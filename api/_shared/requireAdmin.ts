@@ -334,4 +334,4 @@ function normalizePermission(permission: string): string {
 
 function uniquePermissions(permissions: string[]): string[] {
   return Array.from(new Set(permissions.filter(Boolean))).sort();
-}
+}   
