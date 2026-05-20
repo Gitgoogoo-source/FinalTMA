@@ -1,0 +1,966 @@
+/**
+ * 全项目统一错误码。
+ *
+ * 使用原则：
+ * 1. API 返回 error.code，不返回数据库内部细节。
+ * 2. 前端根据 code 显示 publicMessage。
+ * 3. 后端日志可以记录 internalMessage、requestId、userId、payload。
+ * 4. 数据库 RPC 可以返回这些 code，API 层转为统一响应。
+ */
+
+export const ERROR_CATEGORY = {
+  COMMON: "COMMON",
+  VALIDATION: "VALIDATION",
+  AUTH: "AUTH",
+  USER: "USER",
+  RATE_LIMIT: "RATE_LIMIT",
+  ECONOMY: "ECONOMY",
+  PAYMENT: "PAYMENT",
+  GACHA: "GACHA",
+  MARKET: "MARKET",
+  INVENTORY: "INVENTORY",
+  TASK: "TASK",
+  REFERRAL: "REFERRAL",
+  ALBUM: "ALBUM",
+  WALLET: "WALLET",
+  ONCHAIN: "ONCHAIN",
+  ADMIN: "ADMIN",
+  OPS: "OPS",
+  INTERNAL: "INTERNAL"
+} as const;
+
+export type ErrorCategory =
+  (typeof ERROR_CATEGORY)[keyof typeof ERROR_CATEGORY];
+
+export const ERROR_SEVERITY = {
+  INFO: "INFO",
+  WARNING: "WARNING",
+  ERROR: "ERROR",
+  CRITICAL: "CRITICAL"
+} as const;
+
+export type ErrorSeverity =
+  (typeof ERROR_SEVERITY)[keyof typeof ERROR_SEVERITY];
+
+export const ERROR_CODE = {
+  COMMON_UNKNOWN: "COMMON_UNKNOWN",
+  COMMON_NOT_IMPLEMENTED: "COMMON_NOT_IMPLEMENTED",
+
+  VALIDATION_INVALID_INPUT: "VALIDATION_INVALID_INPUT",
+  VALIDATION_INVALID_ID: "VALIDATION_INVALID_ID",
+  VALIDATION_INVALID_IDEMPOTENCY_KEY: "VALIDATION_INVALID_IDEMPOTENCY_KEY",
+
+  AUTH_MISSING_SESSION: "AUTH_MISSING_SESSION",
+  AUTH_INVALID_SESSION: "AUTH_INVALID_SESSION",
+  AUTH_EXPIRED_SESSION: "AUTH_EXPIRED_SESSION",
+  AUTH_INVALID_TELEGRAM_INIT_DATA: "AUTH_INVALID_TELEGRAM_INIT_DATA",
+  AUTH_TELEGRAM_INIT_DATA_EXPIRED: "AUTH_TELEGRAM_INIT_DATA_EXPIRED",
+
+  USER_NOT_FOUND: "USER_NOT_FOUND",
+  USER_BANNED: "USER_BANNED",
+  USER_RESTRICTED: "USER_RESTRICTED",
+
+  RATE_LIMITED: "RATE_LIMITED",
+
+  ECONOMY_INSUFFICIENT_BALANCE: "ECONOMY_INSUFFICIENT_BALANCE",
+  ECONOMY_BALANCE_LOCKED: "ECONOMY_BALANCE_LOCKED",
+  ECONOMY_LEDGER_CONFLICT: "ECONOMY_LEDGER_CONFLICT",
+  ECONOMY_INVALID_CURRENCY: "ECONOMY_INVALID_CURRENCY",
+
+  PAYMENT_ORDER_NOT_FOUND: "PAYMENT_ORDER_NOT_FOUND",
+  PAYMENT_ORDER_EXPIRED: "PAYMENT_ORDER_EXPIRED",
+  PAYMENT_ALREADY_PROCESSED: "PAYMENT_ALREADY_PROCESSED",
+  PAYMENT_AMOUNT_MISMATCH: "PAYMENT_AMOUNT_MISMATCH",
+  PAYMENT_WEBHOOK_INVALID: "PAYMENT_WEBHOOK_INVALID",
+  PAYMENT_PRECHECKOUT_REJECTED: "PAYMENT_PRECHECKOUT_REJECTED",
+  PAYMENT_SUCCESSFUL_PAYMENT_MISSING: "PAYMENT_SUCCESSFUL_PAYMENT_MISSING",
+
+  GACHA_BOX_NOT_FOUND: "GACHA_BOX_NOT_FOUND",
+  GACHA_BOX_NOT_ACTIVE: "GACHA_BOX_NOT_ACTIVE",
+  GACHA_BOX_NOT_STARTED: "GACHA_BOX_NOT_STARTED",
+  GACHA_BOX_ENDED: "GACHA_BOX_ENDED",
+  GACHA_BOX_SOLD_OUT: "GACHA_BOX_SOLD_OUT",
+  GACHA_DROP_POOL_NOT_FOUND: "GACHA_DROP_POOL_NOT_FOUND",
+  GACHA_ORDER_NOT_FOUND: "GACHA_ORDER_NOT_FOUND",
+  GACHA_ORDER_NOT_PAID: "GACHA_ORDER_NOT_PAID",
+  GACHA_ORDER_ALREADY_COMPLETED: "GACHA_ORDER_ALREADY_COMPLETED",
+  GACHA_DRAW_FAILED: "GACHA_DRAW_FAILED",
+
+  MARKET_LISTING_NOT_FOUND: "MARKET_LISTING_NOT_FOUND",
+  MARKET_LISTING_NOT_ACTIVE: "MARKET_LISTING_NOT_ACTIVE",
+  MARKET_LISTING_ALREADY_SOLD: "MARKET_LISTING_ALREADY_SOLD",
+  MARKET_CANNOT_BUY_OWN_LISTING: "MARKET_CANNOT_BUY_OWN_LISTING",
+  MARKET_PRICE_INVALID: "MARKET_PRICE_INVALID",
+  MARKET_INSUFFICIENT_STOCK: "MARKET_INSUFFICIENT_STOCK",
+  MARKET_LISTING_LOCKED: "MARKET_LISTING_LOCKED",
+  MARKET_FEE_RULE_NOT_FOUND: "MARKET_FEE_RULE_NOT_FOUND",
+
+  INVENTORY_ITEM_NOT_FOUND: "INVENTORY_ITEM_NOT_FOUND",
+  INVENTORY_ITEM_NOT_OWNED: "INVENTORY_ITEM_NOT_OWNED",
+  INVENTORY_ITEM_NOT_AVAILABLE: "INVENTORY_ITEM_NOT_AVAILABLE",
+  INVENTORY_ITEM_LOCKED: "INVENTORY_ITEM_LOCKED",
+  INVENTORY_ITEM_LISTED: "INVENTORY_ITEM_LISTED",
+  INVENTORY_UPGRADE_NOT_ALLOWED: "INVENTORY_UPGRADE_NOT_ALLOWED",
+  INVENTORY_UPGRADE_INSUFFICIENT_FGEMS:
+    "INVENTORY_UPGRADE_INSUFFICIENT_FGEMS",
+  INVENTORY_EVOLVE_NOT_ALLOWED: "INVENTORY_EVOLVE_NOT_ALLOWED",
+  INVENTORY_EVOLVE_INVALID_ITEMS: "INVENTORY_EVOLVE_INVALID_ITEMS",
+  INVENTORY_EVOLVE_INSUFFICIENT_KCOIN:
+    "INVENTORY_EVOLVE_INSUFFICIENT_KCOIN",
+  INVENTORY_DECOMPOSE_NOT_ALLOWED: "INVENTORY_DECOMPOSE_NOT_ALLOWED",
+
+  TASK_NOT_FOUND: "TASK_NOT_FOUND",
+  TASK_NOT_COMPLETED: "TASK_NOT_COMPLETED",
+  TASK_ALREADY_CLAIMED: "TASK_ALREADY_CLAIMED",
+  TASK_EXPIRED: "TASK_EXPIRED",
+  SIGNIN_ALREADY_CHECKED_IN: "SIGNIN_ALREADY_CHECKED_IN",
+
+  REFERRAL_SELF_INVITE_NOT_ALLOWED: "REFERRAL_SELF_INVITE_NOT_ALLOWED",
+  REFERRAL_ALREADY_BOUND: "REFERRAL_ALREADY_BOUND",
+  REFERRAL_INVITER_NOT_FOUND: "REFERRAL_INVITER_NOT_FOUND",
+  REFERRAL_REWARD_ALREADY_GRANTED: "REFERRAL_REWARD_ALREADY_GRANTED",
+
+  ALBUM_MILESTONE_NOT_FOUND: "ALBUM_MILESTONE_NOT_FOUND",
+  ALBUM_REWARD_NOT_CLAIMABLE: "ALBUM_REWARD_NOT_CLAIMABLE",
+  ALBUM_REWARD_ALREADY_CLAIMED: "ALBUM_REWARD_ALREADY_CLAIMED",
+
+  WALLET_INVALID_ADDRESS: "WALLET_INVALID_ADDRESS",
+  WALLET_NOT_CONNECTED: "WALLET_NOT_CONNECTED",
+  WALLET_PROOF_INVALID: "WALLET_PROOF_INVALID",
+  WALLET_PROOF_EXPIRED: "WALLET_PROOF_EXPIRED",
+  WALLET_ALREADY_BOUND: "WALLET_ALREADY_BOUND",
+
+  ONCHAIN_MINT_NOT_ALLOWED: "ONCHAIN_MINT_NOT_ALLOWED",
+  ONCHAIN_MINT_QUEUE_NOT_FOUND: "ONCHAIN_MINT_QUEUE_NOT_FOUND",
+  ONCHAIN_MINT_ALREADY_EXISTS: "ONCHAIN_MINT_ALREADY_EXISTS",
+  ONCHAIN_TRANSACTION_NOT_FOUND: "ONCHAIN_TRANSACTION_NOT_FOUND",
+  ONCHAIN_TRANSACTION_FAILED: "ONCHAIN_TRANSACTION_FAILED",
+  ONCHAIN_SYNC_FAILED: "ONCHAIN_SYNC_FAILED",
+
+  ADMIN_FORBIDDEN: "ADMIN_FORBIDDEN",
+  ADMIN_PERMISSION_DENIED: "ADMIN_PERMISSION_DENIED",
+
+  OPS_FEATURE_DISABLED: "OPS_FEATURE_DISABLED",
+  OPS_MAINTENANCE: "OPS_MAINTENANCE",
+
+  INTERNAL_SERVER_ERROR: "INTERNAL_SERVER_ERROR"
+} as const;
+
+export type ErrorCode = (typeof ERROR_CODE)[keyof typeof ERROR_CODE];
+
+export interface ErrorMeta {
+  code: ErrorCode;
+  category: ErrorCategory;
+  severity: ErrorSeverity;
+  httpStatus: number;
+  publicMessage: string;
+  internalMessage: string;
+  retryable: boolean;
+}
+
+export const ERROR_META = {
+  [ERROR_CODE.COMMON_UNKNOWN]: {
+    code: ERROR_CODE.COMMON_UNKNOWN,
+    category: ERROR_CATEGORY.COMMON,
+    severity: ERROR_SEVERITY.ERROR,
+    httpStatus: 400,
+    publicMessage: "未知错误。",
+    internalMessage: "Unknown common error.",
+    retryable: false
+  },
+  [ERROR_CODE.COMMON_NOT_IMPLEMENTED]: {
+    code: ERROR_CODE.COMMON_NOT_IMPLEMENTED,
+    category: ERROR_CATEGORY.COMMON,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 501,
+    publicMessage: "该功能暂未开放。",
+    internalMessage: "Feature is not implemented.",
+    retryable: false
+  },
+
+  [ERROR_CODE.VALIDATION_INVALID_INPUT]: {
+    code: ERROR_CODE.VALIDATION_INVALID_INPUT,
+    category: ERROR_CATEGORY.VALIDATION,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 400,
+    publicMessage: "提交的信息格式不正确。",
+    internalMessage: "Invalid request input.",
+    retryable: false
+  },
+  [ERROR_CODE.VALIDATION_INVALID_ID]: {
+    code: ERROR_CODE.VALIDATION_INVALID_ID,
+    category: ERROR_CATEGORY.VALIDATION,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 400,
+    publicMessage: "请求的对象不存在或格式不正确。",
+    internalMessage: "Invalid id.",
+    retryable: false
+  },
+  [ERROR_CODE.VALIDATION_INVALID_IDEMPOTENCY_KEY]: {
+    code: ERROR_CODE.VALIDATION_INVALID_IDEMPOTENCY_KEY,
+    category: ERROR_CATEGORY.VALIDATION,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 400,
+    publicMessage: "请求标识无效，请刷新后重试。",
+    internalMessage: "Invalid idempotency key.",
+    retryable: true
+  },
+
+  [ERROR_CODE.AUTH_MISSING_SESSION]: {
+    code: ERROR_CODE.AUTH_MISSING_SESSION,
+    category: ERROR_CATEGORY.AUTH,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 401,
+    publicMessage: "登录状态缺失，请重新进入应用。",
+    internalMessage: "Missing app session.",
+    retryable: true
+  },
+  [ERROR_CODE.AUTH_INVALID_SESSION]: {
+    code: ERROR_CODE.AUTH_INVALID_SESSION,
+    category: ERROR_CATEGORY.AUTH,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 401,
+    publicMessage: "登录状态无效，请重新进入应用。",
+    internalMessage: "Invalid app session.",
+    retryable: true
+  },
+  [ERROR_CODE.AUTH_EXPIRED_SESSION]: {
+    code: ERROR_CODE.AUTH_EXPIRED_SESSION,
+    category: ERROR_CATEGORY.AUTH,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 401,
+    publicMessage: "登录状态已过期，请重新进入应用。",
+    internalMessage: "Expired app session.",
+    retryable: true
+  },
+  [ERROR_CODE.AUTH_INVALID_TELEGRAM_INIT_DATA]: {
+    code: ERROR_CODE.AUTH_INVALID_TELEGRAM_INIT_DATA,
+    category: ERROR_CATEGORY.AUTH,
+    severity: ERROR_SEVERITY.ERROR,
+    httpStatus: 401,
+    publicMessage: "Telegram 身份验证失败。",
+    internalMessage: "Invalid Telegram initData.",
+    retryable: true
+  },
+  [ERROR_CODE.AUTH_TELEGRAM_INIT_DATA_EXPIRED]: {
+    code: ERROR_CODE.AUTH_TELEGRAM_INIT_DATA_EXPIRED,
+    category: ERROR_CATEGORY.AUTH,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 401,
+    publicMessage: "Telegram 登录信息已过期，请重新打开应用。",
+    internalMessage: "Telegram initData expired.",
+    retryable: true
+  },
+
+  [ERROR_CODE.USER_NOT_FOUND]: {
+    code: ERROR_CODE.USER_NOT_FOUND,
+    category: ERROR_CATEGORY.USER,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 404,
+    publicMessage: "用户不存在。",
+    internalMessage: "User not found.",
+    retryable: false
+  },
+  [ERROR_CODE.USER_BANNED]: {
+    code: ERROR_CODE.USER_BANNED,
+    category: ERROR_CATEGORY.USER,
+    severity: ERROR_SEVERITY.ERROR,
+    httpStatus: 403,
+    publicMessage: "当前账号已被限制使用。",
+    internalMessage: "User is banned.",
+    retryable: false
+  },
+  [ERROR_CODE.USER_RESTRICTED]: {
+    code: ERROR_CODE.USER_RESTRICTED,
+    category: ERROR_CATEGORY.USER,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 403,
+    publicMessage: "当前账号部分功能受限。",
+    internalMessage: "User is restricted.",
+    retryable: false
+  },
+
+  [ERROR_CODE.RATE_LIMITED]: {
+    code: ERROR_CODE.RATE_LIMITED,
+    category: ERROR_CATEGORY.RATE_LIMIT,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 429,
+    publicMessage: "操作过于频繁，请稍后再试。",
+    internalMessage: "Rate limited.",
+    retryable: true
+  },
+
+  [ERROR_CODE.ECONOMY_INSUFFICIENT_BALANCE]: {
+    code: ERROR_CODE.ECONOMY_INSUFFICIENT_BALANCE,
+    category: ERROR_CATEGORY.ECONOMY,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 400,
+    publicMessage: "余额不足。",
+    internalMessage: "Insufficient balance.",
+    retryable: false
+  },
+  [ERROR_CODE.ECONOMY_BALANCE_LOCKED]: {
+    code: ERROR_CODE.ECONOMY_BALANCE_LOCKED,
+    category: ERROR_CATEGORY.ECONOMY,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 409,
+    publicMessage: "部分余额正在锁定中。",
+    internalMessage: "Balance is locked.",
+    retryable: false
+  },
+  [ERROR_CODE.ECONOMY_LEDGER_CONFLICT]: {
+    code: ERROR_CODE.ECONOMY_LEDGER_CONFLICT,
+    category: ERROR_CATEGORY.ECONOMY,
+    severity: ERROR_SEVERITY.ERROR,
+    httpStatus: 409,
+    publicMessage: "资产处理冲突，请稍后重试。",
+    internalMessage: "Ledger conflict.",
+    retryable: true
+  },
+  [ERROR_CODE.ECONOMY_INVALID_CURRENCY]: {
+    code: ERROR_CODE.ECONOMY_INVALID_CURRENCY,
+    category: ERROR_CATEGORY.ECONOMY,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 400,
+    publicMessage: "币种无效。",
+    internalMessage: "Invalid currency.",
+    retryable: false
+  },
+
+  [ERROR_CODE.PAYMENT_ORDER_NOT_FOUND]: {
+    code: ERROR_CODE.PAYMENT_ORDER_NOT_FOUND,
+    category: ERROR_CATEGORY.PAYMENT,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 404,
+    publicMessage: "支付订单不存在。",
+    internalMessage: "Payment order not found.",
+    retryable: false
+  },
+  [ERROR_CODE.PAYMENT_ORDER_EXPIRED]: {
+    code: ERROR_CODE.PAYMENT_ORDER_EXPIRED,
+    category: ERROR_CATEGORY.PAYMENT,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 400,
+    publicMessage: "支付订单已过期，请重新下单。",
+    internalMessage: "Payment order expired.",
+    retryable: false
+  },
+  [ERROR_CODE.PAYMENT_ALREADY_PROCESSED]: {
+    code: ERROR_CODE.PAYMENT_ALREADY_PROCESSED,
+    category: ERROR_CATEGORY.PAYMENT,
+    severity: ERROR_SEVERITY.INFO,
+    httpStatus: 409,
+    publicMessage: "支付订单已处理。",
+    internalMessage: "Payment already processed.",
+    retryable: false
+  },
+  [ERROR_CODE.PAYMENT_AMOUNT_MISMATCH]: {
+    code: ERROR_CODE.PAYMENT_AMOUNT_MISMATCH,
+    category: ERROR_CATEGORY.PAYMENT,
+    severity: ERROR_SEVERITY.ERROR,
+    httpStatus: 400,
+    publicMessage: "支付金额异常。",
+    internalMessage: "Payment amount mismatch.",
+    retryable: false
+  },
+  [ERROR_CODE.PAYMENT_WEBHOOK_INVALID]: {
+    code: ERROR_CODE.PAYMENT_WEBHOOK_INVALID,
+    category: ERROR_CATEGORY.PAYMENT,
+    severity: ERROR_SEVERITY.ERROR,
+    httpStatus: 401,
+    publicMessage: "支付回调验证失败。",
+    internalMessage: "Invalid payment webhook.",
+    retryable: false
+  },
+  [ERROR_CODE.PAYMENT_PRECHECKOUT_REJECTED]: {
+    code: ERROR_CODE.PAYMENT_PRECHECKOUT_REJECTED,
+    category: ERROR_CATEGORY.PAYMENT,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 400,
+    publicMessage: "支付预校验失败。",
+    internalMessage: "Pre-checkout rejected.",
+    retryable: false
+  },
+  [ERROR_CODE.PAYMENT_SUCCESSFUL_PAYMENT_MISSING]: {
+    code: ERROR_CODE.PAYMENT_SUCCESSFUL_PAYMENT_MISSING,
+    category: ERROR_CATEGORY.PAYMENT,
+    severity: ERROR_SEVERITY.ERROR,
+    httpStatus: 400,
+    publicMessage: "支付成功信息缺失。",
+    internalMessage: "successful_payment is missing.",
+    retryable: true
+  },
+
+  [ERROR_CODE.GACHA_BOX_NOT_FOUND]: {
+    code: ERROR_CODE.GACHA_BOX_NOT_FOUND,
+    category: ERROR_CATEGORY.GACHA,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 404,
+    publicMessage: "盲盒不存在。",
+    internalMessage: "Gacha box not found.",
+    retryable: false
+  },
+  [ERROR_CODE.GACHA_BOX_NOT_ACTIVE]: {
+    code: ERROR_CODE.GACHA_BOX_NOT_ACTIVE,
+    category: ERROR_CATEGORY.GACHA,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 400,
+    publicMessage: "该盲盒当前不可开启。",
+    internalMessage: "Gacha box is not active.",
+    retryable: false
+  },
+  [ERROR_CODE.GACHA_BOX_NOT_STARTED]: {
+    code: ERROR_CODE.GACHA_BOX_NOT_STARTED,
+    category: ERROR_CATEGORY.GACHA,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 400,
+    publicMessage: "该盲盒活动尚未开始。",
+    internalMessage: "Gacha box has not started.",
+    retryable: false
+  },
+  [ERROR_CODE.GACHA_BOX_ENDED]: {
+    code: ERROR_CODE.GACHA_BOX_ENDED,
+    category: ERROR_CATEGORY.GACHA,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 400,
+    publicMessage: "该盲盒活动已结束。",
+    internalMessage: "Gacha box has ended.",
+    retryable: false
+  },
+  [ERROR_CODE.GACHA_BOX_SOLD_OUT]: {
+    code: ERROR_CODE.GACHA_BOX_SOLD_OUT,
+    category: ERROR_CATEGORY.GACHA,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 400,
+    publicMessage: "该盲盒已售罄。",
+    internalMessage: "Gacha box sold out.",
+    retryable: false
+  },
+  [ERROR_CODE.GACHA_DROP_POOL_NOT_FOUND]: {
+    code: ERROR_CODE.GACHA_DROP_POOL_NOT_FOUND,
+    category: ERROR_CATEGORY.GACHA,
+    severity: ERROR_SEVERITY.ERROR,
+    httpStatus: 500,
+    publicMessage: "奖励池暂不可用。",
+    internalMessage: "Drop pool not found.",
+    retryable: true
+  },
+  [ERROR_CODE.GACHA_ORDER_NOT_FOUND]: {
+    code: ERROR_CODE.GACHA_ORDER_NOT_FOUND,
+    category: ERROR_CATEGORY.GACHA,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 404,
+    publicMessage: "开盒订单不存在。",
+    internalMessage: "Gacha order not found.",
+    retryable: false
+  },
+  [ERROR_CODE.GACHA_ORDER_NOT_PAID]: {
+    code: ERROR_CODE.GACHA_ORDER_NOT_PAID,
+    category: ERROR_CATEGORY.GACHA,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 400,
+    publicMessage: "订单尚未支付成功。",
+    internalMessage: "Gacha order is not paid.",
+    retryable: true
+  },
+  [ERROR_CODE.GACHA_ORDER_ALREADY_COMPLETED]: {
+    code: ERROR_CODE.GACHA_ORDER_ALREADY_COMPLETED,
+    category: ERROR_CATEGORY.GACHA,
+    severity: ERROR_SEVERITY.INFO,
+    httpStatus: 409,
+    publicMessage: "该订单已经完成。",
+    internalMessage: "Gacha order already completed.",
+    retryable: false
+  },
+  [ERROR_CODE.GACHA_DRAW_FAILED]: {
+    code: ERROR_CODE.GACHA_DRAW_FAILED,
+    category: ERROR_CATEGORY.GACHA,
+    severity: ERROR_SEVERITY.ERROR,
+    httpStatus: 500,
+    publicMessage: "开盒处理失败，请稍后查看结果。",
+    internalMessage: "Gacha draw failed.",
+    retryable: true
+  },
+
+  [ERROR_CODE.MARKET_LISTING_NOT_FOUND]: {
+    code: ERROR_CODE.MARKET_LISTING_NOT_FOUND,
+    category: ERROR_CATEGORY.MARKET,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 404,
+    publicMessage: "挂单不存在。",
+    internalMessage: "Market listing not found.",
+    retryable: false
+  },
+  [ERROR_CODE.MARKET_LISTING_NOT_ACTIVE]: {
+    code: ERROR_CODE.MARKET_LISTING_NOT_ACTIVE,
+    category: ERROR_CATEGORY.MARKET,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 400,
+    publicMessage: "该挂单当前不可购买。",
+    internalMessage: "Market listing is not active.",
+    retryable: false
+  },
+  [ERROR_CODE.MARKET_LISTING_ALREADY_SOLD]: {
+    code: ERROR_CODE.MARKET_LISTING_ALREADY_SOLD,
+    category: ERROR_CATEGORY.MARKET,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 409,
+    publicMessage: "该藏品已售出。",
+    internalMessage: "Market listing already sold.",
+    retryable: false
+  },
+  [ERROR_CODE.MARKET_CANNOT_BUY_OWN_LISTING]: {
+    code: ERROR_CODE.MARKET_CANNOT_BUY_OWN_LISTING,
+    category: ERROR_CATEGORY.MARKET,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 400,
+    publicMessage: "不能购买自己的挂单。",
+    internalMessage: "User cannot buy own listing.",
+    retryable: false
+  },
+  [ERROR_CODE.MARKET_PRICE_INVALID]: {
+    code: ERROR_CODE.MARKET_PRICE_INVALID,
+    category: ERROR_CATEGORY.MARKET,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 400,
+    publicMessage: "出售价格无效。",
+    internalMessage: "Invalid market price.",
+    retryable: false
+  },
+  [ERROR_CODE.MARKET_INSUFFICIENT_STOCK]: {
+    code: ERROR_CODE.MARKET_INSUFFICIENT_STOCK,
+    category: ERROR_CATEGORY.MARKET,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 409,
+    publicMessage: "挂单库存不足。",
+    internalMessage: "Listing stock is insufficient.",
+    retryable: false
+  },
+  [ERROR_CODE.MARKET_LISTING_LOCKED]: {
+    code: ERROR_CODE.MARKET_LISTING_LOCKED,
+    category: ERROR_CATEGORY.MARKET,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 409,
+    publicMessage: "该挂单正在处理中，请稍后再试。",
+    internalMessage: "Market listing is locked.",
+    retryable: true
+  },
+  [ERROR_CODE.MARKET_FEE_RULE_NOT_FOUND]: {
+    code: ERROR_CODE.MARKET_FEE_RULE_NOT_FOUND,
+    category: ERROR_CATEGORY.MARKET,
+    severity: ERROR_SEVERITY.ERROR,
+    httpStatus: 500,
+    publicMessage: "市场手续费规则不可用。",
+    internalMessage: "Market fee rule not found.",
+    retryable: true
+  },
+
+  [ERROR_CODE.INVENTORY_ITEM_NOT_FOUND]: {
+    code: ERROR_CODE.INVENTORY_ITEM_NOT_FOUND,
+    category: ERROR_CATEGORY.INVENTORY,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 404,
+    publicMessage: "藏品不存在。",
+    internalMessage: "Inventory item not found.",
+    retryable: false
+  },
+  [ERROR_CODE.INVENTORY_ITEM_NOT_OWNED]: {
+    code: ERROR_CODE.INVENTORY_ITEM_NOT_OWNED,
+    category: ERROR_CATEGORY.INVENTORY,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 403,
+    publicMessage: "该藏品不属于当前用户。",
+    internalMessage: "Inventory item is not owned by current user.",
+    retryable: false
+  },
+  [ERROR_CODE.INVENTORY_ITEM_NOT_AVAILABLE]: {
+    code: ERROR_CODE.INVENTORY_ITEM_NOT_AVAILABLE,
+    category: ERROR_CATEGORY.INVENTORY,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 400,
+    publicMessage: "该藏品当前不可操作。",
+    internalMessage: "Inventory item is not available.",
+    retryable: false
+  },
+  [ERROR_CODE.INVENTORY_ITEM_LOCKED]: {
+    code: ERROR_CODE.INVENTORY_ITEM_LOCKED,
+    category: ERROR_CATEGORY.INVENTORY,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 409,
+    publicMessage: "该藏品正在锁定中。",
+    internalMessage: "Inventory item is locked.",
+    retryable: true
+  },
+  [ERROR_CODE.INVENTORY_ITEM_LISTED]: {
+    code: ERROR_CODE.INVENTORY_ITEM_LISTED,
+    category: ERROR_CATEGORY.INVENTORY,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 400,
+    publicMessage: "该藏品正在出售中，请先下架。",
+    internalMessage: "Inventory item is listed.",
+    retryable: false
+  },
+  [ERROR_CODE.INVENTORY_UPGRADE_NOT_ALLOWED]: {
+    code: ERROR_CODE.INVENTORY_UPGRADE_NOT_ALLOWED,
+    category: ERROR_CATEGORY.INVENTORY,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 400,
+    publicMessage: "该藏品不能升级。",
+    internalMessage: "Inventory upgrade is not allowed.",
+    retryable: false
+  },
+  [ERROR_CODE.INVENTORY_UPGRADE_INSUFFICIENT_FGEMS]: {
+    code: ERROR_CODE.INVENTORY_UPGRADE_INSUFFICIENT_FGEMS,
+    category: ERROR_CATEGORY.INVENTORY,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 400,
+    publicMessage: "Fgems 不足，无法升级。",
+    internalMessage: "Insufficient Fgems for upgrade.",
+    retryable: false
+  },
+  [ERROR_CODE.INVENTORY_EVOLVE_NOT_ALLOWED]: {
+    code: ERROR_CODE.INVENTORY_EVOLVE_NOT_ALLOWED,
+    category: ERROR_CATEGORY.INVENTORY,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 400,
+    publicMessage: "该藏品不能合成。",
+    internalMessage: "Inventory evolve is not allowed.",
+    retryable: false
+  },
+  [ERROR_CODE.INVENTORY_EVOLVE_INVALID_ITEMS]: {
+    code: ERROR_CODE.INVENTORY_EVOLVE_INVALID_ITEMS,
+    category: ERROR_CATEGORY.INVENTORY,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 400,
+    publicMessage: "合成材料不符合要求。",
+    internalMessage: "Invalid items for evolve.",
+    retryable: false
+  },
+  [ERROR_CODE.INVENTORY_EVOLVE_INSUFFICIENT_KCOIN]: {
+    code: ERROR_CODE.INVENTORY_EVOLVE_INSUFFICIENT_KCOIN,
+    category: ERROR_CATEGORY.INVENTORY,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 400,
+    publicMessage: "K-coin 不足，无法合成。",
+    internalMessage: "Insufficient K-coin for evolve.",
+    retryable: false
+  },
+  [ERROR_CODE.INVENTORY_DECOMPOSE_NOT_ALLOWED]: {
+    code: ERROR_CODE.INVENTORY_DECOMPOSE_NOT_ALLOWED,
+    category: ERROR_CATEGORY.INVENTORY,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 400,
+    publicMessage: "该藏品不能分解。",
+    internalMessage: "Inventory decompose is not allowed.",
+    retryable: false
+  },
+
+  [ERROR_CODE.TASK_NOT_FOUND]: {
+    code: ERROR_CODE.TASK_NOT_FOUND,
+    category: ERROR_CATEGORY.TASK,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 404,
+    publicMessage: "任务不存在。",
+    internalMessage: "Task not found.",
+    retryable: false
+  },
+  [ERROR_CODE.TASK_NOT_COMPLETED]: {
+    code: ERROR_CODE.TASK_NOT_COMPLETED,
+    category: ERROR_CATEGORY.TASK,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 400,
+    publicMessage: "任务尚未完成。",
+    internalMessage: "Task is not completed.",
+    retryable: false
+  },
+  [ERROR_CODE.TASK_ALREADY_CLAIMED]: {
+    code: ERROR_CODE.TASK_ALREADY_CLAIMED,
+    category: ERROR_CATEGORY.TASK,
+    severity: ERROR_SEVERITY.INFO,
+    httpStatus: 409,
+    publicMessage: "该任务奖励已领取。",
+    internalMessage: "Task reward already claimed.",
+    retryable: false
+  },
+  [ERROR_CODE.TASK_EXPIRED]: {
+    code: ERROR_CODE.TASK_EXPIRED,
+    category: ERROR_CATEGORY.TASK,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 400,
+    publicMessage: "任务已过期。",
+    internalMessage: "Task expired.",
+    retryable: false
+  },
+  [ERROR_CODE.SIGNIN_ALREADY_CHECKED_IN]: {
+    code: ERROR_CODE.SIGNIN_ALREADY_CHECKED_IN,
+    category: ERROR_CATEGORY.TASK,
+    severity: ERROR_SEVERITY.INFO,
+    httpStatus: 409,
+    publicMessage: "今天已经签到。",
+    internalMessage: "Already checked in today.",
+    retryable: false
+  },
+
+  [ERROR_CODE.REFERRAL_SELF_INVITE_NOT_ALLOWED]: {
+    code: ERROR_CODE.REFERRAL_SELF_INVITE_NOT_ALLOWED,
+    category: ERROR_CATEGORY.REFERRAL,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 400,
+    publicMessage: "不能邀请自己。",
+    internalMessage: "Self invite is not allowed.",
+    retryable: false
+  },
+  [ERROR_CODE.REFERRAL_ALREADY_BOUND]: {
+    code: ERROR_CODE.REFERRAL_ALREADY_BOUND,
+    category: ERROR_CATEGORY.REFERRAL,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 409,
+    publicMessage: "邀请关系已绑定。",
+    internalMessage: "Referral already bound.",
+    retryable: false
+  },
+  [ERROR_CODE.REFERRAL_INVITER_NOT_FOUND]: {
+    code: ERROR_CODE.REFERRAL_INVITER_NOT_FOUND,
+    category: ERROR_CATEGORY.REFERRAL,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 404,
+    publicMessage: "邀请人不存在。",
+    internalMessage: "Referral inviter not found.",
+    retryable: false
+  },
+  [ERROR_CODE.REFERRAL_REWARD_ALREADY_GRANTED]: {
+    code: ERROR_CODE.REFERRAL_REWARD_ALREADY_GRANTED,
+    category: ERROR_CATEGORY.REFERRAL,
+    severity: ERROR_SEVERITY.INFO,
+    httpStatus: 409,
+    publicMessage: "邀请奖励已发放。",
+    internalMessage: "Referral reward already granted.",
+    retryable: false
+  },
+
+  [ERROR_CODE.ALBUM_MILESTONE_NOT_FOUND]: {
+    code: ERROR_CODE.ALBUM_MILESTONE_NOT_FOUND,
+    category: ERROR_CATEGORY.ALBUM,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 404,
+    publicMessage: "图鉴奖励节点不存在。",
+    internalMessage: "Album milestone not found.",
+    retryable: false
+  },
+  [ERROR_CODE.ALBUM_REWARD_NOT_CLAIMABLE]: {
+    code: ERROR_CODE.ALBUM_REWARD_NOT_CLAIMABLE,
+    category: ERROR_CATEGORY.ALBUM,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 400,
+    publicMessage: "图鉴奖励暂不可领取。",
+    internalMessage: "Album reward is not claimable.",
+    retryable: false
+  },
+  [ERROR_CODE.ALBUM_REWARD_ALREADY_CLAIMED]: {
+    code: ERROR_CODE.ALBUM_REWARD_ALREADY_CLAIMED,
+    category: ERROR_CATEGORY.ALBUM,
+    severity: ERROR_SEVERITY.INFO,
+    httpStatus: 409,
+    publicMessage: "图鉴奖励已领取。",
+    internalMessage: "Album reward already claimed.",
+    retryable: false
+  },
+
+  [ERROR_CODE.WALLET_INVALID_ADDRESS]: {
+    code: ERROR_CODE.WALLET_INVALID_ADDRESS,
+    category: ERROR_CATEGORY.WALLET,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 400,
+    publicMessage: "钱包地址无效。",
+    internalMessage: "Invalid wallet address.",
+    retryable: false
+  },
+  [ERROR_CODE.WALLET_NOT_CONNECTED]: {
+    code: ERROR_CODE.WALLET_NOT_CONNECTED,
+    category: ERROR_CATEGORY.WALLET,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 400,
+    publicMessage: "请先连接 TON 钱包。",
+    internalMessage: "Wallet is not connected.",
+    retryable: false
+  },
+  [ERROR_CODE.WALLET_PROOF_INVALID]: {
+    code: ERROR_CODE.WALLET_PROOF_INVALID,
+    category: ERROR_CATEGORY.WALLET,
+    severity: ERROR_SEVERITY.ERROR,
+    httpStatus: 401,
+    publicMessage: "钱包签名验证失败。",
+    internalMessage: "Invalid wallet proof.",
+    retryable: true
+  },
+  [ERROR_CODE.WALLET_PROOF_EXPIRED]: {
+    code: ERROR_CODE.WALLET_PROOF_EXPIRED,
+    category: ERROR_CATEGORY.WALLET,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 401,
+    publicMessage: "钱包验证已过期，请重新验证。",
+    internalMessage: "Wallet proof expired.",
+    retryable: true
+  },
+  [ERROR_CODE.WALLET_ALREADY_BOUND]: {
+    code: ERROR_CODE.WALLET_ALREADY_BOUND,
+    category: ERROR_CATEGORY.WALLET,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 409,
+    publicMessage: "该钱包已绑定。",
+    internalMessage: "Wallet already bound.",
+    retryable: false
+  },
+
+  [ERROR_CODE.ONCHAIN_MINT_NOT_ALLOWED]: {
+    code: ERROR_CODE.ONCHAIN_MINT_NOT_ALLOWED,
+    category: ERROR_CATEGORY.ONCHAIN,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 400,
+    publicMessage: "该藏品暂不能 Mint。",
+    internalMessage: "Mint is not allowed.",
+    retryable: false
+  },
+  [ERROR_CODE.ONCHAIN_MINT_QUEUE_NOT_FOUND]: {
+    code: ERROR_CODE.ONCHAIN_MINT_QUEUE_NOT_FOUND,
+    category: ERROR_CATEGORY.ONCHAIN,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 404,
+    publicMessage: "Mint 队列不存在。",
+    internalMessage: "Mint queue not found.",
+    retryable: false
+  },
+  [ERROR_CODE.ONCHAIN_MINT_ALREADY_EXISTS]: {
+    code: ERROR_CODE.ONCHAIN_MINT_ALREADY_EXISTS,
+    category: ERROR_CATEGORY.ONCHAIN,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 409,
+    publicMessage: "该藏品已经在 Mint 队列中。",
+    internalMessage: "Mint queue already exists for item.",
+    retryable: false
+  },
+  [ERROR_CODE.ONCHAIN_TRANSACTION_NOT_FOUND]: {
+    code: ERROR_CODE.ONCHAIN_TRANSACTION_NOT_FOUND,
+    category: ERROR_CATEGORY.ONCHAIN,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 404,
+    publicMessage: "链上交易不存在。",
+    internalMessage: "On-chain transaction not found.",
+    retryable: false
+  },
+  [ERROR_CODE.ONCHAIN_TRANSACTION_FAILED]: {
+    code: ERROR_CODE.ONCHAIN_TRANSACTION_FAILED,
+    category: ERROR_CATEGORY.ONCHAIN,
+    severity: ERROR_SEVERITY.ERROR,
+    httpStatus: 500,
+    publicMessage: "链上交易失败。",
+    internalMessage: "On-chain transaction failed.",
+    retryable: true
+  },
+  [ERROR_CODE.ONCHAIN_SYNC_FAILED]: {
+    code: ERROR_CODE.ONCHAIN_SYNC_FAILED,
+    category: ERROR_CATEGORY.ONCHAIN,
+    severity: ERROR_SEVERITY.ERROR,
+    httpStatus: 500,
+    publicMessage: "链上数据同步失败。",
+    internalMessage: "On-chain sync failed.",
+    retryable: true
+  },
+
+  [ERROR_CODE.ADMIN_FORBIDDEN]: {
+    code: ERROR_CODE.ADMIN_FORBIDDEN,
+    category: ERROR_CATEGORY.ADMIN,
+    severity: ERROR_SEVERITY.ERROR,
+    httpStatus: 403,
+    publicMessage: "无后台访问权限。",
+    internalMessage: "Admin access forbidden.",
+    retryable: false
+  },
+  [ERROR_CODE.ADMIN_PERMISSION_DENIED]: {
+    code: ERROR_CODE.ADMIN_PERMISSION_DENIED,
+    category: ERROR_CATEGORY.ADMIN,
+    severity: ERROR_SEVERITY.ERROR,
+    httpStatus: 403,
+    publicMessage: "当前管理员权限不足。",
+    internalMessage: "Admin permission denied.",
+    retryable: false
+  },
+
+  [ERROR_CODE.OPS_FEATURE_DISABLED]: {
+    code: ERROR_CODE.OPS_FEATURE_DISABLED,
+    category: ERROR_CATEGORY.OPS,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 403,
+    publicMessage: "该功能暂时关闭。",
+    internalMessage: "Feature disabled by ops.",
+    retryable: false
+  },
+  [ERROR_CODE.OPS_MAINTENANCE]: {
+    code: ERROR_CODE.OPS_MAINTENANCE,
+    category: ERROR_CATEGORY.OPS,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 503,
+    publicMessage: "系统维护中，请稍后再试。",
+    internalMessage: "System maintenance.",
+    retryable: true
+  },
+
+  [ERROR_CODE.INTERNAL_SERVER_ERROR]: {
+    code: ERROR_CODE.INTERNAL_SERVER_ERROR,
+    category: ERROR_CATEGORY.INTERNAL,
+    severity: ERROR_SEVERITY.CRITICAL,
+    httpStatus: 500,
+    publicMessage: "服务器错误，请稍后再试。",
+    internalMessage: "Internal server error.",
+    retryable: true
+  }
+} as const satisfies Record<ErrorCode, ErrorMeta>;
+
+export const ERROR_CODES = Object.values(ERROR_CODE) as ErrorCode[];
+
+export interface PublicError {
+  code: ErrorCode;
+  message: string;
+  category: ErrorCategory;
+  retryable: boolean;
+}
+
+export function isErrorCode(value: unknown): value is ErrorCode {
+  return (
+    typeof value === "string" &&
+    (ERROR_CODES as readonly string[]).includes(value)
+  );
+}
+
+export function assertErrorCode(value: unknown): asserts value is ErrorCode {
+  if (!isErrorCode(value)) {
+    throw new Error(`Invalid error code: ${String(value)}`);
+  }
+}
+
+export function getErrorMeta(code: ErrorCode): ErrorMeta {
+  return ERROR_META[code];
+}
+
+export function getErrorMetaSafe(value: unknown): ErrorMeta {
+  if (isErrorCode(value)) {
+    return ERROR_META[value];
+  }
+
+  return ERROR_META[ERROR_CODE.INTERNAL_SERVER_ERROR];
+}
+
+export function toPublicError(code: ErrorCode): PublicError {
+  const meta = getErrorMeta(code);
+
+  return {
+    code: meta.code,
+    message: meta.publicMessage,
+    category: meta.category,
+    retryable: meta.retryable
+  };
+}
+
+export function toPublicErrorSafe(value: unknown): PublicError {
+  return toPublicError(getErrorMetaSafe(value).code);
+}
