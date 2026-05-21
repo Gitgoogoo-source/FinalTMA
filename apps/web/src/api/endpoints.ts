@@ -17,6 +17,9 @@ export const API_ENDPOINTS = {
     createOpenOrder: "/boxes/create-open-order",
     result: "/boxes/result",
   },
+  inventory: {
+    list: "/inventory/list",
+  },
 } as const;
 
 export type ApiEndpointKey = keyof typeof API_ENDPOINTS;

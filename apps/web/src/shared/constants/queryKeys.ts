@@ -15,6 +15,7 @@ export const queryKeys = {
   },
   inventory: {
     root: ["inventory"] as const,
-    list: ["inventory", "list"] as const,
+    list: (userId: string | null | undefined) =>
+      ["inventory", "list", userId ?? "anonymous"] as const,
   },
 } as const;
