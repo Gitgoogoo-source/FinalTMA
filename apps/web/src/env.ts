@@ -14,12 +14,6 @@ import { z } from "zod";
 
 declare global {
   interface ImportMetaEnv {
-    readonly MODE: string;
-    readonly BASE_URL: string;
-    readonly DEV: boolean;
-    readonly PROD: boolean;
-    readonly SSR: boolean;
-
     readonly VITE_APP_NAME?: string;
     readonly VITE_APP_VERSION?: string;
     readonly VITE_APP_ENV?: string;

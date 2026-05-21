@@ -1,0 +1,23 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "declaration": true,
+    "declarationMap": true,
+    "noEmit": false,
+    "tsBuildInfoFile": "./node_modules/.cache/tsconfig.tsbuildinfo"
+  },
+  "include": [
+    "src/index.ts",
+    "src/common.schemas.ts",
+    "src/auth.schemas.ts",
+    "src/me.schemas.ts",
+    "src/telegram.schemas.ts",
+    "src/payment.schemas.ts",
+    "src/box.schemas.ts",
+    "src/inventory.schemas.ts",
+    "src/game.schemas.ts"
+  ],
+  "exclude": ["dist", "node_modules"]
+}

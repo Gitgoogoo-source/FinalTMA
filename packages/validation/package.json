@@ -75,7 +75,7 @@
     "clean": "node -e \"const fs=require('node:fs'); fs.rmSync('dist',{recursive:true,force:true}); fs.rmSync('tsconfig.tsbuildinfo',{force:true});\"",
     "build": "tsup src/index.ts src/*.schemas.ts --format esm --dts --clean --sourcemap",
     "dev": "tsup src/index.ts src/*.schemas.ts --format esm --dts --watch --sourcemap",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint ."
@@ -86,7 +86,7 @@
   },
   "devDependencies": {
     "tsup": "^8.0.0",
-    "typescript": "^5.0.0",
+    "typescript": "catalog:",
     "vitest": "^3.0.0"
   },
   "engines": {

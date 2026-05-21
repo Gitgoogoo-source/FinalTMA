@@ -1,0 +1,8 @@
+{
+  "name": "@tma-game/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "TON contract workspace placeholder; NFT contracts are outside phase 1.",
+  "sideEffects": false
+}

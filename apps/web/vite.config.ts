@@ -40,6 +40,18 @@ function normalizeBasePath(value: string | undefined): string {
   return withLeadingSlash.endsWith('/') ? withLeadingSlash : `${withLeadingSlash}/`;
 }
 
+function createHmrOptions(options: {
+  useHttps: boolean;
+  host: string | undefined;
+  clientPort: number | undefined;
+}) {
+  return {
+    protocol: options.useHttps ? 'wss' : 'ws',
+    ...(options.host ? { host: options.host } : {}),
+    ...(options.clientPort !== undefined ? { clientPort: options.clientPort } : {})
+  };
+}
+
 function createManualChunk(id: string): string | undefined {
   const normalizedId = id.replaceAll('\\', '/');
 
@@ -157,21 +169,23 @@ export default defineConfig(({ mode }) => {
       fs: {
         allow: [webRoot, workspaceRoot, packagesRoot]
       },
-      hmr: {
-        protocol: useHttps ? 'wss' : 'ws',
+      hmr: createHmrOptions({
+        useHttps,
         host: env.VITE_HMR_HOST || undefined,
         clientPort: toOptionalPort(env.VITE_HMR_CLIENT_PORT)
-      },
-      proxy: enableApiProxy
+      }),
+      ...(enableApiProxy
         ? {
-            '/api': {
-              target: apiProxyTarget,
-              changeOrigin: true,
-              secure: false,
-              ws: true
+            proxy: {
+              '/api': {
+                target: apiProxyTarget,
+                changeOrigin: true,
+                secure: false,
+                ws: true
+              }
             }
           }
-        : undefined
+        : {})
     },
 
     preview: {

@@ -17,7 +17,7 @@
     "contracts"
   ],
   "scripts": {
-    "dev": "pnpm -r --parallel --filter @tma-game/web --filter @tma-game/admin dev",
+    "dev": "pnpm --filter @tma-game/web dev",
     "dev:web": "pnpm --filter @tma-game/web dev",
     "dev:admin": "pnpm --filter @tma-game/admin dev",
     "dev:vercel": "vercel dev",
@@ -68,6 +68,7 @@
     "doctor": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test"
   },
   "devDependencies": {
+    "@vercel/node": "catalog:",
     "@playwright/test": "catalog:",
     "@types/node": "catalog:",
     "eslint": "catalog:",

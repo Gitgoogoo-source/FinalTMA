@@ -6,12 +6,7 @@
  * - User asset bootstrap
  * - Blind-box / gacha
  * - Telegram Stars payments
- * - Marketplace trading
- * - Inventory growth
- * - Album and leaderboard
- * - Tasks and referrals
- * - TON wallet / NFT minting
- * - Admin operations
+ * - First-phase bootstrap, auth, gacha and inventory APIs
  *
  * Rule:
  * Validation schemas only validate request / response shape.
@@ -34,13 +29,8 @@ export * as MeValidation from "./me.schemas";
 export * as BoxValidation from "./box.schemas";
 export * as TelegramValidation from "./telegram.schemas";
 export * as PaymentValidation from "./payment.schemas";
-export * as MarketValidation from "./market.schemas";
 export * as InventoryValidation from "./inventory.schemas";
-export * as AlbumValidation from "./album.schemas";
-export * as TaskValidation from "./task.schemas";
-export * as WalletValidation from "./wallet.schemas";
 export * as GameValidation from "./game.schemas";
-export * as AdminValidation from "./admin.schemas";
 
 /**
  * Direct exports.
@@ -63,10 +53,5 @@ export * from "./me.schemas";
 export * from "./box.schemas";
 export * from "./telegram.schemas";
 export * from "./payment.schemas";
-export * from "./market.schemas";
 export * from "./inventory.schemas";
-export * from "./album.schemas";
-export * from "./task.schemas";
-export * from "./wallet.schemas";
 export * from "./game.schemas";
-export * from "./admin.schemas";

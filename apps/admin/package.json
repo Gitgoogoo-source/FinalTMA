@@ -1,0 +1,8 @@
+{
+  "name": "@tma-game/admin",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Admin workspace placeholder; admin UI is outside phase 1.",
+  "sideEffects": false
+}
