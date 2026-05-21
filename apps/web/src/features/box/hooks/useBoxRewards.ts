@@ -15,6 +15,8 @@ export function useBoxRewards(boxId: string | null | undefined) {
     ...query,
     rewards: query.data?.items ?? [],
     poolVersionId: query.data?.poolVersionId ?? null,
+    poolVersion: query.data?.poolVersion ?? null,
     pityRule: query.data?.pityRule ?? null,
+    generatedAt: query.data?.generatedAt ?? null,
   };
 }

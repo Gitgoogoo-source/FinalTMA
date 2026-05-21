@@ -165,6 +165,11 @@ export function BoxPage() {
         rewards={rewardsQuery.rewards}
         isLoading={rewardsQuery.isLoading}
         isError={rewardsQuery.isError}
+        poolVersion={rewardsQuery.poolVersion}
+        pityRule={rewardsQuery.pityRule}
+        generatedAt={rewardsQuery.generatedAt}
+        errorMessage={getRewardsErrorMessage(rewardsQuery.error)}
+        onRetry={() => void rewardsQuery.refetch()}
         onClose={() => setRewardsOpen(false)}
       />
     </section>
@@ -189,4 +194,13 @@ function formatStock(box: BlindBox): string {
   }
 
   return `剩余 ${formatCurrencyAmount(box.remainingStock)} / ${formatCurrencyAmount(box.totalStock)}`;
+}
+
+function getRewardsErrorMessage(error: unknown): string | null {
+  if (!(error instanceof Error)) {
+    return null;
+  }
+
+  const message = error.message.trim();
+  return message.length > 0 ? message : null;
 }
