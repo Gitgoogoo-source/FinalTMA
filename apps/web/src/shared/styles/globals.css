@@ -835,24 +835,28 @@ a {
 }
 
 .box-pity {
-  min-height: 46px;
+  min-height: 92px;
   display: grid;
   grid-template-columns: 40px minmax(0, 1fr) auto;
   gap: 9px;
-  align-items: center;
+  align-items: start;
   border: 1px solid rgb(255 255 255 / 12%);
-  border-radius: 999px;
-  padding: 4px 10px 4px 4px;
+  border-radius: 8px;
+  padding: 10px;
   color: #f7fbff;
   background: rgb(255 255 255 / 8%);
 }
 
 .box-pity--empty {
   grid-template-columns: auto minmax(0, 1fr);
-  padding-left: 12px;
+  min-height: 58px;
+  align-items: center;
   color: #b6c7cf;
-  font-size: 13px;
-  font-weight: 800;
+}
+
+.box-pity--reset {
+  border-color: rgb(139 211 199 / 30%);
+  background: rgb(139 211 199 / 9%);
 }
 
 .box-pity__meter {
@@ -882,7 +886,7 @@ a {
 .box-pity__copy {
   min-width: 0;
   display: grid;
-  gap: 2px;
+  gap: 7px;
 }
 
 .box-pity__copy strong,
@@ -904,8 +908,68 @@ a {
   line-height: 1.15;
 }
 
+.box-pity__stats {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.box-pity__stats > span {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 8px;
+  padding: 6px;
+  background: rgb(13 20 25 / 42%);
+}
+
+.box-pity__stats small,
+.box-pity__stats strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.box-pity__stats small {
+  color: #8fa3ab;
+  font-size: 9px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.box-pity__stats strong {
+  color: #f7fbff;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.box-pity__reset {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  overflow: hidden;
+  color: #b9fff2;
+  font-size: 11px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.box-pity__reset svg {
+  flex: 0 0 auto;
+}
+
 .box-pity > svg {
+  margin-top: 10px;
   color: #ffd166;
+}
+
+.box-pity--empty > svg {
+  margin-top: 0;
 }
 
 .box-open-actions {
