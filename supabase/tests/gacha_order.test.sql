@@ -308,6 +308,27 @@ select ok(exists (select 1 from gacha.draw_orders d join _ids i on i.id = d.id w
 select ok(exists (select 1 from payments.star_orders s join _ids i on i.id = s.id where i.key = 'star_order1' and s.business_type = 'gacha_open' and s.xtr_amount = 10), 'Stars order is created for gacha open');
 select is((select payment_star_order_id from gacha.draw_orders d join _ids i on i.id = d.id where i.key = 'draw_order1'), (select id from _ids where key = 'star_order1'), 'draw order links to Stars order');
 
+insert into _ids (key, id) values ('other_user', testutil.make_user(9300000002, 'gacha_order_other_user', null));
+select ok(testutil.raises_like(format('select api.gacha_process_dev_paid_order(%L::uuid, %L::uuid)', (select id::text from _ids where key = 'draw_order1'), (select id::text from _ids where key = 'other_user')), '%does not belong to user%'), 'dev paid process rejects another user order');
+
+insert into _ids (key, payload)
+select 'order1_dev_process', api.gacha_process_dev_paid_order((select id from _ids where key = 'draw_order1'), (select id from _ids where key = 'user'));
+select is(((select payload from _ids where key = 'order1_dev_process') ->> 'status'), 'opened', 'dev paid process opens order');
+select is(((select payload from _ids where key = 'order1_dev_process') ->> 'payment_status'), 'dev_paid', 'dev paid process marks dev payment status');
+select is(jsonb_array_length((select payload from _ids where key = 'order1_dev_process') -> 'results'), 1, 'dev paid process creates one draw result for single draw');
+select is(testutil.balance_of((select id from _ids where key = 'user'), 'KCOIN'), 100::numeric, 'dev paid process credits KCOIN reward');
+select ok(exists (select 1 from economy.currency_ledger where user_id = (select id from _ids where key = 'user') and source_id = (select id from _ids where key = 'draw_order1') and entry_type = 'credit' and currency_code = 'KCOIN'), 'dev paid process writes KCOIN ledger');
+select ok(exists (select 1 from inventory.item_instances ii join gacha.draw_results dr on dr.item_instance_id = ii.id where dr.draw_order_id = (select id from _ids where key = 'draw_order1') and ii.owner_user_id = (select id from _ids where key = 'user') and ii.status = 'available'), 'dev paid process creates available inventory item');
+
+insert into _ids (key, payload)
+select 'inventory_after_dev_process', api.inventory_list_user_items((select id from _ids where key = 'user'), array['available']::text[], 20, 0);
+select is(((select payload from _ids where key = 'inventory_after_dev_process') ->> 'total')::int, 1, 'inventory list returns item created by dev gacha process');
+
+insert into _ids (key, payload)
+select 'order1_dev_process_repeat', api.gacha_process_dev_paid_order((select id from _ids where key = 'draw_order1'), (select id from _ids where key = 'user'));
+select ok(((select payload from _ids where key = 'order1_dev_process_repeat') ->> 'idempotent')::boolean, 'repeated dev paid process is idempotent');
+select is((select count(*)::int from gacha.draw_results where draw_order_id = (select id from _ids where key = 'draw_order1')), 1, 'repeated dev paid process does not create duplicate draw results');
+
 insert into _ids (key, payload)
 select 'order1_repeat', api.gacha_create_order((select id from _ids where key = 'user'), (select id from _ids where key = 'box'), 1, 'gacha-order-single-001');
 select ok(((select payload from _ids where key = 'order1_repeat') ->> 'idempotent')::boolean, 'repeated create order returns idempotent=true');
