@@ -11,6 +11,11 @@ export const API_ENDPOINTS = {
     profile: "/me/profile",
     notifications: "/me/notifications",
   },
+  boxes: {
+    list: "/boxes/list",
+    rewards: "/boxes/rewards",
+    createOpenOrder: "/boxes/create-open-order",
+  },
 } as const;
 
 export type ApiEndpointKey = keyof typeof API_ENDPOINTS;

@@ -5,4 +5,10 @@ export const queryKeys = {
     assets: (userId: string | null | undefined) =>
       ["me", "assets", userId ?? "anonymous"] as const,
   },
+  box: {
+    root: ["box"] as const,
+    list: ["box", "list"] as const,
+    rewards: (boxId: string | null | undefined) =>
+      ["box", "rewards", boxId ?? "none"] as const,
+  },
 } as const;

@@ -1,0 +1,55 @@
+import type { BoxStatus } from "../box.types";
+
+type BoxStatusBadgeProps = {
+  status: BoxStatus;
+  disabledReason?: string | null;
+};
+
+const STATUS_META: Record<
+  BoxStatus,
+  {
+    label: string;
+    tone: "success" | "warning" | "disabled";
+  }
+> = {
+  active: {
+    label: "进行中",
+    tone: "success",
+  },
+  not_started: {
+    label: "未开始",
+    tone: "disabled",
+  },
+  paused: {
+    label: "已暂停",
+    tone: "warning",
+  },
+  ended: {
+    label: "已结束",
+    tone: "disabled",
+  },
+  sold_out: {
+    label: "已售罄",
+    tone: "disabled",
+  },
+  hidden: {
+    label: "不可见",
+    tone: "disabled",
+  },
+};
+
+export function BoxStatusBadge({
+  status,
+  disabledReason,
+}: BoxStatusBadgeProps) {
+  const meta = STATUS_META[status];
+  const label = disabledReason
+    ? `${meta.label} · ${disabledReason}`
+    : meta.label;
+
+  return (
+    <span className={`box-status-badge box-status-badge--${meta.tone}`}>
+      {label}
+    </span>
+  );
+}
