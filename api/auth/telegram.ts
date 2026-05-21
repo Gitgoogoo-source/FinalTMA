@@ -35,7 +35,6 @@ type ExistingUserRow = {
 
 type AuthUserRow = {
   status: string;
-  deleted_at?: string | null;
 };
 
 const SESSION_TTL_SECONDS = 7 * 24 * 60 * 60;
@@ -77,7 +76,7 @@ export default withApiHandler(
     const userId = requireStringField(userResult, 'user_id');
     const authUser = await loadAuthUser(userId);
 
-    if (authUser.deleted_at || authUser.status !== 'active') {
+    if (authUser.status !== 'active') {
       throw new ApiError(403, 'AUTH_USER_NOT_ACTIVE', '当前账号状态不可登录。', {
         details: {
           status: authUser.status,
@@ -193,7 +192,7 @@ async function loadAuthUser(userId: string): Promise<AuthUserRow> {
   const { data, error } = await db
     .schema('core')
     .from('users')
-    .select('status,deleted_at')
+    .select('status')
     .eq('id', userId)
     .maybeSingle<AuthUserRow>();
 

@@ -44,7 +44,6 @@ interface UserRow {
   id: string;
   telegram_user_id: number | null;
   status: string;
-  deleted_at?: string | null;
 }
 
 /**
@@ -113,7 +112,7 @@ export async function requireSession(
   const { data: user, error: userError } = await db
     .schema('core')
     .from('users')
-    .select('id,telegram_user_id,status,deleted_at')
+    .select('id,telegram_user_id,status')
     .eq('id', session.user_id)
     .maybeSingle<UserRow>();
 
@@ -126,10 +125,6 @@ export async function requireSession(
 
   if (!user) {
     throw ApiError.unauthorized('Session user does not exist');
-  }
-
-  if (user.deleted_at) {
-    throw ApiError.forbidden('User has been deleted');
   }
 
   if (options.requireActiveUser !== false && user.status !== 'active') {
