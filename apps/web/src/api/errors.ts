@@ -42,6 +42,49 @@ export class ApiClientError extends Error {
   }
 }
 
+export function isApiClientError(error: unknown): error is ApiClientError {
+  return error instanceof ApiClientError;
+}
+
+export function isUnauthorizedApiError(error: unknown): boolean {
+  return (
+    error instanceof ApiClientError &&
+    (error.status === 401 ||
+      error.code === "AUTH_SESSION_REQUIRED" ||
+      error.code === "AUTH_SESSION_INVALID" ||
+      error.code === "AUTH_SESSION_EXPIRED" ||
+      error.code === "UNAUTHORIZED")
+  );
+}
+
+export function shouldRetryApiError(error: unknown): boolean {
+  if (!(error instanceof ApiClientError)) {
+    return true;
+  }
+
+  if (error.status === 401 || error.status === 403) {
+    return false;
+  }
+
+  if (error.status >= 400 && error.status < 500) {
+    return false;
+  }
+
+  return true;
+}
+
+export function getApiErrorMessage(error: unknown): string {
+  if (error instanceof ApiClientError) {
+    return error.message;
+  }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return "请求失败，请稍后重试。";
+}
+
 export function isApiErrorResponse(value: unknown): value is ApiErrorResponse {
   if (typeof value !== "object" || value === null) {
     return false;
@@ -58,7 +101,9 @@ export function isApiErrorResponse(value: unknown): value is ApiErrorResponse {
   );
 }
 
-export function isApiSuccessResponse<T>(value: unknown): value is ApiSuccessResponse<T> {
+export function isApiSuccessResponse<T>(
+  value: unknown,
+): value is ApiSuccessResponse<T> {
   if (typeof value !== "object" || value === null) {
     return false;
   }

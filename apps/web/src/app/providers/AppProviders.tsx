@@ -12,11 +12,11 @@ type AppProvidersProps = {
 export function AppProviders({ children }: AppProvidersProps) {
   return (
     <TelegramProvider>
-      <SessionProvider>
+      <FeedbackProvider>
         <QueryProvider>
-          <FeedbackProvider>{children}</FeedbackProvider>
+          <SessionProvider>{children}</SessionProvider>
         </QueryProvider>
-      </SessionProvider>
+      </FeedbackProvider>
     </TelegramProvider>
   );
 }

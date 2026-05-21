@@ -1,16 +1,7 @@
-type TelegramWebApp = {
-  ready?: () => void;
-  expand?: () => void;
-};
-
-type TelegramGlobal = typeof globalThis & {
-  Telegram?: {
-    WebApp?: TelegramWebApp;
-  };
-};
+import { getTelegramWebApp } from "@/types/telegram";
 
 export function bootstrapTelegramApp(): void {
-  const telegramWebApp = (globalThis as TelegramGlobal).Telegram?.WebApp;
+  const telegramWebApp = getTelegramWebApp();
 
   telegramWebApp?.ready?.();
   telegramWebApp?.expand?.();

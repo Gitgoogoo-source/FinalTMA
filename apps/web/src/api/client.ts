@@ -12,6 +12,31 @@ type ApiRequestOptions = Omit<RequestInit, "body"> & {
   body?: RequestBody;
 };
 
+type UnauthorizedHandler = () => void;
+
+let apiSessionToken: string | null = null;
+let unauthorizedHandler: UnauthorizedHandler | null = null;
+
+export function setApiSessionToken(token: string | null): void {
+  apiSessionToken = token && token.trim().length > 0 ? token.trim() : null;
+}
+
+export function getApiSessionToken(): string | null {
+  return apiSessionToken;
+}
+
+export function setApiUnauthorizedHandler(
+  handler: UnauthorizedHandler | null,
+): () => void {
+  unauthorizedHandler = handler;
+
+  return () => {
+    if (unauthorizedHandler === handler) {
+      unauthorizedHandler = null;
+    }
+  };
+}
+
 function buildApiUrl(path: string): string {
   if (path.startsWith("http://") || path.startsWith("https://")) {
     return path;
@@ -44,8 +69,16 @@ function serializeBody(body: RequestBody | undefined): BodyInit | undefined {
 function createHeaders(options: ApiRequestOptions): Headers {
   const headers = new Headers(options.headers);
 
-  if (options.body !== undefined && options.body !== null && !headers.has("Content-Type")) {
+  if (
+    options.body !== undefined &&
+    options.body !== null &&
+    !headers.has("Content-Type")
+  ) {
     headers.set("Content-Type", "application/json");
+  }
+
+  if (apiSessionToken && !headers.has("Authorization")) {
+    headers.set("Authorization", `Bearer ${apiSessionToken}`);
   }
 
   return headers;
@@ -77,6 +110,7 @@ export async function apiRequest<T>(
   const { body, ...requestOptions } = options;
   const serializedBody = serializeBody(body);
   const requestInit: RequestInit = {
+    credentials: "include",
     ...requestOptions,
     headers: createHeaders(options),
   };
@@ -98,16 +132,22 @@ export async function apiRequest<T>(
       ...(payload.requestId ? { requestId: payload.requestId } : {}),
     };
 
-    throw new ApiClientError(errorOptions);
+    const error = new ApiClientError(errorOptions);
+    notifyUnauthorized(path, error);
+
+    throw error;
   }
 
   if (!response.ok) {
-    throw new ApiClientError({
+    const error = new ApiClientError({
       code: "API_HTTP_ERROR",
       message: `API request failed with status ${response.status}.`,
       status: response.status,
       details: payload,
     });
+    notifyUnauthorized(path, error);
+
+    throw error;
   }
 
   if (!isApiSuccessResponse<T>(payload)) {
@@ -120,4 +160,17 @@ export async function apiRequest<T>(
   }
 
   return payload.data;
+}
+
+function notifyUnauthorized(path: string, error: ApiClientError): void {
+  if (error.status !== 401 || isAuthPath(path)) {
+    return;
+  }
+
+  unauthorizedHandler?.();
+}
+
+function isAuthPath(path: string): boolean {
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  return normalizedPath.startsWith("/auth/");
 }
