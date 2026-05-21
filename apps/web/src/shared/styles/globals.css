@@ -555,7 +555,7 @@ a {
 
 .box-tier-card {
   min-width: 0;
-  min-height: 122px;
+  min-height: 142px;
   position: relative;
   display: grid;
   justify-items: center;
@@ -604,7 +604,8 @@ a {
 }
 
 .box-tier-card__name,
-.box-tier-card__price {
+.box-tier-card__price,
+.box-tier-card__stock {
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -620,6 +621,41 @@ a {
   color: #b6c7cf;
   font-size: 10px;
   font-weight: 800;
+}
+
+.box-tier-card__stock {
+  min-height: 19px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 999px;
+  padding: 0 6px;
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.box-tier-card__stock--available {
+  border-color: rgb(139 211 199 / 34%);
+  color: #cafff5;
+  background: rgb(139 211 199 / 9%);
+}
+
+.box-tier-card__stock--low {
+  border-color: rgb(255 209 102 / 42%);
+  color: #ffe7a6;
+  background: rgb(255 209 102 / 10%);
+}
+
+.box-tier-card__stock--sold {
+  color: #b6c7cf;
+  background: rgb(255 255 255 / 6%);
+}
+
+.box-tier-card__stock--muted {
+  color: #aebfc7;
+  background: rgb(255 255 255 / 6%);
 }
 
 .box-tier-card .box-status-badge {
@@ -1116,7 +1152,7 @@ a {
   }
 
   .box-tier-card {
-    min-height: 116px;
+    min-height: 136px;
   }
 
   .box-open-actions {
