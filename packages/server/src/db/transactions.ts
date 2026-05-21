@@ -55,22 +55,22 @@ export interface RpcAuditContext {
   /**
    * Current app user id.
    */
-  userId?: string;
+  userId?: string | undefined;
 
   /**
    * Telegram user id, if useful for audit.
    */
-  telegramUserId?: string | number;
+  telegramUserId?: string | number | undefined;
 
   /**
    * Idempotency key for this operation.
    */
-  idempotencyKey?: string;
+  idempotencyKey?: string | undefined;
 
   /**
    * Trace id for logs and database audit.
    */
-  traceId?: string;
+  traceId?: string | undefined;
 
   /**
    * Source of request.
@@ -78,17 +78,17 @@ export interface RpcAuditContext {
    * Example:
    * tma, telegram_webhook, admin, cron
    */
-  source?: string;
+  source?: string | undefined;
 
   /**
    * Optional IP hash. Never store raw IP unless you have a clear reason.
    */
-  ipHash?: string;
+  ipHash?: string | undefined;
 
   /**
    * Optional user-agent hash.
    */
-  userAgentHash?: string;
+  userAgentHash?: string | undefined;
 }
 
 export interface RpcTransactionOptions<TArgs extends RpcArgs = RpcArgs> {
@@ -100,7 +100,7 @@ export interface RpcTransactionOptions<TArgs extends RpcArgs = RpcArgs> {
    *
    * If omitted, Supabase uses the default exposed schema.
    */
-  schema?: string;
+  schema?: string | undefined;
 
   /**
    * RPC function name.
@@ -115,19 +115,19 @@ export interface RpcTransactionOptions<TArgs extends RpcArgs = RpcArgs> {
    *
    * Keep args JSON-safe. Do not pass raw Request, Response, Buffer, class instances.
    */
-  args?: TArgs;
+  args?: TArgs | undefined;
 
   /**
    * Whether the RPC is read or write.
    *
    * Default is "write" because most game operations are transactional writes.
    */
-  mode?: TransactionMode;
+  mode?: TransactionMode | undefined;
 
   /**
    * Timeout for the Supabase RPC request.
    */
-  timeoutMs?: number;
+  timeoutMs?: number | undefined;
 
   /**
    * Retry config.
@@ -138,32 +138,32 @@ export interface RpcTransactionOptions<TArgs extends RpcArgs = RpcArgs> {
    *
    * For write operations, only enable retry when the RPC is idempotent.
    */
-  retry?: false | Partial<RetryOptions>;
+  retry?: false | Partial<RetryOptions> | undefined;
 
   /**
    * Optional trace id. If omitted, a random UUID will be created.
    */
-  traceId?: string;
+  traceId?: string | undefined;
 
   /**
    * Human-readable label for logs.
    */
-  label?: string;
+  label?: string | undefined;
 
   /**
    * If true, null RPC data will throw.
    */
-  throwOnNullData?: boolean;
+  throwOnNullData?: boolean | undefined;
 
   /**
    * Optional callback when a retry happens.
    */
-  onRetry?: (event: RpcRetryEvent) => void | Promise<void>;
+  onRetry?: ((event: RpcRetryEvent) => void | Promise<void>) | undefined;
 }
 
 export interface RpcRetryEvent {
   traceId: string;
-  schema?: string;
+  schema?: string | undefined;
   functionName: string;
   mode: TransactionMode;
   attempt: number;
@@ -175,7 +175,7 @@ export interface RpcRetryEvent {
 
 export interface RpcTransactionMeta {
   traceId: string;
-  schema?: string;
+  schema?: string | undefined;
   functionName: string;
   mode: TransactionMode;
   attempts: number;
@@ -188,41 +188,41 @@ export interface RpcTransactionResult<TData> {
 }
 
 export interface NormalizedDbErrorInput {
-  code?: string;
-  message?: string;
-  details?: string | JsonValue;
-  hint?: string;
-  status?: number;
-  statusText?: string;
+  code?: string | undefined;
+  message?: string | undefined;
+  details?: string | JsonValue | undefined;
+  hint?: string | undefined;
+  status?: number | undefined;
+  statusText?: string | undefined;
 }
 
 export class DbTransactionError extends Error {
-  readonly name = "DbTransactionError";
-  readonly code?: string;
-  readonly details?: string | JsonValue;
-  readonly hint?: string;
-  readonly status?: number;
-  readonly statusText?: string;
-  readonly traceId?: string;
-  readonly schema?: string;
-  readonly functionName?: string;
-  readonly mode?: TransactionMode;
-  readonly attempt?: number;
-  readonly cause?: unknown;
+  override readonly name = "DbTransactionError";
+  readonly code: string | undefined;
+  readonly details: string | JsonValue | undefined;
+  readonly hint: string | undefined;
+  readonly status: number | undefined;
+  readonly statusText: string | undefined;
+  readonly traceId: string | undefined;
+  readonly schema: string | undefined;
+  readonly functionName: string | undefined;
+  readonly mode: TransactionMode | undefined;
+  readonly attempt: number | undefined;
+  override readonly cause: unknown;
 
   constructor(
     message: string,
     options: {
-      code?: string;
-      details?: string | JsonValue;
-      hint?: string;
-      status?: number;
-      statusText?: string;
-      traceId?: string;
-      schema?: string;
-      functionName?: string;
-      mode?: TransactionMode;
-      attempt?: number;
+      code?: string | undefined;
+      details?: string | JsonValue | undefined;
+      hint?: string | undefined;
+      status?: number | undefined;
+      statusText?: string | undefined;
+      traceId?: string | undefined;
+      schema?: string | undefined;
+      functionName?: string | undefined;
+      mode?: TransactionMode | undefined;
+      attempt?: number | undefined;
       cause?: unknown;
     } = {},
   ) {
@@ -364,9 +364,7 @@ export async function runRpcTransaction<
 export async function runRpcTransactionWithMeta<
   TData = JsonValue,
   TArgs extends RpcArgs = RpcArgs,
->(
-  options: RpcTransactionOptions<TArgs>,
-): Promise<RpcTransactionResult<TData>> {
+>(options: RpcTransactionOptions<TArgs>): Promise<RpcTransactionResult<TData>> {
   const functionName = normalizeFunctionName(options.functionName);
   const schema = normalizeOptionalString(options.schema);
   const mode: TransactionMode = options.mode ?? "write";
@@ -476,9 +474,7 @@ export async function runRpcTransactionWithMeta<
 export async function runReadRpc<
   TData = JsonValue,
   TArgs extends RpcArgs = RpcArgs,
->(
-  options: Omit<RpcTransactionOptions<TArgs>, "mode">,
-): Promise<TData> {
+>(options: Omit<RpcTransactionOptions<TArgs>, "mode">): Promise<TData> {
   return runRpcTransaction<TData, TArgs>({
     ...options,
     mode: "read",
@@ -488,9 +484,7 @@ export async function runReadRpc<
 export async function runWriteRpc<
   TData = JsonValue,
   TArgs extends RpcArgs = RpcArgs,
->(
-  options: Omit<RpcTransactionOptions<TArgs>, "mode">,
-): Promise<TData> {
+>(options: Omit<RpcTransactionOptions<TArgs>, "mode">): Promise<TData> {
   return runRpcTransaction<TData, TArgs>({
     ...options,
     mode: "write",
@@ -500,13 +494,13 @@ export async function runWriteRpc<
 export function normalizeDbError(
   error: unknown,
   context: {
-    traceId?: string;
-    schema?: string;
-    functionName?: string;
-    mode?: TransactionMode;
-    attempt?: number;
-    status?: number;
-    statusText?: string;
+    traceId?: string | undefined;
+    schema?: string | undefined;
+    functionName?: string | undefined;
+    mode?: TransactionMode | undefined;
+    attempt?: number | undefined;
+    status?: number | undefined;
+    statusText?: string | undefined;
   } = {},
 ): DbTransactionError {
   if (error instanceof DbTransactionError) {
@@ -556,8 +550,7 @@ export function normalizeDbError(
           ? error.details
           : undefined,
       hint: typeof error.hint === "string" ? error.hint : undefined,
-      status:
-        typeof error.status === "number" ? error.status : context.status,
+      status: typeof error.status === "number" ? error.status : context.status,
       statusText:
         typeof error.statusText === "string"
           ? error.statusText
@@ -626,20 +619,28 @@ interface RpcResponse<TData> {
   statusText?: string;
 }
 
+type RpcQuery<TData> = PromiseLike<RpcResponse<TData>> & {
+  abortSignal?: (signal: AbortSignal) => RpcQuery<TData>;
+};
+
+type RpcInvoker = {
+  rpc: <TData>(functionName: string, args: RpcArgs) => RpcQuery<TData>;
+  schema: (schema: string) => RpcInvoker;
+};
+
 async function callRpcOnce<TData, TArgs extends RpcArgs>(input: {
-  schema?: string;
+  schema?: string | undefined;
   functionName: string;
-  args?: TArgs;
+  args?: TArgs | undefined;
   timeoutMs: number;
   traceId: string;
   mode: TransactionMode;
   attempt: number;
 }): Promise<RpcResponse<TData>> {
-  const client = input.schema
-    ? (supabaseAdmin as any).schema(input.schema)
-    : (supabaseAdmin as any);
+  const baseClient = supabaseAdmin as unknown as RpcInvoker;
+  const client = input.schema ? baseClient.schema(input.schema) : baseClient;
 
-  let query = client.rpc(input.functionName, input.args ?? {});
+  let query = client.rpc<TData>(input.functionName, input.args ?? {});
 
   const controller =
     typeof AbortController !== "undefined" ? new AbortController() : undefined;
@@ -701,21 +702,9 @@ function resolveRetryOptions(
   }
 
   return {
-    maxAttempts: clampInteger(
-      retry.maxAttempts ?? base.maxAttempts,
-      1,
-      10,
-    ),
-    minDelayMs: clampInteger(
-      retry.minDelayMs ?? base.minDelayMs,
-      0,
-      60_000,
-    ),
-    maxDelayMs: clampInteger(
-      retry.maxDelayMs ?? base.maxDelayMs,
-      0,
-      120_000,
-    ),
+    maxAttempts: clampInteger(retry.maxAttempts ?? base.maxAttempts, 1, 10),
+    minDelayMs: clampInteger(retry.minDelayMs ?? base.minDelayMs, 0, 60_000),
+    maxDelayMs: clampInteger(retry.maxDelayMs ?? base.maxDelayMs, 0, 120_000),
     factor: clampNumber(retry.factor ?? base.factor, 1, 10),
     jitter: clampNumber(retry.jitter ?? base.jitter, 0, 1),
   };
@@ -748,7 +737,9 @@ function normalizeFunctionName(functionName: string): string {
   return trimmed;
 }
 
-function normalizeOptionalString(value: string | undefined): string | undefined {
+function normalizeOptionalString(
+  value: string | undefined,
+): string | undefined {
   const trimmed = value?.trim();
 
   return trimmed ? trimmed : undefined;

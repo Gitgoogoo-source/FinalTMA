@@ -94,7 +94,10 @@ function formatZodIssues(error: z.ZodError): string {
     .join("\n");
 }
 
-function maskSecret(value: string | undefined, visibleChars = 4): string | undefined {
+function maskSecret(
+  value: string | undefined,
+  visibleChars = 4,
+): string | undefined {
   if (!value) {
     return undefined;
   }
@@ -226,25 +229,32 @@ const numberFromEnv = (
     max?: number;
   },
 ) =>
-  z.preprocess((value) => {
-    if (isEmptyEnvValue(value)) {
-      return defaultValue;
-    }
-
-    if (typeof value === "number") {
-      return value;
-    }
-
-    if (typeof value === "string") {
-      const parsed = Number(value);
-
-      if (Number.isFinite(parsed)) {
-        return parsed;
+  z.preprocess(
+    (value) => {
+      if (isEmptyEnvValue(value)) {
+        return defaultValue;
       }
-    }
 
-    return value;
-  }, z.number().int().min(options?.min ?? 0).max(options?.max ?? Number.MAX_SAFE_INTEGER));
+      if (typeof value === "number") {
+        return value;
+      }
+
+      if (typeof value === "string") {
+        const parsed = Number(value);
+
+        if (Number.isFinite(parsed)) {
+          return parsed;
+        }
+      }
+
+      return value;
+    },
+    z
+      .number()
+      .int()
+      .min(options?.min ?? 0)
+      .max(options?.max ?? Number.MAX_SAFE_INTEGER),
+  );
 
 const enumFromEnv = <T extends readonly [string, ...string[]]>(
   values: T,
@@ -258,27 +268,31 @@ const enumFromEnv = <T extends readonly [string, ...string[]]>(
     return value;
   }, z.enum(values));
 
-const optionalEnumFromEnv = <T extends readonly [string, ...string[]]>(values: T) =>
-  z.preprocess(emptyStringToUndefined, z.enum(values).optional());
+const optionalEnumFromEnv = <T extends readonly [string, ...string[]]>(
+  values: T,
+) => z.preprocess(emptyStringToUndefined, z.enum(values).optional());
 
-const csvListFromEnv = z.preprocess((value) => {
-  if (isEmptyEnvValue(value)) {
-    return [];
-  }
+const csvListFromEnv = z.preprocess(
+  (value) => {
+    if (isEmptyEnvValue(value)) {
+      return [];
+    }
 
-  if (Array.isArray(value)) {
+    if (Array.isArray(value)) {
+      return value;
+    }
+
+    if (typeof value === "string") {
+      return value
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
+    }
+
     return value;
-  }
-
-  if (typeof value === "string") {
-    return value
-      .split(",")
-      .map((item) => item.trim())
-      .filter(Boolean);
-  }
-
-  return value;
-}, z.array(z.string().trim().min(1)));
+  },
+  z.array(z.string().trim().min(1)),
+);
 
 const corsOriginsFromEnv = csvListFromEnv.superRefine((origins, ctx) => {
   for (const origin of origins) {
@@ -298,7 +312,7 @@ const corsOriginsFromEnv = csvListFromEnv.superRefine((origins, ctx) => {
 function isProductionLikeInput(input: {
   APP_ENV: AppEnv;
   NODE_ENV: NodeEnv;
-  VERCEL_ENV?: VercelEnv;
+  VERCEL_ENV?: VercelEnv | undefined;
 }): boolean {
   return (
     input.APP_ENV === "production" ||
@@ -428,7 +442,11 @@ export const serverEnvSchema = z
       });
     }
 
-    if (isProductionLike && resolvedPublicAppUrl && !isHttpsUrl(resolvedPublicAppUrl)) {
+    if (
+      isProductionLike &&
+      resolvedPublicAppUrl &&
+      !isHttpsUrl(resolvedPublicAppUrl)
+    ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["PUBLIC_APP_URL"],
@@ -445,7 +463,11 @@ export const serverEnvSchema = z
       });
     }
 
-    if (isProductionLike && !input.APP_SESSION_SECRET && !input.SESSION_SECRET) {
+    if (
+      isProductionLike &&
+      !input.APP_SESSION_SECRET &&
+      !input.SESSION_SECRET
+    ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["APP_SESSION_SECRET"],
@@ -475,11 +497,16 @@ export const serverEnvSchema = z
       });
     }
 
-    if (input.ENABLE_CRON_API && isProductionLike && !input.INTERNAL_CRON_SECRET) {
+    if (
+      input.ENABLE_CRON_API &&
+      isProductionLike &&
+      !input.INTERNAL_CRON_SECRET
+    ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["INTERNAL_CRON_SECRET"],
-        message: "INTERNAL_CRON_SECRET is required when cron API is enabled in production.",
+        message:
+          "INTERNAL_CRON_SECRET is required when cron API is enabled in production.",
       });
     }
 
@@ -566,8 +593,7 @@ const publicAppUrl =
 
 const normalizedPublicAppUrl = trimTrailingSlash(publicAppUrl);
 
-const apiBaseUrl =
-  raw.API_BASE_URL ?? `${normalizedPublicAppUrl}/api`;
+const apiBaseUrl = raw.API_BASE_URL ?? `${normalizedPublicAppUrl}/api`;
 
 const corsAllowedOrigins =
   raw.CORS_ALLOWED_ORIGINS.length > 0
@@ -583,24 +609,19 @@ const sessionSecret =
   raw.SESSION_SECRET ??
   createLocalOnlySecret("SESSION_SECRET");
 
-const adminSessionSecret =
-  raw.ADMIN_SESSION_SECRET ??
-  sessionSecret;
+const adminSessionSecret = raw.ADMIN_SESSION_SECRET ?? sessionSecret;
 
 const supabaseServerKey =
   raw.SUPABASE_SECRET_KEY ?? raw.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseServerKey) {
-  throw new Error(
-    "Missing Supabase server key after environment validation.",
-  );
+  throw new Error("Missing Supabase server key after environment validation.");
 }
 
 const telegramWebhookSecret =
   raw.TELEGRAM_WEBHOOK_SECRET ?? raw.TELEGRAM_WEBHOOK_SECRET_TOKEN;
 
-const sessionCookieSecure =
-  raw.SESSION_COOKIE_SECURE ?? isProductionLike;
+const sessionCookieSecure = raw.SESSION_COOKIE_SECURE ?? isProductionLike;
 
 const tonConnectManifestUrl =
   raw.TONCONNECT_MANIFEST_URL ??
@@ -734,7 +755,9 @@ export function isTest(): boolean {
   return env.APP.IS_TEST;
 }
 
-export function isFeatureEnabled(feature: keyof ServerEnv["FEATURES"]): boolean {
+export function isFeatureEnabled(
+  feature: keyof ServerEnv["FEATURES"],
+): boolean {
   return env.FEATURES[feature];
 }
 

@@ -1,6 +1,6 @@
 // packages/server/src/db/rpc.ts
 
-import type { Database } from "@tma-game/db-types";
+import type { Database } from "./database";
 import {
   getSupabaseAdminClient,
   type SupabaseAdminClient,
@@ -43,8 +43,8 @@ export type RpcArgsObject = Record<string, unknown>;
 export type RpcResult<TData> = {
   data: TData;
   count: number | null;
-  status?: number;
-  statusText?: string;
+  status?: number | undefined;
+  statusText?: string | undefined;
 };
 
 export type RpcCallOptions = {
@@ -109,26 +109,49 @@ export type SupabaseRpcErrorPayload = {
   code?: string | null;
 };
 
+type RpcQuery<TResult> = PromiseLike<{
+  data: TResult | null;
+  error: SupabaseRpcErrorPayload | null;
+  count?: number | null;
+  status?: number;
+  statusText?: string;
+}> & {
+  abortSignal?: (signal: AbortSignal) => RpcQuery<TResult>;
+};
+
+type RpcInvoker = {
+  rpc: <TResult>(
+    rpcName: string,
+    args: RpcArgsObject,
+    options: {
+      head?: boolean | undefined;
+      get?: boolean | undefined;
+      count?: RpcCountOption | undefined;
+    },
+  ) => RpcQuery<TResult>;
+  schema: (schema: string) => RpcInvoker;
+};
+
 type RpcErrorConstructorParams = {
   rpcName: string;
   error?: SupabaseRpcErrorPayload | null;
   cause?: unknown;
-  status?: number;
-  statusText?: string;
+  status?: number | undefined;
+  statusText?: string | undefined;
   args?: unknown;
-  context?: Record<string, unknown>;
+  context?: Record<string, unknown> | undefined;
 };
 
 export class RpcError extends Error {
   public readonly rpcName: string;
-  public readonly code?: string | null;
-  public readonly details?: string | null;
-  public readonly hint?: string | null;
-  public readonly status?: number;
-  public readonly statusText?: string;
+  public readonly code: string | null | undefined;
+  public readonly details: string | null | undefined;
+  public readonly hint: string | null | undefined;
+  public readonly status: number | undefined;
+  public readonly statusText: string | undefined;
   public readonly args?: unknown;
-  public readonly context?: Record<string, unknown>;
-  public readonly cause?: unknown;
+  public readonly context: Record<string, unknown> | undefined;
+  public override readonly cause: unknown;
 
   constructor(params: RpcErrorConstructorParams) {
     const message =
@@ -177,8 +200,7 @@ function parsePositiveInteger(value: unknown): number | undefined {
     return undefined;
   }
 
-  const parsed =
-    typeof value === "number" ? value : Number.parseInt(value, 10);
+  const parsed = typeof value === "number" ? value : Number.parseInt(value, 10);
 
   if (!Number.isFinite(parsed) || parsed <= 0) {
     return undefined;
@@ -271,7 +293,6 @@ function createAbortSignal(options: RpcCallOptions): {
 
   if (!timeoutMs && !externalSignal) {
     return {
-      signal: undefined,
       cleanup: () => undefined,
     };
   }
@@ -318,7 +339,10 @@ function createAbortSignal(options: RpcCallOptions): {
   };
 }
 
-function attachAbortSignal<TQuery>(query: TQuery, signal?: AbortSignal): TQuery {
+function attachAbortSignal<TQuery>(
+  query: TQuery,
+  signal?: AbortSignal,
+): TQuery {
   if (!signal) {
     return query;
   }
@@ -407,12 +431,13 @@ async function executeRpc<TResult>(
      * 如果使用自定义 schema，例如 "private_rpc"、"internal"，
      * 可以传 options.schema。
      */
+    const baseClient = client as unknown as RpcInvoker;
     const rpcClient =
       options.schema && options.schema !== "public"
-        ? (client.schema(options.schema as never) as any)
-        : (client as any);
+        ? baseClient.schema(options.schema)
+        : baseClient;
 
-    const query = rpcClient.rpc(rpcName, effectiveArgs, {
+    const query = rpcClient.rpc<TResult>(rpcName, effectiveArgs, {
       head: options.head,
       get: options.get,
       count: options.count,

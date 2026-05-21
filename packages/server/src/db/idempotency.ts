@@ -2,19 +2,15 @@ import { createHash, randomUUID } from "node:crypto";
 import { supabaseAdmin } from "./supabaseAdmin";
 import {
   DbTransactionError,
-  JsonObject,
-  JsonValue,
-  RpcArgs,
-  RpcTransactionOptions,
+  type JsonObject,
+  type JsonValue,
+  type RpcArgs,
+  type RpcTransactionOptions,
   normalizeDbError,
   runRpcTransaction,
 } from "./transactions";
 
-export type IdempotencyStatus =
-  | "processing"
-  | "completed"
-  | "failed"
-  | "expired";
+export type IdempotencyStatus = "started" | "completed" | "failed";
 
 export type IdempotencyReservationKind =
   | "locked"
@@ -34,92 +30,31 @@ export type IdempotencyErrorCode =
   | "IDEMPOTENCY_IN_PROGRESS"
   | "IDEMPOTENCY_PREVIOUSLY_FAILED"
   | "IDEMPOTENCY_LOCK_LOST"
-  | "IDEMPOTENCY_RECORD_NOT_FOUND"
-  | "IDEMPOTENCY_DB_ERROR";
+  | "IDEMPOTENCY_RECORD_NOT_FOUND";
 
 export interface IdempotencyRecord {
-  scope: string;
   key: string;
-  request_hash: string;
   user_id: string | null;
-  status: IdempotencyStatus;
+  scope: string;
+  request_hash: string | null;
   response: JsonValue | null;
-  error: JsonValue | null;
-  lock_token: string | null;
+  status: IdempotencyStatus;
   locked_until: string | null;
-  expires_at: string;
-  attempts: number;
-  metadata: JsonValue | null;
-  last_trace_id: string | null;
   created_at: string;
   updated_at: string;
-  completed_at: string | null;
-  failed_at: string | null;
 }
 
 export interface ReserveIdempotencyInput {
-  /**
-   * Business scope.
-   *
-   * Example:
-   * "gacha.create_open_order"
-   * "gacha.process_paid_order"
-   * "market.buy_listing"
-   * "inventory.evolve_item"
-   * "tasks.claim_reward"
-   */
   scope: string;
-
-  /**
-   * Client-provided or server-generated idempotency key.
-   */
   key: string;
-
-  /**
-   * Current app user id.
-   *
-   * For Telegram webhook events that do not directly belong to one user,
-   * this can be null or undefined.
-   */
-  userId?: string | null;
-
-  /**
-   * Raw request payload used to generate request_hash.
-   */
-  requestPayload?: unknown;
-
-  /**
-   * If you already computed request_hash, pass it here.
-   */
-  requestHash?: string;
-
-  /**
-   * How long this operation lock is valid.
-   *
-   * If the server crashes while processing, another request with the same
-   * scope/key/request_hash can take over after lock expiry.
-   */
-  lockMs?: number;
-
-  /**
-   * How long this record should be considered active.
-   */
-  ttlMs?: number;
-
-  /**
-   * Whether a failed operation can be retried with the same key and same payload.
-   */
-  retryOnFailure?: boolean;
-
-  /**
-   * Trace id for audit.
-   */
-  traceId?: string;
-
-  /**
-   * Extra JSON-safe metadata.
-   */
-  metadata?: JsonObject;
+  userId?: string | null | undefined;
+  requestPayload?: unknown | undefined;
+  requestHash?: string | undefined;
+  lockMs?: number | undefined;
+  ttlMs?: number | undefined;
+  retryOnFailure?: boolean | undefined;
+  traceId?: string | undefined;
+  metadata?: JsonObject | undefined;
 }
 
 export interface LockedReservation {
@@ -179,7 +114,7 @@ export interface CompleteIdempotencyInput<TData extends JsonValue = JsonValue> {
   requestHash: string;
   lockToken: string;
   response: TData;
-  traceId?: string;
+  traceId?: string | undefined;
 }
 
 export interface FailIdempotencyInput {
@@ -188,20 +123,20 @@ export interface FailIdempotencyInput {
   requestHash: string;
   lockToken: string;
   error: unknown;
-  traceId?: string;
+  traceId?: string | undefined;
 }
 
 export interface WithIdempotencyInput<TData extends JsonValue = JsonValue> {
   scope: string;
   key: string;
-  userId?: string | null;
-  requestPayload?: unknown;
-  requestHash?: string;
-  lockMs?: number;
-  ttlMs?: number;
-  retryOnFailure?: boolean;
-  traceId?: string;
-  metadata?: JsonObject;
+  userId?: string | null | undefined;
+  requestPayload?: unknown | undefined;
+  requestHash?: string | undefined;
+  lockMs?: number | undefined;
+  ttlMs?: number | undefined;
+  retryOnFailure?: boolean | undefined;
+  traceId?: string | undefined;
+  metadata?: JsonObject | undefined;
   handler: (context: IdempotencyExecutionContext) => Promise<TData>;
 }
 
@@ -210,7 +145,7 @@ export interface IdempotencyExecutionContext {
   key: string;
   requestHash: string;
   lockToken: string;
-  traceId?: string;
+  traceId?: string | undefined;
   record: IdempotencyRecord;
 }
 
@@ -234,23 +169,22 @@ export interface RunIdempotentRpcTransactionInput<
 }
 
 export class IdempotencyError extends Error {
-  readonly name = "IdempotencyError";
+  override readonly name = "IdempotencyError";
   readonly code: IdempotencyErrorCode;
   readonly status: number;
-  readonly details?: JsonObject;
-  readonly cause?: unknown;
+  readonly details: JsonObject | undefined;
+  override readonly cause: unknown;
 
   constructor(
     message: string,
     options: {
       code: IdempotencyErrorCode;
       status?: number;
-      details?: JsonObject;
+      details?: JsonObject | undefined;
       cause?: unknown;
     },
   ) {
     super(message);
-
     Object.setPrototypeOf(this, new.target.prototype);
 
     this.code = options.code;
@@ -274,35 +208,12 @@ const IDEMPOTENCY_SCHEMA = "ops";
 const IDEMPOTENCY_TABLE = "idempotency_keys";
 
 const DEFAULT_LOCK_MS = 2 * 60 * 1000;
-const DEFAULT_TTL_MS = 24 * 60 * 60 * 1000;
-
 const MAX_KEY_LENGTH = 180;
 const MAX_SCOPE_LENGTH = 120;
 
 const SAFE_KEY_PATTERN = /^[a-zA-Z0-9:_./-]+$/;
 const SAFE_SCOPE_PATTERN = /^[a-zA-Z0-9:_./-]+$/;
 
-/**
- * Main wrapper for idempotent business logic.
- *
- * Typical usage in API route:
- *
- * const result = await withIdempotency({
- *   scope: "market.buy_listing",
- *   key: idempotencyKey,
- *   userId,
- *   requestPayload: body,
- *   handler: async () => {
- *     return await runRpcTransaction({
- *       schema: "market",
- *       functionName: "market_buy_listing",
- *       args: ...
- *     });
- *   }
- * });
- *
- * return result.data;
- */
 export async function withIdempotency<TData extends JsonValue = JsonValue>(
   input: WithIdempotencyInput<TData>,
 ): Promise<IdempotentExecutionResult<TData>> {
@@ -370,7 +281,7 @@ export async function withIdempotency<TData extends JsonValue = JsonValue>(
         details: {
           scope: reservation.scope,
           key: reservation.key,
-          error: reservation.record.error,
+          response: reservation.record.response,
         },
       },
     );
@@ -424,10 +335,6 @@ export async function withIdempotency<TData extends JsonValue = JsonValue>(
   }
 }
 
-/**
- * Convenience helper:
- * withIdempotency() + runRpcTransaction()
- */
 export async function runIdempotentRpcTransaction<
   TData extends JsonValue = JsonValue,
   TArgs extends RpcArgs = RpcArgs,
@@ -442,16 +349,6 @@ export async function runIdempotentRpcTransaction<
   });
 }
 
-/**
- * Reserve an idempotency key.
- *
- * Result:
- * - locked: current request can execute the operation
- * - cached: same request already completed; return cached response
- * - in_progress: same request is still being processed
- * - failed: same request failed before and retryOnFailure is false
- * - mismatch: same key used with a different request payload
- */
 export async function reserveIdempotencyKey<TData = JsonValue>(
   input: ReserveIdempotencyInput,
 ): Promise<IdempotencyReservation<TData>> {
@@ -460,28 +357,20 @@ export async function reserveIdempotencyKey<TData = JsonValue>(
   const requestHash =
     input.requestHash ?? hashIdempotencyPayload(input.requestPayload ?? {});
   const lockMs = input.lockMs ?? DEFAULT_LOCK_MS;
-  const ttlMs = input.ttlMs ?? DEFAULT_TTL_MS;
   const now = new Date();
-  const lockToken = randomUUID();
-
-  const insertPayload = {
-    scope,
-    key,
-    request_hash: requestHash,
-    user_id: input.userId ?? null,
-    status: "processing" satisfies IdempotencyStatus,
-    response: null,
-    error: null,
-    lock_token: lockToken,
-    locked_until: addMs(now, lockMs).toISOString(),
-    expires_at: addMs(now, ttlMs).toISOString(),
-    attempts: 1,
-    metadata: input.metadata ?? null,
-    last_trace_id: input.traceId ?? null,
-  };
+  const lockToken = addMs(now, lockMs).toISOString();
 
   const { data, error } = await idempotencyTable()
-    .insert(insertPayload)
+    .insert({
+      key,
+      user_id: input.userId ?? null,
+      scope,
+      request_hash: requestHash,
+      response: null,
+      status: "started" satisfies IdempotencyStatus,
+      locked_until: lockToken,
+      updated_at: now.toISOString(),
+    })
     .select("*")
     .single();
 
@@ -521,13 +410,9 @@ export async function reserveIdempotencyKey<TData = JsonValue>(
     requestHash,
     lockMs,
     retryOnFailure: input.retryOnFailure ?? true,
-    traceId: input.traceId,
   });
 }
 
-/**
- * Mark an idempotent operation as completed and store JSON response.
- */
 export async function completeIdempotencyKey<
   TData extends JsonValue = JsonValue,
 >(input: CompleteIdempotencyInput<TData>): Promise<IdempotencyRecord> {
@@ -535,24 +420,20 @@ export async function completeIdempotencyKey<
   const key = normalizeIdempotencyKey(input.key);
   const nowIso = new Date().toISOString();
 
-  let query = idempotencyTable()
+  const { data, error } = await idempotencyTable()
     .update({
       status: "completed" satisfies IdempotencyStatus,
       response: toJsonValue(input.response),
-      error: null,
-      lock_token: null,
       locked_until: null,
-      last_trace_id: input.traceId ?? null,
-      completed_at: nowIso,
       updated_at: nowIso,
     })
     .eq("scope", scope)
     .eq("key", key)
     .eq("request_hash", input.requestHash)
-    .eq("status", "processing")
-    .eq("lock_token", input.lockToken);
-
-  const { data, error } = await query.select("*").maybeSingle();
+    .eq("status", "started")
+    .eq("locked_until", input.lockToken)
+    .select("*")
+    .maybeSingle();
 
   if (error) {
     throw normalizeDbError(error, {
@@ -562,25 +443,19 @@ export async function completeIdempotencyKey<
   }
 
   if (!data) {
-    throw new IdempotencyError(
-      "Idempotency lock was lost before completion.",
-      {
-        code: "IDEMPOTENCY_LOCK_LOST",
-        status: 409,
-        details: {
-          scope,
-          key,
-        },
+    throw new IdempotencyError("Idempotency lock was lost before completion.", {
+      code: "IDEMPOTENCY_LOCK_LOST",
+      status: 409,
+      details: {
+        scope,
+        key,
       },
-    );
+    });
   }
 
   return castRecord(data);
 }
 
-/**
- * Mark an idempotent operation as failed.
- */
 export async function failIdempotencyKey(
   input: FailIdempotencyInput,
 ): Promise<IdempotencyRecord> {
@@ -591,19 +466,15 @@ export async function failIdempotencyKey(
   const { data, error } = await idempotencyTable()
     .update({
       status: "failed" satisfies IdempotencyStatus,
-      response: null,
-      error: normalizeErrorForStorage(input.error),
-      lock_token: null,
+      response: normalizeErrorForStorage(input.error),
       locked_until: null,
-      last_trace_id: input.traceId ?? null,
-      failed_at: nowIso,
       updated_at: nowIso,
     })
     .eq("scope", scope)
     .eq("key", key)
     .eq("request_hash", input.requestHash)
-    .eq("status", "processing")
-    .eq("lock_token", input.lockToken)
+    .eq("status", "started")
+    .eq("locked_until", input.lockToken)
     .select("*")
     .maybeSingle();
 
@@ -714,40 +585,28 @@ export function normalizeScope(scopeInput: string): string {
   }
 
   if (!SAFE_SCOPE_PATTERN.test(scope)) {
-    throw new IdempotencyError("Idempotency scope contains invalid characters.", {
-      code: "IDEMPOTENCY_SCOPE_INVALID",
-      status: 400,
-      details: {
-        allowed: "letters, numbers, colon, underscore, dot, slash, hyphen",
+    throw new IdempotencyError(
+      "Idempotency scope contains invalid characters.",
+      {
+        code: "IDEMPOTENCY_SCOPE_INVALID",
+        status: 400,
+        details: {
+          allowed: "letters, numbers, colon, underscore, dot, slash, hyphen",
+        },
       },
-    });
+    );
   }
 
   return scope;
 }
 
-/**
- * Stable SHA-256 hash for request payload.
- *
- * Same JSON payload with different object key order will produce the same hash.
- */
 export function hashIdempotencyPayload(payload: unknown): string {
   const stablePayload = stableStringify(payload);
-
   return createHash("sha256").update(stablePayload).digest("hex");
 }
 
-/**
- * Read idempotency key from headers.
- *
- * Supports:
- * - Idempotency-Key
- * - X-Idempotency-Key
- */
 export function getIdempotencyKeyFromHeaders(
-  headers:
-    | Headers
-    | Record<string, string | string[] | undefined | null>,
+  headers: Headers | Record<string, string | string[] | undefined | null>,
 ): string | null {
   const value =
     getHeader(headers, "Idempotency-Key") ??
@@ -765,7 +624,6 @@ async function resolveExistingReservation<TData>(input: {
   requestHash: string;
   lockMs: number;
   retryOnFailure: boolean;
-  traceId?: string;
 }): Promise<IdempotencyReservation<TData>> {
   const { record, requestHash } = input;
 
@@ -775,7 +633,7 @@ async function resolveExistingReservation<TData>(input: {
       scope: record.scope,
       key: record.key,
       incomingRequestHash: requestHash,
-      storedRequestHash: record.request_hash,
+      storedRequestHash: record.request_hash ?? "",
       record,
     };
   }
@@ -791,7 +649,7 @@ async function resolveExistingReservation<TData>(input: {
     };
   }
 
-  if (record.status === "processing") {
+  if (record.status === "started") {
     if (!isLockExpired(record)) {
       return {
         kind: "in_progress",
@@ -807,30 +665,10 @@ async function resolveExistingReservation<TData>(input: {
       record,
       requestHash,
       lockMs: input.lockMs,
-      traceId: input.traceId,
     });
   }
 
-  if (record.status === "failed") {
-    if (!input.retryOnFailure) {
-      return {
-        kind: "failed",
-        scope: record.scope,
-        key: record.key,
-        requestHash,
-        record,
-      };
-    }
-
-    return takeOverRecord<TData>({
-      record,
-      requestHash,
-      lockMs: input.lockMs,
-      traceId: input.traceId,
-    });
-  }
-
-  if (record.status === "expired") {
+  if (!input.retryOnFailure) {
     return {
       kind: "failed",
       scope: record.scope,
@@ -840,44 +678,31 @@ async function resolveExistingReservation<TData>(input: {
     };
   }
 
-  return {
-    kind: "failed",
-    scope: record.scope,
-    key: record.key,
-    requestHash,
+  return takeOverRecord<TData>({
     record,
-  };
+    requestHash,
+    lockMs: input.lockMs,
+  });
 }
 
 async function takeOverRecord<TData>(input: {
   record: IdempotencyRecord;
   requestHash: string;
   lockMs: number;
-  traceId?: string;
 }): Promise<IdempotencyReservation<TData>> {
   const now = new Date();
-  const lockToken = randomUUID();
+  const lockToken = addMs(now, input.lockMs).toISOString();
 
   let query = idempotencyTable()
     .update({
-      status: "processing" satisfies IdempotencyStatus,
-      error: null,
-      lock_token: lockToken,
-      locked_until: addMs(now, input.lockMs).toISOString(),
-      attempts: (input.record.attempts ?? 0) + 1,
-      last_trace_id: input.traceId ?? null,
+      status: "started" satisfies IdempotencyStatus,
+      locked_until: lockToken,
       updated_at: now.toISOString(),
     })
     .eq("scope", input.record.scope)
     .eq("key", input.record.key)
     .eq("request_hash", input.requestHash)
     .eq("status", input.record.status);
-
-  if (input.record.lock_token) {
-    query = query.eq("lock_token", input.record.lock_token);
-  } else {
-    query = query.is("lock_token", null);
-  }
 
   if (input.record.locked_until) {
     query = query.eq("locked_until", input.record.locked_until);
@@ -911,7 +736,10 @@ async function takeOverRecord<TData>(input: {
       });
     }
 
-    if (latest.status === "completed" && latest.request_hash === input.requestHash) {
+    if (
+      latest.status === "completed" &&
+      latest.request_hash === input.requestHash
+    ) {
       return {
         kind: "cached",
         scope: latest.scope,
@@ -945,9 +773,7 @@ async function takeOverRecord<TData>(input: {
 }
 
 function idempotencyTable() {
-  return (supabaseAdmin as any)
-    .schema(IDEMPOTENCY_SCHEMA)
-    .from(IDEMPOTENCY_TABLE);
+  return supabaseAdmin.schema(IDEMPOTENCY_SCHEMA).from(IDEMPOTENCY_TABLE);
 }
 
 function castRecord(data: unknown): IdempotencyRecord {
@@ -999,7 +825,10 @@ function stableStringify(value: unknown): string {
   return JSON.stringify(toStableJsonValue(value));
 }
 
-function toStableJsonValue(value: unknown, seen = new WeakSet<object>()): JsonValue {
+function toStableJsonValue(
+  value: unknown,
+  seen = new WeakSet<object>(),
+): JsonValue {
   if (value === null || value === undefined) {
     return null;
   }

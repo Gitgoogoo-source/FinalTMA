@@ -21,7 +21,7 @@ export type TelegramInitDataErrorCode =
 export class TelegramInitDataValidationError extends Error {
   public readonly code: TelegramInitDataErrorCode;
   public readonly statusCode = 401;
-  public readonly cause?: unknown;
+  public override readonly cause?: unknown;
 
   constructor(
     code: TelegramInitDataErrorCode,
@@ -37,23 +37,23 @@ export class TelegramInitDataValidationError extends Error {
 
 export interface TelegramWebAppUser {
   id: number;
-  is_bot?: boolean;
+  is_bot?: boolean | undefined;
   first_name: string;
-  last_name?: string;
-  username?: string;
-  language_code?: string;
-  is_premium?: boolean;
-  added_to_attachment_menu?: boolean;
-  allows_write_to_pm?: boolean;
-  photo_url?: string;
+  last_name?: string | undefined;
+  username?: string | undefined;
+  language_code?: string | undefined;
+  is_premium?: boolean | undefined;
+  added_to_attachment_menu?: boolean | undefined;
+  allows_write_to_pm?: boolean | undefined;
+  photo_url?: string | undefined;
 }
 
 export interface TelegramWebAppChat {
   id: number;
   type: "group" | "supergroup" | "channel" | string;
   title: string;
-  username?: string;
-  photo_url?: string;
+  username?: string | undefined;
+  photo_url?: string | undefined;
 }
 
 export interface VerifiedTelegramInitData {
@@ -64,15 +64,15 @@ export interface VerifiedTelegramInitData {
   authDateUnix: number;
   authDate: Date;
 
-  queryId?: string;
+  queryId?: string | undefined;
   user: TelegramWebAppUser;
-  receiver?: TelegramWebAppUser;
-  chat?: TelegramWebAppChat;
+  receiver?: TelegramWebAppUser | undefined;
+  chat?: TelegramWebAppChat | undefined;
 
-  chatType?: string;
-  chatInstance?: string;
-  startParam?: string;
-  canSendAfter?: number;
+  chatType?: string | undefined;
+  chatInstance?: string | undefined;
+  startParam?: string | undefined;
+  canSendAfter?: number | undefined;
 
   /**
    * 用于后续写入 core.app_sessions.init_hash，方便审计。
@@ -238,9 +238,7 @@ export function computeTelegramInitDataHash(
     .update(botToken)
     .digest();
 
-  return createHmac("sha256", secretKey)
-    .update(dataCheckString)
-    .digest("hex");
+  return createHmac("sha256", secretKey).update(dataCheckString).digest("hex");
 }
 
 function normalizeRawInitData(initData: string): string {
@@ -418,7 +416,7 @@ function isTelegramWebAppUser(value: unknown): value is TelegramWebAppUser {
   );
 }
 
-function isRecord(value: unknown): value is Record<string, any> {
+function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 

@@ -1,16 +1,16 @@
 // packages/server/src/auth/verifySession.ts
 
 import { timingSafeEqual } from "node:crypto";
-import type { SupabaseClient } from "@supabase/supabase-js";
-import { getSupabaseAdminClient } from "../db/supabaseAdmin";
+import {
+  getSupabaseAdminClient,
+  type SupabaseAdminClient,
+} from "../db/supabaseAdmin";
 import {
   SESSION_COOKIE_NAME,
   hashClientFingerprint,
   hashSessionToken,
   parseSessionToken,
 } from "./issueSession";
-
-export type SupabaseAdminClient = SupabaseClient<any, any, any>;
 
 export type SessionVerificationErrorCode =
   | "SESSION_TOKEN_MISSING"
@@ -26,7 +26,7 @@ export type SessionVerificationErrorCode =
 export class SessionVerificationError extends Error {
   public readonly code: SessionVerificationErrorCode;
   public readonly statusCode = 401;
-  public readonly cause?: unknown;
+  public override readonly cause?: unknown;
 
   constructor(
     code: SessionVerificationErrorCode,
@@ -43,11 +43,11 @@ export class SessionVerificationError extends Error {
 export interface VerifiedAppSession {
   sessionId: string;
   userId: string;
-  telegramUserId?: string;
+  telegramUserId?: string | undefined;
 
-  issuedAt?: Date;
+  issuedAt?: Date | undefined;
   expiresAt: Date;
-  lastSeenAt?: Date;
+  lastSeenAt?: Date | undefined;
 
   expiresInSeconds: number;
   metadata: Record<string, unknown>;
@@ -124,19 +124,20 @@ export interface RequestLike {
 interface AppSessionRow {
   id: string;
   user_id: string;
-  telegram_user_id: string | null;
 
-  token_hash: string;
+  session_token_hash: string;
 
-  issued_at: string | null;
+  created_at: string | null;
   expires_at: string;
   last_seen_at: string | null;
   revoked_at: string | null;
 
   ip_hash: string | null;
-  user_agent_hash: string | null;
+  user_agent: string | null;
+}
 
-  metadata: Record<string, unknown> | null;
+interface SessionUserRow {
+  telegram_user_id: number | string | null;
 }
 
 /**
@@ -200,15 +201,13 @@ export async function verifySessionToken(
       [
         "id",
         "user_id",
-        "telegram_user_id",
-        "token_hash",
-        "issued_at",
+        "session_token_hash",
+        "created_at",
         "expires_at",
         "last_seen_at",
         "revoked_at",
         "ip_hash",
-        "user_agent_hash",
-        "metadata",
+        "user_agent",
       ].join(","),
     )
     .eq("id", tokenParts.sessionId)
@@ -223,13 +222,10 @@ export async function verifySessionToken(
   }
 
   if (!data) {
-    throw new SessionVerificationError(
-      "SESSION_NOT_FOUND",
-      "session 不存在。",
-    );
+    throw new SessionVerificationError("SESSION_NOT_FOUND", "session 不存在。");
   }
 
-  if (!safeHexEqual(data.token_hash, tokenHash)) {
+  if (!safeHexEqual(data.session_token_hash, tokenHash)) {
     throw new SessionVerificationError(
       "SESSION_HASH_MISMATCH",
       "session token 校验失败。",
@@ -237,19 +233,13 @@ export async function verifySessionToken(
   }
 
   if (data.revoked_at) {
-    throw new SessionVerificationError(
-      "SESSION_REVOKED",
-      "session 已被撤销。",
-    );
+    throw new SessionVerificationError("SESSION_REVOKED", "session 已被撤销。");
   }
 
   const expiresAtMs = Date.parse(data.expires_at);
 
   if (!Number.isFinite(expiresAtMs) || expiresAtMs <= nowMs) {
-    throw new SessionVerificationError(
-      "SESSION_EXPIRED",
-      "session 已过期。",
-    );
+    throw new SessionVerificationError("SESSION_EXPIRED", "session 已过期。");
   }
 
   if (options.strictIp && data.ip_hash && options.ip) {
@@ -263,13 +253,13 @@ export async function verifySessionToken(
     }
   }
 
-  if (options.strictUserAgent && data.user_agent_hash && options.userAgent) {
+  if (options.strictUserAgent && data.user_agent && options.userAgent) {
     const incomingUserAgentHash = hashClientFingerprint(
       options.userAgent,
       "user_agent",
     );
 
-    if (!safeHexEqual(data.user_agent_hash, incomingUserAgentHash)) {
+    if (!safeHexEqual(data.user_agent, incomingUserAgentHash)) {
       throw new SessionVerificationError(
         "SESSION_USER_AGENT_MISMATCH",
         "请求 User-Agent 与 session 指纹不匹配。",
@@ -281,26 +271,25 @@ export async function verifySessionToken(
     await touchSessionIfNeeded(db, data, tokenHash, now, options);
   }
 
+  const telegramUserId = await getSessionTelegramUserId(db, data.user_id);
+
   return {
     sessionId: data.id,
     userId: data.user_id,
-    telegramUserId: data.telegram_user_id ?? undefined,
+    telegramUserId,
 
-    issuedAt: data.issued_at ? new Date(data.issued_at) : undefined,
+    issuedAt: data.created_at ? new Date(data.created_at) : undefined,
     expiresAt: new Date(data.expires_at),
     lastSeenAt: data.last_seen_at ? new Date(data.last_seen_at) : undefined,
 
     expiresInSeconds: Math.max(0, Math.floor((expiresAtMs - nowMs) / 1000)),
-    metadata: data.metadata ?? {},
+    metadata: {},
   };
 }
 
 export function extractSessionTokenFromHeaders(
   headers: HeadersLike,
-  options: Pick<
-    VerifySessionOptions,
-    "cookieName" | "sessionHeaderName"
-  > = {},
+  options: Pick<VerifySessionOptions, "cookieName" | "sessionHeaderName"> = {},
 ): string {
   const authorization = getHeader(headers, "authorization");
 
@@ -337,7 +326,9 @@ export function extractSessionTokenFromHeaders(
   );
 }
 
-export function parseCookieHeader(cookieHeader: string): Record<string, string> {
+export function parseCookieHeader(
+  cookieHeader: string,
+): Record<string, string> {
   const result: Record<string, string> = {};
 
   for (const part of cookieHeader.split(";")) {
@@ -383,10 +374,35 @@ async function touchSessionIfNeeded(
     .from("app_sessions")
     .update({
       last_seen_at: now.toISOString(),
-      updated_at: now.toISOString(),
     })
     .eq("id", session.id)
-    .eq("token_hash", tokenHash);
+    .eq("session_token_hash", tokenHash);
+}
+
+async function getSessionTelegramUserId(
+  db: SupabaseAdminClient,
+  userId: string,
+): Promise<string | undefined> {
+  const { data, error } = await db
+    .schema("core")
+    .from("users")
+    .select("telegram_user_id")
+    .eq("id", userId)
+    .maybeSingle<SessionUserRow>();
+
+  if (error) {
+    throw new SessionVerificationError(
+      "SESSION_DB_ERROR",
+      "查询 session 用户失败。",
+      error,
+    );
+  }
+
+  if (data?.telegram_user_id === null || data?.telegram_user_id === undefined) {
+    return undefined;
+  }
+
+  return String(data.telegram_user_id);
 }
 
 function shouldTouch(

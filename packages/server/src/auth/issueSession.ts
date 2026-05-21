@@ -1,10 +1,10 @@
 // packages/server/src/auth/issueSession.ts
 
 import { createHmac, randomBytes, randomUUID } from "node:crypto";
-import type { SupabaseClient } from "@supabase/supabase-js";
-import { getSupabaseAdminClient } from "../db/supabaseAdmin";
-
-export type SupabaseAdminClient = SupabaseClient<any, any, any>;
+import {
+  getSupabaseAdminClient,
+  type SupabaseAdminClient,
+} from "../db/supabaseAdmin";
 
 export type IssueSessionErrorCode =
   | "SESSION_SECRET_MISSING"
@@ -16,7 +16,7 @@ export type IssueSessionErrorCode =
 export class IssueSessionError extends Error {
   public readonly code: IssueSessionErrorCode;
   public readonly statusCode = 500;
-  public readonly cause?: unknown;
+  public override readonly cause?: unknown;
 
   constructor(code: IssueSessionErrorCode, message: string, cause?: unknown) {
     super(message);
@@ -91,7 +91,7 @@ export interface IssuedSession {
   tokenType: "Bearer";
   sessionId: string;
   userId: string;
-  telegramUserId?: string;
+  telegramUserId?: string | undefined;
   issuedAt: Date;
   expiresAt: Date;
   expiresInSeconds: number;
@@ -146,7 +146,6 @@ export async function issueSession(
       .from("app_sessions")
       .update({
         revoked_at: issuedAt.toISOString(),
-        updated_at: issuedAt.toISOString(),
       })
       .eq("user_id", input.userId)
       .is("revoked_at", null);
@@ -163,37 +162,25 @@ export async function issueSession(
   const row = {
     id: tokenParts.sessionId,
     user_id: input.userId,
-    telegram_user_id:
-      input.telegramUserId === undefined
-        ? null
-        : String(input.telegramUserId),
 
-    token_hash: tokenHash,
-
-    issued_at: issuedAt.toISOString(),
+    session_token_hash: tokenHash,
     expires_at: expiresAt.toISOString(),
     last_seen_at: issuedAt.toISOString(),
     revoked_at: null,
 
     ip_hash: input.ip ? hashClientFingerprint(input.ip, "ip") : null,
-    user_agent_hash: input.userAgent
+    user_agent: input.userAgent
       ? hashClientFingerprint(input.userAgent, "user_agent")
       : null,
 
-    init_auth_date:
+    telegram_auth_date:
       typeof input.initDataAuthDate === "number"
         ? new Date(input.initDataAuthDate * 1000).toISOString()
         : null,
 
-    init_hash: input.initDataHash ?? null,
-
-    metadata: {
-      ...(input.metadata ?? {}),
-      session_version: 1,
-    },
+    init_data_hash: input.initDataHash ?? null,
 
     created_at: issuedAt.toISOString(),
-    updated_at: issuedAt.toISOString(),
   };
 
   const { error } = await db.schema("core").from("app_sessions").insert(row);
@@ -248,7 +235,12 @@ export function parseSessionToken(token: string): SessionTokenParts | null {
     return null;
   }
 
-  const [sessionId, secret] = segments;
+  const sessionId = segments[0];
+  const secret = segments[1];
+
+  if (!sessionId || !secret) {
+    return null;
+  }
 
   if (!isUuid(sessionId)) {
     return null;
@@ -286,10 +278,7 @@ export function buildSessionCookie(
   const secure = options.secure ?? true;
   const httpOnly = options.httpOnly ?? true;
 
-  const parts = [
-    `${cookieName}=${encodeURIComponent(token)}`,
-    `Path=${path}`,
-  ];
+  const parts = [`${cookieName}=${encodeURIComponent(token)}`, `Path=${path}`];
 
   if (typeof options.maxAgeSeconds === "number") {
     parts.push(`Max-Age=${Math.max(0, Math.floor(options.maxAgeSeconds))}`);

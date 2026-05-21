@@ -1,60 +1,60 @@
 /* packages/server/src/security/rateLimit.ts */
 
-import { createHash, createHmac } from 'node:crypto';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import { createHash, createHmac } from "node:crypto";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
-export type RateLimitStorageName = 'memory' | 'supabase-rpc' | 'none';
+export type RateLimitStorageName = "memory" | "supabase-rpc" | "none";
 
 export type RateLimitScope =
-  | 'global'
-  | 'ip'
-  | 'user'
-  | 'session'
-  | 'telegram_user'
-  | 'wallet'
-  | 'custom';
+  | "global"
+  | "ip"
+  | "user"
+  | "session"
+  | "telegram_user"
+  | "wallet"
+  | "custom";
 
 export type RateLimitAction =
-  | '*'
-  | 'auth.telegram'
-  | 'auth.refresh'
-  | 'me.bootstrap'
-  | 'box.list'
-  | 'box.rewards'
-  | 'box.create_open_order'
-  | 'box.result'
-  | 'box.history'
-  | 'telegram.webhook'
-  | 'telegram.share'
-  | 'market.listings'
-  | 'market.listing_detail'
-  | 'market.buy'
-  | 'market.sellable_items'
-  | 'market.create_listing'
-  | 'market.my_listings'
-  | 'market.update_price'
-  | 'market.cancel_listing'
-  | 'inventory.list'
-  | 'inventory.detail'
-  | 'inventory.upgrade'
-  | 'inventory.evolve'
-  | 'inventory.decompose'
-  | 'album.progress'
-  | 'album.claim_reward'
-  | 'album.leaderboard'
-  | 'tasks.list'
-  | 'tasks.claim'
-  | 'tasks.check_in'
-  | 'tasks.invite_stats'
-  | 'tasks.referral_link'
-  | 'wallet.connect'
-  | 'wallet.proof'
-  | 'wallet.sync_nfts'
-  | 'wallet.mint'
-  | 'wallet.mint_status'
-  | 'admin.read'
-  | 'admin.write'
-  | 'cron.job'
+  | "*"
+  | "auth.telegram"
+  | "auth.refresh"
+  | "me.bootstrap"
+  | "box.list"
+  | "box.rewards"
+  | "box.create_open_order"
+  | "box.result"
+  | "box.history"
+  | "telegram.webhook"
+  | "telegram.share"
+  | "market.listings"
+  | "market.listing_detail"
+  | "market.buy"
+  | "market.sellable_items"
+  | "market.create_listing"
+  | "market.my_listings"
+  | "market.update_price"
+  | "market.cancel_listing"
+  | "inventory.list"
+  | "inventory.detail"
+  | "inventory.upgrade"
+  | "inventory.evolve"
+  | "inventory.decompose"
+  | "album.progress"
+  | "album.claim_reward"
+  | "album.leaderboard"
+  | "tasks.list"
+  | "tasks.claim"
+  | "tasks.check_in"
+  | "tasks.invite_stats"
+  | "tasks.referral_link"
+  | "wallet.connect"
+  | "wallet.proof"
+  | "wallet.sync_nfts"
+  | "wallet.mint"
+  | "wallet.mint_status"
+  | "admin.read"
+  | "admin.write"
+  | "cron.job"
   | (string & {});
 
 export type HeaderValue = string | string[] | number | undefined | null;
@@ -70,31 +70,31 @@ export interface RateLimitRule {
   scope: RateLimitScope;
   windowMs: number;
   max: number;
-  blockMs?: number;
-  enabled?: boolean;
-  description?: string;
-  keyPrefix?: string;
-  failOpen?: boolean;
+  blockMs?: number | undefined;
+  enabled?: boolean | undefined;
+  description?: string | undefined;
+  keyPrefix?: string | undefined;
+  failOpen?: boolean | undefined;
 }
 
 export interface RateLimitSubject {
-  ip?: string;
-  userId?: string;
-  sessionId?: string;
-  telegramUserId?: string | number;
-  walletAddress?: string;
-  custom?: string;
+  ip?: string | undefined;
+  userId?: string | undefined;
+  sessionId?: string | undefined;
+  telegramUserId?: string | number | undefined;
+  walletAddress?: string | undefined;
+  custom?: string | undefined;
 }
 
 export interface RateLimitRequestContext extends RateLimitSubject {
   action: RateLimitAction;
-  method?: string;
-  path?: string;
-  headers?: HeaderLike;
-  userAgent?: string;
-  idempotencyKey?: string;
-  now?: Date;
-  metadata?: Record<string, unknown>;
+  method?: string | undefined;
+  path?: string | undefined;
+  headers?: HeaderLike | undefined;
+  userAgent?: string | undefined;
+  idempotencyKey?: string | undefined;
+  now?: Date | undefined;
+  metadata?: Record<string, unknown> | undefined;
 }
 
 export interface RateLimitStoreConsumeInput {
@@ -104,18 +104,18 @@ export interface RateLimitStoreConsumeInput {
   identifierHash: string;
   limit: number;
   windowMs: number;
-  blockMs?: number;
+  blockMs?: number | undefined;
   now: Date;
-  metadata?: Record<string, unknown>;
+  metadata?: Record<string, unknown> | undefined;
 }
 
 export type RateLimitRejectReason =
-  | 'disabled'
-  | 'allowed'
-  | 'limit_exceeded'
-  | 'blocked'
-  | 'store_error'
-  | 'missing_subject';
+  | "disabled"
+  | "allowed"
+  | "limit_exceeded"
+  | "blocked"
+  | "store_error"
+  | "missing_subject";
 
 export interface RateLimitResult {
   allowed: boolean;
@@ -129,16 +129,16 @@ export interface RateLimitResult {
   windowMs: number;
   resetAt: Date;
   retryAfterMs: number;
-  blockedUntil?: Date;
+  blockedUntil?: Date | undefined;
   reason: RateLimitRejectReason;
-  storeError?: string;
+  storeError?: string | undefined;
 }
 
 export interface RateLimitCombinedResult {
   allowed: boolean;
   action: RateLimitAction;
   results: RateLimitResult[];
-  rejected?: RateLimitResult;
+  rejected?: RateLimitResult | undefined;
   retryAfterMs: number;
   headers: Record<string, string>;
 }
@@ -149,21 +149,21 @@ export interface RateLimitStore {
 }
 
 export interface CreateRateLimiterOptions {
-  supabase?: SupabaseClient;
-  store?: RateLimitStore;
-  rules?: RateLimitRule[];
-  extraRules?: RateLimitRule[];
-  keyPrefix?: string;
-  keySecret?: string;
-  rpcName?: string;
-  failOpen?: boolean;
+  supabase?: SupabaseClient | undefined;
+  store?: RateLimitStore | undefined;
+  rules?: RateLimitRule[] | undefined;
+  extraRules?: RateLimitRule[] | undefined;
+  keyPrefix?: string | undefined;
+  keySecret?: string | undefined;
+  rpcName?: string | undefined;
+  failOpen?: boolean | undefined;
 }
 
 export interface RateLimiterOptions {
   store: RateLimitStore;
   rules: RateLimitRule[];
-  keyPrefix?: string;
-  keySecret?: string;
+  keyPrefix?: string | undefined;
+  keySecret?: string | undefined;
 }
 
 interface BuiltRateLimitKey {
@@ -175,209 +175,210 @@ interface BuiltRateLimitKey {
 interface MemoryBucket {
   count: number;
   windowStartedAtMs: number;
-  blockedUntilMs?: number;
+  blockedUntilMs?: number | undefined;
 }
 
-const DEFAULT_KEY_PREFIX = 'tma_game';
+const DEFAULT_KEY_PREFIX = "tma_game";
 
 const DEFAULT_WINDOW_MS = 60_000;
 
 const DEFAULT_BLOCK_MS = 60_000;
 
 const SENSITIVE_METADATA_KEYS = new Set([
-  'authorization',
-  'auth',
-  'token',
-  'access_token',
-  'refresh_token',
-  'bot_token',
-  'service_role',
-  'apikey',
-  'api_key',
-  'secret',
-  'password',
-  'private_key',
-  'privateKey',
-  'initData',
-  'init_data',
-  'hash',
-  'signature',
-  'headers',
-  'cookie',
-  'cookies',
-  'ip',
+  "authorization",
+  "auth",
+  "token",
+  "access_token",
+  "refresh_token",
+  "bot_token",
+  "service_role",
+  "apikey",
+  "api_key",
+  "secret",
+  "password",
+  "private_key",
+  "privateKey",
+  "initData",
+  "init_data",
+  "hash",
+  "signature",
+  "headers",
+  "cookie",
+  "cookies",
+  "ip",
 ]);
 
 export const DEFAULT_RATE_LIMIT_RULES: RateLimitRule[] = [
   {
-    action: '*',
-    scope: 'ip',
+    action: "*",
+    scope: "ip",
     windowMs: 60_000,
     max: 300,
     blockMs: 60_000,
-    description: 'Global IP protection for all public API requests.',
+    description: "Global IP protection for all public API requests.",
   },
 
   {
-    action: 'auth.telegram',
-    scope: 'ip',
+    action: "auth.telegram",
+    scope: "ip",
     windowMs: 60_000,
     max: 30,
     blockMs: 5 * 60_000,
-    description: 'Prevent Telegram initData brute-force verification attempts.',
+    description: "Prevent Telegram initData brute-force verification attempts.",
   },
   {
-    action: 'auth.refresh',
-    scope: 'session',
+    action: "auth.refresh",
+    scope: "session",
     windowMs: 60_000,
     max: 20,
     blockMs: 2 * 60_000,
   },
 
   {
-    action: 'box.create_open_order',
-    scope: 'user',
+    action: "box.create_open_order",
+    scope: "user",
     windowMs: 60_000,
     max: 12,
     blockMs: 2 * 60_000,
-    description: 'Limit paid draw order creation per user.',
+    description: "Limit paid draw order creation per user.",
   },
   {
-    action: 'box.create_open_order',
-    scope: 'ip',
+    action: "box.create_open_order",
+    scope: "ip",
     windowMs: 60_000,
     max: 40,
     blockMs: 2 * 60_000,
   },
   {
-    action: 'box.result',
-    scope: 'user',
+    action: "box.result",
+    scope: "user",
     windowMs: 60_000,
     max: 60,
     blockMs: 60_000,
   },
 
   {
-    action: 'telegram.webhook',
-    scope: 'ip',
+    action: "telegram.webhook",
+    scope: "ip",
     windowMs: 60_000,
     max: 600,
     blockMs: 60_000,
-    description: 'Telegram webhook can burst; keep this higher than normal user APIs.',
+    description:
+      "Telegram webhook can burst; keep this higher than normal user APIs.",
   },
 
   {
-    action: 'market.buy',
-    scope: 'user',
+    action: "market.buy",
+    scope: "user",
     windowMs: 60_000,
     max: 30,
     blockMs: 3 * 60_000,
   },
   {
-    action: 'market.create_listing',
-    scope: 'user',
+    action: "market.create_listing",
+    scope: "user",
     windowMs: 60_000,
     max: 30,
     blockMs: 3 * 60_000,
   },
   {
-    action: 'market.update_price',
-    scope: 'user',
+    action: "market.update_price",
+    scope: "user",
     windowMs: 60_000,
     max: 20,
     blockMs: 3 * 60_000,
   },
   {
-    action: 'market.cancel_listing',
-    scope: 'user',
+    action: "market.cancel_listing",
+    scope: "user",
     windowMs: 60_000,
     max: 30,
     blockMs: 3 * 60_000,
   },
 
   {
-    action: 'inventory.upgrade',
-    scope: 'user',
+    action: "inventory.upgrade",
+    scope: "user",
     windowMs: 60_000,
     max: 60,
     blockMs: 2 * 60_000,
   },
   {
-    action: 'inventory.evolve',
-    scope: 'user',
+    action: "inventory.evolve",
+    scope: "user",
     windowMs: 60_000,
     max: 20,
     blockMs: 3 * 60_000,
   },
   {
-    action: 'inventory.decompose',
-    scope: 'user',
+    action: "inventory.decompose",
+    scope: "user",
     windowMs: 60_000,
     max: 40,
     blockMs: 3 * 60_000,
   },
 
   {
-    action: 'tasks.claim',
-    scope: 'user',
+    action: "tasks.claim",
+    scope: "user",
     windowMs: 60_000,
     max: 30,
     blockMs: 2 * 60_000,
   },
   {
-    action: 'tasks.check_in',
-    scope: 'user',
+    action: "tasks.check_in",
+    scope: "user",
     windowMs: 60_000,
     max: 10,
     blockMs: 2 * 60_000,
   },
   {
-    action: 'tasks.referral_link',
-    scope: 'user',
+    action: "tasks.referral_link",
+    scope: "user",
     windowMs: 60_000,
     max: 20,
     blockMs: 2 * 60_000,
   },
 
   {
-    action: 'wallet.connect',
-    scope: 'user',
+    action: "wallet.connect",
+    scope: "user",
     windowMs: 60_000,
     max: 20,
     blockMs: 2 * 60_000,
   },
   {
-    action: 'wallet.proof',
-    scope: 'user',
+    action: "wallet.proof",
+    scope: "user",
     windowMs: 60_000,
     max: 20,
     blockMs: 2 * 60_000,
   },
   {
-    action: 'wallet.sync_nfts',
-    scope: 'user',
+    action: "wallet.sync_nfts",
+    scope: "user",
     windowMs: 5 * 60_000,
     max: 12,
     blockMs: 5 * 60_000,
   },
   {
-    action: 'wallet.mint',
-    scope: 'user',
+    action: "wallet.mint",
+    scope: "user",
     windowMs: 60_000,
     max: 10,
     blockMs: 5 * 60_000,
   },
 
   {
-    action: 'admin.write',
-    scope: 'user',
+    action: "admin.write",
+    scope: "user",
     windowMs: 60_000,
     max: 60,
     blockMs: 5 * 60_000,
   },
   {
-    action: 'admin.write',
-    scope: 'ip',
+    action: "admin.write",
+    scope: "ip",
     windowMs: 60_000,
     max: 100,
     blockMs: 5 * 60_000,
@@ -391,22 +392,27 @@ export class RateLimitError extends Error {
 
   public readonly headers: Record<string, string>;
 
-  constructor(result: RateLimitCombinedResult, message = '请求过于频繁，请稍后再试。') {
+  constructor(
+    result: RateLimitCombinedResult,
+    message = "请求过于频繁，请稍后再试。",
+  ) {
     super(message);
-    this.name = 'RateLimitError';
+    this.name = "RateLimitError";
     this.result = result;
     this.headers = result.headers;
   }
 }
 
 export class MemoryRateLimitStore implements RateLimitStore {
-  public readonly name = 'memory' as const;
+  public readonly name = "memory" as const;
 
   private readonly buckets = new Map<string, MemoryBucket>();
 
   private operationCount = 0;
 
-  public async consume(input: RateLimitStoreConsumeInput): Promise<RateLimitResult> {
+  public async consume(
+    input: RateLimitStoreConsumeInput,
+  ): Promise<RateLimitResult> {
     const nowMs = input.now.getTime();
     const windowMs = input.windowMs || DEFAULT_WINDOW_MS;
     const blockMs = input.blockMs ?? DEFAULT_BLOCK_MS;
@@ -434,7 +440,7 @@ export class MemoryRateLimitStore implements RateLimitStore {
         resetAt: new Date(existing.windowStartedAtMs + windowMs),
         retryAfterMs: Math.max(0, existing.blockedUntilMs - nowMs),
         blockedUntil,
-        reason: 'blocked',
+        reason: "blocked",
       };
     }
 
@@ -467,7 +473,7 @@ export class MemoryRateLimitStore implements RateLimitStore {
         resetAt: new Date(bucket.windowStartedAtMs + windowMs),
         retryAfterMs: blockMs,
         blockedUntil: new Date(bucket.blockedUntilMs),
-        reason: 'limit_exceeded',
+        reason: "limit_exceeded",
       };
     }
 
@@ -485,7 +491,7 @@ export class MemoryRateLimitStore implements RateLimitStore {
       windowMs,
       resetAt: new Date(bucket.windowStartedAtMs + windowMs),
       retryAfterMs: 0,
-      reason: 'allowed',
+      reason: "allowed",
     };
   }
 
@@ -495,8 +501,11 @@ export class MemoryRateLimitStore implements RateLimitStore {
 
   private cleanup(nowMs: number): void {
     for (const [key, bucket] of this.buckets.entries()) {
-      const windowExpired = nowMs - bucket.windowStartedAtMs > 10 * DEFAULT_WINDOW_MS;
-      const blockExpired = bucket.blockedUntilMs ? bucket.blockedUntilMs < nowMs : true;
+      const windowExpired =
+        nowMs - bucket.windowStartedAtMs > 10 * DEFAULT_WINDOW_MS;
+      const blockExpired = bucket.blockedUntilMs
+        ? bucket.blockedUntilMs < nowMs
+        : true;
 
       if (windowExpired && blockExpired) {
         this.buckets.delete(key);
@@ -507,8 +516,8 @@ export class MemoryRateLimitStore implements RateLimitStore {
 
 export interface SupabaseRpcRateLimitStoreOptions {
   supabase: SupabaseClient;
-  rpcName?: string;
-  failOpen?: boolean;
+  rpcName?: string | undefined;
+  failOpen?: boolean | undefined;
 }
 
 /**
@@ -532,7 +541,7 @@ export interface SupabaseRpcRateLimitStoreOptions {
  * The database RPC should perform atomic insert/update under a transaction.
  */
 export class SupabaseRpcRateLimitStore implements RateLimitStore {
-  public readonly name = 'supabase-rpc' as const;
+  public readonly name = "supabase-rpc" as const;
 
   private readonly supabase: SupabaseClient;
 
@@ -542,11 +551,13 @@ export class SupabaseRpcRateLimitStore implements RateLimitStore {
 
   constructor(options: SupabaseRpcRateLimitStoreOptions) {
     this.supabase = options.supabase;
-    this.rpcName = options.rpcName ?? 'ops_check_rate_limit';
+    this.rpcName = options.rpcName ?? "ops_check_rate_limit";
     this.failOpen = options.failOpen ?? true;
   }
 
-  public async consume(input: RateLimitStoreConsumeInput): Promise<RateLimitResult> {
+  public async consume(
+    input: RateLimitStoreConsumeInput,
+  ): Promise<RateLimitResult> {
     const fallbackResetAt = new Date(input.now.getTime() + input.windowMs);
 
     try {
@@ -568,7 +579,7 @@ export class SupabaseRpcRateLimitStore implements RateLimitStore {
 
       const row = Array.isArray(data) ? data[0] : data;
 
-      if (!row || typeof row !== 'object') {
+      if (!row || typeof row !== "object") {
         return this.handleStoreError(
           input,
           `RPC ${this.rpcName} returned empty or invalid data.`,
@@ -655,7 +666,7 @@ export class SupabaseRpcRateLimitStore implements RateLimitStore {
         windowMs: input.windowMs,
         resetAt,
         retryAfterMs: 0,
-        reason: 'store_error',
+        reason: "store_error",
         storeError,
       };
     }
@@ -673,16 +684,18 @@ export class SupabaseRpcRateLimitStore implements RateLimitStore {
       resetAt,
       retryAfterMs: input.blockMs ?? input.windowMs,
       blockedUntil: new Date(Date.now() + (input.blockMs ?? input.windowMs)),
-      reason: 'store_error',
+      reason: "store_error",
       storeError,
     };
   }
 }
 
 export class NoopRateLimitStore implements RateLimitStore {
-  public readonly name = 'none' as const;
+  public readonly name = "none" as const;
 
-  public async consume(input: RateLimitStoreConsumeInput): Promise<RateLimitResult> {
+  public async consume(
+    input: RateLimitStoreConsumeInput,
+  ): Promise<RateLimitResult> {
     return {
       allowed: true,
       action: input.action,
@@ -695,7 +708,7 @@ export class NoopRateLimitStore implements RateLimitStore {
       windowMs: input.windowMs,
       resetAt: new Date(input.now.getTime() + input.windowMs),
       retryAfterMs: 0,
-      reason: 'disabled',
+      reason: "disabled",
     };
   }
 }
@@ -707,13 +720,13 @@ export class RateLimiter {
 
   private readonly keyPrefix: string;
 
-  private readonly keySecret?: string;
+  private readonly keySecret: string | undefined;
 
   constructor(options: RateLimiterOptions) {
     this.store = options.store;
     this.rules = options.rules;
     this.keyPrefix = options.keyPrefix ?? DEFAULT_KEY_PREFIX;
-    this.keySecret = options.keySecret ?? getEnv('RATE_LIMIT_HASH_SECRET');
+    this.keySecret = options.keySecret ?? getEnv("RATE_LIMIT_HASH_SECRET");
   }
 
   public async check(
@@ -774,7 +787,9 @@ export class RateLimiter {
   }
 
   public getRulesForAction(action: RateLimitAction): RateLimitRule[] {
-    return this.rules.filter((rule) => rule.action === action || rule.action === '*');
+    return this.rules.filter(
+      (rule) => rule.action === action || rule.action === "*",
+    );
   }
 
   private async checkRule(
@@ -814,13 +829,9 @@ export function createRateLimiter(
   options: CreateRateLimiterOptions = {},
 ): RateLimiter {
   const keyPrefix =
-    options.keyPrefix ??
-    getEnv('RATE_LIMIT_KEY_PREFIX') ??
-    DEFAULT_KEY_PREFIX;
+    options.keyPrefix ?? getEnv("RATE_LIMIT_KEY_PREFIX") ?? DEFAULT_KEY_PREFIX;
 
-  const keySecret =
-    options.keySecret ??
-    getEnv('RATE_LIMIT_HASH_SECRET');
+  const keySecret = options.keySecret ?? getEnv("RATE_LIMIT_HASH_SECRET");
 
   const rules = [
     ...(options.rules ?? DEFAULT_RATE_LIMIT_RULES),
@@ -849,8 +860,8 @@ export function buildRateLimitKey(
   rule: RateLimitRule,
   context: RateLimitRequestContext,
   options: {
-    keyPrefix?: string;
-    keySecret?: string;
+    keyPrefix?: string | undefined;
+    keySecret?: string | undefined;
   } = {},
 ): BuiltRateLimitKey | undefined {
   const subject = getRateLimitSubject(rule.scope, context);
@@ -861,7 +872,7 @@ export function buildRateLimitKey(
 
   const identifierHash = hashIdentifier(subject, options.keySecret);
   const prefix = sanitizeKeyPart(options.keyPrefix ?? DEFAULT_KEY_PREFIX);
-  const actionPart = sanitizeKeyPart(rule.action === '*' ? 'all' : rule.action);
+  const actionPart = sanitizeKeyPart(rule.action === "*" ? "all" : rule.action);
   const scopePart = sanitizeKeyPart(rule.scope);
 
   return {
@@ -876,31 +887,31 @@ export function getRateLimitSubject(
   context: RateLimitRequestContext,
 ): string | undefined {
   switch (scope) {
-    case 'global':
-      return 'global';
+    case "global":
+      return "global";
 
-    case 'ip': {
+    case "ip": {
       const ip = context.ip ?? getClientIp(context.headers);
       return ip ? `ip:${normalizeIp(ip)}` : undefined;
     }
 
-    case 'user':
+    case "user":
       return context.userId ? `user:${context.userId}` : undefined;
 
-    case 'session':
+    case "session":
       return context.sessionId ? `session:${context.sessionId}` : undefined;
 
-    case 'telegram_user':
+    case "telegram_user":
       return context.telegramUserId
         ? `telegram_user:${String(context.telegramUserId)}`
         : undefined;
 
-    case 'wallet':
+    case "wallet":
       return context.walletAddress
         ? `wallet:${normalizeWalletAddress(context.walletAddress)}`
         : undefined;
 
-    case 'custom':
+    case "custom":
       return context.custom ? `custom:${context.custom}` : undefined;
 
     default:
@@ -914,12 +925,12 @@ export function getClientIp(headers?: HeaderLike): string | undefined {
   }
 
   const candidates = [
-    'x-vercel-forwarded-for',
-    'x-forwarded-for',
-    'cf-connecting-ip',
-    'x-real-ip',
-    'real-ip',
-    'remote-addr',
+    "x-vercel-forwarded-for",
+    "x-forwarded-for",
+    "cf-connecting-ip",
+    "x-real-ip",
+    "real-ip",
+    "remote-addr",
   ];
 
   for (const name of candidates) {
@@ -928,7 +939,7 @@ export function getClientIp(headers?: HeaderLike): string | undefined {
       continue;
     }
 
-    const first = String(raw).split(',')[0]?.trim();
+    const first = String(raw).split(",")[0]?.trim();
 
     if (first) {
       return first;
@@ -948,7 +959,7 @@ export function getHeaderValue(
 
   const lowerName = name.toLowerCase();
 
-  if (typeof (headers as { get?: unknown }).get === 'function') {
+  if (typeof (headers as { get?: unknown }).get === "function") {
     const value = (headers as { get(name: string): string | null }).get(name);
     return value ?? undefined;
   }
@@ -982,15 +993,15 @@ export function getRateLimitHeaders(
   const retryAfterSeconds = Math.ceil(result.retryAfterMs / 1_000);
 
   const headers: Record<string, string> = {
-    'X-RateLimit-Limit': String(result.limit),
-    'X-RateLimit-Remaining': String(Math.max(0, result.remaining)),
-    'X-RateLimit-Reset': String(Math.ceil(result.resetAt.getTime() / 1_000)),
-    'X-RateLimit-Action': String(result.action),
-    'X-RateLimit-Scope': String(result.scope),
+    "X-RateLimit-Limit": String(result.limit),
+    "X-RateLimit-Remaining": String(Math.max(0, result.remaining)),
+    "X-RateLimit-Reset": String(Math.ceil(result.resetAt.getTime() / 1_000)),
+    "X-RateLimit-Action": String(result.action),
+    "X-RateLimit-Scope": String(result.scope),
   };
 
   if (!result.allowed) {
-    headers['Retry-After'] = String(Math.max(1, retryAfterSeconds));
+    headers["Retry-After"] = String(Math.max(1, retryAfterSeconds));
   }
 
   return headers;
@@ -1000,10 +1011,10 @@ export function hashIdentifier(value: string, secret?: string): string {
   const normalized = value.trim().toLowerCase();
 
   if (secret) {
-    return createHmac('sha256', secret).update(normalized).digest('hex');
+    return createHmac("sha256", secret).update(normalized).digest("hex");
   }
 
-  return createHash('sha256').update(normalized).digest('hex');
+  return createHash("sha256").update(normalized).digest("hex");
 }
 
 export function sanitizeMetadata(
@@ -1017,7 +1028,7 @@ export function sanitizeMetadata(
 
   for (const [key, value] of Object.entries(metadata)) {
     if (SENSITIVE_METADATA_KEYS.has(key) || looksSensitiveKey(key)) {
-      output[key] = '[redacted]';
+      output[key] = "[redacted]";
       continue;
     }
 
@@ -1034,9 +1045,9 @@ function sanitizeMetadataValue(value: unknown): unknown {
 
   if (
     value === null ||
-    typeof value === 'string' ||
-    typeof value === 'number' ||
-    typeof value === 'boolean'
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean"
   ) {
     return value;
   }
@@ -1045,13 +1056,13 @@ function sanitizeMetadataValue(value: unknown): unknown {
     return value.slice(0, 50).map((item) => sanitizeMetadataValue(item));
   }
 
-  if (typeof value === 'object' && value) {
+  if (typeof value === "object" && value) {
     const objectValue = value as Record<string, unknown>;
     const output: Record<string, unknown> = {};
 
     for (const [key, nestedValue] of Object.entries(objectValue).slice(0, 50)) {
       if (SENSITIVE_METADATA_KEYS.has(key) || looksSensitiveKey(key)) {
-        output[key] = '[redacted]';
+        output[key] = "[redacted]";
       } else {
         output[key] = sanitizeMetadataValue(nestedValue);
       }
@@ -1067,13 +1078,13 @@ function looksSensitiveKey(key: string): boolean {
   const normalized = key.toLowerCase();
 
   return (
-    normalized.includes('token') ||
-    normalized.includes('secret') ||
-    normalized.includes('password') ||
-    normalized.includes('private') ||
-    normalized.includes('cookie') ||
-    normalized.includes('signature') ||
-    normalized.includes('authorization')
+    normalized.includes("token") ||
+    normalized.includes("secret") ||
+    normalized.includes("password") ||
+    normalized.includes("private") ||
+    normalized.includes("cookie") ||
+    normalized.includes("signature") ||
+    normalized.includes("authorization")
   );
 }
 
@@ -1086,7 +1097,8 @@ function selectPrimaryRateLimitResult(
 
   return results.reduce((best, current) => {
     const bestRatio = best.limit > 0 ? best.remaining / best.limit : 0;
-    const currentRatio = current.limit > 0 ? current.remaining / current.limit : 0;
+    const currentRatio =
+      current.limit > 0 ? current.remaining / current.limit : 0;
 
     return currentRatio < bestRatio ? current : best;
   });
@@ -1097,25 +1109,25 @@ function normalizeRejectReason(
   allowed: boolean,
 ): RateLimitRejectReason {
   if (allowed) {
-    return 'allowed';
+    return "allowed";
   }
 
-  const text = typeof value === 'string' ? value : '';
+  const text = typeof value === "string" ? value : "";
 
   if (
-    text === 'blocked' ||
-    text === 'limit_exceeded' ||
-    text === 'store_error' ||
-    text === 'missing_subject'
+    text === "blocked" ||
+    text === "limit_exceeded" ||
+    text === "store_error" ||
+    text === "missing_subject"
   ) {
     return text;
   }
 
-  return 'limit_exceeded';
+  return "limit_exceeded";
 }
 
 function normalizeIp(ip: string): string {
-  return ip.trim().toLowerCase().replace(/^\[/, '').replace(/\]$/, '');
+  return ip.trim().toLowerCase().replace(/^\[/, "").replace(/\]$/, "");
 }
 
 function normalizeWalletAddress(address: string): string {
@@ -1123,14 +1135,14 @@ function normalizeWalletAddress(address: string): string {
 }
 
 function sanitizeKeyPart(value: string): string {
-  return value.replace(/[^a-zA-Z0-9._:-]/g, '_');
+  return value.replace(/[^a-zA-Z0-9._:-]/g, "_");
 }
 
 function toSafeInteger(value: unknown, fallback: number): number {
   const parsed =
-    typeof value === 'number'
+    typeof value === "number"
       ? value
-      : typeof value === 'string'
+      : typeof value === "string"
         ? Number.parseInt(value, 10)
         : Number.NaN;
 
@@ -1150,7 +1162,7 @@ function toDate(value: unknown, fallback: Date): Date {
     return value;
   }
 
-  if (typeof value === 'string' || typeof value === 'number') {
+  if (typeof value === "string" || typeof value === "number") {
     const parsed = new Date(value);
 
     if (Number.isFinite(parsed.getTime())) {
@@ -1172,7 +1184,7 @@ function toOptionalDate(value: unknown): Date | undefined {
 }
 
 function getEnv(name: string): string | undefined {
-  if (typeof process === 'undefined') {
+  if (typeof process === "undefined") {
     return undefined;
   }
 

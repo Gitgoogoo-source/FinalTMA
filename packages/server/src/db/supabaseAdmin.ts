@@ -1,7 +1,7 @@
 // packages/server/src/db/supabaseAdmin.ts
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@tma-game/db-types";
+import type { Database } from "./database";
 
 /**
  * Supabase Admin Client
@@ -189,7 +189,9 @@ export const supabaseAdmin: SupabaseAdminClient = new Proxy(
   {
     get(_target, property) {
       const client = getSupabaseAdminClient();
-      const value = (client as any)[property];
+      const value = (client as unknown as Record<PropertyKey, unknown>)[
+        property
+      ];
 
       if (typeof value === "function") {
         return value.bind(client);
