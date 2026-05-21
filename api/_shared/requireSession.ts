@@ -1,9 +1,12 @@
-// api/shared/requireSession.ts
+// api/_shared/requireSession.ts
 
 import type { VercelRequest } from '@vercel/node';
 import { createHash } from 'node:crypto';
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { ApiError, getHeaderValue, getRequiredEnv } from './handler';
+import {
+  getSupabaseAdminClient,
+  type SupabaseAdminClient,
+} from '../../packages/server/src/db/supabaseAdmin';
+import { ApiError, getHeaderValue } from './handler';
 
 export interface RequireSessionOptions {
   /**
@@ -44,8 +47,6 @@ interface UserRow {
   deleted_at?: string | null;
 }
 
-let supabaseAdminClient: SupabaseClient | null = null;
-
 /**
  * 后端 Supabase Admin Client。
  *
@@ -53,38 +54,8 @@ let supabaseAdminClient: SupabaseClient | null = null;
  * - 必须只在 Vercel Functions 后端使用。
  * - 绝不能暴露 SUPABASE_SERVICE_ROLE_KEY 到前端。
  */
-export function getSupabaseAdmin(): SupabaseClient {
-  if (supabaseAdminClient) {
-    return supabaseAdminClient;
-  }
-
-  const supabaseUrl =
-    process.env.SUPABASE_URL ??
-    process.env.NEXT_PUBLIC_SUPABASE_URL ??
-    process.env.VITE_SUPABASE_URL;
-
-  if (!supabaseUrl) {
-    throw new ApiError(500, 'SERVER_CONFIG_ERROR', 'Missing Supabase URL', {
-      expose: false,
-    });
-  }
-
-  const serviceRoleKey = getRequiredEnv('SUPABASE_SERVICE_ROLE_KEY');
-
-  supabaseAdminClient = createClient(supabaseUrl, serviceRoleKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-      detectSessionInUrl: false,
-    },
-    global: {
-      headers: {
-        'X-Client-Info': 'tma-game-vercel-api',
-      },
-    },
-  });
-
-  return supabaseAdminClient;
+export function getSupabaseAdmin(): SupabaseAdminClient {
+  return getSupabaseAdminClient();
 }
 
 /**
@@ -212,6 +183,8 @@ export function extractSessionToken(req: VercelRequest): string | null {
 
   const cookieNames = [
     process.env.TMA_SESSION_COOKIE_NAME,
+    process.env.SESSION_COOKIE_NAME,
+    'tma_game_session',
     '__Host-tma_session',
     'tma_session',
     'app_session',
@@ -281,7 +254,7 @@ function isExpired(expiresAt: string): boolean {
   return expiresAtMs <= Date.now();
 }
 
-async function touchSessionLastSeen(db: SupabaseClient, sessionId: string): Promise<void> {
+async function touchSessionLastSeen(db: SupabaseAdminClient, sessionId: string): Promise<void> {
   const { error } = await db
     .schema('core')
     .from('app_sessions')

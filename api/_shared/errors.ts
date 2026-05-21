@@ -46,18 +46,18 @@ export type PublicErrorPayload = {
 export type AppErrorOptions = {
   code: ApiErrorCode;
   message: string;
-  statusCode?: number;
-  details?: ErrorDetails;
-  expose?: boolean;
+  statusCode?: number | undefined;
+  details?: ErrorDetails | undefined;
+  expose?: boolean | undefined;
   cause?: unknown;
 };
 
 export class AppError extends Error {
   public readonly code: ApiErrorCode;
   public readonly statusCode: number;
-  public readonly details?: ErrorDetails;
+  public readonly details: ErrorDetails | undefined;
   public readonly expose: boolean;
-  public readonly cause?: unknown;
+  public readonly cause: unknown | undefined;
 
   constructor(options: AppErrorOptions) {
     super(options.message);

@@ -1,7 +1,14 @@
-// api/shared/handler.ts
+// api/_shared/handler.ts
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { randomUUID } from 'node:crypto';
+import {
+  createRateLimiter,
+  RateLimitError,
+  type RateLimitAction,
+  type RateLimitCombinedResult,
+} from '../../packages/server/src/security/rateLimit';
+import { isAppError } from './errors';
 
 export type HttpMethod =
   | 'GET'
@@ -34,23 +41,30 @@ export interface ApiHandlerOptions {
   methods?: HttpMethod[];
   cors?: CorsOptions | false;
   cache?: 'no-store' | 'default';
+  rateLimit?: false | {
+    action: RateLimitAction;
+  };
 }
 
 export interface ApiSuccessResponse<T = unknown> {
   ok: true;
+  success: true;
   data: T;
   meta?: Record<string, unknown>;
   requestId?: string;
+  request_id?: string;
 }
 
 export interface ApiErrorResponse {
   ok: false;
+  success: false;
   error: {
     code: string;
     message: string;
     details?: unknown;
   };
   requestId?: string;
+  request_id?: string;
 }
 
 export type ApiRouteHandler<T = unknown> = (
@@ -120,6 +134,8 @@ export class ApiError extends Error {
   }
 }
 
+const sharedRateLimiter = createRateLimiter();
+
 export function withApiHandler<T = unknown>(
   routeHandler: ApiRouteHandler<T>,
   options: ApiHandlerOptions = {},
@@ -153,6 +169,7 @@ export function withApiHandler<T = unknown>(
       }
 
       assertAllowedMethod(method, options.methods, res);
+      await assertRateLimit(req, res, ctx, options.rateLimit);
 
       const result = await routeHandler(req, res, ctx);
 
@@ -170,6 +187,10 @@ export function withApiHandler<T = unknown>(
         elapsedMs: Date.now() - startedAt,
       });
     } catch (error) {
+      if (error instanceof RateLimitError) {
+        applyResponseHeaders(res, error.headers);
+      }
+
       sendError(res, normalizeError(error), {
         requestId,
         elapsedMs: Date.now() - startedAt,
@@ -190,9 +211,11 @@ export function sendSuccess<T>(
 
   const payload: ApiSuccessResponse<T> = {
     ok: true,
+    success: true,
     data,
     ...(meta ? { meta } : {}),
     ...(meta?.requestId ? { requestId: String(meta.requestId) } : {}),
+    ...(meta?.requestId ? { request_id: String(meta.requestId) } : {}),
   };
 
   res.status(statusCode).json(payload);
@@ -295,6 +318,28 @@ function normalizeError(error: unknown): ApiError {
     return error;
   }
 
+  if (error instanceof RateLimitError) {
+    return new ApiError(429, 'RATE_LIMITED', error.message, {
+      details: normalizeRateLimitDetails(error.result),
+      expose: true,
+      cause: error,
+    });
+  }
+
+  if (isAppError(error)) {
+    return new ApiError(error.statusCode, error.code, error.message, {
+      details: error.details,
+      expose: error.expose,
+      cause: error,
+    });
+  }
+
+  const structuralError = normalizeStructuralError(error);
+
+  if (structuralError) {
+    return structuralError;
+  }
+
   if (isZodLikeError(error)) {
     return new ApiError(400, 'VALIDATION_ERROR', 'Invalid request parameters', {
       details: getZodLikeDetails(error),
@@ -335,6 +380,7 @@ function sendError(
 
   const payload: ApiErrorResponse = {
     ok: false,
+    success: false,
     error: {
       code: error.code,
       message,
@@ -343,6 +389,7 @@ function sendError(
         : {}),
     },
     requestId: meta.requestId,
+    request_id: meta.requestId,
   };
 
   if (error.statusCode >= 500) {
@@ -367,6 +414,38 @@ function applySecurityHeaders(res: VercelResponse): void {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Referrer-Policy', 'no-referrer');
+}
+
+async function assertRateLimit(
+  req: VercelRequest,
+  res: VercelResponse,
+  ctx: ApiContext,
+  option: ApiHandlerOptions['rateLimit'],
+): Promise<void> {
+  if (option === false) {
+    return;
+  }
+
+  const action = option?.action ?? '*';
+  const result = await sharedRateLimiter.assert({
+    action,
+    ip: ctx.ip ?? undefined,
+    method: ctx.method,
+    path: req.url,
+    headers: req.headers,
+    userAgent: ctx.userAgent ?? undefined,
+    metadata: {
+      requestId: ctx.requestId,
+    },
+  });
+
+  applyResponseHeaders(res, result.headers);
+}
+
+function applyResponseHeaders(res: VercelResponse, headers: Record<string, string>): void {
+  for (const [name, value] of Object.entries(headers)) {
+    res.setHeader(name, value);
+  }
 }
 
 function applyCorsHeaders(
@@ -497,4 +576,51 @@ function getZodLikeDetails(error: unknown): unknown {
   }
 
   return (error as { issues: unknown[] }).issues;
+}
+
+function normalizeRateLimitDetails(result: RateLimitCombinedResult): Record<string, unknown> {
+  return {
+    action: result.action,
+    retryAfterMs: result.retryAfterMs,
+    rejected: result.rejected
+      ? {
+          action: result.rejected.action,
+          scope: result.rejected.scope,
+          limit: result.rejected.limit,
+          remaining: result.rejected.remaining,
+          resetAt: result.rejected.resetAt.toISOString(),
+          reason: result.rejected.reason,
+        }
+      : null,
+  };
+}
+
+function normalizeStructuralError(error: unknown): ApiError | null {
+  if (typeof error !== 'object' || error === null) {
+    return null;
+  }
+
+  const record = error as {
+    code?: unknown;
+    statusCode?: unknown;
+    message?: unknown;
+    details?: unknown;
+    cause?: unknown;
+    expose?: unknown;
+  };
+
+  if (typeof record.code !== 'string' || typeof record.message !== 'string') {
+    return null;
+  }
+
+  const statusCode =
+    typeof record.statusCode === 'number' && Number.isFinite(record.statusCode)
+      ? record.statusCode
+      : 500;
+
+  return new ApiError(statusCode, record.code, record.message, {
+    details: record.details,
+    expose: typeof record.expose === 'boolean' ? record.expose : statusCode < 500,
+    cause: record.cause ?? error,
+  });
 }

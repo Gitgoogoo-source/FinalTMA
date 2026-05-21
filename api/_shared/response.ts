@@ -11,13 +11,19 @@ import {
 
 export type ApiSuccessResponse<T> = {
   ok: true;
+  success: true;
   data: T;
-  meta?: Record<string, unknown>;
+  meta?: Record<string, unknown> | undefined;
+  requestId?: string | undefined;
+  request_id?: string | undefined;
 };
 
 export type ApiErrorResponse = {
   ok: false;
+  success: false;
   error: PublicErrorPayload;
+  requestId?: string | undefined;
+  request_id?: string | undefined;
 };
 
 export type ApiResponse<T> = ApiSuccessResponse<T> | ApiErrorResponse;
@@ -32,13 +38,14 @@ export type HttpMethod =
   | 'HEAD';
 
 export type SendSuccessOptions = {
-  statusCode?: number;
-  meta?: Record<string, unknown>;
+  statusCode?: number | undefined;
+  meta?: Record<string, unknown> | undefined;
+  requestId?: string | undefined;
 };
 
 export type SendErrorOptions = {
-  requestId?: string;
-  log?: boolean;
+  requestId?: string | undefined;
+  log?: boolean | undefined;
 };
 
 export function getRequestId(req: VercelRequest): string {
@@ -131,8 +138,10 @@ export function sendSuccess<T>(
 
   const payload: ApiSuccessResponse<T> = {
     ok: true,
+    success: true,
     data,
     ...(options.meta ? { meta: options.meta } : {}),
+    ...(options.requestId ? { requestId: options.requestId, request_id: options.requestId } : {}),
   };
 
   res.status(options.statusCode ?? 200).json(payload);
@@ -180,7 +189,9 @@ export function sendError(
 
   const payload: ApiErrorResponse = {
     ok: false,
+    success: false,
     error: appError.toPublicPayload(requestId),
+    ...(requestId ? { requestId, request_id: requestId } : {}),
   };
 
   res.status(appError.statusCode).json(payload);
