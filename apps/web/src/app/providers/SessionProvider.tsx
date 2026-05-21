@@ -16,7 +16,6 @@ import {
 } from "@/api/client";
 import { API_ENDPOINTS } from "@/api/endpoints";
 import { getApiErrorMessage, isUnauthorizedApiError } from "@/api/errors";
-import { env } from "@/env";
 
 import { useTelegram } from "./TelegramProvider";
 
@@ -85,7 +84,6 @@ type AuthClientContext = {
 };
 
 const SessionContext = createContext<SessionContextValue | null>(null);
-const DEVELOPMENT_INIT_DATA_BYPASS = "development-init-data-bypass";
 
 export function SessionProvider({ children }: SessionProviderProps) {
   const telegram = useTelegram();
@@ -154,9 +152,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
       return;
     }
 
-    // 开发阶段临时注释掉原始 Telegram initData 拦截，方便直接打开网页验收。
-    // 恢复 Telegram 登录时，将条件改回：if (!telegram.initData) {
-    if (!telegram.initData && !isDevelopmentTelegramAuthBypassEnabled()) {
+    if (!telegram.initData) {
       setApiSessionToken(null);
       setStatus("error");
       setError({
@@ -267,7 +263,7 @@ function buildTelegramLoginBody(
   telegram: ReturnType<typeof useTelegram>,
 ): Record<string, unknown> {
   const body: Record<string, unknown> = {
-    initData: telegram.initData ?? DEVELOPMENT_INIT_DATA_BYPASS,
+    initData: telegram.initData,
     clientContext: buildAuthClientContext(telegram),
   };
 
@@ -312,13 +308,4 @@ function buildAuthClientContext(
   }
 
   return context;
-}
-
-function isDevelopmentTelegramAuthBypassEnabled(): boolean {
-  return (
-    !env.IS_PROD &&
-    (env.APP_ENV === "local" ||
-      env.APP_ENV === "development" ||
-      env.APP_ENV === "test")
-  );
 }

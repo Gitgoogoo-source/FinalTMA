@@ -11,7 +11,6 @@ import {
 import {
   TelegramInitDataValidationError,
   verifyTelegramInitData,
-  type VerifiedTelegramInitData,
 } from '../../packages/server/src/auth/verifyTelegramInitData';
 import { callRpcRaw } from '../../packages/server/src/db/rpc';
 import { ApiError, getHeaderValue, withApiHandler } from '../_shared/handler';
@@ -40,11 +39,6 @@ type AuthUserRow = {
 };
 
 const SESSION_TTL_SECONDS = 7 * 24 * 60 * 60;
-const DEVELOPMENT_INIT_DATA_BYPASS = 'development-init-data-bypass';
-const DEVELOPMENT_TELEGRAM_USER_ID = 9_000_000_001;
-const DEVELOPMENT_INIT_DATA_HASH = createHash('sha256')
-  .update(DEVELOPMENT_INIT_DATA_BYPASS, 'utf8')
-  .digest('hex');
 
 export default withApiHandler(
   async (req, res, ctx) => {
@@ -67,10 +61,7 @@ export default withApiHandler(
         p_photo_url: verified.user.photo_url ?? null,
         p_start_param: verified.startParam ?? null,
         p_metadata: {
-          source:
-            verified.raw === DEVELOPMENT_INIT_DATA_BYPASS
-              ? 'development-init-data-bypass'
-              : 'telegram-mini-app',
+          source: 'telegram-mini-app',
           query_id: verified.queryId ?? null,
         },
       },
@@ -162,16 +153,8 @@ export default withApiHandler(
   },
 );
 
-function verifyTrustedInitData(
-  input: AuthTelegramLoginRequest,
-): VerifiedTelegramInitData {
-  if (isDevelopmentInitDataBypass(input.initData)) {
-    return createDevelopmentVerifiedInitData(input);
-  }
-
+function verifyTrustedInitData(input: AuthTelegramLoginRequest) {
   try {
-    // 原始生产逻辑保留：Telegram initData 必须由后端验签。
-    // 开发完成后移除上面的 development bypass 分支，让这里重新成为唯一入口。
     return verifyTelegramInitData(input.initData);
   } catch (error) {
     if (error instanceof TelegramInitDataValidationError) {
@@ -184,75 +167,6 @@ function verifyTrustedInitData(
 
     throw error;
   }
-}
-
-function isDevelopmentInitDataBypass(initData: string): boolean {
-  return (
-    initData === DEVELOPMENT_INIT_DATA_BYPASS &&
-    isLocalDevelopmentAuthBypassEnabled()
-  );
-}
-
-function isLocalDevelopmentAuthBypassEnabled(): boolean {
-  const appEnv = process.env.APP_ENV?.trim();
-  const nodeEnv = process.env.NODE_ENV?.trim();
-  const vercelEnv = process.env.VERCEL_ENV?.trim();
-
-  if (
-    appEnv === 'production' ||
-    appEnv === 'preview' ||
-    appEnv === 'staging' ||
-    nodeEnv === 'production' ||
-    vercelEnv === 'production' ||
-    vercelEnv === 'preview'
-  ) {
-    return false;
-  }
-
-  return (
-    appEnv === 'local' ||
-    appEnv === 'development' ||
-    appEnv === 'test' ||
-    nodeEnv === 'development' ||
-    nodeEnv === 'test'
-  );
-}
-
-function createDevelopmentVerifiedInitData(
-  input: AuthTelegramLoginRequest,
-): VerifiedTelegramInitData {
-  const authDate = new Date();
-  const authDateUnix = Math.floor(authDate.getTime() / 1000);
-  const user = {
-    id: DEVELOPMENT_TELEGRAM_USER_ID,
-    first_name: '开发用户',
-    username: 'local_dev',
-    language_code: 'zh',
-    is_premium: false,
-  };
-  const params: Record<string, string> = {
-    auth_date: String(authDateUnix),
-    development_bypass: 'true',
-    hash: DEVELOPMENT_INIT_DATA_HASH,
-    query_id: 'development-init-data-bypass',
-    user: JSON.stringify(user),
-  };
-
-  if (input.startParam) {
-    params.start_param = input.startParam;
-  }
-
-  return {
-    raw: DEVELOPMENT_INIT_DATA_BYPASS,
-    params,
-    hash: DEVELOPMENT_INIT_DATA_HASH,
-    authDateUnix,
-    authDate,
-    queryId: 'development-init-data-bypass',
-    user,
-    startParam: input.startParam,
-    initDataHash: DEVELOPMENT_INIT_DATA_HASH,
-  };
 }
 
 async function hasExistingTelegramUser(telegramUserId: number): Promise<boolean> {
