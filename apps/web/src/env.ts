@@ -17,11 +17,13 @@ declare global {
     readonly VITE_APP_NAME?: string;
     readonly VITE_APP_VERSION?: string;
     readonly VITE_APP_ENV?: string;
+    readonly VITE_TMA_ENV?: string;
 
     readonly VITE_PUBLIC_BASE_URL?: string;
     readonly VITE_API_BASE_URL?: string;
 
     readonly VITE_TELEGRAM_BOT_USERNAME?: string;
+    readonly VITE_TG_BOT_USERNAME?: string;
     readonly VITE_TELEGRAM_MINI_APP_SHORT_NAME?: string;
 
     readonly VITE_TONCONNECT_MANIFEST_URL?: string;
@@ -47,6 +49,7 @@ declare global {
 const APP_ENV_VALUES = [
   "local",
   "development",
+  "staging",
   "preview",
   "production",
   "test",
@@ -73,9 +76,11 @@ const SAFE_PUBLIC_VITE_KEYS = new Set([
   "VITE_APP_NAME",
   "VITE_APP_VERSION",
   "VITE_APP_ENV",
+  "VITE_TMA_ENV",
   "VITE_PUBLIC_BASE_URL",
   "VITE_API_BASE_URL",
   "VITE_TELEGRAM_BOT_USERNAME",
+  "VITE_TG_BOT_USERNAME",
   "VITE_TELEGRAM_MINI_APP_SHORT_NAME",
   "VITE_TONCONNECT_MANIFEST_URL",
   "VITE_SUPABASE_URL",
@@ -189,6 +194,11 @@ const stringFromEnv = (defaultValue: string) =>
     return value;
   }, z.string().trim().min(1));
 
+const requiredStringFromEnv = z.preprocess(
+  emptyStringToUndefined,
+  z.string().trim().min(1),
+);
+
 const optionalStringFromEnv = z.preprocess(
   emptyStringToUndefined,
   z.string().trim().min(1).optional(),
@@ -199,7 +209,7 @@ const optionalUrlFromEnv = z.preprocess(
   z.string().trim().url().optional(),
 );
 
-const optionalUrlOrPathFromEnv = z.preprocess(
+const requiredUrlOrPathFromEnv = z.preprocess(
   emptyStringToUndefined,
   z
     .string()
@@ -207,8 +217,7 @@ const optionalUrlOrPathFromEnv = z.preprocess(
     .refine(
       (value) => value.startsWith("/") || isValidUrl(value),
       "Must be an absolute URL or a relative path starting with /",
-    )
-    .optional(),
+    ),
 );
 
 const booleanFromEnv = (defaultValue: boolean) =>
@@ -263,13 +272,54 @@ const numberFromEnv = (defaultValue: number, options?: { min?: number; max?: num
     return value;
   }, z.number().int().min(options?.min ?? 0).max(options?.max ?? Number.MAX_SAFE_INTEGER));
 
-const appEnvFromEnv = z.preprocess((value) => {
-  if (isEmptyEnvValue(value)) {
-    return "development";
+const appEnvFromEnv = z.preprocess(emptyStringToUndefined, z.enum(APP_ENV_VALUES));
+
+function getTrimmedEnvValue(rawEnv: Record<string, unknown>, key: string): string | undefined {
+  const value = rawEnv[key];
+
+  if (typeof value !== "string") {
+    return undefined;
   }
 
-  return value;
-}, z.enum(APP_ENV_VALUES));
+  const trimmed = value.trim();
+
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function applyAlias(
+  rawEnv: Record<string, unknown>,
+  canonicalKey: string,
+  aliasKey: string,
+): void {
+  const canonicalValue = getTrimmedEnvValue(rawEnv, canonicalKey);
+  const aliasValue = getTrimmedEnvValue(rawEnv, aliasKey);
+
+  if (canonicalValue && aliasValue && canonicalValue !== aliasValue) {
+    throw new Error(
+      [
+        "Conflicting frontend environment variables.",
+        `${canonicalKey} and ${aliasKey} are aliases and must use the same value.`,
+      ].join(" "),
+    );
+  }
+
+  if (!canonicalValue && aliasValue) {
+    rawEnv[canonicalKey] = aliasValue;
+  }
+}
+
+function normalizeWebEnv(rawEnv: ImportMetaEnv): ImportMetaEnv {
+  const normalized = { ...rawEnv } as ImportMetaEnv & Record<string, unknown>;
+
+  applyAlias(normalized, "VITE_APP_ENV", "VITE_TMA_ENV");
+  applyAlias(
+    normalized,
+    "VITE_TELEGRAM_BOT_USERNAME",
+    "VITE_TG_BOT_USERNAME",
+  );
+
+  return normalized;
+}
 
 export const webEnvSchema = z
   .object({
@@ -284,9 +334,9 @@ export const webEnvSchema = z
     VITE_APP_ENV: appEnvFromEnv,
 
     VITE_PUBLIC_BASE_URL: optionalUrlFromEnv,
-    VITE_API_BASE_URL: optionalUrlOrPathFromEnv,
+    VITE_API_BASE_URL: requiredUrlOrPathFromEnv,
 
-    VITE_TELEGRAM_BOT_USERNAME: optionalStringFromEnv,
+    VITE_TELEGRAM_BOT_USERNAME: requiredStringFromEnv,
     VITE_TELEGRAM_MINI_APP_SHORT_NAME: optionalStringFromEnv,
 
     VITE_TONCONNECT_MANIFEST_URL: optionalUrlFromEnv,
@@ -342,9 +392,11 @@ export const webEnvSchema = z
     }
   });
 
-assertNoExposedSecrets(import.meta.env);
+const normalizedImportMetaEnv = normalizeWebEnv(import.meta.env);
 
-const parsedEnv = webEnvSchema.safeParse(import.meta.env);
+assertNoExposedSecrets(normalizedImportMetaEnv);
+
+const parsedEnv = webEnvSchema.safeParse(normalizedImportMetaEnv);
 
 if (!parsedEnv.success) {
   throw new Error(

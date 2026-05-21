@@ -15,6 +15,7 @@ import { z } from "zod";
 const APP_ENV_VALUES = [
   "local",
   "development",
+  "staging",
   "preview",
   "production",
   "test",
@@ -327,6 +328,7 @@ export const serverEnvSchema = z
     SESSION_COOKIE_DOMAIN: optionalStringFromEnv,
     SESSION_COOKIE_SECURE: optionalBooleanFromEnv,
     SESSION_COOKIE_SAMESITE: enumFromEnv(COOKIE_SAMESITE_VALUES, "lax"),
+    APP_SESSION_SECRET: optionalSecretFromEnv(32),
     SESSION_SECRET: optionalSecretFromEnv(32),
     SESSION_TTL_SECONDS: numberFromEnv(60 * 60 * 24 * 7, {
       min: 60,
@@ -342,13 +344,15 @@ export const serverEnvSchema = z
 
     SUPABASE_URL: requiredUrlFromEnv,
     SUPABASE_ANON_KEY: optionalStringFromEnv,
-    SUPABASE_SERVICE_ROLE_KEY: requiredSecretFromEnv(32),
+    SUPABASE_SECRET_KEY: optionalSecretFromEnv(32),
+    SUPABASE_SERVICE_ROLE_KEY: optionalSecretFromEnv(32),
     SUPABASE_JWT_SECRET: optionalSecretFromEnv(32),
 
     TELEGRAM_BOT_TOKEN: requiredSecretFromEnv(16),
     TELEGRAM_BOT_USERNAME: optionalStringFromEnv,
     TELEGRAM_MINI_APP_SHORT_NAME: optionalStringFromEnv,
     TELEGRAM_WEBHOOK_SECRET: optionalSecretFromEnv(16),
+    TELEGRAM_WEBHOOK_SECRET_TOKEN: optionalSecretFromEnv(16),
     TELEGRAM_STARS_CURRENCY: z.preprocess((value) => {
       if (isEmptyEnvValue(value)) {
         return "XTR";
@@ -403,6 +407,8 @@ export const serverEnvSchema = z
     SENTRY_DSN: optionalUrlFromEnv,
 
     ENABLE_MOCK_PAYMENTS: booleanFromEnv(false),
+    DEV_GACHA_PAYMENT_MODE: booleanFromEnv(true),
+    DRAW_RANDOM_SECRET: requiredSecretFromEnv(32),
     ENABLE_MOCK_TON: booleanFromEnv(false),
     ENABLE_ADMIN_API: booleanFromEnv(true),
     ENABLE_CRON_API: booleanFromEnv(true),
@@ -430,11 +436,21 @@ export const serverEnvSchema = z
       });
     }
 
-    if (isProductionLike && !input.SESSION_SECRET) {
+    if (!input.SUPABASE_SECRET_KEY && !input.SUPABASE_SERVICE_ROLE_KEY) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ["SESSION_SECRET"],
-        message: "SESSION_SECRET is required in production.",
+        path: ["SUPABASE_SERVICE_ROLE_KEY"],
+        message:
+          "SUPABASE_SERVICE_ROLE_KEY or SUPABASE_SECRET_KEY is required on the server.",
+      });
+    }
+
+    if (isProductionLike && !input.APP_SESSION_SECRET && !input.SESSION_SECRET) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["APP_SESSION_SECRET"],
+        message:
+          "APP_SESSION_SECRET is required in production. SESSION_SECRET is accepted as a legacy alias.",
       });
     }
 
@@ -446,7 +462,11 @@ export const serverEnvSchema = z
       });
     }
 
-    if (isProductionLike && !input.TELEGRAM_WEBHOOK_SECRET) {
+    if (
+      isProductionLike &&
+      !input.TELEGRAM_WEBHOOK_SECRET &&
+      !input.TELEGRAM_WEBHOOK_SECRET_TOKEN
+    ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["TELEGRAM_WEBHOOK_SECRET"],
@@ -476,6 +496,14 @@ export const serverEnvSchema = z
         code: z.ZodIssueCode.custom,
         path: ["ENABLE_MOCK_PAYMENTS"],
         message: "Mock payments must be disabled in production.",
+      });
+    }
+
+    if (isProductionLike && input.DEV_GACHA_PAYMENT_MODE) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["DEV_GACHA_PAYMENT_MODE"],
+        message: "DEV_GACHA_PAYMENT_MODE must be disabled in production.",
       });
     }
 
@@ -551,12 +579,25 @@ const corsAllowedOrigins =
       ];
 
 const sessionSecret =
+  raw.APP_SESSION_SECRET ??
   raw.SESSION_SECRET ??
   createLocalOnlySecret("SESSION_SECRET");
 
 const adminSessionSecret =
   raw.ADMIN_SESSION_SECRET ??
   sessionSecret;
+
+const supabaseServerKey =
+  raw.SUPABASE_SECRET_KEY ?? raw.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseServerKey) {
+  throw new Error(
+    "Missing Supabase server key after environment validation.",
+  );
+}
+
+const telegramWebhookSecret =
+  raw.TELEGRAM_WEBHOOK_SECRET ?? raw.TELEGRAM_WEBHOOK_SECRET_TOKEN;
 
 const sessionCookieSecure =
   raw.SESSION_COOKIE_SECURE ?? isProductionLike;
@@ -580,7 +621,10 @@ export const env = Object.freeze({
     IS_DEVELOPMENT:
       raw.APP_ENV === "development" || raw.NODE_ENV === "development",
     IS_PREVIEW:
-      raw.APP_ENV === "preview" || raw.VERCEL_ENV === "preview",
+      raw.APP_ENV === "preview" ||
+      raw.APP_ENV === "staging" ||
+      raw.VERCEL_ENV === "preview",
+    IS_STAGING: raw.APP_ENV === "staging",
     IS_PRODUCTION: isProductionLike,
     IS_TEST: raw.APP_ENV === "test" || raw.NODE_ENV === "test",
   }),
@@ -604,7 +648,11 @@ export const env = Object.freeze({
   SUPABASE: Object.freeze({
     URL: raw.SUPABASE_URL,
     ANON_KEY: raw.SUPABASE_ANON_KEY,
-    SERVICE_ROLE_KEY: raw.SUPABASE_SERVICE_ROLE_KEY,
+    SERVER_KEY: supabaseServerKey,
+    SERVER_KEY_SOURCE: raw.SUPABASE_SECRET_KEY
+      ? "SUPABASE_SECRET_KEY"
+      : "SUPABASE_SERVICE_ROLE_KEY",
+    SERVICE_ROLE_KEY: supabaseServerKey,
     JWT_SECRET: raw.SUPABASE_JWT_SECRET,
   }),
 
@@ -612,9 +660,14 @@ export const env = Object.freeze({
     BOT_TOKEN: raw.TELEGRAM_BOT_TOKEN,
     BOT_USERNAME: raw.TELEGRAM_BOT_USERNAME,
     MINI_APP_SHORT_NAME: raw.TELEGRAM_MINI_APP_SHORT_NAME,
-    WEBHOOK_SECRET: raw.TELEGRAM_WEBHOOK_SECRET,
+    WEBHOOK_SECRET: telegramWebhookSecret,
     STARS_CURRENCY: raw.TELEGRAM_STARS_CURRENCY,
     STARS_PROVIDER_TOKEN: raw.TELEGRAM_STARS_PROVIDER_TOKEN,
+  }),
+
+  GACHA: Object.freeze({
+    DRAW_RANDOM_SECRET: raw.DRAW_RANDOM_SECRET,
+    DEV_PAYMENT_MODE: raw.DEV_GACHA_PAYMENT_MODE,
   }),
 
   TON: Object.freeze({
@@ -656,6 +709,7 @@ export const env = Object.freeze({
 
   FEATURES: Object.freeze({
     MOCK_PAYMENTS: raw.ENABLE_MOCK_PAYMENTS,
+    DEV_GACHA_PAYMENT_MODE: raw.DEV_GACHA_PAYMENT_MODE,
     MOCK_TON: raw.ENABLE_MOCK_TON,
     ADMIN_API: raw.ENABLE_ADMIN_API,
     CRON_API: raw.ENABLE_CRON_API,
@@ -712,10 +766,11 @@ export function getSafeEnvSnapshot(): Record<string, unknown> {
     SUPABASE: {
       URL: env.SUPABASE.URL,
       HAS_ANON_KEY: Boolean(env.SUPABASE.ANON_KEY),
-      HAS_SERVICE_ROLE_KEY: Boolean(env.SUPABASE.SERVICE_ROLE_KEY),
+      HAS_SERVER_KEY: Boolean(env.SUPABASE.SERVER_KEY),
+      SERVER_KEY_SOURCE: env.SUPABASE.SERVER_KEY_SOURCE,
       HAS_JWT_SECRET: Boolean(env.SUPABASE.JWT_SECRET),
       ANON_KEY: maskSecret(env.SUPABASE.ANON_KEY),
-      SERVICE_ROLE_KEY: maskSecret(env.SUPABASE.SERVICE_ROLE_KEY),
+      SERVER_KEY: maskSecret(env.SUPABASE.SERVER_KEY),
     },
 
     TELEGRAM: {
@@ -727,6 +782,12 @@ export function getSafeEnvSnapshot(): Record<string, unknown> {
       HAS_STARS_PROVIDER_TOKEN: Boolean(env.TELEGRAM.STARS_PROVIDER_TOKEN),
       BOT_TOKEN: maskSecret(env.TELEGRAM.BOT_TOKEN),
       WEBHOOK_SECRET: maskSecret(env.TELEGRAM.WEBHOOK_SECRET),
+    },
+
+    GACHA: {
+      DEV_PAYMENT_MODE: env.GACHA.DEV_PAYMENT_MODE,
+      HAS_DRAW_RANDOM_SECRET: Boolean(env.GACHA.DRAW_RANDOM_SECRET),
+      DRAW_RANDOM_SECRET: maskSecret(env.GACHA.DRAW_RANDOM_SECRET),
     },
 
     TON: {
