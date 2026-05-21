@@ -1,16 +1,16 @@
 import {
   CreateBoxOpenOrderRequestSchema,
   type CreateBoxOpenOrderRequest,
-} from "../../packages/validation/src/box.schemas";
-import { callRpcRaw, RpcError } from "../../packages/server/src/db/rpc";
+} from "../../packages/validation/src/box.schemas.js";
+import { callRpcRaw, RpcError } from "../../packages/server/src/db/rpc.js";
 import {
   ApiError,
   getIdempotencyKey,
   withApiHandler,
-} from "../_shared/handler";
-import { parseJsonBody } from "../_shared/parseBody";
-import { requireSession } from "../_shared/requireSession";
-import { validate } from "../_shared/validate";
+} from "../_shared/handler.js";
+import { parseJsonBody } from "../_shared/parseBody.js";
+import { requireSession } from "../_shared/requireSession.js";
+import { validate } from "../_shared/validate.js";
 
 type CreateOrderRpcResult = {
   draw_order_id?: unknown;

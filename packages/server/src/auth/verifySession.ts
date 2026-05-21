@@ -4,13 +4,13 @@ import { timingSafeEqual } from "node:crypto";
 import {
   getSupabaseAdminClient,
   type SupabaseAdminClient,
-} from "../db/supabaseAdmin";
+} from "../db/supabaseAdmin.js";
 import {
   SESSION_COOKIE_NAME,
   hashClientFingerprint,
   hashSessionToken,
   parseSessionToken,
-} from "./issueSession";
+} from "./issueSession.js";
 
 export type SessionVerificationErrorCode =
   | "SESSION_TOKEN_MISSING"

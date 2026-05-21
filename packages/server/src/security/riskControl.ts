@@ -7,14 +7,14 @@ import {
   getClientIp,
   getHeaderValue,
   sanitizeMetadata,
-} from './rateLimit';
+} from './rateLimit.js';
 import type {
   HeaderLike,
   RateLimitAction,
   RateLimitCombinedResult,
   RateLimitRule,
   RateLimiter,
-} from './rateLimit';
+} from './rateLimit.js';
 
 export type RiskSeverity = 'info' | 'low' | 'medium' | 'high' | 'critical';
 

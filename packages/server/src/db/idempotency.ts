@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { supabaseAdmin } from "./supabaseAdmin";
+import { supabaseAdmin } from "./supabaseAdmin.js";
 import {
   DbTransactionError,
   type JsonObject,
@@ -8,7 +8,7 @@ import {
   type RpcTransactionOptions,
   normalizeDbError,
   runRpcTransaction,
-} from "./transactions";
+} from "./transactions.js";
 
 export type IdempotencyStatus = "started" | "completed" | "failed";
 

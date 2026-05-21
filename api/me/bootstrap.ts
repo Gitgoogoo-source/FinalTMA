@@ -1,6 +1,6 @@
-import { callRpcRaw } from '../../packages/server/src/db/rpc';
-import { ApiError, withApiHandler } from '../_shared/handler';
-import { requireSession } from '../_shared/requireSession';
+import { callRpcRaw } from '../../packages/server/src/db/rpc.js';
+import { ApiError, withApiHandler } from '../_shared/handler.js';
+import { requireSession } from '../_shared/requireSession.js';
 
 type UserBootstrapPayload = Record<string, unknown>;
 

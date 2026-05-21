@@ -73,7 +73,7 @@
 | NFT | TON NFT Collection / Item |
 | 校验 | Zod |
 | 测试 | Vitest + Playwright + SQL tests |
-
+| 模块规范 | ESM |
 禁止无理由引入：Next.js、Prisma、tRPC、Redux、MobX、Express 独立服务器、MongoDB、Firebase、GraphQL、第三方支付 SDK。
 
 如确实需要新增依赖，必须说明：

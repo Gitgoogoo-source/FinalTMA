@@ -1,4 +1,4 @@
-import { validationError, type ErrorFieldIssue } from './errors';
+import { validationError, type ErrorFieldIssue } from './errors.js';
 
 export type ValidationSuccess<T> = {
   success: true;
@@ -28,11 +28,12 @@ export function validate<T>(schema: SchemaLike<T>, input: unknown): T {
   if (hasSafeParse(schema)) {
     const result = schema.safeParse(input);
 
-    if (result.success) {
+    if (result.success === true) {
       return result.data;
     }
 
-    throw validationError('请求参数校验失败。', normalizeValidationIssues(result.error));
+    const failure = result as ValidationFailure;
+    throw validationError('请求参数校验失败。', normalizeValidationIssues(failure.error));
   }
 
   try {

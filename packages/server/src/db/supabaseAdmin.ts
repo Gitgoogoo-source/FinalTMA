@@ -1,7 +1,7 @@
 // packages/server/src/db/supabaseAdmin.ts
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "./database";
+import type { Database } from "./database.js";
 
 /**
  * Supabase Admin Client
@@ -179,7 +179,7 @@ export function getSupabaseAdminClient(): SupabaseAdminClient {
  *   const supabase = getSupabaseAdminClient();
  *
  * 也可以：
- *   import { supabaseAdmin } from "./supabaseAdmin";
+ *   import { supabaseAdmin } from "./supabaseAdmin.js";
  *   await supabaseAdmin.rpc(...)
  *
  * 这里用 Proxy 做 lazy 初始化，避免测试环境 import 文件时立即读取 env。

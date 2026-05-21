@@ -7,8 +7,8 @@ import {
   RateLimitError,
   type RateLimitAction,
   type RateLimitCombinedResult,
-} from '../../packages/server/src/security/rateLimit';
-import { isAppError } from './errors';
+} from '../../packages/server/src/security/rateLimit.js';
+import { isAppError } from './errors.js';
 
 export type HttpMethod =
   | 'GET'
@@ -78,6 +78,7 @@ export class ApiError extends Error {
   public readonly code: string;
   public readonly details?: unknown;
   public readonly expose: boolean;
+  public readonly cause?: unknown;
 
   constructor(
     statusCode: number,
@@ -89,13 +90,14 @@ export class ApiError extends Error {
       cause?: unknown;
     },
   ) {
-    super(message, { cause: options?.cause });
+    super(message);
 
     this.name = 'ApiError';
     this.statusCode = statusCode;
     this.code = code;
     this.details = options?.details;
     this.expose = options?.expose ?? statusCode < 500;
+    this.cause = options?.cause;
   }
 
   static badRequest(message = 'Bad request', details?: unknown): ApiError {

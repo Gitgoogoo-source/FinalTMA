@@ -1,10 +1,10 @@
 // packages/server/src/db/rpc.ts
 
-import type { Database } from "./database";
+import type { Database } from "./database.js";
 import {
   getSupabaseAdminClient,
   type SupabaseAdminClient,
-} from "./supabaseAdmin";
+} from "./supabaseAdmin.js";
 
 /**
  * RPC 调用封装
@@ -151,7 +151,7 @@ export class RpcError extends Error {
   public readonly statusText: string | undefined;
   public readonly args?: unknown;
   public readonly context: Record<string, unknown> | undefined;
-  public override readonly cause: unknown;
+  public readonly cause: unknown;
 
   constructor(params: RpcErrorConstructorParams) {
     const message =

@@ -4,7 +4,7 @@ import { createHmac, randomBytes, randomUUID } from "node:crypto";
 import {
   getSupabaseAdminClient,
   type SupabaseAdminClient,
-} from "../db/supabaseAdmin";
+} from "../db/supabaseAdmin.js";
 
 export type IssueSessionErrorCode =
   | "SESSION_SECRET_MISSING"
@@ -16,7 +16,7 @@ export type IssueSessionErrorCode =
 export class IssueSessionError extends Error {
   public readonly code: IssueSessionErrorCode;
   public readonly statusCode = 500;
-  public override readonly cause?: unknown;
+  public readonly cause?: unknown;
 
   constructor(code: IssueSessionErrorCode, message: string, cause?: unknown) {
     super(message);

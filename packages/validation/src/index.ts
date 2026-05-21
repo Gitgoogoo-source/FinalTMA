@@ -23,14 +23,14 @@ export { z } from "zod";
  * import { BoxValidation } from "@tma-game/validation";
  * BoxValidation.createOpenOrderSchema.parse(input);
  */
-export * as CommonValidation from "./common.schemas";
-export * as AuthValidation from "./auth.schemas";
-export * as MeValidation from "./me.schemas";
-export * as BoxValidation from "./box.schemas";
-export * as TelegramValidation from "./telegram.schemas";
-export * as PaymentValidation from "./payment.schemas";
-export * as InventoryValidation from "./inventory.schemas";
-export * as GameValidation from "./game.schemas";
+export * as CommonValidation from "./common.schemas.js";
+export * as AuthValidation from "./auth.schemas.js";
+export * as MeValidation from "./me.schemas.js";
+export * as BoxValidation from "./box.schemas.js";
+export * as TelegramValidation from "./telegram.schemas.js";
+export * as PaymentValidation from "./payment.schemas.js";
+export * as InventoryValidation from "./inventory.schemas.js";
+export * as GameValidation from "./game.schemas.js";
 
 /**
  * Direct exports.
@@ -47,11 +47,11 @@ export * as GameValidation from "./game.schemas";
  * - marketBuyListingSchema
  * - inventoryUpgradeItemSchema
  */
-export * from "./common.schemas";
-export * from "./auth.schemas";
-export * from "./me.schemas";
-export * from "./box.schemas";
-export * from "./telegram.schemas";
-export * from "./payment.schemas";
-export * from "./inventory.schemas";
-export * from "./game.schemas";
+export * from "./common.schemas.js";
+export * from "./auth.schemas.js";
+export * from "./me.schemas.js";
+export * from "./box.schemas.js";
+export * from "./telegram.schemas.js";
+export * from "./payment.schemas.js";
+export * from "./inventory.schemas.js";
+export * from "./game.schemas.js";

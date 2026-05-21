@@ -1,11 +1,11 @@
 import {
   BoxDrawResultQuerySchema,
   type BoxDrawResultQuery,
-} from "../../packages/validation/src/box.schemas";
-import { callRpcRaw, RpcError } from "../../packages/server/src/db/rpc";
-import { ApiError, withApiHandler } from "../_shared/handler";
-import { requireSession } from "../_shared/requireSession";
-import { validate } from "../_shared/validate";
+} from "../../packages/validation/src/box.schemas.js";
+import { callRpcRaw, RpcError } from "../../packages/server/src/db/rpc.js";
+import { ApiError, withApiHandler } from "../_shared/handler.js";
+import { requireSession } from "../_shared/requireSession.js";
+import { validate } from "../_shared/validate.js";
 
 type RawDrawResultPayload = {
   draw_order_id?: unknown;

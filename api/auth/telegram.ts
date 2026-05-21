@@ -3,20 +3,20 @@ import type { VercelRequest } from '@vercel/node';
 import {
   AuthTelegramLoginRequestSchema,
   type AuthTelegramLoginRequest,
-} from '../../packages/validation/src/auth.schemas';
+} from '../../packages/validation/src/auth.schemas.js';
 import {
   buildSessionCookie,
   SESSION_COOKIE_NAME,
-} from '../../packages/server/src/auth/issueSession';
+} from '../../packages/server/src/auth/issueSession.js';
 import {
   TelegramInitDataValidationError,
   verifyTelegramInitData,
-} from '../../packages/server/src/auth/verifyTelegramInitData';
-import { callRpcRaw } from '../../packages/server/src/db/rpc';
-import { ApiError, getHeaderValue, withApiHandler } from '../_shared/handler';
-import { parseJsonBody } from '../_shared/parseBody';
-import { getSupabaseAdmin, hashSessionToken } from '../_shared/requireSession';
-import { validate } from '../_shared/validate';
+} from '../../packages/server/src/auth/verifyTelegramInitData.js';
+import { callRpcRaw } from '../../packages/server/src/db/rpc.js';
+import { ApiError, getHeaderValue, withApiHandler } from '../_shared/handler.js';
+import { parseJsonBody } from '../_shared/parseBody.js';
+import { getSupabaseAdmin, hashSessionToken } from '../_shared/requireSession.js';
+import { validate } from '../_shared/validate.js';
 
 type AuthUpsertTelegramUserResult = {
   user_id: string;

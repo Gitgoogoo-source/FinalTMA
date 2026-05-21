@@ -7,7 +7,7 @@ import {
   methodNotAllowed,
   normalizeError,
   type PublicErrorPayload,
-} from './errors';
+} from './errors.js';
 
 export type ApiSuccessResponse<T> = {
   ok: true;

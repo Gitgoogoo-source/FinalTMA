@@ -3,7 +3,7 @@ import {
   type JsonValue,
   makeRpcAuditContext,
   runWriteRpc,
-} from "../db/transactions";
+} from "../db/transactions.js";
 
 export type AdminAuditAction =
   | "admin.login"

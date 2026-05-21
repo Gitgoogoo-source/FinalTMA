@@ -57,7 +57,7 @@ export class AppError extends Error {
   public readonly statusCode: number;
   public readonly details: ErrorDetails | undefined;
   public readonly expose: boolean;
-  public override readonly cause: unknown | undefined;
+  public readonly cause: unknown | undefined;
 
   constructor(options: AppErrorOptions) {
     super(options.message);

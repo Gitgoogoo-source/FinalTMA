@@ -1,13 +1,13 @@
 // api/shared/requireAdmin.ts
 
 import type { VercelRequest } from '@vercel/node';
-import { ApiError } from './handler';
+import { ApiError } from './handler.js';
 import {
   getSupabaseAdmin,
   requireSession,
   type RequireSessionOptions,
   type SessionContext,
-} from './requireSession';
+} from './requireSession.js';
 
 export type AdminPermission = string;
 

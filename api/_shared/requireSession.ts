@@ -5,8 +5,8 @@ import { createHash } from 'node:crypto';
 import {
   getSupabaseAdminClient,
   type SupabaseAdminClient,
-} from '../../packages/server/src/db/supabaseAdmin';
-import { ApiError, getHeaderValue } from './handler';
+} from '../../packages/server/src/db/supabaseAdmin.js';
+import { ApiError, getHeaderValue } from './handler.js';
 
 export interface RequireSessionOptions {
   /**

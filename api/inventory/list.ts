@@ -1,11 +1,11 @@
 import {
   InventoryListQuerySchema,
   type InventoryListQuery,
-} from "../../packages/validation/src/inventory.schemas";
-import { callRpcRaw, RpcError } from "../../packages/server/src/db/rpc";
-import { ApiError, withApiHandler } from "../_shared/handler";
-import { requireSession } from "../_shared/requireSession";
-import { validate } from "../_shared/validate";
+} from "../../packages/validation/src/inventory.schemas.js";
+import { callRpcRaw, RpcError } from "../../packages/server/src/db/rpc.js";
+import { ApiError, withApiHandler } from "../_shared/handler.js";
+import { requireSession } from "../_shared/requireSession.js";
+import { validate } from "../_shared/validate.js";
 
 type InventoryListRpcPayload = {
   items?: unknown;

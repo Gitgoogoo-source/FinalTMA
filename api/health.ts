@@ -1,4 +1,4 @@
-import { withApiHandler } from "./_shared/handler";
+import { withApiHandler } from "./_shared/handler.js";
 
 export default withApiHandler(
   (_req, _res, ctx) => ({

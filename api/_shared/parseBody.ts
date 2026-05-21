@@ -1,7 +1,7 @@
 // api/shared/parseBody.ts
 
 import type { VercelRequest } from '@vercel/node';
-import { badRequest, payloadTooLarge, unsupportedMediaType } from './errors';
+import { badRequest, payloadTooLarge, unsupportedMediaType } from './errors.js';
 
 export type ParseBodyOptions = {
   maxBytes?: number;

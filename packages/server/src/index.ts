@@ -1,9 +1,9 @@
-export * from "./auth/issueSession";
-export * from "./auth/verifySession";
-export * from "./auth/verifyTelegramInitData";
-export * from "./db/idempotency";
-export * from "./db/rpc";
-export * from "./db/supabaseAdmin";
+export * from "./auth/issueSession.js";
+export * from "./auth/verifySession.js";
+export * from "./auth/verifyTelegramInitData.js";
+export * from "./db/idempotency.js";
+export * from "./db/rpc.js";
+export * from "./db/supabaseAdmin.js";
 export {
   DbTransactionError,
   createTraceId,
@@ -15,7 +15,7 @@ export {
   runRpcTransactionWithMeta,
   runWriteRpc,
   sleep,
-} from "./db/transactions";
+} from "./db/transactions.js";
 export type {
   JsonObject,
   JsonPrimitive,
@@ -28,7 +28,7 @@ export type {
   RpcTransactionOptions,
   RpcTransactionResult,
   TransactionMode,
-} from "./db/transactions";
-export * from "./env";
-export * from "./security/auditLog";
-export * from "./security/rateLimit";
+} from "./db/transactions.js";
+export * from "./env.js";
+export * from "./security/auditLog.js";
+export * from "./security/rateLimit.js";

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { supabaseAdmin } from "./supabaseAdmin";
+import { supabaseAdmin } from "./supabaseAdmin.js";
 
 export type JsonPrimitive = string | number | boolean | null;
 

@@ -1,10 +1,10 @@
 import {
   BoxRewardsQuerySchema,
   type BoxRewardsQuery,
-} from "../../packages/validation/src/box.schemas";
-import { ApiError, withApiHandler } from "../_shared/handler";
-import { getSupabaseAdmin, requireSession } from "../_shared/requireSession";
-import { validate } from "../_shared/validate";
+} from "../../packages/validation/src/box.schemas.js";
+import { ApiError, withApiHandler } from "../_shared/handler.js";
+import { getSupabaseAdmin, requireSession } from "../_shared/requireSession.js";
+import { validate } from "../_shared/validate.js";
 
 type BlindBoxRow = {
   id: string;

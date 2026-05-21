@@ -1,5 +1,5 @@
-import { ApiError, withApiHandler } from '../_shared/handler';
-import { getSupabaseAdmin, requireSession } from '../_shared/requireSession';
+import { ApiError, withApiHandler } from '../_shared/handler.js';
+import { getSupabaseAdmin, requireSession } from '../_shared/requireSession.js';
 
 type CurrencyCode = 'KCOIN' | 'FGEMS' | 'STAR_DISPLAY';
 
