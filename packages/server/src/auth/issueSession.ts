@@ -16,14 +16,22 @@ export type IssueSessionErrorCode =
 export class IssueSessionError extends Error {
   public readonly code: IssueSessionErrorCode;
   public readonly statusCode = 500;
-  public readonly cause?: unknown;
 
   constructor(code: IssueSessionErrorCode, message: string, cause?: unknown) {
     super(message);
     this.name = "IssueSessionError";
     this.code = code;
-    this.cause = cause;
+    defineErrorCause(this, cause);
   }
+}
+
+function defineErrorCause(error: Error, cause: unknown): void {
+  Object.defineProperty(error, "cause", {
+    configurable: true,
+    enumerable: false,
+    writable: true,
+    value: cause,
+  });
 }
 
 export interface IssueSessionInput {

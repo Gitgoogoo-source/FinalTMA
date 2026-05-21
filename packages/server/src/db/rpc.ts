@@ -151,7 +151,6 @@ export class RpcError extends Error {
   public readonly statusText: string | undefined;
   public readonly args?: unknown;
   public readonly context: Record<string, unknown> | undefined;
-  public readonly cause: unknown;
 
   constructor(params: RpcErrorConstructorParams) {
     const message =
@@ -171,7 +170,7 @@ export class RpcError extends Error {
     this.statusText = params.statusText;
     this.args = params.args;
     this.context = params.context;
-    this.cause = params.cause;
+    defineErrorCause(this, params.cause);
   }
 
   toJSON(): Record<string, unknown> {
@@ -188,6 +187,15 @@ export class RpcError extends Error {
       context: this.context,
     };
   }
+}
+
+function defineErrorCause(error: Error, cause: unknown): void {
+  Object.defineProperty(error, "cause", {
+    configurable: true,
+    enumerable: false,
+    writable: true,
+    value: cause,
+  });
 }
 
 const DEFAULT_RPC_TIMEOUT_MS = 15_000;

@@ -21,7 +21,6 @@ export type TelegramInitDataErrorCode =
 export class TelegramInitDataValidationError extends Error {
   public readonly code: TelegramInitDataErrorCode;
   public readonly statusCode = 401;
-  public readonly cause?: unknown;
 
   constructor(
     code: TelegramInitDataErrorCode,
@@ -31,8 +30,17 @@ export class TelegramInitDataValidationError extends Error {
     super(message);
     this.name = "TelegramInitDataValidationError";
     this.code = code;
-    this.cause = cause;
+    defineErrorCause(this, cause);
   }
+}
+
+function defineErrorCause(error: Error, cause: unknown): void {
+  Object.defineProperty(error, "cause", {
+    configurable: true,
+    enumerable: false,
+    writable: true,
+    value: cause,
+  });
 }
 
 export interface TelegramWebAppUser {
