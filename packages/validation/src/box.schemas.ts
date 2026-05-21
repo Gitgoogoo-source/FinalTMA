@@ -30,59 +30,49 @@ const emptyStringToUndefined = (value: unknown): unknown => {
   return value;
 };
 
-const createIntQuerySchema = (
-  min: number,
-  max: number,
-  defaultValue: number,
-) =>
+const createIntQuerySchema = (min: number, max: number, defaultValue: number) =>
   z
-    .preprocess(
-      (value) => {
-        if (value === "" || value === null || value === undefined) {
-          return undefined;
-        }
-        return value;
-      },
-      z.coerce.number().int().min(min).max(max).optional(),
-    )
+    .preprocess((value) => {
+      if (value === "" || value === null || value === undefined) {
+        return undefined;
+      }
+      return value;
+    }, z.coerce.number().int().min(min).max(max).optional())
     .transform((value) => value ?? defaultValue);
 
 const createBooleanQuerySchema = (defaultValue: boolean) =>
   z
-    .preprocess(
-      (value) => {
-        if (value === "" || value === null || value === undefined) {
-          return undefined;
+    .preprocess((value) => {
+      if (value === "" || value === null || value === undefined) {
+        return undefined;
+      }
+
+      if (typeof value === "boolean") {
+        return value;
+      }
+
+      if (typeof value === "number") {
+        if (value === 1) return true;
+        if (value === 0) return false;
+        return value;
+      }
+
+      if (typeof value === "string") {
+        const normalized = value.trim().toLowerCase();
+
+        if (["true", "1", "yes", "on"].includes(normalized)) {
+          return true;
         }
 
-        if (typeof value === "boolean") {
-          return value;
-        }
-
-        if (typeof value === "number") {
-          if (value === 1) return true;
-          if (value === 0) return false;
-          return value;
-        }
-
-        if (typeof value === "string") {
-          const normalized = value.trim().toLowerCase();
-
-          if (["true", "1", "yes", "on"].includes(normalized)) {
-            return true;
-          }
-
-          if (["false", "0", "no", "off"].includes(normalized)) {
-            return false;
-          }
-
-          return value;
+        if (["false", "0", "no", "off"].includes(normalized)) {
+          return false;
         }
 
         return value;
-      },
-      z.boolean().optional(),
-    )
+      }
+
+      return value;
+    }, z.boolean().optional())
     .transform((value) => value ?? defaultValue);
 
 const BoxUuidSchema = z.string().uuid();
@@ -118,7 +108,10 @@ export const BoxSlugSchema = z
   .trim()
   .min(1)
   .max(80)
-  .regex(SLUG_RE, "Slug must use lowercase letters, numbers, underscore or dash.");
+  .regex(
+    SLUG_RE,
+    "Slug must use lowercase letters, numbers, underscore or dash.",
+  );
 
 export const BoxCursorSchema = z.string().trim().min(1).max(512);
 
@@ -148,9 +141,11 @@ export const BoxItemTypeSchema = z.enum([
 ]);
 
 export const BoxTierSchema = z.enum([
+  "normal",
   "ordinary",
   "rare",
   "legendary",
+  "event",
 ]);
 
 export const BoxStatusSchema = z.enum([
@@ -162,20 +157,13 @@ export const BoxStatusSchema = z.enum([
   "hidden",
 ]);
 
-export const BoxOpenTypeSchema = z.enum([
-  "single",
-  "ten",
-]);
+export const BoxOpenTypeSchema = z.enum(["single", "ten"]);
 
 export const BoxPaymentProviderSchema = z.literal("telegram_stars");
 
 export const BoxPaymentCurrencySchema = z.literal("XTR");
 
-export const BoxCurrencyCodeSchema = z.enum([
-  "KCOIN",
-  "FGEMS",
-  "XTR",
-]);
+export const BoxCurrencyCodeSchema = z.enum(["KCOIN", "FGEMS", "XTR"]);
 
 export const BoxDrawOrderStatusSchema = z.enum([
   "pending_payment",
@@ -195,13 +183,15 @@ export const BoxRewardSourceSchema = z.enum([
 
 export const BoxClientContextSchema = z
   .object({
-    source: z.enum([
-      "box_page",
-      "quick_open",
-      "task_entry",
-      "admin_preview",
-      "unknown",
-    ]).optional(),
+    source: z
+      .enum([
+        "box_page",
+        "quick_open",
+        "task_entry",
+        "admin_preview",
+        "unknown",
+      ])
+      .optional(),
     platform: z.preprocess(
       blankToUndefined,
       z.string().trim().min(1).max(32).optional(),
@@ -366,10 +356,7 @@ export const BoxListResponseSchema = z
 export const BoxRewardsQuerySchema = z
   .object({
     boxId: BoxIdSchema,
-    poolVersionId: z.preprocess(
-      blankToUndefined,
-      BoxUuidSchema.optional(),
-    ),
+    poolVersionId: z.preprocess(blankToUndefined, BoxUuidSchema.optional()),
     includeInactive: createBooleanQuerySchema(false),
     includeSoldOut: createBooleanQuerySchema(true),
   })
@@ -419,17 +406,20 @@ const CreateBoxOpenOrderBaseSchema = z.object({
   clientContext: BoxClientContextSchema.optional(),
 });
 
-export const CreateBoxOpenOrderRequestSchema = z.discriminatedUnion("openType", [
-  CreateBoxOpenOrderBaseSchema.extend({
-    openType: z.literal("single"),
-    quantity: z.literal(1).default(1),
-  }).strict(),
+export const CreateBoxOpenOrderRequestSchema = z.discriminatedUnion(
+  "openType",
+  [
+    CreateBoxOpenOrderBaseSchema.extend({
+      openType: z.literal("single"),
+      quantity: z.literal(1).default(1),
+    }).strict(),
 
-  CreateBoxOpenOrderBaseSchema.extend({
-    openType: z.literal("ten"),
-    quantity: z.literal(10).default(10),
-  }).strict(),
-]);
+    CreateBoxOpenOrderBaseSchema.extend({
+      openType: z.literal("ten"),
+      quantity: z.literal(10).default(10),
+    }).strict(),
+  ],
+);
 
 export const CreateBoxOpenOrderResponseSchema = z
   .object({
@@ -710,7 +700,10 @@ export const BoxAdminPublishDropPoolVersionRequestSchema = z
       (item) => item.probabilityBps !== undefined,
     ).length;
 
-    if (probabilityItemCount > 0 && probabilityItemCount !== value.items.length) {
+    if (
+      probabilityItemCount > 0 &&
+      probabilityItemCount !== value.items.length
+    ) {
       ctx.addIssue({
         code: "custom",
         path: ["items"],
@@ -852,9 +845,7 @@ export type CreateBoxOpenOrderResponse = z.infer<
 
 export type BoxDrawResultQuery = z.infer<typeof BoxDrawResultQuerySchema>;
 export type BoxDrawResultItem = z.infer<typeof BoxDrawResultItemSchema>;
-export type BoxDrawResultResponse = z.infer<
-  typeof BoxDrawResultResponseSchema
->;
+export type BoxDrawResultResponse = z.infer<typeof BoxDrawResultResponseSchema>;
 
 export type BoxDrawHistoryQuery = z.infer<typeof BoxDrawHistoryQuerySchema>;
 export type BoxDrawHistoryItem = z.infer<typeof BoxDrawHistoryItemSchema>;
