@@ -17,6 +17,7 @@ export function useCreateOpenOrder() {
           queryKey: queryKeys.box.rewards(input.boxId),
         }),
         queryClient.invalidateQueries({ queryKey: queryKeys.me.assetsRoot }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.inventory.root }),
       ]);
     },
   });

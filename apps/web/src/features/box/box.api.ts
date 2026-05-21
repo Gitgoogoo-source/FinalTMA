@@ -10,6 +10,8 @@ import type {
   BoxStatus,
   CreateOpenOrderInput,
   CreateOpenOrderResponse,
+  DrawResultItem,
+  DrawResultResponse,
 } from "./box.types";
 
 export async function fetchBoxes(): Promise<BoxListResponse> {
@@ -75,6 +77,23 @@ export async function createOpenOrder(
   );
 
   return normalizeCreateOpenOrderResponse(response, input.drawCount);
+}
+
+export async function fetchDrawResult(
+  orderId: string,
+): Promise<DrawResultResponse> {
+  const params = new URLSearchParams({
+    orderId,
+    includeItems: "true",
+  });
+  const response = await apiRequest<unknown>(
+    `${API_ENDPOINTS.boxes.result}?${params.toString()}`,
+    {
+      method: "GET",
+    },
+  );
+
+  return normalizeDrawResultResponse(response, orderId);
 }
 
 function normalizeBoxListResponse(response: unknown): BoxListResponse {
@@ -318,6 +337,91 @@ function normalizeCreateOpenOrderResponse(
       readBoolean(payload.resultReady) ??
       readBoolean(payload.result_ready) ??
       false,
+  };
+}
+
+function normalizeDrawResultResponse(
+  response: unknown,
+  fallbackOrderId: string,
+): DrawResultResponse {
+  const payload = isRecord(response) ? response : {};
+  const box = isRecord(payload.box) ? payload.box : {};
+  const payment = isRecord(payload.payment) ? payload.payment : {};
+  const rawResults = Array.isArray(payload.results) ? payload.results : [];
+  const status =
+    readString(payload.status) === "completed" ? "completed" : "pending";
+
+  return {
+    orderId:
+      readString(payload.orderId) ??
+      readString(payload.order_id) ??
+      fallbackOrderId,
+    status,
+    orderStatus:
+      readString(payload.orderStatus) ??
+      readString(payload.order_status) ??
+      "unknown",
+    quantity: readNumber(payload.quantity) ?? rawResults.length,
+    paidStars:
+      readNumber(payload.paidStars) ?? readNumber(payload.paid_stars) ?? 0,
+    returnedKcoin:
+      readNumber(payload.returnedKcoin) ??
+      readNumber(payload.returned_kcoin) ??
+      0,
+    invoicePayload:
+      readString(payload.invoicePayload) ?? readString(payload.invoice_payload),
+    paidAt: readString(payload.paidAt) ?? readString(payload.paid_at),
+    completedAt:
+      readString(payload.completedAt) ?? readString(payload.completed_at),
+    boxName:
+      readString(payload.boxName) ??
+      readString(payload.box_name) ??
+      readString(box.displayName) ??
+      readString(box.display_name),
+    paymentStatus:
+      readString(payload.paymentStatus) ??
+      readString(payload.payment_status) ??
+      readString(payment.status),
+    results: rawResults.map(normalizeDrawResultItem),
+    serverTime:
+      readString(payload.serverTime) ?? readString(payload.server_time),
+  };
+}
+
+function normalizeDrawResultItem(value: unknown): DrawResultItem {
+  const item = isRecord(value) ? value : {};
+
+  return {
+    drawIndex: readNumber(item.drawIndex) ?? readNumber(item.draw_index) ?? 0,
+    rewardSource:
+      readString(item.rewardSource) ??
+      readString(item.reward_source) ??
+      "random",
+    isPityHit:
+      readBoolean(item.isPityHit) ?? readBoolean(item.is_pity_hit) ?? false,
+    itemInstanceId:
+      readString(item.itemInstanceId) ?? readString(item.item_instance_id),
+    templateId: readString(item.templateId) ?? readString(item.template_id),
+    templateSlug:
+      readString(item.templateSlug) ?? readString(item.template_slug),
+    name: readString(item.name) ?? "未知奖励",
+    subtitle: readString(item.subtitle),
+    description: readString(item.description),
+    serialNumber:
+      readNullableNumber(item.serialNumber) ??
+      readNullableNumber(item.serial_number),
+    rarity: readString(item.rarity),
+    rarityLabel: readString(item.rarityLabel) ?? readString(item.rarity_label),
+    itemType: readString(item.itemType) ?? readString(item.item_type),
+    formId: readString(item.formId) ?? readString(item.form_id),
+    formIndex:
+      readNullableNumber(item.formIndex) ?? readNullableNumber(item.form_index),
+    formName: readString(item.formName) ?? readString(item.form_name),
+    imageUrl: readString(item.imageUrl) ?? readString(item.image_url),
+    thumbnailUrl:
+      readString(item.thumbnailUrl) ?? readString(item.thumbnail_url),
+    level: readNumber(item.level) ?? 0,
+    power: readNumber(item.power) ?? 0,
   };
 }
 

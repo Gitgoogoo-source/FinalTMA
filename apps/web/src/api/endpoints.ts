@@ -15,6 +15,7 @@ export const API_ENDPOINTS = {
     list: "/boxes/list",
     rewards: "/boxes/rewards",
     createOpenOrder: "/boxes/create-open-order",
+    result: "/boxes/result",
   },
 } as const;
 

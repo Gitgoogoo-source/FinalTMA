@@ -1026,6 +1026,10 @@ a {
   color: currentColor;
 }
 
+.box-open-button__spinner {
+  animation: box-spin 0.8s linear infinite;
+}
+
 .box-open-button em {
   position: absolute;
   right: 12px;
@@ -1303,6 +1307,263 @@ a {
 .box-reward-row__meta strong {
   color: #ffd166;
   font-size: 13px;
+}
+
+.payment-pending-sheet,
+.draw-result-modal {
+  position: fixed;
+  z-index: 70;
+  inset: 0;
+  display: grid;
+  align-items: end;
+}
+
+.payment-pending-sheet__backdrop,
+.draw-result-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  background: rgb(0 0 0 / 56%);
+}
+
+.payment-pending-sheet__panel,
+.draw-result-modal__panel {
+  width: min(100%, 460px);
+  max-height: min(84vh, 700px);
+  margin: 0 auto;
+  position: relative;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: 8px 8px 0 0;
+  background: #101820;
+  box-shadow: 0 -20px 60px rgb(0 0 0 / 34%);
+}
+
+.payment-pending-sheet__header,
+.draw-result-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 15px;
+  border-bottom: 1px solid rgb(255 255 255 / 10%);
+}
+
+.payment-pending-sheet__header span,
+.draw-result-modal__header span {
+  color: #8bd3c7;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.payment-pending-sheet__header h2,
+.draw-result-modal__header h2 {
+  margin: 2px 0 0;
+  color: #f7fbff;
+  font-size: 18px;
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
+.payment-pending-sheet__header button,
+.draw-result-modal__header button {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: 8px;
+  color: #f7fbff;
+  background: rgb(255 255 255 / 8%);
+  cursor: pointer;
+}
+
+.payment-pending-sheet__body,
+.draw-result-modal__body {
+  display: grid;
+  gap: 10px;
+  overflow: auto;
+  padding: 12px;
+}
+
+.payment-pending-sheet__body {
+  justify-items: center;
+  padding: 24px 18px 18px;
+  text-align: center;
+}
+
+.payment-pending-sheet__body > svg {
+  color: #ffd166;
+}
+
+.payment-pending-sheet__body strong {
+  color: #f7fbff;
+  font-size: 16px;
+}
+
+.payment-pending-sheet__body span {
+  max-width: 330px;
+  color: #aebfc7;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.payment-pending-sheet__body p {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 999px;
+  padding: 7px 11px;
+  color: #f7fbff;
+  background: rgb(255 255 255 / 7%);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.payment-pending-sheet__body button,
+.draw-result-state button,
+.draw-result-modal__confirm {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid rgb(255 209 102 / 44%);
+  border-radius: 999px;
+  padding: 0 14px;
+  color: #071615;
+  background: #ffd166;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.draw-result-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.draw-result-summary span {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 8px;
+  padding: 8px 6px;
+  color: #f7fbff;
+  background: rgb(255 255 255 / 7%);
+  font-size: 11px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.draw-result-summary svg {
+  flex: 0 0 auto;
+  color: #ffd166;
+}
+
+.draw-result-list {
+  display: grid;
+  gap: 8px;
+}
+
+.draw-result-item {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 8px;
+  padding: 9px;
+  background: rgb(255 255 255 / 6%);
+}
+
+.draw-result-item__image img,
+.draw-result-item__image span {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: 8px;
+  color: #071615;
+  background: #8bd3c7;
+  object-fit: cover;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.draw-result-item__copy {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.draw-result-item__copy strong,
+.draw-result-item__copy span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.draw-result-item__copy strong {
+  color: #f7fbff;
+  font-size: 13px;
+}
+
+.draw-result-item__copy span {
+  color: #aebfc7;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.draw-result-item em {
+  border: 1px solid rgb(255 209 102 / 36%);
+  border-radius: 999px;
+  padding: 4px 7px;
+  color: #ffe1a0;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.draw-result-state {
+  min-height: 180px;
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 8px;
+  padding: 18px 14px;
+  color: #b6c7cf;
+  background: rgb(255 255 255 / 6%);
+  text-align: center;
+}
+
+.draw-result-state strong {
+  color: #f7fbff;
+  font-size: 15px;
+}
+
+.draw-result-state span {
+  max-width: 320px;
+  color: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.45;
 }
 
 @keyframes box-float {

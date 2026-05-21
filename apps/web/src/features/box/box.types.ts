@@ -111,3 +111,44 @@ export type CreateOpenOrderResponse = {
   idempotent: boolean;
   resultReady: boolean;
 };
+
+export type DrawResultStatus = "completed" | "pending";
+
+export type DrawResultItem = {
+  drawIndex: number;
+  rewardSource: string;
+  isPityHit: boolean;
+  itemInstanceId: string | null;
+  templateId: string | null;
+  templateSlug: string | null;
+  name: string;
+  subtitle: string | null;
+  description: string | null;
+  serialNumber: number | null;
+  rarity: BoxRarity | string | null;
+  rarityLabel: string | null;
+  itemType: string | null;
+  formId: string | null;
+  formIndex: number | null;
+  formName: string | null;
+  imageUrl: string | null;
+  thumbnailUrl: string | null;
+  level: number;
+  power: number;
+};
+
+export type DrawResultResponse = {
+  orderId: string;
+  status: DrawResultStatus;
+  orderStatus: string;
+  quantity: number;
+  paidStars: number;
+  returnedKcoin: number;
+  invoicePayload: string | null;
+  paidAt: string | null;
+  completedAt: string | null;
+  boxName: string | null;
+  paymentStatus: string | null;
+  results: DrawResultItem[];
+  serverTime: string | null;
+};

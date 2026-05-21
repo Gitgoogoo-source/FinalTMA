@@ -1,26 +1,34 @@
 import { RefreshCw } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { getApiErrorMessage } from "@/api/errors";
 import { useFeedback } from "@/app/providers/FeedbackProvider";
 import { formatCurrencyAmount } from "@/shared/lib/formatCurrency";
 
 import { BoxHero } from "../components/BoxHero";
 import { BoxStatusBadge } from "../components/BoxStatusBadge";
 import { BoxTierSelector } from "../components/BoxTierSelector";
+import { DrawResultModal } from "../components/DrawResultModal";
 import { OpenOnceButton } from "../components/OpenOnceButton";
 import { OpenTenButton } from "../components/OpenTenButton";
+import { PaymentPendingSheet } from "../components/PaymentPendingSheet";
 import { PityProgress } from "../components/PityProgress";
 import { PossibleRewardsRow } from "../components/PossibleRewardsRow";
 import { PossibleRewardsSheet } from "../components/PossibleRewardsSheet";
-import type { BlindBox } from "../box.types";
+import type { BlindBox, CreateOpenOrderResponse } from "../box.types";
 import { useBoxRewards } from "../hooks/useBoxRewards";
 import { useBoxes } from "../hooks/useBoxes";
 import { useCreateOpenOrder } from "../hooks/useCreateOpenOrder";
+import { useDrawResult } from "../hooks/useDrawResult";
 
 export function BoxPage() {
   const { pushToast } = useFeedback();
   const [selectedBoxId, setSelectedBoxId] = useState<string | null>(null);
   const [rewardsOpen, setRewardsOpen] = useState(false);
+  const [resultOrderId, setResultOrderId] = useState<string | null>(null);
+  const [paymentPendingOrder, setPaymentPendingOrder] =
+    useState<CreateOpenOrderResponse | null>(null);
+  const openRequestLockedRef = useRef(false);
   const boxesQuery = useBoxes();
   const boxes = boxesQuery.boxes;
   const defaultBoxId = useMemo(() => getDefaultBoxId(boxes), [boxes]);
@@ -40,9 +48,11 @@ export function BoxPage() {
     boxes.find((box) => box.id === selectedBoxId) ?? boxes[0] ?? null;
   const rewardsQuery = useBoxRewards(selectedBox?.id);
   const createOrder = useCreateOpenOrder();
+  const drawResultQuery = useDrawResult(resultOrderId, Boolean(resultOrderId));
   const pendingDrawCount = createOrder.isPending
     ? (createOrder.variables?.drawCount ?? null)
     : null;
+  const openActionDisabled = createOrder.isPending || !selectedBox?.isOpenable;
 
   const handleOpen = useCallback(
     (drawCount: 1 | 10) => {
@@ -59,6 +69,11 @@ export function BoxPage() {
         return;
       }
 
+      if (createOrder.isPending || openRequestLockedRef.current) {
+        return;
+      }
+
+      openRequestLockedRef.current = true;
       createOrder.mutate(
         {
           boxId: selectedBox.id,
@@ -71,6 +86,14 @@ export function BoxPage() {
         },
         {
           onSuccess: (order) => {
+            if (order.resultReady && order.orderId) {
+              setPaymentPendingOrder(null);
+              setResultOrderId(order.orderId);
+            } else {
+              setResultOrderId(null);
+              setPaymentPendingOrder(order);
+            }
+
             pushToast({
               type: order.resultReady ? "success" : "info",
               title: order.resultReady ? "开盒结果已生成" : "支付订单已创建",
@@ -78,6 +101,16 @@ export function BoxPage() {
                 ? "开发支付模式已由后端处理，资产和保底正在刷新。"
                 : `等待 Telegram Stars 支付确认，金额 ${formatCurrencyAmount(order.xtrAmount)} Stars。`,
             });
+          },
+          onError: (error) => {
+            pushToast({
+              type: "error",
+              title: "开盒请求失败",
+              message: getApiErrorMessage(error),
+            });
+          },
+          onSettled: () => {
+            openRequestLockedRef.current = false;
           },
         },
       );
@@ -150,11 +183,13 @@ export function BoxPage() {
         <OpenOnceButton
           box={selectedBox}
           isPending={pendingDrawCount === 1}
+          isDisabled={openActionDisabled}
           onOpen={() => handleOpen(1)}
         />
         <OpenTenButton
           box={selectedBox}
           isPending={pendingDrawCount === 10}
+          isDisabled={openActionDisabled}
           onOpen={() => handleOpen(10)}
         />
       </section>
@@ -171,6 +206,28 @@ export function BoxPage() {
         errorMessage={getRewardsErrorMessage(rewardsQuery.error)}
         onRetry={() => void rewardsQuery.refetch()}
         onClose={() => setRewardsOpen(false)}
+      />
+
+      <PaymentPendingSheet
+        open={paymentPendingOrder !== null}
+        order={paymentPendingOrder}
+        onCheckResult={() => {
+          if (paymentPendingOrder?.orderId) {
+            setResultOrderId(paymentPendingOrder.orderId);
+            setPaymentPendingOrder(null);
+          }
+        }}
+        onClose={() => setPaymentPendingOrder(null)}
+      />
+
+      <DrawResultModal
+        open={resultOrderId !== null}
+        result={drawResultQuery.result}
+        isLoading={drawResultQuery.isLoading}
+        isError={drawResultQuery.isError}
+        errorMessage={getRewardsErrorMessage(drawResultQuery.error)}
+        onRetry={() => void drawResultQuery.refetch()}
+        onClose={() => setResultOrderId(null)}
       />
     </section>
   );

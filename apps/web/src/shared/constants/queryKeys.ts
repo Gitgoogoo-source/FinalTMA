@@ -10,5 +10,11 @@ export const queryKeys = {
     list: ["box", "list"] as const,
     rewards: (boxId: string | null | undefined) =>
       ["box", "rewards", boxId ?? "none"] as const,
+    result: (orderId: string | null | undefined) =>
+      ["box", "result", orderId ?? "none"] as const,
+  },
+  inventory: {
+    root: ["inventory"] as const,
+    list: ["inventory", "list"] as const,
   },
 } as const;
