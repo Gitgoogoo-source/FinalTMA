@@ -1,0 +1,2 @@
+-- 010_market_rules.seed.sql
+-- Reserved for the marketplace phase. Intentionally empty for phase 1.

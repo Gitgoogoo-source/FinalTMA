@@ -1,0 +1,2 @@
+-- 009_album.seed.sql
+-- Reserved for the album/leaderboard phase. Intentionally empty for phase 1.

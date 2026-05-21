@@ -1,0 +1,2 @@
+-- 011_feature_flags.seed.sql
+-- Reserved for feature flag defaults. Intentionally empty for phase 1.
