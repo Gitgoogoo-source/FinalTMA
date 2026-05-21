@@ -13,11 +13,14 @@ type RawDrawResultPayload = {
   quantity?: unknown;
   total_price_stars?: unknown;
   open_reward_kcoin?: unknown;
+  returned_kcoin?: unknown;
+  kcoin_reward?: unknown;
   invoice_payload?: unknown;
   paid_at?: unknown;
   opened_at?: unknown;
   box?: unknown;
   payment?: unknown;
+  balances?: unknown;
   results?: unknown;
   server_time?: unknown;
 };
@@ -107,19 +110,29 @@ export function toDrawResultResponse(
   const rawOrderStatus = stringOrNull(payload.status) ?? "unknown";
   const isCompleted = rawOrderStatus === "opened";
   const rawResults = Array.isArray(payload.results) ? payload.results : [];
+  const quantity = numberOrZero(payload.quantity);
+  const explicitKcoinReturn = numberOrZero(
+    payload.returned_kcoin ?? payload.kcoin_reward,
+  );
+  const perDrawKcoinReturn = numberOrZero(payload.open_reward_kcoin);
+  const returnedKcoin =
+    explicitKcoinReturn > 0
+      ? explicitKcoinReturn
+      : perDrawKcoinReturn * Math.max(quantity, 1);
 
   return {
     order_id: stringOrNull(payload.draw_order_id),
     status: isCompleted ? "completed" : "pending",
     order_status: rawOrderStatus,
-    quantity: numberOrZero(payload.quantity),
+    quantity,
     paid_stars: numberOrZero(payload.total_price_stars),
-    returned_kcoin: numberOrZero(payload.open_reward_kcoin),
+    returned_kcoin: returnedKcoin,
     invoice_payload: stringOrNull(payload.invoice_payload),
     paid_at: stringOrNull(payload.paid_at),
     completed_at: stringOrNull(payload.opened_at),
     box: isRecord(payload.box) ? payload.box : null,
     payment: isRecord(payload.payment) ? payload.payment : null,
+    balances: isRecord(payload.balances) ? payload.balances : null,
     results:
       includeItems && isCompleted ? rawResults.map(toDrawResultItem) : [],
     server_time: stringOrNull(payload.server_time) ?? new Date().toISOString(),

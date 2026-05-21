@@ -3,30 +3,16 @@ import {
   useCallback,
   useContext,
   useMemo,
-  useState,
   type ReactNode,
 } from "react";
 
-type FeedbackType = "success" | "error" | "info";
-
-type FeedbackToast = {
-  id: string;
-  type: FeedbackType;
-  title: string;
-  message?: string;
-};
-
-type PushToastInput = {
-  type?: FeedbackType;
-  title: string;
-  message?: string;
-};
-
-type FeedbackContextValue = {
-  toasts: FeedbackToast[];
-  pushToast: (toast: PushToastInput) => void;
-  dismissToast: (toastId: string) => void;
-};
+import { ResultToast } from "@/features/feedback/components/ResultToast";
+import { RewardModal } from "@/features/feedback/components/RewardModal";
+import { useFeedbackStore } from "@/features/feedback/feedback.store";
+import type {
+  FeedbackContextValue,
+  PushToastInput,
+} from "@/features/feedback/feedback.types";
 
 type FeedbackProviderProps = {
   children: ReactNode;
@@ -35,38 +21,44 @@ type FeedbackProviderProps = {
 const FeedbackContext = createContext<FeedbackContextValue | null>(null);
 
 export function FeedbackProvider({ children }: FeedbackProviderProps) {
-  const [toasts, setToasts] = useState<FeedbackToast[]>([]);
-
-  const dismissToast = useCallback((toastId: string) => {
-    setToasts((currentToasts) =>
-      currentToasts.filter((toast) => toast.id !== toastId),
-    );
-  }, []);
+  const toasts = useFeedbackStore((state) => state.toasts);
+  const rewardModal = useFeedbackStore((state) => state.rewardModal);
+  const storePushToast = useFeedbackStore((state) => state.pushToast);
+  const dismissToast = useFeedbackStore((state) => state.dismissToast);
+  const showRewardModal = useFeedbackStore((state) => state.showRewardModal);
+  const closeRewardModal = useFeedbackStore((state) => state.closeRewardModal);
+  const clearFeedback = useFeedbackStore((state) => state.clearFeedback);
 
   const pushToast = useCallback(
     (toast: PushToastInput) => {
-      const nextToast: FeedbackToast = {
-        id: createToastId(),
-        type: toast.type ?? "info",
-        title: toast.title,
-        ...(toast.message ? { message: toast.message } : {}),
-      };
+      const toastId = storePushToast(toast);
 
-      setToasts((currentToasts) => [...currentToasts.slice(-2), nextToast]);
       globalThis.setTimeout(() => {
-        dismissToast(nextToast.id);
+        dismissToast(toastId);
       }, 4200);
     },
-    [dismissToast],
+    [dismissToast, storePushToast],
   );
 
   const value = useMemo<FeedbackContextValue>(
     () => ({
       toasts,
+      rewardModal,
       pushToast,
       dismissToast,
+      showRewardModal,
+      closeRewardModal,
+      clearFeedback,
     }),
-    [dismissToast, pushToast, toasts],
+    [
+      clearFeedback,
+      closeRewardModal,
+      dismissToast,
+      pushToast,
+      rewardModal,
+      showRewardModal,
+      toasts,
+    ],
   );
 
   return (
@@ -78,17 +70,14 @@ export function FeedbackProvider({ children }: FeedbackProviderProps) {
         aria-relevant="additions text"
       >
         {toasts.map((toast) => (
-          <button
-            className={`feedback-toast feedback-toast--${toast.type}`}
+          <ResultToast
             key={toast.id}
-            onClick={() => dismissToast(toast.id)}
-            type="button"
-          >
-            <strong>{toast.title}</strong>
-            {toast.message ? <span>{toast.message}</span> : null}
-          </button>
+            toast={toast}
+            onDismiss={dismissToast}
+          />
         ))}
       </div>
+      <RewardModal modal={rewardModal} onClose={closeRewardModal} />
     </FeedbackContext.Provider>
   );
 }
@@ -101,12 +90,4 @@ export function useFeedback(): FeedbackContextValue {
   }
 
   return value;
-}
-
-function createToastId(): string {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return crypto.randomUUID();
-  }
-
-  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }

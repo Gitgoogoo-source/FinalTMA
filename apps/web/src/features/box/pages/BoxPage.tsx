@@ -15,7 +15,11 @@ import { PaymentPendingSheet } from "../components/PaymentPendingSheet";
 import { PityProgress } from "../components/PityProgress";
 import { PossibleRewardsRow } from "../components/PossibleRewardsRow";
 import { PossibleRewardsSheet } from "../components/PossibleRewardsSheet";
-import type { BlindBox, CreateOpenOrderResponse } from "../box.types";
+import type {
+  BlindBox,
+  CreateOpenOrderResponse,
+  DrawResultResponse,
+} from "../box.types";
 import { useBoxRewards } from "../hooks/useBoxRewards";
 import { useBoxes } from "../hooks/useBoxes";
 import { useCreateOpenOrder } from "../hooks/useCreateOpenOrder";
@@ -48,7 +52,20 @@ export function BoxPage() {
     boxes.find((box) => box.id === selectedBoxId) ?? boxes[0] ?? null;
   const rewardsQuery = useBoxRewards(selectedBox?.id);
   const createOrder = useCreateOpenOrder();
-  const drawResultQuery = useDrawResult(resultOrderId, Boolean(resultOrderId));
+  const handleDrawCompleted = useCallback(
+    (result: DrawResultResponse) => {
+      pushToast({
+        type: "success",
+        title: "开盒完成",
+        message: `获得 ${formatCurrencyAmount(result.results.length || result.quantity)} 件藏品，返还 ${formatCurrencyAmount(result.returnedKcoin)} K-coin。`,
+      });
+    },
+    [pushToast],
+  );
+  const drawResultQuery = useDrawResult(resultOrderId, {
+    enabled: Boolean(resultOrderId),
+    onCompleted: handleDrawCompleted,
+  });
   const pendingDrawCount = createOrder.isPending
     ? (createOrder.variables?.drawCount ?? null)
     : null;

@@ -1,4 +1,4 @@
-import { RefreshCw, Star, Trophy, X } from "lucide-react";
+import { Coins, RefreshCw, Star, Trophy, X } from "lucide-react";
 
 import { formatCurrencyAmount } from "@/shared/lib/formatCurrency";
 
@@ -74,6 +74,7 @@ export function DrawResultModal({
           {!isLoading && !isError && completed && result ? (
             <>
               <ResultSummary result={result} />
+              <BalanceChanges result={result} />
               <div className="draw-result-list">
                 {result.results.map((item) => (
                   <ResultItem
@@ -98,11 +99,13 @@ export function DrawResultModal({
 }
 
 function ResultSummary({ result }: { result: DrawResultResponse }) {
+  const itemCount = result.results.length || result.quantity;
+
   return (
     <div className="draw-result-summary">
       <span>
         <Trophy aria-hidden="true" size={15} strokeWidth={2.4} />
-        {result.quantity} 次开盒
+        {formatCurrencyAmount(itemCount)} 件藏品
       </span>
       <span>
         <Star aria-hidden="true" size={15} strokeWidth={2.4} />
@@ -113,12 +116,41 @@ function ResultSummary({ result }: { result: DrawResultResponse }) {
   );
 }
 
+function BalanceChanges({ result }: { result: DrawResultResponse }) {
+  return (
+    <div className="draw-result-balance">
+      <div className="draw-result-balance__heading">
+        <strong>余额变化</strong>
+        <span>
+          {result.balances?.kcoin
+            ? `当前 ${formatCurrencyAmount(result.balances.kcoin)} K-coin`
+            : "资产栏已刷新"}
+        </span>
+      </div>
+      <div className="draw-result-balance__grid" aria-label="余额变化">
+        <span>
+          <Star aria-hidden="true" size={15} strokeWidth={2.4} />
+          Stars
+          <strong>-{formatCurrencyAmount(result.paidStars)}</strong>
+        </span>
+        <span>
+          <Coins aria-hidden="true" size={15} strokeWidth={2.4} />
+          K-coin
+          <strong>+{formatCurrencyAmount(result.returnedKcoin)}</strong>
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function ResultItem({ item }: { item: DrawResultItem }) {
+  const imageUrl = item.imageUrl ?? item.thumbnailUrl;
+
   return (
     <article className="draw-result-item">
       <div className="draw-result-item__image">
-        {item.imageUrl ? (
-          <img src={item.imageUrl} alt={item.name} />
+        {imageUrl ? (
+          <img src={imageUrl} alt={item.name} />
         ) : (
           <span>{item.name.slice(0, 1)}</span>
         )}
@@ -127,9 +159,11 @@ function ResultItem({ item }: { item: DrawResultItem }) {
         <strong>{item.name}</strong>
         <span>
           #{item.drawIndex}
+          {" · 数量 1"}
           {item.rarityLabel ? ` · ${item.rarityLabel}` : ""}
           {item.formName ? ` · ${item.formName}` : ""}
         </span>
+        {item.serialNumber ? <span>藏品编号 {item.serialNumber}</span> : null}
       </div>
       {item.isPityHit ? <em>保底</em> : null}
     </article>

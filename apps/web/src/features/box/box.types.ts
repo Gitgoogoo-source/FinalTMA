@@ -137,6 +137,12 @@ export type DrawResultItem = {
   power: number;
 };
 
+export type DrawResultBalances = {
+  kcoin: string | null;
+  fgems: string | null;
+  stars: string | null;
+};
+
 export type DrawResultResponse = {
   orderId: string;
   status: DrawResultStatus;
@@ -149,6 +155,7 @@ export type DrawResultResponse = {
   completedAt: string | null;
   boxName: string | null;
   paymentStatus: string | null;
+  balances: DrawResultBalances | null;
   results: DrawResultItem[];
   serverTime: string | null;
 };

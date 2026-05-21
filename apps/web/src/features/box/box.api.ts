@@ -10,6 +10,7 @@ import type {
   BoxStatus,
   CreateOpenOrderInput,
   CreateOpenOrderResponse,
+  DrawResultBalances,
   DrawResultItem,
   DrawResultResponse,
 } from "./box.types";
@@ -382,10 +383,39 @@ function normalizeDrawResultResponse(
       readString(payload.paymentStatus) ??
       readString(payload.payment_status) ??
       readString(payment.status),
+    balances: normalizeDrawResultBalances(payload.balances),
     results: rawResults.map(normalizeDrawResultItem),
     serverTime:
       readString(payload.serverTime) ?? readString(payload.server_time),
   };
+}
+
+function normalizeDrawResultBalances(
+  value: unknown,
+): DrawResultBalances | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const balances = {
+    kcoin: readBalanceAmount(value.kcoin ?? value.KCOIN),
+    fgems: readBalanceAmount(value.fgems ?? value.FGEMS),
+    stars: readBalanceAmount(value.stars ?? value.STAR_DISPLAY),
+  };
+
+  if (!balances.kcoin && !balances.fgems && !balances.stars) {
+    return null;
+  }
+
+  return balances;
+}
+
+function readBalanceAmount(value: unknown): string | null {
+  if (isRecord(value)) {
+    return readString(value.available) ?? readNumberAsString(value.available);
+  }
+
+  return readString(value) ?? readNumberAsString(value);
 }
 
 function normalizeDrawResultItem(value: unknown): DrawResultItem {
@@ -504,6 +534,16 @@ function readNumber(value: unknown): number | null {
   }
 
   return null;
+}
+
+function readNumberAsString(value: unknown): string | null {
+  const numberValue = readNumber(value);
+
+  if (numberValue === null) {
+    return null;
+  }
+
+  return String(numberValue);
 }
 
 function readNullableNumber(value: unknown): number | null {

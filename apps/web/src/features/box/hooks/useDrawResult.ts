@@ -1,20 +1,56 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef } from "react";
 
 import { queryKeys } from "@/shared/constants/queryKeys";
 
 import { fetchDrawResult } from "../box.api";
+import type { DrawResultResponse } from "../box.types";
+
+type UseDrawResultOptions = {
+  enabled?: boolean;
+  onCompleted?: (result: DrawResultResponse) => void;
+};
 
 export function useDrawResult(
   orderId: string | null | undefined,
-  enabled = true,
+  options: boolean | UseDrawResultOptions = true,
 ) {
+  const queryClient = useQueryClient();
+  const completedOrderRef = useRef<string | null>(null);
+  const enabled = typeof options === "boolean" ? options : options.enabled;
+  const onCompleted =
+    typeof options === "boolean" ? undefined : options.onCompleted;
   const query = useQuery({
     queryKey: queryKeys.box.result(orderId),
     queryFn: () => fetchDrawResult(orderId ?? ""),
-    enabled: Boolean(orderId) && enabled,
+    enabled: Boolean(orderId) && (enabled ?? true),
     refetchInterval: (queryState) =>
       queryState.state.data?.status === "pending" ? 2000 : false,
   });
+
+  useEffect(() => {
+    if (!orderId) {
+      completedOrderRef.current = null;
+    }
+  }, [orderId]);
+
+  useEffect(() => {
+    const result = query.data;
+
+    if (!result || result.status !== "completed") {
+      return;
+    }
+
+    if (completedOrderRef.current === result.orderId) {
+      return;
+    }
+
+    completedOrderRef.current = result.orderId;
+    void queryClient.invalidateQueries({ queryKey: queryKeys.me.assetsRoot });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.inventory.root });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.box.root });
+    onCompleted?.(result);
+  }, [onCompleted, query.data, queryClient]);
 
   return {
     ...query,
