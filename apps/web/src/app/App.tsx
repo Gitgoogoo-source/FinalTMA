@@ -1,4 +1,5 @@
 import { env } from "@/env";
+import { AppShell } from "@/shared/layout/AppShell";
 
 import { RequireSession } from "./guards/RequireSession";
 import { AppProviders } from "./providers/AppProviders";
@@ -19,8 +20,11 @@ function AuthenticatedHome() {
   const displayName = session.user?.firstName ?? "玩家";
 
   return (
-    <main className="phase-shell">
-      <section className="phase-panel" aria-labelledby="phase-title">
+    <AppShell>
+      <section
+        className="phase-panel app-home-panel"
+        aria-labelledby="phase-title"
+      >
         <p className="phase-kicker">第一阶段</p>
         <h1 id="phase-title" className="phase-title">
           盲盒小游戏
@@ -36,6 +40,6 @@ function AuthenticatedHome() {
           </span>
         </div>
       </section>
-    </main>
+    </AppShell>
   );
 }
