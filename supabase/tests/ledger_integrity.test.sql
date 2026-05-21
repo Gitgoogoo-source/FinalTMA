@@ -145,6 +145,47 @@ select 'unlock1', api.economy_unlock_balance(
 select is((select available_amount from economy.user_balances b join _ids i on i.id = b.user_id where i.key = 'user' and b.currency_code = 'KCOIN'), 700::numeric, 'unlock release restores available balance');
 select is((select locked_amount from economy.user_balances b join _ids i on i.id = b.user_id where i.key = 'user' and b.currency_code = 'KCOIN'), 0::numeric, 'unlock release clears locked balance');
 select ok(exists (select 1 from economy.balance_locks l join _ids i on i.id = l.id where i.key = 'lock_id' and l.status = 'released'), 'balance lock row is released');
+select is(
+  (
+    select available_amount
+    from economy.user_balances
+    where user_id = (select id from _ids where key = 'user')
+      and currency_code = 'KCOIN'
+  ),
+  (
+    select coalesce(sum(case
+      when entry_type in ('credit', 'refund') then amount
+      when entry_type = 'unlock' then amount
+      when entry_type in ('debit', 'fee', 'lock') then -amount
+      when entry_type = 'adjustment' then amount
+      when entry_type = 'reversal' then 0
+      else 0
+    end), 0)
+    from economy.currency_ledger
+    where user_id = (select id from _ids where key = 'user')
+      and currency_code = 'KCOIN'
+  ),
+  'available balance equals signed ledger total after credit, debit, lock and unlock'
+);
+select is(
+  (
+    select locked_amount
+    from economy.user_balances
+    where user_id = (select id from _ids where key = 'user')
+      and currency_code = 'KCOIN'
+  ),
+  (
+    select coalesce(sum(case
+      when entry_type = 'lock' then amount
+      when entry_type = 'unlock' then -amount
+      else 0
+    end), 0)
+    from economy.currency_ledger
+    where user_id = (select id from _ids where key = 'user')
+      and currency_code = 'KCOIN'
+  ),
+  'locked balance equals lock ledger total after release'
+);
 select ok(testutil.raises_like(format('update economy.currency_ledger set note = %L where id = %L::uuid', 'mutate forbidden', ((select payload from _ids where key = 'credit1') ->> 'ledger_id')), '%immutable%'), 'ledger update is blocked by immutable trigger');
 select ok(testutil.raises_like(format('delete from economy.currency_ledger where id = %L::uuid', ((select payload from _ids where key = 'credit1') ->> 'ledger_id')), '%immutable%'), 'ledger delete is blocked by immutable trigger');
 

@@ -4,6 +4,7 @@
 \i supabase/tests/gacha_order.test.sql
 \i supabase/tests/gacha_pity.test.sql
 \i supabase/tests/gacha_payment_idempotency.test.sql
+\i supabase/tests/inventory.test.sql
 \i supabase/tests/inventory_lock.test.sql
 \i supabase/tests/inventory_evolve.test.sql
 \i supabase/tests/market_buy.test.sql

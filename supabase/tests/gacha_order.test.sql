@@ -336,8 +336,23 @@ select is(((select payload from _ids where key = 'order1_repeat') ->> 'draw_orde
 
 insert into _ids (key, payload)
 select 'order10', api.gacha_create_order((select id from _ids where key = 'user'), (select id from _ids where key = 'box'), 10, 'gacha-order-ten-001');
+insert into _ids (key, id) select 'draw_order10', ((select payload from _ids where key = 'order10') ->> 'draw_order_id')::uuid;
 select is(((select payload from _ids where key = 'order10') ->> 'xtr_amount')::int, 90, 'ten-draw order applies 9折 discount');
 select is(((select payload from _ids where key = 'order10') ->> 'discount_bps')::int, 1000, 'ten-draw response exposes discount_bps=1000');
+insert into _ids (key, payload)
+select 'order10_dev_process', api.gacha_process_dev_paid_order((select id from _ids where key = 'draw_order10'), (select id from _ids where key = 'user'));
+select is(jsonb_array_length((select payload from _ids where key = 'order10_dev_process') -> 'results'), 10, 'dev paid process creates ten draw results for ten draw');
+select is((select count(*)::int from gacha.draw_results where draw_order_id = (select id from _ids where key = 'draw_order10')), 10, 'ten-draw order stores 10 draw_results rows');
+select is((
+  select count(*)::int
+  from gacha.draw_results dr
+  join inventory.item_instances ii on ii.id = dr.item_instance_id
+  where dr.draw_order_id = (select id from _ids where key = 'draw_order10')
+    and ii.owner_user_id = (select id from _ids where key = 'user')
+    and ii.source_type = 'gacha'
+    and ii.source_id = (select id from _ids where key = 'draw_order10')
+), 10, 'every ten-draw result has a matching owned gacha item_instance');
+select is(testutil.balance_of((select id from _ids where key = 'user'), 'KCOIN'), 1100::numeric, 'single draw plus ten draw credits KCOIN reward per draw');
 select ok(testutil.raises_like(format('select api.gacha_create_order(%L::uuid, %L::uuid, 2, %L)', (select id::text from _ids where key = 'user'), (select id::text from _ids where key = 'box'), 'invalid-quantity'), '%quantity must be 1 or 10%'), 'create order rejects unsupported quantity');
 
 update gacha.blind_boxes set status = 'paused' where id = (select id from _ids where key = 'box');
