@@ -29,7 +29,7 @@ project_id = "tma-game"
 enabled = true
 port = 54321
 
-# 只暴露 public / graphql_public。
+# 方案 A 临时恢复登录：暴露登录 API 当前依赖的 api / core schema。
 #
 # 项目中的核心 schema：
 # - core
@@ -44,12 +44,12 @@ port = 54321
 # - onchain
 # - ops
 #
-# 不建议直接暴露给前端。
+# 长期不建议直接暴露给前端；后续方案 B 应把登录查询收回 RPC 后移除 core。
 # 核心写操作必须通过 Vercel API 调用 Supabase RPC 完成。
 #
 # 如果未来建立专门只读 schema，例如 api_public，可以改成：
 # schemas = ["public", "graphql_public", "api_public"]
-schemas = ["public", "graphql_public"]
+schemas = ["public", "graphql_public", "api", "core"]
 
 # 每个 PostgREST 请求的 search_path。
 # extensions 用于 pgcrypto、uuid、pg_net 等扩展函数。
