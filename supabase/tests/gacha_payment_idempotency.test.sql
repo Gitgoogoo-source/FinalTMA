@@ -307,6 +307,9 @@ insert into _ids (key, payload) select 'process2', api.gacha_process_paid_order(
 
 select ok(((select payload from _ids where key = 'process2') ->> 'idempotent')::boolean, 'second payment fulfillment call returns idempotent=true');
 select is((select count(*)::int from payments.star_payments where telegram_payment_charge_id = 'tg-charge-idempotency-001'), 1, 'duplicate successful_payment charge id is not double-inserted');
+select is((select payment_provider from gacha.draw_orders where id = (select id from _ids where key = 'draw_order')), 'telegram_stars', 'formal successful_payment records telegram_stars payment_provider');
+select is((select payment_status from gacha.draw_orders where id = (select id from _ids where key = 'draw_order')), 'paid', 'formal successful_payment records paid payment_status');
+select is((select telegram_payment_charge_id from gacha.draw_orders where id = (select id from _ids where key = 'draw_order')), 'tg-charge-idempotency-001', 'formal successful_payment records Telegram charge id on draw order');
 select is((select count(*)::int from gacha.draw_results where draw_order_id = (select id from _ids where key = 'draw_order')), 1, 'duplicate payment processing does not create duplicate draw results');
 select is((select count(*)::int from inventory.item_instances where source_type = 'gacha' and source_id = (select id from _ids where key = 'draw_order')), 1, 'duplicate payment processing does not create duplicate inventory items');
 select is(testutil.balance_of((select id from _ids where key = 'user'), 'KCOIN'), 100::numeric, 'duplicate payment processing does not double-credit open reward');

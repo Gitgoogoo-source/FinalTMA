@@ -307,6 +307,10 @@ select is(((select payload from _ids where key = 'order1') ->> 'xtr_amount')::in
 select ok(exists (select 1 from gacha.draw_orders d join _ids i on i.id = d.id where i.key = 'draw_order1' and d.status = 'invoice_created' and d.quantity = 1), 'draw order is created with invoice_created status');
 select ok(exists (select 1 from payments.star_orders s join _ids i on i.id = s.id where i.key = 'star_order1' and s.business_type = 'gacha_open' and s.xtr_amount = 10), 'Stars order is created for gacha open');
 select is((select payment_star_order_id from gacha.draw_orders d join _ids i on i.id = d.id where i.key = 'draw_order1'), (select id from _ids where key = 'star_order1'), 'draw order links to Stars order');
+select is((select payment_provider from gacha.draw_orders d join _ids i on i.id = d.id where i.key = 'draw_order1'), 'telegram_stars', 'draw order stores phase-1 payment_provider');
+select is((select payment_status from gacha.draw_orders d join _ids i on i.id = d.id where i.key = 'draw_order1'), 'pending', 'draw order stores phase-1 pending payment_status');
+select is((select star_amount from gacha.draw_orders d join _ids i on i.id = d.id where i.key = 'draw_order1'), 10, 'draw order stores phase-1 star_amount');
+select is((select telegram_invoice_payload from gacha.draw_orders d join _ids i on i.id = d.id where i.key = 'draw_order1'), (select payload ->> 'invoice_payload' from _ids where key = 'order1'), 'draw order mirrors Telegram invoice payload');
 
 insert into _ids (key, id) values ('other_user', testutil.make_user(9300000002, 'gacha_order_other_user', null));
 select ok(testutil.raises_like(format('select api.gacha_create_order(%L::uuid, %L::uuid, 1, %L)', (select id::text from _ids where key = 'other_user'), (select id::text from _ids where key = 'box'), 'gacha-order-single-001'), '%idempotency key conflict%'), 'create order rejects idempotency key reused by another user');
@@ -317,6 +321,9 @@ insert into _ids (key, payload)
 select 'order1_dev_process', api.gacha_process_dev_paid_order((select id from _ids where key = 'draw_order1'), (select id from _ids where key = 'user'));
 select is(((select payload from _ids where key = 'order1_dev_process') ->> 'status'), 'opened', 'dev paid process opens order');
 select is(((select payload from _ids where key = 'order1_dev_process') ->> 'payment_status'), 'dev_paid', 'dev paid process marks dev payment status');
+select is((select payment_provider from gacha.draw_orders d join _ids i on i.id = d.id where i.key = 'draw_order1'), 'dev', 'dev paid process records dev payment_provider on draw order');
+select is((select payment_status from gacha.draw_orders d join _ids i on i.id = d.id where i.key = 'draw_order1'), 'dev_paid', 'dev paid process records dev_paid payment_status on draw order');
+select is((select telegram_payment_charge_id from gacha.draw_orders d join _ids i on i.id = d.id where i.key = 'draw_order1'), 'dev:' || (select id::text from _ids where key = 'draw_order1'), 'dev paid process records Telegram payment charge placeholder');
 select is(jsonb_array_length((select payload from _ids where key = 'order1_dev_process') -> 'results'), 1, 'dev paid process creates one draw result for single draw');
 select is(testutil.balance_of((select id from _ids where key = 'user'), 'KCOIN'), 100::numeric, 'dev paid process credits KCOIN reward');
 select ok(exists (select 1 from economy.currency_ledger where user_id = (select id from _ids where key = 'user') and source_id = (select id from _ids where key = 'draw_order1') and entry_type = 'credit' and currency_code = 'KCOIN'), 'dev paid process writes KCOIN ledger');
