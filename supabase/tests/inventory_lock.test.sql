@@ -200,7 +200,14 @@ insert into _ids (key, id) values ('user', testutil.make_user(9600000001, 'inven
 insert into _ids (key, payload) values ('catalog', testutil.create_catalog_fixture('inventory-lock', 'COMMON', true, true, true, true, true));
 insert into _ids (key, id) select 'template', ((select payload from _ids where key = 'catalog') ->> 'template_id')::uuid;
 insert into _ids (key, id) select 'form1', ((select payload from _ids where key = 'catalog') ->> 'form1_id')::uuid;
+insert into _ids (key, id) select 'form2', ((select payload from _ids where key = 'catalog') ->> 'form2_id')::uuid;
 insert into _ids (key, id) select 'item', testutil.create_item((select id from _ids where key = 'user'), (select id from _ids where key = 'template'), (select id from _ids where key = 'form1'), 1, 10, 'admin');
+insert into _ids (key, id) select 'item2', testutil.create_item((select id from _ids where key = 'user'), (select id from _ids where key = 'template'), (select id from _ids where key = 'form1'), 1, 10, 'admin');
+insert into _ids (key, id) select 'item3', testutil.create_item((select id from _ids where key = 'user'), (select id from _ids where key = 'template'), (select id from _ids where key = 'form1'), 1, 10, 'admin');
+insert into _ids (key, id) select 'active_locked_item', testutil.create_item((select id from _ids where key = 'user'), (select id from _ids where key = 'template'), (select id from _ids where key = 'form1'), 1, 10, 'admin');
+
+insert into inventory.inventory_locks (item_instance_id, user_id, lock_type, source_type, status)
+values ((select id from _ids where key = 'active_locked_item'), (select id from _ids where key = 'user'), 'admin_hold', 'test_setup', 'active');
 
 insert into inventory.upgrade_rules (rarity_code, form_index, from_level, to_level, cost_fgems, power_gain, active)
 values ('COMMON', 1, 1, 2, 1, 3, true)
@@ -209,6 +216,9 @@ on conflict (rarity_code, form_index, from_level, to_level, active) do update se
 insert into inventory.decompose_rules (rarity_code, form_index, min_level, reward_fgems, active)
 values ('COMMON', 1, 1, 5, true)
 on conflict (rarity_code, form_index, min_level, active) do update set reward_fgems = excluded.reward_fgems, updated_at = now();
+
+insert into inventory.evolution_rules (from_template_id, from_form_id, to_template_id, to_form_id, required_count, cost_kcoin, success_rate_bps, active)
+values ((select id from _ids where key = 'template'), (select id from _ids where key = 'form1'), (select id from _ids where key = 'template'), (select id from _ids where key = 'form2'), 3, 0, 10000, true);
 
 do $$
 begin
@@ -226,6 +236,21 @@ select ok(exists (select 1 from market.listing_items where listing_id = (select 
 select ok(testutil.raises_like(format('select api.inventory_upgrade_item(%L::uuid, %L::uuid, %L)', (select id::text from _ids where key = 'user'), (select id::text from _ids where key = 'item'), 'inventory-lock-upgrade-001'), '%item is not available%'), 'listed item cannot be upgraded');
 select ok(testutil.raises_like(format('select api.inventory_decompose_item(%L::uuid, %L::uuid, %L)', (select id::text from _ids where key = 'user'), (select id::text from _ids where key = 'item'), 'inventory-lock-decompose-001'), '%item is not available%'), 'listed item cannot be decomposed');
 select ok(testutil.raises_like(format('select api.market_create_listing(%L::uuid, array[%L::uuid], 100, %L)', (select id::text from _ids where key = 'user'), (select id::text from _ids where key = 'item'), 'inventory-lock-listing-002'), '%some items are not sellable%'), 'locked/listed item cannot be listed a second time');
+select ok(testutil.raises_like(format('select api.market_create_listing(%L::uuid, array[%L::uuid], 100, %L)', (select id::text from _ids where key = 'user'), (select id::text from _ids where key = 'active_locked_item'), 'inventory-lock-listing-active-lock-001'), '%some items are already locked%'), 'active locked available item cannot be listed');
+select ok(testutil.raises_like(format('select api.inventory_evolve_item(%L::uuid, array[%L::uuid, %L::uuid, %L::uuid], %L)', (select id::text from _ids where key = 'user'), (select id::text from _ids where key = 'item'), (select id::text from _ids where key = 'item2'), (select id::text from _ids where key = 'item3'), 'inventory-lock-evolve-001'), '%some items are not evolvable or not available%'), 'listed item cannot be evolved');
+
+insert into _ids (key, payload) select 'wallet', api.wallet_save_verified_address((select id from _ids where key = 'user'), 'EQ_TEST_INVENTORY_LOCK_WALLET', 'raw-inventory-lock-wallet', 'mainnet', 'Tonkeeper', true);
+insert into _ids (key, id) select 'wallet_id', ((select payload from _ids where key = 'wallet') ->> 'wallet_id')::uuid;
+
+with collection_row as (
+  insert into onchain.nft_collections (code, chain, network, collection_address, owner_address, contract_version, standard, metadata_url, status, deployed_at)
+  values ('INVENTORY_LOCK_TEST_COLLECTION', 'TON', 'mainnet', 'EQ_TEST_INVENTORY_LOCK_COLLECTION', 'EQ_TEST_INVENTORY_LOCK_OWNER', 'test-v1', 'TEP-62', 'https://example.test/inventory-lock-collection.json', 'active', now())
+  on conflict (code) do update set status = 'active', collection_address = excluded.collection_address, updated_at = now()
+  returning id
+)
+insert into _ids (key, id) select 'collection', id from collection_row;
+
+select ok(testutil.raises_like(format('select api.wallet_enqueue_mint(%L::uuid, %L::uuid, %L::uuid, %L::uuid, %L)', (select id::text from _ids where key = 'user'), (select id::text from _ids where key = 'item'), (select id::text from _ids where key = 'collection'), (select id::text from _ids where key = 'wallet_id'), 'inventory-lock-mint-001'), '%item is not available for mint%'), 'listed item cannot be minted');
 
 select * from finish();
 

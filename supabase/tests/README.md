@@ -11,6 +11,7 @@ supabase/tests/
 ```txt
 auth.test.sql
 advisor_performance.test.sql
+market_db_hardening.test.sql
 ledger_integrity.test.sql
 gacha_order.test.sql
 gacha_pity.test.sql
@@ -48,6 +49,7 @@ supabase test db
 ```bash
 psql "$SUPABASE_DB_URL" -f supabase/tests/auth.test.sql
 psql "$SUPABASE_DB_URL" -f supabase/tests/advisor_performance.test.sql
+psql "$SUPABASE_DB_URL" -f supabase/tests/market_db_hardening.test.sql
 psql "$SUPABASE_DB_URL" -f supabase/tests/ledger_integrity.test.sql
 psql "$SUPABASE_DB_URL" -f supabase/tests/gacha_order.test.sql
 psql "$SUPABASE_DB_URL" -f supabase/tests/gacha_pity.test.sql

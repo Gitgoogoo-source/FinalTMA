@@ -1,6 +1,7 @@
 -- Optional psql runner. Supabase CLI normally runs each file automatically.
 \i supabase/tests/auth.test.sql
 \i supabase/tests/advisor_performance.test.sql
+\i supabase/tests/market_db_hardening.test.sql
 \i supabase/tests/ledger_integrity.test.sql
 \i supabase/tests/gacha_order.test.sql
 \i supabase/tests/gacha_pity.test.sql
