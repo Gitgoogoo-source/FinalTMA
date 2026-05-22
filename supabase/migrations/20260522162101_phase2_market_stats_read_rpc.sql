@@ -1,4 +1,5 @@
 -- Phase 2 market stats read RPC.
+-- Local migration only until reviewed and pushed.
 
 create or replace function api.market_get_stats(
   p_user_id uuid,
