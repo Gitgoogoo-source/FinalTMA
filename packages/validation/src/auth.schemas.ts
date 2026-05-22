@@ -5,12 +5,12 @@ import { z } from "zod";
  *
  * 责任：
  * 1. 校验 Telegram Mini App 登录请求。
- * 2. 校验 Telegram initDataUnsafe 的前端辅助结构。
+ * 2. 校验 Telegram initDataUnsafe 的前端本地辅助结构。
  * 3. 校验 session refresh / logout / admin login 请求。
  * 4. 定义 auth API 返回结构。
  *
  * 安全原则：
- * - initDataUnsafe 只允许用于前端展示或辅助排错，不能作为可信身份来源。
+ * - initDataUnsafe 只允许在前端本地辅助展示，不能随登录请求发给后端。
  * - 后端必须使用原始 initData + Bot Token 做签名验证。
  * - user_id、telegram_user_id、wallet address 等敏感身份字段不能从前端 body 信任。
  */
@@ -156,8 +156,8 @@ export const AuthTelegramChatSchema = z
   .passthrough();
 
 /**
- * 前端传来的 initDataUnsafe 只能辅助展示，不能用于最终鉴权。
- * 后端必须验证原始 initData 的 hash / signature。
+ * Telegram WebApp 暴露的 initDataUnsafe 只能辅助本地展示，不能用于最终鉴权。
+ * 后端登录接口必须验证原始 initData 的 hash / signature。
  */
 export const AuthTelegramInitDataUnsafeSchema = z
   .object({
@@ -229,26 +229,6 @@ export const AuthTelegramLoginRequestSchema = z
      * 后端用它做签名验证。
      */
     initData: z.string().trim().min(1).max(12000),
-
-    /**
-     * 仅用于前端调试、辅助展示、日志排查。
-     * 不能作为可信身份来源。
-     */
-    initDataUnsafe: AuthTelegramInitDataUnsafeSchema.optional(),
-
-    /**
-     * Telegram deep link 进入时的 start_param。
-     */
-    startParam: z.preprocess(blankToUndefined, AuthStartParamSchema.optional()),
-
-    /**
-     * 业务邀请 code。
-     * 可以从 startParam 中解析，也可以由前端显式传入。
-     */
-    referralCode: z.preprocess(
-      blankToUndefined,
-      AuthReferralCodeSchema.optional(),
-    ),
 
     clientContext: AuthClientContextSchema.optional(),
   })

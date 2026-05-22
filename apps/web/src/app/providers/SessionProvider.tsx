@@ -262,20 +262,10 @@ export function useSession(): SessionContextValue {
 function buildTelegramLoginBody(
   telegram: ReturnType<typeof useTelegram>,
 ): Record<string, unknown> {
-  const body: Record<string, unknown> = {
+  return {
     initData: telegram.initData,
     clientContext: buildAuthClientContext(telegram),
   };
-
-  if (Object.keys(telegram.initDataUnsafe).length > 0) {
-    body.initDataUnsafe = telegram.initDataUnsafe;
-  }
-
-  if (telegram.startParam) {
-    body.startParam = telegram.startParam;
-  }
-
-  return body;
 }
 
 function buildAuthClientContext(

@@ -166,6 +166,47 @@ describe("auth API", () => {
     );
   });
 
+  it("/api/auth/telegram rejects initDataUnsafe in the login body", async () => {
+    const { default: authTelegramHandler } =
+      await import("../../api/auth/telegram");
+    const initData = buildTelegramInitData({
+      botToken: BOT_TOKEN,
+      authDate: 1779321600,
+      user: {
+        id: 7003,
+        first_name: "Unsafe",
+      },
+    });
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      authTelegramHandler,
+      {
+        method: "POST",
+        url: "/api/auth/telegram",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: {
+          initData,
+          initDataUnsafe: {
+            user: {
+              id: 7003,
+              first_name: "Unsafe",
+            },
+          },
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(400);
+    expect(result.body).toMatchObject({
+      ok: false,
+      error: {
+        code: "VALIDATION_ERROR",
+      },
+    });
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+  });
+
   it("/api/auth/telegram returns USER_BLOCKED for inactive users", async () => {
     getSupabaseAdminClientMock.mockReturnValue(
       createAuthSupabaseMock("blocked"),

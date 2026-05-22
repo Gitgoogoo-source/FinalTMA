@@ -68,15 +68,20 @@
     "doctor": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test"
   },
   "devDependencies": {
-    "@vercel/node": "catalog:",
+    "@eslint/js": "10.0.1",
     "@playwright/test": "catalog:",
     "@types/node": "catalog:",
+    "@vercel/node": "catalog:",
     "eslint": "catalog:",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "eslint-plugin-react-refresh": "0.5.2",
+    "globals": "17.6.0",
     "prettier": "catalog:",
     "rimraf": "catalog:",
     "supabase": "catalog:",
     "tsx": "catalog:",
     "typescript": "catalog:",
+    "typescript-eslint": "8.59.3",
     "vercel": "catalog:",
     "vitest": "catalog:"
   }

@@ -321,6 +321,21 @@ select is(jsonb_array_length((select payload -> 'results' from _ids where key = 
 insert into _ids (key, payload) select 'result_by_payload', api.gacha_get_draw_result((select id from _ids where key = 'user'), null, (select payload ->> 'invoice_payload' from _ids where key = 'order'));
 select is(((select payload from _ids where key = 'result_by_payload') ->> 'status'), 'opened', 'draw result can be queried by invoice_payload');
 
+insert into _ids (key, payload) select 'conflict_order', api.gacha_create_order((select id from _ids where key = 'user'), (select id from _ids where key = 'box'), 1, 'gacha-payment-order-conflict-001');
+insert into _ids (key, id) select 'conflict_star_order', ((select payload from _ids where key = 'conflict_order') ->> 'star_order_id')::uuid;
+insert into _ids (key, id) select 'conflict_draw_order', ((select payload from _ids where key = 'conflict_order') ->> 'draw_order_id')::uuid;
+
+select ok(testutil.raises_like(format(
+  'select api.gacha_process_paid_order(%L::uuid, %L, %L, %L::jsonb)',
+  (select id::text from _ids where key = 'conflict_star_order'),
+  'tg-charge-idempotency-001',
+  'provider-charge-idempotency-conflict',
+  '{"test":"payment_idempotency_conflict"}'
+), '%successful payment not recorded%'), 'reused successful_payment charge id cannot fulfill another order');
+select is((select count(*)::int from gacha.draw_results where draw_order_id = (select id from _ids where key = 'conflict_draw_order')), 0, 'conflicting charge id does not create draw results');
+select is((select count(*)::int from inventory.item_instances where source_type = 'gacha' and source_id = (select id from _ids where key = 'conflict_draw_order')), 0, 'conflicting charge id does not create inventory items');
+select is(testutil.balance_of((select id from _ids where key = 'user'), 'KCOIN'), 100::numeric, 'conflicting charge id does not credit another open reward');
+
 select * from finish();
 
 rollback;
