@@ -510,6 +510,7 @@ export const MarketListingDetailDtoSchema = MarketListingCardDtoSchema.extend({
 export const MarketSellableItemDtoSchema = z
   .object({
     item_instance_id: uuidSchema,
+    item_instance_ids: z.array(uuidSchema).optional(),
     template_id: uuidSchema,
     form_id: uuidSchema.nullable().optional(),
     serial_no: positiveIntegerSchema.optional(),
@@ -519,6 +520,11 @@ export const MarketSellableItemDtoSchema = z
     image_url: optionalImageUrlSchema,
     level: positiveIntegerSchema,
     power: nonNegativeIntegerSchema,
+    owned_count: positiveIntegerSchema.optional(),
+    available_count: positiveIntegerSchema.optional(),
+    suggested_price: nonNegativeKcoinAmountSchema.nullable().optional(),
+    min_price: nonNegativeKcoinAmountSchema.nullable().optional(),
+    max_price: nonNegativeKcoinAmountSchema.nullable().optional(),
     acquired_at: isoDateTimeSchema,
     is_tradeable: z.boolean(),
   })
@@ -617,8 +623,12 @@ export const MarketMyListingsResponseSchema = z
 export const MarketMyListingStatsResponseSchema = z
   .object({
     active_count: nonNegativeIntegerSchema,
+    active_listing_count: nonNegativeIntegerSchema.optional(),
+    active_item_count: nonNegativeIntegerSchema.optional(),
     total_listing_value_kcoin: nonNegativeKcoinAmountSchema,
     expected_net_amount_kcoin: nonNegativeKcoinAmountSchema,
+    sold_24h_count: nonNegativeIntegerSchema.optional(),
+    sold_24h_value_kcoin: nonNegativeKcoinAmountSchema.optional(),
   })
   .strict();
 

@@ -16,6 +16,10 @@ import createListingHandler, {
 } from "../../api/market/create-listing";
 import listingDetailHandler from "../../api/market/listing-detail";
 import listingsHandler from "../../api/market/listings";
+import myListingStatsHandler from "../../api/market/my-listing-stats";
+import myListingsHandler from "../../api/market/my-listings";
+import sellableItemsHandler from "../../api/market/sellable-items";
+import statsHandler from "../../api/market/stats";
 import updatePriceHandler, {
   normalizeMarketUpdateListingPriceInput,
 } from "../../api/market/update-price";
@@ -379,6 +383,399 @@ describe("market listing detail API", () => {
     expect(result.statusCode).toBe(404);
     expect(result.body.error.code).toBe("LISTING_NOT_FOUND");
     expect(result.body.error.message).toBe("挂单不存在或已下架。");
+  });
+});
+
+describe("market sellable items API", () => {
+  beforeEach(() => {
+    process.env.NODE_ENV = "test";
+    callRpcRawMock.mockReset();
+    requireSessionMock.mockReset();
+    requireSessionMock.mockResolvedValue({
+      sessionId: "session-market-sellable-items-test",
+      userId: USER_ID,
+      telegramUserId: 7001,
+      userStatus: "active",
+      expiresAt: "2026-05-28T00:00:00.000Z",
+      sessionTokenHash: "session-hash",
+    });
+  });
+
+  it("calls market_list_sellable_items with the session user and returns grouped inventory", async () => {
+    callRpcRawMock.mockResolvedValueOnce({
+      items: [
+        {
+          item_instance_id: ITEM_ID,
+          item_instance_ids: [ITEM_ID, ITEM_ID_2],
+          template_id: TEMPLATE_ID,
+          form_id: FORM_ID,
+          serial_no: 12,
+          name: "可出售藏品",
+          rarity: "rare",
+          type_code: "character",
+          image_url: "https://example.test/sellable.png",
+          level: 3,
+          power: 120,
+          owned_count: 2,
+          available_count: 2,
+          suggested_price: 500,
+          min_price: 300,
+          max_price: 800,
+          acquired_at: "2026-05-22T00:00:00.000Z",
+          is_tradeable: true,
+          rpc_extra_field: "removed",
+        },
+      ],
+      next_cursor: null,
+    });
+
+    const result = await invokeApiHandler<
+      ApiSuccessResponse<{
+        items: Array<Record<string, unknown>>;
+        next_cursor: string | null;
+      }>
+    >(sellableItemsHandler, {
+      method: "GET",
+      headers: {
+        "x-request-id": "req-market-sellable-items",
+      },
+      query: {
+        rarities: "rare",
+        type_codes: "character",
+        series_ids: SERIES_ID,
+        template_ids: TEMPLATE_ID,
+        only_duplicates: "true",
+        min_level: "2",
+        max_level: "10",
+        sort: "power_high_to_low",
+        limit: "10",
+        cursor: "2026-05-22T01:00:00.000Z",
+      },
+    });
+
+    expect(result.statusCode).toBe(200);
+    expect(callRpcRawMock).toHaveBeenCalledWith(
+      "market_list_sellable_items",
+      {
+        p_user_id: USER_ID,
+        p_rarities: ["rare"],
+        p_type_codes: ["character"],
+        p_series_ids: [SERIES_ID],
+        p_template_ids: [TEMPLATE_ID],
+        p_only_duplicates: true,
+        p_min_level: 2,
+        p_max_level: 10,
+        p_keyword: null,
+        p_sort: "power_high_to_low",
+        p_limit: 10,
+        p_cursor: "2026-05-22T01:00:00.000Z",
+      },
+      {
+        schema: "api",
+        context: {
+          requestId: "req-market-sellable-items",
+          userId: USER_ID,
+        },
+      },
+    );
+    expect(result.body.data.items[0]).toMatchObject({
+      item_instance_id: ITEM_ID,
+      item_instance_ids: [ITEM_ID, ITEM_ID_2],
+      template_id: TEMPLATE_ID,
+      owned_count: 2,
+      suggested_price: 500,
+    });
+    expect(result.body.data.items[0]).not.toHaveProperty("rpc_extra_field");
+  });
+
+  it("rejects invalid sellable item query input before calling RPC", async () => {
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      sellableItemsHandler,
+      {
+        method: "GET",
+        query: {
+          min_level: "10",
+          max_level: "2",
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(400);
+    expect(result.body.error.code).toBe("VALIDATION_ERROR");
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("market my listings API", () => {
+  beforeEach(() => {
+    process.env.NODE_ENV = "test";
+    callRpcRawMock.mockReset();
+    requireSessionMock.mockReset();
+    requireSessionMock.mockResolvedValue({
+      sessionId: "session-market-my-listings-test",
+      userId: USER_ID,
+      telegramUserId: 7001,
+      userStatus: "active",
+      expiresAt: "2026-05-28T00:00:00.000Z",
+      sessionTokenHash: "session-hash",
+    });
+  });
+
+  it("calls market_list_my_listings with the session user and returns listings", async () => {
+    callRpcRawMock.mockResolvedValueOnce({
+      items: [
+        {
+          listing_id: LISTING_ID,
+          seller_user_id: USER_ID,
+          template_id: TEMPLATE_ID,
+          form_id: FORM_ID,
+          name: "我的挂单",
+          rarity: "rare",
+          type_code: "character",
+          image_url: "https://example.test/listing.png",
+          unit_price_kcoin: 500,
+          currency_code: "KCOIN",
+          item_count: 2,
+          remaining_count: 2,
+          expected_net_amount: 950,
+          status: "active",
+          is_own_listing: true,
+          is_buyable: false,
+          not_buyable_reason: "own_listing",
+          price_health: "healthy",
+          created_at: "2026-05-22T00:00:00.000Z",
+          expires_at: null,
+          rpc_extra_field: "removed",
+        },
+      ],
+      next_cursor: null,
+    });
+
+    const result = await invokeApiHandler<
+      ApiSuccessResponse<{
+        items: Array<Record<string, unknown>>;
+        next_cursor: string | null;
+      }>
+    >(myListingsHandler, {
+      method: "GET",
+      headers: {
+        "x-request-id": "req-market-my-listings",
+      },
+      query: {
+        statuses: "active,partially_sold",
+        rarities: "rare",
+        type_codes: "character",
+        template_ids: TEMPLATE_ID,
+        min_price: "100",
+        max_price: "1000",
+        sort: "price_high_to_low",
+        limit: "10",
+        cursor: "2026-05-22T01:00:00.000Z",
+      },
+    });
+
+    expect(result.statusCode).toBe(200);
+    expect(callRpcRawMock).toHaveBeenCalledWith(
+      "market_list_my_listings",
+      {
+        p_user_id: USER_ID,
+        p_statuses: ["active", "partially_sold"],
+        p_rarities: ["rare"],
+        p_type_codes: ["character"],
+        p_template_ids: [TEMPLATE_ID],
+        p_min_price: 100,
+        p_max_price: 1000,
+        p_sort: "price_high_to_low",
+        p_limit: 10,
+        p_cursor: "2026-05-22T01:00:00.000Z",
+      },
+      {
+        schema: "api",
+        context: {
+          requestId: "req-market-my-listings",
+          userId: USER_ID,
+        },
+      },
+    );
+    expect(result.body.data.items[0]).toMatchObject({
+      listing_id: LISTING_ID,
+      is_own_listing: true,
+      is_buyable: false,
+    });
+    expect(result.body.data.items[0]).not.toHaveProperty("rpc_extra_field");
+  });
+});
+
+describe("market my listing stats API", () => {
+  beforeEach(() => {
+    process.env.NODE_ENV = "test";
+    callRpcRawMock.mockReset();
+    requireSessionMock.mockReset();
+    requireSessionMock.mockResolvedValue({
+      sessionId: "session-market-my-listing-stats-test",
+      userId: USER_ID,
+      telegramUserId: 7001,
+      userStatus: "active",
+      expiresAt: "2026-05-28T00:00:00.000Z",
+      sessionTokenHash: "session-hash",
+    });
+  });
+
+  it("calls market_get_my_listing_stats with the session user", async () => {
+    callRpcRawMock.mockResolvedValueOnce({
+      active_listing_count: 2,
+      active_count: 2,
+      active_item_count: 3,
+      total_listing_value_kcoin: 1500,
+      expected_net_amount_kcoin: 1425,
+      sold_24h_count: 1,
+      sold_24h_value_kcoin: 500,
+      rpc_extra_field: "removed",
+    });
+
+    const result = await invokeApiHandler<
+      ApiSuccessResponse<Record<string, unknown>>
+    >(myListingStatsHandler, {
+      method: "GET",
+      headers: {
+        "x-request-id": "req-market-my-listing-stats",
+      },
+    });
+
+    expect(result.statusCode).toBe(200);
+    expect(callRpcRawMock).toHaveBeenCalledWith(
+      "market_get_my_listing_stats",
+      {
+        p_user_id: USER_ID,
+      },
+      {
+        schema: "api",
+        context: {
+          requestId: "req-market-my-listing-stats",
+          userId: USER_ID,
+        },
+      },
+    );
+    expect(result.body.data).toEqual({
+      active_count: 2,
+      active_listing_count: 2,
+      active_item_count: 3,
+      total_listing_value_kcoin: 1500,
+      expected_net_amount_kcoin: 1425,
+      sold_24h_count: 1,
+      sold_24h_value_kcoin: 500,
+    });
+  });
+});
+
+describe("market stats API", () => {
+  beforeEach(() => {
+    process.env.NODE_ENV = "test";
+    callRpcRawMock.mockReset();
+    requireSessionMock.mockReset();
+    requireSessionMock.mockResolvedValue({
+      sessionId: "session-market-stats-test",
+      userId: USER_ID,
+      telegramUserId: 7001,
+      userStatus: "active",
+      expiresAt: "2026-05-28T00:00:00.000Z",
+      sessionTokenHash: "session-hash",
+    });
+  });
+
+  it("calls market_get_stats and returns price and depth snapshots", async () => {
+    callRpcRawMock.mockResolvedValueOnce({
+      price: {
+        template_id: TEMPLATE_ID,
+        form_id: FORM_ID,
+        floor_price_kcoin: 450,
+        avg_price_kcoin: 480,
+        last_sale_price_kcoin: 470,
+        active_listing_count: 3,
+        sale_count_24h: 1,
+        volume_24h_kcoin: 470,
+        snapshot_at: "2026-05-22T00:00:00.000Z",
+        rpc_extra_field: "removed",
+      },
+      depth: [
+        {
+          price_bucket_kcoin: 500,
+          listing_count: 1,
+          item_count: 2,
+        },
+      ],
+      price_health: "healthy",
+    });
+
+    const result = await invokeApiHandler<
+      ApiSuccessResponse<Record<string, unknown>>
+    >(statsHandler, {
+      method: "GET",
+      headers: {
+        "x-request-id": "req-market-stats",
+      },
+      query: {
+        template_id: TEMPLATE_ID,
+        form_id: FORM_ID,
+        period: "7d",
+        include_depth: "true",
+      },
+    });
+
+    expect(result.statusCode).toBe(200);
+    expect(callRpcRawMock).toHaveBeenCalledWith(
+      "market_get_stats",
+      {
+        p_user_id: USER_ID,
+        p_template_id: TEMPLATE_ID,
+        p_form_id: FORM_ID,
+        p_series_id: null,
+        p_rarity: null,
+        p_type_code: null,
+        p_period: "7d",
+        p_include_depth: true,
+      },
+      {
+        schema: "api",
+        context: {
+          requestId: "req-market-stats",
+          userId: USER_ID,
+          templateId: TEMPLATE_ID,
+          formId: FORM_ID,
+        },
+      },
+    );
+    expect(result.body.data).toEqual({
+      price: {
+        template_id: TEMPLATE_ID,
+        form_id: FORM_ID,
+        floor_price_kcoin: 450,
+        avg_price_kcoin: 480,
+        last_sale_price_kcoin: 470,
+        active_listing_count: 3,
+        sale_count_24h: 1,
+        volume_24h_kcoin: 470,
+        snapshot_at: "2026-05-22T00:00:00.000Z",
+      },
+      depth: [
+        {
+          price_kcoin: 500,
+          listing_count: 1,
+          item_count: 2,
+        },
+      ],
+      price_health: "healthy",
+    });
+  });
+
+  it("rejects missing stats filters before calling RPC", async () => {
+    const result = await invokeApiHandler<ApiErrorResponse>(statsHandler, {
+      method: "GET",
+    });
+
+    expect(result.statusCode).toBe(400);
+    expect(result.body.error.code).toBe("VALIDATION_ERROR");
+    expect(callRpcRawMock).not.toHaveBeenCalled();
   });
 });
 
