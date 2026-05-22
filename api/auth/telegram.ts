@@ -1,22 +1,29 @@
-import { createHash, randomBytes } from 'node:crypto';
-import type { VercelRequest } from '@vercel/node';
+import { createHash, randomBytes } from "node:crypto";
+import type { VercelRequest } from "@vercel/node";
 import {
   AuthTelegramLoginRequestSchema,
   type AuthTelegramLoginRequest,
-} from '../../packages/validation/src/auth.schemas.js';
+} from "../../packages/validation/src/auth.schemas.js";
 import {
   buildSessionCookie,
   SESSION_COOKIE_NAME,
-} from '../../packages/server/src/auth/issueSession.js';
+} from "../../packages/server/src/auth/issueSession.js";
 import {
   TelegramInitDataValidationError,
   verifyTelegramInitData,
-} from '../../packages/server/src/auth/verifyTelegramInitData.js';
-import { callRpcRaw } from '../../packages/server/src/db/rpc.js';
-import { ApiError, getHeaderValue, withApiHandler } from '../_shared/handler.js';
-import { parseJsonBody } from '../_shared/parseBody.js';
-import { getSupabaseAdmin, hashSessionToken } from '../_shared/requireSession.js';
-import { validate } from '../_shared/validate.js';
+} from "../../packages/server/src/auth/verifyTelegramInitData.js";
+import { callRpcRaw } from "../../packages/server/src/db/rpc.js";
+import {
+  ApiError,
+  getHeaderValue,
+  withApiHandler,
+} from "../_shared/handler.js";
+import { parseJsonBody } from "../_shared/parseBody.js";
+import {
+  getSupabaseAdmin,
+  hashSessionToken,
+} from "../_shared/requireSession.js";
+import { validate } from "../_shared/validate.js";
 
 type AuthUpsertTelegramUserResult = {
   user_id: string;
@@ -49,7 +56,7 @@ export default withApiHandler(
     const wasExistingUser = await hasExistingTelegramUser(verified.user.id);
 
     const userResult = await callRpcRaw<AuthUpsertTelegramUserResult>(
-      'auth_upsert_telegram_user',
+      "auth_upsert_telegram_user",
       {
         p_telegram_user_id: verified.user.id,
         p_username: verified.user.username ?? null,
@@ -60,12 +67,12 @@ export default withApiHandler(
         p_photo_url: verified.user.photo_url ?? null,
         p_start_param: verified.startParam ?? null,
         p_metadata: {
-          source: 'telegram-mini-app',
+          source: "telegram-mini-app",
           query_id: verified.queryId ?? null,
         },
       },
       {
-        schema: 'api' as never,
+        schema: "api" as never,
         context: {
           requestId: ctx.requestId,
           telegramUserId: String(verified.user.id),
@@ -73,11 +80,11 @@ export default withApiHandler(
       },
     );
 
-    const userId = requireStringField(userResult, 'user_id');
+    const userId = requireStringField(userResult, "user_id");
     const authUser = await loadAuthUser(userId);
 
-    if (authUser.status !== 'active') {
-      throw new ApiError(403, 'AUTH_USER_NOT_ACTIVE', '当前账号状态不可登录。', {
+    if (authUser.status !== "active") {
+      throw ApiError.userBlocked("当前账号已被限制使用。", {
         details: {
           status: authUser.status,
         },
@@ -89,20 +96,23 @@ export default withApiHandler(
     const expiresAt = new Date(Date.now() + SESSION_TTL_SECONDS * 1000);
 
     const sessionResult = await callRpcRaw<AuthCreateSessionResult>(
-      'auth_create_session',
+      "auth_create_session",
       {
         p_user_id: userId,
         p_session_token_hash: tokenHash,
         p_expires_at: expiresAt.toISOString(),
         p_telegram_auth_date: verified.authDate.toISOString(),
         p_init_data_hash: verified.initDataHash,
-        p_ip_hash: ctx.ip ? hashFingerprint('ip', ctx.ip) : null,
-        p_user_agent: hashNullableFingerprint('user_agent', getSafeUserAgent(req)),
+        p_ip_hash: ctx.ip ? hashFingerprint("ip", ctx.ip) : null,
+        p_user_agent: hashNullableFingerprint(
+          "user_agent",
+          getSafeUserAgent(req),
+        ),
         p_device_id: null,
         p_platform: input.clientContext?.platform ?? null,
       },
       {
-        schema: 'api' as never,
+        schema: "api" as never,
         context: {
           requestId: ctx.requestId,
           userId,
@@ -110,11 +120,11 @@ export default withApiHandler(
       },
     );
 
-    const sessionId = requireStringField(sessionResult, 'session_id');
-    const sessionExpiresAt = requireStringField(sessionResult, 'expires_at');
+    const sessionId = requireStringField(sessionResult, "session_id");
+    const sessionExpiresAt = requireStringField(sessionResult, "expires_at");
 
     res.setHeader(
-      'Set-Cookie',
+      "Set-Cookie",
       buildSessionCookie(token, {
         cookieName: SESSION_COOKIE_NAME,
         maxAgeSeconds: SESSION_TTL_SECONDS,
@@ -122,7 +132,7 @@ export default withApiHandler(
     );
 
     return {
-      status: 'ok',
+      status: "ok",
       isNewUser: !wasExistingUser,
       user: {
         id: userId,
@@ -136,7 +146,7 @@ export default withApiHandler(
       },
       session: {
         sessionId,
-        tokenType: 'Bearer',
+        tokenType: "Bearer",
         accessToken: token,
         expiresAt: sessionExpiresAt,
         expiresInSeconds: SESSION_TTL_SECONDS,
@@ -145,9 +155,9 @@ export default withApiHandler(
     };
   },
   {
-    methods: ['POST'],
+    methods: ["POST"],
     rateLimit: {
-      action: 'auth.telegram',
+      action: "auth.telegram",
     },
   },
 );
@@ -157,28 +167,35 @@ function verifyTrustedInitData(input: AuthTelegramLoginRequest) {
     return verifyTelegramInitData(input.initData);
   } catch (error) {
     if (error instanceof TelegramInitDataValidationError) {
-      throw new ApiError(401, 'TELEGRAM_INIT_DATA_INVALID', 'Telegram 登录校验失败。', {
-        details: {
-          reason: error.code,
+      throw new ApiError(
+        401,
+        "AUTH_INIT_DATA_INVALID",
+        "Telegram 登录校验失败。",
+        {
+          details: {
+            reason: error.code,
+          },
         },
-      });
+      );
     }
 
     throw error;
   }
 }
 
-async function hasExistingTelegramUser(telegramUserId: number): Promise<boolean> {
+async function hasExistingTelegramUser(
+  telegramUserId: number,
+): Promise<boolean> {
   const db = getSupabaseAdmin();
   const { data, error } = await db
-    .schema('core')
-    .from('users')
-    .select('id')
-    .eq('telegram_user_id', telegramUserId)
+    .schema("core")
+    .from("users")
+    .select("id")
+    .eq("telegram_user_id", telegramUserId)
     .maybeSingle<ExistingUserRow>();
 
   if (error) {
-    throw new ApiError(500, 'USER_LOOKUP_FAILED', '查询 Telegram 用户失败。', {
+    throw new ApiError(500, "USER_LOOKUP_FAILED", "查询 Telegram 用户失败。", {
       details: error,
       expose: false,
     });
@@ -190,21 +207,21 @@ async function hasExistingTelegramUser(telegramUserId: number): Promise<boolean>
 async function loadAuthUser(userId: string): Promise<AuthUserRow> {
   const db = getSupabaseAdmin();
   const { data, error } = await db
-    .schema('core')
-    .from('users')
-    .select('status')
-    .eq('id', userId)
+    .schema("core")
+    .from("users")
+    .select("status")
+    .eq("id", userId)
     .maybeSingle<AuthUserRow>();
 
   if (error) {
-    throw new ApiError(500, 'USER_LOOKUP_FAILED', '查询用户状态失败。', {
+    throw new ApiError(500, "USER_LOOKUP_FAILED", "查询用户状态失败。", {
       details: error,
       expose: false,
     });
   }
 
   if (!data) {
-    throw new ApiError(500, 'USER_LOOKUP_FAILED', '登录用户不存在。', {
+    throw new ApiError(500, "USER_LOOKUP_FAILED", "登录用户不存在。", {
       expose: false,
     });
   }
@@ -213,11 +230,11 @@ async function loadAuthUser(userId: string): Promise<AuthUserRow> {
 }
 
 function createOpaqueSessionToken(): string {
-  return `tma_sess_v1.${randomBytes(48).toString('base64url')}`;
+  return `tma_sess_v1.${randomBytes(48).toString("base64url")}`;
 }
 
 function getSafeUserAgent(req: VercelRequest): string | null {
-  const value = getHeaderValue(req.headers['user-agent']);
+  const value = getHeaderValue(req.headers["user-agent"]);
 
   if (!value) {
     return null;
@@ -226,24 +243,37 @@ function getSafeUserAgent(req: VercelRequest): string | null {
   return value.slice(0, 1024);
 }
 
-function hashNullableFingerprint(namespace: string, value: string | null): string | null {
+function hashNullableFingerprint(
+  namespace: string,
+  value: string | null,
+): string | null {
   return value ? hashFingerprint(namespace, value) : null;
 }
 
 function hashFingerprint(namespace: string, value: string): string {
-  return createHash('sha256').update(`${namespace}:${value}`, 'utf8').digest('hex');
+  return createHash("sha256")
+    .update(`${namespace}:${value}`, "utf8")
+    .digest("hex");
 }
 
-function requireStringField<T extends Record<string, unknown>>(value: T, field: keyof T): string {
+function requireStringField<T extends Record<string, unknown>>(
+  value: T,
+  field: keyof T,
+): string {
   const fieldValue = value[field];
 
-  if (typeof fieldValue !== 'string' || fieldValue.trim().length === 0) {
-    throw new ApiError(500, 'RPC_RESULT_INVALID', `RPC 返回缺少字段 ${String(field)}。`, {
-      details: {
-        field: String(field),
+  if (typeof fieldValue !== "string" || fieldValue.trim().length === 0) {
+    throw new ApiError(
+      500,
+      "RPC_RESULT_INVALID",
+      `RPC 返回缺少字段 ${String(field)}。`,
+      {
+        details: {
+          field: String(field),
+        },
+        expose: false,
       },
-      expose: false,
-    });
+    );
   }
 
   return fieldValue;

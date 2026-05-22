@@ -61,7 +61,7 @@ describe("auth API", () => {
     expect(result.body).toMatchObject({
       ok: false,
       error: {
-        code: "TELEGRAM_INIT_DATA_INVALID",
+        code: "AUTH_INIT_DATA_INVALID",
       },
     });
     expect(callRpcRawMock).not.toHaveBeenCalled();
@@ -165,9 +165,56 @@ describe("auth API", () => {
       expect.any(Object),
     );
   });
+
+  it("/api/auth/telegram returns USER_BLOCKED for inactive users", async () => {
+    getSupabaseAdminClientMock.mockReturnValue(
+      createAuthSupabaseMock("blocked"),
+    );
+    callRpcRawMock.mockResolvedValueOnce({
+      user_id: USER_ID,
+      telegram_user_id: 7001,
+      invite_code: "invite_test_7001",
+    });
+
+    const { default: authTelegramHandler } =
+      await import("../../api/auth/telegram");
+    const initData = buildTelegramInitData({
+      botToken: BOT_TOKEN,
+      authDate: 1779321600,
+      user: {
+        id: 7001,
+        first_name: "Test",
+      },
+    });
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      authTelegramHandler,
+      {
+        method: "POST",
+        url: "/api/auth/telegram",
+        headers: {
+          "content-type": "application/json",
+          "user-agent": "vitest",
+          "x-forwarded-for": "127.0.0.13",
+        },
+        body: {
+          initData,
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(403);
+    expect(result.body).toMatchObject({
+      ok: false,
+      error: {
+        code: "USER_BLOCKED",
+        message: "当前账号已被限制使用。",
+      },
+    });
+    expect(callRpcRawMock).toHaveBeenCalledTimes(1);
+  });
 });
 
-function createAuthSupabaseMock() {
+function createAuthSupabaseMock(status = "active") {
   const maybeSingleMock = vi
     .fn()
     .mockResolvedValueOnce({
@@ -176,7 +223,7 @@ function createAuthSupabaseMock() {
     })
     .mockResolvedValueOnce({
       data: {
-        status: "active",
+        status,
       },
       error: null,
     });

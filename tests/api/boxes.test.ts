@@ -179,8 +179,8 @@ describe("boxes API helpers", () => {
   it("/api/me/bootstrap returns 401 without a session", async () => {
     requireSessionMock.mockRejectedValueOnce({
       statusCode: 401,
-      code: "UNAUTHORIZED",
-      message: "Missing session token",
+      code: "AUTH_SESSION_EXPIRED",
+      message: "登录状态缺失，请重新进入应用。",
       expose: true,
     });
 
@@ -198,7 +198,7 @@ describe("boxes API helpers", () => {
     expect(result.body).toMatchObject({
       ok: false,
       error: {
-        code: "UNAUTHORIZED",
+        code: "AUTH_SESSION_EXPIRED",
       },
     });
   });
@@ -387,6 +387,88 @@ describe("boxes API helpers", () => {
         code: "IDEMPOTENCY_CONFLICT",
       },
     });
+  });
+
+  it("/api/boxes/create-open-order maps empty drop pools to the first-phase code", async () => {
+    callRpcRawMock.mockRejectedValueOnce(
+      new RpcError({
+        rpcName: "gacha_create_order",
+        error: {
+          message: "active drop pool not found",
+        },
+      }),
+    );
+
+    const { default: createOrderHandler } =
+      await import("../../api/boxes/create-open-order");
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      createOrderHandler,
+      {
+        method: "POST",
+        url: "/api/boxes/create-open-order",
+        headers: {
+          authorization: "Bearer test-session-token-000000000000",
+          "content-type": "application/json",
+          "x-forwarded-for": "127.0.0.28",
+        },
+        body: {
+          box_id: BOX_ID,
+          draw_count: 1,
+          idempotency_key: IDEMPOTENCY_KEY,
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(409);
+    expect(result.body).toMatchObject({
+      ok: false,
+      error: {
+        code: "DROP_POOL_EMPTY",
+        message: "当前奖励池为空，暂时无法开盒。",
+      },
+    });
+  });
+
+  it("/api/boxes/create-open-order maps ledger failures without exposing database details", async () => {
+    callRpcRawMock.mockRejectedValueOnce(
+      new RpcError({
+        rpcName: "gacha_create_order",
+        error: {
+          message:
+            "currency ledger insert failed: duplicate key raw database detail",
+        },
+      }),
+    );
+
+    const { default: createOrderHandler } =
+      await import("../../api/boxes/create-open-order");
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      createOrderHandler,
+      {
+        method: "POST",
+        url: "/api/boxes/create-open-order",
+        headers: {
+          authorization: "Bearer test-session-token-000000000000",
+          "content-type": "application/json",
+          "x-forwarded-for": "127.0.0.29",
+        },
+        body: {
+          box_id: BOX_ID,
+          draw_count: 1,
+          idempotency_key: IDEMPOTENCY_KEY,
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(500);
+    expect(result.body).toMatchObject({
+      ok: false,
+      error: {
+        code: "BALANCE_LEDGER_FAILED",
+        message: "资产流水写入失败，请稍后重试。",
+      },
+    });
+    expect(JSON.stringify(result.body)).not.toContain("duplicate key");
   });
 
   it("/api/boxes/create-open-order creates a ten-draw order", async () => {

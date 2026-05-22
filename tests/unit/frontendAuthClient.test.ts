@@ -85,7 +85,7 @@ describe("frontend auth api client", () => {
           JSON.stringify({
             ok: false,
             error: {
-              code: "TELEGRAM_INIT_DATA_INVALID",
+              code: "AUTH_INIT_DATA_INVALID",
               message: "Telegram initData is invalid.",
             },
           }),
@@ -110,10 +110,22 @@ describe("frontend auth api client", () => {
         },
       }),
     ).rejects.toMatchObject({
-      code: "TELEGRAM_INIT_DATA_INVALID",
+      code: "AUTH_INIT_DATA_INVALID",
       status: 401,
     });
 
     expect(onUnauthorized).not.toHaveBeenCalled();
+  });
+
+  it("uses fixed first-phase messages instead of raw server text", async () => {
+    const { ApiClientError, getApiErrorMessage } =
+      await import("../../apps/web/src/api/errors");
+    const error = new ApiClientError({
+      code: "DROP_POOL_EMPTY",
+      message: "raw database detail should not be shown",
+      status: 409,
+    });
+
+    expect(getApiErrorMessage(error)).toBe("当前奖励池为空，暂时无法开盒。");
   });
 });

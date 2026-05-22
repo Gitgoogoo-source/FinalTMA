@@ -26,7 +26,7 @@ export const ERROR_CATEGORY = {
   ONCHAIN: "ONCHAIN",
   ADMIN: "ADMIN",
   OPS: "OPS",
-  INTERNAL: "INTERNAL"
+  INTERNAL: "INTERNAL",
 } as const;
 
 export type ErrorCategory =
@@ -36,7 +36,7 @@ export const ERROR_SEVERITY = {
   INFO: "INFO",
   WARNING: "WARNING",
   ERROR: "ERROR",
-  CRITICAL: "CRITICAL"
+  CRITICAL: "CRITICAL",
 } as const;
 
 export type ErrorSeverity =
@@ -45,11 +45,14 @@ export type ErrorSeverity =
 export const ERROR_CODE = {
   COMMON_UNKNOWN: "COMMON_UNKNOWN",
   COMMON_NOT_IMPLEMENTED: "COMMON_NOT_IMPLEMENTED",
+  IDEMPOTENCY_CONFLICT: "IDEMPOTENCY_CONFLICT",
 
   VALIDATION_INVALID_INPUT: "VALIDATION_INVALID_INPUT",
   VALIDATION_INVALID_ID: "VALIDATION_INVALID_ID",
   VALIDATION_INVALID_IDEMPOTENCY_KEY: "VALIDATION_INVALID_IDEMPOTENCY_KEY",
 
+  AUTH_INIT_DATA_INVALID: "AUTH_INIT_DATA_INVALID",
+  AUTH_SESSION_EXPIRED: "AUTH_SESSION_EXPIRED",
   AUTH_MISSING_SESSION: "AUTH_MISSING_SESSION",
   AUTH_INVALID_SESSION: "AUTH_INVALID_SESSION",
   AUTH_EXPIRED_SESSION: "AUTH_EXPIRED_SESSION",
@@ -57,6 +60,7 @@ export const ERROR_CODE = {
   AUTH_TELEGRAM_INIT_DATA_EXPIRED: "AUTH_TELEGRAM_INIT_DATA_EXPIRED",
 
   USER_NOT_FOUND: "USER_NOT_FOUND",
+  USER_BLOCKED: "USER_BLOCKED",
   USER_BANNED: "USER_BANNED",
   USER_RESTRICTED: "USER_RESTRICTED",
 
@@ -65,8 +69,11 @@ export const ERROR_CODE = {
   ECONOMY_INSUFFICIENT_BALANCE: "ECONOMY_INSUFFICIENT_BALANCE",
   ECONOMY_BALANCE_LOCKED: "ECONOMY_BALANCE_LOCKED",
   ECONOMY_LEDGER_CONFLICT: "ECONOMY_LEDGER_CONFLICT",
+  BALANCE_LEDGER_FAILED: "BALANCE_LEDGER_FAILED",
   ECONOMY_INVALID_CURRENCY: "ECONOMY_INVALID_CURRENCY",
 
+  ORDER_NOT_FOUND: "ORDER_NOT_FOUND",
+  ORDER_ALREADY_PROCESSED: "ORDER_ALREADY_PROCESSED",
   PAYMENT_ORDER_NOT_FOUND: "PAYMENT_ORDER_NOT_FOUND",
   PAYMENT_ORDER_EXPIRED: "PAYMENT_ORDER_EXPIRED",
   PAYMENT_ALREADY_PROCESSED: "PAYMENT_ALREADY_PROCESSED",
@@ -75,6 +82,11 @@ export const ERROR_CODE = {
   PAYMENT_PRECHECKOUT_REJECTED: "PAYMENT_PRECHECKOUT_REJECTED",
   PAYMENT_SUCCESSFUL_PAYMENT_MISSING: "PAYMENT_SUCCESSFUL_PAYMENT_MISSING",
 
+  BOX_NOT_FOUND: "BOX_NOT_FOUND",
+  BOX_NOT_ACTIVE: "BOX_NOT_ACTIVE",
+  BOX_STOCK_NOT_ENOUGH: "BOX_STOCK_NOT_ENOUGH",
+  DRAW_COUNT_INVALID: "DRAW_COUNT_INVALID",
+  DROP_POOL_EMPTY: "DROP_POOL_EMPTY",
   GACHA_BOX_NOT_FOUND: "GACHA_BOX_NOT_FOUND",
   GACHA_BOX_NOT_ACTIVE: "GACHA_BOX_NOT_ACTIVE",
   GACHA_BOX_NOT_STARTED: "GACHA_BOX_NOT_STARTED",
@@ -96,17 +108,16 @@ export const ERROR_CODE = {
   MARKET_FEE_RULE_NOT_FOUND: "MARKET_FEE_RULE_NOT_FOUND",
 
   INVENTORY_ITEM_NOT_FOUND: "INVENTORY_ITEM_NOT_FOUND",
+  INVENTORY_CREATE_FAILED: "INVENTORY_CREATE_FAILED",
   INVENTORY_ITEM_NOT_OWNED: "INVENTORY_ITEM_NOT_OWNED",
   INVENTORY_ITEM_NOT_AVAILABLE: "INVENTORY_ITEM_NOT_AVAILABLE",
   INVENTORY_ITEM_LOCKED: "INVENTORY_ITEM_LOCKED",
   INVENTORY_ITEM_LISTED: "INVENTORY_ITEM_LISTED",
   INVENTORY_UPGRADE_NOT_ALLOWED: "INVENTORY_UPGRADE_NOT_ALLOWED",
-  INVENTORY_UPGRADE_INSUFFICIENT_FGEMS:
-    "INVENTORY_UPGRADE_INSUFFICIENT_FGEMS",
+  INVENTORY_UPGRADE_INSUFFICIENT_FGEMS: "INVENTORY_UPGRADE_INSUFFICIENT_FGEMS",
   INVENTORY_EVOLVE_NOT_ALLOWED: "INVENTORY_EVOLVE_NOT_ALLOWED",
   INVENTORY_EVOLVE_INVALID_ITEMS: "INVENTORY_EVOLVE_INVALID_ITEMS",
-  INVENTORY_EVOLVE_INSUFFICIENT_KCOIN:
-    "INVENTORY_EVOLVE_INSUFFICIENT_KCOIN",
+  INVENTORY_EVOLVE_INSUFFICIENT_KCOIN: "INVENTORY_EVOLVE_INSUFFICIENT_KCOIN",
   INVENTORY_DECOMPOSE_NOT_ALLOWED: "INVENTORY_DECOMPOSE_NOT_ALLOWED",
 
   TASK_NOT_FOUND: "TASK_NOT_FOUND",
@@ -143,7 +154,7 @@ export const ERROR_CODE = {
   OPS_FEATURE_DISABLED: "OPS_FEATURE_DISABLED",
   OPS_MAINTENANCE: "OPS_MAINTENANCE",
 
-  INTERNAL_SERVER_ERROR: "INTERNAL_SERVER_ERROR"
+  INTERNAL_SERVER_ERROR: "INTERNAL_SERVER_ERROR",
 } as const;
 
 export type ErrorCode = (typeof ERROR_CODE)[keyof typeof ERROR_CODE];
@@ -166,7 +177,7 @@ export const ERROR_META = {
     httpStatus: 400,
     publicMessage: "未知错误。",
     internalMessage: "Unknown common error.",
-    retryable: false
+    retryable: false,
   },
   [ERROR_CODE.COMMON_NOT_IMPLEMENTED]: {
     code: ERROR_CODE.COMMON_NOT_IMPLEMENTED,
@@ -175,7 +186,16 @@ export const ERROR_META = {
     httpStatus: 501,
     publicMessage: "该功能暂未开放。",
     internalMessage: "Feature is not implemented.",
-    retryable: false
+    retryable: false,
+  },
+  [ERROR_CODE.IDEMPOTENCY_CONFLICT]: {
+    code: ERROR_CODE.IDEMPOTENCY_CONFLICT,
+    category: ERROR_CATEGORY.COMMON,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 409,
+    publicMessage: "请求已被其他操作占用，请刷新后重试。",
+    internalMessage: "Idempotency key conflict.",
+    retryable: false,
   },
 
   [ERROR_CODE.VALIDATION_INVALID_INPUT]: {
@@ -185,7 +205,7 @@ export const ERROR_META = {
     httpStatus: 400,
     publicMessage: "提交的信息格式不正确。",
     internalMessage: "Invalid request input.",
-    retryable: false
+    retryable: false,
   },
   [ERROR_CODE.VALIDATION_INVALID_ID]: {
     code: ERROR_CODE.VALIDATION_INVALID_ID,
@@ -194,7 +214,7 @@ export const ERROR_META = {
     httpStatus: 400,
     publicMessage: "请求的对象不存在或格式不正确。",
     internalMessage: "Invalid id.",
-    retryable: false
+    retryable: false,
   },
   [ERROR_CODE.VALIDATION_INVALID_IDEMPOTENCY_KEY]: {
     code: ERROR_CODE.VALIDATION_INVALID_IDEMPOTENCY_KEY,
@@ -203,9 +223,27 @@ export const ERROR_META = {
     httpStatus: 400,
     publicMessage: "请求标识无效，请刷新后重试。",
     internalMessage: "Invalid idempotency key.",
-    retryable: true
+    retryable: true,
   },
 
+  [ERROR_CODE.AUTH_INIT_DATA_INVALID]: {
+    code: ERROR_CODE.AUTH_INIT_DATA_INVALID,
+    category: ERROR_CATEGORY.AUTH,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 401,
+    publicMessage: "Telegram 登录校验失败，请重新进入应用。",
+    internalMessage: "Telegram initData validation failed.",
+    retryable: true,
+  },
+  [ERROR_CODE.AUTH_SESSION_EXPIRED]: {
+    code: ERROR_CODE.AUTH_SESSION_EXPIRED,
+    category: ERROR_CATEGORY.AUTH,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 401,
+    publicMessage: "登录状态已过期，请重新进入应用。",
+    internalMessage: "App session expired or unavailable.",
+    retryable: true,
+  },
   [ERROR_CODE.AUTH_MISSING_SESSION]: {
     code: ERROR_CODE.AUTH_MISSING_SESSION,
     category: ERROR_CATEGORY.AUTH,
@@ -213,7 +251,7 @@ export const ERROR_META = {
     httpStatus: 401,
     publicMessage: "登录状态缺失，请重新进入应用。",
     internalMessage: "Missing app session.",
-    retryable: true
+    retryable: true,
   },
   [ERROR_CODE.AUTH_INVALID_SESSION]: {
     code: ERROR_CODE.AUTH_INVALID_SESSION,
@@ -222,7 +260,7 @@ export const ERROR_META = {
     httpStatus: 401,
     publicMessage: "登录状态无效，请重新进入应用。",
     internalMessage: "Invalid app session.",
-    retryable: true
+    retryable: true,
   },
   [ERROR_CODE.AUTH_EXPIRED_SESSION]: {
     code: ERROR_CODE.AUTH_EXPIRED_SESSION,
@@ -231,7 +269,7 @@ export const ERROR_META = {
     httpStatus: 401,
     publicMessage: "登录状态已过期，请重新进入应用。",
     internalMessage: "Expired app session.",
-    retryable: true
+    retryable: true,
   },
   [ERROR_CODE.AUTH_INVALID_TELEGRAM_INIT_DATA]: {
     code: ERROR_CODE.AUTH_INVALID_TELEGRAM_INIT_DATA,
@@ -240,7 +278,7 @@ export const ERROR_META = {
     httpStatus: 401,
     publicMessage: "Telegram 身份验证失败。",
     internalMessage: "Invalid Telegram initData.",
-    retryable: true
+    retryable: true,
   },
   [ERROR_CODE.AUTH_TELEGRAM_INIT_DATA_EXPIRED]: {
     code: ERROR_CODE.AUTH_TELEGRAM_INIT_DATA_EXPIRED,
@@ -249,7 +287,7 @@ export const ERROR_META = {
     httpStatus: 401,
     publicMessage: "Telegram 登录信息已过期，请重新打开应用。",
     internalMessage: "Telegram initData expired.",
-    retryable: true
+    retryable: true,
   },
 
   [ERROR_CODE.USER_NOT_FOUND]: {
@@ -259,7 +297,16 @@ export const ERROR_META = {
     httpStatus: 404,
     publicMessage: "用户不存在。",
     internalMessage: "User not found.",
-    retryable: false
+    retryable: false,
+  },
+  [ERROR_CODE.USER_BLOCKED]: {
+    code: ERROR_CODE.USER_BLOCKED,
+    category: ERROR_CATEGORY.USER,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 403,
+    publicMessage: "当前账号已被限制使用。",
+    internalMessage: "User is blocked.",
+    retryable: false,
   },
   [ERROR_CODE.USER_BANNED]: {
     code: ERROR_CODE.USER_BANNED,
@@ -268,7 +315,7 @@ export const ERROR_META = {
     httpStatus: 403,
     publicMessage: "当前账号已被限制使用。",
     internalMessage: "User is banned.",
-    retryable: false
+    retryable: false,
   },
   [ERROR_CODE.USER_RESTRICTED]: {
     code: ERROR_CODE.USER_RESTRICTED,
@@ -277,7 +324,7 @@ export const ERROR_META = {
     httpStatus: 403,
     publicMessage: "当前账号部分功能受限。",
     internalMessage: "User is restricted.",
-    retryable: false
+    retryable: false,
   },
 
   [ERROR_CODE.RATE_LIMITED]: {
@@ -287,7 +334,7 @@ export const ERROR_META = {
     httpStatus: 429,
     publicMessage: "操作过于频繁，请稍后再试。",
     internalMessage: "Rate limited.",
-    retryable: true
+    retryable: true,
   },
 
   [ERROR_CODE.ECONOMY_INSUFFICIENT_BALANCE]: {
@@ -297,7 +344,7 @@ export const ERROR_META = {
     httpStatus: 400,
     publicMessage: "余额不足。",
     internalMessage: "Insufficient balance.",
-    retryable: false
+    retryable: false,
   },
   [ERROR_CODE.ECONOMY_BALANCE_LOCKED]: {
     code: ERROR_CODE.ECONOMY_BALANCE_LOCKED,
@@ -306,7 +353,7 @@ export const ERROR_META = {
     httpStatus: 409,
     publicMessage: "部分余额正在锁定中。",
     internalMessage: "Balance is locked.",
-    retryable: false
+    retryable: false,
   },
   [ERROR_CODE.ECONOMY_LEDGER_CONFLICT]: {
     code: ERROR_CODE.ECONOMY_LEDGER_CONFLICT,
@@ -315,7 +362,16 @@ export const ERROR_META = {
     httpStatus: 409,
     publicMessage: "资产处理冲突，请稍后重试。",
     internalMessage: "Ledger conflict.",
-    retryable: true
+    retryable: true,
+  },
+  [ERROR_CODE.BALANCE_LEDGER_FAILED]: {
+    code: ERROR_CODE.BALANCE_LEDGER_FAILED,
+    category: ERROR_CATEGORY.ECONOMY,
+    severity: ERROR_SEVERITY.ERROR,
+    httpStatus: 500,
+    publicMessage: "资产流水写入失败，请稍后重试。",
+    internalMessage: "Currency ledger write failed.",
+    retryable: true,
   },
   [ERROR_CODE.ECONOMY_INVALID_CURRENCY]: {
     code: ERROR_CODE.ECONOMY_INVALID_CURRENCY,
@@ -324,9 +380,27 @@ export const ERROR_META = {
     httpStatus: 400,
     publicMessage: "币种无效。",
     internalMessage: "Invalid currency.",
-    retryable: false
+    retryable: false,
   },
 
+  [ERROR_CODE.ORDER_NOT_FOUND]: {
+    code: ERROR_CODE.ORDER_NOT_FOUND,
+    category: ERROR_CATEGORY.GACHA,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 404,
+    publicMessage: "订单不存在或不属于当前用户。",
+    internalMessage: "Order not found or not owned by current user.",
+    retryable: false,
+  },
+  [ERROR_CODE.ORDER_ALREADY_PROCESSED]: {
+    code: ERROR_CODE.ORDER_ALREADY_PROCESSED,
+    category: ERROR_CATEGORY.GACHA,
+    severity: ERROR_SEVERITY.INFO,
+    httpStatus: 409,
+    publicMessage: "订单已处理。",
+    internalMessage: "Order already processed.",
+    retryable: false,
+  },
   [ERROR_CODE.PAYMENT_ORDER_NOT_FOUND]: {
     code: ERROR_CODE.PAYMENT_ORDER_NOT_FOUND,
     category: ERROR_CATEGORY.PAYMENT,
@@ -334,7 +408,7 @@ export const ERROR_META = {
     httpStatus: 404,
     publicMessage: "支付订单不存在。",
     internalMessage: "Payment order not found.",
-    retryable: false
+    retryable: false,
   },
   [ERROR_CODE.PAYMENT_ORDER_EXPIRED]: {
     code: ERROR_CODE.PAYMENT_ORDER_EXPIRED,
@@ -343,7 +417,7 @@ export const ERROR_META = {
     httpStatus: 400,
     publicMessage: "支付订单已过期，请重新下单。",
     internalMessage: "Payment order expired.",
-    retryable: false
+    retryable: false,
   },
   [ERROR_CODE.PAYMENT_ALREADY_PROCESSED]: {
     code: ERROR_CODE.PAYMENT_ALREADY_PROCESSED,
@@ -352,7 +426,7 @@ export const ERROR_META = {
     httpStatus: 409,
     publicMessage: "支付订单已处理。",
     internalMessage: "Payment already processed.",
-    retryable: false
+    retryable: false,
   },
   [ERROR_CODE.PAYMENT_AMOUNT_MISMATCH]: {
     code: ERROR_CODE.PAYMENT_AMOUNT_MISMATCH,
@@ -361,7 +435,7 @@ export const ERROR_META = {
     httpStatus: 400,
     publicMessage: "支付金额异常。",
     internalMessage: "Payment amount mismatch.",
-    retryable: false
+    retryable: false,
   },
   [ERROR_CODE.PAYMENT_WEBHOOK_INVALID]: {
     code: ERROR_CODE.PAYMENT_WEBHOOK_INVALID,
@@ -370,7 +444,7 @@ export const ERROR_META = {
     httpStatus: 401,
     publicMessage: "支付回调验证失败。",
     internalMessage: "Invalid payment webhook.",
-    retryable: false
+    retryable: false,
   },
   [ERROR_CODE.PAYMENT_PRECHECKOUT_REJECTED]: {
     code: ERROR_CODE.PAYMENT_PRECHECKOUT_REJECTED,
@@ -379,7 +453,7 @@ export const ERROR_META = {
     httpStatus: 400,
     publicMessage: "支付预校验失败。",
     internalMessage: "Pre-checkout rejected.",
-    retryable: false
+    retryable: false,
   },
   [ERROR_CODE.PAYMENT_SUCCESSFUL_PAYMENT_MISSING]: {
     code: ERROR_CODE.PAYMENT_SUCCESSFUL_PAYMENT_MISSING,
@@ -388,9 +462,54 @@ export const ERROR_META = {
     httpStatus: 400,
     publicMessage: "支付成功信息缺失。",
     internalMessage: "successful_payment is missing.",
-    retryable: true
+    retryable: true,
   },
 
+  [ERROR_CODE.BOX_NOT_FOUND]: {
+    code: ERROR_CODE.BOX_NOT_FOUND,
+    category: ERROR_CATEGORY.GACHA,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 404,
+    publicMessage: "盲盒不存在。",
+    internalMessage: "Blind box not found.",
+    retryable: false,
+  },
+  [ERROR_CODE.BOX_NOT_ACTIVE]: {
+    code: ERROR_CODE.BOX_NOT_ACTIVE,
+    category: ERROR_CATEGORY.GACHA,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 400,
+    publicMessage: "当前盲盒不可开启。",
+    internalMessage: "Blind box is not active.",
+    retryable: false,
+  },
+  [ERROR_CODE.BOX_STOCK_NOT_ENOUGH]: {
+    code: ERROR_CODE.BOX_STOCK_NOT_ENOUGH,
+    category: ERROR_CATEGORY.GACHA,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 409,
+    publicMessage: "盲盒库存不足。",
+    internalMessage: "Blind box stock is not enough.",
+    retryable: false,
+  },
+  [ERROR_CODE.DRAW_COUNT_INVALID]: {
+    code: ERROR_CODE.DRAW_COUNT_INVALID,
+    category: ERROR_CATEGORY.GACHA,
+    severity: ERROR_SEVERITY.WARNING,
+    httpStatus: 400,
+    publicMessage: "开盒次数只能是 1 或 10。",
+    internalMessage: "Draw count is invalid.",
+    retryable: false,
+  },
+  [ERROR_CODE.DROP_POOL_EMPTY]: {
+    code: ERROR_CODE.DROP_POOL_EMPTY,
+    category: ERROR_CATEGORY.GACHA,
+    severity: ERROR_SEVERITY.ERROR,
+    httpStatus: 409,
+    publicMessage: "当前奖励池为空，暂时无法开盒。",
+    internalMessage: "Drop pool is empty.",
+    retryable: true,
+  },
   [ERROR_CODE.GACHA_BOX_NOT_FOUND]: {
     code: ERROR_CODE.GACHA_BOX_NOT_FOUND,
     category: ERROR_CATEGORY.GACHA,
@@ -398,7 +517,7 @@ export const ERROR_META = {
     httpStatus: 404,
     publicMessage: "盲盒不存在。",
     internalMessage: "Gacha box not found.",
-    retryable: false
+    retryable: false,
   },
   [ERROR_CODE.GACHA_BOX_NOT_ACTIVE]: {
     code: ERROR_CODE.GACHA_BOX_NOT_ACTIVE,
@@ -407,7 +526,7 @@ export const ERROR_META = {
     httpStatus: 400,
     publicMessage: "该盲盒当前不可开启。",
     internalMessage: "Gacha box is not active.",
-    retryable: false
+    retryable: false,
   },
   [ERROR_CODE.GACHA_BOX_NOT_STARTED]: {
     code: ERROR_CODE.GACHA_BOX_NOT_STARTED,
@@ -416,7 +535,7 @@ export const ERROR_META = {
     httpStatus: 400,
     publicMessage: "该盲盒活动尚未开始。",
     internalMessage: "Gacha box has not started.",
-    retryable: false
+    retryable: false,
   },
   [ERROR_CODE.GACHA_BOX_ENDED]: {
     code: ERROR_CODE.GACHA_BOX_ENDED,
@@ -425,7 +544,7 @@ export const ERROR_META = {
     httpStatus: 400,
     publicMessage: "该盲盒活动已结束。",
     internalMessage: "Gacha box has ended.",
-    retryable: false
+    retryable: false,
   },
   [ERROR_CODE.GACHA_BOX_SOLD_OUT]: {
     code: ERROR_CODE.GACHA_BOX_SOLD_OUT,
@@ -434,7 +553,7 @@ export const ERROR_META = {
     httpStatus: 400,
     publicMessage: "该盲盒已售罄。",
     internalMessage: "Gacha box sold out.",
-    retryable: false
+    retryable: false,
   },
   [ERROR_CODE.GACHA_DROP_POOL_NOT_FOUND]: {
     code: ERROR_CODE.GACHA_DROP_POOL_NOT_FOUND,
@@ -443,7 +562,7 @@ export const ERROR_META = {
     httpStatus: 500,
     publicMessage: "奖励池暂不可用。",
     internalMessage: "Drop pool not found.",
-    retryable: true
+    retryable: true,
   },
   [ERROR_CODE.GACHA_ORDER_NOT_FOUND]: {
     code: ERROR_CODE.GACHA_ORDER_NOT_FOUND,
@@ -452,7 +571,7 @@ export const ERROR_META = {
     httpStatus: 404,
     publicMessage: "开盒订单不存在。",
     internalMessage: "Gacha order not found.",
-    retryable: false
+    retryable: false,
   },
   [ERROR_CODE.GACHA_ORDER_NOT_PAID]: {
     code: ERROR_CODE.GACHA_ORDER_NOT_PAID,
@@ -461,7 +580,7 @@ export const ERROR_META = {
     httpStatus: 400,
     publicMessage: "订单尚未支付成功。",
     internalMessage: "Gacha order is not paid.",
-    retryable: true
+    retryable: true,
   },
   [ERROR_CODE.GACHA_ORDER_ALREADY_COMPLETED]: {
     code: ERROR_CODE.GACHA_ORDER_ALREADY_COMPLETED,
@@ -470,7 +589,7 @@ export const ERROR_META = {
     httpStatus: 409,
     publicMessage: "该订单已经完成。",
     internalMessage: "Gacha order already completed.",
-    retryable: false
+    retryable: false,
   },
   [ERROR_CODE.GACHA_DRAW_FAILED]: {
     code: ERROR_CODE.GACHA_DRAW_FAILED,
@@ -479,7 +598,7 @@ export const ERROR_META = {
     httpStatus: 500,
     publicMessage: "开盒处理失败，请稍后查看结果。",
     internalMessage: "Gacha draw failed.",
-    retryable: true
+    retryable: true,
   },
 
   [ERROR_CODE.MARKET_LISTING_NOT_FOUND]: {
@@ -489,7 +608,7 @@ export const ERROR_META = {
     httpStatus: 404,
     publicMessage: "挂单不存在。",
     internalMessage: "Market listing not found.",
-    retryable: false
+    retryable: false,
   },
   [ERROR_CODE.MARKET_LISTING_NOT_ACTIVE]: {
     code: ERROR_CODE.MARKET_LISTING_NOT_ACTIVE,
@@ -498,7 +617,7 @@ export const ERROR_META = {
     httpStatus: 400,
     publicMessage: "该挂单当前不可购买。",
     internalMessage: "Market listing is not active.",
-    retryable: false
+    retryable: false,
   },
   [ERROR_CODE.MARKET_LISTING_ALREADY_SOLD]: {
     code: ERROR_CODE.MARKET_LISTING_ALREADY_SOLD,
@@ -507,7 +626,7 @@ export const ERROR_META = {
     httpStatus: 409,
     publicMessage: "该藏品已售出。",
     internalMessage: "Market listing already sold.",
-    retryable: false
+    retryable: false,
   },
   [ERROR_CODE.MARKET_CANNOT_BUY_OWN_LISTING]: {
     code: ERROR_CODE.MARKET_CANNOT_BUY_OWN_LISTING,
@@ -516,7 +635,7 @@ export const ERROR_META = {
     httpStatus: 400,
     publicMessage: "不能购买自己的挂单。",
     internalMessage: "User cannot buy own listing.",
-    retryable: false
+    retryable: false,
   },
   [ERROR_CODE.MARKET_PRICE_INVALID]: {
     code: ERROR_CODE.MARKET_PRICE_INVALID,
@@ -525,7 +644,7 @@ export const ERROR_META = {
     httpStatus: 400,
     publicMessage: "出售价格无效。",
     internalMessage: "Invalid market price.",
-    retryable: false
+    retryable: false,
   },
   [ERROR_CODE.MARKET_INSUFFICIENT_STOCK]: {
     code: ERROR_CODE.MARKET_INSUFFICIENT_STOCK,
@@ -534,7 +653,7 @@ export const ERROR_META = {
     httpStatus: 409,
     publicMessage: "挂单库存不足。",
     internalMessage: "Listing stock is insufficient.",
-    retryable: false
+    retryable: false,
   },
   [ERROR_CODE.MARKET_LISTING_LOCKED]: {
     code: ERROR_CODE.MARKET_LISTING_LOCKED,
@@ -543,7 +662,7 @@ export const ERROR_META = {
     httpStatus: 409,
     publicMessage: "该挂单正在处理中，请稍后再试。",
     internalMessage: "Market listing is locked.",
-    retryable: true
+    retryable: true,
   },
   [ERROR_CODE.MARKET_FEE_RULE_NOT_FOUND]: {
     code: ERROR_CODE.MARKET_FEE_RULE_NOT_FOUND,
@@ -552,7 +671,7 @@ export const ERROR_META = {
     httpStatus: 500,
     publicMessage: "市场手续费规则不可用。",
     internalMessage: "Market fee rule not found.",
-    retryable: true
+    retryable: true,
   },
 
   [ERROR_CODE.INVENTORY_ITEM_NOT_FOUND]: {
@@ -562,7 +681,16 @@ export const ERROR_META = {
     httpStatus: 404,
     publicMessage: "藏品不存在。",
     internalMessage: "Inventory item not found.",
-    retryable: false
+    retryable: false,
+  },
+  [ERROR_CODE.INVENTORY_CREATE_FAILED]: {
+    code: ERROR_CODE.INVENTORY_CREATE_FAILED,
+    category: ERROR_CATEGORY.INVENTORY,
+    severity: ERROR_SEVERITY.ERROR,
+    httpStatus: 500,
+    publicMessage: "库存写入失败，请稍后查看结果。",
+    internalMessage: "Inventory item creation failed.",
+    retryable: true,
   },
   [ERROR_CODE.INVENTORY_ITEM_NOT_OWNED]: {
     code: ERROR_CODE.INVENTORY_ITEM_NOT_OWNED,
@@ -571,7 +699,7 @@ export const ERROR_META = {
     httpStatus: 403,
     publicMessage: "该藏品不属于当前用户。",
     internalMessage: "Inventory item is not owned by current user.",
-    retryable: false
+    retryable: false,
   },
   [ERROR_CODE.INVENTORY_ITEM_NOT_AVAILABLE]: {
     code: ERROR_CODE.INVENTORY_ITEM_NOT_AVAILABLE,
@@ -580,7 +708,7 @@ export const ERROR_META = {
     httpStatus: 400,
     publicMessage: "该藏品当前不可操作。",
     internalMessage: "Inventory item is not available.",
-    retryable: false
+    retryable: false,
   },
   [ERROR_CODE.INVENTORY_ITEM_LOCKED]: {
     code: ERROR_CODE.INVENTORY_ITEM_LOCKED,
@@ -589,7 +717,7 @@ export const ERROR_META = {
     httpStatus: 409,
     publicMessage: "该藏品正在锁定中。",
     internalMessage: "Inventory item is locked.",
-    retryable: true
+    retryable: true,
   },
   [ERROR_CODE.INVENTORY_ITEM_LISTED]: {
     code: ERROR_CODE.INVENTORY_ITEM_LISTED,
@@ -598,7 +726,7 @@ export const ERROR_META = {
     httpStatus: 400,
     publicMessage: "该藏品正在出售中，请先下架。",
     internalMessage: "Inventory item is listed.",
-    retryable: false
+    retryable: false,
   },
   [ERROR_CODE.INVENTORY_UPGRADE_NOT_ALLOWED]: {
     code: ERROR_CODE.INVENTORY_UPGRADE_NOT_ALLOWED,
@@ -607,7 +735,7 @@ export const ERROR_META = {
     httpStatus: 400,
     publicMessage: "该藏品不能升级。",
     internalMessage: "Inventory upgrade is not allowed.",
-    retryable: false
+    retryable: false,
   },
   [ERROR_CODE.INVENTORY_UPGRADE_INSUFFICIENT_FGEMS]: {
     code: ERROR_CODE.INVENTORY_UPGRADE_INSUFFICIENT_FGEMS,
@@ -616,7 +744,7 @@ export const ERROR_META = {
     httpStatus: 400,
     publicMessage: "Fgems 不足，无法升级。",
     internalMessage: "Insufficient Fgems for upgrade.",
-    retryable: false
+    retryable: false,
   },
   [ERROR_CODE.INVENTORY_EVOLVE_NOT_ALLOWED]: {
     code: ERROR_CODE.INVENTORY_EVOLVE_NOT_ALLOWED,
@@ -625,7 +753,7 @@ export const ERROR_META = {
     httpStatus: 400,
     publicMessage: "该藏品不能合成。",
     internalMessage: "Inventory evolve is not allowed.",
-    retryable: false
+    retryable: false,
   },
   [ERROR_CODE.INVENTORY_EVOLVE_INVALID_ITEMS]: {
     code: ERROR_CODE.INVENTORY_EVOLVE_INVALID_ITEMS,
@@ -634,7 +762,7 @@ export const ERROR_META = {
     httpStatus: 400,
     publicMessage: "合成材料不符合要求。",
     internalMessage: "Invalid items for evolve.",
-    retryable: false
+    retryable: false,
   },
   [ERROR_CODE.INVENTORY_EVOLVE_INSUFFICIENT_KCOIN]: {
     code: ERROR_CODE.INVENTORY_EVOLVE_INSUFFICIENT_KCOIN,
@@ -643,7 +771,7 @@ export const ERROR_META = {
     httpStatus: 400,
     publicMessage: "K-coin 不足，无法合成。",
     internalMessage: "Insufficient K-coin for evolve.",
-    retryable: false
+    retryable: false,
   },
   [ERROR_CODE.INVENTORY_DECOMPOSE_NOT_ALLOWED]: {
     code: ERROR_CODE.INVENTORY_DECOMPOSE_NOT_ALLOWED,
@@ -652,7 +780,7 @@ export const ERROR_META = {
     httpStatus: 400,
     publicMessage: "该藏品不能分解。",
     internalMessage: "Inventory decompose is not allowed.",
-    retryable: false
+    retryable: false,
   },
 
   [ERROR_CODE.TASK_NOT_FOUND]: {
@@ -662,7 +790,7 @@ export const ERROR_META = {
     httpStatus: 404,
     publicMessage: "任务不存在。",
     internalMessage: "Task not found.",
-    retryable: false
+    retryable: false,
   },
   [ERROR_CODE.TASK_NOT_COMPLETED]: {
     code: ERROR_CODE.TASK_NOT_COMPLETED,
@@ -671,7 +799,7 @@ export const ERROR_META = {
     httpStatus: 400,
     publicMessage: "任务尚未完成。",
     internalMessage: "Task is not completed.",
-    retryable: false
+    retryable: false,
   },
   [ERROR_CODE.TASK_ALREADY_CLAIMED]: {
     code: ERROR_CODE.TASK_ALREADY_CLAIMED,
@@ -680,7 +808,7 @@ export const ERROR_META = {
     httpStatus: 409,
     publicMessage: "该任务奖励已领取。",
     internalMessage: "Task reward already claimed.",
-    retryable: false
+    retryable: false,
   },
   [ERROR_CODE.TASK_EXPIRED]: {
     code: ERROR_CODE.TASK_EXPIRED,
@@ -689,7 +817,7 @@ export const ERROR_META = {
     httpStatus: 400,
     publicMessage: "任务已过期。",
     internalMessage: "Task expired.",
-    retryable: false
+    retryable: false,
   },
   [ERROR_CODE.SIGNIN_ALREADY_CHECKED_IN]: {
     code: ERROR_CODE.SIGNIN_ALREADY_CHECKED_IN,
@@ -698,7 +826,7 @@ export const ERROR_META = {
     httpStatus: 409,
     publicMessage: "今天已经签到。",
     internalMessage: "Already checked in today.",
-    retryable: false
+    retryable: false,
   },
 
   [ERROR_CODE.REFERRAL_SELF_INVITE_NOT_ALLOWED]: {
@@ -708,7 +836,7 @@ export const ERROR_META = {
     httpStatus: 400,
     publicMessage: "不能邀请自己。",
     internalMessage: "Self invite is not allowed.",
-    retryable: false
+    retryable: false,
   },
   [ERROR_CODE.REFERRAL_ALREADY_BOUND]: {
     code: ERROR_CODE.REFERRAL_ALREADY_BOUND,
@@ -717,7 +845,7 @@ export const ERROR_META = {
     httpStatus: 409,
     publicMessage: "邀请关系已绑定。",
     internalMessage: "Referral already bound.",
-    retryable: false
+    retryable: false,
   },
   [ERROR_CODE.REFERRAL_INVITER_NOT_FOUND]: {
     code: ERROR_CODE.REFERRAL_INVITER_NOT_FOUND,
@@ -726,7 +854,7 @@ export const ERROR_META = {
     httpStatus: 404,
     publicMessage: "邀请人不存在。",
     internalMessage: "Referral inviter not found.",
-    retryable: false
+    retryable: false,
   },
   [ERROR_CODE.REFERRAL_REWARD_ALREADY_GRANTED]: {
     code: ERROR_CODE.REFERRAL_REWARD_ALREADY_GRANTED,
@@ -735,7 +863,7 @@ export const ERROR_META = {
     httpStatus: 409,
     publicMessage: "邀请奖励已发放。",
     internalMessage: "Referral reward already granted.",
-    retryable: false
+    retryable: false,
   },
 
   [ERROR_CODE.ALBUM_MILESTONE_NOT_FOUND]: {
@@ -745,7 +873,7 @@ export const ERROR_META = {
     httpStatus: 404,
     publicMessage: "图鉴奖励节点不存在。",
     internalMessage: "Album milestone not found.",
-    retryable: false
+    retryable: false,
   },
   [ERROR_CODE.ALBUM_REWARD_NOT_CLAIMABLE]: {
     code: ERROR_CODE.ALBUM_REWARD_NOT_CLAIMABLE,
@@ -754,7 +882,7 @@ export const ERROR_META = {
     httpStatus: 400,
     publicMessage: "图鉴奖励暂不可领取。",
     internalMessage: "Album reward is not claimable.",
-    retryable: false
+    retryable: false,
   },
   [ERROR_CODE.ALBUM_REWARD_ALREADY_CLAIMED]: {
     code: ERROR_CODE.ALBUM_REWARD_ALREADY_CLAIMED,
@@ -763,7 +891,7 @@ export const ERROR_META = {
     httpStatus: 409,
     publicMessage: "图鉴奖励已领取。",
     internalMessage: "Album reward already claimed.",
-    retryable: false
+    retryable: false,
   },
 
   [ERROR_CODE.WALLET_INVALID_ADDRESS]: {
@@ -773,7 +901,7 @@ export const ERROR_META = {
     httpStatus: 400,
     publicMessage: "钱包地址无效。",
     internalMessage: "Invalid wallet address.",
-    retryable: false
+    retryable: false,
   },
   [ERROR_CODE.WALLET_NOT_CONNECTED]: {
     code: ERROR_CODE.WALLET_NOT_CONNECTED,
@@ -782,7 +910,7 @@ export const ERROR_META = {
     httpStatus: 400,
     publicMessage: "请先连接 TON 钱包。",
     internalMessage: "Wallet is not connected.",
-    retryable: false
+    retryable: false,
   },
   [ERROR_CODE.WALLET_PROOF_INVALID]: {
     code: ERROR_CODE.WALLET_PROOF_INVALID,
@@ -791,7 +919,7 @@ export const ERROR_META = {
     httpStatus: 401,
     publicMessage: "钱包签名验证失败。",
     internalMessage: "Invalid wallet proof.",
-    retryable: true
+    retryable: true,
   },
   [ERROR_CODE.WALLET_PROOF_EXPIRED]: {
     code: ERROR_CODE.WALLET_PROOF_EXPIRED,
@@ -800,7 +928,7 @@ export const ERROR_META = {
     httpStatus: 401,
     publicMessage: "钱包验证已过期，请重新验证。",
     internalMessage: "Wallet proof expired.",
-    retryable: true
+    retryable: true,
   },
   [ERROR_CODE.WALLET_ALREADY_BOUND]: {
     code: ERROR_CODE.WALLET_ALREADY_BOUND,
@@ -809,7 +937,7 @@ export const ERROR_META = {
     httpStatus: 409,
     publicMessage: "该钱包已绑定。",
     internalMessage: "Wallet already bound.",
-    retryable: false
+    retryable: false,
   },
 
   [ERROR_CODE.ONCHAIN_MINT_NOT_ALLOWED]: {
@@ -819,7 +947,7 @@ export const ERROR_META = {
     httpStatus: 400,
     publicMessage: "该藏品暂不能 Mint。",
     internalMessage: "Mint is not allowed.",
-    retryable: false
+    retryable: false,
   },
   [ERROR_CODE.ONCHAIN_MINT_QUEUE_NOT_FOUND]: {
     code: ERROR_CODE.ONCHAIN_MINT_QUEUE_NOT_FOUND,
@@ -828,7 +956,7 @@ export const ERROR_META = {
     httpStatus: 404,
     publicMessage: "Mint 队列不存在。",
     internalMessage: "Mint queue not found.",
-    retryable: false
+    retryable: false,
   },
   [ERROR_CODE.ONCHAIN_MINT_ALREADY_EXISTS]: {
     code: ERROR_CODE.ONCHAIN_MINT_ALREADY_EXISTS,
@@ -837,7 +965,7 @@ export const ERROR_META = {
     httpStatus: 409,
     publicMessage: "该藏品已经在 Mint 队列中。",
     internalMessage: "Mint queue already exists for item.",
-    retryable: false
+    retryable: false,
   },
   [ERROR_CODE.ONCHAIN_TRANSACTION_NOT_FOUND]: {
     code: ERROR_CODE.ONCHAIN_TRANSACTION_NOT_FOUND,
@@ -846,7 +974,7 @@ export const ERROR_META = {
     httpStatus: 404,
     publicMessage: "链上交易不存在。",
     internalMessage: "On-chain transaction not found.",
-    retryable: false
+    retryable: false,
   },
   [ERROR_CODE.ONCHAIN_TRANSACTION_FAILED]: {
     code: ERROR_CODE.ONCHAIN_TRANSACTION_FAILED,
@@ -855,7 +983,7 @@ export const ERROR_META = {
     httpStatus: 500,
     publicMessage: "链上交易失败。",
     internalMessage: "On-chain transaction failed.",
-    retryable: true
+    retryable: true,
   },
   [ERROR_CODE.ONCHAIN_SYNC_FAILED]: {
     code: ERROR_CODE.ONCHAIN_SYNC_FAILED,
@@ -864,7 +992,7 @@ export const ERROR_META = {
     httpStatus: 500,
     publicMessage: "链上数据同步失败。",
     internalMessage: "On-chain sync failed.",
-    retryable: true
+    retryable: true,
   },
 
   [ERROR_CODE.ADMIN_FORBIDDEN]: {
@@ -874,7 +1002,7 @@ export const ERROR_META = {
     httpStatus: 403,
     publicMessage: "无后台访问权限。",
     internalMessage: "Admin access forbidden.",
-    retryable: false
+    retryable: false,
   },
   [ERROR_CODE.ADMIN_PERMISSION_DENIED]: {
     code: ERROR_CODE.ADMIN_PERMISSION_DENIED,
@@ -883,7 +1011,7 @@ export const ERROR_META = {
     httpStatus: 403,
     publicMessage: "当前管理员权限不足。",
     internalMessage: "Admin permission denied.",
-    retryable: false
+    retryable: false,
   },
 
   [ERROR_CODE.OPS_FEATURE_DISABLED]: {
@@ -893,7 +1021,7 @@ export const ERROR_META = {
     httpStatus: 403,
     publicMessage: "该功能暂时关闭。",
     internalMessage: "Feature disabled by ops.",
-    retryable: false
+    retryable: false,
   },
   [ERROR_CODE.OPS_MAINTENANCE]: {
     code: ERROR_CODE.OPS_MAINTENANCE,
@@ -902,7 +1030,7 @@ export const ERROR_META = {
     httpStatus: 503,
     publicMessage: "系统维护中，请稍后再试。",
     internalMessage: "System maintenance.",
-    retryable: true
+    retryable: true,
   },
 
   [ERROR_CODE.INTERNAL_SERVER_ERROR]: {
@@ -912,11 +1040,29 @@ export const ERROR_META = {
     httpStatus: 500,
     publicMessage: "服务器错误，请稍后再试。",
     internalMessage: "Internal server error.",
-    retryable: true
-  }
+    retryable: true,
+  },
 } as const satisfies Record<ErrorCode, ErrorMeta>;
 
 export const ERROR_CODES = Object.values(ERROR_CODE) as ErrorCode[];
+
+export const FIRST_PHASE_ERROR_CODES = [
+  ERROR_CODE.AUTH_INIT_DATA_INVALID,
+  ERROR_CODE.AUTH_SESSION_EXPIRED,
+  ERROR_CODE.USER_BLOCKED,
+  ERROR_CODE.BOX_NOT_FOUND,
+  ERROR_CODE.BOX_NOT_ACTIVE,
+  ERROR_CODE.BOX_STOCK_NOT_ENOUGH,
+  ERROR_CODE.DRAW_COUNT_INVALID,
+  ERROR_CODE.ORDER_ALREADY_PROCESSED,
+  ERROR_CODE.ORDER_NOT_FOUND,
+  ERROR_CODE.DROP_POOL_EMPTY,
+  ERROR_CODE.BALANCE_LEDGER_FAILED,
+  ERROR_CODE.INVENTORY_CREATE_FAILED,
+  ERROR_CODE.IDEMPOTENCY_CONFLICT,
+] as const;
+
+export type FirstPhaseErrorCode = (typeof FIRST_PHASE_ERROR_CODES)[number];
 
 export interface PublicError {
   code: ErrorCode;
@@ -957,7 +1103,7 @@ export function toPublicError(code: ErrorCode): PublicError {
     code: meta.code,
     message: meta.publicMessage,
     category: meta.category,
-    retryable: meta.retryable
+    retryable: meta.retryable,
   };
 }
 

@@ -214,7 +214,7 @@ function mapGachaRpcError(error: unknown): ApiError {
   const message = error.message.toLowerCase();
 
   if (message.includes("blind box not found")) {
-    return ApiError.notFound("盲盒不存在。");
+    return new ApiError(404, "BOX_NOT_FOUND", "盲盒不存在。");
   }
 
   if (
@@ -229,8 +229,17 @@ function mapGachaRpcError(error: unknown): ApiError {
     return new ApiError(409, "BOX_STOCK_NOT_ENOUGH", "盲盒库存不足。");
   }
 
-  if (message.includes("active drop pool not found")) {
-    return new ApiError(409, "BOX_POOL_NOT_ACTIVE", "当前盲盒没有可用奖励池。");
+  if (
+    message.includes("active drop pool not found") ||
+    message.includes("drop pool is empty") ||
+    message.includes("drop pool empty") ||
+    message.includes("reward pool is empty")
+  ) {
+    return new ApiError(
+      409,
+      "DROP_POOL_EMPTY",
+      "当前奖励池为空，暂时无法开盒。",
+    );
   }
 
   if (message.includes("quantity must be 1 or 10")) {
@@ -250,7 +259,46 @@ function mapGachaRpcError(error: unknown): ApiError {
   }
 
   if (message.includes("draw order not found")) {
-    return ApiError.notFound("开盒订单不存在。");
+    return new ApiError(404, "ORDER_NOT_FOUND", "订单不存在或不属于当前用户。");
+  }
+
+  if (
+    message.includes("order already processed") ||
+    message.includes("order already completed") ||
+    message.includes("draw order already processed") ||
+    message.includes("draw order already opened")
+  ) {
+    return new ApiError(409, "ORDER_ALREADY_PROCESSED", "订单已处理。");
+  }
+
+  if (
+    message.includes("currency ledger") ||
+    message.includes("ledger write failed") ||
+    message.includes("ledger insert failed")
+  ) {
+    return new ApiError(
+      500,
+      "BALANCE_LEDGER_FAILED",
+      "资产流水写入失败，请稍后重试。",
+      {
+        expose: true,
+      },
+    );
+  }
+
+  if (
+    message.includes("inventory create failed") ||
+    message.includes("inventory insert failed") ||
+    message.includes("item instance create failed")
+  ) {
+    return new ApiError(
+      500,
+      "INVENTORY_CREATE_FAILED",
+      "库存写入失败，请稍后查看结果。",
+      {
+        expose: true,
+      },
+    );
   }
 
   return new ApiError(500, "GACHA_CREATE_ORDER_FAILED", "创建开盒订单失败。", {

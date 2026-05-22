@@ -110,8 +110,22 @@ export class ApiError extends Error {
     return new ApiError(401, "UNAUTHORIZED", message, { details });
   }
 
+  static authSessionExpired(
+    message = "登录状态已过期，请重新进入应用。",
+    details?: unknown,
+  ): ApiError {
+    return new ApiError(401, "AUTH_SESSION_EXPIRED", message, { details });
+  }
+
   static forbidden(message = "Forbidden", details?: unknown): ApiError {
     return new ApiError(403, "FORBIDDEN", message, { details });
+  }
+
+  static userBlocked(
+    message = "当前账号已被限制使用。",
+    details?: unknown,
+  ): ApiError {
+    return new ApiError(403, "USER_BLOCKED", message, { details });
   }
 
   static notFound(message = "Not found", details?: unknown): ApiError {
@@ -404,10 +418,7 @@ function sendError(
     return;
   }
 
-  const isProduction = process.env.NODE_ENV === "production";
-
-  const message =
-    error.expose || !isProduction ? error.message : "Internal server error";
+  const message = error.expose ? error.message : "Internal server error";
 
   const payload: ApiErrorResponse = {
     ok: false,
@@ -415,7 +426,7 @@ function sendError(
     error: {
       code: error.code,
       message,
-      ...((error.expose || !isProduction) && error.details !== undefined
+      ...(error.expose && error.details !== undefined
         ? { details: error.details }
         : {}),
     },

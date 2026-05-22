@@ -182,7 +182,15 @@ function mapDrawResultRpcError(error: unknown): ApiError {
   const message = error.message.toLowerCase();
 
   if (message.includes("draw order not found")) {
-    return ApiError.notFound("开盒订单不存在。");
+    return new ApiError(404, "ORDER_NOT_FOUND", "订单不存在或不属于当前用户。");
+  }
+
+  if (
+    message.includes("order already processed") ||
+    message.includes("order already completed") ||
+    message.includes("draw order already processed")
+  ) {
+    return new ApiError(409, "ORDER_ALREADY_PROCESSED", "订单已处理。");
   }
 
   if (message.includes("draw_order_id or invoice_payload is required")) {

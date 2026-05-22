@@ -13,6 +13,18 @@ export type ApiErrorCode =
   | "RATE_LIMITED"
   | "PAYLOAD_TOO_LARGE"
   | "UNSUPPORTED_MEDIA_TYPE"
+  | "AUTH_INIT_DATA_INVALID"
+  | "AUTH_SESSION_EXPIRED"
+  | "USER_BLOCKED"
+  | "BOX_NOT_FOUND"
+  | "BOX_NOT_ACTIVE"
+  | "BOX_STOCK_NOT_ENOUGH"
+  | "DRAW_COUNT_INVALID"
+  | "ORDER_ALREADY_PROCESSED"
+  | "ORDER_NOT_FOUND"
+  | "DROP_POOL_EMPTY"
+  | "BALANCE_LEDGER_FAILED"
+  | "INVENTORY_CREATE_FAILED"
   | "IDEMPOTENCY_CONFLICT"
   | "SESSION_EXPIRED"
   | "TELEGRAM_INIT_DATA_INVALID"
@@ -93,17 +105,24 @@ export function statusCodeFromErrorCode(code: ApiErrorCode): number {
     case "WALLET_PROOF_INVALID":
     case "PAYMENT_INVALID":
     case "BOX_NOT_AVAILABLE":
+    case "BOX_NOT_ACTIVE":
+    case "DRAW_COUNT_INVALID":
     case "TASK_NOT_COMPLETED":
       return 400;
 
     case "UNAUTHORIZED":
+    case "AUTH_INIT_DATA_INVALID":
+    case "AUTH_SESSION_EXPIRED":
     case "SESSION_EXPIRED":
       return 401;
 
+    case "USER_BLOCKED":
     case "FORBIDDEN":
       return 403;
 
     case "NOT_FOUND":
+    case "BOX_NOT_FOUND":
+    case "ORDER_NOT_FOUND":
     case "ITEM_NOT_FOUND":
     case "LISTING_NOT_FOUND":
       return 404;
@@ -113,6 +132,9 @@ export function statusCodeFromErrorCode(code: ApiErrorCode): number {
 
     case "CONFLICT":
     case "IDEMPOTENCY_CONFLICT":
+    case "BOX_STOCK_NOT_ENOUGH":
+    case "ORDER_ALREADY_PROCESSED":
+    case "DROP_POOL_EMPTY":
     case "PAYMENT_ALREADY_PROCESSED":
     case "ITEM_LOCKED":
     case "LISTING_NOT_ACTIVE":
@@ -132,6 +154,8 @@ export function statusCodeFromErrorCode(code: ApiErrorCode): number {
       return 402;
 
     case "INTERNAL_SERVER_ERROR":
+    case "BALANCE_LEDGER_FAILED":
+    case "INVENTORY_CREATE_FAILED":
     case "UNKNOWN_ERROR":
     default:
       return 500;

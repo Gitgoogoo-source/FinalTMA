@@ -47,15 +47,14 @@ const AuthUnixSecondsSchema = z.preprocess(
 const AuthTelegramIdSchema = z
   .union([
     z.number().int().positive(),
-    z.string().trim().regex(/^\d{1,20}$/, "Telegram id must be a numeric string."),
+    z
+      .string()
+      .trim()
+      .regex(/^\d{1,20}$/, "Telegram id must be a numeric string."),
   ])
   .transform((value) => String(value));
 
-const AuthSafeTextSchema = z
-  .string()
-  .trim()
-  .min(1)
-  .max(256);
+const AuthSafeTextSchema = z.string().trim().min(1).max(256);
 
 const AuthOptionalSafeTextSchema = z.preprocess(
   blankToUndefined,
@@ -101,16 +100,9 @@ export const AuthUserStatusSchema = z.enum([
   "risk_limited",
 ]);
 
-export const AuthSessionStatusSchema = z.enum([
-  "active",
-  "expired",
-  "revoked",
-]);
+export const AuthSessionStatusSchema = z.enum(["active", "expired", "revoked"]);
 
-export const AuthClientThemeSchema = z.enum([
-  "light",
-  "dark",
-]);
+export const AuthClientThemeSchema = z.enum(["light", "dark"]);
 
 export const AuthLaunchSourceSchema = z.enum([
   "direct",
@@ -247,10 +239,7 @@ export const AuthTelegramLoginRequestSchema = z
     /**
      * Telegram deep link 进入时的 start_param。
      */
-    startParam: z.preprocess(
-      blankToUndefined,
-      AuthStartParamSchema.optional(),
-    ),
+    startParam: z.preprocess(blankToUndefined, AuthStartParamSchema.optional()),
 
     /**
      * 业务邀请 code。
@@ -320,10 +309,7 @@ export const AuthAdminLoginRequestSchema = z
 export const AuthTelegramStartPayloadRequestSchema = z
   .object({
     telegramUserId: AuthTelegramIdSchema,
-    startParam: z.preprocess(
-      blankToUndefined,
-      AuthStartParamSchema.optional(),
-    ),
+    startParam: z.preprocess(blankToUndefined, AuthStartParamSchema.optional()),
     referralCode: z.preprocess(
       blankToUndefined,
       AuthReferralCodeSchema.optional(),
@@ -334,7 +320,10 @@ export const AuthTelegramStartPayloadRequestSchema = z
 export const AuthSessionUserSchema = z
   .object({
     userId: AuthUuidSchema,
-    telegramUserId: z.string().trim().regex(/^\d{1,20}$/),
+    telegramUserId: z
+      .string()
+      .trim()
+      .regex(/^\d{1,20}$/),
     status: AuthUserStatusSchema,
     firstName: AuthSafeTextSchema,
     lastName: AuthOptionalSafeTextSchema,
@@ -379,10 +368,7 @@ export const AuthReferralBindingSchema = z
       blankToUndefined,
       AuthReferralCodeSchema.optional(),
     ),
-    inviterUserId: z.preprocess(
-      blankToUndefined,
-      AuthUuidSchema.optional(),
-    ),
+    inviterUserId: z.preprocess(blankToUndefined, AuthUuidSchema.optional()),
     status: z.enum([
       "none",
       "pending",
@@ -445,6 +431,7 @@ export const AuthErrorCodeSchema = z.enum([
   "AUTH_SESSION_REQUIRED",
   "AUTH_SESSION_INVALID",
   "AUTH_SESSION_EXPIRED",
+  "USER_BLOCKED",
   "AUTH_USER_BLOCKED",
   "AUTH_USER_RISK_LIMITED",
   "AUTH_ADMIN_REQUIRED",

@@ -44,7 +44,7 @@ export default withApiHandler(
     }
 
     if (payload.not_found === true) {
-      throw ApiError.notFound(getNotFoundMessage(payload.reason));
+      throw getRewardsNotFoundError(payload.reason);
     }
 
     if (!Array.isArray(payload.items)) {
@@ -79,10 +79,16 @@ function normalizeRewardsQuery(
   };
 }
 
-function getNotFoundMessage(reason: unknown): string {
-  return reason === "pool"
-    ? "当前盲盒没有可展示的 active 奖励池。"
-    : "盲盒不存在或不可展示。";
+function getRewardsNotFoundError(reason: unknown): ApiError {
+  if (reason === "pool") {
+    return new ApiError(
+      409,
+      "DROP_POOL_EMPTY",
+      "当前奖励池为空，暂时无法开盒。",
+    );
+  }
+
+  return new ApiError(404, "BOX_NOT_FOUND", "盲盒不存在。");
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

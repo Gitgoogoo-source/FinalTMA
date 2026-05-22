@@ -1,12 +1,12 @@
 // api/_shared/requireSession.ts
 
-import type { VercelRequest } from '@vercel/node';
-import { createHash } from 'node:crypto';
+import type { VercelRequest } from "@vercel/node";
+import { createHash } from "node:crypto";
 import {
   getSupabaseAdminClient,
   type SupabaseAdminClient,
-} from '../../packages/server/src/db/supabaseAdmin.js';
-import { ApiError, getHeaderValue } from './handler.js';
+} from "../../packages/server/src/db/supabaseAdmin.js";
+import { ApiError, getHeaderValue } from "./handler.js";
 
 export interface RequireSessionOptions {
   /**
@@ -73,62 +73,72 @@ export async function requireSession(
   const token = extractSessionToken(req);
 
   if (!token) {
-    throw ApiError.unauthorized('Missing session token');
+    throw ApiError.authSessionExpired("登录状态缺失，请重新进入应用。");
   }
 
   if (!isSafeSessionToken(token)) {
-    throw ApiError.unauthorized('Invalid session token format');
+    throw ApiError.authSessionExpired("登录状态无效，请重新进入应用。");
   }
 
   const sessionTokenHash = hashSessionToken(token);
   const db = getSupabaseAdmin();
 
   const { data: session, error: sessionError } = await db
-    .schema('core')
-    .from('app_sessions')
-    .select('id,user_id,session_token_hash,expires_at,revoked_at,last_seen_at')
-    .eq('session_token_hash', sessionTokenHash)
+    .schema("core")
+    .from("app_sessions")
+    .select("id,user_id,session_token_hash,expires_at,revoked_at,last_seen_at")
+    .eq("session_token_hash", sessionTokenHash)
     .maybeSingle<AppSessionRow>();
 
   if (sessionError) {
-    throw new ApiError(500, 'SESSION_LOOKUP_FAILED', 'Failed to lookup app session', {
-      details: sessionError,
-      expose: false,
-    });
+    throw new ApiError(
+      500,
+      "SESSION_LOOKUP_FAILED",
+      "Failed to lookup app session",
+      {
+        details: sessionError,
+        expose: false,
+      },
+    );
   }
 
   if (!session) {
-    throw ApiError.unauthorized('Invalid session');
+    throw ApiError.authSessionExpired("登录状态无效，请重新进入应用。");
   }
 
   if (session.revoked_at) {
-    throw ApiError.unauthorized('Session has been revoked');
+    throw ApiError.authSessionExpired("登录状态已失效，请重新进入应用。");
   }
 
   if (isExpired(session.expires_at)) {
-    throw ApiError.unauthorized('Session has expired');
+    throw ApiError.authSessionExpired("登录状态已过期，请重新进入应用。");
   }
 
   const { data: user, error: userError } = await db
-    .schema('core')
-    .from('users')
-    .select('id,telegram_user_id,status')
-    .eq('id', session.user_id)
+    .schema("core")
+    .from("users")
+    .select("id,telegram_user_id,status")
+    .eq("id", session.user_id)
     .maybeSingle<UserRow>();
 
   if (userError) {
-    throw new ApiError(500, 'USER_LOOKUP_FAILED', 'Failed to lookup session user', {
-      details: userError,
-      expose: false,
-    });
+    throw new ApiError(
+      500,
+      "USER_LOOKUP_FAILED",
+      "Failed to lookup session user",
+      {
+        details: userError,
+        expose: false,
+      },
+    );
   }
 
   if (!user) {
-    throw ApiError.unauthorized('Session user does not exist');
+    throw ApiError.authSessionExpired("登录用户不存在，请重新进入应用。");
   }
 
-  if (options.requireActiveUser !== false && user.status !== 'active') {
-    throw ApiError.forbidden('User is not active', {
+  if (options.requireActiveUser !== false && user.status !== "active") {
+    throw ApiError.userBlocked("当前账号已被限制使用。", {
       status: user.status,
     });
   }
@@ -148,7 +158,7 @@ export async function requireSession(
 }
 
 export function hashSessionToken(token: string): string {
-  return createHash('sha256').update(token, 'utf8').digest('hex');
+  return createHash("sha256").update(token, "utf8").digest("hex");
 }
 
 export function extractSessionToken(req: VercelRequest): string | null {
@@ -162,7 +172,7 @@ export function extractSessionToken(req: VercelRequest): string | null {
     }
   }
 
-  const xSessionToken = getHeaderValue(req.headers['x-session-token']);
+  const xSessionToken = getHeaderValue(req.headers["x-session-token"]);
 
   if (xSessionToken?.trim()) {
     return xSessionToken.trim();
@@ -179,10 +189,10 @@ export function extractSessionToken(req: VercelRequest): string | null {
   const cookieNames = [
     process.env.TMA_SESSION_COOKIE_NAME,
     process.env.SESSION_COOKIE_NAME,
-    'tma_game_session',
-    '__Host-tma_session',
-    'tma_session',
-    'app_session',
+    "tma_game_session",
+    "__Host-tma_session",
+    "tma_session",
+    "app_session",
   ].filter(Boolean) as string[];
 
   for (const cookieName of cookieNames) {
@@ -199,11 +209,11 @@ export function extractSessionToken(req: VercelRequest): string | null {
 function parseCookieHeader(cookieHeader: string): Record<string, string> {
   const result: Record<string, string> = {};
 
-  for (const part of cookieHeader.split(';')) {
-    const [rawKey, ...rawValueParts] = part.split('=');
+  for (const part of cookieHeader.split(";")) {
+    const [rawKey, ...rawValueParts] = part.split("=");
 
     const key = rawKey?.trim();
-    const rawValue = rawValueParts.join('=').trim();
+    const rawValue = rawValueParts.join("=").trim();
 
     if (!key) {
       continue;
@@ -249,21 +259,24 @@ function isExpired(expiresAt: string): boolean {
   return expiresAtMs <= Date.now();
 }
 
-async function touchSessionLastSeen(db: SupabaseAdminClient, sessionId: string): Promise<void> {
+async function touchSessionLastSeen(
+  db: SupabaseAdminClient,
+  sessionId: string,
+): Promise<void> {
   const { error } = await db
-    .schema('core')
-    .from('app_sessions')
+    .schema("core")
+    .from("app_sessions")
     .update({
       last_seen_at: new Date().toISOString(),
     })
-    .eq('id', sessionId);
+    .eq("id", sessionId);
 
   if (error) {
     /**
      * last_seen_at 失败不应该阻断用户请求。
      * 但需要打日志，便于发现数据库字段或权限配置问题。
      */
-    console.warn('Failed to touch session last_seen_at', {
+    console.warn("Failed to touch session last_seen_at", {
       sessionId,
       error,
     });
