@@ -309,6 +309,8 @@ select ok(exists (select 1 from payments.star_orders s join _ids i on i.id = s.i
 select is((select payment_star_order_id from gacha.draw_orders d join _ids i on i.id = d.id where i.key = 'draw_order1'), (select id from _ids where key = 'star_order1'), 'draw order links to Stars order');
 
 insert into _ids (key, id) values ('other_user', testutil.make_user(9300000002, 'gacha_order_other_user', null));
+select ok(testutil.raises_like(format('select api.gacha_create_order(%L::uuid, %L::uuid, 1, %L)', (select id::text from _ids where key = 'other_user'), (select id::text from _ids where key = 'box'), 'gacha-order-single-001'), '%idempotency key conflict%'), 'create order rejects idempotency key reused by another user');
+select ok(testutil.raises_like(format('select api.gacha_create_order(%L::uuid, %L::uuid, 10, %L)', (select id::text from _ids where key = 'user'), (select id::text from _ids where key = 'box'), 'gacha-order-single-001'), '%idempotency key conflict%'), 'create order rejects idempotency key reused with a different draw quantity');
 select ok(testutil.raises_like(format('select api.gacha_process_dev_paid_order(%L::uuid, %L::uuid)', (select id::text from _ids where key = 'draw_order1'), (select id::text from _ids where key = 'other_user')), '%does not belong to user%'), 'dev paid process rejects another user order');
 
 insert into _ids (key, payload)

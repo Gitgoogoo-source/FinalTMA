@@ -72,7 +72,7 @@ export async function createOpenOrder(
       method: "POST",
       body,
       headers: {
-        "Idempotency-Key": idempotencyKey,
+        "X-Idempotency-Key": idempotencyKey,
       },
     },
   );

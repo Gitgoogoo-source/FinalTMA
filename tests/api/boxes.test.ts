@@ -10,6 +10,7 @@ import {
   normalizeCreateOpenOrderInput,
 } from "../../api/boxes/create-open-order";
 import { toDrawResultResponse } from "../../api/boxes/result";
+import { RpcError } from "../../packages/server/src/db/rpc";
 import { invokeApiHandler } from "./_utils";
 
 const { callRpcRawMock, requireSessionMock } = vi.hoisted(() => ({
@@ -306,6 +307,86 @@ describe("boxes API helpers", () => {
       }),
       expect.any(Object),
     );
+  });
+
+  it("/api/boxes/create-open-order accepts X-Idempotency-Key when the body omits it", async () => {
+    callRpcRawMock.mockResolvedValueOnce({
+      draw_order_id: ORDER_ID,
+      star_order_id: STAR_ORDER_ID,
+      invoice_payload: `gacha:${ORDER_ID}`,
+      xtr_amount: 10,
+      quantity: 1,
+      discount_bps: 0,
+      idempotent: false,
+    });
+
+    const { default: createOrderHandler } =
+      await import("../../api/boxes/create-open-order");
+    const result = await invokeApiHandler<ApiSuccessResponse>(
+      createOrderHandler,
+      {
+        method: "POST",
+        url: "/api/boxes/create-open-order",
+        headers: {
+          authorization: "Bearer test-session-token-000000000000",
+          "content-type": "application/json",
+          "x-forwarded-for": "127.0.0.26",
+          "x-idempotency-key": IDEMPOTENCY_KEY,
+        },
+        body: {
+          box_id: BOX_ID,
+          draw_count: 1,
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(200);
+    expect(callRpcRawMock).toHaveBeenCalledWith(
+      "gacha_create_order",
+      expect.objectContaining({
+        p_idempotency_key: IDEMPOTENCY_KEY,
+      }),
+      expect.any(Object),
+    );
+  });
+
+  it("/api/boxes/create-open-order maps RPC idempotency conflicts", async () => {
+    callRpcRawMock.mockRejectedValueOnce(
+      new RpcError({
+        rpcName: "gacha_create_order",
+        error: {
+          message: "idempotency key conflict",
+        },
+      }),
+    );
+
+    const { default: createOrderHandler } =
+      await import("../../api/boxes/create-open-order");
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      createOrderHandler,
+      {
+        method: "POST",
+        url: "/api/boxes/create-open-order",
+        headers: {
+          authorization: "Bearer test-session-token-000000000000",
+          "content-type": "application/json",
+          "x-forwarded-for": "127.0.0.27",
+        },
+        body: {
+          box_id: BOX_ID,
+          draw_count: 1,
+          idempotency_key: IDEMPOTENCY_KEY,
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(409);
+    expect(result.body).toMatchObject({
+      ok: false,
+      error: {
+        code: "IDEMPOTENCY_CONFLICT",
+      },
+    });
   });
 
   it("/api/boxes/create-open-order creates a ten-draw order", async () => {

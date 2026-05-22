@@ -1,13 +1,13 @@
 // api/shared/response.ts
 
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+import type { VercelRequest, VercelResponse } from "@vercel/node";
 import {
   AppError,
   isAppError,
   methodNotAllowed,
   normalizeError,
   type PublicErrorPayload,
-} from './errors.js';
+} from "./errors.js";
 
 export type ApiSuccessResponse<T> = {
   ok: true;
@@ -29,13 +29,13 @@ export type ApiErrorResponse = {
 export type ApiResponse<T> = ApiSuccessResponse<T> | ApiErrorResponse;
 
 export type HttpMethod =
-  | 'GET'
-  | 'POST'
-  | 'PUT'
-  | 'PATCH'
-  | 'DELETE'
-  | 'OPTIONS'
-  | 'HEAD';
+  | "GET"
+  | "POST"
+  | "PUT"
+  | "PATCH"
+  | "DELETE"
+  | "OPTIONS"
+  | "HEAD";
 
 export type SendSuccessOptions = {
   statusCode?: number | undefined;
@@ -49,17 +49,17 @@ export type SendErrorOptions = {
 };
 
 export function getRequestId(req: VercelRequest): string {
-  const headerValue = req.headers['x-request-id'];
+  const headerValue = req.headers["x-request-id"];
 
-  if (typeof headerValue === 'string' && headerValue.trim().length > 0) {
+  if (typeof headerValue === "string" && headerValue.trim().length > 0) {
     return headerValue;
   }
 
-  if (Array.isArray(headerValue) && typeof headerValue[0] === 'string') {
+  if (Array.isArray(headerValue) && typeof headerValue[0] === "string") {
     return headerValue[0];
   }
 
-  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return crypto.randomUUID();
   }
 
@@ -67,13 +67,13 @@ export function getRequestId(req: VercelRequest): string {
 }
 
 export function setSecurityHeaders(res: VercelResponse): void {
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'DENY');
-  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("Referrer-Policy", "no-referrer");
 }
 
 export function setJsonHeaders(res: VercelResponse): void {
-  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.setHeader("Content-Type", "application/json; charset=utf-8");
 }
 
 export function setCorsHeaders(
@@ -84,29 +84,43 @@ export function setCorsHeaders(
     allowCredentials?: boolean;
   },
 ): void {
-  const origin = options?.origin ?? process.env.CORS_ORIGIN ?? '*';
-  const methods = options?.methods ?? ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'];
+  const origin = options?.origin ?? process.env.CORS_ORIGIN ?? "*";
+  const methods = options?.methods ?? [
+    "GET",
+    "POST",
+    "PUT",
+    "PATCH",
+    "DELETE",
+    "OPTIONS",
+  ];
 
-  res.setHeader('Access-Control-Allow-Origin', origin);
-  res.setHeader('Access-Control-Allow-Methods', methods.join(', '));
+  res.setHeader("Access-Control-Allow-Origin", origin);
+  res.setHeader("Access-Control-Allow-Methods", methods.join(", "));
   res.setHeader(
-    'Access-Control-Allow-Headers',
+    "Access-Control-Allow-Headers",
     [
-      'Content-Type',
-      'Authorization',
-      'X-Request-Id',
-      'X-Idempotency-Key',
-      'X-Telegram-Init-Data',
-    ].join(', '),
+      "Content-Type",
+      "Authorization",
+      "X-Request-Id",
+      "X-Idempotency-Key",
+      "Idempotency-Key",
+      "X-Telegram-Init-Data",
+    ].join(", "),
   );
 
-  if (options?.allowCredentials ?? process.env.CORS_ALLOW_CREDENTIALS === 'true') {
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  if (
+    options?.allowCredentials ??
+    process.env.CORS_ALLOW_CREDENTIALS === "true"
+  ) {
+    res.setHeader("Access-Control-Allow-Credentials", "true");
   }
 }
 
-export function handleOptions(req: VercelRequest, res: VercelResponse): boolean {
-  if (req.method !== 'OPTIONS') {
+export function handleOptions(
+  req: VercelRequest,
+  res: VercelResponse,
+): boolean {
+  if (req.method !== "OPTIONS") {
     return false;
   }
 
@@ -117,11 +131,14 @@ export function handleOptions(req: VercelRequest, res: VercelResponse): boolean 
   return true;
 }
 
-export function assertMethod(req: VercelRequest, allowedMethods: HttpMethod[]): void {
+export function assertMethod(
+  req: VercelRequest,
+  allowedMethods: HttpMethod[],
+): void {
   const method = req.method?.toUpperCase() as HttpMethod | undefined;
 
   if (!method || !allowedMethods.includes(method)) {
-    throw methodNotAllowed(`Method ${req.method ?? 'UNKNOWN'} is not allowed`, {
+    throw methodNotAllowed(`Method ${req.method ?? "UNKNOWN"} is not allowed`, {
       allowedMethods,
       receivedMethod: req.method ?? null,
     });
@@ -141,7 +158,9 @@ export function sendSuccess<T>(
     success: true,
     data,
     ...(options.meta ? { meta: options.meta } : {}),
-    ...(options.requestId ? { requestId: options.requestId, request_id: options.requestId } : {}),
+    ...(options.requestId
+      ? { requestId: options.requestId, request_id: options.requestId }
+      : {}),
   };
 
   res.status(options.statusCode ?? 200).json(payload);
@@ -176,7 +195,7 @@ export function sendError(
   setJsonHeaders(res);
 
   if (shouldLog && appError.statusCode >= 500) {
-    console.error('[api:error]', {
+    console.error("[api:error]", {
       requestId,
       code: appError.code,
       statusCode: appError.statusCode,

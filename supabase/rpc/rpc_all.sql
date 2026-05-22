@@ -1228,6 +1228,7 @@ declare
   v_draw_order_id uuid := gen_random_uuid();
   v_star_order_id uuid := gen_random_uuid();
   v_payload text;
+  v_idempotency_key text;
 begin
   if p_user_id is null or p_box_id is null then
     raise exception 'user_id and box_id are required';
@@ -1235,15 +1236,24 @@ begin
   if p_quantity not in (1, 10) then
     raise exception 'quantity must be 1 or 10';
   end if;
-  if p_idempotency_key is null or length(trim(p_idempotency_key)) = 0 then
+
+  v_idempotency_key := nullif(trim(p_idempotency_key), '');
+  if v_idempotency_key is null then
     raise exception 'idempotency_key is required';
   end if;
 
   select * into v_existing_order
   from gacha.draw_orders
-  where idempotency_key = p_idempotency_key;
+  where idempotency_key = v_idempotency_key
+  for update;
 
   if v_existing_order.id is not null then
+    if v_existing_order.user_id <> p_user_id
+      or v_existing_order.box_id <> p_box_id
+      or v_existing_order.quantity <> p_quantity then
+      raise exception 'idempotency key conflict';
+    end if;
+
     return jsonb_build_object(
       'draw_order_id', v_existing_order.id,
       'star_order_id', v_existing_order.payment_star_order_id,
@@ -1314,7 +1324,7 @@ begin
     telegram_invoice_payload, title, description, idempotency_key, expires_at, metadata
   ) values (
     v_star_order_id, p_user_id, 'gacha_open', v_draw_order_id, 'created', v_total_price,
-    v_payload, v_box.display_name, 'Open blind box x' || p_quantity::text, p_idempotency_key,
+    v_payload, v_box.display_name, 'Open blind box x' || p_quantity::text, v_idempotency_key,
     now() + interval '15 minutes',
     jsonb_build_object('box_id', p_box_id, 'quantity', p_quantity, 'pool_version_id', v_pool.id)
   );
@@ -1326,7 +1336,7 @@ begin
   ) values (
     v_draw_order_id, p_user_id, p_box_id, v_pool.id, v_star_order_id, 'invoice_created',
     p_quantity, v_unit_price, v_discount_bps, v_total_price,
-    v_box.open_reward_kcoin, v_payload, p_idempotency_key,
+    v_box.open_reward_kcoin, v_payload, v_idempotency_key,
     jsonb_build_object('box_slug', v_box.slug, 'box_tier', v_box.tier)
   );
 

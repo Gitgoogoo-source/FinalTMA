@@ -770,7 +770,9 @@ export const BoxErrorCodeSchema = z.enum([
   "BOX_NOT_STARTED",
   "BOX_ENDED",
   "BOX_SOLD_OUT",
+  "BOX_STOCK_NOT_ENOUGH",
   "BOX_PAUSED",
+  "DRAW_COUNT_INVALID",
   "BOX_PRICE_CHANGED",
   "BOX_POOL_VERSION_CHANGED",
   "BOX_ORDER_NOT_FOUND",
@@ -780,6 +782,7 @@ export const BoxErrorCodeSchema = z.enum([
   "BOX_PAYMENT_NOT_CONFIRMED",
   "BOX_DRAW_RESULT_NOT_READY",
   "BOX_IDEMPOTENCY_CONFLICT",
+  "IDEMPOTENCY_CONFLICT",
 ]);
 
 export const BoxErrorResponseSchema = z

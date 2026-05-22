@@ -226,7 +226,7 @@ function mapGachaRpcError(error: unknown): ApiError {
   }
 
   if (message.includes("stock is insufficient")) {
-    return new ApiError(409, "BOX_SOLD_OUT", "盲盒库存不足。");
+    return new ApiError(409, "BOX_STOCK_NOT_ENOUGH", "盲盒库存不足。");
   }
 
   if (message.includes("active drop pool not found")) {
@@ -234,11 +234,19 @@ function mapGachaRpcError(error: unknown): ApiError {
   }
 
   if (message.includes("quantity must be 1 or 10")) {
-    return ApiError.badRequest("开盒次数只能是 1 或 10。");
+    return new ApiError(400, "DRAW_COUNT_INVALID", "开盒次数只能是 1 或 10。");
   }
 
   if (message.includes("idempotency_key is required")) {
     return ApiError.badRequest("缺少幂等键。");
+  }
+
+  if (message.includes("idempotency key conflict")) {
+    return new ApiError(
+      409,
+      "IDEMPOTENCY_CONFLICT",
+      "幂等键已被其他开盒请求使用。",
+    );
   }
 
   if (message.includes("draw order not found")) {
