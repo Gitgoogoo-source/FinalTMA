@@ -27,11 +27,9 @@ export async function mockFirstPhaseApi(page: Page): Promise<void> {
       },
       session: {
         sessionId: "session-e2e",
-        tokenType: "Bearer",
-        accessToken: "test-session-token-000000000000000000000000",
         expiresAt: "2026-05-28T00:00:00.000Z",
         expiresInSeconds: 604800,
-        cookieBased: false,
+        cookieBased: true,
       },
     }),
   );

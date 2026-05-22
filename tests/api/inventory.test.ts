@@ -160,7 +160,7 @@ describe("inventory API helpers", () => {
           limit: "40",
         },
         headers: {
-          authorization: "Bearer test-session-token-000000000000",
+          cookie: "tma_game_session=test-session-token-000000000000",
           "x-forwarded-for": "127.0.0.31",
         },
       },

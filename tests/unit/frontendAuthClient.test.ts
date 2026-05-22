@@ -20,26 +20,22 @@ describe("frontend auth api client", () => {
     vi.unstubAllGlobals();
   });
 
-  it("attaches the in-memory session token as a bearer header", async () => {
+  it("uses HttpOnly cookie credentials", async () => {
     const fetchMock = vi.fn(
       async (_input: RequestInfo | URL, _init?: RequestInit) =>
         new Response(successResponse),
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    const { apiRequest, setApiSessionToken } =
-      await import("../../apps/web/src/api/client");
-
-    setApiSessionToken("tma_sess_v1.test-token");
+    const { apiRequest } = await import("../../apps/web/src/api/client");
 
     await apiRequest("/me/bootstrap", {
       method: "GET",
     });
 
     const requestInit = fetchMock.mock.calls[0]?.[1];
-    const headers = new Headers(requestInit?.headers);
 
-    expect(headers.get("Authorization")).toBe("Bearer tma_sess_v1.test-token");
+    expect(requestInit?.credentials).toBe("include");
   });
 
   it("notifies unauthorized handlers for protected API calls", async () => {

@@ -14,16 +14,7 @@ type ApiRequestOptions = Omit<RequestInit, "body"> & {
 
 type UnauthorizedHandler = () => void;
 
-let apiSessionToken: string | null = null;
 let unauthorizedHandler: UnauthorizedHandler | null = null;
-
-export function setApiSessionToken(token: string | null): void {
-  apiSessionToken = token && token.trim().length > 0 ? token.trim() : null;
-}
-
-export function getApiSessionToken(): string | null {
-  return apiSessionToken;
-}
 
 export function setApiUnauthorizedHandler(
   handler: UnauthorizedHandler | null,
@@ -75,10 +66,6 @@ function createHeaders(options: ApiRequestOptions): Headers {
     !headers.has("Content-Type")
   ) {
     headers.set("Content-Type", "application/json");
-  }
-
-  if (apiSessionToken && !headers.has("Authorization")) {
-    headers.set("Authorization", `Bearer ${apiSessionToken}`);
   }
 
   return headers;

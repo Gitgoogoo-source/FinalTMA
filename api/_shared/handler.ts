@@ -525,10 +525,8 @@ function applyCorsHeaders(
     "Access-Control-Allow-Headers",
     (
       cors.allowedHeaders ?? [
-        "Authorization",
         "Content-Type",
         "X-Requested-With",
-        "X-Session-Token",
         "X-Idempotency-Key",
         "Idempotency-Key",
         "X-Request-Id",

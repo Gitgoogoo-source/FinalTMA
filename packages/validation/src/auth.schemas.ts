@@ -18,7 +18,6 @@ import { z } from "zod";
 const TELEGRAM_START_PARAM_RE = /^[A-Za-z0-9_-]{1,512}$/;
 const TELEGRAM_USERNAME_RE = /^@?[A-Za-z0-9_]{5,32}$/;
 const REFERRAL_CODE_RE = /^[A-Za-z0-9_-]{1,64}$/;
-const SESSION_TOKEN_RE = /^[-A-Za-z0-9._~:]{24,512}$/;
 const ISO_DATE_TIME_RE =
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})$/;
 
@@ -79,11 +78,6 @@ export const AuthStartParamSchema = z
   .string()
   .trim()
   .regex(TELEGRAM_START_PARAM_RE, "Invalid Telegram start_param.");
-
-export const AuthSessionTokenSchema = z
-  .string()
-  .trim()
-  .regex(SESSION_TOKEN_RE, "Invalid session token.");
 
 export const AuthTelegramChatTypeSchema = z.enum([
   "sender",
@@ -236,31 +230,13 @@ export const AuthTelegramLoginRequestSchema = z
 
 export const AuthRefreshSessionRequestSchema = z
   .object({
-    /**
-     * 如果使用 HttpOnly Cookie，可以不传 sessionToken。
-     * 如果使用 Authorization Bearer，可以传入 sessionToken。
-     */
-    sessionToken: z.preprocess(
-      blankToUndefined,
-      AuthSessionTokenSchema.optional(),
-    ),
     clientContext: AuthClientContextSchema.optional(),
   })
   .strict();
 
 export const AuthLogoutRequestSchema = z
   .object({
-    sessionToken: z.preprocess(
-      blankToUndefined,
-      AuthSessionTokenSchema.optional(),
-    ),
     allDevices: z.boolean().optional().default(false),
-  })
-  .strict();
-
-export const AuthVerifySessionRequestSchema = z
-  .object({
-    sessionToken: AuthSessionTokenSchema,
   })
   .strict();
 
@@ -328,15 +304,6 @@ export const AuthSessionSchema = z
     status: AuthSessionStatusSchema,
     issuedAt: AuthIsoDateTimeSchema,
     expiresAt: AuthIsoDateTimeSchema,
-
-    /**
-     * 使用 HttpOnly Cookie 时，后端可以不返回 accessToken。
-     * 使用 Bearer Token 时，后端可以返回 accessToken。
-     */
-    accessToken: z.preprocess(
-      blankToUndefined,
-      AuthSessionTokenSchema.optional(),
-    ),
 
     cookieBased: z.boolean().default(true),
   })
@@ -442,7 +409,6 @@ export const parseAuthAdminLoginRequest = (input: unknown) =>
 export type AuthTelegramUsername = z.infer<typeof AuthTelegramUsernameSchema>;
 export type AuthReferralCode = z.infer<typeof AuthReferralCodeSchema>;
 export type AuthStartParam = z.infer<typeof AuthStartParamSchema>;
-export type AuthSessionToken = z.infer<typeof AuthSessionTokenSchema>;
 export type AuthTelegramUser = z.infer<typeof AuthTelegramUserSchema>;
 export type AuthTelegramChat = z.infer<typeof AuthTelegramChatSchema>;
 export type AuthTelegramInitDataUnsafe = z.infer<
@@ -456,9 +422,6 @@ export type AuthRefreshSessionRequest = z.infer<
   typeof AuthRefreshSessionRequestSchema
 >;
 export type AuthLogoutRequest = z.infer<typeof AuthLogoutRequestSchema>;
-export type AuthVerifySessionRequest = z.infer<
-  typeof AuthVerifySessionRequestSchema
->;
 export type AuthAdminLoginRequest = z.infer<typeof AuthAdminLoginRequestSchema>;
 export type AuthTelegramStartPayloadRequest = z.infer<
   typeof AuthTelegramStartPayloadRequestSchema

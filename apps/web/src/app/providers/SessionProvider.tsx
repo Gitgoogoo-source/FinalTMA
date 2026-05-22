@@ -9,11 +9,7 @@ import {
   type ReactNode,
 } from "react";
 
-import {
-  apiRequest,
-  setApiSessionToken,
-  setApiUnauthorizedHandler,
-} from "@/api/client";
+import { apiRequest, setApiUnauthorizedHandler } from "@/api/client";
 import { API_ENDPOINTS } from "@/api/endpoints";
 import { getApiErrorMessage, isUnauthorizedApiError } from "@/api/errors";
 
@@ -39,8 +35,6 @@ type SessionUser = {
 
 type AppSession = {
   sessionId: string;
-  tokenType: "Bearer";
-  accessToken: string;
   expiresAt: string;
   expiresInSeconds: number | null;
   cookieBased: boolean;
@@ -102,7 +96,6 @@ export function SessionProvider({ children }: SessionProviderProps) {
   );
 
   const clearSession = useCallback(() => {
-    setApiSessionToken(null);
     setStatus("idle");
     setBootstrapStatus("idle");
     setUser(null);
@@ -135,7 +128,6 @@ export function SessionProvider({ children }: SessionProviderProps) {
       });
 
       if (isUnauthorizedApiError(requestError)) {
-        setApiSessionToken(null);
         setUser(null);
         setSession(null);
         setStatus("error");
@@ -153,7 +145,6 @@ export function SessionProvider({ children }: SessionProviderProps) {
     }
 
     if (!telegram.initData) {
-      setApiSessionToken(null);
       setStatus("error");
       setError({
         code: "AUTH_INIT_DATA_REQUIRED",
@@ -177,13 +168,11 @@ export function SessionProvider({ children }: SessionProviderProps) {
         },
       );
 
-      setApiSessionToken(loginResponse.session.accessToken);
       setUser(loginResponse.user);
       setSession(loginResponse.session);
       setStatus("authenticated");
       await reloadBootstrap();
     } catch (requestError) {
-      setApiSessionToken(null);
       setUser(null);
       setSession(null);
       setBootstrap(null);
@@ -211,7 +200,6 @@ export function SessionProvider({ children }: SessionProviderProps) {
         return;
       }
 
-      setApiSessionToken(null);
       void authenticate();
     });
   }, [authenticate]);

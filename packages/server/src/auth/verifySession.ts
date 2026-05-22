@@ -101,12 +101,6 @@ export interface VerifySessionOptions {
    * 从 Cookie 读取 session 时使用的 cookie 名。
    */
   cookieName?: string;
-
-  /**
-   * 可选：从自定义 header 读取 session。
-   * 默认 x-app-session。
-   */
-  sessionHeaderName?: string;
 }
 
 export interface WebHeadersLike {
@@ -142,21 +136,16 @@ interface SessionUserRow {
 
 /**
  * 统一入口：
- * - 可以传 raw token
- * - 可以传 Authorization header 内容
- * - 可以传 Headers
+ * - 可以传 Headers；Headers 默认优先读取 HttpOnly Cookie
  * - 可以传 { headers }
  */
 export async function verifySession(
-  input: string | HeadersLike | RequestLike,
+  input: HeadersLike | RequestLike,
   options: VerifySessionOptions = {},
 ): Promise<VerifiedAppSession> {
-  const token =
-    typeof input === "string"
-      ? normalizePossibleBearerToken(input)
-      : isRequestLike(input)
-        ? extractSessionTokenFromHeaders(input.headers, options)
-        : extractSessionTokenFromHeaders(input, options);
+  const token = isRequestLike(input)
+    ? extractSessionTokenFromHeaders(input.headers, options)
+    : extractSessionTokenFromHeaders(input, options);
 
   return verifySessionToken(token, options);
 }
@@ -289,25 +278,8 @@ export async function verifySessionToken(
 
 export function extractSessionTokenFromHeaders(
   headers: HeadersLike,
-  options: Pick<VerifySessionOptions, "cookieName" | "sessionHeaderName"> = {},
+  options: Pick<VerifySessionOptions, "cookieName"> = {},
 ): string {
-  const authorization = getHeader(headers, "authorization");
-
-  if (authorization) {
-    const token = normalizePossibleBearerToken(authorization);
-
-    if (token) {
-      return token;
-    }
-  }
-
-  const customHeaderName = options.sessionHeaderName ?? "x-app-session";
-  const customHeaderToken = getHeader(headers, customHeaderName);
-
-  if (customHeaderToken && customHeaderToken.trim().length > 0) {
-    return customHeaderToken.trim();
-  }
-
   const cookieHeader = getHeader(headers, "cookie");
 
   if (cookieHeader) {
@@ -417,16 +389,6 @@ function shouldTouch(
   if (!Number.isFinite(lastSeenMs)) return true;
 
   return nowMs - lastSeenMs >= intervalSeconds * 1000;
-}
-
-function normalizePossibleBearerToken(value: string): string {
-  const trimmed = value.trim();
-
-  if (/^Bearer\s+/i.test(trimmed)) {
-    return trimmed.replace(/^Bearer\s+/i, "").trim();
-  }
-
-  return trimmed;
 }
 
 function getHeader(headers: HeadersLike, name: string): string | undefined {

@@ -61,9 +61,9 @@ export function getSupabaseAdmin(): SupabaseAdminClient {
  * 校验 TMA app session。
  *
  * 约定：
- * - 前端登录后拿到一个 opaque session token。
+ * - 登录接口签发一个 opaque session token，并写入 HttpOnly Cookie。
  * - 数据库存 hash，不存明文 token。
- * - 前端请求时通过 Authorization: Bearer <token> 或 cookie 携带。
+ * - 前端请求只能依赖 Cookie 携带 session。
  * - API 永远从 session 中取 user_id，不信任 body 里的 user_id。
  */
 export async function requireSession(
@@ -162,48 +162,31 @@ export function hashSessionToken(token: string): string {
 }
 
 export function extractSessionToken(req: VercelRequest): string | null {
-  const authorization = getHeaderValue(req.headers.authorization);
+  const cookieHeader = getHeaderValue(req.headers.cookie);
 
-  if (authorization) {
-    const match = authorization.match(/^Bearer\s+(.+)$/i);
+  if (cookieHeader) {
+    const cookies = parseCookieHeader(cookieHeader);
 
-    if (match?.[1]) {
-      return match[1].trim();
+    for (const cookieName of getSessionCookieNames()) {
+      const value = cookies[cookieName];
+
+      if (value?.trim()) {
+        return value.trim();
+      }
     }
   }
 
-  const xSessionToken = getHeaderValue(req.headers["x-session-token"]);
+  return null;
+}
 
-  if (xSessionToken?.trim()) {
-    return xSessionToken.trim();
-  }
-
-  const cookieHeader = getHeaderValue(req.headers.cookie);
-
-  if (!cookieHeader) {
-    return null;
-  }
-
-  const cookies = parseCookieHeader(cookieHeader);
-
-  const cookieNames = [
-    process.env.TMA_SESSION_COOKIE_NAME,
+function getSessionCookieNames(): string[] {
+  return [
     process.env.SESSION_COOKIE_NAME,
     "tma_game_session",
     "__Host-tma_session",
     "tma_session",
     "app_session",
   ].filter(Boolean) as string[];
-
-  for (const cookieName of cookieNames) {
-    const value = cookies[cookieName];
-
-    if (value?.trim()) {
-      return value.trim();
-    }
-  }
-
-  return null;
 }
 
 function parseCookieHeader(cookieHeader: string): Record<string, string> {

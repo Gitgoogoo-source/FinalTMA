@@ -100,7 +100,6 @@ export function setCorsHeaders(
     "Access-Control-Allow-Headers",
     [
       "Content-Type",
-      "Authorization",
       "X-Request-Id",
       "X-Idempotency-Key",
       "Idempotency-Key",

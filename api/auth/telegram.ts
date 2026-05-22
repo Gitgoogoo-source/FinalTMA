@@ -126,8 +126,11 @@ export default withApiHandler(
     res.setHeader(
       "Set-Cookie",
       buildSessionCookie(token, {
-        cookieName: SESSION_COOKIE_NAME,
+        cookieName: getSessionCookieName(),
+        domain: getSessionCookieDomain(),
         maxAgeSeconds: SESSION_TTL_SECONDS,
+        sameSite: getSessionCookieSameSite(),
+        secure: getSessionCookieSecure(),
       }),
     );
 
@@ -146,11 +149,9 @@ export default withApiHandler(
       },
       session: {
         sessionId,
-        tokenType: "Bearer",
-        accessToken: token,
         expiresAt: sessionExpiresAt,
         expiresInSeconds: SESSION_TTL_SECONDS,
-        cookieBased: false,
+        cookieBased: true,
       },
     };
   },
@@ -231,6 +232,51 @@ async function loadAuthUser(userId: string): Promise<AuthUserRow> {
 
 function createOpaqueSessionToken(): string {
   return `tma_sess_v1.${randomBytes(48).toString("base64url")}`;
+}
+
+function getSessionCookieName(): string {
+  return process.env.SESSION_COOKIE_NAME?.trim() || SESSION_COOKIE_NAME;
+}
+
+function getSessionCookieDomain(): string | undefined {
+  const domain = process.env.SESSION_COOKIE_DOMAIN?.trim();
+  return domain || undefined;
+}
+
+function getSessionCookieSameSite(): "Lax" | "Strict" | "None" {
+  const raw = process.env.SESSION_COOKIE_SAMESITE?.trim().toLowerCase();
+
+  if (raw === "strict") {
+    return "Strict";
+  }
+
+  if (raw === "none") {
+    return "None";
+  }
+
+  return "Lax";
+}
+
+function getSessionCookieSecure(): boolean {
+  const raw = process.env.SESSION_COOKIE_SECURE?.trim().toLowerCase();
+
+  if (raw === "true" || raw === "1" || raw === "yes") {
+    return true;
+  }
+
+  if (raw === "false" || raw === "0" || raw === "no") {
+    return false;
+  }
+
+  return isProductionLikeRuntime();
+}
+
+function isProductionLikeRuntime(): boolean {
+  return (
+    process.env.APP_ENV === "production" ||
+    process.env.NODE_ENV === "production" ||
+    process.env.VERCEL_ENV === "production"
+  );
 }
 
 function getSafeUserAgent(req: VercelRequest): string | null {

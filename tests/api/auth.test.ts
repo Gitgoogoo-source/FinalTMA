@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { VercelRequest } from "@vercel/node";
 
 import type {
   ApiErrorResponse,
@@ -27,6 +28,9 @@ describe("auth API", () => {
   beforeEach(() => {
     process.env.NODE_ENV = "test";
     process.env.TELEGRAM_BOT_TOKEN = BOT_TOKEN;
+    process.env.SESSION_COOKIE_NAME = "tma_game_session";
+    process.env.SESSION_COOKIE_SECURE = "false";
+    process.env.SESSION_COOKIE_SAMESITE = "lax";
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-05-21T00:00:00.000Z"));
     callRpcRawMock.mockReset();
@@ -36,6 +40,9 @@ describe("auth API", () => {
   afterEach(() => {
     vi.useRealTimers();
     delete process.env.TELEGRAM_BOT_TOKEN;
+    delete process.env.SESSION_COOKIE_NAME;
+    delete process.env.SESSION_COOKIE_SECURE;
+    delete process.env.SESSION_COOKIE_SAMESITE;
   });
 
   it("/api/auth/telegram rejects invalid Telegram initData", async () => {
@@ -125,6 +132,9 @@ describe("auth API", () => {
     expect(result.headers["set-cookie"]).toEqual(
       expect.stringContaining("tma_game_session="),
     );
+    expect(result.headers["set-cookie"]).toEqual(
+      expect.stringContaining("HttpOnly"),
+    );
     expect(result.body).toMatchObject({
       ok: true,
       data: {
@@ -138,15 +148,9 @@ describe("auth API", () => {
         },
         session: {
           sessionId: SESSION_ID,
-          tokenType: "Bearer",
           expiresAt: "2026-05-28T00:00:00.000Z",
-          cookieBased: false,
+          cookieBased: true,
         },
-      },
-    });
-    expect(result.body.data).toMatchObject({
-      session: {
-        accessToken: expect.stringMatching(/^tma_sess_v1\./),
       },
     });
     expect(callRpcRawMock).toHaveBeenCalledWith(
@@ -164,6 +168,25 @@ describe("auth API", () => {
       }),
       expect.any(Object),
     );
+  });
+
+  it("reads session tokens from the HttpOnly cookie", async () => {
+    const { extractSessionToken } =
+      await import("../../api/_shared/requireSession");
+    const { extractSessionTokenFromHeaders } =
+      await import("../../packages/server/src/auth/verifySession");
+    const token = extractSessionToken({
+      headers: {
+        cookie: "other=value; tma_game_session=cookie-session-token",
+      },
+    } as unknown as VercelRequest);
+
+    expect(token).toBe("cookie-session-token");
+    expect(
+      extractSessionTokenFromHeaders({
+        cookie: "other=value; tma_game_session=cookie-session-token",
+      }),
+    ).toBe("cookie-session-token");
   });
 
   it("/api/auth/telegram rejects initDataUnsafe in the login body", async () => {

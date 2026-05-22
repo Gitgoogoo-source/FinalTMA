@@ -228,7 +228,7 @@ describe("boxes API helpers", () => {
         limit: "20",
       },
       headers: {
-        authorization: "Bearer test-session-token-000000000000",
+        cookie: "tma_game_session=test-session-token-000000000000",
         "x-forwarded-for": "127.0.0.22",
       },
     });
@@ -275,7 +275,7 @@ describe("boxes API helpers", () => {
         method: "POST",
         url: "/api/boxes/create-open-order",
         headers: {
-          authorization: "Bearer test-session-token-000000000000",
+          cookie: "tma_game_session=test-session-token-000000000000",
           "content-type": "application/json",
           "x-forwarded-for": "127.0.0.23",
         },
@@ -328,7 +328,7 @@ describe("boxes API helpers", () => {
         method: "POST",
         url: "/api/boxes/create-open-order",
         headers: {
-          authorization: "Bearer test-session-token-000000000000",
+          cookie: "tma_game_session=test-session-token-000000000000",
           "content-type": "application/json",
           "x-forwarded-for": "127.0.0.26",
           "x-idempotency-key": IDEMPOTENCY_KEY,
@@ -368,7 +368,7 @@ describe("boxes API helpers", () => {
         method: "POST",
         url: "/api/boxes/create-open-order",
         headers: {
-          authorization: "Bearer test-session-token-000000000000",
+          cookie: "tma_game_session=test-session-token-000000000000",
           "content-type": "application/json",
           "x-forwarded-for": "127.0.0.27",
         },
@@ -407,7 +407,7 @@ describe("boxes API helpers", () => {
         method: "POST",
         url: "/api/boxes/create-open-order",
         headers: {
-          authorization: "Bearer test-session-token-000000000000",
+          cookie: "tma_game_session=test-session-token-000000000000",
           "content-type": "application/json",
           "x-forwarded-for": "127.0.0.28",
         },
@@ -448,7 +448,7 @@ describe("boxes API helpers", () => {
         method: "POST",
         url: "/api/boxes/create-open-order",
         headers: {
-          authorization: "Bearer test-session-token-000000000000",
+          cookie: "tma_game_session=test-session-token-000000000000",
           "content-type": "application/json",
           "x-forwarded-for": "127.0.0.29",
         },
@@ -490,7 +490,7 @@ describe("boxes API helpers", () => {
         method: "POST",
         url: "/api/boxes/create-open-order",
         headers: {
-          authorization: "Bearer test-session-token-000000000000",
+          cookie: "tma_game_session=test-session-token-000000000000",
           "content-type": "application/json",
           "x-forwarded-for": "127.0.0.24",
         },
@@ -554,7 +554,7 @@ describe("boxes API helpers", () => {
         include_items: "true",
       },
       headers: {
-        authorization: "Bearer test-session-token-000000000000",
+        cookie: "tma_game_session=test-session-token-000000000000",
         "x-forwarded-for": "127.0.0.25",
       },
     });

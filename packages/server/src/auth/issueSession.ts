@@ -96,7 +96,6 @@ export interface IssueSessionInput {
 
 export interface IssuedSession {
   token: string;
-  tokenType: "Bearer";
   sessionId: string;
   userId: string;
   telegramUserId?: string | undefined;
@@ -203,7 +202,6 @@ export async function issueSession(
 
   return {
     token,
-    tokenType: "Bearer",
     sessionId: tokenParts.sessionId,
     userId: input.userId,
     telegramUserId:
