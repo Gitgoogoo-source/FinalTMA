@@ -1,5 +1,4 @@
 import {
-  MarketListingCardDtoSchema,
   MarketMyListingsQuerySchema,
   MarketMyListingsResponseSchema,
   type MarketMyListingsQuery,
@@ -109,23 +108,19 @@ function normalizeMyListingCard(item: unknown): Record<string, unknown> {
     currency_code: item.currency_code,
     item_count: item.item_count,
     remaining_count: item.remaining_count,
+    expected_net_amount: item.expected_net_amount,
     status: item.status,
     seller_display_name: item.seller_display_name,
     is_own_listing: item.is_own_listing,
     is_buyable: item.is_buyable,
     not_buyable_reason: item.not_buyable_reason,
     price_health: item.price_health,
+    last_price_changed_at: item.last_price_changed_at,
     created_at: item.created_at,
     expires_at: item.expires_at,
   };
 
-  const parsed = MarketListingCardDtoSchema.safeParse(normalized);
-
-  if (!parsed.success) {
-    return normalized;
-  }
-
-  return parsed.data;
+  return normalized;
 }
 
 function invalidMarketMyListingsResult(details?: unknown): ApiError {

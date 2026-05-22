@@ -543,6 +543,7 @@ describe("market my listings API", () => {
           is_buyable: false,
           not_buyable_reason: "own_listing",
           price_health: "healthy",
+          last_price_changed_at: "2026-05-22T00:10:00.000Z",
           created_at: "2026-05-22T00:00:00.000Z",
           expires_at: null,
           rpc_extra_field: "removed",
@@ -601,6 +602,8 @@ describe("market my listings API", () => {
       listing_id: LISTING_ID,
       is_own_listing: true,
       is_buyable: false,
+      expected_net_amount: 950,
+      last_price_changed_at: "2026-05-22T00:10:00.000Z",
     });
     expect(result.body.data.items[0]).not.toHaveProperty("rpc_extra_field");
   });

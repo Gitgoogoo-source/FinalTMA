@@ -615,7 +615,12 @@ export const MarketBuyListingResponseSchema = z
 
 export const MarketMyListingsResponseSchema = z
   .object({
-    items: z.array(MarketListingCardDtoSchema),
+    items: z.array(
+      MarketListingCardDtoSchema.extend({
+        expected_net_amount: nonNegativeKcoinAmountSchema,
+        last_price_changed_at: isoDateTimeSchema.nullable().optional(),
+      }).strict(),
+    ),
     next_cursor: cursorSchema.nullable(),
   })
   .strict();
