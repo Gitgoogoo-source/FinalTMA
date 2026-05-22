@@ -453,6 +453,7 @@ export const MarketListingCardDtoSchema = z
     is_own_listing: z.boolean().optional(),
     is_buyable: z.boolean().optional(),
     not_buyable_reason: z.string().trim().min(1).max(80).nullable().optional(),
+    price_health: MarketPriceHealthSchema.default("unknown"),
 
     created_at: isoDateTimeSchema,
     expires_at: isoDateTimeSchema.nullable().optional(),
@@ -481,14 +482,29 @@ export const MarketPriceStatsDtoSchema = z
   })
   .strict();
 
+export const MarketListingSellerDtoSchema = z
+  .object({
+    user_id: uuidSchema,
+    display_name: z.string().trim().min(1).max(80).nullable().optional(),
+    avatar_url: optionalImageUrlSchema,
+  })
+  .strict();
+
 export const MarketListingDetailDtoSchema = MarketListingCardDtoSchema.extend({
   description: z.string().trim().max(512).nullable().optional(),
+  seller: MarketListingSellerDtoSchema,
   floor_price_kcoin: nonNegativeKcoinAmountSchema.nullable().optional(),
+  avg_price_kcoin: nonNegativeKcoinAmountSchema.nullable().optional(),
   last_sale_price_kcoin: nonNegativeKcoinAmountSchema.nullable().optional(),
   reference_price_kcoin: nonNegativeKcoinAmountSchema.nullable().optional(),
-  price_health: MarketPriceHealthSchema.default("unknown"),
+  active_listing_count: nonNegativeIntegerSchema.default(0),
+  sale_count_24h: nonNegativeIntegerSchema.default(0),
+  volume_24h_kcoin: nonNegativeKcoinAmountSchema.default(0),
+  snapshot_at: isoDateTimeSchema.nullable().optional(),
   market_depth: z.array(MarketDepthLevelDtoSchema).default([]),
   item_instance_ids: z.array(uuidSchema).optional(),
+  can_buy: z.boolean(),
+  disabled_reason: z.string().trim().min(1).max(80).nullable().optional(),
 }).strict();
 
 export const MarketSellableItemDtoSchema = z

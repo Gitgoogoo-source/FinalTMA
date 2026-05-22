@@ -4,6 +4,8 @@ import { API_ENDPOINTS } from "../../apps/web/src/api/endpoints";
 import {
   MarketBuyListingBodySchema,
   MarketCreateListingBodySchema,
+  MarketListingDetailResponseSchema,
+  MarketListingsResponseSchema,
   MarketListListingsQuerySchema,
   MarketUpdateListingPriceBodySchema,
 } from "../../packages/validation/src/market.schemas";
@@ -72,6 +74,38 @@ describe("market API contract schemas", () => {
     ).toThrow();
   });
 
+  it("accepts price health in listing card responses", () => {
+    const result = MarketListingsResponseSchema.parse({
+      items: [
+        {
+          listing_id: LISTING_ID,
+          seller_user_id: USER_ID,
+          template_id: ITEM_ID,
+          form_id: null,
+          name: "测试藏品",
+          rarity: "rare",
+          type_code: "character",
+          image_url: null,
+          unit_price_kcoin: 300,
+          currency_code: "KCOIN",
+          item_count: 1,
+          remaining_count: 1,
+          status: "active",
+          seller_display_name: "卖家",
+          is_own_listing: false,
+          is_buyable: true,
+          not_buyable_reason: null,
+          price_health: "healthy",
+          created_at: "2026-05-22T00:00:00.000Z",
+          expires_at: null,
+        },
+      ],
+      next_cursor: null,
+    });
+
+    expect(result.items[0]?.price_health).toBe("healthy");
+  });
+
   it("requires idempotency and server-owned user identity for create listing", () => {
     const result = MarketCreateListingBodySchema.parse({
       item_instance_ids: [ITEM_ID],
@@ -132,6 +166,68 @@ describe("market API contract schemas", () => {
         idempotency_key: IDEMPOTENCY_KEY,
       }),
     ).toThrow();
+  });
+
+  it("accepts the documented listing detail response fields", () => {
+    const result = MarketListingDetailResponseSchema.parse({
+      listing: {
+        listing_id: LISTING_ID,
+        seller_user_id: USER_ID,
+        template_id: ITEM_ID,
+        form_id: null,
+        name: "测试藏品",
+        description: "详情说明",
+        rarity: "rare",
+        type_code: "character",
+        image_url: null,
+        seller: {
+          user_id: USER_ID,
+          display_name: "卖家",
+          avatar_url: null,
+        },
+        seller_display_name: "卖家",
+        unit_price_kcoin: 300,
+        currency_code: "KCOIN",
+        item_count: 1,
+        remaining_count: 1,
+        status: "active",
+        floor_price_kcoin: 280,
+        avg_price_kcoin: 290,
+        last_sale_price_kcoin: 300,
+        reference_price_kcoin: 280,
+        active_listing_count: 3,
+        sale_count_24h: 1,
+        volume_24h_kcoin: 300,
+        snapshot_at: "2026-05-22T00:00:00.000Z",
+        price_health: "healthy",
+        market_depth: [
+          {
+            price_kcoin: 300,
+            listing_count: 1,
+            item_count: 1,
+          },
+        ],
+        item_instance_ids: [ITEM_ID],
+        is_own_listing: false,
+        is_buyable: true,
+        not_buyable_reason: null,
+        can_buy: true,
+        disabled_reason: null,
+        created_at: "2026-05-22T00:00:00.000Z",
+        expires_at: null,
+      },
+    });
+
+    expect(result.listing).toMatchObject({
+      seller: {
+        user_id: USER_ID,
+        display_name: "卖家",
+      },
+      avg_price_kcoin: 290,
+      active_listing_count: 3,
+      can_buy: true,
+      disabled_reason: null,
+    });
   });
 
   it("uses new_unit_price_kcoin for update price and rejects body user_id", () => {
