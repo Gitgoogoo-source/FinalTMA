@@ -80,6 +80,10 @@ select 'credit1', api.economy_credit(
 
 select is(testutil.balance_of((select id from _ids where key = 'user'), 'KCOIN'), 1000::numeric, 'credit increases available KCOIN balance');
 select is((select count(*)::int from economy.currency_ledger where idempotency_key = 'ledger-credit-001'), 1, 'credit writes one immutable ledger row');
+select is((select available_before from economy.currency_ledger where idempotency_key = 'ledger-credit-001'), 0::numeric, 'credit ledger records available_before');
+select is((select available_after from economy.currency_ledger where idempotency_key = 'ledger-credit-001'), 1000::numeric, 'credit ledger records available_after');
+select is((select locked_before from economy.currency_ledger where idempotency_key = 'ledger-credit-001'), 0::numeric, 'credit ledger records locked_before');
+select is((select locked_after from economy.currency_ledger where idempotency_key = 'ledger-credit-001'), 0::numeric, 'credit ledger records locked_after');
 
 insert into _ids (key, payload)
 select 'credit1_repeat', api.economy_credit(
@@ -111,6 +115,10 @@ select 'debit1', api.economy_debit(
 );
 
 select is(testutil.balance_of((select id from _ids where key = 'user'), 'KCOIN'), 700::numeric, 'debit decreases available KCOIN balance');
+select is((select available_before from economy.currency_ledger where idempotency_key = 'ledger-debit-001'), 1000::numeric, 'debit ledger records available_before');
+select is((select available_after from economy.currency_ledger where idempotency_key = 'ledger-debit-001'), 700::numeric, 'debit ledger records available_after');
+select is((select locked_before from economy.currency_ledger where idempotency_key = 'ledger-debit-001'), 0::numeric, 'debit ledger records locked_before');
+select is((select locked_after from economy.currency_ledger where idempotency_key = 'ledger-debit-001'), 0::numeric, 'debit ledger records locked_after');
 select is((select total_spent from economy.user_balances b join _ids i on i.id = b.user_id where i.key = 'user' and b.currency_code = 'KCOIN'), 300::numeric, 'total_spent tracks debit amount');
 select ok(testutil.raises_like(format('select api.economy_debit(%L::uuid, %L, 999999, %L)', (select id::text from _ids where key = 'user'), 'KCOIN', 'overdraft_test'), '%insufficient balance%'), 'debit rejects insufficient balance');
 
@@ -131,6 +139,10 @@ select 'lock1', api.economy_lock_balance(
 insert into _ids (key, id) select 'lock_id', ((select payload from _ids where key = 'lock1') ->> 'lock_id')::uuid;
 select is((select available_amount from economy.user_balances b join _ids i on i.id = b.user_id where i.key = 'user' and b.currency_code = 'KCOIN'), 500::numeric, 'lock moves amount out of available balance');
 select is((select locked_amount from economy.user_balances b join _ids i on i.id = b.user_id where i.key = 'user' and b.currency_code = 'KCOIN'), 200::numeric, 'lock increases locked balance');
+select is((select available_before from economy.currency_ledger where idempotency_key = 'ledger-lock-001'), 700::numeric, 'lock ledger records available_before');
+select is((select available_after from economy.currency_ledger where idempotency_key = 'ledger-lock-001'), 500::numeric, 'lock ledger records available_after');
+select is((select locked_before from economy.currency_ledger where idempotency_key = 'ledger-lock-001'), 0::numeric, 'lock ledger records locked_before');
+select is((select locked_after from economy.currency_ledger where idempotency_key = 'ledger-lock-001'), 200::numeric, 'lock ledger records locked_after');
 select ok(exists (select 1 from economy.balance_locks l join _ids i on i.id = l.id where i.key = 'lock_id' and l.status = 'active'), 'balance lock row is active');
 
 insert into _ids (key, payload)
@@ -144,6 +156,10 @@ select 'unlock1', api.economy_unlock_balance(
 
 select is((select available_amount from economy.user_balances b join _ids i on i.id = b.user_id where i.key = 'user' and b.currency_code = 'KCOIN'), 700::numeric, 'unlock release restores available balance');
 select is((select locked_amount from economy.user_balances b join _ids i on i.id = b.user_id where i.key = 'user' and b.currency_code = 'KCOIN'), 0::numeric, 'unlock release clears locked balance');
+select is((select available_before from economy.currency_ledger where idempotency_key = 'ledger-unlock-001'), 500::numeric, 'unlock ledger records available_before');
+select is((select available_after from economy.currency_ledger where idempotency_key = 'ledger-unlock-001'), 700::numeric, 'unlock ledger records available_after');
+select is((select locked_before from economy.currency_ledger where idempotency_key = 'ledger-unlock-001'), 200::numeric, 'unlock ledger records locked_before');
+select is((select locked_after from economy.currency_ledger where idempotency_key = 'ledger-unlock-001'), 0::numeric, 'unlock ledger records locked_after');
 select ok(exists (select 1 from economy.balance_locks l join _ids i on i.id = l.id where i.key = 'lock_id' and l.status = 'released'), 'balance lock row is released');
 select is(
   (

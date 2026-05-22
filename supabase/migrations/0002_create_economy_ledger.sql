@@ -45,8 +45,10 @@ create table if not exists economy.currency_ledger (
   currency_code text not null references economy.currencies(code),
   entry_type text not null check (entry_type in ('credit', 'debit', 'lock', 'unlock', 'fee', 'refund', 'adjustment', 'reversal')),
   amount numeric(38,0) not null check (amount > 0),
-  available_after numeric(38,0),
-  locked_after numeric(38,0),
+  available_before numeric(38,0) check (available_before >= 0),
+  available_after numeric(38,0) check (available_after >= 0),
+  locked_before numeric(38,0) check (locked_before >= 0),
+  locked_after numeric(38,0) check (locked_after >= 0),
   source_type text not null,
   source_id uuid,
   source_ref text,
@@ -57,6 +59,10 @@ create table if not exists economy.currency_ledger (
 );
 
 comment on table economy.currency_ledger is 'Immutable asset ledger. Never update or delete rows; use reversal entries for corrections.';
+comment on column economy.currency_ledger.available_before is 'Available balance immediately before this ledger entry.';
+comment on column economy.currency_ledger.available_after is 'Available balance immediately after this ledger entry.';
+comment on column economy.currency_ledger.locked_before is 'Locked balance immediately before this ledger entry.';
+comment on column economy.currency_ledger.locked_after is 'Locked balance immediately after this ledger entry.';
 comment on column economy.currency_ledger.idempotency_key is 'Prevents duplicate balance mutations from repeated requests or webhooks.';
 
 create table if not exists economy.balance_locks (

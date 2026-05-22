@@ -18,8 +18,10 @@ security definer
 set search_path = ''
 as $$
 declare
-  v_available numeric(38,0);
-  v_locked numeric(38,0);
+  v_available_before numeric(38,0);
+  v_available_after numeric(38,0);
+  v_locked_before numeric(38,0);
+  v_locked_after numeric(38,0);
   v_ledger_id uuid;
   v_existing uuid;
 begin
@@ -42,7 +44,7 @@ begin
   on conflict (user_id, currency_code) do nothing;
 
   select available_amount, locked_amount
-    into v_available, v_locked
+    into v_available_before, v_locked_before
   from economy.user_balances
   where user_id = p_user_id and currency_code = p_currency_code
   for update;
@@ -52,13 +54,15 @@ begin
       total_earned = total_earned + p_amount,
       updated_at = now()
   where user_id = p_user_id and currency_code = p_currency_code
-  returning available_amount, locked_amount into v_available, v_locked;
+  returning available_amount, locked_amount into v_available_after, v_locked_after;
 
   insert into economy.currency_ledger (
-    user_id, currency_code, entry_type, amount, available_after, locked_after,
+    user_id, currency_code, entry_type, amount,
+    available_before, available_after, locked_before, locked_after,
     source_type, source_id, source_ref, idempotency_key, note, metadata
   ) values (
-    p_user_id, p_currency_code, 'credit', p_amount, v_available, v_locked,
+    p_user_id, p_currency_code, 'credit', p_amount,
+    v_available_before, v_available_after, v_locked_before, v_locked_after,
     p_source_type, p_source_id, p_source_ref, p_idempotency_key, p_note, p_metadata
   ) returning id into v_ledger_id;
 
@@ -66,8 +70,12 @@ begin
     'ledger_id', v_ledger_id,
     'user_id', p_user_id,
     'currency_code', p_currency_code,
-    'available', v_available,
-    'locked', v_locked,
+    'available', v_available_after,
+    'locked', v_locked_after,
+    'available_before', v_available_before,
+    'available_after', v_available_after,
+    'locked_before', v_locked_before,
+    'locked_after', v_locked_after,
     'idempotent', false
   );
 end;
@@ -90,8 +98,10 @@ security definer
 set search_path = ''
 as $$
 declare
-  v_available numeric(38,0);
-  v_locked numeric(38,0);
+  v_available_before numeric(38,0);
+  v_available_after numeric(38,0);
+  v_locked_before numeric(38,0);
+  v_locked_after numeric(38,0);
   v_ledger_id uuid;
   v_existing uuid;
 begin
@@ -114,13 +124,13 @@ begin
   on conflict (user_id, currency_code) do nothing;
 
   select available_amount, locked_amount
-    into v_available, v_locked
+    into v_available_before, v_locked_before
   from economy.user_balances
   where user_id = p_user_id and currency_code = p_currency_code
   for update;
 
-  if v_available < p_amount then
-    raise exception 'insufficient balance: currency %, available %, required %', p_currency_code, v_available, p_amount;
+  if v_available_before < p_amount then
+    raise exception 'insufficient balance: currency %, available %, required %', p_currency_code, v_available_before, p_amount;
   end if;
 
   update economy.user_balances
@@ -128,13 +138,15 @@ begin
       total_spent = total_spent + p_amount,
       updated_at = now()
   where user_id = p_user_id and currency_code = p_currency_code
-  returning available_amount, locked_amount into v_available, v_locked;
+  returning available_amount, locked_amount into v_available_after, v_locked_after;
 
   insert into economy.currency_ledger (
-    user_id, currency_code, entry_type, amount, available_after, locked_after,
+    user_id, currency_code, entry_type, amount,
+    available_before, available_after, locked_before, locked_after,
     source_type, source_id, source_ref, idempotency_key, note, metadata
   ) values (
-    p_user_id, p_currency_code, 'debit', p_amount, v_available, v_locked,
+    p_user_id, p_currency_code, 'debit', p_amount,
+    v_available_before, v_available_after, v_locked_before, v_locked_after,
     p_source_type, p_source_id, p_source_ref, p_idempotency_key, p_note, p_metadata
   ) returning id into v_ledger_id;
 
@@ -142,8 +154,12 @@ begin
     'ledger_id', v_ledger_id,
     'user_id', p_user_id,
     'currency_code', p_currency_code,
-    'available', v_available,
-    'locked', v_locked,
+    'available', v_available_after,
+    'locked', v_locked_after,
+    'available_before', v_available_before,
+    'available_after', v_available_after,
+    'locked_before', v_locked_before,
+    'locked_after', v_locked_after,
     'idempotent', false
   );
 end;
