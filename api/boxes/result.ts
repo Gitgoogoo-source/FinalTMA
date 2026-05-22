@@ -10,6 +10,7 @@ import { validate } from "../_shared/validate.js";
 type RawDrawResultPayload = {
   draw_order_id?: unknown;
   status?: unknown;
+  draw_count?: unknown;
   quantity?: unknown;
   total_price_stars?: unknown;
   open_reward_kcoin?: unknown;
@@ -18,6 +19,7 @@ type RawDrawResultPayload = {
   invoice_payload?: unknown;
   paid_at?: unknown;
   opened_at?: unknown;
+  completed_at?: unknown;
   box?: unknown;
   payment?: unknown;
   balances?: unknown;
@@ -108,9 +110,9 @@ export function toDrawResultResponse(
   includeItems: boolean,
 ) {
   const rawOrderStatus = stringOrNull(payload.status) ?? "unknown";
-  const isCompleted = rawOrderStatus === "opened";
+  const isCompleted = isCompletedOrderStatus(rawOrderStatus);
   const rawResults = Array.isArray(payload.results) ? payload.results : [];
-  const quantity = numberOrZero(payload.quantity);
+  const quantity = numberOrZero(payload.draw_count ?? payload.quantity);
   const explicitKcoinReturn = numberOrZero(
     payload.returned_kcoin ?? payload.kcoin_reward,
   );
@@ -129,7 +131,8 @@ export function toDrawResultResponse(
     returned_kcoin: returnedKcoin,
     invoice_payload: stringOrNull(payload.invoice_payload),
     paid_at: stringOrNull(payload.paid_at),
-    completed_at: stringOrNull(payload.opened_at),
+    completed_at:
+      stringOrNull(payload.completed_at) ?? stringOrNull(payload.opened_at),
     box: isRecord(payload.box) ? payload.box : null,
     payment: isRecord(payload.payment) ? payload.payment : null,
     balances: isRecord(payload.balances) ? payload.balances : null,
@@ -137,6 +140,10 @@ export function toDrawResultResponse(
       includeItems && isCompleted ? rawResults.map(toDrawResultItem) : [],
     server_time: stringOrNull(payload.server_time) ?? new Date().toISOString(),
   };
+}
+
+function isCompletedOrderStatus(value: string): boolean {
+  return value === "completed" || value === "opened";
 }
 
 function toDrawResultItem(value: unknown) {

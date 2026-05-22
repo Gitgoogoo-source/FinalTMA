@@ -98,7 +98,7 @@ describe("boxes API helpers", () => {
     expect(isDevGachaPaymentModeEnabled(undefined)).toBe(false);
   });
 
-  it("marks dev-paid opened orders as result-ready", () => {
+  it("marks dev-paid completed orders as result-ready", () => {
     const response = buildCreateOpenOrderResponse(
       {
         draw_order_id: ORDER_ID,
@@ -118,7 +118,7 @@ describe("boxes API helpers", () => {
       },
       {
         draw_order_id: ORDER_ID,
-        status: "opened",
+        status: "completed",
         payment_status: "dev_paid",
       },
     );
@@ -127,7 +127,7 @@ describe("boxes API helpers", () => {
       order_id: ORDER_ID,
       star_order_id: STAR_ORDER_ID,
       draw_count: 10,
-      order_status: "opened",
+      order_status: "completed",
       payment_status: "dev_paid",
       dev_payment_processed: true,
       result_ready: true,
@@ -138,8 +138,8 @@ describe("boxes API helpers", () => {
     const response = toDrawResultResponse(
       {
         draw_order_id: ORDER_ID,
-        status: "opened",
-        quantity: 10,
+        status: "completed",
+        draw_count: 10,
         total_price_stars: 90,
         open_reward_kcoin: 100,
         paid_at: "2026-05-21T00:00:00.000Z",
@@ -523,8 +523,8 @@ describe("boxes API helpers", () => {
   it("/api/boxes/result returns completed draw results", async () => {
     callRpcRawMock.mockResolvedValueOnce({
       draw_order_id: ORDER_ID,
-      status: "opened",
-      quantity: 1,
+      status: "completed",
+      draw_count: 1,
       total_price_stars: 10,
       open_reward_kcoin: 100,
       paid_at: "2026-05-21T00:00:00.000Z",

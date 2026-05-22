@@ -304,7 +304,7 @@ insert into _ids (key, id) select 'draw_order1', ((select payload from _ids wher
 insert into _ids (key, id) select 'star_order1', ((select payload from _ids where key = 'order1') ->> 'star_order_id')::uuid;
 
 select is(((select payload from _ids where key = 'order1') ->> 'xtr_amount')::int, 10, 'single draw uses box price');
-select ok(exists (select 1 from gacha.draw_orders d join _ids i on i.id = d.id where i.key = 'draw_order1' and d.status = 'invoice_created' and d.quantity = 1), 'draw order is created with invoice_created status');
+select ok(exists (select 1 from gacha.draw_orders d join _ids i on i.id = d.id where i.key = 'draw_order1' and d.status = 'invoice_created' and d.quantity = 1 and d.draw_count = 1), 'draw order is created with invoice_created status and draw_count=1');
 select ok(exists (select 1 from payments.star_orders s join _ids i on i.id = s.id where i.key = 'star_order1' and s.business_type = 'gacha_open' and s.xtr_amount = 10), 'Stars order is created for gacha open');
 select is((select payment_star_order_id from gacha.draw_orders d join _ids i on i.id = d.id where i.key = 'draw_order1'), (select id from _ids where key = 'star_order1'), 'draw order links to Stars order');
 select is((select payment_provider from gacha.draw_orders d join _ids i on i.id = d.id where i.key = 'draw_order1'), 'telegram_stars', 'draw order stores phase-1 payment_provider');
@@ -319,15 +319,18 @@ select ok(testutil.raises_like(format('select api.gacha_process_dev_paid_order(%
 
 insert into _ids (key, payload)
 select 'order1_dev_process', api.gacha_process_dev_paid_order((select id from _ids where key = 'draw_order1'), (select id from _ids where key = 'user'));
-select is(((select payload from _ids where key = 'order1_dev_process') ->> 'status'), 'opened', 'dev paid process opens order');
+select is(((select payload from _ids where key = 'order1_dev_process') ->> 'status'), 'completed', 'dev paid process completes order');
 select is(((select payload from _ids where key = 'order1_dev_process') ->> 'payment_status'), 'dev_paid', 'dev paid process marks dev payment status');
+select is((select status from gacha.draw_orders d join _ids i on i.id = d.id where i.key = 'draw_order1'), 'completed', 'draw order status is completed');
+select is((select draw_count from gacha.draw_orders d join _ids i on i.id = d.id where i.key = 'draw_order1'), 1, 'single draw order stores draw_count=1');
 select is((select payment_provider from gacha.draw_orders d join _ids i on i.id = d.id where i.key = 'draw_order1'), 'dev', 'dev paid process records dev payment_provider on draw order');
 select is((select payment_status from gacha.draw_orders d join _ids i on i.id = d.id where i.key = 'draw_order1'), 'dev_paid', 'dev paid process records dev_paid payment_status on draw order');
 select is((select telegram_payment_charge_id from gacha.draw_orders d join _ids i on i.id = d.id where i.key = 'draw_order1'), 'dev:' || (select id::text from _ids where key = 'draw_order1'), 'dev paid process records Telegram payment charge placeholder');
 select is(jsonb_array_length((select payload from _ids where key = 'order1_dev_process') -> 'results'), 1, 'dev paid process creates one draw result for single draw');
 select is(testutil.balance_of((select id from _ids where key = 'user'), 'KCOIN'), 100::numeric, 'dev paid process credits KCOIN reward');
-select ok(exists (select 1 from economy.currency_ledger where user_id = (select id from _ids where key = 'user') and source_id = (select id from _ids where key = 'draw_order1') and entry_type = 'credit' and currency_code = 'KCOIN'), 'dev paid process writes KCOIN ledger');
+select ok(exists (select 1 from economy.currency_ledger where user_id = (select id from _ids where key = 'user') and source_id = (select id from _ids where key = 'draw_order1') and source_type = 'open_box_rebate' and entry_type = 'credit' and currency_code = 'KCOIN' and amount = 100), 'dev paid process writes open_box_rebate KCOIN ledger');
 select ok(exists (select 1 from inventory.item_instances ii join gacha.draw_results dr on dr.item_instance_id = ii.id where dr.draw_order_id = (select id from _ids where key = 'draw_order1') and ii.owner_user_id = (select id from _ids where key = 'user') and ii.status = 'available'), 'dev paid process creates available inventory item');
+select ok(exists (select 1 from inventory.item_instance_events e join gacha.draw_results dr on dr.item_instance_id = e.item_instance_id where dr.draw_order_id = (select id from _ids where key = 'draw_order1') and e.event_type = 'obtained_from_gacha' and e.source_type = 'gacha'), 'dev paid process writes obtained_from_gacha inventory event');
 
 insert into _ids (key, payload)
 select 'inventory_after_dev_process', api.inventory_list_user_items((select id from _ids where key = 'user'), array['available']::text[], 20, 0);
@@ -348,9 +351,11 @@ select 'order10', api.gacha_create_order((select id from _ids where key = 'user'
 insert into _ids (key, id) select 'draw_order10', ((select payload from _ids where key = 'order10') ->> 'draw_order_id')::uuid;
 select is(((select payload from _ids where key = 'order10') ->> 'xtr_amount')::int, 90, 'ten-draw order applies 9折 discount');
 select is(((select payload from _ids where key = 'order10') ->> 'discount_bps')::int, 1000, 'ten-draw response exposes discount_bps=1000');
+select is((select draw_count from gacha.draw_orders d join _ids i on i.id = d.id where i.key = 'draw_order10'), 10, 'ten-draw order stores draw_count=10');
 insert into _ids (key, payload)
 select 'order10_dev_process', api.gacha_process_dev_paid_order((select id from _ids where key = 'draw_order10'), (select id from _ids where key = 'user'));
 select is(jsonb_array_length((select payload from _ids where key = 'order10_dev_process') -> 'results'), 10, 'dev paid process creates ten draw results for ten draw');
+select is((select status from gacha.draw_orders d join _ids i on i.id = d.id where i.key = 'draw_order10'), 'completed', 'ten-draw order status is completed');
 select is((select count(*)::int from gacha.draw_results where draw_order_id = (select id from _ids where key = 'draw_order10')), 10, 'ten-draw order stores 10 draw_results rows');
 select is((
   select count(*)::int
@@ -362,6 +367,7 @@ select is((
     and ii.source_id = (select id from _ids where key = 'draw_order10')
 ), 10, 'every ten-draw result has a matching owned gacha item_instance');
 select is(testutil.balance_of((select id from _ids where key = 'user'), 'KCOIN'), 1100::numeric, 'single draw plus ten draw credits KCOIN reward per draw');
+select is((select amount from economy.currency_ledger where source_id = (select id from _ids where key = 'draw_order10') and source_type = 'open_box_rebate' and currency_code = 'KCOIN'), 1000::numeric, 'ten-draw open_box_rebate ledger amount is 1000');
 select ok(testutil.raises_like(format('select api.gacha_create_order(%L::uuid, %L::uuid, 2, %L)', (select id::text from _ids where key = 'user'), (select id::text from _ids where key = 'box'), 'invalid-quantity'), '%quantity must be 1 or 10%'), 'create order rejects unsupported quantity');
 
 update gacha.blind_boxes set status = 'paused' where id = (select id from _ids where key = 'box');

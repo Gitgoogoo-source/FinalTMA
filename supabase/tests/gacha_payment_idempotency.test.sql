@@ -306,6 +306,8 @@ insert into _ids (key, payload) select 'process1', api.gacha_process_paid_order(
 insert into _ids (key, payload) select 'process2', api.gacha_process_paid_order((select id from _ids where key = 'star_order'), 'tg-charge-idempotency-001', 'provider-charge-idempotency-001', '{"test":"payment_idempotency_second"}'::jsonb);
 
 select ok(((select payload from _ids where key = 'process2') ->> 'idempotent')::boolean, 'second payment fulfillment call returns idempotent=true');
+select is(((select payload from _ids where key = 'process1') ->> 'status'), 'completed', 'first payment fulfillment completes the draw order');
+select is((select status from gacha.draw_orders where id = (select id from _ids where key = 'draw_order')), 'completed', 'draw order persists completed status after fulfillment');
 select is((select count(*)::int from payments.star_payments where telegram_payment_charge_id = 'tg-charge-idempotency-001'), 1, 'duplicate successful_payment charge id is not double-inserted');
 select is((select payment_provider from gacha.draw_orders where id = (select id from _ids where key = 'draw_order')), 'telegram_stars', 'formal successful_payment records telegram_stars payment_provider');
 select is((select payment_status from gacha.draw_orders where id = (select id from _ids where key = 'draw_order')), 'paid', 'formal successful_payment records paid payment_status');
@@ -315,11 +317,11 @@ select is((select count(*)::int from inventory.item_instances where source_type 
 select is(testutil.balance_of((select id from _ids where key = 'user'), 'KCOIN'), 100::numeric, 'duplicate payment processing does not double-credit open reward');
 
 insert into _ids (key, payload) select 'result_by_id', api.gacha_get_draw_result((select id from _ids where key = 'user'), (select id from _ids where key = 'draw_order'), null);
-select is(((select payload from _ids where key = 'result_by_id') ->> 'status'), 'opened', 'draw result can be queried by draw_order_id');
+select is(((select payload from _ids where key = 'result_by_id') ->> 'status'), 'completed', 'draw result can be queried by draw_order_id');
 select is(jsonb_array_length((select payload -> 'results' from _ids where key = 'result_by_id')), 1, 'draw result query returns one reward result');
 
 insert into _ids (key, payload) select 'result_by_payload', api.gacha_get_draw_result((select id from _ids where key = 'user'), null, (select payload ->> 'invoice_payload' from _ids where key = 'order'));
-select is(((select payload from _ids where key = 'result_by_payload') ->> 'status'), 'opened', 'draw result can be queried by invoice_payload');
+select is(((select payload from _ids where key = 'result_by_payload') ->> 'status'), 'completed', 'draw result can be queried by invoice_payload');
 
 insert into _ids (key, payload) select 'conflict_order', api.gacha_create_order((select id from _ids where key = 'user'), (select id from _ids where key = 'box'), 1, 'gacha-payment-order-conflict-001');
 insert into _ids (key, id) select 'conflict_star_order', ((select payload from _ids where key = 'conflict_order') ->> 'star_order_id')::uuid;

@@ -362,7 +362,11 @@ function normalizeDrawResultResponse(
       readString(payload.orderStatus) ??
       readString(payload.order_status) ??
       "unknown",
-    quantity: readNumber(payload.quantity) ?? rawResults.length,
+    quantity:
+      readNumber(payload.drawCount) ??
+      readNumber(payload.draw_count) ??
+      readNumber(payload.quantity) ??
+      rawResults.length,
     paidStars:
       readNumber(payload.paidStars) ?? readNumber(payload.paid_stars) ?? 0,
     returnedKcoin:

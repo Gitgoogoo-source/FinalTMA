@@ -306,8 +306,9 @@ insert into _ids (key, id) select 'star_order', ((select payload from _ids where
 insert into _ids (key, payload)
 select 'process', api.gacha_process_paid_order((select id from _ids where key = 'star_order'), 'tg-charge-gacha-pity-001', null, '{"test":"gacha_pity"}'::jsonb);
 
-select is(((select payload from _ids where key = 'process') ->> 'status'), 'opened', 'paid order is fulfilled and opened');
-select is((select status from gacha.draw_orders d join _ids i on i.id = d.id where i.key = 'draw_order'), 'opened', 'draw order status is opened');
+select is(((select payload from _ids where key = 'process') ->> 'status'), 'completed', 'paid order is fulfilled and completed');
+select is((select status from gacha.draw_orders d join _ids i on i.id = d.id where i.key = 'draw_order'), 'completed', 'draw order status is completed');
+select is((select draw_count from gacha.draw_orders d join _ids i on i.id = d.id where i.key = 'draw_order'), 1, 'draw order stores draw_count=1');
 select is((select status from payments.star_orders s join _ids i on i.id = s.id where i.key = 'star_order'), 'fulfilled', 'Stars order status is fulfilled');
 select is((select count(*)::int from payments.star_payments where telegram_payment_charge_id = 'tg-charge-gacha-pity-001'), 1, 'successful payment row is recorded exactly once');
 select is((select count(*)::int from gacha.draw_results dr join _ids i on i.id = dr.draw_order_id where i.key = 'draw_order'), 1, 'one draw result is generated');

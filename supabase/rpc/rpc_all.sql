@@ -1415,7 +1415,7 @@ begin
     raise exception 'draw order not found for star order';
   end if;
 
-  if v_order.status = 'opened' then
+  if v_order.status in ('opened', 'completed') then
     select coalesce(jsonb_agg(jsonb_build_object(
       'draw_index', dr.draw_index,
       'template_id', dr.template_id,
@@ -1428,7 +1428,14 @@ begin
     from gacha.draw_results dr
     where dr.draw_order_id = v_order.id;
 
-    return jsonb_build_object('draw_order_id', v_order.id, 'status', 'opened', 'results', v_results, 'idempotent', true);
+    return jsonb_build_object(
+      'draw_order_id', v_order.id,
+      'status', 'completed',
+      'draw_count', v_order.draw_count,
+      'quantity', v_order.quantity,
+      'results', v_results,
+      'idempotent', true
+    );
   end if;
 
   if v_star_order.xtr_amount <> v_order.total_price_stars then
@@ -1457,20 +1464,20 @@ begin
   where id = v_order.box_id
   for update;
 
-  if v_box.remaining_stock is not null and v_box.remaining_stock < v_order.quantity then
+  if v_box.remaining_stock is not null and v_box.remaining_stock < v_order.draw_count then
     update gacha.draw_orders set status = 'failed', error_message = 'stock insufficient after payment', updated_at = now() where id = v_order.id;
     raise exception 'blind box stock is insufficient after payment';
   end if;
 
   if v_box.remaining_stock is not null then
     update gacha.blind_boxes
-    set remaining_stock = remaining_stock - v_order.quantity,
-        status = case when remaining_stock - v_order.quantity <= 0 then 'sold_out' else status end,
+    set remaining_stock = remaining_stock - v_order.draw_count,
+        status = case when remaining_stock - v_order.draw_count <= 0 then 'sold_out' else status end,
         updated_at = now()
     where id = v_box.id;
   end if;
 
-  for v_draw_i in 1..v_order.quantity loop
+  for v_draw_i in 1..v_order.draw_count loop
     select null::uuid as id into v_reward;
     select null::uuid as id, 0::integer as current_count into v_pity;
     v_use_pity := false;
@@ -1589,7 +1596,7 @@ begin
     insert into inventory.item_instance_events (
       item_instance_id, user_id, event_type, source_type, source_id, after_state
     ) values (
-      v_item_id, v_order.user_id, 'created', 'gacha', v_order.id,
+      v_item_id, v_order.user_id, 'obtained_from_gacha', 'gacha', v_order.id,
       jsonb_build_object('template_id', v_reward.template_id, 'form_id', v_form_id, 'rarity_code', v_reward.rarity_code)
     );
 
@@ -1627,18 +1634,18 @@ begin
     end if;
   end loop;
 
-  v_reward_kcoin := v_order.open_reward_kcoin * v_order.quantity;
+  v_reward_kcoin := v_order.open_reward_kcoin * v_order.draw_count;
   if v_reward_kcoin > 0 then
     v_credit := api._credit_balance(
       v_order.user_id,
       'KCOIN',
       v_reward_kcoin,
-      'gacha_open_reward',
+      'open_box_rebate',
       v_order.id,
       null,
-      'gacha_open_reward:' || v_order.id::text,
-      'Paid box open reward',
-      jsonb_build_object('draw_order_id', v_order.id, 'quantity', v_order.quantity)
+      'open_box_rebate:' || v_order.id::text,
+      'Open box rebate',
+      jsonb_build_object('draw_order_id', v_order.id, 'draw_count', v_order.draw_count, 'quantity', v_order.quantity)
     );
   end if;
 
@@ -1655,11 +1662,11 @@ begin
     v_order.id,
     v_order.user_id,
     v_order.pool_version_id,
-    jsonb_build_object('box_id', v_order.box_id, 'quantity', v_order.quantity, 'open_reward_kcoin', v_order.open_reward_kcoin)
+    jsonb_build_object('box_id', v_order.box_id, 'draw_count', v_order.draw_count, 'quantity', v_order.quantity, 'open_reward_kcoin', v_order.open_reward_kcoin)
   );
 
   update gacha.draw_orders
-  set status = 'opened', opened_at = now(), updated_at = now()
+  set status = 'completed', opened_at = now(), updated_at = now()
   where id = v_order.id;
 
   update payments.star_orders
@@ -1680,7 +1687,9 @@ begin
 
   return jsonb_build_object(
     'draw_order_id', v_order.id,
-    'status', 'opened',
+    'status', 'completed',
+    'draw_count', v_order.draw_count,
+    'quantity', v_order.quantity,
     'results', v_results,
     'kcoin_reward', v_reward_kcoin,
     'kcoin_ledger', v_credit,
@@ -1812,7 +1821,8 @@ begin
 
   return jsonb_build_object(
     'draw_order_id', v_order.id,
-    'status', v_order.status,
+    'status', case when v_order.status = 'opened' then 'completed' else v_order.status end,
+    'draw_count', v_order.draw_count,
     'quantity', v_order.quantity,
     'unit_price_stars', v_order.unit_price_stars,
     'discount_bps', v_order.discount_bps,
@@ -1821,6 +1831,7 @@ begin
     'invoice_payload', v_order.invoice_payload,
     'paid_at', v_order.paid_at,
     'opened_at', v_order.opened_at,
+    'completed_at', v_order.opened_at,
     'box', v_box,
     'payment', v_payment,
     'results', v_results,
@@ -3377,7 +3388,8 @@ language plpgsql
 set search_path = ''
 as $$
 begin
-  if new.status = 'opened' and old.status is distinct from 'opened' then
+  if new.status in ('opened', 'completed')
+     and old.status not in ('opened', 'completed') then
     if new.payment_star_order_id is null then
       raise exception 'draw order payment_star_order_id is required before opening';
     end if;

@@ -181,10 +181,10 @@ select is((
   from inventory.item_instance_events e
   join gacha.draw_results dr on dr.item_instance_id = e.item_instance_id
   where dr.draw_order_id = (select id from _ids where key = 'draw_order')
-    and e.event_type = 'created'
+    and e.event_type = 'obtained_from_gacha'
     and e.source_type = 'gacha'
     and e.source_id = (select id from _ids where key = 'draw_order')
-), 10, 'every gacha-created item_instance has a created inventory event');
+), 10, 'every gacha-created item_instance has an obtained_from_gacha inventory event');
 
 insert into _ids (key, payload)
 select 'inventory_list', api.inventory_list_user_items((select id from _ids where key = 'user'), array['available']::text[], 40, 0);

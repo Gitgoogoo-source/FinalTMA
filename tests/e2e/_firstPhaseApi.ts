@@ -144,7 +144,7 @@ export async function mockFirstPhaseApi(page: Page): Promise<void> {
       invoice_payload: `gacha:${ORDER_ID}`,
       xtr_amount: drawCount === 10 ? 90 : 10,
       draw_count: drawCount,
-      order_status: "opened",
+      order_status: "completed",
       payment_status: "dev_paid",
       dev_payment_processed: true,
       idempotent: false,
@@ -156,7 +156,7 @@ export async function mockFirstPhaseApi(page: Page): Promise<void> {
     fulfillOk(route, {
       order_id: ORDER_ID,
       status: "completed",
-      order_status: "opened",
+      order_status: "completed",
       quantity: 1,
       paid_stars: 10,
       returned_kcoin: 100,

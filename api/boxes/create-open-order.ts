@@ -17,6 +17,7 @@ type CreateOrderRpcResult = {
   star_order_id?: unknown;
   invoice_payload?: unknown;
   xtr_amount?: unknown;
+  draw_count?: unknown;
   quantity?: unknown;
   discount_bps?: unknown;
   status?: unknown;
@@ -141,7 +142,7 @@ export function buildCreateOpenOrderResponse(
     payment_status: paymentStatus,
     dev_payment_processed: devPaidResult !== null,
     idempotent: Boolean(order.idempotent) || Boolean(devPaidResult?.idempotent),
-    result_ready: orderStatus === "opened",
+    result_ready: isCompletedOrderStatus(orderStatus),
   };
 }
 
@@ -319,6 +320,10 @@ function openTypeFromDrawCount(value: unknown): "single" | "ten" | undefined {
   }
 
   return undefined;
+}
+
+function isCompletedOrderStatus(value: string): boolean {
+  return value === "completed" || value === "opened";
 }
 
 function getRequiredString(
