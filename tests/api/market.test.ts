@@ -8,11 +8,17 @@ import { ApiError } from "../../api/_shared/handler";
 import buyListingHandler, {
   normalizeMarketBuyListingInput,
 } from "../../api/market/buy";
+import cancelListingHandler, {
+  normalizeMarketCancelListingInput,
+} from "../../api/market/cancel-listing";
 import createListingHandler, {
   normalizeMarketCreateListingInput,
 } from "../../api/market/create-listing";
 import listingDetailHandler from "../../api/market/listing-detail";
 import listingsHandler from "../../api/market/listings";
+import updatePriceHandler, {
+  normalizeMarketUpdateListingPriceInput,
+} from "../../api/market/update-price";
 import { RpcError } from "../../packages/server/src/db/rpc";
 import { invokeApiHandler } from "./_utils";
 
@@ -47,6 +53,8 @@ const ITEM_ID = "66666666-6666-4666-8666-666666666666";
 const ITEM_ID_2 = "77777777-7777-4777-8777-777777777777";
 const IDEMPOTENCY_KEY = "market:create-listing-0001";
 const BUY_IDEMPOTENCY_KEY = "market:buy-listing-0001";
+const UPDATE_PRICE_IDEMPOTENCY_KEY = "market:update-price-0001";
+const CANCEL_LISTING_IDEMPOTENCY_KEY = "market:cancel-listing-0001";
 
 describe("market listings API", () => {
   beforeEach(() => {
@@ -811,5 +819,425 @@ describe("market buy listing API", () => {
     expect(result.statusCode).toBe(409);
     expect(result.body.error.code).toBe("CANNOT_BUY_OWN_LISTING");
     expect(result.body.error.message).toBe("不能购买自己的挂单。");
+  });
+});
+
+describe("market update price API", () => {
+  beforeEach(() => {
+    process.env.NODE_ENV = "test";
+    callRpcRawMock.mockReset();
+    requireSessionMock.mockReset();
+    requireSessionMock.mockResolvedValue({
+      sessionId: "session-market-update-price-test",
+      userId: USER_ID,
+      telegramUserId: 7001,
+      userStatus: "active",
+      expiresAt: "2026-05-28T00:00:00.000Z",
+      sessionTokenHash: "session-hash",
+    });
+  });
+
+  it("normalizes snake_case, camelCase and header idempotency input", () => {
+    expect(
+      normalizeMarketUpdateListingPriceInput(
+        {
+          listingId: LISTING_ID,
+          newUnitPriceKcoin: 650,
+        },
+        UPDATE_PRICE_IDEMPOTENCY_KEY,
+      ),
+    ).toMatchObject({
+      listing_id: LISTING_ID,
+      new_unit_price_kcoin: 650,
+      idempotency_key: UPDATE_PRICE_IDEMPOTENCY_KEY,
+    });
+  });
+
+  it("calls market_update_listing_price with the session user and returns updated price", async () => {
+    callRpcRawMock.mockResolvedValueOnce({
+      listing_id: LISTING_ID,
+      unit_price_kcoin: "650",
+      expected_net_amount: 1235,
+      price_health: "healthy",
+      status: "active",
+      idempotent: false,
+      rpc_extra_field: "removed",
+    });
+
+    const result = await invokeApiHandler<
+      ApiSuccessResponse<Record<string, unknown>>
+    >(updatePriceHandler, {
+      method: "POST",
+      headers: {
+        "x-request-id": "req-market-update-price",
+        "x-idempotency-key": UPDATE_PRICE_IDEMPOTENCY_KEY,
+      },
+      body: {
+        listing_id: LISTING_ID,
+        new_unit_price_kcoin: 650,
+      },
+    });
+
+    expect(result.statusCode).toBe(200);
+    expect(callRpcRawMock).toHaveBeenCalledWith(
+      "market_update_listing_price",
+      {
+        p_user_id: USER_ID,
+        p_listing_id: LISTING_ID,
+        p_new_unit_price_kcoin: 650,
+        p_idempotency_key: UPDATE_PRICE_IDEMPOTENCY_KEY,
+      },
+      {
+        schema: "api",
+        context: {
+          requestId: "req-market-update-price",
+          userId: USER_ID,
+          listingId: LISTING_ID,
+          idempotencyKey: UPDATE_PRICE_IDEMPOTENCY_KEY,
+        },
+      },
+    );
+    expect(result.body.data).toEqual({
+      listing_id: LISTING_ID,
+      unit_price_kcoin: 650,
+      expected_net_amount: 1235,
+      status: "active",
+    });
+  });
+
+  it("rejects missing idempotency key before calling RPC", async () => {
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      updatePriceHandler,
+      {
+        method: "POST",
+        body: {
+          listing_id: LISTING_ID,
+          new_unit_price_kcoin: 650,
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(400);
+    expect(result.body.error.code).toBe("VALIDATION_ERROR");
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects body user identity before calling RPC", async () => {
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      updatePriceHandler,
+      {
+        method: "POST",
+        body: {
+          listing_id: LISTING_ID,
+          new_unit_price_kcoin: 650,
+          idempotency_key: UPDATE_PRICE_IDEMPOTENCY_KEY,
+          seller_user_id: USER_ID,
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(400);
+    expect(result.body.error.code).toBe("VALIDATION_ERROR");
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+  });
+
+  it("maps non-owner RPC errors to FORBIDDEN", async () => {
+    callRpcRawMock.mockRejectedValueOnce(
+      new RpcError({
+        rpcName: "market_update_listing_price",
+        error: {
+          message: "not listing owner",
+        },
+      }),
+    );
+
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      updatePriceHandler,
+      {
+        method: "POST",
+        body: {
+          listing_id: LISTING_ID,
+          new_unit_price_kcoin: 650,
+          idempotency_key: UPDATE_PRICE_IDEMPOTENCY_KEY,
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(403);
+    expect(result.body.error.code).toBe("FORBIDDEN");
+    expect(result.body.error.message).toBe("只有卖家可以修改挂单价格。");
+  });
+
+  it("maps sold or cancelled listing RPC errors to LISTING_NOT_ACTIVE", async () => {
+    callRpcRawMock.mockRejectedValueOnce(
+      new RpcError({
+        rpcName: "market_update_listing_price",
+        error: {
+          message: "listing is not editable",
+        },
+      }),
+    );
+
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      updatePriceHandler,
+      {
+        method: "POST",
+        body: {
+          listing_id: LISTING_ID,
+          new_unit_price_kcoin: 650,
+          idempotency_key: UPDATE_PRICE_IDEMPOTENCY_KEY,
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(409);
+    expect(result.body.error.code).toBe("LISTING_NOT_ACTIVE");
+    expect(result.body.error.message).toBe("当前挂单状态不可改价。");
+  });
+
+  it("maps idempotency conflicts to IDEMPOTENCY_CONFLICT", async () => {
+    callRpcRawMock.mockRejectedValueOnce(
+      new RpcError({
+        rpcName: "market_update_listing_price",
+        error: {
+          message: "idempotency conflict",
+        },
+      }),
+    );
+
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      updatePriceHandler,
+      {
+        method: "POST",
+        body: {
+          listing_id: LISTING_ID,
+          new_unit_price_kcoin: 650,
+          idempotency_key: UPDATE_PRICE_IDEMPOTENCY_KEY,
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(409);
+    expect(result.body.error.code).toBe("IDEMPOTENCY_CONFLICT");
+    expect(result.body.error.message).toBe("幂等键已被其他改价请求使用。");
+  });
+});
+
+describe("market cancel listing API", () => {
+  beforeEach(() => {
+    process.env.NODE_ENV = "test";
+    callRpcRawMock.mockReset();
+    requireSessionMock.mockReset();
+    requireSessionMock.mockResolvedValue({
+      sessionId: "session-market-cancel-listing-test",
+      userId: USER_ID,
+      telegramUserId: 7001,
+      userStatus: "active",
+      expiresAt: "2026-05-28T00:00:00.000Z",
+      sessionTokenHash: "session-hash",
+    });
+  });
+
+  it("normalizes snake_case, camelCase and header idempotency input", () => {
+    expect(
+      normalizeMarketCancelListingInput(
+        {
+          listingId: LISTING_ID,
+          reason: "changed_mind",
+        },
+        CANCEL_LISTING_IDEMPOTENCY_KEY,
+      ),
+    ).toMatchObject({
+      listing_id: LISTING_ID,
+      reason: "changed_mind",
+      idempotency_key: CANCEL_LISTING_IDEMPOTENCY_KEY,
+    });
+  });
+
+  it("calls market_cancel_listing with the session user and returns released items", async () => {
+    callRpcRawMock.mockResolvedValueOnce({
+      listing_id: LISTING_ID,
+      status: "cancelled",
+      released_item_instance_ids: [ITEM_ID, ITEM_ID_2],
+      released_item_ids: [ITEM_ID, ITEM_ID_2],
+      cancelled_at: "2026-05-22T00:00:00.000Z",
+      idempotent: false,
+      rpc_extra_field: "removed",
+    });
+
+    const result = await invokeApiHandler<
+      ApiSuccessResponse<Record<string, unknown>>
+    >(cancelListingHandler, {
+      method: "POST",
+      headers: {
+        "x-request-id": "req-market-cancel-listing",
+        "x-idempotency-key": CANCEL_LISTING_IDEMPOTENCY_KEY,
+      },
+      body: {
+        listing_id: LISTING_ID,
+      },
+    });
+
+    expect(result.statusCode).toBe(200);
+    expect(callRpcRawMock).toHaveBeenCalledWith(
+      "market_cancel_listing",
+      {
+        p_user_id: USER_ID,
+        p_listing_id: LISTING_ID,
+        p_idempotency_key: CANCEL_LISTING_IDEMPOTENCY_KEY,
+        p_reason: "user_cancelled",
+      },
+      {
+        schema: "api",
+        context: {
+          requestId: "req-market-cancel-listing",
+          userId: USER_ID,
+          listingId: LISTING_ID,
+          idempotencyKey: CANCEL_LISTING_IDEMPOTENCY_KEY,
+        },
+      },
+    );
+    expect(result.body.data).toEqual({
+      listing_id: LISTING_ID,
+      status: "cancelled",
+      released_item_instance_ids: [ITEM_ID, ITEM_ID_2],
+      cancelled_at: "2026-05-22T00:00:00.000Z",
+    });
+  });
+
+  it("accepts the legacy released_item_ids fallback from RPC payloads", async () => {
+    callRpcRawMock.mockResolvedValueOnce({
+      listing_id: LISTING_ID,
+      status: "cancelled",
+      released_item_ids: [ITEM_ID],
+      cancelled_at: "2026-05-22T00:00:00.000Z",
+    });
+
+    const result = await invokeApiHandler<
+      ApiSuccessResponse<Record<string, unknown>>
+    >(cancelListingHandler, {
+      method: "POST",
+      body: {
+        listing_id: LISTING_ID,
+        idempotency_key: CANCEL_LISTING_IDEMPOTENCY_KEY,
+      },
+    });
+
+    expect(result.statusCode).toBe(200);
+    expect(result.body.data).toMatchObject({
+      released_item_instance_ids: [ITEM_ID],
+    });
+  });
+
+  it("rejects missing idempotency key before calling RPC", async () => {
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      cancelListingHandler,
+      {
+        method: "POST",
+        body: {
+          listing_id: LISTING_ID,
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(400);
+    expect(result.body.error.code).toBe("VALIDATION_ERROR");
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects body user identity before calling RPC", async () => {
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      cancelListingHandler,
+      {
+        method: "POST",
+        body: {
+          listing_id: LISTING_ID,
+          idempotency_key: CANCEL_LISTING_IDEMPOTENCY_KEY,
+          seller_user_id: USER_ID,
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(400);
+    expect(result.body.error.code).toBe("VALIDATION_ERROR");
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+  });
+
+  it("maps non-owner RPC errors to FORBIDDEN", async () => {
+    callRpcRawMock.mockRejectedValueOnce(
+      new RpcError({
+        rpcName: "market_cancel_listing",
+        error: {
+          message: "not listing owner",
+        },
+      }),
+    );
+
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      cancelListingHandler,
+      {
+        method: "POST",
+        body: {
+          listing_id: LISTING_ID,
+          idempotency_key: CANCEL_LISTING_IDEMPOTENCY_KEY,
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(403);
+    expect(result.body.error.code).toBe("FORBIDDEN");
+    expect(result.body.error.message).toBe("只有卖家可以下架挂单。");
+  });
+
+  it("maps sold or cancelled listing RPC errors to LISTING_NOT_ACTIVE", async () => {
+    callRpcRawMock.mockRejectedValueOnce(
+      new RpcError({
+        rpcName: "market_cancel_listing",
+        error: {
+          message: "listing cannot be cancelled",
+        },
+      }),
+    );
+
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      cancelListingHandler,
+      {
+        method: "POST",
+        body: {
+          listing_id: LISTING_ID,
+          idempotency_key: CANCEL_LISTING_IDEMPOTENCY_KEY,
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(409);
+    expect(result.body.error.code).toBe("LISTING_NOT_ACTIVE");
+    expect(result.body.error.message).toBe("当前挂单状态不可下架。");
+  });
+
+  it("maps idempotency conflicts to IDEMPOTENCY_CONFLICT", async () => {
+    callRpcRawMock.mockRejectedValueOnce(
+      new RpcError({
+        rpcName: "market_cancel_listing",
+        error: {
+          message: "idempotency conflict",
+        },
+      }),
+    );
+
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      cancelListingHandler,
+      {
+        method: "POST",
+        body: {
+          listing_id: LISTING_ID,
+          idempotency_key: CANCEL_LISTING_IDEMPOTENCY_KEY,
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(409);
+    expect(result.body.error.code).toBe("IDEMPOTENCY_CONFLICT");
+    expect(result.body.error.message).toBe("幂等键已被其他下架请求使用。");
   });
 });
