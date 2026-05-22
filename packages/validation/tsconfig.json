@@ -17,7 +17,8 @@
     "src/payment.schemas.ts",
     "src/box.schemas.ts",
     "src/inventory.schemas.ts",
-    "src/game.schemas.ts"
+    "src/game.schemas.ts",
+    "src/market.schemas.ts"
   ],
   "exclude": ["dist", "node_modules"]
 }

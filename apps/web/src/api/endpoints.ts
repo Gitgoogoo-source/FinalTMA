@@ -20,6 +20,18 @@ export const API_ENDPOINTS = {
   inventory: {
     list: "/inventory/list",
   },
+  market: {
+    listings: "/market/listings",
+    listingDetail: "/market/listing-detail",
+    buy: "/market/buy",
+    sellableItems: "/market/sellable-items",
+    createListing: "/market/create-listing",
+    myListings: "/market/my-listings",
+    myListingStats: "/market/my-listing-stats",
+    updatePrice: "/market/update-price",
+    cancelListing: "/market/cancel-listing",
+    stats: "/market/stats",
+  },
 } as const;
 
 export type ApiEndpointKey = keyof typeof API_ENDPOINTS;

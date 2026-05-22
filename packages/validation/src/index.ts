@@ -31,6 +31,7 @@ export * as TelegramValidation from "./telegram.schemas.js";
 export * as PaymentValidation from "./payment.schemas.js";
 export * as InventoryValidation from "./inventory.schemas.js";
 export * as GameValidation from "./game.schemas.js";
+export * as MarketValidation from "./market.schemas.js";
 
 /**
  * Direct exports.
@@ -55,3 +56,4 @@ export * from "./telegram.schemas.js";
 export * from "./payment.schemas.js";
 export * from "./inventory.schemas.js";
 export * from "./game.schemas.js";
+export * from "./market.schemas.js";
