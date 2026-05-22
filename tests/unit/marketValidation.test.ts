@@ -4,6 +4,7 @@ import { API_ENDPOINTS } from "../../apps/web/src/api/endpoints";
 import {
   MarketBuyListingBodySchema,
   MarketCreateListingBodySchema,
+  MarketCreateListingResponseSchema,
   MarketListingDetailResponseSchema,
   MarketListingsResponseSchema,
   MarketListListingsQuerySchema,
@@ -135,6 +136,38 @@ describe("market API contract schemas", () => {
         idempotency_key: IDEMPOTENCY_KEY,
       }),
     ).toThrow();
+  });
+
+  it("accepts create listing response and duplicate idempotent response", () => {
+    expect(
+      MarketCreateListingResponseSchema.parse({
+        listing_id: LISTING_ID,
+        item_count: 1,
+        remaining_count: 1,
+        unit_price_kcoin: 300,
+        fee_bps: 500,
+        expected_net_amount: 285,
+        status: "active",
+        price_health: "healthy",
+        idempotent: false,
+      }),
+    ).toMatchObject({
+      listing_id: LISTING_ID,
+      expected_net_amount: 285,
+      price_health: "healthy",
+    });
+
+    expect(
+      MarketCreateListingResponseSchema.parse({
+        listing_id: LISTING_ID,
+        status: "active",
+        idempotent: true,
+      }),
+    ).toEqual({
+      listing_id: LISTING_ID,
+      status: "active",
+      idempotent: true,
+    });
   });
 
   it("requires quantity 1 and expected price for buy listing", () => {

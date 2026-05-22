@@ -561,7 +561,7 @@ export const MarketSellableItemsResponseSchema = z
   })
   .strict();
 
-export const MarketCreateListingResponseSchema = z
+export const MarketCreateListingCreatedResponseSchema = z
   .object({
     listing_id: uuidSchema,
     item_count: positiveIntegerSchema,
@@ -570,8 +570,23 @@ export const MarketCreateListingResponseSchema = z
     fee_bps: bpsSchema,
     expected_net_amount: nonNegativeKcoinAmountSchema,
     status: MarketListingStatusSchema,
+    price_health: MarketPriceHealthSchema.optional(),
+    idempotent: z.literal(false).optional(),
   })
   .strict();
+
+export const MarketCreateListingIdempotentResponseSchema = z
+  .object({
+    listing_id: uuidSchema,
+    status: MarketListingStatusSchema,
+    idempotent: z.literal(true),
+  })
+  .strict();
+
+export const MarketCreateListingResponseSchema = z.union([
+  MarketCreateListingCreatedResponseSchema,
+  MarketCreateListingIdempotentResponseSchema,
+]);
 
 export const MarketBuyListingResponseSchema = z
   .object({
