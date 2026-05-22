@@ -207,9 +207,9 @@ insert into _ids (key, id) select 'item2', testutil.create_item((select id from 
 insert into _ids (key, payload) select 'listing', api.market_create_listing((select id from _ids where key = 'seller'), array[(select id from _ids where key = 'item1'), (select id from _ids where key = 'item2')], 120, 'market-cancel-listing-001');
 insert into _ids (key, id) select 'listing_id', ((select payload from _ids where key = 'listing') ->> 'listing_id')::uuid;
 
-select ok(testutil.raises_like(format('select api.market_cancel_listing(%L::uuid, %L::uuid)', (select id::text from _ids where key = 'other'), (select id::text from _ids where key = 'listing_id')), '%not listing owner%'), 'non-owner cannot cancel listing');
+select ok(testutil.raises_like(format('select api.market_cancel_listing(%L::uuid, %L::uuid, %L)', (select id::text from _ids where key = 'other'), (select id::text from _ids where key = 'listing_id'), 'market-cancel-other-001'), '%not listing owner%'), 'non-owner cannot cancel listing');
 
-insert into _ids (key, payload) select 'cancel', api.market_cancel_listing((select id from _ids where key = 'seller'), (select id from _ids where key = 'listing_id'));
+insert into _ids (key, payload) select 'cancel', api.market_cancel_listing((select id from _ids where key = 'seller'), (select id from _ids where key = 'listing_id'), 'market-cancel-cancel-001');
 select is(((select payload from _ids where key = 'cancel') ->> 'status'), 'cancelled', 'cancel RPC returns cancelled status');
 select is((select status from market.listings where id = (select id from _ids where key = 'listing_id')), 'cancelled', 'listing status becomes cancelled');
 select is((select remaining_count from market.listings where id = (select id from _ids where key = 'listing_id')), 0, 'cancelled listing has zero remaining_count');
@@ -217,7 +217,28 @@ select is((select count(*)::int from market.listing_items where listing_id = (se
 select is((select count(*)::int from inventory.item_instances where id in ((select id from _ids where key = 'item1'), (select id from _ids where key = 'item2')) and status = 'available'), 2, 'cancel releases listed items back to available');
 select is((select count(*)::int from inventory.inventory_locks where source_id = (select id from _ids where key = 'listing_id') and source_type = 'market_listing' and status = 'released'), 2, 'cancel releases active inventory locks');
 select ok(exists (select 1 from market.listing_events where listing_id = (select id from _ids where key = 'listing_id') and event_type = 'cancelled'), 'cancel listing event is recorded');
-select ok(testutil.raises_like(format('select api.market_cancel_listing(%L::uuid, %L::uuid)', (select id::text from _ids where key = 'seller'), (select id::text from _ids where key = 'listing_id')), '%listing cannot be cancelled%'), 'already cancelled listing cannot be cancelled again');
+insert into _ids (key, payload) select 'cancel_repeat', api.market_cancel_listing((select id from _ids where key = 'seller'), (select id from _ids where key = 'listing_id'), 'market-cancel-cancel-001');
+select ok(((select payload from _ids where key = 'cancel_repeat') ->> 'idempotent')::boolean, 'repeated cancel with same idempotency key returns idempotent=true');
+select ok(testutil.raises_like(format('select api.market_cancel_listing(%L::uuid, %L::uuid, %L)', (select id::text from _ids where key = 'seller'), (select id::text from _ids where key = 'listing_id'), 'market-cancel-listing-002'), '%listing cannot be cancelled%'), 'already cancelled listing cannot be cancelled again with a new key');
+
+insert into _ids (key, id) select 'bad_status_item', testutil.create_item((select id from _ids where key = 'seller'), (select id from _ids where key = 'template'), (select id from _ids where key = 'form1'), 1, 12, 'admin');
+insert into _ids (key, payload) select 'bad_status_listing', api.market_create_listing((select id from _ids where key = 'seller'), array[(select id from _ids where key = 'bad_status_item')], 120, 'market-cancel-bad-status-listing-001');
+insert into _ids (key, id) select 'bad_status_listing_id', ((select payload from _ids where key = 'bad_status_listing') ->> 'listing_id')::uuid;
+update inventory.item_instances
+set status = 'available'
+where id = (select id from _ids where key = 'bad_status_item');
+select ok(testutil.raises_like(format('select api.market_cancel_listing(%L::uuid, %L::uuid, %L)', (select id::text from _ids where key = 'seller'), (select id::text from _ids where key = 'bad_status_listing_id'), 'market-cancel-bad-status-001'), '%listing item integrity violation%'), 'cancel rejects listing item that is no longer listed');
+
+insert into _ids (key, id) select 'missing_lock_item', testutil.create_item((select id from _ids where key = 'seller'), (select id from _ids where key = 'template'), (select id from _ids where key = 'form1'), 1, 13, 'admin');
+insert into _ids (key, payload) select 'missing_lock_listing', api.market_create_listing((select id from _ids where key = 'seller'), array[(select id from _ids where key = 'missing_lock_item')], 120, 'market-cancel-missing-lock-listing-001');
+insert into _ids (key, id) select 'missing_lock_listing_id', ((select payload from _ids where key = 'missing_lock_listing') ->> 'listing_id')::uuid;
+update inventory.inventory_locks
+set status = 'released', released_at = now(), updated_at = now()
+where item_instance_id = (select id from _ids where key = 'missing_lock_item')
+  and source_type = 'market_listing'
+  and source_id = (select id from _ids where key = 'missing_lock_listing_id')
+  and status = 'active';
+select ok(testutil.raises_like(format('select api.market_cancel_listing(%L::uuid, %L::uuid, %L)', (select id::text from _ids where key = 'seller'), (select id::text from _ids where key = 'missing_lock_listing_id'), 'market-cancel-missing-lock-001'), '%listing lock integrity violation%'), 'cancel rejects listing item without an active market lock');
 
 select * from finish();
 

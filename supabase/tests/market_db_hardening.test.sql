@@ -153,9 +153,9 @@ select is(
 with write_functions(function_signature) as (
   values
     ('api.market_create_listing(uuid, uuid[], numeric, text)'::regprocedure),
-    ('api.market_buy_listing(uuid, uuid, integer, text)'::regprocedure),
-    ('api.market_update_listing_price(uuid, uuid, numeric)'::regprocedure),
-    ('api.market_cancel_listing(uuid, uuid)'::regprocedure)
+    ('api.market_buy_listing(uuid, uuid, integer, numeric, text)'::regprocedure),
+    ('api.market_update_listing_price(uuid, uuid, numeric, text)'::regprocedure),
+    ('api.market_cancel_listing(uuid, uuid, text, text)'::regprocedure)
 )
 select is(
   (
@@ -171,9 +171,9 @@ select is(
 with write_functions(function_signature) as (
   values
     ('api.market_create_listing(uuid, uuid[], numeric, text)'::regprocedure),
-    ('api.market_buy_listing(uuid, uuid, integer, text)'::regprocedure),
-    ('api.market_update_listing_price(uuid, uuid, numeric)'::regprocedure),
-    ('api.market_cancel_listing(uuid, uuid)'::regprocedure)
+    ('api.market_buy_listing(uuid, uuid, integer, numeric, text)'::regprocedure),
+    ('api.market_update_listing_price(uuid, uuid, numeric, text)'::regprocedure),
+    ('api.market_cancel_listing(uuid, uuid, text, text)'::regprocedure)
 )
 select is(
   (

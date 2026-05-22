@@ -11,6 +11,7 @@
 \i supabase/tests/inventory_evolve.test.sql
 \i supabase/tests/market_buy.test.sql
 \i supabase/tests/market_cancel.test.sql
+\i supabase/tests/market_rpc_stage5.test.sql
 \i supabase/tests/task_claim.test.sql
 \i supabase/tests/referral.test.sql
 \i supabase/tests/album_reward.test.sql

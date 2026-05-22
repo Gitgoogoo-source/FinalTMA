@@ -204,14 +204,14 @@ insert into _ids (key, id) select 'form1', ((select payload from _ids where key 
 insert into _ids (key, id) select 'item', testutil.create_item((select id from _ids where key = 'seller'), (select id from _ids where key = 'template'), (select id from _ids where key = 'form1'), 1, 30, 'admin');
 do $$
 begin
-  perform api.economy_credit((select id from _ids where key = 'buyer'), 'KCOIN', 500, 'test_setup', null, null, 'market-buy-buyer-kcoin-001', 'fixture', '{}'::jsonb);
+  perform api._credit_balance((select id from _ids where key = 'buyer'), 'KCOIN', 500, 'test_setup', null, null, 'market-buy-buyer-kcoin-001', 'fixture', '{}'::jsonb);
 end;
 $$;
 
 insert into _ids (key, payload) select 'listing', api.market_create_listing((select id from _ids where key = 'seller'), array[(select id from _ids where key = 'item')], 100, 'market-buy-listing-001');
 insert into _ids (key, id) select 'listing_id', ((select payload from _ids where key = 'listing') ->> 'listing_id')::uuid;
 
-insert into _ids (key, payload) select 'buy1', api.market_buy_listing((select id from _ids where key = 'buyer'), (select id from _ids where key = 'listing_id'), 1, 'market-buy-order-001');
+insert into _ids (key, payload) select 'buy1', api.market_buy_listing((select id from _ids where key = 'buyer'), (select id from _ids where key = 'listing_id'), 1, 100, 'market-buy-order-001');
 insert into _ids (key, id) select 'order_id', ((select payload from _ids where key = 'buy1') ->> 'order_id')::uuid;
 
 select is((select status from market.listings where id = (select id from _ids where key = 'listing_id')), 'sold', 'listing is sold after buying final item');
@@ -225,10 +225,29 @@ select is((select fee_amount_kcoin from market.orders where id = (select id from
 select ok(exists (select 1 from market.fee_settlements where market_order_id = (select id from _ids where key = 'order_id') and fee_amount = 5), 'fee settlement row is created');
 select ok(exists (select 1 from inventory.inventory_locks where item_instance_id = (select id from _ids where key = 'item') and status = 'consumed'), 'market inventory lock is consumed after sale');
 
-insert into _ids (key, payload) select 'buy_repeat', api.market_buy_listing((select id from _ids where key = 'buyer'), (select id from _ids where key = 'listing_id'), 1, 'market-buy-order-001');
+insert into _ids (key, payload) select 'buy_repeat', api.market_buy_listing((select id from _ids where key = 'buyer'), (select id from _ids where key = 'listing_id'), 1, 100, 'market-buy-order-001');
 select ok(((select payload from _ids where key = 'buy_repeat') ->> 'idempotent')::boolean, 'repeated buy with same idempotency key returns idempotent=true');
 select is((select count(*)::int from market.orders where idempotency_key = 'market-buy-order-001'), 1, 'repeated buy does not create duplicate order');
 select is(testutil.balance_of((select id from _ids where key = 'buyer'), 'KCOIN'), 400::numeric, 'repeated buy does not charge buyer twice');
+
+insert into _ids (key, id) select 'bad_status_item', testutil.create_item((select id from _ids where key = 'seller'), (select id from _ids where key = 'template'), (select id from _ids where key = 'form1'), 1, 31, 'admin');
+insert into _ids (key, payload) select 'bad_status_listing', api.market_create_listing((select id from _ids where key = 'seller'), array[(select id from _ids where key = 'bad_status_item')], 100, 'market-buy-bad-status-listing-001');
+insert into _ids (key, id) select 'bad_status_listing_id', ((select payload from _ids where key = 'bad_status_listing') ->> 'listing_id')::uuid;
+update inventory.item_instances
+set status = 'available'
+where id = (select id from _ids where key = 'bad_status_item');
+select ok(testutil.raises_like(format('select api.market_buy_listing(%L::uuid, %L::uuid, 1, 100, %L)', (select id::text from _ids where key = 'buyer'), (select id::text from _ids where key = 'bad_status_listing_id'), 'market-buy-bad-status-001'), '%listing item integrity violation%'), 'buy rejects listing item that is no longer listed');
+
+insert into _ids (key, id) select 'missing_lock_item', testutil.create_item((select id from _ids where key = 'seller'), (select id from _ids where key = 'template'), (select id from _ids where key = 'form1'), 1, 32, 'admin');
+insert into _ids (key, payload) select 'missing_lock_listing', api.market_create_listing((select id from _ids where key = 'seller'), array[(select id from _ids where key = 'missing_lock_item')], 100, 'market-buy-missing-lock-listing-001');
+insert into _ids (key, id) select 'missing_lock_listing_id', ((select payload from _ids where key = 'missing_lock_listing') ->> 'listing_id')::uuid;
+update inventory.inventory_locks
+set status = 'released', released_at = now(), updated_at = now()
+where item_instance_id = (select id from _ids where key = 'missing_lock_item')
+  and source_type = 'market_listing'
+  and source_id = (select id from _ids where key = 'missing_lock_listing_id')
+  and status = 'active';
+select ok(testutil.raises_like(format('select api.market_buy_listing(%L::uuid, %L::uuid, 1, 100, %L)', (select id::text from _ids where key = 'buyer'), (select id::text from _ids where key = 'missing_lock_listing_id'), 'market-buy-missing-lock-001'), '%listing lock integrity violation%'), 'buy rejects listing item without an active market lock');
 
 select * from finish();
 
