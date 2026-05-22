@@ -5,6 +5,9 @@ import type {
   ApiSuccessResponse,
 } from "../../api/_shared/handler";
 import { ApiError } from "../../api/_shared/handler";
+import buyListingHandler, {
+  normalizeMarketBuyListingInput,
+} from "../../api/market/buy";
 import createListingHandler, {
   normalizeMarketCreateListingInput,
 } from "../../api/market/create-listing";
@@ -43,6 +46,7 @@ const SERIES_ID = "55555555-5555-4555-8555-555555555555";
 const ITEM_ID = "66666666-6666-4666-8666-666666666666";
 const ITEM_ID_2 = "77777777-7777-4777-8777-777777777777";
 const IDEMPOTENCY_KEY = "market:create-listing-0001";
+const BUY_IDEMPOTENCY_KEY = "market:buy-listing-0001";
 
 describe("market listings API", () => {
   beforeEach(() => {
@@ -576,5 +580,236 @@ describe("market create listing API", () => {
     expect(result.statusCode).toBe(409);
     expect(result.body.error.code).toBe("IDEMPOTENCY_CONFLICT");
     expect(result.body.error.message).toBe("幂等键已被其他挂单请求使用。");
+  });
+});
+
+describe("market buy listing API", () => {
+  beforeEach(() => {
+    process.env.NODE_ENV = "test";
+    callRpcRawMock.mockReset();
+    requireSessionMock.mockReset();
+    requireSessionMock.mockResolvedValue({
+      sessionId: "session-market-buy-listing-test",
+      userId: USER_ID,
+      telegramUserId: 7001,
+      userStatus: "active",
+      expiresAt: "2026-05-28T00:00:00.000Z",
+      sessionTokenHash: "session-hash",
+    });
+  });
+
+  it("normalizes snake_case, camelCase and header idempotency input", () => {
+    expect(
+      normalizeMarketBuyListingInput(
+        {
+          listingId: LISTING_ID,
+          expectedUnitPriceKcoin: 500,
+        },
+        BUY_IDEMPOTENCY_KEY,
+      ),
+    ).toMatchObject({
+      listing_id: LISTING_ID,
+      expected_unit_price_kcoin: 500,
+      idempotency_key: BUY_IDEMPOTENCY_KEY,
+    });
+  });
+
+  it("calls market_buy_listing with the session user and returns order result", async () => {
+    const ORDER_ID = "88888888-8888-4888-8888-888888888888";
+
+    callRpcRawMock.mockResolvedValueOnce({
+      order_id: ORDER_ID,
+      listing_id: LISTING_ID,
+      purchased_items: [
+        {
+          item_instance_id: ITEM_ID,
+          template_id: TEMPLATE_ID,
+          form_id: FORM_ID,
+          rpc_extra_field: "removed",
+        },
+      ],
+      total_price_kcoin: "500",
+      fee_amount_kcoin: 25,
+      seller_net_amount_kcoin: 475,
+      buyer_balance_after: 1500,
+      status: "completed",
+      idempotent: false,
+      rpc_extra_field: "removed",
+    });
+
+    const result = await invokeApiHandler<
+      ApiSuccessResponse<Record<string, unknown>>
+    >(buyListingHandler, {
+      method: "POST",
+      headers: {
+        "x-request-id": "req-market-buy-listing",
+        "x-idempotency-key": BUY_IDEMPOTENCY_KEY,
+      },
+      body: {
+        listing_id: LISTING_ID,
+        expected_unit_price_kcoin: 500,
+      },
+    });
+
+    expect(result.statusCode).toBe(200);
+    expect(callRpcRawMock).toHaveBeenCalledWith(
+      "market_buy_listing",
+      {
+        p_buyer_user_id: USER_ID,
+        p_listing_id: LISTING_ID,
+        p_quantity: 1,
+        p_expected_unit_price_kcoin: 500,
+        p_idempotency_key: BUY_IDEMPOTENCY_KEY,
+      },
+      {
+        schema: "api",
+        context: {
+          requestId: "req-market-buy-listing",
+          userId: USER_ID,
+          listingId: LISTING_ID,
+          idempotencyKey: BUY_IDEMPOTENCY_KEY,
+        },
+      },
+    );
+    expect(result.body.data).toEqual({
+      order_id: ORDER_ID,
+      purchased_items: [
+        {
+          item_instance_id: ITEM_ID,
+          template_id: TEMPLATE_ID,
+          form_id: FORM_ID,
+        },
+      ],
+      total_price_kcoin: 500,
+      fee_amount_kcoin: 25,
+      seller_net_amount_kcoin: 475,
+      buyer_balance_after: 1500,
+    });
+  });
+
+  it("rejects missing idempotency key before calling RPC", async () => {
+    const result = await invokeApiHandler<ApiErrorResponse>(buyListingHandler, {
+      method: "POST",
+      body: {
+        listing_id: LISTING_ID,
+        expected_unit_price_kcoin: 500,
+      },
+    });
+
+    expect(result.statusCode).toBe(400);
+    expect(result.body.error.code).toBe("VALIDATION_ERROR");
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects body user identity before calling RPC", async () => {
+    const result = await invokeApiHandler<ApiErrorResponse>(buyListingHandler, {
+      method: "POST",
+      body: {
+        listing_id: LISTING_ID,
+        expected_unit_price_kcoin: 500,
+        idempotency_key: BUY_IDEMPOTENCY_KEY,
+        buyer_user_id: USER_ID,
+      },
+    });
+
+    expect(result.statusCode).toBe(400);
+    expect(result.body.error.code).toBe("VALIDATION_ERROR");
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+  });
+
+  it("maps insufficient balance RPC errors to KCOIN_NOT_ENOUGH", async () => {
+    callRpcRawMock.mockRejectedValueOnce(
+      new RpcError({
+        rpcName: "market_buy_listing",
+        error: {
+          message: "insufficient balance: currency KCOIN, available 0, required 500",
+        },
+      }),
+    );
+
+    const result = await invokeApiHandler<ApiErrorResponse>(buyListingHandler, {
+      method: "POST",
+      body: {
+        listing_id: LISTING_ID,
+        expected_unit_price_kcoin: 500,
+        idempotency_key: BUY_IDEMPOTENCY_KEY,
+      },
+    });
+
+    expect(result.statusCode).toBe(409);
+    expect(result.body.error.code).toBe("KCOIN_NOT_ENOUGH");
+    expect(result.body.error.message).toBe("KCOIN 余额不足。");
+  });
+
+  it("maps stale price RPC errors to LISTING_PRICE_CHANGED", async () => {
+    callRpcRawMock.mockRejectedValueOnce(
+      new RpcError({
+        rpcName: "market_buy_listing",
+        error: {
+          message: "listing price changed",
+        },
+      }),
+    );
+
+    const result = await invokeApiHandler<ApiErrorResponse>(buyListingHandler, {
+      method: "POST",
+      body: {
+        listing_id: LISTING_ID,
+        expected_unit_price_kcoin: 500,
+        idempotency_key: BUY_IDEMPOTENCY_KEY,
+      },
+    });
+
+    expect(result.statusCode).toBe(409);
+    expect(result.body.error.code).toBe("LISTING_PRICE_CHANGED");
+    expect(result.body.error.message).toBe("价格已变化，请刷新后重试。");
+  });
+
+  it("maps sold out RPC errors to LISTING_SOLD_OUT", async () => {
+    callRpcRawMock.mockRejectedValueOnce(
+      new RpcError({
+        rpcName: "market_buy_listing",
+        error: {
+          message: "listing sold out",
+        },
+      }),
+    );
+
+    const result = await invokeApiHandler<ApiErrorResponse>(buyListingHandler, {
+      method: "POST",
+      body: {
+        listing_id: LISTING_ID,
+        expected_unit_price_kcoin: 500,
+        idempotency_key: BUY_IDEMPOTENCY_KEY,
+      },
+    });
+
+    expect(result.statusCode).toBe(409);
+    expect(result.body.error.code).toBe("LISTING_SOLD_OUT");
+    expect(result.body.error.message).toBe("商品已售罄。");
+  });
+
+  it("maps own listing RPC errors to CANNOT_BUY_OWN_LISTING", async () => {
+    callRpcRawMock.mockRejectedValueOnce(
+      new RpcError({
+        rpcName: "market_buy_listing",
+        error: {
+          message: "buyer cannot buy own listing",
+        },
+      }),
+    );
+
+    const result = await invokeApiHandler<ApiErrorResponse>(buyListingHandler, {
+      method: "POST",
+      body: {
+        listing_id: LISTING_ID,
+        expected_unit_price_kcoin: 500,
+        idempotency_key: BUY_IDEMPOTENCY_KEY,
+      },
+    });
+
+    expect(result.statusCode).toBe(409);
+    expect(result.body.error.code).toBe("CANNOT_BUY_OWN_LISTING");
+    expect(result.body.error.message).toBe("不能购买自己的挂单。");
   });
 });
