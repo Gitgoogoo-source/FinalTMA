@@ -34,7 +34,9 @@ test("/trade 默认进入购买 Tab，并可用 query 参数切换", async ({ pa
     page.getByRole("tab", { name: "购买", exact: true }),
   ).toHaveAttribute("aria-selected", "true");
   await expect(page.getByTestId("trade-buy-panel")).toBeVisible();
-  await expect(page.getByText("交易功能后续开放", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("交易功能后续开放", { exact: true })).toHaveCount(
+    0,
+  );
 
   await page.getByRole("tab", { name: "出售", exact: true }).click();
 

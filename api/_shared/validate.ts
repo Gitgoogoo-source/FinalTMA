@@ -1,4 +1,4 @@
-import { validationError, type ErrorFieldIssue } from './errors.js';
+import { validationError, type ErrorFieldIssue } from "./errors.js";
 
 export type ValidationSuccess<T> = {
   success: true;
@@ -33,18 +33,24 @@ export function validate<T>(schema: SchemaLike<T>, input: unknown): T {
     }
 
     const failure = result as ValidationFailure;
-    throw validationError('请求参数校验失败。', normalizeValidationIssues(failure.error));
+    throw validationError(
+      "请求参数校验失败。",
+      normalizeValidationIssues(failure.error),
+    );
   }
 
   try {
     return schema.parse(input);
   } catch (error) {
-    throw validationError('请求参数校验失败。', normalizeValidationIssues(error));
+    throw validationError(
+      "请求参数校验失败。",
+      normalizeValidationIssues(error),
+    );
   }
 }
 
 function hasSafeParse<T>(schema: SchemaLike<T>): schema is SafeParseSchema<T> {
-  return 'safeParse' in schema && typeof schema.safeParse === 'function';
+  return "safeParse" in schema && typeof schema.safeParse === "function";
 }
 
 function normalizeValidationIssues(error: unknown): ErrorFieldIssue[] {
@@ -53,7 +59,7 @@ function normalizeValidationIssues(error: unknown): ErrorFieldIssue[] {
   if (!Array.isArray(issues)) {
     return [
       {
-        path: '',
+        path: "",
         message: getErrorMessage(error),
       },
     ];
@@ -66,10 +72,10 @@ function normalizeValidationIssues(error: unknown): ErrorFieldIssue[] {
     return {
       path,
       message:
-        typeof record.message === 'string' && record.message.trim().length > 0
+        typeof record.message === "string" && record.message.trim().length > 0
           ? record.message
-          : 'Invalid value.',
-      ...(typeof record.code === 'string' ? { code: record.code } : {}),
+          : "Invalid value.",
+      ...(typeof record.code === "string" ? { code: record.code } : {}),
     };
   });
 }
@@ -79,13 +85,13 @@ function getIssues(error: unknown): unknown {
     return undefined;
   }
 
-  if ('issues' in error) {
+  if ("issues" in error) {
     return error.issues;
   }
 
   const nestedError = error.error;
 
-  if (isRecord(nestedError) && 'issues' in nestedError) {
+  if (isRecord(nestedError) && "issues" in nestedError) {
     return nestedError.issues;
   }
 
@@ -93,29 +99,33 @@ function getIssues(error: unknown): unknown {
 }
 
 function getErrorMessage(error: unknown): string {
-  if (isRecord(error) && typeof error.message === 'string') {
+  if (isRecord(error) && typeof error.message === "string") {
     return error.message;
   }
 
-  if (isRecord(error) && isRecord(error.error) && typeof error.error.message === 'string') {
+  if (
+    isRecord(error) &&
+    isRecord(error.error) &&
+    typeof error.error.message === "string"
+  ) {
     return error.error.message;
   }
 
-  return 'Invalid request.';
+  return "Invalid request.";
 }
 
 function normalizePath(path: unknown): string {
   if (Array.isArray(path)) {
-    return path.map(String).join('.');
+    return path.map(String).join(".");
   }
 
-  if (typeof path === 'string') {
+  if (typeof path === "string") {
     return path;
   }
 
-  return '';
+  return "";
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
+  return typeof value === "object" && value !== null;
 }

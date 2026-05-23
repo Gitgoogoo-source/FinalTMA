@@ -180,11 +180,7 @@ function mapMarketUpdateListingPriceRpcError(error: unknown): ApiError {
   }
 
   if (message.includes("listing is not editable")) {
-    return new ApiError(
-      409,
-      "LISTING_NOT_ACTIVE",
-      "当前挂单状态不可改价。",
-    );
+    return new ApiError(409, "LISTING_NOT_ACTIVE", "当前挂单状态不可改价。");
   }
 
   return new ApiError(

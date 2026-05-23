@@ -497,15 +497,12 @@ export const serverEnvSchema = z
       });
     }
 
-    if (
-      input.ENABLE_CRON_API &&
-      isProductionLike &&
-      !input.CRON_SECRET
-    ) {
+    if (input.ENABLE_CRON_API && isProductionLike && !input.CRON_SECRET) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["CRON_SECRET"],
-        message: "CRON_SECRET is required when cron API is enabled in production.",
+        message:
+          "CRON_SECRET is required when cron API is enabled in production.",
       });
     }
 

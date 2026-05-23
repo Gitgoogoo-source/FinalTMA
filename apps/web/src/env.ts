@@ -143,7 +143,10 @@ function getBrowserOrigin(): string | undefined {
   return location?.origin;
 }
 
-function maskValue(value: string | undefined, visibleChars = 4): string | undefined {
+function maskValue(
+  value: string | undefined,
+  visibleChars = 4,
+): string | undefined {
   if (!value) {
     return undefined;
   }
@@ -251,30 +254,46 @@ const booleanFromEnv = (defaultValue: boolean) =>
     return value;
   }, z.boolean());
 
-const numberFromEnv = (defaultValue: number, options?: { min?: number; max?: number }) =>
-  z.preprocess((value) => {
-    if (isEmptyEnvValue(value)) {
-      return defaultValue;
-    }
-
-    if (typeof value === "number") {
-      return value;
-    }
-
-    if (typeof value === "string") {
-      const parsed = Number(value);
-
-      if (Number.isFinite(parsed)) {
-        return parsed;
+const numberFromEnv = (
+  defaultValue: number,
+  options?: { min?: number; max?: number },
+) =>
+  z.preprocess(
+    (value) => {
+      if (isEmptyEnvValue(value)) {
+        return defaultValue;
       }
-    }
 
-    return value;
-  }, z.number().int().min(options?.min ?? 0).max(options?.max ?? Number.MAX_SAFE_INTEGER));
+      if (typeof value === "number") {
+        return value;
+      }
 
-const appEnvFromEnv = z.preprocess(emptyStringToUndefined, z.enum(APP_ENV_VALUES));
+      if (typeof value === "string") {
+        const parsed = Number(value);
 
-function getTrimmedEnvValue(rawEnv: Record<string, unknown>, key: string): string | undefined {
+        if (Number.isFinite(parsed)) {
+          return parsed;
+        }
+      }
+
+      return value;
+    },
+    z
+      .number()
+      .int()
+      .min(options?.min ?? 0)
+      .max(options?.max ?? Number.MAX_SAFE_INTEGER),
+  );
+
+const appEnvFromEnv = z.preprocess(
+  emptyStringToUndefined,
+  z.enum(APP_ENV_VALUES),
+);
+
+function getTrimmedEnvValue(
+  rawEnv: Record<string, unknown>,
+  key: string,
+): string | undefined {
   const value = rawEnv[key];
 
   if (typeof value !== "string") {
@@ -312,11 +331,7 @@ function normalizeWebEnv(rawEnv: ImportMetaEnv): ImportMetaEnv {
   const normalized = { ...rawEnv } as ImportMetaEnv & Record<string, unknown>;
 
   applyAlias(normalized, "VITE_APP_ENV", "VITE_TMA_ENV");
-  applyAlias(
-    normalized,
-    "VITE_TELEGRAM_BOT_USERNAME",
-    "VITE_TG_BOT_USERNAME",
-  );
+  applyAlias(normalized, "VITE_TELEGRAM_BOT_USERNAME", "VITE_TG_BOT_USERNAME");
 
   return normalized;
 }
@@ -378,7 +393,8 @@ export const webEnvSchema = z
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["VITE_SUPABASE_URL"],
-          message: "Required when VITE_ENABLE_SUPABASE_DIRECT_READS is enabled.",
+          message:
+            "Required when VITE_ENABLE_SUPABASE_DIRECT_READS is enabled.",
         });
       }
 
@@ -386,7 +402,8 @@ export const webEnvSchema = z
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["VITE_SUPABASE_ANON_KEY"],
-          message: "Required when VITE_ENABLE_SUPABASE_DIRECT_READS is enabled.",
+          message:
+            "Required when VITE_ENABLE_SUPABASE_DIRECT_READS is enabled.",
         });
       }
     }

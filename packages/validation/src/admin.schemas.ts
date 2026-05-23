@@ -31,7 +31,10 @@ export const CodeSchema = z
   .trim()
   .min(2)
   .max(80)
-  .regex(/^[a-z][a-z0-9_.:-]*$/, "code 必须以小写字母开头，只能包含小写字母、数字、下划线、点、冒号、短横线");
+  .regex(
+    /^[a-z][a-z0-9_.:-]*$/,
+    "code 必须以小写字母开头，只能包含小写字母、数字、下划线、点、冒号、短横线",
+  );
 
 export const SlugSchema = z
   .string()
@@ -42,7 +45,12 @@ export const SlugSchema = z
 
 export const CursorSchema = z.string().trim().min(1).max(256);
 
-export const PageSizeSchema = z.coerce.number().int().min(1).max(100).default(20);
+export const PageSizeSchema = z.coerce
+  .number()
+  .int()
+  .min(1)
+  .max(100)
+  .default(20);
 
 export const PaginationQuerySchema = z.object({
   cursor: CursorSchema.optional(),
@@ -64,7 +72,10 @@ function csvArray<T extends z.ZodTypeAny>(itemSchema: T, max = 50) {
   return z.preprocess((value) => {
     if (typeof value === "string") {
       if (!value.trim()) return [];
-      return value.split(",").map((item) => item.trim()).filter(Boolean);
+      return value
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
     }
     return value;
   }, z.array(itemSchema).max(max));
@@ -94,7 +105,7 @@ export const WeightSchema = z.coerce.number().positive().max(1_000_000_000);
 
 export const UrlSchema = z.string().url().max(1000);
 
-export const JsonObjectSchema = z.record(z.unknown());
+export const JsonObjectSchema = z.record(z.string(), z.unknown());
 
 /* -------------------------------------------------------------------------- */
 /* 通用枚举                                                                     */
@@ -102,7 +113,13 @@ export const JsonObjectSchema = z.record(z.unknown());
 
 export const CurrencyCodeSchema = z.enum(["KCOIN", "FGEMS", "STAR_DISPLAY"]);
 
-export const RaritySchema = z.enum(["COMMON", "RARE", "EPIC", "LEGENDARY", "MYTHIC"]);
+export const RaritySchema = z.enum([
+  "COMMON",
+  "RARE",
+  "EPIC",
+  "LEGENDARY",
+  "MYTHIC",
+]);
 
 export const ItemTypeSchema = z.enum([
   "CHARACTER",
@@ -114,7 +131,12 @@ export const ItemTypeSchema = z.enum([
   "SKIN",
 ]);
 
-export const UserStatusSchema = z.enum(["ACTIVE", "FROZEN", "BANNED", "DELETED"]);
+export const UserStatusSchema = z.enum([
+  "ACTIVE",
+  "FROZEN",
+  "BANNED",
+  "DELETED",
+]);
 
 export const BoxStatusSchema = z.enum([
   "DRAFT",
@@ -126,7 +148,12 @@ export const BoxStatusSchema = z.enum([
   "ARCHIVED",
 ]);
 
-export const DropPoolStatusSchema = z.enum(["DRAFT", "ACTIVE", "RETIRED", "ARCHIVED"]);
+export const DropPoolStatusSchema = z.enum([
+  "DRAFT",
+  "ACTIVE",
+  "RETIRED",
+  "ARCHIVED",
+]);
 
 export const ListingStatusSchema = z.enum([
   "ACTIVE",
@@ -173,7 +200,12 @@ export const AdminRoleSchema = z.enum([
 
 export const AdminStatusSchema = z.enum(["ACTIVE", "DISABLED", "LOCKED"]);
 
-export const FeatureFlagValueTypeSchema = z.enum(["BOOLEAN", "STRING", "NUMBER", "JSON"]);
+export const FeatureFlagValueTypeSchema = z.enum([
+  "BOOLEAN",
+  "STRING",
+  "NUMBER",
+  "JSON",
+]);
 
 export const BannerPlacementSchema = z.enum([
   "TRADE_BUY_TOP",
@@ -235,9 +267,20 @@ export const TaskActionSchema = z.enum([
   "CUSTOM_EVENT",
 ]);
 
-export const TaskPeriodTypeSchema = z.enum(["NONE", "DAILY", "WEEKLY", "MONTHLY", "CAMPAIGN"]);
+export const TaskPeriodTypeSchema = z.enum([
+  "NONE",
+  "DAILY",
+  "WEEKLY",
+  "MONTHLY",
+  "CAMPAIGN",
+]);
 
-export const RiskEventStatusSchema = z.enum(["OPEN", "REVIEWING", "RESOLVED", "IGNORED"]);
+export const RiskEventStatusSchema = z.enum([
+  "OPEN",
+  "REVIEWING",
+  "RESOLVED",
+  "IGNORED",
+]);
 
 export const RiskSeveritySchema = z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]);
 
@@ -301,7 +344,11 @@ export const AdminRewardsSchema = z.array(AdminRewardSchema).max(30);
 export const AdminLoginBodySchema = z.object({
   email: z.string().trim().email().max(200),
   password: z.string().min(8).max(200),
-  otpCode: z.string().trim().regex(/^\d{6}$/).optional(),
+  otpCode: z
+    .string()
+    .trim()
+    .regex(/^\d{6}$/)
+    .optional(),
 });
 
 export const AdminCreateBodySchema = z.object({
@@ -371,7 +418,13 @@ export const AdminAdjustUserBalanceBodySchema = z.object({
   currency: CurrencyCodeSchema,
   direction: z.enum(["CREDIT", "DEBIT"]),
   amount: PositiveMoneyAmountSchema,
-  sourceType: z.enum(["ADMIN_GRANT", "ADMIN_DEDUCT", "COMPENSATION", "PENALTY", "CORRECTION"]),
+  sourceType: z.enum([
+    "ADMIN_GRANT",
+    "ADMIN_DEDUCT",
+    "COMPENSATION",
+    "PENALTY",
+    "CORRECTION",
+  ]),
   reason: AdminReasonSchema,
   idempotencyKey: IdempotencyKeySchema,
 });
@@ -415,10 +468,11 @@ export const AdminCreateCollectibleBodySchema = z.object({
   reason: AdminReasonSchema,
 });
 
-export const AdminUpdateCollectibleBodySchema = AdminCreateCollectibleBodySchema.partial().extend({
-  templateId: UUIDSchema,
-  reason: AdminReasonSchema,
-});
+export const AdminUpdateCollectibleBodySchema =
+  AdminCreateCollectibleBodySchema.partial().extend({
+    templateId: UUIDSchema,
+    reason: AdminReasonSchema,
+  });
 
 export const AdminListCollectiblesQuerySchema = PaginationQuerySchema.extend({
   q: z.string().trim().min(1).max(120).optional(),
@@ -436,7 +490,12 @@ export const AdminListCollectiblesQuerySchema = PaginationQuerySchema.extend({
 export const AdminBoxPriceRuleSchema = z.object({
   singlePriceStars: z.coerce.number().int().positive().max(1_000_000),
   tenDrawDiscountRate: z.coerce.number().min(0.1).max(1).default(0.9),
-  returnKcoinPerPaidOrder: z.coerce.number().int().min(0).max(1_000_000).default(100),
+  returnKcoinPerPaidOrder: z.coerce
+    .number()
+    .int()
+    .min(0)
+    .max(1_000_000)
+    .default(100),
 });
 
 export const AdminCreateBoxBodySchema = z.object({
@@ -456,10 +515,11 @@ export const AdminCreateBoxBodySchema = z.object({
   reason: AdminReasonSchema,
 });
 
-export const AdminUpdateBoxBodySchema = AdminCreateBoxBodySchema.partial().extend({
-  boxId: UUIDSchema,
-  reason: AdminReasonSchema,
-});
+export const AdminUpdateBoxBodySchema =
+  AdminCreateBoxBodySchema.partial().extend({
+    boxId: UUIDSchema,
+    reason: AdminReasonSchema,
+  });
 
 export const AdminListBoxesQuerySchema = PaginationQuerySchema.extend({
   q: z.string().trim().min(1).max(120).optional(),
@@ -548,7 +608,10 @@ export const AdminListMarketListingsQuerySchema = PaginationQuerySchema.extend({
   rarity: RaritySchema.optional(),
   minPrice: MoneyAmountSchema.optional(),
   maxPrice: MoneyAmountSchema.optional(),
-  sortBy: z.enum(["CREATED_AT", "PRICE", "UPDATED_AT"]).default("CREATED_AT").optional(),
+  sortBy: z
+    .enum(["CREATED_AT", "PRICE", "UPDATED_AT"])
+    .default("CREATED_AT")
+    .optional(),
   sortOrder: SortOrderSchema.default("DESC").optional(),
 });
 
@@ -588,12 +651,14 @@ export const AdminTaskDefinitionBodySchema = z.object({
   reason: AdminReasonSchema,
 });
 
-export const AdminCreateTaskDefinitionBodySchema = AdminTaskDefinitionBodySchema;
+export const AdminCreateTaskDefinitionBodySchema =
+  AdminTaskDefinitionBodySchema;
 
-export const AdminUpdateTaskDefinitionBodySchema = AdminTaskDefinitionBodySchema.partial().extend({
-  taskId: UUIDSchema,
-  reason: AdminReasonSchema,
-});
+export const AdminUpdateTaskDefinitionBodySchema =
+  AdminTaskDefinitionBodySchema.partial().extend({
+    taskId: UUIDSchema,
+    reason: AdminReasonSchema,
+  });
 
 export const AdminListTasksQuerySchema = PaginationQuerySchema.extend({
   q: z.string().trim().min(1).max(120).optional(),
@@ -619,10 +684,11 @@ export const AdminSigninCampaignBodySchema = z.object({
   reason: AdminReasonSchema,
 });
 
-export const AdminUpdateSigninCampaignBodySchema = AdminSigninCampaignBodySchema.partial().extend({
-  campaignId: UUIDSchema,
-  reason: AdminReasonSchema,
-});
+export const AdminUpdateSigninCampaignBodySchema =
+  AdminSigninCampaignBodySchema.partial().extend({
+    campaignId: UUIDSchema,
+    reason: AdminReasonSchema,
+  });
 
 export const AdminReferralCampaignBodySchema = z.object({
   code: CodeSchema,
@@ -655,10 +721,11 @@ export const AdminAlbumBookBodySchema = z.object({
   reason: AdminReasonSchema,
 });
 
-export const AdminUpdateAlbumBookBodySchema = AdminAlbumBookBodySchema.partial().extend({
-  albumBookId: UUIDSchema,
-  reason: AdminReasonSchema,
-});
+export const AdminUpdateAlbumBookBodySchema =
+  AdminAlbumBookBodySchema.partial().extend({
+    albumBookId: UUIDSchema,
+    reason: AdminReasonSchema,
+  });
 
 export const AdminAlbumMilestoneBodySchema = z.object({
   albumBookId: UUIDSchema,
@@ -668,10 +735,11 @@ export const AdminAlbumMilestoneBodySchema = z.object({
   reason: AdminReasonSchema,
 });
 
-export const AdminUpdateAlbumMilestoneBodySchema = AdminAlbumMilestoneBodySchema.partial().extend({
-  milestoneId: UUIDSchema,
-  reason: AdminReasonSchema,
-});
+export const AdminUpdateAlbumMilestoneBodySchema =
+  AdminAlbumMilestoneBodySchema.partial().extend({
+    milestoneId: UUIDSchema,
+    reason: AdminReasonSchema,
+  });
 
 export const AdminLeaderboardRuleBodySchema = z.object({
   code: CodeSchema,
@@ -704,10 +772,11 @@ export const AdminBannerBodySchema = z.object({
   reason: AdminReasonSchema,
 });
 
-export const AdminUpdateBannerBodySchema = AdminBannerBodySchema.partial().extend({
-  bannerId: UUIDSchema,
-  reason: AdminReasonSchema,
-});
+export const AdminUpdateBannerBodySchema =
+  AdminBannerBodySchema.partial().extend({
+    bannerId: UUIDSchema,
+    reason: AdminReasonSchema,
+  });
 
 export const AdminListBannersQuerySchema = PaginationQuerySchema.extend({
   placement: BannerPlacementSchema.optional(),
@@ -729,17 +798,19 @@ export const AdminListPaymentsQuerySchema = PaginationQuerySchema.extend({
   maxStars: MoneyAmountSchema.optional(),
 });
 
-export const AdminRefundStarsPaymentBodySchema = z.object({
-  paymentId: UUIDSchema.optional(),
-  telegramPaymentChargeId: z.string().trim().min(1).max(200).optional(),
-  userId: UUIDSchema,
-  amountStars: PositiveMoneyAmountSchema.optional(),
-  reason: AdminReasonSchema,
-  idempotencyKey: IdempotencyKeySchema,
-}).refine(
-  (value) => Boolean(value.paymentId || value.telegramPaymentChargeId),
-  "paymentId 或 telegramPaymentChargeId 至少提供一个",
-);
+export const AdminRefundStarsPaymentBodySchema = z
+  .object({
+    paymentId: UUIDSchema.optional(),
+    telegramPaymentChargeId: z.string().trim().min(1).max(200).optional(),
+    userId: UUIDSchema,
+    amountStars: PositiveMoneyAmountSchema.optional(),
+    reason: AdminReasonSchema,
+    idempotencyKey: IdempotencyKeySchema,
+  })
+  .refine(
+    (value) => Boolean(value.paymentId || value.telegramPaymentChargeId),
+    "paymentId 或 telegramPaymentChargeId 至少提供一个",
+  );
 
 export const AdminResolvePaymentDisputeBodySchema = z.object({
   disputeId: UUIDSchema,
@@ -762,7 +833,9 @@ export const TonAddressSchema = z
   .min(10)
   .max(128)
   .refine(
-    (value) => RAW_TON_ADDRESS_RE.test(value) || USER_FRIENDLY_TON_ADDRESS_RE.test(value),
+    (value) =>
+      RAW_TON_ADDRESS_RE.test(value) ||
+      USER_FRIENDLY_TON_ADDRESS_RE.test(value),
     "TON 地址格式不正确",
   );
 
@@ -781,10 +854,11 @@ export const AdminNftCollectionBodySchema = z.object({
   reason: AdminReasonSchema,
 });
 
-export const AdminUpdateNftCollectionBodySchema = AdminNftCollectionBodySchema.partial().extend({
-  collectionId: UUIDSchema,
-  reason: AdminReasonSchema,
-});
+export const AdminUpdateNftCollectionBodySchema =
+  AdminNftCollectionBodySchema.partial().extend({
+    collectionId: UUIDSchema,
+    reason: AdminReasonSchema,
+  });
 
 export const AdminListMintQueueQuerySchema = PaginationQuerySchema.extend({
   status: MintQueueStatusSchema.optional(),
@@ -844,7 +918,14 @@ export const AdminListRiskEventsQuerySchema = PaginationQuerySchema.extend({
 export const AdminResolveRiskEventBodySchema = z.object({
   riskEventId: UUIDSchema,
   status: z.enum(["RESOLVED", "IGNORED"]),
-  action: z.enum(["NO_ACTION", "WARN_USER", "FREEZE_USER", "BAN_USER", "LIMIT_MARKET", "LIMIT_GACHA"]),
+  action: z.enum([
+    "NO_ACTION",
+    "WARN_USER",
+    "FREEZE_USER",
+    "BAN_USER",
+    "LIMIT_MARKET",
+    "LIMIT_GACHA",
+  ]),
   reason: AdminReasonSchema,
   idempotencyKey: IdempotencyKeySchema,
 });
@@ -934,62 +1015,128 @@ export type AdminUpdateBody = z.infer<typeof AdminUpdateBodySchema>;
 export type AdminListQuery = z.infer<typeof AdminListQuerySchema>;
 
 export type AdminListUsersQuery = z.infer<typeof AdminListUsersQuerySchema>;
-export type AdminUpdateUserStatusBody = z.infer<typeof AdminUpdateUserStatusBodySchema>;
+export type AdminUpdateUserStatusBody = z.infer<
+  typeof AdminUpdateUserStatusBodySchema
+>;
 export type AdminSetUserFlagBody = z.infer<typeof AdminSetUserFlagBodySchema>;
-export type AdminAdjustUserBalanceBody = z.infer<typeof AdminAdjustUserBalanceBodySchema>;
+export type AdminAdjustUserBalanceBody = z.infer<
+  typeof AdminAdjustUserBalanceBodySchema
+>;
 
-export type AdminCreateCollectibleBody = z.infer<typeof AdminCreateCollectibleBodySchema>;
-export type AdminUpdateCollectibleBody = z.infer<typeof AdminUpdateCollectibleBodySchema>;
-export type AdminListCollectiblesQuery = z.infer<typeof AdminListCollectiblesQuerySchema>;
+export type AdminCreateCollectibleBody = z.infer<
+  typeof AdminCreateCollectibleBodySchema
+>;
+export type AdminUpdateCollectibleBody = z.infer<
+  typeof AdminUpdateCollectibleBodySchema
+>;
+export type AdminListCollectiblesQuery = z.infer<
+  typeof AdminListCollectiblesQuerySchema
+>;
 
 export type AdminCreateBoxBody = z.infer<typeof AdminCreateBoxBodySchema>;
 export type AdminUpdateBoxBody = z.infer<typeof AdminUpdateBoxBodySchema>;
 export type AdminListBoxesQuery = z.infer<typeof AdminListBoxesQuerySchema>;
 
-export type AdminCreateDropPoolVersionBody = z.infer<typeof AdminCreateDropPoolVersionBodySchema>;
-export type AdminUpdateDropPoolVersionBody = z.infer<typeof AdminUpdateDropPoolVersionBodySchema>;
-export type AdminPublishDropPoolVersionBody = z.infer<typeof AdminPublishDropPoolVersionBodySchema>;
-export type AdminListDropPoolsQuery = z.infer<typeof AdminListDropPoolsQuerySchema>;
+export type AdminCreateDropPoolVersionBody = z.infer<
+  typeof AdminCreateDropPoolVersionBodySchema
+>;
+export type AdminUpdateDropPoolVersionBody = z.infer<
+  typeof AdminUpdateDropPoolVersionBodySchema
+>;
+export type AdminPublishDropPoolVersionBody = z.infer<
+  typeof AdminPublishDropPoolVersionBodySchema
+>;
+export type AdminListDropPoolsQuery = z.infer<
+  typeof AdminListDropPoolsQuerySchema
+>;
 
-export type AdminMarketFeeRuleBody = z.infer<typeof AdminMarketFeeRuleBodySchema>;
-export type AdminPriceHealthRuleBody = z.infer<typeof AdminPriceHealthRuleBodySchema>;
-export type AdminListMarketListingsQuery = z.infer<typeof AdminListMarketListingsQuerySchema>;
-export type AdminFreezeListingBody = z.infer<typeof AdminFreezeListingBodySchema>;
-export type AdminCancelListingBody = z.infer<typeof AdminCancelListingBodySchema>;
+export type AdminMarketFeeRuleBody = z.infer<
+  typeof AdminMarketFeeRuleBodySchema
+>;
+export type AdminPriceHealthRuleBody = z.infer<
+  typeof AdminPriceHealthRuleBodySchema
+>;
+export type AdminListMarketListingsQuery = z.infer<
+  typeof AdminListMarketListingsQuerySchema
+>;
+export type AdminFreezeListingBody = z.infer<
+  typeof AdminFreezeListingBodySchema
+>;
+export type AdminCancelListingBody = z.infer<
+  typeof AdminCancelListingBodySchema
+>;
 
-export type AdminCreateTaskDefinitionBody = z.infer<typeof AdminCreateTaskDefinitionBodySchema>;
-export type AdminUpdateTaskDefinitionBody = z.infer<typeof AdminUpdateTaskDefinitionBodySchema>;
+export type AdminCreateTaskDefinitionBody = z.infer<
+  typeof AdminCreateTaskDefinitionBodySchema
+>;
+export type AdminUpdateTaskDefinitionBody = z.infer<
+  typeof AdminUpdateTaskDefinitionBodySchema
+>;
 export type AdminListTasksQuery = z.infer<typeof AdminListTasksQuerySchema>;
-export type AdminSigninCampaignBody = z.infer<typeof AdminSigninCampaignBodySchema>;
-export type AdminUpdateSigninCampaignBody = z.infer<typeof AdminUpdateSigninCampaignBodySchema>;
-export type AdminReferralCampaignBody = z.infer<typeof AdminReferralCampaignBodySchema>;
+export type AdminSigninCampaignBody = z.infer<
+  typeof AdminSigninCampaignBodySchema
+>;
+export type AdminUpdateSigninCampaignBody = z.infer<
+  typeof AdminUpdateSigninCampaignBodySchema
+>;
+export type AdminReferralCampaignBody = z.infer<
+  typeof AdminReferralCampaignBodySchema
+>;
 
 export type AdminAlbumBookBody = z.infer<typeof AdminAlbumBookBodySchema>;
-export type AdminUpdateAlbumBookBody = z.infer<typeof AdminUpdateAlbumBookBodySchema>;
-export type AdminAlbumMilestoneBody = z.infer<typeof AdminAlbumMilestoneBodySchema>;
-export type AdminUpdateAlbumMilestoneBody = z.infer<typeof AdminUpdateAlbumMilestoneBodySchema>;
-export type AdminLeaderboardRuleBody = z.infer<typeof AdminLeaderboardRuleBodySchema>;
+export type AdminUpdateAlbumBookBody = z.infer<
+  typeof AdminUpdateAlbumBookBodySchema
+>;
+export type AdminAlbumMilestoneBody = z.infer<
+  typeof AdminAlbumMilestoneBodySchema
+>;
+export type AdminUpdateAlbumMilestoneBody = z.infer<
+  typeof AdminUpdateAlbumMilestoneBodySchema
+>;
+export type AdminLeaderboardRuleBody = z.infer<
+  typeof AdminLeaderboardRuleBodySchema
+>;
 
 export type AdminBannerBody = z.infer<typeof AdminBannerBodySchema>;
 export type AdminUpdateBannerBody = z.infer<typeof AdminUpdateBannerBodySchema>;
 export type AdminListBannersQuery = z.infer<typeof AdminListBannersQuerySchema>;
 
-export type AdminListPaymentsQuery = z.infer<typeof AdminListPaymentsQuerySchema>;
-export type AdminRefundStarsPaymentBody = z.infer<typeof AdminRefundStarsPaymentBodySchema>;
-export type AdminResolvePaymentDisputeBody = z.infer<typeof AdminResolvePaymentDisputeBodySchema>;
+export type AdminListPaymentsQuery = z.infer<
+  typeof AdminListPaymentsQuerySchema
+>;
+export type AdminRefundStarsPaymentBody = z.infer<
+  typeof AdminRefundStarsPaymentBodySchema
+>;
+export type AdminResolvePaymentDisputeBody = z.infer<
+  typeof AdminResolvePaymentDisputeBodySchema
+>;
 
-export type AdminNftCollectionBody = z.infer<typeof AdminNftCollectionBodySchema>;
-export type AdminUpdateNftCollectionBody = z.infer<typeof AdminUpdateNftCollectionBodySchema>;
-export type AdminListMintQueueQuery = z.infer<typeof AdminListMintQueueQuerySchema>;
+export type AdminNftCollectionBody = z.infer<
+  typeof AdminNftCollectionBodySchema
+>;
+export type AdminUpdateNftCollectionBody = z.infer<
+  typeof AdminUpdateNftCollectionBodySchema
+>;
+export type AdminListMintQueueQuery = z.infer<
+  typeof AdminListMintQueueQuerySchema
+>;
 export type AdminRetryMintBody = z.infer<typeof AdminRetryMintBodySchema>;
 export type AdminCancelMintBody = z.infer<typeof AdminCancelMintBodySchema>;
 
 export type AdminFeatureFlagBody = z.infer<typeof AdminFeatureFlagBodySchema>;
-export type AdminSystemSettingBody = z.infer<typeof AdminSystemSettingBodySchema>;
+export type AdminSystemSettingBody = z.infer<
+  typeof AdminSystemSettingBodySchema
+>;
 
-export type AdminListRiskEventsQuery = z.infer<typeof AdminListRiskEventsQuerySchema>;
-export type AdminResolveRiskEventBody = z.infer<typeof AdminResolveRiskEventBodySchema>;
-export type AdminListAuditLogsQuery = z.infer<typeof AdminListAuditLogsQuerySchema>;
+export type AdminListRiskEventsQuery = z.infer<
+  typeof AdminListRiskEventsQuerySchema
+>;
+export type AdminResolveRiskEventBody = z.infer<
+  typeof AdminResolveRiskEventBodySchema
+>;
+export type AdminListAuditLogsQuery = z.infer<
+  typeof AdminListAuditLogsQuerySchema
+>;
 
 export type AdminBulkActionBody = z.infer<typeof AdminBulkActionBodySchema>;
 export type AdminMutationResponse = z.infer<typeof AdminMutationResponseSchema>;

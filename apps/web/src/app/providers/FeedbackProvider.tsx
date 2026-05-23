@@ -70,11 +70,7 @@ export function FeedbackProvider({ children }: FeedbackProviderProps) {
         aria-relevant="additions text"
       >
         {toasts.map((toast) => (
-          <ResultToast
-            key={toast.id}
-            toast={toast}
-            onDismiss={dismissToast}
-          />
+          <ResultToast key={toast.id} toast={toast} onDismiss={dismissToast} />
         ))}
       </div>
       <RewardModal modal={rewardModal} onClose={closeRewardModal} />

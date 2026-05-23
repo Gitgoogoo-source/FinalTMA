@@ -24,10 +24,7 @@ export function useMarketFilters() {
   const [filters, setFilters] = useState<MarketFiltersState>(DEFAULT_FILTERS);
 
   const updateFilter = useCallback(
-    <Key extends MarketFilterKey>(
-      key: Key,
-      value: MarketFiltersState[Key],
-    ) => {
+    <Key extends MarketFilterKey>(key: Key, value: MarketFiltersState[Key]) => {
       setFilters((current) => ({
         ...current,
         [key]: value,

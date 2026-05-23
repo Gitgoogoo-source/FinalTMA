@@ -22,7 +22,11 @@ export default withApiHandler(
     const session = await requireSession(req);
     const query = validate(MarketStatsQuerySchema, req.query);
 
-    const payload = await callMarketGetStats(query, session.userId, ctx.requestId);
+    const payload = await callMarketGetStats(
+      query,
+      session.userId,
+      ctx.requestId,
+    );
 
     return normalizeMarketStatsPayload(payload);
   },
@@ -136,10 +140,15 @@ function normalizeDepthLevel(level: unknown): Record<string, unknown> {
 }
 
 function invalidMarketStatsResult(details?: unknown): ApiError {
-  return new ApiError(500, "MARKET_STATS_RESULT_INVALID", "市场统计格式无效。", {
-    details,
-    expose: false,
-  });
+  return new ApiError(
+    500,
+    "MARKET_STATS_RESULT_INVALID",
+    "市场统计格式无效。",
+    {
+      details,
+      expose: false,
+    },
+  );
 }
 
 function mapMarketStatsRpcError(error: unknown): ApiError {
@@ -156,7 +165,11 @@ function mapMarketStatsRpcError(error: unknown): ApiError {
   const message = getRpcErrorText(error);
 
   if (message.includes("at least one filter is required")) {
-    return new ApiError(400, "MARKET_STATS_FILTER_REQUIRED", "请选择统计范围。");
+    return new ApiError(
+      400,
+      "MARKET_STATS_FILTER_REQUIRED",
+      "请选择统计范围。",
+    );
   }
 
   return new ApiError(

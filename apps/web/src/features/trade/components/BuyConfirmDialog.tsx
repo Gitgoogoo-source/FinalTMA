@@ -27,10 +27,7 @@ export function BuyConfirmDialog({
     return null;
   }
 
-  const disabledReason = getMarketBuyDisabledReason(
-    listing,
-    balanceAvailable,
-  );
+  const disabledReason = getMarketBuyDisabledReason(listing, balanceAvailable);
   const confirmDisabled = Boolean(disabledReason) || isPending;
 
   return (

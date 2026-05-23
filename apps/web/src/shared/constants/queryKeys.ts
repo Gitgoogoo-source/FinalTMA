@@ -21,8 +21,7 @@ export const queryKeys = {
   trade: {
     root: ["trade"] as const,
     listingsRoot: ["trade", "listings"] as const,
-    listings: (query: unknown = {}) =>
-      ["trade", "listings", query] as const,
+    listings: (query: unknown = {}) => ["trade", "listings", query] as const,
     listingDetailRoot: ["trade", "listing-detail"] as const,
     listingDetail: (listingId: string | null | undefined) =>
       ["trade", "listing-detail", listingId ?? "none"] as const,

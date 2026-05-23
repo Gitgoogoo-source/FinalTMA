@@ -1,6 +1,6 @@
 // packages/validation/src/inventory.schemas.ts
 
-import { z } from 'zod';
+import { z } from "zod";
 
 /**
  * Inventory validation schemas
@@ -26,16 +26,17 @@ const uuidSchema = z.string().trim().uuid();
 const cursorSchema = z
   .string()
   .trim()
-  .min(1, 'cursor cannot be empty')
-  .max(512, 'cursor is too long');
+  .min(1, "cursor cannot be empty")
+  .max(512, "cursor is too long");
 
 const idempotencyKeySchema = z
   .string()
   .trim()
-  .min(16, 'idempotency_key must be at least 16 characters')
-  .max(128, 'idempotency_key is too long')
+  .min(16, "idempotency_key must be at least 16 characters")
+  .max(128, "idempotency_key is too long")
   .regex(/^[a-zA-Z0-9:_-]+$/, {
-    message: 'idempotency_key can only contain letters, numbers, colon, underscore and hyphen',
+    message:
+      "idempotency_key can only contain letters, numbers, colon, underscore and hyphen",
   });
 
 const isoDateTimeSchema = z.string().datetime();
@@ -47,23 +48,23 @@ const nonNegativeIntegerSchema = z.coerce.number().int().min(0);
 const positiveAmountSchema = z.coerce
   .number()
   .int()
-  .min(1, 'amount must be greater than 0')
-  .max(1_000_000_000, 'amount is too large');
+  .min(1, "amount must be greater than 0")
+  .max(1_000_000_000, "amount is too large");
 
 const nonNegativeAmountSchema = z.coerce
   .number()
   .int()
-  .min(0, 'amount cannot be negative')
-  .max(1_000_000_000, 'amount is too large');
+  .min(0, "amount cannot be negative")
+  .max(1_000_000_000, "amount is too large");
 
 const booleanFromQuerySchema = z.preprocess((value) => {
-  if (typeof value === 'boolean') return value;
+  if (typeof value === "boolean") return value;
 
-  if (typeof value === 'string') {
+  if (typeof value === "string") {
     const normalized = value.trim().toLowerCase();
 
-    if (['true', '1', 'yes', 'y', 'on'].includes(normalized)) return true;
-    if (['false', '0', 'no', 'n', 'off'].includes(normalized)) return false;
+    if (["true", "1", "yes", "y", "on"].includes(normalized)) return true;
+    if (["false", "0", "no", "n", "off"].includes(normalized)) return false;
   }
 
   return value;
@@ -72,18 +73,21 @@ const booleanFromQuerySchema = z.preprocess((value) => {
 const csvArraySchema = <T extends z.ZodTypeAny>(itemSchema: T, max = 20) =>
   z
     .preprocess((value) => {
-      if (value === undefined || value === null || value === '') return undefined;
+      if (value === undefined || value === null || value === "")
+        return undefined;
 
       if (Array.isArray(value)) {
         return value
-          .flatMap((item) => (typeof item === 'string' ? item.split(',') : [item]))
-          .map((item) => (typeof item === 'string' ? item.trim() : item))
-          .filter((item) => item !== '');
+          .flatMap((item) =>
+            typeof item === "string" ? item.split(",") : [item],
+          )
+          .map((item) => (typeof item === "string" ? item.trim() : item))
+          .filter((item) => item !== "");
       }
 
-      if (typeof value === 'string') {
+      if (typeof value === "string") {
         return value
-          .split(',')
+          .split(",")
           .map((item) => item.trim())
           .filter(Boolean);
       }
@@ -92,10 +96,14 @@ const csvArraySchema = <T extends z.ZodTypeAny>(itemSchema: T, max = 20) =>
     }, z.array(itemSchema).max(max))
     .optional();
 
-const uniqueUuidArraySchema = (options?: { min?: number; max?: number; fieldName?: string }) => {
+const uniqueUuidArraySchema = (options?: {
+  min?: number;
+  max?: number;
+  fieldName?: string;
+}) => {
   const min = options?.min ?? 1;
   const max = options?.max ?? 100;
-  const fieldName = options?.fieldName ?? 'ids';
+  const fieldName = options?.fieldName ?? "ids";
 
   return z
     .array(uuidSchema)
@@ -118,77 +126,77 @@ const uniqueUuidArraySchema = (options?: { min?: number; max?: number; fieldName
     });
 };
 
-export const InventoryCurrencySchema = z.enum(['KCOIN', 'FGEMS']);
+export const InventoryCurrencySchema = z.enum(["KCOIN", "FGEMS"]);
 
 export const InventoryRarityCodeSchema = z.enum([
-  'common',
-  'rare',
-  'epic',
-  'legendary',
-  'mythic',
+  "common",
+  "rare",
+  "epic",
+  "legendary",
+  "mythic",
 ]);
 
 export const InventoryItemTypeSchema = z.enum([
-  'character',
-  'pet',
-  'egg',
-  'decoration',
-  'prop',
-  'material',
+  "character",
+  "pet",
+  "egg",
+  "decoration",
+  "prop",
+  "material",
 ]);
 
 export const InventoryItemStatusSchema = z.enum([
-  'available',
-  'locked',
-  'listed',
-  'consumed',
-  'decomposed',
-  'minting',
-  'minted',
-  'transferred',
-  'burned',
+  "available",
+  "locked",
+  "listed",
+  "consumed",
+  "decomposed",
+  "minting",
+  "minted",
+  "transferred",
+  "burned",
 ]);
 
 export const InventoryLockReasonSchema = z.enum([
-  'market_listing',
-  'market_order',
-  'evolution',
-  'decompose',
-  'upgrade',
-  'mint',
-  'admin',
+  "market_listing",
+  "market_order",
+  "evolution",
+  "decompose",
+  "upgrade",
+  "mint",
+  "admin",
 ]);
 
 export const InventoryActivityTypeSchema = z.enum([
-  'obtained_by_gacha',
-  'obtained_by_market',
-  'obtained_by_admin',
-  'listed',
-  'listing_cancelled',
-  'sold',
-  'bought',
-  'upgraded',
-  'evolved_success',
-  'evolved_failed_returned',
-  'consumed_by_evolution',
-  'decomposed',
-  'mint_requested',
-  'minted',
-  'transferred_onchain',
-  'admin_adjusted',
+  "obtained_by_gacha",
+  "obtained_by_market",
+  "obtained_by_admin",
+  "listed",
+  "listing_cancelled",
+  "sold",
+  "bought",
+  "upgraded",
+  "evolved_success",
+  "evolved_failed_returned",
+  "consumed_by_evolution",
+  "decomposed",
+  "mint_requested",
+  "minted",
+  "transferred_onchain",
+  "admin_adjusted",
 ]);
 
 export const InventorySortSchema = z.enum([
-  'recently_obtained',
-  'oldest_obtained',
-  'rarity_desc',
-  'rarity_asc',
-  'level_desc',
-  'level_asc',
-  'power_desc',
-  'power_asc',
-  'name_asc',
-  'name_desc',
+  "recently_obtained",
+  "oldest_obtained",
+  "rarity_desc",
+  "rarity_asc",
+  "level_desc",
+  "level_asc",
+  "power_desc",
+  "power_asc",
+  "name_asc",
+  "name_desc",
 ]);
 
 export const InventoryItemIdParamSchema = z
@@ -222,7 +230,7 @@ export const InventoryListQuerySchema = z
     min_power: z.coerce.number().int().min(0).max(1_000_000).optional(),
     max_power: z.coerce.number().int().min(0).max(1_000_000).optional(),
 
-    sort: InventorySortSchema.default('recently_obtained'),
+    sort: InventorySortSchema.default("recently_obtained"),
 
     cursor: cursorSchema.optional(),
     limit: z.coerce.number().int().min(1).max(100).default(40),
@@ -236,8 +244,8 @@ export const InventoryListQuerySchema = z
     ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ['min_level'],
-        message: 'min_level cannot be greater than max_level',
+        path: ["min_level"],
+        message: "min_level cannot be greater than max_level",
       });
     }
 
@@ -248,8 +256,8 @@ export const InventoryListQuerySchema = z
     ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ['min_power'],
-        message: 'min_power cannot be greater than max_power',
+        path: ["min_power"],
+        message: "min_power cannot be greater than max_power",
       });
     }
   });
@@ -301,7 +309,7 @@ export const InventoryEvolvePreviewQuerySchema = z
     source_item_instance_ids: uniqueUuidArraySchema({
       min: 3,
       max: 3,
-      fieldName: 'source_item_instance_ids',
+      fieldName: "source_item_instance_ids",
     }),
 
     target_form_id: uuidSchema.optional(),
@@ -321,7 +329,7 @@ export const InventoryEvolveItemBodySchema = z
     source_item_instance_ids: uniqueUuidArraySchema({
       min: 3,
       max: 3,
-      fieldName: 'source_item_instance_ids',
+      fieldName: "source_item_instance_ids",
     }),
 
     /**
@@ -341,7 +349,12 @@ export const InventoryEvolveItemBodySchema = z
      * 前端预期成功率。
      * 只用于防止配置过期，不作为真实概率来源。
      */
-    expected_success_rate_bps: z.coerce.number().int().min(0).max(10_000).optional(),
+    expected_success_rate_bps: z.coerce
+      .number()
+      .int()
+      .min(0)
+      .max(10_000)
+      .optional(),
 
     /**
      * 前端期望失败后保留的主藏品。
@@ -355,12 +368,15 @@ export const InventoryEvolveItemBodySchema = z
   .superRefine((data, ctx) => {
     if (
       data.expected_return_item_instance_id &&
-      !data.source_item_instance_ids.includes(data.expected_return_item_instance_id)
+      !data.source_item_instance_ids.includes(
+        data.expected_return_item_instance_id,
+      )
     ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ['expected_return_item_instance_id'],
-        message: 'expected_return_item_instance_id must be one of source_item_instance_ids',
+        path: ["expected_return_item_instance_id"],
+        message:
+          "expected_return_item_instance_id must be one of source_item_instance_ids",
       });
     }
   });
@@ -370,7 +386,7 @@ export const InventoryDecomposePreviewQuerySchema = z
     item_instance_ids: uniqueUuidArraySchema({
       min: 1,
       max: 100,
-      fieldName: 'item_instance_ids',
+      fieldName: "item_instance_ids",
     }),
   })
   .strict();
@@ -380,7 +396,7 @@ export const InventoryDecomposeItemBodySchema = z
     item_instance_ids: uniqueUuidArraySchema({
       min: 1,
       max: 100,
-      fieldName: 'item_instance_ids',
+      fieldName: "item_instance_ids",
     }),
 
     /**
@@ -398,12 +414,12 @@ export const InventorySellEntryBodySchema = z
     item_instance_ids: uniqueUuidArraySchema({
       min: 1,
       max: 100,
-      fieldName: 'item_instance_ids',
+      fieldName: "item_instance_ids",
     }),
 
     unit_price: positiveAmountSchema,
 
-    currency: z.literal('KCOIN').default('KCOIN'),
+    currency: z.literal("KCOIN").default("KCOIN"),
 
     allow_partial_fill: z.boolean().default(false),
 
@@ -419,8 +435,8 @@ export const InventorySellEntryBodySchema = z
       if (Number.isNaN(expiresAtMs)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          path: ['expires_at'],
-          message: 'expires_at must be a valid ISO datetime',
+          path: ["expires_at"],
+          message: "expires_at must be a valid ISO datetime",
         });
 
         return;
@@ -429,8 +445,8 @@ export const InventorySellEntryBodySchema = z
       if (expiresAtMs <= Date.now()) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          path: ['expires_at'],
-          message: 'expires_at must be in the future',
+          path: ["expires_at"],
+          message: "expires_at must be in the future",
         });
       }
     }
@@ -456,8 +472,8 @@ export const InventoryCancelSellBodySchema = z
     if (!data.listing_id && !data.item_instance_id) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ['listing_id'],
-        message: 'listing_id or item_instance_id is required',
+        path: ["listing_id"],
+        message: "listing_id or item_instance_id is required",
       });
     }
   });
@@ -484,8 +500,8 @@ export const InventoryActivityQuerySchema = z
       if (from > to) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          path: ['from_at'],
-          message: 'from_at cannot be later than to_at',
+          path: ["from_at"],
+          message: "from_at cannot be later than to_at",
         });
       }
     }
@@ -546,14 +562,16 @@ export const InventoryItemDtoSchema = z
 export const InventoryItemDetailDtoSchema = InventoryItemDtoSchema.extend({
   base_power: z.number().int().min(0).optional(),
 
-  attributes: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).optional(),
+  attributes: z
+    .record(z.string(), z.union([z.string(), z.number(), z.boolean()]))
+    .optional(),
 
   market_status: z
     .object({
       is_listed: z.boolean(),
       listing_id: uuidSchema.nullable(),
       unit_price: nonNegativeAmountSchema.nullable(),
-      currency: z.literal('KCOIN').nullable(),
+      currency: z.literal("KCOIN").nullable(),
     })
     .strict()
     .optional(),
@@ -592,7 +610,9 @@ export const InventoryItemDetailDtoSchema = InventoryItemDtoSchema.extend({
   onchain_status: z
     .object({
       is_minted: z.boolean(),
-      mint_status: z.enum(['none', 'queued', 'processing', 'minted', 'failed']).default('none'),
+      mint_status: z
+        .enum(["none", "queued", "processing", "minted", "failed"])
+        .default("none"),
       nft_item_address: z.string().nullable(),
       owner_wallet_address: z.string().nullable(),
     })
@@ -630,7 +650,7 @@ export const InventoryUpgradeItemResponseSchema = z
   })
   .strict();
 
-export const InventoryEvolveResultSchema = z.enum(['success', 'failed']);
+export const InventoryEvolveResultSchema = z.enum(["success", "failed"]);
 
 export const InventoryEvolveItemResponseSchema = z
   .object({
@@ -698,31 +718,65 @@ export type InventorySort = z.infer<typeof InventorySortSchema>;
 export type InventoryListQueryInput = z.input<typeof InventoryListQuerySchema>;
 export type InventoryListQuery = z.output<typeof InventoryListQuerySchema>;
 
-export type InventoryDetailQueryInput = z.input<typeof InventoryDetailQuerySchema>;
+export type InventoryDetailQueryInput = z.input<
+  typeof InventoryDetailQuerySchema
+>;
 export type InventoryDetailQuery = z.output<typeof InventoryDetailQuerySchema>;
 
-export type InventoryUpgradeItemBodyInput = z.input<typeof InventoryUpgradeItemBodySchema>;
-export type InventoryUpgradeItemBody = z.output<typeof InventoryUpgradeItemBodySchema>;
+export type InventoryUpgradeItemBodyInput = z.input<
+  typeof InventoryUpgradeItemBodySchema
+>;
+export type InventoryUpgradeItemBody = z.output<
+  typeof InventoryUpgradeItemBodySchema
+>;
 
-export type InventoryEvolveItemBodyInput = z.input<typeof InventoryEvolveItemBodySchema>;
-export type InventoryEvolveItemBody = z.output<typeof InventoryEvolveItemBodySchema>;
+export type InventoryEvolveItemBodyInput = z.input<
+  typeof InventoryEvolveItemBodySchema
+>;
+export type InventoryEvolveItemBody = z.output<
+  typeof InventoryEvolveItemBodySchema
+>;
 
-export type InventoryDecomposeItemBodyInput = z.input<typeof InventoryDecomposeItemBodySchema>;
-export type InventoryDecomposeItemBody = z.output<typeof InventoryDecomposeItemBodySchema>;
+export type InventoryDecomposeItemBodyInput = z.input<
+  typeof InventoryDecomposeItemBodySchema
+>;
+export type InventoryDecomposeItemBody = z.output<
+  typeof InventoryDecomposeItemBodySchema
+>;
 
-export type InventorySellEntryBodyInput = z.input<typeof InventorySellEntryBodySchema>;
-export type InventorySellEntryBody = z.output<typeof InventorySellEntryBodySchema>;
+export type InventorySellEntryBodyInput = z.input<
+  typeof InventorySellEntryBodySchema
+>;
+export type InventorySellEntryBody = z.output<
+  typeof InventorySellEntryBodySchema
+>;
 
-export type InventoryCancelSellBodyInput = z.input<typeof InventoryCancelSellBodySchema>;
-export type InventoryCancelSellBody = z.output<typeof InventoryCancelSellBodySchema>;
+export type InventoryCancelSellBodyInput = z.input<
+  typeof InventoryCancelSellBodySchema
+>;
+export type InventoryCancelSellBody = z.output<
+  typeof InventoryCancelSellBodySchema
+>;
 
-export type InventoryActivityQueryInput = z.input<typeof InventoryActivityQuerySchema>;
-export type InventoryActivityQuery = z.output<typeof InventoryActivityQuerySchema>;
+export type InventoryActivityQueryInput = z.input<
+  typeof InventoryActivityQuerySchema
+>;
+export type InventoryActivityQuery = z.output<
+  typeof InventoryActivityQuerySchema
+>;
 
 export type InventoryItemDto = z.infer<typeof InventoryItemDtoSchema>;
-export type InventoryItemDetailDto = z.infer<typeof InventoryItemDetailDtoSchema>;
+export type InventoryItemDetailDto = z.infer<
+  typeof InventoryItemDetailDtoSchema
+>;
 export type InventoryListResponse = z.infer<typeof InventoryListResponseSchema>;
-export type InventoryUpgradeItemResponse = z.infer<typeof InventoryUpgradeItemResponseSchema>;
-export type InventoryEvolveItemResponse = z.infer<typeof InventoryEvolveItemResponseSchema>;
-export type InventoryDecomposeItemResponse = z.infer<typeof InventoryDecomposeItemResponseSchema>;
+export type InventoryUpgradeItemResponse = z.infer<
+  typeof InventoryUpgradeItemResponseSchema
+>;
+export type InventoryEvolveItemResponse = z.infer<
+  typeof InventoryEvolveItemResponseSchema
+>;
+export type InventoryDecomposeItemResponse = z.infer<
+  typeof InventoryDecomposeItemResponseSchema
+>;
 export type InventoryActivityDto = z.infer<typeof InventoryActivityDtoSchema>;

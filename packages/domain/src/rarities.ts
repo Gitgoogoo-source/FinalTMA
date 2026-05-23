@@ -10,7 +10,7 @@ export const RARITY = {
   COMMON: "COMMON",
   RARE: "RARE",
   EPIC: "EPIC",
-  LEGENDARY: "LEGENDARY"
+  LEGENDARY: "LEGENDARY",
 } as const;
 
 export type RarityCode = (typeof RARITY)[keyof typeof RARITY];
@@ -56,7 +56,7 @@ export const RARITY_META = {
     badgeToken: "badge-rarity-common",
     defaultCanBePityTarget: false,
     defaultCanScoreInLeaderboard: false,
-    description: "基础稀有度，常见藏品。"
+    description: "基础稀有度，常见藏品。",
   },
 
   [RARITY.RARE]: {
@@ -71,7 +71,7 @@ export const RARITY_META = {
     badgeToken: "badge-rarity-rare",
     defaultCanBePityTarget: false,
     defaultCanScoreInLeaderboard: true,
-    description: "较低概率获得的藏品。"
+    description: "较低概率获得的藏品。",
   },
 
   [RARITY.EPIC]: {
@@ -86,7 +86,7 @@ export const RARITY_META = {
     badgeToken: "badge-rarity-epic",
     defaultCanBePityTarget: true,
     defaultCanScoreInLeaderboard: true,
-    description: "高价值藏品，通常用于保底、市场交易和图鉴榜加分。"
+    description: "高价值藏品，通常用于保底、市场交易和图鉴榜加分。",
   },
 
   [RARITY.LEGENDARY]: {
@@ -101,14 +101,14 @@ export const RARITY_META = {
     badgeToken: "badge-rarity-legendary",
     defaultCanBePityTarget: true,
     defaultCanScoreInLeaderboard: true,
-    description: "最高常规稀有度，通常具有更高收藏价值、交易价值和排行榜权重。"
-  }
+    description: "最高常规稀有度，通常具有更高收藏价值、交易价值和排行榜权重。",
+  },
 } as const satisfies Record<RarityCode, RarityMeta>;
 
 export const RARITY_CODES = Object.values(RARITY) as RarityCode[];
 
 export const RARITY_CODES_BY_ASC = [...RARITY_CODES].sort(
-  (a, b) => RARITY_META[a].sortOrder - RARITY_META[b].sortOrder
+  (a, b) => RARITY_META[a].sortOrder - RARITY_META[b].sortOrder,
 );
 
 export const RARITY_CODES_BY_DESC = [...RARITY_CODES_BY_ASC].reverse();
@@ -132,7 +132,7 @@ export function getRarityMeta(code: RarityCode): RarityMeta {
 
 export function getRarityDisplayName(
   code: RarityCode,
-  locale: "zh-CN" | "en-US" = "zh-CN"
+  locale: "zh-CN" | "en-US" = "zh-CN",
 ): string {
   const meta = getRarityMeta(code);
   return locale === "en-US" ? meta.displayNameEn : meta.displayNameCn;
@@ -148,7 +148,7 @@ export function compareRarity(a: RarityCode, b: RarityCode): number {
 
 export function sortRarityCodes(
   codes: readonly RarityCode[],
-  direction: "asc" | "desc" = "asc"
+  direction: "asc" | "desc" = "asc",
 ): RarityCode[] {
   const sorted = [...codes].sort(compareRarity);
   return direction === "desc" ? sorted.reverse() : sorted;

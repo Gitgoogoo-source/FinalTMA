@@ -10,7 +10,7 @@
 export const CURRENCY = {
   KCOIN: "KCOIN",
   FGEMS: "FGEMS",
-  STAR_DISPLAY: "STAR_DISPLAY"
+  STAR_DISPLAY: "STAR_DISPLAY",
 } as const;
 
 export type CurrencyCode = (typeof CURRENCY)[keyof typeof CURRENCY];
@@ -78,7 +78,7 @@ export const CURRENCY_META = {
     canBeSpentByGame: true,
     isExternalPaymentCurrency: false,
     description:
-      "游戏内主要积分，用于市场购买藏品、合成进化、任务奖励、邀请奖励等。"
+      "游戏内主要积分，用于市场购买藏品、合成进化、任务奖励、邀请奖励等。",
   },
 
   [CURRENCY.FGEMS]: {
@@ -97,7 +97,7 @@ export const CURRENCY_META = {
     canBeSpentByGame: true,
     isExternalPaymentCurrency: false,
     description:
-      "游戏内强化材料积分，主要用于藏品升级，也可由分解重复藏品获得。"
+      "游戏内强化材料积分，主要用于藏品升级，也可由分解重复藏品获得。",
   },
 
   [CURRENCY.STAR_DISPLAY]: {
@@ -116,18 +116,18 @@ export const CURRENCY_META = {
     canBeSpentByGame: false,
     isExternalPaymentCurrency: true,
     description:
-      "Telegram Stars 支付展示币种。真实扣款、支付状态、开盒发货必须以 Telegram 支付回调和后端订单为准。"
-  }
+      "Telegram Stars 支付展示币种。真实扣款、支付状态、开盒发货必须以 Telegram 支付回调和后端订单为准。",
+  },
 } as const satisfies Record<CurrencyCode, CurrencyMeta>;
 
 export const CURRENCY_CODES = Object.values(CURRENCY) as CurrencyCode[];
 
 export const INTERNAL_LEDGER_CURRENCY_CODES = CURRENCY_CODES.filter(
-  (code) => CURRENCY_META[code].isInternalLedgerCurrency
+  (code) => CURRENCY_META[code].isInternalLedgerCurrency,
 );
 
 export const TOP_BAR_CURRENCY_CODES = CURRENCY_CODES.filter(
-  (code) => CURRENCY_META[code].isTopBarVisible
+  (code) => CURRENCY_META[code].isTopBarVisible,
 );
 
 export function isCurrencyCode(value: unknown): value is CurrencyCode {
@@ -137,7 +137,9 @@ export function isCurrencyCode(value: unknown): value is CurrencyCode {
   );
 }
 
-export function assertCurrencyCode(value: unknown): asserts value is CurrencyCode {
+export function assertCurrencyCode(
+  value: unknown,
+): asserts value is CurrencyCode {
   if (!isCurrencyCode(value)) {
     throw new Error(`Invalid currency code: ${String(value)}`);
   }
@@ -149,7 +151,7 @@ export function getCurrencyMeta(code: CurrencyCode): CurrencyMeta {
 
 export function getCurrencyDisplayName(
   code: CurrencyCode,
-  locale: "zh-CN" | "en-US" = "zh-CN"
+  locale: "zh-CN" | "en-US" = "zh-CN",
 ): string {
   const meta = getCurrencyMeta(code);
   return locale === "en-US" ? meta.displayNameEn : meta.displayNameCn;

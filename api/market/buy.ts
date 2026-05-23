@@ -189,11 +189,7 @@ function mapMarketBuyListingRpcError(error: unknown): ApiError {
   }
 
   if (message.includes("buyer cannot buy own listing")) {
-    return new ApiError(
-      409,
-      "CANNOT_BUY_OWN_LISTING",
-      "不能购买自己的挂单。",
-    );
+    return new ApiError(409, "CANNOT_BUY_OWN_LISTING", "不能购买自己的挂单。");
   }
 
   if (message.includes("insufficient balance")) {

@@ -102,11 +102,7 @@ export function ListingStatsPanel({
 
       <dl className="listing-stats-panel__grid">
         {metrics.map((metric) => (
-          <StatCard
-            isLoading={isLoading}
-            key={metric.key}
-            metric={metric}
-          />
+          <StatCard isLoading={isLoading} key={metric.key} metric={metric} />
         ))}
       </dl>
     </section>

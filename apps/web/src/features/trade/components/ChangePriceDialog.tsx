@@ -256,10 +256,7 @@ function estimateNetAmount(listing: MyListing, newUnitPriceKcoin: number) {
     return null;
   }
 
-  const currentFee = Math.max(
-    currentGross - listing.expectedNetAmountKcoin,
-    0,
-  );
+  const currentFee = Math.max(currentGross - listing.expectedNetAmountKcoin, 0);
   const inferredFeeBps = Math.min(
     Math.max(Math.round((currentFee * 10_000) / currentGross), 0),
     10_000,

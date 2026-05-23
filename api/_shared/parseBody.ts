@@ -1,7 +1,7 @@
 // api/shared/parseBody.ts
 
-import type { VercelRequest } from '@vercel/node';
-import { badRequest, payloadTooLarge, unsupportedMediaType } from './errors.js';
+import type { VercelRequest } from "@vercel/node";
+import { badRequest, payloadTooLarge, unsupportedMediaType } from "./errors.js";
 
 export type ParseBodyOptions = {
   maxBytes?: number;
@@ -18,17 +18,20 @@ export type ParsedBody<T = unknown> = {
 const DEFAULT_MAX_BYTES = 1024 * 1024;
 
 function getContentType(req: VercelRequest): string {
-  const header = req.headers['content-type'];
+  const header = req.headers["content-type"];
 
   if (!header) {
-    return '';
+    return "";
   }
 
   const value = Array.isArray(header) ? header[0] : header;
-  return value.split(';')[0]?.trim().toLowerCase() ?? '';
+  return value.split(";")[0]?.trim().toLowerCase() ?? "";
 }
 
-function isAllowedContentType(contentType: string, allowedContentTypes: string[]): boolean {
+function isAllowedContentType(
+  contentType: string,
+  allowedContentTypes: string[],
+): boolean {
   if (allowedContentTypes.length === 0) {
     return true;
   }
@@ -36,8 +39,8 @@ function isAllowedContentType(contentType: string, allowedContentTypes: string[]
   return allowedContentTypes.some((allowed) => {
     const normalizedAllowed = allowed.toLowerCase();
 
-    if (normalizedAllowed.endsWith('/*')) {
-      const prefix = normalizedAllowed.replace('/*', '/');
+    if (normalizedAllowed.endsWith("/*")) {
+      const prefix = normalizedAllowed.replace("/*", "/");
       return contentType.startsWith(prefix);
     }
 
@@ -46,7 +49,7 @@ function isAllowedContentType(contentType: string, allowedContentTypes: string[]
 }
 
 function byteLength(value: string): number {
-  return Buffer.byteLength(value, 'utf8');
+  return Buffer.byteLength(value, "utf8");
 }
 
 function bodyFromAlreadyParsedRequestBody(body: unknown): string | null {
@@ -54,15 +57,15 @@ function bodyFromAlreadyParsedRequestBody(body: unknown): string | null {
     return null;
   }
 
-  if (typeof body === 'string') {
+  if (typeof body === "string") {
     return body;
   }
 
   if (Buffer.isBuffer(body)) {
-    return body.toString('utf8');
+    return body.toString("utf8");
   }
 
-  if (typeof body === 'object') {
+  if (typeof body === "object") {
     return JSON.stringify(body);
   }
 
@@ -71,7 +74,7 @@ function bodyFromAlreadyParsedRequestBody(body: unknown): string | null {
 
 export async function readRawBody(
   req: VercelRequest,
-  options: Pick<ParseBodyOptions, 'maxBytes'> = {},
+  options: Pick<ParseBodyOptions, "maxBytes"> = {},
 ): Promise<string> {
   const maxBytes = options.maxBytes ?? DEFAULT_MAX_BYTES;
 
@@ -90,7 +93,7 @@ export async function readRawBody(
     const chunks: Buffer[] = [];
     let totalBytes = 0;
 
-    req.on('data', (chunk: Buffer | string) => {
+    req.on("data", (chunk: Buffer | string) => {
       const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
       totalBytes += buffer.length;
 
@@ -108,13 +111,13 @@ export async function readRawBody(
       chunks.push(buffer);
     });
 
-    req.on('end', () => {
-      resolve(Buffer.concat(chunks).toString('utf8'));
+    req.on("end", () => {
+      resolve(Buffer.concat(chunks).toString("utf8"));
     });
 
-    req.on('error', (error) => {
+    req.on("error", (error) => {
       reject(
-        badRequest('Failed to read request body', {
+        badRequest("Failed to read request body", {
           message: error.message,
         }),
       );
@@ -126,11 +129,13 @@ function parseJson(rawBody: string): unknown {
   try {
     return JSON.parse(rawBody);
   } catch {
-    throw badRequest('Invalid JSON request body');
+    throw badRequest("Invalid JSON request body");
   }
 }
 
-function parseFormUrlEncoded(rawBody: string): Record<string, string | string[]> {
+function parseFormUrlEncoded(
+  rawBody: string,
+): Record<string, string | string[]> {
   const params = new URLSearchParams(rawBody);
   const result: Record<string, string | string[]> = {};
 
@@ -156,9 +161,9 @@ export async function parseBody<T = unknown>(
   const maxBytes = options.maxBytes ?? DEFAULT_MAX_BYTES;
   const allowEmpty = options.allowEmpty ?? false;
   const allowedContentTypes = options.allowedContentTypes ?? [
-    'application/json',
-    'application/x-www-form-urlencoded',
-    'text/plain',
+    "application/json",
+    "application/x-www-form-urlencoded",
+    "text/plain",
   ];
 
   const contentType = getContentType(req);
@@ -181,16 +186,16 @@ export async function parseBody<T = unknown>(
       };
     }
 
-    throw badRequest('Request body is required');
+    throw badRequest("Request body is required");
   }
 
   let body: unknown;
 
-  if (!contentType || contentType === 'application/json') {
+  if (!contentType || contentType === "application/json") {
     body = parseJson(rawBody);
-  } else if (contentType === 'application/x-www-form-urlencoded') {
+  } else if (contentType === "application/x-www-form-urlencoded") {
     body = parseFormUrlEncoded(rawBody);
-  } else if (contentType === 'text/plain') {
+  } else if (contentType === "text/plain") {
     body = rawBody;
   } else {
     throw unsupportedMediaType(`Unsupported content type: ${contentType}`, {
@@ -208,11 +213,11 @@ export async function parseBody<T = unknown>(
 
 export async function parseJsonBody<T = unknown>(
   req: VercelRequest,
-  options: Omit<ParseBodyOptions, 'allowedContentTypes'> = {},
+  options: Omit<ParseBodyOptions, "allowedContentTypes"> = {},
 ): Promise<T> {
   const parsed = await parseBody<T>(req, {
     ...options,
-    allowedContentTypes: ['application/json'],
+    allowedContentTypes: ["application/json"],
   });
 
   return parsed.body;
@@ -220,12 +225,12 @@ export async function parseJsonBody<T = unknown>(
 
 export async function parseOptionalJsonBody<T = unknown>(
   req: VercelRequest,
-  options: Omit<ParseBodyOptions, 'allowedContentTypes' | 'allowEmpty'> = {},
+  options: Omit<ParseBodyOptions, "allowedContentTypes" | "allowEmpty"> = {},
 ): Promise<T | undefined> {
   const parsed = await parseBody<T | undefined>(req, {
     ...options,
     allowEmpty: true,
-    allowedContentTypes: ['application/json'],
+    allowedContentTypes: ["application/json"],
   });
 
   return parsed.body;

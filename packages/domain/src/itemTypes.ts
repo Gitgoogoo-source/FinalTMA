@@ -11,16 +11,12 @@ export const ITEM_TYPE = {
   PET: "PET",
   EGG: "EGG",
   DECORATION: "DECORATION",
-  PROP: "PROP"
+  PROP: "PROP",
 } as const;
 
 export type ItemTypeCode = (typeof ITEM_TYPE)[keyof typeof ITEM_TYPE];
 
-export type ItemTypeCategory =
-  | "collectible"
-  | "box"
-  | "cosmetic"
-  | "utility";
+export type ItemTypeCategory = "collectible" | "box" | "cosmetic" | "utility";
 
 export interface ItemTypeMeta {
   code: ItemTypeCode;
@@ -91,7 +87,7 @@ export const ITEM_TYPE_META = {
     defaultCanBeDecomposed: true,
     defaultCanBeMinted: true,
     description:
-      "主要收藏对象，支持展示、升级、合成进化、市场交易、图鉴收集和链上 Mint。"
+      "主要收藏对象，支持展示、升级、合成进化、市场交易、图鉴收集和链上 Mint。",
   },
 
   [ITEM_TYPE.PET]: {
@@ -110,7 +106,7 @@ export const ITEM_TYPE_META = {
     defaultCanBeDecomposed: true,
     defaultCanBeMinted: true,
     description:
-      "可收藏的宠物类型藏品，可用于图鉴、市场交易、升级和链上 Mint。"
+      "可收藏的宠物类型藏品，可用于图鉴、市场交易、升级和链上 Mint。",
   },
 
   [ITEM_TYPE.EGG]: {
@@ -129,7 +125,7 @@ export const ITEM_TYPE_META = {
     defaultCanBeDecomposed: false,
     defaultCanBeMinted: false,
     description:
-      "盲盒或开盒入口类型，通常用于支付开盒展示，不作为普通藏品实例进入库存。"
+      "盲盒或开盒入口类型，通常用于支付开盒展示，不作为普通藏品实例进入库存。",
   },
 
   [ITEM_TYPE.DECORATION]: {
@@ -148,7 +144,7 @@ export const ITEM_TYPE_META = {
     defaultCanBeDecomposed: true,
     defaultCanBeMinted: true,
     description:
-      "装饰类藏品，可用于图鉴、展示、市场交易或链上 Mint，通常不参与战力升级。"
+      "装饰类藏品，可用于图鉴、展示、市场交易或链上 Mint，通常不参与战力升级。",
   },
 
   [ITEM_TYPE.PROP]: {
@@ -167,14 +163,14 @@ export const ITEM_TYPE_META = {
     defaultCanBeDecomposed: false,
     defaultCanBeMinted: false,
     description:
-      "功能型道具，通常用于活动、任务、消耗或特殊玩法，不默认进入交易市场。"
-  }
+      "功能型道具，通常用于活动、任务、消耗或特殊玩法，不默认进入交易市场。",
+  },
 } as const satisfies Record<ItemTypeCode, ItemTypeMeta>;
 
 export const ITEM_TYPE_CODES = Object.values(ITEM_TYPE) as ItemTypeCode[];
 
 export const ITEM_TYPE_CODES_BY_ASC = [...ITEM_TYPE_CODES].sort(
-  (a, b) => ITEM_TYPE_META[a].sortOrder - ITEM_TYPE_META[b].sortOrder
+  (a, b) => ITEM_TYPE_META[a].sortOrder - ITEM_TYPE_META[b].sortOrder,
 );
 
 export function isItemTypeCode(value: unknown): value is ItemTypeCode {
@@ -184,7 +180,9 @@ export function isItemTypeCode(value: unknown): value is ItemTypeCode {
   );
 }
 
-export function assertItemTypeCode(value: unknown): asserts value is ItemTypeCode {
+export function assertItemTypeCode(
+  value: unknown,
+): asserts value is ItemTypeCode {
   if (!isItemTypeCode(value)) {
     throw new Error(`Invalid item type code: ${String(value)}`);
   }
@@ -196,7 +194,7 @@ export function getItemTypeMeta(code: ItemTypeCode): ItemTypeMeta {
 
 export function getItemTypeDisplayName(
   code: ItemTypeCode,
-  locale: "zh-CN" | "en-US" = "zh-CN"
+  locale: "zh-CN" | "en-US" = "zh-CN",
 ): string {
   const meta = getItemTypeMeta(code);
   return locale === "en-US" ? meta.displayNameEn : meta.displayNameCn;

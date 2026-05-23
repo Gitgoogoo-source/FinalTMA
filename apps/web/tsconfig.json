@@ -51,16 +51,6 @@
       "@testing-library/jest-dom"
     ]
   },
-  "include": [
-    "src/**/*.ts",
-    "src/**/*.tsx",
-    "src/**/*.d.ts",
-    "vite.config.ts"
-  ],
-  "exclude": [
-    "dist",
-    "coverage",
-    ".vite",
-    "node_modules"
-  ]
+  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.d.ts", "vite.config.ts"],
+  "exclude": ["dist", "coverage", ".vite", "node_modules"]
 }

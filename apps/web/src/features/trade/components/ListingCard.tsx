@@ -26,10 +26,7 @@ export function ListingCard({
   ) : (
     <span aria-hidden="true">{listing.itemName.slice(0, 1)}</span>
   );
-  const disabledReason = getMarketBuyDisabledReason(
-    listing,
-    balanceAvailable,
-  );
+  const disabledReason = getMarketBuyDisabledReason(listing, balanceAvailable);
   const disabled = Boolean(disabledReason);
   const buttonLabel = getBuyButtonLabel(listing, disabledReason);
   const handleOpenDetail = () => {

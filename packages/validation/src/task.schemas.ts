@@ -18,7 +18,10 @@ export const IdempotencyKeySchema = z
   .trim()
   .min(8, "idempotencyKey 最少 8 位")
   .max(128, "idempotencyKey 最多 128 位")
-  .regex(/^[a-zA-Z0-9:_-]+$/, "idempotencyKey 只能包含字母、数字、冒号、下划线和短横线");
+  .regex(
+    /^[a-zA-Z0-9:_-]+$/,
+    "idempotencyKey 只能包含字母、数字、冒号、下划线和短横线",
+  );
 
 export const DateOnlySchema = z
   .string()
@@ -38,7 +41,12 @@ export const PeriodKeySchema = z
 
 export const CursorSchema = z.string().trim().min(1).max(256);
 
-export const PageSizeSchema = z.coerce.number().int().min(1).max(100).default(20);
+export const PageSizeSchema = z.coerce
+  .number()
+  .int()
+  .min(1)
+  .max(100)
+  .default(20);
 
 export const PaginationQuerySchema = z.object({
   cursor: CursorSchema.optional(),
@@ -58,7 +66,10 @@ function csvArray<T extends z.ZodTypeAny>(itemSchema: T, max = 50) {
   return z.preprocess((value) => {
     if (typeof value === "string") {
       if (!value.trim()) return [];
-      return value.split(",").map((item) => item.trim()).filter(Boolean);
+      return value
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
     }
     return value;
   }, z.array(itemSchema).max(max));
@@ -70,7 +81,13 @@ function csvArray<T extends z.ZodTypeAny>(itemSchema: T, max = 50) {
 
 export const CurrencyCodeSchema = z.enum(["KCOIN", "FGEMS", "STAR_DISPLAY"]);
 
-export const RaritySchema = z.enum(["COMMON", "RARE", "EPIC", "LEGENDARY", "MYTHIC"]);
+export const RaritySchema = z.enum([
+  "COMMON",
+  "RARE",
+  "EPIC",
+  "LEGENDARY",
+  "MYTHIC",
+]);
 
 export const TaskCategorySchema = z.enum([
   "DAILY",
@@ -121,7 +138,13 @@ export const TaskStatusSchema = z.enum([
   "DISABLED",
 ]);
 
-export const TaskPeriodTypeSchema = z.enum(["NONE", "DAILY", "WEEKLY", "MONTHLY", "CAMPAIGN"]);
+export const TaskPeriodTypeSchema = z.enum([
+  "NONE",
+  "DAILY",
+  "WEEKLY",
+  "MONTHLY",
+  "CAMPAIGN",
+]);
 
 export const ReferralStatusSchema = z.enum([
   "PENDING",
@@ -237,7 +260,7 @@ export const TaskDisplaySchema = z.object({
   completedAt: IsoDateTimeSchema.optional(),
   actionText: z.string().trim().min(1).max(40).optional(),
   actionRoute: z.string().trim().min(1).max(200).optional(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const TaskListQuerySchema = PaginationQuerySchema.extend({
@@ -385,7 +408,7 @@ export const ShareEventBodySchema = z.object({
   targetChatType: TelegramChatTypeSchema.optional(),
   targetChatIdHash: z.string().trim().min(8).max(128).optional(),
   messageId: z.coerce.number().int().positive().optional(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
   idempotencyKey: IdempotencyKeySchema.optional(),
 });
 
@@ -417,7 +440,7 @@ export const TaskProgressEventBodySchema = z.object({
   amount: z.coerce.number().int().positive().default(1),
   sourceId: UUIDSchema.optional(),
   periodKey: PeriodKeySchema.optional(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
   idempotencyKey: IdempotencyKeySchema,
 });
 

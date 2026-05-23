@@ -1,13 +1,13 @@
 // api/shared/requireAdmin.ts
 
-import type { VercelRequest } from '@vercel/node';
-import { ApiError } from './handler.js';
+import type { VercelRequest } from "@vercel/node";
+import { ApiError } from "./handler.js";
 import {
   getSupabaseAdmin,
   requireSession,
   type RequireSessionOptions,
   type SessionContext,
-} from './requireSession.js';
+} from "./requireSession.js";
 
 export type AdminPermission = string;
 
@@ -101,29 +101,34 @@ export async function requireAdmin(
   const db = getSupabaseAdmin();
 
   const { data: adminUser, error: adminUserError } = await db
-    .schema('ops')
-    .from('admin_users')
-    .select('id,user_id,role_id,status,permissions,revoked_at,last_seen_at')
-    .eq('user_id', session.userId)
+    .schema("ops")
+    .from("admin_users")
+    .select("id,user_id,role_id,status,permissions,revoked_at,last_seen_at")
+    .eq("user_id", session.userId)
     .maybeSingle<AdminUserRow>();
 
   if (adminUserError) {
-    throw new ApiError(500, 'ADMIN_LOOKUP_FAILED', 'Failed to lookup admin user', {
-      details: adminUserError,
-      expose: false,
-    });
+    throw new ApiError(
+      500,
+      "ADMIN_LOOKUP_FAILED",
+      "Failed to lookup admin user",
+      {
+        details: adminUserError,
+        expose: false,
+      },
+    );
   }
 
   if (!adminUser) {
-    throw ApiError.forbidden('Admin permission required');
+    throw ApiError.forbidden("Admin permission required");
   }
 
   if (adminUser.revoked_at) {
-    throw ApiError.forbidden('Admin access has been revoked');
+    throw ApiError.forbidden("Admin access has been revoked");
   }
 
-  if (adminUser.status !== 'active') {
-    throw ApiError.forbidden('Admin account is not active', {
+  if (adminUser.status !== "active") {
+    throw ApiError.forbidden("Admin account is not active", {
       status: adminUser.status,
     });
   }
@@ -132,17 +137,21 @@ export async function requireAdmin(
     ? await loadAdminRole(adminUser.role_id)
     : null;
 
-  if (role && role.status !== 'active') {
-    throw ApiError.forbidden('Admin role is not active', {
+  if (role && role.status !== "active") {
+    throw ApiError.forbidden("Admin role is not active", {
       roleStatus: role.status,
     });
   }
 
   const rolePermissions = normalizePermissions(role?.permissions);
   const userExtraPermissions = normalizePermissions(adminUser.permissions);
-  const mergedPermissions = uniquePermissions([...rolePermissions, ...userExtraPermissions]);
+  const mergedPermissions = uniquePermissions([
+    ...rolePermissions,
+    ...userExtraPermissions,
+  ]);
 
-  const isSuperAdmin = Boolean(role?.is_super_admin) || mergedPermissions.includes('*');
+  const isSuperAdmin =
+    Boolean(role?.is_super_admin) || mergedPermissions.includes("*");
 
   const adminContext: AdminContext = {
     ...session,
@@ -185,7 +194,7 @@ export function assertAdminPermissions(
     : permissionResults.some(Boolean);
 
   if (!passed) {
-    throw ApiError.forbidden('Missing admin permission', {
+    throw ApiError.forbidden("Missing admin permission", {
       requiredPermissions,
       ownedPermissions: admin.permissions,
       requireAll,
@@ -210,7 +219,7 @@ export function permissionMatches(
   ownedPermission: string,
   requiredPermission: string,
 ): boolean {
-  if (ownedPermission === '*') {
+  if (ownedPermission === "*") {
     return true;
   }
 
@@ -224,7 +233,7 @@ export function permissionMatches(
    * ownedPermission = "boxes:*"
    * requiredPermission = "boxes:write"
    */
-  if (ownedPermission.endsWith(':*')) {
+  if (ownedPermission.endsWith(":*")) {
     const namespace = ownedPermission.slice(0, -1);
     return requiredPermission.startsWith(namespace);
   }
@@ -236,17 +245,22 @@ async function loadAdminRole(roleId: string): Promise<AdminRoleRow | null> {
   const db = getSupabaseAdmin();
 
   const { data: role, error } = await db
-    .schema('ops')
-    .from('admin_roles')
-    .select('id,code,name,status,permissions,is_super_admin')
-    .eq('id', roleId)
+    .schema("ops")
+    .from("admin_roles")
+    .select("id,code,name,status,permissions,is_super_admin")
+    .eq("id", roleId)
     .maybeSingle<AdminRoleRow>();
 
   if (error) {
-    throw new ApiError(500, 'ADMIN_ROLE_LOOKUP_FAILED', 'Failed to lookup admin role', {
-      details: error,
-      expose: false,
-    });
+    throw new ApiError(
+      500,
+      "ADMIN_ROLE_LOOKUP_FAILED",
+      "Failed to lookup admin role",
+      {
+        details: error,
+        expose: false,
+      },
+    );
   }
 
   return role;
@@ -256,15 +270,15 @@ async function touchAdminLastSeen(adminId: string): Promise<void> {
   const db = getSupabaseAdmin();
 
   const { error } = await db
-    .schema('ops')
-    .from('admin_users')
+    .schema("ops")
+    .from("admin_users")
     .update({
       last_seen_at: new Date().toISOString(),
     })
-    .eq('id', adminId);
+    .eq("id", adminId);
 
   if (error) {
-    console.warn('Failed to touch admin last_seen_at', {
+    console.warn("Failed to touch admin last_seen_at", {
       adminId,
       error,
     });
@@ -293,10 +307,12 @@ function normalizePermissions(value: unknown): string[] {
   }
 
   if (Array.isArray(value)) {
-    return value.map((item) => normalizePermission(String(item))).filter(Boolean);
+    return value
+      .map((item) => normalizePermission(String(item)))
+      .filter(Boolean);
   }
 
-  if (typeof value === 'string') {
+  if (typeof value === "string") {
     /**
      * 同时兼容：
      * - Postgres text[]
@@ -313,14 +329,16 @@ function normalizePermissions(value: unknown): string[] {
       const parsed = JSON.parse(trimmed);
 
       if (Array.isArray(parsed)) {
-        return parsed.map((item) => normalizePermission(String(item))).filter(Boolean);
+        return parsed
+          .map((item) => normalizePermission(String(item)))
+          .filter(Boolean);
       }
     } catch {
       // ignore
     }
 
     return trimmed
-      .split(',')
+      .split(",")
       .map((item) => normalizePermission(item))
       .filter(Boolean);
   }
@@ -334,4 +352,4 @@ function normalizePermission(permission: string): string {
 
 function uniquePermissions(permissions: string[]): string[] {
   return Array.from(new Set(permissions.filter(Boolean))).sort();
-}   
+}

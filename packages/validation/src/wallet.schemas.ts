@@ -22,7 +22,12 @@ export const IdempotencyKeySchema = z
 
 export const CursorSchema = z.string().trim().min(1).max(256);
 
-export const PageSizeSchema = z.coerce.number().int().min(1).max(100).default(20);
+export const PageSizeSchema = z.coerce
+  .number()
+  .int()
+  .min(1)
+  .max(100)
+  .default(20);
 
 export const PaginationQuerySchema = z.object({
   cursor: CursorSchema.optional(),
@@ -44,7 +49,10 @@ function csvArray<T extends z.ZodTypeAny>(itemSchema: T, max = 50) {
   return z.preprocess((value) => {
     if (typeof value === "string") {
       if (!value.trim()) return [];
-      return value.split(",").map((item) => item.trim()).filter(Boolean);
+      return value
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
     }
     return value;
   }, z.array(itemSchema).max(max));
@@ -63,7 +71,9 @@ export const TonAddressSchema = z
   .min(10)
   .max(128)
   .refine(
-    (value) => RAW_TON_ADDRESS_RE.test(value) || USER_FRIENDLY_TON_ADDRESS_RE.test(value),
+    (value) =>
+      RAW_TON_ADDRESS_RE.test(value) ||
+      USER_FRIENDLY_TON_ADDRESS_RE.test(value),
     "TON 地址格式不正确",
   );
 
@@ -76,7 +86,10 @@ export const HexSchema = z
   .trim()
   .regex(/^[a-fA-F0-9]+$/, "必须是 hex 字符串");
 
-export const TonPublicKeySchema = HexSchema.length(64, "publicKey 必须是 32 字节 hex");
+export const TonPublicKeySchema = HexSchema.length(
+  64,
+  "publicKey 必须是 32 字节 hex",
+);
 
 export const TonTransactionHashSchema = z
   .string()
@@ -130,7 +143,9 @@ export const TonAccountSchema = z.object({
 });
 
 export const WalletDeviceSchema = z.object({
-  platform: z.enum(["IOS", "ANDROID", "WEB", "DESKTOP", "UNKNOWN"]).default("UNKNOWN"),
+  platform: z
+    .enum(["IOS", "ANDROID", "WEB", "DESKTOP", "UNKNOWN"])
+    .default("UNKNOWN"),
   appName: z.string().trim().min(1).max(80).optional(),
   appVersion: z.string().trim().min(1).max(40).optional(),
   userAgent: z.string().trim().max(500).optional(),
@@ -233,9 +248,14 @@ export const MintQueueStatusSchema = z.enum([
   "CANCELED",
 ]);
 
-export const MintPrioritySchema = z.enum(["LOW", "NORMAL", "HIGH"]).default("NORMAL");
+export const MintPrioritySchema = z
+  .enum(["LOW", "NORMAL", "HIGH"])
+  .default("NORMAL");
 
-export const MintMetadataModeSchema = z.enum(["DATABASE_SNAPSHOT", "REFRESH_FROM_CATALOG"]);
+export const MintMetadataModeSchema = z.enum([
+  "DATABASE_SNAPSHOT",
+  "REFRESH_FROM_CATALOG",
+]);
 
 export const CreateMintBodySchema = z.object({
   itemInstanceId: UUIDSchema,
@@ -394,9 +414,13 @@ export type MintStatusResponse = z.infer<typeof MintStatusResponseSchema>;
 export type MintQueueItem = z.infer<typeof MintQueueItemSchema>;
 export type MintQueueStatus = z.infer<typeof MintQueueStatusSchema>;
 
-export type OnchainTransactionQuery = z.infer<typeof OnchainTransactionQuerySchema>;
+export type OnchainTransactionQuery = z.infer<
+  typeof OnchainTransactionQuerySchema
+>;
 export type OnchainTransaction = z.infer<typeof OnchainTransactionSchema>;
-export type OnchainTransactionListResponse = z.infer<typeof OnchainTransactionListResponseSchema>;
+export type OnchainTransactionListResponse = z.infer<
+  typeof OnchainTransactionListResponseSchema
+>;
 
 export type MarkMintSuccessBody = z.infer<typeof MarkMintSuccessBodySchema>;
 export type MarkMintFailedBody = z.infer<typeof MarkMintFailedBodySchema>;

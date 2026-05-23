@@ -1,24 +1,24 @@
 /* packages/server/src/security/riskControl.ts */
 
-import { createHash, createHmac } from 'node:crypto';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import { createHash, createHmac } from "node:crypto";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   createRateLimiter,
   getClientIp,
   getHeaderValue,
   sanitizeMetadata,
-} from './rateLimit.js';
+} from "./rateLimit.js";
 import type {
   HeaderLike,
   RateLimitAction,
   RateLimitCombinedResult,
   RateLimitRule,
   RateLimiter,
-} from './rateLimit.js';
+} from "./rateLimit.js";
 
-export type RiskSeverity = 'info' | 'low' | 'medium' | 'high' | 'critical';
+export type RiskSeverity = "info" | "low" | "medium" | "high" | "critical";
 
-export type RiskDecision = 'allow' | 'challenge' | 'review' | 'deny';
+export type RiskDecision = "allow" | "challenge" | "review" | "deny";
 
 export type RiskAction = RateLimitAction;
 
@@ -172,11 +172,11 @@ export interface PartialRiskPolicy {
   maxTelegramInitDataAgeSeconds?: number;
   suspiciousUserAgents?: RegExp[];
 
-  market?: Partial<RiskPolicy['market']>;
-  gacha?: Partial<RiskPolicy['gacha']>;
-  referral?: Partial<RiskPolicy['referral']>;
-  wallet?: Partial<RiskPolicy['wallet']>;
-  payment?: Partial<RiskPolicy['payment']>;
+  market?: Partial<RiskPolicy["market"]>;
+  gacha?: Partial<RiskPolicy["gacha"]>;
+  referral?: Partial<RiskPolicy["referral"]>;
+  wallet?: Partial<RiskPolicy["wallet"]>;
+  payment?: Partial<RiskPolicy["payment"]>;
 }
 
 export interface RiskEventRecord {
@@ -195,9 +195,7 @@ export interface RiskEventRecord {
   created_at: string;
 }
 
-export type RiskEventWriter = (
-  event: RiskEventRecord,
-) => Promise<void> | void;
+export type RiskEventWriter = (event: RiskEventRecord) => Promise<void> | void;
 
 export interface CreateRiskControlOptions {
   supabase?: SupabaseClient;
@@ -249,9 +247,9 @@ const DEFAULT_RISK_POLICY: RiskPolicy = {
     deny: 95,
   },
 
-  failOnDecision: ['deny'],
+  failOnDecision: ["deny"],
 
-  writeEventMinSeverity: 'medium',
+  writeEventMinSeverity: "medium",
 
   maxTelegramInitDataAgeSeconds: 24 * 60 * 60,
 
@@ -303,10 +301,10 @@ export class RiskControlError extends Error {
 
   constructor(
     assessment: RiskAssessment,
-    message = '当前操作存在风险，已被系统拦截。',
+    message = "当前操作存在风险，已被系统拦截。",
   ) {
     super(message);
-    this.name = 'RiskControlError';
+    this.name = "RiskControlError";
     this.assessment = assessment;
     this.statusCode = getRecommendedRiskHttpStatus(assessment);
   }
@@ -330,8 +328,8 @@ export class RiskControl {
     this.eventWriter = options.eventWriter;
     this.hashSecret =
       options.hashSecret ??
-      getEnv('RISK_HASH_SECRET') ??
-      getEnv('RATE_LIMIT_HASH_SECRET');
+      getEnv("RISK_HASH_SECRET") ??
+      getEnv("RATE_LIMIT_HASH_SECRET");
   }
 
   public async evaluate(input: RiskCheckInput): Promise<RiskAssessment> {
@@ -349,7 +347,11 @@ export class RiskControl {
 
     const score = calculateRiskScore(signals);
     const severity = calculateRiskSeverity(signals, score);
-    const decision = resolveRiskDecision(score, signals, this.policy.thresholds);
+    const decision = resolveRiskDecision(
+      score,
+      signals,
+      this.policy.thresholds,
+    );
     const requiredActions = getRequiredActions(decision, signals);
 
     const assessment: RiskAssessment = {
@@ -364,7 +366,9 @@ export class RiskControl {
       telegramUserId: normalized.telegramUserId,
       sessionId: normalized.sessionId,
       walletAddress: normalized.walletAddress,
-      ipHash: normalized.ip ? this.hashForStorage(`ip:${normalized.ip}`) : undefined,
+      ipHash: normalized.ip
+        ? this.hashForStorage(`ip:${normalized.ip}`)
+        : undefined,
       userAgentHash: normalized.userAgent
         ? this.hashForStorage(`ua:${normalized.userAgent}`)
         : undefined,
@@ -410,12 +414,14 @@ export class RiskControl {
     const db = this.supabase as unknown as {
       schema(schema: string): {
         from(table: string): {
-          insert(payload: unknown): Promise<{ error?: { message: string } | null }>;
+          insert(
+            payload: unknown,
+          ): Promise<{ error?: { message: string } | null }>;
         };
       };
     };
 
-    await db.schema('ops').from('risk_events').insert(event);
+    await db.schema("ops").from("risk_events").insert(event);
   }
 
   private normalizeInput(input: RiskCheckInput): NormalizedRiskCheckInput {
@@ -424,7 +430,7 @@ export class RiskControl {
     const ip = input.ip ?? getClientIp(headers);
     const userAgent =
       input.userAgent ??
-      (headers ? getHeaderValue(headers, 'user-agent') : undefined);
+      (headers ? getHeaderValue(headers, "user-agent") : undefined);
 
     return {
       ...input,
@@ -444,49 +450,49 @@ export class RiskControl {
   ): void {
     if (requiresUser(input.action) && !input.userId) {
       pushSignal(signals, {
-        code: 'MISSING_USER_SESSION',
-        severity: 'critical',
+        code: "MISSING_USER_SESSION",
+        severity: "critical",
         score: 100,
-        decision: 'deny',
-        message: '需要用户会话的操作缺少 userId。',
+        decision: "deny",
+        message: "需要用户会话的操作缺少 userId。",
       });
     }
 
     if (requiresSession(input.action) && !input.sessionId) {
       pushSignal(signals, {
-        code: 'MISSING_APP_SESSION',
-        severity: 'high',
+        code: "MISSING_APP_SESSION",
+        severity: "high",
         score: 80,
-        decision: 'review',
-        message: '需要登录态的操作缺少 sessionId。',
+        decision: "review",
+        message: "需要登录态的操作缺少 sessionId。",
       });
     }
 
     if (
-      input.action === 'auth.telegram' &&
+      input.action === "auth.telegram" &&
       input.metadata.initDataValidated === false
     ) {
       pushSignal(signals, {
-        code: 'TELEGRAM_INIT_DATA_INVALID',
-        severity: 'critical',
+        code: "TELEGRAM_INIT_DATA_INVALID",
+        severity: "critical",
         score: 100,
-        decision: 'deny',
-        message: 'Telegram initData 服务端校验失败。',
+        decision: "deny",
+        message: "Telegram initData 服务端校验失败。",
       });
     }
 
-    const authDateUnix = getNumber(input.metadata, 'authDateUnix');
+    const authDateUnix = getNumber(input.metadata, "authDateUnix");
 
-    if (input.action === 'auth.telegram' && authDateUnix) {
+    if (input.action === "auth.telegram" && authDateUnix) {
       const ageSeconds = Math.floor(input.now.getTime() / 1_000) - authDateUnix;
 
       if (ageSeconds > this.policy.maxTelegramInitDataAgeSeconds) {
         pushSignal(signals, {
-          code: 'TELEGRAM_INIT_DATA_TOO_OLD',
-          severity: 'critical',
+          code: "TELEGRAM_INIT_DATA_TOO_OLD",
+          severity: "critical",
           score: 100,
-          decision: 'deny',
-          message: 'Telegram initData 已超过允许时间窗口。',
+          decision: "deny",
+          message: "Telegram initData 已超过允许时间窗口。",
           metadata: {
             ageSeconds,
             maxAgeSeconds: this.policy.maxTelegramInitDataAgeSeconds,
@@ -506,34 +512,34 @@ export class RiskControl {
 
     if (!input.ip) {
       pushSignal(signals, {
-        code: 'MISSING_CLIENT_IP',
-        severity: 'low',
+        code: "MISSING_CLIENT_IP",
+        severity: "low",
         score: 10,
-        message: '请求缺少可识别客户端 IP。',
+        message: "请求缺少可识别客户端 IP。",
       });
     }
 
     if (!input.userAgent) {
       pushSignal(signals, {
-        code: 'MISSING_USER_AGENT',
-        severity: 'low',
+        code: "MISSING_USER_AGENT",
+        severity: "low",
         score: 10,
-        message: '请求缺少 user-agent。',
+        message: "请求缺少 user-agent。",
       });
       return;
     }
 
     const suspicious = this.policy.suspiciousUserAgents.some((rule) =>
-      rule.test(input.userAgent ?? ''),
+      rule.test(input.userAgent ?? ""),
     );
 
     if (suspicious) {
       pushSignal(signals, {
-        code: 'SUSPICIOUS_USER_AGENT',
-        severity: 'medium',
+        code: "SUSPICIOUS_USER_AGENT",
+        severity: "medium",
         score: 35,
-        decision: 'challenge',
-        message: '请求 user-agent 不符合正常 Telegram Mini App 访问特征。',
+        decision: "challenge",
+        message: "请求 user-agent 不符合正常 Telegram Mini App 访问特征。",
         metadata: {
           userAgentHash: this.hashForStorage(`ua:${input.userAgent}`),
         },
@@ -546,25 +552,25 @@ export class RiskControl {
     signals: RiskSignal[],
   ): void {
     const requiresIdempotency =
-      input.action === 'box.create_open_order' ||
-      input.action === 'market.buy' ||
-      input.action === 'market.create_listing' ||
-      input.action === 'inventory.upgrade' ||
-      input.action === 'inventory.evolve' ||
-      input.action === 'inventory.decompose' ||
-      input.action === 'tasks.claim' ||
-      input.action === 'tasks.check_in' ||
-      input.action === 'wallet.mint';
+      input.action === "box.create_open_order" ||
+      input.action === "market.buy" ||
+      input.action === "market.create_listing" ||
+      input.action === "inventory.upgrade" ||
+      input.action === "inventory.evolve" ||
+      input.action === "inventory.decompose" ||
+      input.action === "tasks.claim" ||
+      input.action === "tasks.check_in" ||
+      input.action === "wallet.mint";
 
-    const idempotencyKey = getString(input.metadata, 'idempotencyKey');
+    const idempotencyKey = getString(input.metadata, "idempotencyKey");
 
     if (requiresIdempotency && !idempotencyKey) {
       pushSignal(signals, {
-        code: 'MISSING_IDEMPOTENCY_KEY',
-        severity: 'medium',
+        code: "MISSING_IDEMPOTENCY_KEY",
+        severity: "medium",
         score: 30,
-        decision: 'challenge',
-        message: '写操作缺少幂等键，可能导致重复提交。',
+        decision: "challenge",
+        message: "写操作缺少幂等键，可能导致重复提交。",
       });
     }
   }
@@ -582,7 +588,8 @@ export class RiskControl {
       userId: input.userId,
       sessionId: input.sessionId,
       telegramUserId: input.telegramUserId,
-      walletAddress: input.walletAddress ?? getString(input.metadata, 'walletAddress'),
+      walletAddress:
+        input.walletAddress ?? getString(input.metadata, "walletAddress"),
       ip: input.ip,
       userAgent: input.userAgent,
       method: input.method,
@@ -593,11 +600,11 @@ export class RiskControl {
 
     if (!result.allowed) {
       pushSignal(signals, {
-        code: 'RATE_LIMIT_EXCEEDED',
-        severity: 'high',
+        code: "RATE_LIMIT_EXCEEDED",
+        severity: "high",
         score: 100,
-        decision: 'deny',
-        message: '请求频率超过限制。',
+        decision: "deny",
+        message: "请求频率超过限制。",
         metadata: {
           retryAfterMs: result.retryAfterMs,
           scope: result.rejected?.scope,
@@ -623,7 +630,10 @@ export class RiskControl {
         schema(schema: string): {
           from(table: string): {
             select(columns: string): {
-              eq(column: string, value: string): {
+              eq(
+                column: string,
+                value: string,
+              ): {
                 limit(count: number): Promise<{
                   data?: UserFlagRecord[] | null;
                   error?: { message: string } | null;
@@ -635,10 +645,10 @@ export class RiskControl {
       };
 
       const { data, error } = await db
-        .schema('core')
-        .from('user_flags')
-        .select('flag,severity,expires_at,metadata')
-        .eq('user_id', input.userId)
+        .schema("core")
+        .from("user_flags")
+        .select("flag,severity,expires_at,metadata")
+        .eq("user_id", input.userId)
         .limit(50);
 
       if (error || !data) {
@@ -665,78 +675,78 @@ export class RiskControl {
   ): void {
     for (const flag of flags) {
       const flagName = String(flag.flag).toLowerCase();
-      const severity = normalizeSeverity(flag.severity, 'high');
+      const severity = normalizeSeverity(flag.severity, "high");
 
-      if (flagName === 'banned' || flagName === 'suspended') {
+      if (flagName === "banned" || flagName === "suspended") {
         pushSignal(signals, {
-          code: 'USER_BANNED',
-          severity: 'critical',
+          code: "USER_BANNED",
+          severity: "critical",
           score: 100,
-          decision: 'deny',
-          message: '用户已被封禁或暂停。',
+          decision: "deny",
+          message: "用户已被封禁或暂停。",
           metadata: sanitizeMetadata(flag.metadata ?? {}),
         });
         continue;
       }
 
       if (
-        (flagName === 'market_restricted' || flagName === 'trade_restricted') &&
+        (flagName === "market_restricted" || flagName === "trade_restricted") &&
         isMarketAction(input.action)
       ) {
         pushSignal(signals, {
-          code: 'USER_MARKET_RESTRICTED',
+          code: "USER_MARKET_RESTRICTED",
           severity,
           score: 90,
-          decision: 'deny',
-          message: '用户被限制使用交易市场。',
+          decision: "deny",
+          message: "用户被限制使用交易市场。",
           metadata: sanitizeMetadata(flag.metadata ?? {}),
         });
         continue;
       }
 
-      if (flagName === 'gacha_restricted' && isGachaAction(input.action)) {
+      if (flagName === "gacha_restricted" && isGachaAction(input.action)) {
         pushSignal(signals, {
-          code: 'USER_GACHA_RESTRICTED',
+          code: "USER_GACHA_RESTRICTED",
           severity,
           score: 90,
-          decision: 'deny',
-          message: '用户被限制开盒。',
+          decision: "deny",
+          message: "用户被限制开盒。",
           metadata: sanitizeMetadata(flag.metadata ?? {}),
         });
         continue;
       }
 
-      if (flagName === 'wallet_restricted' && isWalletAction(input.action)) {
+      if (flagName === "wallet_restricted" && isWalletAction(input.action)) {
         pushSignal(signals, {
-          code: 'USER_WALLET_RESTRICTED',
+          code: "USER_WALLET_RESTRICTED",
           severity,
           score: 90,
-          decision: 'deny',
-          message: '用户被限制使用钱包或链上功能。',
+          decision: "deny",
+          message: "用户被限制使用钱包或链上功能。",
           metadata: sanitizeMetadata(flag.metadata ?? {}),
         });
         continue;
       }
 
-      if (flagName === 'task_restricted' && isTaskAction(input.action)) {
+      if (flagName === "task_restricted" && isTaskAction(input.action)) {
         pushSignal(signals, {
-          code: 'USER_TASK_RESTRICTED',
+          code: "USER_TASK_RESTRICTED",
           severity,
           score: 90,
-          decision: 'deny',
-          message: '用户被限制领取任务奖励。',
+          decision: "deny",
+          message: "用户被限制领取任务奖励。",
           metadata: sanitizeMetadata(flag.metadata ?? {}),
         });
         continue;
       }
 
-      if (flagName === 'risk_watch' || flagName === 'payment_review') {
+      if (flagName === "risk_watch" || flagName === "payment_review") {
         pushSignal(signals, {
-          code: 'USER_UNDER_RISK_WATCH',
-          severity: normalizeSeverity(flag.severity, 'medium'),
+          code: "USER_UNDER_RISK_WATCH",
+          severity: normalizeSeverity(flag.severity, "medium"),
           score: 45,
-          decision: 'review',
-          message: '用户处于风控观察状态。',
+          decision: "review",
+          message: "用户处于风控观察状态。",
           metadata: sanitizeMetadata(flag.metadata ?? {}),
         });
       }
@@ -747,7 +757,7 @@ export class RiskControl {
     input: NormalizedRiskCheckInput,
     signals: RiskSignal[],
   ): void {
-    if (input.action === 'auth.telegram') {
+    if (input.action === "auth.telegram") {
       this.addReferralSignals(input, signals);
     }
 
@@ -755,7 +765,7 @@ export class RiskControl {
       this.addGachaSignals(input, signals);
     }
 
-    if (input.action === 'telegram.webhook') {
+    if (input.action === "telegram.webhook") {
       this.addPaymentWebhookSignals(input, signals);
     }
 
@@ -781,35 +791,35 @@ export class RiskControl {
     input: NormalizedRiskCheckInput,
     signals: RiskSignal[],
   ): void {
-    if (input.action !== 'box.create_open_order') {
+    if (input.action !== "box.create_open_order") {
       return;
     }
 
-    const boxStatus = getString(input.metadata, 'boxStatus');
-    if (boxStatus && boxStatus !== 'active') {
+    const boxStatus = getString(input.metadata, "boxStatus");
+    if (boxStatus && boxStatus !== "active") {
       pushSignal(signals, {
-        code: 'BOX_NOT_ACTIVE',
-        severity: 'critical',
+        code: "BOX_NOT_ACTIVE",
+        severity: "critical",
         score: 100,
-        decision: 'deny',
-        message: '盲盒当前不可开启。',
+        decision: "deny",
+        message: "盲盒当前不可开启。",
         metadata: {
           boxStatus,
         },
       });
     }
 
-    const drawCount = getNumber(input.metadata, 'drawCount');
+    const drawCount = getNumber(input.metadata, "drawCount");
     if (
       drawCount !== undefined &&
       !this.policy.gacha.allowedDrawCounts.includes(drawCount)
     ) {
       pushSignal(signals, {
-        code: 'INVALID_DRAW_COUNT',
-        severity: 'critical',
+        code: "INVALID_DRAW_COUNT",
+        severity: "critical",
         score: 100,
-        decision: 'deny',
-        message: '开盒次数非法，仅允许单抽或十连。',
+        decision: "deny",
+        message: "开盒次数非法，仅允许单抽或十连。",
         metadata: {
           drawCount,
           allowedDrawCounts: this.policy.gacha.allowedDrawCounts,
@@ -817,8 +827,11 @@ export class RiskControl {
       });
     }
 
-    const expectedStarsAmount = getNumber(input.metadata, 'expectedStarsAmount');
-    const actualStarsAmount = getNumber(input.metadata, 'actualStarsAmount');
+    const expectedStarsAmount = getNumber(
+      input.metadata,
+      "expectedStarsAmount",
+    );
+    const actualStarsAmount = getNumber(input.metadata, "actualStarsAmount");
 
     if (
       expectedStarsAmount !== undefined &&
@@ -826,11 +839,11 @@ export class RiskControl {
       expectedStarsAmount !== actualStarsAmount
     ) {
       pushSignal(signals, {
-        code: 'STARS_AMOUNT_MISMATCH',
-        severity: 'critical',
+        code: "STARS_AMOUNT_MISMATCH",
+        severity: "critical",
         score: 100,
-        decision: 'deny',
-        message: 'Stars 支付金额与服务端计算金额不一致。',
+        decision: "deny",
+        message: "Stars 支付金额与服务端计算金额不一致。",
         metadata: {
           expectedStarsAmount,
           actualStarsAmount,
@@ -843,39 +856,42 @@ export class RiskControl {
     input: NormalizedRiskCheckInput,
     signals: RiskSignal[],
   ): void {
-    const paymentChargeId = getString(input.metadata, 'telegramPaymentChargeId');
-    const orderFound = getBoolean(input.metadata, 'paymentOrderFound');
-    const duplicatePayment = getBoolean(input.metadata, 'duplicatePayment');
+    const paymentChargeId = getString(
+      input.metadata,
+      "telegramPaymentChargeId",
+    );
+    const orderFound = getBoolean(input.metadata, "paymentOrderFound");
+    const duplicatePayment = getBoolean(input.metadata, "duplicatePayment");
 
     if (this.policy.payment.denyMissingPaymentChargeId && !paymentChargeId) {
       pushSignal(signals, {
-        code: 'MISSING_TELEGRAM_PAYMENT_CHARGE_ID',
-        severity: 'critical',
+        code: "MISSING_TELEGRAM_PAYMENT_CHARGE_ID",
+        severity: "critical",
         score: 100,
-        decision: 'deny',
-        message: 'Telegram Stars 支付回调缺少 payment charge id。',
+        decision: "deny",
+        message: "Telegram Stars 支付回调缺少 payment charge id。",
       });
     }
 
     if (this.policy.payment.denyMissingPaymentOrder && orderFound === false) {
       pushSignal(signals, {
-        code: 'PAYMENT_ORDER_NOT_FOUND',
-        severity: 'critical',
+        code: "PAYMENT_ORDER_NOT_FOUND",
+        severity: "critical",
         score: 100,
-        decision: 'deny',
-        message: '支付回调无法匹配本地订单。',
+        decision: "deny",
+        message: "支付回调无法匹配本地订单。",
       });
     }
 
     if (duplicatePayment === true) {
       pushSignal(signals, {
-        code: 'DUPLICATE_PAYMENT_CALLBACK',
-        severity: 'high',
+        code: "DUPLICATE_PAYMENT_CALLBACK",
+        severity: "high",
         score: 80,
-        decision: 'review',
-        message: '检测到重复支付回调，应走幂等处理，不可重复发货。',
+        decision: "review",
+        message: "检测到重复支付回调，应走幂等处理，不可重复发货。",
         metadata: {
-          telegramPaymentChargeId: paymentChargeId ? '[present]' : '[missing]',
+          telegramPaymentChargeId: paymentChargeId ? "[present]" : "[missing]",
         },
       });
     }
@@ -885,20 +901,20 @@ export class RiskControl {
     input: NormalizedRiskCheckInput,
     signals: RiskSignal[],
   ): void {
-    const priceKcoin = getNumber(input.metadata, 'priceKcoin');
-    const quantity = getNumber(input.metadata, 'quantity');
-    const buyerId = getString(input.metadata, 'buyerId') ?? input.userId;
-    const sellerId = getString(input.metadata, 'sellerId');
-    const listingStatus = getString(input.metadata, 'listingStatus');
+    const priceKcoin = getNumber(input.metadata, "priceKcoin");
+    const quantity = getNumber(input.metadata, "quantity");
+    const buyerId = getString(input.metadata, "buyerId") ?? input.userId;
+    const sellerId = getString(input.metadata, "sellerId");
+    const listingStatus = getString(input.metadata, "listingStatus");
 
-    if (input.action === 'market.buy') {
+    if (input.action === "market.buy") {
       if (sellerId && buyerId && sameId(sellerId, buyerId)) {
         pushSignal(signals, {
-          code: 'MARKET_SELF_TRADE',
-          severity: 'critical',
+          code: "MARKET_SELF_TRADE",
+          severity: "critical",
           score: 100,
-          decision: 'deny',
-          message: '买家和卖家相同，禁止自买自卖。',
+          decision: "deny",
+          message: "买家和卖家相同，禁止自买自卖。",
           metadata: {
             sellerId,
             buyerId,
@@ -906,31 +922,31 @@ export class RiskControl {
         });
       }
 
-      if (listingStatus && listingStatus !== 'active') {
+      if (listingStatus && listingStatus !== "active") {
         pushSignal(signals, {
-          code: 'LISTING_NOT_ACTIVE',
-          severity: 'critical',
+          code: "LISTING_NOT_ACTIVE",
+          severity: "critical",
           score: 100,
-          decision: 'deny',
-          message: '挂单不是可购买状态。',
+          decision: "deny",
+          message: "挂单不是可购买状态。",
           metadata: {
             listingStatus,
           },
         });
       }
 
-      const buyerBalanceKcoin = getNumber(input.metadata, 'buyerBalanceKcoin');
+      const buyerBalanceKcoin = getNumber(input.metadata, "buyerBalanceKcoin");
       if (
         priceKcoin !== undefined &&
         buyerBalanceKcoin !== undefined &&
         buyerBalanceKcoin < priceKcoin
       ) {
         pushSignal(signals, {
-          code: 'INSUFFICIENT_KCOIN_BALANCE',
-          severity: 'critical',
+          code: "INSUFFICIENT_KCOIN_BALANCE",
+          severity: "critical",
           score: 100,
-          decision: 'deny',
-          message: '买家 K-coin 余额不足。',
+          decision: "deny",
+          message: "买家 K-coin 余额不足。",
           metadata: {
             priceKcoin,
             buyerBalanceKcoin,
@@ -940,17 +956,20 @@ export class RiskControl {
     }
 
     if (
-      input.action === 'market.create_listing' ||
-      input.action === 'market.update_price' ||
-      input.action === 'market.buy'
+      input.action === "market.create_listing" ||
+      input.action === "market.update_price" ||
+      input.action === "market.buy"
     ) {
-      if (priceKcoin !== undefined && priceKcoin < this.policy.market.minPriceKcoin) {
+      if (
+        priceKcoin !== undefined &&
+        priceKcoin < this.policy.market.minPriceKcoin
+      ) {
         pushSignal(signals, {
-          code: 'MARKET_PRICE_BELOW_MINIMUM',
-          severity: 'critical',
+          code: "MARKET_PRICE_BELOW_MINIMUM",
+          severity: "critical",
           score: 100,
-          decision: 'deny',
-          message: '交易价格低于系统允许的最低价格。',
+          decision: "deny",
+          message: "交易价格低于系统允许的最低价格。",
           metadata: {
             priceKcoin,
             minPriceKcoin: this.policy.market.minPriceKcoin,
@@ -963,11 +982,11 @@ export class RiskControl {
         (quantity <= 0 || quantity > this.policy.market.maxQuantityPerListing)
       ) {
         pushSignal(signals, {
-          code: 'MARKET_INVALID_QUANTITY',
-          severity: 'critical',
+          code: "MARKET_INVALID_QUANTITY",
+          severity: "critical",
           score: 100,
-          decision: 'deny',
-          message: '挂单数量非法。',
+          decision: "deny",
+          message: "挂单数量非法。",
           metadata: {
             quantity,
             maxQuantityPerListing: this.policy.market.maxQuantityPerListing,
@@ -983,10 +1002,10 @@ export class RiskControl {
     input: NormalizedRiskCheckInput,
     signals: RiskSignal[],
   ): void {
-    const priceKcoin = getNumber(input.metadata, 'priceKcoin');
-    const reference = getNumber(input.metadata, 'marketReferencePriceKcoin');
-    const minSuggested = getNumber(input.metadata, 'minSuggestedPriceKcoin');
-    const maxSuggested = getNumber(input.metadata, 'maxSuggestedPriceKcoin');
+    const priceKcoin = getNumber(input.metadata, "priceKcoin");
+    const reference = getNumber(input.metadata, "marketReferencePriceKcoin");
+    const minSuggested = getNumber(input.metadata, "minSuggestedPriceKcoin");
+    const maxSuggested = getNumber(input.metadata, "maxSuggestedPriceKcoin");
 
     if (!priceKcoin || priceKcoin <= 0) {
       return;
@@ -994,11 +1013,11 @@ export class RiskControl {
 
     if (minSuggested !== undefined && priceKcoin < minSuggested) {
       pushSignal(signals, {
-        code: 'PRICE_BELOW_SUGGESTED_RANGE',
-        severity: 'medium',
+        code: "PRICE_BELOW_SUGGESTED_RANGE",
+        severity: "medium",
         score: 30,
-        decision: 'challenge',
-        message: '出售价格低于建议价格区间。',
+        decision: "challenge",
+        message: "出售价格低于建议价格区间。",
         metadata: {
           priceKcoin,
           minSuggestedPriceKcoin: minSuggested,
@@ -1008,11 +1027,11 @@ export class RiskControl {
 
     if (maxSuggested !== undefined && priceKcoin > maxSuggested) {
       pushSignal(signals, {
-        code: 'PRICE_ABOVE_SUGGESTED_RANGE',
-        severity: 'medium',
+        code: "PRICE_ABOVE_SUGGESTED_RANGE",
+        severity: "medium",
         score: 25,
-        decision: 'challenge',
-        message: '出售价格高于建议价格区间。',
+        decision: "challenge",
+        message: "出售价格高于建议价格区间。",
         metadata: {
           priceKcoin,
           maxSuggestedPriceKcoin: maxSuggested,
@@ -1028,11 +1047,11 @@ export class RiskControl {
 
     if (ratio <= this.policy.market.minReferenceRatioDeny) {
       pushSignal(signals, {
-        code: 'PRICE_EXTREMELY_UNDER_REFERENCE',
-        severity: 'high',
+        code: "PRICE_EXTREMELY_UNDER_REFERENCE",
+        severity: "high",
         score: 80,
-        decision: 'review',
-        message: '交易价格极低，可能是异常转移或误操作。',
+        decision: "review",
+        message: "交易价格极低，可能是异常转移或误操作。",
         metadata: {
           ratio,
           priceKcoin,
@@ -1044,11 +1063,11 @@ export class RiskControl {
 
     if (ratio <= this.policy.market.minReferenceRatioReview) {
       pushSignal(signals, {
-        code: 'PRICE_UNDER_REFERENCE',
-        severity: 'medium',
+        code: "PRICE_UNDER_REFERENCE",
+        severity: "medium",
         score: 40,
-        decision: 'challenge',
-        message: '交易价格明显低于市场参考价。',
+        decision: "challenge",
+        message: "交易价格明显低于市场参考价。",
         metadata: {
           ratio,
           priceKcoin,
@@ -1059,11 +1078,11 @@ export class RiskControl {
 
     if (ratio >= this.policy.market.maxReferenceRatioDeny) {
       pushSignal(signals, {
-        code: 'PRICE_EXTREMELY_OVER_REFERENCE',
-        severity: 'high',
+        code: "PRICE_EXTREMELY_OVER_REFERENCE",
+        severity: "high",
         score: 70,
-        decision: 'review',
-        message: '交易价格极高，可能存在异常交易或价格操纵。',
+        decision: "review",
+        message: "交易价格极高，可能存在异常交易或价格操纵。",
         metadata: {
           ratio,
           priceKcoin,
@@ -1075,11 +1094,11 @@ export class RiskControl {
 
     if (ratio >= this.policy.market.maxReferenceRatioReview) {
       pushSignal(signals, {
-        code: 'PRICE_OVER_REFERENCE',
-        severity: 'medium',
+        code: "PRICE_OVER_REFERENCE",
+        severity: "medium",
         score: 35,
-        decision: 'challenge',
-        message: '交易价格明显高于市场参考价。',
+        decision: "challenge",
+        message: "交易价格明显高于市场参考价。",
         metadata: {
           ratio,
           priceKcoin,
@@ -1093,23 +1112,23 @@ export class RiskControl {
     input: NormalizedRiskCheckInput,
     signals: RiskSignal[],
   ): void {
-    const itemLocked = getBoolean(input.metadata, 'itemLocked');
-    const itemListed = getBoolean(input.metadata, 'itemListed');
-    const itemMinting = getBoolean(input.metadata, 'itemMinting');
-    const itemMinted = getBoolean(input.metadata, 'itemMinted');
+    const itemLocked = getBoolean(input.metadata, "itemLocked");
+    const itemListed = getBoolean(input.metadata, "itemListed");
+    const itemMinting = getBoolean(input.metadata, "itemMinting");
+    const itemMinted = getBoolean(input.metadata, "itemMinted");
 
     if (
-      (input.action === 'inventory.upgrade' ||
-        input.action === 'inventory.evolve' ||
-        input.action === 'inventory.decompose') &&
+      (input.action === "inventory.upgrade" ||
+        input.action === "inventory.evolve" ||
+        input.action === "inventory.decompose") &&
       (itemLocked || itemListed || itemMinting)
     ) {
       pushSignal(signals, {
-        code: 'ITEM_NOT_AVAILABLE_FOR_INVENTORY_ACTION',
-        severity: 'critical',
+        code: "ITEM_NOT_AVAILABLE_FOR_INVENTORY_ACTION",
+        severity: "critical",
         score: 100,
-        decision: 'deny',
-        message: '藏品处于锁定、挂售或 Mint 中状态，不能执行该库存操作。',
+        decision: "deny",
+        message: "藏品处于锁定、挂售或 Mint 中状态，不能执行该库存操作。",
         metadata: {
           itemLocked,
           itemListed,
@@ -1118,31 +1137,31 @@ export class RiskControl {
       });
     }
 
-    if (input.action === 'inventory.upgrade') {
-      const maxLevelReached = getBoolean(input.metadata, 'maxLevelReached');
+    if (input.action === "inventory.upgrade") {
+      const maxLevelReached = getBoolean(input.metadata, "maxLevelReached");
 
       if (maxLevelReached) {
         pushSignal(signals, {
-          code: 'ITEM_MAX_LEVEL_REACHED',
-          severity: 'high',
+          code: "ITEM_MAX_LEVEL_REACHED",
+          severity: "high",
           score: 90,
-          decision: 'deny',
-          message: '藏品已达到最高等级，不能继续升级。',
+          decision: "deny",
+          message: "藏品已达到最高等级，不能继续升级。",
         });
       }
     }
 
-    if (input.action === 'inventory.evolve') {
-      const itemCount = getNumber(input.metadata, 'itemCount');
-      const sameTemplate = getBoolean(input.metadata, 'sameTemplate');
+    if (input.action === "inventory.evolve") {
+      const itemCount = getNumber(input.metadata, "itemCount");
+      const sameTemplate = getBoolean(input.metadata, "sameTemplate");
 
       if (itemCount !== undefined && itemCount !== 3) {
         pushSignal(signals, {
-          code: 'EVOLVE_REQUIRES_THREE_ITEMS',
-          severity: 'critical',
+          code: "EVOLVE_REQUIRES_THREE_ITEMS",
+          severity: "critical",
           score: 100,
-          decision: 'deny',
-          message: '合成必须消耗 3 份相同藏品。',
+          decision: "deny",
+          message: "合成必须消耗 3 份相同藏品。",
           metadata: {
             itemCount,
           },
@@ -1151,22 +1170,22 @@ export class RiskControl {
 
       if (sameTemplate === false) {
         pushSignal(signals, {
-          code: 'EVOLVE_ITEMS_NOT_SAME_TEMPLATE',
-          severity: 'critical',
+          code: "EVOLVE_ITEMS_NOT_SAME_TEMPLATE",
+          severity: "critical",
           score: 100,
-          decision: 'deny',
-          message: '合成材料不是相同藏品。',
+          decision: "deny",
+          message: "合成材料不是相同藏品。",
         });
       }
     }
 
-    if (input.action === 'inventory.decompose' && itemMinted) {
+    if (input.action === "inventory.decompose" && itemMinted) {
       pushSignal(signals, {
-        code: 'MINTED_ITEM_DECOMPOSE_REVIEW',
-        severity: 'high',
+        code: "MINTED_ITEM_DECOMPOSE_REVIEW",
+        severity: "high",
         score: 70,
-        decision: 'review',
-        message: '已 Mint 的链上藏品执行分解需要进入复核或额外校验。',
+        decision: "review",
+        message: "已 Mint 的链上藏品执行分解需要进入复核或额外校验。",
       });
     }
   }
@@ -1175,30 +1194,30 @@ export class RiskControl {
     input: NormalizedRiskCheckInput,
     signals: RiskSignal[],
   ): void {
-    if (input.action === 'tasks.claim') {
-      const alreadyClaimed = getBoolean(input.metadata, 'alreadyClaimed');
+    if (input.action === "tasks.claim") {
+      const alreadyClaimed = getBoolean(input.metadata, "alreadyClaimed");
 
       if (alreadyClaimed) {
         pushSignal(signals, {
-          code: 'TASK_ALREADY_CLAIMED',
-          severity: 'critical',
+          code: "TASK_ALREADY_CLAIMED",
+          severity: "critical",
           score: 100,
-          decision: 'deny',
-          message: '任务奖励已经领取，不能重复领取。',
+          decision: "deny",
+          message: "任务奖励已经领取，不能重复领取。",
         });
       }
     }
 
-    if (input.action === 'tasks.check_in') {
-      const alreadyCheckedIn = getBoolean(input.metadata, 'alreadyCheckedIn');
+    if (input.action === "tasks.check_in") {
+      const alreadyCheckedIn = getBoolean(input.metadata, "alreadyCheckedIn");
 
       if (alreadyCheckedIn) {
         pushSignal(signals, {
-          code: 'CHECK_IN_ALREADY_CLAIMED',
-          severity: 'critical',
+          code: "CHECK_IN_ALREADY_CLAIMED",
+          severity: "critical",
           score: 100,
-          decision: 'deny',
-          message: '今日签到奖励已经领取。',
+          decision: "deny",
+          message: "今日签到奖励已经领取。",
         });
       }
     }
@@ -1208,9 +1227,9 @@ export class RiskControl {
     input: NormalizedRiskCheckInput,
     signals: RiskSignal[],
   ): void {
-    const inviterId = getString(input.metadata, 'inviterId');
-    const inviteeId = getString(input.metadata, 'inviteeId') ?? input.userId;
-    const sameIpInvite = getBoolean(input.metadata, 'sameIpInvite');
+    const inviterId = getString(input.metadata, "inviterId");
+    const inviteeId = getString(input.metadata, "inviteeId") ?? input.userId;
+    const sameIpInvite = getBoolean(input.metadata, "sameIpInvite");
 
     if (
       this.policy.referral.denySelfInvite &&
@@ -1219,11 +1238,11 @@ export class RiskControl {
       sameId(inviterId, inviteeId)
     ) {
       pushSignal(signals, {
-        code: 'REFERRAL_SELF_INVITE',
-        severity: 'critical',
+        code: "REFERRAL_SELF_INVITE",
+        severity: "critical",
         score: 100,
-        decision: 'deny',
-        message: '检测到自邀请行为。',
+        decision: "deny",
+        message: "检测到自邀请行为。",
         metadata: {
           inviterId,
           inviteeId,
@@ -1233,11 +1252,11 @@ export class RiskControl {
 
     if (this.policy.referral.reviewSameIpInvite && sameIpInvite === true) {
       pushSignal(signals, {
-        code: 'REFERRAL_SAME_IP',
-        severity: 'medium',
+        code: "REFERRAL_SAME_IP",
+        severity: "medium",
         score: 45,
-        decision: 'review',
-        message: '邀请人与被邀请人使用相同 IP，可能存在刷邀请行为。',
+        decision: "review",
+        message: "邀请人与被邀请人使用相同 IP，可能存在刷邀请行为。",
       });
     }
   }
@@ -1247,58 +1266,61 @@ export class RiskControl {
     signals: RiskSignal[],
   ): void {
     const walletAddress =
-      input.walletAddress ?? getString(input.metadata, 'walletAddress');
-    const invalidWalletAddress = getBoolean(input.metadata, 'invalidWalletAddress');
-    const tonProofProvided = getBoolean(input.metadata, 'tonProofProvided');
-    const reuseCount = getNumber(input.metadata, 'walletAddressReuseCount');
+      input.walletAddress ?? getString(input.metadata, "walletAddress");
+    const invalidWalletAddress = getBoolean(
+      input.metadata,
+      "invalidWalletAddress",
+    );
+    const tonProofProvided = getBoolean(input.metadata, "tonProofProvided");
+    const reuseCount = getNumber(input.metadata, "walletAddressReuseCount");
 
     if (
-      input.action !== 'wallet.connect' &&
-      input.action !== 'wallet.proof' &&
-      input.action !== 'wallet.sync_nfts' &&
-      input.action !== 'wallet.mint'
+      input.action !== "wallet.connect" &&
+      input.action !== "wallet.proof" &&
+      input.action !== "wallet.sync_nfts" &&
+      input.action !== "wallet.mint"
     ) {
       return;
     }
 
-    if (!walletAddress && input.action !== 'wallet.sync_nfts') {
+    if (!walletAddress && input.action !== "wallet.sync_nfts") {
       pushSignal(signals, {
-        code: 'MISSING_WALLET_ADDRESS',
-        severity: 'high',
+        code: "MISSING_WALLET_ADDRESS",
+        severity: "high",
         score: 80,
-        decision: 'deny',
-        message: '钱包操作缺少 TON 钱包地址。',
+        decision: "deny",
+        message: "钱包操作缺少 TON 钱包地址。",
       });
     }
 
     if (invalidWalletAddress === true) {
       pushSignal(signals, {
-        code: 'INVALID_WALLET_ADDRESS',
-        severity: 'critical',
+        code: "INVALID_WALLET_ADDRESS",
+        severity: "critical",
         score: 100,
-        decision: 'deny',
-        message: 'TON 钱包地址格式非法。',
+        decision: "deny",
+        message: "TON 钱包地址格式非法。",
       });
     }
 
-    if (input.action === 'wallet.proof' && tonProofProvided === false) {
+    if (input.action === "wallet.proof" && tonProofProvided === false) {
       pushSignal(signals, {
-        code: 'MISSING_TON_PROOF',
-        severity: 'critical',
+        code: "MISSING_TON_PROOF",
+        severity: "critical",
         score: 100,
-        decision: 'deny',
-        message: '钱包验证缺少 ton_proof。',
+        decision: "deny",
+        message: "钱包验证缺少 ton_proof。",
       });
     }
 
     if (reuseCount !== undefined) {
       if (reuseCount >= this.policy.wallet.denyReuseCount) {
         pushSignal(signals, {
-          code: 'WALLET_ADDRESS_HEAVILY_REUSED',
-          severity: 'critical',
+          code: "WALLET_ADDRESS_HEAVILY_REUSED",
+          severity: "critical",
           score: 100,
-          decision: 'deny',
-          message: '同一钱包地址被过多用户绑定。',
+          decision: "deny",
+          message: "同一钱包地址被过多用户绑定。",
           metadata: {
             walletAddressHash: walletAddress
               ? this.hashForStorage(`wallet:${walletAddress}`)
@@ -1308,11 +1330,11 @@ export class RiskControl {
         });
       } else if (reuseCount >= this.policy.wallet.reviewReuseCount) {
         pushSignal(signals, {
-          code: 'WALLET_ADDRESS_REUSED',
-          severity: 'high',
+          code: "WALLET_ADDRESS_REUSED",
+          severity: "high",
           score: 70,
-          decision: 'review',
-          message: '同一钱包地址被多个用户绑定，需要复核。',
+          decision: "review",
+          message: "同一钱包地址被多个用户绑定，需要复核。",
           metadata: {
             walletAddressHash: walletAddress
               ? this.hashForStorage(`wallet:${walletAddress}`)
@@ -1323,18 +1345,18 @@ export class RiskControl {
       }
     }
 
-    if (input.action === 'wallet.mint') {
-      const itemLocked = getBoolean(input.metadata, 'itemLocked');
-      const itemMinting = getBoolean(input.metadata, 'itemMinting');
-      const itemMinted = getBoolean(input.metadata, 'itemMinted');
+    if (input.action === "wallet.mint") {
+      const itemLocked = getBoolean(input.metadata, "itemLocked");
+      const itemMinting = getBoolean(input.metadata, "itemMinting");
+      const itemMinted = getBoolean(input.metadata, "itemMinted");
 
       if (itemLocked || itemMinting || itemMinted) {
         pushSignal(signals, {
-          code: 'ITEM_NOT_AVAILABLE_FOR_MINT',
-          severity: 'critical',
+          code: "ITEM_NOT_AVAILABLE_FOR_MINT",
+          severity: "critical",
           score: 100,
-          decision: 'deny',
-          message: '藏品不可进入 Mint 队列，可能已锁定、Mint 中或已 Mint。',
+          decision: "deny",
+          message: "藏品不可进入 Mint 队列，可能已锁定、Mint 中或已 Mint。",
           metadata: {
             itemLocked,
             itemMinting,
@@ -1346,7 +1368,7 @@ export class RiskControl {
   }
 
   private shouldWriteEvent(assessment: RiskAssessment): boolean {
-    if (assessment.decision !== 'allow') {
+    if (assessment.decision !== "allow") {
       return true;
     }
 
@@ -1392,12 +1414,14 @@ export class RiskControl {
       const db = this.supabase as unknown as {
         schema(schema: string): {
           from(table: string): {
-            insert(payload: unknown): Promise<{ error?: { message: string } | null }>;
+            insert(
+              payload: unknown,
+            ): Promise<{ error?: { message: string } | null }>;
           };
         };
       };
 
-      await db.schema('ops').from('risk_events').insert(event);
+      await db.schema("ops").from("risk_events").insert(event);
     } catch {
       // 风控事件写入失败不能影响主业务判断结果。
       // 真正阻断与否由 assessment.decision 决定。
@@ -1408,12 +1432,12 @@ export class RiskControl {
     const normalized = value.trim().toLowerCase();
 
     if (this.hashSecret) {
-      return createHmac('sha256', this.hashSecret)
+      return createHmac("sha256", this.hashSecret)
         .update(normalized)
-        .digest('hex');
+        .digest("hex");
     }
 
-    return createHash('sha256').update(normalized).digest('hex');
+    return createHash("sha256").update(normalized).digest("hex");
   }
 }
 
@@ -1429,8 +1453,8 @@ export function createRiskControl(
           rules: options.rateLimitRules,
           keySecret:
             options.hashSecret ??
-            getEnv('RISK_HASH_SECRET') ??
-            getEnv('RATE_LIMIT_HASH_SECRET'),
+            getEnv("RISK_HASH_SECRET") ??
+            getEnv("RATE_LIMIT_HASH_SECRET"),
         }));
 
   return new RiskControl({
@@ -1443,22 +1467,22 @@ export function getRecommendedRiskHttpStatus(
   assessment: RiskAssessment,
 ): number {
   const hasRateLimitSignal = assessment.signals.some(
-    (signal) => signal.code === 'RATE_LIMIT_EXCEEDED',
+    (signal) => signal.code === "RATE_LIMIT_EXCEEDED",
   );
 
   if (hasRateLimitSignal) {
     return 429;
   }
 
-  if (assessment.decision === 'deny') {
+  if (assessment.decision === "deny") {
     return 403;
   }
 
-  if (assessment.decision === 'review') {
+  if (assessment.decision === "review") {
     return 409;
   }
 
-  if (assessment.decision === 'challenge') {
+  if (assessment.decision === "challenge") {
     return 428;
   }
 
@@ -1524,36 +1548,36 @@ function calculateRiskSeverity(
   score: number,
 ): RiskSeverity {
   if (signals.length === 0) {
-    return 'info';
+    return "info";
   }
 
   const highestBySignal = signals.reduce<RiskSeverity>((highest, signal) => {
     return SEVERITY_ORDER[signal.severity] > SEVERITY_ORDER[highest]
       ? signal.severity
       : highest;
-  }, 'info');
+  }, "info");
 
-  if (highestBySignal !== 'info') {
+  if (highestBySignal !== "info") {
     return highestBySignal;
   }
 
   if (score >= 95) {
-    return 'critical';
+    return "critical";
   }
 
   if (score >= 70) {
-    return 'high';
+    return "high";
   }
 
   if (score >= 40) {
-    return 'medium';
+    return "medium";
   }
 
   if (score > 0) {
-    return 'low';
+    return "low";
   }
 
-  return 'info';
+  return "info";
 }
 
 function resolveRiskDecision(
@@ -1572,73 +1596,73 @@ function resolveRiskDecision(
       return DECISION_ORDER[current] > DECISION_ORDER[highest]
         ? current
         : highest;
-    }, 'allow');
+    }, "allow");
 
-  if (forced !== 'allow') {
+  if (forced !== "allow") {
     return forced;
   }
 
   if (score >= thresholds.deny) {
-    return 'deny';
+    return "deny";
   }
 
   if (score >= thresholds.review) {
-    return 'review';
+    return "review";
   }
 
   if (score >= thresholds.challenge) {
-    return 'challenge';
+    return "challenge";
   }
 
-  return 'allow';
+  return "allow";
 }
 
 function getRequiredActions(
   decision: RiskDecision,
   signals: RiskSignal[],
 ): string[] {
-  if (decision === 'allow') {
+  if (decision === "allow") {
     return [];
   }
 
   const actions = new Set<string>();
 
-  if (signals.some((signal) => signal.code === 'RATE_LIMIT_EXCEEDED')) {
-    actions.add('cooldown');
+  if (signals.some((signal) => signal.code === "RATE_LIMIT_EXCEEDED")) {
+    actions.add("cooldown");
   }
 
   if (
     signals.some(
       (signal) =>
-        signal.code.includes('TELEGRAM') ||
-        signal.code === 'MISSING_APP_SESSION' ||
-        signal.code === 'MISSING_USER_SESSION',
+        signal.code.includes("TELEGRAM") ||
+        signal.code === "MISSING_APP_SESSION" ||
+        signal.code === "MISSING_USER_SESSION",
     )
   ) {
-    actions.add('refresh_session');
+    actions.add("refresh_session");
   }
 
   if (
     signals.some(
       (signal) =>
-        signal.code.includes('WALLET') ||
-        signal.code.includes('TON_PROOF') ||
-        signal.code.includes('MINT'),
+        signal.code.includes("WALLET") ||
+        signal.code.includes("TON_PROOF") ||
+        signal.code.includes("MINT"),
     )
   ) {
-    actions.add('wallet_proof');
+    actions.add("wallet_proof");
   }
 
-  if (decision === 'review') {
-    actions.add('manual_review');
+  if (decision === "review") {
+    actions.add("manual_review");
   }
 
-  if (decision === 'deny') {
-    actions.add('block_request');
+  if (decision === "deny") {
+    actions.add("block_request");
   }
 
-  if (decision === 'challenge' && actions.size === 0) {
-    actions.add('confirm_action');
+  if (decision === "challenge" && actions.size === 0) {
+    actions.add("confirm_action");
   }
 
   return Array.from(actions);
@@ -1653,18 +1677,18 @@ function pushSignal(signals: RiskSignal[], signal: RiskSignal): void {
 
 function requiresUser(action: RiskAction): boolean {
   if (
-    action === 'auth.telegram' ||
-    action === 'telegram.webhook' ||
-    action === 'cron.job'
+    action === "auth.telegram" ||
+    action === "telegram.webhook" ||
+    action === "cron.job"
   ) {
     return false;
   }
 
-  if (String(action).startsWith('admin.')) {
+  if (String(action).startsWith("admin.")) {
     return false;
   }
 
-  if (String(action).startsWith('cron.')) {
+  if (String(action).startsWith("cron.")) {
     return false;
   }
 
@@ -1673,18 +1697,18 @@ function requiresUser(action: RiskAction): boolean {
 
 function requiresSession(action: RiskAction): boolean {
   if (
-    action === 'auth.telegram' ||
-    action === 'telegram.webhook' ||
-    action === 'cron.job'
+    action === "auth.telegram" ||
+    action === "telegram.webhook" ||
+    action === "cron.job"
   ) {
     return false;
   }
 
-  if (String(action).startsWith('admin.')) {
+  if (String(action).startsWith("admin.")) {
     return false;
   }
 
-  if (String(action).startsWith('cron.')) {
+  if (String(action).startsWith("cron.")) {
     return false;
   }
 
@@ -1693,36 +1717,36 @@ function requiresSession(action: RiskAction): boolean {
 
 function isMachineAction(action: RiskAction): boolean {
   return (
-    action === 'telegram.webhook' ||
-    action === 'cron.job' ||
-    String(action).startsWith('cron.') ||
-    String(action).startsWith('admin.')
+    action === "telegram.webhook" ||
+    action === "cron.job" ||
+    String(action).startsWith("cron.") ||
+    String(action).startsWith("admin.")
   );
 }
 
 function isGachaAction(action: RiskAction): boolean {
   return (
-    action === 'box.create_open_order' ||
-    action === 'box.result' ||
-    action === 'box.history' ||
-    String(action).startsWith('gacha.')
+    action === "box.create_open_order" ||
+    action === "box.result" ||
+    action === "box.history" ||
+    String(action).startsWith("gacha.")
   );
 }
 
 function isMarketAction(action: RiskAction): boolean {
-  return action === 'market.buy' || String(action).startsWith('market.');
+  return action === "market.buy" || String(action).startsWith("market.");
 }
 
 function isInventoryAction(action: RiskAction): boolean {
-  return String(action).startsWith('inventory.');
+  return String(action).startsWith("inventory.");
 }
 
 function isTaskAction(action: RiskAction): boolean {
-  return String(action).startsWith('tasks.');
+  return String(action).startsWith("tasks.");
 }
 
 function isWalletAction(action: RiskAction): boolean {
-  return String(action).startsWith('wallet.');
+  return String(action).startsWith("wallet.");
 }
 
 function getString(
@@ -1731,11 +1755,11 @@ function getString(
 ): string | undefined {
   const value = metadata?.[key];
 
-  if (typeof value === 'string' && value.trim()) {
+  if (typeof value === "string" && value.trim()) {
     return value.trim();
   }
 
-  if (typeof value === 'number' && Number.isFinite(value)) {
+  if (typeof value === "number" && Number.isFinite(value)) {
     return String(value);
   }
 
@@ -1748,11 +1772,11 @@ function getNumber(
 ): number | undefined {
   const value = metadata?.[key];
 
-  if (typeof value === 'number' && Number.isFinite(value)) {
+  if (typeof value === "number" && Number.isFinite(value)) {
     return value;
   }
 
-  if (typeof value === 'string' && value.trim()) {
+  if (typeof value === "string" && value.trim()) {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : undefined;
   }
@@ -1766,16 +1790,16 @@ function getBoolean(
 ): boolean | undefined {
   const value = metadata?.[key];
 
-  if (typeof value === 'boolean') {
+  if (typeof value === "boolean") {
     return value;
   }
 
-  if (typeof value === 'string') {
-    if (value.toLowerCase() === 'true') {
+  if (typeof value === "string") {
+    if (value.toLowerCase() === "true") {
       return true;
     }
 
-    if (value.toLowerCase() === 'false') {
+    if (value.toLowerCase() === "false") {
       return false;
     }
   }
@@ -1792,11 +1816,11 @@ function normalizeSeverity(
   fallback: RiskSeverity,
 ): RiskSeverity {
   if (
-    value === 'info' ||
-    value === 'low' ||
-    value === 'medium' ||
-    value === 'high' ||
-    value === 'critical'
+    value === "info" ||
+    value === "low" ||
+    value === "medium" ||
+    value === "high" ||
+    value === "critical"
   ) {
     return value;
   }
@@ -1805,7 +1829,7 @@ function normalizeSeverity(
 }
 
 function getEnv(name: string): string | undefined {
-  if (typeof process === 'undefined') {
+  if (typeof process === "undefined") {
     return undefined;
   }
 

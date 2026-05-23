@@ -1,6 +1,6 @@
 // packages/validation/src/album.schemas.ts
 
-import { z } from 'zod';
+import { z } from "zod";
 
 /**
  * Album validation schemas
@@ -23,16 +23,17 @@ const uuidSchema = z.string().trim().uuid();
 const cursorSchema = z
   .string()
   .trim()
-  .min(1, 'cursor cannot be empty')
-  .max(512, 'cursor is too long');
+  .min(1, "cursor cannot be empty")
+  .max(512, "cursor is too long");
 
 const idempotencyKeySchema = z
   .string()
   .trim()
-  .min(16, 'idempotency_key must be at least 16 characters')
-  .max(128, 'idempotency_key is too long')
+  .min(16, "idempotency_key must be at least 16 characters")
+  .max(128, "idempotency_key is too long")
   .regex(/^[a-zA-Z0-9:_-]+$/, {
-    message: 'idempotency_key can only contain letters, numbers, colon, underscore and hyphen',
+    message:
+      "idempotency_key can only contain letters, numbers, colon, underscore and hyphen",
   });
 
 const isoDateTimeSchema = z.string().datetime();
@@ -42,17 +43,17 @@ const nonNegativeIntegerSchema = z.coerce.number().int().min(0);
 const nonNegativeAmountSchema = z.coerce
   .number()
   .int()
-  .min(0, 'amount cannot be negative')
-  .max(1_000_000_000, 'amount is too large');
+  .min(0, "amount cannot be negative")
+  .max(1_000_000_000, "amount is too large");
 
 const booleanFromQuerySchema = z.preprocess((value) => {
-  if (typeof value === 'boolean') return value;
+  if (typeof value === "boolean") return value;
 
-  if (typeof value === 'string') {
+  if (typeof value === "string") {
     const normalized = value.trim().toLowerCase();
 
-    if (['true', '1', 'yes', 'y', 'on'].includes(normalized)) return true;
-    if (['false', '0', 'no', 'n', 'off'].includes(normalized)) return false;
+    if (["true", "1", "yes", "y", "on"].includes(normalized)) return true;
+    if (["false", "0", "no", "n", "off"].includes(normalized)) return false;
   }
 
   return value;
@@ -61,18 +62,21 @@ const booleanFromQuerySchema = z.preprocess((value) => {
 const csvArraySchema = <T extends z.ZodTypeAny>(itemSchema: T, max = 20) =>
   z
     .preprocess((value) => {
-      if (value === undefined || value === null || value === '') return undefined;
+      if (value === undefined || value === null || value === "")
+        return undefined;
 
       if (Array.isArray(value)) {
         return value
-          .flatMap((item) => (typeof item === 'string' ? item.split(',') : [item]))
-          .map((item) => (typeof item === 'string' ? item.trim() : item))
-          .filter((item) => item !== '');
+          .flatMap((item) =>
+            typeof item === "string" ? item.split(",") : [item],
+          )
+          .map((item) => (typeof item === "string" ? item.trim() : item))
+          .filter((item) => item !== "");
       }
 
-      if (typeof value === 'string') {
+      if (typeof value === "string") {
         return value
-          .split(',')
+          .split(",")
           .map((item) => item.trim())
           .filter(Boolean);
       }
@@ -81,63 +85,73 @@ const csvArraySchema = <T extends z.ZodTypeAny>(itemSchema: T, max = 20) =>
     }, z.array(itemSchema).max(max))
     .optional();
 
-export const AlbumCurrencySchema = z.enum(['KCOIN', 'FGEMS', 'STAR_DISPLAY', 'ITEM', 'DECORATION']);
+export const AlbumCurrencySchema = z.enum([
+  "KCOIN",
+  "FGEMS",
+  "STAR_DISPLAY",
+  "ITEM",
+  "DECORATION",
+]);
 
 export const AlbumRarityCodeSchema = z.enum([
-  'common',
-  'rare',
-  'epic',
-  'legendary',
-  'mythic',
+  "common",
+  "rare",
+  "epic",
+  "legendary",
+  "mythic",
 ]);
 
 export const AlbumItemTypeSchema = z.enum([
-  'character',
-  'pet',
-  'egg',
-  'decoration',
-  'prop',
-  'material',
+  "character",
+  "pet",
+  "egg",
+  "decoration",
+  "prop",
+  "material",
 ]);
 
 export const AlbumBookTypeSchema = z.enum([
-  'all',
-  'series',
-  'faction',
-  'rarity',
-  'event',
-  'limited',
+  "all",
+  "series",
+  "faction",
+  "rarity",
+  "event",
+  "limited",
 ]);
 
-export const AlbumItemCollectStatusSchema = z.enum(['collected', 'uncollected', 'all']);
+export const AlbumItemCollectStatusSchema = z.enum([
+  "collected",
+  "uncollected",
+  "all",
+]);
 
 export const AlbumMilestoneStatusSchema = z.enum([
-  'locked',
-  'claimable',
-  'claimed',
-  'expired',
+  "locked",
+  "claimable",
+  "claimed",
+  "expired",
 ]);
 
 export const AlbumLeaderboardScopeSchema = z.enum([
-  'global',
-  'friends',
-  'series',
-  'faction',
-  'rarity',
+  "global",
+  "friends",
+  "series",
+  "faction",
+  "rarity",
 ]);
 
 export const AlbumLeaderboardSortSchema = z.enum([
-  'score_desc',
-  'completion_desc',
-  'rare_count_desc',
-  'mint_count_desc',
+  "score_desc",
+  "completion_desc",
+  "rare_count_desc",
+  "mint_count_desc",
 ]);
 
 export const AlbumLeaderboardPeriodSchema = z.enum([
-  'current_week',
-  'last_week',
-  'current_month',
-  'all_time',
+  "current_week",
+  "last_week",
+  "current_month",
+  "all_time",
 ]);
 
 export const AlbumBookIdParamSchema = z
@@ -173,27 +187,30 @@ export const AlbumProgressQuerySchema = z
   })
   .strict()
   .superRefine((data, ctx) => {
-    if (data.book_type === 'series' && !data.series_id && !data.book_id) {
+    if (data.book_type === "series" && !data.series_id && !data.book_id) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ['series_id'],
-        message: 'series_id is required when book_type is series and book_id is not provided',
+        path: ["series_id"],
+        message:
+          "series_id is required when book_type is series and book_id is not provided",
       });
     }
 
-    if (data.book_type === 'faction' && !data.faction_id && !data.book_id) {
+    if (data.book_type === "faction" && !data.faction_id && !data.book_id) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ['faction_id'],
-        message: 'faction_id is required when book_type is faction and book_id is not provided',
+        path: ["faction_id"],
+        message:
+          "faction_id is required when book_type is faction and book_id is not provided",
       });
     }
 
-    if (data.book_type === 'rarity' && !data.rarity && !data.book_id) {
+    if (data.book_type === "rarity" && !data.rarity && !data.book_id) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ['rarity'],
-        message: 'rarity is required when book_type is rarity and book_id is not provided',
+        path: ["rarity"],
+        message:
+          "rarity is required when book_type is rarity and book_id is not provided",
       });
     }
   });
@@ -207,7 +224,7 @@ export const AlbumSeriesQuerySchema = z
     rarities: csvArraySchema(AlbumRarityCodeSchema, 8),
     types: csvArraySchema(AlbumItemTypeSchema, 12),
 
-    status: AlbumItemCollectStatusSchema.default('all'),
+    status: AlbumItemCollectStatusSchema.default("all"),
 
     keyword: z.string().trim().max(64).optional(),
 
@@ -225,20 +242,20 @@ export const AlbumItemsQuerySchema = z
     rarity: AlbumRarityCodeSchema.optional(),
     type: AlbumItemTypeSchema.optional(),
 
-    status: AlbumItemCollectStatusSchema.default('all'),
+    status: AlbumItemCollectStatusSchema.default("all"),
 
     keyword: z.string().trim().max(64).optional(),
 
     sort: z
       .enum([
-        'album_order',
-        'rarity_desc',
-        'rarity_asc',
-        'name_asc',
-        'name_desc',
-        'collected_at_desc',
+        "album_order",
+        "rarity_desc",
+        "rarity_asc",
+        "name_asc",
+        "name_desc",
+        "collected_at_desc",
       ])
-      .default('album_order'),
+      .default("album_order"),
 
     cursor: cursorSchema.optional(),
     limit: z.coerce.number().int().min(1).max(120).default(60),
@@ -281,8 +298,8 @@ export const AlbumLeaderboardQuerySchema = z
   .object({
     board_id: uuidSchema.optional(),
 
-    period: AlbumLeaderboardPeriodSchema.default('current_week'),
-    scope: AlbumLeaderboardScopeSchema.default('global'),
+    period: AlbumLeaderboardPeriodSchema.default("current_week"),
+    scope: AlbumLeaderboardScopeSchema.default("global"),
 
     /**
      * scope 为 series / faction / rarity 时，后端需要对应 scope id。
@@ -291,7 +308,7 @@ export const AlbumLeaderboardQuerySchema = z
     faction_id: uuidSchema.optional(),
     rarity: AlbumRarityCodeSchema.optional(),
 
-    sort: AlbumLeaderboardSortSchema.default('score_desc'),
+    sort: AlbumLeaderboardSortSchema.default("score_desc"),
 
     around_me: booleanFromQuerySchema.default(false),
 
@@ -300,27 +317,27 @@ export const AlbumLeaderboardQuerySchema = z
   })
   .strict()
   .superRefine((data, ctx) => {
-    if (data.scope === 'series' && !data.series_id) {
+    if (data.scope === "series" && !data.series_id) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ['series_id'],
-        message: 'series_id is required when scope is series',
+        path: ["series_id"],
+        message: "series_id is required when scope is series",
       });
     }
 
-    if (data.scope === 'faction' && !data.faction_id) {
+    if (data.scope === "faction" && !data.faction_id) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ['faction_id'],
-        message: 'faction_id is required when scope is faction',
+        path: ["faction_id"],
+        message: "faction_id is required when scope is faction",
       });
     }
 
-    if (data.scope === 'rarity' && !data.rarity) {
+    if (data.scope === "rarity" && !data.rarity) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ['rarity'],
-        message: 'rarity is required when scope is rarity',
+        path: ["rarity"],
+        message: "rarity is required when scope is rarity",
       });
     }
   });
@@ -351,8 +368,8 @@ export const AlbumDiscoveriesQuerySchema = z
       if (from > to) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          path: ['from_at'],
-          message: 'from_at cannot be later than to_at',
+          path: ["from_at"],
+          message: "from_at cannot be later than to_at",
         });
       }
     }
@@ -377,19 +394,25 @@ export const AlbumRewardSchema = z
   })
   .strict()
   .superRefine((data, ctx) => {
-    if (['KCOIN', 'FGEMS', 'STAR_DISPLAY'].includes(data.reward_type) && data.amount === undefined) {
+    if (
+      ["KCOIN", "FGEMS", "STAR_DISPLAY"].includes(data.reward_type) &&
+      data.amount === undefined
+    ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ['amount'],
-        message: 'amount is required for currency rewards',
+        path: ["amount"],
+        message: "amount is required for currency rewards",
       });
     }
 
-    if (['ITEM', 'DECORATION'].includes(data.reward_type) && !data.template_id) {
+    if (
+      ["ITEM", "DECORATION"].includes(data.reward_type) &&
+      !data.template_id
+    ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ['template_id'],
-        message: 'template_id is required for item rewards',
+        path: ["template_id"],
+        message: "template_id is required for item rewards",
       });
     }
   });
@@ -504,7 +527,7 @@ export const AlbumClaimMilestoneRewardResponseSchema = z
     milestone_id: uuidSchema,
     book_id: uuidSchema,
 
-    status: z.literal('claimed'),
+    status: z.literal("claimed"),
 
     rewards: z.array(AlbumRewardSchema),
 
@@ -516,7 +539,7 @@ export const AlbumClaimMilestoneRewardResponseSchema = z
       .array(
         z
           .object({
-            currency: z.enum(['KCOIN', 'FGEMS']),
+            currency: z.enum(["KCOIN", "FGEMS"]),
             delta: z.number().int(),
             balance_after: nonNegativeAmountSchema,
           })
@@ -585,12 +608,12 @@ export const AlbumDiscoveryDtoSchema = z
     image_url: z.string().url().nullable().optional(),
 
     source_type: z.enum([
-      'gacha',
-      'market',
-      'admin',
-      'task_reward',
-      'album_reward',
-      'onchain_sync',
+      "gacha",
+      "market",
+      "admin",
+      "task_reward",
+      "album_reward",
+      "onchain_sync",
     ]),
 
     source_id: uuidSchema.nullable(),
@@ -617,11 +640,15 @@ export type AlbumCurrency = z.infer<typeof AlbumCurrencySchema>;
 export type AlbumRarityCode = z.infer<typeof AlbumRarityCodeSchema>;
 export type AlbumItemType = z.infer<typeof AlbumItemTypeSchema>;
 export type AlbumBookType = z.infer<typeof AlbumBookTypeSchema>;
-export type AlbumItemCollectStatus = z.infer<typeof AlbumItemCollectStatusSchema>;
+export type AlbumItemCollectStatus = z.infer<
+  typeof AlbumItemCollectStatusSchema
+>;
 export type AlbumMilestoneStatus = z.infer<typeof AlbumMilestoneStatusSchema>;
 export type AlbumLeaderboardScope = z.infer<typeof AlbumLeaderboardScopeSchema>;
 export type AlbumLeaderboardSort = z.infer<typeof AlbumLeaderboardSortSchema>;
-export type AlbumLeaderboardPeriod = z.infer<typeof AlbumLeaderboardPeriodSchema>;
+export type AlbumLeaderboardPeriod = z.infer<
+  typeof AlbumLeaderboardPeriodSchema
+>;
 
 export type AlbumProgressQueryInput = z.input<typeof AlbumProgressQuerySchema>;
 export type AlbumProgressQuery = z.output<typeof AlbumProgressQuerySchema>;
@@ -639,19 +666,31 @@ export type AlbumClaimMilestoneRewardBody = z.output<
   typeof AlbumClaimMilestoneRewardBodySchema
 >;
 
-export type AlbumMilestonesQueryInput = z.input<typeof AlbumMilestonesQuerySchema>;
+export type AlbumMilestonesQueryInput = z.input<
+  typeof AlbumMilestonesQuerySchema
+>;
 export type AlbumMilestonesQuery = z.output<typeof AlbumMilestonesQuerySchema>;
 
-export type AlbumLeaderboardQueryInput = z.input<typeof AlbumLeaderboardQuerySchema>;
-export type AlbumLeaderboardQuery = z.output<typeof AlbumLeaderboardQuerySchema>;
+export type AlbumLeaderboardQueryInput = z.input<
+  typeof AlbumLeaderboardQuerySchema
+>;
+export type AlbumLeaderboardQuery = z.output<
+  typeof AlbumLeaderboardQuerySchema
+>;
 
-export type AlbumDiscoveriesQueryInput = z.input<typeof AlbumDiscoveriesQuerySchema>;
-export type AlbumDiscoveriesQuery = z.output<typeof AlbumDiscoveriesQuerySchema>;
+export type AlbumDiscoveriesQueryInput = z.input<
+  typeof AlbumDiscoveriesQuerySchema
+>;
+export type AlbumDiscoveriesQuery = z.output<
+  typeof AlbumDiscoveriesQuerySchema
+>;
 
 export type AlbumReward = z.infer<typeof AlbumRewardSchema>;
 export type AlbumBookDto = z.infer<typeof AlbumBookDtoSchema>;
 export type AlbumItemDto = z.infer<typeof AlbumItemDtoSchema>;
 export type AlbumMilestoneDto = z.infer<typeof AlbumMilestoneDtoSchema>;
 export type AlbumProgressDto = z.infer<typeof AlbumProgressDtoSchema>;
-export type AlbumLeaderboardEntryDto = z.infer<typeof AlbumLeaderboardEntryDtoSchema>;
+export type AlbumLeaderboardEntryDto = z.infer<
+  typeof AlbumLeaderboardEntryDtoSchema
+>;
 export type AlbumDiscoveryDto = z.infer<typeof AlbumDiscoveryDtoSchema>;

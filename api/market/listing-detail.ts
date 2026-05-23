@@ -168,12 +168,7 @@ function mapMarketListingDetailRpcError(error: unknown): ApiError {
 }
 
 function isListingNotFoundError(error: RpcError): boolean {
-  const message = [
-    error.message,
-    error.details,
-    error.hint,
-    error.code,
-  ]
+  const message = [error.message, error.details, error.hint, error.code]
     .filter(Boolean)
     .join(" ")
     .toLowerCase();
