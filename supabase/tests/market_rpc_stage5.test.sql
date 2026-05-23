@@ -142,7 +142,7 @@ begin
 end;
 $$;
 
-select plan(37);
+select plan(41);
 
 create temp table _ids (key text primary key, id uuid, payload jsonb) on commit drop;
 insert into _ids (key, id) values ('seller', testutil.make_user(9700000001, 'market_rpc_seller'));
@@ -182,6 +182,20 @@ select 'listing_repeat', api.market_create_listing((select id from _ids where ke
 select ok(((select payload from _ids where key = 'listing_repeat') ->> 'idempotent')::boolean, 'repeated create listing is idempotent');
 select is(((select payload from _ids where key = 'listing_repeat') ->> 'expected_net_amount')::numeric, 95::numeric, 'idempotent create listing returns backend expected net amount');
 select is(((select payload from _ids where key = 'listing_repeat') ->> 'fee_bps')::int, 500, 'idempotent create listing returns backend fee bps');
+select is((
+  select count(*)::int
+  from ops.app_events
+  where user_id = (select id from _ids where key = 'seller')
+    and event_name = 'market_listing_created'
+    and payload ->> 'task_action_type' = 'sell_market'
+    and (payload ->> 'listing_id')::uuid = (select id from _ids where key = 'listing_id')
+), 1, 'create listing writes one sell_market app event');
+select is((
+  select count(*)::int
+  from ops.app_events
+  where event_name = 'market_listing_created'
+    and payload ->> 'idempotency_key' = 'market-rpc-create-001'
+), 1, 'repeated create listing does not duplicate sell_market app event');
 
 insert into _ids (key, payload)
 select 'buyer_list', api.market_list_listings(p_user_id := (select id from _ids where key = 'buyer'), p_limit := 10);
@@ -254,6 +268,20 @@ select ok(exists (select 1 from market.fee_settlements where market_order_id = (
 insert into _ids (key, payload)
 select 'buy_repeat', api.market_buy_listing((select id from _ids where key = 'buyer'), (select id from _ids where key = 'listing_id'), 1, 150, 'market-rpc-buy-001');
 select ok(((select payload from _ids where key = 'buy_repeat') ->> 'idempotent')::boolean, 'repeated buy is idempotent');
+select is((
+  select count(*)::int
+  from ops.app_events
+  where user_id = (select id from _ids where key = 'buyer')
+    and event_name = 'market_order_completed'
+    and payload ->> 'task_action_type' = 'buy_market'
+    and (payload ->> 'order_id')::uuid = (select id from _ids where key = 'order_id')
+), 1, 'buy listing writes one buy_market app event');
+select is((
+  select count(*)::int
+  from ops.app_events
+  where event_name = 'market_order_completed'
+    and payload ->> 'idempotency_key' = 'market-rpc-buy-001'
+), 1, 'repeated buy does not duplicate buy_market app event');
 
 insert into _ids (key, payload)
 select 'refresh_after_buy', api.market_refresh_price_stats();
