@@ -1,8 +1,23 @@
+import { useCallback } from "react";
+
 import { ListingStatsPanel } from "../components/ListingStatsPanel";
-import { useMyListingStats } from "../hooks/useMyListings";
+import { MyListingFilters } from "../components/MyListingFilters";
+import { MyListingsList } from "../components/MyListingsList";
+import { useMyListingFilters } from "../hooks/useMyListingFilters";
+import { useMyListingStats, useMyListings } from "../hooks/useMyListings";
+import type { MyListing } from "../trade.types";
 
 export function ManageListingsPage() {
+  const { filters, hasActiveFilters, query, resetFilters, updateFilter } =
+    useMyListingFilters();
   const statsQuery = useMyListingStats();
+  const listingsQuery = useMyListings(query);
+  const handleChangePrice = useCallback((listing: MyListing) => {
+    void listing;
+  }, []);
+  const handleCancel = useCallback((listing: MyListing) => {
+    void listing;
+  }, []);
 
   return (
     <section
@@ -22,6 +37,24 @@ export function ManageListingsPage() {
             void statsQuery.refetch();
           }}
           stats={statsQuery.stats}
+        />
+        <MyListingFilters
+          filters={filters}
+          hasActiveFilters={hasActiveFilters}
+          onFilterChange={updateFilter}
+          onReset={resetFilters}
+        />
+        <MyListingsList
+          hasActiveFilters={hasActiveFilters}
+          isError={listingsQuery.isError}
+          isFetching={listingsQuery.isFetching}
+          isLoading={listingsQuery.isLoading}
+          listings={listingsQuery.listings}
+          onCancel={handleCancel}
+          onChangePrice={handleChangePrice}
+          onRetry={() => {
+            void listingsQuery.refetch();
+          }}
         />
       </div>
     </section>

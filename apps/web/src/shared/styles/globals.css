@@ -2165,6 +2165,295 @@ a {
   color: #ffe7a6;
 }
 
+.my-listing-filters {
+  display: grid;
+  gap: 8px;
+}
+
+.my-listing-filters__group {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.my-listing-filters__group--sort {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+}
+
+.my-listings-list {
+  min-width: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.my-listings-list__header {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.my-listings-list__header div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.my-listings-list__header span {
+  color: #8bd3c7;
+  font-size: 11px;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.my-listings-list__header strong {
+  min-width: 0;
+  overflow: hidden;
+  color: #f7fbff;
+  font-size: 15px;
+  font-weight: 950;
+  line-height: 1.18;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.my-listings-list__items {
+  display: grid;
+  gap: 10px;
+}
+
+.my-listing-row {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  gap: 10px;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 13%);
+  border-radius: 8px;
+  padding: 10px;
+  color: #f7fbff;
+  background: rgb(13 20 25 / 82%);
+}
+
+.my-listing-row--rare {
+  border-color: rgb(125 226 209 / 28%);
+}
+
+.my-listing-row--epic {
+  border-color: rgb(201 167 255 / 32%);
+}
+
+.my-listing-row--legendary,
+.my-listing-row--mythic {
+  border-color: rgb(255 209 102 / 38%);
+}
+
+.my-listing-row__image {
+  min-width: 0;
+  min-height: 92px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 8px;
+  color: #071615;
+  background:
+    linear-gradient(135deg, rgb(255 255 255 / 70%), transparent 34%),
+    linear-gradient(155deg, #8bd3c7, #ffd166);
+  font-size: 30px;
+  font-weight: 950;
+}
+
+.my-listing-row__image img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.my-listing-row__body {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 9px;
+}
+
+.my-listing-row__title {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: start;
+}
+
+.my-listing-row__title div {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+
+.my-listing-row__title span {
+  width: fit-content;
+  max-width: 100%;
+  min-height: 21px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgb(139 211 199 / 26%);
+  border-radius: 999px;
+  padding: 0 8px;
+  color: #dffff9;
+  background: rgb(139 211 199 / 9%);
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.my-listing-row__title h3 {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: #f7fbff;
+  font-size: 14px;
+  font-weight: 950;
+  line-height: 1.18;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.my-listing-row__status {
+  max-width: 96px;
+  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 999px;
+  padding: 0 8px;
+  color: #d4e1e7;
+  background: rgb(255 255 255 / 7%);
+  font-size: 10px;
+  font-weight: 950;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.my-listing-row__status--active,
+.my-listing-row__status--partially_sold {
+  color: #dffff9;
+  border-color: rgb(139 211 199 / 28%);
+  background: rgb(139 211 199 / 10%);
+}
+
+.my-listing-row__status--sold {
+  color: #ffe7a6;
+  border-color: rgb(255 209 102 / 30%);
+  background: rgb(255 209 102 / 10%);
+}
+
+.my-listing-row__status--cancelled,
+.my-listing-row__status--expired,
+.my-listing-row__status--suspended {
+  color: #c5d1d7;
+  border-color: rgb(255 255 255 / 12%);
+  background: rgb(255 255 255 / 6%);
+}
+
+.my-listing-row__meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+}
+
+.my-listing-row__meta div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  border: 1px solid rgb(255 255 255 / 8%);
+  border-radius: 8px;
+  padding: 7px;
+  background: rgb(255 255 255 / 4%);
+}
+
+.my-listing-row__meta dt,
+.my-listing-row__meta dd {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.my-listing-row__meta dt {
+  color: #9fb1b9;
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.my-listing-row__meta dd {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #f7fbff;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.my-listing-row__meta dd svg {
+  flex: 0 0 auto;
+  color: #8bd3c7;
+}
+
+.my-listing-row__meta div:first-child dd {
+  color: #ffe7a6;
+}
+
+.my-listing-row__actions {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.my-listing-row__actions button {
+  min-width: 0;
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid rgb(139 211 199 / 32%);
+  border-radius: 8px;
+  padding: 0 12px;
+  color: #dffff9;
+  background: rgb(139 211 199 / 10%);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.my-listing-row__actions button:last-child {
+  color: #ffd6cc;
+  border-color: rgb(255 122 89 / 26%);
+  background: rgb(255 122 89 / 9%);
+}
+
+.my-listing-row__actions button:disabled {
+  color: #6f7e85;
+  cursor: not-allowed;
+  border-color: rgb(255 255 255 / 10%);
+  background: rgb(255 255 255 / 5%);
+}
+
+.my-listing-row__actions button:focus-visible,
+.my-listing-filters .market-filter input:focus-visible,
+.my-listing-filters .market-filter select:focus-visible {
+  outline: 3px solid rgb(139 211 199 / 34%);
+  outline-offset: 2px;
+}
+
 .market-banner {
   min-height: 122px;
   position: relative;
@@ -2177,8 +2466,7 @@ a {
   color: #f7fbff;
   background:
     linear-gradient(135deg, rgb(139 211 199 / 24%), transparent 46%),
-    linear-gradient(160deg, rgb(255 209 102 / 16%), transparent 58%),
-    #182328;
+    linear-gradient(160deg, rgb(255 209 102 / 16%), transparent 58%), #182328;
   text-decoration: none;
 }
 
