@@ -15,6 +15,7 @@ import type {
   MarketListingStatus,
   MarketPriceHealth,
   MarketRarityCode,
+  SellableItemGroup,
   TradeTabId,
 } from "./trade.types";
 
@@ -127,6 +128,27 @@ export function normalizeTradeTab(value: string | null): TradeTabId {
   }
 
   return "buy";
+}
+
+export function getSellableItemSelectionKey(
+  item: Pick<SellableItemGroup, "formId" | "itemInstanceId" | "templateId">,
+): string {
+  return [
+    item.templateId,
+    item.formId ?? "default-form",
+    item.itemInstanceId ?? "group",
+  ].join(":");
+}
+
+export function getSellableItemReferencePrice(
+  item: Pick<
+    SellableItemGroup,
+    "maxPriceKcoin" | "minPriceKcoin" | "suggestedPriceKcoin"
+  >,
+): number | null {
+  return (
+    item.suggestedPriceKcoin ?? item.minPriceKcoin ?? item.maxPriceKcoin
+  );
 }
 
 function toNonNegativeInteger(value: number): number {
