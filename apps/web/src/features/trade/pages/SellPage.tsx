@@ -10,16 +10,14 @@ import type { SellableItemGroup } from "../trade.types";
 import { getSellableItemSelectionKey } from "../trade.utils";
 
 export function SellPage() {
-  const sellableItemsQuery = useSellableItems({
-    limit: 50,
-  });
   const {
-    filteredItems,
     filters,
     hasActiveFilters,
+    query,
     resetFilters,
     updateFilter,
-  } = useSellInventoryFilters(sellableItemsQuery.items);
+  } = useSellInventoryFilters();
+  const sellableItemsQuery = useSellableItems(query);
   const [selectedItem, setSelectedItem] = useState<SellableItemGroup | null>(
     null,
   );
@@ -123,7 +121,12 @@ export function SellPage() {
         <SellInventoryGrid
           isError={sellableItemsQuery.isError}
           isLoading={sellableItemsQuery.isLoading}
-          items={filteredItems}
+          isLoadingMore={sellableItemsQuery.isFetchingNextPage}
+          items={sellableItemsQuery.items}
+          hasMore={sellableItemsQuery.hasNextPage}
+          onLoadMore={() => {
+            void sellableItemsQuery.fetchNextPage();
+          }}
           onRetry={() => {
             void sellableItemsQuery.refetch();
           }}

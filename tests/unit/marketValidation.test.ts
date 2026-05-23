@@ -8,6 +8,7 @@ import {
   MarketListingDetailResponseSchema,
   MarketListingsResponseSchema,
   MarketListListingsQuerySchema,
+  MarketSellableItemsQuerySchema,
   MarketUpdateListingPriceBodySchema,
 } from "../../packages/validation/src/market.schemas";
 
@@ -71,6 +72,34 @@ describe("market API contract schemas", () => {
     expect(() =>
       MarketListListingsQuerySchema.parse({
         limit: 51,
+      }),
+    ).toThrow();
+  });
+
+  it("accepts sellable item query filters", () => {
+    const result = MarketSellableItemsQuerySchema.parse({
+      rarities: "rare",
+      type_codes: "character",
+      min_price: "100",
+      max_price: "500",
+      sort: "power_high_to_low",
+      limit: "50",
+      cursor: "50",
+    });
+
+    expect(result).toMatchObject({
+      rarities: ["rare"],
+      type_codes: ["character"],
+      min_price: 100,
+      max_price: 500,
+      sort: "power_high_to_low",
+      limit: 50,
+    });
+
+    expect(() =>
+      MarketSellableItemsQuerySchema.parse({
+        min_price: "600",
+        max_price: "500",
       }),
     ).toThrow();
   });

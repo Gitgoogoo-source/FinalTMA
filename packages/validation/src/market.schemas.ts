@@ -319,6 +319,8 @@ export const MarketSellableItemsQuerySchema = z
 
     min_level: integerRangeSchema(1, 999).optional(),
     max_level: integerRangeSchema(1, 999).optional(),
+    min_price: nonNegativeKcoinAmountSchema.optional(),
+    max_price: nonNegativeKcoinAmountSchema.optional(),
 
     sort: MarketSellableItemSortSchema.default("recently_obtained"),
     cursor: cursorSchema.optional(),
@@ -337,6 +339,8 @@ export const MarketSellableItemsQuerySchema = z
         message: "min_level cannot be greater than max_level",
       });
     }
+
+    priceRangeRefinement(data, ctx);
   });
 
 export const MarketCreateListingBodySchema = z

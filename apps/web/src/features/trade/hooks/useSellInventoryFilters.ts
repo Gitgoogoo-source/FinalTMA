@@ -1,10 +1,9 @@
 import { useCallback, useMemo, useState } from "react";
 
 import type {
+  MarketSellableItemsQuery,
   MarketSellableItemSort,
-  SellableItemGroup,
 } from "../trade.types";
-import { getSellableItemReferencePrice } from "../trade.utils";
 
 export type SellInventoryFiltersState = {
   minPriceKcoin: string;
@@ -24,7 +23,7 @@ const DEFAULT_FILTERS: SellInventoryFiltersState = {
   sort: "recently_obtained",
 };
 
-export function useSellInventoryFilters(items: SellableItemGroup[]) {
+export function useSellInventoryFilters() {
   const [filters, setFilters] =
     useState<SellInventoryFiltersState>(DEFAULT_FILTERS);
 
@@ -45,111 +44,15 @@ export function useSellInventoryFilters(items: SellableItemGroup[]) {
     setFilters(DEFAULT_FILTERS);
   }, []);
 
-  const filteredItems = useMemo(
-    () => filterSellableItems(items, filters),
-    [filters, items],
-  );
+  const query = useMemo(() => buildSellableItemsQuery(filters), [filters]);
 
   return {
     filters,
-    filteredItems,
     hasActiveFilters: !areFiltersDefault(filters),
+    query,
     resetFilters,
     updateFilter,
   };
-}
-
-function filterSellableItems(
-  items: SellableItemGroup[],
-  filters: SellInventoryFiltersState,
-): SellableItemGroup[] {
-  const minPrice = parseKcoinFilter(filters.minPriceKcoin);
-  const maxPrice = parseKcoinFilter(filters.maxPriceKcoin);
-
-  return [...items]
-    .filter((item) => {
-      if (filters.rarity && item.rarityCode !== filters.rarity) {
-        return false;
-      }
-
-      if (filters.typeCode && item.typeCode !== filters.typeCode) {
-        return false;
-      }
-
-      return matchesLocalPriceFilter(item, minPrice, maxPrice);
-    })
-    .sort((left, right) => compareSellableItems(left, right, filters.sort));
-}
-
-// Price filtering is intentionally local: it only filters the currently loaded
-// sellable item list. If database-wide price filtering is needed later, add
-// min/max price support to the API/RPC path instead (option B).
-function matchesLocalPriceFilter(
-  item: SellableItemGroup,
-  minPrice: number | undefined,
-  maxPrice: number | undefined,
-): boolean {
-  if (minPrice === undefined && maxPrice === undefined) {
-    return true;
-  }
-
-  const referencePrice = getSellableItemReferencePrice(item);
-
-  if (referencePrice === null) {
-    return false;
-  }
-
-  if (minPrice !== undefined && referencePrice < minPrice) {
-    return false;
-  }
-
-  if (maxPrice !== undefined && referencePrice > maxPrice) {
-    return false;
-  }
-
-  return true;
-}
-
-function compareSellableItems(
-  left: SellableItemGroup,
-  right: SellableItemGroup,
-  sort: MarketSellableItemSort,
-): number {
-  if (sort === "rarity_high_to_low") {
-    return compareNumber(
-      getRarityRank(right.rarityCode),
-      getRarityRank(left.rarityCode),
-    );
-  }
-
-  if (sort === "rarity_low_to_high") {
-    return compareNumber(
-      getRarityRank(left.rarityCode),
-      getRarityRank(right.rarityCode),
-    );
-  }
-
-  if (sort === "level_high_to_low") {
-    return compareNumber(right.level, left.level);
-  }
-
-  if (sort === "level_low_to_high") {
-    return compareNumber(left.level, right.level);
-  }
-
-  if (sort === "power_high_to_low") {
-    return compareNumber(right.power, left.power);
-  }
-
-  if (sort === "power_low_to_high") {
-    return compareNumber(left.power, right.power);
-  }
-
-  if (sort === "name_a_to_z") {
-    return left.itemName.localeCompare(right.itemName);
-  }
-
-  return compareTimeDesc(left.acquiredAt, right.acquiredAt);
 }
 
 function parseKcoinFilter(value: string): number | undefined {
@@ -159,13 +62,42 @@ function parseKcoinFilter(value: string): number | undefined {
     return undefined;
   }
 
-  const parsed = Number.parseInt(trimmed, 10);
+  const parsed = Number(trimmed);
 
-  if (!Number.isFinite(parsed) || parsed < 0) {
+  if (!Number.isFinite(parsed) || !Number.isInteger(parsed) || parsed < 0) {
     return undefined;
   }
 
   return parsed;
+}
+
+function buildSellableItemsQuery(
+  filters: SellInventoryFiltersState,
+): MarketSellableItemsQuery {
+  const query: MarketSellableItemsQuery = {
+    limit: 50,
+    sort: filters.sort,
+  };
+  const minPrice = parseKcoinFilter(filters.minPriceKcoin);
+  const maxPrice = parseKcoinFilter(filters.maxPriceKcoin);
+
+  if (filters.rarity) {
+    query.rarities = [filters.rarity];
+  }
+
+  if (filters.typeCode) {
+    query.typeCodes = [filters.typeCode];
+  }
+
+  if (minPrice !== undefined) {
+    query.minPriceKcoin = minPrice;
+  }
+
+  if (maxPrice !== undefined) {
+    query.maxPriceKcoin = maxPrice;
+  }
+
+  return query;
 }
 
 function areFiltersDefault(filters: SellInventoryFiltersState): boolean {
@@ -176,25 +108,4 @@ function areFiltersDefault(filters: SellInventoryFiltersState): boolean {
     filters.typeCode === DEFAULT_FILTERS.typeCode &&
     filters.sort === DEFAULT_FILTERS.sort
   );
-}
-
-function compareNumber(left: number, right: number): number {
-  return left === right ? 0 : left > right ? 1 : -1;
-}
-
-function compareTimeDesc(left: string | null, right: string | null): number {
-  const leftTime = left ? Date.parse(left) : 0;
-  const rightTime = right ? Date.parse(right) : 0;
-
-  return compareNumber(rightTime, leftTime);
-}
-
-function getRarityRank(rarityCode: string): number {
-  if (rarityCode === "mythic") return 5;
-  if (rarityCode === "legendary") return 4;
-  if (rarityCode === "epic") return 3;
-  if (rarityCode === "rare") return 2;
-  if (rarityCode === "common") return 1;
-
-  return 0;
 }

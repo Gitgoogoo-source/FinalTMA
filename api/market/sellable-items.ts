@@ -54,6 +54,8 @@ async function callMarketListSellableItems(
         p_min_level: query.min_level ?? null,
         p_max_level: query.max_level ?? null,
         p_keyword: null,
+        p_min_price_kcoin: query.min_price ?? null,
+        p_max_price_kcoin: query.max_price ?? null,
         p_sort: query.sort,
         p_limit: query.limit,
         p_cursor: query.cursor ?? null,

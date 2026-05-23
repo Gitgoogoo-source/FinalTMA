@@ -254,6 +254,8 @@ function buildSellableItemsQuery(query: MarketSellableItemsQuery): string {
   appendBoolean(params, "only_duplicates", query.onlyDuplicates);
   appendNumber(params, "min_level", query.minLevel);
   appendNumber(params, "max_level", query.maxLevel);
+  appendNumber(params, "min_price", query.minPriceKcoin);
+  appendNumber(params, "max_price", query.maxPriceKcoin);
   appendString(params, "sort", query.sort);
   appendString(params, "cursor", query.cursor);
   appendNumber(params, "limit", query.limit);

@@ -447,9 +447,11 @@ describe("market sellable items API", () => {
         only_duplicates: "true",
         min_level: "2",
         max_level: "10",
+        min_price: "300",
+        max_price: "800",
         sort: "power_high_to_low",
         limit: "10",
-        cursor: "2026-05-22T01:00:00.000Z",
+        cursor: "50",
       },
     });
 
@@ -466,9 +468,11 @@ describe("market sellable items API", () => {
         p_min_level: 2,
         p_max_level: 10,
         p_keyword: null,
+        p_min_price_kcoin: 300,
+        p_max_price_kcoin: 800,
         p_sort: "power_high_to_low",
         p_limit: 10,
-        p_cursor: "2026-05-22T01:00:00.000Z",
+        p_cursor: "50",
       },
       {
         schema: "api",

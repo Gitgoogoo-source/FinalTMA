@@ -190,6 +190,8 @@ export type MarketSellableItemsQuery = {
   onlyDuplicates?: boolean | undefined;
   minLevel?: number | undefined;
   maxLevel?: number | undefined;
+  minPriceKcoin?: number | undefined;
+  maxPriceKcoin?: number | undefined;
   sort?: MarketSellableItemSort | undefined;
   cursor?: string | undefined;
   limit?: number | undefined;

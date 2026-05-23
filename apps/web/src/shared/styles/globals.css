@@ -2695,6 +2695,34 @@ a {
   gap: 10px;
 }
 
+.sell-inventory-grid__footer {
+  display: grid;
+  place-items: center;
+}
+
+.sell-inventory-grid__footer button {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid rgb(139 211 199 / 32%);
+  border-radius: 8px;
+  padding: 0 14px;
+  color: #dffff9;
+  background: rgb(139 211 199 / 10%);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.sell-inventory-grid__footer button:disabled {
+  color: #7d8b91;
+  cursor: not-allowed;
+  background: rgb(255 255 255 / 6%);
+  border-color: rgb(255 255 255 / 11%);
+}
+
 .sell-item-card {
   min-width: 0;
   min-height: 248px;
@@ -2865,7 +2893,8 @@ a {
 }
 
 .sell-item-card__button:focus-visible,
-.sell-quantity-stepper button:focus-visible {
+.sell-quantity-stepper button:focus-visible,
+.sell-inventory-grid__footer button:focus-visible {
   outline: 3px solid rgb(139 211 199 / 34%);
   outline-offset: -3px;
 }

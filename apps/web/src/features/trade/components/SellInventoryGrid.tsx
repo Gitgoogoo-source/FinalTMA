@@ -7,9 +7,12 @@ import { SellItemCard } from "./SellItemCard";
 
 type SellInventoryGridProps = {
   items: SellableItemGroup[];
+  hasMore?: boolean;
   isLoading: boolean;
+  isLoadingMore?: boolean;
   isError: boolean;
   selectedItem: SellableItemGroup | null;
+  onLoadMore: () => void;
   onRetry: () => void;
   onSelect: (item: SellableItemGroup) => void;
 };
@@ -17,7 +20,10 @@ type SellInventoryGridProps = {
 export function SellInventoryGrid({
   isError,
   isLoading,
+  isLoadingMore = false,
   items,
+  hasMore = false,
+  onLoadMore,
   onRetry,
   onSelect,
   selectedItem,
@@ -59,19 +65,34 @@ export function SellInventoryGrid({
   }
 
   return (
-    <div className="sell-inventory-grid" aria-label="可出售藏品列表">
-      {items.map((item) => {
-        const itemKey = getSellableItemSelectionKey(item);
+    <>
+      <div className="sell-inventory-grid" aria-label="可出售藏品列表">
+        {items.map((item) => {
+          const itemKey = getSellableItemSelectionKey(item);
 
-        return (
-          <SellItemCard
-            key={itemKey}
-            isSelected={itemKey === selectedKey}
-            item={item}
-            onSelect={onSelect}
-          />
-        );
-      })}
-    </div>
+          return (
+            <SellItemCard
+              key={itemKey}
+              isSelected={itemKey === selectedKey}
+              item={item}
+              onSelect={onSelect}
+            />
+          );
+        })}
+      </div>
+      {hasMore ? (
+        <div className="sell-inventory-grid__footer">
+          <button disabled={isLoadingMore} onClick={onLoadMore} type="button">
+            {isLoadingMore ? (
+              <span
+                className="market-listing-state__spinner"
+                aria-hidden="true"
+              />
+            ) : null}
+            {isLoadingMore ? "加载中" : "加载更多"}
+          </button>
+        </div>
+      ) : null}
+    </>
   );
 }

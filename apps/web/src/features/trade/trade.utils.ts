@@ -131,13 +131,9 @@ export function normalizeTradeTab(value: string | null): TradeTabId {
 }
 
 export function getSellableItemSelectionKey(
-  item: Pick<SellableItemGroup, "formId" | "itemInstanceId" | "templateId">,
+  item: Pick<SellableItemGroup, "formId" | "templateId">,
 ): string {
-  return [
-    item.templateId,
-    item.formId ?? "default-form",
-    item.itemInstanceId ?? "group",
-  ].join(":");
+  return [item.templateId, item.formId ?? "default-form"].join(":");
 }
 
 export function getSellableItemReferencePrice(
