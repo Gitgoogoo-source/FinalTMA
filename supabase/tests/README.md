@@ -16,10 +16,12 @@ ledger_integrity.test.sql
 gacha_order.test.sql
 gacha_pity.test.sql
 gacha_payment_idempotency.test.sql
+inventory.test.sql
 inventory_lock.test.sql
 inventory_evolve.test.sql
 market_buy.test.sql
 market_cancel.test.sql
+market_rpc_stage5.test.sql
 task_claim.test.sql
 referral.test.sql
 album_reward.test.sql
@@ -41,27 +43,19 @@ supabase db reset
 推荐运行方式：
 
 ```bash
-supabase test db
+pnpm test:db
 ```
 
-或者逐个文件运行：
+或者直接调用 Supabase CLI：
 
 ```bash
-psql "$SUPABASE_DB_URL" -f supabase/tests/auth.test.sql
-psql "$SUPABASE_DB_URL" -f supabase/tests/advisor_performance.test.sql
-psql "$SUPABASE_DB_URL" -f supabase/tests/market_db_hardening.test.sql
-psql "$SUPABASE_DB_URL" -f supabase/tests/ledger_integrity.test.sql
-psql "$SUPABASE_DB_URL" -f supabase/tests/gacha_order.test.sql
-psql "$SUPABASE_DB_URL" -f supabase/tests/gacha_pity.test.sql
-psql "$SUPABASE_DB_URL" -f supabase/tests/gacha_payment_idempotency.test.sql
-psql "$SUPABASE_DB_URL" -f supabase/tests/inventory_lock.test.sql
-psql "$SUPABASE_DB_URL" -f supabase/tests/inventory_evolve.test.sql
-psql "$SUPABASE_DB_URL" -f supabase/tests/market_buy.test.sql
-psql "$SUPABASE_DB_URL" -f supabase/tests/market_cancel.test.sql
-psql "$SUPABASE_DB_URL" -f supabase/tests/task_claim.test.sql
-psql "$SUPABASE_DB_URL" -f supabase/tests/referral.test.sql
-psql "$SUPABASE_DB_URL" -f supabase/tests/album_reward.test.sql
-psql "$SUPABASE_DB_URL" -f supabase/tests/mint_queue.test.sql
+supabase test db --local supabase/tests/*.test.sql
+```
+
+如需逐个文件排查，可以单独执行某个 `*.test.sql`：
+
+```bash
+supabase test db --local supabase/tests/auth.test.sql
 ```
 
 每个测试文件都使用：
