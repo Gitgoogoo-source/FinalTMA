@@ -422,7 +422,7 @@ describe("market sellable items API", () => {
           suggested_price: 500,
           min_price: 300,
           max_price: 800,
-          acquired_at: "2026-05-22T00:00:00.000Z",
+          acquired_at: "2026-05-22T06:17:21.898312+00:00",
           is_tradeable: true,
           rpc_extra_field: "removed",
         },
@@ -489,6 +489,7 @@ describe("market sellable items API", () => {
       template_id: TEMPLATE_ID,
       owned_count: 2,
       suggested_price: 500,
+      acquired_at: "2026-05-22T06:17:21.898312+00:00",
     });
     expect(result.body.data.items[0]).not.toHaveProperty("rpc_extra_field");
   });

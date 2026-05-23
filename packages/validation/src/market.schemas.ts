@@ -75,7 +75,7 @@ const bpsSchema = integerRangeSchema(0, 10_000, {
   max: "bps cannot exceed 10000",
 });
 
-const isoDateTimeSchema = z.string().trim().datetime();
+const isoDateTimeSchema = z.string().trim().datetime({ offset: true });
 
 const optionalImageUrlSchema = z
   .string()

@@ -9,6 +9,7 @@ import {
   MarketListingsResponseSchema,
   MarketListListingsQuerySchema,
   MarketSellRulesResponseSchema,
+  MarketSellableItemsResponseSchema,
   MarketSellableItemsQuerySchema,
   MarketUpdateListingPriceBodySchema,
 } from "../../packages/validation/src/market.schemas";
@@ -104,6 +105,38 @@ describe("market API contract schemas", () => {
         max_price: "500",
       }),
     ).toThrow();
+  });
+
+  it("accepts Postgres offset timestamps in sellable item responses", () => {
+    const result = MarketSellableItemsResponseSchema.parse({
+      items: [
+        {
+          item_instance_id: ITEM_ID,
+          item_instance_ids: [ITEM_ID],
+          template_id: USER_ID,
+          form_id: null,
+          serial_no: 12,
+          name: "可出售藏品",
+          rarity: "rare",
+          type_code: "character",
+          image_url: null,
+          level: 3,
+          power: 120,
+          owned_count: 1,
+          available_count: 1,
+          suggested_price: 500,
+          min_price: 300,
+          max_price: 800,
+          acquired_at: "2026-05-22T06:17:21.898312+00:00",
+          is_tradeable: true,
+        },
+      ],
+      next_cursor: null,
+    });
+
+    expect(result.items[0]?.acquired_at).toBe(
+      "2026-05-22T06:17:21.898312+00:00",
+    );
   });
 
   it("accepts price health in listing card responses", () => {

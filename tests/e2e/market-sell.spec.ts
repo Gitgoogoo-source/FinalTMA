@@ -125,7 +125,7 @@ function sellableItemPayload() {
     suggested_price_kcoin: 360,
     min_price_kcoin: 250,
     max_price_kcoin: 500,
-    acquired_at: "2026-05-23T00:00:00.000Z",
+    acquired_at: "2026-05-23T00:00:00+00:00",
     is_tradeable: true,
   };
 }
