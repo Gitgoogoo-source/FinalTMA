@@ -142,7 +142,7 @@ begin
 end;
 $$;
 
-select plan(32);
+select plan(36);
 
 create temp table _ids (key text primary key, id uuid, payload jsonb) on commit drop;
 insert into _ids (key, id) values ('seller', testutil.make_user(9700000001, 'market_rpc_seller'));
