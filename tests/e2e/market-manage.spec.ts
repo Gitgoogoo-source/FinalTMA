@@ -85,10 +85,41 @@ test("出售管理页可以提交改价", async ({ page }) => {
   await expect(dialog).toBeHidden();
 });
 
+test("出售管理页可以确认下架", async ({ page }) => {
+  const myListingsRequests: URL[] = [];
+  const cancelListingBodies: Record<string, unknown>[] = [];
+
+  await mockFirstPhaseApi(page);
+  await mockMarketManageApi(page, myListingsRequests, [], cancelListingBodies);
+
+  await page.goto(
+    `/trade?tab=manage&mockInitData=${encodeURIComponent(TEST_INIT_DATA)}`,
+  );
+
+  await page.getByRole("button", { name: "下架 月冕守门人" }).click();
+
+  const dialog = page.getByRole("dialog", { name: "月冕守门人" });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByText("未售出的藏品会回到库存")).toBeVisible();
+
+  await dialog.getByRole("button", { name: "确认下架" }).click();
+
+  await expect.poll(() => cancelListingBodies.length).toBe(1);
+  expect(cancelListingBodies[0]).toMatchObject({
+    listing_id: ACTIVE_LISTING_ID,
+    reason: "user_cancelled",
+  });
+  expect(cancelListingBodies[0]?.idempotency_key).toEqual(expect.any(String));
+
+  await expect(page.getByText("下架成功")).toBeVisible();
+  await expect(dialog).toBeHidden();
+});
+
 async function mockMarketManageApi(
   page: Parameters<typeof mockFirstPhaseApi>[0],
   myListingsRequests: URL[],
   updatePriceBodies: Record<string, unknown>[] = [],
+  cancelListingBodies: Record<string, unknown>[] = [],
 ): Promise<void> {
   await page.route("**/api/market/my-listing-stats", (route) =>
     fulfillOk(route, {
@@ -119,6 +150,20 @@ async function mockMarketManageApi(
       unit_price_kcoin: 360,
       expected_net_amount: 684,
       status: "active",
+    });
+  });
+
+  await page.route("**/api/market/cancel-listing", async (route) => {
+    cancelListingBodies.push(parseJsonBody(route.request().postData()));
+
+    return fulfillOk(route, {
+      listing_id: ACTIVE_LISTING_ID,
+      status: "cancelled",
+      released_item_instance_ids: [
+        "eeeeeeee-5555-4555-8555-eeeeeeeeeeee",
+        "eeeeeeee-5555-4555-8555-eeeeeeeeeeef",
+      ],
+      cancelled_at: "2026-05-23T00:30:00.000Z",
     });
   });
 }

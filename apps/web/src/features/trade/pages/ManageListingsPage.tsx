@@ -3,10 +3,12 @@ import { useCallback, useState } from "react";
 import { getApiErrorMessage } from "@/api/errors";
 import { useFeedback } from "@/app/providers/FeedbackProvider";
 
+import { CancelListingDialog } from "../components/CancelListingDialog";
 import { ChangePriceDialog } from "../components/ChangePriceDialog";
 import { ListingStatsPanel } from "../components/ListingStatsPanel";
 import { MyListingFilters } from "../components/MyListingFilters";
 import { MyListingsList } from "../components/MyListingsList";
+import { useCancelListing } from "../hooks/useCancelListing";
 import { useMyListingFilters } from "../hooks/useMyListingFilters";
 import { useMyListingStats, useMyListings } from "../hooks/useMyListings";
 import { useUpdateListingPrice } from "../hooks/useUpdateListingPrice";
@@ -20,7 +22,10 @@ export function ManageListingsPage() {
   const statsQuery = useMyListingStats();
   const listingsQuery = useMyListings(query);
   const updateListingPrice = useUpdateListingPrice();
+  const cancelListing = useCancelListing();
   const [priceDialogListing, setPriceDialogListing] =
+    useState<MyListing | null>(null);
+  const [cancelDialogListing, setCancelDialogListing] =
     useState<MyListing | null>(null);
 
   const handleChangePrice = useCallback((listing: MyListing) => {
@@ -71,8 +76,46 @@ export function ManageListingsPage() {
   );
 
   const handleCancel = useCallback((listing: MyListing) => {
-    void listing;
+    setCancelDialogListing(listing);
   }, []);
+
+  const handleCloseCancelDialog = useCallback(() => {
+    if (!cancelListing.isPending) {
+      setCancelDialogListing(null);
+    }
+  }, [cancelListing.isPending]);
+
+  const handleConfirmCancel = useCallback(() => {
+    if (!cancelDialogListing || cancelListing.isPending) {
+      return;
+    }
+
+    cancelListing.mutate(
+      {
+        listingId: cancelDialogListing.listingId,
+      },
+      {
+        onSuccess: (result) => {
+          setCancelDialogListing(null);
+          pushToast({
+            type: "success",
+            title: "下架成功",
+            message:
+              result.releasedItemInstanceIds.length > 0
+                ? `已释放 ${result.releasedItemInstanceIds.length} 个未售出藏品，可在出售页重新选择。`
+                : "挂单已下架。",
+          });
+        },
+        onError: (error) => {
+          pushToast({
+            type: "error",
+            title: "下架失败",
+            message: getApiErrorMessage(error),
+          });
+        },
+      },
+    );
+  }, [cancelDialogListing, cancelListing, pushToast]);
 
   return (
     <section
@@ -117,6 +160,13 @@ export function ManageListingsPage() {
           onClose={handleClosePriceDialog}
           onConfirm={handleConfirmChangePrice}
           open={Boolean(priceDialogListing)}
+        />
+        <CancelListingDialog
+          isPending={cancelListing.isPending}
+          listing={cancelDialogListing}
+          onClose={handleCloseCancelDialog}
+          onConfirm={handleConfirmCancel}
+          open={Boolean(cancelDialogListing)}
         />
       </div>
     </section>
