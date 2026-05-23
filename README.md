@@ -77,7 +77,7 @@ TELEGRAM_WEBHOOK_SECRET=replace_with_random_webhook_secret
 TELEGRAM_WEBHOOK_URL=http://localhost:3000/api/telegram/webhook
 TON_NETWORK=testnet
 TON_API_KEY=replace_with_ton_api_key
-INTERNAL_CRON_SECRET=replace_with_random_cron_secret
+CRON_SECRET=replace_with_random_cron_secret
 ```
 
 生产或 preview 环境必须在 Vercel Environment Variables 中配置服务端密钥。不要把服务端密钥写成 `VITE_`。

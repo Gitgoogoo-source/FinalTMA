@@ -142,7 +142,7 @@ begin
 end;
 $$;
 
-select plan(36);
+select plan(37);
 
 create temp table _ids (key text primary key, id uuid, payload jsonb) on commit drop;
 insert into _ids (key, id) values ('seller', testutil.make_user(9700000001, 'market_rpc_seller'));
@@ -230,6 +230,14 @@ select is((
   order by snapshot_at desc
   limit 1
 ), 150::numeric, 'price stats floor follows updated listing price');
+select is((
+  select price_bucket_kcoin
+  from market.depth_snapshots
+  where template_id = (select id from _ids where key = 'template')
+    and form_id = (select id from _ids where key = 'form')
+  order by snapshot_at desc, price_bucket_kcoin asc
+  limit 1
+), 100::numeric, 'market depth uses fixed 100-499 bucket for 150 KCOIN listing');
 
 select ok(testutil.raises_like(format('select api.market_buy_listing(%L::uuid, %L::uuid, 1, 100, %L)', (select id::text from _ids where key = 'buyer'), (select id::text from _ids where key = 'listing_id'), 'market-rpc-buy-old-price-001'), '%listing price changed%'), 'buy with stale expected price is rejected');
 

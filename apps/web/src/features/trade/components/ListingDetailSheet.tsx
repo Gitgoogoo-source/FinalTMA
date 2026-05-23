@@ -11,6 +11,7 @@ import {
 import type { MarketListingCard, MarketListingDetail } from "../trade.types";
 import {
   formatKcoinWithUnit,
+  formatMarketDepthBucket,
   getItemTypeLabel,
   getMarketBuyDisabledReason,
   getPriceHealthLabel,
@@ -208,7 +209,7 @@ export function ListingDetailSheet({
                       <div
                         key={`${level.priceKcoin}-${level.listingCount}-${level.itemCount}`}
                       >
-                        <span>{formatKcoinWithUnit(level.priceKcoin)}</span>
+                        <span>{formatMarketDepthBucket(level)}</span>
                         <strong>
                           {level.listingCount} 单 / {level.itemCount} 件
                         </strong>
@@ -217,7 +218,11 @@ export function ListingDetailSheet({
                   </div>
                 ) : (
                   <div className="listing-detail-depth__empty">
-                    <ShoppingBag aria-hidden="true" size={18} strokeWidth={2.3} />
+                    <ShoppingBag
+                      aria-hidden="true"
+                      size={18}
+                      strokeWidth={2.3}
+                    />
                     <span>暂无深度</span>
                   </div>
                 )}

@@ -396,7 +396,7 @@ export const serverEnvSchema = z
       max: 20,
     }),
 
-    INTERNAL_CRON_SECRET: optionalSecretFromEnv(16),
+    CRON_SECRET: optionalSecretFromEnv(16),
     IDEMPOTENCY_TTL_SECONDS: numberFromEnv(60 * 60 * 24, {
       min: 60,
       max: 60 * 60 * 24 * 30,
@@ -500,13 +500,12 @@ export const serverEnvSchema = z
     if (
       input.ENABLE_CRON_API &&
       isProductionLike &&
-      !input.INTERNAL_CRON_SECRET
+      !input.CRON_SECRET
     ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ["INTERNAL_CRON_SECRET"],
-        message:
-          "INTERNAL_CRON_SECRET is required when cron API is enabled in production.",
+        path: ["CRON_SECRET"],
+        message: "CRON_SECRET is required when cron API is enabled in production.",
       });
     }
 
@@ -712,7 +711,7 @@ export const env = Object.freeze({
 
   CRON: Object.freeze({
     ENABLED: raw.ENABLE_CRON_API,
-    INTERNAL_SECRET: raw.INTERNAL_CRON_SECRET,
+    SECRET: raw.CRON_SECRET,
   }),
 
   SECURITY: Object.freeze({
@@ -835,7 +834,7 @@ export function getSafeEnvSnapshot(): Record<string, unknown> {
 
     CRON: {
       ENABLED: env.CRON.ENABLED,
-      HAS_INTERNAL_SECRET: Boolean(env.CRON.INTERNAL_SECRET),
+      HAS_SECRET: Boolean(env.CRON.SECRET),
     },
 
     SECURITY: env.SECURITY,

@@ -5,6 +5,7 @@ import type {
   ApiSuccessResponse,
 } from "../../api/_shared/handler";
 import { ApiError } from "../../api/_shared/handler";
+import refreshMarketStatsCronHandler from "../../api/cron/refresh-market-stats";
 import buyListingHandler, {
   normalizeMarketBuyListingInput,
 } from "../../api/market/buy";
@@ -855,6 +856,70 @@ describe("market stats API", () => {
 
     expect(result.statusCode).toBe(400);
     expect(result.body.error.code).toBe("VALIDATION_ERROR");
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("market stats refresh cron API", () => {
+  beforeEach(() => {
+    process.env.NODE_ENV = "test";
+    process.env.ENABLE_CRON_API = "true";
+    process.env.CRON_SECRET = "test-cron-secret-0001";
+    callRpcRawMock.mockReset();
+    requireSessionMock.mockReset();
+  });
+
+  it("calls market_refresh_price_stats with the internal cron secret", async () => {
+    callRpcRawMock.mockResolvedValueOnce({
+      snapshot_at: "2026-05-23T16:30:44.000Z",
+      price_snapshot_count: 1,
+      depth_snapshot_count: 2,
+      price_health_update_count: 3,
+    });
+
+    const result = await invokeApiHandler<
+      ApiSuccessResponse<Record<string, unknown>>
+    >(refreshMarketStatsCronHandler, {
+      method: "POST",
+      headers: {
+        authorization: "Bearer test-cron-secret-0001",
+        "x-request-id": "req-market-stats-refresh",
+      },
+    });
+
+    expect(result.statusCode).toBe(200);
+    expect(callRpcRawMock).toHaveBeenCalledWith(
+      "market_refresh_price_stats",
+      {},
+      {
+        schema: "api",
+        context: {
+          requestId: "req-market-stats-refresh",
+          source: "cron.refresh_market_stats",
+        },
+      },
+    );
+    expect(result.body.data).toEqual({
+      snapshot_at: "2026-05-23T16:30:44.000Z",
+      price_snapshot_count: 1,
+      depth_snapshot_count: 2,
+      price_health_update_count: 3,
+    });
+  });
+
+  it("rejects refresh requests with an invalid cron secret", async () => {
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      refreshMarketStatsCronHandler,
+      {
+        method: "POST",
+        headers: {
+          authorization: "Bearer wrong-secret",
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(401);
+    expect(result.body.error.code).toBe("CRON_UNAUTHORIZED");
     expect(callRpcRawMock).not.toHaveBeenCalled();
   });
 });

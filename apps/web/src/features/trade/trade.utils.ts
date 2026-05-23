@@ -13,6 +13,7 @@ import type {
   MarketItemTypeCode,
   MarketListingCard,
   MarketListingStatus,
+  MarketDepthLevel,
   MarketPriceHealth,
   MarketRarityCode,
   SellableItemGroup,
@@ -80,6 +81,34 @@ export function getPriceHealthLabel(priceHealth: MarketPriceHealth): string {
   return MARKET_PRICE_HEALTH_LABELS[priceHealth];
 }
 
+export function formatMarketDepthBucket(
+  level: Pick<MarketDepthLevel, "priceKcoin">,
+): string {
+  const bucket = Math.trunc(level.priceKcoin);
+
+  if (bucket <= 0) {
+    return "0-99 K-coin";
+  }
+
+  if (bucket === 100) {
+    return "100-499 K-coin";
+  }
+
+  if (bucket === 500) {
+    return "500-999 K-coin";
+  }
+
+  if (bucket === 1000) {
+    return "1000-4999 K-coin";
+  }
+
+  if (bucket >= 5000) {
+    return "5000+ K-coin";
+  }
+
+  return formatKcoinWithUnit(bucket);
+}
+
 export function getListingStatusLabel(status: MarketListingStatus): string {
   return MARKET_LISTING_STATUS_LABELS[status];
 }
@@ -142,9 +171,7 @@ export function getSellableItemReferencePrice(
     "maxPriceKcoin" | "minPriceKcoin" | "suggestedPriceKcoin"
   >,
 ): number | null {
-  return (
-    item.suggestedPriceKcoin ?? item.minPriceKcoin ?? item.maxPriceKcoin
-  );
+  return item.suggestedPriceKcoin ?? item.minPriceKcoin ?? item.maxPriceKcoin;
 }
 
 function toNonNegativeInteger(value: number): number {
