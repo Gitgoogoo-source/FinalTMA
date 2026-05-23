@@ -1,21 +1,19 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { queryKeys } from "@/shared/constants/queryKeys";
-
 import { createMarketListing } from "../trade.api";
 import type { CreateMarketListingInput } from "../trade.types";
+import { invalidateAfterCreateListing } from "./invalidateMarketCaches";
 
 export function useCreateListing() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (input: CreateMarketListingInput) => createMarketListing(input),
+    meta: {
+      skipGlobalErrorToast: true,
+    },
     onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: queryKeys.trade.root }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.inventory.root }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.me.assetsRoot }),
-      ]);
+      await invalidateAfterCreateListing(queryClient);
     },
   });
 }

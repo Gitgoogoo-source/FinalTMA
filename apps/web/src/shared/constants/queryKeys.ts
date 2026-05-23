@@ -20,12 +20,17 @@ export const queryKeys = {
   },
   trade: {
     root: ["trade"] as const,
-    listings: (query: unknown = {}) => ["trade", "listings", query] as const,
+    listingsRoot: ["trade", "listings"] as const,
+    listings: (query: unknown = {}) =>
+      ["trade", "listings", query] as const,
+    listingDetailRoot: ["trade", "listing-detail"] as const,
     listingDetail: (listingId: string | null | undefined) =>
       ["trade", "listing-detail", listingId ?? "none"] as const,
+    sellableItemsRoot: ["trade", "sellable-items"] as const,
     sellableItems: (query: unknown = {}) =>
       ["trade", "sellable-items", query] as const,
     sellRules: ["trade", "sell-rules"] as const,
+    myListingsRoot: ["trade", "my-listings"] as const,
     myListings: (query: unknown = {}) =>
       ["trade", "my-listings", query] as const,
     myListingStats: ["trade", "my-listing-stats"] as const,
