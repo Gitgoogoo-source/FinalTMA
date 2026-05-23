@@ -45,6 +45,16 @@ test("/trade 默认进入购买 Tab，并可用 query 参数切换", async ({ pa
 
   await expect(page).toHaveURL(/tab=manage/);
   await expect(page.getByTestId("trade-manage-panel")).toBeVisible();
+  await expect(page.getByTestId("listing-stats-panel")).toBeVisible();
+  await expect(page.getByText("当前挂单数量", { exact: true })).toBeVisible();
+  await expect(page.getByText("挂单商品数量", { exact: true })).toBeVisible();
+  await expect(page.getByText("总价值", { exact: true })).toBeVisible();
+  await expect(page.getByText("预计到账金额", { exact: true })).toBeVisible();
+  await expect(page.getByText("24h 成交数量", { exact: true })).toBeVisible();
+  await expect(page.getByText("24h 成交额", { exact: true })).toBeVisible();
+  await expect(
+    page.getByTestId("listing-stats-panel").getByText("0 K-coin"),
+  ).toHaveCount(3);
 });
 
 for (const route of placeholderRoutes) {

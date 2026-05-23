@@ -91,6 +91,18 @@ export async function mockFirstPhaseApi(page: Page): Promise<void> {
     }),
   );
 
+  await page.route("**/api/market/my-listing-stats", (route) =>
+    fulfillOk(route, {
+      active_count: 0,
+      active_listing_count: 0,
+      active_item_count: 0,
+      total_listing_value_kcoin: 0,
+      expected_net_amount_kcoin: 0,
+      sold_24h_count: 0,
+      sold_24h_value_kcoin: 0,
+    }),
+  );
+
   await page.route("**/api/boxes/list?*", (route) =>
     fulfillOk(route, {
       items: [boxPayload()],
