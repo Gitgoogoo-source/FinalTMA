@@ -52,9 +52,43 @@ test("出售管理页展示我的挂单并按筛选查询", async ({ page }) => 
   expect(lastRequest?.searchParams.get("limit")).toBe("50");
 });
 
+test("出售管理页可以提交改价", async ({ page }) => {
+  const myListingsRequests: URL[] = [];
+  const updatePriceBodies: Record<string, unknown>[] = [];
+
+  await mockFirstPhaseApi(page);
+  await mockMarketManageApi(page, myListingsRequests, updatePriceBodies);
+
+  await page.goto(
+    `/trade?tab=manage&mockInitData=${encodeURIComponent(TEST_INIT_DATA)}`,
+  );
+
+  await page.getByRole("button", { name: "改价 月冕守门人" }).click();
+
+  const dialog = page.getByRole("dialog", { name: "月冕守门人" });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByText("当前单价")).toBeVisible();
+
+  await dialog.getByLabel("新单价").fill("360");
+  await expect(dialog.getByText("684 K-coin")).toBeVisible();
+
+  await dialog.getByRole("button", { name: "确认改价" }).click();
+
+  await expect.poll(() => updatePriceBodies.length).toBe(1);
+  expect(updatePriceBodies[0]).toMatchObject({
+    listing_id: ACTIVE_LISTING_ID,
+    new_unit_price_kcoin: 360,
+  });
+  expect(updatePriceBodies[0]?.idempotency_key).toEqual(expect.any(String));
+
+  await expect(page.getByText("改价成功")).toBeVisible();
+  await expect(dialog).toBeHidden();
+});
+
 async function mockMarketManageApi(
   page: Parameters<typeof mockFirstPhaseApi>[0],
   myListingsRequests: URL[],
+  updatePriceBodies: Record<string, unknown>[] = [],
 ): Promise<void> {
   await page.route("**/api/market/my-listing-stats", (route) =>
     fulfillOk(route, {
@@ -74,6 +108,17 @@ async function mockMarketManageApi(
     return fulfillOk(route, {
       items: [myActiveListingPayload(), myCancelledListingPayload()],
       next_cursor: null,
+    });
+  });
+
+  await page.route("**/api/market/update-price", async (route) => {
+    updatePriceBodies.push(parseJsonBody(route.request().postData()));
+
+    return fulfillOk(route, {
+      listing_id: ACTIVE_LISTING_ID,
+      unit_price_kcoin: 360,
+      expected_net_amount: 684,
+      status: "active",
     });
   });
 }
@@ -129,4 +174,15 @@ async function fulfillOk(route: Route, data: unknown): Promise<void> {
       data,
     }),
   });
+}
+
+function parseJsonBody(body: string | null): Record<string, unknown> {
+  if (!body) {
+    return {};
+  }
+
+  const parsed = JSON.parse(body) as unknown;
+  return typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)
+    ? parsed
+    : {};
 }

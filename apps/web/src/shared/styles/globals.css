@@ -3531,7 +3531,8 @@ a {
 
 .listing-detail-sheet,
 .buy-confirm-dialog,
-.sell-confirm-dialog {
+.sell-confirm-dialog,
+.change-price-dialog {
   position: fixed;
   z-index: 60;
   inset: 0;
@@ -3546,7 +3547,8 @@ a {
 
 .listing-detail-sheet__backdrop,
 .buy-confirm-dialog__backdrop,
-.sell-confirm-dialog__backdrop {
+.sell-confirm-dialog__backdrop,
+.change-price-dialog__backdrop {
   position: absolute;
   inset: 0;
   border: 0;
@@ -3557,7 +3559,8 @@ a {
 
 .listing-detail-sheet__panel,
 .buy-confirm-dialog__panel,
-.sell-confirm-dialog__panel {
+.sell-confirm-dialog__panel,
+.change-price-dialog__panel {
   position: relative;
   width: min(100%, 460px);
   max-height: min(760px, calc(100vh - 42px));
@@ -3573,7 +3576,8 @@ a {
 }
 
 .buy-confirm-dialog__panel,
-.sell-confirm-dialog__panel {
+.sell-confirm-dialog__panel,
+.change-price-dialog__panel {
   max-height: min(560px, calc(100vh - 42px));
   max-height: min(560px, calc(100dvh - 42px));
   grid-template-rows: auto minmax(0, 1fr) auto;
@@ -3581,7 +3585,8 @@ a {
 
 .listing-detail-sheet__header,
 .buy-confirm-dialog__header,
-.sell-confirm-dialog__header {
+.sell-confirm-dialog__header,
+.change-price-dialog__header {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 12px;
@@ -3593,7 +3598,8 @@ a {
 
 .listing-detail-sheet__header div,
 .buy-confirm-dialog__header div,
-.sell-confirm-dialog__header div {
+.sell-confirm-dialog__header div,
+.change-price-dialog__header div {
   min-width: 0;
   display: grid;
   gap: 4px;
@@ -3601,7 +3607,8 @@ a {
 
 .listing-detail-sheet__header span,
 .buy-confirm-dialog__header span,
-.sell-confirm-dialog__header span {
+.sell-confirm-dialog__header span,
+.change-price-dialog__header span {
   color: #8bd3c7;
   font-size: 11px;
   font-weight: 950;
@@ -3610,7 +3617,8 @@ a {
 
 .listing-detail-sheet__header h2,
 .buy-confirm-dialog__header h2,
-.sell-confirm-dialog__header h2 {
+.sell-confirm-dialog__header h2,
+.change-price-dialog__header h2 {
   min-width: 0;
   margin: 0;
   overflow: hidden;
@@ -3624,7 +3632,8 @@ a {
 
 .listing-detail-sheet__header button,
 .buy-confirm-dialog__header button,
-.sell-confirm-dialog__header button {
+.sell-confirm-dialog__header button,
+.change-price-dialog__header button {
   width: 34px;
   height: 34px;
   display: grid;
@@ -3638,12 +3647,83 @@ a {
 
 .listing-detail-sheet__body,
 .buy-confirm-dialog__body,
-.sell-confirm-dialog__body {
+.sell-confirm-dialog__body,
+.change-price-dialog__body {
   min-width: 0;
   overflow-y: auto;
   display: grid;
   gap: 12px;
   padding: 12px 14px 14px;
+}
+
+.change-price-dialog__input {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.change-price-dialog__input > span,
+.change-price-dialog__input > strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.change-price-dialog__input > span {
+  color: #9fb1b9;
+  font-size: 11px;
+  font-weight: 950;
+}
+
+.change-price-dialog__input > div {
+  min-width: 0;
+  min-height: 42px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  border: 1px solid rgb(139 211 199 / 24%);
+  border-radius: 8px;
+  padding: 0 11px;
+  background: rgb(255 255 255 / 6%);
+}
+
+.change-price-dialog__input > div:focus-within {
+  outline: 3px solid rgb(139 211 199 / 28%);
+  outline-offset: 2px;
+}
+
+.change-price-dialog__input svg {
+  color: #8bd3c7;
+}
+
+.change-price-dialog__input input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  padding: 0;
+  color: #f7fbff;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 950;
+  outline: 0;
+}
+
+.change-price-dialog__input input:disabled {
+  color: #6f7e85;
+  cursor: not-allowed;
+}
+
+.change-price-dialog__input > strong {
+  min-height: 16px;
+  color: #8bd3c7;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.change-price-dialog__hint--error {
+  color: #ffd6cc !important;
 }
 
 .listing-detail-sheet__hero {
@@ -3697,7 +3777,8 @@ a {
 .listing-detail-price__metric,
 .listing-detail-depth__levels div,
 .buy-confirm-dialog__summary div,
-.sell-confirm-dialog__summary div {
+.sell-confirm-dialog__summary div,
+.change-price-dialog__summary div {
   min-width: 0;
   display: grid;
   gap: 5px;
@@ -3711,7 +3792,8 @@ a {
 .listing-detail-price__metric span,
 .listing-detail-depth__heading span,
 .buy-confirm-dialog__summary dt,
-.sell-confirm-dialog__summary dt {
+.sell-confirm-dialog__summary dt,
+.change-price-dialog__summary dt {
   min-width: 0;
   margin: 0;
   overflow: hidden;
@@ -3728,7 +3810,8 @@ a {
 .listing-detail-depth__heading strong,
 .listing-detail-depth__levels strong,
 .buy-confirm-dialog__summary dd,
-.sell-confirm-dialog__summary dd {
+.sell-confirm-dialog__summary dd,
+.change-price-dialog__summary dd {
   min-width: 0;
   margin: 0;
   overflow: hidden;
@@ -3946,7 +4029,8 @@ a {
 
 .listing-detail-sheet__footer button,
 .buy-confirm-dialog__primary,
-.sell-confirm-dialog__primary {
+.sell-confirm-dialog__primary,
+.change-price-dialog__primary {
   min-width: 92px;
   min-height: 40px;
   display: inline-flex;
@@ -3965,7 +4049,8 @@ a {
 
 .listing-detail-sheet__footer button:disabled,
 .buy-confirm-dialog__primary:disabled,
-.sell-confirm-dialog__primary:disabled {
+.sell-confirm-dialog__primary:disabled,
+.change-price-dialog__primary:disabled {
   color: #c1ccd1;
   cursor: not-allowed;
   background: rgb(255 255 255 / 10%);
@@ -3973,7 +4058,8 @@ a {
 }
 
 .buy-confirm-dialog__item,
-.sell-confirm-dialog__item {
+.sell-confirm-dialog__item,
+.change-price-dialog__item {
   min-width: 0;
   display: grid;
   grid-template-columns: 74px minmax(0, 1fr);
@@ -3982,7 +4068,8 @@ a {
 }
 
 .buy-confirm-dialog__image,
-.sell-confirm-dialog__image {
+.sell-confirm-dialog__image,
+.change-price-dialog__image {
   width: 74px;
   height: 74px;
   display: grid;
@@ -3999,7 +4086,8 @@ a {
 }
 
 .buy-confirm-dialog__image img,
-.sell-confirm-dialog__image img {
+.sell-confirm-dialog__image img,
+.change-price-dialog__image img {
   width: 100%;
   height: 100%;
   display: block;
@@ -4007,7 +4095,8 @@ a {
 }
 
 .buy-confirm-dialog__item div:last-child,
-.sell-confirm-dialog__item div:last-child {
+.sell-confirm-dialog__item div:last-child,
+.change-price-dialog__item div:last-child {
   min-width: 0;
   display: grid;
   gap: 5px;
@@ -4016,7 +4105,9 @@ a {
 .buy-confirm-dialog__item strong,
 .buy-confirm-dialog__item span,
 .sell-confirm-dialog__item strong,
-.sell-confirm-dialog__item span {
+.sell-confirm-dialog__item span,
+.change-price-dialog__item strong,
+.change-price-dialog__item span {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -4024,21 +4115,24 @@ a {
 }
 
 .buy-confirm-dialog__item strong,
-.sell-confirm-dialog__item strong {
+.sell-confirm-dialog__item strong,
+.change-price-dialog__item strong {
   color: #f7fbff;
   font-size: 15px;
   font-weight: 950;
 }
 
 .buy-confirm-dialog__item span,
-.sell-confirm-dialog__item span {
+.sell-confirm-dialog__item span,
+.change-price-dialog__item span {
   color: #9fb1b9;
   font-size: 12px;
   font-weight: 850;
 }
 
 .buy-confirm-dialog__summary,
-.sell-confirm-dialog__summary {
+.sell-confirm-dialog__summary,
+.change-price-dialog__summary {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
@@ -4046,7 +4140,8 @@ a {
 }
 
 .buy-confirm-dialog__notice,
-.sell-confirm-dialog__notice {
+.sell-confirm-dialog__notice,
+.change-price-dialog__notice {
   margin: 0;
   border: 1px solid rgb(255 122 89 / 24%);
   border-radius: 8px;
@@ -4059,7 +4154,8 @@ a {
 }
 
 .buy-confirm-dialog__actions,
-.sell-confirm-dialog__actions {
+.sell-confirm-dialog__actions,
+.change-price-dialog__actions {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr);
   gap: 10px;
@@ -4069,7 +4165,8 @@ a {
 }
 
 .buy-confirm-dialog__secondary,
-.sell-confirm-dialog__secondary {
+.sell-confirm-dialog__secondary,
+.change-price-dialog__secondary {
   min-height: 40px;
   border: 1px solid rgb(255 255 255 / 14%);
   border-radius: 8px;
@@ -4081,7 +4178,8 @@ a {
 }
 
 .buy-confirm-dialog__secondary:disabled,
-.sell-confirm-dialog__secondary:disabled {
+.sell-confirm-dialog__secondary:disabled,
+.change-price-dialog__secondary:disabled {
   color: #64747b;
   cursor: not-allowed;
 }
@@ -4094,7 +4192,10 @@ a {
 .buy-confirm-dialog__primary:focus-visible,
 .sell-confirm-dialog__header button:focus-visible,
 .sell-confirm-dialog__secondary:focus-visible,
-.sell-confirm-dialog__primary:focus-visible {
+.sell-confirm-dialog__primary:focus-visible,
+.change-price-dialog__header button:focus-visible,
+.change-price-dialog__secondary:focus-visible,
+.change-price-dialog__primary:focus-visible {
   outline: 3px solid rgb(139 211 199 / 34%);
   outline-offset: 2px;
 }
