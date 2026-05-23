@@ -254,6 +254,13 @@ export type MarketStatsResponse = {
   priceHealth: MarketPriceHealth;
 };
 
+export type MarketSellRules = {
+  feeType: "market_sell";
+  currencyCode: MarketCurrencyCode;
+  feeBps: number;
+  source: "active_rule" | "fallback";
+};
+
 export type CreateMarketListingInput = {
   itemInstanceIds: string[];
   unitPriceKcoin: number;

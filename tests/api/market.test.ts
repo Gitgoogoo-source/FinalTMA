@@ -18,6 +18,7 @@ import listingDetailHandler from "../../api/market/listing-detail";
 import listingsHandler from "../../api/market/listings";
 import myListingStatsHandler from "../../api/market/my-listing-stats";
 import myListingsHandler from "../../api/market/my-listings";
+import sellRulesHandler from "../../api/market/sell-rules";
 import sellableItemsHandler from "../../api/market/sellable-items";
 import statsHandler from "../../api/market/stats";
 import updatePriceHandler, {
@@ -510,6 +511,77 @@ describe("market sellable items API", () => {
   });
 });
 
+describe("market sell rules API", () => {
+  beforeEach(() => {
+    process.env.NODE_ENV = "test";
+    callRpcRawMock.mockReset();
+    requireSessionMock.mockReset();
+    requireSessionMock.mockResolvedValue({
+      sessionId: "session-market-sell-rules-test",
+      userId: USER_ID,
+      telegramUserId: 7001,
+      userStatus: "active",
+      expiresAt: "2026-05-28T00:00:00.000Z",
+      sessionTokenHash: "session-hash",
+    });
+  });
+
+  it("calls market_get_sell_rules with the session user and returns fee bps", async () => {
+    callRpcRawMock.mockResolvedValueOnce({
+      fee_type: "market_sell",
+      currency_code: "KCOIN",
+      fee_bps: 500,
+      source: "active_rule",
+      rpc_extra_field: "removed",
+    });
+
+    const result = await invokeApiHandler<
+      ApiSuccessResponse<Record<string, unknown>>
+    >(sellRulesHandler, {
+      method: "GET",
+      headers: {
+        "x-request-id": "req-market-sell-rules",
+      },
+    });
+
+    expect(result.statusCode).toBe(200);
+    expect(callRpcRawMock).toHaveBeenCalledWith(
+      "market_get_sell_rules",
+      {
+        p_user_id: USER_ID,
+      },
+      {
+        schema: "api",
+        context: {
+          requestId: "req-market-sell-rules",
+          userId: USER_ID,
+        },
+      },
+    );
+    expect(result.body.data).toEqual({
+      fee_type: "market_sell",
+      currency_code: "KCOIN",
+      fee_bps: 500,
+      source: "active_rule",
+    });
+  });
+
+  it("rejects invalid sell rules RPC payload", async () => {
+    callRpcRawMock.mockResolvedValueOnce({
+      fee_type: "market_sell",
+      currency_code: "KCOIN",
+      fee_bps: 10001,
+    });
+
+    const result = await invokeApiHandler<ApiErrorResponse>(sellRulesHandler, {
+      method: "GET",
+    });
+
+    expect(result.statusCode).toBe(500);
+    expect(result.body.error.code).toBe("MARKET_SELL_RULES_RESULT_INVALID");
+  });
+});
+
 describe("market my listings API", () => {
   beforeEach(() => {
     process.env.NODE_ENV = "test";
@@ -914,10 +986,16 @@ describe("market create listing API", () => {
     expect(callRpcRawMock).not.toHaveBeenCalled();
   });
 
-  it("returns a successful idempotent response without requiring first-create fields", async () => {
+  it("returns a successful idempotent response with backend fee fields", async () => {
     callRpcRawMock.mockResolvedValueOnce({
       listing_id: LISTING_ID,
+      item_count: 1,
+      remaining_count: 1,
+      unit_price_kcoin: 500,
+      fee_bps: 500,
+      expected_net_amount: 475,
       status: "active",
+      price_health: "healthy",
       idempotent: true,
     });
 
@@ -935,7 +1013,13 @@ describe("market create listing API", () => {
     expect(result.statusCode).toBe(200);
     expect(result.body.data).toEqual({
       listing_id: LISTING_ID,
+      item_count: 1,
+      remaining_count: 1,
+      unit_price_kcoin: 500,
+      fee_bps: 500,
+      expected_net_amount: 475,
       status: "active",
+      price_health: "healthy",
       idempotent: true,
     });
   });
@@ -1134,7 +1218,8 @@ describe("market buy listing API", () => {
       new RpcError({
         rpcName: "market_buy_listing",
         error: {
-          message: "insufficient balance: currency KCOIN, available 0, required 500",
+          message:
+            "insufficient balance: currency KCOIN, available 0, required 500",
         },
       }),
     );

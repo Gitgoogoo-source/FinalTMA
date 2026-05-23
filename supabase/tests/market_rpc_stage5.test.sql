@@ -166,12 +166,22 @@ $$;
 select ok(testutil.raises_like(format('select api.market_create_listing(%L::uuid, array[%L::uuid], 100, %L)', (select id::text from _ids where key = 'seller'), (select id::text from _ids where key = 'minting_item'), 'market-rpc-create-minting-001'), '%some items are not sellable%'), 'mint queued item cannot be listed');
 
 insert into _ids (key, payload)
+select 'sell_rules', api.market_get_sell_rules((select id from _ids where key = 'seller'));
+select is(((select payload from _ids where key = 'sell_rules') ->> 'fee_bps')::int, 500, 'sell rules returns active market fee bps');
+
+insert into _ids (key, payload)
 select 'listing', api.market_create_listing((select id from _ids where key = 'seller'), array[(select id from _ids where key = 'item1')], 100, 'market-rpc-create-001');
 insert into _ids (key, id) select 'listing_id', ((select payload from _ids where key = 'listing') ->> 'listing_id')::uuid;
 
 select is(((select payload from _ids where key = 'listing') ->> 'remaining_count')::int, 1, 'create listing returns remaining_count');
 select is((select status from inventory.item_instances where id = (select id from _ids where key = 'item1')), 'listed', 'created listing marks item listed');
 select ok(exists (select 1 from market.listing_events where listing_id = (select id from _ids where key = 'listing_id') and event_type = 'created'), 'created event is recorded');
+
+insert into _ids (key, payload)
+select 'listing_repeat', api.market_create_listing((select id from _ids where key = 'seller'), array[(select id from _ids where key = 'item1')], 100, 'market-rpc-create-001');
+select ok(((select payload from _ids where key = 'listing_repeat') ->> 'idempotent')::boolean, 'repeated create listing is idempotent');
+select is(((select payload from _ids where key = 'listing_repeat') ->> 'expected_net_amount')::numeric, 95::numeric, 'idempotent create listing returns backend expected net amount');
+select is(((select payload from _ids where key = 'listing_repeat') ->> 'fee_bps')::int, 500, 'idempotent create listing returns backend fee bps');
 
 insert into _ids (key, payload)
 select 'buyer_list', api.market_list_listings(p_user_id := (select id from _ids where key = 'buyer'), p_limit := 10);

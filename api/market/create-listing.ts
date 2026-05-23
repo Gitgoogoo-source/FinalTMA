@@ -99,24 +99,17 @@ function normalizeMarketCreateListingPayload(payload: unknown): unknown {
     throw invalidMarketCreateListingResult();
   }
 
-  const normalized =
-    payload.idempotent === true
-      ? {
-          listing_id: payload.listing_id,
-          status: payload.status,
-          idempotent: true,
-        }
-      : {
-          listing_id: payload.listing_id,
-          item_count: payload.item_count,
-          remaining_count: payload.remaining_count,
-          unit_price_kcoin: payload.unit_price_kcoin,
-          fee_bps: payload.fee_bps,
-          expected_net_amount: payload.expected_net_amount,
-          status: payload.status,
-          price_health: payload.price_health,
-          idempotent: payload.idempotent ?? false,
-        };
+  const normalized = {
+    listing_id: payload.listing_id,
+    item_count: payload.item_count,
+    remaining_count: payload.remaining_count,
+    unit_price_kcoin: payload.unit_price_kcoin,
+    fee_bps: payload.fee_bps,
+    expected_net_amount: payload.expected_net_amount,
+    status: payload.status,
+    price_health: payload.price_health,
+    idempotent: payload.idempotent ?? false,
+  };
 
   const parsed = MarketCreateListingResponseSchema.safeParse(normalized);
 

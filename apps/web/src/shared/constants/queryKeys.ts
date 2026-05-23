@@ -25,6 +25,7 @@ export const queryKeys = {
       ["trade", "listing-detail", listingId ?? "none"] as const,
     sellableItems: (query: unknown = {}) =>
       ["trade", "sellable-items", query] as const,
+    sellRules: ["trade", "sell-rules"] as const,
     myListings: (query: unknown = {}) =>
       ["trade", "my-listings", query] as const,
     myListingStats: ["trade", "my-listing-stats"] as const,

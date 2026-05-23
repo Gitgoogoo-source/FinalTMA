@@ -571,24 +571,36 @@ export const MarketSellableItemsResponseSchema = z
   })
   .strict();
 
+export const MarketSellRulesResponseSchema = z
+  .object({
+    fee_type: z.literal("market_sell"),
+    currency_code: MarketCurrencySchema,
+    fee_bps: bpsSchema,
+    source: z.enum(["active_rule", "fallback"]).optional(),
+  })
+  .strict();
+
+const marketCreateListingResponseShape = {
+  listing_id: uuidSchema,
+  item_count: positiveIntegerSchema,
+  remaining_count: nonNegativeIntegerSchema,
+  unit_price_kcoin: nonNegativeKcoinAmountSchema,
+  fee_bps: bpsSchema,
+  expected_net_amount: nonNegativeKcoinAmountSchema,
+  status: MarketListingStatusSchema,
+  price_health: MarketPriceHealthSchema.optional(),
+};
+
 export const MarketCreateListingCreatedResponseSchema = z
   .object({
-    listing_id: uuidSchema,
-    item_count: positiveIntegerSchema,
-    remaining_count: nonNegativeIntegerSchema,
-    unit_price_kcoin: nonNegativeKcoinAmountSchema,
-    fee_bps: bpsSchema,
-    expected_net_amount: nonNegativeKcoinAmountSchema,
-    status: MarketListingStatusSchema,
-    price_health: MarketPriceHealthSchema.optional(),
+    ...marketCreateListingResponseShape,
     idempotent: z.literal(false).optional(),
   })
   .strict();
 
 export const MarketCreateListingIdempotentResponseSchema = z
   .object({
-    listing_id: uuidSchema,
-    status: MarketListingStatusSchema,
+    ...marketCreateListingResponseShape,
     idempotent: z.literal(true),
   })
   .strict();

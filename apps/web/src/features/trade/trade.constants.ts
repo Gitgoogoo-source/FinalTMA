@@ -92,3 +92,5 @@ export const MARKET_MY_LISTING_SORT_OPTIONS: ReadonlyArray<{
   { value: "value_high_to_low", label: "总价值从高到低" },
   { value: "value_low_to_high", label: "总价值从低到高" },
 ];
+
+export const MARKET_MAX_KCOIN_PRICE = 1_000_000_000;

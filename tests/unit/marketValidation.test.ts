@@ -8,6 +8,7 @@ import {
   MarketListingDetailResponseSchema,
   MarketListingsResponseSchema,
   MarketListListingsQuerySchema,
+  MarketSellRulesResponseSchema,
   MarketSellableItemsQuerySchema,
   MarketUpdateListingPriceBodySchema,
 } from "../../packages/validation/src/market.schemas";
@@ -24,6 +25,7 @@ describe("market API contract schemas", () => {
       listingDetail: "/market/listing-detail",
       buy: "/market/buy",
       sellableItems: "/market/sellable-items",
+      sellRules: "/market/sell-rules",
       createListing: "/market/create-listing",
       myListings: "/market/my-listings",
       myListingStats: "/market/my-listing-stats",
@@ -189,13 +191,41 @@ describe("market API contract schemas", () => {
     expect(
       MarketCreateListingResponseSchema.parse({
         listing_id: LISTING_ID,
+        item_count: 1,
+        remaining_count: 1,
+        unit_price_kcoin: 300,
+        fee_bps: 500,
+        expected_net_amount: 285,
         status: "active",
+        price_health: "healthy",
         idempotent: true,
       }),
     ).toEqual({
       listing_id: LISTING_ID,
+      item_count: 1,
+      remaining_count: 1,
+      unit_price_kcoin: 300,
+      fee_bps: 500,
+      expected_net_amount: 285,
       status: "active",
+      price_health: "healthy",
       idempotent: true,
+    });
+  });
+
+  it("accepts sell rules response", () => {
+    expect(
+      MarketSellRulesResponseSchema.parse({
+        fee_type: "market_sell",
+        currency_code: "KCOIN",
+        fee_bps: 500,
+        source: "active_rule",
+      }),
+    ).toEqual({
+      fee_type: "market_sell",
+      currency_code: "KCOIN",
+      fee_bps: 500,
+      source: "active_rule",
     });
   });
 

@@ -25,6 +25,7 @@ export const API_ENDPOINTS = {
     listingDetail: "/market/listing-detail",
     buy: "/market/buy",
     sellableItems: "/market/sellable-items",
+    sellRules: "/market/sell-rules",
     createListing: "/market/create-listing",
     myListings: "/market/my-listings",
     myListingStats: "/market/my-listing-stats",

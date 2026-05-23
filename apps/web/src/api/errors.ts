@@ -33,6 +33,11 @@ const API_ERROR_MESSAGES: Readonly<Record<string, string>> = {
   BALANCE_LEDGER_FAILED: "资产流水写入失败，请稍后重试。",
   INVENTORY_CREATE_FAILED: "库存写入失败，请稍后查看结果。",
   IDEMPOTENCY_CONFLICT: "请求已被其他操作占用，请刷新后重试。",
+  IDEMPOTENCY_KEY_REQUIRED: "请求缺少幂等键，请重试。",
+  ITEM_ALREADY_LOCKED: "藏品已被锁定。",
+  ITEM_NOT_FOUND: "部分藏品不存在。",
+  ITEM_NOT_SELLABLE: "部分藏品不可出售。",
+  MARKET_PRICE_INVALID: "挂单价格无效。",
 
   TELEGRAM_INIT_DATA_INVALID: "Telegram 登录校验失败，请重新进入应用。",
   SESSION_EXPIRED: "登录状态已过期，请重新进入应用。",

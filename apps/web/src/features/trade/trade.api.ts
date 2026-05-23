@@ -28,6 +28,7 @@ import type {
   MarketPriceStats,
   MarketSellableItemsQuery,
   MarketSellableItemsResponse,
+  MarketSellRules,
   MarketStatsQuery,
   MarketStatsResponse,
   MyListing,
@@ -79,6 +80,14 @@ export async function fetchSellableItems(
   );
 
   return normalizeSellableItemsResponse(response);
+}
+
+export async function fetchMarketSellRules(): Promise<MarketSellRules> {
+  const response = await apiRequest<unknown>(API_ENDPOINTS.market.sellRules, {
+    method: "GET",
+  });
+
+  return normalizeMarketSellRulesResponse(response);
 }
 
 export async function createMarketListing(
@@ -331,6 +340,20 @@ function normalizeSellableItemsResponse(
     items,
     nextCursor:
       readString(payload.nextCursor) ?? readString(payload.next_cursor),
+  };
+}
+
+function normalizeMarketSellRulesResponse(response: unknown): MarketSellRules {
+  const payload = isRecord(response) ? response : {};
+
+  return {
+    feeType: "market_sell",
+    currencyCode: normalizeCurrencyCode(
+      readString(payload.currencyCode) ?? readString(payload.currency_code),
+    ),
+    feeBps: readNumber(payload.feeBps) ?? readNumber(payload.fee_bps) ?? 0,
+    source:
+      readString(payload.source) === "fallback" ? "fallback" : "active_rule",
   };
 }
 
