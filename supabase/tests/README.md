@@ -23,6 +23,7 @@ market_create_listing.test.sql
 market_buy_listing.test.sql
 market_buy.test.sql
 market_cancel.test.sql
+market_update_price.test.sql
 market_rpc_stage5.test.sql
 task_claim.test.sql
 referral.test.sql

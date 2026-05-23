@@ -198,11 +198,30 @@ $$;
 create temp table _ids (key text primary key, id uuid, txt text, payload jsonb) on commit drop;
 insert into _ids (key, id) values ('seller', testutil.make_user(9900000001, 'market_cancel_seller', null));
 insert into _ids (key, id) values ('other', testutil.make_user(9900000002, 'market_cancel_other', null));
+insert into _ids (key, id) values ('buyer', testutil.make_user(9900000003, 'market_cancel_buyer', null));
 insert into _ids (key, payload) values ('catalog', testutil.create_catalog_fixture('market-cancel', 'COMMON', true, true, true, true, true));
 insert into _ids (key, id) select 'template', ((select payload from _ids where key = 'catalog') ->> 'template_id')::uuid;
 insert into _ids (key, id) select 'form1', ((select payload from _ids where key = 'catalog') ->> 'form1_id')::uuid;
 insert into _ids (key, id) select 'item1', testutil.create_item((select id from _ids where key = 'seller'), (select id from _ids where key = 'template'), (select id from _ids where key = 'form1'), 1, 10, 'admin');
 insert into _ids (key, id) select 'item2', testutil.create_item((select id from _ids where key = 'seller'), (select id from _ids where key = 'template'), (select id from _ids where key = 'form1'), 1, 11, 'admin');
+insert into _ids (key, id) select 'partial_item1', testutil.create_item((select id from _ids where key = 'seller'), (select id from _ids where key = 'template'), (select id from _ids where key = 'form1'), 1, 14, 'admin');
+insert into _ids (key, id) select 'partial_item2', testutil.create_item((select id from _ids where key = 'seller'), (select id from _ids where key = 'template'), (select id from _ids where key = 'form1'), 1, 15, 'admin');
+
+do $$
+begin
+  perform api._credit_balance(
+    (select id from _ids where key = 'buyer'),
+    'KCOIN',
+    500,
+    'test_setup',
+    null,
+    null,
+    'market-cancel-buyer-kcoin-001',
+    'fixture',
+    '{}'::jsonb
+  );
+end;
+$$;
 
 insert into _ids (key, payload) select 'listing', api.market_create_listing((select id from _ids where key = 'seller'), array[(select id from _ids where key = 'item1'), (select id from _ids where key = 'item2')], 120, 'market-cancel-listing-001');
 insert into _ids (key, id) select 'listing_id', ((select payload from _ids where key = 'listing') ->> 'listing_id')::uuid;
@@ -220,6 +239,30 @@ select ok(exists (select 1 from market.listing_events where listing_id = (select
 insert into _ids (key, payload) select 'cancel_repeat', api.market_cancel_listing((select id from _ids where key = 'seller'), (select id from _ids where key = 'listing_id'), 'market-cancel-cancel-001');
 select ok(((select payload from _ids where key = 'cancel_repeat') ->> 'idempotent')::boolean, 'repeated cancel with same idempotency key returns idempotent=true');
 select ok(testutil.raises_like(format('select api.market_cancel_listing(%L::uuid, %L::uuid, %L)', (select id::text from _ids where key = 'seller'), (select id::text from _ids where key = 'listing_id'), 'market-cancel-listing-002'), '%listing cannot be cancelled%'), 'already cancelled listing cannot be cancelled again with a new key');
+
+insert into _ids (key, payload) select 'partial_listing', api.market_create_listing((select id from _ids where key = 'seller'), array[(select id from _ids where key = 'partial_item1'), (select id from _ids where key = 'partial_item2')], 100, 'market-cancel-partial-listing-001');
+insert into _ids (key, id) select 'partial_listing_id', ((select payload from _ids where key = 'partial_listing') ->> 'listing_id')::uuid;
+insert into _ids (key, payload) select 'partial_buy', api.market_buy_listing((select id from _ids where key = 'buyer'), (select id from _ids where key = 'partial_listing_id'), 1, 100, 'market-cancel-partial-buy-001');
+insert into _ids (key, id) select 'partial_order_id', ((select payload from _ids where key = 'partial_buy') ->> 'order_id')::uuid;
+insert into _ids (key, id)
+select 'partial_sold_item', item_instance_id
+from market.order_items
+where order_id = (select id from _ids where key = 'partial_order_id');
+insert into _ids (key, id)
+select 'partial_remaining_item', li.item_instance_id
+from market.listing_items li
+where li.listing_id = (select id from _ids where key = 'partial_listing_id')
+  and li.status = 'reserved';
+insert into _ids (key, payload) select 'partial_cancel', api.market_cancel_listing((select id from _ids where key = 'seller'), (select id from _ids where key = 'partial_listing_id'), 'market-cancel-partial-cancel-001');
+select is((select status from market.listings where id = (select id from _ids where key = 'partial_listing_id')), 'cancelled', 'partially sold listing can be cancelled');
+select is((select count(*)::int from market.listing_items where listing_id = (select id from _ids where key = 'partial_listing_id') and status = 'sold'), 1, 'cancel keeps sold listing item sold');
+select is((select count(*)::int from market.listing_items where listing_id = (select id from _ids where key = 'partial_listing_id') and status = 'cancelled'), 1, 'cancel only cancels remaining reserved listing item');
+select is((select owner_user_id from inventory.item_instances where id = (select id from _ids where key = 'partial_sold_item')), (select id from _ids where key = 'buyer'), 'cancel does not return sold item ownership to seller');
+select is((select status from inventory.item_instances where id = (select id from _ids where key = 'partial_sold_item')), 'available', 'sold item remains available in buyer inventory');
+select is((select owner_user_id from inventory.item_instances where id = (select id from _ids where key = 'partial_remaining_item')), (select id from _ids where key = 'seller'), 'cancel keeps unsold item owned by seller');
+select is((select status from inventory.item_instances where id = (select id from _ids where key = 'partial_remaining_item')), 'available', 'cancel restores unsold item to available');
+select is((select count(*)::int from inventory.inventory_locks where source_id = (select id from _ids where key = 'partial_listing_id') and status = 'consumed'), 1, 'cancel leaves sold item lock consumed');
+select is((select count(*)::int from inventory.inventory_locks where source_id = (select id from _ids where key = 'partial_listing_id') and status = 'released'), 1, 'cancel releases only unsold item lock');
 
 insert into _ids (key, id) select 'bad_status_item', testutil.create_item((select id from _ids where key = 'seller'), (select id from _ids where key = 'template'), (select id from _ids where key = 'form1'), 1, 12, 'admin');
 insert into _ids (key, payload) select 'bad_status_listing', api.market_create_listing((select id from _ids where key = 'seller'), array[(select id from _ids where key = 'bad_status_item')], 120, 'market-cancel-bad-status-listing-001');
