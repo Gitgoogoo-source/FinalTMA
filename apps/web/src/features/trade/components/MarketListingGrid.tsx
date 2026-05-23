@@ -8,13 +8,19 @@ type MarketListingGridProps = {
   listings: MarketListingCardType[];
   isLoading: boolean;
   isError: boolean;
+  balanceAvailable: string;
+  onBuy: (listing: MarketListingCardType) => void;
+  onOpenDetail: (listing: MarketListingCardType) => void;
   onRetry: () => void;
 };
 
 export function MarketListingGrid({
+  balanceAvailable,
   isError,
   isLoading,
   listings,
+  onBuy,
+  onOpenDetail,
   onRetry,
 }: MarketListingGridProps) {
   const visibleListings = listings.filter(isVisibleBuyListing);
@@ -54,7 +60,13 @@ export function MarketListingGrid({
   return (
     <div className="market-listing-grid" aria-label="市场挂单列表">
       {visibleListings.map((listing) => (
-        <ListingCard key={listing.listingId} listing={listing} />
+        <ListingCard
+          key={listing.listingId}
+          balanceAvailable={balanceAvailable}
+          listing={listing}
+          onBuy={onBuy}
+          onOpenDetail={onOpenDetail}
+        />
       ))}
     </div>
   );

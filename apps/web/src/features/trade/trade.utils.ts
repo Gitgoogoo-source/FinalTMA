@@ -1,4 +1,7 @@
-import { formatCurrencyAmount } from "@/shared/lib/formatCurrency";
+import {
+  formatCurrencyAmount,
+  normalizeCurrencyAmount,
+} from "@/shared/lib/formatCurrency";
 
 import {
   MARKET_ITEM_TYPE_LABELS,
@@ -8,11 +11,23 @@ import {
 } from "./trade.constants";
 import type {
   MarketItemTypeCode,
+  MarketListingCard,
   MarketListingStatus,
   MarketPriceHealth,
   MarketRarityCode,
   TradeTabId,
 } from "./trade.types";
+
+type MarketBuyState = Pick<
+  MarketListingCard,
+  | "canBuy"
+  | "isOwnListing"
+  | "notBuyableReason"
+  | "remainingCount"
+  | "unitPriceKcoin"
+> & {
+  disabledReason?: string | null;
+};
 
 export function formatKcoinAmount(value: unknown): string {
   return formatCurrencyAmount(value);
@@ -68,6 +83,44 @@ export function getListingStatusLabel(status: MarketListingStatus): string {
   return MARKET_LISTING_STATUS_LABELS[status];
 }
 
+export function getMarketBuyDisabledReason(
+  listing: MarketBuyState,
+  balanceAvailable?: string | null,
+): string | null {
+  if (listing.isOwnListing) {
+    return "自己的挂单不能购买";
+  }
+
+  if (listing.remainingCount <= 0) {
+    return "商品已售罄";
+  }
+
+  if (!listing.canBuy) {
+    return mapMarketDisabledReason(
+      listing.disabledReason ?? listing.notBuyableReason,
+    );
+  }
+
+  if (
+    balanceAvailable !== undefined &&
+    !hasEnoughKcoin(balanceAvailable, listing.unitPriceKcoin)
+  ) {
+    return "K-coin 余额不足";
+  }
+
+  return null;
+}
+
+export function hasEnoughKcoin(
+  balanceAvailable: string | null | undefined,
+  priceKcoin: number,
+): boolean {
+  return (
+    toCurrencyBigInt(balanceAvailable) >=
+    BigInt(Math.max(Math.trunc(priceKcoin), 0))
+  );
+}
+
 export function normalizeTradeTab(value: string | null): TradeTabId {
   if (value === "sell" || value === "manage") {
     return value;
@@ -82,6 +135,32 @@ function toNonNegativeInteger(value: number): number {
   }
 
   return Math.trunc(value);
+}
+
+function toCurrencyBigInt(value: string | null | undefined): bigint {
+  const normalized = normalizeCurrencyAmount(value);
+
+  try {
+    return BigInt(normalized);
+  } catch {
+    return 0n;
+  }
+}
+
+function mapMarketDisabledReason(reason: string | null | undefined): string {
+  if (reason === "own_listing") {
+    return "自己的挂单不能购买";
+  }
+
+  if (reason === "listing_sold_out") {
+    return "商品已售罄";
+  }
+
+  if (reason === "listing_not_buyable") {
+    return "当前挂单不可购买";
+  }
+
+  return "当前挂单不可购买";
 }
 
 function isMarketRarityCode(

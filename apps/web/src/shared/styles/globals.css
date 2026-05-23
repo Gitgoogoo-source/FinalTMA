@@ -2235,12 +2235,29 @@ a {
   min-width: 0;
   min-height: 252px;
   display: grid;
-  grid-template-rows: 112px minmax(0, 1fr) auto;
+  grid-template-rows: minmax(0, 1fr) auto;
   overflow: hidden;
   border: 1px solid rgb(255 255 255 / 13%);
   border-radius: 8px;
   color: #f7fbff;
   background: rgb(13 20 25 / 82%);
+}
+
+.market-listing-card__detail {
+  min-width: 0;
+  display: grid;
+  grid-template-rows: 112px minmax(0, 1fr);
+  border: 0;
+  padding: 0;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.market-listing-card__detail:focus-visible {
+  outline: 3px solid rgb(139 211 199 / 34%);
+  outline-offset: -3px;
 }
 
 .market-listing-card--rare {
@@ -2398,6 +2415,545 @@ a {
   cursor: not-allowed;
   background: rgb(255 255 255 / 10%);
   border-color: rgb(255 255 255 / 13%);
+}
+
+.listing-detail-sheet,
+.buy-confirm-dialog {
+  position: fixed;
+  z-index: 60;
+  inset: 0;
+  display: grid;
+  align-items: end;
+  justify-items: center;
+  padding: calc(18px + var(--tg-safe-area-top))
+    calc(12px + var(--tg-safe-area-right))
+    calc(12px + var(--tg-safe-area-bottom))
+    calc(12px + var(--tg-safe-area-left));
+}
+
+.listing-detail-sheet__backdrop,
+.buy-confirm-dialog__backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  background: rgb(2 8 12 / 72%);
+  cursor: pointer;
+}
+
+.listing-detail-sheet__panel,
+.buy-confirm-dialog__panel {
+  position: relative;
+  width: min(100%, 460px);
+  max-height: min(760px, calc(100vh - 42px));
+  max-height: min(760px, calc(100dvh - 42px));
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: 8px 8px 0 0;
+  color: #f7fbff;
+  background: #101820;
+  box-shadow: 0 -24px 80px rgb(0 0 0 / 42%);
+}
+
+.buy-confirm-dialog__panel {
+  max-height: min(560px, calc(100vh - 42px));
+  max-height: min(560px, calc(100dvh - 42px));
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.listing-detail-sheet__header,
+.buy-confirm-dialog__header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+  border-bottom: 1px solid rgb(255 255 255 / 10%);
+  padding: 14px;
+  background: rgb(13 20 25 / 92%);
+}
+
+.listing-detail-sheet__header div,
+.buy-confirm-dialog__header div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.listing-detail-sheet__header span,
+.buy-confirm-dialog__header span {
+  color: #8bd3c7;
+  font-size: 11px;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.listing-detail-sheet__header h2,
+.buy-confirm-dialog__header h2 {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: #f7fbff;
+  font-size: 17px;
+  font-weight: 950;
+  line-height: 1.18;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.listing-detail-sheet__header button,
+.buy-confirm-dialog__header button {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 8px;
+  color: #f7fbff;
+  background: rgb(255 255 255 / 8%);
+  cursor: pointer;
+}
+
+.listing-detail-sheet__body,
+.buy-confirm-dialog__body {
+  min-width: 0;
+  overflow-y: auto;
+  display: grid;
+  gap: 12px;
+  padding: 12px 14px 14px;
+}
+
+.listing-detail-sheet__hero {
+  position: relative;
+  min-height: 210px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 8px;
+  color: #071615;
+  background:
+    linear-gradient(135deg, rgb(255 255 255 / 72%), transparent 32%),
+    linear-gradient(155deg, #8bd3c7, #ffd166 58%, #ff7a59);
+  font-size: 48px;
+  font-weight: 950;
+}
+
+.listing-detail-sheet__hero img {
+  width: 100%;
+  height: 100%;
+  min-height: 210px;
+  display: block;
+  object-fit: cover;
+}
+
+.listing-detail-sheet__rarity {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  max-width: calc(100% - 20px);
+  min-height: 26px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgb(255 255 255 / 18%);
+  border-radius: 999px;
+  padding: 0 10px;
+  color: #071615;
+  background: #ffd166;
+  font-size: 11px;
+  font-weight: 950;
+}
+
+.listing-detail-sheet__summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.listing-detail-sheet__summary div,
+.listing-detail-price__metric,
+.listing-detail-depth__levels div,
+.buy-confirm-dialog__summary div {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+  border: 1px solid rgb(255 255 255 / 9%);
+  border-radius: 8px;
+  padding: 9px;
+  background: rgb(255 255 255 / 5%);
+}
+
+.listing-detail-sheet__summary span,
+.listing-detail-price__metric span,
+.listing-detail-depth__heading span,
+.buy-confirm-dialog__summary dt {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: #9fb1b9;
+  font-size: 10px;
+  font-weight: 950;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.listing-detail-sheet__summary strong,
+.listing-detail-price__metric strong,
+.listing-detail-depth__heading strong,
+.listing-detail-depth__levels strong,
+.buy-confirm-dialog__summary dd {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: #f7fbff;
+  font-size: 12px;
+  font-weight: 950;
+  line-height: 1.18;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.listing-detail-sheet__description {
+  margin: 0;
+  border: 1px solid rgb(255 255 255 / 9%);
+  border-radius: 8px;
+  padding: 10px;
+  color: #cfe0e7;
+  background: rgb(255 255 255 / 4%);
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.55;
+}
+
+.listing-detail-price {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.listing-detail-price__metric span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.listing-detail-price__metric:first-child strong {
+  color: #ffe7a6;
+}
+
+.listing-detail-health {
+  display: grid;
+  gap: 7px;
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 8px;
+  padding: 10px;
+  background: rgb(255 255 255 / 5%);
+}
+
+.listing-detail-health__badge {
+  width: fit-content;
+  max-width: 100%;
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: 999px;
+  padding: 0 10px;
+  font-size: 11px;
+  font-weight: 950;
+}
+
+.listing-detail-health__badge--healthy {
+  color: #dffff9;
+  background: rgb(139 211 199 / 12%);
+  border-color: rgb(139 211 199 / 28%);
+}
+
+.listing-detail-health__badge--too_high {
+  color: #ffe7a6;
+  background: rgb(255 209 102 / 12%);
+  border-color: rgb(255 209 102 / 30%);
+}
+
+.listing-detail-health__badge--too_low {
+  color: #ffd6cc;
+  background: rgb(255 122 89 / 12%);
+  border-color: rgb(255 122 89 / 28%);
+}
+
+.listing-detail-health__badge--unknown {
+  color: #d4e1e7;
+  background: rgb(255 255 255 / 8%);
+}
+
+.listing-detail-health p {
+  margin: 0;
+  color: #c7d7df;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.listing-detail-depth {
+  display: grid;
+  gap: 8px;
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 8px;
+  padding: 10px;
+  background: rgb(13 20 25 / 76%);
+}
+
+.listing-detail-depth__heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.listing-detail-depth__heading div {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+
+.listing-detail-depth__heading svg {
+  color: #8bd3c7;
+}
+
+.listing-detail-depth__levels {
+  display: grid;
+  gap: 6px;
+}
+
+.listing-detail-depth__levels div {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.listing-detail-depth__levels span {
+  min-width: 0;
+  overflow: hidden;
+  color: #ffe7a6;
+  font-size: 12px;
+  font-weight: 950;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.listing-detail-depth__empty,
+.listing-detail-state {
+  min-height: 92px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 8px;
+  border: 1px dashed rgb(255 255 255 / 13%);
+  border-radius: 8px;
+  color: #9fb1b9;
+  background: rgb(255 255 255 / 4%);
+  text-align: center;
+}
+
+.listing-detail-state {
+  min-height: 150px;
+  padding: 14px;
+}
+
+.listing-detail-state--error {
+  border-color: rgb(255 122 89 / 28%);
+}
+
+.listing-detail-state strong {
+  color: #f7fbff;
+  font-size: 14px;
+  font-weight: 950;
+}
+
+.listing-detail-state span,
+.listing-detail-depth__empty span {
+  color: #9fb1b9;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.listing-detail-state button {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: 8px;
+  padding: 0 12px;
+  color: #f7fbff;
+  background: rgb(255 255 255 / 9%);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.listing-detail-sheet__footer {
+  position: sticky;
+  bottom: -14px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  margin: 2px -14px -14px;
+  border-top: 1px solid rgb(255 255 255 / 10%);
+  padding: 12px 14px;
+  background: rgb(13 20 25 / 96%);
+}
+
+.listing-detail-sheet__footer span {
+  min-width: 0;
+  overflow: hidden;
+  color: #c7d7df;
+  font-size: 12px;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.listing-detail-sheet__footer button,
+.buy-confirm-dialog__primary {
+  min-width: 92px;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid rgb(139 211 199 / 36%);
+  border-radius: 8px;
+  padding: 0 13px;
+  color: #071615;
+  background: #8bd3c7;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.listing-detail-sheet__footer button:disabled,
+.buy-confirm-dialog__primary:disabled {
+  color: #c1ccd1;
+  cursor: not-allowed;
+  background: rgb(255 255 255 / 10%);
+  border-color: rgb(255 255 255 / 13%);
+}
+
+.buy-confirm-dialog__item {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+}
+
+.buy-confirm-dialog__image {
+  width: 74px;
+  height: 74px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 8px;
+  color: #071615;
+  background:
+    linear-gradient(135deg, rgb(255 255 255 / 70%), transparent 34%),
+    linear-gradient(155deg, #8bd3c7, #ffd166);
+  font-size: 28px;
+  font-weight: 950;
+}
+
+.buy-confirm-dialog__image img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.buy-confirm-dialog__item div:last-child {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+
+.buy-confirm-dialog__item strong,
+.buy-confirm-dialog__item span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.buy-confirm-dialog__item strong {
+  color: #f7fbff;
+  font-size: 15px;
+  font-weight: 950;
+}
+
+.buy-confirm-dialog__item span {
+  color: #9fb1b9;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.buy-confirm-dialog__summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.buy-confirm-dialog__notice {
+  margin: 0;
+  border: 1px solid rgb(255 122 89 / 24%);
+  border-radius: 8px;
+  padding: 9px 10px;
+  color: #ffd6cc;
+  background: rgb(255 122 89 / 9%);
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 1.45;
+}
+
+.buy-confirm-dialog__actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr);
+  gap: 10px;
+  border-top: 1px solid rgb(255 255 255 / 10%);
+  padding: 12px 14px;
+  background: rgb(13 20 25 / 96%);
+}
+
+.buy-confirm-dialog__secondary {
+  min-height: 40px;
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: 8px;
+  color: #f7fbff;
+  background: rgb(255 255 255 / 8%);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.buy-confirm-dialog__secondary:disabled {
+  color: #64747b;
+  cursor: not-allowed;
+}
+
+.listing-detail-sheet__header button:focus-visible,
+.listing-detail-state button:focus-visible,
+.listing-detail-sheet__footer button:focus-visible,
+.buy-confirm-dialog__header button:focus-visible,
+.buy-confirm-dialog__secondary:focus-visible,
+.buy-confirm-dialog__primary:focus-visible {
+  outline: 3px solid rgb(139 211 199 / 34%);
+  outline-offset: 2px;
 }
 
 .collection-page {
