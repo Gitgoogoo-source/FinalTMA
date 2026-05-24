@@ -216,6 +216,29 @@ insert into _ids (key, id) select 's1', testutil.create_item((select id from _id
 insert into _ids (key, id) select 's2', testutil.create_item((select id from _ids where key = 'user'), (select id from _ids where key = 'template'), (select id from _ids where key = 'form1'), 2, 15, 'admin');
 insert into _ids (key, id) select 's3', testutil.create_item((select id from _ids where key = 'user'), (select id from _ids where key = 'template'), (select id from _ids where key = 'form1'), 5, 30, 'admin');
 
+insert into _ids (key, id) select 'locked1', testutil.create_item((select id from _ids where key = 'user'), (select id from _ids where key = 'template'), (select id from _ids where key = 'form1'), 1, 10, 'admin');
+insert into _ids (key, id) select 'locked2', testutil.create_item((select id from _ids where key = 'user'), (select id from _ids where key = 'template'), (select id from _ids where key = 'form1'), 1, 10, 'admin');
+insert into _ids (key, id) select 'locked3', testutil.create_item((select id from _ids where key = 'user'), (select id from _ids where key = 'template'), (select id from _ids where key = 'form1'), 1, 10, 'admin');
+
+insert into inventory.inventory_locks (item_instance_id, user_id, lock_type, source_type, status)
+values ((select id from _ids where key = 'locked1'), (select id from _ids where key = 'user'), 'admin_hold', 'test_setup', 'active');
+
+select ok(testutil.raises_like(format('select api.inventory_evolve_item(%L::uuid, array[%L::uuid, %L::uuid, %L::uuid], %L)', (select id::text from _ids where key = 'user'), (select id::text from _ids where key = 'locked1'), (select id::text from _ids where key = 'locked2'), (select id::text from _ids where key = 'locked3'), 'inventory-evolve-active-lock-001'), '%some items are not evolvable or not available%'), 'available item with active lock cannot be evolved');
+select is((select count(*)::int from inventory.evolution_attempts where idempotency_key = 'inventory-evolve-active-lock-001'), 0, 'active-lock evolution rejection does not create an attempt');
+select is(testutil.balance_of((select id from _ids where key = 'user'), 'KCOIN'), 1000::numeric, 'active-lock evolution rejection does not debit K-coin');
+
+insert into _ids (key, id) select 'minting1', testutil.create_item((select id from _ids where key = 'user'), (select id from _ids where key = 'template'), (select id from _ids where key = 'form1'), 1, 10, 'admin');
+insert into _ids (key, id) select 'minting2', testutil.create_item((select id from _ids where key = 'user'), (select id from _ids where key = 'template'), (select id from _ids where key = 'form1'), 1, 10, 'admin');
+insert into _ids (key, id) select 'minting3', testutil.create_item((select id from _ids where key = 'user'), (select id from _ids where key = 'template'), (select id from _ids where key = 'form1'), 1, 10, 'admin');
+
+update inventory.item_instances
+set nft_mint_status = 'minting'
+where id = (select id from _ids where key = 'minting2');
+
+select ok(testutil.raises_like(format('select api.inventory_evolve_item(%L::uuid, array[%L::uuid, %L::uuid, %L::uuid], %L)', (select id::text from _ids where key = 'user'), (select id::text from _ids where key = 'minting1'), (select id::text from _ids where key = 'minting2'), (select id::text from _ids where key = 'minting3'), 'inventory-evolve-minting-001'), '%some items are not evolvable or not available%'), 'minting item cannot be evolved');
+select is((select count(*)::int from inventory.evolution_attempts where idempotency_key = 'inventory-evolve-minting-001'), 0, 'minting evolution rejection does not create an attempt');
+select is(testutil.balance_of((select id from _ids where key = 'user'), 'KCOIN'), 1000::numeric, 'minting evolution rejection does not debit K-coin');
+
 insert into _ids (key, payload)
 select 'evolve_success', api.inventory_evolve_item(
   (select id from _ids where key = 'user'),

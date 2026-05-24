@@ -211,8 +211,6 @@ function normalizeOnchainStatus(value: unknown) {
   return {
     is_minted: readBoolean(value.is_minted) ?? false,
     mint_status: readString(value.mint_status) ?? "none",
-    nft_item_address: readString(value.nft_item_address),
-    owner_wallet_address: readString(value.owner_wallet_address),
   };
 }
 

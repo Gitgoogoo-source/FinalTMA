@@ -44,8 +44,6 @@ export type CollectionMarketStatus = {
 export type CollectionOnchainStatus = {
   isMinted: boolean;
   mintStatus: string | null;
-  nftItemAddress: string | null;
-  ownerWalletAddress: string | null;
 };
 
 export type CollectionUpgradePreview = {

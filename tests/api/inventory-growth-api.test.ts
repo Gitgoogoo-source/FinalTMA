@@ -110,7 +110,7 @@ describe("inventory growth API", () => {
         p_include_upgrade_preview: true,
         p_include_evolution_preview: true,
         p_include_decompose_preview: true,
-        p_include_onchain_status: true,
+        p_include_onchain_status: false,
       }),
       expect.objectContaining({
         schema: "api",
@@ -126,6 +126,45 @@ describe("inventory growth API", () => {
       template_id: TEMPLATE_ID,
       is_upgradeable: true,
     });
+  });
+
+  it("detail does not expose on-chain item or wallet addresses", async () => {
+    callRpcRawMock.mockResolvedValueOnce({
+      item_instance_id: ITEM_ID,
+      template_id: TEMPLATE_ID,
+      name: "Moon Crown Guardian",
+      level: 1,
+      power: 390,
+      status: "available",
+      onchain_status: {
+        is_minted: true,
+        mint_status: "minted",
+        nft_item_address: "EQDnft-item-address",
+        owner_wallet_address: "EQDowner-wallet-address",
+      },
+    });
+
+    const result = await invokeApiHandler<ApiSuccessResponse>(detailHandler, {
+      method: "GET",
+      query: {
+        item_instance_id: ITEM_ID,
+        include_onchain_status: "true",
+      },
+    });
+
+    expect(result.statusCode).toBe(200);
+    expect(result.body.data).toMatchObject({
+      onchain_status: {
+        is_minted: true,
+        mint_status: "minted",
+      },
+    });
+    expect(result.body.data.onchain_status).not.toHaveProperty(
+      "nft_item_address",
+    );
+    expect(result.body.data.onchain_status).not.toHaveProperty(
+      "owner_wallet_address",
+    );
   });
 
   it("requires a session before inventory detail can call RPC", async () => {

@@ -270,7 +270,7 @@ export const InventoryDetailQuerySchema = z
     include_upgrade_preview: booleanFromQuerySchema.default(true),
     include_evolution_preview: booleanFromQuerySchema.default(true),
     include_decompose_preview: booleanFromQuerySchema.default(true),
-    include_onchain_status: booleanFromQuerySchema.default(true),
+    include_onchain_status: booleanFromQuerySchema.default(false),
   })
   .strict();
 
@@ -613,8 +613,6 @@ export const InventoryItemDetailDtoSchema = InventoryItemDtoSchema.extend({
       mint_status: z
         .enum(["none", "queued", "processing", "minted", "failed"])
         .default("none"),
-      nft_item_address: z.string().nullable(),
-      owner_wallet_address: z.string().nullable(),
     })
     .strict()
     .optional(),

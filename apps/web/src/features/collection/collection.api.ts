@@ -54,7 +54,6 @@ export async function fetchInventoryDetail(
     include_upgrade_preview: "true",
     include_evolution_preview: "true",
     include_decompose_preview: "true",
-    include_onchain_status: "true",
   });
   const response = await apiRequest<unknown>(
     `${API_ENDPOINTS.inventory.detail}?${params.toString()}`,
@@ -615,11 +614,6 @@ function normalizeOnchainStatus(
     isMinted:
       readBoolean(value.isMinted) ?? readBoolean(value.is_minted) ?? false,
     mintStatus: readString(value.mintStatus) ?? readString(value.mint_status),
-    nftItemAddress:
-      readString(value.nftItemAddress) ?? readString(value.nft_item_address),
-    ownerWalletAddress:
-      readString(value.ownerWalletAddress) ??
-      readString(value.owner_wallet_address),
   };
 }
 
