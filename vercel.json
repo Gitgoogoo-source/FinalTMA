@@ -9,6 +9,10 @@
     {
       "path": "/api/cron/refresh-market-stats",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/refresh-leaderboard",
+      "schedule": "5 0 * * *"
     }
   ],
   "functions": {

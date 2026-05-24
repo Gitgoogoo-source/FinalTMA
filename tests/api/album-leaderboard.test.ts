@@ -115,7 +115,6 @@ describe("album leaderboard API", () => {
       query: {
         period: "current_week",
         scope: "global",
-        around_me: "true",
         sort: "score_desc",
         limit: "25",
         cursor: "50",
@@ -134,7 +133,7 @@ describe("album leaderboard API", () => {
         p_faction_id: null,
         p_rarity: null,
         p_sort: "score_desc",
-        p_around_me: true,
+        p_around_me: false,
         p_limit: 25,
         p_offset: 50,
       },
@@ -203,6 +202,55 @@ describe("album leaderboard API", () => {
 
     expect(result.statusCode).toBe(400);
     expect(result.body.error.code).toBe("BAD_REQUEST");
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects unsupported leaderboard scopes before calling RPC", async () => {
+    const result = await invokeApiHandler<ApiErrorResponse>(leaderboardHandler, {
+      method: "GET",
+      query: {
+        scope: "rarity",
+        rarity: "legendary",
+      },
+    });
+
+    expect(result.statusCode).toBe(400);
+    expect(result.body.error.code).toBe("BAD_REQUEST");
+    expect(result.body.error.details).toMatchObject({
+      unsupported: ["scope", "rarity"],
+    });
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects unsupported leaderboard periods before calling RPC", async () => {
+    const result = await invokeApiHandler<ApiErrorResponse>(leaderboardHandler, {
+      method: "GET",
+      query: {
+        period: "all_time",
+      },
+    });
+
+    expect(result.statusCode).toBe(400);
+    expect(result.body.error.code).toBe("BAD_REQUEST");
+    expect(result.body.error.details).toMatchObject({
+      unsupported: ["period"],
+    });
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects unsupported around-me leaderboard mode before calling RPC", async () => {
+    const result = await invokeApiHandler<ApiErrorResponse>(leaderboardHandler, {
+      method: "GET",
+      query: {
+        around_me: "true",
+      },
+    });
+
+    expect(result.statusCode).toBe(400);
+    expect(result.body.error.code).toBe("BAD_REQUEST");
+    expect(result.body.error.details).toMatchObject({
+      unsupported: ["around_me"],
+    });
     expect(callRpcRawMock).not.toHaveBeenCalled();
   });
 });

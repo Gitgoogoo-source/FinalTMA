@@ -10,10 +10,13 @@ import { validate } from "../_shared/validate.js";
 
 type AlbumLeaderboardRpcPayload = Record<string, unknown>;
 
+const SUPPORTED_LEADERBOARD_PERIODS = new Set(["current_week", "last_week"]);
+
 export default withApiHandler(
   async (req, _res, ctx) => {
     const session = await requireSession(req);
     const query = validate(AlbumLeaderboardQuerySchema, req.query);
+    assertSupportedAlbumLeaderboardQuery(query);
     const offset = parseOffsetCursor(query.cursor);
 
     const payload = await callAlbumLeaderboardRpc(
@@ -186,6 +189,47 @@ function normalizeNextCursor(value: unknown): string | null {
   }
 
   return null;
+}
+
+function assertSupportedAlbumLeaderboardQuery(
+  query: AlbumLeaderboardQuery,
+): void {
+  const unsupported: string[] = [];
+
+  if (query.scope !== "global") {
+    unsupported.push("scope");
+  }
+
+  if (!SUPPORTED_LEADERBOARD_PERIODS.has(query.period)) {
+    unsupported.push("period");
+  }
+
+  if (query.series_id) {
+    unsupported.push("series_id");
+  }
+
+  if (query.faction_id) {
+    unsupported.push("faction_id");
+  }
+
+  if (query.rarity) {
+    unsupported.push("rarity");
+  }
+
+  if (query.around_me) {
+    unsupported.push("around_me");
+  }
+
+  if (unsupported.length > 0) {
+    throw ApiError.badRequest("排行榜接口暂不支持这些筛选条件。", {
+      unsupported,
+      supported: {
+        scope: ["global"],
+        period: Array.from(SUPPORTED_LEADERBOARD_PERIODS),
+        around_me: false,
+      },
+    });
+  }
 }
 
 function parseOffsetCursor(cursor: string | undefined): number {
