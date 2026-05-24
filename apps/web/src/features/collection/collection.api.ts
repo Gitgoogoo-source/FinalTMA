@@ -4,6 +4,8 @@ import { API_ENDPOINTS } from "@/api/endpoints";
 import type {
   CollectionActiveLock,
   CollectionDecomposePreview,
+  CollectionEvolveItemInput,
+  CollectionEvolveItemResponse,
   CollectionEvolutionPreview,
   CollectionForm,
   CollectionInventoryDetail,
@@ -86,6 +88,40 @@ export async function upgradeInventoryItem(
   });
 
   return normalizeUpgradeItemResponse(response);
+}
+
+export async function evolveInventoryItems(
+  input: CollectionEvolveItemInput,
+): Promise<CollectionEvolveItemResponse> {
+  const idempotencyKey =
+    input.idempotencyKey ?? createIdempotencyKey("inventory:evolve");
+  const response = await apiRequest<unknown>(API_ENDPOINTS.inventory.evolve, {
+    method: "POST",
+    body: {
+      source_item_instance_ids: input.sourceItemInstanceIds,
+      idempotency_key: idempotencyKey,
+      ...(input.targetFormId ? { target_form_id: input.targetFormId } : {}),
+      ...(input.expectedKcoinCost !== undefined &&
+      input.expectedKcoinCost !== null
+        ? { expected_kcoin_cost: input.expectedKcoinCost }
+        : {}),
+      ...(input.expectedSuccessRateBps !== undefined &&
+      input.expectedSuccessRateBps !== null
+        ? { expected_success_rate_bps: input.expectedSuccessRateBps }
+        : {}),
+      ...(input.expectedReturnItemInstanceId
+        ? {
+            expected_return_item_instance_id:
+              input.expectedReturnItemInstanceId,
+          }
+        : {}),
+    },
+    headers: {
+      "X-Idempotency-Key": idempotencyKey,
+    },
+  });
+
+  return normalizeEvolveItemResponse(response);
 }
 
 export function normalizeInventoryResponse(
@@ -291,6 +327,91 @@ export function normalizeUpgradeItemResponse(
     ledgerId: readString(response.ledgerId) ?? readString(response.ledger_id),
     upgradedAt:
       readString(response.upgradedAt) ?? readString(response.upgraded_at),
+    idempotent:
+      readBoolean(response.idempotent) ??
+      readBoolean(response.isIdempotent) ??
+      false,
+  };
+}
+
+export function normalizeEvolveItemResponse(
+  response: unknown,
+): CollectionEvolveItemResponse {
+  if (!isRecord(response)) {
+    throw new Error("Invalid inventory evolve payload.");
+  }
+
+  const result = readString(response.result);
+  const success =
+    readBoolean(response.success) ??
+    (result === "success" ? true : result === "failed" ? false : null);
+
+  if (success === null) {
+    throw new Error("Inventory evolve payload is missing result status.");
+  }
+
+  const consumedKcoin =
+    readNumber(response.consumedKcoin) ??
+    readNumber(response.consumed_kcoin) ??
+    readNumber(response.costKcoin) ??
+    readNumber(response.cost_kcoin) ??
+    0;
+  const kcoinBalanceBefore =
+    readNullableNumber(response.kcoinBalanceBefore) ??
+    readNullableNumber(response.kcoin_balance_before) ??
+    readNullableNumber(response.balanceBefore) ??
+    readNullableNumber(response.balance_before);
+  const kcoinBalanceAfter =
+    readNullableNumber(response.kcoinBalanceAfter) ??
+    readNullableNumber(response.kcoin_balance_after) ??
+    readNullableNumber(response.balanceAfter) ??
+    readNullableNumber(response.balance_after);
+
+  return {
+    result: success ? "success" : "failed",
+    success,
+    attemptId:
+      readString(response.attemptId) ?? readString(response.attempt_id),
+    sourceItemInstanceIds: readStringArray(
+      response.sourceItemInstanceIds ?? response.source_item_instance_ids,
+    ),
+    consumedItemInstanceIds: readStringArray(
+      response.consumedItemInstanceIds ?? response.consumed_item_instance_ids,
+    ),
+    returnedItemInstanceId:
+      readString(response.returnedItemInstanceId) ??
+      readString(response.returned_item_instance_id),
+    createdItemInstanceId:
+      readString(response.createdItemInstanceId) ??
+      readString(response.created_item_instance_id),
+    mainItemInstanceId:
+      readString(response.mainItemInstanceId) ??
+      readString(response.main_item_instance_id),
+    consumedKcoin,
+    costKcoin:
+      readNumber(response.costKcoin) ??
+      readNumber(response.cost_kcoin) ??
+      consumedKcoin,
+    kcoinBalanceBefore,
+    kcoinBalanceAfter,
+    balanceChange:
+      readNullableNumber(response.balanceChange) ??
+      readNullableNumber(response.balance_change) ??
+      readNullableNumber(response.balanceDelta) ??
+      readNullableNumber(response.balance_delta) ??
+      (kcoinBalanceBefore !== null && kcoinBalanceAfter !== null
+        ? kcoinBalanceAfter - kcoinBalanceBefore
+        : null),
+    ledgerId: readString(response.ledgerId) ?? readString(response.ledger_id),
+    successRateBps:
+      readNumber(response.successRateBps) ??
+      readNumber(response.success_rate_bps) ??
+      0,
+    randomRollBps:
+      readNullableNumber(response.randomRollBps) ??
+      readNullableNumber(response.random_roll_bps),
+    evolvedAt:
+      readString(response.evolvedAt) ?? readString(response.evolved_at),
     idempotent:
       readBoolean(response.idempotent) ??
       readBoolean(response.isIdempotent) ??

@@ -66,3 +66,35 @@ test("升级面板完成升级并刷新藏品展示", async ({ page }) => {
   await resultDialog.getByRole("button", { name: "确认" }).click();
   await expect(page.getByText("Lv.2", { exact: true }).first()).toBeVisible();
 });
+
+test("合成面板选择材料并展示成功结果", async ({ page }) => {
+  await mockFirstPhaseApi(page);
+
+  await page.goto(
+    `/collection?mockInitData=${encodeURIComponent(TEST_INIT_DATA)}`,
+  );
+
+  await page.getByRole("button", { name: "详情" }).click();
+  await page.getByRole("button", { name: /合成/ }).click();
+
+  const evolveDialog = page.getByRole("dialog", { name: "森林幼芽" });
+  await expect(evolveDialog).toBeVisible();
+  await expect(evolveDialog.getByText("同款 available 数量")).toBeVisible();
+  await expect(evolveDialog.getByText("已选择材料")).toBeVisible();
+  await expect(evolveDialog.getByText("目标形态")).toBeVisible();
+  await expect(evolveDialog.getByText("KCOIN 消耗")).toBeVisible();
+  await expect(evolveDialog.getByText("成功率")).toBeVisible();
+  await expect(evolveDialog.getByText("主藏品", { exact: true })).toBeVisible();
+
+  await evolveDialog.getByRole("button", { name: "确认合成" }).click();
+
+  const resultDialog = page.getByRole("dialog", { name: "合成成功" });
+  await expect(resultDialog).toBeVisible();
+  await expect(resultDialog.getByText("消耗 KCOIN")).toBeVisible();
+  await expect(resultDialog.getByText("1,200 -> 1,000")).toBeVisible();
+
+  await resultDialog.getByRole("button", { name: "确认" }).click();
+  await expect(
+    page.getByRole("heading", { name: "森林幼芽·进化" }),
+  ).toBeVisible();
+});

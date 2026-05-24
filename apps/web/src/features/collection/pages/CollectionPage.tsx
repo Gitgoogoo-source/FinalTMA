@@ -9,10 +9,14 @@ import { formatCurrencyAmount } from "@/shared/lib/formatCurrency";
 import { CharacterDetailSheet } from "../components/CharacterDetailSheet";
 import { CharacterGrid } from "../components/CharacterGrid";
 import { CharacterHero } from "../components/CharacterHero";
+import { EvolvePanel } from "../components/EvolvePanel";
 import { GrowthResultModal } from "../components/GrowthResultModal";
 import { GrowthActionBar } from "../components/GrowthActionBar";
 import { UpgradePanel } from "../components/UpgradePanel";
-import type { CollectionUpgradeItemResponse } from "../collection.types";
+import type {
+  CollectionEvolveItemResponse,
+  CollectionUpgradeItemResponse,
+} from "../collection.types";
 import { useInventory } from "../hooks/useInventory";
 
 export function CollectionPage() {
@@ -21,8 +25,11 @@ export function CollectionPage() {
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isUpgradeOpen, setIsUpgradeOpen] = useState(false);
+  const [isEvolveOpen, setIsEvolveOpen] = useState(false);
   const [upgradeResult, setUpgradeResult] =
     useState<CollectionUpgradeItemResponse | null>(null);
+  const [evolveResult, setEvolveResult] =
+    useState<CollectionEvolveItemResponse | null>(null);
   const selectedItem = useMemo(
     () =>
       items.find((item) => item.itemInstanceId === selectedItemId) ??
@@ -36,7 +43,9 @@ export function CollectionPage() {
       setSelectedItemId(null);
       setIsDetailOpen(false);
       setIsUpgradeOpen(false);
+      setIsEvolveOpen(false);
       setUpgradeResult(null);
+      setEvolveResult(null);
       return;
     }
 
@@ -51,12 +60,31 @@ export function CollectionPage() {
 
   function handleOpenUpgrade() {
     setIsDetailOpen(false);
+    setIsEvolveOpen(false);
     setIsUpgradeOpen(true);
+  }
+
+  function handleOpenEvolve() {
+    setIsDetailOpen(false);
+    setIsUpgradeOpen(false);
+    setIsEvolveOpen(true);
   }
 
   function handleUpgradeResult(result: CollectionUpgradeItemResponse) {
     setSelectedItemId(result.itemInstanceId);
     setUpgradeResult(result);
+  }
+
+  function handleEvolveResult(result: CollectionEvolveItemResponse) {
+    setSelectedItemId(
+      result.createdItemInstanceId ??
+        result.returnedItemInstanceId ??
+        result.mainItemInstanceId ??
+        selectedItem?.itemInstanceId ??
+        result.sourceItemInstanceIds[0] ??
+        null,
+    );
+    setEvolveResult(result);
   }
 
   if (inventoryQuery.isLoading && items.length === 0) {
@@ -117,6 +145,7 @@ export function CollectionPage() {
         open={isDetailOpen}
         item={selectedItem}
         onClose={() => setIsDetailOpen(false)}
+        onEvolve={handleOpenEvolve}
         onUpgrade={handleOpenUpgrade}
       />
       <UpgradePanel
@@ -125,12 +154,26 @@ export function CollectionPage() {
         onClose={() => setIsUpgradeOpen(false)}
         onUpgraded={handleUpgradeResult}
       />
+      <EvolvePanel
+        open={isEvolveOpen}
+        item={selectedItem}
+        items={items}
+        onClose={() => setIsEvolveOpen(false)}
+        onEvolved={handleEvolveResult}
+      />
       <GrowthResultModal
         open={upgradeResult !== null}
         title="升级成功"
         description={formatUpgradeResultDescription(upgradeResult)}
         metrics={getUpgradeResultMetrics(upgradeResult)}
         onClose={() => setUpgradeResult(null)}
+      />
+      <GrowthResultModal
+        open={evolveResult !== null}
+        title={evolveResult?.success ? "合成成功" : "合成失败"}
+        description={formatEvolveResultDescription(evolveResult)}
+        metrics={getEvolveResultMetrics(evolveResult)}
+        onClose={() => setEvolveResult(null)}
       />
     </section>
   );
@@ -193,4 +236,73 @@ function formatLevel(value: number | null): string {
 
 function formatOptionalNumber(value: number | null): string {
   return value === null ? "待同步" : formatCurrencyAmount(value);
+}
+
+function getEvolveResultMetrics(result: CollectionEvolveItemResponse | null) {
+  if (!result) {
+    return [];
+  }
+
+  return [
+    {
+      label: result.success ? "新增藏品" : "已返还主藏品",
+      value: formatResultItemId(
+        result.success
+          ? result.createdItemInstanceId
+          : result.returnedItemInstanceId,
+      ),
+    },
+    {
+      label: "消耗材料",
+      value: `${formatCurrencyAmount(
+        result.consumedItemInstanceIds.length,
+      )} 件`,
+    },
+    {
+      label: "消耗 KCOIN",
+      value: formatCurrencyAmount(result.consumedKcoin),
+    },
+    {
+      label: "KCOIN 余额",
+      value: formatEvolveBalanceChange(result),
+    },
+    {
+      label: "成功率",
+      value: formatSuccessRate(result.successRateBps),
+    },
+  ];
+}
+
+function formatEvolveResultDescription(
+  result: CollectionEvolveItemResponse | null,
+): string | undefined {
+  if (!result) {
+    return undefined;
+  }
+
+  return result.success
+    ? "新形态已由服务端生成，库存和资产正在刷新。"
+    : "合成失败，服务端已按规则返还主藏品。";
+}
+
+function formatEvolveBalanceChange(
+  result: CollectionEvolveItemResponse,
+): string {
+  if (result.kcoinBalanceBefore === null || result.kcoinBalanceAfter === null) {
+    return "待同步";
+  }
+
+  return `${formatCurrencyAmount(
+    result.kcoinBalanceBefore,
+  )} -> ${formatCurrencyAmount(result.kcoinBalanceAfter)}`;
+}
+
+function formatSuccessRate(value: number): string {
+  return `${new Intl.NumberFormat("zh-CN", {
+    maximumFractionDigits: 2,
+  }).format(value / 100)}%`;
+}
+
+function formatResultItemId(value: string | null): string {
+  return value ? value.slice(0, 8) : "待同步";
 }

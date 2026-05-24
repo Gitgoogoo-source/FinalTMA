@@ -6,6 +6,10 @@ const ORDER_ID = "33333333-3333-4333-8333-333333333333";
 const STAR_ORDER_ID = "44444444-4444-4444-8444-444444444444";
 const TEMPLATE_ID = "55555555-5555-4555-8555-555555555555";
 const ITEM_INSTANCE_ID = "66666666-6666-4666-8666-666666666666";
+const ITEM_INSTANCE_ID_2 = "66666666-6666-4666-8666-666666666667";
+const ITEM_INSTANCE_ID_3 = "66666666-6666-4666-8666-666666666668";
+const EVOLVED_ITEM_INSTANCE_ID = "66666666-6666-4666-8666-666666666669";
+const TARGET_FORM_ID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbc";
 
 export const TEST_INIT_DATA =
   "auth_date=1779321600&query_id=e2e-query&user=%7B%22id%22%3A7001%2C%22first_name%22%3A%22%E6%B5%8B%E8%AF%95%22%7D&hash=e2e";
@@ -14,6 +18,8 @@ export async function mockFirstPhaseApi(page: Page): Promise<void> {
   let inventoryLevel = 1;
   let inventoryPower = 10;
   let fgemsAvailable = 80;
+  let kcoinAvailable = 1200;
+  let inventoryEvolved = false;
 
   await page.route("**/api/auth/telegram", (route) =>
     fulfillOk(route, {
@@ -49,7 +55,7 @@ export async function mockFirstPhaseApi(page: Page): Promise<void> {
       },
       balances: {
         KCOIN: {
-          available: "1200",
+          available: String(kcoinAvailable),
           locked: "0",
         },
         FGEMS: {
@@ -79,7 +85,7 @@ export async function mockFirstPhaseApi(page: Page): Promise<void> {
       },
       balances: {
         KCOIN: {
-          available: "1200",
+          available: String(kcoinAvailable),
           locked: "0",
         },
         FGEMS: {
@@ -194,13 +200,38 @@ export async function mockFirstPhaseApi(page: Page): Promise<void> {
 
   await page.route("**/api/inventory/list?*", (route) =>
     fulfillOk(route, {
-      items: [
-        inventoryItemPayload({
-          level: inventoryLevel,
-          power: inventoryPower,
-        }),
-      ],
-      total: 1,
+      items: inventoryEvolved
+        ? [
+            inventoryItemPayload({
+              formDisplayName: "进化形态",
+              formId: TARGET_FORM_ID,
+              itemInstanceId: EVOLVED_ITEM_INSTANCE_ID,
+              level: 1,
+              name: "森林幼芽·进化",
+              power: 42,
+              serialNo: 4,
+              templateSlug: "forest_sproutling_evolved",
+            }),
+          ]
+        : [
+            inventoryItemPayload({
+              level: inventoryLevel,
+              power: inventoryPower,
+            }),
+            inventoryItemPayload({
+              itemInstanceId: ITEM_INSTANCE_ID_2,
+              level: 2,
+              power: 18,
+              serialNo: 2,
+            }),
+            inventoryItemPayload({
+              itemInstanceId: ITEM_INSTANCE_ID_3,
+              level: 3,
+              power: 26,
+              serialNo: 3,
+            }),
+          ],
+      total: inventoryEvolved ? 1 : 3,
       limit: 40,
       offset: 0,
       next_cursor: null,
@@ -235,6 +266,23 @@ export async function mockFirstPhaseApi(page: Page): Promise<void> {
       },
       evolution_preview: {
         can_evolve: true,
+        reason: null,
+        required_count: 3,
+        available_same_items: 3,
+        kcoin_cost: 200,
+        user_kcoin_balance: kcoinAvailable,
+        is_balance_enough: kcoinAvailable >= 200,
+        success_rate_bps: 5000,
+        target_template_id: TEMPLATE_ID,
+        target_form_id: TARGET_FORM_ID,
+        target_name: "森林幼芽·进化",
+        target_image_url: null,
+        selected_item_ids: [
+          ITEM_INSTANCE_ID_3,
+          ITEM_INSTANCE_ID_2,
+          ITEM_INSTANCE_ID,
+        ],
+        main_return_item_id: ITEM_INSTANCE_ID_3,
       },
       decompose_preview: {
         can_decompose: true,
@@ -263,6 +311,42 @@ export async function mockFirstPhaseApi(page: Page): Promise<void> {
       balance_delta: -20,
       ledger_id: "77777777-7777-4777-8777-777777777778",
       upgraded_at: "2026-05-21T00:00:02.000Z",
+      idempotent: false,
+    });
+  });
+
+  await page.route("**/api/inventory/evolve", async (route) => {
+    const body = route.request().postDataJSON() as
+      | { source_item_instance_ids?: unknown }
+      | undefined;
+    const sourceIds = Array.isArray(body?.source_item_instance_ids)
+      ? body.source_item_instance_ids
+          .filter((id): id is string => typeof id === "string")
+          .slice(0, 3)
+      : [ITEM_INSTANCE_ID, ITEM_INSTANCE_ID_2, ITEM_INSTANCE_ID_3];
+    const balanceBefore = kcoinAvailable;
+
+    kcoinAvailable -= 200;
+    inventoryEvolved = true;
+
+    await fulfillOk(route, {
+      result: "success",
+      success: true,
+      attempt_id: "77777777-7777-4777-8777-777777777779",
+      source_item_instance_ids: sourceIds,
+      consumed_item_instance_ids: sourceIds,
+      returned_item_instance_id: null,
+      created_item_instance_id: EVOLVED_ITEM_INSTANCE_ID,
+      main_item_instance_id: ITEM_INSTANCE_ID_3,
+      consumed_kcoin: 200,
+      cost_kcoin: 200,
+      kcoin_balance_before: balanceBefore,
+      kcoin_balance_after: kcoinAvailable,
+      balance_change: -200,
+      ledger_id: "77777777-7777-4777-8777-777777777780",
+      success_rate_bps: 5000,
+      random_roll_bps: 2500,
+      evolved_at: "2026-05-21T00:00:03.000Z",
       idempotent: false,
     });
   });
@@ -302,13 +386,22 @@ function boxPayload() {
 }
 
 function inventoryItemPayload(
-  overrides: { level?: number; power?: number } = {},
+  overrides: {
+    formDisplayName?: string;
+    formId?: string;
+    itemInstanceId?: string;
+    level?: number;
+    name?: string;
+    power?: number;
+    serialNo?: number;
+    templateSlug?: string;
+  } = {},
 ) {
   return {
-    item_instance_id: ITEM_INSTANCE_ID,
+    item_instance_id: overrides.itemInstanceId ?? ITEM_INSTANCE_ID,
     template_id: TEMPLATE_ID,
-    template_slug: "forest_sproutling",
-    name: "森林幼芽",
+    template_slug: overrides.templateSlug ?? "forest_sproutling",
+    name: overrides.name ?? "森林幼芽",
     subtitle: "测试藏品",
     description: "已进入你的库存",
     rarity: {
@@ -322,12 +415,12 @@ function inventoryItemPayload(
       display_name: "森林守护者",
     },
     form: {
-      id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      id: overrides.formId ?? "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
       index: 1,
-      display_name: "基础形态",
+      display_name: overrides.formDisplayName ?? "基础形态",
     },
     type_code: "CHARACTER",
-    serial_no: 1,
+    serial_no: overrides.serialNo ?? 1,
     level: overrides.level ?? 1,
     power: overrides.power ?? 10,
     status: "available",

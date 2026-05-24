@@ -166,3 +166,33 @@ export type CollectionUpgradeItemResponse = {
   upgradedAt: string | null;
   idempotent: boolean;
 };
+
+export type CollectionEvolveItemInput = {
+  sourceItemInstanceIds: string[];
+  targetFormId?: string | null;
+  expectedKcoinCost?: number | null;
+  expectedSuccessRateBps?: number | null;
+  expectedReturnItemInstanceId?: string | null;
+  idempotencyKey?: string | null;
+};
+
+export type CollectionEvolveItemResponse = {
+  result: "success" | "failed";
+  success: boolean;
+  attemptId: string | null;
+  sourceItemInstanceIds: string[];
+  consumedItemInstanceIds: string[];
+  returnedItemInstanceId: string | null;
+  createdItemInstanceId: string | null;
+  mainItemInstanceId: string | null;
+  consumedKcoin: number;
+  costKcoin: number;
+  kcoinBalanceBefore: number | null;
+  kcoinBalanceAfter: number | null;
+  balanceChange: number | null;
+  ledgerId: string | null;
+  successRateBps: number;
+  randomRollBps: number | null;
+  evolvedAt: string | null;
+  idempotent: boolean;
+};
