@@ -39,6 +39,7 @@ export type RateLimitAction =
   | "inventory.upgrade"
   | "inventory.evolve"
   | "inventory.decompose"
+  | "inventory.activity"
   | "album.progress"
   | "album.claim_reward"
   | "album.leaderboard"
@@ -316,6 +317,13 @@ export const DEFAULT_RATE_LIMIT_RULES: RateLimitRule[] = [
     windowMs: 60_000,
     max: 40,
     blockMs: 3 * 60_000,
+  },
+  {
+    action: "inventory.activity",
+    scope: "user",
+    windowMs: 60_000,
+    max: 60,
+    blockMs: 2 * 60_000,
   },
 
   {

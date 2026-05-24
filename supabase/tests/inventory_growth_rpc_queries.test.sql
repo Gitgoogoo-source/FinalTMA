@@ -270,6 +270,8 @@ select 'batch_decompose', api.inventory_decompose_items(
 );
 
 select is(((select payload from _ids where key = 'batch_decompose') ->> 'total_reward_fgems')::numeric, 10::numeric, 'batch decomposition sums per-item FGEMS rewards');
+select is(((select payload from _ids where key = 'batch_decompose') ->> 'fgems_balance_before')::numeric, 100::numeric, 'batch decomposition returns FGEMS balance before credit');
+select is(((select payload from _ids where key = 'batch_decompose') ->> 'fgems_balance_after')::numeric, 110::numeric, 'batch decomposition returns FGEMS balance after credit');
 select is(testutil.balance_of((select id from _ids where key = 'user'), 'FGEMS'), 110::numeric, 'batch decomposition credits FGEMS once');
 select is((select count(*)::integer from inventory.decompose_logs where idempotency_key = 'growth-rpc-decompose-batch-001'), 2, 'batch decomposition writes one log per item with shared idempotency key');
 
@@ -281,6 +283,7 @@ select 'batch_decompose_repeat', api.inventory_decompose_items(
 );
 
 select ok(((select payload from _ids where key = 'batch_decompose_repeat') ->> 'idempotent')::boolean, 'batch decomposition repeat is idempotent');
+select is(((select payload from _ids where key = 'batch_decompose_repeat') ->> 'fgems_balance_after')::numeric, 110::numeric, 'batch decomposition repeat returns original FGEMS balance after credit');
 select is(testutil.balance_of((select id from _ids where key = 'user'), 'FGEMS'), 110::numeric, 'batch decomposition repeat does not credit again');
 select ok(testutil.raises_like(format('select api.inventory_decompose_items(%L::uuid, array[%L::uuid], %L)', (select id::text from _ids where key = 'user'), (select id::text from _ids where key = 'item3'), 'growth-rpc-decompose-batch-001'), '%idempotency conflict%'), 'batch decomposition idempotency key rejects different inputs');
 
@@ -292,6 +295,8 @@ select 'single_decompose', api.inventory_decompose_item(
 );
 
 select is(((select payload from _ids where key = 'single_decompose') ->> 'reward_fgems')::numeric, 5::numeric, 'single decomposition delegates to idempotent batch logic');
+select is(((select payload from _ids where key = 'single_decompose') ->> 'fgems_balance_before')::numeric, 110::numeric, 'single decomposition returns FGEMS balance before credit');
+select is(((select payload from _ids where key = 'single_decompose') ->> 'fgems_balance_after')::numeric, 115::numeric, 'single decomposition returns FGEMS balance after credit');
 
 with book_row as (
   insert into album.books (code, display_name, description, book_type, active)

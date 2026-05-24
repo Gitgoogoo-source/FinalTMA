@@ -225,6 +225,8 @@ select 'evolve_success', api.inventory_evolve_item(
 insert into _ids (key, id) select 'success_result_item', ((select payload from _ids where key = 'evolve_success') ->> 'result_item_instance_id')::uuid;
 
 select ok(((select payload from _ids where key = 'evolve_success') ->> 'success')::boolean, 'success_rate 10000 always evolves successfully');
+select is(((select payload from _ids where key = 'evolve_success') ->> 'kcoin_balance_before')::numeric, 1000::numeric, 'successful evolution returns KCOIN balance before debit');
+select is(((select payload from _ids where key = 'evolve_success') ->> 'kcoin_balance_after')::numeric, 880::numeric, 'successful evolution returns KCOIN balance after debit');
 select is((select count(*)::int from inventory.item_instances where id in ((select id from _ids where key = 's1'), (select id from _ids where key = 's2'), (select id from _ids where key = 's3')) and status = 'consumed'), 3, 'successful evolution consumes all three source items');
 select ok(exists (select 1 from inventory.item_instances ii join _ids i on i.id = ii.id where i.key = 'success_result_item' and ii.owner_user_id = (select id from _ids where key = 'user') and ii.form_id = (select id from _ids where key = 'form2') and ii.status = 'available'), 'successful evolution creates evolved-form item');
 select is(testutil.balance_of((select id from _ids where key = 'user'), 'KCOIN'), 880::numeric, 'successful evolution debits K-coin cost');
@@ -238,6 +240,7 @@ select 'evolve_success_repeat', api.inventory_evolve_item(
 );
 
 select is(((select payload from _ids where key = 'evolve_success_repeat') ->> 'attempt_id')::uuid, ((select payload from _ids where key = 'evolve_success') ->> 'attempt_id')::uuid, 'repeating evolution with the same idempotency key returns the original attempt');
+select is(((select payload from _ids where key = 'evolve_success_repeat') ->> 'kcoin_balance_after')::numeric, 880::numeric, 'idempotent evolution repeat returns original KCOIN balance after debit');
 select is((select count(*)::int from inventory.evolution_attempts where idempotency_key = 'inventory-evolve-success-001'), 1, 'idempotent evolution repeat does not create a second attempt');
 select is((select count(*)::int from inventory.item_instances where source_type = 'evolution' and source_id = (select id from inventory.evolution_rules where from_template_id = (select id from _ids where key = 'template') and from_form_id = (select id from _ids where key = 'form1') and active = true limit 1)), 1, 'idempotent evolution repeat does not create a second evolved item');
 select is(testutil.balance_of((select id from _ids where key = 'user'), 'KCOIN'), 880::numeric, 'idempotent evolution repeat does not debit K-coin again');
@@ -252,6 +255,8 @@ select 'form2_upgrade', api.inventory_upgrade_item(
 );
 
 select is(((select payload from _ids where key = 'form2_upgrade') ->> 'to_level')::int, 2, 'form_index 2 item can upgrade from level 1 to level 2');
+select is(((select payload from _ids where key = 'form2_upgrade') ->> 'fgems_balance_before')::numeric, 100::numeric, 'upgrade returns FGEMS balance before debit');
+select is(((select payload from _ids where key = 'form2_upgrade') ->> 'fgems_balance_after')::numeric, 90::numeric, 'upgrade returns FGEMS balance after debit');
 select is(testutil.balance_of((select id from _ids where key = 'user'), 'FGEMS'), 90::numeric, 'form_index 2 upgrade debits FGEMS once');
 
 insert into _ids (key, payload)
@@ -262,6 +267,7 @@ select 'form2_upgrade_repeat', api.inventory_upgrade_item(
 );
 
 select is(((select payload from _ids where key = 'form2_upgrade_repeat') ->> 'to_level')::int, 2, 'repeating upgrade with the same idempotency key returns the original upgrade');
+select is(((select payload from _ids where key = 'form2_upgrade_repeat') ->> 'fgems_balance_after')::numeric, 90::numeric, 'idempotent upgrade repeat returns original FGEMS balance after debit');
 select is((select level from inventory.item_instances where id = (select id from _ids where key = 'form2_upgrade_item')), 2, 'idempotent upgrade repeat does not upgrade the item twice');
 select is((select count(*)::int from inventory.upgrade_logs where idempotency_key = 'inventory-evolve-form2-upgrade-001'), 1, 'idempotent upgrade repeat does not create a second upgrade log');
 select is(testutil.balance_of((select id from _ids where key = 'user'), 'FGEMS'), 90::numeric, 'idempotent upgrade repeat does not debit FGEMS again');
@@ -286,6 +292,8 @@ select 'evolve_failed', api.inventory_evolve_item(
 insert into _ids (key, id) select 'failed_main_item', ((select payload from _ids where key = 'evolve_failed') ->> 'main_item_instance_id')::uuid;
 
 select ok(not ((select payload from _ids where key = 'evolve_failed') ->> 'success')::boolean, 'success_rate 0 always fails');
+select is(((select payload from _ids where key = 'evolve_failed') ->> 'kcoin_balance_before')::numeric, 880::numeric, 'failed evolution returns KCOIN balance before debit');
+select is(((select payload from _ids where key = 'evolve_failed') ->> 'kcoin_balance_after')::numeric, 800::numeric, 'failed evolution returns KCOIN balance after debit');
 select is((select count(*)::int from inventory.item_instances where id in ((select id from _ids where key = 'f1'), (select id from _ids where key = 'f2'), (select id from _ids where key = 'f3')) and status = 'available'), 1, 'failed evolution returns exactly one main item');
 select ok(exists (select 1 from inventory.item_instances ii join _ids i on i.id = ii.id where i.key = 'failed_main_item' and ii.status = 'available' and ii.owner_user_id = (select id from _ids where key = 'user')), 'returned main item remains owned by user');
 select is((select count(*)::int from inventory.item_instances where id in ((select id from _ids where key = 'f1'), (select id from _ids where key = 'f2'), (select id from _ids where key = 'f3')) and status = 'consumed'), 2, 'failed evolution consumes the two material items');
