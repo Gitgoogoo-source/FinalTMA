@@ -1,4 +1,5 @@
 import {
+  BookOpen,
   Box as BoxIcon,
   ClipboardList,
   Gamepad2,
@@ -15,6 +16,7 @@ const NAV_ICONS = {
   game: Gamepad2,
   box: BoxIcon,
   collection: Images,
+  album: BookOpen,
   tasks: ClipboardList,
 } as const;
 

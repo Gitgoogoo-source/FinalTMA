@@ -28,6 +28,11 @@ export const MAIN_NAV_ITEMS: MainNavItem[] = [
     path: APP_ROUTES.collection,
   },
   {
+    key: "album",
+    label: "图鉴",
+    path: APP_ROUTES.album,
+  },
+  {
     key: "tasks",
     label: "任务",
     path: APP_ROUTES.tasks,

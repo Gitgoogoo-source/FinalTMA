@@ -1,6 +1,7 @@
 export const APP_ROUTES = {
   box: "/box",
   collection: "/collection",
+  album: "/album",
   trade: "/trade",
   game: "/game",
   tasks: "/tasks",
@@ -16,6 +17,10 @@ export function resolveAppRoute(pathname: string): AppRouteKey {
 
   if (pathname.startsWith(APP_ROUTES.collection)) {
     return "collection";
+  }
+
+  if (pathname.startsWith(APP_ROUTES.album)) {
+    return "album";
   }
 
   if (pathname.startsWith(APP_ROUTES.trade)) {

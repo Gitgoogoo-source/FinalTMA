@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate, useLocation } from "react-router-dom";
 
+import { AlbumPage } from "@/features/album/pages/AlbumPage";
 import { BoxPage } from "@/features/box/pages/BoxPage";
 import { CollectionPage } from "@/features/collection/pages/CollectionPage";
 import { GamePage } from "@/features/game/pages/GamePage";
@@ -25,6 +26,10 @@ export const router = createBrowserRouter([
       {
         path: "collection",
         element: <CollectionPage />,
+      },
+      {
+        path: "album",
+        element: <AlbumPage />,
       },
       {
         path: "trade",

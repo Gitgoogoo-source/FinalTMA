@@ -1829,7 +1829,7 @@ a {
   width: min(100%, 460px);
   margin: 0 auto;
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 5px;
   border: 1px solid rgb(255 255 255 / 14%);
   border-radius: 8px;
@@ -4278,6 +4278,268 @@ a {
 
 .collection-empty svg {
   color: #8bd3c7;
+}
+
+.album-page {
+  width: 100%;
+  display: grid;
+  gap: 12px;
+  align-self: start;
+}
+
+.album-page--state {
+  min-height: 360px;
+  align-items: center;
+}
+
+.album-page__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.album-page__header div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.album-page__header span {
+  color: #8bd3c7;
+  font-size: 11px;
+  font-weight: 950;
+  letter-spacing: 0;
+}
+
+.album-page__header h1 {
+  margin: 0;
+  color: #f7fbff;
+  font-size: 20px;
+  font-weight: 950;
+  line-height: 1.15;
+}
+
+.album-page__header button,
+.album-state button {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: 8px;
+  color: #f7fbff;
+  background: rgb(255 255 255 / 9%);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.album-page__header button {
+  width: 38px;
+  padding: 0;
+}
+
+.album-page__header button:disabled {
+  cursor: progress;
+  opacity: 0.58;
+}
+
+.album-state,
+.album-empty-state {
+  min-height: 210px;
+  display: grid;
+  place-items: center;
+  gap: 10px;
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: 8px;
+  padding: 20px;
+  color: #f7fbff;
+  background: rgb(13 20 25 / 72%);
+  text-align: center;
+}
+
+.album-state span,
+.album-empty-state span {
+  max-width: 300px;
+  color: #aebfc7;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.album-state__spinner {
+  width: 26px;
+  height: 26px;
+  border: 3px solid rgb(255 255 255 / 18%);
+  border-top-color: #8bd3c7;
+  border-radius: 999px;
+  animation: box-spin 0.9s linear infinite;
+}
+
+.album-empty-state svg {
+  color: #8bd3c7;
+}
+
+.album-progress {
+  display: grid;
+  gap: 14px;
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: 8px;
+  padding: 14px;
+  background: rgb(13 20 25 / 72%);
+}
+
+.album-progress__header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+}
+
+.album-progress__header div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.album-progress__header span,
+.album-progress__stats small {
+  color: #aebfc7;
+  font-size: 11px;
+  font-weight: 850;
+  line-height: 1.2;
+}
+
+.album-progress__header h2 {
+  margin: 0;
+  color: #f7fbff;
+  font-size: 18px;
+  font-weight: 950;
+  line-height: 1.18;
+}
+
+.album-progress__header > strong {
+  color: #8bd3c7;
+  font-size: 22px;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.album-progress__meter,
+.album-summary__meter {
+  height: 9px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 9%);
+}
+
+.album-progress__meter span,
+.album-summary__meter span {
+  height: 100%;
+  display: block;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #8bd3c7, #ffd166);
+}
+
+.album-progress__stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.album-progress__stats > span {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 8px;
+  padding: 9px;
+  background: rgb(255 255 255 / 5%);
+}
+
+.album-progress__stats strong {
+  color: #f7fbff;
+  font-size: 16px;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.album-summary {
+  display: grid;
+  gap: 9px;
+  border-top: 1px solid rgb(255 255 255 / 10%);
+  padding-top: 12px;
+}
+
+.album-summary h3 {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #f7fbff;
+  font-size: 13px;
+  font-weight: 950;
+  line-height: 1.2;
+}
+
+.album-summary h3 svg {
+  color: #8bd3c7;
+}
+
+.album-summary__list {
+  display: grid;
+  gap: 8px;
+}
+
+.album-summary__row {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(104px, 1fr) minmax(72px, 0.75fr) 48px;
+  gap: 8px;
+  align-items: center;
+}
+
+.album-summary__label {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.album-summary__label strong {
+  min-width: 0;
+  overflow: hidden;
+  color: #f7fbff;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.album-summary__label span,
+.album-summary__empty,
+.album-summary__row em {
+  color: #aebfc7;
+  font-size: 11px;
+  font-weight: 850;
+  line-height: 1.25;
+}
+
+.album-summary__empty {
+  margin: 0;
+}
+
+.album-summary__row em {
+  font-style: normal;
+  text-align: right;
+}
+
+.album-page__header button:focus-visible,
+.album-state button:focus-visible {
+  outline: 3px solid rgb(139 211 199 / 34%);
+  outline-offset: 2px;
 }
 
 .growth-action-bar {
