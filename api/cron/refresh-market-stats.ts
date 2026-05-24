@@ -47,11 +47,8 @@ function assertCronRequest(req: VercelRequest): void {
   }
 
   const expectedSecret = readEnv("CRON_SECRET");
-  const isProductionLike =
-    process.env.NODE_ENV === "production" ||
-    process.env.VERCEL_ENV === "production";
 
-  if (!expectedSecret && isProductionLike) {
+  if (!expectedSecret && !isCronSecretOptional()) {
     throw new ApiError(500, "CRON_SECRET_MISSING", "定时任务密钥未配置。", {
       expose: false,
     });
@@ -120,6 +117,10 @@ function isCronApiDisabled(): boolean {
   const value = process.env.ENABLE_CRON_API;
 
   return typeof value === "string" && value.trim().toLowerCase() === "false";
+}
+
+function isCronSecretOptional(): boolean {
+  return process.env.NODE_ENV === "test" || process.env.APP_ENV === "local";
 }
 
 function readEnv(name: string): string | null {

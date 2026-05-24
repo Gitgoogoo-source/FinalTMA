@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type {
   ApiErrorResponse,
@@ -863,10 +863,18 @@ describe("market stats API", () => {
 describe("market stats refresh cron API", () => {
   beforeEach(() => {
     process.env.NODE_ENV = "test";
+    delete process.env.APP_ENV;
+    delete process.env.VERCEL_ENV;
     process.env.ENABLE_CRON_API = "true";
     process.env.CRON_SECRET = "test-cron-secret-0001";
     callRpcRawMock.mockReset();
     requireSessionMock.mockReset();
+  });
+
+  afterEach(() => {
+    delete process.env.APP_ENV;
+    delete process.env.VERCEL_ENV;
+    delete process.env.CRON_SECRET;
   });
 
   it("calls market_refresh_price_stats with the internal cron secret", async () => {
@@ -921,6 +929,64 @@ describe("market stats refresh cron API", () => {
     expect(result.statusCode).toBe(401);
     expect(result.body.error.code).toBe("CRON_UNAUTHORIZED");
     expect(callRpcRawMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects preview refresh requests when CRON_SECRET is missing", async () => {
+    delete process.env.CRON_SECRET;
+    process.env.NODE_ENV = "development";
+    process.env.VERCEL_ENV = "preview";
+
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      refreshMarketStatsCronHandler,
+      {
+        method: "POST",
+      },
+    );
+
+    expect(result.statusCode).toBe(500);
+    expect(result.body.error.code).toBe("CRON_SECRET_MISSING");
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+  });
+
+  it("allows test refresh requests without CRON_SECRET", async () => {
+    delete process.env.CRON_SECRET;
+    process.env.NODE_ENV = "test";
+    callRpcRawMock.mockResolvedValueOnce({
+      snapshot_at: "2026-05-23T16:30:44.000Z",
+      price_snapshot_count: 1,
+      depth_snapshot_count: 2,
+      price_health_update_count: 3,
+    });
+
+    const result = await invokeApiHandler<
+      ApiSuccessResponse<Record<string, unknown>>
+    >(refreshMarketStatsCronHandler, {
+      method: "POST",
+    });
+
+    expect(result.statusCode).toBe(200);
+    expect(callRpcRawMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("allows local refresh requests without CRON_SECRET", async () => {
+    delete process.env.CRON_SECRET;
+    process.env.NODE_ENV = "development";
+    process.env.APP_ENV = "local";
+    callRpcRawMock.mockResolvedValueOnce({
+      snapshot_at: "2026-05-23T16:30:44.000Z",
+      price_snapshot_count: 1,
+      depth_snapshot_count: 2,
+      price_health_update_count: 3,
+    });
+
+    const result = await invokeApiHandler<
+      ApiSuccessResponse<Record<string, unknown>>
+    >(refreshMarketStatsCronHandler, {
+      method: "POST",
+    });
+
+    expect(result.statusCode).toBe(200);
+    expect(callRpcRawMock).toHaveBeenCalledTimes(1);
   });
 });
 

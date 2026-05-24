@@ -321,6 +321,13 @@ function isProductionLikeInput(input: {
   );
 }
 
+function isCronSecretOptionalInput(input: {
+  APP_ENV: AppEnv;
+  NODE_ENV: NodeEnv;
+}): boolean {
+  return input.NODE_ENV === "test" || input.APP_ENV === "local";
+}
+
 export const serverEnvSchema = z
   .object({
     NODE_ENV: enumFromEnv(NODE_ENV_VALUES, "development"),
@@ -497,12 +504,16 @@ export const serverEnvSchema = z
       });
     }
 
-    if (input.ENABLE_CRON_API && isProductionLike && !input.CRON_SECRET) {
+    if (
+      input.ENABLE_CRON_API &&
+      !isCronSecretOptionalInput(input) &&
+      !input.CRON_SECRET
+    ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["CRON_SECRET"],
         message:
-          "CRON_SECRET is required when cron API is enabled in production.",
+          "CRON_SECRET is required when cron API is enabled outside test/local.",
       });
     }
 
