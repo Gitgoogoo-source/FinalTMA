@@ -199,6 +199,29 @@ export async function mockFirstPhaseApi(page: Page): Promise<void> {
       server_time: "2026-05-21T00:00:00.000Z",
     }),
   );
+
+  await page.route("**/api/inventory/detail?*", (route) =>
+    fulfillOk(route, {
+      ...inventoryItemPayload(),
+      market_status: {
+        is_listed: false,
+        listing_id: null,
+        unit_price: null,
+        currency: null,
+      },
+      upgrade_preview: {
+        can_upgrade: true,
+      },
+      evolution_preview: {
+        can_evolve: true,
+      },
+      decompose_preview: {
+        can_decompose: true,
+      },
+      same_item_count: 3,
+      available_same_item_count: 3,
+    }),
+  );
 }
 
 function boxPayload() {

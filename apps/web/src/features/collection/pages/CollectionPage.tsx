@@ -5,14 +5,17 @@ import { Link } from "react-router-dom";
 import { getApiErrorMessage } from "@/api/errors";
 import { APP_ROUTES } from "@/shared/constants/routes";
 
+import { CharacterDetailSheet } from "../components/CharacterDetailSheet";
 import { CharacterGrid } from "../components/CharacterGrid";
 import { CharacterHero } from "../components/CharacterHero";
+import { GrowthActionBar } from "../components/GrowthActionBar";
 import { useInventory } from "../hooks/useInventory";
 
 export function CollectionPage() {
   const inventoryQuery = useInventory();
   const items = inventoryQuery.items;
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
   const selectedItem = useMemo(
     () =>
       items.find((item) => item.itemInstanceId === selectedItemId) ??
@@ -24,6 +27,7 @@ export function CollectionPage() {
   useEffect(() => {
     if (items.length === 0) {
       setSelectedItemId(null);
+      setIsDetailOpen(false);
       return;
     }
 
@@ -81,10 +85,19 @@ export function CollectionPage() {
   return (
     <section className="collection-page" data-testid="collection-page">
       <CharacterHero item={selectedItem} />
+      <GrowthActionBar
+        item={selectedItem}
+        onOpenDetail={() => setIsDetailOpen(true)}
+      />
       <CharacterGrid
         items={items}
         selectedItemId={selectedItem.itemInstanceId}
         onSelect={setSelectedItemId}
+      />
+      <CharacterDetailSheet
+        open={isDetailOpen}
+        item={selectedItem}
+        onClose={() => setIsDetailOpen(false)}
       />
     </section>
   );
