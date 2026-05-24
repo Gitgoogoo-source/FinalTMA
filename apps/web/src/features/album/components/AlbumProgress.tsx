@@ -37,7 +37,7 @@ export function AlbumProgress({ progress }: AlbumProgressProps) {
     <section className="album-progress" aria-labelledby="album-progress-title">
       <header className="album-progress__header">
         <div>
-          <span>总图鉴</span>
+          <span>{formatBookTypeLabel(book.bookType)}</span>
           <h2 id="album-progress-title">{book.name}</h2>
         </div>
         <strong>{formatPercent(completionPercent)}</strong>
@@ -173,4 +173,24 @@ function formatPercent(value: number): string {
 function formatRarity(value: string): string {
   const normalized = value.toLowerCase();
   return RARITY_LABELS[normalized] ?? normalized.toUpperCase();
+}
+
+function formatBookTypeLabel(value: string): string {
+  if (value === "series") {
+    return "系列图鉴";
+  }
+
+  if (value === "rarity") {
+    return "稀有度图鉴";
+  }
+
+  if (value === "faction") {
+    return "阵营图鉴";
+  }
+
+  if (value === "event") {
+    return "活动图鉴";
+  }
+
+  return "总图鉴";
 }

@@ -7,9 +7,9 @@ import { fetchAlbumProgress } from "../album.api";
 import type { AlbumProgressQuery } from "../album.types";
 
 const DEFAULT_ALBUM_PROGRESS_QUERY: AlbumProgressQuery = {
-  includeItems: false,
-  includeMilestones: false,
-  includeRewards: false,
+  includeItems: true,
+  includeMilestones: true,
+  includeRewards: true,
   includeLockedItems: true,
 };
 

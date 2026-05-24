@@ -1,13 +1,40 @@
+import { useMemo, useState } from "react";
 import { RefreshCw } from "lucide-react";
 
 import { getApiErrorMessage } from "@/api/errors";
 
 import { AlbumProgress } from "../components/AlbumProgress";
+import { AlbumSeriesTabs } from "../components/AlbumSeriesTabs";
 import { useAlbumProgress } from "../hooks/useAlbumProgress";
+import { useAlbumSeries } from "../hooks/useAlbumSeries";
+import type { AlbumProgressQuery } from "../album.types";
 
 export function AlbumPage() {
-  const albumProgressQuery = useAlbumProgress();
+  const [selectedBookId, setSelectedBookId] = useState<string | null>(null);
+  const albumSeriesQuery = useAlbumSeries();
+  const progressQuery = useMemo(() => {
+    const query: AlbumProgressQuery = {
+      includeItems: true,
+      includeMilestones: true,
+      includeRewards: true,
+      includeLockedItems: true,
+    };
+
+    if (selectedBookId) {
+      query.bookId = selectedBookId;
+    }
+
+    return query;
+  }, [selectedBookId]);
+  const albumProgressQuery = useAlbumProgress(progressQuery);
   const progress = albumProgressQuery.progress;
+  const isRefreshing =
+    albumProgressQuery.isFetching || albumSeriesQuery.isFetching;
+
+  function handleRefresh() {
+    void albumSeriesQuery.refetch();
+    void albumProgressQuery.refetch();
+  }
 
   if (albumProgressQuery.isLoading && !progress) {
     return (
@@ -58,14 +85,24 @@ export function AlbumPage() {
         </div>
         <button
           aria-label="刷新图鉴进度"
-          disabled={albumProgressQuery.isFetching}
-          onClick={() => void albumProgressQuery.refetch()}
+          disabled={isRefreshing}
+          onClick={handleRefresh}
           title="刷新图鉴进度"
           type="button"
         >
           <RefreshCw aria-hidden="true" size={16} strokeWidth={2.4} />
         </button>
       </header>
+
+      <AlbumSeriesTabs
+        books={albumSeriesQuery.books}
+        error={albumSeriesQuery.error}
+        isError={albumSeriesQuery.isError}
+        isLoading={albumSeriesQuery.isLoading}
+        onRetry={() => void albumSeriesQuery.refetch()}
+        onSelectBook={setSelectedBookId}
+        selectedBookId={selectedBookId}
+      />
 
       <AlbumProgress progress={progress} />
     </section>
