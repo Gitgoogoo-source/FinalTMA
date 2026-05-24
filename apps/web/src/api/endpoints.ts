@@ -19,6 +19,18 @@ export const API_ENDPOINTS = {
   },
   inventory: {
     list: "/inventory/list",
+    detail: "/inventory/detail",
+    upgrade: "/inventory/upgrade",
+    evolve: "/inventory/evolve",
+    decompose: "/inventory/decompose",
+    activity: "/inventory/activity",
+  },
+  album: {
+    progress: "/album/progress",
+    series: "/album/series",
+    items: "/album/items",
+    claimReward: "/album/claim-reward",
+    leaderboard: "/album/leaderboard",
   },
   market: {
     listings: "/market/listings",

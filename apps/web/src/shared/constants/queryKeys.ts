@@ -17,6 +17,24 @@ export const queryKeys = {
     root: ["inventory"] as const,
     list: (userId: string | null | undefined) =>
       ["inventory", "list", userId ?? "anonymous"] as const,
+    detail: (
+      userId: string | null | undefined,
+      itemId: string | null | undefined,
+    ) =>
+      ["inventory", "detail", userId ?? "anonymous", itemId ?? "none"] as const,
+    activity: (userId: string | null | undefined, query: unknown = {}) =>
+      ["inventory", "activity", userId ?? "anonymous", query] as const,
+  },
+  album: {
+    root: ["album"] as const,
+    progress: (userId: string | null | undefined, query: unknown = {}) =>
+      ["album", "progress", userId ?? "anonymous", query] as const,
+    series: (userId: string | null | undefined, query: unknown = {}) =>
+      ["album", "series", userId ?? "anonymous", query] as const,
+    items: (userId: string | null | undefined, query: unknown = {}) =>
+      ["album", "items", userId ?? "anonymous", query] as const,
+    leaderboard: (userId: string | null | undefined, query: unknown = {}) =>
+      ["album", "leaderboard", userId ?? "anonymous", query] as const,
   },
   trade: {
     root: ["trade"] as const,
