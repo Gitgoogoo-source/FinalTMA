@@ -98,3 +98,38 @@ test("合成面板选择材料并展示成功结果", async ({ page }) => {
     page.getByRole("heading", { name: "森林幼芽·进化" }),
   ).toBeVisible();
 });
+
+test("分解面板二次确认后展示获得 Fgems", async ({ page }) => {
+  await mockFirstPhaseApi(page);
+
+  await page.goto(
+    `/collection?mockInitData=${encodeURIComponent(TEST_INIT_DATA)}`,
+  );
+
+  await page.getByRole("button", { name: "详情" }).click();
+  await page.getByRole("button", { name: /分解/ }).click();
+
+  const decomposeDialog = page.getByRole("dialog", { name: "森林幼芽" });
+  await expect(decomposeDialog).toBeVisible();
+  await expect(decomposeDialog.getByText("同款数量")).toBeVisible();
+  await expect(decomposeDialog.getByText("可分解数量")).toBeVisible();
+  await expect(decomposeDialog.getByText("预计获得 Fgems")).toBeVisible();
+  await expect(
+    decomposeDialog.getByText("分解后不可恢复", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    decomposeDialog.getByRole("button", { name: "确认分解", exact: true }),
+  ).toBeDisabled();
+
+  await decomposeDialog
+    .getByRole("button", { name: "我确认分解后不可恢复" })
+    .click();
+  await decomposeDialog
+    .getByRole("button", { name: "确认分解", exact: true })
+    .click();
+
+  const resultDialog = page.getByRole("dialog", { name: "分解成功" });
+  await expect(resultDialog).toBeVisible();
+  await expect(resultDialog.getByText("获得 Fgems")).toBeVisible();
+  await expect(resultDialog.getByText("80 -> 230")).toBeVisible();
+});

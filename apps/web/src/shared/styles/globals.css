@@ -4197,6 +4197,7 @@ a {
 .upgrade-panel__state button:focus-visible,
 .upgrade-panel__footer button:focus-visible,
 .evolve-panel__material-button:focus-visible,
+.decompose-panel__confirm:focus-visible,
 .growth-result-modal__header button:focus-visible,
 .growth-result-modal__backdrop:focus-visible,
 .growth-result-modal__confirm:focus-visible,
@@ -5383,6 +5384,65 @@ a {
   font-size: 12px;
   font-weight: 850;
   text-align: center;
+}
+
+.decompose-panel__warning {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 9px;
+  align-items: start;
+  border: 1px solid rgb(255 209 102 / 26%);
+  border-radius: 8px;
+  padding: 10px;
+  color: #ffe4a3;
+  background: rgb(255 209 102 / 8%);
+}
+
+.decompose-panel__warning div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.decompose-panel__warning strong {
+  color: #f7fbff;
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.decompose-panel__warning span {
+  color: #c8d3d8;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.decompose-panel__confirm {
+  width: 100%;
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid rgb(255 122 89 / 28%);
+  border-radius: 8px;
+  padding: 0 12px;
+  color: #ffd6cc;
+  background: rgb(255 122 89 / 9%);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.decompose-panel__confirm--checked {
+  border-color: rgb(139 211 199 / 34%);
+  color: #b8fff3;
+  background: rgb(139 211 199 / 10%);
+}
+
+.decompose-panel__confirm:disabled {
+  color: #6f7e85;
+  cursor: progress;
 }
 
 .growth-result-modal__body {

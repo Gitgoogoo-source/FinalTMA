@@ -20,6 +20,7 @@ export async function mockFirstPhaseApi(page: Page): Promise<void> {
   let fgemsAvailable = 80;
   let kcoinAvailable = 1200;
   let inventoryEvolved = false;
+  const decomposedItemIds = new Set<string>();
 
   await page.route("**/api/auth/telegram", (route) =>
     fulfillOk(route, {
@@ -198,47 +199,23 @@ export async function mockFirstPhaseApi(page: Page): Promise<void> {
     }),
   );
 
-  await page.route("**/api/inventory/list?*", (route) =>
-    fulfillOk(route, {
-      items: inventoryEvolved
-        ? [
-            inventoryItemPayload({
-              formDisplayName: "进化形态",
-              formId: TARGET_FORM_ID,
-              itemInstanceId: EVOLVED_ITEM_INSTANCE_ID,
-              level: 1,
-              name: "森林幼芽·进化",
-              power: 42,
-              serialNo: 4,
-              templateSlug: "forest_sproutling_evolved",
-            }),
-          ]
-        : [
-            inventoryItemPayload({
-              level: inventoryLevel,
-              power: inventoryPower,
-            }),
-            inventoryItemPayload({
-              itemInstanceId: ITEM_INSTANCE_ID_2,
-              level: 2,
-              power: 18,
-              serialNo: 2,
-            }),
-            inventoryItemPayload({
-              itemInstanceId: ITEM_INSTANCE_ID_3,
-              level: 3,
-              power: 26,
-              serialNo: 3,
-            }),
-          ],
-      total: inventoryEvolved ? 1 : 3,
+  await page.route("**/api/inventory/list?*", (route) => {
+    const items = getInventoryItems({
+      inventoryEvolved,
+      inventoryLevel,
+      inventoryPower,
+    }).filter((item) => !decomposedItemIds.has(item.item_instance_id));
+
+    return fulfillOk(route, {
+      items,
+      total: items.length,
       limit: 40,
       offset: 0,
       next_cursor: null,
       statuses: ["available"],
       server_time: "2026-05-21T00:00:00.000Z",
-    }),
-  );
+    });
+  });
 
   await page.route("**/api/inventory/detail?*", (route) =>
     fulfillOk(route, {
@@ -286,9 +263,24 @@ export async function mockFirstPhaseApi(page: Page): Promise<void> {
       },
       decompose_preview: {
         can_decompose: true,
+        reason: null,
+        fgems_reward: 150,
+        total_reward_fgems: 150,
+        duplicate_count: 3 - decomposedItemIds.size,
+        item_status: "available",
+        item_instance_ids: [ITEM_INSTANCE_ID],
+        items: [
+          {
+            item_instance_id: ITEM_INSTANCE_ID,
+            reward_fgems: 150,
+            item_status: "available",
+            can_decompose: true,
+            duplicate_count: 3 - decomposedItemIds.size,
+          },
+        ],
       },
-      same_item_count: 3,
-      available_same_item_count: 3,
+      same_item_count: 3 - decomposedItemIds.size,
+      available_same_item_count: 3 - decomposedItemIds.size,
     }),
   );
 
@@ -350,6 +342,84 @@ export async function mockFirstPhaseApi(page: Page): Promise<void> {
       idempotent: false,
     });
   });
+
+  await page.route("**/api/inventory/decompose", async (route) => {
+    const body = route.request().postDataJSON() as
+      | { item_instance_ids?: unknown }
+      | undefined;
+    const itemInstanceIds = Array.isArray(body?.item_instance_ids)
+      ? body.item_instance_ids.filter(
+          (id): id is string => typeof id === "string",
+        )
+      : [ITEM_INSTANCE_ID];
+    const balanceBefore = fgemsAvailable;
+    const gainedFgems = itemInstanceIds.length * 150;
+
+    for (const itemInstanceId of itemInstanceIds) {
+      decomposedItemIds.add(itemInstanceId);
+    }
+    fgemsAvailable += gainedFgems;
+
+    await fulfillOk(route, {
+      decomposed_item_instance_ids: itemInstanceIds,
+      gained_fgems: gainedFgems,
+      total_reward_fgems: gainedFgems,
+      fgems_balance_before: balanceBefore,
+      fgems_balance_after: fgemsAvailable,
+      balance_change: gainedFgems,
+      ledger_id: "77777777-7777-4777-8777-777777777781",
+      items: itemInstanceIds.map((itemInstanceId) => ({
+        item_instance_id: itemInstanceId,
+        reward_fgems: 150,
+      })),
+      decomposed_at: "2026-05-21T00:00:04.000Z",
+      idempotent: false,
+    });
+  });
+}
+
+function getInventoryItems({
+  inventoryEvolved,
+  inventoryLevel,
+  inventoryPower,
+}: {
+  inventoryEvolved: boolean;
+  inventoryLevel: number;
+  inventoryPower: number;
+}) {
+  if (inventoryEvolved) {
+    return [
+      inventoryItemPayload({
+        formDisplayName: "进化形态",
+        formId: TARGET_FORM_ID,
+        itemInstanceId: EVOLVED_ITEM_INSTANCE_ID,
+        level: 1,
+        name: "森林幼芽·进化",
+        power: 42,
+        serialNo: 4,
+        templateSlug: "forest_sproutling_evolved",
+      }),
+    ];
+  }
+
+  return [
+    inventoryItemPayload({
+      level: inventoryLevel,
+      power: inventoryPower,
+    }),
+    inventoryItemPayload({
+      itemInstanceId: ITEM_INSTANCE_ID_2,
+      level: 2,
+      power: 18,
+      serialNo: 2,
+    }),
+    inventoryItemPayload({
+      itemInstanceId: ITEM_INSTANCE_ID_3,
+      level: 3,
+      power: 26,
+      serialNo: 3,
+    }),
+  ];
 }
 
 function boxPayload() {

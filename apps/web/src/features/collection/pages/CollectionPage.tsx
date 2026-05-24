@@ -9,11 +9,13 @@ import { formatCurrencyAmount } from "@/shared/lib/formatCurrency";
 import { CharacterDetailSheet } from "../components/CharacterDetailSheet";
 import { CharacterGrid } from "../components/CharacterGrid";
 import { CharacterHero } from "../components/CharacterHero";
+import { DecomposePanel } from "../components/DecomposePanel";
 import { EvolvePanel } from "../components/EvolvePanel";
 import { GrowthResultModal } from "../components/GrowthResultModal";
 import { GrowthActionBar } from "../components/GrowthActionBar";
 import { UpgradePanel } from "../components/UpgradePanel";
 import type {
+  CollectionDecomposeItemResponse,
   CollectionEvolveItemResponse,
   CollectionUpgradeItemResponse,
 } from "../collection.types";
@@ -26,10 +28,13 @@ export function CollectionPage() {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isUpgradeOpen, setIsUpgradeOpen] = useState(false);
   const [isEvolveOpen, setIsEvolveOpen] = useState(false);
+  const [isDecomposeOpen, setIsDecomposeOpen] = useState(false);
   const [upgradeResult, setUpgradeResult] =
     useState<CollectionUpgradeItemResponse | null>(null);
   const [evolveResult, setEvolveResult] =
     useState<CollectionEvolveItemResponse | null>(null);
+  const [decomposeResult, setDecomposeResult] =
+    useState<CollectionDecomposeItemResponse | null>(null);
   const selectedItem = useMemo(
     () =>
       items.find((item) => item.itemInstanceId === selectedItemId) ??
@@ -44,8 +49,10 @@ export function CollectionPage() {
       setIsDetailOpen(false);
       setIsUpgradeOpen(false);
       setIsEvolveOpen(false);
+      setIsDecomposeOpen(false);
       setUpgradeResult(null);
       setEvolveResult(null);
+      setDecomposeResult(null);
       return;
     }
 
@@ -61,13 +68,22 @@ export function CollectionPage() {
   function handleOpenUpgrade() {
     setIsDetailOpen(false);
     setIsEvolveOpen(false);
+    setIsDecomposeOpen(false);
     setIsUpgradeOpen(true);
   }
 
   function handleOpenEvolve() {
     setIsDetailOpen(false);
     setIsUpgradeOpen(false);
+    setIsDecomposeOpen(false);
     setIsEvolveOpen(true);
+  }
+
+  function handleOpenDecompose() {
+    setIsDetailOpen(false);
+    setIsUpgradeOpen(false);
+    setIsEvolveOpen(false);
+    setIsDecomposeOpen(true);
   }
 
   function handleUpgradeResult(result: CollectionUpgradeItemResponse) {
@@ -85,6 +101,16 @@ export function CollectionPage() {
         null,
     );
     setEvolveResult(result);
+  }
+
+  function handleDecomposeResult(result: CollectionDecomposeItemResponse) {
+    const decomposedIds = new Set(result.decomposedItemInstanceIds);
+    const nextAvailableItem =
+      items.find((candidate) => !decomposedIds.has(candidate.itemInstanceId)) ??
+      null;
+
+    setSelectedItemId(nextAvailableItem?.itemInstanceId ?? null);
+    setDecomposeResult(result);
   }
 
   if (inventoryQuery.isLoading && items.length === 0) {
@@ -145,6 +171,7 @@ export function CollectionPage() {
         open={isDetailOpen}
         item={selectedItem}
         onClose={() => setIsDetailOpen(false)}
+        onDecompose={handleOpenDecompose}
         onEvolve={handleOpenEvolve}
         onUpgrade={handleOpenUpgrade}
       />
@@ -161,6 +188,13 @@ export function CollectionPage() {
         onClose={() => setIsEvolveOpen(false)}
         onEvolved={handleEvolveResult}
       />
+      <DecomposePanel
+        open={isDecomposeOpen}
+        item={selectedItem}
+        items={items}
+        onClose={() => setIsDecomposeOpen(false)}
+        onDecomposed={handleDecomposeResult}
+      />
       <GrowthResultModal
         open={upgradeResult !== null}
         title="升级成功"
@@ -174,6 +208,13 @@ export function CollectionPage() {
         description={formatEvolveResultDescription(evolveResult)}
         metrics={getEvolveResultMetrics(evolveResult)}
         onClose={() => setEvolveResult(null)}
+      />
+      <GrowthResultModal
+        open={decomposeResult !== null}
+        title="分解成功"
+        description={formatDecomposeResultDescription(decomposeResult)}
+        metrics={getDecomposeResultMetrics(decomposeResult)}
+        onClose={() => setDecomposeResult(null)}
       />
     </section>
   );
@@ -305,4 +346,51 @@ function formatSuccessRate(value: number): string {
 
 function formatResultItemId(value: string | null): string {
   return value ? value.slice(0, 8) : "待同步";
+}
+
+function getDecomposeResultMetrics(
+  result: CollectionDecomposeItemResponse | null,
+) {
+  if (!result) {
+    return [];
+  }
+
+  return [
+    {
+      label: "分解藏品",
+      value: `${formatCurrencyAmount(
+        result.decomposedItemInstanceIds.length,
+      )} 件`,
+    },
+    {
+      label: "获得 Fgems",
+      value: formatCurrencyAmount(result.gainedFgems),
+    },
+    {
+      label: "Fgems 余额",
+      value: formatDecomposeBalanceChange(result),
+    },
+  ];
+}
+
+function formatDecomposeResultDescription(
+  result: CollectionDecomposeItemResponse | null,
+): string | undefined {
+  if (!result) {
+    return undefined;
+  }
+
+  return `已获得 ${formatCurrencyAmount(result.gainedFgems)} Fgems，库存和资产正在刷新。`;
+}
+
+function formatDecomposeBalanceChange(
+  result: CollectionDecomposeItemResponse,
+): string {
+  if (result.fgemsBalanceBefore === null || result.fgemsBalanceAfter === null) {
+    return "待同步";
+  }
+
+  return `${formatCurrencyAmount(
+    result.fgemsBalanceBefore,
+  )} -> ${formatCurrencyAmount(result.fgemsBalanceAfter)}`;
 }

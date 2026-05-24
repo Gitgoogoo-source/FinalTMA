@@ -3,6 +3,8 @@ import { API_ENDPOINTS } from "@/api/endpoints";
 
 import type {
   CollectionActiveLock,
+  CollectionDecomposeItemInput,
+  CollectionDecomposeItemResponse,
   CollectionDecomposePreview,
   CollectionEvolveItemInput,
   CollectionEvolveItemResponse,
@@ -122,6 +124,32 @@ export async function evolveInventoryItems(
   });
 
   return normalizeEvolveItemResponse(response);
+}
+
+export async function decomposeInventoryItems(
+  input: CollectionDecomposeItemInput,
+): Promise<CollectionDecomposeItemResponse> {
+  const idempotencyKey =
+    input.idempotencyKey ?? createIdempotencyKey("inventory:decompose");
+  const response = await apiRequest<unknown>(
+    API_ENDPOINTS.inventory.decompose,
+    {
+      method: "POST",
+      body: {
+        item_instance_ids: input.itemInstanceIds,
+        idempotency_key: idempotencyKey,
+        ...(input.expectedFgemsReward !== undefined &&
+        input.expectedFgemsReward !== null
+          ? { expected_fgems_reward: input.expectedFgemsReward }
+          : {}),
+      },
+      headers: {
+        "X-Idempotency-Key": idempotencyKey,
+      },
+    },
+  );
+
+  return normalizeDecomposeItemResponse(response);
 }
 
 export function normalizeInventoryResponse(
@@ -412,6 +440,70 @@ export function normalizeEvolveItemResponse(
       readNullableNumber(response.random_roll_bps),
     evolvedAt:
       readString(response.evolvedAt) ?? readString(response.evolved_at),
+    idempotent:
+      readBoolean(response.idempotent) ??
+      readBoolean(response.isIdempotent) ??
+      false,
+  };
+}
+
+export function normalizeDecomposeItemResponse(
+  response: unknown,
+): CollectionDecomposeItemResponse {
+  if (!isRecord(response)) {
+    throw new Error("Invalid inventory decompose payload.");
+  }
+
+  const decomposedItemInstanceIds = readStringArray(
+    response.decomposedItemInstanceIds ??
+      response.decomposed_item_instance_ids ??
+      response.itemInstanceIds ??
+      response.item_instance_ids,
+  );
+  const gainedFgems =
+    readNumber(response.gainedFgems) ??
+    readNumber(response.gained_fgems) ??
+    readNumber(response.totalRewardFgems) ??
+    readNumber(response.total_reward_fgems) ??
+    readNumber(response.rewardFgems) ??
+    readNumber(response.reward_fgems);
+
+  if (decomposedItemInstanceIds.length === 0 || gainedFgems === null) {
+    throw new Error("Inventory decompose payload is missing required fields.");
+  }
+
+  const fgemsBalanceBefore =
+    readNullableNumber(response.fgemsBalanceBefore) ??
+    readNullableNumber(response.fgems_balance_before) ??
+    readNullableNumber(response.balanceBefore) ??
+    readNullableNumber(response.balance_before);
+  const fgemsBalanceAfter =
+    readNullableNumber(response.fgemsBalanceAfter) ??
+    readNullableNumber(response.fgems_balance_after) ??
+    readNullableNumber(response.balanceAfter) ??
+    readNullableNumber(response.balance_after);
+
+  return {
+    decomposedItemInstanceIds,
+    gainedFgems,
+    totalRewardFgems:
+      readNumber(response.totalRewardFgems) ??
+      readNumber(response.total_reward_fgems) ??
+      gainedFgems,
+    fgemsBalanceBefore,
+    fgemsBalanceAfter,
+    balanceChange:
+      readNullableNumber(response.balanceChange) ??
+      readNullableNumber(response.balance_change) ??
+      readNullableNumber(response.balanceDelta) ??
+      readNullableNumber(response.balance_delta) ??
+      (fgemsBalanceBefore !== null && fgemsBalanceAfter !== null
+        ? fgemsBalanceAfter - fgemsBalanceBefore
+        : null),
+    ledgerId: readString(response.ledgerId) ?? readString(response.ledger_id),
+    items: Array.isArray(response.items) ? response.items : [],
+    decomposedAt:
+      readString(response.decomposedAt) ?? readString(response.decomposed_at),
     idempotent:
       readBoolean(response.idempotent) ??
       readBoolean(response.isIdempotent) ??

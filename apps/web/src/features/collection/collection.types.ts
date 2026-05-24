@@ -196,3 +196,22 @@ export type CollectionEvolveItemResponse = {
   evolvedAt: string | null;
   idempotent: boolean;
 };
+
+export type CollectionDecomposeItemInput = {
+  itemInstanceIds: string[];
+  expectedFgemsReward?: number | null;
+  idempotencyKey?: string | null;
+};
+
+export type CollectionDecomposeItemResponse = {
+  decomposedItemInstanceIds: string[];
+  gainedFgems: number;
+  totalRewardFgems: number;
+  fgemsBalanceBefore: number | null;
+  fgemsBalanceAfter: number | null;
+  balanceChange: number | null;
+  ledgerId: string | null;
+  items: unknown[];
+  decomposedAt: string | null;
+  idempotent: boolean;
+};

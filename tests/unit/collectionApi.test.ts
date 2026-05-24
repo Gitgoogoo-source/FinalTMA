@@ -73,4 +73,38 @@ describe("collection inventory API", () => {
     });
     expect(response.total).toBe(1);
   });
+
+  it("normalizes inventory decompose payload for the collection page", async () => {
+    const { normalizeDecomposeItemResponse } =
+      await import("../../apps/web/src/features/collection/collection.api");
+    const response = normalizeDecomposeItemResponse({
+      decomposed_item_instance_ids: ["11111111-1111-4111-8111-111111111111"],
+      gained_fgems: "150",
+      total_reward_fgems: 150,
+      fgems_balance_before: "80",
+      fgems_balance_after: "230",
+      balance_change: 150,
+      ledger_id: "22222222-2222-4222-8222-222222222222",
+      items: [
+        {
+          item_instance_id: "11111111-1111-4111-8111-111111111111",
+          reward_fgems: 150,
+        },
+      ],
+      decomposed_at: "2026-05-21T00:00:04.000Z",
+      idempotent: false,
+    });
+
+    expect(response).toMatchObject({
+      decomposedItemInstanceIds: ["11111111-1111-4111-8111-111111111111"],
+      gainedFgems: 150,
+      totalRewardFgems: 150,
+      fgemsBalanceBefore: 80,
+      fgemsBalanceAfter: 230,
+      balanceChange: 150,
+      ledgerId: "22222222-2222-4222-8222-222222222222",
+      decomposedAt: "2026-05-21T00:00:04.000Z",
+      idempotent: false,
+    });
+  });
 });
