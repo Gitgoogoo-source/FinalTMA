@@ -39,7 +39,7 @@ supabase db reset
 
 或确保以下内容已经应用到测试库：
 
-1. `supabase/migrations/0001_create_users.sql` 至 `0019_create_constraints.sql`
+1. `supabase/migrations/20260521065609_0001_create_users.sql` 至 `20260521071217_0019_create_constraints.sql`
 2. `supabase/rpc/*.sql`
 3. `supabase/rls/*.sql`
 

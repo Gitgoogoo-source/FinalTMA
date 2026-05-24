@@ -1,4 +1,4 @@
--- 0019_create_constraints.sql
+-- 20260521071217_0019_create_constraints.sql
 -- Cross-schema foreign keys, uniqueness, indexes, updated_at triggers and integrity triggers.
 
 -- Cross-schema foreign keys that could not be declared before dependent tables existed.

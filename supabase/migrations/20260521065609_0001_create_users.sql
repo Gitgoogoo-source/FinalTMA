@@ -1,4 +1,4 @@
--- 0001_create_users.sql
+-- 20260521065609_0001_create_users.sql
 -- Core foundation for Telegram Mini App users, sessions, wallet records and shared helper functions.
 
 create extension if not exists pgcrypto;
@@ -216,4 +216,4 @@ create table if not exists core.user_api_tokens (
   created_at timestamptz not null default now()
 );
 
--- Updated-at triggers are created in 0019_create_constraints.sql after all tables exist.
+-- Updated-at triggers are created in 20260521071217_0019_create_constraints.sql after all tables exist.

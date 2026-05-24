@@ -8,25 +8,25 @@
 tmaGame/
 └── supabase/
     └── migrations/
-        ├── 0001_create_users.sql
-        ├── 0002_create_economy_ledger.sql
-        ├── 0003_create_catalog_collectibles.sql
-        ├── 0004_create_gacha_boxes.sql
-        ├── 0005_create_inventory.sql
-        ├── 0006_create_market.sql
-        ├── 0007_create_payments_stars.sql
-        ├── 0008_create_tasks_referrals.sql
-        ├── 0009_create_album_leaderboard.sql
-        ├── 0010_create_onchain_nft.sql
-        ├── 0011_create_ops_admin_audit.sql
-        ├── 0012_create_views_public.sql
-        ├── 0013_create_rpc_auth.sql
-        ├── 0014_create_rpc_gacha.sql
-        ├── 0015_create_rpc_market.sql
-        ├── 0016_create_rpc_inventory.sql
-        ├── 0017_create_rpc_tasks_album_wallet.sql
-        ├── 0018_create_rls_policies.sql
-        └── 0019_create_constraints.sql
+        ├── 20260521065609_0001_create_users.sql
+        ├── 20260521065659_0002_create_economy_ledger.sql
+        ├── 20260521065733_0003_create_catalog_collectibles.sql
+        ├── 20260521065812_0004_create_gacha_boxes.sql
+        ├── 20260521065853_0005_create_inventory.sql
+        ├── 20260521065924_0006_create_market.sql
+        ├── 20260521065945_0007_create_payments_stars.sql
+        ├── 20260521070030_0008_create_tasks_referrals.sql
+        ├── 20260521070059_0009_create_album_leaderboard.sql
+        ├── 20260521070128_0010_create_onchain_nft.sql
+        ├── 20260521070201_0011_create_ops_admin_audit.sql
+        ├── 20260521070236_0012_create_views_public.sql
+        ├── 20260521070331_0013_create_rpc_auth.sql
+        ├── 20260521070445_0014_create_rpc_gacha.sql
+        ├── 20260521070608_0015_create_rpc_market.sql
+        ├── 20260521070833_0016_create_rpc_inventory.sql
+        ├── 20260521070958_0017_create_rpc_tasks_album_wallet.sql
+        ├── 20260521071106_0018_create_rls_policies.sql
+        └── 20260521071217_0019_create_constraints.sql
 ```
 
 这些迁移文件包含：
