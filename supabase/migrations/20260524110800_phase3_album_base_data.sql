@@ -1,10 +1,3 @@
--- 009_album.seed.sql
--- Local reset companion for stage 3 album base data.
---
--- The remote project receives these rows through a versioned migration. Local
--- `supabase db reset` runs migrations before catalog seeds, so this idempotent
--- seed mirrors the album base data after collectibles have been seeded.
-
 begin;
 
 insert into album.books (
@@ -34,7 +27,7 @@ select
   jsonb_build_object(
     'phase', 'stage_3_growth_system',
     'guide_section', '5.1_album_books',
-    'source', '009_album_seed'
+    'source', 'phase3_album_base_data'
   )
 on conflict (code) do update
 set display_name = excluded.display_name,
@@ -77,7 +70,7 @@ select
     'phase', 'stage_3_growth_system',
     'guide_section', '5.1_album_books',
     'series_slug', s.slug,
-    'source', '009_album_seed'
+    'source', 'phase3_album_base_data'
   )
 from catalog.series s
 where s.status = 'active'
@@ -122,7 +115,7 @@ select
     'phase', 'stage_3_growth_system',
     'guide_section', '5.1_album_books',
     'rarity_code', r.code,
-    'source', '009_album_seed'
+    'source', 'phase3_album_base_data'
   )
 from catalog.rarities r
 on conflict (code) do update
@@ -402,7 +395,7 @@ select
   metadata || jsonb_build_object(
     'phase', 'stage_3_growth_system',
     'guide_section', '5.3_album_milestones',
-    'source', '009_album_seed'
+    'source', 'phase3_album_base_data'
   )
 from deduped_milestone_rows
 on conflict (book_id, required_count) do update
