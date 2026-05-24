@@ -373,11 +373,11 @@ select ok(jsonb_array_length((select payload from _ids where key = 'leaderboard'
 select is(((select payload from _ids where key = 'leaderboard') -> 'my_entry' ->> 'user_id')::uuid, (select id from _ids where key = 'user'), 'leaderboard query returns my entry');
 
 select ok(not has_function_privilege('anon', 'api.inventory_get_item_detail(uuid, uuid, boolean, boolean, boolean, boolean, boolean)', 'execute'), 'anon cannot execute inventory_get_item_detail directly');
-select ok(not has_function_privilege('anon', 'api.album_claim_milestone(uuid, uuid)', 'execute'), 'anon cannot execute album_claim_milestone directly');
+select ok(not has_function_privilege('anon', 'api.album_claim_milestone(uuid, uuid, text, integer)', 'execute'), 'anon cannot execute album_claim_milestone directly');
 select ok(not has_function_privilege('authenticated', 'api.inventory_decompose_item(uuid, uuid, text)', 'execute'), 'authenticated cannot execute inventory_decompose_item directly');
 select ok(not has_function_privilege('authenticated', 'api.inventory_decompose_items(uuid, uuid[], text)', 'execute'), 'authenticated cannot execute inventory_decompose_items directly');
 select ok(has_function_privilege('service_role', 'api.inventory_get_item_detail(uuid, uuid, boolean, boolean, boolean, boolean, boolean)', 'execute'), 'service_role can execute inventory_get_item_detail');
-select ok(has_function_privilege('service_role', 'api.album_claim_milestone(uuid, uuid)', 'execute'), 'service_role can execute album_claim_milestone');
+select ok(has_function_privilege('service_role', 'api.album_claim_milestone(uuid, uuid, text, integer)', 'execute'), 'service_role can execute album_claim_milestone');
 select ok(has_function_privilege('service_role', 'api.album_refresh_weekly_leaderboard(timestamp with time zone)', 'execute'), 'service_role can execute album_refresh_weekly_leaderboard');
 
 select * from finish();

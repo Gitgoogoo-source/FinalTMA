@@ -224,12 +224,16 @@ with milestone_row as (
 )
 insert into _ids (key, id) select 'milestone1', id from milestone_row;
 
-insert into _ids (key, payload) select 'claim1', api.album_claim_milestone((select id from _ids where key = 'user'), (select id from _ids where key = 'milestone1'));
+select ok(testutil.raises_like(format('select api.album_claim_milestone(%L::uuid, %L::uuid, null, 0)', (select id::text from _ids where key = 'user'), (select id::text from _ids where key = 'milestone1')), '%idempotency key is required%'), 'album milestone claim requires idempotency key');
+
+select ok(testutil.raises_like(format('select api.album_claim_milestone(%L::uuid, %L::uuid, %L, 9)', (select id::text from _ids where key = 'user'), (select id::text from _ids where key = 'milestone1'), 'album-reward-stale-version'), '%milestone version mismatch%'), 'album milestone claim rejects stale expected version');
+
+insert into _ids (key, payload) select 'claim1', api.album_claim_milestone((select id from _ids where key = 'user'), (select id from _ids where key = 'milestone1'), 'album-reward-claim-1', 0);
 select is(((select payload from _ids where key = 'claim1') ->> 'collected_count')::int, 1, 'album claim counts discovered item');
 select is(testutil.balance_of((select id from _ids where key = 'user'), 'FGEMS'), 33::numeric, 'album milestone reward credits FGEMS');
 select is((select count(*)::int from album.milestone_claims where user_id = (select id from _ids where key = 'user') and milestone_id = (select id from _ids where key = 'milestone1')), 1, 'one milestone claim row is created');
 
-insert into _ids (key, payload) select 'claim_repeat', api.album_claim_milestone((select id from _ids where key = 'user'), (select id from _ids where key = 'milestone1'));
+insert into _ids (key, payload) select 'claim_repeat', api.album_claim_milestone((select id from _ids where key = 'user'), (select id from _ids where key = 'milestone1'), 'album-reward-claim-1', 0);
 select ok(((select payload from _ids where key = 'claim_repeat') ->> 'idempotent')::boolean, 'repeated album milestone claim returns idempotent=true');
 select is(testutil.balance_of((select id from _ids where key = 'user'), 'FGEMS'), 33::numeric, 'repeated milestone claim does not credit again');
 
@@ -240,7 +244,8 @@ with milestone_row as (
   returning id
 )
 insert into _ids (key, id) select 'milestone2', id from milestone_row;
-select ok(testutil.raises_like(format('select api.album_claim_milestone(%L::uuid, %L::uuid)', (select id::text from _ids where key = 'user'), (select id::text from _ids where key = 'milestone2')), '%milestone not reached%'), 'cannot claim unreached album milestone');
+select ok(testutil.raises_like(format('select api.album_claim_milestone(%L::uuid, %L::uuid, %L, 0)', (select id::text from _ids where key = 'user'), (select id::text from _ids where key = 'milestone2'), 'album-reward-claim-2'), '%milestone not reached%'), 'cannot claim unreached album milestone');
+select ok(testutil.raises_like(format('select api.album_claim_milestone(%L::uuid, %L::uuid, %L, 0)', (select id::text from _ids where key = 'user'), (select id::text from _ids where key = 'milestone2'), 'album-reward-claim-1'), '%idempotency conflict%'), 'idempotency key cannot be reused for another milestone claim');
 
 select * from finish();
 
