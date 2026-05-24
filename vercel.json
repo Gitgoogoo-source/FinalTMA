@@ -3,6 +3,7 @@
   "framework": "vite",
   "installCommand": "pnpm install --frozen-lockfile",
   "buildCommand": "pnpm build:web",
+  "devCommand": "pnpm --filter @tma-game/web exec cross-env VITE_ENABLE_MOCKS=true vite --host 0.0.0.0 --port $PORT",
   "outputDirectory": "apps/web/dist",
   "crons": [
     {
@@ -21,7 +22,7 @@
       "destination": "/api/:path*"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!api/|@vite/|@id/|@fs/|@react-refresh$|src/|node_modules/.vite/).*)",
       "destination": "/index.html"
     }
   ]
