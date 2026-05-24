@@ -222,7 +222,7 @@ values ((select id from _ids where key = 'template'), (select id from _ids where
 
 do $$
 begin
-  perform api.economy_credit((select id from _ids where key = 'user'), 'FGEMS', 10, 'test_setup', null, null, 'inventory-lock-fgems-001', 'fixture', '{}'::jsonb);
+  perform api._credit_balance((select id from _ids where key = 'user'), 'FGEMS', 10, 'test_setup', null, null, 'inventory-lock-fgems-001', 'fixture', '{}'::jsonb);
 end;
 $$;
 
