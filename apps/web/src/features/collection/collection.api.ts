@@ -14,6 +14,8 @@ import type {
   CollectionOnchainStatus,
   CollectionRarity,
   CollectionSeries,
+  CollectionUpgradeItemInput,
+  CollectionUpgradeItemResponse,
   CollectionUpgradePreview,
 } from "./collection.types";
 
@@ -58,6 +60,32 @@ export async function fetchInventoryDetail(
   );
 
   return normalizeInventoryDetail(response);
+}
+
+export async function upgradeInventoryItem(
+  input: CollectionUpgradeItemInput,
+): Promise<CollectionUpgradeItemResponse> {
+  const idempotencyKey =
+    input.idempotencyKey ?? createIdempotencyKey("inventory:upgrade");
+  const response = await apiRequest<unknown>(API_ENDPOINTS.inventory.upgrade, {
+    method: "POST",
+    body: {
+      item_instance_id: input.itemInstanceId,
+      idempotency_key: idempotencyKey,
+      ...(input.expectedFgemsCost !== undefined &&
+      input.expectedFgemsCost !== null
+        ? { expected_fgems_cost: input.expectedFgemsCost }
+        : {}),
+      ...(input.targetLevel !== undefined && input.targetLevel !== null
+        ? { target_level: input.targetLevel }
+        : {}),
+    },
+    headers: {
+      "X-Idempotency-Key": idempotencyKey,
+    },
+  });
+
+  return normalizeUpgradeItemResponse(response);
 }
 
 export function normalizeInventoryResponse(
@@ -198,6 +226,75 @@ export function normalizeInventoryDetail(
       0,
     updatedAt:
       readString(response.updatedAt) ?? readString(response.updated_at),
+  };
+}
+
+export function normalizeUpgradeItemResponse(
+  response: unknown,
+): CollectionUpgradeItemResponse {
+  if (!isRecord(response)) {
+    throw new Error("Invalid inventory upgrade payload.");
+  }
+
+  const itemInstanceId =
+    readString(response.itemInstanceId) ??
+    readString(response.item_instance_id);
+  const toLevel = readNumber(response.toLevel) ?? readNumber(response.to_level);
+  const toPower = readNumber(response.toPower) ?? readNumber(response.to_power);
+
+  if (!itemInstanceId || toLevel === null || toPower === null) {
+    throw new Error("Inventory upgrade payload is missing required fields.");
+  }
+
+  const fgemsBalanceBefore =
+    readNullableNumber(response.fgemsBalanceBefore) ??
+    readNullableNumber(response.fgems_balance_before) ??
+    readNullableNumber(response.balanceBefore) ??
+    readNullableNumber(response.balance_before);
+  const fgemsBalanceAfter =
+    readNullableNumber(response.fgemsBalanceAfter) ??
+    readNullableNumber(response.fgems_balance_after) ??
+    readNullableNumber(response.balanceAfter) ??
+    readNullableNumber(response.balance_after);
+  const consumedFgems =
+    readNumber(response.consumedFgems) ??
+    readNumber(response.consumed_fgems) ??
+    readNumber(response.costFgems) ??
+    readNumber(response.cost_fgems) ??
+    0;
+
+  return {
+    itemInstanceId,
+    fromLevel:
+      readNullableNumber(response.fromLevel) ??
+      readNullableNumber(response.from_level),
+    toLevel,
+    fromPower:
+      readNullableNumber(response.fromPower) ??
+      readNullableNumber(response.from_power),
+    toPower,
+    consumedFgems,
+    costFgems:
+      readNumber(response.costFgems) ??
+      readNumber(response.cost_fgems) ??
+      consumedFgems,
+    fgemsBalanceBefore,
+    fgemsBalanceAfter,
+    balanceChange:
+      readNullableNumber(response.balanceChange) ??
+      readNullableNumber(response.balance_change) ??
+      readNullableNumber(response.balanceDelta) ??
+      readNullableNumber(response.balance_delta) ??
+      (fgemsBalanceBefore !== null && fgemsBalanceAfter !== null
+        ? fgemsBalanceAfter - fgemsBalanceBefore
+        : null),
+    ledgerId: readString(response.ledgerId) ?? readString(response.ledger_id),
+    upgradedAt:
+      readString(response.upgradedAt) ?? readString(response.upgraded_at),
+    idempotent:
+      readBoolean(response.idempotent) ??
+      readBoolean(response.isIdempotent) ??
+      false,
   };
 }
 
@@ -480,4 +577,13 @@ function isInventoryItem(
   item: CollectionInventoryItem | null,
 ): item is CollectionInventoryItem {
   return item !== null;
+}
+
+function createIdempotencyKey(prefix: string): string {
+  const randomPart =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+  return `${prefix}:${randomPart}`;
 }

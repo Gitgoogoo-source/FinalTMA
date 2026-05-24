@@ -4,11 +4,15 @@ import { Link } from "react-router-dom";
 
 import { getApiErrorMessage } from "@/api/errors";
 import { APP_ROUTES } from "@/shared/constants/routes";
+import { formatCurrencyAmount } from "@/shared/lib/formatCurrency";
 
 import { CharacterDetailSheet } from "../components/CharacterDetailSheet";
 import { CharacterGrid } from "../components/CharacterGrid";
 import { CharacterHero } from "../components/CharacterHero";
+import { GrowthResultModal } from "../components/GrowthResultModal";
 import { GrowthActionBar } from "../components/GrowthActionBar";
+import { UpgradePanel } from "../components/UpgradePanel";
+import type { CollectionUpgradeItemResponse } from "../collection.types";
 import { useInventory } from "../hooks/useInventory";
 
 export function CollectionPage() {
@@ -16,6 +20,9 @@ export function CollectionPage() {
   const items = inventoryQuery.items;
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [isUpgradeOpen, setIsUpgradeOpen] = useState(false);
+  const [upgradeResult, setUpgradeResult] =
+    useState<CollectionUpgradeItemResponse | null>(null);
   const selectedItem = useMemo(
     () =>
       items.find((item) => item.itemInstanceId === selectedItemId) ??
@@ -28,6 +35,8 @@ export function CollectionPage() {
     if (items.length === 0) {
       setSelectedItemId(null);
       setIsDetailOpen(false);
+      setIsUpgradeOpen(false);
+      setUpgradeResult(null);
       return;
     }
 
@@ -39,6 +48,16 @@ export function CollectionPage() {
       setSelectedItemId(selectedItem.itemInstanceId);
     }
   }, [items, selectedItem, selectedItemId]);
+
+  function handleOpenUpgrade() {
+    setIsDetailOpen(false);
+    setIsUpgradeOpen(true);
+  }
+
+  function handleUpgradeResult(result: CollectionUpgradeItemResponse) {
+    setSelectedItemId(result.itemInstanceId);
+    setUpgradeResult(result);
+  }
 
   if (inventoryQuery.isLoading && items.length === 0) {
     return (
@@ -98,7 +117,80 @@ export function CollectionPage() {
         open={isDetailOpen}
         item={selectedItem}
         onClose={() => setIsDetailOpen(false)}
+        onUpgrade={handleOpenUpgrade}
+      />
+      <UpgradePanel
+        open={isUpgradeOpen}
+        item={selectedItem}
+        onClose={() => setIsUpgradeOpen(false)}
+        onUpgraded={handleUpgradeResult}
+      />
+      <GrowthResultModal
+        open={upgradeResult !== null}
+        title="升级成功"
+        description={formatUpgradeResultDescription(upgradeResult)}
+        metrics={getUpgradeResultMetrics(upgradeResult)}
+        onClose={() => setUpgradeResult(null)}
       />
     </section>
   );
+}
+
+function getUpgradeResultMetrics(result: CollectionUpgradeItemResponse | null) {
+  if (!result) {
+    return [];
+  }
+
+  return [
+    {
+      label: "等级变化",
+      value: `${formatLevel(result.fromLevel)} -> ${formatLevel(
+        result.toLevel,
+      )}`,
+    },
+    {
+      label: "战力变化",
+      value: `${formatOptionalNumber(result.fromPower)} -> ${formatCurrencyAmount(
+        result.toPower,
+      )}`,
+    },
+    {
+      label: "消耗 Fgems",
+      value: formatCurrencyAmount(result.consumedFgems),
+    },
+    {
+      label: "Fgems 余额",
+      value: formatBalanceChange(result),
+    },
+  ];
+}
+
+function formatUpgradeResultDescription(
+  result: CollectionUpgradeItemResponse | null,
+): string | undefined {
+  if (!result) {
+    return undefined;
+  }
+
+  return `Lv.${formatOptionalNumber(result.fromLevel)} 升至 Lv.${formatCurrencyAmount(
+    result.toLevel,
+  )}`;
+}
+
+function formatBalanceChange(result: CollectionUpgradeItemResponse): string {
+  if (result.fgemsBalanceBefore === null || result.fgemsBalanceAfter === null) {
+    return "待同步";
+  }
+
+  return `${formatCurrencyAmount(
+    result.fgemsBalanceBefore,
+  )} -> ${formatCurrencyAmount(result.fgemsBalanceAfter)}`;
+}
+
+function formatLevel(value: number | null): string {
+  return value === null ? "待同步" : `Lv.${formatCurrencyAmount(value)}`;
+}
+
+function formatOptionalNumber(value: number | null): string {
+  return value === null ? "待同步" : formatCurrencyAmount(value);
 }

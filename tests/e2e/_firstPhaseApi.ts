@@ -11,6 +11,10 @@ export const TEST_INIT_DATA =
   "auth_date=1779321600&query_id=e2e-query&user=%7B%22id%22%3A7001%2C%22first_name%22%3A%22%E6%B5%8B%E8%AF%95%22%7D&hash=e2e";
 
 export async function mockFirstPhaseApi(page: Page): Promise<void> {
+  let inventoryLevel = 1;
+  let inventoryPower = 10;
+  let fgemsAvailable = 80;
+
   await page.route("**/api/auth/telegram", (route) =>
     fulfillOk(route, {
       status: "ok",
@@ -49,7 +53,7 @@ export async function mockFirstPhaseApi(page: Page): Promise<void> {
           locked: "0",
         },
         FGEMS: {
-          available: "80",
+          available: String(fgemsAvailable),
           locked: "0",
         },
         STAR_DISPLAY: {
@@ -79,7 +83,7 @@ export async function mockFirstPhaseApi(page: Page): Promise<void> {
           locked: "0",
         },
         FGEMS: {
-          available: "80",
+          available: String(fgemsAvailable),
           locked: "0",
         },
         STAR_DISPLAY: {
@@ -190,7 +194,12 @@ export async function mockFirstPhaseApi(page: Page): Promise<void> {
 
   await page.route("**/api/inventory/list?*", (route) =>
     fulfillOk(route, {
-      items: [inventoryItemPayload()],
+      items: [
+        inventoryItemPayload({
+          level: inventoryLevel,
+          power: inventoryPower,
+        }),
+      ],
       total: 1,
       limit: 40,
       offset: 0,
@@ -202,7 +211,10 @@ export async function mockFirstPhaseApi(page: Page): Promise<void> {
 
   await page.route("**/api/inventory/detail?*", (route) =>
     fulfillOk(route, {
-      ...inventoryItemPayload(),
+      ...inventoryItemPayload({
+        level: inventoryLevel,
+        power: inventoryPower,
+      }),
       market_status: {
         is_listed: false,
         listing_id: null,
@@ -211,6 +223,15 @@ export async function mockFirstPhaseApi(page: Page): Promise<void> {
       },
       upgrade_preview: {
         can_upgrade: true,
+        reason: null,
+        current_level: inventoryLevel,
+        next_level: inventoryLevel + 1,
+        target_level: inventoryLevel + 1,
+        current_power: inventoryPower,
+        power_after: inventoryPower + 8,
+        fgems_cost: 20,
+        user_fgems_balance: fgemsAvailable,
+        is_balance_enough: fgemsAvailable >= 20,
       },
       evolution_preview: {
         can_evolve: true,
@@ -222,6 +243,29 @@ export async function mockFirstPhaseApi(page: Page): Promise<void> {
       available_same_item_count: 3,
     }),
   );
+
+  await page.route("**/api/inventory/upgrade", (route) => {
+    inventoryLevel += 1;
+    inventoryPower += 8;
+    const balanceBefore = fgemsAvailable;
+    fgemsAvailable -= 20;
+
+    return fulfillOk(route, {
+      item_instance_id: ITEM_INSTANCE_ID,
+      from_level: inventoryLevel - 1,
+      to_level: inventoryLevel,
+      from_power: inventoryPower - 8,
+      to_power: inventoryPower,
+      consumed_fgems: 20,
+      cost_fgems: 20,
+      fgems_balance_before: balanceBefore,
+      fgems_balance_after: fgemsAvailable,
+      balance_delta: -20,
+      ledger_id: "77777777-7777-4777-8777-777777777778",
+      upgraded_at: "2026-05-21T00:00:02.000Z",
+      idempotent: false,
+    });
+  });
 }
 
 function boxPayload() {
@@ -257,7 +301,9 @@ function boxPayload() {
   };
 }
 
-function inventoryItemPayload() {
+function inventoryItemPayload(
+  overrides: { level?: number; power?: number } = {},
+) {
   return {
     item_instance_id: ITEM_INSTANCE_ID,
     template_id: TEMPLATE_ID,
@@ -282,8 +328,8 @@ function inventoryItemPayload() {
     },
     type_code: "CHARACTER",
     serial_no: 1,
-    level: 1,
-    power: 10,
+    level: overrides.level ?? 1,
+    power: overrides.power ?? 10,
     status: "available",
     tradeable: true,
     upgradeable: true,

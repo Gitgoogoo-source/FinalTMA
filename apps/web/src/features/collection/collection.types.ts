@@ -143,3 +143,26 @@ export type CollectionInventoryResponse = {
   statuses: string[];
   serverTime: string | null;
 };
+
+export type CollectionUpgradeItemInput = {
+  itemInstanceId: string;
+  expectedFgemsCost?: number | null;
+  targetLevel?: number | null;
+  idempotencyKey?: string | null;
+};
+
+export type CollectionUpgradeItemResponse = {
+  itemInstanceId: string;
+  fromLevel: number | null;
+  toLevel: number;
+  fromPower: number | null;
+  toPower: number;
+  consumedFgems: number;
+  costFgems: number;
+  fgemsBalanceBefore: number | null;
+  fgemsBalanceAfter: number | null;
+  balanceChange: number | null;
+  ledgerId: string | null;
+  upgradedAt: string | null;
+  idempotent: boolean;
+};

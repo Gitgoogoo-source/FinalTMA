@@ -38,3 +38,31 @@ test("查看藏品详情和成长入口", async ({ page }) => {
     detailDialog.getByRole("button", { name: /分解/ }),
   ).toBeVisible();
 });
+
+test("升级面板完成升级并刷新藏品展示", async ({ page }) => {
+  await mockFirstPhaseApi(page);
+
+  await page.goto(
+    `/collection?mockInitData=${encodeURIComponent(TEST_INIT_DATA)}`,
+  );
+
+  await page.getByRole("button", { name: "详情" }).click();
+  await page.getByRole("button", { name: /升级/ }).click();
+
+  const upgradeDialog = page.getByRole("dialog", { name: "森林幼芽" });
+  await expect(upgradeDialog).toBeVisible();
+  await expect(upgradeDialog.getByText("当前等级")).toBeVisible();
+  await expect(upgradeDialog.getByText("升级后等级")).toBeVisible();
+  await expect(upgradeDialog.getByText("需要 Fgems")).toBeVisible();
+  await expect(upgradeDialog.getByText("余额足够")).toBeVisible();
+
+  await upgradeDialog.getByRole("button", { name: "确认升级" }).click();
+
+  const resultDialog = page.getByRole("dialog", { name: "升级成功" });
+  await expect(resultDialog).toBeVisible();
+  await expect(resultDialog.getByText("Lv.1 -> Lv.2")).toBeVisible();
+  await expect(resultDialog.getByText("80 -> 60")).toBeVisible();
+
+  await resultDialog.getByRole("button", { name: "确认" }).click();
+  await expect(page.getByText("Lv.2", { exact: true }).first()).toBeVisible();
+});

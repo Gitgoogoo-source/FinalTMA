@@ -55,6 +55,7 @@ export function CharacterDetailSheet({
     displayItem.imageUrl ?? displayItem.thumbnailUrl ?? displayItem.avatarUrl;
   const isListed = isItemListed(displayItem, detail);
   const isAvailable = displayItem.status === "available" && !isListed;
+  const canOpenUpgradePanel = canOpenUpgrade(displayItem, detail, isAvailable);
   const lockReason = detail?.activeLock?.reason ?? null;
   const blockReason = getBlockedReason(displayItem, detail, isListed);
 
@@ -201,9 +202,7 @@ export function CharacterDetailSheet({
             {isAvailable ? (
               <>
                 <DetailButtonAction
-                  disabled={
-                    !canUpgrade(displayItem, detail, isAvailable) || !onUpgrade
-                  }
+                  disabled={!canOpenUpgradePanel || !onUpgrade}
                   icon="sparkles"
                   label="升级"
                   onClick={onUpgrade}
@@ -372,6 +371,18 @@ function canUpgrade(
 ): boolean {
   return (
     isAvailable && (detail?.upgradePreview?.canUpgrade ?? item.isUpgradeable)
+  );
+}
+
+function canOpenUpgrade(
+  item: CollectionInventoryItem,
+  detail: CollectionInventoryDetail | null,
+  isAvailable: boolean,
+): boolean {
+  return (
+    isAvailable &&
+    (detail?.isUpgradeable ?? item.isUpgradeable) &&
+    item.status === "available"
   );
 }
 
