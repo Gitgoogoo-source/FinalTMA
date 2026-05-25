@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   ApiClientError,
   getApiErrorMessage,
+  isApiErrorResponse,
+  isApiSuccessResponse,
 } from "../../apps/web/src/api/errors";
 
 describe("stage-3 API feedback messages", () => {
@@ -25,5 +27,45 @@ describe("stage-3 API feedback messages", () => {
     });
 
     expect(getApiErrorMessage(error)).toBe(message);
+  });
+
+  it("requires the standard success flag on API success responses", () => {
+    expect(
+      isApiSuccessResponse<{ value: number }>({
+        ok: true,
+        success: true,
+        data: { value: 1 },
+      }),
+    ).toBe(true);
+
+    expect(
+      isApiSuccessResponse({
+        ok: true,
+        data: { value: 1 },
+      }),
+    ).toBe(false);
+  });
+
+  it("requires the standard success flag on API error responses", () => {
+    expect(
+      isApiErrorResponse({
+        ok: false,
+        success: false,
+        error: {
+          code: "VALIDATION_ERROR",
+          message: "请求参数校验失败。",
+        },
+      }),
+    ).toBe(true);
+
+    expect(
+      isApiErrorResponse({
+        ok: false,
+        error: {
+          code: "VALIDATION_ERROR",
+          message: "请求参数校验失败。",
+        },
+      }),
+    ).toBe(false);
   });
 });

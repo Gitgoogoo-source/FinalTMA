@@ -290,6 +290,20 @@ describe("inventory growth API", () => {
     expect(callRpcRawMock).not.toHaveBeenCalled();
   });
 
+  it("upgrade rejects missing idempotency_key before calling RPC", async () => {
+    const result = await invokeApiHandler<ApiErrorResponse>(upgradeHandler, {
+      method: "POST",
+      body: {
+        item_instance_id: ITEM_ID,
+      },
+    });
+
+    expect(result.statusCode).toBe(400);
+    expectStandardErrorEnvelope(result.body);
+    expect(result.body.error.code).toBe("VALIDATION_ERROR");
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+  });
+
   it("upgrade reads the idempotency key from headers", async () => {
     callRpcRawMock.mockResolvedValueOnce({
       item_instance_id: ITEM_ID,
@@ -513,6 +527,20 @@ describe("inventory growth API", () => {
     expect(callRpcRawMock).not.toHaveBeenCalled();
   });
 
+  it("evolve rejects missing idempotency_key before calling RPC", async () => {
+    const result = await invokeApiHandler<ApiErrorResponse>(evolveHandler, {
+      method: "POST",
+      body: {
+        source_item_instance_ids: [ITEM_ID, ITEM_ID_2, ITEM_ID_3],
+      },
+    });
+
+    expect(result.statusCode).toBe(400);
+    expectStandardErrorEnvelope(result.body);
+    expect(result.body.error.code).toBe("VALIDATION_ERROR");
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+  });
+
   it("evolve calls inventory_evolve_item and normalizes failed results", async () => {
     callRpcRawMock.mockResolvedValueOnce({
       attempt_id: "77777777-7777-4777-8777-777777777777",
@@ -659,6 +687,20 @@ describe("inventory growth API", () => {
         item_instance_ids: [ITEM_ID],
         idempotency_key: IDEMPOTENCY_KEY,
         user_id: FORGED_USER_ID,
+      },
+    });
+
+    expect(result.statusCode).toBe(400);
+    expectStandardErrorEnvelope(result.body);
+    expect(result.body.error.code).toBe("VALIDATION_ERROR");
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+  });
+
+  it("decompose rejects missing idempotency_key before calling RPC", async () => {
+    const result = await invokeApiHandler<ApiErrorResponse>(decomposeHandler, {
+      method: "POST",
+      body: {
+        item_instance_ids: [ITEM_ID],
       },
     });
 

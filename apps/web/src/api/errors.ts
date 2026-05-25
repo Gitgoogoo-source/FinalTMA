@@ -6,12 +6,14 @@ export type ApiErrorPayload = {
 
 export type ApiErrorResponse = {
   ok: false;
+  success: false;
   error: ApiErrorPayload;
   requestId?: string;
 };
 
 export type ApiSuccessResponse<T> = {
   ok: true;
+  success: true;
   data: T;
   meta?: Record<string, unknown>;
   requestId?: string;
@@ -158,6 +160,7 @@ export function isApiErrorResponse(value: unknown): value is ApiErrorResponse {
 
   return (
     candidate.ok === false &&
+    candidate.success === false &&
     typeof candidate.error === "object" &&
     candidate.error !== null &&
     typeof candidate.error.code === "string" &&
@@ -173,5 +176,7 @@ export function isApiSuccessResponse<T>(
   }
 
   const candidate = value as Partial<ApiSuccessResponse<T>>;
-  return candidate.ok === true && "data" in candidate;
+  return (
+    candidate.ok === true && candidate.success === true && "data" in candidate
+  );
 }
