@@ -490,6 +490,9 @@ select is(testutil.balance_of((select id from _ids where key = 'decompose_user')
 
 select ok(testutil.raises_like(format('select api.inventory_decompose_item(%L::uuid, %L::uuid, %L)', (select id::text from _ids where key = 'decompose_user'), (select id::text from _ids where key = 'decompose_item2'), 'stage3-accept-decompose-only-one'), '%only duplicate collectibles can be decomposed%'), 'decomposition rejects user only remaining copy');
 select is((select count(*)::integer from inventory.decompose_logs where idempotency_key = 'stage3-accept-decompose-only-one'), 0, 'only-copy decomposition writes no log');
+select is((select count(*)::integer from economy.currency_ledger where idempotency_key = 'stage3-accept-decompose-only-one'), 0, 'only-copy decomposition writes no ledger credit');
+select is((select status from inventory.item_instances where id = (select id from _ids where key = 'decompose_item2')), 'available', 'only-copy decomposition leaves item status unchanged');
+select is((select owner_user_id from inventory.item_instances where id = (select id from _ids where key = 'decompose_item2')), (select id from _ids where key = 'decompose_user'), 'only-copy decomposition leaves item owner unchanged');
 
 insert into _ids (key, id) select 'decompose_listed1', testutil.create_item((select id from _ids where key = 'decompose_user'), (select id from _ids where key = 'decompose_template'), (select id from _ids where key = 'decompose_form1'), 1, 10);
 insert into _ids (key, id) select 'decompose_listed2', testutil.create_item((select id from _ids where key = 'decompose_user'), (select id from _ids where key = 'decompose_template'), (select id from _ids where key = 'decompose_form1'), 1, 10);
@@ -501,12 +504,20 @@ select 'decompose_listing', api.market_create_listing(
   'stage3-accept-decompose-listing'
 );
 select ok(testutil.raises_like(format('select api.inventory_decompose_item(%L::uuid, %L::uuid, %L)', (select id::text from _ids where key = 'decompose_user'), (select id::text from _ids where key = 'decompose_listed1'), 'stage3-accept-decompose-listed'), '%item is not available%'), 'decomposition rejects listed item');
+select is((select count(*)::integer from inventory.decompose_logs where idempotency_key = 'stage3-accept-decompose-listed'), 0, 'listed-item decomposition writes no log');
+select is((select count(*)::integer from economy.currency_ledger where idempotency_key = 'stage3-accept-decompose-listed'), 0, 'listed-item decomposition writes no ledger credit');
+select is((select status from inventory.item_instances where id = (select id from _ids where key = 'decompose_listed1')), 'listed', 'listed-item decomposition leaves item status unchanged');
+select is((select owner_user_id from inventory.item_instances where id = (select id from _ids where key = 'decompose_listed1')), (select id from _ids where key = 'decompose_user'), 'listed-item decomposition leaves item owner unchanged');
 
 insert into _ids (key, id) select 'decompose_locked1', testutil.create_item((select id from _ids where key = 'decompose_user'), (select id from _ids where key = 'decompose_template'), (select id from _ids where key = 'decompose_form1'), 1, 10);
 insert into _ids (key, id) select 'decompose_locked2', testutil.create_item((select id from _ids where key = 'decompose_user'), (select id from _ids where key = 'decompose_template'), (select id from _ids where key = 'decompose_form1'), 1, 10);
 insert into inventory.inventory_locks (item_instance_id, user_id, lock_type, source_type, status)
 values ((select id from _ids where key = 'decompose_locked1'), (select id from _ids where key = 'decompose_user'), 'admin_hold', 'test_setup', 'active');
 select ok(testutil.raises_like(format('select api.inventory_decompose_item(%L::uuid, %L::uuid, %L)', (select id::text from _ids where key = 'decompose_user'), (select id::text from _ids where key = 'decompose_locked1'), 'stage3-accept-decompose-locked'), '%item is locked%'), 'decomposition rejects actively locked item');
+select is((select count(*)::integer from inventory.decompose_logs where idempotency_key = 'stage3-accept-decompose-locked'), 0, 'locked-item decomposition writes no log');
+select is((select count(*)::integer from economy.currency_ledger where idempotency_key = 'stage3-accept-decompose-locked'), 0, 'locked-item decomposition writes no ledger credit');
+select is((select status from inventory.item_instances where id = (select id from _ids where key = 'decompose_locked1')), 'available', 'locked-item decomposition leaves item status unchanged');
+select is((select owner_user_id from inventory.item_instances where id = (select id from _ids where key = 'decompose_locked1')), (select id from _ids where key = 'decompose_user'), 'locked-item decomposition leaves item owner unchanged');
 
 insert into _ids (key, payload) values ('decompose_blocked_catalog', testutil.create_catalog_fixture('stage3-accept-decompose-blocked', 'COMMON', true, true, true, false, true));
 insert into _ids (key, id) select 'decompose_blocked_template', ((select payload from _ids where key = 'decompose_blocked_catalog') ->> 'template_id')::uuid;
@@ -514,6 +525,10 @@ insert into _ids (key, id) select 'decompose_blocked_form1', ((select payload fr
 insert into _ids (key, id) select 'decompose_blocked1', testutil.create_item((select id from _ids where key = 'decompose_user'), (select id from _ids where key = 'decompose_blocked_template'), (select id from _ids where key = 'decompose_blocked_form1'), 1, 10);
 insert into _ids (key, id) select 'decompose_blocked2', testutil.create_item((select id from _ids where key = 'decompose_user'), (select id from _ids where key = 'decompose_blocked_template'), (select id from _ids where key = 'decompose_blocked_form1'), 1, 10);
 select ok(testutil.raises_like(format('select api.inventory_decompose_item(%L::uuid, %L::uuid, %L)', (select id::text from _ids where key = 'decompose_user'), (select id::text from _ids where key = 'decompose_blocked1'), 'stage3-accept-decompose-not-decomposable'), '%item is not decomposable%'), 'decomposition rejects non-decomposable template');
+select is((select count(*)::integer from inventory.decompose_logs where idempotency_key = 'stage3-accept-decompose-not-decomposable'), 0, 'non-decomposable-template decomposition writes no log');
+select is((select count(*)::integer from economy.currency_ledger where idempotency_key = 'stage3-accept-decompose-not-decomposable'), 0, 'non-decomposable-template decomposition writes no ledger credit');
+select is((select status from inventory.item_instances where id = (select id from _ids where key = 'decompose_blocked1')), 'available', 'non-decomposable-template decomposition leaves item status unchanged');
+select is((select owner_user_id from inventory.item_instances where id = (select id from _ids where key = 'decompose_blocked1')), (select id from _ids where key = 'decompose_user'), 'non-decomposable-template decomposition leaves item owner unchanged');
 
 -- Album progress and milestone reward acceptance cases.
 insert into _ids (key, payload) values ('album_catalog_a', testutil.create_catalog_fixture('stage3-accept-album-a', 'COMMON'));
