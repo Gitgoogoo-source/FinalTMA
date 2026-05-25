@@ -46,6 +46,8 @@ test("升级面板完成升级并刷新藏品展示", async ({ page }) => {
     `/collection?mockInitData=${encodeURIComponent(TEST_INIT_DATA)}`,
   );
 
+  await expect(page.getByLabel("Fgems 余额").getByText("80")).toBeVisible();
+
   await page.getByRole("button", { name: "详情" }).click();
   await page.getByRole("button", { name: /升级/ }).click();
 
@@ -53,7 +55,10 @@ test("升级面板完成升级并刷新藏品展示", async ({ page }) => {
   await expect(upgradeDialog).toBeVisible();
   await expect(upgradeDialog.getByText("当前等级")).toBeVisible();
   await expect(upgradeDialog.getByText("升级后等级")).toBeVisible();
+  await expect(upgradeDialog.getByText("当前战力")).toBeVisible();
+  await expect(upgradeDialog.getByText("升级后战力")).toBeVisible();
   await expect(upgradeDialog.getByText("需要 Fgems")).toBeVisible();
+  await expect(upgradeDialog.getByText("当前 Fgems 余额")).toBeVisible();
   await expect(upgradeDialog.getByText("余额足够")).toBeVisible();
 
   await upgradeDialog.getByRole("button", { name: "确认升级" }).click();
@@ -61,10 +66,12 @@ test("升级面板完成升级并刷新藏品展示", async ({ page }) => {
   const resultDialog = page.getByRole("dialog", { name: "升级成功" });
   await expect(resultDialog).toBeVisible();
   await expect(resultDialog.getByText("Lv.1 -> Lv.2")).toBeVisible();
+  await expect(resultDialog.getByText("10 -> 18")).toBeVisible();
   await expect(resultDialog.getByText("80 -> 60")).toBeVisible();
 
   await resultDialog.getByRole("button", { name: "确认" }).click();
   await expect(page.getByText("Lv.2", { exact: true }).first()).toBeVisible();
+  await expect(page.getByLabel("Fgems 余额").getByText("60")).toBeVisible();
 });
 
 test("合成面板选择材料并展示成功结果", async ({ page }) => {
