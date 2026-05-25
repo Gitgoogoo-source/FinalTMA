@@ -19,6 +19,7 @@ gacha_payment_idempotency.test.sql
 inventory.test.sql
 inventory_lock.test.sql
 inventory_evolve.test.sql
+album_backfill.test.sql
 market_create_listing.test.sql
 market_buy_listing.test.sql
 market_buy.test.sql

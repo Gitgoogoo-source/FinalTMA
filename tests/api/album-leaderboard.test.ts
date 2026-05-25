@@ -206,13 +206,16 @@ describe("album leaderboard API", () => {
   });
 
   it("rejects unsupported leaderboard scopes before calling RPC", async () => {
-    const result = await invokeApiHandler<ApiErrorResponse>(leaderboardHandler, {
-      method: "GET",
-      query: {
-        scope: "rarity",
-        rarity: "legendary",
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      leaderboardHandler,
+      {
+        method: "GET",
+        query: {
+          scope: "rarity",
+          rarity: "legendary",
+        },
       },
-    });
+    );
 
     expect(result.statusCode).toBe(400);
     expect(result.body.error.code).toBe("BAD_REQUEST");
@@ -223,12 +226,15 @@ describe("album leaderboard API", () => {
   });
 
   it("rejects unsupported leaderboard periods before calling RPC", async () => {
-    const result = await invokeApiHandler<ApiErrorResponse>(leaderboardHandler, {
-      method: "GET",
-      query: {
-        period: "all_time",
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      leaderboardHandler,
+      {
+        method: "GET",
+        query: {
+          period: "all_time",
+        },
       },
-    });
+    );
 
     expect(result.statusCode).toBe(400);
     expect(result.body.error.code).toBe("BAD_REQUEST");
@@ -239,12 +245,15 @@ describe("album leaderboard API", () => {
   });
 
   it("rejects unsupported around-me leaderboard mode before calling RPC", async () => {
-    const result = await invokeApiHandler<ApiErrorResponse>(leaderboardHandler, {
-      method: "GET",
-      query: {
-        around_me: "true",
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      leaderboardHandler,
+      {
+        method: "GET",
+        query: {
+          around_me: "true",
+        },
       },
-    });
+    );
 
     expect(result.statusCode).toBe(400);
     expect(result.body.error.code).toBe("BAD_REQUEST");

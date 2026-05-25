@@ -58,6 +58,7 @@
     "ops:create-admin": "tsx scripts/create-admin.ts",
     "ops:rebuild-market-stats": "tsx scripts/rebuild-market-stats.ts",
     "ops:backfill-album": "tsx scripts/backfill-album-progress.ts",
+    "ops:rebuild-leaderboard": "tsx scripts/rebuild-leaderboard.ts",
     "ops:retry-payments": "tsx scripts/retry-failed-payments.ts",
     "ops:retry-mints": "tsx scripts/retry-failed-mints.ts",
     "deploy:preview": "vercel",
