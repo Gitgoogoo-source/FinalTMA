@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 
 import { getApiErrorMessage } from "@/api/errors";
+import { useFeedback } from "@/app/providers/FeedbackProvider";
 import { formatCurrencyAmount } from "@/shared/lib/formatCurrency";
 
 import type {
@@ -34,6 +35,7 @@ export function UpgradePanel({
   onUpgraded,
   open,
 }: UpgradePanelProps) {
+  const { pushToast } = useFeedback();
   const detailQuery = useItemDetail(open ? item?.itemInstanceId : null, {
     enabled: open && Boolean(item),
   });
@@ -67,14 +69,22 @@ export function UpgradePanel({
       return;
     }
 
-    const result = await upgradeMutation.mutateAsync({
-      itemInstanceId,
-      expectedFgemsCost: preview.fgemsCost,
-      targetLevel: preview.nextLevel ?? preview.targetLevel,
-    });
+    try {
+      const result = await upgradeMutation.mutateAsync({
+        itemInstanceId,
+        expectedFgemsCost: preview.fgemsCost,
+        targetLevel: preview.nextLevel ?? preview.targetLevel,
+      });
 
-    onUpgraded?.(result);
-    onClose();
+      onUpgraded?.(result);
+      onClose();
+    } catch (error) {
+      pushToast({
+        type: "error",
+        title: "升级失败",
+        message: getApiErrorMessage(error),
+      });
+    }
   }
 
   function handleClose() {

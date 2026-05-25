@@ -12,6 +12,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { getApiErrorMessage } from "@/api/errors";
+import { useFeedback } from "@/app/providers/FeedbackProvider";
 import { formatCurrencyAmount } from "@/shared/lib/formatCurrency";
 
 import type {
@@ -38,6 +39,7 @@ export function EvolvePanel({
   onEvolved,
   open,
 }: EvolvePanelProps) {
+  const { pushToast } = useFeedback();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const selectionSeedRef = useRef<string>("");
   const detailQuery = useItemDetail(open ? item?.itemInstanceId : null, {
@@ -113,16 +115,24 @@ export function EvolvePanel({
       return;
     }
 
-    const result = await evolveMutation.mutateAsync({
-      sourceItemInstanceIds: selectedIds,
-      targetFormId: preview.targetFormId,
-      expectedKcoinCost: preview.kcoinCost,
-      expectedSuccessRateBps: preview.successRateBps,
-      expectedReturnItemInstanceId: mainReturnItemId,
-    });
+    try {
+      const result = await evolveMutation.mutateAsync({
+        sourceItemInstanceIds: selectedIds,
+        targetFormId: preview.targetFormId,
+        expectedKcoinCost: preview.kcoinCost,
+        expectedSuccessRateBps: preview.successRateBps,
+        expectedReturnItemInstanceId: mainReturnItemId,
+      });
 
-    onEvolved?.(result);
-    onClose();
+      onEvolved?.(result);
+      onClose();
+    } catch (error) {
+      pushToast({
+        type: "error",
+        title: "合成失败",
+        message: getApiErrorMessage(error),
+      });
+    }
   }
 
   function handleClose() {

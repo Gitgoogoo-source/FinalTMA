@@ -6605,6 +6605,16 @@ a {
   background: #8bd3c7;
 }
 
+.growth-result-modal--warning .growth-result-modal__header span {
+  color: #ffd166;
+}
+
+.growth-result-modal--warning .growth-result-modal__mark {
+  border-color: rgb(255 209 102 / 36%);
+  color: #332405;
+  background: #ffd166;
+}
+
 .growth-result-modal__body h2 {
   margin: 0;
   color: #f7fbff;

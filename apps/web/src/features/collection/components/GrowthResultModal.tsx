@@ -1,4 +1,4 @@
-import { CheckCircle2, Sparkles, X } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Sparkles, X } from "lucide-react";
 
 type GrowthResultMetric = {
   label: string;
@@ -12,23 +12,33 @@ type GrowthResultModalProps = {
   description?: string | undefined;
   metrics: GrowthResultMetric[];
   confirmLabel?: string | undefined;
+  headerLabel?: string | undefined;
+  tone?: "success" | "warning" | undefined;
   onClose: () => void;
 };
 
 export function GrowthResultModal({
   confirmLabel = "确认",
   description,
+  headerLabel,
   metrics,
   onClose,
   open,
+  tone = "success",
   title,
 }: GrowthResultModalProps) {
   if (!open) {
     return null;
   }
 
+  const HeaderIcon = tone === "warning" ? AlertTriangle : CheckCircle2;
+  const MarkIcon = tone === "warning" ? AlertTriangle : Sparkles;
+
   return (
-    <div className="growth-result-modal" role="presentation">
+    <div
+      className={`growth-result-modal growth-result-modal--${tone}`}
+      role="presentation"
+    >
       <button
         aria-label="关闭成长结果"
         className="growth-result-modal__backdrop"
@@ -43,8 +53,8 @@ export function GrowthResultModal({
       >
         <header className="growth-result-modal__header">
           <span>
-            <CheckCircle2 aria-hidden="true" size={17} strokeWidth={2.5} />
-            成长完成
+            <HeaderIcon aria-hidden="true" size={17} strokeWidth={2.5} />
+            {headerLabel ?? "成长完成"}
           </span>
           <button aria-label="关闭" onClick={onClose} type="button">
             <X aria-hidden="true" size={18} strokeWidth={2.5} />
@@ -53,7 +63,7 @@ export function GrowthResultModal({
 
         <div className="growth-result-modal__body">
           <div className="growth-result-modal__mark">
-            <Sparkles aria-hidden="true" size={26} strokeWidth={2.4} />
+            <MarkIcon aria-hidden="true" size={26} strokeWidth={2.4} />
           </div>
           <h2 id="growth-result-modal-title">{title}</h2>
           {description ? <p>{description}</p> : null}

@@ -1,12 +1,12 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 
-import { queryKeys } from "@/shared/constants/queryKeys";
+import { useGrowthInvalidation } from "@/shared/hooks/useGrowthInvalidation";
 
 import { claimAlbumMilestoneReward } from "../album.api";
 import type { AlbumClaimRewardInput } from "../album.types";
 
 export function useClaimAlbumReward() {
-  const queryClient = useQueryClient();
+  const growthInvalidation = useGrowthInvalidation();
 
   return useMutation({
     mutationFn: (input: AlbumClaimRewardInput) =>
@@ -14,15 +14,6 @@ export function useClaimAlbumReward() {
     meta: {
       skipGlobalErrorToast: true,
     },
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.album.root,
-        }),
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.me.assetsRoot,
-        }),
-      ]);
-    },
+    onSuccess: () => growthInvalidation.invalidateAfterAlbumRewardClaim(),
   });
 }

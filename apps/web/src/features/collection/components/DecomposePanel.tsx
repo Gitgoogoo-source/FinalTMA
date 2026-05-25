@@ -11,6 +11,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 
 import { getApiErrorMessage } from "@/api/errors";
+import { useFeedback } from "@/app/providers/FeedbackProvider";
 import { formatCurrencyAmount } from "@/shared/lib/formatCurrency";
 
 import type {
@@ -37,6 +38,7 @@ export function DecomposePanel({
   onDecomposed,
   open,
 }: DecomposePanelProps) {
+  const { pushToast } = useFeedback();
   const [confirmed, setConfirmed] = useState(false);
   const detailQuery = useItemDetail(open ? item?.itemInstanceId : null, {
     enabled: open && Boolean(item),
@@ -94,13 +96,21 @@ export function DecomposePanel({
       return;
     }
 
-    const result = await decomposeMutation.mutateAsync({
-      itemInstanceIds: [itemInstanceId],
-      expectedFgemsReward,
-    });
+    try {
+      const result = await decomposeMutation.mutateAsync({
+        itemInstanceIds: [itemInstanceId],
+        expectedFgemsReward,
+      });
 
-    onDecomposed?.(result);
-    onClose();
+      onDecomposed?.(result);
+      onClose();
+    } catch (error) {
+      pushToast({
+        type: "error",
+        title: "分解失败",
+        message: getApiErrorMessage(error),
+      });
+    }
   }
 
   function handleClose() {

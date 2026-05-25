@@ -206,7 +206,9 @@ export function CollectionPage() {
         open={evolveResult !== null}
         title={evolveResult?.success ? "合成成功" : "合成失败"}
         description={formatEvolveResultDescription(evolveResult)}
+        headerLabel={evolveResult?.success ? "成长完成" : "合成结果"}
         metrics={getEvolveResultMetrics(evolveResult)}
+        tone={evolveResult?.success ? "success" : "warning"}
         onClose={() => setEvolveResult(null)}
       />
       <GrowthResultModal

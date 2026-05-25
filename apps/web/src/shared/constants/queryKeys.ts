@@ -33,6 +33,7 @@ export const queryKeys = {
       ["album", "series", userId ?? "anonymous", query] as const,
     items: (userId: string | null | undefined, query: unknown = {}) =>
       ["album", "items", userId ?? "anonymous", query] as const,
+    leaderboardRoot: ["album", "leaderboard"] as const,
     leaderboard: (userId: string | null | undefined, query: unknown = {}) =>
       ["album", "leaderboard", userId ?? "anonymous", query] as const,
   },
