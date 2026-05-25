@@ -122,6 +122,19 @@ select is((select locked_after from economy.currency_ledger where idempotency_ke
 select is((select total_spent from economy.user_balances b join _ids i on i.id = b.user_id where i.key = 'user' and b.currency_code = 'KCOIN'), 300::numeric, 'total_spent tracks debit amount');
 select ok(testutil.raises_like(format('select api.economy_debit(%L::uuid, %L, 999999, %L)', (select id::text from _ids where key = 'user'), 'KCOIN', 'overdraft_test'), '%insufficient balance%'), 'debit rejects insufficient balance');
 
+select ok(not has_schema_privilege('public', 'api', 'usage'), 'PUBLIC has no api schema usage');
+select ok(not has_schema_privilege('anon', 'api', 'usage'), 'anon has no api schema usage');
+select ok(not has_schema_privilege('authenticated', 'api', 'usage'), 'authenticated has no api schema usage');
+select ok(not has_function_privilege('public', 'api._credit_balance(uuid, text, numeric, text, uuid, text, text, text, jsonb)', 'execute'), 'PUBLIC cannot execute _credit_balance directly');
+select ok(not has_function_privilege('anon', 'api._credit_balance(uuid, text, numeric, text, uuid, text, text, text, jsonb)', 'execute'), 'anon cannot execute _credit_balance directly');
+select ok(not has_function_privilege('authenticated', 'api._credit_balance(uuid, text, numeric, text, uuid, text, text, text, jsonb)', 'execute'), 'authenticated cannot execute _credit_balance directly');
+select ok(not has_function_privilege('public', 'api.economy_credit(uuid, text, numeric, text, uuid, text, text, text, jsonb)', 'execute'), 'PUBLIC cannot execute economy_credit directly');
+select ok(not has_function_privilege('anon', 'api.economy_credit(uuid, text, numeric, text, uuid, text, text, text, jsonb)', 'execute'), 'anon cannot execute economy_credit directly');
+select ok(not has_function_privilege('authenticated', 'api.economy_credit(uuid, text, numeric, text, uuid, text, text, text, jsonb)', 'execute'), 'authenticated cannot execute economy_credit directly');
+select ok(has_schema_privilege('service_role', 'api', 'usage'), 'service_role has api schema usage');
+select ok(has_function_privilege('service_role', 'api._credit_balance(uuid, text, numeric, text, uuid, text, text, text, jsonb)', 'execute'), 'service_role can execute _credit_balance');
+select ok(has_function_privilege('service_role', 'api.economy_credit(uuid, text, numeric, text, uuid, text, text, text, jsonb)', 'execute'), 'service_role can execute economy_credit');
+
 insert into _ids (key, payload)
 select 'lock1', api.economy_lock_balance(
   p_user_id := (select id from _ids where key = 'user'),

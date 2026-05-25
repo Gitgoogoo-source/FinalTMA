@@ -3469,6 +3469,14 @@ execute function gacha.require_paid_star_payment_before_opened();
 -- Frontend anon/authenticated roles must not call trusted business mutation RPCs directly.
 -- Vercel API should call these functions using the Supabase service_role key.
 
-revoke execute on all functions in schema api from anon, authenticated;
+revoke usage on schema api from public, anon, authenticated;
 grant usage on schema api to service_role;
+
+revoke execute on all functions in schema api from public, anon, authenticated;
 grant execute on all functions in schema api to service_role;
+
+alter default privileges in schema api
+  revoke execute on functions from public, anon, authenticated;
+
+alter default privileges in schema api
+  grant execute on functions to service_role;

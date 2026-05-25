@@ -108,7 +108,7 @@ export function LeaderboardPanel({
 type PanelHeaderProps = {
   generatedAt: string | null;
   isFetching: boolean;
-  onRefresh?: (() => void) | undefined;
+  onRefresh: (() => void) | undefined;
 };
 
 function PanelHeader({ generatedAt, isFetching, onRefresh }: PanelHeaderProps) {
