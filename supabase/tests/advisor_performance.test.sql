@@ -1,4 +1,4 @@
--- Verifies first-stage Supabase performance advisor fixes.
+-- Verifies targeted Supabase performance advisor fixes.
 -- Run after migrations and RLS files have been applied.
 
 begin;
@@ -27,7 +27,14 @@ with target(schema_name, table_name, column_name) as (
     ('inventory', 'item_instances', 'owner_user_id'),
     ('inventory', 'item_instances', 'template_id'),
     ('inventory', 'item_instance_events', 'item_instance_id'),
-    ('inventory', 'item_instance_events', 'user_id')
+    ('inventory', 'item_instance_events', 'user_id'),
+    ('album', 'book_items', 'template_id'),
+    ('album', 'books', 'series_id'),
+    ('album', 'books', 'faction_id'),
+    ('album', 'books', 'rarity_code'),
+    ('album', 'milestone_claims', 'milestone_id'),
+    ('album', 'score_rules', 'rarity_code'),
+    ('album', 'user_discoveries', 'first_item_instance_id')
 ),
 cols as (
   select
@@ -58,7 +65,7 @@ missing as (
 select is(
   (select count(*)::integer from missing),
   0,
-  'high-priority advisor columns have leftmost covering indexes'
+  'targeted advisor columns have leftmost covering indexes'
 );
 
 with policy_actions as (

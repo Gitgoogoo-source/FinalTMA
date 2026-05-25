@@ -330,11 +330,11 @@ select 'album_books', api.album_list_books((select id from _ids where key = 'use
 select ok(jsonb_array_length((select payload from _ids where key = 'album_books') -> 'books') >= 1, 'album_list_books returns active books with progress');
 
 select ok((select count(*)::integer from album.score_rules where active = true) > 0, 'leaderboard score rules are seeded');
-select ok((select count(*)::integer from album.weekly_leaderboards where status = 'active' and now() >= starts_at and now() < ends_at) >= 1, 'current weekly leaderboard is seeded');
 
 insert into _ids (key, payload)
 select 'leaderboard_refresh', api.album_refresh_weekly_leaderboard();
 
+select ok((select count(*)::integer from album.weekly_leaderboards where status = 'active' and now() >= starts_at and now() < ends_at) >= 1, 'current weekly leaderboard is available after refresh');
 select ok(((select payload from _ids where key = 'leaderboard_refresh') ->> 'entry_count')::integer >= 1, 'leaderboard refresh writes entries');
 select is((
   select count(*)::integer
@@ -365,6 +365,63 @@ select ok((
     and user1_entry.user_id = (select id from _ids where key = 'user')
     and user2_entry.user_id = (select id from _ids where key = 'user2')
 ), 'higher score ranks ahead');
+
+insert into _ids (key, payload)
+select
+  'leaderboard_user_before_new_discovery',
+  jsonb_build_object(
+    'score', user_entry.score,
+    'collected_count', user_entry.collected_count
+  )
+from album.leaderboard_entries user_entry
+where user_entry.leaderboard_id = ((select payload from _ids where key = 'leaderboard_refresh') ->> 'board_id')::uuid
+  and user_entry.user_id = (select id from _ids where key = 'user');
+
+insert into _ids (key, id)
+select 'leaderboard_new_discovery_item', testutil.create_item(
+  (select id from _ids where key = 'user'),
+  (select id from _ids where key = 'template2'),
+  (select id from _ids where key = 'form1_2'),
+  1,
+  10
+);
+
+select ok(exists (
+  select 1
+  from album.user_discoveries discovery
+  where discovery.user_id = (select id from _ids where key = 'user')
+    and discovery.template_id = (select id from _ids where key = 'template2')
+), 'newly collected item records a new album discovery');
+
+insert into _ids (key, payload)
+select 'leaderboard_refresh_after_new_discovery', api.album_refresh_weekly_leaderboard();
+
+select is(
+  ((select payload from _ids where key = 'leaderboard_refresh_after_new_discovery') ->> 'board_id')::uuid,
+  ((select payload from _ids where key = 'leaderboard_refresh') ->> 'board_id')::uuid,
+  'leaderboard refresh after new discovery updates the same weekly board'
+);
+
+insert into _ids (key, payload)
+select
+  'leaderboard_user_after_new_discovery',
+  jsonb_build_object(
+    'score', user_entry.score,
+    'collected_count', user_entry.collected_count
+  )
+from album.leaderboard_entries user_entry
+where user_entry.leaderboard_id = ((select payload from _ids where key = 'leaderboard_refresh_after_new_discovery') ->> 'board_id')::uuid
+  and user_entry.user_id = (select id from _ids where key = 'user');
+
+select ok((
+  ((select payload from _ids where key = 'leaderboard_user_after_new_discovery') ->> 'score')::numeric
+  > ((select payload from _ids where key = 'leaderboard_user_before_new_discovery') ->> 'score')::numeric
+), 'same user score increases after new discovery and leaderboard refresh');
+select is(
+  ((select payload from _ids where key = 'leaderboard_user_after_new_discovery') ->> 'collected_count')::integer,
+  ((select payload from _ids where key = 'leaderboard_user_before_new_discovery') ->> 'collected_count')::integer + 1,
+  'same user collected count increases after new discovery and leaderboard refresh'
+);
 
 insert into _ids (key, payload)
 select 'leaderboard', api.album_get_leaderboard((select id from _ids where key = 'user'), null, 'current_week', 'global', null, null, null, 'score_desc', false, 50, 0);
