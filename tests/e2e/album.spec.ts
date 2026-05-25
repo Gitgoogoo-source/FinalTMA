@@ -163,6 +163,47 @@ test("排行榜没有条目时展示空态而不是假榜单", async ({ page }) 
   ).toBeEnabled();
 });
 
+test("排行榜有条目时在图鉴页展示我的排名和榜单数据", async ({ page }) => {
+  const state = createAlbumMockState();
+
+  await mockFirstPhaseApi(page);
+  await mockAlbumApi(page, state);
+  await gotoAlbum(page);
+
+  await expect.poll(() => state.leaderboardRequests.length).toBeGreaterThan(0);
+
+  const leaderboardRequest = state.leaderboardRequests.at(-1);
+
+  expect(leaderboardRequest?.searchParams.get("period")).toBe("current_week");
+  expect(leaderboardRequest?.searchParams.get("scope")).toBe("global");
+  expect(leaderboardRequest?.searchParams.get("sort")).toBe("score_desc");
+  expect(leaderboardRequest?.searchParams.get("limit")).toBe("50");
+
+  const leaderboardPanel = page.locator(".leaderboard-panel");
+  const myRank = leaderboardPanel.locator(".leaderboard-my-rank");
+  const rows = leaderboardPanel.getByRole("listitem");
+  const firstRow = rows.first();
+
+  await expect(
+    leaderboardPanel.getByRole("heading", { name: "每周图鉴榜" }),
+  ).toBeVisible();
+  await expect(
+    leaderboardPanel.getByText("榜单生成中", { exact: true }),
+  ).toHaveCount(0);
+  await expect(myRank).toContainText("我的排名");
+  await expect(myRank).toContainText("#1");
+  await expect(myRank).toContainText("33.33%");
+  await expect(myRank).toContainText("80");
+  await expect(rows).toHaveCount(1);
+  await expect(firstRow).toHaveAttribute("data-current-user", "true");
+  await expect(firstRow).toHaveAttribute("data-rank-tier", "top");
+  await expect(firstRow.getByLabel("第 1 名")).toBeVisible();
+  await expect(firstRow.getByText("测试玩家", { exact: true })).toBeVisible();
+  await expect(firstRow.getByText("1 / 3", { exact: true })).toBeVisible();
+  await expect(firstRow.getByText("33.33%", { exact: true })).toBeVisible();
+  await expect(firstRow.getByText("80", { exact: true })).toBeVisible();
+});
+
 function createAlbumMockState(
   overrides: Partial<
     Pick<AlbumMockState, "emptyConfig" | "emptyLeaderboard">

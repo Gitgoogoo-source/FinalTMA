@@ -285,6 +285,17 @@ export async function mockFirstPhaseApi(page: Page): Promise<void> {
   );
 
   await page.route("**/api/inventory/upgrade", (route) => {
+    const body = readGrowthMutationBody(route, "inventory/upgrade");
+
+    assert(
+      body.item_instance_id === ITEM_INSTANCE_ID,
+      "inventory/upgrade request body must include the selected item_instance_id.",
+    );
+    assert(
+      body.expected_fgems_cost === 20,
+      "inventory/upgrade request body must include expected_fgems_cost from the preview.",
+    );
+
     inventoryLevel += 1;
     inventoryPower += 8;
     const balanceBefore = fgemsAvailable;
@@ -308,14 +319,31 @@ export async function mockFirstPhaseApi(page: Page): Promise<void> {
   });
 
   await page.route("**/api/inventory/evolve", async (route) => {
-    const body = route.request().postDataJSON() as
-      | { source_item_instance_ids?: unknown }
-      | undefined;
-    const sourceIds = Array.isArray(body?.source_item_instance_ids)
-      ? body.source_item_instance_ids
-          .filter((id): id is string => typeof id === "string")
-          .slice(0, 3)
-      : [ITEM_INSTANCE_ID, ITEM_INSTANCE_ID_2, ITEM_INSTANCE_ID_3];
+    const body = readGrowthMutationBody(route, "inventory/evolve");
+
+    assertStringArray(
+      body.source_item_instance_ids,
+      "inventory/evolve source_item_instance_ids",
+    );
+    assertSameStringSet(
+      body.source_item_instance_ids,
+      [ITEM_INSTANCE_ID, ITEM_INSTANCE_ID_2, ITEM_INSTANCE_ID_3],
+      "inventory/evolve source_item_instance_ids",
+    );
+    assert(
+      body.expected_kcoin_cost === 200,
+      "inventory/evolve request body must include expected_kcoin_cost from the preview.",
+    );
+    assert(
+      body.expected_success_rate_bps === 5000,
+      "inventory/evolve request body must include expected_success_rate_bps from the preview.",
+    );
+    assert(
+      body.expected_return_item_instance_id === ITEM_INSTANCE_ID_3,
+      "inventory/evolve request body must include expected_return_item_instance_id from the preview.",
+    );
+
+    const sourceIds = body.source_item_instance_ids;
     const balanceBefore = kcoinAvailable;
 
     kcoinAvailable -= 200;
@@ -344,14 +372,23 @@ export async function mockFirstPhaseApi(page: Page): Promise<void> {
   });
 
   await page.route("**/api/inventory/decompose", async (route) => {
-    const body = route.request().postDataJSON() as
-      | { item_instance_ids?: unknown }
-      | undefined;
-    const itemInstanceIds = Array.isArray(body?.item_instance_ids)
-      ? body.item_instance_ids.filter(
-          (id): id is string => typeof id === "string",
-        )
-      : [ITEM_INSTANCE_ID];
+    const body = readGrowthMutationBody(route, "inventory/decompose");
+
+    assertStringArray(
+      body.item_instance_ids,
+      "inventory/decompose item_instance_ids",
+    );
+    assertSameStringSet(
+      body.item_instance_ids,
+      [ITEM_INSTANCE_ID],
+      "inventory/decompose item_instance_ids",
+    );
+    assert(
+      body.expected_fgems_reward === 150,
+      "inventory/decompose request body must include expected_fgems_reward from the preview.",
+    );
+
+    const itemInstanceIds = body.item_instance_ids;
     const balanceBefore = fgemsAvailable;
     const gainedFgems = itemInstanceIds.length * 150;
 
@@ -524,6 +561,117 @@ function inventoryItemResult() {
     level: 1,
     power: 10,
   };
+}
+
+function readGrowthMutationBody(
+  route: Route,
+  action: string,
+): Record<string, unknown> {
+  const body = readJsonObjectBody(route, action);
+  const headerIdempotencyKey = route.request().headers()["x-idempotency-key"];
+  const bodyIdempotencyKey = body.idempotency_key;
+
+  assertValidIdempotencyKey(
+    headerIdempotencyKey,
+    `${action} X-Idempotency-Key`,
+  );
+  assertValidIdempotencyKey(
+    bodyIdempotencyKey,
+    `${action} body idempotency_key`,
+  );
+  assert(
+    headerIdempotencyKey === bodyIdempotencyKey,
+    `${action} X-Idempotency-Key must match body idempotency_key.`,
+  );
+  assert(
+    body.user_id === undefined,
+    `${action} request body must not include user_id.`,
+  );
+  assert(
+    body.owner_user_id === undefined,
+    `${action} request body must not include owner_user_id.`,
+  );
+
+  return body;
+}
+
+function readJsonObjectBody(
+  route: Route,
+  action: string,
+): Record<string, unknown> {
+  let body: unknown;
+
+  try {
+    body = route.request().postDataJSON() as unknown;
+  } catch (error) {
+    throw new Error(
+      `${action} request body must be valid JSON. ${formatError(error)}`,
+      { cause: error },
+    );
+  }
+
+  assert(isRecord(body), `${action} request body must be a JSON object.`);
+
+  return body;
+}
+
+function assertValidIdempotencyKey(
+  value: unknown,
+  label: string,
+): asserts value is string {
+  assert(typeof value === "string", `${label} must be a string.`);
+  assert(
+    value.length >= 16 && value.length <= 128,
+    `${label} must be 16-128 characters.`,
+  );
+  assert(
+    /^[A-Za-z0-9:_-]+$/.test(value),
+    `${label} contains unsupported characters.`,
+  );
+}
+
+function assertStringArray(
+  value: unknown,
+  label: string,
+): asserts value is string[] {
+  assert(Array.isArray(value), `${label} must be an array.`);
+  assert(
+    value.every((item) => typeof item === "string"),
+    `${label} must only contain strings.`,
+  );
+}
+
+function assertSameStringSet(
+  actual: string[],
+  expected: string[],
+  label: string,
+): void {
+  const actualSet = new Set(actual);
+  const expectedSet = new Set(expected);
+
+  assert(
+    actualSet.size === actual.length,
+    `${label} must not contain duplicate ids.`,
+  );
+  assert(
+    actualSet.size === expectedSet.size &&
+      expected.every((item) => actualSet.has(item)),
+    `${label} must contain the expected ids.`,
+  );
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function assert(condition: unknown, message: string): asserts condition {
+  if (!condition) {
+    throw new Error(message);
+  }
+}
+
+function formatError(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 async function fulfillOk(route: Route, data: unknown): Promise<void> {
