@@ -3,12 +3,18 @@ import { expect, test, type Page, type Route } from "@playwright/test";
 import { TEST_INIT_DATA, mockFirstPhaseApi } from "./_firstPhaseApi";
 
 const USER_ID = "11111111-1111-4111-8111-111111111111";
+const RIVAL_USER_ID = "22222222-2222-4222-8222-222222222222";
 const BOOK_ALL_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const BOOK_FOREST_ID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const BOOK_LEGENDARY_ID = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 const MILESTONE_ALL_FIRST_ID = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
 const MILESTONE_ALL_FULL_ID = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
 const MILESTONE_FOREST_ID = "ffffffff-ffff-4fff-8fff-ffffffffffff";
+
+type LeaderboardRefreshRequest = {
+  headers: Record<string, string>;
+  method: string;
+};
 
 type ClaimRequest = {
   body: Record<string, unknown>;
@@ -22,8 +28,11 @@ type AlbumMockState = {
   progressRequests: URL[];
   seriesRequests: URL[];
   leaderboardRequests: URL[];
+  leaderboardRefreshRequests: LeaderboardRefreshRequest[];
   claimRequests: ClaimRequest[];
   assetRequests: URL[];
+  pendingNewDiscovery: boolean;
+  leaderboardIncludesNewDiscovery: boolean;
 };
 
 test("图鉴页展示空图鉴配置状态", async ({ page }) => {
@@ -163,11 +172,22 @@ test("排行榜没有条目时展示空态而不是假榜单", async ({ page }) 
   ).toBeEnabled();
 });
 
-test("排行榜有条目时在图鉴页展示我的排名和榜单数据", async ({ page }) => {
+test("排行榜刷新后展示我的排名，并在新增收集后更新排名", async ({ page }) => {
   const state = createAlbumMockState();
 
   await mockFirstPhaseApi(page);
   await mockAlbumApi(page, state);
+
+  await page.goto(`/?mockInitData=${encodeURIComponent(TEST_INIT_DATA)}`);
+  await executeLeaderboardRefresh(page);
+  await expect.poll(() => state.leaderboardRefreshRequests.length).toBe(1);
+  expect(state.leaderboardRefreshRequests[0]).toMatchObject({
+    method: "POST",
+    headers: expect.objectContaining({
+      authorization: "Bearer test-cron-secret-0001",
+    }),
+  });
+
   await gotoAlbum(page);
 
   await expect.poll(() => state.leaderboardRequests.length).toBeGreaterThan(0);
@@ -183,6 +203,7 @@ test("排行榜有条目时在图鉴页展示我的排名和榜单数据", async
   const myRank = leaderboardPanel.locator(".leaderboard-my-rank");
   const rows = leaderboardPanel.getByRole("listitem");
   const firstRow = rows.first();
+  const secondRow = rows.nth(1);
 
   await expect(
     leaderboardPanel.getByRole("heading", { name: "每周图鉴榜" }),
@@ -191,17 +212,47 @@ test("排行榜有条目时在图鉴页展示我的排名和榜单数据", async
     leaderboardPanel.getByText("榜单生成中", { exact: true }),
   ).toHaveCount(0);
   await expect(myRank).toContainText("我的排名");
-  await expect(myRank).toContainText("#1");
+  await expect(myRank).toContainText("#2");
   await expect(myRank).toContainText("33.33%");
   await expect(myRank).toContainText("80");
-  await expect(rows).toHaveCount(1);
-  await expect(firstRow).toHaveAttribute("data-current-user", "true");
+  await expect(rows).toHaveCount(2);
+  await expect(firstRow).toHaveAttribute("data-current-user", "false");
   await expect(firstRow).toHaveAttribute("data-rank-tier", "top");
   await expect(firstRow.getByLabel("第 1 名")).toBeVisible();
+  await expect(firstRow.getByText("竞榜玩家", { exact: true })).toBeVisible();
+  await expect(firstRow.getByText("2 / 3", { exact: true })).toBeVisible();
+  await expect(firstRow.getByText("66.67%", { exact: true })).toBeVisible();
+  await expect(firstRow.getByText("120", { exact: true })).toBeVisible();
+  await expect(secondRow).toHaveAttribute("data-current-user", "true");
+  await expect(secondRow.getByLabel("第 2 名")).toBeVisible();
+  await expect(secondRow.getByText("测试玩家", { exact: true })).toBeVisible();
+  await expect(secondRow.getByText("1 / 3", { exact: true })).toBeVisible();
+  await expect(secondRow.getByText("33.33%", { exact: true })).toBeVisible();
+  await expect(secondRow.getByText("80", { exact: true })).toBeVisible();
+
+  state.pendingNewDiscovery = true;
+  await executeLeaderboardRefresh(page);
+  await expect.poll(() => state.leaderboardRefreshRequests.length).toBe(2);
+
+  const leaderboardRequestCount = state.leaderboardRequests.length;
+  await leaderboardPanel.getByRole("button", { name: "刷新排行榜" }).click();
+  await expect
+    .poll(() => state.leaderboardRequests.length)
+    .toBeGreaterThan(leaderboardRequestCount);
+
+  await expect(myRank).toContainText("#1");
+  await expect(myRank).toContainText("66.67%");
+  await expect(myRank).toContainText("180");
+  await expect(firstRow).toHaveAttribute("data-current-user", "true");
+  await expect(firstRow.getByLabel("第 1 名")).toBeVisible();
   await expect(firstRow.getByText("测试玩家", { exact: true })).toBeVisible();
-  await expect(firstRow.getByText("1 / 3", { exact: true })).toBeVisible();
-  await expect(firstRow.getByText("33.33%", { exact: true })).toBeVisible();
-  await expect(firstRow.getByText("80", { exact: true })).toBeVisible();
+  await expect(firstRow.getByText("2 / 3", { exact: true })).toBeVisible();
+  await expect(firstRow.getByText("66.67%", { exact: true })).toBeVisible();
+  await expect(firstRow.getByText("180", { exact: true })).toBeVisible();
+  await expect(secondRow).toHaveAttribute("data-current-user", "false");
+  await expect(secondRow.getByLabel("第 2 名")).toBeVisible();
+  await expect(secondRow.getByText("竞榜玩家", { exact: true })).toBeVisible();
+  await expect(secondRow.getByText("120", { exact: true })).toBeVisible();
 });
 
 function createAlbumMockState(
@@ -216,8 +267,11 @@ function createAlbumMockState(
     progressRequests: [],
     seriesRequests: [],
     leaderboardRequests: [],
+    leaderboardRefreshRequests: [],
     claimRequests: [],
     assetRequests: [],
+    pendingNewDiscovery: false,
+    leaderboardIncludesNewDiscovery: false,
   };
 }
 
@@ -258,6 +312,29 @@ async function mockAlbumApi(
     return fulfillOk(route, albumLeaderboardPayload(state));
   });
 
+  await page.route("**/api/cron/refresh-leaderboard", async (route) => {
+    state.leaderboardRefreshRequests.push({
+      headers: route.request().headers(),
+      method: route.request().method(),
+    });
+
+    if (state.pendingNewDiscovery) {
+      state.pendingNewDiscovery = false;
+      state.leaderboardIncludesNewDiscovery = true;
+    }
+
+    await fulfillOk(route, {
+      board_id: "abababab-abab-4aba-8aba-abababababab",
+      week_key: "2026-W22",
+      starts_at: "2026-05-25T00:00:00.000Z",
+      ends_at: "2026-06-01T00:00:00.000Z",
+      entry_count: 2,
+      generated_at: state.leaderboardIncludesNewDiscovery
+        ? "2026-05-25T08:05:00.000Z"
+        : "2026-05-25T08:00:00.000Z",
+    });
+  });
+
   await page.route("**/api/album/claim-reward", async (route) => {
     const body = parseJsonBody(route.request().postData());
 
@@ -294,6 +371,35 @@ async function mockAlbumApi(
 async function gotoAlbum(page: Page): Promise<void> {
   await page.goto(`/album?mockInitData=${encodeURIComponent(TEST_INIT_DATA)}`);
   await expect(page.getByTestId("album-page")).toBeVisible();
+}
+
+async function executeLeaderboardRefresh(page: Page): Promise<void> {
+  const result = await page.evaluate(async () => {
+    const response = await fetch("/api/cron/refresh-leaderboard", {
+      method: "POST",
+      headers: {
+        authorization: "Bearer test-cron-secret-0001",
+      },
+    });
+
+    return {
+      body: (await response.json()) as unknown,
+      ok: response.ok,
+      status: response.status,
+    };
+  });
+
+  expect(result).toMatchObject({
+    ok: true,
+    status: 200,
+    body: {
+      ok: true,
+      success: true,
+      data: {
+        entry_count: 2,
+      },
+    },
+  });
 }
 
 function albumSeriesPayload(state: AlbumMockState) {
@@ -463,30 +569,66 @@ function albumLeaderboardPayload(state: AlbumMockState) {
     };
   }
 
-  const entry = {
-    rank: 1,
-    user_id: USER_ID,
-    display_name: "测试玩家",
+  const currentUserEntry = state.leaderboardIncludesNewDiscovery
+    ? {
+        rank: 1,
+        user_id: USER_ID,
+        display_name: "测试玩家",
+        avatar_url: null,
+        score: 180,
+        completion_percent: 66.67,
+        collected_count: 2,
+        total_count: 3,
+        rare_count: 1,
+        epic_count: 0,
+        legendary_count: 0,
+        mint_count: 0,
+        updated_at: "2026-05-25T08:05:00.000Z",
+      }
+    : {
+        rank: 2,
+        user_id: USER_ID,
+        display_name: "测试玩家",
+        avatar_url: null,
+        score: state.claimed ? 180 : 80,
+        completion_percent: 33.33,
+        collected_count: 1,
+        total_count: 3,
+        rare_count: 0,
+        epic_count: 0,
+        legendary_count: 0,
+        mint_count: 0,
+        updated_at: "2026-05-25T08:00:00.000Z",
+      };
+  const rivalEntry = {
+    rank: state.leaderboardIncludesNewDiscovery ? 2 : 1,
+    user_id: RIVAL_USER_ID,
+    display_name: "竞榜玩家",
     avatar_url: null,
-    score: state.claimed ? 180 : 80,
-    completion_percent: 33.33,
-    collected_count: 1,
+    score: 120,
+    completion_percent: 66.67,
+    collected_count: 2,
     total_count: 3,
-    rare_count: 0,
+    rare_count: 1,
     epic_count: 0,
     legendary_count: 0,
     mint_count: 0,
     updated_at: "2026-05-25T08:00:00.000Z",
   };
+  const entries = state.leaderboardIncludesNewDiscovery
+    ? [rivalEntry, currentUserEntry]
+    : [currentUserEntry, rivalEntry];
 
   return {
     board_id: "abababab-abab-4aba-8aba-abababababab",
     period: "current_week",
     scope: "global",
-    entries: [entry],
-    my_entry: entry,
+    entries,
+    my_entry: currentUserEntry,
     next_cursor: null,
-    generated_at: "2026-05-25T08:00:00.000Z",
+    generated_at: state.leaderboardIncludesNewDiscovery
+      ? "2026-05-25T08:05:00.000Z"
+      : "2026-05-25T08:00:00.000Z",
     empty: false,
   };
 }
