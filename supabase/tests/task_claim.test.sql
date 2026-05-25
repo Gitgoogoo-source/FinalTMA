@@ -77,20 +77,38 @@ insert into tasks.user_task_progress (user_id, task_id, period_key, progress_cou
 values ((select id from _ids where key = 'user'), (select id from _ids where key = 'task'), '2026-05-20', 1, 1, 'completed', now())
 on conflict (user_id, task_id, period_key) do update set status = 'completed', progress_count = 1, completed_at = now(), updated_at = now();
 
-insert into _ids (key, payload) select 'claim1', api.task_claim_reward((select id from _ids where key = 'user'), (select id from _ids where key = 'task'), '2026-05-20');
+insert into _ids (key, txt) values ('claim_key', 'task-claim-idem-001');
+insert into _ids (key, payload)
+select 'claim1', api.task_claim_reward(
+  (select id from _ids where key = 'user'),
+  (select id from _ids where key = 'task'),
+  '2026-05-20',
+  (select txt from _ids where key = 'claim_key')
+);
 select ok(((select payload from _ids where key = 'claim1') ? 'claim_id'), 'task claim returns claim_id');
 select is((select status from tasks.user_task_progress where user_id = (select id from _ids where key = 'user') and task_id = (select id from _ids where key = 'task') and period_key = '2026-05-20'), 'claimed', 'task progress becomes claimed');
 select is(testutil.balance_of((select id from _ids where key = 'user'), 'KCOIN'), 77::numeric, 'task reward credits KCOIN');
 select is((select count(*)::int from tasks.task_claims where user_id = (select id from _ids where key = 'user') and task_id = (select id from _ids where key = 'task') and period_key = '2026-05-20'), 1, 'one task claim row is created');
+select is((select idempotency_key from tasks.task_claims where user_id = (select id from _ids where key = 'user') and task_id = (select id from _ids where key = 'task') and period_key = '2026-05-20'), (select txt from _ids where key = 'claim_key'), 'task claim stores idempotency_key');
+select ok((select request_fingerprint is not null from tasks.task_claims where user_id = (select id from _ids where key = 'user') and task_id = (select id from _ids where key = 'task') and period_key = '2026-05-20'), 'task claim stores request_fingerprint');
+select is((select count(*)::int from ops.idempotency_keys where key = 'task_claim_reward:' || (select txt from _ids where key = 'claim_key') and status = 'completed'), 1, 'task claim stores completed API idempotency key');
+select is((select count(*)::int from economy.currency_ledger where idempotency_key like 'task_claim:' || (select txt from _ids where key = 'claim_key') || ':%'), 1, 'task claim ledger key uses idempotency prefix');
 
-insert into _ids (key, payload) select 'claim_repeat', api.task_claim_reward((select id from _ids where key = 'user'), (select id from _ids where key = 'task'), '2026-05-20');
+insert into _ids (key, payload)
+select 'claim_repeat', api.task_claim_reward(
+  (select id from _ids where key = 'user'),
+  (select id from _ids where key = 'task'),
+  '2026-05-20',
+  (select txt from _ids where key = 'claim_key')
+);
 select ok(((select payload from _ids where key = 'claim_repeat') ->> 'idempotent')::boolean, 'second task claim returns idempotent=true');
 select is(testutil.balance_of((select id from _ids where key = 'user'), 'KCOIN'), 77::numeric, 'second task claim does not credit again');
+select ok(testutil.raises_like(format('select api.task_claim_reward(%L::uuid, %L::uuid, %L, %L)', (select id::text from _ids where key = 'user'), (select id::text from _ids where key = 'task'), 'different-period', (select txt from _ids where key = 'claim_key')), '%idempotency conflict%'), 'task claim idempotency key cannot be reused for different inputs');
 
 insert into tasks.user_task_progress (user_id, task_id, period_key, progress_count, target_count, status)
 values ((select id from _ids where key = 'user'), (select id from _ids where key = 'task'), 'incomplete-period', 0, 1, 'in_progress')
 on conflict (user_id, task_id, period_key) do update set status = 'in_progress', progress_count = 0, updated_at = now();
-select ok(testutil.raises_like(format('select api.task_claim_reward(%L::uuid, %L::uuid, %L)', (select id::text from _ids where key = 'user'), (select id::text from _ids where key = 'task'), 'incomplete-period'), '%task is not completed%'), 'cannot claim incomplete task');
+select ok(testutil.raises_like(format('select api.task_claim_reward(%L::uuid, %L::uuid, %L, %L)', (select id::text from _ids where key = 'user'), (select id::text from _ids where key = 'task'), 'incomplete-period', 'task-claim-incomplete-001'), '%task is not completed%'), 'cannot claim incomplete task');
 
 with campaign as (
   insert into tasks.signin_campaigns (code, title, description, cycle_days, active, starts_at, ends_at)
@@ -104,13 +122,52 @@ insert into tasks.signin_days (campaign_id, day_index, reward, title)
 values ((select id from _ids where key = 'signin_campaign'), 1, '[{"currency":"FGEMS","amount":9}]'::jsonb, 'Day 1')
 on conflict (campaign_id, day_index) do update set reward = excluded.reward, title = excluded.title;
 
-insert into _ids (key, payload) select 'signin1', api.task_daily_check_in((select id from _ids where key = 'user'));
+insert into _ids (key, txt) values ('signin_key', 'task-signin-idem-001');
+insert into _ids (key, payload)
+select 'signin1', api.task_daily_check_in(
+  (select id from _ids where key = 'user'),
+  (select id from _ids where key = 'signin_campaign'),
+  current_date,
+  0,
+  (select txt from _ids where key = 'signin_key')
+);
 select is(((select payload from _ids where key = 'signin1') ->> 'day_index')::int, 1, 'first daily sign-in claims day 1');
+select is(((select payload from _ids where key = 'signin1') ->> 'current_streak')::int, 1, 'first daily sign-in returns current_streak=1');
 select is(testutil.balance_of((select id from _ids where key = 'user'), 'FGEMS'), 9::numeric, 'daily sign-in credits configured FGEMS reward');
+select is((select idempotency_key from tasks.user_signins where user_id = (select id from _ids where key = 'user') and campaign_id = (select id from _ids where key = 'signin_campaign') and signin_date = current_date), (select txt from _ids where key = 'signin_key'), 'daily sign-in stores idempotency_key');
+select ok((select request_fingerprint is not null from tasks.user_signins where user_id = (select id from _ids where key = 'user') and campaign_id = (select id from _ids where key = 'signin_campaign') and signin_date = current_date), 'daily sign-in stores request_fingerprint');
+select is((select current_streak from tasks.user_signin_states where user_id = (select id from _ids where key = 'user') and campaign_id = (select id from _ids where key = 'signin_campaign')), 1, 'daily sign-in updates user_signin_states.current_streak');
+select is((select cycle_position from tasks.user_signin_states where user_id = (select id from _ids where key = 'user') and campaign_id = (select id from _ids where key = 'signin_campaign')), 1, 'daily sign-in updates user_signin_states.cycle_position');
+select is((select last_signin_date from tasks.user_signin_states where user_id = (select id from _ids where key = 'user') and campaign_id = (select id from _ids where key = 'signin_campaign')), current_date, 'daily sign-in updates user_signin_states.last_signin_date');
+select is((select count(*)::int from ops.idempotency_keys where key = 'task_daily_check_in:' || (select txt from _ids where key = 'signin_key') and status = 'completed'), 1, 'daily sign-in stores completed API idempotency key');
+select is((select count(*)::int from economy.currency_ledger where idempotency_key like 'daily_check_in:' || (select txt from _ids where key = 'signin_key') || ':%'), 1, 'daily sign-in ledger key uses idempotency prefix');
 
-insert into _ids (key, payload) select 'signin_repeat', api.task_daily_check_in((select id from _ids where key = 'user'));
-select ok(((select payload from _ids where key = 'signin_repeat') ->> 'already_claimed')::boolean, 'second sign-in on same day returns already_claimed=true');
-select is(testutil.balance_of((select id from _ids where key = 'user'), 'FGEMS'), 9::numeric, 'same-day repeated sign-in does not credit again');
+insert into _ids (key, payload)
+select 'signin_repeat', api.task_daily_check_in(
+  (select id from _ids where key = 'user'),
+  (select id from _ids where key = 'signin_campaign'),
+  current_date,
+  0,
+  (select txt from _ids where key = 'signin_key')
+);
+select ok(((select payload from _ids where key = 'signin_repeat') ->> 'idempotent')::boolean, 'same sign-in idempotency key returns cached response');
+select is(testutil.balance_of((select id from _ids where key = 'user'), 'FGEMS'), 9::numeric, 'same idempotency key does not credit again');
+select ok(testutil.raises_like(format('select api.task_daily_check_in(%L::uuid, %L::uuid, current_date + 1, 0, %L)', (select id::text from _ids where key = 'user'), (select id::text from _ids where key = 'signin_campaign'), (select txt from _ids where key = 'signin_key')), '%idempotency conflict%'), 'sign-in idempotency key cannot be reused for different inputs');
+
+insert into _ids (key, payload)
+select 'signin_same_day_new_key', api.task_daily_check_in(
+  (select id from _ids where key = 'user'),
+  (select id from _ids where key = 'signin_campaign'),
+  current_date,
+  0,
+  'task-signin-idem-002'
+);
+select ok(((select payload from _ids where key = 'signin_same_day_new_key') ->> 'already_claimed')::boolean, 'same-day repeated sign-in with a new key returns already_claimed=true');
+select is(testutil.balance_of((select id from _ids where key = 'user'), 'FGEMS'), 9::numeric, 'same-day repeated sign-in with a new key does not credit again');
+
+insert into _ids (key, id) values ('legacy_user', testutil.make_user(10000000002, 'task_claim_legacy_user', null));
+insert into _ids (key, payload) select 'legacy_signin', api.task_daily_check_in((select id from _ids where key = 'legacy_user'));
+select ok(((select payload from _ids where key = 'legacy_signin') ? 'signin_id'), 'legacy sign-in wrapper still works');
 
 select * from finish();
 

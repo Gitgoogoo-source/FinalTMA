@@ -270,6 +270,60 @@ select ok(
   'user_signin_states has updated_at trigger'
 );
 
+select ok(
+  to_regprocedure('api.task_daily_check_in(uuid,uuid,date,integer,text)') is not null,
+  'task_daily_check_in has the Phase 4 idempotent signature'
+);
+
+select ok(
+  to_regprocedure('api.task_daily_check_in(uuid)') is not null,
+  'task_daily_check_in legacy wrapper still exists'
+);
+
+select ok(
+  to_regprocedure('api.task_claim_reward(uuid,uuid,text,text)') is not null,
+  'task_claim_reward has the Phase 4 idempotent signature'
+);
+
+select ok(
+  to_regprocedure('api.task_claim_reward(uuid,uuid,text)') is not null,
+  'task_claim_reward legacy wrapper still exists'
+);
+
+select ok(
+  (
+    select position('ops.idempotency_keys' in pg_get_functiondef(to_regprocedure('api.task_daily_check_in(uuid,uuid,date,integer,text)'))) > 0
+      and position('tasks.user_signin_states' in pg_get_functiondef(to_regprocedure('api.task_daily_check_in(uuid,uuid,date,integer,text)'))) > 0
+      and position('idempotency_key' in pg_get_functiondef(to_regprocedure('api.task_daily_check_in(uuid,uuid,date,integer,text)'))) > 0
+      and position('request_fingerprint' in pg_get_functiondef(to_regprocedure('api.task_daily_check_in(uuid,uuid,date,integer,text)'))) > 0
+  ),
+  'task_daily_check_in uses idempotency keys, request fingerprints and sign-in state'
+);
+
+select ok(
+  (
+    select position('ops.idempotency_keys' in pg_get_functiondef(to_regprocedure('api.task_claim_reward(uuid,uuid,text,text)'))) > 0
+      and position('tasks.task_claims' in pg_get_functiondef(to_regprocedure('api.task_claim_reward(uuid,uuid,text,text)'))) > 0
+      and position('idempotency_key' in pg_get_functiondef(to_regprocedure('api.task_claim_reward(uuid,uuid,text,text)'))) > 0
+      and position('request_fingerprint' in pg_get_functiondef(to_regprocedure('api.task_claim_reward(uuid,uuid,text,text)'))) > 0
+  ),
+  'task_claim_reward uses idempotency keys and request fingerprints'
+);
+
+select ok(
+  has_function_privilege('service_role', 'api.task_daily_check_in(uuid,uuid,date,integer,text)', 'EXECUTE')
+    and not has_function_privilege('anon', 'api.task_daily_check_in(uuid,uuid,date,integer,text)', 'EXECUTE')
+    and not has_function_privilege('authenticated', 'api.task_daily_check_in(uuid,uuid,date,integer,text)', 'EXECUTE'),
+  'task_daily_check_in Phase 4 signature is service-role only'
+);
+
+select ok(
+  has_function_privilege('service_role', 'api.task_claim_reward(uuid,uuid,text,text)', 'EXECUTE')
+    and not has_function_privilege('anon', 'api.task_claim_reward(uuid,uuid,text,text)', 'EXECUTE')
+    and not has_function_privilege('authenticated', 'api.task_claim_reward(uuid,uuid,text,text)', 'EXECUTE'),
+  'task_claim_reward Phase 4 signature is service-role only'
+);
+
 select * from finish();
 
 rollback;
