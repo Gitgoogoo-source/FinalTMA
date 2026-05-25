@@ -4544,6 +4544,7 @@ export type Database = {
       referral_commissions: {
         Row: {
           base_amount_kcoin: number;
+          claimed_at: string | null;
           commission_amount_kcoin: number;
           commission_bps: number;
           created_at: string;
@@ -4558,6 +4559,7 @@ export type Database = {
         };
         Insert: {
           base_amount_kcoin?: number;
+          claimed_at?: string | null;
           commission_amount_kcoin: number;
           commission_bps?: number;
           created_at?: string;
@@ -4572,6 +4574,7 @@ export type Database = {
         };
         Update: {
           base_amount_kcoin?: number;
+          claimed_at?: string | null;
           commission_amount_kcoin?: number;
           commission_bps?: number;
           created_at?: string;
@@ -4684,6 +4687,7 @@ export type Database = {
         Row: {
           created_at: string;
           id: string;
+          idempotency_key: string | null;
           payload: Json;
           share_type: string;
           target: string | null;
@@ -4692,6 +4696,7 @@ export type Database = {
         Insert: {
           created_at?: string;
           id?: string;
+          idempotency_key?: string | null;
           payload?: Json;
           share_type: string;
           target?: string | null;
@@ -4700,6 +4705,7 @@ export type Database = {
         Update: {
           created_at?: string;
           id?: string;
+          idempotency_key?: string | null;
           payload?: Json;
           share_type?: string;
           target?: string | null;
@@ -4788,8 +4794,10 @@ export type Database = {
         Row: {
           claimed_at: string;
           id: string;
+          idempotency_key: string | null;
           metadata: Json;
           period_key: string;
+          request_fingerprint: string | null;
           reward: Json;
           task_id: string;
           user_id: string;
@@ -4797,8 +4805,10 @@ export type Database = {
         Insert: {
           claimed_at?: string;
           id?: string;
+          idempotency_key?: string | null;
           metadata?: Json;
           period_key?: string;
+          request_fingerprint?: string | null;
           reward?: Json;
           task_id: string;
           user_id: string;
@@ -4806,8 +4816,10 @@ export type Database = {
         Update: {
           claimed_at?: string;
           id?: string;
+          idempotency_key?: string | null;
           metadata?: Json;
           period_key?: string;
+          request_fingerprint?: string | null;
           reward?: Json;
           task_id?: string;
           user_id?: string;
@@ -4926,6 +4938,8 @@ export type Database = {
           created_at: string;
           day_index: number;
           id: string;
+          idempotency_key: string | null;
+          request_fingerprint: string | null;
           reward: Json;
           signin_date: string;
           status: string;
@@ -4936,6 +4950,8 @@ export type Database = {
           created_at?: string;
           day_index: number;
           id?: string;
+          idempotency_key?: string | null;
+          request_fingerprint?: string | null;
           reward?: Json;
           signin_date?: string;
           status?: string;
@@ -4946,6 +4962,8 @@ export type Database = {
           created_at?: string;
           day_index?: number;
           id?: string;
+          idempotency_key?: string | null;
+          request_fingerprint?: string | null;
           reward?: Json;
           signin_date?: string;
           status?: string;
@@ -4954,6 +4972,50 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "user_signins_campaign_id_fkey";
+            columns: ["campaign_id"];
+            isOneToOne: false;
+            referencedRelation: "signin_campaigns";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      user_signin_states: {
+        Row: {
+          campaign_id: string;
+          created_at: string;
+          current_streak: number;
+          cycle_position: number;
+          last_signin_date: string | null;
+          metadata: Json;
+          total_signins: number;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          campaign_id: string;
+          created_at?: string;
+          current_streak?: number;
+          cycle_position?: number;
+          last_signin_date?: string | null;
+          metadata?: Json;
+          total_signins?: number;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          campaign_id?: string;
+          created_at?: string;
+          current_streak?: number;
+          cycle_position?: number;
+          last_signin_date?: string | null;
+          metadata?: Json;
+          total_signins?: number;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "user_signin_states_campaign_id_fkey";
             columns: ["campaign_id"];
             isOneToOne: false;
             referencedRelation: "signin_campaigns";
@@ -4970,6 +5032,7 @@ export type Database = {
           metadata: Json;
           period_key: string;
           progress_count: number;
+          source_events: Json;
           status: string;
           target_count: number;
           task_id: string;
@@ -4984,6 +5047,7 @@ export type Database = {
           metadata?: Json;
           period_key?: string;
           progress_count?: number;
+          source_events?: Json;
           status?: string;
           target_count?: number;
           task_id: string;
@@ -4998,6 +5062,7 @@ export type Database = {
           metadata?: Json;
           period_key?: string;
           progress_count?: number;
+          source_events?: Json;
           status?: string;
           target_count?: number;
           task_id?: string;
