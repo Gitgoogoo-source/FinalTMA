@@ -3,6 +3,7 @@ import { RefreshCw } from "lucide-react";
 
 import { getApiErrorMessage } from "@/api/errors";
 
+import { AlbumGrid } from "../components/AlbumGrid";
 import { AlbumProgress } from "../components/AlbumProgress";
 import { AlbumSeriesTabs } from "../components/AlbumSeriesTabs";
 import { useAlbumProgress } from "../hooks/useAlbumProgress";
@@ -105,6 +106,8 @@ export function AlbumPage() {
       />
 
       <AlbumProgress progress={progress} />
+
+      <AlbumGrid items={progress.items} />
     </section>
   );
 }
