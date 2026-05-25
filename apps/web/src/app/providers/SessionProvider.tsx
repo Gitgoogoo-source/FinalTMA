@@ -81,6 +81,7 @@ const SessionContext = createContext<SessionContextValue | null>(null);
 
 export function SessionProvider({ children }: SessionProviderProps) {
   const telegram = useTelegram();
+  const latestTelegramRef = useRef(telegram);
   const authInFlightRef = useRef(false);
   const [status, setStatus] = useState<SessionStatus>("idle");
   const [bootstrapStatus, setBootstrapStatus] =
@@ -94,6 +95,8 @@ export function SessionProvider({ children }: SessionProviderProps) {
   const [bootstrapError, setBootstrapError] = useState<SessionError | null>(
     null,
   );
+
+  latestTelegramRef.current = telegram;
 
   const clearSession = useCallback(() => {
     setStatus("idle");
@@ -144,11 +147,14 @@ export function SessionProvider({ children }: SessionProviderProps) {
       return;
     }
 
-    if (!telegram.initData) {
+    const latestTelegram = latestTelegramRef.current;
+
+    if (!latestTelegram.initData) {
       setStatus("error");
       setError({
         code: "AUTH_INIT_DATA_REQUIRED",
-        message: telegram.error ?? "缺少 Telegram initData，无法完成登录。",
+        message:
+          latestTelegram.error ?? "缺少 Telegram initData，无法完成登录。",
       });
       setUser(null);
       setSession(null);
@@ -164,7 +170,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
         API_ENDPOINTS.auth.telegram,
         {
           method: "POST",
-          body: buildTelegramLoginBody(telegram),
+          body: buildTelegramLoginBody(latestTelegram),
         },
       );
 
@@ -184,7 +190,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
     } finally {
       authInFlightRef.current = false;
     }
-  }, [reloadBootstrap, telegram]);
+  }, [reloadBootstrap]);
 
   useEffect(() => {
     if (!telegram.isReady) {
@@ -192,7 +198,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
     }
 
     void authenticate();
-  }, [authenticate, telegram.isReady]);
+  }, [authenticate, telegram.initData, telegram.isReady]);
 
   useEffect(() => {
     return setApiUnauthorizedHandler(() => {
