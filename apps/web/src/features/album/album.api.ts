@@ -2,9 +2,13 @@ import { apiRequest } from "@/api/client";
 import { API_ENDPOINTS } from "@/api/endpoints";
 
 import type {
+  AlbumBalanceChange,
   AlbumBook,
+  AlbumClaimRewardInput,
+  AlbumClaimRewardResponse,
   AlbumItem,
   AlbumMilestone,
+  AlbumMilestoneStatus,
   AlbumProgress,
   AlbumProgressQuery,
   AlbumRaritySummaryItem,
@@ -46,6 +50,27 @@ export async function fetchAlbumSeries(
   );
 
   return normalizeAlbumSeriesResponse(response);
+}
+
+export async function claimAlbumMilestoneReward(
+  input: AlbumClaimRewardInput,
+): Promise<AlbumClaimRewardResponse> {
+  const idempotencyKey =
+    input.idempotencyKey ?? createIdempotencyKey("album:claim");
+  const response = await apiRequest<unknown>(API_ENDPOINTS.album.claimReward, {
+    method: "POST",
+    body: compactRecord({
+      milestone_id: input.milestoneId,
+      book_id: input.bookId,
+      expected_milestone_version: input.expectedMilestoneVersion,
+      idempotency_key: idempotencyKey,
+    }),
+    headers: {
+      "X-Idempotency-Key": idempotencyKey,
+    },
+  });
+
+  return normalizeAlbumClaimRewardResponse(response);
 }
 
 export function normalizeAlbumProgress(response: unknown): AlbumProgress {
@@ -92,6 +117,40 @@ export function normalizeAlbumSeriesResponse(
       readString(payload.nextCursor) ?? readString(payload.next_cursor),
     serverTime:
       readString(payload.serverTime) ?? readString(payload.server_time),
+  };
+}
+
+export function normalizeAlbumClaimRewardResponse(
+  response: unknown,
+): AlbumClaimRewardResponse {
+  const payload = assertRecord(
+    response,
+    "Invalid album claim reward response.",
+  );
+  const milestoneId =
+    readString(payload.milestone_id) ?? readString(payload.milestoneId);
+  const bookId = readString(payload.book_id) ?? readString(payload.bookId);
+  const status = normalizeMilestoneStatus(payload.status);
+  const claimedAt =
+    readString(payload.claimed_at) ?? readString(payload.claimedAt);
+
+  if (!milestoneId || !bookId || status !== "claimed" || !claimedAt) {
+    throw new Error("Invalid album claim reward response.");
+  }
+
+  return {
+    milestoneId,
+    bookId,
+    status,
+    rewards: Array.isArray(payload.rewards)
+      ? payload.rewards.map(normalizeAlbumReward).filter(isAlbumReward)
+      : [],
+    balanceChanges: Array.isArray(payload.balance_changes)
+      ? payload.balance_changes
+          .map(normalizeAlbumBalanceChange)
+          .filter(isAlbumBalanceChange)
+      : [],
+    claimedAt,
   };
 }
 
@@ -259,7 +318,7 @@ function normalizeAlbumMilestone(value: unknown): AlbumMilestone | null {
   const milestoneId =
     readString(value.milestone_id) ?? readString(value.milestoneId);
   const bookId = readString(value.book_id) ?? readString(value.bookId);
-  const status = readString(value.status);
+  const status = normalizeMilestoneStatus(value.status);
 
   if (!milestoneId || !bookId || !status) {
     return null;
@@ -280,6 +339,49 @@ function normalizeAlbumMilestone(value: unknown): AlbumMilestone | null {
     claimedAt: readString(value.claimed_at) ?? readString(value.claimedAt),
     version: readNumber(value.version) ?? 0,
   };
+}
+
+function normalizeAlbumBalanceChange(
+  value: unknown,
+): AlbumBalanceChange | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const currency =
+    readString(value.currency) ?? readString(value.currency_code);
+  const delta = readNumber(value.delta);
+  const balanceAfter =
+    readNumber(value.balance_after) ?? readNumber(value.balanceAfter);
+
+  if (
+    (currency !== "KCOIN" && currency !== "FGEMS") ||
+    delta === null ||
+    balanceAfter === null
+  ) {
+    return null;
+  }
+
+  return {
+    currency,
+    delta,
+    balanceAfter,
+  };
+}
+
+function normalizeMilestoneStatus(value: unknown): AlbumMilestoneStatus | null {
+  const normalized = readString(value)?.toLowerCase();
+
+  if (
+    normalized === "locked" ||
+    normalized === "claimable" ||
+    normalized === "claimed" ||
+    normalized === "expired"
+  ) {
+    return normalized;
+  }
+
+  return null;
 }
 
 function normalizeAlbumReward(value: unknown): AlbumReward | null {
@@ -374,6 +476,12 @@ function isAlbumMilestone(
   return value !== null;
 }
 
+function isAlbumBalanceChange(
+  value: AlbumBalanceChange | null,
+): value is AlbumBalanceChange {
+  return value !== null;
+}
+
 function isAlbumReward(value: AlbumReward | null): value is AlbumReward {
   return value !== null;
 }
@@ -386,6 +494,17 @@ function isSeriesSummaryItem(
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function assertRecord(
+  value: unknown,
+  message: string,
+): Record<string, unknown> {
+  if (!isRecord(value)) {
+    throw new Error(message);
+  }
+
+  return value;
 }
 
 function readString(value: unknown): string | null {
@@ -439,4 +558,23 @@ function calculateCompletionPercent(
   }
 
   return Math.round((collectedCount / totalCount) * 10000) / 100;
+}
+
+function compactRecord(
+  value: Record<string, unknown>,
+): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(value).filter(
+      ([, entry]) => entry !== undefined && entry !== null,
+    ),
+  );
+}
+
+function createIdempotencyKey(prefix: string): string {
+  const randomPart =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+  return `${prefix}:${randomPart}`;
 }

@@ -61,16 +61,44 @@ export type AlbumReward = {
   iconUrl: string | null;
 };
 
+export type AlbumMilestoneStatus =
+  | "locked"
+  | "claimable"
+  | "claimed"
+  | "expired";
+
 export type AlbumMilestone = {
   milestoneId: string;
   bookId: string;
   requiredCount: number;
   requiredPercent: number | null;
   title: string | null;
-  status: string;
+  status: AlbumMilestoneStatus;
   rewards: AlbumReward[];
   claimedAt: string | null;
   version: number;
+};
+
+export type AlbumClaimRewardInput = {
+  milestoneId: string;
+  bookId?: string | null;
+  expectedMilestoneVersion?: number | null;
+  idempotencyKey?: string | null;
+};
+
+export type AlbumBalanceChange = {
+  currency: "KCOIN" | "FGEMS";
+  delta: number;
+  balanceAfter: number;
+};
+
+export type AlbumClaimRewardResponse = {
+  milestoneId: string;
+  bookId: string;
+  status: "claimed";
+  rewards: AlbumReward[];
+  balanceChanges: AlbumBalanceChange[];
+  claimedAt: string;
 };
 
 export type AlbumRaritySummaryItem = {
