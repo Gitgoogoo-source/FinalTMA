@@ -153,7 +153,7 @@ describe("album claim reward API", () => {
           available_after: 43,
         },
       ],
-      claimed_at: "2026-05-24T15:00:00.000Z",
+      claimed_at: "2026-05-24T15:00:00+00:00",
     });
 
     const result = await invokeApiHandler<ApiSuccessResponse>(

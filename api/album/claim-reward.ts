@@ -115,7 +115,7 @@ export function normalizeAlbumClaimMilestonePayload(
   );
   const milestoneId = readString(result.milestone_id) ?? fallbackMilestoneId;
   const bookId = readString(result.book_id);
-  const claimedAt = readString(result.claimed_at);
+  const claimedAt = readIsoDateString(result.claimed_at);
 
   if (!bookId || !claimedAt) {
     throw invalidAlbumResult(
@@ -342,6 +342,18 @@ function readString(value: unknown): string | null {
 
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
+}
+
+function readIsoDateString(value: unknown): string | null {
+  const text = readString(value);
+
+  if (!text) {
+    return null;
+  }
+
+  const timestamp = Date.parse(text);
+
+  return Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : null;
 }
 
 function readNumber(value: unknown): number | null {
