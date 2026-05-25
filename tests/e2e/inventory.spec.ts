@@ -106,6 +106,46 @@ test("合成面板选择材料并展示成功结果", async ({ page }) => {
   ).toBeVisible();
 });
 
+test("合成失败后返还主藏品并消耗其他材料", async ({ page }) => {
+  await mockFirstPhaseApi(page, { evolveOutcome: "failed" });
+
+  await page.goto(
+    `/collection?mockInitData=${encodeURIComponent(TEST_INIT_DATA)}`,
+  );
+
+  await expect(page.getByLabel("K-coin 余额").getByText("1,200")).toBeVisible();
+
+  await page.getByRole("button", { name: "详情" }).click();
+  await page.getByRole("button", { name: /合成/ }).click();
+
+  const evolveDialog = page.getByRole("dialog", { name: "森林幼芽" });
+  await expect(evolveDialog).toBeVisible();
+  await expect(evolveDialog.getByText("成功率")).toBeVisible();
+  await expect(evolveDialog.getByText("50%")).toBeVisible();
+  await expect(evolveDialog.getByText("主藏品", { exact: true })).toBeVisible();
+
+  await evolveDialog.getByRole("button", { name: "确认合成" }).click();
+
+  const resultDialog = page.getByRole("dialog", { name: "合成失败" });
+  await expect(resultDialog).toBeVisible();
+  await expect(
+    resultDialog.getByText("合成失败，已返还主藏品。"),
+  ).toBeVisible();
+  await expect(
+    resultDialog.getByText("已返还主藏品", { exact: true }),
+  ).toBeVisible();
+  await expect(resultDialog.getByText("消耗材料")).toBeVisible();
+  await expect(resultDialog.getByText("2 件")).toBeVisible();
+  await expect(resultDialog.getByText("1,200 -> 1,000")).toBeVisible();
+
+  await resultDialog.getByRole("button", { name: "确认" }).click();
+  await expect(page.getByText("Lv.3", { exact: true }).first()).toBeVisible();
+  await expect(page.getByLabel("K-coin 余额").getByText("1,000")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "森林幼芽·进化" }),
+  ).toHaveCount(0);
+});
+
 test("分解面板二次确认后展示获得 Fgems", async ({ page }) => {
   await mockFirstPhaseApi(page);
 

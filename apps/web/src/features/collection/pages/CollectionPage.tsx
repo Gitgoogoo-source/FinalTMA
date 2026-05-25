@@ -325,7 +325,7 @@ function formatEvolveResultDescription(
 
   return result.success
     ? "新形态已由服务端生成，库存和资产正在刷新。"
-    : "合成失败，服务端已按规则返还主藏品。";
+    : "合成失败，已返还主藏品。";
 }
 
 function formatEvolveBalanceChange(

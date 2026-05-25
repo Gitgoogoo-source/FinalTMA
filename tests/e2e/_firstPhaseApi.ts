@@ -14,12 +14,21 @@ const TARGET_FORM_ID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbc";
 export const TEST_INIT_DATA =
   "auth_date=1779321600&query_id=e2e-query&user=%7B%22id%22%3A7001%2C%22first_name%22%3A%22%E6%B5%8B%E8%AF%95%22%7D&hash=e2e";
 
-export async function mockFirstPhaseApi(page: Page): Promise<void> {
+type MockFirstPhaseApiOptions = {
+  evolveOutcome?: "success" | "failed";
+};
+
+export async function mockFirstPhaseApi(
+  page: Page,
+  options: MockFirstPhaseApiOptions = {},
+): Promise<void> {
+  const evolveOutcome = options.evolveOutcome ?? "success";
   let inventoryLevel = 1;
   let inventoryPower = 10;
   let fgemsAvailable = 80;
   let kcoinAvailable = 1200;
   let inventoryEvolved = false;
+  const consumedItemIds = new Set<string>();
   const decomposedItemIds = new Set<string>();
 
   await page.route("**/api/auth/telegram", (route) =>
@@ -204,7 +213,11 @@ export async function mockFirstPhaseApi(page: Page): Promise<void> {
       inventoryEvolved,
       inventoryLevel,
       inventoryPower,
-    }).filter((item) => !decomposedItemIds.has(item.item_instance_id));
+    }).filter(
+      (item) =>
+        !consumedItemIds.has(item.item_instance_id) &&
+        !decomposedItemIds.has(item.item_instance_id),
+    );
 
     return fulfillOk(route, {
       items,
@@ -347,16 +360,48 @@ export async function mockFirstPhaseApi(page: Page): Promise<void> {
     const balanceBefore = kcoinAvailable;
 
     kcoinAvailable -= 200;
-    inventoryEvolved = true;
+
+    if (evolveOutcome === "success") {
+      inventoryEvolved = true;
+
+      return fulfillOk(route, {
+        result: "success",
+        success: true,
+        attempt_id: "77777777-7777-4777-8777-777777777779",
+        source_item_instance_ids: sourceIds,
+        consumed_item_instance_ids: sourceIds,
+        returned_item_instance_id: null,
+        created_item_instance_id: EVOLVED_ITEM_INSTANCE_ID,
+        main_item_instance_id: ITEM_INSTANCE_ID_3,
+        consumed_kcoin: 200,
+        cost_kcoin: 200,
+        kcoin_balance_before: balanceBefore,
+        kcoin_balance_after: kcoinAvailable,
+        balance_change: -200,
+        ledger_id: "77777777-7777-4777-8777-777777777780",
+        success_rate_bps: 5000,
+        random_roll_bps: 2500,
+        evolved_at: "2026-05-21T00:00:03.000Z",
+        idempotent: false,
+      });
+    }
+
+    for (const itemInstanceId of sourceIds) {
+      if (itemInstanceId !== ITEM_INSTANCE_ID_3) {
+        consumedItemIds.add(itemInstanceId);
+      }
+    }
 
     await fulfillOk(route, {
-      result: "success",
-      success: true,
+      result: "failed",
+      success: false,
       attempt_id: "77777777-7777-4777-8777-777777777779",
       source_item_instance_ids: sourceIds,
-      consumed_item_instance_ids: sourceIds,
-      returned_item_instance_id: null,
-      created_item_instance_id: EVOLVED_ITEM_INSTANCE_ID,
+      consumed_item_instance_ids: sourceIds.filter(
+        (itemInstanceId) => itemInstanceId !== ITEM_INSTANCE_ID_3,
+      ),
+      returned_item_instance_id: ITEM_INSTANCE_ID_3,
+      created_item_instance_id: null,
       main_item_instance_id: ITEM_INSTANCE_ID_3,
       consumed_kcoin: 200,
       cost_kcoin: 200,
@@ -365,7 +410,7 @@ export async function mockFirstPhaseApi(page: Page): Promise<void> {
       balance_change: -200,
       ledger_id: "77777777-7777-4777-8777-777777777780",
       success_rate_bps: 5000,
-      random_roll_bps: 2500,
+      random_roll_bps: 7500,
       evolved_at: "2026-05-21T00:00:03.000Z",
       idempotent: false,
     });
