@@ -53,6 +53,26 @@ const SERIES_ID = "33333333-3333-4333-8333-333333333333";
 const TEMPLATE_ID = "44444444-4444-4444-8444-444444444444";
 const FORM_ID = "55555555-5555-4555-8555-555555555555";
 const MILESTONE_ID = "66666666-6666-4666-8666-666666666666";
+const FORGED_USER_ID = "99999999-9999-4999-8999-999999999999";
+
+function expectStandardSuccessEnvelope(body: ApiSuccessResponse): void {
+  expect(body).toMatchObject({
+    ok: true,
+    success: true,
+    data: expect.any(Object),
+  });
+}
+
+function expectStandardErrorEnvelope(body: ApiErrorResponse): void {
+  expect(body).toMatchObject({
+    ok: false,
+    success: false,
+    error: {
+      code: expect.any(String),
+      message: expect.any(String),
+    },
+  });
+}
 
 describe("album API", () => {
   beforeEach(() => {
@@ -138,6 +158,7 @@ describe("album API", () => {
     });
 
     expect(result.statusCode).toBe(200);
+    expectStandardSuccessEnvelope(result.body);
     expect(callRpcRawMock).toHaveBeenCalledWith(
       "album_get_progress",
       expect.objectContaining({
@@ -200,7 +221,71 @@ describe("album API", () => {
     });
 
     expect(result.statusCode).toBe(401);
+    expectStandardErrorEnvelope(result.body);
     expect(result.body.error.code).toBe("UNAUTHORIZED");
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+  });
+
+  it("progress rejects incomplete scoped filters before calling RPC", async () => {
+    const result = await invokeApiHandler<ApiErrorResponse>(progressHandler, {
+      method: "GET",
+      query: {
+        book_type: "series",
+      },
+    });
+
+    expect(result.statusCode).toBe(400);
+    expectStandardErrorEnvelope(result.body);
+    expect(result.body.error.code).toBe("VALIDATION_ERROR");
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+  });
+
+  it("progress rejects forged user_id query fields before calling RPC", async () => {
+    const result = await invokeApiHandler<ApiErrorResponse>(progressHandler, {
+      method: "GET",
+      query: {
+        user_id: FORGED_USER_ID,
+      },
+    });
+
+    expect(result.statusCode).toBe(400);
+    expectStandardErrorEnvelope(result.body);
+    expect(result.body.error.code).toBe("VALIDATION_ERROR");
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+  });
+
+  it("progress maps RPC failures to a stable error code", async () => {
+    callRpcRawMock.mockRejectedValueOnce(
+      new RpcError({
+        rpcName: "album_get_progress",
+        error: {
+          message: "database is unavailable",
+        },
+      }),
+    );
+
+    const result = await invokeApiHandler<ApiErrorResponse>(progressHandler, {
+      method: "GET",
+    });
+
+    expect(result.statusCode).toBe(500);
+    expectStandardErrorEnvelope(result.body);
+    expect(result.body.error.code).toBe("ALBUM_PROGRESS_RPC_FAILED");
+    expect(result.body.error.message).toBe("Internal server error");
+  });
+
+  it("requires a session before album series can call RPC", async () => {
+    requireSessionMock.mockRejectedValueOnce(
+      ApiError.authSessionExpired("登录状态缺失，请重新进入应用。"),
+    );
+
+    const result = await invokeApiHandler<ApiErrorResponse>(seriesHandler, {
+      method: "GET",
+    });
+
+    expect(result.statusCode).toBe(401);
+    expectStandardErrorEnvelope(result.body);
+    expect(result.body.error.code).toBe("AUTH_SESSION_EXPIRED");
     expect(callRpcRawMock).not.toHaveBeenCalled();
   });
 
@@ -239,6 +324,7 @@ describe("album API", () => {
     });
 
     expect(result.statusCode).toBe(200);
+    expectStandardSuccessEnvelope(result.body);
     expect(callRpcRawMock).toHaveBeenCalledWith(
       "album_list_books",
       {
@@ -285,7 +371,22 @@ describe("album API", () => {
     });
 
     expect(result.statusCode).toBe(400);
+    expectStandardErrorEnvelope(result.body);
     expect(result.body.error.code).toBe("BAD_REQUEST");
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+  });
+
+  it("series rejects forged user_id query fields before calling RPC", async () => {
+    const result = await invokeApiHandler<ApiErrorResponse>(seriesHandler, {
+      method: "GET",
+      query: {
+        user_id: FORGED_USER_ID,
+      },
+    });
+
+    expect(result.statusCode).toBe(400);
+    expectStandardErrorEnvelope(result.body);
+    expect(result.body.error.code).toBe("VALIDATION_ERROR");
     expect(callRpcRawMock).not.toHaveBeenCalled();
   });
 
@@ -304,6 +405,7 @@ describe("album API", () => {
     });
 
     expect(result.statusCode).toBe(500);
+    expectStandardErrorEnvelope(result.body);
     expect(result.body.error.code).toBe("ALBUM_SERIES_RPC_FAILED");
   });
 
@@ -364,6 +466,7 @@ describe("album API", () => {
     });
 
     expect(result.statusCode).toBe(200);
+    expectStandardSuccessEnvelope(result.body);
     expect(callRpcRawMock).toHaveBeenCalledWith(
       "album_get_progress",
       expect.objectContaining({
@@ -413,6 +516,7 @@ describe("album API", () => {
     });
 
     expect(result.statusCode).toBe(400);
+    expectStandardErrorEnvelope(result.body);
     expect(result.body.error.code).toBe("BAD_REQUEST");
     expect(callRpcRawMock).not.toHaveBeenCalled();
   });

@@ -7,6 +7,7 @@ import {
 } from "../../api/_shared/handler";
 import leaderboardHandler from "../../api/album/leaderboard";
 import refreshLeaderboardCronHandler from "../../api/cron/refresh-leaderboard";
+import { RpcError } from "../../packages/server/src/db/rpc";
 import { invokeApiHandler } from "./_utils";
 
 const { callRpcRawMock, requireSessionMock } = vi.hoisted(() => ({
@@ -48,6 +49,25 @@ vi.mock("../../api/_shared/requireSession.js", () => ({
 const USER_ID = "11111111-1111-4111-8111-111111111111";
 const BOARD_ID = "22222222-2222-4222-8222-222222222222";
 const OTHER_USER_ID = "33333333-3333-4333-8333-333333333333";
+
+function expectStandardSuccessEnvelope(body: ApiSuccessResponse): void {
+  expect(body).toMatchObject({
+    ok: true,
+    success: true,
+    data: expect.any(Object),
+  });
+}
+
+function expectStandardErrorEnvelope(body: ApiErrorResponse): void {
+  expect(body).toMatchObject({
+    ok: false,
+    success: false,
+    error: {
+      code: expect.any(String),
+      message: expect.any(String),
+    },
+  });
+}
 
 describe("album leaderboard API", () => {
   beforeEach(() => {
@@ -122,6 +142,7 @@ describe("album leaderboard API", () => {
     });
 
     expect(result.statusCode).toBe(200);
+    expectStandardSuccessEnvelope(result.body);
     expect(callRpcRawMock).toHaveBeenCalledWith(
       "album_get_leaderboard",
       {
@@ -185,6 +206,7 @@ describe("album leaderboard API", () => {
     );
 
     expect(result.statusCode).toBe(401);
+    expectStandardErrorEnvelope(result.body);
     expect(result.body.error.code).toBe("AUTH_SESSION_EXPIRED");
     expect(callRpcRawMock).not.toHaveBeenCalled();
   });
@@ -201,6 +223,7 @@ describe("album leaderboard API", () => {
     );
 
     expect(result.statusCode).toBe(400);
+    expectStandardErrorEnvelope(result.body);
     expect(result.body.error.code).toBe("BAD_REQUEST");
     expect(callRpcRawMock).not.toHaveBeenCalled();
   });
@@ -218,6 +241,7 @@ describe("album leaderboard API", () => {
     );
 
     expect(result.statusCode).toBe(400);
+    expectStandardErrorEnvelope(result.body);
     expect(result.body.error.code).toBe("BAD_REQUEST");
     expect(result.body.error.details).toMatchObject({
       unsupported: ["scope", "rarity"],
@@ -237,6 +261,7 @@ describe("album leaderboard API", () => {
     );
 
     expect(result.statusCode).toBe(400);
+    expectStandardErrorEnvelope(result.body);
     expect(result.body.error.code).toBe("BAD_REQUEST");
     expect(result.body.error.details).toMatchObject({
       unsupported: ["period"],
@@ -256,11 +281,34 @@ describe("album leaderboard API", () => {
     );
 
     expect(result.statusCode).toBe(400);
+    expectStandardErrorEnvelope(result.body);
     expect(result.body.error.code).toBe("BAD_REQUEST");
     expect(result.body.error.details).toMatchObject({
       unsupported: ["around_me"],
     });
     expect(callRpcRawMock).not.toHaveBeenCalled();
+  });
+
+  it("maps missing leaderboards to a stable not found error", async () => {
+    callRpcRawMock.mockRejectedValueOnce(
+      new RpcError({
+        rpcName: "album_get_leaderboard",
+        error: {
+          message: "leaderboard not found",
+        },
+      }),
+    );
+
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      leaderboardHandler,
+      {
+        method: "GET",
+      },
+    );
+
+    expect(result.statusCode).toBe(404);
+    expectStandardErrorEnvelope(result.body);
+    expect(result.body.error.code).toBe("LEADERBOARD_NOT_FOUND");
   });
 });
 
@@ -302,6 +350,7 @@ describe("album leaderboard refresh cron API", () => {
     });
 
     expect(result.statusCode).toBe(200);
+    expectStandardSuccessEnvelope(result.body);
     expect(callRpcRawMock).toHaveBeenCalledWith(
       "album_refresh_weekly_leaderboard",
       {
@@ -337,6 +386,7 @@ describe("album leaderboard refresh cron API", () => {
     );
 
     expect(result.statusCode).toBe(401);
+    expectStandardErrorEnvelope(result.body);
     expect(result.body.error.code).toBe("CRON_UNAUTHORIZED");
     expect(callRpcRawMock).not.toHaveBeenCalled();
   });
@@ -354,6 +404,7 @@ describe("album leaderboard refresh cron API", () => {
     );
 
     expect(result.statusCode).toBe(500);
+    expectStandardErrorEnvelope(result.body);
     expect(result.body.error.code).toBe("CRON_SECRET_MISSING");
     expect(callRpcRawMock).not.toHaveBeenCalled();
   });

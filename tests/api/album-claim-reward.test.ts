@@ -52,6 +52,25 @@ const BOOK_ID = "33333333-3333-4333-8333-333333333333";
 const IDEMPOTENCY_KEY = "album:claim-reward-focused-0001";
 const BODY_IDEMPOTENCY_KEY = "album:claim-reward-body";
 
+function expectStandardSuccessEnvelope(body: ApiSuccessResponse): void {
+  expect(body).toMatchObject({
+    ok: true,
+    success: true,
+    data: expect.any(Object),
+  });
+}
+
+function expectStandardErrorEnvelope(body: ApiErrorResponse): void {
+  expect(body).toMatchObject({
+    ok: false,
+    success: false,
+    error: {
+      code: expect.any(String),
+      message: expect.any(String),
+    },
+  });
+}
+
 describe("album claim reward API", () => {
   beforeEach(() => {
     process.env.NODE_ENV = "test";
@@ -80,6 +99,7 @@ describe("album claim reward API", () => {
     );
 
     expect(result.statusCode).toBe(401);
+    expectStandardErrorEnvelope(result.body);
     expect(result.body.error.code).toBe("AUTH_SESSION_EXPIRED");
     expect(callRpcRawMock).not.toHaveBeenCalled();
   });
@@ -98,6 +118,7 @@ describe("album claim reward API", () => {
     );
 
     expect(result.statusCode).toBe(400);
+    expectStandardErrorEnvelope(result.body);
     expect(result.body.error.code).toBe("VALIDATION_ERROR");
     expect(callRpcRawMock).not.toHaveBeenCalled();
   });
@@ -114,6 +135,7 @@ describe("album claim reward API", () => {
     );
 
     expect(result.statusCode).toBe(400);
+    expectStandardErrorEnvelope(result.body);
     expect(result.body.error.code).toBe("VALIDATION_ERROR");
     expect(callRpcRawMock).not.toHaveBeenCalled();
   });
@@ -151,6 +173,7 @@ describe("album claim reward API", () => {
     );
 
     expect(result.statusCode).toBe(200);
+    expectStandardSuccessEnvelope(result.body);
     expect(callRpcRawMock).toHaveBeenCalledWith(
       "album_claim_milestone",
       {
@@ -192,6 +215,32 @@ describe("album claim reward API", () => {
     });
   });
 
+  it("maps missing milestones to a stable not found error", async () => {
+    callRpcRawMock.mockRejectedValueOnce(
+      new RpcError({
+        rpcName: "album_claim_milestone",
+        error: {
+          message: "milestone not found",
+        },
+      }),
+    );
+
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      claimRewardHandler,
+      {
+        method: "POST",
+        body: {
+          milestone_id: MILESTONE_ID,
+          idempotency_key: IDEMPOTENCY_KEY,
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(404);
+    expectStandardErrorEnvelope(result.body);
+    expect(result.body.error.code).toBe("MILESTONE_NOT_FOUND");
+  });
+
   it("maps unreached milestones to a stable conflict", async () => {
     callRpcRawMock.mockRejectedValueOnce(
       new RpcError({
@@ -214,6 +263,7 @@ describe("album claim reward API", () => {
     );
 
     expect(result.statusCode).toBe(409);
+    expectStandardErrorEnvelope(result.body);
     expect(result.body.error.code).toBe("MILESTONE_NOT_REACHED");
   });
 
@@ -240,6 +290,60 @@ describe("album claim reward API", () => {
     );
 
     expect(result.statusCode).toBe(409);
+    expectStandardErrorEnvelope(result.body);
     expect(result.body.error.code).toBe("MILESTONE_VERSION_MISMATCH");
+  });
+
+  it("maps idempotency conflicts to a stable conflict", async () => {
+    callRpcRawMock.mockRejectedValueOnce(
+      new RpcError({
+        rpcName: "album_claim_milestone",
+        error: {
+          message: "idempotency conflict",
+        },
+      }),
+    );
+
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      claimRewardHandler,
+      {
+        method: "POST",
+        body: {
+          milestone_id: MILESTONE_ID,
+          idempotency_key: IDEMPOTENCY_KEY,
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(409);
+    expectStandardErrorEnvelope(result.body);
+    expect(result.body.error.code).toBe("IDEMPOTENCY_CONFLICT");
+  });
+
+  it("maps invalid reward configuration without exposing database details", async () => {
+    callRpcRawMock.mockRejectedValueOnce(
+      new RpcError({
+        rpcName: "album_claim_milestone",
+        error: {
+          message: "invalid reward config",
+        },
+      }),
+    );
+
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      claimRewardHandler,
+      {
+        method: "POST",
+        body: {
+          milestone_id: MILESTONE_ID,
+          idempotency_key: IDEMPOTENCY_KEY,
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(500);
+    expectStandardErrorEnvelope(result.body);
+    expect(result.body.error.code).toBe("REWARD_CONFIG_INVALID");
+    expect(result.body.error.message).toBe("Internal server error");
   });
 });

@@ -60,6 +60,25 @@ const IDEMPOTENCY_KEY = "inventory:growth-api-0001";
 const BODY_IDEMPOTENCY_KEY = "inventory:growth-api-body";
 const LEDGER_ID = "88888888-8888-4888-8888-888888888888";
 
+function expectStandardSuccessEnvelope(body: ApiSuccessResponse): void {
+  expect(body).toMatchObject({
+    ok: true,
+    success: true,
+    data: expect.any(Object),
+  });
+}
+
+function expectStandardErrorEnvelope(body: ApiErrorResponse): void {
+  expect(body).toMatchObject({
+    ok: false,
+    success: false,
+    error: {
+      code: expect.any(String),
+      message: expect.any(String),
+    },
+  });
+}
+
 describe("inventory growth API", () => {
   beforeEach(() => {
     process.env.NODE_ENV = "test";
@@ -101,6 +120,7 @@ describe("inventory growth API", () => {
     });
 
     expect(result.statusCode).toBe(200);
+    expectStandardSuccessEnvelope(result.body);
     expect(callRpcRawMock).toHaveBeenCalledWith(
       "inventory_get_item_detail",
       expect.objectContaining({
@@ -184,6 +204,76 @@ describe("inventory growth API", () => {
     expect(callRpcRawMock).not.toHaveBeenCalled();
   });
 
+  it("detail rejects invalid item ids before calling RPC", async () => {
+    const result = await invokeApiHandler<ApiErrorResponse>(detailHandler, {
+      method: "GET",
+      query: {
+        item_instance_id: "not-a-uuid",
+      },
+    });
+
+    expect(result.statusCode).toBe(400);
+    expectStandardErrorEnvelope(result.body);
+    expect(result.body.error.code).toBe("VALIDATION_ERROR");
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+  });
+
+  it("detail rejects forged user_id query fields before calling RPC", async () => {
+    const result = await invokeApiHandler<ApiErrorResponse>(detailHandler, {
+      method: "GET",
+      query: {
+        item_instance_id: ITEM_ID,
+        user_id: FORGED_USER_ID,
+      },
+    });
+
+    expect(result.statusCode).toBe(400);
+    expectStandardErrorEnvelope(result.body);
+    expect(result.body.error.code).toBe("VALIDATION_ERROR");
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+  });
+
+  it("detail maps non-owner items to a stable forbidden error", async () => {
+    callRpcRawMock.mockRejectedValueOnce(
+      new RpcError({
+        rpcName: "inventory_get_item_detail",
+        error: {
+          message: "not item owner",
+        },
+      }),
+    );
+
+    const result = await invokeApiHandler<ApiErrorResponse>(detailHandler, {
+      method: "GET",
+      query: {
+        item_instance_id: ITEM_ID,
+      },
+    });
+
+    expect(result.statusCode).toBe(403);
+    expectStandardErrorEnvelope(result.body);
+    expect(result.body.error.code).toBe("ITEM_NOT_OWNER");
+  });
+
+  it("requires a session before upgrade can call RPC", async () => {
+    requireSessionMock.mockRejectedValueOnce(
+      ApiError.authSessionExpired("登录状态缺失，请重新进入应用。"),
+    );
+
+    const result = await invokeApiHandler<ApiErrorResponse>(upgradeHandler, {
+      method: "POST",
+      body: {
+        item_instance_id: ITEM_ID,
+        idempotency_key: IDEMPOTENCY_KEY,
+      },
+    });
+
+    expect(result.statusCode).toBe(401);
+    expectStandardErrorEnvelope(result.body);
+    expect(result.body.error.code).toBe("AUTH_SESSION_EXPIRED");
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+  });
+
   it("upgrade rejects forged user_id before calling RPC", async () => {
     const result = await invokeApiHandler<ApiErrorResponse>(upgradeHandler, {
       method: "POST",
@@ -195,6 +285,7 @@ describe("inventory growth API", () => {
     });
 
     expect(result.statusCode).toBe(400);
+    expectStandardErrorEnvelope(result.body);
     expect(result.body.error.code).toBe("VALIDATION_ERROR");
     expect(callRpcRawMock).not.toHaveBeenCalled();
   });
@@ -226,6 +317,7 @@ describe("inventory growth API", () => {
     });
 
     expect(result.statusCode).toBe(200);
+    expectStandardSuccessEnvelope(result.body);
     expect(callRpcRawMock).toHaveBeenCalledWith(
       "inventory_upgrade_item",
       {
@@ -254,6 +346,29 @@ describe("inventory growth API", () => {
     });
   });
 
+  it("upgrade maps non-owner items to a stable forbidden error", async () => {
+    callRpcRawMock.mockRejectedValueOnce(
+      new RpcError({
+        rpcName: "inventory_upgrade_item",
+        error: {
+          message: "not item owner",
+        },
+      }),
+    );
+
+    const result = await invokeApiHandler<ApiErrorResponse>(upgradeHandler, {
+      method: "POST",
+      body: {
+        item_instance_id: ITEM_ID,
+        idempotency_key: IDEMPOTENCY_KEY,
+      },
+    });
+
+    expect(result.statusCode).toBe(403);
+    expectStandardErrorEnvelope(result.body);
+    expect(result.body.error.code).toBe("ITEM_NOT_OWNER");
+  });
+
   it("upgrade maps unavailable items to a stable conflict", async () => {
     callRpcRawMock.mockRejectedValueOnce(
       new RpcError({
@@ -273,7 +388,129 @@ describe("inventory growth API", () => {
     });
 
     expect(result.statusCode).toBe(409);
+    expectStandardErrorEnvelope(result.body);
     expect(result.body.error.code).toBe("ITEM_NOT_AVAILABLE");
+  });
+
+  it("upgrade maps insufficient FGEMS to a stable conflict", async () => {
+    callRpcRawMock.mockRejectedValueOnce(
+      new RpcError({
+        rpcName: "inventory_upgrade_item",
+        error: {
+          message:
+            "insufficient balance: currency FGEMS, available 0, required 80",
+        },
+      }),
+    );
+
+    const result = await invokeApiHandler<ApiErrorResponse>(upgradeHandler, {
+      method: "POST",
+      body: {
+        item_instance_id: ITEM_ID,
+        idempotency_key: IDEMPOTENCY_KEY,
+      },
+    });
+
+    expect(result.statusCode).toBe(409);
+    expectStandardErrorEnvelope(result.body);
+    expect(result.body.error.code).toBe("INSUFFICIENT_FGEMS");
+  });
+
+  it("upgrade maps missing rules without exposing database details", async () => {
+    callRpcRawMock.mockRejectedValueOnce(
+      new RpcError({
+        rpcName: "inventory_upgrade_item",
+        error: {
+          message: "upgrade rule not found",
+        },
+      }),
+    );
+
+    const result = await invokeApiHandler<ApiErrorResponse>(upgradeHandler, {
+      method: "POST",
+      body: {
+        item_instance_id: ITEM_ID,
+        idempotency_key: IDEMPOTENCY_KEY,
+      },
+    });
+
+    expect(result.statusCode).toBe(500);
+    expectStandardErrorEnvelope(result.body);
+    expect(result.body.error.code).toBe("UPGRADE_RULE_NOT_FOUND");
+    expect(result.body.error.message).toBe("Internal server error");
+  });
+
+  it("upgrade maps idempotency conflicts to a stable conflict", async () => {
+    callRpcRawMock.mockRejectedValueOnce(
+      new RpcError({
+        rpcName: "inventory_upgrade_item",
+        error: {
+          message: "idempotency conflict",
+        },
+      }),
+    );
+
+    const result = await invokeApiHandler<ApiErrorResponse>(upgradeHandler, {
+      method: "POST",
+      body: {
+        item_instance_id: ITEM_ID,
+        idempotency_key: IDEMPOTENCY_KEY,
+      },
+    });
+
+    expect(result.statusCode).toBe(409);
+    expectStandardErrorEnvelope(result.body);
+    expect(result.body.error.code).toBe("IDEMPOTENCY_CONFLICT");
+  });
+
+  it("requires a session before evolve can call RPC", async () => {
+    requireSessionMock.mockRejectedValueOnce(
+      ApiError.authSessionExpired("登录状态缺失，请重新进入应用。"),
+    );
+
+    const result = await invokeApiHandler<ApiErrorResponse>(evolveHandler, {
+      method: "POST",
+      body: {
+        source_item_instance_ids: [ITEM_ID, ITEM_ID_2, ITEM_ID_3],
+        idempotency_key: IDEMPOTENCY_KEY,
+      },
+    });
+
+    expect(result.statusCode).toBe(401);
+    expectStandardErrorEnvelope(result.body);
+    expect(result.body.error.code).toBe("AUTH_SESSION_EXPIRED");
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+  });
+
+  it("evolve rejects duplicate item ids before calling RPC", async () => {
+    const result = await invokeApiHandler<ApiErrorResponse>(evolveHandler, {
+      method: "POST",
+      body: {
+        source_item_instance_ids: [ITEM_ID, ITEM_ID, ITEM_ID_2],
+        idempotency_key: IDEMPOTENCY_KEY,
+      },
+    });
+
+    expect(result.statusCode).toBe(400);
+    expectStandardErrorEnvelope(result.body);
+    expect(result.body.error.code).toBe("VALIDATION_ERROR");
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+  });
+
+  it("evolve rejects forged user_id before calling RPC", async () => {
+    const result = await invokeApiHandler<ApiErrorResponse>(evolveHandler, {
+      method: "POST",
+      body: {
+        source_item_instance_ids: [ITEM_ID, ITEM_ID_2, ITEM_ID_3],
+        idempotency_key: IDEMPOTENCY_KEY,
+        user_id: FORGED_USER_ID,
+      },
+    });
+
+    expect(result.statusCode).toBe(400);
+    expectStandardErrorEnvelope(result.body);
+    expect(result.body.error.code).toBe("VALIDATION_ERROR");
+    expect(callRpcRawMock).not.toHaveBeenCalled();
   });
 
   it("evolve calls inventory_evolve_item and normalizes failed results", async () => {
@@ -303,6 +540,7 @@ describe("inventory growth API", () => {
     });
 
     expect(result.statusCode).toBe(200);
+    expectStandardSuccessEnvelope(result.body);
     expect(callRpcRawMock).toHaveBeenCalledWith(
       "inventory_evolve_item",
       {
@@ -344,6 +582,7 @@ describe("inventory growth API", () => {
     });
 
     expect(result.statusCode).toBe(409);
+    expectStandardErrorEnvelope(result.body);
     expect(result.body.error.code).toBe("INSUFFICIENT_KCOIN");
   });
 
@@ -366,7 +605,67 @@ describe("inventory growth API", () => {
     });
 
     expect(result.statusCode).toBe(409);
+    expectStandardErrorEnvelope(result.body);
     expect(result.body.error.code).toBe("ITEM_NOT_EVOLVABLE");
+  });
+
+  it("evolve maps missing evolution rules without exposing database details", async () => {
+    callRpcRawMock.mockRejectedValueOnce(
+      new RpcError({
+        rpcName: "inventory_evolve_item",
+        error: {
+          message: "evolution rule not found",
+        },
+      }),
+    );
+
+    const result = await invokeApiHandler<ApiErrorResponse>(evolveHandler, {
+      method: "POST",
+      body: {
+        source_item_instance_ids: [ITEM_ID, ITEM_ID_2, ITEM_ID_3],
+        idempotency_key: IDEMPOTENCY_KEY,
+      },
+    });
+
+    expect(result.statusCode).toBe(500);
+    expectStandardErrorEnvelope(result.body);
+    expect(result.body.error.code).toBe("EVOLVE_RULE_NOT_FOUND");
+    expect(result.body.error.message).toBe("Internal server error");
+  });
+
+  it("requires a session before decompose can call RPC", async () => {
+    requireSessionMock.mockRejectedValueOnce(
+      ApiError.authSessionExpired("登录状态缺失，请重新进入应用。"),
+    );
+
+    const result = await invokeApiHandler<ApiErrorResponse>(decomposeHandler, {
+      method: "POST",
+      body: {
+        item_instance_ids: [ITEM_ID],
+        idempotency_key: IDEMPOTENCY_KEY,
+      },
+    });
+
+    expect(result.statusCode).toBe(401);
+    expectStandardErrorEnvelope(result.body);
+    expect(result.body.error.code).toBe("AUTH_SESSION_EXPIRED");
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+  });
+
+  it("decompose rejects forged user_id before calling RPC", async () => {
+    const result = await invokeApiHandler<ApiErrorResponse>(decomposeHandler, {
+      method: "POST",
+      body: {
+        item_instance_ids: [ITEM_ID],
+        idempotency_key: IDEMPOTENCY_KEY,
+        user_id: FORGED_USER_ID,
+      },
+    });
+
+    expect(result.statusCode).toBe(400);
+    expectStandardErrorEnvelope(result.body);
+    expect(result.body.error.code).toBe("VALIDATION_ERROR");
+    expect(callRpcRawMock).not.toHaveBeenCalled();
   });
 
   it("decompose calls the batch inventory_decompose_items RPC", async () => {
@@ -400,6 +699,7 @@ describe("inventory growth API", () => {
     );
 
     expect(result.statusCode).toBe(200);
+    expectStandardSuccessEnvelope(result.body);
     expect(callRpcRawMock).toHaveBeenCalledWith(
       "inventory_decompose_items",
       {
@@ -438,7 +738,78 @@ describe("inventory growth API", () => {
     });
 
     expect(result.statusCode).toBe(409);
+    expectStandardErrorEnvelope(result.body);
     expect(result.body.error.code).toBe("ITEM_NOT_AVAILABLE");
+  });
+
+  it("decompose maps duplicate requirements to a stable conflict", async () => {
+    callRpcRawMock.mockRejectedValueOnce(
+      new RpcError({
+        rpcName: "inventory_decompose_items",
+        error: {
+          message: "only duplicate collectibles can be decomposed",
+        },
+      }),
+    );
+
+    const result = await invokeApiHandler<ApiErrorResponse>(decomposeHandler, {
+      method: "POST",
+      body: {
+        item_instance_ids: [ITEM_ID],
+        idempotency_key: IDEMPOTENCY_KEY,
+      },
+    });
+
+    expect(result.statusCode).toBe(409);
+    expectStandardErrorEnvelope(result.body);
+    expect(result.body.error.code).toBe("DECOMPOSE_REQUIRES_DUPLICATE");
+  });
+
+  it("decompose maps missing rules without exposing database details", async () => {
+    callRpcRawMock.mockRejectedValueOnce(
+      new RpcError({
+        rpcName: "inventory_decompose_items",
+        error: {
+          message: "decompose rule not found",
+        },
+      }),
+    );
+
+    const result = await invokeApiHandler<ApiErrorResponse>(decomposeHandler, {
+      method: "POST",
+      body: {
+        item_instance_ids: [ITEM_ID],
+        idempotency_key: IDEMPOTENCY_KEY,
+      },
+    });
+
+    expect(result.statusCode).toBe(500);
+    expectStandardErrorEnvelope(result.body);
+    expect(result.body.error.code).toBe("DECOMPOSE_RULE_NOT_FOUND");
+    expect(result.body.error.message).toBe("Internal server error");
+  });
+
+  it("decompose maps idempotency conflicts to a stable conflict", async () => {
+    callRpcRawMock.mockRejectedValueOnce(
+      new RpcError({
+        rpcName: "inventory_decompose_items",
+        error: {
+          message: "idempotency conflict",
+        },
+      }),
+    );
+
+    const result = await invokeApiHandler<ApiErrorResponse>(decomposeHandler, {
+      method: "POST",
+      body: {
+        item_instance_ids: [ITEM_ID],
+        idempotency_key: IDEMPOTENCY_KEY,
+      },
+    });
+
+    expect(result.statusCode).toBe(409);
+    expectStandardErrorEnvelope(result.body);
+    expect(result.body.error.code).toBe("IDEMPOTENCY_CONFLICT");
   });
 
   it("activity calls inventory_list_activity with validated filters", async () => {
