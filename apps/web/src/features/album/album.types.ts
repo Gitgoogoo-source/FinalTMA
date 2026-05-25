@@ -132,3 +132,49 @@ export type AlbumSeriesResponse = {
   nextCursor: string | null;
   serverTime: string | null;
 };
+
+export type AlbumLeaderboardPeriod = "current_week" | "last_week";
+
+export type AlbumLeaderboardScope = "global";
+
+export type AlbumLeaderboardSort =
+  | "score_desc"
+  | "completion_desc"
+  | "rare_count_desc"
+  | "mint_count_desc";
+
+export type AlbumLeaderboardQuery = {
+  boardId?: string;
+  period?: AlbumLeaderboardPeriod;
+  scope?: AlbumLeaderboardScope;
+  sort?: AlbumLeaderboardSort;
+  cursor?: string;
+  limit?: number;
+};
+
+export type AlbumLeaderboardEntry = {
+  rank: number;
+  userId: string;
+  displayName: string;
+  avatarUrl: string | null;
+  score: number;
+  completionPercent: number;
+  collectedCount: number;
+  totalCount: number;
+  rareCount: number;
+  epicCount: number;
+  legendaryCount: number;
+  mintCount: number;
+  updatedAt: string;
+};
+
+export type AlbumLeaderboardResponse = {
+  boardId: string | null;
+  period: AlbumLeaderboardPeriod;
+  scope: AlbumLeaderboardScope;
+  entries: AlbumLeaderboardEntry[];
+  myEntry: AlbumLeaderboardEntry | null;
+  nextCursor: string | null;
+  generatedAt: string | null;
+  empty: boolean;
+};

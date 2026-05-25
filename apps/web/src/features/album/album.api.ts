@@ -6,6 +6,10 @@ import type {
   AlbumBook,
   AlbumClaimRewardInput,
   AlbumClaimRewardResponse,
+  AlbumLeaderboardEntry,
+  AlbumLeaderboardPeriod,
+  AlbumLeaderboardQuery,
+  AlbumLeaderboardResponse,
   AlbumItem,
   AlbumMilestone,
   AlbumMilestoneStatus,
@@ -50,6 +54,23 @@ export async function fetchAlbumSeries(
   );
 
   return normalizeAlbumSeriesResponse(response);
+}
+
+export async function fetchAlbumLeaderboard(
+  query: AlbumLeaderboardQuery = {},
+): Promise<AlbumLeaderboardResponse> {
+  const params = buildAlbumLeaderboardParams(query);
+  const queryString = params.toString();
+  const response = await apiRequest<unknown>(
+    queryString
+      ? `${API_ENDPOINTS.album.leaderboard}?${queryString}`
+      : API_ENDPOINTS.album.leaderboard,
+    {
+      method: "GET",
+    },
+  );
+
+  return normalizeAlbumLeaderboardResponse(response);
 }
 
 export async function claimAlbumMilestoneReward(
@@ -120,6 +141,37 @@ export function normalizeAlbumSeriesResponse(
   };
 }
 
+export function normalizeAlbumLeaderboardResponse(
+  response: unknown,
+): AlbumLeaderboardResponse {
+  const payload = assertRecord(response, "Invalid album leaderboard response.");
+  const rawEntries = Array.isArray(payload.entries) ? payload.entries : [];
+  const entries = rawEntries
+    .map(normalizeLeaderboardEntry)
+    .filter(isLeaderboardEntry)
+    .sort(sortLeaderboardEntries);
+  const myEntry =
+    payload.my_entry === null || payload.my_entry === undefined
+      ? null
+      : normalizeLeaderboardEntry(payload.my_entry);
+  const boardId = readString(payload.board_id) ?? readString(payload.boardId);
+
+  return {
+    boardId,
+    period: normalizeLeaderboardPeriod(payload.period),
+    scope: "global",
+    entries,
+    myEntry,
+    nextCursor:
+      readString(payload.next_cursor) ?? readString(payload.nextCursor),
+    generatedAt:
+      readString(payload.generated_at) ?? readString(payload.generatedAt),
+    empty:
+      readBoolean(payload.empty) ??
+      (boardId === null && entries.length === 0 && myEntry === null),
+  };
+}
+
 export function normalizeAlbumClaimRewardResponse(
   response: unknown,
 ): AlbumClaimRewardResponse {
@@ -179,6 +231,21 @@ function buildAlbumSeriesParams(query: AlbumSeriesQuery): URLSearchParams {
   appendArrayParam(params, "rarities", query.rarities);
   appendStringParam(params, "cursor", query.cursor);
   appendNumberParam(params, "limit", query.limit);
+
+  return params;
+}
+
+function buildAlbumLeaderboardParams(
+  query: AlbumLeaderboardQuery,
+): URLSearchParams {
+  const params = new URLSearchParams();
+
+  appendStringParam(params, "board_id", query.boardId);
+  appendStringParam(params, "period", query.period ?? "current_week");
+  appendStringParam(params, "scope", query.scope ?? "global");
+  appendStringParam(params, "sort", query.sort ?? "score_desc");
+  appendStringParam(params, "cursor", query.cursor);
+  appendNumberParam(params, "limit", query.limit ?? 50);
 
   return params;
 }
@@ -367,6 +434,98 @@ function normalizeAlbumBalanceChange(
     delta,
     balanceAfter,
   };
+}
+
+function normalizeLeaderboardEntry(
+  value: unknown,
+): AlbumLeaderboardEntry | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const rank = readNumber(value.rank);
+  const userId = readString(value.user_id) ?? readString(value.userId);
+  const score = readNumber(value.score);
+  const completionPercent =
+    readNumber(value.completion_percent) ?? readNumber(value.completionPercent);
+  const collectedCount =
+    readNumber(value.collected_count) ?? readNumber(value.collectedCount);
+  const totalCount =
+    readNumber(value.total_count) ?? readNumber(value.totalCount);
+  const rareCount = readNumber(value.rare_count) ?? readNumber(value.rareCount);
+  const epicCount = readNumber(value.epic_count) ?? readNumber(value.epicCount);
+  const legendaryCount =
+    readNumber(value.legendary_count) ?? readNumber(value.legendaryCount);
+  const mintCount =
+    readNumber(value.mint_count) ??
+    readNumber(value.mintCount) ??
+    readNumber(value.minted_count) ??
+    readNumber(value.mintedCount);
+  const updatedAt =
+    readString(value.updated_at) ??
+    readString(value.updatedAt) ??
+    readString(value.generated_at) ??
+    readString(value.generatedAt);
+
+  if (
+    rank === null ||
+    !userId ||
+    score === null ||
+    completionPercent === null ||
+    collectedCount === null ||
+    totalCount === null ||
+    rareCount === null ||
+    epicCount === null ||
+    legendaryCount === null ||
+    mintCount === null ||
+    !updatedAt
+  ) {
+    return null;
+  }
+
+  return {
+    rank: Math.trunc(rank),
+    userId,
+    displayName:
+      readString(value.display_name) ??
+      readString(value.displayName) ??
+      "Player",
+    avatarUrl: readString(value.avatar_url) ?? readString(value.avatarUrl),
+    score: Math.trunc(score),
+    completionPercent,
+    collectedCount: Math.trunc(collectedCount),
+    totalCount: Math.trunc(totalCount),
+    rareCount: Math.trunc(rareCount),
+    epicCount: Math.trunc(epicCount),
+    legendaryCount: Math.trunc(legendaryCount),
+    mintCount: Math.trunc(mintCount),
+    updatedAt,
+  };
+}
+
+function normalizeLeaderboardPeriod(value: unknown): AlbumLeaderboardPeriod {
+  return value === "last_week" ? "last_week" : "current_week";
+}
+
+function isLeaderboardEntry(
+  value: AlbumLeaderboardEntry | null,
+): value is AlbumLeaderboardEntry {
+  return value !== null;
+}
+
+function sortLeaderboardEntries(
+  left: AlbumLeaderboardEntry,
+  right: AlbumLeaderboardEntry,
+): number {
+  if (left.rank !== right.rank) {
+    return left.rank - right.rank;
+  }
+
+  if (left.score !== right.score) {
+    return right.score - left.score;
+  }
+
+  return left.userId.localeCompare(right.userId);
 }
 
 function normalizeMilestoneStatus(value: unknown): AlbumMilestoneStatus | null {

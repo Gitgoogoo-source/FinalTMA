@@ -8,10 +8,12 @@ import type { RewardModalItem } from "@/features/feedback/feedback.types";
 import { AlbumGrid } from "../components/AlbumGrid";
 import { AlbumProgress } from "../components/AlbumProgress";
 import { AlbumSeriesTabs } from "../components/AlbumSeriesTabs";
+import { LeaderboardPanel } from "../components/LeaderboardPanel";
 import { MilestoneRewardRow } from "../components/MilestoneRewardRow";
 import { useClaimAlbumReward } from "../hooks/useClaimAlbumReward";
 import { useAlbumProgress } from "../hooks/useAlbumProgress";
 import { useAlbumSeries } from "../hooks/useAlbumSeries";
+import { useLeaderboard } from "../hooks/useLeaderboard";
 import type {
   AlbumClaimRewardResponse,
   AlbumMilestone,
@@ -38,10 +40,13 @@ export function AlbumPage() {
     return query;
   }, [selectedBookId]);
   const albumProgressQuery = useAlbumProgress(progressQuery);
+  const leaderboardQuery = useLeaderboard();
   const claimReward = useClaimAlbumReward();
   const progress = albumProgressQuery.progress;
   const isRefreshing =
-    albumProgressQuery.isFetching || albumSeriesQuery.isFetching;
+    albumProgressQuery.isFetching ||
+    albumSeriesQuery.isFetching ||
+    leaderboardQuery.isFetching;
   const pendingMilestoneId = claimReward.isPending
     ? (claimReward.variables?.milestoneId ?? null)
     : null;
@@ -49,6 +54,7 @@ export function AlbumPage() {
   function handleRefresh() {
     void albumSeriesQuery.refetch();
     void albumProgressQuery.refetch();
+    void leaderboardQuery.refetch();
   }
 
   async function handleClaimMilestone(milestone: AlbumMilestone) {
@@ -143,6 +149,15 @@ export function AlbumPage() {
       />
 
       <AlbumProgress progress={progress} />
+
+      <LeaderboardPanel
+        error={leaderboardQuery.error}
+        isError={leaderboardQuery.isError}
+        isFetching={leaderboardQuery.isFetching}
+        isLoading={leaderboardQuery.isLoading}
+        leaderboard={leaderboardQuery.leaderboard}
+        onRefresh={() => void leaderboardQuery.refetch()}
+      />
 
       <section
         className="album-milestones"
