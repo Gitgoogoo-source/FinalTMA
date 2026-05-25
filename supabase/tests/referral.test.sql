@@ -81,12 +81,48 @@ insert into _ids (key, id) values ('commission_source', gen_random_uuid());
 insert into _ids (key, payload) select 'commission1', api.referral_create_commission((select id from _ids where key = 'invitee'), (select id from _ids where key = 'commission_source'), 100, 1000);
 select ok(((select payload from _ids where key = 'commission1') ->> 'processed')::boolean, 'commission is processed for rewarded referral');
 select is(((select payload from _ids where key = 'commission1') ->> 'amount_kcoin')::numeric, 10::numeric, '10% referral commission is calculated from K-coin base amount');
-select is(testutil.balance_of((select id from _ids where key = 'inviter'), 'KCOIN'), 510::numeric, 'commission credits inviter balance');
+select is(((select payload from _ids where key = 'commission1') ->> 'status'), 'pending', 'commission is generated as pending');
+select is(testutil.balance_of((select id from _ids where key = 'inviter'), 'KCOIN'), 500::numeric, 'pending commission does not credit inviter balance');
 select is((select count(*)::int from tasks.referral_commissions where referral_id = (select id from _ids where key = 'referral')), 1, 'one referral commission row is recorded');
+select is((select status from tasks.referral_commissions where referral_id = (select id from _ids where key = 'referral')), 'pending', 'commission row remains pending before claim');
+select ok((select ledger_id is null from tasks.referral_commissions where referral_id = (select id from _ids where key = 'referral')), 'pending commission has no ledger id before claim');
+select ok((select claimed_at is null from tasks.referral_commissions where referral_id = (select id from _ids where key = 'referral')), 'pending commission has no claimed_at before claim');
 
 insert into _ids (key, payload) select 'commission_repeat', api.referral_create_commission((select id from _ids where key = 'invitee'), (select id from _ids where key = 'commission_source'), 100, 1000);
 select ok(((select payload from _ids where key = 'commission_repeat') ->> 'idempotent')::boolean, 'repeated commission for same source is idempotent');
-select is(testutil.balance_of((select id from _ids where key = 'inviter'), 'KCOIN'), 510::numeric, 'repeated commission does not credit again');
+select is(testutil.balance_of((select id from _ids where key = 'inviter'), 'KCOIN'), 500::numeric, 'repeated commission still does not credit before claim');
+
+insert into _ids (key, payload)
+select 'claim_commission1', api.referral_claim_commission((select id from _ids where key = 'inviter'), null, 'referral-commission-claim-001');
+select ok(((select payload from _ids where key = 'claim_commission1') ->> 'claimed')::boolean, 'pending commission can be claimed');
+select is(((select payload from _ids where key = 'claim_commission1') ->> 'claimed_count')::int, 1, 'claim covers one pending commission');
+select is(((select payload from _ids where key = 'claim_commission1') ->> 'claimed_amount_kcoin')::numeric, 10::numeric, 'claim amount equals pending commission amount');
+select is(testutil.balance_of((select id from _ids where key = 'inviter'), 'KCOIN'), 510::numeric, 'claim credits inviter balance');
+select is((select status from tasks.referral_commissions where referral_id = (select id from _ids where key = 'referral')), 'granted', 'claimed commission becomes granted');
+select ok((select ledger_id is not null from tasks.referral_commissions where referral_id = (select id from _ids where key = 'referral')), 'claimed commission stores ledger id');
+select ok((select claimed_at is not null from tasks.referral_commissions where referral_id = (select id from _ids where key = 'referral')), 'claimed commission stores claimed_at');
+select ok(exists (
+  select 1
+  from economy.currency_ledger
+  where id = (select ledger_id from tasks.referral_commissions where referral_id = (select id from _ids where key = 'referral'))
+    and user_id = (select id from _ids where key = 'inviter')
+    and source_type = 'referral_commission_claim'
+    and entry_type = 'credit'
+    and currency_code = 'KCOIN'
+    and amount = 10
+    and idempotency_key = 'referral_commission_claim:referral-commission-claim-001'
+), 'claim writes one KCOIN ledger entry');
+
+insert into _ids (key, payload)
+select 'claim_commission_repeat', api.referral_claim_commission((select id from _ids where key = 'inviter'), null, 'referral-commission-claim-001');
+select ok(((select payload from _ids where key = 'claim_commission_repeat') ->> 'idempotent')::boolean, 'repeated claim with same key returns idempotent=true');
+select is(testutil.balance_of((select id from _ids where key = 'inviter'), 'KCOIN'), 510::numeric, 'repeated claim does not credit again');
+select is((select count(*)::int from economy.currency_ledger where idempotency_key = 'referral_commission_claim:referral-commission-claim-001'), 1, 'repeated claim does not write duplicate ledger');
+
+insert into _ids (key, payload)
+select 'claim_commission_empty', api.referral_claim_commission((select id from _ids where key = 'inviter'), null, 'referral-commission-claim-empty');
+select ok(not ((select payload from _ids where key = 'claim_commission_empty') ->> 'claimed')::boolean, 'claim with no pending commissions returns claimed=false');
+select is(((select payload from _ids where key = 'claim_commission_empty') ->> 'claimed_amount_kcoin')::numeric, 0::numeric, 'no-pending claim returns zero amount');
 
 insert into _ids (key, id) values ('no_ref_user', testutil.make_user(10100000003, 'no_ref_user', null));
 insert into _ids (key, payload) select 'no_ref_commission', api.referral_create_commission((select id from _ids where key = 'no_ref_user'), gen_random_uuid(), 100, 1000);
