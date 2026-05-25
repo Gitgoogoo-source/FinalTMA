@@ -7,6 +7,7 @@ import {
 import {
   buildSessionCookie,
   SESSION_COOKIE_NAME,
+  type BuildSessionCookieOptions,
 } from "../../packages/server/src/auth/issueSession.js";
 import {
   TelegramInitDataValidationError,
@@ -123,16 +124,19 @@ export default withApiHandler(
     const sessionId = requireStringField(sessionResult, "session_id");
     const sessionExpiresAt = requireStringField(sessionResult, "expires_at");
 
-    res.setHeader(
-      "Set-Cookie",
-      buildSessionCookie(token, {
-        cookieName: getSessionCookieName(),
-        domain: getSessionCookieDomain(),
-        maxAgeSeconds: SESSION_TTL_SECONDS,
-        sameSite: getSessionCookieSameSite(),
-        secure: getSessionCookieSecure(),
-      }),
-    );
+    const cookieOptions: BuildSessionCookieOptions = {
+      cookieName: getSessionCookieName(),
+      maxAgeSeconds: SESSION_TTL_SECONDS,
+      sameSite: getSessionCookieSameSite(),
+      secure: getSessionCookieSecure(),
+    };
+    const cookieDomain = getSessionCookieDomain();
+
+    if (cookieDomain !== undefined) {
+      cookieOptions.domain = cookieDomain;
+    }
+
+    res.setHeader("Set-Cookie", buildSessionCookie(token, cookieOptions));
 
     return {
       status: "ok",

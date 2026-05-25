@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const successResponse = JSON.stringify({
   ok: true,
+  success: true,
   data: {
     status: "ok",
   },
@@ -44,6 +45,7 @@ describe("frontend auth api client", () => {
         new Response(
           JSON.stringify({
             ok: false,
+            success: false,
             error: {
               code: "AUTH_SESSION_EXPIRED",
               message: "Session expired.",
@@ -80,6 +82,7 @@ describe("frontend auth api client", () => {
         new Response(
           JSON.stringify({
             ok: false,
+            success: false,
             error: {
               code: "AUTH_INIT_DATA_INVALID",
               message: "Telegram initData is invalid.",

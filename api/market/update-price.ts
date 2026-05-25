@@ -127,7 +127,12 @@ function normalizeMarketUpdateListingPricePayload(
     throw invalidMarketUpdateListingPriceResult(parsed.error.issues);
   }
 
-  return parsed.data;
+  return {
+    listing_id: parsed.data.listing_id,
+    unit_price_kcoin: parsed.data.unit_price_kcoin,
+    expected_net_amount: parsed.data.expected_net_amount,
+    ...(parsed.data.status !== undefined ? { status: parsed.data.status } : {}),
+  };
 }
 
 function invalidMarketUpdateListingPriceResult(details?: unknown): ApiError {

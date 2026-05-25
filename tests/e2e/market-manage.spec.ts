@@ -227,7 +227,9 @@ function parseJsonBody(body: string | null): Record<string, unknown> {
   }
 
   const parsed = JSON.parse(body) as unknown;
-  return typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)
-    ? parsed
-    : {};
+  return isRecord(parsed) ? parsed : {};
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

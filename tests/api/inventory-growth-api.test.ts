@@ -60,6 +60,10 @@ const IDEMPOTENCY_KEY = "inventory:growth-api-0001";
 const BODY_IDEMPOTENCY_KEY = "inventory:growth-api-body";
 const LEDGER_ID = "88888888-8888-4888-8888-888888888888";
 
+type InventoryDetailPrivacyResponse = {
+  onchain_status?: Record<string, unknown>;
+};
+
 function expectStandardSuccessEnvelope(body: ApiSuccessResponse): void {
   expect(body).toMatchObject({
     ok: true,
@@ -164,7 +168,9 @@ describe("inventory growth API", () => {
       },
     });
 
-    const result = await invokeApiHandler<ApiSuccessResponse>(detailHandler, {
+    const result = await invokeApiHandler<
+      ApiSuccessResponse<InventoryDetailPrivacyResponse>
+    >(detailHandler, {
       method: "GET",
       query: {
         item_instance_id: ITEM_ID,
@@ -179,12 +185,10 @@ describe("inventory growth API", () => {
         mint_status: "minted",
       },
     });
-    expect(result.body.data.onchain_status).not.toHaveProperty(
-      "nft_item_address",
-    );
-    expect(result.body.data.onchain_status).not.toHaveProperty(
-      "owner_wallet_address",
-    );
+    const onchainStatus = result.body.data.onchain_status;
+
+    expect(onchainStatus).not.toHaveProperty("nft_item_address");
+    expect(onchainStatus).not.toHaveProperty("owner_wallet_address");
   });
 
   it("requires a session before inventory detail can call RPC", async () => {

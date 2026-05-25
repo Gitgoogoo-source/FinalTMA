@@ -124,7 +124,14 @@ function normalizeMarketCancelListingPayload(
     throw invalidMarketCancelListingResult(parsed.error.issues);
   }
 
-  return parsed.data;
+  return {
+    listing_id: parsed.data.listing_id,
+    status: parsed.data.status,
+    released_item_instance_ids: parsed.data.released_item_instance_ids,
+    ...(parsed.data.cancelled_at !== undefined
+      ? { cancelled_at: parsed.data.cancelled_at }
+      : {}),
+  };
 }
 
 function invalidMarketCancelListingResult(details?: unknown): ApiError {

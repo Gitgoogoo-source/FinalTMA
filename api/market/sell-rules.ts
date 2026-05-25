@@ -69,7 +69,12 @@ function normalizeMarketSellRulesPayload(
     throw invalidMarketSellRulesResult(parsed.error.issues);
   }
 
-  return parsed.data;
+  return {
+    fee_type: parsed.data.fee_type,
+    currency_code: parsed.data.currency_code,
+    fee_bps: parsed.data.fee_bps,
+    ...(parsed.data.source !== undefined ? { source: parsed.data.source } : {}),
+  };
 }
 
 function invalidMarketSellRulesResult(details?: unknown): ApiError {

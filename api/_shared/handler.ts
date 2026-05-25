@@ -80,7 +80,7 @@ export class ApiError extends Error {
   public readonly code: string;
   public readonly details?: unknown;
   public readonly expose: boolean;
-  public readonly cause?: unknown;
+  public override readonly cause?: unknown;
 
   constructor(
     statusCode: number,
