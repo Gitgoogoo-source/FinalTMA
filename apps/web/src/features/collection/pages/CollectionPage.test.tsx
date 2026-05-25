@@ -1,0 +1,465 @@
+import "@testing-library/jest-dom/vitest";
+
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { FeedbackProvider } from "@/app/providers/FeedbackProvider";
+
+import type {
+  CollectionDecomposeItemResponse,
+  CollectionEvolveItemResponse,
+  CollectionInventoryDetail,
+  CollectionInventoryItem,
+  CollectionUpgradeItemResponse,
+} from "../collection.types";
+import { CollectionPage } from "./CollectionPage";
+
+const mocks = vi.hoisted(() => ({
+  inventoryItems: [] as unknown[],
+  itemDetails: new Map<string, unknown>(),
+  inventoryRefetch: vi.fn(),
+  detailRefetch: vi.fn(),
+  upgradeMutateAsync: vi.fn(),
+  evolveMutateAsync: vi.fn(),
+  decomposeMutateAsync: vi.fn(),
+}));
+
+vi.mock("../hooks/useInventory", () => ({
+  useInventory: () => ({
+    error: null,
+    isError: false,
+    isFetching: false,
+    isLoading: false,
+    items: mocks.inventoryItems,
+    refetch: mocks.inventoryRefetch,
+    serverTime: "2026-05-25T08:00:00.000Z",
+    total: mocks.inventoryItems.length,
+  }),
+}));
+
+vi.mock("../hooks/useItemDetail", () => ({
+  useItemDetail: (itemInstanceId: string | null | undefined) => ({
+    error: null,
+    isError: false,
+    isFetching: false,
+    isLoading: false,
+    item: itemInstanceId
+      ? (mocks.itemDetails.get(itemInstanceId) ?? null)
+      : null,
+    refetch: mocks.detailRefetch,
+  }),
+}));
+
+vi.mock("../hooks/useUpgradeItem", () => ({
+  useUpgradeItem: () => ({
+    error: null,
+    isError: false,
+    isPending: false,
+    mutateAsync: mocks.upgradeMutateAsync,
+  }),
+}));
+
+vi.mock("../hooks/useEvolveItem", () => ({
+  useEvolveItem: () => ({
+    error: null,
+    isError: false,
+    isPending: false,
+    mutateAsync: mocks.evolveMutateAsync,
+  }),
+}));
+
+vi.mock("../hooks/useDecomposeItem", () => ({
+  useDecomposeItem: () => ({
+    error: null,
+    isError: false,
+    isPending: false,
+    mutateAsync: mocks.decomposeMutateAsync,
+  }),
+}));
+
+const ITEM_A_ID = "66666666-6666-4666-8666-666666666666";
+const ITEM_B_ID = "66666666-6666-4666-8666-666666666667";
+const ITEM_C_ID = "66666666-6666-4666-8666-666666666668";
+const TEMPLATE_ID = "55555555-5555-4555-8555-555555555555";
+const FORM_ID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+
+describe("CollectionPage stage-3 frontend states", () => {
+  beforeEach(() => {
+    mocks.inventoryItems = [];
+    mocks.itemDetails = new Map<string, unknown>();
+    mocks.inventoryRefetch.mockReset();
+    mocks.detailRefetch.mockReset();
+    mocks.upgradeMutateAsync.mockReset();
+    mocks.evolveMutateAsync.mockReset();
+    mocks.decomposeMutateAsync.mockReset();
+    mocks.upgradeMutateAsync.mockResolvedValue(upgradeResult());
+    mocks.evolveMutateAsync.mockResolvedValue(evolveResult());
+    mocks.decomposeMutateAsync.mockResolvedValue(decomposeResult());
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("shows the empty inventory state when the user has no collection items", () => {
+    renderCollectionPage();
+
+    expect(screen.getByText("还没有藏品")).toBeVisible();
+    expect(screen.getByText("开盒后获得的藏品会显示在这里。")).toBeVisible();
+    expect(screen.getByRole("link", { name: "去开盒" })).toHaveAttribute(
+      "href",
+      "/box",
+    );
+  });
+
+  it("renders the selected hero and switches selectedItem from the grid", () => {
+    const firstItem = makeItem();
+    const secondItem = makeItem({
+      itemInstanceId: ITEM_B_ID,
+      name: "月冕守门人",
+      power: 88,
+      rarity: {
+        code: "legendary",
+        label: "传说",
+        sortOrder: 40,
+      },
+      serialNo: 2,
+      templateId: "77777777-7777-4777-8777-777777777777",
+    });
+    setInventoryItems(firstItem, secondItem);
+
+    renderCollectionPage();
+
+    expect(
+      within(screen.getByLabelText("当前选中藏品")).getByRole("heading", {
+        name: "森林幼芽",
+      }),
+    ).toBeVisible();
+    expect(screen.getByText("我的藏品")).toBeVisible();
+    expect(screen.getByText("2 件")).toBeVisible();
+
+    const secondThumb = screen.getByRole("button", { name: /月冕守门人/ });
+    expect(secondThumb).toHaveAttribute("aria-pressed", "false");
+
+    fireEvent.click(secondThumb);
+
+    expect(
+      within(screen.getByLabelText("当前选中藏品")).getByRole("heading", {
+        name: "月冕守门人",
+      }),
+    ).toBeVisible();
+    expect(screen.getByRole("button", { name: /月冕守门人/ })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  });
+
+  it("opens details and enables growth actions for upgradeable duplicate items", () => {
+    const firstItem = makeItem();
+    const items = [
+      firstItem,
+      makeItem({ itemInstanceId: ITEM_B_ID, serialNo: 2 }),
+      makeItem({ itemInstanceId: ITEM_C_ID, serialNo: 3 }),
+    ];
+    setInventoryItems(...items);
+    setItemDetail(firstItem, makeDetail(firstItem));
+
+    renderCollectionPage();
+    fireEvent.click(screen.getByRole("button", { name: "详情" }));
+
+    const dialog = screen.getByRole("dialog", { name: "森林幼芽" });
+
+    expect(within(dialog).getByText("藏品详情")).toBeVisible();
+    expect(within(dialog).getByRole("button", { name: "升级" })).toBeEnabled();
+    expect(within(dialog).getByRole("button", { name: "合成" })).toBeEnabled();
+    expect(within(dialog).getByRole("button", { name: "分解" })).toBeEnabled();
+    expect(within(dialog).getByRole("link", { name: "出售" })).toHaveAttribute(
+      "href",
+      "/trade?tab=sell",
+    );
+  });
+
+  it("disables growth actions when the item is not upgradeable, lacks materials and is not duplicated", () => {
+    const uniqueItem = makeItem({
+      isDecomposable: true,
+      isEvolvable: true,
+      isUpgradeable: false,
+    });
+    setInventoryItems(uniqueItem);
+    setItemDetail(
+      uniqueItem,
+      makeDetail(uniqueItem, {
+        availableSameItemCount: 1,
+        decomposePreview: {
+          canDecompose: false,
+          duplicateCount: 1,
+          fgemsReward: null,
+          itemInstanceIds: [ITEM_A_ID],
+          itemStatus: "available",
+          items: [],
+          reason: "DECOMPOSE_REQUIRES_DUPLICATE",
+          totalRewardFgems: null,
+        },
+        evolutionPreview: {
+          availableSameItems: 1,
+          canEvolve: false,
+          isBalanceEnough: true,
+          kcoinCost: 200,
+          mainReturnItemId: null,
+          reason: "EVOLVE_ITEM_COUNT_INVALID",
+          requiredCount: 3,
+          selectedItemIds: [ITEM_A_ID],
+          successRateBps: 5000,
+          targetFormId: FORM_ID,
+          targetImageUrl: null,
+          targetName: "森林幼芽·进化",
+          targetTemplateId: TEMPLATE_ID,
+          userKcoinBalance: 1200,
+        },
+        sameItemCount: 1,
+      }),
+    );
+
+    renderCollectionPage();
+    fireEvent.click(screen.getByRole("button", { name: "详情" }));
+
+    const dialog = screen.getByRole("dialog", { name: "森林幼芽" });
+
+    expect(within(dialog).getByRole("button", { name: "升级" })).toBeDisabled();
+    expect(within(dialog).getByRole("button", { name: "合成" })).toBeDisabled();
+    expect(within(dialog).getByRole("button", { name: "分解" })).toBeDisabled();
+  });
+
+  it("submits an upgrade and shows the server result instead of local-only state", async () => {
+    const item = makeItem();
+    setInventoryItems(
+      item,
+      makeItem({ itemInstanceId: ITEM_B_ID, serialNo: 2 }),
+      makeItem({ itemInstanceId: ITEM_C_ID, serialNo: 3 }),
+    );
+    setItemDetail(item, makeDetail(item));
+
+    renderCollectionPage();
+    fireEvent.click(screen.getByRole("button", { name: "详情" }));
+    fireEvent.click(
+      within(screen.getByRole("dialog", { name: "森林幼芽" })).getByRole(
+        "button",
+        { name: "升级" },
+      ),
+    );
+
+    expect(screen.getByText("藏品升级")).toBeVisible();
+    expect(screen.getByText("需要 Fgems")).toBeVisible();
+    expect(screen.getByText("当前 Fgems 余额")).toBeVisible();
+
+    fireEvent.click(screen.getByRole("button", { name: "确认升级" }));
+
+    await waitFor(() =>
+      expect(mocks.upgradeMutateAsync).toHaveBeenCalledTimes(1),
+    );
+    expect(mocks.upgradeMutateAsync).toHaveBeenCalledWith({
+      expectedFgemsCost: 20,
+      itemInstanceId: ITEM_A_ID,
+      targetLevel: 2,
+    });
+    expect(
+      await screen.findByRole("dialog", { name: "升级成功" }),
+    ).toBeVisible();
+    expect(screen.getByText("消耗 Fgems")).toBeVisible();
+    expect(screen.getByText("80 -> 60")).toBeVisible();
+  });
+});
+
+function renderCollectionPage() {
+  return render(
+    <MemoryRouter>
+      <FeedbackProvider>
+        <CollectionPage />
+      </FeedbackProvider>
+    </MemoryRouter>,
+  );
+}
+
+function setInventoryItems(...items: CollectionInventoryItem[]) {
+  mocks.inventoryItems = items;
+}
+
+function setItemDetail(
+  item: CollectionInventoryItem,
+  detail: CollectionInventoryDetail,
+) {
+  mocks.itemDetails.set(item.itemInstanceId, detail);
+}
+
+function makeItem(
+  overrides: Partial<CollectionInventoryItem> = {},
+): CollectionInventoryItem {
+  return {
+    avatarUrl: null,
+    description: "已进入你的库存",
+    form: {
+      description: null,
+      displayName: "基础形态",
+      id: FORM_ID,
+      index: 1,
+    },
+    imageUrl: null,
+    isDecomposable: true,
+    isEvolvable: true,
+    isMintable: true,
+    isTradeable: true,
+    isUpgradeable: true,
+    itemInstanceId: ITEM_A_ID,
+    level: 1,
+    name: "森林幼芽",
+    nftMintStatus: "not_minted",
+    obtainedAt: "2026-05-24T08:00:00.000Z",
+    power: 10,
+    rarity: {
+      code: "common",
+      label: "普通",
+      sortOrder: 10,
+    },
+    serialNo: 1,
+    series: {
+      displayName: "森林守护者",
+      id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      slug: "forest_guardians",
+    },
+    sourceId: null,
+    sourceType: "gacha",
+    status: "available",
+    subtitle: "测试藏品",
+    templateId: TEMPLATE_ID,
+    templateSlug: "forest_sproutling",
+    thumbnailUrl: null,
+    typeCode: "CHARACTER",
+    ...overrides,
+  };
+}
+
+function makeDetail(
+  item: CollectionInventoryItem,
+  overrides: Partial<CollectionInventoryDetail> = {},
+): CollectionInventoryDetail {
+  return {
+    ...item,
+    activeLock: null,
+    attributes: {},
+    availableSameItemCount: 3,
+    basePower: 10,
+    decomposePreview: {
+      canDecompose: true,
+      duplicateCount: 3,
+      fgemsReward: 150,
+      itemInstanceIds: [item.itemInstanceId],
+      itemStatus: "available",
+      items: [],
+      reason: null,
+      totalRewardFgems: 150,
+    },
+    evolutionPreview: {
+      availableSameItems: 3,
+      canEvolve: true,
+      isBalanceEnough: true,
+      kcoinCost: 200,
+      mainReturnItemId: ITEM_C_ID,
+      reason: null,
+      requiredCount: 3,
+      selectedItemIds: [ITEM_C_ID, ITEM_B_ID, item.itemInstanceId],
+      successRateBps: 5000,
+      targetFormId: FORM_ID,
+      targetImageUrl: null,
+      targetName: "森林幼芽·进化",
+      targetTemplateId: TEMPLATE_ID,
+      userKcoinBalance: 1200,
+    },
+    faction: null,
+    formId: item.form?.id ?? null,
+    marketStatus: {
+      currency: null,
+      isListed: false,
+      listingId: null,
+      unitPrice: null,
+    },
+    onchainStatus: null,
+    sameItemCount: 3,
+    updatedAt: "2026-05-25T08:00:00.000Z",
+    upgradePreview: {
+      canUpgrade: true,
+      currentLevel: 1,
+      currentPower: 10,
+      fgemsCost: 20,
+      isBalanceEnough: true,
+      nextLevel: 2,
+      powerAfter: 18,
+      reason: null,
+      targetLevel: 2,
+      userFgemsBalance: 80,
+    },
+    ...overrides,
+  };
+}
+
+function upgradeResult(): CollectionUpgradeItemResponse {
+  return {
+    balanceChange: -20,
+    consumedFgems: 20,
+    costFgems: 20,
+    fgemsBalanceAfter: 60,
+    fgemsBalanceBefore: 80,
+    fromLevel: 1,
+    fromPower: 10,
+    idempotent: false,
+    itemInstanceId: ITEM_A_ID,
+    ledgerId: "77777777-7777-4777-8777-777777777778",
+    toLevel: 2,
+    toPower: 18,
+    upgradedAt: "2026-05-25T08:00:00.000Z",
+  };
+}
+
+function evolveResult(): CollectionEvolveItemResponse {
+  return {
+    attemptId: "77777777-7777-4777-8777-777777777779",
+    balanceChange: -200,
+    consumedItemInstanceIds: [ITEM_A_ID, ITEM_B_ID, ITEM_C_ID],
+    consumedKcoin: 200,
+    costKcoin: 200,
+    createdItemInstanceId: "66666666-6666-4666-8666-666666666669",
+    evolvedAt: "2026-05-25T08:00:00.000Z",
+    idempotent: false,
+    kcoinBalanceAfter: 1000,
+    kcoinBalanceBefore: 1200,
+    ledgerId: "77777777-7777-4777-8777-777777777780",
+    mainItemInstanceId: ITEM_C_ID,
+    randomRollBps: 2500,
+    result: "success",
+    returnedItemInstanceId: null,
+    sourceItemInstanceIds: [ITEM_A_ID, ITEM_B_ID, ITEM_C_ID],
+    success: true,
+    successRateBps: 5000,
+  };
+}
+
+function decomposeResult(): CollectionDecomposeItemResponse {
+  return {
+    balanceChange: 150,
+    decomposedAt: "2026-05-25T08:00:00.000Z",
+    decomposedItemInstanceIds: [ITEM_A_ID],
+    fgemsBalanceAfter: 230,
+    fgemsBalanceBefore: 80,
+    gainedFgems: 150,
+    idempotent: false,
+    items: [{ item_instance_id: ITEM_A_ID, reward_fgems: 150 }],
+    ledgerId: "77777777-7777-4777-8777-777777777781",
+    totalRewardFgems: 150,
+  };
+}
