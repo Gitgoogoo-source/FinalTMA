@@ -435,8 +435,11 @@ export const InviteStatsResponseSchema = z.object({
   validInviteCount: z.coerce.number().int().min(0),
   firstOpenCount: z.coerce.number().int().min(0),
   totalRewardKcoin: z.coerce.number().int().min(0),
+  grantedCommissionKcoin: z.coerce.number().int().min(0),
   commissionKcoin: z.coerce.number().int().min(0),
   pendingCommissionKcoin: z.coerce.number().int().min(0).optional(),
+  totalCommissionKcoin: z.coerce.number().int().min(0),
+  commissionBps: z.coerce.number().int().min(0).max(10000),
   commissionRate: z.coerce.number().min(0).max(1),
 });
 

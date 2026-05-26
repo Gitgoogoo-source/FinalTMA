@@ -58,6 +58,10 @@ export function CommissionStatsPanel({
           <dt>已领取</dt>
           <dd>{formatCurrencyAmount(stats?.grantedAmountKcoin ?? 0)} KCOIN</dd>
         </div>
+        <div>
+          <dt>累计生成</dt>
+          <dd>{formatCurrencyAmount(stats?.totalAmountKcoin ?? 0)} KCOIN</dd>
+        </div>
       </dl>
 
       <div className="commission-panel__history">

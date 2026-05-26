@@ -70,10 +70,13 @@ test("任务页邀请卡片可以生成、复制并打开 Telegram 分享", asyn
   await expect(inviteStats).toContainText("3");
   await expect(inviteStats).toContainText("有效邀请");
   await expect(inviteStats).toContainText("2");
+  await expect(inviteStats).toContainText("首开人数");
   await expect(inviteStats).toContainText("邀请奖励");
   await expect(inviteStats).toContainText("1,000");
-  await expect(inviteStats).toContainText("分红收益");
-  await expect(inviteStats).toContainText("40");
+  await expect(inviteStats).toContainText("累计生成分红");
+  await expect(inviteStats).toContainText("165");
+  await expect(inviteStats).toContainText("当前分红比例");
+  await expect(inviteStats).toContainText("10%");
 
   await inviteCard.getByRole("button", { name: "生成链接" }).click();
 
@@ -277,6 +280,7 @@ test("分红领取后刷新统计、资产和奖励记录", async ({ page }) => 
 
   await expect(commissionPanel).toContainText("125 KCOIN");
   await expect(commissionPanel).toContainText("40 KCOIN");
+  await expect(commissionPanel).toContainText("165 KCOIN");
   await expect(
     commissionPanel.getByRole("button", { name: "领取" }),
   ).toBeEnabled();
@@ -741,8 +745,12 @@ function inviteStatsPayload(state: TaskMockState) {
       valid_invite_count: 2,
       first_open_count: 2,
       total_reward_kcoin: 1000,
-      commission_kcoin: state.commissionClaimed ? 165 : 40,
       pending_commission_kcoin: state.commissionClaimed ? 0 : 125,
+      granted_commission_kcoin: state.commissionClaimed ? 165 : 40,
+      commission_kcoin: state.commissionClaimed ? 165 : 40,
+      total_commission_kcoin: 165,
+      commission_bps: 1000,
+      commission_rate: 0.1,
       share_count: state.shareRecorded ? 1 : 0,
     },
     server_time: "2026-05-26T08:10:00.000Z",
@@ -758,6 +766,10 @@ function emptyInviteStatsPayload() {
       total_reward_kcoin: 0,
       commission_kcoin: 0,
       pending_commission_kcoin: 0,
+      granted_commission_kcoin: 0,
+      total_commission_kcoin: 0,
+      commission_bps: 1000,
+      commission_rate: 0.1,
       share_count: 0,
     },
     server_time: "2026-05-26T08:10:00.000Z",
@@ -825,6 +837,10 @@ function commissionStatsPayload(state: TaskMockState) {
       granted_amount_kcoin: 0,
       reversed_count: 0,
       reversed_amount_kcoin: 0,
+      total_count: 0,
+      total_amount_kcoin: 0,
+      current_bps: 1000,
+      current_rate: 0.1,
     };
   }
 
@@ -835,6 +851,10 @@ function commissionStatsPayload(state: TaskMockState) {
     granted_amount_kcoin: state.commissionClaimed ? 165 : 40,
     reversed_count: 0,
     reversed_amount_kcoin: 0,
+    total_count: 3,
+    total_amount_kcoin: 165,
+    current_bps: 1000,
+    current_rate: 0.1,
   };
 }
 

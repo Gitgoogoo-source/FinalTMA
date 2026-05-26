@@ -851,6 +851,8 @@ describe("tasks API", () => {
         total_count: 3,
         qualified_count: 1,
         rewarded_count: 1,
+        first_open_count: 2,
+        valid_count: 2,
       },
       rewards: {
         KCOIN: {
@@ -861,6 +863,9 @@ describe("tasks API", () => {
       commissions: {
         pending_amount_kcoin: "25",
         granted_amount_kcoin: "75",
+        total_amount_kcoin: "100",
+        current_bps: 1000,
+        current_rate: "0.1",
       },
       shares: {
         total_count: 4,
@@ -905,7 +910,11 @@ describe("tasks API", () => {
         first_open_count: 2,
         total_reward_kcoin: 1000,
         commission_kcoin: 75,
+        granted_commission_kcoin: 75,
         pending_commission_kcoin: 25,
+        total_commission_kcoin: 100,
+        commission_bps: 1000,
+        commission_rate: 0.1,
         share_count: 4,
       },
     });

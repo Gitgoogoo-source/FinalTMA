@@ -1,4 +1,11 @@
-import { Coins, HandCoins, Share2, Users } from "lucide-react";
+import {
+  Coins,
+  HandCoins,
+  Percent,
+  Share2,
+  Sparkles,
+  Users,
+} from "lucide-react";
 
 import { formatCurrencyAmount } from "@/shared/lib/formatCurrency";
 
@@ -21,6 +28,11 @@ export function InviteStatsPanel({ stats }: InviteStatsPanelProps) {
       value: stats?.validInviteCount ?? 0,
     },
     {
+      icon: Sparkles,
+      label: "首开人数",
+      value: stats?.firstOpenCount ?? 0,
+    },
+    {
       icon: Coins,
       label: "邀请奖励",
       value: formatCurrencyAmount(stats?.totalRewardKcoin ?? 0),
@@ -28,9 +40,14 @@ export function InviteStatsPanel({ stats }: InviteStatsPanelProps) {
     },
     {
       icon: HandCoins,
-      label: "分红收益",
-      value: formatCurrencyAmount(stats?.commissionKcoin ?? 0),
+      label: "累计生成分红",
+      value: formatCurrencyAmount(stats?.totalCommissionKcoin ?? 0),
       suffix: "KCOIN",
+    },
+    {
+      icon: Percent,
+      label: "当前分红比例",
+      value: formatCommissionRate(stats?.commissionRate ?? 0),
     },
   ];
 
@@ -54,4 +71,12 @@ export function InviteStatsPanel({ stats }: InviteStatsPanelProps) {
       })}
     </section>
   );
+}
+
+function formatCommissionRate(rate: number): string {
+  if (!Number.isFinite(rate) || rate <= 0) {
+    return "0%";
+  }
+
+  return `${Number((rate * 100).toFixed(2)).toString()}%`;
 }

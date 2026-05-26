@@ -131,8 +131,12 @@ export type InviteStats = {
   validInviteCount: number;
   firstOpenCount: number;
   totalRewardKcoin: number;
+  grantedCommissionKcoin: number;
   commissionKcoin: number;
   pendingCommissionKcoin: number;
+  totalCommissionKcoin: number;
+  commissionBps: number;
+  commissionRate: number;
   shareCount: number;
   serverTime: string | null;
 };
@@ -172,6 +176,10 @@ export type CommissionStats = {
   grantedAmountKcoin: number;
   reversedCount: number;
   reversedAmountKcoin: number;
+  totalCount: number;
+  totalAmountKcoin: number;
+  commissionBps: number;
+  commissionRate: number;
 };
 
 export type CommissionHistory = {

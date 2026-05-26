@@ -364,9 +364,41 @@ function normalizeInviteStats(value: unknown): InviteStats {
   const commissions = isRecord(payload.commissions) ? payload.commissions : {};
   const shares = isRecord(payload.shares) ? payload.shares : {};
   const kcoinRewards = isRecord(rewards.KCOIN) ? rewards.KCOIN : {};
+  const pendingCommissionKcoin =
+    readInteger(summary.pending_commission_kcoin) ??
+    readInteger(summary.pendingCommissionKcoin) ??
+    readInteger(commissions.pending_amount_kcoin) ??
+    0;
+  const grantedCommissionKcoin =
+    readInteger(summary.granted_commission_kcoin) ??
+    readInteger(summary.grantedCommissionKcoin) ??
+    readInteger(summary.commission_kcoin) ??
+    readInteger(summary.commissionKcoin) ??
+    readInteger(commissions.granted_amount_kcoin) ??
+    0;
+  const totalCommissionKcoin =
+    readInteger(summary.total_commission_kcoin) ??
+    readInteger(summary.totalCommissionKcoin) ??
+    readInteger(commissions.total_amount_kcoin) ??
+    pendingCommissionKcoin + grantedCommissionKcoin;
+  const commissionBps =
+    readInteger(summary.commission_bps) ??
+    readInteger(summary.commissionBps) ??
+    readInteger(commissions.current_bps) ??
+    readInteger(commissions.currentBps) ??
+    readInteger(commissions.commission_bps) ??
+    0;
+  const commissionRate =
+    readNumber(summary.commission_rate) ??
+    readNumber(summary.commissionRate) ??
+    readNumber(commissions.current_rate) ??
+    readNumber(commissions.currentRate) ??
+    (commissionBps > 0 ? commissionBps / 10000 : 0);
   const validInviteCount =
     readInteger(summary.valid_invite_count) ??
     readInteger(summary.validInviteCount) ??
+    readInteger(referrals.valid_count) ??
+    readInteger(referrals.validCount) ??
     (readInteger(referrals.qualified_count) ?? 0) +
       (readInteger(referrals.rewarded_count) ?? 0);
 
@@ -380,22 +412,20 @@ function normalizeInviteStats(value: unknown): InviteStats {
     firstOpenCount:
       readInteger(summary.first_open_count) ??
       readInteger(summary.firstOpenCount) ??
+      readInteger(referrals.first_open_count) ??
+      readInteger(referrals.firstOpenCount) ??
       validInviteCount,
     totalRewardKcoin:
       readInteger(summary.total_reward_kcoin) ??
       readInteger(summary.totalRewardKcoin) ??
       readInteger(kcoinRewards.amount) ??
       0,
-    commissionKcoin:
-      readInteger(summary.commission_kcoin) ??
-      readInteger(summary.commissionKcoin) ??
-      readInteger(commissions.granted_amount_kcoin) ??
-      0,
-    pendingCommissionKcoin:
-      readInteger(summary.pending_commission_kcoin) ??
-      readInteger(summary.pendingCommissionKcoin) ??
-      readInteger(commissions.pending_amount_kcoin) ??
-      0,
+    grantedCommissionKcoin,
+    commissionKcoin: grantedCommissionKcoin,
+    pendingCommissionKcoin,
+    totalCommissionKcoin,
+    commissionBps,
+    commissionRate,
     shareCount:
       readInteger(summary.share_count) ??
       readInteger(summary.shareCount) ??
@@ -512,32 +542,62 @@ function normalizeCommissionRecord(value: unknown): CommissionRecord | null {
 
 function normalizeCommissionStats(value: unknown): CommissionStats {
   const payload = isRecord(value) ? value : {};
+  const pendingCount =
+    readInteger(payload.pending_count) ??
+    readInteger(payload.pendingCount) ??
+    0;
+  const pendingAmountKcoin =
+    readInteger(payload.pending_amount_kcoin) ??
+    readInteger(payload.pendingAmountKcoin) ??
+    0;
+  const grantedCount =
+    readInteger(payload.granted_count) ??
+    readInteger(payload.grantedCount) ??
+    0;
+  const grantedAmountKcoin =
+    readInteger(payload.granted_amount_kcoin) ??
+    readInteger(payload.grantedAmountKcoin) ??
+    0;
+  const reversedCount =
+    readInteger(payload.reversed_count) ??
+    readInteger(payload.reversedCount) ??
+    0;
+  const reversedAmountKcoin =
+    readInteger(payload.reversed_amount_kcoin) ??
+    readInteger(payload.reversedAmountKcoin) ??
+    0;
+  const totalCount =
+    readInteger(payload.total_count) ??
+    readInteger(payload.totalCount) ??
+    pendingCount + grantedCount;
+  const totalAmountKcoin =
+    readInteger(payload.total_amount_kcoin) ??
+    readInteger(payload.totalAmountKcoin) ??
+    pendingAmountKcoin + grantedAmountKcoin;
+  const commissionBps =
+    readInteger(payload.current_bps) ??
+    readInteger(payload.currentBps) ??
+    readInteger(payload.commission_bps) ??
+    readInteger(payload.commissionBps) ??
+    0;
+  const commissionRate =
+    readNumber(payload.current_rate) ??
+    readNumber(payload.currentRate) ??
+    readNumber(payload.commission_rate) ??
+    readNumber(payload.commissionRate) ??
+    (commissionBps > 0 ? commissionBps / 10000 : 0);
 
   return {
-    pendingCount:
-      readInteger(payload.pending_count) ??
-      readInteger(payload.pendingCount) ??
-      0,
-    pendingAmountKcoin:
-      readInteger(payload.pending_amount_kcoin) ??
-      readInteger(payload.pendingAmountKcoin) ??
-      0,
-    grantedCount:
-      readInteger(payload.granted_count) ??
-      readInteger(payload.grantedCount) ??
-      0,
-    grantedAmountKcoin:
-      readInteger(payload.granted_amount_kcoin) ??
-      readInteger(payload.grantedAmountKcoin) ??
-      0,
-    reversedCount:
-      readInteger(payload.reversed_count) ??
-      readInteger(payload.reversedCount) ??
-      0,
-    reversedAmountKcoin:
-      readInteger(payload.reversed_amount_kcoin) ??
-      readInteger(payload.reversedAmountKcoin) ??
-      0,
+    pendingCount,
+    pendingAmountKcoin,
+    grantedCount,
+    grantedAmountKcoin,
+    reversedCount,
+    reversedAmountKcoin,
+    totalCount,
+    totalAmountKcoin,
+    commissionBps,
+    commissionRate,
   };
 }
 

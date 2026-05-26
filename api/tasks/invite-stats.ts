@@ -84,7 +84,40 @@ export function normalizeInviteStatsPayload(payload: unknown) {
   const rewards = isRecord(result.rewards) ? result.rewards : {};
   const commissions = isRecord(result.commissions) ? result.commissions : {};
   const shares = isRecord(result.shares) ? result.shares : {};
+  const summary = isRecord(result.summary) ? result.summary : {};
   const kcoinRewards = isRecord(rewards.KCOIN) ? rewards.KCOIN : {};
+  const qualifiedCount = readInteger(referrals.qualified_count) ?? 0;
+  const rewardedCount = readInteger(referrals.rewarded_count) ?? 0;
+  const firstOpenCount =
+    readInteger(summary.first_open_count) ??
+    readInteger(referrals.first_open_count) ??
+    qualifiedCount + rewardedCount;
+  const validInviteCount =
+    readInteger(summary.valid_invite_count) ??
+    readInteger(referrals.valid_count) ??
+    Math.max(qualifiedCount + rewardedCount, firstOpenCount);
+  const pendingCommissionKcoin =
+    readInteger(summary.pending_commission_kcoin) ??
+    readInteger(commissions.pending_amount_kcoin) ??
+    0;
+  const grantedCommissionKcoin =
+    readInteger(summary.granted_commission_kcoin) ??
+    readInteger(summary.commission_kcoin) ??
+    readInteger(commissions.granted_amount_kcoin) ??
+    0;
+  const totalCommissionKcoin =
+    readInteger(summary.total_commission_kcoin) ??
+    readInteger(commissions.total_amount_kcoin) ??
+    pendingCommissionKcoin + grantedCommissionKcoin;
+  const commissionBps =
+    readInteger(summary.commission_bps) ??
+    readInteger(commissions.current_bps) ??
+    readInteger(commissions.commission_bps) ??
+    null;
+  const commissionRate =
+    readNumber(summary.commission_rate) ??
+    readNumber(commissions.current_rate) ??
+    (commissionBps !== null ? commissionBps / 10000 : 0);
 
   return {
     referrals,
@@ -93,18 +126,26 @@ export function normalizeInviteStatsPayload(payload: unknown) {
     shares,
     date_range: isRecord(result.date_range) ? result.date_range : {},
     summary: compactRecord({
-      invited_count: readInteger(referrals.total_count) ?? 0,
-      valid_invite_count:
-        (readInteger(referrals.qualified_count) ?? 0) +
-        (readInteger(referrals.rewarded_count) ?? 0),
-      first_open_count:
-        (readInteger(referrals.qualified_count) ?? 0) +
-        (readInteger(referrals.rewarded_count) ?? 0),
-      total_reward_kcoin: readInteger(kcoinRewards.amount) ?? 0,
-      commission_kcoin: readInteger(commissions.granted_amount_kcoin) ?? 0,
-      pending_commission_kcoin:
-        readInteger(commissions.pending_amount_kcoin) ?? 0,
-      share_count: readInteger(shares.total_count) ?? 0,
+      invited_count:
+        readInteger(summary.invited_count) ??
+        readInteger(referrals.total_count) ??
+        0,
+      valid_invite_count: validInviteCount,
+      first_open_count: firstOpenCount,
+      total_reward_kcoin:
+        readInteger(summary.total_reward_kcoin) ??
+        readInteger(kcoinRewards.amount) ??
+        0,
+      pending_commission_kcoin: pendingCommissionKcoin,
+      granted_commission_kcoin: grantedCommissionKcoin,
+      commission_kcoin: grantedCommissionKcoin,
+      total_commission_kcoin: totalCommissionKcoin,
+      commission_bps: commissionBps,
+      commission_rate: commissionRate,
+      share_count:
+        readInteger(summary.share_count) ??
+        readInteger(shares.total_count) ??
+        0,
     }),
     server_time: readString(result.server_time) ?? new Date().toISOString(),
   };
