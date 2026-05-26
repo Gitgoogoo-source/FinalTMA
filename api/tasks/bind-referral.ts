@@ -2,6 +2,7 @@ import {
   BindReferralBodySchema,
   type BindReferralBody,
 } from "../../packages/validation/src/task.schemas.js";
+import { ApiError } from "../_shared/handler.js";
 import {
   assertNoClientControlledTaskFields,
   assertNoSensitiveMetadata,
@@ -108,16 +109,60 @@ export function normalizeBindReferralPayload(payload: unknown) {
     "绑定邀请结果格式无效。",
   );
   const bound = readBoolean(result.bound) ?? false;
+  const status = readString(result.status) ?? (bound ? "pending" : "rejected");
+  const reason = readString(result.reason);
+
+  if (!bound) {
+    throw mapBindReferralRejectedPayload(status, reason);
+  }
 
   return compactRecord({
     bound,
-    status: readString(result.status) ?? (bound ? "pending" : "rejected"),
-    reason: readString(result.reason),
+    status,
+    reason,
     referral_id: readString(result.referral_id),
     invite_code: readString(result.invite_code),
     created_at: readIsoDateString(result.created_at),
     idempotent: readBoolean(result.idempotent) ?? false,
   });
+}
+
+function mapBindReferralRejectedPayload(
+  status: string,
+  reason: string | null,
+): ApiError {
+  if (reason === "self_invite_not_allowed") {
+    return new ApiError(
+      400,
+      "REFERRAL_SELF_INVITE_NOT_ALLOWED",
+      "不能邀请自己。",
+      {
+        details: { status, reason },
+      },
+    );
+  }
+
+  if (reason === "referral_already_bound" || status === "conflict") {
+    return new ApiError(409, "REFERRAL_ALREADY_BOUND", "邀请关系已绑定。", {
+      details: { status, reason },
+    });
+  }
+
+  if (reason === "invite_code_not_found") {
+    return new ApiError(404, "REFERRAL_INVITER_NOT_FOUND", "邀请人不存在。", {
+      details: { status, reason },
+    });
+  }
+
+  return new ApiError(
+    500,
+    "REFERRAL_BIND_RESULT_INVALID",
+    "绑定邀请结果格式无效。",
+    {
+      details: { status, reason },
+      expose: false,
+    },
+  );
 }
 
 function extractInviteCode(value: unknown): unknown {

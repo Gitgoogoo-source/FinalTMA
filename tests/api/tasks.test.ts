@@ -739,6 +739,96 @@ describe("tasks API", () => {
     expect(result.body.data).not.toHaveProperty("invitee_user_id");
   });
 
+  it("bind-referral maps invalid invite code RPC result to a stable API error", async () => {
+    callRpcRawMock.mockResolvedValueOnce({
+      bound: false,
+      status: "rejected",
+      reason: "invite_code_not_found",
+      invite_code: "MISSING7001",
+      idempotent: false,
+    });
+
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      bindReferralHandler,
+      {
+        method: "POST",
+        headers: {
+          "x-idempotency-key": BIND_IDEMPOTENCY_KEY,
+        },
+        body: {
+          start_payload: "MISSING7001",
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(404);
+    expect(result.body.error.code).toBe("REFERRAL_INVITER_NOT_FOUND");
+    expect(result.body.error.details).toMatchObject({
+      status: "rejected",
+      reason: "invite_code_not_found",
+    });
+  });
+
+  it("bind-referral maps self invite RPC result to a stable API error", async () => {
+    callRpcRawMock.mockResolvedValueOnce({
+      bound: false,
+      status: "rejected",
+      reason: "self_invite_not_allowed",
+      invite_code: "INVITE7001",
+      idempotent: false,
+    });
+
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      bindReferralHandler,
+      {
+        method: "POST",
+        headers: {
+          "x-idempotency-key": BIND_IDEMPOTENCY_KEY,
+        },
+        body: {
+          start_payload: "INVITE7001",
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(400);
+    expect(result.body.error.code).toBe("REFERRAL_SELF_INVITE_NOT_ALLOWED");
+    expect(result.body.error.details).toMatchObject({
+      status: "rejected",
+      reason: "self_invite_not_allowed",
+    });
+  });
+
+  it("bind-referral maps different inviter rebind RPC result to a stable API error", async () => {
+    callRpcRawMock.mockResolvedValueOnce({
+      bound: false,
+      status: "conflict",
+      reason: "referral_already_bound",
+      referral_id: REFERRAL_ID,
+      idempotent: false,
+    });
+
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      bindReferralHandler,
+      {
+        method: "POST",
+        headers: {
+          "x-idempotency-key": BIND_IDEMPOTENCY_KEY,
+        },
+        body: {
+          start_payload: "OTHER7001",
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(409);
+    expect(result.body.error.code).toBe("REFERRAL_ALREADY_BOUND");
+    expect(result.body.error.details).toMatchObject({
+      status: "conflict",
+      reason: "referral_already_bound",
+    });
+  });
+
   it("invite-stats calls referral_get_invite_stats and returns nested stats plus summary", async () => {
     callRpcRawMock.mockResolvedValueOnce({
       referrals: {
