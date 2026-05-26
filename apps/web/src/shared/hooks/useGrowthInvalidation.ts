@@ -98,23 +98,57 @@ export function useGrowthInvalidation() {
   );
 
   const invalidateAfterDailyCheckIn = useCallback(
-    () => invalidateAll([queryKeys.tasks.root, queryKeys.me.assetsRoot]),
-    [invalidateAll],
+    () =>
+      invalidateAll([
+        queryKeys.tasks.overview(userId),
+        queryKeys.tasks.checkInStatus(userId),
+        queryKeys.tasks.listRoot(userId),
+        queryKeys.me.assetsRoot,
+      ]),
+    [invalidateAll, userId],
   );
 
   const invalidateAfterTaskRewardClaim = useCallback(
-    () => invalidateAll([queryKeys.tasks.root, queryKeys.me.assetsRoot]),
-    [invalidateAll],
+    () =>
+      invalidateAll([
+        queryKeys.tasks.listRoot(userId),
+        queryKeys.tasks.overview(userId),
+        queryKeys.me.assetsRoot,
+        queryKeys.tasks.rewardHistoryRoot(userId),
+      ]),
+    [invalidateAll, userId],
   );
 
   const invalidateAfterInviteShare = useCallback(
-    () => invalidateAll([queryKeys.tasks.root]),
-    [invalidateAll],
+    () =>
+      invalidateAll([
+        queryKeys.tasks.listRoot(userId),
+        queryKeys.tasks.inviteStats(userId),
+        queryKeys.tasks.overview(userId),
+      ]),
+    [invalidateAll, userId],
+  );
+
+  const invalidateAfterReferralBind = useCallback(
+    () =>
+      invalidateAll([
+        queryKeys.tasks.inviteStats(userId),
+        queryKeys.tasks.referralRecordsRoot(userId),
+        queryKeys.tasks.overview(userId),
+      ]),
+    [invalidateAll, userId],
   );
 
   const invalidateAfterCommissionClaim = useCallback(
-    () => invalidateAll([queryKeys.tasks.root, queryKeys.me.assetsRoot]),
-    [invalidateAll],
+    () =>
+      invalidateAll([
+        queryKeys.tasks.commissionHistoryRoot(userId),
+        queryKeys.tasks.inviteStats(userId),
+        queryKeys.me.assetsRoot,
+        queryKeys.tasks.rewardHistoryRoot(userId),
+        queryKeys.tasks.overview(userId),
+      ]),
+    [invalidateAll, userId],
   );
 
   return {
@@ -124,6 +158,7 @@ export function useGrowthInvalidation() {
     invalidateAfterDailyCheckIn,
     invalidateAfterEvolve,
     invalidateAfterInviteShare,
+    invalidateAfterReferralBind,
     invalidateAfterTaskRewardClaim,
     invalidateAfterUpgrade,
   };

@@ -134,6 +134,80 @@ describe("useGrowthInvalidation", () => {
 
     expectInvalidated(queryKeys.album.root, queryKeys.me.assetsRoot);
   });
+
+  it("refreshes task overview, check-in status, task list and assets after daily check-in", async () => {
+    const { result } = renderHook(() => useGrowthInvalidation());
+
+    await act(async () => {
+      await result.current.invalidateAfterDailyCheckIn();
+    });
+
+    expectInvalidated(
+      queryKeys.tasks.overview(USER_ID),
+      queryKeys.tasks.checkInStatus(USER_ID),
+      queryKeys.tasks.listRoot(USER_ID),
+      queryKeys.me.assetsRoot,
+    );
+  });
+
+  it("refreshes task list, overview, assets and reward history after claiming a task reward", async () => {
+    const { result } = renderHook(() => useGrowthInvalidation());
+
+    await act(async () => {
+      await result.current.invalidateAfterTaskRewardClaim();
+    });
+
+    expectInvalidated(
+      queryKeys.tasks.listRoot(USER_ID),
+      queryKeys.tasks.overview(USER_ID),
+      queryKeys.me.assetsRoot,
+      queryKeys.tasks.rewardHistoryRoot(USER_ID),
+    );
+  });
+
+  it("refreshes task list and invite stats after sharing an invite link", async () => {
+    const { result } = renderHook(() => useGrowthInvalidation());
+
+    await act(async () => {
+      await result.current.invalidateAfterInviteShare();
+    });
+
+    expectInvalidated(
+      queryKeys.tasks.listRoot(USER_ID),
+      queryKeys.tasks.inviteStats(USER_ID),
+      queryKeys.tasks.overview(USER_ID),
+    );
+  });
+
+  it("refreshes invite stats and referral records after binding a referral", async () => {
+    const { result } = renderHook(() => useGrowthInvalidation());
+
+    await act(async () => {
+      await result.current.invalidateAfterReferralBind();
+    });
+
+    expectInvalidated(
+      queryKeys.tasks.inviteStats(USER_ID),
+      queryKeys.tasks.referralRecordsRoot(USER_ID),
+      queryKeys.tasks.overview(USER_ID),
+    );
+  });
+
+  it("refreshes commission history, invite stats, assets and reward history after claiming commission", async () => {
+    const { result } = renderHook(() => useGrowthInvalidation());
+
+    await act(async () => {
+      await result.current.invalidateAfterCommissionClaim();
+    });
+
+    expectInvalidated(
+      queryKeys.tasks.commissionHistoryRoot(USER_ID),
+      queryKeys.tasks.inviteStats(USER_ID),
+      queryKeys.me.assetsRoot,
+      queryKeys.tasks.rewardHistoryRoot(USER_ID),
+      queryKeys.tasks.overview(USER_ID),
+    );
+  });
 });
 
 function expectInvalidated(...queryKeysToFind: Array<readonly unknown[]>) {

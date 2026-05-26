@@ -41,18 +41,26 @@ export const queryKeys = {
     root: ["tasks"] as const,
     overview: (userId: string | null | undefined) =>
       ["tasks", "overview", userId ?? "anonymous"] as const,
+    listRoot: (userId: string | null | undefined) =>
+      ["tasks", "list", userId ?? "anonymous"] as const,
     list: (userId: string | null | undefined, query: unknown = {}) =>
       ["tasks", "list", userId ?? "anonymous", query] as const,
     checkInStatus: (userId: string | null | undefined) =>
       ["tasks", "check-in-status", userId ?? "anonymous"] as const,
     inviteStats: (userId: string | null | undefined) =>
       ["tasks", "invite-stats", userId ?? "anonymous"] as const,
+    referralRecordsRoot: (userId: string | null | undefined) =>
+      ["tasks", "referral-records", userId ?? "anonymous"] as const,
     referralRecords: (userId: string | null | undefined, query: unknown = {}) =>
       ["tasks", "referral-records", userId ?? "anonymous", query] as const,
+    commissionHistoryRoot: (userId: string | null | undefined) =>
+      ["tasks", "commission-history", userId ?? "anonymous"] as const,
     commissionHistory: (
       userId: string | null | undefined,
       query: unknown = {},
     ) => ["tasks", "commission-history", userId ?? "anonymous", query] as const,
+    rewardHistoryRoot: (userId: string | null | undefined) =>
+      ["tasks", "reward-history", userId ?? "anonymous"] as const,
     rewardHistory: (userId: string | null | undefined, query: unknown = {}) =>
       ["tasks", "reward-history", userId ?? "anonymous", query] as const,
   },
