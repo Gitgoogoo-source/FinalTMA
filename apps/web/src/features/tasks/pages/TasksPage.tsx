@@ -10,6 +10,7 @@ import { CommissionStatsPanel } from "../components/CommissionStatsPanel";
 import { InviteCampaignCard } from "../components/InviteCampaignCard";
 import { InviteStatsPanel } from "../components/InviteStatsPanel";
 import { ReferralLinkSheet } from "../components/ReferralLinkSheet";
+import { RewardHistoryPanel } from "../components/RewardHistoryEntry";
 import { SevenDayCheckIn } from "../components/SevenDayCheckIn";
 import { TaskCategoryTabs } from "../components/TaskCategoryTabs";
 import { TaskList } from "../components/TaskList";
@@ -61,6 +62,7 @@ export function TasksPage() {
     checkInQuery.isFetching ||
     inviteStatsQuery.isFetching ||
     commissionQuery.isFetching;
+  const isTaskCenterLoading = taskQuery.isLoading && !taskQuery.overview;
 
   function handleRefresh() {
     void taskQuery.refetch();
@@ -276,11 +278,18 @@ export function TasksPage() {
       <TaskList
         error={taskQuery.error}
         isError={taskQuery.isError}
-        isLoading={taskQuery.isLoading && !taskQuery.overview}
+        isLoading={isTaskCenterLoading}
         onClaim={(task) => void handleClaimTask(task)}
         onRetry={() => void taskQuery.refetch()}
         pendingTaskId={pendingTaskId}
         tasks={taskQuery.tasks}
+      />
+
+      <RewardHistoryPanel
+        checkInStatus={checkInQuery.checkInStatus}
+        commissionHistory={commissionQuery.commissionHistory}
+        isLoading={isTaskCenterLoading}
+        tasks={taskQuery.allTasks}
       />
 
       <ReferralLinkSheet

@@ -6847,7 +6847,8 @@ a {
 .tasks-page__header span,
 .invite-campaign-card__copy span,
 .seven-day-check-in__header span,
-.commission-panel__header span {
+.commission-panel__header span,
+.reward-history-panel__header span {
   color: #8bd3c7;
   font-size: 11px;
   font-weight: 950;
@@ -6857,7 +6858,8 @@ a {
 .tasks-page__header h1,
 .invite-campaign-card__copy h2,
 .seven-day-check-in__header h2,
-.commission-panel__header h2 {
+.commission-panel__header h2,
+.reward-history-panel__header h2 {
   margin: 0;
   color: #f7fbff;
   font-size: 20px;
@@ -6885,7 +6887,8 @@ a {
 
 .invite-campaign-card,
 .seven-day-check-in,
-.commission-panel {
+.commission-panel,
+.reward-history-panel {
   display: grid;
   gap: 12px;
   border: 1px solid rgb(255 255 255 / 14%);
@@ -7018,7 +7021,8 @@ a {
 }
 
 .commission-panel__header,
-.seven-day-check-in__header {
+.seven-day-check-in__header,
+.reward-history-panel__header {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 10px;
@@ -7026,10 +7030,24 @@ a {
 }
 
 .commission-panel__header div,
-.seven-day-check-in__header div {
+.seven-day-check-in__header div,
+.reward-history-panel__header div {
   min-width: 0;
   display: grid;
   gap: 3px;
+}
+
+.reward-history-panel__header strong {
+  min-width: 32px;
+  min-height: 32px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid rgb(139 211 199 / 24%);
+  border-radius: 8px;
+  color: #dffff9;
+  background: rgb(139 211 199 / 9%);
+  font-size: 13px;
+  font-weight: 950;
 }
 
 .commission-panel__stats {
@@ -7155,7 +7173,8 @@ a {
 }
 
 .seven-day-check-in__empty,
-.task-list-state {
+.task-list-state,
+.reward-history-panel__state {
   min-height: 150px;
   display: grid;
   place-items: center;
@@ -7169,7 +7188,8 @@ a {
 }
 
 .seven-day-check-in__empty span,
-.task-list-state span {
+.task-list-state span,
+.reward-history-panel__state span {
   max-width: 280px;
   color: #aebfc7;
   font-size: 12px;
@@ -7308,6 +7328,77 @@ a {
   border-radius: 999px;
   padding: 0 8px;
   background: rgb(255 255 255 / 5%);
+}
+
+.reward-history-panel__list {
+  display: grid;
+  gap: 8px;
+}
+
+.reward-history-entry {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 8px;
+  padding: 10px;
+  background: rgb(255 255 255 / 5%);
+}
+
+.reward-history-entry__icon {
+  width: 30px;
+  min-height: 30px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 8px;
+  color: #8bd3c7;
+  background: rgb(139 211 199 / 11%);
+}
+
+.reward-history-entry[data-tone="signin"] .reward-history-entry__icon {
+  color: #ffd166;
+  background: rgb(255 209 102 / 10%);
+}
+
+.reward-history-entry[data-tone="commission"] .reward-history-entry__icon {
+  color: #c9a7ff;
+  background: rgb(201 167 255 / 11%);
+}
+
+.reward-history-entry__copy {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.reward-history-entry__copy strong,
+.reward-history-entry__copy span,
+.reward-history-entry__copy time {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reward-history-entry__copy strong {
+  color: #f7fbff;
+  font-size: 13px;
+  font-weight: 950;
+  line-height: 1.2;
+}
+
+.reward-history-entry__copy span,
+.reward-history-entry__copy time {
+  color: #aebfc7;
+  font-size: 11px;
+  font-weight: 850;
+  line-height: 1.2;
+}
+
+.reward-history-entry .task-reward-badges {
+  grid-column: 1 / -1;
 }
 
 .claim-task-button {

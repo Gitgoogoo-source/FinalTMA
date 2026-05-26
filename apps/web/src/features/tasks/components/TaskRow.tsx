@@ -1,6 +1,6 @@
 import { Coins, Gem, Gift, Star } from "lucide-react";
 
-import type { TaskItem, TaskReward } from "../tasks.types";
+import type { TaskItem, TaskProgress, TaskReward } from "../tasks.types";
 import { ClaimTaskButton } from "./ClaimTaskButton";
 
 type TaskRowProps = {
@@ -21,17 +21,26 @@ export function TaskRow({ isPending = false, onClaim, task }: TaskRowProps) {
         <ClaimTaskButton isPending={isPending} onClaim={onClaim} task={task} />
       </div>
 
-      <div className="task-row__progress" aria-label="任务进度">
-        <span>
-          <i style={{ width: `${task.progress.percent}%` }} />
-        </span>
-        <em>
-          {task.progress.current}/{task.progress.target}
-        </em>
-      </div>
-
+      <TaskProgressBar progress={task.progress} />
       <RewardBadges rewards={task.rewards} />
     </article>
+  );
+}
+
+type TaskProgressBarProps = {
+  progress: TaskProgress;
+};
+
+export function TaskProgressBar({ progress }: TaskProgressBarProps) {
+  return (
+    <div className="task-row__progress" aria-label="任务进度">
+      <span>
+        <i style={{ width: `${progress.percent}%` }} />
+      </span>
+      <em>
+        {progress.current}/{progress.target}
+      </em>
+    </div>
   );
 }
 
