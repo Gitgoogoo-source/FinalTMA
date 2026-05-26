@@ -122,6 +122,9 @@ select 'claim_commission1', api.referral_claim_commission((select id from _ids w
 select ok(((select payload from _ids where key = 'claim_commission1') ->> 'claimed')::boolean, 'pending commission can be claimed');
 select is(((select payload from _ids where key = 'claim_commission1') ->> 'claimed_count')::int, 1, 'claim covers one pending commission');
 select is(((select payload from _ids where key = 'claim_commission1') ->> 'claimed_amount_kcoin')::numeric, 10::numeric, 'claim amount equals pending commission amount');
+select is(((select payload from _ids where key = 'claim_commission1') ->> 'kcoin_balance_before')::numeric, 500::numeric, 'claim returns inviter KCOIN balance before credit');
+select is(((select payload from _ids where key = 'claim_commission1') ->> 'kcoin_balance_after')::numeric, 510::numeric, 'claim returns inviter KCOIN balance after credit');
+select is(((select payload from _ids where key = 'claim_commission1') ->> 'balance_change')::numeric, 10::numeric, 'claim returns KCOIN balance change');
 select is(testutil.balance_of((select id from _ids where key = 'inviter'), 'KCOIN'), 510::numeric, 'claim credits inviter balance');
 select is((select status from tasks.referral_commissions where referral_id = (select id from _ids where key = 'referral')), 'granted', 'claimed commission becomes granted');
 select ok((select ledger_id is not null from tasks.referral_commissions where referral_id = (select id from _ids where key = 'referral')), 'claimed commission stores ledger id');
@@ -141,6 +144,7 @@ select ok(exists (
 insert into _ids (key, payload)
 select 'claim_commission_repeat', api.referral_claim_commission((select id from _ids where key = 'inviter'), null, 'referral-commission-claim-001');
 select ok(((select payload from _ids where key = 'claim_commission_repeat') ->> 'idempotent')::boolean, 'repeated claim with same key returns idempotent=true');
+select is(((select payload from _ids where key = 'claim_commission_repeat') ->> 'kcoin_balance_after')::numeric, 510::numeric, 'repeated claim returns the original KCOIN balance snapshot');
 select is(testutil.balance_of((select id from _ids where key = 'inviter'), 'KCOIN'), 510::numeric, 'repeated claim does not credit again');
 select is((select count(*)::int from economy.currency_ledger where idempotency_key = 'referral_commission_claim:referral-commission-claim-001'), 1, 'repeated claim does not write duplicate ledger');
 

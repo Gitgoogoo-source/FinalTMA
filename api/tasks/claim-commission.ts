@@ -101,6 +101,20 @@ export function normalizeClaimCommissionPayload(payload: unknown) {
   const claimedAmount =
     readInteger(result.claimed_amount_kcoin) ??
     readInteger(result.amount_kcoin);
+  const kcoinBalanceBefore =
+    readInteger(result.kcoin_balance_before) ??
+    readInteger(result.balance_before) ??
+    readInteger(result.available_before);
+  const kcoinBalanceAfter =
+    readInteger(result.kcoin_balance_after) ??
+    readInteger(result.balance_after) ??
+    readInteger(result.available_after);
+  const balanceChange =
+    readInteger(result.balance_change) ??
+    readInteger(result.balance_delta) ??
+    (kcoinBalanceBefore !== null && kcoinBalanceAfter !== null
+      ? kcoinBalanceAfter - kcoinBalanceBefore
+      : null);
 
   if (processed === null || claimedCount === null || claimedAmount === null) {
     throw new ApiError(
@@ -127,6 +141,12 @@ export function normalizeClaimCommissionPayload(payload: unknown) {
     amount_kcoin: readInteger(result.amount_kcoin) ?? claimedAmount,
     commission_ids: normalizeUuidList(result.commission_ids),
     ledger_id: readString(result.ledger_id),
+    kcoin_balance_before: kcoinBalanceBefore,
+    kcoin_balance_after: kcoinBalanceAfter,
+    kcoin_locked_after:
+      readInteger(result.kcoin_locked_after) ??
+      readInteger(result.locked_after),
+    balance_change: balanceChange,
     status:
       readString(result.status) ??
       (claimedCount > 0 ? "granted" : "no_pending"),

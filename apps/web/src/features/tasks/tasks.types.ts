@@ -273,6 +273,10 @@ export type ClaimCommissionResult = {
   claimedCount: number;
   claimedAmountKcoin: number;
   amountKcoin: number;
+  kcoinBalanceBefore: number | null;
+  kcoinBalanceAfter: number | null;
+  kcoinLockedAfter: number | null;
+  balanceChangeKcoin: number | null;
   commissionIds: string[];
   ledgerId: string | null;
   status: string;

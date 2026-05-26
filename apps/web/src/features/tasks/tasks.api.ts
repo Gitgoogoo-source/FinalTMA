@@ -702,6 +702,26 @@ function normalizeClaimCommissionResult(
   response: unknown,
 ): ClaimCommissionResult {
   const payload = assertRecord(response, "Invalid commission claim response.");
+  const kcoinBalanceBefore =
+    readInteger(payload.kcoin_balance_before) ??
+    readInteger(payload.kcoinBalanceBefore) ??
+    readInteger(payload.balance_before) ??
+    readInteger(payload.balanceBefore) ??
+    readInteger(payload.available_before);
+  const kcoinBalanceAfter =
+    readInteger(payload.kcoin_balance_after) ??
+    readInteger(payload.kcoinBalanceAfter) ??
+    readInteger(payload.balance_after) ??
+    readInteger(payload.balanceAfter) ??
+    readInteger(payload.available_after);
+  const balanceChangeKcoin =
+    readInteger(payload.balance_change) ??
+    readInteger(payload.balanceChange) ??
+    readInteger(payload.balance_delta) ??
+    readInteger(payload.balanceDelta) ??
+    (kcoinBalanceBefore !== null && kcoinBalanceAfter !== null
+      ? kcoinBalanceAfter - kcoinBalanceBefore
+      : null);
 
   return {
     processed: readBoolean(payload.processed) ?? false,
@@ -719,6 +739,13 @@ function normalizeClaimCommissionResult(
       readInteger(payload.amountKcoin) ??
       readInteger(payload.claimed_amount_kcoin) ??
       0,
+    kcoinBalanceBefore,
+    kcoinBalanceAfter,
+    kcoinLockedAfter:
+      readInteger(payload.kcoin_locked_after) ??
+      readInteger(payload.kcoinLockedAfter) ??
+      readInteger(payload.locked_after),
+    balanceChangeKcoin,
     commissionIds: Array.isArray(payload.commission_ids)
       ? payload.commission_ids
           .map((item) => readString(item))

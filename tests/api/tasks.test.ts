@@ -1270,6 +1270,10 @@ describe("tasks API", () => {
       amount_kcoin: "10",
       commission_ids: [COMMISSION_ID],
       ledger_id: LEDGER_ID,
+      kcoin_balance_before: "500",
+      kcoin_balance_after: "510",
+      kcoin_locked_after: "0",
+      balance_change: "10",
       status: "granted",
       idempotent: false,
     });
@@ -1315,6 +1319,10 @@ describe("tasks API", () => {
       amount_kcoin: 10,
       commission_ids: [COMMISSION_ID],
       ledger_id: LEDGER_ID,
+      kcoin_balance_before: 500,
+      kcoin_balance_after: 510,
+      kcoin_locked_after: 0,
+      balance_change: 10,
       status: "granted",
       idempotent: false,
     });
