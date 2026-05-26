@@ -279,6 +279,22 @@ export function mapTaskRpcError(
     return new ApiError(404, "REFERRAL_INVITER_NOT_FOUND", "邀请人不存在。");
   }
 
+  if (message.includes("invalid commission status")) {
+    return new ApiError(
+      400,
+      "REFERRAL_COMMISSION_STATUS_INVALID",
+      "分红状态无效。",
+    );
+  }
+
+  if (message.includes("commission not found or not pending")) {
+    return new ApiError(
+      409,
+      "REFERRAL_COMMISSION_NOT_CLAIMABLE",
+      "分红不存在或不可领取。",
+    );
+  }
+
   return new ApiError(500, fallbackCode, fallbackMessage, {
     cause: error,
     expose: false,

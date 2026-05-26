@@ -172,6 +172,20 @@ export const ReferralRecordStatusInputSchema = z.preprocess((value) => {
   return normalized;
 }, ReferralRecordStatusSchema);
 
+export const CommissionStatusSchema = z.enum([
+  "pending",
+  "granted",
+  "reversed",
+]);
+
+export const CommissionStatusInputSchema = z.preprocess((value) => {
+  if (typeof value !== "string") {
+    return value;
+  }
+
+  return value.trim().toLowerCase();
+}, CommissionStatusSchema);
+
 export const ShareSceneSchema = z.enum([
   "TASK_PAGE",
   "INVITE_CARD",
@@ -430,6 +444,15 @@ export const ReferralListResponseSchema = z.object({
   nextCursor: CursorSchema.nullable().optional(),
 });
 
+export const CommissionHistoryQuerySchema = PaginationQuerySchema.extend({
+  status: CommissionStatusInputSchema.optional(),
+});
+
+export const ClaimCommissionBodySchema = z.object({
+  commissionIds: z.array(UUIDSchema).min(1).max(100).optional(),
+  idempotencyKey: IdempotencyKeySchema,
+});
+
 /* -------------------------------------------------------------------------- */
 /* 分享事件 schema                                                              */
 /* -------------------------------------------------------------------------- */
@@ -513,6 +536,11 @@ export type InviteStatsQuery = z.infer<typeof InviteStatsQuerySchema>;
 export type InviteStatsResponse = z.infer<typeof InviteStatsResponseSchema>;
 export type ReferralListQuery = z.infer<typeof ReferralListQuerySchema>;
 export type ReferralListResponse = z.infer<typeof ReferralListResponseSchema>;
+export type CommissionStatus = z.infer<typeof CommissionStatusSchema>;
+export type CommissionHistoryQuery = z.infer<
+  typeof CommissionHistoryQuerySchema
+>;
+export type ClaimCommissionBody = z.infer<typeof ClaimCommissionBodySchema>;
 
 export type ShareEventBody = z.infer<typeof ShareEventBodySchema>;
 export type ShareEventResponse = z.infer<typeof ShareEventResponseSchema>;

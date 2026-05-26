@@ -7,7 +7,9 @@ import type {
 import { ApiError } from "../../api/_shared/handler";
 import bindReferralHandler from "../../api/tasks/bind-referral";
 import checkInHandler from "../../api/tasks/check-in";
+import claimCommissionHandler from "../../api/tasks/claim-commission";
 import claimTaskHandler from "../../api/tasks/claim";
+import commissionHistoryHandler from "../../api/tasks/commission-history";
 import inviteStatsHandler from "../../api/tasks/invite-stats";
 import overviewHandler from "../../api/tasks/overview";
 import referralLinkHandler from "../../api/tasks/referral-link";
@@ -64,10 +66,13 @@ const TASK_ID = "44444444-4444-4444-8444-444444444444";
 const CLAIM_ID = "55555555-5555-4555-8555-555555555555";
 const REFERRAL_ID = "66666666-6666-4666-8666-666666666666";
 const SHARE_EVENT_ID = "77777777-7777-4777-8777-777777777777";
+const COMMISSION_ID = "88888888-8888-4888-8888-888888888888";
+const LEDGER_ID = "99999999-9999-4999-8999-999999999999";
 const IDEMPOTENCY_KEY = "task:check-in:0001";
 const CLAIM_IDEMPOTENCY_KEY = "task:claim:0001";
 const BIND_IDEMPOTENCY_KEY = "task:bind-referral:0001";
 const SHARE_IDEMPOTENCY_KEY = "task:share-event:0001";
+const CLAIM_COMMISSION_IDEMPOTENCY_KEY = "task:claim-commission:0001";
 
 describe("tasks API", () => {
   beforeEach(() => {
@@ -550,6 +555,217 @@ describe("tasks API", () => {
     expect(referralRecordsData.items[0]).not.toHaveProperty(
       "first_open_order_id",
     );
+  });
+
+  it("commission-history calls referral_get_commission_history and hides user UUIDs", async () => {
+    callRpcRawMock.mockResolvedValueOnce({
+      commissions: [
+        {
+          commission_id: COMMISSION_ID,
+          referral_id: REFERRAL_ID,
+          inviter_user_id: USER_ID,
+          invitee_user_id: FORGED_USER_ID,
+          invitee_username: "friend_user",
+          invitee_display_name: "Friend",
+          source_type: "gacha_open",
+          source_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          base_amount_kcoin: "100",
+          commission_bps: 1000,
+          commission_amount_kcoin: "10",
+          ledger_id: LEDGER_ID,
+          status: "granted",
+          created_at: "2026-05-26T06:00:00.000Z",
+          claimed_at: "2026-05-26T06:05:00.000Z",
+        },
+      ],
+      count: 1,
+      next_cursor: "2026-05-26T06:00:00.000Z",
+      server_time: "2026-05-26T06:10:00.000Z",
+    });
+
+    const result = await invokeApiHandler<ApiSuccessResponse>(
+      commissionHistoryHandler,
+      {
+        method: "GET",
+        headers: {
+          "x-request-id": "req-commission-history",
+        },
+        query: {
+          status: "GRANTED",
+          cursor: "2026-05-26T07:00:00.000Z",
+          limit: "10",
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(200);
+    expect(callRpcRawMock).toHaveBeenCalledWith(
+      "referral_get_commission_history",
+      {
+        p_user_id: USER_ID,
+        p_cursor: "2026-05-26T07:00:00.000Z",
+        p_status: "granted",
+        p_limit: 10,
+      },
+      expect.objectContaining({
+        schema: "api",
+        context: expect.objectContaining({
+          requestId: "req-commission-history",
+          userId: USER_ID,
+          status: "granted",
+          limit: 10,
+        }),
+      }),
+    );
+    expect(result.body.data).toMatchObject({
+      items: [
+        {
+          commission_id: COMMISSION_ID,
+          invitee_username: "friend_user",
+          invitee_display_name: "Friend",
+          source_type: "gacha_open",
+          base_amount_kcoin: 100,
+          commission_bps: 1000,
+          commission_amount_kcoin: 10,
+          ledger_id: LEDGER_ID,
+          status: "granted",
+          claimed_at: "2026-05-26T06:05:00.000Z",
+        },
+      ],
+      count: 1,
+      next_cursor: "2026-05-26T06:00:00.000Z",
+    });
+    const commissionHistoryData = result.body.data as {
+      items: Record<string, unknown>[];
+    };
+    expect(commissionHistoryData.items[0]).not.toHaveProperty(
+      "inviter_user_id",
+    );
+    expect(commissionHistoryData.items[0]).not.toHaveProperty(
+      "invitee_user_id",
+    );
+  });
+
+  it("claim-commission calls referral_claim_commission with header idempotency and session user", async () => {
+    callRpcRawMock.mockResolvedValueOnce({
+      processed: true,
+      claimed: true,
+      claimed_count: 1,
+      claimed_amount_kcoin: "10",
+      amount_kcoin: "10",
+      commission_ids: [COMMISSION_ID],
+      ledger_id: LEDGER_ID,
+      status: "granted",
+      idempotent: false,
+    });
+
+    const result = await invokeApiHandler<ApiSuccessResponse>(
+      claimCommissionHandler,
+      {
+        method: "POST",
+        headers: {
+          "x-request-id": "req-claim-commission",
+          "x-idempotency-key": CLAIM_COMMISSION_IDEMPOTENCY_KEY,
+        },
+        body: {
+          commission_ids: [COMMISSION_ID],
+          idempotencyKey: "task:claim-commission-body-ignored",
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(200);
+    expect(callRpcRawMock).toHaveBeenCalledWith(
+      "referral_claim_commission",
+      {
+        p_user_id: USER_ID,
+        p_commission_ids: [COMMISSION_ID],
+        p_idempotency_key: CLAIM_COMMISSION_IDEMPOTENCY_KEY,
+      },
+      expect.objectContaining({
+        schema: "api",
+        context: expect.objectContaining({
+          requestId: "req-claim-commission",
+          userId: USER_ID,
+          idempotencyKey: CLAIM_COMMISSION_IDEMPOTENCY_KEY,
+          commissionCount: 1,
+        }),
+      }),
+    );
+    expect(result.body.data).toMatchObject({
+      processed: true,
+      claimed: true,
+      claimed_count: 1,
+      claimed_amount_kcoin: 10,
+      amount_kcoin: 10,
+      commission_ids: [COMMISSION_ID],
+      ledger_id: LEDGER_ID,
+      status: "granted",
+      idempotent: false,
+    });
+  });
+
+  it("claim-commission without commission ids claims all pending rows", async () => {
+    callRpcRawMock.mockResolvedValueOnce({
+      processed: true,
+      claimed: false,
+      claimed_count: 0,
+      claimed_amount_kcoin: 0,
+      amount_kcoin: 0,
+      commission_ids: [],
+      ledger_id: null,
+      status: "no_pending",
+      idempotent: false,
+    });
+
+    const result = await invokeApiHandler<ApiSuccessResponse>(
+      claimCommissionHandler,
+      {
+        method: "POST",
+        body: {
+          idempotencyKey: CLAIM_COMMISSION_IDEMPOTENCY_KEY,
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(200);
+    expect(callRpcRawMock).toHaveBeenCalledWith(
+      "referral_claim_commission",
+      expect.objectContaining({
+        p_user_id: USER_ID,
+        p_commission_ids: null,
+        p_idempotency_key: CLAIM_COMMISSION_IDEMPOTENCY_KEY,
+      }),
+      expect.objectContaining({
+        schema: "api",
+      }),
+    );
+    expect(result.body.data).toMatchObject({
+      claimed: false,
+      claimed_count: 0,
+      claimed_amount_kcoin: 0,
+      status: "no_pending",
+    });
+  });
+
+  it("claim-commission rejects forged commission facts before calling RPC", async () => {
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      claimCommissionHandler,
+      {
+        method: "POST",
+        body: {
+          commissionIds: [COMMISSION_ID],
+          user_id: FORGED_USER_ID,
+          commission_amount_kcoin: 10,
+          status: "pending",
+          idempotencyKey: CLAIM_COMMISSION_IDEMPOTENCY_KEY,
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(400);
+    expect(result.body.error.code).toBe("VALIDATION_ERROR");
+    expect(callRpcRawMock).not.toHaveBeenCalled();
   });
 
   it("share-event records a Telegram share without exposing raw chat ids", async () => {
