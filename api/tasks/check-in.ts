@@ -16,6 +16,7 @@ export default withTaskApiHandler(
   async (req, _res, ctx) => {
     const input = await parseTaskJsonBodyInput(req, CheckInBodySchema, {
       maxBytes: 8 * 1024,
+      requireIdempotencyKey: true,
       normalize: normalizeCheckInInput,
     });
     const payload = await callTaskDailyCheckInRpc(
@@ -48,9 +49,6 @@ export function normalizeCheckInInput(
 
   return {
     campaignId: body.campaignId ?? body.campaign_id,
-    localDate: body.localDate ?? body.local_date,
-    timezoneOffsetMinutes:
-      body.timezoneOffsetMinutes ?? body.timezone_offset_minutes,
     idempotencyKey,
   };
 }
@@ -66,16 +64,14 @@ async function callTaskDailyCheckInRpc(
       session,
       {
         p_campaign_id: input.campaignId ?? null,
-        p_local_date: input.localDate ?? null,
-        p_timezone_offset_minutes: input.timezoneOffsetMinutes ?? null,
+        p_local_date: null,
+        p_timezone_offset_minutes: null,
         p_idempotency_key: input.idempotencyKey,
       },
       {
         requestId,
         idempotencyKey: input.idempotencyKey,
         campaignId: input.campaignId ?? null,
-        localDate: input.localDate ?? null,
-        timezoneOffsetMinutes: input.timezoneOffsetMinutes ?? null,
       },
     );
   } catch (error) {

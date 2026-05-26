@@ -58,6 +58,14 @@ as $$
   ), 0)::numeric;
 $$;
 
+create or replace function testutil.signin_business_date()
+returns date
+language sql
+stable
+as $$
+  select (now() at time zone 'Asia/Shanghai')::date;
+$$;
+
 select no_plan();
 
 create temp table _ids (key text primary key, id uuid, txt text, payload jsonb) on commit drop;
@@ -154,7 +162,7 @@ insert into _ids (key, payload)
 select 'signin_first', api.task_daily_check_in(
   (select id from _ids where key = 'user'),
   (select id from _ids where key = 'campaign'),
-  current_date,
+  date '2099-01-01',
   0,
   (select txt from _ids where key = 'signin_key')
 );
@@ -181,10 +189,21 @@ select is(
     from tasks.user_signins
     where user_id = (select id from _ids where key = 'user')
       and campaign_id = (select id from _ids where key = 'campaign')
-      and signin_date = current_date
+      and signin_date = testutil.signin_business_date()
   ),
   1,
   'first sign-in creates one user_signins row'
+);
+select is(
+  (
+    select count(*)::integer
+    from tasks.user_signins
+    where user_id = (select id from _ids where key = 'user')
+      and campaign_id = (select id from _ids where key = 'campaign')
+      and signin_date = date '2099-01-01'
+  ),
+  0,
+  'first sign-in ignores the client-supplied date'
 );
 select is(
   (
@@ -213,7 +232,7 @@ select is(
     from tasks.user_task_progress
     where user_id = (select id from _ids where key = 'user')
       and task_id = (select id from _ids where key = 'signin_task')
-      and period_key = current_date::text
+      and period_key = testutil.signin_business_date()::text
   ),
   'completed',
   'first sign-in records daily check-in task progress'
@@ -224,7 +243,7 @@ select is(
     from tasks.user_task_progress
     where user_id = (select id from _ids where key = 'user')
       and task_id = (select id from _ids where key = 'signin_task')
-      and period_key = current_date::text
+      and period_key = testutil.signin_business_date()::text
   ),
   1,
   'first sign-in stores one task progress source event'
@@ -236,8 +255,8 @@ select
   api.task_daily_check_in(
     (select id from _ids where key = 'user'),
     (select id from _ids where key = 'campaign'),
-    current_date,
-    0,
+    date '2099-01-02',
+    840,
     'signin-8-3-tx-repeat-' || attempt::text
   )
 from generate_series(1, 10) as gs(attempt);
@@ -258,7 +277,7 @@ select is(
     from tasks.user_signins
     where user_id = (select id from _ids where key = 'user')
       and campaign_id = (select id from _ids where key = 'campaign')
-      and signin_date = current_date
+      and signin_date = testutil.signin_business_date()
   ),
   1,
   'ten same-day retry attempts still leave one user_signins row'
@@ -286,7 +305,7 @@ select is(
     from tasks.user_task_progress
     where user_id = (select id from _ids where key = 'user')
       and task_id = (select id from _ids where key = 'signin_task')
-      and period_key = current_date::text
+      and period_key = testutil.signin_business_date()::text
   ),
   1,
   'ten same-day retry attempts do not duplicate task progress source events'
@@ -296,24 +315,12 @@ insert into _ids (key, payload)
 select 'signin_cached', api.task_daily_check_in(
   (select id from _ids where key = 'user'),
   (select id from _ids where key = 'campaign'),
-  current_date,
-  0,
+  date '1999-01-01',
+  -840,
   (select txt from _ids where key = 'signin_key')
 );
 
-select ok(((select payload from _ids where key = 'signin_cached') ->> 'idempotent')::boolean, 'same idempotency key returns cached response');
-select ok(
-  testutil.raises_like(
-    format(
-      'select api.task_daily_check_in(%L::uuid, %L::uuid, current_date + 1, 0, %L)',
-      (select id::text from _ids where key = 'user'),
-      (select id::text from _ids where key = 'campaign'),
-      (select txt from _ids where key = 'signin_key')
-    ),
-    '%idempotency conflict%'
-  ),
-  'same idempotency key cannot be reused for different sign-in input'
-);
+select ok(((select payload from _ids where key = 'signin_cached') ->> 'idempotent')::boolean, 'same idempotency key returns cached response even when client date changes');
 
 select ok(
   (

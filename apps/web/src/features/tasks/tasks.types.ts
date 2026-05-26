@@ -218,8 +218,6 @@ export type ClaimTaskResult = {
 
 export type DailyCheckInInput = {
   campaignId?: string | null;
-  localDate?: string | null;
-  timezoneOffsetMinutes?: number | null;
   idempotencyKey?: string | null;
 };
 

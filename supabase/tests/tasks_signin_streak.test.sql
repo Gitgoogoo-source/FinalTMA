@@ -46,6 +46,14 @@ begin
 end;
 $$;
 
+create or replace function testutil.signin_business_date()
+returns date
+language sql
+stable
+as $$
+  select (now() at time zone 'Asia/Shanghai')::date;
+$$;
+
 select no_plan();
 
 create temp table _ids (key text primary key, id uuid, payload jsonb) on commit drop;
@@ -112,7 +120,7 @@ values (
   (select id from _ids where key = 'campaign'),
   2,
   2,
-  current_date - 1,
+  testutil.signin_business_date() - 1,
   2
 );
 
@@ -122,7 +130,7 @@ select
   api.task_daily_check_in(
     (select id from _ids where key = 'continuous_user'),
     (select id from _ids where key = 'campaign'),
-    current_date,
+    testutil.signin_business_date(),
     0,
     'signin-8-2-continuous-001'
   );
@@ -142,7 +150,7 @@ select
   api.task_daily_check_in(
     (select id from _ids where key = 'continuous_user'),
     (select id from _ids where key = 'campaign'),
-    current_date,
+    testutil.signin_business_date(),
     0,
     'signin-8-2-continuous-002'
   );
@@ -154,7 +162,7 @@ select is(
     from tasks.user_signins
     where user_id = (select id from _ids where key = 'continuous_user')
       and campaign_id = (select id from _ids where key = 'campaign')
-      and signin_date = current_date
+      and signin_date = testutil.signin_business_date()
   ),
   1,
   'same-day repeated sign-in does not insert a second user_signins row'
@@ -178,7 +186,7 @@ values (
   (select id from _ids where key = 'campaign'),
   5,
   5,
-  current_date - 2,
+  testutil.signin_business_date() - 2,
   5
 );
 
@@ -188,7 +196,7 @@ select
   api.task_daily_check_in(
     (select id from _ids where key = 'break_user'),
     (select id from _ids where key = 'campaign'),
-    current_date,
+    testutil.signin_business_date(),
     0,
     'signin-8-2-break-001'
   );
@@ -197,7 +205,7 @@ select is(((select payload from _ids where key = 'break_signin') ->> 'day_index'
 select is(((select payload from _ids where key = 'break_signin') ->> 'current_streak')::integer, 1, 'missed yesterday resets current_streak to 1');
 select is(
   (select last_signin_date from tasks.user_signin_states where user_id = (select id from _ids where key = 'break_user') and campaign_id = (select id from _ids where key = 'campaign')),
-  current_date,
+  testutil.signin_business_date(),
   'break-streak sign-in stores today as last_signin_date'
 );
 
@@ -214,7 +222,7 @@ values (
   (select id from _ids where key = 'campaign'),
   7,
   7,
-  current_date - 1,
+  testutil.signin_business_date() - 1,
   7
 );
 
@@ -224,7 +232,7 @@ select
   api.task_daily_check_in(
     (select id from _ids where key = 'cycle_user'),
     (select id from _ids where key = 'campaign'),
-    current_date,
+    testutil.signin_business_date(),
     0,
     'signin-8-2-cycle-001'
   );
@@ -268,7 +276,7 @@ insert into _ids (key, id) select 'ended_campaign', id from ended_campaign;
 select ok(
   testutil.raises_like(
     format(
-      'select api.task_daily_check_in(%L::uuid, %L::uuid, current_date, 0, %L)',
+      'select api.task_daily_check_in(%L::uuid, %L::uuid, testutil.signin_business_date(), 0, %L)',
       (select id::text from _ids where key = 'ended_user'),
       (select id::text from _ids where key = 'ended_campaign'),
       'signin-8-2-ended-001'

@@ -37,6 +37,7 @@ export type TaskApiRouteHandler<T = unknown> = (
 export type ParseTaskJsonBodyOptions = {
   maxBytes?: number;
   normalize?: (body: unknown, idempotencyKey: unknown) => unknown;
+  requireIdempotencyKey?: boolean;
 };
 
 export type TaskRpcContext = {
@@ -96,11 +97,27 @@ export async function parseTaskJsonBodyInput<T>(
     maxBytes: options.maxBytes ?? 16 * 1024,
   });
   const idempotencyKey = getTaskIdempotencyKeyCandidate(req, body);
+
+  if (
+    options.requireIdempotencyKey === true &&
+    isMissingIdempotencyKeyCandidate(idempotencyKey)
+  ) {
+    throw new ApiError(400, "IDEMPOTENCY_KEY_REQUIRED", "缺少幂等键。");
+  }
+
   const input = options.normalize
     ? options.normalize(body, idempotencyKey)
     : normalizeTaskBodyInput(body, idempotencyKey);
 
   return validate(schema, input);
+}
+
+function isMissingIdempotencyKeyCandidate(value: unknown): boolean {
+  if (value === undefined || value === null) {
+    return true;
+  }
+
+  return typeof value === "string" && value.trim().length === 0;
 }
 
 export function normalizeTaskBodyInput(

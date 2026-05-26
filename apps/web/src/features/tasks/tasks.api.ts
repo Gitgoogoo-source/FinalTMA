@@ -65,16 +65,12 @@ export async function claimTaskReward(
 export async function dailyCheckIn(
   input: DailyCheckInInput = {},
 ): Promise<DailyCheckInResult> {
-  const localDate = input.localDate ?? getLocalDate(new Date());
   const idempotencyKey =
-    input.idempotencyKey ?? createIdempotencyKey(`task:signin:${localDate}`);
+    input.idempotencyKey ?? createIdempotencyKey("task:signin");
   const response = await apiRequest<unknown>(API_ENDPOINTS.tasks.checkIn, {
     method: "POST",
     body: compactRecord({
       campaign_id: input.campaignId,
-      local_date: localDate,
-      timezone_offset_minutes:
-        input.timezoneOffsetMinutes ?? new Date().getTimezoneOffset(),
       idempotency_key: idempotencyKey,
     }),
     headers: {
@@ -958,14 +954,6 @@ function createIdempotencyKey(scope: string): string {
     `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 
   return `${scope}:${randomValue}`;
-}
-
-function getLocalDate(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
 }
 
 function clampPercent(value: number): number {

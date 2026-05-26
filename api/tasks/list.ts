@@ -21,17 +21,17 @@ import {
 
 const MAX_FILTERED_RPC_LIMIT = 200;
 
-const TASK_CATEGORY_TO_RPC_TYPE: Partial<Record<string, string>> = {
-  DAILY: "daily",
-  SOCIAL: "social",
-  TRADE: "trade",
-  GACHA: "gacha",
-  ALBUM: "album",
-  WALLET: "onchain",
-  ONCHAIN: "onchain",
-  GAME: "one_time",
-  EVENT: "one_time",
-  SYSTEM: "one_time",
+const TASK_CATEGORY_TO_RPC_TYPES: Partial<Record<string, string[]>> = {
+  DAILY: ["daily"],
+  SOCIAL: ["social", "referral"],
+  TRADE: ["trade"],
+  GACHA: ["gacha"],
+  ALBUM: ["album"],
+  WALLET: ["onchain"],
+  ONCHAIN: ["onchain"],
+  GAME: ["one_time"],
+  EVENT: ["one_time"],
+  SYSTEM: ["one_time"],
 };
 
 const TASK_STATUS_TO_RPC_STATUS: Partial<Record<string, string>> = {
@@ -298,7 +298,7 @@ function resolveRpcTaskTypes(
 
   return uniqueStrings(
     categories
-      .map((category) => TASK_CATEGORY_TO_RPC_TYPE[category])
+      .flatMap((category) => TASK_CATEGORY_TO_RPC_TYPES[category] ?? [])
       .filter((category): category is string => Boolean(category)),
   );
 }

@@ -68,16 +68,24 @@ select ok(
 );
 
 select ok(
-  position('task_record_progress' in pg_get_functiondef(to_regprocedure('api.inventory_evolve_item(uuid,uuid[],text)'))) = 0,
-  'inventory_evolve_item is not wired because no active remote task source exists'
+  position('task_record_progress' in pg_get_functiondef(to_regprocedure('api.inventory_evolve_item(uuid,uuid[],text)'))) > 0
+    and position('inventory_evolve_item' in pg_get_functiondef(to_regprocedure('api.inventory_evolve_item(uuid,uuid[],text)'))) > 0,
+  'inventory_evolve_item records inventory_evolve_item progress'
 );
 select ok(
-  position('task_record_progress' in pg_get_functiondef(to_regprocedure('api.inventory_decompose_items(uuid,uuid[],text)'))) = 0,
-  'inventory_decompose_items is not wired because no active remote task source exists'
+  position('task_record_progress' in pg_get_functiondef(to_regprocedure('api.inventory_decompose_items(uuid,uuid[],text)'))) > 0
+    and position('inventory_decompose_item' in pg_get_functiondef(to_regprocedure('api.inventory_decompose_items(uuid,uuid[],text)'))) > 0,
+  'inventory_decompose_items records inventory_decompose_item progress'
 );
 select ok(
-  position('task_record_progress' in pg_get_functiondef(to_regprocedure('api.album_claim_milestone(uuid,uuid,text,integer)'))) = 0,
-  'album_claim_milestone is not wired because no active remote task source exists'
+  position('task_record_progress' in pg_get_functiondef(to_regprocedure('api.inventory_decompose_item(uuid,uuid,text)'))) > 0
+    and position('inventory_decompose_item' in pg_get_functiondef(to_regprocedure('api.inventory_decompose_item(uuid,uuid,text)'))) > 0,
+  'inventory_decompose_item records inventory_decompose_item progress'
+);
+select ok(
+  position('task_record_progress' in pg_get_functiondef(to_regprocedure('api.album_claim_milestone(uuid,uuid,text,integer)'))) > 0
+    and position('album_claim_milestone' in pg_get_functiondef(to_regprocedure('api.album_claim_milestone(uuid,uuid,text,integer)'))) > 0,
+  'album_claim_milestone records album_claim_milestone progress'
 );
 select ok(
   position('task_record_progress' in pg_get_functiondef(to_regprocedure('api.wallet_enqueue_mint(uuid,uuid,uuid,uuid,text)'))) = 0,

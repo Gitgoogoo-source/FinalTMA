@@ -165,11 +165,13 @@ test("任务页展示签到状态，签到后刷新签到和资产数据", async
   await expect.poll(() => state.checkInRequests.length).toBe(1);
   expect(state.checkInRequests[0]?.body).toMatchObject({
     campaign_id: CAMPAIGN_ID,
-    local_date: expect.any(String),
-    timezone_offset_minutes: expect.any(Number),
     idempotency_key: expect.any(String),
   });
   expect(state.checkInRequests[0]?.body).not.toHaveProperty("user_id");
+  expect(state.checkInRequests[0]?.body).not.toHaveProperty("local_date");
+  expect(state.checkInRequests[0]?.body).not.toHaveProperty(
+    "timezone_offset_minutes",
+  );
   expect(state.checkInRequests[0]?.headers["x-idempotency-key"]).toEqual(
     state.checkInRequests[0]?.body.idempotency_key,
   );

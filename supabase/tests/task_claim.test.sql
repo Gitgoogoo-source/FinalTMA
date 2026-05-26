@@ -60,6 +60,14 @@ as $$
   ), 0)::numeric;
 $$;
 
+create or replace function testutil.signin_business_date()
+returns date
+language sql
+stable
+as $$
+  select (now() at time zone 'Asia/Shanghai')::date;
+$$;
+
 select no_plan();
 
 create temp table _ids (key text primary key, id uuid, txt text, payload jsonb) on commit drop;
@@ -161,22 +169,24 @@ insert into _ids (key, payload)
 select 'signin1', api.task_daily_check_in(
   (select id from _ids where key = 'user'),
   (select id from _ids where key = 'signin_campaign'),
-  current_date,
+  date '2099-01-01',
   0,
   (select txt from _ids where key = 'signin_key')
 );
 select is(((select payload from _ids where key = 'signin1') ->> 'day_index')::int, 1, 'first daily sign-in claims day 1');
 select is(((select payload from _ids where key = 'signin1') ->> 'current_streak')::int, 1, 'first daily sign-in returns current_streak=1');
 select is(testutil.balance_of((select id from _ids where key = 'user'), 'FGEMS'), 9::numeric, 'daily sign-in credits configured FGEMS reward');
-select is((select idempotency_key from tasks.user_signins where user_id = (select id from _ids where key = 'user') and campaign_id = (select id from _ids where key = 'signin_campaign') and signin_date = current_date), (select txt from _ids where key = 'signin_key'), 'daily sign-in stores idempotency_key');
-select ok((select request_fingerprint is not null from tasks.user_signins where user_id = (select id from _ids where key = 'user') and campaign_id = (select id from _ids where key = 'signin_campaign') and signin_date = current_date), 'daily sign-in stores request_fingerprint');
+select is((select signin_date from tasks.user_signins where user_id = (select id from _ids where key = 'user') and campaign_id = (select id from _ids where key = 'signin_campaign')), testutil.signin_business_date(), 'daily sign-in ignores client date and stores the business date');
+select is((select count(*)::int from tasks.user_signins where user_id = (select id from _ids where key = 'user') and campaign_id = (select id from _ids where key = 'signin_campaign') and signin_date = date '2099-01-01'), 0, 'daily sign-in never stores the forged client date');
+select is((select idempotency_key from tasks.user_signins where user_id = (select id from _ids where key = 'user') and campaign_id = (select id from _ids where key = 'signin_campaign') and signin_date = testutil.signin_business_date()), (select txt from _ids where key = 'signin_key'), 'daily sign-in stores idempotency_key');
+select ok((select request_fingerprint is not null from tasks.user_signins where user_id = (select id from _ids where key = 'user') and campaign_id = (select id from _ids where key = 'signin_campaign') and signin_date = testutil.signin_business_date()), 'daily sign-in stores request_fingerprint');
 select is((select current_streak from tasks.user_signin_states where user_id = (select id from _ids where key = 'user') and campaign_id = (select id from _ids where key = 'signin_campaign')), 1, 'daily sign-in updates user_signin_states.current_streak');
 select is((select cycle_position from tasks.user_signin_states where user_id = (select id from _ids where key = 'user') and campaign_id = (select id from _ids where key = 'signin_campaign')), 1, 'daily sign-in updates user_signin_states.cycle_position');
-select is((select last_signin_date from tasks.user_signin_states where user_id = (select id from _ids where key = 'user') and campaign_id = (select id from _ids where key = 'signin_campaign')), current_date, 'daily sign-in updates user_signin_states.last_signin_date');
+select is((select last_signin_date from tasks.user_signin_states where user_id = (select id from _ids where key = 'user') and campaign_id = (select id from _ids where key = 'signin_campaign')), testutil.signin_business_date(), 'daily sign-in updates user_signin_states.last_signin_date');
 select ok(((select payload from _ids where key = 'signin1') ? 'progress_result'), 'daily sign-in returns task progress result');
-select is((select progress_count from tasks.user_task_progress where user_id = (select id from _ids where key = 'user') and task_id = (select id from _ids where key = 'signin_task') and period_key = current_date::text), 1, 'daily sign-in records task progress');
-select is((select status from tasks.user_task_progress where user_id = (select id from _ids where key = 'user') and task_id = (select id from _ids where key = 'signin_task') and period_key = current_date::text), 'completed', 'daily sign-in completes the check-in task');
-select is((select jsonb_array_length(source_events) from tasks.user_task_progress where user_id = (select id from _ids where key = 'user') and task_id = (select id from _ids where key = 'signin_task') and period_key = current_date::text), 1, 'daily sign-in stores one task progress source event');
+select is((select progress_count from tasks.user_task_progress where user_id = (select id from _ids where key = 'user') and task_id = (select id from _ids where key = 'signin_task') and period_key = testutil.signin_business_date()::text), 1, 'daily sign-in records task progress');
+select is((select status from tasks.user_task_progress where user_id = (select id from _ids where key = 'user') and task_id = (select id from _ids where key = 'signin_task') and period_key = testutil.signin_business_date()::text), 'completed', 'daily sign-in completes the check-in task');
+select is((select jsonb_array_length(source_events) from tasks.user_task_progress where user_id = (select id from _ids where key = 'user') and task_id = (select id from _ids where key = 'signin_task') and period_key = testutil.signin_business_date()::text), 1, 'daily sign-in stores one task progress source event');
 select is((select count(*)::int from ops.idempotency_keys where key = 'task_daily_check_in:' || (select txt from _ids where key = 'signin_key') and status = 'completed'), 1, 'daily sign-in stores completed API idempotency key');
 select is((select count(*)::int from economy.currency_ledger where idempotency_key like 'daily_check_in:' || (select txt from _ids where key = 'signin_key') || ':%'), 1, 'daily sign-in ledger key uses idempotency prefix');
 
@@ -184,25 +194,25 @@ insert into _ids (key, payload)
 select 'signin_repeat', api.task_daily_check_in(
   (select id from _ids where key = 'user'),
   (select id from _ids where key = 'signin_campaign'),
-  current_date,
-  0,
+  date '1999-01-01',
+  -840,
   (select txt from _ids where key = 'signin_key')
 );
-select ok(((select payload from _ids where key = 'signin_repeat') ->> 'idempotent')::boolean, 'same sign-in idempotency key returns cached response');
+select ok(((select payload from _ids where key = 'signin_repeat') ->> 'idempotent')::boolean, 'same sign-in idempotency key returns cached response even when client date changes');
 select is(testutil.balance_of((select id from _ids where key = 'user'), 'FGEMS'), 9::numeric, 'same idempotency key does not credit again');
-select ok(testutil.raises_like(format('select api.task_daily_check_in(%L::uuid, %L::uuid, current_date + 1, 0, %L)', (select id::text from _ids where key = 'user'), (select id::text from _ids where key = 'signin_campaign'), (select txt from _ids where key = 'signin_key')), '%idempotency conflict%'), 'sign-in idempotency key cannot be reused for different inputs');
 
 insert into _ids (key, payload)
 select 'signin_same_day_new_key', api.task_daily_check_in(
   (select id from _ids where key = 'user'),
   (select id from _ids where key = 'signin_campaign'),
-  current_date,
-  0,
+  date '2099-01-02',
+  840,
   'task-signin-idem-002'
 );
 select ok(((select payload from _ids where key = 'signin_same_day_new_key') ->> 'already_claimed')::boolean, 'same-day repeated sign-in with a new key returns already_claimed=true');
 select is(testutil.balance_of((select id from _ids where key = 'user'), 'FGEMS'), 9::numeric, 'same-day repeated sign-in with a new key does not credit again');
-select is((select jsonb_array_length(source_events) from tasks.user_task_progress where user_id = (select id from _ids where key = 'user') and task_id = (select id from _ids where key = 'signin_task') and period_key = current_date::text), 1, 'same-day repeated sign-in does not duplicate task progress source events');
+select is((select count(*)::int from tasks.user_signins where user_id = (select id from _ids where key = 'user') and campaign_id = (select id from _ids where key = 'signin_campaign')), 1, 'forged client dates still leave only one business-day sign-in row');
+select is((select jsonb_array_length(source_events) from tasks.user_task_progress where user_id = (select id from _ids where key = 'user') and task_id = (select id from _ids where key = 'signin_task') and period_key = testutil.signin_business_date()::text), 1, 'same-day repeated sign-in does not duplicate task progress source events');
 
 insert into _ids (key, id) values ('legacy_user', testutil.make_user(10000000002, 'task_claim_legacy_user', null));
 insert into _ids (key, payload) select 'legacy_signin', api.task_daily_check_in((select id from _ids where key = 'legacy_user'));

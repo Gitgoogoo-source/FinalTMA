@@ -27,7 +27,8 @@ declare
   v_scoped_key text;
   v_request_fingerprint text;
   v_existing_idempotency ops.idempotency_keys%rowtype;
-  v_business_date date := (now() at time zone 'Asia/Shanghai')::date;
+  v_local_date date := coalesce(p_local_date, current_date);
+  v_timezone_offset_minutes integer := coalesce(p_timezone_offset_minutes, 0);
   v_day_index integer;
   v_current_streak integer;
   v_reward jsonb;
@@ -56,6 +57,10 @@ begin
     raise exception 'idempotency key is required';
   end if;
 
+  if v_local_date < current_date - 1 or v_local_date > current_date + 1 then
+    raise exception 'signin date out of range';
+  end if;
+
   select *
   into v_campaign
   from tasks.signin_campaigns
@@ -74,8 +79,8 @@ begin
   v_request_fingerprint := md5(jsonb_build_object(
     'user_id', p_user_id,
     'campaign_id', v_campaign.id,
-    'business_date', v_business_date,
-    'business_timezone', 'Asia/Shanghai'
+    'local_date', v_local_date,
+    'timezone_offset_minutes', v_timezone_offset_minutes
   )::text);
 
   perform pg_advisory_xact_lock(hashtext('task_daily_check_in'), hashtext(v_scoped_key));
@@ -133,7 +138,7 @@ begin
   from tasks.user_signins
   where user_id = p_user_id
     and campaign_id = v_campaign.id
-    and signin_date = v_business_date
+    and signin_date = v_local_date
   for update;
 
   if v_existing.id is not null then
@@ -160,7 +165,7 @@ begin
         metadata = v_state.metadata || jsonb_build_object(
           'last_idempotency_key', v_idempotency_key,
           'last_request_fingerprint', v_request_fingerprint,
-          'business_timezone', 'Asia/Shanghai'
+          'last_timezone_offset_minutes', v_timezone_offset_minutes
         ),
         updated_at = now()
     where user_id = p_user_id
@@ -172,7 +177,7 @@ begin
       'signin_success',
       1,
       v_existing.id,
-      v_business_date::text
+      v_local_date::text
     );
 
     v_response := jsonb_build_object(
@@ -187,8 +192,6 @@ begin
       'ledger_results', '[]'::jsonb,
       'progress_result', v_progress_result,
       'checked_in_at', v_existing.created_at,
-      'business_date', v_business_date,
-      'business_timezone', 'Asia/Shanghai',
       'idempotent', false
     );
 
@@ -202,7 +205,7 @@ begin
     return v_response;
   end if;
 
-  if v_state.last_signin_date = v_business_date - 1 then
+  if v_state.last_signin_date = v_local_date - 1 then
     v_current_streak := v_state.current_streak + 1;
     v_day_index := case
       when v_state.cycle_position >= v_campaign.cycle_days then 1
@@ -236,7 +239,7 @@ begin
     p_user_id,
     v_campaign.id,
     v_day_index,
-    v_business_date,
+    v_local_date,
     v_reward,
     'claimed',
     v_idempotency_key,
@@ -255,13 +258,13 @@ begin
   update tasks.user_signin_states
   set current_streak = v_current_streak,
       cycle_position = v_day_index,
-      last_signin_date = v_business_date,
+      last_signin_date = v_local_date,
       total_signins = total_signins + 1,
       metadata = metadata || jsonb_build_object(
         'last_signin_id', v_existing.id,
         'last_idempotency_key', v_idempotency_key,
         'last_request_fingerprint', v_request_fingerprint,
-        'business_timezone', 'Asia/Shanghai'
+        'last_timezone_offset_minutes', v_timezone_offset_minutes
       ),
       updated_at = now()
   where user_id = p_user_id
@@ -273,7 +276,7 @@ begin
     'signin_success',
     1,
     v_existing.id,
-    v_business_date::text
+    v_local_date::text
   );
 
   v_response := jsonb_build_object(
@@ -288,8 +291,6 @@ begin
     'ledger_results', v_rewards_result,
     'progress_result', v_progress_result,
     'checked_in_at', v_existing.created_at,
-    'business_date', v_business_date,
-    'business_timezone', 'Asia/Shanghai',
     'idempotent', false
   );
 
@@ -314,12 +315,11 @@ begin
   return api.task_daily_check_in(
     p_user_id,
     null,
-    null,
-    null,
+    current_date,
+    0,
     'legacy:task_daily_check_in:' || gen_random_uuid()::text
   );
 end;
 $$;
-
 
 -- ============================================================

@@ -351,8 +351,6 @@ export const ClaimTaskResponseSchema = z.object({
 
 export const CheckInBodySchema = z.object({
   campaignId: UUIDSchema.optional(),
-  localDate: DateOnlySchema.optional(),
-  timezoneOffsetMinutes: z.coerce.number().int().min(-840).max(840).optional(),
   idempotencyKey: IdempotencyKeySchema,
 });
 

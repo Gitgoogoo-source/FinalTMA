@@ -251,6 +251,77 @@ describe("tasks API", () => {
     });
   });
 
+  it("list includes referral task_type when SOCIAL category is requested", async () => {
+    callRpcRawMock.mockResolvedValueOnce({
+      tasks: [
+        {
+          task_id: TASK_ID,
+          code: "JOIN_COMMUNITY",
+          task_type: "social",
+          title: "Join community",
+        },
+        {
+          task_id: REFERRAL_ID,
+          code: "REFERRAL_FIRST_OPEN",
+          task_type: "referral",
+          title: "Invite a friend to open a box",
+        },
+        {
+          task_id: SIGNIN_ID,
+          code: "DAILY_CHECK_IN",
+          task_type: "daily",
+          title: "Daily check-in",
+        },
+      ],
+      count: 3,
+      filters: {
+        limit: 200,
+      },
+      server_time: "2026-05-26T00:00:00.000Z",
+    });
+
+    const result = await invokeApiHandler<ApiSuccessResponse>(listHandler, {
+      method: "GET",
+      headers: {
+        "x-request-id": "req-tasks-list-social",
+      },
+      query: {
+        categories: "SOCIAL",
+      },
+    });
+
+    expect(result.statusCode).toBe(200);
+    expect(callRpcRawMock).toHaveBeenCalledWith(
+      "task_get_list",
+      {
+        p_user_id: USER_ID,
+        p_filters: {
+          limit: 200,
+        },
+      },
+      expect.objectContaining({
+        schema: "api",
+        context: expect.objectContaining({
+          requestId: "req-tasks-list-social",
+          userId: USER_ID,
+          filters: {
+            limit: 200,
+          },
+        }),
+      }),
+    );
+
+    const data = result.body.data as { items: Record<string, unknown>[] };
+    expect(data.items.map((item) => item.code)).toEqual([
+      "JOIN_COMMUNITY",
+      "REFERRAL_FIRST_OPEN",
+    ]);
+    expect(data.items.map((item) => item.task_type)).toEqual([
+      "social",
+      "referral",
+    ]);
+  });
+
   it("list requires a valid session before calling RPC", async () => {
     requireSessionMock.mockRejectedValueOnce(
       ApiError.authSessionExpired("登录状态缺失，请重新进入应用。"),
@@ -423,7 +494,7 @@ describe("tasks API", () => {
     );
   });
 
-  it("check-in calls task_daily_check_in with header idempotency and session user", async () => {
+  it("check-in calls task_daily_check_in with session user and ignores client date fields", async () => {
     callRpcRawMock.mockResolvedValueOnce({
       signin_id: SIGNIN_ID,
       campaign_id: CAMPAIGN_ID,
@@ -459,8 +530,8 @@ describe("tasks API", () => {
       {
         p_user_id: USER_ID,
         p_campaign_id: CAMPAIGN_ID,
-        p_local_date: "2026-05-26",
-        p_timezone_offset_minutes: 480,
+        p_local_date: null,
+        p_timezone_offset_minutes: null,
         p_idempotency_key: IDEMPOTENCY_KEY,
       },
       expect.objectContaining({
@@ -470,11 +541,14 @@ describe("tasks API", () => {
           userId: USER_ID,
           idempotencyKey: IDEMPOTENCY_KEY,
           campaignId: CAMPAIGN_ID,
-          localDate: "2026-05-26",
-          timezoneOffsetMinutes: 480,
         }),
       }),
     );
+    const rpcOptions = callRpcRawMock.mock.calls[0]?.[2] as
+      | { context?: Record<string, unknown> }
+      | undefined;
+    expect(rpcOptions?.context).not.toHaveProperty("localDate");
+    expect(rpcOptions?.context).not.toHaveProperty("timezoneOffsetMinutes");
     expect(result.body.data).toMatchObject({
       signin_id: SIGNIN_ID,
       campaign_id: CAMPAIGN_ID,
@@ -497,6 +571,19 @@ describe("tasks API", () => {
 
     expect(result.statusCode).toBe(400);
     expect(result.body.error.code).toBe("VALIDATION_ERROR");
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+  });
+
+  it("check-in rejects a missing idempotency key with the stable task error code", async () => {
+    const result = await invokeApiHandler<ApiErrorResponse>(checkInHandler, {
+      method: "POST",
+      body: {
+        campaign_id: CAMPAIGN_ID,
+      },
+    });
+
+    expect(result.statusCode).toBe(400);
+    expect(result.body.error.code).toBe("IDEMPOTENCY_KEY_REQUIRED");
     expect(callRpcRawMock).not.toHaveBeenCalled();
   });
 

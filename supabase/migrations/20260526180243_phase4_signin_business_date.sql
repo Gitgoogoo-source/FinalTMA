@@ -1,10 +1,143 @@
--- task_daily_check_in.sql
--- ============================================================
--- Generated RPC file for the Telegram Mini App blind-box game.
--- Place under supabase/rpc/. Execute after schema migrations 0001-0019.
--- Core policy: frontend only requests; all trusted mutations are enforced here by database transactions.
+-- Phase 4 sign-in hardening:
+-- Use the database-owned Asia/Shanghai business date for both sign-in status
+-- and claiming. Deprecated client date/timezone arguments are kept only for
+-- RPC signature compatibility and are intentionally ignored.
 
--- RPC: api.task_daily_check_in
+begin;
+
+create or replace function api.signin_get_status(
+  p_user_id uuid,
+  p_campaign_id uuid default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_campaign tasks.signin_campaigns%rowtype;
+  v_state tasks.user_signin_states%rowtype;
+  v_days jsonb := '[]'::jsonb;
+  v_base_position integer := 0;
+  v_next_day_index integer;
+  v_signed_today boolean := false;
+  v_today date := (now() at time zone 'Asia/Shanghai')::date;
+begin
+  if p_user_id is null then
+    raise exception 'user_id is required';
+  end if;
+
+  select *
+  into v_campaign
+  from tasks.signin_campaigns
+  where (p_campaign_id is null or id = p_campaign_id)
+    and active = true
+    and (starts_at is null or starts_at <= now())
+    and (ends_at is null or ends_at > now())
+  order by created_at desc
+  limit 1;
+
+  if v_campaign.id is null then
+    return jsonb_build_object(
+      'campaign', null,
+      'days', '[]'::jsonb,
+      'current_streak', 0,
+      'cycle_position', 0,
+      'total_signins', 0,
+      'already_claimed_today', false,
+      'next_day_index', null,
+      'server_date', v_today,
+      'server_timezone', 'Asia/Shanghai',
+      'server_time', now()
+    );
+  end if;
+
+  select *
+  into v_state
+  from tasks.user_signin_states
+  where user_id = p_user_id
+    and campaign_id = v_campaign.id;
+
+  select exists (
+    select 1
+    from tasks.user_signins us
+    where us.user_id = p_user_id
+      and us.campaign_id = v_campaign.id
+      and us.signin_date = v_today
+      and us.status = 'claimed'
+  )
+  into v_signed_today;
+
+  if v_state.user_id is null then
+    v_base_position := 0;
+    v_next_day_index := 1;
+  elsif v_state.last_signin_date = v_today then
+    v_base_position := least(v_state.cycle_position, v_campaign.cycle_days);
+    v_next_day_index := null;
+  elsif v_state.last_signin_date = v_today - 1
+        and v_state.cycle_position < v_campaign.cycle_days then
+    v_base_position := greatest(v_state.cycle_position, 0);
+    v_next_day_index := v_base_position + 1;
+  else
+    v_base_position := 0;
+    v_next_day_index := 1;
+  end if;
+
+  select coalesce(jsonb_agg(
+    jsonb_build_object(
+      'day_index', sd.day_index,
+      'title', sd.title,
+      'reward', sd.reward,
+      'status', case
+        when sd.day_index <= v_base_position then 'claimed'
+        when v_next_day_index is not null and sd.day_index = v_next_day_index then 'available'
+        else 'locked'
+      end,
+      'claimed', sd.day_index <= v_base_position,
+      'available', v_next_day_index is not null and sd.day_index = v_next_day_index,
+      'last_claimed_at', last_signin.created_at,
+      'last_claimed_date', last_signin.signin_date
+    )
+    order by sd.day_index asc
+  ), '[]'::jsonb)
+  into v_days
+  from tasks.signin_days sd
+  left join lateral (
+    select us.created_at, us.signin_date
+    from tasks.user_signins us
+    where us.user_id = p_user_id
+      and us.campaign_id = sd.campaign_id
+      and us.day_index = sd.day_index
+      and us.status = 'claimed'
+    order by us.signin_date desc, us.created_at desc
+    limit 1
+  ) last_signin on true
+  where sd.campaign_id = v_campaign.id;
+
+  return jsonb_build_object(
+    'campaign', jsonb_build_object(
+      'campaign_id', v_campaign.id,
+      'code', v_campaign.code,
+      'title', v_campaign.title,
+      'description', v_campaign.description,
+      'cycle_days', v_campaign.cycle_days,
+      'active', v_campaign.active,
+      'starts_at', v_campaign.starts_at,
+      'ends_at', v_campaign.ends_at
+    ),
+    'days', v_days,
+    'current_streak', coalesce(v_state.current_streak, 0),
+    'cycle_position', coalesce(v_state.cycle_position, 0),
+    'total_signins', coalesce(v_state.total_signins, 0),
+    'last_signin_date', v_state.last_signin_date,
+    'already_claimed_today', coalesce(v_signed_today, false),
+    'next_day_index', v_next_day_index,
+    'server_date', v_today,
+    'server_timezone', 'Asia/Shanghai',
+    'server_time', now()
+  );
+end;
+$$;
 
 create or replace function api.task_daily_check_in(
   p_user_id uuid,
@@ -321,5 +454,19 @@ begin
 end;
 $$;
 
+revoke execute on function api.signin_get_status(uuid, uuid)
+  from public, anon, authenticated;
+grant execute on function api.signin_get_status(uuid, uuid)
+  to service_role;
 
--- ============================================================
+revoke execute on function api.task_daily_check_in(uuid, uuid, date, integer, text)
+  from public, anon, authenticated;
+grant execute on function api.task_daily_check_in(uuid, uuid, date, integer, text)
+  to service_role;
+
+revoke execute on function api.task_daily_check_in(uuid)
+  from public, anon, authenticated;
+grant execute on function api.task_daily_check_in(uuid)
+  to service_role;
+
+commit;
