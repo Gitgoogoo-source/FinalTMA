@@ -344,6 +344,10 @@ export const CheckInBodySchema = z.object({
   idempotencyKey: IdempotencyKeySchema,
 });
 
+export const CheckInStatusQuerySchema = z.object({
+  campaignId: UUIDSchema.optional(),
+});
+
 export const CheckInDaySchema = z.object({
   dayIndex: z.coerce.number().int().min(1).max(31),
   status: z.enum(["LOCKED", "AVAILABLE", "CLAIMED", "MISSED"]),
@@ -448,6 +452,25 @@ export const CommissionHistoryQuerySchema = PaginationQuerySchema.extend({
   status: CommissionStatusInputSchema.optional(),
 });
 
+export const RewardHistorySourceSchema = z.enum([
+  "task_claim",
+  "daily_check_in",
+  "referral_first_open",
+  "referral_commission_claim",
+]);
+
+export const RewardHistorySourceInputSchema = z.preprocess((value) => {
+  if (typeof value !== "string") {
+    return value;
+  }
+
+  return value.trim().toLowerCase();
+}, RewardHistorySourceSchema);
+
+export const RewardHistoryQuerySchema = PaginationQuerySchema.extend({
+  source: RewardHistorySourceInputSchema.optional(),
+});
+
 export const ClaimCommissionBodySchema = z.object({
   commissionIds: z.array(UUIDSchema).min(1).max(100).optional(),
   idempotencyKey: IdempotencyKeySchema,
@@ -525,6 +548,7 @@ export type ClaimTaskBody = z.infer<typeof ClaimTaskBodySchema>;
 export type ClaimTaskResponse = z.infer<typeof ClaimTaskResponseSchema>;
 
 export type CheckInBody = z.infer<typeof CheckInBodySchema>;
+export type CheckInStatusQuery = z.infer<typeof CheckInStatusQuerySchema>;
 export type CheckInStatusResponse = z.infer<typeof CheckInStatusResponseSchema>;
 export type CheckInResponse = z.infer<typeof CheckInResponseSchema>;
 
@@ -540,6 +564,8 @@ export type CommissionStatus = z.infer<typeof CommissionStatusSchema>;
 export type CommissionHistoryQuery = z.infer<
   typeof CommissionHistoryQuerySchema
 >;
+export type RewardHistorySource = z.infer<typeof RewardHistorySourceSchema>;
+export type RewardHistoryQuery = z.infer<typeof RewardHistoryQuerySchema>;
 export type ClaimCommissionBody = z.infer<typeof ClaimCommissionBodySchema>;
 
 export type ShareEventBody = z.infer<typeof ShareEventBodySchema>;

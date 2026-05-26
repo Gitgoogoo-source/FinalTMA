@@ -6,14 +6,17 @@ import type {
 } from "../../api/_shared/handler";
 import { ApiError } from "../../api/_shared/handler";
 import bindReferralHandler from "../../api/tasks/bind-referral";
+import checkInStatusHandler from "../../api/tasks/check-in-status";
 import checkInHandler from "../../api/tasks/check-in";
 import claimCommissionHandler from "../../api/tasks/claim-commission";
 import claimTaskHandler from "../../api/tasks/claim";
 import commissionHistoryHandler from "../../api/tasks/commission-history";
 import inviteStatsHandler from "../../api/tasks/invite-stats";
+import listHandler from "../../api/tasks/list";
 import overviewHandler from "../../api/tasks/overview";
 import referralLinkHandler from "../../api/tasks/referral-link";
 import referralRecordsHandler from "../../api/tasks/referral-records";
+import rewardHistoryHandler from "../../api/tasks/reward-history";
 import shareEventHandler from "../../api/tasks/share-event";
 import { RpcError } from "../../packages/server/src/db/rpc";
 import { invokeApiHandler } from "./_utils";
@@ -156,6 +159,193 @@ describe("tasks API", () => {
 
     expect(result.statusCode).toBe(401);
     expect(result.body.error.code).toBe("AUTH_SESSION_EXPIRED");
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+  });
+
+  it("list calls task_get_list with the verified session user", async () => {
+    callRpcRawMock.mockResolvedValueOnce({
+      tasks: [
+        {
+          task_id: TASK_ID,
+          code: "DAILY_CHECK_IN",
+          task_type: "daily",
+          title: "Daily check-in",
+          description: "Check in once today.",
+          period_type: "daily",
+          target_count: 1,
+          reward: [{ currency: "KCOIN", amount: 10 }],
+          action_type: "none",
+          active: true,
+          sort_order: 10,
+          metadata: {
+            phase: "fourth_stage",
+          },
+          progress: {
+            progress_id: null,
+            period_key: null,
+            progress_count: 0,
+            target_count: 1,
+            status: "in_progress",
+            updated_at: "2026-05-26T00:00:00.000Z",
+          },
+        },
+      ],
+      count: 1,
+      filters: {
+        limit: 20,
+      },
+      server_time: "2026-05-26T00:00:00.000Z",
+    });
+
+    const result = await invokeApiHandler<ApiSuccessResponse>(listHandler, {
+      method: "GET",
+      headers: {
+        "x-request-id": "req-tasks-list",
+      },
+    });
+
+    expect(result.statusCode).toBe(200);
+    expect(callRpcRawMock).toHaveBeenCalledWith(
+      "task_get_list",
+      {
+        p_user_id: USER_ID,
+        p_filters: {
+          limit: 20,
+        },
+      },
+      expect.objectContaining({
+        schema: "api",
+        context: expect.objectContaining({
+          requestId: "req-tasks-list",
+          userId: USER_ID,
+          filters: {
+            limit: 20,
+          },
+        }),
+      }),
+    );
+    expect(result.body.data).toMatchObject({
+      items: [
+        {
+          task_id: TASK_ID,
+          code: "DAILY_CHECK_IN",
+          task_type: "daily",
+          status: "in_progress",
+          progress: {
+            progress_count: 0,
+            target_count: 1,
+            status: "in_progress",
+          },
+        },
+      ],
+      tasks: [
+        {
+          task_id: TASK_ID,
+          code: "DAILY_CHECK_IN",
+        },
+      ],
+      count: 1,
+      next_cursor: null,
+      server_time: "2026-05-26T00:00:00.000Z",
+    });
+  });
+
+  it("list requires a valid session before calling RPC", async () => {
+    requireSessionMock.mockRejectedValueOnce(
+      ApiError.authSessionExpired("登录状态缺失，请重新进入应用。"),
+    );
+
+    const result = await invokeApiHandler<ApiErrorResponse>(listHandler, {
+      method: "GET",
+    });
+
+    expect(result.statusCode).toBe(401);
+    expect(result.body.error.code).toBe("AUTH_SESSION_EXPIRED");
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+  });
+
+  it("check-in status returns seven-day config for the verified session user", async () => {
+    callRpcRawMock.mockResolvedValueOnce({
+      campaign: {
+        campaign_id: CAMPAIGN_ID,
+        code: "SIGNIN_7_DAY_DEFAULT",
+        title: "7 Day Sign-In",
+        description: "Default active 7-day sign-in campaign.",
+        cycle_days: 7,
+        active: true,
+      },
+      days: Array.from({ length: 7 }, (_item, index) => ({
+        day_index: index + 1,
+        title: `Day ${index + 1}`,
+        reward: [{ currency: "KCOIN", amount: 100 + index }],
+        status: index === 0 ? "available" : "locked",
+        claimed: false,
+        available: index === 0,
+      })),
+      current_streak: 0,
+      cycle_position: 0,
+      total_signins: 0,
+      already_claimed_today: false,
+      next_day_index: 1,
+      server_date: "2026-05-26",
+      server_time: "2026-05-26T00:00:00.000Z",
+    });
+
+    const result = await invokeApiHandler<ApiSuccessResponse>(
+      checkInStatusHandler,
+      {
+        method: "GET",
+        headers: {
+          "x-request-id": "req-tasks-check-in-status",
+        },
+        query: {
+          campaign_id: CAMPAIGN_ID,
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(200);
+    expect(callRpcRawMock).toHaveBeenCalledWith(
+      "signin_get_status",
+      {
+        p_user_id: USER_ID,
+        p_campaign_id: CAMPAIGN_ID,
+      },
+      expect.objectContaining({
+        schema: "api",
+        context: expect.objectContaining({
+          requestId: "req-tasks-check-in-status",
+          userId: USER_ID,
+          campaignId: CAMPAIGN_ID,
+        }),
+      }),
+    );
+    expect(result.body.data).toMatchObject({
+      campaign: {
+        campaign_id: CAMPAIGN_ID,
+        code: "SIGNIN_7_DAY_DEFAULT",
+        cycle_days: 7,
+      },
+      current_streak: 0,
+      already_claimed_today: false,
+      next_day_index: 1,
+    });
+    expect((result.body.data as { days: unknown[] }).days).toHaveLength(7);
+  });
+
+  it("check-in status rejects forged user identity before calling RPC", async () => {
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      checkInStatusHandler,
+      {
+        method: "GET",
+        query: {
+          user_id: FORGED_USER_ID,
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(400);
+    expect(result.body.error.code).toBe("VALIDATION_ERROR");
     expect(callRpcRawMock).not.toHaveBeenCalled();
   });
 
@@ -778,6 +968,97 @@ describe("tasks API", () => {
     );
   });
 
+  it("reward-history reads reward ledger rows for the verified session user only", async () => {
+    const ledgerQuery = mockRewardHistoryQuery([
+      {
+        id: LEDGER_ID,
+        user_id: USER_ID,
+        currency_code: "KCOIN",
+        entry_type: "credit",
+        amount: "100",
+        available_after: "100",
+        source_type: "daily_check_in",
+        source_id: SIGNIN_ID,
+        source_ref: "internal-ref",
+        idempotency_key: IDEMPOTENCY_KEY,
+        metadata: {
+          private_note: "do-not-expose",
+        },
+        created_at: "2026-05-26T06:30:00.000Z",
+      },
+    ]);
+
+    const result = await invokeApiHandler<ApiSuccessResponse>(
+      rewardHistoryHandler,
+      {
+        method: "GET",
+        headers: {
+          "x-request-id": "req-reward-history",
+        },
+        query: {
+          source: "DAILY_CHECK_IN",
+          cursor: "2026-05-27T00:00:00.000Z",
+          limit: "10",
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(200);
+    expect(getSupabaseAdminMock).toHaveBeenCalledTimes(1);
+    expect(ledgerQuery.schema).toHaveBeenCalledWith("economy");
+    expect(ledgerQuery.from).toHaveBeenCalledWith("currency_ledger");
+    expect(ledgerQuery.builder.eq).toHaveBeenCalledWith("user_id", USER_ID);
+    expect(ledgerQuery.builder.eq).toHaveBeenCalledWith("entry_type", "credit");
+    expect(ledgerQuery.builder.in).toHaveBeenCalledWith("source_type", [
+      "daily_check_in",
+    ]);
+    expect(ledgerQuery.builder.lt).toHaveBeenCalledWith(
+      "created_at",
+      "2026-05-27T00:00:00.000Z",
+    );
+    expect(ledgerQuery.builder.limit).toHaveBeenCalledWith(11);
+    expect(result.body.data).toMatchObject({
+      items: [
+        {
+          reward_id: LEDGER_ID,
+          source_type: "daily_check_in",
+          source_label: "签到奖励",
+          source_id: SIGNIN_ID,
+          currency_code: "KCOIN",
+          entry_type: "credit",
+          amount: 100,
+          created_at: "2026-05-26T06:30:00.000Z",
+        },
+      ],
+      count: 1,
+      next_cursor: null,
+    });
+
+    const rewardHistoryData = result.body.data as {
+      items: Record<string, unknown>[];
+    };
+    expect(rewardHistoryData.items[0]).not.toHaveProperty("user_id");
+    expect(rewardHistoryData.items[0]).not.toHaveProperty("idempotency_key");
+    expect(rewardHistoryData.items[0]).not.toHaveProperty("source_ref");
+    expect(rewardHistoryData.items[0]).not.toHaveProperty("metadata");
+  });
+
+  it("reward-history rejects forged user identity before reading ledger rows", async () => {
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      rewardHistoryHandler,
+      {
+        method: "GET",
+        query: {
+          user_id: FORGED_USER_ID,
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(400);
+    expect(result.body.error.code).toBe("VALIDATION_ERROR");
+    expect(getSupabaseAdminMock).not.toHaveBeenCalled();
+  });
+
   it("claim-commission calls referral_claim_commission with header idempotency and session user", async () => {
     callRpcRawMock.mockResolvedValueOnce({
       processed: true,
@@ -997,4 +1278,45 @@ function mockInviteCodeQuery(inviteCode: string | null): void {
   const schema = vi.fn().mockReturnValue({ from });
 
   getSupabaseAdminMock.mockReturnValue({ schema });
+}
+
+function mockRewardHistoryQuery(rows: Record<string, unknown>[]): {
+  schema: ReturnType<typeof vi.fn>;
+  from: ReturnType<typeof vi.fn>;
+  builder: {
+    select: ReturnType<typeof vi.fn>;
+    eq: ReturnType<typeof vi.fn>;
+    in: ReturnType<typeof vi.fn>;
+    lt: ReturnType<typeof vi.fn>;
+    order: ReturnType<typeof vi.fn>;
+    limit: ReturnType<typeof vi.fn>;
+  };
+} {
+  const builder = {
+    select: vi.fn(),
+    eq: vi.fn(),
+    in: vi.fn(),
+    lt: vi.fn(),
+    order: vi.fn(),
+    limit: vi.fn().mockResolvedValue({
+      data: rows,
+      error: null,
+    }),
+  };
+  builder.select.mockReturnValue(builder);
+  builder.eq.mockReturnValue(builder);
+  builder.in.mockReturnValue(builder);
+  builder.lt.mockReturnValue(builder);
+  builder.order.mockReturnValue(builder);
+
+  const from = vi.fn().mockReturnValue(builder);
+  const schema = vi.fn().mockReturnValue({ from });
+
+  getSupabaseAdminMock.mockReturnValue({ schema });
+
+  return {
+    schema,
+    from,
+    builder,
+  };
 }
