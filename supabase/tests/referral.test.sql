@@ -67,17 +67,33 @@ insert into _ids (key, id) values ('inviter', testutil.make_user(10100000001, 'r
 insert into _ids (key, txt) select 'invite_code', invite_code from core.users where id = (select id from _ids where key = 'inviter');
 insert into _ids (key, id) values ('invitee', testutil.make_user(10100000002, 'referral_invitee', (select txt from _ids where key = 'invite_code')));
 insert into _ids (key, id) select 'referral', id from tasks.referrals where invitee_user_id = (select id from _ids where key = 'invitee');
+insert into _ids (key, id) select 'box', id from gacha.blind_boxes where slug = 'starter_egg';
 
 select ok(exists (select 1 from tasks.referrals r where r.id = (select id from _ids where key = 'referral') and r.status = 'pending'), 'auth start_param creates pending referral');
 
-insert into _ids (key, payload) select 'first_open', api.referral_process_first_open((select id from _ids where key = 'invitee'), null);
+insert into _ids (key, payload)
+select 'open_order', api.gacha_create_order((select id from _ids where key = 'invitee'), (select id from _ids where key = 'box'), 1, 'referral-first-open-order-001');
+insert into _ids (key, id) select 'draw_order', ((select payload from _ids where key = 'open_order') ->> 'draw_order_id')::uuid;
+
+insert into _ids (key, payload)
+select 'first_open_unpaid', api.referral_process_first_open((select id from _ids where key = 'invitee'), (select id from _ids where key = 'draw_order'));
+select ok(not ((select payload from _ids where key = 'first_open_unpaid') ->> 'processed')::boolean, 'unopened draw order does not trigger first-open reward');
+select is((select payload ->> 'reason' from _ids where key = 'first_open_unpaid'), 'draw_order_not_successful', 'first-open reward requires successful draw results');
+
+insert into _ids (key, payload)
+select 'process_order', api.gacha_process_dev_paid_order((select id from _ids where key = 'draw_order'), (select id from _ids where key = 'invitee'));
+
+insert into _ids (key, payload)
+select 'first_open', api.referral_process_first_open((select id from _ids where key = 'invitee'), (select id from _ids where key = 'draw_order'));
 select ok(((select payload from _ids where key = 'first_open') ->> 'processed')::boolean, 'first-open referral reward is processed');
+select ok(((select payload from _ids where key = 'first_open') ->> 'idempotent')::boolean, 'repeated first-open call for same draw order is idempotent');
 select is((select status from tasks.referrals where id = (select id from _ids where key = 'referral')), 'rewarded', 'referral becomes rewarded after first open');
+select is((select first_open_order_id from tasks.referrals where id = (select id from _ids where key = 'referral')), (select id from _ids where key = 'draw_order'), 'referral stores first-open draw order');
 select is(testutil.balance_of((select id from _ids where key = 'inviter'), 'KCOIN'), 500::numeric, 'inviter receives 500 K-coin first-open reward');
-select is(testutil.balance_of((select id from _ids where key = 'invitee'), 'KCOIN'), 500::numeric, 'invitee receives 500 K-coin first-open reward');
+select is(testutil.balance_of((select id from _ids where key = 'invitee'), 'KCOIN'), 600::numeric, 'invitee receives 500 K-coin first-open reward plus 100 open rebate');
 select is((select count(*)::int from tasks.referral_rewards where referral_id = (select id from _ids where key = 'referral')), 2, 'two referral reward rows are recorded');
 
-insert into _ids (key, id) values ('commission_source', gen_random_uuid());
+insert into _ids (key, id) select 'commission_source', (select id from _ids where key = 'draw_order');
 insert into _ids (key, payload) select 'commission1', api.referral_create_commission((select id from _ids where key = 'invitee'), (select id from _ids where key = 'commission_source'), 100, 1000);
 select ok(((select payload from _ids where key = 'commission1') ->> 'processed')::boolean, 'commission is processed for rewarded referral');
 select is(((select payload from _ids where key = 'commission1') ->> 'amount_kcoin')::numeric, 10::numeric, '10% referral commission is calculated from K-coin base amount');

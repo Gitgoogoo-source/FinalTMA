@@ -195,6 +195,7 @@ select is((select count(*)::int from tasks.share_events where user_id = (select 
 insert into _ids (key, id) values ('inviter', testutil.make_user(10400000002, 'phase4_inviter', null));
 insert into _ids (key, txt) select 'invite_code', invite_code from core.users where id = (select id from _ids where key = 'inviter');
 insert into _ids (key, id) values ('invitee', testutil.make_user(10400000003, 'phase4_invitee', null));
+insert into _ids (key, id) select 'box', id from gacha.blind_boxes where slug = 'starter_egg';
 
 insert into _ids (key, payload)
 values (
@@ -255,8 +256,17 @@ select is(
 insert into _ids (key, id)
 select 'referral', id from tasks.referrals where invitee_user_id = (select id from _ids where key = 'invitee');
 insert into _ids (key, payload)
-select 'first_open', api.referral_process_first_open((select id from _ids where key = 'invitee'), null);
-insert into _ids (key, id) values ('commission_source', gen_random_uuid());
+select 'open_order', api.gacha_create_order((select id from _ids where key = 'invitee'), (select id from _ids where key = 'box'), 1, 'phase4-referral-first-open-order-001');
+insert into _ids (key, id) select 'draw_order', ((select payload from _ids where key = 'open_order') ->> 'draw_order_id')::uuid;
+insert into _ids (key, payload)
+select 'first_open_unpaid', api.referral_process_first_open((select id from _ids where key = 'invitee'), (select id from _ids where key = 'draw_order'));
+select is((select payload ->> 'reason' from _ids where key = 'first_open_unpaid'), 'draw_order_not_successful', 'referral_process_first_open rejects unopened draw order');
+insert into _ids (key, payload)
+select 'process_order', api.gacha_process_dev_paid_order((select id from _ids where key = 'draw_order'), (select id from _ids where key = 'invitee'));
+insert into _ids (key, payload)
+select 'first_open', api.referral_process_first_open((select id from _ids where key = 'invitee'), (select id from _ids where key = 'draw_order'));
+select ok(((select payload from _ids where key = 'first_open') ->> 'idempotent')::boolean, 'referral_process_first_open is idempotent for the same successful draw order');
+insert into _ids (key, id) select 'commission_source', (select id from _ids where key = 'draw_order');
 insert into _ids (key, payload)
 select 'commission_create', api.referral_create_commission((select id from _ids where key = 'invitee'), (select id from _ids where key = 'commission_source'), 100, 1000);
 
