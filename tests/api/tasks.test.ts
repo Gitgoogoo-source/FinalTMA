@@ -73,6 +73,7 @@ const COMMISSION_ID = "88888888-8888-4888-8888-888888888888";
 const LEDGER_ID = "99999999-9999-4999-8999-999999999999";
 const IDEMPOTENCY_KEY = "task:check-in:0001";
 const CLAIM_IDEMPOTENCY_KEY = "task:claim:0001";
+const CLAIM_PERIOD_KEY = "2026-05-26";
 const BIND_IDEMPOTENCY_KEY = "task:bind-referral:0001";
 const SHARE_IDEMPOTENCY_KEY = "task:share-event:0001";
 const CLAIM_COMMISSION_IDEMPOTENCY_KEY = "task:claim-commission:0001";
@@ -520,11 +521,11 @@ describe("tasks API", () => {
     expect(result.body.error.code).toBe("IDEMPOTENCY_CONFLICT");
   });
 
-  it("claim calls task_claim_reward with the verified session user and header idempotency", async () => {
+  it("claim calls task_claim_reward with the verified session user, DB period key and header idempotency", async () => {
     callRpcRawMock.mockResolvedValueOnce({
       claim_id: CLAIM_ID,
       task_id: TASK_ID,
-      period_key: "daily:2026-05-26",
+      period_key: CLAIM_PERIOD_KEY,
       status: "claimed",
       reward: [{ type: "CURRENCY", currency: "KCOIN", amount: 100 }],
       ledger_results: [{ ledger_id: "ledger-task-claim" }],
@@ -542,7 +543,7 @@ describe("tasks API", () => {
         },
         body: {
           task_id: TASK_ID,
-          period_key: "daily:2026-05-26",
+          period_key: CLAIM_PERIOD_KEY,
           idempotencyKey: "task:claim-body-ignored",
         },
       },
@@ -554,7 +555,7 @@ describe("tasks API", () => {
       {
         p_user_id: USER_ID,
         p_task_id: TASK_ID,
-        p_period_key: "daily:2026-05-26",
+        p_period_key: CLAIM_PERIOD_KEY,
         p_idempotency_key: CLAIM_IDEMPOTENCY_KEY,
       },
       expect.objectContaining({
@@ -575,6 +576,21 @@ describe("tasks API", () => {
       claimed_at: "2026-05-26T02:00:00.000Z",
       idempotent: false,
     });
+  });
+
+  it("claim rejects unsupported period keys before calling RPC", async () => {
+    const result = await invokeApiHandler<ApiErrorResponse>(claimTaskHandler, {
+      method: "POST",
+      body: {
+        taskId: TASK_ID,
+        periodKey: "../bad-period-key",
+        idempotencyKey: CLAIM_IDEMPOTENCY_KEY,
+      },
+    });
+
+    expect(result.statusCode).toBe(400);
+    expect(result.body.error.code).toBe("VALIDATION_ERROR");
+    expect(callRpcRawMock).not.toHaveBeenCalled();
   });
 
   it("claim rejects forged progress or user fields before calling RPC", async () => {

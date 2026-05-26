@@ -34,10 +34,22 @@ export const PeriodKeySchema = z
   .trim()
   .min(3)
   .max(80)
-  .regex(
-    /^(daily:\d{4}-\d{2}-\d{2}|weekly:\d{4}-W\d{2}|monthly:\d{4}-\d{2}|campaign:[a-zA-Z0-9_-]{1,64})$/,
-    "periodKey 格式不正确",
+  .refine(isSupportedPeriodKey, "periodKey 格式不正确");
+
+function isSupportedPeriodKey(value: string): boolean {
+  return (
+    value === "once" ||
+    /^\d{4}-\d{2}-\d{2}$/.test(value) ||
+    /^\d{4}-W\d{2}$/.test(value) ||
+    /^\d{4}-\d{2}$/.test(value) ||
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      value,
+    ) ||
+    /^(daily:\d{4}-\d{2}-\d{2}|weekly:\d{4}-W\d{2}|monthly:\d{4}-\d{2}|campaign:[a-zA-Z0-9_-]{1,64})$/.test(
+      value,
+    )
   );
+}
 
 export const CursorSchema = z.string().trim().min(1).max(256);
 
