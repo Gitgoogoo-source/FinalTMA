@@ -424,9 +424,68 @@ describe("tasks API", () => {
       referral_code: "INVITE7001",
       start_payload: "INVITE7001",
       invite_url: "https://t.me/test_bot?start=INVITE7001",
+      share_text: "来一起开盲盒 task-center，完成首次开盒还能获得奖励。",
       scene: "TASK_PAGE",
       source: "task-center",
     });
+  });
+
+  it("referral-link builds a Mini App startapp link when the short name is configured", async () => {
+    process.env.TELEGRAM_MINI_APP_SHORT_NAME = "blindbox_app";
+    mockInviteCodeQuery("INVITE7001");
+
+    const result = await invokeApiHandler<ApiSuccessResponse>(
+      referralLinkHandler,
+      {
+        method: "POST",
+        body: {
+          scene: "INVITE_CARD",
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(200);
+    expect(result.body.data).toMatchObject({
+      referral_code: "INVITE7001",
+      start_payload: "INVITE7001",
+      invite_url: "https://t.me/test_bot/blindbox_app?startapp=INVITE7001",
+      share_text: "来一起开盲盒，完成首次开盒还能获得奖励。",
+      scene: "INVITE_CARD",
+    });
+  });
+
+  it("referral-link rejects forged user fields before reading invite_code", async () => {
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      referralLinkHandler,
+      {
+        method: "POST",
+        body: {
+          scene: "TASK_PAGE",
+          user_id: FORGED_USER_ID,
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(400);
+    expect(result.body.error.code).toBe("VALIDATION_ERROR");
+    expect(getSupabaseAdminMock).not.toHaveBeenCalled();
+  });
+
+  it("referral-link fails closed when the session user has no invite_code", async () => {
+    mockInviteCodeQuery(null);
+
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      referralLinkHandler,
+      {
+        method: "POST",
+        body: {
+          scene: "TASK_PAGE",
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(500);
+    expect(result.body.error.code).toBe("REFERRAL_INVITE_CODE_MISSING");
   });
 
   it("bind-referral calls referral_bind_inviter for the current session user only", async () => {
@@ -925,7 +984,7 @@ describe("tasks API", () => {
   });
 });
 
-function mockInviteCodeQuery(inviteCode: string): void {
+function mockInviteCodeQuery(inviteCode: string | null): void {
   const maybeSingle = vi.fn().mockResolvedValue({
     data: {
       invite_code: inviteCode,
