@@ -315,6 +315,30 @@ select is((select telegram_payment_charge_id from gacha.draw_orders where id = (
 select is((select count(*)::int from gacha.draw_results where draw_order_id = (select id from _ids where key = 'draw_order')), 1, 'duplicate payment processing does not create duplicate draw results');
 select is((select count(*)::int from inventory.item_instances where source_type = 'gacha' and source_id = (select id from _ids where key = 'draw_order')), 1, 'duplicate payment processing does not create duplicate inventory items');
 select is(testutil.balance_of((select id from _ids where key = 'user'), 'KCOIN'), 100::numeric, 'duplicate payment processing does not double-credit open reward');
+select is(
+  (
+    select up.progress_count
+    from tasks.user_task_progress up
+    join tasks.task_definitions td on td.id = up.task_id
+    where up.user_id = (select id from _ids where key = 'user')
+      and td.code = 'DAILY_OPEN_BOX_10'
+      and up.period_key = current_date::text
+  ),
+  1,
+  'duplicate payment processing advances open-box task progress only once'
+);
+select is(
+  (
+    select jsonb_array_length(up.source_events)
+    from tasks.user_task_progress up
+    join tasks.task_definitions td on td.id = up.task_id
+    where up.user_id = (select id from _ids where key = 'user')
+      and td.code = 'DAILY_OPEN_BOX_10'
+      and up.period_key = current_date::text
+  ),
+  1,
+  'duplicate payment processing stores one open-box task progress source event'
+);
 
 insert into _ids (key, payload) select 'result_by_id', api.gacha_get_draw_result((select id from _ids where key = 'user'), (select id from _ids where key = 'draw_order'), null);
 select is(((select payload from _ids where key = 'result_by_id') ->> 'status'), 'completed', 'draw result can be queried by draw_order_id');
