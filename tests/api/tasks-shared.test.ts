@@ -16,7 +16,7 @@ import {
   ShareEventBodySchema,
 } from "../../packages/validation/src/task.schemas";
 import { RpcError } from "../../packages/server/src/db/rpc.js";
-import { invokeApiHandler } from "./_utils";
+import { invokeApiHandler, type ApiInvokeResult } from "./_utils";
 
 const { callRpcRawMock, requireSessionMock } = vi.hoisted(() => ({
   callRpcRawMock: vi.fn(),
@@ -56,6 +56,11 @@ vi.mock("../../api/_shared/requireSession.js", () => ({
 
 const USER_ID = "11111111-1111-4111-8111-111111111111";
 const FORGED_USER_ID = "99999999-9999-4999-8999-999999999999";
+const RATE_LIMIT_USER_IDS = {
+  "tasks.claim": "22222222-2222-4222-8222-222222222222",
+  "tasks.check_in": "33333333-3333-4333-8333-333333333333",
+  "tasks.referral_link": "44444444-4444-4444-8444-444444444444",
+} as const;
 
 describe("task API shared rules", () => {
   beforeEach(() => {
@@ -101,6 +106,62 @@ describe("task API shared rules", () => {
     });
     expect(requireSessionMock).toHaveBeenCalledTimes(1);
   });
+
+  it.each([
+    ["tasks.claim", 30],
+    ["tasks.check_in", 10],
+    ["tasks.referral_link", 20],
+  ] as const)(
+    "applies the post-session user rate limit for %s",
+    async (action, maxRequests) => {
+      const routeHandler = vi.fn(async () => ({
+        accepted: true,
+      }));
+      const handler = withTaskApiHandler(routeHandler, {
+        methods: ["POST"],
+        rateLimit: {
+          action,
+        },
+      });
+      requireSessionMock.mockResolvedValue({
+        sessionId: `session-rate-limit-${action}`,
+        userId: RATE_LIMIT_USER_IDS[action],
+        telegramUserId: 9001,
+        userStatus: "active",
+        expiresAt: "2026-05-28T00:00:00.000Z",
+        sessionTokenHash: `session-hash-${action}`,
+      });
+
+      let result: ApiInvokeResult<
+        ApiSuccessResponse | ApiErrorResponse
+      > | null = null;
+
+      for (let attempt = 0; attempt <= maxRequests; attempt += 1) {
+        result = await invokeApiHandler<ApiSuccessResponse | ApiErrorResponse>(
+          handler,
+          {
+            method: "POST",
+            headers: {
+              "x-forwarded-for": `203.0.113.${attempt}`,
+            },
+          },
+        );
+      }
+
+      expect(result?.statusCode).toBe(429);
+      expect((result?.body as ApiErrorResponse).error.code).toBe(
+        "RATE_LIMITED",
+      );
+      expect((result?.body as ApiErrorResponse).error.details).toMatchObject({
+        action,
+        rejected: {
+          scope: "user",
+        },
+      });
+      expect(routeHandler).toHaveBeenCalledTimes(maxRequests);
+      expect(requireSessionMock).toHaveBeenCalledTimes(maxRequests + 1);
+    },
+  );
 
   it("reads idempotency from the header before falling back to the body", async () => {
     const handler = withTaskApiHandler(

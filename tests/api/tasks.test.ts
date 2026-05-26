@@ -159,6 +159,79 @@ describe("tasks API", () => {
     expect(callRpcRawMock).not.toHaveBeenCalled();
   });
 
+  it("overview hides sensitive referral and commission UUIDs from RPC payloads", async () => {
+    callRpcRawMock.mockResolvedValueOnce({
+      tasks: [],
+      signin: null,
+      invite_stats: {},
+      referral_records: [
+        {
+          referral_id: REFERRAL_ID,
+          inviter_user_id: USER_ID,
+          invitee_user_id: FORGED_USER_ID,
+          invitee_username: "friend_user",
+          invitee_display_name: "Friend",
+          invite_code: "INVITE7001",
+          status: "qualified",
+          first_open_order_id: "88888888-8888-4888-8888-888888888888",
+          qualified_at: "2026-05-26T05:00:00.000Z",
+          created_at: "2026-05-26T04:30:00.000Z",
+          updated_at: "2026-05-26T05:00:00.000Z",
+        },
+      ],
+      commission_history: [
+        {
+          commission_id: COMMISSION_ID,
+          referral_id: REFERRAL_ID,
+          inviter_user_id: USER_ID,
+          invitee_user_id: FORGED_USER_ID,
+          invitee_username: "friend_user",
+          invitee_display_name: "Friend",
+          source_type: "gacha_open",
+          source_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          base_amount_kcoin: "100",
+          commission_bps: 1000,
+          commission_amount_kcoin: "10",
+          ledger_id: LEDGER_ID,
+          status: "pending",
+          created_at: "2026-05-26T06:00:00.000Z",
+        },
+      ],
+      server_time: "2026-05-26T00:00:00.000Z",
+    });
+
+    const result = await invokeApiHandler<ApiSuccessResponse>(overviewHandler, {
+      method: "GET",
+      headers: {
+        "x-request-id": "req-tasks-overview-sensitive-fields",
+      },
+    });
+
+    expect(result.statusCode).toBe(200);
+    const overviewData = result.body.data as {
+      referral_records: Record<string, unknown>[];
+      commission_history: Record<string, unknown>[];
+    };
+
+    expect(overviewData.referral_records).toHaveLength(1);
+    expect(overviewData.commission_history).toHaveLength(1);
+    expect(overviewData.referral_records[0]).not.toHaveProperty(
+      "inviter_user_id",
+    );
+    expect(overviewData.referral_records[0]).not.toHaveProperty(
+      "invitee_user_id",
+    );
+    expect(overviewData.referral_records[0]).not.toHaveProperty(
+      "first_open_order_id",
+    );
+    expect(overviewData.commission_history[0]).not.toHaveProperty(
+      "inviter_user_id",
+    );
+    expect(overviewData.commission_history[0]).not.toHaveProperty(
+      "invitee_user_id",
+    );
+  });
+
   it("check-in calls task_daily_check_in with header idempotency and session user", async () => {
     callRpcRawMock.mockResolvedValueOnce({
       signin_id: SIGNIN_ID,

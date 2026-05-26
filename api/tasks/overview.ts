@@ -5,6 +5,8 @@ import {
   mapTaskRpcError,
   withTaskApiHandler,
 } from "./_shared.js";
+import { normalizeCommissionRecord } from "./commission-history.js";
+import { normalizeReferralRecord } from "./referral-records.js";
 
 export default withTaskApiHandler(
   async (_req, _res, ctx) => {
@@ -63,15 +65,31 @@ export function normalizeTaskOverviewPayload(payload: unknown) {
     invite_stats: inviteStats,
     commission_stats: commissionStats,
     task_summary: isRecord(result.task_summary) ? result.task_summary : {},
-    referral_records: Array.isArray(result.referral_records)
-      ? result.referral_records
-      : [],
-    commission_history: Array.isArray(result.commission_history)
-      ? result.commission_history
-      : [],
+    referral_records: normalizeReferralRecords(result.referral_records),
+    commission_history: normalizeCommissionHistory(result.commission_history),
     balances: isRecord(result.balances) ? result.balances : {},
     server_time: readString(result.server_time) ?? new Date().toISOString(),
   };
+}
+
+function normalizeReferralRecords(value: unknown): Record<string, unknown>[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map(normalizeReferralRecord)
+    .filter((item): item is Record<string, unknown> => item !== null);
+}
+
+function normalizeCommissionHistory(value: unknown): Record<string, unknown>[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map(normalizeCommissionRecord)
+    .filter((item): item is Record<string, unknown> => item !== null);
 }
 
 function readString(value: unknown): string | null {

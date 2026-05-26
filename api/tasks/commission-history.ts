@@ -101,7 +101,7 @@ export function normalizeCommissionHistoryPayload(payload: unknown) {
   };
 }
 
-function normalizeCommissionRecord(
+export function normalizeCommissionRecord(
   value: unknown,
 ): Record<string, unknown> | null {
   if (!isRecord(value)) {

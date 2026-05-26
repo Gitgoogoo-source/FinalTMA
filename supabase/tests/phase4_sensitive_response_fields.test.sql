@@ -181,36 +181,36 @@ select ok(
   not exists (
     select 1
     from jsonb_array_elements((select payload -> 'records' from _ids where key = 'records_response')) as record(value)
-    where record.value ? 'invitee_user_id'
+    where record.value ?| array['inviter_user_id', 'invitee_user_id', 'first_open_order_id']
   ),
-  'referral_get_records does not return invitee_user_id'
+  'referral_get_records does not return internal user or first-open order UUIDs'
 );
 
 select ok(
   not exists (
     select 1
     from jsonb_array_elements((select payload -> 'commissions' from _ids where key = 'commission_history_response')) as commission(value)
-    where commission.value ? 'invitee_user_id'
+    where commission.value ?| array['inviter_user_id', 'invitee_user_id']
   ),
-  'referral_get_commission_history does not return invitee_user_id'
+  'referral_get_commission_history does not return internal user UUIDs'
 );
 
 select ok(
   not exists (
     select 1
     from jsonb_array_elements((select payload -> 'referral_records' from _ids where key = 'task_center_response')) as record(value)
-    where record.value ? 'invitee_user_id'
+    where record.value ?| array['inviter_user_id', 'invitee_user_id', 'first_open_order_id']
   ),
-  'get_user_task_center referral records do not return invitee_user_id'
+  'get_user_task_center referral records do not return internal user or first-open order UUIDs'
 );
 
 select ok(
   not exists (
     select 1
     from jsonb_array_elements((select payload -> 'commission_history' from _ids where key = 'task_center_response')) as commission(value)
-    where commission.value ? 'invitee_user_id'
+    where commission.value ?| array['inviter_user_id', 'invitee_user_id']
   ),
-  'get_user_task_center commission history does not return invitee_user_id'
+  'get_user_task_center commission history does not return internal user UUIDs'
 );
 
 select ok(

@@ -251,10 +251,8 @@ begin
   with rows as (
     select
       r.id,
-      r.inviter_user_id,
       r.invite_code,
       r.status,
-      r.first_open_order_id,
       r.qualified_at,
       r.rewarded_at,
       r.created_at,
@@ -273,12 +271,10 @@ begin
   select
     coalesce(jsonb_agg(jsonb_build_object(
       'referral_id', id,
-      'inviter_user_id', inviter_user_id,
       'invitee_username', invitee_username,
       'invitee_display_name', invitee_display_name,
       'invite_code', invite_code,
       'status', status,
-      'first_open_order_id', first_open_order_id,
       'qualified_at', qualified_at,
       'rewarded_at', rewarded_at,
       'created_at', created_at,
@@ -326,7 +322,6 @@ begin
     select
       c.id,
       c.referral_id,
-      c.inviter_user_id,
       c.source_type,
       c.source_id,
       c.base_amount_kcoin,
@@ -351,7 +346,6 @@ begin
     coalesce(jsonb_agg(jsonb_build_object(
       'commission_id', id,
       'referral_id', referral_id,
-      'inviter_user_id', inviter_user_id,
       'invitee_username', invitee_username,
       'invitee_display_name', invitee_display_name,
       'source_type', source_type,

@@ -7,6 +7,8 @@ import {
   RateLimitError,
   type RateLimitAction,
   type RateLimitCombinedResult,
+  type RateLimitRequestContext,
+  type RateLimitScope,
 } from "../../packages/server/src/security/rateLimit.js";
 import { isAppError } from "./errors.js";
 
@@ -46,6 +48,16 @@ export interface ApiHandlerOptions {
     | {
         action: RateLimitAction;
       };
+}
+
+export interface ApiRateLimitOverrides {
+  scopes?: RateLimitScope[];
+  userId?: string;
+  sessionId?: string;
+  telegramUserId?: string | number;
+  walletAddress?: string;
+  custom?: string;
+  metadata?: Record<string, unknown>;
 }
 
 export interface ApiSuccessResponse<T = unknown> {
@@ -202,7 +214,7 @@ export function withApiHandler<T = unknown>(
       }
 
       assertAllowedMethod(method, options.methods, res);
-      await assertRateLimit(req, res, ctx, options.rateLimit);
+      await assertApiRateLimit(req, res, ctx, options.rateLimit);
 
       const result = await routeHandler(req, res, ctx);
 
@@ -458,18 +470,29 @@ function applySecurityHeaders(res: VercelResponse): void {
   res.setHeader("Referrer-Policy", "no-referrer");
 }
 
-async function assertRateLimit(
+export async function assertApiRateLimit(
   req: VercelRequest,
   res: VercelResponse,
   ctx: ApiContext,
   option: ApiHandlerOptions["rateLimit"],
+  overrides: ApiRateLimitOverrides = {},
 ): Promise<void> {
   if (option === false) {
     return;
   }
 
   const action = option?.action ?? "*";
-  const result = await sharedRateLimiter.assert({
+  const explicitRules = overrides.scopes
+    ? sharedRateLimiter
+        .getRulesForAction(action)
+        .filter((rule) => overrides.scopes?.includes(rule.scope))
+    : undefined;
+
+  if (overrides.scopes && explicitRules?.length === 0) {
+    return;
+  }
+
+  const rateLimitContext: RateLimitRequestContext = {
     action,
     ip: ctx.ip ?? undefined,
     method: ctx.method,
@@ -478,8 +501,34 @@ async function assertRateLimit(
     userAgent: ctx.userAgent ?? undefined,
     metadata: {
       requestId: ctx.requestId,
+      ...(overrides.metadata ?? {}),
     },
-  });
+  };
+
+  if (overrides.userId) {
+    rateLimitContext.userId = overrides.userId;
+  }
+
+  if (overrides.sessionId) {
+    rateLimitContext.sessionId = overrides.sessionId;
+  }
+
+  if (overrides.telegramUserId !== undefined) {
+    rateLimitContext.telegramUserId = overrides.telegramUserId;
+  }
+
+  if (overrides.walletAddress) {
+    rateLimitContext.walletAddress = overrides.walletAddress;
+  }
+
+  if (overrides.custom) {
+    rateLimitContext.custom = overrides.custom;
+  }
+
+  const result = await sharedRateLimiter.assert(
+    rateLimitContext,
+    explicitRules,
+  );
 
   applyResponseHeaders(res, result.headers);
 }

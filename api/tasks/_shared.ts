@@ -8,6 +8,7 @@ import {
 } from "../../packages/server/src/db/rpc.js";
 import {
   ApiError,
+  assertApiRateLimit,
   getIdempotencyKey,
   withApiHandler,
   type ApiContext,
@@ -57,12 +58,33 @@ export function withTaskApiHandler<T = unknown>(
 ) {
   return withApiHandler<T>(async (req, res, ctx) => {
     const session = await requireSession(req);
+    await assertTaskUserRateLimit(req, res, ctx, session, options.rateLimit);
 
     return routeHandler(req, res, {
       ...ctx,
       session,
     });
   }, options);
+}
+
+async function assertTaskUserRateLimit(
+  req: VercelRequest,
+  res: VercelResponse,
+  ctx: ApiContext,
+  session: SessionContext,
+  option: ApiHandlerOptions["rateLimit"],
+): Promise<void> {
+  await assertApiRateLimit(req, res, ctx, option, {
+    scopes: ["user", "session", "telegram_user"],
+    userId: session.userId,
+    sessionId: session.sessionId,
+    ...(session.telegramUserId !== null
+      ? { telegramUserId: session.telegramUserId }
+      : {}),
+    metadata: {
+      phase: "post_session",
+    },
+  });
 }
 
 export async function parseTaskJsonBodyInput<T>(

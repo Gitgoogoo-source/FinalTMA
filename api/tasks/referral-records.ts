@@ -99,7 +99,7 @@ export function normalizeReferralRecordsPayload(payload: unknown) {
   };
 }
 
-function normalizeReferralRecord(
+export function normalizeReferralRecord(
   value: unknown,
 ): Record<string, unknown> | null {
   if (!isRecord(value)) {
