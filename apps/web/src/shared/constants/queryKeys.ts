@@ -37,6 +37,25 @@ export const queryKeys = {
     leaderboard: (userId: string | null | undefined, query: unknown = {}) =>
       ["album", "leaderboard", userId ?? "anonymous", query] as const,
   },
+  tasks: {
+    root: ["tasks"] as const,
+    overview: (userId: string | null | undefined) =>
+      ["tasks", "overview", userId ?? "anonymous"] as const,
+    list: (userId: string | null | undefined, query: unknown = {}) =>
+      ["tasks", "list", userId ?? "anonymous", query] as const,
+    checkInStatus: (userId: string | null | undefined) =>
+      ["tasks", "check-in-status", userId ?? "anonymous"] as const,
+    inviteStats: (userId: string | null | undefined) =>
+      ["tasks", "invite-stats", userId ?? "anonymous"] as const,
+    referralRecords: (userId: string | null | undefined, query: unknown = {}) =>
+      ["tasks", "referral-records", userId ?? "anonymous", query] as const,
+    commissionHistory: (
+      userId: string | null | undefined,
+      query: unknown = {},
+    ) => ["tasks", "commission-history", userId ?? "anonymous", query] as const,
+    rewardHistory: (userId: string | null | undefined, query: unknown = {}) =>
+      ["tasks", "reward-history", userId ?? "anonymous", query] as const,
+  },
   trade: {
     root: ["trade"] as const,
     listingsRoot: ["trade", "listings"] as const,
