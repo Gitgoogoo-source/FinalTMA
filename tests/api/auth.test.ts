@@ -100,6 +100,7 @@ describe("auth API", () => {
     const initData = buildTelegramInitData({
       botToken: BOT_TOKEN,
       authDate: 1779321600,
+      startParam: "INVITE7001",
       user: {
         id: 7001,
         first_name: "Test",
@@ -158,6 +159,7 @@ describe("auth API", () => {
       expect.objectContaining({
         p_telegram_user_id: 7001,
         p_username: "test_user",
+        p_start_param: "INVITE7001",
       }),
       expect.any(Object),
     );

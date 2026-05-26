@@ -104,6 +104,51 @@ select ok(exists (select 1 from core.users where telegram_user_id = 9100000001 a
 select ok(exists (select 1 from core.user_profiles p join _ids i on i.id = p.user_id where i.key = 'inviter' and p.display_name = 'Invite Owner'), 'profile row was created with display name');
 select is((select count(*)::int from economy.user_balances b join _ids i on i.id = b.user_id where i.key = 'inviter'), 2, 'KCOIN and FGEMS balance rows are initialized');
 select ok(exists (select 1 from tasks.referrals r join _ids i on i.id = r.invitee_user_id where i.key = 'invitee' and r.status = 'pending'), 'start_param created pending referral relationship');
+select is(
+  (
+    select r.metadata ->> 'surface'
+    from tasks.referrals r
+    join _ids i on i.id = r.invitee_user_id
+    where i.key = 'invitee'
+  ),
+  'auth_upsert_telegram_user',
+  'start_param referral binding is delegated through referral_bind_inviter'
+);
+select is(
+  (
+    select count(*)::int
+    from ops.idempotency_keys k
+    join _ids i on i.id = k.user_id
+    where i.key = 'invitee'
+      and k.scope = 'referral_bind_inviter'
+  ),
+  1,
+  'start_param referral binding records referral_bind_inviter idempotency'
+);
+
+insert into _ids (key, payload)
+select 'invitee_repeat_payload', api.auth_upsert_telegram_user(
+  p_telegram_user_id := 9100000002,
+  p_username := 'invitee_auth_test_repeat',
+  p_first_name := 'Invitee',
+  p_last_name := 'User',
+  p_language_code := 'en',
+  p_is_premium := false,
+  p_photo_url := 'https://example.test/invitee-repeat.png',
+  p_start_param := (select txt from _ids where key = 'inviter'),
+  p_metadata := '{"case":"auth_referral_repeat"}'::jsonb
+);
+
+select is(
+  (
+    select count(*)::int
+    from tasks.referrals r
+    join _ids i on i.id = r.invitee_user_id
+    where i.key = 'invitee'
+  ),
+  1,
+  'repeated auth start_param bind with the same inviter does not duplicate referral'
+);
 
 insert into _ids (key, payload)
 select 'updated_payload', api.auth_upsert_telegram_user(
@@ -121,6 +166,89 @@ select 'updated_payload', api.auth_upsert_telegram_user(
 select is((select count(*)::int from core.users where telegram_user_id = 9100000001), 1, 'upsert does not create duplicate Telegram users');
 select is((select username::text from core.users where telegram_user_id = 9100000001), 'inviter_auth_test_updated', 'upsert updates Telegram username');
 select is((select selected_language from core.user_profiles p join _ids i on i.id = p.user_id where i.key = 'inviter'), 'zh-hans', 'profile selected language is refreshed');
+
+insert into _ids (key, payload)
+select 'second_inviter_payload', api.auth_upsert_telegram_user(
+  p_telegram_user_id := 9100000003,
+  p_username := 'second_inviter_auth_test',
+  p_first_name := 'Second',
+  p_last_name := 'Inviter',
+  p_language_code := 'en',
+  p_is_premium := false,
+  p_photo_url := 'https://example.test/second-inviter.png',
+  p_start_param := null,
+  p_metadata := '{"case":"auth_second_inviter"}'::jsonb
+);
+
+insert into _ids (key, id, txt)
+select 'second_inviter', (payload ->> 'user_id')::uuid, payload ->> 'invite_code'
+from _ids where key = 'second_inviter_payload';
+
+insert into _ids (key, payload)
+select 'invitee_rebind_payload', api.auth_upsert_telegram_user(
+  p_telegram_user_id := 9100000002,
+  p_username := 'invitee_auth_test_rebind',
+  p_first_name := 'Invitee',
+  p_last_name := 'User',
+  p_language_code := 'en',
+  p_is_premium := false,
+  p_photo_url := 'https://example.test/invitee-rebind.png',
+  p_start_param := (select txt from _ids where key = 'second_inviter'),
+  p_metadata := '{"case":"auth_referral_rebind"}'::jsonb
+);
+
+select is(
+  (
+    select inviter_user_id
+    from tasks.referrals
+    where invitee_user_id = (select id from _ids where key = 'invitee')
+  ),
+  (select id from _ids where key = 'inviter'),
+  'different start_param inviter does not replace existing referral'
+);
+select is(
+  (
+    select count(*)::int
+    from ops.risk_events
+    where user_id = (select id from _ids where key = 'invitee')
+      and event_type = 'referral_rebind_attempt'
+  ),
+  1,
+  'different start_param inviter writes referral rebind risk event'
+);
+
+insert into _ids (key, payload)
+select 'self_referral_payload', api.auth_upsert_telegram_user(
+  p_telegram_user_id := 9100000001,
+  p_username := 'inviter_auth_test_self',
+  p_first_name := 'Invite',
+  p_last_name := 'Owner2',
+  p_language_code := 'zh-hans',
+  p_is_premium := false,
+  p_photo_url := null,
+  p_start_param := (select txt from _ids where key = 'inviter'),
+  p_metadata := '{"case":"auth_self_referral"}'::jsonb
+);
+
+select is(
+  (
+    select count(*)::int
+    from tasks.referrals
+    where invitee_user_id = (select id from _ids where key = 'inviter')
+  ),
+  0,
+  'self start_param does not create a referral'
+);
+select is(
+  (
+    select count(*)::int
+    from ops.risk_events
+    where user_id = (select id from _ids where key = 'inviter')
+      and event_type = 'referral_self_invite'
+  ),
+  1,
+  'self start_param writes referral self-invite risk event'
+);
 
 insert into _ids (key, payload)
 select 'session_payload', api.auth_create_session(

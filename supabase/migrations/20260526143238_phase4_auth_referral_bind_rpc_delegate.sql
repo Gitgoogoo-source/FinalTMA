@@ -1,11 +1,3 @@
--- auth_upsert_telegram_user.sql
--- ============================================================
--- Generated RPC file for the Telegram Mini App blind-box game.
--- Place under supabase/rpc/. Execute after schema migrations 0001-0019.
--- Core policy: frontend only requests; all trusted mutations are enforced here by database transactions.
-
--- RPC: api.auth_upsert_telegram_user
-
 create or replace function api.auth_upsert_telegram_user(
   p_telegram_user_id bigint,
   p_username text default null,
@@ -88,6 +80,3 @@ begin
   );
 end;
 $$;
-
-
--- ============================================================
