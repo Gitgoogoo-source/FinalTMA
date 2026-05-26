@@ -5,7 +5,7 @@ import { queryKeys } from "@/shared/constants/queryKeys";
 
 import { fetchTaskOverview } from "../tasks.api";
 
-export function useInviteStats() {
+export function useCommissionHistory() {
   const session = useSession();
   const userId = session.user?.id ?? null;
   const result = useQuery({
@@ -16,7 +16,7 @@ export function useInviteStats() {
 
   return {
     ...result,
-    inviteStats: result.data?.inviteStats ?? null,
-    referralRecords: result.data?.referralRecords ?? [],
+    commissionHistory: result.data?.commissionHistory ?? null,
+    commissionStats: result.data?.commissionStats ?? null,
   };
 }

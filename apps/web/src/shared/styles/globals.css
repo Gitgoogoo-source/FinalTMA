@@ -6824,6 +6824,644 @@ a {
   }
 }
 
+.tasks-page {
+  width: 100%;
+  display: grid;
+  gap: 12px;
+  align-self: start;
+}
+
+.tasks-page__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.tasks-page__header div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.tasks-page__header span,
+.invite-campaign-card__copy span,
+.seven-day-check-in__header span,
+.commission-panel__header span {
+  color: #8bd3c7;
+  font-size: 11px;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.tasks-page__header h1,
+.invite-campaign-card__copy h2,
+.seven-day-check-in__header h2,
+.commission-panel__header h2 {
+  margin: 0;
+  color: #f7fbff;
+  font-size: 20px;
+  font-weight: 950;
+  line-height: 1.15;
+}
+
+.tasks-page__header button {
+  width: 38px;
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: 8px;
+  color: #f7fbff;
+  background: rgb(255 255 255 / 9%);
+  cursor: pointer;
+}
+
+.tasks-page__header button:disabled {
+  cursor: progress;
+  opacity: 0.58;
+}
+
+.invite-campaign-card,
+.seven-day-check-in,
+.commission-panel {
+  display: grid;
+  gap: 12px;
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: 8px;
+  padding: 12px;
+  background: rgb(13 20 25 / 72%);
+}
+
+.invite-campaign-card {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.invite-campaign-card__copy {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+
+.invite-campaign-card__copy p {
+  margin: 0;
+  color: #aebfc7;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.invite-campaign-card__actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.invite-button,
+.seven-day-check-in__header button,
+.commission-panel__header button,
+.task-list-state button,
+.claim-task-button,
+.referral-link-sheet__actions button,
+.commission-confirm-dialog__actions button {
+  min-width: 0;
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: 8px;
+  color: #f7fbff;
+  background: rgb(255 255 255 / 9%);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 950;
+  line-height: 1;
+  text-decoration: none;
+}
+
+.invite-button:disabled,
+.seven-day-check-in__header button:disabled,
+.commission-panel__header button:disabled,
+.claim-task-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.invite-stats-panel {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.invite-stat-card,
+.commission-panel__stats div,
+.check-in-reward-card,
+.task-row {
+  min-width: 0;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 5%);
+}
+
+.invite-stat-card {
+  min-height: 78px;
+  display: grid;
+  align-content: space-between;
+  gap: 12px;
+  padding: 10px;
+}
+
+.invite-stat-card span,
+.commission-panel__stats dt,
+.task-row__copy span,
+.task-reward-badges,
+.check-in-reward-card em,
+.commission-panel__history em {
+  color: #aebfc7;
+  font-size: 11px;
+  font-weight: 850;
+  line-height: 1.2;
+}
+
+.invite-stat-card span,
+.task-reward-badges span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.invite-stat-card span svg,
+.task-reward-badges svg {
+  color: #8bd3c7;
+}
+
+.invite-stat-card strong {
+  min-width: 0;
+  overflow: hidden;
+  color: #f7fbff;
+  font-size: 18px;
+  font-weight: 950;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.invite-stat-card em {
+  margin-left: 4px;
+  color: #8bd3c7;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 950;
+}
+
+.commission-panel__header,
+.seven-day-check-in__header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.commission-panel__header div,
+.seven-day-check-in__header div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.commission-panel__stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.commission-panel__stats div {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+}
+
+.commission-panel__stats dd {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: #f7fbff;
+  font-size: 15px;
+  font-weight: 950;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.commission-panel__history {
+  display: grid;
+  gap: 7px;
+}
+
+.commission-panel__history article {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 8px;
+  align-items: center;
+  border-top: 1px solid rgb(255 255 255 / 10%);
+  padding-top: 7px;
+}
+
+.commission-panel__history article > span,
+.commission-panel__history strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.commission-panel__history article > span {
+  color: #f7fbff;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.commission-panel__history strong {
+  color: #ffd166;
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.seven-day-check-in__meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.seven-day-check-in__meta span {
+  min-width: 0;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 8px;
+  padding: 0 10px;
+  color: #f7fbff;
+  background: rgb(255 255 255 / 5%);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.seven-day-check-in__days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(76px, 1fr));
+  gap: 7px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.check-in-reward-card {
+  min-height: 118px;
+  display: grid;
+  align-content: space-between;
+  gap: 7px;
+  padding: 9px;
+}
+
+.check-in-reward-card[data-status="available"] {
+  border-color: rgb(255 209 102 / 40%);
+  background: rgb(255 209 102 / 8%);
+}
+
+.check-in-reward-card[data-status="claimed"] {
+  border-color: rgb(139 211 199 / 30%);
+}
+
+.check-in-reward-card header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  color: #8bd3c7;
+  font-size: 11px;
+  font-weight: 950;
+}
+
+.check-in-reward-card strong {
+  color: #f7fbff;
+  font-size: 12px;
+  font-weight: 950;
+  line-height: 1.2;
+}
+
+.seven-day-check-in__empty,
+.task-list-state {
+  min-height: 150px;
+  display: grid;
+  place-items: center;
+  gap: 9px;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 8px;
+  padding: 18px;
+  color: #f7fbff;
+  background: rgb(255 255 255 / 5%);
+  text-align: center;
+}
+
+.seven-day-check-in__empty span,
+.task-list-state span {
+  max-width: 280px;
+  color: #aebfc7;
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 1.45;
+}
+
+.task-list-state__spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid rgb(255 255 255 / 18%);
+  border-top-color: #8bd3c7;
+  border-radius: 999px;
+  animation: box-spin 0.9s linear infinite;
+}
+
+.task-category-tabs {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 5px;
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: 8px;
+  padding: 5px;
+  background: rgb(13 20 25 / 78%);
+}
+
+.task-category-tabs button {
+  min-width: 0;
+  min-height: 36px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: #aebfc7;
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.task-category-tabs button[data-active="true"] {
+  border-color: rgb(139 211 199 / 38%);
+  color: #dffff9;
+  background: rgb(139 211 199 / 11%);
+}
+
+.task-list {
+  display: grid;
+  gap: 9px;
+}
+
+.task-row {
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+}
+
+.task-row[data-status="claimable"] {
+  border-color: rgb(255 209 102 / 34%);
+  background: rgb(255 209 102 / 7%);
+}
+
+.task-row__main {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+}
+
+.task-row__copy {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.task-row__copy strong,
+.task-row__copy p {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.task-row__copy strong {
+  color: #f7fbff;
+  font-size: 14px;
+  font-weight: 950;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.task-row__copy p {
+  margin: 0;
+  color: #aebfc7;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.task-row__progress {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.task-row__progress span {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 9%);
+}
+
+.task-row__progress i {
+  height: 100%;
+  display: block;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #8bd3c7, #ffd166);
+}
+
+.task-row__progress em {
+  color: #aebfc7;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 950;
+}
+
+.task-reward-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.task-reward-badges span,
+.task-reward-badges--empty {
+  min-height: 24px;
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 999px;
+  padding: 0 8px;
+  background: rgb(255 255 255 / 5%);
+}
+
+.claim-task-button {
+  min-width: 78px;
+  padding: 0 10px;
+}
+
+.claim-task-button:not(:disabled),
+.commission-panel__header button:not(:disabled) {
+  border-color: rgb(255 209 102 / 34%);
+  color: #fff2c2;
+  background: rgb(255 209 102 / 10%);
+}
+
+.referral-link-sheet,
+.commission-confirm-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: grid;
+  align-items: end;
+  padding: 16px;
+}
+
+.referral-link-sheet__backdrop,
+.commission-confirm-dialog__backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgb(0 0 0 / 58%);
+}
+
+.referral-link-sheet__panel,
+.commission-confirm-dialog__panel {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 460px);
+  margin: 0 auto;
+  display: grid;
+  gap: 12px;
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: 8px;
+  padding: 12px;
+  background: #101820;
+  box-shadow: 0 22px 70px rgb(0 0 0 / 45%);
+}
+
+.referral-link-sheet__header,
+.commission-confirm-dialog__header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.referral-link-sheet__header div,
+.commission-confirm-dialog__header div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.referral-link-sheet__header span,
+.commission-confirm-dialog__header span {
+  color: #8bd3c7;
+  font-size: 11px;
+  font-weight: 950;
+}
+
+.referral-link-sheet__header h2,
+.commission-confirm-dialog__header h2 {
+  margin: 0;
+  color: #f7fbff;
+  font-size: 17px;
+  font-weight: 950;
+  line-height: 1.18;
+}
+
+.referral-link-sheet__header button,
+.commission-confirm-dialog__header button {
+  width: 34px;
+  min-height: 34px;
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: 8px;
+  color: #f7fbff;
+  background: rgb(255 255 255 / 8%);
+  cursor: pointer;
+}
+
+.referral-link-sheet__body {
+  display: grid;
+  gap: 8px;
+}
+
+.referral-link-sheet__body code {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 8px;
+  padding: 10px;
+  color: #dffff9;
+  background: rgb(255 255 255 / 6%);
+  font-size: 12px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.referral-link-sheet__body p,
+.commission-confirm-dialog__body span {
+  margin: 0;
+  color: #aebfc7;
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 1.4;
+}
+
+.referral-link-sheet__actions,
+.commission-confirm-dialog__actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.commission-confirm-dialog__body {
+  display: grid;
+  gap: 6px;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 8px;
+  padding: 12px;
+  background: rgb(255 255 255 / 5%);
+}
+
+.commission-confirm-dialog__body strong {
+  color: #ffd166;
+  font-size: 20px;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.tasks-page__header button:focus-visible,
+.invite-button:focus-visible,
+.seven-day-check-in__header button:focus-visible,
+.commission-panel__header button:focus-visible,
+.task-list-state button:focus-visible,
+.claim-task-button:focus-visible,
+.task-category-tabs button:focus-visible,
+.referral-link-sheet__header button:focus-visible,
+.referral-link-sheet__actions button:focus-visible,
+.commission-confirm-dialog__header button:focus-visible,
+.commission-confirm-dialog__actions button:focus-visible {
+  outline: 3px solid rgb(139 211 199 / 34%);
+  outline-offset: 2px;
+}
+
 @media (width <= 430px) {
   .album-milestone-row__header,
   .album-milestone-row__footer {

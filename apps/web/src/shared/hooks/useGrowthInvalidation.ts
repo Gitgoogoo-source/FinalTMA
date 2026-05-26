@@ -97,10 +97,34 @@ export function useGrowthInvalidation() {
     [invalidateAll],
   );
 
+  const invalidateAfterDailyCheckIn = useCallback(
+    () => invalidateAll([queryKeys.tasks.root, queryKeys.me.assetsRoot]),
+    [invalidateAll],
+  );
+
+  const invalidateAfterTaskRewardClaim = useCallback(
+    () => invalidateAll([queryKeys.tasks.root, queryKeys.me.assetsRoot]),
+    [invalidateAll],
+  );
+
+  const invalidateAfterInviteShare = useCallback(
+    () => invalidateAll([queryKeys.tasks.root]),
+    [invalidateAll],
+  );
+
+  const invalidateAfterCommissionClaim = useCallback(
+    () => invalidateAll([queryKeys.tasks.root, queryKeys.me.assetsRoot]),
+    [invalidateAll],
+  );
+
   return {
     invalidateAfterAlbumRewardClaim,
+    invalidateAfterCommissionClaim,
     invalidateAfterDecompose,
+    invalidateAfterDailyCheckIn,
     invalidateAfterEvolve,
+    invalidateAfterInviteShare,
+    invalidateAfterTaskRewardClaim,
     invalidateAfterUpgrade,
   };
 }

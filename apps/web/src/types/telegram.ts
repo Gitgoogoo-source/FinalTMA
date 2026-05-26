@@ -92,6 +92,8 @@ export type TelegramWebApp = {
   safeAreaInset?: TelegramSafeAreaInset;
   contentSafeAreaInset?: TelegramSafeAreaInset;
   BackButton?: TelegramBackButton;
+  openLink?: (url: string, options?: { try_instant_view?: boolean }) => void;
+  openTelegramLink?: (url: string) => void;
   ready?: () => void;
   expand?: () => void;
   onEvent?: (eventType: TelegramEventName, eventHandler: () => void) => void;
