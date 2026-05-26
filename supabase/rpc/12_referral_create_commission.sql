@@ -10,7 +10,7 @@ create or replace function api.referral_create_commission(
   p_invitee_user_id uuid,
   p_source_id uuid,
   p_base_amount_kcoin numeric,
-  p_commission_bps integer default 1000
+  p_commission_bps integer default null
 )
 returns jsonb
 language plpgsql
@@ -19,17 +19,77 @@ set search_path = ''
 as $$
 declare
   v_ref tasks.referrals%rowtype;
+  v_order gacha.draw_orders%rowtype;
+  v_result_count integer := 0;
+  v_required_result_count integer := 0;
   v_amount numeric(38,0);
-  v_commission_bps integer := coalesce(p_commission_bps, 1000);
+  v_commission_setting jsonb;
+  v_commission_bps integer;
   v_commission_id uuid;
   v_existing tasks.referral_commissions%rowtype;
 begin
+  if p_invitee_user_id is null then
+    raise exception 'invitee_user_id is required';
+  end if;
+
   if p_source_id is null then
     raise exception 'source_id is required';
   end if;
 
+  select *
+  into v_order
+  from gacha.draw_orders
+  where id = p_source_id
+  for share;
+
+  if v_order.id is null or v_order.user_id <> p_invitee_user_id then
+    return jsonb_build_object(
+      'processed', false,
+      'reason', 'draw_order_not_found'
+    );
+  end if;
+
+  select count(*)::integer
+  into v_result_count
+  from gacha.draw_results
+  where draw_order_id = p_source_id
+    and user_id = p_invitee_user_id;
+
+  v_required_result_count := greatest(coalesce(v_order.draw_count, v_order.quantity, 1), 1);
+
+  if v_order.status not in ('opening', 'opened', 'completed')
+     or v_result_count < v_required_result_count then
+    return jsonb_build_object(
+      'processed', false,
+      'reason', 'draw_order_not_successful',
+      'draw_order_id', p_source_id,
+      'status', v_order.status,
+      'result_count', v_result_count,
+      'required_result_count', v_required_result_count
+    );
+  end if;
+
   if p_base_amount_kcoin is null or p_base_amount_kcoin <= 0 then
     return jsonb_build_object('processed', false, 'reason', 'no_base_amount');
+  end if;
+
+  if p_commission_bps is null then
+    select value
+    into v_commission_setting
+    from ops.system_settings
+    where key = 'REFERRAL_COMMISSION_BPS';
+
+    if v_commission_setting is null then
+      raise exception 'referral commission bps setting is required';
+    elsif jsonb_typeof(v_commission_setting) = 'object'
+          and v_commission_setting ? 'commission_bps'
+          and (v_commission_setting ->> 'commission_bps') ~ '^[0-9]+$' then
+      v_commission_bps := (v_commission_setting ->> 'commission_bps')::integer;
+    else
+      raise exception 'invalid referral commission bps setting';
+    end if;
+  else
+    v_commission_bps := p_commission_bps;
   end if;
 
   if v_commission_bps < 0 or v_commission_bps > 10000 then
@@ -44,6 +104,15 @@ begin
 
   if v_ref.id is null then
     return jsonb_build_object('processed', false, 'reason', 'no_rewarded_referral');
+  end if;
+
+  if v_ref.first_open_order_id is not distinct from p_source_id then
+    return jsonb_build_object(
+      'processed', false,
+      'reason', 'first_open_order_not_commissionable',
+      'referral_id', v_ref.id,
+      'draw_order_id', p_source_id
+    );
   end if;
 
   select * into v_existing

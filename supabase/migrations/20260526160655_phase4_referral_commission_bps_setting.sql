@@ -1,10 +1,17 @@
--- gacha_process_paid_order.sql
--- ============================================================
--- Generated RPC file for the Telegram Mini App blind-box game.
--- Place under supabase/rpc/. Execute after schema migrations 0001-0019.
--- Core policy: frontend only requests; all trusted mutations are enforced here by database transactions.
+-- Phase 4 referral commission bps setting.
+-- Scope: make referral commission rate configurable through ops.system_settings/admin.
 
--- RPC: api.gacha_process_paid_order
+begin;
+
+insert into ops.system_settings (key, value, description)
+values (
+  'REFERRAL_COMMISSION_BPS',
+  '{"commission_bps":1000}'::jsonb,
+  'Referral commission rate in basis points for post-first-open gacha rewards.'
+)
+on conflict (key) do update
+set description = excluded.description,
+    updated_at = now();
 
 create or replace function api.gacha_process_paid_order(
   p_star_order_id uuid,
@@ -316,9 +323,6 @@ begin
     raise exception 'referral commission bps setting must be between 0 and 10000';
   end if;
 
-  -- Referral growth rules:
-  -- 1. If this is the invitee's first qualified paid open, grant both sides the first-open reward.
-  -- 2. Only later successful opens can grant inviter configured commission based on the K-coin open reward.
   v_referral_first_open := api.referral_process_first_open(v_order.user_id, v_order.id);
   if v_reward_kcoin > 0
      and not coalesce((v_referral_first_open ->> 'processed')::boolean, false) then
@@ -384,5 +388,9 @@ begin
 end;
 $$;
 
+revoke execute on function api.gacha_process_paid_order(uuid, text, text, jsonb)
+  from public, anon, authenticated;
+grant execute on function api.gacha_process_paid_order(uuid, text, text, jsonb)
+  to service_role;
 
--- ============================================================
+commit;

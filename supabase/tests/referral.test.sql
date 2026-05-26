@@ -92,19 +92,28 @@ select is((select first_open_order_id from tasks.referrals where id = (select id
 select is(testutil.balance_of((select id from _ids where key = 'inviter'), 'KCOIN'), 500::numeric, 'inviter receives 500 K-coin first-open reward');
 select is(testutil.balance_of((select id from _ids where key = 'invitee'), 'KCOIN'), 600::numeric, 'invitee receives 500 K-coin first-open reward plus 100 open rebate');
 select is((select count(*)::int from tasks.referral_rewards where referral_id = (select id from _ids where key = 'referral')), 2, 'two referral reward rows are recorded');
+select is((select count(*)::int from tasks.referral_commissions where referral_id = (select id from _ids where key = 'referral')), 0, 'first-open processing does not generate referral commission');
 
-insert into _ids (key, id) select 'commission_source', (select id from _ids where key = 'draw_order');
-insert into _ids (key, payload) select 'commission1', api.referral_create_commission((select id from _ids where key = 'invitee'), (select id from _ids where key = 'commission_source'), 100, 1000);
-select ok(((select payload from _ids where key = 'commission1') ->> 'processed')::boolean, 'commission is processed for rewarded referral');
-select is(((select payload from _ids where key = 'commission1') ->> 'amount_kcoin')::numeric, 10::numeric, '10% referral commission is calculated from K-coin base amount');
-select is(((select payload from _ids where key = 'commission1') ->> 'status'), 'pending', 'commission is generated as pending');
+insert into _ids (key, payload)
+select 'first_open_commission', api.referral_create_commission((select id from _ids where key = 'invitee'), (select id from _ids where key = 'draw_order'), 100, 1000);
+select ok(not ((select payload from _ids where key = 'first_open_commission') ->> 'processed')::boolean, 'first-open draw order is not commissionable');
+select is((select payload ->> 'reason' from _ids where key = 'first_open_commission'), 'first_open_order_not_commissionable', 'first-open draw order is rejected for commission');
+
+insert into _ids (key, payload)
+select 'second_open_order', api.gacha_create_order((select id from _ids where key = 'invitee'), (select id from _ids where key = 'box'), 1, 'referral-second-open-order-001');
+insert into _ids (key, id) select 'second_draw_order', ((select payload from _ids where key = 'second_open_order') ->> 'draw_order_id')::uuid;
+insert into _ids (key, payload)
+select 'second_process_order', api.gacha_process_dev_paid_order((select id from _ids where key = 'second_draw_order'), (select id from _ids where key = 'invitee'));
+select ok(((select payload from _ids where key = 'second_process_order') #>> '{referral_commission,processed}')::boolean, 'subsequent open creates referral commission');
+select is(((select payload from _ids where key = 'second_process_order') #>> '{referral_commission,amount_kcoin}')::numeric, 10::numeric, '10% referral commission is calculated from K-coin base amount');
+select is(((select payload from _ids where key = 'second_process_order') #>> '{referral_commission,status}'), 'pending', 'commission is generated as pending');
 select is(testutil.balance_of((select id from _ids where key = 'inviter'), 'KCOIN'), 500::numeric, 'pending commission does not credit inviter balance');
 select is((select count(*)::int from tasks.referral_commissions where referral_id = (select id from _ids where key = 'referral')), 1, 'one referral commission row is recorded');
 select is((select status from tasks.referral_commissions where referral_id = (select id from _ids where key = 'referral')), 'pending', 'commission row remains pending before claim');
 select ok((select ledger_id is null from tasks.referral_commissions where referral_id = (select id from _ids where key = 'referral')), 'pending commission has no ledger id before claim');
 select ok((select claimed_at is null from tasks.referral_commissions where referral_id = (select id from _ids where key = 'referral')), 'pending commission has no claimed_at before claim');
 
-insert into _ids (key, payload) select 'commission_repeat', api.referral_create_commission((select id from _ids where key = 'invitee'), (select id from _ids where key = 'commission_source'), 100, 1000);
+insert into _ids (key, payload) select 'commission_repeat', api.referral_create_commission((select id from _ids where key = 'invitee'), (select id from _ids where key = 'second_draw_order'), 100, 1000);
 select ok(((select payload from _ids where key = 'commission_repeat') ->> 'idempotent')::boolean, 'repeated commission for same source is idempotent');
 select is(testutil.balance_of((select id from _ids where key = 'inviter'), 'KCOIN'), 500::numeric, 'repeated commission still does not credit before claim');
 

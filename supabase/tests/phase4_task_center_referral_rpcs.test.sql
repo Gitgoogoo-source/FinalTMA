@@ -266,13 +266,49 @@ select 'process_order', api.gacha_process_dev_paid_order((select id from _ids wh
 insert into _ids (key, payload)
 select 'first_open', api.referral_process_first_open((select id from _ids where key = 'invitee'), (select id from _ids where key = 'draw_order'));
 select ok(((select payload from _ids where key = 'first_open') ->> 'idempotent')::boolean, 'referral_process_first_open is idempotent for the same successful draw order');
-insert into _ids (key, id) select 'commission_source', (select id from _ids where key = 'draw_order');
 insert into _ids (key, payload)
-select 'commission_create', api.referral_create_commission((select id from _ids where key = 'invitee'), (select id from _ids where key = 'commission_source'), 100, 1000);
+select 'first_open_commission', api.referral_create_commission((select id from _ids where key = 'invitee'), (select id from _ids where key = 'draw_order'), 100, 1000);
+select is((select payload ->> 'reason' from _ids where key = 'first_open_commission'), 'first_open_order_not_commissionable', 'referral_create_commission rejects first-open draw order');
+
+insert into ops.system_settings (key, value, description)
+values (
+  'REFERRAL_COMMISSION_BPS',
+  '{"commission_bps":1500}'::jsonb,
+  'Test override for referral commission bps.'
+)
+on conflict (key) do update
+set value = excluded.value,
+    description = excluded.description,
+    updated_at = now();
+
+insert into _ids (key, payload)
+select 'second_open_order', api.gacha_create_order((select id from _ids where key = 'invitee'), (select id from _ids where key = 'box'), 1, 'phase4-referral-second-open-order-001');
+insert into _ids (key, id) select 'second_draw_order', ((select payload from _ids where key = 'second_open_order') ->> 'draw_order_id')::uuid;
+insert into _ids (key, payload)
+select 'second_process_order', api.gacha_process_dev_paid_order((select id from _ids where key = 'second_draw_order'), (select id from _ids where key = 'invitee'));
+select ok(((select payload from _ids where key = 'second_process_order') #>> '{referral_commission,processed}')::boolean, 'subsequent open generates pending referral commission');
+select is(
+  (
+    select commission_bps
+    from tasks.referral_commissions
+    where source_id = (select id from _ids where key = 'second_draw_order')
+  ),
+  1500,
+  'gacha_process_paid_order uses configured referral commission bps'
+);
+select is(
+  (
+    select commission_amount_kcoin
+    from tasks.referral_commissions
+    where source_id = (select id from _ids where key = 'second_draw_order')
+  ),
+  15::numeric,
+  'configured referral commission bps controls commission amount'
+);
 
 insert into _ids (key, payload) values ('invite_stats', api.referral_get_invite_stats((select id from _ids where key = 'inviter'), null, null));
 select is(((select payload from _ids where key = 'invite_stats') #>> '{referrals,total_count}')::int, 1, 'referral_get_invite_stats counts referral records');
-select is(((select payload from _ids where key = 'invite_stats') #>> '{commissions,pending_amount_kcoin}')::numeric, 10::numeric, 'referral_get_invite_stats sums pending commission');
+select is(((select payload from _ids where key = 'invite_stats') #>> '{commissions,pending_amount_kcoin}')::numeric, 15::numeric, 'referral_get_invite_stats sums pending commission');
 
 insert into _ids (key, payload) values ('referral_records', api.referral_get_records((select id from _ids where key = 'inviter'), null, null, 10));
 select is(jsonb_array_length((select payload -> 'records' from _ids where key = 'referral_records')), 1, 'referral_get_records returns inviter records');
