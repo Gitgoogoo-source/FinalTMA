@@ -296,8 +296,9 @@ select ok(
       and position('tasks.user_signin_states' in pg_get_functiondef(to_regprocedure('api.task_daily_check_in(uuid,uuid,date,integer,text)'))) > 0
       and position('idempotency_key' in pg_get_functiondef(to_regprocedure('api.task_daily_check_in(uuid,uuid,date,integer,text)'))) > 0
       and position('request_fingerprint' in pg_get_functiondef(to_regprocedure('api.task_daily_check_in(uuid,uuid,date,integer,text)'))) > 0
+      and position('task_record_progress' in pg_get_functiondef(to_regprocedure('api.task_daily_check_in(uuid,uuid,date,integer,text)'))) > 0
   ),
-  'task_daily_check_in uses idempotency keys, request fingerprints and sign-in state'
+  'task_daily_check_in uses idempotency keys, request fingerprints, sign-in state and task progress'
 );
 
 select ok(
