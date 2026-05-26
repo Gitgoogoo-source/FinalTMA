@@ -378,7 +378,6 @@ export const InviteStatsResponseSchema = z.object({
 
 export const ReferralItemSchema = z.object({
   referralId: UUIDSchema,
-  inviteeUserId: UUIDSchema.optional(),
   inviteeDisplayName: z.string().trim().max(120).optional(),
   status: ReferralStatusSchema,
   createdAt: IsoDateTimeSchema,
