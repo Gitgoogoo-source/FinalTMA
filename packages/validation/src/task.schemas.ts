@@ -154,6 +154,24 @@ export const ReferralStatusSchema = z.enum([
   "CANCELED",
 ]);
 
+export const ReferralRecordStatusSchema = z.enum([
+  "pending",
+  "qualified",
+  "rewarded",
+  "cancelled",
+]);
+
+export const ReferralRecordStatusInputSchema = z.preprocess((value) => {
+  if (typeof value !== "string") {
+    return value;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "valid") return "qualified";
+  if (normalized === "canceled") return "cancelled";
+  return normalized;
+}, ReferralRecordStatusSchema);
+
 export const ShareSceneSchema = z.enum([
   "TASK_PAGE",
   "INVITE_CARD",
@@ -360,6 +378,22 @@ export const ReferralLinkResponseSchema = z.object({
   expiresAt: IsoDateTimeSchema.optional(),
 });
 
+export const BindReferralBodySchema = z.object({
+  inviteCode: ReferralCodeSchema,
+  metadata: z.record(z.string(), z.unknown()).optional(),
+  idempotencyKey: IdempotencyKeySchema,
+});
+
+export const BindReferralResponseSchema = z.object({
+  bound: z.boolean(),
+  status: z.string().trim().min(1).max(40),
+  reason: z.string().trim().min(1).max(80).optional(),
+  referralId: UUIDSchema.optional(),
+  inviteCode: ReferralCodeSchema.optional(),
+  createdAt: IsoDateTimeSchema.optional(),
+  idempotent: z.boolean().optional(),
+});
+
 export const InviteStatsQuerySchema = z.object({
   campaignId: UUIDSchema.optional(),
   from: DateOnlySchema.optional(),
@@ -379,7 +413,7 @@ export const InviteStatsResponseSchema = z.object({
 export const ReferralItemSchema = z.object({
   referralId: UUIDSchema,
   inviteeDisplayName: z.string().trim().max(120).optional(),
-  status: ReferralStatusSchema,
+  status: ReferralRecordStatusSchema,
   createdAt: IsoDateTimeSchema,
   firstOpenAt: IsoDateTimeSchema.optional(),
   rewardedAt: IsoDateTimeSchema.optional(),
@@ -387,7 +421,7 @@ export const ReferralItemSchema = z.object({
 });
 
 export const ReferralListQuerySchema = PaginationQuerySchema.extend({
-  status: ReferralStatusSchema.optional(),
+  status: ReferralRecordStatusInputSchema.optional(),
   campaignId: UUIDSchema.optional(),
 });
 
@@ -473,6 +507,8 @@ export type CheckInResponse = z.infer<typeof CheckInResponseSchema>;
 
 export type ReferralLinkQuery = z.infer<typeof ReferralLinkQuerySchema>;
 export type ReferralLinkResponse = z.infer<typeof ReferralLinkResponseSchema>;
+export type BindReferralBody = z.infer<typeof BindReferralBodySchema>;
+export type BindReferralResponse = z.infer<typeof BindReferralResponseSchema>;
 export type InviteStatsQuery = z.infer<typeof InviteStatsQuerySchema>;
 export type InviteStatsResponse = z.infer<typeof InviteStatsResponseSchema>;
 export type ReferralListQuery = z.infer<typeof ReferralListQuerySchema>;

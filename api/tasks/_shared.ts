@@ -300,6 +300,166 @@ export function assertTaskRecordPayload(
   return payload;
 }
 
+export function assertNoClientControlledTaskFields(
+  body: JsonRecord,
+  message = "任务请求不能携带客户端控制的业务事实字段。",
+): void {
+  const forbiddenFields = [
+    "user_id",
+    "userId",
+    "telegram_user_id",
+    "telegramUserId",
+    "wallet_address",
+    "walletAddress",
+    "role",
+    "is_admin",
+    "isAdmin",
+    "balance",
+    "reward",
+    "rewards",
+    "progress",
+    "task_completed",
+    "taskCompleted",
+  ].filter((field) => body[field] !== undefined);
+
+  if (forbiddenFields.length === 0) {
+    return;
+  }
+
+  throw new ApiError(400, "VALIDATION_ERROR", "请求参数校验失败。", {
+    details: forbiddenFields.map((field) => ({
+      path: field,
+      message,
+    })),
+  });
+}
+
+export function assertNoSensitiveMetadata(
+  value: unknown,
+  path = "metadata",
+): void {
+  if (!isRecord(value)) {
+    return;
+  }
+
+  const forbiddenPaths = collectSensitiveMetadataPaths(value, path);
+  if (forbiddenPaths.length === 0) {
+    return;
+  }
+
+  throw new ApiError(400, "VALIDATION_ERROR", "请求参数校验失败。", {
+    details: forbiddenPaths.map((fieldPath) => ({
+      path: fieldPath,
+      message: "metadata 不能携带用户身份、原始 chat id 或敏感字段。",
+    })),
+  });
+}
+
+export function firstQueryValue(value: unknown): unknown {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+export function readString(value: unknown): string | null {
+  return typeof value === "string" && value.trim().length > 0
+    ? value.trim()
+    : null;
+}
+
+export function readNumber(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === "string" && value.trim().length > 0) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  return null;
+}
+
+export function readBoolean(value: unknown): boolean | null {
+  if (typeof value === "boolean") {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === "true" || normalized === "1") return true;
+    if (normalized === "false" || normalized === "0") return false;
+  }
+
+  return null;
+}
+
+export function readIsoDateString(value: unknown): string | null {
+  const text = readString(value);
+  if (!text) {
+    return null;
+  }
+
+  const parsed = new Date(text);
+  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+}
+
+export function compactRecord(
+  value: Record<string, unknown>,
+): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(value).filter(([, item]) => item !== undefined),
+  );
+}
+
+function collectSensitiveMetadataPaths(
+  value: JsonRecord,
+  basePath: string,
+  depth = 0,
+): string[] {
+  if (depth > 4) {
+    return [];
+  }
+
+  const paths: string[] = [];
+
+  for (const [key, item] of Object.entries(value)) {
+    const itemPath = `${basePath}.${key}`;
+
+    if (isSensitiveMetadataKey(key)) {
+      paths.push(itemPath);
+      continue;
+    }
+
+    if (isRecord(item)) {
+      paths.push(...collectSensitiveMetadataPaths(item, itemPath, depth + 1));
+    }
+  }
+
+  return paths;
+}
+
+function isSensitiveMetadataKey(key: string): boolean {
+  return [
+    "user_id",
+    "userId",
+    "telegram_user_id",
+    "telegramUserId",
+    "wallet_address",
+    "walletAddress",
+    "target_chat_id",
+    "targetChatId",
+    "chat_id",
+    "chatId",
+    "authorization",
+    "cookie",
+    "token",
+    "secret",
+    "service_role",
+    "private_key",
+    "seed",
+    "mnemonic",
+  ].includes(key);
+}
+
 export function getRpcErrorText(error: RpcError): string {
   return [error.message, error.details, error.hint, error.code]
     .filter(Boolean)
