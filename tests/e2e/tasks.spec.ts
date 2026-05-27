@@ -197,6 +197,69 @@ test("任务页展示签到状态，签到后刷新签到和资产数据", async
   await expect(checkInCards.nth(1)).toContainText("已领取");
 });
 
+test("任务列表分类、进度、奖励和按钮状态正确", async ({ page }) => {
+  const state = createTaskMockState();
+
+  await mockFirstPhaseApi(page);
+  await mockTasksApi(page, state);
+  await gotoTasks(page);
+
+  const tablist = page.getByRole("tablist", { name: "任务分类" });
+  const allTab = tablist.getByRole("tab", { name: "全部" });
+  const taskList = page.locator(".task-list");
+
+  await expect(allTab).toHaveAttribute("aria-selected", "true");
+  await expect(taskList.locator(".task-row")).toHaveCount(3);
+
+  await tablist.getByRole("tab", { name: "每日" }).click();
+
+  const dailyRow = taskList.locator(".task-row").filter({
+    hasText: "完成一次开盒",
+  });
+  await expect(dailyRow).toBeVisible();
+  await expect(dailyRow).toContainText("每日");
+  await expect(dailyRow).toContainText("1/1");
+  await expect(dailyRow).toContainText("KCOIN +50");
+  await expect(dailyRow.getByRole("button", { name: "领取" })).toBeEnabled();
+  await expect(taskList.locator(".task-row")).toHaveCount(1);
+
+  await tablist.getByRole("tab", { name: "社交" }).click();
+
+  const socialRow = taskList.locator(".task-row").filter({
+    hasText: "分享一次邀请链接",
+  });
+  await expect(socialRow).toBeVisible();
+  await expect(socialRow).toContainText("社交");
+  await expect(socialRow).toContainText("0/1");
+  await expect(socialRow).toContainText("KCOIN +10");
+  await expect(
+    socialRow.getByRole("button", { name: "进行中" }),
+  ).toBeDisabled();
+  await expect(taskList.locator(".task-row")).toHaveCount(1);
+
+  await tablist.getByRole("tab", { name: "交易" }).click();
+
+  const tradeRow = taskList.locator(".task-row").filter({
+    hasText: "上架一个藏品",
+  });
+  await expect(tradeRow).toBeVisible();
+  await expect(tradeRow).toContainText("交易");
+  await expect(tradeRow).toContainText("0/1");
+  await expect(tradeRow).toContainText("FGEMS +5");
+  await expect(tradeRow.getByRole("link", { name: "去完成" })).toHaveAttribute(
+    "href",
+    "/trade",
+  );
+  await expect(taskList.locator(".task-row")).toHaveCount(1);
+
+  await tablist.getByRole("tab", { name: "链上" }).click();
+
+  await expect(page.getByText("暂无任务", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("当前分类没有可展示的任务。", { exact: true }),
+  ).toBeVisible();
+});
+
 test("任务领奖展示 loading、防重复请求和成功反馈", async ({ page }) => {
   const state = createTaskMockState({ claimTaskDelayMs: 200 });
 
@@ -339,6 +402,22 @@ test("任务页空任务、未开放签到和无分红时不报错", async ({ pa
   await gotoTasks(page);
 
   await expect(page.getByTestId("tasks-page")).toBeVisible();
+  const inviteStats = page.locator(".invite-stats-panel");
+  await expect(inviteStats.locator(".invite-stat-card")).toHaveCount(6);
+  await expect(
+    inviteStats.locator(".invite-stat-card").filter({ hasText: "邀请人数" }),
+  ).toContainText("0");
+  await expect(
+    inviteStats.locator(".invite-stat-card").filter({ hasText: "有效邀请" }),
+  ).toContainText("0");
+  await expect(
+    inviteStats.locator(".invite-stat-card").filter({ hasText: "邀请奖励" }),
+  ).toContainText("0KCOIN");
+  await expect(
+    inviteStats
+      .locator(".invite-stat-card")
+      .filter({ hasText: "累计生成分红" }),
+  ).toContainText("0KCOIN");
   await expect(page.getByText("签到活动未开放", { exact: true })).toBeVisible();
   await expect(page.getByText("暂无任务", { exact: true })).toBeVisible();
   await expect(page.getByText("暂无分红明细", { exact: true })).toBeVisible();
