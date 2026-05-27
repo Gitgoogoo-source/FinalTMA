@@ -8,11 +8,6 @@ const placeholderRoutes = [
     testId: "game-page",
     title: "游戏功能后续开放",
   },
-  {
-    path: "/tasks",
-    testId: "tasks-page",
-    title: "任务功能后续开放",
-  },
 ] as const;
 
 test("根路径进入第一阶段默认开盒页", async ({ page }) => {
