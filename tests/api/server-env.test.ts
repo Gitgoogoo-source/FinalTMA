@@ -298,6 +298,27 @@ describe("server env validation", () => {
     });
   });
 
+  it("rejects webhook fulfillment when the server feature flag is false", async () => {
+    prepareEnvImport();
+
+    const { assertPaymentWebhookFulfillmentAllowed } =
+      await import("../../packages/server/src/payments/paymentGuards");
+
+    await expect(
+      assertPaymentWebhookFulfillmentAllowed({
+        env: {
+          NODE_ENV: "test",
+          APP_ENV: "test",
+          FEATURE_PAYMENT_WEBHOOK_FULFILLMENT_ENABLED: "false",
+        },
+      }),
+    ).rejects.toMatchObject({
+      code: "FEATURE_PAYMENT_WEBHOOK_FULFILLMENT_DISABLED",
+      statusCode: 503,
+      message: "支付发货暂时暂停。",
+    });
+  });
+
   it("rejects Mint API calls when the Mint feature flag is false", async () => {
     prepareEnvImport();
 
