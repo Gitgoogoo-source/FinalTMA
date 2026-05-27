@@ -309,6 +309,83 @@ describe("boxes API helpers", () => {
     );
   });
 
+  it("/api/boxes/create-open-order processes the dev-paid draw loop when dev mode is enabled", async () => {
+    process.env.DEV_GACHA_PAYMENT_MODE = "true";
+    callRpcRawMock
+      .mockResolvedValueOnce({
+        draw_order_id: ORDER_ID,
+        star_order_id: STAR_ORDER_ID,
+        invoice_payload: `gacha:${ORDER_ID}`,
+        xtr_amount: 10,
+        quantity: 1,
+        discount_bps: 0,
+        idempotent: false,
+      })
+      .mockResolvedValueOnce({
+        draw_order_id: ORDER_ID,
+        status: "completed",
+        payment_status: "dev_paid",
+        results: [
+          {
+            draw_index: 1,
+            item_instance_id: "44444444-4444-4444-8444-444444444444",
+          },
+        ],
+      });
+
+    const { default: createOrderHandler } =
+      await import("../../api/boxes/create-open-order");
+    const result = await invokeApiHandler<ApiSuccessResponse>(
+      createOrderHandler,
+      {
+        method: "POST",
+        url: "/api/boxes/create-open-order",
+        headers: {
+          cookie: "tma_game_session=test-session-token-000000000000",
+          "content-type": "application/json",
+          "x-forwarded-for": "127.0.0.30",
+        },
+        body: {
+          box_id: BOX_ID,
+          draw_count: 1,
+          idempotency_key: IDEMPOTENCY_KEY,
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(200);
+    expect(result.body).toMatchObject({
+      ok: true,
+      data: {
+        order_id: ORDER_ID,
+        order_status: "completed",
+        payment_status: "dev_paid",
+        dev_payment_processed: true,
+        result_ready: true,
+      },
+    });
+    expect(callRpcRawMock).toHaveBeenNthCalledWith(
+      1,
+      "gacha_create_order",
+      expect.objectContaining({
+        p_user_id: USER_ID,
+        p_box_id: BOX_ID,
+        p_quantity: 1,
+        p_idempotency_key: IDEMPOTENCY_KEY,
+      }),
+      expect.any(Object),
+    );
+    expect(callRpcRawMock).toHaveBeenNthCalledWith(
+      2,
+      "gacha_process_dev_paid_order",
+      expect.objectContaining({
+        p_order_id: ORDER_ID,
+        p_user_id: USER_ID,
+      }),
+      expect.any(Object),
+    );
+  });
+
   it("/api/boxes/create-open-order accepts X-Idempotency-Key when the body omits it", async () => {
     callRpcRawMock.mockResolvedValueOnce({
       draw_order_id: ORDER_ID,
@@ -471,6 +548,43 @@ describe("boxes API helpers", () => {
     expect(JSON.stringify(result.body)).not.toContain("duplicate key");
   });
 
+  it("/api/boxes/create-open-order returns 401 before RPC calls without a session", async () => {
+    requireSessionMock.mockRejectedValueOnce({
+      statusCode: 401,
+      code: "AUTH_SESSION_EXPIRED",
+      message: "登录状态缺失，请重新进入应用。",
+      expose: true,
+    });
+
+    const { default: createOrderHandler } =
+      await import("../../api/boxes/create-open-order");
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      createOrderHandler,
+      {
+        method: "POST",
+        url: "/api/boxes/create-open-order",
+        headers: {
+          "content-type": "application/json",
+          "x-forwarded-for": "127.0.0.31",
+        },
+        body: {
+          box_id: BOX_ID,
+          draw_count: 1,
+          idempotency_key: IDEMPOTENCY_KEY,
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(401);
+    expect(result.body).toMatchObject({
+      ok: false,
+      error: {
+        code: "AUTH_SESSION_EXPIRED",
+      },
+    });
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+  });
+
   it("/api/boxes/create-open-order creates a ten-draw order", async () => {
     callRpcRawMock.mockResolvedValueOnce({
       draw_order_id: ORDER_ID,
@@ -582,5 +696,36 @@ describe("boxes API helpers", () => {
       }),
       expect.any(Object),
     );
+  });
+
+  it("/api/boxes/result returns 401 before RPC calls without a session", async () => {
+    requireSessionMock.mockRejectedValueOnce({
+      statusCode: 401,
+      code: "AUTH_SESSION_EXPIRED",
+      message: "登录状态缺失，请重新进入应用。",
+      expose: true,
+    });
+
+    const { default: resultHandler } = await import("../../api/boxes/result");
+    const result = await invokeApiHandler<ApiErrorResponse>(resultHandler, {
+      method: "GET",
+      url: "/api/boxes/result",
+      query: {
+        order_id: ORDER_ID,
+        include_items: "true",
+      },
+      headers: {
+        "x-forwarded-for": "127.0.0.32",
+      },
+    });
+
+    expect(result.statusCode).toBe(401);
+    expect(result.body).toMatchObject({
+      ok: false,
+      error: {
+        code: "AUTH_SESSION_EXPIRED",
+      },
+    });
+    expect(callRpcRawMock).not.toHaveBeenCalled();
   });
 });
