@@ -56,13 +56,15 @@ const STAR_ORDER_ID = "33333333-3333-4333-8333-333333333333";
 const POOL_VERSION_ID = "77777777-7777-4777-8777-777777777777";
 const IDEMPOTENCY_KEY = "open:test-idempotency-001";
 const USER_ID = "66666666-6666-4666-8666-666666666666";
+const INVOICE_PAYLOAD =
+  "gacha_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 const INVOICE_LINK = "https://t.me/invoice/test-open-order";
 const EXPIRES_AT = "2026-05-28T00:15:00.000Z";
 
 function createInvoiceResult(overrides: Record<string, unknown> = {}) {
   return {
     starOrderId: STAR_ORDER_ID,
-    payload: `gacha:${ORDER_ID}`,
+    payload: INVOICE_PAYLOAD,
     invoiceLink: INVOICE_LINK,
     openMode: "web_app_open_invoice",
     botApiMethod: "createInvoiceLink",
@@ -140,7 +142,7 @@ describe("boxes API helpers", () => {
       {
         draw_order_id: ORDER_ID,
         star_order_id: STAR_ORDER_ID,
-        invoice_payload: `gacha:${ORDER_ID}`,
+        invoice_payload: INVOICE_PAYLOAD,
         xtr_amount: 90,
         quantity: 10,
         discount_bps: 1000,
@@ -301,7 +303,7 @@ describe("boxes API helpers", () => {
     callRpcRawMock.mockResolvedValueOnce({
       draw_order_id: ORDER_ID,
       star_order_id: STAR_ORDER_ID,
-      invoice_payload: `gacha:${ORDER_ID}`,
+      invoice_payload: INVOICE_PAYLOAD,
       xtr_amount: 10,
       quantity: 1,
       discount_bps: 0,
@@ -363,7 +365,7 @@ describe("boxes API helpers", () => {
         starOrderId: STAR_ORDER_ID,
         drawOrderId: ORDER_ID,
         userId: USER_ID,
-        invoicePayload: `gacha:${ORDER_ID}`,
+        invoicePayload: INVOICE_PAYLOAD,
         xtrAmount: 10,
       }),
     );
@@ -375,7 +377,7 @@ describe("boxes API helpers", () => {
       .mockResolvedValueOnce({
         draw_order_id: ORDER_ID,
         star_order_id: STAR_ORDER_ID,
-        invoice_payload: `gacha:${ORDER_ID}`,
+        invoice_payload: INVOICE_PAYLOAD,
         xtr_amount: 10,
         quantity: 1,
         discount_bps: 0,
@@ -454,7 +456,7 @@ describe("boxes API helpers", () => {
     callRpcRawMock.mockResolvedValueOnce({
       draw_order_id: ORDER_ID,
       star_order_id: STAR_ORDER_ID,
-      invoice_payload: `gacha:${ORDER_ID}`,
+      invoice_payload: INVOICE_PAYLOAD,
       xtr_amount: 10,
       quantity: 1,
       discount_bps: 0,
@@ -657,6 +659,88 @@ describe("boxes API helpers", () => {
     });
   });
 
+  it("/api/boxes/create-open-order rejects paused boxes before invoice creation", async () => {
+    callRpcRawMock.mockRejectedValueOnce(
+      new RpcError({
+        rpcName: "gacha_create_order_checked",
+        error: {
+          message: "blind box is not active: paused",
+        },
+      }),
+    );
+
+    const { default: createOrderHandler } =
+      await import("../../api/boxes/create-open-order");
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      createOrderHandler,
+      {
+        method: "POST",
+        url: "/api/boxes/create-open-order",
+        headers: {
+          cookie: "tma_game_session=test-session-token-000000000000",
+          "content-type": "application/json",
+          "x-forwarded-for": "127.0.0.37",
+        },
+        body: {
+          box_id: BOX_ID,
+          draw_count: 1,
+          idempotency_key: IDEMPOTENCY_KEY,
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(400);
+    expect(result.body).toMatchObject({
+      ok: false,
+      error: {
+        code: "BOX_NOT_ACTIVE",
+        message: "当前盲盒不可开启。",
+      },
+    });
+    expect(createTelegramStarsInvoiceMock).not.toHaveBeenCalled();
+  });
+
+  it("/api/boxes/create-open-order rejects sold-out stock before invoice creation", async () => {
+    callRpcRawMock.mockRejectedValueOnce(
+      new RpcError({
+        rpcName: "gacha_create_order_checked",
+        error: {
+          message: "blind box stock is insufficient",
+        },
+      }),
+    );
+
+    const { default: createOrderHandler } =
+      await import("../../api/boxes/create-open-order");
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      createOrderHandler,
+      {
+        method: "POST",
+        url: "/api/boxes/create-open-order",
+        headers: {
+          cookie: "tma_game_session=test-session-token-000000000000",
+          "content-type": "application/json",
+          "x-forwarded-for": "127.0.0.38",
+        },
+        body: {
+          box_id: BOX_ID,
+          draw_count: 10,
+          idempotency_key: "open:test-idempotency-038",
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(409);
+    expect(result.body).toMatchObject({
+      ok: false,
+      error: {
+        code: "BOX_STOCK_NOT_ENOUGH",
+        message: "盲盒库存不足。",
+      },
+    });
+    expect(createTelegramStarsInvoiceMock).not.toHaveBeenCalled();
+  });
+
   it("/api/boxes/create-open-order maps ledger failures without exposing database details", async () => {
     callRpcRawMock.mockRejectedValueOnce(
       new RpcError({
@@ -781,7 +865,7 @@ describe("boxes API helpers", () => {
     callRpcRawMock.mockResolvedValueOnce({
       draw_order_id: ORDER_ID,
       star_order_id: STAR_ORDER_ID,
-      invoice_payload: `gacha:${ORDER_ID}`,
+      invoice_payload: INVOICE_PAYLOAD,
       xtr_amount: 90,
       quantity: 10,
       discount_bps: 1000,
@@ -831,7 +915,7 @@ describe("boxes API helpers", () => {
         starOrderId: STAR_ORDER_ID,
         drawOrderId: ORDER_ID,
         userId: USER_ID,
-        invoicePayload: `gacha:${ORDER_ID}`,
+        invoicePayload: INVOICE_PAYLOAD,
         xtrAmount: 90,
       }),
     );
@@ -847,7 +931,7 @@ describe("boxes API helpers", () => {
     callRpcRawMock.mockResolvedValueOnce({
       draw_order_id: ORDER_ID,
       star_order_id: STAR_ORDER_ID,
-      invoice_payload: `gacha:${ORDER_ID}`,
+      invoice_payload: INVOICE_PAYLOAD,
       xtr_amount: 10,
       quantity: 1,
       discount_bps: 0,

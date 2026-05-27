@@ -314,6 +314,9 @@ select is((select payment_provider from gacha.draw_orders d join _ids i on i.id 
 select is((select payment_status from gacha.draw_orders d join _ids i on i.id = d.id where i.key = 'draw_order1'), 'pending', 'draw order stores phase-1 pending payment_status');
 select is((select star_amount from gacha.draw_orders d join _ids i on i.id = d.id where i.key = 'draw_order1'), 10, 'draw order stores phase-1 star_amount');
 select is((select telegram_invoice_payload from gacha.draw_orders d join _ids i on i.id = d.id where i.key = 'draw_order1'), (select payload ->> 'invoice_payload' from _ids where key = 'order1'), 'draw order mirrors Telegram invoice payload');
+select ok((select payload ->> 'invoice_payload' from _ids where key = 'order1') ~ '^gacha_[0-9a-f]{64}$', 'create order generates an unpredictable invoice payload shape');
+select is(length((select payload ->> 'invoice_payload' from _ids where key = 'order1')), 70, 'invoice payload stays within Telegram payload byte limits');
+select ok((select payload ->> 'invoice_payload' from _ids where key = 'order1') <> 'gacha:' || (select id::text from _ids where key = 'draw_order1'), 'invoice payload is not derived from draw_order_id');
 
 insert into payments.star_invoices (star_order_id, invoice_link, payload, status, bot_api_method, expires_at)
 select
@@ -374,6 +377,7 @@ insert into _ids (key, payload)
 select 'order1_repeat', api.gacha_create_order((select id from _ids where key = 'user'), (select id from _ids where key = 'box'), 1, 'gacha-order-single-001');
 select ok(((select payload from _ids where key = 'order1_repeat') ->> 'idempotent')::boolean, 'repeated create order returns idempotent=true');
 select is(((select payload from _ids where key = 'order1_repeat') ->> 'draw_order_id')::uuid, (select id from _ids where key = 'draw_order1'), 'repeated create order returns same draw_order_id');
+select is((select payload ->> 'invoice_payload' from _ids where key = 'order1_repeat'), (select payload ->> 'invoice_payload' from _ids where key = 'order1'), 'repeated create order returns same invoice payload');
 
 insert into _ids (key, payload)
 select 'order10', api.gacha_create_order((select id from _ids where key = 'user'), (select id from _ids where key = 'box'), 10, 'gacha-order-ten-001');
@@ -446,6 +450,9 @@ select is((
 select is(testutil.balance_of((select id from _ids where key = 'user'), 'KCOIN'), 1100::numeric, 'single draw plus ten draw credits KCOIN reward per draw');
 select is((select amount from economy.currency_ledger where source_id = (select id from _ids where key = 'draw_order10') and source_type = 'open_box_rebate' and currency_code = 'KCOIN'), 1000::numeric, 'ten-draw open_box_rebate ledger amount is 1000');
 select ok(testutil.raises_like(format('select api.gacha_create_order(%L::uuid, %L::uuid, 2, %L)', (select id::text from _ids where key = 'user'), (select id::text from _ids where key = 'box'), 'invalid-quantity'), '%quantity must be 1 or 10%'), 'create order rejects unsupported quantity');
+
+update gacha.blind_boxes set remaining_stock = 0 where id = (select id from _ids where key = 'box');
+select ok(testutil.raises_like(format('select api.gacha_create_order(%L::uuid, %L::uuid, 1, %L)', (select id::text from _ids where key = 'user'), (select id::text from _ids where key = 'box'), 'sold-out-stock-box'), '%blind box stock is insufficient%'), 'create order rejects sold-out stock');
 
 update gacha.blind_boxes set status = 'paused' where id = (select id from _ids where key = 'box');
 select ok(testutil.raises_like(format('select api.gacha_create_order(%L::uuid, %L::uuid, 1, %L)', (select id::text from _ids where key = 'user'), (select id::text from _ids where key = 'box'), 'paused-box'), '%blind box is not active%'), 'create order rejects inactive box');

@@ -8,7 +8,7 @@
 xxx.test.sql
 ```
 
-当前 `pnpm test:db` 会执行：
+当前 `pnpm test:db:pgtap` 会执行：
 
 ```bash
 supabase test db --local supabase/tests/*.test.sql
@@ -16,10 +16,17 @@ supabase test db --local supabase/tests/*.test.sql
 
 这样可以避免 Supabase CLI 自动执行非测试入口文件，也避免旧的 `run_all.sql` 路径问题。
 
+当前 `pnpm test:db` 会先执行上述 pgTAP，再执行：
+
+```bash
+tsx scripts/test-signin-concurrency.ts
+```
+
 当前测试文件：
 
 ```txt
 advisor_performance.test.sql
+album_backfill.test.sql
 album_reward.test.sql
 auth.test.sql
 gacha_order.test.sql
@@ -27,15 +34,45 @@ gacha_payment_idempotency.test.sql
 gacha_pity.test.sql
 inventory.test.sql
 inventory_evolve.test.sql
+inventory_growth_rpc_queries.test.sql
 inventory_lock.test.sql
 ledger_integrity.test.sql
 market_buy.test.sql
+market_buy_listing.test.sql
 market_cancel.test.sql
+market_create_listing.test.sql
 market_db_hardening.test.sql
 market_rpc_stage5.test.sql
+market_update_price.test.sql
 mint_queue.test.sql
+phase4_rls_verification.test.sql
+phase4_rpc_only_operations.test.sql
+phase4_rpc_permissions.test.sql
+phase4_sensitive_response_fields.test.sql
+phase4_table_access.test.sql
+phase4_task_center_referral_rpcs.test.sql
+phase4_task_fields.test.sql
+phase4_task_progress_sources_existing.test.sql
+phase5_payment_wallet_onchain_schema.test.sql
+phase5_secrets_feature_flags.test.sql
 referral.test.sql
+stage3_database_acceptance.test.sql
+stage3_e2e_album_reward.test.sql
+stage3_e2e_decompose.test.sql
+stage3_e2e_evolve_failure.test.sql
+stage3_e2e_evolve_success.test.sql
+stage3_e2e_upgrade.test.sql
+stage4_signin_seed.test.sql
+stage4_task_reward_constraints.test.sql
 task_claim.test.sql
+tasks_claim.test.sql
+tasks_commission.test.sql
+tasks_ledger.test.sql
+tasks_referral.test.sql
+tasks_rls.test.sql
+tasks_signin.test.sql
+tasks_signin_streak.test.sql
+tasks_signin_transaction.test.sql
 ```
 
 运行前请确保本地 Supabase 已启动，并且本地 migration、RPC、RLS 已应用：

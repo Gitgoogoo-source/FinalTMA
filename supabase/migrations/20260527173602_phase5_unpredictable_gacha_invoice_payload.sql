@@ -1,12 +1,8 @@
--- gacha_create_order.sql
--- ============================================================
--- Generated RPC file for the Telegram Mini App blind-box game.
--- Core policy: frontend only requests; all trusted mutations are enforced here by database transactions.
-
--- RPC: api.gacha_create_order_checked
--- Phase 5 checked variant used by /api/boxes/create-open-order. It keeps stale
--- price and stale pool-version checks in the same transaction that creates the
--- draw order and Stars payment order.
+-- Phase 5 step 04: make new Telegram Stars invoice payloads unpredictable.
+--
+-- Historical fulfilled orders are intentionally left unchanged. The new RPC
+-- body keeps the existing idempotency contract and only changes payload
+-- generation for newly created orders.
 
 create or replace function api.gacha_create_order_checked(
   p_user_id uuid,
@@ -200,40 +196,7 @@ begin
 end;
 $$;
 
--- RPC: api.gacha_create_order
--- Compatibility wrapper for existing 4-argument callers.
-
-create or replace function api.gacha_create_order(
-  p_user_id uuid,
-  p_box_id uuid,
-  p_quantity integer,
-  p_idempotency_key text
-)
-returns jsonb
-language plpgsql
-security definer
-set search_path = ''
-as $$
-begin
-  return api.gacha_create_order_checked(
-    p_user_id,
-    p_box_id,
-    p_quantity,
-    p_idempotency_key,
-    null::integer,
-    null::uuid
-  );
-end;
-$$;
-
 revoke execute on function api.gacha_create_order_checked(uuid, uuid, integer, text, integer, uuid)
   from public, anon, authenticated;
 grant execute on function api.gacha_create_order_checked(uuid, uuid, integer, text, integer, uuid)
   to service_role;
-
-revoke execute on function api.gacha_create_order(uuid, uuid, integer, text)
-  from public, anon, authenticated;
-grant execute on function api.gacha_create_order(uuid, uuid, integer, text)
-  to service_role;
-
--- ============================================================
