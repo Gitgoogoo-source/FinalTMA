@@ -591,6 +591,56 @@ describe("tasks API", () => {
     expect(callRpcRawMock).not.toHaveBeenCalled();
   });
 
+  it("check-in returns the cached idempotent result for a repeated key", async () => {
+    callRpcRawMock.mockResolvedValueOnce({
+      signin_id: SIGNIN_ID,
+      campaign_id: CAMPAIGN_ID,
+      already_claimed: false,
+      day_index: 1,
+      current_streak: 1,
+      cycle_position: 1,
+      total_signins: 1,
+      reward: [{ currency: "FGEMS", amount: 10 }],
+      ledger_results: [{ ledger_id: "ledger-signin-cached" }],
+      progress_result: { status: "completed" },
+      checked_in_at: "2026-05-26T01:00:00.000Z",
+      idempotent: true,
+    });
+
+    const result = await invokeApiHandler<ApiSuccessResponse>(checkInHandler, {
+      method: "POST",
+      headers: {
+        "x-idempotency-key": IDEMPOTENCY_KEY,
+      },
+      body: {
+        campaign_id: CAMPAIGN_ID,
+      },
+    });
+
+    expect(result.statusCode).toBe(200);
+    expect(callRpcRawMock).toHaveBeenCalledWith(
+      "task_daily_check_in",
+      expect.objectContaining({
+        p_user_id: USER_ID,
+        p_campaign_id: CAMPAIGN_ID,
+        p_idempotency_key: IDEMPOTENCY_KEY,
+      }),
+      expect.objectContaining({
+        schema: "api",
+        context: expect.objectContaining({
+          userId: USER_ID,
+          idempotencyKey: IDEMPOTENCY_KEY,
+        }),
+      }),
+    );
+    expect(result.body.data).toMatchObject({
+      signin_id: SIGNIN_ID,
+      campaign_id: CAMPAIGN_ID,
+      idempotent: true,
+      ledger_results: [{ ledger_id: "ledger-signin-cached" }],
+    });
+  });
+
   it("check-in maps idempotency conflicts to a stable public error", async () => {
     callRpcRawMock.mockRejectedValueOnce(
       new RpcError({
@@ -1011,6 +1061,68 @@ describe("tasks API", () => {
     });
   });
 
+  it("invite-stats ignores forged user query fields and uses the verified session user", async () => {
+    callRpcRawMock.mockResolvedValueOnce({
+      referrals: {
+        total_count: 1,
+        qualified_count: 1,
+        rewarded_count: 0,
+      },
+      rewards: {},
+      commissions: {
+        pending_amount_kcoin: 0,
+        granted_amount_kcoin: 0,
+        total_amount_kcoin: 0,
+      },
+      shares: {
+        total_count: 0,
+      },
+      server_time: "2026-05-26T04:30:00.000Z",
+    });
+
+    const result = await invokeApiHandler<ApiSuccessResponse>(
+      inviteStatsHandler,
+      {
+        method: "GET",
+        headers: {
+          "x-request-id": "req-invite-stats-forged-user",
+        },
+        query: {
+          user_id: FORGED_USER_ID,
+          telegram_user_id: "999999",
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(200);
+    expect(callRpcRawMock).toHaveBeenCalledWith(
+      "referral_get_invite_stats",
+      {
+        p_user_id: USER_ID,
+        p_from: null,
+        p_to: null,
+      },
+      expect.objectContaining({
+        schema: "api",
+        context: expect.objectContaining({
+          requestId: "req-invite-stats-forged-user",
+          userId: USER_ID,
+        }),
+      }),
+    );
+    const rpcArgs = callRpcRawMock.mock.calls[0]?.[1] as
+      | Record<string, unknown>
+      | undefined;
+    expect(rpcArgs).not.toHaveProperty("user_id");
+    expect(rpcArgs).not.toHaveProperty("telegram_user_id");
+    expect(result.body.data).toMatchObject({
+      summary: {
+        invited_count: 1,
+        valid_invite_count: 1,
+      },
+    });
+  });
+
   it("referral-records hides sensitive user UUIDs from RPC payloads", async () => {
     callRpcRawMock.mockResolvedValueOnce({
       records: [
@@ -1331,6 +1443,100 @@ describe("tasks API", () => {
       balance_change: 10,
       status: "granted",
       idempotent: false,
+    });
+  });
+
+  it("claim-commission returns cached idempotent data for a repeated claim key", async () => {
+    callRpcRawMock
+      .mockResolvedValueOnce({
+        processed: true,
+        claimed: true,
+        claimed_count: 1,
+        claimed_amount_kcoin: "10",
+        amount_kcoin: "10",
+        commission_ids: [COMMISSION_ID],
+        ledger_id: LEDGER_ID,
+        kcoin_balance_before: "500",
+        kcoin_balance_after: "510",
+        kcoin_locked_after: "0",
+        balance_change: "10",
+        status: "granted",
+        idempotent: false,
+      })
+      .mockResolvedValueOnce({
+        processed: true,
+        claimed: true,
+        claimed_count: 1,
+        claimed_amount_kcoin: "10",
+        amount_kcoin: "10",
+        commission_ids: [COMMISSION_ID],
+        ledger_id: LEDGER_ID,
+        kcoin_balance_before: "500",
+        kcoin_balance_after: "510",
+        kcoin_locked_after: "0",
+        balance_change: "10",
+        status: "granted",
+        idempotent: true,
+      });
+
+    const firstResult = await invokeApiHandler<ApiSuccessResponse>(
+      claimCommissionHandler,
+      {
+        method: "POST",
+        headers: {
+          "x-idempotency-key": CLAIM_COMMISSION_IDEMPOTENCY_KEY,
+        },
+        body: {
+          commission_ids: [COMMISSION_ID],
+        },
+      },
+    );
+    const repeatedResult = await invokeApiHandler<ApiSuccessResponse>(
+      claimCommissionHandler,
+      {
+        method: "POST",
+        headers: {
+          "x-idempotency-key": CLAIM_COMMISSION_IDEMPOTENCY_KEY,
+        },
+        body: {
+          commission_ids: [COMMISSION_ID],
+        },
+      },
+    );
+
+    expect(firstResult.statusCode).toBe(200);
+    expect(repeatedResult.statusCode).toBe(200);
+    expect(callRpcRawMock).toHaveBeenNthCalledWith(
+      2,
+      "referral_claim_commission",
+      {
+        p_user_id: USER_ID,
+        p_commission_ids: [COMMISSION_ID],
+        p_idempotency_key: CLAIM_COMMISSION_IDEMPOTENCY_KEY,
+      },
+      expect.objectContaining({
+        schema: "api",
+        context: expect.objectContaining({
+          userId: USER_ID,
+          idempotencyKey: CLAIM_COMMISSION_IDEMPOTENCY_KEY,
+          commissionCount: 1,
+        }),
+      }),
+    );
+    expect(firstResult.body.data).toMatchObject({
+      claimed: true,
+      claimed_amount_kcoin: 10,
+      ledger_id: LEDGER_ID,
+      idempotent: false,
+    });
+    expect(repeatedResult.body.data).toMatchObject({
+      claimed: true,
+      claimed_amount_kcoin: 10,
+      ledger_id: LEDGER_ID,
+      kcoin_balance_before: 500,
+      kcoin_balance_after: 510,
+      balance_change: 10,
+      idempotent: true,
     });
   });
 
