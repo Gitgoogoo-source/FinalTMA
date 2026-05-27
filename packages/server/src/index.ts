@@ -30,5 +30,8 @@ export type {
   TransactionMode,
 } from "./db/transactions.js";
 export * from "./env.js";
+export * from "./ops/featureFlags.js";
+export * from "./payments/paymentGuards.js";
 export * from "./security/auditLog.js";
 export * from "./security/rateLimit.js";
+export * from "./ton/mintGuards.js";

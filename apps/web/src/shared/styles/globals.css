@@ -251,6 +251,17 @@ a {
   background: rgb(255 255 255 / 13%);
 }
 
+.wallet-entry-button:disabled {
+  color: #91a2aa;
+  background: rgb(255 255 255 / 5%);
+  border-color: rgb(255 255 255 / 9%);
+  cursor: not-allowed;
+}
+
+.wallet-entry-button:disabled:hover {
+  background: rgb(255 255 255 / 5%);
+}
+
 .wallet-entry-button:focus-visible,
 .asset-bar__refresh:focus-visible {
   outline: 3px solid rgb(139 211 199 / 38%);

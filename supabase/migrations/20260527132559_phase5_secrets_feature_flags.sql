@@ -1,5 +1,5 @@
--- 011_feature_flags.seed.sql
--- Feature flag and operational setting defaults.
+-- phase5_secrets_feature_flags.sql
+-- Add Phase 5 payment, wallet, mint and operations feature flags.
 
 begin;
 
@@ -14,16 +14,10 @@ values
   ('FEATURE_MINT_WORKER_ENABLED', false, 'Allow scheduled mint worker execution.'),
   ('FEATURE_ADMIN_PAYMENT_OPS_ENABLED', false, 'Allow admin payment operations surfaces.')
 on conflict (key) do update
-set description = excluded.description,
-    updated_at = now();
+set description = excluded.description;
 
 insert into ops.system_settings (key, value, description)
 values
-  (
-    'REFERRAL_COMMISSION_BPS',
-    '{"commission_bps":1000}'::jsonb,
-    'Referral commission rate in basis points for post-first-open gacha rewards.'
-  ),
   (
     'PAYMENT_SUPPORT_CONFIG',
     '{"support_url":null,"support_email":null,"configured":false}'::jsonb,
@@ -45,7 +39,6 @@ values
     'Non-sensitive wallet NFT sync policy.'
   )
 on conflict (key) do update
-set description = excluded.description,
-    updated_at = now();
+set description = excluded.description;
 
 commit;

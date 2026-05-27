@@ -161,6 +161,11 @@ const optionalUrlFromEnv = z.preprocess(
   z.string().trim().url().optional(),
 );
 
+const optionalEmailFromEnv = z.preprocess(
+  emptyStringToUndefined,
+  z.string().trim().email().optional(),
+);
+
 const booleanFromEnv = (defaultValue: boolean) =>
   z.preprocess((value) => {
     if (isEmptyEnvValue(value)) {
@@ -372,6 +377,7 @@ export const serverEnvSchema = z
     TELEGRAM_BOT_TOKEN: requiredSecretFromEnv(16),
     TELEGRAM_BOT_USERNAME: optionalStringFromEnv,
     TELEGRAM_MINI_APP_SHORT_NAME: optionalStringFromEnv,
+    TELEGRAM_WEBHOOK_URL: optionalUrlFromEnv,
     TELEGRAM_WEBHOOK_SECRET: optionalSecretFromEnv(16),
     TELEGRAM_WEBHOOK_SECRET_TOKEN: optionalSecretFromEnv(16),
     TELEGRAM_STARS_CURRENCY: z.preprocess((value) => {
@@ -388,19 +394,74 @@ export const serverEnvSchema = z
 
       return value;
     }, z.string()),
+    STARS_OPEN_ORDER_EXPIRES_MINUTES: numberFromEnv(15, {
+      min: 1,
+      max: 24 * 60,
+    }),
+    PAYMENT_WEBHOOK_IDEMPOTENCY_TTL_SECONDS: numberFromEnv(60 * 60 * 24, {
+      min: 60,
+      max: 60 * 60 * 24 * 30,
+    }),
+    PAYMENT_SUPPORT_URL: optionalUrlFromEnv,
+    PAYMENT_SUPPORT_EMAIL: optionalEmailFromEnv,
 
     TON_NETWORK: enumFromEnv(TON_NETWORK_VALUES, "testnet"),
     TONCONNECT_MANIFEST_URL: optionalUrlFromEnv,
     TON_API_BASE_URL: optionalUrlFromEnv,
     TON_API_KEY: optionalSecretFromEnv(8),
+    TONCENTER_API_KEY: optionalSecretFromEnv(8),
+    TON_PROOF_TTL_SECONDS: numberFromEnv(300, {
+      min: 30,
+      max: 60 * 60,
+    }),
+    TON_PROOF_CHALLENGE_BYTES: numberFromEnv(32, {
+      min: 16,
+      max: 128,
+    }),
     TON_COLLECTION_ADDRESS: optionalStringFromEnv,
+    TON_NFT_COLLECTION_OWNER_ADDRESS: optionalStringFromEnv,
     TON_MINT_ENABLED: booleanFromEnv(false),
     TON_MINTER_WALLET_ADDRESS: optionalStringFromEnv,
     TON_MINTER_PRIVATE_KEY: optionalSecretFromEnv(16),
     TON_MINTER_MNEMONIC: optionalSecretFromEnv(16),
+    TON_MINT_BATCH_SIZE: numberFromEnv(10, {
+      min: 1,
+      max: 100,
+    }),
     TON_MINT_MAX_RETRIES: numberFromEnv(5, {
       min: 0,
       max: 20,
+    }),
+    TON_MINT_RETRY_DELAY_SECONDS: numberFromEnv(60, {
+      min: 1,
+      max: 60 * 60 * 24,
+    }),
+    TON_MINT_CONFIRMATION_TIMEOUT_SECONDS: numberFromEnv(300, {
+      min: 30,
+      max: 60 * 60 * 24,
+    }),
+
+    NFT_METADATA_BASE_URL: optionalUrlFromEnv,
+    NFT_COLLECTION_METADATA_URI: optionalUrlFromEnv,
+    NFT_ITEM_METADATA_BASE_URI: optionalUrlFromEnv,
+    NFT_ROYALTY_FACTOR: numberFromEnv(0, {
+      min: 0,
+      max: 100_000,
+    }),
+    NFT_ROYALTY_BASE: numberFromEnv(1000, {
+      min: 1,
+      max: 100_000,
+    }),
+    NFT_ROYALTY_ADDRESS: optionalStringFromEnv,
+
+    WALLET_SYNC_ENABLED: booleanFromEnv(true),
+    WALLET_SYNC_BATCH_SIZE: numberFromEnv(50, {
+      min: 1,
+      max: 500,
+    }),
+    WALLET_SYNC_CACHE_TTL_SECONDS: numberFromEnv(300, {
+      min: 0,
+      max: 60 * 60 * 24,
     }),
 
     CRON_SECRET: optionalSecretFromEnv(16),
@@ -433,6 +494,24 @@ export const serverEnvSchema = z
     ENABLE_MOCK_TON: booleanFromEnv(false),
     ENABLE_ADMIN_API: booleanFromEnv(true),
     ENABLE_CRON_API: booleanFromEnv(true),
+
+    FEATURE_GACHA_ENABLED: booleanFromEnv(true),
+    FEATURE_MARKET_ENABLED: booleanFromEnv(true),
+    FEATURE_COLLECTION_UPGRADE_ENABLED: booleanFromEnv(true),
+    FEATURE_COLLECTION_EVOLVE_ENABLED: booleanFromEnv(true),
+    FEATURE_COLLECTION_DECOMPOSE_ENABLED: booleanFromEnv(true),
+    FEATURE_ALBUM_ENABLED: booleanFromEnv(true),
+    FEATURE_TASKS_ENABLED: booleanFromEnv(true),
+    FEATURE_REFERRAL_ENABLED: booleanFromEnv(true),
+    FEATURE_WALLET_ENABLED: booleanFromEnv(true),
+    FEATURE_STARS_PAYMENT_ENABLED: booleanFromEnv(false),
+    FEATURE_PAYMENT_WEBHOOK_FULFILLMENT_ENABLED: booleanFromEnv(false),
+    FEATURE_WALLET_PROOF_ENABLED: booleanFromEnv(true),
+    FEATURE_WALLET_SYNC_ENABLED: booleanFromEnv(true),
+    FEATURE_TON_MINT_ENABLED: booleanFromEnv(false),
+    FEATURE_MINT_WORKER_ENABLED: booleanFromEnv(false),
+    FEATURE_ADMIN_PAYMENT_OPS_ENABLED: booleanFromEnv(false),
+    FEATURE_GAME_PLACEHOLDER_ENABLED: booleanFromEnv(true),
   })
   .superRefine((input, ctx) => {
     const isProductionLike = isProductionLikeInput(input);
@@ -501,6 +580,27 @@ export const serverEnvSchema = z
         path: ["TELEGRAM_WEBHOOK_SECRET"],
         message:
           "TELEGRAM_WEBHOOK_SECRET is required in production to verify Telegram webhook requests.",
+      });
+    }
+
+    if (isProductionLike && !input.TELEGRAM_WEBHOOK_URL) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["TELEGRAM_WEBHOOK_URL"],
+        message: "TELEGRAM_WEBHOOK_URL is required in production.",
+      });
+    }
+
+    if (
+      input.FEATURE_PAYMENT_WEBHOOK_FULFILLMENT_ENABLED &&
+      !input.TELEGRAM_WEBHOOK_SECRET &&
+      !input.TELEGRAM_WEBHOOK_SECRET_TOKEN
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["TELEGRAM_WEBHOOK_SECRET"],
+        message:
+          "TELEGRAM_WEBHOOK_SECRET is required when payment webhook fulfillment is enabled.",
       });
     }
 
@@ -574,6 +674,15 @@ export const serverEnvSchema = z
             "Either TON_MINTER_PRIVATE_KEY or TON_MINTER_MNEMONIC is required when TON_MINT_ENABLED is true.",
         });
       }
+    }
+
+    if (input.FEATURE_MINT_WORKER_ENABLED && !input.TON_MINT_ENABLED) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["FEATURE_MINT_WORKER_ENABLED"],
+        message:
+          "FEATURE_MINT_WORKER_ENABLED requires TON_MINT_ENABLED=true on the server.",
+      });
     }
   });
 
@@ -688,9 +797,15 @@ export const env = Object.freeze({
     BOT_TOKEN: raw.TELEGRAM_BOT_TOKEN,
     BOT_USERNAME: raw.TELEGRAM_BOT_USERNAME,
     MINI_APP_SHORT_NAME: raw.TELEGRAM_MINI_APP_SHORT_NAME,
+    WEBHOOK_URL: raw.TELEGRAM_WEBHOOK_URL,
     WEBHOOK_SECRET: telegramWebhookSecret,
     STARS_CURRENCY: raw.TELEGRAM_STARS_CURRENCY,
     STARS_PROVIDER_TOKEN: raw.TELEGRAM_STARS_PROVIDER_TOKEN,
+    STARS_OPEN_ORDER_EXPIRES_MINUTES: raw.STARS_OPEN_ORDER_EXPIRES_MINUTES,
+    PAYMENT_WEBHOOK_IDEMPOTENCY_TTL_SECONDS:
+      raw.PAYMENT_WEBHOOK_IDEMPOTENCY_TTL_SECONDS,
+    PAYMENT_SUPPORT_URL: raw.PAYMENT_SUPPORT_URL,
+    PAYMENT_SUPPORT_EMAIL: raw.PAYMENT_SUPPORT_EMAIL,
   }),
 
   GACHA: Object.freeze({
@@ -703,12 +818,35 @@ export const env = Object.freeze({
     TONCONNECT_MANIFEST_URL: tonConnectManifestUrl,
     API_BASE_URL: raw.TON_API_BASE_URL,
     API_KEY: raw.TON_API_KEY,
+    TONCENTER_API_KEY: raw.TONCENTER_API_KEY,
+    PROOF_TTL_SECONDS: raw.TON_PROOF_TTL_SECONDS,
+    PROOF_CHALLENGE_BYTES: raw.TON_PROOF_CHALLENGE_BYTES,
     COLLECTION_ADDRESS: raw.TON_COLLECTION_ADDRESS,
+    COLLECTION_OWNER_ADDRESS: raw.TON_NFT_COLLECTION_OWNER_ADDRESS,
     MINT_ENABLED: raw.TON_MINT_ENABLED,
     MINTER_WALLET_ADDRESS: raw.TON_MINTER_WALLET_ADDRESS,
     MINTER_PRIVATE_KEY: raw.TON_MINTER_PRIVATE_KEY,
     MINTER_MNEMONIC: raw.TON_MINTER_MNEMONIC,
+    MINT_BATCH_SIZE: raw.TON_MINT_BATCH_SIZE,
     MINT_MAX_RETRIES: raw.TON_MINT_MAX_RETRIES,
+    MINT_RETRY_DELAY_SECONDS: raw.TON_MINT_RETRY_DELAY_SECONDS,
+    MINT_CONFIRMATION_TIMEOUT_SECONDS:
+      raw.TON_MINT_CONFIRMATION_TIMEOUT_SECONDS,
+  }),
+
+  NFT: Object.freeze({
+    METADATA_BASE_URL: raw.NFT_METADATA_BASE_URL,
+    COLLECTION_METADATA_URI: raw.NFT_COLLECTION_METADATA_URI,
+    ITEM_METADATA_BASE_URI: raw.NFT_ITEM_METADATA_BASE_URI,
+    ROYALTY_FACTOR: raw.NFT_ROYALTY_FACTOR,
+    ROYALTY_BASE: raw.NFT_ROYALTY_BASE,
+    ROYALTY_ADDRESS: raw.NFT_ROYALTY_ADDRESS,
+  }),
+
+  WALLET_SYNC: Object.freeze({
+    ENABLED: raw.WALLET_SYNC_ENABLED,
+    BATCH_SIZE: raw.WALLET_SYNC_BATCH_SIZE,
+    CACHE_TTL_SECONDS: raw.WALLET_SYNC_CACHE_TTL_SECONDS,
   }),
 
   ADMIN: Object.freeze({
@@ -741,6 +879,24 @@ export const env = Object.freeze({
     MOCK_TON: raw.ENABLE_MOCK_TON,
     ADMIN_API: raw.ENABLE_ADMIN_API,
     CRON_API: raw.ENABLE_CRON_API,
+    GACHA: raw.FEATURE_GACHA_ENABLED,
+    MARKET: raw.FEATURE_MARKET_ENABLED,
+    COLLECTION_UPGRADE: raw.FEATURE_COLLECTION_UPGRADE_ENABLED,
+    COLLECTION_EVOLVE: raw.FEATURE_COLLECTION_EVOLVE_ENABLED,
+    COLLECTION_DECOMPOSE: raw.FEATURE_COLLECTION_DECOMPOSE_ENABLED,
+    ALBUM: raw.FEATURE_ALBUM_ENABLED,
+    TASKS: raw.FEATURE_TASKS_ENABLED,
+    REFERRAL: raw.FEATURE_REFERRAL_ENABLED,
+    WALLET: raw.FEATURE_WALLET_ENABLED,
+    STARS_PAYMENT: raw.FEATURE_STARS_PAYMENT_ENABLED,
+    PAYMENT_WEBHOOK_FULFILLMENT:
+      raw.FEATURE_PAYMENT_WEBHOOK_FULFILLMENT_ENABLED,
+    WALLET_PROOF: raw.FEATURE_WALLET_PROOF_ENABLED,
+    WALLET_SYNC: raw.FEATURE_WALLET_SYNC_ENABLED,
+    TON_MINT: raw.FEATURE_TON_MINT_ENABLED,
+    MINT_WORKER: raw.FEATURE_MINT_WORKER_ENABLED,
+    ADMIN_PAYMENT_OPS: raw.FEATURE_ADMIN_PAYMENT_OPS_ENABLED,
+    GAME_PLACEHOLDER: raw.FEATURE_GAME_PLACEHOLDER_ENABLED,
   }),
 });
 
@@ -806,10 +962,17 @@ export function getSafeEnvSnapshot(): Record<string, unknown> {
     TELEGRAM: {
       BOT_USERNAME: env.TELEGRAM.BOT_USERNAME,
       MINI_APP_SHORT_NAME: env.TELEGRAM.MINI_APP_SHORT_NAME,
+      WEBHOOK_URL: env.TELEGRAM.WEBHOOK_URL,
       STARS_CURRENCY: env.TELEGRAM.STARS_CURRENCY,
       HAS_BOT_TOKEN: Boolean(env.TELEGRAM.BOT_TOKEN),
       HAS_WEBHOOK_SECRET: Boolean(env.TELEGRAM.WEBHOOK_SECRET),
       HAS_STARS_PROVIDER_TOKEN: Boolean(env.TELEGRAM.STARS_PROVIDER_TOKEN),
+      STARS_OPEN_ORDER_EXPIRES_MINUTES:
+        env.TELEGRAM.STARS_OPEN_ORDER_EXPIRES_MINUTES,
+      PAYMENT_WEBHOOK_IDEMPOTENCY_TTL_SECONDS:
+        env.TELEGRAM.PAYMENT_WEBHOOK_IDEMPOTENCY_TTL_SECONDS,
+      PAYMENT_SUPPORT_URL: env.TELEGRAM.PAYMENT_SUPPORT_URL,
+      PAYMENT_SUPPORT_EMAIL: env.TELEGRAM.PAYMENT_SUPPORT_EMAIL,
       BOT_TOKEN: maskSecret(env.TELEGRAM.BOT_TOKEN),
       WEBHOOK_SECRET: maskSecret(env.TELEGRAM.WEBHOOK_SECRET),
     },
@@ -825,14 +988,27 @@ export function getSafeEnvSnapshot(): Record<string, unknown> {
       TONCONNECT_MANIFEST_URL: env.TON.TONCONNECT_MANIFEST_URL,
       API_BASE_URL: env.TON.API_BASE_URL,
       COLLECTION_ADDRESS: env.TON.COLLECTION_ADDRESS,
+      COLLECTION_OWNER_ADDRESS: env.TON.COLLECTION_OWNER_ADDRESS,
       MINT_ENABLED: env.TON.MINT_ENABLED,
       MINTER_WALLET_ADDRESS: env.TON.MINTER_WALLET_ADDRESS,
+      MINT_BATCH_SIZE: env.TON.MINT_BATCH_SIZE,
       MINT_MAX_RETRIES: env.TON.MINT_MAX_RETRIES,
+      MINT_RETRY_DELAY_SECONDS: env.TON.MINT_RETRY_DELAY_SECONDS,
+      MINT_CONFIRMATION_TIMEOUT_SECONDS:
+        env.TON.MINT_CONFIRMATION_TIMEOUT_SECONDS,
+      PROOF_TTL_SECONDS: env.TON.PROOF_TTL_SECONDS,
+      PROOF_CHALLENGE_BYTES: env.TON.PROOF_CHALLENGE_BYTES,
       HAS_API_KEY: Boolean(env.TON.API_KEY),
+      HAS_TONCENTER_API_KEY: Boolean(env.TON.TONCENTER_API_KEY),
       HAS_MINTER_PRIVATE_KEY: Boolean(env.TON.MINTER_PRIVATE_KEY),
       HAS_MINTER_MNEMONIC: Boolean(env.TON.MINTER_MNEMONIC),
       API_KEY: maskSecret(env.TON.API_KEY),
+      TONCENTER_API_KEY: maskSecret(env.TON.TONCENTER_API_KEY),
     },
+
+    NFT: env.NFT,
+
+    WALLET_SYNC: env.WALLET_SYNC,
 
     ADMIN: {
       ENABLED: env.ADMIN.ENABLED,

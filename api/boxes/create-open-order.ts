@@ -3,6 +3,7 @@ import {
   type CreateBoxOpenOrderRequest,
 } from "../../packages/validation/src/box.schemas.js";
 import { callRpcRaw, RpcError } from "../../packages/server/src/db/rpc.js";
+import { assertStarsPaymentCreateAllowed } from "../../packages/server/src/payments/paymentGuards.js";
 import {
   ApiError,
   getIdempotencyKey,
@@ -56,6 +57,8 @@ export default withApiHandler(
       CreateBoxOpenOrderRequestSchema,
       normalizeCreateOpenOrderInput(body, getIdempotencyKey(req)),
     );
+
+    await assertStarsPaymentCreateAllowed();
 
     const order = await callGachaCreateOrder(
       input,

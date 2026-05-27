@@ -13,7 +13,12 @@ import { toDrawResultResponse } from "../../api/boxes/result";
 import { RpcError } from "../../packages/server/src/db/rpc";
 import { invokeApiHandler } from "./_utils";
 
-const { callRpcRawMock, requireSessionMock } = vi.hoisted(() => ({
+const {
+  assertStarsPaymentCreateAllowedMock,
+  callRpcRawMock,
+  requireSessionMock,
+} = vi.hoisted(() => ({
+  assertStarsPaymentCreateAllowedMock: vi.fn(),
   callRpcRawMock: vi.fn(),
   requireSessionMock: vi.fn(),
 }));
@@ -35,6 +40,10 @@ vi.mock("../../api/_shared/requireSession.js", () => ({
   requireSession: requireSessionMock,
 }));
 
+vi.mock("../../packages/server/src/payments/paymentGuards.js", () => ({
+  assertStarsPaymentCreateAllowed: assertStarsPaymentCreateAllowedMock,
+}));
+
 const BOX_ID = "11111111-1111-4111-8111-111111111111";
 const ORDER_ID = "22222222-2222-4222-8222-222222222222";
 const STAR_ORDER_ID = "33333333-3333-4333-8333-333333333333";
@@ -45,6 +54,8 @@ describe("boxes API helpers", () => {
   beforeEach(() => {
     process.env.NODE_ENV = "test";
     delete process.env.DEV_GACHA_PAYMENT_MODE;
+    assertStarsPaymentCreateAllowedMock.mockReset();
+    assertStarsPaymentCreateAllowedMock.mockResolvedValue(undefined);
     callRpcRawMock.mockReset();
     requireSessionMock.mockReset();
     requireSessionMock.mockResolvedValue({
@@ -580,6 +591,45 @@ describe("boxes API helpers", () => {
       ok: false,
       error: {
         code: "AUTH_SESSION_EXPIRED",
+      },
+    });
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+  });
+
+  it("/api/boxes/create-open-order rejects when Stars payment is disabled", async () => {
+    assertStarsPaymentCreateAllowedMock.mockRejectedValueOnce({
+      statusCode: 503,
+      code: "FEATURE_STARS_PAYMENT_DISABLED",
+      message: "Stars 支付暂未开放。",
+      expose: true,
+    });
+
+    const { default: createOrderHandler } =
+      await import("../../api/boxes/create-open-order");
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      createOrderHandler,
+      {
+        method: "POST",
+        url: "/api/boxes/create-open-order",
+        headers: {
+          cookie: "tma_game_session=test-session-token-000000000000",
+          "content-type": "application/json",
+          "x-forwarded-for": "127.0.0.33",
+        },
+        body: {
+          box_id: BOX_ID,
+          draw_count: 1,
+          idempotency_key: IDEMPOTENCY_KEY,
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(503);
+    expect(result.body).toMatchObject({
+      ok: false,
+      error: {
+        code: "FEATURE_STARS_PAYMENT_DISABLED",
+        message: "Stars 支付暂未开放。",
       },
     });
     expect(callRpcRawMock).not.toHaveBeenCalled();
