@@ -1,0 +1,91 @@
+import "@testing-library/jest-dom/vitest";
+
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+
+import type { CreateOpenOrderResponse } from "../box.types";
+
+import { PaymentPendingSheet } from "./PaymentPendingSheet";
+
+describe("PaymentPendingSheet", () => {
+  it("renders the fifth-stage fulfillment status copy", () => {
+    renderPaymentSheet({
+      paymentStatus: "fulfilling",
+    });
+
+    expect(screen.getByRole("dialog", { name: "发货处理中" })).toBeVisible();
+    expect(screen.getAllByText("发货中")).toHaveLength(2);
+    expect(
+      screen.getByText("服务端正在生成抽卡结果、库存和账本记录。"),
+    ).toBeVisible();
+  });
+
+  it("does not treat refund and dispute states as completed", () => {
+    const { rerender } = renderPaymentSheet({
+      paymentStatus: "refunded",
+    });
+
+    expect(screen.getByRole("dialog", { name: "已退款" })).toBeVisible();
+    expect(screen.getAllByText("退款")).toHaveLength(2);
+
+    rerender(
+      <PaymentPendingSheet
+        open
+        order={createOrder({ paymentStatus: "disputed" })}
+        onCheckResult={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByRole("dialog", { name: "订单争议处理中" }),
+    ).toBeVisible();
+    expect(screen.getAllByText("争议")).toHaveLength(2);
+  });
+
+  it("uses the status action label when checking the result", () => {
+    const onCheckResult = vi.fn();
+    renderPaymentSheet(
+      {
+        paymentStatus: "fulfilled",
+      },
+      onCheckResult,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "查看开盒结果" }));
+
+    expect(onCheckResult).toHaveBeenCalledTimes(1);
+  });
+});
+
+function renderPaymentSheet(
+  overrides: Partial<CreateOpenOrderResponse> = {},
+  onCheckResult = vi.fn(),
+) {
+  return render(
+    <PaymentPendingSheet
+      open
+      order={createOrder(overrides)}
+      onCheckResult={onCheckResult}
+      onClose={vi.fn()}
+    />,
+  );
+}
+
+function createOrder(
+  overrides: Partial<CreateOpenOrderResponse> = {},
+): CreateOpenOrderResponse {
+  return {
+    devPaymentProcessed: false,
+    drawCount: 1,
+    idempotent: false,
+    invoicePayload: "invoice-payload",
+    orderId: "11111111-1111-4111-8111-111111111111",
+    orderStatus: "created",
+    paymentStatus: "invoice_created",
+    resultReady: false,
+    starOrderId: "22222222-2222-4222-8222-222222222222",
+    xtrAmount: 100,
+    ...overrides,
+  };
+}

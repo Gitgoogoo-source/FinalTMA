@@ -1,7 +1,15 @@
-import { Clock, Star, X } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Clock,
+  RefreshCw,
+  Star,
+  X,
+} from "lucide-react";
 
 import { formatCurrencyAmount } from "@/shared/lib/formatCurrency";
 
+import { getPaymentStatusMeta, type PaymentStatusTone } from "../box.status";
 import type { CreateOpenOrderResponse } from "../box.types";
 
 type PaymentPendingSheetProps = {
@@ -21,6 +29,11 @@ export function PaymentPendingSheet({
     return null;
   }
 
+  const statusMeta = getPaymentStatusMeta(
+    order.paymentStatus || order.orderStatus,
+  );
+  const StatusIcon = getStatusIcon(statusMeta.tone);
+
   return (
     <div className="payment-pending-sheet" role="presentation">
       <button
@@ -37,26 +50,43 @@ export function PaymentPendingSheet({
       >
         <header className="payment-pending-sheet__header">
           <div>
-            <span>支付等待</span>
-            <h2 id="payment-pending-title">Telegram Stars 确认中</h2>
+            <span>{statusMeta.label}</span>
+            <h2 id="payment-pending-title">{statusMeta.title}</h2>
           </div>
           <button aria-label="关闭" onClick={onClose} type="button">
             <X aria-hidden="true" size={18} strokeWidth={2.5} />
           </button>
         </header>
-        <div className="payment-pending-sheet__body">
-          <Clock aria-hidden="true" size={28} strokeWidth={2.4} />
-          <strong>订单已创建</strong>
-          <span>等待 Telegram 支付成功回调到达后，服务端会发放奖励。</span>
+        <div
+          className={`payment-pending-sheet__body payment-pending-sheet__body--${statusMeta.tone}`}
+        >
+          <StatusIcon aria-hidden="true" size={28} strokeWidth={2.4} />
+          <strong>{statusMeta.label}</strong>
+          <span>{statusMeta.detail}</span>
           <p>
             <Star aria-hidden="true" size={14} strokeWidth={2.5} />
             {formatCurrencyAmount(order.xtrAmount)} Stars · {order.drawCount} 次
           </p>
           <button onClick={onCheckResult} type="button">
-            查看结果状态
+            {statusMeta.actionLabel}
           </button>
         </div>
       </section>
     </div>
   );
+}
+
+function getStatusIcon(tone: PaymentStatusTone) {
+  switch (tone) {
+    case "success":
+      return CheckCircle2;
+    case "danger":
+    case "warning":
+      return AlertTriangle;
+    case "progress":
+      return RefreshCw;
+    case "neutral":
+    case "pending":
+      return Clock;
+  }
 }

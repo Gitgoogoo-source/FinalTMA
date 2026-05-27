@@ -139,7 +139,7 @@ describe("boxes API helpers", () => {
       star_order_id: STAR_ORDER_ID,
       draw_count: 10,
       order_status: "completed",
-      payment_status: "dev_paid",
+      payment_status: "fulfilled",
       dev_payment_processed: true,
       result_ready: true,
     });
@@ -305,6 +305,7 @@ describe("boxes API helpers", () => {
         order_id: ORDER_ID,
         draw_count: 1,
         xtr_amount: 10,
+        payment_status: "created",
         result_ready: false,
       },
     });
@@ -370,7 +371,7 @@ describe("boxes API helpers", () => {
       data: {
         order_id: ORDER_ID,
         order_status: "completed",
-        payment_status: "dev_paid",
+        payment_status: "fulfilled",
         dev_payment_processed: true,
         result_ready: true,
       },

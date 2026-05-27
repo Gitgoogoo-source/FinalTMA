@@ -239,13 +239,15 @@ export const WalletNftSyncResponseSchema = z.object({
 /* -------------------------------------------------------------------------- */
 
 export const MintQueueStatusSchema = z.enum([
-  "PENDING",
-  "PROCESSING",
-  "WAITING_CHAIN_CONFIRMATION",
-  "MINTED",
-  "FAILED",
-  "RETRYING",
-  "CANCELED",
+  "queued",
+  "processing",
+  "submitted",
+  "confirming",
+  "retrying",
+  "manual_review",
+  "minted",
+  "failed",
+  "cancelled",
 ]);
 
 export const MintPrioritySchema = z
@@ -315,12 +317,10 @@ export const OnchainTransactionTypeSchema = z.enum([
 ]);
 
 export const OnchainTransactionStatusSchema = z.enum([
-  "CREATED",
-  "SENT",
-  "CONFIRMED",
-  "FAILED",
-  "EXPIRED",
-  "CANCELED",
+  "pending",
+  "confirmed",
+  "failed",
+  "expired",
 ]);
 
 export const OnchainTransactionQuerySchema = PaginationQuerySchema.extend({

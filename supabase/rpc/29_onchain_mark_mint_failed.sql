@@ -22,6 +22,7 @@ as $$
 declare
   v_queue onchain.mint_queue%rowtype;
   v_attempt_count integer;
+  v_released_item boolean;
 begin
   if p_mint_queue_id is null then
     raise exception 'mint_queue_id is required';
@@ -34,6 +35,38 @@ begin
 
   if v_queue.id is null then
     raise exception 'mint queue not found';
+  end if;
+
+  if v_queue.status = 'failed' then
+    if p_tx_hash is not null and v_queue.tx_hash is distinct from p_tx_hash then
+      raise exception 'mint failure idempotency conflict';
+    end if;
+
+    select exists (
+      select 1
+      from inventory.inventory_locks
+      where item_instance_id = v_queue.item_instance_id
+        and source_type = 'mint_queue'
+        and source_id = p_mint_queue_id
+        and status = 'released'
+    ) into v_released_item;
+
+    return jsonb_build_object(
+      'mint_queue_id', p_mint_queue_id,
+      'status', 'failed',
+      'attempt_count', v_queue.attempt_count,
+      'released_item', v_released_item,
+      'item_instance_id', v_queue.item_instance_id,
+      'tx_hash', v_queue.tx_hash,
+      'idempotent', true
+    );
+  end if;
+
+  if v_queue.status = 'minted' then
+    raise exception 'mint queue already minted';
+  end if;
+  if v_queue.status = 'cancelled' then
+    raise exception 'mint queue already cancelled';
   end if;
 
   v_attempt_count := v_queue.attempt_count + 1;
@@ -122,7 +155,8 @@ begin
     'attempt_count', v_attempt_count,
     'released_item', coalesce(p_release_item, true),
     'item_instance_id', v_queue.item_instance_id,
-    'tx_hash', p_tx_hash
+    'tx_hash', p_tx_hash,
+    'idempotent', false
   );
 end;
 $$;

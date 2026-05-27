@@ -24,6 +24,7 @@ import { useItemDetail } from "../hooks/useItemDetail";
 import {
   getCollectionLockReasonLabel,
   getCollectionStatusLabel,
+  getMintStatusLabel,
   ItemStatusBadge,
 } from "./ItemStatusBadge";
 
@@ -57,6 +58,9 @@ export function CharacterDetailSheet({
   const isAvailable = displayItem.status === "available" && !isListed;
   const canOpenUpgradePanel = canOpenUpgrade(displayItem, detail, isAvailable);
   const lockReason = detail?.activeLock?.reason ?? null;
+  const mintStatusLabel = getMintStatusLabel(
+    detail?.onchainStatus?.mintStatus ?? displayItem.nftMintStatus,
+  );
   const blockReason = getBlockedReason(displayItem, detail, isListed);
 
   if (!open) {
@@ -169,6 +173,7 @@ export function CharacterDetailSheet({
               label="是否可 Mint"
               value={getBooleanLabel(isAvailable && displayItem.isMintable)}
             />
+            <DetailMetric label="Mint 状态" value={mintStatusLabel} />
           </section>
 
           {displayItem.description ? (

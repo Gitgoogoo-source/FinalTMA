@@ -2,6 +2,7 @@ import { Coins, RefreshCw, Star, Trophy, X } from "lucide-react";
 
 import { formatCurrencyAmount } from "@/shared/lib/formatCurrency";
 
+import { getPaymentStatusMeta } from "../box.status";
 import type { DrawResultItem, DrawResultResponse } from "../box.types";
 
 type DrawResultModalProps = {
@@ -28,6 +29,9 @@ export function DrawResultModal({
   }
 
   const completed = result?.status === "completed";
+  const pendingStatusMeta = result
+    ? getPaymentStatusMeta(result.paymentStatus ?? result.orderStatus)
+    : null;
 
   return (
     <div className="draw-result-modal" role="presentation">
@@ -66,8 +70,11 @@ export function DrawResultModal({
           ) : null}
           {!isLoading && !isError && result && !completed ? (
             <ResultState
-              title="结果处理中"
-              detail="支付确认后，服务端会生成抽卡结果。"
+              title={pendingStatusMeta?.title ?? "结果处理中"}
+              detail={
+                pendingStatusMeta?.detail ??
+                "支付确认后，服务端会生成抽卡结果。"
+              }
               onRetry={onRetry}
             />
           ) : null}

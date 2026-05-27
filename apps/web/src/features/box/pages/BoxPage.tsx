@@ -15,6 +15,7 @@ import { PaymentPendingSheet } from "../components/PaymentPendingSheet";
 import { PityProgress } from "../components/PityProgress";
 import { PossibleRewardsRow } from "../components/PossibleRewardsRow";
 import { PossibleRewardsSheet } from "../components/PossibleRewardsSheet";
+import { getPaymentStatusMeta } from "../box.status";
 import type {
   BlindBox,
   CreateOpenOrderResponse,
@@ -103,6 +104,10 @@ export function BoxPage() {
         },
         {
           onSuccess: (order) => {
+            const paymentStatusMeta = getPaymentStatusMeta(
+              order.paymentStatus || order.orderStatus,
+            );
+
             if (order.resultReady && order.orderId) {
               setPaymentPendingOrder(null);
               setResultOrderId(order.orderId);
@@ -112,11 +117,13 @@ export function BoxPage() {
             }
 
             pushToast({
-              type: order.resultReady ? "success" : "info",
-              title: order.resultReady ? "开盒结果已生成" : "支付订单已创建",
+              type: order.resultReady ? "success" : paymentStatusMeta.toastType,
+              title: order.resultReady
+                ? "开盒结果已生成"
+                : paymentStatusMeta.title,
               message: order.devPaymentProcessed
                 ? "开发支付模式已由后端处理，资产和保底正在刷新。"
-                : `等待 Telegram Stars 支付确认，金额 ${formatCurrencyAmount(order.xtrAmount)} Stars。`,
+                : `${paymentStatusMeta.detail} 金额 ${formatCurrencyAmount(order.xtrAmount)} Stars。`,
             });
           },
           onError: (error) => {

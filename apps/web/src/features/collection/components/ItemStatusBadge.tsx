@@ -80,6 +80,33 @@ export function getCollectionLockReasonLabel(
   }
 }
 
+export function getMintStatusLabel(status: string | null | undefined): string {
+  switch (normalizeStatus(status)) {
+    case "not_minted":
+      return "未 Mint";
+    case "queued":
+      return "Mint 排队中";
+    case "processing":
+      return "正在处理 Mint";
+    case "submitted":
+      return "交易已提交链上";
+    case "confirming":
+      return "等待链上确认";
+    case "minted":
+      return "Mint 成功";
+    case "failed":
+      return "Mint 失败";
+    case "retrying":
+      return "正在重试";
+    case "manual_review":
+      return "需要人工处理";
+    case "cancelled":
+      return "已取消";
+    default:
+      return status ?? "未 Mint";
+  }
+}
+
 function getItemStatusMeta(
   status: string | null,
   isListed: boolean,
@@ -114,4 +141,10 @@ function getItemStatusMeta(
     label: getCollectionStatusLabel(status),
     tone: "neutral",
   } as const;
+}
+
+function normalizeStatus(status: string | null | undefined): string {
+  return String(status ?? "")
+    .trim()
+    .toLowerCase();
 }

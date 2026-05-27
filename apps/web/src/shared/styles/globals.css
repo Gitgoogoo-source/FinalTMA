@@ -1602,6 +1602,26 @@ a {
   color: #ffd166;
 }
 
+.payment-pending-sheet__body--progress > svg {
+  color: #7dd3fc;
+}
+
+.payment-pending-sheet__body--success > svg {
+  color: #86efac;
+}
+
+.payment-pending-sheet__body--warning > svg {
+  color: #facc15;
+}
+
+.payment-pending-sheet__body--danger > svg {
+  color: #fb7185;
+}
+
+.payment-pending-sheet__body--neutral > svg {
+  color: #aebfc7;
+}
+
 .payment-pending-sheet__body strong {
   color: #f7fbff;
   font-size: 16px;

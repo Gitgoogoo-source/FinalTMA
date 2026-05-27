@@ -3,6 +3,10 @@ import {
   type CreateBoxOpenOrderRequest,
 } from "../../packages/validation/src/box.schemas.js";
 import { callRpcRaw, RpcError } from "../../packages/server/src/db/rpc.js";
+import {
+  inferPaymentOrderStatusFromDrawOrderStatus,
+  normalizePaymentOrderStatus,
+} from "../../packages/server/src/payments/paymentEvents.js";
 import { assertStarsPaymentCreateAllowed } from "../../packages/server/src/payments/paymentGuards.js";
 import {
   ApiError,
@@ -22,6 +26,7 @@ type CreateOrderRpcResult = {
   quantity?: unknown;
   discount_bps?: unknown;
   status?: unknown;
+  payment_status?: unknown;
   idempotent?: unknown;
 };
 
@@ -132,8 +137,10 @@ export function buildCreateOpenOrderResponse(
     stringOrNull(order.status) ??
     "invoice_created";
   const paymentStatus =
-    stringOrNull(devPaidResult?.payment_status) ??
-    (devPaidResult ? "dev_paid" : "pending_payment");
+    normalizePaymentOrderStatus(devPaidResult?.payment_status) ??
+    normalizePaymentOrderStatus(order.payment_status) ??
+    inferPaymentOrderStatusFromDrawOrderStatus(orderStatus) ??
+    "created";
 
   return {
     order_id: getRequiredString(order, "draw_order_id"),

@@ -167,12 +167,29 @@ export const BoxCurrencyCodeSchema = z.enum(["KCOIN", "FGEMS", "XTR"]);
 
 export const BoxDrawOrderStatusSchema = z.enum([
   "pending_payment",
+  "invoice_created",
   "paid",
+  "opening",
   "processing",
+  "opened",
   "completed",
   "failed",
   "expired",
   "cancelled",
+]);
+
+export const BoxPaymentOrderStatusSchema = z.enum([
+  "created",
+  "invoice_created",
+  "precheckout_checked",
+  "paid",
+  "fulfilling",
+  "fulfilled",
+  "cancelled",
+  "failed",
+  "expired",
+  "refunded",
+  "disputed",
 ]);
 
 export const BoxRewardSourceSchema = z.enum([
@@ -424,7 +441,8 @@ export const CreateBoxOpenOrderRequestSchema = z.discriminatedUnion(
 export const CreateBoxOpenOrderResponseSchema = z
   .object({
     orderId: BoxUuidSchema,
-    orderStatus: z.literal("pending_payment"),
+    orderStatus: BoxDrawOrderStatusSchema,
+    paymentStatus: BoxPaymentOrderStatusSchema,
     boxId: BoxIdSchema,
     openType: BoxOpenTypeSchema,
     quantity: z.union([z.literal(1), z.literal(10)]),

@@ -20,8 +20,26 @@ exception when others then
 end;
 $$;
 
+create or replace function testutil.explain_uses_index(p_sql text, p_index_name text)
+returns boolean
+language plpgsql
+as $$
+declare
+  v_line text;
+begin
+  for v_line in execute 'explain (costs off) ' || p_sql loop
+    if v_line like '%' || p_index_name || '%' then
+      return true;
+    end if;
+  end loop;
+
+  return false;
+end;
+$$;
+
 grant usage on schema testutil to public;
 grant execute on function testutil.raises_like(text, text) to public;
+grant execute on function testutil.explain_uses_index(text, text) to public;
 
 select no_plan();
 
@@ -102,6 +120,55 @@ select ok(
       and indexdef like '%manual_review%'
   ),
   'active mint queue uniqueness covers all active Phase 5 statuses'
+);
+
+select ok(
+  exists (
+    select 1
+    from pg_indexes
+    where schemaname = 'payments'
+      and tablename = 'star_orders'
+      and indexname = 'star_orders_pending_payment_idx'
+      and indexdef like '%created%'
+      and indexdef like '%invoice_created%'
+      and indexdef like '%precheckout_ok%'
+      and indexdef like '%precheckout_checked%'
+      and lower(indexdef) like '%where%'
+  ),
+  'pending payment partial index covers unpaid Stars order states'
+);
+
+with expected_fk_indexes(schemaname, tablename, indexname) as (
+  values
+    ('core', 'wallet_proofs', 'wallet_proofs_wallet_id_idx'),
+    ('onchain', 'mint_queue', 'mint_queue_collection_id_idx'),
+    ('onchain', 'mint_queue', 'mint_queue_form_id_idx'),
+    ('onchain', 'mint_queue', 'mint_queue_nft_item_id_idx'),
+    ('onchain', 'mint_queue', 'mint_queue_template_id_idx'),
+    ('onchain', 'mint_queue', 'mint_queue_wallet_id_idx'),
+    ('onchain', 'nft_items', 'nft_items_form_id_idx'),
+    ('onchain', 'nft_items', 'nft_items_template_id_idx'),
+    ('onchain', 'transactions', 'onchain_transactions_wallet_id_idx'),
+    ('onchain', 'wallet_nft_snapshots', 'wallet_nft_snapshots_user_id_idx'),
+    ('payments', 'payment_disputes', 'payment_disputes_star_order_idx'),
+    ('payments', 'payment_disputes', 'payment_disputes_star_payment_idx'),
+    ('payments', 'star_refunds', 'star_refunds_user_idx'),
+    ('payments', 'telegram_webhook_events', 'telegram_webhook_events_user_idx')
+)
+select is(
+  (
+    select count(*)::integer
+    from expected_fk_indexes expected
+    where not exists (
+      select 1
+      from pg_indexes existing
+      where existing.schemaname = expected.schemaname
+        and existing.tablename = expected.tablename
+        and existing.indexname = expected.indexname
+    )
+  ),
+  0,
+  'Phase 5 payment, wallet and onchain FK covering indexes exist'
 );
 
 insert into core.users (id, telegram_user_id, username, invite_code)
@@ -263,6 +330,17 @@ insert into payments.star_orders (
   idempotency_key
 ) values
   (
+    '00000000-0000-5000-8000-000000000330',
+    '00000000-0000-5000-8000-000000000301',
+    'gacha_open',
+    null,
+    'precheckout_ok',
+    10,
+    'phase5-schema-payload-legacy-precheckout-ok',
+    'Phase 5 Legacy Precheckout',
+    'phase5-schema-idem-legacy-precheckout-ok'
+  ),
+  (
     '00000000-0000-5000-8000-000000000331',
     '00000000-0000-5000-8000-000000000301',
     'gacha_open',
@@ -308,6 +386,16 @@ select is(
   ),
   3,
   'star_orders accepts new compatible Phase 5 statuses'
+);
+
+select is(
+  (
+    select status
+    from payments.star_orders
+    where telegram_invoice_payload = 'phase5-schema-payload-legacy-precheckout-ok'
+  ),
+  'precheckout_ok',
+  'legacy precheckout_ok payment orders remain queryable after migration'
 );
 
 insert into payments.star_invoices (id, star_order_id, invoice_link, payload, status, bot_api_method, expires_at)
@@ -601,6 +689,54 @@ select ok(
     '%wallet_sync_jobs_idempotency_key_unique%'
   ),
   'wallet_sync_jobs idempotency_key is unique when present'
+);
+
+set local enable_seqscan = off;
+
+select ok(
+  testutil.explain_uses_index(
+    $sql$
+      select id
+      from payments.star_orders
+      where status = 'created'
+        and expires_at > now()
+      order by expires_at, created_at desc
+      limit 20
+    $sql$,
+    'star_orders_pending_payment_idx'
+  ),
+  'pending payment list query can use star_orders_pending_payment_idx'
+);
+
+select ok(
+  testutil.explain_uses_index(
+    $sql$
+      select id
+      from onchain.mint_queue
+      where status in ('queued', 'retrying', 'processing')
+        and (next_attempt_at is null or next_attempt_at <= now())
+      order by status, next_attempt_at, priority, created_at
+      limit 20
+    $sql$,
+    'mint_queue_processing_idx'
+  ),
+  'mint worker queue query can use mint_queue_processing_idx'
+);
+
+select ok(
+  testutil.explain_uses_index(
+    $sql$
+      select id
+      from core.user_wallets
+      where user_id = '00000000-0000-5000-8000-000000000301'
+        and status = 'connected'
+        and verified_at is not null
+      order by verified_at desc
+      limit 1
+    $sql$,
+    'user_wallets_verified_idx'
+  ),
+  'verified wallet lookup can use user_wallets_verified_idx'
 );
 
 set local role authenticated;
