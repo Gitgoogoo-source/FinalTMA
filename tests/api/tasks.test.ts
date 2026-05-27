@@ -492,6 +492,10 @@ describe("tasks API", () => {
     expect(overviewData.commission_history[0]).not.toHaveProperty(
       "invitee_user_id",
     );
+    expect(overviewData.commission_history[0]).not.toHaveProperty(
+      "referral_id",
+    );
+    expect(overviewData.commission_history[0]).not.toHaveProperty("source_id");
   });
 
   it("check-in calls task_daily_check_in with session user and ignores client date fields", async () => {
@@ -1168,6 +1172,8 @@ describe("tasks API", () => {
     expect(commissionHistoryData.items[0]).not.toHaveProperty(
       "invitee_user_id",
     );
+    expect(commissionHistoryData.items[0]).not.toHaveProperty("referral_id");
+    expect(commissionHistoryData.items[0]).not.toHaveProperty("source_id");
   });
 
   it("reward-history reads reward ledger rows for the verified session user only", async () => {
@@ -1369,6 +1375,22 @@ describe("tasks API", () => {
       claimed_amount_kcoin: 0,
       status: "no_pending",
     });
+  });
+
+  it("claim-commission rejects a missing idempotency key with the stable task error code", async () => {
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      claimCommissionHandler,
+      {
+        method: "POST",
+        body: {
+          commission_ids: [COMMISSION_ID],
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(400);
+    expect(result.body.error.code).toBe("IDEMPOTENCY_KEY_REQUIRED");
+    expect(callRpcRawMock).not.toHaveBeenCalled();
   });
 
   it("claim-commission rejects forged commission facts before calling RPC", async () => {

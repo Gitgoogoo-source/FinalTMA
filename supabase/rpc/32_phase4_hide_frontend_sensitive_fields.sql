@@ -321,9 +321,7 @@ begin
   with rows as (
     select
       c.id,
-      c.referral_id,
       c.source_type,
-      c.source_id,
       c.base_amount_kcoin,
       c.commission_bps,
       c.commission_amount_kcoin,
@@ -345,11 +343,9 @@ begin
   select
     coalesce(jsonb_agg(jsonb_build_object(
       'commission_id', id,
-      'referral_id', referral_id,
       'invitee_username', invitee_username,
       'invitee_display_name', invitee_display_name,
       'source_type', source_type,
-      'source_id', source_id,
       'base_amount_kcoin', base_amount_kcoin,
       'commission_bps', commission_bps,
       'commission_amount_kcoin', commission_amount_kcoin,

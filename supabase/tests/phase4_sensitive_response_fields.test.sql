@@ -190,9 +190,9 @@ select ok(
   not exists (
     select 1
     from jsonb_array_elements((select payload -> 'commissions' from _ids where key = 'commission_history_response')) as commission(value)
-    where commission.value ?| array['inviter_user_id', 'invitee_user_id']
+    where commission.value ?| array['inviter_user_id', 'invitee_user_id', 'referral_id', 'source_id']
   ),
-  'referral_get_commission_history does not return internal user UUIDs'
+  'referral_get_commission_history does not return internal user or source UUIDs'
 );
 
 select ok(
@@ -208,9 +208,9 @@ select ok(
   not exists (
     select 1
     from jsonb_array_elements((select payload -> 'commission_history' from _ids where key = 'task_center_response')) as commission(value)
-    where commission.value ?| array['inviter_user_id', 'invitee_user_id']
+    where commission.value ?| array['inviter_user_id', 'invitee_user_id', 'referral_id', 'source_id']
   ),
-  'get_user_task_center commission history does not return internal user UUIDs'
+  'get_user_task_center commission history does not return internal user or source UUIDs'
 );
 
 select ok(

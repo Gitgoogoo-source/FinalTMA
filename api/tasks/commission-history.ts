@@ -120,7 +120,6 @@ export function normalizeCommissionRecord(
     invitee_username: readString(value.invitee_username),
     invitee_display_name: readString(value.invitee_display_name),
     source_type: readString(value.source_type),
-    source_id: readString(value.source_id),
     base_amount_kcoin: readInteger(value.base_amount_kcoin) ?? 0,
     commission_bps: readInteger(value.commission_bps) ?? 0,
     commission_amount_kcoin: readInteger(value.commission_amount_kcoin) ?? 0,

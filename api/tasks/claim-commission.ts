@@ -21,6 +21,7 @@ export default withTaskApiHandler(
   async (req, _res, ctx) => {
     const input = await parseTaskJsonBodyInput(req, ClaimCommissionBodySchema, {
       maxBytes: 8 * 1024,
+      requireIdempotencyKey: true,
       normalize: normalizeClaimCommissionInput,
     });
     const payload = await callClaimCommissionRpc(
