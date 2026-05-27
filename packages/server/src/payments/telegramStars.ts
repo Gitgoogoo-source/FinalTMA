@@ -2,6 +2,7 @@ import {
   getSupabaseAdminClient,
   type SupabaseAdminClient,
 } from "../db/supabaseAdmin.js";
+import { callRpcRaw } from "../db/rpc.js";
 
 export type TelegramInvoiceOpenMode =
   | "telegram_link"
@@ -46,6 +47,53 @@ export type TelegramCreateInvoiceLinkRequest = {
       amount: number;
     },
   ];
+};
+
+export type TelegramPreCheckoutQuery = {
+  id: string;
+  fromId: number;
+  currency: string;
+  totalAmount: number;
+  invoicePayload: string;
+};
+
+export type TelegramPreCheckoutUpdate = {
+  updateId: number;
+  preCheckoutQuery: TelegramPreCheckoutQuery;
+};
+
+export type TelegramAnswerPreCheckoutQueryRequest = {
+  pre_checkout_query_id: string;
+  ok: boolean;
+  error_message?: string | undefined;
+};
+
+export type PaymentMarkPrecheckoutResult = {
+  allowed: boolean;
+  idempotent: boolean;
+  eventId: string;
+  starOrderId: string | null;
+  drawOrderId: string | null;
+  invoicePayload: string | null;
+  reasonCode: string | null;
+  errorMessage: string | null;
+  paymentOrderStatus: string | null;
+};
+
+export type ProcessTelegramPreCheckoutInput = {
+  update: unknown;
+  requestId: string;
+  requestHeadersHash?: string | null | undefined;
+  webhookSecretVerified?: boolean | undefined;
+  client?: SupabaseAdminClient | undefined;
+  fetchImpl?: FetchImpl | undefined;
+  env?: NodeJS.ProcessEnv | undefined;
+};
+
+export type ProcessTelegramPreCheckoutResult = PaymentMarkPrecheckoutResult & {
+  eventType: "pre_checkout_query";
+  answered: true;
+  telegramAnswerOk: boolean;
 };
 
 type FetchImpl = (input: string | URL, init?: RequestInit) => Promise<Response>;
@@ -158,12 +206,243 @@ export class TelegramStarsInvoiceError extends Error {
   }
 }
 
+export class TelegramStarsWebhookError extends Error {
+  readonly statusCode: number;
+  readonly code: string;
+  readonly expose: boolean;
+  readonly details?: Record<string, unknown> | undefined;
+  override readonly cause?: unknown;
+
+  constructor(
+    statusCode: number,
+    code: string,
+    message: string,
+    options: {
+      expose?: boolean | undefined;
+      details?: Record<string, unknown> | undefined;
+      cause?: unknown;
+    } = {},
+  ) {
+    super(message);
+    this.name = "TelegramStarsWebhookError";
+    this.statusCode = statusCode;
+    this.code = code;
+    this.expose = options.expose ?? statusCode < 500;
+    this.details = options.details;
+    this.cause = options.cause;
+  }
+}
+
 const TELEGRAM_BOT_API_BASE_URL = "https://api.telegram.org";
 const CREATE_INVOICE_LINK_METHOD = "createInvoiceLink";
+const ANSWER_PRE_CHECKOUT_QUERY_METHOD = "answerPreCheckoutQuery";
 const DEFAULT_OPEN_MODE: TelegramInvoiceOpenMode = "web_app_open_invoice";
 const MAX_TELEGRAM_TITLE_CHARS = 32;
 const MAX_TELEGRAM_DESCRIPTION_CHARS = 255;
 const MAX_TELEGRAM_PAYLOAD_BYTES = 128;
+const MAX_PRE_CHECKOUT_ERROR_MESSAGE_CHARS = 200;
+
+export function hasTelegramPreCheckoutQuery(
+  update: unknown,
+): update is Record<string, unknown> {
+  return isRecord(update) && isRecord(update.pre_checkout_query);
+}
+
+export function inferTelegramUpdateEventType(update: unknown): string {
+  if (!isRecord(update)) {
+    return "invalid_update";
+  }
+
+  if (isRecord(update.pre_checkout_query)) {
+    return "pre_checkout_query";
+  }
+
+  if (isRecord(update.message) && isRecord(update.message.successful_payment)) {
+    return "successful_payment";
+  }
+
+  if (isRecord(update.message)) {
+    return "message";
+  }
+
+  if (isRecord(update.edited_message)) {
+    return "edited_message";
+  }
+
+  if (isRecord(update.callback_query)) {
+    return "callback_query";
+  }
+
+  return "unsupported_update";
+}
+
+export function parseTelegramPreCheckoutUpdate(
+  update: unknown,
+): TelegramPreCheckoutUpdate {
+  if (!isRecord(update)) {
+    throw new TelegramStarsWebhookError(
+      400,
+      "TELEGRAM_UPDATE_INVALID",
+      "Telegram update 格式无效。",
+    );
+  }
+
+  const updateId = requiredWebhookInteger(update.update_id, "update.update_id");
+  const preCheckoutQuery = update.pre_checkout_query;
+
+  if (!isRecord(preCheckoutQuery)) {
+    throw new TelegramStarsWebhookError(
+      400,
+      "PRE_CHECKOUT_QUERY_MISSING",
+      "Telegram update 缺少 pre_checkout_query。",
+    );
+  }
+
+  const from = preCheckoutQuery.from;
+
+  if (!isRecord(from)) {
+    throw new TelegramStarsWebhookError(
+      400,
+      "PRE_CHECKOUT_FROM_MISSING",
+      "Telegram pre_checkout_query 缺少 from。",
+    );
+  }
+
+  return {
+    updateId,
+    preCheckoutQuery: {
+      id: requiredWebhookString(preCheckoutQuery.id, "pre_checkout_query.id"),
+      fromId: requiredWebhookInteger(from.id, "pre_checkout_query.from.id"),
+      currency: requiredWebhookString(
+        preCheckoutQuery.currency,
+        "pre_checkout_query.currency",
+      ),
+      totalAmount: requiredWebhookInteger(
+        preCheckoutQuery.total_amount,
+        "pre_checkout_query.total_amount",
+      ),
+      invoicePayload: requiredWebhookString(
+        preCheckoutQuery.invoice_payload,
+        "pre_checkout_query.invoice_payload",
+      ),
+    },
+  };
+}
+
+export function buildAnswerPreCheckoutQueryRequest(input: {
+  preCheckoutQueryId: string;
+  ok: boolean;
+  errorMessage?: string | null | undefined;
+}): TelegramAnswerPreCheckoutQueryRequest {
+  const preCheckoutQueryId = input.preCheckoutQueryId.trim();
+
+  if (!preCheckoutQueryId) {
+    throw new TelegramStarsWebhookError(
+      500,
+      "PRE_CHECKOUT_QUERY_ID_INVALID",
+      "Telegram pre_checkout_query id 无效。",
+      { expose: false },
+    );
+  }
+
+  if (input.ok) {
+    return {
+      pre_checkout_query_id: preCheckoutQueryId,
+      ok: true,
+    };
+  }
+
+  return {
+    pre_checkout_query_id: preCheckoutQueryId,
+    ok: false,
+    error_message: normalizeTelegramText(
+      input.errorMessage,
+      "支付校验失败，请重新下单。",
+      MAX_PRE_CHECKOUT_ERROR_MESSAGE_CHARS,
+    ),
+  };
+}
+
+export function parseAnswerPreCheckoutQueryResponse(payload: unknown): boolean {
+  if (!isRecord(payload)) {
+    throw new TelegramStarsWebhookError(
+      502,
+      "TELEGRAM_PRE_CHECKOUT_RESPONSE_INVALID",
+      "Telegram pre_checkout 响应格式无效。",
+      { expose: true },
+    );
+  }
+
+  if (payload.ok !== true) {
+    throw new TelegramStarsWebhookError(
+      502,
+      "TELEGRAM_PRE_CHECKOUT_ANSWER_FAILED",
+      getTelegramApiErrorDescription(payload),
+      {
+        expose: true,
+        details: {
+          errorCode:
+            typeof payload.error_code === "number"
+              ? payload.error_code
+              : undefined,
+        },
+      },
+    );
+  }
+
+  if (payload.result !== true) {
+    throw new TelegramStarsWebhookError(
+      502,
+      "TELEGRAM_PRE_CHECKOUT_RESPONSE_INVALID",
+      "Telegram pre_checkout 响应缺少确认结果。",
+      { expose: true },
+    );
+  }
+
+  return true;
+}
+
+export async function processTelegramPreCheckoutUpdate(
+  input: ProcessTelegramPreCheckoutInput,
+): Promise<ProcessTelegramPreCheckoutResult> {
+  const parsed = parseTelegramPreCheckoutUpdate(input.update);
+  const preCheckoutQuery = parsed.preCheckoutQuery;
+  const markResult = await markTelegramPreCheckoutChecked({
+    updateId: parsed.updateId,
+    preCheckoutQuery,
+    rawUpdate: input.update,
+    requestId: input.requestId,
+    requestHeadersHash: input.requestHeadersHash ?? null,
+    webhookSecretVerified: input.webhookSecretVerified ?? true,
+    client: input.client,
+  });
+
+  try {
+    await answerPreCheckoutQuery({
+      preCheckoutQueryId: preCheckoutQuery.id,
+      ok: markResult.allowed,
+      errorMessage: markResult.errorMessage,
+      fetchImpl: input.fetchImpl,
+      env: input.env,
+    });
+  } catch (error) {
+    await markWebhookEventAnswerFailed({
+      eventId: markResult.eventId,
+      requestId: input.requestId,
+      error,
+      client: input.client,
+    });
+
+    throw error;
+  }
+
+  return {
+    ...markResult,
+    eventType: "pre_checkout_query",
+    answered: true,
+    telegramAnswerOk: true,
+  };
+}
 
 export async function createTelegramStarsInvoice(
   input: CreateTelegramStarsInvoiceInput,
@@ -633,6 +912,102 @@ async function markOrderInvoiceCreated(
   }
 }
 
+async function markTelegramPreCheckoutChecked(input: {
+  updateId: number;
+  preCheckoutQuery: TelegramPreCheckoutQuery;
+  rawUpdate: unknown;
+  requestId: string;
+  requestHeadersHash: string | null;
+  webhookSecretVerified: boolean;
+  client?: SupabaseAdminClient | undefined;
+}): Promise<PaymentMarkPrecheckoutResult> {
+  const rpcOptions = {
+    schema: "api" as never,
+    context: {
+      requestId: input.requestId,
+      updateId: input.updateId,
+      preCheckoutQueryId: input.preCheckoutQuery.id,
+    },
+    ...(input.client ? { client: input.client } : {}),
+  };
+  const rawResult = await callRpcRaw<Record<string, unknown>>(
+    "payment_mark_precheckout_checked",
+    {
+      p_update_id: input.updateId,
+      p_pre_checkout_query_id: input.preCheckoutQuery.id,
+      p_invoice_payload: input.preCheckoutQuery.invoicePayload,
+      p_currency: input.preCheckoutQuery.currency,
+      p_total_amount: input.preCheckoutQuery.totalAmount,
+      p_telegram_user_id: input.preCheckoutQuery.fromId,
+      p_raw_update: isJsonCompatibleRecord(input.rawUpdate)
+        ? input.rawUpdate
+        : {},
+      p_request_headers_hash: input.requestHeadersHash,
+      p_request_id: input.requestId,
+      p_webhook_secret_verified: input.webhookSecretVerified,
+    },
+    rpcOptions,
+  );
+
+  return normalizePaymentMarkPrecheckoutResult(rawResult);
+}
+
+async function answerPreCheckoutQuery(input: {
+  preCheckoutQueryId: string;
+  ok: boolean;
+  errorMessage?: string | null | undefined;
+  fetchImpl?: FetchImpl | undefined;
+  env?: NodeJS.ProcessEnv | undefined;
+}): Promise<boolean> {
+  const config = readTelegramWebhookConfig(input.env);
+  const request = buildAnswerPreCheckoutQueryRequest({
+    preCheckoutQueryId: input.preCheckoutQueryId,
+    ok: input.ok,
+    errorMessage: input.errorMessage,
+  });
+  const payload = await postAnswerPreCheckoutQuery({
+    botToken: config.botToken,
+    request,
+    fetchImpl: input.fetchImpl,
+  });
+
+  return parseAnswerPreCheckoutQueryResponse(payload);
+}
+
+async function markWebhookEventAnswerFailed(input: {
+  eventId: string | null;
+  requestId: string;
+  error: unknown;
+  client?: SupabaseAdminClient | undefined;
+}): Promise<void> {
+  if (!input.eventId) {
+    return;
+  }
+
+  const db = getSchemaClient(input.client);
+  const errorMessage = truncateErrorMessage(
+    getWebhookPublicErrorMessage(input.error),
+  );
+  const response = await db
+    .schema("payments")
+    .from("telegram_webhook_events")
+    .update({
+      process_status: "failed",
+      error_message: errorMessage,
+      processed_at: new Date().toISOString(),
+    })
+    .eq("id", input.eventId);
+
+  if (response.error) {
+    console.error(
+      `[${input.requestId}] TELEGRAM_PRE_CHECKOUT_EVENT_MARK_FAILED: ${response.error.message ?? "unknown error"}`,
+      {
+        eventId: input.eventId,
+      },
+    );
+  }
+}
+
 async function postCreateInvoiceLink(input: {
   botToken: string;
   request: TelegramCreateInvoiceLinkRequest;
@@ -693,6 +1068,66 @@ async function postCreateInvoiceLink(input: {
   return payload;
 }
 
+async function postAnswerPreCheckoutQuery(input: {
+  botToken: string;
+  request: TelegramAnswerPreCheckoutQueryRequest;
+  fetchImpl?: FetchImpl | undefined;
+}): Promise<Record<string, unknown>> {
+  const fetchImpl = input.fetchImpl ?? globalThis.fetch;
+
+  if (typeof fetchImpl !== "function") {
+    throw new TelegramStarsWebhookError(
+      500,
+      "TELEGRAM_FETCH_UNAVAILABLE",
+      "当前运行环境不支持 fetch。",
+      { expose: false },
+    );
+  }
+
+  let response: Response;
+
+  try {
+    response = await fetchImpl(
+      `${TELEGRAM_BOT_API_BASE_URL}/bot${input.botToken}/${ANSWER_PRE_CHECKOUT_QUERY_METHOD}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(input.request),
+      },
+    );
+  } catch (error) {
+    throw new TelegramStarsWebhookError(
+      502,
+      "TELEGRAM_PRE_CHECKOUT_NETWORK_FAILED",
+      "连接 Telegram Bot API 失败。",
+      {
+        expose: true,
+        cause: error,
+      },
+    );
+  }
+
+  const payload = await readTelegramWebhookResponseJson(response);
+
+  if (!response.ok) {
+    throw new TelegramStarsWebhookError(
+      502,
+      "TELEGRAM_PRE_CHECKOUT_ANSWER_FAILED",
+      getTelegramApiErrorDescription(payload),
+      {
+        expose: true,
+        details: {
+          httpStatus: response.status,
+        },
+      },
+    );
+  }
+
+  return payload;
+}
+
 async function readTelegramResponseJson(
   response: Response,
 ): Promise<Record<string, unknown>> {
@@ -705,6 +1140,26 @@ async function readTelegramResponseJson(
       502,
       "TELEGRAM_INVOICE_RESPONSE_INVALID",
       "Telegram invoice 响应不是合法 JSON。",
+      {
+        expose: true,
+        cause: error,
+      },
+    );
+  }
+}
+
+async function readTelegramWebhookResponseJson(
+  response: Response,
+): Promise<Record<string, unknown>> {
+  try {
+    const payload = (await response.json()) as unknown;
+
+    return isRecord(payload) ? payload : { ok: false, result: payload };
+  } catch (error) {
+    throw new TelegramStarsWebhookError(
+      502,
+      "TELEGRAM_PRE_CHECKOUT_RESPONSE_INVALID",
+      "Telegram pre_checkout 响应不是合法 JSON。",
       {
         expose: true,
         cause: error,
@@ -798,6 +1253,55 @@ function readTelegramStarsInvoiceConfig(env = process.env): {
   return {
     botToken,
     providerToken: normalizeEnvText(env.TELEGRAM_STARS_PROVIDER_TOKEN) ?? "",
+  };
+}
+
+function readTelegramWebhookConfig(env = process.env): {
+  botToken: string;
+} {
+  const botToken = normalizeEnvText(env.TELEGRAM_BOT_TOKEN);
+
+  if (!botToken) {
+    throw new TelegramStarsWebhookError(
+      503,
+      "TELEGRAM_WEBHOOK_CONFIG_INVALID",
+      "支付服务暂不可用。",
+      {
+        expose: false,
+        details: {
+          missing: ["TELEGRAM_BOT_TOKEN"],
+        },
+      },
+    );
+  }
+
+  return {
+    botToken,
+  };
+}
+
+function normalizePaymentMarkPrecheckoutResult(
+  value: Record<string, unknown>,
+): PaymentMarkPrecheckoutResult {
+  const eventId = requiredWebhookString(
+    value.event_id,
+    "payment_mark_precheckout_checked.event_id",
+  );
+  const allowed = requiredBoolean(
+    value.allowed,
+    "payment_mark_precheckout_checked.allowed",
+  );
+
+  return {
+    allowed,
+    idempotent: booleanOrFalse(value.idempotent),
+    eventId,
+    starOrderId: optionalString(value.star_order_id),
+    drawOrderId: optionalString(value.draw_order_id),
+    invoicePayload: optionalString(value.invoice_payload),
+    reasonCode: optionalString(value.reason_code),
+    errorMessage: optionalString(value.error_message),
+    paymentOrderStatus: optionalString(value.payment_order_status),
   };
 }
 
@@ -948,8 +1452,49 @@ function getPublicErrorMessage(error: unknown): string {
   return "Telegram Stars invoice 创建失败。";
 }
 
+function getWebhookPublicErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message.trim()) {
+    return error.message.trim();
+  }
+
+  return "Telegram pre_checkout 确认失败。";
+}
+
 function truncateErrorMessage(value: string): string {
   return Array.from(value.trim()).slice(0, 500).join("");
+}
+
+function requiredWebhookString(value: unknown, field: string): string {
+  const normalized = optionalString(value);
+
+  if (!normalized) {
+    throw new TelegramStarsWebhookError(
+      400,
+      "TELEGRAM_WEBHOOK_FIELD_INVALID",
+      `${field} 缺失。`,
+    );
+  }
+
+  return normalized;
+}
+
+function requiredWebhookInteger(value: unknown, field: string): number {
+  const parsed =
+    typeof value === "number"
+      ? value
+      : typeof value === "string" && value.trim() !== ""
+        ? Number(value)
+        : Number.NaN;
+
+  if (!Number.isInteger(parsed)) {
+    throw new TelegramStarsWebhookError(
+      400,
+      "TELEGRAM_WEBHOOK_FIELD_INVALID",
+      `${field} 无效。`,
+    );
+  }
+
+  return parsed;
 }
 
 function requiredString(value: unknown, field: string): string {
@@ -965,6 +1510,23 @@ function requiredString(value: unknown, field: string): string {
   }
 
   return normalized;
+}
+
+function requiredBoolean(value: unknown, field: string): boolean {
+  if (typeof value !== "boolean") {
+    throw new TelegramStarsWebhookError(
+      500,
+      "TELEGRAM_PRE_CHECKOUT_RPC_RESULT_INVALID",
+      `${field} 无效。`,
+      { expose: false },
+    );
+  }
+
+  return value;
+}
+
+function booleanOrFalse(value: unknown): boolean {
+  return value === true;
 }
 
 function optionalString(value: unknown): string | null {
@@ -1009,4 +1571,10 @@ function normalizeEnvText(value: string | undefined): string | null {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isJsonCompatibleRecord(
+  value: unknown,
+): value is Record<string, unknown> {
+  return isRecord(value);
 }

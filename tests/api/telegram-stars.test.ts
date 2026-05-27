@@ -2,10 +2,14 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { SupabaseAdminClient } from "../../packages/server/src/db/supabaseAdmin";
 import {
+  buildAnswerPreCheckoutQueryRequest,
   buildTelegramStarsInvoiceRequest,
   createTelegramStarsInvoice,
+  parseAnswerPreCheckoutQueryResponse,
   parseCreateInvoiceLinkResponse,
+  parseTelegramPreCheckoutUpdate,
   TelegramStarsInvoiceError,
+  TelegramStarsWebhookError,
 } from "../../packages/server/src/payments/telegramStars";
 
 const ORDER_ID = "22222222-2222-4222-8222-222222222222";
@@ -70,6 +74,71 @@ describe("telegramStars payment helpers", () => {
         description: "Bad Request: invalid payload",
       }),
     ).toThrow(TelegramStarsInvoiceError);
+  });
+
+  it("parses pre_checkout_query updates and builds answerPreCheckoutQuery requests", () => {
+    const update = {
+      update_id: 95050001,
+      pre_checkout_query: {
+        id: "pcq-test-001",
+        from: {
+          id: 7050001,
+          first_name: "Test",
+        },
+        currency: "XTR",
+        total_amount: 90,
+        invoice_payload: PAYLOAD,
+      },
+    };
+
+    expect(parseTelegramPreCheckoutUpdate(update)).toEqual({
+      updateId: 95050001,
+      preCheckoutQuery: {
+        id: "pcq-test-001",
+        fromId: 7050001,
+        currency: "XTR",
+        totalAmount: 90,
+        invoicePayload: PAYLOAD,
+      },
+    });
+
+    expect(
+      buildAnswerPreCheckoutQueryRequest({
+        preCheckoutQueryId: "pcq-test-001",
+        ok: true,
+      }),
+    ).toEqual({
+      pre_checkout_query_id: "pcq-test-001",
+      ok: true,
+    });
+
+    expect(
+      buildAnswerPreCheckoutQueryRequest({
+        preCheckoutQueryId: "pcq-test-001",
+        ok: false,
+        errorMessage: "订单已过期，请重新下单。",
+      }),
+    ).toEqual({
+      pre_checkout_query_id: "pcq-test-001",
+      ok: false,
+      error_message: "订单已过期，请重新下单。",
+    });
+  });
+
+  it("parses answerPreCheckoutQuery responses and rejects Telegram failures", () => {
+    expect(
+      parseAnswerPreCheckoutQueryResponse({
+        ok: true,
+        result: true,
+      }),
+    ).toBe(true);
+
+    expect(() =>
+      parseAnswerPreCheckoutQueryResponse({
+        ok: false,
+        description: "Bad Request: query is too old",
+      }),
+    ).toThrow(TelegramStarsWebhookError);
   });
 
   it("creates an invoice link, stores the invoice, and marks the order invoice-created", async () => {
