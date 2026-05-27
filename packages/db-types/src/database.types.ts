@@ -7,11 +7,6 @@ export type Json =
   | Json[];
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5";
-  };
   album: {
     Tables: {
       book_items: {
@@ -163,24 +158,30 @@ export type Database = {
         Row: {
           claimed_at: string;
           id: string;
+          idempotency_key: string | null;
           metadata: Json;
           milestone_id: string;
+          request_fingerprint: string | null;
           reward: Json;
           user_id: string;
         };
         Insert: {
           claimed_at?: string;
           id?: string;
+          idempotency_key?: string | null;
           metadata?: Json;
           milestone_id: string;
+          request_fingerprint?: string | null;
           reward?: Json;
           user_id: string;
         };
         Update: {
           claimed_at?: string;
           id?: string;
+          idempotency_key?: string | null;
           metadata?: Json;
           milestone_id?: string;
+          request_fingerprint?: string | null;
           reward?: Json;
           user_id?: string;
         };
@@ -1398,11 +1399,16 @@ export type Database = {
           expires_at: string;
           id: string;
           payload: Json;
+          proof_hash: string | null;
+          proof_nonce: string | null;
           proof_signature: string | null;
+          request_id: string | null;
           status: string;
+          used_at: string | null;
           user_id: string;
           verified_at: string | null;
           wallet_id: string | null;
+          wallet_public_key: string | null;
         };
         Insert: {
           address?: string | null;
@@ -1413,11 +1419,16 @@ export type Database = {
           expires_at: string;
           id?: string;
           payload?: Json;
+          proof_hash?: string | null;
+          proof_nonce?: string | null;
           proof_signature?: string | null;
+          request_id?: string | null;
           status?: string;
+          used_at?: string | null;
           user_id: string;
           verified_at?: string | null;
           wallet_id?: string | null;
+          wallet_public_key?: string | null;
         };
         Update: {
           address?: string | null;
@@ -1428,11 +1439,16 @@ export type Database = {
           expires_at?: string;
           id?: string;
           payload?: Json;
+          proof_hash?: string | null;
+          proof_nonce?: string | null;
           proof_signature?: string | null;
+          request_id?: string | null;
           status?: string;
+          used_at?: string | null;
           user_id?: string;
           verified_at?: string | null;
           wallet_id?: string | null;
+          wallet_public_key?: string | null;
         };
         Relationships: [
           {
@@ -2423,8 +2439,10 @@ export type Database = {
         Row: {
           created_at: string;
           id: string;
+          idempotency_key: string | null;
           item_instance_id: string;
           ledger_id: string | null;
+          request_fingerprint: string | null;
           reward_fgems: number;
           rule_id: string | null;
           user_id: string;
@@ -2432,8 +2450,10 @@ export type Database = {
         Insert: {
           created_at?: string;
           id?: string;
+          idempotency_key?: string | null;
           item_instance_id: string;
           ledger_id?: string | null;
+          request_fingerprint?: string | null;
           reward_fgems: number;
           rule_id?: string | null;
           user_id: string;
@@ -2441,8 +2461,10 @@ export type Database = {
         Update: {
           created_at?: string;
           id?: string;
+          idempotency_key?: string | null;
           item_instance_id?: string;
           ledger_id?: string | null;
+          request_fingerprint?: string | null;
           reward_fgems?: number;
           rule_id?: string | null;
           user_id?: string;
@@ -2505,10 +2527,12 @@ export type Database = {
           cost_kcoin: number;
           created_at: string;
           id: string;
+          idempotency_key: string | null;
           ledger_id: string | null;
           main_item_instance_id: string | null;
           metadata: Json;
           random_roll_bps: number;
+          request_fingerprint: string | null;
           result_item_instance_id: string | null;
           rule_id: string | null;
           status: string;
@@ -2519,10 +2543,12 @@ export type Database = {
           cost_kcoin?: number;
           created_at?: string;
           id?: string;
+          idempotency_key?: string | null;
           ledger_id?: string | null;
           main_item_instance_id?: string | null;
           metadata?: Json;
           random_roll_bps: number;
+          request_fingerprint?: string | null;
           result_item_instance_id?: string | null;
           rule_id?: string | null;
           status: string;
@@ -2533,10 +2559,12 @@ export type Database = {
           cost_kcoin?: number;
           created_at?: string;
           id?: string;
+          idempotency_key?: string | null;
           ledger_id?: string | null;
           main_item_instance_id?: string | null;
           metadata?: Json;
           random_roll_bps?: number;
+          request_fingerprint?: string | null;
           result_item_instance_id?: string | null;
           rule_id?: string | null;
           status?: string;
@@ -2827,8 +2855,10 @@ export type Database = {
           from_level: number;
           from_power: number;
           id: string;
+          idempotency_key: string | null;
           item_instance_id: string;
           ledger_id: string | null;
+          request_fingerprint: string | null;
           rule_id: string | null;
           to_level: number;
           to_power: number;
@@ -2840,8 +2870,10 @@ export type Database = {
           from_level: number;
           from_power: number;
           id?: string;
+          idempotency_key?: string | null;
           item_instance_id: string;
           ledger_id?: string | null;
+          request_fingerprint?: string | null;
           rule_id?: string | null;
           to_level: number;
           to_power: number;
@@ -2853,8 +2885,10 @@ export type Database = {
           from_level?: number;
           from_power?: number;
           id?: string;
+          idempotency_key?: string | null;
           item_instance_id?: string;
           ledger_id?: string | null;
+          request_fingerprint?: string | null;
           rule_id?: string | null;
           to_level?: number;
           to_power?: number;
@@ -3575,18 +3609,23 @@ export type Database = {
         Row: {
           amount_nano: number | null;
           chain: string;
+          check_count: number;
           confirmed_at: string | null;
           created_at: string;
           direction: string | null;
           error_message: string | null;
+          external_api_provider: string | null;
           id: string;
+          last_checked_at: string | null;
           network: string;
           payload: Json;
           query_id: string | null;
+          raw_response: Json;
           related_id: string | null;
           related_type: string | null;
           status: string;
           submitted_at: string | null;
+          transaction_type: string;
           tx_hash: string | null;
           updated_at: string;
           user_id: string | null;
@@ -3595,18 +3634,23 @@ export type Database = {
         Insert: {
           amount_nano?: number | null;
           chain?: string;
+          check_count?: number;
           confirmed_at?: string | null;
           created_at?: string;
           direction?: string | null;
           error_message?: string | null;
+          external_api_provider?: string | null;
           id?: string;
+          last_checked_at?: string | null;
           network?: string;
           payload?: Json;
           query_id?: string | null;
+          raw_response?: Json;
           related_id?: string | null;
           related_type?: string | null;
           status?: string;
           submitted_at?: string | null;
+          transaction_type?: string;
           tx_hash?: string | null;
           updated_at?: string;
           user_id?: string | null;
@@ -3615,18 +3659,23 @@ export type Database = {
         Update: {
           amount_nano?: number | null;
           chain?: string;
+          check_count?: number;
           confirmed_at?: string | null;
           created_at?: string;
           direction?: string | null;
           error_message?: string | null;
+          external_api_provider?: string | null;
           id?: string;
+          last_checked_at?: string | null;
           network?: string;
           payload?: Json;
           query_id?: string | null;
+          raw_response?: Json;
           related_id?: string | null;
           related_type?: string | null;
           status?: string;
           submitted_at?: string | null;
+          transaction_type?: string;
           tx_hash?: string | null;
           updated_at?: string;
           user_id?: string | null;
@@ -3676,10 +3725,14 @@ export type Database = {
       wallet_sync_jobs: {
         Row: {
           created_at: string;
+          cursor: string | null;
           error_message: string | null;
           finished_at: string | null;
           id: string;
+          idempotency_key: string | null;
+          next_retry_at: string | null;
           result: Json;
+          retry_count: number;
           started_at: string | null;
           status: string;
           sync_type: string;
@@ -3689,10 +3742,14 @@ export type Database = {
         };
         Insert: {
           created_at?: string;
+          cursor?: string | null;
           error_message?: string | null;
           finished_at?: string | null;
           id?: string;
+          idempotency_key?: string | null;
+          next_retry_at?: string | null;
           result?: Json;
+          retry_count?: number;
           started_at?: string | null;
           status?: string;
           sync_type?: string;
@@ -3702,10 +3759,14 @@ export type Database = {
         };
         Update: {
           created_at?: string;
+          cursor?: string | null;
           error_message?: string | null;
           finished_at?: string | null;
           id?: string;
+          idempotency_key?: string | null;
+          next_retry_at?: string | null;
           result?: Json;
+          retry_count?: number;
           started_at?: string | null;
           status?: string;
           sync_type?: string;
@@ -4179,11 +4240,7 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
-      has_admin_permission: {
-        Args: { p_permission: string };
-        Returns: boolean;
-      };
-      is_active_admin: { Args: never; Returns: boolean };
+      [_ in never]: never;
     };
     Enums: {
       [_ in never]: never;
@@ -4259,9 +4316,13 @@ export type Database = {
       };
       star_invoices: {
         Row: {
+          bot_api_method: string | null;
           created_at: string;
+          expires_at: string | null;
           id: string;
           invoice_link: string | null;
+          last_opened_at: string | null;
+          open_mode: string;
           payload: string;
           raw_request: Json;
           raw_response: Json;
@@ -4270,9 +4331,13 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
+          bot_api_method?: string | null;
           created_at?: string;
+          expires_at?: string | null;
           id?: string;
           invoice_link?: string | null;
+          last_opened_at?: string | null;
+          open_mode?: string;
           payload: string;
           raw_request?: Json;
           raw_response?: Json;
@@ -4281,9 +4346,13 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
+          bot_api_method?: string | null;
           created_at?: string;
+          expires_at?: string | null;
           id?: string;
           invoice_link?: string | null;
+          last_opened_at?: string | null;
+          open_mode?: string;
           payload?: string;
           raw_request?: Json;
           raw_response?: Json;
@@ -4490,12 +4559,17 @@ export type Database = {
           event_type: string;
           id: string;
           invoice_payload: string | null;
+          next_retry_at: string | null;
           payload: Json;
           process_status: string;
           processed_at: string | null;
+          processing_duration_ms: number | null;
+          request_headers_hash: string | null;
+          retry_count: number;
           telegram_user_id: number | null;
           update_id: number | null;
           user_id: string | null;
+          webhook_secret_verified: boolean;
         };
         Insert: {
           created_at?: string;
@@ -4503,12 +4577,17 @@ export type Database = {
           event_type: string;
           id?: string;
           invoice_payload?: string | null;
+          next_retry_at?: string | null;
           payload: Json;
           process_status?: string;
           processed_at?: string | null;
+          processing_duration_ms?: number | null;
+          request_headers_hash?: string | null;
+          retry_count?: number;
           telegram_user_id?: number | null;
           update_id?: number | null;
           user_id?: string | null;
+          webhook_secret_verified?: boolean;
         };
         Update: {
           created_at?: string;
@@ -4516,12 +4595,17 @@ export type Database = {
           event_type?: string;
           id?: string;
           invoice_payload?: string | null;
+          next_retry_at?: string | null;
           payload?: Json;
           process_status?: string;
           processed_at?: string | null;
+          processing_duration_ms?: number | null;
+          request_headers_hash?: string | null;
+          retry_count?: number;
           telegram_user_id?: number | null;
           update_id?: number | null;
           user_id?: string | null;
+          webhook_secret_verified?: boolean;
         };
         Relationships: [];
       };
@@ -4932,6 +5016,50 @@ export type Database = {
           },
         ];
       };
+      user_signin_states: {
+        Row: {
+          campaign_id: string;
+          created_at: string;
+          current_streak: number;
+          cycle_position: number;
+          last_signin_date: string | null;
+          metadata: Json;
+          total_signins: number;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          campaign_id: string;
+          created_at?: string;
+          current_streak?: number;
+          cycle_position?: number;
+          last_signin_date?: string | null;
+          metadata?: Json;
+          total_signins?: number;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          campaign_id?: string;
+          created_at?: string;
+          current_streak?: number;
+          cycle_position?: number;
+          last_signin_date?: string | null;
+          metadata?: Json;
+          total_signins?: number;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "user_signin_states_campaign_id_fkey";
+            columns: ["campaign_id"];
+            isOneToOne: false;
+            referencedRelation: "signin_campaigns";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       user_signins: {
         Row: {
           campaign_id: string;
@@ -4972,50 +5100,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "user_signins_campaign_id_fkey";
-            columns: ["campaign_id"];
-            isOneToOne: false;
-            referencedRelation: "signin_campaigns";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      user_signin_states: {
-        Row: {
-          campaign_id: string;
-          created_at: string;
-          current_streak: number;
-          cycle_position: number;
-          last_signin_date: string | null;
-          metadata: Json;
-          total_signins: number;
-          updated_at: string;
-          user_id: string;
-        };
-        Insert: {
-          campaign_id: string;
-          created_at?: string;
-          current_streak?: number;
-          cycle_position?: number;
-          last_signin_date?: string | null;
-          metadata?: Json;
-          total_signins?: number;
-          updated_at?: string;
-          user_id: string;
-        };
-        Update: {
-          campaign_id?: string;
-          created_at?: string;
-          current_streak?: number;
-          cycle_position?: number;
-          last_signin_date?: string | null;
-          metadata?: Json;
-          total_signins?: number;
-          updated_at?: string;
-          user_id?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "user_signin_states_campaign_id_fkey";
             columns: ["campaign_id"];
             isOneToOne: false;
             referencedRelation: "signin_campaigns";
