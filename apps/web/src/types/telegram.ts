@@ -80,6 +80,8 @@ export type TelegramEventName =
   | "contentSafeAreaChanged"
   | "backButtonClicked";
 
+export type TelegramInvoiceStatus = "paid" | "cancelled" | "failed" | "pending";
+
 export type TelegramWebApp = {
   initData?: string;
   initDataUnsafe?: TelegramInitDataUnsafe;
@@ -93,6 +95,10 @@ export type TelegramWebApp = {
   contentSafeAreaInset?: TelegramSafeAreaInset;
   BackButton?: TelegramBackButton;
   openLink?: (url: string, options?: { try_instant_view?: boolean }) => void;
+  openInvoice?: (
+    url: string,
+    callback?: (status: TelegramInvoiceStatus | string) => void,
+  ) => void;
   openTelegramLink?: (url: string) => void;
   ready?: () => void;
   expand?: () => void;

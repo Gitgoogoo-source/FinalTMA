@@ -1,12 +1,6 @@
--- gacha_create_order.sql
--- ============================================================
--- Generated RPC file for the Telegram Mini App blind-box game.
--- Core policy: frontend only requests; all trusted mutations are enforced here by database transactions.
-
--- RPC: api.gacha_create_order_checked
--- Phase 5 checked variant used by /api/boxes/create-open-order. It keeps stale
--- price and stale pool-version checks in the same transaction that creates the
--- draw order and Stars payment order.
+-- Phase 5 step 04: keep stale price / pool checks inside the database
+-- order-creation transaction. The existing 4-argument RPC remains available
+-- as a compatibility wrapper; the API uses the checked RPC.
 
 create or replace function api.gacha_create_order_checked(
   p_user_id uuid,
@@ -197,9 +191,6 @@ begin
 end;
 $$;
 
--- RPC: api.gacha_create_order
--- Compatibility wrapper for existing 4-argument callers.
-
 create or replace function api.gacha_create_order(
   p_user_id uuid,
   p_box_id uuid,
@@ -232,5 +223,3 @@ revoke execute on function api.gacha_create_order(uuid, uuid, integer, text)
   from public, anon, authenticated;
 grant execute on function api.gacha_create_order(uuid, uuid, integer, text)
   to service_role;
-
--- ============================================================

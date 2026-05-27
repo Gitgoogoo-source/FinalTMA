@@ -1649,6 +1649,40 @@ a {
   font-weight: 900;
 }
 
+.payment-pending-sheet__notice {
+  width: min(100%, 330px);
+  display: grid;
+  gap: 4px;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 8px;
+  padding: 10px;
+  background: rgb(255 255 255 / 6%);
+  text-align: left;
+}
+
+.payment-pending-sheet__notice--progress {
+  border-color: rgb(125 211 252 / 36%);
+  background: rgb(125 211 252 / 10%);
+}
+
+.payment-pending-sheet__notice--warning,
+.payment-pending-sheet__notice--pending {
+  border-color: rgb(250 204 21 / 34%);
+  background: rgb(250 204 21 / 10%);
+}
+
+.payment-pending-sheet__notice--danger {
+  border-color: rgb(251 113 133 / 36%);
+  background: rgb(251 113 133 / 10%);
+}
+
+.payment-pending-sheet__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
 .payment-pending-sheet__body button,
 .draw-result-state button,
 .draw-result-modal__confirm {
@@ -1665,6 +1699,12 @@ a {
   cursor: pointer;
   font-size: 13px;
   font-weight: 900;
+}
+
+.payment-pending-sheet__body .payment-pending-sheet__secondary-action {
+  border-color: rgb(255 255 255 / 14%);
+  color: #f7fbff;
+  background: rgb(255 255 255 / 8%);
 }
 
 .draw-result-summary {

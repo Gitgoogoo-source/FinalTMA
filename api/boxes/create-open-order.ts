@@ -31,6 +31,8 @@ type CreateOrderRpcResult = {
   discount_bps?: unknown;
   status?: unknown;
   payment_status?: unknown;
+  expires_at?: unknown;
+  pool_version_id?: unknown;
   idempotent?: unknown;
 };
 
@@ -181,7 +183,8 @@ export function buildCreateOpenOrderResponse(
     payment_order_status: paymentStatus,
     invoice_link: invoiceResult?.invoiceLink ?? null,
     invoice_open_mode: invoiceResult?.openMode ?? null,
-    expires_at: invoiceResult?.expiresAt ?? null,
+    expires_at:
+      invoiceResult?.expiresAt ?? stringOrNull(order.expires_at) ?? null,
     dev_payment_processed: devPaidResult !== null,
     idempotent: Boolean(order.idempotent) || Boolean(devPaidResult?.idempotent),
     result_ready: isCompletedOrderStatus(orderStatus),
@@ -195,12 +198,14 @@ async function callGachaCreateOrder(
 ): Promise<CreateOrderRpcResult> {
   try {
     return await callRpcRaw<CreateOrderRpcResult>(
-      "gacha_create_order",
+      "gacha_create_order_checked",
       {
         p_user_id: userId,
         p_box_id: input.boxId,
         p_quantity: input.quantity,
         p_idempotency_key: input.idempotencyKey,
+        p_expected_price_stars: input.expectedPriceStars ?? null,
+        p_expected_pool_version_id: input.expectedPoolVersionId ?? null,
       },
       {
         schema: "api" as never,
@@ -210,6 +215,8 @@ async function callGachaCreateOrder(
           boxId: input.boxId,
           quantity: input.quantity,
           idempotencyKey: input.idempotencyKey,
+          expectedPriceStars: input.expectedPriceStars,
+          expectedPoolVersionId: input.expectedPoolVersionId,
         },
       },
     );
@@ -298,6 +305,22 @@ function mapGachaRpcError(error: unknown): ApiError {
       409,
       "IDEMPOTENCY_CONFLICT",
       "幂等键已被其他开盒请求使用。",
+    );
+  }
+
+  if (message.includes("expected price changed")) {
+    return new ApiError(
+      409,
+      "BOX_PRICE_CHANGED",
+      "盲盒价格已变化，请刷新后重试。",
+    );
+  }
+
+  if (message.includes("expected pool version changed")) {
+    return new ApiError(
+      409,
+      "BOX_POOL_VERSION_CHANGED",
+      "奖励池版本已变化，请刷新后重试。",
     );
   }
 

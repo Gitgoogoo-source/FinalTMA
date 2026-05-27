@@ -138,6 +138,41 @@ select ok(
   'pending payment partial index covers unpaid Stars order states'
 );
 
+select ok(
+  exists (
+    select 1
+    from pg_indexes
+    where schemaname = 'payments'
+      and tablename = 'star_orders'
+      and indexname = 'star_orders_pending_payment_idx'
+      and indexdef like '%expires_at%'
+      and lower(indexdef) like '%where%'
+  ),
+  'pending payment partial index includes expires_at for expiry scans'
+);
+
+with expected_star_invoice_indexes(indexname) as (
+  values
+    ('star_invoices_star_order_idx'),
+    ('star_invoices_payload_unique_idx'),
+    ('star_invoices_status_created_idx')
+)
+select is(
+  (
+    select count(*)::integer
+    from expected_star_invoice_indexes expected
+    where not exists (
+      select 1
+      from pg_indexes existing
+      where existing.schemaname = 'payments'
+        and existing.tablename = 'star_invoices'
+        and existing.indexname = expected.indexname
+    )
+  ),
+  0,
+  'star_invoices has star_order_id, payload and status indexes'
+);
+
 with expected_fk_indexes(schemaname, tablename, indexname) as (
   values
     ('core', 'wallet_proofs', 'wallet_proofs_wallet_id_idx'),
@@ -706,6 +741,21 @@ select ok(
     'star_orders_pending_payment_idx'
   ),
   'pending payment list query can use star_orders_pending_payment_idx'
+);
+
+select ok(
+  testutil.explain_uses_index(
+    $sql$
+      select id
+      from payments.star_orders
+      where status = 'created'
+        and expires_at <= now()
+      order by expires_at, created_at desc
+      limit 20
+    $sql$,
+    'star_orders_pending_payment_idx'
+  ),
+  'expired payment lookup can use star_orders_pending_payment_idx'
 );
 
 select ok(

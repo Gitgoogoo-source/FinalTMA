@@ -56,6 +56,33 @@ describe("PaymentPendingSheet", () => {
 
     expect(onCheckResult).toHaveBeenCalledTimes(1);
   });
+
+  it("shows retry copy when the Telegram invoice did not open", () => {
+    const onRetryPayment = vi.fn();
+
+    render(
+      <PaymentPendingSheet
+        open
+        order={createOrder()}
+        invoiceOpenNotice={{
+          status: "not_opened",
+          detail: "当前环境不能打开 Telegram Stars invoice。",
+        }}
+        onCheckResult={vi.fn()}
+        onRetryPayment={onRetryPayment}
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("支付未打开，可重试支付")).toBeVisible();
+    expect(
+      screen.getByText("当前环境不能打开 Telegram Stars invoice。"),
+    ).toBeVisible();
+
+    fireEvent.click(screen.getByRole("button", { name: "重试支付" }));
+
+    expect(onRetryPayment).toHaveBeenCalledTimes(1);
+  });
 });
 
 function renderPaymentSheet(

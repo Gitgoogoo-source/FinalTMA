@@ -53,6 +53,7 @@ vi.mock("../../packages/server/src/payments/telegramStars.js", () => ({
 const BOX_ID = "11111111-1111-4111-8111-111111111111";
 const ORDER_ID = "22222222-2222-4222-8222-222222222222";
 const STAR_ORDER_ID = "33333333-3333-4333-8333-333333333333";
+const POOL_VERSION_ID = "77777777-7777-4777-8777-777777777777";
 const IDEMPOTENCY_KEY = "open:test-idempotency-001";
 const USER_ID = "66666666-6666-4666-8666-666666666666";
 const INVOICE_LINK = "https://t.me/invoice/test-open-order";
@@ -304,6 +305,7 @@ describe("boxes API helpers", () => {
       xtr_amount: 10,
       quantity: 1,
       discount_bps: 0,
+      pool_version_id: POOL_VERSION_ID,
       idempotent: false,
     });
 
@@ -322,6 +324,8 @@ describe("boxes API helpers", () => {
         body: {
           box_id: BOX_ID,
           draw_count: 1,
+          expected_price_stars: 10,
+          expected_pool_version_id: POOL_VERSION_ID,
           idempotency_key: IDEMPOTENCY_KEY,
         },
       },
@@ -343,12 +347,14 @@ describe("boxes API helpers", () => {
       },
     });
     expect(callRpcRawMock).toHaveBeenCalledWith(
-      "gacha_create_order",
+      "gacha_create_order_checked",
       expect.objectContaining({
         p_user_id: USER_ID,
         p_box_id: BOX_ID,
         p_quantity: 1,
         p_idempotency_key: IDEMPOTENCY_KEY,
+        p_expected_price_stars: 10,
+        p_expected_pool_version_id: POOL_VERSION_ID,
       }),
       expect.any(Object),
     );
@@ -421,12 +427,14 @@ describe("boxes API helpers", () => {
     });
     expect(callRpcRawMock).toHaveBeenNthCalledWith(
       1,
-      "gacha_create_order",
+      "gacha_create_order_checked",
       expect.objectContaining({
         p_user_id: USER_ID,
         p_box_id: BOX_ID,
         p_quantity: 1,
         p_idempotency_key: IDEMPOTENCY_KEY,
+        p_expected_price_stars: null,
+        p_expected_pool_version_id: null,
       }),
       expect.any(Object),
     );
@@ -475,9 +483,11 @@ describe("boxes API helpers", () => {
 
     expect(result.statusCode).toBe(200);
     expect(callRpcRawMock).toHaveBeenCalledWith(
-      "gacha_create_order",
+      "gacha_create_order_checked",
       expect.objectContaining({
         p_idempotency_key: IDEMPOTENCY_KEY,
+        p_expected_price_stars: null,
+        p_expected_pool_version_id: null,
       }),
       expect.any(Object),
     );
@@ -487,7 +497,7 @@ describe("boxes API helpers", () => {
   it("/api/boxes/create-open-order maps RPC idempotency conflicts", async () => {
     callRpcRawMock.mockRejectedValueOnce(
       new RpcError({
-        rpcName: "gacha_create_order",
+        rpcName: "gacha_create_order_checked",
         error: {
           message: "idempotency key conflict",
         },
@@ -523,10 +533,94 @@ describe("boxes API helpers", () => {
     });
   });
 
+  it("/api/boxes/create-open-order maps stale expected prices", async () => {
+    callRpcRawMock.mockRejectedValueOnce(
+      new RpcError({
+        rpcName: "gacha_create_order_checked",
+        error: {
+          message: "expected price changed",
+        },
+      }),
+    );
+
+    const { default: createOrderHandler } =
+      await import("../../api/boxes/create-open-order");
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      createOrderHandler,
+      {
+        method: "POST",
+        url: "/api/boxes/create-open-order",
+        headers: {
+          cookie: "tma_game_session=test-session-token-000000000000",
+          "content-type": "application/json",
+          "x-forwarded-for": "127.0.0.35",
+        },
+        body: {
+          box_id: BOX_ID,
+          draw_count: 1,
+          expected_price_stars: 9,
+          idempotency_key: IDEMPOTENCY_KEY,
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(409);
+    expect(result.body).toMatchObject({
+      ok: false,
+      error: {
+        code: "BOX_PRICE_CHANGED",
+        message: "盲盒价格已变化，请刷新后重试。",
+      },
+    });
+    expect(createTelegramStarsInvoiceMock).not.toHaveBeenCalled();
+  });
+
+  it("/api/boxes/create-open-order maps stale expected pool versions", async () => {
+    callRpcRawMock.mockRejectedValueOnce(
+      new RpcError({
+        rpcName: "gacha_create_order_checked",
+        error: {
+          message: "expected pool version changed",
+        },
+      }),
+    );
+
+    const { default: createOrderHandler } =
+      await import("../../api/boxes/create-open-order");
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      createOrderHandler,
+      {
+        method: "POST",
+        url: "/api/boxes/create-open-order",
+        headers: {
+          cookie: "tma_game_session=test-session-token-000000000000",
+          "content-type": "application/json",
+          "x-forwarded-for": "127.0.0.36",
+        },
+        body: {
+          box_id: BOX_ID,
+          draw_count: 1,
+          expected_pool_version_id: POOL_VERSION_ID,
+          idempotency_key: IDEMPOTENCY_KEY,
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(409);
+    expect(result.body).toMatchObject({
+      ok: false,
+      error: {
+        code: "BOX_POOL_VERSION_CHANGED",
+        message: "奖励池版本已变化，请刷新后重试。",
+      },
+    });
+    expect(createTelegramStarsInvoiceMock).not.toHaveBeenCalled();
+  });
+
   it("/api/boxes/create-open-order maps empty drop pools to the first-phase code", async () => {
     callRpcRawMock.mockRejectedValueOnce(
       new RpcError({
-        rpcName: "gacha_create_order",
+        rpcName: "gacha_create_order_checked",
         error: {
           message: "active drop pool not found",
         },
@@ -566,7 +660,7 @@ describe("boxes API helpers", () => {
   it("/api/boxes/create-open-order maps ledger failures without exposing database details", async () => {
     callRpcRawMock.mockRejectedValueOnce(
       new RpcError({
-        rpcName: "gacha_create_order",
+        rpcName: "gacha_create_order_checked",
         error: {
           message:
             "currency ledger insert failed: duplicate key raw database detail",
@@ -726,7 +820,7 @@ describe("boxes API helpers", () => {
       },
     });
     expect(callRpcRawMock).toHaveBeenCalledWith(
-      "gacha_create_order",
+      "gacha_create_order_checked",
       expect.objectContaining({
         p_quantity: 10,
       }),

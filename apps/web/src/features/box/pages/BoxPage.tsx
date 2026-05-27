@@ -11,7 +11,10 @@ import { BoxTierSelector } from "../components/BoxTierSelector";
 import { DrawResultModal } from "../components/DrawResultModal";
 import { OpenOnceButton } from "../components/OpenOnceButton";
 import { OpenTenButton } from "../components/OpenTenButton";
-import { PaymentPendingSheet } from "../components/PaymentPendingSheet";
+import {
+  PaymentPendingSheet,
+  type PaymentOpenNotice,
+} from "../components/PaymentPendingSheet";
 import { PityProgress } from "../components/PityProgress";
 import { PossibleRewardsRow } from "../components/PossibleRewardsRow";
 import { PossibleRewardsSheet } from "../components/PossibleRewardsSheet";
@@ -25,6 +28,10 @@ import { useBoxRewards } from "../hooks/useBoxRewards";
 import { useBoxes } from "../hooks/useBoxes";
 import { useCreateOpenOrder } from "../hooks/useCreateOpenOrder";
 import { useDrawResult } from "../hooks/useDrawResult";
+import {
+  useStarsPayment,
+  type StarsInvoiceCallbackResult,
+} from "../hooks/useStarsPayment";
 
 export function BoxPage() {
   const { pushToast } = useFeedback();
@@ -33,6 +40,8 @@ export function BoxPage() {
   const [resultOrderId, setResultOrderId] = useState<string | null>(null);
   const [paymentPendingOrder, setPaymentPendingOrder] =
     useState<CreateOpenOrderResponse | null>(null);
+  const [paymentOpenNotice, setPaymentOpenNotice] =
+    useState<PaymentOpenNotice | null>(null);
   const openRequestLockedRef = useRef(false);
   const boxesQuery = useBoxes();
   const boxes = boxesQuery.boxes;
@@ -53,6 +62,7 @@ export function BoxPage() {
     boxes.find((box) => box.id === selectedBoxId) ?? boxes[0] ?? null;
   const rewardsQuery = useBoxRewards(selectedBox?.id);
   const createOrder = useCreateOpenOrder();
+  const openStarsInvoice = useStarsPayment();
   const handleDrawCompleted = useCallback(
     (result: DrawResultResponse) => {
       pushToast({
@@ -71,6 +81,56 @@ export function BoxPage() {
     ? (createOrder.variables?.drawCount ?? null)
     : null;
   const openActionDisabled = createOrder.isPending || !selectedBox?.isOpenable;
+  const handleInvoiceStatus = useCallback(
+    (result: StarsInvoiceCallbackResult) => {
+      setPaymentOpenNotice(getPaymentOpenNoticeFromInvoiceStatus(result));
+
+      if (result.status === "paid") {
+        pushToast({
+          type: "info",
+          title: "支付已返回",
+          message: "正在等待 Telegram webhook 和服务端发货确认。",
+        });
+        return;
+      }
+
+      if (result.status === "cancelled" || result.status === "failed") {
+        pushToast({
+          type: result.status === "failed" ? "error" : "info",
+          title: result.status === "failed" ? "支付未完成" : "支付窗口已关闭",
+          message: "服务端尚未确认支付成功，可重试支付或刷新状态。",
+        });
+      }
+    },
+    [pushToast],
+  );
+  const openInvoiceForOrder = useCallback(
+    (order: CreateOpenOrderResponse) => {
+      if (order.resultReady || order.devPaymentProcessed) {
+        setPaymentOpenNotice(null);
+        return;
+      }
+
+      setPaymentOpenNotice({
+        status: "opening",
+      });
+
+      const openAttempt = openStarsInvoice(order, handleInvoiceStatus);
+
+      if (!openAttempt.ok) {
+        setPaymentOpenNotice({
+          status: "not_opened",
+          detail: openAttempt.message,
+        });
+        pushToast({
+          type: "error",
+          title: "支付未打开，可重试支付",
+          message: openAttempt.message,
+        });
+      }
+    },
+    [handleInvoiceStatus, openStarsInvoice, pushToast],
+  );
 
   const handleOpen = useCallback(
     (drawCount: 1 | 10) => {
@@ -110,10 +170,12 @@ export function BoxPage() {
 
             if (order.resultReady && order.orderId) {
               setPaymentPendingOrder(null);
+              setPaymentOpenNotice(null);
               setResultOrderId(order.orderId);
             } else {
               setResultOrderId(null);
               setPaymentPendingOrder(order);
+              openInvoiceForOrder(order);
             }
 
             pushToast({
@@ -139,7 +201,13 @@ export function BoxPage() {
         },
       );
     },
-    [createOrder, pushToast, rewardsQuery.poolVersionId, selectedBox],
+    [
+      createOrder,
+      openInvoiceForOrder,
+      pushToast,
+      rewardsQuery.poolVersionId,
+      selectedBox,
+    ],
   );
 
   if (boxesQuery.isLoading && boxes.length === 0) {
@@ -235,13 +303,23 @@ export function BoxPage() {
       <PaymentPendingSheet
         open={paymentPendingOrder !== null}
         order={paymentPendingOrder}
+        invoiceOpenNotice={paymentOpenNotice}
         onCheckResult={() => {
           if (paymentPendingOrder?.orderId) {
             setResultOrderId(paymentPendingOrder.orderId);
             setPaymentPendingOrder(null);
+            setPaymentOpenNotice(null);
           }
         }}
-        onClose={() => setPaymentPendingOrder(null)}
+        onRetryPayment={() => {
+          if (paymentPendingOrder) {
+            openInvoiceForOrder(paymentPendingOrder);
+          }
+        }}
+        onClose={() => {
+          setPaymentPendingOrder(null);
+          setPaymentOpenNotice(null);
+        }}
       />
 
       <DrawResultModal
@@ -284,4 +362,34 @@ function getRewardsErrorMessage(error: unknown): string | null {
 
   const message = error.message.trim();
   return message.length > 0 ? message : null;
+}
+
+function getPaymentOpenNoticeFromInvoiceStatus(
+  result: StarsInvoiceCallbackResult,
+): PaymentOpenNotice {
+  switch (result.status) {
+    case "paid":
+      return {
+        status: "paid",
+      };
+    case "cancelled":
+      return {
+        status: "cancelled",
+      };
+    case "failed":
+      return {
+        status: "failed",
+      };
+    case "pending":
+      return {
+        status: "pending",
+      };
+    case "unknown":
+      return {
+        status: "pending",
+        detail: result.rawStatus
+          ? `Telegram 返回状态 ${result.rawStatus}，请刷新后以服务端状态为准。`
+          : "Telegram 未返回明确支付状态，请刷新后以服务端状态为准。",
+      };
+  }
 }

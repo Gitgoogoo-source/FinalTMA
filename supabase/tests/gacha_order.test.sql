@@ -307,10 +307,39 @@ select is(((select payload from _ids where key = 'order1') ->> 'xtr_amount')::in
 select ok(exists (select 1 from gacha.draw_orders d join _ids i on i.id = d.id where i.key = 'draw_order1' and d.status = 'invoice_created' and d.quantity = 1 and d.draw_count = 1), 'draw order is created with invoice_created status and draw_count=1');
 select ok(exists (select 1 from payments.star_orders s join _ids i on i.id = s.id where i.key = 'star_order1' and s.business_type = 'gacha_open' and s.xtr_amount = 10), 'Stars order is created for gacha open');
 select is((select payment_star_order_id from gacha.draw_orders d join _ids i on i.id = d.id where i.key = 'draw_order1'), (select id from _ids where key = 'star_order1'), 'draw order links to Stars order');
+select is((select business_id from payments.star_orders s join _ids i on i.id = s.id where i.key = 'star_order1'), (select id from _ids where key = 'draw_order1'), 'Stars order business_id points to draw_order');
+select is((select xtr_amount from payments.star_orders s join _ids i on i.id = s.id where i.key = 'star_order1'), (select total_price_stars from gacha.draw_orders d join _ids i on i.id = d.id where i.key = 'draw_order1'), 'Stars order xtr_amount matches draw order total_price_stars');
+select is((select telegram_invoice_payload from payments.star_orders s join _ids i on i.id = s.id where i.key = 'star_order1'), (select invoice_payload from gacha.draw_orders d join _ids i on i.id = d.id where i.key = 'draw_order1'), 'Stars order payload matches draw order invoice_payload');
 select is((select payment_provider from gacha.draw_orders d join _ids i on i.id = d.id where i.key = 'draw_order1'), 'telegram_stars', 'draw order stores phase-1 payment_provider');
 select is((select payment_status from gacha.draw_orders d join _ids i on i.id = d.id where i.key = 'draw_order1'), 'pending', 'draw order stores phase-1 pending payment_status');
 select is((select star_amount from gacha.draw_orders d join _ids i on i.id = d.id where i.key = 'draw_order1'), 10, 'draw order stores phase-1 star_amount');
 select is((select telegram_invoice_payload from gacha.draw_orders d join _ids i on i.id = d.id where i.key = 'draw_order1'), (select payload ->> 'invoice_payload' from _ids where key = 'order1'), 'draw order mirrors Telegram invoice payload');
+
+insert into payments.star_invoices (star_order_id, invoice_link, payload, status, bot_api_method, expires_at)
+select
+  (select id from _ids where key = 'star_order1'),
+  'https://t.me/example/invoice/gacha-order-single-001',
+  s.telegram_invoice_payload,
+  'created',
+  'createInvoiceLink',
+  s.expires_at
+from payments.star_orders s
+where s.id = (select id from _ids where key = 'star_order1');
+
+select is(
+  (
+    select si.payload
+    from payments.star_invoices si
+    join payments.star_orders so on so.id = si.star_order_id
+    where si.star_order_id = (select id from _ids where key = 'star_order1')
+  ),
+  (
+    select telegram_invoice_payload
+    from payments.star_orders
+    where id = (select id from _ids where key = 'star_order1')
+  ),
+  'Stars invoice payload matches star order telegram_invoice_payload'
+);
 
 insert into _ids (key, id) values ('other_user', testutil.make_user(9300000002, 'gacha_order_other_user', null));
 select ok(testutil.raises_like(format('select api.gacha_create_order(%L::uuid, %L::uuid, 1, %L)', (select id::text from _ids where key = 'other_user'), (select id::text from _ids where key = 'box'), 'gacha-order-single-001'), '%idempotency key conflict%'), 'create order rejects idempotency key reused by another user');
@@ -352,6 +381,54 @@ insert into _ids (key, id) select 'draw_order10', ((select payload from _ids whe
 select is(((select payload from _ids where key = 'order10') ->> 'xtr_amount')::int, 90, 'ten-draw order applies 9折 discount');
 select is(((select payload from _ids where key = 'order10') ->> 'discount_bps')::int, 1000, 'ten-draw response exposes discount_bps=1000');
 select is((select draw_count from gacha.draw_orders d join _ids i on i.id = d.id where i.key = 'draw_order10'), 10, 'ten-draw order stores draw_count=10');
+
+insert into _ids (key, payload)
+select 'order_checked', api.gacha_create_order_checked(
+  (select id from _ids where key = 'user'),
+  (select id from _ids where key = 'box'),
+  10,
+  'gacha-order-checked-001',
+  90,
+  ((select payload from _ids where key = 'fixture') ->> 'pool_id')::uuid
+);
+insert into _ids (key, id) select 'draw_order_checked', ((select payload from _ids where key = 'order_checked') ->> 'draw_order_id')::uuid;
+select is(((select payload from _ids where key = 'order_checked') ->> 'xtr_amount')::int, 90, 'checked create order accepts current expected price');
+select is(((select payload from _ids where key = 'order_checked') ->> 'pool_version_id')::uuid, ((select payload from _ids where key = 'fixture') ->> 'pool_id')::uuid, 'checked create order returns current pool version');
+select is((select payment_star_order_id from gacha.draw_orders d join _ids i on i.id = d.id where i.key = 'draw_order_checked'), ((select payload from _ids where key = 'order_checked') ->> 'star_order_id')::uuid, 'checked create order links draw order to Stars order');
+
+insert into _ids (key, payload)
+select 'order_checked_repeat', api.gacha_create_order_checked(
+  (select id from _ids where key = 'user'),
+  (select id from _ids where key = 'box'),
+  10,
+  'gacha-order-checked-001',
+  90,
+  ((select payload from _ids where key = 'fixture') ->> 'pool_id')::uuid
+);
+select ok(((select payload from _ids where key = 'order_checked_repeat') ->> 'idempotent')::boolean, 'checked create order repeat returns existing order');
+select is(((select payload from _ids where key = 'order_checked_repeat') ->> 'draw_order_id')::uuid, (select id from _ids where key = 'draw_order_checked'), 'checked create order repeat keeps the same draw order');
+select ok(testutil.raises_like(format(
+  'select api.gacha_create_order_checked(%L::uuid, %L::uuid, 10, %L, 91, %L::uuid)',
+  (select id::text from _ids where key = 'user'),
+  (select id::text from _ids where key = 'box'),
+  'gacha-order-stale-price-001',
+  ((select payload from _ids where key = 'fixture') ->> 'pool_id')
+), '%expected price changed%'), 'checked create order rejects stale expected price');
+select ok(testutil.raises_like(format(
+  'select api.gacha_create_order_checked(%L::uuid, %L::uuid, 10, %L, 90, %L::uuid)',
+  (select id::text from _ids where key = 'user'),
+  (select id::text from _ids where key = 'box'),
+  'gacha-order-stale-pool-001',
+  '00000000-0000-4000-8000-000000000001'
+), '%expected pool version changed%'), 'checked create order rejects stale expected pool version');
+select ok(testutil.raises_like(format(
+  'select api.gacha_create_order_checked(%L::uuid, %L::uuid, 10, %L, 91, %L::uuid)',
+  (select id::text from _ids where key = 'user'),
+  (select id::text from _ids where key = 'box'),
+  'gacha-order-checked-001',
+  ((select payload from _ids where key = 'fixture') ->> 'pool_id')
+), '%expected price changed%'), 'checked create order repeat rejects a changed expected price for the same key');
+
 insert into _ids (key, payload)
 select 'order10_dev_process', api.gacha_process_dev_paid_order((select id from _ids where key = 'draw_order10'), (select id from _ids where key = 'user'));
 select is(jsonb_array_length((select payload from _ids where key = 'order10_dev_process') -> 'results'), 10, 'dev paid process creates ten draw results for ten draw');
