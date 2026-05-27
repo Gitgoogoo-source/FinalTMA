@@ -12,6 +12,9 @@ catalogs:
     "@supabase/supabase-js":
       specifier: ^2.106.0
       version: 2.106.0
+    "@tma.js/sdk-react":
+      specifier: ^3.0.19
+      version: 3.0.19
     "@types/node":
       specifier: ^24.0.0
       version: 24.10.7
@@ -127,11 +130,8 @@ importers:
       "@tma-game/validation":
         specifier: workspace:*
         version: link:../../packages/validation
-      "@tma.js/sdk":
-        specifier: 3.2.0
-        version: 3.2.0(typescript@6.0.3)
       "@tma.js/sdk-react":
-        specifier: 3.0.19
+        specifier: "catalog:"
         version: 3.0.19(@types/react@19.2.15)(react@19.2.6)(typescript@6.0.3)
       "@tonconnect/ui-react":
         specifier: 2.4.4

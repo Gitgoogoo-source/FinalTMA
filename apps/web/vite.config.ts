@@ -73,10 +73,7 @@ function createManualChunk(id: string): string | undefined {
     return "react";
   }
 
-  if (
-    normalizedId.includes("/@tma.js/") ||
-    normalizedId.includes("/@telegram-apps/")
-  ) {
+  if (normalizedId.includes("/@tma.js/")) {
     return "telegram";
   }
 
@@ -254,7 +251,6 @@ export default defineConfig(({ mode }) => {
         "@tanstack/react-query",
         "zustand",
         "zod",
-        "@tma.js/sdk",
         "@tma.js/sdk-react",
         "@tonconnect/ui-react",
       ],

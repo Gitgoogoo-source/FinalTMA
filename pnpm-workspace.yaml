@@ -17,7 +17,7 @@ catalog:
   # -----------------------------
   # Telegram Mini App
   # -----------------------------
-  "@telegram-apps/sdk-react": "^3.3.9"
+  "@tma.js/sdk-react": "^3.0.19"
 
   # -----------------------------
   # TON / TON Connect
@@ -92,7 +92,7 @@ catalogs:
     "@tailwindcss/vite": "^4.0.0"
 
   telegram:
-    "@telegram-apps/sdk-react": "^3.3.9"
+    "@tma.js/sdk-react": "^3.0.19"
 
   ton:
     "@tonconnect/ui-react": "^2.0.12"

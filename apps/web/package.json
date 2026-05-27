@@ -20,8 +20,7 @@
   },
   "dependencies": {
     "@tanstack/react-query": "5.100.11",
-    "@tma.js/sdk": "3.2.0",
-    "@tma.js/sdk-react": "3.0.19",
+    "@tma.js/sdk-react": "catalog:",
     "@tonconnect/ui-react": "2.4.4",
     "@tma-game/api-client": "workspace:*",
     "@tma-game/config": "workspace:*",
