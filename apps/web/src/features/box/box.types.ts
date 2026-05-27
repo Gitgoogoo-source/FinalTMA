@@ -103,10 +103,14 @@ export type CreateOpenOrderResponse = {
   orderId: string;
   starOrderId: string | null;
   invoicePayload: string | null;
+  invoiceLink: string | null;
+  invoiceOpenMode: string | null;
   xtrAmount: number;
   drawCount: 1 | 10;
   orderStatus: string;
   paymentStatus: string;
+  paymentOrderStatus: string;
+  expiresAt: string | null;
   devPaymentProcessed: boolean;
   idempotent: boolean;
   resultReady: boolean;

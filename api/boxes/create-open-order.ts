@@ -9,6 +9,10 @@ import {
 } from "../../packages/server/src/payments/paymentEvents.js";
 import { assertStarsPaymentCreateAllowed } from "../../packages/server/src/payments/paymentGuards.js";
 import {
+  createTelegramStarsInvoice,
+  type TelegramStarsInvoiceResult,
+} from "../../packages/server/src/payments/telegramStars.js";
+import {
   ApiError,
   getIdempotencyKey,
   withApiHandler,
@@ -47,6 +51,10 @@ type CreateOpenOrderResponse = {
   draw_count: 1 | 10;
   order_status: string;
   payment_status: string;
+  payment_order_status: string;
+  invoice_link: string | null;
+  invoice_open_mode: string | null;
+  expires_at: string | null;
   dev_payment_processed: boolean;
   idempotent: boolean;
   result_ready: boolean;
@@ -71,7 +79,11 @@ export default withApiHandler(
       ctx.requestId,
     );
     const orderId = getRequiredString(order, "draw_order_id");
+    const starOrderId = getRequiredString(order, "star_order_id");
+    const invoicePayload = getRequiredString(order, "invoice_payload");
+    const xtrAmount = numberOrZero(order.xtr_amount);
     let devPaidResult: DevPaidRpcResult | null = null;
+    let invoiceResult: TelegramStarsInvoiceResult | null = null;
 
     if (isDevGachaPaymentModeEnabled(process.env.DEV_GACHA_PAYMENT_MODE)) {
       devPaidResult = await callDevPaidOrder(
@@ -79,9 +91,23 @@ export default withApiHandler(
         session.userId,
         ctx.requestId,
       );
+    } else {
+      invoiceResult = await createTelegramStarsInvoice({
+        starOrderId,
+        drawOrderId: orderId,
+        userId: session.userId,
+        invoicePayload,
+        xtrAmount,
+        requestId: ctx.requestId,
+      });
     }
 
-    return buildCreateOpenOrderResponse(order, input, devPaidResult);
+    return buildCreateOpenOrderResponse(
+      order,
+      input,
+      devPaidResult,
+      invoiceResult,
+    );
   },
   {
     methods: ["POST"],
@@ -131,6 +157,7 @@ export function buildCreateOpenOrderResponse(
   order: CreateOrderRpcResult,
   input: CreateBoxOpenOrderRequest,
   devPaidResult: DevPaidRpcResult | null,
+  invoiceResult: TelegramStarsInvoiceResult | null = null,
 ): CreateOpenOrderResponse {
   const orderStatus =
     stringOrNull(devPaidResult?.status) ??
@@ -138,6 +165,7 @@ export function buildCreateOpenOrderResponse(
     "invoice_created";
   const paymentStatus =
     normalizePaymentOrderStatus(devPaidResult?.payment_status) ??
+    normalizePaymentOrderStatus(invoiceResult?.paymentOrderStatus) ??
     normalizePaymentOrderStatus(order.payment_status) ??
     inferPaymentOrderStatusFromDrawOrderStatus(orderStatus) ??
     "created";
@@ -150,6 +178,10 @@ export function buildCreateOpenOrderResponse(
     draw_count: input.quantity,
     order_status: orderStatus,
     payment_status: paymentStatus,
+    payment_order_status: paymentStatus,
+    invoice_link: invoiceResult?.invoiceLink ?? null,
+    invoice_open_mode: invoiceResult?.openMode ?? null,
+    expires_at: invoiceResult?.expiresAt ?? null,
     dev_payment_processed: devPaidResult !== null,
     idempotent: Boolean(order.idempotent) || Boolean(devPaidResult?.idempotent),
     result_ready: isCompletedOrderStatus(orderStatus),

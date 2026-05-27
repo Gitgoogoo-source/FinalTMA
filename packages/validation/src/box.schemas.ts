@@ -165,6 +165,13 @@ export const BoxPaymentCurrencySchema = z.literal("XTR");
 
 export const BoxCurrencyCodeSchema = z.enum(["KCOIN", "FGEMS", "XTR"]);
 
+export const BoxInvoiceOpenModeSchema = z.enum([
+  "telegram_link",
+  "web_app_open_invoice",
+  "bot_api",
+  "unknown",
+]);
+
 export const BoxDrawOrderStatusSchema = z.enum([
   "pending_payment",
   "invoice_created",
@@ -441,8 +448,10 @@ export const CreateBoxOpenOrderRequestSchema = z.discriminatedUnion(
 export const CreateBoxOpenOrderResponseSchema = z
   .object({
     orderId: BoxUuidSchema,
+    starOrderId: BoxUuidSchema.nullable(),
     orderStatus: BoxDrawOrderStatusSchema,
     paymentStatus: BoxPaymentOrderStatusSchema,
+    paymentOrderStatus: BoxPaymentOrderStatusSchema,
     boxId: BoxIdSchema,
     openType: BoxOpenTypeSchema,
     quantity: z.union([z.literal(1), z.literal(10)]),
@@ -461,6 +470,7 @@ export const CreateBoxOpenOrderResponseSchema = z
      * 如果前端通过 Bot API 其它方式拉起，可以为空。
      */
     invoiceLink: BoxOptionalUrlSchema,
+    invoiceOpenMode: BoxInvoiceOpenModeSchema,
 
     expiresAt: BoxIsoDateTimeSchema,
 
@@ -847,6 +857,7 @@ export type BoxOpenType = z.infer<typeof BoxOpenTypeSchema>;
 export type BoxPaymentProvider = z.infer<typeof BoxPaymentProviderSchema>;
 export type BoxPaymentCurrency = z.infer<typeof BoxPaymentCurrencySchema>;
 export type BoxCurrencyCode = z.infer<typeof BoxCurrencyCodeSchema>;
+export type BoxInvoiceOpenMode = z.infer<typeof BoxInvoiceOpenModeSchema>;
 export type BoxDrawOrderStatus = z.infer<typeof BoxDrawOrderStatusSchema>;
 export type BoxRewardSource = z.infer<typeof BoxRewardSourceSchema>;
 export type BoxClientContext = z.infer<typeof BoxClientContextSchema>;

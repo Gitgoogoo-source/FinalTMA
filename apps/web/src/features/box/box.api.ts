@@ -316,6 +316,11 @@ function normalizeCreateOpenOrderResponse(
       readString(payload.starOrderId) ?? readString(payload.star_order_id),
     invoicePayload:
       readString(payload.invoicePayload) ?? readString(payload.invoice_payload),
+    invoiceLink:
+      readString(payload.invoiceLink) ?? readString(payload.invoice_link),
+    invoiceOpenMode:
+      readString(payload.invoiceOpenMode) ??
+      readString(payload.invoice_open_mode),
     xtrAmount:
       readNumber(payload.xtrAmount) ?? readNumber(payload.xtr_amount) ?? 0,
     drawCount:
@@ -329,6 +334,13 @@ function normalizeCreateOpenOrderResponse(
       readString(payload.paymentStatus) ??
       readString(payload.payment_status) ??
       "pending_payment",
+    paymentOrderStatus:
+      readString(payload.paymentOrderStatus) ??
+      readString(payload.payment_order_status) ??
+      readString(payload.paymentStatus) ??
+      readString(payload.payment_status) ??
+      "pending_payment",
+    expiresAt: readString(payload.expiresAt) ?? readString(payload.expires_at),
     devPaymentProcessed:
       readBoolean(payload.devPaymentProcessed) ??
       readBoolean(payload.dev_payment_processed) ??

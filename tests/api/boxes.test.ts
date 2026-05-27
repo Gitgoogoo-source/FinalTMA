@@ -16,10 +16,12 @@ import { invokeApiHandler } from "./_utils";
 const {
   assertStarsPaymentCreateAllowedMock,
   callRpcRawMock,
+  createTelegramStarsInvoiceMock,
   requireSessionMock,
 } = vi.hoisted(() => ({
   assertStarsPaymentCreateAllowedMock: vi.fn(),
   callRpcRawMock: vi.fn(),
+  createTelegramStarsInvoiceMock: vi.fn(),
   requireSessionMock: vi.fn(),
 }));
 
@@ -44,11 +46,32 @@ vi.mock("../../packages/server/src/payments/paymentGuards.js", () => ({
   assertStarsPaymentCreateAllowed: assertStarsPaymentCreateAllowedMock,
 }));
 
+vi.mock("../../packages/server/src/payments/telegramStars.js", () => ({
+  createTelegramStarsInvoice: createTelegramStarsInvoiceMock,
+}));
+
 const BOX_ID = "11111111-1111-4111-8111-111111111111";
 const ORDER_ID = "22222222-2222-4222-8222-222222222222";
 const STAR_ORDER_ID = "33333333-3333-4333-8333-333333333333";
 const IDEMPOTENCY_KEY = "open:test-idempotency-001";
 const USER_ID = "66666666-6666-4666-8666-666666666666";
+const INVOICE_LINK = "https://t.me/invoice/test-open-order";
+const EXPIRES_AT = "2026-05-28T00:15:00.000Z";
+
+function createInvoiceResult(overrides: Record<string, unknown> = {}) {
+  return {
+    starOrderId: STAR_ORDER_ID,
+    payload: `gacha:${ORDER_ID}`,
+    invoiceLink: INVOICE_LINK,
+    openMode: "web_app_open_invoice",
+    botApiMethod: "createInvoiceLink",
+    expiresAt: EXPIRES_AT,
+    invoiceStatus: "created",
+    paymentOrderStatus: "invoice_created",
+    reused: false,
+    ...overrides,
+  };
+}
 
 describe("boxes API helpers", () => {
   beforeEach(() => {
@@ -57,6 +80,8 @@ describe("boxes API helpers", () => {
     assertStarsPaymentCreateAllowedMock.mockReset();
     assertStarsPaymentCreateAllowedMock.mockResolvedValue(undefined);
     callRpcRawMock.mockReset();
+    createTelegramStarsInvoiceMock.mockReset();
+    createTelegramStarsInvoiceMock.mockResolvedValue(createInvoiceResult());
     requireSessionMock.mockReset();
     requireSessionMock.mockResolvedValue({
       sessionId: "session-boxes-test",
@@ -140,6 +165,10 @@ describe("boxes API helpers", () => {
       draw_count: 10,
       order_status: "completed",
       payment_status: "fulfilled",
+      payment_order_status: "fulfilled",
+      invoice_link: null,
+      invoice_open_mode: null,
+      expires_at: null,
       dev_payment_processed: true,
       result_ready: true,
     });
@@ -305,7 +334,11 @@ describe("boxes API helpers", () => {
         order_id: ORDER_ID,
         draw_count: 1,
         xtr_amount: 10,
-        payment_status: "created",
+        payment_status: "invoice_created",
+        payment_order_status: "invoice_created",
+        invoice_link: INVOICE_LINK,
+        invoice_open_mode: "web_app_open_invoice",
+        expires_at: EXPIRES_AT,
         result_ready: false,
       },
     });
@@ -318,6 +351,15 @@ describe("boxes API helpers", () => {
         p_idempotency_key: IDEMPOTENCY_KEY,
       }),
       expect.any(Object),
+    );
+    expect(createTelegramStarsInvoiceMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        starOrderId: STAR_ORDER_ID,
+        drawOrderId: ORDER_ID,
+        userId: USER_ID,
+        invoicePayload: `gacha:${ORDER_ID}`,
+        xtrAmount: 10,
+      }),
     );
   });
 
@@ -372,6 +414,7 @@ describe("boxes API helpers", () => {
         order_id: ORDER_ID,
         order_status: "completed",
         payment_status: "fulfilled",
+        invoice_link: null,
         dev_payment_processed: true,
         result_ready: true,
       },
@@ -396,6 +439,7 @@ describe("boxes API helpers", () => {
       }),
       expect.any(Object),
     );
+    expect(createTelegramStarsInvoiceMock).not.toHaveBeenCalled();
   });
 
   it("/api/boxes/create-open-order accepts X-Idempotency-Key when the body omits it", async () => {
@@ -437,6 +481,7 @@ describe("boxes API helpers", () => {
       }),
       expect.any(Object),
     );
+    expect(createTelegramStarsInvoiceMock).toHaveBeenCalledTimes(1);
   });
 
   it("/api/boxes/create-open-order maps RPC idempotency conflicts", async () => {
@@ -595,6 +640,7 @@ describe("boxes API helpers", () => {
       },
     });
     expect(callRpcRawMock).not.toHaveBeenCalled();
+    expect(createTelegramStarsInvoiceMock).not.toHaveBeenCalled();
   });
 
   it("/api/boxes/create-open-order rejects when Stars payment is disabled", async () => {
@@ -634,6 +680,7 @@ describe("boxes API helpers", () => {
       },
     });
     expect(callRpcRawMock).not.toHaveBeenCalled();
+    expect(createTelegramStarsInvoiceMock).not.toHaveBeenCalled();
   });
 
   it("/api/boxes/create-open-order creates a ten-draw order", async () => {
@@ -674,6 +721,8 @@ describe("boxes API helpers", () => {
         order_id: ORDER_ID,
         draw_count: 10,
         xtr_amount: 90,
+        invoice_link: INVOICE_LINK,
+        payment_order_status: "invoice_created",
       },
     });
     expect(callRpcRawMock).toHaveBeenCalledWith(
@@ -683,6 +732,63 @@ describe("boxes API helpers", () => {
       }),
       expect.any(Object),
     );
+    expect(createTelegramStarsInvoiceMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        starOrderId: STAR_ORDER_ID,
+        drawOrderId: ORDER_ID,
+        userId: USER_ID,
+        invoicePayload: `gacha:${ORDER_ID}`,
+        xtrAmount: 90,
+      }),
+    );
+  });
+
+  it("/api/boxes/create-open-order does not dev-fulfill when invoice creation fails", async () => {
+    createTelegramStarsInvoiceMock.mockRejectedValueOnce({
+      statusCode: 502,
+      code: "TELEGRAM_INVOICE_CREATE_FAILED",
+      message: "Telegram Stars invoice 创建失败，请稍后重试。",
+      expose: true,
+    });
+    callRpcRawMock.mockResolvedValueOnce({
+      draw_order_id: ORDER_ID,
+      star_order_id: STAR_ORDER_ID,
+      invoice_payload: `gacha:${ORDER_ID}`,
+      xtr_amount: 10,
+      quantity: 1,
+      discount_bps: 0,
+      idempotent: false,
+    });
+
+    const { default: createOrderHandler } =
+      await import("../../api/boxes/create-open-order");
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      createOrderHandler,
+      {
+        method: "POST",
+        url: "/api/boxes/create-open-order",
+        headers: {
+          cookie: "tma_game_session=test-session-token-000000000000",
+          "content-type": "application/json",
+          "x-forwarded-for": "127.0.0.34",
+        },
+        body: {
+          box_id: BOX_ID,
+          draw_count: 1,
+          idempotency_key: IDEMPOTENCY_KEY,
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(502);
+    expect(result.body).toMatchObject({
+      ok: false,
+      error: {
+        code: "TELEGRAM_INVOICE_CREATE_FAILED",
+      },
+    });
+    expect(callRpcRawMock).toHaveBeenCalledTimes(1);
+    expect(createTelegramStarsInvoiceMock).toHaveBeenCalledTimes(1);
   });
 
   it("/api/boxes/result returns completed draw results", async () => {
