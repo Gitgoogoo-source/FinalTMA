@@ -225,6 +225,131 @@ describe("telegram webhook API", () => {
     expect(processTelegramPreCheckoutUpdateMock).not.toHaveBeenCalled();
   });
 
+  it("returns 200 for duplicate successful_payment charge webhooks without recording another payment", async () => {
+    processTelegramSuccessfulPaymentUpdateMock.mockResolvedValueOnce({
+      eventType: "successful_payment",
+      paymentRecorded: false,
+      idempotent: true,
+      duplicateUpdate: false,
+      duplicateCharge: true,
+      eventId: "55555555-5555-4555-8555-555555555556",
+      starOrderId: "33333333-3333-4333-8333-333333333333",
+      starPaymentId: "77777777-7777-4777-8777-777777777777",
+      drawOrderId: "22222222-2222-4222-8222-222222222222",
+      invoicePayload:
+        SUCCESSFUL_PAYMENT_UPDATE.message.successful_payment.invoice_payload,
+      telegramPaymentChargeId:
+        SUCCESSFUL_PAYMENT_UPDATE.message.successful_payment
+          .telegram_payment_charge_id,
+      reasonCode: null,
+      errorMessage: null,
+      paymentOrderStatus: "paid",
+      processStatus: "ignored",
+      paidAt: "2026-05-28T05:06:20.000Z",
+    });
+    const { default: webhookHandler } =
+      await import("../../api/telegram/webhook");
+    const result = await invokeApiHandler<ApiSuccessResponse>(webhookHandler, {
+      method: "POST",
+      url: "/api/telegram/webhook",
+      headers: {
+        "content-type": "application/json",
+        "x-telegram-bot-api-secret-token": WEBHOOK_SECRET,
+      },
+      body: SUCCESSFUL_PAYMENT_UPDATE,
+    });
+
+    expect(result.statusCode).toBe(200);
+    expect(result.body).toMatchObject({
+      ok: true,
+      data: {
+        handled: true,
+        event_type: "successful_payment",
+        payment_recorded: false,
+        idempotent: true,
+        duplicate_update: false,
+        duplicate_charge: true,
+        star_payment_id: "77777777-7777-4777-8777-777777777777",
+        payment_order_status: "paid",
+        process_status: "ignored",
+      },
+    });
+    expect(processTelegramSuccessfulPaymentUpdateMock).toHaveBeenCalledTimes(1);
+    expect(processTelegramPreCheckoutUpdateMock).not.toHaveBeenCalled();
+  });
+
+  it("returns 200 with a failed process status for successful_payment amount mismatch", async () => {
+    processTelegramSuccessfulPaymentUpdateMock.mockResolvedValueOnce({
+      eventType: "successful_payment",
+      paymentRecorded: false,
+      idempotent: false,
+      duplicateUpdate: false,
+      duplicateCharge: false,
+      eventId: "55555555-5555-4555-8555-555555555557",
+      starOrderId: "33333333-3333-4333-8333-333333333333",
+      starPaymentId: null,
+      drawOrderId: "22222222-2222-4222-8222-222222222222",
+      invoicePayload:
+        SUCCESSFUL_PAYMENT_UPDATE.message.successful_payment.invoice_payload,
+      telegramPaymentChargeId:
+        SUCCESSFUL_PAYMENT_UPDATE.message.successful_payment
+          .telegram_payment_charge_id,
+      reasonCode: "AMOUNT_MISMATCH",
+      errorMessage: "Stars 支付金额不一致。",
+      paymentOrderStatus: "failed",
+      processStatus: "failed",
+      paidAt: null,
+    });
+    const { default: webhookHandler } =
+      await import("../../api/telegram/webhook");
+    const result = await invokeApiHandler<ApiSuccessResponse>(webhookHandler, {
+      method: "POST",
+      url: "/api/telegram/webhook",
+      headers: {
+        "content-type": "application/json",
+        "x-telegram-bot-api-secret-token": WEBHOOK_SECRET,
+      },
+      body: {
+        ...SUCCESSFUL_PAYMENT_UPDATE,
+        message: {
+          ...SUCCESSFUL_PAYMENT_UPDATE.message,
+          successful_payment: {
+            ...SUCCESSFUL_PAYMENT_UPDATE.message.successful_payment,
+            total_amount:
+              SUCCESSFUL_PAYMENT_UPDATE.message.successful_payment
+                .total_amount + 1,
+          },
+        },
+      },
+    });
+
+    expect(result.statusCode).toBe(200);
+    expect(result.body).toMatchObject({
+      ok: true,
+      data: {
+        handled: true,
+        event_type: "successful_payment",
+        payment_recorded: false,
+        duplicate_charge: false,
+        reason_code: "AMOUNT_MISMATCH",
+        payment_order_status: "failed",
+        process_status: "failed",
+      },
+    });
+    expect(processTelegramSuccessfulPaymentUpdateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        update: expect.objectContaining({
+          message: expect.objectContaining({
+            successful_payment: expect.objectContaining({
+              total_amount: 91,
+            }),
+          }),
+        }),
+      }),
+    );
+    expect(processTelegramPreCheckoutUpdateMock).not.toHaveBeenCalled();
+  });
+
   it("ignores unsupported update types without calling pre_checkout processing", async () => {
     const { default: webhookHandler } =
       await import("../../api/telegram/webhook");

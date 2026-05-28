@@ -398,15 +398,45 @@ set status = 'fulfilled',
 where id = ((select payload from _cases where key = 'valid_order') ->> 'star_order_id')::uuid;
 
 insert into _cases (key, payload)
-select 'fulfilled_duplicate_charge_result', api.payment_record_successful_payment(
+select 'fulfilled_new_charge_result', api.payment_record_successful_payment(
   96060006,
+  payload ->> 'invoice_payload',
+  'XTR',
+  (payload ->> 'total_amount')::integer,
+  'tg-charge-success-fulfilled-new',
+  'provider-charge-success-fulfilled-new',
+  (payload ->> 'telegram_user_id')::bigint,
+  jsonb_build_object('update_id', 96060006),
+  'headers-hash-fulfilled-new',
+  'req_fulfilled_new',
+  true
+)
+from _cases
+where key = 'valid_order';
+
+select is(((select payload from _cases where key = 'fulfilled_new_charge_result') ->> 'reason_code'), 'ORDER_ALREADY_FULFILLED', 'fulfilled order with new charge is rejected');
+select is((select process_status from payments.telegram_webhook_events where update_id = 96060006), 'failed', 'fulfilled order new charge event is failed');
+select is((select count(*)::integer from payments.star_payments where telegram_payment_charge_id = 'tg-charge-success-fulfilled-new'), 0, 'fulfilled order new charge does not create another payment');
+select is(
+  (
+    select status
+    from payments.star_orders
+    where id = ((select payload from _cases where key = 'valid_order') ->> 'star_order_id')::uuid
+  ),
+  'fulfilled',
+  'fulfilled order remains fulfilled after rejected new charge'
+);
+
+insert into _cases (key, payload)
+select 'fulfilled_duplicate_charge_result', api.payment_record_successful_payment(
+  96060007,
   payload ->> 'invoice_payload',
   'XTR',
   (payload ->> 'total_amount')::integer,
   'tg-charge-success-001',
   'provider-charge-success-001',
   (payload ->> 'telegram_user_id')::bigint,
-  jsonb_build_object('update_id', 96060006),
+  jsonb_build_object('update_id', 96060007),
   'headers-hash-fulfilled-duplicate',
   'req_fulfilled_duplicate',
   true
@@ -415,7 +445,7 @@ from _cases
 where key = 'valid_order';
 
 select ok(((select payload from _cases where key = 'fulfilled_duplicate_charge_result') ->> 'duplicate_charge')::boolean, 'fulfilled order duplicate charge remains idempotent');
-select is((select process_status from payments.telegram_webhook_events where update_id = 96060006), 'ignored', 'fulfilled duplicate charge event is ignored');
+select is((select process_status from payments.telegram_webhook_events where update_id = 96060007), 'ignored', 'fulfilled duplicate charge event is ignored');
 select is((select count(*)::integer from payments.star_payments where telegram_payment_charge_id = 'tg-charge-success-001'), 1, 'fulfilled duplicate charge does not create another payment');
 
 select * from finish();
