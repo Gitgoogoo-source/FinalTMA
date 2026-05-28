@@ -54,11 +54,12 @@ select ok(
         'retry_count',
         'next_retry_at',
         'request_headers_hash',
-        'webhook_secret_verified'
+        'webhook_secret_verified',
+        'status_context'
       )
-    having count(*) = 5
+    having count(*) = 6
   ),
-  'telegram_webhook_events has Phase 5 audit and retry columns'
+  'telegram_webhook_events has Phase 5 audit, retry and status context columns'
 );
 
 select ok(
@@ -534,6 +535,12 @@ select is(
   (select webhook_secret_verified from payments.telegram_webhook_events where id = '00000000-0000-5000-8000-000000000336'),
   true,
   'telegram_webhook_events stores webhook_secret_verified'
+);
+
+select is(
+  (select status_context from payments.telegram_webhook_events where id = '00000000-0000-5000-8000-000000000336'),
+  '{}'::jsonb,
+  'telegram_webhook_events defaults status_context to empty object'
 );
 
 select ok(

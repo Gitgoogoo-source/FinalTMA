@@ -128,6 +128,21 @@ export type PaymentRecordSuccessfulPaymentResult = {
   paidAt: string | null;
 };
 
+export type PaymentFulfillmentResult = {
+  fulfilled: boolean;
+  idempotent: boolean;
+  status: string | null;
+  starOrderId: string | null;
+  drawOrderId: string | null;
+  drawCount: number | null;
+  quantity: number | null;
+  resultCount: number | null;
+  reasonCode: string | null;
+  errorMessage: string | null;
+  paymentOrderStatus: string | null;
+  retryable: boolean;
+};
+
 export type ProcessTelegramSuccessfulPaymentInput = {
   update: unknown;
   requestId: string;
@@ -139,6 +154,8 @@ export type ProcessTelegramSuccessfulPaymentInput = {
 export type ProcessTelegramSuccessfulPaymentResult =
   PaymentRecordSuccessfulPaymentResult & {
     eventType: "successful_payment";
+    fulfillmentAttempted: boolean;
+    fulfillment: PaymentFulfillmentResult | null;
   };
 
 type FetchImpl = (input: string | URL, init?: RequestInit) => Promise<Response>;
@@ -581,10 +598,46 @@ export async function processTelegramSuccessfulPaymentUpdate(
     webhookSecretVerified: input.webhookSecretVerified ?? true,
     client: input.client,
   });
+  const shouldFulfill = shouldFulfillRecordedPayment(recordResult);
+
+  if (!shouldFulfill) {
+    return {
+      ...recordResult,
+      eventType: "successful_payment",
+      fulfillmentAttempted: false,
+      fulfillment: null,
+    };
+  }
+
+  let fulfillment: PaymentFulfillmentResult;
+
+  try {
+    fulfillment = await fulfillTelegramSuccessfulPayment({
+      recordResult,
+      successfulPayment: parsed.successfulPayment,
+      rawUpdate: input.update,
+      requestId: input.requestId,
+      client: input.client,
+    });
+  } catch (error) {
+    await markWebhookEventFulfillmentFailed({
+      eventId: recordResult.eventId,
+      requestId: input.requestId,
+      error,
+      client: input.client,
+    });
+
+    throw error;
+  }
 
   return {
     ...recordResult,
+    paymentOrderStatus:
+      fulfillment.paymentOrderStatus ?? recordResult.paymentOrderStatus,
+    processStatus: fulfillment.fulfilled ? "processed" : "failed",
     eventType: "successful_payment",
+    fulfillmentAttempted: true,
+    fulfillment,
   };
 }
 
@@ -1139,6 +1192,62 @@ async function recordTelegramSuccessfulPayment(input: {
   return normalizePaymentRecordSuccessfulPaymentResult(rawResult);
 }
 
+function shouldFulfillRecordedPayment(
+  recordResult: PaymentRecordSuccessfulPaymentResult,
+): boolean {
+  return (
+    recordResult.reasonCode === null &&
+    recordResult.starOrderId !== null &&
+    recordResult.telegramPaymentChargeId !== null &&
+    (recordResult.paymentRecorded ||
+      recordResult.duplicateUpdate ||
+      recordResult.duplicateCharge)
+  );
+}
+
+async function fulfillTelegramSuccessfulPayment(input: {
+  recordResult: PaymentRecordSuccessfulPaymentResult;
+  successfulPayment: TelegramSuccessfulPayment;
+  rawUpdate: unknown;
+  requestId: string;
+  client?: SupabaseAdminClient | undefined;
+}): Promise<PaymentFulfillmentResult> {
+  if (!input.recordResult.starOrderId) {
+    throw new TelegramStarsWebhookError(
+      500,
+      "FULFILLMENT_STAR_ORDER_ID_MISSING",
+      "支付发货缺少 Stars 订单 ID。",
+      { expose: false },
+    );
+  }
+
+  const rpcOptions = {
+    schema: "api" as never,
+    context: {
+      requestId: input.requestId,
+      starOrderId: input.recordResult.starOrderId,
+      telegramPaymentChargeId: input.successfulPayment.telegramPaymentChargeId,
+    },
+    ...(input.client ? { client: input.client } : {}),
+  };
+  const rawResult = await callRpcRaw<Record<string, unknown>>(
+    "gacha_process_paid_order",
+    {
+      p_star_order_id: input.recordResult.starOrderId,
+      p_telegram_payment_charge_id:
+        input.successfulPayment.telegramPaymentChargeId,
+      p_provider_payment_charge_id:
+        input.successfulPayment.providerPaymentChargeId,
+      p_raw_update: isJsonCompatibleRecord(input.rawUpdate)
+        ? input.rawUpdate
+        : {},
+    },
+    rpcOptions,
+  );
+
+  return normalizePaymentFulfillmentResult(rawResult);
+}
+
 async function answerPreCheckoutQuery(input: {
   preCheckoutQueryId: string;
   ok: boolean;
@@ -1188,6 +1297,40 @@ async function markWebhookEventAnswerFailed(input: {
   if (response.error) {
     console.error(
       `[${input.requestId}] TELEGRAM_PRE_CHECKOUT_EVENT_MARK_FAILED: ${response.error.message ?? "unknown error"}`,
+      {
+        eventId: input.eventId,
+      },
+    );
+  }
+}
+
+async function markWebhookEventFulfillmentFailed(input: {
+  eventId: string | null;
+  requestId: string;
+  error: unknown;
+  client?: SupabaseAdminClient | undefined;
+}): Promise<void> {
+  if (!input.eventId) {
+    return;
+  }
+
+  const db = getSchemaClient(input.client);
+  const errorMessage = truncateErrorMessage(
+    getWebhookFulfillmentErrorMessage(input.error),
+  );
+  const response = await db
+    .schema("payments")
+    .from("telegram_webhook_events")
+    .update({
+      process_status: "failed",
+      error_message: errorMessage,
+      processed_at: new Date().toISOString(),
+    })
+    .eq("id", input.eventId);
+
+  if (response.error) {
+    console.error(
+      `[${input.requestId}] TELEGRAM_FULFILLMENT_EVENT_MARK_FAILED: ${response.error.message ?? "unknown error"}`,
       {
         eventId: input.eventId,
       },
@@ -1523,6 +1666,30 @@ function normalizePaymentRecordSuccessfulPaymentResult(
   };
 }
 
+function normalizePaymentFulfillmentResult(
+  value: Record<string, unknown>,
+): PaymentFulfillmentResult {
+  const fulfilled = requiredBoolean(
+    value.fulfilled,
+    "gacha_process_paid_order.fulfilled",
+  );
+
+  return {
+    fulfilled,
+    idempotent: booleanOrFalse(value.idempotent),
+    status: optionalString(value.status),
+    starOrderId: optionalString(value.star_order_id),
+    drawOrderId: optionalString(value.draw_order_id),
+    drawCount: optionalNumber(value.draw_count),
+    quantity: optionalNumber(value.quantity),
+    resultCount: optionalNumber(value.result_count),
+    reasonCode: optionalString(value.reason_code),
+    errorMessage: optionalString(value.error_message),
+    paymentOrderStatus: optionalString(value.payment_order_status),
+    retryable: value.retryable !== false,
+  };
+}
+
 function normalizeStarOrderRow(value: Record<string, unknown>): StarOrderRow {
   return {
     id: requiredString(value.id, "star_orders.id"),
@@ -1678,6 +1845,14 @@ function getWebhookPublicErrorMessage(error: unknown): string {
   return "Telegram pre_checkout 确认失败。";
 }
 
+function getWebhookFulfillmentErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message.trim()) {
+    return error.message.trim();
+  }
+
+  return "支付成功后发货失败。";
+}
+
 function truncateErrorMessage(value: string): string {
   return Array.from(value.trim()).slice(0, 500).join("");
 }
@@ -1755,6 +1930,17 @@ function optionalString(value: unknown): string | null {
   const normalized = value.trim();
 
   return normalized.length > 0 ? normalized : null;
+}
+
+function optionalNumber(value: unknown): number | null {
+  const parsed =
+    typeof value === "number"
+      ? value
+      : typeof value === "string" && value.trim() !== ""
+        ? Number(value)
+        : Number.NaN;
+
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 function requiredNumber(value: unknown, field: string): number {

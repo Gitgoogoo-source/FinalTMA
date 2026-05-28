@@ -9,6 +9,7 @@ import {
   parseCreateInvoiceLinkResponse,
   parseTelegramSuccessfulPaymentUpdate,
   parseTelegramPreCheckoutUpdate,
+  processTelegramSuccessfulPaymentUpdate,
   TelegramStarsInvoiceError,
   TelegramStarsWebhookError,
 } from "../../packages/server/src/payments/telegramStars";
@@ -154,6 +155,118 @@ describe("telegramStars payment helpers", () => {
         invoicePayload: PAYLOAD,
         telegramPaymentChargeId: "tg-charge-test-001",
         providerPaymentChargeId: "provider-charge-test-001",
+      },
+    });
+  });
+
+  it("records then fulfills successful_payment updates through the paid-order RPC", async () => {
+    const rpcCalls: Array<{
+      schema: string;
+      name: string;
+      args: Record<string, unknown>;
+    }> = [];
+    const client = {
+      schema(schema: string) {
+        return {
+          rpc(name: string, args: Record<string, unknown>) {
+            rpcCalls.push({
+              schema,
+              name,
+              args,
+            });
+
+            if (name === "payment_record_successful_payment") {
+              return Promise.resolve({
+                data: {
+                  payment_recorded: true,
+                  idempotent: false,
+                  duplicate_update: false,
+                  duplicate_charge: false,
+                  event_id: "55555555-5555-4555-8555-555555555555",
+                  star_order_id: STAR_ORDER_ID,
+                  star_payment_id: "77777777-7777-4777-8777-777777777777",
+                  draw_order_id: ORDER_ID,
+                  invoice_payload: PAYLOAD,
+                  telegram_payment_charge_id: "tg-charge-test-001",
+                  reason_code: null,
+                  error_message: null,
+                  payment_order_status: "paid",
+                  process_status: "processed",
+                  paid_at: "2026-05-28T05:06:20.000Z",
+                },
+                error: null,
+                count: null,
+                status: 200,
+                statusText: "OK",
+              });
+            }
+
+            return Promise.resolve({
+              data: {
+                fulfilled: true,
+                idempotent: false,
+                status: "completed",
+                star_order_id: STAR_ORDER_ID,
+                draw_order_id: ORDER_ID,
+                draw_count: 1,
+                quantity: 1,
+                result_count: 1,
+                reason_code: null,
+                error_message: null,
+                payment_order_status: "fulfilled",
+                retryable: false,
+              },
+              error: null,
+              count: null,
+              status: 200,
+              statusText: "OK",
+            });
+          },
+        };
+      },
+    } as unknown as SupabaseAdminClient;
+
+    const result = await processTelegramSuccessfulPaymentUpdate({
+      update: {
+        update_id: 96060001,
+        message: {
+          from: {
+            id: 7050001,
+          },
+          successful_payment: {
+            currency: "XTR",
+            total_amount: 90,
+            invoice_payload: PAYLOAD,
+            telegram_payment_charge_id: "tg-charge-test-001",
+            provider_payment_charge_id: "provider-charge-test-001",
+          },
+        },
+      },
+      requestId: "req_test_successful_payment_fulfillment",
+      requestHeadersHash: "headers-hash",
+      webhookSecretVerified: true,
+      client,
+    });
+
+    expect(rpcCalls.map((call) => call.name)).toEqual([
+      "payment_record_successful_payment",
+      "gacha_process_paid_order",
+    ]);
+    expect(rpcCalls[1]?.args).toMatchObject({
+      p_star_order_id: STAR_ORDER_ID,
+      p_telegram_payment_charge_id: "tg-charge-test-001",
+      p_provider_payment_charge_id: "provider-charge-test-001",
+    });
+    expect(result).toMatchObject({
+      eventType: "successful_payment",
+      paymentRecorded: true,
+      paymentOrderStatus: "fulfilled",
+      processStatus: "processed",
+      fulfillmentAttempted: true,
+      fulfillment: {
+        fulfilled: true,
+        status: "completed",
+        paymentOrderStatus: "fulfilled",
       },
     });
   });

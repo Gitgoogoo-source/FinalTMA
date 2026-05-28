@@ -46,6 +46,11 @@ export default withApiHandler(
           reason_code: result.reasonCode,
           payment_order_status: result.paymentOrderStatus,
           process_status: result.processStatus,
+          fulfillment_attempted: result.fulfillmentAttempted,
+          fulfillment_status: result.fulfillment?.status ?? null,
+          fulfillment_idempotent: result.fulfillment?.idempotent ?? false,
+          fulfillment_reason_code: result.fulfillment?.reasonCode ?? null,
+          fulfillment_retryable: result.fulfillment?.retryable ?? null,
         };
       }
 

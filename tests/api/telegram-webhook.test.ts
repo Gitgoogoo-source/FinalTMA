@@ -118,9 +118,24 @@ describe("telegram webhook API", () => {
           .telegram_payment_charge_id,
       reasonCode: null,
       errorMessage: null,
-      paymentOrderStatus: "paid",
+      paymentOrderStatus: "fulfilled",
       processStatus: "processed",
       paidAt: "2026-05-28T05:06:20.000Z",
+      fulfillmentAttempted: true,
+      fulfillment: {
+        fulfilled: true,
+        idempotent: false,
+        status: "completed",
+        starOrderId: "33333333-3333-4333-8333-333333333333",
+        drawOrderId: "22222222-2222-4222-8222-222222222222",
+        drawCount: 1,
+        quantity: 1,
+        resultCount: 1,
+        reasonCode: null,
+        errorMessage: null,
+        paymentOrderStatus: "fulfilled",
+        retryable: false,
+      },
     });
   });
 
@@ -210,8 +225,13 @@ describe("telegram webhook API", () => {
         duplicate_charge: false,
         event_id: "55555555-5555-4555-8555-555555555555",
         star_payment_id: "77777777-7777-4777-8777-777777777777",
-        payment_order_status: "paid",
+        payment_order_status: "fulfilled",
         process_status: "processed",
+        fulfillment_attempted: true,
+        fulfillment_status: "completed",
+        fulfillment_idempotent: false,
+        fulfillment_reason_code: null,
+        fulfillment_retryable: false,
       },
     });
     expect(processTelegramSuccessfulPaymentUpdateMock).toHaveBeenCalledWith(
@@ -243,9 +263,24 @@ describe("telegram webhook API", () => {
           .telegram_payment_charge_id,
       reasonCode: null,
       errorMessage: null,
-      paymentOrderStatus: "paid",
-      processStatus: "ignored",
+      paymentOrderStatus: "fulfilled",
+      processStatus: "processed",
       paidAt: "2026-05-28T05:06:20.000Z",
+      fulfillmentAttempted: true,
+      fulfillment: {
+        fulfilled: true,
+        idempotent: true,
+        status: "completed",
+        starOrderId: "33333333-3333-4333-8333-333333333333",
+        drawOrderId: "22222222-2222-4222-8222-222222222222",
+        drawCount: 1,
+        quantity: 1,
+        resultCount: 1,
+        reasonCode: null,
+        errorMessage: null,
+        paymentOrderStatus: "fulfilled",
+        retryable: false,
+      },
     });
     const { default: webhookHandler } =
       await import("../../api/telegram/webhook");
@@ -270,8 +305,13 @@ describe("telegram webhook API", () => {
         duplicate_update: false,
         duplicate_charge: true,
         star_payment_id: "77777777-7777-4777-8777-777777777777",
-        payment_order_status: "paid",
-        process_status: "ignored",
+        payment_order_status: "fulfilled",
+        process_status: "processed",
+        fulfillment_attempted: true,
+        fulfillment_status: "completed",
+        fulfillment_idempotent: true,
+        fulfillment_reason_code: null,
+        fulfillment_retryable: false,
       },
     });
     expect(processTelegramSuccessfulPaymentUpdateMock).toHaveBeenCalledTimes(1);
@@ -299,6 +339,8 @@ describe("telegram webhook API", () => {
       paymentOrderStatus: "failed",
       processStatus: "failed",
       paidAt: null,
+      fulfillmentAttempted: false,
+      fulfillment: null,
     });
     const { default: webhookHandler } =
       await import("../../api/telegram/webhook");
@@ -334,6 +376,8 @@ describe("telegram webhook API", () => {
         reason_code: "AMOUNT_MISMATCH",
         payment_order_status: "failed",
         process_status: "failed",
+        fulfillment_attempted: false,
+        fulfillment_status: null,
       },
     });
     expect(processTelegramSuccessfulPaymentUpdateMock).toHaveBeenCalledWith(

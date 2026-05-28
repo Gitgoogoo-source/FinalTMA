@@ -302,12 +302,35 @@ insert into _ids (key, payload) select 'order', api.gacha_create_order((select i
 insert into _ids (key, id) select 'draw_order', ((select payload from _ids where key = 'order') ->> 'draw_order_id')::uuid;
 insert into _ids (key, id) select 'star_order', ((select payload from _ids where key = 'order') ->> 'star_order_id')::uuid;
 
-insert into _ids (key, payload) select 'process1', api.gacha_process_paid_order((select id from _ids where key = 'star_order'), 'tg-charge-idempotency-001', 'provider-charge-idempotency-001', '{"test":"payment_idempotency_first"}'::jsonb);
-insert into _ids (key, payload) select 'process2', api.gacha_process_paid_order((select id from _ids where key = 'star_order'), 'tg-charge-idempotency-001', 'provider-charge-idempotency-001', '{"test":"payment_idempotency_second"}'::jsonb);
+insert into payments.telegram_webhook_events (
+  update_id,
+  event_type,
+  user_id,
+  telegram_user_id,
+  invoice_payload,
+  payload,
+  process_status,
+  webhook_secret_verified
+) values (
+  97070001,
+  'successful_payment',
+  (select id from _ids where key = 'user'),
+  9500000001,
+  (select payload ->> 'invoice_payload' from _ids where key = 'order'),
+  jsonb_build_object('update_id', 97070001, 'test', 'payment_idempotency_first'),
+  'processed',
+  true
+);
+
+insert into _ids (key, payload) select 'process1', api.gacha_process_paid_order((select id from _ids where key = 'star_order'), 'tg-charge-idempotency-001', 'provider-charge-idempotency-001', jsonb_build_object('update_id', 97070001, 'test', 'payment_idempotency_first'));
+insert into _ids (key, payload) select 'process2', api.gacha_process_paid_order((select id from _ids where key = 'star_order'), 'tg-charge-idempotency-001', 'provider-charge-idempotency-001', jsonb_build_object('update_id', 97070001, 'test', 'payment_idempotency_second'));
 
 select ok(((select payload from _ids where key = 'process2') ->> 'idempotent')::boolean, 'second payment fulfillment call returns idempotent=true');
+select ok(((select payload from _ids where key = 'process1') ->> 'fulfilled')::boolean, 'first payment fulfillment returns fulfilled=true');
 select is(((select payload from _ids where key = 'process1') ->> 'status'), 'completed', 'first payment fulfillment completes the draw order');
+select is(((select payload from _ids where key = 'process1') ->> 'payment_order_status'), 'fulfilled', 'first payment fulfillment marks Stars order fulfilled');
 select is((select status from gacha.draw_orders where id = (select id from _ids where key = 'draw_order')), 'completed', 'draw order persists completed status after fulfillment');
+select is((select status from payments.star_orders where id = (select id from _ids where key = 'star_order')), 'fulfilled', 'Stars order persists fulfilled status after fulfillment');
 select is((select count(*)::int from payments.star_payments where telegram_payment_charge_id = 'tg-charge-idempotency-001'), 1, 'duplicate successful_payment charge id is not double-inserted');
 select is((select payment_provider from gacha.draw_orders where id = (select id from _ids where key = 'draw_order')), 'telegram_stars', 'formal successful_payment records telegram_stars payment_provider');
 select is((select payment_status from gacha.draw_orders where id = (select id from _ids where key = 'draw_order')), 'paid', 'formal successful_payment records paid payment_status');
@@ -315,6 +338,13 @@ select is((select telegram_payment_charge_id from gacha.draw_orders where id = (
 select is((select count(*)::int from gacha.draw_results where draw_order_id = (select id from _ids where key = 'draw_order')), 1, 'duplicate payment processing does not create duplicate draw results');
 select is((select count(*)::int from inventory.item_instances where source_type = 'gacha' and source_id = (select id from _ids where key = 'draw_order')), 1, 'duplicate payment processing does not create duplicate inventory items');
 select is(testutil.balance_of((select id from _ids where key = 'user'), 'KCOIN'), 100::numeric, 'duplicate payment processing does not double-credit open reward');
+select is((select process_status from payments.telegram_webhook_events where update_id = 97070001), 'processed', 'fulfilled webhook event remains processed');
+select is((select status_context #>> '{fulfillment,status}' from payments.telegram_webhook_events where update_id = 97070001), 'fulfilled', 'fulfilled webhook event records fulfillment status');
+select is(
+  (select status_context #>> '{fulfillment,draw_order_id}' from payments.telegram_webhook_events where update_id = 97070001),
+  (select id::text from _ids where key = 'draw_order'),
+  'fulfilled webhook event records draw order id'
+);
 select is(
   (
     select up.progress_count
@@ -347,20 +377,225 @@ select is(jsonb_array_length((select payload -> 'results' from _ids where key = 
 insert into _ids (key, payload) select 'result_by_payload', api.gacha_get_draw_result((select id from _ids where key = 'user'), null, (select payload ->> 'invoice_payload' from _ids where key = 'order'));
 select is(((select payload from _ids where key = 'result_by_payload') ->> 'status'), 'completed', 'draw result can be queried by invoice_payload');
 
+insert into payments.telegram_webhook_events (
+  update_id,
+  event_type,
+  user_id,
+  telegram_user_id,
+  invoice_payload,
+  payload,
+  process_status,
+  webhook_secret_verified
+) values (
+  97070004,
+  'successful_payment',
+  (select id from _ids where key = 'user'),
+  9500000001,
+  (select payload ->> 'invoice_payload' from _ids where key = 'order'),
+  jsonb_build_object('update_id', 97070004, 'test', 'payment_duplicate_fulfillment_attempt'),
+  'processed',
+  true
+);
+
+insert into _ids (key, payload)
+select 'duplicate_fulfilled_attempt', api.gacha_process_paid_order(
+  (select id from _ids where key = 'star_order'),
+  'tg-charge-idempotency-duplicate-001',
+  'provider-charge-idempotency-duplicate-001',
+  jsonb_build_object('update_id', 97070004, 'test', 'payment_duplicate_fulfillment_attempt')
+);
+
+select is(((select payload from _ids where key = 'duplicate_fulfilled_attempt') ->> 'fulfilled')::boolean, false, 'fulfilled order rejects another charge id');
+select is(((select payload from _ids where key = 'duplicate_fulfilled_attempt') ->> 'reason_code'), 'ORDER_ALREADY_FULFILLED', 'fulfilled order duplicate attempt returns fulfilled-order reason');
+select is((select count(*)::int from payments.star_payments where telegram_payment_charge_id = 'tg-charge-idempotency-duplicate-001'), 0, 'fulfilled order duplicate attempt does not insert another payment row');
+select is((select count(*)::int from gacha.draw_results where draw_order_id = (select id from _ids where key = 'draw_order')), 1, 'fulfilled order duplicate attempt does not create more draw results');
+select is(testutil.balance_of((select id from _ids where key = 'user'), 'KCOIN'), 100::numeric, 'fulfilled order duplicate attempt does not credit another open reward');
+select is(
+  (
+    select count(*)::int
+    from ops.risk_events
+    where source_id = (select id from _ids where key = 'star_order')
+      and event_type = 'gacha_fulfillment_duplicate_or_conflicting_charge'
+      and detail ->> 'reason_code' = 'ORDER_ALREADY_FULFILLED'
+  ),
+  1,
+  'fulfilled order duplicate attempt writes risk event'
+);
+select is((select process_status from payments.telegram_webhook_events where update_id = 97070004), 'failed', 'fulfilled order duplicate attempt marks webhook event failed');
+select is((select status_context #>> '{fulfillment,reason_code}' from payments.telegram_webhook_events where update_id = 97070004), 'ORDER_ALREADY_FULFILLED', 'fulfilled order duplicate attempt records fulfillment reason');
+
+insert into _ids (key, payload) select 'retry_order', api.gacha_create_order((select id from _ids where key = 'user'), (select id from _ids where key = 'box'), 1, 'gacha-payment-order-retry-001');
+insert into _ids (key, id) select 'retry_star_order', ((select payload from _ids where key = 'retry_order') ->> 'star_order_id')::uuid;
+insert into _ids (key, id) select 'retry_draw_order', ((select payload from _ids where key = 'retry_order') ->> 'draw_order_id')::uuid;
+
+insert into payments.telegram_webhook_events (
+  update_id,
+  event_type,
+  user_id,
+  telegram_user_id,
+  invoice_payload,
+  payload,
+  process_status,
+  webhook_secret_verified
+) values (
+  97070002,
+  'successful_payment',
+  (select id from _ids where key = 'user'),
+  9500000001,
+  (select payload ->> 'invoice_payload' from _ids where key = 'retry_order'),
+  jsonb_build_object('update_id', 97070002, 'test', 'payment_retry_failure'),
+  'processed',
+  true
+);
+
+update gacha.blind_boxes
+set remaining_stock = 0,
+    status = 'active',
+    updated_at = now()
+where id = (select id from _ids where key = 'box');
+
+insert into _ids (key, payload)
+select 'retry_failed', api.gacha_process_paid_order(
+  (select id from _ids where key = 'retry_star_order'),
+  'tg-charge-idempotency-retry-001',
+  'provider-charge-idempotency-retry-001',
+  jsonb_build_object('update_id', 97070002, 'test', 'payment_retry_failure')
+);
+
+select is(((select payload from _ids where key = 'retry_failed') ->> 'fulfilled')::boolean, false, 'stock failure returns fulfilled=false');
+select is(((select payload from _ids where key = 'retry_failed') ->> 'reason_code'), 'STOCK_INSUFFICIENT', 'stock failure returns retryable stock reason');
+select is((select status from payments.star_orders where id = (select id from _ids where key = 'retry_star_order')), 'failed', 'stock failure marks Stars order failed');
+select is((select status from gacha.draw_orders where id = (select id from _ids where key = 'retry_draw_order')), 'failed', 'stock failure marks draw order failed');
+select is((select count(*)::int from payments.star_payments where telegram_payment_charge_id = 'tg-charge-idempotency-retry-001'), 1, 'stock failure keeps successful payment row for retry');
+select is((select count(*)::int from gacha.draw_results where draw_order_id = (select id from _ids where key = 'retry_draw_order')), 0, 'stock failure does not create draw results');
+select is((select count(*)::int from ops.risk_events where source_id = (select id from _ids where key = 'retry_star_order') and event_type = 'gacha_fulfillment_failed'), 1, 'stock failure writes risk event');
+select is((select process_status from payments.telegram_webhook_events where update_id = 97070002), 'failed', 'stock failure marks webhook event failed');
+select is((select status_context #>> '{fulfillment,status}' from payments.telegram_webhook_events where update_id = 97070002), 'failed', 'stock failure records fulfillment status');
+select is((select status_context #>> '{fulfillment,reason_code}' from payments.telegram_webhook_events where update_id = 97070002), 'STOCK_INSUFFICIENT', 'stock failure records fulfillment reason');
+select is((select retry_count from payments.telegram_webhook_events where update_id = 97070002), 1, 'stock failure increments webhook retry count');
+select ok((select next_retry_at is not null from payments.telegram_webhook_events where update_id = 97070002), 'stock failure schedules webhook retry');
+
+update gacha.blind_boxes
+set remaining_stock = 10,
+    status = 'active',
+    updated_at = now()
+where id = (select id from _ids where key = 'box');
+
+insert into _ids (key, payload)
+select 'retry_success', api.gacha_process_paid_order(
+  (select id from _ids where key = 'retry_star_order'),
+  'tg-charge-idempotency-retry-001',
+  'provider-charge-idempotency-retry-001',
+  jsonb_build_object('update_id', 97070002, 'test', 'payment_retry_success')
+);
+
+select ok(((select payload from _ids where key = 'retry_success') ->> 'fulfilled')::boolean, 'retry after stock recovery fulfills paid order');
+select is((select status from payments.star_orders where id = (select id from _ids where key = 'retry_star_order')), 'fulfilled', 'retry after stock recovery marks Stars order fulfilled');
+select is((select count(*)::int from gacha.draw_results where draw_order_id = (select id from _ids where key = 'retry_draw_order')), 1, 'retry after stock recovery creates one draw result');
+select is(testutil.balance_of((select id from _ids where key = 'user'), 'KCOIN'), 200::numeric, 'retry after stock recovery credits open reward once');
+select is((select process_status from payments.telegram_webhook_events where update_id = 97070002), 'processed', 'retry success marks webhook event processed');
+select is((select status_context #>> '{fulfillment,status}' from payments.telegram_webhook_events where update_id = 97070002), 'fulfilled', 'retry success records fulfilled context');
+select ok((select next_retry_at is null from payments.telegram_webhook_events where update_id = 97070002), 'retry success clears webhook next retry time');
+
+insert into _ids (key, payload) select 'amount_mismatch_order', api.gacha_create_order((select id from _ids where key = 'user'), (select id from _ids where key = 'box'), 1, 'gacha-payment-order-amount-mismatch-001');
+insert into _ids (key, id) select 'amount_mismatch_star_order', ((select payload from _ids where key = 'amount_mismatch_order') ->> 'star_order_id')::uuid;
+insert into _ids (key, id) select 'amount_mismatch_draw_order', ((select payload from _ids where key = 'amount_mismatch_order') ->> 'draw_order_id')::uuid;
+
+update payments.star_orders
+set xtr_amount = xtr_amount + 1,
+    updated_at = now()
+where id = (select id from _ids where key = 'amount_mismatch_star_order');
+
+insert into payments.telegram_webhook_events (
+  update_id,
+  event_type,
+  user_id,
+  telegram_user_id,
+  invoice_payload,
+  payload,
+  process_status,
+  webhook_secret_verified
+) values (
+  97070005,
+  'successful_payment',
+  (select id from _ids where key = 'user'),
+  9500000001,
+  (select payload ->> 'invoice_payload' from _ids where key = 'amount_mismatch_order'),
+  jsonb_build_object('update_id', 97070005, 'test', 'payment_amount_mismatch'),
+  'processed',
+  true
+);
+
+insert into _ids (key, payload)
+select 'amount_mismatch_process', api.gacha_process_paid_order(
+  (select id from _ids where key = 'amount_mismatch_star_order'),
+  'tg-charge-idempotency-amount-mismatch-001',
+  'provider-charge-idempotency-amount-mismatch-001',
+  jsonb_build_object('update_id', 97070005, 'test', 'payment_amount_mismatch')
+);
+
+select is(((select payload from _ids where key = 'amount_mismatch_process') ->> 'fulfilled')::boolean, false, 'amount mismatch is not fulfilled');
+select is(((select payload from _ids where key = 'amount_mismatch_process') ->> 'reason_code'), 'AMOUNT_MISMATCH', 'amount mismatch returns amount reason');
+select is((select status from payments.star_orders where id = (select id from _ids where key = 'amount_mismatch_star_order')), 'failed', 'amount mismatch marks Stars order failed');
+select is((select status from gacha.draw_orders where id = (select id from _ids where key = 'amount_mismatch_draw_order')), 'failed', 'amount mismatch marks draw order failed');
+select is((select count(*)::int from payments.star_payments where telegram_payment_charge_id = 'tg-charge-idempotency-amount-mismatch-001'), 0, 'amount mismatch does not insert payment row during fulfillment');
+select is((select count(*)::int from gacha.draw_results where draw_order_id = (select id from _ids where key = 'amount_mismatch_draw_order')), 0, 'amount mismatch does not create draw results');
+select is(testutil.balance_of((select id from _ids where key = 'user'), 'KCOIN'), 200::numeric, 'amount mismatch does not credit another open reward');
+select is(
+  (
+    select count(*)::int
+    from ops.risk_events
+    where source_id = (select id from _ids where key = 'amount_mismatch_star_order')
+      and event_type = 'gacha_fulfillment_validation_failed'
+      and detail ->> 'reason_code' = 'AMOUNT_MISMATCH'
+  ),
+  1,
+  'amount mismatch writes risk event'
+);
+select is((select process_status from payments.telegram_webhook_events where update_id = 97070005), 'failed', 'amount mismatch marks webhook event failed');
+select is((select status_context #>> '{fulfillment,reason_code}' from payments.telegram_webhook_events where update_id = 97070005), 'AMOUNT_MISMATCH', 'amount mismatch records fulfillment reason');
+
 insert into _ids (key, payload) select 'conflict_order', api.gacha_create_order((select id from _ids where key = 'user'), (select id from _ids where key = 'box'), 1, 'gacha-payment-order-conflict-001');
 insert into _ids (key, id) select 'conflict_star_order', ((select payload from _ids where key = 'conflict_order') ->> 'star_order_id')::uuid;
 insert into _ids (key, id) select 'conflict_draw_order', ((select payload from _ids where key = 'conflict_order') ->> 'draw_order_id')::uuid;
 
-select ok(testutil.raises_like(format(
-  'select api.gacha_process_paid_order(%L::uuid, %L, %L, %L::jsonb)',
-  (select id::text from _ids where key = 'conflict_star_order'),
+insert into payments.telegram_webhook_events (
+  update_id,
+  event_type,
+  user_id,
+  telegram_user_id,
+  invoice_payload,
+  payload,
+  process_status,
+  webhook_secret_verified
+) values (
+  97070003,
+  'successful_payment',
+  (select id from _ids where key = 'user'),
+  9500000001,
+  (select payload ->> 'invoice_payload' from _ids where key = 'conflict_order'),
+  jsonb_build_object('update_id', 97070003, 'test', 'payment_idempotency_conflict'),
+  'processed',
+  true
+);
+
+insert into _ids (key, payload)
+select 'conflict_process', api.gacha_process_paid_order(
+  (select id from _ids where key = 'conflict_star_order'),
   'tg-charge-idempotency-001',
   'provider-charge-idempotency-conflict',
-  '{"test":"payment_idempotency_conflict"}'
-), '%successful payment not recorded%'), 'reused successful_payment charge id cannot fulfill another order');
+  jsonb_build_object('update_id', 97070003, 'test', 'payment_idempotency_conflict')
+);
+
+select is(((select payload from _ids where key = 'conflict_process') ->> 'fulfilled')::boolean, false, 'reused successful_payment charge id is not fulfilled for another order');
+select is(((select payload from _ids where key = 'conflict_process') ->> 'reason_code'), 'PAYMENT_CHARGE_CONFLICT', 'reused successful_payment charge id returns conflict reason');
 select is((select count(*)::int from gacha.draw_results where draw_order_id = (select id from _ids where key = 'conflict_draw_order')), 0, 'conflicting charge id does not create draw results');
 select is((select count(*)::int from inventory.item_instances where source_type = 'gacha' and source_id = (select id from _ids where key = 'conflict_draw_order')), 0, 'conflicting charge id does not create inventory items');
-select is(testutil.balance_of((select id from _ids where key = 'user'), 'KCOIN'), 100::numeric, 'conflicting charge id does not credit another open reward');
+select is(testutil.balance_of((select id from _ids where key = 'user'), 'KCOIN'), 200::numeric, 'conflicting charge id does not credit another open reward');
+select is((select count(*)::int from ops.risk_events where source_id = (select id from _ids where key = 'conflict_star_order') and event_type = 'gacha_fulfillment_validation_failed'), 1, 'conflicting charge id writes one risk event');
+select is((select process_status from payments.telegram_webhook_events where update_id = 97070003), 'failed', 'conflicting charge marks webhook event failed');
+select is((select status_context #>> '{fulfillment,reason_code}' from payments.telegram_webhook_events where update_id = 97070003), 'PAYMENT_CHARGE_CONFLICT', 'conflicting charge records fulfillment reason');
+select is((select status_context #>> '{fulfillment,retryable}' from payments.telegram_webhook_events where update_id = 97070003), 'false', 'conflicting charge records non-retryable fulfillment');
 
 select * from finish();
 
