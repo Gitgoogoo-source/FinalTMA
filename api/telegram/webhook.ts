@@ -2,8 +2,10 @@ import { createHash, timingSafeEqual } from "node:crypto";
 
 import {
   hasTelegramPreCheckoutQuery,
+  hasTelegramSuccessfulPayment,
   inferTelegramUpdateEventType,
   processTelegramPreCheckoutUpdate,
+  processTelegramSuccessfulPaymentUpdate,
 } from "../../packages/server/src/payments/telegramStars.js";
 import {
   ApiError,
@@ -22,6 +24,31 @@ export default withApiHandler(
     const eventType = inferTelegramUpdateEventType(update);
 
     if (!hasTelegramPreCheckoutQuery(update)) {
+      if (hasTelegramSuccessfulPayment(update)) {
+        const result = await processTelegramSuccessfulPaymentUpdate({
+          update,
+          requestId: ctx.requestId,
+          requestHeadersHash: hashWebhookHeaders(req.headers),
+          webhookSecretVerified: true,
+        });
+
+        return {
+          handled: true,
+          event_type: result.eventType,
+          payment_recorded: result.paymentRecorded,
+          idempotent: result.idempotent,
+          duplicate_update: result.duplicateUpdate,
+          duplicate_charge: result.duplicateCharge,
+          event_id: result.eventId,
+          star_order_id: result.starOrderId,
+          star_payment_id: result.starPaymentId,
+          draw_order_id: result.drawOrderId,
+          reason_code: result.reasonCode,
+          payment_order_status: result.paymentOrderStatus,
+          process_status: result.processStatus,
+        };
+      }
+
       return {
         handled: false,
         event_type: eventType,

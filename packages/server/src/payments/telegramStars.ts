@@ -62,6 +62,20 @@ export type TelegramPreCheckoutUpdate = {
   preCheckoutQuery: TelegramPreCheckoutQuery;
 };
 
+export type TelegramSuccessfulPayment = {
+  fromId: number;
+  currency: string;
+  totalAmount: number;
+  invoicePayload: string;
+  telegramPaymentChargeId: string;
+  providerPaymentChargeId: string | null;
+};
+
+export type TelegramSuccessfulPaymentUpdate = {
+  updateId: number;
+  successfulPayment: TelegramSuccessfulPayment;
+};
+
 export type TelegramAnswerPreCheckoutQueryRequest = {
   pre_checkout_query_id: string;
   ok: boolean;
@@ -95,6 +109,37 @@ export type ProcessTelegramPreCheckoutResult = PaymentMarkPrecheckoutResult & {
   answered: true;
   telegramAnswerOk: boolean;
 };
+
+export type PaymentRecordSuccessfulPaymentResult = {
+  paymentRecorded: boolean;
+  idempotent: boolean;
+  duplicateUpdate: boolean;
+  duplicateCharge: boolean;
+  eventId: string;
+  starOrderId: string | null;
+  starPaymentId: string | null;
+  drawOrderId: string | null;
+  invoicePayload: string | null;
+  telegramPaymentChargeId: string | null;
+  reasonCode: string | null;
+  errorMessage: string | null;
+  paymentOrderStatus: string | null;
+  processStatus: string | null;
+  paidAt: string | null;
+};
+
+export type ProcessTelegramSuccessfulPaymentInput = {
+  update: unknown;
+  requestId: string;
+  requestHeadersHash?: string | null | undefined;
+  webhookSecretVerified?: boolean | undefined;
+  client?: SupabaseAdminClient | undefined;
+};
+
+export type ProcessTelegramSuccessfulPaymentResult =
+  PaymentRecordSuccessfulPaymentResult & {
+    eventType: "successful_payment";
+  };
 
 type FetchImpl = (input: string | URL, init?: RequestInit) => Promise<Response>;
 
@@ -248,6 +293,16 @@ export function hasTelegramPreCheckoutQuery(
   return isRecord(update) && isRecord(update.pre_checkout_query);
 }
 
+export function hasTelegramSuccessfulPayment(
+  update: unknown,
+): update is Record<string, unknown> {
+  return (
+    isRecord(update) &&
+    isRecord(update.message) &&
+    isRecord(update.message.successful_payment)
+  );
+}
+
 export function inferTelegramUpdateEventType(update: unknown): string {
   if (!isRecord(update)) {
     return "invalid_update";
@@ -324,6 +379,75 @@ export function parseTelegramPreCheckoutUpdate(
       invoicePayload: requiredWebhookString(
         preCheckoutQuery.invoice_payload,
         "pre_checkout_query.invoice_payload",
+      ),
+    },
+  };
+}
+
+export function parseTelegramSuccessfulPaymentUpdate(
+  update: unknown,
+): TelegramSuccessfulPaymentUpdate {
+  if (!isRecord(update)) {
+    throw new TelegramStarsWebhookError(
+      400,
+      "TELEGRAM_UPDATE_INVALID",
+      "Telegram update 格式无效。",
+    );
+  }
+
+  const updateId = requiredWebhookInteger(update.update_id, "update.update_id");
+  const message = update.message;
+
+  if (!isRecord(message)) {
+    throw new TelegramStarsWebhookError(
+      400,
+      "SUCCESSFUL_PAYMENT_MESSAGE_MISSING",
+      "Telegram update 缺少 message。",
+    );
+  }
+
+  const from = message.from;
+
+  if (!isRecord(from)) {
+    throw new TelegramStarsWebhookError(
+      400,
+      "SUCCESSFUL_PAYMENT_FROM_MISSING",
+      "Telegram successful_payment 缺少 from。",
+    );
+  }
+
+  const successfulPayment = message.successful_payment;
+
+  if (!isRecord(successfulPayment)) {
+    throw new TelegramStarsWebhookError(
+      400,
+      "SUCCESSFUL_PAYMENT_MISSING",
+      "Telegram update 缺少 successful_payment。",
+    );
+  }
+
+  return {
+    updateId,
+    successfulPayment: {
+      fromId: requiredWebhookInteger(from.id, "message.from.id"),
+      currency: requiredWebhookString(
+        successfulPayment.currency,
+        "successful_payment.currency",
+      ),
+      totalAmount: requiredWebhookInteger(
+        successfulPayment.total_amount,
+        "successful_payment.total_amount",
+      ),
+      invoicePayload: requiredWebhookString(
+        successfulPayment.invoice_payload,
+        "successful_payment.invoice_payload",
+      ),
+      telegramPaymentChargeId: requiredWebhookString(
+        successfulPayment.telegram_payment_charge_id,
+        "successful_payment.telegram_payment_charge_id",
+      ),
+      providerPaymentChargeId: optionalString(
+        successfulPayment.provider_payment_charge_id,
       ),
     },
   };
@@ -441,6 +565,26 @@ export async function processTelegramPreCheckoutUpdate(
     eventType: "pre_checkout_query",
     answered: true,
     telegramAnswerOk: true,
+  };
+}
+
+export async function processTelegramSuccessfulPaymentUpdate(
+  input: ProcessTelegramSuccessfulPaymentInput,
+): Promise<ProcessTelegramSuccessfulPaymentResult> {
+  const parsed = parseTelegramSuccessfulPaymentUpdate(input.update);
+  const recordResult = await recordTelegramSuccessfulPayment({
+    updateId: parsed.updateId,
+    successfulPayment: parsed.successfulPayment,
+    rawUpdate: input.update,
+    requestId: input.requestId,
+    requestHeadersHash: input.requestHeadersHash ?? null,
+    webhookSecretVerified: input.webhookSecretVerified ?? true,
+    client: input.client,
+  });
+
+  return {
+    ...recordResult,
+    eventType: "successful_payment",
   };
 }
 
@@ -952,6 +1096,49 @@ async function markTelegramPreCheckoutChecked(input: {
   return normalizePaymentMarkPrecheckoutResult(rawResult);
 }
 
+async function recordTelegramSuccessfulPayment(input: {
+  updateId: number;
+  successfulPayment: TelegramSuccessfulPayment;
+  rawUpdate: unknown;
+  requestId: string;
+  requestHeadersHash: string | null;
+  webhookSecretVerified: boolean;
+  client?: SupabaseAdminClient | undefined;
+}): Promise<PaymentRecordSuccessfulPaymentResult> {
+  const rpcOptions = {
+    schema: "api" as never,
+    context: {
+      requestId: input.requestId,
+      updateId: input.updateId,
+      telegramPaymentChargeId: input.successfulPayment.telegramPaymentChargeId,
+    },
+    ...(input.client ? { client: input.client } : {}),
+  };
+  const rawResult = await callRpcRaw<Record<string, unknown>>(
+    "payment_record_successful_payment",
+    {
+      p_update_id: input.updateId,
+      p_invoice_payload: input.successfulPayment.invoicePayload,
+      p_currency: input.successfulPayment.currency,
+      p_total_amount: input.successfulPayment.totalAmount,
+      p_telegram_payment_charge_id:
+        input.successfulPayment.telegramPaymentChargeId,
+      p_provider_payment_charge_id:
+        input.successfulPayment.providerPaymentChargeId,
+      p_telegram_user_id: input.successfulPayment.fromId,
+      p_raw_update: isJsonCompatibleRecord(input.rawUpdate)
+        ? input.rawUpdate
+        : {},
+      p_request_headers_hash: input.requestHeadersHash,
+      p_request_id: input.requestId,
+      p_webhook_secret_verified: input.webhookSecretVerified,
+    },
+    rpcOptions,
+  );
+
+  return normalizePaymentRecordSuccessfulPaymentResult(rawResult);
+}
+
 async function answerPreCheckoutQuery(input: {
   preCheckoutQueryId: string;
   ok: boolean;
@@ -1302,6 +1489,37 @@ function normalizePaymentMarkPrecheckoutResult(
     reasonCode: optionalString(value.reason_code),
     errorMessage: optionalString(value.error_message),
     paymentOrderStatus: optionalString(value.payment_order_status),
+  };
+}
+
+function normalizePaymentRecordSuccessfulPaymentResult(
+  value: Record<string, unknown>,
+): PaymentRecordSuccessfulPaymentResult {
+  const eventId = requiredWebhookString(
+    value.event_id,
+    "payment_record_successful_payment.event_id",
+  );
+  const paymentRecorded = requiredBoolean(
+    value.payment_recorded,
+    "payment_record_successful_payment.payment_recorded",
+  );
+
+  return {
+    paymentRecorded,
+    idempotent: booleanOrFalse(value.idempotent),
+    duplicateUpdate: booleanOrFalse(value.duplicate_update),
+    duplicateCharge: booleanOrFalse(value.duplicate_charge),
+    eventId,
+    starOrderId: optionalString(value.star_order_id),
+    starPaymentId: optionalString(value.star_payment_id),
+    drawOrderId: optionalString(value.draw_order_id),
+    invoicePayload: optionalString(value.invoice_payload),
+    telegramPaymentChargeId: optionalString(value.telegram_payment_charge_id),
+    reasonCode: optionalString(value.reason_code),
+    errorMessage: optionalString(value.error_message),
+    paymentOrderStatus: optionalString(value.payment_order_status),
+    processStatus: optionalString(value.process_status),
+    paidAt: optionalString(value.paid_at),
   };
 }
 

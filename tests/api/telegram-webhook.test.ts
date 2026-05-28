@@ -6,8 +6,12 @@ import type {
 } from "../../api/_shared/handler";
 import { invokeApiHandler } from "./_utils";
 
-const { processTelegramPreCheckoutUpdateMock } = vi.hoisted(() => ({
+const {
+  processTelegramPreCheckoutUpdateMock,
+  processTelegramSuccessfulPaymentUpdateMock,
+} = vi.hoisted(() => ({
   processTelegramPreCheckoutUpdateMock: vi.fn(),
+  processTelegramSuccessfulPaymentUpdateMock: vi.fn(),
 }));
 
 vi.mock("../../packages/server/src/payments/telegramStars.js", () => ({
@@ -15,13 +19,33 @@ vi.mock("../../packages/server/src/payments/telegramStars.js", () => ({
     typeof update === "object" &&
     update !== null &&
     "pre_checkout_query" in update,
+  hasTelegramSuccessfulPayment: (update: unknown) =>
+    typeof update === "object" &&
+    update !== null &&
+    "message" in update &&
+    typeof (update as { message?: unknown }).message === "object" &&
+    (update as { message?: { successful_payment?: unknown } }).message !==
+      null &&
+    "successful_payment" in
+      (update as { message: { successful_payment?: unknown } }).message,
   inferTelegramUpdateEventType: (update: unknown) =>
     typeof update === "object" &&
     update !== null &&
     "pre_checkout_query" in update
       ? "pre_checkout_query"
-      : "unsupported_update",
+      : typeof update === "object" &&
+          update !== null &&
+          "message" in update &&
+          typeof (update as { message?: unknown }).message === "object" &&
+          (update as { message?: { successful_payment?: unknown } }).message !==
+            null &&
+          "successful_payment" in
+            (update as { message: { successful_payment?: unknown } }).message
+        ? "successful_payment"
+        : "unsupported_update",
   processTelegramPreCheckoutUpdate: processTelegramPreCheckoutUpdateMock,
+  processTelegramSuccessfulPaymentUpdate:
+    processTelegramSuccessfulPaymentUpdateMock,
 }));
 
 const WEBHOOK_SECRET = "test-telegram-webhook-secret";
@@ -39,12 +63,30 @@ const PRE_CHECKOUT_UPDATE = {
       "gacha_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
   },
 };
+const SUCCESSFUL_PAYMENT_UPDATE = {
+  update_id: 96060001,
+  message: {
+    message_id: 777,
+    from: {
+      id: 7050001,
+      first_name: "Test",
+    },
+    successful_payment: {
+      currency: "XTR",
+      total_amount: 90,
+      invoice_payload: PRE_CHECKOUT_UPDATE.pre_checkout_query.invoice_payload,
+      telegram_payment_charge_id: "tg-charge-api-success-001",
+      provider_payment_charge_id: "provider-charge-api-success-001",
+    },
+  },
+};
 
 describe("telegram webhook API", () => {
   beforeEach(() => {
     process.env.NODE_ENV = "test";
     process.env.TELEGRAM_WEBHOOK_SECRET = WEBHOOK_SECRET;
     processTelegramPreCheckoutUpdateMock.mockReset();
+    processTelegramSuccessfulPaymentUpdateMock.mockReset();
     processTelegramPreCheckoutUpdateMock.mockResolvedValue({
       eventType: "pre_checkout_query",
       allowed: true,
@@ -58,6 +100,27 @@ describe("telegram webhook API", () => {
       reasonCode: null,
       errorMessage: null,
       paymentOrderStatus: "precheckout_checked",
+    });
+    processTelegramSuccessfulPaymentUpdateMock.mockResolvedValue({
+      eventType: "successful_payment",
+      paymentRecorded: true,
+      idempotent: false,
+      duplicateUpdate: false,
+      duplicateCharge: false,
+      eventId: "55555555-5555-4555-8555-555555555555",
+      starOrderId: "33333333-3333-4333-8333-333333333333",
+      starPaymentId: "77777777-7777-4777-8777-777777777777",
+      drawOrderId: "22222222-2222-4222-8222-222222222222",
+      invoicePayload:
+        SUCCESSFUL_PAYMENT_UPDATE.message.successful_payment.invoice_payload,
+      telegramPaymentChargeId:
+        SUCCESSFUL_PAYMENT_UPDATE.message.successful_payment
+          .telegram_payment_charge_id,
+      reasonCode: null,
+      errorMessage: null,
+      paymentOrderStatus: "paid",
+      processStatus: "processed",
+      paidAt: "2026-05-28T05:06:20.000Z",
     });
   });
 
@@ -121,6 +184,47 @@ describe("telegram webhook API", () => {
     );
   });
 
+  it("records successful_payment updates after secret verification", async () => {
+    const { default: webhookHandler } =
+      await import("../../api/telegram/webhook");
+    const result = await invokeApiHandler<ApiSuccessResponse>(webhookHandler, {
+      method: "POST",
+      url: "/api/telegram/webhook",
+      headers: {
+        "content-type": "application/json",
+        "user-agent": "TelegramBotWebhookTest/1.0",
+        "x-telegram-bot-api-secret-token": WEBHOOK_SECRET,
+      },
+      body: SUCCESSFUL_PAYMENT_UPDATE,
+    });
+
+    expect(result.statusCode).toBe(200);
+    expect(result.body).toMatchObject({
+      ok: true,
+      data: {
+        handled: true,
+        event_type: "successful_payment",
+        payment_recorded: true,
+        idempotent: false,
+        duplicate_update: false,
+        duplicate_charge: false,
+        event_id: "55555555-5555-4555-8555-555555555555",
+        star_payment_id: "77777777-7777-4777-8777-777777777777",
+        payment_order_status: "paid",
+        process_status: "processed",
+      },
+    });
+    expect(processTelegramSuccessfulPaymentUpdateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        update: SUCCESSFUL_PAYMENT_UPDATE,
+        requestId: expect.any(String),
+        requestHeadersHash: expect.any(String),
+        webhookSecretVerified: true,
+      }),
+    );
+    expect(processTelegramPreCheckoutUpdateMock).not.toHaveBeenCalled();
+  });
+
   it("ignores unsupported update types without calling pre_checkout processing", async () => {
     const { default: webhookHandler } =
       await import("../../api/telegram/webhook");
@@ -148,5 +252,6 @@ describe("telegram webhook API", () => {
       },
     });
     expect(processTelegramPreCheckoutUpdateMock).not.toHaveBeenCalled();
+    expect(processTelegramSuccessfulPaymentUpdateMock).not.toHaveBeenCalled();
   });
 });

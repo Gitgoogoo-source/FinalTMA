@@ -7,6 +7,7 @@ import {
   createTelegramStarsInvoice,
   parseAnswerPreCheckoutQueryResponse,
   parseCreateInvoiceLinkResponse,
+  parseTelegramSuccessfulPaymentUpdate,
   parseTelegramPreCheckoutUpdate,
   TelegramStarsInvoiceError,
   TelegramStarsWebhookError,
@@ -122,6 +123,38 @@ describe("telegramStars payment helpers", () => {
       pre_checkout_query_id: "pcq-test-001",
       ok: false,
       error_message: "订单已过期，请重新下单。",
+    });
+  });
+
+  it("parses successful_payment updates", () => {
+    const update = {
+      update_id: 96060001,
+      message: {
+        message_id: 777,
+        from: {
+          id: 7050001,
+          first_name: "Test",
+        },
+        successful_payment: {
+          currency: "XTR",
+          total_amount: 90,
+          invoice_payload: PAYLOAD,
+          telegram_payment_charge_id: "tg-charge-test-001",
+          provider_payment_charge_id: "provider-charge-test-001",
+        },
+      },
+    };
+
+    expect(parseTelegramSuccessfulPaymentUpdate(update)).toEqual({
+      updateId: 96060001,
+      successfulPayment: {
+        fromId: 7050001,
+        currency: "XTR",
+        totalAmount: 90,
+        invoicePayload: PAYLOAD,
+        telegramPaymentChargeId: "tg-charge-test-001",
+        providerPaymentChargeId: "provider-charge-test-001",
+      },
     });
   });
 
