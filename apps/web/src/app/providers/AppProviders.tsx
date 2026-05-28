@@ -4,6 +4,7 @@ import { FeedbackProvider } from "./FeedbackProvider";
 import { QueryProvider } from "./QueryProvider";
 import { SessionProvider } from "./SessionProvider";
 import { TelegramProvider } from "./TelegramProvider";
+import { TonConnectProvider } from "./TonConnectProvider";
 
 type AppProvidersProps = {
   children: ReactNode;
@@ -14,7 +15,9 @@ export function AppProviders({ children }: AppProvidersProps) {
     <TelegramProvider>
       <FeedbackProvider>
         <QueryProvider>
-          <SessionProvider>{children}</SessionProvider>
+          <TonConnectProvider>
+            <SessionProvider>{children}</SessionProvider>
+          </TonConnectProvider>
         </QueryProvider>
       </FeedbackProvider>
     </TelegramProvider>

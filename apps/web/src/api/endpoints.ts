@@ -48,6 +48,18 @@ export const API_ENDPOINTS = {
     claimCommission: "/tasks/claim-commission",
     rewardHistory: "/tasks/reward-history",
   },
+  wallet: {
+    challenge: "/wallet/challenge",
+    connect: "/wallet/connect",
+    proof: "/wallet/proof",
+    status: "/wallet/status",
+    disconnect: "/wallet/disconnect",
+    syncNfts: "/wallet/sync-nfts",
+    nfts: "/wallet/nfts",
+    transactions: "/wallet/transactions",
+    mint: "/wallet/mint",
+    mintStatus: "/wallet/mint-status",
+  },
   market: {
     listings: "/market/listings",
     listingDetail: "/market/listing-detail",
