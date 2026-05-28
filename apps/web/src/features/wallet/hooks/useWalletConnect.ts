@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   useIsConnectionRestored,
   useTonAddress,
@@ -9,21 +9,19 @@ import {
 import { useCallback, useEffect, useMemo, useRef } from "react";
 
 import { useSession } from "@/app/providers/SessionProvider";
-import { getApiErrorMessage } from "@/api/errors";
+import { getApiErrorMessage, isApiClientError } from "@/api/errors";
 import { queryKeys } from "@/shared/constants/queryKeys";
 
-import {
-  connectWallet,
-  disconnectWallet,
-  fetchWalletStatus,
-} from "../wallet.api";
+import { connectWallet } from "../wallet.api";
 import type {
   ConnectWalletInput,
   WalletConnectionStatus,
   WalletStatusData,
   WalletVerificationStatus,
 } from "../wallet.types";
+import { useDisconnectWallet } from "./useDisconnectWallet";
 import { useWalletProof } from "./useWalletProof";
+import { useWalletStatus } from "./useWalletStatus";
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -48,14 +46,9 @@ export function useWalletConnect({
   const connectedSignatureRef = useRef<string | null>(null);
   const verifiedWalletRef = useRef<string | null>(null);
 
-  const statusQuery = useQuery({
-    queryKey: queryKeys.wallet.status(userId),
-    queryFn: fetchWalletStatus,
-    enabled: enabled && statusQueryEnabled && session.isAuthenticated,
-    meta: {
-      skipGlobalErrorToast: true,
-    },
-    retry: false,
+  const statusQuery = useWalletStatus({
+    enabled: enabled && statusQueryEnabled,
+    userId,
   });
 
   const connectMutation = useMutation({
@@ -70,16 +63,8 @@ export function useWalletConnect({
     },
   });
 
-  const disconnectMutation = useMutation({
-    mutationFn: disconnectWallet,
-    meta: {
-      skipGlobalErrorToast: true,
-    },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({
-        queryKey: queryKeys.wallet.status(userId),
-      });
-    },
+  const disconnectMutation = useDisconnectWallet({
+    userId,
   });
 
   const currentWalletInput = useMemo(
@@ -132,7 +117,7 @@ export function useWalletConnect({
     }
 
     verifiedWalletRef.current = signature;
-    void proof.verifyConnectedWallet(wallet);
+    void proof.verifyConnectedWallet(wallet).catch(() => undefined);
   }, [enabled, proof, session.isAuthenticated, wallet]);
 
   const openWalletModal = useCallback(async () => {
@@ -189,13 +174,19 @@ export function useWalletConnect({
     await statusQuery.refetch();
   }, [statusQuery]);
 
+  const proofErrorStatus = getWalletProofErrorStatus(proof.proofError);
   const status = deriveWalletStatus({
     currentWalletInput,
     isConnectionRestored,
     isModalOpen,
+    proofErrorStatus,
     remoteStatus,
   });
-  const displayWallet = deriveWalletData(remoteStatus, currentWalletInput);
+  const displayWallet = deriveWalletData(
+    remoteStatus,
+    currentWalletInput,
+    proofErrorStatus,
+  );
   const errorMessage =
     remoteStatus?.errorMessage ??
     getFirstErrorMessage(
@@ -236,6 +227,7 @@ function deriveWalletStatus(options: {
   currentWalletInput: ConnectWalletInput | null;
   isConnectionRestored: boolean;
   isModalOpen: boolean;
+  proofErrorStatus: WalletConnectionStatus | null;
   remoteStatus: WalletStatusData | null;
 }): WalletConnectionStatus {
   if (!options.isConnectionRestored || options.isModalOpen) {
@@ -258,6 +250,10 @@ function deriveWalletStatus(options: {
       return options.remoteStatus.status;
     }
 
+    if (options.proofErrorStatus) {
+      return options.proofErrorStatus;
+    }
+
     return "connected_unverified";
   }
 
@@ -267,6 +263,7 @@ function deriveWalletStatus(options: {
 function deriveWalletData(
   remoteStatus: WalletStatusData | null,
   currentWalletInput: ConnectWalletInput | null,
+  proofErrorStatus: WalletConnectionStatus | null,
 ): WalletStatusData {
   if (currentWalletInput) {
     const isRemoteSameWallet =
@@ -276,7 +273,7 @@ function deriveWalletData(
       status:
         isRemoteSameWallet && remoteStatus.status === "verified"
           ? "verified"
-          : "connected_unverified",
+          : (proofErrorStatus ?? "connected_unverified"),
       address: currentWalletInput.address,
       rawAddress: currentWalletInput.rawAddress ?? currentWalletInput.address,
       network:
@@ -307,6 +304,26 @@ function deriveWalletData(
       errorMessage: null,
     }
   );
+}
+
+export function getWalletProofErrorStatus(
+  error: unknown,
+): WalletConnectionStatus | null {
+  if (!isApiClientError(error)) {
+    return null;
+  }
+
+  switch (error.code) {
+    case "WALLET_PROOF_EXPIRED":
+    case "TON_PROOF_EXPIRED":
+      return "expired_proof";
+    case "WALLET_NETWORK_MISMATCH":
+    case "WALLET_PROOF_INVALID":
+    case "WALLET_PROOF_REPLAYED":
+      return "invalid_proof";
+    default:
+      return null;
+  }
 }
 
 function buildConnectWalletInput(

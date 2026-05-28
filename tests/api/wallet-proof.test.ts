@@ -1,4 +1,4 @@
-import { generateKeyPairSync, sign, type KeyObject } from "node:crypto";
+import { createPrivateKey, sign } from "node:crypto";
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -37,7 +37,18 @@ const PROOF_ID = "22222222-2222-4222-8222-222222222222";
 const WALLET_ID = "33333333-3333-4333-8333-333333333333";
 const CHALLENGE = "wallet-proof-challenge-0001";
 const DOMAIN = "app.example.com";
-const RAW_ADDRESS = `0:${"11".repeat(32)}`;
+const RAW_ADDRESS =
+  "0:676898db2fc6d59bc0590be076943831b0a27fa0441b194846b4327d96aea388";
+const WALLET_PUBLIC_KEY =
+  "95aac656e719d06b884b104968ee919afac71b5038f5b55a7e32b2dc4023d1f8";
+const WALLET_STATE_INIT =
+  "te6cckECFgEAAwQAAgE0ARUBFP8A9KQT9LzyyAsCAgEgAxACAUgEBwLm0AHQ0wMhcbCSXwTgItdJwSCSXwTgAtMfIYIQcGx1Z70ighBkc3RyvbCSXwXgA/pAMCD6RAHIygfL/8nQ7UTQgQFA1yH0BDBcgQEI9ApvoTGzkl8H4AXTP8glghBwbHVnupI4MOMNA4IQZHN0crqSXwbjDQUGAHgB+gD0BDD4J28iMFAKoSG+8uBQghBwbHVngx6xcIAYUATLBSbPFlj6Ahn0AMtpF8sfUmDLPyDJgED7AAYAilAEgQEI9Fkw7UTQgQFA1yDIAc8W9ADJ7VQBcrCOI4IQZHN0coMesXCAGFAFywVQA88WI/oCE8tqyx/LP8mAQPsAkl8D4gIBIAgPAgEgCQ4CAVgKCwA9sp37UTQgQFA1yH0BDACyMoHy//J0AGBAQj0Cm+hMYAIBIAwNABmtznaiaEAga5Drhf/AABmvHfaiaEAQa5DrhY/AABG4yX7UTQ1wsfgAWb0kK29qJoQICga5D6AhhHDUCAhHpJN9KZEM5pA+n/mDeBKAG3gQFImHFZ8xhAT48oMI1xgg0x/TH9MfAvgju/Jk7UTQ0x/TH9P/9ATRUUO68qFRUbryogX5AVQQZPkQ8qP4ACSkyMsfUkDLH1Iwy/9SEPQAye1U+A8B0wchwACfbFGTINdKltMH1AL7AOgw4CHAAeMAIcAC4wABwAORMOMNA6TIyx8Syx/L/xESExQAbtIH+gDU1CL5AAXIygcVy//J0Hd0gBjIywXLAiLPFlAF+gIUy2sSzMzJc/sAyEAUgQEI9FHypwIAcIEBCNcY+gDTP8hUIEeBAQj0UfKnghBub3RlcHSAGMjLBcsCUAbPFlAE+gIUy2oSyx/LP8lz+wACAGyBAQjXGPoA0z8wUiSBAQj0WfKnghBkc3RycHSAGMjLBcsCUAXPFlAD+gITy2rLHxLLP8lz+wAACvQAye1UAFEAAAAAKamjF5WqxlbnGdBriEsQSWjukZr6xxtQOPW1Wn4ystxAI9H4QEc5mKQ=";
+const WALLET_PRIVATE_KEY_JWK = {
+  crv: "Ed25519",
+  d: "YVau-JwBmiNk26E2aPlr9zlsGqOy-kxDk4RpdOTtZ8s",
+  x: "larGVucZ0GuISxBJaO6RmvrHG1A49bVafjKy3EAj0fg",
+  kty: "OKP",
+} as const;
 
 type QueryState = {
   schema: string;
@@ -134,7 +145,7 @@ describe("wallet proof API", () => {
     getSupabaseAdminClientMock.mockReturnValue(db.client);
     callRpcRawMock.mockResolvedValue({
       wallet_id: WALLET_ID,
-      address: RAW_ADDRESS,
+      address: proofPayload.account.address,
       network: "mainnet",
     });
 
@@ -197,6 +208,50 @@ describe("wallet proof API", () => {
       status: "verified",
       wallet_id: WALLET_ID,
       error_message: null,
+      wallet_public_key: WALLET_PUBLIC_KEY,
+    });
+  });
+
+  it("rejects a proof when wallet stateInit does not derive the submitted address", async () => {
+    const proofPayload = await createSignedProof({
+      address: `0:${"22".repeat(32)}`,
+    });
+    const db = createSupabaseMock([
+      {
+        data: createWalletProofRow(),
+        error: null,
+      },
+      {
+        data: null,
+        error: null,
+      },
+    ]);
+    getSupabaseAdminClientMock.mockReturnValue(db.client);
+
+    const { default: proofHandler } = await import("../../api/wallet/proof");
+    const result = await invokeApiHandler<ApiErrorResponse>(proofHandler, {
+      method: "POST",
+      url: "/api/wallet/proof",
+      headers: {
+        cookie: "tma_game_session=test-session-token-000000000000",
+      },
+      body: {
+        ...proofPayload,
+        idempotencyKey: "wallet:proof:mismatch-0001",
+      },
+    });
+
+    expect(result.statusCode).toBe(400);
+    expect(result.body).toMatchObject({
+      ok: false,
+      error: {
+        code: "WALLET_PROOF_INVALID",
+      },
+    });
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+    expect(db.queries[1]?.payload).toMatchObject({
+      status: "failed",
+      error_message: "WALLET_PROOF_INVALID",
     });
   });
 
@@ -288,11 +343,17 @@ describe("wallet proof API", () => {
   });
 });
 
-async function createSignedProof(): Promise<{
+async function createSignedProof(
+  options: {
+    address?: string;
+    walletStateInit?: string;
+  } = {},
+): Promise<{
   account: {
     address: string;
     chain: string;
     publicKey: string;
+    walletStateInit: string;
   };
   proof: {
     timestamp: number;
@@ -305,12 +366,13 @@ async function createSignedProof(): Promise<{
   };
   challenge: string;
 }> {
-  const { buildTonProofDigest, parseRawTonAddress } =
-    await import("../../packages/server/src/ton/tonConnect");
-  const { privateKey, publicKey } = generateKeyPairSync("ed25519");
-  const publicKeyHex = exportRawEd25519PublicKey(publicKey);
+  const privateKey = createPrivateKey({
+    key: WALLET_PRIVATE_KEY_JWK,
+    format: "jwk",
+  });
+  const address = options.address ?? RAW_ADDRESS;
   const timestamp = Math.floor(Date.now() / 1000);
-  const messageHash = buildTonProofDigest(parseRawTonAddress(RAW_ADDRESS), {
+  const messageHash = buildTonProofDigest(parseRawTonAddress(address), {
     timestamp,
     domain: {
       lengthBytes: Buffer.byteLength(DOMAIN, "utf8"),
@@ -323,9 +385,10 @@ async function createSignedProof(): Promise<{
 
   return {
     account: {
-      address: RAW_ADDRESS,
+      address,
       chain: "-239",
-      publicKey: publicKeyHex,
+      publicKey: WALLET_PUBLIC_KEY,
+      walletStateInit: options.walletStateInit ?? WALLET_STATE_INIT,
     },
     proof: {
       timestamp,
@@ -338,16 +401,6 @@ async function createSignedProof(): Promise<{
     },
     challenge: CHALLENGE,
   };
-}
-
-function exportRawEd25519PublicKey(publicKey: KeyObject): string {
-  const exported = publicKey.export({
-    format: "der",
-    type: "spki",
-  });
-  const buffer = Buffer.isBuffer(exported) ? exported : Buffer.from(exported);
-
-  return buffer.subarray(-32).toString("hex");
 }
 
 function createWalletProofRow(

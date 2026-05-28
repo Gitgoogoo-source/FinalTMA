@@ -298,6 +298,66 @@ describe("WalletEntryButton", () => {
     });
   });
 
+  it("shows an invalid proof state with a retry action", () => {
+    walletConnectMock.state = createWalletConnectState({
+      address: "EQABCDEFGHIJKLMNOPQRSTUV1234567890abcdefghi",
+      errorMessage: "钱包 proof 校验失败。",
+      isConnected: true,
+      status: "invalid_proof",
+      wallet: {
+        address: "EQABCDEFGHIJKLMNOPQRSTUV1234567890abcdefghi",
+        rawAddress: "0:abcdef",
+        network: "testnet",
+        walletAppName: "Tonkeeper",
+        verifiedAt: null,
+        lastSyncAt: null,
+        syncStatus: "idle",
+        mintQueue: null,
+        errorMessage: "钱包 proof 校验失败。",
+        status: "invalid_proof",
+      },
+    });
+
+    renderWalletEntry(true);
+
+    fireEvent.click(screen.getByRole("button", { name: /EQAB...fghi.*重试/ }));
+
+    expect(screen.getByText("钱包 proof 未通过")).toBeVisible();
+    expect(screen.getByText("钱包 proof 校验失败。")).toBeVisible();
+    expect(screen.getByRole("button", { name: "验证钱包" })).toBeEnabled();
+  });
+
+  it("shows an expired proof state with a retry action", () => {
+    walletConnectMock.state = createWalletConnectState({
+      address: "EQABCDEFGHIJKLMNOPQRSTUV1234567890abcdefghi",
+      errorMessage: "钱包 proof 已过期，请重新连接钱包。",
+      isConnected: true,
+      status: "expired_proof",
+      wallet: {
+        address: "EQABCDEFGHIJKLMNOPQRSTUV1234567890abcdefghi",
+        rawAddress: "0:abcdef",
+        network: "testnet",
+        walletAppName: "Tonkeeper",
+        verifiedAt: null,
+        lastSyncAt: null,
+        syncStatus: "idle",
+        mintQueue: null,
+        errorMessage: "钱包 proof 已过期，请重新连接钱包。",
+        status: "expired_proof",
+      },
+    });
+
+    renderWalletEntry(true);
+
+    fireEvent.click(screen.getByRole("button", { name: /EQAB...fghi.*重试/ }));
+
+    expect(screen.getByText("钱包 proof 已过期")).toBeVisible();
+    expect(
+      screen.getByText("钱包 proof 已过期，请重新连接钱包。"),
+    ).toBeVisible();
+    expect(screen.getByRole("button", { name: "验证钱包" })).toBeEnabled();
+  });
+
   it("can refresh backend wallet status from the status sheet", () => {
     walletConnectMock.state = createWalletConnectState({
       address: "EQABCDEFGHIJKLMNOPQRSTUV1234567890abcdefghi",

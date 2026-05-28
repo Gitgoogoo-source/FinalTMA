@@ -15,6 +15,9 @@ catalogs:
     "@tma.js/sdk-react":
       specifier: ^3.0.19
       version: 3.0.19
+    "@ton/ton":
+      specifier: ^16.2.4
+      version: 16.2.4
     "@types/node":
       specifier: ^24.0.0
       version: 24.10.7
@@ -277,6 +280,9 @@ importers:
       "@tma-game/db-types":
         specifier: workspace:*
         version: link:../db-types
+      "@ton/ton":
+        specifier: "catalog:"
+        version: 16.2.4(@ton/core@0.63.1(@ton/crypto@3.3.0))(@ton/crypto@3.3.0)
       zod:
         specifier: "catalog:"
         version: 4.4.3
@@ -2823,6 +2829,35 @@ packages:
         integrity: sha512-qs4mi+U1xZmMQBdMhWAo1X4YqUJ/ae0y28s+GNCpQq58bsJo0h8rvyVOB1RwPvXogIY9+yribbZe6z3AIJmsAQ==,
       }
 
+  "@ton/core@0.63.1":
+    resolution:
+      {
+        integrity: sha512-hDWMjlKzc18W2E4OeV3hUP8ohRJNHPD4Wd1+AQJj8zshZyCRT0usrvnExgbNUTo/vntDqCGMzgYWbXxyaA+L4g==,
+      }
+    peerDependencies:
+      "@ton/crypto": ">=3.2.0"
+
+  "@ton/crypto-primitives@2.1.0":
+    resolution:
+      {
+        integrity: sha512-PQesoyPgqyI6vzYtCXw4/ZzevePc4VGcJtFwf08v10OevVJHVfW238KBdpj1kEDQkxWLeuNHEpTECNFKnP6tow==,
+      }
+
+  "@ton/crypto@3.3.0":
+    resolution:
+      {
+        integrity: sha512-/A6CYGgA/H36OZ9BbTaGerKtzWp50rg67ZCH2oIjV1NcrBaCK9Z343M+CxedvM7Haf3f/Ee9EhxyeTp0GKMUpA==,
+      }
+
+  "@ton/ton@16.2.4":
+    resolution:
+      {
+        integrity: sha512-GWCNKizQm7MM99XNQGr+zWWdSfbFu/WLeQYm7tMIQDNKpAYEpLDKJUKuK/yrz763DBbnTDAFeq1NWAEy8rAOaQ==,
+      }
+    peerDependencies:
+      "@ton/core": ">=0.63.0 <1.0.0"
+      "@ton/crypto": ">=3.2.0"
+
   "@tonconnect/isomorphic-eventsource@0.0.2":
     resolution:
       {
@@ -3562,6 +3597,12 @@ packages:
         integrity: sha512-Oei9OH4tRh0YqU3GxhX79dM/mwVgvbZJaSNaRk+bshkj0S5cfHcgYakreBjrHwatXKbz+IoIdYLxrKim2MjW0Q==,
       }
 
+  axios@1.15.0:
+    resolution:
+      {
+        integrity: sha512-wWyJDlAatxk30ZJer+GeCWS209sA42X+N5jU2jy6oHTp7ufw8uzUTVFBX9+wTfAlhiJXGS0Bq7X6efruWjuK9Q==,
+      }
+
   b4a@1.8.1:
     resolution:
       {
@@ -3897,6 +3938,12 @@ packages:
         integrity: sha512-23XHcCF+coGYevirZceTVD7NdJOqVn+49IHyxgszm+JIiHLoB2TkmPtsYkNWT1pvRSGkc35L6NHs0yHkN2SumA==,
       }
     engines: { node: ^20.19.0 || ^22.12.0 || >=24.0.0 }
+
+  dataloader@2.2.3:
+    resolution:
+      {
+        integrity: sha512-y2krtASINtPFS1rSDjacrFgn1dcUuoREVabwlOGOe4SdxenREqwjwjElAdwvbGM7kgZz9a3KVicWR7vcz8rnzA==,
+      }
 
   date-fns@4.2.1:
     resolution:
@@ -4470,6 +4517,18 @@ packages:
         integrity: sha512-PjDse7RzhcPkIJwy5t7KPWQSZ9cAbzQXcafsetQoD7sOJRQlGikNbx7yZp2OotDnJyrDcbyRq3Ttb18iYOqkxA==,
       }
 
+  follow-redirects@1.16.0:
+    resolution:
+      {
+        integrity: sha512-y5rN/uOsadFT/JfYwhxRS5R7Qce+g3zG97+JrtFZlC9klX/W5hD7iiLzScI4nZqUS7DNUdhPgw4xI8W2LuXlUw==,
+      }
+    engines: { node: ">=4.0" }
+    peerDependencies:
+      debug: "*"
+    peerDependenciesMeta:
+      debug:
+        optional: true
+
   form-data@4.0.5:
     resolution:
       {
@@ -4940,6 +4999,12 @@ packages:
     resolution:
       {
         integrity: sha512-ekDrAGso79Cvf+dtm+mL8OBI2bmAOt3gssYs833De/C9NmIpWDWyUO4zPgB5x2/OhY366dkhgfPMYfwZF7yOZA==,
+      }
+
+  jssha@3.2.0:
+    resolution:
+      {
+        integrity: sha512-QuruyBENDWdN4tZwJbQq7/eAK85FqrI4oDbXjy5IBhYD+2pTJyBUWZe8ctWaCkrV0gy6AaelgOZZBMeswEa/6Q==,
       }
 
   keyv@4.5.4:
@@ -5771,6 +5836,12 @@ packages:
     resolution:
       {
         integrity: sha512-D+zkORCbA9f1tdWRK0RaCR3GPv50cMxcrz4X8k5LTSUD1Dkw47mKJEZQNunItRTkWwgtaUSo1RVFRIG9ZXiFYg==,
+      }
+
+  proxy-from-env@2.1.0:
+    resolution:
+      {
+        integrity: sha512-cJ+oHTW1VAEa8cJslgmUZrc+sjRKgAKl3Zyse6+PV38hZe/V6Z14TbCuXcan9F9ghlz4QrFr2c92TNF82UkYHA==,
       }
 
   pump@3.0.4:
@@ -8241,6 +8312,30 @@ snapshots:
 
   "@tma.js/types@1.0.2": {}
 
+  "@ton/core@0.63.1(@ton/crypto@3.3.0)":
+    dependencies:
+      "@ton/crypto": 3.3.0
+
+  "@ton/crypto-primitives@2.1.0":
+    dependencies:
+      jssha: 3.2.0
+
+  "@ton/crypto@3.3.0":
+    dependencies:
+      "@ton/crypto-primitives": 2.1.0
+      jssha: 3.2.0
+      tweetnacl: 1.0.3
+
+  "@ton/ton@16.2.4(@ton/core@0.63.1(@ton/crypto@3.3.0))(@ton/crypto@3.3.0)":
+    dependencies:
+      "@ton/core": 0.63.1(@ton/crypto@3.3.0)
+      "@ton/crypto": 3.3.0
+      axios: 1.15.0
+      dataloader: 2.2.3
+      zod: 3.24.4
+    transitivePeerDependencies:
+      - debug
+
   "@tonconnect/isomorphic-eventsource@0.0.2":
     dependencies:
       eventsource: 2.0.2
@@ -8956,6 +9051,14 @@ snapshots:
 
   asynckit@0.4.0: {}
 
+  axios@1.15.0:
+    dependencies:
+      follow-redirects: 1.16.0
+      form-data: 4.0.5
+      proxy-from-env: 2.1.0
+    transitivePeerDependencies:
+      - debug
+
   b4a@1.8.1: {}
 
   balanced-match@1.0.2: {}
@@ -9107,6 +9210,8 @@ snapshots:
       whatwg-url: 16.0.1
     transitivePeerDependencies:
       - "@noble/hashes"
+
+  dataloader@2.2.3: {}
 
   date-fns@4.2.1: {}
 
@@ -9530,6 +9635,8 @@ snapshots:
 
   flatted@3.4.2: {}
 
+  follow-redirects@1.16.0: {}
+
   form-data@4.0.5:
     dependencies:
       asynckit: 0.4.0
@@ -9788,6 +9895,8 @@ snapshots:
       graceful-fs: 4.2.11
 
   jsonlines@0.1.1: {}
+
+  jssha@3.2.0: {}
 
   keyv@4.5.4:
     dependencies:
@@ -10244,6 +10353,8 @@ snapshots:
       - supports-color
 
   proxy-from-env@1.1.0: {}
+
+  proxy-from-env@2.1.0: {}
 
   pump@3.0.4:
     dependencies:

@@ -1,15 +1,13 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTonConnectUI } from "@tonconnect/ui-react";
 import { useCallback, useRef } from "react";
 
-import { queryKeys } from "@/shared/constants/queryKeys";
-
-import { requestWalletChallenge, verifyWalletProof } from "../wallet.api";
 import type {
   WalletAccountPayload,
   WalletChallenge,
   WalletProofPayload,
 } from "../wallet.types";
+import { useVerifyTonProof } from "./useVerifyTonProof";
+import { useWalletChallenge } from "./useWalletChallenge";
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -19,30 +17,16 @@ type UseWalletProofOptions = {
 
 export function useWalletProof(options: UseWalletProofOptions = {}) {
   const [tonConnectUI] = useTonConnectUI();
-  const queryClient = useQueryClient();
   const latestChallengeRef = useRef<WalletChallenge | null>(null);
   const verifiedSignatureRef = useRef<string | null>(null);
-
-  const challengeMutation = useMutation({
-    mutationFn: requestWalletChallenge,
-    meta: {
-      skipGlobalErrorToast: true,
-    },
-  });
-
-  const verifyMutation = useMutation({
-    mutationFn: verifyWalletProof,
-    meta: {
-      skipGlobalErrorToast: true,
-    },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({
-        queryKey: queryKeys.wallet.status(options.userId),
-      });
-    },
+  const challengeMutation = useWalletChallenge();
+  const verifyMutation = useVerifyTonProof({
+    userId: options.userId,
   });
 
   const prepareTonProofRequest = useCallback(async () => {
+    challengeMutation.reset();
+    verifyMutation.reset();
     tonConnectUI.setConnectRequestParameters({ state: "loading" });
 
     try {
@@ -60,12 +44,14 @@ export function useWalletProof(options: UseWalletProofOptions = {}) {
       tonConnectUI.setConnectRequestParameters(null);
       throw error;
     }
-  }, [challengeMutation, tonConnectUI]);
+  }, [challengeMutation, tonConnectUI, verifyMutation]);
 
   const clearTonProofRequest = useCallback(() => {
+    challengeMutation.reset();
+    verifyMutation.reset();
     tonConnectUI.setConnectRequestParameters(null);
     latestChallengeRef.current = null;
-  }, [tonConnectUI]);
+  }, [challengeMutation, tonConnectUI, verifyMutation]);
 
   const verifyConnectedWallet = useCallback(
     async (wallet: unknown) => {

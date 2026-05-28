@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "catalog:",
+    "@ton/ton": "catalog:",
     "@tma-game/db-types": "workspace:*",
     "zod": "catalog:"
   },

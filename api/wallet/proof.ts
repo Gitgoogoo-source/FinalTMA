@@ -12,8 +12,10 @@ import {
   normalizeTonNetwork,
   resolveExpectedTonProofDomain,
   TonProofVerificationError,
+  type TonProofVerificationResult,
   verifyTonProof as verifyTonConnectProof,
 } from "../../packages/server/src/ton/tonConnect.js";
+import { resolveVerifiedTonWalletPublicKey } from "../../packages/server/src/ton/walletPublicKey.js";
 import {
   ApiError,
   getHeaderValue,
@@ -124,30 +126,19 @@ export async function verifyAndSaveWalletProof(
     requestHost: string | null;
   },
 ): Promise<WalletProofResponse> {
-  const publicKey = normalizeHex(input.account.publicKey);
-
-  if (!publicKey) {
-    throw new ApiError(
-      400,
-      "WALLET_PROOF_INVALID",
-      "钱包 proof 缺少 publicKey。",
-    );
-  }
-
   const now = new Date();
   const proofHash = createProofHash(input);
   const claimedProof = await claimPendingProof(db, input, {
     ...context,
     now,
     proofHash,
-    publicKey,
   });
+  let verification: TonProofVerificationResult;
 
   try {
-    await verifyTonProof(input, {
+    verification = await verifyTonProof(input, {
       now,
       requestHost: context.requestHost,
-      publicKey,
     });
   } catch (error) {
     await markProofFailed(db, claimedProof.id, getPublicErrorCode(error));
@@ -183,7 +174,13 @@ export async function verifyAndSaveWalletProof(
 
   const walletId = readString(rpcResult.wallet_id);
   const verifiedAt = new Date().toISOString();
-  await markProofVerified(db, claimedProof.id, walletId, verifiedAt);
+  await markProofVerified(
+    db,
+    claimedProof.id,
+    walletId,
+    verifiedAt,
+    verification.walletPublicKey,
+  );
 
   return {
     verified: true,
@@ -224,14 +221,13 @@ export async function verifyTonProof(
   options: {
     now: Date;
     requestHost: string | null;
-    publicKey: string;
   },
-): Promise<void> {
+): Promise<TonProofVerificationResult> {
   assertExpectedNetwork(input.account.chain);
   const expectedDomain = resolveExpectedProofDomain(options.requestHost);
 
   try {
-    await verifyTonConnectProof({
+    return await verifyTonConnectProof({
       account: input.account,
       proof: input.proof,
       expectedDomain,
@@ -241,7 +237,8 @@ export async function verifyTonProof(
         "TON_PROOF_TTL_SECONDS",
         DEFAULT_PROOF_TTL_SECONDS,
       ),
-      trustedPublicKey: options.publicKey,
+      resolvePublicKey: (resolveInput) =>
+        resolveVerifiedTonWalletPublicKey(resolveInput),
     });
   } catch (error) {
     throw mapTonProofVerificationError(error);
@@ -256,7 +253,6 @@ async function claimPendingProof(
     requestId: string;
     now: Date;
     proofHash: string;
-    publicKey: string;
   },
 ): Promise<WalletProofRow> {
   const payload = buildProofAuditPayload(input);
@@ -270,7 +266,6 @@ async function claimPendingProof(
       payload,
       proof_signature: input.proof.signature,
       proof_hash: context.proofHash,
-      wallet_public_key: context.publicKey,
       request_id: context.requestId,
     })
     .eq("user_id", context.userId)
@@ -366,6 +361,7 @@ async function markProofVerified(
   proofId: string,
   walletId: string | null,
   verifiedAt: string,
+  walletPublicKey: string,
 ): Promise<void> {
   const { error } = await db
     .schema("core")
@@ -374,6 +370,7 @@ async function markProofVerified(
       status: "verified",
       wallet_id: walletId,
       verified_at: verifiedAt,
+      wallet_public_key: walletPublicKey,
       error_message: null,
     })
     .eq("id", proofId);
@@ -569,16 +566,6 @@ function readPositiveIntegerEnv(name: string, fallback: number): number {
   const parsed = Number.parseInt(value, 10);
 
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
-}
-
-function normalizeHex(value: string | undefined): string | null {
-  if (!value) {
-    return null;
-  }
-
-  const normalized = value.trim().toLowerCase();
-
-  return /^[a-f0-9]{64}$/.test(normalized) ? normalized : null;
 }
 
 function isExpired(expiresAt: string): boolean {
