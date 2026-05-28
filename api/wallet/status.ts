@@ -5,7 +5,7 @@ import {
 import { ApiError, withApiHandler } from "../_shared/handler.js";
 import { requireSession } from "../_shared/requireSession.js";
 
-type WalletRow = {
+export type WalletRow = {
   id: string;
   user_id: string;
   chain: string;
@@ -21,14 +21,14 @@ type WalletRow = {
   updated_at: string;
 };
 
-type WalletConnectionStatus =
+export type WalletConnectionStatus =
   | "not_connected"
   | "connected_unverified"
   | "verified"
   | "disconnected"
   | "revoked";
 
-type WalletStatusResponse = {
+export type WalletStatusResponse = {
   connected: boolean;
   verified: boolean;
   status: WalletConnectionStatus;
@@ -44,7 +44,7 @@ type WalletStatusResponse = {
   serverTime: string;
 };
 
-const WALLET_STATUS_COLUMNS = [
+export const WALLET_STATUS_COLUMNS = [
   "id",
   "user_id",
   "chain",

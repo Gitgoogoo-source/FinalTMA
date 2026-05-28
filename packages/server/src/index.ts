@@ -35,5 +35,6 @@ export * from "./payments/paymentEvents.js";
 export * from "./payments/paymentGuards.js";
 export * from "./security/auditLog.js";
 export * from "./security/rateLimit.js";
+export * from "./ton/tonConnect.js";
 export * from "./ton/mintGuards.js";
 export * from "./ton/mintQueue.js";
