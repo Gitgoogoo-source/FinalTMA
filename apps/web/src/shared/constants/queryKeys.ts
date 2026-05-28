@@ -68,6 +68,13 @@ export const queryKeys = {
     rewardHistory: (userId: string | null | undefined, query: unknown = {}) =>
       ["tasks", "reward-history", userId ?? "anonymous", query] as const,
   },
+  wallet: {
+    root: ["wallet"] as const,
+    status: (userId: string | null | undefined) =>
+      ["wallet", "status", userId ?? "anonymous"] as const,
+    mintQueue: (userId: string | null | undefined) =>
+      ["wallet", "mint-queue", userId ?? "anonymous"] as const,
+  },
   trade: {
     root: ["trade"] as const,
     listingsRoot: ["trade", "listings"] as const,

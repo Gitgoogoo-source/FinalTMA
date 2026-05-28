@@ -12,9 +12,16 @@ type QueryErrorHandler = (error: unknown, source: QueryErrorSource) => void;
 export function createAppQueryClient(onError?: QueryErrorHandler): QueryClient {
   return new QueryClient({
     queryCache: new QueryCache({
-      onError: (error) => {
+      onError: (error, query) => {
+        const meta = normalizeMutationMeta(query.meta);
+
+        if (meta?.skipGlobalErrorToast === true) {
+          return;
+        }
+
         onError?.(error, {
           kind: "query",
+          ...(meta ? { meta } : {}),
         });
       },
     }),

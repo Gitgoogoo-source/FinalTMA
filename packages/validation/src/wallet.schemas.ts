@@ -176,11 +176,25 @@ export const WalletDisconnectBodySchema = z.object({
 export const WalletStatusResponseSchema = z.object({
   connected: z.boolean(),
   verified: z.boolean(),
+  status: z
+    .enum([
+      "not_connected",
+      "connected_unverified",
+      "verified",
+      "disconnected",
+      "revoked",
+    ])
+    .optional(),
+  walletId: UUIDSchema.optional(),
   address: TonAddressSchema.optional(),
   chain: TonChainSchema.optional(),
+  network: z.enum(["mainnet", "testnet"]).optional(),
   walletAppName: TonWalletAppNameSchema.optional(),
   verifiedAt: IsoDateTimeSchema.optional(),
   connectedAt: IsoDateTimeSchema.optional(),
+  disconnectedAt: IsoDateTimeSchema.optional(),
+  lastSyncAt: IsoDateTimeSchema.optional(),
+  serverTime: IsoDateTimeSchema.optional(),
 });
 
 export const WalletProofResponseSchema = z.object({
