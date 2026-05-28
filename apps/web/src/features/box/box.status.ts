@@ -40,9 +40,9 @@ const PAYMENT_STATUS_META: Readonly<Record<string, PaymentStatusMeta>> = {
   },
   precheckout_checked: {
     status: "precheckout_checked",
-    label: "支付中",
+    label: "支付校验中",
     title: "Telegram 正在校验支付",
-    detail: "支付校验已通过，正在等待最终支付成功回调。",
+    detail: "支付校验中，服务端已确认订单可支付，正在等待最终支付成功回调。",
     tone: "pending",
     actionLabel: "查看支付状态",
     toastType: "info",

@@ -20,6 +20,33 @@ describe("PaymentPendingSheet", () => {
     ).toBeVisible();
   });
 
+  it("shows payment validation copy for pre-checkout status", () => {
+    const { rerender } = renderPaymentSheet({
+      paymentStatus: "precheckout_checked",
+    });
+
+    expect(
+      screen.getByRole("dialog", { name: "Telegram 正在校验支付" }),
+    ).toBeVisible();
+    expect(screen.getAllByText("支付校验中")).toHaveLength(2);
+    expect(
+      screen.getByText(
+        "支付校验中，服务端已确认订单可支付，正在等待最终支付成功回调。",
+      ),
+    ).toBeVisible();
+
+    rerender(
+      <PaymentPendingSheet
+        open
+        order={createOrder({ paymentStatus: "precheckout_ok" })}
+        onCheckResult={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(screen.getAllByText("支付校验中")).toHaveLength(2);
+  });
+
   it("does not treat refund and dispute states as completed", () => {
     const { rerender } = renderPaymentSheet({
       paymentStatus: "refunded",

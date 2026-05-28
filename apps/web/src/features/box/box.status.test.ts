@@ -6,7 +6,7 @@ describe("payment status labels", () => {
   it.each([
     ["created", "支付中", "支付订单已创建"],
     ["invoice_created", "支付中", "等待 Stars 支付"],
-    ["precheckout_checked", "支付中", "Telegram 正在校验支付"],
+    ["precheckout_checked", "支付校验中", "Telegram 正在校验支付"],
     ["paid", "已支付", "支付已成功"],
     ["fulfilling", "发货中", "发货处理中"],
     ["fulfilled", "已完成", "开盒完成"],
