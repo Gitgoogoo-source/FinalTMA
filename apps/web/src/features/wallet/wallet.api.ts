@@ -90,7 +90,6 @@ export async function verifyWalletProof(
     rawAddress: input.account.address,
     network: input.account.chain,
     walletAppName: input.walletAppName ?? null,
-    status: "verified",
   });
 }
 

@@ -11,7 +11,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { FeedbackProvider } from "@/app/providers/FeedbackProvider";
 import { useFeedbackStore } from "@/features/feedback/feedback.store";
-import type { WalletConnectionStatus } from "@/features/wallet/wallet.types";
+import type {
+  WalletConnectionStatus,
+  WalletMintQueueSummary,
+} from "@/features/wallet/wallet.types";
 
 import { WalletEntryButton } from "./WalletEntryButton";
 
@@ -39,7 +42,7 @@ const walletConnectMock = vi.hoisted(() => ({
       address: null as string | null,
       errorMessage: null as string | null,
       lastSyncAt: null as string | null,
-      mintQueue: null,
+      mintQueue: null as WalletMintQueueSummary | null,
       network: null as string | null,
       rawAddress: null as string | null,
       status: "not_connected" as WalletConnectionStatus,
@@ -62,7 +65,7 @@ const syncWalletNftsMock = vi.hoisted(() => ({
 const mintQueueMock = vi.hoisted(() => ({
   refetch: vi.fn(),
   state: {
-    mintQueue: null,
+    mintQueue: null as WalletMintQueueSummary | null,
     refetch: vi.fn(),
   },
 }));
@@ -133,6 +136,27 @@ describe("WalletEntryButton", () => {
     fireEvent.click(screen.getByRole("button", { name: "Connect Wallet" }));
 
     expect(walletConnectMock.openWalletModal).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the entry unconnected when the user cancels wallet connection", async () => {
+    walletConnectMock.openWalletModal.mockResolvedValue({ proofReady: true });
+    walletConnectMock.state = createWalletConnectState({
+      openWalletModal: walletConnectMock.openWalletModal,
+    });
+
+    renderWalletEntry(true);
+
+    fireEvent.click(screen.getByRole("button", { name: "Connect Wallet" }));
+
+    await waitFor(() => {
+      expect(walletConnectMock.openWalletModal).toHaveBeenCalledTimes(1);
+    });
+    expect(
+      screen.getByRole("button", { name: "Connect Wallet" }),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole("dialog", { name: "钱包状态" }),
+    ).not.toBeInTheDocument();
   });
 
   it("shows a stable notice when proof preparation is not ready", async () => {
@@ -206,6 +230,43 @@ describe("WalletEntryButton", () => {
     ).toHaveAttribute("title", "钱包已验证");
   });
 
+  it("restores verified wallet UI from backend status after refresh", () => {
+    walletConnectMock.state = createWalletConnectState({
+      address: "EQBACKENDRESTOREDWALLET1234567890abcdefghi",
+      isConnected: true,
+      status: "verified",
+      wallet: {
+        address: "EQBACKENDRESTOREDWALLET1234567890abcdefghi",
+        rawAddress: "0:backend",
+        network: "mainnet",
+        walletAppName: "Tonkeeper",
+        verifiedAt: "2026-05-28T10:00:00.000Z",
+        lastSyncAt: "2026-05-28T11:00:00.000Z",
+        syncStatus: "success",
+        mintQueue: {
+          queued: 1,
+          processing: 0,
+          failed: 0,
+          manualReview: 0,
+        },
+        errorMessage: null,
+        status: "verified",
+      },
+    });
+
+    renderWalletEntry(true);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /EQBA...fghi.*verified/ }),
+    );
+
+    expect(screen.getByRole("dialog", { name: "钱包状态" })).toBeVisible();
+    expect(screen.getByText("钱包验证已通过")).toBeVisible();
+    expect(screen.getByText("Tonkeeper")).toBeVisible();
+    expect(screen.getByText("已同步")).toBeVisible();
+    expect(screen.getByText("1 个进行中")).toBeVisible();
+  });
+
   it("can trigger wallet verification from the status sheet", async () => {
     walletConnectMock.state = createWalletConnectState({
       address: "EQABCDEFGHIJKLMNOPQRSTUV1234567890abcdefghi",
@@ -235,6 +296,37 @@ describe("WalletEntryButton", () => {
     await waitFor(() => {
       expect(walletConnectMock.verifyWallet).toHaveBeenCalledTimes(1);
     });
+  });
+
+  it("can refresh backend wallet status from the status sheet", () => {
+    walletConnectMock.state = createWalletConnectState({
+      address: "EQABCDEFGHIJKLMNOPQRSTUV1234567890abcdefghi",
+      isConnected: true,
+      refetchStatus: walletConnectMock.refetchStatus,
+      status: "verified",
+      wallet: {
+        address: "EQABCDEFGHIJKLMNOPQRSTUV1234567890abcdefghi",
+        rawAddress: "0:abcdef",
+        network: "mainnet",
+        walletAppName: "Tonkeeper",
+        verifiedAt: "2026-05-28T10:00:00.000Z",
+        lastSyncAt: null,
+        syncStatus: "idle",
+        mintQueue: null,
+        errorMessage: null,
+        status: "verified",
+      },
+    });
+
+    renderWalletEntry(true);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /EQAB...fghi.*verified/ }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "刷新状态" }));
+
+    expect(walletConnectMock.refetchStatus).toHaveBeenCalledTimes(1);
+    expect(mintQueueMock.refetch).toHaveBeenCalledTimes(1);
   });
 
   it("disconnects from the status sheet", async () => {
@@ -270,6 +362,57 @@ describe("WalletEntryButton", () => {
     expect(screen.getByRole("status")).toHaveTextContent("钱包已断开");
   });
 
+  it("returns to the unconnected UI after disconnect state refreshes", async () => {
+    const { rerender } = renderWalletEntry(true);
+
+    walletConnectMock.state = createWalletConnectState({
+      address: "EQABCDEFGHIJKLMNOPQRSTUV1234567890abcdefghi",
+      disconnectWallet: walletConnectMock.disconnectWallet,
+      isConnected: true,
+      status: "connected_unverified",
+      wallet: {
+        address: "EQABCDEFGHIJKLMNOPQRSTUV1234567890abcdefghi",
+        rawAddress: "0:abcdef",
+        network: "testnet",
+        walletAppName: "Tonkeeper",
+        verifiedAt: null,
+        lastSyncAt: null,
+        syncStatus: "idle",
+        mintQueue: null,
+        errorMessage: null,
+        status: "connected_unverified",
+      },
+    });
+    rerender(
+      <FeedbackProvider>
+        <WalletEntryButton tonConnectEnabled />
+      </FeedbackProvider>,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /EQAB...fghi.*验证钱包/ }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "断开" }));
+
+    await waitFor(() => {
+      expect(walletConnectMock.disconnectWallet).toHaveBeenCalledTimes(1);
+    });
+
+    walletConnectMock.state = createWalletConnectState({
+      status: "not_connected",
+    });
+    rerender(
+      <FeedbackProvider>
+        <WalletEntryButton tonConnectEnabled />
+      </FeedbackProvider>,
+    );
+
+    expect(
+      screen.getAllByRole("button", { name: "Connect Wallet" })[0]!,
+    ).toBeVisible();
+    expect(screen.getByText("尚未连接钱包")).toBeVisible();
+  });
+
   it("shows loading while TON Connect restores the wallet session", () => {
     walletConnectMock.state = createWalletConnectState({
       isConnecting: true,
@@ -297,7 +440,7 @@ function createWalletConnectState(
     address: null,
     errorMessage: null,
     lastSyncAt: null,
-    mintQueue: null,
+    mintQueue: null as WalletMintQueueSummary | null,
     network: null,
     rawAddress: null,
     status: "not_connected" as WalletConnectionStatus,
