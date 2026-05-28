@@ -16,6 +16,7 @@ describe("payment status labels", () => {
     ["paid", "已支付", "支付已成功，等待发货"],
     ["paid_waiting_fulfillment", "已支付", "支付已成功，等待发货"],
     ["fulfilling", "发货中", "发货处理中"],
+    ["fulfillment_failed_retrying", "补发中", "支付已成功，奖励补发中"],
     ["fulfilled", "已完成", "开盒完成"],
     ["cancelled", "已取消", "支付已取消"],
     ["failed", "失败", "支付或发货异常"],
@@ -53,6 +54,7 @@ describe("payment status labels", () => {
     expect(isPaymentRetryAllowed("invoice_created")).toBe(true);
     expect(isPaymentRetryAllowed("paid")).toBe(false);
     expect(isPaymentRetryAllowed("fulfilling")).toBe(false);
+    expect(isPaymentRetryAllowed("fulfillment_failed_retrying")).toBe(false);
     expect(isPaymentRetryAllowed("failed")).toBe(false);
   });
 
@@ -62,6 +64,14 @@ describe("payment status labels", () => {
         status: "pending",
         paymentStatus: "fulfilling",
         orderStatus: "processing",
+      }),
+    ).toBe(true);
+
+    expect(
+      shouldPollDrawResultStatus({
+        status: "pending",
+        paymentStatus: "fulfillment_failed_retrying",
+        orderStatus: "failed",
       }),
     ).toBe(true);
 

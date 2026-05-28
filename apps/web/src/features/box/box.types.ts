@@ -111,6 +111,8 @@ export type CreateOpenOrderResponse = {
   paymentStatus: string;
   paymentOrderStatus: string;
   expiresAt: string | null;
+  paidAt?: string | null;
+  fulfilledAt?: string | null;
   devPaymentProcessed: boolean;
   idempotent: boolean;
   resultReady: boolean;
@@ -159,6 +161,7 @@ export type DrawResultResponse = {
   completedAt: string | null;
   boxName: string | null;
   paymentStatus: string | null;
+  paymentOrderStatus: string | null;
   balances: DrawResultBalances | null;
   results: DrawResultItem[];
   serverTime: string | null;

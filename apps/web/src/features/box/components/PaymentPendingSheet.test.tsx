@@ -84,6 +84,35 @@ describe("PaymentPendingSheet", () => {
     expect(onCheckResult).toHaveBeenCalledTimes(1);
   });
 
+  it("prefers normalized payment order status over stale draw order status", () => {
+    renderPaymentSheet({
+      orderStatus: "invoice_created",
+      paymentOrderStatus: "paid",
+      paymentStatus: "invoice_created",
+    });
+
+    expect(
+      screen.getByRole("dialog", { name: "支付已成功，等待发货" }),
+    ).toBeVisible();
+    expect(screen.getAllByText("已支付")).toHaveLength(2);
+  });
+
+  it("shows compensation copy for paid orders with failed fulfillment", () => {
+    renderPaymentSheet({
+      paidAt: "2026-05-28T00:02:00.000Z",
+      paymentOrderStatus: "failed",
+      paymentStatus: "fulfillment_failed_retrying",
+    });
+
+    expect(
+      screen.getByRole("dialog", { name: "支付已成功，奖励补发中" }),
+    ).toBeVisible();
+    expect(screen.getAllByText("补发中")).toHaveLength(2);
+    expect(
+      screen.getByText("发货事务异常，后台会重试补发；请不要重复支付。"),
+    ).toBeVisible();
+  });
+
   it("shows retry copy when the Telegram invoice did not open", () => {
     const onRetryPayment = vi.fn();
 
@@ -152,7 +181,7 @@ function renderPaymentSheet(
 function createOrder(
   overrides: Partial<CreateOpenOrderResponse> = {},
 ): CreateOpenOrderResponse {
-  return {
+  const order: CreateOpenOrderResponse = {
     devPaymentProcessed: false,
     drawCount: 1,
     expiresAt: "2026-05-28T00:15:00.000Z",
@@ -169,4 +198,10 @@ function createOrder(
     xtrAmount: 100,
     ...overrides,
   };
+
+  if (overrides.paymentStatus && !overrides.paymentOrderStatus) {
+    order.paymentOrderStatus = overrides.paymentStatus;
+  }
+
+  return order;
 }

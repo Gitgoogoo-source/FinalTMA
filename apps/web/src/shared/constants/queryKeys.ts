@@ -10,6 +10,10 @@ export const queryKeys = {
     list: ["box", "list"] as const,
     rewards: (boxId: string | null | undefined) =>
       ["box", "rewards", boxId ?? "none"] as const,
+    paymentStatus: (orderId: string | null | undefined) =>
+      ["box", "payment-status", orderId ?? "none"] as const,
+    pendingDrawOrder: (orderId: string | null | undefined) =>
+      ["box", "pending-draw-order", orderId ?? "none"] as const,
     result: (orderId: string | null | undefined) =>
       ["box", "result", orderId ?? "none"] as const,
   },

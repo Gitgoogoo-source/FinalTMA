@@ -309,6 +309,16 @@ function normalizeCreateOpenOrderResponse(
   fallbackDrawCount: 1 | 10,
 ): CreateOpenOrderResponse {
   const payload = isRecord(response) ? response : {};
+  const orderStatus =
+    readString(payload.orderStatus) ??
+    readString(payload.order_status) ??
+    "pending_payment";
+  const paymentOrderStatus =
+    readPaymentOrderStatus(payload, orderStatus) ?? "created";
+  const paymentStatus =
+    normalizePaymentOrderStatus(
+      payload.paymentStatus ?? payload.payment_status,
+    ) ?? paymentOrderStatus;
 
   return {
     orderId: readString(payload.orderId) ?? readString(payload.order_id) ?? "",
@@ -326,21 +336,13 @@ function normalizeCreateOpenOrderResponse(
     drawCount:
       normalizeDrawCount(payload.drawCount ?? payload.draw_count) ??
       fallbackDrawCount,
-    orderStatus:
-      readString(payload.orderStatus) ??
-      readString(payload.order_status) ??
-      "pending_payment",
-    paymentStatus:
-      readString(payload.paymentStatus) ??
-      readString(payload.payment_status) ??
-      "pending_payment",
-    paymentOrderStatus:
-      readString(payload.paymentOrderStatus) ??
-      readString(payload.payment_order_status) ??
-      readString(payload.paymentStatus) ??
-      readString(payload.payment_status) ??
-      "pending_payment",
+    orderStatus,
+    paymentStatus,
+    paymentOrderStatus,
     expiresAt: readString(payload.expiresAt) ?? readString(payload.expires_at),
+    paidAt: readString(payload.paidAt) ?? readString(payload.paid_at),
+    fulfilledAt:
+      readString(payload.fulfilledAt) ?? readString(payload.fulfilled_at),
     devPaymentProcessed:
       readBoolean(payload.devPaymentProcessed) ??
       readBoolean(payload.dev_payment_processed) ??
@@ -363,6 +365,20 @@ function normalizeDrawResultResponse(
   const rawResults = Array.isArray(payload.results) ? payload.results : [];
   const status =
     readString(payload.status) === "completed" ? "completed" : "pending";
+  const orderStatus =
+    readString(payload.orderStatus) ??
+    readString(payload.order_status) ??
+    "unknown";
+  const paidAt =
+    readString(payload.paidAt) ??
+    readString(payload.paid_at) ??
+    readString(payment.paidAt) ??
+    readString(payment.paid_at);
+  const paymentOrderStatus = readPaymentOrderStatus(
+    payload,
+    orderStatus,
+    payment,
+  );
 
   return {
     orderId:
@@ -370,10 +386,7 @@ function normalizeDrawResultResponse(
       readString(payload.order_id) ??
       fallbackOrderId,
     status,
-    orderStatus:
-      readString(payload.orderStatus) ??
-      readString(payload.order_status) ??
-      "unknown",
+    orderStatus,
     quantity:
       readNumber(payload.drawCount) ??
       readNumber(payload.draw_count) ??
@@ -387,7 +400,7 @@ function normalizeDrawResultResponse(
       0,
     invoicePayload:
       readString(payload.invoicePayload) ?? readString(payload.invoice_payload),
-    paidAt: readString(payload.paidAt) ?? readString(payload.paid_at),
+    paidAt,
     completedAt:
       readString(payload.completedAt) ?? readString(payload.completed_at),
     boxName:
@@ -395,10 +408,8 @@ function normalizeDrawResultResponse(
       readString(payload.box_name) ??
       readString(box.displayName) ??
       readString(box.display_name),
-    paymentStatus:
-      readString(payload.paymentStatus) ??
-      readString(payload.payment_status) ??
-      readString(payment.status),
+    paymentStatus: toPaymentDisplayStatus(paymentOrderStatus, paidAt),
+    paymentOrderStatus,
     balances: normalizeDrawResultBalances(payload.balances),
     results: rawResults.map(normalizeDrawResultItem),
     serverTime:
@@ -509,6 +520,85 @@ function normalizeDrawCount(value: unknown): 1 | 10 | null {
   }
 
   return null;
+}
+
+const PAYMENT_ORDER_STATUS_ALIASES: Readonly<Record<string, string>> = {
+  canceled: "cancelled",
+  completed: "fulfilled",
+  dev_paid: "fulfilled",
+  opened: "fulfilled",
+  opening: "fulfilling",
+  paid_and_fulfilled: "fulfilled",
+  paid_waiting: "paid_waiting_fulfillment",
+  pending: "created",
+  pending_payment: "invoice_created",
+  precheckout_ok: "precheckout_checked",
+  processing: "fulfilling",
+};
+
+function readPaymentOrderStatus(
+  payload: Record<string, unknown>,
+  orderStatus: string | null | undefined,
+  payment?: Record<string, unknown>,
+): string | null {
+  return (
+    normalizePaymentOrderStatus(
+      payload.paymentOrderStatus ?? payload.payment_order_status,
+    ) ??
+    normalizePaymentOrderStatus(
+      payload.paymentStatus ?? payload.payment_status,
+    ) ??
+    normalizePaymentOrderStatus(
+      payment?.paymentOrderStatus ?? payment?.payment_order_status,
+    ) ??
+    normalizePaymentOrderStatus(payment?.status) ??
+    inferPaymentOrderStatusFromOrderStatus(orderStatus)
+  );
+}
+
+function normalizePaymentOrderStatus(value: unknown): string | null {
+  const normalized = readString(value)?.toLowerCase();
+
+  if (!normalized) {
+    return null;
+  }
+
+  return PAYMENT_ORDER_STATUS_ALIASES[normalized] ?? normalized;
+}
+
+function inferPaymentOrderStatusFromOrderStatus(
+  value: unknown,
+): string | null {
+  const normalized = normalizePaymentOrderStatus(value);
+
+  switch (normalized) {
+    case "invoice_created":
+    case "created":
+      return "created";
+    case "paid":
+      return "paid";
+    case "fulfilling":
+      return "fulfilling";
+    case "fulfilled":
+      return "fulfilled";
+    case "failed":
+    case "expired":
+    case "cancelled":
+      return normalized;
+    default:
+      return null;
+  }
+}
+
+function toPaymentDisplayStatus(
+  paymentOrderStatus: string | null,
+  paidAt: string | null,
+): string | null {
+  if (paymentOrderStatus === "failed" && paidAt) {
+    return "fulfillment_failed_retrying";
+  }
+
+  return paymentOrderStatus;
 }
 
 function createIdempotencyKey(drawCount: 1 | 10): string {

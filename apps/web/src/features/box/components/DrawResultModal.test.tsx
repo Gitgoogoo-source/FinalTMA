@@ -21,7 +21,7 @@ describe("DrawResultModal", () => {
   });
 
   it("shows compensation copy when a paid order failed fulfillment", () => {
-    renderDrawResultModal({
+    const { rerender } = renderDrawResultModal({
       orderStatus: "failed",
       paidAt: "2026-05-28T00:01:00.000Z",
       paymentStatus: "failed",
@@ -31,6 +31,24 @@ describe("DrawResultModal", () => {
     expect(
       screen.getByText("发货事务异常，后台会重试补发；请不要重复支付。"),
     ).toBeVisible();
+
+    rerender(
+      <DrawResultModal
+        open
+        result={createPendingResult({
+          orderStatus: "failed",
+          paidAt: "2026-05-28T00:01:00.000Z",
+          paymentStatus: "fulfillment_failed_retrying",
+        })}
+        isLoading={false}
+        isError={false}
+        errorMessage={null}
+        onRetry={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("支付已成功，奖励补发中")).toBeVisible();
   });
 });
 
@@ -60,6 +78,7 @@ function createPendingResult(
     orderStatus: "processing",
     paidAt: "2026-05-28T00:01:00.000Z",
     paidStars: 10,
+    paymentOrderStatus: "fulfilling",
     paymentStatus: "fulfilling",
     quantity: 1,
     results: [],

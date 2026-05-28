@@ -15,6 +15,7 @@ export const API_ENDPOINTS = {
     list: "/boxes/list",
     rewards: "/boxes/rewards",
     createOpenOrder: "/boxes/create-open-order",
+    paymentStatus: "/boxes/result",
     result: "/boxes/result",
   },
   inventory: {

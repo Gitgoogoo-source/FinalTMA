@@ -101,6 +101,15 @@ const PAYMENT_STATUS_META: Readonly<Record<string, PaymentStatusMeta>> = {
     actionLabel: "重试查询",
     toastType: "error",
   },
+  fulfillment_failed_retrying: {
+    status: "fulfillment_failed_retrying",
+    label: "补发中",
+    title: "支付已成功，奖励补发中",
+    detail: "发货事务异常，后台会重试补发；请不要重复支付。",
+    tone: "warning",
+    actionLabel: "查看补发状态",
+    toastType: "info",
+  },
   cancelled: {
     status: "cancelled",
     label: "已取消",
@@ -164,6 +173,7 @@ const PAYMENT_ACTIVE_FULFILLMENT_STATUSES = new Set([
   "paid",
   "paid_waiting_fulfillment",
   "fulfilling",
+  "fulfillment_failed_retrying",
 ]);
 
 const PAYMENT_TERMINAL_STATUSES = new Set([
@@ -246,6 +256,10 @@ export function shouldPollDrawResultStatus(
 
   const paymentStatus = normalizePaymentStatus(result.paymentStatus);
   const orderStatus = normalizePaymentStatus(result.orderStatus);
+
+  if (paymentStatus === "fulfillment_failed_retrying") {
+    return true;
+  }
 
   if (
     isPaymentTerminalStatus(paymentStatus) ||

@@ -121,7 +121,7 @@ describe("BoxPage Stars invoice flow", () => {
         expect.any(Function),
       );
     });
-    expect(screen.getByText("正在打开 Stars 支付窗口")).toBeVisible();
+    expect(screen.getByText("支付窗口已打开")).toBeVisible();
   });
 
   it("shows a retryable state when Telegram invoice opening is unavailable", async () => {
@@ -285,6 +285,7 @@ function createDrawResult(
     orderStatus: "completed",
     paidAt: "2026-05-28T00:01:00.000Z",
     paidStars: order.xtrAmount,
+    paymentOrderStatus: "fulfilled",
     paymentStatus: "fulfilled",
     quantity: order.drawCount,
     results: [

@@ -12,6 +12,8 @@ import { formatCurrencyAmount } from "@/shared/lib/formatCurrency";
 import {
   getPaymentStatusMeta,
   isPaymentRetryAllowed,
+  normalizePaymentStatus,
+  type PaymentStatusMeta,
   type PaymentStatusTone,
 } from "../box.status";
 import type { CreateOpenOrderResponse } from "../box.types";
@@ -48,12 +50,9 @@ export function PaymentPendingSheet({
     return null;
   }
 
-  const statusMeta = getPaymentStatusMeta(
-    order.paymentStatus || order.orderStatus,
-  );
-  const canRetryCurrentOrder = isPaymentRetryAllowed(
-    order.paymentStatus || order.orderStatus,
-  );
+  const paymentStatus = getCurrentPaymentStatus(order);
+  const statusMeta = getPaymentSheetStatusMeta(order, paymentStatus);
+  const canRetryCurrentOrder = isPaymentRetryAllowed(paymentStatus);
   const invoiceNoticeMeta = getInvoiceNoticeMeta(invoiceOpenNotice);
   const showRetryPayment =
     Boolean(invoiceNoticeMeta?.canRetry) &&
@@ -127,6 +126,34 @@ export function PaymentPendingSheet({
   );
 }
 
+function getCurrentPaymentStatus(order: CreateOpenOrderResponse): string {
+  return order.paymentOrderStatus || order.paymentStatus || order.orderStatus;
+}
+
+function getPaymentSheetStatusMeta(
+  order: CreateOpenOrderResponse,
+  status: string | null | undefined,
+): PaymentStatusMeta {
+  const normalized = normalizePaymentStatus(status);
+
+  if (
+    normalized === "fulfillment_failed_retrying" ||
+    (normalized === "failed" && order.paidAt)
+  ) {
+    return {
+      status: "fulfillment_failed_retrying",
+      label: "补发中",
+      title: "支付已成功，奖励补发中",
+      detail: "发货事务异常，后台会重试补发；请不要重复支付。",
+      tone: "warning",
+      actionLabel: "查看补发状态",
+      toastType: "info",
+    };
+  }
+
+  return getPaymentStatusMeta(normalized);
+}
+
 function getInvoiceNoticeMeta(notice: PaymentOpenNotice | null): {
   title: string;
   detail: string;
@@ -140,8 +167,9 @@ function getInvoiceNoticeMeta(notice: PaymentOpenNotice | null): {
   switch (notice.status) {
     case "opening":
       return {
-        title: "正在打开 Stars 支付窗口",
-        detail: "请在 Telegram 窗口中完成支付，关闭窗口不代表支付成功。",
+        title: "支付窗口已打开",
+        detail:
+          "请在 Telegram Stars 窗口中完成支付，关闭窗口不代表支付成功。",
         tone: "pending",
         canRetry: false,
       };
