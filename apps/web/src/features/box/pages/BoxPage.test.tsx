@@ -11,6 +11,7 @@ import type {
   CreateOpenOrderResponse,
   DrawResultResponse,
 } from "../box.types";
+import { PENDING_STARS_PAYMENT_STORAGE_KEY } from "../hooks/useStarsPayment";
 import { BoxPage } from "./BoxPage";
 
 type CreateOrderMutateOptions = {
@@ -25,8 +26,11 @@ const mocks = vi.hoisted(() => ({
   createOrderResult: null as CreateOpenOrderResponse | null,
   drawResultByOrderId: new Map<string, DrawResultResponse>(),
   drawResultRefetch: vi.fn(),
+  paymentStatusByOrderId: new Map<string, DrawResultResponse>(),
+  paymentStatusRefetch: vi.fn(),
   rewardsRefetch: vi.fn(),
   useDrawResult: vi.fn(),
+  usePaymentStatus: vi.fn(),
 }));
 
 vi.mock("../hooks/useBoxes", () => ({
@@ -66,12 +70,18 @@ vi.mock("../hooks/useDrawResult", () => ({
   useDrawResult: mocks.useDrawResult,
 }));
 
+vi.mock("../hooks/usePaymentStatus", () => ({
+  usePaymentStatus: mocks.usePaymentStatus,
+}));
+
 describe("BoxPage Stars invoice flow", () => {
   beforeEach(() => {
     mocks.boxes = [createBox()];
     mocks.createOrderResult = createOrder();
     mocks.drawResultByOrderId.clear();
+    mocks.paymentStatusByOrderId.clear();
     mocks.drawResultRefetch.mockReset();
+    mocks.paymentStatusRefetch.mockReset();
     mocks.createOrderMutate.mockReset();
     mocks.createOrderMutate.mockImplementation(
       (_input: unknown, options?: CreateOrderMutateOptions) => {
@@ -96,10 +106,25 @@ describe("BoxPage Stars invoice flow", () => {
           : null,
       }),
     );
+    mocks.usePaymentStatus.mockReset();
+    mocks.usePaymentStatus.mockImplementation(
+      (orderId: string | null | undefined) => ({
+        error: null,
+        isError: false,
+        isFetching: false,
+        isLoading: false,
+        refetch: mocks.paymentStatusRefetch,
+        result: orderId
+          ? (mocks.paymentStatusByOrderId.get(orderId) ?? null)
+          : null,
+      }),
+    );
+    globalThis.localStorage?.removeItem(PENDING_STARS_PAYMENT_STORAGE_KEY);
   });
 
   afterEach(() => {
     delete (globalThis as TelegramGlobal).Telegram;
+    globalThis.localStorage?.removeItem(PENDING_STARS_PAYMENT_STORAGE_KEY);
     vi.clearAllMocks();
   });
 
@@ -137,7 +162,7 @@ describe("BoxPage Stars invoice flow", () => {
     expect(screen.getByRole("button", { name: "重试支付" })).toBeVisible();
   });
 
-  it("polls the existing draw result endpoint while the payment sheet is open", async () => {
+  it("polls the payment status query while the payment sheet is open", async () => {
     renderBoxPage();
 
     fireEvent.click(screen.getByRole("button", { name: /^开 1 次/ }));
@@ -149,7 +174,7 @@ describe("BoxPage Stars invoice flow", () => {
     });
 
     expect(
-      mocks.useDrawResult.mock.calls.some(([orderId, options]) => {
+      mocks.usePaymentStatus.mock.calls.some(([orderId, options]) => {
         return (
           orderId === mocks.createOrderResult?.orderId &&
           options &&
@@ -162,13 +187,14 @@ describe("BoxPage Stars invoice flow", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "查看结果状态" }));
 
-    expect(mocks.drawResultRefetch).toHaveBeenCalledTimes(1);
+    expect(mocks.paymentStatusRefetch).toHaveBeenCalledTimes(1);
   });
 
   it("opens the result modal only after result polling is completed", async () => {
     const order = createOrder();
     mocks.createOrderResult = order;
     mocks.drawResultByOrderId.set(order.orderId, createDrawResult(order));
+    mocks.paymentStatusByOrderId.set(order.orderId, createDrawResult(order));
 
     renderBoxPage();
 
@@ -187,7 +213,7 @@ describe("BoxPage Stars invoice flow", () => {
   it("does not keep retry payment available after polling sees fulfillment", async () => {
     const order = createOrder();
     mocks.createOrderResult = order;
-    mocks.drawResultByOrderId.set(
+    mocks.paymentStatusByOrderId.set(
       order.orderId,
       createDrawResult(order, {
         completedAt: null,
@@ -208,6 +234,60 @@ describe("BoxPage Stars invoice flow", () => {
     expect(
       screen.queryByRole("button", { name: "重试支付" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("restores a pending order from local storage and checks server status", async () => {
+    const openInvoice = vi.fn();
+    const order = createOrder({
+      expiresAt: "2099-05-28T00:15:00.000Z",
+    });
+    (globalThis as TelegramGlobal).Telegram = {
+      WebApp: {
+        openInvoice,
+      },
+    };
+    globalThis.localStorage?.setItem(
+      PENDING_STARS_PAYMENT_STORAGE_KEY,
+      JSON.stringify({
+        expiresAt: order.expiresAt,
+        orderId: order.orderId,
+        savedAt: "2026-05-28T00:01:00.000Z",
+      }),
+    );
+    mocks.paymentStatusByOrderId.set(
+      order.orderId,
+      createDrawResult(order, {
+        completedAt: null,
+        orderStatus: "invoice_created",
+        paymentOrderStatus: "invoice_created",
+        paymentStatus: "invoice_created",
+        results: [],
+        status: "pending",
+      }),
+    );
+
+    renderBoxPage();
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("已恢复上次未完成订单，正在向服务端确认支付状态。"),
+      ).toBeVisible();
+    });
+    expect(
+      screen.getByRole("dialog", { name: "等待 Stars 支付" }),
+    ).toBeVisible();
+    expect(openInvoice).not.toHaveBeenCalled();
+    expect(
+      mocks.usePaymentStatus.mock.calls.some(([orderId, options]) => {
+        return (
+          orderId === order.orderId &&
+          options &&
+          typeof options === "object" &&
+          "enabled" in options &&
+          options.enabled === true
+        );
+      }),
+    ).toBe(true);
   });
 });
 

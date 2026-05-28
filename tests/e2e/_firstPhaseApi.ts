@@ -15,6 +15,7 @@ export const TEST_INIT_DATA =
   "auth_date=1779321600&query_id=e2e-query&user=%7B%22id%22%3A7001%2C%22first_name%22%3A%22%E6%B5%8B%E8%AF%95%22%7D&hash=e2e";
 
 type MockFirstPhaseApiOptions = {
+  boxPaymentFlow?: "dev_completed" | "stars_pending";
   evolveOutcome?: "success" | "failed";
 };
 
@@ -23,6 +24,7 @@ export async function mockFirstPhaseApi(
   options: MockFirstPhaseApiOptions = {},
 ): Promise<void> {
   const evolveOutcome = options.evolveOutcome ?? "success";
+  const boxPaymentFlow = options.boxPaymentFlow ?? "dev_completed";
   let inventoryLevel = 1;
   let inventoryPower = 10;
   let fgemsAvailable = 80;
@@ -168,6 +170,26 @@ export async function mockFirstPhaseApi(
       | undefined;
     const drawCount = body?.draw_count === 10 ? 10 : 1;
 
+    if (boxPaymentFlow === "stars_pending") {
+      await fulfillOk(route, {
+        order_id: ORDER_ID,
+        star_order_id: STAR_ORDER_ID,
+        invoice_payload: `gacha:${ORDER_ID}`,
+        invoice_link: "https://t.me/invoice/e2e-open-order",
+        invoice_open_mode: "web_app_open_invoice",
+        xtr_amount: drawCount === 10 ? 90 : 10,
+        draw_count: drawCount,
+        order_status: "invoice_created",
+        payment_status: "invoice_created",
+        payment_order_status: "invoice_created",
+        expires_at: "2099-05-21T00:15:00.000Z",
+        dev_payment_processed: false,
+        idempotent: false,
+        result_ready: false,
+      });
+      return;
+    }
+
     await fulfillOk(route, {
       order_id: ORDER_ID,
       star_order_id: STAR_ORDER_ID,
@@ -183,29 +205,54 @@ export async function mockFirstPhaseApi(
   });
 
   await page.route("**/api/boxes/result?*", (route) =>
-    fulfillOk(route, {
-      order_id: ORDER_ID,
-      status: "completed",
-      order_status: "completed",
-      quantity: 1,
-      paid_stars: 10,
-      returned_kcoin: 100,
-      paid_at: "2026-05-21T00:00:00.000Z",
-      completed_at: "2026-05-21T00:00:01.000Z",
-      box: {
-        display_name: "测试盲盒",
-      },
-      payment: {
-        status: "dev_paid",
-      },
-      balances: {
-        kcoin: {
-          available: "1300",
-        },
-      },
-      results: [inventoryItemResult()],
-      server_time: "2026-05-21T00:00:01.000Z",
-    }),
+    fulfillOk(
+      route,
+      boxPaymentFlow === "stars_pending"
+        ? {
+            order_id: ORDER_ID,
+            status: "pending",
+            order_status: "invoice_created",
+            quantity: 1,
+            paid_stars: 10,
+            returned_kcoin: 100,
+            invoice_payload: `gacha:${ORDER_ID}`,
+            paid_at: null,
+            completed_at: null,
+            box: {
+              display_name: "测试盲盒",
+            },
+            payment: {
+              status: "invoice_created",
+              payment_order_status: "invoice_created",
+            },
+            balances: null,
+            results: [],
+            server_time: "2026-05-21T00:00:01.000Z",
+          }
+        : {
+            order_id: ORDER_ID,
+            status: "completed",
+            order_status: "completed",
+            quantity: 1,
+            paid_stars: 10,
+            returned_kcoin: 100,
+            paid_at: "2026-05-21T00:00:00.000Z",
+            completed_at: "2026-05-21T00:00:01.000Z",
+            box: {
+              display_name: "测试盲盒",
+            },
+            payment: {
+              status: "dev_paid",
+            },
+            balances: {
+              kcoin: {
+                available: "1300",
+              },
+            },
+            results: [inventoryItemResult()],
+            server_time: "2026-05-21T00:00:01.000Z",
+          },
+    ),
   );
 
   await page.route("**/api/inventory/list?*", (route) => {

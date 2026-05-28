@@ -108,4 +108,37 @@ describe("box api", () => {
       status: "pending",
     });
   });
+
+  it("queries payment status without requesting result items", async () => {
+    mocks.apiRequest.mockResolvedValueOnce({
+      draw_order_id: "11111111-1111-4111-8111-111111111111",
+      draw_count: 10,
+      invoice_payload: "gacha:test-payload",
+      order_status: "invoice_created",
+      payment: {
+        status: "invoice_created",
+      },
+      status: "pending",
+      total_price_stars: 90,
+    });
+
+    const { fetchPaymentStatus } = await import("./box.api");
+    const result = await fetchPaymentStatus(
+      "11111111-1111-4111-8111-111111111111",
+    );
+
+    expect(mocks.apiRequest).toHaveBeenCalledWith(
+      "/boxes/result?orderId=11111111-1111-4111-8111-111111111111&includeItems=false",
+      {
+        method: "GET",
+      },
+    );
+    expect(result).toMatchObject({
+      orderId: "11111111-1111-4111-8111-111111111111",
+      paymentStatus: "invoice_created",
+      quantity: 10,
+      status: "pending",
+    });
+    expect(result.results).toEqual([]);
+  });
 });

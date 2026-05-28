@@ -83,12 +83,25 @@ export async function createOpenOrder(
 export async function fetchDrawResult(
   orderId: string,
 ): Promise<DrawResultResponse> {
+  return fetchBoxOrderResult(orderId, true);
+}
+
+export async function fetchPaymentStatus(
+  orderId: string,
+): Promise<DrawResultResponse> {
+  return fetchBoxOrderResult(orderId, false);
+}
+
+async function fetchBoxOrderResult(
+  orderId: string,
+  includeItems: boolean,
+): Promise<DrawResultResponse> {
   const params = new URLSearchParams({
     orderId,
-    includeItems: "true",
+    includeItems: includeItems ? "true" : "false",
   });
   const response = await apiRequest<unknown>(
-    `${API_ENDPOINTS.boxes.result}?${params.toString()}`,
+    `${API_ENDPOINTS.boxes.paymentStatus}?${params.toString()}`,
     {
       method: "GET",
     },
@@ -566,9 +579,7 @@ function normalizePaymentOrderStatus(value: unknown): string | null {
   return PAYMENT_ORDER_STATUS_ALIASES[normalized] ?? normalized;
 }
 
-function inferPaymentOrderStatusFromOrderStatus(
-  value: unknown,
-): string | null {
+function inferPaymentOrderStatusFromOrderStatus(value: unknown): string | null {
   const normalized = normalizePaymentOrderStatus(value);
 
   switch (normalized) {

@@ -493,6 +493,12 @@ export const BoxDrawResultQuerySchema = z
   })
   .strict();
 
+export const BoxPaymentStatusQuerySchema = z
+  .object({
+    orderId: BoxUuidSchema,
+  })
+  .strict();
+
 export const BoxDrawResultItemSchema = z
   .object({
     drawIndex: z.number().int().min(1).max(10),
@@ -839,6 +845,9 @@ export const parseCreateBoxOpenOrderRequest = (input: unknown) =>
 export const parseBoxDrawResultQuery = (input: unknown) =>
   BoxDrawResultQuerySchema.parse(input);
 
+export const parseBoxPaymentStatusQuery = (input: unknown) =>
+  BoxPaymentStatusQuerySchema.parse(input);
+
 export const parseBoxDrawHistoryQuery = (input: unknown) =>
   BoxDrawHistoryQuerySchema.parse(input);
 
@@ -859,6 +868,7 @@ export type BoxPaymentCurrency = z.infer<typeof BoxPaymentCurrencySchema>;
 export type BoxCurrencyCode = z.infer<typeof BoxCurrencyCodeSchema>;
 export type BoxInvoiceOpenMode = z.infer<typeof BoxInvoiceOpenModeSchema>;
 export type BoxDrawOrderStatus = z.infer<typeof BoxDrawOrderStatusSchema>;
+export type BoxPaymentOrderStatus = z.infer<typeof BoxPaymentOrderStatusSchema>;
 export type BoxRewardSource = z.infer<typeof BoxRewardSourceSchema>;
 export type BoxClientContext = z.infer<typeof BoxClientContextSchema>;
 export type BoxAssetAmount = z.infer<typeof BoxAssetAmountSchema>;
@@ -881,6 +891,7 @@ export type CreateBoxOpenOrderResponse = z.infer<
 >;
 
 export type BoxDrawResultQuery = z.infer<typeof BoxDrawResultQuerySchema>;
+export type BoxPaymentStatusQuery = z.infer<typeof BoxPaymentStatusQuerySchema>;
 export type BoxDrawResultItem = z.infer<typeof BoxDrawResultItemSchema>;
 export type BoxDrawResultResponse = z.infer<typeof BoxDrawResultResponseSchema>;
 

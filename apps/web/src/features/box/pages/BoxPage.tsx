@@ -20,6 +20,7 @@ import { PossibleRewardsRow } from "../components/PossibleRewardsRow";
 import { PossibleRewardsSheet } from "../components/PossibleRewardsSheet";
 import {
   getPaymentStatusMeta,
+  isPaymentTerminalStatus,
   isPaymentRetryAllowed,
   normalizePaymentStatus,
 } from "../box.status";
@@ -32,8 +33,12 @@ import { useBoxRewards } from "../hooks/useBoxRewards";
 import { useBoxes } from "../hooks/useBoxes";
 import { useCreateOpenOrder } from "../hooks/useCreateOpenOrder";
 import { useDrawResult } from "../hooks/useDrawResult";
+import { usePaymentStatus } from "../hooks/usePaymentStatus";
+import { usePendingDrawOrder } from "../hooks/usePendingDrawOrder";
 import {
+  clearPendingStarsPaymentOrder,
   useStarsPayment,
+  type PendingStarsPaymentOrder,
   type StarsInvoiceCallbackResult,
 } from "../hooks/useStarsPayment";
 
@@ -67,8 +72,10 @@ export function BoxPage() {
   const rewardsQuery = useBoxRewards(selectedBox?.id);
   const createOrder = useCreateOpenOrder();
   const openStarsInvoice = useStarsPayment();
+  const restoredPendingDrawOrder = usePendingDrawOrder();
   const handleDrawCompleted = useCallback(
     (result: DrawResultResponse) => {
+      clearPendingStarsPaymentOrder(result.orderId);
       pushToast({
         type: "success",
         title: "开盒完成",
@@ -82,9 +89,23 @@ export function BoxPage() {
     onCompleted: handleDrawCompleted,
   });
   const pendingStatusOrderId = paymentPendingOrder?.orderId ?? null;
-  const pendingStatusQuery = useDrawResult(pendingStatusOrderId, {
+  const pendingStatusQuery = usePaymentStatus(pendingStatusOrderId, {
     enabled: Boolean(pendingStatusOrderId) && resultOrderId === null,
   });
+
+  useEffect(() => {
+    if (!restoredPendingDrawOrder || paymentPendingOrder || resultOrderId) {
+      return;
+    }
+
+    setPaymentPendingOrder(
+      createRestoredPendingOrder(restoredPendingDrawOrder),
+    );
+    setPaymentOpenNotice({
+      status: "pending",
+      detail: "已恢复上次未完成订单，正在向服务端确认支付状态。",
+    });
+  }, [paymentPendingOrder, restoredPendingDrawOrder, resultOrderId]);
 
   useEffect(() => {
     const result = pendingStatusQuery.result;
@@ -98,6 +119,7 @@ export function BoxPage() {
     }
 
     if (result.status === "completed") {
+      clearPendingStarsPaymentOrder(result.orderId);
       setPaymentPendingOrder(null);
       setPaymentOpenNotice(null);
       setResultOrderId(result.orderId);
@@ -110,19 +132,44 @@ export function BoxPage() {
       paymentPendingOrder.paymentStatus;
     const nextOrderStatus =
       result.orderStatus ?? paymentPendingOrder.orderStatus;
+    const nextDrawCount =
+      normalizeRestoredDrawCount(result.quantity) ??
+      paymentPendingOrder.drawCount;
+    const nextXtrAmount =
+      result.paidStars > 0 ? result.paidStars : paymentPendingOrder.xtrAmount;
+    const nextPaidAt = result.paidAt ?? paymentPendingOrder.paidAt ?? null;
+    const nextFulfilledAt =
+      result.completedAt ?? paymentPendingOrder.fulfilledAt ?? null;
+    const nextInvoicePayload =
+      result.invoicePayload ?? paymentPendingOrder.invoicePayload;
 
     if (
       nextPaymentStatus === paymentPendingOrder.paymentStatus &&
-      nextOrderStatus === paymentPendingOrder.orderStatus
+      nextOrderStatus === paymentPendingOrder.orderStatus &&
+      nextDrawCount === paymentPendingOrder.drawCount &&
+      nextXtrAmount === paymentPendingOrder.xtrAmount &&
+      nextPaidAt === paymentPendingOrder.paidAt &&
+      nextFulfilledAt === paymentPendingOrder.fulfilledAt &&
+      nextInvoicePayload === paymentPendingOrder.invoicePayload
     ) {
       return;
     }
 
+    if (isPaymentTerminalStatus(nextPaymentStatus ?? nextOrderStatus)) {
+      clearPendingStarsPaymentOrder(result.orderId);
+    }
+
     setPaymentPendingOrder({
       ...paymentPendingOrder,
+      drawCount: nextDrawCount,
+      fulfilledAt: nextFulfilledAt,
+      invoicePayload: nextInvoicePayload,
       orderStatus: nextOrderStatus,
+      paidAt: nextPaidAt,
       paymentOrderStatus: nextPaymentStatus,
       paymentStatus: nextPaymentStatus,
+      resultReady: false,
+      xtrAmount: nextXtrAmount,
     });
     if (!isPaymentRetryAllowed(nextPaymentStatus ?? nextOrderStatus)) {
       setPaymentOpenNotice(null);
@@ -230,6 +277,7 @@ export function BoxPage() {
             );
 
             if (order.resultReady && order.orderId) {
+              clearPendingStarsPaymentOrder(order.orderId);
               setPaymentPendingOrder(null);
               setPaymentOpenNotice(null);
               setResultOrderId(order.orderId);
@@ -479,4 +527,33 @@ function getPaymentOpenNoticeFromInvoiceStatus(
 
 function isFulfilledPaymentStatus(status: string | null | undefined): boolean {
   return normalizePaymentStatus(status) === "fulfilled";
+}
+
+function createRestoredPendingOrder(
+  order: PendingStarsPaymentOrder,
+): CreateOpenOrderResponse {
+  return {
+    devPaymentProcessed: false,
+    drawCount: 1,
+    expiresAt: order.expiresAt,
+    idempotent: false,
+    invoiceLink: null,
+    invoiceOpenMode: null,
+    invoicePayload: null,
+    orderId: order.orderId,
+    orderStatus: "created",
+    paymentOrderStatus: "created",
+    paymentStatus: "created",
+    resultReady: false,
+    starOrderId: null,
+    xtrAmount: 0,
+  };
+}
+
+function normalizeRestoredDrawCount(value: number): 1 | 10 | null {
+  if (value === 1 || value === 10) {
+    return value;
+  }
+
+  return null;
 }
