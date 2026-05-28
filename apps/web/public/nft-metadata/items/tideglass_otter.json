@@ -1,0 +1,23 @@
+{
+  "name": "Tideglass Otter",
+  "description": "A rare cove guardian with polished crystal armor.",
+  "image": "/storage/v1/object/public/collectibles/tideglass_otter_card.png",
+  "attributes": [
+    {
+      "trait_type": "Rarity",
+      "value": "RARE"
+    },
+    {
+      "trait_type": "Type",
+      "value": "PET"
+    },
+    {
+      "trait_type": "Series",
+      "value": "Crystal Cove"
+    },
+    {
+      "trait_type": "Faction",
+      "value": "Crystal Tide"
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "name": "Crystal Otter",
+  "description": "A playful otter carrying cove crystals.",
+  "image": "/storage/v1/object/public/collectibles/crystal_otter_card.png",
+  "attributes": [
+    {
+      "trait_type": "Rarity",
+      "value": "COMMON"
+    },
+    {
+      "trait_type": "Type",
+      "value": "PET"
+    },
+    {
+      "trait_type": "Series",
+      "value": "Crystal Cove"
+    },
+    {
+      "trait_type": "Faction",
+      "value": "Crystal Tide"
+    }
+  ]
+}

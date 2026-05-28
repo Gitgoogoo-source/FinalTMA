@@ -1,5 +1,6 @@
 import {
   AlertTriangle,
+  BadgeCheck,
   ChevronRight,
   PackageMinus,
   RefreshCw,
@@ -12,6 +13,7 @@ import {
 import { Link } from "react-router-dom";
 
 import { getApiErrorMessage } from "@/api/errors";
+import { useWalletStatus } from "@/features/wallet/hooks/useWalletStatus";
 import { APP_ROUTES } from "@/shared/constants/routes";
 import { formatCurrencyAmount } from "@/shared/lib/formatCurrency";
 
@@ -34,6 +36,7 @@ type CharacterDetailSheetProps = {
   onClose: () => void;
   onDecompose?: () => void;
   onEvolve?: () => void;
+  onMint?: () => void;
   onUpgrade?: () => void;
 };
 
@@ -44,10 +47,14 @@ export function CharacterDetailSheet({
   onDecompose,
   onClose,
   onEvolve,
+  onMint,
   onUpgrade,
   open,
 }: CharacterDetailSheetProps) {
   const detailQuery = useItemDetail(open ? item.itemInstanceId : null, {
+    enabled: open,
+  });
+  const walletStatusQuery = useWalletStatus({
     enabled: open,
   });
   const detail = detailQuery.item;
@@ -62,6 +69,10 @@ export function CharacterDetailSheet({
     detail?.onchainStatus?.mintStatus ?? displayItem.nftMintStatus,
   );
   const blockReason = getBlockedReason(displayItem, detail, isListed);
+  const mintEligibility = getMintEligibility(displayItem, detail, {
+    isListed,
+    walletVerified: walletStatusQuery.data?.status === "verified",
+  });
 
   if (!open) {
     return null;
@@ -171,7 +182,7 @@ export function CharacterDetailSheet({
             />
             <DetailMetric
               label="是否可 Mint"
-              value={getBooleanLabel(isAvailable && displayItem.isMintable)}
+              value={getBooleanLabel(mintEligibility.canShowEntry)}
             />
             <DetailMetric label="Mint 状态" value={mintStatusLabel} />
           </section>
@@ -237,6 +248,14 @@ export function CharacterDetailSheet({
                   onClick={onDecompose}
                   tone="danger"
                 />
+                {mintEligibility.canShowEntry ? (
+                  <DetailButtonAction
+                    disabled={!onMint}
+                    icon="mint"
+                    label={mintEligibility.actionLabel}
+                    onClick={onMint}
+                  />
+                ) : null}
               </>
             ) : null}
           </section>
@@ -271,7 +290,7 @@ function DetailButtonAction({
   tone = "secondary",
 }: {
   disabled: boolean;
-  icon: "decompose" | "sparkles" | "swords";
+  icon: "decompose" | "mint" | "sparkles" | "swords";
   label: string;
   onClick: (() => void) | undefined;
   tone?: DetailActionTone;
@@ -441,11 +460,13 @@ function getBooleanLabel(value: boolean): string {
 }
 
 function getActionIcon(
-  icon: "decompose" | "shopping" | "sparkles" | "swords" | "tag",
+  icon: "decompose" | "mint" | "shopping" | "sparkles" | "swords" | "tag",
 ) {
   switch (icon) {
     case "decompose":
       return PackageMinus;
+    case "mint":
+      return BadgeCheck;
     case "shopping":
       return ShoppingBag;
     case "sparkles":
@@ -455,4 +476,49 @@ function getActionIcon(
     case "tag":
       return Tag;
   }
+}
+
+function getMintEligibility(
+  item: CollectionInventoryItem,
+  detail: CollectionInventoryDetail | null,
+  options: {
+    isListed: boolean;
+    walletVerified: boolean;
+  },
+): { actionLabel: string; canShowEntry: boolean } {
+  const mintStatus = normalizeMintStatus(
+    detail?.onchainStatus?.mintStatus ?? item.nftMintStatus,
+  );
+
+  if (!detail || !options.walletVerified || !item.isMintable) {
+    return {
+      actionLabel: "Mint NFT",
+      canShowEntry: false,
+    };
+  }
+
+  if (options.isListed || detail.activeLock || detail.status !== "available") {
+    return {
+      actionLabel: "Mint NFT",
+      canShowEntry: false,
+    };
+  }
+
+  if (mintStatus !== "not_minted" && mintStatus !== "failed") {
+    return {
+      actionLabel: "Mint NFT",
+      canShowEntry: false,
+    };
+  }
+
+  return {
+    actionLabel: mintStatus === "failed" ? "重试 Mint" : "Mint NFT",
+    canShowEntry: true,
+  };
+}
+
+function normalizeMintStatus(status: string | null | undefined): string {
+  return String(status ?? "")
+    .trim()
+    .toLowerCase();
 }

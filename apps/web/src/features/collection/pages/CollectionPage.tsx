@@ -2,6 +2,7 @@ import { PackageOpen, RefreshCw } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
+import { useFeedback } from "@/app/providers/FeedbackProvider";
 import { getApiErrorMessage } from "@/api/errors";
 import { APP_ROUTES } from "@/shared/constants/routes";
 import { formatCurrencyAmount } from "@/shared/lib/formatCurrency";
@@ -22,6 +23,7 @@ import type {
 import { useInventory } from "../hooks/useInventory";
 
 export function CollectionPage() {
+  const { pushToast } = useFeedback();
   const inventoryQuery = useInventory();
   const items = inventoryQuery.items;
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
@@ -84,6 +86,14 @@ export function CollectionPage() {
     setIsUpgradeOpen(false);
     setIsEvolveOpen(false);
     setIsDecomposeOpen(true);
+  }
+
+  function handleOpenMint() {
+    pushToast({
+      type: "info",
+      title: "Mint 暂未开放",
+      message: "藏品已满足 Mint 入口条件，入队请求将在后续步骤接入。",
+    });
   }
 
   function handleUpgradeResult(result: CollectionUpgradeItemResponse) {
@@ -173,6 +183,7 @@ export function CollectionPage() {
         onClose={() => setIsDetailOpen(false)}
         onDecompose={handleOpenDecompose}
         onEvolve={handleOpenEvolve}
+        onMint={handleOpenMint}
         onUpgrade={handleOpenUpgrade}
       />
       <UpgradePanel

@@ -1,0 +1,23 @@
+{
+  "name": "Verdant Ranger",
+  "description": "A precise ranger trained by the Forest Pact.",
+  "image": "/storage/v1/object/public/collectibles/forest_ranger_card.png",
+  "attributes": [
+    {
+      "trait_type": "Rarity",
+      "value": "RARE"
+    },
+    {
+      "trait_type": "Type",
+      "value": "CHARACTER"
+    },
+    {
+      "trait_type": "Series",
+      "value": "Forest Guardians"
+    },
+    {
+      "trait_type": "Faction",
+      "value": "Forest Pact"
+    }
+  ]
+}

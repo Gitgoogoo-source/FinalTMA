@@ -29,6 +29,7 @@ const mocks = vi.hoisted(() => ({
   upgradeMutateAsync: vi.fn(),
   evolveMutateAsync: vi.fn(),
   decomposeMutateAsync: vi.fn(),
+  walletStatus: null as unknown,
 }));
 
 vi.mock("../hooks/useInventory", () => ({
@@ -84,6 +85,17 @@ vi.mock("../hooks/useDecomposeItem", () => ({
   }),
 }));
 
+vi.mock("@/features/wallet/hooks/useWalletStatus", () => ({
+  useWalletStatus: () => ({
+    data: mocks.walletStatus,
+    error: null,
+    isError: false,
+    isFetching: false,
+    isLoading: false,
+    refetch: vi.fn(),
+  }),
+}));
+
 const ITEM_A_ID = "66666666-6666-4666-8666-666666666666";
 const ITEM_B_ID = "66666666-6666-4666-8666-666666666667";
 const ITEM_C_ID = "66666666-6666-4666-8666-666666666668";
@@ -102,6 +114,7 @@ describe("CollectionPage stage-3 frontend states", () => {
     mocks.upgradeMutateAsync.mockResolvedValue(upgradeResult());
     mocks.evolveMutateAsync.mockResolvedValue(evolveResult());
     mocks.decomposeMutateAsync.mockResolvedValue(decomposeResult());
+    mocks.walletStatus = makeWalletStatus("not_connected");
   });
 
   afterEach(() => {
@@ -237,6 +250,145 @@ describe("CollectionPage stage-3 frontend states", () => {
     expect(within(dialog).getByRole("button", { name: "分解" })).toBeDisabled();
   });
 
+  it("shows the Mint entry only after wallet verification and item eligibility pass", () => {
+    mocks.walletStatus = makeWalletStatus("verified");
+    const item = makeItem();
+    setInventoryItems(item);
+    setItemDetail(item, makeDetail(item));
+
+    renderCollectionPage();
+    fireEvent.click(screen.getByRole("button", { name: "详情" }));
+
+    const dialog = screen.getByRole("dialog", { name: "森林幼芽" });
+    const mintButton = within(dialog).getByRole("button", {
+      name: "Mint NFT",
+    });
+
+    expect(mintButton).toBeEnabled();
+
+    fireEvent.click(mintButton);
+
+    expect(screen.getByText("Mint 暂未开放")).toBeVisible();
+  });
+
+  it("hides the Mint entry when the wallet is not verified", () => {
+    mocks.walletStatus = makeWalletStatus("connected_unverified");
+    const item = makeItem();
+    setInventoryItems(item);
+    setItemDetail(item, makeDetail(item));
+
+    renderCollectionPage();
+    fireEvent.click(screen.getByRole("button", { name: "详情" }));
+
+    const dialog = screen.getByRole("dialog", { name: "森林幼芽" });
+
+    expect(
+      within(dialog).queryByRole("button", { name: "Mint NFT" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("hides the Mint entry for non-mintable, listed, locked, decomposed or minted items", () => {
+    mocks.walletStatus = makeWalletStatus("verified");
+
+    const cases: Array<{
+      detailOverrides?: Partial<CollectionInventoryDetail>;
+      itemOverrides?: Partial<CollectionInventoryItem>;
+      name: string;
+    }> = [
+      {
+        itemOverrides: { isMintable: false },
+        name: "不可 Mint",
+      },
+      {
+        detailOverrides: {
+          marketStatus: {
+            currency: "KCOIN",
+            isListed: true,
+            listingId: "99999999-9999-4999-8999-999999999999",
+            unitPrice: 100,
+          },
+        },
+        name: "挂售中",
+      },
+      {
+        detailOverrides: {
+          activeLock: {
+            expiresAt: null,
+            lockedAt: "2026-05-25T08:00:00.000Z",
+            lockId: "88888888-8888-4888-8888-888888888888",
+            reason: "mint",
+            sourceId: null,
+            sourceType: "onchain",
+          },
+        },
+        name: "锁定中",
+      },
+      {
+        itemOverrides: { status: "decomposed" },
+        name: "已分解",
+      },
+      {
+        detailOverrides: {
+          onchainStatus: {
+            isMinted: true,
+            mintStatus: "minted",
+          },
+        },
+        itemOverrides: { nftMintStatus: "minted" },
+        name: "已 Mint",
+      },
+    ];
+
+    for (const testCase of cases) {
+      const item = makeItem({
+        itemInstanceId: `${ITEM_A_ID.slice(0, -1)}${cases.indexOf(testCase)}`,
+        ...testCase.itemOverrides,
+      });
+      mocks.inventoryItems = [];
+      mocks.itemDetails = new Map<string, unknown>();
+      setInventoryItems(item);
+      setItemDetail(item, makeDetail(item, testCase.detailOverrides));
+
+      const { unmount } = renderCollectionPage();
+      fireEvent.click(screen.getByRole("button", { name: "详情" }));
+
+      const dialog = screen.getByRole("dialog", { name: item.name });
+
+      expect(
+        within(dialog).queryByRole("button", { name: /Mint/ }),
+        testCase.name,
+      ).not.toBeInTheDocument();
+
+      unmount();
+    }
+  });
+
+  it("shows the retry Mint entry when the server reports a failed mint status", () => {
+    mocks.walletStatus = makeWalletStatus("verified");
+    const item = makeItem({
+      nftMintStatus: "failed",
+    });
+    setInventoryItems(item);
+    setItemDetail(
+      item,
+      makeDetail(item, {
+        onchainStatus: {
+          isMinted: false,
+          mintStatus: "failed",
+        },
+      }),
+    );
+
+    renderCollectionPage();
+    fireEvent.click(screen.getByRole("button", { name: "详情" }));
+
+    const dialog = screen.getByRole("dialog", { name: "森林幼芽" });
+
+    expect(
+      within(dialog).getByRole("button", { name: "重试 Mint" }),
+    ).toBeEnabled();
+  });
+
   it("submits an upgrade and shows the server result instead of local-only state", async () => {
     const item = makeItem();
     setInventoryItems(
@@ -296,6 +448,27 @@ function setItemDetail(
   detail: CollectionInventoryDetail,
 ) {
   mocks.itemDetails.set(item.itemInstanceId, detail);
+}
+
+function makeWalletStatus(status: string) {
+  return {
+    address:
+      status === "not_connected"
+        ? null
+        : "EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c",
+    errorMessage: null,
+    lastSyncAt: null,
+    mintQueue: null,
+    network: "testnet",
+    rawAddress:
+      status === "not_connected"
+        ? null
+        : "0:0000000000000000000000000000000000000000000000000000000000000000",
+    status,
+    syncStatus: "idle",
+    verifiedAt: status === "verified" ? "2026-05-25T08:00:00.000Z" : null,
+    walletAppName: "Tonkeeper",
+  };
 }
 
 function makeItem(

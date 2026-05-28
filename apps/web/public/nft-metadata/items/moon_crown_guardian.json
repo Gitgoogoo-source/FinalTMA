@@ -1,0 +1,23 @@
+{
+  "name": "Moon Crown Guardian",
+  "description": "A legendary guardian shown in the hero banner.",
+  "image": "/storage/v1/object/public/collectibles/moon_crown_guardian_card.png",
+  "attributes": [
+    {
+      "trait_type": "Rarity",
+      "value": "LEGENDARY"
+    },
+    {
+      "trait_type": "Type",
+      "value": "CHARACTER"
+    },
+    {
+      "trait_type": "Series",
+      "value": "Moon Crown"
+    },
+    {
+      "trait_type": "Faction",
+      "value": "Lunar Court"
+    }
+  ]
+}
