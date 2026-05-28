@@ -28,7 +28,7 @@ import { requireSession } from "../_shared/requireSession.js";
 import { validate } from "../_shared/validate.js";
 
 type WalletNetwork = "mainnet" | "testnet";
-type MintPriority = NonNullable<CreateMintBody["priority"]>;
+type MintPriority = "LOW" | "NORMAL" | "HIGH";
 type JsonRecord = Record<string, unknown>;
 
 type VerifiedWalletRow = {
@@ -243,6 +243,29 @@ const MEDIA_COLUMNS = [
   "metadata",
 ].join(",");
 
+const SERVER_METADATA_MODE = "DATABASE_SNAPSHOT";
+
+const CLIENT_CONTROLLED_MINT_FIELDS = [
+  "collectionId",
+  "collection_id",
+  "collectionAddress",
+  "collection_address",
+  "contentBaseUrl",
+  "content_base_url",
+  "imageUrl",
+  "image_url",
+  "itemMetadataUrl",
+  "item_metadata_url",
+  "metadata",
+  "metadataJson",
+  "metadata_json",
+  "metadataMode",
+  "metadata_mode",
+  "metadataUrl",
+  "metadata_url",
+  "priority",
+] as const;
+
 export default withApiHandler(
   async (req, _res, ctx) => {
     const session = await requireSession(req);
@@ -280,8 +303,8 @@ export default withApiHandler(
           await saveMintMetadataSnapshot(db, response.mintQueueId, prepared, {
             requestId: ctx.requestId,
             userId: session.userId,
-            metadataMode: input.metadataMode,
-            priority: input.priority ?? "NORMAL",
+            metadataMode: SERVER_METADATA_MODE,
+            priority: "NORMAL",
           });
 
           return response as unknown as JsonValue;
@@ -309,19 +332,14 @@ export function normalizeCreateMintInput(
     return {};
   }
 
+  assertNoClientControlledMintFields(body);
+
   return compactRecord({
     itemInstanceId:
       readString(body.itemInstanceId) ?? readString(body.item_instance_id),
-    collectionId:
-      readString(body.collectionId) ?? readString(body.collection_id),
-    collectionAddress:
-      readString(body.collectionAddress) ?? readString(body.collection_address),
     targetAddress:
       readString(body.targetAddress) ?? readString(body.target_address),
     chain: normalizeTonChain(body.chain ?? body.network),
-    metadataMode:
-      readString(body.metadataMode) ?? readString(body.metadata_mode),
-    priority: readString(body.priority),
     idempotencyKey:
       readString(body.idempotencyKey) ??
       readString(body.idempotency_key) ??
@@ -339,7 +357,7 @@ async function prepareMintRequest(
 ): Promise<PreparedMintRequest> {
   const requestedNetwork = networkFromTonChain(input.chain);
   const wallet = await findVerifiedWallet(db, context.userId, requestedNetwork);
-  const collection = await resolveActiveCollection(db, input, wallet.network);
+  const collection = await resolveActiveCollection(db, wallet.network);
 
   assertTargetAddressMatchesWallet(input, wallet);
 
@@ -460,13 +478,15 @@ async function findAnyConnectedWallet(
 
 async function resolveActiveCollection(
   db: SupabaseAdminClient,
-  input: CreateMintBody,
   walletNetwork: string,
 ): Promise<NftCollectionRow> {
-  const selector = getCollectionSelector(input);
+  const envCollectionAddress = readString(process.env.TON_COLLECTION_ADDRESS);
 
-  if (selector) {
-    const collection = await findCollectionBySelector(db, selector);
+  if (envCollectionAddress) {
+    const collection = await findCollectionBySelector(db, {
+      column: "collection_address",
+      value: envCollectionAddress,
+    });
 
     if (!collection) {
       throw new ApiError(
@@ -511,7 +531,7 @@ async function resolveActiveCollection(
 
 async function findCollectionBySelector(
   db: SupabaseAdminClient,
-  selector: { column: "id" | "collection_address"; value: string },
+  selector: { column: "collection_address"; value: string },
 ): Promise<NftCollectionRow | null> {
   const { data, error } = await db
     .schema("onchain")
@@ -699,7 +719,6 @@ async function buildItemMetadataSnapshot(
     item,
     metadataUrl,
     metadataSnapshot: buildMetadataSnapshot({
-      input,
       requestId: context.requestId,
       wallet: context.wallet,
       collection: context.collection,
@@ -967,7 +986,6 @@ function findPreferredMediaUrl(
 }
 
 function buildMetadataSnapshot(input: {
-  input: CreateMintBody;
   requestId: string;
   wallet: VerifiedWalletRow;
   collection: NftCollectionRow;
@@ -982,7 +1000,7 @@ function buildMetadataSnapshot(input: {
     generated_by: "api.wallet.mint",
     generated_at: new Date().toISOString(),
     request_id: input.requestId,
-    metadata_mode: input.input.metadataMode,
+    metadata_mode: SERVER_METADATA_MODE,
     item_instance: {
       id: input.item.id,
       serial_no: String(input.item.serial_no),
@@ -1068,7 +1086,7 @@ async function saveMintMetadataSnapshot(
   context: {
     requestId: string;
     userId: string;
-    metadataMode: CreateMintBody["metadataMode"];
+    metadataMode: typeof SERVER_METADATA_MODE;
     priority: MintPriority;
   },
 ): Promise<void> {
@@ -1136,47 +1154,6 @@ function buildMintResponse(
   };
 }
 
-function getCollectionSelector(
-  input: CreateMintBody,
-): { column: "id" | "collection_address"; value: string } | null {
-  const envCollectionAddress = readString(process.env.TON_COLLECTION_ADDRESS);
-
-  if (
-    envCollectionAddress &&
-    input.collectionAddress &&
-    input.collectionAddress !== envCollectionAddress
-  ) {
-    throw new ApiError(
-      400,
-      "COLLECTION_ADDRESS_MISMATCH",
-      "请求的 Collection 与服务端配置不一致。",
-    );
-  }
-
-  if (input.collectionId) {
-    return {
-      column: "id",
-      value: input.collectionId,
-    };
-  }
-
-  if (envCollectionAddress) {
-    return {
-      column: "collection_address",
-      value: envCollectionAddress,
-    };
-  }
-
-  if (input.collectionAddress) {
-    return {
-      column: "collection_address",
-      value: input.collectionAddress,
-    };
-  }
-
-  return null;
-}
-
 function assertTargetAddressMatchesWallet(
   input: CreateMintBody,
   wallet: VerifiedWalletRow,
@@ -1201,12 +1178,26 @@ function assertTargetAddressMatchesWallet(
 function buildMintRequestPayload(input: CreateMintBody): JsonObject {
   return compactJsonRecord({
     item_instance_id: input.itemInstanceId,
-    collection_id: input.collectionId,
-    collection_address: input.collectionAddress,
     target_address: input.targetAddress,
     chain: input.chain,
-    metadata_mode: input.metadataMode,
-    priority: input.priority ?? "NORMAL",
+  });
+}
+
+function assertNoClientControlledMintFields(body: JsonRecord): void {
+  const blockedFields = CLIENT_CONTROLLED_MINT_FIELDS.filter(
+    (field) => field in body,
+  );
+
+  if (blockedFields.length === 0) {
+    return;
+  }
+
+  throw new ApiError(400, "VALIDATION_ERROR", "请求参数校验失败。", {
+    details: blockedFields.map((field) => ({
+      path: field,
+      message: "Mint Collection、metadata 和队列优先级只能由服务端配置或生成。",
+      code: "CLIENT_CONTROLLED_MINT_FIELD",
+    })),
   });
 }
 

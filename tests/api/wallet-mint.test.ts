@@ -217,6 +217,7 @@ describe("wallet mint API", () => {
   });
 
   it("rejects Collection and wallet network mismatch", async () => {
+    process.env.TON_COLLECTION_ADDRESS = COLLECTION_ADDRESS;
     const db = createSupabaseMintMock([
       {
         data: createWalletRow({
@@ -240,7 +241,6 @@ describe("wallet mint API", () => {
       headers: requestHeaders("wallet:mint:network-mismatch"),
       body: {
         item_instance_id: ITEM_ID,
-        collection_id: COLLECTION_ID,
         chain: "TESTNET",
       },
     });
@@ -255,22 +255,22 @@ describe("wallet mint API", () => {
     expect(callRpcRawMock).not.toHaveBeenCalled();
   });
 
-  it("does not allow collectionId to bypass the server configured Collection address", async () => {
-    process.env.TON_COLLECTION_ADDRESS = OTHER_ADDRESS;
-    const db = createSupabaseMintMock([
-      { data: createWalletRow(), error: null },
-      { data: createCollectionRow(), error: null },
-    ]);
-    getSupabaseAdminClientMock.mockReturnValue(db.client);
-
+  it.each([
+    ["collection_id", { collection_id: COLLECTION_ID }],
+    ["collectionAddress", { collectionAddress: COLLECTION_ADDRESS }],
+    ["metadata", { metadata: { name: "client supplied metadata" } }],
+    ["metadata_url", { metadata_url: "https://evil.example/nft.json" }],
+    ["metadataMode", { metadataMode: "REFRESH_FROM_CATALOG" }],
+    ["priority", { priority: "HIGH" }],
+  ])("rejects client-controlled Mint field %s", async (field, extraBody) => {
     const { default: mintHandler } = await import("../../api/wallet/mint");
     const result = await invokeApiHandler<ApiErrorResponse>(mintHandler, {
       method: "POST",
       url: "/api/wallet/mint",
-      headers: requestHeaders("wallet:mint:env-collection-mismatch"),
+      headers: requestHeaders(`wallet:mint:blocked-${field}`),
       body: {
         item_instance_id: ITEM_ID,
-        collection_id: COLLECTION_ID,
+        ...extraBody,
       },
     });
 
@@ -278,9 +278,16 @@ describe("wallet mint API", () => {
     expect(result.body).toMatchObject({
       ok: false,
       error: {
-        code: "COLLECTION_ADDRESS_MISMATCH",
+        code: "VALIDATION_ERROR",
+        details: expect.arrayContaining([
+          expect.objectContaining({
+            path: field,
+            code: "CLIENT_CONTROLLED_MINT_FIELD",
+          }),
+        ]),
       },
     });
+    expect(getSupabaseAdminClientMock).not.toHaveBeenCalled();
     expect(callRpcRawMock).not.toHaveBeenCalled();
   });
 
@@ -385,6 +392,77 @@ describe("wallet mint API", () => {
     expect(callRpcRawMock).not.toHaveBeenCalled();
   });
 
+  it("rejects a non-mintable collectible before enqueueing", async () => {
+    const db = createSupabaseMintMock([
+      { data: createWalletRow(), error: null },
+      { data: [createCollectionRow()], error: null },
+      { data: createItemRow(), error: null },
+      { data: null, error: null },
+      {
+        data: createTemplateRow({
+          nft_mintable: false,
+        }),
+        error: null,
+      },
+    ]);
+    getSupabaseAdminClientMock.mockReturnValue(db.client);
+
+    const { default: mintHandler } = await import("../../api/wallet/mint");
+    const result = await invokeApiHandler<ApiErrorResponse>(mintHandler, {
+      method: "POST",
+      url: "/api/wallet/mint",
+      headers: requestHeaders("wallet:mint:not-mintable"),
+      body: {
+        item_instance_id: ITEM_ID,
+      },
+    });
+
+    expect(result.statusCode).toBe(409);
+    expect(result.body).toMatchObject({
+      ok: false,
+      error: {
+        code: "ITEM_NOT_MINTABLE",
+        message: "该藏品不支持 Mint。",
+      },
+    });
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects repeat Mint for an already minted item before enqueueing", async () => {
+    const db = createSupabaseMintMock([
+      { data: createWalletRow(), error: null },
+      { data: [createCollectionRow()], error: null },
+      {
+        data: createItemRow({
+          minted_nft_item_id: QUEUE_ID,
+          nft_mint_status: "minted",
+        }),
+        error: null,
+      },
+    ]);
+    getSupabaseAdminClientMock.mockReturnValue(db.client);
+
+    const { default: mintHandler } = await import("../../api/wallet/mint");
+    const result = await invokeApiHandler<ApiErrorResponse>(mintHandler, {
+      method: "POST",
+      url: "/api/wallet/mint",
+      headers: requestHeaders("wallet:mint:already-minted"),
+      body: {
+        item_instance_id: ITEM_ID,
+      },
+    });
+
+    expect(result.statusCode).toBe(409);
+    expect(result.body).toMatchObject({
+      ok: false,
+      error: {
+        code: "ITEM_ALREADY_MINTED",
+        message: "藏品已经完成 Mint。",
+      },
+    });
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+  });
+
   it("enqueues Mint through the existing RPC and stores a backend metadata snapshot", async () => {
     const db = createSupabaseMintMock([
       { data: createWalletRow(), error: null },
@@ -412,7 +490,6 @@ describe("wallet mint API", () => {
       body: {
         item_instance_id: ITEM_ID,
         target_address: ADDRESS,
-        priority: "HIGH",
       },
     });
 
@@ -440,10 +517,21 @@ describe("wallet mint API", () => {
         userId: USER_ID,
         requestPayload: expect.objectContaining({
           item_instance_id: ITEM_ID,
-          priority: "HIGH",
+          target_address: ADDRESS,
         }),
       }),
     );
+    const idempotencyInput = withIdempotencyMock.mock.calls[0]?.[0] as
+      | { requestPayload?: Record<string, unknown> }
+      | undefined;
+    expect(idempotencyInput?.requestPayload).not.toHaveProperty(
+      "collection_id",
+    );
+    expect(idempotencyInput?.requestPayload).not.toHaveProperty(
+      "collection_address",
+    );
+    expect(idempotencyInput?.requestPayload).not.toHaveProperty("metadata");
+    expect(idempotencyInput?.requestPayload).not.toHaveProperty("priority");
     expect(callRpcRawMock).toHaveBeenCalledWith(
       "wallet_enqueue_mint",
       {
@@ -466,7 +554,7 @@ describe("wallet mint API", () => {
     expect(mintQueueUpdate).toMatchObject({
       schema: "onchain",
       values: {
-        priority: 50,
+        priority: 100,
         metadata: {
           metadata_url: "/nft-metadata/items/ember_whelp.json",
           collection_address: COLLECTION_ADDRESS,

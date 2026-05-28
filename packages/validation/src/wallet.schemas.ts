@@ -275,12 +275,8 @@ export const MintMetadataModeSchema = z.enum([
 
 export const CreateMintBodySchema = z.object({
   itemInstanceId: UUIDSchema,
-  collectionId: UUIDSchema.optional(),
-  collectionAddress: TonAddressSchema.optional(),
   targetAddress: TonAddressSchema.optional(),
   chain: TonChainSchema.default("MAINNET"),
-  metadataMode: MintMetadataModeSchema.default("DATABASE_SNAPSHOT"),
-  priority: MintPrioritySchema.optional(),
   idempotencyKey: IdempotencyKeySchema,
 });
 
