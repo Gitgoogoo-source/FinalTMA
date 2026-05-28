@@ -18,7 +18,11 @@ import {
 import { PityProgress } from "../components/PityProgress";
 import { PossibleRewardsRow } from "../components/PossibleRewardsRow";
 import { PossibleRewardsSheet } from "../components/PossibleRewardsSheet";
-import { getPaymentStatusMeta, normalizePaymentStatus } from "../box.status";
+import {
+  getPaymentStatusMeta,
+  isPaymentRetryAllowed,
+  normalizePaymentStatus,
+} from "../box.status";
 import type {
   BlindBox,
   CreateOpenOrderResponse,
@@ -120,6 +124,9 @@ export function BoxPage() {
       paymentOrderStatus: nextPaymentStatus,
       paymentStatus: nextPaymentStatus,
     });
+    if (!isPaymentRetryAllowed(nextPaymentStatus ?? nextOrderStatus)) {
+      setPaymentOpenNotice(null);
+    }
   }, [paymentPendingOrder, pendingStatusQuery.result]);
   const pendingDrawCount = createOrder.isPending
     ? (createOrder.variables?.drawCount ?? null)
@@ -152,6 +159,16 @@ export function BoxPage() {
     (order: CreateOpenOrderResponse) => {
       if (order.resultReady || order.devPaymentProcessed) {
         setPaymentOpenNotice(null);
+        return;
+      }
+
+      if (!isPaymentRetryAllowed(order.paymentStatus || order.orderStatus)) {
+        setPaymentOpenNotice(null);
+        pushToast({
+          type: "info",
+          title: "订单已进入服务端处理",
+          message: "支付或发货状态已由服务端接管，请刷新发货状态。",
+        });
         return;
       }
 
@@ -350,7 +367,18 @@ export function BoxPage() {
         invoiceOpenNotice={paymentOpenNotice}
         onCheckResult={() => {
           if (paymentPendingOrder?.orderId) {
-            if (isFulfilledPaymentStatus(paymentPendingOrder.paymentStatus)) {
+            const currentPaymentStatus =
+              paymentPendingOrder.paymentStatus ??
+              paymentPendingOrder.orderStatus;
+
+            if (isFulfilledPaymentStatus(currentPaymentStatus)) {
+              setResultOrderId(paymentPendingOrder.orderId);
+              setPaymentPendingOrder(null);
+              setPaymentOpenNotice(null);
+              return;
+            }
+
+            if (!isPaymentRetryAllowed(currentPaymentStatus)) {
               setResultOrderId(paymentPendingOrder.orderId);
               setPaymentPendingOrder(null);
               setPaymentOpenNotice(null);
@@ -361,7 +389,13 @@ export function BoxPage() {
           }
         }}
         onRetryPayment={() => {
-          if (paymentPendingOrder) {
+          if (
+            paymentPendingOrder &&
+            isPaymentRetryAllowed(
+              paymentPendingOrder.paymentStatus ??
+                paymentPendingOrder.orderStatus,
+            )
+          ) {
             openInvoiceForOrder(paymentPendingOrder);
           }
         }}

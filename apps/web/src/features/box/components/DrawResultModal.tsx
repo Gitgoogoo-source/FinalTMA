@@ -2,7 +2,7 @@ import { Coins, RefreshCw, Star, Trophy, X } from "lucide-react";
 
 import { formatCurrencyAmount } from "@/shared/lib/formatCurrency";
 
-import { getPaymentStatusMeta } from "../box.status";
+import { getPaymentStatusMeta, normalizePaymentStatus } from "../box.status";
 import type { DrawResultItem, DrawResultResponse } from "../box.types";
 
 type DrawResultModalProps = {
@@ -29,9 +29,7 @@ export function DrawResultModal({
   }
 
   const completed = result?.status === "completed";
-  const pendingStatusMeta = result
-    ? getPaymentStatusMeta(result.paymentStatus ?? result.orderStatus)
-    : null;
+  const pendingState = result ? getPendingResultState(result) : null;
 
   return (
     <div className="draw-result-modal" role="presentation">
@@ -70,10 +68,9 @@ export function DrawResultModal({
           ) : null}
           {!isLoading && !isError && result && !completed ? (
             <ResultState
-              title={pendingStatusMeta?.title ?? "结果处理中"}
+              title={pendingState?.title ?? "结果处理中"}
               detail={
-                pendingStatusMeta?.detail ??
-                "支付确认后，服务端会生成抽卡结果。"
+                pendingState?.detail ?? "支付确认后，服务端会生成抽卡结果。"
               }
               onRetry={onRetry}
             />
@@ -103,6 +100,45 @@ export function DrawResultModal({
       </section>
     </div>
   );
+}
+
+function getPendingResultState(result: DrawResultResponse): {
+  title: string;
+  detail: string;
+} {
+  const status = normalizePaymentStatus(
+    result.paymentStatus ?? result.orderStatus,
+  );
+
+  if (status === "paid" || status === "paid_waiting_fulfillment") {
+    return {
+      title: "支付已成功，等待发货",
+      detail: "Telegram 已确认支付，正在等待服务端发货事务。",
+    };
+  }
+
+  if (status === "fulfilling") {
+    return {
+      title: "支付已成功，发货处理中",
+      detail: "服务端正在生成抽卡结果、库存和账本记录。",
+    };
+  }
+
+  if (status === "failed" && result.paidAt) {
+    return {
+      title: "支付已成功，奖励补发中",
+      detail: "发货事务异常，后台会重试补发；请不要重复支付。",
+    };
+  }
+
+  const statusMeta = getPaymentStatusMeta(
+    result.paymentStatus ?? result.orderStatus,
+  );
+
+  return {
+    title: statusMeta.title,
+    detail: statusMeta.detail,
+  };
 }
 
 function ResultSummary({ result }: { result: DrawResultResponse }) {

@@ -183,6 +183,32 @@ describe("BoxPage Stars invoice flow", () => {
       screen.queryByRole("dialog", { name: "等待 Stars 支付" }),
     ).not.toBeInTheDocument();
   });
+
+  it("does not keep retry payment available after polling sees fulfillment", async () => {
+    const order = createOrder();
+    mocks.createOrderResult = order;
+    mocks.drawResultByOrderId.set(
+      order.orderId,
+      createDrawResult(order, {
+        completedAt: null,
+        orderStatus: "processing",
+        paymentStatus: "fulfilling",
+        results: [],
+        status: "pending",
+      }),
+    );
+
+    renderBoxPage();
+
+    fireEvent.click(screen.getByRole("button", { name: /^开 1 次/ }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("dialog", { name: "发货处理中" })).toBeVisible();
+    });
+    expect(
+      screen.queryByRole("button", { name: "重试支付" }),
+    ).not.toBeInTheDocument();
+  });
 });
 
 function renderBoxPage() {
@@ -242,7 +268,10 @@ function createOrder(
   };
 }
 
-function createDrawResult(order: CreateOpenOrderResponse): DrawResultResponse {
+function createDrawResult(
+  order: CreateOpenOrderResponse,
+  overrides: Partial<DrawResultResponse> = {},
+): DrawResultResponse {
   return {
     balances: {
       fgems: null,
@@ -285,5 +314,6 @@ function createDrawResult(order: CreateOpenOrderResponse): DrawResultResponse {
     returnedKcoin: 100,
     serverTime: "2026-05-28T00:02:00.000Z",
     status: "completed",
+    ...overrides,
   };
 }

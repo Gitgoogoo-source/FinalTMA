@@ -110,6 +110,29 @@ describe("PaymentPendingSheet", () => {
 
     expect(onRetryPayment).toHaveBeenCalledTimes(1);
   });
+
+  it("does not offer payment retry after the server confirms fulfillment", () => {
+    const onRetryPayment = vi.fn();
+
+    render(
+      <PaymentPendingSheet
+        open
+        order={createOrder({ paymentStatus: "fulfilling" })}
+        invoiceOpenNotice={{
+          status: "cancelled",
+          detail: "Telegram 支付窗口已关闭。",
+        }}
+        onCheckResult={vi.fn()}
+        onRetryPayment={onRetryPayment}
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("dialog", { name: "发货处理中" })).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: "重试支付" }),
+    ).not.toBeInTheDocument();
+  });
 });
 
 function renderPaymentSheet(

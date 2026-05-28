@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { queryKeys } from "@/shared/constants/queryKeys";
 
 import { fetchDrawResult } from "../box.api";
+import { shouldPollDrawResultStatus } from "../box.status";
 import type { DrawResultResponse } from "../box.types";
 
 type UseDrawResultOptions = {
@@ -25,7 +26,7 @@ export function useDrawResult(
     queryFn: () => fetchDrawResult(orderId ?? ""),
     enabled: Boolean(orderId) && (enabled ?? true),
     refetchInterval: (queryState) =>
-      queryState.state.data?.status === "pending" ? 2000 : false,
+      shouldPollDrawResultStatus(queryState.state.data) ? 2000 : false,
   });
 
   useEffect(() => {

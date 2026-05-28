@@ -9,7 +9,11 @@ import {
 
 import { formatCurrencyAmount } from "@/shared/lib/formatCurrency";
 
-import { getPaymentStatusMeta, type PaymentStatusTone } from "../box.status";
+import {
+  getPaymentStatusMeta,
+  isPaymentRetryAllowed,
+  type PaymentStatusTone,
+} from "../box.status";
 import type { CreateOpenOrderResponse } from "../box.types";
 
 type PaymentPendingSheetProps = {
@@ -47,7 +51,14 @@ export function PaymentPendingSheet({
   const statusMeta = getPaymentStatusMeta(
     order.paymentStatus || order.orderStatus,
   );
+  const canRetryCurrentOrder = isPaymentRetryAllowed(
+    order.paymentStatus || order.orderStatus,
+  );
   const invoiceNoticeMeta = getInvoiceNoticeMeta(invoiceOpenNotice);
+  const showRetryPayment =
+    Boolean(invoiceNoticeMeta?.canRetry) &&
+    canRetryCurrentOrder &&
+    Boolean(onRetryPayment);
   const StatusIcon = getStatusIcon(statusMeta.tone);
 
   return (
@@ -92,7 +103,7 @@ export function PaymentPendingSheet({
             </div>
           ) : null}
           <div className="payment-pending-sheet__actions">
-            {invoiceNoticeMeta?.canRetry && onRetryPayment ? (
+            {showRetryPayment ? (
               <button onClick={onRetryPayment} type="button">
                 <RefreshCw aria-hidden="true" size={14} strokeWidth={2.5} />
                 重试支付
@@ -100,7 +111,7 @@ export function PaymentPendingSheet({
             ) : null}
             <button
               className={
-                invoiceNoticeMeta?.canRetry && onRetryPayment
+                showRetryPayment
                   ? "payment-pending-sheet__secondary-action"
                   : undefined
               }

@@ -19,6 +19,15 @@ export type PaymentStatusMeta = {
 };
 
 const PAYMENT_STATUS_META: Readonly<Record<string, PaymentStatusMeta>> = {
+  pending_payment: {
+    status: "pending_payment",
+    label: "待支付",
+    title: "等待支付",
+    detail: "订单已创建，请在 Telegram Stars 完成支付。",
+    tone: "pending",
+    actionLabel: "刷新支付状态",
+    toastType: "info",
+  },
   created: {
     status: "created",
     label: "支付中",
@@ -50,8 +59,17 @@ const PAYMENT_STATUS_META: Readonly<Record<string, PaymentStatusMeta>> = {
   paid: {
     status: "paid",
     label: "已支付",
-    title: "支付已成功",
+    title: "支付已成功，等待发货",
     detail: "服务端已收到 successful_payment，正在等待发货事务。",
+    tone: "progress",
+    actionLabel: "查看发货状态",
+    toastType: "info",
+  },
+  paid_waiting_fulfillment: {
+    status: "paid_waiting_fulfillment",
+    label: "已支付",
+    title: "支付已成功，等待发货",
+    detail: "Telegram 已确认支付，正在等待服务端发货事务。",
     tone: "progress",
     actionLabel: "查看发货状态",
     toastType: "info",
@@ -82,6 +100,15 @@ const PAYMENT_STATUS_META: Readonly<Record<string, PaymentStatusMeta>> = {
     tone: "danger",
     actionLabel: "重试查询",
     toastType: "error",
+  },
+  cancelled: {
+    status: "cancelled",
+    label: "已取消",
+    title: "支付已取消",
+    detail: "Telegram 支付窗口已取消；如需继续开盒，请重新发起支付。",
+    tone: "warning",
+    actionLabel: "查看订单状态",
+    toastType: "info",
   },
   expired: {
     status: "expired",
@@ -116,11 +143,37 @@ const PAYMENT_STATUS_ALIASES: Readonly<Record<string, string>> = {
   completed: "fulfilled",
   dev_paid: "fulfilled",
   opened: "fulfilled",
+  paid_waiting: "paid_waiting_fulfillment",
   paid_and_fulfilled: "fulfilled",
   pending: "created",
-  pending_payment: "invoice_created",
   precheckout_ok: "precheckout_checked",
+  processing: "fulfilling",
+  opening: "fulfilling",
+  canceled: "cancelled",
 };
+
+const PAYMENT_RETRY_ALLOWED_STATUSES = new Set([
+  "",
+  "pending_payment",
+  "created",
+  "invoice_created",
+  "precheckout_checked",
+]);
+
+const PAYMENT_ACTIVE_FULFILLMENT_STATUSES = new Set([
+  "paid",
+  "paid_waiting_fulfillment",
+  "fulfilling",
+]);
+
+const PAYMENT_TERMINAL_STATUSES = new Set([
+  "fulfilled",
+  "cancelled",
+  "failed",
+  "expired",
+  "refunded",
+  "disputed",
+]);
 
 export function getPaymentStatusMeta(
   value: string | null | undefined,
@@ -157,4 +210,60 @@ export function normalizePaymentStatus(
   }
 
   return PAYMENT_STATUS_ALIASES[normalized] ?? normalized;
+}
+
+export function isPaymentRetryAllowed(
+  value: string | null | undefined,
+): boolean {
+  return PAYMENT_RETRY_ALLOWED_STATUSES.has(normalizePaymentStatus(value));
+}
+
+export function isPaymentFulfillmentActive(
+  value: string | null | undefined,
+): boolean {
+  return PAYMENT_ACTIVE_FULFILLMENT_STATUSES.has(normalizePaymentStatus(value));
+}
+
+export function isPaymentTerminalStatus(
+  value: string | null | undefined,
+): boolean {
+  return PAYMENT_TERMINAL_STATUSES.has(normalizePaymentStatus(value));
+}
+
+export function shouldPollDrawResultStatus(
+  result:
+    | {
+        status?: string | null | undefined;
+        paymentStatus?: string | null | undefined;
+        orderStatus?: string | null | undefined;
+      }
+    | null
+    | undefined,
+): boolean {
+  if (!result || result.status !== "pending") {
+    return false;
+  }
+
+  const paymentStatus = normalizePaymentStatus(result.paymentStatus);
+  const orderStatus = normalizePaymentStatus(result.orderStatus);
+
+  if (
+    isPaymentTerminalStatus(paymentStatus) ||
+    isPaymentTerminalStatus(orderStatus)
+  ) {
+    return false;
+  }
+
+  if (
+    isPaymentFulfillmentActive(paymentStatus) ||
+    isPaymentFulfillmentActive(orderStatus)
+  ) {
+    return true;
+  }
+
+  return (
+    isPaymentRetryAllowed(paymentStatus) ||
+    isPaymentRetryAllowed(orderStatus) ||
+    (!paymentStatus && !orderStatus)
+  );
 }
