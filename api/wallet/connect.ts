@@ -3,6 +3,11 @@ import {
   type SupabaseAdminClient,
 } from "../../packages/server/src/db/supabaseAdmin.js";
 import {
+  IdempotencyError,
+  withIdempotency,
+} from "../../packages/server/src/db/idempotency.js";
+import type { JsonValue } from "../../packages/server/src/db/transactions.js";
+import {
   WalletConnectBodySchema,
   type TonChain,
   type WalletConnectBody,
@@ -31,13 +36,13 @@ type WalletUpsertRow = {
   address: string;
   address_raw: string | null;
   wallet_app_name: string | null;
-  is_primary: true;
+  is_primary: boolean;
   status: "connected";
   disconnected_at: null;
 };
 
 export default withApiHandler(
-  async (req) => {
+  async (req, _res, ctx) => {
     const session = await requireSession(req);
     const body = await parseJsonBody<unknown>(req, {
       maxBytes: 32 * 1024,
@@ -46,14 +51,40 @@ export default withApiHandler(
       WalletConnectBodySchema,
       normalizeWalletConnectInput(body, getIdempotencyKey(req)),
     );
-    const wallet = await saveConnectedWalletSession(
-      getSupabaseAdminClient(),
-      session.userId,
-      input,
-      getWalletRawAddress(body, input.account.address),
-    );
+    const idempotencyKey = requireWalletConnectIdempotencyKey(input);
+    const addressRaw = getWalletRawAddress(body, input.account.address);
+    const db = getSupabaseAdminClient();
 
-    return toWalletStatusResponse(wallet, new Date());
+    try {
+      const result = await withIdempotency<JsonValue>({
+        scope: "wallet.connect",
+        key: idempotencyKey,
+        userId: session.userId,
+        requestPayload: {
+          account: input.account,
+          address_raw: addressRaw,
+          wallet_app_name: input.walletAppName ?? input.device?.appName ?? null,
+        },
+        traceId: ctx.requestId,
+        handler: async () => {
+          const wallet = await saveConnectedWalletSession(
+            db,
+            session.userId,
+            input,
+            addressRaw,
+          );
+
+          return toWalletStatusResponse(
+            wallet,
+            new Date(),
+          ) as unknown as JsonValue;
+        },
+      });
+
+      return result.data;
+    } catch (error) {
+      throw mapWalletConnectError(error);
+    }
   },
   {
     methods: ["POST"],
@@ -117,8 +148,16 @@ export async function saveConnectedWalletSession(
   addressRaw: string | null = null,
 ): Promise<WalletRow> {
   const network = networkFromTonChain(input.account.chain);
+  const primaryWallet = await findPrimaryConnectedWallet(db, userId, network);
+  const keepVerifiedPrimary =
+    primaryWallet?.verified_at !== null &&
+    primaryWallet?.verified_at !== undefined &&
+    primaryWallet.address !== input.account.address;
+  const shouldBePrimary = !keepVerifiedPrimary;
 
-  await clearPrimaryConnectedWallet(db, userId, network);
+  if (shouldBePrimary) {
+    await clearPrimaryConnectedWallet(db, userId, network);
+  }
 
   const row: WalletUpsertRow = {
     user_id: userId,
@@ -127,7 +166,7 @@ export async function saveConnectedWalletSession(
     address: input.account.address,
     address_raw: addressRaw ?? input.account.address,
     wallet_app_name: input.walletAppName ?? input.device?.appName ?? null,
-    is_primary: true,
+    is_primary: shouldBePrimary,
     status: "connected",
     disconnected_at: null,
   };
@@ -157,6 +196,32 @@ export async function saveConnectedWalletSession(
   }
 
   return data;
+}
+
+async function findPrimaryConnectedWallet(
+  db: SupabaseAdminClient,
+  userId: string,
+  network: WalletNetwork,
+): Promise<WalletRow | null> {
+  const { data, error } = await db
+    .schema("core")
+    .from("user_wallets")
+    .select(WALLET_STATUS_COLUMNS)
+    .eq("user_id", userId)
+    .eq("chain", "TON")
+    .eq("network", network)
+    .eq("status", "connected")
+    .eq("is_primary", true)
+    .order("verified_at", { ascending: false, nullsFirst: false })
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle<WalletRow>();
+
+  if (error) {
+    throw mapWalletConnectError(error);
+  }
+
+  return data ?? null;
 }
 
 function getWalletRawAddress(body: unknown, fallbackAddress: string): string {
@@ -194,6 +259,23 @@ async function clearPrimaryConnectedWallet(
 }
 
 function mapWalletConnectError(error: unknown): ApiError {
+  if (error instanceof ApiError) {
+    return error;
+  }
+
+  if (error instanceof IdempotencyError) {
+    return new ApiError(
+      error.status,
+      error.code,
+      mapIdempotencyMessage(error.code),
+      {
+        details: error.details,
+        expose: error.status < 500,
+        cause: error,
+      },
+    );
+  }
+
   if (isPostgresErrorCode(error, "23505")) {
     return new ApiError(
       409,
@@ -214,6 +296,31 @@ function mapWalletConnectError(error: unknown): ApiError {
       cause: error,
     },
   );
+}
+
+function requireWalletConnectIdempotencyKey(input: WalletConnectBody): string {
+  const key = input.idempotencyKey?.trim();
+
+  if (!key) {
+    throw new ApiError(400, "IDEMPOTENCY_KEY_REQUIRED", "缺少幂等键。");
+  }
+
+  return key;
+}
+
+function mapIdempotencyMessage(code: string): string {
+  switch (code) {
+    case "IDEMPOTENCY_KEY_REQUIRED":
+      return "缺少幂等键。";
+    case "IDEMPOTENCY_REQUEST_MISMATCH":
+      return "幂等键已被其他连接钱包请求使用。";
+    case "IDEMPOTENCY_IN_PROGRESS":
+      return "连接钱包请求正在处理中，请稍后重试。";
+    case "IDEMPOTENCY_PREVIOUSLY_FAILED":
+      return "相同连接钱包请求此前失败，请重新发起。";
+    default:
+      return "连接钱包请求幂等校验失败。";
+  }
 }
 
 function normalizeTonChain(value: unknown): TonChain | null {

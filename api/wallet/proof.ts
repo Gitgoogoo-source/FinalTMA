@@ -18,7 +18,6 @@ import {
 import { resolveVerifiedTonWalletPublicKey } from "../../packages/server/src/ton/walletPublicKey.js";
 import {
   ApiError,
-  getHeaderValue,
   getIdempotencyKey,
   withApiHandler,
 } from "../_shared/handler.js";
@@ -103,7 +102,6 @@ export default withApiHandler(
       {
         userId: session.userId,
         requestId: ctx.requestId,
-        requestHost: getHeaderValue(req.headers.host) ?? null,
       },
     );
 
@@ -123,10 +121,10 @@ export async function verifyAndSaveWalletProof(
   context: {
     userId: string;
     requestId: string;
-    requestHost: string | null;
   },
 ): Promise<WalletProofResponse> {
   const now = new Date();
+  const expectedDomain = resolveExpectedProofDomain();
   const proofHash = createProofHash(input);
   const claimedProof = await claimPendingProof(db, input, {
     ...context,
@@ -138,7 +136,7 @@ export async function verifyAndSaveWalletProof(
   try {
     verification = await verifyTonProof(input, {
       now,
-      requestHost: context.requestHost,
+      expectedDomain,
     });
   } catch (error) {
     await markProofFailed(db, claimedProof.id, getPublicErrorCode(error));
@@ -220,17 +218,16 @@ export async function verifyTonProof(
   input: WalletProofBody,
   options: {
     now: Date;
-    requestHost: string | null;
+    expectedDomain: string;
   },
 ): Promise<TonProofVerificationResult> {
   assertExpectedNetwork(input.account.chain);
-  const expectedDomain = resolveExpectedProofDomain(options.requestHost);
 
   try {
     return await verifyTonConnectProof({
       account: input.account,
       proof: input.proof,
-      expectedDomain,
+      expectedDomain: options.expectedDomain,
       expectedPayload: input.proof.payload,
       now: options.now,
       maxAgeSeconds: readPositiveIntegerEnv(
@@ -508,39 +505,26 @@ function createProofHash(input: WalletProofBody): string {
   return createTonProofHash(input.account, input.proof);
 }
 
-function resolveExpectedProofDomain(requestHost: string | null): string {
+function resolveExpectedProofDomain(): string {
   try {
     return resolveExpectedTonProofDomain();
   } catch (error) {
-    const fallbackDomain = normalizeDomainCandidate(requestHost);
-
-    if (fallbackDomain) {
-      return fallbackDomain;
+    if (
+      error instanceof TonProofVerificationError &&
+      error.code === "TON_PROOF_DOMAIN_INVALID"
+    ) {
+      throw new ApiError(
+        500,
+        "SERVER_CONFIG_ERROR",
+        "TON proof domain is not configured.",
+        {
+          expose: false,
+          cause: error,
+        },
+      );
     }
 
     throw mapTonProofVerificationError(error);
-  }
-}
-
-function normalizeDomainCandidate(
-  value: string | null | undefined,
-): string | null {
-  if (!value) {
-    return null;
-  }
-
-  const trimmed = value.trim();
-
-  if (!trimmed) {
-    return null;
-  }
-
-  try {
-    return new URL(
-      trimmed.includes("://") ? trimmed : `https://${trimmed}`,
-    ).hostname.toLowerCase();
-  } catch {
-    return trimmed.split(":")[0]?.toLowerCase() ?? null;
   }
 }
 

@@ -255,6 +255,98 @@ describe("wallet proof API", () => {
     });
   });
 
+  it("rejects a proof for the wrong domain and marks it failed", async () => {
+    const proofPayload = await createSignedProof({
+      domain: "evil.example.com",
+    });
+    const db = createSupabaseMock([
+      {
+        data: createWalletProofRow(),
+        error: null,
+      },
+      {
+        data: null,
+        error: null,
+      },
+    ]);
+    getSupabaseAdminClientMock.mockReturnValue(db.client);
+
+    const { default: proofHandler } = await import("../../api/wallet/proof");
+    const result = await invokeApiHandler<ApiErrorResponse>(proofHandler, {
+      method: "POST",
+      url: "/api/wallet/proof",
+      headers: {
+        cookie: "tma_game_session=test-session-token-000000000000",
+      },
+      body: {
+        ...proofPayload,
+        idempotencyKey: "wallet:proof:wrong-domain-0001",
+      },
+    });
+
+    expect(result.statusCode).toBe(400);
+    expect(result.body).toMatchObject({
+      ok: false,
+      error: {
+        code: "WALLET_PROOF_INVALID",
+        details: {
+          reason: "TON_PROOF_DOMAIN_MISMATCH",
+        },
+      },
+    });
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+    expect(db.queries[1]?.payload).toMatchObject({
+      status: "failed",
+      error_message: "WALLET_PROOF_INVALID",
+    });
+  });
+
+  it("rejects a proof with the wrong signature and marks it failed", async () => {
+    const proofPayload = await createSignedProof({
+      signature: Buffer.alloc(64, 7).toString("base64"),
+    });
+    const db = createSupabaseMock([
+      {
+        data: createWalletProofRow(),
+        error: null,
+      },
+      {
+        data: null,
+        error: null,
+      },
+    ]);
+    getSupabaseAdminClientMock.mockReturnValue(db.client);
+
+    const { default: proofHandler } = await import("../../api/wallet/proof");
+    const result = await invokeApiHandler<ApiErrorResponse>(proofHandler, {
+      method: "POST",
+      url: "/api/wallet/proof",
+      headers: {
+        cookie: "tma_game_session=test-session-token-000000000000",
+      },
+      body: {
+        ...proofPayload,
+        idempotencyKey: "wallet:proof:wrong-signature-0001",
+      },
+    });
+
+    expect(result.statusCode).toBe(400);
+    expect(result.body).toMatchObject({
+      ok: false,
+      error: {
+        code: "WALLET_PROOF_INVALID",
+        details: {
+          reason: "TON_PROOF_SIGNATURE_INVALID",
+        },
+      },
+    });
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+    expect(db.queries[1]?.payload).toMatchObject({
+      status: "failed",
+      error_message: "WALLET_PROOF_INVALID",
+    });
+  });
+
   it("rejects an expired challenge and marks it expired without calling RPC", async () => {
     const proofPayload = await createSignedProof();
     const db = createSupabaseMock([
@@ -302,6 +394,42 @@ describe("wallet proof API", () => {
     });
   });
 
+  it("fails closed when the expected proof domain is not configured", async () => {
+    delete process.env.TON_PROOF_DOMAIN;
+    delete process.env.PUBLIC_APP_URL;
+    delete process.env.TONCONNECT_MANIFEST_URL;
+    delete process.env.VERCEL_URL;
+
+    const proofPayload = await createSignedProof();
+    const db = createSupabaseMock([]);
+    getSupabaseAdminClientMock.mockReturnValue(db.client);
+
+    const { default: proofHandler } = await import("../../api/wallet/proof");
+    const result = await invokeApiHandler<ApiErrorResponse>(proofHandler, {
+      method: "POST",
+      url: "/api/wallet/proof",
+      headers: {
+        cookie: "tma_game_session=test-session-token-000000000000",
+        host: DOMAIN,
+      },
+      body: {
+        ...proofPayload,
+        idempotencyKey: "wallet:proof:domain-missing-0001",
+      },
+    });
+
+    expect(result.statusCode).toBe(500);
+    expect(result.body).toMatchObject({
+      ok: false,
+      error: {
+        code: "SERVER_CONFIG_ERROR",
+        message: "Internal server error",
+      },
+    });
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+    expect(db.queries).toHaveLength(0);
+  });
+
   it("rejects an already used challenge as replay", async () => {
     const proofPayload = await createSignedProof();
     const db = createSupabaseMock([
@@ -346,6 +474,8 @@ describe("wallet proof API", () => {
 async function createSignedProof(
   options: {
     address?: string;
+    domain?: string;
+    signature?: string;
     walletStateInit?: string;
   } = {},
 ): Promise<{
@@ -371,17 +501,19 @@ async function createSignedProof(
     format: "jwk",
   });
   const address = options.address ?? RAW_ADDRESS;
+  const domain = options.domain ?? DOMAIN;
   const timestamp = Math.floor(Date.now() / 1000);
   const messageHash = buildTonProofDigest(parseRawTonAddress(address), {
     timestamp,
     domain: {
-      lengthBytes: Buffer.byteLength(DOMAIN, "utf8"),
-      value: DOMAIN,
+      lengthBytes: Buffer.byteLength(domain, "utf8"),
+      value: domain,
     },
     payload: CHALLENGE,
     signature: "",
   });
-  const signature = sign(null, messageHash, privateKey).toString("base64");
+  const signature =
+    options.signature ?? sign(null, messageHash, privateKey).toString("base64");
 
   return {
     account: {
@@ -393,8 +525,8 @@ async function createSignedProof(
     proof: {
       timestamp,
       domain: {
-        lengthBytes: Buffer.byteLength(DOMAIN, "utf8"),
-        value: DOMAIN,
+        lengthBytes: Buffer.byteLength(domain, "utf8"),
+        value: domain,
       },
       payload: CHALLENGE,
       signature,

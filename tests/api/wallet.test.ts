@@ -53,6 +53,7 @@ const USER_ID = "11111111-1111-4111-8111-111111111111";
 const OTHER_USER_ID = "99999999-9999-4999-8999-999999999999";
 const WALLET_ID = "22222222-2222-4222-8222-222222222222";
 const ADDRESS = `EQ${"A".repeat(46)}`;
+const NEW_ADDRESS = `EQ${"B".repeat(46)}`;
 const RAW_ADDRESS = `0:${"a".repeat(64)}`;
 
 type QueryState = {
@@ -388,6 +389,17 @@ describe("wallet connect API", () => {
     vi.setSystemTime(new Date("2026-05-28T12:00:00.000Z"));
     getSupabaseAdminClientMock.mockReset();
     requireSessionMock.mockReset();
+    withIdempotencyMock.mockReset();
+    withIdempotencyMock.mockImplementation(
+      async (input: { handler: () => Promise<unknown>; key: string }) => ({
+        data: await input.handler(),
+        replayed: false,
+        scope: "wallet.connect",
+        key: input.key,
+        requestHash: "request-hash",
+        record: {},
+      }),
+    );
     requireSessionMock.mockResolvedValue({
       sessionId: "session-wallet-connect-test",
       userId: USER_ID,
@@ -400,6 +412,10 @@ describe("wallet connect API", () => {
 
   it("saves a connected unverified wallet for the session user", async () => {
     const db = createWalletConnectSupabaseMock([
+      {
+        data: null,
+        error: null,
+      },
       {
         data: null,
         error: null,
@@ -502,10 +518,24 @@ describe("wallet connect API", () => {
     expect(JSON.stringify(db.mutations[1]?.values)).not.toContain(
       "verified_at",
     );
+    expect(withIdempotencyMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scope: "wallet.connect",
+        key: "wallet:connect:test-key",
+        userId: USER_ID,
+      }),
+    );
   });
 
   it("returns verified when reconnecting an already verified wallet", async () => {
     const db = createWalletConnectSupabaseMock([
+      {
+        data: createWalletRow({
+          address: ADDRESS,
+          verified_at: "2026-05-28T11:00:00.000Z",
+        }),
+        error: null,
+      },
       {
         data: null,
         error: null,
@@ -530,10 +560,12 @@ describe("wallet connect API", () => {
         headers: {
           cookie: "tma_game_session=test-session-token-000000000000",
           "x-forwarded-for": "127.0.0.62",
+          "x-idempotency-key": "wallet:connect:verified-test-key",
         },
         body: {
           address: ADDRESS,
           network: "mainnet",
+          idempotency_key: "wallet:connect:verified-test-key",
         },
       },
     );
@@ -546,6 +578,197 @@ describe("wallet connect API", () => {
         verified: true,
         status: "verified",
         verifiedAt: "2026-05-28T11:00:00.000Z",
+      },
+    });
+  });
+
+  it("does not replace a verified primary wallet with an unverified different address", async () => {
+    const db = createWalletConnectSupabaseMock([
+      {
+        data: createWalletRow({
+          address: ADDRESS,
+          verified_at: "2026-05-28T11:00:00.000Z",
+        }),
+        error: null,
+      },
+      {
+        data: createWalletRow({
+          address: NEW_ADDRESS,
+          verified_at: null,
+          is_primary: false,
+          updated_at: "2026-05-28T12:00:00.000Z",
+        }),
+        error: null,
+      },
+    ]);
+    getSupabaseAdminClientMock.mockReturnValue(db.client);
+
+    const { default: walletConnectHandler } =
+      await import("../../api/wallet/connect");
+    const result = await invokeApiHandler<ApiSuccessResponse>(
+      walletConnectHandler,
+      {
+        method: "POST",
+        url: "/api/wallet/connect",
+        headers: {
+          cookie: "tma_game_session=test-session-token-000000000000",
+          "x-forwarded-for": "127.0.0.66",
+          "x-idempotency-key": "wallet:connect:new-unverified-key",
+        },
+        body: {
+          address: NEW_ADDRESS,
+          raw_address: `0:${"b".repeat(64)}`,
+          network: "mainnet",
+          wallet_app_name: "Tonkeeper",
+          idempotency_key: "wallet:connect:new-unverified-key",
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(200);
+    expect(result.body).toMatchObject({
+      ok: true,
+      data: {
+        connected: true,
+        verified: false,
+        status: "connected_unverified",
+        address: NEW_ADDRESS,
+      },
+    });
+    expect(db.mutations).toHaveLength(1);
+    expect(db.mutations[0]).toMatchObject({
+      operation: "upsert",
+      values: expect.objectContaining({
+        user_id: USER_ID,
+        address: NEW_ADDRESS,
+        is_primary: false,
+        status: "connected",
+      }),
+    });
+  });
+
+  it("requires an idempotency key before saving a wallet connection", async () => {
+    const db = createWalletConnectSupabaseMock([]);
+    getSupabaseAdminClientMock.mockReturnValue(db.client);
+
+    const { default: walletConnectHandler } =
+      await import("../../api/wallet/connect");
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      walletConnectHandler,
+      {
+        method: "POST",
+        url: "/api/wallet/connect",
+        headers: {
+          cookie: "tma_game_session=test-session-token-000000000000",
+          "x-forwarded-for": "127.0.0.67",
+        },
+        body: {
+          address: ADDRESS,
+          network: "mainnet",
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(400);
+    expect(result.body).toMatchObject({
+      ok: false,
+      error: {
+        code: "IDEMPOTENCY_KEY_REQUIRED",
+      },
+    });
+    expect(withIdempotencyMock).not.toHaveBeenCalled();
+    expect(db.mutations).toHaveLength(0);
+  });
+
+  it("scopes the same wallet address to the current session user", async () => {
+    requireSessionMock.mockResolvedValueOnce({
+      sessionId: "session-wallet-connect-other-user-test",
+      userId: OTHER_USER_ID,
+      telegramUserId: 7003,
+      userStatus: "active",
+      expiresAt: "2026-05-29T00:00:00.000Z",
+      sessionTokenHash: "session-hash-other-user",
+    });
+    const db = createWalletConnectSupabaseMock([
+      {
+        data: null,
+        error: null,
+      },
+      {
+        data: null,
+        error: null,
+      },
+      {
+        data: createWalletRow({
+          id: "88888888-8888-4888-8888-888888888888",
+          user_id: OTHER_USER_ID,
+          address: ADDRESS,
+          verified_at: null,
+          updated_at: "2026-05-28T12:00:00.000Z",
+        }),
+        error: null,
+      },
+    ]);
+    getSupabaseAdminClientMock.mockReturnValue(db.client);
+
+    const { default: walletConnectHandler } =
+      await import("../../api/wallet/connect");
+    const result = await invokeApiHandler<ApiSuccessResponse>(
+      walletConnectHandler,
+      {
+        method: "POST",
+        url: "/api/wallet/connect",
+        headers: {
+          cookie: "tma_game_session=other-session-token-000000000000",
+          "x-forwarded-for": "127.0.0.65",
+          "x-idempotency-key": "wallet:connect:other-user-key",
+        },
+        body: {
+          address: ADDRESS,
+          raw_address: RAW_ADDRESS,
+          network: "mainnet",
+          wallet_app_name: "Tonkeeper",
+          idempotency_key: "wallet:connect:other-user-key",
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(200);
+    expect(result.body).toMatchObject({
+      ok: true,
+      data: {
+        connected: true,
+        verified: false,
+        status: "connected_unverified",
+        address: ADDRESS,
+      },
+    });
+    expect(JSON.stringify(result.body)).not.toContain(USER_ID);
+    expect(db.mutations[0]).toMatchObject({
+      operation: "update",
+      values: {
+        is_primary: false,
+      },
+      filters: expect.arrayContaining([
+        {
+          column: "user_id",
+          value: OTHER_USER_ID,
+        },
+        {
+          column: "network",
+          value: "mainnet",
+        },
+      ]),
+    });
+    expect(db.mutations[1]).toMatchObject({
+      operation: "upsert",
+      values: expect.objectContaining({
+        user_id: OTHER_USER_ID,
+        address: ADDRESS,
+        status: "connected",
+      }),
+      upsertOptions: {
+        onConflict: "user_id,chain,network,address",
       },
     });
   });
@@ -606,10 +829,12 @@ describe("wallet connect API", () => {
         headers: {
           cookie: "tma_game_session=test-session-token-000000000000",
           "x-forwarded-for": "127.0.0.64",
+          "x-idempotency-key": "wallet:connect:error-key",
         },
         body: {
           address: ADDRESS,
           network: "mainnet",
+          idempotency_key: "wallet:connect:error-key",
         },
       },
     );
@@ -949,6 +1174,7 @@ function createSupabaseMutationMock(results: QueryResult[]) {
 }
 
 function createWalletConnectSupabaseMock(results: QueryResult[]) {
+  const queries: QueryState[] = [];
   const mutations: MutationState[] = [];
   let queryIndex = 0;
 
@@ -965,7 +1191,7 @@ function createWalletConnectSupabaseMock(results: QueryResult[]) {
     schema(schema: string) {
       return {
         from(table: string) {
-          function createBuilder(state: MutationState) {
+          function createBuilder(state: QueryState | MutationState) {
             const builder = {
               eq(column: string, value: unknown) {
                 state.filters.push({
@@ -981,6 +1207,20 @@ function createWalletConnectSupabaseMock(results: QueryResult[]) {
               async single() {
                 return nextResult();
               },
+              async maybeSingle() {
+                return nextResult();
+              },
+              order(column: string, options: Record<string, unknown>) {
+                state.orders.push({
+                  column,
+                  options,
+                });
+                return builder;
+              },
+              limit(value: number) {
+                state.limitValue = value;
+                return builder;
+              },
               then(
                 resolve: (value: QueryResult) => unknown,
                 reject?: (reason: unknown) => unknown,
@@ -993,6 +1233,18 @@ function createWalletConnectSupabaseMock(results: QueryResult[]) {
           }
 
           return {
+            select(columns: string) {
+              const state: QueryState = {
+                schema,
+                table,
+                selected: columns,
+                filters: [],
+                orders: [],
+                limitValue: null,
+              };
+              queries.push(state);
+              return createBuilder(state);
+            },
             update(values: unknown) {
               const state: MutationState = {
                 schema,
@@ -1030,6 +1282,7 @@ function createWalletConnectSupabaseMock(results: QueryResult[]) {
 
   return {
     client,
+    queries,
     mutations,
   };
 }
