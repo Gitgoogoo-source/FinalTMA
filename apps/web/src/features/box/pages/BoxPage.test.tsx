@@ -23,8 +23,10 @@ const mocks = vi.hoisted(() => ({
   boxes: [] as BlindBox[],
   createOrderMutate: vi.fn(),
   createOrderResult: null as CreateOpenOrderResponse | null,
+  drawResultByOrderId: new Map<string, DrawResultResponse>(),
   drawResultRefetch: vi.fn(),
   rewardsRefetch: vi.fn(),
+  useDrawResult: vi.fn(),
 }));
 
 vi.mock("../hooks/useBoxes", () => ({
@@ -61,19 +63,15 @@ vi.mock("../hooks/useCreateOpenOrder", () => ({
 }));
 
 vi.mock("../hooks/useDrawResult", () => ({
-  useDrawResult: () => ({
-    error: null,
-    isError: false,
-    isLoading: false,
-    refetch: mocks.drawResultRefetch,
-    result: null as DrawResultResponse | null,
-  }),
+  useDrawResult: mocks.useDrawResult,
 }));
 
 describe("BoxPage Stars invoice flow", () => {
   beforeEach(() => {
     mocks.boxes = [createBox()];
     mocks.createOrderResult = createOrder();
+    mocks.drawResultByOrderId.clear();
+    mocks.drawResultRefetch.mockReset();
     mocks.createOrderMutate.mockReset();
     mocks.createOrderMutate.mockImplementation(
       (_input: unknown, options?: CreateOrderMutateOptions) => {
@@ -84,6 +82,19 @@ describe("BoxPage Stars invoice flow", () => {
         options?.onSuccess?.(mocks.createOrderResult);
         options?.onSettled?.();
       },
+    );
+    mocks.useDrawResult.mockReset();
+    mocks.useDrawResult.mockImplementation(
+      (orderId: string | null | undefined) => ({
+        error: null,
+        isError: false,
+        isFetching: false,
+        isLoading: false,
+        refetch: mocks.drawResultRefetch,
+        result: orderId
+          ? (mocks.drawResultByOrderId.get(orderId) ?? null)
+          : null,
+      }),
     );
   });
 
@@ -124,6 +135,53 @@ describe("BoxPage Stars invoice flow", () => {
       ).toBeGreaterThan(0);
     });
     expect(screen.getByRole("button", { name: "重试支付" })).toBeVisible();
+  });
+
+  it("polls the existing draw result endpoint while the payment sheet is open", async () => {
+    renderBoxPage();
+
+    fireEvent.click(screen.getByRole("button", { name: /^开 1 次/ }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("dialog", { name: "等待 Stars 支付" }),
+      ).toBeVisible();
+    });
+
+    expect(
+      mocks.useDrawResult.mock.calls.some(([orderId, options]) => {
+        return (
+          orderId === mocks.createOrderResult?.orderId &&
+          options &&
+          typeof options === "object" &&
+          "enabled" in options &&
+          options.enabled === true
+        );
+      }),
+    ).toBe(true);
+
+    fireEvent.click(screen.getByRole("button", { name: "查看结果状态" }));
+
+    expect(mocks.drawResultRefetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("opens the result modal only after result polling is completed", async () => {
+    const order = createOrder();
+    mocks.createOrderResult = order;
+    mocks.drawResultByOrderId.set(order.orderId, createDrawResult(order));
+
+    renderBoxPage();
+
+    fireEvent.click(screen.getByRole("button", { name: /^开 1 次/ }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("dialog", { name: "测试盲盒奖励" }),
+      ).toBeVisible();
+    });
+    expect(
+      screen.queryByRole("dialog", { name: "等待 Stars 支付" }),
+    ).not.toBeInTheDocument();
   });
 });
 
@@ -181,5 +239,51 @@ function createOrder(
     starOrderId: "44444444-4444-4444-8444-444444444444",
     xtrAmount: 10,
     ...overrides,
+  };
+}
+
+function createDrawResult(order: CreateOpenOrderResponse): DrawResultResponse {
+  return {
+    balances: {
+      fgems: null,
+      kcoin: "100",
+      stars: null,
+    },
+    boxName: "测试盲盒奖励",
+    completedAt: "2026-05-28T00:02:00.000Z",
+    invoicePayload: order.invoicePayload,
+    orderId: order.orderId,
+    orderStatus: "completed",
+    paidAt: "2026-05-28T00:01:00.000Z",
+    paidStars: order.xtrAmount,
+    paymentStatus: "fulfilled",
+    quantity: order.drawCount,
+    results: [
+      {
+        description: null,
+        drawIndex: 1,
+        formId: null,
+        formIndex: null,
+        formName: null,
+        imageUrl: null,
+        isPityHit: false,
+        itemInstanceId: "55555555-5555-4555-8555-555555555555",
+        itemType: "character",
+        level: 1,
+        name: "测试藏品",
+        power: 10,
+        rarity: "rare",
+        rarityLabel: "稀有",
+        rewardSource: "random",
+        serialNumber: 1,
+        subtitle: null,
+        templateId: "66666666-6666-4666-8666-666666666666",
+        templateSlug: "test-item",
+        thumbnailUrl: null,
+      },
+    ],
+    returnedKcoin: 100,
+    serverTime: "2026-05-28T00:02:00.000Z",
+    status: "completed",
   };
 }

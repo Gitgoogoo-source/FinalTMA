@@ -18,7 +18,7 @@ import {
 import { PityProgress } from "../components/PityProgress";
 import { PossibleRewardsRow } from "../components/PossibleRewardsRow";
 import { PossibleRewardsSheet } from "../components/PossibleRewardsSheet";
-import { getPaymentStatusMeta } from "../box.status";
+import { getPaymentStatusMeta, normalizePaymentStatus } from "../box.status";
 import type {
   BlindBox,
   CreateOpenOrderResponse,
@@ -77,6 +77,50 @@ export function BoxPage() {
     enabled: Boolean(resultOrderId),
     onCompleted: handleDrawCompleted,
   });
+  const pendingStatusOrderId = paymentPendingOrder?.orderId ?? null;
+  const pendingStatusQuery = useDrawResult(pendingStatusOrderId, {
+    enabled: Boolean(pendingStatusOrderId) && resultOrderId === null,
+  });
+
+  useEffect(() => {
+    const result = pendingStatusQuery.result;
+
+    if (!result || !paymentPendingOrder) {
+      return;
+    }
+
+    if (result.orderId !== paymentPendingOrder.orderId) {
+      return;
+    }
+
+    if (result.status === "completed") {
+      setPaymentPendingOrder(null);
+      setPaymentOpenNotice(null);
+      setResultOrderId(result.orderId);
+      return;
+    }
+
+    const nextPaymentStatus =
+      result.paymentStatus ??
+      result.orderStatus ??
+      paymentPendingOrder.paymentStatus;
+    const nextOrderStatus =
+      result.orderStatus ?? paymentPendingOrder.orderStatus;
+
+    if (
+      nextPaymentStatus === paymentPendingOrder.paymentStatus &&
+      nextOrderStatus === paymentPendingOrder.orderStatus
+    ) {
+      return;
+    }
+
+    setPaymentPendingOrder({
+      ...paymentPendingOrder,
+      orderStatus: nextOrderStatus,
+      paymentOrderStatus: nextPaymentStatus,
+      paymentStatus: nextPaymentStatus,
+    });
+  }, [paymentPendingOrder, pendingStatusQuery.result]);
   const pendingDrawCount = createOrder.isPending
     ? (createOrder.variables?.drawCount ?? null)
     : null;
@@ -306,9 +350,14 @@ export function BoxPage() {
         invoiceOpenNotice={paymentOpenNotice}
         onCheckResult={() => {
           if (paymentPendingOrder?.orderId) {
-            setResultOrderId(paymentPendingOrder.orderId);
-            setPaymentPendingOrder(null);
-            setPaymentOpenNotice(null);
+            if (isFulfilledPaymentStatus(paymentPendingOrder.paymentStatus)) {
+              setResultOrderId(paymentPendingOrder.orderId);
+              setPaymentPendingOrder(null);
+              setPaymentOpenNotice(null);
+              return;
+            }
+
+            void pendingStatusQuery.refetch();
           }
         }}
         onRetryPayment={() => {
@@ -392,4 +441,8 @@ function getPaymentOpenNoticeFromInvoiceStatus(
           : "Telegram 未返回明确支付状态，请刷新后以服务端状态为准。",
       };
   }
+}
+
+function isFulfilledPaymentStatus(status: string | null | undefined): boolean {
+  return normalizePaymentStatus(status) === "fulfilled";
 }
