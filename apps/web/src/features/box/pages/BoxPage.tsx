@@ -127,9 +127,10 @@ export function BoxPage() {
     }
 
     const nextPaymentStatus =
+      result.paymentOrderStatus ??
       result.paymentStatus ??
       result.orderStatus ??
-      paymentPendingOrder.paymentStatus;
+      getOrderPaymentStatus(paymentPendingOrder);
     const nextOrderStatus =
       result.orderStatus ?? paymentPendingOrder.orderStatus;
     const nextDrawCount =
@@ -144,7 +145,7 @@ export function BoxPage() {
       result.invoicePayload ?? paymentPendingOrder.invoicePayload;
 
     if (
-      nextPaymentStatus === paymentPendingOrder.paymentStatus &&
+      nextPaymentStatus === getOrderPaymentStatus(paymentPendingOrder) &&
       nextOrderStatus === paymentPendingOrder.orderStatus &&
       nextDrawCount === paymentPendingOrder.drawCount &&
       nextXtrAmount === paymentPendingOrder.xtrAmount &&
@@ -178,7 +179,10 @@ export function BoxPage() {
   const pendingDrawCount = createOrder.isPending
     ? (createOrder.variables?.drawCount ?? null)
     : null;
-  const openActionDisabled = createOrder.isPending || !selectedBox?.isOpenable;
+  const openActionDisabled =
+    createOrder.isPending ||
+    isPaymentOpenActionLocked(paymentPendingOrder) ||
+    !selectedBox?.isOpenable;
   const handleInvoiceStatus = useCallback(
     (result: StarsInvoiceCallbackResult) => {
       setPaymentOpenNotice(getPaymentOpenNoticeFromInvoiceStatus(result));
@@ -209,7 +213,9 @@ export function BoxPage() {
         return;
       }
 
-      if (!isPaymentRetryAllowed(order.paymentStatus || order.orderStatus)) {
+      const paymentStatus = getOrderPaymentStatus(order);
+
+      if (!isPaymentRetryAllowed(paymentStatus)) {
         setPaymentOpenNotice(null);
         pushToast({
           type: "info",
@@ -273,7 +279,7 @@ export function BoxPage() {
         {
           onSuccess: (order) => {
             const paymentStatusMeta = getPaymentStatusMeta(
-              order.paymentStatus || order.orderStatus,
+              getOrderPaymentStatus(order),
             );
 
             if (order.resultReady && order.orderId) {
@@ -416,8 +422,7 @@ export function BoxPage() {
         onCheckResult={() => {
           if (paymentPendingOrder?.orderId) {
             const currentPaymentStatus =
-              paymentPendingOrder.paymentStatus ??
-              paymentPendingOrder.orderStatus;
+              getOrderPaymentStatus(paymentPendingOrder);
 
             if (isFulfilledPaymentStatus(currentPaymentStatus)) {
               setResultOrderId(paymentPendingOrder.orderId);
@@ -439,10 +444,7 @@ export function BoxPage() {
         onRetryPayment={() => {
           if (
             paymentPendingOrder &&
-            isPaymentRetryAllowed(
-              paymentPendingOrder.paymentStatus ??
-                paymentPendingOrder.orderStatus,
-            )
+            isPaymentRetryAllowed(getOrderPaymentStatus(paymentPendingOrder))
           ) {
             openInvoiceForOrder(paymentPendingOrder);
           }
@@ -527,6 +529,20 @@ function getPaymentOpenNoticeFromInvoiceStatus(
 
 function isFulfilledPaymentStatus(status: string | null | undefined): boolean {
   return normalizePaymentStatus(status) === "fulfilled";
+}
+
+function getOrderPaymentStatus(order: CreateOpenOrderResponse): string {
+  return order.paymentOrderStatus || order.paymentStatus || order.orderStatus;
+}
+
+function isPaymentOpenActionLocked(
+  order: CreateOpenOrderResponse | null,
+): boolean {
+  if (!order) {
+    return false;
+  }
+
+  return !isPaymentTerminalStatus(getOrderPaymentStatus(order));
 }
 
 function createRestoredPendingOrder(

@@ -149,6 +149,86 @@ describe("BoxPage Stars invoice flow", () => {
     expect(screen.getByText("支付窗口已打开")).toBeVisible();
   });
 
+  it("keeps open buttons locked while an order is waiting for payment", async () => {
+    const openInvoice = vi.fn();
+    (globalThis as TelegramGlobal).Telegram = {
+      WebApp: {
+        openInvoice,
+      },
+    };
+
+    renderBoxPage();
+
+    const openOnceButton = screen.getByRole("button", { name: /^开 1 次/ });
+    fireEvent.click(openOnceButton);
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("dialog", { name: "等待 Stars 支付" }),
+      ).toBeVisible();
+    });
+
+    expect(openOnceButton).toBeDisabled();
+    expect(screen.getByRole("button", { name: /^开 10 次/ })).toBeDisabled();
+
+    fireEvent.click(openOnceButton);
+
+    expect(mocks.createOrderMutate).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not reopen invoice when paymentOrderStatus is already server-controlled", async () => {
+    const openInvoice = vi.fn();
+    mocks.createOrderResult = createOrder({
+      orderStatus: "invoice_created",
+      paymentOrderStatus: "paid",
+      paymentStatus: "invoice_created",
+    });
+    (globalThis as TelegramGlobal).Telegram = {
+      WebApp: {
+        openInvoice,
+      },
+    };
+
+    renderBoxPage();
+
+    fireEvent.click(screen.getByRole("button", { name: /^开 1 次/ }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("dialog", { name: "支付已成功，等待发货" }),
+      ).toBeVisible();
+    });
+
+    expect(openInvoice).not.toHaveBeenCalled();
+  });
+
+  it("keeps a paid invoice callback pending until the server confirms fulfillment", async () => {
+    const openInvoice = vi.fn(
+      (_url: string, callback?: (status: string) => void) => {
+        callback?.("paid");
+      },
+    );
+    (globalThis as TelegramGlobal).Telegram = {
+      WebApp: {
+        openInvoice,
+      },
+    };
+
+    renderBoxPage();
+
+    fireEvent.click(screen.getByRole("button", { name: /^开 1 次/ }));
+
+    await waitFor(() => {
+      expect(screen.getByText("支付已返回，等待服务端确认")).toBeVisible();
+    });
+    expect(
+      screen.getByRole("dialog", { name: "等待 Stars 支付" }),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole("dialog", { name: "测试盲盒奖励" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("shows a retryable state when Telegram invoice opening is unavailable", async () => {
     renderBoxPage();
 
@@ -160,6 +240,42 @@ describe("BoxPage Stars invoice flow", () => {
       ).toBeGreaterThan(0);
     });
     expect(screen.getByRole("button", { name: "重试支付" })).toBeVisible();
+  });
+
+  it("shows expired orders from the server without offering payment retry", async () => {
+    const openInvoice = vi.fn();
+    const order = createOrder();
+    mocks.createOrderResult = order;
+    mocks.paymentStatusByOrderId.set(
+      order.orderId,
+      createDrawResult(order, {
+        completedAt: null,
+        orderStatus: "expired",
+        paymentOrderStatus: "expired",
+        paymentStatus: "expired",
+        results: [],
+        status: "pending",
+      }),
+    );
+    (globalThis as TelegramGlobal).Telegram = {
+      WebApp: {
+        openInvoice,
+      },
+    };
+
+    renderBoxPage();
+
+    fireEvent.click(screen.getByRole("button", { name: /^开 1 次/ }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("dialog", { name: "订单已过期" })).toBeVisible();
+    });
+    expect(
+      screen.queryByRole("button", { name: "重试支付" }),
+    ).not.toBeInTheDocument();
+    expect(
+      globalThis.localStorage?.getItem(PENDING_STARS_PAYMENT_STORAGE_KEY),
+    ).toBeNull();
   });
 
   it("polls the payment status query while the payment sheet is open", async () => {
@@ -190,6 +306,48 @@ describe("BoxPage Stars invoice flow", () => {
     expect(mocks.paymentStatusRefetch).toHaveBeenCalledTimes(1);
   });
 
+  it("locks rapid repeated single-draw clicks until the create request settles", () => {
+    mocks.createOrderMutate.mockImplementation(() => undefined);
+
+    renderBoxPage();
+
+    const openOnceButton = screen.getByRole("button", { name: /^开 1 次/ });
+    fireEvent.click(openOnceButton);
+    fireEvent.click(openOnceButton);
+
+    expect(mocks.createOrderMutate).toHaveBeenCalledTimes(1);
+  });
+
+  it("uses the displayed ten-draw price as the expected order price and shows the returned amount", async () => {
+    const openInvoice = vi.fn();
+    mocks.createOrderResult = createOrder({
+      drawCount: 10,
+      xtrAmount: 90,
+    });
+    (globalThis as TelegramGlobal).Telegram = {
+      WebApp: {
+        openInvoice,
+      },
+    };
+
+    renderBoxPage();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "开 10 次，90 Stars，9 折" }),
+    );
+
+    expect(mocks.createOrderMutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        drawCount: 10,
+        expectedPriceStars: 90,
+      }),
+      expect.any(Object),
+    );
+    await waitFor(() => {
+      expect(screen.getByText("90 Stars · 10 次")).toBeVisible();
+    });
+  });
+
   it("opens the result modal only after result polling is completed", async () => {
     const order = createOrder();
     mocks.createOrderResult = order;
@@ -218,6 +376,7 @@ describe("BoxPage Stars invoice flow", () => {
       createDrawResult(order, {
         completedAt: null,
         orderStatus: "processing",
+        paymentOrderStatus: "fulfilling",
         paymentStatus: "fulfilling",
         results: [],
         status: "pending",

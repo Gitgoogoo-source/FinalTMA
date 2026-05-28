@@ -16,6 +16,7 @@ export const TEST_INIT_DATA =
 
 type MockFirstPhaseApiOptions = {
   boxPaymentFlow?: "dev_completed" | "stars_pending";
+  boxPaymentStatus?: "invoice_created" | "paid" | "fulfilling" | "expired";
   evolveOutcome?: "success" | "failed";
 };
 
@@ -25,11 +26,13 @@ export async function mockFirstPhaseApi(
 ): Promise<void> {
   const evolveOutcome = options.evolveOutcome ?? "success";
   const boxPaymentFlow = options.boxPaymentFlow ?? "dev_completed";
+  const boxPaymentStatus = options.boxPaymentStatus ?? "invoice_created";
   let inventoryLevel = 1;
   let inventoryPower = 10;
   let fgemsAvailable = 80;
   let kcoinAvailable = 1200;
   let inventoryEvolved = false;
+  let lastBoxDrawCount: 1 | 10 = 1;
   const consumedItemIds = new Set<string>();
   const decomposedItemIds = new Set<string>();
 
@@ -165,10 +168,36 @@ export async function mockFirstPhaseApi(
   );
 
   await page.route("**/api/boxes/create-open-order", async (route) => {
-    const body = route.request().postDataJSON() as
-      | { draw_count?: unknown }
-      | undefined;
+    const body = readJsonObjectBody(route, "boxes/create-open-order");
+    const headerIdempotencyKey = route.request().headers()["x-idempotency-key"];
     const drawCount = body?.draw_count === 10 ? 10 : 1;
+    const expectedPriceStars = drawCount === 10 ? 90 : 10;
+    lastBoxDrawCount = drawCount;
+
+    assertValidIdempotencyKey(
+      headerIdempotencyKey,
+      "boxes/create-open-order X-Idempotency-Key",
+    );
+    assertValidIdempotencyKey(
+      body.idempotency_key,
+      "boxes/create-open-order body idempotency_key",
+    );
+    assert(
+      headerIdempotencyKey === body.idempotency_key,
+      "boxes/create-open-order X-Idempotency-Key must match body idempotency_key.",
+    );
+    assert(
+      body.expected_price_stars === expectedPriceStars,
+      "boxes/create-open-order request body must include expected_price_stars from the selected draw option.",
+    );
+    assert(
+      body.user_id === undefined,
+      "boxes/create-open-order request body must not include user_id.",
+    );
+    assert(
+      body.telegram_user_id === undefined,
+      "boxes/create-open-order request body must not include telegram_user_id.",
+    );
 
     if (boxPaymentFlow === "stars_pending") {
       await fulfillOk(route, {
@@ -208,27 +237,7 @@ export async function mockFirstPhaseApi(
     fulfillOk(
       route,
       boxPaymentFlow === "stars_pending"
-        ? {
-            order_id: ORDER_ID,
-            status: "pending",
-            order_status: "invoice_created",
-            quantity: 1,
-            paid_stars: 10,
-            returned_kcoin: 100,
-            invoice_payload: `gacha:${ORDER_ID}`,
-            paid_at: null,
-            completed_at: null,
-            box: {
-              display_name: "测试盲盒",
-            },
-            payment: {
-              status: "invoice_created",
-              payment_order_status: "invoice_created",
-            },
-            balances: null,
-            results: [],
-            server_time: "2026-05-21T00:00:01.000Z",
-          }
+        ? starsPaymentResultPayload(boxPaymentStatus, lastBoxDrawCount)
         : {
             order_id: ORDER_ID,
             status: "completed",
@@ -505,6 +514,41 @@ export async function mockFirstPhaseApi(
       idempotent: false,
     });
   });
+}
+
+function starsPaymentResultPayload(
+  paymentStatus: "invoice_created" | "paid" | "fulfilling" | "expired",
+  drawCount: 1 | 10,
+) {
+  const paidAt =
+    paymentStatus === "paid" || paymentStatus === "fulfilling"
+      ? "2026-05-21T00:00:00.000Z"
+      : null;
+  const orderStatus =
+    paymentStatus === "fulfilling" ? "processing" : paymentStatus;
+
+  return {
+    order_id: ORDER_ID,
+    status: "pending",
+    order_status: orderStatus,
+    quantity: drawCount,
+    paid_stars: drawCount === 10 ? 90 : 10,
+    returned_kcoin: drawCount * 100,
+    invoice_payload: `gacha:${ORDER_ID}`,
+    paid_at: paidAt,
+    completed_at: null,
+    box: {
+      display_name: "测试盲盒",
+    },
+    payment: {
+      status: paymentStatus,
+      payment_order_status: paymentStatus,
+      paid_at: paidAt,
+    },
+    balances: null,
+    results: [],
+    server_time: "2026-05-21T00:00:01.000Z",
+  };
 }
 
 function getInventoryItems({
