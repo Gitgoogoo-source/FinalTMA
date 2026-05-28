@@ -21,11 +21,67 @@ export type WalletSyncStatus =
   | "failed"
   | "disabled";
 
+export type WalletMintQueueStatus =
+  | "queued"
+  | "processing"
+  | "submitted"
+  | "confirming"
+  | "retrying"
+  | "manual_review"
+  | "minted"
+  | "failed"
+  | "cancelled";
+
 export type WalletMintQueueSummary = {
   queued: number;
   processing: number;
+  submitted?: number;
+  confirming?: number;
+  retrying?: number;
+  minted?: number;
+  cancelled?: number;
   failed: number;
   manualReview: number;
+};
+
+export type WalletMintQueueItem = {
+  mintQueueId: string;
+  itemInstanceId: string;
+  status: WalletMintQueueStatus;
+  chain: "MAINNET" | "TESTNET";
+  collectionAddress: string | null;
+  itemAddress: string | null;
+  targetAddress: string | null;
+  transactionHash: string | null;
+  errorCode: string | null;
+  errorMessage: string | null;
+  retryCount: number;
+  createdAt: string;
+  updatedAt: string;
+  mintedAt: string | null;
+};
+
+export type WalletMintQueueResponse = {
+  items: WalletMintQueueItem[];
+  summary: WalletMintQueueSummary;
+  nextCursor: string | null;
+  serverTime: string | null;
+};
+
+export type CreateMintInput = {
+  itemInstanceId: string;
+  targetAddress?: string | null;
+  chain?: "MAINNET" | "TESTNET";
+  idempotencyKey?: string | null;
+};
+
+export type CreateMintResult = {
+  accepted: boolean;
+  mintQueueId: string;
+  status: WalletMintQueueStatus;
+  itemInstanceId: string;
+  metadataUrl: string | null;
+  idempotent: boolean;
 };
 
 export type WalletStatusData = {

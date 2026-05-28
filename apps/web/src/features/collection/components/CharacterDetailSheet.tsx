@@ -1,6 +1,5 @@
 import {
   AlertTriangle,
-  BadgeCheck,
   ChevronRight,
   PackageMinus,
   RefreshCw,
@@ -29,20 +28,23 @@ import {
   getMintStatusLabel,
   ItemStatusBadge,
 } from "./ItemStatusBadge";
+import { MintButton } from "./MintButton";
 
 type CharacterDetailSheetProps = {
   open: boolean;
   item: CollectionInventoryItem;
+  isMinting?: boolean;
   onClose: () => void;
   onDecompose?: () => void;
   onEvolve?: () => void;
-  onMint?: () => void;
+  onMint?: (itemInstanceId: string) => void;
   onUpgrade?: () => void;
 };
 
 type DetailActionTone = "primary" | "secondary" | "danger";
 
 export function CharacterDetailSheet({
+  isMinting = false,
   item,
   onDecompose,
   onClose,
@@ -249,11 +251,11 @@ export function CharacterDetailSheet({
                   tone="danger"
                 />
                 {mintEligibility.canShowEntry ? (
-                  <DetailButtonAction
+                  <MintButton
                     disabled={!onMint}
-                    icon="mint"
                     label={mintEligibility.actionLabel}
-                    onClick={onMint}
+                    loading={isMinting}
+                    onClick={() => onMint?.(displayItem.itemInstanceId)}
                   />
                 ) : null}
               </>
@@ -290,7 +292,7 @@ function DetailButtonAction({
   tone = "secondary",
 }: {
   disabled: boolean;
-  icon: "decompose" | "mint" | "sparkles" | "swords";
+  icon: "decompose" | "sparkles" | "swords";
   label: string;
   onClick: (() => void) | undefined;
   tone?: DetailActionTone;
@@ -460,13 +462,11 @@ function getBooleanLabel(value: boolean): string {
 }
 
 function getActionIcon(
-  icon: "decompose" | "mint" | "shopping" | "sparkles" | "swords" | "tag",
+  icon: "decompose" | "shopping" | "sparkles" | "swords" | "tag",
 ) {
   switch (icon) {
     case "decompose":
       return PackageMinus;
-    case "mint":
-      return BadgeCheck;
     case "shopping":
       return ShoppingBag;
     case "sparkles":

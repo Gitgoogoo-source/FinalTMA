@@ -538,9 +538,248 @@ a {
   white-space: nowrap;
 }
 
+.mint-queue-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 68;
+  display: grid;
+  align-items: end;
+}
+
+.mint-queue-sheet__backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgb(2 6 8 / 64%);
+  cursor: pointer;
+}
+
+.mint-queue-sheet__panel {
+  position: relative;
+  width: min(100%, 460px);
+  max-height: min(74vh, 620px);
+  margin: 0 auto;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: 8px 8px 0 0;
+  background: #121c22;
+  box-shadow: 0 -22px 58px rgb(0 0 0 / 38%);
+}
+
+.mint-queue-sheet__header {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px;
+  border-bottom: 1px solid rgb(255 255 255 / 10%);
+}
+
+.mint-queue-sheet__header div {
+  min-width: 0;
+}
+
+.mint-queue-sheet__header span,
+.mint-queue-sheet__pill span,
+.mint-queue-row dt {
+  color: #8ea2aa;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.mint-queue-sheet__header h2 {
+  margin: 4px 0 0;
+  overflow: hidden;
+  color: #f7fbff;
+  font-size: 18px;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mint-queue-sheet__header button {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 8px;
+  color: #dbe7ec;
+  background: rgb(255 255 255 / 7%);
+  cursor: pointer;
+}
+
+.mint-queue-sheet__body {
+  min-height: 0;
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  overflow-y: auto;
+  padding: 12px;
+}
+
+.mint-queue-sheet__summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.mint-queue-sheet__pill,
+.mint-queue-sheet__state,
+.mint-queue-row {
+  border: 1px solid rgb(255 255 255 / 11%);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 6%);
+}
+
+.mint-queue-sheet__pill {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+  padding: 10px;
+}
+
+.mint-queue-sheet__pill strong {
+  color: #f7fbff;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.mint-queue-sheet__pill--progress strong,
+.mint-queue-row--progress > svg {
+  color: #7de2d1;
+}
+
+.mint-queue-sheet__pill--success strong,
+.mint-queue-row--success > svg {
+  color: #8fd694;
+}
+
+.mint-queue-sheet__pill--warning strong,
+.mint-queue-row--warning > svg {
+  color: #ffd166;
+}
+
+.mint-queue-row--danger > svg,
+.mint-queue-sheet__state--danger > svg {
+  color: #ff8f8f;
+}
+
+.mint-queue-sheet__state {
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  padding: 18px 12px;
+  text-align: center;
+}
+
+.mint-queue-sheet__state strong {
+  color: #f7fbff;
+  font-size: 14px;
+}
+
+.mint-queue-sheet__state span {
+  color: #aec0c7;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.mint-queue-sheet__list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mint-queue-row {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 9px;
+  padding: 10px;
+}
+
+.mint-queue-row > svg {
+  margin-top: 2px;
+}
+
+.mint-queue-row strong,
+.mint-queue-row span,
+.mint-queue-row dd {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mint-queue-row strong {
+  display: block;
+  color: #f7fbff;
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.mint-queue-row span,
+.mint-queue-row dd {
+  color: #b7c8cf;
+  font-size: 12px;
+}
+
+.mint-queue-row dl {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.mint-queue-row dt {
+  margin-bottom: 4px;
+}
+
+.mint-queue-row dd {
+  margin: 0;
+}
+
+.mint-queue-row__error {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #ffc4c4;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.mint-queue-sheet__refresh {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: 8px;
+  color: #f7fbff;
+  background: rgb(255 255 255 / 8%);
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.mint-queue-sheet__refresh:disabled {
+  color: #8da0a8;
+  cursor: not-allowed;
+}
+
 @media (width < 390px) {
   .wallet-status-sheet__actions,
-  .wallet-status-sheet__summary {
+  .wallet-status-sheet__summary,
+  .mint-queue-sheet__summary,
+  .mint-queue-row dl {
     grid-template-columns: 1fr;
   }
 

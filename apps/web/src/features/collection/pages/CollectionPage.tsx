@@ -4,6 +4,9 @@ import { Link } from "react-router-dom";
 
 import { useFeedback } from "@/app/providers/FeedbackProvider";
 import { getApiErrorMessage } from "@/api/errors";
+import { MintQueueSheet } from "@/features/wallet/components/MintQueueSheet";
+import { useCreateMint } from "@/features/wallet/hooks/useCreateMint";
+import { useMintQueue } from "@/features/wallet/hooks/useMintQueue";
 import { APP_ROUTES } from "@/shared/constants/routes";
 import { formatCurrencyAmount } from "@/shared/lib/formatCurrency";
 
@@ -25,12 +28,17 @@ import { useInventory } from "../hooks/useInventory";
 export function CollectionPage() {
   const { pushToast } = useFeedback();
   const inventoryQuery = useInventory();
+  const createMintMutation = useCreateMint();
   const items = inventoryQuery.items;
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isUpgradeOpen, setIsUpgradeOpen] = useState(false);
   const [isEvolveOpen, setIsEvolveOpen] = useState(false);
   const [isDecomposeOpen, setIsDecomposeOpen] = useState(false);
+  const [isMintQueueOpen, setIsMintQueueOpen] = useState(false);
+  const mintQueueQuery = useMintQueue({
+    enabled: isMintQueueOpen,
+  });
   const [upgradeResult, setUpgradeResult] =
     useState<CollectionUpgradeItemResponse | null>(null);
   const [evolveResult, setEvolveResult] =
@@ -52,6 +60,7 @@ export function CollectionPage() {
       setIsUpgradeOpen(false);
       setIsEvolveOpen(false);
       setIsDecomposeOpen(false);
+      setIsMintQueueOpen(false);
       setUpgradeResult(null);
       setEvolveResult(null);
       setDecomposeResult(null);
@@ -88,12 +97,39 @@ export function CollectionPage() {
     setIsDecomposeOpen(true);
   }
 
-  function handleOpenMint() {
-    pushToast({
-      type: "info",
-      title: "Mint 暂未开放",
-      message: "藏品已满足 Mint 入口条件，入队请求将在后续步骤接入。",
-    });
+  function handleCreateMint(itemInstanceId: string) {
+    createMintMutation.mutate(
+      {
+        itemInstanceId,
+      },
+      {
+        onSuccess: (result) => {
+          setSelectedItemId(result.itemInstanceId);
+          setIsDetailOpen(false);
+          setIsMintQueueOpen(true);
+          pushToast({
+            type: "success",
+            title: "Mint 已入队",
+            message: "藏品已锁定，队列状态以服务端为准。",
+          });
+        },
+        onError: (error) => {
+          pushToast({
+            type: "error",
+            title: "Mint 入队失败",
+            message: getApiErrorMessage(error),
+          });
+        },
+      },
+    );
+  }
+
+  function handleCloseMintQueue() {
+    setIsMintQueueOpen(false);
+  }
+
+  function handleRefreshMintQueue() {
+    void mintQueueQuery.refetch();
   }
 
   function handleUpgradeResult(result: CollectionUpgradeItemResponse) {
@@ -180,10 +216,11 @@ export function CollectionPage() {
       <CharacterDetailSheet
         open={isDetailOpen}
         item={selectedItem}
+        isMinting={createMintMutation.isPending}
         onClose={() => setIsDetailOpen(false)}
         onDecompose={handleOpenDecompose}
         onEvolve={handleOpenEvolve}
-        onMint={handleOpenMint}
+        onMint={handleCreateMint}
         onUpgrade={handleOpenUpgrade}
       />
       <UpgradePanel
@@ -205,6 +242,19 @@ export function CollectionPage() {
         items={items}
         onClose={() => setIsDecomposeOpen(false)}
         onDecomposed={handleDecomposeResult}
+      />
+      <MintQueueSheet
+        open={isMintQueueOpen}
+        items={mintQueueQuery.items}
+        summary={mintQueueQuery.mintQueue}
+        loading={mintQueueQuery.isLoading || mintQueueQuery.isFetching}
+        errorMessage={
+          mintQueueQuery.isError
+            ? getApiErrorMessage(mintQueueQuery.error)
+            : null
+        }
+        onClose={handleCloseMintQueue}
+        onRefresh={handleRefreshMintQueue}
       />
       <GrowthResultModal
         open={upgradeResult !== null}

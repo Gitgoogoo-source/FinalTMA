@@ -21,6 +21,9 @@ export function useMintQueue({ enabled = true }: UseMintQueueOptions = {}) {
 
   return {
     ...result,
-    mintQueue: result.data ?? null,
+    mintQueue: result.data?.summary ?? null,
+    items: result.data?.items ?? [],
+    nextCursor: result.data?.nextCursor ?? null,
+    serverTime: result.data?.serverTime ?? null,
   };
 }

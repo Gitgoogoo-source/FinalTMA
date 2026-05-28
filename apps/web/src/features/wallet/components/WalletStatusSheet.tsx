@@ -40,6 +40,11 @@ export type WalletStatusSheetWallet = {
 export type WalletMintQueueSummary = {
   queued?: number;
   processing?: number;
+  submitted?: number;
+  confirming?: number;
+  retrying?: number;
+  minted?: number;
+  cancelled?: number;
   failed?: number;
   manualReview?: number;
 };
@@ -529,7 +534,12 @@ function formatMintQueueSummary(
   const processing = summary.processing ?? 0;
   const failed = summary.failed ?? 0;
   const manualReview = summary.manualReview ?? 0;
-  const activeCount = queued + processing;
+  const activeCount =
+    queued +
+    processing +
+    (summary.submitted ?? 0) +
+    (summary.confirming ?? 0) +
+    (summary.retrying ?? 0);
 
   if (failed > 0 || manualReview > 0) {
     return `${failed + manualReview} 个需处理`;

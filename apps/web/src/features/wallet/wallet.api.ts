@@ -3,10 +3,15 @@ import { API_ENDPOINTS } from "@/api/endpoints";
 
 import type {
   ConnectWalletInput,
+  CreateMintInput,
+  CreateMintResult,
   VerifyWalletProofInput,
   WalletChallenge,
   WalletConnectionStatus,
+  WalletMintQueueItem,
+  WalletMintQueueResponse,
   WalletMintQueueSummary,
+  WalletMintQueueStatus,
   WalletStatusData,
   WalletSyncResult,
   WalletSyncStatus,
@@ -17,6 +22,11 @@ type JsonRecord = Record<string, unknown>;
 const EMPTY_MINT_QUEUE: WalletMintQueueSummary = {
   queued: 0,
   processing: 0,
+  submitted: 0,
+  confirming: 0,
+  retrying: 0,
+  minted: 0,
+  cancelled: 0,
   failed: 0,
   manualReview: 0,
 };
@@ -129,12 +139,33 @@ export async function syncWalletNfts(): Promise<WalletSyncResult> {
   return normalizeWalletSyncResult(response);
 }
 
-export async function fetchWalletMintQueue(): Promise<WalletMintQueueSummary> {
+export async function createWalletMint(
+  input: CreateMintInput,
+): Promise<CreateMintResult> {
+  const idempotencyKey =
+    input.idempotencyKey ?? createIdempotencyKey("wallet:mint");
+  const response = await apiRequest<unknown>(API_ENDPOINTS.wallet.mint, {
+    method: "POST",
+    body: compactRecord({
+      item_instance_id: input.itemInstanceId,
+      target_address: input.targetAddress,
+      chain: input.chain,
+      idempotency_key: idempotencyKey,
+    }),
+    headers: {
+      "X-Idempotency-Key": idempotencyKey,
+    },
+  });
+
+  return normalizeCreateMintResult(response);
+}
+
+export async function fetchWalletMintQueue(): Promise<WalletMintQueueResponse> {
   const response = await apiRequest<unknown>(API_ENDPOINTS.wallet.mintStatus, {
     method: "GET",
   });
 
-  return normalizeMintQueue(response) ?? EMPTY_MINT_QUEUE;
+  return normalizeMintQueueResponse(response);
 }
 
 export function normalizeWalletStatus(
@@ -245,6 +276,53 @@ function normalizeWalletSyncResult(response: unknown): WalletSyncResult {
   };
 }
 
+function normalizeCreateMintResult(response: unknown): CreateMintResult {
+  if (!isRecord(response)) {
+    throw new Error("Invalid Mint response.");
+  }
+
+  const mintQueueId =
+    readString(response.mintQueueId) ?? readString(response.mint_queue_id);
+  const itemInstanceId =
+    readString(response.itemInstanceId) ??
+    readString(response.item_instance_id);
+
+  if (!mintQueueId || !itemInstanceId) {
+    throw new Error("Mint response is missing required fields.");
+  }
+
+  return {
+    accepted: readBoolean(response.accepted) ?? true,
+    mintQueueId,
+    status: normalizeMintQueueStatus(response.status),
+    itemInstanceId,
+    metadataUrl:
+      readString(response.metadataUrl) ?? readString(response.metadata_url),
+    idempotent: readBoolean(response.idempotent) ?? false,
+  };
+}
+
+function normalizeMintQueueResponse(
+  response: unknown,
+): WalletMintQueueResponse {
+  const payload = isRecord(response) ? response : {};
+  const items = Array.isArray(payload.items)
+    ? payload.items.map(normalizeMintQueueItem).filter(isMintQueueItem)
+    : [];
+  const summary =
+    normalizeMintQueue(payload.summary ?? payload.mint_queue) ??
+    summarizeMintQueueItems(items);
+
+  return {
+    items,
+    summary,
+    nextCursor:
+      readString(payload.nextCursor) ?? readString(payload.next_cursor),
+    serverTime:
+      readString(payload.serverTime) ?? readString(payload.server_time),
+  };
+}
+
 function normalizeMintQueue(value: unknown): WalletMintQueueSummary | null {
   const root = isRecord(value) ? value : null;
   const payload = isRecord(root?.mint_queue) ? root.mint_queue : root;
@@ -258,12 +336,124 @@ function normalizeMintQueue(value: unknown): WalletMintQueueSummary | null {
   return {
     queued: readInteger(summary.queued) ?? EMPTY_MINT_QUEUE.queued,
     processing: readInteger(summary.processing) ?? EMPTY_MINT_QUEUE.processing,
+    submitted: readInteger(summary.submitted) ?? 0,
+    confirming: readInteger(summary.confirming) ?? 0,
+    retrying: readInteger(summary.retrying) ?? 0,
+    minted: readInteger(summary.minted) ?? 0,
+    cancelled: readInteger(summary.cancelled) ?? 0,
     failed: readInteger(summary.failed) ?? EMPTY_MINT_QUEUE.failed,
     manualReview:
       readInteger(summary.manual_review) ??
       readInteger(summary.manualReview) ??
       EMPTY_MINT_QUEUE.manualReview,
   };
+}
+
+function normalizeMintQueueItem(value: unknown): WalletMintQueueItem | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const mintQueueId =
+    readString(value.mintQueueId) ?? readString(value.mint_queue_id);
+  const itemInstanceId =
+    readString(value.itemInstanceId) ?? readString(value.item_instance_id);
+
+  if (!mintQueueId || !itemInstanceId) {
+    return null;
+  }
+
+  return {
+    mintQueueId,
+    itemInstanceId,
+    status: normalizeMintQueueStatus(value.status),
+    chain: normalizeTonChain(value.chain),
+    collectionAddress:
+      readString(value.collectionAddress) ??
+      readString(value.collection_address),
+    itemAddress:
+      readString(value.itemAddress) ?? readString(value.item_address),
+    targetAddress:
+      readString(value.targetAddress) ?? readString(value.target_address),
+    transactionHash:
+      readString(value.transactionHash) ??
+      readString(value.transaction_hash) ??
+      readString(value.tx_hash),
+    errorCode: readString(value.errorCode) ?? readString(value.error_code),
+    errorMessage:
+      readString(value.errorMessage) ?? readString(value.error_message),
+    retryCount:
+      readInteger(value.retryCount) ?? readInteger(value.retry_count) ?? 0,
+    createdAt:
+      readString(value.createdAt) ??
+      readString(value.created_at) ??
+      new Date(0).toISOString(),
+    updatedAt:
+      readString(value.updatedAt) ??
+      readString(value.updated_at) ??
+      readString(value.createdAt) ??
+      readString(value.created_at) ??
+      new Date(0).toISOString(),
+    mintedAt: readString(value.mintedAt) ?? readString(value.minted_at),
+  };
+}
+
+function isMintQueueItem(
+  value: WalletMintQueueItem | null,
+): value is WalletMintQueueItem {
+  return value !== null;
+}
+
+function summarizeMintQueueItems(
+  items: WalletMintQueueItem[],
+): WalletMintQueueSummary {
+  const summary = { ...EMPTY_MINT_QUEUE };
+
+  for (const item of items) {
+    if (item.status === "manual_review") {
+      summary.manualReview += 1;
+      continue;
+    }
+
+    summary[item.status] += 1;
+  }
+
+  return summary;
+}
+
+function normalizeMintQueueStatus(value: unknown): WalletMintQueueStatus {
+  const normalized =
+    typeof value === "string" ? value.trim().toLowerCase() : "";
+
+  switch (normalized) {
+    case "queued":
+    case "processing":
+    case "submitted":
+    case "confirming":
+    case "retrying":
+    case "manual_review":
+    case "minted":
+    case "failed":
+    case "cancelled":
+      return normalized;
+    case "pending":
+      return "queued";
+    case "minting":
+      return "processing";
+    case "confirmed":
+      return "minted";
+    case "canceled":
+      return "cancelled";
+    default:
+      return "queued";
+  }
+}
+
+function normalizeTonChain(value: unknown): "MAINNET" | "TESTNET" {
+  const normalized =
+    typeof value === "string" ? value.trim().toLowerCase() : "";
+
+  return normalized === "testnet" ? "TESTNET" : "MAINNET";
 }
 
 function normalizeConnectionStatus(

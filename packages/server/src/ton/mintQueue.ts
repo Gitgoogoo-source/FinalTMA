@@ -34,6 +34,25 @@ export interface MintWorkerStatusContextInput {
   details?: Record<string, unknown> | undefined;
 }
 
+export interface MintRetryStrategy {
+  maxAttempts: number;
+  retryDelaySeconds: number;
+  backoffMultiplier: number;
+}
+
+export interface MintRetryDecision {
+  status: Extract<MintQueueStatus, "retrying" | "manual_review">;
+  nextAttemptAt: Date | null;
+  attemptCount: number;
+  maxAttempts: number;
+}
+
+const DEFAULT_MINT_RETRY_STRATEGY: MintRetryStrategy = {
+  maxAttempts: 5,
+  retryDelaySeconds: 300,
+  backoffMultiplier: 2,
+};
+
 const MINT_QUEUE_STATUS_SET = new Set<string>(MINT_QUEUE_STATUSES);
 const ONCHAIN_TRANSACTION_STATUS_SET = new Set<string>(
   ONCHAIN_TRANSACTION_STATUSES,
@@ -135,6 +154,61 @@ export function buildMintWorkerStatusMetadata(
   });
 }
 
+export function readMintRetryStrategy(
+  env: NodeJS.ProcessEnv = process.env,
+): MintRetryStrategy {
+  return {
+    maxAttempts: readPositiveInteger(
+      env.TON_MINT_MAX_RETRIES,
+      DEFAULT_MINT_RETRY_STRATEGY.maxAttempts,
+    ),
+    retryDelaySeconds: readPositiveInteger(
+      env.TON_MINT_RETRY_DELAY_SECONDS,
+      DEFAULT_MINT_RETRY_STRATEGY.retryDelaySeconds,
+    ),
+    backoffMultiplier: readPositiveNumber(
+      env.TON_MINT_RETRY_BACKOFF_MULTIPLIER,
+      DEFAULT_MINT_RETRY_STRATEGY.backoffMultiplier,
+    ),
+  };
+}
+
+export function buildMintRetryDecision(input: {
+  attemptCount: number;
+  maxAttempts?: number | null | undefined;
+  now?: Date | undefined;
+  strategy?: Partial<MintRetryStrategy> | undefined;
+}): MintRetryDecision {
+  const now = input.now ?? new Date();
+  const strategy = {
+    ...DEFAULT_MINT_RETRY_STRATEGY,
+    ...input.strategy,
+  };
+  const attemptCount = Math.max(0, Math.trunc(input.attemptCount));
+  const maxAttempts = Math.max(
+    1,
+    Math.trunc(input.maxAttempts ?? strategy.maxAttempts),
+  );
+
+  if (attemptCount >= maxAttempts) {
+    return {
+      status: "manual_review",
+      nextAttemptAt: null,
+      attemptCount,
+      maxAttempts,
+    };
+  }
+
+  return {
+    status: "retrying",
+    nextAttemptAt: new Date(
+      now.getTime() + calculateRetryDelayMs(attemptCount, strategy),
+    ),
+    attemptCount,
+    maxAttempts,
+  };
+}
+
 function normalizeStatusText(value: unknown): string | null {
   if (typeof value !== "string") {
     return null;
@@ -149,4 +223,38 @@ function normalizeOptionalText(value: string | undefined): string | undefined {
   const normalized = value?.trim();
 
   return normalized ? normalized : undefined;
+}
+
+function calculateRetryDelayMs(
+  attemptCount: number,
+  strategy: MintRetryStrategy,
+): number {
+  const exponent = Math.max(0, attemptCount - 1);
+  const delaySeconds =
+    strategy.retryDelaySeconds *
+    Math.pow(Math.max(1, strategy.backoffMultiplier), exponent);
+
+  return Math.round(delaySeconds * 1000);
+}
+
+function readPositiveInteger(
+  value: string | undefined,
+  fallback: number,
+): number {
+  const parsed = Number(value);
+
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return fallback;
+  }
+
+  return Math.trunc(parsed);
+}
+
+function readPositiveNumber(
+  value: string | undefined,
+  fallback: number,
+): number {
+  const parsed = Number(value);
+
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }

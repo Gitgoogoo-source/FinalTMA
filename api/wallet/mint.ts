@@ -1256,6 +1256,32 @@ function mapMintRpcError(error: RpcError): ApiError {
   }
 
   if (
+    message.includes("wallet not found") ||
+    message.includes("wallet does not belong to user") ||
+    message.includes("wallet is not verified")
+  ) {
+    return new ApiError(
+      403,
+      "WALLET_NOT_VERIFIED",
+      "请先完成钱包签名验证后再 Mint。",
+      {
+        cause: error,
+      },
+    );
+  }
+
+  if (message.includes("wallet network does not match nft collection")) {
+    return new ApiError(
+      400,
+      "WALLET_NETWORK_MISMATCH",
+      "钱包网络与本次 Mint 请求网络不匹配。",
+      {
+        cause: error,
+      },
+    );
+  }
+
+  if (
     message.includes("not item owner") ||
     message.includes("item not found")
   ) {
@@ -1269,6 +1295,17 @@ function mapMintRpcError(error: RpcError): ApiError {
       409,
       "ITEM_NOT_AVAILABLE_FOR_MINT",
       "藏品当前状态不能 Mint。",
+      {
+        cause: error,
+      },
+    );
+  }
+
+  if (message.includes("item has active inventory lock")) {
+    return new ApiError(
+      409,
+      "ITEM_ALREADY_LOCKED",
+      "藏品已被其他操作锁定，暂时不能 Mint。",
       {
         cause: error,
       },

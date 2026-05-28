@@ -204,9 +204,18 @@ insert into _ids (key, id) select 'form1', ((select payload from _ids where key 
 insert into _ids (key, id) select 'item_success', testutil.create_item((select id from _ids where key = 'user'), (select id from _ids where key = 'template'), (select id from _ids where key = 'form1'), 1, 100, 'admin');
 insert into _ids (key, id) select 'item_failed', testutil.create_item((select id from _ids where key = 'user'), (select id from _ids where key = 'template'), (select id from _ids where key = 'form1'), 1, 100, 'admin');
 insert into _ids (key, id) select 'item_conflict', testutil.create_item((select id from _ids where key = 'user'), (select id from _ids where key = 'template'), (select id from _ids where key = 'form1'), 1, 100, 'admin');
+insert into _ids (key, id) select 'item_queued_status_guard', testutil.create_item((select id from _ids where key = 'user'), (select id from _ids where key = 'template'), (select id from _ids where key = 'form1'), 1, 100, 'admin');
+insert into _ids (key, id) select 'item_active_lock_guard', testutil.create_item((select id from _ids where key = 'user'), (select id from _ids where key = 'template'), (select id from _ids where key = 'form1'), 1, 100, 'admin');
+insert into _ids (key, id) select 'item_unverified_wallet_guard', testutil.create_item((select id from _ids where key = 'user'), (select id from _ids where key = 'template'), (select id from _ids where key = 'form1'), 1, 100, 'admin');
 
 insert into _ids (key, payload) select 'wallet', api.wallet_save_verified_address((select id from _ids where key = 'user'), 'EQ_TEST_MINT_WALLET_MAIN', 'raw-mint-wallet', 'mainnet', 'Tonkeeper', true);
 insert into _ids (key, id) select 'wallet_id', ((select payload from _ids where key = 'wallet') ->> 'wallet_id')::uuid;
+with unverified_wallet as (
+  insert into core.user_wallets (user_id, chain, network, address, address_raw, wallet_app_name, is_primary, status, verified_at, metadata)
+  values ((select id from _ids where key = 'user'), 'TON', 'mainnet', 'EQ_TEST_MINT_WALLET_UNVERIFIED', 'raw-mint-wallet-unverified', 'Tonkeeper', false, 'connected', null, '{"fixture":true}'::jsonb)
+  returning id
+)
+insert into _ids (key, id) select 'wallet_unverified_id', id from unverified_wallet;
 select ok(exists (select 1 from core.user_wallets where id = (select id from _ids where key = 'wallet_id') and status = 'connected' and verified_at is not null), 'wallet_save_verified_address stores verified connected wallet');
 
 with collection_row as (
@@ -230,6 +239,12 @@ select is((select status from inventory.item_instances where id = (select id fro
 select ok(exists (select 1 from inventory.inventory_locks where item_instance_id = (select id from _ids where key = 'item_success') and lock_type = 'mint' and status = 'active'), 'queued mint creates active mint lock');
 select ok(testutil.raises_like(format('select api.wallet_enqueue_mint(%L::uuid, %L::uuid, %L::uuid, %L::uuid, %L)', (select id::text from _ids where key = 'user'), (select id::text from _ids where key = 'item_conflict'), (select id::text from _ids where key = 'collection'), (select id::text from _ids where key = 'wallet_id'), 'mint-queue-success-001'), '%idempotency conflict%'), 'mint enqueue idempotency key cannot be reused for a different item');
 select ok(testutil.raises_like(format('select api.wallet_enqueue_mint(%L::uuid, %L::uuid, %L::uuid, %L::uuid, %L)', (select id::text from _ids where key = 'user'), (select id::text from _ids where key = 'item_success'), (select id::text from _ids where key = 'collection'), (select id::text from _ids where key = 'wallet_id'), 'mint-queue-duplicate-item'), '%item is not available for mint%'), 'same item cannot enter a second active mint queue');
+update inventory.item_instances set nft_mint_status = 'queued' where id = (select id from _ids where key = 'item_queued_status_guard');
+select ok(testutil.raises_like(format('select api.wallet_enqueue_mint(%L::uuid, %L::uuid, %L::uuid, %L::uuid, %L)', (select id::text from _ids where key = 'user'), (select id::text from _ids where key = 'item_queued_status_guard'), (select id::text from _ids where key = 'collection'), (select id::text from _ids where key = 'wallet_id'), 'mint-queue-nft-status-guard'), '%item is not available for mint%'), 'item with queued nft_mint_status cannot enter mint queue even if status is available');
+insert into inventory.inventory_locks (item_instance_id, user_id, lock_type, source_type, status)
+values ((select id from _ids where key = 'item_active_lock_guard'), (select id from _ids where key = 'user'), 'admin_hold', 'admin', 'active');
+select ok(testutil.raises_like(format('select api.wallet_enqueue_mint(%L::uuid, %L::uuid, %L::uuid, %L::uuid, %L)', (select id::text from _ids where key = 'user'), (select id::text from _ids where key = 'item_active_lock_guard'), (select id::text from _ids where key = 'collection'), (select id::text from _ids where key = 'wallet_id'), 'mint-queue-active-lock-guard'), '%item has active inventory lock%'), 'item with active inventory lock cannot enter mint queue');
+select ok(testutil.raises_like(format('select api.wallet_enqueue_mint(%L::uuid, %L::uuid, %L::uuid, %L::uuid, %L)', (select id::text from _ids where key = 'user'), (select id::text from _ids where key = 'item_unverified_wallet_guard'), (select id::text from _ids where key = 'collection'), (select id::text from _ids where key = 'wallet_unverified_id'), 'mint-queue-unverified-wallet-guard'), '%wallet is not verified%'), 'unverified wallet cannot create mint queue');
 
 insert into _ids (key, payload) select 'mint_success', api.onchain_mark_mint_success((select id from _ids where key = 'queue_success_id'), 'EQ_TEST_NFT_ITEM_SUCCESS', 1001, 'EQ_TEST_MINT_WALLET_MAIN', 'tx_mint_success_001', 'https://example.test/item-success.json');
 insert into _ids (key, id) select 'nft_item_success', ((select payload from _ids where key = 'mint_success') ->> 'nft_item_id')::uuid;

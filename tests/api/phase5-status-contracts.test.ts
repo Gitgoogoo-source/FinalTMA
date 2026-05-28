@@ -8,6 +8,7 @@ import {
   normalizePaymentOrderStatus,
 } from "../../packages/server/src/payments/paymentEvents";
 import {
+  buildMintRetryDecision,
   buildMintWorkerStatusMetadata,
   isActiveMintQueueStatus,
   isTerminalMintQueueStatus,
@@ -108,6 +109,40 @@ describe("Phase 5 backend status contracts", () => {
       error_message: "provider timeout",
       tx_hash: "tx-hash-001",
       external_api_provider: "toncenter",
+    });
+  });
+
+  it("builds Mint retry decisions without exceeding manual review", () => {
+    const now = new Date("2026-05-29T08:00:00.000Z");
+
+    expect(
+      buildMintRetryDecision({
+        attemptCount: 2,
+        maxAttempts: 5,
+        now,
+        strategy: {
+          retryDelaySeconds: 60,
+          backoffMultiplier: 2,
+        },
+      }),
+    ).toMatchObject({
+      status: "retrying",
+      attemptCount: 2,
+      maxAttempts: 5,
+      nextAttemptAt: new Date("2026-05-29T08:02:00.000Z"),
+    });
+
+    expect(
+      buildMintRetryDecision({
+        attemptCount: 5,
+        maxAttempts: 5,
+        now,
+      }),
+    ).toMatchObject({
+      status: "manual_review",
+      nextAttemptAt: null,
+      attemptCount: 5,
+      maxAttempts: 5,
     });
   });
 });

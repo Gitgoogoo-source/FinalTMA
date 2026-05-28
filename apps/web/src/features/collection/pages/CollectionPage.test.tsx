@@ -29,6 +29,8 @@ const mocks = vi.hoisted(() => ({
   upgradeMutateAsync: vi.fn(),
   evolveMutateAsync: vi.fn(),
   decomposeMutateAsync: vi.fn(),
+  createMintMutate: vi.fn(),
+  mintQueueRefetch: vi.fn(),
   walletStatus: null as unknown,
 }));
 
@@ -96,6 +98,29 @@ vi.mock("@/features/wallet/hooks/useWalletStatus", () => ({
   }),
 }));
 
+vi.mock("@/features/wallet/hooks/useCreateMint", () => ({
+  useCreateMint: () => ({
+    error: null,
+    isError: false,
+    isPending: false,
+    mutate: mocks.createMintMutate,
+  }),
+}));
+
+vi.mock("@/features/wallet/hooks/useMintQueue", () => ({
+  useMintQueue: () => ({
+    error: null,
+    isError: false,
+    isFetching: false,
+    isLoading: false,
+    items: [],
+    mintQueue: null,
+    nextCursor: null,
+    refetch: mocks.mintQueueRefetch,
+    serverTime: null,
+  }),
+}));
+
 const ITEM_A_ID = "66666666-6666-4666-8666-666666666666";
 const ITEM_B_ID = "66666666-6666-4666-8666-666666666667";
 const ITEM_C_ID = "66666666-6666-4666-8666-666666666668";
@@ -111,9 +136,28 @@ describe("CollectionPage stage-3 frontend states", () => {
     mocks.upgradeMutateAsync.mockReset();
     mocks.evolveMutateAsync.mockReset();
     mocks.decomposeMutateAsync.mockReset();
+    mocks.createMintMutate.mockReset();
+    mocks.mintQueueRefetch.mockReset();
     mocks.upgradeMutateAsync.mockResolvedValue(upgradeResult());
     mocks.evolveMutateAsync.mockResolvedValue(evolveResult());
     mocks.decomposeMutateAsync.mockResolvedValue(decomposeResult());
+    mocks.createMintMutate.mockImplementation(
+      (
+        _input: unknown,
+        options?: {
+          onSuccess?: (result: unknown) => void;
+        },
+      ) => {
+        options?.onSuccess?.({
+          accepted: true,
+          idempotent: false,
+          itemInstanceId: ITEM_A_ID,
+          metadataUrl: "/nft-metadata/items/forest_sproutling.json",
+          mintQueueId: "77777777-7777-4777-8777-777777777777",
+          status: "queued",
+        });
+      },
+    );
     mocks.walletStatus = makeWalletStatus("not_connected");
   });
 
@@ -250,7 +294,7 @@ describe("CollectionPage stage-3 frontend states", () => {
     expect(within(dialog).getByRole("button", { name: "分解" })).toBeDisabled();
   });
 
-  it("shows the Mint entry only after wallet verification and item eligibility pass", () => {
+  it("submits Mint after wallet verification and item eligibility pass", async () => {
     mocks.walletStatus = makeWalletStatus("verified");
     const item = makeItem();
     setInventoryItems(item);
@@ -268,7 +312,17 @@ describe("CollectionPage stage-3 frontend states", () => {
 
     fireEvent.click(mintButton);
 
-    expect(screen.getByText("Mint 暂未开放")).toBeVisible();
+    expect(mocks.createMintMutate).toHaveBeenCalledWith(
+      {
+        itemInstanceId: ITEM_A_ID,
+      },
+      expect.objectContaining({
+        onError: expect.any(Function),
+        onSuccess: expect.any(Function),
+      }),
+    );
+    expect(await screen.findByText("Mint 已入队")).toBeVisible();
+    expect(screen.getByRole("dialog", { name: "Mint 队列" })).toBeVisible();
   });
 
   it("hides the Mint entry when the wallet is not verified", () => {
