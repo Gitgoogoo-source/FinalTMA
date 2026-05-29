@@ -160,4 +160,18 @@ describe("Phase 5 backend status contracts", () => {
       ]),
     );
   });
+
+  it("keeps wallet NFT sync on a user-scoped rate-limit action", () => {
+    const rules = createRateLimiter().getRulesForAction("wallet.sync_nfts");
+
+    expect(rules).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          action: "wallet.sync_nfts",
+          scope: "user",
+          max: 12,
+        }),
+      ]),
+    );
+  });
 });

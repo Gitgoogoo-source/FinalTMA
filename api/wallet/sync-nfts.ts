@@ -18,6 +18,7 @@ import {
 } from "../../packages/validation/src/wallet.schemas.js";
 import {
   ApiError,
+  assertApiRateLimit,
   getIdempotencyKey,
   withApiHandler,
 } from "../_shared/handler.js";
@@ -150,8 +151,27 @@ const DEFAULT_RECENT_JOB_TTL_SECONDS = 300;
 const DEFAULT_RETRY_DELAY_SECONDS = 300;
 
 export default withApiHandler(
-  async (req, _res, ctx) => {
+  async (req, res, ctx) => {
     const session = await requireSession(req);
+    await assertApiRateLimit(
+      req,
+      res,
+      ctx,
+      {
+        action: "wallet.sync_nfts",
+      },
+      {
+        scopes: ["user"],
+        userId: session.userId,
+        sessionId: session.sessionId,
+        ...(session.telegramUserId === null
+          ? {}
+          : {
+              telegramUserId: session.telegramUserId,
+            }),
+      },
+    );
+
     const body = await parseOptionalJsonBody<unknown>(req, {
       maxBytes: 8 * 1024,
     });
@@ -198,13 +218,13 @@ export function normalizeWalletNftSyncInput(
   }
 
   assertNoClientIdentityFields(body);
+  assertNoClientSnapshotFields(body);
 
   return {
     address: body.address,
     chain: normalizeTonChainValue(body.chain ?? body.network),
     mode: normalizeSyncModeValue(body.mode),
     collectionAddress: body.collectionAddress ?? body.collection_address,
-    force: body.force,
     idempotencyKey:
       body.idempotencyKey ?? body.idempotency_key ?? headerIdempotencyKey,
   };
@@ -1086,6 +1106,41 @@ function assertNoClientIdentityFields(body: Record<string, unknown>): void {
       details: forbiddenFields.map((field) => ({
         path: field,
         message: "同步 NFT 请求不能携带身份或链上归属事实字段。",
+      })),
+    });
+  }
+}
+
+function assertNoClientSnapshotFields(body: Record<string, unknown>): void {
+  const forbiddenFields = [
+    "items",
+    "item",
+    "nfts",
+    "snapshot",
+    "snapshots",
+    "item_address",
+    "itemAddress",
+    "owner_address",
+    "ownerAddress",
+    "metadata_url",
+    "metadataUrl",
+    "image_url",
+    "imageUrl",
+    "raw_payload",
+    "rawPayload",
+    "raw_response",
+    "rawResponse",
+    "seen_at",
+    "seenAt",
+    "last_seen_at",
+    "lastSeenAt",
+  ].filter((field) => body[field] !== undefined);
+
+  if (forbiddenFields.length > 0) {
+    throw new ApiError(400, "VALIDATION_ERROR", "请求参数校验失败。", {
+      details: forbiddenFields.map((field) => ({
+        path: field,
+        message: "同步 NFT 请求不能携带 NFT 快照或链上归属事实字段。",
       })),
     });
   }

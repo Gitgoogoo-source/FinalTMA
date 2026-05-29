@@ -5,6 +5,7 @@ import type {
   ApiSuccessResponse,
 } from "../../api/_shared/handler";
 import { ApiError } from "../../api/_shared/handler";
+import { TonNftProviderError } from "../../packages/server/src/ton/nft";
 import { invokeApiHandler } from "./_utils";
 
 const { getSupabaseAdminClientMock, requireSessionMock } = vi.hoisted(() => ({
@@ -66,6 +67,44 @@ describe("wallet NFT sync service", () => {
     requireSessionMock.mockResolvedValue(session());
   });
 
+  it("rejects client-submitted NFT snapshot fields", async () => {
+    const { normalizeWalletNftSyncInput } =
+      await import("../../api/wallet/sync-nfts");
+
+    expect(() =>
+      normalizeWalletNftSyncInput(
+        {
+          item_address: RAW_ITEM_ADDRESS,
+          owner_address: RAW_OWNER_ADDRESS,
+          raw_payload: {
+            name: "client supplied snapshot",
+          },
+        },
+        null,
+      ),
+    ).toThrow(
+      expect.objectContaining({
+        code: "VALIDATION_ERROR",
+        statusCode: 400,
+      }),
+    );
+  });
+
+  it("does not let public request bodies force bypass recent job reuse", async () => {
+    const { normalizeWalletNftSyncInput } =
+      await import("../../api/wallet/sync-nfts");
+
+    expect(
+      normalizeWalletNftSyncInput(
+        {
+          force: true,
+          idempotency_key: "wallet:sync:test-key",
+        },
+        null,
+      ),
+    ).not.toHaveProperty("force");
+  });
+
   it("rejects sync before a verified wallet exists", async () => {
     const db = createSupabaseMock([
       {
@@ -120,6 +159,78 @@ describe("wallet NFT sync service", () => {
           operator: "not",
           value: "is",
           extra: null,
+        },
+      ]),
+    });
+  });
+
+  it("returns a recent wallet sync job instead of creating a duplicate job", async () => {
+    const now = new Date("2026-05-29T08:00:00.000Z");
+    const db = createSupabaseMock([
+      {
+        data: walletRow(),
+      },
+      {
+        data: walletSyncJob({
+          status: "processing",
+          result: {
+            mode: "INCREMENTAL",
+          },
+        }),
+      },
+    ]);
+    const provider = {
+      submitMint: vi.fn(),
+      queryTransaction: vi.fn(),
+      queryWalletNfts: vi.fn(),
+    };
+    const { syncWalletNftsForUser } =
+      await import("../../api/wallet/sync-nfts");
+
+    const result = await syncWalletNftsForUser({
+      db: db.client as never,
+      provider,
+      userId: USER_ID,
+      input: {
+        chain: "MAINNET",
+        mode: "INCREMENTAL",
+      },
+      requestId: "req_recent_job",
+      now,
+    });
+
+    expect(result).toMatchObject({
+      accepted: true,
+      status: "syncing",
+      jobId: JOB_ID,
+    });
+    expect(provider.queryWalletNfts).not.toHaveBeenCalled();
+    expect(
+      db.operations.some(
+        (operation) =>
+          operation.operation === "insert" &&
+          operation.table === "wallet_sync_jobs",
+      ),
+    ).toBe(false);
+    expect(db.operations[1]).toMatchObject({
+      schema: "onchain",
+      table: "wallet_sync_jobs",
+      operation: "select",
+      filters: expect.arrayContaining([
+        {
+          column: "wallet_id",
+          operator: "eq",
+          value: WALLET_ID,
+        },
+        {
+          column: "sync_type",
+          operator: "eq",
+          value: "nft",
+        },
+        {
+          column: "status",
+          operator: "in",
+          value: ["queued", "processing", "success"],
         },
       ]),
     });
@@ -288,6 +399,304 @@ describe("wallet NFT sync service", () => {
     ).toMatchObject({
       last_sync_at: completedAt,
     });
+  });
+
+  it("completes an empty-wallet sync without writing NFT snapshots", async () => {
+    const completedAt = "2026-05-29T08:05:00.000Z";
+    const db = createSupabaseMock([
+      {
+        data: walletRow(),
+      },
+      {
+        data: walletSyncJob({
+          status: "processing",
+          result: {
+            mode: "INCREMENTAL",
+          },
+        }),
+      },
+      {
+        data: [
+          {
+            id: COLLECTION_ID,
+            network: "mainnet",
+            collection_address: RAW_COLLECTION_ADDRESS,
+            status: "active",
+          },
+        ],
+      },
+      {},
+      {
+        data: walletSyncJob({
+          status: "success",
+          finished_at: completedAt,
+          result: {
+            mode: "INCREMENTAL",
+            synced_count: 0,
+            linked_count: 0,
+            ignored_count: 0,
+            next_cursor: null,
+          },
+        }),
+      },
+    ]);
+    const provider = {
+      submitMint: vi.fn(),
+      queryTransaction: vi.fn(),
+      queryWalletNfts: vi.fn().mockResolvedValue({
+        items: [],
+        nextCursor: null,
+        rawResponse: {
+          ok: true,
+        },
+        externalApiProvider: "mock-ton-provider",
+        checkedAt: completedAt,
+      }),
+    };
+    const { syncWalletNftsForUser } =
+      await import("../../api/wallet/sync-nfts");
+
+    const result = await syncWalletNftsForUser({
+      db: db.client as never,
+      provider,
+      userId: USER_ID,
+      input: {
+        chain: "MAINNET",
+        mode: "INCREMENTAL",
+        force: true,
+      },
+      requestId: "req_empty_wallet",
+      now: new Date(completedAt),
+    });
+
+    expect(result).toMatchObject({
+      status: "success",
+      syncedCount: 0,
+      linkedCount: 0,
+      ignoredCount: 0,
+      message: "未发现当前游戏 Collection NFT。",
+    });
+    expect(
+      db.operations.some(
+        (operation) =>
+          operation.operation === "upsert" &&
+          operation.table === "wallet_nft_snapshots",
+      ),
+    ).toBe(false);
+    expect(
+      db.operations.find(
+        (operation) =>
+          operation.operation === "update" &&
+          operation.table === "user_wallets",
+      )?.payload,
+    ).toMatchObject({
+      last_sync_at: completedAt,
+    });
+  });
+
+  it("marks the sync job retryable when the TON NFT provider fails", async () => {
+    const now = new Date("2026-05-29T08:10:00.000Z");
+    const db = createSupabaseMock([
+      {
+        data: walletRow(),
+      },
+      {
+        data: walletSyncJob({
+          status: "processing",
+          result: {
+            mode: "INCREMENTAL",
+          },
+        }),
+      },
+      {},
+    ]);
+    const providerError = new TonNftProviderError(
+      "TON_NFT_PROVIDER_TIMEOUT",
+      "TON API timed out",
+      {
+        retryable: true,
+      },
+    );
+    const provider = {
+      submitMint: vi.fn(),
+      queryTransaction: vi.fn(),
+      queryWalletNfts: vi.fn().mockRejectedValue(providerError),
+    };
+    const { syncWalletNftsForUser } =
+      await import("../../api/wallet/sync-nfts");
+
+    await expect(
+      syncWalletNftsForUser({
+        db: db.client as never,
+        provider,
+        userId: USER_ID,
+        input: {
+          chain: "MAINNET",
+          mode: "INCREMENTAL",
+          force: true,
+        },
+        requestId: "req_provider_timeout",
+        now,
+      }),
+    ).rejects.toBe(providerError);
+
+    expect(
+      db.operations.find(
+        (operation) =>
+          operation.operation === "update" &&
+          operation.table === "wallet_sync_jobs",
+      )?.payload,
+    ).toMatchObject({
+      status: "failed",
+      error_message: "TON_NFT_PROVIDER_TIMEOUT",
+      retry_count: 1,
+      next_retry_at: "2026-05-29T08:15:00.000Z",
+      result: expect.objectContaining({
+        error_code: "TON_NFT_PROVIDER_TIMEOUT",
+        retryable: true,
+      }),
+    });
+    expect(
+      db.operations.some(
+        (operation) => operation.table === "wallet_nft_snapshots",
+      ),
+    ).toBe(false);
+  });
+
+  it("returns the recent wallet sync job for a repeated manual sync", async () => {
+    const now = new Date("2026-05-29T08:20:00.000Z");
+    const recentJob = walletSyncJob({
+      status: "processing",
+      result: {
+        mode: "INCREMENTAL",
+        synced_count: 0,
+        linked_count: 0,
+        ignored_count: 0,
+        next_cursor: null,
+      },
+    });
+    const db = createSupabaseMock([
+      {
+        data: walletRow(),
+      },
+      {
+        data: recentJob,
+      },
+    ]);
+    const provider = {
+      submitMint: vi.fn(),
+      queryTransaction: vi.fn(),
+      queryWalletNfts: vi.fn(),
+    };
+    const { syncWalletNftsForUser } =
+      await import("../../api/wallet/sync-nfts");
+
+    const result = await syncWalletNftsForUser({
+      db: db.client as never,
+      provider,
+      userId: USER_ID,
+      input: {
+        chain: "MAINNET",
+        mode: "INCREMENTAL",
+        force: false,
+      },
+      requestId: "req_repeat_recent_job",
+      now,
+    });
+
+    expect(result).toMatchObject({
+      accepted: true,
+      status: "syncing",
+      jobId: JOB_ID,
+    });
+    expect(provider.queryWalletNfts).not.toHaveBeenCalled();
+    expect(
+      db.operations.some(
+        (operation) =>
+          operation.operation === "insert" &&
+          operation.table === "wallet_sync_jobs",
+      ),
+    ).toBe(false);
+    expect(db.operations[1]).toMatchObject({
+      schema: "onchain",
+      table: "wallet_sync_jobs",
+      filters: expect.arrayContaining([
+        {
+          column: "wallet_id",
+          operator: "eq",
+          value: WALLET_ID,
+        },
+        {
+          column: "sync_type",
+          operator: "eq",
+          value: "nft",
+        },
+        {
+          column: "status",
+          operator: "in",
+          value: ["queued", "processing", "success"],
+        },
+      ]),
+    });
+  });
+
+  it("returns an existing idempotent sync job without querying TON again", async () => {
+    const now = new Date("2026-05-29T08:25:00.000Z");
+    const db = createSupabaseMock([
+      {
+        data: walletRow(),
+      },
+      {
+        data: walletSyncJob({
+          status: "success",
+          finished_at: "2026-05-29T08:24:00.000Z",
+          result: {
+            mode: "INCREMENTAL",
+            synced_count: 1,
+            linked_count: 1,
+            ignored_count: 0,
+            next_cursor: null,
+          },
+        }),
+      },
+    ]);
+    const provider = {
+      submitMint: vi.fn(),
+      queryTransaction: vi.fn(),
+      queryWalletNfts: vi.fn(),
+    };
+    const { syncWalletNftsForUser } =
+      await import("../../api/wallet/sync-nfts");
+
+    const result = await syncWalletNftsForUser({
+      db: db.client as never,
+      provider,
+      userId: USER_ID,
+      input: {
+        chain: "MAINNET",
+        mode: "INCREMENTAL",
+        force: true,
+        idempotencyKey: "wallet:sync:test-key",
+      },
+      requestId: "req_repeat_idempotency_key",
+      now,
+    });
+
+    expect(result).toMatchObject({
+      accepted: false,
+      status: "success",
+      jobId: JOB_ID,
+      syncedCount: 1,
+      linkedCount: 1,
+    });
+    expect(provider.queryWalletNfts).not.toHaveBeenCalled();
+    expect(
+      db.operations.some(
+        (operation) =>
+          operation.operation === "insert" &&
+          operation.table === "wallet_sync_jobs",
+      ),
+    ).toBe(false);
   });
 });
 
