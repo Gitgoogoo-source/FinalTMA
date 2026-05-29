@@ -415,8 +415,8 @@ async function findVerifiedWallet(
 
   throw new ApiError(
     403,
-    "WALLET_NOT_VERIFIED",
-    "请先完成钱包签名验证后再 Mint。",
+    "WALLET_NOT_CONNECTED",
+    "请先连接钱包后再 Mint。",
   );
 }
 

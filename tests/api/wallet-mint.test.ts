@@ -322,6 +322,33 @@ describe("wallet mint API", () => {
     expect(callRpcRawMock).not.toHaveBeenCalled();
   });
 
+  it("requires a connected wallet", async () => {
+    const db = createSupabaseMintMock([
+      { data: null, error: null },
+      { data: null, error: null },
+    ]);
+    getSupabaseAdminClientMock.mockReturnValue(db.client);
+
+    const { default: mintHandler } = await import("../../api/wallet/mint");
+    const result = await invokeApiHandler<ApiErrorResponse>(mintHandler, {
+      method: "POST",
+      url: "/api/wallet/mint",
+      headers: requestHeaders("wallet:mint:not-connected"),
+      body: {
+        item_instance_id: ITEM_ID,
+      },
+    });
+
+    expect(result.statusCode).toBe(403);
+    expect(result.body).toMatchObject({
+      ok: false,
+      error: {
+        code: "WALLET_NOT_CONNECTED",
+      },
+    });
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+  });
+
   it("rejects a target address that is not the verified wallet", async () => {
     const db = createSupabaseMintMock([
       { data: createWalletRow(), error: null },
@@ -352,6 +379,87 @@ describe("wallet mint API", () => {
     ).toBe(false);
     expect(callRpcRawMock).not.toHaveBeenCalled();
   });
+
+  it("rejects an item that is not owned by the session user", async () => {
+    const db = createSupabaseMintMock([
+      { data: createWalletRow(), error: null },
+      { data: [createCollectionRow()], error: null },
+      { data: null, error: null },
+    ]);
+    getSupabaseAdminClientMock.mockReturnValue(db.client);
+
+    const { default: mintHandler } = await import("../../api/wallet/mint");
+    const result = await invokeApiHandler<ApiErrorResponse>(mintHandler, {
+      method: "POST",
+      url: "/api/wallet/mint",
+      headers: requestHeaders("wallet:mint:not-owner"),
+      body: {
+        item_instance_id: ITEM_ID,
+      },
+    });
+
+    expect(result.statusCode).toBe(404);
+    expect(result.body).toMatchObject({
+      ok: false,
+      error: {
+        code: "ITEM_NOT_FOUND",
+      },
+    });
+    expect(
+      db.operations.find((operation) => operation.table === "item_instances"),
+    ).toMatchObject({
+      filters: expect.arrayContaining([
+        {
+          column: "id",
+          value: ITEM_ID,
+        },
+        {
+          column: "owner_user_id",
+          value: USER_ID,
+        },
+      ]),
+    });
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+  });
+
+  it.each(["listed", "consumed", "decomposed"] as const)(
+    "rejects a %s item before enqueueing",
+    async (status) => {
+      const db = createSupabaseMintMock([
+        { data: createWalletRow(), error: null },
+        { data: [createCollectionRow()], error: null },
+        {
+          data: createItemRow({
+            status,
+          }),
+          error: null,
+        },
+      ]);
+      getSupabaseAdminClientMock.mockReturnValue(db.client);
+
+      const { default: mintHandler } = await import("../../api/wallet/mint");
+      const result = await invokeApiHandler<ApiErrorResponse>(mintHandler, {
+        method: "POST",
+        url: "/api/wallet/mint",
+        headers: requestHeaders(`wallet:mint:item-${status}`),
+        body: {
+          item_instance_id: ITEM_ID,
+        },
+      });
+
+      expect(result.statusCode).toBe(409);
+      expect(result.body).toMatchObject({
+        ok: false,
+        error: {
+          code: "ITEM_NOT_AVAILABLE_FOR_MINT",
+          details: {
+            status,
+          },
+        },
+      });
+      expect(callRpcRawMock).not.toHaveBeenCalled();
+    },
+  );
 
   it("rejects Mint when item metadata or image is missing", async () => {
     const db = createSupabaseMintMock([
