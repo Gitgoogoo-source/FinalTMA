@@ -25,7 +25,7 @@ export default defineConfig({
       VITE_TELEGRAM_BOT_USERNAME: "test_bot",
       VITE_TG_BOT_USERNAME: "test_bot",
       VITE_ENABLE_MOCKS: "true",
-      VITE_ENABLE_TON_CONNECT: "false",
+      VITE_ENABLE_TON_CONNECT: "true",
     },
   },
   projects: [

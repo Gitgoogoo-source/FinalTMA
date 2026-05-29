@@ -101,6 +101,91 @@ export type PaymentAdminResponse = {
   serverTime: string;
 };
 
+export type MonitoringStatus = "ok" | "warning" | "critical";
+
+export type MonitoringRateMetric = {
+  key: string;
+  label: string;
+  value: number;
+  unit: "percent";
+  numerator: number;
+  denominator: number;
+  stuckCount?: number;
+  status: MonitoringStatus;
+  description: string;
+};
+
+export type MonitoringLatencyMetric = {
+  key: string;
+  label: string;
+  value: number | null;
+  unit: "milliseconds";
+  averageMs: number | null;
+  p95Ms: number | null;
+  maxMs: number | null;
+  processedCount: number;
+  pendingCount: number;
+  stuckCount: number;
+  status: MonitoringStatus;
+  description: string;
+};
+
+export type MonitoringCountMetric = {
+  key: string;
+  label: string;
+  value: number;
+  unit: "count";
+  activeCount: number;
+  stuckCount: number;
+  status: MonitoringStatus;
+  description: string;
+};
+
+export type MonitoringException = {
+  id: string;
+  userId?: string;
+  updateId?: number | string | null;
+  eventType?: string;
+  processStatus?: string;
+  status?: string;
+  paidAt?: string | null;
+  fulfilledAt?: string | null;
+  processedAt?: string | null;
+  completedAt?: string | null;
+  attemptCount?: number;
+  maxAttempts?: number;
+  nextAttemptAt?: string | null;
+  errorMessage?: string | null;
+  createdAt: string;
+  updatedAt?: string;
+};
+
+export type MonitoringResponse = {
+  window: {
+    hours: number;
+    startedAt: string;
+    endedAt: string;
+  };
+  thresholds: {
+    webhookStuckMinutes: number;
+    fulfillmentStuckMinutes: number;
+    mintStuckMinutes: number;
+  };
+  metrics: {
+    paymentFailureRate: MonitoringRateMetric;
+    fulfillmentFailureRate: MonitoringRateMetric;
+    webhookLatency: MonitoringLatencyMetric;
+    mintStuckCount: MonitoringCountMetric;
+  };
+  recentExceptions: {
+    paymentOrders: MonitoringException[];
+    webhookEvents: MonitoringException[];
+    mintQueue: MonitoringException[];
+  };
+  sources: Record<string, number>;
+  serverTime: string;
+};
+
 export type MintQueueItem = {
   id: string;
   user_id: string;
@@ -193,4 +278,4 @@ export type FeatureFlagsResponse = {
   serverTime: string;
 };
 
-export type AdminTab = "payments" | "mint" | "wallets" | "flags";
+export type AdminTab = "monitoring" | "payments" | "mint" | "wallets" | "flags";

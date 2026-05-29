@@ -10,15 +10,46 @@ const ITEM_INSTANCE_ID_2 = "66666666-6666-4666-8666-666666666667";
 const ITEM_INSTANCE_ID_3 = "66666666-6666-4666-8666-666666666668";
 const EVOLVED_ITEM_INSTANCE_ID = "66666666-6666-4666-8666-666666666669";
 const TARGET_FORM_ID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbc";
+const WALLET_ADDRESS = "EQE2EWALLET0000000000000000000000000000000001";
+const WALLET_RAW_ADDRESS =
+  "0:e2e000000000000000000000000000000000000000000000000000000000000001";
+const MINT_QUEUE_ID = "99999999-9999-4999-8999-999999999991";
+const NFT_ITEM_ADDRESS = "EQE2ENFTITEM0000000000000000000000000000000001";
 
 export const TEST_INIT_DATA =
   "auth_date=1779321600&query_id=e2e-query&user=%7B%22id%22%3A7001%2C%22first_name%22%3A%22%E6%B5%8B%E8%AF%95%22%7D&hash=e2e";
 
 type MockFirstPhaseApiOptions = {
   boxPaymentFlow?: "dev_completed" | "stars_pending";
-  boxPaymentStatus?: "invoice_created" | "paid" | "fulfilling" | "expired";
+  boxPaymentStatus?:
+    | "invoice_created"
+    | "paid"
+    | "fulfilling"
+    | "fulfilled"
+    | "expired";
   evolveOutcome?: "success" | "failed";
+  mintQueueStatus?: WalletMintQueueStatus | null;
+  walletStatus?: WalletConnectionStatus;
 };
+
+type WalletConnectionStatus =
+  | "not_connected"
+  | "connected_unverified"
+  | "verified"
+  | "invalid_proof"
+  | "expired_proof"
+  | "disconnected";
+
+type WalletMintQueueStatus =
+  | "queued"
+  | "processing"
+  | "submitted"
+  | "confirming"
+  | "retrying"
+  | "manual_review"
+  | "minted"
+  | "failed"
+  | "cancelled";
 
 export async function mockFirstPhaseApi(
   page: Page,
@@ -27,6 +58,8 @@ export async function mockFirstPhaseApi(
   const evolveOutcome = options.evolveOutcome ?? "success";
   const boxPaymentFlow = options.boxPaymentFlow ?? "dev_completed";
   const boxPaymentStatus = options.boxPaymentStatus ?? "invoice_created";
+  const walletStatus = options.walletStatus ?? "not_connected";
+  let mintQueueStatus = options.mintQueueStatus ?? null;
   let inventoryLevel = 1;
   let inventoryPower = 10;
   let fgemsAvailable = 80;
@@ -35,6 +68,14 @@ export async function mockFirstPhaseApi(
   let lastBoxDrawCount: 1 | 10 = 1;
   const consumedItemIds = new Set<string>();
   const decomposedItemIds = new Set<string>();
+
+  await page.route("https://config.ton.org/wallets-v2.json", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: "[]",
+    }),
+  );
 
   await page.route("**/api/auth/telegram", (route) =>
     fulfillOk(route, {
@@ -114,6 +155,86 @@ export async function mockFirstPhaseApi(
       },
       updated_at: "2026-05-21T00:00:00.000Z",
     }),
+  );
+
+  await page.route("**/api/wallet/status", (route) =>
+    fulfillOk(route, walletStatusPayload(walletStatus, mintQueueStatus)),
+  );
+
+  await page.route("**/api/wallet/challenge", (route) =>
+    fulfillOk(route, {
+      challenge: "e2e-ton-proof-challenge",
+      ton_proof_payload: "e2e-ton-proof-challenge",
+      expires_at: "2099-05-21T00:05:00.000Z",
+    }),
+  );
+
+  await page.route("**/api/wallet/connect", (route) => {
+    const body = readWalletMutationBody(route, "wallet/connect");
+
+    assert(
+      typeof body.address === "string" && body.address.length > 0,
+      "wallet/connect request body must include a public address.",
+    );
+    return fulfillOk(route, walletStatusPayload("connected_unverified", null));
+  });
+
+  await page.route("**/api/wallet/proof", (route) => {
+    const body = readWalletMutationBody(route, "wallet/proof");
+
+    assert(isRecord(body.account), "wallet/proof must include account.");
+    assert(isRecord(body.proof), "wallet/proof must include proof.");
+    return fulfillOk(route, walletStatusPayload("verified", mintQueueStatus));
+  });
+
+  await page.route("**/api/wallet/disconnect", (route) => {
+    readWalletMutationBody(route, "wallet/disconnect");
+    return fulfillOk(route, walletStatusPayload("disconnected", null));
+  });
+
+  await page.route("**/api/wallet/sync-nfts", (route) => {
+    readWalletMutationBody(route, "wallet/sync-nfts");
+    return fulfillOk(route, {
+      status: "queued",
+      job_id: "wallet-sync-e2e",
+      last_sync_at: null,
+      message: "钱包 NFT 同步已排队。",
+      synced_count: 0,
+      linked_count: 0,
+      ignored_count: 0,
+    });
+  });
+
+  await page.route("**/api/wallet/nfts?*", (route) =>
+    fulfillOk(route, walletNftsPayload(mintQueueStatus)),
+  );
+
+  await page.route("**/api/wallet/mint", (route) => {
+    const body = readWalletMutationBody(route, "wallet/mint");
+
+    assert(
+      body.item_instance_id === ITEM_INSTANCE_ID,
+      "wallet/mint request body must include the selected item_instance_id.",
+    );
+    assert(
+      body.target_address === undefined,
+      "wallet/mint request body must not include a client-supplied target_address unless explicitly selected.",
+    );
+
+    mintQueueStatus = "queued";
+
+    return fulfillOk(route, {
+      accepted: true,
+      mint_queue_id: MINT_QUEUE_ID,
+      status: mintQueueStatus,
+      item_instance_id: ITEM_INSTANCE_ID,
+      metadata_url: "https://example.test/nft-metadata/e2e.json",
+      idempotent: false,
+    });
+  });
+
+  await page.route("**/api/wallet/mint-status", (route) =>
+    fulfillOk(route, walletMintQueuePayload(mintQueueStatus)),
   );
 
   await page.route("**/api/market/my-listing-stats", (route) =>
@@ -269,6 +390,7 @@ export async function mockFirstPhaseApi(
       inventoryEvolved,
       inventoryLevel,
       inventoryPower,
+      mintStatus: mintQueueStatus,
     }).filter(
       (item) =>
         !consumedItemIds.has(item.item_instance_id) &&
@@ -290,6 +412,7 @@ export async function mockFirstPhaseApi(
     fulfillOk(route, {
       ...inventoryItemPayload({
         level: inventoryLevel,
+        mintStatus: mintQueueStatus,
         power: inventoryPower,
       }),
       market_status: {
@@ -297,6 +420,10 @@ export async function mockFirstPhaseApi(
         listing_id: null,
         unit_price: null,
         currency: null,
+      },
+      onchain_status: {
+        is_minted: mintQueueStatus === "minted",
+        mint_status: mintQueueStatus ?? "not_minted",
       },
       upgrade_preview: {
         can_upgrade: true,
@@ -517,26 +644,39 @@ export async function mockFirstPhaseApi(
 }
 
 function starsPaymentResultPayload(
-  paymentStatus: "invoice_created" | "paid" | "fulfilling" | "expired",
+  paymentStatus:
+    | "invoice_created"
+    | "paid"
+    | "fulfilling"
+    | "fulfilled"
+    | "expired",
   drawCount: 1 | 10,
 ) {
   const paidAt =
-    paymentStatus === "paid" || paymentStatus === "fulfilling"
+    paymentStatus === "paid" ||
+    paymentStatus === "fulfilling" ||
+    paymentStatus === "fulfilled"
       ? "2026-05-21T00:00:00.000Z"
       : null;
   const orderStatus =
-    paymentStatus === "fulfilling" ? "processing" : paymentStatus;
+    paymentStatus === "fulfilling"
+      ? "processing"
+      : paymentStatus === "fulfilled"
+        ? "completed"
+        : paymentStatus;
+  const completedAt =
+    paymentStatus === "fulfilled" ? "2026-05-21T00:00:01.000Z" : null;
 
   return {
     order_id: ORDER_ID,
-    status: "pending",
+    status: paymentStatus === "fulfilled" ? "completed" : "pending",
     order_status: orderStatus,
     quantity: drawCount,
     paid_stars: drawCount === 10 ? 90 : 10,
     returned_kcoin: drawCount * 100,
     invoice_payload: `gacha:${ORDER_ID}`,
     paid_at: paidAt,
-    completed_at: null,
+    completed_at: completedAt,
     box: {
       display_name: "测试盲盒",
     },
@@ -545,8 +685,20 @@ function starsPaymentResultPayload(
       payment_order_status: paymentStatus,
       paid_at: paidAt,
     },
-    balances: null,
-    results: [],
+    balances:
+      paymentStatus === "fulfilled"
+        ? {
+            kcoin: {
+              available: String(1200 + drawCount * 100),
+            },
+          }
+        : null,
+    results:
+      paymentStatus === "fulfilled"
+        ? Array.from({ length: drawCount }, (_, index) =>
+            inventoryItemResult(index + 1),
+          )
+        : [],
     server_time: "2026-05-21T00:00:01.000Z",
   };
 }
@@ -555,10 +707,12 @@ function getInventoryItems({
   inventoryEvolved,
   inventoryLevel,
   inventoryPower,
+  mintStatus,
 }: {
   inventoryEvolved: boolean;
   inventoryLevel: number;
   inventoryPower: number;
+  mintStatus: WalletMintQueueStatus | null;
 }) {
   if (inventoryEvolved) {
     return [
@@ -567,6 +721,7 @@ function getInventoryItems({
         formId: TARGET_FORM_ID,
         itemInstanceId: EVOLVED_ITEM_INSTANCE_ID,
         level: 1,
+        mintStatus,
         name: "森林幼芽·进化",
         power: 42,
         serialNo: 4,
@@ -578,17 +733,20 @@ function getInventoryItems({
   return [
     inventoryItemPayload({
       level: inventoryLevel,
+      mintStatus,
       power: inventoryPower,
     }),
     inventoryItemPayload({
       itemInstanceId: ITEM_INSTANCE_ID_2,
       level: 2,
+      mintStatus: null,
       power: 18,
       serialNo: 2,
     }),
     inventoryItemPayload({
       itemInstanceId: ITEM_INSTANCE_ID_3,
       level: 3,
+      mintStatus: null,
       power: 26,
       serialNo: 3,
     }),
@@ -634,6 +792,7 @@ function inventoryItemPayload(
     formId?: string;
     itemInstanceId?: string;
     level?: number;
+    mintStatus?: WalletMintQueueStatus | null;
     name?: string;
     power?: number;
     serialNo?: number;
@@ -667,6 +826,7 @@ function inventoryItemPayload(
     level: overrides.level ?? 1,
     power: overrides.power ?? 10,
     status: "available",
+    nft_mint_status: overrides.mintStatus ?? "not_minted",
     tradeable: true,
     upgradeable: true,
     evolvable: true,
@@ -678,9 +838,9 @@ function inventoryItemPayload(
   };
 }
 
-function inventoryItemResult() {
+function inventoryItemResult(drawIndex = 1) {
   return {
-    draw_index: 1,
+    draw_index: drawIndex,
     reward_source: "random",
     is_pity_hit: false,
     item_instance_id: ITEM_INSTANCE_ID,
@@ -697,6 +857,158 @@ function inventoryItemResult() {
     level: 1,
     power: 10,
   };
+}
+
+function walletStatusPayload(
+  status: WalletConnectionStatus,
+  mintStatus: WalletMintQueueStatus | null,
+) {
+  const connected = status !== "not_connected" && status !== "disconnected";
+  const verified = status === "verified";
+
+  return {
+    status,
+    wallet: {
+      status,
+      address: connected ? WALLET_ADDRESS : null,
+      raw_address: connected ? WALLET_RAW_ADDRESS : null,
+      network: connected ? "testnet" : null,
+      wallet_app_name: connected ? "Tonkeeper" : null,
+      verified,
+      verified_at: verified ? "2026-05-29T08:00:00.000Z" : null,
+      last_sync_at: verified ? "2026-05-29T08:05:00.000Z" : null,
+      sync_status: verified ? "success" : "idle",
+      mint_queue: walletMintQueueSummary(mintStatus),
+      error_message:
+        status === "invalid_proof"
+          ? "钱包 proof 校验失败。"
+          : status === "expired_proof"
+            ? "钱包 proof 已过期，请重新连接钱包。"
+            : null,
+    },
+    mint_queue: walletMintQueueSummary(mintStatus),
+  };
+}
+
+function walletMintQueuePayload(status: WalletMintQueueStatus | null) {
+  const items = status ? [walletMintQueueItem(status)] : [];
+
+  return {
+    items,
+    summary: walletMintQueueSummary(status),
+    next_cursor: null,
+    server_time: "2026-05-29T08:06:00.000Z",
+  };
+}
+
+function walletMintQueueSummary(status: WalletMintQueueStatus | null) {
+  const summary = {
+    queued: 0,
+    processing: 0,
+    submitted: 0,
+    confirming: 0,
+    retrying: 0,
+    minted: 0,
+    cancelled: 0,
+    failed: 0,
+    manual_review: 0,
+  };
+
+  if (!status) {
+    return summary;
+  }
+
+  summary[status] += 1;
+  return summary;
+}
+
+function walletMintQueueItem(status: WalletMintQueueStatus) {
+  const minted = status === "minted";
+
+  return {
+    mint_queue_id: MINT_QUEUE_ID,
+    item_instance_id: ITEM_INSTANCE_ID,
+    status,
+    chain: "TESTNET",
+    collection_address: "EQE2ECOLLECTION000000000000000000000000000001",
+    item_address: minted ? NFT_ITEM_ADDRESS : null,
+    target_address: WALLET_ADDRESS,
+    transaction_hash:
+      status === "submitted" || status === "confirming" || minted
+        ? "e2e-mint-transaction-hash"
+        : null,
+    error_code: status === "failed" ? "TON_MINT_FAILED" : null,
+    error_message: status === "failed" ? "测试 Mint 失败。" : null,
+    retry_count: status === "retrying" ? 1 : 0,
+    created_at: "2026-05-29T08:00:00.000Z",
+    updated_at: "2026-05-29T08:06:00.000Z",
+    minted_at: minted ? "2026-05-29T08:10:00.000Z" : null,
+  };
+}
+
+function walletNftsPayload(status: WalletMintQueueStatus | null) {
+  if (status !== "minted") {
+    return {
+      items: [],
+      next_cursor: null,
+      server_time: "2026-05-29T08:06:00.000Z",
+    };
+  }
+
+  return {
+    items: [
+      {
+        nft_item_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa91",
+        item_address: NFT_ITEM_ADDRESS,
+        collection_address: "EQE2ECOLLECTION000000000000000000000000000001",
+        owner_address: WALLET_ADDRESS,
+        item_index: 1,
+        name: "森林幼芽 NFT",
+        image_url: null,
+        metadata_url: "https://example.test/nft-metadata/e2e.json",
+        linked_item_instance_id: ITEM_INSTANCE_ID,
+        synced_at: "2026-05-29T08:11:00.000Z",
+      },
+    ],
+    next_cursor: null,
+    server_time: "2026-05-29T08:12:00.000Z",
+  };
+}
+
+function readWalletMutationBody(
+  route: Route,
+  action: string,
+): Record<string, unknown> {
+  const body = readJsonObjectBody(route, action);
+  const headerIdempotencyKey = route.request().headers()["x-idempotency-key"];
+  const bodyIdempotencyKey = body.idempotency_key;
+
+  assertValidIdempotencyKey(
+    headerIdempotencyKey,
+    `${action} X-Idempotency-Key`,
+  );
+  assertValidIdempotencyKey(
+    bodyIdempotencyKey,
+    `${action} body idempotency_key`,
+  );
+  assert(
+    headerIdempotencyKey === bodyIdempotencyKey,
+    `${action} X-Idempotency-Key must match body idempotency_key.`,
+  );
+  assert(
+    body.user_id === undefined,
+    `${action} request body must not include user_id.`,
+  );
+  assert(
+    body.telegram_user_id === undefined,
+    `${action} request body must not include telegram_user_id.`,
+  );
+  assert(
+    body.wallet_address === undefined,
+    `${action} request body must not include wallet_address as a trusted fact.`,
+  );
+
+  return body;
 }
 
 function readGrowthMutationBody(

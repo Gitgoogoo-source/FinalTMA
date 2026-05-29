@@ -2,6 +2,7 @@ import { Activity, Flag, ReceiptText, WalletCards } from "lucide-react";
 import { useState } from "react";
 
 import type { AdminTab } from "./admin.types";
+import { DashboardPage } from "./pages/DashboardPage";
 import { FeatureFlagsPage } from "./pages/FeatureFlagsPage";
 import { MintQueuePage } from "./pages/MintQueuePage";
 import { PaymentsPage } from "./pages/PaymentsPage";
@@ -12,6 +13,7 @@ const NAV_ITEMS: Array<{
   label: string;
   icon: typeof ReceiptText;
 }> = [
+  { id: "monitoring", label: "监控", icon: Activity },
   { id: "payments", label: "支付", icon: ReceiptText },
   { id: "mint", label: "Mint", icon: Activity },
   { id: "wallets", label: "钱包", icon: WalletCards },
@@ -19,7 +21,7 @@ const NAV_ITEMS: Array<{
 ];
 
 export function App() {
-  const [activeTab, setActiveTab] = useState<AdminTab>("payments");
+  const [activeTab, setActiveTab] = useState<AdminTab>("monitoring");
 
   return (
     <div className="admin-shell">
@@ -56,6 +58,7 @@ export function App() {
             <h1>{NAV_ITEMS.find((item) => item.id === activeTab)?.label}</h1>
           </div>
         </header>
+        {activeTab === "monitoring" ? <DashboardPage /> : null}
         {activeTab === "payments" ? <PaymentsPage /> : null}
         {activeTab === "mint" ? <MintQueuePage /> : null}
         {activeTab === "wallets" ? <WalletsPage /> : null}

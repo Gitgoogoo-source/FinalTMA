@@ -414,6 +414,56 @@ describe("server env validation", () => {
       },
     });
   });
+
+  it("rejects market write operations when the market feature flag is false", async () => {
+    prepareEnvImport();
+
+    const { assertMarketWriteAllowed } = await import(
+      "../../packages/server/src/market/marketGuards"
+    );
+
+    await expect(
+      assertMarketWriteAllowed({
+        env: {
+          NODE_ENV: "test",
+          APP_ENV: "test",
+          FEATURE_MARKET_ENABLED: "false",
+        },
+      }),
+    ).rejects.toMatchObject({
+      code: "FEATURE_MARKET_DISABLED",
+      statusCode: 503,
+      message: "市场暂时暂停。",
+    });
+  });
+
+  it("falls back to the legacy market database key when the Phase 5 key is missing", async () => {
+    prepareEnvImport();
+
+    const { assertMarketWriteAllowed } = await import(
+      "../../packages/server/src/market/marketGuards"
+    );
+    const client = createFeatureFlagClient({
+      "market.enabled": false,
+    });
+
+    await expect(
+      assertMarketWriteAllowed({
+        env: {
+          NODE_ENV: "test",
+          APP_ENV: "test",
+          FEATURE_MARKET_ENABLED: "true",
+        },
+        client,
+      }),
+    ).rejects.toMatchObject({
+      code: "FEATURE_MARKET_DISABLED",
+      details: {
+        flagKey: "market.enabled",
+        source: "database",
+      },
+    });
+  });
 });
 
 function createFeatureFlagClient(rows: FeatureFlagRows) {

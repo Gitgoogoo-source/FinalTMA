@@ -7,15 +7,20 @@ import { formatDate, StatusBadge } from "../admin.ui";
 
 const IMPORTANT_KEYS = new Set([
   "FEATURE_STARS_PAYMENT_ENABLED",
+  "FEATURE_PAYMENT_WEBHOOK_FULFILLMENT_ENABLED",
+  "FEATURE_MARKET_ENABLED",
   "FEATURE_TON_MINT_ENABLED",
   "FEATURE_MINT_WORKER_ENABLED",
   "gacha.open_box",
+  "market.enabled",
   "onchain.mint",
 ]);
 const PAYMENT_FLAG_KEYS = new Set([
   "FEATURE_STARS_PAYMENT_ENABLED",
+  "FEATURE_PAYMENT_WEBHOOK_FULFILLMENT_ENABLED",
   "gacha.open_box",
 ]);
+const MARKET_FLAG_KEYS = new Set(["FEATURE_MARKET_ENABLED", "market.enabled"]);
 const MINT_FLAG_KEYS = new Set([
   "FEATURE_TON_MINT_ENABLED",
   "FEATURE_MINT_WORKER_ENABLED",
@@ -38,6 +43,9 @@ export function FeatureFlagsPage() {
   }, [data]);
   const paymentFlags = sortedFlags.filter((flag) =>
     PAYMENT_FLAG_KEYS.has(flag.key),
+  );
+  const marketFlags = sortedFlags.filter((flag) =>
+    MARKET_FLAG_KEYS.has(flag.key),
   );
   const mintFlags = sortedFlags.filter((flag) => MINT_FLAG_KEYS.has(flag.key));
 
@@ -136,6 +144,13 @@ export function FeatureFlagsPage() {
           emptyText="未找到 Mint 暂停开关"
           flags={mintFlags}
           title="Mint 暂停开关"
+          toggle={toggle}
+        />
+        <FlagGroup
+          busyKey={busyKey}
+          emptyText="未找到 market 暂停开关"
+          flags={marketFlags}
+          title="Market 暂停开关"
           toggle={toggle}
         />
       </div>

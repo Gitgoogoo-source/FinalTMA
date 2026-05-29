@@ -3,6 +3,7 @@ import {
   type SupabaseAdminClient,
 } from "../db/supabaseAdmin.js";
 import { callRpcRaw } from "../db/rpc.js";
+import { isPaymentWebhookFulfillmentEnabled } from "./paymentGuards.js";
 
 export type TelegramInvoiceOpenMode =
   | "telegram_link"
@@ -149,6 +150,7 @@ export type ProcessTelegramSuccessfulPaymentInput = {
   requestHeadersHash?: string | null | undefined;
   webhookSecretVerified?: boolean | undefined;
   client?: SupabaseAdminClient | undefined;
+  env?: NodeJS.ProcessEnv | undefined;
 };
 
 export type ProcessTelegramSuccessfulPaymentResult =
@@ -601,6 +603,20 @@ export async function processTelegramSuccessfulPaymentUpdate(
   const shouldFulfill = shouldFulfillRecordedPayment(recordResult);
 
   if (!shouldFulfill) {
+    return {
+      ...recordResult,
+      eventType: "successful_payment",
+      fulfillmentAttempted: false,
+      fulfillment: null,
+    };
+  }
+
+  const fulfillmentEnabled = await isPaymentWebhookFulfillmentEnabled({
+    client: input.client,
+    env: input.env,
+  });
+
+  if (!fulfillmentEnabled) {
     return {
       ...recordResult,
       eventType: "successful_payment",

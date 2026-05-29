@@ -246,6 +246,9 @@ describe("telegramStars payment helpers", () => {
       requestHeadersHash: "headers-hash",
       webhookSecretVerified: true,
       client,
+      env: {
+        FEATURE_PAYMENT_WEBHOOK_FULFILLMENT_ENABLED: "true",
+      } as NodeJS.ProcessEnv,
     });
 
     expect(rpcCalls.map((call) => call.name)).toEqual([
@@ -267,6 +270,282 @@ describe("telegramStars payment helpers", () => {
         fulfilled: true,
         status: "completed",
         paymentOrderStatus: "fulfilled",
+      },
+    });
+  });
+
+  it("records successful_payment without fulfillment when the webhook fulfillment switch is paused", async () => {
+    const rpcCalls: Array<{
+      schema: string;
+      name: string;
+      args: Record<string, unknown>;
+    }> = [];
+    const client = {
+      schema(schema: string) {
+        return {
+          rpc(name: string, args: Record<string, unknown>) {
+            rpcCalls.push({
+              schema,
+              name,
+              args,
+            });
+
+            return Promise.resolve({
+              data: {
+                payment_recorded: true,
+                idempotent: false,
+                duplicate_update: false,
+                duplicate_charge: false,
+                event_id: "55555555-5555-4555-8555-555555555560",
+                star_order_id: STAR_ORDER_ID,
+                star_payment_id: "77777777-7777-4777-8777-777777777779",
+                draw_order_id: ORDER_ID,
+                invoice_payload: PAYLOAD,
+                telegram_payment_charge_id: "tg-charge-paused-001",
+                reason_code: null,
+                error_message: null,
+                payment_order_status: "paid",
+                process_status: "processed",
+                paid_at: "2026-05-28T05:06:20.000Z",
+              },
+              error: null,
+              count: null,
+              status: 200,
+              statusText: "OK",
+            });
+          },
+        };
+      },
+    } as unknown as SupabaseAdminClient;
+
+    const result = await processTelegramSuccessfulPaymentUpdate({
+      update: {
+        update_id: 96060010,
+        message: {
+          from: {
+            id: 7050001,
+          },
+          successful_payment: {
+            currency: "XTR",
+            total_amount: 90,
+            invoice_payload: PAYLOAD,
+            telegram_payment_charge_id: "tg-charge-paused-001",
+            provider_payment_charge_id: "provider-charge-paused-001",
+          },
+        },
+      },
+      requestId: "req_test_successful_payment_fulfillment_paused",
+      requestHeadersHash: "headers-hash",
+      webhookSecretVerified: true,
+      client,
+      env: {
+        FEATURE_PAYMENT_WEBHOOK_FULFILLMENT_ENABLED: "false",
+      } as NodeJS.ProcessEnv,
+    });
+
+    expect(rpcCalls.map((call) => call.name)).toEqual([
+      "payment_record_successful_payment",
+    ]);
+    expect(result).toMatchObject({
+      eventType: "successful_payment",
+      paymentRecorded: true,
+      paymentOrderStatus: "paid",
+      processStatus: "processed",
+      fulfillmentAttempted: false,
+      fulfillment: null,
+    });
+  });
+
+  it("does not fulfill successful_payment updates when recording rejects the order", async () => {
+    const rpcCalls: Array<{
+      schema: string;
+      name: string;
+      args: Record<string, unknown>;
+    }> = [];
+    const client = {
+      schema(schema: string) {
+        return {
+          rpc(name: string, args: Record<string, unknown>) {
+            rpcCalls.push({
+              schema,
+              name,
+              args,
+            });
+
+            return Promise.resolve({
+              data: {
+                payment_recorded: false,
+                idempotent: false,
+                duplicate_update: false,
+                duplicate_charge: false,
+                event_id: "55555555-5555-4555-8555-555555555558",
+                star_order_id: null,
+                star_payment_id: null,
+                draw_order_id: null,
+                invoice_payload: PAYLOAD,
+                telegram_payment_charge_id: "tg-charge-missing-order-001",
+                reason_code: "ORDER_NOT_FOUND",
+                error_message: "Stars 订单不存在。",
+                payment_order_status: null,
+                process_status: "failed",
+                paid_at: null,
+              },
+              error: null,
+              count: null,
+              status: 200,
+              statusText: "OK",
+            });
+          },
+        };
+      },
+    } as unknown as SupabaseAdminClient;
+
+    const result = await processTelegramSuccessfulPaymentUpdate({
+      update: {
+        update_id: 96060008,
+        message: {
+          from: {
+            id: 7050001,
+          },
+          successful_payment: {
+            currency: "XTR",
+            total_amount: 90,
+            invoice_payload: PAYLOAD,
+            telegram_payment_charge_id: "tg-charge-missing-order-001",
+            provider_payment_charge_id: "provider-charge-missing-order-001",
+          },
+        },
+      },
+      requestId: "req_test_successful_payment_missing_order",
+      requestHeadersHash: "headers-hash",
+      webhookSecretVerified: true,
+      client,
+      env: {
+        FEATURE_PAYMENT_WEBHOOK_FULFILLMENT_ENABLED: "true",
+      } as NodeJS.ProcessEnv,
+    });
+
+    expect(rpcCalls.map((call) => call.name)).toEqual([
+      "payment_record_successful_payment",
+    ]);
+    expect(result).toMatchObject({
+      eventType: "successful_payment",
+      paymentRecorded: false,
+      reasonCode: "ORDER_NOT_FOUND",
+      processStatus: "failed",
+      fulfillmentAttempted: false,
+      fulfillment: null,
+    });
+  });
+
+  it("surfaces paid-order fulfillment failures after payment recording succeeds", async () => {
+    const rpcCalls: Array<{
+      schema: string;
+      name: string;
+      args: Record<string, unknown>;
+    }> = [];
+    const client = {
+      schema(schema: string) {
+        return {
+          rpc(name: string, args: Record<string, unknown>) {
+            rpcCalls.push({
+              schema,
+              name,
+              args,
+            });
+
+            if (name === "payment_record_successful_payment") {
+              return Promise.resolve({
+                data: {
+                  payment_recorded: true,
+                  idempotent: false,
+                  duplicate_update: false,
+                  duplicate_charge: false,
+                  event_id: "55555555-5555-4555-8555-555555555559",
+                  star_order_id: STAR_ORDER_ID,
+                  star_payment_id: "77777777-7777-4777-8777-777777777778",
+                  draw_order_id: ORDER_ID,
+                  invoice_payload: PAYLOAD,
+                  telegram_payment_charge_id: "tg-charge-stock-failed-001",
+                  reason_code: null,
+                  error_message: null,
+                  payment_order_status: "paid",
+                  process_status: "processed",
+                  paid_at: "2026-05-28T05:06:20.000Z",
+                },
+                error: null,
+                count: null,
+                status: 200,
+                statusText: "OK",
+              });
+            }
+
+            return Promise.resolve({
+              data: {
+                fulfilled: false,
+                idempotent: false,
+                status: "failed",
+                star_order_id: STAR_ORDER_ID,
+                draw_order_id: ORDER_ID,
+                draw_count: 1,
+                quantity: 1,
+                result_count: 0,
+                reason_code: "STOCK_INSUFFICIENT",
+                error_message: "Blind box stock is insufficient.",
+                payment_order_status: "failed",
+                retryable: true,
+              },
+              error: null,
+              count: null,
+              status: 200,
+              statusText: "OK",
+            });
+          },
+        };
+      },
+    } as unknown as SupabaseAdminClient;
+
+    const result = await processTelegramSuccessfulPaymentUpdate({
+      update: {
+        update_id: 96060009,
+        message: {
+          from: {
+            id: 7050001,
+          },
+          successful_payment: {
+            currency: "XTR",
+            total_amount: 90,
+            invoice_payload: PAYLOAD,
+            telegram_payment_charge_id: "tg-charge-stock-failed-001",
+            provider_payment_charge_id: "provider-charge-stock-failed-001",
+          },
+        },
+      },
+      requestId: "req_test_successful_payment_fulfillment_failed",
+      requestHeadersHash: "headers-hash",
+      webhookSecretVerified: true,
+      client,
+      env: {
+        FEATURE_PAYMENT_WEBHOOK_FULFILLMENT_ENABLED: "true",
+      } as NodeJS.ProcessEnv,
+    });
+
+    expect(rpcCalls.map((call) => call.name)).toEqual([
+      "payment_record_successful_payment",
+      "gacha_process_paid_order",
+    ]);
+    expect(result).toMatchObject({
+      eventType: "successful_payment",
+      paymentRecorded: true,
+      paymentOrderStatus: "failed",
+      processStatus: "failed",
+      fulfillmentAttempted: true,
+      fulfillment: {
+        fulfilled: false,
+        status: "failed",
+        reasonCode: "STOCK_INSUFFICIENT",
+        paymentOrderStatus: "failed",
+        retryable: true,
       },
     });
   });

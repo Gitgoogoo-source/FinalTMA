@@ -198,6 +198,12 @@ $$;
 create temp table _ids (key text primary key, id uuid, txt text, payload jsonb) on commit drop;
 insert into _ids (key, id) values ('user', testutil.make_user(10300000001, 'mint_user', null));
 insert into _ids (key, id) values ('user_other', testutil.make_user(10300000002, 'mint_other_user', null));
+with admin_row as (
+  insert into ops.admin_users (email, display_name, status, metadata)
+  values ('mint-queue-admin@example.test', 'Mint Queue Admin', 'active', '{"test":true}'::jsonb)
+  returning id
+)
+insert into _ids (key, id) select 'admin', id from admin_row;
 insert into _ids (key, payload) values ('catalog', testutil.create_catalog_fixture('mint-queue', 'LEGENDARY', true, true, true, true, true));
 insert into _ids (key, id) select 'template', ((select payload from _ids where key = 'catalog') ->> 'template_id')::uuid;
 insert into _ids (key, id) select 'form1', ((select payload from _ids where key = 'catalog') ->> 'form1_id')::uuid;
@@ -211,6 +217,9 @@ insert into _ids (key, id) select 'item_unverified_wallet_guard', testutil.creat
 insert into _ids (key, id) select 'item_other_owner_guard', testutil.create_item((select id from _ids where key = 'user_other'), (select id from _ids where key = 'template'), (select id from _ids where key = 'form1'), 1, 100, 'admin');
 insert into _ids (key, id) select 'item_consumed_guard', testutil.create_item((select id from _ids where key = 'user'), (select id from _ids where key = 'template'), (select id from _ids where key = 'form1'), 1, 100, 'admin');
 insert into _ids (key, id) select 'item_decomposed_guard', testutil.create_item((select id from _ids where key = 'user'), (select id from _ids where key = 'template'), (select id from _ids where key = 'form1'), 1, 100, 'admin');
+insert into _ids (key, id) select 'item_admin_retry_failed', testutil.create_item((select id from _ids where key = 'user'), (select id from _ids where key = 'template'), (select id from _ids where key = 'form1'), 1, 100, 'admin');
+insert into _ids (key, id) select 'item_admin_retry_manual_review', testutil.create_item((select id from _ids where key = 'user'), (select id from _ids where key = 'template'), (select id from _ids where key = 'form1'), 1, 100, 'admin');
+insert into _ids (key, id) select 'item_admin_retry_active_guard', testutil.create_item((select id from _ids where key = 'user'), (select id from _ids where key = 'template'), (select id from _ids where key = 'form1'), 1, 100, 'admin');
 
 insert into _ids (key, payload) select 'wallet', api.wallet_save_verified_address((select id from _ids where key = 'user'), 'EQ_TEST_MINT_WALLET_MAIN', 'raw-mint-wallet', 'mainnet', 'Tonkeeper', true);
 insert into _ids (key, id) select 'wallet_id', ((select payload from _ids where key = 'wallet') ->> 'wallet_id')::uuid;
@@ -285,6 +294,73 @@ select is((select count(*)::int from onchain.transactions where tx_hash = 'tx_mi
 select is((select count(*)::int from inventory.item_instance_events where source_type = 'mint_queue' and source_id = (select id from _ids where key = 'queue_failed_id') and event_type = 'admin_adjusted'), 1, 'same mint failure callback does not create another failure event');
 select ok(testutil.raises_like(format('select api.onchain_mark_mint_failed(%L::uuid, %L, %L, true, %L::jsonb)', (select id::text from _ids where key = 'queue_failed_id'), 'simulated mint failure', 'tx_mint_failed_conflict', '{"case":"mint_failure"}'), '%mint failure idempotency conflict%'), 'mint failure repeat with a different tx hash is rejected');
 select ok(testutil.raises_like(format('select api.onchain_mark_mint_failed(%L::uuid, %L, %L, true, %L::jsonb)', (select id::text from _ids where key = 'queue_success_id'), 'should not downgrade minted queue', 'tx_mint_after_success', '{"case":"mint_after_success"}'), '%mint queue already minted%'), 'mint failure cannot downgrade a minted queue');
+
+insert into _ids (key, payload) select 'queue_admin_failed', api.wallet_enqueue_mint((select id from _ids where key = 'user'), (select id from _ids where key = 'item_admin_retry_failed'), (select id from _ids where key = 'collection'), (select id from _ids where key = 'wallet_id'), 'mint-admin-retry-failed-queue');
+insert into _ids (key, id) select 'queue_admin_failed_id', ((select payload from _ids where key = 'queue_admin_failed') ->> 'mint_queue_id')::uuid;
+insert into _ids (key, payload) select 'queue_admin_failed_marked', api.onchain_mark_mint_failed((select id from _ids where key = 'queue_admin_failed_id'), 'admin retry failed queue', 'tx_mint_admin_retry_failed', false, '{"case":"admin_retry_failed"}'::jsonb);
+select is((select status from onchain.mint_queue where id = (select id from _ids where key = 'queue_admin_failed_id')), 'failed', 'admin retry fixture starts from failed queue');
+select is((select status from inventory.item_instances where id = (select id from _ids where key = 'item_admin_retry_failed')), 'minting', 'failed queue kept for retry remains minting when item is not released');
+insert into _ids (key, payload) select 'admin_retry_failed', api.admin_retry_mint_queue(
+  (select id from _ids where key = 'admin'),
+  (select id from _ids where key = 'queue_admin_failed_id'),
+  'HIGH',
+  'retry failed mint in pgTAP',
+  'mint-admin-retry-failed-001',
+  '{"ip_hash":"test-ip-hash","user_agent_hash":"test-user-agent-hash"}'::jsonb
+);
+select is((select payload ->> 'status' from _ids where key = 'admin_retry_failed'), 'retrying', 'admin retry moves failed mint queue to retrying');
+select is((select payload ->> 'previous_status' from _ids where key = 'admin_retry_failed'), 'failed', 'admin retry returns failed previous status');
+select is((select status from onchain.mint_queue where id = (select id from _ids where key = 'queue_admin_failed_id')), 'retrying', 'admin retry stores retrying status');
+select is((select priority from onchain.mint_queue where id = (select id from _ids where key = 'queue_admin_failed_id')), 10, 'admin retry maps HIGH priority to worker priority 10');
+select ok((select next_attempt_at is not null from onchain.mint_queue where id = (select id from _ids where key = 'queue_admin_failed_id')), 'admin retry schedules the queue immediately');
+select ok((select completed_at is null and error_message is null from onchain.mint_queue where id = (select id from _ids where key = 'queue_admin_failed_id')), 'admin retry clears failed completion and error state');
+select is((select metadata -> 'admin_retry' ->> 'reason' from onchain.mint_queue where id = (select id from _ids where key = 'queue_admin_failed_id')), 'retry failed mint in pgTAP', 'admin retry stores manual reason in queue metadata');
+select is((select count(*)::int from ops.risk_events where source_type = 'mint_queue' and source_id = (select id from _ids where key = 'queue_admin_failed_id') and event_type = 'admin_mint_retry' and detail ->> 'previous_status' = 'failed'), 1, 'admin retry writes one risk event for failed queue');
+select is((select count(*)::int from ops.admin_audit_logs where action = 'mint.retry' and target_schema = 'onchain' and target_table = 'mint_queue' and target_id = (select id from _ids where key = 'queue_admin_failed_id') and reason = 'retry failed mint in pgTAP'), 1, 'admin retry writes one audit log for failed queue');
+insert into _ids (key, payload) select 'admin_retry_failed_repeat', api.admin_retry_mint_queue(
+  (select id from _ids where key = 'admin'),
+  (select id from _ids where key = 'queue_admin_failed_id'),
+  'HIGH',
+  'retry failed mint in pgTAP',
+  'mint-admin-retry-failed-001',
+  '{"ip_hash":"test-ip-hash","user_agent_hash":"test-user-agent-hash"}'::jsonb
+);
+select ok(((select payload ->> 'idempotent' from _ids where key = 'admin_retry_failed_repeat'))::boolean, 'admin retry returns idempotent repeat');
+select is((select count(*)::int from ops.risk_events where source_type = 'mint_queue' and source_id = (select id from _ids where key = 'queue_admin_failed_id') and event_type = 'admin_mint_retry'), 1, 'admin retry idempotent repeat does not duplicate risk event');
+select is((select count(*)::int from ops.admin_audit_logs where action = 'mint.retry' and target_id = (select id from _ids where key = 'queue_admin_failed_id')), 1, 'admin retry idempotent repeat does not duplicate audit log');
+
+insert into _ids (key, payload) select 'queue_admin_manual_review', api.wallet_enqueue_mint((select id from _ids where key = 'user'), (select id from _ids where key = 'item_admin_retry_manual_review'), (select id from _ids where key = 'collection'), (select id from _ids where key = 'wallet_id'), 'mint-admin-retry-manual-review-queue');
+insert into _ids (key, id) select 'queue_admin_manual_review_id', ((select payload from _ids where key = 'queue_admin_manual_review') ->> 'mint_queue_id')::uuid;
+update onchain.mint_queue
+set status = 'manual_review',
+    attempt_count = max_attempts,
+    next_attempt_at = null,
+    error_message = 'needs operator review',
+    completed_at = now(),
+    metadata = metadata || '{"manual_review_reason":"max_attempts_exhausted"}'::jsonb
+where id = (select id from _ids where key = 'queue_admin_manual_review_id');
+insert into _ids (key, payload) select 'admin_retry_manual_review', api.admin_retry_mint_queue(
+  (select id from _ids where key = 'admin'),
+  (select id from _ids where key = 'queue_admin_manual_review_id'),
+  'NORMAL',
+  'retry manual review mint in pgTAP',
+  'mint-admin-retry-manual-review-001',
+  '{"ip_hash":"test-ip-hash","user_agent_hash":"test-user-agent-hash"}'::jsonb
+);
+select is((select payload ->> 'previous_status' from _ids where key = 'admin_retry_manual_review'), 'manual_review', 'admin retry returns manual_review previous status');
+select is((select status from onchain.mint_queue where id = (select id from _ids where key = 'queue_admin_manual_review_id')), 'retrying', 'admin retry moves manual_review queue to retrying');
+select is((select priority from onchain.mint_queue where id = (select id from _ids where key = 'queue_admin_manual_review_id')), 100, 'admin retry maps NORMAL priority to worker priority 100');
+select is((select count(*)::int from ops.risk_events where source_type = 'mint_queue' and source_id = (select id from _ids where key = 'queue_admin_manual_review_id') and event_type = 'admin_mint_retry' and detail ->> 'previous_status' = 'manual_review'), 1, 'admin retry writes risk event for manual_review queue');
+
+insert into _ids (key, payload) select 'queue_admin_active_guard', api.wallet_enqueue_mint((select id from _ids where key = 'user'), (select id from _ids where key = 'item_admin_retry_active_guard'), (select id from _ids where key = 'collection'), (select id from _ids where key = 'wallet_id'), 'mint-admin-retry-active-guard-queue');
+insert into _ids (key, id) select 'queue_admin_active_guard_id', ((select payload from _ids where key = 'queue_admin_active_guard') ->> 'mint_queue_id')::uuid;
+update onchain.mint_queue
+set status = 'confirming',
+    tx_hash = 'tx_mint_admin_retry_active_guard',
+    updated_at = now()
+where id = (select id from _ids where key = 'queue_admin_active_guard_id');
+select ok(testutil.raises_like(format('select api.admin_retry_mint_queue(%L::uuid, %L::uuid, %L, %L, %L, %L::jsonb)', (select id::text from _ids where key = 'admin'), (select id::text from _ids where key = 'queue_admin_active_guard_id'), 'HIGH', 'should not retry confirming queue', 'mint-admin-retry-active-guard-001', '{"ip_hash":"test-ip-hash"}'), '%MINT_QUEUE_NOT_RETRYABLE_ACTIVE%'), 'admin retry rejects active confirming queue');
+select ok(testutil.raises_like(format('select api.admin_retry_mint_queue(%L::uuid, %L::uuid, %L, %L, %L, %L::jsonb)', (select id::text from _ids where key = 'admin'), (select id::text from _ids where key = 'queue_success_id'), 'HIGH', 'should not retry minted queue', 'mint-admin-retry-minted-guard-001', '{"ip_hash":"test-ip-hash"}'), '%MINT_QUEUE_NOT_RETRYABLE%'), 'admin retry rejects minted queue');
 
 select * from finish();
 

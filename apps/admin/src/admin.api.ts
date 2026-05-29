@@ -2,6 +2,7 @@ import type {
   AdminApiEnvelope,
   FeatureFlagsResponse,
   MintQueueResponse,
+  MonitoringResponse,
   PaymentAdminResponse,
   WalletsResponse,
 } from "./admin.types";
@@ -39,6 +40,14 @@ export async function fetchPayments(
 ): Promise<PaymentAdminResponse> {
   return adminRequest<PaymentAdminResponse>(
     `/api/admin/payments${toQueryString(params)}`,
+  );
+}
+
+export async function fetchMonitoring(
+  params: QueryParams = {},
+): Promise<MonitoringResponse> {
+  return adminRequest<MonitoringResponse>(
+    `/api/admin/monitoring${toQueryString(params)}`,
   );
 }
 

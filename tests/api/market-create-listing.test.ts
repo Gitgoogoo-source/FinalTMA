@@ -39,6 +39,7 @@ const IDEMPOTENCY_KEY = "market:create-listing-focused-0001";
 describe("market create listing API focused coverage", () => {
   beforeEach(() => {
     process.env.NODE_ENV = "test";
+    process.env.FEATURE_MARKET_ENABLED = "true";
     callRpcRawMock.mockReset();
     requireSessionMock.mockReset();
     requireSessionMock.mockResolvedValue({
@@ -101,6 +102,29 @@ describe("market create listing API focused coverage", () => {
 
     expect(result.statusCode).toBe(400);
     expect(result.body.error.code).toBe("VALIDATION_ERROR");
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects new listings when the market rollback switch is paused", async () => {
+    process.env.FEATURE_MARKET_ENABLED = "false";
+
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      createListingHandler,
+      {
+        method: "POST",
+        headers: {
+          "x-idempotency-key": IDEMPOTENCY_KEY,
+        },
+        body: {
+          item_instance_ids: [ITEM_ID],
+          unit_price_kcoin: 500,
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(503);
+    expect(result.body.error.code).toBe("FEATURE_MARKET_DISABLED");
+    expect(result.body.error.message).toBe("市场暂时暂停。");
     expect(callRpcRawMock).not.toHaveBeenCalled();
   });
 

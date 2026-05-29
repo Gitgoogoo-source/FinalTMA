@@ -261,6 +261,197 @@ describe("Mint queue worker", () => {
     });
   });
 
+  it("records submitted mints without assuming chain confirmation", async () => {
+    const queued = mintQueueRow({
+      status: "queued",
+      attempt_count: 0,
+    });
+    const claimed = mintQueueRow({
+      status: "processing",
+      attempt_count: 1,
+      metadata: {
+        metadata_url: "/nft-metadata/items/test.json",
+        metadata_snapshot: {
+          name: "Test NFT",
+        },
+        mint_worker: {
+          query_id: `mint:${QUEUE_ID}:1`,
+        },
+      },
+    });
+    const db = createSupabaseQueryMock([
+      {
+        data: [queued],
+      },
+      {
+        data: claimed,
+      },
+      {
+        data: collectionRow(),
+      },
+      {
+        data: walletRow(),
+      },
+      {
+        data: null,
+      },
+      {},
+      {},
+    ]);
+    const provider = createProviderMock({
+      submitMint: vi.fn().mockResolvedValue({
+        status: "submitted",
+        txHash: null,
+        queryId: `mint:${QUEUE_ID}:1`,
+        itemAddress: null,
+        itemIndex: null,
+        ownerAddress: null,
+        metadataUrl: null,
+        rawResponse: {
+          accepted: true,
+        },
+        externalApiProvider: "mock-ton-provider",
+        submittedAt: "2026-05-29T08:00:01.000Z",
+      }),
+    });
+
+    const result = await runMintQueueWorker({
+      db: db.client,
+      provider,
+      requestId: "req_worker_submitted",
+      env: {
+        TON_MINT_BATCH_SIZE: "10",
+      },
+      now: new Date("2026-05-29T08:00:00.000Z"),
+    });
+
+    expect(result).toMatchObject({
+      scanned: 1,
+      claimed: 1,
+      submitted: 1,
+      confirming: 0,
+      minted: 0,
+      retrying: 0,
+      manualReview: 0,
+    });
+    expect(
+      db.operations.find(
+        (operation) =>
+          operation.operation === "insert" &&
+          operation.table === "transactions",
+      )?.payload,
+    ).toMatchObject({
+      tx_hash: null,
+      query_id: `mint:${QUEUE_ID}:1`,
+      status: "pending",
+      related_type: "mint_queue",
+      related_id: QUEUE_ID,
+    });
+    expect(lastMintQueueUpdate(db.operations)).toMatchObject({
+      status: "submitted",
+      tx_hash: null,
+      next_attempt_at: null,
+    });
+  });
+
+  it("marks directly minted provider results through the success RPC", async () => {
+    callRpcRawMock.mockResolvedValue({
+      status: "minted",
+      idempotent: false,
+    });
+    const queued = mintQueueRow({
+      status: "queued",
+      attempt_count: 0,
+    });
+    const claimed = mintQueueRow({
+      status: "processing",
+      attempt_count: 1,
+    });
+    const db = createSupabaseQueryMock([
+      {
+        data: [queued],
+      },
+      {
+        data: claimed,
+      },
+      {
+        data: collectionRow(),
+      },
+      {
+        data: walletRow(),
+      },
+      {
+        data: null,
+      },
+      {
+        data: null,
+      },
+      {},
+    ]);
+    const provider = createProviderMock({
+      submitMint: vi.fn().mockResolvedValue({
+        status: "minted",
+        txHash: "tx_hash_minted_001",
+        queryId: `mint:${QUEUE_ID}:1`,
+        itemAddress: RAW_ITEM_ADDRESS,
+        itemIndex: 9,
+        ownerAddress: RAW_OWNER_ADDRESS,
+        metadataUrl: "/nft-metadata/items/test.json",
+        rawResponse: {
+          confirmed: true,
+        },
+        externalApiProvider: "mock-ton-provider",
+        submittedAt: "2026-05-29T08:00:01.000Z",
+      }),
+    });
+
+    const result = await runMintQueueWorker({
+      db: db.client,
+      provider,
+      requestId: "req_worker_direct_minted",
+      env: {
+        TON_MINT_BATCH_SIZE: "10",
+      },
+      now: new Date("2026-05-29T08:00:00.000Z"),
+    });
+
+    expect(result).toMatchObject({
+      scanned: 1,
+      claimed: 1,
+      submitted: 0,
+      confirming: 0,
+      minted: 1,
+      retrying: 0,
+      manualReview: 0,
+    });
+    expect(
+      db.operations.find(
+        (operation) =>
+          operation.operation === "upsert" &&
+          operation.table === "transactions",
+      )?.payload,
+    ).toMatchObject({
+      tx_hash: "tx_hash_minted_001",
+      query_id: `mint:${QUEUE_ID}:1`,
+      status: "confirmed",
+      confirmed_at: "2026-05-29T08:00:00.000Z",
+      related_type: "mint_queue",
+      related_id: QUEUE_ID,
+    });
+    expect(callRpcRawMock).toHaveBeenCalledWith(
+      "onchain_mark_mint_success",
+      expect.objectContaining({
+        p_mint_queue_id: QUEUE_ID,
+        p_item_address: RAW_ITEM_ADDRESS,
+        p_item_index: 9,
+        p_tx_hash: "tx_hash_minted_001",
+      }),
+      expect.objectContaining({
+        schema: "api",
+      }),
+    );
+  });
+
   it("skips a row already claimed by another worker", async () => {
     const queued = mintQueueRow({
       status: "queued",

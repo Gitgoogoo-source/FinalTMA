@@ -960,6 +960,103 @@ describe("wallet disconnect API", () => {
     );
   });
 
+  it("disconnects the requested address when multiple wallets are connected", async () => {
+    const targetWalletId = "44444444-4444-4444-8444-444444444444";
+    const db = createSupabaseMutationMock([
+      {
+        data: createWalletRow({
+          id: targetWalletId,
+          address: NEW_ADDRESS,
+          is_primary: false,
+          verified_at: "2026-05-28T11:15:00.000Z",
+          updated_at: "2026-05-28T11:15:00.000Z",
+        }),
+        error: null,
+      },
+      {
+        data: createWalletRow({
+          id: targetWalletId,
+          address: NEW_ADDRESS,
+          is_primary: false,
+          status: "disconnected",
+          verified_at: "2026-05-28T11:15:00.000Z",
+          disconnected_at: "2026-05-28T12:00:00.000Z",
+          updated_at: "2026-05-28T12:00:00.000Z",
+        }),
+        error: null,
+      },
+    ]);
+    getSupabaseAdminClientMock.mockReturnValue(db.client);
+
+    const { default: walletDisconnectHandler } =
+      await import("../../api/wallet/disconnect");
+    const result = await invokeApiHandler<ApiSuccessResponse>(
+      walletDisconnectHandler,
+      {
+        method: "POST",
+        url: "/api/wallet/disconnect",
+        body: {
+          address: NEW_ADDRESS,
+          idempotency_key: "wallet:disconnect:target-address-key",
+        },
+        headers: {
+          cookie: "tma_game_session=test-session-token-000000000000",
+          "content-type": "application/json",
+          "x-forwarded-for": "127.0.0.60",
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(200);
+    expect(result.body).toMatchObject({
+      ok: true,
+      data: {
+        connected: false,
+        verified: false,
+        status: "disconnected",
+        walletId: targetWalletId,
+        address: NEW_ADDRESS,
+        disconnectedAt: "2026-05-28T12:00:00.000Z",
+      },
+    });
+    expect(db.queries[0]?.filters).toEqual(
+      expect.arrayContaining([
+        {
+          column: "user_id",
+          value: USER_ID,
+        },
+        {
+          column: "status",
+          value: "connected",
+        },
+        {
+          column: "address",
+          value: NEW_ADDRESS,
+        },
+      ]),
+    );
+    expect(db.queries[1]?.filters).toEqual(
+      expect.arrayContaining([
+        {
+          column: "id",
+          value: targetWalletId,
+        },
+        {
+          column: "user_id",
+          value: USER_ID,
+        },
+        {
+          column: "status",
+          value: "connected",
+        },
+      ]),
+    );
+    expect(db.queries[1]?.updates).toMatchObject({
+      status: "disconnected",
+      is_primary: false,
+    });
+  });
+
   it("returns not_connected when the user has no wallet to disconnect", async () => {
     const db = createSupabaseMutationMock([
       {
@@ -998,6 +1095,57 @@ describe("wallet disconnect API", () => {
         connected: false,
         verified: false,
         status: "not_connected",
+      },
+    });
+    expect(db.queries.some((query) => query.updates)).toBe(false);
+  });
+
+  it("returns the existing disconnected wallet on repeated disconnect without another update", async () => {
+    const db = createSupabaseMutationMock([
+      {
+        data: null,
+        error: null,
+      },
+      {
+        data: createWalletRow({
+          status: "disconnected",
+          is_primary: false,
+          verified_at: "2026-05-28T11:00:00.000Z",
+          disconnected_at: "2026-05-28T11:45:00.000Z",
+          updated_at: "2026-05-28T11:45:00.000Z",
+        }),
+        error: null,
+      },
+    ]);
+    getSupabaseAdminClientMock.mockReturnValue(db.client);
+
+    const { default: walletDisconnectHandler } =
+      await import("../../api/wallet/disconnect");
+    const result = await invokeApiHandler<ApiSuccessResponse>(
+      walletDisconnectHandler,
+      {
+        method: "POST",
+        url: "/api/wallet/disconnect",
+        body: {
+          idempotency_key: "wallet:disconnect:repeat-key",
+        },
+        headers: {
+          cookie: "tma_game_session=test-session-token-000000000000",
+          "content-type": "application/json",
+          "x-forwarded-for": "127.0.0.68",
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(200);
+    expect(result.body).toMatchObject({
+      ok: true,
+      data: {
+        connected: false,
+        verified: false,
+        status: "disconnected",
+        walletId: WALLET_ID,
+        disconnectedAt: "2026-05-28T11:45:00.000Z",
       },
     });
     expect(db.queries.some((query) => query.updates)).toBe(false);

@@ -62,6 +62,14 @@ const BUY_IDEMPOTENCY_KEY = "market:buy-listing-0001";
 const UPDATE_PRICE_IDEMPOTENCY_KEY = "market:update-price-0001";
 const CANCEL_LISTING_IDEMPOTENCY_KEY = "market:cancel-listing-0001";
 
+beforeEach(() => {
+  process.env.FEATURE_MARKET_ENABLED = "true";
+});
+
+afterEach(() => {
+  delete process.env.FEATURE_MARKET_ENABLED;
+});
+
 describe("market listings API", () => {
   beforeEach(() => {
     process.env.NODE_ENV = "test";

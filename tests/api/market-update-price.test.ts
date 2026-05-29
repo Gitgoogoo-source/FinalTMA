@@ -53,6 +53,7 @@ const IDEMPOTENCY_KEY = "market:update-price-focused-0001";
 describe("market update price API focused coverage", () => {
   beforeEach(() => {
     process.env.NODE_ENV = "test";
+    process.env.FEATURE_MARKET_ENABLED = "true";
     callRpcRawMock.mockReset();
     requireSessionMock.mockReset();
     requireSessionMock.mockResolvedValue({

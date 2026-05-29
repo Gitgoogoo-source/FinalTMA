@@ -469,6 +469,50 @@ describe("wallet proof API", () => {
     });
     expect(callRpcRawMock).not.toHaveBeenCalled();
   });
+
+  it("rejects a duplicate proof hash unique violation as replay", async () => {
+    const proofPayload = await createSignedProof();
+    const db = createSupabaseMock([
+      {
+        data: null,
+        error: {
+          code: "23505",
+          message:
+            'duplicate key value violates unique constraint "wallet_proofs_proof_hash_unique_idx"',
+        },
+      },
+    ]);
+    getSupabaseAdminClientMock.mockReturnValue(db.client);
+
+    const { default: proofHandler } = await import("../../api/wallet/proof");
+    const result = await invokeApiHandler<ApiErrorResponse>(proofHandler, {
+      method: "POST",
+      url: "/api/wallet/proof",
+      headers: {
+        cookie: "tma_game_session=test-session-token-000000000000",
+      },
+      body: {
+        ...proofPayload,
+        idempotencyKey: "wallet:proof:hash-replay-0001",
+      },
+    });
+
+    expect(result.statusCode).toBe(409);
+    expect(result.body).toMatchObject({
+      ok: false,
+      error: {
+        code: "WALLET_PROOF_REPLAYED",
+      },
+    });
+    expect(db.queries[0]).toMatchObject({
+      table: "wallet_proofs",
+      operation: "update",
+      payload: expect.objectContaining({
+        proof_hash: expect.any(String),
+      }),
+    });
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+  });
 });
 
 async function createSignedProof(

@@ -4,6 +4,7 @@ import {
   type MarketUpdateListingPriceBody,
 } from "../../packages/validation/src/market.schemas.js";
 import { callRpcRaw, RpcError } from "../../packages/server/src/db/rpc.js";
+import { assertMarketWriteAllowed } from "../../packages/server/src/market/marketGuards.js";
 import {
   ApiError,
   getIdempotencyKey,
@@ -31,6 +32,8 @@ export default withApiHandler(
       MarketUpdateListingPriceBodySchema,
       normalizeMarketUpdateListingPriceInput(body, getIdempotencyKey(req)),
     );
+
+    await assertMarketWriteAllowed();
 
     const payload = await callMarketUpdateListingPrice(
       input,

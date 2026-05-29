@@ -73,6 +73,30 @@ test("Stars 支付 paid 回调但 webhook 延迟时继续等待服务端确认",
   ).not.toBeVisible();
 });
 
+test("Stars 支付成功后展示服务端发货结果", async ({ page }) => {
+  await mockFirstPhaseApi(page, {
+    boxPaymentFlow: "stars_pending",
+    boxPaymentStatus: "fulfilled",
+  });
+
+  await page.goto(`/box?mockInitData=${encodeURIComponent(TEST_INIT_DATA)}`);
+  await installTelegramInvoiceMock(page, "paid");
+  await page.getByRole("button", { name: /开 1 次/ }).click();
+
+  await expect
+    .poll(() => readOpenedInvoiceUrl(page))
+    .toBe("https://t.me/invoice/e2e-open-order");
+
+  const resultDialog = page.getByRole("dialog", { name: "测试盲盒" });
+  await expect(resultDialog).toBeVisible();
+  await expect(resultDialog.getByText("森林幼芽")).toBeVisible();
+  await expect(resultDialog.getByText("返还 100 K-coin")).toBeVisible();
+  await expect(resultDialog.getByText("当前 1,300 K-coin")).toBeVisible();
+  await expect(
+    page.getByRole("dialog", { name: "等待 Stars 支付" }),
+  ).not.toBeVisible();
+});
+
 test("Stars 支付已成功但发货处理中时展示发货状态且不能重试支付", async ({
   page,
 }) => {
