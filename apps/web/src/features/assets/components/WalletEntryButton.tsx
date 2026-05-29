@@ -8,7 +8,9 @@ import {
 import { useCallback, useMemo, useState } from "react";
 
 import { useFeedback } from "@/app/providers/FeedbackProvider";
+import { getApiErrorMessage } from "@/api/errors";
 import { isFeatureEnabled } from "@/env";
+import { MintQueueSheet } from "@/features/wallet/components/MintQueueSheet";
 import { WalletStatusSheet } from "@/features/wallet/components/WalletStatusSheet";
 import { useMintQueue } from "@/features/wallet/hooks/useMintQueue";
 import { useSyncWalletNfts } from "@/features/wallet/hooks/useSyncWalletNfts";
@@ -42,10 +44,12 @@ export function WalletEntryButton({
 function EnabledWalletEntryButton() {
   const { pushToast } = useFeedback();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [isMintQueueOpen, setIsMintQueueOpen] = useState(false);
   const walletConnect = useWalletConnect();
   const syncWalletNfts = useSyncWalletNfts();
   const mintQueue = useMintQueue({
-    enabled: isSheetOpen && walletConnect.status === "verified",
+    enabled:
+      (isSheetOpen || isMintQueueOpen) && walletConnect.status === "verified",
   });
   const shortAddress = useMemo(
     () => formatWalletAddress(walletConnect.address ?? ""),
@@ -158,13 +162,10 @@ function EnabledWalletEntryButton() {
   );
 
   const handleOpenMintQueue = useCallback(() => {
+    setIsSheetOpen(false);
+    setIsMintQueueOpen(true);
     void mintQueue.refetch();
-    pushToast({
-      type: "info",
-      title: "Mint 队列",
-      message: "已刷新 Mint 队列摘要。",
-    });
-  }, [mintQueue, pushToast]);
+  }, [mintQueue]);
 
   const handleRefreshStatus = useCallback(() => {
     void walletConnect.refetchStatus();
@@ -226,6 +227,20 @@ function EnabledWalletEntryButton() {
           verifiedAt: walletConnect.wallet.verifiedAt,
           walletAppName: walletConnect.wallet.walletAppName,
         }}
+      />
+
+      <MintQueueSheet
+        open={isMintQueueOpen}
+        items={mintQueue.items ?? []}
+        summary={mintQueue.mintQueue ?? walletConnect.wallet.mintQueue}
+        loading={
+          Boolean(mintQueue.isLoading) && (mintQueue.items?.length ?? 0) === 0
+        }
+        errorMessage={
+          mintQueue.isError ? getApiErrorMessage(mintQueue.error) : null
+        }
+        onClose={() => setIsMintQueueOpen(false)}
+        onRefresh={() => void mintQueue.refetch()}
       />
     </>
   );

@@ -490,7 +490,9 @@ function getMintEligibility(
     detail?.onchainStatus?.mintStatus ?? item.nftMintStatus,
   );
 
-  if (!detail || !options.walletVerified || !item.isMintable) {
+  const isMintable = detail?.isMintable ?? item.isMintable;
+
+  if (!detail || !options.walletVerified || !isMintable) {
     return {
       actionLabel: "Mint NFT",
       canShowEntry: false,

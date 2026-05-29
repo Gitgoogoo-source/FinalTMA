@@ -376,6 +376,13 @@ export const DEFAULT_RATE_LIMIT_RULES: RateLimitRule[] = [
     max: 10,
     blockMs: 5 * 60_000,
   },
+  {
+    action: "wallet.mint_status",
+    scope: "user",
+    windowMs: 60_000,
+    max: 60,
+    blockMs: 60_000,
+  },
 
   {
     action: "admin.write",

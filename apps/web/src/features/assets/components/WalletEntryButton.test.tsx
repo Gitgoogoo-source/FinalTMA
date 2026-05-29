@@ -13,6 +13,7 @@ import { FeedbackProvider } from "@/app/providers/FeedbackProvider";
 import { useFeedbackStore } from "@/features/feedback/feedback.store";
 import type {
   WalletConnectionStatus,
+  WalletMintQueueItem,
   WalletMintQueueSummary,
 } from "@/features/wallet/wallet.types";
 
@@ -65,8 +66,15 @@ const syncWalletNftsMock = vi.hoisted(() => ({
 const mintQueueMock = vi.hoisted(() => ({
   refetch: vi.fn(),
   state: {
+    error: null as unknown,
+    isError: false,
+    isFetching: false,
+    isLoading: false,
+    items: [] as WalletMintQueueItem[],
     mintQueue: null as WalletMintQueueSummary | null,
+    nextCursor: null as string | null,
     refetch: vi.fn(),
+    serverTime: null as string | null,
   },
 }));
 
@@ -111,8 +119,15 @@ describe("WalletEntryButton", () => {
       mutateAsync: syncWalletNftsMock.mutateAsync,
     };
     mintQueueMock.state = {
+      error: null,
+      isError: false,
+      isFetching: false,
+      isLoading: false,
+      items: [],
       mintQueue: null,
+      nextCursor: null,
       refetch: mintQueueMock.refetch,
+      serverTime: null,
     };
   });
 
@@ -265,6 +280,79 @@ describe("WalletEntryButton", () => {
     expect(screen.getByText("Tonkeeper")).toBeVisible();
     expect(screen.getByText("已同步")).toBeVisible();
     expect(screen.getByText("1 个进行中")).toBeVisible();
+  });
+
+  it("opens the Mint queue sheet from a verified wallet status sheet", () => {
+    walletConnectMock.state = createWalletConnectState({
+      address: "EQBACKENDRESTOREDWALLET1234567890abcdefghi",
+      isConnected: true,
+      status: "verified",
+      wallet: {
+        address: "EQBACKENDRESTOREDWALLET1234567890abcdefghi",
+        rawAddress: "0:backend",
+        network: "mainnet",
+        walletAppName: "Tonkeeper",
+        verifiedAt: "2026-05-28T10:00:00.000Z",
+        lastSyncAt: "2026-05-28T11:00:00.000Z",
+        syncStatus: "success",
+        mintQueue: {
+          queued: 1,
+          processing: 0,
+          failed: 0,
+          manualReview: 0,
+        },
+        errorMessage: null,
+        status: "verified",
+      },
+    });
+    mintQueueMock.state = {
+      error: null,
+      isError: false,
+      isFetching: false,
+      isLoading: false,
+      items: [
+        {
+          chain: "MAINNET",
+          collectionAddress:
+            "EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c",
+          createdAt: "2026-05-29T08:00:00.000Z",
+          errorCode: null,
+          errorMessage: null,
+          itemAddress: null,
+          itemInstanceId: "66666666-6666-4666-8666-666666666666",
+          mintedAt: null,
+          mintQueueId: "77777777-7777-4777-8777-777777777777",
+          retryCount: 0,
+          status: "queued",
+          targetAddress: "EQBACKENDRESTOREDWALLET1234567890abcdefghi",
+          transactionHash: null,
+          updatedAt: "2026-05-29T08:01:00.000Z",
+        },
+      ],
+      mintQueue: {
+        queued: 1,
+        processing: 0,
+        failed: 0,
+        manualReview: 0,
+      },
+      nextCursor: null,
+      refetch: mintQueueMock.refetch,
+      serverTime: "2026-05-29T08:02:00.000Z",
+    };
+
+    renderWalletEntry(true);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /EQBA...fghi.*verified/ }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Mint 队列" }));
+
+    expect(mintQueueMock.refetch).toHaveBeenCalledTimes(1);
+    expect(
+      screen.queryByRole("dialog", { name: "钱包状态" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "Mint 队列" })).toBeVisible();
+    expect(screen.getByText("排队中")).toBeVisible();
   });
 
   it("can trigger wallet verification from the status sheet", async () => {

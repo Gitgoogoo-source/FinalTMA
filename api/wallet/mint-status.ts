@@ -134,7 +134,7 @@ export default withApiHandler(
   {
     methods: ["GET"],
     rateLimit: {
-      action: "wallet.mint-status",
+      action: "wallet.mint_status",
     },
   },
 );

@@ -54,6 +54,7 @@ export async function fetchInventoryDetail(
     include_upgrade_preview: "true",
     include_evolution_preview: "true",
     include_decompose_preview: "true",
+    include_onchain_status: "true",
   });
   const response = await apiRequest<unknown>(
     `${API_ENDPOINTS.inventory.detail}?${params.toString()}`,

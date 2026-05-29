@@ -15,6 +15,7 @@ import {
   normalizeMintQueueStatus,
   normalizeOnchainTransactionStatus,
 } from "../../packages/server/src/ton/mintQueue";
+import { createRateLimiter } from "../../packages/server/src/security/rateLimit";
 import {
   MintQueueStatusSchema,
   OnchainTransactionStatusSchema,
@@ -144,5 +145,19 @@ describe("Phase 5 backend status contracts", () => {
       attemptCount: 5,
       maxAttempts: 5,
     });
+  });
+
+  it("keeps Mint queue polling on the wallet.mint_status rate-limit action", () => {
+    const rules = createRateLimiter().getRulesForAction("wallet.mint_status");
+
+    expect(rules).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          action: "wallet.mint_status",
+          scope: "user",
+          max: 60,
+        }),
+      ]),
+    );
   });
 });
