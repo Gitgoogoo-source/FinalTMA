@@ -39,6 +39,7 @@
     "test:unit:watch": "vitest --passWithNoTests",
     "test:e2e": "playwright test",
     "test:e2e:stage3-real": "tsx scripts/run-stage3-real-e2e.ts",
+    "test:e2e:phase5-real": "tsx scripts/run-phase5-real-e2e.ts",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:install": "playwright install --with-deps",
     "test:db": "pnpm test:db:pgtap && pnpm test:db:signin-concurrency",

@@ -30,6 +30,7 @@ export type {
   TransactionMode,
 } from "./db/transactions.js";
 export * from "./env.js";
+export * from "./jobs/ledgerReconcileJob.js";
 export * from "./ops/featureFlags.js";
 export * from "./payments/paymentEvents.js";
 export * from "./payments/paymentGuards.js";
