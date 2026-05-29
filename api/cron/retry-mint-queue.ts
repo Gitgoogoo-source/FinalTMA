@@ -326,10 +326,7 @@ async function claimMintQueueRow(
   },
 ): Promise<MintQueueRow | null> {
   const attemptCount = readInteger(row.attempt_count, 0) + 1;
-  const queryId = buildMintQueryId({
-    mintQueueId: row.id,
-    attemptCount,
-  });
+  const queryId = readClaimQueryId(row, attemptCount);
   const nowIso = input.now.toISOString();
   const { data, error } = await db
     .schema("onchain")
@@ -965,6 +962,19 @@ function readWorkerQueryId(row: MintQueueRow): string | null {
   const worker = toRecord(toRecord(row.metadata).mint_worker);
 
   return readString(worker.query_id) ?? readString(worker.queryId);
+}
+
+function readClaimQueryId(row: MintQueueRow, attemptCount: number): string {
+  const previousQueryId = readWorkerQueryId(row);
+
+  if (readPossibleSubmission(row) && previousQueryId) {
+    return previousQueryId;
+  }
+
+  return buildMintQueryId({
+    mintQueueId: row.id,
+    attemptCount,
+  });
 }
 
 function readPossibleSubmission(row: MintQueueRow): boolean {

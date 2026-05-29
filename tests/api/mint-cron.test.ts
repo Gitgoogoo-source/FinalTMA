@@ -261,6 +261,171 @@ describe("Mint queue worker", () => {
     });
   });
 
+  it("skips a row already claimed by another worker", async () => {
+    const queued = mintQueueRow({
+      status: "queued",
+      attempt_count: 0,
+    });
+    const db = createSupabaseQueryMock([
+      {
+        data: [queued],
+      },
+      {
+        data: null,
+      },
+    ]);
+    const provider = createProviderMock();
+
+    const result = await runMintQueueWorker({
+      db: db.client,
+      provider,
+      requestId: "req_worker_concurrent_claim",
+      env: {
+        TON_MINT_BATCH_SIZE: "10",
+      },
+      now: new Date("2026-05-29T08:00:00.000Z"),
+    });
+
+    expect(result).toMatchObject({
+      scanned: 1,
+      claimed: 0,
+      skipped: 1,
+      confirming: 0,
+      retrying: 0,
+      manualReview: 0,
+    });
+    expect(provider.submitMint).not.toHaveBeenCalled();
+    expect(
+      db.operations.find(
+        (operation) =>
+          operation.operation === "update" && operation.table === "mint_queue",
+      )?.filters,
+    ).toEqual(
+      expect.arrayContaining([
+        {
+          column: "id",
+          operator: "eq",
+          value: QUEUE_ID,
+        },
+        {
+          column: "status",
+          operator: "in",
+          value: ["queued", "retrying"],
+        },
+      ]),
+    );
+  });
+
+  it("recovers a possibly submitted mint by querying the previous query id before resubmitting", async () => {
+    const previousQueryId = `mint:${QUEUE_ID}:1`;
+    const queued = mintQueueRow({
+      status: "retrying",
+      attempt_count: 1,
+      metadata: {
+        metadata_url: "/nft-metadata/items/test.json",
+        metadata_snapshot: {
+          name: "Test NFT",
+        },
+        mint_worker: {
+          query_id: previousQueryId,
+          possible_submission: true,
+        },
+      },
+    });
+    const claimed = mintQueueRow({
+      status: "processing",
+      attempt_count: 2,
+      metadata: {
+        metadata_url: "/nft-metadata/items/test.json",
+        metadata_snapshot: {
+          name: "Test NFT",
+        },
+        mint_worker: {
+          query_id: previousQueryId,
+          possible_submission: true,
+        },
+      },
+    });
+    const db = createSupabaseQueryMock([
+      {
+        data: [queued],
+      },
+      {
+        data: claimed,
+      },
+      {
+        data: collectionRow(),
+      },
+      {
+        data: walletRow(),
+      },
+      {
+        data: null,
+      },
+      {},
+      {},
+    ]);
+    const provider = createProviderMock({
+      queryTransaction: vi.fn().mockResolvedValue({
+        status: "pending",
+        txHash: null,
+        queryId: previousQueryId,
+        itemAddress: null,
+        itemIndex: null,
+        ownerAddress: null,
+        metadataUrl: null,
+        errorMessage: null,
+        rawResponse: {
+          ok: true,
+        },
+        externalApiProvider: "mock-ton-provider",
+        checkedAt: "2026-05-29T08:02:00.000Z",
+      }),
+    });
+
+    const result = await runMintQueueWorker({
+      db: db.client,
+      provider,
+      requestId: "req_worker_recover_possible_submission",
+      env: {
+        TON_MINT_RETRY_DELAY_SECONDS: "60",
+      },
+      now: new Date("2026-05-29T08:02:00.000Z"),
+    });
+
+    expect(result).toMatchObject({
+      scanned: 1,
+      claimed: 1,
+      confirming: 1,
+      retrying: 0,
+      manualReview: 0,
+    });
+    expect(provider.queryTransaction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryId: previousQueryId,
+        relatedId: QUEUE_ID,
+      }),
+    );
+    expect(provider.submitMint).not.toHaveBeenCalled();
+    expect(
+      db.operations.find(
+        (operation) =>
+          operation.operation === "update" && operation.table === "mint_queue",
+      )?.payload,
+    ).toMatchObject({
+      metadata: expect.objectContaining({
+        mint_worker: expect.objectContaining({
+          query_id: previousQueryId,
+          attempt_count: 2,
+        }),
+      }),
+    });
+    expect(lastMintQueueUpdate(db.operations)).toMatchObject({
+      status: "confirming",
+      tx_hash: null,
+    });
+  });
+
   it("moves a queue to manual review when the returned tx hash belongs to another operation", async () => {
     const queued = mintQueueRow({
       status: "queued",
