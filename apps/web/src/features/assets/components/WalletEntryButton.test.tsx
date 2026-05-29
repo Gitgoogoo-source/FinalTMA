@@ -15,6 +15,7 @@ import type {
   WalletConnectionStatus,
   WalletMintQueueItem,
   WalletMintQueueSummary,
+  WalletSyncResult,
 } from "@/features/wallet/wallet.types";
 
 import { WalletEntryButton } from "./WalletEntryButton";
@@ -57,7 +58,9 @@ const walletConnectMock = vi.hoisted(() => ({
 const syncWalletNftsMock = vi.hoisted(() => ({
   mutateAsync: vi.fn(),
   state: {
-    data: null,
+    data: null as WalletSyncResult | null,
+    error: null as unknown,
+    isError: false,
     isPending: false,
     mutateAsync: vi.fn(),
   },
@@ -137,6 +140,8 @@ describe("WalletEntryButton", () => {
     walletConnectMock.state = createWalletConnectState();
     syncWalletNftsMock.state = {
       data: null,
+      error: null,
+      isError: false,
       isPending: false,
       mutateAsync: syncWalletNftsMock.mutateAsync,
     };
@@ -384,6 +389,89 @@ describe("WalletEntryButton", () => {
     ).not.toBeInTheDocument();
     expect(screen.getByRole("dialog", { name: "Mint 队列" })).toBeVisible();
     expect(screen.getByText("排队中")).toBeVisible();
+  });
+
+  it("triggers wallet NFT sync from the status sheet", async () => {
+    walletConnectMock.state = createWalletConnectState({
+      address: "EQBACKENDRESTOREDWALLET1234567890abcdefghi",
+      isConnected: true,
+      status: "verified",
+      wallet: {
+        address: "EQBACKENDRESTOREDWALLET1234567890abcdefghi",
+        rawAddress: "0:backend",
+        network: "mainnet",
+        walletAppName: "Tonkeeper",
+        verifiedAt: "2026-05-28T10:00:00.000Z",
+        lastSyncAt: null,
+        syncStatus: "idle",
+        mintQueue: null,
+        errorMessage: null,
+        status: "verified",
+      },
+    });
+
+    renderWalletEntry(true);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /EQBA...fghi.*verified/ }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "同步 NFT" }));
+
+    await waitFor(() => {
+      expect(syncWalletNftsMock.mutateAsync).toHaveBeenCalledTimes(1);
+    });
+    expect(walletNftsMock.refetch).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("status")).toHaveTextContent("NFT 同步已提交");
+  });
+
+  it("shows the latest backend NFT sync counts in the status sheet", () => {
+    walletConnectMock.state = createWalletConnectState({
+      address: "EQBACKENDRESTOREDWALLET1234567890abcdefghi",
+      isConnected: true,
+      status: "verified",
+      wallet: {
+        address: "EQBACKENDRESTOREDWALLET1234567890abcdefghi",
+        rawAddress: "0:backend",
+        network: "mainnet",
+        walletAppName: "Tonkeeper",
+        verifiedAt: "2026-05-28T10:00:00.000Z",
+        lastSyncAt: "2026-05-28T11:00:00.000Z",
+        syncStatus: "success",
+        mintQueue: null,
+        errorMessage: null,
+        status: "verified",
+      },
+    });
+    syncWalletNftsMock.state = {
+      data: {
+        status: "success",
+        jobId: "job-1",
+        lastSyncAt: "2026-05-29T08:00:00.000Z",
+        message: "钱包 NFT 同步完成。",
+        syncedCount: 2,
+        linkedCount: 1,
+        ignoredCount: 3,
+      },
+      error: null,
+      isError: false,
+      isPending: false,
+      mutateAsync: syncWalletNftsMock.mutateAsync,
+    };
+
+    renderWalletEntry(true);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /EQBA...fghi.*verified/ }),
+    );
+
+    expect(screen.getByText("NFT 同步完成")).toBeVisible();
+    expect(screen.getByText("钱包 NFT 同步完成。")).toBeVisible();
+    expect(screen.getByText("游戏 NFT")).toBeVisible();
+    expect(screen.getByText("2")).toBeVisible();
+    expect(screen.getByText("已关联")).toBeVisible();
+    expect(screen.getByText("1")).toBeVisible();
+    expect(screen.getByText("已忽略")).toBeVisible();
+    expect(screen.getByText("3")).toBeVisible();
   });
 
   it("can trigger wallet verification from the status sheet", async () => {

@@ -522,6 +522,10 @@ a {
   gap: 8px;
 }
 
+.wallet-status-sheet__summary--single {
+  grid-template-columns: 1fr;
+}
+
 .wallet-status-sheet__pill {
   min-width: 0;
   padding: 11px 12px;
@@ -536,6 +540,125 @@ a {
   font-size: 14px;
   line-height: 1.2;
   white-space: nowrap;
+}
+
+.wallet-sync-panel {
+  display: grid;
+  gap: 12px;
+  border: 1px solid rgb(255 255 255 / 11%);
+  border-radius: 8px;
+  padding: 12px;
+  background: rgb(255 255 255 / 5%);
+}
+
+.wallet-sync-panel__header {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+}
+
+.wallet-sync-panel__header > svg {
+  margin-top: 2px;
+}
+
+.wallet-sync-panel__header span {
+  display: block;
+  color: #9fb2ba;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.wallet-sync-panel__header strong {
+  display: block;
+  margin-top: 3px;
+  overflow: hidden;
+  color: #f7fbff;
+  font-size: 14px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wallet-sync-panel__header p {
+  margin: 5px 0 0;
+  color: #c7d7df;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.wallet-sync-panel--success .wallet-sync-panel__header > svg {
+  color: #8bd3c7;
+}
+
+.wallet-sync-panel--progress .wallet-sync-panel__header > svg {
+  color: #ffd166;
+}
+
+.wallet-sync-panel--warning .wallet-sync-panel__header > svg {
+  color: #ffb86b;
+}
+
+.wallet-sync-panel--danger .wallet-sync-panel__header > svg {
+  color: #ff7878;
+}
+
+.wallet-sync-panel__metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.wallet-sync-panel__metrics > div {
+  min-width: 0;
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 8px;
+  padding: 9px;
+  background: rgb(255 255 255 / 5%);
+}
+
+.wallet-sync-panel__metrics dt {
+  margin-bottom: 5px;
+  color: #9fb2ba;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.wallet-sync-panel__metrics dd {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: #f7fbff;
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wallet-sync-panel__action {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid rgb(139 211 199 / 36%);
+  border-radius: 8px;
+  color: #071615;
+  background: #8bd3c7;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.wallet-sync-panel__action:disabled {
+  border-color: rgb(255 255 255 / 8%);
+  color: #87979f;
+  background: rgb(255 255 255 / 5%);
+  cursor: not-allowed;
 }
 
 .mint-queue-sheet {
@@ -811,6 +934,7 @@ a {
 @media (width < 390px) {
   .wallet-status-sheet__actions,
   .wallet-status-sheet__summary,
+  .wallet-sync-panel__metrics,
   .mint-queue-sheet__summary,
   .mint-queue-row dl,
   .wallet-nft-row dl {

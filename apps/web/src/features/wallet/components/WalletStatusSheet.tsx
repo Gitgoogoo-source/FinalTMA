@@ -12,6 +12,12 @@ import {
   X,
 } from "lucide-react";
 
+import type {
+  WalletSyncResult,
+  WalletSyncStatus as WalletSyncStatusValue,
+} from "../wallet.types";
+import { WalletSyncPanel } from "./WalletSyncPanel";
+
 export type WalletStatusSheetStatus =
   | "not_connected"
   | "connecting"
@@ -21,13 +27,7 @@ export type WalletStatusSheetStatus =
   | "expired_proof"
   | "disconnected";
 
-export type WalletSyncStatus =
-  | "idle"
-  | "queued"
-  | "syncing"
-  | "success"
-  | "failed"
-  | "disabled";
+export type WalletSyncStatus = WalletSyncStatusValue;
 
 export type WalletStatusSheetWallet = {
   address: string | null;
@@ -54,6 +54,9 @@ export type WalletStatusSheetProps = {
   status: WalletStatusSheetStatus;
   wallet?: WalletStatusSheetWallet | null;
   syncStatus?: WalletSyncStatus;
+  syncResult?: WalletSyncResult | null | undefined;
+  syncErrorMessage?: string | null | undefined;
+  syncedNftCount?: number | undefined;
   mintQueue?: WalletMintQueueSummary | null;
   isConnecting?: boolean;
   isVerifying?: boolean;
@@ -90,6 +93,9 @@ export function WalletStatusSheet({
   status,
   wallet = null,
   syncStatus = "idle",
+  syncResult = null,
+  syncErrorMessage = null,
+  syncedNftCount = 0,
   mintQueue = null,
   isConnecting = false,
   isVerifying = false,
@@ -130,7 +136,6 @@ export function WalletStatusSheet({
       status === "invalid_proof" ||
       status === "expired_proof") &&
     Boolean(onVerify);
-  const canSyncNfts = isVerified && Boolean(onSyncNfts) && !isSyncing;
   const canOpenMintQueue = isVerified && Boolean(onOpenMintQueue);
   const StatusIcon = meta.Icon;
 
@@ -262,21 +267,6 @@ export function WalletStatusSheet({
 
             <button
               className="wallet-status-sheet__secondary-action"
-              disabled={!canSyncNfts}
-              onClick={onSyncNfts}
-              title={isVerified ? "同步链上 NFT" : "验证钱包后可同步 NFT"}
-              type="button"
-            >
-              {isSyncing ? (
-                <Loader2 aria-hidden="true" size={15} strokeWidth={2.4} />
-              ) : (
-                <RefreshCw aria-hidden="true" size={15} strokeWidth={2.4} />
-              )}
-              同步 NFT
-            </button>
-
-            <button
-              className="wallet-status-sheet__secondary-action"
               disabled={!canOpenMintQueue}
               onClick={onOpenMintQueue}
               title={
@@ -316,12 +306,18 @@ export function WalletStatusSheet({
             ) : null}
           </section>
 
-          <section className="wallet-status-sheet__summary">
-            <StatusPill
-              label="同步状态"
-              tone={getSyncStatusTone(syncStatus)}
-              value={getSyncStatusLabel(syncStatus)}
-            />
+          <WalletSyncPanel
+            disabled={!isVerified || !onSyncNfts}
+            errorMessage={syncErrorMessage}
+            lastSyncAt={wallet?.lastSyncAt}
+            loading={isSyncing}
+            onSync={onSyncNfts}
+            result={syncResult}
+            status={syncStatus}
+            syncedNftCount={syncedNftCount}
+          />
+
+          <section className="wallet-status-sheet__summary wallet-status-sheet__summary--single">
             <StatusPill
               label="Mint 队列"
               tone={getMintQueueTone(mintQueue)}
@@ -488,39 +484,6 @@ function formatDateTime(value: string | null | undefined): string {
     hour: "2-digit",
     minute: "2-digit",
   });
-}
-
-function getSyncStatusLabel(status: WalletSyncStatus): string {
-  switch (status) {
-    case "idle":
-      return "未同步";
-    case "queued":
-      return "排队中";
-    case "syncing":
-      return "同步中";
-    case "success":
-      return "已同步";
-    case "failed":
-      return "同步失败";
-    case "disabled":
-      return "已暂停";
-  }
-}
-
-function getSyncStatusTone(status: WalletSyncStatus): WalletStatusTone {
-  switch (status) {
-    case "success":
-      return "success";
-    case "queued":
-    case "syncing":
-      return "progress";
-    case "failed":
-      return "danger";
-    case "disabled":
-      return "warning";
-    case "idle":
-      return "neutral";
-  }
 }
 
 function formatMintQueueSummary(

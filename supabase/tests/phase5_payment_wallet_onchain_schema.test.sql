@@ -207,6 +207,43 @@ select is(
   'Phase 5 payment, wallet and onchain FK covering indexes exist'
 );
 
+with expected_wallet_sync_indexes(schemaname, tablename, indexname) as (
+  values
+    ('onchain', 'wallet_nft_snapshots', 'wallet_nft_snapshots_wallet_item_seen_idx'),
+    ('onchain', 'nft_items', 'nft_items_collection_item_address_idx'),
+    ('onchain', 'nft_items', 'nft_items_owner_address_seen_idx'),
+    ('ops', 'risk_events', 'risk_events_source_type_id_event_idx')
+)
+select is(
+  (
+    select count(*)::integer
+    from expected_wallet_sync_indexes expected
+    where not exists (
+      select 1
+      from pg_indexes existing
+      where existing.schemaname = expected.schemaname
+        and existing.tablename = expected.tablename
+        and existing.indexname = expected.indexname
+    )
+  ),
+  0,
+  'Phase 5 wallet NFT sync lookup and owner-drift indexes exist'
+);
+
+select ok(
+  exists (
+    select 1
+    from pg_constraint con
+    join pg_class c on c.oid = con.conrelid
+    join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'onchain'
+      and c.relname = 'wallet_nft_snapshots'
+      and con.conname = 'wallet_nft_snapshots_wallet_id_item_address_key'
+      and pg_get_constraintdef(con.oid) = 'UNIQUE (wallet_id, item_address)'
+  ),
+  'wallet_nft_snapshots keeps the existing latest snapshot uniqueness strategy'
+);
+
 insert into core.users (id, telegram_user_id, username, invite_code)
 values
   ('00000000-0000-5000-8000-000000000301', 105030001, 'phase5_schema_a', 'P5S301'),
@@ -733,6 +770,100 @@ select ok(
   'wallet_sync_jobs idempotency_key is unique when present'
 );
 
+insert into onchain.nft_items (
+  id,
+  collection_id,
+  template_id,
+  form_id,
+  item_index,
+  item_address,
+  owner_address,
+  owner_user_id,
+  metadata_url,
+  status,
+  last_seen_at,
+  metadata
+) values (
+  '00000000-0000-5000-8000-000000000348',
+  '00000000-0000-5000-8000-000000000341',
+  '00000000-0000-5000-8000-000000000313',
+  '00000000-0000-5000-8000-000000000314',
+  105030001,
+  'EQ_PHASE5_SCHEMA_NFT_ITEM_A',
+  'EQ_PHASE5_SCHEMA_WALLET_A',
+  '00000000-0000-5000-8000-000000000301',
+  'https://example.test/phase5-nft-a.json',
+  'minted',
+  now(),
+  '{"fixture":true}'::jsonb
+);
+
+insert into onchain.wallet_nft_snapshots (
+  id,
+  wallet_id,
+  user_id,
+  collection_address,
+  item_address,
+  owner_address,
+  metadata_url,
+  raw_payload,
+  seen_at
+) values (
+  '00000000-0000-5000-8000-000000000349',
+  '00000000-0000-5000-8000-000000000321',
+  '00000000-0000-5000-8000-000000000301',
+  'EQ_PHASE5_SCHEMA_COLLECTION',
+  'EQ_PHASE5_SCHEMA_NFT_ITEM_A',
+  'EQ_PHASE5_SCHEMA_WALLET_A',
+  'https://example.test/phase5-nft-a.json',
+  '{"collection":"EQ_PHASE5_SCHEMA_COLLECTION","item":"EQ_PHASE5_SCHEMA_NFT_ITEM_A"}'::jsonb,
+  now()
+);
+
+select ok(
+  testutil.raises_like(
+    $sql$
+      insert into onchain.wallet_nft_snapshots (
+        wallet_id, user_id, collection_address, item_address, owner_address, raw_payload, seen_at
+      ) values (
+        '00000000-0000-5000-8000-000000000321',
+        '00000000-0000-5000-8000-000000000301',
+        'EQ_PHASE5_SCHEMA_COLLECTION',
+        'EQ_PHASE5_SCHEMA_NFT_ITEM_A',
+        'EQ_PHASE5_SCHEMA_WALLET_A',
+        '{}'::jsonb,
+        now() + interval '1 second'
+      )
+    $sql$,
+    '%wallet_nft_snapshots_wallet_id_item_address_key%'
+  ),
+  'wallet_nft_snapshots still rejects duplicate wallet item snapshots'
+);
+
+insert into ops.risk_events (
+  id,
+  user_id,
+  event_type,
+  severity,
+  status,
+  source_type,
+  source_id,
+  detail
+) values (
+  '00000000-0000-5000-8000-000000000350',
+  '00000000-0000-5000-8000-000000000301',
+  'wallet_nft_owner_mismatch',
+  'medium',
+  'open',
+  'wallet_nft_sync_job',
+  '00000000-0000-5000-8000-000000000347',
+  jsonb_build_object(
+    'item_address', 'EQ_PHASE5_SCHEMA_NFT_ITEM_A',
+    'database_owner_address', 'EQ_PHASE5_SCHEMA_WALLET_A',
+    'chain_owner_address', 'EQ_PHASE5_SCHEMA_WALLET_DRIFTED'
+  )
+);
+
 set local enable_seqscan = off;
 
 select ok(
@@ -794,6 +925,66 @@ select ok(
     'user_wallets_verified_idx'
   ),
   'verified wallet lookup can use user_wallets_verified_idx'
+);
+
+select ok(
+  testutil.explain_uses_index(
+    $sql$
+      select id
+      from onchain.wallet_nft_snapshots
+      where wallet_id = '00000000-0000-5000-8000-000000000321'
+        and item_address >= 'EQ_PHASE5_SCHEMA_NFT_ITEM'
+      order by item_address, seen_at desc
+      limit 20
+    $sql$,
+    'wallet_nft_snapshots_wallet_item_seen_idx'
+  ),
+  'wallet NFT snapshot lookup can use wallet_nft_snapshots_wallet_item_seen_idx'
+);
+
+select ok(
+  testutil.explain_uses_index(
+    $sql$
+      select id
+      from onchain.nft_items
+      where collection_id = '00000000-0000-5000-8000-000000000341'
+        and item_address >= 'EQ_PHASE5_SCHEMA_NFT_ITEM'
+      order by item_address
+      limit 20
+    $sql$,
+    'nft_items_collection_item_address_idx'
+  ),
+  'known collection NFT matching can use nft_items_collection_item_address_idx'
+);
+
+select ok(
+  testutil.explain_uses_index(
+    $sql$
+      select id
+      from onchain.nft_items
+      where owner_address = 'EQ_PHASE5_SCHEMA_WALLET_A'
+      order by last_seen_at desc
+      limit 20
+    $sql$,
+    'nft_items_owner_address_seen_idx'
+  ),
+  'owner address drift review can use nft_items_owner_address_seen_idx'
+);
+
+select ok(
+  testutil.explain_uses_index(
+    $sql$
+      select id
+      from ops.risk_events
+      where source_type = 'wallet_nft_sync_job'
+        and source_id = '00000000-0000-5000-8000-000000000347'
+        and event_type = 'wallet_nft_owner_mismatch'
+      order by created_at desc
+      limit 20
+    $sql$,
+    'risk_events_source_type_id_event_idx'
+  ),
+  'wallet NFT owner mismatch review can use risk_events_source_type_id_event_idx'
 );
 
 set local role authenticated;
@@ -864,6 +1055,25 @@ select ok(
     '%permission denied%'
   ),
   'authenticated user cannot directly insert onchain.mint_queue'
+);
+
+select ok(
+  testutil.raises_like(
+    $sql$
+      insert into onchain.wallet_nft_snapshots (
+        wallet_id, user_id, collection_address, item_address, owner_address, raw_payload
+      ) values (
+        '00000000-0000-5000-8000-000000000321',
+        '00000000-0000-5000-8000-000000000301',
+        'EQ_PHASE5_SCHEMA_COLLECTION',
+        'EQ_PHASE5_SCHEMA_CLIENT_WRITTEN_NFT',
+        'EQ_PHASE5_SCHEMA_WALLET_A',
+        '{}'::jsonb
+      )
+    $sql$,
+    '%permission denied%'
+  ),
+  'authenticated user cannot directly insert wallet NFT snapshots'
 );
 
 reset role;

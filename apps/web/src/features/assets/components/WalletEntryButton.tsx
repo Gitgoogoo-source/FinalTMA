@@ -224,6 +224,13 @@ function EnabledWalletEntryButton() {
         onVerify={() => void handleVerify()}
         open={isSheetOpen}
         status={walletConnect.status}
+        syncedNftCount={walletNfts.items.length}
+        syncErrorMessage={
+          syncWalletNfts.isError
+            ? getApiErrorMessage(syncWalletNfts.error)
+            : null
+        }
+        syncResult={syncWalletNfts.data ?? null}
         syncStatus={
           syncWalletNfts.data?.status ?? walletConnect.wallet.syncStatus
         }
