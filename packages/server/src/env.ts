@@ -424,6 +424,21 @@ export const serverEnvSchema = z
     TON_MINTER_WALLET_ADDRESS: optionalStringFromEnv,
     TON_MINTER_PRIVATE_KEY: optionalSecretFromEnv(16),
     TON_MINTER_MNEMONIC: optionalSecretFromEnv(16),
+    TON_MINT_PROVIDER_URL: optionalUrlFromEnv,
+    TON_NFT_MINT_PROVIDER_URL: optionalUrlFromEnv,
+    TON_TRANSACTION_PROVIDER_URL: optionalUrlFromEnv,
+    TON_NFT_TX_PROVIDER_URL: optionalUrlFromEnv,
+    TON_MINT_PROVIDER_TOKEN: optionalSecretFromEnv(8),
+    TON_NFT_PROVIDER_TOKEN: optionalSecretFromEnv(8),
+    TON_NFT_PROVIDER_NAME: optionalStringFromEnv,
+    TON_MINT_PROVIDER_TIMEOUT_MS: numberFromEnv(15_000, {
+      min: 1_000,
+      max: 60_000,
+    }),
+    TON_TX_SYNC_BATCH_SIZE: numberFromEnv(20, {
+      min: 1,
+      max: 100,
+    }),
     TON_MINT_BATCH_SIZE: numberFromEnv(10, {
       min: 1,
       max: 100,
@@ -650,6 +665,13 @@ export const serverEnvSchema = z
     }
 
     if (input.TON_MINT_ENABLED) {
+      const hasDirectMinter =
+        Boolean(input.TON_MINTER_PRIVATE_KEY) ||
+        Boolean(input.TON_MINTER_MNEMONIC);
+      const hasMintProvider =
+        Boolean(input.TON_MINT_PROVIDER_URL) ||
+        Boolean(input.TON_NFT_MINT_PROVIDER_URL);
+
       if (!input.TON_COLLECTION_ADDRESS) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -658,20 +680,35 @@ export const serverEnvSchema = z
         });
       }
 
-      if (!input.TON_MINTER_WALLET_ADDRESS) {
+      if (hasDirectMinter && !input.TON_MINTER_WALLET_ADDRESS) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["TON_MINTER_WALLET_ADDRESS"],
-          message: "Required when TON_MINT_ENABLED is true.",
+          message:
+            "Required when TON_MINT_ENABLED is true and a local minter key is configured.",
         });
       }
 
-      if (!input.TON_MINTER_PRIVATE_KEY && !input.TON_MINTER_MNEMONIC) {
+      if (!hasDirectMinter && !hasMintProvider) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["TON_MINTER_PRIVATE_KEY"],
           message:
-            "Either TON_MINTER_PRIVATE_KEY or TON_MINTER_MNEMONIC is required when TON_MINT_ENABLED is true.",
+            "Either TON_MINTER_PRIVATE_KEY, TON_MINTER_MNEMONIC, TON_MINT_PROVIDER_URL or TON_NFT_MINT_PROVIDER_URL is required when TON_MINT_ENABLED is true.",
+        });
+      }
+
+      if (
+        isProductionLike &&
+        hasMintProvider &&
+        !input.TON_MINT_PROVIDER_TOKEN &&
+        !input.TON_NFT_PROVIDER_TOKEN
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["TON_MINT_PROVIDER_TOKEN"],
+          message:
+            "TON_MINT_PROVIDER_TOKEN or TON_NFT_PROVIDER_TOKEN is required for provider-based Mint in production.",
         });
       }
     }
@@ -827,6 +864,15 @@ export const env = Object.freeze({
     MINTER_WALLET_ADDRESS: raw.TON_MINTER_WALLET_ADDRESS,
     MINTER_PRIVATE_KEY: raw.TON_MINTER_PRIVATE_KEY,
     MINTER_MNEMONIC: raw.TON_MINTER_MNEMONIC,
+    MINT_PROVIDER_URL: raw.TON_MINT_PROVIDER_URL,
+    NFT_MINT_PROVIDER_URL: raw.TON_NFT_MINT_PROVIDER_URL,
+    TRANSACTION_PROVIDER_URL: raw.TON_TRANSACTION_PROVIDER_URL,
+    NFT_TX_PROVIDER_URL: raw.TON_NFT_TX_PROVIDER_URL,
+    MINT_PROVIDER_TOKEN: raw.TON_MINT_PROVIDER_TOKEN,
+    NFT_PROVIDER_TOKEN: raw.TON_NFT_PROVIDER_TOKEN,
+    NFT_PROVIDER_NAME: raw.TON_NFT_PROVIDER_NAME,
+    MINT_PROVIDER_TIMEOUT_MS: raw.TON_MINT_PROVIDER_TIMEOUT_MS,
+    TX_SYNC_BATCH_SIZE: raw.TON_TX_SYNC_BATCH_SIZE,
     MINT_BATCH_SIZE: raw.TON_MINT_BATCH_SIZE,
     MINT_MAX_RETRIES: raw.TON_MINT_MAX_RETRIES,
     MINT_RETRY_DELAY_SECONDS: raw.TON_MINT_RETRY_DELAY_SECONDS,

@@ -40,3 +40,4 @@ export * from "./ton/chainClient.js";
 export * from "./ton/walletPublicKey.js";
 export * from "./ton/mintGuards.js";
 export * from "./ton/mintQueue.js";
+export * from "./ton/nft.js";

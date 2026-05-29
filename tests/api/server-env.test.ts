@@ -174,6 +174,24 @@ describe("server env validation", () => {
     }
   });
 
+  it("allows provider-based Mint configuration without a local minter key outside production", async () => {
+    prepareEnvImport();
+
+    const { serverEnvSchema } = await import("../../packages/server/src/env");
+    const parsed = serverEnvSchema.safeParse({
+      ...process.env,
+      TON_MINT_ENABLED: "true",
+      TON_COLLECTION_ADDRESS: `0:${"3".repeat(64)}`,
+      TON_MINTER_PRIVATE_KEY: "",
+      TON_MINTER_MNEMONIC: "",
+      TON_MINTER_WALLET_ADDRESS: "",
+      TON_MINT_PROVIDER_URL: "https://mint-provider.example.test/ton/mint",
+      FEATURE_MINT_WORKER_ENABLED: "true",
+    });
+
+    expect(parsed.success).toBe(true);
+  });
+
   it("rejects production payment operations when required server secrets are missing", async () => {
     prepareEnvImport();
 

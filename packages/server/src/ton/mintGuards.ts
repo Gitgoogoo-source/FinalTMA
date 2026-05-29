@@ -71,7 +71,7 @@ export async function assertMintWorkerEnabled(
     );
   }
 
-  if (!readMintWorkerSecret(env)) {
+  if (!readMintWorkerSecret(env) && !readMintWorkerProviderEndpoint(env)) {
     throw new BackendOperationGuardError(
       503,
       "MINT_WORKER_CONFIG_INVALID",
@@ -79,7 +79,9 @@ export async function assertMintWorkerEnabled(
       {
         expose: false,
         details: {
-          missing: ["TON_MINTER_PRIVATE_KEY or TON_MINTER_MNEMONIC"],
+          missing: [
+            "TON_MINTER_PRIVATE_KEY or TON_MINTER_MNEMONIC or TON_MINT_PROVIDER_URL",
+          ],
         },
       },
     );
@@ -93,6 +95,15 @@ export function readMintWorkerSecret(
   const mnemonic = normalizeSecret(env.TON_MINTER_MNEMONIC);
 
   return privateKey ?? mnemonic;
+}
+
+export function readMintWorkerProviderEndpoint(
+  env: NodeJS.ProcessEnv = process.env,
+): string | undefined {
+  return (
+    normalizeSecret(env.TON_NFT_MINT_PROVIDER_URL) ??
+    normalizeSecret(env.TON_MINT_PROVIDER_URL)
+  );
 }
 
 function normalizeSecret(value: string | undefined): string | undefined {

@@ -13,6 +13,14 @@
     {
       "path": "/api/cron/refresh-leaderboard",
       "schedule": "5 0 * * *"
+    },
+    {
+      "path": "/api/cron/retry-mint-queue",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/sync-onchain-transactions",
+      "schedule": "*/5 * * * *"
     }
   ],
   "functions": {
