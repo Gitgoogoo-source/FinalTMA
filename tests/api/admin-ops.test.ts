@@ -3,9 +3,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, type ApiSuccessResponse } from "../../api/_shared/handler";
 import { invokeApiHandler } from "./_utils";
 
-const { requireAdminMock, runWriteRpcMock } = vi.hoisted(() => ({
-  requireAdminMock: vi.fn(),
-  runWriteRpcMock: vi.fn(),
+const { getSupabaseAdminClientMock, requireAdminMock, runWriteRpcMock } =
+  vi.hoisted(() => ({
+    getSupabaseAdminClientMock: vi.fn(),
+    requireAdminMock: vi.fn(),
+    runWriteRpcMock: vi.fn(),
+  }));
+
+vi.mock("../../packages/server/src/db/supabaseAdmin.js", () => ({
+  getSupabaseAdminClient: getSupabaseAdminClientMock,
 }));
 
 vi.mock("../../api/_shared/requireAdmin.js", () => ({
@@ -32,10 +38,26 @@ const ADMIN_CONTEXT = {
 
 const MINT_QUEUE_ID = "44444444-4444-4444-8444-444444444444";
 const STAR_ORDER_ID = "66666666-6666-4666-8666-666666666666";
+const PAYMENT_ID = "77777777-7777-4777-8777-777777777777";
+
+type AdminQueryOperation = {
+  schema: string;
+  table: string;
+  filters: Array<{
+    kind: "eq" | "gte" | "lte" | "ilike" | "in";
+    column: string;
+    value: unknown;
+  }>;
+  range: [number, number] | null;
+  limit: number | null;
+};
+
+type AdminTableRows = Record<string, Array<Record<string, unknown>>>;
 
 describe("admin ops APIs", () => {
   beforeEach(() => {
     process.env.NODE_ENV = "test";
+    getSupabaseAdminClientMock.mockReset();
     requireAdminMock.mockReset();
     runWriteRpcMock.mockReset();
     requireAdminMock.mockResolvedValue(ADMIN_CONTEXT);
@@ -43,6 +65,147 @@ describe("admin ops APIs", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it("rejects non-admin payment queries before reading admin payment tables", async () => {
+    requireAdminMock.mockRejectedValue(
+      new ApiError(403, "FORBIDDEN", "Admin permission required"),
+    );
+
+    const { default: paymentsHandler } =
+      await import("../../api/admin/payments");
+    const result = await invokeApiHandler(paymentsHandler, {
+      method: "GET",
+      url: "/api/admin/payments",
+    });
+
+    expect(result.statusCode).toBe(403);
+    expect(getSupabaseAdminClientMock).not.toHaveBeenCalled();
+  });
+
+  it("lets admins query payment orders with payment and exception context", async () => {
+    const db = createAdminReadDbMock({
+      "payments.star_orders": [
+        {
+          id: STAR_ORDER_ID,
+          user_id: ADMIN_CONTEXT.userId,
+          business_type: "gacha_open",
+          business_id: null,
+          status: "failed",
+          xtr_amount: 10,
+          telegram_invoice_payload: "invoice-admin-query-test",
+          title: "Admin query payment",
+          description: null,
+          expires_at: null,
+          precheckout_at: null,
+          paid_at: "2026-05-29T00:00:00.000Z",
+          fulfilled_at: null,
+          error_message: "fulfillment failed",
+          metadata: {},
+          created_at: "2026-05-29T00:00:00.000Z",
+          updated_at: "2026-05-29T00:00:00.000Z",
+        },
+      ],
+      "payments.star_payments": [
+        {
+          id: PAYMENT_ID,
+          star_order_id: STAR_ORDER_ID,
+          user_id: ADMIN_CONTEXT.userId,
+          xtr_amount: 10,
+          currency: "XTR",
+          invoice_payload: "invoice-admin-query-test",
+          paid_at: "2026-05-29T00:00:01.000Z",
+          created_at: "2026-05-29T00:00:01.000Z",
+        },
+      ],
+      "payments.telegram_webhook_events": [
+        {
+          id: "88888888-8888-4888-8888-888888888888",
+          update_id: 1001,
+          event_type: "successful_payment",
+          user_id: ADMIN_CONTEXT.userId,
+          telegram_user_id: ADMIN_CONTEXT.telegramUserId,
+          invoice_payload: "invoice-admin-query-test",
+          process_status: "failed",
+          processed_at: null,
+          error_message: "fulfillment failed",
+          retry_count: 1,
+          next_retry_at: null,
+          webhook_secret_verified: true,
+          status_context: {},
+          created_at: "2026-05-29T00:00:02.000Z",
+        },
+      ],
+      "payments.star_refunds": [],
+      "payments.payment_disputes": [],
+    });
+    getSupabaseAdminClientMock.mockReturnValue(db.client);
+
+    const { default: paymentsHandler } =
+      await import("../../api/admin/payments");
+    const result = await invokeApiHandler<ApiSuccessResponse>(paymentsHandler, {
+      method: "GET",
+      url: "/api/admin/payments?status=failed&limit=10",
+      query: {
+        status: "failed",
+        limit: "10",
+      },
+    });
+
+    expect(result.statusCode).toBe(200);
+    expect(result.body).toMatchObject({
+      ok: true,
+      data: {
+        orders: [
+          {
+            id: STAR_ORDER_ID,
+            status: "failed",
+            xtr_amount: 10,
+            payment: {
+              id: PAYMENT_ID,
+              star_order_id: STAR_ORDER_ID,
+              currency: "XTR",
+            },
+          },
+        ],
+        events: [
+          {
+            event_type: "successful_payment",
+            process_status: "failed",
+          },
+        ],
+        exceptions: [
+          {
+            id: STAR_ORDER_ID,
+            status: "failed",
+          },
+        ],
+        summary: {
+          failed: 1,
+        },
+      },
+    });
+    expect(requireAdminMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        permissions: "payments:read",
+      }),
+    );
+    expect(db.operations).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          schema: "payments",
+          table: "star_orders",
+          filters: expect.arrayContaining([
+            {
+              kind: "eq",
+              column: "status",
+              value: "failed",
+            },
+          ]),
+        }),
+      ]),
+    );
   });
 
   it("rejects non-admin retry-mint requests before calling the write RPC", async () => {
@@ -159,9 +322,8 @@ describe("admin ops APIs", () => {
       audit_log_id: "77777777-7777-4777-8777-777777777777",
     });
 
-    const { default: retryFulfillmentHandler } = await import(
-      "../../api/admin/retry-fulfillment"
-    );
+    const { default: retryFulfillmentHandler } =
+      await import("../../api/admin/retry-fulfillment");
     const result = await invokeApiHandler<ApiSuccessResponse>(
       retryFulfillmentHandler,
       {
@@ -208,9 +370,8 @@ describe("admin ops APIs", () => {
   });
 
   it("requires a reason for retry-fulfillment requests", async () => {
-    const { default: retryFulfillmentHandler } = await import(
-      "../../api/admin/retry-fulfillment"
-    );
+    const { default: retryFulfillmentHandler } =
+      await import("../../api/admin/retry-fulfillment");
     const result = await invokeApiHandler(retryFulfillmentHandler, {
       method: "POST",
       url: "/api/admin/retry-fulfillment",
@@ -231,4 +392,247 @@ describe("admin ops APIs", () => {
     });
     expect(runWriteRpcMock).not.toHaveBeenCalled();
   });
+
+  it("requires explicit confirmation for retry-fulfillment requests", async () => {
+    const { default: retryFulfillmentHandler } =
+      await import("../../api/admin/retry-fulfillment");
+    const result = await invokeApiHandler(retryFulfillmentHandler, {
+      method: "POST",
+      url: "/api/admin/retry-fulfillment",
+      headers: {
+        "x-idempotency-key": "admin-retry-fulfillment-test-003",
+      },
+      body: {
+        starOrderId: STAR_ORDER_ID,
+        reason: "retry failed fulfillment in admin test",
+      },
+    });
+
+    expect(result.statusCode).toBe(400);
+    expect(result.body).toMatchObject({
+      error: {
+        code: "ADMIN_CONFIRMATION_REQUIRED",
+      },
+    });
+    expect(runWriteRpcMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects non-admin feature flag updates before calling the write RPC", async () => {
+    requireAdminMock.mockRejectedValue(
+      new ApiError(403, "FORBIDDEN", "Admin permission required"),
+    );
+
+    const { default: featureFlagsHandler } =
+      await import("../../api/admin/feature-flags");
+    const result = await invokeApiHandler(featureFlagsHandler, {
+      method: "PATCH",
+      url: "/api/admin/feature-flags",
+      headers: {
+        "x-admin-confirm": "true",
+        "x-idempotency-key": "admin-feature-flag-test-001",
+      },
+      body: {
+        key: "FEATURE_STARS_PAYMENT_ENABLED",
+        enabled: false,
+        reason: "pause payment creation in admin test",
+      },
+    });
+
+    expect(result.statusCode).toBe(403);
+    expect(runWriteRpcMock).not.toHaveBeenCalled();
+  });
+
+  it("requires explicit confirmation for feature flag updates", async () => {
+    const { default: featureFlagsHandler } =
+      await import("../../api/admin/feature-flags");
+    const result = await invokeApiHandler(featureFlagsHandler, {
+      method: "PATCH",
+      url: "/api/admin/feature-flags",
+      headers: {
+        "x-idempotency-key": "admin-feature-flag-test-002",
+      },
+      body: {
+        key: "FEATURE_TON_MINT_ENABLED",
+        enabled: false,
+        reason: "pause mint creation in admin test",
+      },
+    });
+
+    expect(result.statusCode).toBe(400);
+    expect(result.body).toMatchObject({
+      error: {
+        code: "ADMIN_CONFIRMATION_REQUIRED",
+      },
+    });
+    expect(runWriteRpcMock).not.toHaveBeenCalled();
+  });
+
+  it("calls the admin feature flag RPC with audit context and idempotency key", async () => {
+    runWriteRpcMock.mockResolvedValue({
+      key: "FEATURE_TON_MINT_ENABLED",
+      enabled: false,
+      previous_enabled: true,
+      audit_log_id: "88888888-8888-4888-8888-888888888888",
+    });
+
+    const { default: featureFlagsHandler } =
+      await import("../../api/admin/feature-flags");
+    const result = await invokeApiHandler<ApiSuccessResponse>(
+      featureFlagsHandler,
+      {
+        method: "PATCH",
+        url: "/api/admin/feature-flags",
+        headers: {
+          "x-admin-confirm": "true",
+          "x-idempotency-key": "admin-feature-flag-test-003",
+          "x-forwarded-for": "127.0.0.22",
+          "user-agent": "vitest-admin-feature-flags",
+        },
+        body: {
+          key: "FEATURE_TON_MINT_ENABLED",
+          enabled: false,
+          description: "Allow users to request NFT minting.",
+          reason: "pause mint creation in admin test",
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(200);
+    expect(result.body).toMatchObject({
+      ok: true,
+      data: {
+        key: "FEATURE_TON_MINT_ENABLED",
+        enabled: false,
+      },
+    });
+    expect(runWriteRpcMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        schema: "api",
+        functionName: "admin_update_feature_flag",
+        args: expect.objectContaining({
+          p_admin_user_id: ADMIN_CONTEXT.adminId,
+          p_key: "FEATURE_TON_MINT_ENABLED",
+          p_enabled: false,
+          p_description: "Allow users to request NFT minting.",
+          p_reason: "pause mint creation in admin test",
+          p_idempotency_key: "admin-feature-flag-test-003",
+          p_request_context: expect.objectContaining({
+            admin_user_id: ADMIN_CONTEXT.adminId,
+            ip_hash: expect.any(String),
+            user_agent_hash: expect.any(String),
+          }),
+        }),
+      }),
+    );
+  });
 });
+
+function createAdminReadDbMock(rowsByTable: AdminTableRows): {
+  client: unknown;
+  operations: AdminQueryOperation[];
+} {
+  const operations: AdminQueryOperation[] = [];
+
+  return {
+    client: {
+      schema: (schema: string) => ({
+        from: (table: string) =>
+          createAdminQueryBuilder(schema, table, rowsByTable, operations),
+      }),
+    },
+    operations,
+  };
+}
+
+function createAdminQueryBuilder(
+  schema: string,
+  table: string,
+  rowsByTable: AdminTableRows,
+  operations: AdminQueryOperation[],
+) {
+  const operation: AdminQueryOperation = {
+    schema,
+    table,
+    filters: [],
+    range: null,
+    limit: null,
+  };
+  operations.push(operation);
+
+  const builder = {
+    select: () => builder,
+    eq: (column: string, value: unknown) => {
+      operation.filters.push({ kind: "eq", column, value });
+      return builder;
+    },
+    gte: (column: string, value: unknown) => {
+      operation.filters.push({ kind: "gte", column, value });
+      return builder;
+    },
+    lte: (column: string, value: unknown) => {
+      operation.filters.push({ kind: "lte", column, value });
+      return builder;
+    },
+    ilike: (column: string, value: unknown) => {
+      operation.filters.push({ kind: "ilike", column, value });
+      return builder;
+    },
+    in: (column: string, value: unknown) => {
+      operation.filters.push({ kind: "in", column, value });
+      return builder;
+    },
+    order: () => builder,
+    range: (from: number, to: number) => {
+      operation.range = [from, to];
+      return builder;
+    },
+    limit: (limit: number) => {
+      operation.limit = limit;
+      return builder;
+    },
+    then: (
+      resolve: (value: {
+        data: Array<Record<string, unknown>>;
+        error: null;
+      }) => unknown,
+      reject?: (reason: unknown) => unknown,
+    ) =>
+      Promise.resolve(resolve(resolveAdminQuery(operation, rowsByTable))).catch(
+        reject,
+      ),
+  };
+
+  return builder;
+}
+
+function resolveAdminQuery(
+  operation: AdminQueryOperation,
+  rowsByTable: AdminTableRows,
+): { data: Array<Record<string, unknown>>; error: null } {
+  let rows = [...(rowsByTable[`${operation.schema}.${operation.table}`] ?? [])];
+
+  for (const filter of operation.filters) {
+    if (filter.kind === "eq") {
+      rows = rows.filter((row) => row[filter.column] === filter.value);
+    }
+
+    const values = filter.value;
+
+    if (filter.kind === "in" && Array.isArray(values)) {
+      rows = rows.filter((row) => values.includes(row[filter.column]));
+    }
+  }
+
+  if (operation.range) {
+    rows = rows.slice(operation.range[0], operation.range[1] + 1);
+  }
+
+  if (operation.limit !== null) {
+    rows = rows.slice(0, operation.limit);
+  }
+
+  return {
+    data: rows,
+    error: null,
+  };
+}
