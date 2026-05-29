@@ -1,0 +1,196 @@
+export type AdminApiEnvelope<T> = {
+  ok: true;
+  success: true;
+  data: T;
+  requestId?: string;
+};
+
+export type AdminApiErrorEnvelope = {
+  ok: false;
+  success: false;
+  error: {
+    code: string;
+    message: string;
+    details?: unknown;
+  };
+  requestId?: string;
+};
+
+export type PaymentOrder = {
+  id: string;
+  user_id: string;
+  business_type: string;
+  business_id: string | null;
+  status: string;
+  xtr_amount: number;
+  telegram_invoice_payload: string;
+  title: string;
+  description: string | null;
+  expires_at: string | null;
+  precheckout_at: string | null;
+  paid_at: string | null;
+  fulfilled_at: string | null;
+  error_message: string | null;
+  metadata?: unknown;
+  created_at: string;
+  updated_at: string;
+  payment: {
+    id: string;
+    star_order_id?: string;
+    user_id?: string;
+    currency: string;
+    xtr_amount: number;
+    invoice_payload?: string;
+    paid_at: string;
+    created_at?: string;
+  } | null;
+};
+
+export type WebhookEvent = {
+  id: string;
+  update_id: number | string | null;
+  event_type: string;
+  user_id?: string | null;
+  telegram_user_id?: number | string | null;
+  invoice_payload: string | null;
+  process_status: string;
+  processed_at: string | null;
+  error_message: string | null;
+  retry_count: number | string;
+  next_retry_at: string | null;
+  webhook_secret_verified: boolean;
+  status_context?: unknown;
+  created_at: string;
+};
+
+export type PaymentRefund = {
+  id: string;
+  star_payment_id: string;
+  star_order_id: string;
+  user_id: string;
+  xtr_amount: number | string;
+  status: string;
+  reason: string | null;
+  processed_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PaymentDispute = {
+  id: string;
+  user_id: string;
+  star_order_id: string | null;
+  star_payment_id: string | null;
+  status: string;
+  subject: string;
+  message: string | null;
+  resolution: string | null;
+  resolved_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PaymentAdminResponse = {
+  orders: PaymentOrder[];
+  events: WebhookEvent[];
+  exceptions: PaymentOrder[];
+  refunds: PaymentRefund[];
+  disputes: PaymentDispute[];
+  summary: Record<string, number>;
+  nextCursor: string | null;
+  serverTime: string;
+};
+
+export type MintQueueItem = {
+  id: string;
+  user_id: string;
+  wallet_id: string | null;
+  collection_id: string;
+  item_instance_id: string;
+  template_id?: string;
+  form_id?: string | null;
+  status: string;
+  priority: number;
+  attempt_count: number;
+  max_attempts: number;
+  next_attempt_at: string | null;
+  nft_item_id?: string | null;
+  tx_hash: string | null;
+  error_message: string | null;
+  created_at: string;
+  updated_at: string;
+  completed_at?: string | null;
+  wallet: {
+    address: string;
+    network: string;
+    wallet_app_name: string | null;
+    verified_at: string | null;
+  } | null;
+  transaction: {
+    tx_hash: string | null;
+    query_id: string | null;
+    status: string;
+    error_message: string | null;
+    created_at: string;
+  } | null;
+};
+
+export type MintQueueResponse = {
+  items: MintQueueItem[];
+  summary: Record<string, number>;
+  nextCursor: string | null;
+  serverTime: string;
+};
+
+export type WalletItem = {
+  id: string;
+  user_id: string;
+  chain: string;
+  network: string;
+  address: string;
+  address_raw: string | null;
+  wallet_app_name: string | null;
+  wallet_device?: string | null;
+  is_primary?: boolean;
+  status: string;
+  verified_at: string | null;
+  disconnected_at: string | null;
+  last_sync_at: string | null;
+  metadata?: unknown;
+  created_at: string;
+  updated_at?: string;
+  latest_proof: {
+    id?: string;
+    address?: string | null;
+    status: string;
+    domain: string | null;
+    expires_at?: string;
+    verified_at: string | null;
+    error_message: string | null;
+    created_at: string;
+  } | null;
+};
+
+export type WalletsResponse = {
+  items: WalletItem[];
+  summary: Record<string, number>;
+  nextCursor: string | null;
+  serverTime: string;
+};
+
+export type FeatureFlag = {
+  key: string;
+  enabled: boolean;
+  description: string | null;
+  rollout?: unknown;
+  updated_by_admin_id: string | null;
+  updated_at: string;
+  created_at: string;
+};
+
+export type FeatureFlagsResponse = {
+  items: FeatureFlag[];
+  serverTime: string;
+};
+
+export type AdminTab = "payments" | "mint" | "wallets" | "flags";

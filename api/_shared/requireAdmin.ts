@@ -56,21 +56,18 @@ export interface AdminContext extends SessionContext {
 
 interface AdminUserRow {
   id: string;
-  user_id: string;
-  role_id: string | null;
+  core_user_id: string | null;
+  telegram_user_id: number | string | null;
   status: string;
-  permissions: unknown;
-  revoked_at: string | null;
-  last_seen_at?: string | null;
+  metadata: unknown;
+  last_login_at?: string | null;
 }
 
 interface AdminRoleRow {
   id: string;
   code: string;
-  name?: string | null;
-  status: string;
+  display_name?: string | null;
   permissions: unknown;
-  is_super_admin: boolean | null;
 }
 
 /**
@@ -100,31 +97,10 @@ export async function requireAdmin(
 
   const db = getSupabaseAdmin();
 
-  const { data: adminUser, error: adminUserError } = await db
-    .schema("ops")
-    .from("admin_users")
-    .select("id,user_id,role_id,status,permissions,revoked_at,last_seen_at")
-    .eq("user_id", session.userId)
-    .maybeSingle<AdminUserRow>();
-
-  if (adminUserError) {
-    throw new ApiError(
-      500,
-      "ADMIN_LOOKUP_FAILED",
-      "Failed to lookup admin user",
-      {
-        details: adminUserError,
-        expose: false,
-      },
-    );
-  }
+  const adminUser = await loadAdminUser(session);
 
   if (!adminUser) {
     throw ApiError.forbidden("Admin permission required");
-  }
-
-  if (adminUser.revoked_at) {
-    throw ApiError.forbidden("Admin access has been revoked");
   }
 
   if (adminUser.status !== "active") {
@@ -133,38 +109,35 @@ export async function requireAdmin(
     });
   }
 
-  const role = adminUser.role_id
-    ? await loadAdminRole(adminUser.role_id)
-    : null;
-
-  if (role && role.status !== "active") {
-    throw ApiError.forbidden("Admin role is not active", {
-      roleStatus: role.status,
-    });
-  }
-
-  const rolePermissions = normalizePermissions(role?.permissions);
-  const userExtraPermissions = normalizePermissions(adminUser.permissions);
+  const roles = await loadAdminRoles(adminUser.id);
+  const rolePermissions = roles.flatMap((role) =>
+    normalizePermissions(role.permissions),
+  );
+  const userExtraPermissions = normalizePermissionsFromMetadata(
+    adminUser.metadata,
+  );
   const mergedPermissions = uniquePermissions([
     ...rolePermissions,
     ...userExtraPermissions,
   ]);
 
   const isSuperAdmin =
-    Boolean(role?.is_super_admin) || mergedPermissions.includes("*");
+    roles.some((role) => normalizeRoleCode(role.code) === "SUPER_ADMIN") ||
+    mergedPermissions.includes("*");
+  const primaryRole = roles[0] ?? null;
 
   const adminContext: AdminContext = {
     ...session,
     adminId: adminUser.id,
-    roleId: adminUser.role_id,
-    roleCode: role?.code ?? null,
+    roleId: primaryRole?.id ?? null,
+    roleCode: primaryRole?.code ?? null,
     isSuperAdmin,
     permissions: mergedPermissions,
   };
 
   assertAdminPermissions(adminContext, options);
 
-  await touchAdminLastSeen(adminUser.id);
+  await touchAdminLastLogin(adminUser.id);
 
   return adminContext;
 }
@@ -241,44 +214,133 @@ export function permissionMatches(
   return false;
 }
 
-async function loadAdminRole(roleId: string): Promise<AdminRoleRow | null> {
+async function loadAdminUser(
+  session: SessionContext,
+): Promise<AdminUserRow | null> {
   const db = getSupabaseAdmin();
 
-  const { data: role, error } = await db
+  const { data: byCoreUserId, error: byCoreUserIdError } = await db
     .schema("ops")
-    .from("admin_roles")
-    .select("id,code,name,status,permissions,is_super_admin")
-    .eq("id", roleId)
-    .maybeSingle<AdminRoleRow>();
+    .from("admin_users")
+    .select("id,core_user_id,telegram_user_id,status,metadata,last_login_at")
+    .eq("core_user_id", session.userId)
+    .maybeSingle<AdminUserRow>();
 
-  if (error) {
+  if (byCoreUserIdError) {
     throw new ApiError(
       500,
-      "ADMIN_ROLE_LOOKUP_FAILED",
-      "Failed to lookup admin role",
+      "ADMIN_LOOKUP_FAILED",
+      "Failed to lookup admin user",
       {
-        details: error,
+        details: byCoreUserIdError,
         expose: false,
       },
     );
   }
 
-  return role;
+  if (byCoreUserId) {
+    return byCoreUserId;
+  }
+
+  if (session.telegramUserId === null) {
+    return null;
+  }
+
+  const { data: byTelegramUserId, error: byTelegramUserIdError } = await db
+    .schema("ops")
+    .from("admin_users")
+    .select("id,core_user_id,telegram_user_id,status,metadata,last_login_at")
+    .eq("telegram_user_id", session.telegramUserId)
+    .maybeSingle<AdminUserRow>();
+
+  if (byTelegramUserIdError) {
+    throw new ApiError(
+      500,
+      "ADMIN_LOOKUP_FAILED",
+      "Failed to lookup admin user",
+      {
+        details: byTelegramUserIdError,
+        expose: false,
+      },
+    );
+  }
+
+  return byTelegramUserId ?? null;
 }
 
-async function touchAdminLastSeen(adminId: string): Promise<void> {
+async function loadAdminRoles(adminId: string): Promise<AdminRoleRow[]> {
+  const db = getSupabaseAdmin();
+
+  const { data: roleLinks, error: roleLinksError } = await db
+    .schema("ops")
+    .from("admin_user_roles")
+    .select("role_id")
+    .eq("admin_user_id", adminId);
+
+  if (roleLinksError) {
+    throw new ApiError(
+      500,
+      "ADMIN_ROLE_LOOKUP_FAILED",
+      "Failed to lookup admin role links",
+      {
+        details: roleLinksError,
+        expose: false,
+      },
+    );
+  }
+
+  const roleIds = uniquePermissions(
+    (Array.isArray(roleLinks) ? roleLinks : [])
+      .map((link) =>
+        isRecord(link) && typeof link.role_id === "string" ? link.role_id : "",
+      )
+      .filter(Boolean),
+  );
+
+  if (roleIds.length === 0) {
+    return [];
+  }
+
+  const { data: roles, error: rolesError } = await db
+    .schema("ops")
+    .from("admin_roles")
+    .select("id,code,display_name,permissions")
+    .in("id", roleIds);
+
+  if (rolesError) {
+    throw new ApiError(
+      500,
+      "ADMIN_ROLE_LOOKUP_FAILED",
+      "Failed to lookup admin roles",
+      {
+        details: rolesError,
+        expose: false,
+      },
+    );
+  }
+
+  return Array.isArray(roles)
+    ? (roles as unknown as AdminRoleRow[]).sort((left, right) =>
+        normalizeRoleCode(left.code).localeCompare(
+          normalizeRoleCode(right.code),
+        ),
+      )
+    : [];
+}
+
+async function touchAdminLastLogin(adminId: string): Promise<void> {
   const db = getSupabaseAdmin();
 
   const { error } = await db
     .schema("ops")
     .from("admin_users")
     .update({
-      last_seen_at: new Date().toISOString(),
+      last_login_at: new Date().toISOString(),
     })
     .eq("id", adminId);
 
   if (error) {
-    console.warn("Failed to touch admin last_seen_at", {
+    console.warn("Failed to touch admin last_login_at", {
       adminId,
       error,
     });
@@ -346,10 +408,26 @@ function normalizePermissions(value: unknown): string[] {
   return [];
 }
 
+function normalizePermissionsFromMetadata(value: unknown): string[] {
+  if (!isRecord(value)) {
+    return [];
+  }
+
+  return normalizePermissions(value.permissions);
+}
+
 function normalizePermission(permission: string): string {
   return permission.trim().toLowerCase();
 }
 
+function normalizeRoleCode(code: string): string {
+  return code.trim().toUpperCase();
+}
+
 function uniquePermissions(permissions: string[]): string[] {
   return Array.from(new Set(permissions.filter(Boolean))).sort();
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
 }
