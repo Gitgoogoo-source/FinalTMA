@@ -92,6 +92,14 @@ type MintExecutionContext = {
 
 type TransactionStatus = "pending" | "confirmed" | "failed" | "expired";
 
+type ExistingMintTransactionRow = {
+  id: string;
+  related_type: string | null;
+  related_id: string | null;
+  tx_hash: string | null;
+  query_id: string | null;
+};
+
 const MINT_QUEUE_COLUMNS = [
   "id",
   "user_id",
@@ -585,11 +593,38 @@ async function upsertMintTransaction(
     raw_response: asDbJson(input.rawResponse),
     updated_at: now,
   };
-  const existingId = await findExistingMintTransactionId(db, {
-    mintQueueId: context.queue.id,
-    txHash: input.txHash,
-    queryId: input.queryId,
-  });
+
+  const existingByHash = input.txHash
+    ? await findExistingMintTransactionByTxHash(db, input.txHash)
+    : null;
+
+  if (
+    existingByHash &&
+    (existingByHash.related_type !== "mint_queue" ||
+      existingByHash.related_id !== context.queue.id)
+  ) {
+    throw new TonNftProviderError(
+      "ONCHAIN_TRANSACTION_HASH_CONFLICT",
+      "Transaction hash is already linked to another operation.",
+      {
+        retryable: false,
+        rawResponse: {
+          tx_hash: input.txHash,
+          existing_related_type: existingByHash.related_type,
+          existing_related_id: existingByHash.related_id,
+          mint_queue_id: context.queue.id,
+        },
+      },
+    );
+  }
+
+  const existingId =
+    existingByHash?.id ??
+    (await findExistingMintTransactionId(db, {
+      mintQueueId: context.queue.id,
+      txHash: input.txHash,
+      queryId: input.queryId,
+    }));
 
   if (existingId) {
     const { error } = await db
@@ -631,6 +666,32 @@ async function upsertMintTransaction(
       },
     );
   }
+}
+
+async function findExistingMintTransactionByTxHash(
+  db: SupabaseAdminClient,
+  txHash: string,
+): Promise<ExistingMintTransactionRow | null> {
+  const { data, error } = await db
+    .schema("onchain")
+    .from("transactions")
+    .select("id,related_type,related_id,tx_hash,query_id")
+    .eq("tx_hash", txHash)
+    .maybeSingle();
+
+  if (error) {
+    throw new ApiError(
+      500,
+      "ONCHAIN_TRANSACTION_LOOKUP_FAILED",
+      "查询链上交易失败。",
+      {
+        expose: false,
+        cause: error,
+      },
+    );
+  }
+
+  return data ? (data as unknown as ExistingMintTransactionRow) : null;
 }
 
 async function findExistingMintTransactionId(

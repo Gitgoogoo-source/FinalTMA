@@ -198,9 +198,9 @@ function getMintStatusMeta(status: WalletMintQueueStatus): {
     case "confirming":
       return { label: "等待确认", tone: "progress", Icon: Clock3 };
     case "retrying":
-      return { label: "等待重试", tone: "warning", Icon: RotateCcw };
+      return { label: "重试中", tone: "warning", Icon: RotateCcw };
     case "manual_review":
-      return { label: "人工处理", tone: "warning", Icon: AlertTriangle };
+      return { label: "人工处理中", tone: "warning", Icon: AlertTriangle };
     case "minted":
       return { label: "Mint 成功", tone: "success", Icon: CheckCircle2 };
     case "failed":

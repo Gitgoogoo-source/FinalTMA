@@ -563,7 +563,13 @@ function getMintQueueTone(
     return "warning";
   }
 
-  if ((summary.queued ?? 0) > 0 || (summary.processing ?? 0) > 0) {
+  if (
+    (summary.queued ?? 0) > 0 ||
+    (summary.processing ?? 0) > 0 ||
+    (summary.submitted ?? 0) > 0 ||
+    (summary.confirming ?? 0) > 0 ||
+    (summary.retrying ?? 0) > 0
+  ) {
     return "progress";
   }
 

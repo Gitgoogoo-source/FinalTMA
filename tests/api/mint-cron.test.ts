@@ -28,6 +28,7 @@ const WALLET_ID = "22222222-2222-4222-8222-222222222222";
 const COLLECTION_ID = "33333333-3333-4333-8333-333333333333";
 const ITEM_ID = "44444444-4444-4444-8444-444444444444";
 const QUEUE_ID = "55555555-5555-4555-8555-555555555555";
+const OTHER_QUEUE_ID = "55555555-5555-4555-8555-000000000000";
 const TX_ID = "66666666-6666-4666-8666-666666666666";
 const TEMPLATE_ID = "77777777-7777-4777-8777-777777777777";
 const RAW_ITEM_ADDRESS = `0:${"1".repeat(64)}`;
@@ -194,6 +195,9 @@ describe("Mint queue worker", () => {
       {
         data: null,
       },
+      {
+        data: null,
+      },
       {},
       {},
     ]);
@@ -254,6 +258,86 @@ describe("Mint queue worker", () => {
     expect(lastMintQueueUpdate(db.operations)).toMatchObject({
       status: "confirming",
       tx_hash: "tx_hash_001",
+    });
+  });
+
+  it("moves a queue to manual review when the returned tx hash belongs to another operation", async () => {
+    const queued = mintQueueRow({
+      status: "queued",
+      attempt_count: 0,
+    });
+    const claimed = mintQueueRow({
+      status: "processing",
+      attempt_count: 1,
+    });
+    const db = createSupabaseQueryMock([
+      {
+        data: [queued],
+      },
+      {
+        data: claimed,
+      },
+      {
+        data: collectionRow(),
+      },
+      {
+        data: walletRow(),
+      },
+      {
+        data: {
+          id: TX_ID,
+          related_type: "mint_queue",
+          related_id: OTHER_QUEUE_ID,
+          tx_hash: "tx_hash_001",
+          query_id: `mint:${OTHER_QUEUE_ID}:1`,
+        },
+      },
+      {},
+    ]);
+    const provider = createProviderMock({
+      submitMint: vi.fn().mockResolvedValue({
+        status: "confirming",
+        txHash: "tx_hash_001",
+        queryId: `mint:${QUEUE_ID}:1`,
+        itemAddress: null,
+        itemIndex: null,
+        ownerAddress: null,
+        metadataUrl: null,
+        rawResponse: {
+          ok: true,
+        },
+        externalApiProvider: "mock-ton-provider",
+        submittedAt: "2026-05-29T08:00:01.000Z",
+      }),
+    });
+
+    const result = await runMintQueueWorker({
+      db: db.client,
+      provider,
+      requestId: "req_worker_tx_conflict",
+      env: {
+        TON_MINT_RETRY_DELAY_SECONDS: "60",
+      },
+      now: new Date("2026-05-29T08:00:00.000Z"),
+    });
+
+    expect(result).toMatchObject({
+      scanned: 1,
+      claimed: 1,
+      manualReview: 1,
+      errors: [
+        {
+          mintQueueId: QUEUE_ID,
+          code: "ONCHAIN_TRANSACTION_HASH_CONFLICT",
+        },
+      ],
+    });
+    expect(
+      db.operations.some((operation) => operation.operation === "upsert"),
+    ).toBe(false);
+    expect(lastMintQueueUpdate(db.operations)).toMatchObject({
+      status: "manual_review",
+      next_attempt_at: null,
     });
   });
 
@@ -443,6 +527,120 @@ describe("onchain transaction sync", () => {
       check_count: 1,
     });
   });
+
+  it("retries confirmed transactions until the Mint success RPC is applied", async () => {
+    const confirmedTransaction = transactionRow({
+      status: "confirmed",
+      confirmed_at: "2026-05-29T08:05:00.000Z",
+    });
+    const provider = createProviderMock({
+      queryTransaction: vi.fn().mockResolvedValue({
+        status: "confirmed",
+        txHash: "tx_hash_001",
+        queryId: `mint:${QUEUE_ID}:1`,
+        itemAddress: RAW_ITEM_ADDRESS,
+        itemIndex: 7,
+        ownerAddress: RAW_OWNER_ADDRESS,
+        metadataUrl: "/nft-metadata/items/test.json",
+        errorMessage: null,
+        rawResponse: {
+          ok: true,
+        },
+        externalApiProvider: "mock-ton-provider",
+        checkedAt: "2026-05-29T08:06:00.000Z",
+      }),
+    });
+    callRpcRawMock
+      .mockRejectedValueOnce(new Error("rpc temporarily unavailable"))
+      .mockResolvedValueOnce({
+        status: "minted",
+        idempotent: false,
+      });
+    const firstDb = createSupabaseQueryMock([
+      {
+        data: [confirmedTransaction],
+      },
+      {
+        data: mintQueueRow({
+          status: "confirming",
+          attempt_count: 1,
+        }),
+      },
+      {
+        data: collectionRow(),
+      },
+      {
+        data: walletRow(),
+      },
+      {},
+      {},
+    ]);
+
+    const firstResult = await runOnchainTransactionSync({
+      db: firstDb.client,
+      provider,
+      requestId: "req_sync_rpc_failed_once",
+      env: {},
+      now: new Date("2026-05-29T08:06:00.000Z"),
+    });
+
+    expect(firstResult).toMatchObject({
+      scanned: 1,
+      checked: 1,
+      confirmed: 0,
+      errors: [
+        {
+          transactionId: TX_ID,
+          code: "Error",
+        },
+      ],
+    });
+    expect(firstDb.operations[0]).toMatchObject({
+      table: "transactions",
+      filters: expect.arrayContaining([
+        {
+          column: "status",
+          operator: "in",
+          value: ["pending", "confirmed"],
+        },
+      ]),
+    });
+
+    const secondDb = createSupabaseQueryMock([
+      {
+        data: [confirmedTransaction],
+      },
+      {
+        data: mintQueueRow({
+          status: "confirming",
+          attempt_count: 1,
+        }),
+      },
+      {
+        data: collectionRow(),
+      },
+      {
+        data: walletRow(),
+      },
+      {},
+    ]);
+
+    const secondResult = await runOnchainTransactionSync({
+      db: secondDb.client,
+      provider,
+      requestId: "req_sync_rpc_recovered",
+      env: {},
+      now: new Date("2026-05-29T08:07:00.000Z"),
+    });
+
+    expect(secondResult).toMatchObject({
+      scanned: 1,
+      checked: 1,
+      confirmed: 1,
+      errors: [],
+    });
+    expect(callRpcRawMock).toHaveBeenCalledTimes(2);
+  });
 });
 
 function createProviderMock(
@@ -516,7 +714,9 @@ function walletRow(): Record<string, unknown> {
   };
 }
 
-function transactionRow(): Record<string, unknown> {
+function transactionRow(
+  overrides: Partial<Record<string, unknown>> = {},
+): Record<string, unknown> {
   return {
     id: TX_ID,
     network: "testnet",
@@ -536,6 +736,7 @@ function transactionRow(): Record<string, unknown> {
     last_checked_at: null,
     check_count: 0,
     created_at: "2026-05-29T08:00:00.000Z",
+    ...overrides,
   };
 }
 

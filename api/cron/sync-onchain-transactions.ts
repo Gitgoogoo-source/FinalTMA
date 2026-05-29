@@ -170,7 +170,7 @@ export async function runOnchainTransactionSync(input: {
   const env = input.env ?? process.env;
   const now = input.now ?? new Date();
   const strategy = readMintRetryStrategy(env);
-  const rows = await listPendingMintTransactions(
+  const rows = await listMintTransactionsToSync(
     input.db,
     readBatchSize(env, "TON_TX_SYNC_BATCH_SIZE", DEFAULT_BATCH_SIZE),
   );
@@ -193,6 +193,14 @@ export async function runOnchainTransactionSync(input: {
       const context = await loadMintTransactionContext(input.db, transaction);
 
       if (!context) {
+        result.skipped += 1;
+        continue;
+      }
+
+      if (
+        transaction.status === "confirmed" &&
+        context.queue.status === "minted"
+      ) {
         result.skipped += 1;
         continue;
       }
@@ -224,8 +232,18 @@ export async function runOnchainTransactionSync(input: {
       }
 
       if (queryResult.status === "confirmed") {
-        await markMintSuccess(input.db, context, transaction, queryResult);
-        result.confirmed += 1;
+        const outcome = await markMintSuccess(
+          input.db,
+          context,
+          transaction,
+          queryResult,
+        );
+
+        if (outcome === "manual_review") {
+          result.manualReview += 1;
+        } else {
+          result.confirmed += 1;
+        }
         continue;
       }
 
@@ -262,7 +280,7 @@ export async function runOnchainTransactionSync(input: {
   return result;
 }
 
-async function listPendingMintTransactions(
+async function listMintTransactionsToSync(
   db: SupabaseAdminClient,
   limit: number,
 ): Promise<OnchainTransactionRow[]> {
@@ -271,7 +289,7 @@ async function listPendingMintTransactions(
     .from("transactions")
     .select(TRANSACTION_COLUMNS)
     .eq("related_type", "mint_queue")
-    .eq("status", "pending")
+    .in("status", ["pending", "confirmed"])
     .order("last_checked_at", { ascending: true, nullsFirst: true })
     .order("created_at", { ascending: true })
     .limit(limit);
@@ -485,17 +503,29 @@ async function markMintSuccess(
   },
   transaction: OnchainTransactionRow,
   result: TonNftTransactionQueryResult,
-): Promise<void> {
-  if (!result.itemAddress || result.itemIndex === null) {
+): Promise<"minted" | "manual_review"> {
+  const txHash = result.txHash ?? transaction.tx_hash;
+  const ownerAddress =
+    result.ownerAddress ??
+    context.wallet?.address ??
+    context.wallet?.address_raw ??
+    null;
+
+  if (
+    !txHash ||
+    !ownerAddress ||
+    !result.itemAddress ||
+    result.itemIndex === null
+  ) {
     await moveQueueToManualReview(db, context.queue, {
       requestId: "sync-onchain-transactions",
       errorReason: "TON_NFT_CONFIRMED_RESULT_INCOMPLETE",
       errorMessage:
-        "Confirmed transaction did not include NFT item address/index.",
-      txHash: result.txHash ?? transaction.tx_hash,
+        "Confirmed transaction did not include tx hash, owner address, NFT item address or item index.",
+      txHash,
       provider: result.externalApiProvider,
     });
-    return;
+    return "manual_review";
   }
 
   await callRpcRaw(
@@ -504,12 +534,8 @@ async function markMintSuccess(
       p_mint_queue_id: context.queue.id,
       p_item_address: result.itemAddress,
       p_item_index: result.itemIndex,
-      p_owner_address:
-        result.ownerAddress ??
-        context.wallet?.address ??
-        context.wallet?.address_raw ??
-        "",
-      p_tx_hash: result.txHash ?? transaction.tx_hash,
+      p_owner_address: ownerAddress,
+      p_tx_hash: txHash,
       p_metadata_url: result.metadataUrl,
     },
     {
@@ -521,6 +547,8 @@ async function markMintSuccess(
       },
     },
   );
+
+  return "minted";
 }
 
 async function moveQueueToRetryOrReview(
