@@ -15,6 +15,7 @@ import { WalletStatusSheet } from "@/features/wallet/components/WalletStatusShee
 import { useMintQueue } from "@/features/wallet/hooks/useMintQueue";
 import { useSyncWalletNfts } from "@/features/wallet/hooks/useSyncWalletNfts";
 import { useWalletConnect } from "@/features/wallet/hooks/useWalletConnect";
+import { useWalletNfts } from "@/features/wallet/hooks/useWalletNfts";
 import type { WalletConnectionStatus } from "@/features/wallet/wallet.types";
 
 type WalletEntryButtonProps = {
@@ -48,6 +49,10 @@ function EnabledWalletEntryButton() {
   const walletConnect = useWalletConnect();
   const syncWalletNfts = useSyncWalletNfts();
   const mintQueue = useMintQueue({
+    enabled:
+      (isSheetOpen || isMintQueueOpen) && walletConnect.status === "verified",
+  });
+  const walletNfts = useWalletNfts({
     enabled:
       (isSheetOpen || isMintQueueOpen) && walletConnect.status === "verified",
   });
@@ -135,6 +140,7 @@ function EnabledWalletEntryButton() {
   const handleSyncNfts = useCallback(async () => {
     try {
       await syncWalletNfts.mutateAsync();
+      void walletNfts.refetch();
       pushToast({
         type: "success",
         title: "NFT 同步已提交",
@@ -147,7 +153,7 @@ function EnabledWalletEntryButton() {
         message: error instanceof Error ? error.message : "请稍后重试。",
       });
     }
-  }, [pushToast, syncWalletNfts]);
+  }, [pushToast, syncWalletNfts, walletNfts]);
 
   const handleCopyAddress = useCallback(
     async (address: string) => {
@@ -170,7 +176,8 @@ function EnabledWalletEntryButton() {
   const handleRefreshStatus = useCallback(() => {
     void walletConnect.refetchStatus();
     void mintQueue.refetch();
-  }, [mintQueue, walletConnect]);
+    void walletNfts.refetch();
+  }, [mintQueue, walletConnect, walletNfts]);
 
   const handleClick = useCallback(async () => {
     if (buttonState.disabled) {
@@ -233,9 +240,11 @@ function EnabledWalletEntryButton() {
         open={isMintQueueOpen}
         items={mintQueue.items ?? []}
         summary={mintQueue.mintQueue ?? walletConnect.wallet.mintQueue}
+        syncedNfts={walletNfts.items}
         loading={
           Boolean(mintQueue.isLoading) && (mintQueue.items?.length ?? 0) === 0
         }
+        nftLoading={Boolean(walletNfts.isLoading)}
         errorMessage={
           mintQueue.isError ? getApiErrorMessage(mintQueue.error) : null
         }

@@ -12,6 +12,8 @@ import type {
   WalletMintQueueResponse,
   WalletMintQueueSummary,
   WalletMintQueueStatus,
+  WalletNftItem,
+  WalletNftListResponse,
   WalletStatusData,
   WalletSyncResult,
   WalletSyncStatus,
@@ -137,6 +139,14 @@ export async function syncWalletNfts(): Promise<WalletSyncResult> {
   });
 
   return normalizeWalletSyncResult(response);
+}
+
+export async function fetchWalletNfts(): Promise<WalletNftListResponse> {
+  const response = await apiRequest<unknown>(API_ENDPOINTS.wallet.nfts, {
+    method: "GET",
+  });
+
+  return normalizeWalletNftListResponse(response);
 }
 
 export async function createWalletMint(
@@ -273,7 +283,74 @@ function normalizeWalletSyncResult(response: unknown): WalletSyncResult {
       readString(payload.lastSyncAt) ??
       null,
     message: readString(payload.message),
+    syncedCount:
+      readInteger(payload.synced_count) ??
+      readInteger(payload.syncedCount) ??
+      0,
+    linkedCount:
+      readInteger(payload.linked_count) ??
+      readInteger(payload.linkedCount) ??
+      0,
+    ignoredCount:
+      readInteger(payload.ignored_count) ??
+      readInteger(payload.ignoredCount) ??
+      0,
   };
+}
+
+function normalizeWalletNftListResponse(
+  response: unknown,
+): WalletNftListResponse {
+  const payload = isRecord(response) ? response : {};
+  const items = Array.isArray(payload.items)
+    ? payload.items.map(normalizeWalletNftItem).filter(isWalletNftItem)
+    : [];
+
+  return {
+    items,
+    nextCursor:
+      readString(payload.nextCursor) ?? readString(payload.next_cursor),
+    serverTime:
+      readString(payload.serverTime) ?? readString(payload.server_time),
+  };
+}
+
+function normalizeWalletNftItem(value: unknown): WalletNftItem | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const itemAddress =
+    readString(value.itemAddress) ?? readString(value.item_address);
+  const ownerAddress =
+    readString(value.ownerAddress) ?? readString(value.owner_address);
+  const syncedAt = readString(value.syncedAt) ?? readString(value.synced_at);
+
+  if (!itemAddress || !ownerAddress || !syncedAt) {
+    return null;
+  }
+
+  return {
+    nftItemId: readString(value.nftItemId) ?? readString(value.nft_item_id),
+    itemAddress,
+    collectionAddress:
+      readString(value.collectionAddress) ??
+      readString(value.collection_address),
+    ownerAddress,
+    itemIndex: readInteger(value.itemIndex) ?? readInteger(value.item_index),
+    name: readString(value.name),
+    imageUrl: readString(value.imageUrl) ?? readString(value.image_url),
+    metadataUrl:
+      readString(value.metadataUrl) ?? readString(value.metadata_url),
+    linkedItemInstanceId:
+      readString(value.linkedItemInstanceId) ??
+      readString(value.linked_item_instance_id),
+    syncedAt,
+  };
+}
+
+function isWalletNftItem(value: WalletNftItem | null): value is WalletNftItem {
+  return value !== null;
 }
 
 function normalizeCreateMintResult(response: unknown): CreateMintResult {

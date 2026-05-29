@@ -68,6 +68,25 @@ export type WalletMintQueueResponse = {
   serverTime: string | null;
 };
 
+export type WalletNftItem = {
+  nftItemId: string | null;
+  itemAddress: string;
+  collectionAddress: string | null;
+  ownerAddress: string;
+  itemIndex: number | null;
+  name: string | null;
+  imageUrl: string | null;
+  metadataUrl: string | null;
+  linkedItemInstanceId: string | null;
+  syncedAt: string;
+};
+
+export type WalletNftListResponse = {
+  items: WalletNftItem[];
+  nextCursor: string | null;
+  serverTime: string | null;
+};
+
 export type CreateMintInput = {
   itemInstanceId: string;
   targetAddress?: string | null;
@@ -142,4 +161,7 @@ export type WalletSyncResult = {
   jobId: string | null;
   lastSyncAt: string | null;
   message: string | null;
+  syncedCount: number;
+  linkedCount: number;
+  ignoredCount: number;
 };

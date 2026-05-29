@@ -4,7 +4,8 @@ export type JsonRecord = Record<string, unknown>;
 
 export type TonNftProviderOperation =
   | "mint_collection_item"
-  | "query_transaction_status";
+  | "query_transaction_status"
+  | "query_wallet_nfts";
 
 export interface TonNftMintQueueContext {
   id: string;
@@ -37,6 +38,37 @@ export interface TonNftWalletContext {
   address: string;
   addressRaw: string | null;
   network: "mainnet" | "testnet";
+}
+
+export type TonNftWalletSyncMode = "INCREMENTAL" | "FULL";
+
+export interface TonNftWalletQueryInput {
+  requestId: string;
+  wallet: TonNftWalletContext;
+  mode: TonNftWalletSyncMode;
+  collectionAddress?: string | null | undefined;
+  cursor?: string | null | undefined;
+  limit?: number | null | undefined;
+  rawPayload?: JsonRecord | undefined;
+}
+
+export interface TonNftWalletItem {
+  itemAddress: string;
+  collectionAddress: string | null;
+  ownerAddress: string;
+  itemIndex: number | null;
+  metadataUrl: string | null;
+  name: string | null;
+  imageUrl: string | null;
+  rawPayload: JsonRecord;
+}
+
+export interface TonNftWalletQueryResult {
+  items: TonNftWalletItem[];
+  nextCursor: string | null;
+  rawResponse: JsonRecord;
+  externalApiProvider: string;
+  checkedAt: string;
 }
 
 export interface TonNftSubmitMintInput {
@@ -100,6 +132,9 @@ export interface TonNftProviderAdapter {
   queryTransaction(
     input: TonNftTransactionQueryInput,
   ): Promise<TonNftTransactionQueryResult>;
+  queryWalletNfts(
+    input: TonNftWalletQueryInput,
+  ): Promise<TonNftWalletQueryResult>;
 }
 
 export interface CreateTonNftServiceOptions {
@@ -172,6 +207,22 @@ export function createHttpTonNftProviderAdapter(options: {
         operation: "query_transaction_status",
         body: buildQueryTransactionProviderPayload(input),
         normalize: normalizeTransactionQueryResult,
+        submissionUncertainOnAbort: false,
+      });
+    },
+    queryWalletNfts(input) {
+      const endpoint = readProviderEndpoint(env, "wallet_nfts");
+      return postProviderJson<TonNftWalletQueryResult>({
+        endpoint,
+        env,
+        operation: "query_wallet_nfts",
+        body: buildWalletNftsProviderPayload(input),
+        normalize: (payload, provider) =>
+          normalizeWalletNftsQueryResult(
+            payload,
+            provider,
+            input.wallet.address,
+          ),
         submissionUncertainOnAbort: false,
       });
     },
@@ -296,6 +347,27 @@ function buildQueryTransactionProviderPayload(
     network: input.network,
     collection_address: input.collectionAddress,
     related_id: input.relatedId,
+    raw_payload: input.rawPayload ?? {},
+  };
+}
+
+function buildWalletNftsProviderPayload(
+  input: TonNftWalletQueryInput,
+): JsonRecord {
+  return {
+    operation: "query_wallet_nfts",
+    request_id: input.requestId,
+    mode: input.mode,
+    cursor: input.cursor ?? null,
+    limit: input.limit ?? null,
+    collection_address: input.collectionAddress ?? null,
+    wallet: {
+      id: input.wallet.id,
+      address: input.wallet.address,
+      address_raw:
+        input.wallet.addressRaw ?? normalizeTonRawAddress(input.wallet.address),
+      network: input.wallet.network,
+    },
     raw_payload: input.rawPayload ?? {},
   };
 }
@@ -475,6 +547,104 @@ function normalizeTransactionQueryResult(
   };
 }
 
+function normalizeWalletNftsQueryResult(
+  payload: unknown,
+  provider: string,
+  fallbackOwnerAddress: string,
+): TonNftWalletQueryResult {
+  const root = unwrapProviderPayload(payload);
+  const values = readProviderArray(payload, root, [
+    "items",
+    "nfts",
+    "wallet_nfts",
+    "walletNfts",
+    "nft_items",
+    "nftItems",
+  ]);
+  const fallbackOwner = normalizeTonAddress(fallbackOwnerAddress);
+  const items = values
+    .map((value) => normalizeWalletNftItem(value, fallbackOwner))
+    .filter((item): item is TonNftWalletItem => item !== null);
+
+  return {
+    items,
+    nextCursor:
+      readString(root.next_cursor) ??
+      readString(root.nextCursor) ??
+      readString(root.cursor) ??
+      null,
+    rawResponse: toJsonRecord(payload),
+    externalApiProvider:
+      readString(root.external_api_provider) ??
+      readString(root.externalApiProvider) ??
+      provider,
+    checkedAt:
+      readString(root.checked_at) ??
+      readString(root.checkedAt) ??
+      new Date().toISOString(),
+  };
+}
+
+function normalizeWalletNftItem(
+  value: unknown,
+  fallbackOwnerAddress: string | null,
+): TonNftWalletItem | null {
+  const itemAddress = findFirstTonAddress(value, [
+    "item_address",
+    "itemAddress",
+    "nft_item_address",
+    "nftItemAddress",
+    "nft_address",
+    "nftAddress",
+    "address",
+  ]);
+  const ownerAddress =
+    findFirstTonAddress(value, [
+      "owner_address",
+      "ownerAddress",
+      "owner",
+      "current_owner",
+      "currentOwner",
+    ]) ?? fallbackOwnerAddress;
+
+  if (!itemAddress || !ownerAddress) {
+    return null;
+  }
+
+  const metadataUrlValue = findFirstProviderValue(value, [
+    "metadata_url",
+    "metadataUrl",
+    "content_url",
+    "contentUrl",
+    "uri",
+  ]);
+  const nameValue = findFirstProviderValue(value, ["name", "display_name"]);
+  const imageValue = findFirstProviderValue(value, [
+    "image_url",
+    "imageUrl",
+    "image",
+    "thumbnail_url",
+    "thumbnailUrl",
+  ]);
+
+  return {
+    itemAddress,
+    collectionAddress: findFirstTonAddress(value, [
+      "collection_address",
+      "collectionAddress",
+      "collection",
+      "collection_contract",
+      "collectionContract",
+    ]),
+    ownerAddress,
+    itemIndex: parseNftItemIndexFromProviderPayload(value),
+    metadataUrl: readString(metadataUrlValue),
+    name: readString(nameValue),
+    imageUrl: readString(imageValue),
+    rawPayload: toJsonRecord(value),
+  };
+}
+
 function normalizeSubmitStatus(
   value: string | null,
   payload: JsonRecord,
@@ -559,14 +729,18 @@ function normalizeTransactionStatus(
 
 function readProviderEndpoint(
   env: NodeJS.ProcessEnv,
-  mode: "submit" | "query",
+  mode: "submit" | "query" | "wallet_nfts",
 ): string | null {
   const explicit =
     mode === "submit"
       ? (env.TON_NFT_MINT_PROVIDER_URL ?? env.TON_MINT_PROVIDER_URL)
-      : (env.TON_NFT_TX_PROVIDER_URL ??
-        env.TON_TRANSACTION_PROVIDER_URL ??
-        env.TON_MINT_PROVIDER_URL);
+      : mode === "query"
+        ? (env.TON_NFT_TX_PROVIDER_URL ??
+          env.TON_TRANSACTION_PROVIDER_URL ??
+          env.TON_MINT_PROVIDER_URL)
+        : (env.TON_NFT_WALLET_SYNC_PROVIDER_URL ??
+          env.TON_WALLET_NFT_PROVIDER_URL ??
+          env.TON_NFT_SYNC_PROVIDER_URL);
 
   return normalizeUrl(explicit);
 }
@@ -640,6 +814,28 @@ function unwrapProviderPayload(payload: unknown): JsonRecord {
   }
 
   return root;
+}
+
+function readProviderArray(
+  payload: unknown,
+  root: JsonRecord,
+  keys: string[],
+): unknown[] {
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+
+  for (const key of keys) {
+    const value = root[key];
+
+    if (Array.isArray(value)) {
+      return value;
+    }
+  }
+
+  const nestedValue = findFirstProviderValue(root, keys);
+
+  return Array.isArray(nestedValue) ? nestedValue : [];
 }
 
 function findFirstTonAddress(payload: unknown, keys: string[]): string | null {

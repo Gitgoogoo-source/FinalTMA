@@ -625,13 +625,14 @@ a {
 
 .mint-queue-sheet__summary {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
 }
 
 .mint-queue-sheet__pill,
 .mint-queue-sheet__state,
-.mint-queue-row {
+.mint-queue-row,
+.wallet-nft-row {
   border: 1px solid rgb(255 255 255 / 11%);
   border-radius: 8px;
   background: rgb(255 255 255 / 6%);
@@ -697,7 +698,25 @@ a {
   list-style: none;
 }
 
-.mint-queue-row {
+.mint-queue-sheet__nfts {
+  display: grid;
+  gap: 8px;
+}
+
+.mint-queue-sheet__section-title {
+  min-height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: #e6f3f7;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.mint-queue-row,
+.wallet-nft-row {
   min-width: 0;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -705,20 +724,25 @@ a {
   padding: 10px;
 }
 
-.mint-queue-row > svg {
+.mint-queue-row > svg,
+.wallet-nft-row > svg {
   margin-top: 2px;
 }
 
 .mint-queue-row strong,
 .mint-queue-row span,
-.mint-queue-row dd {
+.mint-queue-row dd,
+.wallet-nft-row strong,
+.wallet-nft-row span,
+.wallet-nft-row dd {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.mint-queue-row strong {
+.mint-queue-row strong,
+.wallet-nft-row strong {
   display: block;
   color: #f7fbff;
   font-size: 13px;
@@ -726,12 +750,15 @@ a {
 }
 
 .mint-queue-row span,
-.mint-queue-row dd {
+.mint-queue-row dd,
+.wallet-nft-row span,
+.wallet-nft-row dd {
   color: #b7c8cf;
   font-size: 12px;
 }
 
-.mint-queue-row dl {
+.mint-queue-row dl,
+.wallet-nft-row dl {
   grid-column: 1 / -1;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -739,12 +766,18 @@ a {
   margin: 0;
 }
 
-.mint-queue-row dt {
+.mint-queue-row dt,
+.wallet-nft-row dt {
   margin-bottom: 4px;
 }
 
-.mint-queue-row dd {
+.mint-queue-row dd,
+.wallet-nft-row dd {
   margin: 0;
+}
+
+.wallet-nft-row > svg {
+  color: #8fd694;
 }
 
 .mint-queue-row__error {
@@ -779,7 +812,8 @@ a {
   .wallet-status-sheet__actions,
   .wallet-status-sheet__summary,
   .mint-queue-sheet__summary,
-  .mint-queue-row dl {
+  .mint-queue-row dl,
+  .wallet-nft-row dl {
     grid-template-columns: 1fr;
   }
 

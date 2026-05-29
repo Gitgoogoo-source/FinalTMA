@@ -74,6 +74,8 @@ export const queryKeys = {
       ["wallet", "status", userId ?? "anonymous"] as const,
     mintQueue: (userId: string | null | undefined) =>
       ["wallet", "mint-queue", userId ?? "anonymous"] as const,
+    nfts: (userId: string | null | undefined) =>
+      ["wallet", "nfts", userId ?? "anonymous"] as const,
   },
   trade: {
     root: ["trade"] as const,

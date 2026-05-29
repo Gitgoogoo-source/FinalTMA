@@ -240,12 +240,32 @@ export const WalletNftItemSchema = z.object({
   syncedAt: IsoDateTimeSchema,
 });
 
+export const WalletSyncResponseStatusSchema = z.enum([
+  "queued",
+  "syncing",
+  "success",
+  "failed",
+]);
+
 export const WalletNftSyncResponseSchema = z.object({
   jobId: UUIDSchema.optional(),
   accepted: z.boolean(),
+  status: WalletSyncResponseStatusSchema.optional(),
+  syncStatus: WalletSyncResponseStatusSchema.optional(),
   mode: WalletNftSyncModeSchema,
   syncedCount: z.coerce.number().int().min(0).optional(),
+  linkedCount: z.coerce.number().int().min(0).optional(),
+  ignoredCount: z.coerce.number().int().min(0).optional(),
   nextCursor: CursorSchema.nullable().optional(),
+  lastSyncAt: IsoDateTimeSchema.nullable().optional(),
+  message: z.string().trim().max(300).nullable().optional(),
+  serverTime: IsoDateTimeSchema.optional(),
+});
+
+export const WalletNftListResponseSchema = z.object({
+  items: z.array(WalletNftItemSchema),
+  nextCursor: CursorSchema.nullable().optional(),
+  serverTime: IsoDateTimeSchema.optional(),
 });
 
 /* -------------------------------------------------------------------------- */
@@ -416,6 +436,7 @@ export type WalletNftSyncBody = z.infer<typeof WalletNftSyncBodySchema>;
 export type WalletNftSyncQuery = z.infer<typeof WalletNftSyncQuerySchema>;
 export type WalletNftSyncResponse = z.infer<typeof WalletNftSyncResponseSchema>;
 export type WalletNftItem = z.infer<typeof WalletNftItemSchema>;
+export type WalletNftListResponse = z.infer<typeof WalletNftListResponseSchema>;
 
 export type CreateMintBody = z.infer<typeof CreateMintBodySchema>;
 export type CreateMintResponse = z.infer<typeof CreateMintResponseSchema>;

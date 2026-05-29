@@ -19,6 +19,9 @@ export function useSyncWalletNfts() {
       void queryClient.invalidateQueries({
         queryKey: queryKeys.wallet.status(userId),
       });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.wallet.nfts(userId),
+      });
     },
   });
 }

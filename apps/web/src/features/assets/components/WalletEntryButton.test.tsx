@@ -78,6 +78,19 @@ const mintQueueMock = vi.hoisted(() => ({
   },
 }));
 
+const walletNftsMock = vi.hoisted(() => ({
+  refetch: vi.fn(),
+  state: {
+    error: null as unknown,
+    isError: false,
+    isLoading: false,
+    items: [],
+    nextCursor: null as string | null,
+    refetch: vi.fn(),
+    serverTime: null as string | null,
+  },
+}));
+
 vi.mock("@/features/wallet/hooks/useWalletConnect", () => ({
   useWalletConnect: () => walletConnectMock.state,
 }));
@@ -88,6 +101,10 @@ vi.mock("@/features/wallet/hooks/useSyncWalletNfts", () => ({
 
 vi.mock("@/features/wallet/hooks/useMintQueue", () => ({
   useMintQueue: () => mintQueueMock.state,
+}));
+
+vi.mock("@/features/wallet/hooks/useWalletNfts", () => ({
+  useWalletNfts: () => walletNftsMock.state,
 }));
 
 describe("WalletEntryButton", () => {
@@ -107,10 +124,15 @@ describe("WalletEntryButton", () => {
       jobId: "job-1",
       lastSyncAt: null,
       message: null,
+      syncedCount: 0,
+      linkedCount: 0,
+      ignoredCount: 0,
     });
 
     mintQueueMock.refetch.mockReset();
     mintQueueMock.refetch.mockResolvedValue({ data: null });
+    walletNftsMock.refetch.mockReset();
+    walletNftsMock.refetch.mockResolvedValue({ data: null });
 
     walletConnectMock.state = createWalletConnectState();
     syncWalletNftsMock.state = {
@@ -127,6 +149,15 @@ describe("WalletEntryButton", () => {
       mintQueue: null,
       nextCursor: null,
       refetch: mintQueueMock.refetch,
+      serverTime: null,
+    };
+    walletNftsMock.state = {
+      error: null,
+      isError: false,
+      isLoading: false,
+      items: [],
+      nextCursor: null,
+      refetch: walletNftsMock.refetch,
       serverTime: null,
     };
   });

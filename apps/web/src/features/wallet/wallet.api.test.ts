@@ -189,4 +189,77 @@ describe("wallet api", () => {
       ],
     });
   });
+
+  it("syncs wallet NFTs with a generated idempotency key", async () => {
+    mocks.apiRequest.mockResolvedValueOnce({
+      status: "success",
+      job_id: "88888888-8888-4888-8888-888888888888",
+      last_sync_at: "2026-05-29T08:00:00.000Z",
+      synced_count: 2,
+      linked_count: 1,
+      ignored_count: 3,
+      message: "钱包 NFT 同步完成。",
+    });
+
+    const { syncWalletNfts } = await import("./wallet.api");
+    const result = await syncWalletNfts();
+
+    expect(mocks.apiRequest).toHaveBeenCalledWith("/wallet/sync-nfts", {
+      method: "POST",
+      body: {
+        idempotency_key: expect.stringMatching(/^wallet:sync-nfts:/),
+      },
+      headers: {
+        "X-Idempotency-Key": expect.stringMatching(/^wallet:sync-nfts:/),
+      },
+    });
+    expect(result).toMatchObject({
+      status: "success",
+      jobId: "88888888-8888-4888-8888-888888888888",
+      lastSyncAt: "2026-05-29T08:00:00.000Z",
+      syncedCount: 2,
+      linkedCount: 1,
+      ignoredCount: 3,
+    });
+  });
+
+  it("normalizes wallet NFT snapshot responses", async () => {
+    mocks.apiRequest.mockResolvedValueOnce({
+      items: [
+        {
+          nft_item_id: "55555555-5555-4555-8555-555555555555",
+          item_address: "EQabcdefghijklmnopqrstuvwxyz1234567890ABCDE",
+          collection_address: "EQabcdefghijklmnopqrstuvwxyz1234567890ABCDE",
+          owner_address: "EQabcdefghijklmnopqrstuvwxyz1234567890ABCDE",
+          item_index: 7,
+          name: "Known NFT",
+          image_url: "https://example.test/nft.png",
+          metadata_url: "https://example.test/nft.json",
+          linked_item_instance_id: "44444444-4444-4444-8444-444444444444",
+          synced_at: "2026-05-29T08:00:00.000Z",
+        },
+      ],
+      next_cursor: "20",
+      server_time: "2026-05-29T08:01:00.000Z",
+    });
+
+    const { fetchWalletNfts } = await import("./wallet.api");
+    const result = await fetchWalletNfts();
+
+    expect(mocks.apiRequest).toHaveBeenCalledWith("/wallet/nfts", {
+      method: "GET",
+    });
+    expect(result).toMatchObject({
+      nextCursor: "20",
+      items: [
+        {
+          nftItemId: "55555555-5555-4555-8555-555555555555",
+          itemAddress: "EQabcdefghijklmnopqrstuvwxyz1234567890ABCDE",
+          itemIndex: 7,
+          name: "Known NFT",
+          linkedItemInstanceId: "44444444-4444-4444-8444-444444444444",
+        },
+      ],
+    });
+  });
 });

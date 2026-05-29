@@ -13,13 +13,16 @@ import type {
   WalletMintQueueItem,
   WalletMintQueueSummary,
   WalletMintQueueStatus,
+  WalletNftItem,
 } from "../wallet.types";
 
 type MintQueueSheetProps = {
   open: boolean;
   items: WalletMintQueueItem[];
   summary: WalletMintQueueSummary | null;
+  syncedNfts?: WalletNftItem[];
   loading?: boolean;
+  nftLoading?: boolean;
   errorMessage?: string | null;
   onClose: () => void;
   onRefresh?: () => void;
@@ -31,7 +34,9 @@ export function MintQueueSheet({
   open,
   items,
   summary,
+  syncedNfts = [],
   loading = false,
+  nftLoading = false,
   errorMessage = null,
   onClose,
   onRefresh,
@@ -80,6 +85,11 @@ export function MintQueueSheet({
               tone="warning"
               value={(summary?.failed ?? 0) + (summary?.manualReview ?? 0)}
             />
+            <SummaryPill
+              label="已同步 NFT"
+              tone="neutral"
+              value={syncedNfts.length}
+            />
           </section>
 
           {loading ? (
@@ -116,6 +126,29 @@ export function MintQueueSheet({
               ))}
             </ol>
           ) : null}
+
+          <section className="mint-queue-sheet__nfts">
+            <div className="mint-queue-sheet__section-title">
+              <span>Wallet NFTs</span>
+              {nftLoading ? (
+                <Loader2 aria-hidden="true" size={14} strokeWidth={2.4} />
+              ) : null}
+            </div>
+            {!nftLoading && syncedNfts.length === 0 ? (
+              <div className="mint-queue-sheet__state">
+                <Clock3 aria-hidden="true" size={22} strokeWidth={2.4} />
+                <strong>暂无已同步 NFT</strong>
+                <span>完成钱包 NFT 同步后会显示当前游戏 Collection 资产。</span>
+              </div>
+            ) : null}
+            {syncedNfts.length > 0 ? (
+              <ol className="mint-queue-sheet__list">
+                {syncedNfts.map((item) => (
+                  <WalletNftRow item={item} key={item.itemAddress} />
+                ))}
+              </ol>
+            ) : null}
+          </section>
 
           {onRefresh ? (
             <button
@@ -179,6 +212,32 @@ function MintQueueRow({ item }: { item: WalletMintQueueItem }) {
       {item.errorMessage ? (
         <p className="mint-queue-row__error">{item.errorMessage}</p>
       ) : null}
+    </li>
+  );
+}
+
+function WalletNftRow({ item }: { item: WalletNftItem }) {
+  return (
+    <li className="wallet-nft-row">
+      <CheckCircle2 aria-hidden="true" size={18} strokeWidth={2.4} />
+      <div>
+        <strong>{item.name ?? "Game NFT"}</strong>
+        <span>{formatOptionalHash(item.itemAddress)}</span>
+      </div>
+      <dl>
+        <div>
+          <dt>编号</dt>
+          <dd>{item.itemIndex ?? "未知"}</dd>
+        </div>
+        <div>
+          <dt>关联</dt>
+          <dd>{item.linkedItemInstanceId ? "已关联" : "未关联"}</dd>
+        </div>
+        <div>
+          <dt>同步</dt>
+          <dd>{formatDateTime(item.syncedAt)}</dd>
+        </div>
+      </dl>
     </li>
   );
 }
