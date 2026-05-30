@@ -510,6 +510,8 @@ tr.is-selected td {
 .status-badge--retrying,
 .status-badge--processing,
 .status-badge--fulfilling,
+.status-badge--validating,
+.status-badge--scheduled,
 .status-badge--warning {
   border-color: #f0d497;
   background: #fff9e8;
@@ -1171,6 +1173,7 @@ tr.is-selected td {
 }
 
 .status-badge--archived,
+.status-badge--disabled,
 .status-badge--hidden {
   border-color: #cbd7df;
   background: #eef3f7;

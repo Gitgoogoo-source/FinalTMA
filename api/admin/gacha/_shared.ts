@@ -43,7 +43,14 @@ export const BOX_TIER_VALUES = [
   "event",
 ] as const;
 
-export const DROP_POOL_STATUS_VALUES = ["draft", "active", "archived"] as const;
+export const DROP_POOL_STATUS_VALUES = [
+  "draft",
+  "validating",
+  "scheduled",
+  "active",
+  "archived",
+  "disabled",
+] as const;
 
 const SENSITIVE_JSON_KEY_RE =
   /(secret|token|private|service_role|authorization|cookie|random_seed|seed_hash)/i;

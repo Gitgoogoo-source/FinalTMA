@@ -74,6 +74,9 @@ export function GachaPoolsPage() {
     null;
   const selectedVersionReadOnly =
     !selectedVersion || selectedVersion.status !== "draft";
+  const selectedVersionPublishable =
+    selectedVersion?.status === "draft" ||
+    selectedVersion?.status === "scheduled";
 
   async function loadBoxes() {
     setLoadingBoxes(true);
@@ -218,6 +221,10 @@ export function GachaPoolsPage() {
 
       setValidation(normalizeValidationResult(result));
       setNotice(result.valid ? "校验通过" : "校验未通过");
+
+      if (selectedBox) {
+        await loadVersions(selectedBox.id);
+      }
     } catch (validateError) {
       setError(readAdminError(validateError, "校验概率版本失败"));
     } finally {
@@ -489,8 +496,8 @@ export function GachaPoolsPage() {
 
             {selectedVersionReadOnly ? (
               <p className="notice">
-                当前版本不是 draft，只允许查看；线上 active version
-                已在上方固定展示。
+                当前版本不是 draft，只允许查看；scheduled 可发布，active /
+                archived / disabled 只读，线上 active version 已在上方固定展示。
               </p>
             ) : null}
 
@@ -517,7 +524,7 @@ export function GachaPoolsPage() {
                 className="icon-button icon-button--danger"
                 disabled={
                   !selectedVersion ||
-                  selectedVersion.status !== "draft" ||
+                  !selectedVersionPublishable ||
                   busyAction === "publish"
                 }
                 onClick={() => void handlePublish()}

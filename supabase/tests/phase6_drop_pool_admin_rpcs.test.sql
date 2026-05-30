@@ -207,6 +207,25 @@ select ok(
   'drop pool admin RPCs exist with version-centric signatures'
 );
 
+select ok(
+  exists (
+    select 1
+    from pg_constraint c
+    join pg_class rel on rel.oid = c.conrelid
+    join pg_namespace nsp on nsp.oid = rel.relnamespace
+    where nsp.nspname = 'gacha'
+      and rel.relname = 'drop_pool_versions'
+      and c.conname = 'drop_pool_versions_status_check'
+      and pg_get_constraintdef(c.oid) like '%draft%'
+      and pg_get_constraintdef(c.oid) like '%validating%'
+      and pg_get_constraintdef(c.oid) like '%scheduled%'
+      and pg_get_constraintdef(c.oid) like '%active%'
+      and pg_get_constraintdef(c.oid) like '%archived%'
+      and pg_get_constraintdef(c.oid) like '%disabled%'
+  ),
+  'drop_pool_versions status check supports the phase 6 lifecycle states'
+);
+
 with signatures(signature) as (
   values
     ('api.admin_create_drop_pool_draft(uuid,uuid,uuid,text,jsonb,jsonb,text,text,jsonb)'),
@@ -335,6 +354,32 @@ select is(
   'admin_update_drop_pool_item refreshes total weight through trigger'
 );
 
+update gacha.drop_pool_versions
+set status = 'validating',
+    updated_at = now()
+where id = (select id from _ids where key = 'draft_pool');
+
+select ok(
+  testutil.raises_like(
+    format(
+      'select api.admin_update_drop_pool_item(p_admin_user_id => %L::uuid, p_drop_pool_version_id => %L::uuid, p_box_id => %L::uuid, p_reason => %L, p_idempotency_key => %L, p_request_context => %L::jsonb)',
+      (select id::text from _ids where key = 'actor'),
+      (select id::text from _ids where key = 'draft_pool'),
+      (select id::text from _ids where key = 'box'),
+      'phase 6 validating edit rejected',
+      'phase6-drop-pool-update-validating-rejected',
+      '{}'
+    ),
+    '%ADMIN_DROP_POOL_VERSION_NOT_EDITABLE%'
+  ),
+  'admin_update_drop_pool_item rejects validating versions'
+);
+
+update gacha.drop_pool_versions
+set status = 'draft',
+    updated_at = now()
+where id = (select id from _ids where key = 'draft_pool');
+
 insert into _ids (key, payload)
 values (
   'validate_draft',
@@ -350,6 +395,12 @@ values (
 select ok(
   ((select payload ->> 'valid' from _ids where key = 'validate_draft'))::boolean,
   'admin_validate_drop_pool returns valid for a complete draft'
+);
+
+select is(
+  (select status from gacha.drop_pool_versions where id = (select id from _ids where key = 'draft_pool')),
+  'scheduled',
+  'admin_validate_drop_pool moves a valid draft to scheduled'
 );
 
 insert into _ids (key, payload)
@@ -461,6 +512,49 @@ select is(
   (select status from gacha.drop_pool_versions where id = (select id from _ids where key = 'draft_pool')),
   'archived',
   'admin_archive_drop_pool_version archives after unfinished orders are cleared'
+);
+
+update gacha.drop_pool_versions
+set status = 'disabled',
+    updated_at = now()
+where id = (select id from _ids where key = 'draft_pool');
+
+select is(
+  (select status from gacha.drop_pool_versions where id = (select id from _ids where key = 'draft_pool')),
+  'disabled',
+  'drop_pool_versions accepts disabled as an abnormal offline status'
+);
+
+select ok(
+  testutil.raises_like(
+    format(
+      'select api.admin_publish_drop_pool_version(p_admin_user_id => %L::uuid, p_drop_pool_version_id => %L::uuid, p_reason => %L, p_idempotency_key => %L, p_request_context => %L::jsonb, p_approval_context => %L::jsonb)',
+      (select id::text from _ids where key = 'actor'),
+      (select id::text from _ids where key = 'draft_pool'),
+      'phase 6 disabled publish rejected',
+      'phase6-drop-pool-publish-disabled-rejected',
+      '{}',
+      '{"approvalStatus":"not_required"}'
+    ),
+    '%ADMIN_DROP_POOL_VERSION_NOT_PUBLISHABLE%'
+  ),
+  'admin_publish_drop_pool_version rejects disabled versions'
+);
+
+select ok(
+  testutil.raises_like(
+    format(
+      'select api.admin_update_drop_pool_item(p_admin_user_id => %L::uuid, p_drop_pool_version_id => %L::uuid, p_box_id => %L::uuid, p_reason => %L, p_idempotency_key => %L, p_request_context => %L::jsonb)',
+      (select id::text from _ids where key = 'actor'),
+      (select id::text from _ids where key = 'draft_pool'),
+      (select id::text from _ids where key = 'box'),
+      'phase 6 disabled edit rejected',
+      'phase6-drop-pool-update-disabled-rejected',
+      '{}'
+    ),
+    '%ADMIN_DROP_POOL_VERSION_NOT_EDITABLE%'
+  ),
+  'admin_update_drop_pool_item rejects disabled versions'
 );
 
 select is(

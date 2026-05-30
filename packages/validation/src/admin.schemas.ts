@@ -150,9 +150,11 @@ export const BoxStatusSchema = z.enum([
 
 export const DropPoolStatusSchema = z.enum([
   "DRAFT",
+  "VALIDATING",
+  "SCHEDULED",
   "ACTIVE",
-  "RETIRED",
   "ARCHIVED",
+  "DISABLED",
 ]);
 
 export const ListingStatusSchema = z.enum([
