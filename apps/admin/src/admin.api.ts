@@ -1,6 +1,8 @@
 import type {
   AdminApiEnvelope,
   AdminMeResponse,
+  AdminRolesResponse,
+  AdminUsersResponse,
   FeatureFlagsResponse,
   MintQueueResponse,
   MonitoringResponse,
@@ -38,6 +40,22 @@ export class AdminApiError extends Error {
 
 export async function fetchAdminMe(): Promise<AdminMeResponse> {
   return adminRequest<AdminMeResponse>("/api/admin/me");
+}
+
+export async function fetchAdminUsers(
+  params: QueryParams = {},
+): Promise<AdminUsersResponse> {
+  return adminRequest<AdminUsersResponse>(
+    `/api/admin/admin-users${toQueryString(params)}`,
+  );
+}
+
+export async function fetchAdminRoles(
+  params: QueryParams = {},
+): Promise<AdminRolesResponse> {
+  return adminRequest<AdminRolesResponse>(
+    `/api/admin/roles${toQueryString(params)}`,
+  );
 }
 
 export async function fetchPayments(

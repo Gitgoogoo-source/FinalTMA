@@ -1,9 +1,12 @@
 import {
   Activity,
   Flag,
+  KeyRound,
   RefreshCw,
   ReceiptText,
   ShieldAlert,
+  ShieldCheck,
+  Users,
   WalletCards,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -14,10 +17,13 @@ import type {
   AdminTab,
 } from "./admin.types";
 import { useAdminMe, type AdminMeStatus } from "./auth/useAdminMe";
+import { AdminUsersPage } from "./pages/AdminUsersPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { FeatureFlagsPage } from "./pages/FeatureFlagsPage";
 import { MintQueuePage } from "./pages/MintQueuePage";
 import { PaymentsPage } from "./pages/PaymentsPage";
+import { PermissionMatrixPage } from "./pages/PermissionMatrixPage";
+import { RolesPage } from "./pages/RolesPage";
 import { WalletsPage } from "./pages/WalletsPage";
 
 type AdminNavItem = {
@@ -60,6 +66,24 @@ const NAV_ITEMS: AdminNavItem[] = [
     requiredPermissions: ["feature_flags:read", "admin:read"],
     permissionMode: "any",
   },
+  {
+    id: "admins",
+    label: "管理员",
+    icon: Users,
+    requiredPermissions: ["admin:read"],
+  },
+  {
+    id: "roles",
+    label: "角色",
+    icon: ShieldCheck,
+    requiredPermissions: ["roles:read"],
+  },
+  {
+    id: "permissions",
+    label: "权限",
+    icon: KeyRound,
+    requiredPermissions: ["permissions:read"],
+  },
 ];
 
 export function App() {
@@ -82,9 +106,7 @@ export function App() {
   const activeNavItem =
     NAV_ITEMS.find((item) => item.id === activeTab) ?? NAV_ITEMS[0];
   const canAccessActiveTab =
-    adminMe && activeNavItem
-      ? canAccessNavItem(activeNavItem, adminMe)
-      : false;
+    adminMe && activeNavItem ? canAccessNavItem(activeNavItem, adminMe) : false;
 
   useEffect(() => {
     function handleHashChange() {
@@ -204,6 +226,12 @@ function renderActivePage(tab: AdminTab) {
       return <WalletsPage />;
     case "flags":
       return <FeatureFlagsPage />;
+    case "admins":
+      return <AdminUsersPage />;
+    case "roles":
+      return <RolesPage />;
+    case "permissions":
+      return <PermissionMatrixPage />;
   }
 }
 

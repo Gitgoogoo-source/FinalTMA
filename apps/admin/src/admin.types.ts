@@ -286,6 +286,70 @@ export type AdminMeResponse = {
   serverTime: string;
 };
 
-export type AdminTab = "monitoring" | "payments" | "mint" | "wallets" | "flags";
+export type AdminRoleSummary = {
+  id: string;
+  code: string;
+  display_name: string | null;
+};
+
+export type AdminUser = {
+  id: string;
+  core_user_id: string | null;
+  telegram_user_id: number | string | null;
+  display_name: string | null;
+  status: string;
+  roles: AdminRoleSummary[];
+  last_login_at: string | null;
+  created_at: string;
+  updated_at?: string | null;
+};
+
+export type AdminRole = AdminRoleSummary & {
+  permissions: string[];
+  admin_user_count: number;
+  created_at: string;
+  updated_at?: string | null;
+};
+
+export type AdminPermissionMatrix = {
+  domains: AdminPermissionDomain[];
+  serverTime: string;
+};
+
+export type AdminPermissionDomain = {
+  domain: string;
+  label: string;
+  description: string;
+  permissions: AdminPermissionDefinition[];
+};
+
+export type AdminPermissionDefinition = {
+  code: string;
+  label: string;
+  description: string;
+  risk: "read" | "write" | "danger";
+};
+
+export type AdminUsersResponse = {
+  items: AdminUser[];
+  summary: Record<string, number>;
+  nextCursor: string | null;
+  serverTime: string;
+};
+
+export type AdminRolesResponse = {
+  items: AdminRole[];
+  serverTime: string;
+};
+
+export type AdminTab =
+  | "monitoring"
+  | "payments"
+  | "mint"
+  | "wallets"
+  | "flags"
+  | "admins"
+  | "roles"
+  | "permissions";
 
 export type AdminPermissionMode = "all" | "any";
