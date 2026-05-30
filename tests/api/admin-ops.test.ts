@@ -57,9 +57,10 @@ type AdminQueryOperation = {
   table: string;
   selectedColumns: string[] | null;
   filters: Array<{
-    kind: "eq" | "gte" | "lte" | "ilike" | "in" | "or";
+    kind: "eq" | "gte" | "lte" | "ilike" | "in" | "or" | "not";
     column: string;
     value: unknown;
+    operator?: string;
   }>;
   range: [number, number] | null;
   limit: number | null;
@@ -223,6 +224,7 @@ describe("admin ops APIs", () => {
           targetId: LOCK_ID,
           from: "2026-05-30T00:00:00.000Z",
           to: "2026-05-30T23:59:59.999Z",
+          riskLevel: "medium",
           limit: "10",
         },
       },
@@ -316,6 +318,24 @@ describe("admin ops APIs", () => {
               kind: "lte",
               column: "created_at",
               value: "2026-05-30T23:59:59.999Z",
+            },
+            {
+              kind: "or",
+              column: "",
+              value:
+                "action.ilike.%create%,action.ilike.%update%,action.ilike.%retry%,action.ilike.%feature_flag%,action.ilike.%feature-flag%,action.ilike.%status%,action.ilike.%audit.export%",
+            },
+            {
+              kind: "not",
+              column: "action",
+              operator: "ilike",
+              value: "%payment.retry%",
+            },
+            {
+              kind: "not",
+              column: "action",
+              operator: "ilike",
+              value: "%mint.retry%",
             },
           ]),
           range: [0, 10],
@@ -1488,6 +1508,10 @@ function createAdminQueryBuilder(
       operation.filters.push({ kind: "or", column: "", value });
       return builder;
     },
+    not: (column: string, operator: string, value: unknown) => {
+      operation.filters.push({ kind: "not", column, operator, value });
+      return builder;
+    },
     in: (column: string, value: unknown) => {
       operation.filters.push({ kind: "in", column, value });
       return builder;
@@ -1556,6 +1580,20 @@ function resolveAdminQuery(
 
     if (filter.kind === "in" && Array.isArray(values)) {
       rows = rows.filter((row) => values.includes(row[filter.column]));
+    }
+
+    if (filter.kind === "not" && filter.operator === "ilike") {
+      const pattern = String(filter.value ?? "")
+        .replace(/^%/, "")
+        .replace(/%$/, "")
+        .toLowerCase();
+
+      rows = rows.filter(
+        (row) =>
+          !String(row[filter.column] ?? "")
+            .toLowerCase()
+            .includes(pattern),
+      );
     }
   }
 

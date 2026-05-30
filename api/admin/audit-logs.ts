@@ -73,6 +73,29 @@ const MAX_TEXT_FILTER_LENGTH = 128;
 const MAX_AUDIT_STATE_JSON_BYTES = 4096;
 const SENSITIVE_KEY_RE =
   /(authorization|bot[_-]?token|cookie|init[_-]?data|password|private[_-]?key|secret|service[_-]?role|token|signature|proof|mnemonic|seed)/i;
+const HIGH_RISK_ACTION_PATTERNS = [
+  "ban",
+  "compensate",
+  "refund",
+  "release",
+  "publish",
+  "grant",
+  "revoke",
+  "bootstrap",
+  "approval",
+  "danger",
+  "payment.retry",
+  "mint.retry",
+] as const;
+const MEDIUM_RISK_ACTION_PATTERNS = [
+  "create",
+  "update",
+  "retry",
+  "feature_flag",
+  "feature-flag",
+  "status",
+  "audit.export",
+] as const;
 
 export default withApiHandler(
   async (req) => {
@@ -139,6 +162,9 @@ async function listAuditLogs(
   const from = normalizeTimestampFilter(queryInput.from, "from");
   const to = normalizeTimestampFilter(queryInput.to, "to");
   const q = normalizeTextFilter(queryInput.q, "q");
+  const riskLevel = normalizeRiskLevelFilter(
+    queryInput.riskLevel ?? queryInput.risk_level,
+  );
 
   if (from && to && from > to) {
     throw new ApiError(
@@ -200,6 +226,22 @@ async function listAuditLogs(
           ].join(","),
         );
       }
+    }
+  }
+
+  if (riskLevel) {
+    if (riskLevel === "high") {
+      query = query.or(buildRiskActionSearch(HIGH_RISK_ACTION_PATTERNS));
+    }
+
+    if (riskLevel === "medium") {
+      query = query.or(buildRiskActionSearch(MEDIUM_RISK_ACTION_PATTERNS));
+      query = excludeRiskActionPatterns(query, HIGH_RISK_ACTION_PATTERNS);
+    }
+
+    if (riskLevel === "low") {
+      query = excludeRiskActionPatterns(query, HIGH_RISK_ACTION_PATTERNS);
+      query = excludeRiskActionPatterns(query, MEDIUM_RISK_ACTION_PATTERNS);
     }
   }
 
@@ -353,24 +395,54 @@ function mapAuditRiskLevel(action: string): AuditRiskLevel {
   const normalized = action.trim().toLowerCase();
 
   if (
-    /(ban|compensate|refund|release|publish|grant|revoke|bootstrap|approval|danger)/.test(
-      normalized,
-    ) ||
-    normalized.includes("payment.retry") ||
-    normalized.includes("mint.retry")
+    HIGH_RISK_ACTION_PATTERNS.some((pattern) => normalized.includes(pattern))
   ) {
     return "high";
   }
 
   if (
-    /(create|update|retry|feature_flag|feature-flag|status|audit\.export)/.test(
-      normalized,
-    )
+    MEDIUM_RISK_ACTION_PATTERNS.some((pattern) => normalized.includes(pattern))
   ) {
     return "medium";
   }
 
   return "low";
+}
+
+function normalizeRiskLevelFilter(value: unknown): AuditRiskLevel | undefined {
+  const raw = firstQueryValue(value)?.trim().toLowerCase();
+
+  if (!raw) {
+    return undefined;
+  }
+
+  if (raw === "low" || raw === "medium" || raw === "high") {
+    return raw;
+  }
+
+  throw new ApiError(
+    400,
+    "VALIDATION_FAILED",
+    "riskLevel must be low, medium, or high",
+  );
+}
+
+function buildRiskActionSearch(patterns: readonly string[]): string {
+  return patterns.map((pattern) => `action.ilike.%${pattern}%`).join(",");
+}
+
+function excludeRiskActionPatterns<
+  TQuery extends {
+    not: (column: string, operator: string, value: string) => TQuery;
+  },
+>(query: TQuery, patterns: readonly string[]): TQuery {
+  let nextQuery = query;
+
+  for (const pattern of patterns) {
+    nextQuery = nextQuery.not("action", "ilike", `%${pattern}%`);
+  }
+
+  return nextQuery;
 }
 
 function summarizeAuditLogs(

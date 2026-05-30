@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AdminApiError, fetchAuditLogs } from "../admin.api";
 import type {
   AdminAuditLog,
+  AuditRiskLevel,
   AuditLogFilters,
   AuditLogsResponse,
 } from "../admin.types";
@@ -21,6 +22,7 @@ type AuditFilterDraft = {
   targetId: string;
   from: string;
   to: string;
+  riskLevel: AuditRiskLevel | "";
   q: string;
 };
 
@@ -43,11 +45,26 @@ const EMPTY_FILTERS: AuditFilterDraft = {
   targetId: "",
   from: "",
   to: "",
+  riskLevel: "",
   q: "",
 };
 
+const AUDIT_FILTER_QUERY_KEYS = [
+  "adminUserId",
+  "action",
+  "targetSchema",
+  "targetTable",
+  "targetId",
+  "from",
+  "to",
+  "riskLevel",
+  "q",
+] as const;
+
 export function AuditLogsPage() {
-  const [filters, setFilters] = useState<AuditFilterDraft>(EMPTY_FILTERS);
+  const [filters, setFilters] = useState<AuditFilterDraft>(() =>
+    readAuditFiltersFromLocation(),
+  );
   const [cursor, setCursor] = useState<string | null>(null);
   const [previousCursors, setPreviousCursors] = useState<string[]>([]);
   const [data, setData] = useState<AuditLogsResponse | null>(null);
@@ -98,6 +115,7 @@ export function AuditLogsPage() {
   function applyFilters() {
     setCursor(null);
     setPreviousCursors([]);
+    writeAuditFiltersToLocation(filters);
     void load(null);
   }
 
@@ -105,6 +123,7 @@ export function AuditLogsPage() {
     setFilters(EMPTY_FILTERS);
     setCursor(null);
     setPreviousCursors([]);
+    writeAuditFiltersToLocation(EMPTY_FILTERS);
     void loadWithFilters(EMPTY_FILTERS, null);
   }
 
@@ -227,6 +246,23 @@ export function AuditLogsPage() {
             type="datetime-local"
             value={filters.to}
           />
+        </label>
+        <label>
+          <span>风险等级</span>
+          <select
+            onChange={(event) =>
+              updateFilter(
+                "riskLevel",
+                normalizeRiskLevelDraft(event.target.value),
+              )
+            }
+            value={filters.riskLevel}
+          >
+            <option value="">全部</option>
+            <option value="high">high</option>
+            <option value="medium">medium</option>
+            <option value="low">low</option>
+          </select>
         </label>
         <label className="toolbar__search">
           <span>搜索</span>
@@ -487,6 +523,7 @@ function buildAuditLogParams(filters: AuditFilterDraft): AuditLogFilters {
   const targetId = blankToUndefined(filters.targetId);
   const from = toIsoString(filters.from);
   const to = toIsoString(filters.to);
+  const riskLevel = filters.riskLevel;
   const q = blankToUndefined(filters.q);
 
   if (adminUserId) {
@@ -517,6 +554,10 @@ function buildAuditLogParams(filters: AuditFilterDraft): AuditLogFilters {
     params.to = to;
   }
 
+  if (riskLevel) {
+    params.riskLevel = riskLevel;
+  }
+
   if (q) {
     params.q = q;
   }
@@ -536,6 +577,91 @@ function toIsoString(value: string): string | undefined {
 
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
+}
+
+function readAuditFiltersFromLocation(): AuditFilterDraft {
+  if (typeof window === "undefined") {
+    return EMPTY_FILTERS;
+  }
+
+  const search = new URLSearchParams(window.location.search);
+
+  return {
+    adminUserId: search.get("adminUserId") ?? "",
+    action: search.get("action") ?? "",
+    targetSchema: search.get("targetSchema") ?? "",
+    targetTable: search.get("targetTable") ?? "",
+    targetId: search.get("targetId") ?? "",
+    from: toDateTimeLocalInput(search.get("from")),
+    to: toDateTimeLocalInput(search.get("to")),
+    riskLevel: normalizeRiskLevelDraft(search.get("riskLevel") ?? ""),
+    q: search.get("q") ?? "",
+  };
+}
+
+function writeAuditFiltersToLocation(filters: AuditFilterDraft): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const url = new URL(window.location.href);
+
+  for (const key of AUDIT_FILTER_QUERY_KEYS) {
+    url.searchParams.delete(key);
+  }
+
+  for (const [key, value] of Object.entries(filters)) {
+    if (!value) {
+      continue;
+    }
+
+    if (key === "from" || key === "to") {
+      const isoValue = toIsoString(value);
+
+      if (isoValue) {
+        url.searchParams.set(key, isoValue);
+      }
+
+      continue;
+    }
+
+    url.searchParams.set(key, value);
+  }
+
+  window.history.replaceState(
+    null,
+    "",
+    `${url.pathname}${url.search}${url.hash}`,
+  );
+}
+
+function toDateTimeLocalInput(value: string | null): string {
+  if (!value) {
+    return "";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const offsetMs = date.getTimezoneOffset() * 60_000;
+  return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16);
+}
+
+function normalizeRiskLevelDraft(value: string): AuditFilterDraft["riskLevel"] {
+  const normalized = value.trim().toLowerCase();
+
+  if (
+    normalized === "low" ||
+    normalized === "medium" ||
+    normalized === "high"
+  ) {
+    return normalized;
+  }
+
+  return "";
 }
 
 function formatPageError(error: unknown): PageError {

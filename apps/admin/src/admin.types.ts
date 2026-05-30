@@ -285,6 +285,8 @@ export type AdminAuditLogAdmin = {
   email: string | null;
 };
 
+export type AuditRiskLevel = "low" | "medium" | "high";
+
 export type AdminAuditLog = {
   id: string;
   admin_user_id: string | null;
@@ -300,7 +302,7 @@ export type AdminAuditLog = {
   reason: string | null;
   request_id?: string | null;
   requestId?: string | null;
-  risk_level?: string | null;
+  risk_level?: AuditRiskLevel | null;
   created_at: string;
 };
 
@@ -312,6 +314,7 @@ export type AuditLogFilters = {
   targetId?: string;
   from?: string;
   to?: string;
+  riskLevel?: AuditRiskLevel;
   q?: string;
   cursor?: string | null;
   limit?: number;
