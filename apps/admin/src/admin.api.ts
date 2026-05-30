@@ -15,6 +15,20 @@ type QueryParams = Record<string, string | number | boolean | null | undefined>;
 type RequestOptions = Omit<RequestInit, "body"> & {
   body?: Record<string, unknown>;
 };
+export type AdminDangerAction =
+  | "compensate_asset"
+  | "ban_user"
+  | "request_refund"
+  | "release_inventory_lock"
+  | "publish_drop_pool_version";
+
+export type AdminDangerOperationInput = {
+  action: AdminDangerAction;
+  targetId: string;
+  reason: string;
+  payload: Record<string, unknown>;
+  approvalContext?: Record<string, unknown>;
+};
 
 export class AdminApiError extends Error {
   readonly code: string;
@@ -89,10 +103,7 @@ export async function retryMintQueue(input: {
 }): Promise<Record<string, unknown>> {
   return adminRequest<Record<string, unknown>>("/api/admin/retry-mint", {
     method: "POST",
-    headers: {
-      "X-Admin-Confirm": "true",
-      "X-Idempotency-Key": `admin-retry-mint:${input.mintQueueId}:${Date.now()}`,
-    },
+    headers: buildDangerHeaders("admin-retry-mint", input.mintQueueId),
     body: {
       mintQueueId: input.mintQueueId,
       priority: input.priority,
@@ -126,16 +137,32 @@ export async function updateFeatureFlag(input: {
 }): Promise<Record<string, unknown>> {
   return adminRequest<Record<string, unknown>>("/api/admin/feature-flags", {
     method: "PATCH",
-    headers: {
-      "X-Admin-Confirm": "true",
-      "X-Idempotency-Key": `admin-feature-flag:${input.key}:${input.enabled}:${Date.now()}`,
-    },
+    headers: buildDangerHeaders("admin-feature-flag", input.key),
     body: {
       key: input.key,
       enabled: input.enabled,
       reason: input.reason,
       description: input.description ?? undefined,
       confirm: true,
+    },
+  });
+}
+
+export async function runAdminDangerOperation(
+  input: AdminDangerOperationInput,
+): Promise<Record<string, unknown>> {
+  return adminRequest<Record<string, unknown>>("/api/admin/danger-ops", {
+    method: "POST",
+    headers: buildDangerHeaders(input.action, input.targetId),
+    body: {
+      action: input.action,
+      ...input.payload,
+      reason: input.reason,
+      confirm: true,
+      approvalContext: input.approvalContext ?? {
+        phase: "phase6_initial",
+        approvalStatus: "not_required",
+      },
     },
   });
 }
@@ -232,4 +259,27 @@ function toQueryString(params: QueryParams): string {
 
   const query = search.toString();
   return query ? `?${query}` : "";
+}
+
+function buildDangerHeaders(
+  action: string,
+  targetId: string,
+): Record<string, string> {
+  return {
+    "X-Admin-Confirm": "true",
+    "X-Idempotency-Key": `${sanitizeIdempotencyPart(action)}:${sanitizeIdempotencyPart(
+      targetId,
+    )}:${createIdempotencySuffix()}`,
+  };
+}
+
+function sanitizeIdempotencyPart(value: string): string {
+  return value
+    .trim()
+    .replace(/[^a-zA-Z0-9:_-]+/g, "_")
+    .slice(0, 48);
+}
+
+function createIdempotencySuffix(): string {
+  return globalThis.crypto?.randomUUID?.() ?? Date.now().toString(36);
 }

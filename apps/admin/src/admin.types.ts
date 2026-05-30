@@ -348,6 +348,7 @@ export type AdminTab =
   | "mint"
   | "wallets"
   | "flags"
+  | "danger"
   | "admins"
   | "roles"
   | "permissions";

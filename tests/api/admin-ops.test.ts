@@ -3,18 +3,24 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, type ApiSuccessResponse } from "../../api/_shared/handler";
 import { invokeApiHandler } from "./_utils";
 
-const { getSupabaseAdminClientMock, requireAdminMock, runWriteRpcMock } =
-  vi.hoisted(() => ({
-    getSupabaseAdminClientMock: vi.fn(),
-    requireAdminMock: vi.fn(),
-    runWriteRpcMock: vi.fn(),
-  }));
+const {
+  assertAdminPermissionsMock,
+  getSupabaseAdminClientMock,
+  requireAdminMock,
+  runWriteRpcMock,
+} = vi.hoisted(() => ({
+  assertAdminPermissionsMock: vi.fn(),
+  getSupabaseAdminClientMock: vi.fn(),
+  requireAdminMock: vi.fn(),
+  runWriteRpcMock: vi.fn(),
+}));
 
 vi.mock("../../packages/server/src/db/supabaseAdmin.js", () => ({
   getSupabaseAdminClient: getSupabaseAdminClientMock,
 }));
 
 vi.mock("../../api/_shared/requireAdmin.js", () => ({
+  assertAdminPermissions: assertAdminPermissionsMock,
   requireAdmin: requireAdminMock,
 }));
 
@@ -41,6 +47,9 @@ const TARGET_ADMIN_USER_ID = "55555555-5555-4555-8555-555555555555";
 const ADMIN_ROLE_ID = "99999999-9999-4999-8999-999999999999";
 const STAR_ORDER_ID = "66666666-6666-4666-8666-666666666666";
 const PAYMENT_ID = "77777777-7777-4777-8777-777777777777";
+const CORE_USER_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+const LOCK_ID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+const BOX_ID = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 
 type AdminQueryOperation = {
   schema: string;
@@ -61,8 +70,10 @@ describe("admin ops APIs", () => {
   beforeEach(() => {
     process.env.NODE_ENV = "test";
     getSupabaseAdminClientMock.mockReset();
+    assertAdminPermissionsMock.mockReset();
     requireAdminMock.mockReset();
     runWriteRpcMock.mockReset();
+    assertAdminPermissionsMock.mockImplementation(() => undefined);
     requireAdminMock.mockResolvedValue(ADMIN_CONTEXT);
   });
 
@@ -1000,6 +1011,187 @@ describe("admin ops APIs", () => {
         }),
       }),
     );
+  });
+
+  it("routes danger operations to dedicated admin RPCs with audit context", async () => {
+    const { default: dangerOpsHandler } =
+      await import("../../api/admin/danger-ops");
+    const cases = [
+      {
+        idempotencyKey: "admin-danger-compensate-test-001",
+        body: {
+          action: "compensate_asset",
+          userId: CORE_USER_ID,
+          currencyCode: "KCOIN",
+          amount: 25,
+        },
+        functionName: "admin_compensate_asset",
+        permissions: ["risk:write"],
+        args: {
+          p_user_id: CORE_USER_ID,
+          p_currency_code: "KCOIN",
+          p_amount: 25,
+        },
+      },
+      {
+        idempotencyKey: "admin-danger-ban-test-001",
+        body: {
+          action: "ban_user",
+          userId: CORE_USER_ID,
+          status: "banned",
+        },
+        functionName: "admin_ban_user",
+        permissions: ["users:ban", "risk:write"],
+        args: {
+          p_user_id: CORE_USER_ID,
+          p_status: "banned",
+        },
+      },
+      {
+        idempotencyKey: "admin-danger-refund-test-001",
+        body: {
+          action: "request_refund",
+          starOrderId: STAR_ORDER_ID,
+        },
+        functionName: "admin_request_star_refund",
+        permissions: ["payments:write"],
+        args: {
+          p_star_order_id: STAR_ORDER_ID,
+        },
+      },
+      {
+        idempotencyKey: "admin-danger-release-lock-test-001",
+        body: {
+          action: "release_inventory_lock",
+          lockId: LOCK_ID,
+        },
+        functionName: "admin_release_inventory_lock",
+        permissions: ["inventory:write", "risk:write"],
+        args: {
+          p_lock_id: LOCK_ID,
+        },
+      },
+      {
+        idempotencyKey: "admin-danger-drop-pool-test-001",
+        body: {
+          action: "publish_drop_pool_version",
+          boxId: BOX_ID,
+          items: [
+            {
+              templateId: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+              rarityCode: "N",
+              weight: 10000,
+              probabilityBps: 10000,
+            },
+          ],
+        },
+        functionName: "admin_publish_drop_pool_version",
+        permissions: ["gacha:write"],
+        args: {
+          p_box_id: BOX_ID,
+          p_items: expect.arrayContaining([
+            expect.objectContaining({
+              template_id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+              drop_weight: 10000,
+              probability_bps: 10000,
+            }),
+          ]),
+        },
+      },
+    ];
+
+    for (const dangerCase of cases) {
+      runWriteRpcMock.mockClear();
+      assertAdminPermissionsMock.mockClear();
+      runWriteRpcMock.mockResolvedValueOnce({
+        accepted: true,
+        operation: dangerCase.body.action,
+      });
+
+      const result = await invokeApiHandler<ApiSuccessResponse>(
+        dangerOpsHandler,
+        {
+          method: "POST",
+          url: "/api/admin/danger-ops",
+          headers: {
+            "x-admin-confirm": "true",
+            "x-idempotency-key": dangerCase.idempotencyKey,
+            "x-forwarded-for": "127.0.0.23",
+            "user-agent": "vitest-admin-danger-ops",
+          },
+          body: {
+            ...dangerCase.body,
+            reason: "danger operation in admin test",
+            approvalContext: {
+              approvalStatus: "not_required",
+              phase: "phase6_initial",
+            },
+          },
+        },
+      );
+
+      expect(result.statusCode).toBe(200);
+      expect(result.body).toMatchObject({
+        ok: true,
+        data: {
+          action: dangerCase.body.action,
+          accepted: true,
+        },
+      });
+      expect(assertAdminPermissionsMock).toHaveBeenCalledWith(
+        ADMIN_CONTEXT,
+        expect.objectContaining({
+          permissions: dangerCase.permissions,
+          requireAll: false,
+        }),
+      );
+      expect(runWriteRpcMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          schema: "api",
+          functionName: dangerCase.functionName,
+          args: expect.objectContaining({
+            p_admin_user_id: ADMIN_CONTEXT.adminId,
+            p_reason: "danger operation in admin test",
+            p_idempotency_key: dangerCase.idempotencyKey,
+            p_request_context: expect.objectContaining({
+              admin_user_id: ADMIN_CONTEXT.adminId,
+              ip_hash: expect.any(String),
+              user_agent_hash: expect.any(String),
+            }),
+            p_approval_context: expect.objectContaining({
+              approvalStatus: "not_required",
+              phase: "phase6_initial",
+            }),
+            ...dangerCase.args,
+          }),
+        }),
+      );
+    }
+  });
+
+  it("requires explicit confirmation for danger operation requests", async () => {
+    const { default: dangerOpsHandler } =
+      await import("../../api/admin/danger-ops");
+    const result = await invokeApiHandler(dangerOpsHandler, {
+      method: "POST",
+      url: "/api/admin/danger-ops",
+      headers: {
+        "x-idempotency-key": "admin-danger-confirm-test-001",
+      },
+      body: {
+        action: "ban_user",
+        userId: CORE_USER_ID,
+        reason: "ban user in admin test",
+      },
+    });
+
+    expect(result.statusCode).toBe(400);
+    expect(result.body).toMatchObject({
+      error: {
+        code: "ADMIN_CONFIRMATION_REQUIRED",
+      },
+    });
+    expect(runWriteRpcMock).not.toHaveBeenCalled();
   });
 });
 

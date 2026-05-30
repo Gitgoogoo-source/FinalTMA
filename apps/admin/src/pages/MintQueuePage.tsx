@@ -1,9 +1,10 @@
-import { RefreshCw, RotateCcw, X } from "lucide-react";
-import { type FormEvent, useEffect, useState } from "react";
+import { RefreshCw, RotateCcw } from "lucide-react";
+import { useEffect, useState } from "react";
 
 import { fetchMintQueue, retryMintQueue } from "../admin.api";
 import type { MintQueueItem, MintQueueResponse } from "../admin.types";
 import { formatDate, shortId, StatusBadge } from "../admin.ui";
+import { ConfirmDangerDialog } from "../components/ConfirmDangerDialog";
 
 const MINT_STATUSES = [
   "",
@@ -18,14 +19,8 @@ const MINT_STATUSES = [
   "cancelled",
 ];
 const RETRYABLE_STATUSES = new Set(["failed", "manual_review"]);
-const RETRY_PRIORITIES = ["HIGH", "NORMAL", "LOW"] as const;
-type RetryPriority = (typeof RETRY_PRIORITIES)[number];
-
 type RetryDraft = {
   item: MintQueueItem;
-  reason: string;
-  priority: RetryPriority;
-  confirmed: boolean;
 };
 
 export function MintQueuePage() {
@@ -68,22 +63,8 @@ export function MintQueuePage() {
     }
   }
 
-  async function submitRetry(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
+  async function confirmRetry(reason: string) {
     if (!retryDraft) {
-      return;
-    }
-
-    const reason = retryDraft.reason.trim();
-
-    if (!reason) {
-      setError("重试原因不能为空");
-      return;
-    }
-
-    if (!retryDraft.confirmed) {
-      setError("请先完成二次确认");
       return;
     }
 
@@ -93,7 +74,7 @@ export function MintQueuePage() {
     try {
       await retryMintQueue({
         mintQueueId: retryDraft.item.id,
-        priority: retryDraft.priority,
+        priority: "HIGH",
         reason,
       });
       setRetryDraft(null);
@@ -233,9 +214,6 @@ export function MintQueuePage() {
                     onClick={() =>
                       setRetryDraft({
                         item,
-                        priority: "HIGH",
-                        reason: "",
-                        confirmed: false,
                       })
                     }
                     title="重试 Mint"
@@ -253,79 +231,16 @@ export function MintQueuePage() {
 
       <MintFailureDetail item={selectedItem} />
 
-      {retryDraft ? (
-        <form className="danger-panel" onSubmit={submitRetry}>
-          <div className="detail-panel__header">
-            <div>
-              <h2>手动重试 Mint</h2>
-              <p>{retryDraft.item.id}</p>
-            </div>
-            <button
-              className="icon-only-button"
-              onClick={() => setRetryDraft(null)}
-              type="button"
-            >
-              <X aria-hidden="true" size={18} />
-            </button>
-          </div>
-          <div className="form-grid">
-            <label>
-              <span>优先级</span>
-              <select
-                value={retryDraft.priority}
-                onChange={(event) =>
-                  setRetryDraft({
-                    ...retryDraft,
-                    priority: event.target.value as RetryPriority,
-                  })
-                }
-              >
-                {RETRY_PRIORITIES.map((priority) => (
-                  <option key={priority} value={priority}>
-                    {priority}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="form-grid__wide">
-              <span>重试原因</span>
-              <textarea
-                onChange={(event) =>
-                  setRetryDraft({ ...retryDraft, reason: event.target.value })
-                }
-                placeholder="说明为什么需要人工重试"
-                rows={3}
-                value={retryDraft.reason}
-              />
-            </label>
-            <label className="checkbox-row form-grid__wide">
-              <input
-                checked={retryDraft.confirmed}
-                onChange={(event) =>
-                  setRetryDraft({
-                    ...retryDraft,
-                    confirmed: event.target.checked,
-                  })
-                }
-                type="checkbox"
-              />
-              <span>确认该操作会写入后台 audit，并且不会绕过 Mint RPC</span>
-            </label>
-          </div>
-          <div className="button-row">
-            <button
-              className="icon-button icon-button--danger"
-              disabled={busyId === retryDraft.item.id}
-              type="submit"
-            >
-              <RotateCcw aria-hidden="true" size={16} />
-              <span>
-                {busyId === retryDraft.item.id ? "提交中" : "确认重试"}
-              </span>
-            </button>
-          </div>
-        </form>
-      ) : null}
+      <ConfirmDangerDialog
+        confirmLabel="确认重试"
+        isOpen={retryDraft !== null}
+        pending={retryDraft ? busyId === retryDraft.item.id : false}
+        targetLabel="Mint queue"
+        targetValue={retryDraft?.item.id ?? ""}
+        title="手动重试 Mint"
+        onCancel={() => setRetryDraft(null)}
+        onConfirm={(confirmation) => confirmRetry(confirmation.reason)}
+      />
     </section>
   );
 }

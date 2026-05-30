@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { fetchFeatureFlags, updateFeatureFlag } from "../admin.api";
 import type { FeatureFlag, FeatureFlagsResponse } from "../admin.types";
 import { formatDate, StatusBadge } from "../admin.ui";
+import { ConfirmDangerDialog } from "../components/ConfirmDangerDialog";
 
 const IMPORTANT_KEYS = new Set([
   "FEATURE_STARS_PAYMENT_ENABLED",
@@ -26,6 +27,10 @@ const MINT_FLAG_KEYS = new Set([
   "FEATURE_MINT_WORKER_ENABLED",
   "onchain.mint",
 ]);
+type FlagDangerDraft = {
+  flag: FeatureFlag;
+  nextEnabled: boolean;
+};
 
 export function FeatureFlagsPage() {
   const [query, setQuery] = useState("");
@@ -33,6 +38,7 @@ export function FeatureFlagsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [dangerDraft, setDangerDraft] = useState<FlagDangerDraft | null>(null);
 
   const sortedFlags = useMemo(() => {
     return [...(data?.items ?? [])].sort((left, right) => {
@@ -64,20 +70,12 @@ export function FeatureFlagsPage() {
     }
   }
 
-  async function toggle(flag: FeatureFlag) {
-    const nextEnabled = !flag.enabled;
-    const reason = window.prompt(
-      nextEnabled ? "请输入启用原因" : "请输入暂停原因",
-    );
-
-    if (!reason?.trim()) {
+  async function confirmToggle(reason: string) {
+    if (!dangerDraft) {
       return;
     }
 
-    if (!window.confirm(`确认${nextEnabled ? "启用" : "暂停"} ${flag.key}？`)) {
-      return;
-    }
-
+    const { flag, nextEnabled } = dangerDraft;
     setBusyKey(flag.key);
     setError(null);
 
@@ -88,6 +86,7 @@ export function FeatureFlagsPage() {
         description: flag.description,
         reason,
       });
+      setDangerDraft(null);
       await load();
     } catch (toggleError) {
       setError(
@@ -96,6 +95,13 @@ export function FeatureFlagsPage() {
     } finally {
       setBusyKey(null);
     }
+  }
+
+  function toggle(flag: FeatureFlag) {
+    setDangerDraft({
+      flag,
+      nextEnabled: !flag.enabled,
+    });
   }
 
   useEffect(() => {
@@ -178,6 +184,29 @@ export function FeatureFlagsPage() {
           </tbody>
         </table>
       </div>
+      <ConfirmDangerDialog
+        confirmLabel={
+          dangerDraft?.nextEnabled
+            ? "确认启用"
+            : dangerDraft
+              ? "确认暂停"
+              : "确认"
+        }
+        description={dangerDraft?.flag.description ?? undefined}
+        isOpen={dangerDraft !== null}
+        pending={dangerDraft ? busyKey === dangerDraft.flag.key : false}
+        targetLabel="Feature flag"
+        targetValue={dangerDraft?.flag.key ?? ""}
+        title={
+          dangerDraft
+            ? `${dangerDraft.nextEnabled ? "启用" : "暂停"} ${
+                dangerDraft.flag.key
+              }`
+            : "确认功能开关"
+        }
+        onCancel={() => setDangerDraft(null)}
+        onConfirm={(confirmation) => confirmToggle(confirmation.reason)}
+      />
     </section>
   );
 }
@@ -187,7 +216,7 @@ function FlagGroup(props: {
   emptyText: string;
   flags: FeatureFlag[];
   title: string;
-  toggle: (flag: FeatureFlag) => Promise<void>;
+  toggle: (flag: FeatureFlag) => void;
 }) {
   return (
     <section className="ops-card">
@@ -215,7 +244,7 @@ function FlagRow(props: {
   busy: boolean;
   compact?: boolean;
   flag: FeatureFlag;
-  toggle: (flag: FeatureFlag) => Promise<void>;
+  toggle: (flag: FeatureFlag) => void;
 }) {
   const actionLabel = props.flag.enabled ? "暂停" : "启用";
   const actionTitle = props.flag.enabled ? "暂停该开关" : "启用该开关";
@@ -226,7 +255,7 @@ function FlagRow(props: {
         props.flag.enabled ? "icon-button icon-button--danger" : "icon-button"
       }
       disabled={props.busy}
-      onClick={() => void props.toggle(props.flag)}
+      onClick={() => props.toggle(props.flag)}
       title={actionTitle}
       type="button"
     >

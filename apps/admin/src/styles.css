@@ -674,8 +674,134 @@ tr.is-selected td {
 
 .button-row {
   display: flex;
+  gap: 8px;
   justify-content: flex-end;
   margin-top: 12px;
+}
+
+.danger-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  overflow: auto;
+  background: rgb(16 24 32 / 52%);
+  padding: 24px;
+}
+
+.danger-dialog {
+  width: min(560px, calc(100vw - 32px));
+  display: grid;
+  gap: 12px;
+  border: 1px solid #e59595;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 18px 44px rgb(16 24 32 / 22%);
+  padding: 16px;
+}
+
+.danger-dialog__header {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 36px;
+  gap: 10px;
+  align-items: start;
+}
+
+.danger-dialog__header h2,
+.danger-dialog__header p {
+  margin: 0;
+}
+
+.danger-dialog__header h2 {
+  color: #17202a;
+  font-size: 18px;
+  letter-spacing: 0;
+}
+
+.danger-dialog__header p {
+  margin-top: 3px;
+  color: #657583;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.danger-dialog__icon {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: #fff4f4;
+  color: #9a2727;
+}
+
+.danger-dialog__target {
+  display: grid;
+  grid-template-columns: 1fr 112px;
+  gap: 8px;
+}
+
+.danger-dialog__target span {
+  min-width: 0;
+  border: 1px solid #e1e8ee;
+  border-radius: 8px;
+  background: #f9fbfc;
+  padding: 9px 10px;
+}
+
+.danger-dialog__target small,
+.danger-dialog label > span,
+.danger-action-card label > span {
+  display: block;
+  color: #667887;
+  font-size: 12px;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.danger-dialog__target strong {
+  display: block;
+  overflow-wrap: anywhere;
+  color: #17202a;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.danger-dialog input,
+.danger-dialog textarea,
+.danger-action-card input,
+.danger-action-card select,
+.danger-action-card textarea {
+  width: 100%;
+}
+
+.danger-action-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.danger-action-card {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.danger-action-card--wide {
+  grid-column: span 2;
+}
+
+.danger-action-card h2 {
+  margin: 0;
+  color: #17202a;
+  font-size: 16px;
+}
+
+.form-inline {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1fr);
+  gap: 10px;
 }
 
 .ops-grid {

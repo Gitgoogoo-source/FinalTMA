@@ -28,6 +28,15 @@ const PERMISSION_DOMAINS: AdminPermissionMatrix["domains"] = [
     ],
   },
   {
+    domain: "inventory",
+    label: "库存",
+    description: "库存锁定、释放和人工运营干预。",
+    permissions: [
+      buildPermission("inventory:read", "查看库存", "读取库存和锁定状态。"),
+      buildPermission("inventory:write", "处理库存", "释放或调整库存锁定。"),
+    ],
+  },
+  {
     domain: "onchain",
     label: "链上",
     description: "TON 钱包、链上同步和 NFT 状态。",

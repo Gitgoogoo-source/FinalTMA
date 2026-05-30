@@ -19,6 +19,7 @@ import type {
 import { useAdminMe, type AdminMeStatus } from "./auth/useAdminMe";
 import { AdminUsersPage } from "./pages/AdminUsersPage";
 import { DashboardPage } from "./pages/DashboardPage";
+import { DangerOpsPage } from "./pages/DangerOpsPage";
 import { FeatureFlagsPage } from "./pages/FeatureFlagsPage";
 import { MintQueuePage } from "./pages/MintQueuePage";
 import { PaymentsPage } from "./pages/PaymentsPage";
@@ -64,6 +65,20 @@ const NAV_ITEMS: AdminNavItem[] = [
     label: "开关",
     icon: Flag,
     requiredPermissions: ["feature_flags:read", "admin:read"],
+    permissionMode: "any",
+  },
+  {
+    id: "danger",
+    label: "危险操作",
+    icon: ShieldAlert,
+    requiredPermissions: [
+      "payments:write",
+      "feature_flags:write",
+      "gacha:write",
+      "risk:write",
+      "users:ban",
+      "inventory:write",
+    ],
     permissionMode: "any",
   },
   {
@@ -226,6 +241,8 @@ function renderActivePage(tab: AdminTab) {
       return <WalletsPage />;
     case "flags":
       return <FeatureFlagsPage />;
+    case "danger":
+      return <DangerOpsPage />;
     case "admins":
       return <AdminUsersPage />;
     case "roles":

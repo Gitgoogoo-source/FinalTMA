@@ -4,7 +4,10 @@ import {
 } from "../../packages/server/src/db/supabaseAdmin.js";
 import { parseJsonBody } from "../_shared/parseBody.js";
 import { ApiError, withApiHandler } from "../_shared/handler.js";
-import { requireAdmin } from "../_shared/requireAdmin.js";
+import {
+  assertAdminPermissions,
+  requireAdmin,
+} from "../_shared/requireAdmin.js";
 import {
   asJsonRecord,
   buildAdminRpcContext,
@@ -57,10 +60,7 @@ export default withApiHandler(
       return await listFeatureFlags(getSupabaseAdminClient(), req.query);
     }
 
-    const admin = await requireAdmin(req, {
-      permissions: ["feature_flags:write", "admin:write"],
-      requireAll: false,
-    });
+    const admin = await requireAdmin(req);
     const body = asJsonRecord(
       await parseJsonBody(req, { maxBytes: 32 * 1024 }),
     );
@@ -72,6 +72,11 @@ export default withApiHandler(
     const enabled = normalizeBoolean(body.enabled, "enabled");
     const reason = normalizeRequiredText(body.reason, "reason");
     const description = normalizeOptionalText(body.description);
+
+    assertAdminPermissions(admin, {
+      permissions: getFeatureFlagWritePermissions(key),
+      requireAll: false,
+    });
 
     try {
       const result = await callAdminWriteRpc<UpdateFeatureFlagRpcResult>({
@@ -103,6 +108,45 @@ export default withApiHandler(
     },
   },
 );
+
+function getFeatureFlagWritePermissions(key: string): string[] {
+  const normalized = key.trim();
+
+  if (
+    [
+      "FEATURE_STARS_PAYMENT_ENABLED",
+      "FEATURE_PAYMENT_WEBHOOK_FULFILLMENT_ENABLED",
+    ].includes(normalized)
+  ) {
+    return ["payments:write", "feature_flags:write", "admin:write"];
+  }
+
+  if (normalized === "gacha.open_box") {
+    return ["gacha:write", "feature_flags:write", "admin:write"];
+  }
+
+  if (["FEATURE_MARKET_ENABLED", "market.enabled"].includes(normalized)) {
+    return ["market:write", "feature_flags:write", "admin:write"];
+  }
+
+  if (
+    [
+      "FEATURE_TON_MINT_ENABLED",
+      "FEATURE_MINT_WORKER_ENABLED",
+      "onchain.mint",
+    ].includes(normalized)
+  ) {
+    return [
+      "inventory:write",
+      "mint:write",
+      "onchain:write",
+      "feature_flags:write",
+      "admin:write",
+    ];
+  }
+
+  return ["feature_flags:write", "admin:write"];
+}
 
 async function listFeatureFlags(
   db: SupabaseAdminClient,
