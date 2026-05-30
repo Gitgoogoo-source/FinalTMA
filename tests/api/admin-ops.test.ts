@@ -37,12 +37,15 @@ const ADMIN_CONTEXT = {
 };
 
 const MINT_QUEUE_ID = "44444444-4444-4444-8444-444444444444";
+const TARGET_ADMIN_USER_ID = "55555555-5555-4555-8555-555555555555";
+const ADMIN_ROLE_ID = "99999999-9999-4999-8999-999999999999";
 const STAR_ORDER_ID = "66666666-6666-4666-8666-666666666666";
 const PAYMENT_ID = "77777777-7777-4777-8777-777777777777";
 
 type AdminQueryOperation = {
   schema: string;
   table: string;
+  selectedColumns: string[] | null;
   filters: Array<{
     kind: "eq" | "gte" | "lte" | "ilike" | "in";
     column: string;
@@ -397,6 +400,290 @@ describe("admin ops APIs", () => {
     );
   });
 
+  it("lets admins query admin users with role summaries without leaking metadata", async () => {
+    const db = createAdminReadDbMock({
+      "ops.admin_users": [
+        {
+          id: TARGET_ADMIN_USER_ID,
+          core_user_id: ADMIN_CONTEXT.userId,
+          telegram_user_id: 7002,
+          display_name: "Ops Admin",
+          status: "active",
+          last_login_at: "2026-05-29T00:00:00.000Z",
+          metadata: {
+            permissions: ["admin:write"],
+            secret_note: "do-not-return",
+          },
+          created_at: "2026-05-28T00:00:00.000Z",
+          updated_at: "2026-05-29T00:00:00.000Z",
+        },
+      ],
+      "ops.admin_user_roles": [
+        {
+          admin_user_id: TARGET_ADMIN_USER_ID,
+          role_id: ADMIN_ROLE_ID,
+          granted_by_admin_id: ADMIN_CONTEXT.adminId,
+          granted_at: "2026-05-29T00:00:00.000Z",
+        },
+      ],
+      "ops.admin_roles": [
+        {
+          id: ADMIN_ROLE_ID,
+          code: "OPS",
+          display_name: "Operations",
+          permissions: ["gacha:read"],
+          created_at: "2026-05-28T00:00:00.000Z",
+          updated_at: "2026-05-29T00:00:00.000Z",
+        },
+      ],
+    });
+    getSupabaseAdminClientMock.mockReturnValue(db.client);
+
+    const { default: adminUsersHandler } =
+      await import("../../api/admin/admin-users");
+    const result = await invokeApiHandler<ApiSuccessResponse>(
+      adminUsersHandler,
+      {
+        method: "GET",
+        url: "/api/admin/admin-users?status=active&limit=10",
+        query: {
+          status: "active",
+          limit: "10",
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(200);
+    expect(result.body).toMatchObject({
+      ok: true,
+      data: {
+        items: [
+          {
+            id: TARGET_ADMIN_USER_ID,
+            core_user_id: ADMIN_CONTEXT.userId,
+            telegram_user_id: 7002,
+            display_name: "Ops Admin",
+            status: "active",
+            roles: [
+              {
+                id: ADMIN_ROLE_ID,
+                code: "OPS",
+                display_name: "Operations",
+              },
+            ],
+          },
+        ],
+        summary: {
+          active: 1,
+        },
+      },
+    });
+    expect(JSON.stringify(result.body)).not.toContain("do-not-return");
+    expect(requireAdminMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        permissions: ["admin:read", "roles:read"],
+        requireAll: false,
+      }),
+    );
+  });
+
+  it("lets admins query roles with bound admin counts", async () => {
+    const db = createAdminReadDbMock({
+      "ops.admin_roles": [
+        {
+          id: ADMIN_ROLE_ID,
+          code: "OPS",
+          display_name: "Operations",
+          permissions: ["gacha:read", "gacha:write"],
+          created_at: "2026-05-28T00:00:00.000Z",
+          updated_at: "2026-05-29T00:00:00.000Z",
+        },
+      ],
+      "ops.admin_user_roles": [
+        {
+          admin_user_id: TARGET_ADMIN_USER_ID,
+          role_id: ADMIN_ROLE_ID,
+          granted_by_admin_id: ADMIN_CONTEXT.adminId,
+          granted_at: "2026-05-29T00:00:00.000Z",
+        },
+      ],
+    });
+    getSupabaseAdminClientMock.mockReturnValue(db.client);
+
+    const { default: rolesHandler } = await import("../../api/admin/roles");
+    const result = await invokeApiHandler<ApiSuccessResponse>(rolesHandler, {
+      method: "GET",
+      url: "/api/admin/roles",
+    });
+
+    expect(result.statusCode).toBe(200);
+    expect(result.body).toMatchObject({
+      ok: true,
+      data: {
+        items: [
+          {
+            id: ADMIN_ROLE_ID,
+            code: "OPS",
+            permissions: ["gacha:read", "gacha:write"],
+            admin_user_count: 1,
+          },
+        ],
+      },
+    });
+    expect(requireAdminMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        permissions: ["admin:read", "roles:read"],
+        requireAll: false,
+      }),
+    );
+  });
+
+  it("calls the admin grant role RPC with confirmation, reason and idempotency", async () => {
+    runWriteRpcMock.mockResolvedValue({
+      admin_user_id: TARGET_ADMIN_USER_ID,
+      role_id: ADMIN_ROLE_ID,
+      audit_log_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    });
+
+    const { default: grantRoleHandler } =
+      await import("../../api/admin/grant-role");
+    const result = await invokeApiHandler<ApiSuccessResponse>(
+      grantRoleHandler,
+      {
+        method: "POST",
+        url: "/api/admin/grant-role",
+        headers: {
+          "x-admin-confirm": "true",
+          "x-idempotency-key": "admin-grant-role-test-001",
+          "x-forwarded-for": "127.0.0.30",
+          "user-agent": "vitest-admin-grant-role",
+        },
+        body: {
+          adminUserId: TARGET_ADMIN_USER_ID,
+          roleId: ADMIN_ROLE_ID,
+          reason: "grant ops role in admin test",
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(200);
+    expect(result.body).toMatchObject({
+      ok: true,
+      data: {
+        admin_user_id: TARGET_ADMIN_USER_ID,
+        role_id: ADMIN_ROLE_ID,
+      },
+    });
+    expect(runWriteRpcMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        schema: "api",
+        functionName: "admin_grant_role",
+        args: expect.objectContaining({
+          p_admin_user_id: ADMIN_CONTEXT.adminId,
+          p_target_admin_user_id: TARGET_ADMIN_USER_ID,
+          p_role_id: ADMIN_ROLE_ID,
+          p_reason: "grant ops role in admin test",
+          p_idempotency_key: "admin-grant-role-test-001",
+          p_request_context: expect.objectContaining({
+            admin_user_id: ADMIN_CONTEXT.adminId,
+            ip_hash: expect.any(String),
+            user_agent_hash: expect.any(String),
+          }),
+        }),
+      }),
+    );
+    expect(requireAdminMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        permissions: ["admin:write", "roles:write"],
+        requireAll: false,
+      }),
+    );
+  });
+
+  it("calls the admin revoke role RPC with confirmation, reason and idempotency", async () => {
+    runWriteRpcMock.mockResolvedValue({
+      admin_user_id: TARGET_ADMIN_USER_ID,
+      role_id: ADMIN_ROLE_ID,
+      audit_log_id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+    });
+
+    const { default: revokeRoleHandler } =
+      await import("../../api/admin/revoke-role");
+    const result = await invokeApiHandler<ApiSuccessResponse>(
+      revokeRoleHandler,
+      {
+        method: "POST",
+        url: "/api/admin/revoke-role",
+        headers: {
+          "x-admin-confirm": "true",
+          "x-idempotency-key": "admin-revoke-role-test-001",
+          "x-forwarded-for": "127.0.0.31",
+          "user-agent": "vitest-admin-revoke-role",
+        },
+        body: {
+          adminUserId: TARGET_ADMIN_USER_ID,
+          roleId: ADMIN_ROLE_ID,
+          reason: "revoke ops role in admin test",
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(200);
+    expect(result.body).toMatchObject({
+      ok: true,
+      data: {
+        admin_user_id: TARGET_ADMIN_USER_ID,
+        role_id: ADMIN_ROLE_ID,
+      },
+    });
+    expect(runWriteRpcMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        schema: "api",
+        functionName: "admin_revoke_role",
+        args: expect.objectContaining({
+          p_admin_user_id: ADMIN_CONTEXT.adminId,
+          p_target_admin_user_id: TARGET_ADMIN_USER_ID,
+          p_role_id: ADMIN_ROLE_ID,
+          p_reason: "revoke ops role in admin test",
+          p_idempotency_key: "admin-revoke-role-test-001",
+          p_request_context: expect.objectContaining({
+            admin_user_id: ADMIN_CONTEXT.adminId,
+            ip_hash: expect.any(String),
+            user_agent_hash: expect.any(String),
+          }),
+        }),
+      }),
+    );
+  });
+
+  it("requires explicit confirmation for grant-role requests", async () => {
+    const { default: grantRoleHandler } =
+      await import("../../api/admin/grant-role");
+    const result = await invokeApiHandler(grantRoleHandler, {
+      method: "POST",
+      url: "/api/admin/grant-role",
+      headers: {
+        "x-idempotency-key": "admin-grant-role-test-002",
+      },
+      body: {
+        adminUserId: TARGET_ADMIN_USER_ID,
+        roleId: ADMIN_ROLE_ID,
+        reason: "grant ops role in admin test",
+      },
+    });
+
+    expect(result.statusCode).toBe(400);
+    expect(result.body).toMatchObject({
+      error: {
+        code: "ADMIN_CONFIRMATION_REQUIRED",
+      },
+    });
+    expect(runWriteRpcMock).not.toHaveBeenCalled();
+  });
+
   it("rejects non-admin retry-mint requests before calling the write RPC", async () => {
     requireAdminMock.mockRejectedValue(
       new ApiError(403, "FORBIDDEN", "Admin permission required"),
@@ -742,6 +1029,7 @@ function createAdminQueryBuilder(
   const operation: AdminQueryOperation = {
     schema,
     table,
+    selectedColumns: null,
     filters: [],
     range: null,
     limit: null,
@@ -749,7 +1037,10 @@ function createAdminQueryBuilder(
   operations.push(operation);
 
   const builder = {
-    select: () => builder,
+    select: (columns?: string) => {
+      operation.selectedColumns = parseSelectedColumns(columns);
+      return builder;
+    },
     eq: (column: string, value: unknown) => {
       operation.filters.push({ kind: "eq", column, value });
       return builder;
@@ -794,6 +1085,19 @@ function createAdminQueryBuilder(
   return builder;
 }
 
+function parseSelectedColumns(columns: string | undefined): string[] | null {
+  if (!columns) {
+    return null;
+  }
+
+  return columns
+    .split(",")
+    .map((column) => column.trim())
+    .filter(Boolean)
+    .map((column) => column.split(":").at(0)?.trim() ?? "")
+    .filter(Boolean);
+}
+
 function resolveAdminQuery(
   operation: AdminQueryOperation,
   rowsByTable: AdminTableRows,
@@ -830,6 +1134,18 @@ function resolveAdminQuery(
 
   if (operation.limit !== null) {
     rows = rows.slice(0, operation.limit);
+  }
+
+  if (operation.selectedColumns) {
+    rows = rows.map((row) => {
+      const selectedRow: Record<string, unknown> = {};
+
+      for (const column of operation.selectedColumns ?? []) {
+        selectedRow[column] = row[column];
+      }
+
+      return selectedRow;
+    });
   }
 
   return {
