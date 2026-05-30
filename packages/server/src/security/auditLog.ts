@@ -5,23 +5,23 @@ import {
   runWriteRpc,
 } from "../db/transactions.js";
 
+export const ADMIN_AUDIT_ACTIONS = {
+  adminCreateUser: "admin.create_user",
+  adminUpdateStatus: "admin.update_status",
+  adminGrantRole: "admin.grant_role",
+  adminRevokeRole: "admin.revoke_role",
+  assetCompensate: "asset.compensate",
+  featureFlagUpdate: "feature_flag.update",
+  gachaDropPoolPublish: "gacha.drop_pool.publish",
+  inventoryLockRelease: "inventory.lock.release",
+  mintRetry: "mint.retry",
+  paymentFulfillmentRetry: "payment.fulfillment.retry",
+  paymentRefundRequest: "payment.refund.request",
+  userBan: "user.ban",
+} as const;
+
 export type AdminAuditAction =
-  | "admin.login"
-  | "admin.logout"
-  | "admin.create"
-  | "admin.update"
-  | "admin.delete"
-  | "box.create"
-  | "box.update"
-  | "drop_pool.publish"
-  | "collectible.update"
-  | "market.rule_update"
-  | "task.update"
-  | "feature_flag.update"
-  | "user.restrict"
-  | "user.balance_adjust"
-  | "payment.review"
-  | "mint.retry"
+  | (typeof ADMIN_AUDIT_ACTIONS)[keyof typeof ADMIN_AUDIT_ACTIONS]
   | (string & {});
 
 export interface AdminAuditLogInput {

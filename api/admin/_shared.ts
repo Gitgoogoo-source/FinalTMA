@@ -215,19 +215,27 @@ export async function callAdminWriteRpc<TResult = JsonObject>(input: {
   args: Record<string, JsonValue | undefined>;
   requestId: string;
 }): Promise<TResult> {
-  return await runWriteRpc<TResult>({
+  const result = await runWriteRpc<TResult>({
     schema: "api",
     functionName: input.functionName,
     args: input.args,
     traceId: input.requestId,
     label: input.functionName,
   });
+
+  assertAdminWriteAuditResult(result, input.functionName);
+
+  return result;
 }
 
 export function mapAdminRpcError(
   error: unknown,
   fallbackCode: string,
 ): ApiError {
+  if (error instanceof ApiError) {
+    return error;
+  }
+
   const message = error instanceof Error ? error.message : String(error);
   const knownCode = extractKnownAdminErrorCode(message);
 
@@ -253,6 +261,27 @@ export function mapAdminRpcError(
     expose: false,
     cause: error,
   });
+}
+
+function assertAdminWriteAuditResult(
+  value: unknown,
+  functionName: string,
+): void {
+  if (
+    !isRecord(value) ||
+    typeof value.audit_log_id !== "string" ||
+    value.audit_log_id.trim().length === 0
+  ) {
+    throw new ApiError(
+      500,
+      "ADMIN_AUDIT_LOG_REQUIRED",
+      "Admin write RPC did not return audit_log_id.",
+      {
+        details: { functionName },
+        expose: false,
+      },
+    );
+  }
 }
 
 function extractKnownAdminErrorCode(message: string): string | null {

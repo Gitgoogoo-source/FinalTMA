@@ -1210,6 +1210,37 @@ describe("admin ops APIs", () => {
     );
   });
 
+  it("rejects admin write RPC results that do not return an audit log id", async () => {
+    runWriteRpcMock.mockResolvedValue({
+      key: "FEATURE_TON_MINT_ENABLED",
+      enabled: false,
+      previous_enabled: true,
+    });
+
+    const { default: featureFlagsHandler } =
+      await import("../../api/admin/feature-flags");
+    const result = await invokeApiHandler(featureFlagsHandler, {
+      method: "PATCH",
+      url: "/api/admin/feature-flags",
+      headers: {
+        "x-admin-confirm": "true",
+        "x-idempotency-key": "admin-feature-flag-test-missing-audit",
+      },
+      body: {
+        key: "FEATURE_TON_MINT_ENABLED",
+        enabled: false,
+        reason: "verify audit id requirement in admin test",
+      },
+    });
+
+    expect(result.statusCode).toBe(500);
+    expect(result.body).toMatchObject({
+      error: {
+        code: "ADMIN_AUDIT_LOG_REQUIRED",
+      },
+    });
+  });
+
   it("routes danger operations to dedicated admin RPCs with audit context", async () => {
     const { default: dangerOpsHandler } =
       await import("../../api/admin/danger-ops");
@@ -1303,6 +1334,7 @@ describe("admin ops APIs", () => {
       runWriteRpcMock.mockResolvedValueOnce({
         accepted: true,
         operation: dangerCase.body.action,
+        audit_log_id: AUDIT_LOG_ID,
       });
 
       const result = await invokeApiHandler<ApiSuccessResponse>(
