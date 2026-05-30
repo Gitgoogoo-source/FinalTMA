@@ -7,9 +7,10 @@ create extension if not exists pgtap with schema extensions;
 
 set search_path = public, extensions, core, economy, catalog, gacha, inventory, market, payments, tasks, album, onchain, ops, api;
 
-select plan(19);
+select plan(22);
 
 create temp table _ids (key text primary key, id uuid, payload jsonb) on commit drop;
+create temp table _errors (key text primary key, message text) on commit drop;
 
 with admin_row as (
   insert into ops.admin_users (email, display_name, status, metadata)
@@ -83,6 +84,25 @@ select ok(
   'mint queue status/attempt retry index exists'
 );
 
+select ok(
+  exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'ops'
+      and table_name = 'feature_flags'
+      and column_name = 'id'
+      and is_nullable = 'NO'
+  )
+  and exists (
+    select 1
+    from pg_indexes
+    where schemaname = 'ops'
+      and tablename = 'feature_flags'
+      and indexname = 'feature_flags_id_idx'
+  ),
+  'feature flags have a stable UUID audit target id'
+);
+
 insert into _ids (key, payload)
 values (
   'feature_flag_update',
@@ -126,6 +146,24 @@ select is(
 select ok(
   exists (
     select 1
+    from ops.admin_audit_logs aal
+    join ops.feature_flags ff on ff.key = 'FEATURE_ADMIN_TEST_FLAG'
+    where aal.admin_user_id = (select id from _ids where key = 'admin')
+      and aal.action = 'feature_flag.update'
+      and aal.target_schema = 'ops'
+      and aal.target_table = 'feature_flags'
+      and aal.target_id = ff.id
+      and aal.before_state = 'null'::jsonb
+      and aal.after_state ->> 'id' = ff.id::text
+      and aal.after_state ->> 'key' = ff.key
+      and aal.reason = 'pause flag for admin ops test'
+  ),
+  'feature flag audit captures target_id and before/after state'
+);
+
+select ok(
+  exists (
+    select 1
     from ops.risk_events
     where event_type = 'admin_feature_flag_update'
       and source_type = 'feature_flag'
@@ -164,6 +202,30 @@ select is(
   ),
   1,
   'idempotent repeat does not duplicate admin audit log'
+);
+
+do $$
+begin
+  perform api.admin_update_feature_flag(
+    (select id from _ids where key = 'admin'),
+    'FEATURE_ADMIN_TEST_FLAG',
+    true,
+    'test flag',
+    '',
+    'phase5-admin-ops-flag-missing-reason',
+    jsonb_build_object('ip_hash', 'test-ip-hash', 'user_agent_hash', 'test-ua-hash')
+  );
+  insert into _errors (key, message) values ('feature_flag_missing_reason', 'NO_ERROR');
+exception
+  when others then
+    insert into _errors (key, message) values ('feature_flag_missing_reason', sqlerrm);
+end
+$$;
+
+select is(
+  (select message from _errors where key = 'feature_flag_missing_reason'),
+  'ADMIN_REASON_REQUIRED',
+  'feature flag RPC rejects empty reason'
 );
 
 select ok(

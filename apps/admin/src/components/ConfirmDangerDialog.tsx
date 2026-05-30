@@ -3,6 +3,8 @@ import { type FormEvent, useEffect, useMemo, useState } from "react";
 
 import { shortId } from "../admin.ui";
 
+const MIN_REASON_LENGTH = 5;
+
 export type DangerConfirmation = {
   reason: string;
   targetCode: string;
@@ -44,8 +46,8 @@ export function ConfirmDangerDialog(props: ConfirmDangerDialogProps) {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!reason.trim()) {
-      setLocalError("必须填写操作原因");
+    if (reason.trim().length < MIN_REASON_LENGTH) {
+      setLocalError(`操作原因至少 ${MIN_REASON_LENGTH} 个字符`);
       return;
     }
 

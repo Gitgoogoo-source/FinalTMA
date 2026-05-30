@@ -1154,6 +1154,9 @@ describe("admin ops APIs", () => {
   it("calls the admin feature flag RPC with audit context and idempotency key", async () => {
     runWriteRpcMock.mockResolvedValue({
       key: "FEATURE_TON_MINT_ENABLED",
+      target_schema: "ops",
+      target_table: "feature_flags",
+      target_id: LOCK_ID,
       enabled: false,
       previous_enabled: true,
       audit_log_id: "88888888-8888-4888-8888-888888888888",
@@ -1186,6 +1189,9 @@ describe("admin ops APIs", () => {
       ok: true,
       data: {
         key: "FEATURE_TON_MINT_ENABLED",
+        target_schema: "ops",
+        target_table: "feature_flags",
+        target_id: LOCK_ID,
         enabled: false,
       },
     });

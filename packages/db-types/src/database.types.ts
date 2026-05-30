@@ -4022,6 +4022,7 @@ export type Database = {
           created_at: string;
           description: string | null;
           enabled: boolean;
+          id: string;
           key: string;
           rollout: Json;
           updated_at: string;
@@ -4031,6 +4032,7 @@ export type Database = {
           created_at?: string;
           description?: string | null;
           enabled?: boolean;
+          id?: string;
           key: string;
           rollout?: Json;
           updated_at?: string;
@@ -4040,6 +4042,7 @@ export type Database = {
           created_at?: string;
           description?: string | null;
           enabled?: boolean;
+          id?: string;
           key?: string;
           rollout?: Json;
           updated_at?: string;
