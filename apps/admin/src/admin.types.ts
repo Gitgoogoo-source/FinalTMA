@@ -278,6 +278,38 @@ export type FeatureFlagsResponse = {
   serverTime: string;
 };
 
+export type BannerCampaign = {
+  id: string;
+  code: string;
+  title: string;
+  description: string | null;
+  image_url: string;
+  placement: string;
+  target_type: string;
+  target_ref: string | null;
+  status: string;
+  starts_at: string | null;
+  ends_at: string | null;
+  sort_order: number;
+  metadata?: unknown;
+  created_at: string;
+  updated_at: string;
+};
+
+export type BoxPriceRule = {
+  id: string;
+  box_id: string;
+  quantity: number;
+  discount_bps: number;
+  price_stars_override: number | null;
+  active: boolean;
+  starts_at: string | null;
+  ends_at: string | null;
+  metadata?: unknown;
+  created_at: string;
+  updated_at: string;
+};
+
 export type BlindBoxAdminItem = {
   id: string;
   slug: string;
@@ -300,6 +332,7 @@ export type BlindBoxAdminItem = {
   active_version?: DropPoolVersion | null;
   version_count?: number;
   active_item_count?: number;
+  price_rules?: BoxPriceRule[];
 };
 
 export type DropPoolVersion = {
@@ -381,6 +414,75 @@ export type BlindBoxesAdminResponse = {
   summary?: Record<string, number>;
   nextCursor: string | null;
   serverTime: string;
+};
+
+export type CampaignsResponse = {
+  items: BannerCampaign[];
+  summary?: Record<string, number>;
+  nextCursor: string | null;
+  serverTime: string;
+};
+
+export type AdminConfigMutationResponse = Record<string, unknown> & {
+  audit_log_id?: string | null;
+  idempotent?: boolean;
+  serverTime: string;
+};
+
+export type UpsertCampaignInput = {
+  id?: string;
+  code: string;
+  title: string;
+  description?: string | null;
+  image_url: string;
+  placement: string;
+  target_type: string;
+  target_ref?: string | null;
+  status: string;
+  starts_at?: string | null;
+  ends_at?: string | null;
+  sort_order: number;
+  metadata?: Record<string, unknown>;
+  reason: string;
+};
+
+export type UpsertBlindBoxInput = {
+  id?: string;
+  slug: string;
+  display_name: string;
+  description?: string | null;
+  tier: string;
+  status: string;
+  price_stars: number;
+  total_stock?: number | null;
+  remaining_stock?: number | null;
+  open_reward_kcoin: number;
+  cover_image_url?: string | null;
+  hero_image_url?: string | null;
+  starts_at?: string | null;
+  ends_at?: string | null;
+  sort_order: number;
+  metadata?: Record<string, unknown>;
+  reason: string;
+};
+
+export type UpdateBlindBoxStatusInput = {
+  boxId: string;
+  status: string;
+  reason: string;
+};
+
+export type UpsertBoxPriceRuleInput = {
+  id?: string;
+  box_id: string;
+  quantity: number;
+  discount_bps: number;
+  price_stars_override?: number | null;
+  active: boolean;
+  starts_at?: string | null;
+  ends_at?: string | null;
+  metadata?: Record<string, unknown>;
+  reason: string;
 };
 
 export type DropPoolVersionsResponse = {
@@ -569,6 +671,8 @@ export type AdminTab =
   | "payments"
   | "mint"
   | "wallets"
+  | "campaigns"
+  | "blind-boxes"
   | "gacha-pools"
   | "flags"
   | "danger"

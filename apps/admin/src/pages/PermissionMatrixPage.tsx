@@ -86,6 +86,15 @@ const PERMISSION_DOMAINS: AdminPermissionMatrix["domains"] = [
     ],
   },
   {
+    domain: "campaigns",
+    label: "活动",
+    description: "活动 Banner、跳转目标和展示时间窗口。",
+    permissions: [
+      buildPermission("campaigns:read", "查看活动", "读取活动配置。"),
+      buildPermission("campaigns:write", "修改活动", "调整活动配置。"),
+    ],
+  },
+  {
     domain: "market",
     label: "市场",
     description: "市场挂单、成交、手续费和运营干预。",

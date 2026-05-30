@@ -2,7 +2,9 @@ import {
   Activity,
   Flag,
   Gift,
+  Image as ImageIcon,
   KeyRound,
+  PackageOpen,
   RefreshCw,
   ReceiptText,
   ScrollText,
@@ -21,6 +23,8 @@ import type {
 import { useAdminMe, type AdminMeStatus } from "./auth/useAdminMe";
 import { AdminUsersPage } from "./pages/AdminUsersPage";
 import { AuditLogsPage } from "./pages/AuditLogsPage";
+import { BlindBoxesPage } from "./pages/BlindBoxesPage";
+import { CampaignsPage } from "./pages/CampaignsPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { DangerOpsPage } from "./pages/DangerOpsPage";
 import { FeatureFlagsPage } from "./pages/FeatureFlagsPage";
@@ -63,6 +67,18 @@ const NAV_ITEMS: AdminNavItem[] = [
     label: "钱包",
     icon: WalletCards,
     requiredPermissions: ["wallets:read", "wallet:read", "onchain:read"],
+  },
+  {
+    id: "campaigns",
+    label: "活动",
+    icon: ImageIcon,
+    requiredPermissions: ["campaigns:read"],
+  },
+  {
+    id: "blind-boxes",
+    label: "盲盒",
+    icon: PackageOpen,
+    requiredPermissions: ["gacha:read"],
   },
   {
     id: "gacha-pools",
@@ -256,6 +272,10 @@ function renderActivePage(tab: AdminTab, me: AdminMeResponse) {
       return <MintQueuePage />;
     case "wallets":
       return <WalletsPage />;
+    case "campaigns":
+      return <CampaignsPage />;
+    case "blind-boxes":
+      return <BlindBoxesPage />;
     case "gacha-pools":
       return <GachaPoolsPage />;
     case "flags":

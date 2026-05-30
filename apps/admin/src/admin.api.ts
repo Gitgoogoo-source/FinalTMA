@@ -2,7 +2,9 @@ import type {
   AdminApiEnvelope,
   AuditLogFilters,
   AuditLogsResponse,
+  AdminConfigMutationResponse,
   BlindBoxesAdminResponse,
+  CampaignsResponse,
   AdminMeResponse,
   AdminRolesResponse,
   AdminUsersResponse,
@@ -17,6 +19,10 @@ import type {
   MonitoringResponse,
   PaymentAdminResponse,
   PityRulesResponse,
+  UpdateBlindBoxStatusInput,
+  UpsertBlindBoxInput,
+  UpsertBoxPriceRuleInput,
+  UpsertCampaignInput,
   WalletsResponse,
 } from "./admin.types";
 
@@ -144,11 +150,92 @@ export async function fetchFeatureFlags(
   );
 }
 
+export async function fetchCampaigns(
+  params: QueryParams = {},
+): Promise<CampaignsResponse> {
+  return adminRequest<CampaignsResponse>(
+    `/api/admin/campaigns${toQueryString(params)}`,
+  );
+}
+
+export async function upsertCampaign(
+  input: UpsertCampaignInput,
+): Promise<AdminConfigMutationResponse> {
+  return adminRequest<AdminConfigMutationResponse>("/api/admin/campaigns", {
+    method: "POST",
+    headers: buildDangerHeaders(
+      "admin-upsert-campaign",
+      input.id ?? input.code,
+    ),
+    body: {
+      ...input,
+      confirm: true,
+    },
+  });
+}
+
 export async function fetchBlindBoxAdminItems(
   params: QueryParams = {},
 ): Promise<BlindBoxesAdminResponse> {
   return adminRequest<BlindBoxesAdminResponse>(
     `/api/admin/gacha/boxes${toQueryString(params)}`,
+  );
+}
+
+export async function fetchBlindBoxes(
+  params: QueryParams = {},
+): Promise<BlindBoxesAdminResponse> {
+  return fetchBlindBoxAdminItems(params);
+}
+
+export async function upsertBlindBox(
+  input: UpsertBlindBoxInput,
+): Promise<AdminConfigMutationResponse> {
+  return adminRequest<AdminConfigMutationResponse>("/api/admin/blind-boxes", {
+    method: "POST",
+    headers: buildDangerHeaders(
+      "admin-upsert-blind-box",
+      input.id ?? input.slug,
+    ),
+    body: {
+      ...input,
+      confirm: true,
+    },
+  });
+}
+
+export async function updateBlindBoxStatus(
+  input: UpdateBlindBoxStatusInput,
+): Promise<AdminConfigMutationResponse> {
+  return adminRequest<AdminConfigMutationResponse>("/api/admin/blind-boxes", {
+    method: "PATCH",
+    headers: buildDangerHeaders("admin-update-box-status", input.boxId),
+    body: {
+      action: "update_status",
+      boxId: input.boxId,
+      status: input.status,
+      reason: input.reason,
+      confirm: true,
+    },
+  });
+}
+
+export async function upsertBoxPriceRule(
+  input: UpsertBoxPriceRuleInput,
+): Promise<AdminConfigMutationResponse> {
+  return adminRequest<AdminConfigMutationResponse>(
+    "/api/admin/box-price-rules",
+    {
+      method: "POST",
+      headers: buildDangerHeaders(
+        "admin-upsert-box-price-rule",
+        input.id ?? `${input.box_id}:${input.quantity}`,
+      ),
+      body: {
+        ...input,
+        confirm: true,
+      },
+    },
   );
 }
 
