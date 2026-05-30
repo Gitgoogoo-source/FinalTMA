@@ -37,6 +37,68 @@ type PageError = {
   code?: string;
   requestId?: string | null;
 };
+type ChangeKind = "added" | "removed" | "changed" | "unchanged";
+type NumericDelta = {
+  before: number | null;
+  after: number | null;
+  delta: number | null;
+  changed: boolean;
+};
+type BooleanDelta = {
+  before: boolean | null;
+  after: boolean | null;
+  changed: boolean;
+};
+type TextDelta = {
+  before: string | null;
+  after: string | null;
+  changed: boolean;
+};
+type CompareItemDiff = {
+  key: string;
+  label: string;
+  kind: ChangeKind;
+  rarity: TextDelta;
+  weight: NumericDelta;
+  probabilityBps: NumericDelta;
+  stockTotal: NumericDelta;
+  stockRemaining: NumericDelta;
+  pityEligible: BooleanDelta;
+  highRiskReasons: string[];
+};
+type RarityProbabilityDiff = {
+  rarityCode: string;
+  beforeBps: number;
+  afterBps: number;
+  deltaBps: number;
+  highRisk: boolean;
+};
+type PityRuleDiff = {
+  key: string;
+  label: string;
+  kind: ChangeKind;
+  threshold: NumericDelta;
+  targetRarity: TextDelta;
+  active: BooleanDelta;
+  highRiskReasons: string[];
+};
+type DropPoolComparison = {
+  activeVersion: DropPoolVersion;
+  targetVersion: DropPoolVersion;
+  itemDiffs: CompareItemDiff[];
+  rarityDiffs: RarityProbabilityDiff[];
+  pityDiffs: PityRuleDiff[];
+  summary: {
+    addedRewards: number;
+    removedRewards: number;
+    changedRewards: number;
+    rarityChanges: number;
+    stockChanges: number;
+    pityChanges: number;
+    highRiskCount: number;
+  };
+  loadedAt: string;
+};
 
 export function GachaPoolsPage() {
   const [boxes, setBoxes] = useState<BlindBoxAdminItem[]>([]);
@@ -52,6 +114,9 @@ export function GachaPoolsPage() {
   const [loadingVersions, setLoadingVersions] = useState(false);
   const [loadingItems, setLoadingItems] = useState(false);
   const [busyAction, setBusyAction] = useState<BusyAction>(null);
+  const [loadingComparison, setLoadingComparison] = useState(false);
+  const [comparison, setComparison] = useState<DropPoolComparison | null>(null);
+  const [publishConfirmOpen, setPublishConfirmOpen] = useState(false);
   const [error, setError] = useState<PageError | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [validation, setValidation] = useState<DropPoolValidationResult | null>(
@@ -83,6 +148,12 @@ export function GachaPoolsPage() {
   const selectedVersionPublishable =
     selectedVersion?.status === "draft" ||
     selectedVersion?.status === "scheduled";
+  const currentComparison =
+    comparison &&
+    comparison.activeVersion.id === activeVersion?.id &&
+    comparison.targetVersion.id === selectedVersion?.id
+      ? comparison
+      : null;
 
   async function loadBoxes() {
     setLoadingBoxes(true);
@@ -152,6 +223,56 @@ export function GachaPoolsPage() {
     }
   }
 
+  async function loadComparisonForSelection(): Promise<DropPoolComparison | null> {
+    if (!selectedBox || !selectedVersion || !activeVersion) {
+      setError({ message: "请选择盲盒、目标版本，并确认存在 active 版本" });
+      return null;
+    }
+
+    setLoadingComparison(true);
+    setError(null);
+
+    try {
+      const [
+        activeItemResponse,
+        activePityResponse,
+        targetItemResponse,
+        targetPityResponse,
+      ] = await Promise.all([
+        fetchDropPoolItems({ poolVersionId: activeVersion.id, limit: 500 }),
+        fetchPityRules({
+          boxId: selectedBox.id,
+          poolVersionId: activeVersion.id,
+          limit: 50,
+        }),
+        fetchDropPoolItems({ poolVersionId: selectedVersion.id, limit: 500 }),
+        fetchPityRules({
+          boxId: selectedBox.id,
+          poolVersionId: selectedVersion.id,
+          limit: 50,
+        }),
+      ]);
+      const nextComparison = buildDropPoolComparison({
+        activeVersion,
+        targetVersion: selectedVersion,
+        activeItems: activeItemResponse.items,
+        activePityRules: activePityResponse.items,
+        targetItems: targetItemResponse.items,
+        targetPityRules: targetPityResponse.items,
+      });
+
+      setComparison(nextComparison);
+      return nextComparison;
+    } catch (compareError) {
+      const pageError = readAdminError(compareError, "概率版本对比加载失败");
+      setComparison(null);
+      setError(pageError);
+      return null;
+    } finally {
+      setLoadingComparison(false);
+    }
+  }
+
   async function reloadSelected() {
     await loadBoxes();
 
@@ -161,6 +282,18 @@ export function GachaPoolsPage() {
 
     if (selectedBoxId && selectedVersionId) {
       await loadVersionDetails(selectedBoxId, selectedVersionId);
+    }
+  }
+
+  async function handleCompareActive() {
+    const nextComparison = await loadComparisonForSelection();
+
+    if (nextComparison) {
+      setNotice(
+        nextComparison.summary.highRiskCount > 0
+          ? `对比完成：发现 ${nextComparison.summary.highRiskCount} 个高风险变化`
+          : "对比完成：未发现高风险变化",
+      );
     }
   }
 
@@ -238,7 +371,26 @@ export function GachaPoolsPage() {
     }
   }
 
-  async function handlePublish() {
+  async function openPublishConfirm() {
+    if (!selectedVersion || !selectedVersionPublishable) {
+      setError({ message: "请选择可发布的概率版本" });
+      return;
+    }
+
+    if (activeVersion) {
+      const nextComparison = await loadComparisonForSelection();
+
+      if (!nextComparison) {
+        return;
+      }
+    } else {
+      setComparison(null);
+    }
+
+    setPublishConfirmOpen(true);
+  }
+
+  async function handlePublishConfirmed() {
     if (!selectedVersion) {
       setError({ message: "请选择概率版本" });
       return;
@@ -264,6 +416,8 @@ export function GachaPoolsPage() {
       setNotice(
         `发布已提交${result.audit_log_id ? ` / audit ${shortId(result.audit_log_id)}` : ""}`,
       );
+      setPublishConfirmOpen(false);
+      setComparison(null);
 
       if (selectedBox) {
         await loadVersions(selectedBox.id);
@@ -328,10 +482,13 @@ export function GachaPoolsPage() {
     setDraftItems([]);
     setPityRules([]);
     setValidation(null);
+    setComparison(null);
+    setPublishConfirmOpen(false);
     setNotice(null);
   }
 
   function updateDraftItem(index: number, patch: Partial<DropPoolItem>) {
+    setComparison(null);
     setDraftItems((current) =>
       current.map((item, itemIndex) =>
         itemIndex === index ? { ...item, ...patch } : item,
@@ -472,6 +629,8 @@ export function GachaPoolsPage() {
                             onClick={() => {
                               setSelectedVersionId(version.id);
                               setValidation(null);
+                              setComparison(null);
+                              setPublishConfirmOpen(false);
                             }}
                             type="button"
                           >
@@ -566,13 +725,24 @@ export function GachaPoolsPage() {
                     <span>{busyAction === "validate" ? "校验中" : "校验"}</span>
                   </button>
                   <button
+                    className="icon-button"
+                    disabled={
+                      !selectedVersion || !activeVersion || loadingComparison
+                    }
+                    onClick={() => void handleCompareActive()}
+                    type="button"
+                  >
+                    <ShieldAlert aria-hidden="true" size={16} />
+                    <span>{loadingComparison ? "对比中" : "对比 active"}</span>
+                  </button>
+                  <button
                     className="icon-button icon-button--danger"
                     disabled={
                       !selectedVersion ||
                       !selectedVersionPublishable ||
                       busyAction === "publish"
                     }
-                    onClick={() => void handlePublish()}
+                    onClick={() => void openPublishConfirm()}
                     type="button"
                   >
                     <Rocket aria-hidden="true" size={16} />
@@ -591,12 +761,28 @@ export function GachaPoolsPage() {
             />
           </section>
 
+          <DropPoolComparePanel
+            comparison={currentComparison}
+            loading={loadingComparison}
+          />
+
           <div className="split-grid split-grid--even">
             <PityRulesPanel rules={pityRules} />
             <ValidationPanel validation={validation} />
           </div>
         </div>
       </div>
+
+      <PublishConfirmDialog
+        comparison={currentComparison}
+        isOpen={publishConfirmOpen}
+        pending={busyAction === "publish"}
+        reason={reason}
+        selectedVersion={selectedVersion}
+        onCancel={() => setPublishConfirmOpen(false)}
+        onConfirm={() => void handlePublishConfirmed()}
+        onReasonChange={setReason}
+      />
     </section>
   );
 }
@@ -785,6 +971,343 @@ function DropPoolItemsTable(props: {
   );
 }
 
+function DropPoolComparePanel(props: {
+  comparison: DropPoolComparison | null;
+  loading: boolean;
+}) {
+  const changedItems =
+    props.comparison?.itemDiffs.filter((item) => item.kind !== "unchanged") ??
+    [];
+  const changedRarities =
+    props.comparison?.rarityDiffs.filter((item) => item.deltaBps !== 0) ?? [];
+  const changedPityRules =
+    props.comparison?.pityDiffs.filter((rule) => rule.kind !== "unchanged") ??
+    [];
+
+  return (
+    <section className="detail-panel gacha-compare-panel">
+      <div className="detail-panel__header">
+        <div>
+          <h2>概率版本对比</h2>
+          <p>
+            {props.comparison
+              ? `active v${props.comparison.activeVersion.version_no} -> v${props.comparison.targetVersion.version_no} / ${formatDate(props.comparison.loadedAt)}`
+              : "点击“对比 active”后展示新旧概率、稀有度概率、库存和保底变化"}
+          </p>
+        </div>
+        <StatusBadge status={props.loading ? "processing" : "read"} />
+      </div>
+
+      {props.loading ? <p className="notice">对比数据加载中...</p> : null}
+      {!props.loading && !props.comparison ? (
+        <p className="muted">暂无对比数据</p>
+      ) : null}
+
+      {props.comparison ? (
+        <div className="gacha-compare-stack">
+          <ComparisonSummaryGrid comparison={props.comparison} />
+
+          {props.comparison.summary.highRiskCount > 0 ? (
+            <HighRiskList comparison={props.comparison} />
+          ) : null}
+
+          <div className="split-grid split-grid--even">
+            <section className="gacha-compare-section">
+              <h3>稀有度概率变化</h3>
+              <div className="table-wrap table-wrap--small">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>稀有度</th>
+                      <th>active</th>
+                      <th>目标版本</th>
+                      <th>变化</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {changedRarities.map((rarity) => (
+                      <tr
+                        className={
+                          rarity.highRisk ? "gacha-diff-row--risk" : undefined
+                        }
+                        key={rarity.rarityCode}
+                      >
+                        <td>
+                          <StatusBadge status={rarity.rarityCode} />
+                        </td>
+                        <td>{formatBpsPercent(rarity.beforeBps)}</td>
+                        <td>{formatBpsPercent(rarity.afterBps)}</td>
+                        <td>{formatBpsDelta(rarity.deltaBps)}</td>
+                      </tr>
+                    ))}
+                    {changedRarities.length === 0 ? (
+                      <tr>
+                        <td colSpan={4}>稀有度概率无变化</td>
+                      </tr>
+                    ) : null}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <section className="gacha-compare-section">
+              <h3>保底规则变化</h3>
+              <div className="table-wrap table-wrap--small">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>规则</th>
+                      <th>状态</th>
+                      <th>次数</th>
+                      <th>目标稀有度</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {changedPityRules.map((rule) => (
+                      <tr
+                        className={
+                          rule.highRiskReasons.length > 0
+                            ? "gacha-diff-row--risk"
+                            : undefined
+                        }
+                        key={rule.key}
+                      >
+                        <td>
+                          <strong>{rule.label}</strong>
+                          {rule.highRiskReasons.length > 0 ? (
+                            <small>{rule.highRiskReasons.join(" / ")}</small>
+                          ) : null}
+                        </td>
+                        <td>
+                          <StatusBadge status={rule.kind} />
+                        </td>
+                        <td>{formatNumberDelta(rule.threshold)}</td>
+                        <td>{formatTextDelta(rule.targetRarity)}</td>
+                      </tr>
+                    ))}
+                    {changedPityRules.length === 0 ? (
+                      <tr>
+                        <td colSpan={4}>保底规则无变化</td>
+                      </tr>
+                    ) : null}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+
+          <section className="gacha-compare-section">
+            <h3>奖励项差异</h3>
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>奖励</th>
+                    <th>状态</th>
+                    <th>稀有度</th>
+                    <th>权重</th>
+                    <th>概率</th>
+                    <th>库存</th>
+                    <th>保底 eligible</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {changedItems.map((item) => (
+                    <tr
+                      className={
+                        item.highRiskReasons.length > 0
+                          ? "gacha-diff-row--risk"
+                          : undefined
+                      }
+                      key={item.key}
+                    >
+                      <td>
+                        <strong>{item.label}</strong>
+                        {item.highRiskReasons.length > 0 ? (
+                          <small>{item.highRiskReasons.join(" / ")}</small>
+                        ) : null}
+                      </td>
+                      <td>
+                        <StatusBadge status={item.kind} />
+                      </td>
+                      <td>{formatTextDelta(item.rarity)}</td>
+                      <td>{formatNumberDelta(item.weight)}</td>
+                      <td>{formatBpsDeltaRange(item.probabilityBps)}</td>
+                      <td>{formatStockDelta(item)}</td>
+                      <td>{formatBooleanDelta(item.pityEligible)}</td>
+                    </tr>
+                  ))}
+                  {changedItems.length === 0 ? (
+                    <tr>
+                      <td colSpan={7}>奖励项无变化</td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function ComparisonSummaryGrid({
+  comparison,
+}: {
+  comparison: DropPoolComparison;
+}) {
+  return (
+    <div className="gacha-compare-summary">
+      <DetailItem
+        label="奖励变化"
+        value={`+${comparison.summary.addedRewards} / -${comparison.summary.removedRewards} / 改 ${comparison.summary.changedRewards}`}
+      />
+      <DetailItem
+        label="稀有度变化"
+        value={String(comparison.summary.rarityChanges)}
+      />
+      <DetailItem
+        label="库存变化"
+        value={String(comparison.summary.stockChanges)}
+      />
+      <DetailItem
+        label="保底变化"
+        value={String(comparison.summary.pityChanges)}
+      />
+      <DetailItem
+        label="高风险变化"
+        value={String(comparison.summary.highRiskCount)}
+      />
+    </div>
+  );
+}
+
+function HighRiskList({ comparison }: { comparison: DropPoolComparison }) {
+  const messages = getHighRiskMessages(comparison);
+
+  return (
+    <div className="gacha-risk-list">
+      <span className="gacha-risk-list__icon">
+        <ShieldAlert aria-hidden="true" size={18} />
+      </span>
+      <div>
+        <strong>高风险变化</strong>
+        <ul>
+          {messages.map((message) => (
+            <li key={message}>{message}</li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+function PublishConfirmDialog(props: {
+  comparison: DropPoolComparison | null;
+  isOpen: boolean;
+  pending: boolean;
+  reason: string;
+  selectedVersion: DropPoolVersion | null;
+  onCancel: () => void;
+  onConfirm: () => void;
+  onReasonChange: (value: string) => void;
+}) {
+  if (!props.isOpen) {
+    return null;
+  }
+
+  const reasonReady = props.reason.trim().length > 0;
+
+  return (
+    <div className="danger-dialog-backdrop" role="presentation">
+      <form
+        aria-modal="true"
+        className="danger-dialog gacha-publish-dialog"
+        onSubmit={(event) => {
+          event.preventDefault();
+
+          if (reasonReady) {
+            props.onConfirm();
+          }
+        }}
+        role="dialog"
+      >
+        <div className="danger-dialog__header">
+          <span className="danger-dialog__icon">
+            <ShieldAlert aria-hidden="true" size={20} />
+          </span>
+          <div>
+            <h2>确认发布概率版本</h2>
+            <p>
+              {props.selectedVersion
+                ? `目标版本 v${props.selectedVersion.version_no} / ${shortId(props.selectedVersion.id)}`
+                : "未选择目标版本"}
+            </p>
+          </div>
+          <button
+            className="icon-only-button"
+            disabled={props.pending}
+            onClick={props.onCancel}
+            type="button"
+          >
+            ×
+          </button>
+        </div>
+
+        {props.comparison ? (
+          <>
+            <ComparisonSummaryGrid comparison={props.comparison} />
+            {props.comparison.summary.highRiskCount > 0 ? (
+              <HighRiskList comparison={props.comparison} />
+            ) : (
+              <p className="notice">差异摘要未发现高风险变化。</p>
+            )}
+          </>
+        ) : (
+          <p className="notice">
+            当前没有 active 版本可对比；发布将以后台 RPC 校验结果为准。
+          </p>
+        )}
+
+        <label>
+          <span>发布 reason</span>
+          <textarea
+            disabled={props.pending}
+            onChange={(event) => props.onReasonChange(event.target.value)}
+            placeholder="说明本次概率、库存或保底调整原因"
+            rows={3}
+            value={props.reason}
+          />
+        </label>
+
+        {!reasonReady ? (
+          <p className="notice notice--error">发布前必须填写 reason</p>
+        ) : null}
+
+        <div className="button-row">
+          <button
+            className="text-button"
+            disabled={props.pending}
+            onClick={props.onCancel}
+            type="button"
+          >
+            取消
+          </button>
+          <button
+            className="icon-button icon-button--danger"
+            disabled={props.pending || !reasonReady}
+            type="submit"
+          >
+            <Rocket aria-hidden="true" size={16} />
+            <span>{props.pending ? "发布中" : "确认发布"}</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
 function PityRulesPanel({ rules }: { rules: PityRule[] }) {
   return (
     <section className="ops-card">
@@ -921,6 +1444,525 @@ function serializeDraftPityRule(rule: PityRule): DropPoolDraftPityRuleInput {
     priority: rule.priority,
     active: rule.active,
     metadata: rule.metadata,
+  };
+}
+
+function buildDropPoolComparison(input: {
+  activeVersion: DropPoolVersion;
+  targetVersion: DropPoolVersion;
+  activeItems: DropPoolItem[];
+  activePityRules: PityRule[];
+  targetItems: DropPoolItem[];
+  targetPityRules: PityRule[];
+}): DropPoolComparison {
+  const itemDiffs = buildItemDiffs(input);
+  const rarityDiffs = buildRarityDiffs(input);
+  const pityDiffs = buildPityDiffs(
+    input.activePityRules,
+    input.targetPityRules,
+  );
+  const stockChanges = itemDiffs.filter(
+    (item) => item.stockRemaining.changed || item.stockTotal.changed,
+  ).length;
+  const highRiskCount =
+    itemDiffs.filter((item) => item.highRiskReasons.length > 0).length +
+    rarityDiffs.filter((rarity) => rarity.highRisk).length +
+    pityDiffs.filter((rule) => rule.highRiskReasons.length > 0).length;
+
+  return {
+    activeVersion: input.activeVersion,
+    targetVersion: input.targetVersion,
+    itemDiffs,
+    rarityDiffs,
+    pityDiffs,
+    summary: {
+      addedRewards: itemDiffs.filter((item) => item.kind === "added").length,
+      removedRewards: itemDiffs.filter((item) => item.kind === "removed")
+        .length,
+      changedRewards: itemDiffs.filter((item) => item.kind === "changed")
+        .length,
+      rarityChanges: rarityDiffs.filter((rarity) => rarity.deltaBps !== 0)
+        .length,
+      stockChanges,
+      pityChanges: pityDiffs.filter((rule) => rule.kind !== "unchanged").length,
+      highRiskCount,
+    },
+    loadedAt: new Date().toISOString(),
+  };
+}
+
+function buildItemDiffs(input: {
+  activeVersion: DropPoolVersion;
+  targetVersion: DropPoolVersion;
+  activeItems: DropPoolItem[];
+  targetItems: DropPoolItem[];
+}): CompareItemDiff[] {
+  const activeItemsByKey = indexItemsByRewardKey(input.activeItems);
+  const targetItemsByKey = indexItemsByRewardKey(input.targetItems);
+  const keys = Array.from(
+    new Set([...activeItemsByKey.keys(), ...targetItemsByKey.keys()]),
+  );
+
+  return keys
+    .map((key) => {
+      const before = activeItemsByKey.get(key) ?? null;
+      const after = targetItemsByKey.get(key) ?? null;
+      const rarity = textDelta(
+        before?.rarity_code ?? null,
+        after?.rarity_code ?? null,
+      );
+      const weight = numberDelta(before?.drop_weight, after?.drop_weight);
+      const probabilityBps = numberDelta(
+        before ? readItemProbabilityBps(before, input.activeVersion) : null,
+        after ? readItemProbabilityBps(after, input.targetVersion) : null,
+      );
+      const stockTotal = numberDelta(
+        before?.stock_total ?? null,
+        after?.stock_total ?? null,
+      );
+      const stockRemaining = numberDelta(
+        before?.stock_remaining ?? null,
+        after?.stock_remaining ?? null,
+      );
+      const pityEligible = booleanDelta(
+        before?.is_pity_eligible ?? null,
+        after?.is_pity_eligible ?? null,
+      );
+      const kind = readChangeKind(
+        [
+          rarity.changed,
+          weight.changed,
+          probabilityBps.changed,
+          stockTotal.changed,
+          stockRemaining.changed,
+          pityEligible.changed,
+        ],
+        before,
+        after,
+      );
+      const highRiskReasons: string[] = [];
+
+      if (isDecrease(stockTotal)) {
+        highRiskReasons.push("库存上限减少");
+      }
+
+      if (isDecrease(stockRemaining)) {
+        highRiskReasons.push("剩余库存减少");
+      }
+
+      if (before && !after && isLegendaryRarity(before.rarity_code)) {
+        highRiskReasons.push("Legendary 奖励删除");
+      }
+
+      if (
+        before?.is_pity_eligible === true &&
+        after?.is_pity_eligible === false
+      ) {
+        highRiskReasons.push("保底 eligible 关闭");
+      }
+
+      return {
+        key,
+        label: getItemLabel(after ?? before ?? fallbackDropPoolItem(key)),
+        kind,
+        rarity,
+        weight,
+        probabilityBps,
+        stockTotal,
+        stockRemaining,
+        pityEligible,
+        highRiskReasons,
+      };
+    })
+    .sort(compareItemDiffs);
+}
+
+function buildRarityDiffs(input: {
+  activeVersion: DropPoolVersion;
+  targetVersion: DropPoolVersion;
+  activeItems: DropPoolItem[];
+  targetItems: DropPoolItem[];
+}): RarityProbabilityDiff[] {
+  const activeByRarity = summarizeProbabilityByRarity(
+    input.activeItems,
+    input.activeVersion,
+  );
+  const targetByRarity = summarizeProbabilityByRarity(
+    input.targetItems,
+    input.targetVersion,
+  );
+  const rarityCodes = Array.from(
+    new Set([...activeByRarity.keys(), ...targetByRarity.keys()]),
+  ).sort();
+
+  return rarityCodes.map((rarityCode) => {
+    const beforeBps = activeByRarity.get(rarityCode) ?? 0;
+    const afterBps = targetByRarity.get(rarityCode) ?? 0;
+    const deltaBps = normalizeBps(afterBps - beforeBps);
+
+    return {
+      rarityCode,
+      beforeBps,
+      afterBps,
+      deltaBps,
+      highRisk: isLegendaryRarity(rarityCode) && deltaBps < 0,
+    };
+  });
+}
+
+function buildPityDiffs(
+  activeRules: PityRule[],
+  targetRules: PityRule[],
+): PityRuleDiff[] {
+  const activeRulesByKey = indexPityRulesByKey(activeRules);
+  const targetRulesByKey = indexPityRulesByKey(targetRules);
+  const keys = Array.from(
+    new Set([...activeRulesByKey.keys(), ...targetRulesByKey.keys()]),
+  );
+
+  return keys
+    .map((key) => {
+      const before = activeRulesByKey.get(key) ?? null;
+      const after = targetRulesByKey.get(key) ?? null;
+      const threshold = numberDelta(
+        before?.threshold ?? null,
+        after?.threshold ?? null,
+      );
+      const targetRarity = textDelta(
+        before?.target_rarity_code ?? null,
+        after?.target_rarity_code ?? null,
+      );
+      const active = booleanDelta(
+        before?.active ?? null,
+        after?.active ?? null,
+      );
+      const kind = readChangeKind(
+        [threshold.changed, targetRarity.changed, active.changed],
+        before,
+        after,
+      );
+      const highRiskReasons: string[] = [];
+
+      if (threshold.delta !== null && threshold.delta > 0) {
+        highRiskReasons.push("保底次数增加");
+      }
+
+      return {
+        key,
+        label: after?.rule_name ?? before?.rule_name ?? key,
+        kind,
+        threshold,
+        targetRarity,
+        active,
+        highRiskReasons,
+      };
+    })
+    .sort(comparePityDiffs);
+}
+
+function indexItemsByRewardKey(
+  items: DropPoolItem[],
+): Map<string, DropPoolItem> {
+  return new Map(items.map((item) => [readRewardKey(item), item]));
+}
+
+function indexPityRulesByKey(rules: PityRule[]): Map<string, PityRule> {
+  return new Map(rules.map((rule) => [readPityRuleKey(rule), rule]));
+}
+
+function readRewardKey(item: DropPoolItem): string {
+  return `${item.template_id}:${item.form_id ?? "no-form"}`;
+}
+
+function readPityRuleKey(rule: PityRule): string {
+  return [
+    rule.rule_name.trim().toLowerCase(),
+    rule.target_rarity_code,
+    rule.guaranteed_template_id ?? "no-template",
+    rule.guaranteed_form_id ?? "no-form",
+  ].join(":");
+}
+
+function summarizeProbabilityByRarity(
+  items: DropPoolItem[],
+  version: DropPoolVersion,
+): Map<string, number> {
+  const summary = new Map<string, number>();
+
+  for (const item of items) {
+    const bps = readItemProbabilityBps(item, version) ?? 0;
+    summary.set(
+      item.rarity_code,
+      normalizeBps((summary.get(item.rarity_code) ?? 0) + bps),
+    );
+  }
+
+  return summary;
+}
+
+function readItemProbabilityBps(
+  item: DropPoolItem,
+  version: DropPoolVersion,
+): number | null {
+  const explicitBps = normalizeNumber(item.probability_bps);
+
+  if (explicitBps !== null) {
+    return normalizeBps(explicitBps);
+  }
+
+  const computedBps = computeProbabilityBps(
+    item.drop_weight,
+    version.total_weight,
+  );
+  return computedBps === null ? null : normalizeBps(computedBps);
+}
+
+function numberDelta(
+  beforeValue: number | string | null | undefined,
+  afterValue: number | string | null | undefined,
+): NumericDelta {
+  const before = normalizeNumber(beforeValue);
+  const after = normalizeNumber(afterValue);
+  const changed = !sameNullableNumber(before, after);
+
+  return {
+    before,
+    after,
+    delta:
+      before === null || after === null ? null : normalizeBps(after - before),
+    changed,
+  };
+}
+
+function textDelta(
+  beforeValue: string | null | undefined,
+  afterValue: string | null | undefined,
+): TextDelta {
+  const before = beforeValue?.trim() ? beforeValue.trim() : null;
+  const after = afterValue?.trim() ? afterValue.trim() : null;
+
+  return {
+    before,
+    after,
+    changed: before !== after,
+  };
+}
+
+function booleanDelta(
+  before: boolean | null,
+  after: boolean | null,
+): BooleanDelta {
+  return {
+    before,
+    after,
+    changed: before !== after,
+  };
+}
+
+function readChangeKind(
+  changedFields: boolean[],
+  before: unknown,
+  after: unknown,
+): ChangeKind {
+  if (!before && after) {
+    return "added";
+  }
+
+  if (before && !after) {
+    return "removed";
+  }
+
+  return changedFields.some(Boolean) ? "changed" : "unchanged";
+}
+
+function isDecrease(delta: NumericDelta): boolean {
+  return (
+    delta.before !== null && delta.after !== null && delta.after < delta.before
+  );
+}
+
+function compareItemDiffs(a: CompareItemDiff, b: CompareItemDiff): number {
+  const riskDelta = b.highRiskReasons.length - a.highRiskReasons.length;
+
+  if (riskDelta !== 0) {
+    return riskDelta;
+  }
+
+  const order: Record<ChangeKind, number> = {
+    added: 0,
+    removed: 1,
+    changed: 2,
+    unchanged: 3,
+  };
+
+  return order[a.kind] - order[b.kind] || a.label.localeCompare(b.label);
+}
+
+function comparePityDiffs(a: PityRuleDiff, b: PityRuleDiff): number {
+  const riskDelta = b.highRiskReasons.length - a.highRiskReasons.length;
+
+  if (riskDelta !== 0) {
+    return riskDelta;
+  }
+
+  return a.label.localeCompare(b.label);
+}
+
+function getHighRiskMessages(comparison: DropPoolComparison): string[] {
+  const messages = [
+    ...comparison.rarityDiffs
+      .filter((rarity) => rarity.highRisk)
+      .map(
+        (rarity) =>
+          `${rarity.rarityCode} 概率降低：${formatBpsPercent(
+            rarity.beforeBps,
+          )} -> ${formatBpsPercent(rarity.afterBps)}`,
+      ),
+    ...comparison.itemDiffs
+      .filter((item) => item.highRiskReasons.length > 0)
+      .map((item) => `${item.label}: ${item.highRiskReasons.join(" / ")}`),
+    ...comparison.pityDiffs
+      .filter((rule) => rule.highRiskReasons.length > 0)
+      .map((rule) => `${rule.label}: ${rule.highRiskReasons.join(" / ")}`),
+  ];
+  const uniqueMessages = Array.from(new Set(messages));
+
+  if (uniqueMessages.length <= 8) {
+    return uniqueMessages;
+  }
+
+  return [
+    ...uniqueMessages.slice(0, 8),
+    `还有 ${uniqueMessages.length - 8} 个高风险变化`,
+  ];
+}
+
+function formatNumberDelta(delta: NumericDelta): string {
+  if (!delta.changed) {
+    return formatNullableNumber(delta.after ?? delta.before);
+  }
+
+  return `${formatNullableNumber(delta.before)} -> ${formatNullableNumber(
+    delta.after,
+  )}${delta.delta === null ? "" : ` (${formatSignedNumber(delta.delta)})`}`;
+}
+
+function formatTextDelta(delta: TextDelta): string {
+  if (!delta.changed) {
+    return delta.after ?? delta.before ?? "-";
+  }
+
+  return `${delta.before ?? "-"} -> ${delta.after ?? "-"}`;
+}
+
+function formatBooleanDelta(delta: BooleanDelta): string {
+  if (!delta.changed) {
+    return formatNullableBoolean(delta.after ?? delta.before);
+  }
+
+  return `${formatNullableBoolean(delta.before)} -> ${formatNullableBoolean(
+    delta.after,
+  )}`;
+}
+
+function formatBpsDeltaRange(delta: NumericDelta): string {
+  if (!delta.changed) {
+    return delta.after === null && delta.before === null
+      ? "-"
+      : formatBpsPercent(delta.after ?? delta.before ?? 0);
+  }
+
+  return `${formatNullableBpsPercent(delta.before)} -> ${formatNullableBpsPercent(
+    delta.after,
+  )}${delta.delta === null ? "" : ` (${formatBpsDelta(delta.delta)})`}`;
+}
+
+function formatStockDelta(item: CompareItemDiff): string {
+  const before = formatStockPair(
+    item.stockRemaining.before,
+    item.stockTotal.before,
+  );
+  const after = formatStockPair(
+    item.stockRemaining.after,
+    item.stockTotal.after,
+  );
+
+  if (!item.stockRemaining.changed && !item.stockTotal.changed) {
+    return after === "- / -" ? before : after;
+  }
+
+  return `${before} -> ${after}`;
+}
+
+function formatStockPair(
+  remaining: number | null,
+  total: number | null,
+): string {
+  return `${formatNullableNumber(remaining)} / ${formatNullableNumber(total)}`;
+}
+
+function formatNullableNumber(value: number | null): string {
+  return value === null ? "-" : formatNumeric(value);
+}
+
+function formatNullableBoolean(value: boolean | null): string {
+  if (value === null) {
+    return "-";
+  }
+
+  return value ? "yes" : "no";
+}
+
+function formatNullableBpsPercent(value: number | null): string {
+  return value === null ? "-" : formatBpsPercent(value);
+}
+
+function formatBpsPercent(bps: number): string {
+  return `${(bps / 100).toFixed(2)}%`;
+}
+
+function formatBpsDelta(deltaBps: number): string {
+  const sign = deltaBps > 0 ? "+" : "";
+  return `${sign}${(deltaBps / 100).toFixed(2)}pp`;
+}
+
+function formatSignedNumber(value: number): string {
+  const sign = value > 0 ? "+" : "";
+  return `${sign}${formatNumeric(value)}`;
+}
+
+function sameNullableNumber(a: number | null, b: number | null): boolean {
+  if (a === null || b === null) {
+    return a === b;
+  }
+
+  return Math.abs(a - b) < 0.0001;
+}
+
+function normalizeBps(value: number): number {
+  return Number(value.toFixed(4));
+}
+
+function isLegendaryRarity(value: string | null | undefined): boolean {
+  return value?.toLowerCase() === "legendary";
+}
+
+function fallbackDropPoolItem(key: string): DropPoolItem {
+  return {
+    id: key,
+    pool_version_id: "",
+    template_id: key,
+    form_id: null,
+    rarity_code: "",
+    drop_weight: 0,
+    probability_bps: null,
+    stock_total: null,
+    stock_remaining: null,
+    is_pity_eligible: false,
+    is_featured: false,
+    sort_order: 0,
+    created_at: "",
+    updated_at: "",
   };
 }
 

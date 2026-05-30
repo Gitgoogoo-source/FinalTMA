@@ -1133,6 +1133,111 @@ tr.is-selected td {
   width: 100%;
 }
 
+.gacha-compare-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.gacha-compare-stack {
+  display: grid;
+  gap: 14px;
+}
+
+.gacha-compare-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.gacha-compare-summary > span {
+  min-width: 0;
+  border: 1px solid #e1e8ee;
+  border-radius: 8px;
+  background: #f9fbfc;
+  padding: 10px;
+}
+
+.gacha-compare-summary small,
+.gacha-compare-summary strong {
+  display: block;
+}
+
+.gacha-compare-summary small {
+  color: #667887;
+  font-size: 12px;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.gacha-compare-summary strong {
+  overflow-wrap: anywhere;
+  color: #17202a;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.gacha-compare-section {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.gacha-compare-section h3 {
+  margin: 0;
+  color: #17202a;
+  font-size: 14px;
+}
+
+.gacha-diff-row--risk {
+  background: #fff8f2;
+}
+
+.gacha-diff-row--risk td {
+  border-bottom-color: #f0c7a7;
+}
+
+.gacha-risk-list {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 10px;
+  border: 1px solid #efb7b7;
+  border-radius: 8px;
+  background: #fff4f4;
+  color: #9c2929;
+  padding: 10px;
+}
+
+.gacha-risk-list__icon {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.gacha-risk-list strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.gacha-risk-list ul {
+  display: grid;
+  gap: 3px;
+  margin: 0;
+  padding-left: 18px;
+}
+
+.gacha-risk-list li {
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.gacha-publish-dialog {
+  width: min(760px, calc(100vw - 32px));
+}
+
 .validation-list {
   display: grid;
   gap: 8px;
