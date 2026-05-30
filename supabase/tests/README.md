@@ -39,6 +39,7 @@ phase4_task_fields.test.sql
 phase4_task_progress_sources_existing.test.sql
 phase5_payment_wallet_onchain_schema.test.sql
 phase5_secrets_feature_flags.test.sql
+phase6_admin_user_role_rpcs.test.sql
 referral.test.sql
 stage3_database_acceptance.test.sql
 stage3_e2e_album_reward.test.sql

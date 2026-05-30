@@ -1,0 +1,25 @@
+# Test suites and test outputs
+tests/
+contracts/tests/
+supabase/tests/
+test-results/
+playwright-report/
+coverage/
+
+# Co-located unit/component tests
+**/*.test.ts
+**/*.test.tsx
+**/*.test.js
+**/*.test.jsx
+**/*.test.mts
+**/*.test.cts
+**/*.spec.ts
+**/*.spec.tsx
+**/*.spec.js
+**/*.spec.jsx
+**/*.spec.mts
+**/*.spec.cts
+
+# Conventional test-only folders
+**/__tests__/
+**/__mocks__/
