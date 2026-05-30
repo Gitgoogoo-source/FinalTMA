@@ -278,6 +278,52 @@ export type FeatureFlagsResponse = {
   serverTime: string;
 };
 
+export type AdminAuditLogAdmin = {
+  id: string;
+  display_name: string | null;
+  telegram_user_id: number | string | null;
+  email: string | null;
+};
+
+export type AdminAuditLog = {
+  id: string;
+  admin_user_id: string | null;
+  admin?: AdminAuditLogAdmin | null;
+  action: string;
+  target_schema: string | null;
+  target_table: string | null;
+  target_id: string | null;
+  before_state: unknown;
+  after_state: unknown;
+  ip_hash?: string | null;
+  user_agent?: string | null;
+  reason: string | null;
+  request_id?: string | null;
+  requestId?: string | null;
+  risk_level?: string | null;
+  created_at: string;
+};
+
+export type AuditLogFilters = {
+  adminUserId?: string;
+  action?: string;
+  targetSchema?: string;
+  targetTable?: string;
+  targetId?: string;
+  from?: string;
+  to?: string;
+  q?: string;
+  cursor?: string | null;
+  limit?: number;
+};
+
+export type AuditLogsResponse = {
+  items: AdminAuditLog[];
+  summary: Record<string, number>;
+  nextCursor: string | null;
+  serverTime: string;
+};
+
 export type AdminMeResponse = {
   adminId: string;
   roleCode: string | null;
@@ -349,6 +395,7 @@ export type AdminTab =
   | "wallets"
   | "flags"
   | "danger"
+  | "audit"
   | "admins"
   | "roles"
   | "permissions";

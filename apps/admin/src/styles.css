@@ -306,6 +306,10 @@ select {
   font-weight: 800;
 }
 
+.audit-toolbar {
+  align-items: end;
+}
+
 input,
 select,
 textarea {
@@ -677,6 +681,72 @@ tr.is-selected td {
   gap: 8px;
   justify-content: flex-end;
   margin-top: 12px;
+}
+
+.audit-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.audit-dialog {
+  width: min(980px, calc(100vw - 32px));
+}
+
+.audit-dialog__header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 36px;
+  gap: 12px;
+  align-items: start;
+}
+
+.audit-dialog__header h2,
+.audit-dialog__header p,
+.audit-diff h3 {
+  margin: 0;
+}
+
+.audit-dialog__header h2 {
+  overflow-wrap: anywhere;
+  color: #17202a;
+  font-size: 18px;
+}
+
+.audit-dialog__header p {
+  margin-top: 4px;
+  color: #657583;
+  font-size: 12px;
+}
+
+.audit-diff {
+  display: grid;
+  gap: 8px;
+}
+
+.audit-diff h3 {
+  color: #17202a;
+  font-size: 14px;
+}
+
+.audit-json-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.audit-json-panel {
+  min-width: 0;
+  border: 1px solid #e1e8ee;
+  border-radius: 8px;
+  background: #f9fbfc;
+  padding: 10px;
+}
+
+.audit-json-panel summary {
+  cursor: pointer;
+  color: #17202a;
+  font-weight: 800;
 }
 
 .danger-dialog-backdrop {

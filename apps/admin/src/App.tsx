@@ -4,6 +4,7 @@ import {
   KeyRound,
   RefreshCw,
   ReceiptText,
+  ScrollText,
   ShieldAlert,
   ShieldCheck,
   Users,
@@ -18,6 +19,7 @@ import type {
 } from "./admin.types";
 import { useAdminMe, type AdminMeStatus } from "./auth/useAdminMe";
 import { AdminUsersPage } from "./pages/AdminUsersPage";
+import { AuditLogsPage } from "./pages/AuditLogsPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { DangerOpsPage } from "./pages/DangerOpsPage";
 import { FeatureFlagsPage } from "./pages/FeatureFlagsPage";
@@ -79,6 +81,13 @@ const NAV_ITEMS: AdminNavItem[] = [
       "users:ban",
       "inventory:write",
     ],
+    permissionMode: "any",
+  },
+  {
+    id: "audit",
+    label: "审计",
+    icon: ScrollText,
+    requiredPermissions: ["audit:read", "admin:read"],
     permissionMode: "any",
   },
   {
@@ -243,6 +252,8 @@ function renderActivePage(tab: AdminTab) {
       return <FeatureFlagsPage />;
     case "danger":
       return <DangerOpsPage />;
+    case "audit":
+      return <AuditLogsPage />;
     case "admins":
       return <AdminUsersPage />;
     case "roles":

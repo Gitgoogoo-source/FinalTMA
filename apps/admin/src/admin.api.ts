@@ -1,5 +1,7 @@
 import type {
   AdminApiEnvelope,
+  AuditLogFilters,
+  AuditLogsResponse,
   AdminMeResponse,
   AdminRolesResponse,
   AdminUsersResponse,
@@ -126,6 +128,14 @@ export async function fetchFeatureFlags(
 ): Promise<FeatureFlagsResponse> {
   return adminRequest<FeatureFlagsResponse>(
     `/api/admin/feature-flags${toQueryString(params)}`,
+  );
+}
+
+export async function fetchAuditLogs(
+  params: AuditLogFilters = {},
+): Promise<AuditLogsResponse> {
+  return adminRequest<AuditLogsResponse>(
+    `/api/admin/audit-logs${toQueryString(params)}`,
   );
 }
 
