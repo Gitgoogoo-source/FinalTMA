@@ -176,6 +176,12 @@ async function saveDropPoolDraft(input: {
       input.body.poolVersionId,
     "dropPoolVersionId",
   );
+  const sourceVersionId = normalizeOptionalBodyUuid(
+    input.body.sourceVersionId ??
+      input.body.source_version_id ??
+      input.body.cloneFromVersionId,
+    "sourceVersionId",
+  );
   const versionName = normalizeOptionalText(
     input.body.versionName ?? input.body.version_name,
   );
@@ -183,20 +189,32 @@ async function saveDropPoolDraft(input: {
   const pityRules = normalizePityRulesInput(
     input.body.pityRules ?? input.body.pity_rules,
   );
-  const args: Record<string, JsonValue | undefined> = {
-    p_admin_user_id: input.adminUserId,
-    p_box_id: boxId,
-    p_drop_pool_version_id: dropPoolVersionId,
-    p_version_name: versionName,
-    p_items: items,
-    p_pity_rules: pityRules,
-    p_reason: input.controls.reason,
-    p_idempotency_key: input.controls.idempotencyKey,
-    p_request_context: input.controls.requestContext,
-  };
   const functionName = dropPoolVersionId
     ? "admin_update_drop_pool_item"
     : "admin_create_drop_pool_draft";
+  const args: Record<string, JsonValue | undefined> = dropPoolVersionId
+    ? {
+        p_admin_user_id: input.adminUserId,
+        p_drop_pool_version_id: dropPoolVersionId,
+        p_box_id: boxId,
+        p_version_name: versionName ?? null,
+        p_items: items,
+        p_pity_rules: pityRules,
+        p_reason: input.controls.reason,
+        p_idempotency_key: input.controls.idempotencyKey,
+        p_request_context: input.controls.requestContext,
+      }
+    : {
+        p_admin_user_id: input.adminUserId,
+        p_box_id: boxId,
+        p_source_version_id: sourceVersionId ?? null,
+        p_version_name: versionName ?? null,
+        p_items: items,
+        p_pity_rules: pityRules,
+        p_reason: input.controls.reason,
+        p_idempotency_key: input.controls.idempotencyKey,
+        p_request_context: input.controls.requestContext,
+      };
 
   return await callGachaWriteRpc<DropPoolMutationResult>({
     functionName,

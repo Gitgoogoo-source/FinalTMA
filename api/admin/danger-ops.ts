@@ -186,8 +186,12 @@ function buildDangerRpcCall(input: {
         requestId: input.requestId,
         args: {
           ...commonArgs,
-          p_box_id: normalizeRequiredUuid(input.body.boxId, "boxId"),
-          p_items: normalizeDropPoolItems(input.body.items),
+          p_drop_pool_version_id: normalizeRequiredUuid(
+            input.body.dropPoolVersionId ??
+              input.body.drop_pool_version_id ??
+              input.body.poolVersionId,
+            "dropPoolVersionId",
+          ),
         },
       };
   }
@@ -195,42 +199,6 @@ function buildDangerRpcCall(input: {
 
 function normalizeJsonRecord(value: unknown): ReturnType<typeof toJsonObject> {
   return toJsonObject(isRecord(value) ? value : {});
-}
-
-function normalizeJsonArray(value: unknown, field: string) {
-  if (!Array.isArray(value)) {
-    throw new ApiError(400, "VALIDATION_FAILED", `${field} must be an array`);
-  }
-
-  return value.map((item) =>
-    isRecord(item) ? toJsonObject(item) : item,
-  ) as JsonValue[];
-}
-
-function normalizeDropPoolItems(value: unknown): JsonValue[] {
-  return normalizeJsonArray(value, "items").map((item) => {
-    if (!isRecord(item)) {
-      throw new ApiError(
-        400,
-        "VALIDATION_FAILED",
-        "items must contain objects",
-      );
-    }
-
-    return toJsonObject({
-      template_id: item.template_id ?? item.templateId,
-      form_id: item.form_id ?? item.formId ?? null,
-      rarity_code: item.rarity_code ?? item.rarityCode,
-      drop_weight: item.drop_weight ?? item.dropWeight ?? item.weight,
-      probability_bps: item.probability_bps ?? item.probabilityBps ?? null,
-      stock_total: item.stock_total ?? item.stockTotal ?? null,
-      stock_remaining: item.stock_remaining ?? item.stockRemaining ?? null,
-      is_pity_eligible: item.is_pity_eligible ?? item.isPityEligible ?? true,
-      is_featured: item.is_featured ?? item.isFeatured ?? false,
-      sort_order: item.sort_order ?? item.sortOrder ?? 100,
-      metadata: isRecord(item.metadata) ? item.metadata : {},
-    });
-  });
 }
 
 function normalizePositiveNumber(value: unknown, field: string): number {

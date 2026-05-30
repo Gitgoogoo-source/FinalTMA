@@ -70,6 +70,20 @@ on conflict (id) do update
 set status = excluded.status,
     updated_at = now();
 
+insert into ops.admin_user_roles (admin_user_id, role_id, granted_by_admin_id)
+select admin_id, role_id, '62000000-0000-4000-8000-000000000001'::uuid
+from (
+  values
+    ('62000000-0000-4000-8000-000000000001'::uuid),
+    ('62000000-0000-4000-8000-000000000002'::uuid)
+) as admins(admin_id)
+cross join (
+  select id as role_id
+  from ops.admin_roles
+  where code = 'OPS'
+) as role
+on conflict (admin_user_id, role_id) do nothing;
+
 insert into _ids (key, id)
 values
   ('actor', '62000000-0000-4000-8000-000000000001'),
@@ -79,6 +93,7 @@ values
   ('template', '62000000-0000-4000-8000-000000000201'),
   ('box', '62000000-0000-4000-8000-000000000301'),
   ('old_pool', '62000000-0000-4000-8000-000000000302'),
+  ('draft_pool', '62000000-0000-4000-8000-000000000303'),
   ('item', '62000000-0000-4000-8000-000000000401'),
   ('lock', '62000000-0000-4000-8000-000000000402'),
   ('star_order', '62000000-0000-4000-8000-000000000501'),
@@ -177,6 +192,39 @@ values (
   10000
 );
 
+insert into gacha.drop_pool_versions (
+  id,
+  box_id,
+  version_no,
+  status,
+  total_weight,
+  created_by_admin_id
+)
+values (
+  (select id from _ids where key = 'draft_pool'),
+  (select id from _ids where key = 'box'),
+  2,
+  'draft',
+  10000,
+  (select id from _ids where key = 'actor')
+)
+on conflict (id) do nothing;
+
+insert into gacha.drop_pool_items (
+  pool_version_id,
+  template_id,
+  rarity_code,
+  drop_weight,
+  probability_bps
+)
+values (
+  (select id from _ids where key = 'draft_pool'),
+  (select id from _ids where key = 'template'),
+  'COMMON',
+  10000,
+  10000
+);
+
 insert into inventory.item_instances (
   id,
   owner_user_id,
@@ -260,7 +308,7 @@ select ok(
     and to_regprocedure('api.admin_ban_user(uuid,uuid,text,text,text,jsonb,jsonb)') is not null
     and to_regprocedure('api.admin_request_star_refund(uuid,uuid,text,text,jsonb,jsonb)') is not null
     and to_regprocedure('api.admin_release_inventory_lock(uuid,uuid,text,text,jsonb,jsonb)') is not null
-    and to_regprocedure('api.admin_publish_drop_pool_version(uuid,uuid,jsonb,text,text,jsonb,jsonb)') is not null
+    and to_regprocedure('api.admin_publish_drop_pool_version(uuid,uuid,text,text,jsonb,jsonb)') is not null
     and to_regprocedure('api.admin_create_approval_request(uuid,text,text,text,uuid,jsonb,text,text,jsonb)') is not null
     and to_regprocedure('api.admin_review_approval_request(uuid,uuid,text,text,text,jsonb)') is not null
     and to_regprocedure('api.admin_execute_approval_request(uuid,uuid,text,jsonb)') is not null,
@@ -318,7 +366,11 @@ select ok(
         'admin_ban_user',
         'admin_request_star_refund',
         'admin_release_inventory_lock',
-        'admin_publish_drop_pool_version'
+        'admin_publish_drop_pool_version',
+        'admin_create_drop_pool_draft',
+        'admin_update_drop_pool_item',
+        'admin_validate_drop_pool',
+        'admin_archive_drop_pool_version'
       )
       and (
         not p.prosecdef
@@ -334,7 +386,7 @@ with signatures(signature) as (
     ('api.admin_ban_user(uuid,uuid,text,text,text,jsonb,jsonb)'),
     ('api.admin_request_star_refund(uuid,uuid,text,text,jsonb,jsonb)'),
     ('api.admin_release_inventory_lock(uuid,uuid,text,text,jsonb,jsonb)'),
-    ('api.admin_publish_drop_pool_version(uuid,uuid,jsonb,text,text,jsonb,jsonb)'),
+    ('api.admin_publish_drop_pool_version(uuid,uuid,text,text,jsonb,jsonb)'),
     ('api.admin_create_approval_request(uuid,text,text,text,uuid,jsonb,text,text,jsonb)'),
     ('api.admin_review_approval_request(uuid,uuid,text,text,text,jsonb)'),
     ('api.admin_execute_approval_request(uuid,uuid,text,jsonb)')
@@ -563,15 +615,7 @@ values (
   'drop_pool',
   api.admin_publish_drop_pool_version(
     p_admin_user_id => (select id from _ids where key = 'actor'),
-    p_box_id => (select id from _ids where key = 'box'),
-    p_items => jsonb_build_array(
-      jsonb_build_object(
-        'template_id', (select id from _ids where key = 'template'),
-        'rarity_code', 'COMMON',
-        'drop_weight', 10000,
-        'probability_bps', 10000
-      )
-    ),
+    p_drop_pool_version_id => (select id from _ids where key = 'draft_pool'),
     p_reason => 'phase 6 probability publish test',
     p_idempotency_key => 'phase6-danger-drop-pool-001',
     p_request_context => jsonb_build_object('ip_hash', 'phase6-ip', 'user_agent_hash', 'phase6-ua'),
@@ -592,16 +636,16 @@ select is(
 );
 
 select is(
-  (select status from gacha.drop_pool_versions where id = (select id from _ids where key = 'new_pool')),
+  (select status from gacha.drop_pool_versions where id = (select id from _ids where key = 'draft_pool')),
   'active',
-  'admin_publish_drop_pool_version creates a new active version'
+  'admin_publish_drop_pool_version publishes the draft version'
 );
 
 select is(
   (
     select probability_bps
     from gacha.drop_pool_items
-    where pool_version_id = (select id from _ids where key = 'new_pool')
+    where pool_version_id = (select id from _ids where key = 'draft_pool')
   ),
   10000,
   'admin_publish_drop_pool_version writes probability bps'
@@ -612,15 +656,7 @@ values (
   'drop_pool_repeat',
   api.admin_publish_drop_pool_version(
     p_admin_user_id => (select id from _ids where key = 'actor'),
-    p_box_id => (select id from _ids where key = 'box'),
-    p_items => jsonb_build_array(
-      jsonb_build_object(
-        'template_id', (select id from _ids where key = 'template'),
-        'rarity_code', 'COMMON',
-        'drop_weight', 10000,
-        'probability_bps', 10000
-      )
-    ),
+    p_drop_pool_version_id => (select id from _ids where key = 'draft_pool'),
     p_reason => 'phase 6 probability publish test',
     p_idempotency_key => 'phase6-danger-drop-pool-001',
     p_request_context => jsonb_build_object('ip_hash', 'phase6-ip', 'user_agent_hash', 'phase6-ua'),

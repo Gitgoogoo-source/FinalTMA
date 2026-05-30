@@ -34,8 +34,7 @@ type PendingDanger = {
 
 export function DangerOpsPage() {
   const [paymentFlag, setPaymentFlag] = useState(PAYMENT_PAUSE_FLAGS[0] ?? "");
-  const [boxId, setBoxId] = useState("");
-  const [dropPoolItems, setDropPoolItems] = useState("[]");
+  const [dropPoolVersionId, setDropPoolVersionId] = useState("");
   const [compUserId, setCompUserId] = useState("");
   const [compCurrency, setCompCurrency] = useState(CURRENCIES[0] ?? "KCOIN");
   const [compAmount, setCompAmount] = useState("");
@@ -106,31 +105,17 @@ export function DangerOpsPage() {
   }
 
   function openPublishDropPool() {
-    const target = boxId.trim();
+    const target = dropPoolVersionId.trim();
 
     if (!target) {
-      setError("Box ID 不能为空");
-      return;
-    }
-
-    let items: unknown;
-
-    try {
-      items = JSON.parse(dropPoolItems);
-    } catch {
-      setError("概率配置 JSON 无法解析");
-      return;
-    }
-
-    if (!Array.isArray(items)) {
-      setError("概率配置必须是数组");
+      setError("Drop Pool Version ID 不能为空");
       return;
     }
 
     setPendingDanger({
       action: "publish_drop_pool_version",
       confirmLabel: "确认发布",
-      targetLabel: "Box ID",
+      targetLabel: "Drop Pool Version ID",
       targetValue: target,
       title: "发布概率版本",
       submit: (reason) =>
@@ -139,8 +124,7 @@ export function DangerOpsPage() {
           targetId: target,
           reason,
           payload: {
-            boxId: target,
-            items,
+            dropPoolVersionId: target,
           },
           approvalContext,
         }),
@@ -312,18 +296,10 @@ export function DangerOpsPage() {
         <section className="ops-card danger-action-card danger-action-card--wide">
           <h2>修改概率</h2>
           <label>
-            <span>Box ID</span>
+            <span>Drop Pool Version ID</span>
             <input
-              onChange={(event) => setBoxId(event.target.value)}
-              value={boxId}
-            />
-          </label>
-          <label>
-            <span>Items JSON</span>
-            <textarea
-              onChange={(event) => setDropPoolItems(event.target.value)}
-              rows={8}
-              value={dropPoolItems}
+              onChange={(event) => setDropPoolVersionId(event.target.value)}
+              value={dropPoolVersionId}
             />
           </label>
           <DangerSubmitButton
