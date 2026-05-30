@@ -185,7 +185,9 @@ export async function fetchBlindBoxAdminItems(
 export async function fetchBlindBoxes(
   params: QueryParams = {},
 ): Promise<BlindBoxesAdminResponse> {
-  return fetchBlindBoxAdminItems(params);
+  return adminRequest<BlindBoxesAdminResponse>(
+    `/api/admin/blind-boxes${toQueryString(params)}`,
+  );
 }
 
 export async function upsertBlindBox(
