@@ -35,6 +35,21 @@ describe("scripts/create-admin", () => {
     });
   });
 
+  it("fails production bootstrap when the env allowlist is missing", () => {
+    expect(() =>
+      parseCliOptions(["--dry-run", "--telegram-user-id=345678"], {
+        VERCEL_ENV: "production",
+      }),
+    ).toThrow("ADMIN_BOOTSTRAP_TELEGRAM_USER_IDS is required");
+
+    expect(() =>
+      parseCliOptions(["--dry-run"], {
+        APP_ENV: "production",
+        ADMIN_BOOTSTRAP_TELEGRAM_USER_IDS: "345678",
+      }),
+    ).not.toThrow();
+  });
+
   it("rejects non-positive and unsafe Telegram ids before any database work", () => {
     expect(() =>
       normalizeTelegramUserIds(["123456", "0", "not-a-number"]),

@@ -194,6 +194,8 @@ export function parseCliOptions(
     ]);
   }
 
+  assertProductionBootstrapEnvConfigured(env);
+
   const telegramUserIdSource = cliTelegramUserId ? "cli" : "env";
   const telegramUserIds = cliTelegramUserId
     ? normalizeTelegramUserIds([cliTelegramUserId])
@@ -205,6 +207,44 @@ export function parseCliOptions(
     telegramUserIds,
     telegramUserIdSource,
   };
+}
+
+function assertProductionBootstrapEnvConfigured(env: EnvLike): void {
+  if (!isProductionBootstrapRuntime(env)) {
+    return;
+  }
+
+  const raw = env[ADMIN_BOOTSTRAP_ENV];
+
+  if (raw?.trim()) {
+    return;
+  }
+
+  throw new CreateAdminScriptError(
+    `${ADMIN_BOOTSTRAP_ENV} is required before running admin bootstrap in production.`,
+    [
+      {
+        code: "ADMIN_BOOTSTRAP_IDS_REQUIRED_IN_PRODUCTION",
+        message: `${ADMIN_BOOTSTRAP_ENV} is required before running admin bootstrap in production.`,
+        values: [ADMIN_BOOTSTRAP_ENV],
+        context: {
+          vercel_env: env.VERCEL_ENV ?? null,
+          app_env: env.APP_ENV ?? null,
+        },
+      },
+    ],
+  );
+}
+
+function isProductionBootstrapRuntime(env: EnvLike): boolean {
+  return (
+    normalizeEnvName(env.VERCEL_ENV) === "production" ||
+    normalizeEnvName(env.APP_ENV) === "production"
+  );
+}
+
+function normalizeEnvName(value: string | undefined): string {
+  return value?.trim().toLowerCase() ?? "";
 }
 
 function parseSingleValueFlag(
@@ -855,6 +895,7 @@ function getHelpText(): string {
     "Usage: pnpm ops:create-admin [--dry-run] [--telegram-user-id=123456789] [--role-code=SUPER_ADMIN]",
     "",
     `Without --telegram-user-id, reads ${ADMIN_BOOTSTRAP_ENV} as a comma-separated list.`,
+    "Production bootstrap requires that env variable to be configured; CLI single-user mode is for staging/local checks.",
     "Creates or refreshes ops.admin_users and grants an existing ops.admin_roles code.",
     "Use --dry-run to preview changes without writing to Supabase.",
   ].join("\n");
