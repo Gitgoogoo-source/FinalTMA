@@ -50,13 +50,14 @@ const PAYMENT_ID = "77777777-7777-4777-8777-777777777777";
 const CORE_USER_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const LOCK_ID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const BOX_ID = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+const AUDIT_LOG_ID = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
 
 type AdminQueryOperation = {
   schema: string;
   table: string;
   selectedColumns: string[] | null;
   filters: Array<{
-    kind: "eq" | "gte" | "lte" | "ilike" | "in";
+    kind: "eq" | "gte" | "lte" | "ilike" | "in" | "or";
     column: string;
     value: unknown;
   }>;
@@ -137,6 +138,202 @@ describe("admin ops APIs", () => {
       },
     });
     expect(getSupabaseAdminClientMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects non-admin audit log queries before reading admin audit tables", async () => {
+    requireAdminMock.mockRejectedValue(
+      new ApiError(403, "FORBIDDEN", "Admin permission required"),
+    );
+
+    const { default: auditLogsHandler } =
+      await import("../../api/admin/audit-logs");
+    const result = await invokeApiHandler(auditLogsHandler, {
+      method: "GET",
+      url: "/api/admin/audit-logs",
+    });
+
+    expect(result.statusCode).toBe(403);
+    expect(result.body).toMatchObject({
+      error: {
+        code: "FORBIDDEN",
+      },
+    });
+    expect(getSupabaseAdminClientMock).not.toHaveBeenCalled();
+    expect(requireAdminMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        permissions: ["audit:read", "admin:read"],
+        requireAll: false,
+      }),
+    );
+  });
+
+  it("lets admins query audit logs with filters and safe admin summaries", async () => {
+    const db = createAdminReadDbMock({
+      "ops.admin_audit_logs": [
+        {
+          id: AUDIT_LOG_ID,
+          admin_user_id: ADMIN_CONTEXT.adminId,
+          action: "feature_flag.update",
+          target_schema: "ops",
+          target_table: "feature_flags",
+          target_id: LOCK_ID,
+          before_state: {
+            enabled: false,
+            service_role_key: "secret-service-role",
+          },
+          after_state: {
+            enabled: true,
+            request_context: {
+              request_id: "req-audit-1",
+            },
+          },
+          ip_hash: "ip-hash",
+          user_agent: "user-agent-hash",
+          reason: "enable payment gate",
+          created_at: "2026-05-30T10:00:00.000Z",
+        },
+      ],
+      "ops.admin_users": [
+        {
+          id: ADMIN_CONTEXT.adminId,
+          display_name: "Ops Admin",
+          telegram_user_id: ADMIN_CONTEXT.telegramUserId,
+          email: "ops@example.test",
+          metadata: {
+            should_not_leak: true,
+          },
+        },
+      ],
+    });
+    getSupabaseAdminClientMock.mockReturnValue(db.client);
+
+    const { default: auditLogsHandler } =
+      await import("../../api/admin/audit-logs");
+    const result = await invokeApiHandler<ApiSuccessResponse>(
+      auditLogsHandler,
+      {
+        method: "GET",
+        url: "/api/admin/audit-logs",
+        query: {
+          adminUserId: ADMIN_CONTEXT.adminId,
+          action: "feature_flag",
+          targetSchema: "ops",
+          targetTable: "feature_flags",
+          targetId: LOCK_ID,
+          from: "2026-05-30T00:00:00.000Z",
+          to: "2026-05-30T23:59:59.999Z",
+          limit: "10",
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(200);
+    expect(result.body).toMatchObject({
+      ok: true,
+      data: {
+        items: [
+          {
+            id: AUDIT_LOG_ID,
+            admin_user_id: ADMIN_CONTEXT.adminId,
+            admin: {
+              id: ADMIN_CONTEXT.adminId,
+              display_name: "Ops Admin",
+              telegram_user_id: ADMIN_CONTEXT.telegramUserId,
+              email: "ops@example.test",
+            },
+            action: "feature_flag.update",
+            target_schema: "ops",
+            target_table: "feature_flags",
+            target_id: LOCK_ID,
+            before_state: {
+              enabled: false,
+              service_role_key: "[redacted]",
+            },
+            after_state: {
+              enabled: true,
+              request_context: {
+                request_id: "req-audit-1",
+              },
+            },
+            request_id: "req-audit-1",
+            risk_level: "medium",
+          },
+        ],
+        summary: {
+          total: 1,
+          medium: 1,
+        },
+        nextCursor: null,
+      },
+    });
+    expect(JSON.stringify(result.body)).not.toContain("secret-service-role");
+    expect(JSON.stringify(result.body)).not.toContain("should_not_leak");
+    expect(requireAdminMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        permissions: ["audit:read", "admin:read"],
+        requireAll: false,
+      }),
+    );
+    expect(db.operations).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          schema: "ops",
+          table: "admin_audit_logs",
+          filters: expect.arrayContaining([
+            {
+              kind: "eq",
+              column: "admin_user_id",
+              value: ADMIN_CONTEXT.adminId,
+            },
+            {
+              kind: "ilike",
+              column: "action",
+              value: "%feature_flag%",
+            },
+            {
+              kind: "eq",
+              column: "target_schema",
+              value: "ops",
+            },
+            {
+              kind: "eq",
+              column: "target_table",
+              value: "feature_flags",
+            },
+            {
+              kind: "eq",
+              column: "target_id",
+              value: LOCK_ID,
+            },
+            {
+              kind: "gte",
+              column: "created_at",
+              value: "2026-05-30T00:00:00.000Z",
+            },
+            {
+              kind: "lte",
+              column: "created_at",
+              value: "2026-05-30T23:59:59.999Z",
+            },
+          ]),
+          range: [0, 10],
+        }),
+        expect.objectContaining({
+          schema: "ops",
+          table: "admin_users",
+          selectedColumns: ["id", "display_name", "telegram_user_id", "email"],
+          filters: expect.arrayContaining([
+            {
+              kind: "in",
+              column: "id",
+              value: [ADMIN_CONTEXT.adminId],
+            },
+          ]),
+        }),
+      ]),
+    );
   });
 
   it("lets admins query payment orders with payment and exception context", async () => {
@@ -1247,6 +1444,10 @@ function createAdminQueryBuilder(
     },
     ilike: (column: string, value: unknown) => {
       operation.filters.push({ kind: "ilike", column, value });
+      return builder;
+    },
+    or: (value: string) => {
+      operation.filters.push({ kind: "or", column: "", value });
       return builder;
     },
     in: (column: string, value: unknown) => {
