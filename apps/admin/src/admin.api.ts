@@ -273,16 +273,21 @@ export async function saveDropPoolDraft(input: {
 
 export async function validateDropPoolVersion(input: {
   dropPoolVersionId: string;
-  reason?: string;
+  reason: string;
 }): Promise<DropPoolValidationResult> {
   return adminRequest<DropPoolValidationResult>(
     "/api/admin/gacha/drop-pool-versions",
     {
       method: "PATCH",
+      headers: buildDangerHeaders(
+        "admin-validate-drop-pool",
+        input.dropPoolVersionId,
+      ),
       body: {
         action: "validate",
         dropPoolVersionId: input.dropPoolVersionId,
         reason: input.reason,
+        confirm: true,
       },
     },
   );

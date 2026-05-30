@@ -199,22 +199,21 @@ export function GachaPoolsPage() {
       return;
     }
 
+    const operationReason = reason.trim();
+
+    if (!operationReason) {
+      setError({ message: "校验版本必须填写 reason" });
+      return;
+    }
+
     setBusyAction("validate");
     setError(null);
     setNotice(null);
 
     try {
-      const validationInput: Parameters<typeof validateDropPoolVersion>[0] = {
-        dropPoolVersionId: selectedVersion.id,
-      };
-      const operationReason = reason.trim();
-
-      if (operationReason) {
-        validationInput.reason = operationReason;
-      }
-
       const result = await validateDropPoolVersion({
-        ...validationInput,
+        dropPoolVersionId: selectedVersion.id,
+        reason: operationReason,
       });
 
       setValidation(normalizeValidationResult(result));
