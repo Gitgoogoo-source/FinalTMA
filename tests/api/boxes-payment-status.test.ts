@@ -28,12 +28,8 @@ const PAYMENT_ID = "44444444-4444-4444-8444-444444444444";
 
 type QueryState = {
   schema: string;
-  table: string;
-  selected: string | null;
-  filters: Array<{
-    column: string;
-    value: unknown;
-  }>;
+  functionName: string;
+  args: Record<string, unknown>;
 };
 
 type QueryResult = {
@@ -64,29 +60,25 @@ describe("boxes payment-status API", () => {
 
   it("returns a fulfilled payment status without exposing payment secrets or draw results", async () => {
     const db = createSupabaseMock({
-      "gacha.draw_orders": {
-        data: createDrawOrder({
-          status: "completed",
-          payment_status: "dev_paid",
-          opened_at: "2026-05-28T11:00:02.000Z",
-          telegram_payment_charge_id: "tg-charge-should-not-leak",
-        }),
-        error: null,
-      },
-      "payments.star_orders": {
-        data: createStarOrder({
-          status: "fulfilled",
-          fulfilled_at: "2026-05-28T11:00:02.000Z",
-        }),
-        error: null,
-      },
-      "payments.star_payments": {
+      "api.gacha_get_payment_status": {
         data: {
-          ...createStarPayment(),
-          telegram_payment_charge_id: "tg-charge-should-not-leak",
-          provider_payment_charge_id: "provider-charge-should-not-leak",
-          raw_update: {
-            secret: "raw-update-should-not-leak",
+          draw_order: createDrawOrder({
+            status: "completed",
+            payment_status: "dev_paid",
+            opened_at: "2026-05-28T11:00:02.000Z",
+            telegram_payment_charge_id: "tg-charge-should-not-leak",
+          }),
+          star_order: createStarOrder({
+            status: "fulfilled",
+            fulfilled_at: "2026-05-28T11:00:02.000Z",
+          }),
+          payment: {
+            ...createStarPayment(),
+            telegram_payment_charge_id: "tg-charge-should-not-leak",
+            provider_payment_charge_id: "provider-charge-should-not-leak",
+            raw_update: {
+              secret: "raw-update-should-not-leak",
+            },
           },
         },
         error: null,
@@ -160,45 +152,36 @@ describe("boxes payment-status API", () => {
       "tg-charge-should-not-leak",
     );
 
-    const drawQuery = db.queries.find(
-      (query) => query.schema === "gacha" && query.table === "draw_orders",
-    );
-    expect(drawQuery?.filters).toEqual(
-      expect.arrayContaining([
-        {
-          column: "id",
-          value: ORDER_ID,
+    expect(db.queries).toEqual([
+      {
+        schema: "api",
+        functionName: "gacha_get_payment_status",
+        args: {
+          p_user_id: USER_ID,
+          p_draw_order_id: ORDER_ID,
         },
-        {
-          column: "user_id",
-          value: USER_ID,
-        },
-      ]),
-    );
+      },
+    ]);
   });
 
   it("derives expired for unpaid pending orders without mutating the database", async () => {
     const db = createSupabaseMock({
-      "gacha.draw_orders": {
-        data: createDrawOrder({
-          status: "invoice_created",
-          payment_status: "invoice_created",
-          paid_at: null,
-          opened_at: null,
-        }),
-        error: null,
-      },
-      "payments.star_orders": {
-        data: createStarOrder({
-          status: "invoice_created",
-          expires_at: "2026-05-28T00:00:00.000Z",
-          paid_at: null,
-          fulfilled_at: null,
-        }),
-        error: null,
-      },
-      "payments.star_payments": {
-        data: null,
+      "api.gacha_get_payment_status": {
+        data: {
+          draw_order: createDrawOrder({
+            status: "invoice_created",
+            payment_status: "invoice_created",
+            paid_at: null,
+            opened_at: null,
+          }),
+          star_order: createStarOrder({
+            status: "invoice_created",
+            expires_at: "2026-05-28T00:00:00.000Z",
+            paid_at: null,
+            fulfilled_at: null,
+          }),
+          payment: null,
+        },
         error: null,
       },
     });
@@ -244,7 +227,7 @@ describe("boxes payment-status API", () => {
 
   it("returns 404 for orders not owned by the current session user", async () => {
     const db = createSupabaseMock({
-      "gacha.draw_orders": {
+      "api.gacha_get_payment_status": {
         data: null,
         error: null,
       },
@@ -276,19 +259,16 @@ describe("boxes payment-status API", () => {
         code: "ORDER_NOT_FOUND",
       },
     });
-    expect(db.queries).toHaveLength(1);
-    expect(db.queries[0]?.filters).toEqual(
-      expect.arrayContaining([
-        {
-          column: "id",
-          value: ORDER_ID,
+    expect(db.queries).toEqual([
+      {
+        schema: "api",
+        functionName: "gacha_get_payment_status",
+        args: {
+          p_user_id: USER_ID,
+          p_draw_order_id: ORDER_ID,
         },
-        {
-          column: "user_id",
-          value: USER_ID,
-        },
-      ]),
-    );
+      },
+    ]);
   });
 });
 
@@ -299,54 +279,20 @@ function createSupabaseMock(results: Record<string, QueryResult>) {
   const client = {
     schema(schema: string) {
       return {
-        from(table: string) {
+        rpc(functionName: string, args: Record<string, unknown>) {
           const state: QueryState = {
             schema,
-            table,
-            selected: null,
-            filters: [],
+            functionName,
+            args,
           };
           queries.push(state);
 
-          const builder = {
-            select(columns: string) {
-              state.selected = columns;
-              return builder;
+          return Promise.resolve(
+            results[`${schema}.${functionName}`] ?? {
+              data: null,
+              error: null,
             },
-            eq(column: string, value: unknown) {
-              state.filters.push({
-                column,
-                value,
-              });
-              return builder;
-            },
-            async maybeSingle() {
-              return (
-                results[`${schema}.${table}`] ?? {
-                  data: null,
-                  error: null,
-                }
-              );
-            },
-            update(values: unknown) {
-              mutations.push({
-                schema,
-                table,
-                values,
-              });
-              return builder;
-            },
-            insert(values: unknown) {
-              mutations.push({
-                schema,
-                table,
-                values,
-              });
-              return builder;
-            },
-          };
-
-          return builder;
+          );
         },
       };
     },

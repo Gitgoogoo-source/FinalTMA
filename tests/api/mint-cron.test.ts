@@ -507,6 +507,48 @@ describe("Mint queue worker", () => {
     );
   });
 
+  it("only scans queued and retrying rows so in-flight and terminal states are not resubmitted", async () => {
+    const db = createSupabaseQueryMock([
+      {
+        data: [],
+      },
+    ]);
+    const provider = createProviderMock();
+
+    const result = await runMintQueueWorker({
+      db: db.client,
+      provider,
+      requestId: "req_worker_status_filter",
+      env: {
+        TON_MINT_BATCH_SIZE: "10",
+      },
+      now: new Date("2026-05-29T08:00:00.000Z"),
+    });
+
+    expect(result).toMatchObject({
+      scanned: 0,
+      claimed: 0,
+      submitted: 0,
+      confirming: 0,
+      minted: 0,
+      retrying: 0,
+      manualReview: 0,
+      skipped: 0,
+    });
+    expect(provider.submitMint).not.toHaveBeenCalled();
+    expect(db.operations[0]).toMatchObject({
+      operation: "select",
+      table: "mint_queue",
+      filters: expect.arrayContaining([
+        {
+          column: "status",
+          operator: "in",
+          value: ["queued", "retrying"],
+        },
+      ]),
+    });
+  });
+
   it("recovers a possibly submitted mint by querying the previous query id before resubmitting", async () => {
     const previousQueryId = `mint:${QUEUE_ID}:1`;
     const queued = mintQueueRow({
@@ -881,6 +923,291 @@ describe("onchain transaction sync", () => {
     ).toMatchObject({
       status: "confirmed",
       check_count: 1,
+    });
+  });
+
+  it("keeps pending transactions confirming and retryable", async () => {
+    const db = createSupabaseQueryMock([
+      {
+        data: [transactionRow()],
+      },
+      {
+        data: mintQueueRow({
+          status: "submitted",
+          attempt_count: 1,
+          tx_hash: "tx_hash_001",
+        }),
+      },
+      {
+        data: collectionRow(),
+      },
+      {
+        data: walletRow(),
+      },
+      {},
+      {},
+    ]);
+    const provider = createProviderMock({
+      queryTransaction: vi.fn().mockResolvedValue({
+        status: "pending",
+        txHash: "tx_hash_001",
+        queryId: `mint:${QUEUE_ID}:1`,
+        itemAddress: null,
+        itemIndex: null,
+        ownerAddress: null,
+        metadataUrl: null,
+        errorMessage: null,
+        rawResponse: {
+          pending: true,
+        },
+        externalApiProvider: "mock-ton-provider",
+        checkedAt: "2026-05-29T08:05:00.000Z",
+      }),
+    });
+
+    const result = await runOnchainTransactionSync({
+      db: db.client,
+      provider,
+      requestId: "req_sync_pending",
+      env: {},
+      now: new Date("2026-05-29T08:05:00.000Z"),
+    });
+
+    expect(result).toMatchObject({
+      scanned: 1,
+      checked: 1,
+      pending: 1,
+      confirmed: 0,
+      failed: 0,
+      retrying: 0,
+      manualReview: 0,
+    });
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+    expect(
+      db.operations.find(
+        (operation) =>
+          operation.operation === "update" &&
+          operation.table === "transactions",
+      )?.payload,
+    ).toMatchObject({
+      status: "pending",
+      check_count: 1,
+    });
+    expect(lastMintQueueUpdate(db.operations)).toMatchObject({
+      status: "confirming",
+      tx_hash: "tx_hash_001",
+      next_attempt_at: null,
+    });
+  });
+
+  it("moves failed chain transactions to retrying before max attempts", async () => {
+    const db = createSupabaseQueryMock([
+      {
+        data: [transactionRow()],
+      },
+      {
+        data: mintQueueRow({
+          status: "confirming",
+          attempt_count: 1,
+          max_attempts: 3,
+        }),
+      },
+      {
+        data: collectionRow(),
+      },
+      {
+        data: walletRow(),
+      },
+      {},
+      {},
+    ]);
+    const provider = createProviderMock({
+      queryTransaction: vi.fn().mockResolvedValue({
+        status: "failed",
+        txHash: "tx_hash_001",
+        queryId: `mint:${QUEUE_ID}:1`,
+        itemAddress: null,
+        itemIndex: null,
+        ownerAddress: null,
+        metadataUrl: null,
+        errorMessage: "chain execution failed",
+        rawResponse: {
+          failed: true,
+        },
+        externalApiProvider: "mock-ton-provider",
+        checkedAt: "2026-05-29T08:05:00.000Z",
+      }),
+    });
+
+    const result = await runOnchainTransactionSync({
+      db: db.client,
+      provider,
+      requestId: "req_sync_failed_retry",
+      env: {
+        TON_MINT_RETRY_DELAY_SECONDS: "60",
+        TON_MINT_RETRY_BACKOFF_MULTIPLIER: "1",
+      },
+      now: new Date("2026-05-29T08:05:00.000Z"),
+    });
+
+    expect(result).toMatchObject({
+      scanned: 1,
+      checked: 1,
+      failed: 1,
+      retrying: 1,
+      manualReview: 0,
+    });
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+    expect(
+      db.operations.find(
+        (operation) =>
+          operation.operation === "update" &&
+          operation.table === "transactions",
+      )?.payload,
+    ).toMatchObject({
+      status: "failed",
+      error_message: "chain execution failed",
+    });
+    expect(lastMintQueueUpdate(db.operations)).toMatchObject({
+      status: "retrying",
+      error_message: "chain execution failed",
+      next_attempt_at: "2026-05-29T08:06:00.000Z",
+    });
+  });
+
+  it("records TON API outages without losing the pending transaction", async () => {
+    const db = createSupabaseQueryMock([
+      {
+        data: [transactionRow()],
+      },
+      {
+        data: mintQueueRow({
+          status: "confirming",
+          attempt_count: 1,
+        }),
+      },
+      {
+        data: collectionRow(),
+      },
+      {
+        data: walletRow(),
+      },
+      {},
+    ]);
+    const provider = createProviderMock({
+      queryTransaction: vi.fn().mockRejectedValue(
+        new TonNftProviderError("TON_API_UNAVAILABLE", "TON API unavailable", {
+          retryable: true,
+        }),
+      ),
+    });
+
+    const result = await runOnchainTransactionSync({
+      db: db.client,
+      provider,
+      requestId: "req_sync_ton_api_unavailable",
+      env: {},
+      now: new Date("2026-05-29T08:05:00.000Z"),
+    });
+
+    expect(result).toMatchObject({
+      scanned: 1,
+      checked: 0,
+      pending: 0,
+      errors: [
+        {
+          transactionId: TX_ID,
+          code: "TON_API_UNAVAILABLE",
+        },
+      ],
+    });
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+    expect(
+      db.operations.find(
+        (operation) =>
+          operation.operation === "update" &&
+          operation.table === "transactions",
+      )?.payload,
+    ).toMatchObject({
+      error_message: "TON API unavailable",
+      check_count: 1,
+      raw_response: expect.objectContaining({
+        request_id: "req_sync_ton_api_unavailable",
+        error_code: "TON_API_UNAVAILABLE",
+      }),
+    });
+    expect(lastMintQueueUpdate(db.operations)).toBeNull();
+  });
+
+  it("moves expired chain confirmations to manual review", async () => {
+    const db = createSupabaseQueryMock([
+      {
+        data: [transactionRow()],
+      },
+      {
+        data: mintQueueRow({
+          status: "confirming",
+          attempt_count: 5,
+          max_attempts: 5,
+        }),
+      },
+      {
+        data: collectionRow(),
+      },
+      {
+        data: walletRow(),
+      },
+      {},
+      {},
+    ]);
+    const provider = createProviderMock({
+      queryTransaction: vi.fn().mockResolvedValue({
+        status: "expired",
+        txHash: "tx_hash_001",
+        queryId: `mint:${QUEUE_ID}:1`,
+        itemAddress: null,
+        itemIndex: null,
+        ownerAddress: null,
+        metadataUrl: null,
+        errorMessage: "confirmation timeout",
+        rawResponse: {
+          expired: true,
+        },
+        externalApiProvider: "mock-ton-provider",
+        checkedAt: "2026-05-29T08:15:00.000Z",
+      }),
+    });
+
+    const result = await runOnchainTransactionSync({
+      db: db.client,
+      provider,
+      requestId: "req_sync_expired_manual_review",
+      env: {},
+      now: new Date("2026-05-29T08:15:00.000Z"),
+    });
+
+    expect(result).toMatchObject({
+      scanned: 1,
+      checked: 1,
+      expired: 1,
+      retrying: 0,
+      manualReview: 1,
+    });
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+    expect(
+      db.operations.find(
+        (operation) =>
+          operation.operation === "update" &&
+          operation.table === "transactions",
+      )?.payload,
+    ).toMatchObject({
+      status: "expired",
+      error_message: "confirmation timeout",
+    });
+    expect(lastMintQueueUpdate(db.operations)).toMatchObject({
+      status: "manual_review",
+      error_message: "confirmation timeout",
+      next_attempt_at: null,
     });
   });
 

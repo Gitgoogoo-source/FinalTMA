@@ -91,27 +91,7 @@ const RAW_ADDRESS = `0:${"a".repeat(64)}`;
 const OTHER_ADDRESS = `EQ${"B".repeat(46)}`;
 const COLLECTION_ADDRESS = `EQ${"C".repeat(46)}`;
 
-type QueryResult = {
-  data: unknown;
-  error: unknown;
-};
-
-type OperationState = {
-  schema: string;
-  table: string;
-  operation: "select" | "update";
-  selected: string | null;
-  values: unknown;
-  filters: Array<{
-    column: string;
-    value: unknown;
-  }>;
-  orders: Array<{
-    column: string;
-    options: Record<string, unknown>;
-  }>;
-  limitValue: number | null;
-};
+let preparePayload: Record<string, unknown>;
 
 describe("wallet mint API", () => {
   beforeEach(() => {
@@ -119,16 +99,36 @@ describe("wallet mint API", () => {
     vi.setSystemTime(new Date("2026-05-29T08:00:00.000Z"));
     delete process.env.TON_COLLECTION_ADDRESS;
 
+    preparePayload = createPreparePayload();
     assertMintApiEnabledMock.mockReset();
     assertMintApiEnabledMock.mockResolvedValue(undefined);
     callRpcRawMock.mockReset();
-    callRpcRawMock.mockResolvedValue({
-      mint_queue_id: QUEUE_ID,
-      status: "queued",
-      item_instance_id: ITEM_ID,
-      idempotent: false,
+    callRpcRawMock.mockImplementation(async (rpcName: string) => {
+      if (rpcName === "wallet_prepare_mint_request") {
+        return preparePayload;
+      }
+
+      if (rpcName === "wallet_enqueue_mint") {
+        return {
+          mint_queue_id: QUEUE_ID,
+          status: "queued",
+          item_instance_id: ITEM_ID,
+          idempotent: false,
+        };
+      }
+
+      if (rpcName === "wallet_save_mint_metadata_snapshot") {
+        return {
+          mint_queue_id: QUEUE_ID,
+          status: "queued",
+          priority: 100,
+        };
+      }
+
+      throw new Error(`Unexpected RPC ${rpcName}`);
     });
     getSupabaseAdminClientMock.mockReset();
+    getSupabaseAdminClientMock.mockReturnValue({});
     requireSessionMock.mockReset();
     requireSessionMock.mockResolvedValue({
       sessionId: "session-wallet-mint-test",
@@ -152,11 +152,9 @@ describe("wallet mint API", () => {
   });
 
   it("returns a clear error when no active Collection is configured", async () => {
-    const db = createSupabaseMintMock([
-      { data: createWalletRow(), error: null },
-      { data: [], error: null },
-    ]);
-    getSupabaseAdminClientMock.mockReturnValue(db.client);
+    preparePayload = createPreparePayload({
+      collections: [],
+    });
 
     const { default: mintHandler } = await import("../../api/wallet/mint");
     const result = await invokeApiHandler<ApiErrorResponse>(mintHandler, {
@@ -176,25 +174,17 @@ describe("wallet mint API", () => {
         message: "Collection 未配置，暂时无法 Mint。",
       },
     });
-    expect(callRpcRawMock).not.toHaveBeenCalled();
-    expect(
-      db.operations.filter((operation) => operation.operation === "update"),
-    ).toHaveLength(0);
+    expect(callRpcRawMock).toHaveBeenCalledTimes(1);
   });
 
   it("rejects a paused Collection before enqueueing", async () => {
-    const db = createSupabaseMintMock([
-      { data: createWalletRow(), error: null },
-      {
-        data: [
-          createCollectionRow({
-            status: "paused",
-          }),
-        ],
-        error: null,
-      },
-    ]);
-    getSupabaseAdminClientMock.mockReturnValue(db.client);
+    preparePayload = createPreparePayload({
+      collections: [
+        createCollectionRow({
+          status: "paused",
+        }),
+      ],
+    });
 
     const { default: mintHandler } = await import("../../api/wallet/mint");
     const result = await invokeApiHandler<ApiErrorResponse>(mintHandler, {
@@ -213,26 +203,20 @@ describe("wallet mint API", () => {
         code: "NFT_COLLECTION_PAUSED",
       },
     });
-    expect(callRpcRawMock).not.toHaveBeenCalled();
+    expect(callRpcRawMock).toHaveBeenCalledTimes(1);
   });
 
   it("rejects Collection and wallet network mismatch", async () => {
     process.env.TON_COLLECTION_ADDRESS = COLLECTION_ADDRESS;
-    const db = createSupabaseMintMock([
-      {
-        data: createWalletRow({
-          network: "testnet",
-        }),
-        error: null,
-      },
-      {
-        data: createCollectionRow({
-          network: "mainnet",
-        }),
-        error: null,
-      },
-    ]);
-    getSupabaseAdminClientMock.mockReturnValue(db.client);
+    preparePayload = createPreparePayload({
+      wallet: createWalletRow({
+        network: "testnet",
+      }),
+      collection: createCollectionRow({
+        network: "mainnet",
+      }),
+      collections: [],
+    });
 
     const { default: mintHandler } = await import("../../api/wallet/mint");
     const result = await invokeApiHandler<ApiErrorResponse>(mintHandler, {
@@ -252,7 +236,7 @@ describe("wallet mint API", () => {
         code: "COLLECTION_NETWORK_MISMATCH",
       },
     });
-    expect(callRpcRawMock).not.toHaveBeenCalled();
+    expect(callRpcRawMock).toHaveBeenCalledTimes(1);
   });
 
   it.each([
@@ -292,15 +276,11 @@ describe("wallet mint API", () => {
   });
 
   it("requires a verified wallet", async () => {
-    const db = createSupabaseMintMock([
-      {
-        data: createWalletRow({
-          verified_at: null,
-        }),
-        error: null,
-      },
-    ]);
-    getSupabaseAdminClientMock.mockReturnValue(db.client);
+    preparePayload = createPreparePayload({
+      wallet: createWalletRow({
+        verified_at: null,
+      }),
+    });
 
     const { default: mintHandler } = await import("../../api/wallet/mint");
     const result = await invokeApiHandler<ApiErrorResponse>(mintHandler, {
@@ -319,15 +299,14 @@ describe("wallet mint API", () => {
         code: "WALLET_NOT_VERIFIED",
       },
     });
-    expect(callRpcRawMock).not.toHaveBeenCalled();
+    expect(callRpcRawMock).toHaveBeenCalledTimes(1);
   });
 
   it("requires a connected wallet", async () => {
-    const db = createSupabaseMintMock([
-      { data: null, error: null },
-      { data: null, error: null },
-    ]);
-    getSupabaseAdminClientMock.mockReturnValue(db.client);
+    preparePayload = createPreparePayload({
+      wallet: null,
+      other_wallet: null,
+    });
 
     const { default: mintHandler } = await import("../../api/wallet/mint");
     const result = await invokeApiHandler<ApiErrorResponse>(mintHandler, {
@@ -346,16 +325,10 @@ describe("wallet mint API", () => {
         code: "WALLET_NOT_CONNECTED",
       },
     });
-    expect(callRpcRawMock).not.toHaveBeenCalled();
+    expect(callRpcRawMock).toHaveBeenCalledTimes(1);
   });
 
   it("rejects a target address that is not the verified wallet", async () => {
-    const db = createSupabaseMintMock([
-      { data: createWalletRow(), error: null },
-      { data: [createCollectionRow()], error: null },
-    ]);
-    getSupabaseAdminClientMock.mockReturnValue(db.client);
-
     const { default: mintHandler } = await import("../../api/wallet/mint");
     const result = await invokeApiHandler<ApiErrorResponse>(mintHandler, {
       method: "POST",
@@ -374,19 +347,13 @@ describe("wallet mint API", () => {
         code: "MINT_TARGET_WALLET_MISMATCH",
       },
     });
-    expect(
-      db.operations.some((operation) => operation.table === "item_instances"),
-    ).toBe(false);
-    expect(callRpcRawMock).not.toHaveBeenCalled();
+    expect(callRpcRawMock).toHaveBeenCalledTimes(1);
   });
 
   it("rejects an item that is not owned by the session user", async () => {
-    const db = createSupabaseMintMock([
-      { data: createWalletRow(), error: null },
-      { data: [createCollectionRow()], error: null },
-      { data: null, error: null },
-    ]);
-    getSupabaseAdminClientMock.mockReturnValue(db.client);
+    preparePayload = createPreparePayload({
+      item: null,
+    });
 
     const { default: mintHandler } = await import("../../api/wallet/mint");
     const result = await invokeApiHandler<ApiErrorResponse>(mintHandler, {
@@ -405,37 +372,17 @@ describe("wallet mint API", () => {
         code: "ITEM_NOT_FOUND",
       },
     });
-    expect(
-      db.operations.find((operation) => operation.table === "item_instances"),
-    ).toMatchObject({
-      filters: expect.arrayContaining([
-        {
-          column: "id",
-          value: ITEM_ID,
-        },
-        {
-          column: "owner_user_id",
-          value: USER_ID,
-        },
-      ]),
-    });
-    expect(callRpcRawMock).not.toHaveBeenCalled();
+    expect(callRpcRawMock).toHaveBeenCalledTimes(1);
   });
 
   it.each(["listed", "consumed", "decomposed"] as const)(
     "rejects a %s item before enqueueing",
     async (status) => {
-      const db = createSupabaseMintMock([
-        { data: createWalletRow(), error: null },
-        { data: [createCollectionRow()], error: null },
-        {
-          data: createItemRow({
-            status,
-          }),
-          error: null,
-        },
-      ]);
-      getSupabaseAdminClientMock.mockReturnValue(db.client);
+      preparePayload = createPreparePayload({
+        item: createItemRow({
+          status,
+        }),
+      });
 
       const { default: mintHandler } = await import("../../api/wallet/mint");
       const result = await invokeApiHandler<ApiErrorResponse>(mintHandler, {
@@ -457,28 +404,19 @@ describe("wallet mint API", () => {
           },
         },
       });
-      expect(callRpcRawMock).not.toHaveBeenCalled();
+      expect(callRpcRawMock).toHaveBeenCalledTimes(1);
     },
   );
 
   it("rejects Mint when item metadata or image is missing", async () => {
-    const db = createSupabaseMintMock([
-      { data: createWalletRow(), error: null },
-      { data: [createCollectionRow()], error: null },
-      { data: createItemRow(), error: null },
-      { data: null, error: null },
-      { data: createTemplateRow(), error: null },
-      {
-        data: createFormRow({
-          image_url: null,
-          thumbnail_url: null,
-          avatar_url: null,
-        }),
-        error: null,
-      },
-      { data: [], error: null },
-    ]);
-    getSupabaseAdminClientMock.mockReturnValue(db.client);
+    preparePayload = createPreparePayload({
+      form: createFormRow({
+        image_url: null,
+        thumbnail_url: null,
+        avatar_url: null,
+      }),
+      media: [],
+    });
 
     const { default: mintHandler } = await import("../../api/wallet/mint");
     const result = await invokeApiHandler<ApiErrorResponse>(mintHandler, {
@@ -497,23 +435,15 @@ describe("wallet mint API", () => {
         code: "NFT_METADATA_MISSING",
       },
     });
-    expect(callRpcRawMock).not.toHaveBeenCalled();
+    expect(callRpcRawMock).toHaveBeenCalledTimes(1);
   });
 
   it("rejects a non-mintable collectible before enqueueing", async () => {
-    const db = createSupabaseMintMock([
-      { data: createWalletRow(), error: null },
-      { data: [createCollectionRow()], error: null },
-      { data: createItemRow(), error: null },
-      { data: null, error: null },
-      {
-        data: createTemplateRow({
-          nft_mintable: false,
-        }),
-        error: null,
-      },
-    ]);
-    getSupabaseAdminClientMock.mockReturnValue(db.client);
+    preparePayload = createPreparePayload({
+      template: createTemplateRow({
+        nft_mintable: false,
+      }),
+    });
 
     const { default: mintHandler } = await import("../../api/wallet/mint");
     const result = await invokeApiHandler<ApiErrorResponse>(mintHandler, {
@@ -533,22 +463,16 @@ describe("wallet mint API", () => {
         message: "该藏品不支持 Mint。",
       },
     });
-    expect(callRpcRawMock).not.toHaveBeenCalled();
+    expect(callRpcRawMock).toHaveBeenCalledTimes(1);
   });
 
   it("rejects repeat Mint for an already minted item before enqueueing", async () => {
-    const db = createSupabaseMintMock([
-      { data: createWalletRow(), error: null },
-      { data: [createCollectionRow()], error: null },
-      {
-        data: createItemRow({
-          minted_nft_item_id: QUEUE_ID,
-          nft_mint_status: "minted",
-        }),
-        error: null,
-      },
-    ]);
-    getSupabaseAdminClientMock.mockReturnValue(db.client);
+    preparePayload = createPreparePayload({
+      item: createItemRow({
+        minted_nft_item_id: QUEUE_ID,
+        nft_mint_status: "minted",
+      }),
+    });
 
     const { default: mintHandler } = await import("../../api/wallet/mint");
     const result = await invokeApiHandler<ApiErrorResponse>(mintHandler, {
@@ -568,27 +492,12 @@ describe("wallet mint API", () => {
         message: "藏品已经完成 Mint。",
       },
     });
-    expect(callRpcRawMock).not.toHaveBeenCalled();
+    expect(callRpcRawMock).toHaveBeenCalledTimes(1);
   });
 
-  it("enqueues Mint through the existing RPC and stores a backend metadata snapshot", async () => {
-    const db = createSupabaseMintMock([
-      { data: createWalletRow(), error: null },
-      { data: [createCollectionRow()], error: null },
-      { data: createItemRow(), error: null },
-      { data: null, error: null },
-      { data: createTemplateRow(), error: null },
-      { data: createFormRow(), error: null },
-      {
-        data: [
-          createMediaRow("metadata", "/nft-metadata/items/ember_whelp.json"),
-          createMediaRow("nft_image", "/images/ember_whelp.png"),
-        ],
-        error: null,
-      },
-      { data: null, error: null },
-    ]);
-    getSupabaseAdminClientMock.mockReturnValue(db.client);
+  it("enqueues Mint through service-role RPC facades and stores a backend metadata snapshot", async () => {
+    const db = {};
+    getSupabaseAdminClientMock.mockReturnValue(db);
 
     const { default: mintHandler } = await import("../../api/wallet/mint");
     const result = await invokeApiHandler<ApiSuccessResponse>(mintHandler, {
@@ -640,7 +549,22 @@ describe("wallet mint API", () => {
     );
     expect(idempotencyInput?.requestPayload).not.toHaveProperty("metadata");
     expect(idempotencyInput?.requestPayload).not.toHaveProperty("priority");
-    expect(callRpcRawMock).toHaveBeenCalledWith(
+    expect(callRpcRawMock).toHaveBeenNthCalledWith(
+      1,
+      "wallet_prepare_mint_request",
+      {
+        p_user_id: USER_ID,
+        p_item_instance_id: ITEM_ID,
+        p_collection_address: null,
+        p_network: "mainnet",
+      },
+      expect.objectContaining({
+        schema: "api",
+        client: db,
+      }),
+    );
+    expect(callRpcRawMock).toHaveBeenNthCalledWith(
+      2,
       "wallet_enqueue_mint",
       {
         p_user_id: USER_ID,
@@ -651,19 +575,17 @@ describe("wallet mint API", () => {
       },
       expect.objectContaining({
         schema: "api",
-        client: db.client,
+        client: db,
       }),
     );
-
-    const mintQueueUpdate = db.operations.find(
-      (operation) =>
-        operation.operation === "update" && operation.table === "mint_queue",
-    );
-    expect(mintQueueUpdate).toMatchObject({
-      schema: "onchain",
-      values: {
-        priority: 100,
-        metadata: {
+    expect(callRpcRawMock).toHaveBeenNthCalledWith(
+      3,
+      "wallet_save_mint_metadata_snapshot",
+      expect.objectContaining({
+        p_user_id: USER_ID,
+        p_mint_queue_id: QUEUE_ID,
+        p_priority: 100,
+        p_metadata: expect.objectContaining({
           metadata_url: "/nft-metadata/items/ember_whelp.json",
           collection_address: COLLECTION_ADDRESS,
           metadata_snapshot: expect.objectContaining({
@@ -679,19 +601,13 @@ describe("wallet mint API", () => {
               source: "backend_catalog_snapshot",
             },
           }),
-        },
-      },
-      filters: expect.arrayContaining([
-        {
-          column: "id",
-          value: QUEUE_ID,
-        },
-        {
-          column: "user_id",
-          value: USER_ID,
-        },
-      ]),
-    });
+        }),
+      }),
+      expect.objectContaining({
+        schema: "api",
+        client: db,
+      }),
+    );
   });
 });
 
@@ -704,98 +620,21 @@ function requestHeaders(idempotencyKey: string): Record<string, string> {
   };
 }
 
-function createSupabaseMintMock(results: QueryResult[]) {
-  const operations: OperationState[] = [];
-  let resultIndex = 0;
-
-  function nextResult(): QueryResult {
-    const result = results[resultIndex] ?? {
-      data: null,
-      error: null,
-    };
-    resultIndex += 1;
-    return result;
-  }
-
-  function createBuilder(state: OperationState) {
-    const builder = {
-      eq(column: string, value: unknown) {
-        state.filters.push({
-          column,
-          value,
-        });
-        return builder;
-      },
-      order(column: string, options: Record<string, unknown>) {
-        state.orders.push({
-          column,
-          options,
-        });
-        return builder;
-      },
-      limit(value: number) {
-        state.limitValue = value;
-        return builder;
-      },
-      async maybeSingle() {
-        return nextResult();
-      },
-      async single() {
-        return nextResult();
-      },
-      then(
-        resolve: (value: QueryResult) => unknown,
-        reject?: (reason: unknown) => unknown,
-      ) {
-        return Promise.resolve(nextResult()).then(resolve, reject);
-      },
-    };
-
-    return builder;
-  }
-
-  const client = {
-    schema(schema: string) {
-      return {
-        from(table: string) {
-          return {
-            select(columns: string) {
-              const state: OperationState = {
-                schema,
-                table,
-                operation: "select",
-                selected: columns,
-                values: null,
-                filters: [],
-                orders: [],
-                limitValue: null,
-              };
-              operations.push(state);
-              return createBuilder(state);
-            },
-            update(values: unknown) {
-              const state: OperationState = {
-                schema,
-                table,
-                operation: "update",
-                selected: null,
-                values,
-                filters: [],
-                orders: [],
-                limitValue: null,
-              };
-              operations.push(state);
-              return createBuilder(state);
-            },
-          };
-        },
-      };
-    },
-  };
-
+function createPreparePayload(overrides: Record<string, unknown> = {}) {
   return {
-    client,
-    operations,
+    wallet: createWalletRow(),
+    other_wallet: createWalletRow(),
+    collection: null,
+    collections: [createCollectionRow()],
+    item: createItemRow(),
+    active_lock: null,
+    template: createTemplateRow(),
+    form: createFormRow(),
+    media: [
+      createMediaRow("metadata", "/nft-metadata/items/ember_whelp.json"),
+      createMediaRow("nft_image", "/images/ember_whelp.png"),
+    ],
+    ...overrides,
   };
 }
 

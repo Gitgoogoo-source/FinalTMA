@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { supabaseAdmin } from "./supabaseAdmin.js";
+import { callRpcRaw } from "./rpc.js";
 import {
   DbTransactionError,
   type JsonObject,
@@ -204,8 +204,7 @@ export class IdempotencyError extends Error {
   }
 }
 
-const IDEMPOTENCY_SCHEMA = "ops";
-const IDEMPOTENCY_TABLE = "idempotency_keys";
+const IDEMPOTENCY_RPC_SCHEMA = "api" as never;
 
 const DEFAULT_LOCK_MS = 2 * 60 * 1000;
 const MAX_KEY_LENGTH = 180;
@@ -360,19 +359,21 @@ export async function reserveIdempotencyKey<TData = JsonValue>(
   const now = new Date();
   const lockToken = addMs(now, lockMs).toISOString();
 
-  const { data, error } = await idempotencyTable()
-    .insert({
-      key,
-      user_id: input.userId ?? null,
+  let data: IdempotencyRecord | null = null;
+  let error: unknown = null;
+
+  try {
+    data = await insertStartedIdempotencyRecord({
       scope,
-      request_hash: requestHash,
-      response: null,
-      status: "started" satisfies IdempotencyStatus,
-      locked_until: lockToken,
-      updated_at: now.toISOString(),
-    })
-    .select("*")
-    .single();
+      key,
+      userId: input.userId ?? null,
+      requestHash,
+      lockToken,
+      traceId: input.traceId,
+    });
+  } catch (insertError) {
+    error = insertError;
+  }
 
   if (!error && data) {
     return {
@@ -387,7 +388,7 @@ export async function reserveIdempotencyKey<TData = JsonValue>(
 
   if (!isUniqueViolation(error)) {
     throw normalizeDbError(error, {
-      schema: IDEMPOTENCY_SCHEMA,
+      schema: IDEMPOTENCY_RPC_SCHEMA,
       functionName: "reserve_idempotency_key",
     });
   }
@@ -418,26 +419,30 @@ export async function completeIdempotencyKey<
 >(input: CompleteIdempotencyInput<TData>): Promise<IdempotencyRecord> {
   const scope = normalizeScope(input.scope);
   const key = normalizeIdempotencyKey(input.key);
-  const nowIso = new Date().toISOString();
 
-  const { data, error } = await idempotencyTable()
-    .update({
-      status: "completed" satisfies IdempotencyStatus,
+  let data: IdempotencyRecord | null = null;
+  let error: unknown = null;
+
+  try {
+    data = await updateIdempotencyRecordStatus({
+      scope,
+      key,
+      requestHash: input.requestHash,
+      expectedStatus: "started",
+      expectedLockToken: input.lockToken,
+      nextStatus: "completed",
+      nextLockToken: null,
       response: toJsonValue(input.response),
-      locked_until: null,
-      updated_at: nowIso,
-    })
-    .eq("scope", scope)
-    .eq("key", key)
-    .eq("request_hash", input.requestHash)
-    .eq("status", "started")
-    .eq("locked_until", input.lockToken)
-    .select("*")
-    .maybeSingle();
+      replaceResponse: true,
+      traceId: input.traceId,
+    });
+  } catch (updateError) {
+    error = updateError;
+  }
 
   if (error) {
     throw normalizeDbError(error, {
-      schema: IDEMPOTENCY_SCHEMA,
+      schema: IDEMPOTENCY_RPC_SCHEMA,
       functionName: "complete_idempotency_key",
     });
   }
@@ -461,26 +466,30 @@ export async function failIdempotencyKey(
 ): Promise<IdempotencyRecord> {
   const scope = normalizeScope(input.scope);
   const key = normalizeIdempotencyKey(input.key);
-  const nowIso = new Date().toISOString();
 
-  const { data, error } = await idempotencyTable()
-    .update({
-      status: "failed" satisfies IdempotencyStatus,
+  let data: IdempotencyRecord | null = null;
+  let error: unknown = null;
+
+  try {
+    data = await updateIdempotencyRecordStatus({
+      scope,
+      key,
+      requestHash: input.requestHash,
+      expectedStatus: "started",
+      expectedLockToken: input.lockToken,
+      nextStatus: "failed",
+      nextLockToken: null,
       response: normalizeErrorForStorage(input.error),
-      locked_until: null,
-      updated_at: nowIso,
-    })
-    .eq("scope", scope)
-    .eq("key", key)
-    .eq("request_hash", input.requestHash)
-    .eq("status", "started")
-    .eq("locked_until", input.lockToken)
-    .select("*")
-    .maybeSingle();
+      replaceResponse: true,
+      traceId: input.traceId,
+    });
+  } catch (updateError) {
+    error = updateError;
+  }
 
   if (error) {
     throw normalizeDbError(error, {
-      schema: IDEMPOTENCY_SCHEMA,
+      schema: IDEMPOTENCY_RPC_SCHEMA,
       functionName: "fail_idempotency_key",
     });
   }
@@ -506,15 +515,18 @@ export async function getIdempotencyRecord(
   const scope = normalizeScope(scopeInput);
   const key = normalizeIdempotencyKey(keyInput);
 
-  const { data, error } = await idempotencyTable()
-    .select("*")
-    .eq("scope", scope)
-    .eq("key", key)
-    .maybeSingle();
+  let data: IdempotencyRecord | null = null;
+  let error: unknown = null;
+
+  try {
+    data = await getIdempotencyRecordViaRpc(scope, key);
+  } catch (getError) {
+    error = getError;
+  }
 
   if (error) {
     throw normalizeDbError(error, {
-      schema: IDEMPOTENCY_SCHEMA,
+      schema: IDEMPOTENCY_RPC_SCHEMA,
       functionName: "get_idempotency_record",
     });
   }
@@ -693,28 +705,27 @@ async function takeOverRecord<TData>(input: {
   const now = new Date();
   const lockToken = addMs(now, input.lockMs).toISOString();
 
-  let query = idempotencyTable()
-    .update({
-      status: "started" satisfies IdempotencyStatus,
-      locked_until: lockToken,
-      updated_at: now.toISOString(),
-    })
-    .eq("scope", input.record.scope)
-    .eq("key", input.record.key)
-    .eq("request_hash", input.requestHash)
-    .eq("status", input.record.status);
+  let data: IdempotencyRecord | null = null;
+  let error: unknown = null;
 
-  if (input.record.locked_until) {
-    query = query.eq("locked_until", input.record.locked_until);
-  } else {
-    query = query.is("locked_until", null);
+  try {
+    data = await updateIdempotencyRecordStatus({
+      scope: input.record.scope,
+      key: input.record.key,
+      requestHash: input.requestHash,
+      expectedStatus: input.record.status,
+      expectedLockToken: input.record.locked_until,
+      nextStatus: "started",
+      nextLockToken: lockToken,
+      replaceResponse: false,
+    });
+  } catch (updateError) {
+    error = updateError;
   }
-
-  const { data, error } = await query.select("*").maybeSingle();
 
   if (error) {
     throw normalizeDbError(error, {
-      schema: IDEMPOTENCY_SCHEMA,
+      schema: IDEMPOTENCY_RPC_SCHEMA,
       functionName: "take_over_idempotency_record",
     });
   }
@@ -772,12 +783,98 @@ async function takeOverRecord<TData>(input: {
   };
 }
 
-function idempotencyTable() {
-  return supabaseAdmin.schema(IDEMPOTENCY_SCHEMA).from(IDEMPOTENCY_TABLE);
-}
-
 function castRecord(data: unknown): IdempotencyRecord {
   return data as IdempotencyRecord;
+}
+
+async function insertStartedIdempotencyRecord(input: {
+  scope: string;
+  key: string;
+  userId: string | null;
+  requestHash: string;
+  lockToken: string;
+  traceId?: string | undefined;
+}): Promise<IdempotencyRecord | null> {
+  const data = await callRpcRaw<unknown>(
+    "idempotency_insert_started",
+    {
+      p_scope: input.scope,
+      p_key: input.key,
+      p_user_id: input.userId,
+      p_request_hash: input.requestHash,
+      p_locked_until: input.lockToken,
+    },
+    {
+      schema: IDEMPOTENCY_RPC_SCHEMA,
+      context: {
+        traceId: input.traceId,
+        scope: input.scope,
+        key: input.key,
+      },
+    },
+  );
+
+  return data ? castRecord(data) : null;
+}
+
+async function getIdempotencyRecordViaRpc(
+  scope: string,
+  key: string,
+): Promise<IdempotencyRecord | null> {
+  const data = await callRpcRaw<unknown>(
+    "idempotency_get",
+    {
+      p_scope: scope,
+      p_key: key,
+    },
+    {
+      schema: IDEMPOTENCY_RPC_SCHEMA,
+      context: {
+        scope,
+        key,
+      },
+    },
+  );
+
+  return data ? castRecord(data) : null;
+}
+
+async function updateIdempotencyRecordStatus(input: {
+  scope: string;
+  key: string;
+  requestHash: string;
+  expectedStatus: IdempotencyStatus;
+  expectedLockToken: string | null;
+  nextStatus: IdempotencyStatus;
+  nextLockToken: string | null;
+  response?: JsonValue | undefined;
+  replaceResponse: boolean;
+  traceId?: string | undefined;
+}): Promise<IdempotencyRecord | null> {
+  const data = await callRpcRaw<unknown>(
+    "idempotency_update_status",
+    {
+      p_scope: input.scope,
+      p_key: input.key,
+      p_request_hash: input.requestHash,
+      p_expected_status: input.expectedStatus,
+      p_expected_locked_until: input.expectedLockToken,
+      p_next_status: input.nextStatus,
+      p_next_locked_until: input.nextLockToken,
+      p_response: input.response ?? null,
+      p_replace_response: input.replaceResponse,
+    },
+    {
+      schema: IDEMPOTENCY_RPC_SCHEMA,
+      context: {
+        traceId: input.traceId,
+        scope: input.scope,
+        key: input.key,
+      },
+    },
+  );
+
+  return data ? castRecord(data) : null;
 }
 
 function isUniqueViolation(error: unknown): boolean {

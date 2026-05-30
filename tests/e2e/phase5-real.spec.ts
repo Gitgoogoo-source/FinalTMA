@@ -111,6 +111,11 @@ test("第五阶段真实链路：支付、钱包验证、Mint 队列和刷新恢
   await page.goto(`/box?mockInitData=${encodeURIComponent(initData)}`);
   await expect(page.getByTestId("box-page")).toBeVisible();
   await expect(page.getByText(fixture.boxName).first()).toBeVisible();
+  const fixtureBoxButton = page.getByRole("button", {
+    name: new RegExp(`^${escapeRegExp(fixture.boxName)}\\b`),
+  });
+  await fixtureBoxButton.click();
+  await expect(fixtureBoxButton).toHaveAttribute("aria-pressed", "true");
 
   await page.getByRole("button", { name: /开 1 次/ }).click();
   await expect(page.getByText(fixture.itemName).first()).toBeVisible({
@@ -151,9 +156,10 @@ test("第五阶段真实链路：支付、钱包验证、Mint 队列和刷新恢
   const walletButton = page.locator(".wallet-entry-button").first();
   await expect(walletButton).toContainText("verified");
   await walletButton.click();
-  await expect(page.getByRole("dialog", { name: "钱包状态" })).toBeVisible();
+  const walletStatusDialog = page.getByRole("dialog", { name: "钱包状态" });
+  await expect(walletStatusDialog).toBeVisible();
   await expect(page.getByText("钱包验证已通过")).toBeVisible();
-  await page.getByLabel("关闭钱包面板").click();
+  await walletStatusDialog.getByRole("button", { name: "关闭" }).click();
 
   await page.getByRole("button", { name: "详情" }).click();
   const detailDialog = page.getByRole("dialog", { name: fixture.itemName });
@@ -1104,6 +1110,10 @@ function requireLocalSupabaseUrl(value: string | undefined): string {
 
 function createRunId(): string {
   return randomUUID().replaceAll("-", "").slice(0, 10);
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function createTelegramUserId(): number {

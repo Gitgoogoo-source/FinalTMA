@@ -8,13 +8,19 @@ import { ApiError } from "../../api/_shared/handler";
 import { TonNftProviderError } from "../../packages/server/src/ton/nft";
 import { invokeApiHandler } from "./_utils";
 
-const { getSupabaseAdminClientMock, requireSessionMock } = vi.hoisted(() => ({
-  getSupabaseAdminClientMock: vi.fn(),
-  requireSessionMock: vi.fn(),
-}));
+const { callRpcRawMock, getSupabaseAdminClientMock, requireSessionMock } =
+  vi.hoisted(() => ({
+    callRpcRawMock: vi.fn(),
+    getSupabaseAdminClientMock: vi.fn(),
+    requireSessionMock: vi.fn(),
+  }));
 
 vi.mock("../../packages/server/src/db/supabaseAdmin.js", () => ({
   getSupabaseAdminClient: getSupabaseAdminClientMock,
+}));
+
+vi.mock("../../packages/server/src/db/rpc.js", () => ({
+  callRpcRaw: callRpcRawMock,
 }));
 
 vi.mock("../../api/_shared/requireSession.js", () => ({
@@ -62,6 +68,7 @@ type OperationState = {
 
 describe("wallet NFT sync service", () => {
   beforeEach(() => {
+    callRpcRawMock.mockReset();
     getSupabaseAdminClientMock.mockReset();
     requireSessionMock.mockReset();
     requireSessionMock.mockResolvedValue(session());
@@ -702,45 +709,33 @@ describe("wallet NFT sync service", () => {
 
 describe("wallet NFT query API", () => {
   beforeEach(() => {
+    callRpcRawMock.mockReset();
     getSupabaseAdminClientMock.mockReset();
     requireSessionMock.mockReset();
     requireSessionMock.mockResolvedValue(session());
   });
 
   it("returns only the current user's NFT snapshots with known item links", async () => {
-    const db = createSupabaseMock([
-      {
-        data: [
-          {
-            id: "77777777-7777-4777-8777-777777777777",
-            wallet_id: WALLET_ID,
-            user_id: USER_ID,
-            collection_address: RAW_COLLECTION_ADDRESS,
-            item_address: RAW_ITEM_ADDRESS,
-            owner_address: RAW_OWNER_ADDRESS,
-            metadata_url: "https://example.test/nft/7.json",
-            raw_payload: {
-              name: "Known NFT",
-              image_url: "https://example.test/nft/7.png",
-            },
-            seen_at: "2026-05-29T08:00:00.000Z",
-            created_at: "2026-05-29T08:00:00.000Z",
-          },
-        ],
-      },
-      {
-        data: [
-          {
-            id: NFT_ITEM_ID,
-            item_address: RAW_ITEM_ADDRESS,
-            item_instance_id: ITEM_INSTANCE_ID,
-            item_index: 7,
-            metadata_url: "https://example.test/nft/7.json",
-          },
-        ],
-      },
-    ]);
-    getSupabaseAdminClientMock.mockReturnValue(db.client);
+    const db = {};
+    getSupabaseAdminClientMock.mockReturnValue(db);
+    callRpcRawMock.mockResolvedValue({
+      items: [
+        {
+          nftItemId: NFT_ITEM_ID,
+          itemAddress: RAW_ITEM_ADDRESS,
+          collectionAddress: RAW_COLLECTION_ADDRESS,
+          ownerAddress: RAW_OWNER_ADDRESS,
+          itemIndex: 7,
+          name: "Known NFT",
+          imageUrl: "https://example.test/nft/7.png",
+          metadataUrl: "https://example.test/nft/7.json",
+          linkedItemInstanceId: ITEM_INSTANCE_ID,
+          syncedAt: "2026-05-29T08:00:00.000Z",
+        },
+      ],
+      nextCursor: null,
+      serverTime: "2026-05-29T08:00:01.000Z",
+    });
 
     const { default: walletNftsHandler } =
       await import("../../api/wallet/nfts");
@@ -770,18 +765,22 @@ describe("wallet NFT query API", () => {
         nextCursor: null,
       },
     });
-    expect(db.operations[0]).toMatchObject({
-      schema: "onchain",
-      table: "wallet_nft_snapshots",
-      filters: [
-        {
-          column: "user_id",
-          operator: "eq",
-          value: USER_ID,
-        },
-      ],
-      rangeValue: [0, 20],
-    });
+    expect(callRpcRawMock).toHaveBeenCalledWith(
+      "wallet_list_nft_snapshots",
+      {
+        p_user_id: USER_ID,
+        p_address: null,
+        p_network: null,
+        p_collection_address: null,
+        p_only_known_collections: false,
+        p_offset: 0,
+        p_limit: 20,
+      },
+      expect.objectContaining({
+        schema: "api",
+        client: db,
+      }),
+    );
   });
 
   it("rejects an invalid cursor without querying snapshots", async () => {
@@ -806,7 +805,7 @@ describe("wallet NFT query API", () => {
         code: "VALIDATION_ERROR",
       },
     });
-    expect(db.operations).toHaveLength(0);
+    expect(callRpcRawMock).not.toHaveBeenCalled();
   });
 });
 

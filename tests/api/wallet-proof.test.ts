@@ -347,6 +347,54 @@ describe("wallet proof API", () => {
     });
   });
 
+  it("rejects an expired ton_proof timestamp and never saves a verified wallet", async () => {
+    const proofPayload = await createSignedProof({
+      timestamp: Math.floor(
+        new Date("2026-05-28T11:54:59.000Z").getTime() / 1000,
+      ),
+    });
+    const db = createSupabaseMock([
+      {
+        data: createWalletProofRow(),
+        error: null,
+      },
+      {
+        data: null,
+        error: null,
+      },
+    ]);
+    getSupabaseAdminClientMock.mockReturnValue(db.client);
+
+    const { default: proofHandler } = await import("../../api/wallet/proof");
+    const result = await invokeApiHandler<ApiErrorResponse>(proofHandler, {
+      method: "POST",
+      url: "/api/wallet/proof",
+      headers: {
+        cookie: "tma_game_session=test-session-token-000000000000",
+      },
+      body: {
+        ...proofPayload,
+        idempotencyKey: "wallet:proof:expired-timestamp-0001",
+      },
+    });
+
+    expect(result.statusCode).toBe(400);
+    expect(result.body).toMatchObject({
+      ok: false,
+      error: {
+        code: "WALLET_PROOF_EXPIRED",
+        details: {
+          reason: "TON_PROOF_EXPIRED",
+        },
+      },
+    });
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+    expect(db.queries[1]?.payload).toMatchObject({
+      status: "failed",
+      error_message: "WALLET_PROOF_EXPIRED",
+    });
+  });
+
   it("rejects an expired challenge and marks it expired without calling RPC", async () => {
     const proofPayload = await createSignedProof();
     const db = createSupabaseMock([
@@ -520,6 +568,7 @@ async function createSignedProof(
     address?: string;
     domain?: string;
     signature?: string;
+    timestamp?: number;
     walletStateInit?: string;
   } = {},
 ): Promise<{
@@ -546,7 +595,7 @@ async function createSignedProof(
   });
   const address = options.address ?? RAW_ADDRESS;
   const domain = options.domain ?? DOMAIN;
-  const timestamp = Math.floor(Date.now() / 1000);
+  const timestamp = options.timestamp ?? Math.floor(Date.now() / 1000);
   const messageHash = buildTonProofDigest(parseRawTonAddress(address), {
     timestamp,
     domain: {

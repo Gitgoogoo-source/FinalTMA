@@ -141,6 +141,18 @@ type PreparedMintRequest = {
   metadataUrl: string;
 };
 
+type MintPreparationPayload = {
+  wallet?: unknown;
+  other_wallet?: unknown;
+  collection?: unknown;
+  collections?: unknown;
+  item?: unknown;
+  active_lock?: unknown;
+  template?: unknown;
+  form?: unknown;
+  media?: unknown;
+};
+
 type MintResponse = {
   accepted: true;
   mintQueueId: string;
@@ -157,91 +169,6 @@ type MintResponse = {
   metadataUrl: string;
   idempotent: boolean;
 };
-
-const WALLET_COLUMNS = [
-  "id",
-  "user_id",
-  "chain",
-  "network",
-  "address",
-  "address_raw",
-  "status",
-  "verified_at",
-  "is_primary",
-  "updated_at",
-].join(",");
-
-const COLLECTION_COLUMNS = [
-  "id",
-  "code",
-  "chain",
-  "network",
-  "collection_address",
-  "owner_address",
-  "standard",
-  "metadata_url",
-  "content_base_url",
-  "royalty_config",
-  "status",
-  "metadata",
-  "created_at",
-  "updated_at",
-].join(",");
-
-const ITEM_COLUMNS = [
-  "id",
-  "owner_user_id",
-  "template_id",
-  "form_id",
-  "serial_no",
-  "level",
-  "exp",
-  "power",
-  "status",
-  "nft_mint_status",
-  "minted_nft_item_id",
-  "metadata",
-  "created_at",
-  "updated_at",
-].join(",");
-
-const TEMPLATE_COLUMNS = [
-  "id",
-  "slug",
-  "display_name",
-  "subtitle",
-  "description",
-  "rarity_code",
-  "type_code",
-  "release_status",
-  "nft_mintable",
-  "metadata",
-].join(",");
-
-const FORM_COLUMNS = [
-  "id",
-  "template_id",
-  "form_index",
-  "form_slug",
-  "display_name",
-  "description",
-  "image_url",
-  "thumbnail_url",
-  "avatar_url",
-  "is_default",
-  "metadata",
-].join(",");
-
-const MEDIA_COLUMNS = [
-  "id",
-  "template_id",
-  "form_id",
-  "media_type",
-  "url",
-  "mime_type",
-  "sort_order",
-  "metadata",
-].join(",");
 
 const SERVER_METADATA_MODE = "DATABASE_SNAPSHOT";
 
@@ -356,14 +283,20 @@ async function prepareMintRequest(
   },
 ): Promise<PreparedMintRequest> {
   const requestedNetwork = networkFromTonChain(input.chain);
-  const wallet = await findVerifiedWallet(db, context.userId, requestedNetwork);
-  const collection = await resolveActiveCollection(db, wallet.network);
+  const payload = await loadMintPreparationPayload(db, input, {
+    ...context,
+    requestedNetwork,
+  });
+  const wallet = resolveVerifiedWalletFromPayload(payload, requestedNetwork);
+  const collection = resolveActiveCollectionFromPayload(
+    payload,
+    wallet.network,
+  );
 
   assertTargetAddressMatchesWallet(input, wallet);
 
   const { item, metadataSnapshot, metadataUrl } =
-    await buildItemMetadataSnapshot(db, input, {
-      userId: context.userId,
+    buildItemMetadataSnapshotFromPayload(payload, {
       requestId: context.requestId,
       wallet,
       collection,
@@ -378,12 +311,40 @@ async function prepareMintRequest(
   };
 }
 
-async function findVerifiedWallet(
+async function loadMintPreparationPayload(
   db: SupabaseAdminClient,
-  userId: string,
+  input: CreateMintBody,
+  context: {
+    userId: string;
+    requestId: string;
+    requestedNetwork: WalletNetwork;
+  },
+): Promise<MintPreparationPayload> {
+  return await callRpcRaw<MintPreparationPayload>(
+    "wallet_prepare_mint_request",
+    {
+      p_user_id: context.userId,
+      p_item_instance_id: input.itemInstanceId,
+      p_collection_address: readString(process.env.TON_COLLECTION_ADDRESS),
+      p_network: context.requestedNetwork,
+    },
+    {
+      schema: "api" as never,
+      client: db,
+      context: {
+        requestId: context.requestId,
+        userId: context.userId,
+        itemInstanceId: input.itemInstanceId,
+      },
+    },
+  );
+}
+
+function resolveVerifiedWalletFromPayload(
+  payload: MintPreparationPayload,
   network: WalletNetwork,
-): Promise<VerifiedWalletRow> {
-  const wallet = await findConnectedWallet(db, userId, network);
+): VerifiedWalletRow {
+  const wallet = toNullableRow<VerifiedWalletRow>(payload.wallet);
 
   if (wallet?.verified_at) {
     return wallet;
@@ -397,7 +358,7 @@ async function findVerifiedWallet(
     );
   }
 
-  const otherWallet = await findAnyConnectedWallet(db, userId);
+  const otherWallet = toNullableRow<VerifiedWalletRow>(payload.other_wallet);
 
   if (otherWallet?.verified_at && otherWallet.network !== network) {
     throw new ApiError(
@@ -420,73 +381,14 @@ async function findVerifiedWallet(
   );
 }
 
-async function findConnectedWallet(
-  db: SupabaseAdminClient,
-  userId: string,
-  network: WalletNetwork,
-): Promise<VerifiedWalletRow | null> {
-  const { data, error } = await db
-    .schema("core")
-    .from("user_wallets")
-    .select(WALLET_COLUMNS)
-    .eq("user_id", userId)
-    .eq("chain", "TON")
-    .eq("network", network)
-    .eq("status", "connected")
-    .order("is_primary", { ascending: false })
-    .order("verified_at", { ascending: false, nullsFirst: false })
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle<VerifiedWalletRow>();
-
-  if (error) {
-    throw new ApiError(500, "WALLET_LOOKUP_FAILED", "查询钱包状态失败。", {
-      expose: false,
-      cause: error,
-    });
-  }
-
-  return data ?? null;
-}
-
-async function findAnyConnectedWallet(
-  db: SupabaseAdminClient,
-  userId: string,
-): Promise<VerifiedWalletRow | null> {
-  const { data, error } = await db
-    .schema("core")
-    .from("user_wallets")
-    .select(WALLET_COLUMNS)
-    .eq("user_id", userId)
-    .eq("chain", "TON")
-    .eq("status", "connected")
-    .order("is_primary", { ascending: false })
-    .order("verified_at", { ascending: false, nullsFirst: false })
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle<VerifiedWalletRow>();
-
-  if (error) {
-    throw new ApiError(500, "WALLET_LOOKUP_FAILED", "查询钱包状态失败。", {
-      expose: false,
-      cause: error,
-    });
-  }
-
-  return data ?? null;
-}
-
-async function resolveActiveCollection(
-  db: SupabaseAdminClient,
+function resolveActiveCollectionFromPayload(
+  payload: MintPreparationPayload,
   walletNetwork: string,
-): Promise<NftCollectionRow> {
+): NftCollectionRow {
   const envCollectionAddress = readString(process.env.TON_COLLECTION_ADDRESS);
 
   if (envCollectionAddress) {
-    const collection = await findCollectionBySelector(db, {
-      column: "collection_address",
-      value: envCollectionAddress,
-    });
+    const collection = toNullableRow<NftCollectionRow>(payload.collection);
 
     if (!collection) {
       throw new ApiError(
@@ -503,7 +405,7 @@ async function resolveActiveCollection(
     return collection;
   }
 
-  const collections = await listCollectionsForNetwork(db, walletNetwork);
+  const collections = toRowArray<NftCollectionRow>(payload.collections);
   const activeCollection = collections.find(
     (collection) => collection.status === "active",
   );
@@ -529,61 +431,84 @@ async function resolveActiveCollection(
   );
 }
 
-async function findCollectionBySelector(
-  db: SupabaseAdminClient,
-  selector: { column: "collection_address"; value: string },
-): Promise<NftCollectionRow | null> {
-  const { data, error } = await db
-    .schema("onchain")
-    .from("nft_collections")
-    .select(COLLECTION_COLUMNS)
-    .eq(selector.column, selector.value)
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle<NftCollectionRow>();
+function buildItemMetadataSnapshotFromPayload(
+  payload: MintPreparationPayload,
+  context: {
+    requestId: string;
+    wallet: VerifiedWalletRow;
+    collection: NftCollectionRow;
+  },
+): {
+  item: ItemInstanceRow;
+  metadataSnapshot: MintMetadataSnapshot;
+  metadataUrl: string;
+} {
+  const item = toNullableRow<ItemInstanceRow>(payload.item);
 
-  if (error) {
+  if (!item) {
+    throw new ApiError(404, "ITEM_NOT_FOUND", "藏品不存在或不属于当前用户。");
+  }
+
+  assertItemCanEnterMint(item);
+
+  const activeLock = toNullableRow<InventoryLockRow>(payload.active_lock);
+
+  if (activeLock) {
     throw new ApiError(
-      500,
-      "NFT_COLLECTION_LOOKUP_FAILED",
-      "查询 NFT Collection 配置失败。",
+      409,
+      "ITEM_ALREADY_LOCKED",
+      "藏品已被其他操作锁定，暂时不能 Mint。",
       {
-        expose: false,
-        cause: error,
+        details: {
+          lockType: activeLock.lock_type,
+        },
       },
     );
   }
 
-  return data ?? null;
-}
+  const template = toNullableRow<CollectibleTemplateRow>(payload.template);
 
-async function listCollectionsForNetwork(
-  db: SupabaseAdminClient,
-  walletNetwork: string,
-): Promise<NftCollectionRow[]> {
-  const { data, error } = await db
-    .schema("onchain")
-    .from("nft_collections")
-    .select(COLLECTION_COLUMNS)
-    .eq("chain", "TON")
-    .eq("network", walletNetwork)
-    .order("status", { ascending: true })
-    .order("updated_at", { ascending: false })
-    .limit(10);
+  if (!template) {
+    throw new ApiError(409, "ITEM_NOT_MINTABLE", "藏品模板不存在，不能 Mint。");
+  }
 
-  if (error) {
+  assertTemplateCanMint(template);
+
+  const form = toNullableRow<CollectibleFormRow>(payload.form);
+  const mediaRows = toRowArray<CollectibleMediaRow>(payload.media);
+  const metadataUrl = resolveItemMetadataUrl(
+    context.collection,
+    template,
+    form,
+    mediaRows,
+  );
+  const imageUrl = resolveImageUrl(form, mediaRows);
+
+  if (!metadataUrl || !imageUrl) {
     throw new ApiError(
-      500,
-      "NFT_COLLECTION_LOOKUP_FAILED",
-      "查询 NFT Collection 配置失败。",
+      503,
+      "NFT_METADATA_MISSING",
+      "NFT metadata 或 image 配置缺失。",
       {
-        expose: false,
-        cause: error,
+        expose: true,
       },
     );
   }
 
-  return Array.isArray(data) ? (data as unknown as NftCollectionRow[]) : [];
+  return {
+    item,
+    metadataUrl,
+    metadataSnapshot: buildMetadataSnapshot({
+      requestId: context.requestId,
+      wallet: context.wallet,
+      collection: context.collection,
+      item,
+      template,
+      form,
+      metadataUrl,
+      imageUrl,
+    }),
+  };
 }
 
 function assertCollectionUsable(
@@ -657,216 +582,6 @@ function assertCollectionMetadataConfigured(
       },
     );
   }
-}
-
-async function buildItemMetadataSnapshot(
-  db: SupabaseAdminClient,
-  input: CreateMintBody,
-  context: {
-    userId: string;
-    requestId: string;
-    wallet: VerifiedWalletRow;
-    collection: NftCollectionRow;
-  },
-): Promise<{
-  item: ItemInstanceRow;
-  metadataSnapshot: MintMetadataSnapshot;
-  metadataUrl: string;
-}> {
-  const item = await findOwnedItem(db, context.userId, input.itemInstanceId);
-  assertItemCanEnterMint(item);
-
-  const activeLock = await findActiveInventoryLock(db, item.id);
-
-  if (activeLock) {
-    throw new ApiError(
-      409,
-      "ITEM_ALREADY_LOCKED",
-      "藏品已被其他操作锁定，暂时不能 Mint。",
-      {
-        details: {
-          lockType: activeLock.lock_type,
-        },
-      },
-    );
-  }
-
-  const template = await findTemplate(db, item.template_id);
-  assertTemplateCanMint(template);
-
-  const form = item.form_id ? await findForm(db, item.form_id) : null;
-  const mediaRows = await listTemplateMedia(db, item.template_id);
-  const metadataUrl = resolveItemMetadataUrl(
-    context.collection,
-    template,
-    form,
-    mediaRows,
-  );
-  const imageUrl = resolveImageUrl(form, mediaRows);
-
-  if (!metadataUrl || !imageUrl) {
-    throw new ApiError(
-      503,
-      "NFT_METADATA_MISSING",
-      "NFT metadata 或 image 配置缺失。",
-      {
-        expose: true,
-      },
-    );
-  }
-
-  return {
-    item,
-    metadataUrl,
-    metadataSnapshot: buildMetadataSnapshot({
-      requestId: context.requestId,
-      wallet: context.wallet,
-      collection: context.collection,
-      item,
-      template,
-      form,
-      metadataUrl,
-      imageUrl,
-    }),
-  };
-}
-
-async function findOwnedItem(
-  db: SupabaseAdminClient,
-  userId: string,
-  itemInstanceId: string,
-): Promise<ItemInstanceRow> {
-  const { data, error } = await db
-    .schema("inventory")
-    .from("item_instances")
-    .select(ITEM_COLUMNS)
-    .eq("id", itemInstanceId)
-    .eq("owner_user_id", userId)
-    .maybeSingle<ItemInstanceRow>();
-
-  if (error) {
-    throw new ApiError(500, "ITEM_LOOKUP_FAILED", "查询藏品失败。", {
-      expose: false,
-      cause: error,
-    });
-  }
-
-  if (!data) {
-    throw new ApiError(404, "ITEM_NOT_FOUND", "藏品不存在或不属于当前用户。");
-  }
-
-  return data;
-}
-
-async function findActiveInventoryLock(
-  db: SupabaseAdminClient,
-  itemInstanceId: string,
-): Promise<InventoryLockRow | null> {
-  const { data, error } = await db
-    .schema("inventory")
-    .from("inventory_locks")
-    .select("id,lock_type,source_type,source_id,status")
-    .eq("item_instance_id", itemInstanceId)
-    .eq("status", "active")
-    .limit(1)
-    .maybeSingle<InventoryLockRow>();
-
-  if (error) {
-    throw new ApiError(
-      500,
-      "ITEM_LOCK_LOOKUP_FAILED",
-      "查询藏品锁定状态失败。",
-      {
-        expose: false,
-        cause: error,
-      },
-    );
-  }
-
-  return data ?? null;
-}
-
-async function findTemplate(
-  db: SupabaseAdminClient,
-  templateId: string,
-): Promise<CollectibleTemplateRow> {
-  const { data, error } = await db
-    .schema("catalog")
-    .from("collectible_templates")
-    .select(TEMPLATE_COLUMNS)
-    .eq("id", templateId)
-    .maybeSingle<CollectibleTemplateRow>();
-
-  if (error) {
-    throw new ApiError(
-      500,
-      "COLLECTIBLE_TEMPLATE_LOOKUP_FAILED",
-      "查询藏品模板失败。",
-      {
-        expose: false,
-        cause: error,
-      },
-    );
-  }
-
-  if (!data) {
-    throw new ApiError(409, "ITEM_NOT_MINTABLE", "藏品模板不存在，不能 Mint。");
-  }
-
-  return data;
-}
-
-async function findForm(
-  db: SupabaseAdminClient,
-  formId: string,
-): Promise<CollectibleFormRow | null> {
-  const { data, error } = await db
-    .schema("catalog")
-    .from("collectible_forms")
-    .select(FORM_COLUMNS)
-    .eq("id", formId)
-    .maybeSingle<CollectibleFormRow>();
-
-  if (error) {
-    throw new ApiError(
-      500,
-      "COLLECTIBLE_FORM_LOOKUP_FAILED",
-      "查询藏品形态失败。",
-      {
-        expose: false,
-        cause: error,
-      },
-    );
-  }
-
-  return data ?? null;
-}
-
-async function listTemplateMedia(
-  db: SupabaseAdminClient,
-  templateId: string,
-): Promise<CollectibleMediaRow[]> {
-  const { data, error } = await db
-    .schema("catalog")
-    .from("collectible_media")
-    .select(MEDIA_COLUMNS)
-    .eq("template_id", templateId)
-    .order("sort_order", { ascending: true })
-    .order("created_at", { ascending: true });
-
-  if (error) {
-    throw new ApiError(
-      500,
-      "COLLECTIBLE_MEDIA_LOOKUP_FAILED",
-      "查询 NFT metadata 配置失败。",
-      {
-        expose: false,
-        cause: error,
-      },
-    );
-  }
-
-  return Array.isArray(data) ? (data as unknown as CollectibleMediaRow[]) : [];
 }
 
 function assertItemCanEnterMint(item: ItemInstanceRow): void {
@@ -1090,23 +805,32 @@ async function saveMintMetadataSnapshot(
     priority: MintPriority;
   },
 ): Promise<void> {
-  const { error } = await db
-    .schema("onchain")
-    .from("mint_queue")
-    .update({
-      priority: toQueuePriority(context.priority),
-      metadata: {
-        request_id: context.requestId,
-        metadata_mode: context.metadataMode,
-        metadata_snapshot: prepared.metadataSnapshot,
-        metadata_url: prepared.metadataUrl,
-        collection_address: prepared.collection.collection_address,
+  try {
+    await callRpcRaw(
+      "wallet_save_mint_metadata_snapshot",
+      {
+        p_user_id: context.userId,
+        p_mint_queue_id: mintQueueId,
+        p_priority: toQueuePriority(context.priority),
+        p_metadata: {
+          request_id: context.requestId,
+          metadata_mode: context.metadataMode,
+          metadata_snapshot: prepared.metadataSnapshot,
+          metadata_url: prepared.metadataUrl,
+          collection_address: prepared.collection.collection_address,
+        },
       },
-    })
-    .eq("id", mintQueueId)
-    .eq("user_id", context.userId);
-
-  if (error) {
+      {
+        schema: "api" as never,
+        client: db,
+        context: {
+          requestId: context.requestId,
+          userId: context.userId,
+          mintQueueId,
+        },
+      },
+    );
+  } catch (error) {
     throw new ApiError(
       500,
       "MINT_METADATA_SNAPSHOT_SAVE_FAILED",
@@ -1414,6 +1138,22 @@ function readString(value: unknown): string | null {
 
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
+}
+
+function toNullableRow<T>(value: unknown): T | null {
+  if (!isRecord(value) || !readString(value.id)) {
+    return null;
+  }
+
+  return value as T;
+}
+
+function toRowArray<T>(value: unknown): T[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.filter(isRecord) as T[];
 }
 
 function isRecord(value: unknown): value is JsonRecord {

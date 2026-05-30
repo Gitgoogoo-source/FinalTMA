@@ -59,6 +59,24 @@ type StarPaymentRow = {
   created_at: string;
 };
 
+type PaymentStatusSnapshot = {
+  draw_order: DrawOrderRow;
+  star_order: StarOrderRow | null;
+  payment: StarPaymentRow | null;
+};
+
+type PaymentStatusRpcClient = {
+  schema: (schema: string) => {
+    rpc: <TResult>(
+      functionName: string,
+      args: Record<string, unknown>,
+    ) => PromiseLike<{
+      data: TResult | null;
+      error: unknown;
+    }>;
+  };
+};
+
 type PaymentStatusResponse = {
   order_id: string;
   star_order_id: string | null;
@@ -157,16 +175,15 @@ export async function getPaymentStatus(
   now: Date,
   db: SupabaseAdminClient = getSupabaseAdminClient(),
 ): Promise<PaymentStatusResponse> {
-  const drawOrder = await findDrawOrder(db, userId, query.orderId);
+  const snapshot = await getPaymentStatusSnapshot(db, userId, query.orderId);
 
-  if (!drawOrder) {
+  if (!snapshot?.draw_order) {
     throw new ApiError(404, "ORDER_NOT_FOUND", "订单不存在或不属于当前用户。");
   }
 
-  const starOrder = await findStarOrder(db, userId, drawOrder);
-  const starPayment = starOrder
-    ? await findStarPayment(db, userId, starOrder.id)
-    : null;
+  const drawOrder = snapshot.draw_order;
+  const starOrder = snapshot.star_order;
+  const starPayment = snapshot.payment;
   const paymentOrderStatus = derivePaymentOrderStatus(
     drawOrder,
     starOrder,
@@ -244,102 +261,20 @@ export async function getPaymentStatus(
   };
 }
 
-async function findDrawOrder(
+async function getPaymentStatusSnapshot(
   db: SupabaseAdminClient,
   userId: string,
   orderId: string,
-): Promise<DrawOrderRow | null> {
-  const { data, error } = await db
-    .schema("gacha")
-    .from("draw_orders")
-    .select(
-      [
-        "id",
-        "user_id",
-        "box_id",
-        "payment_star_order_id",
-        "status",
-        "payment_status",
-        "draw_count",
-        "quantity",
-        "total_price_stars",
-        "open_reward_kcoin",
-        "paid_at",
-        "opened_at",
-        "created_at",
-        "updated_at",
-        "error_message",
-      ].join(","),
-    )
-    .eq("id", orderId)
-    .eq("user_id", userId)
-    .maybeSingle<DrawOrderRow>();
+): Promise<PaymentStatusSnapshot | null> {
+  const { data, error } = await (db as unknown as PaymentStatusRpcClient)
+    .schema("api")
+    .rpc<PaymentStatusSnapshot | null>("gacha_get_payment_status", {
+      p_user_id: userId,
+      p_draw_order_id: orderId,
+    });
 
   if (error) {
     throw ApiError.internal("查询订单状态失败。", { cause: error });
-  }
-
-  return data ?? null;
-}
-
-async function findStarOrder(
-  db: SupabaseAdminClient,
-  userId: string,
-  drawOrder: DrawOrderRow,
-): Promise<StarOrderRow | null> {
-  const query = db
-    .schema("payments")
-    .from("star_orders")
-    .select(
-      [
-        "id",
-        "user_id",
-        "business_type",
-        "business_id",
-        "status",
-        "xtr_amount",
-        "expires_at",
-        "precheckout_at",
-        "paid_at",
-        "fulfilled_at",
-        "created_at",
-        "updated_at",
-        "error_message",
-      ].join(","),
-    )
-    .eq("user_id", userId);
-
-  const { data, error } = drawOrder.payment_star_order_id
-    ? await query
-        .eq("id", drawOrder.payment_star_order_id)
-        .maybeSingle<StarOrderRow>()
-    : await query
-        .eq("business_type", "gacha_open")
-        .eq("business_id", drawOrder.id)
-        .maybeSingle<StarOrderRow>();
-
-  if (error) {
-    throw ApiError.internal("查询支付订单状态失败。", { cause: error });
-  }
-
-  return data ?? null;
-}
-
-async function findStarPayment(
-  db: SupabaseAdminClient,
-  userId: string,
-  starOrderId: string,
-): Promise<StarPaymentRow | null> {
-  const { data, error } = await db
-    .schema("payments")
-    .from("star_payments")
-    .select("id,star_order_id,user_id,currency,xtr_amount,paid_at,created_at")
-    .eq("star_order_id", starOrderId)
-    .eq("user_id", userId)
-    .maybeSingle<StarPaymentRow>();
-
-  if (error) {
-    throw ApiError.internal("查询支付流水状态失败。", { cause: error });
   }
 
   return data ?? null;

@@ -325,6 +325,31 @@ describe("CollectionPage stage-3 frontend states", () => {
     expect(screen.getByRole("dialog", { name: "Mint 队列" })).toBeVisible();
   });
 
+  it("keeps Mint available when onchain status has no queue yet", () => {
+    mocks.walletStatus = makeWalletStatus("verified");
+    const item = makeItem();
+    setInventoryItems(item);
+    setItemDetail(
+      item,
+      makeDetail(item, {
+        onchainStatus: {
+          isMinted: false,
+          mintStatus: "none",
+        },
+      }),
+    );
+
+    renderCollectionPage();
+    fireEvent.click(screen.getByRole("button", { name: "详情" }));
+
+    const dialog = screen.getByRole("dialog", { name: "森林幼芽" });
+
+    expect(
+      within(dialog).getByRole("button", { name: "Mint NFT" }),
+    ).toBeEnabled();
+    expect(within(dialog).getByText("未 Mint")).toBeVisible();
+  });
+
   it("hides the Mint entry when the wallet is not verified", () => {
     mocks.walletStatus = makeWalletStatus("connected_unverified");
     const item = makeItem();

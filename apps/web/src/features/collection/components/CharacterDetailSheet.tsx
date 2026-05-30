@@ -67,9 +67,8 @@ export function CharacterDetailSheet({
   const isAvailable = displayItem.status === "available" && !isListed;
   const canOpenUpgradePanel = canOpenUpgrade(displayItem, detail, isAvailable);
   const lockReason = detail?.activeLock?.reason ?? null;
-  const mintStatusLabel = getMintStatusLabel(
-    detail?.onchainStatus?.mintStatus ?? displayItem.nftMintStatus,
-  );
+  const effectiveMintStatus = getEffectiveMintStatus(displayItem, detail);
+  const mintStatusLabel = getMintStatusLabel(effectiveMintStatus);
   const blockReason = getBlockedReason(displayItem, detail, isListed);
   const mintEligibility = getMintEligibility(displayItem, detail, {
     isListed,
@@ -486,9 +485,7 @@ function getMintEligibility(
     walletVerified: boolean;
   },
 ): { actionLabel: string; canShowEntry: boolean } {
-  const mintStatus = normalizeMintStatus(
-    detail?.onchainStatus?.mintStatus ?? item.nftMintStatus,
-  );
+  const mintStatus = normalizeMintStatus(getEffectiveMintStatus(item, detail));
 
   const isMintable = detail?.isMintable ?? item.isMintable;
 
@@ -517,6 +514,19 @@ function getMintEligibility(
     actionLabel: mintStatus === "failed" ? "重试 Mint" : "Mint NFT",
     canShowEntry: true,
   };
+}
+
+function getEffectiveMintStatus(
+  item: CollectionInventoryItem,
+  detail: CollectionInventoryDetail | null,
+): string | null {
+  const onchainStatus = normalizeMintStatus(detail?.onchainStatus?.mintStatus);
+
+  if (onchainStatus && onchainStatus !== "none") {
+    return onchainStatus;
+  }
+
+  return detail?.nftMintStatus ?? item.nftMintStatus;
 }
 
 function normalizeMintStatus(status: string | null | undefined): string {
