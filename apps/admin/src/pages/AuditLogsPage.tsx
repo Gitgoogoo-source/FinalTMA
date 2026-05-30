@@ -14,6 +14,7 @@ import {
   fetchAuditLogs,
 } from "../admin.api";
 import type {
+  AdminAuditCorrection,
   AdminAuditLog,
   AuditRiskLevel,
   AuditLogFilters,
@@ -563,12 +564,44 @@ function AuditLogDialog(props: {
           )}
         </section>
 
+        <CorrectionChain corrections={props.log.corrections ?? []} />
+
         <div className="audit-json-grid">
           <JsonStatePanel label="before_state" value={beforeState} />
           <JsonStatePanel label="after_state" value={afterState} />
         </div>
       </section>
     </div>
+  );
+}
+
+function CorrectionChain(props: { corrections: AdminAuditCorrection[] }) {
+  if (props.corrections.length === 0) {
+    return (
+      <section className="audit-diff">
+        <h3>Correction 链路</h3>
+        <p className="muted">暂无 correction 记录</p>
+      </section>
+    );
+  }
+
+  return (
+    <section className="audit-diff">
+      <h3>Correction 链路</h3>
+      <ol className="audit-correction-list">
+        {props.corrections.map((correction) => (
+          <li key={correction.id}>
+            <strong>{extractCorrectionNote(correction)}</strong>
+            <small>
+              {formatDate(correction.created_at)} /{" "}
+              {formatAdminLabel(correction)} /{" "}
+              {extractRequestId(correction) ?? "-"}
+            </small>
+            <small>reason: {correction.reason ?? "-"}</small>
+          </li>
+        ))}
+      </ol>
+    </section>
   );
 }
 
@@ -827,6 +860,17 @@ function extractRequestId(log: AdminAuditLog): string | null {
   );
 }
 
+function extractCorrectionNote(correction: AdminAuditCorrection): string {
+  const correctionState = readRecordKey(correction.after_state, "correction");
+
+  return (
+    readStringKey(correctionState, "note") ??
+    readStringKey(correction.after_state, "note") ??
+    correction.reason ??
+    "-"
+  );
+}
+
 function readStringKey(value: unknown, key: string): string | null {
   if (!isRecord(value)) {
     return null;
@@ -834,6 +878,18 @@ function readStringKey(value: unknown, key: string): string | null {
 
   const match = value[key];
   return typeof match === "string" && match.trim() ? match : null;
+}
+
+function readRecordKey(
+  value: unknown,
+  key: string,
+): Record<string, unknown> | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const match = value[key];
+  return isRecord(match) ? match : null;
 }
 
 function summarizeJson(value: unknown): string {

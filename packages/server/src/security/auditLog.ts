@@ -10,6 +10,7 @@ export const ADMIN_AUDIT_ACTIONS = {
   adminUpdateStatus: "admin.update_status",
   adminGrantRole: "admin.grant_role",
   adminRevokeRole: "admin.revoke_role",
+  auditCorrection: "audit.correction",
   assetCompensate: "asset.compensate",
   auditExport: "audit.export",
   featureFlagUpdate: "feature_flag.update",

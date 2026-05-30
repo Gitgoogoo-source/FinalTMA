@@ -729,6 +729,28 @@ tr.is-selected td {
   font-size: 14px;
 }
 
+.audit-correction-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 20px;
+}
+
+.audit-correction-list li {
+  min-width: 0;
+}
+
+.audit-correction-list strong,
+.audit-correction-list small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.audit-correction-list small {
+  margin-top: 3px;
+  color: #657583;
+}
+
 .audit-json-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

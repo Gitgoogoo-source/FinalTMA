@@ -26,7 +26,7 @@ export type AdminAuditLogAdminRow = {
   email: string | null;
 };
 
-export type AdminAuditLogResponseItem = Omit<
+export type AdminAuditCorrectionResponseItem = Omit<
   AdminAuditLogRow,
   "before_state" | "after_state"
 > & {
@@ -35,6 +35,10 @@ export type AdminAuditLogResponseItem = Omit<
   after_state: unknown;
   request_id: string | null;
   risk_level: AuditRiskLevel;
+};
+
+export type AdminAuditLogResponseItem = AdminAuditCorrectionResponseItem & {
+  corrections: AdminAuditCorrectionResponseItem[];
 };
 
 const AUDIT_LOG_COLUMNS = [
@@ -258,10 +262,78 @@ export async function loadAdminsById(
   );
 }
 
+export async function loadCorrectionsByTargetId(
+  db: SupabaseAdminClient,
+  rows: AdminAuditLogRow[],
+): Promise<Map<string, AdminAuditLogRow[]>> {
+  const targetIds = rows.map((row) => row.id);
+
+  if (targetIds.length === 0) {
+    return new Map();
+  }
+
+  const { data, error } = await db
+    .schema("ops")
+    .from("admin_audit_logs")
+    .select(AUDIT_LOG_COLUMNS)
+    .eq("action", "audit.correction")
+    .eq("target_schema", "ops")
+    .eq("target_table", "admin_audit_logs")
+    .in("target_id", targetIds)
+    .order("created_at", { ascending: true })
+    .order("id", { ascending: true });
+
+  if (error) {
+    throw new ApiError(
+      500,
+      "ADMIN_AUDIT_CORRECTIONS_LOOKUP_FAILED",
+      "审计日志 correction 查询失败。",
+      {
+        expose: false,
+        cause: error,
+      },
+    );
+  }
+
+  const correctionsByTargetId = new Map<string, AdminAuditLogRow[]>();
+
+  for (const correction of Array.isArray(data)
+    ? (data as unknown as AdminAuditLogRow[])
+    : []) {
+    if (!correction.target_id) {
+      continue;
+    }
+
+    const current = correctionsByTargetId.get(correction.target_id) ?? [];
+    current.push(correction);
+    correctionsByTargetId.set(correction.target_id, current);
+  }
+
+  return correctionsByTargetId;
+}
+
 export function normalizeAuditLogItem(
   row: AdminAuditLogRow,
   admin: AdminAuditLogAdminRow | null,
+  corrections: AdminAuditCorrectionResponseItem[] = [],
 ): AdminAuditLogResponseItem {
+  return {
+    ...normalizeAuditLogBaseItem(row, admin),
+    corrections,
+  };
+}
+
+export function normalizeAuditCorrectionItem(
+  row: AdminAuditLogRow,
+  admin: AdminAuditLogAdminRow | null,
+): AdminAuditCorrectionResponseItem {
+  return normalizeAuditLogBaseItem(row, admin);
+}
+
+function normalizeAuditLogBaseItem(
+  row: AdminAuditLogRow,
+  admin: AdminAuditLogAdminRow | null,
+): AdminAuditCorrectionResponseItem {
   const beforeState = limitAuditState(row.before_state);
   const afterState = limitAuditState(row.after_state);
 

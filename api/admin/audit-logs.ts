@@ -8,7 +8,9 @@ import {
 } from "./_shared.js";
 import {
   listAuditLogs,
+  loadCorrectionsByTargetId,
   loadAdminsById,
+  normalizeAuditCorrectionItem,
   normalizeAuditLogItem,
   summarizeAuditLogs,
 } from "./audit-logs.shared.js";
@@ -25,13 +27,27 @@ export default withApiHandler(
     const offset = parseOffsetCursor(req.query.cursor);
     const rows = await listAuditLogs(db, req.query, offset, limit);
     const pageRows = rows.slice(0, limit);
-    const adminsById = await loadAdminsById(db, pageRows);
-    const items = pageRows.map((row) =>
-      normalizeAuditLogItem(
+    const correctionsByTargetId = await loadCorrectionsByTargetId(db, pageRows);
+    const correctionRows = Array.from(correctionsByTargetId.values()).flat();
+    const adminsById = await loadAdminsById(db, [
+      ...pageRows,
+      ...correctionRows,
+    ]);
+    const items = pageRows.map((row) => {
+      const corrections = (correctionsByTargetId.get(row.id) ?? []).map(
+        (correction) =>
+          normalizeAuditCorrectionItem(
+            correction,
+            adminsById.get(correction.admin_user_id ?? "") ?? null,
+          ),
+      );
+
+      return normalizeAuditLogItem(
         row,
         adminsById.get(row.admin_user_id ?? "") ?? null,
-      ),
-    );
+        corrections,
+      );
+    });
 
     return {
       items,
