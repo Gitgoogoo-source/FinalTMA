@@ -91,6 +91,7 @@ values
   ('target_user', '62000000-0000-4000-8000-000000000101'),
   ('payment_user', '62000000-0000-4000-8000-000000000102'),
   ('template', '62000000-0000-4000-8000-000000000201'),
+  ('form', '62000000-0000-4000-8000-000000000202'),
   ('box', '62000000-0000-4000-8000-000000000301'),
   ('old_pool', '62000000-0000-4000-8000-000000000302'),
   ('draft_pool', '62000000-0000-4000-8000-000000000303'),
@@ -130,6 +131,24 @@ values (
   'CHARACTER',
   'active',
   1
+)
+on conflict (id) do nothing;
+
+insert into catalog.collectible_forms (
+  id,
+  template_id,
+  form_index,
+  form_slug,
+  display_name,
+  is_default
+)
+values (
+  (select id from _ids where key = 'form'),
+  (select id from _ids where key = 'template'),
+  1,
+  'base',
+  'Base',
+  true
 )
 on conflict (id) do nothing;
 
@@ -180,6 +199,7 @@ on conflict (id) do nothing;
 insert into gacha.drop_pool_items (
   pool_version_id,
   template_id,
+  form_id,
   rarity_code,
   drop_weight,
   probability_bps
@@ -187,6 +207,7 @@ insert into gacha.drop_pool_items (
 values (
   (select id from _ids where key = 'old_pool'),
   (select id from _ids where key = 'template'),
+  (select id from _ids where key = 'form'),
   'COMMON',
   10000,
   10000
@@ -213,6 +234,7 @@ on conflict (id) do nothing;
 insert into gacha.drop_pool_items (
   pool_version_id,
   template_id,
+  form_id,
   rarity_code,
   drop_weight,
   probability_bps
@@ -220,10 +242,43 @@ insert into gacha.drop_pool_items (
 values (
   (select id from _ids where key = 'draft_pool'),
   (select id from _ids where key = 'template'),
+  (select id from _ids where key = 'form'),
   'COMMON',
   10000,
   10000
 );
+
+insert into gacha.pity_rules (
+  box_id,
+  pool_version_id,
+  rule_name,
+  threshold,
+  target_rarity_code,
+  priority,
+  active,
+  metadata
+)
+values
+  (
+    (select id from _ids where key = 'box'),
+    (select id from _ids where key = 'old_pool'),
+    'phase6 danger old pity',
+    5,
+    'COMMON',
+    10,
+    true,
+    '{}'::jsonb
+  ),
+  (
+    (select id from _ids where key = 'box'),
+    (select id from _ids where key = 'draft_pool'),
+    'phase6 danger draft pity',
+    5,
+    'COMMON',
+    10,
+    false,
+    '{"admin_draft":{"intended_active":true}}'::jsonb
+  );
 
 insert into inventory.item_instances (
   id,
