@@ -278,6 +278,173 @@ export type FeatureFlagsResponse = {
   serverTime: string;
 };
 
+export type BlindBoxAdminItem = {
+  id: string;
+  slug: string;
+  display_name: string;
+  description: string | null;
+  tier: string;
+  status: string;
+  price_stars: number;
+  total_stock: number | null;
+  remaining_stock: number | null;
+  open_reward_kcoin: number | string;
+  cover_image_url: string | null;
+  hero_image_url: string | null;
+  starts_at: string | null;
+  ends_at: string | null;
+  sort_order: number;
+  metadata?: unknown;
+  created_at: string;
+  updated_at: string;
+  active_version?: DropPoolVersion | null;
+  version_count?: number;
+  active_item_count?: number;
+};
+
+export type DropPoolVersion = {
+  id: string;
+  box_id: string;
+  version_no: number;
+  status: string;
+  total_weight: number | string;
+  published_at: string | null;
+  effective_from: string | null;
+  effective_to: string | null;
+  config_snapshot?: unknown;
+  created_by_admin_id: string | null;
+  created_at: string;
+  updated_at: string;
+  item_count?: number;
+};
+
+export type DropPoolItem = {
+  id: string;
+  pool_version_id: string;
+  template_id: string;
+  form_id: string | null;
+  rarity_code: string;
+  drop_weight: number | string;
+  probability_bps: number | string | null;
+  stock_total: number | string | null;
+  stock_remaining: number | string | null;
+  is_pity_eligible: boolean;
+  is_featured: boolean;
+  sort_order: number;
+  metadata?: unknown;
+  created_at: string;
+  updated_at: string;
+  template_slug?: string | null;
+  template_display_name?: string | null;
+  form_display_name?: string | null;
+};
+
+export type PityRule = {
+  id: string;
+  box_id: string;
+  pool_version_id: string | null;
+  rule_name: string;
+  threshold: number;
+  target_rarity_code: string;
+  reset_on_rarity_code: string | null;
+  guaranteed_template_id: string | null;
+  guaranteed_form_id: string | null;
+  priority: number;
+  active: boolean;
+  metadata?: unknown;
+  created_at: string;
+  updated_at: string;
+  guaranteed_template_display_name?: string | null;
+  guaranteed_form_display_name?: string | null;
+};
+
+export type DropPoolValidationIssue = {
+  code: string;
+  message: string;
+  field?: string | null;
+  severity?: "error" | "warning" | "info";
+};
+
+export type DropPoolValidationResult = {
+  valid: boolean;
+  validation_errors: DropPoolValidationIssue[];
+  warnings: DropPoolValidationIssue[];
+  total_weight?: number | string;
+  computed_probability_bps?: number;
+  audit_log_id?: string | null;
+  idempotent?: boolean;
+  serverTime?: string;
+};
+
+export type BlindBoxesAdminResponse = {
+  items: BlindBoxAdminItem[];
+  summary?: Record<string, number>;
+  nextCursor: string | null;
+  serverTime: string;
+};
+
+export type DropPoolVersionsResponse = {
+  items: DropPoolVersion[];
+  activeVersion: DropPoolVersion | null;
+  summary?: Record<string, number>;
+  nextCursor: string | null;
+  serverTime: string;
+};
+
+export type DropPoolItemsResponse = {
+  items: DropPoolItem[];
+  summary?: Record<string, number>;
+  nextCursor: string | null;
+  serverTime: string;
+};
+
+export type PityRulesResponse = {
+  items: PityRule[];
+  summary?: Record<string, number>;
+  nextCursor: string | null;
+  serverTime: string;
+};
+
+export type DropPoolDraftItemInput = Pick<
+  DropPoolItem,
+  | "template_id"
+  | "form_id"
+  | "rarity_code"
+  | "drop_weight"
+  | "probability_bps"
+  | "stock_total"
+  | "stock_remaining"
+  | "is_pity_eligible"
+  | "is_featured"
+  | "sort_order"
+> & {
+  id?: string;
+  metadata?: unknown;
+};
+
+export type DropPoolDraftPityRuleInput = Pick<
+  PityRule,
+  | "rule_name"
+  | "threshold"
+  | "target_rarity_code"
+  | "reset_on_rarity_code"
+  | "guaranteed_template_id"
+  | "guaranteed_form_id"
+  | "priority"
+  | "active"
+> & {
+  id?: string;
+  metadata?: unknown;
+};
+
+export type DropPoolMutationResponse = {
+  audit_log_id?: string | null;
+  drop_pool_version_id?: string;
+  validation?: DropPoolValidationResult;
+  idempotent?: boolean;
+  serverTime: string;
+};
+
 export type AdminAuditLogAdmin = {
   id: string;
   display_name: string | null;
@@ -402,6 +569,7 @@ export type AdminTab =
   | "payments"
   | "mint"
   | "wallets"
+  | "gacha-pools"
   | "flags"
   | "danger"
   | "audit"

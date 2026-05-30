@@ -2,13 +2,21 @@ import type {
   AdminApiEnvelope,
   AuditLogFilters,
   AuditLogsResponse,
+  BlindBoxesAdminResponse,
   AdminMeResponse,
   AdminRolesResponse,
   AdminUsersResponse,
+  DropPoolDraftItemInput,
+  DropPoolDraftPityRuleInput,
+  DropPoolItemsResponse,
+  DropPoolMutationResponse,
+  DropPoolValidationResult,
+  DropPoolVersionsResponse,
   FeatureFlagsResponse,
   MintQueueResponse,
   MonitoringResponse,
   PaymentAdminResponse,
+  PityRulesResponse,
   WalletsResponse,
 } from "./admin.types";
 
@@ -136,6 +144,38 @@ export async function fetchFeatureFlags(
   );
 }
 
+export async function fetchBlindBoxAdminItems(
+  params: QueryParams = {},
+): Promise<BlindBoxesAdminResponse> {
+  return adminRequest<BlindBoxesAdminResponse>(
+    `/api/admin/gacha/boxes${toQueryString(params)}`,
+  );
+}
+
+export async function fetchDropPoolVersions(
+  params: QueryParams = {},
+): Promise<DropPoolVersionsResponse> {
+  return adminRequest<DropPoolVersionsResponse>(
+    `/api/admin/gacha/drop-pool-versions${toQueryString(params)}`,
+  );
+}
+
+export async function fetchDropPoolItems(
+  params: QueryParams = {},
+): Promise<DropPoolItemsResponse> {
+  return adminRequest<DropPoolItemsResponse>(
+    `/api/admin/gacha/drop-pool-items${toQueryString(params)}`,
+  );
+}
+
+export async function fetchPityRules(
+  params: QueryParams = {},
+): Promise<PityRulesResponse> {
+  return adminRequest<PityRulesResponse>(
+    `/api/admin/gacha/pity-rules${toQueryString(params)}`,
+  );
+}
+
 export async function fetchAuditLogs(
   params: AuditLogFilters = {},
 ): Promise<AuditLogsResponse> {
@@ -201,6 +241,96 @@ export async function updateFeatureFlag(input: {
       confirm: true,
     },
   });
+}
+
+export async function saveDropPoolDraft(input: {
+  boxId: string;
+  dropPoolVersionId?: string;
+  versionName?: string;
+  items: DropPoolDraftItemInput[];
+  pityRules?: DropPoolDraftPityRuleInput[];
+  reason: string;
+}): Promise<DropPoolMutationResponse> {
+  const targetId = input.dropPoolVersionId ?? input.boxId;
+
+  return adminRequest<DropPoolMutationResponse>(
+    "/api/admin/gacha/drop-pool-versions",
+    {
+      method: "POST",
+      headers: buildDangerHeaders("admin-save-drop-pool-draft", targetId),
+      body: {
+        boxId: input.boxId,
+        dropPoolVersionId: input.dropPoolVersionId,
+        versionName: input.versionName,
+        items: input.items,
+        pityRules: input.pityRules,
+        reason: input.reason,
+        confirm: true,
+      },
+    },
+  );
+}
+
+export async function validateDropPoolVersion(input: {
+  dropPoolVersionId: string;
+  reason?: string;
+}): Promise<DropPoolValidationResult> {
+  return adminRequest<DropPoolValidationResult>(
+    "/api/admin/gacha/drop-pool-versions",
+    {
+      method: "PATCH",
+      body: {
+        action: "validate",
+        dropPoolVersionId: input.dropPoolVersionId,
+        reason: input.reason,
+      },
+    },
+  );
+}
+
+export async function publishDropPoolVersion(input: {
+  dropPoolVersionId: string;
+  startsAt?: string | null;
+  reason: string;
+}): Promise<DropPoolMutationResponse> {
+  return adminRequest<DropPoolMutationResponse>(
+    "/api/admin/gacha/publish-drop-pool",
+    {
+      method: "POST",
+      headers: buildDangerHeaders(
+        "admin-publish-drop-pool",
+        input.dropPoolVersionId,
+      ),
+      body: {
+        dropPoolVersionId: input.dropPoolVersionId,
+        startsAt: input.startsAt ?? undefined,
+        reason: input.reason,
+        confirm: true,
+      },
+    },
+  );
+}
+
+export async function archiveDropPoolVersion(input: {
+  dropPoolVersionId: string;
+  reason: string;
+}): Promise<DropPoolMutationResponse> {
+  return adminRequest<DropPoolMutationResponse>(
+    "/api/admin/gacha/drop-pool-versions",
+    {
+      method: "PATCH",
+      headers: buildDangerHeaders(
+        "admin-archive-drop-pool",
+        input.dropPoolVersionId,
+      ),
+      body: {
+        action: "archive",
+        dropPoolVersionId: input.dropPoolVersionId,
+        reason: input.reason,
+        confirm: true,
+      },
+    },
+  );
 }
 
 export async function runAdminDangerOperation(

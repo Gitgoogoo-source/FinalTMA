@@ -1,6 +1,7 @@
 import {
   Activity,
   Flag,
+  Gift,
   KeyRound,
   RefreshCw,
   ReceiptText,
@@ -23,6 +24,7 @@ import { AuditLogsPage } from "./pages/AuditLogsPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { DangerOpsPage } from "./pages/DangerOpsPage";
 import { FeatureFlagsPage } from "./pages/FeatureFlagsPage";
+import { GachaPoolsPage } from "./pages/GachaPoolsPage";
 import { MintQueuePage } from "./pages/MintQueuePage";
 import { PaymentsPage } from "./pages/PaymentsPage";
 import { PermissionMatrixPage } from "./pages/PermissionMatrixPage";
@@ -61,6 +63,12 @@ const NAV_ITEMS: AdminNavItem[] = [
     label: "钱包",
     icon: WalletCards,
     requiredPermissions: ["wallets:read", "wallet:read", "onchain:read"],
+  },
+  {
+    id: "gacha-pools",
+    label: "概率池",
+    icon: Gift,
+    requiredPermissions: ["gacha:read"],
   },
   {
     id: "flags",
@@ -248,6 +256,8 @@ function renderActivePage(tab: AdminTab, me: AdminMeResponse) {
       return <MintQueuePage />;
     case "wallets":
       return <WalletsPage />;
+    case "gacha-pools":
+      return <GachaPoolsPage />;
     case "flags":
       return <FeatureFlagsPage />;
     case "danger":

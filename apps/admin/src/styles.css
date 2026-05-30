@@ -1038,3 +1038,150 @@ tr.is-selected td {
   background: #f3f7fa;
   color: #415260;
 }
+
+.gacha-pools-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.32fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.gacha-pools-main {
+  min-width: 0;
+  display: grid;
+  gap: 16px;
+}
+
+.gacha-section-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.gacha-section-header h2 {
+  margin: 0;
+  color: #17202a;
+  font-size: 16px;
+}
+
+.gacha-box-list {
+  position: sticky;
+  top: 18px;
+  display: grid;
+  gap: 10px;
+}
+
+.gacha-box-button {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid #d7e0e8;
+  border-radius: 8px;
+  background: #fff;
+  color: #17202a;
+  cursor: pointer;
+  padding: 10px;
+  text-align: left;
+}
+
+.gacha-box-button:hover,
+.gacha-box-button.is-selected {
+  border-color: #36a78f;
+  background: #f0faf7;
+}
+
+.gacha-box-button strong,
+.gacha-box-button small,
+.gacha-box-meta small {
+  display: block;
+}
+
+.gacha-box-button small,
+.gacha-box-meta small {
+  margin-top: 3px;
+  color: #657583;
+  font-size: 12px;
+}
+
+.gacha-box-meta {
+  display: grid;
+  justify-items: end;
+  gap: 3px;
+}
+
+.gacha-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+
+.gacha-stock-inputs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(78px, 1fr));
+  gap: 8px;
+}
+
+.gacha-stock-inputs input,
+.gacha-pools-main table input {
+  width: 100%;
+}
+
+.validation-list {
+  display: grid;
+  gap: 8px;
+  border: 1px solid #e1e8ee;
+  border-radius: 8px;
+  background: #f9fbfc;
+  padding: 10px;
+}
+
+.validation-list > strong {
+  color: #17202a;
+  font-size: 13px;
+}
+
+.validation-list span {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+}
+
+.validation-list small {
+  overflow-wrap: anywhere;
+  color: #657583;
+  line-height: 1.45;
+}
+
+.status-badge--draft {
+  border-color: #cbd7df;
+  background: #f3f7fa;
+  color: #415260;
+}
+
+.status-badge--active {
+  border-color: #a7d8cb;
+  background: #effbf7;
+  color: #08705d;
+}
+
+.status-badge--archived,
+.status-badge--hidden {
+  border-color: #cbd7df;
+  background: #eef3f7;
+  color: #526271;
+}
+
+.status-badge--normal,
+.status-badge--rare,
+.status-badge--legendary,
+.status-badge--event {
+  border-color: #b8cfe0;
+  background: #f2f8fc;
+  color: #295875;
+}
