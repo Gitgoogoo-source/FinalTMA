@@ -1,5 +1,6 @@
 import type {
   AdminApiEnvelope,
+  AdminMeResponse,
   FeatureFlagsResponse,
   MintQueueResponse,
   MonitoringResponse,
@@ -33,6 +34,10 @@ export class AdminApiError extends Error {
     this.details = input.details;
     this.requestId = input.requestId;
   }
+}
+
+export async function fetchAdminMe(): Promise<AdminMeResponse> {
+  return adminRequest<AdminMeResponse>("/api/admin/me");
 }
 
 export async function fetchPayments(

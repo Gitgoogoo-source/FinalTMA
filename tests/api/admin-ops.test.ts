@@ -84,6 +84,47 @@ describe("admin ops APIs", () => {
     expect(getSupabaseAdminClientMock).not.toHaveBeenCalled();
   });
 
+  it("returns the current admin session permissions without leaking session token data", async () => {
+    const { default: meHandler } = await import("../../api/admin/me");
+    const result = await invokeApiHandler<ApiSuccessResponse>(meHandler, {
+      method: "GET",
+      url: "/api/admin/me",
+    });
+
+    expect(result.statusCode).toBe(200);
+    expect(result.body).toMatchObject({
+      ok: true,
+      data: {
+        adminId: ADMIN_CONTEXT.adminId,
+        roleCode: "SUPER_ADMIN",
+        isSuperAdmin: true,
+        permissions: ["*"],
+      },
+    });
+    expect(JSON.stringify(result.body)).not.toContain("session-hash");
+    expect(requireAdminMock).toHaveBeenCalledWith(expect.anything());
+  });
+
+  it("rejects non-admin /admin/me requests", async () => {
+    requireAdminMock.mockRejectedValue(
+      new ApiError(403, "FORBIDDEN", "Admin permission required"),
+    );
+
+    const { default: meHandler } = await import("../../api/admin/me");
+    const result = await invokeApiHandler(meHandler, {
+      method: "GET",
+      url: "/api/admin/me",
+    });
+
+    expect(result.statusCode).toBe(403);
+    expect(result.body).toMatchObject({
+      error: {
+        code: "FORBIDDEN",
+      },
+    });
+    expect(getSupabaseAdminClientMock).not.toHaveBeenCalled();
+  });
+
   it("lets admins query payment orders with payment and exception context", async () => {
     const db = createAdminReadDbMock({
       "payments.star_orders": [

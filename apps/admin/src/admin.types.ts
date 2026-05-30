@@ -278,4 +278,14 @@ export type FeatureFlagsResponse = {
   serverTime: string;
 };
 
+export type AdminMeResponse = {
+  adminId: string;
+  roleCode: string | null;
+  permissions: string[];
+  isSuperAdmin: boolean;
+  serverTime: string;
+};
+
 export type AdminTab = "monitoring" | "payments" | "mint" | "wallets" | "flags";
+
+export type AdminPermissionMode = "all" | "any";
