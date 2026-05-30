@@ -356,6 +356,178 @@ describe("admin ops APIs", () => {
     );
   });
 
+  it("rejects audit log exports without audit export permission before reading tables", async () => {
+    requireAdminMock.mockRejectedValue(
+      new ApiError(403, "FORBIDDEN", "Missing admin permission"),
+    );
+
+    const { default: auditExportHandler } =
+      await import("../../api/admin/audit-logs/export");
+    const result = await invokeApiHandler(auditExportHandler, {
+      method: "POST",
+      url: "/api/admin/audit-logs/export",
+      body: {
+        filters: {},
+        reason: "export audit logs in admin test",
+      },
+    });
+
+    expect(result.statusCode).toBe(403);
+    expect(result.body).toMatchObject({
+      error: {
+        code: "FORBIDDEN",
+      },
+    });
+    expect(getSupabaseAdminClientMock).not.toHaveBeenCalled();
+    expect(runWriteRpcMock).not.toHaveBeenCalled();
+    expect(requireAdminMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        permissions: "audit:export",
+      }),
+    );
+  });
+
+  it("exports filtered audit logs as redacted CSV and writes an export audit log", async () => {
+    runWriteRpcMock.mockResolvedValue({
+      audit_log_id: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+      admin_user_id: ADMIN_CONTEXT.adminId,
+      action: "audit.export",
+      target_schema: "ops",
+      target_table: "admin_audit_logs",
+      created_at: "2026-05-30T10:01:00.000Z",
+    });
+    const db = createAdminReadDbMock({
+      "ops.admin_audit_logs": [
+        {
+          id: AUDIT_LOG_ID,
+          admin_user_id: ADMIN_CONTEXT.adminId,
+          action: "feature_flag.update",
+          target_schema: "ops",
+          target_table: "feature_flags",
+          target_id: LOCK_ID,
+          before_state: {
+            enabled: false,
+            service_role_key: "secret-service-role",
+          },
+          after_state: {
+            enabled: true,
+            request_context: {
+              request_id: "req-audit-export-1",
+            },
+          },
+          ip_hash: "ip-hash",
+          user_agent: "user-agent-hash",
+          reason: "enable payment gate",
+          created_at: "2026-05-30T10:00:00.000Z",
+        },
+      ],
+      "ops.admin_users": [
+        {
+          id: ADMIN_CONTEXT.adminId,
+          display_name: "Ops Admin",
+          telegram_user_id: ADMIN_CONTEXT.telegramUserId,
+          email: "ops@example.test",
+        },
+      ],
+    });
+    getSupabaseAdminClientMock.mockReturnValue(db.client);
+
+    const { default: auditExportHandler } =
+      await import("../../api/admin/audit-logs/export");
+    const result = await invokeApiHandler<string>(auditExportHandler, {
+      method: "POST",
+      url: "/api/admin/audit-logs/export",
+      headers: {
+        "x-forwarded-for": "127.0.0.40",
+        "user-agent": "vitest-admin-audit-export",
+      },
+      body: {
+        filters: {
+          action: "feature_flag",
+          targetSchema: "ops",
+          targetTable: "feature_flags",
+          riskLevel: "medium",
+        },
+        reason: "export audit logs in admin test",
+      },
+    });
+
+    expect(result.statusCode).toBe(200);
+    expect(result.headers["content-type"]).toBe("text/csv; charset=utf-8");
+    expect(result.headers["x-audit-log-id"]).toBe(
+      "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+    );
+    expect(String(result.body)).toContain("id,created_at,admin_user_id");
+    expect(String(result.body)).toContain(AUDIT_LOG_ID);
+    expect(String(result.body)).toContain("feature_flag.update");
+    expect(String(result.body)).toContain("req-audit-export-1");
+    expect(String(result.body)).toContain(
+      "object(keys=[redacted_key]|enabled)",
+    );
+    expect(String(result.body)).not.toContain("secret-service-role");
+    expect(String(result.body)).not.toContain("service_role_key");
+    expect(requireAdminMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        permissions: "audit:export",
+      }),
+    );
+    expect(runWriteRpcMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        schema: "api",
+        functionName: "admin_write_audit_log",
+        args: expect.objectContaining({
+          p_admin_user_id: ADMIN_CONTEXT.adminId,
+          p_action: "audit.export",
+          p_target_schema: "ops",
+          p_target_table: "admin_audit_logs",
+          p_reason: "export audit logs in admin test",
+          p_after_state: expect.objectContaining({
+            request_id: expect.any(String),
+            format: "csv",
+            row_count: 1,
+            max_rows: 1000,
+            filters: expect.objectContaining({
+              action: "feature_flag",
+              targetSchema: "ops",
+              targetTable: "feature_flags",
+              riskLevel: "medium",
+            }),
+          }),
+          p_ip_hash: expect.any(String),
+          p_user_agent: expect.any(String),
+        }),
+      }),
+    );
+    expect(db.operations).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          schema: "ops",
+          table: "admin_audit_logs",
+          filters: expect.arrayContaining([
+            {
+              kind: "ilike",
+              column: "action",
+              value: "%feature_flag%",
+            },
+            {
+              kind: "eq",
+              column: "target_schema",
+              value: "ops",
+            },
+            {
+              kind: "eq",
+              column: "target_table",
+              value: "feature_flags",
+            },
+          ]),
+          range: [0, 1000],
+        }),
+      ]),
+    );
+  });
+
   it("lets admins query payment orders with payment and exception context", async () => {
     const db = createAdminReadDbMock({
       "payments.star_orders": [

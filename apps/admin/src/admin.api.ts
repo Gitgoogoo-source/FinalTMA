@@ -17,6 +17,11 @@ type QueryParams = Record<string, string | number | boolean | null | undefined>;
 type RequestOptions = Omit<RequestInit, "body"> & {
   body?: Record<string, unknown>;
 };
+export type AdminCsvExportResult = {
+  auditLogId: string | null;
+  blob: Blob;
+  filename: string;
+};
 export type AdminDangerAction =
   | "compensate_asset"
   | "ban_user"
@@ -137,6 +142,46 @@ export async function fetchAuditLogs(
   return adminRequest<AuditLogsResponse>(
     `/api/admin/audit-logs${toQueryString(params)}`,
   );
+}
+
+export async function exportAuditLogsCsv(input: {
+  filters: AuditLogFilters;
+  reason: string;
+}): Promise<AdminCsvExportResult> {
+  const response = await fetch("/api/admin/audit-logs/export", {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      filters: input.filters,
+      reason: input.reason,
+    }),
+  });
+
+  if (!response.ok) {
+    const payload = await parseAdminPayload<unknown>(response);
+    const errorPayload = payload?.ok === false ? payload : null;
+
+    throw new AdminApiError({
+      code: errorPayload?.error?.code ?? "ADMIN_AUDIT_EXPORT_FAILED",
+      message:
+        errorPayload?.error?.message ?? `Request failed: ${response.status}`,
+      status: response.status,
+      details: errorPayload?.error?.details,
+      requestId: errorPayload?.requestId,
+    });
+  }
+
+  return {
+    auditLogId: response.headers.get("x-audit-log-id"),
+    blob: await response.blob(),
+    filename:
+      readFilenameFromContentDisposition(
+        response.headers.get("content-disposition"),
+      ) ?? "audit-logs.csv",
+  };
 }
 
 export async function updateFeatureFlag(input: {
@@ -292,4 +337,31 @@ function sanitizeIdempotencyPart(value: string): string {
 
 function createIdempotencySuffix(): string {
   return globalThis.crypto?.randomUUID?.() ?? Date.now().toString(36);
+}
+
+function readFilenameFromContentDisposition(
+  value: string | null,
+): string | null {
+  if (!value) {
+    return null;
+  }
+
+  const encodedMatch = value.match(/filename\*=UTF-8''([^;]+)/i);
+
+  if (encodedMatch?.[1]) {
+    try {
+      return decodeURIComponent(encodedMatch[1]);
+    } catch {
+      return encodedMatch[1];
+    }
+  }
+
+  const quotedMatch = value.match(/filename="([^"]+)"/i);
+
+  if (quotedMatch?.[1]) {
+    return quotedMatch[1];
+  }
+
+  const plainMatch = value.match(/filename=([^;]+)/i);
+  return plainMatch?.[1]?.trim() ?? null;
 }

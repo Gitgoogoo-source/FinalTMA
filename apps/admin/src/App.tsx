@@ -229,7 +229,7 @@ export function App() {
           <AdminSessionSummary me={adminMe} refresh={adminSession.refresh} />
         </header>
         {canAccessActiveTab && activeNavItem ? (
-          renderActivePage(activeTab)
+          renderActivePage(activeTab, adminMe)
         ) : (
           <ForbiddenTabState item={activeNavItem} />
         )}
@@ -238,7 +238,7 @@ export function App() {
   );
 }
 
-function renderActivePage(tab: AdminTab) {
+function renderActivePage(tab: AdminTab, me: AdminMeResponse) {
   switch (tab) {
     case "monitoring":
       return <DashboardPage />;
@@ -253,7 +253,14 @@ function renderActivePage(tab: AdminTab) {
     case "danger":
       return <DangerOpsPage />;
     case "audit":
-      return <AuditLogsPage />;
+      return (
+        <AuditLogsPage
+          canExport={
+            me.isSuperAdmin ||
+            hasAdminPermission(me.permissions, "audit:export")
+          }
+        />
+      );
     case "admins":
       return <AdminUsersPage />;
     case "roles":

@@ -64,6 +64,7 @@ const PERMISSION_DOMAINS: AdminPermissionMatrix["domains"] = [
     description: "后台操作日志和安全追踪。",
     permissions: [
       buildPermission("audit:read", "查看审计", "读取后台审计日志。"),
+      buildPermission("audit:export", "导出审计", "导出后台审计日志。"),
     ],
   },
   {
@@ -244,6 +245,7 @@ function buildPermission(
     description,
     risk:
       code.includes(":write") ||
+      code.includes(":export") ||
       code.includes(":ban") ||
       code.includes(":retry")
         ? "danger"

@@ -11,6 +11,7 @@ export const ADMIN_AUDIT_ACTIONS = {
   adminGrantRole: "admin.grant_role",
   adminRevokeRole: "admin.revoke_role",
   assetCompensate: "asset.compensate",
+  auditExport: "audit.export",
   featureFlagUpdate: "feature_flag.update",
   gachaDropPoolPublish: "gacha.drop_pool.publish",
   inventoryLockRelease: "inventory.lock.release",

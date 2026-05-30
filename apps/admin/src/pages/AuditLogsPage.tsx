@@ -1,7 +1,18 @@
-import { ChevronLeft, ChevronRight, RefreshCw, Search, X } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  RefreshCw,
+  Search,
+  X,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
-import { AdminApiError, fetchAuditLogs } from "../admin.api";
+import {
+  AdminApiError,
+  exportAuditLogsCsv,
+  fetchAuditLogs,
+} from "../admin.api";
 import type {
   AdminAuditLog,
   AuditRiskLevel,
@@ -9,6 +20,7 @@ import type {
   AuditLogsResponse,
 } from "../admin.types";
 import { formatDate, shortId, StatusBadge } from "../admin.ui";
+import { ConfirmDangerDialog } from "../components/ConfirmDangerDialog";
 
 const PAGE_LIMIT = 30;
 const SENSITIVE_KEY_RE =
@@ -61,7 +73,11 @@ const AUDIT_FILTER_QUERY_KEYS = [
   "q",
 ] as const;
 
-export function AuditLogsPage() {
+type AuditLogsPageProps = {
+  canExport: boolean;
+};
+
+export function AuditLogsPage({ canExport }: AuditLogsPageProps) {
   const [filters, setFilters] = useState<AuditFilterDraft>(() =>
     readAuditFiltersFromLocation(),
   );
@@ -70,9 +86,16 @@ export function AuditLogsPage() {
   const [data, setData] = useState<AuditLogsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<PageError | null>(null);
+  const [exportError, setExportError] = useState<PageError | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [selectedLog, setSelectedLog] = useState<AdminAuditLog | null>(null);
 
   const items = data?.items ?? [];
+  const exportTargetValue = useMemo(
+    () => buildExportTargetValue(filters),
+    [filters],
+  );
   const selectedDiff = useMemo(
     () =>
       selectedLog
@@ -115,6 +138,7 @@ export function AuditLogsPage() {
   function applyFilters() {
     setCursor(null);
     setPreviousCursors([]);
+    setExportError(null);
     writeAuditFiltersToLocation(filters);
     void load(null);
   }
@@ -123,8 +147,28 @@ export function AuditLogsPage() {
     setFilters(EMPTY_FILTERS);
     setCursor(null);
     setPreviousCursors([]);
+    setExportError(null);
     writeAuditFiltersToLocation(EMPTY_FILTERS);
     void loadWithFilters(EMPTY_FILTERS, null);
+  }
+
+  async function exportCsv(reason: string) {
+    setExporting(true);
+    setExportError(null);
+
+    try {
+      const result = await exportAuditLogsCsv({
+        filters: buildAuditLogParams(filters),
+        reason,
+      });
+
+      downloadBlob(result.blob, result.filename);
+      setIsExportDialogOpen(false);
+    } catch (downloadError) {
+      setExportError(formatPageError(downloadError));
+    } finally {
+      setExporting(false);
+    }
   }
 
   async function loadWithFilters(
@@ -294,9 +338,24 @@ export function AuditLogsPage() {
           <RefreshCw aria-hidden="true" size={17} />
           <span>刷新</span>
         </button>
+        {canExport ? (
+          <button
+            className="icon-button"
+            disabled={loading || exporting}
+            onClick={() => {
+              setExportError(null);
+              setIsExportDialogOpen(true);
+            }}
+            type="button"
+          >
+            <Download aria-hidden="true" size={17} />
+            <span>{exporting ? "导出中" : "导出 CSV"}</span>
+          </button>
+        ) : null}
       </form>
 
       {error ? <AuditErrorNotice error={error} /> : null}
+      {exportError ? <AuditErrorNotice error={exportError} /> : null}
       {loading ? <p className="notice">加载中...</p> : null}
 
       <AuditSummary data={data} />
@@ -393,6 +452,17 @@ export function AuditLogsPage() {
           onClose={() => setSelectedLog(null)}
         />
       ) : null}
+      <ConfirmDangerDialog
+        confirmLabel="导出 CSV"
+        description="导出结果会写入审计日志。"
+        isOpen={isExportDialogOpen}
+        onCancel={() => setIsExportDialogOpen(false)}
+        onConfirm={(confirmation) => void exportCsv(confirmation.reason)}
+        pending={exporting}
+        targetLabel="导出范围"
+        targetValue={exportTargetValue}
+        title="导出审计日志"
+      />
     </section>
   );
 }
@@ -633,6 +703,45 @@ function writeAuditFiltersToLocation(filters: AuditFilterDraft): void {
     "",
     `${url.pathname}${url.search}${url.hash}`,
   );
+}
+
+function buildExportTargetValue(filters: AuditFilterDraft): string {
+  const params = buildAuditLogParams(filters);
+  const serialized =
+    Object.keys(params).length === 0
+      ? "all"
+      : JSON.stringify(
+          Object.fromEntries(
+            Object.entries(params).sort(([left], [right]) =>
+              left.localeCompare(right),
+            ),
+          ),
+        );
+
+  return `audit-export-${hashString(serialized)}`;
+}
+
+function hashString(value: string): string {
+  let hash = 0;
+
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash * 31 + value.charCodeAt(index)) | 0;
+  }
+
+  return (hash >>> 0).toString(36);
+}
+
+function downloadBlob(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = filename;
+  link.rel = "noopener";
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 }
 
 function toDateTimeLocalInput(value: string | null): string {
