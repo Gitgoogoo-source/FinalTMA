@@ -7,7 +7,7 @@ create extension if not exists pgtap with schema extensions;
 
 set search_path = public, extensions, core, economy, catalog, gacha, inventory, market, payments, tasks, album, onchain, ops, api;
 
-select plan(36);
+select plan(41);
 
 create temp table _ids (
   key text primary key,
@@ -103,6 +103,16 @@ select ok(
   'phase 6 admin RPCs are service_role only'
 );
 
+select ok(
+  not has_table_privilege('anon', 'ops.admin_audit_logs', 'INSERT')
+    and not has_table_privilege('anon', 'ops.admin_audit_logs', 'UPDATE')
+    and not has_table_privilege('anon', 'ops.admin_audit_logs', 'DELETE')
+    and not has_table_privilege('authenticated', 'ops.admin_audit_logs', 'INSERT')
+    and not has_table_privilege('authenticated', 'ops.admin_audit_logs', 'UPDATE')
+    and not has_table_privilege('authenticated', 'ops.admin_audit_logs', 'DELETE'),
+  'anon/authenticated cannot write admin audit logs through frontend roles'
+);
+
 insert into _ids (key, payload)
 values (
   'created_admin',
@@ -161,6 +171,25 @@ select is(
   ),
   1,
   'admin_create_user writes one audit log'
+);
+
+select ok(
+  exists (
+    select 1
+    from ops.admin_audit_logs
+    where admin_user_id = (select id from _ids where key = 'actor')
+      and action = 'admin.create_user'
+      and target_schema = 'ops'
+      and target_table = 'admin_users'
+      and target_id = (select id from _ids where key = 'target_admin')
+      and reason = 'create admin user for phase 6 test'
+      and ip_hash = 'phase6-ip'
+      and user_agent = 'phase6-ua'
+      and before_state -> 'admin_user' = 'null'::jsonb
+      and after_state ->> 'id' = (select id::text from _ids where key = 'target_admin')
+      and after_state ->> 'status' = 'active'
+  ),
+  'admin_create_user audit captures before/after state and request context'
 );
 
 select is(
@@ -314,6 +343,24 @@ select is(
   'admin_update_user_status writes one audit log'
 );
 
+select ok(
+  exists (
+    select 1
+    from ops.admin_audit_logs
+    where admin_user_id = (select id from _ids where key = 'actor')
+      and action = 'admin.update_status'
+      and target_schema = 'ops'
+      and target_table = 'admin_users'
+      and target_id = (select id from _ids where key = 'target_admin')
+      and reason = 'lock admin user for phase 6 test'
+      and ip_hash = 'phase6-ip'
+      and user_agent = 'phase6-ua'
+      and before_state ->> 'status' = 'active'
+      and after_state ->> 'status' = 'locked'
+  ),
+  'admin_update_user_status audit captures before/after state and request context'
+);
+
 insert into _ids (key, payload)
 values (
   'status_locked_repeat',
@@ -457,6 +504,26 @@ select is(
   'admin_grant_role writes one audit log'
 );
 
+select ok(
+  exists (
+    select 1
+    from ops.admin_audit_logs
+    where admin_user_id = (select id from _ids where key = 'actor')
+      and action = 'admin.grant_role'
+      and target_schema = 'ops'
+      and target_table = 'admin_user_roles'
+      and target_id = (select id from _ids where key = 'target_admin')
+      and reason = 'grant ops role for phase 6 test'
+      and ip_hash = 'phase6-ip'
+      and user_agent = 'phase6-ua'
+      and before_state -> 'role_link' = 'null'::jsonb
+      and after_state -> 'role_link' ->> 'admin_user_id' = (select id::text from _ids where key = 'target_admin')
+      and after_state -> 'role_link' ->> 'role_id' = (select id::text from _ids where key = 'ops_role')
+      and (after_state ->> 'role_granted')::boolean
+  ),
+  'admin_grant_role audit captures role link before/after state and request context'
+);
+
 insert into _ids (key, payload)
 values (
   'grant_ops_repeat',
@@ -571,6 +638,26 @@ select is(
   ),
   1,
   'admin_revoke_role writes one audit log'
+);
+
+select ok(
+  exists (
+    select 1
+    from ops.admin_audit_logs
+    where admin_user_id = (select id from _ids where key = 'actor')
+      and action = 'admin.revoke_role'
+      and target_schema = 'ops'
+      and target_table = 'admin_user_roles'
+      and target_id = (select id from _ids where key = 'target_admin')
+      and reason = 'revoke ops role for phase 6 test'
+      and ip_hash = 'phase6-ip'
+      and user_agent = 'phase6-ua'
+      and before_state -> 'role_link' ->> 'admin_user_id' = (select id::text from _ids where key = 'target_admin')
+      and before_state -> 'role_link' ->> 'role_id' = (select id::text from _ids where key = 'ops_role')
+      and after_state -> 'role_link' = 'null'::jsonb
+      and (after_state ->> 'role_revoked')::boolean
+  ),
+  'admin_revoke_role audit captures role link before/after state and request context'
 );
 
 insert into _ids (key, payload)

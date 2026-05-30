@@ -203,6 +203,11 @@ begin
       raise exception 'ADMIN_USER_ALREADY_EXISTS' using errcode = 'P0001';
   end;
 
+  select *
+  into v_target_admin
+  from ops.admin_users
+  where id = v_target_admin.id;
+
   v_after := to_jsonb(v_target_admin);
 
   v_audit := api.admin_write_audit_log(
@@ -214,7 +219,10 @@ begin
     v_before,
     v_after,
     p_request_context ->> 'ip_hash',
-    p_request_context ->> 'user_agent_hash',
+    coalesce(
+      nullif(p_request_context ->> 'user_agent_hash', ''),
+      nullif(p_request_context ->> 'user_agent', '')
+    ),
     v_reason
   );
 
@@ -384,6 +392,11 @@ begin
     into v_target_admin;
   end if;
 
+  select *
+  into v_target_admin
+  from ops.admin_users
+  where id = p_target_admin_user_id;
+
   v_after := to_jsonb(v_target_admin);
 
   v_audit := api.admin_write_audit_log(
@@ -395,7 +408,10 @@ begin
     v_before,
     v_after,
     p_request_context ->> 'ip_hash',
-    p_request_context ->> 'user_agent_hash',
+    coalesce(
+      nullif(p_request_context ->> 'user_agent_hash', ''),
+      nullif(p_request_context ->> 'user_agent', '')
+    ),
     v_reason
   );
 
@@ -599,7 +615,10 @@ begin
     v_before,
     v_after,
     p_request_context ->> 'ip_hash',
-    p_request_context ->> 'user_agent_hash',
+    coalesce(
+      nullif(p_request_context ->> 'user_agent_hash', ''),
+      nullif(p_request_context ->> 'user_agent', '')
+    ),
     v_reason
   );
 
@@ -642,6 +661,7 @@ declare
   v_target_admin ops.admin_users%rowtype;
   v_role ops.admin_roles%rowtype;
   v_existing_link ops.admin_user_roles%rowtype;
+  v_after_link ops.admin_user_roles%rowtype;
   v_before jsonb;
   v_after jsonb;
   v_response jsonb;
@@ -780,10 +800,19 @@ begin
 
   get diagnostics v_deleted = row_count;
 
+  select *
+  into v_after_link
+  from ops.admin_user_roles
+  where admin_user_id = p_target_admin_user_id
+    and role_id = p_role_id;
+
   v_after := jsonb_build_object(
     'admin_user', to_jsonb(v_target_admin),
     'role', to_jsonb(v_role),
-    'role_link', null,
+    'role_link', case
+      when v_after_link.admin_user_id is null then null::jsonb
+      else to_jsonb(v_after_link)
+    end,
     'role_revoked', v_deleted > 0
   );
 
@@ -796,7 +825,10 @@ begin
     v_before,
     v_after,
     p_request_context ->> 'ip_hash',
-    p_request_context ->> 'user_agent_hash',
+    coalesce(
+      nullif(p_request_context ->> 'user_agent_hash', ''),
+      nullif(p_request_context ->> 'user_agent', '')
+    ),
     v_reason
   );
 
