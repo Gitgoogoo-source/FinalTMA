@@ -326,6 +326,8 @@ values (
         'rarity_code', 'COMMON',
         'drop_weight', 8000,
         'probability_bps', 10000,
+        'stock_total', 5,
+        'stock_remaining', 5,
         'is_pity_eligible', true
       )
     ),
@@ -439,6 +441,94 @@ select ok(
   'published version stores config snapshot and previous version id'
 );
 
+select is(
+  (
+    select config_snapshot #>> '{published,schema_version}'
+    from gacha.drop_pool_versions
+    where id = (select id from _ids where key = 'draft_pool')
+  ),
+  '2',
+  'published config snapshot records the snapshot schema version'
+);
+
+select is(
+  (
+    select config_snapshot #>> '{published,published_by_admin_id}'
+    from gacha.drop_pool_versions
+    where id = (select id from _ids where key = 'draft_pool')
+  ),
+  (select id::text from _ids where key = 'actor'),
+  'published config snapshot records the publishing admin'
+);
+
+select ok(
+  (
+    select nullif(config_snapshot #>> '{published,published_at}', '') is not null
+    from gacha.drop_pool_versions
+    where id = (select id from _ids where key = 'draft_pool')
+  ),
+  'published config snapshot records publish time'
+);
+
+select is(
+  (
+    select (config_snapshot #>> '{published,weight,total_weight}')::numeric::int
+    from gacha.drop_pool_versions
+    where id = (select id from _ids where key = 'draft_pool')
+  ),
+  8000,
+  'published config snapshot records total weight'
+);
+
+select is(
+  (
+    select (config_snapshot #>> '{published,items,0,effective_probability_bps}')::int
+    from gacha.drop_pool_versions
+    where id = (select id from _ids where key = 'draft_pool')
+  ),
+  10000,
+  'published config snapshot records effective item probability'
+);
+
+select is(
+  (
+    select (config_snapshot #>> '{published,items,0,stock,total}')::int
+    from gacha.drop_pool_versions
+    where id = (select id from _ids where key = 'draft_pool')
+  ),
+  5,
+  'published config snapshot records item stock'
+);
+
+select is(
+  (
+    select (config_snapshot #>> '{published,stock,total_configured_stock}')::int
+    from gacha.drop_pool_versions
+    where id = (select id from _ids where key = 'draft_pool')
+  ),
+  5,
+  'published config snapshot records stock summary'
+);
+
+select is(
+  (
+    select (config_snapshot #>> '{published,pity,active_rule_count}')::int
+    from gacha.drop_pool_versions
+    where id = (select id from _ids where key = 'draft_pool')
+  ),
+  1,
+  'published config snapshot records active pity rule count'
+);
+
+select ok(
+  (
+    select length(config_snapshot #>> '{published,validation_hash}') = 32
+    from gacha.drop_pool_versions
+    where id = (select id from _ids where key = 'draft_pool')
+  ),
+  'published config snapshot records validation hash'
+);
+
 select ok(
   exists (
     select 1
@@ -474,6 +564,32 @@ values (
   'phase6-drop-pool-open-order',
   'phase6-drop-pool-open-order',
   1
+);
+
+insert into gacha.draw_audit (
+  draw_order_id,
+  user_id,
+  pool_version_id,
+  rules_snapshot
+)
+values (
+  (select id from _ids where key = 'open_order'),
+  (select id from _ids where key = 'user'),
+  (select id from _ids where key = 'draft_pool'),
+  jsonb_build_object('test', 'phase6-drop-pool-config-snapshot')
+);
+
+select ok(
+  exists (
+    select 1
+    from gacha.draw_audit da
+    join gacha.drop_pool_versions dpv on dpv.id = da.pool_version_id
+    where da.draw_order_id = (select id from _ids where key = 'open_order')
+      and dpv.config_snapshot ? 'published'
+      and dpv.config_snapshot #>> '{published,pool_version_id}' = da.pool_version_id::text
+      and dpv.config_snapshot #>> '{published,items,0,effective_probability_bps}' = '10000'
+  ),
+  'draw_audit can trace published draws back to the stored pool config snapshot'
 );
 
 select ok(
