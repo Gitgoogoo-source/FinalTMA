@@ -4,8 +4,22 @@ begin;
 
 create schema if not exists extensions;
 create extension if not exists pgtap with schema extensions;
+create schema if not exists testutil;
 
-set search_path = public, extensions, core, economy, catalog, gacha, inventory, market, payments, tasks, album, onchain, ops, api;
+set search_path = public, extensions, testutil, core, economy, catalog, gacha, inventory, market, payments, tasks, album, onchain, ops, api;
+
+create or replace function testutil.raises_like(p_sql text, p_pattern text)
+returns boolean
+language plpgsql
+as $$
+begin
+  execute p_sql;
+  return false;
+exception
+  when others then
+    return sqlerrm like p_pattern;
+end;
+$$;
 
 select no_plan();
 
@@ -37,13 +51,21 @@ set status = excluded.status,
     updated_at = now();
 
 insert into ops.admin_users (id, email, display_name, status, metadata)
-values (
-  '62000000-0000-4000-8000-000000000001',
-  'phase6-danger-admin@example.test',
-  'Phase 6 Danger Admin',
-  'active',
-  '{"test":true}'::jsonb
-)
+values
+  (
+    '62000000-0000-4000-8000-000000000001',
+    'phase6-danger-admin@example.test',
+    'Phase 6 Danger Admin',
+    'active',
+    '{"test":true}'::jsonb
+  ),
+  (
+    '62000000-0000-4000-8000-000000000002',
+    'phase6-danger-reviewer@example.test',
+    'Phase 6 Danger Reviewer',
+    'active',
+    '{"test":true}'::jsonb
+  )
 on conflict (id) do update
 set status = excluded.status,
     updated_at = now();
@@ -51,6 +73,7 @@ set status = excluded.status,
 insert into _ids (key, id)
 values
   ('actor', '62000000-0000-4000-8000-000000000001'),
+  ('reviewer', '62000000-0000-4000-8000-000000000002'),
   ('target_user', '62000000-0000-4000-8000-000000000101'),
   ('payment_user', '62000000-0000-4000-8000-000000000102'),
   ('template', '62000000-0000-4000-8000-000000000201'),
@@ -237,8 +260,39 @@ select ok(
     and to_regprocedure('api.admin_ban_user(uuid,uuid,text,text,text,jsonb,jsonb)') is not null
     and to_regprocedure('api.admin_request_star_refund(uuid,uuid,text,text,jsonb,jsonb)') is not null
     and to_regprocedure('api.admin_release_inventory_lock(uuid,uuid,text,text,jsonb,jsonb)') is not null
-    and to_regprocedure('api.admin_publish_drop_pool_version(uuid,uuid,jsonb,text,text,jsonb,jsonb)') is not null,
+    and to_regprocedure('api.admin_publish_drop_pool_version(uuid,uuid,jsonb,text,text,jsonb,jsonb)') is not null
+    and to_regprocedure('api.admin_create_approval_request(uuid,text,text,text,uuid,jsonb,text,text,jsonb)') is not null
+    and to_regprocedure('api.admin_review_approval_request(uuid,uuid,text,text,text,jsonb)') is not null
+    and to_regprocedure('api.admin_execute_approval_request(uuid,uuid,text,jsonb)') is not null,
   'phase 6 admin danger RPCs exist'
+);
+
+select ok(
+  to_regclass('ops.admin_approval_requests') is not null
+    and exists (
+      select 1
+      from information_schema.columns
+      where table_schema = 'ops'
+        and table_name = 'admin_approval_requests'
+        and column_name in (
+          'requester_admin_user_id',
+          'approver_admin_user_id',
+          'action',
+          'target_schema',
+          'target_table',
+          'target_id',
+          'payload',
+          'status',
+          'reason',
+          'review_reason',
+          'created_at',
+          'reviewed_at',
+          'executed_at'
+        )
+      group by table_schema, table_name
+      having count(*) = 13
+    ),
+  'admin approval request table has the required two-person review fields'
 );
 
 select ok(
@@ -251,6 +305,15 @@ select ok(
         '_admin_require_active',
         '_admin_start_idempotency',
         '_admin_complete_idempotency',
+        '_admin_requires_approval',
+        '_admin_execute_compensate_asset',
+        '_admin_execute_ban_user',
+        '_admin_execute_request_star_refund',
+        '_admin_execute_release_inventory_lock',
+        '_admin_execute_publish_drop_pool_version',
+        'admin_create_approval_request',
+        'admin_review_approval_request',
+        'admin_execute_approval_request',
         'admin_compensate_asset',
         'admin_ban_user',
         'admin_request_star_refund',
@@ -271,7 +334,10 @@ with signatures(signature) as (
     ('api.admin_ban_user(uuid,uuid,text,text,text,jsonb,jsonb)'),
     ('api.admin_request_star_refund(uuid,uuid,text,text,jsonb,jsonb)'),
     ('api.admin_release_inventory_lock(uuid,uuid,text,text,jsonb,jsonb)'),
-    ('api.admin_publish_drop_pool_version(uuid,uuid,jsonb,text,text,jsonb,jsonb)')
+    ('api.admin_publish_drop_pool_version(uuid,uuid,jsonb,text,text,jsonb,jsonb)'),
+    ('api.admin_create_approval_request(uuid,text,text,text,uuid,jsonb,text,text,jsonb)'),
+    ('api.admin_review_approval_request(uuid,uuid,text,text,text,jsonb)'),
+    ('api.admin_execute_approval_request(uuid,uuid,text,jsonb)')
 )
 select ok(
   not exists (
@@ -583,6 +649,261 @@ select ok(
     having count(distinct action) = 5
   ),
   'danger operation RPCs write admin audit logs'
+);
+
+insert into _ids (key, payload)
+values (
+  'approval_pending',
+  api.admin_compensate_asset(
+    p_admin_user_id => (select id from _ids where key = 'actor'),
+    p_user_id => (select id from _ids where key = 'target_user'),
+    p_currency_code => 'KCOIN',
+    p_amount => 13,
+    p_reason => 'phase 6 compensation requires approval',
+    p_idempotency_key => 'phase6-danger-approval-compensate-001',
+    p_request_context => jsonb_build_object('ip_hash', 'phase6-ip', 'user_agent_hash', 'phase6-ua'),
+    p_metadata => '{"case":"approval_compensate"}'::jsonb,
+    p_approval_context => '{"requiresApproval":true}'::jsonb
+  )
+);
+
+insert into _ids (key, id)
+values (
+  'approval_request',
+  ((select payload ->> 'approval_request_id' from _ids where key = 'approval_pending'))::uuid
+);
+
+select is(
+  (select status from ops.admin_approval_requests where id = (select id from _ids where key = 'approval_request')),
+  'pending_approval',
+  'requiresApproval creates a pending approval request'
+);
+
+select is(
+  (
+    select count(*)::integer
+    from economy.currency_ledger
+    where idempotency_key = 'admin_compensation:phase6-danger-approval-compensate-001'
+  ),
+  0,
+  'pending approval does not write the business ledger'
+);
+
+select is(
+  (
+    select available_amount
+    from economy.user_balances
+    where user_id = (select id from _ids where key = 'target_user')
+      and currency_code = 'KCOIN'
+  ),
+  37::numeric,
+  'pending approval does not change the balance'
+);
+
+insert into _ids (key, payload)
+values (
+  'approval_pending_repeat',
+  api.admin_compensate_asset(
+    p_admin_user_id => (select id from _ids where key = 'actor'),
+    p_user_id => (select id from _ids where key = 'target_user'),
+    p_currency_code => 'KCOIN',
+    p_amount => 13,
+    p_reason => 'phase 6 compensation requires approval',
+    p_idempotency_key => 'phase6-danger-approval-compensate-001',
+    p_request_context => jsonb_build_object('ip_hash', 'phase6-ip', 'user_agent_hash', 'phase6-ua'),
+    p_metadata => '{"case":"approval_compensate"}'::jsonb,
+    p_approval_context => '{"requiresApproval":true}'::jsonb
+  )
+);
+
+select ok(
+  ((select payload ->> 'idempotent' from _ids where key = 'approval_pending_repeat'))::boolean
+    and ((select payload ->> 'approval_request_id' from _ids where key = 'approval_pending_repeat'))::uuid = (select id from _ids where key = 'approval_request'),
+  'pending approval request is idempotent'
+);
+
+select ok(
+  testutil.raises_like(
+    format(
+      'select api.admin_review_approval_request(%L::uuid, %L::uuid, %L, %L, %L, %L::jsonb)',
+      (select id::text from _ids where key = 'actor'),
+      (select id::text from _ids where key = 'approval_request'),
+      'approved',
+      'self approval must fail',
+      'phase6-danger-approval-self-review-001',
+      '{"ip_hash":"phase6-ip","user_agent_hash":"phase6-ua"}'
+    ),
+    '%ADMIN_APPROVER_SELF_REVIEW_NOT_ALLOWED%'
+  ),
+  'requester cannot approve their own high-risk operation'
+);
+
+insert into _ids (key, payload)
+values (
+  'approval_approved',
+  api.admin_review_approval_request(
+    p_admin_user_id => (select id from _ids where key = 'reviewer'),
+    p_approval_request_id => (select id from _ids where key = 'approval_request'),
+    p_decision => 'approved',
+    p_review_reason => 'phase 6 approval review test',
+    p_idempotency_key => 'phase6-danger-approval-review-001',
+    p_request_context => jsonb_build_object('ip_hash', 'phase6-ip', 'user_agent_hash', 'phase6-ua')
+  )
+);
+
+select is(
+  (select status from ops.admin_approval_requests where id = (select id from _ids where key = 'approval_request')),
+  'approved',
+  'reviewer moves approval request to approved'
+);
+
+select is(
+  (
+    select count(*)::integer
+    from economy.currency_ledger
+    where idempotency_key = 'admin_compensation:phase6-danger-approval-compensate-001'
+  ),
+  0,
+  'approved status still does not write business data before execution'
+);
+
+insert into _ids (key, payload)
+values (
+  'approval_executed',
+  api.admin_execute_approval_request(
+    p_admin_user_id => (select id from _ids where key = 'reviewer'),
+    p_approval_request_id => (select id from _ids where key = 'approval_request'),
+    p_idempotency_key => 'phase6-danger-approval-execute-001',
+    p_request_context => jsonb_build_object('ip_hash', 'phase6-ip', 'user_agent_hash', 'phase6-ua')
+  )
+);
+
+select is(
+  (select status from ops.admin_approval_requests where id = (select id from _ids where key = 'approval_request')),
+  'executed',
+  'approved request moves to executed after explicit execution'
+);
+
+select ok(
+  exists (
+    select 1
+    from ops.admin_approval_requests
+    where id = (select id from _ids where key = 'approval_request')
+      and executed_at is not null
+      and execute_audit_log_id is not null
+      and execution_result -> 'business_result' ->> 'audit_log_id' is not null
+  ),
+  'executed approval links the business audit result'
+);
+
+select is(
+  (
+    select available_amount
+    from economy.user_balances
+    where user_id = (select id from _ids where key = 'target_user')
+      and currency_code = 'KCOIN'
+  ),
+  50::numeric,
+  'approval execution applies the business compensation exactly once'
+);
+
+select is(
+  (
+    select count(*)::integer
+    from economy.currency_ledger
+    where idempotency_key = 'admin_compensation:phase6-danger-approval-compensate-001'
+      and entry_type = 'credit'
+  ),
+  1,
+  'approval execution writes one immutable ledger row'
+);
+
+insert into _ids (key, payload)
+values (
+  'approval_pending_reject',
+  api.admin_compensate_asset(
+    p_admin_user_id => (select id from _ids where key = 'actor'),
+    p_user_id => (select id from _ids where key = 'target_user'),
+    p_currency_code => 'KCOIN',
+    p_amount => 19,
+    p_reason => 'phase 6 rejected compensation test',
+    p_idempotency_key => 'phase6-danger-approval-reject-compensate-001',
+    p_request_context => jsonb_build_object('ip_hash', 'phase6-ip', 'user_agent_hash', 'phase6-ua'),
+    p_metadata => '{"case":"approval_reject"}'::jsonb,
+    p_approval_context => '{"requiresApproval":true}'::jsonb
+  )
+);
+
+insert into _ids (key, id)
+values (
+  'approval_reject_request',
+  ((select payload ->> 'approval_request_id' from _ids where key = 'approval_pending_reject'))::uuid
+);
+
+insert into _ids (key, payload)
+values (
+  'approval_rejected',
+  api.admin_review_approval_request(
+    p_admin_user_id => (select id from _ids where key = 'reviewer'),
+    p_approval_request_id => (select id from _ids where key = 'approval_reject_request'),
+    p_decision => 'rejected',
+    p_review_reason => 'phase 6 reject review test',
+    p_idempotency_key => 'phase6-danger-approval-reject-review-001',
+    p_request_context => jsonb_build_object('ip_hash', 'phase6-ip', 'user_agent_hash', 'phase6-ua')
+  )
+);
+
+select is(
+  (select status from ops.admin_approval_requests where id = (select id from _ids where key = 'approval_reject_request')),
+  'rejected',
+  'reviewer can reject a pending approval request'
+);
+
+select is(
+  (
+    select count(*)::integer
+    from economy.currency_ledger
+    where idempotency_key = 'admin_compensation:phase6-danger-approval-reject-compensate-001'
+  ),
+  0,
+  'rejected approval does not write business data'
+);
+
+select is(
+  (
+    select available_amount
+    from economy.user_balances
+    where user_id = (select id from _ids where key = 'target_user')
+      and currency_code = 'KCOIN'
+  ),
+  50::numeric,
+  'rejected approval leaves the balance unchanged'
+);
+
+select ok(
+  testutil.raises_like(
+    format(
+      'select api.admin_execute_approval_request(%L::uuid, %L::uuid, %L, %L::jsonb)',
+      (select id::text from _ids where key = 'reviewer'),
+      (select id::text from _ids where key = 'approval_reject_request'),
+      'phase6-danger-approval-rejected-execute-001',
+      '{"ip_hash":"phase6-ip","user_agent_hash":"phase6-ua"}'
+    ),
+    '%ADMIN_APPROVAL_NOT_APPROVED%'
+  ),
+  'rejected approval cannot be executed'
+);
+
+select ok(
+  exists (
+    select 1
+    from ops.admin_audit_logs
+    where target_table = 'admin_approval_requests'
+      and action in ('approval.request', 'approval.approve', 'approval.execute', 'approval.reject')
+    group by target_table
+    having count(distinct action) = 4
+  ),
+  'approval request, review, execute and reject paths write audit logs'
 );
 
 select * from finish();
