@@ -70,6 +70,7 @@ export function BoxPage() {
   const selectedBox =
     boxes.find((box) => box.id === selectedBoxId) ?? boxes[0] ?? null;
   const rewardsQuery = useBoxRewards(selectedBox?.id);
+  const refetchRewards = rewardsQuery.refetch;
   const createOrder = useCreateOpenOrder();
   const openStarsInvoice = useStarsPayment();
   const restoredPendingDrawOrder = usePendingDrawOrder();
@@ -92,6 +93,13 @@ export function BoxPage() {
   const pendingStatusQuery = usePaymentStatus(pendingStatusOrderId, {
     enabled: Boolean(pendingStatusOrderId) && resultOrderId === null,
   });
+  const handleOpenRewards = useCallback(() => {
+    setRewardsOpen(true);
+
+    if (selectedBox?.id) {
+      void refetchRewards();
+    }
+  }, [refetchRewards, selectedBox?.id]);
 
   useEffect(() => {
     if (!restoredPendingDrawOrder || paymentPendingOrder || resultOrderId) {
@@ -381,7 +389,7 @@ export function BoxPage() {
       <PossibleRewardsRow
         rewards={rewardsQuery.rewards}
         isLoading={rewardsQuery.isLoading}
-        onOpen={() => setRewardsOpen(true)}
+        onOpen={handleOpenRewards}
       />
 
       <PityProgress box={selectedBox} />

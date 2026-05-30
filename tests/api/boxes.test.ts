@@ -299,6 +299,78 @@ describe("boxes API helpers", () => {
     );
   });
 
+  it("/api/boxes/rewards reads only frontend-visible pool versions", async () => {
+    callRpcRawMock.mockResolvedValueOnce({
+      box_id: BOX_ID,
+      box_name: "测试盲盒",
+      box_status: "active",
+      pool_version_id: POOL_VERSION_ID,
+      pool_version: 2,
+      items: [
+        {
+          pool_item_id: "88888888-8888-4888-8888-888888888888",
+          template_id: "55555555-5555-4555-8555-555555555555",
+          name: "测试藏品",
+          rarity: "COMMON",
+          rarity_label: "普通",
+          item_type: "CHARACTER",
+          item_type_label: "角色",
+          display_probability: "100%",
+          probability_bps: 10000,
+          is_limited: false,
+          is_pity_eligible: true,
+        },
+      ],
+      pity_rule: null,
+      generated_at: "2026-05-28T00:00:00.000Z",
+    });
+
+    const { default: rewardsHandler } = await import("../../api/boxes/rewards");
+    const result = await invokeApiHandler<ApiSuccessResponse>(rewardsHandler, {
+      method: "GET",
+      url: "/api/boxes/rewards",
+      query: {
+        boxId: BOX_ID,
+        includeInactive: "true",
+        includeSoldOut: "false",
+      },
+      headers: {
+        cookie: "tma_game_session=test-session-token-000000000000",
+        "x-forwarded-for": "127.0.0.31",
+      },
+    });
+
+    expect(result.statusCode).toBe(200);
+    expect(result.body).toMatchObject({
+      ok: true,
+      data: {
+        box_id: BOX_ID,
+        pool_version_id: POOL_VERSION_ID,
+        items: [
+          {
+            name: "测试藏品",
+          },
+        ],
+      },
+    });
+    expect(callRpcRawMock).toHaveBeenCalledWith(
+      "gacha_get_box_rewards",
+      {
+        p_box_id: BOX_ID,
+        p_pool_version_id: null,
+        p_include_inactive: false,
+        p_include_sold_out: false,
+      },
+      expect.objectContaining({
+        schema: "api",
+        context: expect.objectContaining({
+          userId: USER_ID,
+          boxId: BOX_ID,
+        }),
+      }),
+    );
+  });
+
   it("/api/boxes/create-open-order creates a single draw order", async () => {
     callRpcRawMock.mockResolvedValueOnce({
       draw_order_id: ORDER_ID,

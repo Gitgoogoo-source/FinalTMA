@@ -149,6 +149,17 @@ describe("BoxPage Stars invoice flow", () => {
     expect(screen.getByText("支付窗口已打开")).toBeVisible();
   });
 
+  it("refreshes possible rewards when the sheet opens", async () => {
+    renderBoxPage();
+
+    fireEvent.click(screen.getByRole("button", { name: /查看全部/ }));
+
+    await waitFor(() => {
+      expect(mocks.rewardsRefetch).toHaveBeenCalledTimes(1);
+    });
+    expect(screen.getByRole("dialog", { name: "测试盲盒" })).toBeVisible();
+  });
+
   it("keeps open buttons locked while an order is waiting for payment", async () => {
     const openInvoice = vi.fn();
     (globalThis as TelegramGlobal).Telegram = {

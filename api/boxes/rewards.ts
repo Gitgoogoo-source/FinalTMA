@@ -19,7 +19,7 @@ export default withApiHandler(
       {
         p_box_id: query.boxId,
         p_pool_version_id: query.poolVersionId ?? null,
-        p_include_inactive: query.includeInactive,
+        p_include_inactive: false,
         p_include_sold_out: query.includeSoldOut,
       },
       {
@@ -74,7 +74,7 @@ function normalizeRewardsQuery(
   return {
     boxId: query.boxId ?? query.box_id,
     poolVersionId: query.poolVersionId ?? query.pool_version_id,
-    includeInactive: query.includeInactive ?? query.include_inactive,
+    includeInactive: false,
     includeSoldOut: query.includeSoldOut ?? query.include_sold_out,
   };
 }
