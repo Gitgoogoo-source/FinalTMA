@@ -185,10 +185,31 @@ async function saveDropPoolDraft(input: {
   const versionName = normalizeOptionalText(
     input.body.versionName ?? input.body.version_name,
   );
-  const items = normalizeDropPoolItemsInput(input.body.items);
-  const pityRules = normalizePityRulesInput(
-    input.body.pityRules ?? input.body.pity_rules,
-  );
+  const hasItems = input.body.items !== undefined && input.body.items !== null;
+  const hasPityRules =
+    input.body.pityRules !== undefined || input.body.pity_rules !== undefined;
+  const items = hasItems
+    ? normalizeDropPoolItemsInput(input.body.items)
+    : undefined;
+  const pityRules = hasPityRules
+    ? normalizePityRulesInput(input.body.pityRules ?? input.body.pity_rules)
+    : undefined;
+
+  if (dropPoolVersionId) {
+    await assertDropPoolVersionEditable(
+      getSupabaseAdminClient(),
+      dropPoolVersionId,
+    );
+
+    if (!items) {
+      throw new ApiError(
+        400,
+        "VALIDATION_FAILED",
+        "items must be an array when updating a drop pool draft",
+      );
+    }
+  }
+
   const functionName = dropPoolVersionId
     ? "admin_update_drop_pool_item"
     : "admin_create_drop_pool_draft";
@@ -199,7 +220,7 @@ async function saveDropPoolDraft(input: {
         p_box_id: boxId,
         p_version_name: versionName ?? null,
         p_items: items,
-        p_pity_rules: pityRules,
+        p_pity_rules: pityRules ?? [],
         p_reason: input.controls.reason,
         p_idempotency_key: input.controls.idempotencyKey,
         p_request_context: input.controls.requestContext,
@@ -209,8 +230,8 @@ async function saveDropPoolDraft(input: {
         p_box_id: boxId,
         p_source_version_id: sourceVersionId ?? null,
         p_version_name: versionName ?? null,
-        p_items: items,
-        p_pity_rules: pityRules,
+        p_items: items ?? null,
+        p_pity_rules: pityRules ?? null,
         p_reason: input.controls.reason,
         p_idempotency_key: input.controls.idempotencyKey,
         p_request_context: input.controls.requestContext,
@@ -222,6 +243,48 @@ async function saveDropPoolDraft(input: {
     args,
     fallbackCode: "ADMIN_DROP_POOL_DRAFT_SAVE_FAILED",
   });
+}
+
+async function assertDropPoolVersionEditable(
+  db: SupabaseAdminClient,
+  dropPoolVersionId: string,
+): Promise<void> {
+  const { data, error } = await db
+    .schema("gacha")
+    .from("drop_pool_versions")
+    .select("id,status")
+    .eq("id", dropPoolVersionId)
+    .limit(1);
+
+  assertReadSuccess(
+    error,
+    "ADMIN_GACHA_DROP_POOL_VERSION_LOOKUP_FAILED",
+    "Failed to load drop pool version.",
+  );
+
+  const version = ((data ?? []) as Array<{ id: string; status: string }>)[0];
+
+  if (!version) {
+    throw new ApiError(
+      404,
+      "ADMIN_DROP_POOL_VERSION_NOT_FOUND",
+      "Drop pool version was not found",
+    );
+  }
+
+  if (version.status !== "draft") {
+    throw new ApiError(
+      409,
+      "ADMIN_DROP_POOL_VERSION_NOT_EDITABLE",
+      "Only draft drop pool versions can be edited. Clone a published version into a new draft first.",
+      {
+        details: {
+          dropPoolVersionId,
+          status: version.status,
+        },
+      },
+    );
+  }
 }
 
 async function runDropPoolVersionAction(input: {

@@ -349,45 +349,100 @@ describe("admin gacha APIs", () => {
     );
   });
 
-  it("publishes a drop pool version only through the admin publish RPC", async () => {
-    const db = createAdminReadDbMock({
-      "gacha.drop_pool_versions": [
-        {
-          id: DRAFT_VERSION_ID,
-          box_id: BOX_ID,
-          version_no: 2,
-          status: "draft",
-          total_weight: "10000",
-          published_at: null,
-          effective_from: null,
-          effective_to: null,
-          config_snapshot: {},
-          created_by_admin_id: ADMIN_CONTEXT.adminId,
-          created_at: "2026-05-30T00:00:00.000Z",
-          updated_at: "2026-05-30T00:00:00.000Z",
-        },
-      ],
-      "gacha.drop_pool_items": [
-        {
-          id: "10000000-0000-4000-8000-000000000001",
-          pool_version_id: DRAFT_VERSION_ID,
-          template_id: TEMPLATE_ID,
-          form_id: FORM_ID,
-          rarity_code: "RARE",
-          drop_weight: "10000",
-          probability_bps: 10000,
-          stock_total: null,
-          stock_remaining: null,
-          is_pity_eligible: true,
-          is_featured: false,
-          sort_order: 10,
-          metadata: {},
-          created_at: "2026-05-30T00:00:00.000Z",
-          updated_at: "2026-05-30T00:00:00.000Z",
-        },
-      ],
+  it("maps clone requests to create a new draft from the source version", async () => {
+    runWriteRpcMock.mockResolvedValueOnce({
+      audit_log_id: AUDIT_LOG_ID,
+      drop_pool_version_id: DRAFT_VERSION_ID,
     });
-    getSupabaseAdminClientMock.mockReturnValue(db.client);
+
+    const { default: versionsHandler } =
+      await import("../../api/admin/gacha/drop-pool-versions");
+    const result = await invokeApiHandler<ApiSuccessResponse>(versionsHandler, {
+      method: "POST",
+      url: "/api/admin/gacha/drop-pool-versions",
+      headers: {
+        "x-admin-confirm": "true",
+        "x-idempotency-key": "admin-clone-drop-pool-test-001",
+      },
+      body: {
+        boxId: BOX_ID,
+        sourceVersionId: ACTIVE_VERSION_ID,
+        versionName: "clone-v1",
+        reason: "clone active version",
+        confirm: true,
+      },
+    });
+
+    expect(result.statusCode).toBe(200);
+    expect(runWriteRpcMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        schema: "api",
+        functionName: "admin_create_drop_pool_draft",
+        args: expect.objectContaining({
+          p_admin_user_id: ADMIN_CONTEXT.adminId,
+          p_box_id: BOX_ID,
+          p_source_version_id: ACTIVE_VERSION_ID,
+          p_version_name: "clone-v1",
+          p_items: null,
+          p_pity_rules: null,
+          p_reason: "clone active version",
+          p_idempotency_key: "admin-clone-drop-pool-test-001",
+        }),
+      }),
+    );
+  });
+
+  it("rejects editing active or archived drop pool versions before the update RPC", async () => {
+    const { default: versionsHandler } =
+      await import("../../api/admin/gacha/drop-pool-versions");
+
+    for (const status of ["active", "archived"] as const) {
+      const db = createAdminReadDbMock({
+        "gacha.drop_pool_versions": [
+          {
+            id: ACTIVE_VERSION_ID,
+            status,
+          },
+        ],
+      });
+      getSupabaseAdminClientMock.mockReturnValue(db.client);
+
+      const result = await invokeApiHandler(versionsHandler, {
+        method: "POST",
+        url: "/api/admin/gacha/drop-pool-versions",
+        headers: {
+          "x-admin-confirm": "true",
+          "x-idempotency-key": `admin-edit-${status}-drop-pool-test-001`,
+        },
+        body: {
+          boxId: BOX_ID,
+          dropPoolVersionId: ACTIVE_VERSION_ID,
+          reason: `attempt edit ${status} version`,
+          confirm: true,
+          items: [
+            {
+              template_id: TEMPLATE_ID,
+              form_id: FORM_ID,
+              rarity_code: "RARE",
+              drop_weight: 10000,
+              probability_bps: 10000,
+            },
+          ],
+        },
+      });
+
+      expect(result.statusCode).toBe(409);
+      expect(result.body).toMatchObject({
+        error: {
+          code: "ADMIN_DROP_POOL_VERSION_NOT_EDITABLE",
+        },
+      });
+    }
+
+    expect(runWriteRpcMock).not.toHaveBeenCalled();
+  });
+
+  it("publishes a drop pool version only through the admin publish RPC", async () => {
     runWriteRpcMock.mockResolvedValueOnce({
       audit_log_id: AUDIT_LOG_ID,
       drop_pool_version_id: ACTIVE_VERSION_ID,
@@ -416,17 +471,10 @@ describe("admin gacha APIs", () => {
         functionName: "admin_publish_drop_pool_version",
         args: expect.objectContaining({
           p_admin_user_id: ADMIN_CONTEXT.adminId,
-          p_box_id: BOX_ID,
+          p_drop_pool_version_id: DRAFT_VERSION_ID,
           p_reason: "publish draft",
           p_idempotency_key: "admin-publish-drop-pool-test-001",
-          p_items: [
-            expect.objectContaining({
-              template_id: TEMPLATE_ID,
-              form_id: FORM_ID,
-              rarity_code: "RARE",
-              drop_weight: "10000",
-            }),
-          ],
+          p_approval_context: {},
         }),
       }),
     );

@@ -1,6 +1,6 @@
 import {
-  Archive,
   CheckCircle2,
+  Copy,
   RefreshCw,
   Rocket,
   Save,
@@ -10,7 +10,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import {
   AdminApiError,
-  archiveDropPoolVersion,
+  cloneDropPoolVersion,
   fetchBlindBoxAdminItems,
   fetchDropPoolItems,
   fetchDropPoolVersions,
@@ -31,7 +31,7 @@ import type {
 } from "../admin.types";
 import { formatDate, shortId, StatusBadge } from "../admin.ui";
 
-type BusyAction = "save" | "validate" | "publish" | "archive" | null;
+type BusyAction = "save" | "validate" | "publish" | "clone" | null;
 type PageError = {
   message: string;
   code?: string;
@@ -74,6 +74,12 @@ export function GachaPoolsPage() {
     null;
   const selectedVersionReadOnly =
     !selectedVersion || selectedVersion.status !== "draft";
+  const selectedVersionCloneable = selectedVersion
+    ? isCloneableVersion(selectedVersion)
+    : false;
+  const selectedVersionValidatable =
+    selectedVersion?.status === "draft" ||
+    selectedVersion?.status === "scheduled";
   const selectedVersionPublishable =
     selectedVersion?.status === "draft" ||
     selectedVersion?.status === "scheduled";
@@ -269,38 +275,47 @@ export function GachaPoolsPage() {
     }
   }
 
-  async function handleArchive() {
-    if (!selectedVersion) {
-      setError({ message: "请选择概率版本" });
+  async function handleClone(version: DropPoolVersion) {
+    if (!selectedBox) {
+      setError({ message: "请选择盲盒" });
+      return;
+    }
+
+    if (!isCloneableVersion(version)) {
+      setError({ message: "只有 active / archived 版本可以克隆为草稿" });
       return;
     }
 
     const operationReason = reason.trim();
 
     if (!operationReason) {
-      setError({ message: "归档版本必须填写 reason" });
+      setError({ message: "克隆版本必须填写 reason" });
       return;
     }
 
-    setBusyAction("archive");
+    setBusyAction("clone");
     setError(null);
     setNotice(null);
 
     try {
-      const result = await archiveDropPoolVersion({
-        dropPoolVersionId: selectedVersion.id,
+      const result = await cloneDropPoolVersion({
+        boxId: selectedBox.id,
+        sourceVersionId: version.id,
+        versionName: `clone-v${version.version_no}`,
         reason: operationReason,
       });
 
       setNotice(
-        `归档已提交${result.audit_log_id ? ` / audit ${shortId(result.audit_log_id)}` : ""}`,
+        `已克隆为草稿${result.drop_pool_version_id ? ` / draft ${shortId(result.drop_pool_version_id)}` : ""}${result.audit_log_id ? ` / audit ${shortId(result.audit_log_id)}` : ""}`,
       );
 
-      if (selectedBox) {
-        await loadVersions(selectedBox.id);
+      await loadVersions(selectedBox.id);
+
+      if (result.drop_pool_version_id) {
+        setSelectedVersionId(result.drop_pool_version_id);
       }
-    } catch (archiveError) {
-      setError(readAdminError(archiveError, "归档概率版本失败"));
+    } catch (cloneError) {
+      setError(readAdminError(cloneError, "克隆概率版本失败"));
     } finally {
       setBusyAction(null);
     }
@@ -451,16 +466,28 @@ export function GachaPoolsPage() {
                       <td>{formatNumeric(version.total_weight)}</td>
                       <td>{formatDate(version.published_at)}</td>
                       <td>
-                        <button
-                          className="text-button"
-                          onClick={() => {
-                            setSelectedVersionId(version.id);
-                            setValidation(null);
-                          }}
-                          type="button"
-                        >
-                          查看
-                        </button>
+                        <div className="list-row__actions">
+                          <button
+                            className="text-button"
+                            onClick={() => {
+                              setSelectedVersionId(version.id);
+                              setValidation(null);
+                            }}
+                            type="button"
+                          >
+                            查看
+                          </button>
+                          {isCloneableVersion(version) ? (
+                            <button
+                              className="text-button"
+                              disabled={busyAction === "clone"}
+                              onClick={() => void handleClone(version)}
+                              type="button"
+                            >
+                              克隆为草稿
+                            </button>
+                          ) : null}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -497,55 +524,62 @@ export function GachaPoolsPage() {
             {selectedVersionReadOnly ? (
               <p className="notice">
                 当前版本不是 draft，只允许查看；scheduled 可发布，active /
-                archived / disabled 只读，线上 active version 已在上方固定展示。
+                archived 只能克隆为新草稿后编辑，disabled 只读。
               </p>
             ) : null}
 
             <div className="gacha-editor-actions">
-              <button
-                className="icon-button"
-                disabled={selectedVersionReadOnly || busyAction === "save"}
-                onClick={() => void handleSaveDraft()}
-                type="button"
-              >
-                <Save aria-hidden="true" size={16} />
-                <span>{busyAction === "save" ? "保存中" : "保存草稿"}</span>
-              </button>
-              <button
-                className="icon-button"
-                disabled={!selectedVersion || busyAction === "validate"}
-                onClick={() => void handleValidate()}
-                type="button"
-              >
-                <CheckCircle2 aria-hidden="true" size={16} />
-                <span>{busyAction === "validate" ? "校验中" : "校验"}</span>
-              </button>
-              <button
-                className="icon-button icon-button--danger"
-                disabled={
-                  !selectedVersion ||
-                  !selectedVersionPublishable ||
-                  busyAction === "publish"
-                }
-                onClick={() => void handlePublish()}
-                type="button"
-              >
-                <Rocket aria-hidden="true" size={16} />
-                <span>{busyAction === "publish" ? "发布中" : "发布"}</span>
-              </button>
-              <button
-                className="icon-button icon-button--danger"
-                disabled={
-                  !selectedVersion ||
-                  selectedVersion.status !== "active" ||
-                  busyAction === "archive"
-                }
-                onClick={() => void handleArchive()}
-                type="button"
-              >
-                <Archive aria-hidden="true" size={16} />
-                <span>{busyAction === "archive" ? "归档中" : "归档"}</span>
-              </button>
+              {selectedVersionCloneable && selectedVersion ? (
+                <button
+                  className="icon-button"
+                  disabled={busyAction === "clone"}
+                  onClick={() => void handleClone(selectedVersion)}
+                  type="button"
+                >
+                  <Copy aria-hidden="true" size={16} />
+                  <span>
+                    {busyAction === "clone" ? "克隆中" : "克隆为草稿"}
+                  </span>
+                </button>
+              ) : (
+                <>
+                  <button
+                    className="icon-button"
+                    disabled={selectedVersionReadOnly || busyAction === "save"}
+                    onClick={() => void handleSaveDraft()}
+                    type="button"
+                  >
+                    <Save aria-hidden="true" size={16} />
+                    <span>{busyAction === "save" ? "保存中" : "保存草稿"}</span>
+                  </button>
+                  <button
+                    className="icon-button"
+                    disabled={
+                      !selectedVersion ||
+                      !selectedVersionValidatable ||
+                      busyAction === "validate"
+                    }
+                    onClick={() => void handleValidate()}
+                    type="button"
+                  >
+                    <CheckCircle2 aria-hidden="true" size={16} />
+                    <span>{busyAction === "validate" ? "校验中" : "校验"}</span>
+                  </button>
+                  <button
+                    className="icon-button icon-button--danger"
+                    disabled={
+                      !selectedVersion ||
+                      !selectedVersionPublishable ||
+                      busyAction === "publish"
+                    }
+                    onClick={() => void handlePublish()}
+                    type="button"
+                  >
+                    <Rocket aria-hidden="true" size={16} />
+                    <span>{busyAction === "publish" ? "发布中" : "发布"}</span>
+                  </button>
+                </>
+              )}
             </div>
 
             <DropPoolItemsTable
@@ -899,6 +933,10 @@ function normalizeValidationResult(
     validation_errors: result.validation_errors ?? [],
     warnings: result.warnings ?? [],
   };
+}
+
+function isCloneableVersion(version: DropPoolVersion): boolean {
+  return version.status === "active" || version.status === "archived";
 }
 
 function readAdminError(error: unknown, fallback: string): PageError {

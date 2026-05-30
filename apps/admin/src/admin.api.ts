@@ -271,6 +271,31 @@ export async function saveDropPoolDraft(input: {
   );
 }
 
+export async function cloneDropPoolVersion(input: {
+  boxId: string;
+  sourceVersionId: string;
+  versionName?: string;
+  reason: string;
+}): Promise<DropPoolMutationResponse> {
+  return adminRequest<DropPoolMutationResponse>(
+    "/api/admin/gacha/drop-pool-versions",
+    {
+      method: "POST",
+      headers: buildDangerHeaders(
+        "admin-clone-drop-pool-version",
+        input.sourceVersionId,
+      ),
+      body: {
+        boxId: input.boxId,
+        sourceVersionId: input.sourceVersionId,
+        versionName: input.versionName,
+        reason: input.reason,
+        confirm: true,
+      },
+    },
+  );
+}
+
 export async function validateDropPoolVersion(input: {
   dropPoolVersionId: string;
   reason: string;
