@@ -14,6 +14,9 @@ export const API_ENDPOINTS = {
   banners: {
     list: "/banners/list",
   },
+  telegram: {
+    paymentSupport: "/telegram/payment-support",
+  },
   boxes: {
     list: "/boxes/list",
     rewards: "/boxes/rewards",

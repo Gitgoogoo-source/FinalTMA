@@ -1192,6 +1192,17 @@ describe("admin ops APIs", () => {
           updated_at: "2026-05-29T23:00:00.000Z",
         },
       ],
+      "ops.system_settings": [
+        {
+          key: "PAYMENT_SUPPORT_CONFIG",
+          value: {
+            configured: false,
+            support_url: null,
+            support_email: null,
+          },
+          updated_at: "2026-05-29T23:00:00.000Z",
+        },
+      ],
     });
     getSupabaseAdminClientMock.mockReturnValue(db.client);
 
@@ -1240,6 +1251,16 @@ describe("admin ops APIs", () => {
             status: "warning",
           },
         },
+        paymentSupport: {
+          configured: false,
+          source: "system_settings",
+        },
+        warnings: [
+          expect.objectContaining({
+            code: "PAYMENT_SUPPORT_CONFIG_MISSING",
+            severity: "warning",
+          }),
+        ],
       },
     });
     expect(requireAdminMock).toHaveBeenCalledWith(
@@ -1263,6 +1284,17 @@ describe("admin ops APIs", () => {
         expect.objectContaining({
           schema: "onchain",
           table: "mint_queue",
+        }),
+        expect.objectContaining({
+          schema: "ops",
+          table: "system_settings",
+          filters: expect.arrayContaining([
+            expect.objectContaining({
+              kind: "eq",
+              column: "key",
+              value: "PAYMENT_SUPPORT_CONFIG",
+            }),
+          ]),
         }),
       ]),
     );

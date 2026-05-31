@@ -10,6 +10,7 @@ export const queryKeys = {
     placement: (placement: string | null | undefined) =>
       ["banners", placement ?? "none"] as const,
   },
+  paymentSupport: ["payment-support"] as const,
   box: {
     root: ["box"] as const,
     list: ["box", "list"] as const,

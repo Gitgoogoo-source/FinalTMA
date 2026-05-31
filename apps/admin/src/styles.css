@@ -396,6 +396,29 @@ textarea {
   background: #fff7f7;
 }
 
+.notice--warning {
+  border-color: #f0d58a;
+  color: #7c5614;
+  background: #fffaf0;
+}
+
+.admin-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.admin-warning strong,
+.admin-warning small {
+  display: block;
+}
+
+.admin-warning small {
+  margin-top: 2px;
+  color: #8a6a2a;
+  font-size: 12px;
+}
+
 .metric-strip {
   display: flex;
   flex-wrap: wrap;
@@ -799,6 +822,10 @@ tr.is-selected td {
 
 .form-grid__wide {
   grid-column: span 4;
+}
+
+.payment-support-form {
+  margin-top: 12px;
 }
 
 .checkbox-row {

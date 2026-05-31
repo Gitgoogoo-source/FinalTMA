@@ -113,6 +113,55 @@ describe("PaymentPendingSheet", () => {
     ).toBeVisible();
   });
 
+  it("shows configured support contacts on payment failure states only", () => {
+    const { rerender } = render(
+      <PaymentPendingSheet
+        open
+        order={createOrder({
+          paidAt: "2026-05-28T00:02:00.000Z",
+          paymentOrderStatus: "failed",
+          paymentStatus: "fulfillment_failed_retrying",
+        })}
+        paymentSupport={{
+          configured: true,
+          supportEmail: "pay@example.test",
+          supportUrl: "https://t.me/tma_support",
+          serverTime: "2026-05-31T09:00:00.000Z",
+        }}
+        onCheckResult={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("link", { name: "联系客服" })).toHaveAttribute(
+      "href",
+      "https://t.me/tma_support",
+    );
+    expect(screen.getByRole("link", { name: "发送邮件" })).toHaveAttribute(
+      "href",
+      "mailto:pay@example.test",
+    );
+
+    rerender(
+      <PaymentPendingSheet
+        open
+        order={createOrder({ paymentStatus: "fulfilling" })}
+        paymentSupport={{
+          configured: true,
+          supportEmail: "pay@example.test",
+          supportUrl: "https://t.me/tma_support",
+          serverTime: "2026-05-31T09:00:00.000Z",
+        }}
+        onCheckResult={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.queryByRole("link", { name: "联系客服" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("shows retry copy when the Telegram invoice did not open", () => {
     const onRetryPayment = vi.fn();
 

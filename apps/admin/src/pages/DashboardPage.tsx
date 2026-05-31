@@ -1,13 +1,14 @@
-import { RefreshCw } from "lucide-react";
+import { AlertTriangle, RefreshCw, Save } from "lucide-react";
 import { useEffect, useState } from "react";
 
-import { fetchMonitoring } from "../admin.api";
+import { fetchMonitoring, updatePaymentSupportConfig } from "../admin.api";
 import type {
   MonitoringCountMetric,
   MonitoringException,
   MonitoringLatencyMetric,
   MonitoringRateMetric,
   MonitoringResponse,
+  PaymentSupportConfig,
 } from "../admin.types";
 import { formatDate, shortId, StatusBadge } from "../admin.ui";
 
@@ -21,6 +22,12 @@ export function DashboardPage() {
   const [windowHours, setWindowHours] = useState(24);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [supportUrlDraft, setSupportUrlDraft] = useState("");
+  const [supportEmailDraft, setSupportEmailDraft] = useState("");
+  const [supportReason, setSupportReason] = useState("");
+  const [supportSaving, setSupportSaving] = useState(false);
+  const [supportMessage, setSupportMessage] = useState<string | null>(null);
+  const [supportError, setSupportError] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
@@ -44,6 +51,69 @@ export function DashboardPage() {
   useEffect(() => {
     void load();
   }, [windowHours]);
+
+  useEffect(() => {
+    if (!data?.paymentSupport) {
+      return;
+    }
+
+    setSupportUrlDraft(data.paymentSupport.supportUrl ?? "");
+    setSupportEmailDraft(data.paymentSupport.supportEmail ?? "");
+  }, [data?.paymentSupport]);
+
+  async function savePaymentSupportConfig() {
+    const reason = supportReason.trim();
+
+    if (!reason) {
+      setSupportError("保存支付客服入口必须填写 reason");
+      return;
+    }
+
+    setSupportSaving(true);
+    setSupportError(null);
+    setSupportMessage(null);
+
+    try {
+      const updated = await updatePaymentSupportConfig({
+        supportUrl: normalizeDraftValue(supportUrlDraft),
+        supportEmail: normalizeDraftValue(supportEmailDraft),
+        reason,
+      });
+
+      setData((current) =>
+        current
+          ? {
+              ...current,
+              paymentSupport: {
+                configured: updated.configured,
+                source: updated.source,
+                supportEmail: updated.supportEmail,
+                supportUrl: updated.supportUrl,
+                updatedAt: updated.updatedAt,
+              },
+              warnings: updated.configured
+                ? current.warnings.filter(
+                    (warning) =>
+                      warning.code !== "PAYMENT_SUPPORT_CONFIG_MISSING",
+                  )
+                : ensurePaymentSupportWarning(current.warnings),
+            }
+          : current,
+      );
+      setSupportReason("");
+      setSupportMessage(
+        updated.audit_log_id
+          ? `已保存，audit ${updated.audit_log_id}`
+          : "已保存",
+      );
+    } catch (saveError) {
+      setSupportError(
+        saveError instanceof Error ? saveError.message : "支付客服入口保存失败",
+      );
+    } finally {
+      setSupportSaving(false);
+    }
+  }
 
   const metrics = data
     ? [
@@ -85,6 +155,19 @@ export function DashboardPage() {
 
       {data ? (
         <>
+          {data.warnings.map((warning) => (
+            <p
+              className="notice notice--warning admin-warning"
+              key={warning.code}
+            >
+              <AlertTriangle aria-hidden="true" size={16} />
+              <span>
+                <strong>{warning.message}</strong>
+                <small>{warning.suggestedAction}</small>
+              </span>
+            </p>
+          ))}
+
           <div className="ops-grid ops-grid--monitoring">
             {metrics.map((metric) => (
               <MetricCard key={metric.key} metric={metric} />
@@ -122,6 +205,20 @@ export function DashboardPage() {
             </div>
           </section>
 
+          <PaymentSupportConfigPanel
+            config={data.paymentSupport}
+            emailDraft={supportEmailDraft}
+            error={supportError}
+            isSaving={supportSaving}
+            message={supportMessage}
+            reason={supportReason}
+            urlDraft={supportUrlDraft}
+            onEmailChange={setSupportEmailDraft}
+            onReasonChange={setSupportReason}
+            onSave={() => void savePaymentSupportConfig()}
+            onUrlChange={setSupportUrlDraft}
+          />
+
           <div className="split-grid split-grid--even">
             <ExceptionList
               items={data.recentExceptions.paymentOrders}
@@ -138,6 +235,93 @@ export function DashboardPage() {
           />
         </>
       ) : null}
+    </section>
+  );
+}
+
+function PaymentSupportConfigPanel(props: {
+  config: PaymentSupportConfig;
+  emailDraft: string;
+  error: string | null;
+  isSaving: boolean;
+  message: string | null;
+  reason: string;
+  urlDraft: string;
+  onEmailChange: (value: string) => void;
+  onReasonChange: (value: string) => void;
+  onSave: () => void;
+  onUrlChange: (value: string) => void;
+}) {
+  return (
+    <section className="detail-panel" aria-label="支付客服入口">
+      <div className="detail-panel__header">
+        <div>
+          <h2>支付客服入口</h2>
+          <p>
+            PAYMENT_SUPPORT_CONFIG
+            控制用户支付失败和发货补偿页面展示的客服入口。
+          </p>
+        </div>
+        <StatusBadge status={props.config.configured ? "ok" : "warning"} />
+      </div>
+      <div className="detail-grid">
+        <DetailItem
+          label="当前状态"
+          value={props.config.configured ? "已配置" : "未配置"}
+        />
+        <DetailItem label="来源" value={props.config.source} />
+        <DetailItem
+          label="更新时间"
+          value={formatDate(props.config.updatedAt)}
+        />
+        <DetailItem
+          label="展示入口"
+          value={formatSupportPreview(props.config)}
+        />
+      </div>
+      <div className="form-grid form-grid--compact payment-support-form">
+        <label className="form-grid__wide">
+          <span>客服 URL</span>
+          <input
+            placeholder="https://t.me/support_username"
+            type="url"
+            value={props.urlDraft}
+            onChange={(event) => props.onUrlChange(event.target.value)}
+          />
+        </label>
+        <label className="form-grid__wide">
+          <span>客服 email</span>
+          <input
+            placeholder="support@example.com"
+            type="email"
+            value={props.emailDraft}
+            onChange={(event) => props.onEmailChange(event.target.value)}
+          />
+        </label>
+        <label className="form-grid__wide">
+          <span>Reason</span>
+          <textarea
+            placeholder="说明本次支付客服入口配置变更原因"
+            value={props.reason}
+            onChange={(event) => props.onReasonChange(event.target.value)}
+          />
+        </label>
+      </div>
+      {props.error ? (
+        <p className="notice notice--error">{props.error}</p>
+      ) : null}
+      {props.message ? <p className="notice">{props.message}</p> : null}
+      <div className="button-row">
+        <button
+          className="icon-button"
+          disabled={props.isSaving}
+          onClick={props.onSave}
+          type="button"
+        >
+          <Save aria-hidden="true" size={16} />
+          <span>{props.isSaving ? "保存中" : "保存客服入口"}</span>
+        </button>
+      </div>
     </section>
   );
 }
@@ -190,6 +374,41 @@ function DetailItem(props: { label: string; value: string }) {
       <strong>{props.value}</strong>
     </span>
   );
+}
+
+function normalizeDraftValue(value: string): string | null {
+  const normalized = value.trim();
+  return normalized ? normalized : null;
+}
+
+function formatSupportPreview(config: PaymentSupportConfig): string {
+  if (!config.configured) {
+    return "-";
+  }
+
+  return [config.supportUrl, config.supportEmail].filter(Boolean).join(" / ");
+}
+
+function ensurePaymentSupportWarning(
+  warnings: MonitoringResponse["warnings"],
+): MonitoringResponse["warnings"] {
+  if (
+    warnings.some(
+      (warning) => warning.code === "PAYMENT_SUPPORT_CONFIG_MISSING",
+    )
+  ) {
+    return warnings;
+  }
+
+  return [
+    ...warnings,
+    {
+      code: "PAYMENT_SUPPORT_CONFIG_MISSING",
+      severity: "warning",
+      message: "支付客服入口未配置，支付失败页不会展示客服入口。",
+      suggestedAction: "在监控页配置 PAYMENT_SUPPORT_CONFIG 的 URL 或 email。",
+    },
+  ];
 }
 
 function formatMetricValue(metric: Metric): string {

@@ -3,7 +3,12 @@ import { Coins, RefreshCw, Star, Trophy, X } from "lucide-react";
 import { formatCurrencyAmount } from "@/shared/lib/formatCurrency";
 
 import { getPaymentStatusMeta, normalizePaymentStatus } from "../box.status";
-import type { DrawResultItem, DrawResultResponse } from "../box.types";
+import type {
+  DrawResultItem,
+  DrawResultResponse,
+  PaymentSupportConfig,
+} from "../box.types";
+import { PaymentSupportLinks } from "./PaymentSupportLinks";
 
 type DrawResultModalProps = {
   open: boolean;
@@ -11,6 +16,7 @@ type DrawResultModalProps = {
   isLoading: boolean;
   isError: boolean;
   errorMessage: string | null;
+  paymentSupport?: PaymentSupportConfig | null;
   onRetry: () => void;
   onClose: () => void;
 };
@@ -21,6 +27,7 @@ export function DrawResultModal({
   isLoading,
   isError,
   errorMessage,
+  paymentSupport = null,
   onRetry,
   onClose,
 }: DrawResultModalProps) {
@@ -72,6 +79,7 @@ export function DrawResultModal({
               detail={
                 pendingState?.detail ?? "支付确认后，服务端会生成抽卡结果。"
               }
+              paymentSupport={pendingState?.showSupport ? paymentSupport : null}
               onRetry={onRetry}
             />
           ) : null}
@@ -105,6 +113,7 @@ export function DrawResultModal({
 function getPendingResultState(result: DrawResultResponse): {
   title: string;
   detail: string;
+  showSupport?: boolean;
 } {
   const status = normalizePaymentStatus(
     result.paymentStatus ?? result.orderStatus,
@@ -128,6 +137,7 @@ function getPendingResultState(result: DrawResultResponse): {
     return {
       title: "支付已成功，奖励补发中",
       detail: "发货事务异常，后台会重试补发；请不要重复支付。",
+      showSupport: true,
     };
   }
 
@@ -216,16 +226,19 @@ function ResultItem({ item }: { item: DrawResultItem }) {
 function ResultState({
   title,
   detail,
+  paymentSupport = null,
   onRetry,
 }: {
   title: string;
   detail: string;
+  paymentSupport?: PaymentSupportConfig | null;
   onRetry?: () => void;
 }) {
   return (
     <div className="draw-result-state">
       <strong>{title}</strong>
       <span>{detail}</span>
+      <PaymentSupportLinks config={paymentSupport} />
       {onRetry ? (
         <button onClick={onRetry} type="button">
           <RefreshCw aria-hidden="true" size={14} strokeWidth={2.5} />

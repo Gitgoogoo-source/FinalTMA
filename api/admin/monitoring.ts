@@ -2,6 +2,7 @@ import {
   getSupabaseAdminClient,
   type SupabaseAdminClient,
 } from "../../packages/server/src/db/supabaseAdmin.js";
+import { loadPaymentSupportConfig } from "../_shared/paymentSupportConfig.js";
 import { ApiError, withApiHandler } from "../_shared/handler.js";
 import { requireAdmin } from "../_shared/requireAdmin.js";
 import { firstQueryValue } from "./_shared.js";
@@ -145,6 +146,7 @@ export default withApiHandler(
       activeWebhookEvents,
       mintQueueRows,
       activeMintQueueRows,
+      paymentSupportConfig,
     ] = await Promise.all([
       listPaymentOrders(db, windowStartedAt),
       listActivePaymentOrders(db),
@@ -152,6 +154,7 @@ export default withApiHandler(
       listActiveWebhookEvents(db),
       listMintQueueRows(db, windowStartedAt),
       listActiveMintQueueRows(db),
+      loadPaymentSupportConfig(db),
     ]);
 
     const fulfillmentStuckBefore = new Date(
@@ -223,6 +226,8 @@ export default withApiHandler(
           .slice(0, 8)
           .map(mapMintException),
       },
+      paymentSupport: paymentSupportConfig,
+      warnings: buildMonitoringWarnings(paymentSupportConfig),
       sources: {
         paymentOrderRows: paymentOrders.length,
         activePaymentOrderRows: activePaymentOrders.length,
@@ -524,6 +529,28 @@ function mapPaymentException(row: PaymentOrderMonitorRow) {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
+}
+
+function buildMonitoringWarnings(paymentSupport: {
+  configured: boolean;
+}): Array<{
+  code: string;
+  severity: "warning";
+  message: string;
+  suggestedAction: string;
+}> {
+  if (paymentSupport.configured) {
+    return [];
+  }
+
+  return [
+    {
+      code: "PAYMENT_SUPPORT_CONFIG_MISSING",
+      severity: "warning",
+      message: "支付客服入口未配置，支付失败页不会展示客服入口。",
+      suggestedAction: "在监控页配置 PAYMENT_SUPPORT_CONFIG 的 URL 或 email。",
+    },
+  ];
 }
 
 function mapWebhookException(row: WebhookEventMonitorRow) {

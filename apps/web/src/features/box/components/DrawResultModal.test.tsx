@@ -50,6 +50,35 @@ describe("DrawResultModal", () => {
 
     expect(screen.getByText("支付已成功，奖励补发中")).toBeVisible();
   });
+
+  it("shows configured support contacts for failed paid fulfillment", () => {
+    render(
+      <DrawResultModal
+        open
+        result={createPendingResult({
+          orderStatus: "failed",
+          paidAt: "2026-05-28T00:01:00.000Z",
+          paymentStatus: "failed",
+        })}
+        isLoading={false}
+        isError={false}
+        errorMessage={null}
+        paymentSupport={{
+          configured: true,
+          supportEmail: "pay@example.test",
+          supportUrl: "https://t.me/tma_support",
+          serverTime: "2026-05-31T09:00:00.000Z",
+        }}
+        onRetry={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("link", { name: "联系客服" })).toHaveAttribute(
+      "href",
+      "https://t.me/tma_support",
+    );
+  });
 });
 
 function renderDrawResultModal(overrides: Partial<DrawResultResponse> = {}) {

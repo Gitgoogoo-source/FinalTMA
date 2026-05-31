@@ -16,12 +16,17 @@ import {
   type PaymentStatusMeta,
   type PaymentStatusTone,
 } from "../box.status";
-import type { CreateOpenOrderResponse } from "../box.types";
+import type {
+  CreateOpenOrderResponse,
+  PaymentSupportConfig,
+} from "../box.types";
+import { PaymentSupportLinks } from "./PaymentSupportLinks";
 
 type PaymentPendingSheetProps = {
   open: boolean;
   order: CreateOpenOrderResponse | null;
   invoiceOpenNotice?: PaymentOpenNotice | null;
+  paymentSupport?: PaymentSupportConfig | null;
   onCheckResult: () => void;
   onRetryPayment?: () => void;
   onClose: () => void;
@@ -42,6 +47,7 @@ export function PaymentPendingSheet({
   open,
   order,
   invoiceOpenNotice = null,
+  paymentSupport = null,
   onCheckResult,
   onRetryPayment,
   onClose,
@@ -58,6 +64,10 @@ export function PaymentPendingSheet({
     Boolean(invoiceNoticeMeta?.canRetry) &&
     canRetryCurrentOrder &&
     Boolean(onRetryPayment);
+  const showPaymentSupport = shouldShowPaymentSupport(
+    statusMeta,
+    invoiceNoticeMeta,
+  );
   const StatusIcon = getStatusIcon(statusMeta.tone);
 
   return (
@@ -101,6 +111,9 @@ export function PaymentPendingSheet({
               <span>{invoiceNoticeMeta.detail}</span>
             </div>
           ) : null}
+          {showPaymentSupport ? (
+            <PaymentSupportLinks config={paymentSupport} />
+          ) : null}
           <div className="payment-pending-sheet__actions">
             {showRetryPayment ? (
               <button onClick={onRetryPayment} type="button">
@@ -123,6 +136,19 @@ export function PaymentPendingSheet({
         </div>
       </section>
     </div>
+  );
+}
+
+function shouldShowPaymentSupport(
+  statusMeta: PaymentStatusMeta,
+  invoiceNoticeMeta: {
+    tone: PaymentStatusTone;
+  } | null,
+): boolean {
+  return (
+    statusMeta.status === "fulfillment_failed_retrying" ||
+    statusMeta.tone === "danger" ||
+    invoiceNoticeMeta?.tone === "danger"
   );
 }
 
@@ -168,8 +194,7 @@ function getInvoiceNoticeMeta(notice: PaymentOpenNotice | null): {
     case "opening":
       return {
         title: "支付窗口已打开",
-        detail:
-          "请在 Telegram Stars 窗口中完成支付，关闭窗口不代表支付成功。",
+        detail: "请在 Telegram Stars 窗口中完成支付，关闭窗口不代表支付成功。",
         tone: "pending",
         canRetry: false,
       };

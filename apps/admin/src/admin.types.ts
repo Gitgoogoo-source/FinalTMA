@@ -350,6 +350,21 @@ export type MonitoringException = {
   updatedAt?: string;
 };
 
+export type PaymentSupportConfig = {
+  configured: boolean;
+  supportUrl: string | null;
+  supportEmail: string | null;
+  updatedAt: string | null;
+  source: "system_settings" | "server_env" | "none";
+};
+
+export type MonitoringWarning = {
+  code: string;
+  severity: "warning";
+  message: string;
+  suggestedAction: string;
+};
+
 export type MonitoringResponse = {
   window: {
     hours: number;
@@ -372,6 +387,8 @@ export type MonitoringResponse = {
     webhookEvents: MonitoringException[];
     mintQueue: MonitoringException[];
   };
+  paymentSupport: PaymentSupportConfig;
+  warnings: MonitoringWarning[];
   sources: Record<string, number>;
   serverTime: string;
 };

@@ -2366,6 +2366,30 @@ a {
   gap: 8px;
 }
 
+.payment-support-links {
+  width: min(100%, 330px);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.payment-support-links a {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid rgb(139 211 199 / 42%);
+  border-radius: 999px;
+  padding: 0 12px;
+  color: #d8fff7;
+  background: rgb(139 211 199 / 12%);
+  font-size: 12px;
+  font-weight: 900;
+  text-decoration: none;
+}
+
 .payment-pending-sheet__body button,
 .draw-result-state button,
 .draw-result-modal__confirm {

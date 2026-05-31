@@ -37,6 +37,7 @@ import { useCreateOpenOrder } from "../hooks/useCreateOpenOrder";
 import { useDrawResult } from "../hooks/useDrawResult";
 import { usePaymentStatus } from "../hooks/usePaymentStatus";
 import { usePendingDrawOrder } from "../hooks/usePendingDrawOrder";
+import { usePaymentSupportConfig } from "../hooks/usePaymentSupportConfig";
 import {
   clearPendingStarsPaymentOrder,
   useStarsPayment,
@@ -56,6 +57,9 @@ export function BoxPage() {
   const openRequestLockedRef = useRef(false);
   const boxesQuery = useBoxes();
   const bannerQuery = useBanners("box_top");
+  const paymentSupportQuery = usePaymentSupportConfig({
+    enabled: paymentPendingOrder !== null || resultOrderId !== null,
+  });
   const boxes = boxesQuery.boxes;
   const defaultBoxId = useMemo(() => getDefaultBoxId(boxes), [boxes]);
 
@@ -432,6 +436,7 @@ export function BoxPage() {
         open={paymentPendingOrder !== null}
         order={paymentPendingOrder}
         invoiceOpenNotice={paymentOpenNotice}
+        paymentSupport={paymentSupportQuery.config}
         onCheckResult={() => {
           if (paymentPendingOrder?.orderId) {
             const currentPaymentStatus =
@@ -474,6 +479,7 @@ export function BoxPage() {
         isLoading={drawResultQuery.isLoading}
         isError={drawResultQuery.isError}
         errorMessage={getRewardsErrorMessage(drawResultQuery.error)}
+        paymentSupport={paymentSupportQuery.config}
         onRetry={() => void drawResultQuery.refetch()}
         onClose={() => setResultOrderId(null)}
       />

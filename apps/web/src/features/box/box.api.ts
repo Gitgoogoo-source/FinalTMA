@@ -13,6 +13,7 @@ import type {
   DrawResultBalances,
   DrawResultItem,
   DrawResultResponse,
+  PaymentSupportConfig,
 } from "./box.types";
 
 export async function fetchBoxes(): Promise<BoxListResponse> {
@@ -92,6 +93,17 @@ export async function fetchPaymentStatus(
   return fetchBoxOrderResult(orderId, false);
 }
 
+export async function fetchPaymentSupportConfig(): Promise<PaymentSupportConfig> {
+  const response = await apiRequest<unknown>(
+    API_ENDPOINTS.telegram.paymentSupport,
+    {
+      method: "GET",
+    },
+  );
+
+  return normalizePaymentSupportConfig(response);
+}
+
 async function fetchBoxOrderResult(
   orderId: string,
   includeItems: boolean,
@@ -120,6 +132,27 @@ function normalizeBoxListResponse(response: unknown): BoxListResponse {
     items,
     nextCursor:
       readString(payload.nextCursor) ?? readString(payload.next_cursor),
+    serverTime:
+      readString(payload.serverTime) ?? readString(payload.server_time),
+  };
+}
+
+function normalizePaymentSupportConfig(
+  response: unknown,
+): PaymentSupportConfig {
+  const payload = isRecord(response) ? response : {};
+  const supportUrl =
+    readString(payload.supportUrl) ?? readString(payload.support_url);
+  const supportEmail =
+    readString(payload.supportEmail) ?? readString(payload.support_email);
+  const configured =
+    readBoolean(payload.configured) === true &&
+    (supportUrl !== null || supportEmail !== null);
+
+  return {
+    configured,
+    supportEmail: configured ? supportEmail : null,
+    supportUrl: configured ? supportUrl : null,
     serverTime:
       readString(payload.serverTime) ?? readString(payload.server_time),
   };

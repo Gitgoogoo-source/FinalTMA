@@ -167,3 +167,10 @@ export type DrawResultResponse = {
   results: DrawResultItem[];
   serverTime: string | null;
 };
+
+export type PaymentSupportConfig = {
+  configured: boolean;
+  supportUrl: string | null;
+  supportEmail: string | null;
+  serverTime: string | null;
+};

@@ -59,6 +59,8 @@ type AdminTableRows = Record<string, Array<Record<string, unknown>>>;
 describe("admin campaign and blind box config APIs", () => {
   beforeEach(() => {
     process.env.NODE_ENV = "test";
+    vi.stubEnv("PAYMENT_SUPPORT_URL", "");
+    vi.stubEnv("PAYMENT_SUPPORT_EMAIL", "");
     vi.resetModules();
     getSupabaseAdminClientMock.mockReset();
     requireAdminMock.mockReset();
@@ -67,6 +69,7 @@ describe("admin campaign and blind box config APIs", () => {
   });
 
   afterEach(() => {
+    vi.unstubAllEnvs();
     vi.restoreAllMocks();
   });
 
@@ -193,6 +196,176 @@ describe("admin campaign and blind box config APIs", () => {
         }),
       }),
     );
+  });
+
+  it("reads configured payment support contacts for admins", async () => {
+    const db = createAdminReadDbMock({
+      "ops.system_settings": [
+        {
+          key: "PAYMENT_SUPPORT_CONFIG",
+          value: {
+            configured: true,
+            support_url: "https://t.me/tma_support",
+            support_email: "pay@example.test",
+          },
+          updated_at: "2026-05-31T09:00:00.000Z",
+        },
+      ],
+    });
+    getSupabaseAdminClientMock.mockReturnValue(db.client);
+
+    const { default: paymentSupportHandler } =
+      await import("../../api/admin/payment-support-config");
+    const result = await invokeApiHandler<ApiSuccessResponse>(
+      paymentSupportHandler,
+      {
+        method: "GET",
+        url: "/api/admin/payment-support-config",
+      },
+    );
+
+    expect(result.statusCode).toBe(200);
+    expect(requireAdminMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        permissions: ["payments:read", "admin:read"],
+        requireAll: false,
+      }),
+    );
+    expect(result.body).toMatchObject({
+      ok: true,
+      data: {
+        configured: true,
+        source: "system_settings",
+        supportEmail: "pay@example.test",
+        supportUrl: "https://t.me/tma_support",
+        updatedAt: "2026-05-31T09:00:00.000Z",
+      },
+    });
+  });
+
+  it("maps payment support config writes to the audited admin RPC", async () => {
+    runWriteRpcMock.mockResolvedValueOnce({
+      audit_log_id: AUDIT_LOG_ID,
+      configured: true,
+      support_url: "https://t.me/tma_support",
+      support_email: "pay@example.test",
+      updated_at: "2026-05-31T09:00:00.000Z",
+    });
+
+    const { default: paymentSupportHandler } =
+      await import("../../api/admin/payment-support-config");
+    const result = await invokeApiHandler<ApiSuccessResponse>(
+      paymentSupportHandler,
+      {
+        method: "PATCH",
+        url: "/api/admin/payment-support-config",
+        headers: {
+          "x-admin-confirm": "true",
+          "x-idempotency-key": "admin-payment-support-test-001",
+        },
+        body: {
+          supportUrl: "https://t.me/tma_support",
+          supportEmail: "Pay@Example.Test",
+          reason: "configure payment support",
+          confirm: true,
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(200);
+    expect(requireAdminMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        permissions: ["payments:write", "admin:write"],
+        requireAll: false,
+      }),
+    );
+    expect(runWriteRpcMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        schema: "api",
+        functionName: "admin_update_payment_support_config",
+        args: expect.objectContaining({
+          p_admin_user_id: ADMIN_CONTEXT.adminId,
+          p_support_url: "https://t.me/tma_support",
+          p_support_email: "pay@example.test",
+          p_reason: "configure payment support",
+          p_idempotency_key: "admin-payment-support-test-001",
+        }),
+      }),
+    );
+    expect(result.body).toMatchObject({
+      data: {
+        audit_log_id: AUDIT_LOG_ID,
+        configured: true,
+        supportEmail: "pay@example.test",
+        supportUrl: "https://t.me/tma_support",
+        source: "system_settings",
+      },
+    });
+  });
+
+  it("rejects non-HTTPS payment support URLs before calling RPC", async () => {
+    const { default: paymentSupportHandler } =
+      await import("../../api/admin/payment-support-config");
+    const result = await invokeApiHandler(paymentSupportHandler, {
+      method: "PATCH",
+      url: "/api/admin/payment-support-config",
+      headers: {
+        "x-admin-confirm": "true",
+        "x-idempotency-key": "admin-payment-support-test-002",
+      },
+      body: {
+        supportUrl: "http://example.test/support",
+        supportEmail: null,
+        reason: "reject bad support url",
+        confirm: true,
+      },
+    });
+
+    expect(result.statusCode).toBe(400);
+    expect(result.body).toMatchObject({
+      error: {
+        code: "VALIDATION_FAILED",
+      },
+    });
+    expect(runWriteRpcMock).not.toHaveBeenCalled();
+  });
+
+  it("exposes only configured payment support contacts to the web app", async () => {
+    const db = createAdminReadDbMock({
+      "ops.system_settings": [
+        {
+          key: "PAYMENT_SUPPORT_CONFIG",
+          value: {
+            configured: true,
+            support_url: "https://t.me/tma_support",
+            support_email: "pay@example.test",
+          },
+          updated_at: "2026-05-31T09:00:00.000Z",
+        },
+      ],
+    });
+    getSupabaseAdminClientMock.mockReturnValue(db.client);
+
+    const { default: paymentSupportHandler } =
+      await import("../../api/telegram/payment-support");
+    const result = await invokeApiHandler<ApiSuccessResponse>(
+      paymentSupportHandler,
+      {
+        method: "GET",
+        url: "/api/telegram/payment-support",
+      },
+    );
+
+    expect(result.statusCode).toBe(200);
+    expect(result.body).toMatchObject({
+      data: {
+        configured: true,
+        supportEmail: "pay@example.test",
+        supportUrl: "https://t.me/tma_support",
+      },
+    });
   });
 
   it("rejects legacy campaign target types before calling RPC", async () => {

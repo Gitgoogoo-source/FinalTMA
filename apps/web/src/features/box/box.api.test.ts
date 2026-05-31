@@ -141,4 +141,46 @@ describe("box api", () => {
     });
     expect(result.results).toEqual([]);
   });
+
+  it("normalizes configured payment support contacts", async () => {
+    mocks.apiRequest.mockResolvedValueOnce({
+      configured: true,
+      support_url: "https://t.me/tma_support",
+      support_email: "pay@example.test",
+      server_time: "2026-05-31T09:00:00.000Z",
+    });
+
+    const { fetchPaymentSupportConfig } = await import("./box.api");
+    const result = await fetchPaymentSupportConfig();
+
+    expect(mocks.apiRequest).toHaveBeenCalledWith(
+      "/telegram/payment-support",
+      {
+        method: "GET",
+      },
+    );
+    expect(result).toEqual({
+      configured: true,
+      supportEmail: "pay@example.test",
+      supportUrl: "https://t.me/tma_support",
+      serverTime: "2026-05-31T09:00:00.000Z",
+    });
+  });
+
+  it("does not expose partial payment support contacts when config is disabled", async () => {
+    mocks.apiRequest.mockResolvedValueOnce({
+      configured: false,
+      support_url: "https://t.me/tma_support",
+      support_email: "pay@example.test",
+    });
+
+    const { fetchPaymentSupportConfig } = await import("./box.api");
+    const result = await fetchPaymentSupportConfig();
+
+    expect(result).toMatchObject({
+      configured: false,
+      supportEmail: null,
+      supportUrl: null,
+    });
+  });
 });

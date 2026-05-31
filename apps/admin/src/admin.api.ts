@@ -23,6 +23,7 @@ import type {
   MonitoringResponse,
   PaymentAdminResponse,
   PaymentDetailResponse,
+  PaymentSupportConfig,
   PityRulesResponse,
   UpdateBlindBoxStatusInput,
   UpsertBlindBoxInput,
@@ -120,6 +121,46 @@ export async function fetchMonitoring(
   return adminRequest<MonitoringResponse>(
     `/api/admin/monitoring${toQueryString(params)}`,
   );
+}
+
+export async function fetchPaymentSupportConfig(): Promise<
+  PaymentSupportConfig & { serverTime: string }
+> {
+  return adminRequest<PaymentSupportConfig & { serverTime: string }>(
+    "/api/admin/payment-support-config",
+  );
+}
+
+export async function updatePaymentSupportConfig(input: {
+  supportUrl: string | null;
+  supportEmail: string | null;
+  reason: string;
+}): Promise<
+  PaymentSupportConfig & {
+    audit_log_id?: string | null;
+    idempotent?: boolean;
+    serverTime: string;
+  }
+> {
+  return adminRequest<
+    PaymentSupportConfig & {
+      audit_log_id?: string | null;
+      idempotent?: boolean;
+      serverTime: string;
+    }
+  >("/api/admin/payment-support-config", {
+    method: "PATCH",
+    headers: buildDangerHeaders(
+      "admin-payment-support-config",
+      input.supportUrl ?? input.supportEmail ?? "clear",
+    ),
+    body: {
+      supportUrl: input.supportUrl,
+      supportEmail: input.supportEmail,
+      reason: input.reason,
+      confirm: true,
+    },
+  });
 }
 
 export async function fetchMintQueue(
