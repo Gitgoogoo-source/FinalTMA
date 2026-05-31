@@ -1,4 +1,11 @@
-import { Image as ImageIcon, Plus, RefreshCw, Save } from "lucide-react";
+import {
+  AlertTriangle,
+  Image as ImageIcon,
+  Plus,
+  RefreshCw,
+  Save,
+  X,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import {
@@ -39,6 +46,11 @@ const PREVIEW_STATUSES = [
   "sold_out",
   "ended",
 ];
+const TELEGRAM_WEBVIEW_PREVIEWS = [
+  { label: "Small WebView", width: 320 },
+  { label: "Default WebView", width: 375 },
+  { label: "Large WebView", width: 430 },
+];
 
 type CampaignDraft = {
   id?: string;
@@ -57,6 +69,22 @@ type CampaignDraft = {
   metadata: string;
 };
 
+type PreviewImageState = "empty" | "loading" | "ready" | "failed";
+
+type CampaignPreviewModel = {
+  imageUrl: string;
+  title: string;
+  description: string;
+  placement: string;
+  targetLabel: string;
+  targetMeta: string;
+  status: string;
+  startsAtLabel: string;
+  endsAtLabel: string;
+  canPublish: boolean;
+  errors: string[];
+};
+
 export function CampaignsPage() {
   const [placement, setPlacement] = useState("");
   const [status, setStatus] = useState("");
@@ -71,12 +99,20 @@ export function CampaignsPage() {
   const [pendingUpload, setPendingUpload] =
     useState<AdminStorageSignedUpload | null>(null);
   const [reason, setReason] = useState("");
+  const [publishConfirmOpen, setPublishConfirmOpen] = useState(false);
+  const [previewImageState, setPreviewImageState] =
+    useState<PreviewImageState>("empty");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
   const campaigns = data?.items ?? [];
+  const previewImageUrl = pendingUpload?.previewUrl ?? draft.image_url.trim();
+  const campaignPreview = useMemo(
+    () => buildCampaignPreviewModel(draft, previewImageUrl, previewImageState),
+    [draft, previewImageState, previewImageUrl],
+  );
   const selectedCampaign = useMemo(() => {
     return (
       campaigns.find((campaign) => campaign.id === selectedCampaignId) ??
@@ -112,7 +148,7 @@ export function CampaignsPage() {
     }
   }
 
-  async function save() {
+  function openPublishConfirm() {
     const operationReason = reason.trim();
 
     if (!operationReason) {
@@ -120,10 +156,47 @@ export function CampaignsPage() {
       return;
     }
 
+    if (!campaignPreview.canPublish) {
+      setError(
+        `活动预览未通过，不能发布：${campaignPreview.errors[0] ?? "请检查预览"}`,
+      );
+      return;
+    }
+
+    try {
+      serializeCampaignDraft(
+        {
+          ...draft,
+          image_url:
+            draft.image_url.trim() ||
+            pendingUpload?.previewUrl ||
+            campaignPreview.imageUrl,
+        },
+        operationReason,
+      );
+    } catch (serializeError) {
+      setError(readError(serializeError, "活动保存失败"));
+      return;
+    }
+
+    setError(null);
+    setNotice(null);
+    setPublishConfirmOpen(true);
+  }
+
+  async function saveConfirmed() {
+    const operationReason = reason.trim();
+
+    if (!operationReason || !campaignPreview.canPublish) {
+      setPublishConfirmOpen(false);
+      return;
+    }
+
     let saveDraft = draft;
     setSaving(true);
     setError(null);
     setNotice(null);
+    setPublishConfirmOpen(false);
 
     try {
       if (pendingUpload) {
@@ -157,6 +230,7 @@ export function CampaignsPage() {
     setSelectedCampaignId(campaign.id);
     setDraft(toCampaignDraft(campaign));
     setPendingUpload(null);
+    setPublishConfirmOpen(false);
     setNotice(null);
     setError(null);
   }
@@ -165,6 +239,7 @@ export function CampaignsPage() {
     setSelectedCampaignId(null);
     setDraft(createEmptyCampaignDraft());
     setPendingUpload(null);
+    setPublishConfirmOpen(false);
     setNotice(null);
     setError(null);
   }
@@ -180,6 +255,35 @@ export function CampaignsPage() {
       setDraft(createEmptyCampaignDraft());
     }
   }, [selectedCampaign, selectedCampaignId]);
+
+  useEffect(() => {
+    const imageUrl = previewImageUrl.trim();
+
+    if (!imageUrl) {
+      setPreviewImageState("empty");
+      return;
+    }
+
+    let active = true;
+    const image = new Image();
+
+    setPreviewImageState("loading");
+    image.onload = () => {
+      if (active) {
+        setPreviewImageState("ready");
+      }
+    };
+    image.onerror = () => {
+      if (active) {
+        setPreviewImageState("failed");
+      }
+    };
+    image.src = imageUrl;
+
+    return () => {
+      active = false;
+    };
+  }, [previewImageUrl]);
 
   return (
     <section className="admin-surface">
@@ -317,13 +421,13 @@ export function CampaignsPage() {
               <p>{draft.id ? shortId(draft.id) : "new campaign draft"}</p>
             </div>
             <StatusBadge
-              status={getCampaignDraftPreviewStatus(draft) || "draft"}
+              status={campaignPreview.status || "draft"}
             />
           </div>
 
-          <CampaignPreview
-            draft={draft}
-            previewUrl={pendingUpload?.previewUrl ?? null}
+          <CampaignPreviewPanel
+            imageState={previewImageState}
+            preview={campaignPreview}
           />
 
           <ImageUploader
@@ -547,8 +651,8 @@ export function CampaignsPage() {
           <div className="button-row">
             <button
               className="icon-button"
-              disabled={saving}
-              onClick={() => void save()}
+              disabled={saving || !campaignPreview.canPublish}
+              onClick={openPublishConfirm}
               type="button"
             >
               <Save aria-hidden="true" size={16} />
@@ -563,6 +667,15 @@ export function CampaignsPage() {
           </div>
         </section>
       </div>
+
+      <CampaignPublishConfirmDialog
+        isOpen={publishConfirmOpen}
+        pending={saving}
+        preview={campaignPreview}
+        reason={reason}
+        onCancel={() => setPublishConfirmOpen(false)}
+        onConfirm={() => void saveConfirmed()}
+      />
     </section>
   );
 }
@@ -586,30 +699,201 @@ function CampaignThumb({ campaign }: { campaign: BannerCampaign }) {
   );
 }
 
-function CampaignPreview({
-  draft,
-  previewUrl,
+function CampaignPreviewPanel({
+  imageState,
+  preview,
 }: {
-  draft: CampaignDraft;
-  previewUrl?: string | null;
+  imageState: PreviewImageState;
+  preview: CampaignPreviewModel;
 }) {
-  const imageUrl = previewUrl ?? draft.image_url;
+  return (
+    <section className="campaign-preview-panel" aria-label="Campaign preview">
+      <div className="campaign-preview-panel__header">
+        <div>
+          <h3>Telegram WebView 预览</h3>
+          <p>
+            {preview.placement} / {preview.targetLabel}
+          </p>
+        </div>
+        <StatusBadge status={preview.status || "draft"} />
+      </div>
+
+      <div className="telegram-preview-strip">
+        {TELEGRAM_WEBVIEW_PREVIEWS.map((variant) => (
+          <div
+            className="telegram-preview-frame"
+            key={variant.width}
+            style={{ width: `${variant.width}px` }}
+          >
+            <div className="telegram-preview-frame__meta">
+              <strong>{variant.label}</strong>
+              <small>{variant.width}px</small>
+            </div>
+            <div className="telegram-preview-frame__viewport">
+              <div className="telegram-preview-frame__chrome" />
+              <CampaignPreviewBanner preview={preview} />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="campaign-preview-checks">
+        <span>
+          <small>图片</small>
+          <strong>{readPreviewImageState(imageState)}</strong>
+        </span>
+        <span>
+          <small>时间窗口</small>
+          <strong>
+            {preview.startsAtLabel} → {preview.endsAtLabel}
+          </strong>
+        </span>
+      </div>
+
+      {preview.errors.length > 0 ? (
+        <p className="notice notice--error">
+          {preview.errors.map((item) => item).join("；")}
+        </p>
+      ) : (
+        <p className="notice">预览已通过，可以进入发布确认。</p>
+      )}
+    </section>
+  );
+}
+
+function CampaignPreviewBanner({
+  preview,
+}: {
+  preview: CampaignPreviewModel;
+}) {
+  return (
+    <article className="campaign-preview-banner">
+      <div className="campaign-preview-banner__image">
+        {preview.imageUrl ? (
+          <img alt={preview.title} src={preview.imageUrl} />
+        ) : (
+          <span>
+            <ImageIcon aria-hidden="true" size={24} />
+          </span>
+        )}
+      </div>
+      <div className="campaign-preview-banner__content">
+        <span>{preview.placement}</span>
+        <strong>{preview.title}</strong>
+        {preview.description ? <p>{preview.description}</p> : null}
+        <button disabled type="button">
+          {preview.targetLabel}
+        </button>
+        <small>{preview.targetMeta}</small>
+      </div>
+    </article>
+  );
+}
+
+function CampaignPublishConfirmDialog(props: {
+  isOpen: boolean;
+  pending: boolean;
+  preview: CampaignPreviewModel;
+  reason: string;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  if (!props.isOpen) {
+    return null;
+  }
 
   return (
-    <div className="campaign-preview" aria-label="Campaign preview">
-      {imageUrl ? (
-        <img alt={draft.title || "campaign preview"} src={imageUrl} />
-      ) : (
-        <span>
-          <ImageIcon aria-hidden="true" size={24} />
-        </span>
-      )}
-      <div>
-        <strong>{draft.title || "Untitled campaign"}</strong>
-        <small>
-          {draft.placement} / {draft.target_type}
-        </small>
-      </div>
+    <div className="danger-dialog-backdrop" role="presentation">
+      <form
+        aria-modal="true"
+        className="danger-dialog campaign-publish-dialog"
+        onSubmit={(event) => {
+          event.preventDefault();
+
+          if (props.preview.canPublish) {
+            props.onConfirm();
+          }
+        }}
+        role="dialog"
+      >
+        <div className="danger-dialog__header">
+          <span className="danger-dialog__icon">
+            <AlertTriangle aria-hidden="true" size={20} />
+          </span>
+          <div>
+            <h2>确认发布活动 Banner</h2>
+            <p>{props.preview.title}</p>
+          </div>
+          <button
+            className="icon-only-button"
+            disabled={props.pending}
+            onClick={props.onCancel}
+            type="button"
+          >
+            <X aria-hidden="true" size={18} />
+          </button>
+        </div>
+
+        <div className="campaign-publish-summary">
+          <div className="campaign-publish-summary__thumb">
+            {props.preview.imageUrl ? (
+              <img alt={props.preview.title} src={props.preview.imageUrl} />
+            ) : (
+              <ImageIcon aria-hidden="true" size={22} />
+            )}
+          </div>
+          <div className="campaign-publish-summary__meta">
+            <span>
+              <small>Placement</small>
+              <strong>{props.preview.placement}</strong>
+            </span>
+            <span>
+              <small>Target</small>
+              <strong>{props.preview.targetLabel}</strong>
+            </span>
+            <span>
+              <small>开始</small>
+              <strong>{props.preview.startsAtLabel}</strong>
+            </span>
+            <span>
+              <small>结束</small>
+              <strong>{props.preview.endsAtLabel}</strong>
+            </span>
+          </div>
+        </div>
+
+        {props.preview.errors.length > 0 ? (
+          <p className="notice notice--error">
+            预览未通过：{props.preview.errors.join("；")}
+          </p>
+        ) : (
+          <p className="notice">确认后将按当前表单内容提交保存并写入审计。</p>
+        )}
+
+        <label>
+          <span>操作 reason</span>
+          <textarea disabled readOnly rows={3} value={props.reason} />
+        </label>
+
+        <div className="button-row">
+          <button
+            className="text-button"
+            disabled={props.pending}
+            onClick={props.onCancel}
+            type="button"
+          >
+            取消
+          </button>
+          <button
+            className="icon-button icon-button--danger"
+            disabled={props.pending || !props.preview.canPublish}
+            type="submit"
+          >
+            <Save aria-hidden="true" size={16} />
+            <span>{props.pending ? "提交中" : "确认发布"}</span>
+          </button>
+        </div>
+      </form>
     </div>
   );
 }
@@ -669,6 +953,213 @@ function toCampaignDraft(campaign: BannerCampaign): CampaignDraft {
   };
 }
 
+function buildCampaignPreviewModel(
+  draft: CampaignDraft,
+  imageUrl: string,
+  imageState: PreviewImageState,
+): CampaignPreviewModel {
+  const errors: string[] = [];
+  const title = draft.title.trim();
+  const description = draft.description.trim();
+  const timeWindow = readCampaignPreviewTimeWindow(draft);
+  const target = readCampaignTargetPreview(draft);
+
+  if (!title) {
+    errors.push("预览缺少 title");
+  }
+
+  if (!imageUrl.trim()) {
+    errors.push("预览缺少 image_url 或待发布素材");
+  } else if (imageState === "loading") {
+    errors.push("Banner 图片仍在加载");
+  } else if (imageState === "failed") {
+    errors.push("Banner 图片无法加载");
+  }
+
+  if (timeWindow.error) {
+    errors.push(timeWindow.error);
+  }
+
+  if (target.error) {
+    errors.push(target.error);
+  }
+
+  return {
+    imageUrl: imageUrl.trim(),
+    title: title || "Untitled campaign",
+    description,
+    placement: draft.placement || "unknown",
+    targetLabel: target.label,
+    targetMeta: target.meta,
+    status: timeWindow.error
+      ? draft.status
+      : getWindowPreviewStatus({
+          status: draft.status,
+          startsAt: timeWindow.startsAt,
+          endsAt: timeWindow.endsAt,
+        }),
+    startsAtLabel: formatDate(timeWindow.startsAt),
+    endsAtLabel: formatDate(timeWindow.endsAt),
+    canPublish: errors.length === 0,
+    errors,
+  };
+}
+
+function readCampaignPreviewTimeWindow(draft: CampaignDraft): {
+  startsAt: string | null;
+  endsAt: string | null;
+  error: string | null;
+} {
+  const startsAt = readDraftIsoDate(draft.starts_at, "开始时间");
+  const endsAt = readDraftIsoDate(draft.ends_at, "结束时间");
+
+  if (startsAt.error) {
+    return { startsAt: null, endsAt: endsAt.value, error: startsAt.error };
+  }
+
+  if (endsAt.error) {
+    return { startsAt: startsAt.value, endsAt: null, error: endsAt.error };
+  }
+
+  if (
+    startsAt.value &&
+    endsAt.value &&
+    Date.parse(startsAt.value) >= Date.parse(endsAt.value)
+  ) {
+    return {
+      startsAt: startsAt.value,
+      endsAt: endsAt.value,
+      error: "开始时间必须早于结束时间",
+    };
+  }
+
+  return { startsAt: startsAt.value, endsAt: endsAt.value, error: null };
+}
+
+function readDraftIsoDate(
+  value: string,
+  label: string,
+): { value: string | null; error: string | null } {
+  if (!value.trim()) {
+    return { value: null, error: null };
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return { value: null, error: `${label}格式无效` };
+  }
+
+  return { value: date.toISOString(), error: null };
+}
+
+function readCampaignTargetPreview(draft: CampaignDraft): {
+  label: string;
+  meta: string;
+  error: string | null;
+} {
+  const targetRef = draft.target_ref.trim();
+  let payload: Record<string, unknown>;
+
+  try {
+    payload = parseJsonObject(draft.target_payload, "target_payload");
+  } catch (error) {
+    return {
+      label: "Target JSON 无效",
+      meta: readError(error, "target_payload 必须是 JSON object"),
+      error: readError(error, "target_payload 必须是 JSON object"),
+    };
+  }
+
+  switch (draft.target_type) {
+    case "none":
+      return {
+        label: "仅展示",
+        meta: "无跳转目标",
+        error: null,
+      };
+    case "box": {
+      const ref = targetRef || readPayloadRef(payload, ["box_id"]);
+      return {
+        label: "查看盲盒",
+        meta: ref ? `box ${ref}` : "缺少 box target",
+        error: ref ? null : "box target 缺少 target_ref 或 box_id",
+      };
+    }
+    case "listing": {
+      const ref = targetRef || readPayloadRef(payload, ["listing_id"]);
+      return {
+        label: "查看挂单",
+        meta: ref ? `listing ${ref}` : "缺少 listing target",
+        error: ref ? null : "listing target 缺少 target_ref 或 listing_id",
+      };
+    }
+    case "task": {
+      const ref = targetRef || readPayloadRef(payload, ["task_ref", "task_id"]);
+      return {
+        label: "查看任务",
+        meta: ref ? `task ${ref}` : "缺少 task target",
+        error: ref ? null : "task target 缺少 target_ref 或 task_ref",
+      };
+    }
+    case "payment": {
+      const ref =
+        targetRef || readPayloadRef(payload, ["star_order_id", "payment_ref"]);
+      return {
+        label: "打开支付入口",
+        meta: ref ? `payment ${ref}` : "等待后端支付入口",
+        error: null,
+      };
+    }
+    case "external": {
+      const ref = targetRef || readPayloadRef(payload, ["url"]);
+      return {
+        label: "打开外部链接",
+        meta: ref || "缺少 external URL",
+        error: ref ? null : "external target 缺少 URL",
+      };
+    }
+    default:
+      return {
+        label: draft.target_type || "未知 target",
+        meta: "target_type 不在白名单内",
+        error: "target_type 不在白名单内",
+      };
+  }
+}
+
+function readPayloadRef(
+  payload: Record<string, unknown>,
+  keys: string[],
+): string {
+  for (const key of keys) {
+    const value = payload[key];
+
+    if (typeof value === "string" && value.trim()) {
+      return value.trim();
+    }
+
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return String(value);
+    }
+  }
+
+  return "";
+}
+
+function readPreviewImageState(state: PreviewImageState): string {
+  switch (state) {
+    case "empty":
+      return "缺少图片";
+    case "loading":
+      return "加载中";
+    case "ready":
+      return "已加载";
+    case "failed":
+      return "加载失败";
+  }
+}
+
 function serializeCampaignDraft(
   draft: CampaignDraft,
   reason: string,
@@ -725,14 +1216,6 @@ function getCampaignPreviewStatus(campaign: BannerCampaign): string {
     status: campaign.status,
     startsAt: campaign.starts_at,
     endsAt: campaign.ends_at,
-  });
-}
-
-function getCampaignDraftPreviewStatus(draft: CampaignDraft): string {
-  return getWindowPreviewStatus({
-    status: draft.status,
-    startsAt: toIsoOrNull(draft.starts_at),
-    endsAt: toIsoOrNull(draft.ends_at),
   });
 }
 
