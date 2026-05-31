@@ -105,6 +105,102 @@ function createNoRiskDbMock() {
   };
 }
 
+function createHighFrequencyGachaDbMock(recentOrderCount: number) {
+  const riskBuilder = {
+    select: vi.fn(() => riskBuilder),
+    eq: vi.fn(() => riskBuilder),
+    limit: vi.fn(() => Promise.resolve({ data: [], count: 0, error: null })),
+    then: (
+      resolve: (value: {
+        data: unknown[];
+        count: number;
+        error: null;
+      }) => unknown,
+      reject?: (reason: unknown) => unknown,
+    ) =>
+      Promise.resolve(resolve({ data: [], count: 0, error: null })).catch(
+        reject,
+      ),
+  };
+  const drawOrdersBuilder = {
+    select: vi.fn(() => drawOrdersBuilder),
+    eq: vi.fn(() => drawOrdersBuilder),
+    gte: vi.fn(() => drawOrdersBuilder),
+    then: (
+      resolve: (value: {
+        data: unknown[];
+        count: number;
+        error: null;
+      }) => unknown,
+      reject?: (reason: unknown) => unknown,
+    ) =>
+      Promise.resolve(
+        resolve({ data: [], count: recentOrderCount, error: null }),
+      ).catch(reject),
+  };
+
+  return {
+    schema: vi.fn((schema: string) => ({
+      from: vi.fn((table: string) =>
+        schema === "gacha" && table === "draw_orders"
+          ? drawOrdersBuilder
+          : riskBuilder,
+      ),
+    })),
+  };
+}
+
+function createRiskFlagDbMock(flagCode: string) {
+  const builder = {
+    select: vi.fn(() => builder),
+    eq: vi.fn(() => builder),
+    limit: vi.fn(() =>
+      Promise.resolve({
+        data: [
+          {
+            flag_code: flagCode,
+            flag_level: "restriction",
+            active: true,
+            ends_at: null,
+            metadata: { reason: "risk test" },
+          },
+        ],
+        count: 1,
+        error: null,
+      }),
+    ),
+    then: (
+      resolve: (value: {
+        data: unknown[];
+        count: number;
+        error: null;
+      }) => unknown,
+      reject?: (reason: unknown) => unknown,
+    ) =>
+      Promise.resolve(
+        resolve({
+          data: [
+            {
+              flag_code: flagCode,
+              flag_level: "restriction",
+              active: true,
+              ends_at: null,
+              metadata: { reason: "risk test" },
+            },
+          ],
+          count: 1,
+          error: null,
+        }),
+      ).catch(reject),
+  };
+
+  return {
+    schema: vi.fn(() => ({
+      from: vi.fn(() => builder),
+    })),
+  };
+}
+
 describe("boxes API helpers", () => {
   beforeEach(() => {
     process.env.NODE_ENV = "test";
@@ -402,6 +498,35 @@ describe("boxes API helpers", () => {
     );
   });
 
+  it("/api/boxes/create-open-order rejects gacha_blocked users before creating orders", async () => {
+    getSupabaseAdminMock.mockReturnValue(createRiskFlagDbMock("gacha_blocked"));
+
+    const { default: createOrderHandler } =
+      await import("../../api/boxes/create-open-order");
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      createOrderHandler,
+      {
+        method: "POST",
+        url: "/api/boxes/create-open-order",
+        headers: {
+          cookie: "tma_game_session=test-session-token-000000000000",
+          "content-type": "application/json",
+        },
+        body: {
+          box_id: BOX_ID,
+          draw_count: 1,
+          expected_price_stars: 10,
+          expected_pool_version_id: POOL_VERSION_ID,
+          idempotency_key: IDEMPOTENCY_KEY,
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(403);
+    expect(result.body.error.code).toBe("RISK_REJECTED");
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+  });
+
   it("/api/boxes/create-open-order creates a single draw order", async () => {
     callRpcRawMock.mockResolvedValueOnce({
       draw_order_id: ORDER_ID,
@@ -470,6 +595,66 @@ describe("boxes API helpers", () => {
         userId: USER_ID,
         invoicePayload: INVOICE_PAYLOAD,
         xtrAmount: 10,
+      }),
+    );
+  });
+
+  it("/api/boxes/create-open-order records gacha_high_frequency risk events", async () => {
+    getSupabaseAdminMock.mockReturnValue(createHighFrequencyGachaDbMock(6));
+    callRpcRawMock
+      .mockResolvedValueOnce({
+        draw_order_id: ORDER_ID,
+        star_order_id: STAR_ORDER_ID,
+        invoice_payload: INVOICE_PAYLOAD,
+        xtr_amount: 10,
+        quantity: 1,
+        discount_bps: 0,
+        pool_version_id: POOL_VERSION_ID,
+        idempotent: false,
+      })
+      .mockResolvedValueOnce({
+        risk_event_id: "99999999-9999-4999-8999-999999999999",
+        status: "open",
+      });
+
+    const { default: createOrderHandler } =
+      await import("../../api/boxes/create-open-order");
+    const result = await invokeApiHandler<ApiSuccessResponse>(
+      createOrderHandler,
+      {
+        method: "POST",
+        url: "/api/boxes/create-open-order",
+        headers: {
+          cookie: "tma_game_session=test-session-token-000000000000",
+          "content-type": "application/json",
+          "x-request-id": "req-gacha-high-frequency",
+        },
+        body: {
+          box_id: BOX_ID,
+          draw_count: 1,
+          expected_price_stars: 10,
+          expected_pool_version_id: POOL_VERSION_ID,
+          idempotency_key: IDEMPOTENCY_KEY,
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(200);
+    expect(callRpcRawMock).toHaveBeenNthCalledWith(
+      2,
+      "risk_record_event",
+      expect.objectContaining({
+        p_event_type: "gacha_high_frequency",
+        p_source_type: "gacha_order",
+        p_source_id: ORDER_ID,
+        p_idempotency_key: `risk:gacha_high_frequency:${ORDER_ID}:${IDEMPOTENCY_KEY}`,
+      }),
+      expect.objectContaining({
+        schema: "api",
+        context: expect.objectContaining({
+          requestId: "req-gacha-high-frequency",
+          userId: USER_ID,
+        }),
       }),
     );
   });

@@ -522,8 +522,50 @@ export type RiskUserSummary = {
   metadata?: unknown;
 };
 
+export type RiskDeviceSummary = {
+  id?: string;
+  deviceHash?: string | null;
+  device_hash?: string | null;
+  deviceLast4?: string | null;
+  device_last4?: string | null;
+  ipHash?: string | null;
+  ip_hash?: string | null;
+  platform?: string | null;
+  userAgentHash?: string | null;
+  user_agent_hash?: string | null;
+  firstSeenAt?: string | null;
+  first_seen_at?: string | null;
+  lastSeenAt?: string | null;
+  last_seen_at?: string | null;
+  createdAt?: string;
+  created_at?: string;
+  expiresAt?: string;
+  expires_at?: string;
+  revoked?: boolean;
+  metadata?: unknown;
+};
+
 export type RiskUserProfile = {
   user: RiskUserSummary;
+  devices: Record<string, unknown> & {
+    deviceCount?: number;
+    device_count?: number;
+    sessionCount?: number;
+    session_count?: number;
+    ipHashCount?: number;
+    ip_hash_count?: number;
+    recentIpHashes?: string[];
+    recent_ip_hashes?: string[];
+    recentDeviceHashes?: string[];
+    recent_device_hashes?: string[];
+    devices?: RiskDeviceSummary[];
+    sessions?: RiskDeviceSummary[];
+    items?: RiskDeviceSummary[];
+    pageCount?: number;
+    page_count?: number;
+    nextCursor?: string | null;
+    next_cursor?: string | null;
+  };
   flags: {
     active?: UserFlag[];
     recent?: UserFlag[];
@@ -554,6 +596,8 @@ export type RiskUserProfile = {
     success_count?: number;
     failedCount?: number;
     failed_count?: number;
+    failureRate?: number;
+    failure_rate?: number;
     disputedCount?: number;
     disputed_count?: number;
     pageCount?: number;
@@ -624,6 +668,7 @@ export type RiskUserProfile = {
 };
 
 export type RiskUserProfileSection =
+  | "devices"
   | "flags"
   | "payments"
   | "market"

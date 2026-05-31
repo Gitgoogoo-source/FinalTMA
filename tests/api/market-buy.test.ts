@@ -11,9 +11,9 @@ import { invokeApiHandler } from "./_utils";
 
 const { callRpcRawMock, getSupabaseAdminMock, requireSessionMock } = vi.hoisted(
   () => ({
-  callRpcRawMock: vi.fn(),
-  getSupabaseAdminMock: vi.fn(),
-  requireSessionMock: vi.fn(),
+    callRpcRawMock: vi.fn(),
+    getSupabaseAdminMock: vi.fn(),
+    requireSessionMock: vi.fn(),
   }),
 );
 
@@ -93,6 +93,56 @@ function createMarketBuyDbMock(
   };
 }
 
+function createMarketBuyRiskFlagDbMock(flagCode: string) {
+  return {
+    schema: vi.fn((schema: string) => ({
+      from: vi.fn((table: string) => {
+        const builder = {
+          select: vi.fn(() => builder),
+          eq: vi.fn(() => builder),
+          limit: vi.fn(() =>
+            Promise.resolve({
+              data:
+                schema === "core" && table === "user_flags"
+                  ? [
+                      {
+                        flag_code: flagCode,
+                        flag_level: "restriction",
+                        active: true,
+                        ends_at: null,
+                        metadata: { reason: "risk test" },
+                      },
+                    ]
+                  : [],
+              error: null,
+            }),
+          ),
+          maybeSingle: vi.fn(() =>
+            Promise.resolve({
+              data:
+                schema === "market" && table === "listings"
+                  ? {
+                      id: LISTING_ID,
+                      seller_user_id: SELLER_ID,
+                      status: "active",
+                    }
+                  : null,
+              error: null,
+            }),
+          ),
+          then: (
+            resolve: (value: { data: unknown[]; error: null }) => unknown,
+            reject?: (reason: unknown) => unknown,
+          ) =>
+            Promise.resolve(resolve({ data: [], error: null })).catch(reject),
+        };
+
+        return builder;
+      }),
+    })),
+  };
+}
+
 describe("market buy API focused coverage", () => {
   beforeEach(() => {
     process.env.NODE_ENV = "test";
@@ -152,6 +202,27 @@ describe("market buy API focused coverage", () => {
 
     expect(result.statusCode).toBe(400);
     expect(result.body.error.code).toBe("VALIDATION_ERROR");
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects market_buy_blocked users before calling the purchase RPC", async () => {
+    getSupabaseAdminMock.mockReturnValue(
+      createMarketBuyRiskFlagDbMock("market_buy_blocked"),
+    );
+
+    const result = await invokeApiHandler<ApiErrorResponse>(buyListingHandler, {
+      method: "POST",
+      headers: {
+        "x-idempotency-key": IDEMPOTENCY_KEY,
+      },
+      body: {
+        listing_id: LISTING_ID,
+        expected_unit_price_kcoin: 500,
+      },
+    });
+
+    expect(result.statusCode).toBe(403);
+    expect(result.body.error.code).toBe("RISK_REJECTED");
     expect(callRpcRawMock).not.toHaveBeenCalled();
   });
 

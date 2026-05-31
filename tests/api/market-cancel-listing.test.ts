@@ -9,10 +9,13 @@ import cancelListingHandler from "../../api/market/cancel-listing";
 import { RpcError } from "../../packages/server/src/db/rpc";
 import { invokeApiHandler } from "./_utils";
 
-const { callRpcRawMock, requireSessionMock } = vi.hoisted(() => ({
-  callRpcRawMock: vi.fn(),
-  requireSessionMock: vi.fn(),
-}));
+const { callRpcRawMock, getSupabaseAdminMock, requireSessionMock } = vi.hoisted(
+  () => ({
+    callRpcRawMock: vi.fn(),
+    getSupabaseAdminMock: vi.fn(),
+    requireSessionMock: vi.fn(),
+  }),
+);
 
 vi.mock("../../packages/server/src/db/rpc.js", () => ({
   callRpcRaw: callRpcRawMock,
@@ -42,6 +45,7 @@ vi.mock("../../packages/server/src/db/rpc.js", () => ({
 }));
 
 vi.mock("../../api/_shared/requireSession.js", () => ({
+  getSupabaseAdmin: getSupabaseAdminMock,
   requireSession: requireSessionMock,
 }));
 
@@ -51,10 +55,27 @@ const LISTING_ID = "22222222-2222-4222-8222-222222222222";
 const ITEM_ID = "66666666-6666-4666-8666-666666666666";
 const IDEMPOTENCY_KEY = "market:cancel-listing-focused-0001";
 
+function createRiskDbMock(rows: Array<Record<string, unknown>> = []) {
+  const builder = {
+    select: vi.fn(() => builder),
+    eq: vi.fn(() => builder),
+    limit: vi.fn(() => Promise.resolve({ data: rows, error: null })),
+  };
+
+  return {
+    schema: vi.fn(() => ({
+      from: vi.fn(() => builder),
+    })),
+  };
+}
+
 describe("market cancel listing API focused coverage", () => {
   beforeEach(() => {
     process.env.NODE_ENV = "test";
+    process.env.FEATURE_MARKET_ENABLED = "true";
     callRpcRawMock.mockReset();
+    getSupabaseAdminMock.mockReset();
+    getSupabaseAdminMock.mockReturnValue(createRiskDbMock());
     requireSessionMock.mockReset();
     requireSessionMock.mockResolvedValue({
       sessionId: "session-market-cancel-listing-focused-test",
@@ -162,6 +183,37 @@ describe("market cancel listing API focused coverage", () => {
       status: "cancelled",
       released_item_instance_ids: [ITEM_ID],
     });
+  });
+
+  it("rejects market_sell_blocked users before calling the cancel listing RPC", async () => {
+    getSupabaseAdminMock.mockReturnValue(
+      createRiskDbMock([
+        {
+          flag_code: "market_sell_blocked",
+          flag_level: "restriction",
+          active: true,
+          ends_at: null,
+          metadata: { reason: "risk test" },
+        },
+      ]),
+    );
+
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      cancelListingHandler,
+      {
+        method: "POST",
+        headers: {
+          "x-idempotency-key": IDEMPOTENCY_KEY,
+        },
+        body: {
+          listing_id: LISTING_ID,
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(403);
+    expect(result.body.error.code).toBe("RISK_REJECTED");
+    expect(callRpcRawMock).not.toHaveBeenCalled();
   });
 
   it("maps non-seller RPC errors to FORBIDDEN", async () => {

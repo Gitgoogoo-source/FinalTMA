@@ -673,7 +673,7 @@ export class RiskControl {
         : currentResult;
 
       if (error || !data) {
-        return [];
+        return [riskGuardUnavailableFlag(error?.message)];
       }
 
       return data.filter((flag) => {
@@ -690,8 +690,12 @@ export class RiskControl {
         const expiresAt = new Date(expiresAtValue);
         return Number.isFinite(expiresAt.getTime()) && expiresAt > input.now;
       });
-    } catch {
-      return [];
+    } catch (error) {
+      return [
+        riskGuardUnavailableFlag(
+          error instanceof Error ? error.message : String(error),
+        ),
+      ];
     }
   }
 
@@ -706,6 +710,18 @@ export class RiskControl {
       const metadata = sanitizeMetadata(flag.metadata ?? {}) ?? {};
 
       if (!flagName) {
+        continue;
+      }
+
+      if (flagName === "risk_guard_unavailable") {
+        pushSignal(signals, {
+          code: "USER_FLAGS_LOOKUP_FAILED",
+          severity: "critical",
+          score: 100,
+          decision: "deny",
+          message: "用户风控状态读取失败，关键写操作已拦截。",
+          metadata,
+        });
         continue;
       }
 
@@ -755,6 +771,18 @@ export class RiskControl {
           score: 100,
           decision: "deny",
           message: "用户被限制市场出售。",
+          metadata,
+        });
+        continue;
+      }
+
+      if (flagName === "market_blocked" && isMarketAction(input.action)) {
+        pushSignal(signals, {
+          code: "USER_MARKET_BLOCKED",
+          severity,
+          score: 100,
+          decision: "deny",
+          message: "用户被限制使用交易市场。",
           metadata,
         });
         continue;
@@ -1804,6 +1832,18 @@ function pushSignal(signals: RiskSignal[], signal: RiskSignal): void {
     ...signal,
     score: Math.min(100, Math.max(0, Math.round(signal.score))),
   });
+}
+
+function riskGuardUnavailableFlag(reason?: string): UserFlagRecord {
+  return {
+    flag_code: "risk_guard_unavailable",
+    flag_level: "critical",
+    active: true,
+    metadata: {
+      reason: "user_flags_lookup_failed",
+      ...(reason ? { error: reason } : {}),
+    },
+  };
 }
 
 function requiresUser(action: RiskAction): boolean {

@@ -8,8 +8,8 @@ import {
   mapAdminRpcError,
   normalizeRequiredText,
   normalizeRequiredUuid,
-  readBodyIdempotencyKey,
-  requireAdminConfirmation,
+  readHeaderIdempotencyKey,
+  requireAdminConfirmHeader,
 } from "../_shared.js";
 import {
   normalizeJsonMetadata,
@@ -31,20 +31,15 @@ export default withApiHandler(
       await parseJsonBody(req, { maxBytes: 32 * 1024 }),
     );
 
-    requireAdminConfirmation(req, body);
+    requireAdminConfirmHeader(req);
 
-    const idempotencyKey = readBodyIdempotencyKey(req, body);
-    const userId = normalizeRequiredUuid(
-      body.userId ?? body.user_id,
-      "userId",
-    );
+    const idempotencyKey = readHeaderIdempotencyKey(req);
+    const userId = normalizeRequiredUuid(body.userId ?? body.user_id, "userId");
     const flagCode = normalizeRequiredText(
       body.flagCode ?? body.flag_code,
       "flagCode",
     );
-    const flagLevel = normalizeUserFlagLevel(
-      body.flagLevel ?? body.flag_level,
-    );
+    const flagLevel = normalizeUserFlagLevel(body.flagLevel ?? body.flag_level);
     const reason = normalizeRequiredText(body.reason, "reason");
     const endsAt = normalizeOptionalIsoDateTime(
       body.endsAt ?? body.ends_at,

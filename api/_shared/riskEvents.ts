@@ -8,13 +8,17 @@ export type RecordRiskEventInput = {
   sourceId?: string | null;
   scoreDelta?: number | null;
   detail?: Record<string, unknown>;
-  idempotencyKey?: string | null;
+  idempotencyKey: string;
   context?: Record<string, unknown>;
 };
 
 export async function recordRiskEvent(
   input: RecordRiskEventInput,
 ): Promise<Record<string, unknown>> {
+  if (!input.idempotencyKey.trim()) {
+    throw new Error("risk_record_event requires an idempotency key");
+  }
+
   return callRpcRaw<Record<string, unknown>>(
     "risk_record_event",
     {
@@ -25,7 +29,7 @@ export async function recordRiskEvent(
       p_source_id: input.sourceId ?? null,
       p_score_delta: input.scoreDelta ?? null,
       p_detail: input.detail ?? {},
-      p_idempotency_key: input.idempotencyKey ?? null,
+      p_idempotency_key: input.idempotencyKey,
     },
     {
       schema: "api" as never,

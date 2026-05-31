@@ -154,6 +154,18 @@ export function requireAdminConfirmation(
   }
 }
 
+export function requireAdminConfirmHeader(req: VercelRequest): void {
+  const header = getHeaderValue(req.headers["x-admin-confirm"]);
+
+  if (header?.trim().toLowerCase() !== "true") {
+    throw new ApiError(
+      400,
+      "ADMIN_CONFIRMATION_REQUIRED",
+      "High-risk admin operation requires X-Admin-Confirm: true",
+    );
+  }
+}
+
 export function readBodyIdempotencyKey(
   req: VercelRequest,
   body: JsonRecord,
@@ -167,6 +179,20 @@ export function readBodyIdempotencyKey(
       400,
       "IDEMPOTENCY_KEY_REQUIRED",
       "Idempotency key is required",
+    );
+  }
+
+  return idempotencyKey;
+}
+
+export function readHeaderIdempotencyKey(req: VercelRequest): string {
+  const idempotencyKey = getIdempotencyKey(req);
+
+  if (!idempotencyKey) {
+    throw new ApiError(
+      400,
+      "IDEMPOTENCY_KEY_REQUIRED",
+      "X-Idempotency-Key header is required",
     );
   }
 

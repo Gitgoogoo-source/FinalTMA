@@ -382,6 +382,10 @@ begin
     raise exception 'RISK_EVENT_TYPE_REQUIRED' using errcode = 'P0001';
   end if;
 
+  if v_key is null then
+    raise exception 'RISK_IDEMPOTENCY_KEY_REQUIRED' using errcode = 'P0001';
+  end if;
+
   select s.value -> v_event_type
   into v_config
   from ops.system_settings s
@@ -422,11 +426,9 @@ begin
     'detail', coalesce(p_detail, '{}'::jsonb)
   )::text;
 
-  if v_key is not null then
-    v_idempotent := api._admin_start_idempotency(v_key, v_scope, v_request_hash, v_now);
-    if v_idempotent is not null then
-      return v_idempotent;
-    end if;
+  v_idempotent := api._admin_start_idempotency(v_key, v_scope, v_request_hash, v_now);
+  if v_idempotent is not null then
+    return v_idempotent;
   end if;
 
   if p_user_id is not null then
@@ -524,9 +526,7 @@ begin
     'idempotent', false
   );
 
-  if v_key is not null then
-    perform api._admin_complete_idempotency(v_key, v_response, v_now);
-  end if;
+  perform api._admin_complete_idempotency(v_key, v_response, v_now);
 
   return v_response;
 end;

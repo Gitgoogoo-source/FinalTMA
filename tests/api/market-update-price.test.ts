@@ -9,10 +9,13 @@ import updatePriceHandler from "../../api/market/update-price";
 import { RpcError } from "../../packages/server/src/db/rpc";
 import { invokeApiHandler } from "./_utils";
 
-const { callRpcRawMock, requireSessionMock } = vi.hoisted(() => ({
-  callRpcRawMock: vi.fn(),
-  requireSessionMock: vi.fn(),
-}));
+const { callRpcRawMock, getSupabaseAdminMock, requireSessionMock } = vi.hoisted(
+  () => ({
+    callRpcRawMock: vi.fn(),
+    getSupabaseAdminMock: vi.fn(),
+    requireSessionMock: vi.fn(),
+  }),
+);
 
 vi.mock("../../packages/server/src/db/rpc.js", () => ({
   callRpcRaw: callRpcRawMock,
@@ -42,6 +45,7 @@ vi.mock("../../packages/server/src/db/rpc.js", () => ({
 }));
 
 vi.mock("../../api/_shared/requireSession.js", () => ({
+  getSupabaseAdmin: getSupabaseAdminMock,
   requireSession: requireSessionMock,
 }));
 
@@ -50,11 +54,30 @@ const FORGED_USER_ID = "99999999-9999-4999-8999-999999999999";
 const LISTING_ID = "22222222-2222-4222-8222-222222222222";
 const IDEMPOTENCY_KEY = "market:update-price-focused-0001";
 
+function createRiskDbMock(
+  rows: Array<Record<string, unknown>> = [],
+  error: { message: string } | null = null,
+) {
+  const builder = {
+    select: vi.fn(() => builder),
+    eq: vi.fn(() => builder),
+    limit: vi.fn(() => Promise.resolve({ data: error ? null : rows, error })),
+  };
+
+  return {
+    schema: vi.fn(() => ({
+      from: vi.fn(() => builder),
+    })),
+  };
+}
+
 describe("market update price API focused coverage", () => {
   beforeEach(() => {
     process.env.NODE_ENV = "test";
     process.env.FEATURE_MARKET_ENABLED = "true";
     callRpcRawMock.mockReset();
+    getSupabaseAdminMock.mockReset();
+    getSupabaseAdminMock.mockReturnValue(createRiskDbMock());
     requireSessionMock.mockReset();
     requireSessionMock.mockResolvedValue({
       sessionId: "session-market-update-price-focused-test",
@@ -164,6 +187,65 @@ describe("market update price API focused coverage", () => {
       listing_id: LISTING_ID,
       unit_price_kcoin: 650,
     });
+  });
+
+  it("rejects market_sell_blocked users before calling the price update RPC", async () => {
+    getSupabaseAdminMock.mockReturnValue(
+      createRiskDbMock([
+        {
+          flag_code: "market_sell_blocked",
+          flag_level: "restriction",
+          active: true,
+          ends_at: null,
+          metadata: { reason: "risk test" },
+        },
+      ]),
+    );
+
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      updatePriceHandler,
+      {
+        method: "POST",
+        headers: {
+          "x-idempotency-key": IDEMPOTENCY_KEY,
+        },
+        body: {
+          listing_id: LISTING_ID,
+          new_unit_price_kcoin: 650,
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(403);
+    expect(result.body.error.code).toBe("RISK_REJECTED");
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+  });
+
+  it("fails closed when user_flags cannot be read before price update", async () => {
+    getSupabaseAdminMock.mockReturnValue(
+      createRiskDbMock([], { message: "user_flags unavailable" }),
+    );
+
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      updatePriceHandler,
+      {
+        method: "POST",
+        headers: {
+          "x-idempotency-key": IDEMPOTENCY_KEY,
+        },
+        body: {
+          listing_id: LISTING_ID,
+          new_unit_price_kcoin: 650,
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(403);
+    expect(result.body.error.code).toBe("RISK_REJECTED");
+    expect(JSON.stringify(result.body.error.details)).toContain(
+      "USER_FLAGS_LOOKUP_FAILED",
+    );
+    expect(callRpcRawMock).not.toHaveBeenCalled();
   });
 
   it("maps non-seller RPC errors to FORBIDDEN", async () => {

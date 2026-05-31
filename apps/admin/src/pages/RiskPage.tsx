@@ -115,8 +115,9 @@ export function RiskPage(props: { canWriteRisk?: boolean }) {
   const [notice, setNotice] = useState<string | null>(null);
   const [busyTarget, setBusyTarget] = useState<string | null>(null);
   const [dangerDraft, setDangerDraft] = useState<DangerDraft | null>(null);
-  const [selectedFlagCode, setSelectedFlagCode] =
-    useState<(typeof USER_FLAG_CODES)[number]>("support_review_required");
+  const [selectedFlagCode, setSelectedFlagCode] = useState<
+    (typeof USER_FLAG_CODES)[number]
+  >("support_review_required");
 
   const events = data?.items ?? [];
   const selectedUserId = selectedEvent ? getEventUserId(selectedEvent) : null;
@@ -139,7 +140,9 @@ export function RiskPage(props: { canWriteRisk?: boolean }) {
       setSelectedEvent((current) => {
         if (
           current &&
-          response.items.some((item) => getEventId(item) === getEventId(current))
+          response.items.some(
+            (item) => getEventId(item) === getEventId(current),
+          )
         ) {
           return current;
         }
@@ -192,7 +195,9 @@ export function RiskPage(props: { canWriteRisk?: boolean }) {
         limit: PROFILE_SECTION_LIMIT,
       });
       setProfile((current) =>
-        current ? mergeProfileSection(current, nextProfile, section) : nextProfile,
+        current
+          ? mergeProfileSection(current, nextProfile, section)
+          : nextProfile,
       );
     } catch (loadError) {
       setProfileError(formatError(loadError, "用户画像分页加载失败"));
@@ -306,9 +311,7 @@ export function RiskPage(props: { canWriteRisk?: boolean }) {
           eventType: getEventType(draft.event),
           previousStatus: getEventStatus(draft.event),
         },
-        ...(draft.status === "fixed"
-          ? { fixMethod: "admin_risk_center" }
-          : {}),
+        ...(draft.status === "fixed" ? { fixMethod: "admin_risk_center" } : {}),
         ...(draft.status === "escalated"
           ? { escalationOwner: "risk_team" }
           : {}),
@@ -405,10 +408,7 @@ export function RiskPage(props: { canWriteRisk?: boolean }) {
           <span>Severity</span>
           <select
             onChange={(event) =>
-              updateFilter(
-                "severity",
-                event.target.value as RiskSeverity | "",
-              )
+              updateFilter("severity", event.target.value as RiskSeverity | "")
             }
             value={filters.severity}
           >
@@ -551,7 +551,9 @@ export function RiskPage(props: { canWriteRisk?: boolean }) {
                     <RiskEventRow
                       event={event}
                       key={getEventId(event)}
-                      selected={getEventId(event) === getSelectedEventId(selectedEvent)}
+                      selected={
+                        getEventId(event) === getSelectedEventId(selectedEvent)
+                      }
                       onSelect={setSelectedEvent}
                     />
                   ))
@@ -582,12 +584,12 @@ export function RiskPage(props: { canWriteRisk?: boolean }) {
         </section>
 
         <section className="detail-panel" aria-label="Risk event detail">
-        <RiskEventDetail
-          busyTarget={busyTarget}
-          canWriteRisk={canWriteRisk}
-          event={selectedEvent}
-          onResolve={(event, status) =>
-            setDangerDraft({ kind: "resolve", event, status })
+          <RiskEventDetail
+            busyTarget={busyTarget}
+            canWriteRisk={canWriteRisk}
+            event={selectedEvent}
+            onResolve={(event, status) =>
+              setDangerDraft({ kind: "resolve", event, status })
             }
           />
         </section>
@@ -638,7 +640,9 @@ export function RiskPage(props: { canWriteRisk?: boolean }) {
         confirmLabel={getDangerConfirmLabel(dangerDraft)}
         description={getDangerDescription(dangerDraft)}
         isOpen={dangerDraft !== null}
-        pending={dangerDraft ? busyTarget === getDangerTargetValue(dangerDraft) : false}
+        pending={
+          dangerDraft ? busyTarget === getDangerTargetValue(dangerDraft) : false
+        }
         targetLabel={getDangerTargetLabel(dangerDraft)}
         targetValue={getDangerTargetValue(dangerDraft)}
         title={getDangerTitle(dangerDraft)}
@@ -773,7 +777,9 @@ function RiskEventDetail(props: {
                   </span>
                   <span>
                     <small>Summary</small>
-                    <strong>{formatAssociationSummary(association.summary)}</strong>
+                    <strong>
+                      {formatAssociationSummary(association.summary)}
+                    </strong>
                   </span>
                 </div>
               </section>
@@ -797,13 +803,13 @@ function RiskEventDetail(props: {
         <div className="payment-detail-section__title">
           <h3>风险上下文 detail</h3>
         </div>
-        <pre className="payment-detail-json">
-          {stringifyJson(event.detail)}
-        </pre>
+        <pre className="payment-detail-json">{stringifyJson(event.detail)}</pre>
       </div>
 
       {!props.canWriteRisk ? (
-        <p className="notice">当前账号为风控只读权限，不能处理事件或修改限制。</p>
+        <p className="notice">
+          当前账号为风控只读权限，不能处理事件或修改限制。
+        </p>
       ) : null}
 
       <div className="action-cell">
@@ -860,6 +866,10 @@ function RiskProfilePanel(props: {
   const userId = user.id;
   const riskTimeline =
     props.profile.riskEvents.items ?? props.profile.riskEvents.recent ?? [];
+  const deviceItems = readRecordArray(
+    props.profile.devices.items ?? props.profile.devices.devices,
+  );
+  const sessionItems = readRecordArray(props.profile.devices.sessions);
   const walletItems = readRecordArray(props.profile.wallets.items);
   const paymentRecent = readRecordArray(
     props.profile.payments.items ?? props.profile.payments.recent,
@@ -888,16 +898,22 @@ function RiskProfilePanel(props: {
         </span>
         <span>
           <small>Telegram</small>
-          <strong>{formatValue(user.telegramUserId ?? user.telegram_user_id)}</strong>
+          <strong>
+            {formatValue(user.telegramUserId ?? user.telegram_user_id)}
+          </strong>
         </span>
         <span>
           <small>Last seen</small>
-          <strong>{formatDate(user.lastSeenAt ?? user.last_seen_at ?? null)}</strong>
+          <strong>
+            {formatDate(user.lastSeenAt ?? user.last_seen_at ?? null)}
+          </strong>
         </span>
       </div>
 
       {!props.canWriteRisk ? (
-        <p className="notice">当前账号为 SUPPORT/只读风控权限，只能查看画像和事件。</p>
+        <p className="notice">
+          当前账号为 SUPPORT/只读风控权限，只能查看画像和事件。
+        </p>
       ) : null}
 
       <div className="toolbar">
@@ -936,6 +952,26 @@ function RiskProfilePanel(props: {
       <div className="ops-grid">
         <SummaryPanel
           rows={[
+            [
+              "设备数",
+              props.profile.devices.deviceCount ??
+                props.profile.devices.device_count,
+            ],
+            [
+              "会话数",
+              props.profile.devices.sessionCount ??
+                props.profile.devices.session_count,
+            ],
+            [
+              "IP hash 数",
+              props.profile.devices.ipHashCount ??
+                props.profile.devices.ip_hash_count,
+            ],
+          ]}
+          title="设备 / IP 摘要"
+        />
+        <SummaryPanel
+          rows={[
             ["钱包数", props.profile.wallets.count],
             [
               "复用用户数",
@@ -966,6 +1002,13 @@ function RiskProfilePanel(props: {
                   props.profile.payments.disputed_count,
               )}`,
             ],
+            [
+              "失败率",
+              formatPercent(
+                props.profile.payments.failureRate ??
+                  props.profile.payments.failure_rate,
+              ),
+            ],
           ]}
           title="支付摘要"
         />
@@ -973,7 +1016,8 @@ function RiskProfilePanel(props: {
           rows={[
             [
               "买入订单",
-              props.profile.market.buyerCount ?? props.profile.market.buyer_count,
+              props.profile.market.buyerCount ??
+                props.profile.market.buyer_count,
             ],
             [
               "卖出订单",
@@ -1057,6 +1101,26 @@ function RiskProfilePanel(props: {
         )}
       </section>
 
+      <div className="split-grid split-grid--even">
+        <RecordTable
+          emptyText="暂无设备摘要"
+          rows={deviceItems}
+          title="设备 hash"
+          columns={["deviceHash", "platform", "userAgentHash", "lastSeenAt"]}
+          loading={props.sectionLoading === "devices"}
+          nextCursor={readNextCursor(props.profile.devices)}
+          onNext={() => props.onLoadSection("devices")}
+        />
+        <RecordTable
+          emptyText="暂无登录 IP 摘要"
+          rows={sessionItems}
+          title="近期 IP hash"
+          columns={["ipHash", "deviceHash", "platform", "createdAt"]}
+          loading={props.sectionLoading === "devices"}
+          nextCursor={readNextCursor(props.profile.devices)}
+          onNext={() => props.onLoadSection("devices")}
+        />
+      </div>
       <div className="split-grid split-grid--even">
         <RecordTable
           emptyText="暂无钱包摘要"
@@ -1313,6 +1377,8 @@ function getProfileSectionNextCursor(
   section: RiskUserProfileSection,
 ): string | null {
   switch (section) {
+    case "devices":
+      return readNextCursor(profile.devices);
     case "flags":
       return readNextCursor(profile.flags);
     case "payments":
@@ -1334,6 +1400,8 @@ function mergeProfileSection(
   section: RiskUserProfileSection,
 ): RiskUserProfile {
   switch (section) {
+    case "devices":
+      return { ...current, devices: next.devices };
     case "flags":
       return { ...current, flags: next.flags };
     case "payments":
@@ -1412,7 +1480,12 @@ function collectAssociationRowsFromValue(
 
   if (Array.isArray(value)) {
     value.slice(0, 5).forEach((item, index) => {
-      collectAssociationRowsFromValue(item, `${path}[${index}]`, rows, depth + 1);
+      collectAssociationRowsFromValue(
+        item,
+        `${path}[${index}]`,
+        rows,
+        depth + 1,
+      );
     });
     return;
   }
@@ -1631,15 +1704,26 @@ function formatCounts(counts: Record<string, number>): string {
 
 function readRecordArray(value: unknown): Array<Record<string, unknown>> {
   return Array.isArray(value)
-    ? value.filter((item): item is Record<string, unknown> => isRecordLike(item))
+    ? value.filter((item): item is Record<string, unknown> =>
+        isRecordLike(item),
+      )
     : [];
 }
 
-function formatRecordCell(row: Record<string, unknown>, column: string): string {
+function formatRecordCell(
+  row: Record<string, unknown>,
+  column: string,
+): string {
   const value = row[column] ?? row[toSnakeCase(column)];
 
   if (column === "id" && typeof value === "string") {
     return shortId(value);
+  }
+
+  if (column.toLowerCase().endsWith("hash") && typeof value === "string") {
+    return value.length > 16
+      ? `${value.slice(0, 8)}...${value.slice(-6)}`
+      : value;
   }
 
   if (column.toLowerCase().endsWith("at") && typeof value === "string") {

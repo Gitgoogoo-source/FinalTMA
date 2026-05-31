@@ -69,8 +69,7 @@ const NAV_ITEMS: AdminNavItem[] = [
     id: "risk",
     label: "风控",
     icon: ShieldAlert,
-    requiredPermissions: ["risk:read", "admin:read"],
-    permissionMode: "any",
+    requiredPermissions: ["risk:read"],
   },
   {
     id: "mint",

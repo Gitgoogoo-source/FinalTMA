@@ -274,13 +274,16 @@ export const TaskPeriodTypeSchema = z.enum([
 ]);
 
 export const RiskEventStatusSchema = z.enum([
-  "OPEN",
-  "REVIEWING",
-  "RESOLVED",
-  "IGNORED",
+  "open",
+  "reviewing",
+  "resolved",
+  "ignored",
+  "fixed",
+  "false_positive",
+  "escalated",
 ]);
 
-export const RiskSeveritySchema = z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]);
+export const RiskSeveritySchema = z.enum(["low", "medium", "high", "critical"]);
 
 /* -------------------------------------------------------------------------- */
 /* 奖励 schema                                                                  */
@@ -909,22 +912,28 @@ export const AdminListRiskEventsQuerySchema = PaginationQuerySchema.extend({
   userId: UUIDSchema.optional(),
   status: RiskEventStatusSchema.optional(),
   severity: RiskSeveritySchema.optional(),
+  eventType: CodeSchema.optional(),
   eventCode: CodeSchema.optional(),
+  sourceType: CodeSchema.optional(),
+  sourceId: UUIDSchema.optional(),
+  sort: z.enum(["severity", "created_at"]).optional(),
   from: DateOnlySchema.optional(),
   to: DateOnlySchema.optional(),
 });
 
 export const AdminResolveRiskEventBodySchema = z.object({
   riskEventId: UUIDSchema,
-  status: z.enum(["RESOLVED", "IGNORED"]),
-  action: z.enum([
-    "NO_ACTION",
-    "WARN_USER",
-    "FREEZE_USER",
-    "BAN_USER",
-    "LIMIT_MARKET",
-    "LIMIT_GACHA",
+  status: z.enum([
+    "reviewing",
+    "ignored",
+    "fixed",
+    "false_positive",
+    "escalated",
+    "resolved",
   ]),
+  fixMethod: z.string().trim().min(1).max(120).optional(),
+  escalationOwner: z.string().trim().min(1).max(120).optional(),
+  escalationTicketId: z.string().trim().min(1).max(120).optional(),
   reason: AdminReasonSchema,
   idempotencyKey: IdempotencyKeySchema,
 });

@@ -479,6 +479,37 @@ describe("admin gacha APIs", () => {
       }),
     );
   });
+
+  it("rejects risk-only admins before probability publish writes", async () => {
+    requireAdminMock.mockRejectedValueOnce(
+      new ApiError(403, "FORBIDDEN", "Admin permission required"),
+    );
+
+    const { default: publishHandler } =
+      await import("../../api/admin/gacha/publish-drop-pool");
+    const result = await invokeApiHandler(publishHandler, {
+      method: "POST",
+      url: "/api/admin/gacha/publish-drop-pool",
+      headers: {
+        "x-admin-confirm": "true",
+        "x-idempotency-key": "admin-publish-risk-only-test-001",
+      },
+      body: {
+        dropPoolVersionId: DRAFT_VERSION_ID,
+        reason: "risk-only cannot change probability",
+      },
+    });
+
+    expect(result.statusCode).toBe(403);
+    expect(runWriteRpcMock).not.toHaveBeenCalled();
+    expect(requireAdminMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        permissions: ["gacha:write", "admin:write"],
+        requireAll: false,
+      }),
+    );
+  });
 });
 
 function createAdminReadDbMock(rowsByTable: AdminTableRows): {

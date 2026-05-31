@@ -102,7 +102,32 @@ type WalletReuseRow = {
   address: string;
 };
 
+type UserDeviceRow = {
+  id: string;
+  user_id: string;
+  device_key: string;
+  platform: string | null;
+  user_agent: string | null;
+  first_seen_at: string;
+  last_seen_at: string | null;
+  metadata: unknown;
+};
+
+type AppSessionRow = {
+  id: string;
+  user_id: string;
+  ip_hash: string | null;
+  device_id: string | null;
+  platform: string | null;
+  user_agent: string | null;
+  expires_at: string;
+  revoked_at: string | null;
+  last_seen_at: string | null;
+  created_at: string;
+};
+
 type ProfileSection =
+  | "devices"
   | "flags"
   | "payments"
   | "market"
@@ -183,6 +208,28 @@ const WALLET_COLUMNS = [
   "created_at",
   "updated_at",
 ].join(",");
+const USER_DEVICE_COLUMNS = [
+  "id",
+  "user_id",
+  "device_key",
+  "platform",
+  "user_agent",
+  "first_seen_at",
+  "last_seen_at",
+  "metadata",
+].join(",");
+const APP_SESSION_COLUMNS = [
+  "id",
+  "user_id",
+  "ip_hash",
+  "device_id",
+  "platform",
+  "user_agent",
+  "expires_at",
+  "revoked_at",
+  "last_seen_at",
+  "created_at",
+].join(",");
 
 export default withApiHandler(
   async (req) => {
@@ -206,6 +253,7 @@ export default withApiHandler(
       market,
       referrals,
       wallets,
+      devices,
       riskEvents,
     ] = await Promise.all([
       loadUser(db, userId),
@@ -214,6 +262,7 @@ export default withApiHandler(
       loadMarketSummary(db, userId, sectionPage("market")),
       loadReferralSummary(db, userId, sectionPage("referrals")),
       loadWalletSummary(db, userId, sectionPage("wallets")),
+      loadDeviceSummary(db, userId, sectionPage("devices")),
       loadRiskTimeline(db, userId, sectionPage("riskEvents")),
     ]);
 
@@ -224,6 +273,7 @@ export default withApiHandler(
       market,
       referrals,
       wallets,
+      devices,
       riskEvents,
       serverTime: new Date().toISOString(),
     };
@@ -247,6 +297,7 @@ function parseProfileSection(value: unknown): ProfileSection | null {
 
   if (
     raw === "flags" ||
+    raw === "devices" ||
     raw === "payments" ||
     raw === "market" ||
     raw === "referrals" ||
@@ -339,7 +390,13 @@ async function loadUserFlags(
   userId: string,
   page: SectionPage,
 ): Promise<Record<string, unknown>> {
-  const totalCount = await countRows(db, "core", "user_flags", "user_id", userId);
+  const totalCount = await countRows(
+    db,
+    "core",
+    "user_flags",
+    "user_id",
+    userId,
+  );
   const { data, error } = await db
     .schema("core")
     .from("user_flags")
@@ -391,6 +448,8 @@ async function loadPaymentSummary(
       countPaymentStatuses(db, userId, ["disputed", "refunded", "chargeback"]),
       loadStarOrders(db, userId, page),
     ]);
+  const failureRate =
+    totalCount > 0 ? roundRate((failedCount + disputedCount) / totalCount) : 0;
   const pageRows = recentRows.slice(0, page.limit);
   const recent = pageRows.map((row) => ({
     id: row.id,
@@ -416,6 +475,8 @@ async function loadPaymentSummary(
     success_count: successCount,
     failedCount,
     failed_count: failedCount,
+    failureRate,
+    failure_rate: failureRate,
     disputedCount,
     disputed_count: disputedCount,
     statusCounts: countBy(pageRows, (row) => row.status),
@@ -434,13 +495,15 @@ async function loadMarketSummary(
   userId: string,
   page: SectionPage,
 ): Promise<Record<string, unknown>> {
-  const [buyerCount, sellerCount, marketRows] = await Promise.all([
-    countRows(db, "market", "orders", "buyer_user_id", userId),
-    countRows(db, "market", "orders", "seller_user_id", userId),
-    loadMarketOrders(db, userId, page),
-  ]);
+  const [buyerCount, sellerCount, marketRows, counterpartyRows] =
+    await Promise.all([
+      countRows(db, "market", "orders", "buyer_user_id", userId),
+      countRows(db, "market", "orders", "seller_user_id", userId),
+      loadMarketOrders(db, userId, page),
+      loadMarketOrders(db, userId, { offset: 0, limit: 500 }),
+    ]);
   const pageRows = marketRows.slice(0, page.limit);
-  const counterparties = summarizeCounterparties(userId, pageRows);
+  const counterparties = summarizeCounterparties(userId, counterpartyRows);
   const recent = pageRows.map((row) => ({
     id: row.id,
     role: row.buyer_user_id === userId ? "buyer" : "seller",
@@ -629,6 +692,88 @@ async function loadWalletSummary(
   };
 }
 
+async function loadDeviceSummary(
+  db: SupabaseAdminClient,
+  userId: string,
+  page: SectionPage,
+): Promise<Record<string, unknown>> {
+  const [deviceCount, sessionCount, deviceRows, sessionRows] =
+    await Promise.all([
+      countRows(db, "core", "user_devices", "user_id", userId),
+      countRows(db, "core", "app_sessions", "user_id", userId),
+      loadUserDevices(db, userId, page),
+      loadAppSessions(db, userId, page),
+    ]);
+  const devices = deviceRows.slice(0, page.limit).map((device) => ({
+    id: device.id,
+    deviceHash: hashRiskValue(device.device_key),
+    device_hash: hashRiskValue(device.device_key),
+    deviceLast4: last4(device.device_key),
+    device_last4: last4(device.device_key),
+    platform: device.platform,
+    userAgentHash: hashRiskValue(device.user_agent),
+    user_agent_hash: hashRiskValue(device.user_agent),
+    first_seen_at: device.first_seen_at,
+    firstSeenAt: device.first_seen_at,
+    last_seen_at: device.last_seen_at,
+    lastSeenAt: device.last_seen_at,
+    metadata: sanitizeRiskDetail(device.metadata),
+  }));
+  const sessions = sessionRows.slice(0, page.limit).map((session) => ({
+    ip_hash: session.ip_hash,
+    ipHash: session.ip_hash,
+    deviceHash: hashRiskValue(session.device_id),
+    device_hash: hashRiskValue(session.device_id),
+    deviceLast4: last4(session.device_id),
+    device_last4: last4(session.device_id),
+    platform: session.platform,
+    userAgentHash: hashRiskValue(session.user_agent),
+    user_agent_hash: hashRiskValue(session.user_agent),
+    revoked: session.revoked_at !== null,
+    expires_at: session.expires_at,
+    expiresAt: session.expires_at,
+    last_seen_at: session.last_seen_at,
+    lastSeenAt: session.last_seen_at,
+    created_at: session.created_at,
+    createdAt: session.created_at,
+  }));
+  const recentIpHashes = uniqueStrings(
+    sessionRows.map((session) => session.ip_hash),
+  );
+  const recentDeviceHashes = uniqueStrings([
+    ...deviceRows.map((device) => hashRiskValue(device.device_key)),
+    ...sessionRows.map((session) => hashRiskValue(session.device_id)),
+  ]);
+
+  return {
+    deviceCount,
+    device_count: deviceCount,
+    sessionCount,
+    session_count: sessionCount,
+    ipHashCount: recentIpHashes.length,
+    ip_hash_count: recentIpHashes.length,
+    recentIpHashes,
+    recent_ip_hashes: recentIpHashes,
+    recentDeviceHashes,
+    recent_device_hashes: recentDeviceHashes,
+    devices,
+    sessions,
+    items: devices,
+    pageCount: devices.length,
+    page_count: devices.length,
+    nextCursor: buildNextCursor(
+      Math.max(deviceRows.length, sessionRows.length),
+      page.limit,
+      page.offset,
+    ),
+    next_cursor: buildNextCursor(
+      Math.max(deviceRows.length, sessionRows.length),
+      page.limit,
+      page.offset,
+    ),
+  };
+}
+
 async function loadRiskTimeline(
   db: SupabaseAdminClient,
   userId: string,
@@ -771,6 +916,63 @@ async function loadReferrals(
   return Array.isArray(data) ? (data as unknown as ReferralRow[]) : [];
 }
 
+async function loadUserDevices(
+  db: SupabaseAdminClient,
+  userId: string,
+  page: SectionPage,
+): Promise<UserDeviceRow[]> {
+  const { data, error } = await db
+    .schema("core")
+    .from("user_devices")
+    .select(USER_DEVICE_COLUMNS)
+    .eq("user_id", userId)
+    .order("last_seen_at", { ascending: false, nullsFirst: false })
+    .order("first_seen_at", { ascending: false })
+    .range(page.offset, page.offset + page.limit);
+
+  if (error) {
+    throw new ApiError(
+      500,
+      "ADMIN_RISK_USER_DEVICES_LOOKUP_FAILED",
+      "用户设备摘要查询失败。",
+      {
+        expose: false,
+        cause: error,
+      },
+    );
+  }
+
+  return Array.isArray(data) ? (data as unknown as UserDeviceRow[]) : [];
+}
+
+async function loadAppSessions(
+  db: SupabaseAdminClient,
+  userId: string,
+  page: SectionPage,
+): Promise<AppSessionRow[]> {
+  const { data, error } = await db
+    .schema("core")
+    .from("app_sessions")
+    .select(APP_SESSION_COLUMNS)
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .range(page.offset, page.offset + page.limit);
+
+  if (error) {
+    throw new ApiError(
+      500,
+      "ADMIN_RISK_USER_SESSIONS_LOOKUP_FAILED",
+      "用户登录会话摘要查询失败。",
+      {
+        expose: false,
+        cause: error,
+      },
+    );
+  }
+
+  return Array.isArray(data) ? (data as unknown as AppSessionRow[]) : [];
+}
+
 async function loadWalletReuseCounts(
   db: SupabaseAdminClient,
   userId: string,
@@ -879,10 +1081,12 @@ async function countRows(
   db: SupabaseAdminClient,
   schema: "core" | "market" | "ops" | "payments" | "tasks",
   table:
+    | "app_sessions"
     | "orders"
     | "referrals"
     | "risk_events"
     | "star_orders"
+    | "user_devices"
     | "user_flags"
     | "user_wallets",
   column: string,
@@ -930,6 +1134,12 @@ function countBy<T>(
   return result;
 }
 
+function uniqueStrings(values: Array<string | null>): string[] {
+  return [
+    ...new Set(values.filter((value): value is string => Boolean(value))),
+  ];
+}
+
 function summarizeCounterparties(
   userId: string,
   rows: MarketOrderRow[],
@@ -948,15 +1158,13 @@ function summarizeCounterparties(
   for (const row of rows) {
     const counterpartyUserId =
       row.buyer_user_id === userId ? row.seller_user_id : row.buyer_user_id;
-    const current =
-      byUserId.get(counterpartyUserId) ??
-      {
-        userId: counterpartyUserId,
-        buyCount: 0,
-        sellCount: 0,
-        totalCount: 0,
-        totalVolumeKcoin: 0,
-      };
+    const current = byUserId.get(counterpartyUserId) ?? {
+      userId: counterpartyUserId,
+      buyCount: 0,
+      sellCount: 0,
+      totalCount: 0,
+      totalVolumeKcoin: 0,
+    };
 
     if (row.buyer_user_id === userId) {
       current.buyCount += 1;

@@ -242,7 +242,8 @@ select
     p_event_type => 'gacha_high_frequency',
     p_source_type => 'gacha_order',
     p_source_id => 'bbbbbbbb-2000-4000-8000-000000000002'::uuid,
-    p_detail => '{"test":"risk_record_second"}'::jsonb
+    p_detail => '{"test":"risk_record_second"}'::jsonb,
+    p_idempotency_key => 'phase6-risk-record-second'
   );
 
 select is(
@@ -276,12 +277,29 @@ select ok(
     $$
       select api.risk_record_event(
         p_user_id => '11111111-1000-4000-8000-000000000001'::uuid,
-        p_event_type => 'unknown_risk_type'
+        p_event_type => 'unknown_risk_type',
+        p_idempotency_key => 'phase6-risk-record-unknown-type'
       )
     $$,
     '%RISK_EVENT_TYPE_INVALID%'
   ),
   'risk_record_event rejects unknown event type'
+);
+
+select ok(
+  testutil.raises_like(
+    $$
+      select api.risk_record_event(
+        p_user_id => '11111111-1000-4000-8000-000000000001'::uuid,
+        p_event_type => 'gacha_high_frequency',
+        p_source_type => 'gacha_order',
+        p_source_id => 'bbbbbbbb-2000-4000-8000-000000000004'::uuid,
+        p_detail => '{"test":"risk_record_missing_idempotency"}'::jsonb
+      )
+    $$,
+    '%RISK_IDEMPOTENCY_KEY_REQUIRED%'
+  ),
+  'risk_record_event requires idempotency key'
 );
 
 select ok(

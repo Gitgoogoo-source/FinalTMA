@@ -12,6 +12,7 @@ import {
 } from "../_shared/handler.js";
 import { parseJsonBody } from "../_shared/parseBody.js";
 import { requireSession } from "../_shared/requireSession.js";
+import { assertUserRiskAllowed } from "../_shared/riskGuards.js";
 import { validate } from "../_shared/validate.js";
 
 type MarketUpdateListingPriceRpcPayload = Record<string, unknown>;
@@ -34,6 +35,17 @@ export default withApiHandler(
     );
 
     await assertMarketWriteAllowed();
+    await assertUserRiskAllowed({
+      req,
+      ctx,
+      session,
+      action: "market.update_price",
+      idempotencyKey: input.idempotency_key,
+      metadata: {
+        listingId: input.listing_id,
+        priceKcoin: input.new_unit_price_kcoin,
+      },
+    });
 
     const payload = await callMarketUpdateListingPrice(
       input,

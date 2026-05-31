@@ -9,8 +9,8 @@ import {
   normalizeOptionalText,
   normalizeRequiredText,
   normalizeUuid,
-  readBodyIdempotencyKey,
-  requireAdminConfirmation,
+  readHeaderIdempotencyKey,
+  requireAdminConfirmHeader,
 } from "../_shared.js";
 
 type ClearUserFlagRpcResult = Record<string, unknown> & {
@@ -27,9 +27,9 @@ export default withApiHandler(
       await parseJsonBody(req, { maxBytes: 32 * 1024 }),
     );
 
-    requireAdminConfirmation(req, body);
+    requireAdminConfirmHeader(req);
 
-    const idempotencyKey = readBodyIdempotencyKey(req, body);
+    const idempotencyKey = readHeaderIdempotencyKey(req);
     const userFlagId = normalizeOptionalBodyUuid(
       body.userFlagId ?? body.user_flag_id ?? body.flagId ?? body.flag_id,
       "userFlagId",

@@ -4,6 +4,7 @@ import {
   type MarketCancelListingBody,
 } from "../../packages/validation/src/market.schemas.js";
 import { callRpcRaw, RpcError } from "../../packages/server/src/db/rpc.js";
+import { assertMarketWriteAllowed } from "../../packages/server/src/market/marketGuards.js";
 import {
   ApiError,
   getIdempotencyKey,
@@ -11,6 +12,7 @@ import {
 } from "../_shared/handler.js";
 import { parseJsonBody } from "../_shared/parseBody.js";
 import { requireSession } from "../_shared/requireSession.js";
+import { assertUserRiskAllowed } from "../_shared/riskGuards.js";
 import { validate } from "../_shared/validate.js";
 
 type MarketCancelListingRpcPayload = Record<string, unknown>;
@@ -31,6 +33,19 @@ export default withApiHandler(
       MarketCancelListingBodySchema,
       normalizeMarketCancelListingInput(body, getIdempotencyKey(req)),
     );
+
+    await assertMarketWriteAllowed();
+    await assertUserRiskAllowed({
+      req,
+      ctx,
+      session,
+      action: "market.cancel_listing",
+      idempotencyKey: input.idempotency_key,
+      metadata: {
+        listingId: input.listing_id,
+        reason: input.reason ?? null,
+      },
+    });
 
     const payload = await callMarketCancelListing(
       input,

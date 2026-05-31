@@ -8,8 +8,8 @@ import {
   mapAdminRpcError,
   normalizeOptionalText,
   normalizeRequiredText,
-  readBodyIdempotencyKey,
-  requireAdminConfirmation,
+  readHeaderIdempotencyKey,
+  requireAdminConfirmHeader,
   toJsonObject,
 } from "../_shared.js";
 import {
@@ -32,9 +32,9 @@ export default withApiHandler(
       await parseJsonBody(req, { maxBytes: 32 * 1024 }),
     );
 
-    requireAdminConfirmation(req, body);
+    requireAdminConfirmHeader(req);
 
-    const idempotencyKey = readBodyIdempotencyKey(req, body);
+    const idempotencyKey = readHeaderIdempotencyKey(req);
     const riskEventId = normalizeRiskEventId(
       body.riskEventId ?? body.risk_event_id ?? body.eventId ?? body.id,
     );

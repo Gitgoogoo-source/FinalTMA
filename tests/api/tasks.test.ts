@@ -927,19 +927,25 @@ describe("tasks API", () => {
   });
 
   it("bind-referral maps self invite RPC result to a stable API error", async () => {
-    callRpcRawMock.mockResolvedValueOnce({
-      bound: false,
-      status: "rejected",
-      reason: "self_invite_not_allowed",
-      invite_code: "INVITE7001",
-      idempotent: false,
-    });
+    callRpcRawMock
+      .mockResolvedValueOnce({
+        bound: false,
+        status: "rejected",
+        reason: "self_invite_not_allowed",
+        invite_code: "INVITE7001",
+        idempotent: false,
+      })
+      .mockResolvedValueOnce({
+        risk_event_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        status: "open",
+      });
 
     const result = await invokeApiHandler<ApiErrorResponse>(
       bindReferralHandler,
       {
         method: "POST",
         headers: {
+          "x-request-id": "req-referral-self-loop",
           "x-idempotency-key": BIND_IDEMPOTENCY_KEY,
         },
         body: {
@@ -954,6 +960,23 @@ describe("tasks API", () => {
       status: "rejected",
       reason: "self_invite_not_allowed",
     });
+    expect(callRpcRawMock).toHaveBeenNthCalledWith(
+      2,
+      "risk_record_event",
+      expect.objectContaining({
+        p_user_id: USER_ID,
+        p_event_type: "referral_self_loop",
+        p_source_type: "referral",
+        p_idempotency_key: `risk:referral_self_loop:${USER_ID}:${BIND_IDEMPOTENCY_KEY}`,
+      }),
+      expect.objectContaining({
+        schema: "api",
+        context: expect.objectContaining({
+          requestId: "req-referral-self-loop",
+          userId: USER_ID,
+        }),
+      }),
+    );
   });
 
   it("bind-referral maps different inviter rebind RPC result to a stable API error", async () => {
