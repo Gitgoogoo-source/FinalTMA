@@ -56,6 +56,7 @@ const LEDGER_ID = "14141414-1414-4141-8141-141414141414";
 const CORE_USER_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const LOCK_ID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const BOX_ID = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+const DROP_POOL_VERSION_ID = "16161616-1616-4161-8161-161616161616";
 const AUDIT_LOG_ID = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
 
 type AdminQueryOperation = {
@@ -2294,27 +2295,12 @@ describe("admin ops APIs", () => {
         idempotencyKey: "admin-danger-drop-pool-test-001",
         body: {
           action: "publish_drop_pool_version",
-          boxId: BOX_ID,
-          items: [
-            {
-              templateId: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
-              rarityCode: "N",
-              weight: 10000,
-              probabilityBps: 10000,
-            },
-          ],
+          dropPoolVersionId: DROP_POOL_VERSION_ID,
         },
         functionName: "admin_publish_drop_pool_version",
         permissions: ["gacha:write"],
         args: {
-          p_box_id: BOX_ID,
-          p_items: expect.arrayContaining([
-            expect.objectContaining({
-              template_id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
-              drop_weight: 10000,
-              probability_bps: 10000,
-            }),
-          ]),
+          p_drop_pool_version_id: DROP_POOL_VERSION_ID,
         },
       },
     ];
