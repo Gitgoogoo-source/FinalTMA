@@ -1,16 +1,9 @@
 import {
   runPhase5Reconciliation,
-  type Phase5ReconciliationRunType,
 } from "../../packages/server/src/jobs/ledgerReconcileJob.js";
 import { assertCronRequest } from "../_shared/cron.js";
 import { ApiError, withApiHandler } from "../_shared/handler.js";
-
-const ALLOWED_RUN_TYPES: ReadonlySet<Phase5ReconciliationRunType> = new Set([
-  "payment_fulfillment",
-  "mint_queue",
-  "wallet_sync",
-  "ledger_balance",
-]);
+import { parseRunTypes } from "../admin/reconciliation/_shared.js";
 
 export default withApiHandler(
   async (req, _res, ctx) => {
@@ -34,37 +27,6 @@ export default withApiHandler(
     },
   },
 );
-
-function parseRunTypes(
-  value: string | string[] | undefined,
-): Phase5ReconciliationRunType[] | undefined {
-  const raw = Array.isArray(value) ? value.join(",") : value;
-
-  if (!raw) {
-    return undefined;
-  }
-
-  const runTypes = raw
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
-
-  if (runTypes.length === 0) {
-    return undefined;
-  }
-
-  for (const runType of runTypes) {
-    if (!ALLOWED_RUN_TYPES.has(runType as Phase5ReconciliationRunType)) {
-      throw new ApiError(
-        400,
-        "RECONCILIATION_RUN_TYPE_INVALID",
-        "对账类型无效。",
-      );
-    }
-  }
-
-  return runTypes as Phase5ReconciliationRunType[];
-}
 
 function parseLimit(value: string | string[] | undefined): number | undefined {
   const raw = Array.isArray(value) ? value[0] : value;

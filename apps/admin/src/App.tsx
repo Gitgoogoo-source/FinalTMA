@@ -32,6 +32,7 @@ import { GachaPoolsPage } from "./pages/GachaPoolsPage";
 import { MintQueuePage } from "./pages/MintQueuePage";
 import { PaymentsPage } from "./pages/PaymentsPage";
 import { PermissionMatrixPage } from "./pages/PermissionMatrixPage";
+import { ReconciliationPage } from "./pages/ReconciliationPage";
 import { RolesPage } from "./pages/RolesPage";
 import { WalletsPage } from "./pages/WalletsPage";
 
@@ -55,6 +56,13 @@ const NAV_ITEMS: AdminNavItem[] = [
     label: "支付",
     icon: ReceiptText,
     requiredPermissions: ["payments:read"],
+  },
+  {
+    id: "reconciliation",
+    label: "对账",
+    icon: RefreshCw,
+    requiredPermissions: ["ops:read", "risk:read"],
+    permissionMode: "any",
   },
   {
     id: "mint",
@@ -275,6 +283,8 @@ function renderActivePage(tab: AdminTab, me: AdminMeResponse) {
           }
         />
       );
+    case "reconciliation":
+      return <ReconciliationPage />;
     case "mint":
       return <MintQueuePage />;
     case "wallets":
@@ -468,7 +478,7 @@ function hasAdminPermission(
 }
 
 function readHashTab(): AdminTab | null {
-  const hash = window.location.hash.replace(/^#/, "");
+  const hash = window.location.hash.replace(/^#/, "").split("?")[0] ?? "";
 
   return isAdminTab(hash) ? hash : null;
 }

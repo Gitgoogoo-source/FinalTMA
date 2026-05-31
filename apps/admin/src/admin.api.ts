@@ -25,10 +25,16 @@ import type {
   PaymentDetailResponse,
   PaymentSupportConfig,
   PityRulesResponse,
+  ReconciliationFindingsResponse,
+  ReconciliationRunsResponse,
+  ReconciliationResponse,
+  ResolveReconciliationFindingResponse,
+  ResolveReconciliationFindingInput,
   UpdateBlindBoxStatusInput,
   UpsertBlindBoxInput,
   UpsertBoxPriceRuleInput,
   UpsertCampaignInput,
+  RunReconciliationInput,
   WalletsResponse,
 } from "./admin.types";
 
@@ -477,6 +483,80 @@ export async function fetchAuditLogs(
   );
 }
 
+export async function fetchReconciliationRuns(
+  params: QueryParams = {},
+): Promise<ReconciliationRunsResponse> {
+  return adminRequest<ReconciliationRunsResponse>(
+    `/api/admin/reconciliation/runs${toQueryString(params)}`,
+  );
+}
+
+export async function runReconciliationNow(
+  input: RunReconciliationInput,
+): Promise<ReconciliationResponse> {
+  const dryRun = input.dryRun ?? true;
+  const confirmationTarget = input.confirmationTarget ?? input.runTypes.join(",");
+
+  return adminRequest<ReconciliationResponse>(
+    "/api/admin/reconciliation/run-now",
+    {
+      method: "POST",
+      headers: buildDangerHeaders(
+        "admin-reconciliation-run-now",
+        input.runTypes.join(","),
+      ),
+      body: {
+        runTypes: input.runTypes,
+        limit: input.limit,
+        dryRun,
+        writeRiskEvents: !dryRun,
+        reason: input.reason,
+        confirmationTarget,
+        confirmationCode:
+          input.confirmationCode ??
+          buildAdminConfirmationCode(confirmationTarget),
+        confirm: true,
+      },
+    },
+  );
+}
+
+export async function fetchReconciliationFindings(
+  params: QueryParams = {},
+): Promise<ReconciliationFindingsResponse> {
+  return adminRequest<ReconciliationFindingsResponse>(
+    `/api/admin/reconciliation/findings${toQueryString(params)}`,
+  );
+}
+
+export async function resolveReconciliationFinding(
+  input: ResolveReconciliationFindingInput,
+): Promise<ResolveReconciliationFindingResponse> {
+  return adminRequest<ResolveReconciliationFindingResponse>(
+    "/api/admin/reconciliation/resolve-finding",
+    {
+      method: "PATCH",
+      headers: buildDangerHeaders(
+        "admin-reconciliation-resolve-finding",
+        `${input.findingId}:${input.status}`,
+      ),
+      body: {
+        findingId: input.findingId,
+        status: input.status,
+        reason: input.reason,
+        resolutionDetail: input.resolutionDetail,
+        fixMethod: input.fixMethod,
+        escalationOwner: input.escalationOwner,
+        escalationTicketId: input.escalationTicketId,
+        confirmationTarget: input.confirmationTarget ?? input.findingId,
+        confirmationCode:
+          input.confirmationCode ?? buildAdminConfirmationCode(input.findingId),
+        confirm: true,
+      },
+    },
+  );
+}
+
 export async function exportAuditLogsCsv(input: {
   filters: AuditLogFilters;
   reason: string;
@@ -779,6 +859,16 @@ function buildDangerHeaders(
       targetId,
     )}:${createIdempotencySuffix()}`,
   };
+}
+
+function buildAdminConfirmationCode(value: string): string {
+  const normalized = value.trim();
+
+  if (normalized.length <= 8) {
+    return normalized;
+  }
+
+  return normalized.slice(-6);
 }
 
 function sanitizeIdempotencyPart(value: string): string {

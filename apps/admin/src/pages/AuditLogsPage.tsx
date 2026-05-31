@@ -688,17 +688,22 @@ function readAuditFiltersFromLocation(): AuditFilterDraft {
   }
 
   const search = new URLSearchParams(window.location.search);
+  const hash = window.location.hash.replace(/^#/, "");
+  const [hashTab, hashQuery = ""] = hash.split("?");
+  const hashSearch =
+    hashTab === "audit" ? new URLSearchParams(hashQuery) : new URLSearchParams();
+  const readParam = (key: string) => search.get(key) ?? hashSearch.get(key);
 
   return {
-    adminUserId: search.get("adminUserId") ?? "",
-    action: search.get("action") ?? "",
-    targetSchema: search.get("targetSchema") ?? "",
-    targetTable: search.get("targetTable") ?? "",
-    targetId: search.get("targetId") ?? "",
-    from: toDateTimeLocalInput(search.get("from")),
-    to: toDateTimeLocalInput(search.get("to")),
-    riskLevel: normalizeRiskLevelDraft(search.get("riskLevel") ?? ""),
-    q: search.get("q") ?? "",
+    adminUserId: readParam("adminUserId") ?? "",
+    action: readParam("action") ?? "",
+    targetSchema: readParam("targetSchema") ?? "",
+    targetTable: readParam("targetTable") ?? "",
+    targetId: readParam("targetId") ?? "",
+    from: toDateTimeLocalInput(readParam("from")),
+    to: toDateTimeLocalInput(readParam("to")),
+    riskLevel: normalizeRiskLevelDraft(readParam("riskLevel") ?? ""),
+    q: readParam("q") ?? "",
   };
 }
 

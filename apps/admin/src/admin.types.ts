@@ -14,6 +14,9 @@ type StarPaymentRow = Database["payments"]["Tables"]["star_payments"]["Row"];
 type StarRefundRow = Database["payments"]["Tables"]["star_refunds"]["Row"];
 type TelegramWebhookEventRow =
   Database["payments"]["Tables"]["telegram_webhook_events"]["Row"];
+type ReconciliationRunRow =
+  Database["economy"]["Tables"]["reconciliation_runs"]["Row"];
+type RiskEventRow = Database["ops"]["Tables"]["risk_events"]["Row"];
 
 export type AdminApiEnvelope<T> = {
   ok: true;
@@ -114,7 +117,7 @@ export type PaymentAdminResponse = {
   refunds: PaymentRefund[];
   disputes: PaymentDispute[];
   summary: Record<string, number>;
-  nextCursor: string | null;
+  nextCursor?: string | null;
   serverTime: string;
 };
 
@@ -409,6 +412,215 @@ export type MonitoringResponse = {
   paymentSupport: PaymentSupportConfig;
   warnings: MonitoringWarning[];
   sources: Record<string, number>;
+  serverTime: string;
+};
+
+export type ReconciliationRunType =
+  | "payment"
+  | "ledger"
+  | "market"
+  | "inventory"
+  | "gacha"
+  | "referral"
+  | "mint"
+  | "wallet";
+
+export type ReconciliationJobType =
+  | "payment_fulfillment"
+  | "ledger_balance"
+  | "market_settlement"
+  | "inventory_lock"
+  | "gacha_stock"
+  | "referral_commission"
+  | "mint_queue"
+  | "wallet_sync";
+
+export type ReconciliationFindingSeverity =
+  | "low"
+  | "medium"
+  | "high"
+  | "critical";
+
+export type ReconciliationFindingStatus =
+  | "open"
+  | "reviewing"
+  | "resolved"
+  | "ignored"
+  | "fixed"
+  | "false_positive"
+  | "escalated";
+
+export type ResolveReconciliationFindingStatus =
+  | "ignored"
+  | "fixed"
+  | "false_positive"
+  | "escalated"
+  | "reviewing";
+
+export type ReconciliationRun = Pick<
+  ReconciliationRunRow,
+  | "id"
+  | "run_type"
+  | "status"
+  | "started_at"
+  | "finished_at"
+  | "result"
+  | "error_message"
+  | "created_by"
+> & {
+  runId?: string;
+  runType?: ReconciliationRunType | ReconciliationJobType | string;
+  finding_count?: number;
+  findingCount?: number;
+  critical_count?: number;
+  criticalCount?: number;
+  risk_event_count?: number;
+  riskEventCount?: number;
+  risk_event_inserted_count?: number;
+  riskEventInsertedCount?: number;
+  risk_event_existing_count?: number;
+  riskEventExistingCount?: number;
+  risk_event_skipped_count?: number;
+  riskEventSkippedCount?: number;
+  checked_count?: number;
+  checkedCount?: number;
+  elapsed_ms?: number;
+  elapsedMs?: number;
+  severity_counts?: Partial<Record<ReconciliationFindingSeverity, number>>;
+  severityCounts?: Partial<Record<ReconciliationFindingSeverity, number>>;
+  dry_run?: boolean;
+  dryRun?: boolean;
+};
+
+export type ReconciliationFinding = {
+  id?: string;
+  risk_event_id?: string | null;
+  riskEventId?: string | null;
+  event_type?: RiskEventRow["event_type"];
+  code?: string;
+  message?: string;
+  severity: RiskEventRow["severity"] | ReconciliationFindingSeverity;
+  status?: RiskEventRow["status"] | ReconciliationFindingStatus;
+  source_type?: RiskEventRow["source_type"];
+  sourceType?: string | null;
+  source_id?: RiskEventRow["source_id"];
+  sourceId?: string | null;
+  user_id?: RiskEventRow["user_id"];
+  userId?: string | null;
+  detail?: RiskEventRow["detail"] | Json;
+  created_at?: RiskEventRow["created_at"];
+  createdAt?: string;
+  resolved_at?: RiskEventRow["resolved_at"];
+  resolvedAt?: string | null;
+  resolved_by_admin_id?: RiskEventRow["resolved_by_admin_id"];
+  resolvedByAdminId?: string | null;
+  reconciliation_run_id?: string | null;
+  reconciliationRunId?: string | null;
+  reconciliation_run_type?:
+    | ReconciliationRunType
+    | ReconciliationJobType
+    | string
+    | null;
+  reconciliationRunType?:
+    | ReconciliationRunType
+    | ReconciliationJobType
+    | string
+    | null;
+  star_order_id?: string | null;
+  starOrderId?: string | null;
+  draw_order_id?: string | null;
+  drawOrderId?: string | null;
+  payment_charge_id?: string | null;
+  paymentChargeId?: string | null;
+  mint_queue_id?: string | null;
+  mintQueueId?: string | null;
+  tx_hash?: string | null;
+  txHash?: string | null;
+  suggested_action?: string | null;
+  suggestedAction?: string | null;
+  dry_run?: boolean;
+  dryRun?: boolean;
+};
+
+export type ReconciliationSummary = {
+  latestRun?: ReconciliationRun | null;
+  latest_run?: ReconciliationRun | null;
+  totalRuns?: number;
+  total_runs?: number;
+  findingCount?: number;
+  finding_count?: number;
+  criticalCount?: number;
+  critical_count?: number;
+  riskEventCount?: number;
+  risk_event_count?: number;
+  checkedCount?: number;
+  checked_count?: number;
+  dryRunCount?: number;
+  dry_run_count?: number;
+};
+
+export type ReconciliationResponse = {
+  summary?: ReconciliationSummary;
+  runs?: ReconciliationRun[];
+  findings?: ReconciliationFinding[];
+  checkedCount?: number;
+  findingCount?: number;
+  criticalCount?: number;
+  riskEventCount?: number;
+  elapsedMs?: number;
+  startedAt?: string;
+  finishedAt?: string;
+  limit?: number;
+  nextCursor: string | null;
+  serverTime: string;
+  requestId?: string;
+  dryRun?: boolean;
+  dry_run?: boolean;
+  writeRiskEvents?: boolean;
+  write_risk_events?: boolean;
+};
+
+export type ReconciliationRunsResponse = ReconciliationResponse & {
+  items?: ReconciliationRun[];
+  runs?: ReconciliationRun[];
+};
+
+export type ReconciliationFindingsResponse = ReconciliationResponse & {
+  items?: ReconciliationFinding[];
+  findings?: ReconciliationFinding[];
+};
+
+export type RunReconciliationInput = {
+  runTypes: ReconciliationRunType[];
+  limit?: number;
+  dryRun?: boolean;
+  reason: string;
+  confirmationTarget?: string;
+  confirmationCode?: string;
+};
+
+export type ResolveReconciliationFindingInput = {
+  findingId: string;
+  status: ResolveReconciliationFindingStatus;
+  reason: string;
+  resolutionDetail?: Record<string, unknown>;
+  fixMethod?: string;
+  escalationOwner?: string;
+  escalationTicketId?: string;
+  confirmationTarget?: string;
+  confirmationCode?: string;
+};
+
+export type ResolveReconciliationFindingResponse = {
+  risk_event_id: string;
+  riskEventId?: string;
+  status: ReconciliationFindingStatus | string;
+  previous_status?: ReconciliationFindingStatus | string;
+  previousStatus?: ReconciliationFindingStatus | string;
+  audit_log_id?: string;
+  auditLogId?: string;
+  resolved_at?: string | null;
+  resolvedAt?: string | null;
   serverTime: string;
 };
 
@@ -927,6 +1139,7 @@ export type AdminRolesResponse = {
 export type AdminTab =
   | "monitoring"
   | "payments"
+  | "reconciliation"
   | "mint"
   | "wallets"
   | "campaigns"

@@ -49,6 +49,7 @@ type RetryDraft = {
 
 type LoadOptions = {
   preserveDetailOrderId?: boolean;
+  queryOverride?: string;
 };
 
 export function PaymentsPage({
@@ -56,12 +57,18 @@ export function PaymentsPage({
 }: {
   canViewPaymentDebug?: boolean;
 }) {
+  const hashParams = readHashParams("payments");
+  const initialStarOrderId = hashParams.get("starOrderId");
+  const initialDrawOrderId = hashParams.get("drawOrderId");
+  const initialQuery = initialStarOrderId ?? initialDrawOrderId ?? "";
   const [status, setStatus] = useState("");
   const [eventStatus, setEventStatus] = useState("");
   const [refundStatus, setRefundStatus] = useState("");
   const [disputeStatus, setDisputeStatus] = useState("");
-  const [query, setQuery] = useState("");
-  const [detailOrderId, setDetailOrderId] = useState<string | null>(null);
+  const [query, setQuery] = useState(initialQuery);
+  const [detailOrderId, setDetailOrderId] = useState<string | null>(
+    initialStarOrderId,
+  );
   const [data, setData] = useState<PaymentAdminResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -74,6 +81,7 @@ export function PaymentsPage({
   async function load(options: LoadOptions = {}) {
     setLoading(true);
     setError(null);
+    const nextQuery = options.queryOverride ?? query;
 
     try {
       const response = await fetchPayments({
@@ -81,7 +89,7 @@ export function PaymentsPage({
         eventStatus: eventStatus || undefined,
         refundStatus: refundStatus || undefined,
         disputeStatus: disputeStatus || undefined,
-        q: query || undefined,
+        q: nextQuery || undefined,
         limit: 30,
       });
 
@@ -127,7 +135,31 @@ export function PaymentsPage({
   }
 
   useEffect(() => {
-    void load();
+    void load({ preserveDetailOrderId: Boolean(detailOrderId) });
+  }, [status, eventStatus, refundStatus, disputeStatus]);
+
+  useEffect(() => {
+    function focusFromHash() {
+      const params = readHashParams("payments");
+      const nextStarOrderId = params.get("starOrderId");
+      const nextDrawOrderId = params.get("drawOrderId");
+      const nextQuery = nextStarOrderId ?? nextDrawOrderId;
+
+      if (!nextQuery) {
+        return;
+      }
+
+      setQuery(nextQuery);
+      setDetailOrderId(nextStarOrderId);
+      void load({
+        preserveDetailOrderId: Boolean(nextStarOrderId),
+        queryOverride: nextQuery,
+      });
+    }
+
+    window.addEventListener("hashchange", focusFromHash);
+
+    return () => window.removeEventListener("hashchange", focusFromHash);
   }, [status, eventStatus, refundStatus, disputeStatus]);
 
   return (
@@ -509,6 +541,13 @@ function StatusStrip(props: {
       ))}
     </div>
   );
+}
+
+function readHashParams(tab: string): URLSearchParams {
+  const hash = window.location.hash.replace(/^#/, "");
+  const [hashTab, query = ""] = hash.split("?");
+
+  return hashTab === tab ? new URLSearchParams(query) : new URLSearchParams();
 }
 
 function formatAdminActionError(error: unknown, fallback: string): string {

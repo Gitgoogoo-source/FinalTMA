@@ -22,11 +22,20 @@ const RETRYABLE_STATUSES = new Set(["failed", "manual_review"]);
 type RetryDraft = {
   item: MintQueueItem;
 };
+type LoadOptions = {
+  queryOverride?: string;
+  statusOverride?: string;
+  preserveSelectedItemId?: boolean;
+};
 
 export function MintQueuePage() {
-  const [status, setStatus] = useState("failed");
-  const [query, setQuery] = useState("");
-  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const hashParams = readHashParams("mint");
+  const initialMintQueueId = hashParams.get("mintQueueId");
+  const [status, setStatus] = useState(initialMintQueueId ? "" : "failed");
+  const [query, setQuery] = useState(initialMintQueueId ?? "");
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(
+    initialMintQueueId,
+  );
   const [data, setData] = useState<MintQueueResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -37,20 +46,24 @@ export function MintQueuePage() {
     data?.items[0] ??
     null;
 
-  async function load() {
+  async function load(options: LoadOptions = {}) {
     setLoading(true);
     setError(null);
+    const nextStatus = options.statusOverride ?? status;
+    const nextQuery = options.queryOverride ?? query;
 
     try {
       const response = await fetchMintQueue({
-        status: status || undefined,
-        q: query || undefined,
+        status: nextStatus || undefined,
+        q: nextQuery || undefined,
         limit: 30,
       });
 
       setData(response);
       setSelectedItemId((current) =>
-        current && response.items.some((item) => item.id === current)
+        current &&
+        (options.preserveSelectedItemId ||
+          response.items.some((item) => item.id === current))
           ? current
           : (response.items[0]?.id ?? null),
       );
@@ -91,6 +104,30 @@ export function MintQueuePage() {
   useEffect(() => {
     void load();
   }, [status]);
+
+  useEffect(() => {
+    function focusFromHash() {
+      const params = readHashParams("mint");
+      const nextMintQueueId = params.get("mintQueueId");
+
+      if (!nextMintQueueId) {
+        return;
+      }
+
+      setStatus("");
+      setQuery(nextMintQueueId);
+      setSelectedItemId(nextMintQueueId);
+      void load({
+        preserveSelectedItemId: true,
+        queryOverride: nextMintQueueId,
+        statusOverride: "",
+      });
+    }
+
+    window.addEventListener("hashchange", focusFromHash);
+
+    return () => window.removeEventListener("hashchange", focusFromHash);
+  }, []);
 
   return (
     <section className="admin-surface">
@@ -243,6 +280,13 @@ export function MintQueuePage() {
       />
     </section>
   );
+}
+
+function readHashParams(tab: string): URLSearchParams {
+  const hash = window.location.hash.replace(/^#/, "");
+  const [hashTab, query = ""] = hash.split("?");
+
+  return hashTab === tab ? new URLSearchParams(query) : new URLSearchParams();
 }
 
 function MintFailureDetail({ item }: { item: MintQueueItem | null }) {
