@@ -21,6 +21,7 @@ import {
 } from "../../packages/server/src/ton/nft.js";
 import { assertCronRequest } from "../_shared/cron.js";
 import { ApiError, withApiHandler } from "../_shared/handler.js";
+import { recordMintRetryExceededRisk } from "../_shared/mintRiskEvents.js";
 
 type OnchainTransactionRow = {
   id: string;
@@ -237,6 +238,7 @@ export async function runOnchainTransactionSync(input: {
           context,
           transaction,
           queryResult,
+          input.requestId,
         );
 
         if (outcome === "manual_review") {
@@ -503,6 +505,7 @@ async function markMintSuccess(
   },
   transaction: OnchainTransactionRow,
   result: TonNftTransactionQueryResult,
+  requestId: string,
 ): Promise<"minted" | "manual_review"> {
   const txHash = result.txHash ?? transaction.tx_hash;
   const ownerAddress =
@@ -518,7 +521,7 @@ async function markMintSuccess(
     result.itemIndex === null
   ) {
     await moveQueueToManualReview(db, context.queue, {
-      requestId: "sync-onchain-transactions",
+      requestId,
       errorReason: "TON_NFT_CONFIRMED_RESULT_INCOMPLETE",
       errorMessage:
         "Confirmed transaction did not include tx hash, owner address, NFT item address or item index.",
@@ -622,6 +625,25 @@ async function moveQueueToRetryOrReview(
     );
   }
 
+  if (decision.status === "manual_review") {
+    await recordMintRetryExceededRisk({
+      userId: queue.user_id,
+      mintQueueId: queue.id,
+      itemInstanceId: queue.item_instance_id,
+      walletId: queue.wallet_id,
+      requestId: input.requestId,
+      action: "cron.sync_onchain_transactions",
+      status: "manual_review",
+      attemptCount: decision.attemptCount,
+      maxAttempts: decision.maxAttempts,
+      errorCode: getSyncErrorCode(input.error),
+      errorMessage,
+      retryable,
+      txHash: input.txHash,
+      provider: input.provider,
+    });
+  }
+
   return {
     status: decision.status,
   };
@@ -671,6 +693,23 @@ async function moveQueueToManualReview(
       },
     );
   }
+
+  await recordMintRetryExceededRisk({
+    userId: queue.user_id,
+    mintQueueId: queue.id,
+    itemInstanceId: queue.item_instance_id,
+    walletId: queue.wallet_id,
+    requestId: input.requestId,
+    action: "cron.sync_onchain_transactions",
+    status: "manual_review",
+    attemptCount: readInteger(queue.attempt_count, 1),
+    maxAttempts: readInteger(queue.max_attempts, 1),
+    errorCode: input.errorReason,
+    errorMessage: input.errorMessage,
+    retryable: false,
+    txHash: input.txHash,
+    provider: input.provider,
+  });
 }
 
 async function recordTransactionCheckError(

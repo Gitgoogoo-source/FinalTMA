@@ -1,12 +1,10 @@
-import {
-  getSupabaseAdminClient,
-  type SupabaseAdminClient,
-} from "../../../packages/server/src/db/supabaseAdmin.js";
+import { callRpcRaw } from "../../../packages/server/src/db/rpc.js";
 import { ApiError, withApiHandler } from "../../_shared/handler.js";
 import { requireAdmin } from "../../_shared/requireAdmin.js";
 import {
   buildNextCursor,
   firstQueryValue,
+  isRecord,
   parseAdminLimit,
   parseOffsetCursor,
 } from "../_shared.js";
@@ -14,12 +12,10 @@ import {
   hashRiskValue,
   last4,
   normalizeRiskUserId,
-  RISK_EVENT_COLUMNS,
   serializeRiskEvent,
   serializeUserFlag,
   shortAddress,
   sanitizeRiskDetail,
-  USER_FLAG_COLUMNS,
   type RiskEventRow,
   type UserFlagRow,
 } from "./_shared.js";
@@ -97,9 +93,9 @@ type WalletRow = {
   updated_at: string;
 };
 
-type WalletReuseRow = {
-  user_id: string;
+type WalletReuseCountRow = {
   address: string;
+  reuse_user_count: number | string;
 };
 
 type UserDeviceRow = {
@@ -140,96 +136,16 @@ type SectionPage = {
   offset: number;
 };
 
-const USER_COLUMNS = [
-  "id",
-  "telegram_user_id",
-  "username",
-  "first_name",
-  "last_name",
-  "language_code",
-  "is_premium",
-  "is_bot",
-  "invite_code",
-  "referred_by_user_id",
-  "status",
-  "risk_score",
-  "first_seen_at",
-  "last_seen_at",
-  "last_auth_at",
-  "metadata",
-  "created_at",
-  "updated_at",
-].join(",");
-const STAR_ORDER_COLUMNS = [
-  "id",
-  "user_id",
-  "business_type",
-  "business_id",
-  "status",
-  "xtr_amount",
-  "paid_at",
-  "fulfilled_at",
-  "created_at",
-].join(",");
-const MARKET_ORDER_COLUMNS = [
-  "id",
-  "buyer_user_id",
-  "seller_user_id",
-  "status",
-  "item_count",
-  "total_price_kcoin",
-  "completed_at",
-  "created_at",
-].join(",");
-const REFERRAL_COLUMNS = [
-  "id",
-  "inviter_user_id",
-  "invitee_user_id",
-  "status",
-  "first_open_order_id",
-  "qualified_at",
-  "rewarded_at",
-  "created_at",
-].join(",");
-const WALLET_COLUMNS = [
-  "id",
-  "user_id",
-  "chain",
-  "network",
-  "address",
-  "wallet_app_name",
-  "wallet_device",
-  "is_primary",
-  "status",
-  "verified_at",
-  "disconnected_at",
-  "last_sync_at",
-  "metadata",
-  "created_at",
-  "updated_at",
-].join(",");
-const USER_DEVICE_COLUMNS = [
-  "id",
-  "user_id",
-  "device_key",
-  "platform",
-  "user_agent",
-  "first_seen_at",
-  "last_seen_at",
-  "metadata",
-].join(",");
-const APP_SESSION_COLUMNS = [
-  "id",
-  "user_id",
-  "ip_hash",
-  "device_id",
-  "platform",
-  "user_agent",
-  "expires_at",
-  "revoked_at",
-  "last_seen_at",
-  "created_at",
-].join(",");
+type RiskUserProfileRpcPayload = {
+  user?: unknown;
+  flags?: unknown;
+  payments?: unknown;
+  market?: unknown;
+  referrals?: unknown;
+  wallets?: unknown;
+  devices?: unknown;
+  risk_events?: unknown;
+};
 
 export default withApiHandler(
   async (req) => {
@@ -238,43 +154,34 @@ export default withApiHandler(
       requireAll: false,
     });
 
-    const db = getSupabaseAdminClient();
     const userId = normalizeRiskUserId(req.query.userId ?? req.query.user_id);
     const section = parseProfileSection(req.query.section);
-    const sectionPage = getSectionPage(
-      section,
-      parseOffsetCursor(req.query.cursor),
-      parseAdminLimit(req.query.limit),
-    );
-    const [
-      user,
-      flags,
-      payments,
-      market,
-      referrals,
-      wallets,
-      devices,
-      riskEvents,
-    ] = await Promise.all([
-      loadUser(db, userId),
-      loadUserFlags(db, userId, sectionPage("flags")),
-      loadPaymentSummary(db, userId, sectionPage("payments")),
-      loadMarketSummary(db, userId, sectionPage("market")),
-      loadReferralSummary(db, userId, sectionPage("referrals")),
-      loadWalletSummary(db, userId, sectionPage("wallets")),
-      loadDeviceSummary(db, userId, sectionPage("devices")),
-      loadRiskTimeline(db, userId, sectionPage("riskEvents")),
-    ]);
+    const offset = parseOffsetCursor(req.query.cursor);
+    const limit = parseAdminLimit(req.query.limit);
+    const sectionPage = getSectionPage(section, offset, limit);
+    const payload = await loadRiskUserProfile(userId, section, limit, offset);
+    const user = readUser(payload.user);
+
+    if (!user) {
+      throw new ApiError(404, "USER_NOT_FOUND", "User not found");
+    }
 
     return {
-      user,
-      flags,
-      payments,
-      market,
-      referrals,
-      wallets,
-      devices,
-      riskEvents,
+      user: serializeUser(user),
+      flags: buildUserFlags(payload.flags, sectionPage("flags")),
+      payments: buildPaymentSummary(payload.payments, sectionPage("payments")),
+      market: buildMarketSummary(userId, payload.market, sectionPage("market")),
+      referrals: buildReferralSummary(
+        userId,
+        payload.referrals,
+        sectionPage("referrals"),
+      ),
+      wallets: buildWalletSummary(payload.wallets, sectionPage("wallets")),
+      devices: buildDeviceSummary(payload.devices, sectionPage("devices")),
+      riskEvents: buildRiskTimeline(
+        payload.risk_events,
+        sectionPage("riskEvents"),
+      ),
       serverTime: new Date().toISOString(),
     };
   },
@@ -325,30 +232,44 @@ function getSectionPage(
   });
 }
 
-async function loadUser(
-  db: SupabaseAdminClient,
+async function loadRiskUserProfile(
   userId: string,
-): Promise<Record<string, unknown>> {
-  const { data, error } = await db
-    .schema("core")
-    .from("users")
-    .select(USER_COLUMNS)
-    .eq("id", userId)
-    .maybeSingle();
-
-  if (error) {
-    throw new ApiError(500, "ADMIN_RISK_USER_LOOKUP_FAILED", "用户查询失败。", {
-      expose: false,
-      cause: error,
-    });
+  section: ProfileSection | null,
+  limit: number,
+  offset: number,
+): Promise<RiskUserProfileRpcPayload> {
+  try {
+    return await callRpcRaw<RiskUserProfileRpcPayload>(
+      "admin_get_risk_user_profile",
+      {
+        p_user_id: userId,
+        p_section: section,
+        p_limit: limit,
+        p_offset: offset,
+      },
+      {
+        schema: "api" as never,
+        context: {
+          route: "admin.risk.user-profile",
+          userId,
+          section,
+        },
+      },
+    );
+  } catch (error) {
+    throw new ApiError(
+      500,
+      "ADMIN_RISK_USER_PROFILE_LOOKUP_FAILED",
+      "用户风控画像查询失败。",
+      {
+        expose: false,
+        cause: error,
+      },
+    );
   }
+}
 
-  if (!data) {
-    throw new ApiError(404, "USER_NOT_FOUND", "User not found");
-  }
-
-  const row = data as unknown as UserRow;
-
+function serializeUser(row: UserRow): Record<string, unknown> {
   return {
     id: row.id,
     telegram_user_id: row.telegram_user_id,
@@ -385,42 +306,16 @@ async function loadUser(
   };
 }
 
-async function loadUserFlags(
-  db: SupabaseAdminClient,
-  userId: string,
+function buildUserFlags(
+  payload: unknown,
   page: SectionPage,
-): Promise<Record<string, unknown>> {
-  const totalCount = await countRows(
-    db,
-    "core",
-    "user_flags",
-    "user_id",
-    userId,
-  );
-  const { data, error } = await db
-    .schema("core")
-    .from("user_flags")
-    .select(USER_FLAG_COLUMNS)
-    .eq("user_id", userId)
-    .order("active", { ascending: false })
-    .order("created_at", { ascending: false })
-    .range(page.offset, page.offset + page.limit);
-
-  if (error) {
-    throw new ApiError(
-      500,
-      "ADMIN_RISK_USER_FLAGS_LOOKUP_FAILED",
-      "用户风控标签查询失败。",
-      {
-        expose: false,
-        cause: error,
-      },
-    );
-  }
-
-  const rows = Array.isArray(data) ? (data as unknown as UserFlagRow[]) : [];
+): Record<string, unknown> {
+  const section = readRecord(payload);
+  const rows = readRows<UserFlagRow>(section.rows);
   const pageRows = rows.slice(0, page.limit);
   const items = pageRows.map(serializeUserFlag);
+  const totalCount = readNumber(section.total_count);
+  const nextCursor = buildNextCursor(rows.length, page.limit, page.offset);
 
   return {
     active: items.filter((item) => item.active === true),
@@ -430,27 +325,22 @@ async function loadUserFlags(
     total_count: totalCount,
     pageCount: items.length,
     page_count: items.length,
-    nextCursor: buildNextCursor(rows.length, page.limit, page.offset),
-    next_cursor: buildNextCursor(rows.length, page.limit, page.offset),
+    nextCursor,
+    next_cursor: nextCursor,
   };
 }
 
-async function loadPaymentSummary(
-  db: SupabaseAdminClient,
-  userId: string,
+function buildPaymentSummary(
+  payload: unknown,
   page: SectionPage,
-): Promise<Record<string, unknown>> {
-  const [totalCount, successCount, failedCount, disputedCount, recentRows] =
-    await Promise.all([
-      countRows(db, "payments", "star_orders", "user_id", userId),
-      countPaymentStatuses(db, userId, ["paid", "fulfilled", "completed"]),
-      countPaymentStatuses(db, userId, ["failed", "expired", "cancelled"]),
-      countPaymentStatuses(db, userId, ["disputed", "refunded", "chargeback"]),
-      loadStarOrders(db, userId, page),
-    ]);
-  const failureRate =
-    totalCount > 0 ? roundRate((failedCount + disputedCount) / totalCount) : 0;
-  const pageRows = recentRows.slice(0, page.limit);
+): Record<string, unknown> {
+  const section = readRecord(payload);
+  const totalCount = readNumber(section.total_count);
+  const successCount = readNumber(section.success_count);
+  const failedCount = readNumber(section.failed_count);
+  const disputedCount = readNumber(section.disputed_count);
+  const rows = readRows<StarOrderRow>(section.rows);
+  const pageRows = rows.slice(0, page.limit);
   const recent = pageRows.map((row) => ({
     id: row.id,
     status: row.status,
@@ -467,6 +357,9 @@ async function loadPaymentSummary(
     created_at: row.created_at,
     createdAt: row.created_at,
   }));
+  const failureRate =
+    totalCount > 0 ? roundRate((failedCount + disputedCount) / totalCount) : 0;
+  const nextCursor = buildNextCursor(rows.length, page.limit, page.offset);
 
   return {
     totalCount,
@@ -485,24 +378,22 @@ async function loadPaymentSummary(
     items: recent,
     pageCount: recent.length,
     page_count: recent.length,
-    nextCursor: buildNextCursor(recentRows.length, page.limit, page.offset),
-    next_cursor: buildNextCursor(recentRows.length, page.limit, page.offset),
+    nextCursor,
+    next_cursor: nextCursor,
   };
 }
 
-async function loadMarketSummary(
-  db: SupabaseAdminClient,
+function buildMarketSummary(
   userId: string,
+  payload: unknown,
   page: SectionPage,
-): Promise<Record<string, unknown>> {
-  const [buyerCount, sellerCount, marketRows, counterpartyRows] =
-    await Promise.all([
-      countRows(db, "market", "orders", "buyer_user_id", userId),
-      countRows(db, "market", "orders", "seller_user_id", userId),
-      loadMarketOrders(db, userId, page),
-      loadMarketOrders(db, userId, { offset: 0, limit: 500 }),
-    ]);
-  const pageRows = marketRows.slice(0, page.limit);
+): Record<string, unknown> {
+  const section = readRecord(payload);
+  const buyerCount = readNumber(section.buyer_count);
+  const sellerCount = readNumber(section.seller_count);
+  const rows = readRows<MarketOrderRow>(section.rows);
+  const counterpartyRows = readRows<MarketOrderRow>(section.counterparty_rows);
+  const pageRows = rows.slice(0, page.limit);
   const counterparties = summarizeCounterparties(userId, counterpartyRows);
   const recent = pageRows.map((row) => ({
     id: row.id,
@@ -521,6 +412,7 @@ async function loadMarketSummary(
     created_at: row.created_at,
     createdAt: row.created_at,
   }));
+  const nextCursor = buildNextCursor(rows.length, page.limit, page.offset);
 
   return {
     buyerCount,
@@ -537,40 +429,33 @@ async function loadMarketSummary(
     items: recent,
     pageCount: recent.length,
     page_count: recent.length,
-    nextCursor: buildNextCursor(marketRows.length, page.limit, page.offset),
-    next_cursor: buildNextCursor(marketRows.length, page.limit, page.offset),
+    nextCursor,
+    next_cursor: nextCursor,
   };
 }
 
-async function loadReferralSummary(
-  db: SupabaseAdminClient,
+function buildReferralSummary(
   userId: string,
+  payload: unknown,
   page: SectionPage,
-): Promise<Record<string, unknown>> {
-  const [
-    invitedCount,
-    invitedByCount,
-    firstOpenCount,
-    qualifiedCount,
-    rewardedCount,
-    referralRows,
-  ] = await Promise.all([
-    countRows(db, "tasks", "referrals", "inviter_user_id", userId),
-    countRows(db, "tasks", "referrals", "invitee_user_id", userId),
-    countReferralsWithValue(db, userId, "first_open_order_id"),
-    countReferralsWithValue(db, userId, "qualified_at"),
-    countReferralsWithValue(db, userId, "rewarded_at"),
-    loadReferrals(db, userId, page),
-  ]);
-  const pageRows = referralRows.slice(0, page.limit);
+): Record<string, unknown> {
+  const section = readRecord(payload);
+  const invitedCount = readNumber(section.invited_count);
+  const invitedByCount = readNumber(section.invited_by_count);
+  const firstOpenCount = readNumber(section.first_open_count);
+  const qualifiedCount = readNumber(section.qualified_count);
+  const rewardedCount = readNumber(section.rewarded_count);
+  const rows = readRows<ReferralRow>(section.rows);
+  const pageRows = rows.slice(0, page.limit);
   const inviterRows = pageRows.filter((row) => row.inviter_user_id === userId);
   const inviteeRows = pageRows.filter((row) => row.invitee_user_id === userId);
-  const firstOpenConversionRate =
-    invitedCount > 0 ? roundRate(firstOpenCount / invitedCount) : 0;
   const items = pageRows.map((row) => ({
     ...serializeReferral(row),
     role: row.inviter_user_id === userId ? "inviter" : "invitee",
   }));
+  const firstOpenConversionRate =
+    invitedCount > 0 ? roundRate(firstOpenCount / invitedCount) : 0;
+  const nextCursor = buildNextCursor(rows.length, page.limit, page.offset);
 
   return {
     invitedCount,
@@ -596,46 +481,20 @@ async function loadReferralSummary(
     items,
     pageCount: items.length,
     page_count: items.length,
-    nextCursor: buildNextCursor(referralRows.length, page.limit, page.offset),
-    next_cursor: buildNextCursor(referralRows.length, page.limit, page.offset),
+    nextCursor,
+    next_cursor: nextCursor,
   };
 }
 
-async function loadWalletSummary(
-  db: SupabaseAdminClient,
-  userId: string,
+function buildWalletSummary(
+  payload: unknown,
   page: SectionPage,
-): Promise<Record<string, unknown>> {
-  const totalCount = await countRows(
-    db,
-    "core",
-    "user_wallets",
-    "user_id",
-    userId,
-  );
-  const { data, error } = await db
-    .schema("core")
-    .from("user_wallets")
-    .select(WALLET_COLUMNS)
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false })
-    .range(page.offset, page.offset + page.limit);
-
-  if (error) {
-    throw new ApiError(
-      500,
-      "ADMIN_RISK_USER_WALLETS_LOOKUP_FAILED",
-      "用户钱包摘要查询失败。",
-      {
-        expose: false,
-        cause: error,
-      },
-    );
-  }
-
-  const rows = Array.isArray(data) ? (data as unknown as WalletRow[]) : [];
+): Record<string, unknown> {
+  const section = readRecord(payload);
+  const totalCount = readNumber(section.total_count);
+  const rows = readRows<WalletRow>(section.rows);
   const wallets = rows.slice(0, page.limit);
-  const reuseCounts = await loadWalletReuseCounts(db, userId, wallets);
+  const reuseCounts = readWalletReuseCounts(section.reuse_counts);
   const items = wallets.map((wallet) => {
     const addressHash = hashRiskValue(wallet.address);
 
@@ -669,6 +528,11 @@ async function loadWalletSummary(
       updatedAt: wallet.updated_at,
     };
   });
+  const addressReuseCount = items.reduce(
+    (sum, item) => sum + Number(item.reuseUserCount ?? 0),
+    0,
+  );
+  const nextCursor = buildNextCursor(rows.length, page.limit, page.offset);
 
   return {
     count: totalCount,
@@ -678,32 +542,23 @@ async function loadWalletSummary(
     page_count: items.length,
     statusCounts: countBy(wallets, (wallet) => wallet.status),
     status_counts: countBy(wallets, (wallet) => wallet.status),
-    addressReuseCount: items.reduce(
-      (sum, item) => sum + Number(item.reuseUserCount ?? 0),
-      0,
-    ),
-    address_reuse_count: items.reduce(
-      (sum, item) => sum + Number(item.reuseUserCount ?? 0),
-      0,
-    ),
+    addressReuseCount,
+    address_reuse_count: addressReuseCount,
     items,
-    nextCursor: buildNextCursor(rows.length, page.limit, page.offset),
-    next_cursor: buildNextCursor(rows.length, page.limit, page.offset),
+    nextCursor,
+    next_cursor: nextCursor,
   };
 }
 
-async function loadDeviceSummary(
-  db: SupabaseAdminClient,
-  userId: string,
+function buildDeviceSummary(
+  payload: unknown,
   page: SectionPage,
-): Promise<Record<string, unknown>> {
-  const [deviceCount, sessionCount, deviceRows, sessionRows] =
-    await Promise.all([
-      countRows(db, "core", "user_devices", "user_id", userId),
-      countRows(db, "core", "app_sessions", "user_id", userId),
-      loadUserDevices(db, userId, page),
-      loadAppSessions(db, userId, page),
-    ]);
+): Record<string, unknown> {
+  const section = readRecord(payload);
+  const deviceCount = readNumber(section.device_count);
+  const sessionCount = readNumber(section.session_count);
+  const deviceRows = readRows<UserDeviceRow>(section.device_rows);
+  const sessionRows = readRows<AppSessionRow>(section.session_rows);
   const devices = deviceRows.slice(0, page.limit).map((device) => ({
     id: device.id,
     deviceHash: hashRiskValue(device.device_key),
@@ -744,6 +599,11 @@ async function loadDeviceSummary(
     ...deviceRows.map((device) => hashRiskValue(device.device_key)),
     ...sessionRows.map((session) => hashRiskValue(session.device_id)),
   ]);
+  const nextCursor = buildNextCursor(
+    Math.max(deviceRows.length, sessionRows.length),
+    page.limit,
+    page.offset,
+  );
 
   return {
     deviceCount,
@@ -761,56 +621,20 @@ async function loadDeviceSummary(
     items: devices,
     pageCount: devices.length,
     page_count: devices.length,
-    nextCursor: buildNextCursor(
-      Math.max(deviceRows.length, sessionRows.length),
-      page.limit,
-      page.offset,
-    ),
-    next_cursor: buildNextCursor(
-      Math.max(deviceRows.length, sessionRows.length),
-      page.limit,
-      page.offset,
-    ),
+    nextCursor,
+    next_cursor: nextCursor,
   };
 }
 
-async function loadRiskTimeline(
-  db: SupabaseAdminClient,
-  userId: string,
+function buildRiskTimeline(
+  payload: unknown,
   page: SectionPage,
-): Promise<Record<string, unknown>> {
-  const totalCount = await countRows(
-    db,
-    "ops",
-    "risk_events",
-    "user_id",
-    userId,
-  );
-  const { data, error } = await db
-    .schema("ops")
-    .from("risk_events")
-    .select(RISK_EVENT_COLUMNS)
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false })
-    .order("id", { ascending: false })
-    .range(page.offset, page.offset + page.limit);
-
-  if (error) {
-    throw new ApiError(
-      500,
-      "ADMIN_RISK_USER_TIMELINE_LOOKUP_FAILED",
-      "用户风险时间线查询失败。",
-      {
-        expose: false,
-        cause: error,
-      },
-    );
-  }
-
-  const rows = Array.isArray(data)
-    ? (data as unknown as RiskEventRow[]).slice(0, page.limit)
-    : [];
-  const items = rows.map(serializeRiskEvent);
+): Record<string, unknown> {
+  const section = readRecord(payload);
+  const totalCount = readNumber(section.total_count);
+  const rows = readRows<RiskEventRow>(section.rows);
+  const items = rows.slice(0, page.limit).map(serializeRiskEvent);
+  const nextCursor = buildNextCursor(rows.length, page.limit, page.offset);
 
   return {
     items,
@@ -819,298 +643,47 @@ async function loadRiskTimeline(
     total_count: totalCount,
     pageCount: items.length,
     page_count: items.length,
-    nextCursor: buildNextCursor(
-      Array.isArray(data) ? data.length : 0,
-      page.limit,
-      page.offset,
-    ),
-    next_cursor: buildNextCursor(
-      Array.isArray(data) ? data.length : 0,
-      page.limit,
-      page.offset,
-    ),
+    nextCursor,
+    next_cursor: nextCursor,
   };
 }
 
-async function loadStarOrders(
-  db: SupabaseAdminClient,
-  userId: string,
-  page: SectionPage,
-): Promise<StarOrderRow[]> {
-  const { data, error } = await db
-    .schema("payments")
-    .from("star_orders")
-    .select(STAR_ORDER_COLUMNS)
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false })
-    .range(page.offset, page.offset + page.limit);
-
-  if (error) {
-    throw new ApiError(
-      500,
-      "ADMIN_RISK_USER_PAYMENTS_LOOKUP_FAILED",
-      "用户支付摘要查询失败。",
-      {
-        expose: false,
-        cause: error,
-      },
-    );
-  }
-
-  return Array.isArray(data) ? (data as unknown as StarOrderRow[]) : [];
+function readUser(value: unknown): UserRow | null {
+  return isRecord(value) ? (value as unknown as UserRow) : null;
 }
 
-async function loadMarketOrders(
-  db: SupabaseAdminClient,
-  userId: string,
-  page: SectionPage,
-): Promise<MarketOrderRow[]> {
-  const { data, error } = await db
-    .schema("market")
-    .from("orders")
-    .select(MARKET_ORDER_COLUMNS)
-    .or(`buyer_user_id.eq.${userId},seller_user_id.eq.${userId}`)
-    .order("created_at", { ascending: false })
-    .range(page.offset, page.offset + page.limit);
-
-  if (error) {
-    throw new ApiError(
-      500,
-      "ADMIN_RISK_USER_MARKET_LOOKUP_FAILED",
-      "用户市场摘要查询失败。",
-      {
-        expose: false,
-        cause: error,
-      },
-    );
-  }
-
-  return Array.isArray(data) ? (data as unknown as MarketOrderRow[]) : [];
+function readRecord(value: unknown): Record<string, unknown> {
+  return isRecord(value) ? value : {};
 }
 
-async function loadReferrals(
-  db: SupabaseAdminClient,
-  userId: string,
-  page: SectionPage,
-): Promise<ReferralRow[]> {
-  const { data, error } = await db
-    .schema("tasks")
-    .from("referrals")
-    .select(REFERRAL_COLUMNS)
-    .or(`inviter_user_id.eq.${userId},invitee_user_id.eq.${userId}`)
-    .order("created_at", { ascending: false })
-    .range(page.offset, page.offset + page.limit);
-
-  if (error) {
-    throw new ApiError(
-      500,
-      "ADMIN_RISK_USER_REFERRALS_LOOKUP_FAILED",
-      "用户邀请摘要查询失败。",
-      {
-        expose: false,
-        cause: error,
-      },
-    );
-  }
-
-  return Array.isArray(data) ? (data as unknown as ReferralRow[]) : [];
+function readRows<TRow>(value: unknown): TRow[] {
+  return Array.isArray(value) ? (value as TRow[]) : [];
 }
 
-async function loadUserDevices(
-  db: SupabaseAdminClient,
-  userId: string,
-  page: SectionPage,
-): Promise<UserDeviceRow[]> {
-  const { data, error } = await db
-    .schema("core")
-    .from("user_devices")
-    .select(USER_DEVICE_COLUMNS)
-    .eq("user_id", userId)
-    .order("last_seen_at", { ascending: false, nullsFirst: false })
-    .order("first_seen_at", { ascending: false })
-    .range(page.offset, page.offset + page.limit);
+function readNumber(value: unknown): number {
+  const parsed =
+    typeof value === "number"
+      ? value
+      : typeof value === "string"
+        ? Number.parseInt(value, 10)
+        : 0;
 
-  if (error) {
-    throw new ApiError(
-      500,
-      "ADMIN_RISK_USER_DEVICES_LOOKUP_FAILED",
-      "用户设备摘要查询失败。",
-      {
-        expose: false,
-        cause: error,
-      },
-    );
-  }
-
-  return Array.isArray(data) ? (data as unknown as UserDeviceRow[]) : [];
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
 }
 
-async function loadAppSessions(
-  db: SupabaseAdminClient,
-  userId: string,
-  page: SectionPage,
-): Promise<AppSessionRow[]> {
-  const { data, error } = await db
-    .schema("core")
-    .from("app_sessions")
-    .select(APP_SESSION_COLUMNS)
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false })
-    .range(page.offset, page.offset + page.limit);
+function readWalletReuseCounts(value: unknown): Map<string, number> {
+  const rows = readRows<WalletReuseCountRow>(value);
+  const result = new Map<string, number>();
 
-  if (error) {
-    throw new ApiError(
-      500,
-      "ADMIN_RISK_USER_SESSIONS_LOOKUP_FAILED",
-      "用户登录会话摘要查询失败。",
-      {
-        expose: false,
-        cause: error,
-      },
-    );
+  for (const row of rows) {
+    if (typeof row.address !== "string") {
+      continue;
+    }
+
+    result.set(row.address, readNumber(row.reuse_user_count));
   }
 
-  return Array.isArray(data) ? (data as unknown as AppSessionRow[]) : [];
-}
-
-async function loadWalletReuseCounts(
-  db: SupabaseAdminClient,
-  userId: string,
-  wallets: WalletRow[],
-): Promise<Map<string, number>> {
-  const addresses = [...new Set(wallets.map((wallet) => wallet.address))];
-
-  if (addresses.length === 0) {
-    return new Map();
-  }
-
-  const { data, error } = await db
-    .schema("core")
-    .from("user_wallets")
-    .select("user_id,address")
-    .in("address", addresses)
-    .neq("user_id", userId)
-    .limit(500);
-
-  if (error) {
-    throw new ApiError(
-      500,
-      "ADMIN_RISK_WALLET_REUSE_LOOKUP_FAILED",
-      "钱包复用摘要查询失败。",
-      {
-        expose: false,
-        cause: error,
-      },
-    );
-  }
-
-  const reuseRows = Array.isArray(data)
-    ? (data as unknown as WalletReuseRow[])
-    : [];
-  const usersByAddress = new Map<string, Set<string>>();
-
-  for (const row of reuseRows) {
-    const users = usersByAddress.get(row.address) ?? new Set<string>();
-    users.add(row.user_id);
-    usersByAddress.set(row.address, users);
-  }
-
-  return new Map(
-    Array.from(usersByAddress.entries()).map(([address, users]) => [
-      address,
-      users.size,
-    ]),
-  );
-}
-
-async function countPaymentStatuses(
-  db: SupabaseAdminClient,
-  userId: string,
-  statuses: string[],
-): Promise<number> {
-  const { count, error } = await db
-    .schema("payments")
-    .from("star_orders")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", userId)
-    .in("status", statuses);
-
-  if (error) {
-    throw new ApiError(
-      500,
-      "ADMIN_RISK_PAYMENT_STATUS_COUNT_FAILED",
-      "用户支付状态数量查询失败。",
-      {
-        expose: false,
-        cause: error,
-      },
-    );
-  }
-
-  return count ?? 0;
-}
-
-async function countReferralsWithValue(
-  db: SupabaseAdminClient,
-  userId: string,
-  column: "first_open_order_id" | "qualified_at" | "rewarded_at",
-): Promise<number> {
-  const { count, error } = await db
-    .schema("tasks")
-    .from("referrals")
-    .select("id", { count: "exact", head: true })
-    .eq("inviter_user_id", userId)
-    .not(column, "is", null);
-
-  if (error) {
-    throw new ApiError(
-      500,
-      "ADMIN_RISK_REFERRAL_COUNT_FAILED",
-      "用户邀请转化数量查询失败。",
-      {
-        expose: false,
-        cause: error,
-      },
-    );
-  }
-
-  return count ?? 0;
-}
-
-async function countRows(
-  db: SupabaseAdminClient,
-  schema: "core" | "market" | "ops" | "payments" | "tasks",
-  table:
-    | "app_sessions"
-    | "orders"
-    | "referrals"
-    | "risk_events"
-    | "star_orders"
-    | "user_devices"
-    | "user_flags"
-    | "user_wallets",
-  column: string,
-  userId: string,
-): Promise<number> {
-  const { count, error } = await db
-    .schema(schema)
-    .from(table)
-    .select("id", { count: "exact", head: true })
-    .eq(column, userId);
-
-  if (error) {
-    throw new ApiError(
-      500,
-      "ADMIN_RISK_USER_COUNT_LOOKUP_FAILED",
-      "用户画像数量查询失败。",
-      {
-        expose: false,
-        cause: error,
-      },
-    );
-  }
-
-  return count ?? 0;
+  return result;
 }
 
 function roundRate(value: number): number {

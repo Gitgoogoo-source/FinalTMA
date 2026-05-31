@@ -23,6 +23,7 @@ import {
 } from "../_shared/handler.js";
 import { parseJsonBody } from "../_shared/parseBody.js";
 import { requireSession } from "../_shared/requireSession.js";
+import { recordRiskEventSafely } from "../_shared/riskEvents.js";
 import { validate } from "../_shared/validate.js";
 
 type WalletProofBody = {
@@ -275,6 +276,14 @@ async function claimPendingProof(
 
   if (error) {
     if (isUniqueViolation(error)) {
+      await recordWalletProofReplayRisk({
+        userId: context.userId,
+        requestId: context.requestId,
+        walletProof: input,
+        proofHash: context.proofHash,
+        proofRow: null,
+        reason: "proof_hash_unique_violation",
+      });
       throw new ApiError(
         409,
         "WALLET_PROOF_REPLAYED",
@@ -297,24 +306,28 @@ async function claimPendingProof(
     return data;
   }
 
-  return await throwProofUnavailableError(
-    db,
-    context.userId,
-    input.proof.payload,
-  );
+  return await throwProofUnavailableError(db, input, {
+    userId: context.userId,
+    requestId: context.requestId,
+    proofHash: context.proofHash,
+  });
 }
 
 async function throwProofUnavailableError(
   db: SupabaseAdminClient,
-  userId: string,
-  challenge: string,
+  input: WalletProofBody,
+  context: {
+    userId: string;
+    requestId: string;
+    proofHash: string;
+  },
 ): Promise<never> {
   const { data, error } = await db
     .schema("core")
     .from("wallet_proofs")
     .select("id,user_id,wallet_id,challenge,status,expires_at,used_at")
-    .eq("user_id", userId)
-    .eq("challenge", challenge)
+    .eq("user_id", context.userId)
+    .eq("challenge", input.proof.payload)
     .maybeSingle<WalletProofRow>();
 
   if (error) {
@@ -346,11 +359,70 @@ async function throwProofUnavailableError(
     );
   }
 
+  await recordWalletProofReplayRisk({
+    userId: context.userId,
+    requestId: context.requestId,
+    walletProof: input,
+    proofHash: context.proofHash,
+    proofRow: data,
+    reason: "challenge_not_pending",
+  });
+
   throw new ApiError(
     409,
     "WALLET_PROOF_REPLAYED",
     "钱包 proof 已被使用，请重新连接钱包。",
   );
+}
+
+async function recordWalletProofReplayRisk(input: {
+  userId: string;
+  requestId: string;
+  walletProof: WalletProofBody;
+  proofHash: string;
+  proofRow: WalletProofRow | null;
+  reason: string;
+}): Promise<void> {
+  const proofId = input.proofRow?.id ?? null;
+  const challengeHash = sha256Hex(input.walletProof.proof.payload);
+  const keyHash = sha256Hex(
+    [
+      input.userId,
+      input.reason,
+      input.proofHash,
+      proofId ?? "no-proof-row",
+      input.walletProof.idempotencyKey,
+    ].join(":"),
+  ).slice(0, 40);
+
+  await recordRiskEventSafely({
+    userId: input.userId,
+    eventType: "wallet_proof_replay",
+    sourceType: "wallet_proof",
+    sourceId: proofId,
+    detail: {
+      request_id: input.requestId,
+      action: "wallet.proof",
+      reason: input.reason,
+      proof_id: proofId,
+      existing_status: input.proofRow?.status ?? null,
+      used_at: input.proofRow?.used_at ?? null,
+      expires_at: input.proofRow?.expires_at ?? null,
+      address: input.walletProof.account.address,
+      chain: input.walletProof.account.chain,
+      network: toWalletNetwork(input.walletProof.account.chain),
+      wallet_app_name: input.walletProof.walletAppName ?? null,
+      challenge_hash: challengeHash,
+      proof_hash: input.proofHash,
+      idempotency_key_hash: sha256Hex(input.walletProof.idempotencyKey),
+    },
+    idempotencyKey: `risk:wallet_proof_replay:${keyHash}`,
+    context: {
+      requestId: input.requestId,
+      userId: input.userId,
+      proofId,
+    },
+  });
 }
 
 async function markProofVerified(

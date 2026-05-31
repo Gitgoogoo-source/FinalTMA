@@ -24,6 +24,7 @@ import {
 } from "../../packages/server/src/ton/nft.js";
 import { assertCronRequest } from "../_shared/cron.js";
 import { ApiError, withApiHandler } from "../_shared/handler.js";
+import { recordMintRetryExceededRisk } from "../_shared/mintRiskEvents.js";
 
 type MintQueueRow = {
   id: string;
@@ -863,6 +864,26 @@ async function moveMintQueueToRetryOrReview(
       retry_max_attempts: decision.maxAttempts,
     },
   });
+
+  if (decision.status === "manual_review") {
+    await recordMintRetryExceededRisk({
+      userId: queue.user_id,
+      mintQueueId: queue.id,
+      itemInstanceId: queue.item_instance_id,
+      walletId: queue.wallet_id,
+      requestId: input.requestId,
+      action: "cron.retry_mint_queue",
+      status: "manual_review",
+      attemptCount: decision.attemptCount,
+      maxAttempts: decision.maxAttempts,
+      errorCode: getMintWorkerErrorCode(input.error),
+      errorMessage,
+      retryable,
+      txHash: queue.tx_hash,
+      possibleSubmission,
+      forceNoSubmit: input.forceNoSubmit ?? false,
+    });
+  }
 
   return {
     status: decision.status,

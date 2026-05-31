@@ -852,7 +852,7 @@ insert into ops.risk_events (
 ) values (
   '00000000-0000-5000-8000-000000000350',
   '00000000-0000-5000-8000-000000000301',
-  'wallet_nft_owner_mismatch',
+  'onchain_nft_owner_mismatch',
   'medium',
   'open',
   'wallet_nft_sync_job',
@@ -978,7 +978,7 @@ select ok(
       from ops.risk_events
       where source_type = 'wallet_nft_sync_job'
         and source_id = '00000000-0000-5000-8000-000000000347'
-        and event_type = 'wallet_nft_owner_mismatch'
+        and event_type = 'onchain_nft_owner_mismatch'
       order by created_at desc
       limit 20
     $sql$,

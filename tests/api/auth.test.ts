@@ -22,7 +22,9 @@ vi.mock("../../packages/server/src/db/supabaseAdmin.js", () => ({
 
 const BOT_TOKEN = "123456:test-bot-token";
 const USER_ID = "11111111-1111-4111-8111-111111111111";
+const INVITER_USER_ID = "11111111-1111-4111-8111-222222222222";
 const SESSION_ID = "22222222-2222-4222-8222-222222222222";
+const REFERRAL_ID = "33333333-3333-4333-8333-333333333333";
 
 describe("auth API", () => {
   beforeEach(() => {
@@ -167,8 +169,98 @@ describe("auth API", () => {
       "auth_create_session",
       expect.objectContaining({
         p_user_id: USER_ID,
+        p_device_id: expect.any(String),
+        p_ip_hash: expect.any(String),
+        p_user_agent: expect.any(String),
       }),
       expect.any(Object),
+    );
+  });
+
+  it("/api/auth/telegram records same-device referral multi-account risk", async () => {
+    let createSessionParams: Record<string, unknown> | null = null;
+    getSupabaseAdminClientMock.mockReturnValue(
+      createAuthReferralRiskSupabaseMock(() => createSessionParams),
+    );
+    callRpcRawMock.mockImplementation(
+      async (rpcName: string, params: Record<string, unknown>) => {
+        if (rpcName === "auth_upsert_telegram_user") {
+          return {
+            user_id: USER_ID,
+            telegram_user_id: 7002,
+            invite_code: "invite_test_7002",
+          };
+        }
+
+        if (rpcName === "auth_create_session") {
+          createSessionParams = params;
+          return {
+            session_id: SESSION_ID,
+            expires_at: "2026-05-28T00:00:00.000Z",
+          };
+        }
+
+        if (rpcName === "risk_record_event") {
+          return {
+            risk_event_id: "44444444-4444-4444-8444-444444444444",
+            status: "open",
+          };
+        }
+
+        throw new Error(`Unexpected RPC: ${rpcName}`);
+      },
+    );
+
+    const { default: authTelegramHandler } =
+      await import("../../api/auth/telegram");
+    const initData = buildTelegramInitData({
+      botToken: BOT_TOKEN,
+      authDate: 1779321600,
+      startParam: "INVITER7002",
+      user: {
+        id: 7002,
+        first_name: "Invitee",
+      },
+    });
+
+    const result = await invokeApiHandler<ApiSuccessResponse>(
+      authTelegramHandler,
+      {
+        method: "POST",
+        url: "/api/auth/telegram",
+        headers: {
+          "content-type": "application/json",
+          "user-agent": "same-device-agent",
+          "x-forwarded-for": "127.0.0.22",
+        },
+        body: {
+          initData,
+          clientContext: {
+            platform: "ios",
+          },
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(200);
+    expect(callRpcRawMock).toHaveBeenCalledWith(
+      "risk_record_event",
+      expect.objectContaining({
+        p_user_id: USER_ID,
+        p_event_type: "referral_multi_account",
+        p_source_type: "referral",
+        p_source_id: REFERRAL_ID,
+        p_detail: expect.objectContaining({
+          action: "auth.telegram",
+          reason: "same_server_device_fingerprint",
+          referral_id: REFERRAL_ID,
+          inviter_user_id: INVITER_USER_ID,
+          matched_signals: expect.arrayContaining(["device_id"]),
+        }),
+      }),
+      expect.objectContaining({
+        schema: "api",
+      }),
     );
   });
 
@@ -292,6 +384,10 @@ function createAuthSupabaseMock(status = "active") {
         status,
       },
       error: null,
+    })
+    .mockResolvedValue({
+      data: null,
+      error: null,
     });
   const eqMock = vi.fn(() => ({
     maybeSingle: maybeSingleMock,
@@ -308,5 +404,94 @@ function createAuthSupabaseMock(status = "active") {
 
   return {
     schema: schemaMock,
+  };
+}
+
+function createAuthReferralRiskSupabaseMock(
+  readCreateSessionParams: () => Record<string, unknown> | null,
+) {
+  let maybeSingleCount = 0;
+
+  function resolveMaybeSingle() {
+    maybeSingleCount += 1;
+
+    if (maybeSingleCount === 1) {
+      return Promise.resolve({
+        data: null,
+        error: null,
+      });
+    }
+
+    if (maybeSingleCount === 2) {
+      return Promise.resolve({
+        data: {
+          status: "active",
+        },
+        error: null,
+      });
+    }
+
+    if (maybeSingleCount === 3) {
+      return Promise.resolve({
+        data: {
+          id: INVITER_USER_ID,
+          invite_code: "INVITER7002",
+        },
+        error: null,
+      });
+    }
+
+    if (maybeSingleCount === 4) {
+      return Promise.resolve({
+        data: {
+          id: REFERRAL_ID,
+          inviter_user_id: INVITER_USER_ID,
+          invitee_user_id: USER_ID,
+          invite_code: "INVITER7002",
+          status: "pending",
+        },
+        error: null,
+      });
+    }
+
+    return Promise.resolve({
+      data: null,
+      error: null,
+    });
+  }
+
+  function resolveSessionList() {
+    const params = readCreateSessionParams();
+
+    return Promise.resolve({
+      data: [
+        {
+          id: "55555555-5555-4555-8555-555555555555",
+          ip_hash: params?.p_ip_hash ?? null,
+          user_agent: params?.p_user_agent ?? null,
+          device_id: params?.p_device_id ?? null,
+          platform: "ios",
+          created_at: "2026-05-20T00:00:00.000Z",
+        },
+      ],
+      error: null,
+    });
+  }
+
+  const builder = {
+    select: vi.fn(() => builder),
+    eq: vi.fn(() => builder),
+    order: vi.fn(() => builder),
+    limit: vi.fn(() => builder),
+    maybeSingle: vi.fn(resolveMaybeSingle),
+    then: vi.fn((resolve, reject) =>
+      resolveSessionList().then(resolve, reject),
+    ),
+  };
+
+  return {
+    schema: vi.fn(() => ({
+      from: vi.fn(() => builder),
+    })),
   };
 }

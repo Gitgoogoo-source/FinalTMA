@@ -515,7 +515,23 @@ describe("wallet proof API", () => {
         code: "WALLET_PROOF_REPLAYED",
       },
     });
-    expect(callRpcRawMock).not.toHaveBeenCalled();
+    expect(callRpcRawMock).toHaveBeenCalledWith(
+      "risk_record_event",
+      expect.objectContaining({
+        p_user_id: USER_ID,
+        p_event_type: "wallet_proof_replay",
+        p_source_type: "wallet_proof",
+        p_source_id: PROOF_ID,
+        p_detail: expect.objectContaining({
+          reason: "challenge_not_pending",
+          existing_status: "verified",
+          action: "wallet.proof",
+        }),
+      }),
+      expect.objectContaining({
+        schema: "api",
+      }),
+    );
   });
 
   it("rejects a duplicate proof hash unique violation as replay", async () => {
@@ -559,7 +575,22 @@ describe("wallet proof API", () => {
         proof_hash: expect.any(String),
       }),
     });
-    expect(callRpcRawMock).not.toHaveBeenCalled();
+    expect(callRpcRawMock).toHaveBeenCalledWith(
+      "risk_record_event",
+      expect.objectContaining({
+        p_user_id: USER_ID,
+        p_event_type: "wallet_proof_replay",
+        p_source_type: "wallet_proof",
+        p_source_id: null,
+        p_detail: expect.objectContaining({
+          reason: "proof_hash_unique_violation",
+          action: "wallet.proof",
+        }),
+      }),
+      expect.objectContaining({
+        schema: "api",
+      }),
+    );
   });
 });
 

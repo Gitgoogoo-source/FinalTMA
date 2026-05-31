@@ -7,15 +7,16 @@ import {
 } from "../../api/_shared/handler";
 import { invokeApiHandler } from "./_utils";
 
-const { getSupabaseAdminClientMock, requireAdminMock, runWriteRpcMock } =
-  vi.hoisted(() => ({
-    getSupabaseAdminClientMock: vi.fn(),
+const { callRpcRawMock, requireAdminMock, runWriteRpcMock } = vi.hoisted(
+  () => ({
+    callRpcRawMock: vi.fn(),
     requireAdminMock: vi.fn(),
     runWriteRpcMock: vi.fn(),
-  }));
+  }),
+);
 
-vi.mock("../../packages/server/src/db/supabaseAdmin.js", () => ({
-  getSupabaseAdminClient: getSupabaseAdminClientMock,
+vi.mock("../../packages/server/src/db/rpc.js", () => ({
+  callRpcRaw: callRpcRawMock,
 }));
 
 vi.mock("../../api/_shared/requireAdmin.js", () => ({
@@ -45,31 +46,11 @@ const USER_ID = "44444444-4444-4444-8444-444444444444";
 const STAR_ORDER_ID = "55555555-5555-4555-8555-555555555555";
 const FLAG_ID = "66666666-6666-4666-8666-666666666666";
 
-type AdminTableRows = Record<string, Array<Record<string, unknown>>>;
-
-type QueryFilter =
-  | {
-      kind: "eq" | "neq" | "gte" | "lte" | "in";
-      column: string;
-      value: unknown;
-    }
-  | { kind: "not"; column: string; operator: string; value: unknown }
-  | { kind: "or"; value: string };
-
-type QueryOperation = {
-  schema: string;
-  table: string;
-  selectedColumns: string[] | null;
-  filters: QueryFilter[];
-  range: [number, number] | null;
-  limit: number | null;
-};
-
 describe("admin risk APIs", () => {
   beforeEach(() => {
     process.env.NODE_ENV = "test";
     vi.resetModules();
-    getSupabaseAdminClientMock.mockReset();
+    callRpcRawMock.mockReset();
     requireAdminMock.mockReset();
     runWriteRpcMock.mockReset();
     requireAdminMock.mockResolvedValue(ADMIN_CONTEXT);
@@ -217,9 +198,10 @@ describe("admin risk APIs", () => {
   });
 
   it("lists risk events with loaded payment association summaries", async () => {
-    getSupabaseAdminClientMock.mockReturnValue(
-      createAdminReadDbMock({
-        "ops.risk_events": [
+    callRpcRawMock
+      .mockResolvedValueOnce({
+        total_count: 1,
+        rows: [
           {
             id: RISK_EVENT_ID,
             user_id: USER_ID,
@@ -238,20 +220,24 @@ describe("admin risk APIs", () => {
             created_at: "2026-05-31T00:00:00.000Z",
           },
         ],
-        "payments.star_orders": [
+      })
+      .mockResolvedValueOnce({
+        summaries: [
           {
-            id: STAR_ORDER_ID,
-            status: "paid",
-            business_type: "gacha",
-            business_id: RISK_EVENT_ID,
-            xtr_amount: 100,
-            paid_at: "2026-05-31T00:01:00.000Z",
-            fulfilled_at: null,
-            created_at: "2026-05-31T00:00:00.000Z",
+            kind: "payment_order",
+            source_id: STAR_ORDER_ID,
+            summary: {
+              status: "paid",
+              business_type: "gacha",
+              business_id: RISK_EVENT_ID,
+              xtr_amount: 100,
+              paid_at: "2026-05-31T00:01:00.000Z",
+              fulfilled_at: null,
+              created_at: "2026-05-31T00:00:00.000Z",
+            },
           },
         ],
-      }).client,
-    );
+      });
 
     const { default: eventsHandler } =
       await import("../../api/admin/risk/events");
@@ -267,6 +253,34 @@ describe("admin risk APIs", () => {
     });
 
     expect(result.statusCode).toBe(200);
+    expect(callRpcRawMock).toHaveBeenNthCalledWith(
+      1,
+      "admin_list_risk_events",
+      expect.objectContaining({
+        p_filters: {},
+        p_sort: "created_at",
+        p_limit: 20,
+        p_offset: 0,
+      }),
+      expect.objectContaining({
+        schema: "api",
+      }),
+    );
+    expect(callRpcRawMock).toHaveBeenNthCalledWith(
+      2,
+      "admin_get_risk_association_summaries",
+      expect.objectContaining({
+        p_associations: [
+          {
+            kind: "payment_order",
+            source_id: STAR_ORDER_ID,
+          },
+        ],
+      }),
+      expect.objectContaining({
+        schema: "api",
+      }),
+    );
     expect(result.body.data).toMatchObject({
       items: [
         {
@@ -283,31 +297,31 @@ describe("admin risk APIs", () => {
   });
 
   it("returns user profile device/IP hashes and payment failure rate", async () => {
-    getSupabaseAdminClientMock.mockReturnValue(
-      createAdminReadDbMock({
-        "core.users": [
-          {
-            id: USER_ID,
-            telegram_user_id: 7001,
-            username: "risk_user",
-            first_name: "Risk",
-            last_name: "User",
-            language_code: "en",
-            is_premium: false,
-            is_bot: false,
-            invite_code: "riskuser",
-            referred_by_user_id: null,
-            status: "active",
-            risk_score: 30,
-            first_seen_at: "2026-05-01T00:00:00.000Z",
-            last_seen_at: "2026-05-31T00:00:00.000Z",
-            last_auth_at: "2026-05-31T00:00:00.000Z",
-            metadata: {},
-            created_at: "2026-05-01T00:00:00.000Z",
-            updated_at: "2026-05-31T00:00:00.000Z",
-          },
-        ],
-        "core.user_devices": [
+    callRpcRawMock.mockResolvedValueOnce({
+      user: {
+        id: USER_ID,
+        telegram_user_id: 7001,
+        username: "risk_user",
+        first_name: "Risk",
+        last_name: "User",
+        language_code: "en",
+        is_premium: false,
+        is_bot: false,
+        invite_code: "riskuser",
+        referred_by_user_id: null,
+        status: "active",
+        risk_score: 30,
+        first_seen_at: "2026-05-01T00:00:00.000Z",
+        last_seen_at: "2026-05-31T00:00:00.000Z",
+        last_auth_at: "2026-05-31T00:00:00.000Z",
+        metadata: {},
+        created_at: "2026-05-01T00:00:00.000Z",
+        updated_at: "2026-05-31T00:00:00.000Z",
+      },
+      devices: {
+        device_count: 1,
+        session_count: 1,
+        device_rows: [
           {
             id: "88888888-8888-4888-8888-888888888888",
             user_id: USER_ID,
@@ -319,7 +333,7 @@ describe("admin risk APIs", () => {
             metadata: {},
           },
         ],
-        "core.app_sessions": [
+        session_rows: [
           {
             id: "99999999-9999-4999-8999-999999999999",
             user_id: USER_ID,
@@ -333,7 +347,13 @@ describe("admin risk APIs", () => {
             created_at: "2026-05-31T00:00:00.000Z",
           },
         ],
-        "payments.star_orders": [
+      },
+      payments: {
+        total_count: 2,
+        success_count: 1,
+        failed_count: 1,
+        disputed_count: 0,
+        rows: [
           {
             id: STAR_ORDER_ID,
             user_id: USER_ID,
@@ -357,7 +377,10 @@ describe("admin risk APIs", () => {
             created_at: "2026-05-30T00:00:00.000Z",
           },
         ],
-        "core.user_flags": [
+      },
+      flags: {
+        total_count: 1,
+        rows: [
           {
             id: FLAG_ID,
             user_id: USER_ID,
@@ -373,12 +396,31 @@ describe("admin risk APIs", () => {
             updated_at: "2026-05-31T00:00:00.000Z",
           },
         ],
-        "core.user_wallets": [],
-        "market.orders": [],
-        "tasks.referrals": [],
-        "ops.risk_events": [],
-      }).client,
-    );
+      },
+      wallets: {
+        total_count: 0,
+        rows: [],
+        reuse_counts: [],
+      },
+      market: {
+        buyer_count: 0,
+        seller_count: 0,
+        rows: [],
+        counterparty_rows: [],
+      },
+      referrals: {
+        invited_count: 0,
+        invited_by_count: 0,
+        first_open_count: 0,
+        qualified_count: 0,
+        rewarded_count: 0,
+        rows: [],
+      },
+      risk_events: {
+        total_count: 0,
+        rows: [],
+      },
+    });
 
     const { default: profileHandler } =
       await import("../../api/admin/risk/user-profile");
@@ -393,6 +435,18 @@ describe("admin risk APIs", () => {
     });
 
     expect(result.statusCode).toBe(200);
+    expect(callRpcRawMock).toHaveBeenCalledWith(
+      "admin_get_risk_user_profile",
+      expect.objectContaining({
+        p_user_id: USER_ID,
+        p_section: null,
+        p_limit: 20,
+        p_offset: 0,
+      }),
+      expect.objectContaining({
+        schema: "api",
+      }),
+    );
     expect(result.body.data).toMatchObject({
       devices: {
         deviceCount: 1,
@@ -410,197 +464,3 @@ describe("admin risk APIs", () => {
     expect(JSON.stringify(result.body.data)).not.toContain("raw user agent");
   });
 });
-
-function createAdminReadDbMock(rowsByTable: AdminTableRows): {
-  client: unknown;
-  operations: QueryOperation[];
-} {
-  const operations: QueryOperation[] = [];
-
-  return {
-    client: {
-      schema: (schema: string) => ({
-        from: (table: string) =>
-          createAdminQueryBuilder(schema, table, rowsByTable, operations),
-      }),
-    },
-    operations,
-  };
-}
-
-function createAdminQueryBuilder(
-  schema: string,
-  table: string,
-  rowsByTable: AdminTableRows,
-  operations: QueryOperation[],
-) {
-  const operation: QueryOperation = {
-    schema,
-    table,
-    selectedColumns: null,
-    filters: [],
-    range: null,
-    limit: null,
-  };
-  operations.push(operation);
-
-  const builder = {
-    select: (columns?: string) => {
-      operation.selectedColumns = parseSelectedColumns(columns);
-      return builder;
-    },
-    eq: (column: string, value: unknown) => {
-      operation.filters.push({ kind: "eq", column, value });
-      return builder;
-    },
-    neq: (column: string, value: unknown) => {
-      operation.filters.push({ kind: "neq", column, value });
-      return builder;
-    },
-    gte: (column: string, value: unknown) => {
-      operation.filters.push({ kind: "gte", column, value });
-      return builder;
-    },
-    lte: (column: string, value: unknown) => {
-      operation.filters.push({ kind: "lte", column, value });
-      return builder;
-    },
-    in: (column: string, value: unknown) => {
-      operation.filters.push({ kind: "in", column, value });
-      return builder;
-    },
-    not: (column: string, operator: string, value: unknown) => {
-      operation.filters.push({ kind: "not", column, operator, value });
-      return builder;
-    },
-    or: (value: string) => {
-      operation.filters.push({ kind: "or", value });
-      return builder;
-    },
-    order: () => builder,
-    range: (from: number, to: number) => {
-      operation.range = [from, to];
-      return builder;
-    },
-    limit: (limit: number) => {
-      operation.limit = limit;
-      return builder;
-    },
-    maybeSingle: () => {
-      const resolved = resolveAdminQuery(operation, rowsByTable);
-      return Promise.resolve({
-        data: resolved.data[0] ?? null,
-        error: null,
-      });
-    },
-    then: (
-      resolve: (value: {
-        data: Array<Record<string, unknown>>;
-        error: null;
-        count: number;
-      }) => unknown,
-      reject?: (reason: unknown) => unknown,
-    ) =>
-      Promise.resolve(resolve(resolveAdminQuery(operation, rowsByTable))).catch(
-        reject,
-      ),
-  };
-
-  return builder;
-}
-
-function parseSelectedColumns(columns: string | undefined): string[] | null {
-  if (!columns) {
-    return null;
-  }
-
-  return columns
-    .split(",")
-    .map((column) => column.trim())
-    .filter(Boolean)
-    .map((column) => column.split(":").at(0)?.trim() ?? "")
-    .filter(Boolean);
-}
-
-function resolveAdminQuery(
-  operation: QueryOperation,
-  rowsByTable: AdminTableRows,
-): { data: Array<Record<string, unknown>>; error: null; count: number } {
-  let rows = [...(rowsByTable[`${operation.schema}.${operation.table}`] ?? [])];
-
-  for (const filter of operation.filters) {
-    if (filter.kind === "eq") {
-      rows = rows.filter((row) => row[filter.column] === filter.value);
-    }
-
-    if (filter.kind === "neq") {
-      rows = rows.filter((row) => row[filter.column] !== filter.value);
-    }
-
-    if (filter.kind === "gte") {
-      rows = rows.filter(
-        (row) => String(row[filter.column] ?? "") >= String(filter.value),
-      );
-    }
-
-    if (filter.kind === "lte") {
-      rows = rows.filter(
-        (row) => String(row[filter.column] ?? "") <= String(filter.value),
-      );
-    }
-
-    if (filter.kind === "in") {
-      const values = filter.value;
-
-      if (Array.isArray(values)) {
-        rows = rows.filter((row) => values.includes(row[filter.column]));
-      }
-    }
-
-    if (filter.kind === "not" && filter.operator === "is") {
-      rows = rows.filter((row) => row[filter.column] !== filter.value);
-    }
-
-    if (filter.kind === "or") {
-      const clauses = filter.value.split(",");
-      rows = rows.filter((row) =>
-        clauses.some((clause) => {
-          const [column, operator, value] = clause.split(".");
-          if (!column) {
-            return false;
-          }
-
-          return operator === "eq" && row[column] === value;
-        }),
-      );
-    }
-  }
-
-  const count = rows.length;
-
-  if (operation.range) {
-    rows = rows.slice(operation.range[0], operation.range[1] + 1);
-  }
-
-  if (operation.limit !== null) {
-    rows = rows.slice(0, operation.limit);
-  }
-
-  if (operation.selectedColumns) {
-    rows = rows.map((row) => {
-      const selectedRow: Record<string, unknown> = {};
-
-      for (const column of operation.selectedColumns ?? []) {
-        selectedRow[column] = row[column];
-      }
-
-      return selectedRow;
-    });
-  }
-
-  return {
-    data: rows,
-    error: null,
-    count,
-  };
-}

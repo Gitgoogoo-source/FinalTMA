@@ -122,26 +122,60 @@ async function recordReferralRiskFromRejectedPayload(
   const bound = readBoolean(payload.bound) ?? false;
   const reason = readString(payload.reason);
 
-  if (bound || reason !== "self_invite_not_allowed") {
+  if (bound) {
     return;
   }
 
+  if (reason === "self_invite_not_allowed") {
+    await recordRiskEventSafely({
+      userId,
+      eventType: "referral_self_loop",
+      sourceType: "referral",
+      sourceId: null,
+      detail: {
+        request_id: requestId,
+        action: "tasks.bind_referral",
+        reason,
+        status: readString(payload.status),
+        invite_code: readString(payload.invite_code),
+      },
+      idempotencyKey: `risk:referral_self_loop:${userId}:${idempotencyKey}`,
+      context: {
+        requestId,
+        userId,
+        idempotencyKey,
+      },
+    });
+    return;
+  }
+
+  if (
+    reason !== "referral_already_bound" &&
+    readString(payload.status) !== "conflict"
+  ) {
+    return;
+  }
+
+  const referralId = readString(payload.referral_id);
+
   await recordRiskEventSafely({
     userId,
-    eventType: "referral_self_loop",
+    eventType: "referral_abuse",
     sourceType: "referral",
-    sourceId: null,
+    sourceId: referralId,
     detail: {
       request_id: requestId,
       action: "tasks.bind_referral",
       reason,
       status: readString(payload.status),
+      referral_id: referralId,
       invite_code: readString(payload.invite_code),
     },
-    idempotencyKey: `risk:referral_self_loop:${userId}:${idempotencyKey}`,
+    idempotencyKey: `risk:referral_abuse:${referralId ?? userId}:${idempotencyKey}`,
     context: {
       requestId,
       userId,
+      referralId,
       idempotencyKey,
     },
   });

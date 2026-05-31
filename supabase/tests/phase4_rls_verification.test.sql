@@ -189,7 +189,7 @@ insert into ops.risk_events (
 ) values (
   '00000000-0000-4000-8000-000000004591',
   '00000000-0000-4000-8000-000000004501',
-  'phase4_rls_verification',
+  'wallet_sync_stuck',
   'low',
   'test',
   '{"test":"phase4_rls_verification"}'::jsonb

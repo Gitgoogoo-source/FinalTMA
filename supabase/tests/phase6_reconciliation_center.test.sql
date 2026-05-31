@@ -133,7 +133,7 @@ select lives_ok(
     )
     values
       (
-        'phase6_reconciliation_center_status_test',
+        'ledger_balance_mismatch',
         'low',
         'fixed',
         'reconciliation_run',
@@ -141,7 +141,7 @@ select lives_ok(
         '{"test":"phase6_reconciliation_center","status":"fixed"}'::jsonb
       ),
       (
-        'phase6_reconciliation_center_status_test',
+        'ledger_balance_mismatch',
         'low',
         'false_positive',
         'reconciliation_run',
@@ -149,7 +149,7 @@ select lives_ok(
         '{"test":"phase6_reconciliation_center","status":"false_positive"}'::jsonb
       ),
       (
-        'phase6_reconciliation_center_status_test',
+        'ledger_balance_mismatch',
         'low',
         'escalated',
         'reconciliation_run',
@@ -164,7 +164,8 @@ select is(
   (
     select count(*)::int
     from ops.risk_events
-    where event_type = 'phase6_reconciliation_center_status_test'
+    where event_type = 'ledger_balance_mismatch'
+      and detail ->> 'test' = 'phase6_reconciliation_center'
       and status in ('fixed', 'false_positive', 'escalated')
   ),
   3,
@@ -307,7 +308,7 @@ insert into ops.risk_events (
 values
   (
     'bbbbbbbb-1000-4000-8000-000000000001'::uuid,
-    'phase6_reconciliation_ordinary_scope_test',
+    'ledger_balance_mismatch',
     'high',
     'open',
     'manual_risk',
@@ -316,7 +317,7 @@ values
   ),
   (
     'bbbbbbbb-1000-4000-8000-000000000002'::uuid,
-    'phase6_reconciliation_permission_test',
+    'payment_paid_not_fulfilled',
     'high',
     'open',
     'market_order',
@@ -325,7 +326,7 @@ values
   ),
   (
     'bbbbbbbb-1000-4000-8000-000000000003'::uuid,
-    'phase6_reconciliation_reviewing_test',
+    'ledger_balance_mismatch',
     'critical',
     'open',
     'market_order',
@@ -334,7 +335,7 @@ values
   ),
   (
     'bbbbbbbb-1000-4000-8000-000000000004'::uuid,
-    'phase6_reconciliation_fixed_validation_test',
+    'gacha_stock_mismatch',
     'high',
     'open',
     'gacha_pool_item',
@@ -343,7 +344,7 @@ values
   ),
   (
     'bbbbbbbb-1000-4000-8000-000000000005'::uuid,
-    'phase6_reconciliation_escalation_validation_test',
+    'referral_abuse',
     'high',
     'open',
     'referral_commission',
@@ -352,7 +353,7 @@ values
   ),
   (
     'bbbbbbbb-1000-4000-8000-000000000006'::uuid,
-    'phase6_reconciliation_ops_permission_test',
+    'mint_retry_exceeded',
     'high',
     'open',
     'inventory_lock',
@@ -361,7 +362,7 @@ values
   ),
   (
     'bbbbbbbb-1000-4000-8000-000000000007'::uuid,
-    'phase6_reconciliation_resolved_reject_test',
+    'mint_confirmed_queue_not_minted',
     'medium',
     'open',
     'mint_queue',
@@ -370,7 +371,7 @@ values
   ),
   (
     'bbbbbbbb-1000-4000-8000-000000000008'::uuid,
-    'phase6_reconciliation_dedupe_test',
+    'market_price_manipulation',
     'high',
     'open',
     'market_order',
@@ -379,7 +380,7 @@ values
   ),
   (
     'bbbbbbbb-1000-4000-8000-000000000009'::uuid,
-    'phase6_reconciliation_wildcard_permission_test',
+    'market_abnormal_cancel_rate',
     'high',
     'open',
     'market_order',
@@ -399,7 +400,7 @@ select ok(
         detail
       )
       values (
-        'phase6_reconciliation_dedupe_test',
+        'market_price_manipulation',
         'high',
         'reviewing',
         'market_order',

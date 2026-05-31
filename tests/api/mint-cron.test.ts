@@ -841,6 +841,24 @@ describe("Mint queue worker", () => {
       status: "manual_review",
       next_attempt_at: null,
     });
+    expect(callRpcRawMock).toHaveBeenCalledWith(
+      "risk_record_event",
+      expect.objectContaining({
+        p_user_id: USER_ID,
+        p_event_type: "mint_retry_exceeded",
+        p_source_type: "mint_queue",
+        p_source_id: QUEUE_ID,
+        p_detail: expect.objectContaining({
+          action: "cron.retry_mint_queue",
+          attempt_count: 5,
+          max_attempts: 5,
+          error_code: "TON_API_UNAVAILABLE",
+        }),
+      }),
+      expect.objectContaining({
+        schema: "api",
+      }),
+    );
   });
 });
 
@@ -1193,7 +1211,23 @@ describe("onchain transaction sync", () => {
       retrying: 0,
       manualReview: 1,
     });
-    expect(callRpcRawMock).not.toHaveBeenCalled();
+    expect(callRpcRawMock).toHaveBeenCalledWith(
+      "risk_record_event",
+      expect.objectContaining({
+        p_user_id: USER_ID,
+        p_event_type: "mint_retry_exceeded",
+        p_source_type: "mint_queue",
+        p_source_id: QUEUE_ID,
+        p_detail: expect.objectContaining({
+          action: "cron.sync_onchain_transactions",
+          error_code: "TON_NFT_TRANSACTION_EXPIRED",
+          error_message: "confirmation timeout",
+        }),
+      }),
+      expect.objectContaining({
+        schema: "api",
+      }),
+    );
     expect(
       db.operations.find(
         (operation) =>

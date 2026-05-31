@@ -121,7 +121,7 @@ insert into ops.risk_events (
   detail
 ) values (
   (select id from _ids where key = 'invitee'),
-  'phase4_sensitive_response_test',
+  'referral_abuse',
   'high',
   'test',
   jsonb_build_object('rule_id', 'internal-risk-rule', 'ip_hash', 'internal-ip-hash')

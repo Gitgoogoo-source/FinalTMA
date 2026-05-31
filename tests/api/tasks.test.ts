@@ -993,6 +993,7 @@ describe("tasks API", () => {
       {
         method: "POST",
         headers: {
+          "x-request-id": "req-referral-rebind",
           "x-idempotency-key": BIND_IDEMPOTENCY_KEY,
         },
         body: {
@@ -1007,6 +1008,25 @@ describe("tasks API", () => {
       status: "conflict",
       reason: "referral_already_bound",
     });
+    expect(callRpcRawMock).toHaveBeenNthCalledWith(
+      2,
+      "risk_record_event",
+      expect.objectContaining({
+        p_user_id: USER_ID,
+        p_event_type: "referral_abuse",
+        p_source_type: "referral",
+        p_source_id: REFERRAL_ID,
+        p_idempotency_key: `risk:referral_abuse:${REFERRAL_ID}:${BIND_IDEMPOTENCY_KEY}`,
+      }),
+      expect.objectContaining({
+        schema: "api",
+        context: expect.objectContaining({
+          requestId: "req-referral-rebind",
+          userId: USER_ID,
+          referralId: REFERRAL_ID,
+        }),
+      }),
+    );
   });
 
   it("invite-stats calls referral_get_invite_stats and returns nested stats plus summary", async () => {

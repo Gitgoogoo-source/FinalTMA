@@ -24,6 +24,7 @@ import {
   getSupabaseAdmin,
   hashSessionToken,
 } from "../_shared/requireSession.js";
+import { recordRiskEventSafely } from "../_shared/riskEvents.js";
 import { validate } from "../_shared/validate.js";
 
 type AuthUpsertTelegramUserResult = {
@@ -43,6 +44,28 @@ type ExistingUserRow = {
 
 type AuthUserRow = {
   status: string;
+};
+
+type ReferralSignalRow = {
+  id: string;
+  inviter_user_id: string;
+  invitee_user_id: string;
+  invite_code: string | null;
+  status: string | null;
+};
+
+type ReferralInviterRow = {
+  id: string;
+  invite_code: string;
+};
+
+type AppSessionSignalRow = {
+  id: string;
+  ip_hash: string | null;
+  user_agent: string | null;
+  device_id: string | null;
+  platform: string | null;
+  created_at: string;
 };
 
 const SESSION_TTL_SECONDS = 7 * 24 * 60 * 60;
@@ -95,6 +118,17 @@ export default withApiHandler(
     const token = createOpaqueSessionToken();
     const tokenHash = hashSessionToken(token);
     const expiresAt = new Date(Date.now() + SESSION_TTL_SECONDS * 1000);
+    const ipHash = ctx.ip ? hashFingerprint("ip", ctx.ip) : null;
+    const userAgentHash = hashNullableFingerprint(
+      "user_agent",
+      getSafeUserAgent(req),
+    );
+    const platform = input.clientContext?.platform ?? null;
+    const deviceId = buildServerDeviceId({
+      ipHash,
+      userAgentHash,
+      platform,
+    });
 
     const sessionResult = await callRpcRaw<AuthCreateSessionResult>(
       "auth_create_session",
@@ -104,13 +138,10 @@ export default withApiHandler(
         p_expires_at: expiresAt.toISOString(),
         p_telegram_auth_date: verified.authDate.toISOString(),
         p_init_data_hash: verified.initDataHash,
-        p_ip_hash: ctx.ip ? hashFingerprint("ip", ctx.ip) : null,
-        p_user_agent: hashNullableFingerprint(
-          "user_agent",
-          getSafeUserAgent(req),
-        ),
-        p_device_id: null,
-        p_platform: input.clientContext?.platform ?? null,
+        p_ip_hash: ipHash,
+        p_user_agent: userAgentHash,
+        p_device_id: deviceId,
+        p_platform: platform,
       },
       {
         schema: "api" as never,
@@ -123,6 +154,17 @@ export default withApiHandler(
 
     const sessionId = requireStringField(sessionResult, "session_id");
     const sessionExpiresAt = requireStringField(sessionResult, "expires_at");
+    await recordReferralStartParamRiskSignalsSafely({
+      db: getSupabaseAdmin(),
+      userId,
+      startParam: verified.startParam ?? null,
+      requestId: ctx.requestId,
+      sessionId,
+      deviceId,
+      ipHash,
+      userAgentHash,
+      platform,
+    });
 
     const cookieOptions: BuildSessionCookieOptions = {
       cookieName: getSessionCookieName(),
@@ -234,6 +276,269 @@ async function loadAuthUser(userId: string): Promise<AuthUserRow> {
   return data;
 }
 
+async function recordReferralStartParamRiskSignalsSafely(input: {
+  db: ReturnType<typeof getSupabaseAdmin>;
+  userId: string;
+  startParam: string | null;
+  requestId: string;
+  sessionId: string;
+  deviceId: string | null;
+  ipHash: string | null;
+  userAgentHash: string | null;
+  platform: string | null;
+}): Promise<void> {
+  const startParam = input.startParam;
+
+  if (!startParam) {
+    return;
+  }
+
+  try {
+    await recordReferralStartParamRiskSignals({
+      ...input,
+      startParam,
+    });
+  } catch (error) {
+    console.error("[risk-event:referral-start-param-check-failed]", {
+      requestId: input.requestId,
+      userId: input.userId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+async function recordReferralStartParamRiskSignals(input: {
+  db: ReturnType<typeof getSupabaseAdmin>;
+  userId: string;
+  startParam: string;
+  requestId: string;
+  sessionId: string;
+  deviceId: string | null;
+  ipHash: string | null;
+  userAgentHash: string | null;
+  platform: string | null;
+}): Promise<void> {
+  const inviteCode = input.startParam.trim().toUpperCase();
+  if (!inviteCode) {
+    return;
+  }
+
+  const attemptedInviter = await loadReferralInviter(input.db, inviteCode);
+  const currentReferral = await loadCurrentReferral(input.db, input.userId);
+
+  if (attemptedInviter?.id === input.userId) {
+    await recordRiskEventSafely({
+      userId: input.userId,
+      eventType: "referral_self_loop",
+      sourceType: "referral_start_param",
+      sourceId: null,
+      detail: {
+        request_id: input.requestId,
+        action: "auth.telegram",
+        reason: "self_invite_not_allowed",
+        session_id: input.sessionId,
+        invite_code: inviteCode,
+      },
+      idempotencyKey: `risk:referral_self_loop:auth:${input.userId}:${sha256Short(inviteCode)}`,
+      context: {
+        requestId: input.requestId,
+        userId: input.userId,
+      },
+    });
+    return;
+  }
+
+  if (
+    currentReferral &&
+    attemptedInviter &&
+    currentReferral.inviter_user_id !== attemptedInviter.id
+  ) {
+    await recordRiskEventSafely({
+      userId: input.userId,
+      eventType: "referral_abuse",
+      sourceType: "referral",
+      sourceId: currentReferral.id,
+      detail: {
+        request_id: input.requestId,
+        action: "auth.telegram",
+        reason: "start_param_rebind_attempt",
+        session_id: input.sessionId,
+        referral_id: currentReferral.id,
+        existing_inviter_user_id: currentReferral.inviter_user_id,
+        attempted_inviter_user_id: attemptedInviter.id,
+        attempted_invite_code: inviteCode,
+        existing_invite_code: currentReferral.invite_code,
+        referral_status: currentReferral.status,
+      },
+      idempotencyKey: `risk:referral_abuse:auth_rebind:${currentReferral.id}:${sha256Short(inviteCode)}`,
+      context: {
+        requestId: input.requestId,
+        userId: input.userId,
+        referralId: currentReferral.id,
+      },
+    });
+  }
+
+  if (!currentReferral) {
+    return;
+  }
+
+  const inviterSessions = await loadRecentInviterSessions(
+    input.db,
+    currentReferral.inviter_user_id,
+  );
+  const match = findMatchingInviterSession(inviterSessions, input);
+
+  if (!match) {
+    return;
+  }
+
+  await recordRiskEventSafely({
+    userId: input.userId,
+    eventType: "referral_multi_account",
+    sourceType: "referral",
+    sourceId: currentReferral.id,
+    detail: {
+      request_id: input.requestId,
+      action: "auth.telegram",
+      reason: "same_server_device_fingerprint",
+      session_id: input.sessionId,
+      inviter_session_id: match.session.id,
+      referral_id: currentReferral.id,
+      inviter_user_id: currentReferral.inviter_user_id,
+      invitee_user_id: currentReferral.invitee_user_id,
+      matched_signals: match.signals,
+      device_id: input.deviceId,
+      ip_hash: input.ipHash,
+      user_agent_hash: input.userAgentHash,
+      platform: input.platform,
+      inviter_platform: match.session.platform,
+    },
+    idempotencyKey: `risk:referral_multi_account:${currentReferral.id}:${sha256Short(
+      [
+        input.deviceId,
+        input.ipHash,
+        input.userAgentHash,
+        match.session.id,
+      ].join(":"),
+    )}`,
+    context: {
+      requestId: input.requestId,
+      userId: input.userId,
+      referralId: currentReferral.id,
+    },
+  });
+}
+
+async function loadReferralInviter(
+  db: ReturnType<typeof getSupabaseAdmin>,
+  inviteCode: string,
+): Promise<ReferralInviterRow | null> {
+  const { data, error } = await db
+    .schema("core")
+    .from("users")
+    .select("id,invite_code")
+    .eq("invite_code", inviteCode)
+    .maybeSingle<ReferralInviterRow>();
+
+  if (error) {
+    throw new ApiError(
+      500,
+      "REFERRAL_INVITER_LOOKUP_FAILED",
+      "查询邀请人失败。",
+      {
+        expose: false,
+        cause: error,
+      },
+    );
+  }
+
+  return data ?? null;
+}
+
+async function loadCurrentReferral(
+  db: ReturnType<typeof getSupabaseAdmin>,
+  userId: string,
+): Promise<ReferralSignalRow | null> {
+  const { data, error } = await db
+    .schema("tasks")
+    .from("referrals")
+    .select("id,inviter_user_id,invitee_user_id,invite_code,status")
+    .eq("invitee_user_id", userId)
+    .maybeSingle<ReferralSignalRow>();
+
+  if (error) {
+    throw new ApiError(500, "REFERRAL_LOOKUP_FAILED", "查询邀请关系失败。", {
+      expose: false,
+      cause: error,
+    });
+  }
+
+  return data ?? null;
+}
+
+async function loadRecentInviterSessions(
+  db: ReturnType<typeof getSupabaseAdmin>,
+  inviterUserId: string,
+): Promise<AppSessionSignalRow[]> {
+  const { data, error } = await db
+    .schema("core")
+    .from("app_sessions")
+    .select("id,ip_hash,user_agent,device_id,platform,created_at")
+    .eq("user_id", inviterUserId)
+    .order("created_at", { ascending: false })
+    .limit(20);
+
+  if (error) {
+    throw new ApiError(
+      500,
+      "REFERRAL_INVITER_SESSION_LOOKUP_FAILED",
+      "查询邀请人会话失败。",
+      {
+        expose: false,
+        cause: error,
+      },
+    );
+  }
+
+  return Array.isArray(data) ? (data as unknown as AppSessionSignalRow[]) : [];
+}
+
+function findMatchingInviterSession(
+  sessions: AppSessionSignalRow[],
+  input: {
+    deviceId: string | null;
+    ipHash: string | null;
+    userAgentHash: string | null;
+  },
+): { session: AppSessionSignalRow; signals: string[] } | null {
+  for (const session of sessions) {
+    const signals: string[] = [];
+
+    if (input.deviceId && session.device_id === input.deviceId) {
+      signals.push("device_id");
+    }
+
+    if (
+      input.ipHash &&
+      input.userAgentHash &&
+      session.ip_hash === input.ipHash &&
+      session.user_agent === input.userAgentHash
+    ) {
+      signals.push("ip_hash", "user_agent_hash");
+    }
+
+    if (signals.length > 0) {
+      return {
+        session,
+        signals,
+      };
+    }
+  }
+
+  return null;
+}
+
 function createOpaqueSessionToken(): string {
   return `tma_sess_v1.${randomBytes(48).toString("base64url")}`;
 }
@@ -304,6 +609,25 @@ function hashFingerprint(namespace: string, value: string): string {
   return createHash("sha256")
     .update(`${namespace}:${value}`, "utf8")
     .digest("hex");
+}
+
+function buildServerDeviceId(input: {
+  ipHash: string | null;
+  userAgentHash: string | null;
+  platform: string | null;
+}): string | null {
+  if (!input.ipHash || !input.userAgentHash) {
+    return null;
+  }
+
+  return hashFingerprint(
+    "device",
+    [input.ipHash, input.userAgentHash, input.platform ?? "unknown"].join(":"),
+  );
+}
+
+function sha256Short(value: string): string {
+  return hashFingerprint("risk", value).slice(0, 24);
 }
 
 function requireStringField<T extends Record<string, unknown>>(
