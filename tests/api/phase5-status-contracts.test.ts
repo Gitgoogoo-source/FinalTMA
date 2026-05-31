@@ -28,9 +28,8 @@ describe("Phase 5 backend status contracts", () => {
     expect(normalizePaymentOrderStatus("precheckout_ok")).toBe(
       "precheckout_checked",
     );
-    expect(normalizePaymentOrderStatus("pending_payment")).toBe(
-      "invoice_created",
-    );
+    expect(normalizePaymentOrderStatus("pending_payment")).toBe("created");
+    expect(normalizePaymentOrderStatus("cancelled")).toBe("expired");
     expect(normalizePaymentOrderStatus("dev_paid")).toBe("fulfilled");
     expect(inferPaymentOrderStatusFromDrawOrderStatus("opening")).toBe(
       "fulfilling",

@@ -130,7 +130,6 @@ type PaymentStatusResponse = {
 
 const PENDING_PAYMENT_STATUSES = new Set<PaymentOrderStatus>([
   "created",
-  "invoice_created",
   "precheckout_checked",
 ]);
 

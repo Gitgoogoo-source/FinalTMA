@@ -341,6 +341,12 @@ const MAX_TELEGRAM_TITLE_CHARS = 32;
 const MAX_TELEGRAM_DESCRIPTION_CHARS = 255;
 const MAX_TELEGRAM_PAYLOAD_BYTES = 128;
 const MAX_PRE_CHECKOUT_ERROR_MESSAGE_CHARS = 200;
+const INVOICE_CREATABLE_STAR_ORDER_STATUSES = new Set([
+  "created",
+  "invoice_created",
+  "precheckout_ok",
+  "precheckout_checked",
+]);
 
 export function hasTelegramPreCheckoutQuery(
   update: unknown,
@@ -769,7 +775,7 @@ export async function createTelegramStarsInvoice(
       botApiMethod: "createInvoiceLink",
       expiresAt: existingInvoice.expires_at ?? starOrder.expires_at,
       invoiceStatus: existingInvoice.status,
-      paymentOrderStatus: "invoice_created",
+      paymentOrderStatus: normalizeInvoicePaymentOrderStatus(starOrder.status),
       reused: true,
     };
   }
@@ -848,7 +854,7 @@ export async function createTelegramStarsInvoice(
     botApiMethod: "createInvoiceLink",
     expiresAt: invoice.expires_at ?? starOrder.expires_at,
     invoiceStatus: invoice.status,
-    paymentOrderStatus: "invoice_created",
+    paymentOrderStatus: normalizeInvoicePaymentOrderStatus(starOrder.status),
     reused: false,
   };
 }
@@ -1166,7 +1172,6 @@ async function markOrderInvoiceCreated(
       .schema("payments")
       .from("star_orders")
       .update({
-        status: "invoice_created",
         error_message: null,
       })
       .eq("id", input.starOrderId),
@@ -1631,6 +1636,20 @@ function assertStarOrderMatchesInput(
       "Stars 支付订单金额不匹配。",
     );
   }
+
+  if (!INVOICE_CREATABLE_STAR_ORDER_STATUSES.has(row.status)) {
+    throw new TelegramStarsInvoiceError(
+      409,
+      "STAR_ORDER_STATUS_NOT_PAYABLE",
+      "Stars 支付订单当前状态不可创建 invoice。",
+    );
+  }
+}
+
+function normalizeInvoicePaymentOrderStatus(status: string): string {
+  return status === "precheckout_checked" || status === "precheckout_ok"
+    ? "precheckout_checked"
+    : "created";
 }
 
 function readTelegramStarsInvoiceConfig(env = process.env): {

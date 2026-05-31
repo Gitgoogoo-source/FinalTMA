@@ -85,7 +85,6 @@ const MONITORING_LIMIT = 1000;
 
 const PAYMENT_FAILURE_STATUSES = new Set([
   "failed",
-  "cancelled",
   "expired",
   "refunded",
   "disputed",
@@ -408,8 +407,7 @@ function buildPaymentFailureRate(rows: PaymentOrderMonitorRow[]) {
     numerator,
     denominator,
     status: rateStatus(rate, 0.02, 0.05),
-    description:
-      "窗口内 failed、cancelled、expired、refunded、disputed 支付订单占比。",
+    description: "窗口内 failed、expired、refunded、disputed 支付订单占比。",
   };
 }
 

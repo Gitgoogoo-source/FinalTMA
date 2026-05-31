@@ -162,6 +162,19 @@ const DEFAULT_RUN_TYPES: Phase5ReconciliationRunType[] = [
   "wallet_sync",
   "ledger_balance",
 ];
+const PAID_LIFECYCLE_STAR_ORDER_STATUSES = [
+  "paid",
+  "fulfilling",
+  "fulfilled",
+  "failed",
+  "refunded",
+  "disputed",
+] as const;
+const FULFILLMENT_RETRY_STAR_ORDER_STATUSES = new Set<string>([
+  "paid",
+  "fulfilling",
+  "failed",
+]);
 const DEFAULT_LIMIT = 500;
 const MAX_LIMIT = 2_000;
 const MAX_RELATED_ROW_LIMIT = 5_000;
@@ -295,7 +308,7 @@ async function collectPaymentFulfillmentFindings(input: {
       .select(
         "id,user_id,business_id,status,paid_at,fulfilled_at,error_message,created_at,updated_at",
       )
-      .in("status", ["paid", "fulfilling", "fulfilled"])
+      .in("status", [...PAID_LIFECYCLE_STAR_ORDER_STATUSES])
       .order("updated_at", { ascending: false })
       .limit(input.limit),
     "RECONCILIATION_PAYMENT_ORDER_LOOKUP_FAILED",
@@ -396,7 +409,11 @@ async function collectPaymentFulfillmentFindings(input: {
       ? (resultsByOrder.get(drawOrder.id) ?? [])
       : [];
 
-    if (order.status !== "fulfilled" && order.paid_at && !order.fulfilled_at) {
+    if (
+      FULFILLMENT_RETRY_STAR_ORDER_STATUSES.has(order.status) &&
+      order.paid_at &&
+      !order.fulfilled_at
+    ) {
       findings.push(
         buildFinding({
           code: "phase5_payment_paid_not_fulfilled",

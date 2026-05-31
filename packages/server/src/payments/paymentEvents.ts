@@ -1,15 +1,13 @@
 export const PAYMENT_ORDER_STATUSES = [
   "created",
-  "invoice_created",
   "precheckout_checked",
   "paid",
   "fulfilling",
   "fulfilled",
-  "cancelled",
-  "expired",
   "failed",
   "refunded",
   "disputed",
+  "expired",
 ] as const;
 
 export type PaymentOrderStatus = (typeof PAYMENT_ORDER_STATUSES)[number];
@@ -43,15 +41,17 @@ export interface PaymentWebhookStatusUpdateInput extends BackendStatusContextInp
 const PAYMENT_ORDER_STATUS_SET = new Set<string>(PAYMENT_ORDER_STATUSES);
 
 const PAYMENT_ORDER_STATUS_ALIASES: Record<string, PaymentOrderStatus> = {
+  invoice_created: "created",
   precheckout_ok: "precheckout_checked",
   pending: "created",
-  pending_payment: "invoice_created",
+  pending_payment: "created",
   dev_paid: "fulfilled",
   opened: "fulfilled",
   completed: "fulfilled",
   opening: "fulfilling",
   processing: "fulfilling",
-  canceled: "cancelled",
+  canceled: "expired",
+  cancelled: "expired",
 };
 
 export function normalizePaymentOrderStatus(
@@ -108,8 +108,7 @@ export function isTerminalPaymentOrderStatus(
     status === "failed" ||
     status === "expired" ||
     status === "refunded" ||
-    status === "disputed" ||
-    status === "cancelled"
+    status === "disputed"
   );
 }
 

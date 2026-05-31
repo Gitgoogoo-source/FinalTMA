@@ -188,16 +188,14 @@ export const BoxDrawOrderStatusSchema = z.enum([
 
 export const BoxPaymentOrderStatusSchema = z.enum([
   "created",
-  "invoice_created",
   "precheckout_checked",
   "paid",
   "fulfilling",
   "fulfilled",
-  "cancelled",
   "failed",
-  "expired",
   "refunded",
   "disputed",
+  "expired",
 ]);
 
 export const BoxRewardSourceSchema = z.enum([

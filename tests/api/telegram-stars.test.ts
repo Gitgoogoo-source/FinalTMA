@@ -566,7 +566,7 @@ describe("telegramStars payment helpers", () => {
     ).toThrow(TelegramStarsWebhookError);
   });
 
-  it("creates an invoice link, stores the invoice, and marks the order invoice-created", async () => {
+  it("creates an invoice link, stores the invoice, and keeps the payment order created", async () => {
     const { client, state } = createSupabaseClientMock();
     const fetchMock = vi.fn(
       async (_input: string | URL, _init?: RequestInit) =>
@@ -604,7 +604,7 @@ describe("telegramStars payment helpers", () => {
       payload: PAYLOAD,
       invoiceLink: INVOICE_LINK,
       openMode: "web_app_open_invoice",
-      paymentOrderStatus: "invoice_created",
+      paymentOrderStatus: "created",
       reused: false,
     });
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -625,7 +625,7 @@ describe("telegramStars payment helpers", () => {
           schema: "payments",
           table: "star_orders",
           values: expect.objectContaining({
-            status: "invoice_created",
+            error_message: null,
           }),
         }),
         expect.objectContaining({

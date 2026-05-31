@@ -20,7 +20,6 @@ import { PaymentDetailSheet } from "./PaymentDetailSheet";
 const PAYMENT_STATUSES = [
   "",
   "created",
-  "invoice_created",
   "precheckout_checked",
   "paid",
   "fulfilling",
@@ -28,6 +27,7 @@ const PAYMENT_STATUSES = [
   "failed",
   "refunded",
   "disputed",
+  "expired",
 ];
 const EVENT_STATUSES = ["", "pending", "processing", "processed", "failed"];
 const REFUND_STATUSES = ["", "created", "pending", "processed", "failed"];

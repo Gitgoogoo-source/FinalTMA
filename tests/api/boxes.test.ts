@@ -70,7 +70,7 @@ function createInvoiceResult(overrides: Record<string, unknown> = {}) {
     botApiMethod: "createInvoiceLink",
     expiresAt: EXPIRES_AT,
     invoiceStatus: "created",
-    paymentOrderStatus: "invoice_created",
+    paymentOrderStatus: "created",
     reused: false,
     ...overrides,
   };
@@ -412,8 +412,8 @@ describe("boxes API helpers", () => {
         order_id: ORDER_ID,
         draw_count: 1,
         xtr_amount: 10,
-        payment_status: "invoice_created",
-        payment_order_status: "invoice_created",
+        payment_status: "created",
+        payment_order_status: "created",
         invoice_link: INVOICE_LINK,
         invoice_open_mode: "web_app_open_invoice",
         expires_at: EXPIRES_AT,
@@ -972,7 +972,7 @@ describe("boxes API helpers", () => {
         draw_count: 10,
         xtr_amount: 90,
         invoice_link: INVOICE_LINK,
-        payment_order_status: "invoice_created",
+        payment_order_status: "created",
       },
     });
     expect(callRpcRawMock).toHaveBeenCalledWith(

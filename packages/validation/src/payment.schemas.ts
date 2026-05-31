@@ -2,21 +2,21 @@ import { z } from "zod";
 
 export const paymentOrderStatusSchema = z.enum([
   "created",
-  "invoice_created",
   "precheckout_checked",
   "paid",
   "fulfilling",
   "fulfilled",
-  "cancelled",
   "failed",
-  "expired",
   "refunded",
   "disputed",
+  "expired",
 ]);
 
 export const rawPaymentOrderStatusSchema = z.union([
   paymentOrderStatusSchema,
+  z.literal("invoice_created"),
   z.literal("precheckout_ok"),
+  z.literal("cancelled"),
   z.literal("pending"),
   z.literal("pending_payment"),
 ]);
