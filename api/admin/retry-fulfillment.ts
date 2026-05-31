@@ -21,7 +21,8 @@ type RetryFulfillmentRpcResult = {
   reason_code?: string | null;
   retryable?: string | null;
   payment_order_status?: string | null;
-  result_count?: string | null;
+  draw_order_id?: string | null;
+  result_count?: string | number | null;
   idempotent?: boolean;
   audit_log_id?: string;
 };

@@ -7,7 +7,7 @@ create extension if not exists pgtap with schema extensions;
 
 set search_path = public, extensions, core, economy, catalog, gacha, inventory, market, payments, tasks, album, onchain, ops, api;
 
-select plan(18);
+select plan(23);
 
 create temp table _ids (key text primary key, id uuid, payload jsonb) on commit drop;
 create temp table _errors (key text primary key, message text) on commit drop;
@@ -20,6 +20,13 @@ values
   ('star_payment_processing', gen_random_uuid()),
   ('star_order_completed', gen_random_uuid()),
   ('star_payment_completed', gen_random_uuid()),
+  ('star_order_fulfilled', gen_random_uuid()),
+  ('star_payment_fulfilled', gen_random_uuid()),
+  ('fulfilled_box', gen_random_uuid()),
+  ('fulfilled_pool_version', gen_random_uuid()),
+  ('fulfilled_template', gen_random_uuid()),
+  ('fulfilled_item_instance', gen_random_uuid()),
+  ('fulfilled_draw_order', gen_random_uuid()),
   ('dispute', gen_random_uuid());
 
 insert into ops.admin_users (id, email, display_name, status, metadata)
@@ -38,6 +45,57 @@ values (
   'phase6_payment_ops_user',
   'Phase6 Payment Ops',
   'active'
+);
+
+insert into catalog.collectible_templates (
+  id,
+  slug,
+  display_name,
+  rarity_code,
+  type_code,
+  release_status
+)
+values (
+  (select id from _ids where key = 'fulfilled_template'),
+  'phase6-payment-ops-fulfilled-template',
+  'Phase 6 Payment Ops Fulfilled Template',
+  'COMMON',
+  'CHARACTER',
+  'active'
+);
+
+insert into gacha.blind_boxes (
+  id,
+  slug,
+  display_name,
+  tier,
+  status,
+  price_stars
+)
+values (
+  (select id from _ids where key = 'fulfilled_box'),
+  'phase6-payment-ops-fulfilled-box',
+  'Phase 6 Payment Ops Fulfilled Box',
+  'normal',
+  'active',
+  6
+);
+
+insert into gacha.drop_pool_versions (
+  id,
+  box_id,
+  version_no,
+  status,
+  total_weight,
+  published_at
+)
+values (
+  (select id from _ids where key = 'fulfilled_pool_version'),
+  (select id from _ids where key = 'fulfilled_box'),
+  1,
+  'active',
+  1,
+  now()
 );
 
 insert into payments.star_orders (
@@ -73,6 +131,17 @@ values
     'Phase 6 completed refund',
     'phase6-payment-ops-completed-order',
     now()
+  ),
+  (
+    (select id from _ids where key = 'star_order_fulfilled'),
+    (select id from _ids where key = 'payment_user'),
+    'gacha_open',
+    'fulfilled',
+    6,
+    'phase6-payment-ops-fulfilled-payload',
+    'Phase 6 fulfilled retry',
+    'phase6-payment-ops-fulfilled-order',
+    now()
   );
 
 insert into payments.star_payments (
@@ -102,7 +171,95 @@ values
     8,
     'XTR',
     'phase6-payment-ops-completed-payload'
+  ),
+  (
+    (select id from _ids where key = 'star_payment_fulfilled'),
+    (select id from _ids where key = 'star_order_fulfilled'),
+    (select id from _ids where key = 'payment_user'),
+    'phase6-payment-ops-charge-fulfilled',
+    6,
+    'XTR',
+    'phase6-payment-ops-fulfilled-payload'
   );
+
+insert into inventory.item_instances (
+  id,
+  owner_user_id,
+  template_id,
+  level,
+  power,
+  status,
+  source_type,
+  source_id
+)
+values (
+  (select id from _ids where key = 'fulfilled_item_instance'),
+  (select id from _ids where key = 'payment_user'),
+  (select id from _ids where key = 'fulfilled_template'),
+  1,
+  10,
+  'available',
+  'gacha',
+  (select id from _ids where key = 'fulfilled_draw_order')
+);
+
+insert into gacha.draw_orders (
+  id,
+  user_id,
+  box_id,
+  pool_version_id,
+  payment_star_order_id,
+  status,
+  quantity,
+  draw_count,
+  unit_price_stars,
+  total_price_stars,
+  invoice_payload,
+  telegram_invoice_payload,
+  idempotency_key,
+  payment_status,
+  paid_at,
+  opened_at
+)
+values (
+  (select id from _ids where key = 'fulfilled_draw_order'),
+  (select id from _ids where key = 'payment_user'),
+  (select id from _ids where key = 'fulfilled_box'),
+  (select id from _ids where key = 'fulfilled_pool_version'),
+  (select id from _ids where key = 'star_order_fulfilled'),
+  'completed',
+  1,
+  1,
+  6,
+  6,
+  'phase6-payment-ops-fulfilled-payload',
+  'phase6-payment-ops-fulfilled-payload',
+  'phase6-payment-ops-fulfilled-draw-order',
+  'paid',
+  now(),
+  now()
+);
+
+insert into gacha.draw_results (
+  draw_order_id,
+  user_id,
+  box_id,
+  pool_version_id,
+  draw_index,
+  item_instance_id,
+  template_id,
+  rarity_code
+)
+values (
+  (select id from _ids where key = 'fulfilled_draw_order'),
+  (select id from _ids where key = 'payment_user'),
+  (select id from _ids where key = 'fulfilled_box'),
+  (select id from _ids where key = 'fulfilled_pool_version'),
+  1,
+  (select id from _ids where key = 'fulfilled_item_instance'),
+  (select id from _ids where key = 'fulfilled_template'),
+  'COMMON'
+);
 
 insert into payments.payment_disputes (
   id,
@@ -144,6 +301,78 @@ select ok(
        or has_function_privilege('authenticated', signature, 'EXECUTE')
   ),
   'phase 6 admin payment operation RPCs are service_role only'
+);
+
+insert into _ids (key, payload)
+values (
+  'fulfilled_retry',
+  api.admin_retry_payment_fulfillment(
+    p_admin_user_id => (select id from _ids where key = 'actor'),
+    p_star_order_id => (select id from _ids where key = 'star_order_fulfilled'),
+    p_reason => 'phase 6 fulfilled retry idempotent test',
+    p_idempotency_key => 'phase6-payment-ops-fulfilled-retry-001',
+    p_request_context => jsonb_build_object('ip_hash', 'phase6-ip', 'user_agent_hash', 'phase6-ua')
+  )
+);
+
+insert into _ids (key, payload)
+values (
+  'fulfilled_retry_second_key',
+  api.admin_retry_payment_fulfillment(
+    p_admin_user_id => (select id from _ids where key = 'actor'),
+    p_star_order_id => (select id from _ids where key = 'star_order_fulfilled'),
+    p_reason => 'phase 6 fulfilled retry idempotent test second key',
+    p_idempotency_key => 'phase6-payment-ops-fulfilled-retry-002',
+    p_request_context => jsonb_build_object('ip_hash', 'phase6-ip', 'user_agent_hash', 'phase6-ua')
+  )
+);
+
+select ok(
+  ((select payload ->> 'idempotent' from _ids where key = 'fulfilled_retry'))::boolean
+    and ((select payload ->> 'fulfilled' from _ids where key = 'fulfilled_retry'))::boolean,
+  'admin_retry_payment_fulfillment returns idempotent success for fulfilled orders'
+);
+
+select ok(
+  ((select payload ->> 'idempotent' from _ids where key = 'fulfilled_retry_second_key'))::boolean,
+  'admin_retry_payment_fulfillment returns idempotent success for later fulfilled retries'
+);
+
+select is(
+  (
+    select count(*)::int
+    from gacha.draw_results
+    where draw_order_id = (select id from _ids where key = 'fulfilled_draw_order')
+  ),
+  1,
+  'fulfilled payment retries do not duplicate draw_results'
+);
+
+select is(
+  (
+    select count(*)::int
+    from ops.admin_audit_logs
+    where admin_user_id = (select id from _ids where key = 'actor')
+      and action = 'payment.fulfillment.retry'
+      and target_schema = 'payments'
+      and target_table = 'star_orders'
+      and target_id = (select id from _ids where key = 'star_order_fulfilled')
+  ),
+  2,
+  'fulfilled payment retries write audit logs for each idempotent admin action'
+);
+
+select is(
+  (
+    select count(*)::int
+    from ops.risk_events
+    where event_type = 'admin_payment_fulfillment_retry'
+      and source_type = 'star_order'
+      and source_id = (select id from _ids where key = 'star_order_fulfilled')
+      and (detail ->> 'idempotent')::boolean
+  ),
+  2,
+  'fulfilled payment retries write risk events for each idempotent admin action'
 );
 
 insert into _ids (key, payload)
