@@ -286,7 +286,7 @@ function assertAdminWriteAuditResult(
 
 function extractKnownAdminErrorCode(message: string): string | null {
   const match = message.match(
-    /(ADMIN_[A-Z0-9_]+|MINT_QUEUE_[A-Z0-9_]+|FEATURE_FLAG_[A-Z0-9_]+)/,
+    /(ADMIN_[A-Z0-9_]+|RISK_[A-Z0-9_]+|MINT_QUEUE_[A-Z0-9_]+|FEATURE_FLAG_[A-Z0-9_]+)/,
   );
 
   return match?.[1] ?? null;

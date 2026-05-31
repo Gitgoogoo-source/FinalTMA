@@ -11,6 +11,7 @@ import {
   parseTaskJsonBodyInput,
   withTaskApiHandler,
 } from "./_shared.js";
+import { assertUserRiskAllowed } from "../_shared/riskGuards.js";
 
 export default withTaskApiHandler(
   async (req, _res, ctx) => {
@@ -18,6 +19,16 @@ export default withTaskApiHandler(
       maxBytes: 8 * 1024,
       requireIdempotencyKey: true,
       normalize: normalizeCheckInInput,
+    });
+    await assertUserRiskAllowed({
+      req,
+      ctx,
+      session: ctx.session,
+      action: "tasks.check_in",
+      idempotencyKey: input.idempotencyKey,
+      metadata: {
+        campaignId: input.campaignId ?? undefined,
+      },
     });
     const payload = await callTaskDailyCheckInRpc(
       input,

@@ -415,6 +415,291 @@ export type MonitoringResponse = {
   serverTime: string;
 };
 
+export type RiskSeverity = "low" | "medium" | "high" | "critical";
+
+export type RiskEventStatus =
+  | "open"
+  | "reviewing"
+  | "resolved"
+  | "ignored"
+  | "fixed"
+  | "false_positive"
+  | "escalated";
+
+export type ResolveRiskEventStatus =
+  | "reviewing"
+  | "ignored"
+  | "fixed"
+  | "false_positive"
+  | "escalated"
+  | "resolved";
+
+export type UserFlagLevel = "info" | "warning" | "restriction" | "ban";
+
+export type RiskEvent = Pick<
+  RiskEventRow,
+  | "id"
+  | "user_id"
+  | "event_type"
+  | "severity"
+  | "status"
+  | "source_type"
+  | "source_id"
+  | "score_delta"
+  | "detail"
+  | "resolved_by_admin_id"
+  | "resolved_at"
+  | "created_at"
+> & {
+  risk_event_id?: string;
+  riskEventId?: string;
+  associations?: RiskAssociation[];
+  userId?: string | null;
+  eventType?: string;
+  sourceType?: string | null;
+  sourceId?: string | null;
+  scoreDelta?: number | string | null;
+  resolvedByAdminId?: string | null;
+  resolvedAt?: string | null;
+  createdAt?: string;
+};
+
+export type RiskAssociation = {
+  kind: string;
+  label: string;
+  sourceType?: string;
+  source_type?: string;
+  sourceId?: string;
+  source_id?: string;
+  routeKey?: string | null;
+  route_key?: string | null;
+  summary?: Record<string, unknown>;
+};
+
+export type UserFlag = {
+  id: string;
+  user_id: string;
+  userId?: string;
+  flag_code: string;
+  flagCode?: string;
+  flag_level: UserFlagLevel | string;
+  flagLevel?: UserFlagLevel | string;
+  reason: string | null;
+  active: boolean;
+  starts_at: string;
+  startsAt?: string;
+  ends_at: string | null;
+  endsAt?: string | null;
+  created_by_admin_id: string | null;
+  createdByAdminId?: string | null;
+  metadata?: unknown;
+  created_at: string;
+  createdAt?: string;
+  updated_at: string;
+  updatedAt?: string;
+};
+
+export type RiskUserSummary = {
+  id: string;
+  telegram_user_id?: number | string;
+  telegramUserId?: number | string;
+  username?: string | null;
+  first_name?: string | null;
+  firstName?: string | null;
+  last_name?: string | null;
+  lastName?: string | null;
+  status: string;
+  risk_score?: number | string | null;
+  riskScore?: number | string | null;
+  referred_by_user_id?: string | null;
+  referredByUserId?: string | null;
+  last_seen_at?: string | null;
+  lastSeenAt?: string | null;
+  last_auth_at?: string | null;
+  lastAuthAt?: string | null;
+  created_at?: string;
+  createdAt?: string;
+  metadata?: unknown;
+};
+
+export type RiskUserProfile = {
+  user: RiskUserSummary;
+  flags: {
+    active?: UserFlag[];
+    recent?: UserFlag[];
+    items?: UserFlag[];
+    totalCount?: number;
+    total_count?: number;
+    pageCount?: number;
+    page_count?: number;
+    nextCursor?: string | null;
+    next_cursor?: string | null;
+  };
+  wallets: Record<string, unknown> & {
+    count?: number;
+    totalCount?: number;
+    total_count?: number;
+    pageCount?: number;
+    page_count?: number;
+    nextCursor?: string | null;
+    next_cursor?: string | null;
+    addressReuseCount?: number;
+    address_reuse_count?: number;
+    items?: Array<Record<string, unknown>>;
+  };
+  payments: Record<string, unknown> & {
+    totalCount?: number;
+    total_count?: number;
+    successCount?: number;
+    success_count?: number;
+    failedCount?: number;
+    failed_count?: number;
+    disputedCount?: number;
+    disputed_count?: number;
+    pageCount?: number;
+    page_count?: number;
+    nextCursor?: string | null;
+    next_cursor?: string | null;
+    statusCounts?: Record<string, number>;
+    status_counts?: Record<string, number>;
+    recent?: Array<Record<string, unknown>>;
+    items?: Array<Record<string, unknown>>;
+  };
+  market: Record<string, unknown> & {
+    buyerCount?: number;
+    buyer_count?: number;
+    sellerCount?: number;
+    seller_count?: number;
+    totalCount?: number;
+    total_count?: number;
+    pageCount?: number;
+    page_count?: number;
+    nextCursor?: string | null;
+    next_cursor?: string | null;
+    statusCounts?: Record<string, number>;
+    status_counts?: Record<string, number>;
+    topCounterparties?: Array<Record<string, unknown>>;
+    top_counterparties?: Array<Record<string, unknown>>;
+    recent?: Array<Record<string, unknown>>;
+    items?: Array<Record<string, unknown>>;
+  };
+  referrals: Record<string, unknown> & {
+    invitedCount?: number;
+    invited_count?: number;
+    invitedByCount?: number;
+    invited_by_count?: number;
+    totalCount?: number;
+    total_count?: number;
+    firstOpenCount?: number;
+    first_open_count?: number;
+    firstOpenConversionRate?: number;
+    first_open_conversion_rate?: number;
+    qualifiedCount?: number;
+    qualified_count?: number;
+    rewardedCount?: number;
+    rewarded_count?: number;
+    pageCount?: number;
+    page_count?: number;
+    nextCursor?: string | null;
+    next_cursor?: string | null;
+    statusCounts?: Record<string, number>;
+    status_counts?: Record<string, number>;
+    asInviter?: Array<Record<string, unknown>>;
+    as_inviter?: Array<Record<string, unknown>>;
+    asInvitee?: Array<Record<string, unknown>>;
+    as_invitee?: Array<Record<string, unknown>>;
+    items?: Array<Record<string, unknown>>;
+  };
+  riskEvents: {
+    items?: RiskEvent[];
+    recent?: RiskEvent[];
+    totalCount?: number;
+    total_count?: number;
+    pageCount?: number;
+    page_count?: number;
+    nextCursor?: string | null;
+    next_cursor?: string | null;
+  };
+  serverTime: string;
+};
+
+export type RiskUserProfileSection =
+  | "flags"
+  | "payments"
+  | "market"
+  | "referrals"
+  | "wallets"
+  | "riskEvents";
+
+export type RiskUserProfileParams = {
+  section?: RiskUserProfileSection;
+  cursor?: string | null;
+  limit?: number;
+};
+
+export type RiskEventFilters = {
+  severity?: RiskSeverity | "";
+  status?: RiskEventStatus | "";
+  eventType?: string;
+  userId?: string;
+  sourceId?: string;
+  sourceType?: string;
+  from?: string;
+  to?: string;
+  sort?: "severity" | "created_at";
+  cursor?: string | null;
+  limit?: number;
+};
+
+export type RiskEventsResponse = {
+  items: RiskEvent[];
+  summary: Record<string, unknown> & {
+    totalCount?: number;
+    total_count?: number;
+    pageCount?: number;
+    page_count?: number;
+    criticalCount?: number;
+    critical_count?: number;
+    bySeverity?: Record<string, number>;
+    byStatus?: Record<string, number>;
+  };
+  nextCursor: string | null;
+  serverTime: string;
+};
+
+export type ResolveRiskEventInput = {
+  riskEventId: string;
+  status: ResolveRiskEventStatus;
+  reason: string;
+  resolutionDetail?: Record<string, unknown>;
+  fixMethod?: string;
+  escalationOwner?: string;
+  escalationTicketId?: string;
+};
+
+export type ApplyUserFlagInput = {
+  userId: string;
+  flagCode: string;
+  flagLevel?: UserFlagLevel;
+  reason: string;
+  endsAt?: string | null;
+  metadata?: Record<string, unknown>;
+};
+
+export type ClearUserFlagInput = {
+  userFlagId?: string;
+  userId?: string;
+  flagCode?: string;
+  reason: string;
+};
+
+export type RiskMutationResponse = Record<string, unknown> & {
+  audit_log_id?: string | null;
+  auditLogId?: string | null;
+  idempotent?: boolean;
+  serverTime: string;
+};
+
 export type ReconciliationRunType =
   | "payment"
   | "ledger"
@@ -1140,6 +1425,7 @@ export type AdminTab =
   | "monitoring"
   | "payments"
   | "reconciliation"
+  | "risk"
   | "mint"
   | "wallets"
   | "campaigns"

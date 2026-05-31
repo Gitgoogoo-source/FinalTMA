@@ -28,10 +28,13 @@ import updatePriceHandler, {
 import { RpcError } from "../../packages/server/src/db/rpc";
 import { invokeApiHandler } from "./_utils";
 
-const { callRpcRawMock, requireSessionMock } = vi.hoisted(() => ({
+const { callRpcRawMock, getSupabaseAdminMock, requireSessionMock } = vi.hoisted(
+  () => ({
   callRpcRawMock: vi.fn(),
+  getSupabaseAdminMock: vi.fn(),
   requireSessionMock: vi.fn(),
-}));
+  }),
+);
 
 vi.mock("../../packages/server/src/db/rpc.js", () => ({
   callRpcRaw: callRpcRawMock,
@@ -47,6 +50,7 @@ vi.mock("../../packages/server/src/db/rpc.js", () => ({
 }));
 
 vi.mock("../../api/_shared/requireSession.js", () => ({
+  getSupabaseAdmin: getSupabaseAdminMock,
   requireSession: requireSessionMock,
 }));
 
@@ -55,6 +59,7 @@ const LISTING_ID = "22222222-2222-4222-8222-222222222222";
 const TEMPLATE_ID = "33333333-3333-4333-8333-333333333333";
 const FORM_ID = "44444444-4444-4444-8444-444444444444";
 const SERIES_ID = "55555555-5555-4555-8555-555555555555";
+const SELLER_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const ITEM_ID = "66666666-6666-4666-8666-666666666666";
 const ITEM_ID_2 = "77777777-7777-4777-8777-777777777777";
 const IDEMPOTENCY_KEY = "market:create-listing-0001";
@@ -62,8 +67,44 @@ const BUY_IDEMPOTENCY_KEY = "market:buy-listing-0001";
 const UPDATE_PRICE_IDEMPOTENCY_KEY = "market:update-price-0001";
 const CANCEL_LISTING_IDEMPOTENCY_KEY = "market:cancel-listing-0001";
 
+function createMarketDbMock(
+  listing: Record<string, unknown> | null = {
+    id: LISTING_ID,
+    seller_user_id: SELLER_ID,
+    status: "active",
+  },
+) {
+  return {
+    schema: vi.fn((schema: string) => ({
+      from: vi.fn((table: string) => {
+        const builder = {
+          select: vi.fn(() => builder),
+          eq: vi.fn(() => builder),
+          limit: vi.fn(() => Promise.resolve({ data: [], error: null })),
+          maybeSingle: vi.fn(() =>
+            Promise.resolve({
+              data:
+                schema === "market" && table === "listings" ? listing : null,
+              error: null,
+            }),
+          ),
+          then: (
+            resolve: (value: { data: unknown[]; error: null }) => unknown,
+            reject?: (reason: unknown) => unknown,
+          ) =>
+            Promise.resolve(resolve({ data: [], error: null })).catch(reject),
+        };
+
+        return builder;
+      }),
+    })),
+  };
+}
+
 beforeEach(() => {
   process.env.FEATURE_MARKET_ENABLED = "true";
+  getSupabaseAdminMock.mockReset();
+  getSupabaseAdminMock.mockReturnValue(createMarketDbMock());
 });
 
 afterEach(() => {

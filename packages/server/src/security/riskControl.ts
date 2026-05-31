@@ -212,9 +212,13 @@ interface RiskControlOptions extends CreateRiskControlOptions {
 }
 
 interface UserFlagRecord {
-  flag: string;
+  flag?: string | null;
+  flag_code?: string | null;
   severity?: RiskSeverity | string | null;
+  flag_level?: string | null;
   expires_at?: string | null;
+  ends_at?: string | null;
+  active?: boolean | null;
   metadata?: Record<string, unknown> | null;
 }
 
@@ -311,15 +315,15 @@ export class RiskControlError extends Error {
 }
 
 export class RiskControl {
-  private readonly supabase?: SupabaseClient;
+  private readonly supabase: SupabaseClient | undefined;
 
-  private readonly rateLimiter?: RateLimiter;
+  private readonly rateLimiter: RateLimiter | undefined;
 
   private readonly policy: RiskPolicy;
 
-  private readonly eventWriter?: RiskEventWriter;
+  private readonly eventWriter: RiskEventWriter | undefined;
 
-  private readonly hashSecret?: string;
+  private readonly hashSecret: string | undefined;
 
   constructor(options: RiskControlOptions = {}) {
     this.supabase = options.supabase;
@@ -354,25 +358,32 @@ export class RiskControl {
     );
     const requiredActions = getRequiredActions(decision, signals);
 
+    const sanitizedAssessmentMetadata = sanitizeMetadata(normalized.metadata);
     const assessment: RiskAssessment = {
       action: normalized.action,
       decision,
       severity,
       score,
       signals,
-      rateLimit,
+      ...(rateLimit ? { rateLimit } : {}),
       requiredActions,
-      userId: normalized.userId,
-      telegramUserId: normalized.telegramUserId,
-      sessionId: normalized.sessionId,
-      walletAddress: normalized.walletAddress,
-      ipHash: normalized.ip
-        ? this.hashForStorage(`ip:${normalized.ip}`)
-        : undefined,
-      userAgentHash: normalized.userAgent
-        ? this.hashForStorage(`ua:${normalized.userAgent}`)
-        : undefined,
-      metadata: sanitizeMetadata(normalized.metadata),
+      ...(normalized.userId ? { userId: normalized.userId } : {}),
+      ...(normalized.telegramUserId !== undefined
+        ? { telegramUserId: normalized.telegramUserId }
+        : {}),
+      ...(normalized.sessionId ? { sessionId: normalized.sessionId } : {}),
+      ...(normalized.walletAddress
+        ? { walletAddress: normalized.walletAddress }
+        : {}),
+      ...(normalized.ip
+        ? { ipHash: this.hashForStorage(`ip:${normalized.ip}`) }
+        : {}),
+      ...(normalized.userAgent
+        ? { userAgentHash: this.hashForStorage(`ua:${normalized.userAgent}`) }
+        : {}),
+      ...(sanitizedAssessmentMetadata
+        ? { metadata: sanitizedAssessmentMetadata }
+        : {}),
       createdAt: normalized.now.toISOString(),
     };
 
@@ -431,15 +442,17 @@ export class RiskControl {
     const userAgent =
       input.userAgent ??
       (headers ? getHeaderValue(headers, "user-agent") : undefined);
+    const idempotencyKey =
+      input.idempotencyKey ?? input.metadata?.idempotencyKey;
 
     return {
       ...input,
       now,
-      ip,
-      userAgent,
+      ...(ip ? { ip } : {}),
+      ...(userAgent ? { userAgent } : {}),
       metadata: {
         ...(input.metadata ?? {}),
-        idempotencyKey: input.idempotencyKey ?? input.metadata?.idempotencyKey,
+        ...(idempotencyKey ? { idempotencyKey } : {}),
       },
     };
   }
@@ -626,41 +639,55 @@ export class RiskControl {
     }
 
     try {
+      type UserFlagSelectBuilder = {
+        eq(column: string, value: unknown): UserFlagSelectBuilder;
+        limit(count: number): Promise<{
+          data?: UserFlagRecord[] | null;
+          error?: { message: string } | null;
+        }>;
+      };
+
       const db = this.supabase as unknown as {
         schema(schema: string): {
           from(table: string): {
-            select(columns: string): {
-              eq(
-                column: string,
-                value: string,
-              ): {
-                limit(count: number): Promise<{
-                  data?: UserFlagRecord[] | null;
-                  error?: { message: string } | null;
-                }>;
-              };
-            };
+            select(columns: string): UserFlagSelectBuilder;
           };
         };
       };
 
-      const { data, error } = await db
+      const currentQuery = db
         .schema("core")
         .from("user_flags")
-        .select("flag,severity,expires_at,metadata")
+        .select("flag_code,flag_level,ends_at,active,metadata")
         .eq("user_id", input.userId)
-        .limit(50);
+        .eq("active", true);
+
+      const currentResult = await currentQuery.limit(50);
+      const { data, error } = currentResult.error
+        ? await db
+            .schema("core")
+            .from("user_flags")
+            .select("flag,severity,expires_at,metadata")
+            .eq("user_id", input.userId)
+            .limit(50)
+        : currentResult;
 
       if (error || !data) {
         return [];
       }
 
       return data.filter((flag) => {
-        if (!flag.expires_at) {
+        if (flag.active === false) {
+          return false;
+        }
+
+        const expiresAtValue = flag.ends_at ?? flag.expires_at;
+
+        if (!expiresAtValue) {
           return true;
         }
 
-        const expiresAt = new Date(flag.expires_at);
+        const expiresAt = new Date(expiresAtValue);
         return Number.isFinite(expiresAt.getTime()) && expiresAt > input.now;
       });
     } catch {
@@ -674,8 +701,112 @@ export class RiskControl {
     signals: RiskSignal[],
   ): void {
     for (const flag of flags) {
-      const flagName = String(flag.flag).toLowerCase();
-      const severity = normalizeSeverity(flag.severity, "high");
+      const flagName = getUserFlagCode(flag);
+      const severity = normalizeUserFlagSeverity(flag, "high");
+      const metadata = sanitizeMetadata(flag.metadata ?? {}) ?? {};
+
+      if (!flagName) {
+        continue;
+      }
+
+      if (flagName === "support_review_required") {
+        pushSignal(signals, {
+          code: "USER_SUPPORT_REVIEW_REQUIRED",
+          severity,
+          score: 95,
+          decision: "deny",
+          message: "用户操作需要客服复核。",
+          metadata,
+        });
+        continue;
+      }
+
+      if (flagName === "gacha_blocked" && isGachaAction(input.action)) {
+        pushSignal(signals, {
+          code: "USER_GACHA_BLOCKED",
+          severity,
+          score: 100,
+          decision: "deny",
+          message: "用户被限制开盒。",
+          metadata,
+        });
+        continue;
+      }
+
+      if (flagName === "market_buy_blocked" && input.action === "market.buy") {
+        pushSignal(signals, {
+          code: "USER_MARKET_BUY_BLOCKED",
+          severity,
+          score: 100,
+          decision: "deny",
+          message: "用户被限制市场购买。",
+          metadata,
+        });
+        continue;
+      }
+
+      if (
+        flagName === "market_sell_blocked" &&
+        isMarketSellAction(input.action)
+      ) {
+        pushSignal(signals, {
+          code: "USER_MARKET_SELL_BLOCKED",
+          severity,
+          score: 100,
+          decision: "deny",
+          message: "用户被限制市场出售。",
+          metadata,
+        });
+        continue;
+      }
+
+      if (flagName === "task_reward_blocked" && isTaskAction(input.action)) {
+        pushSignal(signals, {
+          code: "USER_TASK_REWARD_BLOCKED",
+          severity,
+          score: 100,
+          decision: "deny",
+          message: "用户被限制领取任务奖励。",
+          metadata,
+        });
+        continue;
+      }
+
+      if (flagName === "mint_blocked" && input.action === "wallet.mint") {
+        pushSignal(signals, {
+          code: "USER_MINT_BLOCKED",
+          severity,
+          score: 100,
+          decision: "deny",
+          message: "用户被限制 Mint。",
+          metadata,
+        });
+        continue;
+      }
+
+      if (flagName === "kcoin_frozen" && isKcoinAffectingAction(input.action)) {
+        pushSignal(signals, {
+          code: "USER_KCOIN_FROZEN",
+          severity,
+          score: 100,
+          decision: "deny",
+          message: "用户 K-coin 资产已冻结。",
+          metadata,
+        });
+        continue;
+      }
+
+      if (flagName === "fgems_frozen" && isFgemsAffectingAction(input.action)) {
+        pushSignal(signals, {
+          code: "USER_FGEMS_FROZEN",
+          severity,
+          score: 100,
+          decision: "deny",
+          message: "用户 Fgems 资产已冻结。",
+          metadata,
+        });
+        continue;
+      }
 
       if (flagName === "banned" || flagName === "suspended") {
         pushSignal(signals, {
@@ -684,7 +815,7 @@ export class RiskControl {
           score: 100,
           decision: "deny",
           message: "用户已被封禁或暂停。",
-          metadata: sanitizeMetadata(flag.metadata ?? {}),
+          metadata,
         });
         continue;
       }
@@ -699,7 +830,7 @@ export class RiskControl {
           score: 90,
           decision: "deny",
           message: "用户被限制使用交易市场。",
-          metadata: sanitizeMetadata(flag.metadata ?? {}),
+          metadata,
         });
         continue;
       }
@@ -711,7 +842,7 @@ export class RiskControl {
           score: 90,
           decision: "deny",
           message: "用户被限制开盒。",
-          metadata: sanitizeMetadata(flag.metadata ?? {}),
+          metadata,
         });
         continue;
       }
@@ -723,7 +854,7 @@ export class RiskControl {
           score: 90,
           decision: "deny",
           message: "用户被限制使用钱包或链上功能。",
-          metadata: sanitizeMetadata(flag.metadata ?? {}),
+          metadata,
         });
         continue;
       }
@@ -735,7 +866,7 @@ export class RiskControl {
           score: 90,
           decision: "deny",
           message: "用户被限制领取任务奖励。",
-          metadata: sanitizeMetadata(flag.metadata ?? {}),
+          metadata,
         });
         continue;
       }
@@ -743,11 +874,11 @@ export class RiskControl {
       if (flagName === "risk_watch" || flagName === "payment_review") {
         pushSignal(signals, {
           code: "USER_UNDER_RISK_WATCH",
-          severity: normalizeSeverity(flag.severity, "medium"),
+          severity: normalizeUserFlagSeverity(flag, "medium"),
           score: 45,
           decision: "review",
           message: "用户处于风控观察状态。",
-          metadata: sanitizeMetadata(flag.metadata ?? {}),
+          metadata,
         });
       }
     }
@@ -1397,7 +1528,7 @@ export class RiskControl {
       wallet_address_hash: assessment.walletAddress
         ? this.hashForStorage(`wallet:${assessment.walletAddress}`)
         : null,
-      metadata: assessment.metadata,
+      ...(assessment.metadata ? { metadata: assessment.metadata } : {}),
       created_at: assessment.createdAt,
     };
 
@@ -1459,7 +1590,7 @@ export function createRiskControl(
 
   return new RiskControl({
     ...options,
-    rateLimiter,
+    ...(rateLimiter ? { rateLimiter } : {}),
   });
 }
 
@@ -1737,6 +1868,14 @@ function isMarketAction(action: RiskAction): boolean {
   return action === "market.buy" || String(action).startsWith("market.");
 }
 
+function isMarketSellAction(action: RiskAction): boolean {
+  return (
+    action === "market.create_listing" ||
+    action === "market.update_price" ||
+    action === "market.cancel_listing"
+  );
+}
+
 function isInventoryAction(action: RiskAction): boolean {
   return String(action).startsWith("inventory.");
 }
@@ -1747,6 +1886,26 @@ function isTaskAction(action: RiskAction): boolean {
 
 function isWalletAction(action: RiskAction): boolean {
   return String(action).startsWith("wallet.");
+}
+
+function isKcoinAffectingAction(action: RiskAction): boolean {
+  return (
+    action === "market.buy" ||
+    action === "inventory.evolve" ||
+    action === "tasks.claim_commission"
+  );
+}
+
+function isFgemsAffectingAction(action: RiskAction): boolean {
+  return action === "inventory.upgrade" || action === "inventory.decompose";
+}
+
+function getUserFlagCode(flag: UserFlagRecord): string | undefined {
+  const value = flag.flag_code ?? flag.flag;
+
+  return typeof value === "string" && value.trim()
+    ? value.trim().toLowerCase()
+    : undefined;
 }
 
 function getString(
@@ -1826,6 +1985,27 @@ function normalizeSeverity(
   }
 
   return fallback;
+}
+
+function normalizeUserFlagSeverity(
+  flag: UserFlagRecord,
+  fallback: RiskSeverity,
+): RiskSeverity {
+  const value = flag.flag_level ?? flag.severity;
+
+  if (value === "ban") {
+    return "critical";
+  }
+
+  if (value === "restriction") {
+    return "high";
+  }
+
+  if (value === "warning") {
+    return "medium";
+  }
+
+  return normalizeSeverity(value, fallback);
 }
 
 function getEnv(name: string): string | undefined {

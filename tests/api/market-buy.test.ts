@@ -9,10 +9,13 @@ import buyListingHandler from "../../api/market/buy";
 import { RpcError } from "../../packages/server/src/db/rpc";
 import { invokeApiHandler } from "./_utils";
 
-const { callRpcRawMock, requireSessionMock } = vi.hoisted(() => ({
+const { callRpcRawMock, getSupabaseAdminMock, requireSessionMock } = vi.hoisted(
+  () => ({
   callRpcRawMock: vi.fn(),
+  getSupabaseAdminMock: vi.fn(),
   requireSessionMock: vi.fn(),
-}));
+  }),
+);
 
 vi.mock("../../packages/server/src/db/rpc.js", () => ({
   callRpcRaw: callRpcRawMock,
@@ -42,6 +45,7 @@ vi.mock("../../packages/server/src/db/rpc.js", () => ({
 }));
 
 vi.mock("../../api/_shared/requireSession.js", () => ({
+  getSupabaseAdmin: getSupabaseAdminMock,
   requireSession: requireSessionMock,
 }));
 
@@ -53,12 +57,49 @@ const ITEM_ID = "66666666-6666-4666-8666-666666666666";
 const TEMPLATE_ID = "33333333-3333-4333-8333-333333333333";
 const FORM_ID = "44444444-4444-4444-8444-444444444444";
 const IDEMPOTENCY_KEY = "market:buy-listing-focused-0001";
+const SELLER_ID = "55555555-5555-4555-8555-555555555555";
+
+function createMarketBuyDbMock(
+  listing: Record<string, unknown> | null = {
+    id: LISTING_ID,
+    seller_user_id: SELLER_ID,
+    status: "active",
+  },
+) {
+  return {
+    schema: vi.fn((schema: string) => ({
+      from: vi.fn((table: string) => {
+        const builder = {
+          select: vi.fn(() => builder),
+          eq: vi.fn(() => builder),
+          limit: vi.fn(() => Promise.resolve({ data: [], error: null })),
+          maybeSingle: vi.fn(() =>
+            Promise.resolve({
+              data:
+                schema === "market" && table === "listings" ? listing : null,
+              error: null,
+            }),
+          ),
+          then: (
+            resolve: (value: { data: unknown[]; error: null }) => unknown,
+            reject?: (reason: unknown) => unknown,
+          ) =>
+            Promise.resolve(resolve({ data: [], error: null })).catch(reject),
+        };
+
+        return builder;
+      }),
+    })),
+  };
+}
 
 describe("market buy API focused coverage", () => {
   beforeEach(() => {
     process.env.NODE_ENV = "test";
     process.env.FEATURE_MARKET_ENABLED = "true";
     callRpcRawMock.mockReset();
+    getSupabaseAdminMock.mockReset();
+    getSupabaseAdminMock.mockReturnValue(createMarketBuyDbMock());
     requireSessionMock.mockReset();
     requireSessionMock.mockResolvedValue({
       sessionId: "session-market-buy-focused-test",
@@ -241,5 +282,47 @@ describe("market buy API focused coverage", () => {
     expect(result.statusCode).toBe(409);
     expect(result.body.error.code).toBe("CANNOT_BUY_OWN_LISTING");
     expect(result.body.error.message).toBe("不能购买自己的挂单。");
+  });
+
+  it("records self-trade risk before rejecting own listings", async () => {
+    getSupabaseAdminMock.mockReturnValue(
+      createMarketBuyDbMock({
+        id: LISTING_ID,
+        seller_user_id: USER_ID,
+        status: "active",
+      }),
+    );
+
+    const result = await invokeApiHandler<ApiErrorResponse>(buyListingHandler, {
+      method: "POST",
+      headers: {
+        "x-request-id": "req-market-buy-self-trade",
+      },
+      body: {
+        listing_id: LISTING_ID,
+        expected_unit_price_kcoin: 500,
+        idempotency_key: IDEMPOTENCY_KEY,
+      },
+    });
+
+    expect(result.statusCode).toBe(409);
+    expect(result.body.error.code).toBe("CANNOT_BUY_OWN_LISTING");
+    expect(callRpcRawMock).toHaveBeenCalledWith(
+      "risk_record_event",
+      expect.objectContaining({
+        p_user_id: USER_ID,
+        p_event_type: "market_self_trade",
+        p_source_type: "market_listing",
+        p_source_id: LISTING_ID,
+      }),
+      expect.objectContaining({
+        schema: "api",
+      }),
+    );
+    expect(callRpcRawMock).not.toHaveBeenCalledWith(
+      "market_buy_listing",
+      expect.any(Object),
+      expect.any(Object),
+    );
   });
 });

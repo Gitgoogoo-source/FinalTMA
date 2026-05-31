@@ -25,6 +25,7 @@ import {
 } from "../_shared/handler.js";
 import { parseJsonBody } from "../_shared/parseBody.js";
 import { requireSession } from "../_shared/requireSession.js";
+import { assertUserRiskAllowed } from "../_shared/riskGuards.js";
 import { validate } from "../_shared/validate.js";
 
 type WalletNetwork = "mainnet" | "testnet";
@@ -217,6 +218,16 @@ export default withApiHandler(
         requestPayload: buildMintRequestPayload(input),
         traceId: ctx.requestId,
         handler: async () => {
+          await assertUserRiskAllowed({
+            req,
+            ctx,
+            session,
+            action: "wallet.mint",
+            idempotencyKey: input.idempotencyKey,
+            metadata: {
+              itemId: input.itemInstanceId,
+            },
+          });
           const prepared = await prepareMintRequest(db, input, {
             userId: session.userId,
             requestId: ctx.requestId,

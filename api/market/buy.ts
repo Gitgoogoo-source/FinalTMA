@@ -11,7 +11,9 @@ import {
   withApiHandler,
 } from "../_shared/handler.js";
 import { parseJsonBody } from "../_shared/parseBody.js";
-import { requireSession } from "../_shared/requireSession.js";
+import { getSupabaseAdmin, requireSession } from "../_shared/requireSession.js";
+import { recordRiskEventSafely } from "../_shared/riskEvents.js";
+import { assertUserRiskAllowed } from "../_shared/riskGuards.js";
 import { validate } from "../_shared/validate.js";
 
 type MarketBuyListingRpcPayload = Record<string, unknown>;
@@ -36,6 +38,24 @@ export default withApiHandler(
     );
 
     await assertMarketWriteAllowed();
+    await assertUserRiskAllowed({
+      req,
+      ctx,
+      session,
+      action: "market.buy",
+      idempotencyKey: input.idempotency_key,
+      metadata: {
+        listingId: input.listing_id,
+        quantity: input.quantity,
+        priceKcoin: input.expected_unit_price_kcoin,
+      },
+    });
+    await assertNotSelfTradeListing({
+      listingId: input.listing_id,
+      userId: session.userId,
+      requestId: ctx.requestId,
+      idempotencyKey: input.idempotency_key,
+    });
 
     const payload = await callMarketBuyListing(
       input,
@@ -79,6 +99,58 @@ export function normalizeMarketBuyListingInput(
       ? { seller_user_id: body.seller_user_id }
       : {}),
   };
+}
+
+async function assertNotSelfTradeListing(input: {
+  listingId: string;
+  userId: string;
+  requestId: string;
+  idempotencyKey: string;
+}): Promise<void> {
+  const { data, error } = await getSupabaseAdmin()
+    .schema("market")
+    .from("listings")
+    .select("id,seller_user_id,status")
+    .eq("id", input.listingId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[risk-event:market-listing-lookup-failed]", {
+      requestId: input.requestId,
+      userId: input.userId,
+      listingId: input.listingId,
+      error: error.message,
+    });
+    return;
+  }
+
+  if (!isRecord(data) || data.seller_user_id !== input.userId) {
+    return;
+  }
+
+  await recordRiskEventSafely({
+    userId: input.userId,
+    eventType: "market_self_trade",
+    sourceType: "market_listing",
+    sourceId: input.listingId,
+    detail: {
+      request_id: input.requestId,
+      action: "market.buy",
+      listing_id: input.listingId,
+      listing_status: data.status,
+      buyer_user_id: input.userId,
+      seller_user_id: data.seller_user_id,
+    },
+    idempotencyKey: `risk:market_self_trade:${input.listingId}:${input.idempotencyKey}`,
+    context: {
+      requestId: input.requestId,
+      userId: input.userId,
+      listingId: input.listingId,
+      idempotencyKey: input.idempotencyKey,
+    },
+  });
+
+  throw new ApiError(409, "CANNOT_BUY_OWN_LISTING", "不能购买自己的挂单。");
 }
 
 async function callMarketBuyListing(

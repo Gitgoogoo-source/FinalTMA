@@ -16,12 +16,24 @@ import {
   readString,
   withTaskApiHandler,
 } from "./_shared.js";
+import { assertUserRiskAllowed } from "../_shared/riskGuards.js";
 
 export default withTaskApiHandler(
   async (req, _res, ctx) => {
     const input = await parseTaskJsonBodyInput(req, ClaimTaskBodySchema, {
       maxBytes: 8 * 1024,
       normalize: normalizeClaimTaskInput,
+    });
+    await assertUserRiskAllowed({
+      req,
+      ctx,
+      session: ctx.session,
+      action: "tasks.claim",
+      idempotencyKey: input.idempotencyKey,
+      metadata: {
+        taskId: input.taskId,
+        periodKey: input.periodKey ?? undefined,
+      },
     });
     const payload = await callClaimTaskRpc(input, ctx.session, ctx.requestId);
 

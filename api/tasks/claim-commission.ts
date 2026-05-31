@@ -16,6 +16,7 @@ import {
   readString,
   withTaskApiHandler,
 } from "./_shared.js";
+import { assertUserRiskAllowed } from "../_shared/riskGuards.js";
 
 export default withTaskApiHandler(
   async (req, _res, ctx) => {
@@ -23,6 +24,16 @@ export default withTaskApiHandler(
       maxBytes: 8 * 1024,
       requireIdempotencyKey: true,
       normalize: normalizeClaimCommissionInput,
+    });
+    await assertUserRiskAllowed({
+      req,
+      ctx,
+      session: ctx.session,
+      action: "tasks.claim_commission",
+      idempotencyKey: input.idempotencyKey,
+      metadata: {
+        commissionCount: input.commissionIds?.length ?? undefined,
+      },
     });
     const payload = await callClaimCommissionRpc(
       input,

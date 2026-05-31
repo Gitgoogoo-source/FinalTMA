@@ -18,7 +18,9 @@ import {
   withApiHandler,
 } from "../_shared/handler.js";
 import { parseJsonBody } from "../_shared/parseBody.js";
-import { requireSession } from "../_shared/requireSession.js";
+import { getSupabaseAdmin, requireSession } from "../_shared/requireSession.js";
+import { recordRiskEventSafely } from "../_shared/riskEvents.js";
+import { assertUserRiskAllowed } from "../_shared/riskGuards.js";
 import { validate } from "../_shared/validate.js";
 
 type CreateOrderRpcResult = {
@@ -62,6 +64,9 @@ type CreateOpenOrderResponse = {
   result_ready: boolean;
 };
 
+const GACHA_HIGH_FREQUENCY_WINDOW_MS = 5 * 60 * 1000;
+const GACHA_HIGH_FREQUENCY_THRESHOLD = 5;
+
 export default withApiHandler(
   async (req, _res, ctx) => {
     const session = await requireSession(req);
@@ -74,6 +79,18 @@ export default withApiHandler(
     );
 
     await assertStarsPaymentCreateAllowed();
+    await assertUserRiskAllowed({
+      req,
+      ctx,
+      session,
+      action: "box.create_open_order",
+      idempotencyKey: input.idempotencyKey,
+      metadata: {
+        boxId: input.boxId,
+        drawCount: input.quantity,
+        expectedStarsAmount: input.expectedPriceStars ?? undefined,
+      },
+    });
 
     const order = await callGachaCreateOrder(
       input,
@@ -81,6 +98,14 @@ export default withApiHandler(
       ctx.requestId,
     );
     const orderId = getRequiredString(order, "draw_order_id");
+    await recordGachaHighFrequencyRiskIfNeeded({
+      userId: session.userId,
+      orderId,
+      boxId: input.boxId,
+      quantity: input.quantity,
+      idempotencyKey: input.idempotencyKey,
+      requestId: ctx.requestId,
+    });
     const starOrderId = getRequiredString(order, "star_order_id");
     const invoicePayload = getRequiredString(order, "invoice_payload");
     const xtrAmount = numberOrZero(order.xtr_amount);
@@ -250,6 +275,63 @@ async function callDevPaidOrder(
   } catch (error) {
     throw mapGachaRpcError(error);
   }
+}
+
+async function recordGachaHighFrequencyRiskIfNeeded(input: {
+  userId: string;
+  orderId: string;
+  boxId: string;
+  quantity: 1 | 10;
+  idempotencyKey: string;
+  requestId: string;
+}): Promise<void> {
+  const since = new Date(
+    Date.now() - GACHA_HIGH_FREQUENCY_WINDOW_MS,
+  ).toISOString();
+  const { count, error } = await getSupabaseAdmin()
+    .schema("gacha")
+    .from("draw_orders")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", input.userId)
+    .gte("created_at", since);
+
+  if (error) {
+    console.error("[risk-event:gacha-frequency-count-failed]", {
+      requestId: input.requestId,
+      userId: input.userId,
+      error: error.message,
+    });
+    return;
+  }
+
+  const recentOrderCount = count ?? 0;
+
+  if (recentOrderCount < GACHA_HIGH_FREQUENCY_THRESHOLD) {
+    return;
+  }
+
+  await recordRiskEventSafely({
+    userId: input.userId,
+    eventType: "gacha_high_frequency",
+    sourceType: "gacha_order",
+    sourceId: input.orderId,
+    detail: {
+      request_id: input.requestId,
+      action: "boxes.create_open_order",
+      box_id: input.boxId,
+      draw_count: input.quantity,
+      recent_order_count: recentOrderCount,
+      window_seconds: Math.trunc(GACHA_HIGH_FREQUENCY_WINDOW_MS / 1000),
+      threshold: GACHA_HIGH_FREQUENCY_THRESHOLD,
+    },
+    idempotencyKey: `risk:gacha_high_frequency:${input.orderId}:${input.idempotencyKey}`,
+    context: {
+      requestId: input.requestId,
+      userId: input.userId,
+      orderId: input.orderId,
+      idempotencyKey: input.idempotencyKey,
+    },
+  });
 }
 
 function mapGachaRpcError(error: unknown): ApiError {

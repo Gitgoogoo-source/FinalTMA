@@ -33,6 +33,7 @@ import { MintQueuePage } from "./pages/MintQueuePage";
 import { PaymentsPage } from "./pages/PaymentsPage";
 import { PermissionMatrixPage } from "./pages/PermissionMatrixPage";
 import { ReconciliationPage } from "./pages/ReconciliationPage";
+import { RiskPage } from "./pages/RiskPage";
 import { RolesPage } from "./pages/RolesPage";
 import { WalletsPage } from "./pages/WalletsPage";
 
@@ -62,6 +63,13 @@ const NAV_ITEMS: AdminNavItem[] = [
     label: "对账",
     icon: RefreshCw,
     requiredPermissions: ["ops:read", "risk:read"],
+    permissionMode: "any",
+  },
+  {
+    id: "risk",
+    label: "风控",
+    icon: ShieldAlert,
+    requiredPermissions: ["risk:read", "admin:read"],
     permissionMode: "any",
   },
   {
@@ -285,6 +293,16 @@ function renderActivePage(tab: AdminTab, me: AdminMeResponse) {
       );
     case "reconciliation":
       return <ReconciliationPage />;
+    case "risk":
+      return (
+        <RiskPage
+          canWriteRisk={
+            me.isSuperAdmin ||
+            hasAdminPermission(me.permissions, "risk:write") ||
+            hasAdminPermission(me.permissions, "admin:write")
+          }
+        />
+      );
     case "mint":
       return <MintQueuePage />;
     case "wallets":

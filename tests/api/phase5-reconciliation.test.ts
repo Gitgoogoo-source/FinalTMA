@@ -126,10 +126,12 @@ describe("phase 5 reconciliation job", () => {
     expect(db.rows["ops.risk_events"]).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          event_type: "phase5_payment_paid_not_fulfilled",
+          event_type: "payment_paid_not_fulfilled",
           source_type: "star_order",
           detail: expect.objectContaining({
             request_id: "req-reconcile-payment",
+            reconciliation_finding_code:
+              "phase5_payment_paid_not_fulfilled",
             star_order_id: "11111111-1111-4111-8111-111111111111",
             draw_order_id: "22222222-2222-4222-8222-222222222222",
             payment_charge_id: "charge-paid-not-fulfilled",
@@ -186,9 +188,12 @@ describe("phase 5 reconciliation job", () => {
     expect(db.rows["economy.currency_ledger"]).toHaveLength(1);
     expect(db.rows["ops.risk_events"]).toEqual([
       expect.objectContaining({
-        event_type: "phase5_ledger_balance_mismatch",
+        event_type: "ledger_balance_mismatch",
         source_type: "user_balance",
         source_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        detail: expect.objectContaining({
+          reconciliation_finding_code: "phase5_ledger_balance_mismatch",
+        }),
       }),
     ]);
   });
@@ -270,7 +275,7 @@ describe("phase 5 reconciliation job", () => {
       "ops.risk_events": [
         {
           id: "risk-existing-ledger-mismatch",
-          event_type: "phase5_ledger_balance_mismatch",
+          event_type: "ledger_balance_mismatch",
           source_type: "user_balance",
           source_id: userId,
           status: "open",
@@ -413,9 +418,11 @@ describe("phase 5 reconciliation job", () => {
     expect(db.rows["ops.risk_events"]).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          event_type: "phase6_market_order_ledger_missing",
+          event_type: "market_price_manipulation",
           source_type: "market_order",
           detail: expect.objectContaining({
+            reconciliation_finding_code:
+              "phase6_market_order_item_count_mismatch",
             reconciliation_run_type: "market_settlement",
             suggested_action: expect.any(String),
           }),
@@ -1161,9 +1168,13 @@ function createDbMock(
   const failures = [...(options?.failures ?? [])];
   const operations: QueryOperation[] = [];
   const client = {
+    rpc: (rpcName: string, args: Record<string, unknown>) =>
+      createRpcQuery(rpcName, args, mutableRows),
     schema: (schema: string) => ({
       from: (table: string) =>
         createQueryBuilder(schema, table, mutableRows, operations, failures),
+      rpc: (rpcName: string, args: Record<string, unknown>) =>
+        createRpcQuery(rpcName, args, mutableRows),
     }),
   };
 
@@ -1171,6 +1182,98 @@ function createDbMock(
     client: client as unknown as SupabaseAdminClient,
     rows: mutableRows,
     operations,
+  };
+}
+
+function createRpcQuery(
+  rpcName: string,
+  args: Record<string, unknown>,
+  rows: TableRows,
+) {
+  let response:
+    | (QueryResult & {
+        count: number | null;
+        status: number;
+        statusText: string;
+      })
+    | null = null;
+  const getResponse = () => {
+    response ??= resolveRpcOperation(rpcName, args, rows);
+    return response;
+  };
+
+  const query = {
+    abortSignal: () => query,
+    then: (
+      resolve: (value: QueryResult & {
+        count: number | null;
+        status: number;
+        statusText: string;
+      }) => unknown,
+      reject?: (reason: unknown) => unknown,
+    ) => Promise.resolve(resolve(getResponse())).catch(reject),
+  };
+
+  return query;
+}
+
+function resolveRpcOperation(
+  rpcName: string,
+  args: Record<string, unknown>,
+  rows: TableRows,
+): QueryResult & {
+  count: number | null;
+  status: number;
+  statusText: string;
+} {
+  if (rpcName !== "risk_record_event") {
+    return {
+      data: null,
+      error: {
+        message: `unsupported rpc in test mock: ${rpcName}`,
+      },
+      count: null,
+      status: 400,
+      statusText: "Bad Request",
+    };
+  }
+
+  const riskEvents = rows["ops.risk_events"] ?? [];
+  rows["ops.risk_events"] = riskEvents;
+  const inserted = {
+    id: `mock-risk_events-${riskEvents.length + 1}`,
+    user_id: args.p_user_id ?? null,
+    event_type: args.p_event_type,
+    severity: args.p_severity ?? "medium",
+    status: "open",
+    source_type: args.p_source_type ?? null,
+    source_id: args.p_source_id ?? null,
+    score_delta: args.p_score_delta ?? 0,
+    detail:
+      args.p_detail !== null &&
+      typeof args.p_detail === "object" &&
+      !Array.isArray(args.p_detail)
+        ? args.p_detail
+        : {},
+    resolved_by_admin_id: null,
+    resolved_at: null,
+    created_at: "2026-05-29T00:00:00.000Z",
+  };
+
+  riskEvents.push(inserted);
+
+  return {
+    data: {
+      risk_event_id: inserted.id,
+      severity: inserted.severity,
+      score_delta: inserted.score_delta,
+      status: inserted.status,
+      idempotent: false,
+    },
+    error: null,
+    count: null,
+    status: 200,
+    statusText: "OK",
   };
 }
 

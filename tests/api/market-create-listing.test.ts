@@ -8,10 +8,13 @@ import { ApiError } from "../../api/_shared/handler";
 import createListingHandler from "../../api/market/create-listing";
 import { invokeApiHandler } from "./_utils";
 
-const { callRpcRawMock, requireSessionMock } = vi.hoisted(() => ({
+const { callRpcRawMock, getSupabaseAdminMock, requireSessionMock } = vi.hoisted(
+  () => ({
   callRpcRawMock: vi.fn(),
+  getSupabaseAdminMock: vi.fn(),
   requireSessionMock: vi.fn(),
-}));
+  }),
+);
 
 vi.mock("../../packages/server/src/db/rpc.js", () => ({
   callRpcRaw: callRpcRawMock,
@@ -27,6 +30,7 @@ vi.mock("../../packages/server/src/db/rpc.js", () => ({
 }));
 
 vi.mock("../../api/_shared/requireSession.js", () => ({
+  getSupabaseAdmin: getSupabaseAdminMock,
   requireSession: requireSessionMock,
 }));
 
@@ -36,11 +40,31 @@ const LISTING_ID = "22222222-2222-4222-8222-222222222222";
 const ITEM_ID = "66666666-6666-4666-8666-666666666666";
 const IDEMPOTENCY_KEY = "market:create-listing-focused-0001";
 
+function createNoRiskDbMock() {
+  const builder = {
+    select: vi.fn(() => builder),
+    eq: vi.fn(() => builder),
+    limit: vi.fn(() => Promise.resolve({ data: [], error: null })),
+    then: (
+      resolve: (value: { data: unknown[]; error: null }) => unknown,
+      reject?: (reason: unknown) => unknown,
+    ) => Promise.resolve(resolve({ data: [], error: null })).catch(reject),
+  };
+
+  return {
+    schema: vi.fn(() => ({
+      from: vi.fn(() => builder),
+    })),
+  };
+}
+
 describe("market create listing API focused coverage", () => {
   beforeEach(() => {
     process.env.NODE_ENV = "test";
     process.env.FEATURE_MARKET_ENABLED = "true";
     callRpcRawMock.mockReset();
+    getSupabaseAdminMock.mockReset();
+    getSupabaseAdminMock.mockReturnValue(createNoRiskDbMock());
     requireSessionMock.mockReset();
     requireSessionMock.mockResolvedValue({
       sessionId: "session-market-create-listing-focused-test",

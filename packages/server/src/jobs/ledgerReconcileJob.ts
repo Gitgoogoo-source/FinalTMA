@@ -1,4 +1,5 @@
 import type { Json } from "../db/database.js";
+import { callRpcRaw } from "../db/rpc.js";
 import {
   getSupabaseAdminClient,
   type SupabaseAdminClient,
@@ -2516,6 +2517,7 @@ async function writeRiskEvents(
 
   for (const finding of input.findings) {
     logFinding(input.requestId, input.runId, input.runType, finding);
+    const eventType = getRiskEventTypeForFinding(finding);
 
     if (!finding.sourceId) {
       counts.skipped += 1;
@@ -2528,7 +2530,7 @@ async function writeRiskEvents(
           .schema("ops")
           .from("risk_events")
           .select("id")
-          .eq("event_type", finding.code)
+          .eq("event_type", eventType)
           .eq("source_type", finding.sourceType)
           .eq("source_id", finding.sourceId)
           .in("status", ["open", "reviewing"])
@@ -2543,44 +2545,103 @@ async function writeRiskEvents(
       }
     }
 
-    const { error } = await db
-      .schema("ops")
-      .from("risk_events")
-      .insert({
-        user_id: finding.userId,
-        event_type: finding.code,
-        severity: finding.severity,
-        status: "open",
-        source_type: finding.sourceType,
-        source_id: finding.sourceId,
-        detail: toJson({
-          ...finding.detail,
-          request_id: input.requestId,
-          reconciliation_run_id: input.runId,
-          reconciliation_run_type: input.runType,
-          message: finding.message,
-          suggested_action: finding.suggestedAction,
-          star_order_id: finding.starOrderId ?? null,
-          draw_order_id: finding.drawOrderId ?? null,
-          payment_charge_id: finding.paymentChargeId ?? null,
-          mint_queue_id: finding.mintQueueId ?? null,
-          tx_hash: finding.txHash ?? null,
-        }),
-      });
-
-    if (error) {
+    try {
+      await callRpcRaw<Record<string, unknown>>(
+        "risk_record_event",
+        {
+          p_user_id: finding.userId,
+          p_event_type: eventType,
+          p_severity: finding.severity,
+          p_source_type: finding.sourceType,
+          p_source_id: finding.sourceId,
+          p_score_delta: null,
+          p_detail: toJson({
+            ...finding.detail,
+            request_id: input.requestId,
+            reconciliation_run_id: input.runId,
+            reconciliation_run_type: input.runType,
+            reconciliation_finding_code: finding.code,
+            message: finding.message,
+            suggested_action: finding.suggestedAction,
+            star_order_id: finding.starOrderId ?? null,
+            draw_order_id: finding.drawOrderId ?? null,
+            payment_charge_id: finding.paymentChargeId ?? null,
+            mint_queue_id: finding.mintQueueId ?? null,
+            tx_hash: finding.txHash ?? null,
+          }),
+          p_idempotency_key: `risk:reconciliation:${input.runId}:${finding.sourceType}:${finding.sourceId}:${eventType}`,
+        },
+        {
+          client: db,
+          schema: "api" as never,
+          context: {
+            requestId: input.requestId,
+            runId: input.runId,
+            runType: input.runType,
+            findingCode: finding.code,
+            sourceType: finding.sourceType,
+            sourceId: finding.sourceId,
+          },
+        },
+      );
+    } catch (error) {
       if (isUniqueViolation(error)) {
         counts.existing += 1;
         continue;
       }
 
-      throw new Error(`Failed to write risk event: ${error.message}`);
+      throw new Error(`Failed to write risk event: ${getErrorMessage(error)}`);
     }
 
     counts.inserted += 1;
   }
 
   return counts;
+}
+
+function getRiskEventTypeForFinding(
+  finding: Phase5ReconciliationFinding,
+): string {
+  const code = finding.code.toLowerCase();
+  const sourceType = finding.sourceType.toLowerCase();
+
+  if (code.includes("negative_balance")) {
+    return "negative_balance_detected";
+  }
+
+  if (code.includes("payment") || sourceType.includes("star_order")) {
+    return "payment_paid_not_fulfilled";
+  }
+
+  if (code.includes("gacha") || sourceType.includes("draw")) {
+    return code.includes("stock")
+      ? "gacha_stock_mismatch"
+      : "gacha_fulfillment_mismatch";
+  }
+
+  if (code.includes("market") || sourceType.includes("market")) {
+    return "market_price_manipulation";
+  }
+
+  if (code.includes("referral") || sourceType.includes("referral")) {
+    return "referral_abuse";
+  }
+
+  if (code.includes("wallet") || sourceType.includes("wallet")) {
+    return "wallet_sync_stuck";
+  }
+
+  if (code.includes("mint") || code.includes("tx")) {
+    return code.includes("retry")
+      ? "mint_retry_exceeded"
+      : "mint_confirmed_queue_not_minted";
+  }
+
+  if (code.includes("ledger") || sourceType.includes("ledger")) {
+    return "ledger_balance_mismatch";
+  }
+
+  return "ledger_balance_mismatch";
 }
 
 function emptyRiskEventWriteCounts(): RiskEventWriteCounts {

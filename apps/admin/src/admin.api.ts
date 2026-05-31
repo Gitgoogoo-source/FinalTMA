@@ -25,11 +25,19 @@ import type {
   PaymentDetailResponse,
   PaymentSupportConfig,
   PityRulesResponse,
+  ApplyUserFlagInput,
+  ClearUserFlagInput,
   ReconciliationFindingsResponse,
   ReconciliationRunsResponse,
   ReconciliationResponse,
+  ResolveRiskEventInput,
   ResolveReconciliationFindingResponse,
   ResolveReconciliationFindingInput,
+  RiskEventFilters,
+  RiskEventsResponse,
+  RiskMutationResponse,
+  RiskUserProfileParams,
+  RiskUserProfile,
   UpdateBlindBoxStatusInput,
   UpsertBlindBoxInput,
   UpsertBoxPriceRuleInput,
@@ -481,6 +489,85 @@ export async function fetchAuditLogs(
   return adminRequest<AuditLogsResponse>(
     `/api/admin/audit-logs${toQueryString(params)}`,
   );
+}
+
+export async function fetchRiskEvents(
+  params: RiskEventFilters = {},
+): Promise<RiskEventsResponse> {
+  return adminRequest<RiskEventsResponse>(
+    `/api/admin/risk/events${toQueryString(params)}`,
+  );
+}
+
+export async function fetchRiskUserProfile(
+  userId: string,
+  params: RiskUserProfileParams = {},
+): Promise<RiskUserProfile> {
+  return adminRequest<RiskUserProfile>(
+    `/api/admin/risk/user-profile${toQueryString({ userId, ...params })}`,
+  );
+}
+
+export async function resolveRiskEvent(
+  input: ResolveRiskEventInput,
+): Promise<RiskMutationResponse> {
+  return adminRequest<RiskMutationResponse>("/api/admin/risk/resolve", {
+    method: "PATCH",
+    headers: buildDangerHeaders(
+      "admin-resolve-risk-event",
+      `${input.riskEventId}:${input.status}`,
+    ),
+    body: {
+      riskEventId: input.riskEventId,
+      status: input.status,
+      reason: input.reason,
+      resolutionDetail: input.resolutionDetail,
+      fixMethod: input.fixMethod,
+      escalationOwner: input.escalationOwner,
+      escalationTicketId: input.escalationTicketId,
+      confirm: true,
+    },
+  });
+}
+
+export async function applyUserFlag(
+  input: ApplyUserFlagInput,
+): Promise<RiskMutationResponse> {
+  return adminRequest<RiskMutationResponse>("/api/admin/risk/apply-user-flag", {
+    method: "POST",
+    headers: buildDangerHeaders(
+      "admin-apply-user-flag",
+      `${input.userId}:${input.flagCode}`,
+    ),
+    body: {
+      userId: input.userId,
+      flagCode: input.flagCode,
+      flagLevel: input.flagLevel ?? "restriction",
+      reason: input.reason,
+      endsAt: input.endsAt ?? undefined,
+      metadata: input.metadata,
+      confirm: true,
+    },
+  });
+}
+
+export async function clearUserFlag(
+  input: ClearUserFlagInput,
+): Promise<RiskMutationResponse> {
+  const targetId =
+    input.userFlagId ?? `${input.userId ?? "user"}:${input.flagCode ?? "flag"}`;
+
+  return adminRequest<RiskMutationResponse>("/api/admin/risk/clear-user-flag", {
+    method: "POST",
+    headers: buildDangerHeaders("admin-clear-user-flag", targetId),
+    body: {
+      userFlagId: input.userFlagId,
+      userId: input.userId,
+      flagCode: input.flagCode,
+      reason: input.reason,
+      confirm: true,
+    },
+  });
 }
 
 export async function fetchReconciliationRuns(

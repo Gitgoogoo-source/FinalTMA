@@ -3,6 +3,7 @@ import {
   type BindReferralBody,
 } from "../../packages/validation/src/task.schemas.js";
 import { ApiError } from "../_shared/handler.js";
+import { recordRiskEventSafely } from "../_shared/riskEvents.js";
 import {
   assertNoClientControlledTaskFields,
   assertNoSensitiveMetadata,
@@ -27,6 +28,12 @@ export default withTaskApiHandler(
     const payload = await callBindReferralRpc(
       input,
       ctx.session,
+      ctx.requestId,
+    );
+    await recordReferralRiskFromRejectedPayload(
+      payload,
+      ctx.session.userId,
+      input.idempotencyKey,
       ctx.requestId,
     );
 
@@ -100,6 +107,44 @@ async function callBindReferralRpc(
       "绑定邀请关系失败，请稍后重试。",
     );
   }
+}
+
+async function recordReferralRiskFromRejectedPayload(
+  payload: unknown,
+  userId: string,
+  idempotencyKey: string,
+  requestId: string,
+): Promise<void> {
+  if (!isRecord(payload)) {
+    return;
+  }
+
+  const bound = readBoolean(payload.bound) ?? false;
+  const reason = readString(payload.reason);
+
+  if (bound || reason !== "self_invite_not_allowed") {
+    return;
+  }
+
+  await recordRiskEventSafely({
+    userId,
+    eventType: "referral_self_loop",
+    sourceType: "referral",
+    sourceId: null,
+    detail: {
+      request_id: requestId,
+      action: "tasks.bind_referral",
+      reason,
+      status: readString(payload.status),
+      invite_code: readString(payload.invite_code),
+    },
+    idempotencyKey: `risk:referral_self_loop:${userId}:${idempotencyKey}`,
+    context: {
+      requestId,
+      userId,
+      idempotencyKey,
+    },
+  });
 }
 
 export function normalizeBindReferralPayload(payload: unknown) {

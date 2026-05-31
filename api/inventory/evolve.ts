@@ -10,6 +10,7 @@ import {
 } from "../_shared/handler.js";
 import { parseJsonBody } from "../_shared/parseBody.js";
 import { requireSession } from "../_shared/requireSession.js";
+import { assertUserRiskAllowed } from "../_shared/riskGuards.js";
 import { validate } from "../_shared/validate.js";
 import {
   assertRecordPayload,
@@ -34,6 +35,17 @@ export default withApiHandler(
       InventoryEvolveItemBodySchema,
       normalizeInventoryEvolveInput(body, getIdempotencyKey(req)),
     );
+    await assertUserRiskAllowed({
+      req,
+      ctx,
+      session,
+      action: "inventory.evolve",
+      idempotencyKey: input.idempotency_key,
+      metadata: {
+        itemIds: input.source_item_instance_ids,
+        itemCount: input.source_item_instance_ids.length,
+      },
+    });
 
     const payload = await callInventoryEvolveRpc(
       input,

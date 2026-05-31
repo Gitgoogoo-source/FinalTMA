@@ -376,6 +376,7 @@ export type Database = {
           sort_order: number;
           starts_at: string | null;
           status: string;
+          target_payload: Json;
           target_ref: string | null;
           target_type: string;
           title: string;
@@ -393,6 +394,7 @@ export type Database = {
           sort_order?: number;
           starts_at?: string | null;
           status?: string;
+          target_payload?: Json;
           target_ref?: string | null;
           target_type?: string;
           title: string;
@@ -410,6 +412,7 @@ export type Database = {
           sort_order?: number;
           starts_at?: string | null;
           status?: string;
+          target_payload?: Json;
           target_ref?: string | null;
           target_type?: string;
           title?: string;
@@ -1165,6 +1168,7 @@ export type Database = {
           metadata: Json;
           reason: string | null;
           starts_at: string;
+          updated_at: string;
           user_id: string;
         };
         Insert: {
@@ -1178,6 +1182,7 @@ export type Database = {
           metadata?: Json;
           reason?: string | null;
           starts_at?: string;
+          updated_at?: string;
           user_id: string;
         };
         Update: {
@@ -1191,6 +1196,7 @@ export type Database = {
           metadata?: Json;
           reason?: string | null;
           starts_at?: string;
+          updated_at?: string;
           user_id?: string;
         };
         Relationships: [
@@ -3792,6 +3798,121 @@ export type Database = {
   };
   ops: {
     Tables: {
+      admin_approval_requests: {
+        Row: {
+          action: string;
+          approver_admin_user_id: string | null;
+          created_at: string;
+          execute_audit_log_id: string | null;
+          executed_at: string | null;
+          executed_by_admin_user_id: string | null;
+          execution_result: Json | null;
+          id: string;
+          operation_idempotency_key: string;
+          payload: Json;
+          reason: string;
+          request_audit_log_id: string | null;
+          requester_admin_user_id: string;
+          review_audit_log_id: string | null;
+          review_reason: string | null;
+          reviewed_at: string | null;
+          status: string;
+          target_id: string | null;
+          target_schema: string | null;
+          target_table: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          action: string;
+          approver_admin_user_id?: string | null;
+          created_at?: string;
+          execute_audit_log_id?: string | null;
+          executed_at?: string | null;
+          executed_by_admin_user_id?: string | null;
+          execution_result?: Json | null;
+          id?: string;
+          operation_idempotency_key: string;
+          payload?: Json;
+          reason: string;
+          request_audit_log_id?: string | null;
+          requester_admin_user_id: string;
+          review_audit_log_id?: string | null;
+          review_reason?: string | null;
+          reviewed_at?: string | null;
+          status?: string;
+          target_id?: string | null;
+          target_schema?: string | null;
+          target_table?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          action?: string;
+          approver_admin_user_id?: string | null;
+          created_at?: string;
+          execute_audit_log_id?: string | null;
+          executed_at?: string | null;
+          executed_by_admin_user_id?: string | null;
+          execution_result?: Json | null;
+          id?: string;
+          operation_idempotency_key?: string;
+          payload?: Json;
+          reason?: string;
+          request_audit_log_id?: string | null;
+          requester_admin_user_id?: string;
+          review_audit_log_id?: string | null;
+          review_reason?: string | null;
+          reviewed_at?: string | null;
+          status?: string;
+          target_id?: string | null;
+          target_schema?: string | null;
+          target_table?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "admin_approval_requests_approver_admin_user_id_fkey";
+            columns: ["approver_admin_user_id"];
+            isOneToOne: false;
+            referencedRelation: "admin_users";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "admin_approval_requests_execute_audit_log_id_fkey";
+            columns: ["execute_audit_log_id"];
+            isOneToOne: false;
+            referencedRelation: "admin_audit_logs";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "admin_approval_requests_executed_by_admin_user_id_fkey";
+            columns: ["executed_by_admin_user_id"];
+            isOneToOne: false;
+            referencedRelation: "admin_users";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "admin_approval_requests_request_audit_log_id_fkey";
+            columns: ["request_audit_log_id"];
+            isOneToOne: false;
+            referencedRelation: "admin_audit_logs";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "admin_approval_requests_requester_admin_user_id_fkey";
+            columns: ["requester_admin_user_id"];
+            isOneToOne: false;
+            referencedRelation: "admin_users";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "admin_approval_requests_review_audit_log_id_fkey";
+            columns: ["review_audit_log_id"];
+            isOneToOne: false;
+            referencedRelation: "admin_audit_logs";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       admin_audit_logs: {
         Row: {
           action: string;
@@ -4569,6 +4690,7 @@ export type Database = {
           processing_duration_ms: number | null;
           request_headers_hash: string | null;
           retry_count: number;
+          status_context: Json;
           telegram_user_id: number | null;
           update_id: number | null;
           user_id: string | null;
@@ -4587,6 +4709,7 @@ export type Database = {
           processing_duration_ms?: number | null;
           request_headers_hash?: string | null;
           retry_count?: number;
+          status_context?: Json;
           telegram_user_id?: number | null;
           update_id?: number | null;
           user_id?: string | null;
@@ -4605,6 +4728,7 @@ export type Database = {
           processing_duration_ms?: number | null;
           request_headers_hash?: string | null;
           retry_count?: number;
+          status_context?: Json;
           telegram_user_id?: number | null;
           update_id?: number | null;
           user_id?: string | null;

@@ -10,6 +10,7 @@ import {
 } from "../_shared/handler.js";
 import { parseJsonBody } from "../_shared/parseBody.js";
 import { requireSession } from "../_shared/requireSession.js";
+import { assertUserRiskAllowed } from "../_shared/riskGuards.js";
 import { validate } from "../_shared/validate.js";
 import {
   assertRecordPayload,
@@ -35,6 +36,17 @@ export default withApiHandler(
       InventoryDecomposeItemBodySchema,
       normalizeInventoryDecomposeInput(body, getIdempotencyKey(req)),
     );
+    await assertUserRiskAllowed({
+      req,
+      ctx,
+      session,
+      action: "inventory.decompose",
+      idempotencyKey: input.idempotency_key,
+      metadata: {
+        itemIds: input.item_instance_ids,
+        itemCount: input.item_instance_ids.length,
+      },
+    });
 
     const payload = await callInventoryDecomposeRpc(
       input,

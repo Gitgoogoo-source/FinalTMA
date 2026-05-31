@@ -10,6 +10,7 @@ import {
 } from "../_shared/handler.js";
 import { parseJsonBody } from "../_shared/parseBody.js";
 import { requireSession } from "../_shared/requireSession.js";
+import { assertUserRiskAllowed } from "../_shared/riskGuards.js";
 import { validate } from "../_shared/validate.js";
 import {
   assertRecordPayload,
@@ -34,6 +35,16 @@ export default withApiHandler(
       InventoryUpgradeItemBodySchema,
       normalizeInventoryUpgradeInput(body, getIdempotencyKey(req)),
     );
+    await assertUserRiskAllowed({
+      req,
+      ctx,
+      session,
+      action: "inventory.upgrade",
+      idempotencyKey: input.idempotency_key,
+      metadata: {
+        itemId: input.item_instance_id,
+      },
+    });
 
     const payload = await callInventoryUpgradeRpc(
       input,

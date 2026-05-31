@@ -17,11 +17,13 @@ const {
   assertStarsPaymentCreateAllowedMock,
   callRpcRawMock,
   createTelegramStarsInvoiceMock,
+  getSupabaseAdminMock,
   requireSessionMock,
 } = vi.hoisted(() => ({
   assertStarsPaymentCreateAllowedMock: vi.fn(),
   callRpcRawMock: vi.fn(),
   createTelegramStarsInvoiceMock: vi.fn(),
+  getSupabaseAdminMock: vi.fn(),
   requireSessionMock: vi.fn(),
 }));
 
@@ -39,6 +41,7 @@ vi.mock("../../packages/server/src/db/rpc.js", () => ({
 }));
 
 vi.mock("../../api/_shared/requireSession.js", () => ({
+  getSupabaseAdmin: getSupabaseAdminMock,
   requireSession: requireSessionMock,
 }));
 
@@ -76,6 +79,32 @@ function createInvoiceResult(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function createNoRiskDbMock() {
+  const builder = {
+    select: vi.fn(() => builder),
+    eq: vi.fn(() => builder),
+    gte: vi.fn(() => builder),
+    limit: vi.fn(() => Promise.resolve({ data: [], count: 0, error: null })),
+    then: (
+      resolve: (value: {
+        data: unknown[];
+        count: number;
+        error: null;
+      }) => unknown,
+      reject?: (reason: unknown) => unknown,
+    ) =>
+      Promise.resolve(resolve({ data: [], count: 0, error: null })).catch(
+        reject,
+      ),
+  };
+
+  return {
+    schema: vi.fn(() => ({
+      from: vi.fn(() => builder),
+    })),
+  };
+}
+
 describe("boxes API helpers", () => {
   beforeEach(() => {
     process.env.NODE_ENV = "test";
@@ -85,6 +114,8 @@ describe("boxes API helpers", () => {
     callRpcRawMock.mockReset();
     createTelegramStarsInvoiceMock.mockReset();
     createTelegramStarsInvoiceMock.mockResolvedValue(createInvoiceResult());
+    getSupabaseAdminMock.mockReset();
+    getSupabaseAdminMock.mockReturnValue(createNoRiskDbMock());
     requireSessionMock.mockReset();
     requireSessionMock.mockResolvedValue({
       sessionId: "session-boxes-test",

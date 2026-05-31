@@ -12,6 +12,7 @@ import {
 } from "../_shared/handler.js";
 import { parseJsonBody } from "../_shared/parseBody.js";
 import { requireSession } from "../_shared/requireSession.js";
+import { assertUserRiskAllowed } from "../_shared/riskGuards.js";
 import { validate } from "../_shared/validate.js";
 
 type MarketCreateListingRpcPayload = Record<string, unknown>;
@@ -28,6 +29,18 @@ export default withApiHandler(
     );
 
     await assertMarketWriteAllowed();
+    await assertUserRiskAllowed({
+      req,
+      ctx,
+      session,
+      action: "market.create_listing",
+      idempotencyKey: input.idempotency_key,
+      metadata: {
+        itemCount: input.item_instance_ids.length,
+        priceKcoin: input.unit_price_kcoin,
+        quantity: input.item_instance_ids.length,
+      },
+    });
 
     const payload = await callMarketCreateListing(
       input,
