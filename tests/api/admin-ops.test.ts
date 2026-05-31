@@ -47,6 +47,11 @@ const TARGET_ADMIN_USER_ID = "55555555-5555-4555-8555-555555555555";
 const ADMIN_ROLE_ID = "99999999-9999-4999-8999-999999999999";
 const STAR_ORDER_ID = "66666666-6666-4666-8666-666666666666";
 const PAYMENT_ID = "77777777-7777-4777-8777-777777777777";
+const DRAW_ORDER_ID = "88888888-8888-4888-8888-888888888888";
+const DRAW_RESULT_ID = "99999999-9999-4999-8999-999999999999";
+const ITEM_INSTANCE_ID = "12121212-1212-4121-8121-121212121212";
+const DISPUTE_ID = "13131313-1313-4131-8131-131313131313";
+const LEDGER_ID = "14141414-1414-4141-8141-141414141414";
 const CORE_USER_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const LOCK_ID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const BOX_ID = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
@@ -646,6 +651,275 @@ describe("admin ops APIs", () => {
               kind: "eq",
               column: "status",
               value: "failed",
+            },
+          ]),
+        }),
+      ]),
+    );
+  });
+
+  it("returns payment detail with draw, ledger and webhook context", async () => {
+    const db = createAdminReadDbMock({
+      "payments.star_orders": [
+        {
+          id: STAR_ORDER_ID,
+          user_id: ADMIN_CONTEXT.userId,
+          business_type: "gacha_open",
+          business_id: DRAW_ORDER_ID,
+          status: "failed",
+          xtr_amount: 10,
+          telegram_invoice_payload: "invoice-admin-detail-test",
+          title: "Admin detail payment",
+          description: null,
+          idempotency_key: "payment-detail-order-idem",
+          expires_at: null,
+          precheckout_at: null,
+          paid_at: "2026-05-29T00:00:00.000Z",
+          fulfilled_at: null,
+          error_message: "fulfillment failed",
+          metadata: {
+            error: {
+              code: "FULFILLMENT_FAILED",
+              requestId: "req-payment-detail-1",
+              stack: "stack only for debug admins",
+            },
+          },
+          created_at: "2026-05-29T00:00:00.000Z",
+          updated_at: "2026-05-29T00:00:00.000Z",
+        },
+      ],
+      "core.users": [
+        {
+          id: ADMIN_CONTEXT.userId,
+          telegram_user_id: ADMIN_CONTEXT.telegramUserId,
+          username: "ops_user",
+          first_name: "Ops",
+          last_name: "User",
+          status: "active",
+          risk_score: 0,
+          last_seen_at: null,
+          last_auth_at: "2026-05-29T00:00:00.000Z",
+          created_at: "2026-05-20T00:00:00.000Z",
+        },
+      ],
+      "payments.star_payments": [
+        {
+          id: PAYMENT_ID,
+          star_order_id: STAR_ORDER_ID,
+          user_id: ADMIN_CONTEXT.userId,
+          telegram_payment_charge_id: "telegram-charge-admin-detail",
+          provider_payment_charge_id: null,
+          xtr_amount: 10,
+          currency: "XTR",
+          invoice_payload: "invoice-admin-detail-test",
+          paid_at: "2026-05-29T00:00:01.000Z",
+          created_at: "2026-05-29T00:00:01.000Z",
+          metadata: {},
+        },
+      ],
+      "gacha.draw_orders": [
+        {
+          id: DRAW_ORDER_ID,
+          user_id: ADMIN_CONTEXT.userId,
+          box_id: BOX_ID,
+          pool_version_id: null,
+          payment_star_order_id: STAR_ORDER_ID,
+          status: "failed",
+          quantity: 1,
+          draw_count: 1,
+          unit_price_stars: 10,
+          discount_bps: 0,
+          total_price_stars: 10,
+          open_reward_kcoin: 100,
+          invoice_payload: "invoice-admin-detail-test",
+          paid_at: "2026-05-29T00:00:01.000Z",
+          opened_at: null,
+          payment_provider: "telegram_stars",
+          payment_status: "paid",
+          star_amount: 10,
+          telegram_invoice_payload: "invoice-admin-detail-test",
+          telegram_payment_charge_id: "telegram-charge-admin-detail",
+          error_message: "draw failed",
+          metadata: {},
+          created_at: "2026-05-29T00:00:00.000Z",
+          updated_at: "2026-05-29T00:00:02.000Z",
+        },
+      ],
+      "gacha.draw_results": [
+        {
+          id: DRAW_RESULT_ID,
+          draw_order_id: DRAW_ORDER_ID,
+          user_id: ADMIN_CONTEXT.userId,
+          box_id: BOX_ID,
+          pool_version_id: null,
+          draw_index: 1,
+          drop_pool_item_id: null,
+          item_instance_id: ITEM_INSTANCE_ID,
+          template_id: "15151515-1515-4151-8151-151515151515",
+          form_id: null,
+          rarity_code: "N",
+          was_pity: false,
+          random_roll: 1234,
+          metadata: {},
+          created_at: "2026-05-29T00:00:03.000Z",
+        },
+      ],
+      "inventory.item_instances": [
+        {
+          id: ITEM_INSTANCE_ID,
+          owner_user_id: ADMIN_CONTEXT.userId,
+          template_id: "15151515-1515-4151-8151-151515151515",
+          form_id: null,
+          serial_no: 1,
+          level: 1,
+          power: 10,
+          status: "owned",
+          source_type: "gacha",
+          source_id: DRAW_RESULT_ID,
+          nft_mint_status: null,
+          minted_nft_item_id: null,
+          acquired_at: "2026-05-29T00:00:03.000Z",
+          created_at: "2026-05-29T00:00:03.000Z",
+        },
+      ],
+      "economy.currency_ledger": [
+        {
+          id: LEDGER_ID,
+          user_id: ADMIN_CONTEXT.userId,
+          currency_code: "KCOIN",
+          entry_type: "credit",
+          amount: 100,
+          available_before: 0,
+          available_after: 100,
+          locked_before: 0,
+          locked_after: 0,
+          source_type: "gacha_open",
+          source_id: DRAW_ORDER_ID,
+          source_ref: "invoice-admin-detail-test",
+          idempotency_key: "ledger-payment-detail",
+          note: "open reward",
+          created_at: "2026-05-29T00:00:04.000Z",
+        },
+      ],
+      "payments.telegram_webhook_events": [
+        {
+          id: "16161616-1616-4161-8161-161616161616",
+          update_id: 1001,
+          event_type: "successful_payment",
+          user_id: ADMIN_CONTEXT.userId,
+          telegram_user_id: ADMIN_CONTEXT.telegramUserId,
+          invoice_payload: "invoice-admin-detail-test",
+          process_status: "failed",
+          processed_at: null,
+          error_message: "fulfillment failed",
+          retry_count: 1,
+          next_retry_at: null,
+          webhook_secret_verified: true,
+          status_context: {
+            request_id: "req-payment-detail-webhook",
+          },
+          payload: {
+            successful_payment: true,
+          },
+          processing_duration_ms: 250,
+          request_headers_hash: "headers-hash",
+          created_at: "2026-05-29T00:00:02.000Z",
+        },
+      ],
+    });
+    getSupabaseAdminClientMock.mockReturnValue(db.client);
+
+    const { default: paymentDetailHandler } =
+      await import("../../api/admin/payment-detail");
+    const result = await invokeApiHandler<ApiSuccessResponse>(
+      paymentDetailHandler,
+      {
+        method: "GET",
+        url: `/api/admin/payment-detail?starOrderId=${STAR_ORDER_ID}`,
+        query: {
+          starOrderId: STAR_ORDER_ID,
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(200);
+    expect(result.body).toMatchObject({
+      ok: true,
+      data: {
+        order: {
+          id: STAR_ORDER_ID,
+          xtr_amount: 10,
+        },
+        user: {
+          id: ADMIN_CONTEXT.userId,
+        },
+        payment: {
+          id: PAYMENT_ID,
+          telegram_payment_charge_id: "telegram-charge-admin-detail",
+        },
+        drawOrder: {
+          id: DRAW_ORDER_ID,
+          payment_star_order_id: STAR_ORDER_ID,
+        },
+        drawResults: [
+          {
+            id: DRAW_RESULT_ID,
+            item_instance_id: ITEM_INSTANCE_ID,
+          },
+        ],
+        itemInstances: [
+          {
+            id: ITEM_INSTANCE_ID,
+          },
+        ],
+        ledgerEntries: [
+          {
+            id: LEDGER_ID,
+            amount: 100,
+          },
+        ],
+        webhookEvents: [
+          {
+            event_type: "successful_payment",
+            retry_count: 1,
+            processing_duration_ms: 250,
+          },
+        ],
+        errorContext: {
+          code: "FULFILLMENT_FAILED",
+          message: "fulfillment failed",
+          requestId: "req-payment-detail-1",
+          stack: "stack only for debug admins",
+        },
+      },
+    });
+    expect(requireAdminMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        permissions: "payments:read",
+      }),
+    );
+    expect(db.operations).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          schema: "payments",
+          table: "star_orders",
+          filters: expect.arrayContaining([
+            {
+              kind: "eq",
+              column: "id",
+              value: STAR_ORDER_ID,
+            },
+          ]),
+        }),
+        expect.objectContaining({
+          schema: "economy",
+          table: "currency_ledger",
+          filters: expect.arrayContaining([
+            {
+              kind: "in",
+              column: "source_id",
+              value: expect.arrayContaining([STAR_ORDER_ID, DRAW_ORDER_ID]),
             },
           ]),
         }),
@@ -1291,6 +1565,209 @@ describe("admin ops APIs", () => {
       },
     });
     expect(runWriteRpcMock).not.toHaveBeenCalled();
+  });
+
+  it("exposes the required retry-payment-fulfillment path", async () => {
+    runWriteRpcMock.mockResolvedValue({
+      star_order_id: STAR_ORDER_ID,
+      status: "fulfilled",
+      previous_status: "failed",
+      fulfilled: true,
+      audit_log_id: "17171717-1717-4171-8171-171717171717",
+    });
+
+    const { default: retryPaymentFulfillmentHandler } =
+      await import("../../api/admin/retry-payment-fulfillment");
+    const result = await invokeApiHandler<ApiSuccessResponse>(
+      retryPaymentFulfillmentHandler,
+      {
+        method: "POST",
+        url: "/api/admin/retry-payment-fulfillment",
+        headers: {
+          "x-admin-confirm": "true",
+          "x-idempotency-key": "admin-retry-payment-fulfillment-test-001",
+        },
+        body: {
+          starOrderId: STAR_ORDER_ID,
+          reason: "retry failed fulfillment through required path",
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(200);
+    expect(runWriteRpcMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        schema: "api",
+        functionName: "admin_retry_payment_fulfillment",
+        args: expect.objectContaining({
+          p_star_order_id: STAR_ORDER_ID,
+          p_reason: "retry failed fulfillment through required path",
+          p_idempotency_key: "admin-retry-payment-fulfillment-test-001",
+        }),
+      }),
+    );
+  });
+
+  it("calls the admin create refund record RPC with confirmation and idempotency", async () => {
+    runWriteRpcMock.mockResolvedValue({
+      star_order_id: STAR_ORDER_ID,
+      star_payment_id: PAYMENT_ID,
+      star_refund_id: "18181818-1818-4181-8181-181818181818",
+      status: "processing",
+      xtr_amount: 5,
+      external_refund_completed: false,
+      audit_log_id: "19191919-1919-4191-8191-191919191919",
+    });
+
+    const { default: createRefundRecordHandler } =
+      await import("../../api/admin/create-refund-record");
+    const result = await invokeApiHandler<ApiSuccessResponse>(
+      createRefundRecordHandler,
+      {
+        method: "POST",
+        url: "/api/admin/create-refund-record",
+        headers: {
+          "x-admin-confirm": "true",
+          "x-idempotency-key": "admin-create-refund-record-test-001",
+          "x-forwarded-for": "127.0.0.22",
+          "user-agent": "vitest-admin-refund-record",
+        },
+        body: {
+          starPaymentId: PAYMENT_ID,
+          starOrderId: STAR_ORDER_ID,
+          reason: "record refund request in admin test",
+          xtrAmount: 5,
+          status: "processing",
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(200);
+    expect(result.body).toMatchObject({
+      ok: true,
+      data: {
+        star_order_id: STAR_ORDER_ID,
+        star_payment_id: PAYMENT_ID,
+        status: "processing",
+        external_refund_completed: false,
+      },
+    });
+    expect(requireAdminMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        permissions: "payments:write",
+      }),
+    );
+    expect(runWriteRpcMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        schema: "api",
+        functionName: "admin_create_refund_record",
+        args: expect.objectContaining({
+          p_admin_user_id: ADMIN_CONTEXT.adminId,
+          p_star_payment_id: PAYMENT_ID,
+          p_star_order_id: STAR_ORDER_ID,
+          p_reason: "record refund request in admin test",
+          p_xtr_amount: 5,
+          p_status: "processing",
+          p_idempotency_key: "admin-create-refund-record-test-001",
+          p_request_context: expect.objectContaining({
+            admin_user_id: ADMIN_CONTEXT.adminId,
+            ip_hash: expect.any(String),
+            user_agent_hash: expect.any(String),
+          }),
+          p_approval_context: {},
+        }),
+      }),
+    );
+  });
+
+  it("requires confirmation for create-refund-record requests", async () => {
+    const { default: createRefundRecordHandler } =
+      await import("../../api/admin/create-refund-record");
+    const result = await invokeApiHandler(createRefundRecordHandler, {
+      method: "POST",
+      url: "/api/admin/create-refund-record",
+      headers: {
+        "x-idempotency-key": "admin-create-refund-record-test-002",
+      },
+      body: {
+        starPaymentId: PAYMENT_ID,
+        starOrderId: STAR_ORDER_ID,
+        reason: "record refund request in admin test",
+        xtrAmount: 5,
+        status: "processing",
+      },
+    });
+
+    expect(result.statusCode).toBe(400);
+    expect(result.body).toMatchObject({
+      error: {
+        code: "ADMIN_CONFIRMATION_REQUIRED",
+      },
+    });
+    expect(runWriteRpcMock).not.toHaveBeenCalled();
+  });
+
+  it("calls the admin resolve payment dispute RPC with confirmation and idempotency", async () => {
+    runWriteRpcMock.mockResolvedValue({
+      dispute_id: DISPUTE_ID,
+      star_order_id: STAR_ORDER_ID,
+      star_payment_id: PAYMENT_ID,
+      status: "resolved",
+      resolution: "refund record created and fulfillment reviewed",
+      audit_log_id: "20202020-2020-4020-8020-202020202020",
+    });
+
+    const { default: resolveDisputeHandler } =
+      await import("../../api/admin/resolve-payment-dispute");
+    const result = await invokeApiHandler<ApiSuccessResponse>(
+      resolveDisputeHandler,
+      {
+        method: "PATCH",
+        url: "/api/admin/resolve-payment-dispute",
+        headers: {
+          "x-admin-confirm": "true",
+          "x-idempotency-key": "admin-resolve-dispute-test-001",
+          "x-forwarded-for": "127.0.0.24",
+          "user-agent": "vitest-admin-resolve-dispute",
+        },
+        body: {
+          disputeId: DISPUTE_ID,
+          resolution: "refund record created and fulfillment reviewed",
+          status: "resolved",
+          reason: "resolve payment dispute in admin test",
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(200);
+    expect(result.body).toMatchObject({
+      ok: true,
+      data: {
+        dispute_id: DISPUTE_ID,
+        status: "resolved",
+      },
+    });
+    expect(runWriteRpcMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        schema: "api",
+        functionName: "admin_resolve_payment_dispute",
+        args: expect.objectContaining({
+          p_admin_user_id: ADMIN_CONTEXT.adminId,
+          p_dispute_id: DISPUTE_ID,
+          p_resolution: "refund record created and fulfillment reviewed",
+          p_status: "resolved",
+          p_reason: "resolve payment dispute in admin test",
+          p_idempotency_key: "admin-resolve-dispute-test-001",
+          p_request_context: expect.objectContaining({
+            admin_user_id: ADMIN_CONTEXT.adminId,
+            ip_hash: expect.any(String),
+            user_agent_hash: expect.any(String),
+          }),
+          p_approval_context: {},
+        }),
+      }),
+    );
   });
 
   it("rejects non-admin feature flag updates before calling the write RPC", async () => {

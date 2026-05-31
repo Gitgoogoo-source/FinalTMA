@@ -1,0 +1,782 @@
+import {
+  getSupabaseAdminClient,
+  type SupabaseAdminClient,
+} from "../../packages/server/src/db/supabaseAdmin.js";
+import { ApiError, withApiHandler } from "../_shared/handler.js";
+import { hasAdminPermission, requireAdmin } from "../_shared/requireAdmin.js";
+import {
+  firstQueryValue,
+  isRecord,
+  normalizeRequiredUuid,
+  type JsonRecord,
+} from "./_shared.js";
+
+type StarOrderRow = {
+  id: string;
+  user_id: string;
+  business_type: string;
+  business_id: string | null;
+  status: string;
+  xtr_amount: number | string;
+  telegram_invoice_payload: string;
+  title: string;
+  description: string | null;
+  idempotency_key: string;
+  expires_at: string | null;
+  precheckout_at: string | null;
+  paid_at: string | null;
+  fulfilled_at: string | null;
+  error_message: string | null;
+  metadata: unknown;
+  created_at: string;
+  updated_at: string;
+};
+
+type CoreUserRow = {
+  id: string;
+  telegram_user_id: number | string;
+  username: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  status: string;
+  risk_score: number | string;
+  last_seen_at: string | null;
+  last_auth_at: string | null;
+  created_at: string;
+};
+
+type StarPaymentRow = {
+  id: string;
+  star_order_id: string;
+  user_id: string;
+  telegram_payment_charge_id: string;
+  provider_payment_charge_id: string | null;
+  xtr_amount: number | string;
+  currency: string;
+  invoice_payload: string;
+  paid_at: string;
+  created_at: string;
+  metadata: unknown;
+};
+
+type DrawOrderRow = {
+  id: string;
+  user_id: string;
+  box_id: string;
+  pool_version_id: string | null;
+  payment_star_order_id: string | null;
+  status: string;
+  quantity: number | string;
+  draw_count: number | string;
+  unit_price_stars: number | string;
+  discount_bps: number | string;
+  total_price_stars: number | string;
+  open_reward_kcoin: number | string;
+  invoice_payload: string | null;
+  paid_at: string | null;
+  opened_at: string | null;
+  payment_provider: string | null;
+  payment_status: string | null;
+  star_amount: number | string | null;
+  telegram_invoice_payload: string | null;
+  telegram_payment_charge_id: string | null;
+  error_message: string | null;
+  metadata: unknown;
+  created_at: string;
+  updated_at: string;
+};
+
+type DrawResultRow = {
+  id: string;
+  draw_order_id: string;
+  user_id: string;
+  box_id: string;
+  pool_version_id: string | null;
+  draw_index: number | string;
+  drop_pool_item_id: string | null;
+  item_instance_id: string | null;
+  template_id: string;
+  form_id: string | null;
+  rarity_code: string;
+  was_pity: boolean;
+  random_roll: number | string | null;
+  metadata: unknown;
+  created_at: string;
+};
+
+type ItemInstanceRow = {
+  id: string;
+  owner_user_id: string;
+  template_id: string;
+  form_id: string | null;
+  serial_no: number | string;
+  level: number | string;
+  power: number | string;
+  status: string;
+  source_type: string;
+  source_id: string | null;
+  nft_mint_status: string | null;
+  minted_nft_item_id: string | null;
+  acquired_at: string;
+  created_at: string;
+};
+
+type CurrencyLedgerRow = {
+  id: string;
+  user_id: string;
+  currency_code: string;
+  entry_type: string;
+  amount: number | string;
+  available_before: number | string | null;
+  available_after: number | string;
+  locked_before: number | string | null;
+  locked_after: number | string;
+  source_type: string;
+  source_id: string | null;
+  source_ref: string | null;
+  idempotency_key: string | null;
+  note: string | null;
+  created_at: string;
+};
+
+type WebhookEventRow = {
+  id: string;
+  update_id: number | string | null;
+  event_type: string;
+  user_id: string | null;
+  telegram_user_id: number | string | null;
+  invoice_payload: string | null;
+  process_status: string;
+  processed_at: string | null;
+  error_message: string | null;
+  retry_count: number | string;
+  next_retry_at: string | null;
+  webhook_secret_verified: boolean;
+  status_context: unknown;
+  payload: unknown;
+  processing_duration_ms: number | string | null;
+  request_headers_hash: string | null;
+  created_at: string;
+};
+
+type PaymentDetailErrorContext = {
+  code: string | null;
+  message: string | null;
+  requestId: string | null;
+  errorStack?: string | null;
+  stack?: string | null;
+  raw?: unknown;
+};
+
+const STAR_ORDER_COLUMNS = [
+  "id",
+  "user_id",
+  "business_type",
+  "business_id",
+  "status",
+  "xtr_amount",
+  "telegram_invoice_payload",
+  "title",
+  "description",
+  "idempotency_key",
+  "expires_at",
+  "precheckout_at",
+  "paid_at",
+  "fulfilled_at",
+  "error_message",
+  "metadata",
+  "created_at",
+  "updated_at",
+].join(",");
+
+const CORE_USER_COLUMNS = [
+  "id",
+  "telegram_user_id",
+  "username",
+  "first_name",
+  "last_name",
+  "status",
+  "risk_score",
+  "last_seen_at",
+  "last_auth_at",
+  "created_at",
+].join(",");
+
+const STAR_PAYMENT_COLUMNS = [
+  "id",
+  "star_order_id",
+  "user_id",
+  "telegram_payment_charge_id",
+  "provider_payment_charge_id",
+  "xtr_amount",
+  "currency",
+  "invoice_payload",
+  "paid_at",
+  "created_at",
+  "metadata",
+].join(",");
+
+const DRAW_ORDER_COLUMNS = [
+  "id",
+  "user_id",
+  "box_id",
+  "pool_version_id",
+  "payment_star_order_id",
+  "status",
+  "quantity",
+  "draw_count",
+  "unit_price_stars",
+  "discount_bps",
+  "total_price_stars",
+  "open_reward_kcoin",
+  "invoice_payload",
+  "paid_at",
+  "opened_at",
+  "payment_provider",
+  "payment_status",
+  "star_amount",
+  "telegram_invoice_payload",
+  "telegram_payment_charge_id",
+  "error_message",
+  "metadata",
+  "created_at",
+  "updated_at",
+].join(",");
+
+const DRAW_RESULT_COLUMNS = [
+  "id",
+  "draw_order_id",
+  "user_id",
+  "box_id",
+  "pool_version_id",
+  "draw_index",
+  "drop_pool_item_id",
+  "item_instance_id",
+  "template_id",
+  "form_id",
+  "rarity_code",
+  "was_pity",
+  "random_roll",
+  "metadata",
+  "created_at",
+].join(",");
+
+const ITEM_INSTANCE_COLUMNS = [
+  "id",
+  "owner_user_id",
+  "template_id",
+  "form_id",
+  "serial_no",
+  "level",
+  "power",
+  "status",
+  "source_type",
+  "source_id",
+  "nft_mint_status",
+  "minted_nft_item_id",
+  "acquired_at",
+  "created_at",
+].join(",");
+
+const LEDGER_COLUMNS = [
+  "id",
+  "user_id",
+  "currency_code",
+  "entry_type",
+  "amount",
+  "available_before",
+  "available_after",
+  "locked_before",
+  "locked_after",
+  "source_type",
+  "source_id",
+  "source_ref",
+  "idempotency_key",
+  "note",
+  "created_at",
+].join(",");
+
+const WEBHOOK_EVENT_COLUMNS = [
+  "id",
+  "update_id",
+  "event_type",
+  "user_id",
+  "telegram_user_id",
+  "invoice_payload",
+  "process_status",
+  "processed_at",
+  "error_message",
+  "retry_count",
+  "next_retry_at",
+  "webhook_secret_verified",
+  "status_context",
+  "payload",
+  "processing_duration_ms",
+  "request_headers_hash",
+  "created_at",
+].join(",");
+
+export default withApiHandler(
+  async (req) => {
+    const admin = await requireAdmin(req, {
+      permissions: "payments:read",
+    });
+    const starOrderId = normalizeRequiredUuid(
+      firstQueryValue(req.query.starOrderId ?? req.query.star_order_id),
+      "starOrderId",
+    );
+    const db = getSupabaseAdminClient();
+    const order = await loadOrder(db, starOrderId);
+
+    if (!order) {
+      throw new ApiError(
+        404,
+        "ADMIN_PAYMENT_ORDER_NOT_FOUND",
+        "Payment order not found",
+      );
+    }
+
+    const canViewDebug =
+      admin.isSuperAdmin ||
+      hasAdminPermission(admin.permissions, "payments:debug");
+
+    const [user, payment, initialDrawOrder, webhookEvents] = await Promise.all([
+      loadUser(db, order.user_id),
+      loadPayment(db, order.id),
+      loadDrawOrderByPaymentOrder(db, order.id),
+      loadWebhookEvents(db, order.telegram_invoice_payload),
+    ]);
+    const drawOrder =
+      initialDrawOrder ??
+      (order.business_id
+        ? await loadDrawOrderById(db, order.business_id)
+        : null);
+    const drawResults = drawOrder
+      ? await loadDrawResults(db, drawOrder.id)
+      : [];
+    const itemInstanceIds = uniqueStrings(
+      drawResults.map((result) => result.item_instance_id),
+    );
+    const itemInstances = await loadItemInstances(db, itemInstanceIds);
+    const ledgerSourceIds = uniqueStrings([
+      order.id,
+      order.business_id,
+      payment?.id,
+      drawOrder?.id,
+      ...drawResults.map((result) => result.id),
+      ...itemInstanceIds,
+    ]);
+    const ledgerEntries = await loadLedgerEntries(
+      db,
+      order.user_id,
+      ledgerSourceIds,
+    );
+
+    return {
+      order: normalizeOrder(order),
+      user: user ? normalizeUser(user) : null,
+      payment: payment ? normalizePayment(payment) : null,
+      drawOrder: drawOrder ? normalizeDrawOrder(drawOrder) : null,
+      drawResults: drawResults.map(normalizeDrawResult),
+      itemInstances: itemInstances.map(normalizeItemInstance),
+      ledgerEntries: ledgerEntries.map(normalizeLedgerEntry),
+      webhookEvents: webhookEvents.map(normalizeWebhookEvent),
+      errorContext: buildErrorContext(order, webhookEvents, canViewDebug),
+      serverTime: new Date().toISOString(),
+    };
+  },
+  {
+    methods: ["GET"],
+    rateLimit: {
+      action: "admin.read",
+    },
+  },
+);
+
+async function loadOrder(
+  db: SupabaseAdminClient,
+  starOrderId: string,
+): Promise<StarOrderRow | null> {
+  const { data, error } = await db
+    .schema("payments")
+    .from("star_orders")
+    .select(STAR_ORDER_COLUMNS)
+    .eq("id", starOrderId)
+    .limit(1);
+
+  if (error) {
+    throw new ApiError(
+      500,
+      "ADMIN_PAYMENT_ORDER_LOOKUP_FAILED",
+      "Payment order lookup failed",
+      { expose: false, cause: error },
+    );
+  }
+
+  return firstRow<StarOrderRow>(data);
+}
+
+async function loadUser(
+  db: SupabaseAdminClient,
+  userId: string,
+): Promise<CoreUserRow | null> {
+  const { data, error } = await db
+    .schema("core")
+    .from("users")
+    .select(CORE_USER_COLUMNS)
+    .eq("id", userId)
+    .limit(1);
+
+  if (error) {
+    throw new ApiError(
+      500,
+      "ADMIN_PAYMENT_USER_LOOKUP_FAILED",
+      "User lookup failed",
+      {
+        expose: false,
+        cause: error,
+      },
+    );
+  }
+
+  return firstRow<CoreUserRow>(data);
+}
+
+async function loadPayment(
+  db: SupabaseAdminClient,
+  starOrderId: string,
+): Promise<StarPaymentRow | null> {
+  const { data, error } = await db
+    .schema("payments")
+    .from("star_payments")
+    .select(STAR_PAYMENT_COLUMNS)
+    .eq("star_order_id", starOrderId)
+    .order("paid_at", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  if (error) {
+    throw new ApiError(
+      500,
+      "ADMIN_STAR_PAYMENT_LOOKUP_FAILED",
+      "Star payment lookup failed",
+      { expose: false, cause: error },
+    );
+  }
+
+  return firstRow<StarPaymentRow>(data);
+}
+
+async function loadDrawOrderByPaymentOrder(
+  db: SupabaseAdminClient,
+  starOrderId: string,
+): Promise<DrawOrderRow | null> {
+  const { data, error } = await db
+    .schema("gacha")
+    .from("draw_orders")
+    .select(DRAW_ORDER_COLUMNS)
+    .eq("payment_star_order_id", starOrderId)
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  if (error) {
+    throw new ApiError(
+      500,
+      "ADMIN_DRAW_ORDER_LOOKUP_FAILED",
+      "Draw order lookup failed",
+      { expose: false, cause: error },
+    );
+  }
+
+  return firstRow<DrawOrderRow>(data);
+}
+
+async function loadDrawOrderById(
+  db: SupabaseAdminClient,
+  drawOrderId: string,
+): Promise<DrawOrderRow | null> {
+  const { data, error } = await db
+    .schema("gacha")
+    .from("draw_orders")
+    .select(DRAW_ORDER_COLUMNS)
+    .eq("id", drawOrderId)
+    .limit(1);
+
+  if (error) {
+    throw new ApiError(
+      500,
+      "ADMIN_DRAW_ORDER_LOOKUP_FAILED",
+      "Draw order lookup failed",
+      { expose: false, cause: error },
+    );
+  }
+
+  return firstRow<DrawOrderRow>(data);
+}
+
+async function loadDrawResults(
+  db: SupabaseAdminClient,
+  drawOrderId: string,
+): Promise<DrawResultRow[]> {
+  const { data, error } = await db
+    .schema("gacha")
+    .from("draw_results")
+    .select(DRAW_RESULT_COLUMNS)
+    .eq("draw_order_id", drawOrderId)
+    .order("draw_index", { ascending: true });
+
+  if (error) {
+    throw new ApiError(
+      500,
+      "ADMIN_DRAW_RESULTS_LOOKUP_FAILED",
+      "Draw results lookup failed",
+      { expose: false, cause: error },
+    );
+  }
+
+  return rows<DrawResultRow>(data);
+}
+
+async function loadItemInstances(
+  db: SupabaseAdminClient,
+  itemInstanceIds: string[],
+): Promise<ItemInstanceRow[]> {
+  if (itemInstanceIds.length === 0) {
+    return [];
+  }
+
+  const { data, error } = await db
+    .schema("inventory")
+    .from("item_instances")
+    .select(ITEM_INSTANCE_COLUMNS)
+    .in("id", itemInstanceIds)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    throw new ApiError(
+      500,
+      "ADMIN_ITEM_INSTANCES_LOOKUP_FAILED",
+      "Item instances lookup failed",
+      { expose: false, cause: error },
+    );
+  }
+
+  return rows<ItemInstanceRow>(data);
+}
+
+async function loadLedgerEntries(
+  db: SupabaseAdminClient,
+  userId: string,
+  sourceIds: string[],
+): Promise<CurrencyLedgerRow[]> {
+  if (sourceIds.length === 0) {
+    return [];
+  }
+
+  const { data, error } = await db
+    .schema("economy")
+    .from("currency_ledger")
+    .select(LEDGER_COLUMNS)
+    .eq("user_id", userId)
+    .in("source_id", sourceIds)
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  if (error) {
+    throw new ApiError(
+      500,
+      "ADMIN_LEDGER_LOOKUP_FAILED",
+      "Ledger lookup failed",
+      { expose: false, cause: error },
+    );
+  }
+
+  return rows<CurrencyLedgerRow>(data);
+}
+
+async function loadWebhookEvents(
+  db: SupabaseAdminClient,
+  invoicePayload: string,
+): Promise<WebhookEventRow[]> {
+  const { data, error } = await db
+    .schema("payments")
+    .from("telegram_webhook_events")
+    .select(WEBHOOK_EVENT_COLUMNS)
+    .eq("invoice_payload", invoicePayload)
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  if (error) {
+    throw new ApiError(
+      500,
+      "ADMIN_WEBHOOK_EVENTS_LOOKUP_FAILED",
+      "Webhook events lookup failed",
+      { expose: false, cause: error },
+    );
+  }
+
+  return rows<WebhookEventRow>(data);
+}
+
+function normalizeOrder(row: StarOrderRow): StarOrderRow {
+  return {
+    ...row,
+    xtr_amount: Number(row.xtr_amount),
+  };
+}
+
+function normalizeUser(row: CoreUserRow): CoreUserRow {
+  return {
+    ...row,
+    risk_score: Number(row.risk_score),
+  };
+}
+
+function normalizePayment(row: StarPaymentRow): StarPaymentRow {
+  return {
+    ...row,
+    xtr_amount: Number(row.xtr_amount),
+  };
+}
+
+function normalizeDrawOrder(row: DrawOrderRow): DrawOrderRow {
+  return {
+    ...row,
+    quantity: Number(row.quantity),
+    draw_count: Number(row.draw_count),
+    unit_price_stars: Number(row.unit_price_stars),
+    discount_bps: Number(row.discount_bps),
+    total_price_stars: Number(row.total_price_stars),
+    open_reward_kcoin: Number(row.open_reward_kcoin),
+    star_amount: row.star_amount === null ? null : Number(row.star_amount),
+  };
+}
+
+function normalizeDrawResult(row: DrawResultRow): DrawResultRow {
+  return {
+    ...row,
+    draw_index: Number(row.draw_index),
+    random_roll: row.random_roll === null ? null : Number(row.random_roll),
+  };
+}
+
+function normalizeItemInstance(row: ItemInstanceRow): ItemInstanceRow {
+  return {
+    ...row,
+    serial_no: Number(row.serial_no),
+    level: Number(row.level),
+    power: Number(row.power),
+  };
+}
+
+function normalizeLedgerEntry(row: CurrencyLedgerRow): CurrencyLedgerRow {
+  return {
+    ...row,
+    amount: Number(row.amount),
+    available_before:
+      row.available_before === null ? null : Number(row.available_before),
+    available_after: Number(row.available_after),
+    locked_before:
+      row.locked_before === null ? null : Number(row.locked_before),
+    locked_after: Number(row.locked_after),
+  };
+}
+
+function normalizeWebhookEvent(row: WebhookEventRow): WebhookEventRow {
+  return {
+    ...row,
+    retry_count: Number(row.retry_count),
+    processing_duration_ms:
+      row.processing_duration_ms === null
+        ? null
+        : Number(row.processing_duration_ms),
+  };
+}
+
+function buildErrorContext(
+  order: StarOrderRow,
+  webhookEvents: WebhookEventRow[],
+  canViewDebug: boolean,
+): PaymentDetailErrorContext | null {
+  const metadata = isRecord(order.metadata) ? order.metadata : {};
+  const latestFailedWebhook = webhookEvents.find(
+    (event) => event.error_message || event.process_status === "failed",
+  );
+  const statusContext = isRecord(latestFailedWebhook?.status_context)
+    ? latestFailedWebhook.status_context
+    : {};
+  const rawError =
+    readRecord(metadata, "error") ?? readRecord(metadata, "errorContext");
+  const rawErrorRecord = isRecord(rawError) ? rawError : {};
+  const code =
+    readText(rawErrorRecord, "code") ??
+    readText(metadata, "error_code") ??
+    readText(metadata, "errorCode") ??
+    readText(statusContext, "code") ??
+    readText(statusContext, "error_code");
+  const message =
+    order.error_message ??
+    latestFailedWebhook?.error_message ??
+    readText(rawErrorRecord, "message") ??
+    readText(metadata, "error_message") ??
+    readText(statusContext, "message") ??
+    null;
+  const requestId =
+    readText(rawErrorRecord, "requestId") ??
+    readText(rawErrorRecord, "request_id") ??
+    readText(metadata, "request_id") ??
+    readText(metadata, "requestId") ??
+    readText(statusContext, "request_id") ??
+    null;
+  const stack =
+    readText(rawErrorRecord, "stack") ??
+    readText(rawErrorRecord, "errorStack") ??
+    readText(metadata, "error_stack") ??
+    readText(statusContext, "stack");
+
+  if (!code && !message && !requestId && !stack) {
+    return null;
+  }
+
+  return {
+    code,
+    message,
+    requestId,
+    raw: metadata,
+    ...(canViewDebug
+      ? {
+          errorStack: stack ?? null,
+          stack: stack ?? null,
+        }
+      : {}),
+  };
+}
+
+function readRecord(record: JsonRecord, key: string): unknown {
+  return record[key];
+}
+
+function readText(record: JsonRecord, key: string): string | null {
+  const value = record[key];
+
+  return typeof value === "string" && value.trim() ? value : null;
+}
+
+function firstRow<T>(data: unknown): T | null {
+  return rows<T>(data)[0] ?? null;
+}
+
+function rows<T>(data: unknown): T[] {
+  return Array.isArray(data) ? (data as T[]) : [];
+}
+
+function uniqueStrings(values: Array<string | null | undefined>): string[] {
+  return Array.from(
+    new Set(
+      values.filter(
+        (value): value is string =>
+          typeof value === "string" && value.trim().length > 0,
+      ),
+    ),
+  );
+}
