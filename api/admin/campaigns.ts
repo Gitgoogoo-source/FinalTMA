@@ -32,6 +32,7 @@ import {
   sanitizeAdminJson,
   summarizeByStatus,
 } from "./gacha/_shared.js";
+import { assertAllowedStoragePublicUrl } from "./storage/_shared.js";
 
 type CampaignRow = {
   id: string;
@@ -42,6 +43,7 @@ type CampaignRow = {
   placement: string;
   target_type: string;
   target_ref: string | null;
+  target_payload: unknown;
   status: string;
   starts_at: string | null;
   ends_at: string | null;
@@ -65,6 +67,7 @@ type CampaignInput = {
   placement: CampaignPlacement;
   targetType: CampaignTargetType;
   targetRef: string | null;
+  targetPayload: ReturnType<typeof toJsonObject>;
   status: CampaignStatus;
   startsAt: string | null;
   endsAt: string | null;
@@ -93,10 +96,10 @@ const CAMPAIGN_PLACEMENTS = [
 const CAMPAIGN_TARGET_TYPES = [
   "none",
   "box",
-  "market_listing",
-  "shop_product",
-  "external_url",
+  "listing",
   "task",
+  "payment",
+  "external",
 ] as const;
 const CAMPAIGN_STATUSES = ["draft", "active", "paused", "ended"] as const;
 
@@ -113,6 +116,7 @@ const CAMPAIGN_COLUMNS = [
   "placement",
   "target_type",
   "target_ref",
+  "target_payload",
   "status",
   "starts_at",
   "ends_at",
@@ -167,6 +171,7 @@ export default withApiHandler(
           p_placement: input.placement,
           p_target_type: input.targetType,
           p_target_ref: input.targetRef,
+          p_target_payload: input.targetPayload,
           p_status: input.status,
           p_starts_at: input.startsAt,
           p_ends_at: input.endsAt,
@@ -270,6 +275,13 @@ function normalizeCampaignInput(
 
   assertValidTimeWindow(startsAt, endsAt);
 
+  const targetType = normalizeEnum(
+    body.target_type,
+    "target_type",
+    CAMPAIGN_TARGET_TYPES,
+  );
+  const targetRef = normalizeOptionalText(body.target_ref) ?? null;
+
   return {
     id: id ?? null,
     code: normalizeCampaignCode(body.code, "code"),
@@ -277,12 +289,13 @@ function normalizeCampaignInput(
     description: normalizeOptionalText(body.description) ?? null,
     imageUrl: normalizeImageUrl(body.image_url, "image_url"),
     placement: normalizeEnum(body.placement, "placement", CAMPAIGN_PLACEMENTS),
-    targetType: normalizeEnum(
-      body.target_type,
-      "target_type",
-      CAMPAIGN_TARGET_TYPES,
+    targetType,
+    targetRef,
+    targetPayload: normalizeCampaignTargetPayload(
+      body.target_payload ?? body.targetPayload,
+      targetType,
+      targetRef,
     ),
-    targetRef: normalizeOptionalText(body.target_ref) ?? null,
     status: normalizeEnum(body.status, "status", CAMPAIGN_STATUSES),
     startsAt,
     endsAt,
@@ -296,7 +309,75 @@ function mapCampaignRow(row: CampaignRow): CampaignRow {
     ...row,
     sort_order: Number(row.sort_order),
     metadata: sanitizeAdminJson(row.metadata),
+    target_payload: sanitizeAdminJson(row.target_payload),
   };
+}
+
+function normalizeCampaignTargetPayload(
+  value: unknown,
+  targetType: CampaignTargetType,
+  targetRef: string | null,
+): ReturnType<typeof toJsonObject> {
+  const payload = value === undefined ? {} : normalizeJsonObjectStrict(value);
+
+  if (targetType === "none") {
+    if (targetRef || Object.keys(payload).length > 0) {
+      throw new ApiError(
+        400,
+        "VALIDATION_FAILED",
+        "target_ref and target_payload are not allowed when target_type is none",
+      );
+    }
+
+    return toJsonObject({});
+  }
+
+  if (targetType === "payment" && hasPaymentStatusHint(payload)) {
+    throw new ApiError(
+      400,
+      "VALIDATION_FAILED",
+      "payment target_payload must not contain payment status or success fields",
+    );
+  }
+
+  if (Object.keys(payload).length > 0) {
+    return toJsonObject(payload);
+  }
+
+  if (!targetRef) {
+    return toJsonObject({});
+  }
+
+  switch (targetType) {
+    case "box":
+      return toJsonObject({ box_id: targetRef });
+    case "listing":
+      return toJsonObject({ listing_id: targetRef });
+    case "task":
+      return toJsonObject({ task_ref: targetRef });
+    case "payment":
+      return toJsonObject({ star_order_id: targetRef });
+    case "external":
+      return toJsonObject({ url: targetRef });
+  }
+}
+
+function normalizeJsonObjectStrict(value: unknown): JsonRecord {
+  if (!isRecord(value)) {
+    throw new ApiError(
+      400,
+      "VALIDATION_FAILED",
+      "target_payload must be a JSON object",
+    );
+  }
+
+  return value;
+}
+
+function hasPaymentStatusHint(value: JsonRecord): boolean {
+  return ["status", "payment_status", "paid", "success", "fulfilled"].some(
+    (key) => Object.hasOwn(value, key),
+  );
 }
 
 function normalizeOptionalBodyUuid(
@@ -361,6 +442,8 @@ function normalizeImageUrl(value: unknown, field: string): string {
       `${field} must be an http(s) URL or an absolute path`,
     );
   }
+
+  assertAllowedStoragePublicUrl(normalized, field, ["banners"]);
 
   return normalized;
 }

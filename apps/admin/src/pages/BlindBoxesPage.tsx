@@ -3,11 +3,13 @@ import { useEffect, useMemo, useState } from "react";
 
 import {
   fetchBlindBoxes,
+  publishAdminStorageUpload,
   updateBlindBoxStatus,
   upsertBlindBox,
   upsertBoxPriceRule,
 } from "../admin.api";
 import type {
+  AdminStorageSignedUpload,
   BlindBoxAdminItem,
   BlindBoxesAdminResponse,
   BoxPriceRule,
@@ -15,6 +17,7 @@ import type {
   UpsertBoxPriceRuleInput,
 } from "../admin.types";
 import { formatDate, shortId, StatusBadge } from "../admin.ui";
+import { ImageUploader } from "../components/ImageUploader";
 
 const BOX_STATUS_OPTIONS = [
   "draft",
@@ -72,6 +75,11 @@ type PriceRuleDraft = {
   metadata: string;
 };
 
+type BlindBoxPendingUploads = {
+  cover: AdminStorageSignedUpload | null;
+  hero: AdminStorageSignedUpload | null;
+};
+
 export function BlindBoxesPage() {
   const [status, setStatus] = useState("");
   const [tier, setTier] = useState("");
@@ -81,6 +89,10 @@ export function BlindBoxesPage() {
   const [draft, setDraft] = useState<BlindBoxDraft>(() =>
     createEmptyBlindBoxDraft(),
   );
+  const [pendingUploads, setPendingUploads] = useState<BlindBoxPendingUploads>({
+    cover: null,
+    hero: null,
+  });
   const [priceRuleDraft, setPriceRuleDraft] = useState<PriceRuleDraft>(() =>
     createEmptyPriceRuleDraft(""),
   );
@@ -137,27 +149,27 @@ export function BlindBoxesPage() {
       return;
     }
 
-    let input: UpsertBlindBoxInput;
-
-    try {
-      input = serializeBlindBoxDraft(draft, operationReason);
-    } catch (serializeError) {
-      setError(readError(serializeError, "盲盒表单校验失败"));
-      return;
-    }
-
     setSavingBox(true);
     setError(null);
     setNotice(null);
 
     try {
+      const saveDraft = await publishPendingBlindBoxUploads(
+        draft,
+        pendingUploads,
+        operationReason,
+      );
+      setDraft(saveDraft);
+      setPendingUploads({ cover: null, hero: null });
+
+      const input = serializeBlindBoxDraft(saveDraft, operationReason);
       const result = await upsertBlindBox(input);
       setNotice(
         `盲盒已提交${result.audit_log_id ? ` / audit ${shortId(result.audit_log_id)}` : ""}`,
       );
       await load();
-    } catch (saveError) {
-      setError(readError(saveError, "盲盒保存失败"));
+    } catch (serializeError) {
+      setError(readError(serializeError, "盲盒保存失败"));
     } finally {
       setSavingBox(false);
     }
@@ -234,6 +246,7 @@ export function BlindBoxesPage() {
   function selectBox(box: BlindBoxAdminItem) {
     setSelectedBoxId(box.id);
     setDraft(toBlindBoxDraft(box));
+    setPendingUploads({ cover: null, hero: null });
     setPriceRuleDraft(toPriceRuleDraft(findEditablePriceRule(box), box.id));
     setNextStatus(box.status);
     setNotice(null);
@@ -249,6 +262,7 @@ export function BlindBoxesPage() {
       const statusOptions = getEditableStatusOptions(selectedBox.status);
 
       setDraft(toBlindBoxDraft(selectedBox));
+      setPendingUploads({ cover: null, hero: null });
       setPriceRuleDraft(
         toPriceRuleDraft(findEditablePriceRule(selectedBox), selectedBox.id),
       );
@@ -259,6 +273,7 @@ export function BlindBoxesPage() {
       );
     } else {
       setDraft(createEmptyBlindBoxDraft());
+      setPendingUploads({ cover: null, hero: null });
       setPriceRuleDraft(createEmptyPriceRuleDraft(""));
       setNextStatus("active");
     }
@@ -415,7 +430,52 @@ export function BlindBoxesPage() {
               </div>
               <StatusBadge status={getDraftPreviewStatus(draft)} />
             </div>
-            <BlindBoxMediaPreview draft={draft} />
+            <BlindBoxMediaPreview
+              draft={draft}
+              previewUrl={
+                pendingUploads.hero?.previewUrl ??
+                pendingUploads.cover?.previewUrl ??
+                null
+              }
+            />
+            <div className="asset-upload-grid">
+              <ImageUploader
+                disabled={savingBox}
+                label="盲盒封面素材"
+                onError={setError}
+                onUploaded={(upload) => {
+                  setPendingUploads((current) => ({
+                    ...current,
+                    cover: upload,
+                  }));
+                  setNotice(
+                    "封面已上传到 admin-temp，保存盲盒时会发布到 boxes。",
+                  );
+                }}
+                previewUrl={
+                  pendingUploads.cover?.previewUrl ?? draft.cover_image_url
+                }
+                targetBucket="boxes"
+              />
+              <ImageUploader
+                disabled={savingBox}
+                label="盲盒 Hero 素材"
+                onError={setError}
+                onUploaded={(upload) => {
+                  setPendingUploads((current) => ({
+                    ...current,
+                    hero: upload,
+                  }));
+                  setNotice(
+                    "Hero 已上传到 admin-temp，保存盲盒时会发布到 boxes。",
+                  );
+                }}
+                previewUrl={
+                  pendingUploads.hero?.previewUrl ?? draft.hero_image_url
+                }
+                targetBucket="boxes"
+              />
+            </div>
             <div className="form-grid form-grid--compact">
               <label>
                 <span>Slug</span>
@@ -633,7 +693,13 @@ export function BlindBoxesPage() {
                 type="button"
               >
                 <Save aria-hidden="true" size={16} />
-                <span>{savingBox ? "保存中" : "保存盲盒"}</span>
+                <span>
+                  {savingBox
+                    ? "保存中"
+                    : pendingUploads.cover || pendingUploads.hero
+                      ? "发布素材并保存"
+                      : "保存盲盒"}
+                </span>
               </button>
             </div>
           </section>
@@ -840,8 +906,14 @@ function BlindBoxSummary(props: {
   );
 }
 
-function BlindBoxMediaPreview({ draft }: { draft: BlindBoxDraft }) {
-  const imageUrl = draft.hero_image_url || draft.cover_image_url;
+function BlindBoxMediaPreview({
+  draft,
+  previewUrl,
+}: {
+  draft: BlindBoxDraft;
+  previewUrl?: string | null;
+}) {
+  const imageUrl = previewUrl || draft.hero_image_url || draft.cover_image_url;
 
   return (
     <div className="campaign-preview blind-box-preview">
@@ -860,6 +932,40 @@ function BlindBoxMediaPreview({ draft }: { draft: BlindBoxDraft }) {
       </div>
     </div>
   );
+}
+
+async function publishPendingBlindBoxUploads(
+  draft: BlindBoxDraft,
+  uploads: BlindBoxPendingUploads,
+  reason: string,
+): Promise<BlindBoxDraft> {
+  let nextDraft = draft;
+
+  if (uploads.cover) {
+    const published = await publishAdminStorageUpload({
+      targetBucket: "boxes",
+      tempPath: uploads.cover.tempPath,
+      reason,
+    });
+    nextDraft = {
+      ...nextDraft,
+      cover_image_url: published.publicUrl,
+    };
+  }
+
+  if (uploads.hero) {
+    const published = await publishAdminStorageUpload({
+      targetBucket: "boxes",
+      tempPath: uploads.hero.tempPath,
+      reason,
+    });
+    nextDraft = {
+      ...nextDraft,
+      hero_image_url: published.publicUrl,
+    };
+  }
+
+  return nextDraft;
 }
 
 function PriceRulesList({ box }: { box: BlindBoxAdminItem | null }) {

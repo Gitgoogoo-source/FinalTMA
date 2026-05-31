@@ -218,15 +218,12 @@ export const BannerPlacementSchema = z.enum([
 ]);
 
 export const BannerTargetTypeSchema = z.enum([
-  "NONE",
-  "URL",
-  "BOX",
-  "MARKET_LISTING",
-  "COLLECTIBLE",
-  "TASK",
-  "ALBUM",
-  "WALLET",
-  "INTERNAL_ROUTE",
+  "box",
+  "listing",
+  "task",
+  "payment",
+  "external",
+  "none",
 ]);
 
 export const TaskCategorySchema = z.enum([
@@ -765,6 +762,7 @@ export const AdminBannerBodySchema = z.object({
   imageUrl: UrlSchema,
   targetType: BannerTargetTypeSchema,
   targetValue: z.string().trim().max(1000).optional(),
+  targetPayload: JsonObjectSchema.optional(),
   isEnabled: z.boolean().default(true),
   startsAt: IsoDateTimeSchema.optional(),
   endsAt: IsoDateTimeSchema.optional(),

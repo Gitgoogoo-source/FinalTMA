@@ -287,6 +287,7 @@ export type BannerCampaign = {
   placement: string;
   target_type: string;
   target_ref: string | null;
+  target_payload?: unknown;
   status: string;
   starts_at: string | null;
   ends_at: string | null;
@@ -438,6 +439,7 @@ export type UpsertCampaignInput = {
   placement: string;
   target_type: string;
   target_ref?: string | null;
+  target_payload?: Record<string, unknown>;
   status: string;
   starts_at?: string | null;
   ends_at?: string | null;
@@ -483,6 +485,36 @@ export type UpsertBoxPriceRuleInput = {
   ends_at?: string | null;
   metadata?: Record<string, unknown>;
   reason: string;
+};
+
+export type AdminStorageTargetBucket = "banners" | "boxes" | "collectibles";
+
+export type AdminStorageSignedUpload = {
+  tempBucket: "admin-temp";
+  tempPath: string;
+  targetBucket: AdminStorageTargetBucket;
+  signedUrl: string;
+  previewUrl?: string | null;
+  contentType: string;
+  sizeBytes: number;
+  maxSizeBytes: number;
+  expiresAt: string;
+  previewExpiresAt?: string | null;
+};
+
+export type AdminStoragePreview = {
+  tempBucket: "admin-temp";
+  tempPath: string;
+  targetBucket: AdminStorageTargetBucket;
+  previewUrl: string;
+  previewExpiresAt: string;
+};
+
+export type AdminStoragePublishedAsset = {
+  bucket: AdminStorageTargetBucket;
+  path: string;
+  publicUrl: string;
+  publishedAt: string;
 };
 
 export type DropPoolVersionsResponse = {

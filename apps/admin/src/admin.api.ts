@@ -1,5 +1,9 @@
 import type {
   AdminApiEnvelope,
+  AdminStoragePublishedAsset,
+  AdminStoragePreview,
+  AdminStorageSignedUpload,
+  AdminStorageTargetBucket,
   AuditLogFilters,
   AuditLogsResponse,
   AdminConfigMutationResponse,
@@ -235,6 +239,74 @@ export async function upsertBoxPriceRule(
       ),
       body: {
         ...input,
+        confirm: true,
+      },
+    },
+  );
+}
+
+export async function signAdminStorageUpload(input: {
+  targetBucket: AdminStorageTargetBucket;
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+}): Promise<AdminStorageSignedUpload> {
+  return adminRequest<AdminStorageSignedUpload>(
+    "/api/admin/storage/sign-upload",
+    {
+      method: "POST",
+      body: input,
+    },
+  );
+}
+
+export async function uploadFileToSignedUrl(input: {
+  signedUrl: string;
+  file: File;
+  cacheControl?: string;
+}): Promise<void> {
+  const formData = new FormData();
+  formData.append("cacheControl", input.cacheControl ?? "31536000");
+  formData.append("", input.file);
+
+  const response = await fetch(input.signedUrl, {
+    method: "PUT",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw new AdminApiError({
+      code: "ADMIN_STORAGE_UPLOAD_FAILED",
+      message: `Storage upload failed: ${response.status}`,
+      status: response.status,
+    });
+  }
+}
+
+export async function signAdminStoragePreview(input: {
+  targetBucket: AdminStorageTargetBucket;
+  tempPath: string;
+}): Promise<AdminStoragePreview> {
+  return adminRequest<AdminStoragePreview>("/api/admin/storage/sign-preview", {
+    method: "POST",
+    body: input,
+  });
+}
+
+export async function publishAdminStorageUpload(input: {
+  targetBucket: AdminStorageTargetBucket;
+  tempPath: string;
+  reason: string;
+}): Promise<AdminStoragePublishedAsset> {
+  return adminRequest<AdminStoragePublishedAsset>(
+    "/api/admin/storage/publish-upload",
+    {
+      method: "POST",
+      headers: buildDangerHeaders("admin-publish-storage", input.tempPath),
+      body: {
+        targetBucket: input.targetBucket,
+        tempPath: input.tempPath,
+        reason: input.reason,
         confirm: true,
       },
     },

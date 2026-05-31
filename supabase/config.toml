@@ -115,7 +115,8 @@ sql_paths = [
   "./seed/009_album.seed.sql",
   "./seed/010_market_rules.seed.sql",
   "./seed/011_feature_flags.seed.sql",
-  "./seed/012_growth_rules.seed.sql"
+  "./seed/012_growth_rules.seed.sql",
+  "./seed/013_nft_metadata.seed.sql"
 ]
 
 [db.network_restrictions]

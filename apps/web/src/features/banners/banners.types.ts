@@ -5,6 +5,14 @@ export type BannerPlacement =
   | "home_top"
   | "album_top";
 
+export type BannerTargetType =
+  | "box"
+  | "listing"
+  | "task"
+  | "payment"
+  | "external"
+  | "none";
+
 export type ActivityBannerItem = {
   id: string;
   code: string;
@@ -12,8 +20,9 @@ export type ActivityBannerItem = {
   description: string | null;
   imageUrl: string | null;
   placement: BannerPlacement;
-  targetType: string;
+  targetType: BannerTargetType;
   targetRef: string | null;
+  targetPayload: Record<string, unknown>;
   targetHref: string | null;
   sortOrder: number;
   startsAt: string | null;

@@ -7,6 +7,13 @@ type BannerPlacement =
   | "box_top"
   | "home_top"
   | "album_top";
+type BannerTargetType =
+  | "box"
+  | "listing"
+  | "task"
+  | "payment"
+  | "external"
+  | "none";
 
 type BannerRow = {
   id: string;
@@ -17,6 +24,7 @@ type BannerRow = {
   placement: string;
   target_type: string;
   target_ref: string | null;
+  target_payload: unknown;
   sort_order: number;
   starts_at: string | null;
   ends_at: string | null;
@@ -41,6 +49,7 @@ const BANNER_COLUMNS = [
   "placement",
   "target_type",
   "target_ref",
+  "target_payload",
   "sort_order",
   "starts_at",
   "ends_at",
@@ -96,6 +105,10 @@ export default withApiHandler(
 );
 
 function mapBannerRow(row: BannerRow) {
+  const targetType = normalizeTargetType(row.target_type);
+  const targetRef = resolveTargetRef(row, targetType);
+  const targetPayload = normalizeTargetPayload(row.target_payload);
+
   return {
     id: row.id,
     code: row.code,
@@ -104,12 +117,14 @@ function mapBannerRow(row: BannerRow) {
     imageUrl: row.image_url,
     image_url: row.image_url,
     placement: row.placement,
-    targetType: row.target_type,
-    target_type: row.target_type,
-    targetRef: row.target_ref,
-    target_ref: row.target_ref,
-    targetHref: buildTargetHref(row),
-    target_href: buildTargetHref(row),
+    targetType,
+    target_type: targetType,
+    targetRef: targetRef,
+    target_ref: targetRef,
+    targetPayload,
+    target_payload: targetPayload,
+    targetHref: buildTargetHref(targetType, targetRef),
+    target_href: buildTargetHref(targetType, targetRef),
     sortOrder: Number(row.sort_order),
     sort_order: Number(row.sort_order),
     startsAt: row.starts_at,
@@ -123,25 +138,94 @@ function mapBannerRow(row: BannerRow) {
   };
 }
 
-function buildTargetHref(row: BannerRow): string | null {
-  const targetRef = row.target_ref?.trim();
-
-  if (!targetRef || row.target_type === "none") {
+function buildTargetHref(
+  targetType: BannerTargetType,
+  targetRef: string | null,
+): string | null {
+  if (!targetRef || targetType === "none") {
     return null;
   }
 
-  switch (row.target_type) {
+  switch (targetType) {
     case "box":
       return `/box?boxId=${encodeURIComponent(targetRef)}`;
-    case "market_listing":
-      return `/trade?listingId=${encodeURIComponent(targetRef)}`;
+    case "listing":
+      return `/trade?tab=buy&listingId=${encodeURIComponent(targetRef)}`;
     case "task":
       return `/tasks?task=${encodeURIComponent(targetRef)}`;
-    case "external_url":
+    case "payment":
+      return `/box?paymentOrderId=${encodeURIComponent(targetRef)}`;
+    case "external":
       return targetRef.startsWith("https://") ? targetRef : null;
+  }
+}
+
+function normalizeTargetType(value: string): BannerTargetType {
+  switch (value) {
+    case "box":
+    case "listing":
+    case "task":
+    case "payment":
+    case "external":
+    case "none":
+      return value;
+    case "market_listing":
+      return "listing";
+    case "external_url":
+      return "external";
     default:
+      return "none";
+  }
+}
+
+function resolveTargetRef(
+  row: BannerRow,
+  targetType: BannerTargetType,
+): string | null {
+  const targetRef = row.target_ref?.trim();
+
+  if (targetRef) {
+    return targetRef;
+  }
+
+  const payload = normalizeTargetPayload(row.target_payload);
+
+  switch (targetType) {
+    case "box":
+      return readString(payload.box_id) ?? readString(payload.id);
+    case "listing":
+      return readString(payload.listing_id) ?? readString(payload.id);
+    case "task":
+      return (
+        readString(payload.task_id) ??
+        readString(payload.task_code) ??
+        readString(payload.task_ref) ??
+        readString(payload.id) ??
+        readString(payload.code)
+      );
+    case "payment":
+      return (
+        readString(payload.star_order_id) ??
+        readString(payload.payment_order_id) ??
+        readString(payload.id)
+      );
+    case "external":
+      return readString(payload.url) ?? readString(payload.href);
+    case "none":
       return null;
   }
+}
+
+function normalizeTargetPayload(value: unknown): Record<string, unknown> {
+  return isRecord(value) ? value : {};
+}
+
+function readString(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function isBannerVisibleAt(row: BannerRow, now: Date): boolean {

@@ -58,7 +58,24 @@ values
   ('price_rule_conflict', '64000000-0000-4000-8000-000000000103'),
   ('missing_box', '64000000-0000-4000-8000-000000000104'),
   ('banner', '64000000-0000-4000-8000-000000000201'),
-  ('task', '64000000-0000-4000-8000-000000000301');
+  ('listing_banner', '64000000-0000-4000-8000-000000000202'),
+  ('payment_banner', '64000000-0000-4000-8000-000000000203'),
+  ('external_banner', '64000000-0000-4000-8000-000000000204'),
+  ('task', '64000000-0000-4000-8000-000000000301'),
+  ('seller', '64000000-0000-4000-8000-000000000401'),
+  ('listing', '64000000-0000-4000-8000-000000000501'),
+  ('star_order', '64000000-0000-4000-8000-000000000601');
+
+insert into core.users (id, telegram_user_id, username, invite_code)
+values (
+  (select id from _ids where key = 'seller'),
+  6400000401,
+  'phase6_banner_seller',
+  'P6BANNER01'
+)
+on conflict (id) do update
+set username = excluded.username,
+    updated_at = now();
 
 insert into tasks.task_definitions (
   id,
@@ -84,11 +101,71 @@ on conflict (id) do update
 set active = excluded.active,
     updated_at = now();
 
+insert into market.listings (
+  id,
+  seller_user_id,
+  template_id,
+  rarity_code,
+  status,
+  item_count,
+  remaining_count,
+  unit_price_kcoin,
+  fee_bps,
+  expected_net_amount
+)
+select
+  (select id from _ids where key = 'listing'),
+  (select id from _ids where key = 'seller'),
+  ct.id,
+  ct.rarity_code,
+  'active',
+  1,
+  1,
+  100,
+  500,
+  95
+from catalog.collectible_templates ct
+order by ct.created_at
+limit 1
+on conflict (id) do update
+set status = excluded.status,
+    remaining_count = excluded.remaining_count,
+    updated_at = now();
+
+insert into payments.star_orders (
+  id,
+  user_id,
+  business_type,
+  business_id,
+  status,
+  xtr_amount,
+  telegram_invoice_payload,
+  title,
+  idempotency_key,
+  expires_at
+)
+values (
+  (select id from _ids where key = 'star_order'),
+  (select id from _ids where key = 'seller'),
+  'gacha_open',
+  (select id from _ids where key = 'box'),
+  'invoice_created',
+  10,
+  'phase6-banner-target-payment-payload',
+  'Phase 6 Banner Payment Target',
+  'phase6-banner-payment-target-order',
+  now() + interval '1 hour'
+)
+on conflict (id) do update
+set status = excluded.status,
+    expires_at = excluded.expires_at,
+    updated_at = now();
+
 select ok(
   to_regprocedure('api.admin_upsert_blind_box(uuid,text,text,text,text,integer,text,text,jsonb,uuid,text,integer,integer,numeric,text,text,timestamptz,timestamptz,integer,jsonb)') is not null
     and to_regprocedure('api.admin_update_box_status(uuid,uuid,text,text,text,jsonb)') is not null
     and to_regprocedure('api.admin_upsert_box_price_rule(uuid,uuid,integer,integer,text,text,jsonb,uuid,integer,boolean,timestamptz,timestamptz,jsonb)') is not null
-    and to_regprocedure('api.admin_upsert_banner_campaign(uuid,text,text,text,text,text,text,text,text,jsonb,uuid,text,text,timestamptz,timestamptz,integer,jsonb)') is not null,
+    and to_regprocedure('api.admin_upsert_banner_campaign(uuid,text,text,text,text,text,text,text,text,jsonb,uuid,text,text,jsonb,timestamptz,timestamptz,integer,jsonb)') is not null,
   'box and banner admin RPCs exist with p_-prefixed signatures'
 );
 
@@ -107,12 +184,40 @@ select ok(
   'blind box status constraint uses fixed phase 6 status set'
 );
 
+select ok(
+  exists (
+    select 1
+    from pg_attribute a
+    join pg_class t on t.oid = a.attrelid
+    join pg_namespace n on n.oid = t.relnamespace
+    where n.nspname = 'catalog'
+      and t.relname = 'banner_campaigns'
+      and a.attname = 'target_payload'
+      and not a.attisdropped
+  )
+  and exists (
+    select 1
+    from pg_constraint c
+    join pg_class t on t.oid = c.conrelid
+    join pg_namespace n on n.oid = t.relnamespace
+    where n.nspname = 'catalog'
+      and t.relname = 'banner_campaigns'
+      and c.conname = 'banner_campaigns_target_type_check'
+      and pg_get_constraintdef(c.oid) like '%listing%'
+      and pg_get_constraintdef(c.oid) like '%payment%'
+      and pg_get_constraintdef(c.oid) like '%external%'
+      and pg_get_constraintdef(c.oid) not like '%market_listing%'
+      and pg_get_constraintdef(c.oid) not like '%external_url%'
+  ),
+  'banner campaigns use guide target types and target_payload'
+);
+
 with signatures(signature) as (
   values
     ('api.admin_upsert_blind_box(uuid,text,text,text,text,integer,text,text,jsonb,uuid,text,integer,integer,numeric,text,text,timestamptz,timestamptz,integer,jsonb)'),
     ('api.admin_update_box_status(uuid,uuid,text,text,text,jsonb)'),
     ('api.admin_upsert_box_price_rule(uuid,uuid,integer,integer,text,text,jsonb,uuid,integer,boolean,timestamptz,timestamptz,jsonb)'),
-    ('api.admin_upsert_banner_campaign(uuid,text,text,text,text,text,text,text,text,jsonb,uuid,text,text,timestamptz,timestamptz,integer,jsonb)')
+    ('api.admin_upsert_banner_campaign(uuid,text,text,text,text,text,text,text,text,jsonb,uuid,text,text,jsonb,timestamptz,timestamptz,integer,jsonb)')
 )
 select ok(
   not exists (
@@ -330,7 +435,7 @@ values (
     p_banner_campaign_id => (select id from _ids where key = 'banner'),
     p_code => 'phase6-admin-banner',
     p_title => 'Phase 6 Admin Banner',
-    p_image_url => 'https://example.test/banner.png',
+    p_image_url => '/storage/v1/object/public/banners/phase6/banner.png',
     p_placement => 'box_top',
     p_target_type => 'box',
     p_target_ref => (select id::text from _ids where key = 'box'),
@@ -353,6 +458,84 @@ select is(
   'admin_upsert_banner_campaign keeps a valid top placement'
 );
 
+select is(
+  (select target_payload ->> 'box_id' from catalog.banner_campaigns where id = (select id from _ids where key = 'banner')),
+  (select id::text from _ids where key = 'box'),
+  'admin_upsert_banner_campaign stores canonical box target payload'
+);
+
+insert into _ids (key, payload)
+values (
+  'listing_banner_payload',
+  api.admin_upsert_banner_campaign(
+    p_admin_user_id => (select id from _ids where key = 'actor'),
+    p_banner_campaign_id => (select id from _ids where key = 'listing_banner'),
+    p_code => 'phase6-listing-banner',
+    p_title => 'Phase 6 Listing Banner',
+    p_image_url => '/storage/v1/object/public/banners/phase6/listing-banner.png',
+    p_placement => 'market_top',
+    p_target_type => 'listing',
+    p_target_ref => (select id::text from _ids where key = 'listing'),
+    p_status => 'active',
+    p_reason => 'phase 6 create listing banner target',
+    p_idempotency_key => 'phase6-listing-banner-001'
+  )
+);
+
+select is(
+  (select target_payload ->> 'listing_id' from catalog.banner_campaigns where id = (select id from _ids where key = 'listing_banner')),
+  (select id::text from _ids where key = 'listing'),
+  'admin_upsert_banner_campaign accepts a displayable listing target'
+);
+
+insert into _ids (key, payload)
+values (
+  'payment_banner_payload',
+  api.admin_upsert_banner_campaign(
+    p_admin_user_id => (select id from _ids where key = 'actor'),
+    p_banner_campaign_id => (select id from _ids where key = 'payment_banner'),
+    p_code => 'phase6-payment-banner',
+    p_title => 'Phase 6 Payment Banner',
+    p_image_url => '/storage/v1/object/public/banners/phase6/payment-banner.png',
+    p_placement => 'box_top',
+    p_target_type => 'payment',
+    p_target_payload => jsonb_build_object('star_order_id', (select id::text from _ids where key = 'star_order')),
+    p_status => 'draft',
+    p_reason => 'phase 6 create payment banner target',
+    p_idempotency_key => 'phase6-payment-banner-001'
+  )
+);
+
+select is(
+  (select target_payload ->> 'star_order_id' from catalog.banner_campaigns where id = (select id from _ids where key = 'payment_banner')),
+  (select id::text from _ids where key = 'star_order'),
+  'admin_upsert_banner_campaign accepts a backend-created payment target'
+);
+
+insert into _ids (key, payload)
+values (
+  'external_banner_payload',
+  api.admin_upsert_banner_campaign(
+    p_admin_user_id => (select id from _ids where key = 'actor'),
+    p_banner_campaign_id => (select id from _ids where key = 'external_banner'),
+    p_code => 'phase6-external-banner',
+    p_title => 'Phase 6 External Banner',
+    p_image_url => '/storage/v1/object/public/banners/phase6/external-banner.png',
+    p_placement => 'home_top',
+    p_target_type => 'external',
+    p_target_ref => 'https://example.test/event',
+    p_status => 'draft',
+    p_reason => 'phase 6 create external banner target',
+    p_idempotency_key => 'phase6-external-banner-001'
+  )
+);
+
+select is(
+  (select target_payload ->> 'url' from catalog.banner_campaigns where id = (select id from _ids where key = 'external_banner')),
+  'https://example.test/event',
+  'admin_upsert_banner_campaign accepts an https external target'
+);
+
 insert into _ids (key, id)
 values ('home_banner', '88888888-8888-4888-8888-888888888888');
 
@@ -364,7 +547,7 @@ values (
     p_banner_campaign_id => (select id from _ids where key = 'home_banner'),
     p_code => 'phase6-home-top-banner',
     p_title => 'Phase 6 Home Top Banner',
-    p_image_url => 'https://example.test/home-top-banner.png',
+    p_image_url => '/storage/v1/object/public/banners/phase6/home-top-banner.png',
     p_placement => 'home_top',
     p_target_type => 'none',
     p_status => 'draft',
@@ -387,7 +570,7 @@ values (
     p_banner_campaign_id => (select id from _ids where key = 'banner'),
     p_code => 'phase6-admin-banner',
     p_title => 'Phase 6 Admin Banner',
-    p_image_url => 'https://example.test/banner.png',
+    p_image_url => '/storage/v1/object/public/banners/phase6/banner.png',
     p_placement => 'box_top',
     p_target_type => 'box',
     p_target_ref => (select id::text from _ids where key = 'box'),
@@ -410,7 +593,7 @@ select ok(
       (select id::text from _ids where key = 'actor'),
       'phase6-missing-target-banner',
       'Phase 6 Missing Target Banner',
-      'https://example.test/banner.png',
+      '/storage/v1/object/public/banners/phase6/missing-target-banner.png',
       'box_top',
       'box',
       (select id::text from _ids where key = 'missing_box'),
@@ -426,11 +609,91 @@ select ok(
 select ok(
   testutil.raises_like(
     format(
+      'select api.admin_upsert_banner_campaign(p_admin_user_id => %L::uuid, p_code => %L, p_title => %L, p_image_url => %L, p_placement => %L, p_target_type => %L, p_target_ref => %L, p_status => %L, p_reason => %L, p_idempotency_key => %L)',
+      (select id::text from _ids where key = 'actor'),
+      'phase6-non-storage-banner',
+      'Phase 6 Non Storage Banner',
+      'https://cdn.example.test/banner.png',
+      'box_top',
+      'box',
+      (select id::text from _ids where key = 'box'),
+      'draft',
+      'phase 6 non storage banner rejected',
+      'phase6-banner-non-storage'
+    ),
+    '%banner_campaigns_image_url_storage_check%'
+  ),
+  'admin_upsert_banner_campaign rejects non-Storage image_url values'
+);
+
+select ok(
+  testutil.raises_like(
+    format(
+      'select api.admin_upsert_banner_campaign(p_admin_user_id => %L::uuid, p_code => %L, p_title => %L, p_image_url => %L, p_placement => %L, p_target_type => %L, p_target_ref => %L, p_status => %L, p_reason => %L, p_idempotency_key => %L)',
+      (select id::text from _ids where key = 'actor'),
+      'phase6-legacy-listing-target-banner',
+      'Phase 6 Legacy Listing Target Banner',
+      '/storage/v1/object/public/banners/phase6/legacy-listing-target-banner.png',
+      'market_top',
+      'market_listing',
+      (select id::text from _ids where key = 'listing'),
+      'draft',
+      'phase 6 legacy target rejected',
+      'phase6-banner-legacy-target'
+    ),
+    '%ADMIN_BANNER_TARGET_TYPE_INVALID%'
+  ),
+  'admin_upsert_banner_campaign rejects legacy market_listing target type'
+);
+
+select ok(
+  testutil.raises_like(
+    format(
+      'select api.admin_upsert_banner_campaign(p_admin_user_id => %L::uuid, p_code => %L, p_title => %L, p_image_url => %L, p_placement => %L, p_target_type => %L, p_target_ref => %L, p_status => %L, p_reason => %L, p_idempotency_key => %L)',
+      (select id::text from _ids where key = 'actor'),
+      'phase6-external-http-banner',
+      'Phase 6 External HTTP Banner',
+      '/storage/v1/object/public/banners/phase6/external-http-banner.png',
+      'home_top',
+      'external',
+      'http://example.test/event',
+      'draft',
+      'phase 6 external protocol rejected',
+      'phase6-banner-external-http'
+    ),
+    '%ADMIN_BANNER_EXTERNAL_URL_INVALID%'
+  ),
+  'admin_upsert_banner_campaign rejects non-whitelisted external URL protocols'
+);
+
+select ok(
+  testutil.raises_like(
+    format(
+      'select api.admin_upsert_banner_campaign(p_admin_user_id => %L::uuid, p_code => %L, p_title => %L, p_image_url => %L, p_placement => %L, p_target_type => %L, p_target_payload => %L::jsonb, p_status => %L, p_reason => %L, p_idempotency_key => %L)',
+      (select id::text from _ids where key = 'actor'),
+      'phase6-payment-status-banner',
+      'Phase 6 Payment Status Banner',
+      '/storage/v1/object/public/banners/phase6/payment-status-banner.png',
+      'box_top',
+      'payment',
+      jsonb_build_object('star_order_id', (select id::text from _ids where key = 'star_order'), 'payment_status', 'paid')::text,
+      'draft',
+      'phase 6 payment status payload rejected',
+      'phase6-banner-payment-status'
+    ),
+    '%ADMIN_BANNER_PAYMENT_TARGET_PAYLOAD_INVALID%'
+  ),
+  'admin_upsert_banner_campaign rejects hard-coded payment success state'
+);
+
+select ok(
+  testutil.raises_like(
+    format(
       'select api.admin_upsert_banner_campaign(p_admin_user_id => %L::uuid, p_code => %L, p_title => %L, p_image_url => %L, p_placement => %L, p_target_type => %L, p_status => %L, p_reason => %L, p_idempotency_key => %L)',
       (select id::text from _ids where key = 'actor'),
       'phase6-legacy-home-banner',
       'Phase 6 Legacy Home Banner',
-      'https://example.test/legacy-home-banner.png',
+      '/storage/v1/object/public/banners/phase6/legacy-home-banner.png',
       'home',
       'none',
       'draft',

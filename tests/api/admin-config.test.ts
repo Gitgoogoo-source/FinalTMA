@@ -78,10 +78,11 @@ describe("admin campaign and blind box config APIs", () => {
           code: "home_launch",
           title: "Home Launch",
           description: null,
-          image_url: "https://cdn.example.test/banner.png",
+          image_url: "/storage/v1/object/public/banners/banner.png",
           placement: "home_top",
           target_type: "none",
           target_ref: null,
+          target_payload: {},
           status: "active",
           starts_at: "2026-05-31T00:00:00.000Z",
           ends_at: "2026-06-30T00:00:00.000Z",
@@ -128,6 +129,7 @@ describe("admin campaign and blind box config APIs", () => {
               public_note: "visible",
               private_token: "[redacted]",
             },
+            target_payload: {},
           },
         ],
         summary: {
@@ -157,9 +159,10 @@ describe("admin campaign and blind box config APIs", () => {
         body: {
           code: "home_launch",
           title: "Home Launch",
-          image_url: "https://cdn.example.test/banner.png",
+          image_url: "/storage/v1/object/public/banners/banner.png",
           placement: "home_top",
           target_type: "none",
+          target_payload: {},
           status: "draft",
           starts_at: "2026-06-01T00:00:00.000Z",
           ends_at: "2026-06-30T00:00:00.000Z",
@@ -180,15 +183,82 @@ describe("admin campaign and blind box config APIs", () => {
           p_admin_user_id: ADMIN_CONTEXT.adminId,
           p_banner_campaign_id: null,
           p_code: "home_launch",
-          p_image_url: "https://cdn.example.test/banner.png",
+          p_image_url: "/storage/v1/object/public/banners/banner.png",
           p_placement: "home_top",
           p_target_type: "none",
+          p_target_payload: {},
           p_status: "draft",
           p_reason: "configure home banner",
           p_idempotency_key: "admin-upsert-campaign-test-001",
         }),
       }),
     );
+  });
+
+  it("rejects legacy campaign target types before calling RPC", async () => {
+    const { default: campaignsHandler } =
+      await import("../../api/admin/campaigns");
+    const result = await invokeApiHandler(campaignsHandler, {
+      method: "POST",
+      url: "/api/admin/campaigns",
+      headers: {
+        "x-admin-confirm": "true",
+        "x-idempotency-key": "admin-invalid-campaign-target-test-001",
+      },
+      body: {
+        code: "legacy_target",
+        title: "Legacy Target",
+        image_url: "/storage/v1/object/public/banners/banner.png",
+        placement: "home_top",
+        target_type: "external_url",
+        target_ref: "https://example.test/live",
+        status: "draft",
+        sort_order: 10,
+        reason: "reject legacy target",
+        confirm: true,
+      },
+    });
+
+    expect(result.statusCode).toBe(400);
+    expect(result.body).toMatchObject({
+      error: {
+        code: "VALIDATION_FAILED",
+      },
+    });
+    expect(runWriteRpcMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects campaign image URLs outside public Storage before calling RPC", async () => {
+    const { default: campaignsHandler } =
+      await import("../../api/admin/campaigns");
+    const result = await invokeApiHandler(campaignsHandler, {
+      method: "POST",
+      url: "/api/admin/campaigns",
+      headers: {
+        "x-admin-confirm": "true",
+        "x-idempotency-key": "admin-invalid-campaign-image-test-001",
+      },
+      body: {
+        code: "bad_image",
+        title: "Bad Image",
+        image_url: "https://cdn.example.test/banner.png",
+        placement: "home_top",
+        target_type: "none",
+        target_payload: {},
+        status: "draft",
+        sort_order: 10,
+        reason: "reject non storage image",
+        confirm: true,
+      },
+    });
+
+    expect(result.statusCode).toBe(400);
+    expect(result.body).toMatchObject({
+      error: {
+        code: "VALIDATION_FAILED",
+      },
+    });
+    expect(runWriteRpcMock).not.toHaveBeenCalled();
   });
 
   it("lists blind boxes from the new API with price rules attached", async () => {

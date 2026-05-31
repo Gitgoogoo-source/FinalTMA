@@ -1,13 +1,19 @@
 import { Image as ImageIcon, Plus, RefreshCw, Save } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
-import { fetchCampaigns, upsertCampaign } from "../admin.api";
+import {
+  fetchCampaigns,
+  publishAdminStorageUpload,
+  upsertCampaign,
+} from "../admin.api";
 import type {
+  AdminStorageSignedUpload,
   BannerCampaign,
   CampaignsResponse,
   UpsertCampaignInput,
 } from "../admin.types";
 import { formatDate, shortId, StatusBadge } from "../admin.ui";
+import { ImageUploader } from "../components/ImageUploader";
 
 const CAMPAIGN_PLACEMENTS = [
   "",
@@ -20,10 +26,10 @@ const CAMPAIGN_PLACEMENTS = [
 const CAMPAIGN_TARGET_TYPES = [
   "none",
   "box",
-  "market_listing",
-  "shop_product",
-  "external_url",
+  "listing",
   "task",
+  "payment",
+  "external",
 ];
 const CAMPAIGN_STATUSES = ["", "draft", "active", "paused", "ended"];
 const PREVIEW_STATUSES = [
@@ -43,6 +49,7 @@ type CampaignDraft = {
   placement: string;
   target_type: string;
   target_ref: string;
+  target_payload: string;
   status: string;
   starts_at: string;
   ends_at: string;
@@ -61,6 +68,8 @@ export function CampaignsPage() {
   const [draft, setDraft] = useState<CampaignDraft>(() =>
     createEmptyCampaignDraft(),
   );
+  const [pendingUpload, setPendingUpload] =
+    useState<AdminStorageSignedUpload | null>(null);
   const [reason, setReason] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -111,27 +120,34 @@ export function CampaignsPage() {
       return;
     }
 
-    let input: UpsertCampaignInput;
-
-    try {
-      input = serializeCampaignDraft(draft, operationReason);
-    } catch (serializeError) {
-      setError(readError(serializeError, "活动表单校验失败"));
-      return;
-    }
-
+    let saveDraft = draft;
     setSaving(true);
     setError(null);
     setNotice(null);
 
     try {
+      if (pendingUpload) {
+        const published = await publishAdminStorageUpload({
+          targetBucket: "banners",
+          tempPath: pendingUpload.tempPath,
+          reason: operationReason,
+        });
+        saveDraft = {
+          ...draft,
+          image_url: published.publicUrl,
+        };
+        setDraft(saveDraft);
+        setPendingUpload(null);
+      }
+
+      const input = serializeCampaignDraft(saveDraft, operationReason);
       const result = await upsertCampaign(input);
       setNotice(
         `活动已提交${result.audit_log_id ? ` / audit ${shortId(result.audit_log_id)}` : ""}`,
       );
       await load();
-    } catch (saveError) {
-      setError(readError(saveError, "活动保存失败"));
+    } catch (serializeError) {
+      setError(readError(serializeError, "活动保存失败"));
     } finally {
       setSaving(false);
     }
@@ -140,6 +156,7 @@ export function CampaignsPage() {
   function selectCampaign(campaign: BannerCampaign) {
     setSelectedCampaignId(campaign.id);
     setDraft(toCampaignDraft(campaign));
+    setPendingUpload(null);
     setNotice(null);
     setError(null);
   }
@@ -147,6 +164,7 @@ export function CampaignsPage() {
   function createDraft() {
     setSelectedCampaignId(null);
     setDraft(createEmptyCampaignDraft());
+    setPendingUpload(null);
     setNotice(null);
     setError(null);
   }
@@ -303,7 +321,24 @@ export function CampaignsPage() {
             />
           </div>
 
-          <CampaignPreview draft={draft} />
+          <CampaignPreview
+            draft={draft}
+            previewUrl={pendingUpload?.previewUrl ?? null}
+          />
+
+          <ImageUploader
+            disabled={saving}
+            label="Banner 素材"
+            onError={setError}
+            onUploaded={(upload) => {
+              setPendingUpload(upload);
+              setNotice(
+                "素材已上传到 admin-temp，保存活动时会发布到 banners。",
+              );
+            }}
+            previewUrl={pendingUpload?.previewUrl ?? draft.image_url}
+            targetBucket="banners"
+          />
 
           <div className="form-grid form-grid--compact">
             <label>
@@ -382,10 +417,18 @@ export function CampaignsPage() {
               <span>Target type</span>
               <select
                 onChange={(event) =>
-                  setDraft((current) => ({
-                    ...current,
-                    target_type: event.target.value,
-                  }))
+                  setDraft((current) => {
+                    const targetType = event.target.value;
+
+                    return {
+                      ...current,
+                      target_type: targetType,
+                      target_payload: defaultTargetPayloadJson(
+                        targetType,
+                        current.target_ref,
+                      ),
+                    };
+                  })
                 }
                 value={draft.target_type}
               >
@@ -400,12 +443,32 @@ export function CampaignsPage() {
               <span>Target ref</span>
               <input
                 onChange={(event) =>
-                  setDraft((current) => ({
-                    ...current,
-                    target_ref: event.target.value,
-                  }))
+                  setDraft((current) => {
+                    const targetRef = event.target.value;
+
+                    return {
+                      ...current,
+                      target_ref: targetRef,
+                      target_payload: defaultTargetPayloadJson(
+                        current.target_type,
+                        targetRef,
+                      ),
+                    };
+                  })
                 }
                 value={draft.target_ref}
+              />
+            </label>
+            <label className="form-grid__wide">
+              <span>Target payload JSON</span>
+              <textarea
+                onChange={(event) =>
+                  setDraft((current) => ({
+                    ...current,
+                    target_payload: event.target.value,
+                  }))
+                }
+                value={draft.target_payload}
               />
             </label>
             <label>
@@ -489,7 +552,13 @@ export function CampaignsPage() {
               type="button"
             >
               <Save aria-hidden="true" size={16} />
-              <span>{saving ? "保存中" : "保存活动"}</span>
+              <span>
+                {saving
+                  ? "保存中"
+                  : pendingUpload
+                    ? "发布素材并保存"
+                    : "保存活动"}
+              </span>
             </button>
           </div>
         </section>
@@ -517,11 +586,19 @@ function CampaignThumb({ campaign }: { campaign: BannerCampaign }) {
   );
 }
 
-function CampaignPreview({ draft }: { draft: CampaignDraft }) {
+function CampaignPreview({
+  draft,
+  previewUrl,
+}: {
+  draft: CampaignDraft;
+  previewUrl?: string | null;
+}) {
+  const imageUrl = previewUrl ?? draft.image_url;
+
   return (
     <div className="campaign-preview" aria-label="Campaign preview">
-      {draft.image_url ? (
-        <img alt={draft.title || "campaign preview"} src={draft.image_url} />
+      {imageUrl ? (
+        <img alt={draft.title || "campaign preview"} src={imageUrl} />
       ) : (
         <span>
           <ImageIcon aria-hidden="true" size={24} />
@@ -559,6 +636,7 @@ function createEmptyCampaignDraft(): CampaignDraft {
     placement: "market_top",
     target_type: "none",
     target_ref: "",
+    target_payload: "{}",
     status: "draft",
     starts_at: "",
     ends_at: "",
@@ -577,6 +655,12 @@ function toCampaignDraft(campaign: BannerCampaign): CampaignDraft {
     placement: campaign.placement,
     target_type: campaign.target_type,
     target_ref: campaign.target_ref ?? "",
+    target_payload: JSON.stringify(
+      campaign.target_payload ??
+        deriveTargetPayload(campaign.target_type, campaign.target_ref ?? ""),
+      null,
+      2,
+    ),
     status: campaign.status,
     starts_at: toDateTimeLocal(campaign.starts_at),
     ends_at: toDateTimeLocal(campaign.ends_at),
@@ -593,9 +677,11 @@ function serializeCampaignDraft(
   const title = draft.title.trim();
   const imageUrl = draft.image_url.trim();
   const sortOrder = Number.parseInt(draft.sort_order, 10);
-  const metadata = parseMetadata(draft.metadata);
+  const metadata = parseJsonObject(draft.metadata, "metadata");
+  const targetPayload = parseJsonObject(draft.target_payload, "target_payload");
   const startsAt = toIsoOrNull(draft.starts_at);
   const endsAt = toIsoOrNull(draft.ends_at);
+  const targetRef = draft.target_ref.trim() || null;
 
   if (!code || !title || !imageUrl) {
     throw new Error("code、title、image_url 为必填项");
@@ -614,7 +700,11 @@ function serializeCampaignDraft(
     image_url: imageUrl,
     placement: draft.placement,
     target_type: draft.target_type,
-    target_ref: draft.target_ref.trim() || null,
+    target_ref: targetRef,
+    target_payload:
+      Object.keys(targetPayload).length > 0
+        ? targetPayload
+        : deriveTargetPayload(draft.target_type, targetRef ?? ""),
     status: draft.status,
     starts_at: startsAt,
     ends_at: endsAt,
@@ -670,7 +760,10 @@ function getWindowPreviewStatus(input: {
   return input.status === "active" ? "active" : input.status;
 }
 
-function parseMetadata(value: string): Record<string, unknown> {
+function parseJsonObject(
+  value: string,
+  field: string,
+): Record<string, unknown> {
   if (!value.trim()) {
     return {};
   }
@@ -678,10 +771,43 @@ function parseMetadata(value: string): Record<string, unknown> {
   const parsed: unknown = JSON.parse(value);
 
   if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-    throw new Error("metadata 必须是 JSON object");
+    throw new Error(`${field} 必须是 JSON object`);
   }
 
   return parsed as Record<string, unknown>;
+}
+
+function defaultTargetPayloadJson(
+  targetType: string,
+  targetRef: string,
+): string {
+  return JSON.stringify(deriveTargetPayload(targetType, targetRef), null, 2);
+}
+
+function deriveTargetPayload(
+  targetType: string,
+  targetRef: string,
+): Record<string, unknown> {
+  const ref = targetRef.trim();
+
+  if (!ref) {
+    return {};
+  }
+
+  switch (targetType) {
+    case "box":
+      return { box_id: ref };
+    case "listing":
+      return { listing_id: ref };
+    case "task":
+      return { task_ref: ref };
+    case "payment":
+      return { star_order_id: ref };
+    case "external":
+      return { url: ref };
+    default:
+      return {};
+  }
 }
 
 function assertValidTimeWindow(

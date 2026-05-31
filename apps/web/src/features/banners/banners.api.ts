@@ -4,6 +4,7 @@ import { API_ENDPOINTS } from "@/api/endpoints";
 import type {
   ActivityBannerItem,
   BannerPlacement,
+  BannerTargetType,
   BannersResponse,
 } from "./banners.types";
 
@@ -13,6 +14,14 @@ const BANNER_PLACEMENTS: readonly BannerPlacement[] = [
   "box_top",
   "home_top",
   "album_top",
+];
+const BANNER_TARGET_TYPES: readonly BannerTargetType[] = [
+  "box",
+  "listing",
+  "task",
+  "payment",
+  "external",
+  "none",
 ];
 
 export async function fetchBanners(
@@ -70,6 +79,8 @@ function normalizeBanner(
     return null;
   }
 
+  const targetPayload = readRecord(value.targetPayload ?? value.target_payload);
+
   return {
     id,
     code,
@@ -80,15 +91,36 @@ function normalizeBanner(
       readString(value.placement),
       fallbackPlacement,
     ),
-    targetType:
-      readString(value.targetType) ?? readString(value.target_type) ?? "none",
+    targetType: normalizeTargetType(
+      readString(value.targetType) ?? readString(value.target_type),
+    ),
     targetRef: readString(value.targetRef) ?? readString(value.target_ref),
+    targetPayload,
     targetHref: readString(value.targetHref) ?? readString(value.target_href),
     sortOrder:
       readNumber(value.sortOrder) ?? readNumber(value.sort_order) ?? 100,
     startsAt: readString(value.startsAt) ?? readString(value.starts_at),
     endsAt: readString(value.endsAt) ?? readString(value.ends_at),
   };
+}
+
+function normalizeTargetType(value: string | null): BannerTargetType {
+  if (!value) {
+    return "none";
+  }
+
+  if (BANNER_TARGET_TYPES.includes(value as BannerTargetType)) {
+    return value as BannerTargetType;
+  }
+
+  switch (value) {
+    case "market_listing":
+      return "listing";
+    case "external_url":
+      return "external";
+    default:
+      return "none";
+  }
 }
 
 function normalizePlacement(
@@ -115,6 +147,10 @@ function readNumber(value: unknown): number | null {
   }
 
   return null;
+}
+
+function readRecord(value: unknown): Record<string, unknown> {
+  return isRecord(value) ? value : {};
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

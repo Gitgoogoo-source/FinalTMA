@@ -47,6 +47,7 @@ import {
   type DropPoolMutationResult,
   type DropPoolVersionRow,
 } from "./gacha/_shared.js";
+import { assertAllowedStoragePublicUrl } from "./storage/_shared.js";
 
 type BoxPriceRuleRow = {
   id: string;
@@ -344,7 +345,10 @@ async function upsertBlindBox(input: {
     box,
   );
 
-  if (currentStatus && !isAllowedBoxStatusTransition(currentStatus, box.status)) {
+  if (
+    currentStatus &&
+    !isAllowedBoxStatusTransition(currentStatus, box.status)
+  ) {
     throw new ApiError(
       400,
       "VALIDATION_FAILED",
@@ -427,11 +431,7 @@ async function updateBlindBoxStatus(input: {
     input.body.boxId ?? input.body.box_id ?? input.body.id,
     "boxId",
   );
-  const status = normalizeEnum(
-    input.body.status,
-    "status",
-    BOX_STATUS_VALUES,
-  );
+  const status = normalizeEnum(input.body.status, "status", BOX_STATUS_VALUES);
   const currentStatus = await loadBlindBoxStatus(
     getSupabaseAdminClient(),
     boxId,
@@ -529,7 +529,10 @@ function normalizeBlindBoxInput(body: JsonRecord): BlindBoxInput {
       "open_reward_kcoin",
       { min: 0 },
     ),
-    coverImageUrl: normalizeNullableUrl(body.cover_image_url, "cover_image_url"),
+    coverImageUrl: normalizeNullableUrl(
+      body.cover_image_url,
+      "cover_image_url",
+    ),
     heroImageUrl: normalizeNullableUrl(body.hero_image_url, "hero_image_url"),
     startsAt,
     endsAt,
@@ -594,21 +597,15 @@ function normalizeNullableUrl(value: unknown, field: string): string | null {
     return null;
   }
 
-  let parsed: URL;
-
-  try {
-    parsed = new URL(normalized);
-  } catch {
-    throw new ApiError(400, "VALIDATION_FAILED", `${field} must be a URL`);
-  }
-
-  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+  if (!/^(https?:\/\/\S+|\/\S+)$/.test(normalized)) {
     throw new ApiError(
       400,
       "VALIDATION_FAILED",
-      `${field} must use http or https`,
+      `${field} must be an http(s) URL or an absolute path`,
     );
   }
+
+  assertAllowedStoragePublicUrl(normalized, field, ["boxes"]);
 
   return normalized;
 }
