@@ -1,15 +1,15 @@
-import { RefreshCw } from "lucide-react";
+import { Eye, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { fetchPayments } from "../admin.api";
 import type {
   PaymentAdminResponse,
   PaymentDispute,
-  PaymentOrder,
   PaymentRefund,
   WebhookEvent,
 } from "../admin.types";
 import { formatDate, shortId, StatusBadge } from "../admin.ui";
+import { PaymentDetailSheet } from "./PaymentDetailSheet";
 
 const PAYMENT_STATUSES = [
   "",
@@ -27,20 +27,22 @@ const EVENT_STATUSES = ["", "pending", "processing", "processed", "failed"];
 const REFUND_STATUSES = ["", "created", "pending", "processed", "failed"];
 const DISPUTE_STATUSES = ["", "open", "reviewing", "resolved", "rejected"];
 
-export function PaymentsPage() {
+export function PaymentsPage({
+  canViewPaymentDebug = false,
+}: {
+  canViewPaymentDebug?: boolean;
+}) {
   const [status, setStatus] = useState("");
   const [eventStatus, setEventStatus] = useState("");
   const [refundStatus, setRefundStatus] = useState("");
   const [disputeStatus, setDisputeStatus] = useState("");
   const [query, setQuery] = useState("");
-  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [detailOrderId, setDetailOrderId] = useState<string | null>(null);
   const [data, setData] = useState<PaymentAdminResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const selectedOrder =
-    data?.orders.find((order) => order.id === selectedOrderId) ??
-    data?.orders[0] ??
-    null;
+  const detailOrder =
+    data?.orders.find((order) => order.id === detailOrderId) ?? null;
 
   async function load() {
     setLoading(true);
@@ -57,10 +59,10 @@ export function PaymentsPage() {
       });
 
       setData(response);
-      setSelectedOrderId((current) =>
+      setDetailOrderId((current) =>
         current && response.orders.some((order) => order.id === current)
           ? current
-          : (response.orders[0]?.id ?? null),
+          : null,
       );
     } catch (loadError) {
       setError(
@@ -176,7 +178,7 @@ export function PaymentsPage() {
           <tbody>
             {(data?.orders ?? []).map((order) => (
               <tr
-                className={selectedOrder?.id === order.id ? "is-selected" : ""}
+                className={detailOrder?.id === order.id ? "is-selected" : ""}
                 key={order.id}
               >
                 <td>
@@ -192,11 +194,12 @@ export function PaymentsPage() {
                 <td>{formatDate(order.created_at)}</td>
                 <td>
                   <button
-                    className="text-button"
-                    onClick={() => setSelectedOrderId(order.id)}
+                    className="text-button text-button--with-icon"
+                    onClick={() => setDetailOrderId(order.id)}
                     type="button"
                   >
-                    查看
+                    <Eye aria-hidden="true" size={15} />
+                    <span>详情</span>
                   </button>
                 </td>
               </tr>
@@ -205,7 +208,12 @@ export function PaymentsPage() {
         </table>
       </div>
 
-      <PaymentDetail order={selectedOrder} />
+      <PaymentDetailSheet
+        canViewDebug={canViewPaymentDebug}
+        fallbackOrder={detailOrder}
+        onClose={() => setDetailOrderId(null)}
+        starOrderId={detailOrderId}
+      />
 
       <div className="split-grid">
         <section>
@@ -241,7 +249,7 @@ export function PaymentsPage() {
                 <button
                   className="list-row list-row--button"
                   key={order.id}
-                  onClick={() => setSelectedOrderId(order.id)}
+                  onClick={() => setDetailOrderId(order.id)}
                   type="button"
                 >
                   <span>
@@ -259,52 +267,6 @@ export function PaymentsPage() {
       <div className="split-grid split-grid--even">
         <PaymentsRefunds refunds={data?.refunds ?? []} />
         <PaymentsDisputes disputes={data?.disputes ?? []} />
-      </div>
-    </section>
-  );
-}
-
-function PaymentDetail({ order }: { order: PaymentOrder | null }) {
-  if (!order) {
-    return <p className="notice">暂无可查看的支付详情</p>;
-  }
-
-  return (
-    <section className="detail-panel" aria-label="支付详情">
-      <div className="detail-panel__header">
-        <div>
-          <h2>支付详情</h2>
-          <p>{order.telegram_invoice_payload}</p>
-        </div>
-        <StatusBadge status={order.status} />
-      </div>
-      <div className="detail-grid">
-        <DetailItem label="订单 ID" value={order.id} />
-        <DetailItem label="用户 ID" value={order.user_id} />
-        <DetailItem label="业务" value={order.business_type} />
-        <DetailItem label="业务 ID" value={order.business_id} />
-        <DetailItem label="Stars" value={String(order.xtr_amount)} />
-        <DetailItem label="过期时间" value={formatDate(order.expires_at)} />
-        <DetailItem
-          label="Pre-checkout"
-          value={formatDate(order.precheckout_at)}
-        />
-        <DetailItem label="支付时间" value={formatDate(order.paid_at)} />
-        <DetailItem label="发货时间" value={formatDate(order.fulfilled_at)} />
-        <DetailItem label="更新时间" value={formatDate(order.updated_at)} />
-      </div>
-      <div className="detail-grid detail-grid--wide">
-        <DetailItem label="标题" value={order.title} />
-        <DetailItem label="描述" value={order.description} />
-        <DetailItem label="错误" value={order.error_message} />
-        <DetailItem
-          label="支付流水"
-          value={
-            order.payment
-              ? `${shortId(order.payment.id)} / ${order.payment.currency} ${order.payment.xtr_amount}`
-              : "未记录"
-          }
-        />
       </div>
     </section>
   );
@@ -430,15 +392,6 @@ function PaymentsDisputes({ disputes }: { disputes: PaymentDispute[] }) {
         </table>
       </div>
     </section>
-  );
-}
-
-function DetailItem(props: { label: string; value: string | null }) {
-  return (
-    <span>
-      <small>{props.label}</small>
-      <strong>{props.value ?? "-"}</strong>
-    </span>
   );
 }
 

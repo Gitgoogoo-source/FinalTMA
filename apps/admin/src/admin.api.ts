@@ -22,6 +22,7 @@ import type {
   MintQueueResponse,
   MonitoringResponse,
   PaymentAdminResponse,
+  PaymentDetailResponse,
   PityRulesResponse,
   UpdateBlindBoxStatusInput,
   UpsertBlindBoxInput,
@@ -102,6 +103,14 @@ export async function fetchPayments(
 ): Promise<PaymentAdminResponse> {
   return adminRequest<PaymentAdminResponse>(
     `/api/admin/payments${toQueryString(params)}`,
+  );
+}
+
+export async function fetchPaymentDetail(
+  starOrderId: string,
+): Promise<PaymentDetailResponse> {
+  return adminRequest<PaymentDetailResponse>(
+    `/api/admin/payment-detail${toQueryString({ starOrderId })}`,
   );
 }
 

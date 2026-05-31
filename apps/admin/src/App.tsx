@@ -267,7 +267,14 @@ function renderActivePage(tab: AdminTab, me: AdminMeResponse) {
     case "monitoring":
       return <DashboardPage />;
     case "payments":
-      return <PaymentsPage />;
+      return (
+        <PaymentsPage
+          canViewPaymentDebug={
+            me.isSuperAdmin ||
+            hasAdminPermission(me.permissions, "payments:debug")
+          }
+        />
+      );
     case "mint":
       return <MintQueuePage />;
     case "wallets":

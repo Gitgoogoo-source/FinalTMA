@@ -1,3 +1,19 @@
+import type {
+  Database,
+  Json,
+} from "../../../packages/db-types/src/database.types.js";
+
+type CoreUserRow = Database["core"]["Tables"]["users"]["Row"];
+type CurrencyLedgerRow =
+  Database["economy"]["Tables"]["currency_ledger"]["Row"];
+type DrawOrderRow = Database["gacha"]["Tables"]["draw_orders"]["Row"];
+type DrawResultRow = Database["gacha"]["Tables"]["draw_results"]["Row"];
+type ItemInstanceRow = Database["inventory"]["Tables"]["item_instances"]["Row"];
+type StarOrderRow = Database["payments"]["Tables"]["star_orders"]["Row"];
+type StarPaymentRow = Database["payments"]["Tables"]["star_payments"]["Row"];
+type TelegramWebhookEventRow =
+  Database["payments"]["Tables"]["telegram_webhook_events"]["Row"];
+
 export type AdminApiEnvelope<T> = {
   ok: true;
   success: true;
@@ -98,6 +114,169 @@ export type PaymentAdminResponse = {
   disputes: PaymentDispute[];
   summary: Record<string, number>;
   nextCursor: string | null;
+  serverTime: string;
+};
+
+export type PaymentDetailOrder = Pick<
+  StarOrderRow,
+  | "id"
+  | "user_id"
+  | "business_type"
+  | "business_id"
+  | "status"
+  | "xtr_amount"
+  | "telegram_invoice_payload"
+  | "title"
+  | "description"
+  | "idempotency_key"
+  | "expires_at"
+  | "precheckout_at"
+  | "paid_at"
+  | "fulfilled_at"
+  | "error_message"
+  | "metadata"
+  | "created_at"
+  | "updated_at"
+>;
+
+export type PaymentDetailUser = Pick<
+  CoreUserRow,
+  | "id"
+  | "telegram_user_id"
+  | "username"
+  | "first_name"
+  | "last_name"
+  | "status"
+  | "risk_score"
+  | "last_seen_at"
+  | "last_auth_at"
+  | "created_at"
+>;
+
+export type PaymentDetailPayment = Pick<
+  StarPaymentRow,
+  | "id"
+  | "star_order_id"
+  | "user_id"
+  | "telegram_payment_charge_id"
+  | "provider_payment_charge_id"
+  | "xtr_amount"
+  | "currency"
+  | "invoice_payload"
+  | "paid_at"
+  | "created_at"
+  | "metadata"
+>;
+
+export type PaymentDetailDrawOrder = Pick<
+  DrawOrderRow,
+  | "id"
+  | "user_id"
+  | "box_id"
+  | "pool_version_id"
+  | "payment_star_order_id"
+  | "status"
+  | "quantity"
+  | "draw_count"
+  | "unit_price_stars"
+  | "discount_bps"
+  | "total_price_stars"
+  | "open_reward_kcoin"
+  | "invoice_payload"
+  | "paid_at"
+  | "opened_at"
+  | "payment_provider"
+  | "payment_status"
+  | "star_amount"
+  | "telegram_invoice_payload"
+  | "telegram_payment_charge_id"
+  | "error_message"
+  | "metadata"
+  | "created_at"
+  | "updated_at"
+>;
+
+export type PaymentDetailDrawResult = Pick<
+  DrawResultRow,
+  | "id"
+  | "draw_order_id"
+  | "user_id"
+  | "box_id"
+  | "pool_version_id"
+  | "draw_index"
+  | "drop_pool_item_id"
+  | "item_instance_id"
+  | "template_id"
+  | "form_id"
+  | "rarity_code"
+  | "was_pity"
+  | "random_roll"
+  | "metadata"
+  | "created_at"
+>;
+
+export type PaymentDetailItemInstance = Pick<
+  ItemInstanceRow,
+  | "id"
+  | "owner_user_id"
+  | "template_id"
+  | "form_id"
+  | "serial_no"
+  | "level"
+  | "power"
+  | "status"
+  | "source_type"
+  | "source_id"
+  | "nft_mint_status"
+  | "minted_nft_item_id"
+  | "acquired_at"
+  | "created_at"
+>;
+
+export type PaymentDetailLedgerEntry = Pick<
+  CurrencyLedgerRow,
+  | "id"
+  | "user_id"
+  | "currency_code"
+  | "entry_type"
+  | "amount"
+  | "available_before"
+  | "available_after"
+  | "locked_before"
+  | "locked_after"
+  | "source_type"
+  | "source_id"
+  | "source_ref"
+  | "idempotency_key"
+  | "note"
+  | "created_at"
+>;
+
+export type PaymentDetailWebhookEvent = WebhookEvent &
+  Pick<
+    TelegramWebhookEventRow,
+    "payload" | "processing_duration_ms" | "request_headers_hash"
+  >;
+
+export type PaymentDetailErrorContext = {
+  code: string | null;
+  message: string | null;
+  requestId: string | null;
+  errorStack?: string | null;
+  stack?: string | null;
+  raw?: Json | null;
+};
+
+export type PaymentDetailResponse = {
+  order: PaymentDetailOrder;
+  user: PaymentDetailUser | null;
+  payment: PaymentDetailPayment | null;
+  drawOrder: PaymentDetailDrawOrder | null;
+  drawResults: PaymentDetailDrawResult[];
+  itemInstances: PaymentDetailItemInstance[];
+  ledgerEntries: PaymentDetailLedgerEntry[];
+  webhookEvents: PaymentDetailWebhookEvent[];
+  errorContext: PaymentDetailErrorContext | null;
   serverTime: string;
 };
 
