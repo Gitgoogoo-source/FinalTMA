@@ -7,9 +7,11 @@ import type {
 import { invokeApiHandler } from "./_utils";
 
 const {
+  recordTelegramWebhookReceivedMock,
   processTelegramPreCheckoutUpdateMock,
   processTelegramSuccessfulPaymentUpdateMock,
 } = vi.hoisted(() => ({
+  recordTelegramWebhookReceivedMock: vi.fn(),
   processTelegramPreCheckoutUpdateMock: vi.fn(),
   processTelegramSuccessfulPaymentUpdateMock: vi.fn(),
 }));
@@ -46,6 +48,7 @@ vi.mock("../../packages/server/src/payments/telegramStars.js", () => ({
   processTelegramPreCheckoutUpdate: processTelegramPreCheckoutUpdateMock,
   processTelegramSuccessfulPaymentUpdate:
     processTelegramSuccessfulPaymentUpdateMock,
+  recordTelegramWebhookReceived: recordTelegramWebhookReceivedMock,
 }));
 
 const WEBHOOK_SECRET = "test-telegram-webhook-secret";
@@ -85,8 +88,33 @@ describe("telegram webhook API", () => {
   beforeEach(() => {
     process.env.NODE_ENV = "test";
     process.env.TELEGRAM_WEBHOOK_SECRET = WEBHOOK_SECRET;
+    recordTelegramWebhookReceivedMock.mockReset();
     processTelegramPreCheckoutUpdateMock.mockReset();
     processTelegramSuccessfulPaymentUpdateMock.mockReset();
+    recordTelegramWebhookReceivedMock.mockImplementation(async (input) => ({
+      eventId:
+        input.processStatus === "ignored"
+          ? "66666666-6666-4666-8666-666666666666"
+          : input.processStatus === "failed"
+            ? "99999999-9999-4999-8999-999999999999"
+            : "11111111-1111-4111-8111-111111111111",
+      updateId:
+        typeof input.update === "object" &&
+        input.update !== null &&
+        "update_id" in input.update
+          ? (input.update as { update_id: number }).update_id
+          : null,
+      eventType: input.eventType,
+      processStatus: input.processStatus ?? "received",
+      telegramUserId: null,
+      invoicePayload: null,
+      webhookSecretVerified: input.webhookSecretVerified,
+      duplicateUpdate: false,
+      eventTypeConflict: false,
+      retryCount: 0,
+      reasonCode: null,
+      errorMessage: input.errorMessage ?? null,
+    }));
     processTelegramPreCheckoutUpdateMock.mockResolvedValue({
       eventType: "pre_checkout_query",
       allowed: true,
@@ -159,6 +187,27 @@ describe("telegram webhook API", () => {
         code: "TELEGRAM_WEBHOOK_SECRET_INVALID",
       },
     });
+    expect(recordTelegramWebhookReceivedMock).toHaveBeenCalledTimes(2);
+    expect(recordTelegramWebhookReceivedMock).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        update: PRE_CHECKOUT_UPDATE,
+        eventType: "pre_checkout_query",
+        webhookSecretVerified: false,
+        processStatus: "received",
+      }),
+    );
+    expect(recordTelegramWebhookReceivedMock).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        update: PRE_CHECKOUT_UPDATE,
+        eventType: "pre_checkout_query",
+        webhookSecretVerified: false,
+        processStatus: "failed",
+        errorMessage: "Telegram webhook secret 无效。",
+        incrementRetryCount: false,
+      }),
+    );
     expect(processTelegramPreCheckoutUpdateMock).not.toHaveBeenCalled();
   });
 
@@ -196,6 +245,19 @@ describe("telegram webhook API", () => {
         requestHeadersHash: expect.any(String),
         webhookSecretVerified: true,
       }),
+    );
+    expect(recordTelegramWebhookReceivedMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        update: PRE_CHECKOUT_UPDATE,
+        eventType: "pre_checkout_query",
+        webhookSecretVerified: true,
+        processStatus: "received",
+      }),
+    );
+    expect(
+      recordTelegramWebhookReceivedMock.mock.invocationCallOrder[0]!,
+    ).toBeLessThan(
+      processTelegramPreCheckoutUpdateMock.mock.invocationCallOrder[0]!,
     );
   });
 
@@ -241,6 +303,19 @@ describe("telegram webhook API", () => {
         requestHeadersHash: expect.any(String),
         webhookSecretVerified: true,
       }),
+    );
+    expect(recordTelegramWebhookReceivedMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        update: SUCCESSFUL_PAYMENT_UPDATE,
+        eventType: "successful_payment",
+        webhookSecretVerified: true,
+        processStatus: "received",
+      }),
+    );
+    expect(
+      recordTelegramWebhookReceivedMock.mock.invocationCallOrder[0]!,
+    ).toBeLessThan(
+      processTelegramSuccessfulPaymentUpdateMock.mock.invocationCallOrder[0]!,
     );
     expect(processTelegramPreCheckoutUpdateMock).not.toHaveBeenCalled();
   });
@@ -315,6 +390,7 @@ describe("telegram webhook API", () => {
       },
     });
     expect(processTelegramSuccessfulPaymentUpdateMock).toHaveBeenCalledTimes(1);
+    expect(recordTelegramWebhookReceivedMock).toHaveBeenCalledTimes(1);
     expect(processTelegramPreCheckoutUpdateMock).not.toHaveBeenCalled();
   });
 
@@ -391,6 +467,60 @@ describe("telegram webhook API", () => {
         }),
       }),
     );
+    expect(recordTelegramWebhookReceivedMock).toHaveBeenCalledTimes(1);
+    expect(processTelegramPreCheckoutUpdateMock).not.toHaveBeenCalled();
+  });
+
+  it("marks a received successful_payment event failed when processing throws", async () => {
+    const processingError = Object.assign(
+      new Error("successful payment parse failed"),
+      {
+        code: "TELEGRAM_WEBHOOK_FIELD_INVALID",
+      },
+    );
+    processTelegramSuccessfulPaymentUpdateMock.mockRejectedValueOnce(
+      processingError,
+    );
+
+    const { default: webhookHandler } =
+      await import("../../api/telegram/webhook");
+    const result = await invokeApiHandler<ApiErrorResponse>(webhookHandler, {
+      method: "POST",
+      url: "/api/telegram/webhook",
+      headers: {
+        "content-type": "application/json",
+        "x-telegram-bot-api-secret-token": WEBHOOK_SECRET,
+      },
+      body: SUCCESSFUL_PAYMENT_UPDATE,
+    });
+
+    expect(result.statusCode).toBe(500);
+    expect(result.body).toMatchObject({
+      ok: false,
+      error: {
+        code: "TELEGRAM_WEBHOOK_FIELD_INVALID",
+      },
+    });
+    expect(recordTelegramWebhookReceivedMock).toHaveBeenCalledTimes(2);
+    expect(recordTelegramWebhookReceivedMock).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        eventType: "successful_payment",
+        processStatus: "received",
+      }),
+    );
+    expect(recordTelegramWebhookReceivedMock).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        eventType: "successful_payment",
+        processStatus: "failed",
+        errorMessage: "successful payment parse failed",
+        statusContext: expect.objectContaining({
+          error_reason: "TELEGRAM_WEBHOOK_FIELD_INVALID",
+        }),
+        incrementRetryCount: false,
+      }),
+    );
     expect(processTelegramPreCheckoutUpdateMock).not.toHaveBeenCalled();
   });
 
@@ -418,8 +548,29 @@ describe("telegram webhook API", () => {
       data: {
         handled: false,
         event_type: "unsupported_update",
+        event_id: "66666666-6666-4666-8666-666666666666",
+        received_event_id: "11111111-1111-4111-8111-111111111111",
+        process_status: "ignored",
       },
     });
+    expect(recordTelegramWebhookReceivedMock).toHaveBeenCalledTimes(2);
+    expect(recordTelegramWebhookReceivedMock).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        eventType: "unsupported_update",
+        processStatus: "received",
+        webhookSecretVerified: true,
+      }),
+    );
+    expect(recordTelegramWebhookReceivedMock).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        eventType: "unsupported_update",
+        processStatus: "ignored",
+        webhookSecretVerified: true,
+        incrementRetryCount: false,
+      }),
+    );
     expect(processTelegramPreCheckoutUpdateMock).not.toHaveBeenCalled();
     expect(processTelegramSuccessfulPaymentUpdateMock).not.toHaveBeenCalled();
   });

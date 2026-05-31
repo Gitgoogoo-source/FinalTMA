@@ -160,6 +160,42 @@ export type ProcessTelegramSuccessfulPaymentResult =
     fulfillment: PaymentFulfillmentResult | null;
   };
 
+export type TelegramWebhookProcessStatus =
+  | "received"
+  | "processing"
+  | "processed"
+  | "ignored"
+  | "failed";
+
+export type RecordTelegramWebhookReceivedInput = {
+  update: unknown;
+  eventType: string;
+  requestId: string;
+  requestHeadersHash?: string | null | undefined;
+  webhookSecretVerified: boolean;
+  processStatus?: TelegramWebhookProcessStatus | undefined;
+  errorMessage?: string | null | undefined;
+  statusContext?: Record<string, unknown> | undefined;
+  nextRetryAt?: string | Date | null | undefined;
+  incrementRetryCount?: boolean | undefined;
+  client?: SupabaseAdminClient | undefined;
+};
+
+export type TelegramWebhookReceivedResult = {
+  eventId: string;
+  updateId: number | null;
+  eventType: string;
+  processStatus: TelegramWebhookProcessStatus;
+  telegramUserId: number | null;
+  invoicePayload: string | null;
+  webhookSecretVerified: boolean;
+  duplicateUpdate: boolean;
+  eventTypeConflict: boolean;
+  retryCount: number;
+  reasonCode: string | null;
+  errorMessage: string | null;
+};
+
 type FetchImpl = (input: string | URL, init?: RequestInit) => Promise<Response>;
 
 type DbError = {
@@ -348,6 +384,42 @@ export function inferTelegramUpdateEventType(update: unknown): string {
   }
 
   return "unsupported_update";
+}
+
+export async function recordTelegramWebhookReceived(
+  input: RecordTelegramWebhookReceivedInput,
+): Promise<TelegramWebhookReceivedResult> {
+  const fields = extractTelegramWebhookAuditFields(input.update);
+  const rpcOptions = {
+    schema: "api" as never,
+    context: {
+      requestId: input.requestId,
+      updateId: fields.updateId,
+      eventType: input.eventType,
+    },
+    ...(input.client ? { client: input.client } : {}),
+  };
+  const rawResult = await callRpcRaw<Record<string, unknown>>(
+    "payment_record_telegram_webhook_received",
+    {
+      p_update_id: fields.updateId,
+      p_event_type: input.eventType,
+      p_telegram_user_id: fields.telegramUserId,
+      p_invoice_payload: fields.invoicePayload,
+      p_raw_update: toWebhookJsonPayload(input.update),
+      p_request_headers_hash: input.requestHeadersHash ?? null,
+      p_request_id: input.requestId,
+      p_webhook_secret_verified: input.webhookSecretVerified,
+      p_process_status: input.processStatus ?? "received",
+      p_error_message: input.errorMessage ?? null,
+      p_status_context: input.statusContext ?? {},
+      p_next_retry_at: normalizeWebhookDateTime(input.nextRetryAt),
+      p_increment_retry_count: input.incrementRetryCount ?? true,
+    },
+    rpcOptions,
+  );
+
+  return normalizeTelegramWebhookReceivedResult(rawResult);
 }
 
 export function parseTelegramPreCheckoutUpdate(
@@ -1682,6 +1754,36 @@ function normalizePaymentRecordSuccessfulPaymentResult(
   };
 }
 
+function normalizeTelegramWebhookReceivedResult(
+  value: Record<string, unknown>,
+): TelegramWebhookReceivedResult {
+  const processStatus = requiredWebhookProcessStatus(
+    value.process_status,
+    "payment_record_telegram_webhook_received.process_status",
+  );
+
+  return {
+    eventId: requiredWebhookString(
+      value.event_id,
+      "payment_record_telegram_webhook_received.event_id",
+    ),
+    updateId: optionalNumber(value.update_id),
+    eventType: requiredWebhookString(
+      value.event_type,
+      "payment_record_telegram_webhook_received.event_type",
+    ),
+    processStatus,
+    telegramUserId: optionalNumber(value.telegram_user_id),
+    invoicePayload: optionalString(value.invoice_payload),
+    webhookSecretVerified: booleanOrFalse(value.webhook_secret_verified),
+    duplicateUpdate: booleanOrFalse(value.duplicate_update),
+    eventTypeConflict: booleanOrFalse(value.event_type_conflict),
+    retryCount: optionalNumber(value.retry_count) ?? 0,
+    reasonCode: optionalString(value.reason_code),
+    errorMessage: optionalString(value.error_message),
+  };
+}
+
 function normalizePaymentFulfillmentResult(
   value: Record<string, unknown>,
 ): PaymentFulfillmentResult {
@@ -1938,6 +2040,30 @@ function booleanOrFalse(value: unknown): boolean {
   return value === true;
 }
 
+function requiredWebhookProcessStatus(
+  value: unknown,
+  field: string,
+): TelegramWebhookProcessStatus {
+  const normalized = optionalString(value);
+
+  if (
+    normalized === "received" ||
+    normalized === "processing" ||
+    normalized === "processed" ||
+    normalized === "ignored" ||
+    normalized === "failed"
+  ) {
+    return normalized;
+  }
+
+  throw new TelegramStarsWebhookError(
+    500,
+    "TELEGRAM_WEBHOOK_RPC_RESULT_INVALID",
+    `${field} 无效。`,
+    { expose: false },
+  );
+}
+
 function optionalString(value: unknown): string | null {
   if (typeof value !== "string") {
     return null;
@@ -1957,6 +2083,17 @@ function optionalNumber(value: unknown): number | null {
         : Number.NaN;
 
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function optionalWebhookInteger(value: unknown): number | null {
+  const parsed =
+    typeof value === "number"
+      ? value
+      : typeof value === "string" && value.trim() !== ""
+        ? Number(value)
+        : Number.NaN;
+
+  return Number.isInteger(parsed) ? parsed : null;
 }
 
 function requiredNumber(value: unknown, field: string): number {
@@ -1997,4 +2134,82 @@ function isJsonCompatibleRecord(
   value: unknown,
 ): value is Record<string, unknown> {
   return isRecord(value);
+}
+
+function extractTelegramWebhookAuditFields(update: unknown): {
+  updateId: number | null;
+  telegramUserId: number | null;
+  invoicePayload: string | null;
+} {
+  if (!isRecord(update)) {
+    return {
+      updateId: null,
+      telegramUserId: null,
+      invoicePayload: null,
+    };
+  }
+
+  const preCheckoutQuery = isRecord(update.pre_checkout_query)
+    ? update.pre_checkout_query
+    : null;
+
+  if (preCheckoutQuery) {
+    const from = isRecord(preCheckoutQuery.from) ? preCheckoutQuery.from : null;
+
+    return {
+      updateId: optionalWebhookInteger(update.update_id),
+      telegramUserId: from ? optionalWebhookInteger(from.id) : null,
+      invoicePayload: optionalString(preCheckoutQuery.invoice_payload),
+    };
+  }
+
+  const message = isRecord(update.message) ? update.message : null;
+  const successfulPayment =
+    message && isRecord(message.successful_payment)
+      ? message.successful_payment
+      : null;
+
+  if (message) {
+    const from = isRecord(message.from) ? message.from : null;
+
+    return {
+      updateId: optionalWebhookInteger(update.update_id),
+      telegramUserId: from ? optionalWebhookInteger(from.id) : null,
+      invoicePayload: successfulPayment
+        ? optionalString(successfulPayment.invoice_payload)
+        : null,
+    };
+  }
+
+  const callbackQuery = isRecord(update.callback_query)
+    ? update.callback_query
+    : null;
+  const callbackFrom =
+    callbackQuery && isRecord(callbackQuery.from) ? callbackQuery.from : null;
+
+  return {
+    updateId: optionalWebhookInteger(update.update_id),
+    telegramUserId: callbackFrom
+      ? optionalWebhookInteger(callbackFrom.id)
+      : null,
+    invoicePayload: null,
+  };
+}
+
+function normalizeWebhookDateTime(
+  value: string | Date | null | undefined,
+): string | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value.toISOString();
+  }
+
+  return optionalString(value);
+}
+
+function toWebhookJsonPayload(value: unknown): unknown {
+  return value ?? {};
 }
