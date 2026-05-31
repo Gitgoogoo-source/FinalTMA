@@ -92,6 +92,21 @@ select ok(
   'box and banner admin RPCs exist with p_-prefixed signatures'
 );
 
+select ok(
+  exists (
+    select 1
+    from pg_constraint c
+    join pg_class t on t.oid = c.conrelid
+    join pg_namespace n on n.oid = t.relnamespace
+    where n.nspname = 'gacha'
+      and t.relname = 'blind_boxes'
+      and c.conname = 'blind_boxes_status_check'
+      and pg_get_constraintdef(c.oid) like '%archived%'
+      and pg_get_constraintdef(c.oid) not like '%hidden%'
+  ),
+  'blind box status constraint uses fixed phase 6 status set'
+);
+
 with signatures(signature) as (
   values
     ('api.admin_upsert_blind_box(uuid,text,text,text,text,integer,text,text,jsonb,uuid,text,integer,integer,numeric,text,text,timestamptz,timestamptz,integer,jsonb)'),
@@ -237,6 +252,22 @@ select ok(
   'admin_update_box_status rejects illegal status transitions'
 );
 
+select ok(
+  testutil.raises_like(
+    format(
+      'select api.admin_update_box_status(%L::uuid, %L::uuid, %L, %L, %L, %L::jsonb)',
+      (select id::text from _ids where key = 'actor'),
+      (select id::text from _ids where key = 'box'),
+      'hidden',
+      'phase 6 hidden status rejected',
+      'phase6-box-status-hidden-rejected',
+      '{}'
+    ),
+    '%ADMIN_BOX_STATUS_INVALID%'
+  ),
+  'admin_update_box_status rejects legacy hidden status'
+);
+
 insert into _ids (key, payload)
 values (
   'price_rule',
@@ -316,6 +347,38 @@ select is(
   'admin_upsert_banner_campaign writes a valid box target'
 );
 
+select is(
+  (select placement from catalog.banner_campaigns where id = (select id from _ids where key = 'banner')),
+  'box_top',
+  'admin_upsert_banner_campaign keeps a valid top placement'
+);
+
+insert into _ids (key, id)
+values ('home_banner', '88888888-8888-4888-8888-888888888888');
+
+insert into _ids (key, payload)
+values (
+  'home_banner_payload',
+  api.admin_upsert_banner_campaign(
+    p_admin_user_id => (select id from _ids where key = 'actor'),
+    p_banner_campaign_id => (select id from _ids where key = 'home_banner'),
+    p_code => 'phase6-home-top-banner',
+    p_title => 'Phase 6 Home Top Banner',
+    p_image_url => 'https://example.test/home-top-banner.png',
+    p_placement => 'home_top',
+    p_target_type => 'none',
+    p_status => 'draft',
+    p_reason => 'phase 6 create home top banner campaign',
+    p_idempotency_key => 'phase6-home-top-banner-001'
+  )
+);
+
+select is(
+  (select placement from catalog.banner_campaigns where id = (select id from _ids where key = 'home_banner')),
+  'home_top',
+  'admin_upsert_banner_campaign accepts home_top placement'
+);
+
 insert into _ids (key, payload)
 values (
   'banner_repeat',
@@ -358,6 +421,57 @@ select ok(
     '%ADMIN_BANNER_TARGET_NOT_FOUND%'
   ),
   'admin_upsert_banner_campaign rejects missing target references'
+);
+
+select ok(
+  testutil.raises_like(
+    format(
+      'select api.admin_upsert_banner_campaign(p_admin_user_id => %L::uuid, p_code => %L, p_title => %L, p_image_url => %L, p_placement => %L, p_target_type => %L, p_status => %L, p_reason => %L, p_idempotency_key => %L)',
+      (select id::text from _ids where key = 'actor'),
+      'phase6-legacy-home-banner',
+      'Phase 6 Legacy Home Banner',
+      'https://example.test/legacy-home-banner.png',
+      'home',
+      'none',
+      'draft',
+      'phase 6 legacy home placement rejected',
+      'phase6-legacy-home-banner'
+    ),
+    '%ADMIN_BANNER_PLACEMENT_INVALID%'
+  ),
+  'admin_upsert_banner_campaign rejects legacy home placement'
+);
+
+insert into _ids (key, payload)
+values (
+  'end_box',
+  api.admin_update_box_status(
+    p_admin_user_id => (select id from _ids where key = 'actor'),
+    p_box_id => (select id from _ids where key = 'box'),
+    p_status => 'ended',
+    p_reason => 'phase 6 end blind box',
+    p_idempotency_key => 'phase6-box-status-ended-001',
+    p_request_context => jsonb_build_object('ip_hash', 'phase6-ip', 'user_agent_hash', 'phase6-ua')
+  )
+);
+
+insert into _ids (key, payload)
+values (
+  'archive_box',
+  api.admin_update_box_status(
+    p_admin_user_id => (select id from _ids where key = 'actor'),
+    p_box_id => (select id from _ids where key = 'box'),
+    p_status => 'archived',
+    p_reason => 'phase 6 archive blind box',
+    p_idempotency_key => 'phase6-box-status-archived-001',
+    p_request_context => jsonb_build_object('ip_hash', 'phase6-ip', 'user_agent_hash', 'phase6-ua')
+  )
+);
+
+select is(
+  (select status from gacha.blind_boxes where id = (select id from _ids where key = 'box')),
+  'archived',
+  'admin_update_box_status allows ended to archived'
 );
 
 select is(

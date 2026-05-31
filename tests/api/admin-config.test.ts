@@ -79,7 +79,7 @@ describe("admin campaign and blind box config APIs", () => {
           title: "Home Launch",
           description: null,
           image_url: "https://cdn.example.test/banner.png",
-          placement: "home",
+          placement: "home_top",
           target_type: "none",
           target_ref: null,
           status: "active",
@@ -103,9 +103,9 @@ describe("admin campaign and blind box config APIs", () => {
       campaignsHandler,
       {
         method: "GET",
-        url: "/api/admin/campaigns?placement=home",
+        url: "/api/admin/campaigns?placement=home_top",
         query: {
-          placement: "home",
+          placement: "home_top",
         },
       },
     );
@@ -158,13 +158,13 @@ describe("admin campaign and blind box config APIs", () => {
           code: "home_launch",
           title: "Home Launch",
           image_url: "https://cdn.example.test/banner.png",
-          placement: "home",
+          placement: "home_top",
           target_type: "none",
           status: "draft",
           starts_at: "2026-06-01T00:00:00.000Z",
           ends_at: "2026-06-30T00:00:00.000Z",
           sort_order: 10,
-          metadata: { channel: "home" },
+          metadata: { channel: "home_top" },
           reason: "configure home banner",
           confirm: true,
         },
@@ -181,7 +181,7 @@ describe("admin campaign and blind box config APIs", () => {
           p_banner_campaign_id: null,
           p_code: "home_launch",
           p_image_url: "https://cdn.example.test/banner.png",
-          p_placement: "home",
+          p_placement: "home_top",
           p_target_type: "none",
           p_status: "draft",
           p_reason: "configure home banner",
@@ -293,6 +293,15 @@ describe("admin campaign and blind box config APIs", () => {
   });
 
   it("maps blind box status changes to the planned admin status RPC", async () => {
+    const db = createAdminReadDbMock({
+      "gacha.blind_boxes": [
+        {
+          id: BOX_ID,
+          status: "active",
+        },
+      ],
+    });
+    getSupabaseAdminClientMock.mockReturnValue(db.client);
     runWriteRpcMock.mockResolvedValueOnce({
       audit_log_id: AUDIT_LOG_ID,
       box_id: BOX_ID,
@@ -470,6 +479,14 @@ function createAdminQueryBuilder(
     range: (from: number, to: number) => {
       operation.range = [from, to];
       return builder;
+    },
+    maybeSingle: () => {
+      const result = resolveAdminQuery(operation, rowsByTable);
+
+      return Promise.resolve({
+        data: result.data[0] ?? null,
+        error: result.error,
+      });
     },
     then: (
       resolve: (value: {

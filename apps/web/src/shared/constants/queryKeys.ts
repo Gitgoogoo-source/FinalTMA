@@ -5,6 +5,11 @@ export const queryKeys = {
     assets: (userId: string | null | undefined) =>
       ["me", "assets", userId ?? "anonymous"] as const,
   },
+  banners: {
+    root: ["banners"] as const,
+    placement: (placement: string | null | undefined) =>
+      ["banners", placement ?? "none"] as const,
+  },
   box: {
     root: ["box"] as const,
     list: ["box", "list"] as const,

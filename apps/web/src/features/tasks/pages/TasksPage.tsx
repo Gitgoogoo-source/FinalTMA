@@ -3,6 +3,8 @@ import { RefreshCw } from "lucide-react";
 
 import { getApiErrorMessage } from "@/api/errors";
 import { useFeedback } from "@/app/providers/FeedbackProvider";
+import { ActivityBanner } from "@/features/banners/components/ActivityBanner";
+import { useBanners } from "@/features/banners/hooks/useBanners";
 import type { RewardModalItem } from "@/features/feedback/feedback.types";
 import { openTelegramShareLink } from "@/shared/lib/telegramShare";
 
@@ -47,6 +49,7 @@ export function TasksPage() {
   );
   const taskQuery = useTasks(taskListQuery);
   const checkInQuery = useCheckInStatus();
+  const bannerQuery = useBanners("task_top");
   const inviteStatsQuery = useInviteStats();
   const commissionQuery = useCommissionHistory();
   const claimTask = useClaimTask();
@@ -244,6 +247,8 @@ export function TasksPage() {
           <RefreshCw aria-hidden="true" size={16} strokeWidth={2.5} />
         </button>
       </header>
+
+      <ActivityBanner banner={bannerQuery.primaryBanner} label="任务活动" />
 
       <InviteCampaignCard
         isGenerating={referralLinkMutation.isPending}

@@ -12,6 +12,10 @@ const STATUS_META: Record<
     tone: "success" | "warning" | "disabled";
   }
 > = {
+  draft: {
+    label: "草稿",
+    tone: "disabled",
+  },
   active: {
     label: "进行中",
     tone: "success",
@@ -32,8 +36,8 @@ const STATUS_META: Record<
     label: "已售罄",
     tone: "disabled",
   },
-  hidden: {
-    label: "不可见",
+  archived: {
+    label: "已归档",
     tone: "disabled",
   },
 };

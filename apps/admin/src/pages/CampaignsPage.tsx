@@ -12,10 +12,10 @@ import { formatDate, shortId, StatusBadge } from "../admin.ui";
 const CAMPAIGN_PLACEMENTS = [
   "",
   "market_top",
-  "box_top",
   "task_top",
+  "box_top",
+  "home_top",
   "album_top",
-  "home",
 ];
 const CAMPAIGN_TARGET_TYPES = [
   "none",

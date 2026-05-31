@@ -85,10 +85,10 @@ const CAMPAIGN_WRITE_PERMISSIONS = [
 
 const CAMPAIGN_PLACEMENTS = [
   "market_top",
-  "box_top",
   "task_top",
+  "box_top",
+  "home_top",
   "album_top",
-  "home",
 ] as const;
 const CAMPAIGN_TARGET_TYPES = [
   "none",

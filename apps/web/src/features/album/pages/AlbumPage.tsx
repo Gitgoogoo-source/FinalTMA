@@ -3,6 +3,8 @@ import { RefreshCw } from "lucide-react";
 
 import { getApiErrorMessage } from "@/api/errors";
 import { useFeedback } from "@/app/providers/FeedbackProvider";
+import { ActivityBanner } from "@/features/banners/components/ActivityBanner";
+import { useBanners } from "@/features/banners/hooks/useBanners";
 import type { RewardModalItem } from "@/features/feedback/feedback.types";
 
 import { AlbumGrid } from "../components/AlbumGrid";
@@ -25,6 +27,7 @@ export function AlbumPage() {
   const [selectedBookId, setSelectedBookId] = useState<string | null>(null);
   const { pushToast, showRewardModal } = useFeedback();
   const albumSeriesQuery = useAlbumSeries();
+  const bannerQuery = useBanners("album_top");
   const progressQuery = useMemo(() => {
     const query: AlbumProgressQuery = {
       includeItems: true,
@@ -137,6 +140,8 @@ export function AlbumPage() {
           <RefreshCw aria-hidden="true" size={16} strokeWidth={2.4} />
         </button>
       </header>
+
+      <ActivityBanner banner={bannerQuery.primaryBanner} label="图鉴活动" />
 
       <AlbumSeriesTabs
         books={albumSeriesQuery.books}

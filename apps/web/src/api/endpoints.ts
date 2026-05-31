@@ -11,6 +11,9 @@ export const API_ENDPOINTS = {
     profile: "/me/profile",
     notifications: "/me/notifications",
   },
+  banners: {
+    list: "/banners/list",
+  },
   boxes: {
     list: "/boxes/list",
     rewards: "/boxes/rewards",

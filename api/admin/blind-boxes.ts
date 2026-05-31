@@ -31,6 +31,7 @@ import {
   callGachaWriteRpc,
   mapBlindBoxRow,
   mapDropPoolVersionRow,
+  isAllowedBoxStatusTransition,
   normalizeEnum,
   normalizeOptionalBodyUuid,
   normalizeOptionalEnumQuery,
@@ -41,6 +42,7 @@ import {
   sanitizeAdminJson,
   summarizeByStatus,
   type BlindBoxRow,
+  type BoxStatusValue,
   type DropPoolItemRow,
   type DropPoolMutationResult,
   type DropPoolVersionRow,
@@ -77,6 +79,10 @@ type BlindBoxInput = {
   endsAt: string | null;
   sortOrder: number;
   metadata: ReturnType<typeof toJsonObject>;
+};
+
+type BlindBoxStatusRow = {
+  status: string;
 };
 
 const BOX_PRICE_RULE_COLUMNS = [
@@ -333,6 +339,18 @@ async function upsertBlindBox(input: {
   controls: ReturnType<typeof requireGachaWriteControls>;
 }) {
   const box = normalizeBlindBoxInput(input.body);
+  const currentStatus = await loadExistingBlindBoxStatus(
+    getSupabaseAdminClient(),
+    box,
+  );
+
+  if (currentStatus && !isAllowedBoxStatusTransition(currentStatus, box.status)) {
+    throw new ApiError(
+      400,
+      "VALIDATION_FAILED",
+      `Illegal blind box status transition: ${currentStatus} -> ${box.status}`,
+    );
+  }
 
   return await callGachaWriteRpc<DropPoolMutationResult>({
     functionName: "admin_upsert_blind_box",
@@ -363,6 +381,32 @@ async function upsertBlindBox(input: {
   });
 }
 
+async function loadExistingBlindBoxStatus(
+  db: SupabaseAdminClient,
+  input: Pick<BlindBoxInput, "id" | "slug">,
+): Promise<BoxStatusValue | null> {
+  const query = db.schema("gacha").from("blind_boxes").select("status");
+  const { data, error } = input.id
+    ? await query.eq("id", input.id).maybeSingle()
+    : await query.eq("slug", input.slug).maybeSingle();
+
+  assertReadSuccess(
+    error,
+    "ADMIN_BLIND_BOX_LOOKUP_FAILED",
+    "Failed to load blind box.",
+  );
+
+  if (!data) {
+    return null;
+  }
+
+  return normalizeEnum(
+    (data as unknown as BlindBoxStatusRow).status,
+    "current_status",
+    BOX_STATUS_VALUES,
+  );
+}
+
 async function updateBlindBoxStatus(input: {
   body: JsonRecord;
   adminUserId: string;
@@ -388,6 +432,18 @@ async function updateBlindBoxStatus(input: {
     "status",
     BOX_STATUS_VALUES,
   );
+  const currentStatus = await loadBlindBoxStatus(
+    getSupabaseAdminClient(),
+    boxId,
+  );
+
+  if (!isAllowedBoxStatusTransition(currentStatus, status)) {
+    throw new ApiError(
+      400,
+      "VALIDATION_FAILED",
+      `Illegal blind box status transition: ${currentStatus} -> ${status}`,
+    );
+  }
 
   return await callGachaWriteRpc<DropPoolMutationResult>({
     functionName: "admin_update_box_status",
@@ -402,6 +458,34 @@ async function updateBlindBoxStatus(input: {
     },
     fallbackCode: "ADMIN_BLIND_BOX_STATUS_UPDATE_FAILED",
   });
+}
+
+async function loadBlindBoxStatus(
+  db: SupabaseAdminClient,
+  boxId: string,
+): Promise<BoxStatusValue> {
+  const { data, error } = await db
+    .schema("gacha")
+    .from("blind_boxes")
+    .select("status")
+    .eq("id", boxId)
+    .maybeSingle();
+
+  assertReadSuccess(
+    error,
+    "ADMIN_BLIND_BOX_LOOKUP_FAILED",
+    "Failed to load blind box.",
+  );
+
+  if (!data) {
+    throw new ApiError(404, "ADMIN_BOX_NOT_FOUND", "Blind box not found.");
+  }
+
+  return normalizeEnum(
+    (data as unknown as BlindBoxStatusRow).status,
+    "current_status",
+    BOX_STATUS_VALUES,
+  );
 }
 
 function normalizeBlindBoxInput(body: JsonRecord): BlindBoxInput {

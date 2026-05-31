@@ -31,10 +31,41 @@ export const BOX_STATUS_VALUES = [
   "not_started",
   "active",
   "paused",
-  "ended",
   "sold_out",
-  "hidden",
+  "ended",
+  "archived",
 ] as const;
+export type BoxStatusValue = (typeof BOX_STATUS_VALUES)[number];
+
+const BOX_STATUS_TRANSITIONS: Readonly<
+  Record<BoxStatusValue, readonly BoxStatusValue[]>
+> = {
+  draft: ["not_started", "active"],
+  not_started: [],
+  active: ["paused", "sold_out", "ended"],
+  paused: [],
+  sold_out: [],
+  ended: ["archived"],
+  archived: [],
+};
+
+export function isBoxStatusValue(value: string): value is BoxStatusValue {
+  return (BOX_STATUS_VALUES as readonly string[]).includes(value);
+}
+
+export function isAllowedBoxStatusTransition(
+  currentStatus: string,
+  nextStatus: string,
+): boolean {
+  if (!isBoxStatusValue(currentStatus) || !isBoxStatusValue(nextStatus)) {
+    return false;
+  }
+
+  return (
+    currentStatus === nextStatus ||
+    BOX_STATUS_TRANSITIONS[currentStatus].includes(nextStatus)
+  );
+}
 
 export const BOX_TIER_VALUES = [
   "normal",

@@ -499,12 +499,13 @@ function normalizeBoxStatus(value: unknown): BoxStatus {
   const normalized = readString(value);
 
   if (
+    normalized === "draft" ||
     normalized === "not_started" ||
     normalized === "active" ||
     normalized === "paused" ||
-    normalized === "ended" ||
     normalized === "sold_out" ||
-    normalized === "hidden"
+    normalized === "ended" ||
+    normalized === "archived"
   ) {
     return normalized;
   }

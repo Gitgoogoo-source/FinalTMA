@@ -3,10 +3,11 @@ import { useCallback, useState } from "react";
 import { getApiErrorMessage } from "@/api/errors";
 import { useFeedback } from "@/app/providers/FeedbackProvider";
 import { useMyAssets } from "@/features/assets/hooks/useMyAssets";
+import { ActivityBanner } from "@/features/banners/components/ActivityBanner";
+import { useBanners } from "@/features/banners/hooks/useBanners";
 
 import { BuyConfirmDialog } from "../components/BuyConfirmDialog";
 import { ListingDetailSheet } from "../components/ListingDetailSheet";
-import { MarketBanner } from "../components/MarketBanner";
 import { MarketFilters } from "../components/MarketFilters";
 import { MarketListingGrid } from "../components/MarketListingGrid";
 import { useBuyListing } from "../hooks/useBuyListing";
@@ -21,6 +22,7 @@ export function BuyPage() {
   const { filters, hasActiveFilters, query, resetFilters, updateFilter } =
     useMarketFilters();
   const { isError, isLoading, listings, refetch } = useMarketListings(query);
+  const bannerQuery = useBanners("market_top");
   const buyListing = useBuyListing();
   const [detailListingId, setDetailListingId] = useState<string | null>(null);
   const [detailPreviewListing, setDetailPreviewListing] =
@@ -93,7 +95,12 @@ export function BuyPage() {
       role="tabpanel"
       tabIndex={0}
     >
-      <MarketBanner />
+      <ActivityBanner
+        banner={bannerQuery.primaryBanner}
+        fallbackDescription="用 K-coin 购买出售中的藏品，市场状态以服务端返回为准。"
+        fallbackTitle="精选藏品交易"
+        label="市场活动"
+      />
       <MarketFilters
         filters={filters}
         hasActiveFilters={hasActiveFilters}

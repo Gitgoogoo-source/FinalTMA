@@ -16,17 +16,28 @@ import type {
 } from "../admin.types";
 import { formatDate, shortId, StatusBadge } from "../admin.ui";
 
-const BOX_STATUSES = [
-  "",
+const BOX_STATUS_OPTIONS = [
   "draft",
   "not_started",
   "active",
   "paused",
   "sold_out",
   "ended",
-  "hidden",
-];
-const BOX_STATUS_OPTIONS = BOX_STATUSES.filter(Boolean);
+  "archived",
+] as const;
+type BoxStatusOption = (typeof BOX_STATUS_OPTIONS)[number];
+const BOX_STATUSES = ["", ...BOX_STATUS_OPTIONS] as const;
+const BOX_STATUS_TRANSITIONS: Readonly<
+  Record<BoxStatusOption, readonly BoxStatusOption[]>
+> = {
+  draft: ["not_started", "active"],
+  not_started: [],
+  active: ["paused", "sold_out", "ended"],
+  paused: [],
+  sold_out: [],
+  ended: ["archived"],
+  archived: [],
+};
 const BOX_TIERS = ["", "normal", "rare", "legendary", "event"];
 const PRICE_RULE_QUANTITIES = [1, 10];
 
@@ -86,6 +97,10 @@ export function BlindBoxesPage() {
   const selectedBox = useMemo(() => {
     return boxes.find((box) => box.id === selectedBoxId) ?? boxes[0] ?? null;
   }, [boxes, selectedBoxId]);
+  const draftStatusOptions = getEditableStatusOptions(
+    draft.id ? selectedBox?.status : null,
+  );
+  const nextStatusOptions = getEditableStatusOptions(selectedBox?.status);
 
   async function load() {
     setLoading(true);
@@ -231,11 +246,17 @@ export function BlindBoxesPage() {
 
   useEffect(() => {
     if (selectedBox) {
+      const statusOptions = getEditableStatusOptions(selectedBox.status);
+
       setDraft(toBlindBoxDraft(selectedBox));
       setPriceRuleDraft(
         toPriceRuleDraft(findEditablePriceRule(selectedBox), selectedBox.id),
       );
-      setNextStatus(selectedBox.status);
+      setNextStatus(
+        statusOptions.includes(selectedBox.status as BoxStatusOption)
+          ? selectedBox.status
+          : (statusOptions[0] ?? "draft"),
+      );
     } else {
       setDraft(createEmptyBlindBoxDraft());
       setPriceRuleDraft(createEmptyPriceRuleDraft(""));
@@ -449,7 +470,7 @@ export function BlindBoxesPage() {
                   }
                   value={draft.status}
                 >
-                  {BOX_STATUS_OPTIONS.map((item) => (
+                  {draftStatusOptions.map((item) => (
                     <option key={item} value={item}>
                       {item}
                     </option>
@@ -635,7 +656,7 @@ export function BlindBoxesPage() {
                     onChange={(event) => setNextStatus(event.target.value)}
                     value={nextStatus}
                   >
-                    {BOX_STATUS_OPTIONS.map((item) => (
+                    {nextStatusOptions.map((item) => (
                       <option key={item} value={item}>
                         {item}
                       </option>
@@ -873,6 +894,20 @@ function PriceRulesList({ box }: { box: BlindBoxAdminItem | null }) {
       ))}
     </div>
   );
+}
+
+function getEditableStatusOptions(
+  currentStatus: string | null | undefined,
+): BoxStatusOption[] {
+  if (!currentStatus || !isBoxStatusOption(currentStatus)) {
+    return [...BOX_STATUS_OPTIONS];
+  }
+
+  return [currentStatus, ...BOX_STATUS_TRANSITIONS[currentStatus]];
+}
+
+function isBoxStatusOption(value: string): value is BoxStatusOption {
+  return (BOX_STATUS_OPTIONS as readonly string[]).includes(value);
 }
 
 function createEmptyBlindBoxDraft(): BlindBoxDraft {
@@ -1118,7 +1153,7 @@ function getWindowPreviewStatus(input: {
     input.status === "paused" ||
     input.status === "sold_out" ||
     input.status === "ended" ||
-    input.status === "hidden"
+    input.status === "archived"
   ) {
     return input.status;
   }

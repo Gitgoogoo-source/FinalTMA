@@ -149,12 +149,13 @@ export const BoxTierSchema = z.enum([
 ]);
 
 export const BoxStatusSchema = z.enum([
+  "draft",
   "not_started",
   "active",
   "paused",
-  "ended",
   "sold_out",
-  "hidden",
+  "ended",
+  "archived",
 ]);
 
 export const BoxOpenTypeSchema = z.enum(["single", "ten"]);

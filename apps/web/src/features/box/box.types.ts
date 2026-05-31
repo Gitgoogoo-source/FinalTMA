@@ -1,10 +1,11 @@
 export type BoxStatus =
+  | "draft"
   | "not_started"
   | "active"
   | "paused"
-  | "ended"
   | "sold_out"
-  | "hidden";
+  | "ended"
+  | "archived";
 
 export type BoxTier = "normal" | "ordinary" | "rare" | "legendary" | "event";
 

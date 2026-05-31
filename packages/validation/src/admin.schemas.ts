@@ -210,12 +210,11 @@ export const FeatureFlagValueTypeSchema = z.enum([
 ]);
 
 export const BannerPlacementSchema = z.enum([
-  "TRADE_BUY_TOP",
-  "TASK_TOP",
-  "BOX_TOP",
-  "ALBUM_TOP",
-  "COLLECTION_TOP",
-  "HOME_POPUP",
+  "market_top",
+  "task_top",
+  "box_top",
+  "home_top",
+  "album_top",
 ]);
 
 export const BannerTargetTypeSchema = z.enum([

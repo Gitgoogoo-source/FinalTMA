@@ -3,6 +3,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { getApiErrorMessage } from "@/api/errors";
 import { useFeedback } from "@/app/providers/FeedbackProvider";
+import { ActivityBanner } from "@/features/banners/components/ActivityBanner";
+import { useBanners } from "@/features/banners/hooks/useBanners";
 import { formatCurrencyAmount } from "@/shared/lib/formatCurrency";
 
 import { BoxHero } from "../components/BoxHero";
@@ -53,6 +55,7 @@ export function BoxPage() {
     useState<PaymentOpenNotice | null>(null);
   const openRequestLockedRef = useRef(false);
   const boxesQuery = useBoxes();
+  const bannerQuery = useBanners("box_top");
   const boxes = boxesQuery.boxes;
   const defaultBoxId = useMemo(() => getDefaultBoxId(boxes), [boxes]);
 
@@ -370,6 +373,8 @@ export function BoxPage() {
 
   return (
     <section className="box-page" data-testid="box-page">
+      <ActivityBanner banner={bannerQuery.primaryBanner} label="开盒活动" />
+
       <BoxHero box={selectedBox} />
 
       <BoxTierSelector

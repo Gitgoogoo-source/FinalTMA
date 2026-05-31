@@ -49,7 +49,7 @@ values
   ('inactive_template', '64000000-0000-4000-8000-000000000203'),
   ('inactive_form', '64000000-0000-4000-8000-000000000204'),
   ('box', '64000000-0000-4000-8000-000000000301'),
-  ('hidden_box', '64000000-0000-4000-8000-000000000302'),
+  ('archived_box', '64000000-0000-4000-8000-000000000302'),
   ('empty_pool', '64000000-0000-4000-8000-000000000401'),
   ('valid_six_item_pool', '64000000-0000-4000-8000-000000000402'),
   ('probability_pool', '64000000-0000-4000-8000-000000000403'),
@@ -60,7 +60,7 @@ values
   ('pity_target_pool', '64000000-0000-4000-8000-000000000408'),
   ('scheduled_pool', '64000000-0000-4000-8000-000000000409'),
   ('scheduled_conflict_pool', '64000000-0000-4000-8000-000000000410'),
-  ('hidden_box_pool', '64000000-0000-4000-8000-000000000411'),
+  ('archived_box_pool', '64000000-0000-4000-8000-000000000411'),
   ('stock_item', '64000000-0000-4000-8000-000000000501'),
   ('stock_order', '64000000-0000-4000-8000-000000000601');
 
@@ -197,11 +197,11 @@ values
     100
   ),
   (
-    (select id from _ids where key = 'hidden_box'),
-    'phase6-publish-validation-hidden-box',
-    'Phase 6 Publish Validation Hidden Box',
+    (select id from _ids where key = 'archived_box'),
+    'phase6-publish-validation-archived-box',
+    'Phase 6 Publish Validation Archived Box',
     'normal',
-    'hidden',
+    'archived',
     1,
     100,
     100
@@ -222,7 +222,7 @@ values
   ((select id from _ids where key = 'pity_target_pool'), (select id from _ids where key = 'box'), 8, 'draft', '2029-08-01 00:00:00+00', '2029-09-01 00:00:00+00'),
   ((select id from _ids where key = 'scheduled_pool'), (select id from _ids where key = 'box'), 9, 'scheduled', '2030-01-01 00:00:00+00', '2030-02-01 00:00:00+00'),
   ((select id from _ids where key = 'scheduled_conflict_pool'), (select id from _ids where key = 'box'), 10, 'draft', '2030-01-15 00:00:00+00', '2030-03-01 00:00:00+00'),
-  ((select id from _ids where key = 'hidden_box_pool'), (select id from _ids where key = 'hidden_box'), 1, 'draft', '2029-09-01 00:00:00+00', '2029-10-01 00:00:00+00');
+  ((select id from _ids where key = 'archived_box_pool'), (select id from _ids where key = 'archived_box'), 1, 'draft', '2029-09-01 00:00:00+00', '2029-10-01 00:00:00+00');
 
 insert into gacha.drop_pool_items (
   id,
@@ -263,7 +263,7 @@ from (
     ((select id from _ids where key = 'pity_target_pool'), (select id from _ids where key = 'template'), (select id from _ids where key = 'form'), 'COMMON', 1::numeric, 10000, null::integer, null::integer, true),
     ((select id from _ids where key = 'scheduled_pool'), (select id from _ids where key = 'template'), (select id from _ids where key = 'form'), 'COMMON', 1::numeric, 10000, null::integer, null::integer, true),
     ((select id from _ids where key = 'scheduled_conflict_pool'), (select id from _ids where key = 'template'), (select id from _ids where key = 'form'), 'COMMON', 1::numeric, 10000, null::integer, null::integer, true),
-    ((select id from _ids where key = 'hidden_box_pool'), (select id from _ids where key = 'template'), (select id from _ids where key = 'form'), 'COMMON', 1::numeric, 10000, null::integer, null::integer, true)
+    ((select id from _ids where key = 'archived_box_pool'), (select id from _ids where key = 'template'), (select id from _ids where key = 'form'), 'COMMON', 1::numeric, 10000, null::integer, null::integer, true)
 ) as item(pool_id, template_id, form_id, rarity_code, drop_weight, probability_bps, stock_total, stock_remaining, is_pity_eligible);
 
 insert into gacha.drop_pool_items (
@@ -333,9 +333,9 @@ insert into gacha.pity_rules (
   metadata
 )
 values (
-  (select id from _ids where key = 'hidden_box'),
-  (select id from _ids where key = 'hidden_box_pool'),
-  'hidden box pool pity',
+  (select id from _ids where key = 'archived_box'),
+  (select id from _ids where key = 'archived_box_pool'),
+  'archived box pool pity',
   5,
   'COMMON',
   10,
@@ -475,10 +475,10 @@ select ok(
 
 select ok(
   testutil.validation_has_code(
-    api._admin_validate_drop_pool_config((select id from _ids where key = 'hidden_box_pool')),
+    api._admin_validate_drop_pool_config((select id from _ids where key = 'archived_box_pool')),
     'ADMIN_BOX_NOT_PUBLISHABLE'
   ),
-  'publish validation rejects non-publishable blind boxes'
+  'publish validation rejects archived blind boxes'
 );
 
 select ok(
