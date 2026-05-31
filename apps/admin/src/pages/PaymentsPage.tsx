@@ -1,14 +1,20 @@
-import { Eye, RefreshCw } from "lucide-react";
+import { Eye, RefreshCw, RotateCcw } from "lucide-react";
 import { useEffect, useState } from "react";
 
-import { fetchPayments } from "../admin.api";
+import {
+  AdminApiError,
+  fetchPayments,
+  retryPaymentFulfillment,
+} from "../admin.api";
 import type {
   PaymentAdminResponse,
   PaymentDispute,
+  PaymentOrder,
   PaymentRefund,
   WebhookEvent,
 } from "../admin.types";
 import { formatDate, shortId, StatusBadge } from "../admin.ui";
+import { ConfirmDangerDialog } from "../components/ConfirmDangerDialog";
 import { PaymentDetailSheet } from "./PaymentDetailSheet";
 
 const PAYMENT_STATUSES = [
@@ -26,6 +32,15 @@ const PAYMENT_STATUSES = [
 const EVENT_STATUSES = ["", "pending", "processing", "processed", "failed"];
 const REFUND_STATUSES = ["", "created", "pending", "processed", "failed"];
 const DISPUTE_STATUSES = ["", "open", "reviewing", "resolved", "rejected"];
+const RETRYABLE_PAYMENT_STATUSES = new Set(["paid", "fulfilling", "failed"]);
+
+type RetryDraft = {
+  order: PaymentOrder;
+};
+
+type LoadOptions = {
+  preserveDetailOrderId?: boolean;
+};
 
 export function PaymentsPage({
   canViewPaymentDebug = false,
@@ -41,10 +56,13 @@ export function PaymentsPage({
   const [data, setData] = useState<PaymentAdminResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [busyOrderId, setBusyOrderId] = useState<string | null>(null);
+  const [retryDraft, setRetryDraft] = useState<RetryDraft | null>(null);
+  const [detailRefreshKey, setDetailRefreshKey] = useState(0);
   const detailOrder =
     data?.orders.find((order) => order.id === detailOrderId) ?? null;
 
-  async function load() {
+  async function load(options: LoadOptions = {}) {
     setLoading(true);
     setError(null);
 
@@ -60,7 +78,9 @@ export function PaymentsPage({
 
       setData(response);
       setDetailOrderId((current) =>
-        current && response.orders.some((order) => order.id === current)
+        current &&
+        (options.preserveDetailOrderId ||
+          response.orders.some((order) => order.id === current))
           ? current
           : null,
       );
@@ -70,6 +90,30 @@ export function PaymentsPage({
       );
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function confirmRetry(reason: string) {
+    if (!retryDraft) {
+      return;
+    }
+
+    setBusyOrderId(retryDraft.order.id);
+    setError(null);
+
+    try {
+      await retryPaymentFulfillment({
+        starOrderId: retryDraft.order.id,
+        reason,
+      });
+      setDetailOrderId(retryDraft.order.id);
+      setDetailRefreshKey((current) => current + 1);
+      setRetryDraft(null);
+      await load({ preserveDetailOrderId: true });
+    } catch (retryError) {
+      setError(formatAdminActionError(retryError, "支付发货重试失败"));
+    } finally {
+      setBusyOrderId(null);
     }
   }
 
@@ -211,6 +255,7 @@ export function PaymentsPage({
       <PaymentDetailSheet
         canViewDebug={canViewPaymentDebug}
         fallbackOrder={detailOrder}
+        key={`${detailOrderId ?? "none"}:${detailRefreshKey}`}
         onClose={() => setDetailOrderId(null)}
         starOrderId={detailOrderId}
       />
@@ -246,18 +291,38 @@ export function PaymentsPage({
               <p className="muted">暂无异常订单</p>
             ) : (
               data?.exceptions.map((order) => (
-                <button
-                  className="list-row list-row--button"
-                  key={order.id}
-                  onClick={() => setDetailOrderId(order.id)}
-                  type="button"
-                >
+                <div className="list-row" key={order.id}>
                   <span>
                     <strong>{shortId(order.id)}</strong>
                     <small>{order.error_message ?? order.status}</small>
                   </span>
-                  <StatusBadge status={order.status} />
-                </button>
+                  <span className="list-row__actions">
+                    <StatusBadge status={order.status} />
+                    <button
+                      className="text-button text-button--with-icon"
+                      onClick={() => setDetailOrderId(order.id)}
+                      type="button"
+                    >
+                      <Eye aria-hidden="true" size={15} />
+                      <span>详情</span>
+                    </button>
+                    <button
+                      className="icon-button"
+                      disabled={
+                        busyOrderId === order.id ||
+                        !RETRYABLE_PAYMENT_STATUSES.has(order.status)
+                      }
+                      onClick={() => setRetryDraft({ order })}
+                      title="重试发货"
+                      type="button"
+                    >
+                      <RotateCcw aria-hidden="true" size={16} />
+                      <span>
+                        {busyOrderId === order.id ? "提交中" : "重试发货"}
+                      </span>
+                    </button>
+                  </span>
+                </div>
               ))
             )}
           </div>
@@ -268,6 +333,18 @@ export function PaymentsPage({
         <PaymentsRefunds refunds={data?.refunds ?? []} />
         <PaymentsDisputes disputes={data?.disputes ?? []} />
       </div>
+
+      <ConfirmDangerDialog
+        confirmLabel="确认重试"
+        description="仅对 paid、fulfilling、failed 且未完成发货的订单执行幂等补偿。"
+        isOpen={retryDraft !== null}
+        pending={retryDraft ? busyOrderId === retryDraft.order.id : false}
+        targetLabel="支付订单"
+        targetValue={retryDraft?.order.id ?? ""}
+        title="手动重试发货"
+        onCancel={() => setRetryDraft(null)}
+        onConfirm={(confirmation) => confirmRetry(confirmation.reason)}
+      />
     </section>
   );
 }
@@ -423,4 +500,14 @@ function StatusStrip(props: {
       ))}
     </div>
   );
+}
+
+function formatAdminActionError(error: unknown, fallback: string): string {
+  if (error instanceof AdminApiError) {
+    const requestId = error.requestId ? `，requestId: ${error.requestId}` : "";
+
+    return `${error.code}: ${error.message}${requestId}`;
+  }
+
+  return error instanceof Error ? error.message : fallback;
 }

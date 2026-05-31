@@ -147,6 +147,24 @@ export async function retryMintQueue(input: {
   });
 }
 
+export async function retryPaymentFulfillment(input: {
+  starOrderId: string;
+  reason: string;
+}): Promise<AdminConfigMutationResponse> {
+  return adminRequest<AdminConfigMutationResponse>(
+    "/api/admin/retry-payment-fulfillment",
+    {
+      method: "POST",
+      headers: buildDangerHeaders("admin-retry-payment", input.starOrderId),
+      body: {
+        starOrderId: input.starOrderId,
+        reason: input.reason,
+        confirm: true,
+      },
+    },
+  );
+}
+
 export async function fetchWallets(
   params: QueryParams = {},
 ): Promise<WalletsResponse> {
