@@ -25,6 +25,10 @@
     {
       "path": "/api/cron/sync-onchain-transactions",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/sync-campaign-box-statuses",
+      "schedule": "*/5 * * * *"
     }
   ],
   "functions": {
