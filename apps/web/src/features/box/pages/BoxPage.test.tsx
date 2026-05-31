@@ -44,6 +44,18 @@ vi.mock("../hooks/useBoxes", () => ({
   }),
 }));
 
+vi.mock("@/features/banners/hooks/useBanners", () => ({
+  useBanners: () => ({
+    banners: [],
+    error: null,
+    isError: false,
+    isLoading: false,
+    primaryBanner: null,
+    refetch: vi.fn(),
+    serverTime: null,
+  }),
+}));
+
 vi.mock("../hooks/useBoxRewards", () => ({
   useBoxRewards: () => ({
     error: null,
@@ -327,6 +339,29 @@ describe("BoxPage Stars invoice flow", () => {
     fireEvent.click(openOnceButton);
 
     expect(mocks.createOrderMutate).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows not_started boxes but keeps payment actions disabled", () => {
+    mocks.boxes = [
+      createBox({
+        disabledReason: "活动未开始",
+        isOpenable: false,
+        status: "not_started",
+      }),
+    ];
+
+    renderBoxPage();
+
+    expect(screen.getAllByText("未开始 · 活动未开始").length).toBeGreaterThan(
+      0,
+    );
+
+    const openOnceButton = screen.getByRole("button", { name: /^开 1 次/ });
+    expect(openOnceButton).toBeDisabled();
+
+    fireEvent.click(openOnceButton);
+
+    expect(mocks.createOrderMutate).not.toHaveBeenCalled();
   });
 
   it("uses the displayed ten-draw price as the expected order price and shows the returned amount", async () => {
