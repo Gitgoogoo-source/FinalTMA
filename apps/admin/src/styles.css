@@ -526,6 +526,12 @@ tr.is-selected td {
   color: #8a5a00;
 }
 
+.status-badge--info {
+  border-color: #b9d5f0;
+  background: #f1f8ff;
+  color: #1d5f91;
+}
+
 .split-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(320px, 0.6fr);
@@ -722,6 +728,16 @@ tr.is-selected td {
   gap: 8px;
 }
 
+.payment-detail-section__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.payment-detail-section__links a {
+  text-decoration: none;
+}
+
 .payment-detail-section {
   display: grid;
   gap: 10px;
@@ -747,6 +763,32 @@ tr.is-selected td {
   font-size: 12px;
   line-height: 1.5;
   white-space: pre-wrap;
+}
+
+.payment-diagnostics-table td {
+  vertical-align: top;
+}
+
+.payment-diagnostics-table strong,
+.payment-diagnostics-table small {
+  display: block;
+}
+
+.payment-diagnostics-table small {
+  margin-top: 3px;
+  color: #657583;
+}
+
+.payment-diagnostics-row--critical td {
+  background: #fff7f7;
+}
+
+.payment-diagnostics-row--warning td {
+  background: #fffaf0;
+}
+
+.payment-diagnostics-row--info td {
+  background: #f6fbff;
 }
 
 .form-grid input,

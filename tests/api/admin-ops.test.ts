@@ -801,6 +801,16 @@ describe("admin ops APIs", () => {
           created_at: "2026-05-29T00:00:04.000Z",
         },
       ],
+      "economy.user_balances": [
+        {
+          user_id: ADMIN_CONTEXT.userId,
+          currency_code: "KCOIN",
+          available_amount: 100,
+          locked_amount: 0,
+          updated_at: "2026-05-29T00:00:04.000Z",
+          created_at: "2026-05-29T00:00:04.000Z",
+        },
+      ],
       "payments.telegram_webhook_events": [
         {
           id: "16161616-1616-4161-8161-161616161616",
@@ -891,6 +901,13 @@ describe("admin ops APIs", () => {
           requestId: "req-payment-detail-1",
           stack: "stack only for debug admins",
         },
+        diagnostics: [
+          {
+            code: "PAID_NOT_FULFILLED",
+            severity: "critical",
+            related_id: STAR_ORDER_ID,
+          },
+        ],
       },
     });
     expect(requireAdminMock).toHaveBeenCalledWith(
@@ -925,6 +942,183 @@ describe("admin ops APIs", () => {
         }),
       ]),
     );
+  });
+
+  it("returns payment diagnostics for fulfillment integrity anomalies", async () => {
+    const duplicateOrderId = "66666666-6666-4666-8666-666666666667";
+    const duplicatePaymentId = "77777777-7777-4777-8777-777777777778";
+    const db = createAdminReadDbMock({
+      "payments.star_orders": [
+        {
+          id: STAR_ORDER_ID,
+          user_id: ADMIN_CONTEXT.userId,
+          business_type: "gacha_open",
+          business_id: DRAW_ORDER_ID,
+          status: "fulfilled",
+          xtr_amount: 10,
+          telegram_invoice_payload: "invoice-admin-diagnostics-test",
+          title: "Admin diagnostics payment",
+          description: null,
+          idempotency_key: "payment-diagnostics-order-idem",
+          expires_at: null,
+          precheckout_at: null,
+          paid_at: "2026-05-29T00:00:00.000Z",
+          fulfilled_at: "2026-05-29T00:00:05.000Z",
+          error_message: null,
+          metadata: {},
+          created_at: "2026-05-29T00:00:00.000Z",
+          updated_at: "2026-05-29T00:00:05.000Z",
+        },
+      ],
+      "payments.star_payments": [
+        {
+          id: PAYMENT_ID,
+          star_order_id: STAR_ORDER_ID,
+          user_id: ADMIN_CONTEXT.userId,
+          telegram_payment_charge_id: "telegram-charge-duplicate",
+          provider_payment_charge_id: null,
+          xtr_amount: 10,
+          currency: "XTR",
+          invoice_payload: "invoice-admin-diagnostics-test",
+          paid_at: "2026-05-29T00:00:01.000Z",
+          created_at: "2026-05-29T00:00:01.000Z",
+          metadata: {},
+        },
+        {
+          id: duplicatePaymentId,
+          star_order_id: duplicateOrderId,
+          user_id: ADMIN_CONTEXT.userId,
+          telegram_payment_charge_id: "telegram-charge-duplicate",
+          provider_payment_charge_id: null,
+          xtr_amount: 10,
+          currency: "XTR",
+          invoice_payload: "invoice-admin-diagnostics-duplicate",
+          paid_at: "2026-05-29T00:00:02.000Z",
+          created_at: "2026-05-29T00:00:02.000Z",
+          metadata: {},
+        },
+      ],
+      "gacha.draw_orders": [
+        {
+          id: DRAW_ORDER_ID,
+          user_id: ADMIN_CONTEXT.userId,
+          box_id: BOX_ID,
+          pool_version_id: null,
+          payment_star_order_id: STAR_ORDER_ID,
+          status: "completed",
+          quantity: 10,
+          draw_count: 10,
+          unit_price_stars: 10,
+          discount_bps: 1000,
+          total_price_stars: 90,
+          open_reward_kcoin: 100,
+          invoice_payload: "invoice-admin-diagnostics-test",
+          paid_at: "2026-05-29T00:00:01.000Z",
+          opened_at: "2026-05-29T00:00:05.000Z",
+          payment_provider: "telegram_stars",
+          payment_status: "paid",
+          star_amount: 90,
+          telegram_invoice_payload: "invoice-admin-diagnostics-test",
+          telegram_payment_charge_id: "telegram-charge-duplicate",
+          error_message: null,
+          metadata: {},
+          created_at: "2026-05-29T00:00:00.000Z",
+          updated_at: "2026-05-29T00:00:05.000Z",
+        },
+      ],
+      "gacha.draw_results": [
+        {
+          id: DRAW_RESULT_ID,
+          draw_order_id: DRAW_ORDER_ID,
+          user_id: ADMIN_CONTEXT.userId,
+          box_id: BOX_ID,
+          pool_version_id: null,
+          draw_index: 1,
+          drop_pool_item_id: null,
+          item_instance_id: ITEM_INSTANCE_ID,
+          template_id: "15151515-1515-4151-8151-151515151515",
+          form_id: null,
+          rarity_code: "N",
+          was_pity: false,
+          random_roll: 1234,
+          metadata: {},
+          created_at: "2026-05-29T00:00:03.000Z",
+        },
+      ],
+      "inventory.item_instances": [],
+      "economy.currency_ledger": [
+        {
+          id: LEDGER_ID,
+          user_id: ADMIN_CONTEXT.userId,
+          currency_code: "KCOIN",
+          entry_type: "credit",
+          amount: 100,
+          available_before: 100,
+          available_after: 200,
+          locked_before: 0,
+          locked_after: 0,
+          source_type: "gacha_open",
+          source_id: DRAW_ORDER_ID,
+          source_ref: "invoice-admin-diagnostics-test",
+          idempotency_key: "ledger-payment-diagnostics",
+          note: "open reward",
+          created_at: "2026-05-29T00:00:04.000Z",
+        },
+      ],
+      "economy.user_balances": [
+        {
+          user_id: ADMIN_CONTEXT.userId,
+          currency_code: "KCOIN",
+          available_amount: 150,
+          locked_amount: 0,
+          updated_at: "2026-05-29T00:00:04.000Z",
+          created_at: "2026-05-29T00:00:04.000Z",
+        },
+      ],
+    });
+    getSupabaseAdminClientMock.mockReturnValue(db.client);
+
+    const { default: paymentDetailHandler } =
+      await import("../../api/admin/payment-detail");
+    const result = await invokeApiHandler<ApiSuccessResponse>(
+      paymentDetailHandler,
+      {
+        method: "GET",
+        url: `/api/admin/payment-detail?starOrderId=${STAR_ORDER_ID}`,
+        query: {
+          starOrderId: STAR_ORDER_ID,
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(200);
+    expect(result.body).toMatchObject({
+      ok: true,
+      data: {
+        diagnostics: expect.arrayContaining([
+          expect.objectContaining({
+            code: "DRAW_RESULTS_COUNT_MISMATCH",
+            severity: "critical",
+            related_id: DRAW_ORDER_ID,
+          }),
+          expect.objectContaining({
+            code: "DUPLICATE_TELEGRAM_CHARGE_ID",
+            severity: "critical",
+            related_id: "telegram-charge-duplicate",
+          }),
+          expect.objectContaining({
+            code: "DRAW_RESULT_ITEM_INSTANCE_MISSING",
+            severity: "critical",
+            related_id: DRAW_RESULT_ID,
+          }),
+          expect.objectContaining({
+            code: "LEDGER_BALANCE_MISMATCH",
+            severity: "critical",
+            related_id: ADMIN_CONTEXT.userId,
+          }),
+        ]),
+      },
+    });
   });
 
   it("lets admins query phase 5 monitoring metrics", async () => {

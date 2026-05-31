@@ -1,8 +1,9 @@
-import { RefreshCw, X } from "lucide-react";
+import { ExternalLink, RefreshCw, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import { AdminApiError, fetchPaymentDetail } from "../admin.api";
 import type {
+  PaymentDetailDiagnostic,
   PaymentDetailDrawOrder,
   PaymentDetailErrorContext,
   PaymentDetailItemInstance,
@@ -107,6 +108,7 @@ export function PaymentDetailSheet(props: PaymentDetailSheetProps) {
         {loading ? <p className="notice">详情加载中...</p> : null}
         {error ? <LoadErrorNotice error={error} /> : null}
 
+        {data ? <DiagnosticsSection diagnostics={data.diagnostics} /> : null}
         {order ? <OrderSection order={order} /> : null}
         <PaymentRecordSection payment={payment} />
         <UserSection user={data?.user ?? null} />
@@ -122,6 +124,71 @@ export function PaymentDetailSheet(props: PaymentDetailSheetProps) {
         />
       </section>
     </div>
+  );
+}
+
+function DiagnosticsSection({
+  diagnostics,
+}: {
+  diagnostics: PaymentDetailDiagnostic[];
+}) {
+  const sortedDiagnostics = [...diagnostics].sort(compareDiagnostics);
+
+  return (
+    <section className="payment-detail-section">
+      <div className="payment-detail-section__title">
+        <h3>异常诊断</h3>
+        <span className="status-badge">{diagnostics.length}</span>
+      </div>
+      <div className="payment-detail-section__links">
+        <a className="icon-button" href="#monitoring">
+          <ExternalLink aria-hidden="true" size={14} />
+          <span>对账 / 监控</span>
+        </a>
+        <a className="icon-button" href="#danger">
+          <ExternalLink aria-hidden="true" size={14} />
+          <span>风控处理</span>
+        </a>
+      </div>
+      {sortedDiagnostics.length === 0 ? (
+        <p className="muted">暂无异常诊断</p>
+      ) : (
+        <div className="table-wrap table-wrap--small">
+          <table className="payment-diagnostics-table">
+            <thead>
+              <tr>
+                <th>级别</th>
+                <th>异常</th>
+                <th>关联</th>
+                <th>建议</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sortedDiagnostics.map((diagnostic) => (
+                <tr
+                  className={`payment-diagnostics-row payment-diagnostics-row--${diagnostic.severity}`}
+                  key={`${diagnostic.code}:${diagnostic.related_id ?? "none"}`}
+                >
+                  <td>
+                    <StatusBadge status={diagnostic.severity} />
+                  </td>
+                  <td>
+                    <strong>{diagnostic.code}</strong>
+                    <small>{diagnostic.message}</small>
+                  </td>
+                  <td>
+                    {diagnostic.related_id
+                      ? shortId(diagnostic.related_id)
+                      : "-"}
+                  </td>
+                  <td>{diagnostic.suggested_action}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -649,4 +716,28 @@ function stringifyJson(value: unknown): string {
   } catch {
     return String(value);
   }
+}
+
+const DIAGNOSTIC_SEVERITY_ORDER: Record<
+  PaymentDetailDiagnostic["severity"],
+  number
+> = {
+  critical: 0,
+  warning: 1,
+  info: 2,
+};
+
+function compareDiagnostics(
+  left: PaymentDetailDiagnostic,
+  right: PaymentDetailDiagnostic,
+): number {
+  const severityDelta =
+    DIAGNOSTIC_SEVERITY_ORDER[left.severity] -
+    DIAGNOSTIC_SEVERITY_ORDER[right.severity];
+
+  if (severityDelta !== 0) {
+    return severityDelta;
+  }
+
+  return left.code.localeCompare(right.code);
 }

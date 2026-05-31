@@ -128,14 +128,23 @@ type CurrencyLedgerRow = {
   entry_type: string;
   amount: number | string;
   available_before: number | string | null;
-  available_after: number | string;
+  available_after: number | string | null;
   locked_before: number | string | null;
-  locked_after: number | string;
+  locked_after: number | string | null;
   source_type: string;
   source_id: string | null;
   source_ref: string | null;
   idempotency_key: string | null;
   note: string | null;
+  created_at: string;
+};
+
+type UserBalanceRow = {
+  user_id: string;
+  currency_code: string;
+  available_amount: number | string;
+  locked_amount: number | string;
+  updated_at: string;
   created_at: string;
 };
 
@@ -166,6 +175,16 @@ type PaymentDetailErrorContext = {
   errorStack?: string | null;
   stack?: string | null;
   raw?: unknown;
+};
+
+type PaymentDiagnosticSeverity = "critical" | "warning" | "info";
+
+type PaymentDiagnostic = {
+  severity: PaymentDiagnosticSeverity;
+  code: string;
+  message: string;
+  related_id: string | null;
+  suggested_action: string;
 };
 
 const STAR_ORDER_COLUMNS = [
@@ -296,6 +315,15 @@ const LEDGER_COLUMNS = [
   "created_at",
 ].join(",");
 
+const USER_BALANCE_COLUMNS = [
+  "user_id",
+  "currency_code",
+  "available_amount",
+  "locked_amount",
+  "updated_at",
+  "created_at",
+].join(",");
+
 const WEBHOOK_EVENT_COLUMNS = [
   "id",
   "update_id",
@@ -371,16 +399,52 @@ export default withApiHandler(
       order.user_id,
       ledgerSourceIds,
     );
+    const ledgerCurrencyCodes = uniqueStrings(
+      ledgerEntries.map((entry) => entry.currency_code),
+    );
+    const [duplicateChargePayments, userBalances, latestLedgerEntries] =
+      await Promise.all([
+        loadPaymentsByTelegramChargeId(
+          db,
+          payment?.telegram_payment_charge_id ?? null,
+        ),
+        loadUserBalances(db, order.user_id, ledgerCurrencyCodes),
+        loadLatestLedgerEntriesByCurrency(
+          db,
+          order.user_id,
+          ledgerCurrencyCodes,
+        ),
+      ]);
+    const normalizedOrder = normalizeOrder(order);
+    const normalizedPayment = payment ? normalizePayment(payment) : null;
+    const normalizedDrawOrder = drawOrder
+      ? normalizeDrawOrder(drawOrder)
+      : null;
+    const normalizedDrawResults = drawResults.map(normalizeDrawResult);
+    const normalizedItemInstances = itemInstances.map(normalizeItemInstance);
+    const normalizedLedgerEntries = ledgerEntries.map(normalizeLedgerEntry);
+    const diagnostics = buildDiagnostics({
+      order: normalizedOrder,
+      payment: normalizedPayment,
+      drawOrder: normalizedDrawOrder,
+      drawResults: normalizedDrawResults,
+      itemInstances: normalizedItemInstances,
+      ledgerEntries: normalizedLedgerEntries,
+      duplicateChargePayments: duplicateChargePayments.map(normalizePayment),
+      userBalances: userBalances.map(normalizeUserBalance),
+      latestLedgerEntries: latestLedgerEntries.map(normalizeLedgerEntry),
+    });
 
     return {
-      order: normalizeOrder(order),
+      order: normalizedOrder,
       user: user ? normalizeUser(user) : null,
-      payment: payment ? normalizePayment(payment) : null,
-      drawOrder: drawOrder ? normalizeDrawOrder(drawOrder) : null,
-      drawResults: drawResults.map(normalizeDrawResult),
-      itemInstances: itemInstances.map(normalizeItemInstance),
-      ledgerEntries: ledgerEntries.map(normalizeLedgerEntry),
+      payment: normalizedPayment,
+      drawOrder: normalizedDrawOrder,
+      drawResults: normalizedDrawResults,
+      itemInstances: normalizedItemInstances,
+      ledgerEntries: normalizedLedgerEntries,
       webhookEvents: webhookEvents.map(normalizeWebhookEvent),
+      diagnostics,
       errorContext: buildErrorContext(order, webhookEvents, canViewDebug),
       serverTime: new Date().toISOString(),
     };
@@ -465,6 +529,34 @@ async function loadPayment(
   }
 
   return firstRow<StarPaymentRow>(data);
+}
+
+async function loadPaymentsByTelegramChargeId(
+  db: SupabaseAdminClient,
+  telegramPaymentChargeId: string | null,
+): Promise<StarPaymentRow[]> {
+  if (!telegramPaymentChargeId) {
+    return [];
+  }
+
+  const { data, error } = await db
+    .schema("payments")
+    .from("star_payments")
+    .select(STAR_PAYMENT_COLUMNS)
+    .eq("telegram_payment_charge_id", telegramPaymentChargeId)
+    .order("created_at", { ascending: false })
+    .limit(10);
+
+  if (error) {
+    throw new ApiError(
+      500,
+      "ADMIN_STAR_PAYMENT_CHARGE_LOOKUP_FAILED",
+      "Star payment charge lookup failed",
+      { expose: false, cause: error },
+    );
+  }
+
+  return rows<StarPaymentRow>(data);
 }
 
 async function loadDrawOrderByPaymentOrder(
@@ -594,6 +686,72 @@ async function loadLedgerEntries(
   return rows<CurrencyLedgerRow>(data);
 }
 
+async function loadUserBalances(
+  db: SupabaseAdminClient,
+  userId: string,
+  currencyCodes: string[],
+): Promise<UserBalanceRow[]> {
+  if (currencyCodes.length === 0) {
+    return [];
+  }
+
+  const { data, error } = await db
+    .schema("economy")
+    .from("user_balances")
+    .select(USER_BALANCE_COLUMNS)
+    .eq("user_id", userId)
+    .in("currency_code", currencyCodes);
+
+  if (error) {
+    throw new ApiError(
+      500,
+      "ADMIN_USER_BALANCE_LOOKUP_FAILED",
+      "User balance lookup failed",
+      { expose: false, cause: error },
+    );
+  }
+
+  return rows<UserBalanceRow>(data);
+}
+
+async function loadLatestLedgerEntriesByCurrency(
+  db: SupabaseAdminClient,
+  userId: string,
+  currencyCodes: string[],
+): Promise<CurrencyLedgerRow[]> {
+  if (currencyCodes.length === 0) {
+    return [];
+  }
+
+  const { data, error } = await db
+    .schema("economy")
+    .from("currency_ledger")
+    .select(LEDGER_COLUMNS)
+    .eq("user_id", userId)
+    .in("currency_code", currencyCodes)
+    .order("created_at", { ascending: false })
+    .limit(200);
+
+  if (error) {
+    throw new ApiError(
+      500,
+      "ADMIN_LATEST_LEDGER_LOOKUP_FAILED",
+      "Latest ledger lookup failed",
+      { expose: false, cause: error },
+    );
+  }
+
+  const byCurrency = new Map<string, CurrencyLedgerRow>();
+
+  for (const row of rows<CurrencyLedgerRow>(data)) {
+    if (!byCurrency.has(row.currency_code)) {
+      byCurrency.set(row.currency_code, row);
+    }
+  }
+
+  return [...byCurrency.values()];
+}
+
 async function loadWebhookEvents(
   db: SupabaseAdminClient,
   invoicePayload: string,
@@ -675,10 +833,19 @@ function normalizeLedgerEntry(row: CurrencyLedgerRow): CurrencyLedgerRow {
     amount: Number(row.amount),
     available_before:
       row.available_before === null ? null : Number(row.available_before),
-    available_after: Number(row.available_after),
+    available_after:
+      row.available_after === null ? null : Number(row.available_after),
     locked_before:
       row.locked_before === null ? null : Number(row.locked_before),
-    locked_after: Number(row.locked_after),
+    locked_after: row.locked_after === null ? null : Number(row.locked_after),
+  };
+}
+
+function normalizeUserBalance(row: UserBalanceRow): UserBalanceRow {
+  return {
+    ...row,
+    available_amount: Number(row.available_amount),
+    locked_amount: Number(row.locked_amount),
   };
 }
 
@@ -691,6 +858,144 @@ function normalizeWebhookEvent(row: WebhookEventRow): WebhookEventRow {
         ? null
         : Number(row.processing_duration_ms),
   };
+}
+
+function buildDiagnostics(input: {
+  order: StarOrderRow;
+  payment: StarPaymentRow | null;
+  drawOrder: DrawOrderRow | null;
+  drawResults: DrawResultRow[];
+  itemInstances: ItemInstanceRow[];
+  ledgerEntries: CurrencyLedgerRow[];
+  duplicateChargePayments: StarPaymentRow[];
+  userBalances: UserBalanceRow[];
+  latestLedgerEntries: CurrencyLedgerRow[];
+}): PaymentDiagnostic[] {
+  const diagnostics: PaymentDiagnostic[] = [];
+  const isPaidUnfulfilledStatus = ["paid", "fulfilling", "failed"].includes(
+    input.order.status,
+  );
+  const isFulfilled =
+    input.order.status === "fulfilled" || Boolean(input.order.fulfilled_at);
+
+  if (isPaidUnfulfilledStatus && !input.order.fulfilled_at) {
+    diagnostics.push({
+      severity: "critical",
+      code: "PAID_NOT_FULFILLED",
+      message: "订单已收款但未完成发货。",
+      related_id: input.order.id,
+      suggested_action:
+        "在支付监控确认 webhook/RPC 状态，必要时重试发货或进入退款流程。",
+    });
+  }
+
+  if (isFulfilled && input.drawResults.length === 0) {
+    diagnostics.push({
+      severity: "critical",
+      code: "FULFILLED_WITHOUT_DRAW_RESULTS",
+      message: "订单已标记 fulfilled，但没有生成 draw_results。",
+      related_id: input.drawOrder?.id ?? input.order.id,
+      suggested_action: "进入对账检查发货链路，并按补偿流程处理库存和奖励。",
+    });
+  }
+
+  if (
+    input.drawOrder &&
+    input.drawResults.length !== Number(input.drawOrder.draw_count)
+  ) {
+    diagnostics.push({
+      severity: isFulfilled ? "critical" : "warning",
+      code: "DRAW_RESULTS_COUNT_MISMATCH",
+      message: `draw_results 数量为 ${input.drawResults.length}，与 draw_count ${input.drawOrder.draw_count} 不一致。`,
+      related_id: input.drawOrder.id,
+      suggested_action:
+        "进入对账核对 draw_order 与 draw_results，确认是否需要补偿发货。",
+    });
+  }
+
+  const chargeId = input.payment?.telegram_payment_charge_id ?? null;
+  const duplicateChargePaymentIds = uniqueStrings(
+    input.duplicateChargePayments
+      .filter((payment) => payment.telegram_payment_charge_id === chargeId)
+      .map((payment) => payment.id),
+  );
+
+  if (chargeId && duplicateChargePaymentIds.length > 1) {
+    diagnostics.push({
+      severity: "critical",
+      code: "DUPLICATE_TELEGRAM_CHARGE_ID",
+      message: `同一个 Telegram charge id 关联了 ${duplicateChargePaymentIds.length} 条支付记录。`,
+      related_id: chargeId,
+      suggested_action: "暂停自动补偿，进入风控和对账检查重复支付来源。",
+    });
+  }
+
+  const itemInstanceIds = new Set(input.itemInstances.map((item) => item.id));
+
+  for (const result of input.drawResults) {
+    if (
+      result.item_instance_id &&
+      !itemInstanceIds.has(result.item_instance_id)
+    ) {
+      diagnostics.push({
+        severity: "critical",
+        code: "DRAW_RESULT_ITEM_INSTANCE_MISSING",
+        message: "draw_result 指向的 item_instance 不存在或未被详情接口读到。",
+        related_id: result.id,
+        suggested_action:
+          "进入对账检查库存生成链路，必要时人工补偿或标记风险事件。",
+      });
+    }
+  }
+
+  const balancesByCurrency = new Map(
+    input.userBalances.map((balance) => [balance.currency_code, balance]),
+  );
+  const latestLedgerByCurrency = new Map(
+    input.latestLedgerEntries.map((entry) => [entry.currency_code, entry]),
+  );
+
+  for (const currencyCode of uniqueStrings(
+    input.ledgerEntries.map((entry) => entry.currency_code),
+  )) {
+    const latestLedger = latestLedgerByCurrency.get(currencyCode);
+
+    if (!latestLedger) {
+      continue;
+    }
+
+    const balance = balancesByCurrency.get(currencyCode);
+
+    if (!balance) {
+      diagnostics.push({
+        severity: "critical",
+        code: "BALANCE_SNAPSHOT_MISSING",
+        message: `${currencyCode} 存在 ledger，但缺少 user_balances 快照。`,
+        related_id: input.order.user_id,
+        suggested_action: "进入对账重建余额快照，并检查是否存在发货补偿遗漏。",
+      });
+      continue;
+    }
+
+    if (
+      !sameNumericValue(
+        latestLedger.available_after,
+        balance.available_amount,
+      ) ||
+      !sameNumericValue(latestLedger.locked_after, balance.locked_amount)
+    ) {
+      diagnostics.push({
+        severity: "critical",
+        code: "LEDGER_BALANCE_MISMATCH",
+        message: `${currencyCode} 最新 ledger 余额与 user_balances 快照不一致。`,
+        related_id: input.order.user_id,
+        suggested_action:
+          "进入对账检查 ledger 与余额快照，禁止直接修改历史流水。",
+      });
+    }
+  }
+
+  return diagnostics;
 }
 
 function buildErrorContext(
@@ -760,6 +1065,24 @@ function readText(record: JsonRecord, key: string): string | null {
   const value = record[key];
 
   return typeof value === "string" && value.trim() ? value : null;
+}
+
+function sameNumericValue(
+  left: number | string | null,
+  right: number | string | null,
+): boolean {
+  if (left === null || right === null) {
+    return left === right;
+  }
+
+  const leftNumber = Number(left);
+  const rightNumber = Number(right);
+
+  return (
+    Number.isFinite(leftNumber) &&
+    Number.isFinite(rightNumber) &&
+    Math.abs(leftNumber - rightNumber) < 0.000001
+  );
 }
 
 function firstRow<T>(data: unknown): T | null {

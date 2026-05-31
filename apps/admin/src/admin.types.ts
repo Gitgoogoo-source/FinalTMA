@@ -267,6 +267,16 @@ export type PaymentDetailErrorContext = {
   raw?: Json | null;
 };
 
+export type PaymentDetailDiagnosticSeverity = "critical" | "warning" | "info";
+
+export type PaymentDetailDiagnostic = {
+  severity: PaymentDetailDiagnosticSeverity;
+  code: string;
+  message: string;
+  related_id: string | null;
+  suggested_action: string;
+};
+
 export type PaymentDetailResponse = {
   order: PaymentDetailOrder;
   user: PaymentDetailUser | null;
@@ -276,6 +286,7 @@ export type PaymentDetailResponse = {
   itemInstances: PaymentDetailItemInstance[];
   ledgerEntries: PaymentDetailLedgerEntry[];
   webhookEvents: PaymentDetailWebhookEvent[];
+  diagnostics: PaymentDetailDiagnostic[];
   errorContext: PaymentDetailErrorContext | null;
   serverTime: string;
 };
