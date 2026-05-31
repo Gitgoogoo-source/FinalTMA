@@ -59,6 +59,22 @@ type StarPaymentRow = {
   metadata: unknown;
 };
 
+type StarRefundRow = {
+  id: string;
+  star_payment_id: string;
+  star_order_id: string;
+  user_id: string;
+  telegram_payment_charge_id: string;
+  xtr_amount: number | string;
+  status: string;
+  reason: string | null;
+  requested_by_admin_id: string | null;
+  processed_at: string | null;
+  metadata: unknown;
+  created_at: string;
+  updated_at: string;
+};
+
 type DrawOrderRow = {
   id: string;
   user_id: string;
@@ -235,6 +251,22 @@ const STAR_PAYMENT_COLUMNS = [
   "metadata",
 ].join(",");
 
+const STAR_REFUND_COLUMNS = [
+  "id",
+  "star_payment_id",
+  "star_order_id",
+  "user_id",
+  "telegram_payment_charge_id",
+  "xtr_amount",
+  "status",
+  "reason",
+  "requested_by_admin_id",
+  "processed_at",
+  "metadata",
+  "created_at",
+  "updated_at",
+].join(",");
+
 const DRAW_ORDER_COLUMNS = [
   "id",
   "user_id",
@@ -368,12 +400,14 @@ export default withApiHandler(
       admin.isSuperAdmin ||
       hasAdminPermission(admin.permissions, "payments:debug");
 
-    const [user, payment, initialDrawOrder, webhookEvents] = await Promise.all([
-      loadUser(db, order.user_id),
-      loadPayment(db, order.id),
-      loadDrawOrderByPaymentOrder(db, order.id),
-      loadWebhookEvents(db, order.telegram_invoice_payload),
-    ]);
+    const [user, payment, initialDrawOrder, webhookEvents, refunds] =
+      await Promise.all([
+        loadUser(db, order.user_id),
+        loadPayment(db, order.id),
+        loadDrawOrderByPaymentOrder(db, order.id),
+        loadWebhookEvents(db, order.telegram_invoice_payload),
+        loadRefunds(db, order.id),
+      ]);
     const drawOrder =
       initialDrawOrder ??
       (order.business_id
@@ -391,6 +425,7 @@ export default withApiHandler(
       order.business_id,
       payment?.id,
       drawOrder?.id,
+      ...refunds.map((refund) => refund.id),
       ...drawResults.map((result) => result.id),
       ...itemInstanceIds,
     ]);
@@ -417,6 +452,7 @@ export default withApiHandler(
       ]);
     const normalizedOrder = normalizeOrder(order);
     const normalizedPayment = payment ? normalizePayment(payment) : null;
+    const normalizedRefunds = refunds.map(normalizeRefund);
     const normalizedDrawOrder = drawOrder
       ? normalizeDrawOrder(drawOrder)
       : null;
@@ -439,6 +475,7 @@ export default withApiHandler(
       order: normalizedOrder,
       user: user ? normalizeUser(user) : null,
       payment: normalizedPayment,
+      refunds: normalizedRefunds,
       drawOrder: normalizedDrawOrder,
       drawResults: normalizedDrawResults,
       itemInstances: normalizedItemInstances,
@@ -557,6 +594,30 @@ async function loadPaymentsByTelegramChargeId(
   }
 
   return rows<StarPaymentRow>(data);
+}
+
+async function loadRefunds(
+  db: SupabaseAdminClient,
+  starOrderId: string,
+): Promise<StarRefundRow[]> {
+  const { data, error } = await db
+    .schema("payments")
+    .from("star_refunds")
+    .select(STAR_REFUND_COLUMNS)
+    .eq("star_order_id", starOrderId)
+    .order("created_at", { ascending: false })
+    .limit(20);
+
+  if (error) {
+    throw new ApiError(
+      500,
+      "ADMIN_STAR_REFUNDS_LOOKUP_FAILED",
+      "Star refund lookup failed",
+      { expose: false, cause: error },
+    );
+  }
+
+  return rows<StarRefundRow>(data);
 }
 
 async function loadDrawOrderByPaymentOrder(
@@ -791,6 +852,13 @@ function normalizeUser(row: CoreUserRow): CoreUserRow {
 }
 
 function normalizePayment(row: StarPaymentRow): StarPaymentRow {
+  return {
+    ...row,
+    xtr_amount: Number(row.xtr_amount),
+  };
+}
+
+function normalizeRefund(row: StarRefundRow): StarRefundRow {
   return {
     ...row,
     xtr_amount: Number(row.xtr_amount),

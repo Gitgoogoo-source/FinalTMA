@@ -57,6 +57,39 @@ export type AdminDangerOperationInput = {
   approvalContext?: Record<string, unknown>;
 };
 
+export type RefundAssetHandlingStrategy =
+  | "keep"
+  | "freeze"
+  | "reclaim"
+  | "manual_review";
+
+export type CreateRefundRecordInput = {
+  starPaymentId: string;
+  starOrderId: string;
+  reason: string;
+  xtrAmount: number;
+  status: "requested" | "processing" | "completed" | "rejected" | "failed";
+  externalTicketId?: string | null;
+  assetHandlingStrategy?: RefundAssetHandlingStrategy;
+  assetHandlingNote?: string | null;
+  riskRestrictionRequired?: boolean;
+  riskRestrictionReason?: string | null;
+};
+
+export type CreateRefundRecordResponse = AdminConfigMutationResponse & {
+  star_order_id?: string;
+  star_payment_id?: string;
+  star_refund_id?: string;
+  status?: string;
+  order_status?: string | null;
+  xtr_amount?: number | string;
+  refund_context?: Record<string, unknown>;
+  external_ticket_id?: string | null;
+  asset_handling_strategy?: RefundAssetHandlingStrategy;
+  risk_restriction_required?: boolean;
+  external_refund_completed?: boolean;
+};
+
 export class AdminApiError extends Error {
   readonly code: string;
   readonly status: number;
@@ -200,6 +233,37 @@ export async function retryPaymentFulfillment(input: {
       body: {
         starOrderId: input.starOrderId,
         reason: input.reason,
+        confirm: true,
+      },
+    },
+  );
+}
+
+export async function createRefundRecord(
+  input: CreateRefundRecordInput,
+): Promise<CreateRefundRecordResponse> {
+  return adminRequest<CreateRefundRecordResponse>(
+    "/api/admin/create-refund-record",
+    {
+      method: "POST",
+      headers: buildDangerHeaders(
+        "admin-create-refund-record",
+        `${input.starOrderId}:${input.status}`,
+      ),
+      body: {
+        starPaymentId: input.starPaymentId,
+        starOrderId: input.starOrderId,
+        reason: input.reason,
+        xtrAmount: input.xtrAmount,
+        status: input.status,
+        refundContext: {
+          externalTicketId: input.externalTicketId ?? null,
+          assetHandlingStrategy: input.assetHandlingStrategy ?? "manual_review",
+          assetHandlingNote: input.assetHandlingNote ?? null,
+          riskRestrictionRequired: input.riskRestrictionRequired ?? false,
+          riskRestrictionReason: input.riskRestrictionReason ?? null,
+          externalRefundCompleted: false,
+        },
         confirm: true,
       },
     },

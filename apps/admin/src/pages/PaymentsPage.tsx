@@ -30,7 +30,16 @@ const PAYMENT_STATUSES = [
   "expired",
 ];
 const EVENT_STATUSES = ["", "pending", "processing", "processed", "failed"];
-const REFUND_STATUSES = ["", "created", "pending", "processed", "failed"];
+const REFUND_STATUSES = [
+  "",
+  "requested",
+  "processing",
+  "completed",
+  "rejected",
+  "failed",
+  "approved",
+  "processed",
+];
 const DISPUTE_STATUSES = ["", "open", "reviewing", "resolved", "rejected"];
 const RETRYABLE_PAYMENT_STATUSES = new Set(["paid", "fulfilling", "failed"]);
 

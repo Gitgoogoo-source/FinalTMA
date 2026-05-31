@@ -7,7 +7,7 @@ create extension if not exists pgtap with schema extensions;
 
 set search_path = public, extensions, core, economy, catalog, gacha, inventory, market, payments, tasks, album, onchain, ops, api;
 
-select plan(14);
+select plan(18);
 
 create temp table _ids (key text primary key, id uuid, payload jsonb) on commit drop;
 create temp table _errors (key text primary key, message text) on commit drop;
@@ -124,14 +124,14 @@ values (
 );
 
 select ok(
-  to_regprocedure('api.admin_create_refund_record(uuid,uuid,uuid,text,integer,text,text,jsonb,jsonb)') is not null
+  to_regprocedure('api.admin_create_refund_record(uuid,uuid,uuid,text,integer,text,text,jsonb,jsonb,jsonb)') is not null
     and to_regprocedure('api.admin_resolve_payment_dispute(uuid,uuid,text,text,text,text,jsonb,jsonb)') is not null,
   'phase 6 admin payment operation RPCs exist'
 );
 
 with signatures(signature) as (
   values
-    ('api.admin_create_refund_record(uuid,uuid,uuid,text,integer,text,text,jsonb,jsonb)'),
+    ('api.admin_create_refund_record(uuid,uuid,uuid,text,integer,text,text,jsonb,jsonb,jsonb)'),
     ('api.admin_resolve_payment_dispute(uuid,uuid,text,text,text,text,jsonb,jsonb)')
 )
 select ok(
@@ -158,7 +158,14 @@ values (
     p_status => 'processing',
     p_idempotency_key => 'phase6-payment-ops-refund-processing-001',
     p_request_context => jsonb_build_object('ip_hash', 'phase6-ip', 'user_agent_hash', 'phase6-ua'),
-    p_approval_context => '{"approvalStatus":"not_required"}'::jsonb
+    p_approval_context => '{"approvalStatus":"not_required"}'::jsonb,
+    p_refund_context => jsonb_build_object(
+      'external_ticket_id', 'TG-STARS-TICKET-123',
+      'asset_handling_strategy', 'freeze',
+      'asset_handling_note', 'freeze delivered items until support completes',
+      'risk_restriction_required', true,
+      'risk_restriction_reason', 'refund pending external support'
+    )
   )
 );
 
@@ -192,6 +199,50 @@ select is(
 
 select is(
   (
+    select metadata #>> '{refund_context,external_ticket_id}'
+    from payments.star_refunds
+    where star_payment_id = (select id from _ids where key = 'star_payment_processing')
+  ),
+  'TG-STARS-TICKET-123',
+  'refund record stores the external support ticket id in metadata'
+);
+
+select is(
+  (
+    select metadata #>> '{refund_context,asset_handling_strategy}'
+    from payments.star_refunds
+    where star_payment_id = (select id from _ids where key = 'star_payment_processing')
+  ),
+  'freeze',
+  'refund record stores the delivered asset handling strategy'
+);
+
+select ok(
+  (
+    select (metadata #>> '{admin_refund,risk_restriction_required}')::boolean
+    from payments.star_orders
+    where id = (select id from _ids where key = 'star_order_processing')
+  ),
+  'refund order metadata records that risk restriction is required'
+);
+
+select is(
+  (
+    select detail #>> '{refund_context,asset_handling_strategy}'
+    from ops.risk_events
+    where source_type = 'star_refund'
+      and source_id = (
+        select id
+        from payments.star_refunds
+        where star_payment_id = (select id from _ids where key = 'star_payment_processing')
+      )
+  ),
+  'freeze',
+  'refund risk event includes the asset handling strategy'
+);
+
+select is(
+  (
     select count(*)::int
     from ops.admin_audit_logs
     where admin_user_id = (select id from _ids where key = 'actor')
@@ -216,7 +267,14 @@ values (
     p_status => 'processing',
     p_idempotency_key => 'phase6-payment-ops-refund-processing-001',
     p_request_context => jsonb_build_object('ip_hash', 'phase6-ip', 'user_agent_hash', 'phase6-ua'),
-    p_approval_context => '{"approvalStatus":"not_required"}'::jsonb
+    p_approval_context => '{"approvalStatus":"not_required"}'::jsonb,
+    p_refund_context => jsonb_build_object(
+      'external_ticket_id', 'TG-STARS-TICKET-123',
+      'asset_handling_strategy', 'freeze',
+      'asset_handling_note', 'freeze delivered items until support completes',
+      'risk_restriction_required', true,
+      'risk_restriction_reason', 'refund pending external support'
+    )
   )
 );
 

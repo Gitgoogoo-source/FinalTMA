@@ -47,6 +47,7 @@ const TARGET_ADMIN_USER_ID = "55555555-5555-4555-8555-555555555555";
 const ADMIN_ROLE_ID = "99999999-9999-4999-8999-999999999999";
 const STAR_ORDER_ID = "66666666-6666-4666-8666-666666666666";
 const PAYMENT_ID = "77777777-7777-4777-8777-777777777777";
+const REFUND_ID = "17171717-1717-4171-8171-171717171717";
 const DRAW_ORDER_ID = "88888888-8888-4888-8888-888888888888";
 const DRAW_RESULT_ID = "99999999-9999-4999-8999-999999999999";
 const ITEM_INSTANCE_ID = "12121212-1212-4121-8121-121212121212";
@@ -717,6 +718,33 @@ describe("admin ops APIs", () => {
           metadata: {},
         },
       ],
+      "payments.star_refunds": [
+        {
+          id: REFUND_ID,
+          star_payment_id: PAYMENT_ID,
+          star_order_id: STAR_ORDER_ID,
+          user_id: ADMIN_CONTEXT.userId,
+          telegram_payment_charge_id: "telegram-charge-admin-detail",
+          xtr_amount: 10,
+          status: "processing",
+          reason: "external support refund pending",
+          requested_by_admin_id: ADMIN_CONTEXT.adminId,
+          processed_at: null,
+          metadata: {
+            refund_context: {
+              external_ticket_id: "TG-STARS-TICKET-123",
+              asset_handling_strategy: "freeze",
+              asset_handling_note: "freeze delivered items",
+              risk_restriction_required: true,
+              risk_restriction_reason: "refund pending support",
+              external_refund_completed: false,
+            },
+            external_refund_completed: false,
+          },
+          created_at: "2026-05-29T00:00:05.000Z",
+          updated_at: "2026-05-29T00:00:05.000Z",
+        },
+      ],
       "gacha.draw_orders": [
         {
           id: DRAW_ORDER_ID,
@@ -867,6 +895,20 @@ describe("admin ops APIs", () => {
           id: PAYMENT_ID,
           telegram_payment_charge_id: "telegram-charge-admin-detail",
         },
+        refunds: [
+          {
+            id: REFUND_ID,
+            status: "processing",
+            metadata: {
+              refund_context: {
+                external_ticket_id: "TG-STARS-TICKET-123",
+                asset_handling_strategy: "freeze",
+                risk_restriction_required: true,
+                external_refund_completed: false,
+              },
+            },
+          },
+        ],
         drawOrder: {
           id: DRAW_ORDER_ID,
           payment_star_order_id: STAR_ORDER_ID,
@@ -1864,6 +1906,13 @@ describe("admin ops APIs", () => {
           reason: "record refund request in admin test",
           xtrAmount: 5,
           status: "processing",
+          refundContext: {
+            externalTicketId: "TG-STARS-TICKET-123",
+            assetHandlingStrategy: "freeze",
+            assetHandlingNote: "freeze delivered items until support completes",
+            riskRestrictionRequired: true,
+            riskRestrictionReason: "refund is pending external support",
+          },
         },
       },
     );
@@ -1896,6 +1945,15 @@ describe("admin ops APIs", () => {
           p_xtr_amount: 5,
           p_status: "processing",
           p_idempotency_key: "admin-create-refund-record-test-001",
+          p_refund_context: {
+            external_ticket_id: "TG-STARS-TICKET-123",
+            asset_handling_strategy: "freeze",
+            asset_handling_note:
+              "freeze delivered items until support completes",
+            risk_restriction_required: true,
+            risk_restriction_reason: "refund is pending external support",
+            external_refund_completed: false,
+          },
           p_request_context: expect.objectContaining({
             admin_user_id: ADMIN_CONTEXT.adminId,
             ip_hash: expect.any(String),
@@ -1929,6 +1987,38 @@ describe("admin ops APIs", () => {
     expect(result.body).toMatchObject({
       error: {
         code: "ADMIN_CONFIRMATION_REQUIRED",
+      },
+    });
+    expect(runWriteRpcMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects create-refund-record requests that claim external Telegram refunds are complete", async () => {
+    const { default: createRefundRecordHandler } =
+      await import("../../api/admin/create-refund-record");
+    const result = await invokeApiHandler(createRefundRecordHandler, {
+      method: "POST",
+      url: "/api/admin/create-refund-record",
+      headers: {
+        "x-admin-confirm": "true",
+        "x-idempotency-key": "admin-create-refund-record-test-003",
+      },
+      body: {
+        starPaymentId: PAYMENT_ID,
+        starOrderId: STAR_ORDER_ID,
+        reason: "record refund request in admin test",
+        xtrAmount: 5,
+        status: "processing",
+        refundContext: {
+          externalRefundCompleted: true,
+          assetHandlingStrategy: "manual_review",
+        },
+      },
+    });
+
+    expect(result.statusCode).toBe(400);
+    expect(result.body).toMatchObject({
+      error: {
+        code: "VALIDATION_FAILED",
       },
     });
     expect(runWriteRpcMock).not.toHaveBeenCalled();

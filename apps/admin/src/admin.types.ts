@@ -11,6 +11,7 @@ type DrawResultRow = Database["gacha"]["Tables"]["draw_results"]["Row"];
 type ItemInstanceRow = Database["inventory"]["Tables"]["item_instances"]["Row"];
 type StarOrderRow = Database["payments"]["Tables"]["star_orders"]["Row"];
 type StarPaymentRow = Database["payments"]["Tables"]["star_payments"]["Row"];
+type StarRefundRow = Database["payments"]["Tables"]["star_refunds"]["Row"];
 type TelegramWebhookEventRow =
   Database["payments"]["Tables"]["telegram_webhook_events"]["Row"];
 
@@ -168,6 +169,23 @@ export type PaymentDetailPayment = Pick<
   | "metadata"
 >;
 
+export type PaymentDetailRefund = Pick<
+  StarRefundRow,
+  | "id"
+  | "star_payment_id"
+  | "star_order_id"
+  | "user_id"
+  | "telegram_payment_charge_id"
+  | "xtr_amount"
+  | "status"
+  | "reason"
+  | "requested_by_admin_id"
+  | "processed_at"
+  | "metadata"
+  | "created_at"
+  | "updated_at"
+>;
+
 export type PaymentDetailDrawOrder = Pick<
   DrawOrderRow,
   | "id"
@@ -281,6 +299,7 @@ export type PaymentDetailResponse = {
   order: PaymentDetailOrder;
   user: PaymentDetailUser | null;
   payment: PaymentDetailPayment | null;
+  refunds: PaymentDetailRefund[];
   drawOrder: PaymentDetailDrawOrder | null;
   drawResults: PaymentDetailDrawResult[];
   itemInstances: PaymentDetailItemInstance[];

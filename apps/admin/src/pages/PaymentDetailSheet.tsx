@@ -10,6 +10,7 @@ import type {
   PaymentDetailLedgerEntry,
   PaymentDetailOrder,
   PaymentDetailPayment,
+  PaymentDetailRefund,
   PaymentDetailResponse,
   PaymentDetailWebhookEvent,
   PaymentOrder,
@@ -111,6 +112,7 @@ export function PaymentDetailSheet(props: PaymentDetailSheetProps) {
         {data ? <DiagnosticsSection diagnostics={data.diagnostics} /> : null}
         {order ? <OrderSection order={order} /> : null}
         <PaymentRecordSection payment={payment} />
+        <RefundPolicySection refunds={data?.refunds ?? []} />
         <UserSection user={data?.user ?? null} />
         <DrawOrderSection drawOrder={data?.drawOrder ?? null} />
         <DrawResultsTable items={data?.drawResults ?? []} />
@@ -261,6 +263,83 @@ function PaymentRecordSection({ payment }: { payment: PaymentRecord | null }) {
       ) : (
         <p className="muted">未记录 Star 支付流水</p>
       )}
+    </section>
+  );
+}
+
+function RefundPolicySection({ refunds }: { refunds: PaymentDetailRefund[] }) {
+  return (
+    <section className="payment-detail-section">
+      <div className="payment-detail-section__title">
+        <h3>退款处理</h3>
+        <span className="status-badge">{refunds.length}</span>
+      </div>
+      <div className="table-wrap table-wrap--small">
+        <table>
+          <thead>
+            <tr>
+              <th>退款</th>
+              <th>状态</th>
+              <th>外部工单</th>
+              <th>藏品处理</th>
+              <th>风控限制</th>
+              <th>外部退款</th>
+            </tr>
+          </thead>
+          <tbody>
+            {refunds.length === 0 ? (
+              <EmptyTableRow colSpan={6} label="暂无退款记录" />
+            ) : (
+              refunds.map((refund) => {
+                const policy = readRefundPolicy(refund);
+
+                return (
+                  <tr key={refund.id}>
+                    <td>
+                      <strong>{shortId(refund.id)}</strong>
+                      <small>{formatDate(refund.created_at)}</small>
+                    </td>
+                    <td>
+                      <StatusBadge status={refund.status} />
+                      <small>{Number(refund.xtr_amount)} Stars</small>
+                    </td>
+                    <td>
+                      {policy.externalTicketId ?? "-"}
+                      <small>{formatDate(refund.processed_at)}</small>
+                    </td>
+                    <td>
+                      <strong>{policy.assetHandlingLabel}</strong>
+                      <small>
+                        {policy.assetHandlingNote ?? refund.reason ?? "-"}
+                      </small>
+                    </td>
+                    <td>
+                      <StatusBadge
+                        status={
+                          policy.riskRestrictionRequired
+                            ? "reviewing"
+                            : "not_required"
+                        }
+                      />
+                      <small>{policy.riskRestrictionReason ?? "-"}</small>
+                    </td>
+                    <td>
+                      <StatusBadge
+                        status={
+                          policy.externalRefundCompleted
+                            ? "completed"
+                            : "external_support"
+                        }
+                      />
+                      <small>{policy.supportFlow}</small>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
     </section>
   );
 }
@@ -716,6 +795,103 @@ function stringifyJson(value: unknown): string {
   } catch {
     return String(value);
   }
+}
+
+type RefundPolicy = {
+  externalTicketId: string | null;
+  assetHandlingLabel: string;
+  assetHandlingNote: string | null;
+  riskRestrictionRequired: boolean;
+  riskRestrictionReason: string | null;
+  externalRefundCompleted: boolean;
+  supportFlow: string;
+};
+
+function readRefundPolicy(refund: PaymentDetailRefund): RefundPolicy {
+  const metadata = isPlainRecord(refund.metadata) ? refund.metadata : {};
+  const context = isPlainRecord(metadata.refund_context)
+    ? metadata.refund_context
+    : {};
+  const assetHandlingStrategy =
+    readString(context, "asset_handling_strategy") ??
+    readString(metadata, "asset_handling_strategy") ??
+    "manual_review";
+
+  return {
+    externalTicketId:
+      readString(context, "external_ticket_id") ??
+      readString(metadata, "external_ticket_id"),
+    assetHandlingLabel: formatAssetHandlingStrategy(assetHandlingStrategy),
+    assetHandlingNote:
+      readString(context, "asset_handling_note") ??
+      readString(metadata, "asset_handling_note"),
+    riskRestrictionRequired:
+      readBoolean(context, "risk_restriction_required") ??
+      readBoolean(metadata, "risk_restriction_required") ??
+      false,
+    riskRestrictionReason:
+      readString(context, "risk_restriction_reason") ??
+      readString(metadata, "risk_restriction_reason"),
+    externalRefundCompleted:
+      readBoolean(context, "external_refund_completed") ??
+      readBoolean(metadata, "external_refund_completed") ??
+      false,
+    supportFlow:
+      readString(context, "telegram_stars_refund_flow") ?? "external_support",
+  };
+}
+
+function formatAssetHandlingStrategy(strategy: string): string {
+  switch (strategy) {
+    case "keep":
+      return "保留";
+    case "freeze":
+      return "冻结";
+    case "reclaim":
+      return "回收";
+    case "manual_review":
+      return "人工处理";
+    default:
+      return strategy;
+  }
+}
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function readString(
+  record: Record<string, unknown>,
+  key: string,
+): string | null {
+  const value = record[key];
+
+  return typeof value === "string" && value.trim() ? value : null;
+}
+
+function readBoolean(
+  record: Record<string, unknown>,
+  key: string,
+): boolean | null {
+  const value = record[key];
+
+  if (typeof value === "boolean") {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+
+    if (["true", "1", "yes", "on"].includes(normalized)) {
+      return true;
+    }
+
+    if (["false", "0", "no", "off"].includes(normalized)) {
+      return false;
+    }
+  }
+
+  return null;
 }
 
 const DIAGNOSTIC_SEVERITY_ORDER: Record<
