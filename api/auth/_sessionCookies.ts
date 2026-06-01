@@ -61,6 +61,10 @@ function getSessionCookieSameSite(): "Lax" | "Strict" | "None" {
 }
 
 function getSessionCookieSecure(): boolean {
+  if (isProductionLikeRuntime()) {
+    return true;
+  }
+
   const raw = process.env.SESSION_COOKIE_SECURE?.trim().toLowerCase();
 
   if (raw === "true" || raw === "1" || raw === "yes") {

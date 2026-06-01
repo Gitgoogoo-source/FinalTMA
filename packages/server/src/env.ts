@@ -1,4 +1,8 @@
 import { z } from "zod";
+import {
+  AUTH_SESSION_DEFAULTS,
+  AUTH_SESSION_LIMITS,
+} from "./auth/sessionConfig.js";
 
 /**
  * packages/server/src/env.ts
@@ -364,6 +368,13 @@ export const serverEnvSchema = z
       min: 60,
       max: 60 * 60 * 24 * 30,
     }),
+    SESSION_MAX_LIFETIME_SECONDS: numberFromEnv(
+      AUTH_SESSION_DEFAULTS.maxLifetimeSeconds,
+      {
+        min: AUTH_SESSION_LIMITS.minTtlSeconds,
+        max: AUTH_SESSION_LIMITS.maxLifetimeSeconds,
+      },
+    ),
 
     ADMIN_SESSION_SECRET: optionalSecretFromEnv(32),
     ADMIN_EMAIL_ALLOWLIST: csvListFromEnv,
@@ -380,6 +391,20 @@ export const serverEnvSchema = z
     TELEGRAM_WEBHOOK_URL: optionalUrlFromEnv,
     TELEGRAM_WEBHOOK_SECRET: optionalSecretFromEnv(16),
     TELEGRAM_WEBHOOK_SECRET_TOKEN: optionalSecretFromEnv(16),
+    TELEGRAM_INIT_DATA_MAX_AGE_SECONDS: numberFromEnv(
+      AUTH_SESSION_DEFAULTS.telegramInitDataMaxAgeSeconds,
+      {
+        min: AUTH_SESSION_LIMITS.minTtlSeconds,
+        max: AUTH_SESSION_LIMITS.maxTelegramInitDataAgeSeconds,
+      },
+    ),
+    TELEGRAM_INIT_DATA_CLOCK_TOLERANCE_SECONDS: numberFromEnv(
+      AUTH_SESSION_DEFAULTS.telegramInitDataClockToleranceSeconds,
+      {
+        min: 0,
+        max: AUTH_SESSION_LIMITS.maxTelegramInitDataClockToleranceSeconds,
+      },
+    ),
     TELEGRAM_STARS_CURRENCY: z.preprocess((value) => {
       if (isEmptyEnvValue(value)) {
         return "XTR";
@@ -582,6 +607,15 @@ export const serverEnvSchema = z
         code: z.ZodIssueCode.custom,
         path: ["SESSION_COOKIE_SECURE"],
         message: "SESSION_COOKIE_SECURE must not be false in production.",
+      });
+    }
+
+    if (input.SESSION_MAX_LIFETIME_SECONDS < input.SESSION_TTL_SECONDS) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["SESSION_MAX_LIFETIME_SECONDS"],
+        message:
+          "SESSION_MAX_LIFETIME_SECONDS must be greater than or equal to SESSION_TTL_SECONDS.",
       });
     }
 
@@ -817,6 +851,7 @@ export const env = Object.freeze({
     SECRET: sessionSecret,
     TTL_SECONDS: raw.SESSION_TTL_SECONDS,
     REFRESH_THRESHOLD_SECONDS: raw.SESSION_REFRESH_THRESHOLD_SECONDS,
+    MAX_LIFETIME_SECONDS: raw.SESSION_MAX_LIFETIME_SECONDS,
   }),
 
   SUPABASE: Object.freeze({
@@ -836,6 +871,9 @@ export const env = Object.freeze({
     MINI_APP_SHORT_NAME: raw.TELEGRAM_MINI_APP_SHORT_NAME,
     WEBHOOK_URL: raw.TELEGRAM_WEBHOOK_URL,
     WEBHOOK_SECRET: telegramWebhookSecret,
+    INIT_DATA_MAX_AGE_SECONDS: raw.TELEGRAM_INIT_DATA_MAX_AGE_SECONDS,
+    INIT_DATA_CLOCK_TOLERANCE_SECONDS:
+      raw.TELEGRAM_INIT_DATA_CLOCK_TOLERANCE_SECONDS,
     STARS_CURRENCY: raw.TELEGRAM_STARS_CURRENCY,
     STARS_PROVIDER_TOKEN: raw.TELEGRAM_STARS_PROVIDER_TOKEN,
     STARS_OPEN_ORDER_EXPIRES_MINUTES: raw.STARS_OPEN_ORDER_EXPIRES_MINUTES,
@@ -991,6 +1029,7 @@ export function getSafeEnvSnapshot(): Record<string, unknown> {
       COOKIE_SAMESITE: env.SESSION.COOKIE_SAMESITE,
       TTL_SECONDS: env.SESSION.TTL_SECONDS,
       REFRESH_THRESHOLD_SECONDS: env.SESSION.REFRESH_THRESHOLD_SECONDS,
+      MAX_LIFETIME_SECONDS: env.SESSION.MAX_LIFETIME_SECONDS,
       HAS_SECRET: Boolean(env.SESSION.SECRET),
       SECRET: maskSecret(env.SESSION.SECRET),
     },
@@ -1009,6 +1048,9 @@ export function getSafeEnvSnapshot(): Record<string, unknown> {
       BOT_USERNAME: env.TELEGRAM.BOT_USERNAME,
       MINI_APP_SHORT_NAME: env.TELEGRAM.MINI_APP_SHORT_NAME,
       WEBHOOK_URL: env.TELEGRAM.WEBHOOK_URL,
+      INIT_DATA_MAX_AGE_SECONDS: env.TELEGRAM.INIT_DATA_MAX_AGE_SECONDS,
+      INIT_DATA_CLOCK_TOLERANCE_SECONDS:
+        env.TELEGRAM.INIT_DATA_CLOCK_TOLERANCE_SECONDS,
       STARS_CURRENCY: env.TELEGRAM.STARS_CURRENCY,
       HAS_BOT_TOKEN: Boolean(env.TELEGRAM.BOT_TOKEN),
       HAS_WEBHOOK_SECRET: Boolean(env.TELEGRAM.WEBHOOK_SECRET),

@@ -1,4 +1,9 @@
 import {
+  getAuthSessionConfig,
+  secondsUntil,
+  type AuthSessionConfig,
+} from "../../packages/server/src/auth/sessionConfig.js";
+import {
   AuthRefreshSessionRequestSchema,
   type AuthClientContext,
 } from "../../packages/validation/src/auth.schemas.js";
@@ -29,10 +34,9 @@ type RefreshedSessionRow = {
   expires_at: string;
 };
 
-const SESSION_TTL_SECONDS = 7 * 24 * 60 * 60;
-
 export default withApiHandler(
   async (req, res) => {
+    const sessionConfig = getAuthSessionConfig();
     const session = await requireSession(req, {
       touchLastSeen: false,
     });
@@ -47,9 +51,7 @@ export default withApiHandler(
     }
 
     const now = new Date();
-    const expiresAt = new Date(
-      now.getTime() + SESSION_TTL_SECONDS * 1000,
-    ).toISOString();
+    const expiresAt = resolveRefreshExpiresAt(session, now, sessionConfig);
     const db = getSupabaseAdmin();
     const refreshed = await refreshCurrentSession(db, {
       sessionId: session.sessionId,
@@ -59,10 +61,11 @@ export default withApiHandler(
       platform: input.clientContext?.platform ?? null,
     });
     const user = await loadSessionUser(db, session.userId);
+    const expiresInSeconds = secondsUntil(refreshed.expires_at, now);
 
     res.setHeader(
       "Set-Cookie",
-      buildAuthSessionCookie(token, SESSION_TTL_SECONDS),
+      buildAuthSessionCookie(token, expiresInSeconds),
     );
 
     return {
@@ -71,7 +74,7 @@ export default withApiHandler(
       session: {
         sessionId: refreshed.id,
         expiresAt: refreshed.expires_at,
-        expiresInSeconds: SESSION_TTL_SECONDS,
+        expiresInSeconds,
         cookieBased: true,
       },
     };
@@ -83,6 +86,53 @@ export default withApiHandler(
     },
   },
 );
+
+function resolveRefreshExpiresAt(
+  session: {
+    expiresAt: string;
+    createdAt: string;
+  },
+  now: Date,
+  config: AuthSessionConfig,
+): string {
+  const currentExpiresAt = parseDate(session.expiresAt);
+  const createdAt = parseDate(session.createdAt);
+
+  if (!currentExpiresAt || !createdAt) {
+    throw ApiError.authSessionExpired("登录状态无效，请重新进入应用。");
+  }
+
+  const absoluteExpiresAt = new Date(
+    createdAt.getTime() + config.maxLifetimeSeconds * 1000,
+  );
+
+  if (absoluteExpiresAt.getTime() <= now.getTime()) {
+    throw ApiError.authSessionExpired("登录时间已达到上限，请重新进入应用。");
+  }
+
+  const shouldExtend =
+    secondsUntil(currentExpiresAt, now) <= config.refreshThresholdSeconds;
+  const exceedsAbsoluteMax =
+    currentExpiresAt.getTime() > absoluteExpiresAt.getTime();
+
+  if (!shouldExtend && !exceedsAbsoluteMax) {
+    return currentExpiresAt.toISOString();
+  }
+
+  const rollingExpiresAt = new Date(now.getTime() + config.ttlSeconds * 1000);
+
+  return minDate(rollingExpiresAt, absoluteExpiresAt).toISOString();
+}
+
+function parseDate(value: string): Date | null {
+  const date = new Date(value);
+
+  return Number.isFinite(date.getTime()) ? date : null;
+}
+
+function minDate(left: Date, right: Date): Date {
+  return left.getTime() <= right.getTime() ? left : right;
+}
 
 async function refreshCurrentSession(
   db: ReturnType<typeof getSupabaseAdmin>,

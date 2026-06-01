@@ -16,6 +16,7 @@ export type ApiErrorCode =
   | "AUTH_INIT_DATA_INVALID"
   | "AUTH_INIT_DATA_EXPIRED"
   | "AUTH_INIT_DATA_FROM_FUTURE"
+  | "AUTH_INIT_DATA_REPLAYED"
   | "AUTH_SESSION_EXPIRED"
   | "USER_BLOCKED"
   | "BOX_NOT_FOUND"
@@ -135,6 +136,7 @@ export function statusCodeFromErrorCode(code: ApiErrorCode): number {
       return 405;
 
     case "CONFLICT":
+    case "AUTH_INIT_DATA_REPLAYED":
     case "IDEMPOTENCY_CONFLICT":
     case "BOX_STOCK_NOT_ENOUGH":
     case "ORDER_ALREADY_PROCESSED":

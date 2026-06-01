@@ -1,6 +1,11 @@
 import { randomBytes } from "node:crypto";
 import type { VercelRequest } from "@vercel/node";
 import {
+  getAuthSessionConfig,
+  secondsUntil,
+  type AuthSessionConfig,
+} from "../../packages/server/src/auth/sessionConfig.js";
+import {
   AuthTelegramLoginRequestSchema,
   type AuthTelegramLoginRequest,
 } from "../../packages/validation/src/auth.schemas.js";
@@ -11,15 +16,21 @@ import {
 } from "../../packages/server/src/auth/verifyTelegramInitData.js";
 import { callRpcRaw } from "../../packages/server/src/db/rpc.js";
 import {
+  type ApiContext,
   ApiError,
   getHeaderValue,
   withApiHandler,
 } from "../_shared/handler.js";
 import { parseJsonBody } from "../_shared/parseBody.js";
 import {
+  extractSessionToken,
   getSupabaseAdmin,
   hashSessionToken,
 } from "../_shared/requireSession.js";
+import {
+  createRateLimiter,
+  DEFAULT_RATE_LIMIT_RULES,
+} from "../../packages/server/src/security/rateLimit.js";
 import { recordRiskEventSafely } from "../_shared/riskEvents.js";
 import { validate } from "../_shared/validate.js";
 import { buildAuthSessionCookie } from "./_sessionCookies.js";
@@ -37,6 +48,13 @@ type AuthCreateSessionResult = {
 
 type ExistingUserRow = {
   id: string;
+};
+
+type ExistingSessionRow = {
+  id: string;
+  expires_at: string;
+  revoked_at: string | null;
+  init_data_hash: string | null;
 };
 
 type AuthUserRow = {
@@ -65,15 +83,23 @@ type AppSessionSignalRow = {
   created_at: string;
 };
 
-const SESSION_TTL_SECONDS = 7 * 24 * 60 * 60;
+const verifiedAuthRateLimiter = createRateLimiter({
+  rules: DEFAULT_RATE_LIMIT_RULES.filter(
+    (rule) =>
+      rule.action === "auth.telegram" &&
+      (rule.scope === "telegram_user" || rule.scope === "custom"),
+  ),
+});
 
 export default withApiHandler(
   async (req, res, ctx) => {
+    const sessionConfig = getAuthSessionConfig();
     const body = await parseJsonBody<unknown>(req, {
       maxBytes: 16 * 1024,
     });
     const input = validate(AuthTelegramLoginRequestSchema, body);
-    const verified = verifyTrustedInitData(input);
+    const verified = verifyTrustedInitData(input, sessionConfig);
+    await assertVerifiedAuthRateLimit(req, ctx, verified);
     const wasExistingUser = await hasExistingTelegramUser(verified.user.id);
 
     const userResult = await upsertTelegramUser(verified, ctx.requestId);
@@ -87,9 +113,33 @@ export default withApiHandler(
       });
     }
 
+    const reusableSession = await loadReusableSessionFromCookie(req, {
+      userId,
+      initDataHash: verified.initDataHash,
+    });
+
+    if (reusableSession) {
+      const expiresInSeconds = secondsUntil(reusableSession.expiresAt);
+
+      res.setHeader(
+        "Set-Cookie",
+        buildAuthSessionCookie(reusableSession.token, expiresInSeconds),
+      );
+
+      return buildLoginResponse({
+        isNewUser: !wasExistingUser,
+        userId,
+        userResult,
+        verified,
+        sessionId: reusableSession.sessionId,
+        expiresAt: reusableSession.expiresAt,
+        expiresInSeconds,
+      });
+    }
+
     const token = createOpaqueSessionToken();
     const tokenHash = hashSessionToken(token);
-    const expiresAt = new Date(Date.now() + SESSION_TTL_SECONDS * 1000);
+    const expiresAt = new Date(Date.now() + sessionConfig.ttlSeconds * 1000);
     const ipHash = ctx.ip ? hashFingerprint("ip", ctx.ip) : null;
     const userAgentHash = hashNullableFingerprint(
       "user_agent",
@@ -102,30 +152,21 @@ export default withApiHandler(
       platform,
     });
 
-    const sessionResult = await callRpcRaw<AuthCreateSessionResult>(
-      "auth_create_session",
-      {
-        p_user_id: userId,
-        p_session_token_hash: tokenHash,
-        p_expires_at: expiresAt.toISOString(),
-        p_telegram_auth_date: verified.authDate.toISOString(),
-        p_init_data_hash: verified.initDataHash,
-        p_ip_hash: ipHash,
-        p_user_agent: userAgentHash,
-        p_device_id: deviceId,
-        p_platform: platform,
-      },
-      {
-        schema: "api" as never,
-        context: {
-          requestId: ctx.requestId,
-          userId,
-        },
-      },
-    );
+    const sessionResult = await createSession({
+      userId,
+      tokenHash,
+      expiresAt,
+      verified,
+      ipHash,
+      userAgentHash,
+      deviceId,
+      platform,
+      requestId: ctx.requestId,
+    });
 
     const sessionId = requireStringField(sessionResult, "session_id");
     const sessionExpiresAt = requireStringField(sessionResult, "expires_at");
+    const expiresInSeconds = secondsUntil(sessionExpiresAt);
     await recordReferralStartParamRiskSignalsSafely({
       db: getSupabaseAdmin(),
       userId,
@@ -140,29 +181,18 @@ export default withApiHandler(
 
     res.setHeader(
       "Set-Cookie",
-      buildAuthSessionCookie(token, SESSION_TTL_SECONDS),
+      buildAuthSessionCookie(token, expiresInSeconds),
     );
 
-    return {
-      status: "ok",
+    return buildLoginResponse({
       isNewUser: !wasExistingUser,
-      user: {
-        id: userId,
-        telegramUserId: String(verified.user.id),
-        username: verified.user.username ?? null,
-        firstName: verified.user.first_name,
-        lastName: verified.user.last_name ?? null,
-        languageCode: verified.user.language_code ?? null,
-        avatarUrl: verified.user.photo_url ?? null,
-        inviteCode: userResult.invite_code ?? null,
-      },
-      session: {
-        sessionId,
-        expiresAt: sessionExpiresAt,
-        expiresInSeconds: SESSION_TTL_SECONDS,
-        cookieBased: true,
-      },
-    };
+      userId,
+      userResult,
+      verified,
+      sessionId,
+      expiresAt: sessionExpiresAt,
+      expiresInSeconds,
+    });
   },
   {
     methods: ["POST"],
@@ -172,9 +202,16 @@ export default withApiHandler(
   },
 );
 
-function verifyTrustedInitData(input: AuthTelegramLoginRequest) {
+function verifyTrustedInitData(
+  input: AuthTelegramLoginRequest,
+  sessionConfig: AuthSessionConfig,
+) {
   try {
-    return verifyTelegramInitData(input.initData);
+    return verifyTelegramInitData(input.initData, {
+      maxAgeSeconds: sessionConfig.telegramInitDataMaxAgeSeconds,
+      allowedClockSkewSeconds:
+        sessionConfig.telegramInitDataClockToleranceSeconds,
+    });
   } catch (error) {
     if (error instanceof TelegramInitDataValidationError) {
       throw new ApiError(
@@ -191,6 +228,26 @@ function verifyTrustedInitData(input: AuthTelegramLoginRequest) {
 
     throw error;
   }
+}
+
+async function assertVerifiedAuthRateLimit(
+  req: VercelRequest,
+  ctx: ApiContext,
+  verified: ReturnType<typeof verifyTelegramInitData>,
+): Promise<void> {
+  await verifiedAuthRateLimiter.assert({
+    action: "auth.telegram",
+    method: ctx.method,
+    path: req.url,
+    headers: req.headers,
+    ip: ctx.ip ?? undefined,
+    userAgent: ctx.userAgent ?? undefined,
+    telegramUserId: verified.user.id,
+    custom: `init_data:${verified.initDataHash}`,
+    metadata: {
+      stage: "verified_init_data",
+    },
+  });
 }
 
 function mapTelegramInitDataErrorCode(code: string): string {
@@ -249,6 +306,135 @@ async function upsertTelegramUser(
   } catch (error) {
     throw mapAuthUpsertTelegramUserError(error);
   }
+}
+
+async function createSession(input: {
+  userId: string;
+  tokenHash: string;
+  expiresAt: Date;
+  verified: ReturnType<typeof verifyTelegramInitData>;
+  ipHash: string | null;
+  userAgentHash: string | null;
+  deviceId: string | null;
+  platform: string | null;
+  requestId: string;
+}): Promise<AuthCreateSessionResult> {
+  try {
+    return await callRpcRaw<AuthCreateSessionResult>(
+      "auth_create_session",
+      {
+        p_user_id: input.userId,
+        p_session_token_hash: input.tokenHash,
+        p_expires_at: input.expiresAt.toISOString(),
+        p_telegram_auth_date: input.verified.authDate.toISOString(),
+        p_init_data_hash: input.verified.initDataHash,
+        p_ip_hash: input.ipHash,
+        p_user_agent: input.userAgentHash,
+        p_device_id: input.deviceId,
+        p_platform: input.platform,
+      },
+      {
+        schema: "api" as never,
+        context: {
+          requestId: input.requestId,
+          userId: input.userId,
+        },
+      },
+    );
+  } catch (error) {
+    throw mapAuthCreateSessionError(error);
+  }
+}
+
+function mapAuthCreateSessionError(error: unknown): unknown {
+  const message = error instanceof Error ? error.message.toLowerCase() : "";
+
+  if (message.includes("auth_init_data_replayed")) {
+    return new ApiError(
+      409,
+      "AUTH_INIT_DATA_REPLAYED",
+      "Telegram 登录凭证已被使用，请重新进入应用。",
+    );
+  }
+
+  return error;
+}
+
+async function loadReusableSessionFromCookie(
+  req: VercelRequest,
+  input: {
+    userId: string;
+    initDataHash: string;
+  },
+): Promise<{
+  token: string;
+  sessionId: string;
+  expiresAt: string;
+} | null> {
+  const token = extractSessionToken(req);
+
+  if (!token) {
+    return null;
+  }
+
+  const tokenHash = hashSessionToken(token);
+  const db = getSupabaseAdmin();
+  const { data, error } = await db
+    .schema("core")
+    .from("app_sessions")
+    .select("id,expires_at,revoked_at,init_data_hash")
+    .eq("session_token_hash", tokenHash)
+    .eq("user_id", input.userId)
+    .eq("init_data_hash", input.initDataHash)
+    .maybeSingle<ExistingSessionRow>();
+
+  if (error) {
+    throw new ApiError(500, "SESSION_LOOKUP_FAILED", "查询当前登录状态失败。", {
+      cause: error,
+      expose: false,
+    });
+  }
+
+  if (!data || data.revoked_at || secondsUntil(data.expires_at) <= 0) {
+    return null;
+  }
+
+  return {
+    token,
+    sessionId: data.id,
+    expiresAt: data.expires_at,
+  };
+}
+
+function buildLoginResponse(input: {
+  isNewUser: boolean;
+  userId: string;
+  userResult: AuthUpsertTelegramUserResult;
+  verified: ReturnType<typeof verifyTelegramInitData>;
+  sessionId: string;
+  expiresAt: string;
+  expiresInSeconds: number;
+}) {
+  return {
+    status: "ok",
+    isNewUser: input.isNewUser,
+    user: {
+      id: input.userId,
+      telegramUserId: String(input.verified.user.id),
+      username: input.verified.user.username ?? null,
+      firstName: input.verified.user.first_name,
+      lastName: input.verified.user.last_name ?? null,
+      languageCode: input.verified.user.language_code ?? null,
+      avatarUrl: input.verified.user.photo_url ?? null,
+      inviteCode: input.userResult.invite_code ?? null,
+    },
+    session: {
+      sessionId: input.sessionId,
+      expiresAt: input.expiresAt,
+      expiresInSeconds: input.expiresInSeconds,
+      cookieBased: true,
+    },
+  };
 }
 
 function mapAuthUpsertTelegramUserError(error: unknown): unknown {

@@ -29,6 +29,8 @@ export interface SessionContext {
   userStatus: string;
   expiresAt: string;
   sessionTokenHash: string;
+  createdAt: string;
+  telegramAuthDate: string | null;
 }
 
 interface AppSessionRow {
@@ -38,6 +40,8 @@ interface AppSessionRow {
   expires_at: string;
   revoked_at: string | null;
   last_seen_at?: string | null;
+  created_at: string;
+  telegram_auth_date: string | null;
 }
 
 interface UserRow {
@@ -86,7 +90,9 @@ export async function requireSession(
   const { data: session, error: sessionError } = await db
     .schema("core")
     .from("app_sessions")
-    .select("id,user_id,session_token_hash,expires_at,revoked_at,last_seen_at")
+    .select(
+      "id,user_id,session_token_hash,expires_at,revoked_at,last_seen_at,created_at,telegram_auth_date",
+    )
     .eq("session_token_hash", sessionTokenHash)
     .maybeSingle<AppSessionRow>();
 
@@ -154,6 +160,8 @@ export async function requireSession(
     userStatus: user.status,
     expiresAt: session.expires_at,
     sessionTokenHash,
+    createdAt: session.created_at,
+    telegramAuthDate: session.telegram_auth_date,
   };
 }
 

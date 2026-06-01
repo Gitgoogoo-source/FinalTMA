@@ -229,6 +229,22 @@ export const DEFAULT_RATE_LIMIT_RULES: RateLimitRule[] = [
     description: "Prevent Telegram initData brute-force verification attempts.",
   },
   {
+    action: "auth.telegram",
+    scope: "telegram_user",
+    windowMs: 60_000,
+    max: 10,
+    blockMs: 5 * 60_000,
+    description: "Limit verified Telegram login attempts per Telegram user.",
+  },
+  {
+    action: "auth.telegram",
+    scope: "custom",
+    windowMs: 60_000,
+    max: 3,
+    blockMs: 10 * 60_000,
+    description: "Limit repeated use of the same verified Telegram initData.",
+  },
+  {
     action: "auth.refresh",
     scope: "session",
     windowMs: 60_000,

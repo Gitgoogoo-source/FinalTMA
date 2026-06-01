@@ -275,13 +275,12 @@ export const AuthTelegramStartPayloadRequestSchema = z
 
 export const AuthSessionUserSchema = z
   .object({
-    userId: AuthUuidSchema,
+    id: AuthUuidSchema,
     telegramUserId: z
       .string()
       .trim()
       .regex(/^\d{1,20}$/),
-    status: AuthUserStatusSchema,
-    firstName: AuthSafeTextSchema,
+    firstName: z.string().trim().max(256),
     lastName: AuthOptionalSafeTextSchema,
     username: z.preprocess(
       blankToUndefined,
@@ -291,19 +290,19 @@ export const AuthSessionUserSchema = z
       blankToUndefined,
       z.string().trim().min(2).max(32).optional(),
     ),
-    photoUrl: AuthOptionalUrlSchema,
-    isPremium: z.boolean().optional().default(false),
-    createdAt: AuthIsoDateTimeSchema,
-    updatedAt: AuthIsoDateTimeSchema,
+    avatarUrl: AuthOptionalUrlSchema,
+    inviteCode: z.preprocess(
+      blankToUndefined,
+      AuthReferralCodeSchema.optional(),
+    ),
   })
   .strict();
 
 export const AuthSessionSchema = z
   .object({
     sessionId: AuthUuidSchema,
-    status: AuthSessionStatusSchema,
-    issuedAt: AuthIsoDateTimeSchema,
     expiresAt: AuthIsoDateTimeSchema,
+    expiresInSeconds: z.number().int().nonnegative(),
 
     cookieBased: z.boolean().default(true),
   })
@@ -376,6 +375,7 @@ export const AuthErrorCodeSchema = z.enum([
   "AUTH_INIT_DATA_INVALID",
   "AUTH_INIT_DATA_EXPIRED",
   "AUTH_INIT_DATA_FROM_FUTURE",
+  "AUTH_INIT_DATA_REPLAYED",
   "AUTH_SESSION_REQUIRED",
   "AUTH_SESSION_INVALID",
   "AUTH_SESSION_EXPIRED",

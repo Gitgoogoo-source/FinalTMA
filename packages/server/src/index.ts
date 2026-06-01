@@ -1,4 +1,5 @@
 export * from "./auth/issueSession.js";
+export * from "./auth/sessionConfig.js";
 export * from "./auth/verifySession.js";
 export * from "./auth/verifyTelegramInitData.js";
 export * from "./db/idempotency.js";

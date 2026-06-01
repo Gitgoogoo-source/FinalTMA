@@ -49,6 +49,12 @@ describe("auth API", () => {
     delete process.env.SESSION_COOKIE_NAME;
     delete process.env.SESSION_COOKIE_SECURE;
     delete process.env.SESSION_COOKIE_SAMESITE;
+    delete process.env.SESSION_TTL_SECONDS;
+    delete process.env.SESSION_REFRESH_THRESHOLD_SECONDS;
+    delete process.env.SESSION_MAX_LIFETIME_SECONDS;
+    delete process.env.TELEGRAM_INIT_DATA_MAX_AGE_SECONDS;
+    delete process.env.TELEGRAM_INIT_DATA_CLOCK_TOLERANCE_SECONDS;
+    delete process.env.VERCEL_ENV;
   });
 
   it("/api/auth/telegram rejects invalid Telegram initData", async () => {
@@ -270,6 +276,7 @@ describe("auth API", () => {
         session: {
           sessionId: SESSION_ID,
           expiresAt: "2026-05-28T00:00:00.000Z",
+          expiresInSeconds: 604800,
           cookieBased: true,
         },
       },
@@ -306,6 +313,73 @@ describe("auth API", () => {
         [expectedIpHash, expectedUserAgentHash, "ios"].join(":"),
       ),
     );
+  });
+
+  it("/api/auth/telegram uses configured session TTL for DB expiry and cookie lifetime", async () => {
+    process.env.SESSION_TTL_SECONDS = "86400";
+    getSupabaseAdminClientMock.mockReturnValue(createAuthSupabaseMock());
+    callRpcRawMock.mockImplementation(
+      async (rpcName: string, params: Record<string, unknown>) => {
+        if (rpcName === "auth_upsert_telegram_user") {
+          return {
+            user_id: USER_ID,
+            telegram_user_id: 7010,
+            invite_code: "invite_test_7010",
+          };
+        }
+
+        if (rpcName === "auth_create_session") {
+          return {
+            session_id: SESSION_ID,
+            expires_at: params.p_expires_at,
+          };
+        }
+
+        throw new Error(`Unexpected RPC: ${rpcName}`);
+      },
+    );
+
+    const { default: authTelegramHandler } =
+      await import("../../api/auth/telegram");
+    const initData = buildTelegramInitData({
+      botToken: BOT_TOKEN,
+      authDate: 1779321600,
+      user: {
+        id: 7010,
+        first_name: "Ttl",
+      },
+    });
+    const result = await invokeApiHandler<ApiSuccessResponse>(
+      authTelegramHandler,
+      {
+        method: "POST",
+        url: "/api/auth/telegram",
+        headers: {
+          "content-type": "application/json",
+          "x-forwarded-for": "127.0.0.101",
+        },
+        body: {
+          initData,
+        },
+      },
+    );
+
+    const [, sessionParams] = callRpcRawMock.mock.calls.find(
+      ([rpcName]) => rpcName === "auth_create_session",
+    ) as [string, Record<string, unknown>];
+
+    expect(sessionParams.p_expires_at).toBe("2026-05-22T00:00:00.000Z");
+    expect(result.headers["set-cookie"]).toEqual(
+      expect.stringContaining("Max-Age=86400"),
+    );
+    expect(result.body).toMatchObject({
+      data: {
+        session: {
+          expiresAt: "2026-05-22T00:00:00.000Z",
+          expiresInSeconds: 86400,
+        },
+      },
+    });
   });
 
   it("/api/auth/telegram records same-device referral multi-account risk", async () => {
@@ -503,6 +577,60 @@ describe("auth API", () => {
     expect(callRpcRawMock).toHaveBeenCalledTimes(1);
   });
 
+  it("/api/auth/telegram maps replayed initData session creation to a stable error", async () => {
+    getSupabaseAdminClientMock.mockReturnValue(createAuthSupabaseMock());
+    callRpcRawMock.mockImplementation(async (rpcName: string) => {
+      if (rpcName === "auth_upsert_telegram_user") {
+        return {
+          user_id: USER_ID,
+          telegram_user_id: 7011,
+          invite_code: "invite_test_7011",
+        };
+      }
+
+      if (rpcName === "auth_create_session") {
+        throw new Error(
+          'Supabase RPC "auth_create_session" failed: auth_init_data_replayed',
+        );
+      }
+
+      throw new Error(`Unexpected RPC: ${rpcName}`);
+    });
+
+    const { default: authTelegramHandler } =
+      await import("../../api/auth/telegram");
+    const initData = buildTelegramInitData({
+      botToken: BOT_TOKEN,
+      authDate: 1779321600,
+      user: {
+        id: 7011,
+        first_name: "Replay",
+      },
+    });
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      authTelegramHandler,
+      {
+        method: "POST",
+        url: "/api/auth/telegram",
+        headers: {
+          "content-type": "application/json",
+          "x-forwarded-for": "127.0.0.111",
+        },
+        body: {
+          initData,
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(409);
+    expect(result.body).toMatchObject({
+      ok: false,
+      error: {
+        code: "AUTH_INIT_DATA_REPLAYED",
+      },
+    });
+  });
+
   it("/api/auth/refresh extends the current session and renews the cookie", async () => {
     const token = "refresh-session-token-1234567890abcdef";
     const db = createSessionLifecycleSupabaseMock({
@@ -542,6 +670,7 @@ describe("auth API", () => {
         session: {
           sessionId: SESSION_ID,
           expiresAt: "2026-05-28T00:00:00.000Z",
+          expiresInSeconds: 604800,
           cookieBased: true,
         },
       },
@@ -563,6 +692,68 @@ describe("auth API", () => {
         }),
       ]),
     );
+  });
+
+  it("/api/auth/refresh clamps sliding refresh to the configured max lifetime", async () => {
+    process.env.SESSION_TTL_SECONDS = "86400";
+    process.env.SESSION_REFRESH_THRESHOLD_SECONDS = "86400";
+    process.env.SESSION_MAX_LIFETIME_SECONDS = "172800";
+    const token = "refresh-clamp-session-token-1234567890abcdef";
+    const db = createSessionLifecycleSupabaseMock({
+      token,
+      refreshExpiresAt: "2026-05-22T00:00:00.000Z",
+      sessionOverrides: {
+        created_at: "2026-05-20T00:00:00.000Z",
+        expires_at: "2026-05-21T00:30:00.000Z",
+      },
+    });
+    getSupabaseAdminClientMock.mockReturnValue(db);
+
+    const { default: refreshHandler } = await import("../../api/auth/refresh");
+    const result = await invokeApiHandler<ApiSuccessResponse>(refreshHandler, {
+      method: "POST",
+      url: "/api/auth/refresh",
+      headers: {
+        "content-type": "application/json",
+        cookie: `tma_game_session=${token}`,
+      },
+      body: {},
+    });
+
+    expect(result.statusCode).toBe(200);
+    expect(result.headers["set-cookie"]).toEqual(
+      expect.stringContaining("Max-Age=86400"),
+    );
+    expect(db.operations).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          table: "app_sessions",
+          action: "update",
+          updatePayload: expect.objectContaining({
+            expires_at: "2026-05-22T00:00:00.000Z",
+          }),
+        }),
+      ]),
+    );
+    expect(result.body).toMatchObject({
+      data: {
+        session: {
+          expiresAt: "2026-05-22T00:00:00.000Z",
+          expiresInSeconds: 86400,
+        },
+      },
+    });
+  });
+
+  it("forces Secure session cookies in production-like runtimes", async () => {
+    process.env.NODE_ENV = "production";
+    process.env.VERCEL_ENV = "production";
+    process.env.SESSION_COOKIE_SECURE = "false";
+
+    const { buildAuthSessionCookie } =
+      await import("../../api/auth/_sessionCookies");
+
+    expect(buildAuthSessionCookie("token-value", 60)).toContain("Secure");
   });
 
   it("/api/auth/logout revokes only the current session by default", async () => {
@@ -679,6 +870,7 @@ function createSessionLifecycleSupabaseMock(options: {
   token: string;
   refreshExpiresAt?: string;
   logoutRows?: Array<{ id: string }>;
+  sessionOverrides?: Record<string, unknown>;
 }) {
   const operations: LifecycleOperation[] = [];
   const session = {
@@ -688,6 +880,9 @@ function createSessionLifecycleSupabaseMock(options: {
     expires_at: "2026-05-22T00:00:00.000Z",
     revoked_at: null,
     last_seen_at: "2026-05-21T00:00:00.000Z",
+    created_at: "2026-05-21T00:00:00.000Z",
+    telegram_auth_date: "2026-05-21T00:00:00.000Z",
+    ...(options.sessionOverrides ?? {}),
   };
   const user = {
     id: USER_ID,
