@@ -1,3 +1,4 @@
+import { createHash, createHmac } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { VercelRequest } from "@vercel/node";
 
@@ -21,6 +22,7 @@ vi.mock("../../packages/server/src/db/supabaseAdmin.js", () => ({
 }));
 
 const BOT_TOKEN = "123456:test-bot-token";
+const APP_SESSION_SECRET = "test-app-session-secret-32-bytes-minimum";
 const USER_ID = "11111111-1111-4111-8111-111111111111";
 const INVITER_USER_ID = "11111111-1111-4111-8111-222222222222";
 const SESSION_ID = "22222222-2222-4222-8222-222222222222";
@@ -30,6 +32,7 @@ describe("auth API", () => {
   beforeEach(() => {
     process.env.NODE_ENV = "test";
     process.env.TELEGRAM_BOT_TOKEN = BOT_TOKEN;
+    process.env.APP_SESSION_SECRET = APP_SESSION_SECRET;
     process.env.SESSION_COOKIE_NAME = "tma_game_session";
     process.env.SESSION_COOKIE_SECURE = "false";
     process.env.SESSION_COOKIE_SAMESITE = "lax";
@@ -42,6 +45,7 @@ describe("auth API", () => {
   afterEach(() => {
     vi.useRealTimers();
     delete process.env.TELEGRAM_BOT_TOKEN;
+    delete process.env.APP_SESSION_SECRET;
     delete process.env.SESSION_COOKIE_NAME;
     delete process.env.SESSION_COOKIE_SECURE;
     delete process.env.SESSION_COOKIE_SAMESITE;
@@ -71,6 +75,120 @@ describe("auth API", () => {
       ok: false,
       error: {
         code: "AUTH_INIT_DATA_INVALID",
+      },
+    });
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+  });
+
+  it("/api/auth/telegram returns a stable expired-code for expired initData", async () => {
+    const { default: authTelegramHandler } =
+      await import("../../api/auth/telegram");
+    const initData = buildTelegramInitData({
+      botToken: BOT_TOKEN,
+      authDate: 1779235199,
+      user: {
+        id: 7001,
+        first_name: "Expired",
+      },
+    });
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      authTelegramHandler,
+      {
+        method: "POST",
+        url: "/api/auth/telegram",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: {
+          initData,
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(401);
+    expect(result.body).toMatchObject({
+      ok: false,
+      error: {
+        code: "AUTH_INIT_DATA_EXPIRED",
+        details: {
+          reason: "AUTH_DATE_EXPIRED",
+        },
+      },
+    });
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+  });
+
+  it("/api/auth/telegram returns a stable future-code for future initData", async () => {
+    const { default: authTelegramHandler } =
+      await import("../../api/auth/telegram");
+    const initData = buildTelegramInitData({
+      botToken: BOT_TOKEN,
+      authDate: 1779321901,
+      user: {
+        id: 7001,
+        first_name: "Future",
+      },
+    });
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      authTelegramHandler,
+      {
+        method: "POST",
+        url: "/api/auth/telegram",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: {
+          initData,
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(401);
+    expect(result.body).toMatchObject({
+      ok: false,
+      error: {
+        code: "AUTH_INIT_DATA_FROM_FUTURE",
+        details: {
+          reason: "AUTH_DATE_FROM_FUTURE",
+        },
+      },
+    });
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+  });
+
+  it("/api/auth/telegram rejects duplicated initData keys before RPC writes", async () => {
+    const { default: authTelegramHandler } =
+      await import("../../api/auth/telegram");
+    const initData = `${buildTelegramInitData({
+      botToken: BOT_TOKEN,
+      authDate: 1779321600,
+      user: {
+        id: 7001,
+        first_name: "Duplicate",
+      },
+    })}&user=%7B%22id%22%3A7002%2C%22first_name%22%3A%22Duplicate%22%7D`;
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      authTelegramHandler,
+      {
+        method: "POST",
+        url: "/api/auth/telegram",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: {
+          initData,
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(401);
+    expect(result.body).toMatchObject({
+      ok: false,
+      error: {
+        code: "AUTH_INIT_DATA_INVALID",
+        details: {
+          reason: "INIT_DATA_DUPLICATE_KEY",
+        },
       },
     });
     expect(callRpcRawMock).not.toHaveBeenCalled();
@@ -174,6 +292,19 @@ describe("auth API", () => {
         p_user_agent: expect.any(String),
       }),
       expect.any(Object),
+    );
+    const [, sessionParams] = callRpcRawMock.mock.calls.find(
+      ([rpcName]) => rpcName === "auth_create_session",
+    ) as [string, Record<string, unknown>];
+    const expectedIpHash = hmacFingerprint("ip", "127.0.0.12");
+    const expectedUserAgentHash = hmacFingerprint("user_agent", "vitest");
+    expect(sessionParams.p_ip_hash).toBe(expectedIpHash);
+    expect(sessionParams.p_user_agent).toBe(expectedUserAgentHash);
+    expect(sessionParams.p_device_id).toBe(
+      hmacFingerprint(
+        "device",
+        [expectedIpHash, expectedUserAgentHash, "ios"].join(":"),
+      ),
     );
   });
 
@@ -324,15 +455,13 @@ describe("auth API", () => {
     expect(callRpcRawMock).not.toHaveBeenCalled();
   });
 
-  it("/api/auth/telegram returns USER_BLOCKED for inactive users", async () => {
-    getSupabaseAdminClientMock.mockReturnValue(
-      createAuthSupabaseMock("blocked"),
+  it("/api/auth/telegram returns USER_BLOCKED when auth RPC rejects inactive users before writes", async () => {
+    getSupabaseAdminClientMock.mockReturnValue(createAuthSupabaseMock());
+    callRpcRawMock.mockRejectedValueOnce(
+      new Error(
+        'Supabase RPC "auth_upsert_telegram_user" failed: auth_user_not_active:restricted',
+      ),
     );
-    callRpcRawMock.mockResolvedValueOnce({
-      user_id: USER_ID,
-      telegram_user_id: 7001,
-      invite_code: "invite_test_7001",
-    });
 
     const { default: authTelegramHandler } =
       await import("../../api/auth/telegram");
@@ -366,11 +495,334 @@ describe("auth API", () => {
       error: {
         code: "USER_BLOCKED",
         message: "当前账号已被限制使用。",
+        details: {
+          status: "restricted",
+        },
       },
     });
     expect(callRpcRawMock).toHaveBeenCalledTimes(1);
   });
+
+  it("/api/auth/refresh extends the current session and renews the cookie", async () => {
+    const token = "refresh-session-token-1234567890abcdef";
+    const db = createSessionLifecycleSupabaseMock({
+      token,
+      refreshExpiresAt: "2026-05-28T00:00:00.000Z",
+    });
+    getSupabaseAdminClientMock.mockReturnValue(db);
+
+    const { default: refreshHandler } = await import("../../api/auth/refresh");
+    const result = await invokeApiHandler<ApiSuccessResponse>(refreshHandler, {
+      method: "POST",
+      url: "/api/auth/refresh",
+      headers: {
+        "content-type": "application/json",
+        cookie: `tma_game_session=${token}`,
+      },
+      body: {
+        clientContext: {
+          platform: "ios",
+        },
+      },
+    });
+
+    expect(result.statusCode).toBe(200);
+    expect(result.headers["set-cookie"]).toEqual(
+      expect.stringContaining(`tma_game_session=${token}`),
+    );
+    expect(result.body).toMatchObject({
+      ok: true,
+      data: {
+        status: "ok",
+        user: {
+          id: USER_ID,
+          telegramUserId: "7001",
+          username: "test_user",
+        },
+        session: {
+          sessionId: SESSION_ID,
+          expiresAt: "2026-05-28T00:00:00.000Z",
+          cookieBased: true,
+        },
+      },
+    });
+    expect(db.operations).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          table: "app_sessions",
+          action: "update",
+          updatePayload: expect.objectContaining({
+            expires_at: "2026-05-28T00:00:00.000Z",
+            platform: "ios",
+          }),
+          eqs: expect.arrayContaining([
+            ["id", SESSION_ID],
+            ["user_id", USER_ID],
+            ["session_token_hash", sha256(token)],
+          ]),
+        }),
+      ]),
+    );
+  });
+
+  it("/api/auth/logout revokes only the current session by default", async () => {
+    const token = "logout-session-token-1234567890abcdef";
+    const db = createSessionLifecycleSupabaseMock({
+      token,
+      logoutRows: [{ id: SESSION_ID }],
+    });
+    getSupabaseAdminClientMock.mockReturnValue(db);
+
+    const { default: logoutHandler } = await import("../../api/auth/logout");
+    const result = await invokeApiHandler<ApiSuccessResponse>(logoutHandler, {
+      method: "POST",
+      url: "/api/auth/logout",
+      headers: {
+        "content-type": "application/json",
+        cookie: `tma_game_session=${token}`,
+      },
+      body: {},
+    });
+
+    expect(result.statusCode).toBe(200);
+    expect(result.headers["set-cookie"]).toEqual(
+      expect.stringContaining("Max-Age=0"),
+    );
+    expect(result.body).toMatchObject({
+      ok: true,
+      data: {
+        status: "ok",
+        revokedSessionCount: 1,
+      },
+    });
+    expect(db.operations).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          table: "app_sessions",
+          action: "update",
+          eqs: expect.arrayContaining([
+            ["user_id", USER_ID],
+            ["id", SESSION_ID],
+            ["session_token_hash", sha256(token)],
+          ]),
+        }),
+      ]),
+    );
+  });
+
+  it("/api/auth/logout can revoke all active sessions for the current user", async () => {
+    const token = "logout-all-session-token-1234567890abcdef";
+    const db = createSessionLifecycleSupabaseMock({
+      token,
+      logoutRows: [
+        { id: SESSION_ID },
+        { id: "22222222-2222-4222-8222-333333333333" },
+      ],
+    });
+    getSupabaseAdminClientMock.mockReturnValue(db);
+
+    const { default: logoutHandler } = await import("../../api/auth/logout");
+    const result = await invokeApiHandler<ApiSuccessResponse>(logoutHandler, {
+      method: "POST",
+      url: "/api/auth/logout",
+      headers: {
+        "content-type": "application/json",
+        cookie: `tma_game_session=${token}`,
+      },
+      body: {
+        allDevices: true,
+      },
+    });
+
+    expect(result.statusCode).toBe(200);
+    expect(result.body).toMatchObject({
+      ok: true,
+      data: {
+        revokedSessionCount: 2,
+      },
+    });
+    const logoutUpdate = db.operations.find(
+      (operation) =>
+        operation.table === "app_sessions" &&
+        operation.action === "update" &&
+        operation.selectColumns === "id",
+    );
+    expect(logoutUpdate?.eqs).toEqual(
+      expect.arrayContaining([["user_id", USER_ID]]),
+    );
+    expect(logoutUpdate?.eqs).not.toEqual(
+      expect.arrayContaining([["id", SESSION_ID]]),
+    );
+  });
 });
+
+function hmacFingerprint(namespace: string, value: string): string {
+  return createHmac("sha256", APP_SESSION_SECRET)
+    .update(`${namespace}:${value}`)
+    .digest("hex");
+}
+
+function sha256(value: string): string {
+  return createHash("sha256").update(value, "utf8").digest("hex");
+}
+
+type LifecycleOperation = {
+  table: string;
+  action: "select" | "update" | null;
+  selectColumns: string | null;
+  updatePayload: Record<string, unknown> | null;
+  eqs: Array<[string, unknown]>;
+  isFilters: Array<[string, unknown]>;
+};
+
+function createSessionLifecycleSupabaseMock(options: {
+  token: string;
+  refreshExpiresAt?: string;
+  logoutRows?: Array<{ id: string }>;
+}) {
+  const operations: LifecycleOperation[] = [];
+  const session = {
+    id: SESSION_ID,
+    user_id: USER_ID,
+    session_token_hash: sha256(options.token),
+    expires_at: "2026-05-22T00:00:00.000Z",
+    revoked_at: null,
+    last_seen_at: "2026-05-21T00:00:00.000Z",
+  };
+  const user = {
+    id: USER_ID,
+    telegram_user_id: 7001,
+    username: "test_user",
+    first_name: "Test",
+    last_name: "User",
+    language_code: "zh-hans",
+    photo_url: "https://example.test/avatar.png",
+    invite_code: "invite_test_7001",
+    status: "active",
+  };
+
+  return {
+    operations,
+    schema: vi.fn(() => ({
+      from: vi.fn((table: string) =>
+        createLifecycleBuilder(table, operations, {
+          session,
+          user,
+          refreshExpiresAt:
+            options.refreshExpiresAt ?? "2026-05-28T00:00:00.000Z",
+          logoutRows: options.logoutRows ?? [{ id: SESSION_ID }],
+        }),
+      ),
+    })),
+  };
+}
+
+function createLifecycleBuilder(
+  table: string,
+  operations: LifecycleOperation[],
+  rows: {
+    session: Record<string, unknown>;
+    user: Record<string, unknown>;
+    refreshExpiresAt: string;
+    logoutRows: Array<{ id: string }>;
+  },
+) {
+  const state: LifecycleOperation = {
+    table,
+    action: null,
+    selectColumns: null,
+    updatePayload: null,
+    eqs: [],
+    isFilters: [],
+  };
+  const builder = {
+    select: vi.fn((columns: string) => {
+      if (state.action === null) {
+        state.action = "select";
+      }
+      state.selectColumns = columns;
+      return builder;
+    }),
+    update: vi.fn((payload: Record<string, unknown>) => {
+      state.action = "update";
+      state.updatePayload = payload;
+      return builder;
+    }),
+    eq: vi.fn((column: string, value: unknown) => {
+      state.eqs.push([column, value]);
+      return builder;
+    }),
+    is: vi.fn((column: string, value: unknown) => {
+      state.isFilters.push([column, value]);
+      return builder;
+    }),
+    maybeSingle: vi.fn(async () => {
+      operations.push(cloneLifecycleOperation(state));
+
+      if (table === "app_sessions" && state.action === "select") {
+        return {
+          data: rows.session,
+          error: null,
+        };
+      }
+
+      if (table === "users" && state.action === "select") {
+        return {
+          data: rows.user,
+          error: null,
+        };
+      }
+
+      if (table === "app_sessions" && state.action === "update") {
+        return {
+          data: {
+            id: rows.session.id,
+            expires_at: rows.refreshExpiresAt,
+          },
+          error: null,
+        };
+      }
+
+      return {
+        data: null,
+        error: null,
+      };
+    }),
+    then: vi.fn((resolve, reject) => {
+      operations.push(cloneLifecycleOperation(state));
+
+      const result =
+        table === "app_sessions" && state.action === "update"
+          ? {
+              data: rows.logoutRows,
+              error: null,
+            }
+          : {
+              data: null,
+              error: null,
+            };
+
+      return Promise.resolve(result).then(resolve, reject);
+    }),
+  };
+
+  return builder;
+}
+
+function cloneLifecycleOperation(
+  operation: LifecycleOperation,
+): LifecycleOperation {
+  return {
+    table: operation.table,
+    action: operation.action,
+    selectColumns: operation.selectColumns,
+    updatePayload: operation.updatePayload
+      ? { ...operation.updatePayload }
+      : null,
+    eqs: [...operation.eqs],
+    isFilters: [...operation.isFilters],
+  };
+}
 
 function createAuthSupabaseMock(status = "active") {
   const maybeSingleMock = vi

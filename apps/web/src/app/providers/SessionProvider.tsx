@@ -47,9 +47,19 @@ type LoginResponse = {
   session: AppSession;
 };
 
+type RefreshSessionResponse = {
+  status: "ok";
+  user: SessionUser;
+  session: AppSession;
+};
+
 type SessionError = {
   code: string;
   message: string;
+};
+
+type LogoutOptions = {
+  allDevices?: boolean;
 };
 
 type SessionContextValue = {
@@ -62,7 +72,9 @@ type SessionContextValue = {
   bootstrapError: SessionError | null;
   isAuthenticated: boolean;
   authenticate: () => Promise<void>;
+  refreshSession: () => Promise<void>;
   reloadBootstrap: () => Promise<void>;
+  logout: (options?: LogoutOptions) => Promise<void>;
   clearSession: () => void;
 };
 
@@ -192,6 +204,61 @@ export function SessionProvider({ children }: SessionProviderProps) {
     }
   }, [reloadBootstrap]);
 
+  const refreshSession = useCallback(async () => {
+    setError(null);
+
+    try {
+      const refreshResponse = await apiRequest<RefreshSessionResponse>(
+        API_ENDPOINTS.auth.refresh,
+        {
+          method: "POST",
+          body: buildSessionRefreshBody(latestTelegramRef.current),
+        },
+      );
+
+      setUser(refreshResponse.user);
+      setSession(refreshResponse.session);
+      setStatus("authenticated");
+      await reloadBootstrap();
+    } catch (requestError) {
+      setUser(null);
+      setSession(null);
+      setBootstrap(null);
+      setStatus("error");
+      setError({
+        code: "AUTH_SESSION_REFRESH_FAILED",
+        message: getApiErrorMessage(requestError),
+      });
+
+      throw requestError;
+    }
+  }, [reloadBootstrap]);
+
+  const logout = useCallback(
+    async (options: LogoutOptions = {}) => {
+      setError(null);
+
+      try {
+        await apiRequest(API_ENDPOINTS.auth.logout, {
+          method: "POST",
+          body: {
+            allDevices: Boolean(options.allDevices),
+          },
+        });
+
+        clearSession();
+      } catch (requestError) {
+        setError({
+          code: "AUTH_LOGOUT_FAILED",
+          message: getApiErrorMessage(requestError),
+        });
+
+        throw requestError;
+      }
+    },
+    [clearSession],
+  );
+
   useEffect(() => {
     if (!telegram.isReady) {
       return;
@@ -221,7 +288,9 @@ export function SessionProvider({ children }: SessionProviderProps) {
       bootstrapError,
       isAuthenticated: status === "authenticated" && Boolean(session),
       authenticate,
+      refreshSession,
       reloadBootstrap,
+      logout,
       clearSession,
     }),
     [
@@ -231,7 +300,9 @@ export function SessionProvider({ children }: SessionProviderProps) {
       bootstrapStatus,
       clearSession,
       error,
+      logout,
       reloadBootstrap,
+      refreshSession,
       session,
       status,
       user,
@@ -258,6 +329,14 @@ function buildTelegramLoginBody(
 ): Record<string, unknown> {
   return {
     initData: telegram.initData,
+    clientContext: buildAuthClientContext(telegram),
+  };
+}
+
+function buildSessionRefreshBody(
+  telegram: ReturnType<typeof useTelegram>,
+): Record<string, unknown> {
+  return {
     clientContext: buildAuthClientContext(telegram),
   };
 }

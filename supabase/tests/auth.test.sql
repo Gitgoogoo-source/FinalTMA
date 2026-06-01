@@ -168,6 +168,70 @@ select is((select username::text from core.users where telegram_user_id = 910000
 select is((select selected_language from core.user_profiles p join _ids i on i.id = p.user_id where i.key = 'inviter'), 'zh-hans', 'profile selected language is refreshed');
 
 insert into _ids (key, payload)
+select 'restricted_payload', api.auth_upsert_telegram_user(
+  p_telegram_user_id := 9100000004,
+  p_username := 'restricted_auth_test',
+  p_first_name := 'Restricted',
+  p_last_name := 'Before',
+  p_language_code := 'en',
+  p_is_premium := false,
+  p_photo_url := 'https://example.test/restricted-before.png',
+  p_start_param := null,
+  p_metadata := '{"case":"auth_restricted_seed"}'::jsonb
+);
+
+insert into _ids (key, id)
+select 'restricted', (payload ->> 'user_id')::uuid
+from _ids where key = 'restricted_payload';
+
+update core.users
+set status = 'restricted',
+    username = 'restricted_auth_test_before',
+    first_name = 'Restricted',
+    last_name = 'Before',
+    language_code = 'en',
+    photo_url = 'https://example.test/restricted-before.png',
+    updated_at = '2026-01-01T00:00:00Z'::timestamptz,
+    last_auth_at = '2026-01-01T00:00:00Z'::timestamptz
+where id = (select id from _ids where key = 'restricted');
+
+update core.user_profiles
+set display_name = 'Restricted Before',
+    avatar_url = 'https://example.test/restricted-before.png',
+    selected_language = 'en',
+    updated_at = '2026-01-01T00:00:00Z'::timestamptz
+where user_id = (select id from _ids where key = 'restricted');
+
+select ok(
+  testutil.raises_like(
+    $sql$
+      select api.auth_upsert_telegram_user(
+        p_telegram_user_id := 9100000004,
+        p_username := 'restricted_auth_test_after',
+        p_first_name := 'Restricted',
+        p_last_name := 'After',
+        p_language_code := 'zh-hans',
+        p_is_premium := true,
+        p_photo_url := 'https://example.test/restricted-after.png',
+        p_start_param := null,
+        p_metadata := '{"case":"auth_restricted_retry"}'::jsonb
+      )
+    $sql$,
+    '%auth_user_not_active:restricted%'
+  ),
+  'restricted users are rejected before auth upsert writes profile or balances'
+);
+
+select is((select username::text from core.users where telegram_user_id = 9100000004), 'restricted_auth_test_before', 'restricted auth retry does not update username');
+select is((select last_name from core.users where telegram_user_id = 9100000004), 'Before', 'restricted auth retry does not update user profile fields on core.users');
+select is((select selected_language from core.user_profiles where user_id = (select id from _ids where key = 'restricted')), 'en', 'restricted auth retry does not update core.user_profiles');
+select is(
+  (select count(*)::int from economy.user_balances where user_id = (select id from _ids where key = 'restricted')),
+  2,
+  'restricted auth retry does not create duplicate balance rows'
+);
+
+insert into _ids (key, payload)
 select 'second_inviter_payload', api.auth_upsert_telegram_user(
   p_telegram_user_id := 9100000003,
   p_username := 'second_inviter_auth_test',

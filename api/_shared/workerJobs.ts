@@ -88,6 +88,10 @@ function validateWorkerParams(jobName: WorkerJobName, params: JsonObject): void 
   if (jobName === "reconciliation") {
     parseReconciliationRunTypes(params.runTypes);
   }
+
+  if (jobName === "daily_reports") {
+    readDateString(params.reportDate ?? params.report_date ?? params.date);
+  }
 }
 
 async function runWorkerTask(input: {
@@ -113,6 +117,8 @@ async function runWorkerTask(input: {
       return runCampaignCloseWorker(input);
     case "cleanup_idempotency":
       return runCleanupIdempotencyWorker(input);
+    case "daily_reports":
+      return runDailyReportsWorker(input);
   }
 }
 
@@ -339,6 +345,37 @@ async function runCleanupIdempotencyWorker(input: {
   };
 }
 
+async function runDailyReportsWorker(input: {
+  requestId: string;
+  params: JsonObject;
+}): Promise<WorkerTaskResult> {
+  const payload = await callRpcRaw<Record<string, unknown>>(
+    "worker_build_daily_reports",
+    {
+      p_report_date: readDateString(
+        input.params.reportDate ?? input.params.report_date ?? input.params.date,
+      ),
+      p_request_context: {
+        request_id: input.requestId,
+        source: "worker.daily_reports",
+      },
+    },
+    {
+      schema: "api" as never,
+      context: {
+        requestId: input.requestId,
+        source: "worker.daily_reports",
+      },
+    },
+  );
+
+  return {
+    processedCount: readNumber(payload.processed_count),
+    failedCount: payload.status === "success" ? 0 : 1,
+    result: toJsonObject(payload),
+  };
+}
+
 function parseReconciliationRunTypes(
   value: unknown,
 ): Phase5ReconciliationRunType[] | undefined {
@@ -402,6 +439,24 @@ function readString(value: unknown): string | null {
   return typeof value === "string" && value.trim().length > 0
     ? value.trim()
     : null;
+}
+
+function readDateString(value: unknown): string | null {
+  const raw = readString(value);
+
+  if (raw === null) {
+    return null;
+  }
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    throw new ApiError(
+      400,
+      "WORKER_REPORT_DATE_INVALID",
+      "reportDate must be YYYY-MM-DD.",
+    );
+  }
+
+  return raw;
 }
 
 function sumNumber(values: number[]): number {

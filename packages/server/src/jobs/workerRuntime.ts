@@ -19,6 +19,7 @@ export const WORKER_JOB_NAMES = [
   "expire_listings",
   "campaign_close",
   "cleanup_idempotency",
+  "daily_reports",
 ] as const;
 
 export type WorkerJobName = (typeof WORKER_JOB_NAMES)[number];
@@ -267,6 +268,20 @@ export const WORKER_JOB_DEFINITIONS: readonly WorkerJobDefinition[] = [
     flag: {
       key: "FEATURE_CLEANUP_IDEMPOTENCY_WORKER_ENABLED",
       envName: "FEATURE_CLEANUP_IDEMPOTENCY_WORKER_ENABLED",
+      defaultEnabled: true,
+    },
+  },
+  {
+    jobName: "daily_reports",
+    label: "Daily reports",
+    description: "生成商业运营 BI 日报快照。",
+    cronPath: "/api/cron/build-daily-reports",
+    schedule: "10 17 * * *",
+    nextRunHint: "每天 17:10 UTC，聚合前一天数据。",
+    permission: "ops:read",
+    flag: {
+      key: "FEATURE_DAILY_REPORTS_WORKER_ENABLED",
+      envName: "FEATURE_DAILY_REPORTS_WORKER_ENABLED",
       defaultEnabled: true,
     },
   },

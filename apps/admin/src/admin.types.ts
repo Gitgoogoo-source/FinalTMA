@@ -1797,6 +1797,167 @@ export type CampaignsResponse = {
   serverTime: string;
 };
 
+export type ReportMetricValue = string | number | boolean | null | Json;
+
+export type ReportMetrics = Record<string, ReportMetricValue>;
+
+export type ReportFilterOptions = {
+  campaigns?: Array<{
+    id: string;
+    code: string;
+    title: string;
+    status: string;
+  }>;
+  blindBoxes?: Array<{
+    id: string;
+    slug: string;
+    displayName: string;
+    status: string;
+  }>;
+  series?: Array<{
+    id: string;
+    slug: string;
+    displayName: string;
+    status: string;
+  }>;
+  rarities?: Array<{
+    code: string;
+    displayName: string;
+    sortOrder?: number | string | null;
+  }>;
+  templates?: Array<{
+    id: string;
+    slug: string;
+    displayName: string;
+    rarityCode: string;
+    seriesId?: string | null;
+    releaseStatus?: string | null;
+  }>;
+  currencies?: Array<{
+    code: string;
+    displayName: string;
+    symbol?: string | null;
+  }>;
+  cohorts?: Array<{
+    key: string;
+    label: string;
+  }>;
+};
+
+export type DailyBusinessReport = {
+  id: string;
+  report_date: string;
+  campaign_id: string | null;
+  box_id: string | null;
+  cohort_key: string;
+  scope_key: string;
+  metrics: ReportMetrics;
+};
+
+export type DailyEconomyReport = {
+  id: string;
+  report_date: string;
+  currency_code: string;
+  source_type: string;
+  cohort_key: string;
+  scope_key: string;
+  metrics: ReportMetrics;
+};
+
+export type DailyGachaReport = {
+  id: string;
+  report_date: string;
+  campaign_id: string | null;
+  box_id: string | null;
+  series_id: string | null;
+  template_id: string | null;
+  rarity_code: string;
+  cohort_key: string;
+  scope_key: string;
+  metrics: ReportMetrics;
+};
+
+export type DailyMarketReport = {
+  id: string;
+  report_date: string;
+  series_id: string | null;
+  template_id: string | null;
+  rarity_code: string;
+  cohort_key: string;
+  scope_key: string;
+  metrics: ReportMetrics;
+};
+
+export type DailyReferralReport = {
+  id: string;
+  report_date: string;
+  campaign_id: string | null;
+  cohort_key: string;
+  scope_key: string;
+  metrics: ReportMetrics;
+};
+
+export type ReportFilters = {
+  from?: string;
+  to?: string;
+  campaignId?: string;
+  boxId?: string;
+  seriesId?: string;
+  templateId?: string;
+  rarityCode?: string;
+  cohortKey?: string;
+  currencyCode?: string;
+  limit?: number;
+  cursor?: string | number | null;
+};
+
+export type DailyReportsResponse = {
+  items: DailyBusinessReport[];
+  businessReports?: DailyBusinessReport[];
+  referralReports: DailyReferralReport[];
+  filterOptions?: ReportFilterOptions;
+  summary?: Record<string, unknown>;
+  nextCursor: string | null;
+  sources?: Record<string, unknown>;
+  serverTime: string;
+};
+
+export type EconomyReportsResponse = {
+  items: DailyEconomyReport[];
+  filterOptions?: ReportFilterOptions;
+  summary?: Record<string, unknown>;
+  nextCursor: string | null;
+  sources?: Record<string, unknown>;
+  serverTime: string;
+};
+
+export type GachaReportsResponse = {
+  items: DailyGachaReport[];
+  filterOptions?: ReportFilterOptions;
+  summary?: Record<string, unknown>;
+  nextCursor: string | null;
+  sources?: Record<string, unknown>;
+  serverTime: string;
+};
+
+export type MarketReportsResponse = {
+  items: DailyMarketReport[];
+  filterOptions?: ReportFilterOptions;
+  summary?: Record<string, unknown>;
+  nextCursor: string | null;
+  sources?: Record<string, unknown>;
+  serverTime: string;
+};
+
+export type ReportExportType = "daily" | "gacha" | "economy" | "market";
+
+export type ReportExportInput = {
+  reportType: ReportExportType;
+  filters: ReportFilters;
+  reason: string;
+  confirmLargeRange?: boolean;
+};
+
 export type AdminConfigMutationResponse = Record<string, unknown> & {
   audit_log_id?: string | null;
   idempotent?: boolean;
@@ -2565,6 +2726,7 @@ export type AdminTab =
   | "payments"
   | "reconciliation"
   | "workers"
+  | "reports"
   | "risk"
   | "mint"
   | "market-ops"

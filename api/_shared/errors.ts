@@ -14,6 +14,8 @@ export type ApiErrorCode =
   | "PAYLOAD_TOO_LARGE"
   | "UNSUPPORTED_MEDIA_TYPE"
   | "AUTH_INIT_DATA_INVALID"
+  | "AUTH_INIT_DATA_EXPIRED"
+  | "AUTH_INIT_DATA_FROM_FUTURE"
   | "AUTH_SESSION_EXPIRED"
   | "USER_BLOCKED"
   | "BOX_NOT_FOUND"
@@ -112,6 +114,8 @@ export function statusCodeFromErrorCode(code: ApiErrorCode): number {
 
     case "UNAUTHORIZED":
     case "AUTH_INIT_DATA_INVALID":
+    case "AUTH_INIT_DATA_EXPIRED":
+    case "AUTH_INIT_DATA_FROM_FUTURE":
     case "AUTH_SESSION_EXPIRED":
     case "SESSION_EXPIRED":
       return 401;

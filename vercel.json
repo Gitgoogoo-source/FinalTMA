@@ -51,6 +51,10 @@
       "schedule": "35 2 * * *"
     },
     {
+      "path": "/api/cron/build-daily-reports",
+      "schedule": "10 17 * * *"
+    },
+    {
       "path": "/api/cron/monitoring-alert-scan",
       "schedule": "*/5 * * * *"
     }

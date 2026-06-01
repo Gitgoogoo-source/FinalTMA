@@ -1,5 +1,6 @@
 import {
   Activity,
+  BarChart3,
   Flag,
   Gift,
   Image as ImageIcon,
@@ -37,6 +38,7 @@ import { MintQueuePage } from "./pages/MintQueuePage";
 import { PaymentsPage } from "./pages/PaymentsPage";
 import { PermissionMatrixPage } from "./pages/PermissionMatrixPage";
 import { ReconciliationPage } from "./pages/ReconciliationPage";
+import { ReportsPage } from "./pages/ReportsPage";
 import { RiskCenterPage } from "./pages/RiskCenterPage";
 import { RolesPage } from "./pages/RolesPage";
 import { SupportTicketsPage } from "./pages/SupportTicketsPage";
@@ -77,6 +79,12 @@ const NAV_ITEMS: AdminNavItem[] = [
     label: "Worker",
     icon: RefreshCw,
     requiredPermissions: ["ops:read"],
+  },
+  {
+    id: "reports",
+    label: "报表",
+    icon: BarChart3,
+    requiredPermissions: ["reports:read"],
   },
   {
     id: "risk",
@@ -325,6 +333,15 @@ function renderActivePage(tab: AdminTab, me: AdminMeResponse) {
       return <ReconciliationPage />;
     case "workers":
       return <WorkersPage />;
+    case "reports":
+      return (
+        <ReportsPage
+          canExportReports={
+            me.isSuperAdmin ||
+            hasAdminPermission(me.permissions, "reports:export")
+          }
+        />
+      );
     case "risk":
       return (
         <RiskCenterPage

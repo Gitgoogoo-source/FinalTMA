@@ -18,6 +18,7 @@ export type RateLimitAction =
   | "*"
   | "auth.telegram"
   | "auth.refresh"
+  | "auth.logout"
   | "me.bootstrap"
   | "box.list"
   | "box.rewards"
@@ -229,6 +230,13 @@ export const DEFAULT_RATE_LIMIT_RULES: RateLimitRule[] = [
   },
   {
     action: "auth.refresh",
+    scope: "session",
+    windowMs: 60_000,
+    max: 20,
+    blockMs: 2 * 60_000,
+  },
+  {
+    action: "auth.logout",
     scope: "session",
     windowMs: 60_000,
     max: 20,

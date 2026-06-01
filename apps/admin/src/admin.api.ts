@@ -27,9 +27,12 @@ import type {
   DropPoolMutationResponse,
   DropPoolValidationResult,
   DropPoolVersionsResponse,
+  DailyReportsResponse,
   EconomyMonitoringResponse,
+  EconomyReportsResponse,
   FeatureFlagsResponse,
   GachaMonitoringResponse,
+  GachaReportsResponse,
   ForceCancelMarketListingInput,
   ForceCancelMarketListingResponse,
   MarketAdminListingsResponse,
@@ -40,6 +43,7 @@ import type {
   MarketMonitoringResponse,
   MarketOpsStats,
   MarketPriceRulesResponse,
+  MarketReportsResponse,
   MarketStatsRebuildResponse,
   MintQueueResponse,
   MonitoringResponse,
@@ -57,6 +61,7 @@ import type {
   ResolveRiskEventInput,
   ResolveReconciliationFindingResponse,
   ResolveReconciliationFindingInput,
+  ReportExportInput,
   RiskEventFilters,
   RiskEventsResponse,
   RiskMutationResponse,
@@ -395,6 +400,38 @@ export async function fetchMarketMonitoring(
 ): Promise<MarketMonitoringResponse> {
   return adminRequest<MarketMonitoringResponse>(
     `/api/admin/monitoring/market${toQueryString(params)}`,
+  );
+}
+
+export async function fetchDailyReports(
+  params: QueryParams = {},
+): Promise<DailyReportsResponse> {
+  return adminRequest<DailyReportsResponse>(
+    `/api/admin/reports/daily${toQueryString(params)}`,
+  );
+}
+
+export async function fetchGachaReports(
+  params: QueryParams = {},
+): Promise<GachaReportsResponse> {
+  return adminRequest<GachaReportsResponse>(
+    `/api/admin/reports/gacha${toQueryString(params)}`,
+  );
+}
+
+export async function fetchEconomyReports(
+  params: QueryParams = {},
+): Promise<EconomyReportsResponse> {
+  return adminRequest<EconomyReportsResponse>(
+    `/api/admin/reports/economy${toQueryString(params)}`,
+  );
+}
+
+export async function fetchMarketReports(
+  params: QueryParams = {},
+): Promise<MarketReportsResponse> {
+  return adminRequest<MarketReportsResponse>(
+    `/api/admin/reports/market${toQueryString(params)}`,
   );
 }
 
@@ -1105,6 +1142,58 @@ export async function exportAuditLogsCsv(input: {
       readFilenameFromContentDisposition(
         response.headers.get("content-disposition"),
       ) ?? "audit-logs.csv",
+  };
+}
+
+export async function exportReport(
+  input: ReportExportInput,
+): Promise<AdminCsvExportResult> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+
+  if (input.confirmLargeRange) {
+    headers["X-Admin-Confirm"] = "true";
+  }
+
+  const response = await fetch("/api/admin/reports/export", {
+    method: "POST",
+    credentials: "include",
+    headers,
+    body: JSON.stringify({
+      reportType: input.reportType,
+      filters: input.filters,
+      reason: input.reason,
+    }),
+  });
+
+  if (!response.ok) {
+    const payload = await parseAdminPayload<unknown>(response);
+    const errorPayload = payload?.ok === false ? payload : null;
+
+    const error = new AdminApiError({
+      code: errorPayload?.error?.code ?? "ADMIN_REPORT_EXPORT_FAILED",
+      message:
+        errorPayload?.error?.message ?? `Request failed: ${response.status}`,
+      status: response.status,
+      details: errorPayload?.error?.details,
+      requestId: errorPayload?.requestId,
+    });
+
+    reportAdminApiError(error, {
+      path: "/api/admin/reports/export",
+      method: "POST",
+    });
+    throw error;
+  }
+
+  return {
+    auditLogId: response.headers.get("x-audit-log-id"),
+    blob: await response.blob(),
+    filename:
+      readFilenameFromContentDisposition(
+        response.headers.get("content-disposition"),
+      ) ?? `reports-${input.reportType}.csv`,
   };
 }
 

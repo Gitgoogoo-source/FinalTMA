@@ -23,6 +23,8 @@ export type ApiResponse<T> = ApiSuccessResponse<T> | ApiErrorResponse;
 
 const API_ERROR_MESSAGES: Readonly<Record<string, string>> = {
   AUTH_INIT_DATA_INVALID: "Telegram 登录校验失败，请重新进入应用。",
+  AUTH_INIT_DATA_EXPIRED: "Telegram 登录凭证已过期，请重新进入应用。",
+  AUTH_INIT_DATA_FROM_FUTURE: "Telegram 登录凭证时间无效，请重新进入应用。",
   AUTH_SESSION_EXPIRED: "登录状态已过期，请重新进入应用。",
   USER_BLOCKED: "当前账号已被限制使用。",
   BOX_NOT_FOUND: "盲盒不存在。",
@@ -96,6 +98,8 @@ const UNAUTHORIZED_ERROR_CODES = new Set([
   "AUTH_SESSION_INVALID",
   "AUTH_SESSION_EXPIRED",
   "AUTH_INIT_DATA_INVALID",
+  "AUTH_INIT_DATA_EXPIRED",
+  "AUTH_INIT_DATA_FROM_FUTURE",
   "SESSION_EXPIRED",
   "TELEGRAM_INIT_DATA_INVALID",
   "UNAUTHORIZED",

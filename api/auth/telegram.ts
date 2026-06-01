@@ -1,14 +1,10 @@
-import { createHash, randomBytes } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import type { VercelRequest } from "@vercel/node";
 import {
   AuthTelegramLoginRequestSchema,
   type AuthTelegramLoginRequest,
 } from "../../packages/validation/src/auth.schemas.js";
-import {
-  buildSessionCookie,
-  SESSION_COOKIE_NAME,
-  type BuildSessionCookieOptions,
-} from "../../packages/server/src/auth/issueSession.js";
+import { hashClientFingerprint } from "../../packages/server/src/auth/issueSession.js";
 import {
   TelegramInitDataValidationError,
   verifyTelegramInitData,
@@ -26,6 +22,7 @@ import {
 } from "../_shared/requireSession.js";
 import { recordRiskEventSafely } from "../_shared/riskEvents.js";
 import { validate } from "../_shared/validate.js";
+import { buildAuthSessionCookie } from "./_sessionCookies.js";
 
 type AuthUpsertTelegramUserResult = {
   user_id: string;
@@ -79,39 +76,14 @@ export default withApiHandler(
     const verified = verifyTrustedInitData(input);
     const wasExistingUser = await hasExistingTelegramUser(verified.user.id);
 
-    const userResult = await callRpcRaw<AuthUpsertTelegramUserResult>(
-      "auth_upsert_telegram_user",
-      {
-        p_telegram_user_id: verified.user.id,
-        p_username: verified.user.username ?? null,
-        p_first_name: verified.user.first_name ?? null,
-        p_last_name: verified.user.last_name ?? null,
-        p_language_code: verified.user.language_code ?? null,
-        p_is_premium: verified.user.is_premium ?? false,
-        p_photo_url: verified.user.photo_url ?? null,
-        p_start_param: verified.startParam ?? null,
-        p_metadata: {
-          source: "telegram-mini-app",
-          query_id: verified.queryId ?? null,
-        },
-      },
-      {
-        schema: "api" as never,
-        context: {
-          requestId: ctx.requestId,
-          telegramUserId: String(verified.user.id),
-        },
-      },
-    );
+    const userResult = await upsertTelegramUser(verified, ctx.requestId);
 
     const userId = requireStringField(userResult, "user_id");
     const authUser = await loadAuthUser(userId);
 
     if (authUser.status !== "active") {
       throw ApiError.userBlocked("当前账号已被限制使用。", {
-        details: {
-          status: authUser.status,
-        },
+        status: authUser.status,
       });
     }
 
@@ -166,19 +138,10 @@ export default withApiHandler(
       platform,
     });
 
-    const cookieOptions: BuildSessionCookieOptions = {
-      cookieName: getSessionCookieName(),
-      maxAgeSeconds: SESSION_TTL_SECONDS,
-      sameSite: getSessionCookieSameSite(),
-      secure: getSessionCookieSecure(),
-    };
-    const cookieDomain = getSessionCookieDomain();
-
-    if (cookieDomain !== undefined) {
-      cookieOptions.domain = cookieDomain;
-    }
-
-    res.setHeader("Set-Cookie", buildSessionCookie(token, cookieOptions));
+    res.setHeader(
+      "Set-Cookie",
+      buildAuthSessionCookie(token, SESSION_TTL_SECONDS),
+    );
 
     return {
       status: "ok",
@@ -216,8 +179,8 @@ function verifyTrustedInitData(input: AuthTelegramLoginRequest) {
     if (error instanceof TelegramInitDataValidationError) {
       throw new ApiError(
         401,
-        "AUTH_INIT_DATA_INVALID",
-        "Telegram 登录校验失败。",
+        mapTelegramInitDataErrorCode(error.code),
+        mapTelegramInitDataErrorMessage(error.code),
         {
           details: {
             reason: error.code,
@@ -228,6 +191,78 @@ function verifyTrustedInitData(input: AuthTelegramLoginRequest) {
 
     throw error;
   }
+}
+
+function mapTelegramInitDataErrorCode(code: string): string {
+  if (code === "AUTH_DATE_EXPIRED") {
+    return "AUTH_INIT_DATA_EXPIRED";
+  }
+
+  if (code === "AUTH_DATE_FROM_FUTURE") {
+    return "AUTH_INIT_DATA_FROM_FUTURE";
+  }
+
+  return "AUTH_INIT_DATA_INVALID";
+}
+
+function mapTelegramInitDataErrorMessage(code: string): string {
+  if (code === "AUTH_DATE_EXPIRED") {
+    return "Telegram 登录凭证已过期，请重新进入应用。";
+  }
+
+  if (code === "AUTH_DATE_FROM_FUTURE") {
+    return "Telegram 登录凭证时间无效，请重新进入应用。";
+  }
+
+  return "Telegram 登录校验失败。";
+}
+
+async function upsertTelegramUser(
+  verified: ReturnType<typeof verifyTelegramInitData>,
+  requestId: string,
+): Promise<AuthUpsertTelegramUserResult> {
+  try {
+    return await callRpcRaw<AuthUpsertTelegramUserResult>(
+      "auth_upsert_telegram_user",
+      {
+        p_telegram_user_id: verified.user.id,
+        p_username: verified.user.username ?? null,
+        p_first_name: verified.user.first_name ?? null,
+        p_last_name: verified.user.last_name ?? null,
+        p_language_code: verified.user.language_code ?? null,
+        p_is_premium: verified.user.is_premium ?? false,
+        p_photo_url: verified.user.photo_url ?? null,
+        p_start_param: verified.startParam ?? null,
+        p_metadata: {
+          source: "telegram-mini-app",
+          query_id: verified.queryId ?? null,
+        },
+      },
+      {
+        schema: "api" as never,
+        context: {
+          requestId,
+          telegramUserId: String(verified.user.id),
+        },
+      },
+    );
+  } catch (error) {
+    throw mapAuthUpsertTelegramUserError(error);
+  }
+}
+
+function mapAuthUpsertTelegramUserError(error: unknown): unknown {
+  const message = error instanceof Error ? error.message.toLowerCase() : "";
+
+  if (message.includes("auth_user_not_active")) {
+    const [, rawStatus] = message.match(/auth_user_not_active:([a-z_]+)/) ?? [];
+
+    return ApiError.userBlocked("当前账号已被限制使用。", {
+      status: rawStatus ?? "restricted",
+    });
+  }
+
+  return error;
 }
 
 async function hasExistingTelegramUser(
@@ -543,51 +578,6 @@ function createOpaqueSessionToken(): string {
   return `tma_sess_v1.${randomBytes(48).toString("base64url")}`;
 }
 
-function getSessionCookieName(): string {
-  return process.env.SESSION_COOKIE_NAME?.trim() || SESSION_COOKIE_NAME;
-}
-
-function getSessionCookieDomain(): string | undefined {
-  const domain = process.env.SESSION_COOKIE_DOMAIN?.trim();
-  return domain || undefined;
-}
-
-function getSessionCookieSameSite(): "Lax" | "Strict" | "None" {
-  const raw = process.env.SESSION_COOKIE_SAMESITE?.trim().toLowerCase();
-
-  if (raw === "strict") {
-    return "Strict";
-  }
-
-  if (raw === "none") {
-    return "None";
-  }
-
-  return "Lax";
-}
-
-function getSessionCookieSecure(): boolean {
-  const raw = process.env.SESSION_COOKIE_SECURE?.trim().toLowerCase();
-
-  if (raw === "true" || raw === "1" || raw === "yes") {
-    return true;
-  }
-
-  if (raw === "false" || raw === "0" || raw === "no") {
-    return false;
-  }
-
-  return isProductionLikeRuntime();
-}
-
-function isProductionLikeRuntime(): boolean {
-  return (
-    process.env.APP_ENV === "production" ||
-    process.env.NODE_ENV === "production" ||
-    process.env.VERCEL_ENV === "production"
-  );
-}
-
 function getSafeUserAgent(req: VercelRequest): string | null {
   const value = getHeaderValue(req.headers["user-agent"]);
 
@@ -606,9 +596,7 @@ function hashNullableFingerprint(
 }
 
 function hashFingerprint(namespace: string, value: string): string {
-  return createHash("sha256")
-    .update(`${namespace}:${value}`, "utf8")
-    .digest("hex");
+  return hashClientFingerprint(value, namespace);
 }
 
 function buildServerDeviceId(input: {

@@ -127,6 +127,7 @@ const PERMISSION_DOMAINS: AdminPermissionMatrix["domains"] = [
     description: "商业运营 BI、收入、留存和活动表现。",
     permissions: [
       buildPermission("reports:read", "查看报表", "读取运营报表。"),
+      buildPermission("reports:export", "导出报表", "导出运营报表 CSV。"),
     ],
   },
 ];
