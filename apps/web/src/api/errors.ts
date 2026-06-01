@@ -91,6 +91,8 @@ const API_ERROR_MESSAGES: Readonly<Record<string, string>> = {
   TELEGRAM_INIT_DATA_INVALID: "Telegram 登录校验失败，请重新进入应用。",
   SESSION_EXPIRED: "登录状态已过期，请重新进入应用。",
   UNAUTHORIZED: "登录状态已过期，请重新进入应用。",
+  API_REQUEST_TIMEOUT: "请求超时，请检查网络后重试。",
+  API_NETWORK_ERROR: "网络请求失败，请检查网络后重试。",
 };
 
 const UNAUTHORIZED_ERROR_CODES = new Set([

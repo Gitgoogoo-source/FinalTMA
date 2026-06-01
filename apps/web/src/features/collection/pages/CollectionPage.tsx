@@ -204,6 +204,10 @@ export function CollectionPage() {
   }
 
   function handleCreateMint(itemInstanceId: string) {
+    if (createMintMutation.isPending) {
+      return;
+    }
+
     createMintMutation.mutate(
       {
         itemInstanceId,

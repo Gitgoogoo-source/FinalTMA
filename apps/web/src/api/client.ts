@@ -10,6 +10,7 @@ type RequestBody = BodyInit | Record<string, unknown> | null;
 
 type ApiRequestOptions = Omit<RequestInit, "body"> & {
   body?: RequestBody;
+  timeoutMs?: number;
 };
 
 type UnauthorizedHandler = () => void;
@@ -94,8 +95,12 @@ export async function apiRequest<T>(
   path: string,
   options: ApiRequestOptions = {},
 ): Promise<T> {
-  const { body, ...requestOptions } = options;
+  const { body, timeoutMs, signal, ...requestOptions } = options;
   const serializedBody = serializeBody(body);
+  const requestAbort = createRequestAbortSignal(
+    signal,
+    timeoutMs ?? env.REQUEST_TIMEOUT_MS,
+  );
   const requestInit: RequestInit = {
     credentials: "include",
     ...requestOptions,
@@ -106,7 +111,19 @@ export async function apiRequest<T>(
     requestInit.body = serializedBody;
   }
 
-  const response = await fetch(buildApiUrl(path), requestInit);
+  if (requestAbort.signal) {
+    requestInit.signal = requestAbort.signal;
+  }
+
+  let response: Response;
+
+  try {
+    response = await fetch(buildApiUrl(path), requestInit);
+  } catch (error) {
+    throw createFetchError(error, requestAbort.didTimeout());
+  } finally {
+    requestAbort.cleanup();
+  }
 
   const payload = await parseJsonResponse(response);
 
@@ -160,4 +177,88 @@ function notifyUnauthorized(path: string, error: ApiClientError): void {
 function isAuthPath(path: string): boolean {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
   return normalizedPath.startsWith("/auth/");
+}
+
+function createRequestAbortSignal(
+  externalSignal: AbortSignal | null | undefined,
+  timeoutMs: number,
+): {
+  signal?: AbortSignal;
+  cleanup: () => void;
+  didTimeout: () => boolean;
+} {
+  const effectiveTimeoutMs =
+    Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : undefined;
+
+  if (!externalSignal && !effectiveTimeoutMs) {
+    return {
+      cleanup: () => undefined,
+      didTimeout: () => false,
+    };
+  }
+
+  const controller = new AbortController();
+  let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+  let timedOut = false;
+
+  const abortFromExternalSignal = (): void => {
+    if (!controller.signal.aborted) {
+      controller.abort();
+    }
+  };
+
+  if (externalSignal) {
+    if (externalSignal.aborted) {
+      controller.abort();
+    } else {
+      externalSignal.addEventListener("abort", abortFromExternalSignal, {
+        once: true,
+      });
+    }
+  }
+
+  if (effectiveTimeoutMs) {
+    timeoutHandle = setTimeout(() => {
+      timedOut = true;
+      if (!controller.signal.aborted) {
+        controller.abort();
+      }
+    }, effectiveTimeoutMs);
+  }
+
+  return {
+    signal: controller.signal,
+    cleanup: () => {
+      if (timeoutHandle) {
+        clearTimeout(timeoutHandle);
+      }
+
+      if (externalSignal) {
+        externalSignal.removeEventListener("abort", abortFromExternalSignal);
+      }
+    },
+    didTimeout: () => timedOut,
+  };
+}
+
+function createFetchError(error: unknown, timedOut: boolean): ApiClientError {
+  if (timedOut || isAbortError(error)) {
+    return new ApiClientError({
+      code: "API_REQUEST_TIMEOUT",
+      message: "请求超时，请检查网络后重试。",
+      status: 0,
+      details: error,
+    });
+  }
+
+  return new ApiClientError({
+    code: "API_NETWORK_ERROR",
+    message: "网络请求失败，请检查网络后重试。",
+    status: 0,
+    details: error,
+  });
+}
+
+function isAbortError(error: unknown): boolean {
+  return error instanceof Error && error.name === "AbortError";
 }

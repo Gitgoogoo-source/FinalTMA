@@ -3,7 +3,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { randomUUID } from "node:crypto";
 import {
-  createRateLimiter,
   RateLimitError,
   type RateLimitAction,
   type RateLimitCombinedResult,
@@ -16,6 +15,7 @@ import {
   recordSupabaseQueryError,
   reportApiError,
 } from "./observability.js";
+import { createApiRateLimiter } from "./rateLimiter.js";
 
 export type HttpMethod =
   | "GET"
@@ -178,7 +178,7 @@ export class ApiError extends Error {
   }
 }
 
-const sharedRateLimiter = createRateLimiter();
+const sharedRateLimiter = createApiRateLimiter();
 
 export function withApiHandler<T = unknown>(
   routeHandler: ApiRouteHandler<T>,

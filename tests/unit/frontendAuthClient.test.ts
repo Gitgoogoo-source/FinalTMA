@@ -17,6 +17,7 @@ describe("frontend auth api client", () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
   });
@@ -114,6 +115,36 @@ describe("frontend auth api client", () => {
     });
 
     expect(onUnauthorized).not.toHaveBeenCalled();
+  });
+
+  it("aborts stalled requests using the configured timeout", async () => {
+    vi.useFakeTimers();
+    vi.stubEnv("VITE_REQUEST_TIMEOUT_MS", "1000");
+
+    const fetchMock = vi.fn((_input: RequestInfo | URL, init?: RequestInit) => {
+      const signal = init?.signal;
+
+      return new Promise<Response>((_resolve, reject) => {
+        signal?.addEventListener("abort", () => {
+          reject(new DOMException("The operation was aborted.", "AbortError"));
+        });
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { apiRequest } = await import("../../apps/web/src/api/client");
+    const request = apiRequest("/me/bootstrap", {
+      method: "GET",
+    });
+    const assertion = expect(request).rejects.toMatchObject({
+      code: "API_REQUEST_TIMEOUT",
+      status: 0,
+    });
+
+    await vi.advanceTimersByTimeAsync(1000);
+    await assertion;
+
+    expect(fetchMock.mock.calls[0]?.[1]?.signal).toBeInstanceOf(AbortSignal);
   });
 
   it("uses fixed first-phase messages instead of raw server text", async () => {

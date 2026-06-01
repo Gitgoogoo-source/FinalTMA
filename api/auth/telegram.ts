@@ -29,10 +29,8 @@ import {
   extractSessionToken,
   getSupabaseAdmin,
 } from "../_shared/requireSession.js";
-import {
-  createRateLimiter,
-  DEFAULT_RATE_LIMIT_RULES,
-} from "../../packages/server/src/security/rateLimit.js";
+import { DEFAULT_RATE_LIMIT_RULES } from "../../packages/server/src/security/rateLimit.js";
+import { createApiRateLimiter } from "../_shared/rateLimiter.js";
 import { recordRiskEventSafely } from "../_shared/riskEvents.js";
 import { validate } from "../_shared/validate.js";
 import { buildAuthSessionCookie } from "./_sessionCookies.js";
@@ -93,7 +91,7 @@ type AppSessionSignalRow = {
   created_at: string;
 };
 
-const verifiedAuthRateLimiter = createRateLimiter({
+const verifiedAuthRateLimiter = createApiRateLimiter({
   rules: DEFAULT_RATE_LIMIT_RULES.filter(
     (rule) =>
       rule.action === "auth.telegram" &&

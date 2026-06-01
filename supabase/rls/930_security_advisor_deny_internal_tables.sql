@@ -22,6 +22,7 @@ BEGIN
         ('ops', 'idempotency_keys'),
         ('ops', 'risk_events'),
         ('ops', 'system_settings'),
+        ('ops', 'telegram_init_data_consumptions'),
         ('payments', 'telegram_webhook_events')
     ) AS t(schema_name, table_name)
   LOOP

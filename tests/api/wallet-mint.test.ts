@@ -11,12 +11,14 @@ const {
   callRpcRawMock,
   getSupabaseAdminClientMock,
   requireSessionMock,
+  assertUserRiskAllowedMock,
   withIdempotencyMock,
 } = vi.hoisted(() => ({
   assertMintApiEnabledMock: vi.fn(),
   callRpcRawMock: vi.fn(),
   getSupabaseAdminClientMock: vi.fn(),
   requireSessionMock: vi.fn(),
+  assertUserRiskAllowedMock: vi.fn(),
   withIdempotencyMock: vi.fn(),
 }));
 
@@ -30,6 +32,10 @@ vi.mock("../../api/_shared/requireSession.js", () => ({
 
 vi.mock("../../packages/server/src/ton/mintGuards.js", () => ({
   assertMintApiEnabled: assertMintApiEnabledMock,
+}));
+
+vi.mock("../../api/_shared/riskGuards.js", () => ({
+  assertUserRiskAllowed: assertUserRiskAllowedMock,
 }));
 
 vi.mock("../../packages/server/src/db/idempotency.js", () => {
@@ -138,6 +144,8 @@ describe("wallet mint API", () => {
       expiresAt: "2026-05-30T00:00:00.000Z",
       sessionTokenHash: "session-hash",
     });
+    assertUserRiskAllowedMock.mockReset();
+    assertUserRiskAllowedMock.mockResolvedValue(undefined);
     withIdempotencyMock.mockReset();
     withIdempotencyMock.mockImplementation(
       async (input: { handler: () => Promise<unknown>; key: string }) => ({

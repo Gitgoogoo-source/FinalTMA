@@ -90,7 +90,7 @@ describe("collection api", () => {
       total: 1,
       limit: 40,
       offset: 0,
-      statuses: ["available", "minting", "minted"],
+      statuses: ["available", "listed", "minting", "minted"],
     });
 
     const { fetchInventory, normalizeInventoryDetail } =
@@ -107,7 +107,12 @@ describe("collection api", () => {
       status: "minted",
       nftMintStatus: "minted",
     });
-    expect(inventory.statuses).toEqual(["available", "minting", "minted"]);
+    expect(inventory.statuses).toEqual([
+      "available",
+      "listed",
+      "minting",
+      "minted",
+    ]);
 
     const detail = normalizeInventoryDetail({
       item_instance_id: "77777777-7777-4777-8777-777777777777",

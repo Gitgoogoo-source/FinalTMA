@@ -24,6 +24,9 @@ set search_path = ''
 as $$
 declare
   v_session_id uuid;
+  v_consumption_id uuid;
+  v_now timestamptz := now();
+  v_consumed_until timestamptz;
   v_revoked_replayed_sessions integer := 0;
   v_revoked_device_sessions integer := 0;
   v_revoked_over_limit_sessions integer := 0;
@@ -33,7 +36,7 @@ begin
     raise exception 'user_id, token hash and expires_at are required';
   end if;
 
-  if p_expires_at <= now() then
+  if p_expires_at <= v_now then
     raise exception 'expires_at must be in the future';
   end if;
 
@@ -54,52 +57,51 @@ begin
       )
     );
 
-    if exists (
-      select 1
-      from core.app_sessions s
-      where s.user_id = p_user_id
-        and s.init_data_hash = p_init_data_hash
-        and s.revoked_at is null
-        and s.expires_at > now()
-        and not (
-          (p_device_id is not null and s.device_id = p_device_id)
-          or (
-            p_ip_hash is not null
-            and p_user_agent is not null
-            and s.ip_hash = p_ip_hash
-            and s.user_agent = p_user_agent
-          )
-        )
-    ) then
+    v_consumed_until := greatest(
+      p_expires_at,
+      coalesce(p_telegram_auth_date, v_now) + interval '24 hours'
+    );
+
+    insert into ops.telegram_init_data_consumptions (
+      user_id,
+      init_data_hash,
+      telegram_auth_date,
+      consumed_until,
+      metadata
+    )
+    values (
+      p_user_id,
+      p_init_data_hash,
+      p_telegram_auth_date,
+      v_consumed_until,
+      jsonb_build_object(
+        'source', 'auth_create_session',
+        'device_id', p_device_id,
+        'platform', p_platform
+      )
+    )
+    on conflict (user_id, init_data_hash)
+    do update
+    set telegram_auth_date = excluded.telegram_auth_date,
+        consumed_until = excluded.consumed_until,
+        session_id = null,
+        metadata = excluded.metadata,
+        updated_at = v_now
+    where ops.telegram_init_data_consumptions.consumed_until <= v_now
+    returning id into v_consumption_id;
+
+    if v_consumption_id is null then
       raise exception 'auth_init_data_replayed';
     end if;
-
-    update core.app_sessions s
-    set revoked_at = now()
-    where s.user_id = p_user_id
-      and s.init_data_hash = p_init_data_hash
-      and s.revoked_at is null
-      and s.expires_at > now()
-      and (
-        (p_device_id is not null and s.device_id = p_device_id)
-        or (
-          p_ip_hash is not null
-          and p_user_agent is not null
-          and s.ip_hash = p_ip_hash
-          and s.user_agent = p_user_agent
-        )
-      );
-
-    get diagnostics v_revoked_replayed_sessions = row_count;
   end if;
 
   if p_device_id is not null then
     update core.app_sessions s
-    set revoked_at = now()
+    set revoked_at = v_now
     where s.user_id = p_user_id
       and s.device_id = p_device_id
       and s.revoked_at is null
-      and s.expires_at > now();
+      and s.expires_at > v_now;
 
     get diagnostics v_revoked_device_sessions = row_count;
   end if;
@@ -109,8 +111,17 @@ begin
     init_data_hash, ip_hash, user_agent, device_id, platform, last_seen_at
   ) values (
     p_user_id, p_session_token_hash, p_expires_at, p_telegram_auth_date,
-    p_init_data_hash, p_ip_hash, p_user_agent, p_device_id, p_platform, now()
+    p_init_data_hash, p_ip_hash, p_user_agent, p_device_id, p_platform, v_now
   ) returning id into v_session_id;
+
+  if p_init_data_hash is not null then
+    update ops.telegram_init_data_consumptions c
+    set session_id = v_session_id,
+        metadata = coalesce(c.metadata, '{}'::jsonb)
+          || jsonb_build_object('session_id', v_session_id)
+    where c.user_id = p_user_id
+      and c.init_data_hash = p_init_data_hash;
+  end if;
 
   with ranked_sessions as (
     select
@@ -119,10 +130,10 @@ begin
     from core.app_sessions s
     where s.user_id = p_user_id
       and s.revoked_at is null
-      and s.expires_at > now()
+      and s.expires_at > v_now
   )
   update core.app_sessions s
-  set revoked_at = now()
+  set revoked_at = v_now
   from ranked_sessions r
   where s.id = r.id
     and r.session_rank > v_max_active_sessions;
@@ -131,11 +142,11 @@ begin
 
   if p_device_id is not null then
     insert into core.user_devices (user_id, device_key, platform, user_agent, last_seen_at)
-    values (p_user_id, p_device_id, p_platform, p_user_agent, now())
+    values (p_user_id, p_device_id, p_platform, p_user_agent, v_now)
     on conflict (user_id, device_key) do update
     set platform = excluded.platform,
         user_agent = excluded.user_agent,
-        last_seen_at = now();
+        last_seen_at = v_now;
   end if;
 
   return jsonb_build_object(

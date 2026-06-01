@@ -475,7 +475,12 @@ describe("wallet proof API", () => {
       },
     });
     expect(callRpcRawMock).not.toHaveBeenCalled();
-    expect(db.queries).toHaveLength(0);
+    expect(db.queries).toHaveLength(1);
+    expect(db.queries[0]).toMatchObject({
+      schema: "ops",
+      table: "app_events",
+      operation: "insert",
+    });
   });
 
   it("rejects an already used challenge as replay", async () => {

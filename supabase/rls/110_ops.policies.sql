@@ -45,6 +45,7 @@ alter table ops.system_settings enable row level security;
 alter table ops.risk_events enable row level security;
 alter table ops.idempotency_keys enable row level security;
 alter table ops.api_rate_limits enable row level security;
+alter table ops.telegram_init_data_consumptions enable row level security;
 alter table ops.support_tickets enable row level security;
 alter table ops.app_events enable row level security;
 
@@ -171,4 +172,3 @@ DROP POLICY IF EXISTS ops_app_events_admin_read ON ops.app_events;
 CREATE POLICY ops_app_events_admin_read ON ops.app_events
 FOR SELECT TO authenticated
 USING (ops.has_admin_permission('ops:read') OR ops.has_admin_permission('risk:read'));
-

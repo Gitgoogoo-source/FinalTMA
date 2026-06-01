@@ -158,6 +158,7 @@ export interface CreateRateLimiterOptions {
   keyPrefix?: string | undefined;
   keySecret?: string | undefined;
   rpcName?: string | undefined;
+  rpcSchema?: string | undefined;
   failOpen?: boolean | undefined;
 }
 
@@ -556,6 +557,7 @@ export class MemoryRateLimitStore implements RateLimitStore {
 export interface SupabaseRpcRateLimitStoreOptions {
   supabase: SupabaseClient;
   rpcName?: string | undefined;
+  rpcSchema?: string | undefined;
   failOpen?: boolean | undefined;
 }
 
@@ -586,11 +588,14 @@ export class SupabaseRpcRateLimitStore implements RateLimitStore {
 
   private readonly rpcName: string;
 
+  private readonly rpcSchema: string | undefined;
+
   private readonly failOpen: boolean;
 
   constructor(options: SupabaseRpcRateLimitStoreOptions) {
     this.supabase = options.supabase;
     this.rpcName = options.rpcName ?? "ops_check_rate_limit";
+    this.rpcSchema = options.rpcSchema;
     this.failOpen = options.failOpen ?? true;
   }
 
@@ -600,7 +605,11 @@ export class SupabaseRpcRateLimitStore implements RateLimitStore {
     const fallbackResetAt = new Date(input.now.getTime() + input.windowMs);
 
     try {
-      const { data, error } = await this.supabase.rpc(this.rpcName, {
+      const rpcClient = this.rpcSchema
+        ? getSchemaRpcClient(this.supabase, this.rpcSchema)
+        : this.supabase;
+
+      const { data, error } = await rpcClient.rpc(this.rpcName, {
         p_key: input.key,
         p_action: input.action,
         p_scope: input.scope,
@@ -883,6 +892,7 @@ export function createRateLimiter(
       ? new SupabaseRpcRateLimitStore({
           supabase: options.supabase,
           rpcName: options.rpcName,
+          rpcSchema: options.rpcSchema,
           failOpen: options.failOpen ?? true,
         })
       : new MemoryRateLimitStore());
@@ -1167,6 +1177,21 @@ function normalizeRejectReason(
 
 function normalizeIp(ip: string): string {
   return ip.trim().toLowerCase().replace(/^\[/, "").replace(/\]$/, "");
+}
+
+function getSchemaRpcClient(
+  supabase: SupabaseClient,
+  schema: string,
+): Pick<SupabaseClient, "rpc"> {
+  const schemaCapableClient = supabase as SupabaseClient & {
+    schema?: (schema: string) => Pick<SupabaseClient, "rpc">;
+  };
+
+  if (typeof schemaCapableClient.schema !== "function") {
+    return supabase;
+  }
+
+  return schemaCapableClient.schema(schema);
 }
 
 function normalizeWalletAddress(address: string): string {

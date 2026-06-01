@@ -10,13 +10,23 @@ export function AssetBar() {
   const { assets, data, isError, isFetching, profile, refreshAssets } =
     useMyAssets();
   const showLoadingAmount = isFetching && data.updatedAt === null;
+  const showUnavailableAmount =
+    isError && !isFetching && data.updatedAt === null;
 
   return (
     <header className="asset-bar" aria-busy={isFetching}>
       <UserAvatar profile={profile} />
       <div className="asset-bar__balances" aria-label="用户资产">
-        <KCoinPill balance={assets.kcoin} isLoading={showLoadingAmount} />
-        <FgemsPill balance={assets.fgems} isLoading={showLoadingAmount} />
+        <KCoinPill
+          balance={assets.kcoin}
+          isLoading={showLoadingAmount}
+          isUnavailable={showUnavailableAmount}
+        />
+        <FgemsPill
+          balance={assets.fgems}
+          isLoading={showLoadingAmount}
+          isUnavailable={showUnavailableAmount}
+        />
       </div>
       <div className="asset-bar__actions">
         {isError ? (

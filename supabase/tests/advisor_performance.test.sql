@@ -135,6 +135,7 @@ with target(schema_name, table_name, policy_name) as (
     ('ops', 'idempotency_keys', 'ops_idempotency_keys_deny_client_access'),
     ('ops', 'risk_events', 'ops_risk_events_deny_client_access'),
     ('ops', 'system_settings', 'ops_system_settings_deny_client_access'),
+    ('ops', 'telegram_init_data_consumptions', 'ops_telegram_init_data_consumptions_deny_client_access'),
     ('payments', 'telegram_webhook_events', 'payments_telegram_webhook_events_deny_client_access')
 ),
 missing_explicit_deny as (
@@ -169,6 +170,7 @@ with target(schema_name, table_name) as (
     ('ops', 'idempotency_keys'),
     ('ops', 'risk_events'),
     ('ops', 'system_settings'),
+    ('ops', 'telegram_init_data_consumptions'),
     ('payments', 'telegram_webhook_events')
 ),
 target_state as (
@@ -209,6 +211,7 @@ with target(schema_name, table_name) as (
     ('ops', 'idempotency_keys'),
     ('ops', 'risk_events'),
     ('ops', 'system_settings'),
+    ('ops', 'telegram_init_data_consumptions'),
     ('payments', 'telegram_webhook_events')
 ),
 table_privileges as (

@@ -18,13 +18,14 @@ export function useMyAssets() {
     () => normalizeBootstrapAssets(session.bootstrap, session.user),
     [session.bootstrap, session.user],
   );
+  const profileFallback = bootstrapAssets?.profile ?? session.user;
   const fallbackAssets = useMemo(
     () => bootstrapAssets ?? createEmptyMyAssets(session.user),
     [bootstrapAssets, session.user],
   );
   const query = useQuery({
     queryKey: queryKeys.me.assets(userId),
-    queryFn: () => fetchMyAssets(session.user),
+    queryFn: () => fetchMyAssets(profileFallback),
     enabled: session.isAuthenticated,
     placeholderData: fallbackAssets,
   });

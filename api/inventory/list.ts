@@ -45,30 +45,10 @@ type InventoryRpcItem = {
   obtained_at?: unknown;
 };
 
-const UNSUPPORTED_FILTERS: Array<keyof InventoryListQuery> = [
-  "keyword",
-  "rarities",
-  "types",
-  "series_ids",
-  "faction_ids",
-  "template_ids",
-  "form_ids",
-  "only_sellable",
-  "only_duplicates",
-  "only_unlocked",
-  "only_mintable",
-  "min_level",
-  "max_level",
-  "min_power",
-  "max_power",
-  "sort",
-];
-
 export default withApiHandler(
   async (req, _res, ctx) => {
     const session = await requireSession(req);
     const query = validate(InventoryListQuerySchema, req.query);
-    assertSupportedFirstPhaseQuery(query);
     const offset = parseOffsetCursor(query.cursor);
     const statuses = resolveStatuses(query);
     const payload = await callInventoryListRpc(
@@ -204,32 +184,6 @@ function toInventoryListItem(value: unknown) {
   };
 }
 
-function assertSupportedFirstPhaseQuery(query: InventoryListQuery): void {
-  const unsupported = UNSUPPORTED_FILTERS.filter((key) => {
-    if (key === "sort") {
-      return query.sort !== "recently_obtained";
-    }
-
-    const value = query[key];
-
-    if (Array.isArray(value)) {
-      return value.length > 0;
-    }
-
-    if (typeof value === "boolean") {
-      return value;
-    }
-
-    return value !== undefined;
-  });
-
-  if (unsupported.length > 0) {
-    throw ApiError.badRequest("第一阶段库存接口暂不支持这些筛选条件。", {
-      unsupported,
-    });
-  }
-}
-
 function resolveStatuses(query: InventoryListQuery): string[] {
   if (query.statuses && query.statuses.length > 0) {
     return query.statuses;
@@ -239,7 +193,7 @@ function resolveStatuses(query: InventoryListQuery): string[] {
     return ["available", "locked", "listed", "minting", "minted"];
   }
 
-  return ["available", "minting", "minted"];
+  return ["available", "listed", "minting", "minted"];
 }
 
 function parseOffsetCursor(cursor: string | undefined): number {

@@ -148,7 +148,7 @@ describe("inventory API helpers", () => {
       total: 1,
       limit: 40,
       offset: 0,
-      statuses: ["available", "minting", "minted"],
+      statuses: ["available", "listed", "minting", "minted"],
       server_time: "2026-05-21T00:00:00.000Z",
     });
 
@@ -189,7 +189,7 @@ describe("inventory API helpers", () => {
       "inventory_list_user_items",
       expect.objectContaining({
         p_user_id: USER_ID,
-        p_statuses: ["available", "minting", "minted"],
+        p_statuses: ["available", "listed", "minting", "minted"],
         p_limit: 40,
         p_offset: 0,
       }),
@@ -233,7 +233,7 @@ describe("inventory API helpers", () => {
     );
   });
 
-  it("/api/inventory/list rejects the not-yet-supported only_sellable filter", async () => {
+  it("/api/inventory/list rejects filters that are not part of the list contract", async () => {
     const { default: inventoryListHandler } =
       await import("../../api/inventory/list");
     const result = await invokeApiHandler<ApiErrorResponse>(
@@ -251,10 +251,7 @@ describe("inventory API helpers", () => {
     expect(result.body).toMatchObject({
       ok: false,
       error: {
-        code: "BAD_REQUEST",
-        details: {
-          unsupported: ["only_sellable"],
-        },
+        code: "VALIDATION_ERROR",
       },
     });
     expect(callRpcRawMock).not.toHaveBeenCalled();

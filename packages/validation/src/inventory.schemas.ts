@@ -186,18 +186,7 @@ export const InventoryActivityTypeSchema = z.enum([
   "admin_adjusted",
 ]);
 
-export const InventorySortSchema = z.enum([
-  "recently_obtained",
-  "oldest_obtained",
-  "rarity_desc",
-  "rarity_asc",
-  "level_desc",
-  "level_asc",
-  "power_desc",
-  "power_asc",
-  "name_asc",
-  "name_desc",
-]);
+export const InventorySortSchema = z.enum(["recently_obtained"]);
 
 export const InventoryItemIdParamSchema = z
   .object({
@@ -207,60 +196,13 @@ export const InventoryItemIdParamSchema = z
 
 export const InventoryListQuerySchema = z
   .object({
-    keyword: z.string().trim().max(64).optional(),
-
     statuses: csvArraySchema(InventoryItemStatusSchema, 12),
-    rarities: csvArraySchema(InventoryRarityCodeSchema, 8),
-    types: csvArraySchema(InventoryItemTypeSchema, 12),
-
-    series_ids: csvArraySchema(uuidSchema, 20),
-    faction_ids: csvArraySchema(uuidSchema, 20),
-    template_ids: csvArraySchema(uuidSchema, 80),
-    form_ids: csvArraySchema(uuidSchema, 80),
-
-    only_sellable: booleanFromQuerySchema.default(false),
-    only_duplicates: booleanFromQuerySchema.default(false),
-    only_unlocked: booleanFromQuerySchema.default(false),
-    only_mintable: booleanFromQuerySchema.default(false),
     include_locked: booleanFromQuerySchema.default(false),
-
-    min_level: z.coerce.number().int().min(1).max(999).optional(),
-    max_level: z.coerce.number().int().min(1).max(999).optional(),
-
-    min_power: z.coerce.number().int().min(0).max(1_000_000).optional(),
-    max_power: z.coerce.number().int().min(0).max(1_000_000).optional(),
-
     sort: InventorySortSchema.default("recently_obtained"),
-
     cursor: cursorSchema.optional(),
     limit: z.coerce.number().int().min(1).max(100).default(40),
   })
-  .strict()
-  .superRefine((data, ctx) => {
-    if (
-      data.min_level !== undefined &&
-      data.max_level !== undefined &&
-      data.min_level > data.max_level
-    ) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["min_level"],
-        message: "min_level cannot be greater than max_level",
-      });
-    }
-
-    if (
-      data.min_power !== undefined &&
-      data.max_power !== undefined &&
-      data.min_power > data.max_power
-    ) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["min_power"],
-        message: "min_power cannot be greater than max_power",
-      });
-    }
-  });
+  .strict();
 
 export const InventoryDetailQuerySchema = z
   .object({
