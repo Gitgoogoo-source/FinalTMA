@@ -27,8 +27,10 @@ import type {
 import { useAdminMe, type AdminMeStatus } from "./auth/useAdminMe";
 import { AdminUsersPage } from "./pages/AdminUsersPage";
 import { AuditLogsPage } from "./pages/AuditLogsPage";
+import { AlbumPage } from "./pages/AlbumPage";
 import { BlindBoxesPage } from "./pages/BlindBoxesPage";
 import { CampaignsPage } from "./pages/CampaignsPage";
+import { CollectiblesPage } from "./pages/CollectiblesPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { DangerOpsPage } from "./pages/DangerOpsPage";
 import { FeatureFlagsPage } from "./pages/FeatureFlagsPage";
@@ -127,6 +129,18 @@ const NAV_ITEMS: AdminNavItem[] = [
     label: "活动",
     icon: ImageIcon,
     requiredPermissions: ["campaigns:read"],
+  },
+  {
+    id: "collectibles",
+    label: "藏品",
+    icon: PackageOpen,
+    requiredPermissions: ["catalog:read"],
+  },
+  {
+    id: "album",
+    label: "图鉴",
+    icon: Gift,
+    requiredPermissions: ["catalog:read"],
   },
   {
     id: "blind-boxes",
@@ -401,6 +415,26 @@ function renderActivePage(tab: AdminTab, me: AdminMeResponse) {
       return <WalletsPage />;
     case "campaigns":
       return <CampaignsPage />;
+    case "collectibles":
+      return (
+        <CollectiblesPage
+          canWriteCatalog={
+            me.isSuperAdmin ||
+            hasAdminPermission(me.permissions, "catalog:write") ||
+            hasAdminPermission(me.permissions, "admin:write")
+          }
+        />
+      );
+    case "album":
+      return (
+        <AlbumPage
+          canWriteCatalog={
+            me.isSuperAdmin ||
+            hasAdminPermission(me.permissions, "catalog:write") ||
+            hasAdminPermission(me.permissions, "admin:write")
+          }
+        />
+      );
     case "blind-boxes":
       return <BlindBoxesPage />;
     case "gacha-pools":

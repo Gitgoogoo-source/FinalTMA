@@ -213,3 +213,34 @@ export type CollectionDecomposeItemResponse = {
   decomposedAt: string | null;
   idempotent: boolean;
 };
+
+export type CollectionSellEntryInput = {
+  itemInstanceId: string;
+  unitPriceKcoin: number;
+  idempotencyKey?: string | null;
+};
+
+export type CollectionSellEntryResponse = {
+  listingId: string;
+  itemCount: number;
+  remainingCount: number;
+  unitPriceKcoin: number;
+  feeBps: number;
+  expectedNetAmountKcoin: number;
+  status: string;
+  priceHealth: string;
+  idempotent: boolean;
+};
+
+export type CollectionCancelSellInput = {
+  itemInstanceId: string;
+  listingId?: string | null;
+  idempotencyKey?: string | null;
+};
+
+export type CollectionCancelSellResponse = {
+  listingId: string;
+  status: string;
+  releasedItemInstanceIds: string[];
+  cancelledAt: string | null;
+};

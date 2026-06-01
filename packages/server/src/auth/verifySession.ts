@@ -9,7 +9,6 @@ import {
   SESSION_COOKIE_NAME,
   hashClientFingerprint,
   hashSessionToken,
-  parseSessionToken,
 } from "./issueSession.js";
 
 export type SessionVerificationErrorCode =
@@ -169,9 +168,7 @@ export async function verifySessionToken(
     );
   }
 
-  const tokenParts = parseSessionToken(token);
-
-  if (!tokenParts) {
+  if (!isSafeSessionToken(token)) {
     throw new SessionVerificationError(
       "SESSION_TOKEN_INVALID_FORMAT",
       "session token 格式无效。",
@@ -199,7 +196,7 @@ export async function verifySessionToken(
         "user_agent",
       ].join(","),
     )
-    .eq("id", tokenParts.sessionId)
+    .eq("session_token_hash", tokenHash)
     .maybeSingle<AppSessionRow>();
 
   if (error) {
@@ -292,10 +289,44 @@ export function extractSessionTokenFromHeaders(
     }
   }
 
+  const bearerToken = extractBearerSessionToken(
+    getHeader(headers, "authorization"),
+  );
+
+  if (bearerToken) {
+    return bearerToken;
+  }
+
   throw new SessionVerificationError(
     "SESSION_TOKEN_MISSING",
     "请求中缺少 session token。",
   );
+}
+
+function extractBearerSessionToken(
+  authorizationHeader: string | undefined,
+): string | null {
+  if (!authorizationHeader) {
+    return null;
+  }
+
+  const match = /^bearer\s+(.+)$/i.exec(authorizationHeader.trim());
+
+  if (!match) {
+    return null;
+  }
+
+  const token = match[1]?.trim();
+
+  return token || null;
+}
+
+function isSafeSessionToken(token: string): boolean {
+  if (token.length < 32 || token.length > 4096) {
+    return false;
+  }
+
+  return !/[\s<>"']/.test(token);
 }
 
 export function parseCookieHeader(

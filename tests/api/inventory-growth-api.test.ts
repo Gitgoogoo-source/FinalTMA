@@ -13,10 +13,12 @@ import upgradeHandler from "../../api/inventory/upgrade";
 import { RpcError } from "../../packages/server/src/db/rpc";
 import { invokeApiHandler } from "./_utils";
 
-const { callRpcRawMock, requireSessionMock } = vi.hoisted(() => ({
-  callRpcRawMock: vi.fn(),
-  requireSessionMock: vi.fn(),
-}));
+const { assertUserRiskAllowedMock, callRpcRawMock, requireSessionMock } =
+  vi.hoisted(() => ({
+    assertUserRiskAllowedMock: vi.fn(),
+    callRpcRawMock: vi.fn(),
+    requireSessionMock: vi.fn(),
+  }));
 
 vi.mock("../../packages/server/src/db/rpc.js", () => ({
   callRpcRaw: callRpcRawMock,
@@ -49,12 +51,17 @@ vi.mock("../../api/_shared/requireSession.js", () => ({
   requireSession: requireSessionMock,
 }));
 
+vi.mock("../../api/_shared/riskGuards.js", () => ({
+  assertUserRiskAllowed: assertUserRiskAllowedMock,
+}));
+
 const USER_ID = "11111111-1111-4111-8111-111111111111";
 const FORGED_USER_ID = "99999999-9999-4999-8999-999999999999";
 const ITEM_ID = "22222222-2222-4222-8222-222222222222";
 const ITEM_ID_2 = "33333333-3333-4333-8333-333333333333";
 const ITEM_ID_3 = "44444444-4444-4444-8444-444444444444";
 const TEMPLATE_ID = "55555555-5555-4555-8555-555555555555";
+const FORM_ID = "99999999-9999-4999-8999-999999999998";
 const ACTIVITY_ID = "66666666-6666-4666-8666-666666666666";
 const IDEMPOTENCY_KEY = "inventory:growth-api-0001";
 const BODY_IDEMPOTENCY_KEY = "inventory:growth-api-body";
@@ -86,6 +93,8 @@ function expectStandardErrorEnvelope(body: ApiErrorResponse): void {
 describe("inventory growth API", () => {
   beforeEach(() => {
     process.env.NODE_ENV = "test";
+    assertUserRiskAllowedMock.mockReset();
+    assertUserRiskAllowedMock.mockResolvedValue(undefined);
     callRpcRawMock.mockReset();
     requireSessionMock.mockReset();
     requireSessionMock.mockResolvedValue({
@@ -189,6 +198,46 @@ describe("inventory growth API", () => {
 
     expect(onchainStatus).not.toHaveProperty("nft_item_address");
     expect(onchainStatus).not.toHaveProperty("owner_wallet_address");
+  });
+
+  it("detail preserves extended Mint queue statuses from the RPC", async () => {
+    callRpcRawMock.mockResolvedValueOnce({
+      item_instance_id: ITEM_ID,
+      template_id: TEMPLATE_ID,
+      name: "Moon Crown Guardian",
+      level: 1,
+      power: 390,
+      status: "minting",
+      nft_mint_status: "queued",
+      onchain_status: {
+        is_minted: false,
+        mint_status: "manual_review",
+        nft_item_address: "EQDnft-item-address",
+        owner_wallet_address: "EQDowner-wallet-address",
+      },
+    });
+
+    const result = await invokeApiHandler<
+      ApiSuccessResponse<InventoryDetailPrivacyResponse>
+    >(detailHandler, {
+      method: "GET",
+      query: {
+        item_instance_id: ITEM_ID,
+        include_onchain_status: "true",
+      },
+    });
+
+    expect(result.statusCode).toBe(200);
+    expect(result.body.data).toMatchObject({
+      status: "minting",
+      onchain_status: {
+        is_minted: false,
+        mint_status: "manual_review",
+      },
+    });
+    expect(result.body.data.onchain_status).not.toHaveProperty(
+      "nft_item_address",
+    );
   });
 
   it("requires a session before inventory detail can call RPC", async () => {
@@ -331,6 +380,9 @@ describe("inventory growth API", () => {
       body: {
         item_instance_id: ITEM_ID,
         idempotency_key: BODY_IDEMPOTENCY_KEY,
+        target_level: 2,
+        expected_fgems_cost: 80,
+        expected_item_version: 4,
       },
     });
 
@@ -342,6 +394,9 @@ describe("inventory growth API", () => {
         p_user_id: USER_ID,
         p_item_instance_id: ITEM_ID,
         p_idempotency_key: IDEMPOTENCY_KEY,
+        p_target_level: 2,
+        p_expected_fgems_cost: 80,
+        p_expected_item_version: 4,
       },
       expect.objectContaining({
         schema: "api",
@@ -350,6 +405,9 @@ describe("inventory growth API", () => {
           userId: USER_ID,
           itemInstanceId: ITEM_ID,
           idempotencyKey: IDEMPOTENCY_KEY,
+          targetLevel: 2,
+          expectedFgemsCost: 80,
+          expectedItemVersion: 4,
         }),
       }),
     );
@@ -432,6 +490,30 @@ describe("inventory growth API", () => {
     expect(result.statusCode).toBe(409);
     expectStandardErrorEnvelope(result.body);
     expect(result.body.error.code).toBe("INSUFFICIENT_FGEMS");
+  });
+
+  it("upgrade maps stale previews to a stable conflict", async () => {
+    callRpcRawMock.mockRejectedValueOnce(
+      new RpcError({
+        rpcName: "inventory_upgrade_item",
+        error: {
+          message: "upgrade preview mismatch",
+        },
+      }),
+    );
+
+    const result = await invokeApiHandler<ApiErrorResponse>(upgradeHandler, {
+      method: "POST",
+      body: {
+        item_instance_id: ITEM_ID,
+        expected_fgems_cost: 80,
+        idempotency_key: IDEMPOTENCY_KEY,
+      },
+    });
+
+    expect(result.statusCode).toBe(409);
+    expectStandardErrorEnvelope(result.body);
+    expect(result.body.error.code).toBe("INVENTORY_PREVIEW_STALE");
   });
 
   it("upgrade maps missing rules without exposing database details", async () => {
@@ -568,6 +650,10 @@ describe("inventory growth API", () => {
       body: {
         source_item_instance_ids: [ITEM_ID, ITEM_ID_2, ITEM_ID_3],
         idempotency_key: BODY_IDEMPOTENCY_KEY,
+        target_form_id: FORM_ID,
+        expected_kcoin_cost: 2000,
+        expected_success_rate_bps: 5000,
+        expected_return_item_instance_id: ITEM_ID,
       },
     });
 
@@ -579,6 +665,10 @@ describe("inventory growth API", () => {
         p_user_id: USER_ID,
         p_item_instance_ids: [ITEM_ID, ITEM_ID_2, ITEM_ID_3],
         p_idempotency_key: IDEMPOTENCY_KEY,
+        p_target_form_id: FORM_ID,
+        p_expected_kcoin_cost: 2000,
+        p_expected_success_rate_bps: 5000,
+        p_expected_return_item_instance_id: ITEM_ID,
       },
       expect.objectContaining({ schema: "api" }),
     );
@@ -616,6 +706,30 @@ describe("inventory growth API", () => {
     expect(result.statusCode).toBe(409);
     expectStandardErrorEnvelope(result.body);
     expect(result.body.error.code).toBe("INSUFFICIENT_KCOIN");
+  });
+
+  it("evolve maps stale previews to a stable conflict", async () => {
+    callRpcRawMock.mockRejectedValueOnce(
+      new RpcError({
+        rpcName: "inventory_evolve_item",
+        error: {
+          message: "evolution preview mismatch",
+        },
+      }),
+    );
+
+    const result = await invokeApiHandler<ApiErrorResponse>(evolveHandler, {
+      method: "POST",
+      body: {
+        source_item_instance_ids: [ITEM_ID, ITEM_ID_2, ITEM_ID_3],
+        expected_kcoin_cost: 2000,
+        idempotency_key: IDEMPOTENCY_KEY,
+      },
+    });
+
+    expect(result.statusCode).toBe(409);
+    expectStandardErrorEnvelope(result.body);
+    expect(result.body.error.code).toBe("INVENTORY_PREVIEW_STALE");
   });
 
   it("evolve maps unavailable or non-evolvable materials to a stable conflict", async () => {
@@ -740,6 +854,7 @@ describe("inventory growth API", () => {
         body: {
           item_instance_ids: [ITEM_ID],
           idempotency_key: BODY_IDEMPOTENCY_KEY,
+          expected_fgems_reward: 150,
         },
       },
     );
@@ -752,6 +867,7 @@ describe("inventory growth API", () => {
         p_user_id: USER_ID,
         p_item_instance_ids: [ITEM_ID],
         p_idempotency_key: IDEMPOTENCY_KEY,
+        p_expected_fgems_reward: 150,
       },
       expect.objectContaining({ schema: "api" }),
     );
@@ -809,6 +925,30 @@ describe("inventory growth API", () => {
     expect(result.statusCode).toBe(409);
     expectStandardErrorEnvelope(result.body);
     expect(result.body.error.code).toBe("DECOMPOSE_REQUIRES_DUPLICATE");
+  });
+
+  it("decompose maps stale previews to a stable conflict", async () => {
+    callRpcRawMock.mockRejectedValueOnce(
+      new RpcError({
+        rpcName: "inventory_decompose_items",
+        error: {
+          message: "decompose preview mismatch",
+        },
+      }),
+    );
+
+    const result = await invokeApiHandler<ApiErrorResponse>(decomposeHandler, {
+      method: "POST",
+      body: {
+        item_instance_ids: [ITEM_ID],
+        expected_fgems_reward: 150,
+        idempotency_key: IDEMPOTENCY_KEY,
+      },
+    });
+
+    expect(result.statusCode).toBe(409);
+    expectStandardErrorEnvelope(result.body);
+    expect(result.body.error.code).toBe("INVENTORY_PREVIEW_STALE");
   });
 
   it("decompose maps missing rules without exposing database details", async () => {

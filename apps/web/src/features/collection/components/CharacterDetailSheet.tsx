@@ -9,11 +9,9 @@ import {
   Tag,
   X,
 } from "lucide-react";
-import { Link } from "react-router-dom";
 
 import { getApiErrorMessage } from "@/api/errors";
 import { useWalletStatus } from "@/features/wallet/hooks/useWalletStatus";
-import { APP_ROUTES } from "@/shared/constants/routes";
 import { formatCurrencyAmount } from "@/shared/lib/formatCurrency";
 
 import type {
@@ -35,9 +33,15 @@ type CharacterDetailSheetProps = {
   item: CollectionInventoryItem;
   isMinting?: boolean;
   onClose: () => void;
+  onCancelSell?: (target: {
+    itemInstanceId: string;
+    listingId: string | null;
+    unitPriceKcoin: number | null;
+  }) => void;
   onDecompose?: () => void;
   onEvolve?: () => void;
   onMint?: (itemInstanceId: string) => void;
+  onSell?: () => void;
   onUpgrade?: () => void;
 };
 
@@ -46,10 +50,12 @@ type DetailActionTone = "primary" | "secondary" | "danger";
 export function CharacterDetailSheet({
   isMinting = false,
   item,
+  onCancelSell,
   onDecompose,
   onClose,
   onEvolve,
   onMint,
+  onSell,
   onUpgrade,
   open,
 }: CharacterDetailSheetProps) {
@@ -209,10 +215,17 @@ export function CharacterDetailSheet({
             aria-label="藏品操作"
           >
             {isListed ? (
-              <DetailLinkAction
+              <DetailButtonAction
+                disabled={!onCancelSell}
                 icon="tag"
                 label="下架"
-                to={`${APP_ROUTES.trade}?tab=manage`}
+                onClick={() =>
+                  onCancelSell?.({
+                    itemInstanceId: displayItem.itemInstanceId,
+                    listingId: detail?.marketStatus?.listingId ?? null,
+                    unitPriceKcoin: detail?.marketStatus?.unitPrice ?? null,
+                  })
+                }
               />
             ) : null}
 
@@ -233,11 +246,11 @@ export function CharacterDetailSheet({
                   label="合成"
                   onClick={onEvolve}
                 />
-                <DetailLinkAction
-                  disabled={!displayItem.isTradeable}
+                <DetailButtonAction
+                  disabled={!displayItem.isTradeable || !onSell}
                   icon="shopping"
                   label="出售"
-                  to={`${APP_ROUTES.trade}?tab=sell`}
+                  onClick={onSell}
                 />
                 <DetailButtonAction
                   disabled={
@@ -291,7 +304,7 @@ function DetailButtonAction({
   tone = "secondary",
 }: {
   disabled: boolean;
-  icon: "decompose" | "sparkles" | "swords";
+  icon: "decompose" | "shopping" | "sparkles" | "swords" | "tag";
   label: string;
   onClick: (() => void) | undefined;
   tone?: DetailActionTone;
@@ -309,45 +322,6 @@ function DetailButtonAction({
       {label}
       <ChevronRight aria-hidden="true" size={14} strokeWidth={2.5} />
     </button>
-  );
-}
-
-function DetailLinkAction({
-  disabled = false,
-  icon,
-  label,
-  to,
-}: {
-  disabled?: boolean;
-  icon: "shopping" | "tag";
-  label: string;
-  to: string;
-}) {
-  const Icon = getActionIcon(icon);
-
-  if (disabled) {
-    return (
-      <button
-        className="character-detail-sheet__action character-detail-sheet__action--secondary"
-        disabled
-        type="button"
-      >
-        <Icon aria-hidden="true" size={15} strokeWidth={2.5} />
-        {label}
-        <ChevronRight aria-hidden="true" size={14} strokeWidth={2.5} />
-      </button>
-    );
-  }
-
-  return (
-    <Link
-      className="character-detail-sheet__action character-detail-sheet__action--secondary"
-      to={to}
-    >
-      <Icon aria-hidden="true" size={15} strokeWidth={2.5} />
-      {label}
-      <ChevronRight aria-hidden="true" size={14} strokeWidth={2.5} />
-    </Link>
   );
 }
 

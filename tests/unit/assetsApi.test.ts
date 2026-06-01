@@ -8,7 +8,7 @@ describe("assets api normalizers", () => {
     vi.stubEnv("VITE_TELEGRAM_BOT_USERNAME", "test_bot");
   });
 
-  it("normalizes /api/me/assets response and keeps missing balances at zero", async () => {
+  it("normalizes /api/me/assets response and ignores external Stars display rows", async () => {
     const { normalizeMyAssetsResponse } =
       await import("../../apps/web/src/features/assets/assets.api");
 
@@ -16,8 +16,13 @@ describe("assets api normalizers", () => {
       {
         userId: "user-1",
         balances: {
-          KCOIN: { available: "1200", locked: "0" },
-          FGEMS: { available: 35, locked: null },
+          KCOIN: { currencyCode: "KCOIN", available: "1200", locked: "0" },
+          FGEMS: { currencyCode: "FGEMS", available: 35, locked: "0" },
+          STAR_DISPLAY: {
+            currencyCode: "STAR_DISPLAY",
+            available: "999",
+            locked: "0",
+          },
         },
         updatedAt: "2026-05-21T00:00:00.000Z",
       },
@@ -31,9 +36,24 @@ describe("assets api normalizers", () => {
 
     expect(normalized.assets.kcoin.available).toBe("1200");
     expect(normalized.assets.fgems.available).toBe("35");
-    expect(normalized.assets.stars.available).toBe("0");
+    expect("stars" in normalized.assets).toBe(false);
     expect(normalized.profile.displayName).toBe("Ada");
     expect(normalized.wallet.label).toBe("Connect Wallet");
+  });
+
+  it("rejects /api/me/assets responses missing required top-bar balances", async () => {
+    const { normalizeMyAssetsResponse } =
+      await import("../../apps/web/src/features/assets/assets.api");
+
+    expect(() =>
+      normalizeMyAssetsResponse({
+        userId: "user-1",
+        balances: {
+          KCOIN: { currencyCode: "KCOIN", available: "1200", locked: "0" },
+        },
+        updatedAt: "2026-05-21T00:00:00.000Z",
+      }),
+    ).toThrow(/balances\.FGEMS/);
   });
 
   it("normalizes bootstrap balances and snake_case profile fields", async () => {
@@ -59,7 +79,7 @@ describe("assets api normalizers", () => {
 
     expect(normalized?.profile.displayName).toBe("Lin Q");
     expect(normalized?.assets.kcoin.available).toBe("0");
-    expect(normalized?.assets.stars.available).toBe("15");
+    expect(normalized ? "stars" in normalized.assets : true).toBe(false);
     expect(normalized?.updatedAt).toBe("2026-05-21T00:00:00.000Z");
   });
 });

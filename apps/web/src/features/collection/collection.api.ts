@@ -6,6 +6,8 @@ import type {
   CollectionDecomposeItemInput,
   CollectionDecomposeItemResponse,
   CollectionDecomposePreview,
+  CollectionCancelSellInput,
+  CollectionCancelSellResponse,
   CollectionEvolveItemInput,
   CollectionEvolveItemResponse,
   CollectionEvolutionPreview,
@@ -18,6 +20,8 @@ import type {
   CollectionOnchainStatus,
   CollectionRarity,
   CollectionSeries,
+  CollectionSellEntryInput,
+  CollectionSellEntryResponse,
   CollectionUpgradeItemInput,
   CollectionUpgradeItemResponse,
   CollectionUpgradePreview,
@@ -31,10 +35,22 @@ const RARITY_LABELS: Record<string, string> = {
   mythic: "神话",
 };
 
-export async function fetchInventory(): Promise<CollectionInventoryResponse> {
+type FetchInventoryParams = {
+  cursor?: string | null;
+  limit?: number;
+};
+
+export async function fetchInventory(
+  input: FetchInventoryParams = {},
+): Promise<CollectionInventoryResponse> {
   const params = new URLSearchParams({
-    limit: "40",
+    limit: String(input.limit ?? 40),
   });
+
+  if (input.cursor) {
+    params.set("cursor", input.cursor);
+  }
+
   const response = await apiRequest<unknown>(
     `${API_ENDPOINTS.inventory.list}?${params.toString()}`,
     {
@@ -150,6 +166,53 @@ export async function decomposeInventoryItems(
   );
 
   return normalizeDecomposeItemResponse(response);
+}
+
+export async function sellInventoryItem(
+  input: CollectionSellEntryInput,
+): Promise<CollectionSellEntryResponse> {
+  const idempotencyKey =
+    input.idempotencyKey ?? createIdempotencyKey("inventory:sell");
+  const response = await apiRequest<unknown>(
+    API_ENDPOINTS.inventory.sellEntry,
+    {
+      method: "POST",
+      body: {
+        item_instance_ids: [input.itemInstanceId],
+        unit_price: input.unitPriceKcoin,
+        currency: "KCOIN",
+        idempotency_key: idempotencyKey,
+      },
+      headers: {
+        "X-Idempotency-Key": idempotencyKey,
+      },
+    },
+  );
+
+  return normalizeSellEntryResponse(response);
+}
+
+export async function cancelInventorySell(
+  input: CollectionCancelSellInput,
+): Promise<CollectionCancelSellResponse> {
+  const idempotencyKey =
+    input.idempotencyKey ?? createIdempotencyKey("inventory:cancel-sell");
+  const response = await apiRequest<unknown>(
+    API_ENDPOINTS.inventory.cancelSell,
+    {
+      method: "POST",
+      body: {
+        item_instance_id: input.itemInstanceId,
+        ...(input.listingId ? { listing_id: input.listingId } : {}),
+        idempotency_key: idempotencyKey,
+      },
+      headers: {
+        "X-Idempotency-Key": idempotencyKey,
+      },
+    },
+  );
+
+  return normalizeCancelSellResponse(response);
 }
 
 export function normalizeInventoryResponse(
@@ -508,6 +571,80 @@ export function normalizeDecomposeItemResponse(
       readBoolean(response.idempotent) ??
       readBoolean(response.isIdempotent) ??
       false,
+  };
+}
+
+export function normalizeSellEntryResponse(
+  response: unknown,
+): CollectionSellEntryResponse {
+  if (!isRecord(response)) {
+    throw new Error("Invalid inventory sell entry payload.");
+  }
+
+  const listingId =
+    readString(response.listingId) ?? readString(response.listing_id);
+  const unitPriceKcoin =
+    readNumber(response.unitPriceKcoin) ??
+    readNumber(response.unit_price_kcoin);
+  const expectedNetAmountKcoin =
+    readNumber(response.expectedNetAmountKcoin) ??
+    readNumber(response.expected_net_amount);
+
+  if (
+    !listingId ||
+    unitPriceKcoin === null ||
+    expectedNetAmountKcoin === null
+  ) {
+    throw new Error("Inventory sell entry payload is missing required fields.");
+  }
+
+  return {
+    listingId,
+    itemCount:
+      readNumber(response.itemCount) ?? readNumber(response.item_count) ?? 1,
+    remainingCount:
+      readNumber(response.remainingCount) ??
+      readNumber(response.remaining_count) ??
+      1,
+    unitPriceKcoin,
+    feeBps: readNumber(response.feeBps) ?? readNumber(response.fee_bps) ?? 0,
+    expectedNetAmountKcoin,
+    status: readString(response.status) ?? "active",
+    priceHealth:
+      readString(response.priceHealth) ??
+      readString(response.price_health) ??
+      "unknown",
+    idempotent:
+      readBoolean(response.idempotent) ??
+      readBoolean(response.isIdempotent) ??
+      false,
+  };
+}
+
+export function normalizeCancelSellResponse(
+  response: unknown,
+): CollectionCancelSellResponse {
+  if (!isRecord(response)) {
+    throw new Error("Invalid inventory cancel sell payload.");
+  }
+
+  const listingId =
+    readString(response.listingId) ?? readString(response.listing_id);
+
+  if (!listingId) {
+    throw new Error("Inventory cancel sell payload is missing listing id.");
+  }
+
+  return {
+    listingId,
+    status: readString(response.status) ?? "cancelled",
+    releasedItemInstanceIds: readStringArray(
+      response.releasedItemInstanceIds ??
+        response.released_item_instance_ids ??
+        response.released_item_ids,
+    ),
+    cancelledAt:
+      readString(response.cancelledAt) ?? readString(response.cancelled_at),
   };
 }
 

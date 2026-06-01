@@ -905,6 +905,54 @@ tr.is-selected td {
   width: 100%;
 }
 
+.admin-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(340px, 0.75fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.field-stack {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.field-stack > span {
+  color: #667887;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.field-stack input,
+.field-stack textarea {
+  width: 100%;
+}
+
+.toggle-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.toggle-list label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #e1e8ee;
+  border-radius: 8px;
+  background: #f9fbfc;
+  padding: 9px 10px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.toggle-list input {
+  width: 16px;
+  min-height: 16px;
+}
+
 .form-grid__wide {
   grid-column: span 4;
 }

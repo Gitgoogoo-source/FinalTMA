@@ -3,7 +3,6 @@ import { RefreshCw } from "lucide-react";
 import { useMyAssets } from "../hooks/useMyAssets";
 import { FgemsPill } from "./FgemsPill";
 import { KCoinPill } from "./KCoinPill";
-import { StarsPill } from "./StarsPill";
 import { UserAvatar } from "./UserAvatar";
 import { WalletEntryButton } from "./WalletEntryButton";
 
@@ -18,7 +17,6 @@ export function AssetBar() {
       <div className="asset-bar__balances" aria-label="用户资产">
         <KCoinPill balance={assets.kcoin} isLoading={showLoadingAmount} />
         <FgemsPill balance={assets.fgems} isLoading={showLoadingAmount} />
-        <StarsPill balance={assets.stars} isLoading={showLoadingAmount} />
       </div>
       <div className="asset-bar__actions">
         {isError ? (

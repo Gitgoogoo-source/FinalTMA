@@ -1,12 +1,12 @@
 -- inventory_list_user_items.sql
 -- ============================================================
--- Lists the current user's inventory items for the first-stage collection page.
--- Defaults to available items only, while allowing backend callers to request
--- explicit status sets for debugging or later UI states.
+-- Lists the current user's inventory items for the collection page.
+-- Defaults to owned collection-visible items, including Mint-in-progress and
+-- Minted NFTs, while allowing backend callers to request explicit status sets.
 
 create or replace function api.inventory_list_user_items(
   p_user_id uuid,
-  p_statuses text[] default array['available']::text[],
+  p_statuses text[] default array['available', 'minting', 'minted']::text[],
   p_limit integer default 100,
   p_offset integer default 0
 )
@@ -16,7 +16,7 @@ security definer
 set search_path = ''
 as $$
 declare
-  v_statuses text[] := coalesce(nullif(p_statuses, array[]::text[]), array['available']::text[]);
+  v_statuses text[] := coalesce(nullif(p_statuses, array[]::text[]), array['available', 'minting', 'minted']::text[]);
   v_limit integer := least(greatest(coalesce(p_limit, 100), 1), 200);
   v_offset integer := greatest(coalesce(p_offset, 0), 0);
   v_total integer;

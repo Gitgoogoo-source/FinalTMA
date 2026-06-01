@@ -1,7 +1,7 @@
-import type { CurrencyCode } from "@/shared/constants/currencies";
+export type TopAssetCurrencyCode = "KCOIN" | "FGEMS";
 
 export type AssetBalance = {
-  currencyCode: CurrencyCode;
+  currencyCode: TopAssetCurrencyCode;
   available: string;
   locked: string;
 };
@@ -9,13 +9,11 @@ export type AssetBalance = {
 export type AssetBalanceMap = {
   KCOIN: AssetBalance;
   FGEMS: AssetBalance;
-  STAR_DISPLAY: AssetBalance;
 };
 
 export type AssetSummary = {
   kcoin: AssetBalance;
   fgems: AssetBalance;
-  stars: AssetBalance;
 };
 
 export type AssetProfile = {

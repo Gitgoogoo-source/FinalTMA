@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { useFeedback } from "@/app/providers/FeedbackProvider";
 import { getApiErrorMessage } from "@/api/errors";
 import { MintQueueSheet } from "@/features/wallet/components/MintQueueSheet";
+import { useMarketSellRules } from "@/features/trade/hooks/useMarketSellRules";
 import { useCreateMint } from "@/features/wallet/hooks/useCreateMint";
 import { useMintQueue } from "@/features/wallet/hooks/useMintQueue";
 import { APP_ROUTES } from "@/shared/constants/routes";
@@ -13,6 +14,8 @@ import { formatCurrencyAmount } from "@/shared/lib/formatCurrency";
 import { CharacterDetailSheet } from "../components/CharacterDetailSheet";
 import { CharacterGrid } from "../components/CharacterGrid";
 import { CharacterHero } from "../components/CharacterHero";
+import { CollectionCancelEntry } from "../components/CollectionCancelEntry";
+import { CollectionSellEntry } from "../components/CollectionSellEntry";
 import { DecomposePanel } from "../components/DecomposePanel";
 import { EvolvePanel } from "../components/EvolvePanel";
 import { GrowthResultModal } from "../components/GrowthResultModal";
@@ -23,19 +26,30 @@ import type {
   CollectionEvolveItemResponse,
   CollectionUpgradeItemResponse,
 } from "../collection.types";
+import { useCancelInventorySell } from "../hooks/useCancelInventorySell";
 import { useInventory } from "../hooks/useInventory";
+import { useSellInventoryItem } from "../hooks/useSellInventoryItem";
 
 export function CollectionPage() {
   const { pushToast } = useFeedback();
   const inventoryQuery = useInventory();
   const createMintMutation = useCreateMint();
+  const sellInventoryMutation = useSellInventoryItem();
+  const cancelSellMutation = useCancelInventorySell();
+  const sellRulesQuery = useMarketSellRules();
   const items = inventoryQuery.items;
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [isSellOpen, setIsSellOpen] = useState(false);
   const [isUpgradeOpen, setIsUpgradeOpen] = useState(false);
   const [isEvolveOpen, setIsEvolveOpen] = useState(false);
   const [isDecomposeOpen, setIsDecomposeOpen] = useState(false);
   const [isMintQueueOpen, setIsMintQueueOpen] = useState(false);
+  const [cancelSellTarget, setCancelSellTarget] = useState<{
+    itemInstanceId: string;
+    listingId: string | null;
+    unitPriceKcoin: number | null;
+  } | null>(null);
   const mintQueueQuery = useMintQueue({
     enabled: isMintQueueOpen,
   });
@@ -57,10 +71,12 @@ export function CollectionPage() {
     if (items.length === 0) {
       setSelectedItemId(null);
       setIsDetailOpen(false);
+      setIsSellOpen(false);
       setIsUpgradeOpen(false);
       setIsEvolveOpen(false);
       setIsDecomposeOpen(false);
       setIsMintQueueOpen(false);
+      setCancelSellTarget(null);
       setUpgradeResult(null);
       setEvolveResult(null);
       setDecomposeResult(null);
@@ -78,6 +94,7 @@ export function CollectionPage() {
 
   function handleOpenUpgrade() {
     setIsDetailOpen(false);
+    setIsSellOpen(false);
     setIsEvolveOpen(false);
     setIsDecomposeOpen(false);
     setIsUpgradeOpen(true);
@@ -85,6 +102,7 @@ export function CollectionPage() {
 
   function handleOpenEvolve() {
     setIsDetailOpen(false);
+    setIsSellOpen(false);
     setIsUpgradeOpen(false);
     setIsDecomposeOpen(false);
     setIsEvolveOpen(true);
@@ -92,9 +110,97 @@ export function CollectionPage() {
 
   function handleOpenDecompose() {
     setIsDetailOpen(false);
+    setIsSellOpen(false);
     setIsUpgradeOpen(false);
     setIsEvolveOpen(false);
     setIsDecomposeOpen(true);
+  }
+
+  function handleOpenSell() {
+    setIsDetailOpen(false);
+    setIsUpgradeOpen(false);
+    setIsEvolveOpen(false);
+    setIsDecomposeOpen(false);
+    setIsSellOpen(true);
+  }
+
+  function handleOpenCancelSell(target: {
+    itemInstanceId: string;
+    listingId: string | null;
+    unitPriceKcoin: number | null;
+  }) {
+    setIsDetailOpen(false);
+    setIsUpgradeOpen(false);
+    setIsEvolveOpen(false);
+    setIsDecomposeOpen(false);
+    setCancelSellTarget(target);
+  }
+
+  function handleConfirmSell(unitPriceKcoin: number) {
+    if (!selectedItem || sellInventoryMutation.isPending) {
+      return;
+    }
+
+    sellInventoryMutation.mutate(
+      {
+        itemInstanceId: selectedItem.itemInstanceId,
+        unitPriceKcoin,
+      },
+      {
+        onSuccess: (result) => {
+          setIsSellOpen(false);
+          pushToast({
+            type: "success",
+            title: "上架成功",
+            message: `预计到手 ${formatCurrencyAmount(
+              result.expectedNetAmountKcoin,
+            )} K-coin，库存和市场正在刷新。`,
+          });
+        },
+        onError: (error) => {
+          pushToast({
+            type: "error",
+            title: "上架失败",
+            message: getApiErrorMessage(error),
+          });
+        },
+      },
+    );
+  }
+
+  function handleConfirmCancelSell() {
+    if (!cancelSellTarget || cancelSellMutation.isPending) {
+      return;
+    }
+
+    cancelSellMutation.mutate(
+      {
+        itemInstanceId: cancelSellTarget.itemInstanceId,
+        listingId: cancelSellTarget.listingId,
+      },
+      {
+        onSuccess: (result) => {
+          setCancelSellTarget(null);
+          pushToast({
+            type: "success",
+            title: "下架成功",
+            message:
+              result.releasedItemInstanceIds.length > 0
+                ? `已释放 ${formatCurrencyAmount(
+                    result.releasedItemInstanceIds.length,
+                  )} 个未售出藏品。`
+                : "挂单已下架，库存正在刷新。",
+          });
+        },
+        onError: (error) => {
+          pushToast({
+            type: "error",
+            title: "下架失败",
+            message: getApiErrorMessage(error),
+          });
+        },
+      },
+    );
   }
 
   function handleCreateMint(itemInstanceId: string) {
@@ -213,15 +319,54 @@ export function CollectionPage() {
         selectedItemId={selectedItem.itemInstanceId}
         onSelect={setSelectedItemId}
       />
+      {inventoryQuery.hasNextPage ? (
+        <div className="collection-load-more">
+          <button
+            disabled={inventoryQuery.isFetchingNextPage}
+            onClick={() => void inventoryQuery.fetchNextPage()}
+            type="button"
+          >
+            <RefreshCw
+              aria-hidden="true"
+              className={
+                inventoryQuery.isFetchingNextPage
+                  ? "collection-load-more__spin"
+                  : undefined
+              }
+              size={15}
+              strokeWidth={2.4}
+            />
+            {inventoryQuery.isFetchingNextPage ? "加载中" : "加载更多"}
+          </button>
+        </div>
+      ) : null}
       <CharacterDetailSheet
         open={isDetailOpen}
         item={selectedItem}
         isMinting={createMintMutation.isPending}
         onClose={() => setIsDetailOpen(false)}
+        onCancelSell={handleOpenCancelSell}
         onDecompose={handleOpenDecompose}
         onEvolve={handleOpenEvolve}
         onMint={handleCreateMint}
+        onSell={handleOpenSell}
         onUpgrade={handleOpenUpgrade}
+      />
+      <CollectionSellEntry
+        feeBps={sellRulesQuery.rules?.feeBps ?? null}
+        isPending={sellInventoryMutation.isPending}
+        item={selectedItem}
+        onClose={() => setIsSellOpen(false)}
+        onConfirm={handleConfirmSell}
+        open={isSellOpen}
+      />
+      <CollectionCancelEntry
+        isPending={cancelSellMutation.isPending}
+        item={selectedItem}
+        onClose={() => setCancelSellTarget(null)}
+        onConfirm={handleConfirmCancelSell}
+        open={cancelSellTarget !== null}
+        unitPriceKcoin={cancelSellTarget?.unitPriceKcoin ?? null}
       />
       <UpgradePanel
         open={isUpgradeOpen}

@@ -198,6 +198,46 @@ select 'process_repeat', api.gacha_process_dev_paid_order((select id from _ids w
 select ok(((select payload from _ids where key = 'process_repeat') ->> 'idempotent')::boolean, 'repeating dev paid processing is idempotent');
 select is((select count(*)::int from inventory.item_instances where source_id = (select id from _ids where key = 'draw_order') and source_type = 'gacha'), 10, 'idempotent reprocessing does not duplicate inventory items');
 
+with minted_item as (
+  select id
+  from inventory.item_instances
+  where owner_user_id = (select id from _ids where key = 'user')
+  order by serial_no asc
+  limit 1
+)
+update inventory.item_instances ii
+set status = 'minted',
+    nft_mint_status = 'minted',
+    updated_at = now()
+from minted_item
+where ii.id = minted_item.id;
+
+with minting_item as (
+  select id
+  from inventory.item_instances
+  where owner_user_id = (select id from _ids where key = 'user')
+    and status = 'available'
+  order by serial_no asc
+  limit 1
+)
+update inventory.item_instances ii
+set status = 'minting',
+    nft_mint_status = 'queued',
+    updated_at = now()
+from minting_item
+where ii.id = minting_item.id;
+
+insert into _ids (key, payload)
+select 'inventory_default_list', api.inventory_list_user_items((select id from _ids where key = 'user'));
+
+select is(((select payload from _ids where key = 'inventory_default_list') ->> 'total')::int, 10, 'inventory list default includes available, minting and minted items');
+select is((select payload from _ids where key = 'inventory_default_list') -> 'statuses', '["available", "minting", "minted"]'::jsonb, 'inventory list returns collection-visible default statuses');
+select is((
+  select count(*)::int
+  from jsonb_array_elements((select payload from _ids where key = 'inventory_default_list') -> 'items') item
+  where item ->> 'status' in ('minting', 'minted')
+), 2, 'inventory list default keeps Mint-in-progress and Minted items visible');
+
 select * from finish();
 
 rollback;

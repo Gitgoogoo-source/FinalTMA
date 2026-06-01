@@ -10,9 +10,11 @@ import type {
   AuditLogFilters,
   AuditLogsResponse,
   AdminConfigMutationResponse,
+  AlbumAdminResponse,
   BlindBoxesAdminResponse,
   BusinessMonitoringResponse,
   CampaignsResponse,
+  CollectiblesAdminResponse,
   AdminMeResponse,
   AdminRolesResponse,
   AdminUsersResponse,
@@ -67,7 +69,9 @@ import type {
   RiskMutationResponse,
   RiskUserProfileParams,
   RiskUserProfile,
+  UpdateAlbumMilestoneInput,
   UpdateBlindBoxStatusInput,
+  UpdateCollectibleTemplateOpsInput,
   UpsertBlindBoxInput,
   UpsertBoxPriceRuleInput,
   UpsertCampaignInput,
@@ -727,6 +731,48 @@ export async function upsertCampaign(
       "admin-upsert-campaign",
       input.id ?? input.code,
     ),
+    body: {
+      ...input,
+      confirm: true,
+    },
+  });
+}
+
+export async function fetchCollectibles(
+  params: QueryParams = {},
+): Promise<CollectiblesAdminResponse> {
+  return adminRequest<CollectiblesAdminResponse>(
+    `/api/admin/collectibles${toQueryString(params)}`,
+  );
+}
+
+export async function updateCollectibleTemplateOps(
+  input: UpdateCollectibleTemplateOpsInput,
+): Promise<AdminConfigMutationResponse> {
+  return adminRequest<AdminConfigMutationResponse>("/api/admin/collectibles", {
+    method: "PATCH",
+    headers: buildDangerHeaders("admin-update-collectible", input.id),
+    body: {
+      ...input,
+      confirm: true,
+    },
+  });
+}
+
+export async function fetchAlbumAdmin(
+  params: QueryParams = {},
+): Promise<AlbumAdminResponse> {
+  return adminRequest<AlbumAdminResponse>(
+    `/api/admin/album${toQueryString(params)}`,
+  );
+}
+
+export async function updateAlbumMilestone(
+  input: UpdateAlbumMilestoneInput,
+): Promise<AdminConfigMutationResponse> {
+  return adminRequest<AdminConfigMutationResponse>("/api/admin/album", {
+    method: "PATCH",
+    headers: buildDangerHeaders("admin-update-album-milestone", input.id),
     body: {
       ...input,
       confirm: true,

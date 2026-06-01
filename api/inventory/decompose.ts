@@ -99,6 +99,7 @@ async function callInventoryDecomposeRpc(
         p_user_id: userId,
         p_item_instance_ids: input.item_instance_ids,
         p_idempotency_key: input.idempotency_key,
+        p_expected_fgems_reward: input.expected_fgems_reward ?? null,
       },
       {
         schema: "api" as never,
@@ -107,6 +108,7 @@ async function callInventoryDecomposeRpc(
           userId,
           itemCount: input.item_instance_ids.length,
           idempotencyKey: input.idempotency_key,
+          expectedFgemsReward: input.expected_fgems_reward,
         },
       },
     );
@@ -240,6 +242,14 @@ function mapInventoryDecomposeRpcError(error: unknown): ApiError {
       cause: error,
       expose: false,
     });
+  }
+
+  if (message.includes("decompose preview mismatch")) {
+    return new ApiError(
+      409,
+      "INVENTORY_PREVIEW_STALE",
+      "藏品分解配置已变化，请刷新后重试。",
+    );
   }
 
   return new ApiError(500, "INVENTORY_DECOMPOSE_RPC_FAILED", "分解失败。", {

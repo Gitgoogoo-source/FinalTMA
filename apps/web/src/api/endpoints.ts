@@ -30,6 +30,8 @@ export const API_ENDPOINTS = {
     upgrade: "/inventory/upgrade",
     evolve: "/inventory/evolve",
     decompose: "/inventory/decompose",
+    sellEntry: "/inventory/sell-entry",
+    cancelSell: "/inventory/cancel-sell",
     activity: "/inventory/activity",
   },
   album: {

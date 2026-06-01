@@ -99,6 +99,9 @@ async function callInventoryUpgradeRpc(
         p_user_id: userId,
         p_item_instance_id: input.item_instance_id,
         p_idempotency_key: input.idempotency_key,
+        p_target_level: input.target_level ?? null,
+        p_expected_fgems_cost: input.expected_fgems_cost ?? null,
+        p_expected_item_version: input.expected_item_version ?? null,
       },
       {
         schema: "api" as never,
@@ -107,6 +110,9 @@ async function callInventoryUpgradeRpc(
           userId,
           itemInstanceId: input.item_instance_id,
           idempotencyKey: input.idempotency_key,
+          targetLevel: input.target_level,
+          expectedFgemsCost: input.expected_fgems_cost,
+          expectedItemVersion: input.expected_item_version,
         },
       },
     );
@@ -223,6 +229,17 @@ function mapInventoryUpgradeRpcError(error: unknown): ApiError {
 
   if (message.includes("insufficient balance")) {
     return new ApiError(409, "INSUFFICIENT_FGEMS", "FGEMS 余额不足。");
+  }
+
+  if (
+    message.includes("upgrade preview mismatch") ||
+    message.includes("item version mismatch")
+  ) {
+    return new ApiError(
+      409,
+      "INVENTORY_PREVIEW_STALE",
+      "藏品升级配置已变化，请刷新后重试。",
+    );
   }
 
   return new ApiError(500, "INVENTORY_UPGRADE_RPC_FAILED", "升级失败。", {

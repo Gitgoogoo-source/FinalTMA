@@ -1,10 +1,6 @@
 import { apiRequest } from "@/api/client";
 import { API_ENDPOINTS } from "@/api/endpoints";
-import {
-  CURRENCY_CODE,
-  type CurrencyCode,
-} from "@/shared/constants/currencies";
-import { normalizeCurrencyAmount } from "@/shared/lib/formatCurrency";
+import { CURRENCY_CODE } from "@/shared/constants/currencies";
 
 import type {
   AssetBalance,
@@ -12,6 +8,7 @@ import type {
   AssetProfile,
   AssetProfileSource,
   MyAssets,
+  TopAssetCurrencyCode,
   WalletEntryState,
 } from "./assets.types";
 
@@ -34,8 +31,12 @@ export function normalizeMyAssetsResponse(
   response: unknown,
   profileFallback?: AssetProfileSource | null,
 ): MyAssets {
-  const payload = isRecord(response) ? response : {};
-  const balances = normalizeBalances(payload.balances);
+  const payload = readRecord(response, "/me/assets response");
+  const balances = normalizeRequiredBalances(
+    payload.balances,
+    "/me/assets.balances",
+    { requireCurrencyCode: true },
+  );
   const profile = normalizeAssetProfile(payload.profile, profileFallback);
   const userId =
     readString(payload.userId) ?? readString(payload.user_id) ?? profile.id;
@@ -56,12 +57,18 @@ export function normalizeBootstrapAssets(
     return null;
   }
 
+  const balances = normalizeOptionalBalances(bootstrap.balances);
+
+  if (!balances) {
+    return null;
+  }
+
   const profile = normalizeAssetProfile(bootstrap.profile, profileFallback);
 
   return buildMyAssets({
     userId: profile.id,
     profile,
-    balances: normalizeBalances(bootstrap.balances),
+    balances,
     updatedAt:
       readString(bootstrap.updatedAt) ??
       readString(bootstrap.updated_at) ??
@@ -77,7 +84,7 @@ export function createEmptyMyAssets(
   return buildMyAssets({
     userId: profile.id,
     profile,
-    balances: normalizeBalances(null),
+    balances: createEmptyBalances(),
     updatedAt: null,
   });
 }
@@ -99,36 +106,86 @@ function buildMyAssets(input: {
     assets: {
       kcoin: input.balances.KCOIN,
       fgems: input.balances.FGEMS,
-      stars: input.balances.STAR_DISPLAY,
     },
     wallet: WALLET_PLACEHOLDER,
     updatedAt: input.updatedAt,
   };
 }
 
-function normalizeBalances(value: unknown): AssetBalanceMap {
-  const record = isRecord(value) ? value : {};
+function normalizeRequiredBalances(
+  value: unknown,
+  path: string,
+  options: {
+    requireCurrencyCode: boolean;
+  },
+): AssetBalanceMap {
+  const record = readRecord(value, path);
 
   return {
-    KCOIN: normalizeBalance(CURRENCY_CODE.KCOIN, record[CURRENCY_CODE.KCOIN]),
-    FGEMS: normalizeBalance(CURRENCY_CODE.FGEMS, record[CURRENCY_CODE.FGEMS]),
-    STAR_DISPLAY: normalizeBalance(
-      CURRENCY_CODE.STAR_DISPLAY,
-      record[CURRENCY_CODE.STAR_DISPLAY],
+    KCOIN: normalizeRequiredBalance(
+      CURRENCY_CODE.KCOIN,
+      record[CURRENCY_CODE.KCOIN],
+      `${path}.KCOIN`,
+      options,
+    ),
+    FGEMS: normalizeRequiredBalance(
+      CURRENCY_CODE.FGEMS,
+      record[CURRENCY_CODE.FGEMS],
+      `${path}.FGEMS`,
+      options,
     ),
   };
 }
 
-function normalizeBalance(
-  currencyCode: CurrencyCode,
+function normalizeOptionalBalances(value: unknown): AssetBalanceMap | null {
+  try {
+    return normalizeRequiredBalances(value, "bootstrap.balances", {
+      requireCurrencyCode: false,
+    });
+  } catch {
+    return null;
+  }
+}
+
+function createEmptyBalances(): AssetBalanceMap {
+  return {
+    KCOIN: createZeroBalance(CURRENCY_CODE.KCOIN),
+    FGEMS: createZeroBalance(CURRENCY_CODE.FGEMS),
+  };
+}
+
+function createZeroBalance(currencyCode: TopAssetCurrencyCode): AssetBalance {
+  return {
+    currencyCode,
+    available: "0",
+    locked: "0",
+  };
+}
+
+function normalizeRequiredBalance(
+  currencyCode: TopAssetCurrencyCode,
   value: unknown,
+  path: string,
+  options: {
+    requireCurrencyCode: boolean;
+  },
 ): AssetBalance {
-  const record = isRecord(value) ? value : {};
+  const record = readRecord(value, path);
+  const responseCurrencyCode = readString(record.currencyCode);
+
+  if (options.requireCurrencyCode && responseCurrencyCode !== currencyCode) {
+    throw new Error(
+      `Invalid asset response: ${path}.currencyCode must be ${currencyCode}.`,
+    );
+  }
 
   return {
     currencyCode,
-    available: normalizeCurrencyAmount(record.available),
-    locked: normalizeCurrencyAmount(record.locked),
+    available: readRequiredCurrencyAmount(
+      record.available,
+      `${path}.available`,
+    ),
+    locked: readRequiredCurrencyAmount(record.locked, `${path}.locked`),
   };
 }
 
@@ -206,6 +263,36 @@ function normalizeOptionalString(
 
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
+}
+
+function readRequiredCurrencyAmount(value: unknown, path: string): string {
+  if (typeof value === "bigint") {
+    return value.toString();
+  }
+
+  if (typeof value === "number" && Number.isInteger(value)) {
+    return String(value);
+  }
+
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+
+    if (/^\d+$/.test(trimmed)) {
+      return trimmed;
+    }
+  }
+
+  throw new Error(
+    `Invalid asset response: ${path} must be a non-negative integer amount.`,
+  );
+}
+
+function readRecord(value: unknown, path: string): Record<string, unknown> {
+  if (isRecord(value)) {
+    return value;
+  }
+
+  throw new Error(`Invalid asset response: ${path} must be an object.`);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

@@ -24,11 +24,16 @@ import { CollectionPage } from "./CollectionPage";
 const mocks = vi.hoisted(() => ({
   inventoryItems: [] as unknown[],
   itemDetails: new Map<string, unknown>(),
+  hasNextInventoryPage: false,
+  isFetchingNextInventoryPage: false,
   inventoryRefetch: vi.fn(),
+  inventoryFetchNextPage: vi.fn(),
   detailRefetch: vi.fn(),
   upgradeMutateAsync: vi.fn(),
   evolveMutateAsync: vi.fn(),
   decomposeMutateAsync: vi.fn(),
+  sellMutate: vi.fn(),
+  cancelSellMutate: vi.fn(),
   createMintMutate: vi.fn(),
   mintQueueRefetch: vi.fn(),
   walletStatus: null as unknown,
@@ -39,8 +44,11 @@ vi.mock("../hooks/useInventory", () => ({
     error: null,
     isError: false,
     isFetching: false,
+    isFetchingNextPage: mocks.isFetchingNextInventoryPage,
     isLoading: false,
+    hasNextPage: mocks.hasNextInventoryPage,
     items: mocks.inventoryItems,
+    fetchNextPage: mocks.inventoryFetchNextPage,
     refetch: mocks.inventoryRefetch,
     serverTime: "2026-05-25T08:00:00.000Z",
     total: mocks.inventoryItems.length,
@@ -84,6 +92,38 @@ vi.mock("../hooks/useDecomposeItem", () => ({
     isError: false,
     isPending: false,
     mutateAsync: mocks.decomposeMutateAsync,
+  }),
+}));
+
+vi.mock("../hooks/useSellInventoryItem", () => ({
+  useSellInventoryItem: () => ({
+    error: null,
+    isError: false,
+    isPending: false,
+    mutate: mocks.sellMutate,
+  }),
+}));
+
+vi.mock("../hooks/useCancelInventorySell", () => ({
+  useCancelInventorySell: () => ({
+    error: null,
+    isError: false,
+    isPending: false,
+    mutate: mocks.cancelSellMutate,
+  }),
+}));
+
+vi.mock("@/features/trade/hooks/useMarketSellRules", () => ({
+  useMarketSellRules: () => ({
+    error: null,
+    isError: false,
+    isLoading: false,
+    rules: {
+      currencyCode: "KCOIN",
+      feeBps: 500,
+      feeType: "market_sell",
+      source: "active_rule",
+    },
   }),
 }));
 
@@ -131,16 +171,56 @@ describe("CollectionPage stage-3 frontend states", () => {
   beforeEach(() => {
     mocks.inventoryItems = [];
     mocks.itemDetails = new Map<string, unknown>();
+    mocks.hasNextInventoryPage = false;
+    mocks.isFetchingNextInventoryPage = false;
     mocks.inventoryRefetch.mockReset();
+    mocks.inventoryFetchNextPage.mockReset();
     mocks.detailRefetch.mockReset();
     mocks.upgradeMutateAsync.mockReset();
     mocks.evolveMutateAsync.mockReset();
     mocks.decomposeMutateAsync.mockReset();
+    mocks.sellMutate.mockReset();
+    mocks.cancelSellMutate.mockReset();
     mocks.createMintMutate.mockReset();
     mocks.mintQueueRefetch.mockReset();
     mocks.upgradeMutateAsync.mockResolvedValue(upgradeResult());
     mocks.evolveMutateAsync.mockResolvedValue(evolveResult());
     mocks.decomposeMutateAsync.mockResolvedValue(decomposeResult());
+    mocks.sellMutate.mockImplementation(
+      (
+        _input: unknown,
+        options?: {
+          onSuccess?: (result: unknown) => void;
+        },
+      ) => {
+        options?.onSuccess?.({
+          expectedNetAmountKcoin: 475,
+          feeBps: 500,
+          idempotent: false,
+          itemCount: 1,
+          listingId: "99999999-9999-4999-8999-999999999999",
+          priceHealth: "healthy",
+          remainingCount: 1,
+          status: "active",
+          unitPriceKcoin: 500,
+        });
+      },
+    );
+    mocks.cancelSellMutate.mockImplementation(
+      (
+        _input: unknown,
+        options?: {
+          onSuccess?: (result: unknown) => void;
+        },
+      ) => {
+        options?.onSuccess?.({
+          cancelledAt: "2026-05-25T08:00:00.000Z",
+          listingId: "99999999-9999-4999-8999-999999999999",
+          releasedItemInstanceIds: [ITEM_A_ID],
+          status: "cancelled",
+        });
+      },
+    );
     mocks.createMintMutate.mockImplementation(
       (
         _input: unknown,
@@ -218,6 +298,20 @@ describe("CollectionPage stage-3 frontend states", () => {
     );
   });
 
+  it("loads the next inventory page when more items are available", async () => {
+    mocks.hasNextInventoryPage = true;
+    mocks.inventoryFetchNextPage.mockResolvedValueOnce({});
+    mocks.inventoryItems = [makeItem()];
+
+    renderCollectionPage();
+
+    fireEvent.click(screen.getByRole("button", { name: "加载更多" }));
+
+    await waitFor(() => {
+      expect(mocks.inventoryFetchNextPage).toHaveBeenCalledTimes(1);
+    });
+  });
+
   it("opens details and enables growth actions for upgradeable duplicate items", () => {
     const firstItem = makeItem();
     const items = [
@@ -237,10 +331,91 @@ describe("CollectionPage stage-3 frontend states", () => {
     expect(within(dialog).getByRole("button", { name: "升级" })).toBeEnabled();
     expect(within(dialog).getByRole("button", { name: "合成" })).toBeEnabled();
     expect(within(dialog).getByRole("button", { name: "分解" })).toBeEnabled();
-    expect(within(dialog).getByRole("link", { name: "出售" })).toHaveAttribute(
-      "href",
-      "/trade?tab=sell",
+    expect(within(dialog).getByRole("button", { name: "出售" })).toBeEnabled();
+  });
+
+  it("opens the direct sell entry from item details and submits the price", async () => {
+    const item = makeItem();
+    setInventoryItems(item);
+    setItemDetail(item, makeDetail(item));
+
+    renderCollectionPage();
+    fireEvent.click(screen.getByRole("button", { name: "详情" }));
+    fireEvent.click(
+      within(screen.getByRole("dialog", { name: "森林幼芽" })).getByRole(
+        "button",
+        { name: "出售" },
+      ),
     );
+
+    const sellDialog = screen.getByRole("dialog", { name: "森林幼芽" });
+    fireEvent.change(within(sellDialog).getByLabelText("出售单价"), {
+      target: { value: "500" },
+    });
+    fireEvent.click(
+      within(sellDialog).getByRole("button", { name: "确认出售" }),
+    );
+
+    await waitFor(() => expect(mocks.sellMutate).toHaveBeenCalledTimes(1));
+    expect(mocks.sellMutate).toHaveBeenCalledWith(
+      {
+        itemInstanceId: ITEM_A_ID,
+        unitPriceKcoin: 500,
+      },
+      expect.objectContaining({
+        onError: expect.any(Function),
+        onSuccess: expect.any(Function),
+      }),
+    );
+    expect(await screen.findByText("上架成功")).toBeVisible();
+  });
+
+  it("opens the direct cancel entry for listed items and submits downlist", async () => {
+    const listedItem = makeItem({
+      status: "listed",
+    });
+    setInventoryItems(listedItem);
+    setItemDetail(
+      listedItem,
+      makeDetail(listedItem, {
+        marketStatus: {
+          currency: "KCOIN",
+          isListed: true,
+          listingId: "99999999-9999-4999-8999-999999999999",
+          unitPrice: 500,
+        },
+        status: "listed",
+      }),
+    );
+
+    renderCollectionPage();
+    fireEvent.click(screen.getByRole("button", { name: "详情" }));
+    fireEvent.click(
+      within(screen.getByRole("dialog", { name: "森林幼芽" })).getByRole(
+        "button",
+        { name: "下架" },
+      ),
+    );
+
+    const cancelDialog = screen.getByRole("dialog", { name: "森林幼芽" });
+    fireEvent.click(
+      within(cancelDialog).getByRole("button", { name: "确认下架" }),
+    );
+
+    await waitFor(() =>
+      expect(mocks.cancelSellMutate).toHaveBeenCalledTimes(1),
+    );
+    expect(mocks.cancelSellMutate).toHaveBeenCalledWith(
+      {
+        itemInstanceId: ITEM_A_ID,
+        listingId: "99999999-9999-4999-8999-999999999999",
+      },
+      expect.objectContaining({
+        onError: expect.any(Function),
+        onSuccess: expect.any(Function),
+      }),
+    );
+    expect(await screen.findByText("下架成功")).toBeVisible();
   });
 
   it("disables growth actions when the item is not upgradeable, lacks materials and is not duplicated", () => {

@@ -1,12 +1,29 @@
--- economy_apply_reward_json.sql
--- ============================================================
--- Generated RPC file for the Telegram Mini App blind-box game.
--- Place under supabase/rpc/. Execute after schema migrations 0001-0019.
--- Core policy: frontend only requests; all trusted mutations are enforced here by database transactions.
+-- Fulfill album milestone reward JSON for every reward type accepted by the
+-- album API contract. Currency rewards go through the immutable ledger; item
+-- and decoration rewards create inventory instances with per-reward idempotency.
 
--- Applies a JSON reward array to a user.
--- Currency rewards write economy.currency_ledger. Template-backed ITEM,
--- DECORATION and COLLECTIBLE rewards create inventory.item_instances.
+alter table inventory.item_instances
+  drop constraint if exists item_instances_source_type_check;
+
+alter table inventory.item_instances
+  add constraint item_instances_source_type_check
+  check (
+    source_type = any (
+      array[
+        'gacha'::text,
+        'market'::text,
+        'evolution'::text,
+        'admin'::text,
+        'admin_compensation'::text,
+        'album_milestone'::text,
+        'task_claim'::text,
+        'daily_check_in'::text,
+        'onchain_sync'::text,
+        'airdrop'::text,
+        'unknown'::text
+      ]
+    )
+  );
 
 create or replace function api._apply_reward_json(
   p_user_id uuid,
@@ -289,30 +306,3 @@ begin
   return v_results;
 end;
 $$;
-
-
-create or replace function api.economy_apply_reward_json(
-  p_user_id uuid,
-  p_reward jsonb,
-  p_source_type text,
-  p_source_id uuid,
-  p_idempotency_prefix text
-)
-returns jsonb
-language plpgsql
-security definer
-set search_path = ''
-as $$
-begin
-  return api._apply_reward_json(
-    p_user_id,
-    coalesce(p_reward, '[]'::jsonb),
-    p_source_type,
-    p_source_id,
-    p_idempotency_prefix
-  );
-end;
-$$;
-
-
--- ============================================================

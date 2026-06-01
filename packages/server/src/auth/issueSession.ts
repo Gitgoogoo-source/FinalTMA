@@ -1,6 +1,6 @@
 // packages/server/src/auth/issueSession.ts
 
-import { createHmac, randomBytes, randomUUID } from "node:crypto";
+import { createHash, createHmac, randomBytes, randomUUID } from "node:crypto";
 import {
   getSupabaseAdminClient,
   type SupabaseAdminClient,
@@ -104,11 +104,6 @@ export interface IssuedSession {
   expiresInSeconds: number;
 }
 
-export interface SessionTokenParts {
-  sessionId: string;
-  secret: string;
-}
-
 export interface BuildSessionCookieOptions {
   cookieName?: string;
   maxAgeSeconds?: number;
@@ -143,8 +138,8 @@ export async function issueSession(
   const ttlSeconds = normalizeTtlSeconds(input.ttlSeconds);
   const expiresAt = new Date(nowMs + ttlSeconds * 1000);
 
-  const tokenParts = createSessionTokenParts();
-  const token = formatSessionToken(tokenParts);
+  const sessionId = randomUUID();
+  const token = createOpaqueSessionToken();
   const tokenHash = hashSessionToken(token);
 
   if (input.revokePreviousSessions) {
@@ -167,7 +162,7 @@ export async function issueSession(
   }
 
   const row = {
-    id: tokenParts.sessionId,
+    id: sessionId,
     user_id: input.userId,
 
     session_token_hash: tokenHash,
@@ -202,7 +197,7 @@ export async function issueSession(
 
   return {
     token,
-    sessionId: tokenParts.sessionId,
+    sessionId,
     userId: input.userId,
     telegramUserId:
       input.telegramUserId === undefined
@@ -214,55 +209,12 @@ export async function issueSession(
   };
 }
 
-export function createSessionTokenParts(): SessionTokenParts {
-  return {
-    sessionId: randomUUID(),
-    secret: randomBytes(SESSION_SECRET_BYTES).toString("base64url"),
-  };
-}
-
-export function formatSessionToken(parts: SessionTokenParts): string {
-  return `${SESSION_TOKEN_PREFIX}${parts.sessionId}.${parts.secret}`;
-}
-
-export function parseSessionToken(token: string): SessionTokenParts | null {
-  if (typeof token !== "string") return null;
-
-  const trimmed = token.trim();
-
-  if (!trimmed.startsWith(SESSION_TOKEN_PREFIX)) {
-    return null;
-  }
-
-  const payload = trimmed.slice(SESSION_TOKEN_PREFIX.length);
-  const segments = payload.split(".");
-
-  if (segments.length !== 2) {
-    return null;
-  }
-
-  const sessionId = segments[0];
-  const secret = segments[1];
-
-  if (!sessionId || !secret) {
-    return null;
-  }
-
-  if (!isUuid(sessionId)) {
-    return null;
-  }
-
-  if (!/^[A-Za-z0-9_-]{32,}$/.test(secret)) {
-    return null;
-  }
-
-  return { sessionId, secret };
+export function createOpaqueSessionToken(): string {
+  return `${SESSION_TOKEN_PREFIX}${randomBytes(SESSION_SECRET_BYTES + 16).toString("base64url")}`;
 }
 
 export function hashSessionToken(token: string): string {
-  return createHmac("sha256", getAppSessionSecret())
-    .update(token)
-    .digest("hex");
+  return createHash("sha256").update(token, "utf8").digest("hex");
 }
 
 export function hashClientFingerprint(
@@ -357,10 +309,4 @@ function getNowMs(now?: Date | number): number {
   if (typeof now === "number") return now;
   if (now instanceof Date) return now.getTime();
   return Date.now();
-}
-
-function isUuid(value: string): boolean {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-    value,
-  );
 }

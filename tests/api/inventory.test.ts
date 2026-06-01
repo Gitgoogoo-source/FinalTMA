@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { ApiSuccessResponse } from "../../api/_shared/handler";
+import type {
+  ApiErrorResponse,
+  ApiSuccessResponse,
+} from "../../api/_shared/handler";
 import { buildInventoryListResponse } from "../../api/inventory/list";
 import { invokeApiHandler } from "./_utils";
 
@@ -145,7 +148,7 @@ describe("inventory API helpers", () => {
       total: 1,
       limit: 40,
       offset: 0,
-      statuses: ["available"],
+      statuses: ["available", "minting", "minted"],
       server_time: "2026-05-21T00:00:00.000Z",
     });
 
@@ -186,11 +189,74 @@ describe("inventory API helpers", () => {
       "inventory_list_user_items",
       expect.objectContaining({
         p_user_id: USER_ID,
-        p_statuses: ["available"],
+        p_statuses: ["available", "minting", "minted"],
         p_limit: 40,
         p_offset: 0,
       }),
       expect.any(Object),
     );
+  });
+
+  it("/api/inventory/list includes locked states only when requested", async () => {
+    callRpcRawMock.mockResolvedValueOnce({
+      items: [],
+      total: 0,
+      limit: 40,
+      offset: 0,
+      statuses: ["available", "locked", "listed", "minting", "minted"],
+      server_time: "2026-05-21T00:00:00.000Z",
+    });
+
+    const { default: inventoryListHandler } =
+      await import("../../api/inventory/list");
+    const result = await invokeApiHandler<ApiSuccessResponse>(
+      inventoryListHandler,
+      {
+        method: "GET",
+        url: "/api/inventory/list",
+        query: {
+          include_locked: "true",
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(200);
+    expect(callRpcRawMock).toHaveBeenCalledWith(
+      "inventory_list_user_items",
+      expect.objectContaining({
+        p_user_id: USER_ID,
+        p_statuses: ["available", "locked", "listed", "minting", "minted"],
+        p_limit: 40,
+        p_offset: 0,
+      }),
+      expect.any(Object),
+    );
+  });
+
+  it("/api/inventory/list rejects the not-yet-supported only_sellable filter", async () => {
+    const { default: inventoryListHandler } =
+      await import("../../api/inventory/list");
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      inventoryListHandler,
+      {
+        method: "GET",
+        url: "/api/inventory/list",
+        query: {
+          only_sellable: "true",
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(400);
+    expect(result.body).toMatchObject({
+      ok: false,
+      error: {
+        code: "BAD_REQUEST",
+        details: {
+          unsupported: ["only_sellable"],
+        },
+      },
+    });
+    expect(callRpcRawMock).not.toHaveBeenCalled();
   });
 });

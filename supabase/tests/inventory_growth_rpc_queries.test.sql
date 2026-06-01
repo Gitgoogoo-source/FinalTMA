@@ -256,17 +256,26 @@ select 'minting_decompose_preview', api.inventory_get_decompose_preview(
 );
 
 select is(((select payload from _ids where key = 'minting_decompose_preview') ->> 'reason'), 'ITEM_MINTING', 'decompose preview rejects minting item');
-select ok(testutil.raises_like(format('select api.inventory_decompose_items(%L::uuid, array[%L::uuid], %L)', (select id::text from _ids where key = 'user'), (select id::text from _ids where key = 'item4'), 'growth-rpc-decompose-minting-001'), '%item is minting%'), 'batch decomposition rejects minting item');
+select ok(testutil.raises_like(format('select api.inventory_decompose_items(%L::uuid, array[%L::uuid], %L::text)', (select id::text from _ids where key = 'user'), (select id::text from _ids where key = 'item4'), 'growth-rpc-decompose-minting-001'), '%item is minting%'), 'batch decomposition rejects minting item');
 
 update inventory.item_instances
 set nft_mint_status = 'not_minted'
 where id = (select id from _ids where key = 'item4');
 
+select ok(testutil.raises_like(format(
+  'select api.inventory_decompose_items(%L::uuid, array[%L::uuid, %L::uuid], %L::text, 999::numeric)',
+  (select id::text from _ids where key = 'user'),
+  (select id::text from _ids where key = 'item1'),
+  (select id::text from _ids where key = 'item2'),
+  'growth-rpc-decompose-stale-preview-001'
+), '%decompose preview mismatch%'), 'batch decomposition rejects stale expected FGEMS reward');
+select is((select count(*)::integer from inventory.decompose_logs where idempotency_key = 'growth-rpc-decompose-stale-preview-001'), 0, 'stale decompose preview writes no log');
+
 insert into _ids (key, payload)
 select 'batch_decompose', api.inventory_decompose_items(
   (select id from _ids where key = 'user'),
   array[(select id from _ids where key = 'item1'), (select id from _ids where key = 'item2')],
-  'growth-rpc-decompose-batch-001'
+  'growth-rpc-decompose-batch-001'::text
 );
 
 select is(((select payload from _ids where key = 'batch_decompose') ->> 'total_reward_fgems')::numeric, 10::numeric, 'batch decomposition sums per-item FGEMS rewards');
@@ -279,13 +288,13 @@ insert into _ids (key, payload)
 select 'batch_decompose_repeat', api.inventory_decompose_items(
   (select id from _ids where key = 'user'),
   array[(select id from _ids where key = 'item1'), (select id from _ids where key = 'item2')],
-  'growth-rpc-decompose-batch-001'
+  'growth-rpc-decompose-batch-001'::text
 );
 
 select ok(((select payload from _ids where key = 'batch_decompose_repeat') ->> 'idempotent')::boolean, 'batch decomposition repeat is idempotent');
 select is(((select payload from _ids where key = 'batch_decompose_repeat') ->> 'fgems_balance_after')::numeric, 110::numeric, 'batch decomposition repeat returns original FGEMS balance after credit');
 select is(testutil.balance_of((select id from _ids where key = 'user'), 'FGEMS'), 110::numeric, 'batch decomposition repeat does not credit again');
-select ok(testutil.raises_like(format('select api.inventory_decompose_items(%L::uuid, array[%L::uuid], %L)', (select id::text from _ids where key = 'user'), (select id::text from _ids where key = 'item3'), 'growth-rpc-decompose-batch-001'), '%idempotency conflict%'), 'batch decomposition idempotency key rejects different inputs');
+select ok(testutil.raises_like(format('select api.inventory_decompose_items(%L::uuid, array[%L::uuid], %L::text)', (select id::text from _ids where key = 'user'), (select id::text from _ids where key = 'item3'), 'growth-rpc-decompose-batch-001'), '%idempotency conflict%'), 'batch decomposition idempotency key rejects different inputs');
 
 insert into _ids (key, payload)
 select 'single_decompose', api.inventory_decompose_item(
@@ -433,7 +442,9 @@ select ok(not has_function_privilege('anon', 'api.inventory_get_item_detail(uuid
 select ok(not has_function_privilege('anon', 'api.album_claim_milestone(uuid, uuid, text, integer)', 'execute'), 'anon cannot execute album_claim_milestone directly');
 select ok(not has_function_privilege('authenticated', 'api.inventory_decompose_item(uuid, uuid, text)', 'execute'), 'authenticated cannot execute inventory_decompose_item directly');
 select ok(not has_function_privilege('authenticated', 'api.inventory_decompose_items(uuid, uuid[], text)', 'execute'), 'authenticated cannot execute inventory_decompose_items directly');
+select ok(not has_function_privilege('authenticated', 'api.inventory_decompose_items(uuid, uuid[], text, numeric)', 'execute'), 'authenticated cannot execute guarded inventory_decompose_items directly');
 select ok(has_function_privilege('service_role', 'api.inventory_get_item_detail(uuid, uuid, boolean, boolean, boolean, boolean, boolean)', 'execute'), 'service_role can execute inventory_get_item_detail');
+select ok(has_function_privilege('service_role', 'api.inventory_decompose_items(uuid, uuid[], text, numeric)', 'execute'), 'service_role can execute guarded inventory_decompose_items');
 select ok(has_function_privilege('service_role', 'api.album_claim_milestone(uuid, uuid, text, integer)', 'execute'), 'service_role can execute album_claim_milestone');
 select ok(has_function_privilege('service_role', 'api.album_refresh_weekly_leaderboard(timestamp with time zone)', 'execute'), 'service_role can execute album_refresh_weekly_leaderboard');
 

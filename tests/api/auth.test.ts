@@ -488,6 +488,79 @@ describe("auth API", () => {
     ).toBe("cookie-session-token");
   });
 
+  it("reads session tokens from Authorization Bearer when no cookie is present", async () => {
+    const { extractSessionToken } =
+      await import("../../api/_shared/requireSession");
+    const { extractSessionTokenFromHeaders } =
+      await import("../../packages/server/src/auth/verifySession");
+    const token = "bearer-session-token-1234567890abcdef";
+
+    expect(
+      extractSessionToken({
+        headers: {
+          authorization: `Bearer ${token}`,
+        },
+      } as unknown as VercelRequest),
+    ).toBe(token);
+    expect(
+      extractSessionTokenFromHeaders({
+        authorization: `Bearer ${token}`,
+      }),
+    ).toBe(token);
+  });
+
+  it("/api/auth/telegram reuses a valid session cookie before replay rate limits or RPC writes", async () => {
+    const token = "reuse-session-token-1234567890abcdef";
+    getSupabaseAdminClientMock.mockReturnValue(
+      createSessionLifecycleSupabaseMock({
+        token,
+        sessionOverrides: {
+          expires_at: "2026-05-22T00:00:00.000Z",
+        },
+      }),
+    );
+
+    const { default: authTelegramHandler } =
+      await import("../../api/auth/telegram");
+    const initData = buildTelegramInitData({
+      botToken: BOT_TOKEN,
+      authDate: 1779321600,
+      user: {
+        id: 7001,
+        first_name: "Reuse",
+      },
+    });
+    const result = await invokeApiHandler<ApiSuccessResponse>(
+      authTelegramHandler,
+      {
+        method: "POST",
+        url: "/api/auth/telegram",
+        headers: {
+          "content-type": "application/json",
+          cookie: `tma_game_session=${token}`,
+        },
+        body: {
+          initData,
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(200);
+    expect(result.headers["set-cookie"]).toEqual(
+      expect.stringContaining(`tma_game_session=${token}`),
+    );
+    expect(result.body).toMatchObject({
+      data: {
+        isNewUser: false,
+        session: {
+          sessionId: SESSION_ID,
+          expiresAt: "2026-05-22T00:00:00.000Z",
+        },
+      },
+    });
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+  });
+
   it("/api/auth/telegram rejects initDataUnsafe in the login body", async () => {
     const { default: authTelegramHandler } =
       await import("../../api/auth/telegram");
@@ -689,6 +762,40 @@ describe("auth API", () => {
             ["user_id", USER_ID],
             ["session_token_hash", sha256(token)],
           ]),
+        }),
+      ]),
+    );
+  });
+
+  it("/api/auth/refresh accepts Authorization Bearer session tokens", async () => {
+    const token = "refresh-bearer-session-token-1234567890abcdef";
+    const db = createSessionLifecycleSupabaseMock({
+      token,
+      refreshExpiresAt: "2026-05-28T00:00:00.000Z",
+    });
+    getSupabaseAdminClientMock.mockReturnValue(db);
+
+    const { default: refreshHandler } = await import("../../api/auth/refresh");
+    const result = await invokeApiHandler<ApiSuccessResponse>(refreshHandler, {
+      method: "POST",
+      url: "/api/auth/refresh",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${token}`,
+      },
+      body: {},
+    });
+
+    expect(result.statusCode).toBe(200);
+    expect(result.headers["set-cookie"]).toEqual(
+      expect.stringContaining(`tma_game_session=${token}`),
+    );
+    expect(db.operations).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          table: "app_sessions",
+          action: "update",
+          eqs: expect.arrayContaining([["session_token_hash", sha256(token)]]),
         }),
       ]),
     );

@@ -26,6 +26,12 @@ type MarketPriceHealthRuleRow =
   Database["market"]["Tables"]["price_health_rules"]["Row"];
 type CatalogMarketPriceRuleRow =
   Database["catalog"]["Tables"]["market_price_rules"]["Row"];
+type CatalogCollectibleTemplateRow =
+  Database["catalog"]["Tables"]["collectible_templates"]["Row"];
+type CatalogCollectibleFormRow =
+  Database["catalog"]["Tables"]["collectible_forms"]["Row"];
+type AlbumBookRow = Database["album"]["Tables"]["books"]["Row"];
+type AlbumMilestoneRow = Database["album"]["Tables"]["milestones"]["Row"];
 type EconomyFeeRuleRow = Database["economy"]["Tables"]["fee_rules"]["Row"];
 type ReferralRow = Database["tasks"]["Tables"]["referrals"]["Row"];
 type UserTaskProgressRow =
@@ -1797,6 +1803,95 @@ export type CampaignsResponse = {
   serverTime: string;
 };
 
+export type CollectibleAdminForm = {
+  id: CatalogCollectibleFormRow["id"];
+  template_id: CatalogCollectibleFormRow["template_id"];
+  form_index: CatalogCollectibleFormRow["form_index"];
+  form_slug: CatalogCollectibleFormRow["form_slug"];
+  display_name: CatalogCollectibleFormRow["display_name"];
+  image_url: CatalogCollectibleFormRow["image_url"];
+  thumbnail_url: CatalogCollectibleFormRow["thumbnail_url"];
+  avatar_url: CatalogCollectibleFormRow["avatar_url"];
+  is_default: CatalogCollectibleFormRow["is_default"];
+  next_form_id: CatalogCollectibleFormRow["next_form_id"];
+  updated_at: CatalogCollectibleFormRow["updated_at"];
+};
+
+export type CollectibleAdminItem = {
+  id: CatalogCollectibleTemplateRow["id"];
+  slug: CatalogCollectibleTemplateRow["slug"];
+  display_name: CatalogCollectibleTemplateRow["display_name"];
+  subtitle: CatalogCollectibleTemplateRow["subtitle"];
+  description: CatalogCollectibleTemplateRow["description"];
+  rarity_code: CatalogCollectibleTemplateRow["rarity_code"];
+  type_code: CatalogCollectibleTemplateRow["type_code"];
+  series_id: CatalogCollectibleTemplateRow["series_id"];
+  faction_id: CatalogCollectibleTemplateRow["faction_id"];
+  base_power: CatalogCollectibleTemplateRow["base_power"];
+  max_level: CatalogCollectibleTemplateRow["max_level"];
+  supply_limit: CatalogCollectibleTemplateRow["supply_limit"];
+  release_status: CatalogCollectibleTemplateRow["release_status"];
+  tradeable: CatalogCollectibleTemplateRow["tradeable"];
+  upgradeable: CatalogCollectibleTemplateRow["upgradeable"];
+  evolvable: CatalogCollectibleTemplateRow["evolvable"];
+  decomposable: CatalogCollectibleTemplateRow["decomposable"];
+  nft_mintable: CatalogCollectibleTemplateRow["nft_mintable"];
+  sort_order: CatalogCollectibleTemplateRow["sort_order"];
+  metadata?: Json;
+  created_at: CatalogCollectibleTemplateRow["created_at"];
+  updated_at: CatalogCollectibleTemplateRow["updated_at"];
+  forms: CollectibleAdminForm[];
+  media_counts: Record<string, number>;
+};
+
+export type CollectiblesAdminResponse = {
+  items: CollectibleAdminItem[];
+  summary?: Record<string, number>;
+  nextCursor: string | null;
+  serverTime: string;
+};
+
+export type AlbumMilestoneAdminItem = {
+  id: AlbumMilestoneRow["id"];
+  book_id: AlbumMilestoneRow["book_id"];
+  required_count: AlbumMilestoneRow["required_count"];
+  title: AlbumMilestoneRow["title"];
+  reward: AlbumMilestoneRow["reward"];
+  active: AlbumMilestoneRow["active"];
+  sort_order: AlbumMilestoneRow["sort_order"];
+  metadata?: Json;
+  created_at: AlbumMilestoneRow["created_at"];
+  updated_at: AlbumMilestoneRow["updated_at"];
+};
+
+export type AlbumBookAdminItem = {
+  id: AlbumBookRow["id"];
+  code: AlbumBookRow["code"];
+  display_name: AlbumBookRow["display_name"];
+  description: AlbumBookRow["description"];
+  book_type: AlbumBookRow["book_type"];
+  series_id: AlbumBookRow["series_id"];
+  faction_id: AlbumBookRow["faction_id"];
+  rarity_code: AlbumBookRow["rarity_code"];
+  cover_url: AlbumBookRow["cover_url"];
+  active: AlbumBookRow["active"];
+  starts_at: AlbumBookRow["starts_at"];
+  ends_at: AlbumBookRow["ends_at"];
+  sort_order: AlbumBookRow["sort_order"];
+  metadata?: Json;
+  created_at: AlbumBookRow["created_at"];
+  updated_at: AlbumBookRow["updated_at"];
+  item_count: number;
+  milestones: AlbumMilestoneAdminItem[];
+};
+
+export type AlbumAdminResponse = {
+  items: AlbumBookAdminItem[];
+  summary?: Record<string, number>;
+  nextCursor: string | null;
+  serverTime: string;
+};
+
 export type ReportMetricValue = string | number | boolean | null | Json;
 
 export type ReportMetrics = Record<string, ReportMetricValue>;
@@ -1978,6 +2073,33 @@ export type UpsertCampaignInput = {
   starts_at?: string | null;
   ends_at?: string | null;
   sort_order: number;
+  metadata?: Record<string, unknown>;
+  reason: string;
+};
+
+export type UpdateCollectibleTemplateOpsInput = {
+  id: string;
+  release_status?: string;
+  tradeable?: boolean;
+  upgradeable?: boolean;
+  evolvable?: boolean;
+  decomposable?: boolean;
+  nft_mintable?: boolean;
+  sort_order?: number;
+  metadata?: Record<string, unknown>;
+  reason: string;
+};
+
+export type UpdateAlbumMilestoneInput = {
+  id: string;
+  title?: string;
+  required_count?: number;
+  reward?: Array<{
+    currency: "KCOIN" | "FGEMS";
+    amount: number;
+  }>;
+  active?: boolean;
+  sort_order?: number;
   metadata?: Record<string, unknown>;
   reason: string;
 };
@@ -2732,6 +2854,8 @@ export type AdminTab =
   | "market-ops"
   | "wallets"
   | "campaigns"
+  | "collectibles"
+  | "album"
   | "blind-boxes"
   | "gacha-pools"
   | "flags"

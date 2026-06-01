@@ -47,6 +47,10 @@ const BOX_ID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const PRICE_RULE_ID = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 const ACTIVE_VERSION_ID = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
 const AUDIT_LOG_ID = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
+const TEMPLATE_ID = "99999999-9999-4999-8999-999999999999";
+const FORM_ID = "99999999-9999-4999-8999-999999999998";
+const BOOK_ID = "77777777-7777-4777-8777-777777777777";
+const MILESTONE_ID = "66666666-6666-4666-8666-666666666666";
 
 type AdminQueryOperation = {
   schema: string;
@@ -200,6 +204,270 @@ describe("admin campaign and blind box config APIs", () => {
           p_status: "draft",
           p_reason: "configure home banner",
           p_idempotency_key: "admin-upsert-campaign-test-001",
+        }),
+      }),
+    );
+  });
+
+  it("lists collectible templates with catalog read permission", async () => {
+    const db = createAdminReadDbMock({
+      "catalog.collectible_templates": [
+        {
+          id: TEMPLATE_ID,
+          slug: "forest_sproutling",
+          display_name: "Forest Sproutling",
+          subtitle: null,
+          description: null,
+          rarity_code: "COMMON",
+          type_code: "CHARACTER",
+          series_id: null,
+          faction_id: null,
+          base_power: 10,
+          max_level: 10,
+          supply_limit: null,
+          release_status: "active",
+          tradeable: true,
+          upgradeable: true,
+          evolvable: true,
+          decomposable: true,
+          nft_mintable: true,
+          sort_order: 10,
+          metadata: {
+            public_note: "visible",
+            secret_seed: "must-not-leak",
+          },
+          created_at: "2026-05-31T00:00:00.000Z",
+          updated_at: "2026-05-31T00:00:00.000Z",
+        },
+      ],
+      "catalog.collectible_forms": [
+        {
+          id: FORM_ID,
+          template_id: TEMPLATE_ID,
+          form_index: 1,
+          form_slug: "base",
+          display_name: "Base",
+          image_url: null,
+          thumbnail_url: null,
+          avatar_url: null,
+          is_default: true,
+          next_form_id: null,
+          updated_at: "2026-05-31T00:00:00.000Z",
+        },
+      ],
+      "catalog.collectible_media": [
+        {
+          template_id: TEMPLATE_ID,
+          media_type: "card",
+        },
+      ],
+    });
+    getSupabaseAdminClientMock.mockReturnValue(db.client);
+
+    const { default: collectiblesHandler } =
+      await import("../../api/admin/collectibles");
+    const result = await invokeApiHandler<ApiSuccessResponse>(
+      collectiblesHandler,
+      {
+        method: "GET",
+        url: "/api/admin/collectibles?status=active",
+        query: {
+          status: "active",
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(200);
+    expect(requireAdminMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        permissions: ["catalog:read", "gacha:read", "admin:read"],
+        requireAll: false,
+      }),
+    );
+    expect(result.body).toMatchObject({
+      ok: true,
+      data: {
+        items: [
+          {
+            id: TEMPLATE_ID,
+            forms: [{ id: FORM_ID }],
+            media_counts: { card: 1 },
+            metadata: {
+              public_note: "visible",
+              secret_seed: "[redacted]",
+            },
+          },
+        ],
+        summary: {
+          active: 1,
+        },
+      },
+    });
+  });
+
+  it("maps collectible ops writes to the audited admin RPC", async () => {
+    runWriteRpcMock.mockResolvedValueOnce({
+      audit_log_id: AUDIT_LOG_ID,
+      template_id: TEMPLATE_ID,
+    });
+
+    const { default: collectiblesHandler } =
+      await import("../../api/admin/collectibles");
+    const result = await invokeApiHandler<ApiSuccessResponse>(
+      collectiblesHandler,
+      {
+        method: "PATCH",
+        url: "/api/admin/collectibles",
+        headers: {
+          "x-admin-confirm": "true",
+          "x-idempotency-key": "admin-update-collectible-test-001",
+        },
+        body: {
+          id: TEMPLATE_ID,
+          release_status: "hidden",
+          tradeable: false,
+          upgradeable: true,
+          evolvable: true,
+          decomposable: true,
+          nft_mintable: false,
+          sort_order: 20,
+          metadata: { ops: "catalog" },
+          reason: "catalog ops update",
+          confirm: true,
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(200);
+    expect(runWriteRpcMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        schema: "api",
+        functionName: "admin_update_collectible_template_ops",
+        args: expect.objectContaining({
+          p_admin_user_id: ADMIN_CONTEXT.adminId,
+          p_template_id: TEMPLATE_ID,
+          p_release_status: "hidden",
+          p_tradeable: false,
+          p_nft_mintable: false,
+          p_reason: "catalog ops update",
+          p_idempotency_key: "admin-update-collectible-test-001",
+        }),
+      }),
+    );
+  });
+
+  it("lists album books with milestones for catalog admins", async () => {
+    const db = createAdminReadDbMock({
+      "album.books": [
+        {
+          id: BOOK_ID,
+          code: "all_collectibles",
+          display_name: "All Collectibles",
+          description: null,
+          book_type: "all",
+          series_id: null,
+          faction_id: null,
+          rarity_code: null,
+          cover_url: null,
+          active: true,
+          starts_at: null,
+          ends_at: null,
+          sort_order: 10,
+          metadata: {},
+          created_at: "2026-05-31T00:00:00.000Z",
+          updated_at: "2026-05-31T00:00:00.000Z",
+        },
+      ],
+      "album.milestones": [
+        {
+          id: MILESTONE_ID,
+          book_id: BOOK_ID,
+          required_count: 1,
+          title: "First Discovery",
+          reward: [{ currency: "KCOIN", amount: 100 }],
+          active: true,
+          sort_order: 10,
+          metadata: {},
+          created_at: "2026-05-31T00:00:00.000Z",
+          updated_at: "2026-05-31T00:00:00.000Z",
+        },
+      ],
+      "album.book_items": [
+        {
+          book_id: BOOK_ID,
+        },
+      ],
+    });
+    getSupabaseAdminClientMock.mockReturnValue(db.client);
+
+    const { default: albumHandler } = await import("../../api/admin/album");
+    const result = await invokeApiHandler<ApiSuccessResponse>(albumHandler, {
+      method: "GET",
+      url: "/api/admin/album?book_type=all",
+      query: {
+        book_type: "all",
+      },
+    });
+
+    expect(result.statusCode).toBe(200);
+    expect(result.body).toMatchObject({
+      ok: true,
+      data: {
+        items: [
+          {
+            id: BOOK_ID,
+            item_count: 1,
+            milestones: [{ id: MILESTONE_ID }],
+          },
+        ],
+        summary: {
+          active: 1,
+          all: 1,
+        },
+      },
+    });
+  });
+
+  it("maps album milestone writes to the audited admin RPC", async () => {
+    runWriteRpcMock.mockResolvedValueOnce({
+      audit_log_id: AUDIT_LOG_ID,
+      milestone_id: MILESTONE_ID,
+    });
+
+    const { default: albumHandler } = await import("../../api/admin/album");
+    const result = await invokeApiHandler<ApiSuccessResponse>(albumHandler, {
+      method: "PATCH",
+      url: "/api/admin/album",
+      headers: {
+        "x-admin-confirm": "true",
+        "x-idempotency-key": "admin-update-album-test-001",
+      },
+      body: {
+        id: MILESTONE_ID,
+        title: "First Discovery",
+        required_count: 1,
+        reward: [{ currency: "FGEMS", amount: 50 }],
+        active: true,
+        sort_order: 10,
+        metadata: { ops: "album" },
+        reason: "album reward update",
+        confirm: true,
+      },
+    });
+
+    expect(result.statusCode).toBe(200);
+    expect(runWriteRpcMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        schema: "api",
+        functionName: "admin_update_album_milestone",
+        args: expect.objectContaining({
+          p_admin_user_id: ADMIN_CONTEXT.adminId,
+          p_milestone_id: MILESTONE_ID,
+          p_title: "First Discovery",
+          p_reward: [{ currency: "FGEMS", amount: 50 }],
+          p_reason: "album reward update",
+          p_idempotency_key: "admin-update-album-test-001",
         }),
       }),
     );

@@ -111,12 +111,12 @@ export const CURRENCY_META = {
     precision: 0,
     sortOrder: 30,
     isInternalLedgerCurrency: false,
-    isTopBarVisible: true,
+    isTopBarVisible: false,
     canBeGrantedByGame: false,
     canBeSpentByGame: false,
     isExternalPaymentCurrency: true,
     description:
-      "Telegram Stars 支付展示币种。真实扣款、支付状态、开盒发货必须以 Telegram 支付回调和后端订单为准。",
+      "Telegram Stars 支付展示币种。真实扣款、支付状态、开盒发货必须以 Telegram 支付回调和后端订单为准，不作为顶部可用余额展示。",
   },
 } as const satisfies Record<CurrencyCode, CurrencyMeta>;
 

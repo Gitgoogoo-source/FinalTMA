@@ -107,4 +107,39 @@ describe("collection inventory API", () => {
       idempotent: false,
     });
   });
+
+  it("normalizes direct sell and cancel payloads for the collection page", async () => {
+    const { normalizeCancelSellResponse, normalizeSellEntryResponse } =
+      await import("../../apps/web/src/features/collection/collection.api");
+    const sellResponse = normalizeSellEntryResponse({
+      listing_id: "33333333-3333-4333-8333-333333333333",
+      item_count: 1,
+      remaining_count: 1,
+      unit_price_kcoin: "500",
+      fee_bps: 500,
+      expected_net_amount: 475,
+      status: "active",
+      price_health: "healthy",
+      idempotent: false,
+    });
+    const cancelResponse = normalizeCancelSellResponse({
+      listing_id: "33333333-3333-4333-8333-333333333333",
+      status: "cancelled",
+      released_item_instance_ids: ["11111111-1111-4111-8111-111111111111"],
+      cancelled_at: "2026-05-21T00:00:05.000Z",
+    });
+
+    expect(sellResponse).toMatchObject({
+      listingId: "33333333-3333-4333-8333-333333333333",
+      unitPriceKcoin: 500,
+      expectedNetAmountKcoin: 475,
+      status: "active",
+    });
+    expect(cancelResponse).toMatchObject({
+      listingId: "33333333-3333-4333-8333-333333333333",
+      status: "cancelled",
+      releasedItemInstanceIds: ["11111111-1111-4111-8111-111111111111"],
+      cancelledAt: "2026-05-21T00:00:05.000Z",
+    });
+  });
 });

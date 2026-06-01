@@ -1,4 +1,3 @@
-import { randomBytes } from "node:crypto";
 import type { VercelRequest } from "@vercel/node";
 import {
   getAuthSessionConfig,
@@ -9,7 +8,11 @@ import {
   AuthTelegramLoginRequestSchema,
   type AuthTelegramLoginRequest,
 } from "../../packages/validation/src/auth.schemas.js";
-import { hashClientFingerprint } from "../../packages/server/src/auth/issueSession.js";
+import {
+  createOpaqueSessionToken,
+  hashClientFingerprint,
+  hashSessionToken,
+} from "../../packages/server/src/auth/issueSession.js";
 import {
   TelegramInitDataValidationError,
   verifyTelegramInitData,
@@ -25,7 +28,6 @@ import { parseJsonBody } from "../_shared/parseBody.js";
 import {
   extractSessionToken,
   getSupabaseAdmin,
-  hashSessionToken,
 } from "../_shared/requireSession.js";
 import {
   createRateLimiter,
@@ -52,9 +54,17 @@ type ExistingUserRow = {
 
 type ExistingSessionRow = {
   id: string;
+  user_id: string;
   expires_at: string;
   revoked_at: string | null;
   init_data_hash: string | null;
+};
+
+type ReusableSessionUserRow = {
+  id: string;
+  telegram_user_id: number | string;
+  invite_code: string | null;
+  status: string;
 };
 
 type AuthUserRow = {
@@ -99,6 +109,30 @@ export default withApiHandler(
     });
     const input = validate(AuthTelegramLoginRequestSchema, body);
     const verified = verifyTrustedInitData(input, sessionConfig);
+    const reusableSession = await loadReusableSessionForVerifiedInitData(
+      req,
+      verified,
+    );
+
+    if (reusableSession) {
+      const expiresInSeconds = secondsUntil(reusableSession.expiresAt);
+
+      res.setHeader(
+        "Set-Cookie",
+        buildAuthSessionCookie(reusableSession.token, expiresInSeconds),
+      );
+
+      return buildLoginResponse({
+        isNewUser: false,
+        userId: reusableSession.userResult.user_id,
+        userResult: reusableSession.userResult,
+        verified,
+        sessionId: reusableSession.sessionId,
+        expiresAt: reusableSession.expiresAt,
+        expiresInSeconds,
+      });
+    }
+
     await assertVerifiedAuthRateLimit(req, ctx, verified);
     const wasExistingUser = await hasExistingTelegramUser(verified.user.id);
 
@@ -110,30 +144,6 @@ export default withApiHandler(
     if (authUser.status !== "active") {
       throw ApiError.userBlocked("当前账号已被限制使用。", {
         status: authUser.status,
-      });
-    }
-
-    const reusableSession = await loadReusableSessionFromCookie(req, {
-      userId,
-      initDataHash: verified.initDataHash,
-    });
-
-    if (reusableSession) {
-      const expiresInSeconds = secondsUntil(reusableSession.expiresAt);
-
-      res.setHeader(
-        "Set-Cookie",
-        buildAuthSessionCookie(reusableSession.token, expiresInSeconds),
-      );
-
-      return buildLoginResponse({
-        isNewUser: !wasExistingUser,
-        userId,
-        userResult,
-        verified,
-        sessionId: reusableSession.sessionId,
-        expiresAt: reusableSession.expiresAt,
-        expiresInSeconds,
       });
     }
 
@@ -360,16 +370,14 @@ function mapAuthCreateSessionError(error: unknown): unknown {
   return error;
 }
 
-async function loadReusableSessionFromCookie(
+async function loadReusableSessionForVerifiedInitData(
   req: VercelRequest,
-  input: {
-    userId: string;
-    initDataHash: string;
-  },
+  verified: ReturnType<typeof verifyTelegramInitData>,
 ): Promise<{
   token: string;
   sessionId: string;
   expiresAt: string;
+  userResult: AuthUpsertTelegramUserResult;
 } | null> {
   const token = extractSessionToken(req);
 
@@ -382,10 +390,9 @@ async function loadReusableSessionFromCookie(
   const { data, error } = await db
     .schema("core")
     .from("app_sessions")
-    .select("id,expires_at,revoked_at,init_data_hash")
+    .select("id,user_id,expires_at,revoked_at,init_data_hash")
     .eq("session_token_hash", tokenHash)
-    .eq("user_id", input.userId)
-    .eq("init_data_hash", input.initDataHash)
+    .eq("init_data_hash", verified.initDataHash)
     .maybeSingle<ExistingSessionRow>();
 
   if (error) {
@@ -399,11 +406,53 @@ async function loadReusableSessionFromCookie(
     return null;
   }
 
+  const user = await loadReusableSessionUser(db, data.user_id);
+
+  if (!user) {
+    return null;
+  }
+
+  if (String(user.telegram_user_id) !== String(verified.user.id)) {
+    return null;
+  }
+
+  if (user.status !== "active") {
+    throw ApiError.userBlocked("当前账号已被限制使用。", {
+      status: user.status,
+    });
+  }
+
   return {
     token,
     sessionId: data.id,
     expiresAt: data.expires_at,
+    userResult: {
+      user_id: user.id,
+      telegram_user_id: user.telegram_user_id,
+      invite_code: user.invite_code,
+    },
   };
+}
+
+async function loadReusableSessionUser(
+  db: ReturnType<typeof getSupabaseAdmin>,
+  userId: string,
+): Promise<ReusableSessionUserRow | null> {
+  const { data, error } = await db
+    .schema("core")
+    .from("users")
+    .select("id,telegram_user_id,invite_code,status")
+    .eq("id", userId)
+    .maybeSingle<ReusableSessionUserRow>();
+
+  if (error) {
+    throw new ApiError(500, "USER_LOOKUP_FAILED", "查询用户状态失败。", {
+      details: error,
+      expose: false,
+    });
+  }
+
+  return data ?? null;
 }
 
 function buildLoginResponse(input: {
@@ -758,10 +807,6 @@ function findMatchingInviterSession(
   }
 
   return null;
-}
-
-function createOpaqueSessionToken(): string {
-  return `tma_sess_v1.${randomBytes(48).toString("base64url")}`;
 }
 
 function getSafeUserAgent(req: VercelRequest): string | null {

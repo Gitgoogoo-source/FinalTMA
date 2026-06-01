@@ -53,6 +53,7 @@ const UNSUPPORTED_FILTERS: Array<keyof InventoryListQuery> = [
   "faction_ids",
   "template_ids",
   "form_ids",
+  "only_sellable",
   "only_duplicates",
   "only_unlocked",
   "only_mintable",
@@ -235,10 +236,10 @@ function resolveStatuses(query: InventoryListQuery): string[] {
   }
 
   if (query.include_locked) {
-    return ["available", "locked", "listed", "minting"];
+    return ["available", "locked", "listed", "minting", "minted"];
   }
 
-  return ["available"];
+  return ["available", "minting", "minted"];
 }
 
 function parseOffsetCursor(cursor: string | undefined): number {

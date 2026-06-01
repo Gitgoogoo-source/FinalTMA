@@ -1,11 +1,3 @@
--- auth_create_session.sql
--- ============================================================
--- Generated RPC file for the Telegram Mini App blind-box game.
--- Place under supabase/rpc/. Execute after schema migrations 0001-0019.
--- Core policy: frontend only requests; all trusted mutations are enforced here by database transactions.
-
--- RPC: api.auth_create_session
-
 create or replace function api.auth_create_session(
   p_user_id uuid,
   p_session_token_hash text,
@@ -148,5 +140,26 @@ begin
 end;
 $$;
 
+revoke execute on function api.auth_create_session(
+  uuid,
+  text,
+  timestamptz,
+  timestamptz,
+  text,
+  text,
+  text,
+  text,
+  text
+) from public, anon, authenticated;
 
--- ============================================================
+grant execute on function api.auth_create_session(
+  uuid,
+  text,
+  timestamptz,
+  timestamptz,
+  text,
+  text,
+  text,
+  text,
+  text
+) to service_role;

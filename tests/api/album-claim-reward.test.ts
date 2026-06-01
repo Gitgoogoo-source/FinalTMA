@@ -9,10 +9,12 @@ import claimRewardHandler from "../../api/album/claim-reward";
 import { RpcError } from "../../packages/server/src/db/rpc";
 import { invokeApiHandler } from "./_utils";
 
-const { callRpcRawMock, requireSessionMock } = vi.hoisted(() => ({
-  callRpcRawMock: vi.fn(),
-  requireSessionMock: vi.fn(),
-}));
+const { assertUserRiskAllowedMock, callRpcRawMock, requireSessionMock } =
+  vi.hoisted(() => ({
+    assertUserRiskAllowedMock: vi.fn(),
+    callRpcRawMock: vi.fn(),
+    requireSessionMock: vi.fn(),
+  }));
 
 vi.mock("../../packages/server/src/db/rpc.js", () => ({
   callRpcRaw: callRpcRawMock,
@@ -45,6 +47,10 @@ vi.mock("../../api/_shared/requireSession.js", () => ({
   requireSession: requireSessionMock,
 }));
 
+vi.mock("../../api/_shared/riskGuards.js", () => ({
+  assertUserRiskAllowed: assertUserRiskAllowedMock,
+}));
+
 const USER_ID = "11111111-1111-4111-8111-111111111111";
 const FORGED_USER_ID = "99999999-9999-4999-8999-999999999999";
 const MILESTONE_ID = "22222222-2222-4222-8222-222222222222";
@@ -74,6 +80,8 @@ function expectStandardErrorEnvelope(body: ApiErrorResponse): void {
 describe("album claim reward API", () => {
   beforeEach(() => {
     process.env.NODE_ENV = "test";
+    assertUserRiskAllowedMock.mockReset();
+    assertUserRiskAllowedMock.mockResolvedValue(undefined);
     callRpcRawMock.mockReset();
     requireSessionMock.mockReset();
     requireSessionMock.mockResolvedValue({
@@ -120,6 +128,7 @@ describe("album claim reward API", () => {
     expect(result.statusCode).toBe(400);
     expectStandardErrorEnvelope(result.body);
     expect(result.body.error.code).toBe("VALIDATION_ERROR");
+    expect(assertUserRiskAllowedMock).not.toHaveBeenCalled();
     expect(callRpcRawMock).not.toHaveBeenCalled();
   });
 
@@ -137,6 +146,31 @@ describe("album claim reward API", () => {
     expect(result.statusCode).toBe(400);
     expectStandardErrorEnvelope(result.body);
     expect(result.body.error.code).toBe("VALIDATION_ERROR");
+    expect(assertUserRiskAllowedMock).not.toHaveBeenCalled();
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects risk-denied users before calling RPC", async () => {
+    assertUserRiskAllowedMock.mockRejectedValueOnce(
+      new ApiError(403, "RISK_REJECTED", "当前操作存在风险，已被系统拦截。"),
+    );
+
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      claimRewardHandler,
+      {
+        method: "POST",
+        headers: {
+          "x-idempotency-key": IDEMPOTENCY_KEY,
+        },
+        body: {
+          milestone_id: MILESTONE_ID,
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(403);
+    expectStandardErrorEnvelope(result.body);
+    expect(result.body.error.code).toBe("RISK_REJECTED");
     expect(callRpcRawMock).not.toHaveBeenCalled();
   });
 
@@ -174,6 +208,19 @@ describe("album claim reward API", () => {
 
     expect(result.statusCode).toBe(200);
     expectStandardSuccessEnvelope(result.body);
+    expect(assertUserRiskAllowedMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "album.claim_reward",
+        idempotencyKey: IDEMPOTENCY_KEY,
+        session: expect.objectContaining({
+          userId: USER_ID,
+        }),
+        metadata: {
+          milestoneId: MILESTONE_ID,
+          expectedMilestoneVersion: 3,
+        },
+      }),
+    );
     expect(callRpcRawMock).toHaveBeenCalledWith(
       "album_claim_milestone",
       {

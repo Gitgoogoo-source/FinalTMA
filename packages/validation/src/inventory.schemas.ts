@@ -611,7 +611,18 @@ export const InventoryItemDetailDtoSchema = InventoryItemDtoSchema.extend({
     .object({
       is_minted: z.boolean(),
       mint_status: z
-        .enum(["none", "queued", "processing", "minted", "failed"])
+        .enum([
+          "none",
+          "queued",
+          "processing",
+          "submitted",
+          "confirming",
+          "retrying",
+          "manual_review",
+          "minted",
+          "failed",
+          "cancelled",
+        ])
         .default("none"),
     })
     .strict()

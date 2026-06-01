@@ -11,6 +11,7 @@ import {
 } from "../_shared/handler.js";
 import { parseJsonBody } from "../_shared/parseBody.js";
 import { requireSession } from "../_shared/requireSession.js";
+import { assertUserRiskAllowed } from "../_shared/riskGuards.js";
 import { validate } from "../_shared/validate.js";
 
 type AlbumClaimMilestoneRpcPayload = Record<string, unknown>;
@@ -33,6 +34,17 @@ export default withApiHandler(
       AlbumClaimMilestoneRewardBodySchema,
       normalizeAlbumClaimMilestoneInput(body, getIdempotencyKey(req)),
     );
+    await assertUserRiskAllowed({
+      req,
+      ctx,
+      session,
+      action: "album.claim_reward",
+      idempotencyKey: input.idempotency_key,
+      metadata: {
+        milestoneId: input.milestone_id,
+        expectedMilestoneVersion: input.expected_milestone_version ?? null,
+      },
+    });
 
     const payload = await callAlbumClaimMilestoneRpc(
       input,

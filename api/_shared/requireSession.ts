@@ -1,12 +1,14 @@
 // api/_shared/requireSession.ts
 
 import type { VercelRequest } from "@vercel/node";
-import { createHash } from "node:crypto";
+import { hashSessionToken } from "../../packages/server/src/auth/issueSession.js";
 import {
   getSupabaseAdminClient,
   type SupabaseAdminClient,
 } from "../../packages/server/src/db/supabaseAdmin.js";
 import { ApiError, getHeaderValue } from "./handler.js";
+
+export { hashSessionToken };
 
 export interface RequireSessionOptions {
   /**
@@ -67,7 +69,7 @@ export function getSupabaseAdmin(): SupabaseAdminClient {
  * 约定：
  * - 登录接口签发一个 opaque session token，并写入 HttpOnly Cookie。
  * - 数据库存 hash，不存明文 token。
- * - 前端请求只能依赖 Cookie 携带 session。
+ * - 浏览器前端默认依赖 Cookie 携带 session；后端/测试客户端可用 Bearer。
  * - API 永远从 session 中取 user_id，不信任 body 里的 user_id。
  */
 export async function requireSession(
@@ -165,10 +167,6 @@ export async function requireSession(
   };
 }
 
-export function hashSessionToken(token: string): string {
-  return createHash("sha256").update(token, "utf8").digest("hex");
-}
-
 export function extractSessionToken(req: VercelRequest): string | null {
   const cookieHeader = getHeaderValue(req.headers.cookie);
 
@@ -184,7 +182,25 @@ export function extractSessionToken(req: VercelRequest): string | null {
     }
   }
 
-  return null;
+  return extractBearerSessionToken(getHeaderValue(req.headers.authorization));
+}
+
+function extractBearerSessionToken(
+  authorizationHeader: string | undefined,
+): string | null {
+  if (!authorizationHeader) {
+    return null;
+  }
+
+  const match = /^bearer\s+(.+)$/i.exec(authorizationHeader.trim());
+
+  if (!match) {
+    return null;
+  }
+
+  const token = match[1]?.trim();
+
+  return token || null;
 }
 
 function getSessionCookieNames(): string[] {

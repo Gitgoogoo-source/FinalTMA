@@ -200,6 +200,17 @@ insert into _ids (key, id) values ('user', testutil.make_user(10200000001, 'albu
 insert into _ids (key, payload) values ('catalog', testutil.create_catalog_fixture('album-reward', 'EPIC', true, true, true, true, true));
 insert into _ids (key, id) select 'template', ((select payload from _ids where key = 'catalog') ->> 'template_id')::uuid;
 insert into _ids (key, id) select 'form1', ((select payload from _ids where key = 'catalog') ->> 'form1_id')::uuid;
+insert into _ids (key, payload) values ('item_reward_catalog', testutil.create_catalog_fixture('album-reward-item', 'RARE', true, true, true, true, true));
+insert into _ids (key, id) select 'item_reward_template', ((select payload from _ids where key = 'item_reward_catalog') ->> 'template_id')::uuid;
+insert into _ids (key, id) select 'item_reward_form', ((select payload from _ids where key = 'item_reward_catalog') ->> 'form1_id')::uuid;
+insert into _ids (key, payload) values ('decoration_reward_catalog', testutil.create_catalog_fixture('album-reward-decoration', 'COMMON', true, false, false, true, false));
+insert into _ids (key, id) select 'decoration_reward_template', ((select payload from _ids where key = 'decoration_reward_catalog') ->> 'template_id')::uuid;
+insert into _ids (key, id) select 'decoration_reward_form', ((select payload from _ids where key = 'decoration_reward_catalog') ->> 'form1_id')::uuid;
+
+update catalog.collectible_templates
+set type_code = 'DECORATION',
+    updated_at = now()
+where id = (select id from _ids where key = 'decoration_reward_template');
 
 with book_row as (
   insert into album.books (code, display_name, description, book_type, active)
@@ -236,6 +247,181 @@ select is((select count(*)::int from album.milestone_claims where user_id = (sel
 insert into _ids (key, payload) select 'claim_repeat', api.album_claim_milestone((select id from _ids where key = 'user'), (select id from _ids where key = 'milestone1'), 'album-reward-claim-1', 0);
 select ok(((select payload from _ids where key = 'claim_repeat') ->> 'idempotent')::boolean, 'repeated album milestone claim returns idempotent=true');
 select is(testutil.balance_of((select id from _ids where key = 'user'), 'FGEMS'), 33::numeric, 'repeated milestone claim does not credit again');
+
+with book_row as (
+  insert into album.books (code, display_name, description, book_type, active)
+  values ('ALBUM_TEST_STAR_BOOK', 'Album Star Reward Book', 'pgTAP album star reward book', 'all', true)
+  on conflict (code) do update set active = true, updated_at = now()
+  returning id
+)
+insert into _ids (key, id) select 'star_book', id from book_row;
+
+insert into album.book_items (book_id, template_id, sort_order)
+values ((select id from _ids where key = 'star_book'), (select id from _ids where key = 'template'), 1)
+on conflict (book_id, template_id) do nothing;
+
+with milestone_row as (
+  insert into album.milestones (book_id, required_count, title, reward, active, sort_order)
+  values (
+    (select id from _ids where key = 'star_book'),
+    1,
+    'Collect 1 for Stars',
+    '[{"reward_type":"STAR_DISPLAY","amount":7}]'::jsonb,
+    true,
+    1
+  )
+  on conflict (book_id, required_count) do update set reward = excluded.reward, active = true, updated_at = now()
+  returning id
+)
+insert into _ids (key, id) select 'star_milestone', id from milestone_row;
+
+insert into _ids (key, payload) select 'star_claim', api.album_claim_milestone((select id from _ids where key = 'user'), (select id from _ids where key = 'star_milestone'), 'album-reward-star-claim-1', 0);
+select is(testutil.balance_of((select id from _ids where key = 'user'), 'STAR_DISPLAY'), 7::numeric, 'album milestone reward credits STAR_DISPLAY from reward_type');
+select is(jsonb_array_length((select payload from _ids where key = 'star_claim') -> 'ledger_results'), 1, 'STAR_DISPLAY claim returns one ledger result');
+
+with book_row as (
+  insert into album.books (code, display_name, description, book_type, active)
+  values ('ALBUM_TEST_ITEM_BOOK', 'Album Item Reward Book', 'pgTAP album item reward book', 'all', true)
+  on conflict (code) do update set active = true, updated_at = now()
+  returning id
+)
+insert into _ids (key, id) select 'item_book', id from book_row;
+
+insert into album.book_items (book_id, template_id, sort_order)
+values ((select id from _ids where key = 'item_book'), (select id from _ids where key = 'template'), 1)
+on conflict (book_id, template_id) do nothing;
+
+with milestone_row as (
+  insert into album.milestones (book_id, required_count, title, reward, active, sort_order)
+  values (
+    (select id from _ids where key = 'item_book'),
+    1,
+    'Collect 1 for Items',
+    jsonb_build_array(jsonb_build_object(
+      'reward_type', 'ITEM',
+      'template_id', (select id::text from _ids where key = 'item_reward_template'),
+      'quantity', 2
+    )),
+    true,
+    1
+  )
+  on conflict (book_id, required_count) do update set reward = excluded.reward, active = true, updated_at = now()
+  returning id
+)
+insert into _ids (key, id) select 'item_milestone', id from milestone_row;
+
+insert into _ids (key, payload) select 'item_claim', api.album_claim_milestone((select id from _ids where key = 'user'), (select id from _ids where key = 'item_milestone'), 'album-reward-item-claim-1', 0);
+select is((
+  select count(*)::int
+  from inventory.item_instances
+  where owner_user_id = (select id from _ids where key = 'user')
+    and template_id = (select id from _ids where key = 'item_reward_template')
+    and source_type = 'album_milestone'
+    and source_id = ((select payload from _ids where key = 'item_claim') ->> 'claim_id')::uuid
+), 2, 'ITEM album reward grants two inventory instances');
+select is((
+  select count(*)::int
+  from inventory.item_instance_events
+  where user_id = (select id from _ids where key = 'user')
+    and event_type = 'acquired'
+    and source_type = 'album_milestone'
+    and source_id = ((select payload from _ids where key = 'item_claim') ->> 'claim_id')::uuid
+), 2, 'ITEM album reward writes acquired inventory events');
+select ok(exists (
+  select 1
+  from album.user_discoveries
+  where user_id = (select id from _ids where key = 'user')
+    and template_id = (select id from _ids where key = 'item_reward_template')
+), 'ITEM album reward records album discovery through inventory trigger');
+
+insert into _ids (key, payload) select 'item_claim_repeat', api.album_claim_milestone((select id from _ids where key = 'user'), (select id from _ids where key = 'item_milestone'), 'album-reward-item-claim-1', 0);
+select is((
+  select count(*)::int
+  from inventory.item_instances
+  where owner_user_id = (select id from _ids where key = 'user')
+    and template_id = (select id from _ids where key = 'item_reward_template')
+    and source_type = 'album_milestone'
+), 2, 'repeated ITEM album claim does not create more inventory instances');
+
+with book_row as (
+  insert into album.books (code, display_name, description, book_type, active)
+  values ('ALBUM_TEST_DECORATION_BOOK', 'Album Decoration Reward Book', 'pgTAP album decoration reward book', 'all', true)
+  on conflict (code) do update set active = true, updated_at = now()
+  returning id
+)
+insert into _ids (key, id) select 'decoration_book', id from book_row;
+
+insert into album.book_items (book_id, template_id, sort_order)
+values ((select id from _ids where key = 'decoration_book'), (select id from _ids where key = 'template'), 1)
+on conflict (book_id, template_id) do nothing;
+
+with milestone_row as (
+  insert into album.milestones (book_id, required_count, title, reward, active, sort_order)
+  values (
+    (select id from _ids where key = 'decoration_book'),
+    1,
+    'Collect 1 for Decoration',
+    jsonb_build_array(jsonb_build_object(
+      'reward_type', 'DECORATION',
+      'template_id', (select id::text from _ids where key = 'decoration_reward_template')
+    )),
+    true,
+    1
+  )
+  on conflict (book_id, required_count) do update set reward = excluded.reward, active = true, updated_at = now()
+  returning id
+)
+insert into _ids (key, id) select 'decoration_milestone', id from milestone_row;
+
+insert into _ids (key, payload) select 'decoration_claim', api.album_claim_milestone((select id from _ids where key = 'user'), (select id from _ids where key = 'decoration_milestone'), 'album-reward-decoration-claim-1', 0);
+select is((
+  select count(*)::int
+  from inventory.item_instances ii
+  join catalog.collectible_templates ct on ct.id = ii.template_id
+  where ii.owner_user_id = (select id from _ids where key = 'user')
+    and ii.template_id = (select id from _ids where key = 'decoration_reward_template')
+    and ii.source_type = 'album_milestone'
+    and ii.source_id = ((select payload from _ids where key = 'decoration_claim') ->> 'claim_id')::uuid
+    and ct.type_code = 'DECORATION'
+), 1, 'DECORATION album reward grants a decoration inventory instance');
+
+with book_row as (
+  insert into album.books (code, display_name, description, book_type, active)
+  values ('ALBUM_TEST_BAD_DECORATION_BOOK', 'Album Bad Decoration Reward Book', 'pgTAP bad decoration reward book', 'all', true)
+  on conflict (code) do update set active = true, updated_at = now()
+  returning id
+)
+insert into _ids (key, id) select 'bad_decoration_book', id from book_row;
+
+insert into album.book_items (book_id, template_id, sort_order)
+values ((select id from _ids where key = 'bad_decoration_book'), (select id from _ids where key = 'template'), 1)
+on conflict (book_id, template_id) do nothing;
+
+with milestone_row as (
+  insert into album.milestones (book_id, required_count, title, reward, active, sort_order)
+  values (
+    (select id from _ids where key = 'bad_decoration_book'),
+    1,
+    'Collect 1 for Bad Decoration',
+    jsonb_build_array(jsonb_build_object(
+      'reward_type', 'DECORATION',
+      'template_id', (select id::text from _ids where key = 'item_reward_template')
+    )),
+    true,
+    1
+  )
+  on conflict (book_id, required_count) do update set reward = excluded.reward, active = true, updated_at = now()
+  returning id
+)
+insert into _ids (key, id) select 'bad_decoration_milestone', id from milestone_row;
+
+select ok(testutil.raises_like(format('select api.album_claim_milestone(%L::uuid, %L::uuid, %L, 0)', (select id::text from _ids where key = 'user'), (select id::text from _ids where key = 'bad_decoration_milestone'), 'album-reward-bad-decoration-claim-1'), '%invalid reward config%'), 'DECORATION reward rejects non-decoration templates');
+select is((
+  select count(*)::int
+  from album.milestone_claims
+  where user_id = (select id from _ids where key = 'user')
+    and milestone_id = (select id from _ids where key = 'bad_decoration_milestone')
+), 0, 'invalid decoration reward rolls back milestone claim row');
 
 with milestone_row as (
   insert into album.milestones (book_id, required_count, title, reward, active, sort_order)

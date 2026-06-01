@@ -158,7 +158,7 @@ a {
 .asset-bar__balances {
   grid-column: 1 / -1;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
 }
 
@@ -206,10 +206,6 @@ a {
 
 .asset-pill--fgems svg {
   color: #7de2d1;
-}
-
-.asset-pill--stars svg {
-  color: #c9a7ff;
 }
 
 .asset-bar__actions {
@@ -7472,6 +7468,34 @@ a {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
+}
+
+.collection-load-more {
+  display: flex;
+  justify-content: center;
+}
+
+.collection-load-more button {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid rgb(139 211 199 / 34%);
+  border-radius: 8px;
+  padding: 0 14px;
+  color: #d9fbf4;
+  background: rgb(15 31 31 / 76%);
+  font-weight: 900;
+}
+
+.collection-load-more button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.collection-load-more__spin {
+  animation: box-spin 900ms linear infinite;
 }
 
 .character-thumb {

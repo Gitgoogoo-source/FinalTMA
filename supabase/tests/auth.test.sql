@@ -352,6 +352,24 @@ select ok(
 );
 
 insert into _ids (key, payload)
+select 'session_same_device_retry_payload', api.auth_create_session(
+  p_user_id := (select id from _ids where key = 'inviter'),
+  p_session_token_hash := 'auth-test-token-hash-001-retry',
+  p_expires_at := now() + interval '1 hour',
+  p_telegram_auth_date := now(),
+  p_init_data_hash := 'auth-test-init-hash-001',
+  p_ip_hash := 'ip-hash-auth-test',
+  p_user_agent := 'pgTAP auth test',
+  p_device_id := 'device-auth-test',
+  p_platform := 'ios'
+);
+
+select ok(exists (select 1 from core.app_sessions where session_token_hash = 'auth-test-token-hash-001' and revoked_at is not null), 'same-device initData retry revokes previous matching session');
+select ok(exists (select 1 from core.app_sessions where session_token_hash = 'auth-test-token-hash-001-retry' and revoked_at is null), 'same-device initData retry creates a replacement session');
+select is(((select payload from _ids where key = 'session_same_device_retry_payload') ->> 'revoked_replayed_session_count')::int, 1, 'same-device initData retry reports replay replacement count');
+select is(((select payload from _ids where key = 'session_same_device_retry_payload') ->> 'revoked_device_session_count')::int, 0, 'same-device initData retry does not double-count device revocation');
+
+insert into _ids (key, payload)
 select 'session_same_device_payload', api.auth_create_session(
   p_user_id := (select id from _ids where key = 'inviter'),
   p_session_token_hash := 'auth-test-token-hash-002',
@@ -367,6 +385,88 @@ select 'session_same_device_payload', api.auth_create_session(
 select ok(exists (select 1 from core.app_sessions where session_token_hash = 'auth-test-token-hash-001' and revoked_at is not null), 'new same-device session revokes previous active device session');
 select ok(exists (select 1 from core.app_sessions where session_token_hash = 'auth-test-token-hash-002' and revoked_at is null), 'new same-device session remains active');
 select is(((select payload from _ids where key = 'session_same_device_payload') ->> 'revoked_device_session_count')::int, 1, 'same-device session reports revoked session count');
+
+insert into core.app_sessions (
+  user_id,
+  session_token_hash,
+  expires_at,
+  telegram_auth_date,
+  init_data_hash,
+  ip_hash,
+  user_agent,
+  device_id,
+  platform,
+  last_seen_at
+) values (
+  (select id from _ids where key = 'inviter'),
+  'auth-test-token-hash-expired-old',
+  now() - interval '1 minute',
+  now() - interval '2 minutes',
+  'auth-test-init-hash-expired',
+  'ip-hash-auth-expired-old',
+  'pgTAP auth expired old',
+  'device-auth-expired-old',
+  'ios',
+  now() - interval '2 minutes'
+);
+
+insert into _ids (key, payload)
+select 'session_expired_replay_payload', api.auth_create_session(
+  p_user_id := (select id from _ids where key = 'inviter'),
+  p_session_token_hash := 'auth-test-token-hash-expired-new',
+  p_expires_at := now() + interval '1 hour',
+  p_telegram_auth_date := now(),
+  p_init_data_hash := 'auth-test-init-hash-expired',
+  p_ip_hash := 'ip-hash-auth-expired-new',
+  p_user_agent := 'pgTAP auth expired new',
+  p_device_id := 'device-auth-expired-new',
+  p_platform := 'ios'
+);
+
+select ok(exists (select 1 from core.app_sessions where session_token_hash = 'auth-test-token-hash-expired-new' and revoked_at is null), 'expired historical initData hash does not block new session creation');
+select is(((select payload from _ids where key = 'session_expired_replay_payload') ->> 'revoked_replayed_session_count')::int, 0, 'expired historical initData hash is not counted as replay replacement');
+
+insert into core.app_sessions (
+  user_id,
+  session_token_hash,
+  expires_at,
+  revoked_at,
+  telegram_auth_date,
+  init_data_hash,
+  ip_hash,
+  user_agent,
+  device_id,
+  platform,
+  last_seen_at
+) values (
+  (select id from _ids where key = 'inviter'),
+  'auth-test-token-hash-revoked-old',
+  now() + interval '1 hour',
+  now() - interval '1 minute',
+  now() - interval '2 minutes',
+  'auth-test-init-hash-revoked',
+  'ip-hash-auth-revoked-old',
+  'pgTAP auth revoked old',
+  'device-auth-revoked-old',
+  'ios',
+  now() - interval '2 minutes'
+);
+
+insert into _ids (key, payload)
+select 'session_revoked_replay_payload', api.auth_create_session(
+  p_user_id := (select id from _ids where key = 'inviter'),
+  p_session_token_hash := 'auth-test-token-hash-revoked-new',
+  p_expires_at := now() + interval '1 hour',
+  p_telegram_auth_date := now(),
+  p_init_data_hash := 'auth-test-init-hash-revoked',
+  p_ip_hash := 'ip-hash-auth-revoked-new',
+  p_user_agent := 'pgTAP auth revoked new',
+  p_device_id := 'device-auth-revoked-new',
+  p_platform := 'ios'
+);
+
+select ok(exists (select 1 from core.app_sessions where session_token_hash = 'auth-test-token-hash-revoked-new' and revoked_at is null), 'revoked historical initData hash does not block new session creation');
+select is(((select payload from _ids where key = 'session_revoked_replay_payload') ->> 'revoked_replayed_session_count')::int, 0, 'revoked historical initData hash is not counted as replay replacement');
 
 insert into _ids (key, payload)
 select 'session_cap_' || n::text, api.auth_create_session(

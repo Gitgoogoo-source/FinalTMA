@@ -107,6 +107,11 @@ async function callInventoryEvolveRpc(
         p_user_id: userId,
         p_item_instance_ids: input.source_item_instance_ids,
         p_idempotency_key: input.idempotency_key,
+        p_target_form_id: input.target_form_id ?? null,
+        p_expected_kcoin_cost: input.expected_kcoin_cost ?? null,
+        p_expected_success_rate_bps: input.expected_success_rate_bps ?? null,
+        p_expected_return_item_instance_id:
+          input.expected_return_item_instance_id ?? null,
       },
       {
         schema: "api" as never,
@@ -115,6 +120,10 @@ async function callInventoryEvolveRpc(
           userId,
           itemCount: input.source_item_instance_ids.length,
           idempotencyKey: input.idempotency_key,
+          targetFormId: input.target_form_id,
+          expectedKcoinCost: input.expected_kcoin_cost,
+          expectedSuccessRateBps: input.expected_success_rate_bps,
+          expectedReturnItemInstanceId: input.expected_return_item_instance_id,
         },
       },
     );
@@ -255,6 +264,14 @@ function mapInventoryEvolveRpcError(error: unknown): ApiError {
 
   if (message.includes("insufficient balance")) {
     return new ApiError(409, "INSUFFICIENT_KCOIN", "KCOIN 余额不足。");
+  }
+
+  if (message.includes("evolution preview mismatch")) {
+    return new ApiError(
+      409,
+      "INVENTORY_PREVIEW_STALE",
+      "藏品合成配置已变化，请刷新后重试。",
+    );
   }
 
   return new ApiError(500, "INVENTORY_EVOLVE_RPC_FAILED", "合成失败。", {
