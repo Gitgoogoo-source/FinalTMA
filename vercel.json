@@ -7,8 +7,8 @@
   "outputDirectory": "apps/web/dist",
   "crons": [
     {
-      "path": "/api/cron/refresh-market-stats",
-      "schedule": "0 0 * * *"
+      "path": "/api/cron/rebuild-market-stats",
+      "schedule": "*/10 * * * *"
     },
     {
       "path": "/api/cron/refresh-leaderboard",

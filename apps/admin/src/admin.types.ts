@@ -534,16 +534,96 @@ export type MarketMonitoringResponse = MonitoringDomainResponse;
 export type MarketOpsStats = {
   activeListingCount: number;
   activeListingValueKcoin?: number | string | null;
+  totalListingValueKcoin?: number | string | null;
   soldListingCount?: number;
   cancelledListingCount?: number;
   expiredListingCount?: number;
   volume24hKcoin: number | string;
   feeRevenueKcoin: number | string;
   abnormalListingCount: number;
+  window?: {
+    hours?: number | string | null;
+    startedAt?: string | null;
+    endedAt?: string | null;
+  };
+  priceReferences?: MarketOpsPriceReference[];
+  priceHealthFindings?: MarketOpsPriceHealthFinding[];
+  suspiciousTradeGroups?: MarketOpsSuspiciousTradeGroup[];
+  feeRevenueSources?: MarketOpsFeeRevenueSource[];
   statusCounts?: Record<string, number>;
   priceHealthCounts?: Record<string, number>;
   sources?: Record<string, unknown>;
   serverTime: string;
+};
+
+export type MarketOpsPriceReference = {
+  templateId?: string | null;
+  templateName?: string | null;
+  templateSlug?: string | null;
+  formId?: string | null;
+  formName?: string | null;
+  rarityCode?: string | null;
+  floorPriceKcoin?: number | string | null;
+  activeListingAvgPriceKcoin?: number | string | null;
+  completedOrderAvgPriceKcoin?: number | string | null;
+  lastSalePriceKcoin?: number | string | null;
+  lastSaleOrderId?: string | null;
+  lastSaleListingId?: string | null;
+  lastSaleAt?: string | null;
+  activeListingCount?: number | string | null;
+  completedOrderCount?: number | string | null;
+  saleCount24h?: number | string | null;
+  snapshotAt?: string | null;
+};
+
+export type MarketOpsPriceHealthFinding = {
+  listingId: string;
+  status?: string | null;
+  priceHealth?: string | null;
+  templateId?: string | null;
+  templateName?: string | null;
+  templateSlug?: string | null;
+  formId?: string | null;
+  formName?: string | null;
+  rarityCode?: string | null;
+  unitPriceKcoin?: number | string | null;
+  floorPriceKcoin?: number | string | null;
+  referencePriceKcoin?: number | string | null;
+  ratioBps?: number | string | null;
+  ruleId?: string | null;
+  ruleSummary?: string | null;
+  reason?: string | null;
+  detectedAt?: string | null;
+};
+
+export type MarketOpsSuspiciousTradeGroup = {
+  id?: string | null;
+  riskEventId?: string | null;
+  status?: string | null;
+  sellerUserId?: string | null;
+  buyerUserId?: string | null;
+  orderCount?: number | string | null;
+  listingCount?: number | string | null;
+  totalVolumeKcoin?: number | string | null;
+  sharedDeviceCount?: number | string | null;
+  sharedWalletCount?: number | string | null;
+  sharedIpHashCount?: number | string | null;
+  evidenceSummary?: string | null;
+  detectedAt?: string | null;
+  relatedListingIds?: string[];
+  relatedOrderIds?: string[];
+};
+
+export type MarketOpsFeeRevenueSource = {
+  source: string;
+  sourceLabel?: string | null;
+  currencyCode?: string | null;
+  amountKcoin?: number | string | null;
+  orderCount?: number | string | null;
+  settlementCount?: number | string | null;
+  ledgerEntryCount?: number | string | null;
+  status?: string | null;
+  updatedAt?: string | null;
 };
 
 export type MarketListingAdminItem = {
@@ -593,9 +673,14 @@ export type MarketPriceRule = {
 export type MarketHealthRule = {
   id: MarketPriceHealthRuleRow["id"];
   templateId?: MarketPriceHealthRuleRow["template_id"];
+  formId?: string | null;
+  formIndex?: number | string | null;
+  formName?: string | null;
   rarityCode?: MarketPriceHealthRuleRow["rarity_code"];
   minRatioToFloor: MarketPriceHealthRuleRow["min_ratio_to_floor"];
   maxRatioToFloor: MarketPriceHealthRuleRow["max_ratio_to_floor"];
+  lowBps?: number | string | null;
+  highBps?: number | string | null;
   active: MarketPriceHealthRuleRow["active"];
   metadata: MarketPriceHealthRuleRow["metadata"];
   createdAt: MarketPriceHealthRuleRow["created_at"];
@@ -641,9 +726,81 @@ export type MarketHealthRulesResponse = {
   serverTime: string;
 };
 
+export type MarketFeeRulesResponse = {
+  items: MarketFeeRule[];
+  summary?: Record<string, unknown>;
+  nextCursor: string | null;
+  serverTime: string;
+};
+
 export type ForceCancelMarketListingInput = {
   listingId: string;
   reason: string;
+};
+
+export type UpsertMarketPriceRuleInput = {
+  id?: string | null;
+  templateId?: string | null;
+  rarityCode?: string | null;
+  formIndex?: number | null;
+  minPriceKcoin: number;
+  maxPriceKcoin?: number | null;
+  suggestedPriceKcoin?: number | null;
+  active: boolean;
+  metadata?: Record<string, unknown>;
+  reason: string;
+};
+
+export type UpsertMarketHealthRuleInput = {
+  id?: string | null;
+  templateId?: string | null;
+  formId?: string | null;
+  rarityCode?: string | null;
+  lowBps: number;
+  highBps: number;
+  active: boolean;
+  metadata?: Record<string, unknown>;
+  reason: string;
+};
+
+export type UpsertMarketFeeRuleInput = {
+  id?: string | null;
+  code?: string | null;
+  feeBps: number;
+  minFee?: number;
+  maxFee?: number | null;
+  active: boolean;
+  startsAt?: string | null;
+  endsAt?: string | null;
+  metadata?: Record<string, unknown>;
+  reason: string;
+};
+
+export type MarketAdminMutationResponse = AdminConfigMutationResponse & {
+  price_rule_id?: string;
+  priceRuleId?: string;
+  health_rule_id?: string;
+  healthRuleId?: string;
+  fee_rule_id?: string;
+  feeRuleId?: string;
+  risk_event_id?: string;
+  riskEventId?: string;
+  idempotent?: boolean;
+  rule?: Record<string, unknown>;
+  status?: string;
+  serverTime?: string;
+};
+
+export type MarketStatsRebuildResponse = MarketAdminMutationResponse & {
+  snapshot_at?: string | null;
+  price_snapshot_count?: number | string | null;
+  depth_snapshot_count?: number | string | null;
+  price_health_update_count?: number | string | null;
+  start_app_event_id?: string | null;
+  end_app_event_id?: string | null;
+  failure_risk_event_id?: string | null;
+  duration_ms?: number | string | null;
+  error?: string | null;
 };
 
 export type ForceCancelMarketListingResponse = AdminConfigMutationResponse & {

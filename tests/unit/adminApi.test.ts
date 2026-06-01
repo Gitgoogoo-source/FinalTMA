@@ -216,6 +216,7 @@ describe("admin api client", () => {
 
     const {
       fetchMarketAdminListings,
+      fetchMarketFeeRules,
       fetchMarketHealthRules,
       fetchMarketOpsStats,
       fetchMarketPriceRules,
@@ -234,14 +235,93 @@ describe("admin api client", () => {
     });
     await fetchMarketPriceRules({ active: true, limit: 50 });
     await fetchMarketHealthRules({ rarityCode: "rare", active: true });
+    await fetchMarketFeeRules({ active: true, limit: 20 });
 
-    expect(fetchMock).toHaveBeenCalledTimes(4);
+    expect(fetchMock).toHaveBeenCalledTimes(5);
     expect(fetchMock.mock.calls.map(([path]) => path)).toEqual([
       "/api/admin/market/stats?windowHours=24",
       "/api/admin/market/listings?status=active&rarityCode=rare&templateId=99999999-9999-4999-8999-999999999999&minPriceKcoin=100&maxPriceKcoin=500&sellerUserId=88888888-8888-4888-8888-888888888888&limit=25&cursor=next-page",
       "/api/admin/market/price-rules?active=true&limit=50",
       "/api/admin/market/health-rules?rarityCode=rare&active=true",
+      "/api/admin/market/fee-rules?active=true&limit=20",
     ]);
+  });
+
+  it("calls market rule writes and manual rebuild with danger headers", async () => {
+    const fetchMock = vi.fn(
+      async (_input: RequestInfo | URL, _init?: RequestInit) =>
+        new Response(
+          JSON.stringify({
+            ok: true,
+            success: true,
+            data: {
+              audit_log_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+              risk_event_id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+              status: "success",
+            },
+          }),
+          {
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const {
+      rebuildMarketStats,
+      upsertMarketFeeRule,
+      upsertMarketHealthRule,
+      upsertMarketPriceRule,
+    } = await import("../../apps/admin/src/admin.api");
+
+    await upsertMarketPriceRule({
+      rarityCode: "RARE",
+      minPriceKcoin: 100,
+      maxPriceKcoin: 500,
+      suggestedPriceKcoin: 250,
+      active: true,
+      metadata: { source: "unit" },
+      reason: "configure price rule",
+    });
+    await upsertMarketHealthRule({
+      rarityCode: "RARE",
+      lowBps: 7000,
+      highBps: 13000,
+      active: true,
+      metadata: { source: "unit" },
+      reason: "configure health rule",
+    });
+    await upsertMarketFeeRule({
+      code: "MARKET_SELL_FEE",
+      feeBps: 750,
+      minFee: 0,
+      active: true,
+      reason: "configure fee rule",
+    });
+    await rebuildMarketStats({
+      reason: "manual rebuild after rule change",
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    expect(fetchMock.mock.calls.map(([path]) => path)).toEqual([
+      "/api/admin/market/price-rules",
+      "/api/admin/market/health-rules",
+      "/api/admin/market/fee-rules",
+      "/api/admin/market/rebuild-stats",
+    ]);
+
+    for (const [, init] of fetchMock.mock.calls) {
+      expect(init).toBeDefined();
+      if (!init) {
+        throw new Error("Expected init.");
+      }
+      const headers = readHeaders(init);
+      expect(headers.get("X-Admin-Confirm")).toBe("true");
+      expect(headers.get("X-Idempotency-Key")).toBeTruthy();
+      expect(readJsonBody(init).confirm).toBe(true);
+    }
   });
 
   it("calls force-cancel-listing with confirmation, reason, and idempotency", async () => {

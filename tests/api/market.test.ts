@@ -5,7 +5,7 @@ import type {
   ApiSuccessResponse,
 } from "../../api/_shared/handler";
 import { ApiError } from "../../api/_shared/handler";
-import refreshMarketStatsCronHandler from "../../api/cron/refresh-market-stats";
+import rebuildMarketStatsCronHandler from "../../api/cron/rebuild-market-stats";
 import buyListingHandler, {
   normalizeMarketBuyListingInput,
 } from "../../api/market/buy";
@@ -30,9 +30,9 @@ import { invokeApiHandler } from "./_utils";
 
 const { callRpcRawMock, getSupabaseAdminMock, requireSessionMock } = vi.hoisted(
   () => ({
-  callRpcRawMock: vi.fn(),
-  getSupabaseAdminMock: vi.fn(),
-  requireSessionMock: vi.fn(),
+    callRpcRawMock: vi.fn(),
+    getSupabaseAdminMock: vi.fn(),
+    requireSessionMock: vi.fn(),
   }),
 );
 
@@ -909,7 +909,7 @@ describe("market stats API", () => {
   });
 });
 
-describe("market stats refresh cron API", () => {
+describe("market stats rebuild cron API", () => {
   beforeEach(() => {
     process.env.NODE_ENV = "test";
     delete process.env.APP_ENV;
@@ -926,47 +926,69 @@ describe("market stats refresh cron API", () => {
     delete process.env.CRON_SECRET;
   });
 
-  it("calls market_refresh_price_stats with the internal cron secret", async () => {
+  it("calls market_rebuild_stats_job with the internal cron secret", async () => {
     callRpcRawMock.mockResolvedValueOnce({
+      status: "success",
       snapshot_at: "2026-05-23T16:30:44.000Z",
       price_snapshot_count: 1,
       depth_snapshot_count: 2,
       price_health_update_count: 3,
+      start_app_event_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      end_app_event_id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      failure_risk_event_id: null,
+      server_time: "2026-05-23T16:30:45.000Z",
+      duration_ms: 42,
     });
 
     const result = await invokeApiHandler<
       ApiSuccessResponse<Record<string, unknown>>
-    >(refreshMarketStatsCronHandler, {
+    >(rebuildMarketStatsCronHandler, {
       method: "POST",
       headers: {
         authorization: "Bearer test-cron-secret-0001",
+        "x-idempotency-key": "market-stats-rebuild-test-001",
         "x-request-id": "req-market-stats-refresh",
       },
     });
 
     expect(result.statusCode).toBe(200);
     expect(callRpcRawMock).toHaveBeenCalledWith(
-      "market_refresh_price_stats",
-      {},
+      "market_rebuild_stats_job",
+      {
+        p_idempotency_key: "market-stats-rebuild-test-001",
+        p_request_context: {
+          request_id: "req-market-stats-refresh",
+          method: "POST",
+          source: "vercel.cron",
+          route: "rebuild-market-stats",
+        },
+      },
       {
         schema: "api",
         context: {
           requestId: "req-market-stats-refresh",
-          source: "cron.refresh_market_stats",
+          source: "cron.rebuild_market_stats",
         },
       },
     );
     expect(result.body.data).toEqual({
+      status: "success",
       snapshot_at: "2026-05-23T16:30:44.000Z",
       price_snapshot_count: 1,
       depth_snapshot_count: 2,
       price_health_update_count: 3,
+      start_app_event_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      end_app_event_id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      failure_risk_event_id: null,
+      server_time: "2026-05-23T16:30:45.000Z",
+      duration_ms: 42,
+      error: null,
     });
   });
 
   it("rejects refresh requests with an invalid cron secret", async () => {
     const result = await invokeApiHandler<ApiErrorResponse>(
-      refreshMarketStatsCronHandler,
+      rebuildMarketStatsCronHandler,
       {
         method: "POST",
         headers: {
@@ -986,7 +1008,7 @@ describe("market stats refresh cron API", () => {
     process.env.VERCEL_ENV = "preview";
 
     const result = await invokeApiHandler<ApiErrorResponse>(
-      refreshMarketStatsCronHandler,
+      rebuildMarketStatsCronHandler,
       {
         method: "POST",
       },
@@ -1001,15 +1023,21 @@ describe("market stats refresh cron API", () => {
     delete process.env.CRON_SECRET;
     process.env.NODE_ENV = "test";
     callRpcRawMock.mockResolvedValueOnce({
+      status: "success",
       snapshot_at: "2026-05-23T16:30:44.000Z",
       price_snapshot_count: 1,
       depth_snapshot_count: 2,
       price_health_update_count: 3,
+      start_app_event_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      end_app_event_id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      failure_risk_event_id: null,
+      server_time: "2026-05-23T16:30:45.000Z",
+      duration_ms: 42,
     });
 
     const result = await invokeApiHandler<
       ApiSuccessResponse<Record<string, unknown>>
-    >(refreshMarketStatsCronHandler, {
+    >(rebuildMarketStatsCronHandler, {
       method: "POST",
     });
 
@@ -1022,19 +1050,55 @@ describe("market stats refresh cron API", () => {
     process.env.NODE_ENV = "development";
     process.env.APP_ENV = "local";
     callRpcRawMock.mockResolvedValueOnce({
+      status: "success",
       snapshot_at: "2026-05-23T16:30:44.000Z",
       price_snapshot_count: 1,
       depth_snapshot_count: 2,
       price_health_update_count: 3,
+      start_app_event_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      end_app_event_id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      failure_risk_event_id: null,
+      server_time: "2026-05-23T16:30:45.000Z",
+      duration_ms: 42,
     });
 
     const result = await invokeApiHandler<
       ApiSuccessResponse<Record<string, unknown>>
-    >(refreshMarketStatsCronHandler, {
+    >(rebuildMarketStatsCronHandler, {
       method: "POST",
     });
 
     expect(result.statusCode).toBe(200);
+    expect(callRpcRawMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("maps failed rebuild payloads after DB records app and risk events", async () => {
+    callRpcRawMock.mockResolvedValueOnce({
+      status: "failed",
+      snapshot_at: null,
+      price_snapshot_count: 0,
+      depth_snapshot_count: 0,
+      price_health_update_count: 0,
+      start_app_event_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      end_app_event_id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      failure_risk_event_id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      server_time: "2026-05-23T16:30:45.000Z",
+      duration_ms: 42,
+      error: "refresh failed",
+    });
+
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      rebuildMarketStatsCronHandler,
+      {
+        method: "POST",
+        headers: {
+          authorization: "Bearer test-cron-secret-0001",
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(500);
+    expect(result.body.error.code).toBe("MARKET_STATS_REBUILD_FAILED");
     expect(callRpcRawMock).toHaveBeenCalledTimes(1);
   });
 });

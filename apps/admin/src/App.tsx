@@ -313,7 +313,15 @@ function renderActivePage(tab: AdminTab, me: AdminMeResponse) {
     case "mint":
       return <MintQueuePage />;
     case "market-ops":
-      return <MarketOpsPage />;
+      return (
+        <MarketOpsPage
+          canWriteMarket={
+            me.isSuperAdmin ||
+            hasAdminPermission(me.permissions, "market:write") ||
+            hasAdminPermission(me.permissions, "admin:write")
+          }
+        />
+      );
     case "wallets":
       return <WalletsPage />;
     case "campaigns":

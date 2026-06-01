@@ -29,10 +29,13 @@ import type {
   ForceCancelMarketListingResponse,
   MarketAdminListingsResponse,
   MarketListingAdminDetail,
+  MarketAdminMutationResponse,
+  MarketFeeRulesResponse,
   MarketHealthRulesResponse,
   MarketMonitoringResponse,
   MarketOpsStats,
   MarketPriceRulesResponse,
+  MarketStatsRebuildResponse,
   MintQueueResponse,
   MonitoringResponse,
   PaymentAdminResponse,
@@ -57,6 +60,9 @@ import type {
   UpsertBoxPriceRuleInput,
   UpsertCampaignInput,
   RunReconciliationInput,
+  UpsertMarketFeeRuleInput,
+  UpsertMarketHealthRuleInput,
+  UpsertMarketPriceRuleInput,
   WalletsResponse,
 } from "./admin.types";
 import { reportAdminApiError, reportAdminUnknownError } from "./observability";
@@ -276,11 +282,96 @@ export async function fetchMarketHealthRules(
   );
 }
 
+export async function fetchMarketFeeRules(
+  params: QueryParams = {},
+): Promise<MarketFeeRulesResponse> {
+  return adminRequest<MarketFeeRulesResponse>(
+    `/api/admin/market/fee-rules${toQueryString(params)}`,
+  );
+}
+
 export async function fetchMarketListingDetail(
   listingId: string,
 ): Promise<MarketListingAdminDetail> {
   return adminRequest<MarketListingAdminDetail>(
     `/api/admin/market${toQueryString({ listingId })}`,
+  );
+}
+
+export async function upsertMarketPriceRule(
+  input: UpsertMarketPriceRuleInput,
+): Promise<MarketAdminMutationResponse> {
+  return adminRequest<MarketAdminMutationResponse>(
+    "/api/admin/market/price-rules",
+    {
+      method: input.id ? "PATCH" : "POST",
+      headers: buildDangerHeaders(
+        "admin-market-price-rule",
+        input.id ?? input.templateId ?? input.rarityCode ?? "global",
+      ),
+      body: {
+        ...input,
+        confirm: true,
+      },
+    },
+  );
+}
+
+export async function upsertMarketHealthRule(
+  input: UpsertMarketHealthRuleInput,
+): Promise<MarketAdminMutationResponse> {
+  return adminRequest<MarketAdminMutationResponse>(
+    "/api/admin/market/health-rules",
+    {
+      method: input.id ? "PATCH" : "POST",
+      headers: buildDangerHeaders(
+        "admin-market-health-rule",
+        input.id ??
+          input.formId ??
+          input.templateId ??
+          input.rarityCode ??
+          "global",
+      ),
+      body: {
+        ...input,
+        confirm: true,
+      },
+    },
+  );
+}
+
+export async function upsertMarketFeeRule(
+  input: UpsertMarketFeeRuleInput,
+): Promise<MarketAdminMutationResponse> {
+  return adminRequest<MarketAdminMutationResponse>(
+    "/api/admin/market/fee-rules",
+    {
+      method: input.id ? "PATCH" : "POST",
+      headers: buildDangerHeaders(
+        "admin-market-fee-rule",
+        input.id ?? input.code ?? "market-sell",
+      ),
+      body: {
+        ...input,
+        confirm: true,
+      },
+    },
+  );
+}
+
+export async function rebuildMarketStats(input: {
+  reason: string;
+}): Promise<MarketStatsRebuildResponse> {
+  return adminRequest<MarketStatsRebuildResponse>(
+    "/api/admin/market/rebuild-stats",
+    {
+      method: "POST",
+      headers: buildDangerHeaders("admin-rebuild-market-stats", "market-stats"),
+      body: {
+        reason: input.reason,
+        confirm: true,
+      },
+    },
   );
 }
 
