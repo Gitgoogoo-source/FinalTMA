@@ -99,7 +99,7 @@ const EMPTY_FILTERS: RiskFilterDraft = {
   to: "",
 };
 
-export function RiskPage(props: { canWriteRisk?: boolean }) {
+export function RiskCenterPage(props: { canWriteRisk?: boolean }) {
   const [filters, setFilters] = useState<RiskFilterDraft>(EMPTY_FILTERS);
   const [cursor, setCursor] = useState<string | null>(null);
   const [previousCursors, setPreviousCursors] = useState<string[]>([]);

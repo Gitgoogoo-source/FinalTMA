@@ -33,7 +33,7 @@ import { MintQueuePage } from "./pages/MintQueuePage";
 import { PaymentsPage } from "./pages/PaymentsPage";
 import { PermissionMatrixPage } from "./pages/PermissionMatrixPage";
 import { ReconciliationPage } from "./pages/ReconciliationPage";
-import { RiskPage } from "./pages/RiskPage";
+import { RiskCenterPage } from "./pages/RiskCenterPage";
 import { RolesPage } from "./pages/RolesPage";
 import { WalletsPage } from "./pages/WalletsPage";
 
@@ -294,7 +294,7 @@ function renderActivePage(tab: AdminTab, me: AdminMeResponse) {
       return <ReconciliationPage />;
     case "risk":
       return (
-        <RiskPage
+        <RiskCenterPage
           canWriteRisk={
             me.isSuperAdmin ||
             hasAdminPermission(me.permissions, "risk:write") ||
