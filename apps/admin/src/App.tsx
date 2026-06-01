@@ -4,6 +4,7 @@ import {
   Gift,
   Image as ImageIcon,
   KeyRound,
+  LifeBuoy,
   PackageOpen,
   RefreshCw,
   ReceiptText,
@@ -11,6 +12,7 @@ import {
   ShieldAlert,
   ShieldCheck,
   Store,
+  UserSearch,
   Users,
   WalletCards,
 } from "lucide-react";
@@ -37,6 +39,8 @@ import { PermissionMatrixPage } from "./pages/PermissionMatrixPage";
 import { ReconciliationPage } from "./pages/ReconciliationPage";
 import { RiskCenterPage } from "./pages/RiskCenterPage";
 import { RolesPage } from "./pages/RolesPage";
+import { SupportTicketsPage } from "./pages/SupportTicketsPage";
+import { UsersPage } from "./pages/UsersPage";
 import { WalletsPage } from "./pages/WalletsPage";
 
 type AdminNavItem = {
@@ -72,6 +76,18 @@ const NAV_ITEMS: AdminNavItem[] = [
     label: "风控",
     icon: ShieldAlert,
     requiredPermissions: ["risk:read"],
+  },
+  {
+    id: "users",
+    label: "用户",
+    icon: UserSearch,
+    requiredPermissions: ["users:read"],
+  },
+  {
+    id: "support",
+    label: "客服",
+    icon: LifeBuoy,
+    requiredPermissions: ["support:read"],
   },
   {
     id: "mint",
@@ -307,6 +323,39 @@ function renderActivePage(tab: AdminTab, me: AdminMeResponse) {
             me.isSuperAdmin ||
             hasAdminPermission(me.permissions, "risk:write") ||
             hasAdminPermission(me.permissions, "admin:write")
+          }
+        />
+      );
+    case "users":
+      return (
+        <UsersPage
+          canCreateCompensation={
+            me.isSuperAdmin ||
+            hasAdminPermission(me.permissions, "users:compensate") ||
+            hasAdminPermission(me.permissions, "support:write")
+          }
+          canRestrictUser={
+            me.isSuperAdmin ||
+            hasAdminPermission(me.permissions, "risk:write") ||
+            hasAdminPermission(me.permissions, "users:ban")
+          }
+          canWriteSupport={
+            me.isSuperAdmin ||
+            hasAdminPermission(me.permissions, "support:write")
+          }
+        />
+      );
+    case "support":
+      return (
+        <SupportTicketsPage
+          canCreateCompensation={
+            me.isSuperAdmin ||
+            hasAdminPermission(me.permissions, "users:compensate") ||
+            hasAdminPermission(me.permissions, "support:write")
+          }
+          canWriteSupport={
+            me.isSuperAdmin ||
+            hasAdminPermission(me.permissions, "support:write")
           }
         />
       );

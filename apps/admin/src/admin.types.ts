@@ -4,11 +4,15 @@ import type {
 } from "../../../packages/db-types/src/database.types.js";
 
 type CoreUserRow = Database["core"]["Tables"]["users"]["Row"];
+type CoreUserWalletRow = Database["core"]["Tables"]["user_wallets"]["Row"];
 type CurrencyLedgerRow =
   Database["economy"]["Tables"]["currency_ledger"]["Row"];
+type UserBalanceRow = Database["economy"]["Tables"]["user_balances"]["Row"];
 type DrawOrderRow = Database["gacha"]["Tables"]["draw_orders"]["Row"];
 type DrawResultRow = Database["gacha"]["Tables"]["draw_results"]["Row"];
 type ItemInstanceRow = Database["inventory"]["Tables"]["item_instances"]["Row"];
+type MintQueueRow = Database["onchain"]["Tables"]["mint_queue"]["Row"];
+type SupportTicketRow = Database["ops"]["Tables"]["support_tickets"]["Row"];
 type StarOrderRow = Database["payments"]["Tables"]["star_orders"]["Row"];
 type StarPaymentRow = Database["payments"]["Tables"]["star_payments"]["Row"];
 type StarRefundRow = Database["payments"]["Tables"]["star_refunds"]["Row"];
@@ -23,6 +27,9 @@ type MarketPriceHealthRuleRow =
 type CatalogMarketPriceRuleRow =
   Database["catalog"]["Tables"]["market_price_rules"]["Row"];
 type EconomyFeeRuleRow = Database["economy"]["Tables"]["fee_rules"]["Row"];
+type ReferralRow = Database["tasks"]["Tables"]["referrals"]["Row"];
+type UserTaskProgressRow =
+  Database["tasks"]["Tables"]["user_task_progress"]["Row"];
 
 export type AdminApiEnvelope<T> = {
   ok: true;
@@ -1966,6 +1973,495 @@ export type AdminRolesResponse = {
   serverTime: string;
 };
 
+export type AdminPaginatedResponse<
+  TItem,
+  TSummary extends Record<string, unknown> = Record<string, unknown>,
+> = {
+  items: TItem[];
+  summary: TSummary;
+  nextCursor: string | null;
+  serverTime: string;
+};
+
+export type AdminUserProfile = Pick<
+  CoreUserRow,
+  | "id"
+  | "telegram_user_id"
+  | "username"
+  | "first_name"
+  | "last_name"
+  | "photo_url"
+  | "language_code"
+  | "status"
+  | "risk_score"
+  | "referred_by_user_id"
+  | "last_seen_at"
+  | "last_auth_at"
+  | "first_seen_at"
+  | "created_at"
+  | "updated_at"
+> & {
+  telegramUserId?: number | string;
+  firstName?: string | null;
+  lastName?: string | null;
+  photoUrl?: string | null;
+  languageCode?: string | null;
+  riskScore?: number | string | null;
+  referredByUserId?: string | null;
+  lastSeenAt?: string | null;
+  lastAuthAt?: string | null;
+  firstSeenAt?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+  displayName?: string | null;
+  walletAddress?: string | null;
+  latestWalletAddress?: string | null;
+  latestPaymentOrderId?: string | null;
+  latestSupportTicketId?: string | null;
+  balanceSummary?: Record<string, number | string | null>;
+  summary?: Record<string, unknown>;
+  metadata?: Record<string, unknown> | null;
+};
+
+export type AdminUserBalance = Pick<
+  UserBalanceRow,
+  | "user_id"
+  | "currency_code"
+  | "available_amount"
+  | "locked_amount"
+  | "total_earned"
+  | "total_spent"
+  | "total_locked"
+  | "total_unlocked"
+  | "updated_at"
+  | "created_at"
+> & {
+  currencyCode?: string;
+  availableAmount?: number | string;
+  lockedAmount?: number | string;
+  totalEarned?: number | string;
+  totalSpent?: number | string;
+  updatedAt?: string;
+};
+
+export type AdminUserLedgerEntry = Pick<
+  CurrencyLedgerRow,
+  | "id"
+  | "user_id"
+  | "currency_code"
+  | "entry_type"
+  | "amount"
+  | "available_before"
+  | "available_after"
+  | "locked_before"
+  | "locked_after"
+  | "source_type"
+  | "source_id"
+  | "source_ref"
+  | "idempotency_key"
+  | "note"
+  | "created_at"
+> & {
+  currencyCode?: string;
+  entryType?: string;
+  sourceType?: string | null;
+  sourceId?: string | null;
+  sourceRef?: string | null;
+  idempotencyKey?: string | null;
+  createdAt?: string;
+};
+
+export type AdminUserInventoryItem = Pick<
+  ItemInstanceRow,
+  | "id"
+  | "owner_user_id"
+  | "template_id"
+  | "form_id"
+  | "serial_no"
+  | "level"
+  | "power"
+  | "status"
+  | "source_type"
+  | "source_id"
+  | "nft_mint_status"
+  | "minted_nft_item_id"
+  | "acquired_at"
+  | "created_at"
+  | "updated_at"
+> & {
+  ownerUserId?: string | null;
+  templateId?: string;
+  templateName?: string | null;
+  formId?: string | null;
+  formName?: string | null;
+  rarityCode?: string | null;
+  serialNo?: number | string;
+  sourceType?: string | null;
+  sourceId?: string | null;
+  nftMintStatus?: string | null;
+  mintedNftItemId?: string | null;
+  acquiredAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type AdminUserPaymentItem = Pick<
+  StarOrderRow,
+  | "id"
+  | "user_id"
+  | "business_type"
+  | "business_id"
+  | "status"
+  | "xtr_amount"
+  | "telegram_invoice_payload"
+  | "title"
+  | "description"
+  | "paid_at"
+  | "fulfilled_at"
+  | "error_message"
+  | "created_at"
+  | "updated_at"
+> & {
+  businessType?: string;
+  businessId?: string | null;
+  xtrAmount?: number | string;
+  invoicePayload?: string;
+  paidAt?: string | null;
+  fulfilledAt?: string | null;
+  errorMessage?: string | null;
+  payment?: PaymentDetailPayment | null;
+  refund?: PaymentDetailRefund | null;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type AdminUserWallet = Pick<
+  CoreUserWalletRow,
+  | "id"
+  | "user_id"
+  | "chain"
+  | "network"
+  | "address"
+  | "wallet_app_name"
+  | "is_primary"
+  | "status"
+  | "verified_at"
+  | "disconnected_at"
+  | "last_sync_at"
+  | "created_at"
+  | "updated_at"
+> & {
+  walletAppName?: string | null;
+  isPrimary?: boolean;
+  verifiedAt?: string | null;
+  disconnectedAt?: string | null;
+  lastSyncAt?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+  metadata?: Record<string, unknown> | null;
+};
+
+export type AdminUserMarketListing = Pick<
+  MarketListingRow,
+  | "id"
+  | "seller_user_id"
+  | "status"
+  | "template_id"
+  | "form_id"
+  | "rarity_code"
+  | "item_count"
+  | "remaining_count"
+  | "unit_price_kcoin"
+  | "expected_net_amount"
+  | "price_health"
+  | "created_at"
+  | "updated_at"
+> & {
+  sellerUserId?: string;
+  templateId?: string;
+  templateName?: string | null;
+  formId?: string | null;
+  rarityCode?: string | null;
+  itemCount?: number | string;
+  remainingCount?: number | string;
+  unitPriceKcoin?: number | string;
+  expectedNetAmount?: number | string;
+  priceHealth?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type AdminUserTaskProgress = Pick<
+  UserTaskProgressRow,
+  | "id"
+  | "user_id"
+  | "task_id"
+  | "status"
+  | "period_key"
+  | "progress_count"
+  | "target_count"
+  | "completed_at"
+  | "claimed_at"
+  | "created_at"
+  | "updated_at"
+> & {
+  taskId?: string;
+  taskTitle?: string | null;
+  periodKey?: string;
+  progressCount?: number | string;
+  targetCount?: number | string;
+  completedAt?: string | null;
+  claimedAt?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type AdminUserReferral = Pick<
+  ReferralRow,
+  | "id"
+  | "inviter_user_id"
+  | "invitee_user_id"
+  | "invite_code"
+  | "status"
+  | "first_open_order_id"
+  | "qualified_at"
+  | "rewarded_at"
+  | "created_at"
+  | "updated_at"
+> & {
+  role?: "inviter" | "invitee" | string;
+  inviterUserId?: string;
+  inviteeUserId?: string;
+  inviteCode?: string;
+  firstOpenOrderId?: string | null;
+  qualifiedAt?: string | null;
+  rewardedAt?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type AdminUserMintQueueItem = Pick<
+  MintQueueRow,
+  | "id"
+  | "user_id"
+  | "item_instance_id"
+  | "template_id"
+  | "form_id"
+  | "wallet_id"
+  | "status"
+  | "priority"
+  | "attempt_count"
+  | "max_attempts"
+  | "next_attempt_at"
+  | "nft_item_id"
+  | "tx_hash"
+  | "error_message"
+  | "created_at"
+  | "updated_at"
+  | "completed_at"
+> & {
+  itemInstanceId?: string;
+  templateId?: string;
+  formId?: string | null;
+  walletId?: string | null;
+  attemptCount?: number | string;
+  maxAttempts?: number | string;
+  nextAttemptAt?: string | null;
+  nftItemId?: string | null;
+  txHash?: string | null;
+  errorMessage?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+  completedAt?: string | null;
+};
+
+export type SupportTicketStatus =
+  | "open"
+  | "pending_user"
+  | "pending_ops"
+  | "resolved"
+  | "rejected"
+  | "escalated"
+  | (string & {});
+
+export type SupportTicket = Pick<
+  SupportTicketRow,
+  | "id"
+  | "user_id"
+  | "ticket_type"
+  | "subject"
+  | "message"
+  | "status"
+  | "assigned_admin_id"
+  | "related_type"
+  | "related_id"
+  | "resolved_at"
+  | "created_at"
+  | "updated_at"
+> & {
+  status: SupportTicketStatus;
+  userId?: string | null;
+  ticketType?: string;
+  assignedAdminId?: string | null;
+  assignedAdminName?: string | null;
+  relatedType?: string | null;
+  relatedId?: string | null;
+  resolution?: string | null;
+  resolutionResult?: string | null;
+  rejectedReason?: string | null;
+  escalationOwner?: string | null;
+  escalationQueue?: string | null;
+  statusReason?: string | null;
+  lastHandledByAdminId?: string | null;
+  lastHandledAt?: string | null;
+  resolvedAt?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+  metadata?: Record<string, unknown> | null;
+  metadataSummary?: Record<string, unknown> | null;
+  compensationRequests?: CompensationRequest[];
+};
+
+export type CompensationRequestStatus =
+  | "draft"
+  | "requested"
+  | "pending_approval"
+  | "approved"
+  | "executed"
+  | "rejected"
+  | "failed"
+  | (string & {});
+
+export type CompensationRequest = {
+  id: string;
+  targetUserId: string;
+  ticketId?: string | null;
+  compensationType: string;
+  currencyCode?: string | null;
+  amount?: number | string | null;
+  itemTemplateId?: string | null;
+  itemFormId?: string | null;
+  sourceType?: string | null;
+  sourceId?: string | null;
+  status: CompensationRequestStatus;
+  impactPreview?: Record<string, unknown>;
+  approvalRequestId?: string | null;
+  auditLogId?: string | null;
+  reason?: string | null;
+  metadata?: Record<string, unknown> | null;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type AdminUserDetail = {
+  user: AdminUserProfile;
+  balances: AdminUserBalance[];
+  wallets: AdminUserWallet[];
+  marketListings: AdminUserMarketListing[];
+  taskProgress: AdminUserTaskProgress[];
+  referrals?: AdminUserReferral[];
+  mintQueue: AdminUserMintQueueItem[];
+  riskEvents: RiskEvent[];
+  flags: UserFlag[];
+  supportTickets: SupportTicket[];
+  compensationRequests?: CompensationRequest[];
+  assets?: AdminDataBlock<AdminUserBalance>;
+  payments?: AdminDataBlock<AdminUserPaymentItem>;
+  gacha?: AdminDataBlock<Record<string, unknown>>;
+  inventory?: AdminDataBlock<AdminUserInventoryItem>;
+  market?: AdminDataBlock<AdminUserMarketListing>;
+  tasks?: AdminDataBlock<Record<string, unknown>>;
+  walletsBlock?: AdminDataBlock<AdminUserWallet>;
+  wallets_block?: AdminDataBlock<AdminUserWallet>;
+  mint?: AdminDataBlock<AdminUserMintQueueItem>;
+  risk?: AdminDataBlock<Record<string, unknown>>;
+  support?: AdminDataBlock<SupportTicket>;
+  summary: Record<string, unknown>;
+  sources: Record<string, unknown>;
+  serverTime: string;
+};
+
+export type AdminDataBlock<TItem> = {
+  dataSource?: string;
+  data_source?: string;
+  updatedAt?: string | null;
+  updated_at?: string | null;
+  count?: number;
+  items?: TItem[];
+  byStatus?: Record<string, number>;
+  by_status?: Record<string, number>;
+  [key: string]: unknown;
+};
+
+export type AdminUserProfilesResponse =
+  AdminPaginatedResponse<AdminUserProfile>;
+
+export type AdminUserLedgerResponse =
+  AdminPaginatedResponse<AdminUserLedgerEntry>;
+
+export type AdminUserInventoryResponse =
+  AdminPaginatedResponse<AdminUserInventoryItem>;
+
+export type AdminUserPaymentsResponse =
+  AdminPaginatedResponse<AdminUserPaymentItem>;
+
+export type SupportTicketsResponse = AdminPaginatedResponse<SupportTicket>;
+
+export type CreateSupportTicketInput = {
+  userId?: string | null;
+  ticketType: string;
+  subject: string;
+  message?: string | null;
+  relatedType?: string | null;
+  relatedId?: string | null;
+  metadata?: Record<string, unknown>;
+  reason?: string;
+};
+
+export type UpdateSupportTicketInput = {
+  ticketId: string;
+  status?: SupportTicketStatus;
+  assignedAdminId?: string | null;
+  resolution?: string | null;
+  rejectionReason?: string | null;
+  escalationOwner?: string | null;
+  escalationQueue?: string | null;
+  result?: Record<string, unknown>;
+  reason: string;
+};
+
+export type CreateCompensationRequestInput = {
+  targetUserId: string;
+  ticketId?: string | null;
+  compensationType: string;
+  currencyCode?: string | null;
+  amount?: number | null;
+  itemTemplateId?: string | null;
+  itemFormId?: string | null;
+  sourceType?: string | null;
+  sourceId?: string | null;
+  sourceTaskProgressId?: string | null;
+  sourceTaskClaimId?: string | null;
+  sourceTaskId?: string | null;
+  sourceTaskPeriodKey?: string | null;
+  sourceDrawOrderId?: string | null;
+  sourceStarOrderId?: string | null;
+  notificationTitle?: string | null;
+  notificationBody?: string | null;
+  impactPreview: Record<string, unknown>;
+  reason: string;
+};
+
+export type SupportMutationResponse = AdminConfigMutationResponse & {
+  ticketId?: string;
+  ticket_id?: string;
+  compensationRequestId?: string;
+  compensation_request_id?: string;
+  approvalRequestId?: string | null;
+  approval_request_id?: string | null;
+  status?: string;
+};
+
 export type AdminTab =
   | "monitoring"
   | "payments"
@@ -1980,6 +2476,8 @@ export type AdminTab =
   | "flags"
   | "danger"
   | "audit"
+  | "users"
+  | "support"
   | "admins"
   | "roles"
   | "permissions";

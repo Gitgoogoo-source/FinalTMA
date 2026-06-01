@@ -16,6 +16,11 @@ import type {
   AdminMeResponse,
   AdminRolesResponse,
   AdminUsersResponse,
+  AdminUserDetail,
+  AdminUserInventoryResponse,
+  AdminUserLedgerResponse,
+  AdminUserPaymentsResponse,
+  AdminUserProfilesResponse,
   DropPoolDraftItemInput,
   DropPoolDraftPityRuleInput,
   DropPoolItemsResponse,
@@ -44,6 +49,8 @@ import type {
   PityRulesResponse,
   ApplyUserFlagInput,
   ClearUserFlagInput,
+  CreateCompensationRequestInput,
+  CreateSupportTicketInput,
   ReconciliationFindingsResponse,
   ReconciliationRunsResponse,
   ReconciliationResponse,
@@ -60,6 +67,9 @@ import type {
   UpsertBoxPriceRuleInput,
   UpsertCampaignInput,
   RunReconciliationInput,
+  SupportMutationResponse,
+  SupportTicketsResponse,
+  UpdateSupportTicketInput,
   UpsertMarketFeeRuleInput,
   UpsertMarketHealthRuleInput,
   UpsertMarketPriceRuleInput,
@@ -156,6 +166,141 @@ export async function fetchAdminUsers(
 ): Promise<AdminUsersResponse> {
   return adminRequest<AdminUsersResponse>(
     `/api/admin/admin-users${toQueryString(params)}`,
+  );
+}
+
+export async function fetchAppUsers(
+  params: QueryParams = {},
+): Promise<AdminUserProfilesResponse> {
+  return adminRequest<AdminUserProfilesResponse>(
+    `/api/admin/users${toQueryString(params)}`,
+  );
+}
+
+export async function fetchAdminUserDetail(
+  userId: string,
+): Promise<AdminUserDetail> {
+  return adminRequest<AdminUserDetail>(
+    `/api/admin/users/detail${toQueryString({ userId })}`,
+  );
+}
+
+export async function fetchAdminUserLedger(
+  params: QueryParams & { userId: string },
+): Promise<AdminUserLedgerResponse> {
+  return adminRequest<AdminUserLedgerResponse>(
+    `/api/admin/users/ledger${toQueryString(params)}`,
+  );
+}
+
+export async function fetchAdminUserInventory(
+  params: QueryParams & { userId: string },
+): Promise<AdminUserInventoryResponse> {
+  return adminRequest<AdminUserInventoryResponse>(
+    `/api/admin/users/inventory${toQueryString(params)}`,
+  );
+}
+
+export async function fetchAdminUserPayments(
+  params: QueryParams & { userId: string },
+): Promise<AdminUserPaymentsResponse> {
+  return adminRequest<AdminUserPaymentsResponse>(
+    `/api/admin/users/payments${toQueryString(params)}`,
+  );
+}
+
+export async function fetchSupportTickets(
+  params: QueryParams = {},
+): Promise<SupportTicketsResponse> {
+  return adminRequest<SupportTicketsResponse>(
+    `/api/admin/support/tickets${toQueryString(params)}`,
+  );
+}
+
+export async function createSupportTicket(
+  input: CreateSupportTicketInput,
+): Promise<SupportMutationResponse> {
+  return adminRequest<SupportMutationResponse>("/api/admin/support/tickets", {
+    method: "POST",
+    headers: buildDangerHeaders(
+      "admin-create-support-ticket",
+      input.relatedId ?? input.userId ?? input.subject,
+    ),
+    body: {
+      userId: input.userId ?? undefined,
+      ticketType: input.ticketType,
+      subject: input.subject,
+      message: input.message ?? undefined,
+      relatedType: input.relatedType ?? undefined,
+      relatedId: input.relatedId ?? undefined,
+      metadata: input.metadata,
+      reason: input.reason,
+      confirm: true,
+    },
+  });
+}
+
+export async function updateSupportTicket(
+  input: UpdateSupportTicketInput,
+): Promise<SupportMutationResponse> {
+  return adminRequest<SupportMutationResponse>("/api/admin/support/tickets", {
+    method: "PATCH",
+    headers: buildDangerHeaders(
+      "admin-update-support-ticket",
+      `${input.ticketId}:${input.status ?? input.assignedAdminId ?? "update"}`,
+    ),
+    body: {
+      ticketId: input.ticketId,
+      status: input.status,
+      assignedAdminId: input.assignedAdminId,
+      resolution: input.resolution ?? undefined,
+      rejectionReason: input.rejectionReason ?? undefined,
+      escalationOwner: input.escalationOwner ?? undefined,
+      escalationQueue: input.escalationQueue ?? undefined,
+      result: input.result,
+      reason: input.reason,
+      confirm: true,
+    },
+  });
+}
+
+export async function createCompensationRequest(
+  input: CreateCompensationRequestInput,
+): Promise<SupportMutationResponse> {
+  const target = [
+    input.targetUserId,
+    input.compensationType,
+    input.currencyCode ?? input.itemTemplateId ?? input.ticketId ?? "request",
+  ].join(":");
+
+  return adminRequest<SupportMutationResponse>(
+    "/api/admin/support/create-compensation-request",
+    {
+      method: "POST",
+      headers: buildDangerHeaders("admin-create-compensation-request", target),
+      body: {
+        targetUserId: input.targetUserId,
+        ticketId: input.ticketId ?? undefined,
+        compensationType: input.compensationType,
+        currencyCode: input.currencyCode ?? undefined,
+        amount: input.amount ?? undefined,
+        itemTemplateId: input.itemTemplateId ?? undefined,
+        itemFormId: input.itemFormId ?? undefined,
+        sourceType: input.sourceType ?? undefined,
+        sourceId: input.sourceId ?? undefined,
+        sourceTaskProgressId: input.sourceTaskProgressId ?? undefined,
+        sourceTaskClaimId: input.sourceTaskClaimId ?? undefined,
+        sourceTaskId: input.sourceTaskId ?? undefined,
+        sourceTaskPeriodKey: input.sourceTaskPeriodKey ?? undefined,
+        sourceDrawOrderId: input.sourceDrawOrderId ?? undefined,
+        sourceStarOrderId: input.sourceStarOrderId ?? undefined,
+        notificationTitle: input.notificationTitle ?? undefined,
+        notificationBody: input.notificationBody ?? undefined,
+        impactPreview: input.impactPreview,
+        reason: input.reason,
+        confirm: true,
+      },
+    },
   );
 }
 
