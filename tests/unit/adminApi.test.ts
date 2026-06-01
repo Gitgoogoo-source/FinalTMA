@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const STAR_ORDER_ID = "11111111-1111-4111-8111-111111111111";
 const STAR_PAYMENT_ID = "33333333-3333-4333-8333-333333333333";
 const ALERT_ID = "55555555-5555-4555-8555-555555555555";
+const MARKET_LISTING_ID = "77777777-7777-4777-8777-777777777777";
 
 describe("admin api client", () => {
   beforeEach(() => {
@@ -186,6 +187,121 @@ describe("admin api client", () => {
       action: "resolved",
       reason: "queue drained after retry",
       resolutionResult: "order fulfilled",
+      confirm: true,
+    });
+  });
+
+  it("calls market ops read endpoints with filters and pagination", async () => {
+    const fetchMock = vi.fn(
+      async (_input: RequestInfo | URL, _init?: RequestInit) =>
+        new Response(
+          JSON.stringify({
+            ok: true,
+            success: true,
+            data: {
+              items: [],
+              summary: {},
+              nextCursor: null,
+              serverTime: "2026-06-01T06:00:00.000Z",
+            },
+          }),
+          {
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const {
+      fetchMarketAdminListings,
+      fetchMarketHealthRules,
+      fetchMarketOpsStats,
+      fetchMarketPriceRules,
+    } = await import("../../apps/admin/src/admin.api");
+
+    await fetchMarketOpsStats({ windowHours: 24 });
+    await fetchMarketAdminListings({
+      status: "active",
+      rarityCode: "rare",
+      templateId: "99999999-9999-4999-8999-999999999999",
+      minPriceKcoin: 100,
+      maxPriceKcoin: 500,
+      sellerUserId: "88888888-8888-4888-8888-888888888888",
+      limit: 25,
+      cursor: "next-page",
+    });
+    await fetchMarketPriceRules({ active: true, limit: 50 });
+    await fetchMarketHealthRules({ rarityCode: "rare", active: true });
+
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    expect(fetchMock.mock.calls.map(([path]) => path)).toEqual([
+      "/api/admin/market/stats?windowHours=24",
+      "/api/admin/market/listings?status=active&rarityCode=rare&templateId=99999999-9999-4999-8999-999999999999&minPriceKcoin=100&maxPriceKcoin=500&sellerUserId=88888888-8888-4888-8888-888888888888&limit=25&cursor=next-page",
+      "/api/admin/market/price-rules?active=true&limit=50",
+      "/api/admin/market/health-rules?rarityCode=rare&active=true",
+    ]);
+  });
+
+  it("calls force-cancel-listing with confirmation, reason, and idempotency", async () => {
+    const fetchMock = vi.fn(
+      async (_input: RequestInfo | URL, _init?: RequestInit) =>
+        new Response(
+          JSON.stringify({
+            ok: true,
+            success: true,
+            data: {
+              listing_id: MARKET_LISTING_ID,
+              status: "cancelled",
+              audit_log_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+              serverTime: "2026-06-01T06:00:00.000Z",
+            },
+          }),
+          {
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { forceCancelMarketListing } =
+      await import("../../apps/admin/src/admin.api");
+
+    await forceCancelMarketListing({
+      listingId: MARKET_LISTING_ID,
+      reason: "abnormal under-floor listing requires admin force cancel",
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    const call = fetchMock.mock.calls.at(0);
+    expect(call).toBeDefined();
+    if (!call) {
+      throw new Error("Expected forceCancelMarketListing to call fetch.");
+    }
+
+    const [path, init] = call;
+    expect(path).toBe("/api/admin/market/force-cancel-listing");
+    expect(init).toBeDefined();
+    if (!init) {
+      throw new Error("Expected forceCancelMarketListing to pass init.");
+    }
+
+    const headers = readHeaders(init);
+    const idempotencyKey = headers.get("X-Idempotency-Key") ?? "";
+
+    expect(init.method).toBe("POST");
+    expect(init.credentials).toBe("include");
+    expect(headers.get("Content-Type")).toBe("application/json");
+    expect(headers.get("X-Admin-Confirm")).toBe("true");
+    expect(idempotencyKey).toContain("admin-force-cancel-market-listing");
+    expect(idempotencyKey).toContain(MARKET_LISTING_ID);
+    expect(readJsonBody(init)).toEqual({
+      listingId: MARKET_LISTING_ID,
+      reason: "abnormal under-floor listing requires admin force cancel",
       confirm: true,
     });
   });

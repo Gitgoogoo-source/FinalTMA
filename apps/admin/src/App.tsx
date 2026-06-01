@@ -83,8 +83,7 @@ const NAV_ITEMS: AdminNavItem[] = [
     id: "market-ops",
     label: "市场",
     icon: Store,
-    requiredPermissions: ["market:read", "admin:read"],
-    permissionMode: "any",
+    requiredPermissions: ["market:read"],
   },
   {
     id: "wallets",

@@ -25,8 +25,14 @@ import type {
   EconomyMonitoringResponse,
   FeatureFlagsResponse,
   GachaMonitoringResponse,
+  ForceCancelMarketListingInput,
+  ForceCancelMarketListingResponse,
+  MarketAdminListingsResponse,
   MarketListingAdminDetail,
+  MarketHealthRulesResponse,
   MarketMonitoringResponse,
+  MarketOpsStats,
+  MarketPriceRulesResponse,
   MintQueueResponse,
   MonitoringResponse,
   PaymentAdminResponse,
@@ -238,11 +244,63 @@ export async function fetchMarketMonitoring(
   );
 }
 
+export async function fetchMarketOpsStats(
+  params: QueryParams = {},
+): Promise<MarketOpsStats> {
+  return adminRequest<MarketOpsStats>(
+    `/api/admin/market/stats${toQueryString(params)}`,
+  );
+}
+
+export async function fetchMarketAdminListings(
+  params: QueryParams = {},
+): Promise<MarketAdminListingsResponse> {
+  return adminRequest<MarketAdminListingsResponse>(
+    `/api/admin/market/listings${toQueryString(params)}`,
+  );
+}
+
+export async function fetchMarketPriceRules(
+  params: QueryParams = {},
+): Promise<MarketPriceRulesResponse> {
+  return adminRequest<MarketPriceRulesResponse>(
+    `/api/admin/market/price-rules${toQueryString(params)}`,
+  );
+}
+
+export async function fetchMarketHealthRules(
+  params: QueryParams = {},
+): Promise<MarketHealthRulesResponse> {
+  return adminRequest<MarketHealthRulesResponse>(
+    `/api/admin/market/health-rules${toQueryString(params)}`,
+  );
+}
+
 export async function fetchMarketListingDetail(
   listingId: string,
 ): Promise<MarketListingAdminDetail> {
   return adminRequest<MarketListingAdminDetail>(
     `/api/admin/market${toQueryString({ listingId })}`,
+  );
+}
+
+export async function forceCancelMarketListing(
+  input: ForceCancelMarketListingInput,
+): Promise<ForceCancelMarketListingResponse> {
+  return adminRequest<ForceCancelMarketListingResponse>(
+    "/api/admin/market/force-cancel-listing",
+    {
+      method: "POST",
+      headers: buildDangerHeaders(
+        "admin-force-cancel-market-listing",
+        input.listingId,
+      ),
+      body: {
+        listingId: input.listingId,
+        reason: input.reason,
+        confirm: true,
+      },
+    },
   );
 }
 

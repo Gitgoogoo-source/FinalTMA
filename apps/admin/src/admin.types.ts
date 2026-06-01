@@ -17,6 +17,12 @@ type TelegramWebhookEventRow =
 type ReconciliationRunRow =
   Database["economy"]["Tables"]["reconciliation_runs"]["Row"];
 type RiskEventRow = Database["ops"]["Tables"]["risk_events"]["Row"];
+type MarketListingRow = Database["market"]["Tables"]["listings"]["Row"];
+type MarketPriceHealthRuleRow =
+  Database["market"]["Tables"]["price_health_rules"]["Row"];
+type CatalogMarketPriceRuleRow =
+  Database["catalog"]["Tables"]["market_price_rules"]["Row"];
+type EconomyFeeRuleRow = Database["economy"]["Tables"]["fee_rules"]["Row"];
 
 export type AdminApiEnvelope<T> = {
   ok: true;
@@ -524,6 +530,129 @@ export type EconomyMonitoringResponse = MonitoringDomainResponse;
 export type GachaMonitoringResponse = MonitoringDomainResponse;
 
 export type MarketMonitoringResponse = MonitoringDomainResponse;
+
+export type MarketOpsStats = {
+  activeListingCount: number;
+  activeListingValueKcoin?: number | string | null;
+  soldListingCount?: number;
+  cancelledListingCount?: number;
+  expiredListingCount?: number;
+  volume24hKcoin: number | string;
+  feeRevenueKcoin: number | string;
+  abnormalListingCount: number;
+  statusCounts?: Record<string, number>;
+  priceHealthCounts?: Record<string, number>;
+  sources?: Record<string, unknown>;
+  serverTime: string;
+};
+
+export type MarketListingAdminItem = {
+  id: MarketListingRow["id"];
+  status: MarketListingRow["status"];
+  sellerUserId?: MarketListingRow["seller_user_id"] | null;
+  sellerTelegramId?: number | string | null;
+  templateId: MarketListingRow["template_id"];
+  templateName?: string | null;
+  templateSlug?: string | null;
+  formId?: MarketListingRow["form_id"];
+  formName?: string | null;
+  rarityCode: MarketListingRow["rarity_code"];
+  itemCount: MarketListingRow["item_count"];
+  remainingCount: MarketListingRow["remaining_count"];
+  unitPriceKcoin: MarketListingRow["unit_price_kcoin"];
+  totalPriceKcoin?: number | string | null;
+  feeBps: MarketListingRow["fee_bps"];
+  feeAmountKcoin?: number | string | null;
+  expectedNetAmount: MarketListingRow["expected_net_amount"];
+  priceHealth?: MarketListingRow["price_health"];
+  abnormalReasons?: string[];
+  anomalyType?: string | null;
+  anomalyTypes?: string[] | null;
+  lockWarning?: string | null;
+  lockStatus?: string | null;
+  expiresAt?: MarketListingRow["expires_at"];
+  lastPriceChangedAt?: MarketListingRow["last_price_changed_at"];
+  createdAt: MarketListingRow["created_at"];
+  updatedAt: MarketListingRow["updated_at"];
+};
+
+export type MarketPriceRule = {
+  id: CatalogMarketPriceRuleRow["id"];
+  templateId?: CatalogMarketPriceRuleRow["template_id"];
+  formIndex?: CatalogMarketPriceRuleRow["form_index"];
+  rarityCode?: CatalogMarketPriceRuleRow["rarity_code"];
+  minPriceKcoin: CatalogMarketPriceRuleRow["min_price_kcoin"];
+  maxPriceKcoin?: CatalogMarketPriceRuleRow["max_price_kcoin"];
+  suggestedPriceKcoin?: CatalogMarketPriceRuleRow["suggested_price_kcoin"];
+  active: CatalogMarketPriceRuleRow["active"];
+  metadata: CatalogMarketPriceRuleRow["metadata"];
+  createdAt: CatalogMarketPriceRuleRow["created_at"];
+  updatedAt: CatalogMarketPriceRuleRow["updated_at"];
+};
+
+export type MarketHealthRule = {
+  id: MarketPriceHealthRuleRow["id"];
+  templateId?: MarketPriceHealthRuleRow["template_id"];
+  rarityCode?: MarketPriceHealthRuleRow["rarity_code"];
+  minRatioToFloor: MarketPriceHealthRuleRow["min_ratio_to_floor"];
+  maxRatioToFloor: MarketPriceHealthRuleRow["max_ratio_to_floor"];
+  active: MarketPriceHealthRuleRow["active"];
+  metadata: MarketPriceHealthRuleRow["metadata"];
+  createdAt: MarketPriceHealthRuleRow["created_at"];
+  updatedAt: MarketPriceHealthRuleRow["updated_at"];
+};
+
+export type MarketFeeRule = {
+  id: EconomyFeeRuleRow["id"];
+  code: EconomyFeeRuleRow["code"];
+  feeType: EconomyFeeRuleRow["fee_type"];
+  currencyCode: EconomyFeeRuleRow["currency_code"];
+  feeBps: EconomyFeeRuleRow["fee_bps"];
+  minFee: EconomyFeeRuleRow["min_fee"];
+  maxFee?: EconomyFeeRuleRow["max_fee"];
+  startsAt?: EconomyFeeRuleRow["starts_at"];
+  endsAt?: EconomyFeeRuleRow["ends_at"];
+  active: EconomyFeeRuleRow["active"];
+  metadata: EconomyFeeRuleRow["metadata"];
+  createdAt: EconomyFeeRuleRow["created_at"];
+  updatedAt: EconomyFeeRuleRow["updated_at"];
+};
+
+export type MarketAdminListingsResponse = {
+  items: MarketListingAdminItem[];
+  summary?: Record<string, unknown>;
+  nextCursor: string | null;
+  serverTime: string;
+};
+
+export type MarketPriceRulesResponse = {
+  items: MarketPriceRule[];
+  feeRules?: MarketFeeRule[];
+  fee_rules?: MarketFeeRule[];
+  summary?: Record<string, unknown>;
+  nextCursor: string | null;
+  serverTime: string;
+};
+
+export type MarketHealthRulesResponse = {
+  items: MarketHealthRule[];
+  summary?: Record<string, unknown>;
+  nextCursor: string | null;
+  serverTime: string;
+};
+
+export type ForceCancelMarketListingInput = {
+  listingId: string;
+  reason: string;
+};
+
+export type ForceCancelMarketListingResponse = AdminConfigMutationResponse & {
+  listing_id?: string;
+  listingId?: string;
+  previous_status?: string;
+  previousStatus?: string;
+  status?: string;
+};
 
 export type MarketListingDetailItem = {
   id: string;
