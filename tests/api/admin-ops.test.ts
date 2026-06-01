@@ -7,11 +7,13 @@ const {
   assertAdminPermissionsMock,
   getSupabaseAdminClientMock,
   requireAdminMock,
+  runReadRpcMock,
   runWriteRpcMock,
 } = vi.hoisted(() => ({
   assertAdminPermissionsMock: vi.fn(),
   getSupabaseAdminClientMock: vi.fn(),
   requireAdminMock: vi.fn(),
+  runReadRpcMock: vi.fn(),
   runWriteRpcMock: vi.fn(),
 }));
 
@@ -25,6 +27,7 @@ vi.mock("../../api/_shared/requireAdmin.js", () => ({
 }));
 
 vi.mock("../../packages/server/src/db/transactions.js", () => ({
+  runReadRpc: runReadRpcMock,
   runWriteRpc: runWriteRpcMock,
 }));
 
@@ -81,6 +84,7 @@ describe("admin ops APIs", () => {
     getSupabaseAdminClientMock.mockReset();
     assertAdminPermissionsMock.mockReset();
     requireAdminMock.mockReset();
+    runReadRpcMock.mockReset();
     runWriteRpcMock.mockReset();
     assertAdminPermissionsMock.mockImplementation(() => undefined);
     requireAdminMock.mockResolvedValue(ADMIN_CONTEXT);
@@ -1165,89 +1169,64 @@ describe("admin ops APIs", () => {
   });
 
   it("lets admins query phase 5 monitoring metrics", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-05-30T00:00:00.000Z"));
-
-    const db = createAdminReadDbMock({
-      "payments.star_orders": [
-        {
-          id: STAR_ORDER_ID,
-          user_id: ADMIN_CONTEXT.userId,
-          status: "failed",
-          paid_at: "2026-05-29T23:10:00.000Z",
-          fulfilled_at: null,
-          error_message: "fulfillment failed",
-          created_at: "2026-05-29T23:00:00.000Z",
-          updated_at: "2026-05-29T23:11:00.000Z",
-        },
-        {
-          id: "66666666-6666-4666-8666-666666666667",
-          user_id: ADMIN_CONTEXT.userId,
-          status: "fulfilled",
-          paid_at: "2026-05-29T22:30:00.000Z",
-          fulfilled_at: "2026-05-29T22:31:00.000Z",
-          error_message: null,
-          created_at: "2026-05-29T22:00:00.000Z",
-          updated_at: "2026-05-29T22:31:00.000Z",
-        },
-        {
-          id: "66666666-6666-4666-8666-666666666668",
-          user_id: ADMIN_CONTEXT.userId,
-          status: "paid",
-          paid_at: "2026-05-29T23:20:00.000Z",
-          fulfilled_at: null,
-          error_message: null,
-          created_at: "2026-05-29T23:19:00.000Z",
-          updated_at: "2026-05-29T23:20:00.000Z",
-        },
-      ],
-      "payments.telegram_webhook_events": [
-        {
-          id: "88888888-8888-4888-8888-888888888888",
-          update_id: 1001,
-          event_type: "successful_payment",
-          process_status: "processed",
-          processed_at: "2026-05-29T23:00:03.000Z",
-          error_message: null,
-          created_at: "2026-05-29T23:00:00.000Z",
-        },
-        {
-          id: "88888888-8888-4888-8888-888888888889",
-          update_id: 1002,
-          event_type: "successful_payment",
-          process_status: "processing",
-          processed_at: null,
-          error_message: null,
-          created_at: "2026-05-29T23:50:00.000Z",
-        },
-      ],
-      "onchain.mint_queue": [
-        {
-          id: MINT_QUEUE_ID,
-          user_id: ADMIN_CONTEXT.userId,
-          status: "processing",
-          attempt_count: 1,
-          max_attempts: 3,
-          next_attempt_at: null,
-          completed_at: null,
-          error_message: null,
-          created_at: "2026-05-29T22:00:00.000Z",
-          updated_at: "2026-05-29T23:00:00.000Z",
-        },
-      ],
-      "ops.system_settings": [
-        {
-          key: "PAYMENT_SUPPORT_CONFIG",
-          value: {
+    runReadRpcMock.mockImplementation(
+      async (input: { functionName: string }) => {
+        if (input.functionName === "get_payment_support_config") {
+          return {
             configured: false,
             support_url: null,
             support_email: null,
+            updated_at: "2026-05-29T23:00:00.000Z",
+            source: "system_settings",
+          };
+        }
+
+        return {
+          window: {
+            hours: 24,
+            startedAt: "2026-05-29T00:00:00.000Z",
+            endedAt: "2026-05-30T00:00:00.000Z",
           },
-          updated_at: "2026-05-29T23:00:00.000Z",
-        },
-      ],
-    });
-    getSupabaseAdminClientMock.mockReturnValue(db.client);
+          metrics: {
+            paymentFailureRate: {
+              key: "payment_failure_rate",
+              numerator: 1,
+              denominator: 3,
+              status: "critical",
+            },
+            fulfillmentFailureRate: {
+              key: "fulfillment_failure_rate",
+              numerator: 1,
+              denominator: 3,
+              stuckCount: 1,
+              status: "critical",
+            },
+            webhookLatency: {
+              key: "webhook_latency",
+              p95Ms: 3000,
+              pendingCount: 1,
+              stuckCount: 1,
+              status: "critical",
+            },
+            mintStuckCount: {
+              key: "mint_stuck_count",
+              activeCount: 1,
+              stuckCount: 1,
+              status: "warning",
+            },
+          },
+          recentExceptions: {
+            paymentOrders: [],
+            webhookEvents: [],
+            mintQueue: [],
+          },
+          sources: {
+            limitPerQuery: 1000,
+          },
+          serverTime: "2026-05-30T00:00:00.000Z",
+        };
+      },
+    );
 
     const { default: monitoringHandler } =
       await import("../../api/admin/monitoring");
@@ -1312,33 +1291,28 @@ describe("admin ops APIs", () => {
         permissions: ["payments:read", "mint:read", "onchain:read"],
       }),
     );
-    expect(db.operations).toEqual(
+    expect(runReadRpcMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        schema: "api",
+        functionName: "admin_get_operational_monitoring",
+        args: expect.objectContaining({
+          p_admin_user_id: ADMIN_CONTEXT.adminId,
+          p_window_hours: 24,
+        }),
+      }),
+    );
+    expect(runReadRpcMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        schema: "api",
+        functionName: "get_payment_support_config",
+      }),
+    );
+    expect(
+      runReadRpcMock.mock.calls.map(([input]) => input.functionName),
+    ).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({
-          schema: "payments",
-          table: "star_orders",
-          filters: expect.arrayContaining([
-            expect.objectContaining({
-              kind: "gte",
-              column: "created_at",
-            }),
-          ]),
-        }),
-        expect.objectContaining({
-          schema: "onchain",
-          table: "mint_queue",
-        }),
-        expect.objectContaining({
-          schema: "ops",
-          table: "system_settings",
-          filters: expect.arrayContaining([
-            expect.objectContaining({
-              kind: "eq",
-              column: "key",
-              value: "PAYMENT_SUPPORT_CONFIG",
-            }),
-          ]),
-        }),
+        "admin_get_operational_monitoring",
+        "get_payment_support_config",
       ]),
     );
   });

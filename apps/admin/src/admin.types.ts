@@ -315,6 +315,17 @@ export type PaymentDetailResponse = {
 
 export type MonitoringStatus = "ok" | "warning" | "critical";
 
+export type MonitoringWindow = {
+  hours: number;
+  startedAt: string;
+  endedAt: string;
+};
+
+export type MonitoringSources = Record<
+  string,
+  number | string | boolean | null | undefined
+>;
+
 export type MonitoringRateMetric = {
   key: string;
   label: string;
@@ -353,9 +364,57 @@ export type MonitoringCountMetric = {
   description: string;
 };
 
+export type MonitoringMetricUnit =
+  | "count"
+  | "percent"
+  | "milliseconds"
+  | "stars"
+  | "xtr"
+  | "kcoin"
+  | "fgems"
+  | "currency"
+  | "ratio"
+  | string;
+
+export type MonitoringBreakdownItem = {
+  key: string;
+  label?: string | null;
+  value: number | string | null;
+  unit?: MonitoringMetricUnit;
+  status?: MonitoringStatus | string;
+};
+
+export type MonitoringGenericMetric = {
+  key: string;
+  label: string;
+  value: number | string | null;
+  unit: MonitoringMetricUnit;
+  status: MonitoringStatus;
+  description?: string | null;
+  numerator?: number | null;
+  denominator?: number | null;
+  previousValue?: number | string | null;
+  breakdown?: MonitoringBreakdownItem[];
+  meta?: Record<string, unknown>;
+};
+
+export type MonitoringMetricCollection =
+  | MonitoringGenericMetric[]
+  | Record<
+      string,
+      MonitoringGenericMetric | number | string | boolean | null | undefined
+    >;
+
 export type MonitoringException = {
   id: string;
   userId?: string;
+  sourceType?: string | null;
+  source_type?: string | null;
+  sourceId?: string | null;
+  source_id?: string | null;
+  title?: string | null;
+  message?: string | null;
+  severity?: string | null;
   updateId?: number | string | null;
   eventType?: string;
   processStatus?: string;
@@ -387,12 +446,167 @@ export type MonitoringWarning = {
   suggestedAction: string;
 };
 
+export type MonitoringAlertStatus =
+  | "open"
+  | "acknowledged"
+  | "resolved"
+  | "ignored"
+  | string;
+
+export type MonitoringAlert = {
+  id: string;
+  alertId?: string;
+  alert_id?: string;
+  alertType?: string;
+  alert_type?: string;
+  title?: string | null;
+  message?: string | null;
+  severity?: string | null;
+  status: MonitoringAlertStatus;
+  sourceType?: string | null;
+  source_type?: string | null;
+  sourceId?: string | null;
+  source_id?: string | null;
+  createdAt?: string;
+  created_at?: string;
+  acknowledgedAt?: string | null;
+  acknowledged_at?: string | null;
+  metadata?: Json;
+};
+
+export type UpdateAdminAlertAction =
+  | "ack"
+  | "acknowledge"
+  | "acknowledged"
+  | "resolve"
+  | "resolved"
+  | "ignore"
+  | "ignored";
+
+export type UpdateAdminAlertStatusInput = {
+  alertId: string;
+  action: UpdateAdminAlertAction;
+  reason: string;
+  resolutionResult?: string | null;
+};
+
+export type UpdateAdminAlertStatusResponse = AdminConfigMutationResponse & {
+  alert_id?: string;
+  alertId?: string;
+  status?: string;
+  previous_status?: string;
+  previousStatus?: string;
+};
+
+export type MonitoringLinkedException = MonitoringException & {
+  detail?: Json;
+  metadata?: Json;
+};
+
+export type MonitoringDomainResponse = {
+  window: MonitoringWindow;
+  metrics?: MonitoringMetricCollection;
+  summary?: Record<string, unknown>;
+  alerts?: MonitoringAlert[];
+  exceptions?: MonitoringLinkedException[];
+  recentExceptions?:
+    | MonitoringLinkedException[]
+    | Record<string, MonitoringLinkedException[]>;
+  warnings?: MonitoringWarning[];
+  sources: MonitoringSources;
+  serverTime: string;
+};
+
+export type BusinessMonitoringResponse = MonitoringDomainResponse;
+
+export type EconomyMonitoringResponse = MonitoringDomainResponse;
+
+export type GachaMonitoringResponse = MonitoringDomainResponse;
+
+export type MarketMonitoringResponse = MonitoringDomainResponse;
+
+export type MarketListingDetailItem = {
+  id: string;
+  itemInstanceId: string;
+  status: string;
+  soldOrderId?: string | null;
+  soldAt?: string | null;
+  createdAt?: string | null;
+  itemStatus?: string | null;
+  level?: number | null;
+  power?: number | null;
+  nftMintStatus?: string | null;
+};
+
+export type MarketListingDetailOrder = {
+  id: string;
+  status: string;
+  itemCount: number;
+  unitPriceKcoin: number | string;
+  totalPriceKcoin: number | string;
+  feeBps: number;
+  feeAmountKcoin: number | string;
+  sellerNetAmountKcoin: number | string;
+  completedAt?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+};
+
+export type MarketListingDetailEvent = {
+  id: string;
+  eventType: string;
+  createdAt?: string | null;
+};
+
+export type MarketListingAdminDetail = {
+  id: string;
+  status: string;
+  templateId: string;
+  formId?: string | null;
+  rarityCode: string;
+  itemCount: number;
+  remainingCount: number;
+  unitPriceKcoin: number | string;
+  feeBps: number;
+  expectedNetAmount: number | string;
+  priceHealth?: string | null;
+  expiresAt?: string | null;
+  lastPriceChangedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  template?: {
+    id: string;
+    slug: string;
+    displayName: string;
+    rarityCode: string;
+    typeCode: string;
+    releaseStatus: string;
+    tradeable: boolean;
+  } | null;
+  form?: {
+    id: string;
+    formIndex: number;
+    formSlug: string;
+    displayName: string;
+    imageUrl?: string | null;
+    thumbnailUrl?: string | null;
+  } | null;
+  items: MarketListingDetailItem[];
+  orders: MarketListingDetailOrder[];
+  events: MarketListingDetailEvent[];
+  sources: Record<string, unknown>;
+  serverTime: string;
+};
+
+export type AdminAlertsResponse = {
+  items: MonitoringAlert[];
+  summary: Record<string, unknown>;
+  nextCursor: string | null;
+  serverTime: string;
+};
+
 export type MonitoringResponse = {
-  window: {
-    hours: number;
-    startedAt: string;
-    endedAt: string;
-  };
+  window: MonitoringWindow;
   thresholds: {
     webhookStuckMinutes: number;
     fulfillmentStuckMinutes: number;
@@ -411,7 +625,7 @@ export type MonitoringResponse = {
   };
   paymentSupport: PaymentSupportConfig;
   warnings: MonitoringWarning[];
-  sources: Record<string, number>;
+  sources: MonitoringSources;
   serverTime: string;
 };
 
@@ -1472,6 +1686,7 @@ export type AdminTab =
   | "reconciliation"
   | "risk"
   | "mint"
+  | "market-ops"
   | "wallets"
   | "campaigns"
   | "blind-boxes"

@@ -2,7 +2,11 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
 import { App } from "./App";
+import { AdminErrorBoundary } from "./components/AdminErrorBoundary";
+import { initializeAdminObservability } from "./observability";
 import "./styles.css";
+
+initializeAdminObservability();
 
 const root = document.getElementById("root");
 
@@ -12,6 +16,8 @@ if (!root) {
 
 createRoot(root).render(
   <StrictMode>
-    <App />
+    <AdminErrorBoundary>
+      <App />
+    </AdminErrorBoundary>
   </StrictMode>,
 );

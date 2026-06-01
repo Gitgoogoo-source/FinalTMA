@@ -10,6 +10,7 @@ import {
   ScrollText,
   ShieldAlert,
   ShieldCheck,
+  Store,
   Users,
   WalletCards,
 } from "lucide-react";
@@ -29,6 +30,7 @@ import { DashboardPage } from "./pages/DashboardPage";
 import { DangerOpsPage } from "./pages/DangerOpsPage";
 import { FeatureFlagsPage } from "./pages/FeatureFlagsPage";
 import { GachaPoolsPage } from "./pages/GachaPoolsPage";
+import { MarketOpsPage } from "./pages/MarketOpsPage";
 import { MintQueuePage } from "./pages/MintQueuePage";
 import { PaymentsPage } from "./pages/PaymentsPage";
 import { PermissionMatrixPage } from "./pages/PermissionMatrixPage";
@@ -76,6 +78,13 @@ const NAV_ITEMS: AdminNavItem[] = [
     label: "Mint",
     icon: Activity,
     requiredPermissions: ["mint:read", "onchain:read"],
+  },
+  {
+    id: "market-ops",
+    label: "市场",
+    icon: Store,
+    requiredPermissions: ["market:read", "admin:read"],
+    permissionMode: "any",
   },
   {
     id: "wallets",
@@ -304,6 +313,8 @@ function renderActivePage(tab: AdminTab, me: AdminMeResponse) {
       );
     case "mint":
       return <MintQueuePage />;
+    case "market-ops":
+      return <MarketOpsPage />;
     case "wallets":
       return <WalletsPage />;
     case "campaigns":

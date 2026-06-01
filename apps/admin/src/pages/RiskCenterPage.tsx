@@ -99,8 +99,47 @@ const EMPTY_FILTERS: RiskFilterDraft = {
   to: "",
 };
 
+function readRiskFiltersFromHash(): RiskFilterDraft | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const hash = window.location.hash.replace(/^#/, "");
+  const [route, queryString = ""] = hash.split("?");
+
+  if (route !== "risk") {
+    return null;
+  }
+
+  const params = new URLSearchParams(queryString);
+  const nextFilters: RiskFilterDraft = { ...EMPTY_FILTERS };
+  const userId = readNonEmpty(params.get("userId") ?? params.get("user_id"));
+  const sourceId = readNonEmpty(
+    params.get("sourceId") ?? params.get("source_id"),
+  );
+
+  if (userId) {
+    nextFilters.userId = userId;
+  }
+
+  if (sourceId) {
+    nextFilters.sourceId = sourceId;
+  }
+
+  return nextFilters;
+}
+
+function readNonEmpty(value: string | null | undefined): string | null {
+  const normalized = value?.trim();
+
+  return normalized ? normalized : null;
+}
+
 export function RiskCenterPage(props: { canWriteRisk?: boolean }) {
   const [filters, setFilters] = useState<RiskFilterDraft>(EMPTY_FILTERS);
+  const [hashProfileUserId, setHashProfileUserId] = useState<string | null>(
+    null,
+  );
   const [cursor, setCursor] = useState<string | null>(null);
   const [previousCursors, setPreviousCursors] = useState<string[]>([]);
   const [data, setData] = useState<RiskEventsResponse | null>(null);
@@ -120,7 +159,10 @@ export function RiskCenterPage(props: { canWriteRisk?: boolean }) {
   >("support_review_required");
 
   const events = data?.items ?? [];
-  const selectedUserId = selectedEvent ? getEventUserId(selectedEvent) : null;
+  const selectedUserId =
+    (selectedEvent ? getEventUserId(selectedEvent) : null) ??
+    readNonEmpty(filters.userId) ??
+    hashProfileUserId;
   const activeFlags = profile?.flags.active ?? [];
   const summary = useMemo(() => buildSummary(data), [data]);
   const canWriteRisk = props.canWriteRisk === true;
@@ -222,6 +264,7 @@ export function RiskCenterPage(props: { canWriteRisk?: boolean }) {
 
   function resetFilters() {
     setFilters(EMPTY_FILTERS);
+    setHashProfileUserId(null);
     setCursor(null);
     setPreviousCursors([]);
     setNotice(null);
@@ -382,7 +425,30 @@ export function RiskCenterPage(props: { canWriteRisk?: boolean }) {
   }
 
   useEffect(() => {
-    void loadEvents(null);
+    const initialFilters = readRiskFiltersFromHash() ?? EMPTY_FILTERS;
+
+    setFilters(initialFilters);
+    setHashProfileUserId(readNonEmpty(initialFilters.userId));
+    void loadEventsWithFilters(initialFilters, null);
+
+    function handleHashChange() {
+      const nextFilters = readRiskFiltersFromHash();
+
+      if (!nextFilters) {
+        return;
+      }
+
+      setFilters(nextFilters);
+      setHashProfileUserId(readNonEmpty(nextFilters.userId));
+      setCursor(null);
+      setPreviousCursors([]);
+      setNotice(null);
+      void loadEventsWithFilters(nextFilters, null);
+    }
+
+    window.addEventListener("hashchange", handleHashChange);
+
+    return () => window.removeEventListener("hashchange", handleHashChange);
   }, []);
 
   useEffect(() => {

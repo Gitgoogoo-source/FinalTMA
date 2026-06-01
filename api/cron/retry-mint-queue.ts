@@ -25,6 +25,7 @@ import {
 import { assertCronRequest } from "../_shared/cron.js";
 import { ApiError, withApiHandler } from "../_shared/handler.js";
 import { recordMintRetryExceededRisk } from "../_shared/mintRiskEvents.js";
+import { reportMintWorkerError } from "../_shared/observability.js";
 
 type MintQueueRow = {
   id: string;
@@ -158,6 +159,10 @@ export default withApiHandler(
         env: process.env,
       });
     } catch (error) {
+      await reportMintWorkerError(error, {
+        requestId: ctx.requestId,
+      });
+
       throw mapMintWorkerError(error);
     }
   },
@@ -269,6 +274,12 @@ export async function runMintQueueWorker(input: {
         result[queueStatus] += 1;
       }
     } catch (error) {
+      await reportMintWorkerError(error, {
+        requestId: input.requestId,
+        userId: claimed.user_id,
+        sourceId: claimed.id,
+      });
+
       const recovery = await moveMintQueueToRetryOrReview(input.db, claimed, {
         error,
         requestId: input.requestId,

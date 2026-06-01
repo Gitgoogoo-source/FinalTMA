@@ -11,6 +11,11 @@ import {
   type RateLimitScope,
 } from "../../packages/server/src/security/rateLimit.js";
 import { isAppError } from "./errors.js";
+import {
+  recordApiOperationalEvent,
+  recordSupabaseQueryError,
+  reportApiError,
+} from "./observability.js";
 
 export type HttpMethod =
   | "GET"
@@ -239,6 +244,8 @@ export function withApiHandler<T = unknown>(
       sendError(res, normalizeError(error), {
         requestId,
         elapsedMs: Date.now() - startedAt,
+        method,
+        path: req.url,
       });
     }
   };
@@ -424,6 +431,8 @@ function sendError(
   meta: {
     requestId: string;
     elapsedMs: number;
+    method?: string | undefined;
+    path?: string | undefined;
   },
 ): void {
   if (isResponseFinished(res)) {
@@ -447,21 +456,106 @@ function sendError(
   };
 
   if (error.statusCode >= 500) {
+    recordApiOperationalEvent({
+      eventName: "api.5xx",
+      eventSource: "api.handler",
+      requestId: meta.requestId,
+    });
+    recordSupabaseQueryErrorIfPresent(error, meta.requestId);
+    void reportApiError(error, {
+      requestId: meta.requestId,
+    });
+
     console.error(`[${meta.requestId}] ${error.code}: ${error.message}`, {
-      statusCode: error.statusCode,
-      details: error.details,
-      elapsedMs: meta.elapsedMs,
-      stack: error.stack,
+      requestId: meta.requestId,
     });
   } else {
+    if (error.statusCode === 429 || error.code === "RATE_LIMITED") {
+      recordApiOperationalEvent({
+        eventName: "api.rate_limited",
+        eventSource: "api.handler",
+        requestId: meta.requestId,
+      });
+    }
+
     console.warn(`[${meta.requestId}] ${error.code}: ${error.message}`, {
-      statusCode: error.statusCode,
-      details: error.details,
-      elapsedMs: meta.elapsedMs,
+      requestId: meta.requestId,
     });
   }
 
   res.status(error.statusCode).json(payload);
+}
+
+function recordSupabaseQueryErrorIfPresent(
+  error: ApiError,
+  requestId: string,
+): void {
+  const queryError = findSupabaseQueryError(error);
+
+  if (!queryError) {
+    return;
+  }
+
+  recordSupabaseQueryError(queryError, {
+    requestId,
+  });
+}
+
+function findSupabaseQueryError(error: unknown): unknown | null {
+  const visited = new Set<unknown>();
+  const queue: unknown[] = [error];
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+
+    if (!current || visited.has(current)) {
+      continue;
+    }
+
+    visited.add(current);
+
+    if (isSupabaseQueryErrorLike(current)) {
+      return current;
+    }
+
+    if (isRecord(current)) {
+      queue.push(current.cause);
+
+      if (isRecord(current.details)) {
+        queue.push(current.details.cause);
+      }
+    }
+  }
+
+  return null;
+}
+
+function isSupabaseQueryErrorLike(value: unknown): boolean {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  const name = typeof value.name === "string" ? value.name : "";
+  const message = typeof value.message === "string" ? value.message : "";
+  const code = typeof value.code === "string" ? value.code : "";
+
+  if (name === "RpcError" || name === "DbTransactionError") {
+    return true;
+  }
+
+  if (
+    message.includes("Supabase RPC") ||
+    message.includes("Database RPC") ||
+    message.includes("PostgREST")
+  ) {
+    return true;
+  }
+
+  return /^(?:PGRST[0-9A-Z]*|[0-9A-Z]{5})$/.test(code) && Boolean(message);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
 }
 
 function applySecurityHeaders(res: VercelResponse): void {

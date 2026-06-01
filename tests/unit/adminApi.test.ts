@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const STAR_ORDER_ID = "11111111-1111-4111-8111-111111111111";
 const STAR_PAYMENT_ID = "33333333-3333-4333-8333-333333333333";
+const ALERT_ID = "55555555-5555-4555-8555-555555555555";
 
 describe("admin api client", () => {
   beforeEach(() => {
@@ -70,6 +71,178 @@ describe("admin api client", () => {
       reason: "manual retry after webhook fulfillment failure",
       confirm: true,
     });
+  });
+
+  it("calls business monitoring endpoints with the selected window", async () => {
+    const responseData = {
+      window: {
+        hours: 6,
+        startedAt: "2026-06-01T00:00:00.000Z",
+        endedAt: "2026-06-01T06:00:00.000Z",
+      },
+      metrics: [],
+      sources: {
+        limitPerQuery: 1000,
+      },
+      serverTime: "2026-06-01T06:00:00.000Z",
+    };
+    const fetchMock = vi.fn(
+      async (_input: RequestInfo | URL, _init?: RequestInit) =>
+        new Response(
+          JSON.stringify({
+            ok: true,
+            success: true,
+            data: responseData,
+          }),
+          {
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const {
+      fetchAdminAlerts,
+      fetchBusinessMonitoring,
+      fetchEconomyMonitoring,
+      fetchGachaMonitoring,
+      fetchMarketMonitoring,
+    } = await import("../../apps/admin/src/admin.api");
+
+    await fetchBusinessMonitoring({ windowHours: 6 });
+    await fetchEconomyMonitoring({ windowHours: 6 });
+    await fetchGachaMonitoring({ windowHours: 6 });
+    await fetchMarketMonitoring({ windowHours: 6 });
+    await fetchAdminAlerts({ status: "open,acknowledged", limit: 50 });
+
+    expect(fetchMock).toHaveBeenCalledTimes(5);
+    expect(fetchMock.mock.calls.map(([path]) => path)).toEqual([
+      "/api/admin/monitoring/business?windowHours=6",
+      "/api/admin/monitoring/economy?windowHours=6",
+      "/api/admin/monitoring/gacha?windowHours=6",
+      "/api/admin/monitoring/market?windowHours=6",
+      "/api/admin/alerts?status=open%2Cacknowledged&limit=50",
+    ]);
+  });
+
+  it("calls alert lifecycle updates with reason, result, and idempotency", async () => {
+    const fetchMock = vi.fn(
+      async (_input: RequestInfo | URL, _init?: RequestInit) =>
+        new Response(
+          JSON.stringify({
+            ok: true,
+            success: true,
+            data: {
+              alert_id: ALERT_ID,
+              status: "resolved",
+              audit_log_id: "66666666-6666-4666-8666-666666666666",
+            },
+          }),
+          {
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { updateAdminAlertStatus } =
+      await import("../../apps/admin/src/admin.api");
+
+    await updateAdminAlertStatus({
+      alertId: ALERT_ID,
+      action: "resolved",
+      reason: "queue drained after retry",
+      resolutionResult: "order fulfilled",
+    });
+
+    const call = fetchMock.mock.calls.at(0);
+    expect(call).toBeDefined();
+    if (!call) {
+      throw new Error("Expected updateAdminAlertStatus to call fetch.");
+    }
+
+    const [path, init] = call;
+    expect(path).toBe("/api/admin/alerts");
+    expect(init).toBeDefined();
+    if (!init) {
+      throw new Error("Expected updateAdminAlertStatus to pass init.");
+    }
+
+    const headers = readHeaders(init);
+    const idempotencyKey = headers.get("X-Idempotency-Key") ?? "";
+
+    expect(init.method).toBe("PATCH");
+    expect(init.credentials).toBe("include");
+    expect(headers.get("Content-Type")).toBe("application/json");
+    expect(headers.get("X-Admin-Confirm")).toBe("true");
+    expect(idempotencyKey).toContain("admin-update-alert-status");
+    expect(idempotencyKey).toContain(ALERT_ID);
+    expect(readJsonBody(init)).toEqual({
+      alertId: ALERT_ID,
+      action: "resolved",
+      reason: "queue drained after retry",
+      resolutionResult: "order fulfilled",
+      confirm: true,
+    });
+  });
+
+  it("reports AdminApiError through sanitized admin observability", async () => {
+    const captureException = vi.fn();
+    const fetchMock = vi.fn(
+      async (_input: RequestInfo | URL, _init?: RequestInit) =>
+        new Response(
+          JSON.stringify({
+            ok: false,
+            success: false,
+            error: {
+              code: "ADMIN_MONITORING_FAILED",
+              message: "Monitoring query failed.",
+              details: {
+                service_role_key: "must-not-be-reported",
+              },
+            },
+            requestId: "req_monitoring_test",
+          }),
+          {
+            headers: {
+              "content-type": "application/json",
+            },
+            status: 500,
+          },
+        ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    vi.stubGlobal("Sentry", { captureException });
+
+    const { AdminApiError, fetchMonitoring } =
+      await import("../../apps/admin/src/admin.api");
+
+    try {
+      await fetchMonitoring({ windowHours: 24 });
+      throw new Error("Expected fetchMonitoring to throw.");
+    } catch (error) {
+      expect(error).toBeInstanceOf(AdminApiError);
+    }
+
+    expect(captureException).toHaveBeenCalledTimes(1);
+    const [, context] = captureException.mock.calls[0] ?? [];
+
+    expect(context).toMatchObject({
+      tags: {
+        area: "admin",
+        type: "admin_api_error",
+      },
+      extra: {
+        requestId: "req_monitoring_test",
+      },
+    });
+    expect(JSON.stringify(context)).not.toContain("must-not-be-reported");
+    expect(JSON.stringify(context)).not.toContain("/api/admin/monitoring");
+    expect(JSON.stringify(context)).not.toContain("ADMIN_MONITORING_FAILED");
   });
 
   it("preserves admin api errors for retry failures", async () => {

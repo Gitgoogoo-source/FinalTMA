@@ -37,6 +37,10 @@
     {
       "path": "/api/cron/sync-campaign-box-statuses",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/monitoring-alert-scan",
+      "schedule": "*/5 * * * *"
     }
   ],
   "functions": {

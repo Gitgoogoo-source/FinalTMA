@@ -13,6 +13,7 @@ import {
   getHeaderValue,
   withApiHandler,
 } from "../_shared/handler.js";
+import { reportPaymentWebhookError } from "../_shared/observability.js";
 import { parseJsonBody } from "../_shared/parseBody.js";
 
 export default withApiHandler(
@@ -54,6 +55,11 @@ export default withApiHandler(
         incrementRetryCount: false,
       });
 
+      await reportPaymentWebhookError(secretVerification.error, {
+        requestId: ctx.requestId,
+        sourceId: failedEvent.eventId,
+      });
+
       throw new ApiError(
         secretVerification.error.statusCode,
         secretVerification.error.code,
@@ -81,12 +87,16 @@ export default withApiHandler(
             webhookSecretVerified: true,
           });
         } catch (error) {
-          await markReceivedWebhookFailed({
+          const failedEvent = await markReceivedWebhookFailed({
             update,
             eventType,
             requestId: ctx.requestId,
             requestHeadersHash,
             error,
+          });
+          await reportPaymentWebhookError(error, {
+            requestId: ctx.requestId,
+            sourceId: failedEvent.eventId,
           });
 
           throw error;
@@ -147,12 +157,16 @@ export default withApiHandler(
         webhookSecretVerified: true,
       });
     } catch (error) {
-      await markReceivedWebhookFailed({
+      const failedEvent = await markReceivedWebhookFailed({
         update,
         eventType,
         requestId: ctx.requestId,
         requestHeadersHash,
         error,
+      });
+      await reportPaymentWebhookError(error, {
+        requestId: ctx.requestId,
+        sourceId: failedEvent.eventId,
       });
 
       throw error;
@@ -200,8 +214,8 @@ type MarkReceivedWebhookFailedInput = {
 
 async function markReceivedWebhookFailed(
   input: MarkReceivedWebhookFailedInput,
-): Promise<void> {
-  await recordTelegramWebhookReceived({
+): Promise<{ eventId: string | undefined }> {
+  const failedEvent = await recordTelegramWebhookReceived({
     update: input.update,
     eventType: input.eventType,
     requestId: input.requestId,
@@ -216,6 +230,11 @@ async function markReceivedWebhookFailed(
     nextRetryAt: null,
     incrementRetryCount: false,
   });
+
+  return {
+    eventId:
+      typeof failedEvent.eventId === "string" ? failedEvent.eventId : undefined,
+  };
 }
 
 function verifyTelegramWebhookSecret(

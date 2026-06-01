@@ -3,12 +3,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { type ApiSuccessResponse } from "../../api/_shared/handler";
 import { invokeApiHandler } from "./_utils";
 
-const { getSupabaseAdminClientMock, requireAdminMock, runWriteRpcMock } =
-  vi.hoisted(() => ({
-    getSupabaseAdminClientMock: vi.fn(),
-    requireAdminMock: vi.fn(),
-    runWriteRpcMock: vi.fn(),
-  }));
+const {
+  getSupabaseAdminClientMock,
+  requireAdminMock,
+  runReadRpcMock,
+  runWriteRpcMock,
+} = vi.hoisted(() => ({
+  getSupabaseAdminClientMock: vi.fn(),
+  requireAdminMock: vi.fn(),
+  runReadRpcMock: vi.fn(),
+  runWriteRpcMock: vi.fn(),
+}));
 
 vi.mock("../../packages/server/src/db/supabaseAdmin.js", () => ({
   getSupabaseAdminClient: getSupabaseAdminClientMock,
@@ -19,6 +24,7 @@ vi.mock("../../api/_shared/requireAdmin.js", () => ({
 }));
 
 vi.mock("../../packages/server/src/db/transactions.js", () => ({
+  runReadRpc: runReadRpcMock,
   runWriteRpc: runWriteRpcMock,
 }));
 
@@ -64,6 +70,7 @@ describe("admin campaign and blind box config APIs", () => {
     vi.resetModules();
     getSupabaseAdminClientMock.mockReset();
     requireAdminMock.mockReset();
+    runReadRpcMock.mockReset();
     runWriteRpcMock.mockReset();
     requireAdminMock.mockResolvedValue(ADMIN_CONTEXT);
   });
@@ -199,20 +206,13 @@ describe("admin campaign and blind box config APIs", () => {
   });
 
   it("reads configured payment support contacts for admins", async () => {
-    const db = createAdminReadDbMock({
-      "ops.system_settings": [
-        {
-          key: "PAYMENT_SUPPORT_CONFIG",
-          value: {
-            configured: true,
-            support_url: "https://t.me/tma_support",
-            support_email: "pay@example.test",
-          },
-          updated_at: "2026-05-31T09:00:00.000Z",
-        },
-      ],
+    runReadRpcMock.mockResolvedValueOnce({
+      configured: true,
+      support_url: "https://t.me/tma_support",
+      support_email: "pay@example.test",
+      updated_at: "2026-05-31T09:00:00.000Z",
+      source: "system_settings",
     });
-    getSupabaseAdminClientMock.mockReturnValue(db.client);
 
     const { default: paymentSupportHandler } =
       await import("../../api/admin/payment-support-config");
@@ -242,6 +242,12 @@ describe("admin campaign and blind box config APIs", () => {
         updatedAt: "2026-05-31T09:00:00.000Z",
       },
     });
+    expect(runReadRpcMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        schema: "api",
+        functionName: "get_payment_support_config",
+      }),
+    );
   });
 
   it("maps payment support config writes to the audited admin RPC", async () => {
@@ -333,20 +339,13 @@ describe("admin campaign and blind box config APIs", () => {
   });
 
   it("exposes only configured payment support contacts to the web app", async () => {
-    const db = createAdminReadDbMock({
-      "ops.system_settings": [
-        {
-          key: "PAYMENT_SUPPORT_CONFIG",
-          value: {
-            configured: true,
-            support_url: "https://t.me/tma_support",
-            support_email: "pay@example.test",
-          },
-          updated_at: "2026-05-31T09:00:00.000Z",
-        },
-      ],
+    runReadRpcMock.mockResolvedValueOnce({
+      configured: true,
+      support_url: "https://t.me/tma_support",
+      support_email: "pay@example.test",
+      updated_at: "2026-05-31T09:00:00.000Z",
+      source: "system_settings",
     });
-    getSupabaseAdminClientMock.mockReturnValue(db.client);
 
     const { default: paymentSupportHandler } =
       await import("../../api/telegram/payment-support");

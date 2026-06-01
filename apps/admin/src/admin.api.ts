@@ -1,13 +1,17 @@
 import type {
   AdminApiEnvelope,
+  AdminAlertsResponse,
   AdminStoragePublishedAsset,
   AdminStoragePreview,
   AdminStorageSignedUpload,
   AdminStorageTargetBucket,
+  UpdateAdminAlertStatusInput,
+  UpdateAdminAlertStatusResponse,
   AuditLogFilters,
   AuditLogsResponse,
   AdminConfigMutationResponse,
   BlindBoxesAdminResponse,
+  BusinessMonitoringResponse,
   CampaignsResponse,
   AdminMeResponse,
   AdminRolesResponse,
@@ -18,7 +22,11 @@ import type {
   DropPoolMutationResponse,
   DropPoolValidationResult,
   DropPoolVersionsResponse,
+  EconomyMonitoringResponse,
   FeatureFlagsResponse,
+  GachaMonitoringResponse,
+  MarketListingAdminDetail,
+  MarketMonitoringResponse,
   MintQueueResponse,
   MonitoringResponse,
   PaymentAdminResponse,
@@ -45,6 +53,7 @@ import type {
   RunReconciliationInput,
   WalletsResponse,
 } from "./admin.types";
+import { reportAdminApiError, reportAdminUnknownError } from "./observability";
 
 type QueryParams = Record<string, string | number | boolean | null | undefined>;
 
@@ -167,6 +176,73 @@ export async function fetchMonitoring(
 ): Promise<MonitoringResponse> {
   return adminRequest<MonitoringResponse>(
     `/api/admin/monitoring${toQueryString(params)}`,
+  );
+}
+
+export async function fetchAdminAlerts(
+  params: QueryParams = {},
+): Promise<AdminAlertsResponse> {
+  return adminRequest<AdminAlertsResponse>(
+    `/api/admin/alerts${toQueryString(params)}`,
+  );
+}
+
+export async function updateAdminAlertStatus(
+  input: UpdateAdminAlertStatusInput,
+): Promise<UpdateAdminAlertStatusResponse> {
+  return adminRequest<UpdateAdminAlertStatusResponse>("/api/admin/alerts", {
+    method: "PATCH",
+    headers: buildDangerHeaders(
+      "admin-update-alert-status",
+      `${input.alertId}:${input.action}`,
+    ),
+    body: {
+      alertId: input.alertId,
+      action: input.action,
+      reason: input.reason,
+      resolutionResult: input.resolutionResult ?? undefined,
+      confirm: true,
+    },
+  });
+}
+
+export async function fetchBusinessMonitoring(
+  params: QueryParams = {},
+): Promise<BusinessMonitoringResponse> {
+  return adminRequest<BusinessMonitoringResponse>(
+    `/api/admin/monitoring/business${toQueryString(params)}`,
+  );
+}
+
+export async function fetchEconomyMonitoring(
+  params: QueryParams = {},
+): Promise<EconomyMonitoringResponse> {
+  return adminRequest<EconomyMonitoringResponse>(
+    `/api/admin/monitoring/economy${toQueryString(params)}`,
+  );
+}
+
+export async function fetchGachaMonitoring(
+  params: QueryParams = {},
+): Promise<GachaMonitoringResponse> {
+  return adminRequest<GachaMonitoringResponse>(
+    `/api/admin/monitoring/gacha${toQueryString(params)}`,
+  );
+}
+
+export async function fetchMarketMonitoring(
+  params: QueryParams = {},
+): Promise<MarketMonitoringResponse> {
+  return adminRequest<MarketMonitoringResponse>(
+    `/api/admin/monitoring/market${toQueryString(params)}`,
+  );
+}
+
+export async function fetchMarketListingDetail(
+  listingId: string,
+): Promise<MarketListingAdminDetail> {
+  return adminRequest<MarketListingAdminDetail>(
+    `/api/admin/market${toQueryString({ listingId })}`,
   );
 }
 
@@ -421,11 +497,17 @@ export async function uploadFileToSignedUrl(input: {
   });
 
   if (!response.ok) {
-    throw new AdminApiError({
+    const error = new AdminApiError({
       code: "ADMIN_STORAGE_UPLOAD_FAILED",
       message: `Storage upload failed: ${response.status}`,
       status: response.status,
     });
+
+    reportAdminApiError(error, {
+      path: "admin-storage-signed-upload",
+      method: "PUT",
+    });
+    throw error;
   }
 }
 
@@ -582,7 +664,8 @@ export async function runReconciliationNow(
   input: RunReconciliationInput,
 ): Promise<ReconciliationResponse> {
   const dryRun = input.dryRun ?? true;
-  const confirmationTarget = input.confirmationTarget ?? input.runTypes.join(",");
+  const confirmationTarget =
+    input.confirmationTarget ?? input.runTypes.join(",");
 
   return adminRequest<ReconciliationResponse>(
     "/api/admin/reconciliation/run-now",
@@ -664,7 +747,7 @@ export async function exportAuditLogsCsv(input: {
     const payload = await parseAdminPayload<unknown>(response);
     const errorPayload = payload?.ok === false ? payload : null;
 
-    throw new AdminApiError({
+    const error = new AdminApiError({
       code: errorPayload?.error?.code ?? "ADMIN_AUDIT_EXPORT_FAILED",
       message:
         errorPayload?.error?.message ?? `Request failed: ${response.status}`,
@@ -672,6 +755,12 @@ export async function exportAuditLogsCsv(input: {
       details: errorPayload?.error?.details,
       requestId: errorPayload?.requestId,
     });
+
+    reportAdminApiError(error, {
+      path: "/api/admin/audit-logs/export",
+      method: "POST",
+    });
+    throw error;
   }
 
   return {
@@ -863,13 +952,25 @@ async function adminRequest<T>(
     requestInit.body = JSON.stringify(body);
   }
 
-  const response = await fetch(path, requestInit);
+  let response: Response;
+
+  try {
+    response = await fetch(path, requestInit);
+  } catch (error) {
+    reportAdminUnknownError(error, {
+      type: "admin_api_network_error",
+      path,
+      method: requestInit.method ?? "GET",
+    });
+    throw error;
+  }
+
   const payload = await parseAdminPayload<T>(response);
 
   if (!response.ok || !payload || payload.ok !== true) {
     const errorPayload = payload?.ok === false ? payload : null;
 
-    throw new AdminApiError({
+    const error = new AdminApiError({
       code: errorPayload?.error?.code ?? "ADMIN_API_ERROR",
       message:
         errorPayload?.error?.message ?? `Request failed: ${response.status}`,
@@ -877,6 +978,12 @@ async function adminRequest<T>(
       details: errorPayload?.error?.details,
       requestId: errorPayload?.requestId,
     });
+
+    reportAdminApiError(error, {
+      path,
+      method: requestInit.method ?? "GET",
+    });
+    throw error;
   }
 
   return payload.data;

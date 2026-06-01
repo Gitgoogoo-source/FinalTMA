@@ -1,27 +1,66 @@
-import { AlertTriangle, RefreshCw, Save } from "lucide-react";
+import { RefreshCw, Save } from "lucide-react";
 import { useEffect, useState } from "react";
 
-import { fetchMonitoring, updatePaymentSupportConfig } from "../admin.api";
+import {
+  fetchAdminAlerts,
+  fetchBusinessMonitoring,
+  fetchEconomyMonitoring,
+  fetchGachaMonitoring,
+  fetchMarketMonitoring,
+  fetchMonitoring,
+  updateAdminAlertStatus,
+  updatePaymentSupportConfig,
+} from "../admin.api";
 import type {
-  MonitoringCountMetric,
-  MonitoringException,
-  MonitoringLatencyMetric,
-  MonitoringRateMetric,
+  AdminAlertsResponse,
+  BusinessMonitoringResponse,
+  EconomyMonitoringResponse,
+  GachaMonitoringResponse,
+  MarketMonitoringResponse,
   MonitoringResponse,
   PaymentSupportConfig,
+  UpdateAdminAlertStatusInput,
 } from "../admin.types";
-import { formatDate, shortId, StatusBadge } from "../admin.ui";
+import { formatDate, StatusBadge } from "../admin.ui";
+import {
+  AlertPanel,
+  BusinessMetricsPanel,
+  EconomyMetricsPanel,
+  GachaMetricsPanel,
+  MarketMetricsPanel,
+  type PanelState,
+  PaymentMetricsPanel,
+} from "./dashboard/DashboardPanels";
 
-type Metric =
-  | MonitoringRateMetric
-  | MonitoringLatencyMetric
-  | MonitoringCountMetric;
+const WINDOW_OPTIONS = [
+  { label: "1h", value: 1 },
+  { label: "6h", value: 6 },
+  { label: "24h", value: 24 },
+  { label: "7d", value: 168 },
+] as const;
+
+type WindowHours = (typeof WINDOW_OPTIONS)[number]["value"];
+
+const INITIAL_PANEL_STATE = {
+  data: null,
+  loading: true,
+  error: null,
+};
 
 export function DashboardPage() {
-  const [data, setData] = useState<MonitoringResponse | null>(null);
-  const [windowHours, setWindowHours] = useState(24);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [windowHours, setWindowHours] = useState<WindowHours>(24);
+  const [paymentState, setPaymentState] =
+    useState<PanelState<MonitoringResponse>>(INITIAL_PANEL_STATE);
+  const [businessState, setBusinessState] =
+    useState<PanelState<BusinessMonitoringResponse>>(INITIAL_PANEL_STATE);
+  const [economyState, setEconomyState] =
+    useState<PanelState<EconomyMonitoringResponse>>(INITIAL_PANEL_STATE);
+  const [gachaState, setGachaState] =
+    useState<PanelState<GachaMonitoringResponse>>(INITIAL_PANEL_STATE);
+  const [marketState, setMarketState] =
+    useState<PanelState<MarketMonitoringResponse>>(INITIAL_PANEL_STATE);
+  const [alertsState, setAlertsState] =
+    useState<PanelState<AdminAlertsResponse>>(INITIAL_PANEL_STATE);
   const [supportUrlDraft, setSupportUrlDraft] = useState("");
   const [supportEmailDraft, setSupportEmailDraft] = useState("");
   const [supportReason, setSupportReason] = useState("");
@@ -29,37 +68,139 @@ export function DashboardPage() {
   const [supportMessage, setSupportMessage] = useState<string | null>(null);
   const [supportError, setSupportError] = useState<string | null>(null);
 
-  async function load() {
-    setLoading(true);
-    setError(null);
+  async function loadPaymentMetrics() {
+    setPaymentState((current) => ({ ...current, loading: true, error: null }));
 
     try {
-      const response = await fetchMonitoring({
-        windowHours,
-      });
+      const response = await fetchMonitoring({ windowHours });
 
-      setData(response);
+      setPaymentState({ data: response, loading: false, error: null });
     } catch (loadError) {
-      setError(
-        loadError instanceof Error ? loadError.message : "监控数据加载失败",
-      );
-    } finally {
-      setLoading(false);
+      setPaymentState((current) => ({
+        ...current,
+        loading: false,
+        error:
+          loadError instanceof Error ? loadError.message : "支付监控加载失败",
+      }));
     }
   }
 
+  async function loadBusinessMetrics() {
+    setBusinessState((current) => ({ ...current, loading: true, error: null }));
+
+    try {
+      const response = await fetchBusinessMonitoring({ windowHours });
+
+      setBusinessState({ data: response, loading: false, error: null });
+    } catch (loadError) {
+      setBusinessState((current) => ({
+        ...current,
+        loading: false,
+        error:
+          loadError instanceof Error ? loadError.message : "商业总览加载失败",
+      }));
+    }
+  }
+
+  async function loadEconomyMetrics() {
+    setEconomyState((current) => ({ ...current, loading: true, error: null }));
+
+    try {
+      const response = await fetchEconomyMonitoring({ windowHours });
+
+      setEconomyState({ data: response, loading: false, error: null });
+    } catch (loadError) {
+      setEconomyState((current) => ({
+        ...current,
+        loading: false,
+        error:
+          loadError instanceof Error ? loadError.message : "经济监控加载失败",
+      }));
+    }
+  }
+
+  async function loadGachaMetrics() {
+    setGachaState((current) => ({ ...current, loading: true, error: null }));
+
+    try {
+      const response = await fetchGachaMonitoring({ windowHours });
+
+      setGachaState({ data: response, loading: false, error: null });
+    } catch (loadError) {
+      setGachaState((current) => ({
+        ...current,
+        loading: false,
+        error:
+          loadError instanceof Error ? loadError.message : "开盒监控加载失败",
+      }));
+    }
+  }
+
+  async function loadMarketMetrics() {
+    setMarketState((current) => ({ ...current, loading: true, error: null }));
+
+    try {
+      const response = await fetchMarketMonitoring({ windowHours });
+
+      setMarketState({ data: response, loading: false, error: null });
+    } catch (loadError) {
+      setMarketState((current) => ({
+        ...current,
+        loading: false,
+        error:
+          loadError instanceof Error ? loadError.message : "市场监控加载失败",
+      }));
+    }
+  }
+
+  async function loadAlerts() {
+    setAlertsState((current) => ({ ...current, loading: true, error: null }));
+
+    try {
+      const response = await fetchAdminAlerts({
+        status: "open,acknowledged",
+        limit: 50,
+      });
+
+      setAlertsState({ data: response, loading: false, error: null });
+    } catch (loadError) {
+      setAlertsState((current) => ({
+        ...current,
+        loading: false,
+        error:
+          loadError instanceof Error ? loadError.message : "告警列表加载失败",
+      }));
+    }
+  }
+
+  function loadAll() {
+    void loadPaymentMetrics();
+    void loadBusinessMetrics();
+    void loadEconomyMetrics();
+    void loadGachaMetrics();
+    void loadMarketMetrics();
+    void loadAlerts();
+  }
+
+  async function handleAlertAction(input: UpdateAdminAlertStatusInput) {
+    await updateAdminAlertStatus(input);
+    await loadAlerts();
+  }
+
   useEffect(() => {
-    void load();
+    loadAll();
   }, [windowHours]);
 
   useEffect(() => {
-    if (!data?.paymentSupport) {
+    const paymentSupport = paymentState.data?.paymentSupport;
+
+    if (!paymentSupport) {
       return;
     }
 
-    setSupportUrlDraft(data.paymentSupport.supportUrl ?? "");
-    setSupportEmailDraft(data.paymentSupport.supportEmail ?? "");
-  }, [data?.paymentSupport]);
+    setSupportUrlDraft(paymentSupport.supportUrl ?? "");
+    setSupportEmailDraft(paymentSupport.supportEmail ?? "");
+  }, [paymentState.data?.paymentSupport]);
 
   async function savePaymentSupportConfig() {
     const reason = supportReason.trim();
@@ -80,23 +221,26 @@ export function DashboardPage() {
         reason,
       });
 
-      setData((current) =>
-        current
+      setPaymentState((current) =>
+        current.data
           ? {
               ...current,
-              paymentSupport: {
-                configured: updated.configured,
-                source: updated.source,
-                supportEmail: updated.supportEmail,
-                supportUrl: updated.supportUrl,
-                updatedAt: updated.updatedAt,
+              data: {
+                ...current.data,
+                paymentSupport: {
+                  configured: updated.configured,
+                  source: updated.source,
+                  supportEmail: updated.supportEmail,
+                  supportUrl: updated.supportUrl,
+                  updatedAt: updated.updatedAt,
+                },
+                warnings: updated.configured
+                  ? current.data.warnings.filter(
+                      (warning) =>
+                        warning.code !== "PAYMENT_SUPPORT_CONFIG_MISSING",
+                    )
+                  : ensurePaymentSupportWarning(current.data.warnings),
               },
-              warnings: updated.configured
-                ? current.warnings.filter(
-                    (warning) =>
-                      warning.code !== "PAYMENT_SUPPORT_CONFIG_MISSING",
-                  )
-                : ensurePaymentSupportWarning(current.warnings),
             }
           : current,
       );
@@ -115,15 +259,6 @@ export function DashboardPage() {
     }
   }
 
-  const metrics = data
-    ? [
-        data.metrics.paymentFailureRate,
-        data.metrics.fulfillmentFailureRate,
-        data.metrics.webhookLatency,
-        data.metrics.mintStuckCount,
-      ]
-    : [];
-
   return (
     <section className="admin-surface">
       <div className="toolbar">
@@ -131,110 +266,61 @@ export function DashboardPage() {
           <span>观察窗口</span>
           <select
             value={windowHours}
-            onChange={(event) => setWindowHours(Number(event.target.value))}
+            onChange={(event) =>
+              setWindowHours(Number(event.target.value) as WindowHours)
+            }
           >
-            <option value={1}>1 小时</option>
-            <option value={6}>6 小时</option>
-            <option value={24}>24 小时</option>
-            <option value={72}>72 小时</option>
-            <option value={168}>7 天</option>
+            {WINDOW_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
           </select>
         </label>
-        <button
-          className="icon-button"
-          onClick={() => void load()}
-          type="button"
-        >
+        <button className="icon-button" onClick={loadAll} type="button">
           <RefreshCw aria-hidden="true" size={17} />
           <span>刷新</span>
         </button>
       </div>
 
-      {error ? <p className="notice notice--error">{error}</p> : null}
-      {loading ? <p className="notice">加载中...</p> : null}
+      <PaymentMetricsPanel state={paymentState} />
 
-      {data ? (
-        <>
-          {data.warnings.map((warning) => (
-            <p
-              className="notice notice--warning admin-warning"
-              key={warning.code}
-            >
-              <AlertTriangle aria-hidden="true" size={16} />
-              <span>
-                <strong>{warning.message}</strong>
-                <small>{warning.suggestedAction}</small>
-              </span>
-            </p>
-          ))}
-
-          <div className="ops-grid ops-grid--monitoring">
-            {metrics.map((metric) => (
-              <MetricCard key={metric.key} metric={metric} />
-            ))}
-          </div>
-
-          <section className="detail-panel" aria-label="监控窗口">
-            <div className="detail-panel__header">
-              <div>
-                <h2>监控窗口</h2>
-                <p>
-                  {formatDate(data.window.startedAt)} 至{" "}
-                  {formatDate(data.window.endedAt)}
-                </p>
-              </div>
-              <StatusBadge status={overallStatus(metrics)} />
-            </div>
-            <div className="detail-grid">
-              <DetailItem
-                label="Webhook 卡住阈值"
-                value={`${data.thresholds.webhookStuckMinutes} 分钟`}
-              />
-              <DetailItem
-                label="发货卡住阈值"
-                value={`${data.thresholds.fulfillmentStuckMinutes} 分钟`}
-              />
-              <DetailItem
-                label="Mint 卡住阈值"
-                value={`${data.thresholds.mintStuckMinutes} 分钟`}
-              />
-              <DetailItem
-                label="单次查询上限"
-                value={String(data.sources.limitPerQuery)}
-              />
-            </div>
-          </section>
-
-          <PaymentSupportConfigPanel
-            config={data.paymentSupport}
-            emailDraft={supportEmailDraft}
-            error={supportError}
-            isSaving={supportSaving}
-            message={supportMessage}
-            reason={supportReason}
-            urlDraft={supportUrlDraft}
-            onEmailChange={setSupportEmailDraft}
-            onReasonChange={setSupportReason}
-            onSave={() => void savePaymentSupportConfig()}
-            onUrlChange={setSupportUrlDraft}
-          />
-
-          <div className="split-grid split-grid--even">
-            <ExceptionList
-              items={data.recentExceptions.paymentOrders}
-              title="支付 / 发货异常"
-            />
-            <ExceptionList
-              items={data.recentExceptions.webhookEvents}
-              title="Webhook 异常"
-            />
-          </div>
-          <ExceptionList
-            items={data.recentExceptions.mintQueue}
-            title="Mint 队列异常"
-          />
-        </>
+      {paymentState.data && !paymentState.error ? (
+        <PaymentSupportConfigPanel
+          config={paymentState.data.paymentSupport}
+          emailDraft={supportEmailDraft}
+          error={supportError}
+          isSaving={supportSaving}
+          message={supportMessage}
+          reason={supportReason}
+          urlDraft={supportUrlDraft}
+          onEmailChange={setSupportEmailDraft}
+          onReasonChange={setSupportReason}
+          onSave={() => void savePaymentSupportConfig()}
+          onUrlChange={setSupportUrlDraft}
+        />
       ) : null}
+
+      <BusinessMetricsPanel state={businessState} />
+
+      <div className="split-grid split-grid--even">
+        <GachaMetricsPanel state={gachaState} />
+        <MarketMetricsPanel state={marketState} />
+      </div>
+
+      <EconomyMetricsPanel state={economyState} />
+
+      <AlertPanel
+        alertsState={alertsState}
+        onAlertAction={handleAlertAction}
+        sources={[
+          { label: "支付 / Webhook / Mint", state: paymentState },
+          { label: "商业总览", state: businessState },
+          { label: "开盒监控", state: gachaState },
+          { label: "市场监控", state: marketState },
+          { label: "经济监控", state: economyState },
+        ]}
+      />
     </section>
   );
 }
@@ -326,47 +412,6 @@ function PaymentSupportConfigPanel(props: {
   );
 }
 
-function MetricCard({ metric }: { metric: Metric }) {
-  return (
-    <section className="ops-card metric-card">
-      <div className="metric-card__header">
-        <h2>{metric.label}</h2>
-        <StatusBadge status={metric.status} />
-      </div>
-      <strong className="metric-card__value">
-        {formatMetricValue(metric)}
-      </strong>
-      <p>{metric.description}</p>
-      <div className="metric-card__meta">{renderMetricMeta(metric)}</div>
-    </section>
-  );
-}
-
-function ExceptionList(props: { items: MonitoringException[]; title: string }) {
-  return (
-    <section className="ops-card">
-      <h2>{props.title}</h2>
-      <div className="stack-list stack-list--spaced">
-        {props.items.length === 0 ? (
-          <p className="muted">暂无异常</p>
-        ) : (
-          props.items.map((item) => (
-            <div className="list-row" key={`${props.title}:${item.id}`}>
-              <span>
-                <strong>{shortId(item.id)}</strong>
-                <small>{buildExceptionSummary(item)}</small>
-              </span>
-              <StatusBadge
-                status={item.status ?? item.processStatus ?? "unknown"}
-              />
-            </div>
-          ))
-        )}
-      </div>
-    </section>
-  );
-}
-
 function DetailItem(props: { label: string; value: string }) {
   return (
     <span>
@@ -409,115 +454,4 @@ function ensurePaymentSupportWarning(
       suggestedAction: "在监控页配置 PAYMENT_SUPPORT_CONFIG 的 URL 或 email。",
     },
   ];
-}
-
-function formatMetricValue(metric: Metric): string {
-  if (metric.unit === "percent") {
-    return `${(metric.value * 100).toFixed(2)}%`;
-  }
-
-  if (metric.unit === "milliseconds") {
-    return metric.value === null ? "-" : `${formatMilliseconds(metric.value)}`;
-  }
-
-  return String(metric.value);
-}
-
-function renderMetricMeta(metric: Metric) {
-  if (metric.unit === "percent") {
-    return (
-      <>
-        <span>
-          <small>异常数</small>
-          <strong>{metric.numerator}</strong>
-        </span>
-        <span>
-          <small>样本数</small>
-          <strong>{metric.denominator}</strong>
-        </span>
-        {metric.stuckCount !== undefined ? (
-          <span>
-            <small>卡住</small>
-            <strong>{metric.stuckCount}</strong>
-          </span>
-        ) : null}
-      </>
-    );
-  }
-
-  if (metric.unit === "milliseconds") {
-    return (
-      <>
-        <span>
-          <small>平均</small>
-          <strong>{formatNullableMilliseconds(metric.averageMs)}</strong>
-        </span>
-        <span>
-          <small>最大</small>
-          <strong>{formatNullableMilliseconds(metric.maxMs)}</strong>
-        </span>
-        <span>
-          <small>未完成</small>
-          <strong>{metric.pendingCount}</strong>
-        </span>
-        <span>
-          <small>卡住</small>
-          <strong>{metric.stuckCount}</strong>
-        </span>
-      </>
-    );
-  }
-
-  return (
-    <>
-      <span>
-        <small>活跃队列</small>
-        <strong>{metric.activeCount}</strong>
-      </span>
-      <span>
-        <small>卡住</small>
-        <strong>{metric.stuckCount}</strong>
-      </span>
-    </>
-  );
-}
-
-function buildExceptionSummary(item: MonitoringException): string {
-  const status = item.status ?? item.processStatus ?? item.eventType ?? "-";
-  const created = formatDate(item.createdAt);
-  const error = item.errorMessage ? ` / ${item.errorMessage}` : "";
-  const attempts =
-    item.attemptCount !== undefined && item.maxAttempts !== undefined
-      ? ` / ${item.attemptCount}/${item.maxAttempts}`
-      : "";
-
-  return `${status}${attempts} / ${created}${error}`;
-}
-
-function overallStatus(metrics: Metric[]): "ok" | "warning" | "critical" {
-  if (metrics.some((metric) => metric.status === "critical")) {
-    return "critical";
-  }
-
-  if (metrics.some((metric) => metric.status === "warning")) {
-    return "warning";
-  }
-
-  return "ok";
-}
-
-function formatNullableMilliseconds(value: number | null): string {
-  return value === null ? "-" : formatMilliseconds(value);
-}
-
-function formatMilliseconds(value: number): string {
-  if (value >= 60_000) {
-    return `${(value / 60_000).toFixed(1)}m`;
-  }
-
-  if (value >= 1000) {
-    return `${(value / 1000).toFixed(1)}s`;
-  }
-
-  return `${value}ms`;
 }

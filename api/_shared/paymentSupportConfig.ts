@@ -1,6 +1,8 @@
-import type { SupabaseAdminClient } from "../../packages/server/src/db/supabaseAdmin.js";
-import { getSupabaseAdminClient } from "../../packages/server/src/db/supabaseAdmin.js";
 import { ApiError } from "./handler.js";
+import {
+  runReadRpc,
+  type JsonObject,
+} from "../../packages/server/src/db/transactions.js";
 
 export type PaymentSupportConfig = {
   configured: boolean;
@@ -18,16 +20,17 @@ type SystemSettingRow = {
 
 const PAYMENT_SUPPORT_SETTING_KEY = "PAYMENT_SUPPORT_CONFIG";
 
-export async function loadPaymentSupportConfig(
-  db: SupabaseAdminClient = getSupabaseAdminClient(),
-): Promise<PaymentSupportConfig> {
-  const { data, error } = await db
-    .schema("ops")
-    .from("system_settings")
-    .select("key,value,updated_at")
-    .eq("key", PAYMENT_SUPPORT_SETTING_KEY);
+export async function loadPaymentSupportConfig(): Promise<PaymentSupportConfig> {
+  let data: JsonObject;
 
-  if (error) {
+  try {
+    data = await runReadRpc<JsonObject>({
+      schema: "api",
+      functionName: "get_payment_support_config",
+      args: {},
+      label: "get_payment_support_config",
+    });
+  } catch (error) {
     throw new ApiError(
       500,
       "PAYMENT_SUPPORT_CONFIG_LOOKUP_FAILED",
@@ -36,10 +39,15 @@ export async function loadPaymentSupportConfig(
     );
   }
 
-  const row = Array.isArray(data)
-    ? ((data[0] ?? null) as unknown as SystemSettingRow | null)
-    : null;
-  const settingConfig = row ? normalizeSystemSettingConfig(row) : null;
+  const settingConfig =
+    data.source === "system_settings"
+      ? normalizeSystemSettingConfig({
+          key: PAYMENT_SUPPORT_SETTING_KEY,
+          value: data,
+          updated_at:
+            typeof data.updated_at === "string" ? data.updated_at : null,
+        })
+      : null;
 
   if (settingConfig?.configured) {
     return settingConfig;

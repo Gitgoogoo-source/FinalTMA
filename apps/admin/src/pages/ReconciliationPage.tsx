@@ -55,6 +55,24 @@ const SEVERITY_WEIGHT: Record<string, number> = {
 };
 const MIN_REASON_LENGTH = 5;
 
+function readReconciliationRunIdFromHash(): string | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const hash = window.location.hash.replace(/^#/, "");
+  const [route, queryString = ""] = hash.split("?");
+
+  if (route !== "reconciliation") {
+    return null;
+  }
+
+  const params = new URLSearchParams(queryString);
+  const runId = (params.get("runId") ?? params.get("run_id"))?.trim();
+
+  return runId || null;
+}
+
 type ResolveDraft = {
   finding: ReconciliationFinding;
   status: ResolveReconciliationFindingStatus;
@@ -80,7 +98,9 @@ export function ReconciliationPage() {
   const [severity, setSeverity] =
     useState<(typeof SEVERITY_FILTERS)[number]>("");
   const [status, setStatus] = useState<(typeof STATUS_FILTERS)[number]>("open");
-  const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
+  const [selectedRunId, setSelectedRunId] = useState<string | null>(() =>
+    readReconciliationRunIdFromHash(),
+  );
   const [runsData, setRunsData] = useState<ReconciliationRunsResponse | null>(
     null,
   );
@@ -247,6 +267,20 @@ export function ReconciliationPage() {
   useEffect(() => {
     void loadFindings();
   }, [severity, status, selectedRunId, runType]);
+
+  useEffect(() => {
+    function handleHashChange() {
+      const runId = readReconciliationRunIdFromHash();
+
+      if (runId) {
+        setSelectedRunId(runId);
+      }
+    }
+
+    window.addEventListener("hashchange", handleHashChange);
+
+    return () => window.removeEventListener("hashchange", handleHashChange);
+  }, []);
 
   return (
     <section className="admin-surface">
