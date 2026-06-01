@@ -3309,6 +3309,7 @@ export type Database = {
         Row: {
           active: boolean;
           created_at: string;
+          form_id: string | null;
           id: string;
           max_ratio_to_floor: number;
           metadata: Json;
@@ -3320,6 +3321,7 @@ export type Database = {
         Insert: {
           active?: boolean;
           created_at?: string;
+          form_id?: string | null;
           id?: string;
           max_ratio_to_floor?: number;
           metadata?: Json;
@@ -3331,6 +3333,7 @@ export type Database = {
         Update: {
           active?: boolean;
           created_at?: string;
+          form_id?: string | null;
           id?: string;
           max_ratio_to_floor?: number;
           metadata?: Json;
@@ -4075,6 +4078,103 @@ export type Database = {
         };
         Relationships: [];
       };
+      alerts: {
+        Row: {
+          acknowledged_at: string | null;
+          acknowledged_by_admin_id: string | null;
+          alert_type: string;
+          created_at: string;
+          detail: Json;
+          first_seen_at: string;
+          id: string;
+          ignored_at: string | null;
+          ignored_by_admin_id: string | null;
+          last_seen_at: string;
+          message: string | null;
+          occurrence_count: number;
+          resolution_result: string | null;
+          resolved_at: string | null;
+          resolved_by_admin_id: string | null;
+          severity: string;
+          source_id: string;
+          source_type: string;
+          status: string;
+          status_reason: string | null;
+          title: string;
+          updated_at: string;
+        };
+        Insert: {
+          acknowledged_at?: string | null;
+          acknowledged_by_admin_id?: string | null;
+          alert_type: string;
+          created_at?: string;
+          detail?: Json;
+          first_seen_at?: string;
+          id?: string;
+          ignored_at?: string | null;
+          ignored_by_admin_id?: string | null;
+          last_seen_at?: string;
+          message?: string | null;
+          occurrence_count?: number;
+          resolution_result?: string | null;
+          resolved_at?: string | null;
+          resolved_by_admin_id?: string | null;
+          severity?: string;
+          source_id: string;
+          source_type: string;
+          status?: string;
+          status_reason?: string | null;
+          title: string;
+          updated_at?: string;
+        };
+        Update: {
+          acknowledged_at?: string | null;
+          acknowledged_by_admin_id?: string | null;
+          alert_type?: string;
+          created_at?: string;
+          detail?: Json;
+          first_seen_at?: string;
+          id?: string;
+          ignored_at?: string | null;
+          ignored_by_admin_id?: string | null;
+          last_seen_at?: string;
+          message?: string | null;
+          occurrence_count?: number;
+          resolution_result?: string | null;
+          resolved_at?: string | null;
+          resolved_by_admin_id?: string | null;
+          severity?: string;
+          source_id?: string;
+          source_type?: string;
+          status?: string;
+          status_reason?: string | null;
+          title?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "alerts_acknowledged_by_admin_id_fkey";
+            columns: ["acknowledged_by_admin_id"];
+            isOneToOne: false;
+            referencedRelation: "admin_users";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "alerts_ignored_by_admin_id_fkey";
+            columns: ["ignored_by_admin_id"];
+            isOneToOne: false;
+            referencedRelation: "admin_users";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "alerts_resolved_by_admin_id_fkey";
+            columns: ["resolved_by_admin_id"];
+            isOneToOne: false;
+            referencedRelation: "admin_users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       api_rate_limits: {
         Row: {
           blocked_until: string | null;
@@ -4215,6 +4315,104 @@ export type Database = {
         };
         Relationships: [];
       };
+      job_locks: {
+        Row: {
+          created_at: string;
+          expires_at: string;
+          job_name: string;
+          locked_at: string;
+          locked_by: string;
+          metadata: Json;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          expires_at: string;
+          job_name: string;
+          locked_at?: string;
+          locked_by: string;
+          metadata?: Json;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          expires_at?: string;
+          job_name?: string;
+          locked_at?: string;
+          locked_by?: string;
+          metadata?: Json;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      job_runs: {
+        Row: {
+          created_at: string;
+          error_message: string | null;
+          failed_count: number;
+          finished_at: string | null;
+          id: string;
+          idempotency_key: string | null;
+          job_name: string;
+          metadata: Json;
+          params: Json;
+          processed_count: number;
+          request_id: string;
+          result: Json;
+          started_at: string;
+          status: string;
+          triggered_by: string;
+          triggered_by_admin_user_id: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          error_message?: string | null;
+          failed_count?: number;
+          finished_at?: string | null;
+          id?: string;
+          idempotency_key?: string | null;
+          job_name: string;
+          metadata?: Json;
+          params?: Json;
+          processed_count?: number;
+          request_id: string;
+          result?: Json;
+          started_at?: string;
+          status?: string;
+          triggered_by: string;
+          triggered_by_admin_user_id?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          error_message?: string | null;
+          failed_count?: number;
+          finished_at?: string | null;
+          id?: string;
+          idempotency_key?: string | null;
+          job_name?: string;
+          metadata?: Json;
+          params?: Json;
+          processed_count?: number;
+          request_id?: string;
+          result?: Json;
+          started_at?: string;
+          status?: string;
+          triggered_by?: string;
+          triggered_by_admin_user_id?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "job_runs_triggered_by_admin_user_id_fkey";
+            columns: ["triggered_by_admin_user_id"];
+            isOneToOne: false;
+            referencedRelation: "admin_users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       risk_events: {
         Row: {
           created_at: string;
@@ -4272,13 +4470,20 @@ export type Database = {
         Row: {
           assigned_admin_id: string | null;
           created_at: string;
+          escalation_owner: string | null;
+          escalation_queue: string | null;
           id: string;
+          last_handled_at: string | null;
+          last_handled_by_admin_id: string | null;
           message: string | null;
           metadata: Json;
+          rejected_reason: string | null;
           related_id: string | null;
           related_type: string | null;
+          resolution: string | null;
           resolved_at: string | null;
           status: string;
+          status_reason: string | null;
           subject: string;
           ticket_type: string;
           updated_at: string;
@@ -4287,13 +4492,20 @@ export type Database = {
         Insert: {
           assigned_admin_id?: string | null;
           created_at?: string;
+          escalation_owner?: string | null;
+          escalation_queue?: string | null;
           id?: string;
+          last_handled_at?: string | null;
+          last_handled_by_admin_id?: string | null;
           message?: string | null;
           metadata?: Json;
+          rejected_reason?: string | null;
           related_id?: string | null;
           related_type?: string | null;
+          resolution?: string | null;
           resolved_at?: string | null;
           status?: string;
+          status_reason?: string | null;
           subject: string;
           ticket_type: string;
           updated_at?: string;
@@ -4302,13 +4514,20 @@ export type Database = {
         Update: {
           assigned_admin_id?: string | null;
           created_at?: string;
+          escalation_owner?: string | null;
+          escalation_queue?: string | null;
           id?: string;
+          last_handled_at?: string | null;
+          last_handled_by_admin_id?: string | null;
           message?: string | null;
           metadata?: Json;
+          rejected_reason?: string | null;
           related_id?: string | null;
           related_type?: string | null;
+          resolution?: string | null;
           resolved_at?: string | null;
           status?: string;
+          status_reason?: string | null;
           subject?: string;
           ticket_type?: string;
           updated_at?: string;
@@ -4318,6 +4537,13 @@ export type Database = {
           {
             foreignKeyName: "support_tickets_assigned_admin_id_fkey";
             columns: ["assigned_admin_id"];
+            isOneToOne: false;
+            referencedRelation: "admin_users";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "support_tickets_last_handled_by_admin_id_fkey";
+            columns: ["last_handled_by_admin_id"];
             isOneToOne: false;
             referencedRelation: "admin_users";
             referencedColumns: ["id"];
@@ -4505,9 +4731,13 @@ export type Database = {
           fulfilled_at: string | null;
           id: string;
           idempotency_key: string;
+          max_retry_count: number;
           metadata: Json;
+          next_retry_at: string | null;
           paid_at: string | null;
           precheckout_at: string | null;
+          retry_count: number;
+          retry_exhausted_at: string | null;
           status: string;
           telegram_invoice_payload: string;
           title: string;
@@ -4525,9 +4755,13 @@ export type Database = {
           fulfilled_at?: string | null;
           id?: string;
           idempotency_key: string;
+          max_retry_count?: number;
           metadata?: Json;
+          next_retry_at?: string | null;
           paid_at?: string | null;
           precheckout_at?: string | null;
+          retry_count?: number;
+          retry_exhausted_at?: string | null;
           status?: string;
           telegram_invoice_payload: string;
           title: string;
@@ -4545,9 +4779,13 @@ export type Database = {
           fulfilled_at?: string | null;
           id?: string;
           idempotency_key?: string;
+          max_retry_count?: number;
           metadata?: Json;
+          next_retry_at?: string | null;
           paid_at?: string | null;
           precheckout_at?: string | null;
+          retry_count?: number;
+          retry_exhausted_at?: string | null;
           status?: string;
           telegram_invoice_payload?: string;
           title?: string;

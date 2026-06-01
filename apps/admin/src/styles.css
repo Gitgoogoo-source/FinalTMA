@@ -437,6 +437,12 @@ textarea {
   background: #fffaf0;
 }
 
+.notice--success {
+  border-color: #a7d8cb;
+  color: #08705d;
+  background: #effbf7;
+}
+
 .admin-warning {
   display: flex;
   align-items: flex-start;
@@ -567,6 +573,7 @@ tr.is-selected td {
 .status-badge--verified,
 .status-badge--processed,
 .status-badge--enabled,
+.status-badge--success,
 .status-badge--ok {
   border-color: #a7d8cb;
   background: #effbf7;
@@ -575,6 +582,8 @@ tr.is-selected td {
 
 .status-badge--retrying,
 .status-badge--processing,
+.status-badge--running,
+.status-badge--partial_failed,
 .status-badge--fulfilling,
 .status-badge--validating,
 .status-badge--scheduled,
@@ -588,6 +597,13 @@ tr.is-selected td {
   border-color: #b9d5f0;
   background: #f1f8ff;
   color: #1d5f91;
+}
+
+.status-badge--skipped,
+.status-badge--already_running {
+  border-color: #cbd7df;
+  background: #f3f7fa;
+  color: #415260;
 }
 
 .split-grid {
@@ -1194,6 +1210,92 @@ tr.is-selected td {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
+}
+
+.worker-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.worker-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.worker-panel__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.worker-panel__header h2,
+.worker-panel__header p {
+  margin: 0;
+}
+
+.worker-panel__header p {
+  margin-top: 4px;
+  color: #657583;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.metric-grid--compact {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.metric-grid--compact .metric-card {
+  min-width: 0;
+  border: 1px solid #d7e0e8;
+  border-radius: 8px;
+  background: #fff;
+  padding: 10px;
+  gap: 4px;
+}
+
+.metric-grid--compact .metric-card span {
+  color: #657583;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.metric-grid--compact .metric-card strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: #17242e;
+  font-size: 13px;
+}
+
+.worker-meta {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.worker-meta div {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 8px;
+}
+
+.worker-meta dt,
+.worker-meta dd {
+  margin: 0;
+  font-size: 12px;
+}
+
+.worker-meta dt {
+  color: #647380;
+  font-weight: 800;
+}
+
+.worker-meta dd {
+  overflow-wrap: anywhere;
+  color: #1c2f3c;
 }
 
 .ops-grid--monitoring {

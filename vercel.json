@@ -11,7 +11,7 @@
       "schedule": "*/10 * * * *"
     },
     {
-      "path": "/api/cron/refresh-leaderboard",
+      "path": "/api/cron/rebuild-leaderboard",
       "schedule": "5 0 * * *"
     },
     {
@@ -27,16 +27,28 @@
       "schedule": "10 0 * * *"
     },
     {
-      "path": "/api/cron/retry-mint-queue",
+      "path": "/api/cron/retry-payments",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/retry-mints",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/expire-listings",
+      "schedule": "*/15 * * * *"
     },
     {
       "path": "/api/cron/sync-onchain-transactions",
       "schedule": "*/5 * * * *"
     },
     {
-      "path": "/api/cron/sync-campaign-box-statuses",
+      "path": "/api/cron/close-ended-campaigns",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/cleanup-idempotency",
+      "schedule": "35 2 * * *"
     },
     {
       "path": "/api/cron/monitoring-alert-scan",

@@ -1,3 +1,3 @@
 import { createWorkerCronHandler } from "../_shared/workerCron.js";
 
-export default createWorkerCronHandler("market_stats");
+export default createWorkerCronHandler("retry_payments");

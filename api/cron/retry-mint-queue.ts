@@ -50,6 +50,8 @@ type MintQueueRow = {
   completed_at: string | null;
 };
 
+export type MintQueueRetryStatus = "queued" | "retrying";
+
 type NftCollectionRow = {
   id: string;
   network: string;
@@ -180,14 +182,17 @@ export async function runMintQueueWorker(input: {
   requestId: string;
   env?: NodeJS.ProcessEnv | undefined;
   now?: Date | undefined;
+  statusFilter?: readonly MintQueueRetryStatus[] | undefined;
 }): Promise<MintWorkerResult> {
   const env = input.env ?? process.env;
   const now = input.now ?? new Date();
   const strategy = readMintRetryStrategy(env);
+  const statusFilter = normalizeStatusFilter(input.statusFilter);
   const rows = await listDueMintQueueRows(
     input.db,
     now,
     readBatchSize(env, "TON_MINT_BATCH_SIZE", DEFAULT_BATCH_SIZE),
+    statusFilter,
   );
   const result: MintWorkerResult = {
     scanned: rows.length,
@@ -206,6 +211,7 @@ export async function runMintQueueWorker(input: {
     const claimed = await claimMintQueueRow(input.db, row, {
       now,
       requestId: input.requestId,
+      statusFilter,
     });
 
     if (!claimed) {
@@ -302,13 +308,14 @@ async function listDueMintQueueRows(
   db: SupabaseAdminClient,
   now: Date,
   limit: number,
+  statusFilter: readonly MintQueueRetryStatus[],
 ): Promise<MintQueueRow[]> {
   const nowIso = now.toISOString();
   const { data, error } = await db
     .schema("onchain")
     .from("mint_queue")
     .select(MINT_QUEUE_COLUMNS)
-    .in("status", ["queued", "retrying"])
+    .in("status", [...statusFilter])
     .or(`next_attempt_at.is.null,next_attempt_at.lte.${nowIso}`)
     .order("priority", { ascending: true })
     .order("created_at", { ascending: true })
@@ -335,6 +342,7 @@ async function claimMintQueueRow(
   input: {
     now: Date;
     requestId: string;
+    statusFilter: readonly MintQueueRetryStatus[];
   },
 ): Promise<MintQueueRow | null> {
   const attemptCount = readInteger(row.attempt_count, 0) + 1;
@@ -357,7 +365,7 @@ async function claimMintQueueRow(
       updated_at: nowIso,
     })
     .eq("id", row.id)
-    .in("status", ["queued", "retrying"])
+    .in("status", [...input.statusFilter])
     .or(`next_attempt_at.is.null,next_attempt_at.lte.${nowIso}`)
     .select(MINT_QUEUE_COLUMNS)
     .maybeSingle();
@@ -370,6 +378,18 @@ async function claimMintQueueRow(
   }
 
   return data ? (data as unknown as MintQueueRow) : null;
+}
+
+function normalizeStatusFilter(
+  value: readonly MintQueueRetryStatus[] | undefined,
+): readonly MintQueueRetryStatus[] {
+  const statuses = value?.filter(
+    (status) => status === "queued" || status === "retrying",
+  );
+
+  return statuses && statuses.length > 0
+    ? [...new Set(statuses)]
+    : ["queued", "retrying"];
 }
 
 async function loadMintExecutionContext(

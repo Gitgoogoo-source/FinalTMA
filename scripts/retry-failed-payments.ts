@@ -3,6 +3,11 @@ import { loadEnvFile } from "node:process";
 import { pathToFileURL } from "node:url";
 
 import { callRpcRaw } from "../packages/server/src/db/rpc.js";
+import type { JsonObject } from "../packages/server/src/db/transactions.js";
+import {
+  runManagedWorker,
+  type WorkerRunSummary,
+} from "../packages/server/src/jobs/workerRuntime.js";
 
 type JsonValue =
   | string
@@ -23,6 +28,10 @@ type CandidateRpcRow = {
   paid_at?: unknown;
   updated_at?: unknown;
   fulfilled_at?: unknown;
+  retry_count?: unknown;
+  max_retry_count?: unknown;
+  next_retry_at?: unknown;
+  retry_exhausted_at?: unknown;
 };
 
 type PaymentRetryCandidatesPayload = {
@@ -36,6 +45,10 @@ export type PaymentRetryCandidate = {
   paidAt: string | null;
   updatedAt: string | null;
   fulfilledAt: string | null;
+  retryCount: number;
+  maxRetryCount: number;
+  nextRetryAt: string | null;
+  retryExhaustedAt: string | null;
 };
 
 export type RetryPaymentFulfillmentResult = {
@@ -45,9 +58,13 @@ export type RetryPaymentFulfillmentResult = {
   fulfilled?: boolean | string | null;
   fulfillment_status?: string | null;
   reason_code?: string | null;
-  retryable?: string | null;
+  retryable?: boolean | string | null;
   payment_order_status?: string | null;
   result_count?: string | number | null;
+  retry_count?: string | number | null;
+  max_retry_count?: string | number | null;
+  next_retry_at?: string | null;
+  retry_exhausted_at?: string | null;
   idempotent?: boolean | string | null;
   audit_log_id?: string | null;
 };
@@ -55,6 +72,7 @@ export type RetryPaymentFulfillmentResult = {
 export type RetryFailedPaymentsOptions = {
   dryRun: boolean;
   limit: number;
+  onlyStatus: PaymentRetryStatus[] | null;
   requestId: string;
   systemAdminUserId: string | null;
 };
@@ -87,6 +105,10 @@ export type PaymentRetryOrderResult = {
   previousStatus: string | null;
   fulfilled: boolean | null;
   idempotent: boolean | null;
+  retryCount: number | null;
+  maxRetryCount: number | null;
+  nextRetryAt: string | null;
+  retryExhaustedAt: string | null;
   auditLogId: string | null;
   error: PaymentRetryError | null;
 };
@@ -95,6 +117,7 @@ export type RetryFailedPaymentsOutput = {
   ok: boolean;
   dryRun: boolean;
   limit: number;
+  onlyStatus: PaymentRetryStatus[] | null;
   candidateCount: number;
   processed: number;
   retried: number;
@@ -108,6 +131,7 @@ export type RetryFailedPaymentsOutput = {
 type RuntimeConfig = {
   dryRun: boolean;
   limit: number;
+  onlyStatus: PaymentRetryStatus[] | null;
   systemAdminUserId: string | null;
 };
 
@@ -122,11 +146,7 @@ class RetryFailedPaymentsScriptError extends Error {
 }
 
 const DEFAULT_PAYMENT_RETRY_LIMIT = 10;
-const PAYMENT_RETRY_STATUSES = [
-  "paid",
-  "fulfilling",
-  "failed",
-] as const;
+const PAYMENT_RETRY_STATUSES = ["paid", "fulfilling", "failed"] as const;
 type PaymentRetryStatus = (typeof PAYMENT_RETRY_STATUSES)[number];
 const PAYMENT_RETRY_SOURCE = "scripts.retry_failed_payments";
 const PAYMENT_RETRY_REASON =
@@ -151,9 +171,10 @@ async function main(): Promise<void> {
   loadLocalEnvFile();
 
   const startedAt = Date.now();
+  const startedAtIso = new Date(startedAt).toISOString();
   const requestId = `script-retry-failed-payments-${startedAt}`;
   const runtime = parsePaymentRetryRuntime(process.env);
-  const output = await runRetryFailedPayments({
+  const summary = await runRetryFailedPaymentsManaged({
     ...runtime,
     requestId,
   });
@@ -161,7 +182,9 @@ async function main(): Promise<void> {
   console.log(
     JSON.stringify(
       {
-        ...output,
+        ...summary,
+        ...(summary.result ?? {}),
+        started_at: summary.started_at ?? startedAtIso,
         requestId,
         elapsedMs: Date.now() - startedAt,
       },
@@ -170,7 +193,7 @@ async function main(): Promise<void> {
     ),
   );
 
-  if (!output.ok) {
+  if (summary.status === "failed" || summary.status === "partial_failed") {
     process.exitCode = 1;
   }
 }
@@ -178,8 +201,13 @@ async function main(): Promise<void> {
 export function parsePaymentRetryRuntime(
   env: EnvLike = process.env,
 ): RuntimeConfig {
-  const dryRun = parsePaymentRetryDryRun(env.PAYMENT_RETRY_DRY_RUN);
-  const limit = parsePaymentRetryLimit(env.PAYMENT_RETRY_LIMIT);
+  const dryRun = parsePaymentRetryDryRun(
+    env.PAYMENT_RETRY_DRY_RUN ?? env.DRY_RUN,
+  );
+  const limit = parsePaymentRetryLimit(env.PAYMENT_RETRY_LIMIT ?? env.LIMIT);
+  const onlyStatus = parseOnlyStatus(
+    env.PAYMENT_RETRY_ONLY_STATUS ?? env.ONLY_STATUS,
+  );
   const systemAdminUserId = parseSystemAdminUserId(
     env.SYSTEM_ADMIN_USER_ID,
     dryRun,
@@ -188,6 +216,7 @@ export function parsePaymentRetryRuntime(
   return {
     dryRun,
     limit,
+    onlyStatus,
     systemAdminUserId,
   };
 }
@@ -239,8 +268,16 @@ export function parsePaymentRetryLimit(value: string | undefined): number {
   return parsed;
 }
 
-export function buildPaymentRetryIdempotencyKey(starOrderId: string): string {
-  return `script-retry-payment:${starOrderId}`;
+export function buildPaymentRetryIdempotencyKey(
+  starOrderId: string,
+  attemptNumber = 1,
+): string {
+  const safeAttempt =
+    Number.isSafeInteger(attemptNumber) && attemptNumber > 0
+      ? attemptNumber
+      : 1;
+
+  return `script-retry-payment:${starOrderId}:attempt-${safeAttempt}`;
 }
 
 export async function runRetryFailedPayments(
@@ -250,11 +287,15 @@ export async function runRetryFailedPayments(
     retryFulfillment: retryPaymentFulfillment,
   },
 ): Promise<RetryFailedPaymentsOutput> {
-  const candidates = await deps.listCandidates(options.limit);
+  const candidates = filterCandidatesByStatus(
+    await deps.listCandidates(options.limit),
+    options.onlyStatus,
+  );
   const output: RetryFailedPaymentsOutput = {
     ok: true,
     dryRun: options.dryRun,
     limit: options.limit,
+    onlyStatus: options.onlyStatus,
     candidateCount: candidates.length,
     processed: 0,
     retried: 0,
@@ -281,6 +322,7 @@ export async function runRetryFailedPayments(
 
     const idempotencyKey = buildPaymentRetryIdempotencyKey(
       candidate.starOrderId,
+      candidate.retryCount + 1,
     );
 
     try {
@@ -308,6 +350,10 @@ export async function runRetryFailedPayments(
         previousStatus: normalizeOptionalString(result.previous_status),
         fulfilled: normalizeBooleanResult(result.fulfilled),
         idempotent,
+        retryCount: normalizeOptionalInteger(result.retry_count),
+        maxRetryCount: normalizeOptionalInteger(result.max_retry_count),
+        nextRetryAt: normalizeOptionalIsoString(result.next_retry_at),
+        retryExhaustedAt: normalizeOptionalIsoString(result.retry_exhausted_at),
         auditLogId: normalizeOptionalString(result.audit_log_id),
         error: null,
       });
@@ -324,6 +370,10 @@ export async function runRetryFailedPayments(
           previousStatus: candidate.status,
           fulfilled: retryError.code === "ADMIN_PAYMENT_ALREADY_FULFILLED",
           idempotent: null,
+          retryCount: candidate.retryCount,
+          maxRetryCount: candidate.maxRetryCount,
+          nextRetryAt: candidate.nextRetryAt,
+          retryExhaustedAt: candidate.retryExhaustedAt,
           auditLogId: null,
           error: retryError,
         });
@@ -341,6 +391,10 @@ export async function runRetryFailedPayments(
         previousStatus: candidate.status,
         fulfilled: null,
         idempotent: null,
+        retryCount: candidate.retryCount,
+        maxRetryCount: candidate.maxRetryCount,
+        nextRetryAt: candidate.nextRetryAt,
+        retryExhaustedAt: candidate.retryExhaustedAt,
         auditLogId: null,
         error: retryError,
       });
@@ -348,6 +402,79 @@ export async function runRetryFailedPayments(
   }
 
   return output;
+}
+
+export async function runRetryFailedPaymentsManaged(
+  options: RetryFailedPaymentsOptions,
+  deps?: RetryFailedPaymentsDeps,
+): Promise<WorkerRunSummary> {
+  return runManagedWorker({
+    jobName: "retry_payments",
+    requestId: options.requestId,
+    triggeredBy: "script",
+    idempotencyKey: `script-retry-payments:${options.requestId}`,
+    params: toJsonObject({
+      dryRun: options.dryRun,
+      limit: options.limit,
+      onlyStatus: options.onlyStatus,
+    }),
+    task: async () => {
+      const output = await runRetryFailedPayments(options, deps);
+
+      return {
+        status: getPaymentRetryOutputStatus(output),
+        processedCount: output.processed,
+        failedCount: output.failed,
+        errorMessage: output.errors[0]?.message ?? null,
+        result: toJsonObject(output as unknown as Record<string, unknown>),
+      };
+    },
+  });
+}
+
+function filterCandidatesByStatus(
+  candidates: PaymentRetryCandidate[],
+  onlyStatus: PaymentRetryStatus[] | null,
+): PaymentRetryCandidate[] {
+  if (!onlyStatus || onlyStatus.length === 0) {
+    return candidates;
+  }
+
+  const allowed = new Set(onlyStatus);
+
+  return candidates.filter((candidate) =>
+    allowed.has(candidate.status as PaymentRetryStatus),
+  );
+}
+
+export function parseOnlyStatus(
+  value: string | undefined,
+): PaymentRetryStatus[] | null {
+  const raw = value?.trim();
+
+  if (!raw) {
+    return null;
+  }
+
+  const statuses = raw
+    .split(",")
+    .map((item) => item.trim().toLowerCase())
+    .filter(Boolean);
+
+  if (statuses.length === 0) {
+    return null;
+  }
+
+  for (const status of statuses) {
+    if (!PAYMENT_RETRY_STATUSES.includes(status as PaymentRetryStatus)) {
+      throw new RetryFailedPaymentsScriptError(
+        "PAYMENT_RETRY_ONLY_STATUS_INVALID",
+        `ONLY_STATUS must contain only ${PAYMENT_RETRY_STATUSES.join(", ")}.`,
+      );
+    }
+  }
+
+  return [...new Set(statuses)] as PaymentRetryStatus[];
 }
 
 async function listCandidatePaymentOrders(
@@ -469,6 +596,16 @@ function normalizeCandidateRow(row: unknown): PaymentRetryCandidate {
     paidAt: normalizeNullableIsoString(candidate.paid_at),
     updatedAt: normalizeNullableIsoString(candidate.updated_at),
     fulfilledAt: normalizeNullableIsoString(candidate.fulfilled_at),
+    retryCount: normalizeNonNegativeInteger(candidate.retry_count ?? 0),
+    maxRetryCount: normalizePositiveInteger(candidate.max_retry_count ?? 5),
+    nextRetryAt:
+      candidate.next_retry_at === undefined
+        ? null
+        : normalizeNullableIsoString(candidate.next_retry_at),
+    retryExhaustedAt:
+      candidate.retry_exhausted_at === undefined
+        ? null
+        : normalizeNullableIsoString(candidate.retry_exhausted_at),
   };
 }
 
@@ -484,6 +621,50 @@ function normalizeXtrAmount(value: unknown): number {
     throw new RetryFailedPaymentsScriptError(
       "PAYMENT_RETRY_CANDIDATE_INVALID",
       "Candidate xtr_amount must be a positive integer.",
+    );
+  }
+
+  return parsed;
+}
+
+function normalizeNonNegativeInteger(value: unknown): number {
+  const parsed = normalizeInteger(value);
+
+  if (parsed < 0) {
+    throw new RetryFailedPaymentsScriptError(
+      "PAYMENT_RETRY_CANDIDATE_INVALID",
+      "Candidate retry_count must be a non-negative integer.",
+    );
+  }
+
+  return parsed;
+}
+
+function normalizePositiveInteger(value: unknown): number {
+  const parsed = normalizeInteger(value);
+
+  if (parsed <= 0) {
+    throw new RetryFailedPaymentsScriptError(
+      "PAYMENT_RETRY_CANDIDATE_INVALID",
+      "Candidate max_retry_count must be a positive integer.",
+    );
+  }
+
+  return parsed;
+}
+
+function normalizeInteger(value: unknown): number {
+  const parsed =
+    typeof value === "number"
+      ? value
+      : typeof value === "string"
+        ? Number.parseInt(value, 10)
+        : Number.NaN;
+
+  if (!Number.isSafeInteger(parsed)) {
+    throw new RetryFailedPaymentsScriptError(
+      "PAYMENT_RETRY_CANDIDATE_INVALID",
+      "Candidate integer field is invalid.",
     );
   }
 
@@ -518,6 +699,35 @@ function normalizeOptionalString(value: unknown): string | null {
   return typeof value === "string" && value.trim().length > 0
     ? value.trim()
     : null;
+}
+
+function normalizeOptionalInteger(value: unknown): number | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  const parsed =
+    typeof value === "number"
+      ? value
+      : typeof value === "string"
+        ? Number.parseInt(value, 10)
+        : Number.NaN;
+
+  return Number.isSafeInteger(parsed) ? parsed : null;
+}
+
+function normalizeOptionalIsoString(value: unknown): string | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const timestamp = Date.parse(value);
+
+  return Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : null;
 }
 
 function normalizeBooleanResult(value: unknown): boolean | null {
@@ -582,6 +792,20 @@ function normalizeCaughtErrors(error: unknown): PaymentRetryError[] {
   return [normalizeRetryError(error, null)];
 }
 
+function getPaymentRetryOutputStatus(
+  output: RetryFailedPaymentsOutput,
+): "success" | "partial_failed" | "failed" {
+  if (output.ok) {
+    return "success";
+  }
+
+  return output.processed > output.failed ? "partial_failed" : "failed";
+}
+
+function toJsonObject(value: Record<string, unknown>): JsonObject {
+  return JSON.parse(JSON.stringify(value)) as JsonObject;
+}
+
 function loadLocalEnvFile(): void {
   try {
     loadEnvFile();
@@ -606,8 +830,9 @@ function getHelpText(): string {
     "Usage: pnpm ops:retry-payments",
     "",
     "Queries payments.star_orders where status is paid, fulfilling, or failed and fulfilled_at is null.",
-    `Set PAYMENT_RETRY_LIMIT to control batch size. Default: ${DEFAULT_PAYMENT_RETRY_LIMIT}.`,
-    "Set PAYMENT_RETRY_DRY_RUN=true to only print candidate orders.",
+    `Set PAYMENT_RETRY_LIMIT or LIMIT to control batch size. Default: ${DEFAULT_PAYMENT_RETRY_LIMIT}.`,
+    "Set PAYMENT_RETRY_DRY_RUN=true or DRY_RUN=true to only print candidate orders.",
+    "Set PAYMENT_RETRY_ONLY_STATUS or ONLY_STATUS to paid,fulfilling,failed filter candidates.",
     "For non dry-run runs, SYSTEM_ADMIN_USER_ID must be an active ops.admin_users id.",
   ].join("\n");
 }
@@ -624,12 +849,23 @@ function isMainModule(): boolean {
 
 if (isMainModule()) {
   main().catch((error: unknown) => {
+    const startedAt = Date.now();
+    const requestId = `script-retry-failed-payments-${startedAt}`;
     console.error(
       JSON.stringify(
         {
+          job_name: "retry_payments",
+          request_id: requestId,
+          started_at: new Date(startedAt).toISOString(),
+          finished_at: new Date().toISOString(),
+          status: "failed",
+          processed_count: 0,
+          failed_count: 1,
+          error_message: error instanceof Error ? error.message : String(error),
           ok: false,
           dryRun: null,
           limit: null,
+          onlyStatus: null,
           candidateCount: 0,
           processed: 0,
           retried: 0,

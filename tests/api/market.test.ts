@@ -66,6 +66,9 @@ const IDEMPOTENCY_KEY = "market:create-listing-0001";
 const BUY_IDEMPOTENCY_KEY = "market:buy-listing-0001";
 const UPDATE_PRICE_IDEMPOTENCY_KEY = "market:update-price-0001";
 const CANCEL_LISTING_IDEMPOTENCY_KEY = "market:cancel-listing-0001";
+const MARKET_STATS_JOB_RUN_ID = "88888888-8888-4888-8888-888888888888";
+const MARKET_STATS_STARTED_AT = "2026-05-23T16:30:00.000Z";
+const MARKET_STATS_FINISHED_AT = "2026-05-23T16:30:45.000Z";
 
 function createMarketDbMock(
   listing: Record<string, unknown> | null = {
@@ -99,6 +102,70 @@ function createMarketDbMock(
       }),
     })),
   };
+}
+
+function mockMarketStatsWorkerRpc(
+  payload: Record<string, unknown>,
+  options: { failMarketRefresh?: boolean } = {},
+): void {
+  callRpcRawMock.mockImplementation(
+    async (rpcName: string, params: Record<string, unknown>) => {
+      if (rpcName === "worker_start_run") {
+        return {
+          id: MARKET_STATS_JOB_RUN_ID,
+          started_at: MARKET_STATS_STARTED_AT,
+        };
+      }
+
+      if (rpcName === "worker_try_acquire_lock") {
+        return {
+          acquired: true,
+          expires_at: "2026-05-23T16:40:00.000Z",
+        };
+      }
+
+      if (rpcName === "market_refresh_price_stats") {
+        if (options.failMarketRefresh) {
+          throw new Error("refresh failed");
+        }
+
+        return payload;
+      }
+
+      if (rpcName === "worker_finish_run") {
+        return {
+          id: params.p_job_run_id,
+          finished_at: MARKET_STATS_FINISHED_AT,
+        };
+      }
+
+      if (rpcName === "worker_release_lock") {
+        return {
+          released: true,
+        };
+      }
+
+      if (rpcName === "risk_record_event") {
+        return {
+          risk_event_id: "99999999-9999-4999-8999-999999999999",
+        };
+      }
+
+      throw new Error(`Unexpected RPC call: ${rpcName}`);
+    },
+  );
+}
+
+function getRpcCall(
+  rpcName: string,
+): [string, Record<string, unknown>, Record<string, unknown>] {
+  const call = callRpcRawMock.mock.calls.find(([name]) => name === rpcName);
+
+  if (!call) {
+    throw new Error(`Missing RPC call: ${rpcName}`);
+  }
+
+  return call as [string, Record<string, unknown>, Record<string, unknown>];
 }
 
 beforeEach(() => {
@@ -924,10 +991,11 @@ describe("market stats rebuild cron API", () => {
     delete process.env.APP_ENV;
     delete process.env.VERCEL_ENV;
     delete process.env.CRON_SECRET;
+    delete process.env.FEATURE_MARKET_STATS_WORKER_ENABLED;
   });
 
-  it("calls market_rebuild_stats_job with the internal cron secret", async () => {
-    callRpcRawMock.mockResolvedValueOnce({
+  it("calls market_refresh_price_stats with the internal cron secret", async () => {
+    const rebuildPayload = {
       status: "success",
       snapshot_at: "2026-05-23T16:30:44.000Z",
       price_snapshot_count: 1,
@@ -938,7 +1006,8 @@ describe("market stats rebuild cron API", () => {
       failure_risk_event_id: null,
       server_time: "2026-05-23T16:30:45.000Z",
       duration_ms: 42,
-    });
+    };
+    mockMarketStatsWorkerRpc(rebuildPayload);
 
     const result = await invokeApiHandler<
       ApiSuccessResponse<Record<string, unknown>>
@@ -949,40 +1018,38 @@ describe("market stats rebuild cron API", () => {
         "x-idempotency-key": "market-stats-rebuild-test-001",
         "x-request-id": "req-market-stats-refresh",
       },
+      body: {},
     });
 
     expect(result.statusCode).toBe(200);
-    expect(callRpcRawMock).toHaveBeenCalledWith(
-      "market_rebuild_stats_job",
-      {
-        p_idempotency_key: "market-stats-rebuild-test-001",
-        p_request_context: {
-          request_id: "req-market-stats-refresh",
-          method: "POST",
-          source: "vercel.cron",
-          route: "rebuild-market-stats",
-        },
-      },
+    expect(getRpcCall("worker_start_run")[1]).toMatchObject({
+      p_job_name: "market_stats",
+      p_request_id: "req-market-stats-refresh",
+      p_triggered_by: "cron",
+      p_idempotency_key: "market-stats-rebuild-test-001",
+    });
+    expect(getRpcCall("market_refresh_price_stats")).toEqual([
+      "market_refresh_price_stats",
+      {},
       {
         schema: "api",
         context: {
           requestId: "req-market-stats-refresh",
-          source: "cron.rebuild_market_stats",
+          source: "worker.market_stats",
         },
       },
-    );
-    expect(result.body.data).toEqual({
+    ]);
+    expect(result.body.data).toMatchObject({
+      job_run_id: MARKET_STATS_JOB_RUN_ID,
+      job_name: "market_stats",
+      request_id: "req-market-stats-refresh",
+      started_at: MARKET_STATS_STARTED_AT,
+      finished_at: MARKET_STATS_FINISHED_AT,
       status: "success",
-      snapshot_at: "2026-05-23T16:30:44.000Z",
-      price_snapshot_count: 1,
-      depth_snapshot_count: 2,
-      price_health_update_count: 3,
-      start_app_event_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-      end_app_event_id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
-      failure_risk_event_id: null,
-      server_time: "2026-05-23T16:30:45.000Z",
-      duration_ms: 42,
-      error: null,
+      processed_count: 6,
+      failed_count: 0,
+      error_message: null,
+      result: rebuildPayload,
     });
   });
 
@@ -1022,7 +1089,7 @@ describe("market stats rebuild cron API", () => {
   it("allows test refresh requests without CRON_SECRET", async () => {
     delete process.env.CRON_SECRET;
     process.env.NODE_ENV = "test";
-    callRpcRawMock.mockResolvedValueOnce({
+    mockMarketStatsWorkerRpc({
       status: "success",
       snapshot_at: "2026-05-23T16:30:44.000Z",
       price_snapshot_count: 1,
@@ -1039,17 +1106,20 @@ describe("market stats rebuild cron API", () => {
       ApiSuccessResponse<Record<string, unknown>>
     >(rebuildMarketStatsCronHandler, {
       method: "POST",
+      body: {},
     });
 
     expect(result.statusCode).toBe(200);
-    expect(callRpcRawMock).toHaveBeenCalledTimes(1);
+    expect(getRpcCall("market_refresh_price_stats")).toBeDefined();
   });
 
   it("allows local refresh requests without CRON_SECRET", async () => {
     delete process.env.CRON_SECRET;
     process.env.NODE_ENV = "development";
     process.env.APP_ENV = "local";
-    callRpcRawMock.mockResolvedValueOnce({
+    process.env.FEATURE_MARKET_STATS_WORKER_ENABLED = "true";
+    process.env.FEATURE_MARKET_ENABLED = "true";
+    mockMarketStatsWorkerRpc({
       status: "success",
       snapshot_at: "2026-05-23T16:30:44.000Z",
       price_snapshot_count: 1,
@@ -1066,40 +1136,47 @@ describe("market stats rebuild cron API", () => {
       ApiSuccessResponse<Record<string, unknown>>
     >(rebuildMarketStatsCronHandler, {
       method: "POST",
+      body: {},
     });
 
     expect(result.statusCode).toBe(200);
-    expect(callRpcRawMock).toHaveBeenCalledTimes(1);
+    expect(getRpcCall("market_refresh_price_stats")).toBeDefined();
   });
 
-  it("maps failed rebuild payloads after DB records app and risk events", async () => {
-    callRpcRawMock.mockResolvedValueOnce({
-      status: "failed",
-      snapshot_at: null,
-      price_snapshot_count: 0,
-      depth_snapshot_count: 0,
-      price_health_update_count: 0,
-      start_app_event_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-      end_app_event_id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
-      failure_risk_event_id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
-      server_time: "2026-05-23T16:30:45.000Z",
-      duration_ms: 42,
-      error: "refresh failed",
-    });
+  it("returns a failed job summary after DB records the worker failure", async () => {
+    mockMarketStatsWorkerRpc({}, { failMarketRefresh: true });
 
-    const result = await invokeApiHandler<ApiErrorResponse>(
+    const result = await invokeApiHandler<
+      ApiSuccessResponse<Record<string, unknown>>
+    >(
       rebuildMarketStatsCronHandler,
       {
         method: "POST",
         headers: {
           authorization: "Bearer test-cron-secret-0001",
         },
+        body: {},
       },
     );
 
-    expect(result.statusCode).toBe(500);
-    expect(result.body.error.code).toBe("MARKET_STATS_REBUILD_FAILED");
-    expect(callRpcRawMock).toHaveBeenCalledTimes(1);
+    expect(result.statusCode).toBe(200);
+    expect(result.body.data).toMatchObject({
+      job_name: "market_stats",
+      status: "failed",
+      processed_count: 0,
+      failed_count: 1,
+      error_message: "refresh failed",
+    });
+    expect(getRpcCall("worker_finish_run")[1]).toMatchObject({
+      p_job_run_id: MARKET_STATS_JOB_RUN_ID,
+      p_status: "failed",
+      p_error_message: "refresh failed",
+    });
+    expect(getRpcCall("risk_record_event")[1]).toMatchObject({
+      p_event_type: "worker_failed",
+      p_source_type: "worker_job_run",
+      p_source_id: MARKET_STATS_JOB_RUN_ID,
+    });
   });
 });
 

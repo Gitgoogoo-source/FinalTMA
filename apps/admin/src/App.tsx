@@ -42,6 +42,7 @@ import { RolesPage } from "./pages/RolesPage";
 import { SupportTicketsPage } from "./pages/SupportTicketsPage";
 import { UsersPage } from "./pages/UsersPage";
 import { WalletsPage } from "./pages/WalletsPage";
+import { WorkersPage } from "./pages/WorkersPage";
 
 type AdminNavItem = {
   id: AdminTab;
@@ -70,6 +71,12 @@ const NAV_ITEMS: AdminNavItem[] = [
     icon: RefreshCw,
     requiredPermissions: ["ops:read", "risk:read"],
     permissionMode: "any",
+  },
+  {
+    id: "workers",
+    label: "Worker",
+    icon: RefreshCw,
+    requiredPermissions: ["ops:read"],
   },
   {
     id: "risk",
@@ -316,6 +323,8 @@ function renderActivePage(tab: AdminTab, me: AdminMeResponse) {
       );
     case "reconciliation":
       return <ReconciliationPage />;
+    case "workers":
+      return <WorkersPage />;
     case "risk":
       return (
         <RiskCenterPage

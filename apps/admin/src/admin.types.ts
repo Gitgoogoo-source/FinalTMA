@@ -1436,6 +1436,104 @@ export type RunReconciliationInput = {
   confirmationCode?: string;
 };
 
+export type WorkerJobName =
+  | "reconciliation"
+  | "market_stats"
+  | "leaderboard"
+  | "retry_payments"
+  | "retry_mints"
+  | "expire_listings"
+  | "campaign_close"
+  | "cleanup_idempotency";
+
+export type WorkerRunStatus =
+  | "running"
+  | "success"
+  | "partial_failed"
+  | "failed"
+  | "skipped"
+  | "already_running";
+
+export type WorkerJob = {
+  jobName?: WorkerJobName;
+  job_name: WorkerJobName;
+  label: string;
+  description: string;
+  cronPath?: string;
+  cron_path: string;
+  schedule: string;
+  nextRunHint?: string;
+  next_run_hint: string;
+  enabled: boolean;
+  disabledReason?: string | null;
+  disabled_reason: string | null;
+  flags: Array<{
+    key: string;
+    enabled: boolean;
+    source: string;
+    envName?: string;
+  }>;
+  lastRun?: WorkerRun | null;
+  last_run: WorkerRun | null;
+};
+
+export type WorkerRun = {
+  id?: string;
+  jobName?: WorkerJobName;
+  job_name: WorkerJobName;
+  label?: string;
+  requestId?: string;
+  request_id: string;
+  triggeredBy?: string;
+  triggered_by: string;
+  triggeredByAdminUserId?: string | null;
+  triggered_by_admin_user_id: string | null;
+  idempotencyKey?: string | null;
+  idempotency_key: string | null;
+  status: WorkerRunStatus;
+  startedAt?: string;
+  started_at: string;
+  finishedAt?: string | null;
+  finished_at: string | null;
+  processedCount?: number;
+  processed_count: number;
+  failedCount?: number;
+  failed_count: number;
+  errorMessage?: string | null;
+  error_message: string | null;
+  params?: unknown;
+  result?: unknown;
+  metadata?: unknown;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type WorkerRunResponse = {
+  jobs: WorkerJob[];
+  items: WorkerRun[];
+  runs: WorkerRun[];
+  summary: Record<string, number>;
+  nextCursor?: string | null;
+  next_cursor?: string | null;
+  pageEnabled?: boolean;
+  page_enabled?: boolean;
+  disabledReason?: string | null;
+  disabled_reason?: string | null;
+  serverTime: string;
+};
+
+export type RunWorkerNowInput = {
+  jobName: WorkerJobName;
+  params?: Record<string, unknown>;
+  reason: string;
+};
+
+export type ToggleWorkerInput = {
+  jobName: WorkerJobName;
+  enabled: boolean;
+  reason: string;
+};
+
 export type ResolveReconciliationFindingInput = {
   findingId: string;
   status: ResolveReconciliationFindingStatus;
@@ -2466,6 +2564,7 @@ export type AdminTab =
   | "monitoring"
   | "payments"
   | "reconciliation"
+  | "workers"
   | "risk"
   | "mint"
   | "market-ops"

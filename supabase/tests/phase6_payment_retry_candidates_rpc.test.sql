@@ -7,7 +7,7 @@ create extension if not exists pgtap with schema extensions;
 
 set search_path = public, extensions, core, economy, catalog, gacha, inventory, market, payments, tasks, album, onchain, ops, api;
 
-select plan(7);
+select plan(10);
 
 create temp table _ids (key text primary key, id uuid, payload jsonb) on commit drop;
 
@@ -17,6 +17,8 @@ values
   ('retry_paid', gen_random_uuid()),
   ('retry_fulfilling', gen_random_uuid()),
   ('retry_failed', gen_random_uuid()),
+  ('skip_future_retry', gen_random_uuid()),
+  ('skip_exhausted_retry', gen_random_uuid()),
   ('skip_created', gen_random_uuid()),
   ('skip_fulfilled', gen_random_uuid());
 
@@ -41,7 +43,11 @@ insert into payments.star_orders (
   paid_at,
   fulfilled_at,
   created_at,
-  updated_at
+  updated_at,
+  retry_count,
+  max_retry_count,
+  next_retry_at,
+  retry_exhausted_at
 )
 values
   (
@@ -56,7 +62,11 @@ values
     now() - interval '10 minutes',
     null,
     now() - interval '10 minutes',
-    now() - interval '10 minutes'
+    now() - interval '10 minutes',
+    0,
+    5,
+    null,
+    null
   ),
   (
     (select id from _ids where key = 'retry_fulfilling'),
@@ -70,7 +80,11 @@ values
     now() - interval '9 minutes',
     null,
     now() - interval '9 minutes',
-    now() - interval '9 minutes'
+    now() - interval '9 minutes',
+    0,
+    5,
+    null,
+    null
   ),
   (
     (select id from _ids where key = 'retry_failed'),
@@ -84,7 +98,47 @@ values
     now() - interval '8 minutes',
     null,
     now() - interval '8 minutes',
-    now() - interval '8 minutes'
+    now() - interval '8 minutes',
+    2,
+    5,
+    now() - interval '1 minute',
+    null
+  ),
+  (
+    (select id from _ids where key = 'skip_future_retry'),
+    (select id from _ids where key = 'user'),
+    'gacha_open',
+    'failed',
+    35,
+    'phase6-retry-candidates-future',
+    'Phase 6 skip future retry',
+    'phase6-retry-candidates-future',
+    now() - interval '7 minutes',
+    null,
+    now() - interval '7 minutes',
+    now() - interval '7 minutes',
+    1,
+    5,
+    now() + interval '1 hour',
+    null
+  ),
+  (
+    (select id from _ids where key = 'skip_exhausted_retry'),
+    (select id from _ids where key = 'user'),
+    'gacha_open',
+    'failed',
+    36,
+    'phase6-retry-candidates-exhausted',
+    'Phase 6 skip exhausted retry',
+    'phase6-retry-candidates-exhausted',
+    now() - interval '7 minutes',
+    null,
+    now() - interval '7 minutes',
+    now() - interval '7 minutes',
+    5,
+    5,
+    null,
+    now() - interval '1 minute'
   ),
   (
     (select id from _ids where key = 'skip_created'),
@@ -98,7 +152,11 @@ values
     null,
     null,
     now() - interval '7 minutes',
-    now() - interval '7 minutes'
+    now() - interval '7 minutes',
+    0,
+    5,
+    null,
+    null
   ),
   (
     (select id from _ids where key = 'skip_fulfilled'),
@@ -112,7 +170,11 @@ values
     now() - interval '6 minutes',
     now() - interval '5 minutes',
     now() - interval '6 minutes',
-    now() - interval '5 minutes'
+    now() - interval '5 minutes',
+    0,
+    5,
+    null,
+    null
   );
 
 select ok(
@@ -126,6 +188,26 @@ select ok(
     and not has_function_privilege('anon', 'api.admin_list_retryable_payment_orders(integer)', 'EXECUTE')
     and not has_function_privilege('authenticated', 'api.admin_list_retryable_payment_orders(integer)', 'EXECUTE'),
   'admin_list_retryable_payment_orders is service_role only'
+);
+
+select ok(
+  not exists (
+    select 1
+    from unnest(array[
+      'retry_count',
+      'max_retry_count',
+      'next_retry_at',
+      'retry_exhausted_at'
+    ]) as expected(column_name)
+    where not exists (
+      select 1
+      from information_schema.columns c
+      where c.table_schema = 'payments'
+        and c.table_name = 'star_orders'
+        and c.column_name = expected.column_name
+    )
+  ),
+  'star_orders has structured payment retry backoff columns'
 );
 
 insert into _ids (key, payload)
@@ -149,6 +231,12 @@ select is(
   'candidate RPC orders candidates by oldest updated_at first'
 );
 
+select ok(
+  ((select payload from _ids where key = 'limited_candidates') #> '{orders,0}')
+    ?& array['retry_count', 'max_retry_count', 'next_retry_at', 'retry_exhausted_at'],
+  'candidate RPC returns retry backoff metadata'
+);
+
 insert into _ids (key, payload)
 values ('all_candidates', api.admin_list_retryable_payment_orders(10));
 
@@ -166,6 +254,18 @@ select ok(
       or candidate.value ->> 'fulfilled_at' is not null
   ),
   'candidate RPC excludes non-retryable and fulfilled orders'
+);
+
+select ok(
+  not exists (
+    select 1
+    from jsonb_array_elements((select payload from _ids where key = 'all_candidates') -> 'orders') as candidate(value)
+    where (candidate.value ->> 'star_order_id')::uuid in (
+      (select id from _ids where key = 'skip_future_retry'),
+      (select id from _ids where key = 'skip_exhausted_retry')
+    )
+  ),
+  'candidate RPC excludes future-scheduled and exhausted retries'
 );
 
 select * from finish();

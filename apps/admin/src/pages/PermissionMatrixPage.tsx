@@ -59,6 +59,15 @@ const PERMISSION_DOMAINS: AdminPermissionMatrix["domains"] = [
     ],
   },
   {
+    domain: "ops",
+    label: "Worker",
+    description: "后台定时任务、运行历史和手动重试。",
+    permissions: [
+      buildPermission("ops:read", "查看任务", "读取 Worker 状态和运行历史。"),
+      buildPermission("ops:write", "运行任务", "手动运行或暂停 Worker。"),
+    ],
+  },
+  {
     domain: "audit",
     label: "审计",
     description: "后台操作日志和安全追踪。",

@@ -7,7 +7,7 @@ create extension if not exists pgtap with schema extensions;
 
 set search_path = public, extensions, core, economy, catalog, gacha, inventory, market, payments, tasks, album, onchain, ops, api;
 
-select plan(23);
+select plan(25);
 
 create temp table _ids (key text primary key, id uuid, payload jsonb) on commit drop;
 create temp table _errors (key text primary key, message text) on commit drop;
@@ -22,6 +22,8 @@ values
   ('star_payment_completed', gen_random_uuid()),
   ('star_order_fulfilled', gen_random_uuid()),
   ('star_payment_fulfilled', gen_random_uuid()),
+  ('star_order_retry_failed', gen_random_uuid()),
+  ('star_payment_retry_failed', gen_random_uuid()),
   ('fulfilled_box', gen_random_uuid()),
   ('fulfilled_pool_version', gen_random_uuid()),
   ('fulfilled_template', gen_random_uuid()),
@@ -142,6 +144,17 @@ values
     'Phase 6 fulfilled retry',
     'phase6-payment-ops-fulfilled-order',
     now()
+  ),
+  (
+    (select id from _ids where key = 'star_order_retry_failed'),
+    (select id from _ids where key = 'payment_user'),
+    'gacha_open',
+    'paid',
+    9,
+    'phase6-payment-ops-retry-failed-payload',
+    'Phase 6 failed retry backoff',
+    'phase6-payment-ops-retry-failed-order',
+    now()
   );
 
 insert into payments.star_payments (
@@ -180,6 +193,15 @@ values
     6,
     'XTR',
     'phase6-payment-ops-fulfilled-payload'
+  ),
+  (
+    (select id from _ids where key = 'star_payment_retry_failed'),
+    (select id from _ids where key = 'star_order_retry_failed'),
+    (select id from _ids where key = 'payment_user'),
+    'phase6-payment-ops-charge-retry-failed',
+    9,
+    'XTR',
+    'phase6-payment-ops-retry-failed-payload'
   );
 
 insert into inventory.item_instances (
@@ -373,6 +395,37 @@ select is(
   ),
   2,
   'fulfilled payment retries write risk events for each idempotent admin action'
+);
+
+insert into _ids (key, payload)
+values (
+  'failed_retry_backoff',
+  api.admin_retry_payment_fulfillment(
+    p_admin_user_id => (select id from _ids where key = 'actor'),
+    p_star_order_id => (select id from _ids where key = 'star_order_retry_failed'),
+    p_reason => 'phase 6 retry backoff failed fulfillment test',
+    p_idempotency_key => 'phase6-payment-ops-retry-backoff-001',
+    p_request_context => jsonb_build_object('ip_hash', 'phase6-ip', 'user_agent_hash', 'phase6-ua')
+  )
+);
+
+select ok(
+  ((select payload ->> 'retryable' from _ids where key = 'failed_retry_backoff'))::boolean
+    and ((select payload ->> 'retry_count' from _ids where key = 'failed_retry_backoff'))::integer = 1
+    and (select payload ->> 'next_retry_at' from _ids where key = 'failed_retry_backoff') is not null,
+  'failed payment retry response includes due backoff state'
+);
+
+select ok(
+  exists (
+    select 1
+    from payments.star_orders
+    where id = (select id from _ids where key = 'star_order_retry_failed')
+      and retry_count = 1
+      and next_retry_at is not null
+      and retry_exhausted_at is null
+  ),
+  'failed payment retry persists order-level backoff state'
 );
 
 insert into _ids (key, payload)

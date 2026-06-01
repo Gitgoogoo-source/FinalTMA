@@ -67,13 +67,16 @@ import type {
   UpsertBoxPriceRuleInput,
   UpsertCampaignInput,
   RunReconciliationInput,
+  RunWorkerNowInput,
   SupportMutationResponse,
   SupportTicketsResponse,
+  ToggleWorkerInput,
   UpdateSupportTicketInput,
   UpsertMarketFeeRuleInput,
   UpsertMarketHealthRuleInput,
   UpsertMarketPriceRuleInput,
   WalletsResponse,
+  WorkerRunResponse,
 } from "./admin.types";
 import { reportAdminApiError, reportAdminUnknownError } from "./observability";
 
@@ -983,6 +986,44 @@ export async function runReconciliationNow(
       },
     },
   );
+}
+
+export async function fetchWorkerRuns(
+  params: QueryParams = {},
+): Promise<WorkerRunResponse> {
+  return adminRequest<WorkerRunResponse>(
+    `/api/admin/workers/runs${toQueryString(params)}`,
+  );
+}
+
+export async function runWorkerNow(
+  input: RunWorkerNowInput,
+): Promise<Record<string, unknown>> {
+  return adminRequest<Record<string, unknown>>("/api/admin/workers/run-now", {
+    method: "POST",
+    headers: buildDangerHeaders("admin-worker-run-now", input.jobName),
+    body: {
+      jobName: input.jobName,
+      params: input.params ?? {},
+      reason: input.reason,
+      confirm: true,
+    },
+  });
+}
+
+export async function toggleWorker(
+  input: ToggleWorkerInput,
+): Promise<Record<string, unknown>> {
+  return adminRequest<Record<string, unknown>>("/api/admin/workers/toggle", {
+    method: "POST",
+    headers: buildDangerHeaders("admin-worker-toggle", input.jobName),
+    body: {
+      jobName: input.jobName,
+      enabled: input.enabled,
+      reason: input.reason,
+      confirm: true,
+    },
+  });
 }
 
 export async function fetchReconciliationFindings(
