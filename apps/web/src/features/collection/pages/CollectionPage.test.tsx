@@ -286,6 +286,10 @@ describe("CollectionPage stage-3 frontend states", () => {
     expect(
       selectedSummary.closest(".character-detail-panel__hero"),
     ).not.toBeNull();
+    const selectedActions = within(selectedPanel).getByLabelText("藏品操作");
+    expect(
+      selectedActions.closest(".character-detail-panel__hero"),
+    ).not.toBeNull();
     expect(within(selectedSummary).getByText("森林幼芽")).toBeVisible();
     expect(
       within(selectedPanel).queryByRole("heading", { name: "森林幼芽" }),

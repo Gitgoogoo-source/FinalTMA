@@ -439,6 +439,11 @@ function applyTelegramCssVariables(snapshot: TelegramSnapshot): void {
   root.dataset.tgShell = isTelegramChromeShell(snapshot) ? "telegram" : "web";
   root.dataset.tgFullscreen = snapshot.isFullscreen ? "true" : "false";
   root.dataset.tgColorScheme = snapshot.colorScheme;
+  root.dataset.tgPlatform =
+    normalizeDatasetValue(snapshot.platform) ?? "unknown";
+  root.dataset.tgMobileShell = isTelegramMobileShell(snapshot)
+    ? "true"
+    : "false";
 }
 
 function isTelegramChromeShell(snapshot: TelegramSnapshot): boolean {
@@ -446,10 +451,25 @@ function isTelegramChromeShell(snapshot: TelegramSnapshot): boolean {
 
   return Boolean(
     snapshot.initData ||
-      (platform && platform !== "unknown") ||
-      hasInsetValue(snapshot.safeAreaInset) ||
-      hasInsetValue(snapshot.contentSafeAreaInset),
+    (platform && platform !== "unknown") ||
+    hasInsetValue(snapshot.safeAreaInset) ||
+    hasInsetValue(snapshot.contentSafeAreaInset),
   );
+}
+
+function isTelegramMobileShell(snapshot: TelegramSnapshot): boolean {
+  const platform = snapshot.platform?.toLowerCase();
+
+  return (
+    isTelegramChromeShell(snapshot) &&
+    Boolean(platform?.includes("ios") || platform?.includes("android"))
+  );
+}
+
+function normalizeDatasetValue(value: string | null): string | null {
+  const normalized = normalizeOptionalString(value)?.toLowerCase();
+
+  return normalized?.replace(/[^a-z0-9_-]/g, "_") ?? null;
 }
 
 function applyInsetVariables(

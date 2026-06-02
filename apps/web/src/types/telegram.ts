@@ -87,6 +87,14 @@ export type TelegramEventHandler = (eventData?: unknown) => void;
 
 export type TelegramInvoiceStatus = "paid" | "cancelled" | "failed" | "pending";
 
+export type TelegramWebView = {
+  postEvent?: (
+    eventType: string,
+    callback?: boolean,
+    eventData?: Record<string, unknown>,
+  ) => void;
+};
+
 export type TelegramWebApp = {
   initData?: string;
   initDataUnsafe?: TelegramInitDataUnsafe;
@@ -130,10 +138,15 @@ export type TelegramWebApp = {
 
 export type TelegramGlobal = typeof globalThis & {
   Telegram?: {
+    WebView?: TelegramWebView;
     WebApp?: TelegramWebApp;
   };
 };
 
 export function getTelegramWebApp(): TelegramWebApp | null {
   return (globalThis as TelegramGlobal).Telegram?.WebApp ?? null;
+}
+
+export function getTelegramWebView(): TelegramWebView | null {
+  return (globalThis as TelegramGlobal).Telegram?.WebView ?? null;
 }

@@ -1,4 +1,8 @@
-import { getTelegramWebApp, type TelegramWebApp } from "@/types/telegram";
+import {
+  getTelegramWebApp,
+  getTelegramWebView,
+  type TelegramWebApp,
+} from "@/types/telegram";
 
 const VERTICAL_SWIPES_MIN_VERSION = "7.7";
 const FULLSCREEN_MIN_VERSION = "8.0";
@@ -19,10 +23,22 @@ export function setupTelegramViewport(webApp: TelegramWebApp | null): void {
 
   syncTelegramSafeArea(webApp);
   syncTelegramChromeColor(webApp);
+  requestTelegramSafeAreas();
   webApp.ready?.();
   webApp.expand?.();
   disableTelegramVerticalSwipes(webApp);
   requestTelegramFullscreen(webApp);
+}
+
+export function requestTelegramSafeAreas(): void {
+  const webView = getTelegramWebView();
+
+  try {
+    webView?.postEvent?.("web_app_request_safe_area");
+    webView?.postEvent?.("web_app_request_content_safe_area");
+  } catch {
+    // Some injected test shells expose only WebApp; the layout still has CSS fallbacks.
+  }
 }
 
 export function disableTelegramVerticalSwipes(webApp: TelegramWebApp): void {
@@ -84,7 +100,11 @@ function syncTelegramSafeArea(webApp: TelegramWebApp): void {
 
   applyInsetVariables(root, "--tg-safe-area", webApp.safeAreaInset);
   applyInsetVariables(root, "--tg-safe-area-inset", webApp.safeAreaInset);
-  applyInsetVariables(root, "--tg-content-safe-area", webApp.contentSafeAreaInset);
+  applyInsetVariables(
+    root,
+    "--tg-content-safe-area",
+    webApp.contentSafeAreaInset,
+  );
   applyInsetVariables(
     root,
     "--tg-content-safe-area-inset",
@@ -92,8 +112,9 @@ function syncTelegramSafeArea(webApp: TelegramWebApp): void {
   );
   root.dataset.tgShell = isTelegramChromeShell(webApp) ? "telegram" : "web";
   root.dataset.tgFullscreen = webApp.isFullscreen ? "true" : "false";
-  root.dataset.tgColorScheme =
-    webApp.colorScheme === "dark" ? "dark" : "light";
+  root.dataset.tgColorScheme = webApp.colorScheme === "dark" ? "dark" : "light";
+  root.dataset.tgPlatform = normalizeDatasetValue(webApp.platform) ?? "unknown";
+  root.dataset.tgMobileShell = isTelegramMobileShell(webApp) ? "true" : "false";
 }
 
 function resolveTelegramChromeColor(webApp: TelegramWebApp): string {
@@ -164,10 +185,25 @@ function isTelegramChromeShell(webApp: TelegramWebApp): boolean {
 
   return Boolean(
     normalizeOptionalString(webApp.initData) ||
-      (platform && platform !== "unknown") ||
-      hasInsetValue(webApp.safeAreaInset) ||
-      hasInsetValue(webApp.contentSafeAreaInset),
+    (platform && platform !== "unknown") ||
+    hasInsetValue(webApp.safeAreaInset) ||
+    hasInsetValue(webApp.contentSafeAreaInset),
   );
+}
+
+function isTelegramMobileShell(webApp: TelegramWebApp): boolean {
+  const platform = webApp.platform?.toLowerCase();
+
+  return (
+    isTelegramChromeShell(webApp) &&
+    Boolean(platform?.includes("ios") || platform?.includes("android"))
+  );
+}
+
+function normalizeDatasetValue(value: string | undefined): string | null {
+  const normalized = normalizeOptionalString(value)?.toLowerCase();
+
+  return normalized?.replace(/[^a-z0-9_-]/g, "_") ?? null;
 }
 
 function applyInsetVariables(
@@ -175,7 +211,10 @@ function applyInsetVariables(
   prefix: string,
   inset: TelegramWebApp["safeAreaInset"],
 ): void {
-  root.style.setProperty(`${prefix}-top`, `${normalizeInsetValue(inset?.top)}px`);
+  root.style.setProperty(
+    `${prefix}-top`,
+    `${normalizeInsetValue(inset?.top)}px`,
+  );
   root.style.setProperty(
     `${prefix}-right`,
     `${normalizeInsetValue(inset?.right)}px`,
@@ -201,9 +240,10 @@ function normalizeInsetValue(value: number | undefined): number {
 function hasInsetValue(inset: TelegramWebApp["safeAreaInset"]): boolean {
   return Boolean(
     inset &&
-      Object.values(inset).some(
-        (value) => typeof value === "number" && Number.isFinite(value) && value > 0,
-      ),
+    Object.values(inset).some(
+      (value) =>
+        typeof value === "number" && Number.isFinite(value) && value > 0,
+    ),
   );
 }
 

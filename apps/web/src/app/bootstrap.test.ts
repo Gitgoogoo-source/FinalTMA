@@ -14,6 +14,8 @@ describe("bootstrapTelegramApp", () => {
     document.documentElement.removeAttribute("data-tg-shell");
     document.documentElement.removeAttribute("data-tg-fullscreen");
     document.documentElement.removeAttribute("data-tg-color-scheme");
+    document.documentElement.removeAttribute("data-tg-platform");
+    document.documentElement.removeAttribute("data-tg-mobile-shell");
     document.documentElement.removeAttribute("style");
     vi.resetModules();
   });
@@ -87,13 +89,36 @@ describe("bootstrapTelegramApp", () => {
     expect(root.dataset.tgShell).toBe("telegram");
     expect(root.dataset.tgFullscreen).toBe("false");
     expect(root.dataset.tgColorScheme).toBe("dark");
-    expect(root.style.getPropertyValue("--tg-safe-area-inset-top")).toBe("22px");
+    expect(root.dataset.tgMobileShell).toBe("false");
+    expect(root.style.getPropertyValue("--tg-safe-area-inset-top")).toBe(
+      "22px",
+    );
     expect(
       root.style.getPropertyValue("--tg-content-safe-area-inset-top"),
     ).toBe("64px");
     expect(
       root.style.getPropertyValue("--tg-content-safe-area-inset-right"),
     ).toBe("10px");
+  });
+
+  it("requests Telegram safe-area updates during bootstrap", async () => {
+    const { bootstrapTelegramApp } = await import("./bootstrap");
+    const postEvent = vi.fn();
+
+    installTelegramWebApp({
+      initData: "auth_date=1&hash=test",
+      platform: "ios",
+    });
+    globalWithTelegram.Telegram!.WebView = {
+      postEvent,
+    };
+
+    bootstrapTelegramApp();
+
+    expect(postEvent).toHaveBeenCalledWith("web_app_request_safe_area");
+    expect(postEvent).toHaveBeenCalledWith("web_app_request_content_safe_area");
+    expect(document.documentElement.dataset.tgMobileShell).toBe("true");
+    expect(document.documentElement.dataset.tgPlatform).toBe("ios");
   });
 
   it("marks fullscreen Telegram shells so content can avoid overlay controls", async () => {

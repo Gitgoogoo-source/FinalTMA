@@ -23,12 +23,14 @@ export function MintButton({
       type="button"
     >
       {loading ? (
-        <Loader2 aria-hidden="true" size={15} strokeWidth={2.5} />
+        <Loader2 aria-hidden="true" size={14} strokeWidth={2.5} />
       ) : (
-        <BadgeCheck aria-hidden="true" size={15} strokeWidth={2.5} />
+        <BadgeCheck aria-hidden="true" size={14} strokeWidth={2.5} />
       )}
-      {loading ? "提交中" : label}
-      <ChevronRight aria-hidden="true" size={14} strokeWidth={2.5} />
+      <span className="character-detail-action__label">
+        {loading ? "提交中" : label}
+      </span>
+      <ChevronRight aria-hidden="true" size={12} strokeWidth={2.5} />
     </button>
   );
 }

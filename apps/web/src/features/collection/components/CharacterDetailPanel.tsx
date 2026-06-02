@@ -186,6 +186,65 @@ export function CharacterDetailPanel({
           />
           <DetailMetric label="Mint 状态" value={mintStatusLabel} />
         </section>
+
+        <section className="character-detail-actions" aria-label="藏品操作">
+          {isListed ? (
+            <DetailButtonAction
+              disabled={!onCancelSell}
+              icon="tag"
+              label="下架"
+              onClick={() =>
+                onCancelSell?.({
+                  itemInstanceId: displayItem.itemInstanceId,
+                  listingId: detail?.marketStatus?.listingId ?? null,
+                  unitPriceKcoin: detail?.marketStatus?.unitPrice ?? null,
+                })
+              }
+            />
+          ) : null}
+
+          {isAvailable ? (
+            <>
+              <DetailButtonAction
+                disabled={!canOpenUpgradePanel || !onUpgrade}
+                icon="sparkles"
+                label="升级"
+                onClick={onUpgrade}
+                tone="primary"
+              />
+              <DetailButtonAction
+                disabled={
+                  !canEvolve(displayItem, detail, isAvailable) || !onEvolve
+                }
+                icon="swords"
+                label="合成"
+                onClick={onEvolve}
+              />
+              <DetailButtonAction
+                disabled={!displayItem.isTradeable || !onSell}
+                icon="shopping"
+                label="出售"
+                onClick={onSell}
+              />
+              <DetailButtonAction
+                disabled={
+                  !canDecompose(displayItem, detail, isAvailable) ||
+                  !onDecompose
+                }
+                icon="decompose"
+                label="分解"
+                onClick={onDecompose}
+                tone="danger"
+              />
+            </>
+          ) : null}
+          <MintButton
+            disabled={!onMint}
+            label={mintEligibility.actionLabel}
+            loading={isMinting || isCheckingMint}
+            onClick={() => void handleMintClick()}
+          />
+        </section>
       </div>
 
       {detailQuery.isLoading || detailQuery.isFetching ? (
@@ -208,63 +267,6 @@ export function CharacterDetailPanel({
         </section>
       ) : null}
 
-      <section className="character-detail-actions" aria-label="藏品操作">
-        {isListed ? (
-          <DetailButtonAction
-            disabled={!onCancelSell}
-            icon="tag"
-            label="下架"
-            onClick={() =>
-              onCancelSell?.({
-                itemInstanceId: displayItem.itemInstanceId,
-                listingId: detail?.marketStatus?.listingId ?? null,
-                unitPriceKcoin: detail?.marketStatus?.unitPrice ?? null,
-              })
-            }
-          />
-        ) : null}
-
-        {isAvailable ? (
-          <>
-            <DetailButtonAction
-              disabled={!canOpenUpgradePanel || !onUpgrade}
-              icon="sparkles"
-              label="升级"
-              onClick={onUpgrade}
-              tone="primary"
-            />
-            <DetailButtonAction
-              disabled={
-                !canEvolve(displayItem, detail, isAvailable) || !onEvolve
-              }
-              icon="swords"
-              label="合成"
-              onClick={onEvolve}
-            />
-            <DetailButtonAction
-              disabled={!displayItem.isTradeable || !onSell}
-              icon="shopping"
-              label="出售"
-              onClick={onSell}
-            />
-            <DetailButtonAction
-              disabled={
-                !canDecompose(displayItem, detail, isAvailable) || !onDecompose
-              }
-              icon="decompose"
-              label="分解"
-              onClick={onDecompose}
-              tone="danger"
-            />
-          </>
-        ) : null}
-        <MintButton
-          disabled={!onMint}
-          label={mintEligibility.actionLabel}
-          loading={isMinting || isCheckingMint}
-          onClick={() => void handleMintClick()}
-        />
-      </section>
     </section>
   );
 }
@@ -300,9 +302,9 @@ function DetailButtonAction({
       onClick={onClick}
       type="button"
     >
-      <Icon aria-hidden="true" size={15} strokeWidth={2.5} />
-      {label}
-      <ChevronRight aria-hidden="true" size={14} strokeWidth={2.5} />
+      <Icon aria-hidden="true" size={14} strokeWidth={2.5} />
+      <span className="character-detail-action__label">{label}</span>
+      <ChevronRight aria-hidden="true" size={12} strokeWidth={2.5} />
     </button>
   );
 }
