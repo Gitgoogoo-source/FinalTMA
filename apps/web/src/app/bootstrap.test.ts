@@ -11,6 +11,9 @@ describe("bootstrapTelegramApp", () => {
 
   afterEach(() => {
     delete globalWithTelegram.Telegram;
+    document.documentElement.removeAttribute("data-tg-shell");
+    document.documentElement.removeAttribute("data-tg-color-scheme");
+    document.documentElement.removeAttribute("style");
     vi.resetModules();
   });
 
@@ -30,6 +33,65 @@ describe("bootstrapTelegramApp", () => {
     expect(webApp.setHeaderColor).toHaveBeenCalledWith("#fffdfa");
     expect(webApp.setBackgroundColor).toHaveBeenCalledWith("#fffdfa");
     expect(webApp.setBottomBarColor).toHaveBeenCalledWith("#fffdfa");
+  });
+
+  it("marks the Telegram shell and safe area before the React provider renders", async () => {
+    const { bootstrapTelegramApp } = await import("./bootstrap");
+
+    installTelegramWebApp({
+      colorScheme: "dark",
+      contentSafeAreaInset: {
+        top: 64,
+        right: 10,
+        bottom: 18,
+        left: 8,
+      },
+      safeAreaInset: {
+        top: 22,
+        right: 4,
+        bottom: 12,
+        left: 4,
+      },
+    });
+
+    bootstrapTelegramApp();
+
+    const root = document.documentElement;
+
+    expect(root.dataset.tgShell).toBe("telegram");
+    expect(root.dataset.tgColorScheme).toBe("dark");
+    expect(root.style.getPropertyValue("--tg-safe-area-inset-top")).toBe("22px");
+    expect(
+      root.style.getPropertyValue("--tg-content-safe-area-inset-top"),
+    ).toBe("64px");
+    expect(
+      root.style.getPropertyValue("--tg-content-safe-area-inset-right"),
+    ).toBe("10px");
+  });
+
+  it("does not enable Telegram chrome fallback for ordinary web loads", async () => {
+    const { bootstrapTelegramApp } = await import("./bootstrap");
+
+    installTelegramWebApp({
+      initData: "",
+      platform: "unknown",
+      safeAreaInset: {
+        top: 0,
+        right: 0,
+        bottom: 0,
+        left: 0,
+      },
+      contentSafeAreaInset: {
+        top: 0,
+        right: 0,
+        bottom: 0,
+        left: 0,
+      },
+    });
+
+    bootstrapTelegramApp();
+
+    expect(document.documentElement.dataset.tgShell).toBe("web");
   });
 
   it("falls back to expand when fullscreen is unavailable", async () => {

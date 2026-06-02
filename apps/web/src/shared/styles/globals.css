@@ -70,7 +70,7 @@
 }
 
 :root[data-tg-shell="telegram"] {
-  --app-telegram-top-controls-fallback: 56px;
+  --app-telegram-top-controls-fallback: 80px;
 }
 
 html,

@@ -16,6 +16,7 @@ export function setupTelegramViewport(webApp: TelegramWebApp | null): void {
     return;
   }
 
+  syncTelegramSafeArea(webApp);
   syncTelegramChromeColor(webApp);
   webApp.ready?.();
   webApp.expand?.();
@@ -46,6 +47,26 @@ function syncTelegramChromeColor(webApp: TelegramWebApp): void {
   webApp.setHeaderColor?.(chromeColor);
   webApp.setBackgroundColor?.(chromeColor);
   webApp.setBottomBarColor?.(chromeColor);
+}
+
+function syncTelegramSafeArea(webApp: TelegramWebApp): void {
+  if (typeof document === "undefined") {
+    return;
+  }
+
+  const root = document.documentElement;
+
+  applyInsetVariables(root, "--tg-safe-area", webApp.safeAreaInset);
+  applyInsetVariables(root, "--tg-safe-area-inset", webApp.safeAreaInset);
+  applyInsetVariables(root, "--tg-content-safe-area", webApp.contentSafeAreaInset);
+  applyInsetVariables(
+    root,
+    "--tg-content-safe-area-inset",
+    webApp.contentSafeAreaInset,
+  );
+  root.dataset.tgShell = isTelegramChromeShell(webApp) ? "telegram" : "web";
+  root.dataset.tgColorScheme =
+    webApp.colorScheme === "dark" ? "dark" : "light";
 }
 
 function resolveTelegramChromeColor(webApp: TelegramWebApp): string {
@@ -109,4 +130,58 @@ function parseVersionParts(version: string): number[] {
 
 function isHexColor(value: string | undefined): value is string {
   return /^#[\da-f]{6}$/i.test(value ?? "");
+}
+
+function isTelegramChromeShell(webApp: TelegramWebApp): boolean {
+  const platform = webApp.platform?.toLowerCase();
+
+  return Boolean(
+    normalizeOptionalString(webApp.initData) ||
+      (platform && platform !== "unknown") ||
+      hasInsetValue(webApp.safeAreaInset) ||
+      hasInsetValue(webApp.contentSafeAreaInset),
+  );
+}
+
+function applyInsetVariables(
+  root: HTMLElement,
+  prefix: string,
+  inset: TelegramWebApp["safeAreaInset"],
+): void {
+  root.style.setProperty(`${prefix}-top`, `${normalizeInsetValue(inset?.top)}px`);
+  root.style.setProperty(
+    `${prefix}-right`,
+    `${normalizeInsetValue(inset?.right)}px`,
+  );
+  root.style.setProperty(
+    `${prefix}-bottom`,
+    `${normalizeInsetValue(inset?.bottom)}px`,
+  );
+  root.style.setProperty(
+    `${prefix}-left`,
+    `${normalizeInsetValue(inset?.left)}px`,
+  );
+}
+
+function normalizeInsetValue(value: number | undefined): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return 0;
+  }
+
+  return Math.max(0, Math.round(value));
+}
+
+function hasInsetValue(inset: TelegramWebApp["safeAreaInset"]): boolean {
+  return Boolean(
+    inset &&
+      Object.values(inset).some(
+        (value) => typeof value === "number" && Number.isFinite(value) && value > 0,
+      ),
+  );
+}
+
+function normalizeOptionalString(value: unknown): string | null {
+  return typeof value === "string" && value.trim().length > 0
+    ? value.trim()
+    : null;
 }

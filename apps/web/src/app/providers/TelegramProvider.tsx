@@ -444,7 +444,10 @@ function isTelegramChromeShell(snapshot: TelegramSnapshot): boolean {
   const platform = snapshot.platform?.toLowerCase();
 
   return Boolean(
-    snapshot.initData || (platform && platform !== "unknown"),
+    snapshot.initData ||
+      (platform && platform !== "unknown") ||
+      hasInsetValue(snapshot.safeAreaInset) ||
+      hasInsetValue(snapshot.contentSafeAreaInset),
   );
 }
 
@@ -465,4 +468,8 @@ function applyInsetVariables(
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function hasInsetValue(inset: Required<TelegramSafeAreaInset>): boolean {
+  return Object.values(inset).some((value) => value > 0);
 }
