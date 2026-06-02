@@ -18,15 +18,17 @@ export function CharacterGrid({
         <strong>我的藏品</strong>
         <span>{items.length} 件</span>
       </div>
-      <div className="character-grid__items">
-        {items.map((item) => (
-          <CharacterThumb
-            item={item}
-            isSelected={item.itemInstanceId === selectedItemId}
-            key={item.itemInstanceId}
-            onSelect={onSelect}
-          />
-        ))}
+      <div className="character-grid__track">
+        <div className="character-grid__items">
+          {items.map((item) => (
+            <CharacterThumb
+              item={item}
+              isSelected={item.itemInstanceId === selectedItemId}
+              key={item.itemInstanceId}
+              onSelect={onSelect}
+            />
+          ))}
+        </div>
       </div>
     </section>
   );

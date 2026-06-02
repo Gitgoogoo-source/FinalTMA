@@ -27,9 +27,10 @@ export function CharacterThumb({
         isSelected ? "，已选中" : ""
       }`}
     >
-      <span className="character-thumb__image">
+      <span className="character-thumb__image" aria-hidden="true">
+        <span className="character-thumb__shine" />
         {imageUrl ? (
-          <img src={imageUrl} alt={item.name} />
+          <img src={imageUrl} alt="" draggable="false" />
         ) : (
           item.name.slice(0, 1)
         )}
@@ -42,7 +43,7 @@ export function CharacterThumb({
           {item.rarity.label}
         </span>
       </span>
-      <span className="character-thumb__power">{item.power}</span>
+      <span className="character-thumb__power">战力 {item.power}</span>
       <span className="character-thumb__check" aria-hidden="true">
         {isSelected ? <Check size={13} strokeWidth={3} /> : null}
       </span>

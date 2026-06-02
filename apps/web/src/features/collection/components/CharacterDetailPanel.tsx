@@ -78,31 +78,49 @@ export function CharacterDetailPanel({
       aria-live="polite"
       className={`character-detail-panel character-detail-panel--${displayItem.rarity.code}`}
     >
-      <header className="character-detail-panel__header">
-        <div className="character-detail-panel__copy">
-          <span className="character-detail-panel__kicker">
-            <Sparkles aria-hidden="true" size={15} strokeWidth={2.4} />
-            {displayItem.rarity.label}
-          </span>
-          <h1>{displayItem.name}</h1>
-          <p>{buildDescription(displayItem)}</p>
-        </div>
-        <ItemStatusBadge
-          status={displayItem.status}
-          isListed={isListed}
-          lockReason={lockReason}
-        />
-      </header>
+      <div className="character-detail-panel__hero">
+        <header className="character-detail-panel__header">
+          <div className="character-detail-panel__copy">
+            <span className="character-detail-panel__kicker">
+              <Sparkles aria-hidden="true" size={15} strokeWidth={2.4} />
+              {displayItem.rarity.label}
+            </span>
+            <h1>{displayItem.name}</h1>
+            <p>{buildRoleLine(displayItem, detail)}</p>
+          </div>
+          <ItemStatusBadge
+            status={displayItem.status}
+            isListed={isListed}
+            lockReason={lockReason}
+          />
+        </header>
 
-      <div className="character-detail-panel__media">
-        <span className="character-detail-panel__shadow" aria-hidden="true" />
-        {imageUrl ? (
-          <img src={imageUrl} alt={displayItem.name} />
-        ) : (
-          <span className="character-detail-panel__fallback" aria-hidden="true">
-            {displayItem.name.slice(0, 1)}
-          </span>
-        )}
+        <div className="character-detail-panel__media">
+          <span className="character-detail-panel__glow" aria-hidden="true" />
+          <span className="character-detail-panel__shadow" aria-hidden="true" />
+          {imageUrl ? (
+            <img src={imageUrl} alt={displayItem.name} draggable="false" />
+          ) : (
+            <span
+              className="character-detail-panel__fallback"
+              aria-hidden="true"
+            >
+              {displayItem.name.slice(0, 1)}
+            </span>
+          )}
+        </div>
+
+        <section className="character-detail-callout" aria-label="藏品角色说明">
+          <p>{buildDescription(displayItem)}</p>
+          <div className="character-detail-callout__tags">
+            <span>战力 {formatCurrencyAmount(displayItem.power)}</span>
+            <span>Lv.{formatCurrencyAmount(displayItem.level)}</span>
+            <span>
+              {detail?.faction?.displayName ?? displayItem.rarity.label}
+            </span>
+            <span>链上 {mintStatusLabel}</span>
+          </div>
+        </section>
       </div>
 
       {detailQuery.isLoading || detailQuery.isFetching ? (
@@ -170,12 +188,6 @@ export function CharacterDetailPanel({
         />
         <DetailMetric label="Mint 状态" value={mintStatusLabel} />
       </section>
-
-      {displayItem.description ? (
-        <p className="character-detail-description">
-          {displayItem.description}
-        </p>
-      ) : null}
 
       {blockReason ? (
         <section className="character-detail-notice" aria-label="状态限制">
@@ -485,6 +497,23 @@ function buildDescription(item: CollectionInventoryItem): string {
   }
 
   return "已进入你的库存，可在后续阶段用于成长、交易和链上 Mint。";
+}
+
+function buildRoleLine(
+  item: CollectionInventoryItem,
+  detail: CollectionInventoryDetail | null,
+): string {
+  const parts = [
+    detail?.faction?.displayName,
+    item.series?.displayName,
+    item.form?.displayName,
+  ].filter(isString);
+
+  if (parts.length > 0) {
+    return parts.join(" · ");
+  }
+
+  return `${item.rarity.label} · 战力 ${formatCurrencyAmount(item.power)}`;
 }
 
 function isString(value: string | null | undefined): value is string {

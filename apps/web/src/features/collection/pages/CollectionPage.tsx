@@ -1,4 +1,4 @@
-import { PackageOpen, RefreshCw } from "lucide-react";
+import { ChevronLeft, Images, PackageOpen, RefreshCw } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -303,6 +303,29 @@ export function CollectionPage() {
 
   return (
     <section className="collection-page" data-testid="collection-page">
+      <div className="collection-page__backdrop" aria-hidden="true" />
+      <header className="collection-page__nav" aria-label="藏品导航">
+        <Link
+          aria-label="返回开盒"
+          className="collection-page__nav-button"
+          to={APP_ROUTES.box}
+        >
+          <ChevronLeft aria-hidden="true" size={24} strokeWidth={2.5} />
+          <span>开盒</span>
+        </Link>
+        <div className="collection-page__title">
+          <span>选择角色</span>
+          <strong>藏品</strong>
+        </div>
+        <Link
+          aria-label="图鉴成就"
+          className="collection-page__nav-button collection-page__nav-button--wide"
+          to={APP_ROUTES.album}
+        >
+          <Images aria-hidden="true" size={18} strokeWidth={2.5} />
+          <span>图鉴</span>
+        </Link>
+      </header>
       <CharacterDetailPanel
         item={selectedItem}
         isMinting={createMintMutation.isPending}
