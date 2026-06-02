@@ -8,6 +8,7 @@ import {
   Swords,
   Tag,
 } from "lucide-react";
+import { useState } from "react";
 
 import { getApiErrorMessage } from "@/api/errors";
 import { useWalletStatus } from "@/features/wallet/hooks/useWalletStatus";
@@ -56,6 +57,7 @@ export function CharacterDetailPanel({
 }: CharacterDetailPanelProps) {
   const detailQuery = useItemDetail(item.itemInstanceId);
   const walletStatusQuery = useWalletStatus();
+  const [isCheckingMint, setIsCheckingMint] = useState(false);
   const detail = detailQuery.item;
   const displayItem = detail ?? item;
   const imageUrl =
@@ -71,6 +73,38 @@ export function CharacterDetailPanel({
     isListed,
     walletStatus: walletStatusQuery.data?.status,
   });
+
+  async function handleMintClick() {
+    if (!onMint || isMinting || isCheckingMint) {
+      return;
+    }
+
+    setIsCheckingMint(true);
+
+    try {
+      const [nextDetailResult, nextWalletResult] = await Promise.all([
+        detailQuery.refetch(),
+        walletStatusQuery.refetch(),
+      ]);
+      const latestDetail =
+        nextDetailResult?.data ?? detailQuery.data ?? detail ?? null;
+      const latestItem = latestDetail ?? item;
+      const latestIsListed = isItemListed(latestItem, latestDetail);
+      const latestMintEligibility = getMintEligibility(
+        latestItem,
+        latestDetail,
+        {
+          isListed: latestIsListed,
+          walletStatus:
+            nextWalletResult?.data?.status ?? walletStatusQuery.data?.status,
+        },
+      );
+
+      onMint(latestItem.itemInstanceId, latestMintEligibility.blockingMessages);
+    } finally {
+      setIsCheckingMint(false);
+    }
+  }
 
   return (
     <section
@@ -249,13 +283,8 @@ export function CharacterDetailPanel({
         <MintButton
           disabled={!onMint}
           label={mintEligibility.actionLabel}
-          loading={isMinting}
-          onClick={() =>
-            onMint?.(
-              displayItem.itemInstanceId,
-              mintEligibility.blockingMessages,
-            )
-          }
+          loading={isMinting || isCheckingMint}
+          onClick={() => void handleMintClick()}
         />
       </section>
     </section>
@@ -434,7 +463,9 @@ function getMintEligibility(
     walletStatus: string | null | undefined;
   },
 ): { actionLabel: string; blockingMessages: string[]; canSubmit: boolean } {
-  const mintStatus = normalizeMintStatus(getEffectiveMintStatus(item, detail));
+  const mintStatus = normalizeMintRequestStatus(
+    getEffectiveMintStatus(item, detail),
+  );
   const isMintable = detail?.isMintable ?? item.isMintable;
   const blockingMessages: string[] = [];
 
@@ -543,6 +574,14 @@ function normalizeMintStatus(status: string | null | undefined): string {
   return String(status ?? "")
     .trim()
     .toLowerCase();
+}
+
+function normalizeMintRequestStatus(status: string | null | undefined): string {
+  const normalized = normalizeMintStatus(status);
+
+  return normalized === "" || normalized === "none"
+    ? "not_minted"
+    : normalized;
 }
 
 function buildDescription(item: CollectionInventoryItem): string {
