@@ -91,6 +91,7 @@ function syncTelegramSafeArea(webApp: TelegramWebApp): void {
     webApp.contentSafeAreaInset,
   );
   root.dataset.tgShell = isTelegramChromeShell(webApp) ? "telegram" : "web";
+  root.dataset.tgFullscreen = webApp.isFullscreen ? "true" : "false";
   root.dataset.tgColorScheme =
     webApp.colorScheme === "dark" ? "dark" : "light";
 }

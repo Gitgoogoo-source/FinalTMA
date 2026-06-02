@@ -437,6 +437,7 @@ function applyTelegramCssVariables(snapshot: TelegramSnapshot): void {
     snapshot.contentSafeAreaInset,
   );
   root.dataset.tgShell = isTelegramChromeShell(snapshot) ? "telegram" : "web";
+  root.dataset.tgFullscreen = snapshot.isFullscreen ? "true" : "false";
   root.dataset.tgColorScheme = snapshot.colorScheme;
 }
 
