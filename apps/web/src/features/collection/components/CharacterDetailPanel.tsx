@@ -115,8 +115,6 @@ export function CharacterDetailPanel({
     >
       <div className="character-detail-panel__hero">
         <div className="character-detail-panel__media">
-          <span className="character-detail-panel__glow" aria-hidden="true" />
-          <span className="character-detail-panel__shadow" aria-hidden="true" />
           {visibleImageUrl ? (
             <img
               src={visibleImageUrl}

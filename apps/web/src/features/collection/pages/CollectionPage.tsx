@@ -315,7 +315,6 @@ export function CollectionPage() {
 
   return (
     <section className="collection-page" data-testid="collection-page">
-      <div className="collection-page__backdrop" aria-hidden="true" />
       <CharacterDetailPanel
         item={selectedItem}
         isMinting={createMintMutation.isPending}
