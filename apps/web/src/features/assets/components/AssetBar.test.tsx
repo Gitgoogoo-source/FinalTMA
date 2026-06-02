@@ -95,6 +95,12 @@ describe("AssetBar", () => {
     expect(screen.getByLabelText("Fgems 余额")).toHaveTextContent("35");
     expect(screen.getByRole("button", { name: "刷新" })).toBeVisible();
   });
+
+  it("does not render the avatar status dot", () => {
+    const { container } = render(<AssetBar />);
+
+    expect(container.querySelector(".user-avatar__status")).not.toBeInTheDocument();
+  });
 });
 
 function createMyAssetsState(

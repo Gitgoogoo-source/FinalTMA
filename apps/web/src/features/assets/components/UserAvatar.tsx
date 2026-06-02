@@ -31,7 +31,6 @@ export function UserAvatar({ profile }: UserAvatarProps) {
         ) : (
           <span>{getInitials(displayName)}</span>
         )}
-        <span className="user-avatar__status" />
       </div>
       <div className="user-avatar__text">
         <strong>{displayName}</strong>
