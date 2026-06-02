@@ -24,7 +24,6 @@ import {
   getCollectionLockReasonLabel,
   getCollectionStatusLabel,
   getMintStatusLabel,
-  ItemStatusBadge,
 } from "./ItemStatusBadge";
 import { MintButton } from "./MintButton";
 
@@ -62,10 +61,12 @@ export function CharacterDetailPanel({
   const displayItem = detail ?? item;
   const imageUrl =
     displayItem.imageUrl ?? displayItem.thumbnailUrl ?? displayItem.avatarUrl;
+  const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null);
+  const visibleImageUrl =
+    imageUrl && imageUrl !== failedImageUrl ? imageUrl : null;
   const isListed = isItemListed(displayItem, detail);
   const isAvailable = displayItem.status === "available" && !isListed;
   const canOpenUpgradePanel = canOpenUpgrade(displayItem, detail, isAvailable);
-  const lockReason = detail?.activeLock?.reason ?? null;
   const effectiveMintStatus = getEffectiveMintStatus(displayItem, detail);
   const mintStatusLabel = getMintStatusLabel(effectiveMintStatus);
   const blockReason = getBlockedReason(displayItem, detail, isListed);
@@ -113,27 +114,16 @@ export function CharacterDetailPanel({
       className={`character-detail-panel character-detail-panel--${displayItem.rarity.code}`}
     >
       <div className="character-detail-panel__hero">
-        <header className="character-detail-panel__header">
-          <div className="character-detail-panel__copy">
-            <span className="character-detail-panel__kicker">
-              <Sparkles aria-hidden="true" size={15} strokeWidth={2.4} />
-              {displayItem.rarity.label}
-            </span>
-            <h1>{displayItem.name}</h1>
-            <p>{buildRoleLine(displayItem, detail)}</p>
-          </div>
-          <ItemStatusBadge
-            status={displayItem.status}
-            isListed={isListed}
-            lockReason={lockReason}
-          />
-        </header>
-
         <div className="character-detail-panel__media">
           <span className="character-detail-panel__glow" aria-hidden="true" />
           <span className="character-detail-panel__shadow" aria-hidden="true" />
-          {imageUrl ? (
-            <img src={imageUrl} alt={displayItem.name} draggable="false" />
+          {visibleImageUrl ? (
+            <img
+              src={visibleImageUrl}
+              alt={displayItem.name}
+              draggable="false"
+              onError={() => setFailedImageUrl(visibleImageUrl)}
+            />
           ) : (
             <span
               className="character-detail-panel__fallback"
@@ -144,16 +134,57 @@ export function CharacterDetailPanel({
           )}
         </div>
 
-        <section className="character-detail-callout" aria-label="藏品角色说明">
-          <p>{buildDescription(displayItem)}</p>
-          <div className="character-detail-callout__tags">
-            <span>战力 {formatCurrencyAmount(displayItem.power)}</span>
-            <span>Lv.{formatCurrencyAmount(displayItem.level)}</span>
-            <span>
-              {detail?.faction?.displayName ?? displayItem.rarity.label}
-            </span>
-            <span>链上 {mintStatusLabel}</span>
-          </div>
+        <section className="character-detail-summary" aria-label="藏品完整信息">
+          <DetailMetric label="名称" value={displayItem.name} />
+          <DetailMetric label="稀有度" value={displayItem.rarity.label} />
+          <DetailMetric
+            label="系列"
+            value={displayItem.series?.displayName ?? "未分配"}
+          />
+          <DetailMetric
+            label="形态"
+            value={displayItem.form?.displayName ?? "未分配"}
+          />
+          <DetailMetric
+            label="等级"
+            value={`Lv.${formatCurrencyAmount(displayItem.level)}`}
+          />
+          <DetailMetric
+            label="战力"
+            value={formatCurrencyAmount(displayItem.power)}
+          />
+          <DetailMetric
+            label="编号"
+            value={
+              displayItem.serialNo
+                ? `#${formatCurrencyAmount(displayItem.serialNo)}`
+                : "未编号"
+            }
+          />
+          <DetailMetric
+            label="状态"
+            value={getCollectionStatusLabel(displayItem.status, isListed)}
+          />
+          <DetailMetric label="是否挂售" value={isListed ? "是" : "否"} />
+          <DetailMetric
+            label="是否可升级"
+            value={getBooleanLabel(canUpgrade(displayItem, detail, isAvailable))}
+          />
+          <DetailMetric
+            label="是否可合成"
+            value={getBooleanLabel(canEvolve(displayItem, detail, isAvailable))}
+          />
+          <DetailMetric
+            label="是否可分解"
+            value={getBooleanLabel(
+              canDecompose(displayItem, detail, isAvailable),
+            )}
+          />
+          <DetailMetric
+            label="是否可 Mint"
+            value={getBooleanLabel(mintEligibility.canSubmit)}
+          />
+          <DetailMetric label="Mint 状态" value={mintStatusLabel} />
         </section>
       </div>
 
@@ -169,59 +200,6 @@ export function CharacterDetailPanel({
           onRetry={() => void detailQuery.refetch()}
         />
       ) : null}
-
-      <section className="character-detail-summary" aria-label="藏品完整信息">
-        <DetailMetric label="名称" value={displayItem.name} />
-        <DetailMetric label="稀有度" value={displayItem.rarity.label} />
-        <DetailMetric
-          label="系列"
-          value={displayItem.series?.displayName ?? "未分配"}
-        />
-        <DetailMetric
-          label="形态"
-          value={displayItem.form?.displayName ?? "未分配"}
-        />
-        <DetailMetric
-          label="等级"
-          value={`Lv.${formatCurrencyAmount(displayItem.level)}`}
-        />
-        <DetailMetric
-          label="战力"
-          value={formatCurrencyAmount(displayItem.power)}
-        />
-        <DetailMetric
-          label="编号"
-          value={
-            displayItem.serialNo
-              ? `#${formatCurrencyAmount(displayItem.serialNo)}`
-              : "未编号"
-          }
-        />
-        <DetailMetric
-          label="状态"
-          value={getCollectionStatusLabel(displayItem.status, isListed)}
-        />
-        <DetailMetric label="是否挂售" value={isListed ? "是" : "否"} />
-        <DetailMetric
-          label="是否可升级"
-          value={getBooleanLabel(canUpgrade(displayItem, detail, isAvailable))}
-        />
-        <DetailMetric
-          label="是否可合成"
-          value={getBooleanLabel(canEvolve(displayItem, detail, isAvailable))}
-        />
-        <DetailMetric
-          label="是否可分解"
-          value={getBooleanLabel(
-            canDecompose(displayItem, detail, isAvailable),
-          )}
-        />
-        <DetailMetric
-          label="是否可 Mint"
-          value={getBooleanLabel(mintEligibility.canSubmit)}
-        />
-        <DetailMetric label="Mint 状态" value={mintStatusLabel} />
-      </section>
 
       {blockReason ? (
         <section className="character-detail-notice" aria-label="状态限制">
@@ -582,43 +560,4 @@ function normalizeMintRequestStatus(status: string | null | undefined): string {
   return normalized === "" || normalized === "none"
     ? "not_minted"
     : normalized;
-}
-
-function buildDescription(item: CollectionInventoryItem): string {
-  if (item.description) {
-    return item.description;
-  }
-
-  const meta = [
-    item.series?.displayName,
-    item.form?.displayName,
-    item.subtitle,
-  ].filter(isString);
-
-  if (meta.length > 0) {
-    return meta.join(" · ");
-  }
-
-  return "已进入你的库存，可在后续阶段用于成长、交易和链上 Mint。";
-}
-
-function buildRoleLine(
-  item: CollectionInventoryItem,
-  detail: CollectionInventoryDetail | null,
-): string {
-  const parts = [
-    detail?.faction?.displayName,
-    item.series?.displayName,
-    item.form?.displayName,
-  ].filter(isString);
-
-  if (parts.length > 0) {
-    return parts.join(" · ");
-  }
-
-  return `${item.rarity.label} · 战力 ${formatCurrencyAmount(item.power)}`;
-}
-
-function isString(value: string | null | undefined): value is string {
-  return typeof value === "string" && value.length > 0;
 }

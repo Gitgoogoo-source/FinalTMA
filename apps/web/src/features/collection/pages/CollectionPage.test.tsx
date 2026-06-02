@@ -281,11 +281,19 @@ describe("CollectionPage stage-3 frontend states", () => {
     renderCollectionPage();
 
     expect(screen.queryByRole("link", { name: /图鉴/ })).not.toBeInTheDocument();
+    const selectedPanel = screen.getByLabelText("当前选中藏品");
+    const selectedSummary = within(selectedPanel).getByLabelText("藏品完整信息");
     expect(
-      within(screen.getByLabelText("当前选中藏品")).getByRole("heading", {
-        name: "森林幼芽",
-      }),
-    ).toBeVisible();
+      selectedSummary.closest(".character-detail-panel__hero"),
+    ).not.toBeNull();
+    expect(within(selectedSummary).getByText("森林幼芽")).toBeVisible();
+    expect(
+      within(selectedPanel).queryByRole("heading", { name: "森林幼芽" }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(selectedPanel).queryByLabelText("藏品角色说明"),
+    ).not.toBeInTheDocument();
+    expect(selectedPanel.querySelector(".item-status-badge")).toBeNull();
     expect(mocks.detailCalls).toContain(ITEM_A_ID);
     expect(
       screen.queryByRole("button", { name: "详情" }),
@@ -298,11 +306,10 @@ describe("CollectionPage stage-3 frontend states", () => {
 
     fireEvent.click(secondThumb);
 
-    expect(
-      within(screen.getByLabelText("当前选中藏品")).getByRole("heading", {
-        name: "月冕守门人",
-      }),
-    ).toBeVisible();
+    const nextSummary = within(
+      screen.getByLabelText("当前选中藏品"),
+    ).getByLabelText("藏品完整信息");
+    expect(within(nextSummary).getByText("月冕守门人")).toBeVisible();
     expect(screen.getByRole("button", { name: /月冕守门人/ })).toHaveAttribute(
       "aria-pressed",
       "true",
