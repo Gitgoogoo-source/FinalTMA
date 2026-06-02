@@ -436,7 +436,16 @@ function applyTelegramCssVariables(snapshot: TelegramSnapshot): void {
     "--tg-content-safe-area-inset",
     snapshot.contentSafeAreaInset,
   );
+  root.dataset.tgShell = isTelegramChromeShell(snapshot) ? "telegram" : "web";
   root.dataset.tgColorScheme = snapshot.colorScheme;
+}
+
+function isTelegramChromeShell(snapshot: TelegramSnapshot): boolean {
+  const platform = snapshot.platform?.toLowerCase();
+
+  return Boolean(
+    snapshot.initData || (platform && platform !== "unknown"),
+  );
 }
 
 function applyInsetVariables(
