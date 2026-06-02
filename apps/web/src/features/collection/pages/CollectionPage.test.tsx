@@ -307,6 +307,10 @@ describe("CollectionPage stage-3 frontend states", () => {
 
     const secondThumb = screen.getByRole("button", { name: /月冕守门人/ });
     expect(secondThumb).toHaveAttribute("aria-pressed", "false");
+    expect(within(secondThumb).queryByText("月冕守门人")).not.toBeInTheDocument();
+    expect(within(secondThumb).queryByText("传说")).not.toBeInTheDocument();
+    expect(within(secondThumb).queryByText("Lv.1")).not.toBeInTheDocument();
+    expect(within(secondThumb).queryByText("战力 88")).not.toBeInTheDocument();
 
     fireEvent.click(secondThumb);
 

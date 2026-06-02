@@ -1,5 +1,3 @@
-import { Check } from "lucide-react";
-
 import type { CollectionInventoryItem } from "../collection.types";
 
 type CharacterThumbProps = {
@@ -34,18 +32,6 @@ export function CharacterThumb({
         ) : (
           item.name.slice(0, 1)
         )}
-      </span>
-      <span className="character-thumb__copy">
-        <strong>{item.name}</strong>
-        <span>
-          Lv.{item.level}
-          {" · "}
-          {item.rarity.label}
-        </span>
-      </span>
-      <span className="character-thumb__power">战力 {item.power}</span>
-      <span className="character-thumb__check" aria-hidden="true">
-        {isSelected ? <Check size={13} strokeWidth={3} /> : null}
       </span>
     </button>
   );
