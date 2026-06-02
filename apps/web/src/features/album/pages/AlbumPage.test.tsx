@@ -94,6 +94,18 @@ vi.mock("../hooks/useClaimAlbumReward", () => ({
   }),
 }));
 
+vi.mock("@/features/banners/hooks/useBanners", () => ({
+  useBanners: () => ({
+    banners: [],
+    error: null,
+    isError: false,
+    isLoading: false,
+    primaryBanner: null,
+    refetch: vi.fn(),
+    serverTime: null,
+  }),
+}));
+
 const USER_ID = "11111111-1111-4111-8111-111111111111";
 const BOOK_ALL_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const BOOK_FOREST_ID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";

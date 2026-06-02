@@ -1,5 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -497,10 +498,23 @@ describe("BoxPage Stars invoice flow", () => {
 });
 
 function renderBoxPage() {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      mutations: {
+        retry: false,
+      },
+      queries: {
+        retry: false,
+      },
+    },
+  });
+
   return render(
-    <FeedbackProvider>
-      <BoxPage />
-    </FeedbackProvider>,
+    <QueryClientProvider client={queryClient}>
+      <FeedbackProvider>
+        <BoxPage />
+      </FeedbackProvider>
+    </QueryClientProvider>,
   );
 }
 
