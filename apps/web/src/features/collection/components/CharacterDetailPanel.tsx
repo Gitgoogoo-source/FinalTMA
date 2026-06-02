@@ -54,7 +54,7 @@ export function CharacterDetailPanel({
   onSell,
   onUpgrade,
 }: CharacterDetailPanelProps) {
-  const detailQuery = useItemDetail(item.itemInstanceId);
+  const detailQuery = useItemDetail(item.itemInstanceId, { enabled: false });
   const walletStatusQuery = useWalletStatus();
   const [isCheckingMint, setIsCheckingMint] = useState(false);
   const detail = detailQuery.item;
@@ -72,6 +72,7 @@ export function CharacterDetailPanel({
   const blockReason = getBlockedReason(displayItem, detail, isListed);
   const mintEligibility = getMintEligibility(displayItem, detail, {
     isListed,
+    requireDetail: false,
     walletStatus: walletStatusQuery.data?.status,
   });
 
@@ -87,8 +88,9 @@ export function CharacterDetailPanel({
         detailQuery.refetch(),
         walletStatusQuery.refetch(),
       ]);
-      const latestDetail =
-        nextDetailResult?.data ?? detailQuery.data ?? detail ?? null;
+      const latestDetail = nextDetailResult.isSuccess
+        ? (nextDetailResult.data ?? null)
+        : null;
       const latestItem = latestDetail ?? item;
       const latestIsListed = isItemListed(latestItem, latestDetail);
       const latestMintEligibility = getMintEligibility(
@@ -96,6 +98,7 @@ export function CharacterDetailPanel({
         latestDetail,
         {
           isListed: latestIsListed,
+          requireDetail: true,
           walletStatus:
             nextWalletResult?.data?.status ?? walletStatusQuery.data?.status,
         },
@@ -166,7 +169,9 @@ export function CharacterDetailPanel({
           <DetailMetric label="是否挂售" value={isListed ? "是" : "否"} />
           <DetailMetric
             label="是否可升级"
-            value={getBooleanLabel(canUpgrade(displayItem, detail, isAvailable))}
+            value={getBooleanLabel(
+              canUpgrade(displayItem, detail, isAvailable),
+            )}
           />
           <DetailMetric
             label="是否可合成"
@@ -245,10 +250,6 @@ export function CharacterDetailPanel({
         </section>
       </div>
 
-      {detailQuery.isLoading || detailQuery.isFetching ? (
-        <DetailState title="详情同步中" detail="正在读取服务端详情。" />
-      ) : null}
-
       {detailQuery.isError ? (
         <DetailState
           tone="error"
@@ -264,7 +265,6 @@ export function CharacterDetailPanel({
           <span>{blockReason}</span>
         </section>
       ) : null}
-
     </section>
   );
 }
@@ -438,6 +438,7 @@ function getMintEligibility(
   detail: CollectionInventoryDetail | null,
   options: {
     isListed: boolean;
+    requireDetail?: boolean;
     walletStatus: string | null | undefined;
   },
 ): { actionLabel: string; blockingMessages: string[]; canSubmit: boolean } {
@@ -447,8 +448,8 @@ function getMintEligibility(
   const isMintable = detail?.isMintable ?? item.isMintable;
   const blockingMessages: string[] = [];
 
-  if (!detail) {
-    blockingMessages.push("正在读取服务端藏品详情，请稍后再试。");
+  if (options.requireDetail === true && !detail) {
+    blockingMessages.push("服务端藏品详情读取失败，请稍后再试。");
   }
 
   const walletMessage = getWalletMintBlockingMessage(options.walletStatus);
@@ -557,7 +558,5 @@ function normalizeMintStatus(status: string | null | undefined): string {
 function normalizeMintRequestStatus(status: string | null | undefined): string {
   const normalized = normalizeMintStatus(status);
 
-  return normalized === "" || normalized === "none"
-    ? "not_minted"
-    : normalized;
+  return normalized === "" || normalized === "none" ? "not_minted" : normalized;
 }

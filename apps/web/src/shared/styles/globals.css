@@ -180,16 +180,16 @@ a {
     calc(100% - 24px - var(--app-safe-area-left) - var(--app-safe-area-right)),
     460px
   );
-  min-height: 0;
+  min-height: 54px;
   margin: 0;
   position: absolute;
-  top: calc(12px + var(--app-layout-safe-area-top));
+  top: calc(10px + var(--app-layout-safe-area-top));
   left: 50%;
   z-index: 40;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 12px;
   isolation: isolate;
   pointer-events: none;
   transform: translateX(-50%);
@@ -243,17 +243,15 @@ a {
   place-items: center;
   position: relative;
   overflow: hidden;
-  border: 1px solid rgb(255 255 255 / 68%);
+  border: 1px solid rgb(178 184 190 / 92%);
   border-radius: 999px;
   color: #fff;
   background:
-    linear-gradient(135deg, rgb(255 255 255 / 48%), rgb(255 255 255 / 18%)),
+    linear-gradient(135deg, rgb(255 255 255 / 42%), rgb(255 255 255 / 0%)),
     linear-gradient(135deg, #d6dce0, #8c969e);
-  box-shadow:
-    0 7px 16px rgb(38 49 55 / 10%),
-    inset 1px 1px 0 rgb(255 255 255 / 62%);
-  backdrop-filter: blur(12px) saturate(170%);
-  -webkit-backdrop-filter: blur(12px) saturate(170%);
+  box-shadow: 0 7px 16px rgb(38 49 55 / 10%);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   font-size: 20px;
   font-weight: 900;
 }
@@ -306,13 +304,13 @@ a {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 6px;
+  gap: 8px;
   pointer-events: auto;
 }
 
 .asset-pill {
   min-width: 0;
-  width: clamp(82px, 24vw, 88px);
+  width: 82px;
   height: 38px;
   flex: 0 0 auto;
   position: relative;
@@ -321,16 +319,18 @@ a {
   justify-content: center;
   gap: 5px;
   isolation: isolate;
-  border: 1px solid rgb(255 255 255 / 70%);
-  border-bottom-color: rgb(255 255 255 / 34%);
+  border: 1px solid rgb(226 226 226 / 72%);
   border-radius: 19px;
   padding: 0 8px;
-  background: var(--liquid-glass-panel);
+  background: linear-gradient(
+    180deg,
+    rgb(255 255 255 / 86%),
+    rgb(255 255 255 / 68%)
+  );
   box-shadow:
-    0 10px 24px rgb(20 74 55 / 10%),
-    inset 1px 1.5px 0 rgb(255 255 255 / 86%),
-    inset -1px -1px 0 rgb(255 255 255 / 34%),
-    inset 0 0 0 1px rgb(120 150 135 / 8%);
+    0 10px 24px rgb(33 39 44 / 8%),
+    inset 0 1px 0 rgb(255 255 255 / 96%),
+    inset 0 -1px 0 rgb(214 219 218 / 28%);
   overflow: hidden;
   backdrop-filter: blur(18px) saturate(180%);
   -webkit-backdrop-filter: blur(18px) saturate(180%);
@@ -342,8 +342,14 @@ a {
   inset: 0;
   z-index: 0;
   border-radius: inherit;
-  background: var(--liquid-glass-shine);
-  opacity: 0.72;
+  background: linear-gradient(
+    135deg,
+    rgb(255 255 255 / 58%) 0%,
+    rgb(255 255 255 / 0%) 38%,
+    rgb(255 255 255 / 0%) 68%,
+    rgb(255 255 255 / 26%) 100%
+  );
+  opacity: 0.62;
   pointer-events: none;
 }
 
@@ -427,14 +433,13 @@ a {
   isolation: isolate;
   padding: 0;
   border: 1px solid rgb(255 255 255 / 18%);
-  border-bottom-color: rgb(0 0 0 / 28%);
   border-radius: 15px;
   color: #fff;
   background: linear-gradient(180deg, rgb(72 83 95 / 98%), rgb(37 49 61 / 96%));
   box-shadow:
     0 12px 25px rgb(28 39 50 / 24%),
-    inset 1px 1px 0 rgb(255 255 255 / 22%),
-    inset -1px -1px 0 rgb(0 0 0 / 28%);
+    inset 0 1px 0 rgb(255 255 255 / 22%),
+    inset 0 -1px 0 rgb(0 0 0 / 28%);
   overflow: hidden;
   backdrop-filter: blur(18px) saturate(180%);
   -webkit-backdrop-filter: blur(18px) saturate(180%);
@@ -448,11 +453,11 @@ a {
   z-index: 0;
   border-radius: inherit;
   background: linear-gradient(
-    135deg,
-    rgb(255 255 255 / 22%),
-    rgb(255 255 255 / 0%) 42%,
-    rgb(255 255 255 / 10%)
+    180deg,
+    rgb(255 255 255 / 18%),
+    rgb(255 255 255 / 0%)
   );
+  opacity: 0.78;
   pointer-events: none;
 }
 
@@ -2860,7 +2865,7 @@ a {
     calc(100% - 24px - var(--app-safe-area-left) - var(--app-safe-area-right)),
     460px
   );
-  min-height: 0;
+  min-height: 58px;
   margin: 0;
   position: absolute;
   right: auto;
@@ -2873,24 +2878,33 @@ a {
   gap: 0;
   isolation: isolate;
   transform: translateX(-50%);
-  border: 0;
-  border-radius: 0;
-  padding: 0;
-  overflow: visible;
-  background: transparent;
-  box-shadow: none;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
+  border: 1px solid rgb(255 255 255 / 58%);
+  border-radius: 27px;
+  padding: 6px 5px;
+  overflow: hidden;
+  background: rgb(255 255 255 / 54%);
+  box-shadow:
+    0 18px 40px rgb(20 74 55 / 18%),
+    inset 0 1px 0 rgb(255 255 255 / 72%),
+    inset 0 -1px 0 rgb(255 255 255 / 18%);
+  backdrop-filter: blur(26px) saturate(185%);
+  -webkit-backdrop-filter: blur(26px) saturate(185%);
 }
 
 .bottom-nav::before {
-  content: none;
+  content: "";
   position: absolute;
   inset: 0;
   z-index: 0;
   border-radius: inherit;
-  background: var(--liquid-glass-shine);
-  opacity: 0.78;
+  background: linear-gradient(
+    135deg,
+    rgb(255 255 255 / 68%) 0%,
+    rgb(255 255 255 / 0%) 34%,
+    rgb(255 255 255 / 0%) 66%,
+    rgb(255 255 255 / 28%) 100%
+  );
+  opacity: 0.5;
   pointer-events: none;
 }
 
@@ -2914,23 +2928,17 @@ a {
 }
 
 .bottom-nav__item::before {
-  content: none;
+  content: "";
   position: absolute;
   inset: 4px 7px;
   z-index: 0;
   border: 1px solid rgb(255 255 255 / 70%);
-  border-bottom-color: rgb(255 255 255 / 34%);
   border-radius: 19px;
   opacity: 0;
-  background: linear-gradient(
-    180deg,
-    rgb(255 255 255 / 74%),
-    rgb(255 255 255 / 52%)
-  );
+  background: rgb(255 255 255 / 68%);
   box-shadow:
     0 8px 18px rgb(20 74 55 / 12%),
-    inset 1px 1px 0 rgb(255 255 255 / 78%),
-    inset -1px -1px 0 rgb(255 255 255 / 28%);
+    inset 0 1px 0 rgb(255 255 255 / 78%);
   backdrop-filter: blur(16px) saturate(180%);
   -webkit-backdrop-filter: blur(16px) saturate(180%);
   transform: scale(0.92);

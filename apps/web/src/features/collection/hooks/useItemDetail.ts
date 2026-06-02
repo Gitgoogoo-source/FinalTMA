@@ -5,6 +5,8 @@ import { queryKeys } from "@/shared/constants/queryKeys";
 
 import { fetchInventoryDetail } from "../collection.api";
 
+const INVENTORY_DETAIL_CACHE_MS = 30 * 60 * 1000;
+
 export function useItemDetail(
   itemInstanceId: string | null | undefined,
   options: { enabled?: boolean } = {},
@@ -20,6 +22,8 @@ export function useItemDetail(
     queryKey: queryKeys.inventory.detail(userId, itemInstanceId),
     queryFn: () => fetchInventoryDetail(itemInstanceId as string),
     enabled,
+    staleTime: INVENTORY_DETAIL_CACHE_MS,
+    gcTime: INVENTORY_DETAIL_CACHE_MS,
   });
 
   return {

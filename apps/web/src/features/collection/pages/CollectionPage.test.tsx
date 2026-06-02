@@ -28,7 +28,10 @@ const mocks = vi.hoisted(() => ({
   isFetchingNextInventoryPage: false,
   inventoryRefetch: vi.fn(),
   inventoryFetchNextPage: vi.fn(),
-  detailCalls: [] as Array<string | null | undefined>,
+  detailCalls: [] as Array<{
+    enabled: boolean;
+    itemInstanceId: string | null | undefined;
+  }>,
   detailRefetch: vi.fn(),
   upgradeMutateAsync: vi.fn(),
   evolveMutateAsync: vi.fn(),
@@ -57,18 +60,23 @@ vi.mock("../hooks/useInventory", () => ({
 }));
 
 vi.mock("../hooks/useItemDetail", () => ({
-  useItemDetail: (itemInstanceId: string | null | undefined) => {
-    mocks.detailCalls.push(itemInstanceId);
+  useItemDetail: (
+    itemInstanceId: string | null | undefined,
+    options: { enabled?: boolean } = {},
+  ) => {
+    const enabled = options.enabled !== false && Boolean(itemInstanceId);
+    mocks.detailCalls.push({ enabled, itemInstanceId });
 
     return {
       error: null,
       isError: false,
       isFetching: false,
       isLoading: false,
-      item: itemInstanceId
-        ? (mocks.itemDetails.get(itemInstanceId) ?? null)
-        : null,
-      refetch: mocks.detailRefetch,
+      item:
+        enabled && itemInstanceId
+          ? (mocks.itemDetails.get(itemInstanceId) ?? null)
+          : null,
+      refetch: () => mocks.detailRefetch(itemInstanceId),
     };
   },
 }));
@@ -189,6 +197,20 @@ describe("CollectionPage stage-3 frontend states", () => {
     mocks.cancelSellMutate.mockReset();
     mocks.createMintMutate.mockReset();
     mocks.mintQueueRefetch.mockReset();
+    mocks.detailRefetch.mockImplementation(
+      async (itemInstanceId: string | null | undefined) => {
+        const detail = itemInstanceId
+          ? (mocks.itemDetails.get(itemInstanceId) ?? null)
+          : null;
+
+        return {
+          data: detail,
+          error: detail ? null : new Error("detail not found"),
+          isSuccess: Boolean(detail),
+          status: detail ? "success" : "error",
+        };
+      },
+    );
     mocks.upgradeMutateAsync.mockResolvedValue(upgradeResult());
     mocks.evolveMutateAsync.mockResolvedValue(evolveResult());
     mocks.decomposeMutateAsync.mockResolvedValue(decomposeResult());
@@ -280,9 +302,12 @@ describe("CollectionPage stage-3 frontend states", () => {
 
     renderCollectionPage();
 
-    expect(screen.queryByRole("link", { name: /图鉴/ })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: /图鉴/ }),
+    ).not.toBeInTheDocument();
     const selectedPanel = screen.getByLabelText("当前选中藏品");
-    const selectedSummary = within(selectedPanel).getByLabelText("藏品完整信息");
+    const selectedSummary =
+      within(selectedPanel).getByLabelText("藏品完整信息");
     expect(
       selectedSummary.closest(".character-detail-panel__hero"),
     ).not.toBeNull();
@@ -298,7 +323,8 @@ describe("CollectionPage stage-3 frontend states", () => {
       within(selectedPanel).queryByLabelText("藏品角色说明"),
     ).not.toBeInTheDocument();
     expect(selectedPanel.querySelector(".item-status-badge")).toBeNull();
-    expect(mocks.detailCalls).toContain(ITEM_A_ID);
+    expect(getEnabledDetailCallIds()).toEqual([]);
+    expect(screen.queryByText("详情同步中")).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "详情" }),
     ).not.toBeInTheDocument();
@@ -307,7 +333,9 @@ describe("CollectionPage stage-3 frontend states", () => {
 
     const secondThumb = screen.getByRole("button", { name: /月冕守门人/ });
     expect(secondThumb).toHaveAttribute("aria-pressed", "false");
-    expect(within(secondThumb).queryByText("月冕守门人")).not.toBeInTheDocument();
+    expect(
+      within(secondThumb).queryByText("月冕守门人"),
+    ).not.toBeInTheDocument();
     expect(within(secondThumb).queryByText("传说")).not.toBeInTheDocument();
     expect(within(secondThumb).queryByText("Lv.1")).not.toBeInTheDocument();
     expect(within(secondThumb).queryByText("战力 88")).not.toBeInTheDocument();
@@ -322,7 +350,8 @@ describe("CollectionPage stage-3 frontend states", () => {
       "aria-pressed",
       "true",
     );
-    expect(mocks.detailCalls).toContain(ITEM_B_ID);
+    expect(getEnabledDetailCallIds()).toEqual([]);
+    expect(screen.queryByText("详情同步中")).not.toBeInTheDocument();
   });
 
   it("loads the next inventory page when more items are available", async () => {
@@ -440,7 +469,7 @@ describe("CollectionPage stage-3 frontend states", () => {
     expect(mocks.cancelSellMutate).toHaveBeenCalledWith(
       {
         itemInstanceId: ITEM_A_ID,
-        listingId: "99999999-9999-4999-8999-999999999999",
+        listingId: null,
       },
       expect.objectContaining({
         onError: expect.any(Function),
@@ -452,8 +481,8 @@ describe("CollectionPage stage-3 frontend states", () => {
 
   it("disables growth actions when the item is not upgradeable, lacks materials and is not duplicated", () => {
     const uniqueItem = makeItem({
-      isDecomposable: true,
-      isEvolvable: true,
+      isDecomposable: false,
+      isEvolvable: false,
       isUpgradeable: false,
     });
     setInventoryItems(uniqueItem);
@@ -579,6 +608,9 @@ describe("CollectionPage stage-3 frontend states", () => {
     );
     mocks.detailRefetch.mockResolvedValueOnce({
       data: makeDetail(item),
+      error: null,
+      isSuccess: true,
+      status: "success",
     });
 
     renderCollectionPage();
@@ -842,6 +874,12 @@ function setItemDetail(
   detail: CollectionInventoryDetail,
 ) {
   mocks.itemDetails.set(item.itemInstanceId, detail);
+}
+
+function getEnabledDetailCallIds(): Array<string | null | undefined> {
+  return mocks.detailCalls
+    .filter((call) => call.enabled)
+    .map((call) => call.itemInstanceId);
 }
 
 function makeWalletStatus(status: string) {
