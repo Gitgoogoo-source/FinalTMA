@@ -109,6 +109,8 @@ a {
 }
 
 .app-shell {
+  height: 100vh;
+  height: 100dvh;
   min-height: 100vh;
   min-height: 100dvh;
   display: grid;
@@ -118,14 +120,20 @@ a {
     calc(12px + var(--app-safe-area-right))
     calc(16px + var(--app-safe-area-bottom))
     calc(12px + var(--app-safe-area-left));
+  overflow: hidden;
 }
 
 .app-shell__content {
   width: min(100%, 460px);
+  min-height: 0;
   margin: 0 auto;
   display: grid;
   align-items: start;
   padding: 6px 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .app-home-panel {
