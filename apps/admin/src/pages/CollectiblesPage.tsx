@@ -14,6 +14,17 @@ const EDITABLE_STATUSES = ["draft", "active", "hidden", "retired"];
 
 type CollectibleDraft = {
   id: string;
+  slug: string;
+  display_name: string;
+  subtitle: string;
+  description: string;
+  rarity_code: string;
+  type_code: string;
+  series_id: string;
+  faction_id: string;
+  base_power: string;
+  max_level: string;
+  supply_limit: string;
   release_status: string;
   tradeable: boolean;
   upgradeable: boolean;
@@ -22,6 +33,8 @@ type CollectibleDraft = {
   nft_mintable: boolean;
   sort_order: string;
   metadata: string;
+  forms: string;
+  media: string;
 };
 
 export function CollectiblesPage({
@@ -229,6 +242,99 @@ export function CollectiblesPage({
 
               <div className="form-grid">
                 <label>
+                  <span>Slug</span>
+                  <input
+                    disabled={!canWriteCatalog || saving}
+                    value={draft.slug}
+                    onChange={(event) =>
+                      setDraft({ ...draft, slug: event.target.value })
+                    }
+                  />
+                </label>
+                <label>
+                  <span>名称</span>
+                  <input
+                    disabled={!canWriteCatalog || saving}
+                    value={draft.display_name}
+                    onChange={(event) =>
+                      setDraft({ ...draft, display_name: event.target.value })
+                    }
+                  />
+                </label>
+                <label>
+                  <span>稀有度</span>
+                  <input
+                    disabled={!canWriteCatalog || saving}
+                    value={draft.rarity_code}
+                    onChange={(event) =>
+                      setDraft({ ...draft, rarity_code: event.target.value })
+                    }
+                  />
+                </label>
+                <label>
+                  <span>类型</span>
+                  <input
+                    disabled={!canWriteCatalog || saving}
+                    value={draft.type_code}
+                    onChange={(event) =>
+                      setDraft({ ...draft, type_code: event.target.value })
+                    }
+                  />
+                </label>
+                <label>
+                  <span>系列 ID</span>
+                  <input
+                    disabled={!canWriteCatalog || saving}
+                    value={draft.series_id}
+                    onChange={(event) =>
+                      setDraft({ ...draft, series_id: event.target.value })
+                    }
+                  />
+                </label>
+                <label>
+                  <span>阵营 ID</span>
+                  <input
+                    disabled={!canWriteCatalog || saving}
+                    value={draft.faction_id}
+                    onChange={(event) =>
+                      setDraft({ ...draft, faction_id: event.target.value })
+                    }
+                  />
+                </label>
+                <label>
+                  <span>基础战力</span>
+                  <input
+                    disabled={!canWriteCatalog || saving}
+                    inputMode="numeric"
+                    value={draft.base_power}
+                    onChange={(event) =>
+                      setDraft({ ...draft, base_power: event.target.value })
+                    }
+                  />
+                </label>
+                <label>
+                  <span>等级上限</span>
+                  <input
+                    disabled={!canWriteCatalog || saving}
+                    inputMode="numeric"
+                    value={draft.max_level}
+                    onChange={(event) =>
+                      setDraft({ ...draft, max_level: event.target.value })
+                    }
+                  />
+                </label>
+                <label>
+                  <span>供应上限</span>
+                  <input
+                    disabled={!canWriteCatalog || saving}
+                    inputMode="numeric"
+                    value={draft.supply_limit}
+                    onChange={(event) =>
+                      setDraft({ ...draft, supply_limit: event.target.value })
+                    }
+                  />
+                </label>
+                <label>
                   <span>发布状态</span>
                   <select
                     disabled={!canWriteCatalog || saving}
@@ -256,6 +362,28 @@ export function CollectiblesPage({
                   />
                 </label>
               </div>
+
+              <label className="field-stack">
+                <span>副标题</span>
+                <input
+                  disabled={!canWriteCatalog || saving}
+                  value={draft.subtitle}
+                  onChange={(event) =>
+                    setDraft({ ...draft, subtitle: event.target.value })
+                  }
+                />
+              </label>
+              <label className="field-stack">
+                <span>说明</span>
+                <textarea
+                  disabled={!canWriteCatalog || saving}
+                  rows={3}
+                  value={draft.description}
+                  onChange={(event) =>
+                    setDraft({ ...draft, description: event.target.value })
+                  }
+                />
+              </label>
 
               <div className="toggle-list">
                 <Toggle
@@ -296,6 +424,28 @@ export function CollectiblesPage({
                 />
               </div>
 
+              <label className="field-stack">
+                <span>Forms JSON</span>
+                <textarea
+                  disabled={!canWriteCatalog || saving}
+                  rows={8}
+                  value={draft.forms}
+                  onChange={(event) =>
+                    setDraft({ ...draft, forms: event.target.value })
+                  }
+                />
+              </label>
+              <label className="field-stack">
+                <span>Media JSON</span>
+                <textarea
+                  disabled={!canWriteCatalog || saving}
+                  rows={8}
+                  value={draft.media}
+                  onChange={(event) =>
+                    setDraft({ ...draft, media: event.target.value })
+                  }
+                />
+              </label>
               <label className="field-stack">
                 <span>Metadata JSON</span>
                 <textarea
@@ -357,6 +507,17 @@ function Toggle(props: {
 function toDraft(item: CollectibleAdminItem): CollectibleDraft {
   return {
     id: item.id,
+    slug: item.slug,
+    display_name: item.display_name,
+    subtitle: item.subtitle ?? "",
+    description: item.description ?? "",
+    rarity_code: item.rarity_code,
+    type_code: item.type_code,
+    series_id: item.series_id ?? "",
+    faction_id: item.faction_id ?? "",
+    base_power: String(item.base_power),
+    max_level: String(item.max_level),
+    supply_limit: item.supply_limit === null ? "" : String(item.supply_limit),
     release_status: item.release_status,
     tradeable: item.tradeable,
     upgradeable: item.upgradeable,
@@ -365,6 +526,8 @@ function toDraft(item: CollectibleAdminItem): CollectibleDraft {
     nft_mintable: item.nft_mintable,
     sort_order: String(item.sort_order),
     metadata: JSON.stringify(item.metadata ?? {}, null, 2),
+    forms: JSON.stringify(item.forms ?? [], null, 2),
+    media: JSON.stringify(item.media ?? [], null, 2),
   };
 }
 
@@ -374,6 +537,17 @@ function serializeDraft(
 ): UpdateCollectibleTemplateOpsInput {
   return {
     id: draft.id,
+    slug: parseRequiredText(draft.slug, "Slug"),
+    display_name: parseRequiredText(draft.display_name, "名称"),
+    subtitle: parseOptionalText(draft.subtitle),
+    description: parseOptionalText(draft.description),
+    rarity_code: parseRequiredText(draft.rarity_code, "稀有度"),
+    type_code: parseRequiredText(draft.type_code, "类型"),
+    series_id: parseOptionalText(draft.series_id),
+    faction_id: parseOptionalText(draft.faction_id),
+    base_power: parseInteger(draft.base_power, "基础战力"),
+    max_level: parseInteger(draft.max_level, "等级上限"),
+    supply_limit: parseNullableInteger(draft.supply_limit, "供应上限"),
     release_status: draft.release_status,
     tradeable: draft.tradeable,
     upgradeable: draft.upgradeable,
@@ -382,6 +556,8 @@ function serializeDraft(
     nft_mintable: draft.nft_mintable,
     sort_order: parseInteger(draft.sort_order, "排序"),
     metadata: parseJsonObject(draft.metadata),
+    forms: parseJsonArray(draft.forms, "forms"),
+    media: parseJsonArray(draft.media, "media"),
     reason,
   };
 }
@@ -415,6 +591,40 @@ function parseJsonObject(value: string): Record<string, unknown> {
   return parsed as Record<string, unknown>;
 }
 
+function parseJsonArray(
+  value: string,
+  label: string,
+): Array<Record<string, unknown>> {
+  const parsed = JSON.parse(value || "[]") as unknown;
+
+  if (!Array.isArray(parsed)) {
+    throw new Error(`${label} 必须是 JSON array`);
+  }
+
+  parsed.forEach((item, index) => {
+    if (typeof item !== "object" || item === null || Array.isArray(item)) {
+      throw new Error(`${label}[${index}] 必须是 object`);
+    }
+  });
+
+  return parsed as Array<Record<string, unknown>>;
+}
+
+function parseRequiredText(value: string, label: string): string {
+  const normalized = value.trim();
+
+  if (!normalized) {
+    throw new Error(`${label} 不能为空`);
+  }
+
+  return normalized;
+}
+
+function parseOptionalText(value: string): string | null {
+  const normalized = value.trim();
+  return normalized || null;
+}
+
 function parseInteger(value: string, label: string): number {
   const parsed = Number(value);
 
@@ -423,6 +633,16 @@ function parseInteger(value: string, label: string): number {
   }
 
   return parsed;
+}
+
+function parseNullableInteger(value: string, label: string): number | null {
+  const normalized = value.trim();
+
+  if (!normalized) {
+    return null;
+  }
+
+  return parseInteger(normalized, label);
 }
 
 function readError(error: unknown, fallback: string): string {

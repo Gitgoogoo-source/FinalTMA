@@ -340,7 +340,7 @@ function normalizeAlbumMilestoneInput(body: JsonRecord): AlbumMilestoneInput {
     reward:
       body.reward === undefined
         ? undefined
-        : normalizeCurrencyRewardArray(body.reward),
+        : normalizeAlbumRewardArray(body.reward),
     active: normalizeOptionalBoolean(body.active, "active"),
     sortOrder:
       body.sort_order === undefined
@@ -353,7 +353,7 @@ function normalizeAlbumMilestoneInput(body: JsonRecord): AlbumMilestoneInput {
   };
 }
 
-function normalizeCurrencyRewardArray(value: unknown): JsonValue {
+function normalizeAlbumRewardArray(value: unknown): JsonValue {
   if (!Array.isArray(value)) {
     throw new ApiError(400, "VALIDATION_FAILED", "reward must be an array");
   }
@@ -367,33 +367,91 @@ function normalizeCurrencyRewardArray(value: unknown): JsonValue {
       );
     }
 
-    const currency = normalizeRequiredText(
-      item.currency,
-      `reward[${index}].currency`,
-    ).toUpperCase();
-    const amount = normalizeNumber(item.amount, `reward[${index}].amount`);
+    const rewardType = normalizeOptionalRewardText(
+      item.reward_type ?? item.type,
+    )?.toUpperCase();
+    const currency = normalizeOptionalRewardText(item.currency)?.toUpperCase();
 
-    if (!["KCOIN", "FGEMS"].includes(currency)) {
+    if (currency || ["KCOIN", "FGEMS", "STAR_DISPLAY"].includes(rewardType ?? "")) {
+      const normalizedCurrency =
+        currency ?? (rewardType as "KCOIN" | "FGEMS" | "STAR_DISPLAY");
+      const amount = normalizeInteger(item.amount, `reward[${index}].amount`, {
+        min: 1,
+      });
+
+      if (!["KCOIN", "FGEMS", "STAR_DISPLAY"].includes(normalizedCurrency)) {
+        throw new ApiError(
+          400,
+          "VALIDATION_FAILED",
+          `reward[${index}].currency is unsupported`,
+        );
+      }
+
+      return {
+        currency: normalizedCurrency,
+        amount,
+      };
+    }
+
+    if (!["ITEM", "DECORATION", "COLLECTIBLE"].includes(rewardType ?? "")) {
       throw new ApiError(
         400,
         "VALIDATION_FAILED",
-        `reward[${index}].currency must be KCOIN or FGEMS`,
+        `reward[${index}].reward_type is unsupported`,
       );
     }
 
-    if (amount <= 0) {
-      throw new ApiError(
-        400,
-        "VALIDATION_FAILED",
-        `reward[${index}].amount must be positive`,
-      );
-    }
+    const templateId = normalizeRequiredUuid(
+      item.template_id ??
+        item.templateId ??
+        item.item_template_id ??
+        item.itemTemplateId ??
+        item.decoration_id ??
+        item.decorationId,
+      `reward[${index}].template_id`,
+    );
+    const formId =
+      item.form_id === undefined &&
+      item.formId === undefined &&
+      item.item_form_id === undefined &&
+      item.itemFormId === undefined
+        ? undefined
+        : normalizeNullableUuid(
+            item.form_id ?? item.formId ?? item.item_form_id ?? item.itemFormId,
+            `reward[${index}].form_id`,
+          );
+    const quantity =
+      item.quantity === undefined
+        ? undefined
+        : normalizeInteger(item.quantity, `reward[${index}].quantity`, {
+            min: 1,
+            max: 100,
+          });
 
     return {
-      currency,
-      amount,
+      reward_type: rewardType,
+      template_id: templateId,
+      ...(formId !== undefined ? { form_id: formId } : {}),
+      ...(quantity !== undefined ? { quantity } : {}),
     };
   });
+}
+
+function normalizeOptionalRewardText(value: unknown): string | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const normalized = value.trim();
+  return normalized ? normalized : undefined;
+}
+
+function normalizeNullableUuid(value: unknown, field: string): string | null {
+  if (value === null || value === "") {
+    return null;
+  }
+
+  return normalizeRequiredUuid(value, field);
 }
 
 function normalizeJsonObject(value: unknown, field: string): JsonValue {

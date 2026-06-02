@@ -672,6 +672,7 @@ describe("CollectionPage stage-3 frontend states", () => {
     );
     expect(mocks.upgradeMutateAsync).toHaveBeenCalledWith({
       expectedFgemsCost: 20,
+      expectedItemVersion: 7,
       itemInstanceId: ITEM_A_ID,
       targetLevel: 2,
     });
@@ -816,6 +817,7 @@ function makeDetail(
       listingId: null,
       unitPrice: null,
     },
+    itemVersion: 7,
     onchainStatus: null,
     sameItemCount: 3,
     updatedAt: "2026-05-25T08:00:00.000Z",

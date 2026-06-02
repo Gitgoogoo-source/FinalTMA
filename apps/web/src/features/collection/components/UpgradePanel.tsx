@@ -73,6 +73,7 @@ export function UpgradePanel({
       const result = await upgradeMutation.mutateAsync({
         itemInstanceId,
         expectedFgemsCost: preview.fgemsCost,
+        expectedItemVersion: detail?.itemVersion ?? null,
         targetLevel: preview.nextLevel ?? preview.targetLevel,
       });
 

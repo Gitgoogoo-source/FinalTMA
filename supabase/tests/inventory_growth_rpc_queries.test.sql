@@ -235,6 +235,7 @@ select 'detail', api.inventory_get_item_detail((select id from _ids where key = 
 select ok(((select payload from _ids where key = 'detail') -> 'upgrade_preview' ->> 'can_upgrade')::boolean, 'item detail includes upgrade preview');
 select ok(((select payload from _ids where key = 'detail') -> 'evolution_preview' ->> 'can_evolve')::boolean, 'item detail includes evolution preview');
 select ok(((select payload from _ids where key = 'detail') -> 'decompose_preview' ->> 'can_decompose')::boolean, 'item detail includes decompose preview');
+select is(((select payload from _ids where key = 'detail') ->> 'item_version')::integer, 0, 'item detail exposes item_version for stale upgrade guards');
 
 update inventory.item_instances
 set nft_mint_status = 'minting'
@@ -447,6 +448,11 @@ select ok(has_function_privilege('service_role', 'api.inventory_get_item_detail(
 select ok(has_function_privilege('service_role', 'api.inventory_decompose_items(uuid, uuid[], text, numeric)', 'execute'), 'service_role can execute guarded inventory_decompose_items');
 select ok(has_function_privilege('service_role', 'api.album_claim_milestone(uuid, uuid, text, integer)', 'execute'), 'service_role can execute album_claim_milestone');
 select ok(has_function_privilege('service_role', 'api.album_refresh_weekly_leaderboard(timestamp with time zone)', 'execute'), 'service_role can execute album_refresh_weekly_leaderboard');
+select ok(
+  position('inventory_decompose_group' in pg_get_functiondef(to_regprocedure('api.inventory_decompose_items(uuid,uuid[],text)'))) > 0
+    and position('for update of ii' in lower(pg_get_functiondef(to_regprocedure('api.inventory_decompose_items(uuid,uuid[],text)')))) > 0,
+  'inventory_decompose_items serializes duplicate decomposition by owned template/form group'
+);
 
 select * from finish();
 

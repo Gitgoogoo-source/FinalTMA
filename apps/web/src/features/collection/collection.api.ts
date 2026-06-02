@@ -96,6 +96,10 @@ export async function upgradeInventoryItem(
       input.expectedFgemsCost !== null
         ? { expected_fgems_cost: input.expectedFgemsCost }
         : {}),
+      ...(input.expectedItemVersion !== undefined &&
+      input.expectedItemVersion !== null
+        ? { expected_item_version: input.expectedItemVersion }
+        : {}),
       ...(input.targetLevel !== undefined && input.targetLevel !== null
         ? { target_level: input.targetLevel }
         : {}),
@@ -273,6 +277,11 @@ function normalizeInventoryItem(
     status: readString(value.status),
     nftMintStatus:
       readString(value.nftMintStatus) ?? readString(value.nft_mint_status),
+    itemVersion:
+      readNullableNumber(value.itemVersion) ??
+      readNullableNumber(value.item_version) ??
+      readNullableNumber(value.lockVersion) ??
+      readNullableNumber(value.lock_version),
     imageUrl: readString(value.imageUrl) ?? readString(value.image_url),
     thumbnailUrl:
       readString(value.thumbnailUrl) ?? readString(value.thumbnail_url),

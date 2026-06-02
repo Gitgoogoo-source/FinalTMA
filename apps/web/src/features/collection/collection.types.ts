@@ -103,6 +103,7 @@ export type CollectionInventoryItem = {
   power: number;
   status: string | null;
   nftMintStatus: string | null;
+  itemVersion?: number | null;
   imageUrl: string | null;
   thumbnailUrl: string | null;
   avatarUrl: string | null;
@@ -145,6 +146,7 @@ export type CollectionInventoryResponse = {
 export type CollectionUpgradeItemInput = {
   itemInstanceId: string;
   expectedFgemsCost?: number | null;
+  expectedItemVersion?: number | null;
   targetLevel?: number | null;
   idempotencyKey?: string | null;
 };

@@ -2,6 +2,7 @@ import {
   getSupabaseAdminClient,
   type SupabaseAdminClient,
 } from "../../packages/server/src/db/supabaseAdmin.js";
+import type { JsonValue } from "../../packages/server/src/db/transactions.js";
 import {
   ApiError,
   assertApiRateLimit,
@@ -60,17 +61,31 @@ type CollectibleFormRow = {
   form_index: number;
   form_slug: string;
   display_name: string;
+  description: string | null;
   image_url: string | null;
   thumbnail_url: string | null;
   avatar_url: string | null;
+  base_power_bonus: number;
   is_default: boolean;
   next_form_id: string | null;
+  metadata: unknown;
   updated_at: string;
 };
 
 type CollectibleMediaRow = {
+  id: string;
   template_id: string;
+  form_id: string | null;
   media_type: string;
+  url: string;
+  storage_bucket: string | null;
+  storage_path: string | null;
+  mime_type: string | null;
+  width: number | null;
+  height: number | null;
+  sort_order: number;
+  metadata: unknown;
+  created_at: string;
 };
 
 type CollectibleMutationResult = Record<string, unknown> & {
@@ -79,15 +94,10 @@ type CollectibleMutationResult = Record<string, unknown> & {
 };
 
 type CollectibleOpsInput = {
-  templateId: string;
-  releaseStatus?: string | undefined;
-  tradeable?: boolean | undefined;
-  upgradeable?: boolean | undefined;
-  evolvable?: boolean | undefined;
-  decomposable?: boolean | undefined;
-  nftMintable?: boolean | undefined;
-  sortOrder?: number | undefined;
-  metadata?: ReturnType<typeof toJsonObject> | undefined;
+  templateId?: string | undefined;
+  template: ReturnType<typeof toJsonObject>;
+  forms?: JsonValue | undefined;
+  media?: JsonValue | undefined;
 };
 
 const COLLECTIBLE_READ_PERMISSIONS = [
@@ -153,19 +163,14 @@ export default withApiHandler(
 
     try {
       const result = await callAdminWriteRpc<CollectibleMutationResult>({
-        functionName: "admin_update_collectible_template_ops",
+        functionName: "admin_upsert_collectible_template",
         requestId: ctx.requestId,
         args: {
           p_admin_user_id: admin.adminId,
           p_template_id: input.templateId,
-          p_release_status: input.releaseStatus,
-          p_tradeable: input.tradeable,
-          p_upgradeable: input.upgradeable,
-          p_evolvable: input.evolvable,
-          p_decomposable: input.decomposable,
-          p_nft_mintable: input.nftMintable,
-          p_sort_order: input.sortOrder,
-          p_metadata: input.metadata,
+          p_template: input.template,
+          p_forms: input.forms,
+          p_media: input.media,
           p_reason: reason,
           p_idempotency_key: idempotencyKey,
           p_request_context: buildAdminRpcContext(admin, ctx),
@@ -181,7 +186,7 @@ export default withApiHandler(
     }
   },
   {
-    methods: ["GET", "PATCH"],
+    methods: ["GET", "PATCH", "POST"],
     rateLimit: false,
   },
 );
@@ -233,12 +238,12 @@ async function listCollectibles(
   const pageRows = rawRows.slice(0, limit);
   const templateIds = pageRows.map((row) => row.id);
   const forms = await loadForms(db, templateIds);
-  const mediaCounts = await loadMediaCounts(db, templateIds);
+  const media = await loadMedia(db, templateIds);
   const items = pageRows.map((row) =>
     mapCollectibleRow(
       row,
       forms.get(row.id) ?? [],
-      mediaCounts.get(row.id) ?? {},
+      media.get(row.id) ?? [],
     ),
   );
 
@@ -264,7 +269,7 @@ async function loadForms(
     .schema("catalog")
     .from("collectible_forms")
     .select(
-      "id,template_id,form_index,form_slug,display_name,image_url,thumbnail_url,avatar_url,is_default,next_form_id,updated_at",
+      "id,template_id,form_index,form_slug,display_name,description,image_url,thumbnail_url,avatar_url,base_power_bonus,is_default,next_form_id,metadata,updated_at",
     )
     .in("template_id", templateIds)
     .order("form_index", { ascending: true });
@@ -284,11 +289,11 @@ async function loadForms(
   return grouped;
 }
 
-async function loadMediaCounts(
+async function loadMedia(
   db: SupabaseAdminClient,
   templateIds: string[],
-): Promise<Map<string, Record<string, number>>> {
-  const grouped = new Map<string, Record<string, number>>();
+): Promise<Map<string, CollectibleMediaRow[]>> {
+  const grouped = new Map<string, CollectibleMediaRow[]>();
 
   if (templateIds.length === 0) {
     return grouped;
@@ -297,8 +302,11 @@ async function loadMediaCounts(
   const { data, error } = await db
     .schema("catalog")
     .from("collectible_media")
-    .select("template_id,media_type")
-    .in("template_id", templateIds);
+    .select(
+      "id,template_id,form_id,media_type,url,storage_bucket,storage_path,mime_type,width,height,sort_order,metadata,created_at",
+    )
+    .in("template_id", templateIds)
+    .order("sort_order", { ascending: true });
 
   assertReadSuccess(
     error,
@@ -307,9 +315,9 @@ async function loadMediaCounts(
   );
 
   for (const media of (data ?? []) as unknown as CollectibleMediaRow[]) {
-    const counts = grouped.get(media.template_id) ?? {};
-    counts[media.media_type] = (counts[media.media_type] ?? 0) + 1;
-    grouped.set(media.template_id, counts);
+    const list = grouped.get(media.template_id) ?? [];
+    list.push(media);
+    grouped.set(media.template_id, list);
   }
 
   return grouped;
@@ -318,8 +326,13 @@ async function loadMediaCounts(
 function mapCollectibleRow(
   row: CollectibleTemplateRow,
   forms: CollectibleFormRow[],
-  mediaCounts: Record<string, number>,
+  media: CollectibleMediaRow[],
 ) {
+  const mediaCounts = media.reduce<Record<string, number>>((counts, item) => {
+    counts[item.media_type] = (counts[item.media_type] ?? 0) + 1;
+    return counts;
+  }, {});
+
   return {
     ...row,
     base_power: Number(row.base_power),
@@ -333,41 +346,155 @@ function mapCollectibleRow(
     forms: forms.map((form) => ({
       ...form,
       form_index: Number(form.form_index),
+      base_power_bonus: Number(form.base_power_bonus),
+      metadata: sanitizeAdminJson(form.metadata),
+    })),
+    media: media.map((item) => ({
+      ...item,
+      width:
+        item.width === null || item.width === undefined
+          ? null
+          : Number(item.width),
+      height:
+        item.height === null || item.height === undefined
+          ? null
+          : Number(item.height),
+      sort_order: Number(item.sort_order),
+      metadata: sanitizeAdminJson(item.metadata),
     })),
     media_counts: mediaCounts,
   };
 }
 
 function normalizeCollectibleOpsInput(body: JsonRecord): CollectibleOpsInput {
-  const releaseStatus =
-    body.release_status === undefined
-      ? undefined
-      : normalizeEnum(body.release_status, "release_status", RELEASE_STATUSES);
+  const templateId = normalizeOptionalBodyUuid(
+    body.id ?? body.template_id,
+    "id",
+  );
+  const template: JsonRecord = {};
+
+  if (templateId) template.id = templateId;
+  copyTextField(template, body, "slug", { required: true });
+  copyTextField(template, body, "display_name", { required: true });
+  copyTextField(template, body, "subtitle", { nullable: true });
+  copyTextField(template, body, "description", { nullable: true });
+  copyTextField(template, body, "rarity_code", { required: true });
+  copyTextField(template, body, "type_code", { required: true });
+  copyUuidField(template, body, "series_id");
+  copyUuidField(template, body, "faction_id");
+  copyIntegerField(template, body, "base_power", { min: 0 });
+  copyIntegerField(template, body, "max_level", { min: 1 });
+  copyIntegerField(template, body, "supply_limit", {
+    min: 0,
+    nullable: true,
+  });
+
+  if (body.release_status !== undefined) {
+    template.release_status = normalizeEnum(
+      body.release_status,
+      "release_status",
+      RELEASE_STATUSES,
+    );
+  }
+
+  copyBooleanField(template, body, "tradeable");
+  copyBooleanField(template, body, "upgradeable");
+  copyBooleanField(template, body, "evolvable");
+  copyBooleanField(template, body, "decomposable");
+  copyBooleanField(template, body, "nft_mintable");
+  copyIntegerField(template, body, "sort_order", { min: 0 });
+
+  if (body.metadata !== undefined) {
+    template.metadata = normalizeJsonObject(body.metadata, "metadata");
+  }
 
   return {
-    templateId: normalizeRequiredUuid(body.id ?? body.template_id, "id"),
-    releaseStatus,
-    tradeable: normalizeOptionalBoolean(body.tradeable, "tradeable"),
-    upgradeable: normalizeOptionalBoolean(body.upgradeable, "upgradeable"),
-    evolvable: normalizeOptionalBoolean(body.evolvable, "evolvable"),
-    decomposable: normalizeOptionalBoolean(body.decomposable, "decomposable"),
-    nftMintable: normalizeOptionalBoolean(body.nft_mintable, "nft_mintable"),
-    sortOrder:
-      body.sort_order === undefined
+    templateId,
+    template: toJsonObject(template),
+    forms:
+      body.forms === undefined
         ? undefined
-        : normalizeInteger(body.sort_order, "sort_order", { min: 0 }),
-    metadata:
-      body.metadata === undefined
+        : normalizeJsonArray(body.forms, "forms"),
+    media:
+      body.media === undefined
         ? undefined
-        : normalizeJsonObject(body.metadata, "metadata"),
+        : normalizeJsonArray(body.media, "media"),
   };
 }
 
-function normalizeOptionalBoolean(
+function copyTextField(
+  target: JsonRecord,
+  source: JsonRecord,
+  key: string,
+  options: { required?: boolean; nullable?: boolean } = {},
+): void {
+  if (source[key] === undefined) return;
+
+  if (source[key] === null && options.nullable) {
+    target[key] = null;
+    return;
+  }
+
+  if (source[key] === "" && options.nullable) {
+    target[key] = null;
+    return;
+  }
+
+  target[key] = options.required
+    ? normalizeRequiredText(source[key], key)
+    : normalizeOptionalTextValue(source[key], key);
+}
+
+function copyUuidField(
+  target: JsonRecord,
+  source: JsonRecord,
+  key: string,
+): void {
+  if (source[key] === undefined) return;
+
+  if (source[key] === null || source[key] === "") {
+    target[key] = null;
+    return;
+  }
+
+  target[key] = normalizeRequiredUuid(source[key], key);
+}
+
+function copyIntegerField(
+  target: JsonRecord,
+  source: JsonRecord,
+  key: string,
+  options: { min?: number; max?: number; nullable?: boolean } = {},
+): void {
+  if (source[key] === undefined) return;
+
+  if ((source[key] === null || source[key] === "") && options.nullable) {
+    target[key] = null;
+    return;
+  }
+
+  target[key] = normalizeInteger(source[key], key, options);
+}
+
+function copyBooleanField(
+  target: JsonRecord,
+  source: JsonRecord,
+  key: string,
+): void {
+  if (source[key] === undefined) return;
+  target[key] = normalizeBoolean(source[key], key);
+}
+
+function normalizeOptionalTextValue(
   value: unknown,
   field: string,
-): boolean | undefined {
-  return value === undefined ? undefined : normalizeBoolean(value, field);
+): string | null {
+  if (value === null) {
+    return null;
+  }
+
+  const normalized = normalizeRequiredText(value, field);
+  return normalized;
 }
 
 function normalizeJsonObject(
@@ -379,6 +506,14 @@ function normalizeJsonObject(
   }
 
   return toJsonObject(value);
+}
+
+function normalizeJsonArray(value: unknown, field: string): JsonValue {
+  if (!Array.isArray(value)) {
+    throw new ApiError(400, "VALIDATION_FAILED", `${field} must be an array`);
+  }
+
+  return JSON.parse(JSON.stringify(value)) as JsonValue;
 }
 
 function normalizeOptionalBodyUuid(

@@ -6,6 +6,7 @@ import type {
   AlbumAdminResponse,
   AlbumBookAdminItem,
   AlbumMilestoneAdminItem,
+  AlbumRewardConfig,
   UpdateAlbumMilestoneInput,
 } from "../admin.types";
 import { formatDate, shortId, StatusBadge } from "../admin.ui";
@@ -415,9 +416,7 @@ function serializeDraft(
   };
 }
 
-function parseReward(
-  value: string,
-): Array<{ currency: "KCOIN" | "FGEMS"; amount: number }> {
+function parseReward(value: string): AlbumRewardConfig[] {
   const parsed = JSON.parse(value || "[]") as unknown;
 
   if (!Array.isArray(parsed)) {
@@ -430,20 +429,57 @@ function parseReward(
     }
 
     const record = item as Record<string, unknown>;
+    const rewardType = String(record.reward_type ?? record.type ?? "").toUpperCase();
     const currency = String(record.currency ?? "").toUpperCase();
-    const amount = Number(record.amount);
 
-    if (currency !== "KCOIN" && currency !== "FGEMS") {
-      throw new Error("reward currency 仅支持 KCOIN / FGEMS");
+    if (currency || ["KCOIN", "FGEMS", "STAR_DISPLAY"].includes(rewardType)) {
+      const normalizedCurrency = currency || rewardType;
+      const amount = Number(record.amount);
+
+      if (!["KCOIN", "FGEMS", "STAR_DISPLAY"].includes(normalizedCurrency)) {
+        throw new Error("reward currency 仅支持 KCOIN / FGEMS / STAR_DISPLAY");
+      }
+
+      if (!Number.isInteger(amount) || amount <= 0) {
+        throw new Error("reward amount 必须是正整数");
+      }
+
+      return {
+        currency: normalizedCurrency as "KCOIN" | "FGEMS" | "STAR_DISPLAY",
+        amount,
+      };
     }
 
-    if (!Number.isFinite(amount) || amount <= 0) {
-      throw new Error("reward amount 必须大于 0");
+    if (!["ITEM", "DECORATION", "COLLECTIBLE"].includes(rewardType)) {
+      throw new Error("reward_type 仅支持 ITEM / DECORATION / COLLECTIBLE");
+    }
+
+    const templateId = String(
+      record.template_id ??
+        record.item_template_id ??
+        record.decoration_id ??
+        "",
+    ).trim();
+
+    if (!templateId) {
+      throw new Error("ITEM / DECORATION reward 必须提供 template_id");
+    }
+
+    const quantity =
+      record.quantity === undefined ? undefined : Number(record.quantity);
+
+    if (
+      quantity !== undefined &&
+      (!Number.isInteger(quantity) || quantity < 1 || quantity > 100)
+    ) {
+      throw new Error("ITEM / DECORATION quantity 必须是 1-100 的整数");
     }
 
     return {
-      currency,
-      amount,
+      reward_type: rewardType as "ITEM" | "DECORATION" | "COLLECTIBLE",
+      template_id: templateId,
+      ...(record.form_id ? { form_id: String(record.form_id) } : {}),
+      ...(quantity !== undefined ? { quantity } : {}),
     };
   });
 }
@@ -480,7 +516,14 @@ function formatReward(value: unknown): string {
       }
 
       const record = item as Record<string, unknown>;
-      return `${record.amount ?? "-"} ${record.currency ?? ""}`.trim();
+      if (record.currency) {
+        return `${record.amount ?? "-"} ${record.currency}`.trim();
+      }
+
+      const rewardType = record.reward_type ?? record.type ?? "ITEM";
+      const templateId =
+        record.template_id ?? record.item_template_id ?? record.decoration_id;
+      return `${rewardType}:${templateId ?? "-"}`.trim();
     })
     .filter(Boolean)
     .join(" + ");

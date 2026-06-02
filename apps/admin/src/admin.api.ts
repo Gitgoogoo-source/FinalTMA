@@ -751,7 +751,10 @@ export async function updateCollectibleTemplateOps(
 ): Promise<AdminConfigMutationResponse> {
   return adminRequest<AdminConfigMutationResponse>("/api/admin/collectibles", {
     method: "PATCH",
-    headers: buildDangerHeaders("admin-update-collectible", input.id),
+    headers: buildDangerHeaders(
+      "admin-update-collectible",
+      input.id ?? input.slug ?? "new",
+    ),
     body: {
       ...input,
       confirm: true,

@@ -120,6 +120,7 @@ describe("collection api", () => {
       name: "确认中的森林幼芽",
       status: "minting",
       nft_mint_status: "queued",
+      item_version: 7,
       onchain_status: {
         is_minted: false,
         mint_status: "confirming",
@@ -129,6 +130,46 @@ describe("collection api", () => {
     expect(detail.onchainStatus).toMatchObject({
       isMinted: false,
       mintStatus: "confirming",
+    });
+    expect(detail.itemVersion).toBe(7);
+  });
+
+  it("sends expected item version with upgrade requests", async () => {
+    mocks.apiRequest.mockResolvedValueOnce({
+      item_instance_id: "66666666-6666-4666-8666-666666666666",
+      from_level: 1,
+      to_level: 2,
+      from_power: 10,
+      to_power: 20,
+      cost_fgems: 25,
+      idempotent: false,
+    });
+
+    const { upgradeInventoryItem } = await import("./collection.api");
+    const result = await upgradeInventoryItem({
+      itemInstanceId: "66666666-6666-4666-8666-666666666666",
+      expectedFgemsCost: 25,
+      expectedItemVersion: 7,
+      targetLevel: 2,
+      idempotencyKey: "inventory:upgrade:test",
+    });
+
+    expect(mocks.apiRequest).toHaveBeenCalledWith("/inventory/upgrade", {
+      method: "POST",
+      body: {
+        item_instance_id: "66666666-6666-4666-8666-666666666666",
+        idempotency_key: "inventory:upgrade:test",
+        expected_fgems_cost: 25,
+        expected_item_version: 7,
+        target_level: 2,
+      },
+      headers: {
+        "X-Idempotency-Key": "inventory:upgrade:test",
+      },
+    });
+    expect(result).toMatchObject({
+      itemInstanceId: "66666666-6666-4666-8666-666666666666",
+      toLevel: 2,
     });
   });
 

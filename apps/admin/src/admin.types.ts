@@ -30,6 +30,8 @@ type CatalogCollectibleTemplateRow =
   Database["catalog"]["Tables"]["collectible_templates"]["Row"];
 type CatalogCollectibleFormRow =
   Database["catalog"]["Tables"]["collectible_forms"]["Row"];
+type CatalogCollectibleMediaRow =
+  Database["catalog"]["Tables"]["collectible_media"]["Row"];
 type AlbumBookRow = Database["album"]["Tables"]["books"]["Row"];
 type AlbumMilestoneRow = Database["album"]["Tables"]["milestones"]["Row"];
 type EconomyFeeRuleRow = Database["economy"]["Tables"]["fee_rules"]["Row"];
@@ -1809,12 +1811,31 @@ export type CollectibleAdminForm = {
   form_index: CatalogCollectibleFormRow["form_index"];
   form_slug: CatalogCollectibleFormRow["form_slug"];
   display_name: CatalogCollectibleFormRow["display_name"];
+  description: CatalogCollectibleFormRow["description"];
   image_url: CatalogCollectibleFormRow["image_url"];
   thumbnail_url: CatalogCollectibleFormRow["thumbnail_url"];
   avatar_url: CatalogCollectibleFormRow["avatar_url"];
+  base_power_bonus: CatalogCollectibleFormRow["base_power_bonus"];
   is_default: CatalogCollectibleFormRow["is_default"];
   next_form_id: CatalogCollectibleFormRow["next_form_id"];
+  metadata?: Json;
   updated_at: CatalogCollectibleFormRow["updated_at"];
+};
+
+export type CollectibleAdminMedia = {
+  id: CatalogCollectibleMediaRow["id"];
+  template_id: CatalogCollectibleMediaRow["template_id"];
+  form_id: CatalogCollectibleMediaRow["form_id"];
+  media_type: CatalogCollectibleMediaRow["media_type"];
+  url: CatalogCollectibleMediaRow["url"];
+  storage_bucket: CatalogCollectibleMediaRow["storage_bucket"];
+  storage_path: CatalogCollectibleMediaRow["storage_path"];
+  mime_type: CatalogCollectibleMediaRow["mime_type"];
+  width: CatalogCollectibleMediaRow["width"];
+  height: CatalogCollectibleMediaRow["height"];
+  sort_order: CatalogCollectibleMediaRow["sort_order"];
+  metadata?: Json;
+  created_at: CatalogCollectibleMediaRow["created_at"];
 };
 
 export type CollectibleAdminItem = {
@@ -1841,6 +1862,7 @@ export type CollectibleAdminItem = {
   created_at: CatalogCollectibleTemplateRow["created_at"];
   updated_at: CatalogCollectibleTemplateRow["updated_at"];
   forms: CollectibleAdminForm[];
+  media: CollectibleAdminMedia[];
   media_counts: Record<string, number>;
 };
 
@@ -2078,7 +2100,18 @@ export type UpsertCampaignInput = {
 };
 
 export type UpdateCollectibleTemplateOpsInput = {
-  id: string;
+  id?: string;
+  slug?: string;
+  display_name?: string;
+  subtitle?: string | null;
+  description?: string | null;
+  rarity_code?: string;
+  type_code?: string;
+  series_id?: string | null;
+  faction_id?: string | null;
+  base_power?: number;
+  max_level?: number;
+  supply_limit?: number | null;
   release_status?: string;
   tradeable?: boolean;
   upgradeable?: boolean;
@@ -2087,17 +2120,30 @@ export type UpdateCollectibleTemplateOpsInput = {
   nft_mintable?: boolean;
   sort_order?: number;
   metadata?: Record<string, unknown>;
+  forms?: Array<Record<string, unknown>>;
+  media?: Array<Record<string, unknown>>;
   reason: string;
 };
+
+export type AlbumRewardConfig =
+  | {
+      currency: "KCOIN" | "FGEMS" | "STAR_DISPLAY";
+      amount: number;
+    }
+  | {
+      reward_type: "ITEM" | "DECORATION" | "COLLECTIBLE";
+      template_id?: string;
+      item_template_id?: string;
+      decoration_id?: string;
+      form_id?: string | null;
+      quantity?: number;
+    };
 
 export type UpdateAlbumMilestoneInput = {
   id: string;
   title?: string;
   required_count?: number;
-  reward?: Array<{
-    currency: "KCOIN" | "FGEMS";
-    amount: number;
-  }>;
+  reward?: AlbumRewardConfig[];
   active?: boolean;
   sort_order?: number;
   metadata?: Record<string, unknown>;

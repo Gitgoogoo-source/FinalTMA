@@ -143,7 +143,7 @@ begin
 end;
 $$;
 
-select plan(12);
+select plan(13);
 
 create temp table _ids (key text primary key, id uuid, payload jsonb) on commit drop;
 insert into _ids (key, id) values ('seller', testutil.make_user(9817000001, 'market_update_seller'));
@@ -202,6 +202,14 @@ select ok(exists (
     and metadata ->> 'idempotency_key' = 'market-update-price-update-001'
     and (after_state ->> 'unit_price_kcoin')::numeric = 150
 ), 'update writes price_changed listing event');
+select ok(exists (
+  select 1
+  from pg_indexes
+  where schemaname = 'market'
+    and tablename = 'listing_events'
+    and indexname = 'listing_events_idempotency_key_uidx'
+    and indexdef like 'CREATE UNIQUE INDEX%'
+), 'listing event idempotency keys have a unique index backstop');
 
 insert into _ids (key, payload)
 select 'update_repeat', api.market_update_listing_price(
