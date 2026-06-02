@@ -51,6 +51,8 @@ type WalletMintQueueStatus =
   | "failed"
   | "cancelled";
 
+type InventoryItemPayload = ReturnType<typeof inventoryItemPayload>;
+
 export async function mockFirstPhaseApi(
   page: Page,
   options: MockFirstPhaseApiOptions = {},
@@ -112,14 +114,20 @@ export async function mockFirstPhaseApi(
       balances: {
         KCOIN: {
           available: String(kcoinAvailable),
+          currencyCode: "KCOIN",
+          currency_code: "KCOIN",
           locked: "0",
         },
         FGEMS: {
           available: String(fgemsAvailable),
+          currencyCode: "FGEMS",
+          currency_code: "FGEMS",
           locked: "0",
         },
         STAR_DISPLAY: {
           available: "30",
+          currencyCode: "STAR_DISPLAY",
+          currency_code: "STAR_DISPLAY",
           locked: "0",
         },
       },
@@ -142,14 +150,20 @@ export async function mockFirstPhaseApi(
       balances: {
         KCOIN: {
           available: String(kcoinAvailable),
+          currencyCode: "KCOIN",
+          currency_code: "KCOIN",
           locked: "0",
         },
         FGEMS: {
           available: String(fgemsAvailable),
+          currencyCode: "FGEMS",
+          currency_code: "FGEMS",
           locked: "0",
         },
         STAR_DISPLAY: {
           available: "30",
+          currencyCode: "STAR_DISPLAY",
+          currency_code: "STAR_DISPLAY",
           locked: "0",
         },
       },
@@ -408,77 +422,43 @@ export async function mockFirstPhaseApi(
     });
   });
 
-  await page.route("**/api/inventory/detail?*", (route) =>
-    fulfillOk(route, {
-      ...inventoryItemPayload({
+  await page.route("**/api/inventory/detail?*", (route) => {
+    const requestedItemId = new URL(route.request().url()).searchParams.get(
+      "item_instance_id",
+    );
+    const availableItems = getInventoryItems({
+      inventoryEvolved,
+      inventoryLevel,
+      inventoryPower,
+      mintStatus: mintQueueStatus,
+    }).filter(
+      (item) =>
+        !consumedItemIds.has(item.item_instance_id) &&
+        !decomposedItemIds.has(item.item_instance_id),
+    );
+    const item =
+      availableItems.find(
+        (candidate) => candidate.item_instance_id === requestedItemId,
+      ) ??
+      availableItems[0] ??
+      inventoryItemPayload({
         level: inventoryLevel,
         mintStatus: mintQueueStatus,
         power: inventoryPower,
+      });
+
+    return fulfillOk(
+      route,
+      inventoryDetailPayload({
+        availableItems,
+        fgemsAvailable,
+        inventoryEvolved,
+        item,
+        kcoinAvailable,
+        mintStatus: mintQueueStatus,
       }),
-      market_status: {
-        is_listed: false,
-        listing_id: null,
-        unit_price: null,
-        currency: null,
-      },
-      onchain_status: {
-        is_minted: mintQueueStatus === "minted",
-        mint_status: mintQueueStatus ?? "not_minted",
-      },
-      upgrade_preview: {
-        can_upgrade: true,
-        reason: null,
-        current_level: inventoryLevel,
-        next_level: inventoryLevel + 1,
-        target_level: inventoryLevel + 1,
-        current_power: inventoryPower,
-        power_after: inventoryPower + 8,
-        fgems_cost: 20,
-        user_fgems_balance: fgemsAvailable,
-        is_balance_enough: fgemsAvailable >= 20,
-      },
-      evolution_preview: {
-        can_evolve: true,
-        reason: null,
-        required_count: 3,
-        available_same_items: 3,
-        kcoin_cost: 200,
-        user_kcoin_balance: kcoinAvailable,
-        is_balance_enough: kcoinAvailable >= 200,
-        success_rate_bps: 5000,
-        target_template_id: TEMPLATE_ID,
-        target_form_id: TARGET_FORM_ID,
-        target_name: "森林幼芽·进化",
-        target_image_url: null,
-        selected_item_ids: [
-          ITEM_INSTANCE_ID_3,
-          ITEM_INSTANCE_ID_2,
-          ITEM_INSTANCE_ID,
-        ],
-        main_return_item_id: ITEM_INSTANCE_ID_3,
-      },
-      decompose_preview: {
-        can_decompose: true,
-        reason: null,
-        fgems_reward: 150,
-        total_reward_fgems: 150,
-        duplicate_count: 3 - decomposedItemIds.size,
-        item_status: "available",
-        item_instance_ids: [ITEM_INSTANCE_ID],
-        items: [
-          {
-            item_instance_id: ITEM_INSTANCE_ID,
-            reward_fgems: 150,
-            item_status: "available",
-            can_decompose: true,
-            duplicate_count: 3 - decomposedItemIds.size,
-          },
-        ],
-      },
-      same_item_count: 3 - decomposedItemIds.size,
-      available_same_item_count: 3 - decomposedItemIds.size,
-    }),
-  );
+    );
+  });
 
   await page.route("**/api/inventory/upgrade", (route) => {
     const body = readGrowthMutationBody(route, "inventory/upgrade");
@@ -751,6 +731,118 @@ function getInventoryItems({
       serialNo: 3,
     }),
   ];
+}
+
+function inventoryDetailPayload({
+  availableItems,
+  fgemsAvailable,
+  inventoryEvolved,
+  item,
+  kcoinAvailable,
+  mintStatus,
+}: {
+  availableItems: InventoryItemPayload[];
+  fgemsAvailable: number;
+  inventoryEvolved: boolean;
+  item: InventoryItemPayload;
+  kcoinAvailable: number;
+  mintStatus: WalletMintQueueStatus | null;
+}) {
+  const sameAvailableItems = availableItems
+    .filter(
+      (candidate) =>
+        candidate.status === "available" &&
+        candidate.template_id === item.template_id &&
+        candidate.form.id === item.form.id,
+    )
+    .sort(compareInventoryItemsForGrowth);
+  const sameItemCount = sameAvailableItems.length;
+  const selectedItemIds = sameAvailableItems
+    .slice(0, 3)
+    .map((candidate) => candidate.item_instance_id);
+  const mainReturnItemId = selectedItemIds[0] ?? item.item_instance_id;
+  const canUseGrowth = item.status === "available" && !inventoryEvolved;
+  const canUpgrade = canUseGrowth && item.upgradeable;
+  const canEvolve = canUseGrowth && item.evolvable && sameItemCount >= 3;
+  const canDecompose = canUseGrowth && item.decomposable && sameItemCount >= 2;
+  const itemMintStatus = item.nft_mint_status ?? mintStatus ?? "not_minted";
+
+  return {
+    ...item,
+    market_status: {
+      is_listed: false,
+      listing_id: null,
+      unit_price: null,
+      currency: null,
+    },
+    onchain_status: {
+      is_minted: itemMintStatus === "minted",
+      mint_status: itemMintStatus,
+    },
+    upgrade_preview: {
+      can_upgrade: canUpgrade,
+      reason: canUpgrade ? null : "ITEM_NOT_UPGRADEABLE",
+      current_level: item.level,
+      next_level: item.level + 1,
+      target_level: item.level + 1,
+      current_power: item.power,
+      power_after: item.power + 8,
+      fgems_cost: 20,
+      user_fgems_balance: fgemsAvailable,
+      is_balance_enough: fgemsAvailable >= 20,
+    },
+    evolution_preview: {
+      can_evolve: canEvolve,
+      reason: canEvolve ? null : "EVOLVE_ITEM_COUNT_INVALID",
+      required_count: 3,
+      available_same_items: sameItemCount,
+      kcoin_cost: 200,
+      user_kcoin_balance: kcoinAvailable,
+      is_balance_enough: kcoinAvailable >= 200,
+      success_rate_bps: 5000,
+      target_template_id: TEMPLATE_ID,
+      target_form_id: TARGET_FORM_ID,
+      target_name: "森林幼芽·进化",
+      target_image_url: null,
+      selected_item_ids: selectedItemIds,
+      main_return_item_id: mainReturnItemId,
+    },
+    decompose_preview: {
+      can_decompose: canDecompose,
+      reason: canDecompose ? null : "DECOMPOSE_REQUIRES_DUPLICATE",
+      fgems_reward: canDecompose ? 150 : null,
+      total_reward_fgems: canDecompose ? 150 : null,
+      duplicate_count: sameItemCount,
+      item_status: item.status,
+      item_instance_ids: [item.item_instance_id],
+      items: [
+        {
+          item_instance_id: item.item_instance_id,
+          reward_fgems: canDecompose ? 150 : null,
+          item_status: item.status,
+          can_decompose: canDecompose,
+          duplicate_count: sameItemCount,
+        },
+      ],
+    },
+    same_item_count: sameItemCount,
+    available_same_item_count: sameItemCount,
+  };
+}
+
+function compareInventoryItemsForGrowth(
+  left: InventoryItemPayload,
+  right: InventoryItemPayload,
+): number {
+  if (right.level !== left.level) {
+    return right.level - left.level;
+  }
+
+  if (right.power !== left.power) {
+    return right.power - left.power;
+  }
+
+  return left.serial_no - right.serial_no;
 }
 
 function boxPayload() {

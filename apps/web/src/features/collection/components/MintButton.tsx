@@ -1,6 +1,7 @@
 import { BadgeCheck, ChevronRight, Loader2 } from "lucide-react";
 
 type MintButtonProps = {
+  className?: string;
   disabled?: boolean;
   label: string;
   loading?: boolean;
@@ -8,6 +9,7 @@ type MintButtonProps = {
 };
 
 export function MintButton({
+  className = "character-detail-action character-detail-action--secondary",
   disabled = false,
   label,
   loading = false,
@@ -15,7 +17,7 @@ export function MintButton({
 }: MintButtonProps) {
   return (
     <button
-      className="character-detail-sheet__action character-detail-sheet__action--secondary"
+      className={className}
       disabled={disabled || loading}
       onClick={onClick}
       type="button"

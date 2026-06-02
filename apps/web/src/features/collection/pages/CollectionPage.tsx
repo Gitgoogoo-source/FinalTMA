@@ -11,15 +11,13 @@ import { useMintQueue } from "@/features/wallet/hooks/useMintQueue";
 import { APP_ROUTES } from "@/shared/constants/routes";
 import { formatCurrencyAmount } from "@/shared/lib/formatCurrency";
 
-import { CharacterDetailSheet } from "../components/CharacterDetailSheet";
+import { CharacterDetailPanel } from "../components/CharacterDetailPanel";
 import { CharacterGrid } from "../components/CharacterGrid";
-import { CharacterHero } from "../components/CharacterHero";
 import { CollectionCancelEntry } from "../components/CollectionCancelEntry";
 import { CollectionSellEntry } from "../components/CollectionSellEntry";
 import { DecomposePanel } from "../components/DecomposePanel";
 import { EvolvePanel } from "../components/EvolvePanel";
 import { GrowthResultModal } from "../components/GrowthResultModal";
-import { GrowthActionBar } from "../components/GrowthActionBar";
 import { UpgradePanel } from "../components/UpgradePanel";
 import type {
   CollectionDecomposeItemResponse,
@@ -39,7 +37,6 @@ export function CollectionPage() {
   const sellRulesQuery = useMarketSellRules();
   const items = inventoryQuery.items;
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
-  const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isSellOpen, setIsSellOpen] = useState(false);
   const [isUpgradeOpen, setIsUpgradeOpen] = useState(false);
   const [isEvolveOpen, setIsEvolveOpen] = useState(false);
@@ -70,7 +67,6 @@ export function CollectionPage() {
   useEffect(() => {
     if (items.length === 0) {
       setSelectedItemId(null);
-      setIsDetailOpen(false);
       setIsSellOpen(false);
       setIsUpgradeOpen(false);
       setIsEvolveOpen(false);
@@ -93,7 +89,6 @@ export function CollectionPage() {
   }, [items, selectedItem, selectedItemId]);
 
   function handleOpenUpgrade() {
-    setIsDetailOpen(false);
     setIsSellOpen(false);
     setIsEvolveOpen(false);
     setIsDecomposeOpen(false);
@@ -101,7 +96,6 @@ export function CollectionPage() {
   }
 
   function handleOpenEvolve() {
-    setIsDetailOpen(false);
     setIsSellOpen(false);
     setIsUpgradeOpen(false);
     setIsDecomposeOpen(false);
@@ -109,7 +103,6 @@ export function CollectionPage() {
   }
 
   function handleOpenDecompose() {
-    setIsDetailOpen(false);
     setIsSellOpen(false);
     setIsUpgradeOpen(false);
     setIsEvolveOpen(false);
@@ -117,7 +110,6 @@ export function CollectionPage() {
   }
 
   function handleOpenSell() {
-    setIsDetailOpen(false);
     setIsUpgradeOpen(false);
     setIsEvolveOpen(false);
     setIsDecomposeOpen(false);
@@ -129,7 +121,6 @@ export function CollectionPage() {
     listingId: string | null;
     unitPriceKcoin: number | null;
   }) {
-    setIsDetailOpen(false);
     setIsUpgradeOpen(false);
     setIsEvolveOpen(false);
     setIsDecomposeOpen(false);
@@ -215,7 +206,6 @@ export function CollectionPage() {
       {
         onSuccess: (result) => {
           setSelectedItemId(result.itemInstanceId);
-          setIsDetailOpen(false);
           setIsMintQueueOpen(true);
           pushToast({
             type: "success",
@@ -313,10 +303,15 @@ export function CollectionPage() {
 
   return (
     <section className="collection-page" data-testid="collection-page">
-      <CharacterHero item={selectedItem} />
-      <GrowthActionBar
+      <CharacterDetailPanel
         item={selectedItem}
-        onOpenDetail={() => setIsDetailOpen(true)}
+        isMinting={createMintMutation.isPending}
+        onCancelSell={handleOpenCancelSell}
+        onDecompose={handleOpenDecompose}
+        onEvolve={handleOpenEvolve}
+        onMint={handleCreateMint}
+        onSell={handleOpenSell}
+        onUpgrade={handleOpenUpgrade}
       />
       <CharacterGrid
         items={items}
@@ -344,18 +339,6 @@ export function CollectionPage() {
           </button>
         </div>
       ) : null}
-      <CharacterDetailSheet
-        open={isDetailOpen}
-        item={selectedItem}
-        isMinting={createMintMutation.isPending}
-        onClose={() => setIsDetailOpen(false)}
-        onCancelSell={handleOpenCancelSell}
-        onDecompose={handleOpenDecompose}
-        onEvolve={handleOpenEvolve}
-        onMint={handleCreateMint}
-        onSell={handleOpenSell}
-        onUpgrade={handleOpenUpgrade}
-      />
       <CollectionSellEntry
         feeBps={sellRulesQuery.rules?.feeBps ?? null}
         isPending={sellInventoryMutation.isPending}

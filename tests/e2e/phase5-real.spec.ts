@@ -161,10 +161,11 @@ test("第五阶段真实链路：支付、钱包验证、Mint 队列和刷新恢
   await expect(page.getByText("钱包验证已通过")).toBeVisible();
   await walletStatusDialog.getByRole("button", { name: "关闭" }).click();
 
-  await page.getByRole("button", { name: "详情" }).click();
-  const detailDialog = page.getByRole("dialog", { name: fixture.itemName });
-  await expect(detailDialog).toBeVisible();
-  const mintButton = detailDialog.getByRole("button", { name: "Mint NFT" });
+  const selectedPanel = page.getByLabel("当前选中藏品");
+  await expect(
+    selectedPanel.getByRole("heading", { name: fixture.itemName }),
+  ).toBeVisible();
+  const mintButton = selectedPanel.getByRole("button", { name: "Mint NFT" });
   await expect(mintButton).toBeEnabled();
   await mintButton.click();
 

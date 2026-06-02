@@ -22,20 +22,23 @@ test("查看藏品详情和成长入口", async ({ page }) => {
     `/collection?mockInitData=${encodeURIComponent(TEST_INIT_DATA)}`,
   );
 
-  await page.getByRole("button", { name: "详情" }).click();
-
-  const detailDialog = page.getByRole("dialog", { name: "森林幼芽" });
-  await expect(detailDialog).toBeVisible();
-  await expect(detailDialog.getByText("是否可升级")).toBeVisible();
+  const selectedPanel = page.getByLabel("当前选中藏品");
   await expect(
-    detailDialog.getByRole("button", { name: /升级/ }),
+    selectedPanel.getByRole("heading", { name: "森林幼芽" }),
+  ).toBeVisible();
+  await expect(selectedPanel.getByLabel("藏品完整信息")).toBeVisible();
+  await expect(selectedPanel.getByText("是否可升级")).toBeVisible();
+  await expect(
+    selectedPanel.getByRole("button", { name: "升级" }),
   ).toBeVisible();
   await expect(
-    detailDialog.getByRole("button", { name: /合成/ }),
+    selectedPanel.getByRole("button", { name: "合成" }),
   ).toBeVisible();
-  await expect(detailDialog.getByRole("link", { name: /出售/ })).toBeVisible();
   await expect(
-    detailDialog.getByRole("button", { name: /分解/ }),
+    selectedPanel.getByRole("button", { name: "出售" }),
+  ).toBeVisible();
+  await expect(
+    selectedPanel.getByRole("button", { name: "分解" }),
   ).toBeVisible();
 });
 
@@ -48,8 +51,10 @@ test("升级面板完成升级并刷新藏品展示", async ({ page }) => {
 
   await expect(page.getByLabel("Fgems 余额").getByText("80")).toBeVisible();
 
-  await page.getByRole("button", { name: "详情" }).click();
-  await page.getByRole("button", { name: /升级/ }).click();
+  await page
+    .getByLabel("当前选中藏品")
+    .getByRole("button", { name: "升级" })
+    .click();
 
   const upgradeDialog = page.getByRole("dialog", { name: "森林幼芽" });
   await expect(upgradeDialog).toBeVisible();
@@ -81,8 +86,10 @@ test("合成面板选择材料并展示成功结果", async ({ page }) => {
     `/collection?mockInitData=${encodeURIComponent(TEST_INIT_DATA)}`,
   );
 
-  await page.getByRole("button", { name: "详情" }).click();
-  await page.getByRole("button", { name: /合成/ }).click();
+  await page
+    .getByLabel("当前选中藏品")
+    .getByRole("button", { name: "合成" })
+    .click();
 
   const evolveDialog = page.getByRole("dialog", { name: "森林幼芽" });
   await expect(evolveDialog).toBeVisible();
@@ -115,8 +122,10 @@ test("合成失败后返还主藏品并消耗其他材料", async ({ page }) => 
 
   await expect(page.getByLabel("K-coin 余额").getByText("1,200")).toBeVisible();
 
-  await page.getByRole("button", { name: "详情" }).click();
-  await page.getByRole("button", { name: /合成/ }).click();
+  await page
+    .getByLabel("当前选中藏品")
+    .getByRole("button", { name: "合成" })
+    .click();
 
   const evolveDialog = page.getByRole("dialog", { name: "森林幼芽" });
   await expect(evolveDialog).toBeVisible();
@@ -153,8 +162,10 @@ test("分解面板二次确认后展示获得 Fgems", async ({ page }) => {
     `/collection?mockInitData=${encodeURIComponent(TEST_INIT_DATA)}`,
   );
 
-  await page.getByRole("button", { name: "详情" }).click();
-  await page.getByRole("button", { name: /分解/ }).click();
+  await page
+    .getByLabel("当前选中藏品")
+    .getByRole("button", { name: "分解" })
+    .click();
 
   const decomposeDialog = page.getByRole("dialog", { name: "森林幼芽" });
   await expect(decomposeDialog).toBeVisible();

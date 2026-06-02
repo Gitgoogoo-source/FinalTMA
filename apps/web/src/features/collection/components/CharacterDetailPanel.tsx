@@ -7,7 +7,6 @@ import {
   Sparkles,
   Swords,
   Tag,
-  X,
 } from "lucide-react";
 
 import { getApiErrorMessage } from "@/api/errors";
@@ -28,11 +27,9 @@ import {
 } from "./ItemStatusBadge";
 import { MintButton } from "./MintButton";
 
-type CharacterDetailSheetProps = {
-  open: boolean;
+type CharacterDetailPanelProps = {
   item: CollectionInventoryItem;
   isMinting?: boolean;
-  onClose: () => void;
   onCancelSell?: (target: {
     itemInstanceId: string;
     listingId: string | null;
@@ -47,24 +44,18 @@ type CharacterDetailSheetProps = {
 
 type DetailActionTone = "primary" | "secondary" | "danger";
 
-export function CharacterDetailSheet({
+export function CharacterDetailPanel({
   isMinting = false,
   item,
   onCancelSell,
   onDecompose,
-  onClose,
   onEvolve,
   onMint,
   onSell,
   onUpgrade,
-  open,
-}: CharacterDetailSheetProps) {
-  const detailQuery = useItemDetail(open ? item.itemInstanceId : null, {
-    enabled: open,
-  });
-  const walletStatusQuery = useWalletStatus({
-    enabled: open,
-  });
+}: CharacterDetailPanelProps) {
+  const detailQuery = useItemDetail(item.itemInstanceId);
+  const walletStatusQuery = useWalletStatus();
   const detail = detailQuery.item;
   const displayItem = detail ?? item;
   const imageUrl =
@@ -81,209 +72,178 @@ export function CharacterDetailSheet({
     walletVerified: walletStatusQuery.data?.status === "verified",
   });
 
-  if (!open) {
-    return null;
-  }
-
   return (
-    <div className="character-detail-sheet" role="presentation">
-      <button
-        aria-label="关闭藏品详情"
-        className="character-detail-sheet__backdrop"
-        onClick={onClose}
-        type="button"
-      />
-      <section
-        aria-labelledby="character-detail-title"
-        aria-modal="true"
-        className="character-detail-sheet__panel"
-        role="dialog"
-      >
-        <header className="character-detail-sheet__header">
-          <div>
-            <span>藏品详情</span>
-            <h2 id="character-detail-title">{displayItem.name}</h2>
-          </div>
-          <button aria-label="关闭" onClick={onClose} type="button">
-            <X aria-hidden="true" size={18} strokeWidth={2.5} />
-          </button>
-        </header>
+    <section
+      aria-label="当前选中藏品"
+      aria-live="polite"
+      className={`character-detail-panel character-detail-panel--${displayItem.rarity.code}`}
+    >
+      <header className="character-detail-panel__header">
+        <div className="character-detail-panel__copy">
+          <span className="character-detail-panel__kicker">
+            <Sparkles aria-hidden="true" size={15} strokeWidth={2.4} />
+            {displayItem.rarity.label}
+          </span>
+          <h1>{displayItem.name}</h1>
+          <p>{buildDescription(displayItem)}</p>
+        </div>
+        <ItemStatusBadge
+          status={displayItem.status}
+          isListed={isListed}
+          lockReason={lockReason}
+        />
+      </header>
 
-        <div className="character-detail-sheet__body" aria-live="polite">
-          <div className="character-detail-sheet__hero">
-            {imageUrl ? (
-              <img src={imageUrl} alt={displayItem.name} />
-            ) : (
-              <span aria-hidden="true">{displayItem.name.slice(0, 1)}</span>
-            )}
-            <strong className="character-detail-sheet__rarity">
-              {displayItem.rarity.label}
-            </strong>
-          </div>
+      <div className="character-detail-panel__media">
+        <span className="character-detail-panel__shadow" aria-hidden="true" />
+        {imageUrl ? (
+          <img src={imageUrl} alt={displayItem.name} />
+        ) : (
+          <span className="character-detail-panel__fallback" aria-hidden="true">
+            {displayItem.name.slice(0, 1)}
+          </span>
+        )}
+      </div>
 
-          {detailQuery.isLoading ? (
-            <DetailState title="详情同步中" detail="正在读取服务端详情。" />
-          ) : null}
+      {detailQuery.isLoading || detailQuery.isFetching ? (
+        <DetailState title="详情同步中" detail="正在读取服务端详情。" />
+      ) : null}
 
-          {detailQuery.isError ? (
-            <DetailState
-              tone="error"
-              title="详情读取失败"
-              detail={getApiErrorMessage(detailQuery.error)}
-              onRetry={() => void detailQuery.refetch()}
-            />
-          ) : null}
+      {detailQuery.isError ? (
+        <DetailState
+          tone="error"
+          title="详情读取失败"
+          detail={getApiErrorMessage(detailQuery.error)}
+          onRetry={() => void detailQuery.refetch()}
+        />
+      ) : null}
 
-          <section
-            className="character-detail-sheet__summary"
-            aria-label="藏品完整信息"
-          >
-            <DetailMetric label="名称" value={displayItem.name} />
-            <DetailMetric label="稀有度" value={displayItem.rarity.label} />
-            <DetailMetric
-              label="系列"
-              value={displayItem.series?.displayName ?? "未分配"}
+      <section className="character-detail-summary" aria-label="藏品完整信息">
+        <DetailMetric label="名称" value={displayItem.name} />
+        <DetailMetric label="稀有度" value={displayItem.rarity.label} />
+        <DetailMetric
+          label="系列"
+          value={displayItem.series?.displayName ?? "未分配"}
+        />
+        <DetailMetric
+          label="形态"
+          value={displayItem.form?.displayName ?? "未分配"}
+        />
+        <DetailMetric
+          label="等级"
+          value={`Lv.${formatCurrencyAmount(displayItem.level)}`}
+        />
+        <DetailMetric
+          label="战力"
+          value={formatCurrencyAmount(displayItem.power)}
+        />
+        <DetailMetric
+          label="编号"
+          value={
+            displayItem.serialNo
+              ? `#${formatCurrencyAmount(displayItem.serialNo)}`
+              : "未编号"
+          }
+        />
+        <DetailMetric
+          label="状态"
+          value={getCollectionStatusLabel(displayItem.status, isListed)}
+        />
+        <DetailMetric label="是否挂售" value={isListed ? "是" : "否"} />
+        <DetailMetric
+          label="是否可升级"
+          value={getBooleanLabel(canUpgrade(displayItem, detail, isAvailable))}
+        />
+        <DetailMetric
+          label="是否可合成"
+          value={getBooleanLabel(canEvolve(displayItem, detail, isAvailable))}
+        />
+        <DetailMetric
+          label="是否可分解"
+          value={getBooleanLabel(
+            canDecompose(displayItem, detail, isAvailable),
+          )}
+        />
+        <DetailMetric
+          label="是否可 Mint"
+          value={getBooleanLabel(mintEligibility.canShowEntry)}
+        />
+        <DetailMetric label="Mint 状态" value={mintStatusLabel} />
+      </section>
+
+      {displayItem.description ? (
+        <p className="character-detail-description">
+          {displayItem.description}
+        </p>
+      ) : null}
+
+      {blockReason ? (
+        <section className="character-detail-notice" aria-label="状态限制">
+          <AlertTriangle aria-hidden="true" size={16} strokeWidth={2.4} />
+          <span>{blockReason}</span>
+        </section>
+      ) : null}
+
+      <section className="character-detail-actions" aria-label="藏品操作">
+        {isListed ? (
+          <DetailButtonAction
+            disabled={!onCancelSell}
+            icon="tag"
+            label="下架"
+            onClick={() =>
+              onCancelSell?.({
+                itemInstanceId: displayItem.itemInstanceId,
+                listingId: detail?.marketStatus?.listingId ?? null,
+                unitPriceKcoin: detail?.marketStatus?.unitPrice ?? null,
+              })
+            }
+          />
+        ) : null}
+
+        {isAvailable ? (
+          <>
+            <DetailButtonAction
+              disabled={!canOpenUpgradePanel || !onUpgrade}
+              icon="sparkles"
+              label="升级"
+              onClick={onUpgrade}
+              tone="primary"
             />
-            <DetailMetric
-              label="形态"
-              value={displayItem.form?.displayName ?? "未分配"}
-            />
-            <DetailMetric
-              label="等级"
-              value={`Lv.${formatCurrencyAmount(displayItem.level)}`}
-            />
-            <DetailMetric
-              label="战力"
-              value={formatCurrencyAmount(displayItem.power)}
-            />
-            <DetailMetric
-              label="编号"
-              value={
-                displayItem.serialNo
-                  ? `#${formatCurrencyAmount(displayItem.serialNo)}`
-                  : "未编号"
+            <DetailButtonAction
+              disabled={
+                !canEvolve(displayItem, detail, isAvailable) || !onEvolve
               }
+              icon="swords"
+              label="合成"
+              onClick={onEvolve}
             />
-            <DetailMetric
-              label="状态"
-              value={getCollectionStatusLabel(displayItem.status, isListed)}
+            <DetailButtonAction
+              disabled={!displayItem.isTradeable || !onSell}
+              icon="shopping"
+              label="出售"
+              onClick={onSell}
             />
-            <DetailMetric label="是否挂售" value={isListed ? "是" : "否"} />
-            <DetailMetric
-              label="是否可升级"
-              value={getBooleanLabel(
-                canUpgrade(displayItem, detail, isAvailable),
-              )}
+            <DetailButtonAction
+              disabled={
+                !canDecompose(displayItem, detail, isAvailable) || !onDecompose
+              }
+              icon="decompose"
+              label="分解"
+              onClick={onDecompose}
+              tone="danger"
             />
-            <DetailMetric
-              label="是否可合成"
-              value={getBooleanLabel(
-                canEvolve(displayItem, detail, isAvailable),
-              )}
-            />
-            <DetailMetric
-              label="是否可分解"
-              value={getBooleanLabel(
-                canDecompose(displayItem, detail, isAvailable),
-              )}
-            />
-            <DetailMetric
-              label="是否可 Mint"
-              value={getBooleanLabel(mintEligibility.canShowEntry)}
-            />
-            <DetailMetric label="Mint 状态" value={mintStatusLabel} />
-          </section>
-
-          {displayItem.description ? (
-            <p className="character-detail-sheet__description">
-              {displayItem.description}
-            </p>
-          ) : null}
-
-          {blockReason ? (
-            <section
-              className="character-detail-sheet__notice"
-              aria-label="状态限制"
-            >
-              <AlertTriangle aria-hidden="true" size={16} strokeWidth={2.4} />
-              <span>{blockReason}</span>
-            </section>
-          ) : null}
-
-          <section
-            className="character-detail-sheet__actions"
-            aria-label="藏品操作"
-          >
-            {isListed ? (
-              <DetailButtonAction
-                disabled={!onCancelSell}
-                icon="tag"
-                label="下架"
-                onClick={() =>
-                  onCancelSell?.({
-                    itemInstanceId: displayItem.itemInstanceId,
-                    listingId: detail?.marketStatus?.listingId ?? null,
-                    unitPriceKcoin: detail?.marketStatus?.unitPrice ?? null,
-                  })
-                }
+            {mintEligibility.canShowEntry ? (
+              <MintButton
+                disabled={!onMint}
+                label={mintEligibility.actionLabel}
+                loading={isMinting}
+                onClick={() => onMint?.(displayItem.itemInstanceId)}
               />
             ) : null}
-
-            {isAvailable ? (
-              <>
-                <DetailButtonAction
-                  disabled={!canOpenUpgradePanel || !onUpgrade}
-                  icon="sparkles"
-                  label="升级"
-                  onClick={onUpgrade}
-                  tone="primary"
-                />
-                <DetailButtonAction
-                  disabled={
-                    !canEvolve(displayItem, detail, isAvailable) || !onEvolve
-                  }
-                  icon="swords"
-                  label="合成"
-                  onClick={onEvolve}
-                />
-                <DetailButtonAction
-                  disabled={!displayItem.isTradeable || !onSell}
-                  icon="shopping"
-                  label="出售"
-                  onClick={onSell}
-                />
-                <DetailButtonAction
-                  disabled={
-                    !canDecompose(displayItem, detail, isAvailable) ||
-                    !onDecompose
-                  }
-                  icon="decompose"
-                  label="分解"
-                  onClick={onDecompose}
-                  tone="danger"
-                />
-                {mintEligibility.canShowEntry ? (
-                  <MintButton
-                    disabled={!onMint}
-                    label={mintEligibility.actionLabel}
-                    loading={isMinting}
-                    onClick={() => onMint?.(displayItem.itemInstanceId)}
-                  />
-                ) : null}
-              </>
-            ) : null}
-          </section>
-
-          <div className="character-detail-sheet__footer">
-            <ItemStatusBadge
-              status={displayItem.status}
-              isListed={isListed}
-              lockReason={lockReason}
-            />
-          </div>
-        </div>
+          </>
+        ) : null}
       </section>
-    </div>
+    </section>
   );
 }
 
@@ -313,7 +273,7 @@ function DetailButtonAction({
 
   return (
     <button
-      className={`character-detail-sheet__action character-detail-sheet__action--${tone}`}
+      className={`character-detail-action character-detail-action--${tone}`}
       disabled={disabled}
       onClick={onClick}
       type="button"
@@ -507,4 +467,26 @@ function normalizeMintStatus(status: string | null | undefined): string {
   return String(status ?? "")
     .trim()
     .toLowerCase();
+}
+
+function buildDescription(item: CollectionInventoryItem): string {
+  if (item.description) {
+    return item.description;
+  }
+
+  const meta = [
+    item.series?.displayName,
+    item.form?.displayName,
+    item.subtitle,
+  ].filter(isString);
+
+  if (meta.length > 0) {
+    return meta.join(" · ");
+  }
+
+  return "已进入你的库存，可在后续阶段用于成长、交易和链上 Mint。";
+}
+
+function isString(value: string | null | undefined): value is string {
+  return typeof value === "string" && value.length > 0;
 }

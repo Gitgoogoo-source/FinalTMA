@@ -45,10 +45,10 @@ test("可 Mint 藏品入队后展示队列并可刷新恢复", async ({ page }) 
   });
 
   await gotoCollection(page);
-  await page.getByRole("button", { name: "详情" }).click();
 
-  const detailDialog = page.getByRole("dialog", { name: "森林幼芽" });
-  const mintButton = detailDialog.getByRole("button", { name: "Mint NFT" });
+  const mintButton = page
+    .getByLabel("当前选中藏品")
+    .getByRole("button", { name: "Mint NFT" });
 
   await expect(mintButton).toBeEnabled();
   await mintButton.click();

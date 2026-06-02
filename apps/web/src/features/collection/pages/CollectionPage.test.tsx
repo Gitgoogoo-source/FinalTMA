@@ -28,6 +28,7 @@ const mocks = vi.hoisted(() => ({
   isFetchingNextInventoryPage: false,
   inventoryRefetch: vi.fn(),
   inventoryFetchNextPage: vi.fn(),
+  detailCalls: [] as Array<string | null | undefined>,
   detailRefetch: vi.fn(),
   upgradeMutateAsync: vi.fn(),
   evolveMutateAsync: vi.fn(),
@@ -56,16 +57,20 @@ vi.mock("../hooks/useInventory", () => ({
 }));
 
 vi.mock("../hooks/useItemDetail", () => ({
-  useItemDetail: (itemInstanceId: string | null | undefined) => ({
-    error: null,
-    isError: false,
-    isFetching: false,
-    isLoading: false,
-    item: itemInstanceId
-      ? (mocks.itemDetails.get(itemInstanceId) ?? null)
-      : null,
-    refetch: mocks.detailRefetch,
-  }),
+  useItemDetail: (itemInstanceId: string | null | undefined) => {
+    mocks.detailCalls.push(itemInstanceId);
+
+    return {
+      error: null,
+      isError: false,
+      isFetching: false,
+      isLoading: false,
+      item: itemInstanceId
+        ? (mocks.itemDetails.get(itemInstanceId) ?? null)
+        : null,
+      refetch: mocks.detailRefetch,
+    };
+  },
 }));
 
 vi.mock("../hooks/useUpgradeItem", () => ({
@@ -175,6 +180,7 @@ describe("CollectionPage stage-3 frontend states", () => {
     mocks.isFetchingNextInventoryPage = false;
     mocks.inventoryRefetch.mockReset();
     mocks.inventoryFetchNextPage.mockReset();
+    mocks.detailCalls = [];
     mocks.detailRefetch.mockReset();
     mocks.upgradeMutateAsync.mockReset();
     mocks.evolveMutateAsync.mockReset();
@@ -256,7 +262,7 @@ describe("CollectionPage stage-3 frontend states", () => {
     );
   });
 
-  it("renders the selected hero and switches selectedItem from the grid", () => {
+  it("renders the selected detail panel and switches selectedItem from the grid", () => {
     const firstItem = makeItem();
     const secondItem = makeItem({
       itemInstanceId: ITEM_B_ID,
@@ -279,6 +285,10 @@ describe("CollectionPage stage-3 frontend states", () => {
         name: "森林幼芽",
       }),
     ).toBeVisible();
+    expect(mocks.detailCalls).toContain(ITEM_A_ID);
+    expect(
+      screen.queryByRole("button", { name: "详情" }),
+    ).not.toBeInTheDocument();
     expect(screen.getByText("我的藏品")).toBeVisible();
     expect(screen.getByText("2 件")).toBeVisible();
 
@@ -296,6 +306,7 @@ describe("CollectionPage stage-3 frontend states", () => {
       "aria-pressed",
       "true",
     );
+    expect(mocks.detailCalls).toContain(ITEM_B_ID);
   });
 
   it("loads the next inventory page when more items are available", async () => {
@@ -312,7 +323,7 @@ describe("CollectionPage stage-3 frontend states", () => {
     });
   });
 
-  it("opens details and enables growth actions for upgradeable duplicate items", () => {
+  it("shows full selected-item details and enables growth actions for upgradeable duplicate items", () => {
     const firstItem = makeItem();
     const items = [
       firstItem,
@@ -323,15 +334,24 @@ describe("CollectionPage stage-3 frontend states", () => {
     setItemDetail(firstItem, makeDetail(firstItem));
 
     renderCollectionPage();
-    fireEvent.click(screen.getByRole("button", { name: "详情" }));
 
-    const dialog = screen.getByRole("dialog", { name: "森林幼芽" });
+    const selectedPanel = screen.getByLabelText("当前选中藏品");
 
-    expect(within(dialog).getByText("藏品详情")).toBeVisible();
-    expect(within(dialog).getByRole("button", { name: "升级" })).toBeEnabled();
-    expect(within(dialog).getByRole("button", { name: "合成" })).toBeEnabled();
-    expect(within(dialog).getByRole("button", { name: "分解" })).toBeEnabled();
-    expect(within(dialog).getByRole("button", { name: "出售" })).toBeEnabled();
+    expect(within(selectedPanel).getByLabelText("藏品完整信息")).toBeVisible();
+    expect(within(selectedPanel).getByText("森林守护者")).toBeVisible();
+    expect(within(selectedPanel).getByText("基础形态")).toBeVisible();
+    expect(
+      within(selectedPanel).getByRole("button", { name: "升级" }),
+    ).toBeEnabled();
+    expect(
+      within(selectedPanel).getByRole("button", { name: "合成" }),
+    ).toBeEnabled();
+    expect(
+      within(selectedPanel).getByRole("button", { name: "分解" }),
+    ).toBeEnabled();
+    expect(
+      within(selectedPanel).getByRole("button", { name: "出售" }),
+    ).toBeEnabled();
   });
 
   it("opens the direct sell entry from item details and submits the price", async () => {
@@ -340,12 +360,10 @@ describe("CollectionPage stage-3 frontend states", () => {
     setItemDetail(item, makeDetail(item));
 
     renderCollectionPage();
-    fireEvent.click(screen.getByRole("button", { name: "详情" }));
     fireEvent.click(
-      within(screen.getByRole("dialog", { name: "森林幼芽" })).getByRole(
-        "button",
-        { name: "出售" },
-      ),
+      within(screen.getByLabelText("当前选中藏品")).getByRole("button", {
+        name: "出售",
+      }),
     );
 
     const sellDialog = screen.getByRole("dialog", { name: "森林幼芽" });
@@ -389,12 +407,10 @@ describe("CollectionPage stage-3 frontend states", () => {
     );
 
     renderCollectionPage();
-    fireEvent.click(screen.getByRole("button", { name: "详情" }));
     fireEvent.click(
-      within(screen.getByRole("dialog", { name: "森林幼芽" })).getByRole(
-        "button",
-        { name: "下架" },
-      ),
+      within(screen.getByLabelText("当前选中藏品")).getByRole("button", {
+        name: "下架",
+      }),
     );
 
     const cancelDialog = screen.getByRole("dialog", { name: "森林幼芽" });
@@ -460,13 +476,18 @@ describe("CollectionPage stage-3 frontend states", () => {
     );
 
     renderCollectionPage();
-    fireEvent.click(screen.getByRole("button", { name: "详情" }));
 
-    const dialog = screen.getByRole("dialog", { name: "森林幼芽" });
+    const selectedPanel = screen.getByLabelText("当前选中藏品");
 
-    expect(within(dialog).getByRole("button", { name: "升级" })).toBeDisabled();
-    expect(within(dialog).getByRole("button", { name: "合成" })).toBeDisabled();
-    expect(within(dialog).getByRole("button", { name: "分解" })).toBeDisabled();
+    expect(
+      within(selectedPanel).getByRole("button", { name: "升级" }),
+    ).toBeDisabled();
+    expect(
+      within(selectedPanel).getByRole("button", { name: "合成" }),
+    ).toBeDisabled();
+    expect(
+      within(selectedPanel).getByRole("button", { name: "分解" }),
+    ).toBeDisabled();
   });
 
   it("submits Mint after wallet verification and item eligibility pass", async () => {
@@ -476,10 +497,9 @@ describe("CollectionPage stage-3 frontend states", () => {
     setItemDetail(item, makeDetail(item));
 
     renderCollectionPage();
-    fireEvent.click(screen.getByRole("button", { name: "详情" }));
 
-    const dialog = screen.getByRole("dialog", { name: "森林幼芽" });
-    const mintButton = within(dialog).getByRole("button", {
+    const selectedPanel = screen.getByLabelText("当前选中藏品");
+    const mintButton = within(selectedPanel).getByRole("button", {
       name: "Mint NFT",
     });
 
@@ -515,14 +535,13 @@ describe("CollectionPage stage-3 frontend states", () => {
     );
 
     renderCollectionPage();
-    fireEvent.click(screen.getByRole("button", { name: "详情" }));
 
-    const dialog = screen.getByRole("dialog", { name: "森林幼芽" });
+    const selectedPanel = screen.getByLabelText("当前选中藏品");
 
     expect(
-      within(dialog).getByRole("button", { name: "Mint NFT" }),
+      within(selectedPanel).getByRole("button", { name: "Mint NFT" }),
     ).toBeEnabled();
-    expect(within(dialog).getByText("未 Mint")).toBeVisible();
+    expect(within(selectedPanel).getByText("未 Mint")).toBeVisible();
   });
 
   it("hides the Mint entry when the wallet is not verified", () => {
@@ -532,12 +551,11 @@ describe("CollectionPage stage-3 frontend states", () => {
     setItemDetail(item, makeDetail(item));
 
     renderCollectionPage();
-    fireEvent.click(screen.getByRole("button", { name: "详情" }));
 
-    const dialog = screen.getByRole("dialog", { name: "森林幼芽" });
+    const selectedPanel = screen.getByLabelText("当前选中藏品");
 
     expect(
-      within(dialog).queryByRole("button", { name: "Mint NFT" }),
+      within(selectedPanel).queryByRole("button", { name: "Mint NFT" }),
     ).not.toBeInTheDocument();
   });
 
@@ -604,12 +622,11 @@ describe("CollectionPage stage-3 frontend states", () => {
       setItemDetail(item, makeDetail(item, testCase.detailOverrides));
 
       const { unmount } = renderCollectionPage();
-      fireEvent.click(screen.getByRole("button", { name: "详情" }));
 
-      const dialog = screen.getByRole("dialog", { name: item.name });
+      const selectedPanel = screen.getByLabelText("当前选中藏品");
 
       expect(
-        within(dialog).queryByRole("button", { name: /Mint/ }),
+        within(selectedPanel).queryByRole("button", { name: /Mint/ }),
         testCase.name,
       ).not.toBeInTheDocument();
 
@@ -634,12 +651,11 @@ describe("CollectionPage stage-3 frontend states", () => {
     );
 
     renderCollectionPage();
-    fireEvent.click(screen.getByRole("button", { name: "详情" }));
 
-    const dialog = screen.getByRole("dialog", { name: "森林幼芽" });
+    const selectedPanel = screen.getByLabelText("当前选中藏品");
 
     expect(
-      within(dialog).getByRole("button", { name: "重试 Mint" }),
+      within(selectedPanel).getByRole("button", { name: "重试 Mint" }),
     ).toBeEnabled();
   });
 
@@ -653,12 +669,10 @@ describe("CollectionPage stage-3 frontend states", () => {
     setItemDetail(item, makeDetail(item));
 
     renderCollectionPage();
-    fireEvent.click(screen.getByRole("button", { name: "详情" }));
     fireEvent.click(
-      within(screen.getByRole("dialog", { name: "森林幼芽" })).getByRole(
-        "button",
-        { name: "升级" },
-      ),
+      within(screen.getByLabelText("当前选中藏品")).getByRole("button", {
+        name: "升级",
+      }),
     );
 
     expect(screen.getByText("藏品升级")).toBeVisible();
