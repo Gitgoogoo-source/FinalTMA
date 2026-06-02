@@ -143,26 +143,31 @@ a {
   height: 100dvh;
   min-height: 100vh;
   min-height: 100dvh;
+  position: relative;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
-  gap: 12px;
-  padding: calc(12px + var(--app-layout-safe-area-top))
-    calc(12px + var(--app-safe-area-right))
-    calc(16px + var(--app-safe-area-bottom))
-    calc(12px + var(--app-safe-area-left));
+  grid-template-rows: minmax(0, 1fr);
+  gap: 0;
+  padding: 0;
   overflow: hidden;
+  isolation: isolate;
 }
 
 .app-shell__content {
-  width: min(100%, 460px);
+  width: min(
+    calc(100% - 24px - var(--app-safe-area-left) - var(--app-safe-area-right)),
+    460px
+  );
+  height: 100%;
   min-height: 0;
   margin: 0 auto;
   display: grid;
   align-items: start;
-  padding: 6px 0;
+  padding: 0 0 calc(74px + var(--app-safe-area-bottom));
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior-y: contain;
+  scroll-padding-block: calc(70px + var(--app-layout-safe-area-top))
+    calc(74px + var(--app-safe-area-bottom));
   -webkit-overflow-scrolling: touch;
 }
 
@@ -171,15 +176,23 @@ a {
 }
 
 .asset-bar {
-  width: min(100%, 460px);
+  width: min(
+    calc(100% - 24px - var(--app-safe-area-left) - var(--app-safe-area-right)),
+    460px
+  );
   min-height: 0;
-  margin: 0 auto;
-  position: relative;
+  margin: 0;
+  position: absolute;
+  top: calc(12px + var(--app-layout-safe-area-top));
+  left: 50%;
+  z-index: 40;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
   isolation: isolate;
+  pointer-events: none;
+  transform: translateX(-50%);
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -211,6 +224,7 @@ a {
   display: flex;
   align-items: center;
   gap: 6px;
+  pointer-events: auto;
 }
 
 .user-avatar {
@@ -293,6 +307,7 @@ a {
   align-items: center;
   justify-content: flex-end;
   gap: 6px;
+  pointer-events: auto;
 }
 
 .asset-pill {
@@ -2841,15 +2856,23 @@ a {
 }
 
 .bottom-nav {
-  width: min(100%, 460px);
+  width: min(
+    calc(100% - 24px - var(--app-safe-area-left) - var(--app-safe-area-right)),
+    460px
+  );
   min-height: 0;
-  margin: 0 auto;
-  position: relative;
+  margin: 0;
+  position: absolute;
+  right: auto;
+  bottom: calc(10px + var(--app-safe-area-bottom));
+  left: 50%;
+  z-index: 40;
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   align-items: center;
   gap: 0;
   isolation: isolate;
+  transform: translateX(-50%);
   border: 0;
   border-radius: 0;
   padding: 0;
