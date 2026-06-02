@@ -29,10 +29,35 @@ describe("bootstrapTelegramApp", () => {
 
     expect(webApp.ready).toHaveBeenCalledOnce();
     expect(webApp.expand).toHaveBeenCalledOnce();
+    expect(webApp.disableVerticalSwipes).toHaveBeenCalledOnce();
     expect(webApp.requestFullscreen).toHaveBeenCalledOnce();
     expect(webApp.setHeaderColor).toHaveBeenCalledWith("#fffdfa");
     expect(webApp.setBackgroundColor).toHaveBeenCalledWith("#fffdfa");
     expect(webApp.setBottomBarColor).toHaveBeenCalledWith("#fffdfa");
+  });
+
+  it("disables Telegram vertical swipes on Bot API 7.7+ clients", async () => {
+    const { bootstrapTelegramApp } = await import("./bootstrap");
+    const webApp = installTelegramWebApp({
+      version: "7.7",
+      disableVerticalSwipes: vi.fn(),
+    });
+
+    bootstrapTelegramApp();
+
+    expect(webApp.disableVerticalSwipes).toHaveBeenCalledOnce();
+  });
+
+  it("keeps old Telegram clients on their default vertical swipe behavior", async () => {
+    const { bootstrapTelegramApp } = await import("./bootstrap");
+    const webApp = installTelegramWebApp({
+      version: "7.6",
+      disableVerticalSwipes: vi.fn(),
+    });
+
+    bootstrapTelegramApp();
+
+    expect(webApp.disableVerticalSwipes).not.toHaveBeenCalled();
   });
 
   it("marks the Telegram shell and safe area before the React provider renders", async () => {
@@ -129,12 +154,14 @@ function installTelegramWebApp(
 ): TelegramWebApp & {
   expand: ReturnType<typeof vi.fn>;
   ready: ReturnType<typeof vi.fn>;
+  disableVerticalSwipes: ReturnType<typeof vi.fn>;
   setBackgroundColor: ReturnType<typeof vi.fn>;
   setBottomBarColor: ReturnType<typeof vi.fn>;
   setHeaderColor: ReturnType<typeof vi.fn>;
 } {
   const webApp = {
     colorScheme: "light",
+    disableVerticalSwipes: vi.fn(),
     expand: vi.fn(),
     ready: vi.fn(),
     setBackgroundColor: vi.fn(),
@@ -145,6 +172,7 @@ function installTelegramWebApp(
   } as TelegramWebApp & {
     expand: ReturnType<typeof vi.fn>;
     ready: ReturnType<typeof vi.fn>;
+    disableVerticalSwipes: ReturnType<typeof vi.fn>;
     setBackgroundColor: ReturnType<typeof vi.fn>;
     setBottomBarColor: ReturnType<typeof vi.fn>;
     setHeaderColor: ReturnType<typeof vi.fn>;

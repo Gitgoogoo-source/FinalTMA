@@ -94,6 +94,7 @@ export type TelegramWebApp = {
   platform?: string;
   isExpanded?: boolean;
   isFullscreen?: boolean;
+  isVerticalSwipesEnabled?: boolean;
   colorScheme?: TelegramColorScheme;
   themeParams?: TelegramThemeParams;
   viewportHeight?: number;
@@ -113,6 +114,8 @@ export type TelegramWebApp = {
   openTelegramLink?: (url: string) => void;
   ready?: () => void;
   expand?: () => void;
+  enableVerticalSwipes?: () => void;
+  disableVerticalSwipes?: () => void;
   requestFullscreen?: () => void;
   exitFullscreen?: () => void;
   onEvent?: (

@@ -1,5 +1,6 @@
 import { getTelegramWebApp, type TelegramWebApp } from "@/types/telegram";
 
+const VERTICAL_SWIPES_MIN_VERSION = "7.7";
 const FULLSCREEN_MIN_VERSION = "8.0";
 const DEFAULT_TMA_CHROME_COLOR = "#fffdfa";
 
@@ -20,7 +21,20 @@ export function setupTelegramViewport(webApp: TelegramWebApp | null): void {
   syncTelegramChromeColor(webApp);
   webApp.ready?.();
   webApp.expand?.();
+  disableTelegramVerticalSwipes(webApp);
   requestTelegramFullscreen(webApp);
+}
+
+export function disableTelegramVerticalSwipes(webApp: TelegramWebApp): void {
+  if (!supportsTelegramVerticalSwipes(webApp)) {
+    return;
+  }
+
+  try {
+    webApp.disableVerticalSwipes?.();
+  } catch {
+    // Older Telegram shells can expose partial APIs; leaving swipes enabled is the fallback.
+  }
 }
 
 export function requestTelegramFullscreen(webApp: TelegramWebApp): void {
@@ -39,6 +53,18 @@ export function requestTelegramFullscreen(webApp: TelegramWebApp): void {
   } catch {
     // Older Telegram shells can expose partial APIs; expand() above is the fallback.
   }
+}
+
+function supportsTelegramVerticalSwipes(webApp: TelegramWebApp): boolean {
+  if (typeof webApp.disableVerticalSwipes !== "function") {
+    return false;
+  }
+
+  if (typeof webApp.isVersionAtLeast === "function") {
+    return webApp.isVersionAtLeast(VERTICAL_SWIPES_MIN_VERSION);
+  }
+
+  return isTelegramVersionAtLeast(webApp.version, VERTICAL_SWIPES_MIN_VERSION);
 }
 
 function syncTelegramChromeColor(webApp: TelegramWebApp): void {

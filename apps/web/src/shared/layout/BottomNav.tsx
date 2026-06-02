@@ -36,8 +36,10 @@ export function BottomNav() {
             to={item.path}
             aria-current={isActive ? "page" : undefined}
           >
-            <Icon aria-hidden="true" size={18} strokeWidth={2.4} />
-            <span>{item.label}</span>
+            <span className="bottom-nav__icon" aria-hidden="true">
+              <Icon size={22} strokeWidth={2.45} />
+            </span>
+            <span className="bottom-nav__label">{item.label}</span>
           </Link>
         );
       })}
