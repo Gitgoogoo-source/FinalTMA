@@ -21,7 +21,9 @@ export function FgemsPill({
       aria-label="Fgems 余额"
       title={isUnavailable ? "资产加载失败，请刷新" : undefined}
     >
-      <Gem aria-hidden="true" size={16} strokeWidth={2.4} />
+      <span className="asset-pill__icon" aria-hidden="true">
+        <Gem size={16} strokeWidth={2.4} />
+      </span>
       <span className="asset-pill__label">Fgems</span>
       <strong className="asset-pill__value">
         {isLoading

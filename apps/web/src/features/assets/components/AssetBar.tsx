@@ -15,7 +15,23 @@ export function AssetBar() {
 
   return (
     <header className="asset-bar" aria-busy={isFetching}>
-      <UserAvatar profile={profile} />
+      <div className="asset-bar__identity">
+        <UserAvatar profile={profile} />
+        <div className="asset-bar__actions">
+          {isError ? (
+            <button
+              className="asset-bar__refresh"
+              onClick={() => void refreshAssets()}
+              title="刷新资产"
+              type="button"
+            >
+              <RefreshCw aria-hidden="true" size={15} strokeWidth={2.4} />
+              <span>刷新</span>
+            </button>
+          ) : null}
+          <WalletEntryButton />
+        </div>
+      </div>
       <div className="asset-bar__balances" aria-label="用户资产">
         <KCoinPill
           balance={assets.kcoin}
@@ -27,20 +43,6 @@ export function AssetBar() {
           isLoading={showLoadingAmount}
           isUnavailable={showUnavailableAmount}
         />
-      </div>
-      <div className="asset-bar__actions">
-        {isError ? (
-          <button
-            className="asset-bar__refresh"
-            onClick={() => void refreshAssets()}
-            title="刷新资产"
-            type="button"
-          >
-            <RefreshCw aria-hidden="true" size={15} strokeWidth={2.4} />
-            <span>刷新</span>
-          </button>
-        ) : null}
-        <WalletEntryButton />
       </div>
     </header>
   );
