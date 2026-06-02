@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from "react";
 
+import { setupTelegramViewport } from "@/app/bootstrap";
 import { env } from "@/env";
 import {
   getTelegramWebApp,
@@ -37,6 +38,8 @@ type TelegramSnapshot = {
   version: string | null;
   colorScheme: TelegramColorScheme;
   themeParams: TelegramThemeParams;
+  isExpanded: boolean;
+  isFullscreen: boolean;
   viewportHeight: number | null;
   viewportStableHeight: number | null;
   safeAreaInset: Required<TelegramSafeAreaInset>;
@@ -92,8 +95,7 @@ export function TelegramProvider({ children }: TelegramProviderProps) {
   useEffect(() => {
     const webApp = getTelegramWebApp();
 
-    webApp?.ready?.();
-    webApp?.expand?.();
+    setupTelegramViewport(webApp);
     setIsReady(true);
     refreshTelegramSnapshot();
 
@@ -109,6 +111,8 @@ export function TelegramProvider({ children }: TelegramProviderProps) {
       "viewportChanged",
       "safeAreaChanged",
       "contentSafeAreaChanged",
+      "fullscreenChanged",
+      "fullscreenFailed",
     ] as const;
 
     for (const eventName of events) {
@@ -178,6 +182,8 @@ export function createTelegramSnapshot(
     version: normalizeOptionalString(webApp?.version),
     colorScheme: webApp?.colorScheme === "dark" ? "dark" : "light",
     themeParams: webApp?.themeParams ?? {},
+    isExpanded: Boolean(webApp?.isExpanded),
+    isFullscreen: Boolean(webApp?.isFullscreen),
     viewportHeight: normalizePositiveNumber(webApp?.viewportHeight),
     viewportStableHeight: normalizePositiveNumber(webApp?.viewportStableHeight),
     safeAreaInset: normalizeInset(webApp?.safeAreaInset),
@@ -419,9 +425,15 @@ function applyTelegramCssVariables(snapshot: TelegramSnapshot): void {
   }
 
   applyInsetVariables(root, "--tg-safe-area", snapshot.safeAreaInset);
+  applyInsetVariables(root, "--tg-safe-area-inset", snapshot.safeAreaInset);
   applyInsetVariables(
     root,
     "--tg-content-safe-area",
+    snapshot.contentSafeAreaInset,
+  );
+  applyInsetVariables(
+    root,
+    "--tg-content-safe-area-inset",
     snapshot.contentSafeAreaInset,
   );
   root.dataset.tgColorScheme = snapshot.colorScheme;

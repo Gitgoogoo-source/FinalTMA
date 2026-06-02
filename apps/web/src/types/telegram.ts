@@ -9,6 +9,7 @@ export type TelegramThemeParams = {
   button_text_color?: string;
   secondary_bg_color?: string;
   header_bg_color?: string;
+  bottom_bar_bg_color?: string;
   accent_text_color?: string;
   section_bg_color?: string;
   section_header_text_color?: string;
@@ -78,7 +79,11 @@ export type TelegramEventName =
   | "viewportChanged"
   | "safeAreaChanged"
   | "contentSafeAreaChanged"
+  | "fullscreenChanged"
+  | "fullscreenFailed"
   | "backButtonClicked";
+
+export type TelegramEventHandler = (eventData?: unknown) => void;
 
 export type TelegramInvoiceStatus = "paid" | "cancelled" | "failed" | "pending";
 
@@ -87,6 +92,8 @@ export type TelegramWebApp = {
   initDataUnsafe?: TelegramInitDataUnsafe;
   version?: string;
   platform?: string;
+  isExpanded?: boolean;
+  isFullscreen?: boolean;
   colorScheme?: TelegramColorScheme;
   themeParams?: TelegramThemeParams;
   viewportHeight?: number;
@@ -94,6 +101,10 @@ export type TelegramWebApp = {
   safeAreaInset?: TelegramSafeAreaInset;
   contentSafeAreaInset?: TelegramSafeAreaInset;
   BackButton?: TelegramBackButton;
+  isVersionAtLeast?: (version: string) => boolean;
+  setHeaderColor?: (color: string) => void;
+  setBackgroundColor?: (color: string) => void;
+  setBottomBarColor?: (color: string) => void;
   openLink?: (url: string, options?: { try_instant_view?: boolean }) => void;
   openInvoice?: (
     url: string,
@@ -102,8 +113,16 @@ export type TelegramWebApp = {
   openTelegramLink?: (url: string) => void;
   ready?: () => void;
   expand?: () => void;
-  onEvent?: (eventType: TelegramEventName, eventHandler: () => void) => void;
-  offEvent?: (eventType: TelegramEventName, eventHandler: () => void) => void;
+  requestFullscreen?: () => void;
+  exitFullscreen?: () => void;
+  onEvent?: (
+    eventType: TelegramEventName,
+    eventHandler: TelegramEventHandler,
+  ) => void;
+  offEvent?: (
+    eventType: TelegramEventName,
+    eventHandler: TelegramEventHandler,
+  ) => void;
 };
 
 export type TelegramGlobal = typeof globalThis & {
