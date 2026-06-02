@@ -5146,7 +5146,6 @@ a {
 .listing-detail-state button:focus-visible,
 .listing-detail-sheet__footer button:focus-visible,
 .collection-load-more button:focus-visible,
-.collection-page__nav-button:focus-visible,
 .character-detail-action:focus-visible,
 .character-detail-state button:focus-visible,
 .character-thumb:focus-visible,
@@ -5220,80 +5219,6 @@ a {
   background:
     linear-gradient(135deg, rgb(93 131 255 / 12%) 0 18%, transparent 18% 100%),
     linear-gradient(315deg, rgb(28 226 4 / 10%) 0 16%, transparent 16% 100%);
-}
-
-.collection-page__nav {
-  min-width: 0;
-  min-height: 58px;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  gap: 8px;
-  align-items: center;
-}
-
-.collection-page__nav-button {
-  min-width: 0;
-  min-height: 46px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  overflow: hidden;
-  border: 1px solid rgb(255 255 255 / 72%);
-  border-radius: 8px;
-  padding: 0 9px;
-  color: var(--collection-ink);
-  background: linear-gradient(
-    180deg,
-    rgb(255 253 250 / 82%),
-    rgb(255 253 250 / 44%)
-  );
-  box-shadow:
-    inset 1px 1px 0 rgb(255 255 255 / 90%),
-    inset 0 -10px 18px rgb(54 67 75 / 6%),
-    0 12px 24px rgb(54 67 75 / 10%);
-  font-size: 12px;
-  font-weight: 950;
-  text-decoration: none;
-}
-
-.collection-page__nav-button span {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.collection-page__nav-button--wide {
-  grid-column: 3;
-  justify-self: end;
-}
-
-.collection-page__title {
-  min-width: 0;
-  grid-column: 2;
-  display: grid;
-  justify-items: center;
-  gap: 2px;
-  text-align: center;
-}
-
-.collection-page__title span {
-  color: var(--collection-muted);
-  font-size: 11px;
-  font-weight: 900;
-  line-height: 1;
-}
-
-.collection-page__title strong {
-  min-width: 0;
-  overflow: hidden;
-  color: var(--collection-ink);
-  font-size: 24px;
-  font-weight: 950;
-  line-height: 1.08;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .collection-state,

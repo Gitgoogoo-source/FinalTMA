@@ -280,6 +280,7 @@ describe("CollectionPage stage-3 frontend states", () => {
 
     renderCollectionPage();
 
+    expect(screen.queryByRole("link", { name: /图鉴/ })).not.toBeInTheDocument();
     expect(
       within(screen.getByLabelText("当前选中藏品")).getByRole("heading", {
         name: "森林幼芽",
