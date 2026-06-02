@@ -1,7 +1,9 @@
 import { APP_ROUTES, type AppRouteKey, type AppRoutePath } from "./routes";
 
+export type MainNavRouteKey = Exclude<AppRouteKey, "album">;
+
 export type MainNavItem = {
-  key: AppRouteKey;
+  key: MainNavRouteKey;
   label: string;
   path: AppRoutePath;
 };
@@ -26,11 +28,6 @@ export const MAIN_NAV_ITEMS: MainNavItem[] = [
     key: "collection",
     label: "藏品",
     path: APP_ROUTES.collection,
-  },
-  {
-    key: "album",
-    label: "图鉴",
-    path: APP_ROUTES.album,
   },
   {
     key: "tasks",
