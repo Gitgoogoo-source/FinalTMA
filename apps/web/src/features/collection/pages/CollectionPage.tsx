@@ -194,7 +194,19 @@ export function CollectionPage() {
     );
   }
 
-  function handleCreateMint(itemInstanceId: string) {
+  function handleCreateMint(
+    itemInstanceId: string,
+    blockingMessages: string[],
+  ) {
+    if (blockingMessages.length > 0) {
+      pushToast({
+        type: "info",
+        title: "暂不能 Mint",
+        message: blockingMessages.join(" "),
+      });
+      return;
+    }
+
     if (createMintMutation.isPending) {
       return;
     }

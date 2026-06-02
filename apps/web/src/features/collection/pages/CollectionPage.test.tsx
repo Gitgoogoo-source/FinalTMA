@@ -544,30 +544,59 @@ describe("CollectionPage stage-3 frontend states", () => {
     expect(within(selectedPanel).getByText("未 Mint")).toBeVisible();
   });
 
-  it("hides the Mint entry when the wallet is not verified", () => {
-    mocks.walletStatus = makeWalletStatus("connected_unverified");
-    const item = makeItem();
-    setInventoryItems(item);
-    setItemDetail(item, makeDetail(item));
+  it("shows the Mint entry and warns before submit when the wallet is not ready", () => {
+    const cases = [
+      {
+        message: "请先连接 TON 钱包并完成验证后再 Mint。",
+        status: "not_connected",
+      },
+      {
+        message: "请先完成 TON 钱包 proof 验证后再 Mint。",
+        status: "connected_unverified",
+      },
+    ];
 
-    renderCollectionPage();
+    for (const testCase of cases) {
+      mocks.walletStatus = makeWalletStatus(testCase.status);
+      const item = makeItem({
+        itemInstanceId: `${ITEM_A_ID.slice(0, -1)}${cases.indexOf(testCase)}`,
+      });
+      mocks.inventoryItems = [];
+      mocks.itemDetails = new Map<string, unknown>();
+      mocks.createMintMutate.mockClear();
+      setInventoryItems(item);
+      setItemDetail(item, makeDetail(item));
 
-    const selectedPanel = screen.getByLabelText("当前选中藏品");
+      const { unmount } = renderCollectionPage();
 
-    expect(
-      within(selectedPanel).queryByRole("button", { name: "Mint NFT" }),
-    ).not.toBeInTheDocument();
+      const selectedPanel = screen.getByLabelText("当前选中藏品");
+      const mintButton = within(selectedPanel).getByRole("button", {
+        name: "Mint NFT",
+      });
+
+      expect(mintButton).toBeEnabled();
+
+      fireEvent.click(mintButton);
+
+      expect(mocks.createMintMutate).not.toHaveBeenCalled();
+      expect(screen.getAllByText("暂不能 Mint").length).toBeGreaterThan(0);
+      expect(screen.getByText(testCase.message)).toBeVisible();
+
+      unmount();
+    }
   });
 
-  it("hides the Mint entry for non-mintable, listed, locked, decomposed or minted items", () => {
+  it("shows the Mint entry and warns for non-mintable, listed, locked, decomposed or minted items", () => {
     mocks.walletStatus = makeWalletStatus("verified");
 
     const cases: Array<{
       detailOverrides?: Partial<CollectionInventoryDetail>;
+      expectedMessage: string;
       itemOverrides?: Partial<CollectionInventoryItem>;
       name: string;
     }> = [
       {
+        expectedMessage: "该藏品当前不可 Mint。",
         itemOverrides: { isMintable: false },
         name: "不可 Mint",
       },
@@ -580,6 +609,7 @@ describe("CollectionPage stage-3 frontend states", () => {
             unitPrice: 100,
           },
         },
+        expectedMessage: "该藏品正在挂售中，请先下架后再 Mint。",
         name: "挂售中",
       },
       {
@@ -593,9 +623,11 @@ describe("CollectionPage stage-3 frontend states", () => {
             sourceType: "onchain",
           },
         },
+        expectedMessage: "该藏品因Mint 处理中被锁定，暂不能 Mint。",
         name: "锁定中",
       },
       {
+        expectedMessage: "该藏品当前状态为已分解，暂不能 Mint。",
         itemOverrides: { status: "decomposed" },
         name: "已分解",
       },
@@ -606,6 +638,7 @@ describe("CollectionPage stage-3 frontend states", () => {
             mintStatus: "minted",
           },
         },
+        expectedMessage: "该藏品已 Mint 成功，不能重复 Mint。",
         itemOverrides: { nftMintStatus: "minted" },
         name: "已 Mint",
       },
@@ -618,17 +651,24 @@ describe("CollectionPage stage-3 frontend states", () => {
       });
       mocks.inventoryItems = [];
       mocks.itemDetails = new Map<string, unknown>();
+      mocks.createMintMutate.mockClear();
       setInventoryItems(item);
       setItemDetail(item, makeDetail(item, testCase.detailOverrides));
 
       const { unmount } = renderCollectionPage();
 
       const selectedPanel = screen.getByLabelText("当前选中藏品");
+      const mintButton = within(selectedPanel).getByRole("button", {
+        name: /Mint/,
+      });
 
-      expect(
-        within(selectedPanel).queryByRole("button", { name: /Mint/ }),
-        testCase.name,
-      ).not.toBeInTheDocument();
+      expect(mintButton, testCase.name).toBeEnabled();
+
+      fireEvent.click(mintButton);
+
+      expect(mocks.createMintMutate, testCase.name).not.toHaveBeenCalled();
+      expect(screen.getAllByText("暂不能 Mint").length).toBeGreaterThan(0);
+      expect(screen.getByText(testCase.expectedMessage)).toBeVisible();
 
       unmount();
     }

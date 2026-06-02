@@ -37,7 +37,7 @@ type CharacterDetailPanelProps = {
   }) => void;
   onDecompose?: () => void;
   onEvolve?: () => void;
-  onMint?: (itemInstanceId: string) => void;
+  onMint?: (itemInstanceId: string, blockingMessages: string[]) => void;
   onSell?: () => void;
   onUpgrade?: () => void;
 };
@@ -69,7 +69,7 @@ export function CharacterDetailPanel({
   const blockReason = getBlockedReason(displayItem, detail, isListed);
   const mintEligibility = getMintEligibility(displayItem, detail, {
     isListed,
-    walletVerified: walletStatusQuery.data?.status === "verified",
+    walletStatus: walletStatusQuery.data?.status,
   });
 
   return (
@@ -184,7 +184,7 @@ export function CharacterDetailPanel({
         />
         <DetailMetric
           label="是否可 Mint"
-          value={getBooleanLabel(mintEligibility.canShowEntry)}
+          value={getBooleanLabel(mintEligibility.canSubmit)}
         />
         <DetailMetric label="Mint 状态" value={mintStatusLabel} />
       </section>
@@ -244,16 +244,19 @@ export function CharacterDetailPanel({
               onClick={onDecompose}
               tone="danger"
             />
-            {mintEligibility.canShowEntry ? (
-              <MintButton
-                disabled={!onMint}
-                label={mintEligibility.actionLabel}
-                loading={isMinting}
-                onClick={() => onMint?.(displayItem.itemInstanceId)}
-              />
-            ) : null}
           </>
         ) : null}
+        <MintButton
+          disabled={!onMint}
+          label={mintEligibility.actionLabel}
+          loading={isMinting}
+          onClick={() =>
+            onMint?.(
+              displayItem.itemInstanceId,
+              mintEligibility.blockingMessages,
+            )
+          }
+        />
       </section>
     </section>
   );
@@ -428,38 +431,99 @@ function getMintEligibility(
   detail: CollectionInventoryDetail | null,
   options: {
     isListed: boolean;
-    walletVerified: boolean;
+    walletStatus: string | null | undefined;
   },
-): { actionLabel: string; canShowEntry: boolean } {
+): { actionLabel: string; blockingMessages: string[]; canSubmit: boolean } {
   const mintStatus = normalizeMintStatus(getEffectiveMintStatus(item, detail));
-
   const isMintable = detail?.isMintable ?? item.isMintable;
+  const blockingMessages: string[] = [];
 
-  if (!detail || !options.walletVerified || !isMintable) {
-    return {
-      actionLabel: "Mint NFT",
-      canShowEntry: false,
-    };
+  if (!detail) {
+    blockingMessages.push("正在读取服务端藏品详情，请稍后再试。");
   }
 
-  if (options.isListed || detail.activeLock || detail.status !== "available") {
-    return {
-      actionLabel: "Mint NFT",
-      canShowEntry: false,
-    };
+  const walletMessage = getWalletMintBlockingMessage(options.walletStatus);
+
+  if (walletMessage) {
+    blockingMessages.push(walletMessage);
+  }
+
+  if (!isMintable) {
+    blockingMessages.push("该藏品当前不可 Mint。");
+  }
+
+  if (options.isListed) {
+    blockingMessages.push("该藏品正在挂售中，请先下架后再 Mint。");
+  }
+
+  if (detail?.activeLock) {
+    blockingMessages.push(
+      `该藏品因${getCollectionLockReasonLabel(
+        detail.activeLock.reason,
+      )}被锁定，暂不能 Mint。`,
+    );
+  }
+
+  const status = detail?.status ?? item.status;
+
+  if (status !== "available") {
+    blockingMessages.push(
+      `该藏品当前状态为${getCollectionStatusLabel(status)}，暂不能 Mint。`,
+    );
   }
 
   if (mintStatus !== "not_minted" && mintStatus !== "failed") {
-    return {
-      actionLabel: "Mint NFT",
-      canShowEntry: false,
-    };
+    blockingMessages.push(getMintStatusBlockingMessage(mintStatus));
   }
 
   return {
     actionLabel: mintStatus === "failed" ? "重试 Mint" : "Mint NFT",
-    canShowEntry: true,
+    blockingMessages,
+    canSubmit: blockingMessages.length === 0,
   };
+}
+
+function getWalletMintBlockingMessage(
+  status: string | null | undefined,
+): string | null {
+  switch (status) {
+    case "verified":
+      return null;
+    case "connected_unverified":
+      return "请先完成 TON 钱包 proof 验证后再 Mint。";
+    case "invalid_proof":
+      return "钱包 proof 未通过，请重新验证钱包后再 Mint。";
+    case "expired_proof":
+      return "钱包 proof 已过期，请重新验证钱包后再 Mint。";
+    case "connecting":
+      return "钱包正在连接中，请完成连接和验证后再 Mint。";
+    case "disconnected":
+    case "not_connected":
+    default:
+      return "请先连接 TON 钱包并完成验证后再 Mint。";
+  }
+}
+
+function getMintStatusBlockingMessage(status: string): string {
+  switch (status) {
+    case "minted":
+      return "该藏品已 Mint 成功，不能重复 Mint。";
+    case "queued":
+      return "该藏品已进入 Mint 队列，请查看 Mint 队列状态。";
+    case "processing":
+    case "minting":
+    case "submitted":
+    case "confirming":
+      return "该藏品正在 Mint 处理中，请查看 Mint 队列状态。";
+    case "cancelled":
+      return "该藏品 Mint 已取消，请刷新状态后再试。";
+    case "manual_review":
+      return "该藏品 Mint 正在人工处理中，请等待运营处理。";
+    default:
+      return `该藏品当前 Mint 状态为${getMintStatusLabel(
+        status,
+      )}，暂不能 Mint。`;
+  }
 }
 
 function getEffectiveMintStatus(
