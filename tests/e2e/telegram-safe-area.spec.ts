@@ -3,8 +3,8 @@ import { expect, test, type Page } from "@playwright/test";
 import { TEST_INIT_DATA, mockFirstPhaseApi } from "./_firstPhaseApi";
 
 const MOBILE_TELEGRAM_CONTENT_SAFE_AREA_TOP = 68;
-const MOBILE_TELEGRAM_OVERLAY_FALLBACK_TOP = 68;
-const APP_SHELL_TOP_GAP = 12;
+const MOBILE_TELEGRAM_OVERLAY_FALLBACK_TOP = 96;
+const MIN_ASSET_BAR_TOP_GAP = 8;
 
 test("keeps the top asset bar below mobile Telegram overlay controls", async ({
   page,
@@ -31,7 +31,7 @@ test("keeps the top asset bar below mobile Telegram overlay controls", async ({
   }
 
   expect(Math.round(box.y)).toBeGreaterThanOrEqual(
-    MOBILE_TELEGRAM_CONTENT_SAFE_AREA_TOP + APP_SHELL_TOP_GAP,
+    MOBILE_TELEGRAM_OVERLAY_FALLBACK_TOP + MIN_ASSET_BAR_TOP_GAP,
   );
 });
 
@@ -65,7 +65,7 @@ test("uses a mobile Telegram fallback when safe-area events report zero", async 
   }
 
   expect(Math.round(box.y)).toBeGreaterThanOrEqual(
-    MOBILE_TELEGRAM_OVERLAY_FALLBACK_TOP + APP_SHELL_TOP_GAP,
+    MOBILE_TELEGRAM_OVERLAY_FALLBACK_TOP + MIN_ASSET_BAR_TOP_GAP,
   );
 });
 
