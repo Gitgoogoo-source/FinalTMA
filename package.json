@@ -37,6 +37,7 @@
     "test:workspaces": "pnpm -r --if-present test",
     "test:unit": "vitest run --passWithNoTests",
     "test:unit:watch": "vitest --passWithNoTests",
+    "test:auth": "pnpm exec vitest run tests/api/auth.test.ts tests/unit/frontendAuthClient.test.ts && pnpm --filter @tma-game/web exec vitest run src/app/providers/SessionProvider.test.tsx",
     "test:e2e": "playwright test",
     "test:e2e:stage3-real": "tsx scripts/run-stage3-real-e2e.ts",
     "test:e2e:phase5-real": "tsx scripts/run-phase5-real-e2e.ts",

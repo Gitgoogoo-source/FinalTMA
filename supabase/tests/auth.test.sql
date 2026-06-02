@@ -100,6 +100,68 @@ from _ids where key = 'invitee_payload';
 
 select ok(to_regprocedure('api.auth_upsert_telegram_user(bigint,text,text,text,text,boolean,text,text,jsonb)') is not null, 'auth_upsert_telegram_user RPC exists');
 select ok(to_regprocedure('api.auth_create_session(uuid,text,timestamp with time zone,timestamp with time zone,text,text,text,text,text)') is not null, 'auth_create_session RPC exists');
+select ok(
+  not has_table_privilege('anon', 'core.app_sessions', 'SELECT')
+    and not has_table_privilege('authenticated', 'core.app_sessions', 'SELECT')
+    and not has_any_column_privilege('anon', 'core.app_sessions', 'SELECT')
+    and not has_any_column_privilege('authenticated', 'core.app_sessions', 'SELECT')
+    and not exists (
+      select 1
+      from pg_policies
+      where schemaname = 'core'
+        and tablename = 'app_sessions'
+        and policyname in (
+          'core_sessions_select_own',
+          'core_sessions_admin_read',
+          'core_sessions_admin_write'
+        )
+    ),
+  'core.app_sessions is not directly readable by browser roles'
+);
+select ok(
+  not has_table_privilege('anon', 'core.user_api_tokens', 'SELECT')
+    and not has_table_privilege('authenticated', 'core.user_api_tokens', 'SELECT')
+    and not has_any_column_privilege('anon', 'core.user_api_tokens', 'SELECT')
+    and not has_any_column_privilege('authenticated', 'core.user_api_tokens', 'SELECT')
+    and not exists (
+      select 1
+      from pg_policies
+      where schemaname = 'core'
+        and tablename = 'user_api_tokens'
+        and policyname in (
+          'core_tokens_select_own',
+          'core_tokens_admin_read',
+          'core_tokens_admin_write'
+        )
+    ),
+  'core.user_api_tokens is not directly readable by browser roles'
+);
+select ok(
+  not has_table_privilege('anon', 'core.app_sessions', 'INSERT')
+    and not has_table_privilege('authenticated', 'core.app_sessions', 'INSERT')
+    and not has_table_privilege('anon', 'core.app_sessions', 'UPDATE')
+    and not has_table_privilege('authenticated', 'core.app_sessions', 'UPDATE')
+    and not has_table_privilege('anon', 'core.app_sessions', 'DELETE')
+    and not has_table_privilege('authenticated', 'core.app_sessions', 'DELETE')
+    and not has_table_privilege('anon', 'core.user_api_tokens', 'INSERT')
+    and not has_table_privilege('authenticated', 'core.user_api_tokens', 'INSERT')
+    and not has_table_privilege('anon', 'core.user_api_tokens', 'UPDATE')
+    and not has_table_privilege('authenticated', 'core.user_api_tokens', 'UPDATE')
+    and not has_table_privilege('anon', 'core.user_api_tokens', 'DELETE')
+    and not has_table_privilege('authenticated', 'core.user_api_tokens', 'DELETE'),
+  'browser roles cannot directly write auth session internal tables'
+);
+select ok(
+  has_table_privilege('service_role', 'core.app_sessions', 'SELECT')
+    and has_table_privilege('service_role', 'core.app_sessions', 'INSERT')
+    and has_table_privilege('service_role', 'core.app_sessions', 'UPDATE')
+    and has_table_privilege('service_role', 'core.app_sessions', 'DELETE')
+    and has_table_privilege('service_role', 'core.user_api_tokens', 'SELECT')
+    and has_table_privilege('service_role', 'core.user_api_tokens', 'INSERT')
+    and has_table_privilege('service_role', 'core.user_api_tokens', 'UPDATE')
+    and has_table_privilege('service_role', 'core.user_api_tokens', 'DELETE'),
+  'service_role keeps backend access to auth session internal tables'
+);
 select ok(exists (select 1 from core.users where telegram_user_id = 9100000001 and username = 'inviter_auth_test'), 'inviter user was created from verified Telegram identity');
 select ok(exists (select 1 from core.user_profiles p join _ids i on i.id = p.user_id where i.key = 'inviter' and p.display_name = 'Invite Owner'), 'profile row was created with display name');
 select is((select count(*)::int from economy.user_balances b join _ids i on i.id = b.user_id where i.key = 'inviter'), 2, 'KCOIN and FGEMS balance rows are initialized');

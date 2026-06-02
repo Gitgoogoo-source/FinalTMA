@@ -18,24 +18,28 @@ export type SessionVerificationErrorCode =
   | "SESSION_HASH_MISMATCH"
   | "SESSION_EXPIRED"
   | "SESSION_REVOKED"
+  | "SESSION_USER_NOT_FOUND"
+  | "SESSION_USER_INACTIVE"
   | "SESSION_IP_MISMATCH"
   | "SESSION_USER_AGENT_MISMATCH"
   | "SESSION_DB_ERROR";
 
 export class SessionVerificationError extends Error {
   public readonly code: SessionVerificationErrorCode;
-  public readonly statusCode = 401;
+  public readonly statusCode: number;
   public override readonly cause?: unknown;
 
   constructor(
     code: SessionVerificationErrorCode,
     message: string,
     cause?: unknown,
+    statusCode = 401,
   ) {
     super(message);
     this.name = "SessionVerificationError";
     this.code = code;
     this.cause = cause;
+    this.statusCode = statusCode;
   }
 }
 
@@ -43,6 +47,7 @@ export interface VerifiedAppSession {
   sessionId: string;
   userId: string;
   telegramUserId?: string | undefined;
+  userStatus: string;
 
   issuedAt?: Date | undefined;
   expiresAt: Date;
@@ -91,6 +96,12 @@ export interface VerifySessionOptions {
   touch?: boolean;
 
   /**
+   * 默认要求用户仍为 active，和 Vercel API requireSession 保持一致。
+   * 只有注销等明确允许非 active 用户完成的场景才应设为 false。
+   */
+  requireActiveUser?: boolean;
+
+  /**
    * last_seen_at 最小更新间隔。
    * 默认 60 秒，避免每次 API 请求都写库。
    */
@@ -131,12 +142,15 @@ interface AppSessionRow {
 
 interface SessionUserRow {
   telegram_user_id: number | string | null;
+  status: string | null;
 }
 
 /**
  * 统一入口：
  * - 可以传 Headers；Headers 默认优先读取 HttpOnly Cookie
  * - 可以传 { headers }
+ * - Bearer 只面向后端/测试客户端；浏览器登录响应不会发行 Bearer token
+ * - 默认要求 session 绑定用户仍为 active
  */
 export async function verifySession(
   input: HeadersLike | RequestLike,
@@ -253,16 +267,35 @@ export async function verifySessionToken(
     }
   }
 
+  const user = await getSessionUser(db, data.user_id);
+
+  if (!user) {
+    throw new SessionVerificationError(
+      "SESSION_USER_NOT_FOUND",
+      "session 用户不存在。",
+    );
+  }
+
+  const userStatus = user.status ?? "unknown";
+
+  if (options.requireActiveUser !== false && userStatus !== "active") {
+    throw new SessionVerificationError(
+      "SESSION_USER_INACTIVE",
+      "当前账号已被限制使用。",
+      { status: userStatus },
+      403,
+    );
+  }
+
   if (options.touch !== false) {
     await touchSessionIfNeeded(db, data, tokenHash, now, options);
   }
 
-  const telegramUserId = await getSessionTelegramUserId(db, data.user_id);
-
   return {
     sessionId: data.id,
     userId: data.user_id,
-    telegramUserId,
+    telegramUserId: normalizeTelegramUserId(user.telegram_user_id),
+    userStatus,
 
     issuedAt: data.created_at ? new Date(data.created_at) : undefined,
     expiresAt: new Date(data.expires_at),
@@ -382,14 +415,14 @@ async function touchSessionIfNeeded(
     .eq("session_token_hash", tokenHash);
 }
 
-async function getSessionTelegramUserId(
+async function getSessionUser(
   db: SupabaseAdminClient,
   userId: string,
-): Promise<string | undefined> {
+): Promise<SessionUserRow | null> {
   const { data, error } = await db
     .schema("core")
     .from("users")
-    .select("telegram_user_id")
+    .select("telegram_user_id,status")
     .eq("id", userId)
     .maybeSingle<SessionUserRow>();
 
@@ -401,11 +434,17 @@ async function getSessionTelegramUserId(
     );
   }
 
-  if (data?.telegram_user_id === null || data?.telegram_user_id === undefined) {
+  return data ?? null;
+}
+
+function normalizeTelegramUserId(
+  telegramUserId: number | string | null,
+): string | undefined {
+  if (telegramUserId === null || telegramUserId === undefined) {
     return undefined;
   }
 
-  return String(data.telegram_user_id);
+  return String(telegramUserId);
 }
 
 function shouldTouch(

@@ -69,7 +69,8 @@ export function getSupabaseAdmin(): SupabaseAdminClient {
  * 约定：
  * - 登录接口签发一个 opaque session token，并写入 HttpOnly Cookie。
  * - 数据库存 hash，不存明文 token。
- * - 浏览器前端默认依赖 Cookie 携带 session；后端/测试客户端可用 Bearer。
+ * - 浏览器前端只依赖 HttpOnly Cookie；登录响应不下发 Bearer token。
+ * - Bearer 仅用于后端/测试客户端携带同一 opaque session token。
  * - API 永远从 session 中取 user_id，不信任 body 里的 user_id。
  */
 export async function requireSession(

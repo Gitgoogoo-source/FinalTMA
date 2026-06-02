@@ -56,13 +56,11 @@ grant all privileges on all tables in schema core to service_role;
 grant select on table
   core.users,
   core.user_profiles,
-  core.app_sessions,
   core.user_devices,
   core.user_wallets,
   core.wallet_proofs,
   core.user_flags,
-  core.notifications,
-  core.user_api_tokens
+  core.notifications
 to authenticated;
 
 -- Optional direct admin management through Supabase JWT with admin_user_id claim.
@@ -70,13 +68,11 @@ to authenticated;
 grant insert, update, delete on table
   core.users,
   core.user_profiles,
-  core.app_sessions,
   core.user_devices,
   core.user_wallets,
   core.wallet_proofs,
   core.user_flags,
-  core.notifications,
-  core.user_api_tokens
+  core.notifications
 to authenticated;
 
 alter table core.users enable row level security;
@@ -122,23 +118,6 @@ CREATE POLICY core_profiles_admin_write ON core.user_profiles
 FOR ALL TO authenticated
 USING (ops.has_admin_permission('core:write') OR ops.has_admin_permission('users:write'))
 WITH CHECK (ops.has_admin_permission('core:write') OR ops.has_admin_permission('users:write'));
-
--- core.app_sessions
-DROP POLICY IF EXISTS core_sessions_select_own ON core.app_sessions;
-CREATE POLICY core_sessions_select_own ON core.app_sessions
-FOR SELECT TO authenticated
-USING (user_id = core.current_user_id());
-
-DROP POLICY IF EXISTS core_sessions_admin_read ON core.app_sessions;
-CREATE POLICY core_sessions_admin_read ON core.app_sessions
-FOR SELECT TO authenticated
-USING (ops.has_admin_permission('core:read') OR ops.has_admin_permission('users:read'));
-
-DROP POLICY IF EXISTS core_sessions_admin_write ON core.app_sessions;
-CREATE POLICY core_sessions_admin_write ON core.app_sessions
-FOR ALL TO authenticated
-USING (ops.has_admin_permission('core:write'))
-WITH CHECK (ops.has_admin_permission('core:write'));
 
 -- core.user_devices
 DROP POLICY IF EXISTS core_devices_select_own ON core.user_devices;
@@ -224,22 +203,4 @@ CREATE POLICY core_notifications_admin_write ON core.notifications
 FOR ALL TO authenticated
 USING (ops.has_admin_permission('core:write') OR ops.has_admin_permission('users:write'))
 WITH CHECK (ops.has_admin_permission('core:write') OR ops.has_admin_permission('users:write'));
-
--- core.user_api_tokens
-DROP POLICY IF EXISTS core_tokens_select_own ON core.user_api_tokens;
-CREATE POLICY core_tokens_select_own ON core.user_api_tokens
-FOR SELECT TO authenticated
-USING (user_id = core.current_user_id());
-
-DROP POLICY IF EXISTS core_tokens_admin_read ON core.user_api_tokens;
-CREATE POLICY core_tokens_admin_read ON core.user_api_tokens
-FOR SELECT TO authenticated
-USING (ops.has_admin_permission('core:read'));
-
-DROP POLICY IF EXISTS core_tokens_admin_write ON core.user_api_tokens;
-CREATE POLICY core_tokens_admin_write ON core.user_api_tokens
-FOR ALL TO authenticated
-USING (ops.has_admin_permission('core:write'))
-WITH CHECK (ops.has_admin_permission('core:write'));
-
 

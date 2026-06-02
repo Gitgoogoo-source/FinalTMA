@@ -107,6 +107,8 @@ export default withApiHandler(
     });
     const input = validate(AuthTelegramLoginRequestSchema, body);
     const verified = verifyTrustedInitData(input, sessionConfig);
+    await assertVerifiedAuthRateLimit(req, ctx, verified);
+
     const reusableSession = await loadReusableSessionForVerifiedInitData(
       req,
       verified,
@@ -131,7 +133,6 @@ export default withApiHandler(
       });
     }
 
-    await assertVerifiedAuthRateLimit(req, ctx, verified);
     const wasExistingUser = await hasExistingTelegramUser(verified.user.id);
 
     const userResult = await upsertTelegramUser(verified, ctx.requestId);

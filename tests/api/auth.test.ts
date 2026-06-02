@@ -281,6 +281,11 @@ describe("auth API", () => {
         },
       },
     });
+    const sessionData = (
+      result.body.data as { session: Record<string, unknown> }
+    ).session;
+    expect(sessionData).not.toHaveProperty("token");
+    expect(sessionData).not.toHaveProperty("bearerToken");
     expect(callRpcRawMock).toHaveBeenCalledWith(
       "auth_upsert_telegram_user",
       expect.objectContaining({
@@ -488,7 +493,7 @@ describe("auth API", () => {
     ).toBe("cookie-session-token");
   });
 
-  it("reads session tokens from Authorization Bearer when no cookie is present", async () => {
+  it("reads session tokens from Authorization Bearer for server/test clients when no cookie is present", async () => {
     const { extractSessionToken } =
       await import("../../api/_shared/requireSession");
     const { extractSessionTokenFromHeaders } =
@@ -509,7 +514,60 @@ describe("auth API", () => {
     ).toBe(token);
   });
 
-  it("/api/auth/telegram reuses a valid session cookie before replay rate limits or RPC writes", async () => {
+  it("shared verifySessionToken rejects inactive users by default", async () => {
+    const token = "shared-restricted-session-token-1234567890abcdef";
+    const db = createSessionLifecycleSupabaseMock({
+      token,
+      userOverrides: {
+        status: "restricted",
+      },
+    });
+    getSupabaseAdminClientMock.mockReturnValue(db);
+
+    const { verifySessionToken } =
+      await import("../../packages/server/src/auth/verifySession");
+
+    await expect(verifySessionToken(token)).rejects.toMatchObject({
+      code: "SESSION_USER_INACTIVE",
+      statusCode: 403,
+    });
+    expect(db.operations).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          table: "app_sessions",
+          action: "update",
+        }),
+      ]),
+    );
+  });
+
+  it("shared verifySessionToken can explicitly allow inactive users for narrow flows", async () => {
+    const token = "shared-inactive-readable-token-1234567890abcdef";
+    const db = createSessionLifecycleSupabaseMock({
+      token,
+      userOverrides: {
+        status: "restricted",
+      },
+    });
+    getSupabaseAdminClientMock.mockReturnValue(db);
+
+    const { verifySessionToken } =
+      await import("../../packages/server/src/auth/verifySession");
+
+    const verified = await verifySessionToken(token, {
+      requireActiveUser: false,
+      touch: false,
+    });
+
+    expect(verified).toMatchObject({
+      sessionId: SESSION_ID,
+      userId: USER_ID,
+      telegramUserId: "7001",
+      userStatus: "restricted",
+    });
+  });
+
+  it("/api/auth/telegram reuses a valid session cookie after verified initData rate limits", async () => {
     const token = "reuse-session-token-1234567890abcdef";
     getSupabaseAdminClientMock.mockReturnValue(
       createSessionLifecycleSupabaseMock({
@@ -556,6 +614,78 @@ describe("auth API", () => {
           sessionId: SESSION_ID,
           expiresAt: "2026-05-22T00:00:00.000Z",
         },
+      },
+    });
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+  });
+
+  it("/api/auth/telegram rate-limits repeated reusable-session initData", async () => {
+    const token = "reuse-rate-limit-session-token-1234567890abcdef";
+    getSupabaseAdminClientMock.mockReturnValue(
+      createSessionLifecycleSupabaseMock({
+        token,
+        userOverrides: {
+          telegram_user_id: 7701,
+        },
+        sessionOverrides: {
+          expires_at: "2026-05-22T00:00:00.000Z",
+        },
+      }),
+    );
+
+    const { default: authTelegramHandler } =
+      await import("../../api/auth/telegram");
+    const initData = buildTelegramInitData({
+      botToken: BOT_TOKEN,
+      authDate: 1779321600,
+      queryId: "reuse-rate-limit-query",
+      user: {
+        id: 7701,
+        first_name: "ReuseRateLimit",
+      },
+    });
+
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const allowed = await invokeApiHandler<ApiSuccessResponse>(
+        authTelegramHandler,
+        {
+          method: "POST",
+          url: "/api/auth/telegram",
+          headers: {
+            "content-type": "application/json",
+            cookie: `tma_game_session=${token}`,
+            "x-forwarded-for": "127.0.0.77",
+          },
+          body: {
+            initData,
+          },
+        },
+      );
+
+      expect(allowed.statusCode).toBe(200);
+    }
+
+    const rejected = await invokeApiHandler<ApiErrorResponse>(
+      authTelegramHandler,
+      {
+        method: "POST",
+        url: "/api/auth/telegram",
+        headers: {
+          "content-type": "application/json",
+          cookie: `tma_game_session=${token}`,
+          "x-forwarded-for": "127.0.0.77",
+        },
+        body: {
+          initData,
+        },
+      },
+    );
+
+    expect(rejected.statusCode).toBe(429);
+    expect(rejected.body).toMatchObject({
+      ok: false,
+      error: {
+        code: "RATE_LIMITED",
       },
     });
     expect(callRpcRawMock).not.toHaveBeenCalled();
@@ -978,6 +1108,7 @@ function createSessionLifecycleSupabaseMock(options: {
   refreshExpiresAt?: string;
   logoutRows?: Array<{ id: string }>;
   sessionOverrides?: Record<string, unknown>;
+  userOverrides?: Record<string, unknown>;
 }) {
   const operations: LifecycleOperation[] = [];
   const session = {
@@ -1001,6 +1132,7 @@ function createSessionLifecycleSupabaseMock(options: {
     photo_url: "https://example.test/avatar.png",
     invite_code: "invite_test_7001",
     status: "active",
+    ...(options.userOverrides ?? {}),
   };
 
   return {
