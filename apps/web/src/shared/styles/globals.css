@@ -177,7 +177,13 @@ a {
   overscroll-behavior-y: contain;
   scroll-padding-block: var(--app-content-top-padding)
     calc(74px + var(--app-safe-area-bottom));
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   -webkit-overflow-scrolling: touch;
+}
+
+.app-shell__content::-webkit-scrollbar {
+  display: none;
 }
 
 .app-home-panel {
