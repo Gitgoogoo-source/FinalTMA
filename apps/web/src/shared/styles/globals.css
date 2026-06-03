@@ -139,6 +139,14 @@ a {
 }
 
 .app-shell {
+  --app-asset-bar-height: 54px;
+  --app-asset-bar-offset-top: calc(10px + var(--app-layout-safe-area-top));
+  --app-asset-bar-content-gap: 14px;
+  --app-content-top-padding: calc(
+    var(--app-asset-bar-offset-top) + var(--app-asset-bar-height) +
+      var(--app-asset-bar-content-gap)
+  );
+
   height: 100vh;
   height: 100dvh;
   min-height: 100vh;
@@ -162,11 +170,12 @@ a {
   margin: 0 auto;
   display: grid;
   align-items: start;
-  padding: 0 0 calc(74px + var(--app-safe-area-bottom));
+  padding: var(--app-content-top-padding) 0
+    calc(74px + var(--app-safe-area-bottom));
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior-y: contain;
-  scroll-padding-block: calc(70px + var(--app-layout-safe-area-top))
+  scroll-padding-block: var(--app-content-top-padding)
     calc(74px + var(--app-safe-area-bottom));
   -webkit-overflow-scrolling: touch;
 }
@@ -183,7 +192,7 @@ a {
   min-height: 54px;
   margin: 0;
   position: absolute;
-  top: calc(10px + var(--app-layout-safe-area-top));
+  top: var(--app-asset-bar-offset-top);
   left: 50%;
   z-index: 40;
   display: flex;
