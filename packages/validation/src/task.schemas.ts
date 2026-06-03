@@ -521,7 +521,6 @@ export const TaskProgressEventSourceSchema = z.enum([
   "WALLET",
   "ONCHAIN",
   "TELEGRAM",
-  "ADMIN",
   "SYSTEM",
 ]);
 

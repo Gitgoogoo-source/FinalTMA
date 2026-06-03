@@ -142,8 +142,23 @@ export function CharacterDetailPanel({
           <div className="character-detail-status-row" aria-label="藏品状态">
             <DetailBadge label="稀有度" value={displayItem.rarity.label} />
             <DetailBadge label="状态" value={statusLabel} />
-            <DetailBadge label="Mint" value={mintStatusLabel} />
+            <DetailBadge label="Mint 状态" value={mintStatusLabel} />
           </div>
+
+          <section className="character-detail-stats" aria-label="藏品关键属性">
+            <DetailMetric
+              icon="level"
+              label="等级"
+              value={`Lv.${formatCurrencyAmount(displayItem.level)}`}
+            />
+            <DetailMetric
+              icon="power"
+              label="战力"
+              value={formatCurrencyAmount(displayItem.power)}
+            />
+            <DetailMetric icon="serial" label="编号" value={serialLabel} />
+            <DetailMetric icon="form" label="形态" value={formLabel} />
+          </section>
         </section>
 
         <div className="character-detail-panel__stage">
@@ -169,21 +184,6 @@ export function CharacterDetailPanel({
             <span>{serialLabel}</span>
           </div>
         </div>
-
-        <section className="character-detail-stats" aria-label="藏品关键属性">
-          <DetailMetric
-            icon="level"
-            label="等级"
-            value={`Lv.${formatCurrencyAmount(displayItem.level)}`}
-          />
-          <DetailMetric
-            icon="power"
-            label="战力"
-            value={formatCurrencyAmount(displayItem.power)}
-          />
-          <DetailMetric icon="serial" label="编号" value={serialLabel} />
-          <DetailMetric icon="form" label="形态" value={formLabel} />
-        </section>
 
         <section className="character-detail-actions" aria-label="藏品操作">
           <DetailButtonAction

@@ -1855,10 +1855,6 @@ function requiresUser(action: RiskAction): boolean {
     return false;
   }
 
-  if (String(action).startsWith("admin.")) {
-    return false;
-  }
-
   if (String(action).startsWith("cron.")) {
     return false;
   }
@@ -1875,10 +1871,6 @@ function requiresSession(action: RiskAction): boolean {
     return false;
   }
 
-  if (String(action).startsWith("admin.")) {
-    return false;
-  }
-
   if (String(action).startsWith("cron.")) {
     return false;
   }
@@ -1890,8 +1882,7 @@ function isMachineAction(action: RiskAction): boolean {
   return (
     action === "telegram.webhook" ||
     action === "cron.job" ||
-    String(action).startsWith("cron.") ||
-    String(action).startsWith("admin.")
+    String(action).startsWith("cron.")
   );
 }
 

@@ -26,7 +26,7 @@ export type OnchainTransactionStatus =
 
 export interface MintWorkerStatusContextInput {
   requestId: string;
-  source: "cron.retry_mint_queue" | "mint_worker" | "admin.retry_mint" | string;
+  source: "cron.retry_mint_queue" | "mint_worker" | string;
   errorReason?: string | undefined;
   errorMessage?: string | undefined;
   txHash?: string | undefined;
