@@ -117,6 +117,13 @@ export type CollectionInventoryItem = {
   obtainedAt: string | null;
 };
 
+export type CollectionInventoryGroup = {
+  key: string;
+  representativeItem: CollectionInventoryItem;
+  itemInstanceIds: string[];
+  ownedCount: number;
+};
+
 export type CollectionInventoryDetail = CollectionInventoryItem & {
   formId: string | null;
   basePower: number | null;

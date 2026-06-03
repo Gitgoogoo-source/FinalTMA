@@ -1,14 +1,14 @@
-import type { CollectionInventoryItem } from "../collection.types";
+import type { CollectionInventoryGroup } from "../collection.types";
 import { CharacterThumb } from "./CharacterThumb";
 
 type CharacterGridProps = {
-  items: CollectionInventoryItem[];
+  groups: CollectionInventoryGroup[];
   selectedItemId: string | null;
   onSelect: (itemId: string) => void;
 };
 
 export function CharacterGrid({
-  items,
+  groups,
   selectedItemId,
   onSelect,
 }: CharacterGridProps) {
@@ -16,12 +16,17 @@ export function CharacterGrid({
     <section className="character-grid" aria-label="藏品网格">
       <div className="character-grid__track">
         <div className="character-grid__items">
-          {items.map((item) => (
+          {groups.map((group) => (
             <CharacterThumb
-              item={item}
-              isSelected={item.itemInstanceId === selectedItemId}
-              key={item.itemInstanceId}
+              item={group.representativeItem}
+              isSelected={
+                selectedItemId
+                  ? group.itemInstanceIds.includes(selectedItemId)
+                  : false
+              }
+              key={group.key}
               onSelect={onSelect}
+              ownedCount={group.ownedCount}
             />
           ))}
         </div>

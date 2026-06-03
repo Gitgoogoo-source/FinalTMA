@@ -376,6 +376,62 @@ describe("CollectionPage stage-3 frontend states", () => {
     expect(screen.queryByText("详情同步中")).not.toBeInTheDocument();
   });
 
+  it("groups duplicate character thumbs and shows the owned count", () => {
+    const firstItem = makeItem();
+    const duplicateItem = makeItem({
+      itemInstanceId: ITEM_B_ID,
+      level: 2,
+      power: 20,
+      serialNo: 2,
+    });
+    const otherItem = makeItem({
+      itemInstanceId: ITEM_C_ID,
+      name: "月冕守门人",
+      power: 88,
+      rarity: {
+        code: "legendary",
+        label: "传说",
+        sortOrder: 40,
+      },
+      form: {
+        description: null,
+        displayName: "高阶形态",
+        id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+        index: 3,
+      },
+      serialNo: 3,
+      templateId: "77777777-7777-4777-8777-777777777777",
+      templateSlug: "moon_crown_guardian",
+    });
+    setInventoryItems(firstItem, duplicateItem, otherItem);
+
+    renderCollectionPage();
+
+    const groupedThumbs = screen.getAllByRole("button", {
+      name: /森林幼芽/,
+    });
+    expect(groupedThumbs).toHaveLength(1);
+    const groupedThumb = groupedThumbs[0]!;
+    expect(groupedThumb).toHaveAccessibleName(
+      "森林幼芽，普通，等级 1，战力 10，形态 基础形态，共有 2 件，已选中",
+    );
+    expect(
+      groupedThumb.querySelector(".character-thumb__count"),
+    ).toHaveTextContent("x2");
+
+    const otherThumb = screen.getByRole("button", { name: /月冕守门人/ });
+    expect(otherThumb.querySelector(".character-thumb__count")).toBeNull();
+
+    fireEvent.click(otherThumb);
+
+    expect(otherThumb).toHaveAttribute("aria-pressed", "true");
+    const nextSummary = within(
+      screen.getByLabelText("当前选中藏品"),
+    ).getByLabelText("藏品完整信息");
+    expect(within(nextSummary).getByText("传说")).toBeVisible();
+    expect(within(nextSummary).getByText("高阶形态")).toBeVisible();
+  });
+
   it("loads the next inventory page when more items are available", async () => {
     mocks.hasNextInventoryPage = true;
     mocks.inventoryFetchNextPage.mockResolvedValueOnce({});

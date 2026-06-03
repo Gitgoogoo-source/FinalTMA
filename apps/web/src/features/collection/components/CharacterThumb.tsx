@@ -6,12 +6,14 @@ type CharacterThumbProps = {
   item: CollectionInventoryItem;
   isSelected: boolean;
   onSelect: (itemId: string) => void;
+  ownedCount: number;
 };
 
 export function CharacterThumb({
   item,
   isSelected,
   onSelect,
+  ownedCount,
 }: CharacterThumbProps) {
   const imageUrl = item.thumbnailUrl ?? item.avatarUrl ?? item.imageUrl;
   const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null);
@@ -28,10 +30,15 @@ export function CharacterThumb({
       aria-pressed={isSelected}
       aria-label={`${item.name}，${item.rarity.label}，等级 ${item.level}，战力 ${item.power}${
         item.form?.displayName ? `，形态 ${item.form.displayName}` : ""
-      }${isSelected ? "，已选中" : ""}`}
+      }${ownedCount > 1 ? `，共有 ${ownedCount} 件` : ""}${
+        isSelected ? "，已选中" : ""
+      }`}
     >
       <span className="character-thumb__image" aria-hidden="true">
         <span className="character-thumb__shine" />
+        {ownedCount > 1 ? (
+          <span className="character-thumb__count">x{ownedCount}</span>
+        ) : null}
         <span className="character-thumb__rarity-dot" />
         {visibleImageUrl ? (
           <img

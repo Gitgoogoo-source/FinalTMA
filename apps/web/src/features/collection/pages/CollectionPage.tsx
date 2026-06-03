@@ -22,6 +22,8 @@ import { UpgradePanel } from "../components/UpgradePanel";
 import type {
   CollectionDecomposeItemResponse,
   CollectionEvolveItemResponse,
+  CollectionInventoryGroup,
+  CollectionInventoryItem,
   CollectionUpgradeItemResponse,
 } from "../collection.types";
 import { useCancelInventorySell } from "../hooks/useCancelInventorySell";
@@ -56,12 +58,16 @@ export function CollectionPage() {
     useState<CollectionEvolveItemResponse | null>(null);
   const [decomposeResult, setDecomposeResult] =
     useState<CollectionDecomposeItemResponse | null>(null);
+  const groupedItems = useMemo(
+    () => groupCollectionInventoryItems(items),
+    [items],
+  );
   const selectedItem = useMemo(
     () =>
       items.find((item) => item.itemInstanceId === selectedItemId) ??
-      items[0] ??
+      groupedItems[0]?.representativeItem ??
       null,
-    [items, selectedItemId],
+    [groupedItems, items, selectedItemId],
   );
 
   useEffect(() => {
@@ -326,7 +332,7 @@ export function CollectionPage() {
         onUpgrade={handleOpenUpgrade}
       />
       <CharacterGrid
-        items={items}
+        groups={groupedItems}
         selectedItemId={selectedItem.itemInstanceId}
         onSelect={setSelectedItemId}
       />
@@ -425,6 +431,42 @@ export function CollectionPage() {
       />
     </section>
   );
+}
+
+function groupCollectionInventoryItems(
+  items: CollectionInventoryItem[],
+): CollectionInventoryGroup[] {
+  const groups = new Map<string, CollectionInventoryGroup>();
+
+  for (const item of items) {
+    const key = getCollectionInventoryGroupKey(item);
+    const existing = groups.get(key);
+
+    if (existing) {
+      existing.itemInstanceIds.push(item.itemInstanceId);
+      existing.ownedCount += 1;
+      continue;
+    }
+
+    groups.set(key, {
+      key,
+      representativeItem: item,
+      itemInstanceIds: [item.itemInstanceId],
+      ownedCount: 1,
+    });
+  }
+
+  return Array.from(groups.values());
+}
+
+function getCollectionInventoryGroupKey(item: CollectionInventoryItem): string {
+  const templateKey = item.templateId ?? item.templateSlug;
+
+  if (!templateKey) {
+    return `instance:${item.itemInstanceId}`;
+  }
+
+  return `template:${templateKey}:form:${item.form?.id ?? "default-form"}`;
 }
 
 function getUpgradeResultMetrics(result: CollectionUpgradeItemResponse | null) {
