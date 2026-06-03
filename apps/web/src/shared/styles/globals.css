@@ -182,6 +182,11 @@ a {
   -webkit-overflow-scrolling: touch;
 }
 
+.app-shell__content--locked-y {
+  overflow-y: hidden;
+  overscroll-behavior-y: none;
+}
+
 .app-shell__content::-webkit-scrollbar {
   display: none;
 }
@@ -7476,10 +7481,6 @@ a {
     min-height: clamp(282px, 38dvh, 318px);
   }
 
-  .character-detail-panel__stage::before {
-    inset: 8px 0;
-  }
-
   .character-detail-panel__media {
     height: clamp(274px, 37dvh, 306px);
   }
@@ -7557,10 +7558,6 @@ a {
     gap: 0;
   }
 
-  .character-detail-panel__stage::before {
-    inset: 7px 0;
-  }
-
   .character-detail-panel__media {
     height: clamp(250px, 36dvh, 280px);
   }
@@ -7572,10 +7569,6 @@ a {
   .character-detail-summary {
     gap: 5px;
     padding: 8px;
-  }
-
-  .character-detail-summary::before {
-    inset: 6px;
   }
 
   .character-detail-summary__identity {
