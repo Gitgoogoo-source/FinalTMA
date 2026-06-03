@@ -328,8 +328,8 @@ describe("CollectionPage stage-3 frontend states", () => {
     expect(
       screen.queryByRole("button", { name: "详情" }),
     ).not.toBeInTheDocument();
-    expect(screen.getByText("我的藏品")).toBeVisible();
-    expect(screen.getByText("2 件")).toBeVisible();
+    expect(screen.queryByText("我的藏品")).not.toBeInTheDocument();
+    expect(screen.queryByText("2 件")).not.toBeInTheDocument();
 
     const secondThumb = screen.getByRole("button", { name: /月冕守门人/ });
     expect(secondThumb).toHaveAttribute("aria-pressed", "false");
