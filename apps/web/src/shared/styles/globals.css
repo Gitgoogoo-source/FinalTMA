@@ -100,7 +100,7 @@
 }
 
 :root[data-tg-mobile-shell="true"] {
-  --app-telegram-mobile-overlay-top: 68px;
+  --app-telegram-mobile-overlay-top: 96px;
 }
 
 html,
