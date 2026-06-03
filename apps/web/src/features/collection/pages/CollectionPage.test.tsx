@@ -381,10 +381,16 @@ describe("CollectionPage stage-3 frontend states", () => {
     renderCollectionPage();
 
     const selectedPanel = screen.getByLabelText("当前选中藏品");
+    const summary = within(selectedPanel).getByLabelText("藏品完整信息");
 
-    expect(within(selectedPanel).getByLabelText("藏品完整信息")).toBeVisible();
+    expect(summary).toBeVisible();
     expect(within(selectedPanel).getByText("森林守护者")).toBeVisible();
     expect(within(selectedPanel).getByText("基础形态")).toBeVisible();
+    expect(within(summary).queryByText("是否挂售")).not.toBeInTheDocument();
+    expect(within(summary).queryByText("是否可升级")).not.toBeInTheDocument();
+    expect(within(summary).queryByText("是否可合成")).not.toBeInTheDocument();
+    expect(within(summary).queryByText("是否可分解")).not.toBeInTheDocument();
+    expect(within(summary).queryByText("是否可 Mint")).not.toBeInTheDocument();
     expect(
       within(selectedPanel).getByRole("button", { name: "升级" }),
     ).toBeEnabled();
@@ -661,14 +667,12 @@ describe("CollectionPage stage-3 frontend states", () => {
     );
   });
 
-  it("shows the Mint entry and warns before submit when the wallet is not ready", async () => {
+  it("disables the Mint entry when the wallet is not ready", () => {
     const cases = [
       {
-        message: "请先连接 TON 钱包并完成验证后再 Mint。",
         status: "not_connected",
       },
       {
-        message: "请先完成 TON 钱包 proof 验证后再 Mint。",
         status: "connected_unverified",
       },
     ];
@@ -691,29 +695,22 @@ describe("CollectionPage stage-3 frontend states", () => {
         name: "Mint NFT",
       });
 
-      expect(mintButton).toBeEnabled();
-
-      fireEvent.click(mintButton);
-
-      expect(await screen.findByText(testCase.message)).toBeVisible();
+      expect(mintButton).toBeDisabled();
       expect(mocks.createMintMutate).not.toHaveBeenCalled();
-      expect(screen.getAllByText("暂不能 Mint").length).toBeGreaterThan(0);
 
       unmount();
     }
   });
 
-  it("shows the Mint entry and warns for non-mintable, listed, locked, decomposed or minted items", async () => {
+  it("disables the Mint entry for non-mintable, listed, locked, decomposed or minted items", () => {
     mocks.walletStatus = makeWalletStatus("verified");
 
     const cases: Array<{
       detailOverrides?: Partial<CollectionInventoryDetail>;
-      expectedMessage: string;
       itemOverrides?: Partial<CollectionInventoryItem>;
       name: string;
     }> = [
       {
-        expectedMessage: "该藏品当前不可 Mint。",
         itemOverrides: { isMintable: false },
         name: "不可 Mint",
       },
@@ -726,7 +723,7 @@ describe("CollectionPage stage-3 frontend states", () => {
             unitPrice: 100,
           },
         },
-        expectedMessage: "该藏品正在挂售中，请先下架后再 Mint。",
+        itemOverrides: { status: "listed" },
         name: "挂售中",
       },
       {
@@ -740,11 +737,10 @@ describe("CollectionPage stage-3 frontend states", () => {
             sourceType: "onchain",
           },
         },
-        expectedMessage: "该藏品因Mint 处理中被锁定，暂不能 Mint。",
+        itemOverrides: { status: "locked" },
         name: "锁定中",
       },
       {
-        expectedMessage: "该藏品当前状态为已分解，暂不能 Mint。",
         itemOverrides: { status: "decomposed" },
         name: "已分解",
       },
@@ -755,7 +751,6 @@ describe("CollectionPage stage-3 frontend states", () => {
             mintStatus: "minted",
           },
         },
-        expectedMessage: "该藏品已 Mint 成功，不能重复 Mint。",
         itemOverrides: { nftMintStatus: "minted" },
         name: "已 Mint",
       },
@@ -779,13 +774,8 @@ describe("CollectionPage stage-3 frontend states", () => {
         name: /Mint/,
       });
 
-      expect(mintButton, testCase.name).toBeEnabled();
-
-      fireEvent.click(mintButton);
-
-      expect(await screen.findByText(testCase.expectedMessage)).toBeVisible();
+      expect(mintButton, testCase.name).toBeDisabled();
       expect(mocks.createMintMutate, testCase.name).not.toHaveBeenCalled();
-      expect(screen.getAllByText("暂不能 Mint").length).toBeGreaterThan(0);
 
       unmount();
     }

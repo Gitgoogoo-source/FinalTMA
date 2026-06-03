@@ -66,7 +66,6 @@ export function CharacterDetailPanel({
     imageUrl && imageUrl !== failedImageUrl ? imageUrl : null;
   const isListed = isItemListed(displayItem, detail);
   const isAvailable = displayItem.status === "available" && !isListed;
-  const canOpenUpgradePanel = canOpenUpgrade(displayItem, detail, isAvailable);
   const effectiveMintStatus = getEffectiveMintStatus(displayItem, detail);
   const mintStatusLabel = getMintStatusLabel(effectiveMintStatus);
   const blockReason = getBlockedReason(displayItem, detail, isListed);
@@ -166,31 +165,25 @@ export function CharacterDetailPanel({
             label="状态"
             value={getCollectionStatusLabel(displayItem.status, isListed)}
           />
-          <DetailMetric label="是否挂售" value={isListed ? "是" : "否"} />
-          <DetailMetric
-            label="是否可升级"
-            value={getBooleanLabel(
-              canUpgrade(displayItem, detail, isAvailable),
-            )}
-          />
-          <DetailMetric
-            label="是否可合成"
-            value={getBooleanLabel(canEvolve(displayItem, detail, isAvailable))}
-          />
-          <DetailMetric
-            label="是否可分解"
-            value={getBooleanLabel(
-              canDecompose(displayItem, detail, isAvailable),
-            )}
-          />
-          <DetailMetric
-            label="是否可 Mint"
-            value={getBooleanLabel(mintEligibility.canSubmit)}
-          />
           <DetailMetric label="Mint 状态" value={mintStatusLabel} />
         </section>
 
         <section className="character-detail-actions" aria-label="藏品操作">
+          <DetailButtonAction
+            disabled={
+              !canUpgrade(displayItem, detail, isAvailable) || !onUpgrade
+            }
+            icon="sparkles"
+            label="升级"
+            onClick={onUpgrade}
+            tone="primary"
+          />
+          <DetailButtonAction
+            disabled={!canEvolve(displayItem, detail, isAvailable) || !onEvolve}
+            icon="swords"
+            label="合成"
+            onClick={onEvolve}
+          />
           {isListed ? (
             <DetailButtonAction
               disabled={!onCancelSell}
@@ -205,44 +198,25 @@ export function CharacterDetailPanel({
               }
             />
           ) : null}
-
-          {isAvailable ? (
-            <>
-              <DetailButtonAction
-                disabled={!canOpenUpgradePanel || !onUpgrade}
-                icon="sparkles"
-                label="升级"
-                onClick={onUpgrade}
-                tone="primary"
-              />
-              <DetailButtonAction
-                disabled={
-                  !canEvolve(displayItem, detail, isAvailable) || !onEvolve
-                }
-                icon="swords"
-                label="合成"
-                onClick={onEvolve}
-              />
-              <DetailButtonAction
-                disabled={!displayItem.isTradeable || !onSell}
-                icon="shopping"
-                label="出售"
-                onClick={onSell}
-              />
-              <DetailButtonAction
-                disabled={
-                  !canDecompose(displayItem, detail, isAvailable) ||
-                  !onDecompose
-                }
-                icon="decompose"
-                label="分解"
-                onClick={onDecompose}
-                tone="danger"
-              />
-            </>
+          {!isListed ? (
+            <DetailButtonAction
+              disabled={!isAvailable || !displayItem.isTradeable || !onSell}
+              icon="shopping"
+              label="出售"
+              onClick={onSell}
+            />
           ) : null}
+          <DetailButtonAction
+            disabled={
+              !canDecompose(displayItem, detail, isAvailable) || !onDecompose
+            }
+            icon="decompose"
+            label="分解"
+            onClick={onDecompose}
+            tone="danger"
+          />
           <MintButton
-            disabled={!onMint}
+            disabled={!onMint || !mintEligibility.canSubmit}
             label={mintEligibility.actionLabel}
             loading={isMinting || isCheckingMint}
             onClick={() => void handleMintClick()}
@@ -355,18 +329,6 @@ function canUpgrade(
   );
 }
 
-function canOpenUpgrade(
-  item: CollectionInventoryItem,
-  detail: CollectionInventoryDetail | null,
-  isAvailable: boolean,
-): boolean {
-  return (
-    isAvailable &&
-    (detail?.isUpgradeable ?? item.isUpgradeable) &&
-    item.status === "available"
-  );
-}
-
 function canEvolve(
   item: CollectionInventoryItem,
   detail: CollectionInventoryDetail | null,
@@ -410,10 +372,6 @@ function getBlockedReason(
   }
 
   return null;
-}
-
-function getBooleanLabel(value: boolean): string {
-  return value ? "是" : "否";
 }
 
 function getActionIcon(
