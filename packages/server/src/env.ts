@@ -376,9 +376,6 @@ export const serverEnvSchema = z
       },
     ),
 
-    ADMIN_SESSION_SECRET: optionalSecretFromEnv(32),
-    ADMIN_EMAIL_ALLOWLIST: csvListFromEnv,
-
     SUPABASE_URL: requiredUrlFromEnv,
     SUPABASE_ANON_KEY: optionalStringFromEnv,
     SUPABASE_SECRET_KEY: optionalSecretFromEnv(32),
@@ -532,7 +529,6 @@ export const serverEnvSchema = z
     DEV_GACHA_PAYMENT_MODE: booleanFromEnv(true),
     DRAW_RANDOM_SECRET: requiredSecretFromEnv(32),
     ENABLE_MOCK_TON: booleanFromEnv(false),
-    ENABLE_ADMIN_API: booleanFromEnv(true),
     ENABLE_CRON_API: booleanFromEnv(true),
 
     FEATURE_GACHA_ENABLED: booleanFromEnv(true),
@@ -550,7 +546,6 @@ export const serverEnvSchema = z
     FEATURE_WALLET_SYNC_ENABLED: booleanFromEnv(true),
     FEATURE_TON_MINT_ENABLED: booleanFromEnv(false),
     FEATURE_MINT_WORKER_ENABLED: booleanFromEnv(false),
-    FEATURE_ADMIN_PAYMENT_OPS_ENABLED: booleanFromEnv(false),
     FEATURE_GAME_PLACEHOLDER_ENABLED: booleanFromEnv(true),
   })
   .superRefine((input, ctx) => {
@@ -796,8 +791,6 @@ const sessionSecret =
   raw.SESSION_SECRET ??
   createLocalOnlySecret("SESSION_SECRET");
 
-const adminSessionSecret = raw.ADMIN_SESSION_SECRET ?? sessionSecret;
-
 const supabaseServerKey =
   raw.SUPABASE_SECRET_KEY ?? raw.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -933,12 +926,6 @@ export const env = Object.freeze({
     CACHE_TTL_SECONDS: raw.WALLET_SYNC_CACHE_TTL_SECONDS,
   }),
 
-  ADMIN: Object.freeze({
-    ENABLED: raw.ENABLE_ADMIN_API,
-    SESSION_SECRET: adminSessionSecret,
-    EMAIL_ALLOWLIST: raw.ADMIN_EMAIL_ALLOWLIST,
-  }),
-
   CRON: Object.freeze({
     ENABLED: raw.ENABLE_CRON_API,
     SECRET: raw.CRON_SECRET,
@@ -961,7 +948,6 @@ export const env = Object.freeze({
     MOCK_PAYMENTS: raw.ENABLE_MOCK_PAYMENTS,
     DEV_GACHA_PAYMENT_MODE: raw.DEV_GACHA_PAYMENT_MODE,
     MOCK_TON: raw.ENABLE_MOCK_TON,
-    ADMIN_API: raw.ENABLE_ADMIN_API,
     CRON_API: raw.ENABLE_CRON_API,
     GACHA: raw.FEATURE_GACHA_ENABLED,
     MARKET: raw.FEATURE_MARKET_ENABLED,
@@ -979,7 +965,6 @@ export const env = Object.freeze({
     WALLET_SYNC: raw.FEATURE_WALLET_SYNC_ENABLED,
     TON_MINT: raw.FEATURE_TON_MINT_ENABLED,
     MINT_WORKER: raw.FEATURE_MINT_WORKER_ENABLED,
-    ADMIN_PAYMENT_OPS: raw.FEATURE_ADMIN_PAYMENT_OPS_ENABLED,
     GAME_PLACEHOLDER: raw.FEATURE_GAME_PLACEHOLDER_ENABLED,
   }),
 });
@@ -1097,12 +1082,6 @@ export function getSafeEnvSnapshot(): Record<string, unknown> {
     NFT: env.NFT,
 
     WALLET_SYNC: env.WALLET_SYNC,
-
-    ADMIN: {
-      ENABLED: env.ADMIN.ENABLED,
-      EMAIL_ALLOWLIST_COUNT: env.ADMIN.EMAIL_ALLOWLIST.length,
-      HAS_SESSION_SECRET: Boolean(env.ADMIN.SESSION_SECRET),
-    },
 
     CRON: {
       ENABLED: env.CRON.ENABLED,

@@ -24,7 +24,6 @@ export const ERROR_CATEGORY = {
   ALBUM: "ALBUM",
   WALLET: "WALLET",
   ONCHAIN: "ONCHAIN",
-  ADMIN: "ADMIN",
   OPS: "OPS",
   INTERNAL: "INTERNAL",
 } as const;
@@ -147,9 +146,6 @@ export const ERROR_CODE = {
   ONCHAIN_TRANSACTION_NOT_FOUND: "ONCHAIN_TRANSACTION_NOT_FOUND",
   ONCHAIN_TRANSACTION_FAILED: "ONCHAIN_TRANSACTION_FAILED",
   ONCHAIN_SYNC_FAILED: "ONCHAIN_SYNC_FAILED",
-
-  ADMIN_FORBIDDEN: "ADMIN_FORBIDDEN",
-  ADMIN_PERMISSION_DENIED: "ADMIN_PERMISSION_DENIED",
 
   OPS_FEATURE_DISABLED: "OPS_FEATURE_DISABLED",
   OPS_MAINTENANCE: "OPS_MAINTENANCE",
@@ -993,25 +989,6 @@ export const ERROR_META = {
     publicMessage: "链上数据同步失败。",
     internalMessage: "On-chain sync failed.",
     retryable: true,
-  },
-
-  [ERROR_CODE.ADMIN_FORBIDDEN]: {
-    code: ERROR_CODE.ADMIN_FORBIDDEN,
-    category: ERROR_CATEGORY.ADMIN,
-    severity: ERROR_SEVERITY.ERROR,
-    httpStatus: 403,
-    publicMessage: "无后台访问权限。",
-    internalMessage: "Admin access forbidden.",
-    retryable: false,
-  },
-  [ERROR_CODE.ADMIN_PERMISSION_DENIED]: {
-    code: ERROR_CODE.ADMIN_PERMISSION_DENIED,
-    category: ERROR_CATEGORY.ADMIN,
-    severity: ERROR_SEVERITY.ERROR,
-    httpStatus: 403,
-    publicMessage: "当前管理员权限不足。",
-    internalMessage: "Admin permission denied.",
-    retryable: false,
   },
 
   [ERROR_CODE.OPS_FEATURE_DISABLED]: {

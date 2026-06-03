@@ -6,7 +6,7 @@ import { z } from "zod";
  * 责任：
  * 1. 校验 Telegram Mini App 登录请求。
  * 2. 校验 Telegram initDataUnsafe 的前端本地辅助结构。
- * 3. 校验 session refresh / logout / admin login 请求。
+ * 3. 校验 session refresh / logout 请求。
  * 4. 定义 auth API 返回结构。
  *
  * 安全原则：
@@ -240,28 +240,6 @@ export const AuthLogoutRequestSchema = z
   })
   .strict();
 
-export const AuthAdminLoginRequestSchema = z
-  .object({
-    email: z
-      .string()
-      .trim()
-      .min(3)
-      .max(254)
-      .email()
-      .transform((value) => value.toLowerCase()),
-    password: z.string().min(8).max(256),
-    otpCode: z.preprocess(
-      blankToUndefined,
-      z
-        .string()
-        .trim()
-        .regex(/^\d{6}$/, "OTP code must be 6 digits.")
-        .optional(),
-    ),
-    rememberMe: z.boolean().optional().default(false),
-  })
-  .strict();
-
 export const AuthTelegramStartPayloadRequestSchema = z
   .object({
     telegramUserId: AuthTelegramIdSchema,
@@ -350,26 +328,6 @@ export const AuthLogoutResponseSchema = z
   })
   .strict();
 
-export const AuthAdminUserSchema = z
-  .object({
-    adminUserId: AuthUuidSchema,
-    email: z.string().trim().email(),
-    displayName: z.string().trim().min(1).max(128),
-    roles: z.array(z.string().trim().min(1).max(64)).max(32),
-    permissions: z.array(z.string().trim().min(1).max(128)).max(256),
-    createdAt: AuthIsoDateTimeSchema,
-    updatedAt: AuthIsoDateTimeSchema,
-  })
-  .strict();
-
-export const AuthAdminLoginResponseSchema = z
-  .object({
-    status: z.literal("ok"),
-    adminUser: AuthAdminUserSchema,
-    session: AuthSessionSchema,
-  })
-  .strict();
-
 export const AuthErrorCodeSchema = z.enum([
   "AUTH_INIT_DATA_REQUIRED",
   "AUTH_INIT_DATA_INVALID",
@@ -382,8 +340,6 @@ export const AuthErrorCodeSchema = z.enum([
   "USER_BLOCKED",
   "AUTH_USER_BLOCKED",
   "AUTH_USER_RISK_LIMITED",
-  "AUTH_ADMIN_REQUIRED",
-  "AUTH_ADMIN_PERMISSION_DENIED",
 ]);
 
 export const AuthErrorResponseSchema = z
@@ -404,9 +360,6 @@ export const parseAuthRefreshSessionRequest = (input: unknown) =>
 export const parseAuthLogoutRequest = (input: unknown) =>
   AuthLogoutRequestSchema.parse(input);
 
-export const parseAuthAdminLoginRequest = (input: unknown) =>
-  AuthAdminLoginRequestSchema.parse(input);
-
 export type AuthTelegramUsername = z.infer<typeof AuthTelegramUsernameSchema>;
 export type AuthReferralCode = z.infer<typeof AuthReferralCodeSchema>;
 export type AuthStartParam = z.infer<typeof AuthStartParamSchema>;
@@ -423,7 +376,6 @@ export type AuthRefreshSessionRequest = z.infer<
   typeof AuthRefreshSessionRequestSchema
 >;
 export type AuthLogoutRequest = z.infer<typeof AuthLogoutRequestSchema>;
-export type AuthAdminLoginRequest = z.infer<typeof AuthAdminLoginRequestSchema>;
 export type AuthTelegramStartPayloadRequest = z.infer<
   typeof AuthTelegramStartPayloadRequestSchema
 >;
@@ -437,9 +389,5 @@ export type AuthRefreshSessionResponse = z.infer<
   typeof AuthRefreshSessionResponseSchema
 >;
 export type AuthLogoutResponse = z.infer<typeof AuthLogoutResponseSchema>;
-export type AuthAdminUser = z.infer<typeof AuthAdminUserSchema>;
-export type AuthAdminLoginResponse = z.infer<
-  typeof AuthAdminLoginResponseSchema
->;
 export type AuthErrorCode = z.infer<typeof AuthErrorCodeSchema>;
 export type AuthErrorResponse = z.infer<typeof AuthErrorResponseSchema>;

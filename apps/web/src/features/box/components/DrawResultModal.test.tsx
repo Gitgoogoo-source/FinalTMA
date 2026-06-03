@@ -29,7 +29,7 @@ describe("DrawResultModal", () => {
 
     expect(screen.getByText("支付已成功，奖励补发中")).toBeVisible();
     expect(
-      screen.getByText("发货事务异常，后台会重试补发；请不要重复支付。"),
+      screen.getByText("发货事务异常，系统会重试补发；请不要重复支付。"),
     ).toBeVisible();
 
     rerender(

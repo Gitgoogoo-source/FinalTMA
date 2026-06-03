@@ -170,7 +170,7 @@ function getPaymentSheetStatusMeta(
       status: "fulfillment_failed_retrying",
       label: "补发中",
       title: "支付已成功，奖励补发中",
-      detail: "发货事务异常，后台会重试补发；请不要重复支付。",
+      detail: "发货事务异常，系统会重试补发；请不要重复支付。",
       tone: "warning",
       actionLabel: "查看补发状态",
       toastType: "info",

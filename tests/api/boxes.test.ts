@@ -204,6 +204,8 @@ function createRiskFlagDbMock(flagCode: string) {
 describe("boxes API helpers", () => {
   beforeEach(() => {
     process.env.NODE_ENV = "test";
+    vi.stubEnv("SUPABASE_URL", "https://project-ref.supabase.co");
+    vi.stubEnv("SUPABASE_STORAGE_PUBLIC_URL", "");
     delete process.env.DEV_GACHA_PAYMENT_MODE;
     assertStarsPaymentCreateAllowedMock.mockReset();
     assertStarsPaymentCreateAllowedMock.mockResolvedValue(undefined);
@@ -324,6 +326,8 @@ describe("boxes API helpers", () => {
             rarity_code: "EPIC",
             rarity_display_name: "史诗",
             type_code: "character",
+            image_url:
+              "/storage/v1/object/public/collectibles/test_item_card.png",
             level: 1,
             power: 100,
           },
@@ -343,6 +347,8 @@ describe("boxes API helpers", () => {
       draw_index: 1,
       is_pity_hit: true,
       name: "测试藏品",
+      image_url:
+        "https://project-ref.supabase.co/storage/v1/object/public/collectibles/test_item_card.png",
     });
   });
 

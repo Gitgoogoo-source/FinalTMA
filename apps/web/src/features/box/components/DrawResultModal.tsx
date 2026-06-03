@@ -136,7 +136,7 @@ function getPendingResultState(result: DrawResultResponse): {
   if (status === "failed" && result.paidAt) {
     return {
       title: "支付已成功，奖励补发中",
-      detail: "发货事务异常，后台会重试补发；请不要重复支付。",
+      detail: "发货事务异常，系统会重试补发；请不要重复支付。",
       showSupport: true,
     };
   }

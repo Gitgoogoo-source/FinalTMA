@@ -39,6 +39,8 @@ const FORM_ID = "44444444-4444-4444-8444-444444444444";
 describe("market listings API focused coverage", () => {
   beforeEach(() => {
     process.env.NODE_ENV = "test";
+    vi.stubEnv("SUPABASE_URL", "https://project-ref.supabase.co");
+    vi.stubEnv("SUPABASE_STORAGE_PUBLIC_URL", "");
     callRpcRawMock.mockReset();
     requireSessionMock.mockReset();
     requireSessionMock.mockResolvedValue({
@@ -89,7 +91,7 @@ describe("market listings API focused coverage", () => {
           name: "测试藏品",
           rarity: "rare",
           type_code: "character",
-          image_url: "https://example.test/item.png",
+          image_url: "/storage/v1/object/public/collectibles/test_item.png",
           unit_price_kcoin: 500,
           currency_code: "KCOIN",
           item_count: 1,
@@ -138,5 +140,8 @@ describe("market listings API focused coverage", () => {
       }),
     );
     expect(result.body.data.items).toHaveLength(1);
+    expect(result.body.data.items[0]?.image_url).toBe(
+      "https://project-ref.supabase.co/storage/v1/object/public/collectibles/test_item.png",
+    );
   });
 });

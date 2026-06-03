@@ -5345,21 +5345,23 @@ a {
 }
 
 .collection-page {
-  --collection-paper: #fffdfa;
-  --collection-surface: rgba(255 255 255 / 48%);
+  --collection-paper: #fffefa;
+  --collection-surface: rgba(255 255 255 / 62%);
   --collection-ink: #24333b;
   --collection-muted: #6e777c;
   --collection-green: #1ce204;
   --collection-orange: #ff9c00;
   --collection-blue: #5d83ff;
   --collection-lilac: #8f9cff;
+  --collection-line: rgb(36 51 59 / 14%);
+  --collection-hairline: rgb(36 51 59 / 8%);
 
   width: 100%;
   min-height: 720px;
   position: relative;
   display: grid;
   align-content: start;
-  gap: 10px;
+  gap: 12px;
   align-self: start;
   padding: 0 0 18px;
   color: var(--collection-ink);

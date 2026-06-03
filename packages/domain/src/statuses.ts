@@ -227,7 +227,7 @@ export const PAYMENT_STATUS_META = {
     displayNameCn: "争议中",
     displayNameEn: "Disputed",
     tone: "warning",
-    description: "支付存在争议，需要客服或后台处理。",
+    description: "支付存在争议，需要客服处理。",
   },
 } as const satisfies Record<PaymentStatus, StatusMeta<PaymentStatus>>;
 

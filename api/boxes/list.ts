@@ -4,6 +4,7 @@ import {
 } from "../../packages/validation/src/box.schemas.js";
 import { callRpcRaw } from "../../packages/server/src/db/rpc.js";
 import { ApiError, withApiHandler } from "../_shared/handler.js";
+import { normalizePublicStorageUrl } from "../_shared/publicStorageUrl.js";
 import { requireSession } from "../_shared/requireSession.js";
 import { validate } from "../_shared/validate.js";
 
@@ -62,7 +63,7 @@ export default withApiHandler(
       });
     }
 
-    return payload;
+    return normalizeBoxListPayload(payload);
   },
   {
     methods: ["GET"],
@@ -90,4 +91,25 @@ function isDisplayableBoxStatus(value: string): value is DisplayableBoxStatus {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function normalizeBoxListPayload(payload: BoxListPayload): BoxListPayload {
+  return {
+    ...payload,
+    items: Array.isArray(payload.items)
+      ? payload.items.map(normalizeBoxListItem)
+      : [],
+  };
+}
+
+function normalizeBoxListItem(item: unknown): unknown {
+  if (!isRecord(item)) {
+    return item;
+  }
+
+  return {
+    ...item,
+    cover_image_url: normalizePublicStorageUrl(item.cover_image_url),
+    hero_image_url: normalizePublicStorageUrl(item.hero_image_url),
+  };
 }

@@ -54,8 +54,6 @@ export type RateLimitAction =
   | "wallet.sync_nfts"
   | "wallet.mint"
   | "wallet.mint_status"
-  | "admin.read"
-  | "admin.write"
   | "cron.job"
   | (string & {});
 
@@ -407,21 +405,6 @@ export const DEFAULT_RATE_LIMIT_RULES: RateLimitRule[] = [
     windowMs: 60_000,
     max: 60,
     blockMs: 60_000,
-  },
-
-  {
-    action: "admin.write",
-    scope: "user",
-    windowMs: 60_000,
-    max: 60,
-    blockMs: 5 * 60_000,
-  },
-  {
-    action: "admin.write",
-    scope: "ip",
-    windowMs: 60_000,
-    max: 100,
-    blockMs: 5 * 60_000,
   },
 ];
 

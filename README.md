@@ -54,7 +54,7 @@ APP_ENV=development
 NODE_ENV=development
 PUBLIC_APP_URL=http://localhost:5173
 API_BASE_URL=http://localhost:3000/api
-CORS_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:5174
+CORS_ALLOWED_ORIGINS=http://localhost:5173
 
 SUPABASE_URL=http://127.0.0.1:54321
 SUPABASE_ANON_KEY=replace_with_local_or_remote_anon_key

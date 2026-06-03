@@ -43,6 +43,7 @@ type CharacterDetailPanelProps = {
 };
 
 type DetailActionTone = "primary" | "secondary" | "danger";
+type DetailMetricIcon = "form" | "level" | "power" | "serial";
 
 export function CharacterDetailPanel({
   isMinting = false,
@@ -124,6 +125,27 @@ export function CharacterDetailPanel({
       className={`character-detail-panel character-detail-panel--${displayItem.rarity.code}`}
     >
       <div className="character-detail-panel__hero">
+        <section className="character-detail-summary" aria-label="藏品完整信息">
+          <div className="character-detail-summary__identity">
+            <strong className="character-detail-summary__number">
+              {displayItem.serialNo
+                ? formatCurrencyAmount(displayItem.serialNo)
+                : "00"}
+            </strong>
+            <div className="character-detail-summary__title">
+              <span>{`${seriesLabel} / ${formLabel}`}</span>
+              <h2>{displayItem.name}</h2>
+              <p>{description}</p>
+            </div>
+          </div>
+
+          <div className="character-detail-status-row" aria-label="藏品状态">
+            <DetailBadge label="稀有度" value={displayItem.rarity.label} />
+            <DetailBadge label="状态" value={statusLabel} />
+            <DetailBadge label="Mint" value={mintStatusLabel} />
+          </div>
+        </section>
+
         <div className="character-detail-panel__stage">
           <div className="character-detail-panel__media">
             {visibleImageUrl ? (
@@ -148,31 +170,19 @@ export function CharacterDetailPanel({
           </div>
         </div>
 
-        <section className="character-detail-summary" aria-label="藏品完整信息">
-          <div className="character-detail-summary__header">
-            <span>{`${seriesLabel} / ${formLabel}`}</span>
-            <h2>{displayItem.name}</h2>
-            <p>{description}</p>
-          </div>
-
-          <div className="character-detail-status-row" aria-label="藏品状态">
-            <DetailBadge label="稀有度" value={displayItem.rarity.label} />
-            <DetailBadge label="状态" value={statusLabel} />
-            <DetailBadge label="Mint 状态" value={mintStatusLabel} />
-          </div>
-
-          <div className="character-detail-stats" aria-label="藏品关键属性">
-            <DetailMetric
-              label="等级"
-              value={`Lv.${formatCurrencyAmount(displayItem.level)}`}
-            />
-            <DetailMetric
-              label="战力"
-              value={formatCurrencyAmount(displayItem.power)}
-            />
-            <DetailMetric label="编号" value={serialLabel} />
-            <DetailMetric label="形态" value={formLabel} />
-          </div>
+        <section className="character-detail-stats" aria-label="藏品关键属性">
+          <DetailMetric
+            icon="level"
+            label="等级"
+            value={`Lv.${formatCurrencyAmount(displayItem.level)}`}
+          />
+          <DetailMetric
+            icon="power"
+            label="战力"
+            value={formatCurrencyAmount(displayItem.power)}
+          />
+          <DetailMetric icon="serial" label="编号" value={serialLabel} />
+          <DetailMetric icon="form" label="形态" value={formLabel} />
         </section>
 
         <section className="character-detail-actions" aria-label="藏品操作">
@@ -250,11 +260,24 @@ export function CharacterDetailPanel({
   );
 }
 
-function DetailMetric({ label, value }: { label: string; value: string }) {
+function DetailMetric({
+  icon,
+  label,
+  value,
+}: {
+  icon: DetailMetricIcon;
+  label: string;
+  value: string;
+}) {
   return (
     <div className="character-detail-metric" aria-label={`${label}：${value}`}>
-      <span>{label}</span>
-      <strong>{value}</strong>
+      <span className="character-detail-metric__icon" aria-hidden="true">
+        {getMetricGlyph(icon)}
+      </span>
+      <span className="character-detail-metric__body">
+        <span>{label}</span>
+        <strong>{value}</strong>
+      </span>
     </div>
   );
 }
@@ -404,6 +427,19 @@ function getActionIcon(
       return Swords;
     case "tag":
       return Tag;
+  }
+}
+
+function getMetricGlyph(icon: DetailMetricIcon): string {
+  switch (icon) {
+    case "form":
+      return "F";
+    case "level":
+      return "LV";
+    case "power":
+      return "P";
+    case "serial":
+      return "#";
   }
 }
 

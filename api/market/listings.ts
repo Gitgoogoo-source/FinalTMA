@@ -6,6 +6,7 @@ import {
 } from "../../packages/validation/src/market.schemas.js";
 import { callRpcRaw, RpcError } from "../../packages/server/src/db/rpc.js";
 import { ApiError, withApiHandler } from "../_shared/handler.js";
+import { normalizePublicStorageUrl } from "../_shared/publicStorageUrl.js";
 import { requireSession } from "../_shared/requireSession.js";
 import { validate } from "../_shared/validate.js";
 
@@ -104,7 +105,7 @@ function normalizeListingCard(item: unknown): Record<string, unknown> {
     serial_no: item.serial_no,
     rarity: item.rarity,
     type_code: item.type_code,
-    image_url: item.image_url,
+    image_url: normalizePublicStorageUrl(item.image_url),
     unit_price_kcoin: item.unit_price_kcoin,
     currency_code: item.currency_code,
     item_count: item.item_count,

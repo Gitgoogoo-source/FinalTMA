@@ -4,6 +4,7 @@ import {
 } from "../../packages/validation/src/box.schemas.js";
 import { callRpcRaw, RpcError } from "../../packages/server/src/db/rpc.js";
 import { ApiError, withApiHandler } from "../_shared/handler.js";
+import { normalizePublicStorageUrl } from "../_shared/publicStorageUrl.js";
 import { requireSession } from "../_shared/requireSession.js";
 import { validate } from "../_shared/validate.js";
 
@@ -133,7 +134,7 @@ export function toDrawResultResponse(
     paid_at: stringOrNull(payload.paid_at),
     completed_at:
       stringOrNull(payload.completed_at) ?? stringOrNull(payload.opened_at),
-    box: isRecord(payload.box) ? payload.box : null,
+    box: normalizeDrawResultBox(payload.box),
     payment: isRecord(payload.payment) ? payload.payment : null,
     balances: isRecord(payload.balances) ? payload.balances : null,
     results:
@@ -168,12 +169,24 @@ function toDrawResultItem(value: unknown) {
     form_index: nullableNumber(item.form_index),
     form_name: stringOrNull(item.form_name),
     image_url:
-      stringOrNull(item.image_url) ??
-      stringOrNull(item.thumbnail_url) ??
-      stringOrNull(item.avatar_url),
-    thumbnail_url: stringOrNull(item.thumbnail_url),
+      normalizePublicStorageUrl(item.image_url) ??
+      normalizePublicStorageUrl(item.thumbnail_url) ??
+      normalizePublicStorageUrl(item.avatar_url),
+    thumbnail_url: normalizePublicStorageUrl(item.thumbnail_url),
     level: numberOrZero(item.level),
     power: numberOrZero(item.power),
+  };
+}
+
+function normalizeDrawResultBox(value: unknown): Record<string, unknown> | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  return {
+    ...value,
+    cover_image_url: normalizePublicStorageUrl(value.cover_image_url),
+    hero_image_url: normalizePublicStorageUrl(value.hero_image_url),
   };
 }
 

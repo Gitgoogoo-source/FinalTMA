@@ -1,6 +1,7 @@
 import { InventoryDetailQuerySchema } from "../../packages/validation/src/inventory.schemas.js";
 import { callRpcRaw, RpcError } from "../../packages/server/src/db/rpc.js";
 import { ApiError, withApiHandler } from "../_shared/handler.js";
+import { normalizePublicStorageUrl } from "../_shared/publicStorageUrl.js";
 import { requireSession } from "../_shared/requireSession.js";
 import { validate } from "../_shared/validate.js";
 import {
@@ -115,9 +116,9 @@ export function normalizeInventoryDetailPayload(payload: unknown) {
     base_power: readNumber(item.base_power),
     status: readString(item.status),
     nft_mint_status: readString(item.nft_mint_status),
-    image_url: readString(item.image_url),
-    thumbnail_url: readString(item.thumbnail_url),
-    avatar_url: readString(item.avatar_url),
+    image_url: normalizePublicStorageUrl(item.image_url),
+    thumbnail_url: normalizePublicStorageUrl(item.thumbnail_url),
+    avatar_url: normalizePublicStorageUrl(item.avatar_url),
     is_tradeable:
       readBoolean(item.is_tradeable) ?? readBoolean(item.tradeable) ?? false,
     is_upgradeable:
@@ -253,7 +254,7 @@ function normalizeEvolutionPreview(value: unknown) {
     target_template_id: readString(value.target_template_id),
     target_form_id: readString(value.target_form_id),
     target_name: readString(value.target_name),
-    target_image_url: readString(value.target_image_url),
+    target_image_url: normalizePublicStorageUrl(value.target_image_url),
     selected_item_ids: readStringArray(value.selected_item_ids),
     main_return_item_id: readString(value.main_return_item_id),
   };

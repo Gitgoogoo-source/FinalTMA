@@ -4,6 +4,7 @@ import {
 } from "../../packages/validation/src/inventory.schemas.js";
 import { callRpcRaw, RpcError } from "../../packages/server/src/db/rpc.js";
 import { ApiError, withApiHandler } from "../_shared/handler.js";
+import { normalizePublicStorageUrl } from "../_shared/publicStorageUrl.js";
 import { requireSession } from "../_shared/requireSession.js";
 import { validate } from "../_shared/validate.js";
 
@@ -168,11 +169,11 @@ function toInventoryListItem(value: unknown) {
     status: stringOrNull(item.status),
     nft_mint_status: stringOrNull(item.nft_mint_status),
     image_url:
-      stringOrNull(item.image_url) ??
-      stringOrNull(item.thumbnail_url) ??
-      stringOrNull(item.avatar_url),
-    thumbnail_url: stringOrNull(item.thumbnail_url),
-    avatar_url: stringOrNull(item.avatar_url),
+      normalizePublicStorageUrl(item.image_url) ??
+      normalizePublicStorageUrl(item.thumbnail_url) ??
+      normalizePublicStorageUrl(item.avatar_url),
+    thumbnail_url: normalizePublicStorageUrl(item.thumbnail_url),
+    avatar_url: normalizePublicStorageUrl(item.avatar_url),
     is_tradeable: Boolean(item.tradeable),
     is_upgradeable: Boolean(item.upgradeable),
     is_evolvable: Boolean(item.evolvable),

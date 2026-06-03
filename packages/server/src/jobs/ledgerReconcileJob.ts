@@ -1232,7 +1232,8 @@ async function collectMarketSettlementFindings(input: {
         findings.push(
           buildFinding({
             code: "phase6_market_order_ledger_missing",
-            message: "Completed market order is missing buyer or seller ledger.",
+            message:
+              "Completed market order is missing buyer or seller ledger.",
             severity: "critical",
             sourceType: "market_order",
             sourceId: order.id,
@@ -1620,10 +1621,7 @@ async function collectInventoryLockFindings(input: {
   ]);
   const itemsById = mapById(items);
   const listingsById = mapById(listings);
-  const listingItemsByListing = groupBy(
-    listingItems,
-    (row) => row.listing_id,
-  );
+  const listingItemsByListing = groupBy(listingItems, (row) => row.listing_id);
   const mintQueuesById = mapById(mintQueues);
   const nowMs = input.now.getTime();
   const findings: Phase5ReconciliationFinding[] = [];
@@ -1947,7 +1945,10 @@ async function collectGachaStockFindings(input: {
       : []),
   ]);
   const resultsByBox = groupBy(drawResults, (row) => row.box_id);
-  const resultsByPoolItem = groupBy(drawResults, (row) => row.drop_pool_item_id);
+  const resultsByPoolItem = groupBy(
+    drawResults,
+    (row) => row.drop_pool_item_id,
+  );
   const findings: Phase5ReconciliationFinding[] = [];
 
   for (const box of boxes) {
@@ -2266,7 +2267,8 @@ async function collectReferralCommissionFindings(input: {
             rewardLedger.entry_type !== "credit" ||
             rewardLedger.source_type !== "referral_first_open" ||
             rewardLedger.source_id !== referral.id ||
-            toNumber(rewardLedger.amount ?? null) !== toNumber(reward.amount ?? null))
+            toNumber(rewardLedger.amount ?? null) !==
+              toNumber(reward.amount ?? null))
         ) {
           findings.push(
             buildFinding({
@@ -2307,10 +2309,7 @@ async function collectReferralCommissionFindings(input: {
         const actualResultCount =
           drawResultsByOrder.get(drawOrder.id)?.length ?? 0;
         const baseAmountKcoin = toNumber(drawOrder.open_reward_kcoin ?? null);
-        if (
-          baseAmountKcoin <= 0 ||
-          actualResultCount < requiredResultCount
-        ) {
+        if (baseAmountKcoin <= 0 || actualResultCount < requiredResultCount) {
           continue;
         }
 
@@ -2590,7 +2589,9 @@ async function writeRiskEvents(
         continue;
       }
 
-      throw new Error(`Failed to write risk event: ${getErrorMessage(error)}`);
+      throw new Error(`Failed to write risk event: ${getErrorMessage(error)}`, {
+        cause: error,
+      });
     }
 
     counts.inserted += 1;
@@ -2808,7 +2809,7 @@ function getDefaultSuggestedAction(
   severity: ReconciliationSeverity,
 ): string {
   if (code.includes("ledger")) {
-    return "Compare the linked ledger entry with the business record; create a corrective ledger adjustment only through an approved admin RPC.";
+    return "Compare the linked ledger entry with the business record; create a corrective ledger adjustment only through an approved repair RPC.";
   }
 
   if (code.includes("payment") || code.includes("fulfilled")) {
@@ -2820,7 +2821,7 @@ function getDefaultSuggestedAction(
   }
 
   if (code.includes("inventory")) {
-    return "Inspect the item instance and active lock source; release or repair the lock only through audited admin operations.";
+    return "Inspect the item instance and active lock source; release or repair the lock only through audited operations.";
   }
 
   if (code.includes("gacha")) {
@@ -2828,7 +2829,7 @@ function getDefaultSuggestedAction(
   }
 
   if (code.includes("referral")) {
-    return "Inspect the referral, reward, commission, and ledger links; use audited task/admin flows for repair.";
+    return "Inspect the referral, reward, commission, and ledger links; use audited task or repair flows.";
   }
 
   if (code.includes("mint") || code.includes("tx")) {

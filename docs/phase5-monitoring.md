@@ -1,7 +1,6 @@
 # 第五阶段监控指标
 
-本文件定义第 16 步“监控”的仓库内落地口径。当前实现通过后台只读接口
-`GET /api/admin/monitoring` 汇总数据库状态，并在后台“监控”页展示。
+本文件定义第 16 步“监控”的仓库内落地口径。当前原监控接口已删除，监控数据应通过服务端日志、定时任务输出或后续独立监控系统汇总。
 
 ## 数据源
 
@@ -18,7 +17,7 @@
 
 | 项目             | 默认值  | 说明                                                            |
 | ---------------- | ------- | --------------------------------------------------------------- |
-| 观察窗口         | 24 小时 | 后台可切换 1 小时、6 小时、24 小时、72 小时、7 天。             |
+| 观察窗口         | 24 小时 | 后续监控系统可切换 1 小时、6 小时、24 小时、72 小时、7 天。     |
 | Webhook 卡住阈值 | 5 分钟  | `received` / `processing` 超过该时间未完成视为卡住。            |
 | 发货卡住阈值     | 10 分钟 | `paid` / `fulfilling` 且 `paid_at` 超过该时间仍未完成视为卡住。 |
 | Mint 卡住阈值    | 30 分钟 | active Mint 状态的 `updated_at` 超过该时间未推进视为卡住。      |
@@ -52,7 +51,7 @@
 
 ### Webhook 延迟
 
-窗口内已处理 webhook 的 `processed_at - created_at`，后台展示 p95、平均值和最大值。
+窗口内已处理 webhook 的 `processed_at - created_at`，监控系统展示 p95、平均值和最大值。
 同时统计当前 `received` / `processing` 的未完成事件数。
 
 告警级别：
@@ -74,12 +73,12 @@
 
 ## 排查入口
 
-| 异常              | 首先查看                                                                 |
-| ----------------- | ------------------------------------------------------------------------ |
-| 支付失败率升高    | 后台“支付”页、Vercel logs、`payments.star_orders.error_message`          |
-| 发货失败率升高    | 后台“支付”页异常支付、`api.gacha_process_paid_order` 返回、Supabase logs |
-| Webhook 延迟升高  | `payments.telegram_webhook_events`、Vercel `/api/telegram/webhook` logs  |
-| Mint 卡住数量升高 | 后台“Mint”页、Mint worker logs、`onchain.transactions`                   |
+| 异常              | 首先查看                                                                |
+| ----------------- | ----------------------------------------------------------------------- |
+| 支付失败率升高    | Vercel logs、`payments.star_orders.error_message`                       |
+| 发货失败率升高    | `api.gacha_process_paid_order` 返回、Supabase logs                      |
+| Webhook 延迟升高  | `payments.telegram_webhook_events`、Vercel `/api/telegram/webhook` logs |
+| Mint 卡住数量升高 | Mint worker logs、`onchain.transactions`                                |
 
 ## 回滚联动
 

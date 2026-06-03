@@ -7,7 +7,6 @@ type ObservabilityLevel = "error" | "warning" | "info";
 export type ObservabilityContext = Readonly<{
   requestId?: string | undefined;
   userId?: string | undefined;
-  adminId?: string | undefined;
   orderId?: string | undefined;
   sourceId?: string | undefined;
 }>;
@@ -17,7 +16,6 @@ export type OperationalAppEventInput = Readonly<{
   eventSource: string;
   requestId?: string | undefined;
   userId?: string | undefined;
-  adminId?: string | undefined;
   orderId?: string | undefined;
   sourceId?: string | undefined;
 }>;
@@ -367,7 +365,6 @@ function sanitizeContext(context: ObservabilityContext): ObservabilityContext {
   return removeUndefined({
     requestId: sanitizeText(context.requestId),
     userId: sanitizeText(context.userId),
-    adminId: sanitizeText(context.adminId),
     orderId: sanitizeText(context.orderId),
     sourceId: sanitizeText(context.sourceId),
   });

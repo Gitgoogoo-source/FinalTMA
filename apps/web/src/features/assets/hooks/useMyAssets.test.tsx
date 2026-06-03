@@ -44,7 +44,7 @@ describe("useMyAssets", () => {
           username: "profile_user",
           first_name: "Profile",
           last_name: "Name",
-          display_name: "后台昵称",
+          display_name: "测试昵称",
           avatar_url: "https://example.test/profile.png",
         },
         balances: {
@@ -83,7 +83,7 @@ describe("useMyAssets", () => {
       wrapper: createQueryWrapper(),
     });
 
-    expect(result.current.profile.displayName).toBe("后台昵称");
+    expect(result.current.profile.displayName).toBe("测试昵称");
     expect(result.current.profile.avatarUrl).toBe(
       "https://example.test/profile.png",
     );
@@ -97,7 +97,7 @@ describe("useMyAssets", () => {
     });
     expect(result.current.assets.kcoin.available).toBe("1200");
     expect(result.current.assets.fgems.available).toBe("35");
-    expect(result.current.profile.displayName).toBe("后台昵称");
+    expect(result.current.profile.displayName).toBe("测试昵称");
     expect(result.current.profile.avatarUrl).toBe(
       "https://example.test/profile.png",
     );

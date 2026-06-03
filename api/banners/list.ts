@@ -1,5 +1,6 @@
 import { getSupabaseAdminClient } from "../../packages/server/src/db/supabaseAdmin.js";
 import { ApiError, withApiHandler } from "../_shared/handler.js";
+import { normalizePublicStorageUrl } from "../_shared/publicStorageUrl.js";
 
 type BannerPlacement =
   | "market_top"
@@ -114,8 +115,8 @@ function mapBannerRow(row: BannerRow) {
     code: row.code,
     title: row.title,
     description: row.description,
-    imageUrl: row.image_url,
-    image_url: row.image_url,
+    imageUrl: normalizePublicStorageUrl(row.image_url),
+    image_url: normalizePublicStorageUrl(row.image_url),
     placement: row.placement,
     targetType,
     target_type: targetType,

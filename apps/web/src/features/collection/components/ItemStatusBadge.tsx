@@ -74,7 +74,7 @@ export function getCollectionLockReasonLabel(
     case "mint":
       return "Mint 处理中";
     case "admin":
-      return "管理员锁定";
+      return "系统锁定";
     default:
       return reason ?? "状态限制";
   }

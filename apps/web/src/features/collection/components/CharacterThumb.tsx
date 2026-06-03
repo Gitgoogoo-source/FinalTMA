@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import type { CollectionInventoryItem } from "../collection.types";
 
 type CharacterThumbProps = {
@@ -12,6 +14,10 @@ export function CharacterThumb({
   onSelect,
 }: CharacterThumbProps) {
   const imageUrl = item.thumbnailUrl ?? item.avatarUrl ?? item.imageUrl;
+  const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null);
+  const visibleImageUrl =
+    imageUrl && imageUrl !== failedImageUrl ? imageUrl : null;
+  const serialLabel = item.serialNo ? `#${item.serialNo}` : item.rarity.label;
 
   return (
     <button
@@ -27,8 +33,14 @@ export function CharacterThumb({
     >
       <span className="character-thumb__image" aria-hidden="true">
         <span className="character-thumb__shine" />
-        {imageUrl ? (
-          <img src={imageUrl} alt="" draggable="false" />
+        <span className="character-thumb__serial">{serialLabel}</span>
+        {visibleImageUrl ? (
+          <img
+            src={visibleImageUrl}
+            alt=""
+            draggable="false"
+            onError={() => setFailedImageUrl(visibleImageUrl)}
+          />
         ) : (
           item.name.slice(0, 1)
         )}

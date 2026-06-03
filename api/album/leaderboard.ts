@@ -5,6 +5,7 @@ import {
 } from "../../packages/validation/src/album.schemas.js";
 import { callRpcRaw, RpcError } from "../../packages/server/src/db/rpc.js";
 import { ApiError, withApiHandler } from "../_shared/handler.js";
+import { normalizePublicStorageUrl } from "../_shared/publicStorageUrl.js";
 import { requireSession } from "../_shared/requireSession.js";
 import { validate } from "../_shared/validate.js";
 
@@ -168,7 +169,7 @@ function normalizeLeaderboardEntry(value: unknown) {
     rank,
     user_id: userId,
     display_name: readString(entry.display_name) ?? "Player",
-    avatar_url: readString(entry.avatar_url),
+    avatar_url: normalizePublicStorageUrl(entry.avatar_url),
     score,
     completion_percent: completionPercent,
     collected_count: collectedCount,

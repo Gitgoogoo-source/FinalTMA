@@ -35,7 +35,6 @@ export * from "./jobs/ledgerReconcileJob.js";
 export * from "./ops/featureFlags.js";
 export * from "./payments/paymentEvents.js";
 export * from "./payments/paymentGuards.js";
-export * from "./security/auditLog.js";
 export * from "./security/rateLimit.js";
 export * from "./ton/tonConnect.js";
 export * from "./ton/chainClient.js";

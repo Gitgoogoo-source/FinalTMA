@@ -36,6 +36,8 @@ const TEMPLATE_ID = "33333333-3333-4333-8333-333333333333";
 describe("inventory API helpers", () => {
   beforeEach(() => {
     process.env.NODE_ENV = "test";
+    vi.stubEnv("SUPABASE_URL", "https://project-ref.supabase.co");
+    vi.stubEnv("SUPABASE_STORAGE_PUBLIC_URL", "");
     callRpcRawMock.mockReset();
     requireSessionMock.mockReset();
     requireSessionMock.mockResolvedValue({
@@ -105,6 +107,8 @@ describe("inventory API helpers", () => {
       },
       level: 3,
       power: 42,
+      image_url:
+        "https://project-ref.supabase.co/storage/v1/object/public/collectibles/forest_sproutling_hero.png",
       is_tradeable: true,
     });
   });

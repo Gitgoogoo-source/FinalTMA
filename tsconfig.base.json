@@ -32,7 +32,6 @@
     "baseUrl": ".",
     "paths": {
       "@web/*": ["apps/web/src/*"],
-      "@admin/*": ["apps/admin/src/*"],
       "@api/*": ["api/*"],
       "@tma-game/api-client": ["packages/api-client/src/index.ts"],
       "@tma-game/config": ["packages/config/src/index.ts"],

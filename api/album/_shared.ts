@@ -1,5 +1,6 @@
 import { RpcError } from "../../packages/server/src/db/rpc.js";
 import { ApiError } from "../_shared/handler.js";
+import { normalizePublicStorageUrl } from "../_shared/publicStorageUrl.js";
 
 export type JsonRecord = Record<string, unknown>;
 
@@ -120,7 +121,7 @@ export function normalizeAlbumBook(value: unknown, code: string) {
     book_type: bookType,
     name,
     description: readString(book.description),
-    cover_url: readString(book.cover_url),
+    cover_url: normalizePublicStorageUrl(book.cover_url),
     total_count: totalCount,
     collected_count: collectedCount,
     completion_percent:
@@ -166,8 +167,8 @@ export function normalizeAlbumItem(value: unknown, code: string) {
     series_name: readString(item.series_name),
     faction_id: readString(item.faction_id),
     faction_name: readString(item.faction_name),
-    image_url: readString(item.image_url),
-    thumb_url: readString(item.thumb_url),
+    image_url: normalizePublicStorageUrl(item.image_url),
+    thumb_url: normalizePublicStorageUrl(item.thumb_url),
     is_collected: isCollected,
     first_collected_at: readString(item.first_collected_at),
     collected_count: readInteger(item.collected_count) ?? (isCollected ? 1 : 0),

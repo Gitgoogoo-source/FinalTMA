@@ -24,6 +24,7 @@ import {
   withApiHandler,
 } from "../_shared/handler.js";
 import { parseJsonBody } from "../_shared/parseBody.js";
+import { normalizePublicStorageUrl } from "../_shared/publicStorageUrl.js";
 import { requireSession } from "../_shared/requireSession.js";
 import { assertUserRiskAllowed } from "../_shared/riskGuards.js";
 import { validate } from "../_shared/validate.js";
@@ -666,15 +667,16 @@ function resolveImageUrl(
   form: CollectibleFormRow | null,
   mediaRows: CollectibleMediaRow[],
 ): string | null {
-  return (
+  const imageUrl =
     findPreferredMediaUrl(mediaRows, "nft_image", form?.id) ??
     findPreferredMediaUrl(mediaRows, "card", form?.id) ??
     findPreferredMediaUrl(mediaRows, "hero", form?.id) ??
     findPreferredMediaUrl(mediaRows, "thumb", form?.id) ??
     readString(form?.image_url) ??
     readString(form?.thumbnail_url) ??
-    readString(form?.avatar_url)
-  );
+    readString(form?.avatar_url);
+
+  return normalizePublicStorageUrl(imageUrl);
 }
 
 function findPreferredMediaUrl(

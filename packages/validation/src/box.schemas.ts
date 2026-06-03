@@ -6,7 +6,7 @@ import { z } from "zod";
  * 责任：
  * 1. 校验盲盒列表、奖励池、保底、开盒订单、开盒结果相关 API。
  * 2. 校验 Telegram Stars 开盒订单创建参数。
- * 3. 校验后台盲盒、价格、奖励池、保底规则配置。
+ * 3. 校验服务端盲盒、价格、奖励池、保底规则配置。
  *
  * 安全原则：
  * - 前端传 expectedPriceStars / expectedPoolVersionId 只用于防止用户看到旧价格。
@@ -688,8 +688,8 @@ export const BoxAdminDropPoolItemInputSchema = z
 
     /**
      * 可选。
-     * 如果后台按固定概率配置，则所有 item 都必须传 probabilityBps，且总和必须等于 10000。
-     * 如果后台按 weight 配置，则不传 probabilityBps。
+     * 如果服务端按固定概率配置，则所有 item 都必须传 probabilityBps，且总和必须等于 10000。
+     * 如果服务端按 weight 配置，则不传 probabilityBps。
      */
     probabilityBps: BoxProbabilityBasisPointsSchema.optional(),
 

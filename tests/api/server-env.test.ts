@@ -136,7 +136,6 @@ describe("server env validation", () => {
       NFT_ITEM_METADATA_BASE_URI: "https://example.test/nft-metadata/items",
       WALLET_SYNC_ENABLED: "true",
       FEATURE_WALLET_SYNC_ENABLED: "true",
-      FEATURE_ADMIN_PAYMENT_OPS_ENABLED: "false",
     });
 
     expect(parsed.success).toBe(true);
@@ -418,9 +417,8 @@ describe("server env validation", () => {
   it("rejects market write operations when the market feature flag is false", async () => {
     prepareEnvImport();
 
-    const { assertMarketWriteAllowed } = await import(
-      "../../packages/server/src/market/marketGuards"
-    );
+    const { assertMarketWriteAllowed } =
+      await import("../../packages/server/src/market/marketGuards");
 
     await expect(
       assertMarketWriteAllowed({
@@ -440,9 +438,8 @@ describe("server env validation", () => {
   it("falls back to the legacy market database key when the Phase 5 key is missing", async () => {
     prepareEnvImport();
 
-    const { assertMarketWriteAllowed } = await import(
-      "../../packages/server/src/market/marketGuards"
-    );
+    const { assertMarketWriteAllowed } =
+      await import("../../packages/server/src/market/marketGuards");
     const client = createFeatureFlagClient({
       "market.enabled": false,
     });

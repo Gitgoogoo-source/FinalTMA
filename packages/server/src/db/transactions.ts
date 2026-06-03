@@ -76,7 +76,7 @@ export interface RpcAuditContext {
    * Source of request.
    *
    * Example:
-   * tma, telegram_webhook, admin, cron
+   * tma, telegram_webhook, ops, cron
    */
   source?: string | undefined;
 

@@ -6,6 +6,7 @@ import {
 } from "../../packages/validation/src/market.schemas.js";
 import { callRpcRaw, RpcError } from "../../packages/server/src/db/rpc.js";
 import { ApiError, withApiHandler } from "../_shared/handler.js";
+import { normalizePublicStorageUrl } from "../_shared/publicStorageUrl.js";
 import { requireSession } from "../_shared/requireSession.js";
 import { validate } from "../_shared/validate.js";
 
@@ -108,7 +109,7 @@ function normalizeSellableItem(item: unknown): Record<string, unknown> {
     name: item.name,
     rarity: item.rarity,
     type_code: item.type_code,
-    image_url: item.image_url,
+    image_url: normalizePublicStorageUrl(item.image_url),
     level: item.level,
     power: item.power,
     owned_count: item.owned_count,
