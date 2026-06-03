@@ -68,6 +68,33 @@ select ok(
   'authenticated cannot execute worker_try_acquire_lock'
 );
 
+select ok(
+  has_function_privilege(
+    'service_role',
+    'api.ops_read_feature_flag(text)',
+    'EXECUTE'
+  ),
+  'service_role can execute ops_read_feature_flag'
+);
+
+select ok(
+  not has_function_privilege(
+    'authenticated',
+    'api.ops_read_feature_flag(text)',
+    'EXECUTE'
+  ),
+  'authenticated cannot execute ops_read_feature_flag'
+);
+
+select ok(
+  has_function_privilege(
+    'service_role',
+    'api.worker_mark_stale_runs_failed(timestamp with time zone,jsonb)',
+    'EXECUTE'
+  ),
+  'service_role can execute worker_mark_stale_runs_failed'
+);
+
 create temporary table _phase6_worker_test_payloads (
   key text primary key,
   payload jsonb not null
@@ -198,6 +225,145 @@ select is(
 )
 from _phase6_worker_test_payloads
 where key = 'run_finish';
+
+insert into _phase6_worker_test_payloads (key, payload)
+select
+  'feature_flag_read',
+  api.ops_read_feature_flag('FEATURE_WORKERS_PAGE_ENABLED');
+
+select is(
+  ((_phase6_worker_test_payloads.payload ->> 'found')::boolean),
+  true,
+  'ops_read_feature_flag finds existing flags'
+)
+from _phase6_worker_test_payloads
+where key = 'feature_flag_read';
+
+select is(
+  ((_phase6_worker_test_payloads.payload ->> 'enabled')::boolean),
+  true,
+  'ops_read_feature_flag returns enabled value'
+)
+from _phase6_worker_test_payloads
+where key = 'feature_flag_read';
+
+insert into _phase6_worker_test_payloads (key, payload)
+select
+  'feature_flag_missing',
+  api.ops_read_feature_flag('FEATURE_DOES_NOT_EXIST_FOR_TEST');
+
+select is(
+  ((_phase6_worker_test_payloads.payload ->> 'found')::boolean),
+  false,
+  'ops_read_feature_flag returns found=false for missing flags'
+)
+from _phase6_worker_test_payloads
+where key = 'feature_flag_missing';
+
+insert into _phase6_worker_test_payloads (key, payload)
+select
+  'run_stale_no_lock',
+  api.worker_start_run(
+    'market_stats',
+    'phase6-worker-stale-no-lock',
+    'cron',
+    null,
+    null,
+    jsonb_build_object('test', 'stale_no_lock'),
+    '{}'::jsonb
+  );
+
+update ops.job_runs
+set started_at = clock_timestamp() - interval '1 hour'
+where id = (
+  select (payload ->> 'id')::uuid
+  from _phase6_worker_test_payloads
+  where key = 'run_stale_no_lock'
+);
+
+insert into _phase6_worker_test_payloads (key, payload)
+select
+  'run_stale_with_lock',
+  api.worker_start_run(
+    'leaderboard',
+    'phase6-worker-stale-with-lock',
+    'cron',
+    null,
+    null,
+    jsonb_build_object('test', 'stale_with_lock'),
+    '{}'::jsonb
+  );
+
+update ops.job_runs
+set started_at = clock_timestamp() - interval '1 hour'
+where id = (
+  select (payload ->> 'id')::uuid
+  from _phase6_worker_test_payloads
+  where key = 'run_stale_with_lock'
+);
+
+insert into _phase6_worker_test_payloads (key, payload)
+select
+  'stale_lock',
+  api.worker_try_acquire_lock(
+    'leaderboard',
+    'phase6-worker-stale-lock',
+    clock_timestamp() + interval '5 minutes',
+    jsonb_build_object('test', 'stale_cleanup_lock')
+  );
+
+insert into _phase6_worker_test_payloads (key, payload)
+select
+  'stale_cleanup',
+  api.worker_mark_stale_runs_failed(
+    clock_timestamp() - interval '10 minutes',
+    jsonb_build_object('test', 'phase6_worker_backend')
+  );
+
+select is(
+  ((_phase6_worker_test_payloads.payload ->> 'marked_failed_count')::integer),
+  1,
+  'worker_mark_stale_runs_failed only marks stale runs without an active lock'
+)
+from _phase6_worker_test_payloads
+where key = 'stale_cleanup';
+
+select is(
+  (
+    select status
+    from ops.job_runs
+    where id = (
+      select (payload ->> 'id')::uuid
+      from _phase6_worker_test_payloads
+      where key = 'run_stale_no_lock'
+    )
+  ),
+  'failed',
+  'stale run without active lock is marked failed'
+);
+
+select is(
+  (
+    select status
+    from ops.job_runs
+    where id = (
+      select (payload ->> 'id')::uuid
+      from _phase6_worker_test_payloads
+      where key = 'run_stale_with_lock'
+    )
+  ),
+  'running',
+  'stale run with active lock remains running'
+);
+
+select ok(
+  (api.worker_release_lock(
+    'leaderboard',
+    'phase6-worker-stale-lock',
+    '{}'::jsonb
+  ) ->> 'released')::boolean,
+  'stale cleanup test lock can be released'
+);
 
 select ok(
   exists (

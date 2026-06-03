@@ -359,53 +359,57 @@ export async function runManagedWorker(
     });
   }
 
-  const flagState = await readWorkerJobState(input.jobName);
-
-  if (!flagState.enabled) {
-    return finishWorkerRunSummary({
-      jobRunId,
-      jobName: input.jobName,
-      requestId: input.requestId,
-      startedAt: startIso,
-      status: "skipped",
-      processedCount: 0,
-      failedCount: 0,
-      errorMessage: flagState.disabledReason,
-      result: {
-        skipped_reason: flagState.disabledReason,
-        flags: flagState.flags as unknown as JsonValue,
-      },
-    });
-  }
-
-  const lockToken = `${input.requestId}:${randomUUID()}`;
-  const lock = await tryAcquireWorkerLock({
-    jobName: input.jobName,
-    lockToken,
-    expiresAt: new Date(
-      Date.now() + (input.lockTtlMs ?? DEFAULT_LOCK_TTL_MS),
-    ).toISOString(),
-    requestId: input.requestId,
-  });
-
-  if (!lock.acquired) {
-    return finishWorkerRunSummary({
-      jobRunId,
-      jobName: input.jobName,
-      requestId: input.requestId,
-      startedAt: startIso,
-      status: "already_running",
-      processedCount: 0,
-      failedCount: 0,
-      errorMessage: "Worker is already running.",
-      result: toJsonObject({
-        lock_status: "already_running",
-        expires_at: lock.expiresAt,
-      }),
-    });
-  }
+  let lockToken: string | null = null;
+  let lockAcquired = false;
 
   try {
+    const flagState = await readWorkerJobState(input.jobName);
+
+    if (!flagState.enabled) {
+      return await finishWorkerRunSummary({
+        jobRunId,
+        jobName: input.jobName,
+        requestId: input.requestId,
+        startedAt: startIso,
+        status: "skipped",
+        processedCount: 0,
+        failedCount: 0,
+        errorMessage: flagState.disabledReason,
+        result: {
+          skipped_reason: flagState.disabledReason,
+          flags: flagState.flags as unknown as JsonValue,
+        },
+      });
+    }
+
+    lockToken = `${input.requestId}:${randomUUID()}`;
+    const lock = await tryAcquireWorkerLock({
+      jobName: input.jobName,
+      lockToken,
+      expiresAt: new Date(
+        Date.now() + (input.lockTtlMs ?? DEFAULT_LOCK_TTL_MS),
+      ).toISOString(),
+      requestId: input.requestId,
+    });
+
+    if (!lock.acquired) {
+      return await finishWorkerRunSummary({
+        jobRunId,
+        jobName: input.jobName,
+        requestId: input.requestId,
+        startedAt: startIso,
+        status: "already_running",
+        processedCount: 0,
+        failedCount: 0,
+        errorMessage: "Worker is already running.",
+        result: toJsonObject({
+          lock_status: "already_running",
+          expires_at: lock.expiresAt,
+        }),
+      });
+    }
+
+    lockAcquired = true;
     const taskResult = await input.task();
     const processedCount = normalizeCount(taskResult.processedCount);
     const failedCount = normalizeCount(taskResult.failedCount);
@@ -441,11 +445,13 @@ export async function runManagedWorker(
       result: {},
     });
   } finally {
-    await releaseWorkerLock({
-      jobName: input.jobName,
-      lockToken,
-      requestId: input.requestId,
-    });
+    if (lockAcquired && lockToken) {
+      await releaseWorkerLock({
+        jobName: input.jobName,
+        lockToken,
+        requestId: input.requestId,
+      });
+    }
   }
 }
 

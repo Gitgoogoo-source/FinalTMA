@@ -1,7 +1,5 @@
-import {
-  getSupabaseAdminClient,
-  type SupabaseAdminClient,
-} from "../db/supabaseAdmin.js";
+import { callRpcRaw } from "../db/rpc.js";
+import type { SupabaseAdminClient } from "../db/supabaseAdmin.js";
 
 export const OPS_FEATURE_FLAGS = Object.freeze({
   STARS_PAYMENT: "FEATURE_STARS_PAYMENT_ENABLED",
@@ -48,30 +46,10 @@ type FeatureFlagRow = {
   enabled: boolean;
 };
 
-type FeatureFlagResponse = {
-  data: FeatureFlagRow | null;
-  error: {
-    message?: string | undefined;
-    code?: string | undefined;
-    details?: string | undefined;
-  } | null;
-};
-
-type FeatureFlagQuery = PromiseLike<FeatureFlagResponse>;
-
-type FeatureFlagClient = {
-  schema(schema: string): {
-    from(table: string): {
-      select(columns: string): {
-        eq(
-          column: string,
-          value: string,
-        ): {
-          maybeSingle(): FeatureFlagQuery;
-        };
-      };
-    };
-  };
+type FeatureFlagRpcPayload = {
+  found?: unknown;
+  key?: unknown;
+  enabled?: unknown;
 };
 
 export class FeatureFlagReadError extends Error {
@@ -104,10 +82,10 @@ export async function readOpsFeatureFlag(
     ? readFeatureFlagEnv(options.envName, options.env)
     : undefined;
 
-  if (envValue === false) {
+  if (envValue !== undefined) {
     return {
       key: options.key,
-      enabled: false,
+      enabled: envValue,
       source: "env",
       envName: options.envName,
     };
@@ -197,24 +175,27 @@ async function readFeatureFlagRow(
   key: string,
   client?: SupabaseAdminClient | undefined,
 ): Promise<FeatureFlagRow | null> {
-  const db = (client ??
-    getSupabaseAdminClient()) as unknown as FeatureFlagClient;
-  const response = await db
-    .schema("ops")
-    .from("feature_flags")
-    .select("enabled")
-    .eq("key", key)
-    .maybeSingle();
+  const options = {
+    schema: "api" as never,
+    context: {
+      source: "ops.feature_flag_read",
+      flagKey: key,
+    },
+    ...(client ? { client } : {}),
+  };
+  const payload = await callRpcRaw<FeatureFlagRpcPayload>(
+    "ops_read_feature_flag",
+    {
+      p_key: key,
+    },
+    options,
+  );
 
-  if (response.error) {
-    throw new Error(response.error.message ?? "Failed to read feature flag.");
-  }
-
-  if (typeof response.data?.enabled !== "boolean") {
+  if (payload.found !== true || typeof payload.enabled !== "boolean") {
     return null;
   }
 
   return {
-    enabled: response.data.enabled,
+    enabled: payload.enabled,
   };
 }

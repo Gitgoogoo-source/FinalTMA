@@ -17,7 +17,6 @@ export function CharacterThumb({
   const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null);
   const visibleImageUrl =
     imageUrl && imageUrl !== failedImageUrl ? imageUrl : null;
-  const serialLabel = item.serialNo ? `#${item.serialNo}` : item.rarity.label;
 
   return (
     <button
@@ -33,7 +32,6 @@ export function CharacterThumb({
     >
       <span className="character-thumb__image" aria-hidden="true">
         <span className="character-thumb__shine" />
-        <span className="character-thumb__serial">{serialLabel}</span>
         <span className="character-thumb__rarity-dot" />
         {visibleImageUrl ? (
           <img

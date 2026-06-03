@@ -124,6 +124,14 @@ function mockMarketStatsWorkerRpc(
         };
       }
 
+      if (rpcName === "ops_read_feature_flag") {
+        return {
+          found: false,
+          key: params.p_key,
+          enabled: null,
+        };
+      }
+
       if (rpcName === "market_refresh_price_stats") {
         if (options.failMarketRefresh) {
           throw new Error("refresh failed");
@@ -1148,16 +1156,13 @@ describe("market stats rebuild cron API", () => {
 
     const result = await invokeApiHandler<
       ApiSuccessResponse<Record<string, unknown>>
-    >(
-      rebuildMarketStatsCronHandler,
-      {
-        method: "POST",
-        headers: {
-          authorization: "Bearer test-cron-secret-0001",
-        },
-        body: {},
+    >(rebuildMarketStatsCronHandler, {
+      method: "POST",
+      headers: {
+        authorization: "Bearer test-cron-secret-0001",
       },
-    );
+      body: {},
+    });
 
     expect(result.statusCode).toBe(200);
     expect(result.body.data).toMatchObject({
@@ -1177,6 +1182,74 @@ describe("market stats rebuild cron API", () => {
       p_source_type: "worker_job_run",
       p_source_id: MARKET_STATS_JOB_RUN_ID,
     });
+  });
+
+  it("finishes the started job when feature flag lookup fails", async () => {
+    process.env.NODE_ENV = "production";
+    delete process.env.FEATURE_MARKET_STATS_WORKER_ENABLED;
+    delete process.env.FEATURE_MARKET_ENABLED;
+
+    callRpcRawMock.mockImplementation(
+      async (rpcName: string, params: Record<string, unknown>) => {
+        if (rpcName === "worker_start_run") {
+          return {
+            id: MARKET_STATS_JOB_RUN_ID,
+            started_at: MARKET_STATS_STARTED_AT,
+          };
+        }
+
+        if (rpcName === "ops_read_feature_flag") {
+          throw new Error("schema ops is not exposed");
+        }
+
+        if (rpcName === "worker_finish_run") {
+          return {
+            id: params.p_job_run_id,
+            finished_at: MARKET_STATS_FINISHED_AT,
+          };
+        }
+
+        if (rpcName === "risk_record_event") {
+          return {
+            risk_event_id: "99999999-9999-4999-8999-999999999999",
+          };
+        }
+
+        throw new Error(`Unexpected RPC call: ${rpcName}`);
+      },
+    );
+
+    const result = await invokeApiHandler<
+      ApiSuccessResponse<Record<string, unknown>>
+    >(rebuildMarketStatsCronHandler, {
+      method: "POST",
+      headers: {
+        authorization: "Bearer test-cron-secret-0001",
+        "x-request-id": "req-market-stats-flag-failure",
+      },
+      body: {},
+    });
+
+    expect(result.statusCode).toBe(200);
+    expect(result.body.data).toMatchObject({
+      job_name: "market_stats",
+      request_id: "req-market-stats-flag-failure",
+      status: "failed",
+      processed_count: 0,
+      failed_count: 1,
+      error_message: "功能开关暂时不可用，请稍后重试。",
+    });
+    expect(getRpcCall("worker_finish_run")[1]).toMatchObject({
+      p_job_run_id: MARKET_STATS_JOB_RUN_ID,
+      p_status: "failed",
+      p_failed_count: 1,
+      p_error_message: "功能开关暂时不可用，请稍后重试。",
+    });
+    expect(
+      callRpcRawMock.mock.calls.some(
+        ([name]) => name === "worker_try_acquire_lock",
+      ),
+    ).toBe(false);
   });
 });
 

@@ -160,10 +160,13 @@ export function EvolvePanel({
   }
 
   return (
-    <div className="upgrade-panel evolve-panel" role="presentation">
+    <div
+      className="upgrade-panel evolve-panel evolve-panel--liquid-glass"
+      role="presentation"
+    >
       <button
         aria-label="关闭合成面板"
-        className="upgrade-panel__backdrop"
+        className="upgrade-panel__backdrop evolve-panel__backdrop"
         disabled={evolveMutation.isPending}
         onClick={handleClose}
         type="button"
@@ -171,10 +174,10 @@ export function EvolvePanel({
       <section
         aria-labelledby="evolve-panel-title"
         aria-modal="true"
-        className="upgrade-panel__panel"
+        className="upgrade-panel__panel evolve-panel__panel"
         role="dialog"
       >
-        <header className="upgrade-panel__header">
+        <header className="upgrade-panel__header evolve-panel__header">
           <div>
             <span>合成 / 进化</span>
             <h2 id="evolve-panel-title">{displayItem.name}</h2>
@@ -189,9 +192,15 @@ export function EvolvePanel({
           </button>
         </header>
 
-        <div className="upgrade-panel__body" aria-live="polite">
-          <section className="upgrade-panel__item" aria-label="当前藏品">
-            <div className="upgrade-panel__thumb">
+        <div
+          className="upgrade-panel__body evolve-panel__body"
+          aria-live="polite"
+        >
+          <section
+            className="upgrade-panel__item evolve-panel__item"
+            aria-label="当前藏品"
+          >
+            <div className="upgrade-panel__thumb evolve-panel__thumb">
               {imageUrl ? (
                 <img src={imageUrl} alt={displayItem.name} />
               ) : (
@@ -240,7 +249,10 @@ export function EvolvePanel({
             </div>
           </section>
 
-          <section className="upgrade-panel__metrics" aria-label="合成预览">
+          <section
+            className="upgrade-panel__metrics evolve-panel__metrics"
+            aria-label="合成预览"
+          >
             <EvolveMetric
               icon="users"
               label="同款 available 数量"
@@ -320,7 +332,7 @@ export function EvolvePanel({
           </section>
 
           <section
-            className={`upgrade-panel__balance upgrade-panel__balance--${getBalanceTone(
+            className={`upgrade-panel__balance evolve-panel__balance upgrade-panel__balance--${getBalanceTone(
               preview,
             )}`}
             aria-label="KCOIN 余额"
@@ -344,8 +356,9 @@ export function EvolvePanel({
           ) : null}
         </div>
 
-        <footer className="upgrade-panel__footer">
+        <footer className="upgrade-panel__footer evolve-panel__footer">
           <button
+            className="evolve-panel__submit"
             disabled={!canSubmit}
             onClick={() => void handleSubmit()}
             type="button"

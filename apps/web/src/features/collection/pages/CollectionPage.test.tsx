@@ -346,6 +346,7 @@ describe("CollectionPage stage-3 frontend states", () => {
       "月冕守门人，传说，等级 1，战力 88，形态 高阶形态",
     );
     expect(secondThumb).toHaveClass("character-thumb--legendary");
+    expect(secondThumb.querySelector(".character-thumb__serial")).toBeNull();
     expect(
       secondThumb.querySelector(".character-thumb__rarity-dot"),
     ).not.toBeNull();
@@ -879,6 +880,53 @@ describe("CollectionPage stage-3 frontend states", () => {
     ).toBeVisible();
     expect(screen.getByText("消耗 Fgems")).toBeVisible();
     expect(screen.getByText("80 -> 60")).toBeVisible();
+  });
+
+  it("opens all evolve info and actions inside a liquid-glass dialog", async () => {
+    const item = makeItem();
+    setInventoryItems(
+      item,
+      makeItem({ itemInstanceId: ITEM_B_ID, serialNo: 2 }),
+      makeItem({ itemInstanceId: ITEM_C_ID, serialNo: 3 }),
+    );
+    setItemDetail(item, makeDetail(item));
+
+    renderCollectionPage();
+    fireEvent.click(
+      within(screen.getByLabelText("当前选中藏品")).getByRole("button", {
+        name: "合成",
+      }),
+    );
+
+    const evolveDialog = screen.getByRole("dialog", { name: "森林幼芽" });
+    expect(evolveDialog.closest(".evolve-panel--liquid-glass")).not.toBeNull();
+    expect(within(evolveDialog).getByText("合成 / 进化")).toBeVisible();
+    expect(within(evolveDialog).getByLabelText("目标形态")).toBeVisible();
+    expect(within(evolveDialog).getByLabelText("合成预览")).toBeVisible();
+    expect(within(evolveDialog).getByText("KCOIN 消耗")).toBeVisible();
+    expect(within(evolveDialog).getByText("成功率")).toBeVisible();
+    expect(within(evolveDialog).getByText("选择 3 个同款材料")).toBeVisible();
+    expect(
+      within(evolveDialog).getByRole("button", { name: "确认合成" }),
+    ).toBeEnabled();
+
+    fireEvent.click(
+      within(evolveDialog).getByRole("button", { name: "确认合成" }),
+    );
+
+    await waitFor(() =>
+      expect(mocks.evolveMutateAsync).toHaveBeenCalledTimes(1),
+    );
+    expect(mocks.evolveMutateAsync).toHaveBeenCalledWith({
+      expectedKcoinCost: 200,
+      expectedReturnItemInstanceId: ITEM_C_ID,
+      expectedSuccessRateBps: 5000,
+      sourceItemInstanceIds: [ITEM_C_ID, ITEM_B_ID, ITEM_A_ID],
+      targetFormId: FORM_ID,
+    });
+    expect(
+      await screen.findByRole("dialog", { name: "合成成功" }),
+    ).toBeVisible();
   });
 });
 
