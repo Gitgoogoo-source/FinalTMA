@@ -1,9 +1,8 @@
-import { Check, Coins } from "lucide-react";
+import { Check } from "lucide-react";
 
 import type { SellableItemGroup } from "../trade.types";
 import {
   formatKcoinWithUnit,
-  getItemTypeLabel,
   getSellableItemReferencePrice,
 } from "../trade.utils";
 
@@ -32,6 +31,13 @@ export function SellItemCard({
       )}${isSelected ? " sell-item-card--selected" : ""}`}
     >
       <button
+        aria-label={`${item.itemName}，${item.rarityLabel}，可出售 ${
+          item.availableCount
+        } 件，参考价 ${
+          referencePrice === null
+            ? "暂无参考"
+            : formatKcoinWithUnit(referencePrice)
+        }`}
         aria-pressed={isSelected}
         className="sell-item-card__button"
         onClick={() => onSelect(item)}
@@ -39,6 +45,13 @@ export function SellItemCard({
       >
         <div className="sell-item-card__image">
           {imageContent}
+          {item.availableCount > 1 ? (
+            <span className="sell-item-card__count">x{item.availableCount}</span>
+          ) : null}
+          <span
+            className="sell-item-card__rarity-dot"
+            aria-hidden="true"
+          />
           {isSelected ? (
             <span className="sell-item-card__check" aria-hidden="true">
               <Check size={13} strokeWidth={3} />
@@ -47,32 +60,8 @@ export function SellItemCard({
         </div>
 
         <div className="sell-item-card__body">
-          <div className="sell-item-card__title">
-            <h3>{item.itemName}</h3>
-            <span>{item.rarityLabel}</span>
-          </div>
-
-          <dl className="sell-item-card__meta">
-            <div>
-              <dt>可售</dt>
-              <dd>{item.availableCount}</dd>
-            </div>
-            <div>
-              <dt>类型</dt>
-              <dd>{getItemTypeLabel(item.typeCode)}</dd>
-            </div>
-            <div>
-              <dt>战力</dt>
-              <dd>{item.power}</dd>
-            </div>
-          </dl>
-
-          <strong className="sell-item-card__price">
-            <Coins aria-hidden="true" size={14} strokeWidth={2.5} />
-            {referencePrice === null
-              ? "暂无参考"
-              : formatKcoinWithUnit(referencePrice)}
-          </strong>
+          <strong>{item.itemName}</strong>
+          <span>{item.rarityLabel}</span>
         </div>
       </button>
     </article>

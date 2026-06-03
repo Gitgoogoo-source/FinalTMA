@@ -1,4 +1,4 @@
-import { BadgeDollarSign, Coins } from "lucide-react";
+import { BadgeDollarSign, Coins, PackageCheck, Sparkles } from "lucide-react";
 
 import type { SellableItemGroup } from "../trade.types";
 import {
@@ -29,6 +29,8 @@ export function SellSelectedItemCard({
   }
 
   const referencePrice = getSellableItemReferencePrice(item);
+  const typeLabel = getItemTypeLabel(item.typeCode);
+  const serialLabel = item.serialNo === null ? "#--" : `#${item.serialNo}`;
   const imageContent = item.imageUrl ? (
     <img src={item.imageUrl} alt={item.itemName} />
   ) : (
@@ -36,42 +38,46 @@ export function SellSelectedItemCard({
   );
 
   return (
-    <section className="sell-selected-card" aria-label="当前出售对象">
+    <section
+      className={`sell-selected-card sell-selected-card--${getRarityTone(
+        item.rarityCode,
+      )}`}
+      aria-label="当前出售对象"
+    >
       <div className="sell-selected-card__hero">
         {imageContent}
-        <strong>{item.rarityLabel}</strong>
       </div>
 
       <div className="sell-selected-card__content">
         <div className="sell-selected-card__title">
-          <span>当前选择</span>
+          <span className="sell-selected-card__eyebrow">当前选择</span>
+          <div className="sell-selected-card__badges">
+            <span>{item.rarityLabel}</span>
+            <span>{serialLabel}</span>
+          </div>
           <h2>{item.itemName}</h2>
+          <p>{typeLabel}</p>
+        </div>
+
+        <div className="sell-selected-card__owned">
+          你拥有 <strong>{item.ownedCount}</strong> 份，可出售{" "}
+          <strong>{item.availableCount}</strong> 份
         </div>
 
         <dl className="sell-selected-card__summary">
           <div>
-            <dt>持有</dt>
-            <dd>{item.ownedCount}</dd>
+            <Sparkles aria-hidden="true" size={18} strokeWidth={2.4} />
+            <span>
+              <dt>稀有度</dt>
+              <dd>{item.rarityLabel}</dd>
+            </span>
           </div>
           <div>
-            <dt>可出售</dt>
-            <dd>{item.availableCount}</dd>
-          </div>
-          <div>
-            <dt>已选</dt>
-            <dd>{quantity}</dd>
-          </div>
-          <div>
-            <dt>类型</dt>
-            <dd>{getItemTypeLabel(item.typeCode)}</dd>
-          </div>
-          <div>
-            <dt>等级</dt>
-            <dd>{item.level}</dd>
-          </div>
-          <div>
-            <dt>战力</dt>
-            <dd>{item.power}</dd>
+            <PackageCheck aria-hidden="true" size={18} strokeWidth={2.4} />
+            <span>
+              <dt>已选</dt>
+              <dd>{quantity} 件</dd>
+            </span>
           </div>
         </dl>
 
@@ -90,4 +96,18 @@ export function SellSelectedItemCard({
       </div>
     </section>
   );
+}
+
+function getRarityTone(rarityCode: string): string {
+  if (
+    rarityCode === "common" ||
+    rarityCode === "rare" ||
+    rarityCode === "epic" ||
+    rarityCode === "legendary" ||
+    rarityCode === "mythic"
+  ) {
+    return rarityCode;
+  }
+
+  return "common";
 }

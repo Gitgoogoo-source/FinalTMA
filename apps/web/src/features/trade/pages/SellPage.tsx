@@ -179,44 +179,6 @@ export function SellPage() {
           selectedItemInstanceIds={selectedItemInstanceIds}
         />
 
-        <section className="sell-settings" aria-label="出售设置">
-          <div className="sell-settings__heading">
-            <span>出售设置</span>
-            <strong>{selectedItem ? "数量和价格" : "未选择藏品"}</strong>
-          </div>
-          <SellQuantityStepper
-            availableCount={availableCount}
-            disabled={!selectedItem}
-            onChange={handleQuantityChange}
-            quantity={quantity}
-          />
-          <SellPriceInput
-            disabled={!selectedItem || createListing.isPending}
-            error={unitPriceValidation.error}
-            onChange={setUnitPriceInput}
-            referencePriceKcoin={referencePrice}
-            value={unitPriceInput}
-          />
-          <SellFeePreview
-            feeBps={feeBps}
-            isFeeRulesError={sellRulesQuery.isError}
-            isFeeRulesLoading={sellRulesQuery.isLoading}
-            item={selectedItem}
-            quantity={quantity}
-            unitPriceKcoin={unitPriceKcoin}
-          />
-          <ConfirmSellButton
-            disabled={confirmDisabled}
-            feeBps={feeBps}
-            isPending={createListing.isPending}
-            item={selectedItem}
-            onConfirm={handleConfirmSell}
-            quantity={quantity}
-            unitPriceKcoin={unitPriceKcoin}
-            validationMessage={confirmValidationMessage}
-          />
-        </section>
-
         <SellInventoryFilters
           filters={filters}
           hasActiveFilters={hasActiveFilters}
@@ -239,6 +201,45 @@ export function SellPage() {
           onSelect={handleSelectItem}
           selectedItem={selectedItem}
         />
+
+        <SellFeePreview
+          feeBps={feeBps}
+          isFeeRulesError={sellRulesQuery.isError}
+          isFeeRulesLoading={sellRulesQuery.isLoading}
+          item={selectedItem}
+          quantity={quantity}
+          unitPriceKcoin={unitPriceKcoin}
+        />
+
+        <section className="sell-settings" aria-label="出售设置">
+          <div className="sell-settings__heading">
+            <span>出售设置</span>
+            <strong>{selectedItem ? "数量和价格" : "未选择藏品"}</strong>
+          </div>
+          <SellQuantityStepper
+            availableCount={availableCount}
+            disabled={!selectedItem}
+            onChange={handleQuantityChange}
+            quantity={quantity}
+          />
+          <SellPriceInput
+            disabled={!selectedItem || createListing.isPending}
+            error={unitPriceValidation.error}
+            onChange={setUnitPriceInput}
+            referencePriceKcoin={referencePrice}
+            value={unitPriceInput}
+          />
+          <ConfirmSellButton
+            disabled={confirmDisabled}
+            feeBps={feeBps}
+            isPending={createListing.isPending}
+            item={selectedItem}
+            onConfirm={handleConfirmSell}
+            quantity={quantity}
+            unitPriceKcoin={unitPriceKcoin}
+            validationMessage={confirmValidationMessage}
+          />
+        </section>
       </div>
     </section>
   );

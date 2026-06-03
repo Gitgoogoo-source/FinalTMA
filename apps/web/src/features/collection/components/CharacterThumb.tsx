@@ -17,6 +17,9 @@ export function CharacterThumb({
   const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null);
   const visibleImageUrl =
     imageUrl && imageUrl !== failedImageUrl ? imageUrl : null;
+  const formStarCount = normalizeFormStarCount(item.form?.index);
+  const formStarLabel =
+    formStarCount > 0 ? `，形态 ${formStarCount} 星` : "";
   const serialLabel = item.serialNo ? `#${item.serialNo}` : item.rarity.label;
 
   return (
@@ -28,12 +31,21 @@ export function CharacterThumb({
       type="button"
       aria-pressed={isSelected}
       aria-label={`${item.name}，${item.rarity.label}，等级 ${item.level}，战力 ${item.power}${
-        isSelected ? "，已选中" : ""
-      }`}
+        formStarLabel
+      }${isSelected ? "，已选中" : ""}`}
     >
       <span className="character-thumb__image" aria-hidden="true">
         <span className="character-thumb__shine" />
         <span className="character-thumb__serial">{serialLabel}</span>
+        {formStarCount > 0 ? (
+          <span className="character-thumb__form-stars">
+            {Array.from({ length: formStarCount }, (_, index) => (
+              <span className="character-thumb__form-star" key={index}>
+                ★
+              </span>
+            ))}
+          </span>
+        ) : null}
         {visibleImageUrl ? (
           <img
             src={visibleImageUrl}
@@ -47,4 +59,12 @@ export function CharacterThumb({
       </span>
     </button>
   );
+}
+
+function normalizeFormStarCount(value: number | null | undefined): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return 0;
+  }
+
+  return Math.max(0, Math.trunc(value));
 }

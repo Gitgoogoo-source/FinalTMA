@@ -295,6 +295,12 @@ describe("CollectionPage stage-3 frontend states", () => {
         label: "传说",
         sortOrder: 40,
       },
+      form: {
+        description: null,
+        displayName: "高阶形态",
+        id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+        index: 3,
+      },
       serialNo: 2,
       templateId: "77777777-7777-4777-8777-777777777777",
     });
@@ -333,6 +339,12 @@ describe("CollectionPage stage-3 frontend states", () => {
 
     const secondThumb = screen.getByRole("button", { name: /月冕守门人/ });
     expect(secondThumb).toHaveAttribute("aria-pressed", "false");
+    expect(secondThumb).toHaveAccessibleName(
+      "月冕守门人，传说，等级 1，战力 88，形态 3 星",
+    );
+    expect(
+      secondThumb.querySelectorAll(".character-thumb__form-star"),
+    ).toHaveLength(3);
     expect(
       within(secondThumb).queryByText("月冕守门人"),
     ).not.toBeInTheDocument();

@@ -3,7 +3,11 @@ import { useEffect, useState } from "react";
 import { BadgeDollarSign, Loader2, X } from "lucide-react";
 
 import type { SellableItemGroup } from "../trade.types";
-import { calculateMarketFeePreview, formatKcoinWithUnit } from "../trade.utils";
+import {
+  calculateMarketFeePreview,
+  formatKcoinAmount,
+  formatKcoinWithUnit,
+} from "../trade.utils";
 
 type ConfirmSellButtonProps = {
   disabled: boolean;
@@ -28,6 +32,10 @@ export function ConfirmSellButton({
 }: ConfirmSellButtonProps) {
   const [open, setOpen] = useDialogState(isPending);
   const canOpen = Boolean(!disabled && !isPending && item && unitPriceKcoin);
+  const preview =
+    item && unitPriceKcoin !== null && feeBps !== null
+      ? calculateMarketFeePreview(unitPriceKcoin, quantity, feeBps)
+      : null;
 
   useEffect(() => {
     if (!item || !unitPriceKcoin) {
@@ -57,17 +65,28 @@ export function ConfirmSellButton({
     <>
       <div className="sell-confirm">
         <button
+          aria-label="确认出售"
           className="sell-confirm__button"
           disabled={disabled || isPending}
           onClick={handleOpen}
           type="button"
         >
-          {isPending ? (
-            <Loader2 aria-hidden="true" size={16} strokeWidth={2.5} />
-          ) : (
-            <BadgeDollarSign aria-hidden="true" size={16} strokeWidth={2.5} />
-          )}
-          {isPending ? "上架中" : "确认出售"}
+          <span className="sell-confirm__action">
+            {isPending ? (
+              <Loader2 aria-hidden="true" size={16} strokeWidth={2.5} />
+            ) : (
+              <BadgeDollarSign aria-hidden="true" size={16} strokeWidth={2.5} />
+            )}
+            {isPending ? "上架中" : "确认出售"}
+          </span>
+          <span className="sell-confirm__divider" aria-hidden="true" />
+          <span className="sell-confirm__receive" aria-hidden="true">
+            到手{" "}
+            <strong>
+              {preview ? formatKcoinAmount(preview.netAmountKcoin) : "以后端为准"}
+            </strong>
+            {preview ? <small>K-coin</small> : null}
+          </span>
         </button>
         {validationMessage ? (
           <span className="sell-confirm__hint">{validationMessage}</span>
