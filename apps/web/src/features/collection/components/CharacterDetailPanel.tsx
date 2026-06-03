@@ -68,6 +68,14 @@ export function CharacterDetailPanel({
   const isAvailable = displayItem.status === "available" && !isListed;
   const effectiveMintStatus = getEffectiveMintStatus(displayItem, detail);
   const mintStatusLabel = getMintStatusLabel(effectiveMintStatus);
+  const statusLabel = getCollectionStatusLabel(displayItem.status, isListed);
+  const seriesLabel = displayItem.series?.displayName ?? "未分配系列";
+  const formLabel = displayItem.form?.displayName ?? "未分配形态";
+  const serialLabel = displayItem.serialNo
+    ? `#${formatCurrencyAmount(displayItem.serialNo)}`
+    : "未编号";
+  const description =
+    displayItem.description ?? displayItem.subtitle ?? "暂无藏品说明";
   const blockReason = getBlockedReason(displayItem, detail, isListed);
   const mintEligibility = getMintEligibility(displayItem, detail, {
     isListed,
@@ -116,56 +124,55 @@ export function CharacterDetailPanel({
       className={`character-detail-panel character-detail-panel--${displayItem.rarity.code}`}
     >
       <div className="character-detail-panel__hero">
-        <div className="character-detail-panel__media">
-          {visibleImageUrl ? (
-            <img
-              src={visibleImageUrl}
-              alt={displayItem.name}
-              draggable="false"
-              onError={() => setFailedImageUrl(visibleImageUrl)}
-            />
-          ) : (
-            <span
-              className="character-detail-panel__fallback"
-              aria-hidden="true"
-            >
-              {displayItem.name.slice(0, 1)}
-            </span>
-          )}
+        <div className="character-detail-panel__stage">
+          <div className="character-detail-panel__media">
+            {visibleImageUrl ? (
+              <img
+                src={visibleImageUrl}
+                alt={displayItem.name}
+                draggable="false"
+                onError={() => setFailedImageUrl(visibleImageUrl)}
+              />
+            ) : (
+              <span
+                className="character-detail-panel__fallback"
+                aria-hidden="true"
+              >
+                {displayItem.name.slice(0, 1)}
+              </span>
+            )}
+          </div>
+          <div className="character-detail-panel__plate">
+            <strong>{displayItem.rarity.label}</strong>
+            <span>{serialLabel}</span>
+          </div>
         </div>
 
         <section className="character-detail-summary" aria-label="藏品完整信息">
-          <DetailMetric label="名称" value={displayItem.name} />
-          <DetailMetric label="稀有度" value={displayItem.rarity.label} />
-          <DetailMetric
-            label="系列"
-            value={displayItem.series?.displayName ?? "未分配"}
-          />
-          <DetailMetric
-            label="形态"
-            value={displayItem.form?.displayName ?? "未分配"}
-          />
-          <DetailMetric
-            label="等级"
-            value={`Lv.${formatCurrencyAmount(displayItem.level)}`}
-          />
-          <DetailMetric
-            label="战力"
-            value={formatCurrencyAmount(displayItem.power)}
-          />
-          <DetailMetric
-            label="编号"
-            value={
-              displayItem.serialNo
-                ? `#${formatCurrencyAmount(displayItem.serialNo)}`
-                : "未编号"
-            }
-          />
-          <DetailMetric
-            label="状态"
-            value={getCollectionStatusLabel(displayItem.status, isListed)}
-          />
-          <DetailMetric label="Mint 状态" value={mintStatusLabel} />
+          <div className="character-detail-summary__header">
+            <span>{`${seriesLabel} / ${formLabel}`}</span>
+            <h2>{displayItem.name}</h2>
+            <p>{description}</p>
+          </div>
+
+          <div className="character-detail-status-row" aria-label="藏品状态">
+            <DetailBadge label="稀有度" value={displayItem.rarity.label} />
+            <DetailBadge label="状态" value={statusLabel} />
+            <DetailBadge label="Mint 状态" value={mintStatusLabel} />
+          </div>
+
+          <div className="character-detail-stats" aria-label="藏品关键属性">
+            <DetailMetric
+              label="等级"
+              value={`Lv.${formatCurrencyAmount(displayItem.level)}`}
+            />
+            <DetailMetric
+              label="战力"
+              value={formatCurrencyAmount(displayItem.power)}
+            />
+            <DetailMetric label="编号" value={serialLabel} />
+            <DetailMetric label="形态" value={formLabel} />
+          </div>
         </section>
 
         <section className="character-detail-actions" aria-label="藏品操作">
@@ -245,9 +252,19 @@ export function CharacterDetailPanel({
 
 function DetailMetric({ label, value }: { label: string; value: string }) {
   return (
-    <div aria-label={`${label}：${value}`}>
+    <div className="character-detail-metric" aria-label={`${label}：${value}`}>
+      <span>{label}</span>
       <strong>{value}</strong>
     </div>
+  );
+}
+
+function DetailBadge({ label, value }: { label: string; value: string }) {
+  return (
+    <span className="character-detail-badge" aria-label={`${label}：${value}`}>
+      <small>{label}</small>
+      <strong>{value}</strong>
+    </span>
   );
 }
 

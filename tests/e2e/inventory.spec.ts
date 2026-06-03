@@ -11,7 +11,7 @@ test("查看库存中的开盒藏品", async ({ page }) => {
 
   await expect(page.getByTestId("collection-page")).toBeVisible();
   await expect(page.getByRole("heading", { name: "森林幼芽" })).toBeVisible();
-  await expect(page.getByText("我的藏品")).toBeVisible();
+  await expect(page.getByLabel("藏品网格")).toBeVisible();
   await expect(page.getByText("Lv.1", { exact: true }).first()).toBeVisible();
 });
 
@@ -27,7 +27,8 @@ test("查看藏品详情和成长入口", async ({ page }) => {
     selectedPanel.getByRole("heading", { name: "森林幼芽" }),
   ).toBeVisible();
   await expect(selectedPanel.getByLabel("藏品完整信息")).toBeVisible();
-  await expect(selectedPanel.getByText("是否可升级")).toBeVisible();
+  await expect(selectedPanel.getByText("Mint 状态")).toBeVisible();
+  await expect(selectedPanel.getByLabel("藏品关键属性")).toBeVisible();
   await expect(
     selectedPanel.getByRole("button", { name: "升级" }),
   ).toBeVisible();

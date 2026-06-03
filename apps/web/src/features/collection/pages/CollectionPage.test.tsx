@@ -317,8 +317,8 @@ describe("CollectionPage stage-3 frontend states", () => {
     ).not.toBeNull();
     expect(within(selectedSummary).getByText("森林幼芽")).toBeVisible();
     expect(
-      within(selectedPanel).queryByRole("heading", { name: "森林幼芽" }),
-    ).not.toBeInTheDocument();
+      within(selectedPanel).getByRole("heading", { name: "森林幼芽" }),
+    ).toBeVisible();
     expect(
       within(selectedPanel).queryByLabelText("藏品角色说明"),
     ).not.toBeInTheDocument();
@@ -384,17 +384,17 @@ describe("CollectionPage stage-3 frontend states", () => {
     const summary = within(selectedPanel).getByLabelText("藏品完整信息");
 
     expect(summary).toBeVisible();
-    expect(within(selectedPanel).getByText("森林守护者")).toBeVisible();
+    expect(within(selectedPanel).getByText(/森林守护者/)).toBeVisible();
     expect(within(selectedPanel).getByText("基础形态")).toBeVisible();
     expect(within(summary).queryByText("名称")).not.toBeInTheDocument();
-    expect(within(summary).queryByText("稀有度")).not.toBeInTheDocument();
+    expect(within(summary).getByText("稀有度")).toBeVisible();
     expect(within(summary).queryByText("系列")).not.toBeInTheDocument();
-    expect(within(summary).queryByText("形态")).not.toBeInTheDocument();
-    expect(within(summary).queryByText("等级")).not.toBeInTheDocument();
-    expect(within(summary).queryByText("战力")).not.toBeInTheDocument();
-    expect(within(summary).queryByText("编号")).not.toBeInTheDocument();
-    expect(within(summary).queryByText("状态")).not.toBeInTheDocument();
-    expect(within(summary).queryByText("Mint 状态")).not.toBeInTheDocument();
+    expect(within(summary).getByText("形态")).toBeVisible();
+    expect(within(summary).getByText("等级")).toBeVisible();
+    expect(within(summary).getByText("战力")).toBeVisible();
+    expect(within(summary).getByText("编号")).toBeVisible();
+    expect(within(summary).getByText("状态")).toBeVisible();
+    expect(within(summary).getByText("Mint 状态")).toBeVisible();
     expect(within(summary).queryByText("是否挂售")).not.toBeInTheDocument();
     expect(within(summary).queryByText("是否可升级")).not.toBeInTheDocument();
     expect(within(summary).queryByText("是否可合成")).not.toBeInTheDocument();
