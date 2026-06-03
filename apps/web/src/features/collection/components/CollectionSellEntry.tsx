@@ -64,7 +64,10 @@ export function CollectionSellEntry({
   }
 
   return (
-    <div className="change-price-dialog" role="presentation">
+    <div
+      className="change-price-dialog collection-entry-dialog"
+      role="presentation"
+    >
       <button
         aria-label="关闭出售弹窗"
         className="change-price-dialog__backdrop"

@@ -108,12 +108,16 @@ body,
 #root {
   min-height: 100%;
   margin: 0;
+  touch-action: pan-x pan-y;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
   min-width: 320px;
   color: var(--theme-ink);
   background: var(--theme-paper);
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
 }
 
 button,
@@ -8569,6 +8573,84 @@ a {
     transparent 42%,
     rgb(54 67 75 / 8%)
   );
+}
+
+.collection-page .collection-state,
+.collection-page .collection-empty,
+.collection-page .collection-state button,
+.collection-page .collection-empty a,
+.collection-page .item-status-badge,
+.collection-page .character-detail-panel,
+.collection-page .character-detail-panel__hero,
+.collection-page .character-detail-panel__stage,
+.collection-page .character-detail-panel__media,
+.collection-page .character-detail-panel__fallback,
+.collection-page .character-detail-summary,
+.collection-page .character-detail-summary__number,
+.collection-page .character-detail-badge,
+.collection-page .character-detail-metric,
+.collection-page .character-detail-metric__icon,
+.collection-page .character-detail-notice,
+.collection-page .character-detail-action,
+.collection-page .character-detail-state,
+.collection-page .character-detail-state button,
+.collection-page .collection-load-more button,
+.collection-page .character-thumb,
+.collection-page .character-thumb__image,
+.collection-page .character-thumb__serial,
+.collection-entry-dialog .change-price-dialog__backdrop,
+.collection-entry-dialog .change-price-dialog__panel,
+.collection-entry-dialog .change-price-dialog__header,
+.collection-entry-dialog .change-price-dialog__header button,
+.collection-entry-dialog .change-price-dialog__body,
+.collection-entry-dialog .change-price-dialog__input > div,
+.collection-entry-dialog .change-price-dialog__summary div,
+.collection-entry-dialog .change-price-dialog__notice,
+.collection-entry-dialog .change-price-dialog__actions,
+.collection-entry-dialog .change-price-dialog__primary,
+.collection-entry-dialog .change-price-dialog__secondary,
+.collection-entry-dialog .change-price-dialog__image,
+.upgrade-panel__backdrop,
+.upgrade-panel__panel,
+.upgrade-panel__header,
+.upgrade-panel__header button,
+.upgrade-panel__item,
+.upgrade-panel__thumb,
+.upgrade-panel__metric,
+.upgrade-panel__balance,
+.upgrade-panel__state,
+.upgrade-panel__state button,
+.upgrade-panel__notice,
+.upgrade-panel__footer,
+.upgrade-panel__footer button,
+.evolve-panel__target,
+.evolve-panel__target-image,
+.evolve-panel__rule,
+.evolve-panel__material-button,
+.evolve-panel__material-thumb,
+.evolve-panel__material-badges em,
+.evolve-panel__placeholder,
+.decompose-panel__warning,
+.decompose-panel__confirm,
+.growth-result-modal__backdrop,
+.growth-result-modal__panel,
+.growth-result-modal__header,
+.growth-result-modal__header button,
+.growth-result-modal__body,
+.growth-result-modal__mark,
+.growth-result-modal__metrics div,
+.growth-result-modal__confirm {
+  background: transparent;
+  background-image: none;
+  box-shadow: none;
+}
+
+.collection-page .character-detail-panel__media img {
+  filter: none;
+}
+
+.collection-page .character-thumb__shine {
+  display: none;
 }
 
 @keyframes box-float {

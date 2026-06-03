@@ -35,7 +35,7 @@ export function CollectionCancelEntry({
 
   return (
     <div
-      className="cancel-listing-dialog change-price-dialog"
+      className="cancel-listing-dialog change-price-dialog collection-entry-dialog"
       role="presentation"
     >
       <button
