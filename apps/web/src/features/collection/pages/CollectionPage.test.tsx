@@ -321,10 +321,13 @@ describe("CollectionPage stage-3 frontend states", () => {
     expect(
       selectedActions.closest(".character-detail-panel__hero"),
     ).not.toBeNull();
-    expect(within(selectedSummary).getByText("森林幼芽")).toBeVisible();
+    expect(within(selectedSummary).getByText("稀有度")).toBeVisible();
+    expect(within(selectedSummary).getByText("形态")).toBeVisible();
+    expect(within(selectedSummary).getByText("等级")).toBeVisible();
+    expect(within(selectedSummary).getByText("战力")).toBeVisible();
     expect(
-      within(selectedPanel).getByRole("heading", { name: "森林幼芽" }),
-    ).toBeVisible();
+      within(selectedSummary).queryByText("森林幼芽"),
+    ).not.toBeInTheDocument();
     expect(
       within(selectedPanel).queryByLabelText("藏品角色说明"),
     ).not.toBeInTheDocument();
@@ -340,11 +343,15 @@ describe("CollectionPage stage-3 frontend states", () => {
     const secondThumb = screen.getByRole("button", { name: /月冕守门人/ });
     expect(secondThumb).toHaveAttribute("aria-pressed", "false");
     expect(secondThumb).toHaveAccessibleName(
-      "月冕守门人，传说，等级 1，战力 88，形态 3 星",
+      "月冕守门人，传说，等级 1，战力 88，形态 高阶形态",
     );
+    expect(secondThumb).toHaveClass("character-thumb--legendary");
+    expect(
+      secondThumb.querySelector(".character-thumb__rarity-dot"),
+    ).not.toBeNull();
     expect(
       secondThumb.querySelectorAll(".character-thumb__form-star"),
-    ).toHaveLength(3);
+    ).toHaveLength(0);
     expect(
       within(secondThumb).queryByText("月冕守门人"),
     ).not.toBeInTheDocument();
@@ -357,7 +364,9 @@ describe("CollectionPage stage-3 frontend states", () => {
     const nextSummary = within(
       screen.getByLabelText("当前选中藏品"),
     ).getByLabelText("藏品完整信息");
-    expect(within(nextSummary).getByText("月冕守门人")).toBeVisible();
+    expect(within(nextSummary).getByText("传说")).toBeVisible();
+    expect(within(nextSummary).getByText("高阶形态")).toBeVisible();
+    expect(within(nextSummary).getByText("88")).toBeVisible();
     expect(screen.getByRole("button", { name: /月冕守门人/ })).toHaveAttribute(
       "aria-pressed",
       "true",
@@ -396,17 +405,22 @@ describe("CollectionPage stage-3 frontend states", () => {
     const summary = within(selectedPanel).getByLabelText("藏品完整信息");
 
     expect(summary).toBeVisible();
-    expect(within(selectedPanel).getByText(/森林守护者/)).toBeVisible();
-    expect(within(selectedPanel).getByText("基础形态")).toBeVisible();
+    expect(within(summary).queryByText(/森林守护者/)).not.toBeInTheDocument();
+    expect(within(summary).queryByText("森林幼芽")).not.toBeInTheDocument();
+    expect(
+      within(summary).queryByText("已进入你的库存"),
+    ).not.toBeInTheDocument();
     expect(within(summary).queryByText("名称")).not.toBeInTheDocument();
     expect(within(summary).getByText("稀有度")).toBeVisible();
+    expect(within(summary).getByText("普通")).toBeVisible();
     expect(within(summary).queryByText("系列")).not.toBeInTheDocument();
     expect(within(summary).getByText("形态")).toBeVisible();
+    expect(within(summary).getByText("基础形态")).toBeVisible();
     expect(within(summary).getByText("等级")).toBeVisible();
     expect(within(summary).getByText("战力")).toBeVisible();
-    expect(within(summary).getByText("编号")).toBeVisible();
-    expect(within(summary).getByText("状态")).toBeVisible();
-    expect(within(summary).getByText("Mint 状态")).toBeVisible();
+    expect(within(summary).queryByText("编号")).not.toBeInTheDocument();
+    expect(within(summary).queryByText("状态")).not.toBeInTheDocument();
+    expect(within(summary).queryByText("Mint 状态")).not.toBeInTheDocument();
     expect(within(summary).queryByText("是否挂售")).not.toBeInTheDocument();
     expect(within(summary).queryByText("是否可升级")).not.toBeInTheDocument();
     expect(within(summary).queryByText("是否可合成")).not.toBeInTheDocument();
@@ -615,7 +629,9 @@ describe("CollectionPage stage-3 frontend states", () => {
     expect(
       within(selectedPanel).getByRole("button", { name: "Mint NFT" }),
     ).toBeEnabled();
-    expect(within(selectedPanel).getByText("未 Mint")).toBeVisible();
+    expect(
+      within(selectedPanel).queryByText("未 Mint"),
+    ).not.toBeInTheDocument();
   });
 
   it("submits Mint when a stale blocked detail refreshes into an eligible state", async () => {
