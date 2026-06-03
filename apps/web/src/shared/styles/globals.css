@@ -7084,23 +7084,7 @@ a {
 }
 
 .character-detail-panel__stage::before {
-  content: "";
-  position: absolute;
-  inset: 8px 0;
-  z-index: 0;
-  border: 1px solid rgb(255 255 255 / 64%);
-  border-radius: 8px;
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--collection-accent) 18%, transparent),
-      rgb(255 255 255 / 18%) 48%,
-      rgb(255 253 250 / 58%)
-    ),
-    rgb(255 255 255 / 34%);
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 76%),
-    0 24px 42px rgb(36 51 59 / 12%);
+  content: none;
 }
 
 .character-detail-panel__media {
@@ -7154,26 +7138,16 @@ a {
   display: grid;
   align-content: start;
   gap: clamp(6px, 0.9dvh, 8px);
-  overflow: hidden;
-  border: 1px solid var(--collection-line, rgb(36 51 59 / 14%));
-  border-radius: 8px;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
   padding: 9px;
-  background:
-    linear-gradient(180deg, rgb(255 255 255 / 82%), rgb(255 253 250 / 52%)),
-    rgb(255 255 255 / 54%);
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 78%),
-    0 18px 32px rgb(36 51 59 / 8%);
+  background: transparent;
+  box-shadow: none;
 }
 
 .character-detail-summary::before {
-  content: "";
-  position: absolute;
-  inset: 7px;
-  z-index: -1;
-  border: 1px solid rgb(36 51 59 / 7%);
-  border-radius: 6px;
-  pointer-events: none;
+  content: none;
 }
 
 .character-detail-summary__identity {
