@@ -7602,7 +7602,7 @@ a {
 }
 
 .character-grid {
-  --character-grid-column-gap: 12px;
+  --character-grid-column-gap: 10px;
 
   display: grid;
   width: 100%;
@@ -7628,11 +7628,11 @@ a {
 .character-grid__items {
   display: grid;
   grid-auto-columns: calc(
-    (100% - (var(--character-grid-column-gap) * 2)) / 3
+    (100% - (var(--character-grid-column-gap) * 3)) / 4
   );
   grid-auto-flow: column;
   grid-template-rows: repeat(2, auto);
-  gap: 12px var(--character-grid-column-gap);
+  gap: 10px var(--character-grid-column-gap);
   width: 100%;
 }
 
@@ -7671,7 +7671,7 @@ a {
   min-width: 0;
   width: 100%;
   min-height: 0;
-  aspect-ratio: 1;
+  aspect-ratio: 9 / 16;
   position: relative;
   display: grid;
   justify-items: center;

@@ -245,8 +245,7 @@ export function CharacterDetailPanel({
 
 function DetailMetric({ label, value }: { label: string; value: string }) {
   return (
-    <div>
-      <span>{label}</span>
+    <div aria-label={`${label}：${value}`}>
       <strong>{value}</strong>
     </div>
   );
