@@ -204,6 +204,18 @@ export const InventoryListQuerySchema = z
   })
   .strict();
 
+export const InventoryGroupItemsQuerySchema = z
+  .object({
+    template_id: uuidSchema,
+    form_id: uuidSchema.optional(),
+    statuses: csvArraySchema(InventoryItemStatusSchema, 12),
+    include_locked: booleanFromQuerySchema.default(false),
+    sort: InventorySortSchema.default("recently_obtained"),
+    cursor: cursorSchema.optional(),
+    limit: z.coerce.number().int().min(1).max(100).default(100),
+  })
+  .strict();
+
 export const InventoryDetailQuerySchema = z
   .object({
     item_instance_id: uuidSchema,
@@ -664,6 +676,13 @@ export type InventorySort = z.infer<typeof InventorySortSchema>;
 
 export type InventoryListQueryInput = z.input<typeof InventoryListQuerySchema>;
 export type InventoryListQuery = z.output<typeof InventoryListQuerySchema>;
+
+export type InventoryGroupItemsQueryInput = z.input<
+  typeof InventoryGroupItemsQuerySchema
+>;
+export type InventoryGroupItemsQuery = z.output<
+  typeof InventoryGroupItemsQuerySchema
+>;
 
 export type InventoryDetailQueryInput = z.input<
   typeof InventoryDetailQuerySchema

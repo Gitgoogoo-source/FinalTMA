@@ -27,6 +27,7 @@ export const API_ENDPOINTS = {
   inventory: {
     list: "/inventory/list",
     summary: "/inventory/summary",
+    groupItems: "/inventory/group-items",
     detail: "/inventory/detail",
     upgrade: "/inventory/upgrade",
     evolve: "/inventory/evolve",

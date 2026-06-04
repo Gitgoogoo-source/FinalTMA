@@ -5,6 +5,7 @@ import {
 import { callRpcRaw, RpcError } from "../../packages/server/src/db/rpc.js";
 import {
   ApiError,
+  assertApiRateLimit,
   getIdempotencyKey,
   withApiHandler,
 } from "../_shared/handler.js";
@@ -27,8 +28,28 @@ import {
 type InventoryDecomposeRpcPayload = Record<string, unknown>;
 
 export default withApiHandler(
-  async (req, _res, ctx) => {
+  async (req, res, ctx) => {
     const session = await requireSession(req);
+    await assertApiRateLimit(
+      req,
+      res,
+      ctx,
+      {
+        action: "inventory.decompose",
+      },
+      {
+        scopes: ["user"],
+        userId: session.userId,
+        sessionId: session.sessionId,
+        ...(session.telegramUserId !== null
+          ? { telegramUserId: session.telegramUserId }
+          : {}),
+        metadata: {
+          phase: "post_session",
+        },
+      },
+    );
+
     const body = await parseJsonBody<unknown>(req, {
       maxBytes: 16 * 1024,
     });

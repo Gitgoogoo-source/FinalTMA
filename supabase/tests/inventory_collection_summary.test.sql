@@ -177,6 +177,33 @@ select is((
   where (group_row.value ->> 'template_id')::uuid = (select id from _ids where key = 'template_a')
 ), 'available', 'summary representative prefers an available item for actions');
 
+insert into _ids (key, payload)
+select 'group_items', api.inventory_list_collection_group_items(
+  (select id from _ids where key = 'user'),
+  (select id from _ids where key = 'template_a'),
+  (select id from _ids where key = 'form_a'),
+  array['available', 'listed', 'locked']::text[],
+  100,
+  0
+);
+
+select is(((select payload from _ids where key = 'group_items') ->> 'total')::integer, 3, 'group items returns the exact concrete item count');
+select is(jsonb_array_length((select payload from _ids where key = 'group_items') -> 'items'), 3, 'group items returns concrete item rows');
+
+select is((
+  select array_agg((item_row.value ->> 'level')::integer order by item_row.ordinality)
+  from jsonb_array_elements((select payload from _ids where key = 'group_items') -> 'items') with ordinality as item_row(value, ordinality)
+), array[3, 2, 1], 'group items are sorted by level from high to low');
+
+select ok(
+  not exists (
+    select 1
+    from jsonb_array_elements((select payload from _ids where key = 'group_items') -> 'items') as item_row(value)
+    where (item_row.value ->> 'template_id')::uuid <> (select id from _ids where key = 'template_a')
+  ),
+  'group items hides other collectible groups'
+);
+
 select ok(
   not has_function_privilege('anon', 'api.inventory_get_collection_summary(uuid,text[])', 'execute'),
   'collection summary RPC is not executable by anon'
@@ -188,6 +215,18 @@ select ok(
 select ok(
   has_function_privilege('service_role', 'api.inventory_get_collection_summary(uuid,text[])', 'execute'),
   'collection summary RPC is executable by service_role'
+);
+select ok(
+  not has_function_privilege('anon', 'api.inventory_list_collection_group_items(uuid,uuid,uuid,text[],integer,integer)', 'execute'),
+  'collection group items RPC is not executable by anon'
+);
+select ok(
+  not has_function_privilege('authenticated', 'api.inventory_list_collection_group_items(uuid,uuid,uuid,text[],integer,integer)', 'execute'),
+  'collection group items RPC is not executable by authenticated'
+);
+select ok(
+  has_function_privilege('service_role', 'api.inventory_list_collection_group_items(uuid,uuid,uuid,text[],integer,integer)', 'execute'),
+  'collection group items RPC is executable by service_role'
 );
 
 select * from finish();

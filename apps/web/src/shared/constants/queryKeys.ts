@@ -29,6 +29,8 @@ export const queryKeys = {
       ["inventory", "list", userId ?? "anonymous"] as const,
     summary: (userId: string | null | undefined) =>
       ["inventory", "summary", userId ?? "anonymous"] as const,
+    groupItems: (userId: string | null | undefined, query: unknown = {}) =>
+      ["inventory", "group-items", userId ?? "anonymous", query] as const,
     detail: (
       userId: string | null | undefined,
       itemId: string | null | undefined,

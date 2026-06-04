@@ -16,8 +16,10 @@ import type {
 import { CharacterThumb } from "./CharacterThumb";
 
 type CharacterGridProps = {
+  emptyLabel?: string;
   groups: CollectionInventoryGroup[];
   filterGroups: CollectionInventoryGroup[];
+  isExpandedGroup?: boolean;
   selectedItemId: string | null;
   filters: CollectionInventoryFilters;
   hasActiveFilters: boolean;
@@ -26,7 +28,7 @@ type CharacterGridProps = {
     value: CollectionInventoryFilters[Key],
   ) => void;
   onResetFilters: () => void;
-  onSelect: (itemId: string) => void;
+  onSelect: (group: CollectionInventoryGroup) => void;
 };
 
 type CollectionFilterMenu = "rarity" | "type" | "status" | "sort";
@@ -73,8 +75,10 @@ const SORT_OPTIONS: ReadonlyArray<FilterOption<CollectionInventorySort>> = [
 ];
 
 export function CharacterGrid({
+  emptyLabel = "没有符合条件的藏品",
   groups,
   filterGroups,
+  isExpandedGroup = false,
   selectedItemId,
   filters,
   hasActiveFilters,
@@ -107,108 +111,110 @@ export function CharacterGrid({
 
   return (
     <section className="character-grid" aria-label="藏品网格">
-      <header className="character-grid__filters" aria-label="藏品筛选">
-        <div className="character-grid-filter-item">
-          <FilterChip
-            active={Boolean(filters.rarity)}
-            icon={<Gem aria-hidden="true" size={14} />}
-            label={getOptionLabel(rarityOptions, filters.rarity, "稀有度")}
-            menuId="rarity"
-            openMenu={openMenu}
-            onClick={() => toggleMenu("rarity")}
-          />
-          {openMenu === "rarity" ? (
-            <OptionsMenu
-              currentValue={filters.rarity}
-              options={rarityOptions}
-              onSelect={(value) => {
-                onFilterChange("rarity", value);
-                setOpenMenu(null);
-              }}
+      {isExpandedGroup ? null : (
+        <header className="character-grid__filters" aria-label="藏品筛选">
+          <div className="character-grid-filter-item">
+            <FilterChip
+              active={Boolean(filters.rarity)}
+              icon={<Gem aria-hidden="true" size={14} />}
+              label={getOptionLabel(rarityOptions, filters.rarity, "稀有度")}
+              menuId="rarity"
+              openMenu={openMenu}
+              onClick={() => toggleMenu("rarity")}
             />
-          ) : null}
-        </div>
+            {openMenu === "rarity" ? (
+              <OptionsMenu
+                currentValue={filters.rarity}
+                options={rarityOptions}
+                onSelect={(value) => {
+                  onFilterChange("rarity", value);
+                  setOpenMenu(null);
+                }}
+              />
+            ) : null}
+          </div>
 
-        <div className="character-grid-filter-item">
-          <FilterChip
-            active={Boolean(filters.typeCode)}
-            icon={<Grid2x2 aria-hidden="true" size={14} />}
-            label={getOptionLabel(typeOptions, filters.typeCode, "类型")}
-            menuId="type"
-            openMenu={openMenu}
-            onClick={() => toggleMenu("type")}
-          />
-          {openMenu === "type" ? (
-            <OptionsMenu
-              currentValue={filters.typeCode}
-              options={typeOptions}
-              onSelect={(value) => {
-                onFilterChange("typeCode", value);
-                setOpenMenu(null);
-              }}
+          <div className="character-grid-filter-item">
+            <FilterChip
+              active={Boolean(filters.typeCode)}
+              icon={<Grid2x2 aria-hidden="true" size={14} />}
+              label={getOptionLabel(typeOptions, filters.typeCode, "类型")}
+              menuId="type"
+              openMenu={openMenu}
+              onClick={() => toggleMenu("type")}
             />
-          ) : null}
-        </div>
+            {openMenu === "type" ? (
+              <OptionsMenu
+                currentValue={filters.typeCode}
+                options={typeOptions}
+                onSelect={(value) => {
+                  onFilterChange("typeCode", value);
+                  setOpenMenu(null);
+                }}
+              />
+            ) : null}
+          </div>
 
-        <div className="character-grid-filter-item">
-          <FilterChip
-            active={Boolean(filters.status)}
-            icon={<CircleDot aria-hidden="true" size={14} />}
-            label={STATUS_LABELS[filters.status]}
-            menuId="status"
-            openMenu={openMenu}
-            onClick={() => toggleMenu("status")}
-          />
-          {openMenu === "status" ? (
-            <OptionsMenu
-              currentValue={filters.status}
-              options={statusOptions}
-              onSelect={(value) => {
-                onFilterChange(
-                  "status",
-                  value as CollectionInventoryStatusFilter,
-                );
-                setOpenMenu(null);
-              }}
+          <div className="character-grid-filter-item">
+            <FilterChip
+              active={Boolean(filters.status)}
+              icon={<CircleDot aria-hidden="true" size={14} />}
+              label={STATUS_LABELS[filters.status]}
+              menuId="status"
+              openMenu={openMenu}
+              onClick={() => toggleMenu("status")}
             />
-          ) : null}
-        </div>
+            {openMenu === "status" ? (
+              <OptionsMenu
+                currentValue={filters.status}
+                options={statusOptions}
+                onSelect={(value) => {
+                  onFilterChange(
+                    "status",
+                    value as CollectionInventoryStatusFilter,
+                  );
+                  setOpenMenu(null);
+                }}
+              />
+            ) : null}
+          </div>
 
-        <div className="character-grid-filter-item">
-          <FilterChip
-            active={filters.sort !== "recently_obtained"}
-            icon={<ArrowDownWideNarrow aria-hidden="true" size={14} />}
-            label={getSortLabel(filters.sort)}
-            menuId="sort"
-            openMenu={openMenu}
-            onClick={() => toggleMenu("sort")}
-          />
-          {openMenu === "sort" ? (
-            <OptionsMenu
-              align="end"
-              currentValue={filters.sort}
-              options={SORT_OPTIONS}
-              onSelect={(value) => {
-                onFilterChange("sort", value as CollectionInventorySort);
-                setOpenMenu(null);
-              }}
+          <div className="character-grid-filter-item">
+            <FilterChip
+              active={filters.sort !== "recently_obtained"}
+              icon={<ArrowDownWideNarrow aria-hidden="true" size={14} />}
+              label={getSortLabel(filters.sort)}
+              menuId="sort"
+              openMenu={openMenu}
+              onClick={() => toggleMenu("sort")}
             />
-          ) : null}
-        </div>
+            {openMenu === "sort" ? (
+              <OptionsMenu
+                align="end"
+                currentValue={filters.sort}
+                options={SORT_OPTIONS}
+                onSelect={(value) => {
+                  onFilterChange("sort", value as CollectionInventorySort);
+                  setOpenMenu(null);
+                }}
+              />
+            ) : null}
+          </div>
 
-        <div className="character-grid-filter-item">
-          <button
-            aria-label="重置藏品筛选"
-            className="character-grid-filter-chip character-grid-filter-chip--reset"
-            disabled={!hasActiveFilters}
-            onClick={handleReset}
-            type="button"
-          >
-            <RotateCcw aria-hidden="true" size={14} strokeWidth={2.4} />
-            <span>all</span>
-          </button>
-        </div>
-      </header>
+          <div className="character-grid-filter-item">
+            <button
+              aria-label="重置藏品筛选"
+              className="character-grid-filter-chip character-grid-filter-chip--reset"
+              disabled={!hasActiveFilters}
+              onClick={handleReset}
+              type="button"
+            >
+              <RotateCcw aria-hidden="true" size={14} strokeWidth={2.4} />
+              <span>all</span>
+            </button>
+          </div>
+        </header>
+      )}
       <div className="character-grid__track">
         {groups.length > 0 ? (
           <div className="character-grid__items">
@@ -221,14 +227,15 @@ export function CharacterGrid({
                     : false
                 }
                 key={group.key}
-                onSelect={onSelect}
-                ownedCount={group.ownedCount}
+                onSelect={() => onSelect(group)}
+                ownedCount={isExpandedGroup ? 1 : group.ownedCount}
+                showSerial={isExpandedGroup}
               />
             ))}
           </div>
         ) : (
           <div className="character-grid__empty" role="status">
-            没有符合条件的藏品
+            {emptyLabel}
           </div>
         )}
       </div>

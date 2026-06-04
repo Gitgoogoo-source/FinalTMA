@@ -1,4 +1,4 @@
-import { PackageOpen, RefreshCw } from "lucide-react";
+import { ArrowLeft, PackageOpen, RefreshCw } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -32,6 +32,7 @@ import type {
 } from "../collection.types";
 import { useCancelInventorySell } from "../hooks/useCancelInventorySell";
 import { useInventory } from "../hooks/useInventory";
+import { useInventoryGroupItems } from "../hooks/useInventoryGroupItems";
 import { useSellInventoryItem } from "../hooks/useSellInventoryItem";
 
 export function CollectionPage() {
@@ -43,6 +44,7 @@ export function CollectionPage() {
   const sellRulesQuery = useMarketSellRules();
   const items = inventoryQuery.items;
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [expandedGroupKey, setExpandedGroupKey] = useState<string | null>(null);
   const [collectionFilters, setCollectionFilters] =
     useState<CollectionInventoryFilters>(DEFAULT_COLLECTION_FILTERS);
   const [isSellOpen, setIsSellOpen] = useState(false);
@@ -78,36 +80,84 @@ export function CollectionPage() {
     () => filterAndSortCollectionGroups(groupedItems, collectionFilters),
     [collectionFilters, groupedItems],
   );
+  const expandedGroup = useMemo(
+    () =>
+      expandedGroupKey
+        ? (groupedItems.find((group) => group.key === expandedGroupKey) ?? null)
+        : null,
+    [expandedGroupKey, groupedItems],
+  );
+  const expandedGroupTemplateId =
+    expandedGroup?.representativeItem.templateId ?? null;
+  const expandedGroupFormId =
+    expandedGroup?.representativeItem.form?.id ?? null;
+  const groupItemsQuery = useInventoryGroupItems({
+    enabled: expandedGroup !== null,
+    formId: expandedGroupFormId,
+    templateId: expandedGroupTemplateId,
+  });
+  const expandedGroupItems = useMemo(
+    () => sortCollectionItemsByLevelDesc(groupItemsQuery.items),
+    [groupItemsQuery.items],
+  );
+  const expandedGroups = useMemo(
+    () => expandedGroupItems.map(createSingleItemGroup),
+    [expandedGroupItems],
+  );
+  const visibleGroups = expandedGroup ? expandedGroups : filteredGroups;
+  const allKnownItems = useMemo(
+    () => mergeCollectionItems(items, expandedGroupItems),
+    [expandedGroupItems, items],
+  );
   const hasActiveCollectionFilters = hasActiveFilters(collectionFilters);
   const selectedItem = useMemo(() => {
     const visibleSelectedItem = selectedItemId
-      ? findGroupRepresentativeItem(filteredGroups, selectedItemId)
+      ? findGroupRepresentativeItem(visibleGroups, selectedItemId)
       : null;
     const selectedInventoryItem = selectedItemId
-      ? (items.find((item) => item.itemInstanceId === selectedItemId) ??
+      ? (allKnownItems.find((item) => item.itemInstanceId === selectedItemId) ??
         findGroupRepresentativeItem(groupedItems, selectedItemId))
       : null;
 
     return (
       visibleSelectedItem ??
-      filteredGroups[0]?.representativeItem ??
+      visibleGroups[0]?.representativeItem ??
       selectedInventoryItem ??
       groupedItems[0]?.representativeItem ??
       null
     );
-  }, [filteredGroups, groupedItems, items, selectedItemId]);
+  }, [allKnownItems, groupedItems, selectedItemId, visibleGroups]);
+  const selectedGroup = useMemo(() => {
+    if (!selectedItem) {
+      return null;
+    }
+
+    return (
+      groupedItems.find((group) =>
+        group.itemInstanceIds.includes(selectedItem.itemInstanceId),
+      ) ??
+      groupedItems.find(
+        (group) =>
+          getCollectionInventoryGroupKey(group.representativeItem) ===
+          getCollectionInventoryGroupKey(selectedItem),
+      ) ??
+      null
+    );
+  }, [groupedItems, selectedItem]);
   const mintConfirmItem = useMemo(
     () =>
       mintConfirmTargetId
-        ? (items.find((item) => item.itemInstanceId === mintConfirmTargetId) ??
-          selectedItem)
+        ? (allKnownItems.find(
+            (item) => item.itemInstanceId === mintConfirmTargetId,
+          ) ?? selectedItem)
         : null,
-    [items, mintConfirmTargetId, selectedItem],
+    [allKnownItems, mintConfirmTargetId, selectedItem],
   );
 
   useEffect(() => {
     if (groupedItems.length === 0) {
       setSelectedItemId(null);
+      setExpandedGroupKey(null);
       setIsSellOpen(false);
       setIsUpgradeOpen(false);
       setIsEvolveOpen(false);
@@ -121,22 +171,33 @@ export function CollectionPage() {
       return;
     }
 
-    if (filteredGroups.length === 0) {
+    if (expandedGroupKey && !expandedGroup) {
+      setExpandedGroupKey(null);
+      return;
+    }
+
+    if (visibleGroups.length === 0) {
       return;
     }
 
     const selectedItemIsVisible = selectedItemId
-      ? filteredGroups.some((group) =>
+      ? visibleGroups.some((group) =>
           group.itemInstanceIds.includes(selectedItemId),
         )
       : false;
 
     if (!selectedItemIsVisible) {
       setSelectedItemId(
-        filteredGroups[0]?.representativeItem.itemInstanceId ?? null,
+        visibleGroups[0]?.representativeItem.itemInstanceId ?? null,
       );
     }
-  }, [filteredGroups, groupedItems.length, selectedItemId]);
+  }, [
+    expandedGroup,
+    expandedGroupKey,
+    groupedItems.length,
+    selectedItemId,
+    visibleGroups,
+  ]);
 
   function handleCollectionFilterChange<
     Key extends keyof CollectionInventoryFilters,
@@ -149,6 +210,36 @@ export function CollectionPage() {
 
   function handleResetCollectionFilters() {
     setCollectionFilters({ ...DEFAULT_COLLECTION_FILTERS });
+  }
+
+  function handleSelectCollectionGroup(group: CollectionInventoryGroup) {
+    const nextItemId = group.representativeItem.itemInstanceId;
+
+    setSelectedItemId(nextItemId);
+    setIsSellOpen(false);
+    setIsUpgradeOpen(false);
+    setIsEvolveOpen(false);
+    setIsDecomposeOpen(false);
+    setMintConfirmTargetId(null);
+    setCancelSellTarget(null);
+
+    if (expandedGroup) {
+      return;
+    }
+
+    if (group.ownedCount > 1 && group.representativeItem.templateId) {
+      setExpandedGroupKey(group.key);
+    }
+  }
+
+  function handleReturnAllCollections() {
+    setExpandedGroupKey(null);
+    setIsSellOpen(false);
+    setIsUpgradeOpen(false);
+    setIsEvolveOpen(false);
+    setIsDecomposeOpen(false);
+    setMintConfirmTargetId(null);
+    setCancelSellTarget(null);
   }
 
   function handleOpenUpgrade() {
@@ -346,8 +437,9 @@ export function CollectionPage() {
   function handleDecomposeResult(result: CollectionDecomposeItemResponse) {
     const decomposedIds = new Set(result.decomposedItemInstanceIds);
     const nextAvailableItem =
-      items.find((candidate) => !decomposedIds.has(candidate.itemInstanceId)) ??
-      null;
+      allKnownItems.find(
+        (candidate) => !decomposedIds.has(candidate.itemInstanceId),
+      ) ?? null;
 
     setSelectedItemId(nextAvailableItem?.itemInstanceId ?? null);
     setDecomposeResult(result);
@@ -395,8 +487,21 @@ export function CollectionPage() {
     );
   }
 
+  const isExpandedGroup = expandedGroup !== null;
+  const collectionPageClassName = [
+    "collection-page",
+    isExpandedGroup ? "collection-page--group-expanded" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const gridEmptyLabel = isExpandedGroup
+    ? groupItemsQuery.isError
+      ? "藏品组读取失败"
+      : "藏品加载中"
+    : "没有符合条件的藏品";
+
   return (
-    <section className="collection-page" data-testid="collection-page">
+    <section className={collectionPageClassName} data-testid="collection-page">
       <CharacterDetailPanel
         item={selectedItem}
         isMinting={createMintMutation.isPending}
@@ -408,15 +513,27 @@ export function CollectionPage() {
         onUpgrade={handleOpenUpgrade}
       />
       <CharacterGrid
+        emptyLabel={gridEmptyLabel}
         filterGroups={groupedItems}
         filters={collectionFilters}
-        groups={filteredGroups}
+        groups={visibleGroups}
         hasActiveFilters={hasActiveCollectionFilters}
+        isExpandedGroup={isExpandedGroup}
         selectedItemId={selectedItem.itemInstanceId}
         onFilterChange={handleCollectionFilterChange}
         onResetFilters={handleResetCollectionFilters}
-        onSelect={setSelectedItemId}
+        onSelect={handleSelectCollectionGroup}
       />
+      {isExpandedGroup ? (
+        <button
+          className="collection-return-all"
+          onClick={handleReturnAllCollections}
+          type="button"
+        >
+          <ArrowLeft aria-hidden="true" size={18} strokeWidth={2.6} />
+          <span>返回全部</span>
+        </button>
+      ) : null}
       <CollectionSellEntry
         feeBps={sellRulesQuery.rules?.feeBps ?? null}
         isPending={sellInventoryMutation.isPending}
@@ -442,14 +559,15 @@ export function CollectionPage() {
       <EvolvePanel
         open={isEvolveOpen}
         item={selectedItem}
-        items={items}
+        items={allKnownItems}
         onClose={() => setIsEvolveOpen(false)}
         onEvolved={handleEvolveResult}
       />
       <DecomposePanel
         open={isDecomposeOpen}
         item={selectedItem}
-        items={items}
+        group={selectedGroup}
+        items={allKnownItems}
         onClose={() => setIsDecomposeOpen(false)}
         onDecomposed={handleDecomposeResult}
       />
@@ -748,6 +866,62 @@ function groupCollectionInventoryItems(
   }
 
   return Array.from(groups.values());
+}
+
+function sortCollectionItemsByLevelDesc(
+  items: CollectionInventoryItem[],
+): CollectionInventoryItem[] {
+  return [...items].sort(
+    (first, second) =>
+      second.level - first.level ||
+      second.power - first.power ||
+      getCollectionItemObtainedTime(second) -
+        getCollectionItemObtainedTime(first) ||
+      (second.serialNo ?? 0) - (first.serialNo ?? 0) ||
+      second.itemInstanceId.localeCompare(first.itemInstanceId),
+  );
+}
+
+function createSingleItemGroup(
+  item: CollectionInventoryItem,
+): CollectionInventoryGroup {
+  return {
+    key: `item:${item.itemInstanceId}`,
+    representativeItem: item,
+    itemInstanceIds: [item.itemInstanceId],
+    ownedCount: 1,
+    availableCount: item.status === "available" ? 1 : 0,
+    listedCount: item.status === "listed" ? 1 : 0,
+    lockedCount: item.status === "locked" ? 1 : 0,
+    mintingCount: item.status === "minting" ? 1 : 0,
+    mintedCount: item.status === "minted" ? 1 : 0,
+    maxLevel: item.level,
+    maxPower: item.power,
+    latestObtainedAt: item.obtainedAt,
+  };
+}
+
+function mergeCollectionItems(
+  baseItems: CollectionInventoryItem[],
+  expandedItems: CollectionInventoryItem[],
+): CollectionInventoryItem[] {
+  const merged = new Map<string, CollectionInventoryItem>();
+
+  for (const item of baseItems) {
+    merged.set(item.itemInstanceId, item);
+  }
+
+  for (const item of expandedItems) {
+    merged.set(item.itemInstanceId, item);
+  }
+
+  return Array.from(merged.values());
+}
+
+function getCollectionItemObtainedTime(item: CollectionInventoryItem): number {
+  const timestamp = Date.parse(item.obtainedAt ?? "");
+
+  return Number.isFinite(timestamp) ? timestamp : 0;
 }
 
 function getCollectionInventoryGroupKey(item: CollectionInventoryItem): string {

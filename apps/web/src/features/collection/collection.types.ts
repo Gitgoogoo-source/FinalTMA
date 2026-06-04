@@ -183,6 +183,14 @@ export type CollectionInventoryResponse = {
   serverTime: string | null;
 };
 
+export type CollectionInventoryGroupItemsInput = {
+  templateId: string;
+  formId?: string | null;
+  cursor?: string | null;
+  includeLocked?: boolean;
+  limit?: number;
+};
+
 export type CollectionInventorySummaryCounts = {
   totalCount: number;
   availableCount: number;

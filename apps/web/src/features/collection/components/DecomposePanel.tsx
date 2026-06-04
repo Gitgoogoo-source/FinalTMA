@@ -1,6 +1,5 @@
 import {
   AlertTriangle,
-  CheckCircle2,
   Gem,
   PackageMinus,
   RefreshCw,
@@ -8,7 +7,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import { getApiErrorMessage } from "@/api/errors";
 import { useFeedback } from "@/app/providers/FeedbackProvider";
@@ -16,22 +15,22 @@ import { formatCurrencyAmount } from "@/shared/lib/formatCurrency";
 
 import type {
   CollectionDecomposeItemResponse,
-  CollectionDecomposePreview,
-  CollectionInventoryDetail,
+  CollectionInventoryGroup,
   CollectionInventoryItem,
 } from "../collection.types";
 import { useDecomposeItem } from "../hooks/useDecomposeItem";
-import { useItemDetail } from "../hooks/useItemDetail";
 
 type DecomposePanelProps = {
   open: boolean;
   item: CollectionInventoryItem | null;
+  group?: CollectionInventoryGroup | null;
   items: CollectionInventoryItem[];
   onClose: () => void;
   onDecomposed?: (result: CollectionDecomposeItemResponse) => void;
 };
 
 export function DecomposePanel({
+  group,
   item,
   items,
   onClose,
@@ -39,20 +38,7 @@ export function DecomposePanel({
   open,
 }: DecomposePanelProps) {
   const { pushToast } = useFeedback();
-  const [confirmed, setConfirmed] = useState(false);
-  const detailQuery = useItemDetail(open ? item?.itemInstanceId : null, {
-    enabled: open && Boolean(item),
-  });
   const decomposeMutation = useDecomposeItem();
-
-  useEffect(() => {
-    if (!open) {
-      setConfirmed(false);
-      return;
-    }
-
-    setConfirmed(false);
-  }, [item?.itemInstanceId, open]);
 
   const sameAvailableItems = useMemo(
     () => getSameAvailableItems(item, items),
@@ -63,31 +49,22 @@ export function DecomposePanel({
     return null;
   }
 
-  const detail = detailQuery.item;
-  const displayItem = detail ?? item;
-  const preview = detail?.decomposePreview ?? null;
   const itemInstanceId = item.itemInstanceId;
-  const imageUrl =
-    displayItem.thumbnailUrl ?? displayItem.imageUrl ?? displayItem.avatarUrl;
-  const isListed = detail?.marketStatus?.isListed ?? item.status === "listed";
-  const availableSameCount = getAvailableSameCount(
-    detail,
-    preview,
+  const imageUrl = item.thumbnailUrl ?? item.imageUrl ?? item.avatarUrl;
+  const availableSameCount = group?.availableCount ?? sameAvailableItems.length;
+  const sameItemCount = Math.max(
+    group?.ownedCount ?? 0,
+    availableSameCount,
     sameAvailableItems.length,
   );
-  const sameItemCount = getSameItemCount(detail, preview, availableSameCount);
   const decomposableCount = Math.max(availableSameCount - 1, 0);
-  const expectedFgemsReward =
-    preview?.fgemsReward ?? preview?.totalRewardFgems ?? null;
+  const expectedFgemsReward = getLocalDecomposeRewardFgems(item);
   const disabledReason = getDecomposeDisabledReason({
     availableSameCount,
-    confirmed,
-    detail,
-    isDetailLoading: detailQuery.isLoading,
-    isListed,
+    expectedFgemsReward,
+    isListed: item.status === "listed",
     isPending: decomposeMutation.isPending,
-    item: displayItem,
-    preview,
+    item,
   });
   const canSubmit = disabledReason === null;
 
@@ -99,7 +76,6 @@ export function DecomposePanel({
     try {
       const result = await decomposeMutation.mutateAsync({
         itemInstanceIds: [itemInstanceId],
-        expectedFgemsReward,
       });
 
       onDecomposed?.(result);
@@ -140,7 +116,7 @@ export function DecomposePanel({
         <header className="upgrade-panel__header">
           <div>
             <span>藏品分解</span>
-            <h2 id="decompose-panel-title">{displayItem.name}</h2>
+            <h2 id="decompose-panel-title">{item.name}</h2>
           </div>
           <button
             aria-label="关闭"
@@ -156,32 +132,19 @@ export function DecomposePanel({
           <section className="upgrade-panel__item" aria-label="当前藏品">
             <div className="upgrade-panel__thumb">
               {imageUrl ? (
-                <img src={imageUrl} alt={displayItem.name} />
+                <img src={imageUrl} alt={item.name} />
               ) : (
-                <span aria-hidden="true">{displayItem.name.slice(0, 1)}</span>
+                <span aria-hidden="true">{item.name.slice(0, 1)}</span>
               )}
             </div>
             <div>
-              <strong>{displayItem.name}</strong>
+              <strong>{item.name}</strong>
               <span>
-                Lv.{formatCurrencyAmount(displayItem.level)} ·{" "}
-                {displayItem.form?.displayName ?? "未分配形态"}
+                Lv.{formatCurrencyAmount(item.level)} ·{" "}
+                {item.form?.displayName ?? "未分配形态"}
               </span>
             </div>
           </section>
-
-          {detailQuery.isLoading ? (
-            <PanelState title="同步分解预览" detail="正在读取服务端规则。" />
-          ) : null}
-
-          {detailQuery.isError ? (
-            <PanelState
-              tone="error"
-              title="预览读取失败"
-              detail={getApiErrorMessage(detailQuery.error)}
-              onRetry={() => void detailQuery.refetch()}
-            />
-          ) : null}
 
           <section className="upgrade-panel__metrics" aria-label="分解预览">
             <DecomposeMetric
@@ -201,6 +164,7 @@ export function DecomposePanel({
               value={formatOptionalNumber(expectedFgemsReward)}
               tone={expectedFgemsReward ? "positive" : "neutral"}
             />
+            <DecomposeMetric icon="reward" label="额外道具" value="无" />
             <DecomposeMetric icon="decompose" label="本次分解" value="1 件" />
           </section>
 
@@ -211,23 +175,6 @@ export function DecomposePanel({
               <span>当前选中的藏品会由后端分解，奖励以后端返回为准。</span>
             </div>
           </section>
-
-          <button
-            aria-pressed={confirmed}
-            className={`decompose-panel__confirm${
-              confirmed ? " decompose-panel__confirm--checked" : ""
-            }`}
-            disabled={decomposeMutation.isPending}
-            onClick={() => setConfirmed((value) => !value)}
-            type="button"
-          >
-            {confirmed ? (
-              <CheckCircle2 aria-hidden="true" size={16} strokeWidth={2.5} />
-            ) : (
-              <AlertTriangle aria-hidden="true" size={16} strokeWidth={2.5} />
-            )}
-            我确认分解后不可恢复
-          </button>
 
           {disabledReason ? (
             <section className="upgrade-panel__notice" role="status">
@@ -274,7 +221,7 @@ function DecomposeMetric({
   tone = "neutral",
   value,
 }: {
-  icon: "available" | "decompose" | "fgems" | "same";
+  icon: "available" | "decompose" | "fgems" | "reward" | "same";
   label: string;
   tone?: "neutral" | "positive";
   value: string;
@@ -288,44 +235,6 @@ function DecomposeMetric({
         {label}
       </span>
       <strong>{value}</strong>
-    </div>
-  );
-}
-
-function PanelState({
-  detail,
-  onRetry,
-  title,
-  tone = "neutral",
-}: {
-  detail: string;
-  onRetry?: () => void;
-  title: string;
-  tone?: "error" | "neutral";
-}) {
-  return (
-    <div
-      className={`upgrade-panel__state upgrade-panel__state--${tone}`}
-      role={tone === "error" ? "alert" : "status"}
-    >
-      {tone === "error" ? (
-        <AlertTriangle aria-hidden="true" size={17} strokeWidth={2.4} />
-      ) : (
-        <RefreshCw
-          aria-hidden="true"
-          className="upgrade-panel__spin"
-          size={17}
-          strokeWidth={2.4}
-        />
-      )}
-      <strong>{title}</strong>
-      <span>{detail}</span>
-      {onRetry ? (
-        <button onClick={onRetry} type="button">
-          <RefreshCw aria-hidden="true" size={14} strokeWidth={2.5} />
-          重试
-        </button>
-      ) : null}
     </div>
   );
 }
@@ -348,48 +257,18 @@ function getSameAvailableItems(
   );
 }
 
-function getAvailableSameCount(
-  detail: CollectionInventoryDetail | null,
-  preview: CollectionDecomposePreview | null,
-  localAvailableCount: number,
-): number {
-  return Math.max(
-    localAvailableCount,
-    detail?.availableSameItemCount ?? 0,
-    preview?.duplicateCount ?? 0,
-  );
-}
-
-function getSameItemCount(
-  detail: CollectionInventoryDetail | null,
-  preview: CollectionDecomposePreview | null,
-  availableSameCount: number,
-): number {
-  return Math.max(
-    detail?.sameItemCount ?? 0,
-    preview?.duplicateCount ?? 0,
-    availableSameCount,
-  );
-}
-
 function getDecomposeDisabledReason({
   availableSameCount,
-  confirmed,
-  detail,
-  isDetailLoading,
+  expectedFgemsReward,
   isListed,
   isPending,
   item,
-  preview,
 }: {
   availableSameCount: number;
-  confirmed: boolean;
-  detail: CollectionInventoryDetail | null;
-  isDetailLoading: boolean;
+  expectedFgemsReward: number | null;
   isListed: boolean;
   isPending: boolean;
   item: CollectionInventoryItem;
-  preview: CollectionDecomposePreview | null;
 }): string | null {
   if (isPending) {
     return "分解请求正在提交。";
@@ -407,59 +286,58 @@ function getDecomposeDisabledReason({
     return "该藏品不可分解。";
   }
 
-  if (isDetailLoading) {
-    return "正在同步分解预览。";
-  }
-
-  if (!detail || !preview) {
-    return "分解预览暂不可用。";
-  }
-
   if (availableSameCount < 2) {
     return "同模板、同形态的 available 藏品数量不足。";
   }
 
-  if (
-    preview.fgemsReward === null &&
-    preview.totalRewardFgems === null &&
-    preview.canDecompose
-  ) {
-    return "没有可用分解规则。";
-  }
-
-  if (!preview.canDecompose) {
-    return getDecomposeReasonLabel(preview.reason) ?? "当前不能分解。";
-  }
-
-  if (!confirmed) {
-    return "请先确认分解后不可恢复。";
+  if (expectedFgemsReward === null) {
+    return "没有本地分解奖励配置。";
   }
 
   return null;
 }
 
-function getDecomposeReasonLabel(reason: string | null): string | null {
-  switch (reason) {
-    case "DECOMPOSE_REQUIRES_DUPLICATE":
-      return "只能分解重复藏品。";
-    case "DECOMPOSE_RULE_NOT_FOUND":
-      return "没有可用分解规则。";
-    case "ITEM_NOT_AVAILABLE":
-      return "该藏品当前状态不可分解。";
-    case "ITEM_NOT_DECOMPOSABLE":
-      return "该藏品不可分解。";
-    default:
-      return reason;
-  }
-}
-
 function formatOptionalNumber(value: number | null | undefined): string {
   return value === null || value === undefined
-    ? "待同步"
+    ? "待配置"
     : formatCurrencyAmount(value);
 }
 
-function getMetricIcon(icon: "available" | "decompose" | "fgems" | "same") {
+function getLocalDecomposeRewardFgems(
+  item: CollectionInventoryItem,
+): number | null {
+  const rarityCode = item.rarity.code.toLowerCase();
+  const formIndex = item.form?.index ?? 1;
+
+  return DECOMPOSE_REWARD_FGEMS[rarityCode]?.[formIndex] ?? null;
+}
+
+const DECOMPOSE_REWARD_FGEMS: Record<string, Record<number, number>> = {
+  common: {
+    1: 5,
+    2: 15,
+    3: 40,
+  },
+  epic: {
+    1: 50,
+    2: 150,
+    3: 400,
+  },
+  legendary: {
+    1: 150,
+    2: 450,
+    3: 1200,
+  },
+  rare: {
+    1: 15,
+    2: 45,
+    3: 120,
+  },
+};
+
+function getMetricIcon(
+  icon: "available" | "decompose" | "fgems" | "reward" | "same",
+) {
   switch (icon) {
     case "available":
       return PackageMinus;
@@ -467,6 +345,8 @@ function getMetricIcon(icon: "available" | "decompose" | "fgems" | "same") {
       return PackageMinus;
     case "fgems":
       return Gem;
+    case "reward":
+      return PackageMinus;
     case "same":
       return Users;
   }

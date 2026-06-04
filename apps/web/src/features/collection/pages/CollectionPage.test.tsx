@@ -16,6 +16,7 @@ import type {
   CollectionDecomposeItemResponse,
   CollectionEvolveItemResponse,
   CollectionInventoryDetail,
+  CollectionInventoryGroup,
   CollectionInventoryItem,
   CollectionUpgradeItemResponse,
 } from "../collection.types";
@@ -24,6 +25,10 @@ import { CollectionPage } from "./CollectionPage";
 const mocks = vi.hoisted(() => ({
   inventoryItems: [] as unknown[],
   inventoryGroups: [] as unknown[],
+  inventoryGroupItems: [] as unknown[],
+  inventoryGroupItemsCalls: [] as unknown[],
+  inventoryGroupItemsError: null as unknown,
+  inventoryGroupItemsLoading: false,
   itemDetails: new Map<string, unknown>(),
   hasNextInventoryPage: false,
   isFetchingNextInventoryPage: false,
@@ -60,6 +65,25 @@ vi.mock("../hooks/useInventory", () => ({
     serverTime: "2026-05-25T08:00:00.000Z",
     total: mocks.inventoryItems.length,
   }),
+}));
+
+vi.mock("../hooks/useInventoryGroupItems", () => ({
+  useInventoryGroupItems: (input: unknown) => {
+    mocks.inventoryGroupItemsCalls.push(input);
+
+    return {
+      error: mocks.inventoryGroupItemsError,
+      fetchNextPage: vi.fn(),
+      hasNextPage: false,
+      isError: Boolean(mocks.inventoryGroupItemsError),
+      isFetching: false,
+      isFetchingNextPage: false,
+      isLoading: mocks.inventoryGroupItemsLoading,
+      items: mocks.inventoryGroupItems,
+      nextCursor: null,
+      total: mocks.inventoryGroupItems.length,
+    };
+  },
 }));
 
 vi.mock("../hooks/useItemDetail", () => ({
@@ -188,6 +212,10 @@ describe("CollectionPage stage-3 frontend states", () => {
   beforeEach(() => {
     mocks.inventoryItems = [];
     mocks.inventoryGroups = [];
+    mocks.inventoryGroupItems = [];
+    mocks.inventoryGroupItemsCalls = [];
+    mocks.inventoryGroupItemsError = null;
+    mocks.inventoryGroupItemsLoading = false;
     mocks.itemDetails = new Map<string, unknown>();
     mocks.hasNextInventoryPage = false;
     mocks.isFetchingNextInventoryPage = false;
@@ -452,6 +480,108 @@ describe("CollectionPage stage-3 frontend states", () => {
     ).getByLabelText("藏品完整信息");
     expect(within(nextSummary).getByText("传说")).toBeVisible();
     expect(within(nextSummary).getByText("高阶形态")).toBeVisible();
+  });
+
+  it("expands a duplicate group into concrete items sorted by level and returns to all groups", async () => {
+    const representativeItem = makeItem({
+      itemInstanceId: ITEM_A_ID,
+      level: 1,
+      power: 10,
+      serialNo: 1,
+    });
+    const highLevelItem = makeItem({
+      itemInstanceId: ITEM_B_ID,
+      level: 9,
+      power: 99,
+      serialNo: 681,
+    });
+    const middleLevelItem = makeItem({
+      itemInstanceId: ITEM_C_ID,
+      level: 5,
+      power: 55,
+      serialNo: 12,
+    });
+    const otherItem = makeItem({
+      itemInstanceId: "77777777-7777-4777-8777-777777777777",
+      name: "月冕守门人",
+      power: 88,
+      rarity: {
+        code: "legendary",
+        label: "传说",
+        sortOrder: 40,
+      },
+      templateId: "88888888-8888-4888-8888-888888888888",
+      templateSlug: "moon_crown_guardian",
+    });
+
+    mocks.inventoryGroups = [
+      makeInventoryGroup(representativeItem, {
+        itemInstanceIds: [ITEM_A_ID],
+        ownedCount: 3,
+      }),
+      makeInventoryGroup(otherItem, {
+        itemInstanceIds: [otherItem.itemInstanceId],
+        ownedCount: 1,
+      }),
+    ];
+    setInventoryItems(representativeItem, otherItem);
+    mocks.inventoryGroupItems = [
+      representativeItem,
+      highLevelItem,
+      middleLevelItem,
+    ];
+
+    renderCollectionPage();
+
+    const groupedThumb = screen.getByRole("button", {
+      name: /森林幼芽.*共有 3 件/,
+    });
+    expect(
+      groupedThumb.querySelector(".character-thumb__count"),
+    ).toHaveTextContent("x3");
+
+    fireEvent.click(groupedThumb);
+
+    await waitFor(() => {
+      expect(mocks.inventoryGroupItemsCalls).toContainEqual({
+        enabled: true,
+        formId: FORM_ID,
+        templateId: TEMPLATE_ID,
+      });
+    });
+
+    expect(
+      screen.queryByRole("button", { name: /月冕守门人/ }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("藏品筛选")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "返回全部" })).toBeVisible();
+
+    const expandedThumbs = screen.getAllByRole("button", {
+      name: /森林幼芽/,
+    });
+    expect(expandedThumbs).toHaveLength(3);
+    expect(
+      expandedThumbs.map((thumb) => thumb.getAttribute("aria-label")),
+    ).toEqual([
+      "森林幼芽，普通，等级 9，战力 99，形态 基础形态，编号 #681",
+      "森林幼芽，普通，等级 5，战力 55，形态 基础形态，编号 #012",
+      "森林幼芽，普通，等级 1，战力 10，形态 基础形态，编号 #001，已选中",
+    ]);
+
+    fireEvent.click(expandedThumbs[0]!);
+    expect(expandedThumbs[0]).toHaveAttribute("aria-pressed", "true");
+    const selectedSummary = within(
+      screen.getByLabelText("当前选中藏品"),
+    ).getByLabelText("藏品完整信息");
+    expect(within(selectedSummary).getByText("99")).toBeVisible();
+
+    fireEvent.click(screen.getByRole("button", { name: "返回全部" }));
+
+    expect(screen.getByLabelText("藏品筛选")).toBeVisible();
+    expect(screen.getByRole("button", { name: /月冕守门人/ })).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: /森林幼芽.*共有 3 件/ }),
+    ).toBeVisible();
   });
 
   it("keeps character thumbs separate when template differs even if the image is shared", () => {
@@ -1109,7 +1239,6 @@ describe("CollectionPage stage-3 frontend states", () => {
       makeItem({ itemInstanceId: ITEM_B_ID, serialNo: 2 }),
       makeItem({ itemInstanceId: ITEM_C_ID, serialNo: 3 }),
     );
-    setItemDetail(item, makeDetail(item));
 
     renderCollectionPage();
     fireEvent.click(
@@ -1125,15 +1254,18 @@ describe("CollectionPage stage-3 frontend states", () => {
     expect(within(decomposeDialog).getByText("藏品分解")).toBeVisible();
     expect(within(decomposeDialog).getByLabelText("分解预览")).toBeVisible();
     expect(within(decomposeDialog).getByLabelText("分解提醒")).toBeVisible();
+    expect(within(decomposeDialog).getByText("额外道具")).toBeVisible();
+    expect(within(decomposeDialog).getByText("无")).toBeVisible();
+    expect(within(decomposeDialog).queryByText("同步分解预览")).toBeNull();
     expect(
       within(decomposeDialog).getByRole("button", { name: "确认分解" }),
-    ).toBeDisabled();
-
-    fireEvent.click(
-      within(decomposeDialog).getByRole("button", {
+    ).toBeEnabled();
+    expect(
+      within(decomposeDialog).queryByRole("button", {
         name: "我确认分解后不可恢复",
       }),
-    );
+    ).toBeNull();
+
     fireEvent.click(
       within(decomposeDialog).getByRole("button", { name: "确认分解" }),
     );
@@ -1142,9 +1274,9 @@ describe("CollectionPage stage-3 frontend states", () => {
       expect(mocks.decomposeMutateAsync).toHaveBeenCalledTimes(1),
     );
     expect(mocks.decomposeMutateAsync).toHaveBeenCalledWith({
-      expectedFgemsReward: 150,
       itemInstanceIds: [ITEM_A_ID],
     });
+    expect(getEnabledDetailCallIds()).toEqual([]);
     expect(
       await screen.findByRole("dialog", { name: "分解成功" }),
     ).toBeVisible();
@@ -1245,6 +1377,31 @@ function renderCollectionPage() {
 
 function setInventoryItems(...items: CollectionInventoryItem[]) {
   mocks.inventoryItems = items;
+}
+
+function makeInventoryGroup(
+  representativeItem: CollectionInventoryItem,
+  overrides: Partial<CollectionInventoryGroup> = {},
+): CollectionInventoryGroup {
+  const ownedCount = overrides.ownedCount ?? 1;
+
+  return {
+    availableCount: representativeItem.status === "available" ? ownedCount : 0,
+    itemInstanceIds: [representativeItem.itemInstanceId],
+    key: `template:${representativeItem.templateId}:form:${
+      representativeItem.form?.id ?? "default-form"
+    }`,
+    latestObtainedAt: representativeItem.obtainedAt,
+    listedCount: representativeItem.status === "listed" ? ownedCount : 0,
+    lockedCount: representativeItem.status === "locked" ? ownedCount : 0,
+    maxLevel: representativeItem.level,
+    maxPower: representativeItem.power,
+    mintedCount: representativeItem.status === "minted" ? ownedCount : 0,
+    mintingCount: representativeItem.status === "minting" ? ownedCount : 0,
+    ownedCount,
+    representativeItem,
+    ...overrides,
+  };
 }
 
 function setItemDetail(

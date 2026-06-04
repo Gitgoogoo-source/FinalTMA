@@ -14,6 +14,7 @@ import type {
   CollectionForm,
   CollectionInventoryDetail,
   CollectionInventoryGroup,
+  CollectionInventoryGroupItemsInput,
   CollectionInventoryItem,
   CollectionInventoryResponse,
   CollectionInventorySummaryCounts,
@@ -86,6 +87,34 @@ export async function fetchInventorySummary(
   );
 
   return normalizeInventorySummaryResponse(response);
+}
+
+export async function fetchInventoryGroupItems(
+  input: CollectionInventoryGroupItemsInput,
+): Promise<CollectionInventoryResponse> {
+  const params = new URLSearchParams({
+    limit: String(input.limit ?? 100),
+    template_id: input.templateId,
+  });
+
+  if (input.formId) {
+    params.set("form_id", input.formId);
+  }
+  if (input.cursor) {
+    params.set("cursor", input.cursor);
+  }
+  if (input.includeLocked) {
+    params.set("include_locked", "true");
+  }
+
+  const response = await apiRequest<unknown>(
+    `${API_ENDPOINTS.inventory.groupItems}?${params.toString()}`,
+    {
+      method: "GET",
+    },
+  );
+
+  return normalizeInventoryResponse(response);
 }
 
 export async function fetchInventoryDetail(
@@ -279,7 +308,8 @@ export function normalizeInventorySummaryResponse(
   const summary = normalizeInventorySummaryCounts(payload.summary);
   const total =
     readNumber(payload.total) ?? summary.totalCount ?? sumOwnedCount(groups);
-  const groupTotal = readNumber(payload.groupTotal) ??
+  const groupTotal =
+    readNumber(payload.groupTotal) ??
     readNumber(payload.group_total) ??
     summary.groupCount ??
     groups.length;

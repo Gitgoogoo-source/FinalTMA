@@ -960,6 +960,65 @@ describe("inventory growth API", () => {
     });
   });
 
+  it("decompose applies the authenticated user rate limit after session lookup", async () => {
+    const rateLimitedUserId = "77777777-7777-4777-8777-777777777777";
+
+    requireSessionMock.mockResolvedValue({
+      sessionId: "session-inventory-decompose-user-limit",
+      userId: rateLimitedUserId,
+      telegramUserId: 7701,
+      userStatus: "active",
+      expiresAt: "2026-05-28T00:00:00.000Z",
+      sessionTokenHash: "session-hash-user-limit",
+    });
+    callRpcRawMock.mockResolvedValue({
+      item_instance_ids: [ITEM_ID],
+      total_reward_fgems: 150,
+      fgems_balance_before: 100,
+      fgems_balance_after: 250,
+      balance_delta: 150,
+      ledger_id: LEDGER_ID,
+      items: [
+        {
+          item_instance_id: ITEM_ID,
+          reward_fgems: 150,
+        },
+      ],
+    });
+
+    for (let index = 0; index < 40; index += 1) {
+      const result = await invokeApiHandler<ApiSuccessResponse>(
+        decomposeHandler,
+        {
+          method: "POST",
+          body: {
+            item_instance_ids: [ITEM_ID],
+            idempotency_key: `inventory:decompose-limit-${index}`,
+          },
+        },
+      );
+
+      expect(result.statusCode).toBe(200);
+    }
+
+    const limitedResult = await invokeApiHandler<ApiErrorResponse>(
+      decomposeHandler,
+      {
+        method: "POST",
+        body: {
+          item_instance_ids: [ITEM_ID],
+          idempotency_key: "inventory:decompose-limit-40",
+        },
+      },
+    );
+
+    expect(limitedResult.statusCode).toBe(429);
+    expectStandardErrorEnvelope(limitedResult.body);
+    expect(limitedResult.body.error.code).toBe("RATE_LIMITED");
+    expect(callRpcRawMock).toHaveBeenCalledTimes(40);
+    expect(assertUserRiskAllowedMock).toHaveBeenCalledTimes(40);
+  });
+
   it("decompose maps locked or minting items to a stable conflict", async () => {
     callRpcRawMock.mockRejectedValueOnce(
       new RpcError({

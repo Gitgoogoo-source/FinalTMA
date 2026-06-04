@@ -238,6 +238,120 @@ describe("inventory API helpers", () => {
     );
   });
 
+  it("/api/inventory/group-items returns concrete items for one collection group", async () => {
+    const formId = "55555555-5555-4555-8555-555555555555";
+
+    callRpcRawMock.mockResolvedValueOnce({
+      items: [
+        {
+          item_instance_id: ITEM_INSTANCE_ID,
+          template_id: TEMPLATE_ID,
+          template_slug: "forest_sproutling",
+          name: "Forest Sproutling",
+          rarity: {
+            code: "COMMON",
+            display_name: "Common",
+            sort_order: 10,
+          },
+          form: {
+            id: formId,
+            index: 1,
+            display_name: "Base Form",
+          },
+          type_code: "CHARACTER",
+          serial_no: 1,
+          level: 9,
+          power: 120,
+          status: "available",
+          tradeable: true,
+          upgradeable: true,
+          evolvable: true,
+          decomposable: true,
+          nft_mintable: true,
+          obtained_at: "2026-05-21T00:00:00.000Z",
+        },
+      ],
+      total: 681,
+      limit: 100,
+      offset: 0,
+      statuses: ["available", "locked", "listed", "minting", "minted"],
+      server_time: "2026-05-21T00:00:00.000Z",
+    });
+
+    const { default: inventoryGroupItemsHandler } =
+      await import("../../api/inventory/group-items");
+    const result = await invokeApiHandler<ApiSuccessResponse>(
+      inventoryGroupItemsHandler,
+      {
+        method: "GET",
+        url: "/api/inventory/group-items",
+        query: {
+          form_id: formId,
+          include_locked: "true",
+          template_id: TEMPLATE_ID,
+        },
+        headers: {
+          cookie: "tma_game_session=test-session-token-000000000000",
+          "x-forwarded-for": "127.0.0.31",
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(200);
+    expect(result.body).toMatchObject({
+      ok: true,
+      data: {
+        next_cursor: "100",
+        total: 681,
+        items: [
+          {
+            item_instance_id: ITEM_INSTANCE_ID,
+            level: 9,
+            power: 120,
+            template_id: TEMPLATE_ID,
+          },
+        ],
+      },
+    });
+    expect(callRpcRawMock).toHaveBeenCalledWith(
+      "inventory_list_collection_group_items",
+      expect.objectContaining({
+        p_form_id: formId,
+        p_limit: 100,
+        p_offset: 0,
+        p_statuses: ["available", "locked", "listed", "minting", "minted"],
+        p_template_id: TEMPLATE_ID,
+        p_user_id: USER_ID,
+      }),
+      expect.any(Object),
+    );
+  });
+
+  it("/api/inventory/group-items rejects filters outside the group-items contract", async () => {
+    const { default: inventoryGroupItemsHandler } =
+      await import("../../api/inventory/group-items");
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      inventoryGroupItemsHandler,
+      {
+        method: "GET",
+        url: "/api/inventory/group-items",
+        query: {
+          only_sellable: "true",
+          template_id: TEMPLATE_ID,
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(400);
+    expect(result.body).toMatchObject({
+      ok: false,
+      error: {
+        code: "VALIDATION_ERROR",
+      },
+    });
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+  });
+
   it("maps inventory_get_collection_summary RPC payload into grouped API data", () => {
     const response = buildInventorySummaryResponse({
       groups: [

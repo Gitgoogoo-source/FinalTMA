@@ -56,6 +56,54 @@ describe("collection api", () => {
     expect(params.get("limit")).toBe("100");
   });
 
+  it("passes collection group identity through the group-items API", async () => {
+    mocks.apiRequest.mockResolvedValueOnce({
+      items: [
+        {
+          item_instance_id: "66666666-6666-4666-8666-666666666666",
+          template_id: "55555555-5555-4555-8555-555555555555",
+          name: "森林幼芽",
+          serial_no: 1,
+          level: 9,
+          power: 120,
+          status: "available",
+        },
+      ],
+      total: 681,
+      limit: 100,
+      offset: 100,
+      next_cursor: "200",
+    });
+
+    const { fetchInventoryGroupItems } = await import("./collection.api");
+    const result = await fetchInventoryGroupItems({
+      cursor: "100",
+      formId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      includeLocked: true,
+      templateId: "55555555-5555-4555-8555-555555555555",
+    });
+    const [url, requestOptions] = mocks.apiRequest.mock.calls[0] ?? [];
+    const params = new URLSearchParams(String(url).split("?")[1] ?? "");
+
+    expect(String(url).startsWith("/inventory/group-items?")).toBe(true);
+    expect(params.get("template_id")).toBe(
+      "55555555-5555-4555-8555-555555555555",
+    );
+    expect(params.get("form_id")).toBe("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");
+    expect(params.get("cursor")).toBe("100");
+    expect(params.get("include_locked")).toBe("true");
+    expect(params.get("limit")).toBe("100");
+    expect(requestOptions).toMatchObject({
+      method: "GET",
+    });
+    expect(result.nextCursor).toBe("200");
+    expect(result.items[0]).toMatchObject({
+      itemInstanceId: "66666666-6666-4666-8666-666666666666",
+      level: 9,
+      serialNo: 1,
+    });
+  });
+
   it("requests server-backed status and evolution preview for inventory detail", async () => {
     mocks.apiRequest.mockResolvedValueOnce({
       item_instance_id: "66666666-6666-4666-8666-666666666666",
