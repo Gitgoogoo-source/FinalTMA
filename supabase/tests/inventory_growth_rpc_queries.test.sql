@@ -185,9 +185,12 @@ create temp table _ids (key text primary key, id uuid, payload jsonb) on commit 
 
 insert into _ids (key, id) values ('user', testutil.make_user(12000000001, 'growth_rpc_user'));
 insert into _ids (key, payload) values ('catalog', testutil.create_catalog_fixture('growth-rpc', 'COMMON'));
+insert into _ids (key, payload) values ('target_catalog', testutil.create_catalog_fixture('growth-rpc-target', 'RARE'));
 insert into _ids (key, id) select 'template', ((select payload from _ids where key = 'catalog') ->> 'template_id')::uuid;
 insert into _ids (key, id) select 'form1', ((select payload from _ids where key = 'catalog') ->> 'form1_id')::uuid;
 insert into _ids (key, id) select 'form2', ((select payload from _ids where key = 'catalog') ->> 'form2_id')::uuid;
+insert into _ids (key, id) select 'target_template', ((select payload from _ids where key = 'target_catalog') ->> 'template_id')::uuid;
+insert into _ids (key, id) select 'target_form', ((select payload from _ids where key = 'target_catalog') ->> 'form1_id')::uuid;
 
 do $$
 begin
@@ -203,8 +206,8 @@ insert into inventory.evolution_rules (
 values (
   (select id from _ids where key = 'template'),
   (select id from _ids where key = 'form1'),
-  (select id from _ids where key = 'template'),
-  (select id from _ids where key = 'form2'),
+  (select id from _ids where key = 'target_template'),
+  (select id from _ids where key = 'target_form'),
   3,
   120,
   10000,

@@ -66,7 +66,7 @@ export function getCollectionLockReasonLabel(
     case "market_order":
       return "市场订单";
     case "evolution":
-      return "合成处理中";
+      return "进化处理中";
     case "decompose":
       return "分解处理中";
     case "upgrade":

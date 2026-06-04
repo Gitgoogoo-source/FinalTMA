@@ -316,7 +316,7 @@ select is((select rarity_code from gacha.draw_results dr join _ids i on i.id = d
 select ok((select was_pity from gacha.draw_results dr join _ids i on i.id = dr.draw_order_id where i.key = 'draw_order'), 'draw result records was_pity=true');
 select is((select current_count from gacha.user_pity_states ups join _ids u on u.id = ups.user_id join _ids p on p.id = ups.pity_rule_id where u.key = 'user' and p.key = 'pity_rule'), 0, 'pity counter resets after guaranteed hit');
 select is(testutil.balance_of((select id from _ids where key = 'user'), 'KCOIN'), 100::numeric, 'paid open returns 100 K-coin');
-select is((select remaining_stock from gacha.blind_boxes b join _ids i on i.id = b.id where i.key = 'box'), 9, 'box stock decreases by draw quantity');
+select is((select remaining_stock from gacha.blind_boxes b join _ids i on i.id = b.id where i.key = 'box'), 10, 'box stock is not decremented because blind boxes are unlimited');
 select ok(exists (select 1 from inventory.item_instances ii join gacha.draw_results dr on dr.item_instance_id = ii.id join _ids i on i.id = dr.draw_order_id where i.key = 'draw_order' and ii.owner_user_id = (select id from _ids where key = 'user') and ii.status = 'available'), 'gacha creates an available inventory item for user');
 select ok(exists (select 1 from album.user_discoveries ud where ud.user_id = (select id from _ids where key = 'user') and ud.template_id = ((select payload from _ids where key = 'fixture') ->> 'epic_template_id')::uuid), 'gacha reward creates album discovery');
 

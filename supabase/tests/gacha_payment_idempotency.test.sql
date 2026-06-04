@@ -499,47 +499,22 @@ set remaining_stock = 0,
 where id = (select id from _ids where key = 'box');
 
 insert into _ids (key, payload)
-select 'retry_failed', api.gacha_process_paid_order(
+select 'zero_stock_fulfilled', api.gacha_process_paid_order(
   (select id from _ids where key = 'retry_star_order'),
   'tg-charge-idempotency-retry-001',
   'provider-charge-idempotency-retry-001',
   jsonb_build_object('update_id', 97070002, 'test', 'payment_retry_failure')
 );
 
-select is(((select payload from _ids where key = 'retry_failed') ->> 'fulfilled')::boolean, false, 'stock failure returns fulfilled=false');
-select is(((select payload from _ids where key = 'retry_failed') ->> 'reason_code'), 'STOCK_INSUFFICIENT', 'stock failure returns retryable stock reason');
-select is((select status from payments.star_orders where id = (select id from _ids where key = 'retry_star_order')), 'failed', 'stock failure marks Stars order failed');
-select is((select status from gacha.draw_orders where id = (select id from _ids where key = 'retry_draw_order')), 'failed', 'stock failure marks draw order failed');
-select is((select count(*)::int from payments.star_payments where telegram_payment_charge_id = 'tg-charge-idempotency-retry-001'), 1, 'stock failure keeps successful payment row for retry');
-select is((select count(*)::int from gacha.draw_results where draw_order_id = (select id from _ids where key = 'retry_draw_order')), 0, 'stock failure does not create draw results');
-select is((select count(*)::int from ops.risk_events where source_id = (select id from _ids where key = 'retry_star_order') and event_type = 'gacha_fulfillment_failed'), 1, 'stock failure writes risk event');
-select is((select process_status from payments.telegram_webhook_events where update_id = 97070002), 'failed', 'stock failure marks webhook event failed');
-select is((select status_context #>> '{fulfillment,status}' from payments.telegram_webhook_events where update_id = 97070002), 'failed', 'stock failure records fulfillment status');
-select is((select status_context #>> '{fulfillment,reason_code}' from payments.telegram_webhook_events where update_id = 97070002), 'STOCK_INSUFFICIENT', 'stock failure records fulfillment reason');
-select is((select retry_count from payments.telegram_webhook_events where update_id = 97070002), 1, 'stock failure increments webhook retry count');
-select ok((select next_retry_at is not null from payments.telegram_webhook_events where update_id = 97070002), 'stock failure schedules webhook retry');
-
-update gacha.blind_boxes
-set remaining_stock = 10,
-    status = 'active',
-    updated_at = now()
-where id = (select id from _ids where key = 'box');
-
-insert into _ids (key, payload)
-select 'retry_success', api.gacha_process_paid_order(
-  (select id from _ids where key = 'retry_star_order'),
-  'tg-charge-idempotency-retry-001',
-  'provider-charge-idempotency-retry-001',
-  jsonb_build_object('update_id', 97070002, 'test', 'payment_retry_success')
-);
-
-select ok(((select payload from _ids where key = 'retry_success') ->> 'fulfilled')::boolean, 'retry after stock recovery fulfills paid order');
-select is((select status from payments.star_orders where id = (select id from _ids where key = 'retry_star_order')), 'fulfilled', 'retry after stock recovery marks Stars order fulfilled');
-select is((select count(*)::int from gacha.draw_results where draw_order_id = (select id from _ids where key = 'retry_draw_order')), 1, 'retry after stock recovery creates one draw result');
-select is(testutil.balance_of((select id from _ids where key = 'user'), 'KCOIN'), 200::numeric, 'retry after stock recovery credits open reward once');
-select is((select process_status from payments.telegram_webhook_events where update_id = 97070002), 'processed', 'retry success marks webhook event processed');
-select is((select status_context #>> '{fulfillment,status}' from payments.telegram_webhook_events where update_id = 97070002), 'fulfilled', 'retry success records fulfilled context');
-select ok((select next_retry_at is null from payments.telegram_webhook_events where update_id = 97070002), 'retry success clears webhook next retry time');
+select ok(((select payload from _ids where key = 'zero_stock_fulfilled') ->> 'fulfilled')::boolean, 'legacy zero stock still fulfills paid order because blind boxes are unlimited');
+select is((select status from payments.star_orders where id = (select id from _ids where key = 'retry_star_order')), 'fulfilled', 'zero-stock paid order marks Stars order fulfilled');
+select is((select status from gacha.draw_orders where id = (select id from _ids where key = 'retry_draw_order')), 'completed', 'zero-stock paid order completes draw order');
+select is((select count(*)::int from payments.star_payments where telegram_payment_charge_id = 'tg-charge-idempotency-retry-001'), 1, 'zero-stock paid order records successful payment row');
+select is((select count(*)::int from gacha.draw_results where draw_order_id = (select id from _ids where key = 'retry_draw_order')), 1, 'zero-stock paid order creates one draw result');
+select is(testutil.balance_of((select id from _ids where key = 'user'), 'KCOIN'), 200::numeric, 'zero-stock paid order credits open reward once');
+select is((select process_status from payments.telegram_webhook_events where update_id = 97070002), 'processed', 'zero-stock paid order marks webhook event processed');
+select is((select status_context #>> '{fulfillment,status}' from payments.telegram_webhook_events where update_id = 97070002), 'fulfilled', 'zero-stock paid order records fulfilled context');
+select ok((select next_retry_at is null from payments.telegram_webhook_events where update_id = 97070002), 'zero-stock paid order does not schedule a stock retry');
 
 insert into _ids (key, payload) select 'amount_mismatch_order', api.gacha_create_order((select id from _ids where key = 'user'), (select id from _ids where key = 'box'), 1, 'gacha-payment-order-amount-mismatch-001');
 insert into _ids (key, id) select 'amount_mismatch_star_order', ((select payload from _ids where key = 'amount_mismatch_order') ->> 'star_order_id')::uuid;

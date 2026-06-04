@@ -22,14 +22,15 @@ type Stage3Fixture = {
   baseTemplateId: string;
   upgradeItemId: string;
   decomposeItemId: string;
+  evolveSuccessTargetTemplateId: string;
   evolveSuccessItemIds: [string, string, string];
+  evolveFailureTargetTemplateId: string;
   evolveFailureItemIds: [string, string, string];
 };
 
 type CreatedCollectible = {
   templateId: string;
   baseFormId: string;
-  evolvedFormId: string;
   slug: string;
   displayName: string;
   successRateBps?: number;
@@ -128,6 +129,11 @@ test("第十七步真实链路：浏览器会话通过 Vercel API 写入 Supabas
   expect(evolveSuccess.success).toBe(true);
   expect(evolveSuccess.created_item_instance_id).toBeTruthy();
   await expectItemsHaveStatus(db, fixture.evolveSuccessItemIds, "consumed");
+  await expectItem(db, evolveSuccess.created_item_instance_id as string, {
+    owner_user_id: userId,
+    status: "available",
+    template_id: fixture.evolveSuccessTargetTemplateId,
+  });
   await expectTableCount(
     db,
     "inventory",
@@ -271,11 +277,21 @@ async function seedStage3Fixture(
     displayName: `真实链路成功 ${input.runId}`,
     successRateBps: 10_000,
   });
+  const evolveSuccessTarget = createCollectible({
+    runId: input.runId,
+    slugPrefix: "success-target",
+    displayName: `真实链路成功目标 ${input.runId}`,
+  });
   const evolveFailure = createCollectible({
     runId: input.runId,
     slugPrefix: "failure",
     displayName: `真实链路失败 ${input.runId}`,
     successRateBps: 0,
+  });
+  const evolveFailureTarget = createCollectible({
+    runId: input.runId,
+    slugPrefix: "failure-target",
+    displayName: `真实链路失败目标 ${input.runId}`,
   });
   const upgradeItemId = randomUUID();
   const decomposeItemId = randomUUID();
@@ -312,7 +328,9 @@ async function seedStage3Fixture(
       milestoneId,
       base,
       evolveSuccess,
+      evolveSuccessTarget,
       evolveFailure,
+      evolveFailureTarget,
       upgradeItemId,
       items,
     }),
@@ -326,7 +344,9 @@ async function seedStage3Fixture(
     baseTemplateId: base.templateId,
     upgradeItemId,
     decomposeItemId,
+    evolveSuccessTargetTemplateId: evolveSuccessTarget.templateId,
     evolveSuccessItemIds,
+    evolveFailureTargetTemplateId: evolveFailureTarget.templateId,
     evolveFailureItemIds,
   };
 }
@@ -340,7 +360,6 @@ function createCollectible(input: {
   const collectible: CreatedCollectible = {
     templateId: randomUUID(),
     baseFormId: randomUUID(),
-    evolvedFormId: randomUUID(),
     slug: `stage3-real-${input.slugPrefix}-${input.runId}`,
     displayName: input.displayName,
   };
@@ -375,7 +394,9 @@ function buildStage3FixtureSql(input: {
   milestoneId: string;
   base: CreatedCollectible;
   evolveSuccess: CreatedCollectible;
+  evolveSuccessTarget: CreatedCollectible;
   evolveFailure: CreatedCollectible;
+  evolveFailureTarget: CreatedCollectible;
   upgradeItemId: string;
   items: FixtureItem[];
 }): string {
@@ -398,7 +419,11 @@ insert into catalog.series (
 
 ${collectibleSql(input.base, input.seriesId, input.runId)}
 ${collectibleSql(input.evolveSuccess, input.seriesId, input.runId)}
+${collectibleSql(input.evolveSuccessTarget, input.seriesId, input.runId)}
 ${collectibleSql(input.evolveFailure, input.seriesId, input.runId)}
+${collectibleSql(input.evolveFailureTarget, input.seriesId, input.runId)}
+${evolutionRuleSql(input.evolveSuccess, input.evolveSuccessTarget, input.runId)}
+${evolutionRuleSql(input.evolveFailure, input.evolveFailureTarget, input.runId)}
 
 insert into inventory.upgrade_rules (
   rarity_code, form_index, from_level, to_level, cost_fgems, power_gain, active, metadata
@@ -516,34 +541,6 @@ function collectibleSql(
   runId: string,
 ): string {
   const metadata = `jsonb_build_object('stage3_real_e2e', true, 'run_id', ${sqlString(runId)})`;
-  const evolutionRule =
-    collectible.successRateBps === undefined
-      ? ""
-      : `
-insert into inventory.evolution_rules (
-  id,
-  from_template_id,
-  from_form_id,
-  to_template_id,
-  to_form_id,
-  required_count,
-  cost_kcoin,
-  success_rate_bps,
-  active,
-  metadata
-) values (
-  ${sqlUuid(randomUUID())},
-  ${sqlUuid(collectible.templateId)},
-  ${sqlUuid(collectible.baseFormId)},
-  ${sqlUuid(collectible.templateId)},
-  ${sqlUuid(collectible.evolvedFormId)},
-  3,
-  25,
-  ${collectible.successRateBps},
-  true,
-  ${metadata}
-);
-`;
 
   return `
 insert into catalog.collectible_templates (
@@ -595,8 +592,7 @@ insert into catalog.collectible_forms (
   base_power_bonus,
   is_default,
   metadata
-) values
-(
+) values (
   ${sqlUuid(collectible.baseFormId)},
   ${sqlUuid(collectible.templateId)},
   1,
@@ -605,22 +601,45 @@ insert into catalog.collectible_forms (
   0,
   true,
   ${metadata}
-),
-(
-  ${sqlUuid(collectible.evolvedFormId)},
-  ${sqlUuid(collectible.templateId)},
-  2,
-  'evolved',
-  ${sqlString(`${collectible.displayName} 进化`)},
-  8,
-  false,
+);
+`;
+}
+
+function evolutionRuleSql(
+  source: CreatedCollectible,
+  target: CreatedCollectible,
+  runId: string,
+): string {
+  if (source.successRateBps === undefined) {
+    throw new Error(`Missing successRateBps for evolution source ${source.slug}`);
+  }
+
+  const metadata = `jsonb_build_object('stage3_real_e2e', true, 'run_id', ${sqlString(runId)})`;
+
+  return `
+insert into inventory.evolution_rules (
+  id,
+  from_template_id,
+  from_form_id,
+  to_template_id,
+  to_form_id,
+  required_count,
+  cost_kcoin,
+  success_rate_bps,
+  active,
+  metadata
+) values (
+  ${sqlUuid(randomUUID())},
+  ${sqlUuid(source.templateId)},
+  ${sqlUuid(source.baseFormId)},
+  ${sqlUuid(target.templateId)},
+  ${sqlUuid(target.baseFormId)},
+  3,
+  25,
+  ${source.successRateBps},
+  true,
   ${metadata}
 );
-
-update catalog.collectible_forms
-set next_form_id = ${sqlUuid(collectible.evolvedFormId)}
-where id = ${sqlUuid(collectible.baseFormId)};
-${evolutionRule}
 `;
 }
 
@@ -776,7 +795,7 @@ async function expectItem(
   const rows = await selectRows<Record<string, unknown>>(
     db,
     `
-select owner_user_id::text as owner_user_id, status, level
+select owner_user_id::text as owner_user_id, template_id::text as template_id, form_id::text as form_id, status, level
 from inventory.item_instances
 where id = ${sqlUuid(id)}
 `,

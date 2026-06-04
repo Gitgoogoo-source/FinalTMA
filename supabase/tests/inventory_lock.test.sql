@@ -198,9 +198,12 @@ $$;
 create temp table _ids (key text primary key, id uuid, txt text, payload jsonb) on commit drop;
 insert into _ids (key, id) values ('user', testutil.make_user(9600000001, 'inventory_lock_user', null));
 insert into _ids (key, payload) values ('catalog', testutil.create_catalog_fixture('inventory-lock', 'COMMON', true, true, true, true, true));
+insert into _ids (key, payload) values ('target_catalog', testutil.create_catalog_fixture('inventory-lock-target', 'RARE', true, true, true, true, true));
 insert into _ids (key, id) select 'template', ((select payload from _ids where key = 'catalog') ->> 'template_id')::uuid;
 insert into _ids (key, id) select 'form1', ((select payload from _ids where key = 'catalog') ->> 'form1_id')::uuid;
 insert into _ids (key, id) select 'form2', ((select payload from _ids where key = 'catalog') ->> 'form2_id')::uuid;
+insert into _ids (key, id) select 'target_template', ((select payload from _ids where key = 'target_catalog') ->> 'template_id')::uuid;
+insert into _ids (key, id) select 'target_form', ((select payload from _ids where key = 'target_catalog') ->> 'form1_id')::uuid;
 insert into _ids (key, id) select 'item', testutil.create_item((select id from _ids where key = 'user'), (select id from _ids where key = 'template'), (select id from _ids where key = 'form1'), 1, 10, 'admin');
 insert into _ids (key, id) select 'item2', testutil.create_item((select id from _ids where key = 'user'), (select id from _ids where key = 'template'), (select id from _ids where key = 'form1'), 1, 10, 'admin');
 insert into _ids (key, id) select 'item3', testutil.create_item((select id from _ids where key = 'user'), (select id from _ids where key = 'template'), (select id from _ids where key = 'form1'), 1, 10, 'admin');
@@ -223,7 +226,7 @@ values ('COMMON', 1, 1, 5, true)
 on conflict (rarity_code, form_index, min_level, active) do update set reward_fgems = excluded.reward_fgems, updated_at = now();
 
 insert into inventory.evolution_rules (from_template_id, from_form_id, to_template_id, to_form_id, required_count, cost_kcoin, success_rate_bps, active)
-values ((select id from _ids where key = 'template'), (select id from _ids where key = 'form1'), (select id from _ids where key = 'template'), (select id from _ids where key = 'form2'), 3, 0, 10000, true);
+values ((select id from _ids where key = 'template'), (select id from _ids where key = 'form1'), (select id from _ids where key = 'target_template'), (select id from _ids where key = 'target_form'), 3, 0, 10000, true);
 
 do $$
 begin

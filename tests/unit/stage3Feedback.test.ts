@@ -14,7 +14,7 @@ describe("stage-3 API feedback messages", () => {
     ["INSUFFICIENT_FGEMS", "FGEMS 余额不足。"],
     ["INSUFFICIENT_KCOIN", "KCOIN 余额不足。"],
     ["UPGRADE_RULE_NOT_FOUND", "升级配置缺失，请稍后重试。"],
-    ["EVOLVE_RULE_NOT_FOUND", "合成配置缺失，请稍后重试。"],
+    ["EVOLVE_RULE_NOT_FOUND", "进化配置缺失，请稍后重试。"],
     ["DECOMPOSE_REQUIRES_DUPLICATE", "只能分解重复藏品。"],
     ["MILESTONE_NOT_REACHED", "图鉴里程碑尚未达成。"],
     ["MILESTONE_VERSION_MISMATCH", "图鉴奖励配置已变更，请刷新后重试。"],

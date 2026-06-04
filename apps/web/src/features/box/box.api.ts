@@ -190,15 +190,9 @@ function normalizeBlindBox(value: unknown): BlindBox | null {
       readNumber(value.discountRate) ?? readNumber(value.discount_rate) ?? 0.9,
     discountBps:
       readNumber(value.discountBps) ?? readNumber(value.discount_bps) ?? 1000,
-    stockStatus: normalizeStockStatus(
-      readString(value.stockStatus) ?? readString(value.stock_status),
-    ),
-    totalStock:
-      readNullableNumber(value.totalStock) ??
-      readNullableNumber(value.total_stock),
-    remainingStock:
-      readNullableNumber(value.remainingStock) ??
-      readNullableNumber(value.remaining_stock),
+    stockStatus: "unlimited",
+    totalStock: null,
+    remainingStock: null,
     pityProgress: normalizePityProgress(
       value.pityProgress ?? value.pity_progress,
     ),
@@ -544,19 +538,6 @@ function normalizeBoxStatus(value: unknown): BoxStatus {
   }
 
   return "paused";
-}
-
-function normalizeStockStatus(value: string | null) {
-  if (
-    value === "available" ||
-    value === "low_stock" ||
-    value === "sold_out" ||
-    value === "unlimited"
-  ) {
-    return value;
-  }
-
-  return "available";
 }
 
 function normalizeDrawCount(value: unknown): 1 | 10 | null {

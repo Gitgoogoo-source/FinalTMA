@@ -95,7 +95,10 @@ export function UpgradePanel({
   }
 
   return (
-    <div className="upgrade-panel" role="presentation">
+    <div
+      className="upgrade-panel growth-panel--liquid-glass"
+      role="presentation"
+    >
       <button
         aria-label="关闭升级面板"
         className="upgrade-panel__backdrop"

@@ -358,7 +358,11 @@ function mapGachaRpcError(error: unknown): ApiError {
   }
 
   if (message.includes("stock is insufficient")) {
-    return new ApiError(409, "BOX_STOCK_NOT_ENOUGH", "盲盒库存不足。");
+    return new ApiError(
+      409,
+      "BOX_STOCK_NOT_ENOUGH",
+      "当前盲盒暂时不可开启，请刷新后重试。",
+    );
   }
 
   if (

@@ -18,6 +18,7 @@ import { CollectionSellEntry } from "../components/CollectionSellEntry";
 import { DecomposePanel } from "../components/DecomposePanel";
 import { EvolvePanel } from "../components/EvolvePanel";
 import { GrowthResultModal } from "../components/GrowthResultModal";
+import { MintConfirmPanel } from "../components/MintConfirmPanel";
 import { UpgradePanel } from "../components/UpgradePanel";
 import type {
   CollectionDecomposeItemResponse,
@@ -44,6 +45,9 @@ export function CollectionPage() {
   const [isEvolveOpen, setIsEvolveOpen] = useState(false);
   const [isDecomposeOpen, setIsDecomposeOpen] = useState(false);
   const [isMintQueueOpen, setIsMintQueueOpen] = useState(false);
+  const [mintConfirmTargetId, setMintConfirmTargetId] = useState<string | null>(
+    null,
+  );
   const [cancelSellTarget, setCancelSellTarget] = useState<{
     itemInstanceId: string;
     listingId: string | null;
@@ -69,6 +73,14 @@ export function CollectionPage() {
       null,
     [groupedItems, items, selectedItemId],
   );
+  const mintConfirmItem = useMemo(
+    () =>
+      mintConfirmTargetId
+        ? (items.find((item) => item.itemInstanceId === mintConfirmTargetId) ??
+          selectedItem)
+        : null,
+    [items, mintConfirmTargetId, selectedItem],
+  );
 
   useEffect(() => {
     if (items.length === 0) {
@@ -78,6 +90,7 @@ export function CollectionPage() {
       setIsEvolveOpen(false);
       setIsDecomposeOpen(false);
       setIsMintQueueOpen(false);
+      setMintConfirmTargetId(null);
       setCancelSellTarget(null);
       setUpgradeResult(null);
       setEvolveResult(null);
@@ -98,6 +111,7 @@ export function CollectionPage() {
     setIsSellOpen(false);
     setIsEvolveOpen(false);
     setIsDecomposeOpen(false);
+    setMintConfirmTargetId(null);
     setIsUpgradeOpen(true);
   }
 
@@ -105,6 +119,7 @@ export function CollectionPage() {
     setIsSellOpen(false);
     setIsUpgradeOpen(false);
     setIsDecomposeOpen(false);
+    setMintConfirmTargetId(null);
     setIsEvolveOpen(true);
   }
 
@@ -112,6 +127,7 @@ export function CollectionPage() {
     setIsSellOpen(false);
     setIsUpgradeOpen(false);
     setIsEvolveOpen(false);
+    setMintConfirmTargetId(null);
     setIsDecomposeOpen(true);
   }
 
@@ -119,6 +135,7 @@ export function CollectionPage() {
     setIsUpgradeOpen(false);
     setIsEvolveOpen(false);
     setIsDecomposeOpen(false);
+    setMintConfirmTargetId(null);
     setIsSellOpen(true);
   }
 
@@ -130,6 +147,7 @@ export function CollectionPage() {
     setIsUpgradeOpen(false);
     setIsEvolveOpen(false);
     setIsDecomposeOpen(false);
+    setMintConfirmTargetId(null);
     setCancelSellTarget(target);
   }
 
@@ -200,7 +218,7 @@ export function CollectionPage() {
     );
   }
 
-  function handleCreateMint(
+  function handleOpenMintConfirm(
     itemInstanceId: string,
     blockingMessages: string[],
   ) {
@@ -217,13 +235,27 @@ export function CollectionPage() {
       return;
     }
 
+    setIsSellOpen(false);
+    setIsUpgradeOpen(false);
+    setIsEvolveOpen(false);
+    setIsDecomposeOpen(false);
+    setCancelSellTarget(null);
+    setMintConfirmTargetId(itemInstanceId);
+  }
+
+  function handleConfirmMint() {
+    if (!mintConfirmTargetId || createMintMutation.isPending) {
+      return;
+    }
+
     createMintMutation.mutate(
       {
-        itemInstanceId,
+        itemInstanceId: mintConfirmTargetId,
       },
       {
         onSuccess: (result) => {
           setSelectedItemId(result.itemInstanceId);
+          setMintConfirmTargetId(null);
           setIsMintQueueOpen(true);
           pushToast({
             type: "success",
@@ -327,7 +359,7 @@ export function CollectionPage() {
         onCancelSell={handleOpenCancelSell}
         onDecompose={handleOpenDecompose}
         onEvolve={handleOpenEvolve}
-        onMint={handleCreateMint}
+        onMint={handleOpenMintConfirm}
         onSell={handleOpenSell}
         onUpgrade={handleOpenUpgrade}
       />
@@ -393,6 +425,13 @@ export function CollectionPage() {
         onClose={() => setIsDecomposeOpen(false)}
         onDecomposed={handleDecomposeResult}
       />
+      <MintConfirmPanel
+        open={mintConfirmTargetId !== null}
+        item={mintConfirmItem}
+        isPending={createMintMutation.isPending}
+        onClose={() => setMintConfirmTargetId(null)}
+        onConfirm={handleConfirmMint}
+      />
       <MintQueueSheet
         open={isMintQueueOpen}
         items={mintQueueQuery.items}
@@ -415,9 +454,9 @@ export function CollectionPage() {
       />
       <GrowthResultModal
         open={evolveResult !== null}
-        title={evolveResult?.success ? "合成成功" : "合成失败"}
+        title={evolveResult?.success ? "进化成功" : "进化失败"}
         description={formatEvolveResultDescription(evolveResult)}
-        headerLabel={evolveResult?.success ? "成长完成" : "合成结果"}
+        headerLabel={evolveResult?.success ? "成长完成" : "进化结果"}
         metrics={getEvolveResultMetrics(evolveResult)}
         tone={evolveResult?.success ? "success" : "warning"}
         onClose={() => setEvolveResult(null)}
@@ -591,8 +630,8 @@ function formatEvolveResultDescription(
   }
 
   return result.success
-    ? "新形态已由服务端生成，库存和资产正在刷新。"
-    : "合成失败，已返还主藏品。";
+    ? "新藏品已由服务端生成，库存和资产正在刷新。"
+    : "进化失败，已返还主藏品。";
 }
 
 function formatEvolveBalanceChange(

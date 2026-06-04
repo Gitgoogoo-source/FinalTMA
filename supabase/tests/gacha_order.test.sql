@@ -452,7 +452,9 @@ select is((select amount from economy.currency_ledger where source_id = (select 
 select ok(testutil.raises_like(format('select api.gacha_create_order(%L::uuid, %L::uuid, 2, %L)', (select id::text from _ids where key = 'user'), (select id::text from _ids where key = 'box'), 'invalid-quantity'), '%quantity must be 1 or 10%'), 'create order rejects unsupported quantity');
 
 update gacha.blind_boxes set remaining_stock = 0 where id = (select id from _ids where key = 'box');
-select ok(testutil.raises_like(format('select api.gacha_create_order(%L::uuid, %L::uuid, 1, %L)', (select id::text from _ids where key = 'user'), (select id::text from _ids where key = 'box'), 'sold-out-stock-box'), '%blind box stock is insufficient%'), 'create order rejects sold-out stock');
+insert into _ids (key, payload)
+select 'zero_stock_order', api.gacha_create_order((select id from _ids where key = 'user'), (select id from _ids where key = 'box'), 1, 'zero-stock-box-still-openable');
+select is(((select payload from _ids where key = 'zero_stock_order') ->> 'quantity')::int, 1, 'create order ignores legacy blind-box stock because boxes are unlimited');
 
 update gacha.blind_boxes set status = 'paused' where id = (select id from _ids where key = 'box');
 select ok(testutil.raises_like(format('select api.gacha_create_order(%L::uuid, %L::uuid, 1, %L)', (select id::text from _ids where key = 'user'), (select id::text from _ids where key = 'box'), 'paused-box'), '%blind box is not active%'), 'create order rejects inactive box');

@@ -314,11 +314,14 @@ select is((select count(*)::integer from inventory.upgrade_logs where idempotenc
 
 -- Evolution acceptance cases.
 insert into _ids (key, payload) values ('evolve_success_catalog', testutil.create_catalog_fixture('stage3-accept-evolve-success', 'COMMON'));
+insert into _ids (key, payload) values ('evolve_success_target_catalog', testutil.create_catalog_fixture('stage3-accept-evolve-success-target', 'RARE'));
 insert into _ids (key, id) select 'evolve_success_template', ((select payload from _ids where key = 'evolve_success_catalog') ->> 'template_id')::uuid;
 insert into _ids (key, id) select 'evolve_success_form1', ((select payload from _ids where key = 'evolve_success_catalog') ->> 'form1_id')::uuid;
 insert into _ids (key, id) select 'evolve_success_form2', ((select payload from _ids where key = 'evolve_success_catalog') ->> 'form2_id')::uuid;
+insert into _ids (key, id) select 'evolve_success_target_template', ((select payload from _ids where key = 'evolve_success_target_catalog') ->> 'template_id')::uuid;
+insert into _ids (key, id) select 'evolve_success_target_form', ((select payload from _ids where key = 'evolve_success_target_catalog') ->> 'form1_id')::uuid;
 insert into inventory.evolution_rules (from_template_id, from_form_id, to_template_id, to_form_id, required_count, cost_kcoin, success_rate_bps, active, metadata)
-values ((select id from _ids where key = 'evolve_success_template'), (select id from _ids where key = 'evolve_success_form1'), (select id from _ids where key = 'evolve_success_template'), (select id from _ids where key = 'evolve_success_form2'), 3, 120, 10000, true, jsonb_build_object('suite', 'stage3_database_acceptance'))
+values ((select id from _ids where key = 'evolve_success_template'), (select id from _ids where key = 'evolve_success_form1'), (select id from _ids where key = 'evolve_success_target_template'), (select id from _ids where key = 'evolve_success_target_form'), 3, 120, 10000, true, jsonb_build_object('suite', 'stage3_database_acceptance'))
 on conflict (from_template_id, from_form_id) where active = true
 do update set cost_kcoin = excluded.cost_kcoin,
               success_rate_bps = excluded.success_rate_bps,
@@ -336,7 +339,7 @@ select 'evolve_success', api.inventory_evolve_item(
   (select id from _ids where key = 'evolve_user'),
   array[(select id from _ids where key = 'evolve_s1'), (select id from _ids where key = 'evolve_s2'), (select id from _ids where key = 'evolve_s3')],
   'stage3-accept-evolve-success',
-  (select id from _ids where key = 'evolve_success_form2'),
+  (select id from _ids where key = 'evolve_success_target_form'),
   120::numeric,
   10000,
   (select id from _ids where key = 'evolve_s3')
@@ -351,9 +354,10 @@ select ok(exists (
   from inventory.item_instances
   where id = (select id from _ids where key = 'evolve_success_result')
     and owner_user_id = (select id from _ids where key = 'evolve_user')
-    and form_id = (select id from _ids where key = 'evolve_success_form2')
+    and template_id = (select id from _ids where key = 'evolve_success_target_template')
+    and form_id = (select id from _ids where key = 'evolve_success_target_form')
     and status = 'available'
-), 'evolution success creates a new available evolved item');
+), 'evolution success creates a new available target item');
 select is((select count(*)::integer from inventory.evolution_attempts where idempotency_key = 'stage3-accept-evolve-success' and status = 'success' and result_item_instance_id is not null), 1, 'evolution success writes one successful attempt');
 select is((select count(*)::integer from inventory.evolution_consumed_items where attempt_id = ((select payload from _ids where key = 'evolve_success') ->> 'attempt_id')::uuid), 3, 'evolution success writes three consumed item rows');
 select is(testutil.balance_of((select id from _ids where key = 'evolve_user'), 'KCOIN'), 880::numeric, 'evolution success debits KCOIN');
@@ -420,16 +424,19 @@ select is((select count(*)::integer from inventory.evolution_attempts where idem
 insert into _ids (key, id) select 'evolve_poor1', testutil.create_item((select id from _ids where key = 'evolve_poor_user'), (select id from _ids where key = 'evolve_success_template'), (select id from _ids where key = 'evolve_success_form1'), 1, 10);
 insert into _ids (key, id) select 'evolve_poor2', testutil.create_item((select id from _ids where key = 'evolve_poor_user'), (select id from _ids where key = 'evolve_success_template'), (select id from _ids where key = 'evolve_success_form1'), 3, 30);
 insert into _ids (key, id) select 'evolve_poor3', testutil.create_item((select id from _ids where key = 'evolve_poor_user'), (select id from _ids where key = 'evolve_success_template'), (select id from _ids where key = 'evolve_success_form1'), 1, 10);
-select ok(testutil.raises_like(format('select api.inventory_evolve_item(%L::uuid, array[%L::uuid, %L::uuid, %L::uuid], %L, %L::uuid, 120::numeric, 10000, %L::uuid)', (select id::text from _ids where key = 'evolve_poor_user'), (select id::text from _ids where key = 'evolve_poor1'), (select id::text from _ids where key = 'evolve_poor2'), (select id::text from _ids where key = 'evolve_poor3'), 'stage3-accept-evolve-insufficient', (select id::text from _ids where key = 'evolve_success_form2'), (select id::text from _ids where key = 'evolve_poor2')), '%insufficient balance%'), 'evolution rejects insufficient KCOIN');
+select ok(testutil.raises_like(format('select api.inventory_evolve_item(%L::uuid, array[%L::uuid, %L::uuid, %L::uuid], %L, %L::uuid, 120::numeric, 10000, %L::uuid)', (select id::text from _ids where key = 'evolve_poor_user'), (select id::text from _ids where key = 'evolve_poor1'), (select id::text from _ids where key = 'evolve_poor2'), (select id::text from _ids where key = 'evolve_poor3'), 'stage3-accept-evolve-insufficient', (select id::text from _ids where key = 'evolve_success_target_form'), (select id::text from _ids where key = 'evolve_poor2')), '%insufficient balance%'), 'evolution rejects insufficient KCOIN');
 select is((select count(*)::integer from inventory.evolution_attempts where idempotency_key = 'stage3-accept-evolve-insufficient'), 0, 'insufficient-KCOIN evolution writes no attempt');
 select is(testutil.balance_of((select id from _ids where key = 'evolve_poor_user'), 'KCOIN'), 50::numeric, 'insufficient-KCOIN evolution leaves balance unchanged');
 
 insert into _ids (key, payload) values ('evolve_fail_catalog', testutil.create_catalog_fixture('stage3-accept-evolve-fail', 'COMMON'));
+insert into _ids (key, payload) values ('evolve_fail_target_catalog', testutil.create_catalog_fixture('stage3-accept-evolve-fail-target', 'RARE'));
 insert into _ids (key, id) select 'evolve_fail_template', ((select payload from _ids where key = 'evolve_fail_catalog') ->> 'template_id')::uuid;
 insert into _ids (key, id) select 'evolve_fail_form1', ((select payload from _ids where key = 'evolve_fail_catalog') ->> 'form1_id')::uuid;
 insert into _ids (key, id) select 'evolve_fail_form2', ((select payload from _ids where key = 'evolve_fail_catalog') ->> 'form2_id')::uuid;
+insert into _ids (key, id) select 'evolve_fail_target_template', ((select payload from _ids where key = 'evolve_fail_target_catalog') ->> 'template_id')::uuid;
+insert into _ids (key, id) select 'evolve_fail_target_form', ((select payload from _ids where key = 'evolve_fail_target_catalog') ->> 'form1_id')::uuid;
 insert into inventory.evolution_rules (from_template_id, from_form_id, to_template_id, to_form_id, required_count, cost_kcoin, success_rate_bps, active, metadata)
-values ((select id from _ids where key = 'evolve_fail_template'), (select id from _ids where key = 'evolve_fail_form1'), (select id from _ids where key = 'evolve_fail_template'), (select id from _ids where key = 'evolve_fail_form2'), 3, 80, 0, true, jsonb_build_object('suite', 'stage3_database_acceptance'))
+values ((select id from _ids where key = 'evolve_fail_template'), (select id from _ids where key = 'evolve_fail_form1'), (select id from _ids where key = 'evolve_fail_target_template'), (select id from _ids where key = 'evolve_fail_target_form'), 3, 80, 0, true, jsonb_build_object('suite', 'stage3_database_acceptance'))
 on conflict (from_template_id, from_form_id) where active = true
 do update set cost_kcoin = excluded.cost_kcoin,
               success_rate_bps = excluded.success_rate_bps,
@@ -446,7 +453,7 @@ select 'evolve_failed', api.inventory_evolve_item(
   (select id from _ids where key = 'evolve_user'),
   array[(select id from _ids where key = 'evolve_f1'), (select id from _ids where key = 'evolve_f2'), (select id from _ids where key = 'evolve_f3')],
   'stage3-accept-evolve-failed',
-  (select id from _ids where key = 'evolve_fail_form2'),
+  (select id from _ids where key = 'evolve_fail_target_form'),
   80::numeric,
   0,
   (select id from _ids where key = 'evolve_f2')

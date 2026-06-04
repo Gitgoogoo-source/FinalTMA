@@ -33,7 +33,7 @@ const STATUS_META: Record<
     tone: "disabled",
   },
   sold_out: {
-    label: "已售罄",
+    label: "不可开启",
     tone: "disabled",
   },
   archived: {

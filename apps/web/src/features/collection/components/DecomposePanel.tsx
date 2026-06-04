@@ -120,7 +120,10 @@ export function DecomposePanel({
   }
 
   return (
-    <div className="upgrade-panel decompose-panel" role="presentation">
+    <div
+      className="upgrade-panel decompose-panel growth-panel--liquid-glass"
+      role="presentation"
+    >
       <button
         aria-label="关闭分解面板"
         className="upgrade-panel__backdrop"

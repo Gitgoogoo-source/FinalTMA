@@ -495,7 +495,7 @@ insert into _cases (key, payload)
 values ('stock_order', testutil.create_precheckout_order('phase5-precheckout-stock', 10, 90));
 
 update gacha.blind_boxes
-set remaining_stock = 5
+set remaining_stock = 0
 where id = ((select payload from _cases where key = 'stock_order') ->> 'box_id')::uuid;
 
 insert into _cases (key, payload)
@@ -514,7 +514,7 @@ select 'stock_result', api.payment_mark_precheckout_checked(
 from _cases
 where key = 'stock_order';
 
-select is(((select payload from _cases where key = 'stock_result') ->> 'reason_code'), 'STOCK_INSUFFICIENT', 'stock-insufficient pre_checkout is rejected');
+select ok(((select payload from _cases where key = 'stock_result') ->> 'allowed')::boolean, 'legacy zero stock does not block pre_checkout because blind boxes are unlimited');
 select is(
   (
     select count(*)::integer
@@ -522,7 +522,7 @@ select is(
     where draw_order_id = ((select payload from _cases where key = 'stock_order') ->> 'draw_order_id')::uuid
   ),
   0,
-  'stock-insufficient pre_checkout does not create draw_results'
+  'pre_checkout still does not create draw_results'
 );
 
 select * from finish();

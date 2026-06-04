@@ -3,7 +3,7 @@
  *
  * 注意：
  * 1. 这里是默认展示能力，不代表最终业务权限。
- * 2. 某个具体藏品是否可交易、可升级、可合成、可分解、可 Mint，必须以数据库 catalog.collectible_templates 配置为准。
+ * 2. 某个具体藏品是否可交易、可升级、可进化、可分解、可 Mint，必须以数据库 catalog.collectible_templates 配置为准。
  */
 
 export const ITEM_TYPE = {
@@ -50,7 +50,7 @@ export interface ItemTypeMeta {
   defaultCanBeUpgraded: boolean;
 
   /**
-   * 是否默认可合成/进化。
+   * 是否默认可进化。
    * 最终以数据库配置为准。
    */
   defaultCanBeEvolved: boolean;
@@ -87,7 +87,7 @@ export const ITEM_TYPE_META = {
     defaultCanBeDecomposed: true,
     defaultCanBeMinted: true,
     description:
-      "主要收藏对象，支持展示、升级、合成进化、市场交易、图鉴收集和链上 Mint。",
+      "主要收藏对象，支持展示、升级、进化、市场交易、图鉴收集和链上 Mint。",
   },
 
   [ITEM_TYPE.PET]: {

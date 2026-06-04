@@ -9,15 +9,15 @@ import { z } from "zod";
  * - 用户库存查询
  * - 藏品详情查询
  * - 升级
- * - 合成 / 进化
+ * - 进化
  * - 分解
  * - 藏品详情直接出售
  * - 藏品详情直接下架
  * - 库存变动记录
  *
  * 注意：
- * - 挂售中、锁定中、Mint 中的藏品不能升级、合成、分解。
- * - 合成失败返还规则必须由后端 RPC 执行。
+ * - 挂售中、锁定中、Mint 中的藏品不能升级、进化、分解。
+ * - 进化失败返还规则必须由后端 RPC 执行。
  * - 前端传来的消耗和奖励只能作为乐观校验，最终以后端返回为准。
  */
 
@@ -261,12 +261,12 @@ export const InventoryEvolvePreviewQuerySchema = z
 export const InventoryEvolveItemBodySchema = z
   .object({
     /**
-     * 必须是 3 份相同藏品或符合 evolution_rules 的藏品实例。
+     * 必须是 3 份相同源藏品或符合 evolution_rules 的藏品实例。
      * 后端必须校验：
      * - owner 是否为当前用户
      * - 是否 available
      * - 是否未挂售、未锁定、未 Mint
-     * - 是否符合相同模板 / 相同形态 / 可进化条件
+     * - 是否符合相同源藏品 / 可进化条件
      */
     source_item_instance_ids: uniqueUuidArraySchema({
       min: 3,
@@ -275,7 +275,7 @@ export const InventoryEvolveItemBodySchema = z
     }),
 
     /**
-     * 前端预览时看到的目标形态。没有传时，服务端会按当前数据库规则补齐。
+     * 前端预览时看到的目标藏品形态。没有传时，服务端会按当前数据库规则补齐。
      */
     target_form_id: uuidSchema.optional(),
 

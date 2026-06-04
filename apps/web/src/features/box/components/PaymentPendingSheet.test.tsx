@@ -16,7 +16,7 @@ describe("PaymentPendingSheet", () => {
     expect(screen.getByRole("dialog", { name: "发货处理中" })).toBeVisible();
     expect(screen.getAllByText("发货中")).toHaveLength(2);
     expect(
-      screen.getByText("服务端正在生成抽卡结果、库存和账本记录。"),
+      screen.getByText("服务端正在生成抽卡结果、藏品和账本记录。"),
     ).toBeVisible();
   });
 

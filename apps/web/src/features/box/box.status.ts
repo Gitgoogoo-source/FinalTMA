@@ -78,7 +78,7 @@ const PAYMENT_STATUS_META: Readonly<Record<string, PaymentStatusMeta>> = {
     status: "fulfilling",
     label: "发货中",
     title: "发货处理中",
-    detail: "服务端正在生成抽卡结果、库存和账本记录。",
+    detail: "服务端正在生成抽卡结果、藏品和账本记录。",
     tone: "progress",
     actionLabel: "查看开盒结果",
     toastType: "info",

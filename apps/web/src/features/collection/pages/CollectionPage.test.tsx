@@ -178,6 +178,7 @@ const ITEM_A_ID = "66666666-6666-4666-8666-666666666666";
 const ITEM_B_ID = "66666666-6666-4666-8666-666666666667";
 const ITEM_C_ID = "66666666-6666-4666-8666-666666666668";
 const TEMPLATE_ID = "55555555-5555-4555-8555-555555555555";
+const TARGET_TEMPLATE_ID = "55555555-5555-4555-8555-555555555556";
 const FORM_ID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 
 describe("CollectionPage stage-3 frontend states", () => {
@@ -527,14 +528,14 @@ describe("CollectionPage stage-3 frontend states", () => {
     expect(within(summary).queryByText("Mint 状态")).not.toBeInTheDocument();
     expect(within(summary).queryByText("是否挂售")).not.toBeInTheDocument();
     expect(within(summary).queryByText("是否可升级")).not.toBeInTheDocument();
-    expect(within(summary).queryByText("是否可合成")).not.toBeInTheDocument();
+    expect(within(summary).queryByText("是否可进化")).not.toBeInTheDocument();
     expect(within(summary).queryByText("是否可分解")).not.toBeInTheDocument();
     expect(within(summary).queryByText("是否可 Mint")).not.toBeInTheDocument();
     expect(
       within(selectedPanel).getByRole("button", { name: "升级" }),
     ).toBeEnabled();
     expect(
-      within(selectedPanel).getByRole("button", { name: "合成" }),
+      within(selectedPanel).getByRole("button", { name: "进化" }),
     ).toBeEnabled();
     expect(
       within(selectedPanel).getByRole("button", { name: "分解" }),
@@ -657,8 +658,8 @@ describe("CollectionPage stage-3 frontend states", () => {
           successRateBps: 5000,
           targetFormId: FORM_ID,
           targetImageUrl: null,
-          targetName: "森林幼芽·进化",
-          targetTemplateId: TEMPLATE_ID,
+          targetName: "森林游侠",
+          targetTemplateId: TARGET_TEMPLATE_ID,
           userKcoinBalance: 1200,
         },
         sameItemCount: 1,
@@ -673,7 +674,7 @@ describe("CollectionPage stage-3 frontend states", () => {
       within(selectedPanel).getByRole("button", { name: "升级" }),
     ).toBeDisabled();
     expect(
-      within(selectedPanel).getByRole("button", { name: "合成" }),
+      within(selectedPanel).getByRole("button", { name: "进化" }),
     ).toBeDisabled();
     expect(
       within(selectedPanel).getByRole("button", { name: "分解" }),
@@ -696,6 +697,19 @@ describe("CollectionPage stage-3 frontend states", () => {
     expect(mintButton).toBeEnabled();
 
     fireEvent.click(mintButton);
+
+    const mintDialog = await screen.findByRole("dialog", { name: "森林幼芽" });
+    expect(mintDialog.closest(".growth-panel--liquid-glass")).not.toBeNull();
+    expect(within(mintDialog).getByText("NFT Mint")).toBeVisible();
+    expect(within(mintDialog).getByLabelText("Mint 信息")).toBeVisible();
+    expect(
+      within(mintDialog).getByText("确认后会请求服务端加入 Mint 队列"),
+    ).toBeVisible();
+    expect(mocks.createMintMutate).not.toHaveBeenCalled();
+
+    fireEvent.click(
+      within(mintDialog).getByRole("button", { name: "确认 Mint" }),
+    );
 
     await waitFor(() =>
       expect(mocks.createMintMutate).toHaveBeenCalledWith(
@@ -768,6 +782,13 @@ describe("CollectionPage stage-3 frontend states", () => {
       }),
     );
 
+    const mintDialog = await screen.findByRole("dialog", { name: "森林幼芽" });
+    expect(mocks.createMintMutate).not.toHaveBeenCalled();
+
+    fireEvent.click(
+      within(mintDialog).getByRole("button", { name: "确认 Mint" }),
+    );
+
     await waitFor(() =>
       expect(mocks.createMintMutate).toHaveBeenCalledWith(
         {
@@ -793,6 +814,13 @@ describe("CollectionPage stage-3 frontend states", () => {
       within(screen.getByLabelText("当前选中藏品")).getByRole("button", {
         name: "Mint NFT",
       }),
+    );
+
+    const mintDialog = await screen.findByRole("dialog", { name: "森林幼芽" });
+    expect(mocks.createMintMutate).not.toHaveBeenCalled();
+
+    fireEvent.click(
+      within(mintDialog).getByRole("button", { name: "确认 Mint" }),
     );
 
     await waitFor(() =>
@@ -922,7 +950,7 @@ describe("CollectionPage stage-3 frontend states", () => {
     }
   });
 
-  it("shows the retry Mint entry when the server reports a failed mint status", () => {
+  it("shows the retry Mint entry when the server reports a failed mint status", async () => {
     mocks.walletStatus = makeWalletStatus("verified");
     const item = makeItem({
       nftMintStatus: "failed",
@@ -945,6 +973,14 @@ describe("CollectionPage stage-3 frontend states", () => {
     expect(
       within(selectedPanel).getByRole("button", { name: "重试 Mint" }),
     ).toBeEnabled();
+
+    fireEvent.click(
+      within(selectedPanel).getByRole("button", { name: "重试 Mint" }),
+    );
+
+    const mintDialog = await screen.findByRole("dialog", { name: "森林幼芽" });
+    expect(mintDialog.closest(".growth-panel--liquid-glass")).not.toBeNull();
+    expect(within(mintDialog).getByText("NFT Mint")).toBeVisible();
   });
 
   it("submits an upgrade and shows the server result instead of local-only state", async () => {
@@ -963,11 +999,15 @@ describe("CollectionPage stage-3 frontend states", () => {
       }),
     );
 
-    expect(screen.getByText("藏品升级")).toBeVisible();
-    expect(screen.getByText("需要 Fgems")).toBeVisible();
-    expect(screen.getByText("当前 Fgems 余额")).toBeVisible();
+    const upgradeDialog = screen.getByRole("dialog", { name: "森林幼芽" });
+    expect(upgradeDialog.closest(".growth-panel--liquid-glass")).not.toBeNull();
+    expect(within(upgradeDialog).getByText("藏品升级")).toBeVisible();
+    expect(within(upgradeDialog).getByText("需要 Fgems")).toBeVisible();
+    expect(within(upgradeDialog).getByText("当前 Fgems 余额")).toBeVisible();
 
-    fireEvent.click(screen.getByRole("button", { name: "确认升级" }));
+    fireEvent.click(
+      within(upgradeDialog).getByRole("button", { name: "确认升级" }),
+    );
 
     await waitFor(() =>
       expect(mocks.upgradeMutateAsync).toHaveBeenCalledTimes(1),
@@ -985,6 +1025,54 @@ describe("CollectionPage stage-3 frontend states", () => {
     expect(screen.getByText("80 -> 60")).toBeVisible();
   });
 
+  it("opens decompose info and action inside a liquid-glass dialog", async () => {
+    const item = makeItem();
+    setInventoryItems(
+      item,
+      makeItem({ itemInstanceId: ITEM_B_ID, serialNo: 2 }),
+      makeItem({ itemInstanceId: ITEM_C_ID, serialNo: 3 }),
+    );
+    setItemDetail(item, makeDetail(item));
+
+    renderCollectionPage();
+    fireEvent.click(
+      within(screen.getByLabelText("当前选中藏品")).getByRole("button", {
+        name: "分解",
+      }),
+    );
+
+    const decomposeDialog = screen.getByRole("dialog", { name: "森林幼芽" });
+    expect(
+      decomposeDialog.closest(".growth-panel--liquid-glass"),
+    ).not.toBeNull();
+    expect(within(decomposeDialog).getByText("藏品分解")).toBeVisible();
+    expect(within(decomposeDialog).getByLabelText("分解预览")).toBeVisible();
+    expect(within(decomposeDialog).getByLabelText("分解提醒")).toBeVisible();
+    expect(
+      within(decomposeDialog).getByRole("button", { name: "确认分解" }),
+    ).toBeDisabled();
+
+    fireEvent.click(
+      within(decomposeDialog).getByRole("button", {
+        name: "我确认分解后不可恢复",
+      }),
+    );
+    fireEvent.click(
+      within(decomposeDialog).getByRole("button", { name: "确认分解" }),
+    );
+
+    await waitFor(() =>
+      expect(mocks.decomposeMutateAsync).toHaveBeenCalledTimes(1),
+    );
+    expect(mocks.decomposeMutateAsync).toHaveBeenCalledWith({
+      expectedFgemsReward: 150,
+      itemInstanceIds: [ITEM_A_ID],
+    });
+    expect(
+      await screen.findByRole("dialog", { name: "分解成功" }),
+    ).toBeVisible();
+  });
+
   it("opens all evolve info and actions inside a liquid-glass dialog", async () => {
     const item = makeItem();
     setInventoryItems(
@@ -996,27 +1084,28 @@ describe("CollectionPage stage-3 frontend states", () => {
     renderCollectionPage();
     fireEvent.click(
       within(screen.getByLabelText("当前选中藏品")).getByRole("button", {
-        name: "合成",
+        name: "进化",
       }),
     );
 
     const evolveDialog = screen.getByRole("dialog", { name: "森林幼芽" });
+    expect(evolveDialog.closest(".growth-panel--liquid-glass")).not.toBeNull();
     expect(evolveDialog.closest(".evolve-panel--liquid-glass")).not.toBeNull();
-    expect(within(evolveDialog).getByText("合成 / 进化")).toBeVisible();
-    expect(within(evolveDialog).getByLabelText("目标形态")).toBeVisible();
+    expect(within(evolveDialog).getByText("藏品进化")).toBeVisible();
+    expect(within(evolveDialog).getByLabelText("目标藏品")).toBeVisible();
     expect(
-      within(evolveDialog).getByText("Forest Sproutling II"),
+      within(evolveDialog).getByText("Verdant Ranger"),
     ).toBeVisible();
-    expect(within(evolveDialog).getByLabelText("合成预览")).toBeVisible();
+    expect(within(evolveDialog).getByLabelText("进化预览")).toBeVisible();
     expect(within(evolveDialog).getByText("KCOIN 消耗")).toBeVisible();
     expect(within(evolveDialog).getByText("成功率")).toBeVisible();
-    expect(within(evolveDialog).getByText("选择 3 个同款材料")).toBeVisible();
+    expect(within(evolveDialog).getByText("选择 3 个同款源藏品")).toBeVisible();
     expect(
-      within(evolveDialog).getByRole("button", { name: "确认合成" }),
+      within(evolveDialog).getByRole("button", { name: "确认进化" }),
     ).toBeEnabled();
 
     fireEvent.click(
-      within(evolveDialog).getByRole("button", { name: "确认合成" }),
+      within(evolveDialog).getByRole("button", { name: "确认进化" }),
     );
 
     await waitFor(() =>
@@ -1027,7 +1116,7 @@ describe("CollectionPage stage-3 frontend states", () => {
     });
     expect(mocks.detailCalls.some((call) => call.enabled)).toBe(false);
     expect(
-      await screen.findByRole("dialog", { name: "合成成功" }),
+      await screen.findByRole("dialog", { name: "进化成功" }),
     ).toBeVisible();
   });
 });
@@ -1159,8 +1248,8 @@ function makeDetail(
       successRateBps: 5000,
       targetFormId: FORM_ID,
       targetImageUrl: null,
-      targetName: "森林幼芽·进化",
-      targetTemplateId: TEMPLATE_ID,
+      targetName: "森林游侠",
+      targetTemplateId: TARGET_TEMPLATE_ID,
       userKcoinBalance: 1200,
     },
     faction: null,

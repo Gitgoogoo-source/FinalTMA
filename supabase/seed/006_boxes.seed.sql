@@ -1,5 +1,7 @@
 -- 006_boxes.seed.sql
 -- Three launch blind boxes. Ten-draw uses discount_bps=1000, meaning 10% off.
+-- Blind boxes are unlimited-supply; prize-pool item stock is configured in
+-- 007_drop_pools.seed.sql.
 
 begin;
 
@@ -17,7 +19,6 @@ begin
         'Best for new players. Contains Common, Rare and a small chance of Epic collectibles.',
         'normal',
         10,
-        100000,
         '/storage/v1/object/public/boxes/starter_egg.png',
         '/storage/v1/object/public/boxes/starter_egg_hero.png',
         10
@@ -28,7 +29,6 @@ begin
         'Higher Rare and Epic rates, with a chance for Legendary collectibles.',
         'rare',
         30,
-        50000,
         '/storage/v1/object/public/boxes/premium_egg.png',
         '/storage/v1/object/public/boxes/premium_egg_hero.png',
         20
@@ -39,7 +39,6 @@ begin
         'High-value box focused on Epic and Legendary launch collectibles.',
         'legendary',
         80,
-        15000,
         '/storage/v1/object/public/boxes/legendary_egg.png',
         '/storage/v1/object/public/boxes/legendary_egg_hero.png',
         30
@@ -50,7 +49,6 @@ begin
       description,
       tier,
       price_stars,
-      stock,
       cover_image_url,
       hero_image_url,
       sort_order
@@ -63,8 +61,6 @@ begin
       tier,
       status,
       price_stars,
-      total_stock,
-      remaining_stock,
       open_reward_kcoin,
       cover_image_url,
       hero_image_url,
@@ -79,8 +75,6 @@ begin
       rec.tier,
       'active',
       rec.price_stars,
-      rec.stock,
-      rec.stock,
       100,
       rec.cover_image_url,
       rec.hero_image_url,
@@ -95,11 +89,8 @@ begin
         tier = excluded.tier,
         status = excluded.status,
         price_stars = excluded.price_stars,
-        total_stock = excluded.total_stock,
-        remaining_stock = case
-          when gacha.blind_boxes.remaining_stock is null then excluded.remaining_stock
-          else least(greatest(gacha.blind_boxes.remaining_stock, 0), excluded.total_stock)
-        end,
+        total_stock = null,
+        remaining_stock = null,
         open_reward_kcoin = excluded.open_reward_kcoin,
         cover_image_url = excluded.cover_image_url,
         hero_image_url = excluded.hero_image_url,

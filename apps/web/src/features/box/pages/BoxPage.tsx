@@ -393,7 +393,6 @@ export function BoxPage() {
             status={selectedBox.status}
             disabledReason={selectedBox.disabledReason}
           />
-          <span>{formatStock(selectedBox)}</span>
         </section>
       ) : null}
 
@@ -491,22 +490,6 @@ export function BoxPage() {
 
 function getDefaultBoxId(boxes: BlindBox[]): string | null {
   return boxes.find((box) => box.isOpenable)?.id ?? boxes[0]?.id ?? null;
-}
-
-function formatStock(box: BlindBox): string {
-  if (box.stockStatus === "unlimited") {
-    return "不限量";
-  }
-
-  if (box.remainingStock === null) {
-    return "库存同步中";
-  }
-
-  if (box.totalStock === null) {
-    return `剩余 ${formatCurrencyAmount(box.remainingStock)}`;
-  }
-
-  return `剩余 ${formatCurrencyAmount(box.remainingStock)} / ${formatCurrencyAmount(box.totalStock)}`;
 }
 
 function shouldShowBoxStatus(box: BlindBox): boolean {

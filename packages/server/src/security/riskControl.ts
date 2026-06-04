@@ -1320,7 +1320,7 @@ export class RiskControl {
           severity: "critical",
           score: 100,
           decision: "deny",
-          message: "合成必须消耗 3 份相同藏品。",
+          message: "进化必须消耗 3 份相同源藏品。",
           metadata: {
             itemCount,
           },
@@ -1333,7 +1333,7 @@ export class RiskControl {
           severity: "critical",
           score: 100,
           decision: "deny",
-          message: "合成材料不是相同藏品。",
+          message: "进化材料不是相同源藏品。",
         });
       }
     }

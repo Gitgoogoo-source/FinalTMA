@@ -5,6 +5,7 @@ const BOX_ID = "22222222-2222-4222-8222-222222222222";
 const ORDER_ID = "33333333-3333-4333-8333-333333333333";
 const STAR_ORDER_ID = "44444444-4444-4444-8444-444444444444";
 const TEMPLATE_ID = "55555555-5555-4555-8555-555555555555";
+const TARGET_TEMPLATE_ID = "55555555-5555-4555-8555-555555555556";
 const ITEM_INSTANCE_ID = "66666666-6666-4666-8666-666666666666";
 const ITEM_INSTANCE_ID_2 = "66666666-6666-4666-8666-666666666667";
 const ITEM_INSTANCE_ID_3 = "66666666-6666-4666-8666-666666666668";
@@ -684,15 +685,16 @@ function getInventoryItems({
   if (inventoryEvolved) {
     return [
       inventoryItemPayload({
-        formDisplayName: "进化形态",
+        formDisplayName: "基础形态",
         formId: TARGET_FORM_ID,
         itemInstanceId: EVOLVED_ITEM_INSTANCE_ID,
         level: 1,
         mintStatus,
-        name: "森林幼芽·进化",
+        name: "森林游侠",
         power: 42,
         serialNo: 4,
-        templateSlug: "forest_sproutling_evolved",
+        templateId: TARGET_TEMPLATE_ID,
+        templateSlug: "forest_ranger",
       }),
     ];
   }
@@ -787,9 +789,9 @@ function inventoryDetailPayload({
       user_kcoin_balance: kcoinAvailable,
       is_balance_enough: kcoinAvailable >= 200,
       success_rate_bps: 5000,
-      target_template_id: TEMPLATE_ID,
+      target_template_id: TARGET_TEMPLATE_ID,
       target_form_id: TARGET_FORM_ID,
-      target_name: "森林幼芽·进化",
+      target_name: "森林游侠",
       target_image_url: null,
       selected_item_ids: selectedItemIds,
       main_return_item_id: mainReturnItemId,
@@ -875,12 +877,13 @@ function inventoryItemPayload(
     name?: string;
     power?: number;
     serialNo?: number;
+    templateId?: string;
     templateSlug?: string;
   } = {},
 ) {
   return {
     item_instance_id: overrides.itemInstanceId ?? ITEM_INSTANCE_ID,
-    template_id: TEMPLATE_ID,
+    template_id: overrides.templateId ?? TEMPLATE_ID,
     template_slug: overrides.templateSlug ?? "forest_sproutling",
     name: overrides.name ?? "森林幼芽",
     subtitle: "测试藏品",

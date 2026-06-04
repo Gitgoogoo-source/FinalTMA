@@ -170,7 +170,7 @@ export function CharacterDetailPanel({
           <DetailButtonAction
             disabled={!canEvolve(displayItem, detail, isAvailable) || !onEvolve}
             icon="swords"
-            label="合成"
+            label="进化"
             onClick={onEvolve}
           />
           {isListed ? (
@@ -358,7 +358,7 @@ function getBlockedReason(
   isListed: boolean,
 ): string | null {
   if (isListed) {
-    return "该藏品正在挂售中，不能升级、合成、分解或 Mint。";
+    return "该藏品正在挂售中，不能升级、进化、分解或 Mint。";
   }
 
   if (detail?.activeLock?.reason) {

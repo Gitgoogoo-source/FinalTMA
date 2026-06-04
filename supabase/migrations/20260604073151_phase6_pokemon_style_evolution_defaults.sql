@@ -1,24 +1,20 @@
--- 012_growth_rules.seed.sql
--- Local reset companion for stage 3 growth rules.
---
--- The remote project receives these rules through versioned migrations. Local
--- `supabase db reset` runs migrations before catalog seeds, so this idempotent
--- seed mirrors the growth-rule data after collectibles have been seeded.
-
 begin;
+
+comment on table inventory.evolution_rules is
+  'Pokemon-style evolution rules. Consumes three copies of the same source collectible plus K-coin; success creates the configured target collectible template, failure returns only the highest-level main item.';
 
 update inventory.evolution_rules er
 set active = false,
     metadata = er.metadata || jsonb_build_object(
-      'deactivated_reason', 'same_template_replaced_by_pokemon_style_seed',
+      'deactivated_reason', 'same_template_replaced_by_pokemon_style_defaults',
       'deactivated_at', now(),
-      'seed', '012_growth_rules'
+      'migration', 'phase6_pokemon_style_evolution_defaults'
     ),
     updated_at = now()
 where er.active = true
   and er.from_template_id = er.to_template_id;
 
-create temp table _seed_evolution_chain_definitions (
+create temp table _default_evolution_chain_definitions (
   code text primary key,
   display_name text not null,
   description text not null,
@@ -26,7 +22,7 @@ create temp table _seed_evolution_chain_definitions (
   sort_order integer not null
 ) on commit drop;
 
-insert into _seed_evolution_chain_definitions (
+insert into _default_evolution_chain_definitions (
   code,
   display_name,
   description,
@@ -56,10 +52,10 @@ select
   chain_def.sort_order,
   jsonb_build_object(
     'source_type', 'default_seed',
-    'series_slug', chain_def.series_slug,
-    'seed', '012_growth_rules'
+    'migration', 'phase6_pokemon_style_evolution_defaults',
+    'series_slug', chain_def.series_slug
   )
-from _seed_evolution_chain_definitions chain_def
+from _default_evolution_chain_definitions chain_def
 join catalog.series series on series.slug = chain_def.series_slug
 on conflict (code) do update
 set display_name = excluded.display_name,
@@ -70,7 +66,7 @@ set display_name = excluded.display_name,
     metadata = inventory.evolution_chains.metadata || excluded.metadata,
     updated_at = now();
 
-create temp table _seed_evolution_steps on commit drop as
+create temp table _default_evolution_steps on commit drop as
 with step_definitions (
   chain_code,
   step_index,
@@ -118,19 +114,52 @@ where source_template.release_status = 'active'
   and target_template.release_status = 'active'
   and source_template.evolvable = true;
 
+do $$
+declare
+  v_known_template_count integer;
+  v_resolved_step_count integer;
+begin
+  select count(*)::integer
+  into v_known_template_count
+  from catalog.collectible_templates
+  where slug in (
+    'forest_sproutling',
+    'forest_ranger',
+    'ancient_leaf_sentinel',
+    'mooncap_bard',
+    'moonlit_minstrel',
+    'moon_crown_guardian',
+    'crystal_otter',
+    'tideglass_otter',
+    'prism_tide_oracle',
+    'ember_whelp',
+    'blazewing_drake',
+    'inferno_crown_dragon'
+  );
+
+  select count(*)::integer
+  into v_resolved_step_count
+  from _default_evolution_steps;
+
+  if v_known_template_count > 0 and v_resolved_step_count <> 8 then
+    raise exception 'DEFAULT_EVOLUTION_CHAIN_INCOMPLETE' using errcode = 'P0001';
+  end if;
+end;
+$$;
+
 update inventory.evolution_chain_steps steps
 set active = false,
     metadata = steps.metadata || jsonb_build_object(
       'deactivated_reason', 'default_pokemon_style_source_replaced',
       'deactivated_at', now(),
-      'seed', '012_growth_rules'
+      'migration', 'phase6_pokemon_style_evolution_defaults'
     ),
     updated_at = now()
-from _seed_evolution_steps seed_steps
+from _default_evolution_steps default_steps
 where steps.active = true
-  and steps.from_template_id = seed_steps.from_template_id
-  and steps.from_form_id = seed_steps.from_form_id
-  and steps.chain_id <> seed_steps.chain_id;
+  and steps.from_template_id = default_steps.from_template_id
+  and steps.from_form_id = default_steps.from_form_id
+  and steps.chain_id <> default_steps.chain_id;
 
 insert into inventory.evolution_chain_steps (
   chain_id,
@@ -158,12 +187,12 @@ select
   true,
   jsonb_build_object(
     'source_type', 'default_seed',
-    'seed', '012_growth_rules',
+    'migration', 'phase6_pokemon_style_evolution_defaults',
     'chain_code', chain_code,
     'from_template_slug', from_template_slug,
     'to_template_slug', to_template_slug
   )
-from _seed_evolution_steps
+from _default_evolution_steps
 on conflict (chain_id, step_index) do update
 set from_template_id = excluded.from_template_id,
     from_form_id = excluded.from_form_id,
@@ -181,17 +210,17 @@ set active = false,
     metadata = steps.metadata || jsonb_build_object(
       'deactivated_reason', 'default_pokemon_style_step_removed',
       'deactivated_at', now(),
-      'seed', '012_growth_rules'
+      'migration', 'phase6_pokemon_style_evolution_defaults'
     ),
     updated_at = now()
 from inventory.evolution_chains chains
 where steps.chain_id = chains.id
-  and chains.code in (select code from _seed_evolution_chain_definitions)
+  and chains.code in (select code from _default_evolution_chain_definitions)
   and not exists (
     select 1
-    from _seed_evolution_steps seed_steps
-    where seed_steps.chain_id = steps.chain_id
-      and seed_steps.step_index = steps.step_index
+    from _default_evolution_steps default_steps
+    where default_steps.chain_id = steps.chain_id
+      and default_steps.step_index = steps.step_index
   );
 
 update inventory.evolution_rules rules
@@ -199,13 +228,13 @@ set active = false,
     metadata = rules.metadata || jsonb_build_object(
       'deactivated_reason', 'source_replaced_by_default_pokemon_style_chain',
       'deactivated_at', now(),
-      'seed', '012_growth_rules'
+      'migration', 'phase6_pokemon_style_evolution_defaults'
     ),
     updated_at = now()
 from inventory.evolution_chain_steps steps
-join _seed_evolution_steps seed_steps
-  on seed_steps.chain_id = steps.chain_id
- and seed_steps.step_index = steps.step_index
+join _default_evolution_steps default_steps
+  on default_steps.chain_id = steps.chain_id
+ and default_steps.step_index = steps.step_index
 where rules.active = true
   and rules.from_template_id = steps.from_template_id
   and rules.from_form_id = steps.from_form_id
@@ -227,14 +256,14 @@ set from_template_id = steps.from_template_id,
     evolution_chain_step_id = steps.id,
     metadata = rules.metadata || steps.metadata || jsonb_build_object(
       'source_type', 'default_evolution_chain',
-      'seed', '012_growth_rules',
+      'migration', 'phase6_pokemon_style_evolution_defaults',
       'published_at', now()
     ),
     updated_at = now()
 from inventory.evolution_chain_steps steps
-join _seed_evolution_steps seed_steps
-  on seed_steps.chain_id = steps.chain_id
- and seed_steps.step_index = steps.step_index
+join _default_evolution_steps default_steps
+  on default_steps.chain_id = steps.chain_id
+ and default_steps.step_index = steps.step_index
 where rules.id = steps.evolution_rule_id;
 
 insert into inventory.evolution_rules (
@@ -263,13 +292,13 @@ select
   steps.id,
   steps.metadata || jsonb_build_object(
     'source_type', 'default_evolution_chain',
-    'seed', '012_growth_rules',
+    'migration', 'phase6_pokemon_style_evolution_defaults',
     'published_at', now()
   )
 from inventory.evolution_chain_steps steps
-join _seed_evolution_steps seed_steps
-  on seed_steps.chain_id = steps.chain_id
- and seed_steps.step_index = steps.step_index
+join _default_evolution_steps default_steps
+  on default_steps.chain_id = steps.chain_id
+ and default_steps.step_index = steps.step_index
 where not exists (
   select 1
   from inventory.evolution_rules rules
@@ -281,55 +310,63 @@ update inventory.evolution_chain_steps steps
 set evolution_rule_id = rules.id,
     updated_at = now()
 from inventory.evolution_rules rules
-join _seed_evolution_steps seed_steps
-  on seed_steps.from_template_id = rules.from_template_id
- and seed_steps.from_form_id = rules.from_form_id
- and seed_steps.to_template_id = rules.to_template_id
- and seed_steps.to_form_id = rules.to_form_id
-where steps.chain_id = seed_steps.chain_id
-  and steps.step_index = seed_steps.step_index
+join _default_evolution_steps default_steps
+  on default_steps.from_template_id = rules.from_template_id
+ and default_steps.from_form_id = rules.from_form_id
+ and default_steps.to_template_id = rules.to_template_id
+ and default_steps.to_form_id = rules.to_form_id
+where steps.chain_id = default_steps.chain_id
+  and steps.step_index = default_steps.step_index
   and rules.active = true
   and rules.evolution_chain_step_id = steps.id;
 
-with rules (rarity_code, form_index, min_level, reward_fgems) as (
-  values
-    ('COMMON', 1, 1, 5::numeric(38,0)),
-    ('COMMON', 2, 1, 15::numeric(38,0)),
-    ('COMMON', 3, 1, 40::numeric(38,0)),
-    ('RARE', 1, 1, 15::numeric(38,0)),
-    ('RARE', 2, 1, 45::numeric(38,0)),
-    ('RARE', 3, 1, 120::numeric(38,0)),
-    ('EPIC', 1, 1, 50::numeric(38,0)),
-    ('EPIC', 2, 1, 150::numeric(38,0)),
-    ('EPIC', 3, 1, 400::numeric(38,0)),
-    ('LEGENDARY', 1, 1, 150::numeric(38,0)),
-    ('LEGENDARY', 2, 1, 450::numeric(38,0)),
-    ('LEGENDARY', 3, 1, 1200::numeric(38,0))
-)
-insert into inventory.decompose_rules (
-  rarity_code,
-  form_index,
-  min_level,
-  reward_fgems,
-  active,
-  metadata
-)
-select
-  rarity_code,
-  form_index,
-  min_level,
-  reward_fgems,
-  true,
-  jsonb_build_object(
-    'phase', 'stage_3_growth_system',
-    'guide_section', '4.3_decompose_rules',
-    'seed', '012_growth_rules'
-  )
-from rules
-on conflict (rarity_code, form_index, min_level, active)
-do update
-set reward_fgems = excluded.reward_fgems,
-    metadata = inventory.decompose_rules.metadata || excluded.metadata,
-    updated_at = now();
+create or replace function inventory.validate_active_evolution_rule_target()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  if new.active = true and new.from_template_id = new.to_template_id then
+    raise exception 'EVOLUTION_RULE_TARGET_TEMPLATE_REQUIRED' using errcode = 'P0001';
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists evolution_rules_validate_target on inventory.evolution_rules;
+create trigger evolution_rules_validate_target
+before insert or update on inventory.evolution_rules
+for each row
+execute function inventory.validate_active_evolution_rule_target();
+
+revoke all on function inventory.validate_active_evolution_rule_target() from public, anon, authenticated;
+
+do $$
+begin
+  if exists (
+    select 1
+    from inventory.evolution_rules
+    where active = true
+      and from_template_id = to_template_id
+  ) then
+    raise exception 'ACTIVE_SAME_TEMPLATE_EVOLUTION_RULE_REMAINS' using errcode = 'P0001';
+  end if;
+
+  if exists (select 1 from _default_evolution_steps)
+     and (
+       select count(*)::integer
+       from inventory.evolution_rules rules
+       join _default_evolution_steps default_steps
+         on default_steps.from_template_id = rules.from_template_id
+        and default_steps.from_form_id = rules.from_form_id
+        and default_steps.to_template_id = rules.to_template_id
+        and default_steps.to_form_id = rules.to_form_id
+       where rules.active = true
+     ) <> (select count(*)::integer from _default_evolution_steps) then
+    raise exception 'DEFAULT_EVOLUTION_RULE_SYNC_FAILED' using errcode = 'P0001';
+  end if;
+end;
+$$;
 
 commit;

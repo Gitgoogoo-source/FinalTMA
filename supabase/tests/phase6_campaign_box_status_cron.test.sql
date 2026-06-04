@@ -183,8 +183,8 @@ select is(
 
 select is(
   (select status from gacha.blind_boxes where id = (select id from _ids where key = 'sold_out_box')),
-  'sold_out',
-  'cron marks zero-stock blind boxes as sold_out'
+  'active',
+  'cron ignores legacy zero stock because blind boxes are unlimited'
 );
 
 select is(
@@ -219,8 +219,8 @@ select is(
 
 select is(
   ((select payload ->> 'boxes_sold_out_count' from _ids where key = 'cron_result'))::int,
-  1,
-  'cron result includes sold_out blind box count'
+  0,
+  'cron result does not include stock-based sold_out blind boxes'
 );
 
 select is(

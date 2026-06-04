@@ -109,10 +109,6 @@ begin
   if v_box.ends_at is not null and v_box.ends_at <= now() then
     raise exception 'blind box has ended';
   end if;
-  if v_box.remaining_stock is not null and v_box.remaining_stock < p_quantity then
-    raise exception 'blind box stock is insufficient';
-  end if;
-
   select * into v_pool
   from gacha.drop_pool_versions
   where box_id = p_box_id

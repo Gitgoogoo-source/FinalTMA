@@ -115,57 +115,11 @@ function getTierQualityLabel(tier: string): string {
 function getStockMeta(box: BlindBox): {
   label: string;
   title: string;
-  tone: "available" | "low" | "sold" | "muted";
+  tone: "available" | "muted";
 } {
-  if (box.stockStatus === "unlimited") {
-    return {
-      label: "不限量",
-      title: "库存不限量",
-      tone: "available",
-    };
-  }
-
-  if (box.stockStatus === "sold_out" || box.remainingStock === 0) {
-    return {
-      label: "库存售罄",
-      title: "库存已售罄",
-      tone: "sold",
-    };
-  }
-
-  if (box.remainingStock === null) {
-    return {
-      label: box.stockStatus === "low_stock" ? "库存紧张" : "库存可用",
-      title: "库存数量同步中",
-      tone: box.stockStatus === "low_stock" ? "low" : "muted",
-    };
-  }
-
-  if (box.stockStatus === "low_stock") {
-    return {
-      label: `仅剩 ${formatCurrencyAmount(box.remainingStock)}`,
-      title: getStockTitle(box),
-      tone: "low",
-    };
-  }
-
   return {
-    label: `剩余 ${formatCurrencyAmount(box.remainingStock)}`,
-    title: getStockTitle(box),
-    tone: "available",
+    label: "无限供应",
+    title: "盲盒无限供应",
+    tone: box.isOpenable ? "available" : "muted",
   };
-}
-
-function getStockTitle(box: BlindBox): string {
-  if (box.remainingStock === null) {
-    return "库存数量同步中";
-  }
-
-  if (box.totalStock === null) {
-    return `剩余 ${formatCurrencyAmount(box.remainingStock)}`;
-  }
-
-  return `剩余 ${formatCurrencyAmount(box.remainingStock)} / ${formatCurrencyAmount(
-    box.totalStock,
-  )}`;
 }

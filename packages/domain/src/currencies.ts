@@ -78,7 +78,7 @@ export const CURRENCY_META = {
     canBeSpentByGame: true,
     isExternalPaymentCurrency: false,
     description:
-      "游戏内主要积分，用于市场购买藏品、合成进化、任务奖励、邀请奖励等。",
+      "游戏内主要积分，用于市场购买藏品、进化、任务奖励、邀请奖励等。",
   },
 
   [CURRENCY.FGEMS]: {

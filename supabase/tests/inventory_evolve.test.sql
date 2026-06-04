@@ -198,9 +198,12 @@ $$;
 create temp table _ids (key text primary key, id uuid, txt text, payload jsonb) on commit drop;
 insert into _ids (key, id) values ('user', testutil.make_user(9700000001, 'inventory_evolve_user', null));
 insert into _ids (key, payload) values ('catalog', testutil.create_catalog_fixture('inventory-evolve', 'COMMON', true, true, true, true, true));
+insert into _ids (key, payload) values ('target_catalog', testutil.create_catalog_fixture('inventory-evolve-target', 'RARE', true, true, true, true, true));
 insert into _ids (key, id) select 'template', ((select payload from _ids where key = 'catalog') ->> 'template_id')::uuid;
 insert into _ids (key, id) select 'form1', ((select payload from _ids where key = 'catalog') ->> 'form1_id')::uuid;
 insert into _ids (key, id) select 'form2', ((select payload from _ids where key = 'catalog') ->> 'form2_id')::uuid;
+insert into _ids (key, id) select 'target_template', ((select payload from _ids where key = 'target_catalog') ->> 'template_id')::uuid;
+insert into _ids (key, id) select 'target_form', ((select payload from _ids where key = 'target_catalog') ->> 'form1_id')::uuid;
 
 do $$
 begin
@@ -210,7 +213,7 @@ end;
 $$;
 
 insert into inventory.evolution_rules (from_template_id, from_form_id, to_template_id, to_form_id, required_count, cost_kcoin, success_rate_bps, active)
-values ((select id from _ids where key = 'template'), (select id from _ids where key = 'form1'), (select id from _ids where key = 'template'), (select id from _ids where key = 'form2'), 3, 120, 10000, true);
+values ((select id from _ids where key = 'template'), (select id from _ids where key = 'form1'), (select id from _ids where key = 'target_template'), (select id from _ids where key = 'target_form'), 3, 120, 10000, true);
 
 insert into _ids (key, id) select 's1', testutil.create_item((select id from _ids where key = 'user'), (select id from _ids where key = 'template'), (select id from _ids where key = 'form1'), 1, 10, 'admin');
 insert into _ids (key, id) select 's2', testutil.create_item((select id from _ids where key = 'user'), (select id from _ids where key = 'template'), (select id from _ids where key = 'form1'), 2, 15, 'admin');
@@ -246,7 +249,7 @@ select ok(testutil.raises_like(format(
   (select id::text from _ids where key = 's2'),
   (select id::text from _ids where key = 's3'),
   'inventory-evolve-stale-preview-001',
-  (select id::text from _ids where key = 'form2'),
+  (select id::text from _ids where key = 'target_form'),
   (select id::text from _ids where key = 's3')
 ), '%evolution preview mismatch%'), 'evolution rejects stale expected KCOIN cost');
 select is((select count(*)::int from inventory.evolution_attempts where idempotency_key = 'inventory-evolve-stale-preview-001'), 0, 'stale evolution preview writes no attempt');
@@ -266,7 +269,7 @@ select 'evolve_success', api.inventory_evolve_item(
   (select id from _ids where key = 'user'),
   array[(select id from _ids where key = 's1'), (select id from _ids where key = 's2'), (select id from _ids where key = 's3')],
   'inventory-evolve-success-001'::text,
-  (select id from _ids where key = 'form2'),
+  (select id from _ids where key = 'target_form'),
   120::numeric,
   10000,
   (select id from _ids where key = 's3')
@@ -277,7 +280,7 @@ select ok(((select payload from _ids where key = 'evolve_success') ->> 'success'
 select is(((select payload from _ids where key = 'evolve_success') ->> 'kcoin_balance_before')::numeric, 1000::numeric, 'successful evolution returns KCOIN balance before debit');
 select is(((select payload from _ids where key = 'evolve_success') ->> 'kcoin_balance_after')::numeric, 880::numeric, 'successful evolution returns KCOIN balance after debit');
 select is((select count(*)::int from inventory.item_instances where id in ((select id from _ids where key = 's1'), (select id from _ids where key = 's2'), (select id from _ids where key = 's3')) and status = 'consumed'), 3, 'successful evolution consumes all three source items');
-select ok(exists (select 1 from inventory.item_instances ii join _ids i on i.id = ii.id where i.key = 'success_result_item' and ii.owner_user_id = (select id from _ids where key = 'user') and ii.form_id = (select id from _ids where key = 'form2') and ii.status = 'available'), 'successful evolution creates evolved-form item');
+select ok(exists (select 1 from inventory.item_instances ii join _ids i on i.id = ii.id where i.key = 'success_result_item' and ii.owner_user_id = (select id from _ids where key = 'user') and ii.template_id = (select id from _ids where key = 'target_template') and ii.form_id = (select id from _ids where key = 'target_form') and ii.status = 'available'), 'successful evolution creates target-template item');
 select is(testutil.balance_of((select id from _ids where key = 'user'), 'KCOIN'), 880::numeric, 'successful evolution debits K-coin cost');
 select ok(exists (select 1 from inventory.evolution_attempts where result_item_instance_id = (select id from _ids where key = 'success_result_item') and status = 'success'), 'successful evolution attempt is logged');
 
@@ -335,7 +338,7 @@ select is(testutil.balance_of((select id from _ids where key = 'user'), 'FGEMS')
 
 update inventory.evolution_rules set active = false where from_template_id = (select id from _ids where key = 'template') and from_form_id = (select id from _ids where key = 'form1');
 insert into inventory.evolution_rules (from_template_id, from_form_id, to_template_id, to_form_id, required_count, cost_kcoin, success_rate_bps, active)
-values ((select id from _ids where key = 'template'), (select id from _ids where key = 'form1'), (select id from _ids where key = 'template'), (select id from _ids where key = 'form2'), 3, 80, 0, true);
+values ((select id from _ids where key = 'template'), (select id from _ids where key = 'form1'), (select id from _ids where key = 'target_template'), (select id from _ids where key = 'target_form'), 3, 80, 0, true);
 
 insert into _ids (key, id) select 'f1', testutil.create_item((select id from _ids where key = 'user'), (select id from _ids where key = 'template'), (select id from _ids where key = 'form1'), 1, 11, 'admin');
 insert into _ids (key, id) select 'f2', testutil.create_item((select id from _ids where key = 'user'), (select id from _ids where key = 'template'), (select id from _ids where key = 'form1'), 4, 40, 'admin');
@@ -349,7 +352,7 @@ select 'evolve_failed', api.inventory_evolve_item(
   (select id from _ids where key = 'user'),
   array[(select id from _ids where key = 'f1'), (select id from _ids where key = 'f2'), (select id from _ids where key = 'f3')],
   'inventory-evolve-failed-001'::text,
-  (select id from _ids where key = 'form2'),
+  (select id from _ids where key = 'target_form'),
   80::numeric,
   0,
   (select id from _ids where key = 'f2')
@@ -366,6 +369,13 @@ select is(testutil.balance_of((select id from _ids where key = 'user'), 'KCOIN')
 select ok(exists (select 1 from inventory.evolution_attempts where main_item_instance_id = (select id from _ids where key = 'failed_main_item') and status = 'failed'), 'failed evolution attempt is logged');
 select ok(exists (select 1 from pg_indexes where schemaname = 'inventory' and indexname = 'upgrade_rules_one_active_from_level'), 'upgrade active-rule uniqueness index exists');
 select ok(exists (select 1 from pg_indexes where schemaname = 'inventory' and indexname = 'evolution_rules_one_active_source_form'), 'evolution active-rule uniqueness index exists');
+select ok(testutil.raises_like(format(
+  'insert into inventory.evolution_rules (from_template_id, from_form_id, to_template_id, to_form_id, required_count, cost_kcoin, success_rate_bps, active) values (%L::uuid, %L::uuid, %L::uuid, %L::uuid, 3, 1, 10000, true)',
+  (select id::text from _ids where key = 'template'),
+  (select id::text from _ids where key = 'form2'),
+  (select id::text from _ids where key = 'template'),
+  (select id::text from _ids where key = 'form2')
+), '%EVOLUTION_RULE_TARGET_TEMPLATE_REQUIRED%'), 'active same-template evolution rules are rejected');
 select ok(not has_function_privilege('anon', 'api.inventory_upgrade_item(uuid, uuid, text)', 'execute'), 'anon cannot execute inventory_upgrade_item directly');
 select ok(not has_function_privilege('authenticated', 'api.inventory_upgrade_item(uuid, uuid, text)', 'execute'), 'authenticated cannot execute inventory_upgrade_item directly');
 select ok(to_regprocedure('api.inventory_evolve_item(uuid,uuid[],text)') is null, 'legacy three-argument inventory_evolve_item is removed');

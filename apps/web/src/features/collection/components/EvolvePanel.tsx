@@ -84,8 +84,7 @@ export function EvolvePanel({
       Boolean(candidate),
     );
   const mainReturnItemId = getMainReturnItemId(selectedItems);
-  const targetImageUrl =
-    preview?.targetImageUrl ?? displayItem.imageUrl ?? displayItem.thumbnailUrl;
+  const targetImageUrl = preview?.targetImageUrl ?? null;
   const isListed = item.status === "listed";
   const disabledReason = getEvolveDisabledReason({
     isListed,
@@ -112,7 +111,7 @@ export function EvolvePanel({
     } catch (error) {
       pushToast({
         type: "error",
-        title: "合成失败",
+        title: "进化失败",
         message: getApiErrorMessage(error),
       });
     }
@@ -144,11 +143,11 @@ export function EvolvePanel({
 
   return (
     <div
-      className="upgrade-panel evolve-panel evolve-panel--liquid-glass"
+      className="upgrade-panel evolve-panel growth-panel--liquid-glass evolve-panel--liquid-glass"
       role="presentation"
     >
       <button
-        aria-label="关闭合成面板"
+        aria-label="关闭进化面板"
         className="upgrade-panel__backdrop evolve-panel__backdrop"
         disabled={evolveMutation.isPending}
         onClick={handleClose}
@@ -162,7 +161,7 @@ export function EvolvePanel({
       >
         <header className="upgrade-panel__header evolve-panel__header">
           <div>
-            <span>合成 / 进化</span>
+            <span>藏品进化</span>
             <h2 id="evolve-panel-title">{displayItem.name}</h2>
           </div>
           <button
@@ -199,19 +198,19 @@ export function EvolvePanel({
             </div>
           </section>
 
-          <section className="evolve-panel__target" aria-label="目标形态">
+          <section className="evolve-panel__target" aria-label="目标藏品">
             <div className="evolve-panel__target-image">
               {targetImageUrl ? (
                 <img
                   src={targetImageUrl}
-                  alt={preview?.targetName ?? "目标形态"}
+                  alt={preview?.targetName ?? "目标藏品"}
                 />
               ) : (
                 <PackageCheck aria-hidden="true" size={24} strokeWidth={2.3} />
               )}
             </div>
             <div className="evolve-panel__target-copy">
-              <span>目标形态</span>
+              <span>目标藏品</span>
               <strong>{preview?.targetName ?? "提交后确认"}</strong>
               <em>{preview ? "本地展示预览" : "未配置本地预览"}</em>
             </div>
@@ -219,11 +218,11 @@ export function EvolvePanel({
 
           <section
             className="upgrade-panel__metrics evolve-panel__metrics"
-            aria-label="合成预览"
+            aria-label="进化预览"
           >
             <EvolveMetric
               icon="users"
-              label="同款 available 数量"
+              label="同款可用数量"
               value={formatOptionalNumber(sameAvailableItems.length)}
             />
             <EvolveMetric
@@ -249,17 +248,17 @@ export function EvolvePanel({
                   : "主藏品待选择"}
               </strong>
               <span>
-                合成失败时返还主藏品；材料消耗和 KCOIN 以后端结果为准。
+                进化失败时返还主藏品；材料消耗和 KCOIN 以后端结果为准。
               </span>
             </div>
           </section>
 
           <section
             className="evolve-panel__materials"
-            aria-label="选择合成材料"
+            aria-label="选择进化材料"
           >
             <div className="evolve-panel__material-header">
-              <strong>选择 3 个同款材料</strong>
+              <strong>选择 3 个同款源藏品</strong>
               <span>
                 {formatCurrencyAmount(selectedIds.length)} /{" "}
                 {formatCurrencyAmount(requiredCount)}
@@ -331,7 +330,7 @@ export function EvolvePanel({
             ) : (
               <Swords aria-hidden="true" size={16} strokeWidth={2.5} />
             )}
-            {evolveMutation.isPending ? "合成中" : "确认合成"}
+            {evolveMutation.isPending ? "进化中" : "确认进化"}
           </button>
         </footer>
       </section>
@@ -481,23 +480,23 @@ function getEvolveDisabledReason({
   selectedCount: number;
 }): string | null {
   if (isPending) {
-    return "合成请求正在提交。";
+    return "进化请求正在提交。";
   }
 
   if (isListed) {
-    return "该藏品正在挂售中，不能合成。";
+    return "该藏品正在挂售中，不能进化。";
   }
 
   if (item.status !== "available") {
-    return "该藏品当前状态不可合成。";
+    return "该藏品当前状态不可进化。";
   }
 
   if (!item.isEvolvable) {
-    return "该藏品不可合成。";
+    return "该藏品不可进化。";
   }
 
   if (localAvailableCount < requiredCount) {
-    return "同款 available 藏品数量不足。";
+    return "同款可用藏品数量不足。";
   }
 
   if (selectedCount < requiredCount) {
@@ -516,7 +515,7 @@ function getBalanceLabel(canSubmit: boolean): string {
 }
 
 function getBalanceDetail(): string {
-  return "余额、消耗和概率由服务端在确认合成时校验。";
+  return "余额、消耗和概率由服务端在确认进化时校验。";
 }
 
 function formatOptionalNumber(value: number | null | undefined): string {

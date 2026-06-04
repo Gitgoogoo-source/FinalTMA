@@ -205,7 +205,7 @@ async function callInventoryEvolvePreviewRpc(
   const preview = assertRecordPayload(
     payload,
     "INVENTORY_EVOLVE_PREVIEW_INVALID",
-    "合成预览结果格式无效。",
+    "进化预览结果格式无效。",
   );
   const canEvolve = readBoolean(preview.can_evolve) ?? false;
   const targetFormId = readString(preview.target_form_id);
@@ -226,7 +226,7 @@ async function callInventoryEvolvePreviewRpc(
   ) {
     throw invalidInventoryResult(
       "INVENTORY_EVOLVE_PREVIEW_INVALID",
-      "合成预览缺少必要字段。",
+      "进化预览缺少必要字段。",
       {
         can_evolve: preview.can_evolve,
         kcoin_cost: preview.kcoin_cost,
@@ -254,34 +254,34 @@ function mapInventoryEvolvePreviewReason(reason: string | null): ApiError {
       return new ApiError(
         400,
         "EVOLVE_DUPLICATE_ITEM_IDS",
-        "合成材料不能重复。",
+        "进化材料不能重复。",
       );
     case "EVOLVE_ITEM_COUNT_INVALID":
       return new ApiError(
         400,
         "EVOLVE_ITEM_COUNT_INVALID",
-        "合成必须选择 3 个藏品。",
+        "进化必须选择 3 个藏品。",
       );
     case "EVOLVE_REQUIRES_SAME_TEMPLATE_AND_FORM":
       return new ApiError(
         409,
         "EVOLVE_REQUIRES_SAME_TEMPLATE_AND_FORM",
-        "合成需要 3 个同模板、同形态藏品。",
+        "进化需要 3 个同一源藏品。",
       );
     case "EVOLVE_RULE_NOT_FOUND":
     case "NO_NEXT_FORM":
-      return new ApiError(500, "EVOLVE_RULE_NOT_FOUND", "合成配置缺失。", {
+      return new ApiError(500, "EVOLVE_RULE_NOT_FOUND", "进化配置缺失。", {
         expose: false,
       });
     case "ITEM_LOCKED":
     case "ITEM_MINTING":
     case "ITEM_NOT_AVAILABLE":
     case "ITEM_NOT_EVOLVABLE":
-      return new ApiError(409, "ITEM_NOT_EVOLVABLE", "部分藏品当前不可合成。");
+      return new ApiError(409, "ITEM_NOT_EVOLVABLE", "部分藏品当前不可进化。");
     case "ITEM_NOT_FOUND":
       return new ApiError(404, "ITEM_NOT_FOUND", "部分藏品不存在。");
     default:
-      return new ApiError(409, "ITEM_NOT_EVOLVABLE", "部分藏品当前不可合成。");
+      return new ApiError(409, "ITEM_NOT_EVOLVABLE", "部分藏品当前不可进化。");
   }
 }
 
@@ -292,7 +292,7 @@ export function normalizeInventoryEvolvePayload(
   const result = assertRecordPayload(
     payload,
     "INVENTORY_EVOLVE_RESULT_INVALID",
-    "合成结果格式无效。",
+    "进化结果格式无效。",
   );
   const success =
     readBoolean(result.success) ??
@@ -304,7 +304,7 @@ export function normalizeInventoryEvolvePayload(
   if (success === null) {
     throw invalidInventoryResult(
       "INVENTORY_EVOLVE_RESULT_INVALID",
-      "合成结果缺少状态字段。",
+      "进化结果缺少状态字段。",
       { success: result.success, result: result.result },
     );
   }
@@ -358,7 +358,7 @@ function mapInventoryEvolveRpcError(error: unknown): ApiError {
   }
 
   if (!(error instanceof RpcError)) {
-    return ApiError.internal("合成失败，请稍后重试。", {
+    return ApiError.internal("进化失败，请稍后重试。", {
       cause: getErrorMessage(error),
     });
   }
@@ -373,7 +373,7 @@ function mapInventoryEvolveRpcError(error: unknown): ApiError {
     return new ApiError(
       409,
       "IDEMPOTENCY_CONFLICT",
-      "幂等键已被其他合成请求使用。",
+      "幂等键已被其他进化请求使用。",
     );
   }
 
@@ -381,12 +381,12 @@ function mapInventoryEvolveRpcError(error: unknown): ApiError {
     return new ApiError(
       400,
       "EVOLVE_ITEM_COUNT_INVALID",
-      "合成必须选择 3 个藏品。",
+      "进化必须选择 3 个藏品。",
     );
   }
 
   if (message.includes("duplicate item ids are not allowed")) {
-    return new ApiError(400, "EVOLVE_DUPLICATE_ITEM_IDS", "合成材料不能重复。");
+    return new ApiError(400, "EVOLVE_DUPLICATE_ITEM_IDS", "进化材料不能重复。");
   }
 
   if (message.includes("some items do not exist")) {
@@ -394,7 +394,7 @@ function mapInventoryEvolveRpcError(error: unknown): ApiError {
   }
 
   if (message.includes("some items are not evolvable or not available")) {
-    return new ApiError(409, "ITEM_NOT_EVOLVABLE", "部分藏品当前不可合成。");
+    return new ApiError(409, "ITEM_NOT_EVOLVABLE", "部分藏品当前不可进化。");
   }
 
   if (
@@ -404,12 +404,12 @@ function mapInventoryEvolveRpcError(error: unknown): ApiError {
     return new ApiError(
       409,
       "EVOLVE_REQUIRES_SAME_TEMPLATE_AND_FORM",
-      "合成需要 3 个同模板、同形态藏品。",
+      "进化需要 3 个同一源藏品。",
     );
   }
 
   if (message.includes("evolution rule not found")) {
-    return new ApiError(500, "EVOLVE_RULE_NOT_FOUND", "合成配置缺失。", {
+    return new ApiError(500, "EVOLVE_RULE_NOT_FOUND", "进化配置缺失。", {
       cause: error,
       expose: false,
     });
@@ -423,11 +423,11 @@ function mapInventoryEvolveRpcError(error: unknown): ApiError {
     return new ApiError(
       409,
       "INVENTORY_PREVIEW_STALE",
-      "藏品合成配置已变化，请刷新后重试。",
+      "藏品进化配置已变化，请刷新后重试。",
     );
   }
 
-  return new ApiError(500, "INVENTORY_EVOLVE_RPC_FAILED", "合成失败。", {
+  return new ApiError(500, "INVENTORY_EVOLVE_RPC_FAILED", "进化失败。", {
     cause: error,
     expose: false,
   });

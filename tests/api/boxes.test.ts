@@ -994,7 +994,7 @@ describe("boxes API helpers", () => {
     expect(createTelegramStarsInvoiceMock).not.toHaveBeenCalled();
   });
 
-  it("/api/boxes/create-open-order rejects sold-out stock before invoice creation", async () => {
+  it("/api/boxes/create-open-order keeps legacy stock RPC errors generic", async () => {
     callRpcRawMock.mockRejectedValueOnce(
       new RpcError({
         rpcName: "gacha_create_order_checked",
@@ -1029,7 +1029,7 @@ describe("boxes API helpers", () => {
       ok: false,
       error: {
         code: "BOX_STOCK_NOT_ENOUGH",
-        message: "盲盒库存不足。",
+        message: "当前盲盒暂时不可开启，请刷新后重试。",
       },
     });
     expect(createTelegramStarsInvoiceMock).not.toHaveBeenCalled();

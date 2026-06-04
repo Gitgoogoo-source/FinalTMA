@@ -110,19 +110,6 @@ begin
   where id = v_order.box_id
   for update;
 
-  if v_box.remaining_stock is not null and v_box.remaining_stock < v_order.draw_count then
-    update gacha.draw_orders set status = 'failed', error_message = 'stock insufficient after payment', updated_at = now() where id = v_order.id;
-    raise exception 'blind box stock is insufficient after payment';
-  end if;
-
-  if v_box.remaining_stock is not null then
-    update gacha.blind_boxes
-    set remaining_stock = remaining_stock - v_order.draw_count,
-        status = case when remaining_stock - v_order.draw_count <= 0 then 'sold_out' else status end,
-        updated_at = now()
-    where id = v_box.id;
-  end if;
-
   for v_draw_i in 1..v_order.draw_count loop
     select null::uuid as id into v_reward;
     select null::uuid as id, 0::integer as current_count into v_pity;

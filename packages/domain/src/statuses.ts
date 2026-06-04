@@ -67,10 +67,10 @@ export const BOX_STATUS_META = {
   },
   [BOX_STATUS.SOLD_OUT]: {
     code: BOX_STATUS.SOLD_OUT,
-    displayNameCn: "已售罄",
-    displayNameEn: "Sold Out",
+    displayNameCn: "不可开启",
+    displayNameEn: "Unavailable",
     tone: "disabled",
-    description: "盲盒库存已售罄，不允许开盒。",
+    description: "当前盲盒不可开启。",
   },
 } as const satisfies Record<BoxStatus, StatusMeta<BoxStatus>>;
 
@@ -332,7 +332,7 @@ export const INVENTORY_ITEM_STATUS_META = {
     displayNameCn: "可用",
     displayNameEn: "Available",
     tone: "success",
-    description: "藏品可用于升级、合成、分解、出售或 Mint。",
+    description: "藏品可用于升级、进化、分解、出售或 Mint。",
   },
   [INVENTORY_ITEM_STATUS.LOCKED]: {
     code: INVENTORY_ITEM_STATUS.LOCKED,
@@ -346,14 +346,14 @@ export const INVENTORY_ITEM_STATUS_META = {
     displayNameCn: "出售中",
     displayNameEn: "Listed",
     tone: "info",
-    description: "藏品已挂售，不能同时升级、合成、分解或 Mint。",
+    description: "藏品已挂售，不能同时升级、进化、分解或 Mint。",
   },
   [INVENTORY_ITEM_STATUS.CONSUMED]: {
     code: INVENTORY_ITEM_STATUS.CONSUMED,
     displayNameCn: "已消耗",
     displayNameEn: "Consumed",
     tone: "disabled",
-    description: "藏品已在合成或其他操作中被消耗。",
+    description: "藏品已在进化或其他操作中被消耗。",
   },
   [INVENTORY_ITEM_STATUS.DECOMPOSED]: {
     code: INVENTORY_ITEM_STATUS.DECOMPOSED,

@@ -319,13 +319,13 @@ with inserted as (
   values (
     (select id from _ids where key = 'a_template'),
     (select id from _ids where key = 'a_form'),
-    (select id from _ids where key = 'a_template'),
-    (select id from _ids where key = 'old_stage_form'),
+    (select id from _ids where key = 'c_template'),
+    (select id from _ids where key = 'c_form'),
     3,
     1,
     10000,
     true,
-    '{"fixture":"old_same_template_rule"}'::jsonb
+    '{"fixture":"old_same_source_rule"}'::jsonb
   )
   returning id
 )
@@ -434,7 +434,7 @@ select 'chain_publish', api.admin_publish_evolution_chain(
 
 select is(((select payload from _ids where key = 'chain_publish') ->> 'synced_rule_count')::integer, 2, 'publishing chain syncs two evolution rules');
 select is(((select payload from _ids where key = 'chain_publish') ->> 'deactivated_rule_count')::integer, 1, 'publishing chain deactivates old same-source rule');
-select is((select active from inventory.evolution_rules where id = (select id from _ids where key = 'old_rule')), false, 'old same-template rule is inactive after chain publish');
+select is((select active from inventory.evolution_rules where id = (select id from _ids where key = 'old_rule')), false, 'old same-source rule is inactive after chain publish');
 
 select is((
   select er.to_template_id
