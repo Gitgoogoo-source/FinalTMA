@@ -17,7 +17,7 @@ const TAB_ICON_BY_ID: Record<TradeTabId, LucideIcon> = {
 
 export function TradeTabs({ activeTab, onTabChange }: TradeTabsProps) {
   return (
-    <div className="trade-tabs" role="tablist" aria-label="交易市场">
+    <div className="trade-tabs" role="tablist" aria-label="交易功能切换">
       {TRADE_TABS.map((tab) => {
         const isActive = activeTab === tab.id;
         const Icon = TAB_ICON_BY_ID[tab.id];

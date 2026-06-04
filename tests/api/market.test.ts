@@ -809,6 +809,38 @@ describe("market my listings API", () => {
     });
     expect(result.body.data.items[0]).not.toHaveProperty("rpc_extra_field");
   });
+
+  it("defaults my listings to active manageable statuses when no status filter is provided", async () => {
+    callRpcRawMock.mockResolvedValueOnce({
+      items: [],
+      next_cursor: null,
+    });
+
+    const result = await invokeApiHandler<
+      ApiSuccessResponse<{
+        items: Array<Record<string, unknown>>;
+        next_cursor: string | null;
+      }>
+    >(myListingsHandler, {
+      method: "GET",
+      headers: {
+        "x-request-id": "req-market-my-listings-default-statuses",
+      },
+      query: {},
+    });
+
+    expect(result.statusCode).toBe(200);
+    expect(callRpcRawMock).toHaveBeenCalledWith(
+      "market_list_my_listings",
+      expect.objectContaining({
+        p_user_id: USER_ID,
+        p_statuses: ["active", "partially_sold"],
+      }),
+      expect.objectContaining({
+        schema: "api",
+      }),
+    );
+  });
 });
 
 describe("market my listing stats API", () => {

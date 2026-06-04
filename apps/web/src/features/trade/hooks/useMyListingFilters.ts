@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 
 import type {
+  MarketListingStatus,
   MarketMyListingsQuery,
   MarketMyListingSort,
 } from "../trade.types";
@@ -22,6 +23,11 @@ const DEFAULT_FILTERS: MyListingFiltersState = {
   typeCode: "",
   sort: "recently_listed",
 };
+
+const MANAGE_LISTING_STATUSES: MarketListingStatus[] = [
+  "active",
+  "partially_sold",
+];
 
 export function useMyListingFilters() {
   const [filters, setFilters] =
@@ -61,6 +67,7 @@ function buildMyListingsQuery(
   const query: MarketMyListingsQuery = {
     limit: 50,
     sort: filters.sort,
+    statuses: MANAGE_LISTING_STATUSES,
   };
   const minPrice = parseKcoinFilter(filters.minPriceKcoin);
   const maxPrice = parseKcoinFilter(filters.maxPriceKcoin);

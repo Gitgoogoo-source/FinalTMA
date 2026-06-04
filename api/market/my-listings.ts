@@ -15,6 +15,8 @@ type MarketMyListingsResponse = {
   next_cursor: string | null;
 };
 
+const DEFAULT_MANAGE_LISTING_STATUSES = ["active", "partially_sold"] as const;
+
 export default withApiHandler(
   async (req, _res, ctx) => {
     const session = await requireSession(req);
@@ -46,7 +48,7 @@ async function callMarketListMyListings(
       "market_list_my_listings",
       {
         p_user_id: userId,
-        p_statuses: query.statuses ?? null,
+        p_statuses: query.statuses ?? [...DEFAULT_MANAGE_LISTING_STATUSES],
         p_rarities: query.rarities ?? null,
         p_type_codes: query.type_codes ?? null,
         p_template_ids: query.template_ids ?? null,

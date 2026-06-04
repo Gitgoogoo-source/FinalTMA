@@ -19,21 +19,20 @@ test("出售管理页展示我的挂单并按筛选查询", async ({ page }) => 
   );
 
   await expect(page.getByTestId("trade-manage-panel")).toBeVisible();
-  await expect(page.getByTestId("my-listing-row")).toHaveCount(2);
+  await expect(page.getByTestId("my-listing-row")).toHaveCount(1);
   await expect(page.getByText("月冕守门人", { exact: true })).toBeVisible();
-  await expect(page.getByText("旧挂单", { exact: true })).toBeVisible();
+  await expect(page.getByText("旧挂单", { exact: true })).toBeHidden();
   await expect(
     page.getByRole("button", { name: "改价 月冕守门人" }),
   ).toBeEnabled();
   await expect(
     page.getByRole("button", { name: "下架 月冕守门人" }),
   ).toBeEnabled();
-  await expect(
-    page.getByRole("button", { name: "改价 旧挂单" }),
-  ).toBeDisabled();
-  await expect(
-    page.getByRole("button", { name: "下架 旧挂单" }),
-  ).toBeDisabled();
+
+  const initialRequest = myListingsRequests.at(-1);
+  expect(initialRequest?.searchParams.get("statuses")).toBe(
+    "active,partially_sold",
+  );
 
   const filters = page.locator(".my-listing-filters");
   await filters.getByLabel("最低价").fill("300");
@@ -137,7 +136,7 @@ async function mockMarketManageApi(
     myListingsRequests.push(new URL(route.request().url()));
 
     return fulfillOk(route, {
-      items: [myActiveListingPayload(), myCancelledListingPayload()],
+      items: filterMyListingPayloadsByRequest(route),
       next_cursor: null,
     });
   });
@@ -207,6 +206,23 @@ function myCancelledListingPayload() {
     status: "cancelled",
     created_at: "2026-05-22T00:00:00.000Z",
   };
+}
+
+function filterMyListingPayloadsByRequest(route: Route) {
+  const requestedStatuses = new URL(route.request().url()).searchParams
+    .get("statuses")
+    ?.split(",")
+    .map((status) => status.trim())
+    .filter(Boolean);
+  const listings = [myActiveListingPayload(), myCancelledListingPayload()];
+
+  if (!requestedStatuses || requestedStatuses.length === 0) {
+    return listings;
+  }
+
+  return listings.filter((listing) =>
+    requestedStatuses.includes(listing.status),
+  );
 }
 
 async function fulfillOk(route: Route, data: unknown): Promise<void> {

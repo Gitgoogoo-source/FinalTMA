@@ -55,7 +55,7 @@ export function MyListingsList({
         <span>
           {hasActiveFilters
             ? "当前筛选条件下没有自己的挂单。"
-            : "上架成功后，这里会显示你的出售中和历史挂单。"}
+            : "上架成功后，这里会显示你的出售中挂单。"}
         </span>
       </div>
     );

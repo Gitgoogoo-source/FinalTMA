@@ -26,7 +26,10 @@ describe("TradePage", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole("heading", { name: "交易市场" })).toBeVisible();
+    expect(
+      screen.queryByRole("heading", { name: "交易市场" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Telegram Mini App")).not.toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "购买" })).toHaveAttribute(
       "aria-selected",
       "true",
