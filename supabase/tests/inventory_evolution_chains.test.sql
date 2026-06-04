@@ -475,7 +475,11 @@ select 'a_to_b', api.inventory_evolve_item(
     (select id from _ids where key = 'a2'),
     (select id from _ids where key = 'a3')
   ],
-  'evolution-chain-a-to-b-001'
+  'evolution-chain-a-to-b-001',
+  (select id from _ids where key = 'b_form'),
+  25::numeric,
+  10000,
+  (select id from _ids where key = 'a3')
 );
 
 insert into _ids (key, id)
@@ -497,7 +501,11 @@ select 'b_to_c', api.inventory_evolve_item(
     (select id from _ids where key = 'b2'),
     (select id from _ids where key = 'b3')
   ],
-  'evolution-chain-b-to-c-001'
+  'evolution-chain-b-to-c-001',
+  (select id from _ids where key = 'c_form'),
+  40::numeric,
+  10000,
+  (select id from _ids where key = 'created_b')
 );
 
 insert into _ids (key, id)

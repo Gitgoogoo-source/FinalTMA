@@ -387,13 +387,15 @@ export function BoxPage() {
         onSelect={setSelectedBoxId}
       />
 
-      <section className="box-page__status" aria-label="盲盒状态">
-        <BoxStatusBadge
-          status={selectedBox.status}
-          disabledReason={selectedBox.disabledReason}
-        />
-        <span>{formatStock(selectedBox)}</span>
-      </section>
+      {shouldShowBoxStatus(selectedBox) ? (
+        <section className="box-page__status" aria-label="盲盒状态">
+          <BoxStatusBadge
+            status={selectedBox.status}
+            disabledReason={selectedBox.disabledReason}
+          />
+          <span>{formatStock(selectedBox)}</span>
+        </section>
+      ) : null}
 
       <PossibleRewardsRow
         rewards={rewardsQuery.rewards}
@@ -505,6 +507,10 @@ function formatStock(box: BlindBox): string {
   }
 
   return `剩余 ${formatCurrencyAmount(box.remainingStock)} / ${formatCurrencyAmount(box.totalStock)}`;
+}
+
+function shouldShowBoxStatus(box: BlindBox): boolean {
+  return box.status !== "active" || !box.isOpenable;
 }
 
 function getRewardsErrorMessage(error: unknown): string | null {

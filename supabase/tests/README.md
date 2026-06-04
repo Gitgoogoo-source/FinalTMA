@@ -66,11 +66,9 @@ tasks_signin_transaction.test.sql
 supabase db reset
 ```
 
-或确保以下内容已经应用到测试库：
+或确保 `supabase/migrations/` 下的版本化 migration 已经完整应用到测试库。
 
-1. `supabase/migrations/20260521065609_0001_create_users.sql` 至 `20260521071217_0019_create_constraints.sql`
-2. `supabase/rpc/*.sql`
-3. `supabase/rls/*.sql`
+注意：当前项目以 migration 为准。`supabase/rpc/*.sql` 中仍保留部分历史/兼容脚本，不再作为重建数据库的权威步骤单独 replay。
 
 只运行 pgTAP：
 

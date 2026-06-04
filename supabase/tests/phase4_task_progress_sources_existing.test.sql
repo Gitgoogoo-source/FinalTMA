@@ -68,8 +68,8 @@ select ok(
 );
 
 select ok(
-  position('task_record_progress' in pg_get_functiondef(to_regprocedure('api.inventory_evolve_item(uuid,uuid[],text)'))) > 0
-    and position('inventory_evolve_item' in pg_get_functiondef(to_regprocedure('api.inventory_evolve_item(uuid,uuid[],text)'))) > 0,
+  position('task_record_progress' in pg_get_functiondef(to_regprocedure('api.inventory_evolve_item(uuid,uuid[],text,uuid,numeric,integer,uuid)'))) > 0
+    and position('inventory_evolve_item' in pg_get_functiondef(to_regprocedure('api.inventory_evolve_item(uuid,uuid[],text,uuid,numeric,integer,uuid)'))) > 0,
   'inventory_evolve_item records inventory_evolve_item progress'
 );
 select ok(

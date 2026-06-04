@@ -992,7 +992,6 @@ describe("CollectionPage stage-3 frontend states", () => {
       makeItem({ itemInstanceId: ITEM_B_ID, serialNo: 2 }),
       makeItem({ itemInstanceId: ITEM_C_ID, serialNo: 3 }),
     );
-    setItemDetail(item, makeDetail(item));
 
     renderCollectionPage();
     fireEvent.click(
@@ -1005,6 +1004,9 @@ describe("CollectionPage stage-3 frontend states", () => {
     expect(evolveDialog.closest(".evolve-panel--liquid-glass")).not.toBeNull();
     expect(within(evolveDialog).getByText("合成 / 进化")).toBeVisible();
     expect(within(evolveDialog).getByLabelText("目标形态")).toBeVisible();
+    expect(
+      within(evolveDialog).getByText("Forest Sproutling II"),
+    ).toBeVisible();
     expect(within(evolveDialog).getByLabelText("合成预览")).toBeVisible();
     expect(within(evolveDialog).getByText("KCOIN 消耗")).toBeVisible();
     expect(within(evolveDialog).getByText("成功率")).toBeVisible();
@@ -1021,12 +1023,9 @@ describe("CollectionPage stage-3 frontend states", () => {
       expect(mocks.evolveMutateAsync).toHaveBeenCalledTimes(1),
     );
     expect(mocks.evolveMutateAsync).toHaveBeenCalledWith({
-      expectedKcoinCost: 200,
-      expectedReturnItemInstanceId: ITEM_C_ID,
-      expectedSuccessRateBps: 5000,
-      sourceItemInstanceIds: [ITEM_C_ID, ITEM_B_ID, ITEM_A_ID],
-      targetFormId: FORM_ID,
+      sourceItemInstanceIds: [ITEM_A_ID, ITEM_B_ID, ITEM_C_ID],
     });
+    expect(mocks.detailCalls.some((call) => call.enabled)).toBe(false);
     expect(
       await screen.findByRole("dialog", { name: "合成成功" }),
     ).toBeVisible();

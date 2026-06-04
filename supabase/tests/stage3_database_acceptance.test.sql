@@ -335,7 +335,11 @@ insert into _ids (key, payload)
 select 'evolve_success', api.inventory_evolve_item(
   (select id from _ids where key = 'evolve_user'),
   array[(select id from _ids where key = 'evolve_s1'), (select id from _ids where key = 'evolve_s2'), (select id from _ids where key = 'evolve_s3')],
-  'stage3-accept-evolve-success'
+  'stage3-accept-evolve-success',
+  (select id from _ids where key = 'evolve_success_form2'),
+  120::numeric,
+  10000,
+  (select id from _ids where key = 'evolve_s3')
 );
 insert into _ids (key, id) select 'evolve_success_result', ((select payload from _ids where key = 'evolve_success') ->> 'result_item_instance_id')::uuid;
 
@@ -369,7 +373,11 @@ insert into _ids (key, payload)
 select 'evolve_success_repeat', api.inventory_evolve_item(
   (select id from _ids where key = 'evolve_user'),
   array[(select id from _ids where key = 'evolve_s1'), (select id from _ids where key = 'evolve_s2'), (select id from _ids where key = 'evolve_s3')],
-  'stage3-accept-evolve-success'
+  'stage3-accept-evolve-success',
+  null::uuid,
+  null::numeric,
+  null::integer,
+  null::uuid
 );
 select is((select count(*)::integer from inventory.evolution_attempts where idempotency_key = 'stage3-accept-evolve-success'), 1, 'repeated evolution idempotency key does not create another attempt');
 select is((select count(*)::integer from economy.currency_ledger where idempotency_key = 'stage3-accept-evolve-success'), 1, 'repeated evolution idempotency key does not create another debit');
@@ -377,10 +385,10 @@ select is(testutil.balance_of((select id from _ids where key = 'evolve_user'), '
 
 insert into _ids (key, id) select 'evolve_short1', testutil.create_item((select id from _ids where key = 'evolve_user'), (select id from _ids where key = 'evolve_success_template'), (select id from _ids where key = 'evolve_success_form1'), 1, 10);
 insert into _ids (key, id) select 'evolve_short2', testutil.create_item((select id from _ids where key = 'evolve_user'), (select id from _ids where key = 'evolve_success_template'), (select id from _ids where key = 'evolve_success_form1'), 1, 10);
-select ok(testutil.raises_like(format('select api.inventory_evolve_item(%L::uuid, array[%L::uuid, %L::uuid], %L)', (select id::text from _ids where key = 'evolve_user'), (select id::text from _ids where key = 'evolve_short1'), (select id::text from _ids where key = 'evolve_short2'), 'stage3-accept-evolve-short'), '%exactly three item ids are required%'), 'evolution rejects fewer than three items');
+select ok(testutil.raises_like(format('select api.inventory_evolve_item(%L::uuid, array[%L::uuid, %L::uuid], %L, null::uuid, null::numeric, null::integer, null::uuid)', (select id::text from _ids where key = 'evolve_user'), (select id::text from _ids where key = 'evolve_short1'), (select id::text from _ids where key = 'evolve_short2'), 'stage3-accept-evolve-short'), '%exactly three item ids are required%'), 'evolution rejects fewer than three items');
 select is((select count(*)::integer from inventory.evolution_attempts where idempotency_key = 'stage3-accept-evolve-short'), 0, 'short evolution writes no attempt');
 
-select ok(testutil.raises_like(format('select api.inventory_evolve_item(%L::uuid, array[%L::uuid, %L::uuid, %L::uuid], %L)', (select id::text from _ids where key = 'evolve_user'), (select id::text from _ids where key = 'evolve_short1'), (select id::text from _ids where key = 'evolve_short1'), (select id::text from _ids where key = 'evolve_short2'), 'stage3-accept-evolve-duplicate'), '%duplicate item ids are not allowed%'), 'evolution rejects duplicate item ids');
+select ok(testutil.raises_like(format('select api.inventory_evolve_item(%L::uuid, array[%L::uuid, %L::uuid, %L::uuid], %L, null::uuid, null::numeric, null::integer, null::uuid)', (select id::text from _ids where key = 'evolve_user'), (select id::text from _ids where key = 'evolve_short1'), (select id::text from _ids where key = 'evolve_short1'), (select id::text from _ids where key = 'evolve_short2'), 'stage3-accept-evolve-duplicate'), '%duplicate item ids are not allowed%'), 'evolution rejects duplicate item ids');
 select is((select count(*)::integer from inventory.evolution_attempts where idempotency_key = 'stage3-accept-evolve-duplicate'), 0, 'duplicate-id evolution writes no attempt');
 
 insert into _ids (key, payload) values ('evolve_other_catalog', testutil.create_catalog_fixture('stage3-accept-evolve-other', 'COMMON'));
@@ -389,12 +397,12 @@ insert into _ids (key, id) select 'evolve_other_form1', ((select payload from _i
 insert into _ids (key, id) select 'evolve_mix_t1', testutil.create_item((select id from _ids where key = 'evolve_user'), (select id from _ids where key = 'evolve_success_template'), (select id from _ids where key = 'evolve_success_form1'), 1, 10);
 insert into _ids (key, id) select 'evolve_mix_t2', testutil.create_item((select id from _ids where key = 'evolve_user'), (select id from _ids where key = 'evolve_success_template'), (select id from _ids where key = 'evolve_success_form1'), 1, 10);
 insert into _ids (key, id) select 'evolve_mix_t3', testutil.create_item((select id from _ids where key = 'evolve_user'), (select id from _ids where key = 'evolve_other_template'), (select id from _ids where key = 'evolve_other_form1'), 1, 10);
-select ok(testutil.raises_like(format('select api.inventory_evolve_item(%L::uuid, array[%L::uuid, %L::uuid, %L::uuid], %L)', (select id::text from _ids where key = 'evolve_user'), (select id::text from _ids where key = 'evolve_mix_t1'), (select id::text from _ids where key = 'evolve_mix_t2'), (select id::text from _ids where key = 'evolve_mix_t3'), 'stage3-accept-evolve-mixed-template'), '%same collectible and form%'), 'evolution rejects mixed templates');
+select ok(testutil.raises_like(format('select api.inventory_evolve_item(%L::uuid, array[%L::uuid, %L::uuid, %L::uuid], %L, null::uuid, null::numeric, null::integer, null::uuid)', (select id::text from _ids where key = 'evolve_user'), (select id::text from _ids where key = 'evolve_mix_t1'), (select id::text from _ids where key = 'evolve_mix_t2'), (select id::text from _ids where key = 'evolve_mix_t3'), 'stage3-accept-evolve-mixed-template'), '%same collectible and form%'), 'evolution rejects mixed templates');
 
 insert into _ids (key, id) select 'evolve_mix_f1', testutil.create_item((select id from _ids where key = 'evolve_user'), (select id from _ids where key = 'evolve_success_template'), (select id from _ids where key = 'evolve_success_form1'), 1, 10);
 insert into _ids (key, id) select 'evolve_mix_f2', testutil.create_item((select id from _ids where key = 'evolve_user'), (select id from _ids where key = 'evolve_success_template'), (select id from _ids where key = 'evolve_success_form1'), 1, 10);
 insert into _ids (key, id) select 'evolve_mix_f3', testutil.create_item((select id from _ids where key = 'evolve_user'), (select id from _ids where key = 'evolve_success_template'), (select id from _ids where key = 'evolve_success_form2'), 1, 30);
-select ok(testutil.raises_like(format('select api.inventory_evolve_item(%L::uuid, array[%L::uuid, %L::uuid, %L::uuid], %L)', (select id::text from _ids where key = 'evolve_user'), (select id::text from _ids where key = 'evolve_mix_f1'), (select id::text from _ids where key = 'evolve_mix_f2'), (select id::text from _ids where key = 'evolve_mix_f3'), 'stage3-accept-evolve-mixed-form'), '%same collectible and form%'), 'evolution rejects mixed forms');
+select ok(testutil.raises_like(format('select api.inventory_evolve_item(%L::uuid, array[%L::uuid, %L::uuid, %L::uuid], %L, null::uuid, null::numeric, null::integer, null::uuid)', (select id::text from _ids where key = 'evolve_user'), (select id::text from _ids where key = 'evolve_mix_f1'), (select id::text from _ids where key = 'evolve_mix_f2'), (select id::text from _ids where key = 'evolve_mix_f3'), 'stage3-accept-evolve-mixed-form'), '%same collectible and form%'), 'evolution rejects mixed forms');
 
 insert into _ids (key, id) select 'evolve_listed1', testutil.create_item((select id from _ids where key = 'evolve_user'), (select id from _ids where key = 'evolve_success_template'), (select id from _ids where key = 'evolve_success_form1'), 1, 10);
 insert into _ids (key, id) select 'evolve_listed2', testutil.create_item((select id from _ids where key = 'evolve_user'), (select id from _ids where key = 'evolve_success_template'), (select id from _ids where key = 'evolve_success_form1'), 1, 10);
@@ -406,13 +414,13 @@ select 'evolve_listing', api.market_create_listing(
   100,
   'stage3-accept-evolve-listing'
 );
-select ok(testutil.raises_like(format('select api.inventory_evolve_item(%L::uuid, array[%L::uuid, %L::uuid, %L::uuid], %L)', (select id::text from _ids where key = 'evolve_user'), (select id::text from _ids where key = 'evolve_listed1'), (select id::text from _ids where key = 'evolve_listed2'), (select id::text from _ids where key = 'evolve_listed3'), 'stage3-accept-evolve-listed'), '%not evolvable or not available%'), 'evolution rejects listed item');
+select ok(testutil.raises_like(format('select api.inventory_evolve_item(%L::uuid, array[%L::uuid, %L::uuid, %L::uuid], %L, null::uuid, null::numeric, null::integer, null::uuid)', (select id::text from _ids where key = 'evolve_user'), (select id::text from _ids where key = 'evolve_listed1'), (select id::text from _ids where key = 'evolve_listed2'), (select id::text from _ids where key = 'evolve_listed3'), 'stage3-accept-evolve-listed'), '%not evolvable or not available%'), 'evolution rejects listed item');
 select is((select count(*)::integer from inventory.evolution_attempts where idempotency_key = 'stage3-accept-evolve-listed'), 0, 'listed evolution writes no attempt');
 
 insert into _ids (key, id) select 'evolve_poor1', testutil.create_item((select id from _ids where key = 'evolve_poor_user'), (select id from _ids where key = 'evolve_success_template'), (select id from _ids where key = 'evolve_success_form1'), 1, 10);
-insert into _ids (key, id) select 'evolve_poor2', testutil.create_item((select id from _ids where key = 'evolve_poor_user'), (select id from _ids where key = 'evolve_success_template'), (select id from _ids where key = 'evolve_success_form1'), 1, 10);
+insert into _ids (key, id) select 'evolve_poor2', testutil.create_item((select id from _ids where key = 'evolve_poor_user'), (select id from _ids where key = 'evolve_success_template'), (select id from _ids where key = 'evolve_success_form1'), 3, 30);
 insert into _ids (key, id) select 'evolve_poor3', testutil.create_item((select id from _ids where key = 'evolve_poor_user'), (select id from _ids where key = 'evolve_success_template'), (select id from _ids where key = 'evolve_success_form1'), 1, 10);
-select ok(testutil.raises_like(format('select api.inventory_evolve_item(%L::uuid, array[%L::uuid, %L::uuid, %L::uuid], %L)', (select id::text from _ids where key = 'evolve_poor_user'), (select id::text from _ids where key = 'evolve_poor1'), (select id::text from _ids where key = 'evolve_poor2'), (select id::text from _ids where key = 'evolve_poor3'), 'stage3-accept-evolve-insufficient'), '%insufficient balance%'), 'evolution rejects insufficient KCOIN');
+select ok(testutil.raises_like(format('select api.inventory_evolve_item(%L::uuid, array[%L::uuid, %L::uuid, %L::uuid], %L, %L::uuid, 120::numeric, 10000, %L::uuid)', (select id::text from _ids where key = 'evolve_poor_user'), (select id::text from _ids where key = 'evolve_poor1'), (select id::text from _ids where key = 'evolve_poor2'), (select id::text from _ids where key = 'evolve_poor3'), 'stage3-accept-evolve-insufficient', (select id::text from _ids where key = 'evolve_success_form2'), (select id::text from _ids where key = 'evolve_poor2')), '%insufficient balance%'), 'evolution rejects insufficient KCOIN');
 select is((select count(*)::integer from inventory.evolution_attempts where idempotency_key = 'stage3-accept-evolve-insufficient'), 0, 'insufficient-KCOIN evolution writes no attempt');
 select is(testutil.balance_of((select id from _ids where key = 'evolve_poor_user'), 'KCOIN'), 50::numeric, 'insufficient-KCOIN evolution leaves balance unchanged');
 
@@ -437,7 +445,11 @@ insert into _ids (key, payload)
 select 'evolve_failed', api.inventory_evolve_item(
   (select id from _ids where key = 'evolve_user'),
   array[(select id from _ids where key = 'evolve_f1'), (select id from _ids where key = 'evolve_f2'), (select id from _ids where key = 'evolve_f3')],
-  'stage3-accept-evolve-failed'
+  'stage3-accept-evolve-failed',
+  (select id from _ids where key = 'evolve_fail_form2'),
+  80::numeric,
+  0,
+  (select id from _ids where key = 'evolve_f2')
 );
 insert into _ids (key, id) select 'evolve_failed_main', ((select payload from _ids where key = 'evolve_failed') ->> 'main_item_instance_id')::uuid;
 

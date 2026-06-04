@@ -63,7 +63,7 @@ describe("collection api", () => {
     );
     expect(params.get("include_market_status")).toBe("true");
     expect(params.get("include_upgrade_preview")).toBe("true");
-    expect(params.get("include_evolution_preview")).toBe("true");
+    expect(params.get("include_evolution_preview")).toBe("false");
     expect(params.get("include_decompose_preview")).toBe("true");
     expect(params.get("include_onchain_status")).toBe("true");
     expect(requestOptions).toMatchObject({

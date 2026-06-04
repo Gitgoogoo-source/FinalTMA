@@ -627,6 +627,70 @@ describe("inventory growth API", () => {
     expect(callRpcRawMock).not.toHaveBeenCalled();
   });
 
+  it("evolve resolves missing preview snapshot on the server before calling mutation RPC", async () => {
+    callRpcRawMock
+      .mockResolvedValueOnce({
+        can_evolve: true,
+        kcoin_cost: 2000,
+        main_return_item_id: ITEM_ID,
+        success_rate_bps: 5000,
+        target_form_id: FORM_ID,
+      })
+      .mockResolvedValueOnce({
+        attempt_id: "77777777-7777-4777-8777-777777777777",
+        success: false,
+        main_item_instance_id: ITEM_ID,
+        result_item_instance_id: null,
+        cost_kcoin: 2000,
+        kcoin_balance_before: 5000,
+        kcoin_balance_after: 3000,
+        balance_delta: -2000,
+        ledger_id: LEDGER_ID,
+        success_rate_bps: 5000,
+        random_roll_bps: 7000,
+      });
+
+    const result = await invokeApiHandler<ApiSuccessResponse>(evolveHandler, {
+      method: "POST",
+      body: {
+        source_item_instance_ids: [ITEM_ID, ITEM_ID_2, ITEM_ID_3],
+        idempotency_key: IDEMPOTENCY_KEY,
+      },
+    });
+
+    expect(result.statusCode).toBe(200);
+    expectStandardSuccessEnvelope(result.body);
+    expect(callRpcRawMock).toHaveBeenNthCalledWith(
+      1,
+      "inventory_get_evolution_preview",
+      {
+        p_user_id: USER_ID,
+        p_item_instance_ids: [ITEM_ID, ITEM_ID_2, ITEM_ID_3],
+        p_target_form_id: null,
+      },
+      expect.objectContaining({ schema: "api" }),
+    );
+    expect(callRpcRawMock).toHaveBeenNthCalledWith(
+      2,
+      "inventory_evolve_item",
+      {
+        p_user_id: USER_ID,
+        p_item_instance_ids: [ITEM_ID, ITEM_ID_2, ITEM_ID_3],
+        p_idempotency_key: IDEMPOTENCY_KEY,
+        p_target_form_id: FORM_ID,
+        p_expected_kcoin_cost: 2000,
+        p_expected_success_rate_bps: 5000,
+        p_expected_return_item_instance_id: ITEM_ID,
+      },
+      expect.objectContaining({ schema: "api" }),
+    );
+    expect(result.body.data).toMatchObject({
+      result: "failed",
+      returned_item_instance_id: ITEM_ID,
+      consumed_kcoin: 2000,
+    });
+  });
+
   it("evolve calls inventory_evolve_item and normalizes failed results", async () => {
     callRpcRawMock.mockResolvedValueOnce({
       attempt_id: "77777777-7777-4777-8777-777777777777",
@@ -700,6 +764,10 @@ describe("inventory growth API", () => {
       body: {
         source_item_instance_ids: [ITEM_ID, ITEM_ID_2, ITEM_ID_3],
         idempotency_key: IDEMPOTENCY_KEY,
+        target_form_id: FORM_ID,
+        expected_kcoin_cost: 2000,
+        expected_success_rate_bps: 5000,
+        expected_return_item_instance_id: ITEM_ID,
       },
     });
 
@@ -722,7 +790,10 @@ describe("inventory growth API", () => {
       method: "POST",
       body: {
         source_item_instance_ids: [ITEM_ID, ITEM_ID_2, ITEM_ID_3],
+        target_form_id: FORM_ID,
         expected_kcoin_cost: 2000,
+        expected_success_rate_bps: 5000,
+        expected_return_item_instance_id: ITEM_ID,
         idempotency_key: IDEMPOTENCY_KEY,
       },
     });
@@ -747,6 +818,10 @@ describe("inventory growth API", () => {
       body: {
         source_item_instance_ids: [ITEM_ID, ITEM_ID_2, ITEM_ID_3],
         idempotency_key: IDEMPOTENCY_KEY,
+        target_form_id: FORM_ID,
+        expected_kcoin_cost: 2000,
+        expected_success_rate_bps: 5000,
+        expected_return_item_instance_id: ITEM_ID,
       },
     });
 
@@ -770,6 +845,10 @@ describe("inventory growth API", () => {
       body: {
         source_item_instance_ids: [ITEM_ID, ITEM_ID_2, ITEM_ID_3],
         idempotency_key: IDEMPOTENCY_KEY,
+        target_form_id: FORM_ID,
+        expected_kcoin_cost: 2000,
+        expected_success_rate_bps: 5000,
+        expected_return_item_instance_id: ITEM_ID,
       },
     });
 

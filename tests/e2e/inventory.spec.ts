@@ -10,8 +10,10 @@ test("查看库存中的开盒藏品", async ({ page }) => {
   );
 
   await expect(page.getByTestId("collection-page")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "森林幼芽" })).toBeVisible();
   await expect(page.getByLabel("藏品网格")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: /森林幼芽，普通/ }),
+  ).toBeVisible();
   await expect(page.getByText("Lv.1", { exact: true }).first()).toBeVisible();
 });
 
@@ -23,11 +25,8 @@ test("查看藏品详情和成长入口", async ({ page }) => {
   );
 
   const selectedPanel = page.getByLabel("当前选中藏品");
-  await expect(
-    selectedPanel.getByRole("heading", { name: "森林幼芽" }),
-  ).toBeVisible();
+  await expect(selectedPanel).toBeVisible();
   await expect(selectedPanel.getByLabel("藏品完整信息")).toBeVisible();
-  await expect(selectedPanel.getByText("Mint 状态")).toBeVisible();
   await expect(selectedPanel.getByLabel("藏品关键属性")).toBeVisible();
   await expect(
     selectedPanel.getByRole("button", { name: "升级" }),
@@ -40,6 +39,9 @@ test("查看藏品详情和成长入口", async ({ page }) => {
   ).toBeVisible();
   await expect(
     selectedPanel.getByRole("button", { name: "分解" }),
+  ).toBeVisible();
+  await expect(
+    selectedPanel.getByRole("button", { name: "Mint NFT" }),
   ).toBeVisible();
 });
 
@@ -110,7 +112,7 @@ test("合成面板选择材料并展示成功结果", async ({ page }) => {
 
   await resultDialog.getByRole("button", { name: "确认" }).click();
   await expect(
-    page.getByRole("heading", { name: "森林幼芽·进化" }),
+    page.getByRole("button", { name: /森林幼芽·进化/ }),
   ).toBeVisible();
 });
 
@@ -131,7 +133,7 @@ test("合成失败后返还主藏品并消耗其他材料", async ({ page }) => 
   const evolveDialog = page.getByRole("dialog", { name: "森林幼芽" });
   await expect(evolveDialog).toBeVisible();
   await expect(evolveDialog.getByText("成功率")).toBeVisible();
-  await expect(evolveDialog.getByText("50%")).toBeVisible();
+  await expect(evolveDialog.getByText("服务端确认").first()).toBeVisible();
   await expect(evolveDialog.getByText("主藏品", { exact: true })).toBeVisible();
 
   await evolveDialog.getByRole("button", { name: "确认合成" }).click();

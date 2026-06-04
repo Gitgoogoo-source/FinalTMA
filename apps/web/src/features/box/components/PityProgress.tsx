@@ -1,4 +1,4 @@
-import { CheckCircle2, Gift, Target } from "lucide-react";
+import { CheckCircle2, Gift } from "lucide-react";
 import type { CSSProperties } from "react";
 
 import type { BlindBox } from "../box.types";
@@ -16,7 +16,7 @@ export function PityProgress({ box }: PityProgressProps) {
         className="box-pity box-pity--empty"
         aria-label={`${box.name} 保底进度`}
       >
-        <Gift aria-hidden="true" size={18} strokeWidth={2.4} />
+        <Gift aria-hidden="true" size={22} strokeWidth={2.4} />
         <div className="box-pity__copy">
           <strong>保底规则待同步</strong>
           <span>当前盲盒暂未返回保底进度</span>
@@ -36,6 +36,12 @@ export function PityProgress({ box }: PityProgressProps) {
   const targetRarity = formatRarity(pity.targetRarity);
   const resetAfterHit =
     currentCount === 0 && pity.totalDraws > 0 && !pity.guaranteedNext;
+  const headline = getPityHeadline({
+    guaranteedNext: pity.guaranteedNext,
+    remainingToGuaranteed,
+    resetAfterHit,
+    targetRarity,
+  });
 
   return (
     <section
@@ -55,20 +61,8 @@ export function PityProgress({ box }: PityProgressProps) {
         </span>
       </div>
       <div className="box-pity__copy">
-        <strong>{getPityHeadline(pity.guaranteedNext, resetAfterHit)}</strong>
-        <span>
-          目标 {targetRarity} 或以上，累计开盒 {pity.totalDraws} 次
-        </span>
-        <div className="box-pity__stats" aria-label="保底明细">
-          <PityStat label="目标稀有度" value={`${targetRarity}+`} />
-          <PityStat label="累计未命中" value={`${currentCount}/${threshold}`} />
-          <PityStat
-            label="距离保底"
-            value={
-              pity.guaranteedNext ? "下一抽" : `${remainingToGuaranteed} 次`
-            }
-          />
-        </div>
+        <strong>{headline}</strong>
+        <span>{targetRarity} 或以上品质的奖励</span>
         {resetAfterHit ? (
           <span className="box-pity__reset">
             <CheckCircle2 aria-hidden="true" size={13} strokeWidth={2.5} />
@@ -76,33 +70,31 @@ export function PityProgress({ box }: PityProgressProps) {
           </span>
         ) : null}
       </div>
-      <Target aria-hidden="true" size={18} strokeWidth={2.4} />
+      <span className="box-pity__gift" aria-hidden="true">
+        <Gift size={24} strokeWidth={2.4} />
+      </span>
     </section>
   );
 }
 
-function PityStat({ label, value }: { label: string; value: string }) {
-  return (
-    <span>
-      <small>{label}</small>
-      <strong>{value}</strong>
-    </span>
-  );
-}
+function getPityHeadline(input: {
+  guaranteedNext: boolean;
+  remainingToGuaranteed: number;
+  resetAfterHit: boolean;
+  targetRarity: string;
+}): string {
+  const { guaranteedNext, remainingToGuaranteed, resetAfterHit, targetRarity } =
+    input;
 
-function getPityHeadline(
-  guaranteedNext: boolean,
-  resetAfterHit: boolean,
-): string {
   if (guaranteedNext) {
-    return "下一抽触发保底";
+    return `下一次必得${targetRarity}`;
   }
 
   if (resetAfterHit) {
     return "本轮保底已重置";
   }
 
-  return "保底进度";
+  return `再开 ${remainingToGuaranteed} 次必得${targetRarity}`;
 }
 
 function formatRarity(rarity: string): string {

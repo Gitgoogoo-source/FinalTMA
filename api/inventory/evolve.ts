@@ -24,6 +24,12 @@ import {
 } from "./_shared.js";
 
 type InventoryEvolveRpcPayload = Record<string, unknown>;
+type ResolvedInventoryEvolveInput = InventoryEvolveItemBody & {
+  expected_kcoin_cost: number;
+  expected_return_item_instance_id: string;
+  expected_success_rate_bps: number;
+  target_form_id: string;
+};
 
 export default withApiHandler(
   async (req, _res, ctx) => {
@@ -47,8 +53,13 @@ export default withApiHandler(
       },
     });
 
-    const payload = await callInventoryEvolveRpc(
+    const resolvedInput = await resolveInventoryEvolveInput(
       input,
+      session.userId,
+      ctx.requestId,
+    );
+    const payload = await callInventoryEvolveRpc(
+      resolvedInput,
       session.userId,
       ctx.requestId,
     );
@@ -96,7 +107,7 @@ export function normalizeInventoryEvolveInput(
 }
 
 async function callInventoryEvolveRpc(
-  input: InventoryEvolveItemBody,
+  input: ResolvedInventoryEvolveInput,
   userId: string,
   requestId: string,
 ): Promise<InventoryEvolveRpcPayload> {
@@ -107,11 +118,11 @@ async function callInventoryEvolveRpc(
         p_user_id: userId,
         p_item_instance_ids: input.source_item_instance_ids,
         p_idempotency_key: input.idempotency_key,
-        p_target_form_id: input.target_form_id ?? null,
-        p_expected_kcoin_cost: input.expected_kcoin_cost ?? null,
-        p_expected_success_rate_bps: input.expected_success_rate_bps ?? null,
+        p_target_form_id: input.target_form_id,
+        p_expected_kcoin_cost: input.expected_kcoin_cost,
+        p_expected_success_rate_bps: input.expected_success_rate_bps,
         p_expected_return_item_instance_id:
-          input.expected_return_item_instance_id ?? null,
+          input.expected_return_item_instance_id,
       },
       {
         schema: "api" as never,
@@ -129,6 +140,148 @@ async function callInventoryEvolveRpc(
     );
   } catch (error) {
     throw mapInventoryEvolveRpcError(error);
+  }
+}
+
+async function resolveInventoryEvolveInput(
+  input: InventoryEvolveItemBody,
+  userId: string,
+  requestId: string,
+): Promise<ResolvedInventoryEvolveInput> {
+  if (
+    input.target_form_id &&
+    input.expected_kcoin_cost !== undefined &&
+    input.expected_success_rate_bps !== undefined &&
+    input.expected_return_item_instance_id
+  ) {
+    return input as ResolvedInventoryEvolveInput;
+  }
+
+  const preview = await callInventoryEvolvePreviewRpc(input, userId, requestId);
+
+  return {
+    ...input,
+    expected_kcoin_cost: preview.expected_kcoin_cost,
+    expected_return_item_instance_id: preview.expected_return_item_instance_id,
+    expected_success_rate_bps: preview.expected_success_rate_bps,
+    target_form_id: preview.target_form_id,
+  };
+}
+
+async function callInventoryEvolvePreviewRpc(
+  input: InventoryEvolveItemBody,
+  userId: string,
+  requestId: string,
+): Promise<{
+  expected_kcoin_cost: number;
+  expected_return_item_instance_id: string;
+  expected_success_rate_bps: number;
+  target_form_id: string;
+}> {
+  let payload: unknown;
+
+  try {
+    payload = await callRpcRaw<unknown>(
+      "inventory_get_evolution_preview",
+      {
+        p_user_id: userId,
+        p_item_instance_ids: input.source_item_instance_ids,
+        p_target_form_id: input.target_form_id ?? null,
+      },
+      {
+        schema: "api" as never,
+        context: {
+          requestId,
+          userId,
+          itemCount: input.source_item_instance_ids.length,
+          targetFormId: input.target_form_id,
+        },
+      },
+    );
+  } catch (error) {
+    throw mapInventoryEvolveRpcError(error);
+  }
+
+  const preview = assertRecordPayload(
+    payload,
+    "INVENTORY_EVOLVE_PREVIEW_INVALID",
+    "合成预览结果格式无效。",
+  );
+  const canEvolve = readBoolean(preview.can_evolve) ?? false;
+  const targetFormId = readString(preview.target_form_id);
+  const expectedKcoinCost =
+    readNumber(preview.kcoin_cost) ?? readNumber(preview.cost_kcoin);
+  const expectedSuccessRateBps = readNumber(preview.success_rate_bps);
+  const expectedReturnItemInstanceId = readString(preview.main_return_item_id);
+
+  if (!canEvolve) {
+    throw mapInventoryEvolvePreviewReason(readString(preview.reason));
+  }
+
+  if (
+    !targetFormId ||
+    expectedKcoinCost === null ||
+    expectedSuccessRateBps === null ||
+    !expectedReturnItemInstanceId
+  ) {
+    throw invalidInventoryResult(
+      "INVENTORY_EVOLVE_PREVIEW_INVALID",
+      "合成预览缺少必要字段。",
+      {
+        can_evolve: preview.can_evolve,
+        kcoin_cost: preview.kcoin_cost,
+        main_return_item_id: preview.main_return_item_id,
+        reason: preview.reason,
+        success_rate_bps: preview.success_rate_bps,
+        target_form_id: preview.target_form_id,
+      },
+    );
+  }
+
+  return {
+    expected_kcoin_cost: expectedKcoinCost,
+    expected_return_item_instance_id: expectedReturnItemInstanceId,
+    expected_success_rate_bps: expectedSuccessRateBps,
+    target_form_id: targetFormId,
+  };
+}
+
+function mapInventoryEvolvePreviewReason(reason: string | null): ApiError {
+  switch (reason) {
+    case "INSUFFICIENT_KCOIN":
+      return new ApiError(409, "INSUFFICIENT_KCOIN", "KCOIN 余额不足。");
+    case "EVOLVE_DUPLICATE_ITEM_IDS":
+      return new ApiError(
+        400,
+        "EVOLVE_DUPLICATE_ITEM_IDS",
+        "合成材料不能重复。",
+      );
+    case "EVOLVE_ITEM_COUNT_INVALID":
+      return new ApiError(
+        400,
+        "EVOLVE_ITEM_COUNT_INVALID",
+        "合成必须选择 3 个藏品。",
+      );
+    case "EVOLVE_REQUIRES_SAME_TEMPLATE_AND_FORM":
+      return new ApiError(
+        409,
+        "EVOLVE_REQUIRES_SAME_TEMPLATE_AND_FORM",
+        "合成需要 3 个同模板、同形态藏品。",
+      );
+    case "EVOLVE_RULE_NOT_FOUND":
+    case "NO_NEXT_FORM":
+      return new ApiError(500, "EVOLVE_RULE_NOT_FOUND", "合成配置缺失。", {
+        expose: false,
+      });
+    case "ITEM_LOCKED":
+    case "ITEM_MINTING":
+    case "ITEM_NOT_AVAILABLE":
+    case "ITEM_NOT_EVOLVABLE":
+      return new ApiError(409, "ITEM_NOT_EVOLVABLE", "部分藏品当前不可合成。");
+    case "ITEM_NOT_FOUND":
+      return new ApiError(404, "ITEM_NOT_FOUND", "部分藏品不存在。");
+    default:
+      return new ApiError(409, "ITEM_NOT_EVOLVABLE", "部分藏品当前不可合成。");
   }
 }
 

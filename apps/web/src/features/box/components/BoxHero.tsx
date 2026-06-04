@@ -1,4 +1,4 @@
-import { Sparkles } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 
 import type { BlindBox } from "../box.types";
 
@@ -11,26 +11,48 @@ export function BoxHero({ box }: BoxHeroProps) {
   const tierTone = getTierTone(box.tier);
 
   return (
-    <section className={`box-hero box-hero--${tierTone}`} aria-label="当前盲盒">
-      <div className="box-hero__copy">
-        <span className="box-hero__kicker">
-          <Sparkles aria-hidden="true" size={15} strokeWidth={2.4} />
-          盲盒-蛋
-        </span>
-        <h1>{box.name}</h1>
-        {box.description ? <p>{box.description}</p> : null}
-      </div>
-
-      <div
-        className="box-hero__stage"
-        aria-hidden={imageUrl ? undefined : true}
+    <section
+      className={`box-hero box-hero--${tierTone}`}
+      aria-label={`当前盲盒：${box.name}`}
+    >
+      <button
+        className="box-hero__back"
+        type="button"
+        aria-label="返回上一页"
+        onClick={() => {
+          window.history.back();
+        }}
       >
+        <ChevronLeft aria-hidden="true" size={25} strokeWidth={2.8} />
+      </button>
+
+      <div className="box-hero__stage">
+        <span className="box-hero__halo" aria-hidden="true" />
         <span className="box-hero__shadow" />
         {imageUrl ? (
           <img src={imageUrl} alt={box.name} />
         ) : (
-          <span className={`box-hero__egg box-hero__egg--${tierTone}`}>
-            <span />
+          <span
+            className={`box-hero__egg box-hero__egg--${tierTone}`}
+            role="img"
+            aria-label={box.name}
+          >
+            <span className="box-hero__egg-glow" aria-hidden="true" />
+            <span className="box-hero__egg-core" aria-hidden="true">
+              ?
+            </span>
+            <span
+              className="box-hero__egg-line box-hero__egg-line--a"
+              aria-hidden="true"
+            />
+            <span
+              className="box-hero__egg-line box-hero__egg-line--b"
+              aria-hidden="true"
+            />
+            <span
+              className="box-hero__egg-line box-hero__egg-line--c"
+              aria-hidden="true"
+            />
           </span>
         )}
       </div>

@@ -275,21 +275,17 @@ export const InventoryEvolveItemBodySchema = z
     }),
 
     /**
-     * 可选。
-     * 如果一个藏品存在多条进化路线，可由前端指定目标形态。
-     * 如果只有唯一进化路线，可以不传，由后端决定。
+     * 前端预览时看到的目标形态。没有传时，服务端会按当前数据库规则补齐。
      */
     target_form_id: uuidSchema.optional(),
 
     /**
-     * 前端预期消耗。
-     * 只用于乐观校验，最终扣费以后端 RPC 为准。
+     * 前端预期消耗。没有传时，服务端会按当前数据库规则补齐。
      */
     expected_kcoin_cost: nonNegativeAmountSchema.optional(),
 
     /**
-     * 前端预期成功率。
-     * 只用于防止配置过期，不作为真实概率来源。
+     * 前端预期成功率。没有传时，服务端会按当前数据库规则补齐。
      */
     expected_success_rate_bps: z.coerce
       .number()
@@ -300,7 +296,7 @@ export const InventoryEvolveItemBodySchema = z
 
     /**
      * 前端期望失败后保留的主藏品。
-     * 后端仍必须按“3个藏品中等级最高的那个返还给用户”的规则重新计算。
+     * 没有传时，服务端会按“3个藏品中等级最高的那个返还给用户”的规则补齐。
      */
     expected_return_item_instance_id: uuidSchema.optional(),
 

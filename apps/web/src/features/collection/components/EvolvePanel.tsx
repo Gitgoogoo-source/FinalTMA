@@ -17,12 +17,10 @@ import { formatCurrencyAmount } from "@/shared/lib/formatCurrency";
 
 import type {
   CollectionEvolveItemResponse,
-  CollectionEvolutionPreview,
-  CollectionInventoryDetail,
   CollectionInventoryItem,
 } from "../collection.types";
 import { useEvolveItem } from "../hooks/useEvolveItem";
-import { useItemDetail } from "../hooks/useItemDetail";
+import { getLocalEvolutionPreview } from "../localEvolutionPreviews";
 
 type EvolvePanelProps = {
   open: boolean;
@@ -42,22 +40,18 @@ export function EvolvePanel({
   const { pushToast } = useFeedback();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const selectionSeedRef = useRef<string>("");
-  const detailQuery = useItemDetail(open ? item?.itemInstanceId : null, {
-    enabled: open && Boolean(item),
-  });
   const evolveMutation = useEvolveItem();
 
   const sameAvailableItems = useMemo(
     () => getSameAvailableItems(item, items),
     [item, items],
   );
-  const detail = detailQuery.item;
-  const displayItem = detail ?? item;
-  const preview = detail?.evolutionPreview ?? null;
+  const displayItem = item;
+  const preview = useMemo(() => getLocalEvolutionPreview(item), [item]);
   const requiredCount = preview?.requiredCount ?? 3;
   const defaultSelectedIds = useMemo(
-    () => getDefaultSelectedIds(preview, sameAvailableItems, requiredCount),
-    [preview, requiredCount, sameAvailableItems],
+    () => getDefaultSelectedIds(sameAvailableItems, requiredCount),
+    [requiredCount, sameAvailableItems],
   );
   const selectionSeed = open
     ? `${item?.itemInstanceId ?? "none"}:${defaultSelectedIds.join("|")}`
@@ -89,39 +83,28 @@ export function EvolvePanel({
     .filter((candidate): candidate is CollectionInventoryItem =>
       Boolean(candidate),
     );
-  const mainReturnItemId = getMainReturnItemId(
-    selectedIds,
-    selectedItems,
-    preview,
-  );
+  const mainReturnItemId = getMainReturnItemId(selectedItems);
   const targetImageUrl =
     preview?.targetImageUrl ?? displayItem.imageUrl ?? displayItem.thumbnailUrl;
-  const isListed = detail?.marketStatus?.isListed ?? item.status === "listed";
+  const isListed = item.status === "listed";
   const disabledReason = getEvolveDisabledReason({
-    detail,
-    isDetailLoading: detailQuery.isLoading,
     isListed,
     isPending: evolveMutation.isPending,
     item: displayItem,
     localAvailableCount: sameAvailableItems.length,
-    preview,
     requiredCount,
     selectedCount: selectedIds.length,
   });
   const canSubmit = disabledReason === null;
 
   async function handleSubmit() {
-    if (!canSubmit || !preview) {
+    if (!canSubmit) {
       return;
     }
 
     try {
       const result = await evolveMutation.mutateAsync({
         sourceItemInstanceIds: selectedIds,
-        targetFormId: preview.targetFormId,
-        expectedKcoinCost: preview.kcoinCost,
-        expectedSuccessRateBps: preview.successRateBps,
-        expectedReturnItemInstanceId: mainReturnItemId,
       });
 
       onEvolved?.(result);
@@ -216,19 +199,6 @@ export function EvolvePanel({
             </div>
           </section>
 
-          {detailQuery.isLoading ? (
-            <PanelState title="同步合成预览" detail="正在读取服务端规则。" />
-          ) : null}
-
-          {detailQuery.isError ? (
-            <PanelState
-              tone="error"
-              title="预览读取失败"
-              detail={getApiErrorMessage(detailQuery.error)}
-              onRetry={() => void detailQuery.refetch()}
-            />
-          ) : null}
-
           <section className="evolve-panel__target" aria-label="目标形态">
             <div className="evolve-panel__target-image">
               {targetImageUrl ? (
@@ -242,10 +212,8 @@ export function EvolvePanel({
             </div>
             <div className="evolve-panel__target-copy">
               <span>目标形态</span>
-              <strong>{preview?.targetName ?? "待同步"}</strong>
-              <em>
-                {preview?.targetFormId ? "服务端规则已返回" : "等待规则返回"}
-              </em>
+              <strong>{preview?.targetName ?? "提交后确认"}</strong>
+              <em>{preview ? "本地展示预览" : "未配置本地预览"}</em>
             </div>
           </section>
 
@@ -256,9 +224,7 @@ export function EvolvePanel({
             <EvolveMetric
               icon="users"
               label="同款 available 数量"
-              value={formatOptionalNumber(
-                preview?.availableSameItems ?? sameAvailableItems.length,
-              )}
+              value={formatOptionalNumber(sameAvailableItems.length)}
             />
             <EvolveMetric
               icon="materials"
@@ -270,16 +236,8 @@ export function EvolvePanel({
                 selectedIds.length === requiredCount ? "positive" : "neutral"
               }
             />
-            <EvolveMetric
-              icon="kcoin"
-              label="KCOIN 消耗"
-              value={formatOptionalNumber(preview?.kcoinCost)}
-            />
-            <EvolveMetric
-              icon="rate"
-              label="成功率"
-              value={formatSuccessRate(preview?.successRateBps)}
-            />
+            <EvolveMetric icon="kcoin" label="KCOIN 消耗" value="服务端确认" />
+            <EvolveMetric icon="rate" label="成功率" value="服务端确认" />
           </section>
 
           <section className="evolve-panel__rule" aria-label="失败返还说明">
@@ -333,12 +291,12 @@ export function EvolvePanel({
 
           <section
             className={`upgrade-panel__balance evolve-panel__balance upgrade-panel__balance--${getBalanceTone(
-              preview,
+              canSubmit,
             )}`}
             aria-label="KCOIN 余额"
           >
-            <strong>{getBalanceLabel(preview)}</strong>
-            <span>{getBalanceDetail(preview)}</span>
+            <strong>{getBalanceLabel(canSubmit)}</strong>
+            <span>{getBalanceDetail()}</span>
           </section>
 
           {disabledReason ? (
@@ -455,44 +413,6 @@ function EvolveMetric({
   );
 }
 
-function PanelState({
-  detail,
-  onRetry,
-  title,
-  tone = "neutral",
-}: {
-  detail: string;
-  onRetry?: () => void;
-  title: string;
-  tone?: "error" | "neutral";
-}) {
-  return (
-    <div
-      className={`upgrade-panel__state upgrade-panel__state--${tone}`}
-      role={tone === "error" ? "alert" : "status"}
-    >
-      {tone === "error" ? (
-        <AlertTriangle aria-hidden="true" size={17} strokeWidth={2.4} />
-      ) : (
-        <RefreshCw
-          aria-hidden="true"
-          className="upgrade-panel__spin"
-          size={17}
-          strokeWidth={2.4}
-        />
-      )}
-      <strong>{title}</strong>
-      <span>{detail}</span>
-      {onRetry ? (
-        <button onClick={onRetry} type="button">
-          <RefreshCw aria-hidden="true" size={14} strokeWidth={2.5} />
-          重试
-        </button>
-      ) : null}
-    </div>
-  );
-}
-
 function getSameAvailableItems(
   item: CollectionInventoryItem | null,
   items: CollectionInventoryItem[],
@@ -529,70 +449,34 @@ function compareMaterialItems(
 }
 
 function getDefaultSelectedIds(
-  preview: CollectionEvolutionPreview | null,
   sameAvailableItems: CollectionInventoryItem[],
   requiredCount: number,
 ): string[] {
-  const availableIds = new Set(
-    sameAvailableItems.map((candidate) => candidate.itemInstanceId),
-  );
-  const previewIds =
-    preview?.selectedItemIds.filter((id) => availableIds.has(id)) ?? [];
-
-  if (previewIds.length >= requiredCount) {
-    return previewIds.slice(0, requiredCount);
-  }
-
   return sameAvailableItems
     .slice(0, requiredCount)
     .map((candidate) => candidate.itemInstanceId);
 }
 
 function getMainReturnItemId(
-  selectedIds: string[],
   selectedItems: CollectionInventoryItem[],
-  preview: CollectionEvolutionPreview | null,
 ): string | null {
-  if (
-    preview?.mainReturnItemId &&
-    selectedIds.includes(preview.mainReturnItemId) &&
-    hasSameIds(selectedIds, preview.selectedItemIds)
-  ) {
-    return preview.mainReturnItemId;
-  }
-
   return (
     [...selectedItems].sort(compareMaterialItems)[0]?.itemInstanceId ?? null
   );
 }
 
-function hasSameIds(left: string[], right: string[]): boolean {
-  if (left.length !== right.length) {
-    return false;
-  }
-
-  const rightIds = new Set(right);
-  return left.every((id) => rightIds.has(id));
-}
-
 function getEvolveDisabledReason({
-  detail,
-  isDetailLoading,
   isListed,
   isPending,
   item,
   localAvailableCount,
-  preview,
   requiredCount,
   selectedCount,
 }: {
-  detail: CollectionInventoryDetail | null;
-  isDetailLoading: boolean;
   isListed: boolean;
   isPending: boolean;
   item: CollectionInventoryItem;
   localAvailableCount: number;
-  preview: CollectionEvolutionPreview | null;
   requiredCount: number;
   selectedCount: number;
 }): string | null {
@@ -612,21 +496,7 @@ function getEvolveDisabledReason({
     return "该藏品不可合成。";
   }
 
-  if (isDetailLoading) {
-    return "正在同步合成预览。";
-  }
-
-  if (!detail || !preview) {
-    return "合成预览暂不可用。";
-  }
-
-  const availableCount = Math.max(
-    localAvailableCount,
-    preview.availableSameItems ?? 0,
-    preview.selectedItemIds.length,
-  );
-
-  if (availableCount < requiredCount) {
+  if (localAvailableCount < requiredCount) {
     return "同款 available 藏品数量不足。";
   }
 
@@ -634,97 +504,25 @@ function getEvolveDisabledReason({
     return `请选择 ${formatCurrencyAmount(requiredCount)} 个同款可用藏品。`;
   }
 
-  if (
-    preview.kcoinCost === null ||
-    preview.successRateBps === null ||
-    preview.targetFormId === null
-  ) {
-    return getEvolveReasonLabel(preview.reason) ?? "没有可用合成规则。";
-  }
-
-  if (preview.isBalanceEnough === false) {
-    return "KCOIN 余额不足。";
-  }
-
-  if (!preview.canEvolve) {
-    return getEvolveReasonLabel(preview.reason) ?? "当前不能合成。";
-  }
-
   return null;
 }
 
-function getEvolveReasonLabel(reason: string | null): string | null {
-  switch (reason) {
-    case "INSUFFICIENT_KCOIN":
-      return "KCOIN 余额不足。";
-    case "EVOLVE_ITEM_COUNT_INVALID":
-      return "合成必须选择 3 个藏品。";
-    case "EVOLVE_DUPLICATE_ITEM_IDS":
-      return "合成材料不能重复。";
-    case "EVOLVE_REQUIRES_SAME_TEMPLATE_AND_FORM":
-      return "合成需要 3 个同模板、同形态藏品。";
-    case "EVOLVE_RULE_NOT_FOUND":
-    case "NO_NEXT_FORM":
-      return "没有可用合成规则，或已经是最高形态。";
-    case "ITEM_NOT_AVAILABLE":
-    case "ITEM_NOT_EVOLVABLE":
-      return "该藏品当前不可合成。";
-    default:
-      return reason;
-  }
+function getBalanceTone(canSubmit: boolean): "neutral" | "ready" {
+  return canSubmit ? "ready" : "neutral";
 }
 
-function getBalanceTone(
-  preview: CollectionEvolutionPreview | null,
-): "neutral" | "ready" | "blocked" {
-  if (!preview || preview.isBalanceEnough === null) {
-    return "neutral";
-  }
-
-  return preview.isBalanceEnough ? "ready" : "blocked";
+function getBalanceLabel(canSubmit: boolean): string {
+  return canSubmit ? "KCOIN 提交后校验" : "KCOIN 等待材料";
 }
 
-function getBalanceLabel(preview: CollectionEvolutionPreview | null): string {
-  if (!preview || preview.isBalanceEnough === null) {
-    return "KCOIN 余额待同步";
-  }
-
-  return preview.isBalanceEnough ? "KCOIN 余额足够" : "KCOIN 余额不足";
-}
-
-function getBalanceDetail(preview: CollectionEvolutionPreview | null): string {
-  if (!preview) {
-    return "等待服务端返回。";
-  }
-
-  if (preview.userKcoinBalance === null || preview.kcoinCost === null) {
-    return "余额或消耗未返回。";
-  }
-
-  const gap = preview.userKcoinBalance - preview.kcoinCost;
-
-  if (gap >= 0) {
-    return `合成后预计剩余 ${formatCurrencyAmount(gap)} KCOIN。`;
-  }
-
-  return `还差 ${formatCurrencyAmount(Math.abs(gap))} KCOIN。`;
+function getBalanceDetail(): string {
+  return "余额、消耗和概率由服务端在确认合成时校验。";
 }
 
 function formatOptionalNumber(value: number | null | undefined): string {
   return value === null || value === undefined
     ? "待同步"
     : formatCurrencyAmount(value);
-}
-
-function formatSuccessRate(value: number | null | undefined): string {
-  if (value === null || value === undefined) {
-    return "待同步";
-  }
-
-  const percent = value / 100;
-  return `${new Intl.NumberFormat("zh-CN", {
-    maximumFractionDigits: 2,
-  }).format(percent)}%`;
 }
 
 function formatShortId(value: string): string {

@@ -370,7 +370,11 @@ select
       (select id from _ids where key = 'source_2'),
       (select id from _ids where key = 'source_3')
     ],
-    'stage3-e2e-evolve-success'
+    'stage3-e2e-evolve-success',
+    ((select payload from _ids where key = 'detail_before') -> 'evolution_preview' ->> 'target_form_id')::uuid,
+    ((select payload from _ids where key = 'detail_before') -> 'evolution_preview' ->> 'kcoin_cost')::numeric,
+    ((select payload from _ids where key = 'detail_before') -> 'evolution_preview' ->> 'success_rate_bps')::integer,
+    ((select payload from _ids where key = 'detail_before') -> 'evolution_preview' ->> 'main_return_item_id')::uuid
   );
 
 insert into _ids (key, id)

@@ -506,19 +506,6 @@ export async function mockFirstPhaseApi(
       [ITEM_INSTANCE_ID, ITEM_INSTANCE_ID_2, ITEM_INSTANCE_ID_3],
       "inventory/evolve source_item_instance_ids",
     );
-    assert(
-      body.expected_kcoin_cost === 200,
-      "inventory/evolve request body must include expected_kcoin_cost from the preview.",
-    );
-    assert(
-      body.expected_success_rate_bps === 5000,
-      "inventory/evolve request body must include expected_success_rate_bps from the preview.",
-    );
-    assert(
-      body.expected_return_item_instance_id === ITEM_INSTANCE_ID_3,
-      "inventory/evolve request body must include expected_return_item_instance_id from the preview.",
-    );
-
     const sourceIds = body.source_item_instance_ids;
     const balanceBefore = kcoinAvailable;
 

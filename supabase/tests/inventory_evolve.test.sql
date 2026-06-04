@@ -223,7 +223,7 @@ insert into _ids (key, id) select 'locked3', testutil.create_item((select id fro
 insert into inventory.inventory_locks (item_instance_id, user_id, lock_type, source_type, status)
 values ((select id from _ids where key = 'locked1'), (select id from _ids where key = 'user'), 'admin_hold', 'test_setup', 'active');
 
-select ok(testutil.raises_like(format('select api.inventory_evolve_item(%L::uuid, array[%L::uuid, %L::uuid, %L::uuid], %L::text)', (select id::text from _ids where key = 'user'), (select id::text from _ids where key = 'locked1'), (select id::text from _ids where key = 'locked2'), (select id::text from _ids where key = 'locked3'), 'inventory-evolve-active-lock-001'), '%some items are not evolvable or not available%'), 'available item with active lock cannot be evolved');
+select ok(testutil.raises_like(format('select api.inventory_evolve_item(%L::uuid, array[%L::uuid, %L::uuid, %L::uuid], %L::text, null::uuid, null::numeric, null::integer, null::uuid)', (select id::text from _ids where key = 'user'), (select id::text from _ids where key = 'locked1'), (select id::text from _ids where key = 'locked2'), (select id::text from _ids where key = 'locked3'), 'inventory-evolve-active-lock-001'), '%some items are not evolvable or not available%'), 'available item with active lock cannot be evolved');
 select is((select count(*)::int from inventory.evolution_attempts where idempotency_key = 'inventory-evolve-active-lock-001'), 0, 'active-lock evolution rejection does not create an attempt');
 select is(testutil.balance_of((select id from _ids where key = 'user'), 'KCOIN'), 1000::numeric, 'active-lock evolution rejection does not debit K-coin');
 
@@ -235,7 +235,7 @@ update inventory.item_instances
 set nft_mint_status = 'minting'
 where id = (select id from _ids where key = 'minting2');
 
-select ok(testutil.raises_like(format('select api.inventory_evolve_item(%L::uuid, array[%L::uuid, %L::uuid, %L::uuid], %L::text)', (select id::text from _ids where key = 'user'), (select id::text from _ids where key = 'minting1'), (select id::text from _ids where key = 'minting2'), (select id::text from _ids where key = 'minting3'), 'inventory-evolve-minting-001'), '%some items are not evolvable or not available%'), 'minting item cannot be evolved');
+select ok(testutil.raises_like(format('select api.inventory_evolve_item(%L::uuid, array[%L::uuid, %L::uuid, %L::uuid], %L::text, null::uuid, null::numeric, null::integer, null::uuid)', (select id::text from _ids where key = 'user'), (select id::text from _ids where key = 'minting1'), (select id::text from _ids where key = 'minting2'), (select id::text from _ids where key = 'minting3'), 'inventory-evolve-minting-001'), '%some items are not evolvable or not available%'), 'minting item cannot be evolved');
 select is((select count(*)::int from inventory.evolution_attempts where idempotency_key = 'inventory-evolve-minting-001'), 0, 'minting evolution rejection does not create an attempt');
 select is(testutil.balance_of((select id from _ids where key = 'user'), 'KCOIN'), 1000::numeric, 'minting evolution rejection does not debit K-coin');
 
@@ -251,11 +251,25 @@ select ok(testutil.raises_like(format(
 ), '%evolution preview mismatch%'), 'evolution rejects stale expected KCOIN cost');
 select is((select count(*)::int from inventory.evolution_attempts where idempotency_key = 'inventory-evolve-stale-preview-001'), 0, 'stale evolution preview writes no attempt');
 
+select ok(testutil.raises_like(format(
+  'select api.inventory_evolve_item(%L::uuid, array[%L::uuid, %L::uuid, %L::uuid], %L::text, null::uuid, null::numeric, null::integer, null::uuid)',
+  (select id::text from _ids where key = 'user'),
+  (select id::text from _ids where key = 's1'),
+  (select id::text from _ids where key = 's2'),
+  (select id::text from _ids where key = 's3'),
+  'inventory-evolve-missing-preview-001'
+), '%evolution preview is required%'), 'new evolution attempts require a complete preview snapshot');
+select is((select count(*)::int from inventory.evolution_attempts where idempotency_key = 'inventory-evolve-missing-preview-001'), 0, 'missing-preview evolution writes no attempt');
+
 insert into _ids (key, payload)
 select 'evolve_success', api.inventory_evolve_item(
   (select id from _ids where key = 'user'),
   array[(select id from _ids where key = 's1'), (select id from _ids where key = 's2'), (select id from _ids where key = 's3')],
-  'inventory-evolve-success-001'::text
+  'inventory-evolve-success-001'::text,
+  (select id from _ids where key = 'form2'),
+  120::numeric,
+  10000,
+  (select id from _ids where key = 's3')
 );
 insert into _ids (key, id) select 'success_result_item', ((select payload from _ids where key = 'evolve_success') ->> 'result_item_instance_id')::uuid;
 
@@ -271,7 +285,11 @@ insert into _ids (key, payload)
 select 'evolve_success_repeat', api.inventory_evolve_item(
   (select id from _ids where key = 'user'),
   array[(select id from _ids where key = 's1'), (select id from _ids where key = 's2'), (select id from _ids where key = 's3')],
-  'inventory-evolve-success-001'::text
+  'inventory-evolve-success-001'::text,
+  null::uuid,
+  null::numeric,
+  null::integer,
+  null::uuid
 );
 
 select is(((select payload from _ids where key = 'evolve_success_repeat') ->> 'attempt_id')::uuid, ((select payload from _ids where key = 'evolve_success') ->> 'attempt_id')::uuid, 'repeating evolution with the same idempotency key returns the original attempt');
@@ -323,14 +341,18 @@ insert into _ids (key, id) select 'f1', testutil.create_item((select id from _id
 insert into _ids (key, id) select 'f2', testutil.create_item((select id from _ids where key = 'user'), (select id from _ids where key = 'template'), (select id from _ids where key = 'form1'), 4, 40, 'admin');
 insert into _ids (key, id) select 'f3', testutil.create_item((select id from _ids where key = 'user'), (select id from _ids where key = 'template'), (select id from _ids where key = 'form1'), 2, 22, 'admin');
 
-select ok(testutil.raises_like(format('select api.inventory_evolve_item(%L::uuid, array[%L::uuid, %L::uuid, %L::uuid], %L::text)', (select id::text from _ids where key = 'user'), (select id::text from _ids where key = 'f1'), (select id::text from _ids where key = 'f2'), (select id::text from _ids where key = 'f3'), 'inventory-evolve-success-001'), '%idempotency conflict%'), 'reusing an evolution idempotency key for different inputs is rejected');
+select ok(testutil.raises_like(format('select api.inventory_evolve_item(%L::uuid, array[%L::uuid, %L::uuid, %L::uuid], %L::text, null::uuid, null::numeric, null::integer, null::uuid)', (select id::text from _ids where key = 'user'), (select id::text from _ids where key = 'f1'), (select id::text from _ids where key = 'f2'), (select id::text from _ids where key = 'f3'), 'inventory-evolve-success-001'), '%idempotency conflict%'), 'reusing an evolution idempotency key for different inputs is rejected');
 select ok(testutil.raises_like(format('select api.inventory_upgrade_item(%L::uuid, %L::uuid, %L::text)', (select id::text from _ids where key = 'user'), (select id::text from _ids where key = 'f1'), 'inventory-evolve-form2-upgrade-001'), '%idempotency conflict%'), 'reusing an upgrade idempotency key for a different item is rejected');
 
 insert into _ids (key, payload)
 select 'evolve_failed', api.inventory_evolve_item(
   (select id from _ids where key = 'user'),
   array[(select id from _ids where key = 'f1'), (select id from _ids where key = 'f2'), (select id from _ids where key = 'f3')],
-  'inventory-evolve-failed-001'::text
+  'inventory-evolve-failed-001'::text,
+  (select id from _ids where key = 'form2'),
+  80::numeric,
+  0,
+  (select id from _ids where key = 'f2')
 );
 insert into _ids (key, id) select 'failed_main_item', ((select payload from _ids where key = 'evolve_failed') ->> 'main_item_instance_id')::uuid;
 
@@ -346,16 +368,15 @@ select ok(exists (select 1 from pg_indexes where schemaname = 'inventory' and in
 select ok(exists (select 1 from pg_indexes where schemaname = 'inventory' and indexname = 'evolution_rules_one_active_source_form'), 'evolution active-rule uniqueness index exists');
 select ok(not has_function_privilege('anon', 'api.inventory_upgrade_item(uuid, uuid, text)', 'execute'), 'anon cannot execute inventory_upgrade_item directly');
 select ok(not has_function_privilege('authenticated', 'api.inventory_upgrade_item(uuid, uuid, text)', 'execute'), 'authenticated cannot execute inventory_upgrade_item directly');
-select ok(not has_function_privilege('anon', 'api.inventory_evolve_item(uuid, uuid[], text)', 'execute'), 'anon cannot execute inventory_evolve_item directly');
-select ok(not has_function_privilege('authenticated', 'api.inventory_evolve_item(uuid, uuid[], text)', 'execute'), 'authenticated cannot execute inventory_evolve_item directly');
+select ok(to_regprocedure('api.inventory_evolve_item(uuid,uuid[],text)') is null, 'legacy three-argument inventory_evolve_item is removed');
 select ok(not has_function_privilege('anon', 'api.inventory_upgrade_item(uuid, uuid, text, integer, numeric, integer)', 'execute'), 'anon cannot execute guarded inventory_upgrade_item directly');
 select ok(not has_function_privilege('authenticated', 'api.inventory_upgrade_item(uuid, uuid, text, integer, numeric, integer)', 'execute'), 'authenticated cannot execute guarded inventory_upgrade_item directly');
 select ok(not has_function_privilege('anon', 'api.inventory_evolve_item(uuid, uuid[], text, uuid, numeric, integer, uuid)', 'execute'), 'anon cannot execute guarded inventory_evolve_item directly');
 select ok(not has_function_privilege('authenticated', 'api.inventory_evolve_item(uuid, uuid[], text, uuid, numeric, integer, uuid)', 'execute'), 'authenticated cannot execute guarded inventory_evolve_item directly');
 select ok(has_function_privilege('service_role', 'api.inventory_upgrade_item(uuid, uuid, text)', 'execute'), 'service_role can execute inventory_upgrade_item');
-select ok(has_function_privilege('service_role', 'api.inventory_evolve_item(uuid, uuid[], text)', 'execute'), 'service_role can execute inventory_evolve_item');
 select ok(has_function_privilege('service_role', 'api.inventory_upgrade_item(uuid, uuid, text, integer, numeric, integer)', 'execute'), 'service_role can execute guarded inventory_upgrade_item');
 select ok(has_function_privilege('service_role', 'api.inventory_evolve_item(uuid, uuid[], text, uuid, numeric, integer, uuid)', 'execute'), 'service_role can execute guarded inventory_evolve_item');
+select ok(not has_function_privilege('service_role', 'api.inventory_evolve_item_without_balance_fields(uuid, uuid[], text)', 'execute'), 'service_role cannot execute internal evolution core directly');
 
 select * from finish();
 

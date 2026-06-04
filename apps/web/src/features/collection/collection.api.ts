@@ -68,7 +68,7 @@ export async function fetchInventoryDetail(
     item_instance_id: itemInstanceId,
     include_market_status: "true",
     include_upgrade_preview: "true",
-    include_evolution_preview: "true",
+    include_evolution_preview: "false",
     include_decompose_preview: "true",
     include_onchain_status: "true",
   });
