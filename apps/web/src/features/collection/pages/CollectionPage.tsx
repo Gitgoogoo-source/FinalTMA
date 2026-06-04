@@ -62,10 +62,13 @@ export function CollectionPage() {
     useState<CollectionEvolveItemResponse | null>(null);
   const [decomposeResult, setDecomposeResult] =
     useState<CollectionDecomposeItemResponse | null>(null);
-  const groupedItems = useMemo(
-    () => groupCollectionInventoryItems(items),
-    [items],
-  );
+  const groupedItems = useMemo(() => {
+    if (inventoryQuery.groups.length > 0) {
+      return inventoryQuery.groups;
+    }
+
+    return groupCollectionInventoryItems(items);
+  }, [inventoryQuery.groups, items]);
   const selectedItem = useMemo(
     () =>
       items.find((item) => item.itemInstanceId === selectedItemId) ??
@@ -366,6 +369,7 @@ export function CollectionPage() {
       <CharacterGrid
         groups={groupedItems}
         selectedItemId={selectedItem.itemInstanceId}
+        totalCount={inventoryQuery.total}
         onSelect={setSelectedItemId}
       />
       <CollectionSellEntry
@@ -463,6 +467,13 @@ function groupCollectionInventoryItems(
     if (existing) {
       existing.itemInstanceIds.push(item.itemInstanceId);
       existing.ownedCount += 1;
+      existing.availableCount += item.status === "available" ? 1 : 0;
+      existing.listedCount += item.status === "listed" ? 1 : 0;
+      existing.lockedCount += item.status === "locked" ? 1 : 0;
+      existing.mintingCount += item.status === "minting" ? 1 : 0;
+      existing.mintedCount += item.status === "minted" ? 1 : 0;
+      existing.maxLevel = Math.max(existing.maxLevel ?? 0, item.level);
+      existing.maxPower = Math.max(existing.maxPower ?? 0, item.power);
       continue;
     }
 
@@ -471,6 +482,14 @@ function groupCollectionInventoryItems(
       representativeItem: item,
       itemInstanceIds: [item.itemInstanceId],
       ownedCount: 1,
+      availableCount: item.status === "available" ? 1 : 0,
+      listedCount: item.status === "listed" ? 1 : 0,
+      lockedCount: item.status === "locked" ? 1 : 0,
+      mintingCount: item.status === "minting" ? 1 : 0,
+      mintedCount: item.status === "minted" ? 1 : 0,
+      maxLevel: item.level,
+      maxPower: item.power,
+      latestObtainedAt: item.obtainedAt,
     });
   }
 
@@ -478,12 +497,6 @@ function groupCollectionInventoryItems(
 }
 
 function getCollectionInventoryGroupKey(item: CollectionInventoryItem): string {
-  const imageKey = getCollectionInventoryImageKey(item);
-
-  if (imageKey) {
-    return `image:${imageKey}`;
-  }
-
   const templateKey = item.templateId ?? item.templateSlug;
 
   if (!templateKey) {
@@ -491,20 +504,6 @@ function getCollectionInventoryGroupKey(item: CollectionInventoryItem): string {
   }
 
   return `template:${templateKey}:form:${item.form?.id ?? "default-form"}`;
-}
-
-function getCollectionInventoryImageKey(
-  item: CollectionInventoryItem,
-): string | null {
-  const imageUrl = item.thumbnailUrl ?? item.avatarUrl ?? item.imageUrl;
-
-  if (!imageUrl) {
-    return null;
-  }
-
-  const trimmedImageUrl = imageUrl.trim();
-
-  return trimmedImageUrl.length > 0 ? trimmedImageUrl : null;
 }
 
 function getUpgradeResultMetrics(result: CollectionUpgradeItemResponse | null) {

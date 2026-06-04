@@ -31,17 +31,23 @@ export function ConfirmSellButton({
   validationMessage,
 }: ConfirmSellButtonProps) {
   const [open, setOpen] = useDialogState(isPending);
-  const canOpen = Boolean(!disabled && !isPending && item && unitPriceKcoin);
+  const hasUnitPrice = unitPriceKcoin !== null;
+  const canOpen = Boolean(!disabled && !isPending && item && hasUnitPrice);
   const preview =
-    item && unitPriceKcoin !== null && feeBps !== null
+    item && hasUnitPrice && feeBps !== null
       ? calculateMarketFeePreview(unitPriceKcoin, quantity, feeBps)
       : null;
+  const receiveAmountLabel = hasUnitPrice
+    ? preview
+      ? formatKcoinAmount(preview.netAmountKcoin)
+      : "以后端为准"
+    : "-";
 
   useEffect(() => {
-    if (!item || !unitPriceKcoin) {
+    if (!item || !hasUnitPrice) {
       setOpen(false);
     }
-  }, [item, setOpen, unitPriceKcoin]);
+  }, [hasUnitPrice, item, setOpen]);
 
   const handleOpen = () => {
     if (canOpen) {
@@ -81,10 +87,7 @@ export function ConfirmSellButton({
           </span>
           <span className="sell-confirm__divider" aria-hidden="true" />
           <span className="sell-confirm__receive" aria-hidden="true">
-            到手{" "}
-            <strong>
-              {preview ? formatKcoinAmount(preview.netAmountKcoin) : "以后端为准"}
-            </strong>
+            到手 <strong>{receiveAmountLabel}</strong>
             {preview ? <small>K-coin</small> : null}
           </span>
         </button>
@@ -128,7 +131,7 @@ function ConfirmSellDialog({
   quantity,
   unitPriceKcoin,
 }: ConfirmSellDialogProps) {
-  if (!open || !item || !unitPriceKcoin) {
+  if (!open || !item || unitPriceKcoin === null) {
     return null;
   }
 

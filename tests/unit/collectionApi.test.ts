@@ -74,6 +74,83 @@ describe("collection inventory API", () => {
     expect(response.total).toBe(1);
   });
 
+  it("normalizes grouped inventory summary payload for the collection page", async () => {
+    const { normalizeInventorySummaryResponse } =
+      await import("../../apps/web/src/features/collection/collection.api");
+    const response = normalizeInventorySummaryResponse({
+      groups: [
+        {
+          group_key:
+            "template:22222222-2222-4222-8222-222222222222:form:44444444-4444-4444-8444-444444444444",
+          template_id: "22222222-2222-4222-8222-222222222222",
+          form_id: "44444444-4444-4444-8444-444444444444",
+          owned_count: 531,
+          available_count: 520,
+          listed_count: 10,
+          locked_count: 1,
+          minting_count: 0,
+          minted_count: 0,
+          max_level: 8,
+          max_power: 900,
+          latest_obtained_at: "2026-05-21T00:00:00.000Z",
+          representative_item: {
+            item_instance_id: "11111111-1111-4111-8111-111111111111",
+            template_id: "22222222-2222-4222-8222-222222222222",
+            template_slug: "moon_guardian",
+            name: "月冕守门人",
+            rarity: {
+              code: "RARE",
+              display_name: "稀有",
+              sort_order: 20,
+            },
+            form: {
+              id: "44444444-4444-4444-8444-444444444444",
+              index: 1,
+              display_name: "初阶",
+            },
+            level: 8,
+            power: 900,
+            status: "available",
+            is_tradeable: true,
+            is_upgradeable: true,
+          },
+        },
+      ],
+      total: 2438,
+      group_total: 1,
+      summary: {
+        total_count: 2438,
+        available_count: 2400,
+        listed_count: 37,
+        locked_count: 1,
+        minting_count: 0,
+        minted_count: 0,
+        group_count: 1,
+      },
+      statuses: ["available", "listed"],
+      server_time: "2026-05-21T00:00:00.000Z",
+    });
+
+    expect(response.total).toBe(2438);
+    expect(response.summary.availableCount).toBe(2400);
+    expect(response.groups).toHaveLength(1);
+    expect(response.groups[0]).toMatchObject({
+      availableCount: 520,
+      key: "template:22222222-2222-4222-8222-222222222222:form:44444444-4444-4444-8444-444444444444",
+      ownedCount: 531,
+      representativeItem: {
+        itemInstanceId: "11111111-1111-4111-8111-111111111111",
+        name: "月冕守门人",
+        rarity: {
+          code: "rare",
+        },
+      },
+    });
+    expect(response.items[0]?.itemInstanceId).toBe(
+      "11111111-1111-4111-8111-111111111111",
+    );
+  });
+
   it("normalizes inventory decompose payload for the collection page", async () => {
     const { normalizeDecomposeItemResponse } =
       await import("../../apps/web/src/features/collection/collection.api");

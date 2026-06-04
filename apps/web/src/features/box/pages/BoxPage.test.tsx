@@ -156,6 +156,58 @@ describe("BoxPage Stars invoice flow", () => {
     expect(screen.getByText("Forest Sproutling")).toBeVisible();
   });
 
+  it("uses the configured launch box images for the three box tiers", () => {
+    mocks.boxes = [
+      createBox({
+        heroImageUrl: "https://cdn.example.test/old-normal-hero.png",
+        id: "11111111-1111-4111-8111-111111111111",
+        name: "Normal Egg",
+        slug: "starter_egg",
+        tier: "normal",
+      }),
+      createBox({
+        heroImageUrl: "https://cdn.example.test/old-rare-hero.png",
+        id: "22222222-2222-4222-8222-222222222222",
+        name: "Rare Egg",
+        slug: "premium_egg",
+        tier: "rare",
+      }),
+      createBox({
+        heroImageUrl: "https://cdn.example.test/old-legendary-hero.png",
+        id: "33333333-3333-4333-8333-333333333333",
+        name: "Legendary Egg",
+        slug: "legendary_egg",
+        tier: "legendary",
+      }),
+    ];
+
+    renderBoxPage();
+
+    expect(screen.getByRole("img", { name: "Normal Egg" })).toHaveAttribute(
+      "src",
+      "/images/boxes/starter_egg.png",
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Rare Egg/ }));
+    expect(screen.getByRole("img", { name: "Rare Egg" })).toHaveAttribute(
+      "src",
+      "/images/boxes/premium_egg.png",
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Legendary Egg/ }));
+    expect(
+      screen.getByRole("img", { name: "Legendary Egg" }),
+    ).toHaveAttribute("src", "/images/boxes/legendary_egg.png");
+  });
+
+  it("does not render the custom hero back button", () => {
+    renderBoxPage();
+
+    expect(
+      screen.queryByRole("button", { name: "返回上一页" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("keeps open buttons locked while an order is waiting for payment", async () => {
     const openInvoice = vi.fn();
     (globalThis as TelegramGlobal).Telegram = {

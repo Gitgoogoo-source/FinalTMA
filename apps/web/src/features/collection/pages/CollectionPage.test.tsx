@@ -23,6 +23,7 @@ import { CollectionPage } from "./CollectionPage";
 
 const mocks = vi.hoisted(() => ({
   inventoryItems: [] as unknown[],
+  inventoryGroups: [] as unknown[],
   itemDetails: new Map<string, unknown>(),
   hasNextInventoryPage: false,
   isFetchingNextInventoryPage: false,
@@ -51,6 +52,8 @@ vi.mock("../hooks/useInventory", () => ({
     isFetchingNextPage: mocks.isFetchingNextInventoryPage,
     isLoading: false,
     hasNextPage: mocks.hasNextInventoryPage,
+    groups: mocks.inventoryGroups,
+    groupTotal: mocks.inventoryGroups.length,
     items: mocks.inventoryItems,
     fetchNextPage: mocks.inventoryFetchNextPage,
     refetch: mocks.inventoryRefetch,
@@ -184,6 +187,7 @@ const FORM_ID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 describe("CollectionPage stage-3 frontend states", () => {
   beforeEach(() => {
     mocks.inventoryItems = [];
+    mocks.inventoryGroups = [];
     mocks.itemDetails = new Map<string, unknown>();
     mocks.hasNextInventoryPage = false;
     mocks.isFetchingNextInventoryPage = false;
@@ -433,7 +437,7 @@ describe("CollectionPage stage-3 frontend states", () => {
     expect(within(nextSummary).getByText("高阶形态")).toBeVisible();
   });
 
-  it("groups character thumbs by the visible image even when template and form differ", () => {
+  it("keeps character thumbs separate when template differs even if the image is shared", () => {
     const sharedImageUrl = "/storage/v1/object/public/collectibles/dragon.png";
     const firstItem = makeItem({
       name: "烈焰龙",
@@ -471,13 +475,12 @@ describe("CollectionPage stage-3 frontend states", () => {
     const groupedDragonThumbs = screen.getAllByRole("button", {
       name: /烈焰龙/,
     });
-    expect(groupedDragonThumbs).toHaveLength(1);
-    expect(
-      groupedDragonThumbs[0]!.querySelector(".character-thumb__count"),
-    ).toHaveTextContent("x2");
+    expect(groupedDragonThumbs).toHaveLength(2);
+    expect(groupedDragonThumbs[0]!.querySelector(".character-thumb__count")).toBeNull();
+    expect(groupedDragonThumbs[1]!.querySelector(".character-thumb__count")).toBeNull();
     expect(
       within(screen.getByLabelText("藏品网格")).getAllByRole("button"),
-    ).toHaveLength(2);
+    ).toHaveLength(3);
   });
 
   it("does not show a manual load-more control when more items are available", () => {
@@ -1115,7 +1118,7 @@ describe("CollectionPage stage-3 frontend states", () => {
     expect(mocks.evolveMutateAsync).toHaveBeenCalledWith({
       sourceItemInstanceIds: [ITEM_A_ID, ITEM_B_ID, ITEM_C_ID],
     });
-    expect(mocks.detailCalls.some((call) => call.enabled)).toBe(false);
+    expect(new Set(getEnabledDetailCallIds())).toEqual(new Set([ITEM_A_ID]));
     expect(
       await screen.findByRole("dialog", { name: "进化成功" }),
     ).toBeVisible();

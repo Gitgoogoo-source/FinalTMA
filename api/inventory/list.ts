@@ -128,7 +128,7 @@ async function callInventoryListRpc(
   }
 }
 
-function toInventoryListItem(value: unknown) {
+export function toInventoryListItem(value: unknown) {
   const item = isRecord(value) ? (value as InventoryRpcItem) : {};
   const rarity = isRecord(item.rarity) ? item.rarity : null;
   const series = isRecord(item.series) ? item.series : null;

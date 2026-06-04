@@ -5,6 +5,7 @@ import type {
   ApiSuccessResponse,
 } from "../../api/_shared/handler";
 import { buildInventoryListResponse } from "../../api/inventory/list";
+import { buildInventorySummaryResponse } from "../../api/inventory/summary";
 import { invokeApiHandler } from "./_utils";
 
 const { callRpcRawMock, requireSessionMock } = vi.hoisted(() => ({
@@ -232,6 +233,133 @@ describe("inventory API helpers", () => {
         p_statuses: ["available", "locked", "listed", "minting", "minted"],
         p_limit: 40,
         p_offset: 0,
+      }),
+      expect.any(Object),
+    );
+  });
+
+  it("maps inventory_get_collection_summary RPC payload into grouped API data", () => {
+    const response = buildInventorySummaryResponse({
+      groups: [
+        {
+          group_key: `template:${TEMPLATE_ID}:form:55555555-5555-4555-8555-555555555555`,
+          template_id: TEMPLATE_ID,
+          form_id: "55555555-5555-4555-8555-555555555555",
+          owned_count: 2000,
+          available_count: 1990,
+          listed_count: 10,
+          locked_count: 0,
+          minting_count: 0,
+          minted_count: 0,
+          max_level: 9,
+          max_power: 1200,
+          representative_item: {
+            item_instance_id: ITEM_INSTANCE_ID,
+            template_id: TEMPLATE_ID,
+            template_slug: "forest_sproutling",
+            name: "Forest Sproutling",
+            rarity: {
+              code: "COMMON",
+              display_name: "Common",
+              sort_order: 10,
+            },
+            form: {
+              id: "55555555-5555-4555-8555-555555555555",
+              index: 1,
+              display_name: "Base Form",
+            },
+            level: 9,
+            power: 1200,
+            status: "available",
+            tradeable: true,
+            upgradeable: true,
+            evolvable: true,
+            decomposable: true,
+            nft_mintable: true,
+          },
+        },
+      ],
+      total: 2000,
+      group_total: 1,
+      summary: {
+        total_count: 2000,
+        available_count: 1990,
+        listed_count: 10,
+        locked_count: 0,
+        minting_count: 0,
+        minted_count: 0,
+        group_count: 1,
+      },
+      statuses: ["available", "listed"],
+      server_time: "2026-05-21T00:00:00.000Z",
+    });
+
+    expect(response).toMatchObject({
+      group_total: 1,
+      summary: {
+        total_count: 2000,
+        available_count: 1990,
+      },
+      total: 2000,
+    });
+    expect(response.groups[0]).toMatchObject({
+      owned_count: 2000,
+      representative_item: {
+        item_instance_id: ITEM_INSTANCE_ID,
+        name: "Forest Sproutling",
+      },
+    });
+  });
+
+  it("/api/inventory/summary returns grouped inventory for a logged-in user", async () => {
+    callRpcRawMock.mockResolvedValueOnce({
+      groups: [],
+      total: 0,
+      group_total: 0,
+      summary: {
+        total_count: 0,
+        available_count: 0,
+        listed_count: 0,
+        locked_count: 0,
+        minting_count: 0,
+        minted_count: 0,
+        group_count: 0,
+      },
+      statuses: ["available", "locked", "listed", "minting", "minted"],
+      server_time: "2026-05-21T00:00:00.000Z",
+    });
+
+    const { default: inventorySummaryHandler } =
+      await import("../../api/inventory/summary");
+    const result = await invokeApiHandler<ApiSuccessResponse>(
+      inventorySummaryHandler,
+      {
+        method: "GET",
+        url: "/api/inventory/summary",
+        query: {
+          include_locked: "true",
+        },
+        headers: {
+          cookie: "tma_game_session=test-session-token-000000000000",
+          "x-forwarded-for": "127.0.0.31",
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(200);
+    expect(result.body).toMatchObject({
+      ok: true,
+      data: {
+        group_total: 0,
+        groups: [],
+        total: 0,
+      },
+    });
+    expect(callRpcRawMock).toHaveBeenCalledWith(
+      "inventory_get_collection_summary",
+      expect.objectContaining({
+        p_user_id: USER_ID,
+        p_statuses: ["available", "locked", "listed", "minting", "minted"],
       }),
       expect.any(Object),
     );

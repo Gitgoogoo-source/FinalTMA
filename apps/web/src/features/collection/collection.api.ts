@@ -13,8 +13,11 @@ import type {
   CollectionEvolutionPreview,
   CollectionForm,
   CollectionInventoryDetail,
+  CollectionInventoryGroup,
   CollectionInventoryItem,
   CollectionInventoryResponse,
+  CollectionInventorySummaryCounts,
+  CollectionInventorySummaryResponse,
   CollectionMarketStatus,
   CollectionNamedObject,
   CollectionOnchainStatus,
@@ -65,6 +68,26 @@ export async function fetchInventory(
   return normalizeInventoryResponse(response);
 }
 
+export async function fetchInventorySummary(
+  input: FetchInventoryParams = {},
+): Promise<CollectionInventorySummaryResponse> {
+  const params = new URLSearchParams();
+
+  if (input.includeLocked) {
+    params.set("include_locked", "true");
+  }
+
+  const queryString = params.toString();
+  const response = await apiRequest<unknown>(
+    `${API_ENDPOINTS.inventory.summary}${queryString ? `?${queryString}` : ""}`,
+    {
+      method: "GET",
+    },
+  );
+
+  return normalizeInventorySummaryResponse(response);
+}
+
 export async function fetchInventoryDetail(
   itemInstanceId: string,
 ): Promise<CollectionInventoryDetail> {
@@ -72,7 +95,7 @@ export async function fetchInventoryDetail(
     item_instance_id: itemInstanceId,
     include_market_status: "true",
     include_upgrade_preview: "true",
-    include_evolution_preview: "false",
+    include_evolution_preview: "true",
     include_decompose_preview: "true",
     include_onchain_status: "true",
   });
@@ -244,6 +267,131 @@ export function normalizeInventoryResponse(
     serverTime:
       readString(payload.serverTime) ?? readString(payload.server_time),
   };
+}
+
+export function normalizeInventorySummaryResponse(
+  response: unknown,
+): CollectionInventorySummaryResponse {
+  const payload = isRecord(response) ? response : {};
+  const groups = Array.isArray(payload.groups)
+    ? payload.groups.map(normalizeInventoryGroup).filter(isInventoryGroup)
+    : [];
+  const summary = normalizeInventorySummaryCounts(payload.summary);
+  const total =
+    readNumber(payload.total) ?? summary.totalCount ?? sumOwnedCount(groups);
+  const groupTotal = readNumber(payload.groupTotal) ??
+    readNumber(payload.group_total) ??
+    summary.groupCount ??
+    groups.length;
+
+  return {
+    groups,
+    items: groups.map((group) => group.representativeItem),
+    total,
+    groupTotal,
+    summary: {
+      ...summary,
+      totalCount: total,
+      groupCount: groupTotal,
+    },
+    statuses: Array.isArray(payload.statuses)
+      ? payload.statuses.map(readString).filter(isString)
+      : [],
+    serverTime:
+      readString(payload.serverTime) ?? readString(payload.server_time),
+  };
+}
+
+function normalizeInventoryGroup(
+  value: unknown,
+): CollectionInventoryGroup | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const representativeItem = normalizeInventoryItem(
+    value.representativeItem ?? value.representative_item,
+  );
+
+  if (!representativeItem) {
+    return null;
+  }
+
+  const ownedCount =
+    readNumber(value.ownedCount) ?? readNumber(value.owned_count) ?? 1;
+  const itemInstanceIds = readStringArray(
+    value.itemInstanceIds ?? value.item_instance_ids,
+  );
+
+  return {
+    key:
+      readString(value.key) ??
+      readString(value.groupKey) ??
+      readString(value.group_key) ??
+      getCollectionGroupFallbackKey(representativeItem),
+    representativeItem,
+    itemInstanceIds:
+      itemInstanceIds.length > 0
+        ? itemInstanceIds
+        : [representativeItem.itemInstanceId],
+    ownedCount,
+    availableCount:
+      readNumber(value.availableCount) ??
+      readNumber(value.available_count) ??
+      0,
+    listedCount:
+      readNumber(value.listedCount) ?? readNumber(value.listed_count) ?? 0,
+    lockedCount:
+      readNumber(value.lockedCount) ?? readNumber(value.locked_count) ?? 0,
+    mintingCount:
+      readNumber(value.mintingCount) ?? readNumber(value.minting_count) ?? 0,
+    mintedCount:
+      readNumber(value.mintedCount) ?? readNumber(value.minted_count) ?? 0,
+    maxLevel:
+      readNullableNumber(value.maxLevel) ?? readNullableNumber(value.max_level),
+    maxPower:
+      readNullableNumber(value.maxPower) ?? readNullableNumber(value.max_power),
+    latestObtainedAt:
+      readString(value.latestObtainedAt) ??
+      readString(value.latest_obtained_at),
+  };
+}
+
+function normalizeInventorySummaryCounts(
+  value: unknown,
+): CollectionInventorySummaryCounts {
+  const summary = isRecord(value) ? value : {};
+
+  return {
+    totalCount:
+      readNumber(summary.totalCount) ?? readNumber(summary.total_count) ?? 0,
+    availableCount:
+      readNumber(summary.availableCount) ??
+      readNumber(summary.available_count) ??
+      0,
+    listedCount:
+      readNumber(summary.listedCount) ?? readNumber(summary.listed_count) ?? 0,
+    lockedCount:
+      readNumber(summary.lockedCount) ?? readNumber(summary.locked_count) ?? 0,
+    mintingCount:
+      readNumber(summary.mintingCount) ??
+      readNumber(summary.minting_count) ??
+      0,
+    mintedCount:
+      readNumber(summary.mintedCount) ?? readNumber(summary.minted_count) ?? 0,
+    groupCount:
+      readNumber(summary.groupCount) ?? readNumber(summary.group_count) ?? 0,
+  };
+}
+
+function getCollectionGroupFallbackKey(item: CollectionInventoryItem): string {
+  return `template:${item.templateId ?? item.templateSlug ?? item.itemInstanceId}:form:${
+    item.form?.id ?? "default-form"
+  }`;
+}
+
+function sumOwnedCount(groups: CollectionInventoryGroup[]): number {
+  return groups.reduce((sum, group) => sum + group.ownedCount, 0);
 }
 
 function normalizeInventoryItem(
@@ -935,6 +1083,12 @@ function isInventoryItem(
   item: CollectionInventoryItem | null,
 ): item is CollectionInventoryItem {
   return item !== null;
+}
+
+function isInventoryGroup(
+  group: CollectionInventoryGroup | null,
+): group is CollectionInventoryGroup {
+  return group !== null;
 }
 
 function createIdempotencyKey(prefix: string): string {

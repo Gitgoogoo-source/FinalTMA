@@ -1,5 +1,4 @@
-import { ChevronLeft } from "lucide-react";
-
+import { getBoxHeroImageUrl } from "../box.images";
 import type { BlindBox } from "../box.types";
 
 type BoxHeroProps = {
@@ -7,7 +6,7 @@ type BoxHeroProps = {
 };
 
 export function BoxHero({ box }: BoxHeroProps) {
-  const imageUrl = box.heroImageUrl ?? box.coverImageUrl;
+  const imageUrl = getBoxHeroImageUrl(box);
   const tierTone = getTierTone(box.tier);
 
   return (
@@ -15,17 +14,6 @@ export function BoxHero({ box }: BoxHeroProps) {
       className={`box-hero box-hero--${tierTone}`}
       aria-label={`当前盲盒：${box.name}`}
     >
-      <button
-        className="box-hero__back"
-        type="button"
-        aria-label="返回上一页"
-        onClick={() => {
-          window.history.back();
-        }}
-      >
-        <ChevronLeft aria-hidden="true" size={25} strokeWidth={2.8} />
-      </button>
-
       <div className="box-hero__stage">
         <span className="box-hero__halo" aria-hidden="true" />
         <span className="box-hero__shadow" />

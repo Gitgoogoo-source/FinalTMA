@@ -1,4 +1,4 @@
-import { expect, test, type Route } from "@playwright/test";
+import { expect, test, type Page, type Route } from "@playwright/test";
 
 import { TEST_INIT_DATA, mockFirstPhaseApi } from "./_firstPhaseApi";
 
@@ -13,6 +13,7 @@ test("出售页可设置价格、预览手续费并确认上架", async ({ page 
   const idempotencyHeaders: Array<string | undefined> = [];
   let listingCreated = false;
 
+  await installTelegramWebAppMock(page);
   await mockFirstPhaseApi(page);
   await mockMarketSellApi(
     page,
@@ -63,6 +64,86 @@ test("出售页可设置价格、预览手续费并确认上架", async ({ page 
     (createRequests[0] as { idempotency_key?: string }).idempotency_key,
   ).toEqual(idempotencyHeaders[0]);
 });
+
+test("出售页未填写单价时仍展示确认出售和到手占位", async ({ page }) => {
+  const createRequests: unknown[] = [];
+  const idempotencyHeaders: Array<string | undefined> = [];
+  let listingCreated = false;
+
+  await installTelegramWebAppMock(page);
+  await mockFirstPhaseApi(page);
+  await mockMarketSellApi(
+    page,
+    createRequests,
+    idempotencyHeaders,
+    () => listingCreated,
+    () => {
+      listingCreated = true;
+    },
+  );
+
+  await page.goto(
+    `/trade?tab=sell&mockInitData=${encodeURIComponent(TEST_INIT_DATA)}`,
+  );
+
+  await page.locator(".sell-item-card__button").click();
+
+  const confirmButton = page.getByRole("button", {
+    name: "确认出售",
+    exact: true,
+  });
+
+  await expect(confirmButton).toBeVisible();
+  await expect(confirmButton).toBeDisabled();
+  await expect(page.locator(".sell-confirm__receive")).toHaveText("到手 -");
+  await expect(page.getByText("请输入出售单价", { exact: true })).toBeVisible();
+  expect(createRequests).toHaveLength(0);
+});
+
+async function installTelegramWebAppMock(page: Page): Promise<void> {
+  await page.route("https://telegram.org/js/telegram-web-app.js", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/javascript",
+      body: "window.Telegram = window.Telegram || {};",
+    }),
+  );
+
+  await page.addInitScript((initData) => {
+    type TestTelegramGlobal = typeof globalThis & {
+      Telegram?: {
+        WebApp?: Record<string, unknown>;
+      };
+    };
+
+    const params = new URLSearchParams(initData);
+    const target = globalThis as TestTelegramGlobal;
+    const user = params.get("user");
+
+    target.Telegram = {
+      WebApp: {
+        initData,
+        initDataUnsafe: {
+          auth_date: Number(params.get("auth_date")),
+          hash: params.get("hash") ?? undefined,
+          query_id: params.get("query_id") ?? undefined,
+          user: user ? JSON.parse(user) : undefined,
+        },
+        colorScheme: "light",
+        contentSafeAreaInset: { bottom: 0, left: 0, right: 0, top: 0 },
+        expand: () => undefined,
+        isExpanded: true,
+        platform: "ios",
+        ready: () => undefined,
+        safeAreaInset: { bottom: 0, left: 0, right: 0, top: 0 },
+        themeParams: {},
+        version: "8.0",
+        viewportHeight: 720,
+        viewportStableHeight: 680,
+      },
+    };
+  }, TEST_INIT_DATA);
+}
 
 async function mockMarketSellApi(
   page: Parameters<typeof mockFirstPhaseApi>[0],

@@ -122,6 +122,14 @@ export type CollectionInventoryGroup = {
   representativeItem: CollectionInventoryItem;
   itemInstanceIds: string[];
   ownedCount: number;
+  availableCount: number;
+  listedCount: number;
+  lockedCount: number;
+  mintingCount: number;
+  mintedCount: number;
+  maxLevel: number | null;
+  maxPower: number | null;
+  latestObtainedAt: string | null;
 };
 
 export type CollectionInventoryDetail = CollectionInventoryItem & {
@@ -146,6 +154,26 @@ export type CollectionInventoryResponse = {
   limit: number;
   offset: number;
   nextCursor: string | null;
+  statuses: string[];
+  serverTime: string | null;
+};
+
+export type CollectionInventorySummaryCounts = {
+  totalCount: number;
+  availableCount: number;
+  listedCount: number;
+  lockedCount: number;
+  mintingCount: number;
+  mintedCount: number;
+  groupCount: number;
+};
+
+export type CollectionInventorySummaryResponse = {
+  groups: CollectionInventoryGroup[];
+  items: CollectionInventoryItem[];
+  total: number;
+  groupTotal: number;
+  summary: CollectionInventorySummaryCounts;
   statuses: string[];
   serverTime: string | null;
 };

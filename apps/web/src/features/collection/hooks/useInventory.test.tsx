@@ -5,12 +5,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type {
   CollectionInventoryItem,
-  CollectionInventoryResponse,
+  CollectionInventorySummaryResponse,
 } from "../collection.types";
 import { useInventory } from "./useInventory";
 
 const mocks = vi.hoisted(() => ({
-  fetchInventory: vi.fn(),
+  fetchInventorySummary: vi.fn(),
   session: {
     isAuthenticated: true,
     user: {
@@ -24,38 +24,34 @@ vi.mock("@/app/providers/SessionProvider", () => ({
 }));
 
 vi.mock("../collection.api", () => ({
-  fetchInventory: mocks.fetchInventory,
+  fetchInventorySummary: mocks.fetchInventorySummary,
 }));
 
 describe("useInventory", () => {
   beforeEach(() => {
-    mocks.fetchInventory.mockReset();
+    mocks.fetchInventorySummary.mockReset();
   });
 
   afterEach(() => {
     vi.clearAllMocks();
   });
 
-  it("continues fetching inventory pages until the collection snapshot is complete", async () => {
-    mocks.fetchInventory
-      .mockResolvedValueOnce(
-        makeInventoryPage({
-          items: [makeItem("66666666-6666-4666-8666-666666666666")],
-          nextCursor: "1",
-          offset: 0,
-          total: 2,
-        }),
-      )
-      .mockResolvedValueOnce(
-        makeInventoryPage({
-          items: [
-            makeItem("77777777-7777-4777-8777-777777777777", "月冕守门人"),
-          ],
-          nextCursor: null,
-          offset: 1,
-          total: 2,
-        }),
-      );
+  it("fetches one grouped inventory summary instead of auto-loading every page", async () => {
+    const firstItem = makeItem("66666666-6666-4666-8666-666666666666");
+    const secondItem = makeItem(
+      "77777777-7777-4777-8777-777777777777",
+      "月冕守门人",
+    );
+
+    mocks.fetchInventorySummary.mockResolvedValueOnce(
+      makeInventorySummary({
+        groups: [
+          makeGroup(firstItem, 1),
+          makeGroup(secondItem, 12),
+        ],
+        total: 13,
+      }),
+    );
 
     const queryClient = new QueryClient({
       defaultOptions: {
@@ -71,43 +67,69 @@ describe("useInventory", () => {
     const { result } = renderHook(() => useInventory(), { wrapper });
 
     await waitFor(() => {
-      expect(mocks.fetchInventory).toHaveBeenCalledTimes(2);
+      expect(mocks.fetchInventorySummary).toHaveBeenCalledTimes(1);
     });
 
-    expect(mocks.fetchInventory).toHaveBeenNthCalledWith(1, {
-      cursor: null,
-      includeLocked: true,
-      limit: 100,
+    await waitFor(() => {
+      expect(result.current.items).toHaveLength(2);
     });
-    expect(mocks.fetchInventory).toHaveBeenNthCalledWith(2, {
-      cursor: "1",
+
+    expect(mocks.fetchInventorySummary).toHaveBeenCalledWith({
       includeLocked: true,
-      limit: 100,
     });
     expect(result.current.items.map((item) => item.itemInstanceId)).toEqual([
       "66666666-6666-4666-8666-666666666666",
       "77777777-7777-4777-8777-777777777777",
     ]);
-    expect(result.current.total).toBe(2);
+    expect(result.current.groups.map((group) => group.ownedCount)).toEqual([
+      1, 12,
+    ]);
+    expect(result.current.total).toBe(13);
 
     queryClient.clear();
   });
 });
 
-function makeInventoryPage(input: {
-  items: CollectionInventoryItem[];
-  nextCursor: string | null;
-  offset: number;
+function makeInventorySummary(input: {
+  groups: CollectionInventorySummaryResponse["groups"];
   total: number;
-}): CollectionInventoryResponse {
+}): CollectionInventorySummaryResponse {
   return {
-    items: input.items,
-    limit: 100,
-    nextCursor: input.nextCursor,
-    offset: input.offset,
+    groupTotal: input.groups.length,
+    groups: input.groups,
+    items: input.groups.map((group) => group.representativeItem),
     serverTime: "2026-05-25T08:00:00.000Z",
+    summary: {
+      availableCount: input.total,
+      groupCount: input.groups.length,
+      listedCount: 0,
+      lockedCount: 0,
+      mintedCount: 0,
+      mintingCount: 0,
+      totalCount: input.total,
+    },
     statuses: ["available"],
     total: input.total,
+  };
+}
+
+function makeGroup(
+  representativeItem: CollectionInventoryItem,
+  ownedCount: number,
+): CollectionInventorySummaryResponse["groups"][number] {
+  return {
+    availableCount: ownedCount,
+    itemInstanceIds: [representativeItem.itemInstanceId],
+    key: `template:${representativeItem.templateId}`,
+    latestObtainedAt: representativeItem.obtainedAt,
+    listedCount: 0,
+    lockedCount: 0,
+    maxLevel: representativeItem.level,
+    maxPower: representativeItem.power,
+    mintedCount: 0,
+    mintingCount: 0,
+    ownedCount,
+    representativeItem,
   };
 }
 

@@ -56,7 +56,7 @@ describe("collection api", () => {
     expect(params.get("limit")).toBe("100");
   });
 
-  it("requests onchain status for inventory detail so Mint state is server-backed", async () => {
+  it("requests server-backed status and evolution preview for inventory detail", async () => {
     mocks.apiRequest.mockResolvedValueOnce({
       item_instance_id: "66666666-6666-4666-8666-666666666666",
       template_id: "55555555-5555-4555-8555-555555555555",
@@ -83,7 +83,7 @@ describe("collection api", () => {
     );
     expect(params.get("include_market_status")).toBe("true");
     expect(params.get("include_upgrade_preview")).toBe("true");
-    expect(params.get("include_evolution_preview")).toBe("false");
+    expect(params.get("include_evolution_preview")).toBe("true");
     expect(params.get("include_decompose_preview")).toBe("true");
     expect(params.get("include_onchain_status")).toBe("true");
     expect(requestOptions).toMatchObject({

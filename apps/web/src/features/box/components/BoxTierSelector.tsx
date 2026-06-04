@@ -1,5 +1,6 @@
 import { Check } from "lucide-react";
 
+import { getBoxCoverImageUrl } from "../box.images";
 import type { BlindBox } from "../box.types";
 
 type BoxTierSelectorProps = {
@@ -40,7 +41,7 @@ export function BoxTierSelector({
 }
 
 function BoxTierPreview({ box }: { box: BlindBox }) {
-  const imageUrl = box.coverImageUrl ?? box.heroImageUrl;
+  const imageUrl = getBoxCoverImageUrl(box);
   const tierTone = getTierTone(box.tier);
 
   if (imageUrl) {

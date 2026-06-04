@@ -16,11 +16,15 @@ import { useFeedback } from "@/app/providers/FeedbackProvider";
 import { formatCurrencyAmount } from "@/shared/lib/formatCurrency";
 
 import type {
+  CollectionEvolutionPreview,
   CollectionEvolveItemResponse,
   CollectionInventoryItem,
 } from "../collection.types";
 import { useEvolveItem } from "../hooks/useEvolveItem";
+import { useItemDetail } from "../hooks/useItemDetail";
 import { getLocalEvolutionPreview } from "../localEvolutionPreviews";
+
+const EMPTY_SELECTED_IDS: string[] = [];
 
 type EvolvePanelProps = {
   open: boolean;
@@ -40,6 +44,9 @@ export function EvolvePanel({
   const { pushToast } = useFeedback();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const selectionSeedRef = useRef<string>("");
+  const detailQuery = useItemDetail(open ? item?.itemInstanceId : null, {
+    enabled: open && Boolean(item),
+  });
   const evolveMutation = useEvolveItem();
 
   const sameAvailableItems = useMemo(
@@ -47,20 +54,31 @@ export function EvolvePanel({
     [item, items],
   );
   const displayItem = item;
-  const preview = useMemo(() => getLocalEvolutionPreview(item), [item]);
-  const requiredCount = preview?.requiredCount ?? 3;
+  const detail = detailQuery.item;
+  const serverPreview = detail?.evolutionPreview ?? null;
+  const localPreview = useMemo(() => getLocalEvolutionPreview(item), [item]);
+  const requiredCount =
+    serverPreview?.requiredCount ?? localPreview?.requiredCount ?? 3;
+  const serverSelectedIds = serverPreview?.selectedItemIds ?? EMPTY_SELECTED_IDS;
   const defaultSelectedIds = useMemo(
-    () => getDefaultSelectedIds(sameAvailableItems, requiredCount),
-    [requiredCount, sameAvailableItems],
+    () =>
+      serverSelectedIds.length > 0
+        ? serverSelectedIds
+        : getDefaultSelectedIds(sameAvailableItems, requiredCount),
+    [requiredCount, sameAvailableItems, serverSelectedIds],
   );
   const selectionSeed = open
-    ? `${item?.itemInstanceId ?? "none"}:${defaultSelectedIds.join("|")}`
+    ? `${item?.itemInstanceId ?? "none"}:${defaultSelectedIds.join("|")}:${
+        serverPreview?.availableSameItems ?? "local"
+      }`
     : "";
 
   useEffect(() => {
     if (!open) {
       selectionSeedRef.current = "";
-      setSelectedIds([]);
+      setSelectedIds((current) =>
+        current.length > 0 ? EMPTY_SELECTED_IDS : current,
+      );
       return;
     }
 
@@ -83,15 +101,26 @@ export function EvolvePanel({
     .filter((candidate): candidate is CollectionInventoryItem =>
       Boolean(candidate),
     );
-  const mainReturnItemId = getMainReturnItemId(selectedItems);
-  const targetImageUrl = preview?.targetImageUrl ?? null;
+  const mainReturnItemId =
+    serverPreview?.mainReturnItemId ?? getMainReturnItemId(selectedItems);
+  const targetImageUrl =
+    serverPreview?.targetImageUrl ?? localPreview?.targetImageUrl ?? null;
+  const targetName = serverPreview?.targetName ?? localPreview?.targetName;
+  const availableSameCount =
+    serverPreview?.availableSameItems ?? sameAvailableItems.length;
+  const isServerSelection =
+    serverSelectedIds.length > 0 &&
+    sameAvailableItems.length < serverSelectedIds.length;
   const isListed = item.status === "listed";
   const disabledReason = getEvolveDisabledReason({
+    detailError: detailQuery.isError,
+    isDetailLoading: detailQuery.isLoading,
     isListed,
     isPending: evolveMutation.isPending,
     item: displayItem,
-    localAvailableCount: sameAvailableItems.length,
+    availableSameCount,
     requiredCount,
+    serverPreview,
     selectedCount: selectedIds.length,
   });
   const canSubmit = disabledReason === null;
@@ -203,7 +232,7 @@ export function EvolvePanel({
               {targetImageUrl ? (
                 <img
                   src={targetImageUrl}
-                  alt={preview?.targetName ?? "目标藏品"}
+                  alt={targetName ?? "目标藏品"}
                 />
               ) : (
                 <PackageCheck aria-hidden="true" size={24} strokeWidth={2.3} />
@@ -211,8 +240,8 @@ export function EvolvePanel({
             </div>
             <div className="evolve-panel__target-copy">
               <span>目标藏品</span>
-              <strong>{preview?.targetName ?? "提交后确认"}</strong>
-              <em>{preview ? "本地展示预览" : "未配置本地预览"}</em>
+              <strong>{targetName ?? "提交后确认"}</strong>
+              <em>{serverPreview ? "服务端预览" : "本地展示预览"}</em>
             </div>
           </section>
 
@@ -223,7 +252,7 @@ export function EvolvePanel({
             <EvolveMetric
               icon="users"
               label="同款可用数量"
-              value={formatOptionalNumber(sameAvailableItems.length)}
+              value={formatOptionalNumber(availableSameCount)}
             />
             <EvolveMetric
               icon="materials"
@@ -235,8 +264,16 @@ export function EvolvePanel({
                 selectedIds.length === requiredCount ? "positive" : "neutral"
               }
             />
-            <EvolveMetric icon="kcoin" label="KCOIN 消耗" value="服务端确认" />
-            <EvolveMetric icon="rate" label="成功率" value="服务端确认" />
+            <EvolveMetric
+              icon="kcoin"
+              label="KCOIN 消耗"
+              value={formatOptionalNumber(serverPreview?.kcoinCost)}
+            />
+            <EvolveMetric
+              icon="rate"
+              label="成功率"
+              value={formatSuccessRate(serverPreview?.successRateBps)}
+            />
           </section>
 
           <section className="evolve-panel__rule" aria-label="失败返还说明">
@@ -265,7 +302,45 @@ export function EvolvePanel({
               </span>
             </div>
 
-            {sameAvailableItems.length === 0 ? (
+            {detailQuery.isLoading ? (
+              <div className="evolve-panel__placeholder">
+                正在同步服务端材料。
+              </div>
+            ) : detailQuery.isError ? (
+              <div className="evolve-panel__placeholder">
+                进化预览读取失败。
+              </div>
+            ) : selectedIds.length > 0 ? (
+              <div className="evolve-panel__material-list">
+                {selectedIds.map((itemInstanceId, index) => {
+                  const candidate = sameAvailableItems.find(
+                    (sameItem) => sameItem.itemInstanceId === itemInstanceId,
+                  );
+
+                  return candidate ? (
+                    <MaterialButton
+                      disabled={evolveMutation.isPending || isServerSelection}
+                      isCurrent={candidate.itemInstanceId === item.itemInstanceId}
+                      isMain={candidate.itemInstanceId === mainReturnItemId}
+                      isSelected={selectedIds.includes(candidate.itemInstanceId)}
+                      item={candidate}
+                      key={candidate.itemInstanceId}
+                      onToggle={() =>
+                        handleToggleMaterial(candidate.itemInstanceId)
+                      }
+                    />
+                  ) : (
+                    <MaterialPlaceholder
+                      index={index}
+                      isCurrent={itemInstanceId === item.itemInstanceId}
+                      isMain={itemInstanceId === mainReturnItemId}
+                      itemInstanceId={itemInstanceId}
+                      key={itemInstanceId}
+                    />
+                  );
+                })}
+              </div>
+            ) : sameAvailableItems.length === 0 ? (
               <div className="evolve-panel__placeholder">
                 没有同款可用藏品。
               </div>
@@ -334,6 +409,35 @@ export function EvolvePanel({
           </button>
         </footer>
       </section>
+    </div>
+  );
+}
+
+function MaterialPlaceholder({
+  index,
+  isCurrent,
+  isMain,
+  itemInstanceId,
+}: {
+  index: number;
+  isCurrent: boolean;
+  isMain: boolean;
+  itemInstanceId: string;
+}) {
+  return (
+    <div className="evolve-panel__material-button evolve-panel__material-button--selected">
+      <div className="evolve-panel__material-thumb">
+        <PackageCheck aria-hidden="true" size={18} strokeWidth={2.4} />
+      </div>
+      <div className="evolve-panel__material-copy">
+        <strong>材料 {formatCurrencyAmount(index + 1)}</strong>
+        <span>服务端已选择候选 {formatShortId(itemInstanceId)}</span>
+        <div className="evolve-panel__material-badges">
+          <em>已选</em>
+          {isMain ? <em>主藏品</em> : null}
+          {isCurrent ? <em>当前</em> : null}
+        </div>
+      </div>
     </div>
   );
 }
@@ -465,18 +569,24 @@ function getMainReturnItemId(
 }
 
 function getEvolveDisabledReason({
+  detailError,
+  isDetailLoading,
   isListed,
   isPending,
   item,
-  localAvailableCount,
+  availableSameCount,
   requiredCount,
+  serverPreview,
   selectedCount,
 }: {
+  detailError: boolean;
+  isDetailLoading: boolean;
   isListed: boolean;
   isPending: boolean;
   item: CollectionInventoryItem;
-  localAvailableCount: number;
+  availableSameCount: number;
   requiredCount: number;
+  serverPreview: CollectionEvolutionPreview | null;
   selectedCount: number;
 }): string | null {
   if (isPending) {
@@ -495,7 +605,19 @@ function getEvolveDisabledReason({
     return "该藏品不可进化。";
   }
 
-  if (localAvailableCount < requiredCount) {
+  if (isDetailLoading) {
+    return "正在同步进化预览。";
+  }
+
+  if (detailError) {
+    return "进化预览读取失败。";
+  }
+
+  if (serverPreview && !serverPreview.canEvolve) {
+    return getEvolveReasonLabel(serverPreview.reason) ?? "当前不能进化。";
+  }
+
+  if (availableSameCount < requiredCount) {
     return "同款可用藏品数量不足。";
   }
 
@@ -504,6 +626,27 @@ function getEvolveDisabledReason({
   }
 
   return null;
+}
+
+function getEvolveReasonLabel(reason: string | null): string | null {
+  switch (reason) {
+    case "ITEM_NOT_AVAILABLE":
+      return "该藏品当前状态不可进化。";
+    case "ITEM_LOCKED":
+      return "该藏品正在锁定中，不能进化。";
+    case "ITEM_MINTING":
+      return "该藏品正在 Mint 流程中，不能进化。";
+    case "ITEM_NOT_EVOLVABLE":
+      return "该藏品不可进化。";
+    case "EVOLVE_NOT_ENOUGH_ITEMS":
+      return "同款可用藏品数量不足。";
+    case "EVOLVE_RULE_NOT_FOUND":
+      return "没有可用进化规则。";
+    case "INSUFFICIENT_KCOIN":
+      return "KCOIN 余额不足。";
+    default:
+      return reason;
+  }
 }
 
 function getBalanceTone(canSubmit: boolean): "neutral" | "ready" {
@@ -522,6 +665,16 @@ function formatOptionalNumber(value: number | null | undefined): string {
   return value === null || value === undefined
     ? "待同步"
     : formatCurrencyAmount(value);
+}
+
+function formatSuccessRate(value: number | null | undefined): string {
+  if (value === null || value === undefined) {
+    return "待同步";
+  }
+
+  const percent = value / 100;
+
+  return `${Number.isInteger(percent) ? percent.toFixed(0) : percent.toFixed(2)}%`;
 }
 
 function formatShortId(value: string): string {

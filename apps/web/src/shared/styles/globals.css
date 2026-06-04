@@ -1630,31 +1630,6 @@ a {
   padding: 38px 0 14px;
 }
 
-.box-hero__back {
-  width: 46px;
-  height: 46px;
-  position: absolute;
-  left: 2px;
-  top: 10px;
-  z-index: 4;
-  display: grid;
-  place-items: center;
-  border: 1px solid rgb(226 226 226 / 72%);
-  border-radius: 999px;
-  color: #20282f;
-  background: linear-gradient(
-    180deg,
-    rgb(255 255 255 / 88%),
-    rgb(255 255 255 / 66%)
-  );
-  box-shadow:
-    0 12px 28px rgb(33 39 44 / 10%),
-    inset 0 1px 0 rgb(255 255 255 / 96%);
-  cursor: pointer;
-  backdrop-filter: blur(18px) saturate(170%);
-  -webkit-backdrop-filter: blur(18px) saturate(170%);
-}
-
 .box-hero__halo {
   width: min(82%, 350px);
   height: 280px;
@@ -9537,9 +9512,36 @@ a {
   --character-grid-column-gap: clamp(6px, 2vw, 8px);
 
   display: grid;
+  gap: 6px;
   width: 100%;
   min-height: 0;
   padding-top: 0;
+}
+
+.character-grid__summary {
+  min-height: 24px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: rgb(54 67 75 / 66%);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.character-grid__summary strong {
+  color: var(--collection-ink, #24333b);
+  font-size: 14px;
+  font-weight: 950;
+}
+
+.character-grid__summary span,
+.character-grid__summary em {
+  font-style: normal;
+}
+
+.character-grid__summary em {
+  margin-left: auto;
 }
 
 .character-grid__track {
