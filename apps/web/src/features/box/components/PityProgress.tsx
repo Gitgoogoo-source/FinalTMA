@@ -1,4 +1,4 @@
-import { CheckCircle2, Gift } from "lucide-react";
+import { Gift } from "lucide-react";
 import type { CSSProperties } from "react";
 
 import type { BlindBox } from "../box.types";
@@ -34,18 +34,15 @@ export function PityProgress({ box }: PityProgressProps) {
     Math.min(100, Math.round((completed / Math.max(threshold, 1)) * 100)),
   );
   const targetRarity = formatRarity(pity.targetRarity);
-  const resetAfterHit =
-    currentCount === 0 && pity.totalDraws > 0 && !pity.guaranteedNext;
   const headline = getPityHeadline({
     guaranteedNext: pity.guaranteedNext,
     remainingToGuaranteed,
-    resetAfterHit,
     targetRarity,
   });
 
   return (
     <section
-      className={`box-pity${resetAfterHit ? " box-pity--reset" : ""}`}
+      className="box-pity"
       aria-label={`${box.name} 保底进度`}
     >
       <div
@@ -63,12 +60,6 @@ export function PityProgress({ box }: PityProgressProps) {
       <div className="box-pity__copy">
         <strong>{headline}</strong>
         <span>{targetRarity} 或以上品质的奖励</span>
-        {resetAfterHit ? (
-          <span className="box-pity__reset">
-            <CheckCircle2 aria-hidden="true" size={13} strokeWidth={2.5} />
-            抽中目标稀有度后已重置
-          </span>
-        ) : null}
       </div>
       <span className="box-pity__gift" aria-hidden="true">
         <Gift size={24} strokeWidth={2.4} />
@@ -80,18 +71,12 @@ export function PityProgress({ box }: PityProgressProps) {
 function getPityHeadline(input: {
   guaranteedNext: boolean;
   remainingToGuaranteed: number;
-  resetAfterHit: boolean;
   targetRarity: string;
 }): string {
-  const { guaranteedNext, remainingToGuaranteed, resetAfterHit, targetRarity } =
-    input;
+  const { guaranteedNext, remainingToGuaranteed, targetRarity } = input;
 
   if (guaranteedNext) {
     return `下一次必得${targetRarity}`;
-  }
-
-  if (resetAfterHit) {
-    return "本轮保底已重置";
   }
 
   return `再开 ${remainingToGuaranteed} 次必得${targetRarity}`;
