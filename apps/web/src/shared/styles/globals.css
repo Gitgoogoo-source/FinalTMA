@@ -9520,6 +9520,7 @@ a {
 
 .character-grid {
   --character-grid-column-gap: clamp(6px, 2vw, 8px);
+  --character-grid-filter-row-height: 31px;
 
   display: grid;
   gap: 6px;
@@ -9528,8 +9529,13 @@ a {
   padding-top: 0;
 }
 
+.collection-page--group-expanded .character-grid::before {
+  content: "";
+  min-height: var(--character-grid-filter-row-height);
+}
+
 .character-grid__filters {
-  min-height: 31px;
+  min-height: var(--character-grid-filter-row-height);
   position: relative;
   z-index: 8;
   display: grid;
