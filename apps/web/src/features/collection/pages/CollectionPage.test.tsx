@@ -46,6 +46,7 @@ const mocks = vi.hoisted(() => ({
   cancelSellMutate: vi.fn(),
   createMintMutate: vi.fn(),
   mintQueueRefetch: vi.fn(),
+  myAssetsState: null as unknown,
   walletStatus: null as unknown,
 }));
 
@@ -167,6 +168,10 @@ vi.mock("@/features/trade/hooks/useMarketSellRules", () => ({
   }),
 }));
 
+vi.mock("@/features/assets/hooks/useMyAssets", () => ({
+  useMyAssets: () => mocks.myAssetsState,
+}));
+
 vi.mock("@/features/wallet/hooks/useWalletStatus", () => ({
   useWalletStatus: () => ({
     data: mocks.walletStatus,
@@ -230,6 +235,7 @@ describe("CollectionPage stage-3 frontend states", () => {
     mocks.cancelSellMutate.mockReset();
     mocks.createMintMutate.mockReset();
     mocks.mintQueueRefetch.mockReset();
+    mocks.myAssetsState = makeMyAssetsState(80);
     mocks.detailRefetch.mockImplementation(
       async (itemInstanceId: string | null | undefined) => {
         const detail = itemInstanceId
@@ -1218,7 +1224,7 @@ describe("CollectionPage stage-3 frontend states", () => {
       expect(mocks.upgradeMutateAsync).toHaveBeenCalledTimes(1),
     );
     expect(mocks.upgradeMutateAsync).toHaveBeenCalledWith({
-      expectedFgemsCost: 20,
+      expectedFgemsCost: 70,
       expectedItemVersion: 7,
       itemInstanceId: ITEM_A_ID,
       targetLevel: 2,
@@ -1229,7 +1235,7 @@ describe("CollectionPage stage-3 frontend states", () => {
     expect(resultDialog).toBeVisible();
     expect(resultDialog.closest(".growth-panel--liquid-glass")).not.toBeNull();
     expect(screen.getByText("消耗 Fgems")).toBeVisible();
-    expect(screen.getByText("80 -> 60")).toBeVisible();
+    expect(screen.getByText("80 -> 10")).toBeVisible();
   });
 
   it("opens decompose info and action inside a liquid-glass dialog", async () => {
@@ -1375,6 +1381,56 @@ function renderCollectionPage() {
   );
 }
 
+function makeMyAssetsState(fgemsAvailable: number) {
+  const fgemsBalance = {
+    available: String(fgemsAvailable),
+    currencyCode: "FGEMS",
+    locked: "0",
+  };
+  const kcoinBalance = {
+    available: "1200",
+    currencyCode: "KCOIN",
+    locked: "0",
+  };
+  const data = {
+    assets: {
+      fgems: fgemsBalance,
+      kcoin: kcoinBalance,
+    },
+    balances: {
+      FGEMS: fgemsBalance,
+      KCOIN: kcoinBalance,
+    },
+    profile: {
+      avatarUrl: null,
+      displayName: "测试玩家",
+      firstName: "测试",
+      id: "11111111-1111-4111-8111-111111111111",
+      lastName: null,
+      telegramUserId: "7001",
+      username: "tester",
+    },
+    updatedAt: "2026-05-25T08:00:00.000Z",
+    userId: "11111111-1111-4111-8111-111111111111",
+    wallet: {
+      label: "Connect Wallet",
+      status: "placeholder",
+    },
+  };
+
+  return {
+    assets: data.assets,
+    data,
+    error: null,
+    isError: false,
+    isFetching: false,
+    isLoading: false,
+    profile: data.profile,
+    refreshAssets: vi.fn(),
+    wallet: data.wallet,
+  };
+}
+
 function setInventoryItems(...items: CollectionInventoryItem[]) {
   mocks.inventoryItems = items;
 }
@@ -1457,6 +1513,7 @@ function makeItem(
     isTradeable: true,
     isUpgradeable: true,
     itemInstanceId: ITEM_A_ID,
+    itemVersion: 7,
     level: 1,
     name: "森林幼芽",
     nftMintStatus: "not_minted",
@@ -1537,10 +1594,10 @@ function makeDetail(
       canUpgrade: true,
       currentLevel: 1,
       currentPower: 10,
-      fgemsCost: 20,
+      fgemsCost: 70,
       isBalanceEnough: true,
       nextLevel: 2,
-      powerAfter: 18,
+      powerAfter: 15,
       reason: null,
       targetLevel: 2,
       userFgemsBalance: 80,
@@ -1551,10 +1608,10 @@ function makeDetail(
 
 function upgradeResult(): CollectionUpgradeItemResponse {
   return {
-    balanceChange: -20,
-    consumedFgems: 20,
-    costFgems: 20,
-    fgemsBalanceAfter: 60,
+    balanceChange: -70,
+    consumedFgems: 70,
+    costFgems: 70,
+    fgemsBalanceAfter: 10,
     fgemsBalanceBefore: 80,
     fromLevel: 1,
     fromPower: 10,
@@ -1562,7 +1619,7 @@ function upgradeResult(): CollectionUpgradeItemResponse {
     itemInstanceId: ITEM_A_ID,
     ledgerId: "77777777-7777-4777-8777-777777777778",
     toLevel: 2,
-    toPower: 18,
+    toPower: 15,
     upgradedAt: "2026-05-25T08:00:00.000Z",
   };
 }

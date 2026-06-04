@@ -423,6 +423,39 @@ export async function mockFirstPhaseApi(
     });
   });
 
+  await page.route("**/api/inventory/summary?*", (route) => {
+    const items = getInventoryItems({
+      inventoryEvolved,
+      inventoryLevel,
+      inventoryPower,
+      mintStatus: mintQueueStatus,
+    }).filter(
+      (item) =>
+        !consumedItemIds.has(item.item_instance_id) &&
+        !decomposedItemIds.has(item.item_instance_id),
+    );
+    const groups = buildInventorySummaryGroups(items);
+
+    return fulfillOk(route, {
+      groups,
+      items,
+      total: items.length,
+      group_total: groups.length,
+      summary: {
+        available_count: items.filter((item) => item.status === "available")
+          .length,
+        group_count: groups.length,
+        listed_count: items.filter((item) => item.status === "listed").length,
+        locked_count: items.filter((item) => item.status === "locked").length,
+        minted_count: items.filter((item) => item.status === "minted").length,
+        minting_count: items.filter((item) => item.status === "minting").length,
+        total_count: items.length,
+      },
+      statuses: ["available"],
+      server_time: "2026-05-21T00:00:00.000Z",
+    });
+  });
+
   await page.route("**/api/inventory/detail?*", (route) => {
     const requestedItemId = new URL(route.request().url()).searchParams.get(
       "item_instance_id",
@@ -469,26 +502,26 @@ export async function mockFirstPhaseApi(
       "inventory/upgrade request body must include the selected item_instance_id.",
     );
     assert(
-      body.expected_fgems_cost === 20,
+      body.expected_fgems_cost === 70,
       "inventory/upgrade request body must include expected_fgems_cost from the preview.",
     );
 
     inventoryLevel += 1;
-    inventoryPower += 8;
+    inventoryPower += 5;
     const balanceBefore = fgemsAvailable;
-    fgemsAvailable -= 20;
+    fgemsAvailable -= 70;
 
     return fulfillOk(route, {
       item_instance_id: ITEM_INSTANCE_ID,
       from_level: inventoryLevel - 1,
       to_level: inventoryLevel,
-      from_power: inventoryPower - 8,
+      from_power: inventoryPower - 5,
       to_power: inventoryPower,
-      consumed_fgems: 20,
-      cost_fgems: 20,
+      consumed_fgems: 70,
+      cost_fgems: 70,
       fgems_balance_before: balanceBefore,
       fgems_balance_after: fgemsAvailable,
-      balance_delta: -20,
+      balance_delta: -70,
       ledger_id: "77777777-7777-4777-8777-777777777778",
       upgraded_at: "2026-05-21T00:00:02.000Z",
       idempotent: false,
@@ -722,6 +755,43 @@ function getInventoryItems({
   ];
 }
 
+function buildInventorySummaryGroups(items: InventoryItemPayload[]) {
+  const groups = new Map<string, InventoryItemPayload[]>();
+
+  for (const item of items) {
+    const key = `template:${item.template_id}:form:${item.form.id}`;
+    groups.set(key, [...(groups.get(key) ?? []), item]);
+  }
+
+  return Array.from(groups.entries()).map(([key, groupItems]) => {
+    const representative = groupItems[0];
+
+    if (!representative) {
+      throw new Error(`inventory summary group ${key} has no items`);
+    }
+
+    return {
+      available_count: groupItems.filter((item) => item.status === "available")
+        .length,
+      item_instance_ids: groupItems.map((item) => item.item_instance_id),
+      key,
+      latest_obtained_at: representative.obtained_at,
+      listed_count: groupItems.filter((item) => item.status === "listed")
+        .length,
+      locked_count: groupItems.filter((item) => item.status === "locked")
+        .length,
+      max_level: Math.max(...groupItems.map((item) => item.level)),
+      max_power: Math.max(...groupItems.map((item) => item.power)),
+      minted_count: groupItems.filter((item) => item.status === "minted")
+        .length,
+      minting_count: groupItems.filter((item) => item.status === "minting")
+        .length,
+      owned_count: groupItems.length,
+      representative_item: representative,
+    };
+  });
+}
+
 function inventoryDetailPayload({
   availableItems,
   fgemsAvailable,
@@ -775,10 +845,10 @@ function inventoryDetailPayload({
       next_level: item.level + 1,
       target_level: item.level + 1,
       current_power: item.power,
-      power_after: item.power + 8,
-      fgems_cost: 20,
+      power_after: item.power + 5,
+      fgems_cost: 70,
       user_fgems_balance: fgemsAvailable,
-      is_balance_enough: fgemsAvailable >= 20,
+      is_balance_enough: fgemsAvailable >= 70,
     },
     evolution_preview: {
       can_evolve: canEvolve,

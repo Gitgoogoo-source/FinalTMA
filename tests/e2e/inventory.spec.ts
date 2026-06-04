@@ -78,9 +78,7 @@ test("升级面板完成升级并刷新藏品展示", async ({ page }) => {
     const root = panel.closest(".growth-result-modal");
     const backdrop = root?.querySelector(".growth-result-modal__backdrop");
     const panelStyle = window.getComputedStyle(panel);
-    const backdropStyle = backdrop
-      ? window.getComputedStyle(backdrop)
-      : null;
+    const backdropStyle = backdrop ? window.getComputedStyle(backdrop) : null;
 
     return {
       backdropBackgroundImage: backdropStyle?.backgroundImage ?? "none",
@@ -94,12 +92,12 @@ test("升级面板完成升级并刷新藏品展示", async ({ page }) => {
   expect(resultChrome.panelBackgroundImage).not.toBe("none");
   expect(resultChrome.panelBoxShadow).not.toBe("none");
   await expect(resultDialog.getByText("Lv.1 -> Lv.2")).toBeVisible();
-  await expect(resultDialog.getByText("10 -> 18")).toBeVisible();
-  await expect(resultDialog.getByText("80 -> 60")).toBeVisible();
+  await expect(resultDialog.getByText("10 -> 15")).toBeVisible();
+  await expect(resultDialog.getByText("80 -> 10")).toBeVisible();
 
   await resultDialog.getByRole("button", { name: "确认" }).click();
   await expect(page.getByText("Lv.2", { exact: true }).first()).toBeVisible();
-  await expect(page.getByLabel("Fgems 余额").getByText("60")).toBeVisible();
+  await expect(page.getByLabel("Fgems 余额").getByText("10")).toBeVisible();
 });
 
 test("进化面板选择材料并展示成功结果", async ({ page }) => {
@@ -131,9 +129,7 @@ test("进化面板选择材料并展示成功结果", async ({ page }) => {
   await expect(resultDialog.getByText("1,200 -> 1,000")).toBeVisible();
 
   await resultDialog.getByRole("button", { name: "确认" }).click();
-  await expect(
-    page.getByRole("button", { name: /森林游侠/ }),
-  ).toBeVisible();
+  await expect(page.getByRole("button", { name: /森林游侠/ })).toBeVisible();
 });
 
 test("进化失败后返还主藏品并消耗其他材料", async ({ page }) => {
@@ -173,9 +169,7 @@ test("进化失败后返还主藏品并消耗其他材料", async ({ page }) => 
   await resultDialog.getByRole("button", { name: "确认" }).click();
   await expect(page.getByText("Lv.3", { exact: true }).first()).toBeVisible();
   await expect(page.getByLabel("K-coin 余额").getByText("1,000")).toBeVisible();
-  await expect(
-    page.getByRole("heading", { name: "森林游侠" }),
-  ).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "森林游侠" })).toHaveCount(0);
 });
 
 test("分解面板二次确认后展示获得 Fgems", async ({ page }) => {

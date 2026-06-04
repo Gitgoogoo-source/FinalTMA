@@ -10,10 +10,11 @@ import {
   normalizeBootstrapAssets,
 } from "../assets.api";
 
-export function useMyAssets() {
+export function useMyAssets(options: { enabled?: boolean } = {}) {
   const session = useSession();
   const queryClient = useQueryClient();
   const userId = session.user?.id ?? null;
+  const enabled = session.isAuthenticated && (options.enabled ?? true);
   const bootstrapAssets = useMemo(
     () => normalizeBootstrapAssets(session.bootstrap, session.user),
     [session.bootstrap, session.user],
@@ -26,7 +27,7 @@ export function useMyAssets() {
   const query = useQuery({
     queryKey: queryKeys.me.assets(userId),
     queryFn: () => fetchMyAssets(profileFallback),
-    enabled: session.isAuthenticated,
+    enabled,
     placeholderData: fallbackAssets,
   });
 

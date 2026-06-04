@@ -11,16 +11,17 @@ import {
 
 import { getApiErrorMessage } from "@/api/errors";
 import { useFeedback } from "@/app/providers/FeedbackProvider";
+import { useMyAssets } from "@/features/assets/hooks/useMyAssets";
 import { formatCurrencyAmount } from "@/shared/lib/formatCurrency";
 
 import type {
-  CollectionInventoryDetail,
   CollectionInventoryItem,
+  CollectionUpgradeItemInput,
   CollectionUpgradeItemResponse,
   CollectionUpgradePreview,
 } from "../collection.types";
-import { useItemDetail } from "../hooks/useItemDetail";
 import { useUpgradeItem } from "../hooks/useUpgradeItem";
+import { getLocalUpgradePreview } from "../localUpgradeRules";
 
 type UpgradePanelProps = {
   open: boolean;
@@ -36,33 +37,34 @@ export function UpgradePanel({
   open,
 }: UpgradePanelProps) {
   const { pushToast } = useFeedback();
-  const detailQuery = useItemDetail(open ? item?.itemInstanceId : null, {
-    enabled: open && Boolean(item),
-  });
+  const assetsQuery = useMyAssets({ enabled: false });
   const upgradeMutation = useUpgradeItem();
 
   if (!open || !item) {
     return null;
   }
 
-  const detail = detailQuery.item;
-  const displayItem = detail ?? item;
-  const itemInstanceId = item.itemInstanceId;
-  const preview = detail?.upgradePreview ?? null;
-  const isListed = detail?.marketStatus?.isListed ?? item.status === "listed";
+  const selectedItem = item;
+  const itemInstanceId = selectedItem.itemInstanceId;
+  const userFgemsBalance = getCachedFgemsBalance(
+    assetsQuery.data.assets.fgems.available,
+    assetsQuery.data.updatedAt,
+  );
+  const preview = getLocalUpgradePreview(selectedItem, userFgemsBalance);
+  const isListed = selectedItem.status === "listed";
   const disabledReason = getUpgradeDisabledReason({
-    detail,
-    isDetailLoading: detailQuery.isLoading,
     isListed,
     isPending: upgradeMutation.isPending,
-    item: displayItem,
+    item: selectedItem,
     preview,
   });
   const canSubmit = disabledReason === null;
-  const currentLevel = preview?.currentLevel ?? displayItem.level;
-  const currentPower = preview?.currentPower ?? displayItem.power;
+  const currentLevel = preview.currentLevel ?? selectedItem.level;
+  const currentPower = preview.currentPower ?? selectedItem.power;
   const imageUrl =
-    displayItem.thumbnailUrl ?? displayItem.imageUrl ?? displayItem.avatarUrl;
+    selectedItem.thumbnailUrl ??
+    selectedItem.imageUrl ??
+    selectedItem.avatarUrl;
 
   async function handleSubmit() {
     if (!canSubmit || !preview) {
@@ -70,12 +72,20 @@ export function UpgradePanel({
     }
 
     try {
-      const result = await upgradeMutation.mutateAsync({
+      const input: CollectionUpgradeItemInput = {
         itemInstanceId,
         expectedFgemsCost: preview.fgemsCost,
-        expectedItemVersion: detail?.itemVersion ?? null,
         targetLevel: preview.nextLevel ?? preview.targetLevel,
-      });
+      };
+
+      if (
+        selectedItem.itemVersion !== undefined &&
+        selectedItem.itemVersion !== null
+      ) {
+        input.expectedItemVersion = selectedItem.itemVersion;
+      }
+
+      const result = await upgradeMutation.mutateAsync(input);
 
       onUpgraded?.(result);
       onClose();
@@ -115,7 +125,7 @@ export function UpgradePanel({
         <header className="upgrade-panel__header">
           <div>
             <span>藏品升级</span>
-            <h2 id="upgrade-panel-title">{displayItem.name}</h2>
+            <h2 id="upgrade-panel-title">{selectedItem.name}</h2>
           </div>
           <button
             aria-label="关闭"
@@ -131,29 +141,16 @@ export function UpgradePanel({
           <section className="upgrade-panel__item" aria-label="当前藏品">
             <div className="upgrade-panel__thumb">
               {imageUrl ? (
-                <img src={imageUrl} alt={displayItem.name} />
+                <img src={imageUrl} alt={selectedItem.name} />
               ) : (
-                <span aria-hidden="true">{displayItem.name.slice(0, 1)}</span>
+                <span aria-hidden="true">{selectedItem.name.slice(0, 1)}</span>
               )}
             </div>
             <div>
-              <strong>{displayItem.name}</strong>
-              <span>{displayItem.rarity.label}</span>
+              <strong>{selectedItem.name}</strong>
+              <span>{selectedItem.rarity.label}</span>
             </div>
           </section>
-
-          {detailQuery.isLoading ? (
-            <PanelState title="同步升级预览" detail="正在读取服务端规则。" />
-          ) : null}
-
-          {detailQuery.isError ? (
-            <PanelState
-              tone="error"
-              title="预览读取失败"
-              detail={getApiErrorMessage(detailQuery.error)}
-              onRetry={() => void detailQuery.refetch()}
-            />
-          ) : null}
 
           <section className="upgrade-panel__metrics" aria-label="升级预览">
             <UpgradeMetric
@@ -264,58 +261,16 @@ function UpgradeMetric({
   );
 }
 
-function PanelState({
-  detail,
-  onRetry,
-  title,
-  tone = "neutral",
-}: {
-  detail: string;
-  onRetry?: () => void;
-  title: string;
-  tone?: "error" | "neutral";
-}) {
-  return (
-    <div
-      className={`upgrade-panel__state upgrade-panel__state--${tone}`}
-      role={tone === "error" ? "alert" : "status"}
-    >
-      {tone === "error" ? (
-        <AlertTriangle aria-hidden="true" size={17} strokeWidth={2.4} />
-      ) : (
-        <RefreshCw
-          aria-hidden="true"
-          className="upgrade-panel__spin"
-          size={17}
-          strokeWidth={2.4}
-        />
-      )}
-      <strong>{title}</strong>
-      <span>{detail}</span>
-      {onRetry ? (
-        <button onClick={onRetry} type="button">
-          <RefreshCw aria-hidden="true" size={14} strokeWidth={2.5} />
-          重试
-        </button>
-      ) : null}
-    </div>
-  );
-}
-
 function getUpgradeDisabledReason({
-  detail,
-  isDetailLoading,
   isListed,
   isPending,
   item,
   preview,
 }: {
-  detail: CollectionInventoryDetail | null;
-  isDetailLoading: boolean;
   isListed: boolean;
   isPending: boolean;
   item: CollectionInventoryItem;
-  preview: CollectionUpgradePreview | null;
+  preview: CollectionUpgradePreview;
 }): string | null {
   if (isPending) {
     return "升级请求正在提交。";
@@ -331,14 +286,6 @@ function getUpgradeDisabledReason({
 
   if (!item.isUpgradeable) {
     return "该藏品不可升级。";
-  }
-
-  if (isDetailLoading) {
-    return "正在同步升级预览。";
-  }
-
-  if (!detail || !preview) {
-    return "升级预览暂不可用。";
   }
 
   if (
@@ -411,6 +358,24 @@ function getBalanceDetail(preview: CollectionUpgradePreview | null): string {
   }
 
   return `还差 ${formatCurrencyAmount(Math.abs(gap))} Fgems。`;
+}
+
+function getCachedFgemsBalance(
+  value: string | number | null | undefined,
+  updatedAt: string | null,
+): number | null {
+  if (updatedAt === null) {
+    return null;
+  }
+
+  const parsed =
+    typeof value === "number"
+      ? value
+      : typeof value === "string"
+        ? Number.parseInt(value, 10)
+        : Number.NaN;
+
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 function formatLevel(value: number | null | undefined): string {
