@@ -1,4 +1,11 @@
-import { RotateCcw } from "lucide-react";
+import {
+  ArrowDownUp,
+  ChevronDown,
+  Diamond,
+  Grid2X2,
+  RotateCcw,
+  Tags,
+} from "lucide-react";
 
 import {
   MARKET_ITEM_TYPE_LABELS,
@@ -56,41 +63,43 @@ export function MarketFilters({
 }: MarketFiltersProps) {
   return (
     <section className="market-filters" aria-label="购买页筛选">
-      <div className="market-filters__group market-filters__group--range">
-        <label className="market-filter">
-          <span>最低价</span>
-          <input
-            inputMode="numeric"
-            min={0}
-            onChange={(event) =>
-              onFilterChange("minPriceKcoin", event.currentTarget.value)
-            }
-            pattern="[0-9]*"
-            placeholder="0"
-            type="number"
-            value={filters.minPriceKcoin}
-          />
-        </label>
-        <label className="market-filter">
-          <span>最高价</span>
-          <input
-            inputMode="numeric"
-            min={0}
-            onChange={(event) =>
-              onFilterChange("maxPriceKcoin", event.currentTarget.value)
-            }
-            pattern="[0-9]*"
-            placeholder="不限"
-            type="number"
-            value={filters.maxPriceKcoin}
-          />
-        </label>
-      </div>
+      <div className="market-filters__row">
+        <div className="market-filter market-filter--price">
+          <Tags aria-hidden="true" size={17} strokeWidth={2.3} />
+          <div className="market-filter__price-fields">
+            <input
+              aria-label="最低价"
+              inputMode="numeric"
+              min={0}
+              onChange={(event) =>
+                onFilterChange("minPriceKcoin", event.currentTarget.value)
+              }
+              pattern="[0-9]*"
+              placeholder="0"
+              type="number"
+              value={filters.minPriceKcoin}
+            />
+            <span aria-hidden="true">-</span>
+            <input
+              aria-label="最高价"
+              inputMode="numeric"
+              min={0}
+              onChange={(event) =>
+                onFilterChange("maxPriceKcoin", event.currentTarget.value)
+              }
+              pattern="[0-9]*"
+              placeholder="不限"
+              type="number"
+              value={filters.maxPriceKcoin}
+            />
+          </div>
+        </div>
 
-      <div className="market-filters__group">
-        <label className="market-filter">
-          <span>稀有度</span>
+        <label className="market-filter market-filter--select">
+          <Diamond aria-hidden="true" size={17} strokeWidth={2.3} />
+          <span>稀有</span>
           <select
+            aria-label="稀有度"
             onChange={(event) =>
               onFilterChange("rarity", event.currentTarget.value)
             }
@@ -103,11 +112,19 @@ export function MarketFilters({
               </option>
             ))}
           </select>
+          <ChevronDown
+            aria-hidden="true"
+            className="market-filter__chevron"
+            size={15}
+            strokeWidth={2.6}
+          />
         </label>
 
-        <label className="market-filter">
+        <label className="market-filter market-filter--select">
+          <Grid2X2 aria-hidden="true" size={17} strokeWidth={2.3} />
           <span>类型</span>
           <select
+            aria-label="类型"
             onChange={(event) =>
               onFilterChange("typeCode", event.currentTarget.value)
             }
@@ -120,13 +137,19 @@ export function MarketFilters({
               </option>
             ))}
           </select>
+          <ChevronDown
+            aria-hidden="true"
+            className="market-filter__chevron"
+            size={15}
+            strokeWidth={2.6}
+          />
         </label>
-      </div>
 
-      <div className="market-filters__group market-filters__group--sort">
-        <label className="market-filter">
+        <label className="market-filter market-filter--select market-filter--sort">
+          <ArrowDownUp aria-hidden="true" size={17} strokeWidth={2.3} />
           <span>排序</span>
           <select
+            aria-label="排序"
             onChange={(event) =>
               onFilterChange(
                 "sort",
@@ -141,17 +164,24 @@ export function MarketFilters({
               </option>
             ))}
           </select>
+          <ChevronDown
+            aria-hidden="true"
+            className="market-filter__chevron"
+            size={15}
+            strokeWidth={2.6}
+          />
         </label>
 
-        <button
-          className="market-filters__reset"
-          disabled={!hasActiveFilters}
-          onClick={onReset}
-          type="button"
-        >
-          <RotateCcw aria-hidden="true" size={15} strokeWidth={2.4} />
-          重置
-        </button>
+        {hasActiveFilters ? (
+          <button
+            className="market-filters__reset"
+            onClick={onReset}
+            type="button"
+          >
+            <RotateCcw aria-hidden="true" size={15} strokeWidth={2.4} />
+            重置
+          </button>
+        ) : null}
       </div>
     </section>
   );

@@ -31,7 +31,10 @@ export function TradePage() {
   return (
     <section className="trade-page" data-testid="trade-page">
       <header className="trade-page__header">
-        <h1>交易市场</h1>
+        <div>
+          <h1>交易市场</h1>
+          <span>Telegram Mini App</span>
+        </div>
       </header>
 
       <TradeTabs activeTab={activeTab} onTabChange={handleTabChange} />

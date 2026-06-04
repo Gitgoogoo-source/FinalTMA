@@ -69,6 +69,16 @@ export function getRarityLabel(rarityCode: string | null | undefined): string {
   return rarityCode ?? "未知";
 }
 
+export function getMarketRarityTone(
+  rarityCode: string | null | undefined,
+): MarketRarityCode {
+  if (isMarketRarityCode(rarityCode)) {
+    return rarityCode;
+  }
+
+  return "common";
+}
+
 export function getItemTypeLabel(typeCode: string | null | undefined): string {
   if (isMarketItemTypeCode(typeCode)) {
     return MARKET_ITEM_TYPE_LABELS[typeCode];

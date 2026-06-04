@@ -480,18 +480,17 @@ describe("CollectionPage stage-3 frontend states", () => {
     ).toHaveLength(2);
   });
 
-  it("loads the next inventory page when more items are available", async () => {
+  it("does not show a manual load-more control when more items are available", () => {
     mocks.hasNextInventoryPage = true;
     mocks.inventoryFetchNextPage.mockResolvedValueOnce({});
     mocks.inventoryItems = [makeItem()];
 
     renderCollectionPage();
 
-    fireEvent.click(screen.getByRole("button", { name: "加载更多" }));
-
-    await waitFor(() => {
-      expect(mocks.inventoryFetchNextPage).toHaveBeenCalledTimes(1);
-    });
+    expect(
+      screen.queryByRole("button", { name: "加载更多" }),
+    ).not.toBeInTheDocument();
+    expect(mocks.inventoryFetchNextPage).not.toHaveBeenCalled();
   });
 
   it("shows full selected-item details and enables growth actions for upgradeable duplicate items", () => {
@@ -1119,6 +1118,43 @@ describe("CollectionPage stage-3 frontend states", () => {
       await screen.findByRole("dialog", { name: "进化成功" }),
     ).toBeVisible();
   });
+
+  it("shows the failed evolve result in a modal after confirming evolve", async () => {
+    mocks.evolveMutateAsync.mockResolvedValue(evolveFailureResult());
+    const item = makeItem();
+    setInventoryItems(
+      item,
+      makeItem({ itemInstanceId: ITEM_B_ID, serialNo: 2 }),
+      makeItem({ itemInstanceId: ITEM_C_ID, serialNo: 3 }),
+    );
+
+    renderCollectionPage();
+    fireEvent.click(
+      within(screen.getByLabelText("当前选中藏品")).getByRole("button", {
+        name: "进化",
+      }),
+    );
+
+    const evolveDialog = screen.getByRole("dialog", { name: "森林幼芽" });
+    fireEvent.click(
+      within(evolveDialog).getByRole("button", { name: "确认进化" }),
+    );
+
+    const resultDialog = await screen.findByRole("dialog", {
+      name: "进化失败",
+    });
+    expect(resultDialog).toBeVisible();
+    expect(
+      within(resultDialog).getByText("进化失败，已返还主藏品。"),
+    ).toBeVisible();
+    expect(within(resultDialog).getByText("已返还主藏品")).toBeVisible();
+    expect(within(resultDialog).getByText("消耗材料")).toBeVisible();
+    expect(within(resultDialog).getByText("2 件")).toBeVisible();
+    expect(within(resultDialog).getByText("消耗 KCOIN")).toBeVisible();
+    expect(within(resultDialog).getByText("200")).toBeVisible();
+    expect(within(resultDialog).getByText("成功率")).toBeVisible();
+    expect(within(resultDialog).getByText("50%")).toBeVisible();
+  });
 });
 
 function renderCollectionPage() {
@@ -1318,6 +1354,17 @@ function evolveResult(): CollectionEvolveItemResponse {
     sourceItemInstanceIds: [ITEM_A_ID, ITEM_B_ID, ITEM_C_ID],
     success: true,
     successRateBps: 5000,
+  };
+}
+
+function evolveFailureResult(): CollectionEvolveItemResponse {
+  return {
+    ...evolveResult(),
+    consumedItemInstanceIds: [ITEM_A_ID, ITEM_B_ID],
+    createdItemInstanceId: null,
+    result: "failed",
+    returnedItemInstanceId: ITEM_C_ID,
+    success: false,
   };
 }
 

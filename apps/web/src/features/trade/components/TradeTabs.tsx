@@ -1,3 +1,6 @@
+import { ClipboardList, ShoppingBag, Tag } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+
 import { TRADE_TABS } from "../trade.constants";
 import type { TradeTabId } from "../trade.types";
 
@@ -6,11 +9,18 @@ type TradeTabsProps = {
   onTabChange: (tab: TradeTabId) => void;
 };
 
+const TAB_ICON_BY_ID: Record<TradeTabId, LucideIcon> = {
+  buy: ShoppingBag,
+  sell: Tag,
+  manage: ClipboardList,
+};
+
 export function TradeTabs({ activeTab, onTabChange }: TradeTabsProps) {
   return (
     <div className="trade-tabs" role="tablist" aria-label="交易市场">
       {TRADE_TABS.map((tab) => {
         const isActive = activeTab === tab.id;
+        const Icon = TAB_ICON_BY_ID[tab.id];
 
         return (
           <button
@@ -25,7 +35,8 @@ export function TradeTabs({ activeTab, onTabChange }: TradeTabsProps) {
             role="tab"
             type="button"
           >
-            {tab.label}
+            <Icon aria-hidden="true" size={18} strokeWidth={2.35} />
+            <span>{tab.label}</span>
           </button>
         );
       })}

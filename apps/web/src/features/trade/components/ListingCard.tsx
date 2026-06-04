@@ -1,10 +1,10 @@
-import { Coins } from "lucide-react";
+import { Coins, Diamond, PackageCheck } from "lucide-react";
 
 import type { MarketListingCard } from "../trade.types";
 import {
   formatKcoinWithUnit,
   getItemTypeLabel,
-  getListingStatusLabel,
+  getMarketRarityTone,
   getMarketBuyDisabledReason,
 } from "../trade.utils";
 
@@ -40,7 +40,7 @@ export function ListingCard({
 
   return (
     <article
-      className={`market-listing-card market-listing-card--${getRarityTone(
+      className={`market-listing-card market-listing-card--${getMarketRarityTone(
         listing.rarityCode,
       )}`}
       data-listing-id={listing.listingId}
@@ -55,23 +55,25 @@ export function ListingCard({
         <div className="market-listing-card__body">
           <div className="market-listing-card__title">
             <h3>{listing.itemName}</h3>
-            <span>{listing.rarityLabel}</span>
+            <span>
+              {listing.serialNo ? `#${listing.serialNo}` : "暂无编号"}
+            </span>
           </div>
 
-          <dl className="market-listing-card__meta">
-            <div>
-              <dt>类型</dt>
-              <dd>{getItemTypeLabel(listing.typeCode)}</dd>
-            </div>
-            <div>
-              <dt>剩余</dt>
-              <dd>{listing.remainingCount}</dd>
-            </div>
-            <div>
-              <dt>状态</dt>
-              <dd>{getListingStatusLabel(listing.status)}</dd>
-            </div>
-          </dl>
+          <div className="market-listing-card__badges">
+            <span className="market-listing-card__rarity">
+              <Diamond aria-hidden="true" size={11} strokeWidth={2.4} />
+              {listing.rarityLabel}
+            </span>
+            <span className="market-listing-card__type">
+              {getItemTypeLabel(listing.typeCode)}
+            </span>
+          </div>
+
+          <span className="market-listing-card__stock">
+            <PackageCheck aria-hidden="true" size={12} strokeWidth={2.4} />
+            剩余 {listing.remainingCount}
+          </span>
         </div>
       </button>
 
@@ -92,20 +94,6 @@ export function ListingCard({
       </div>
     </article>
   );
-}
-
-function getRarityTone(rarityCode: string): string {
-  if (
-    rarityCode === "common" ||
-    rarityCode === "rare" ||
-    rarityCode === "epic" ||
-    rarityCode === "legendary" ||
-    rarityCode === "mythic"
-  ) {
-    return rarityCode;
-  }
-
-  return "common";
 }
 
 function getBuyButtonLabel(

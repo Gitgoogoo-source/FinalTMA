@@ -368,27 +368,6 @@ export function CollectionPage() {
         selectedItemId={selectedItem.itemInstanceId}
         onSelect={setSelectedItemId}
       />
-      {inventoryQuery.hasNextPage ? (
-        <div className="collection-load-more">
-          <button
-            disabled={inventoryQuery.isFetchingNextPage}
-            onClick={() => void inventoryQuery.fetchNextPage()}
-            type="button"
-          >
-            <RefreshCw
-              aria-hidden="true"
-              className={
-                inventoryQuery.isFetchingNextPage
-                  ? "collection-load-more__spin"
-                  : undefined
-              }
-              size={15}
-              strokeWidth={2.4}
-            />
-            {inventoryQuery.isFetchingNextPage ? "加载中" : "加载更多"}
-          </button>
-        </div>
-      ) : null}
       <CollectionSellEntry
         feeBps={sellRulesQuery.rules?.feeBps ?? null}
         isPending={sellInventoryMutation.isPending}

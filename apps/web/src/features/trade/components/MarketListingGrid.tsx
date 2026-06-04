@@ -72,7 +72,7 @@ export function MarketListingGrid({
   );
 }
 
-function isVisibleBuyListing(listing: MarketListingCardType): boolean {
+export function isVisibleBuyListing(listing: MarketListingCardType): boolean {
   return (
     listing.remainingCount > 0 &&
     (listing.status === "active" || listing.status === "partially_sold")
