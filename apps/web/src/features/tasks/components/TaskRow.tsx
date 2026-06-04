@@ -1,4 +1,15 @@
-import { Coins, Gem, Gift, Star } from "lucide-react";
+import {
+  CalendarDays,
+  Coins,
+  Gem,
+  Gift,
+  Images,
+  ListChecks,
+  Star,
+  Store,
+  UsersRound,
+  WalletCards,
+} from "lucide-react";
 
 import type { TaskItem, TaskProgress, TaskReward } from "../tasks.types";
 import { ClaimTaskButton } from "./ClaimTaskButton";
@@ -10,11 +21,19 @@ type TaskRowProps = {
 };
 
 export function TaskRow({ isPending = false, onClaim, task }: TaskRowProps) {
+  const CategoryIcon = getCategoryIcon(task.category);
+
   return (
     <article className="task-row" data-status={task.status}>
+      <div className="task-row__icon" aria-hidden="true">
+        <CategoryIcon size={21} strokeWidth={2.5} />
+      </div>
       <div className="task-row__main">
         <div className="task-row__copy">
-          <span>{getCategoryLabel(task.category)}</span>
+          <span>
+            {getCategoryLabel(task.category)}
+            {task.status === "claimable" ? <em>可领取</em> : null}
+          </span>
           <strong>{task.title}</strong>
           {task.description ? <p>{task.description}</p> : null}
         </div>
@@ -32,10 +51,12 @@ type TaskProgressBarProps = {
 };
 
 export function TaskProgressBar({ progress }: TaskProgressBarProps) {
+  const percent = Math.max(0, Math.min(progress.percent, 100));
+
   return (
     <div className="task-row__progress" aria-label="任务进度">
       <span>
-        <i style={{ width: `${progress.percent}%` }} />
+        <i style={{ width: `${percent}%` }} />
       </span>
       <em>
         {progress.current}/{progress.target}
@@ -87,6 +108,25 @@ function getCategoryLabel(category: TaskItem["category"]): string {
       return "图鉴";
     default:
       return "任务";
+  }
+}
+
+function getCategoryIcon(category: TaskItem["category"]) {
+  switch (category) {
+    case "daily":
+      return CalendarDays;
+    case "social":
+    case "referral":
+      return UsersRound;
+    case "trade":
+      return Store;
+    case "onchain":
+    case "wallet":
+      return WalletCards;
+    case "album":
+      return Images;
+    default:
+      return ListChecks;
   }
 }
 

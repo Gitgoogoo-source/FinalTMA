@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { CalendarCheck, Clock } from "lucide-react";
 
 import type { CheckInStatus } from "../tasks.types";
@@ -17,6 +18,17 @@ export function SevenDayCheckIn({
   const canCheckIn = Boolean(
     status?.campaign && !status.alreadyClaimedToday && status.nextDayIndex,
   );
+  const days = status?.days ?? [];
+  const claimedCount = days.filter((day) => day.status === "claimed").length;
+  const activeIndex = days.findIndex((day) => day.status === "available");
+  const progressIndex = activeIndex >= 0 ? activeIndex : claimedCount;
+  const progressPercent =
+    days.length > 1
+      ? Math.min(100, (progressIndex / (days.length - 1)) * 100)
+      : 0;
+  const trackStyle = {
+    "--check-in-progress": `${progressPercent}%`,
+  } as CSSProperties;
 
   return (
     <section className="seven-day-check-in" aria-labelledby="check-in-title">
@@ -48,12 +60,21 @@ export function SevenDayCheckIn({
         <span>累计 {status?.totalSignins ?? 0} 次</span>
       </div>
 
-      {status?.days.length ? (
-        <div className="seven-day-check-in__days">
-          {status.days.map((day) => (
-            <CheckInRewardCard day={day} key={day.dayIndex} />
-          ))}
-        </div>
+      {days.length ? (
+        <>
+          <div className="seven-day-check-in__track" style={trackStyle}>
+            {days.map((day) => (
+              <span data-status={day.status} key={day.dayIndex}>
+                {day.dayIndex}
+              </span>
+            ))}
+          </div>
+          <div className="seven-day-check-in__days">
+            {days.map((day) => (
+              <CheckInRewardCard day={day} key={day.dayIndex} />
+            ))}
+          </div>
+        </>
       ) : (
         <div className="seven-day-check-in__empty">
           <strong>签到活动未开放</strong>

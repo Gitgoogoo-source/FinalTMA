@@ -11065,6 +11065,585 @@ a {
   background: rgb(255 156 0 / 10%);
 }
 
+.tasks-page {
+  --task-ink: #071d3b;
+  --task-muted: #697894;
+  --task-orange: #ff7900;
+  --task-orange-deep: #ff6500;
+  --task-green: #06ad2b;
+  --task-blue: #4287f5;
+  --task-purple: #8e57ff;
+  --task-line: rgb(7 29 59 / 8%);
+  --task-soft-line: rgb(255 121 0 / 16%);
+  --task-card: linear-gradient(
+    180deg,
+    rgb(255 255 255 / 92%),
+    rgb(255 255 255 / 66%)
+  );
+  --task-shadow:
+    0 14px 30px rgb(7 29 59 / 5%), inset 0 1px 0 rgb(255 255 255 / 92%);
+
+  gap: 8px;
+  color: var(--task-ink);
+}
+
+.tasks-page__header {
+  min-height: 52px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+}
+
+.tasks-page__header span,
+.invite-campaign-card__copy span,
+.seven-day-check-in__header span,
+.commission-panel__header span,
+.reward-history-panel__header span {
+  color: var(--task-orange);
+}
+
+.tasks-page__header h1,
+.invite-campaign-card__copy h2,
+.seven-day-check-in__header h2,
+.commission-panel__header h2,
+.reward-history-panel__header h2 {
+  color: var(--task-ink);
+}
+
+.tasks-page__header button {
+  width: 42px;
+  min-height: 42px;
+  border-color: var(--task-line);
+  color: var(--task-ink);
+  background: var(--task-card);
+  box-shadow: var(--task-shadow);
+}
+
+.invite-campaign-card,
+.seven-day-check-in,
+.commission-panel,
+.reward-history-panel {
+  min-width: 0;
+  gap: 10px;
+  border-color: var(--task-line);
+  background: var(--task-card);
+  box-shadow: var(--task-shadow);
+}
+
+.invite-campaign-card {
+  position: relative;
+  overflow: hidden;
+  border-color: var(--task-soft-line);
+  background:
+    radial-gradient(circle at 88% 10%, rgb(255 121 0 / 18%), transparent 34%),
+    radial-gradient(circle at 10% 98%, rgb(6 173 43 / 8%), transparent 30%),
+    linear-gradient(145deg, rgb(255 253 249 / 96%), rgb(255 242 231 / 82%));
+}
+
+.invite-campaign-card__hero {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 118px;
+  gap: 10px;
+  align-items: center;
+}
+
+.invite-campaign-card__copy {
+  position: relative;
+  z-index: 1;
+}
+
+.invite-campaign-card__copy p {
+  color: var(--task-muted);
+}
+
+.invite-campaign-card__art {
+  height: 112px;
+  position: relative;
+  z-index: 0;
+}
+
+.invite-campaign-card__art span {
+  position: absolute;
+  display: block;
+  border: 1px solid rgb(255 121 0 / 28%);
+  border-radius: 8px;
+  background: linear-gradient(
+    145deg,
+    rgb(255 255 255 / 82%),
+    rgb(255 121 0 / 32%)
+  );
+  box-shadow: 0 14px 26px rgb(255 121 0 / 14%);
+  transform: rotate(12deg);
+}
+
+.invite-campaign-card__art span:first-child {
+  width: 64px;
+  height: 64px;
+  right: 10px;
+  top: 10px;
+}
+
+.invite-campaign-card__art span:nth-child(2) {
+  width: 42px;
+  height: 42px;
+  right: 68px;
+  top: 56px;
+  opacity: 0.78;
+  transform: rotate(-10deg);
+}
+
+.invite-campaign-card__art svg {
+  position: absolute;
+  color: var(--task-orange);
+}
+
+.invite-campaign-card__art svg:first-of-type {
+  right: 25px;
+  top: 25px;
+}
+
+.invite-campaign-card__art svg:last-of-type {
+  right: 80px;
+  top: 44px;
+  color: var(--task-green);
+}
+
+.invite-campaign-card__benefits {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--task-soft-line);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 72%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 92%);
+}
+
+.invite-campaign-card__benefits span {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 7px;
+  align-items: baseline;
+  padding: 10px;
+}
+
+.invite-campaign-card__benefits span + span {
+  border-left: 1px solid rgb(7 29 59 / 11%);
+}
+
+.invite-campaign-card__benefits strong,
+.invite-campaign-card__benefits em {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.invite-campaign-card__benefits strong {
+  color: var(--task-ink);
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.invite-campaign-card__benefits em {
+  color: var(--task-green);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 950;
+}
+
+.invite-campaign-card__actions {
+  position: relative;
+  z-index: 1;
+}
+
+.invite-button,
+.seven-day-check-in__header button,
+.commission-panel__header button,
+.task-list-state button,
+.claim-task-button,
+.referral-link-sheet__actions button,
+.commission-confirm-dialog__actions button {
+  min-height: 38px;
+  border-color: var(--task-line);
+  color: var(--task-ink);
+  background: rgb(255 255 255 / 78%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 92%);
+}
+
+.invite-stats-panel {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.invite-stat-card,
+.commission-panel__stats div,
+.check-in-reward-card,
+.task-row {
+  border-color: var(--task-line);
+  background: var(--task-card);
+  box-shadow: var(--task-shadow);
+}
+
+.invite-stat-card {
+  min-height: 66px;
+  gap: 8px;
+  padding: 9px;
+}
+
+.invite-stat-card span,
+.commission-panel__stats dt,
+.task-row__copy span,
+.task-reward-badges,
+.check-in-reward-card em,
+.commission-panel__history em,
+.reward-history-entry__copy span,
+.reward-history-entry__copy time {
+  color: var(--task-muted);
+}
+
+.invite-stat-card span svg,
+.task-reward-badges svg {
+  color: var(--task-orange);
+}
+
+.invite-stat-card strong {
+  color: var(--task-ink);
+  font-size: 17px;
+}
+
+.invite-stat-card em {
+  color: var(--task-green);
+}
+
+.reward-history-panel__header strong {
+  border-color: rgb(255 121 0 / 22%);
+  color: var(--task-ink);
+  background: rgb(255 121 0 / 9%);
+}
+
+.commission-panel__stats div {
+  background: rgb(255 255 255 / 58%);
+}
+
+.commission-panel__stats dd,
+.commission-panel__history article > span,
+.check-in-reward-card strong,
+.task-row__copy strong,
+.reward-history-entry__copy strong {
+  color: var(--task-ink);
+}
+
+.commission-panel__history article {
+  border-top-color: var(--task-line);
+}
+
+.commission-panel__history strong {
+  color: var(--task-orange);
+}
+
+.seven-day-check-in__meta span {
+  border-color: var(--task-line);
+  color: var(--task-ink);
+  background: rgb(255 255 255 / 58%);
+}
+
+.seven-day-check-in__track {
+  --check-in-progress: 0%;
+
+  min-height: 35px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px;
+}
+
+.seven-day-check-in__track::before,
+.seven-day-check-in__track::after {
+  content: "";
+  position: absolute;
+  right: 22px;
+  left: 22px;
+  top: 16px;
+  height: 3px;
+  border-radius: 999px;
+}
+
+.seven-day-check-in__track::before {
+  background: rgb(7 29 59 / 8%);
+}
+
+.seven-day-check-in__track::after {
+  width: var(--check-in-progress);
+  right: auto;
+  max-width: calc(100% - 44px);
+  background: var(--task-orange);
+  box-shadow: 0 0 12px rgb(255 121 0 / 24%);
+}
+
+.seven-day-check-in__track span {
+  width: 27px;
+  min-height: 27px;
+  position: relative;
+  z-index: 1;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid var(--task-line);
+  border-radius: 999px;
+  color: var(--task-muted);
+  background: linear-gradient(180deg, #fff, #f5f7fa);
+  box-shadow: 0 5px 12px rgb(7 29 59 / 8%);
+  font-size: 12px;
+  font-weight: 950;
+  font-variant-numeric: tabular-nums;
+}
+
+.seven-day-check-in__track span[data-status="available"] {
+  border: 2px solid var(--task-orange);
+  color: var(--task-orange);
+  background: #fff;
+  box-shadow: 0 7px 13px rgb(255 121 0 / 18%);
+}
+
+.seven-day-check-in__track span[data-status="claimed"] {
+  border-color: rgb(6 173 43 / 28%);
+  color: #fff;
+  background: linear-gradient(180deg, #2bd850, var(--task-green));
+}
+
+.seven-day-check-in__days {
+  grid-template-columns: repeat(7, minmax(64px, 1fr));
+}
+
+.check-in-reward-card {
+  background: linear-gradient(
+    180deg,
+    rgb(255 255 255 / 88%),
+    rgb(250 251 253 / 72%)
+  );
+}
+
+.check-in-reward-card[data-status="available"] {
+  border-color: rgb(255 121 0 / 42%);
+  background: linear-gradient(
+    180deg,
+    rgb(255 253 249 / 96%),
+    rgb(255 248 238 / 78%)
+  );
+  box-shadow:
+    0 14px 28px rgb(255 121 0 / 14%),
+    inset 0 1px 0 rgb(255 255 255 / 96%);
+}
+
+.check-in-reward-card[data-status="claimed"] {
+  border-color: rgb(6 173 43 / 24%);
+}
+
+.check-in-reward-card header {
+  color: var(--task-orange);
+}
+
+.seven-day-check-in__empty,
+.task-list-state,
+.reward-history-panel__state {
+  border-color: var(--task-line);
+  color: var(--task-ink);
+  background: var(--task-card);
+}
+
+.seven-day-check-in__empty span,
+.task-list-state span,
+.reward-history-panel__state span {
+  color: var(--task-muted);
+}
+
+.task-list-state__spinner {
+  border-color: rgb(7 29 59 / 14%);
+  border-top-color: var(--task-orange);
+}
+
+.task-category-tabs {
+  border-color: var(--task-line);
+  background: var(--task-card);
+  box-shadow: var(--task-shadow);
+}
+
+.task-category-tabs button {
+  color: var(--task-muted);
+}
+
+.task-category-tabs button[data-active="true"] {
+  border-color: rgb(255 121 0 / 28%);
+  color: var(--task-orange);
+  background: rgb(255 121 0 / 10%);
+}
+
+.task-list {
+  gap: 7px;
+}
+
+.task-row {
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 8px 10px;
+  align-items: center;
+  padding: 9px 10px;
+}
+
+.task-row[data-status="claimable"] {
+  border-color: rgb(255 121 0 / 34%);
+  background:
+    radial-gradient(circle at 96% 0%, rgb(255 121 0 / 11%), transparent 34%),
+    var(--task-card);
+}
+
+.task-row__icon {
+  width: 42px;
+  min-height: 42px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 8px;
+  color: var(--task-orange);
+  background: linear-gradient(
+    145deg,
+    rgb(255 247 238 / 96%),
+    rgb(255 234 212 / 74%)
+  );
+  box-shadow:
+    0 10px 22px rgb(7 29 59 / 6%),
+    inset 0 1px 0 rgb(255 255 255 / 90%);
+}
+
+.task-row__main,
+.task-row__progress,
+.task-reward-badges {
+  grid-column: 2 / -1;
+}
+
+.task-row__main {
+  align-items: center;
+}
+
+.task-row__copy span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.task-row__copy span em {
+  min-height: 20px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgb(255 121 0 / 18%);
+  border-radius: 8px;
+  padding: 0 6px;
+  color: #a8521a;
+  background: rgb(255 247 224 / 78%);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 950;
+}
+
+.task-row__copy p {
+  color: var(--task-muted);
+}
+
+.task-row__progress span {
+  height: 5px;
+  background: rgb(7 29 59 / 8%);
+  box-shadow: inset 0 1px 2px rgb(15 36 23 / 8%);
+}
+
+.task-row__progress i {
+  background: linear-gradient(90deg, var(--task-green), rgb(255 255 255 / 72%));
+  box-shadow: 0 0 14px rgb(6 173 43 / 24%);
+}
+
+.task-row__progress em {
+  color: var(--task-muted);
+}
+
+.task-reward-badges span,
+.task-reward-badges--empty {
+  border-color: rgb(255 255 255 / 58%);
+  border-radius: 8px;
+  background: rgb(255 247 224 / 62%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 62%);
+}
+
+.reward-history-entry {
+  border-color: var(--task-line);
+  background: var(--task-card);
+  box-shadow: var(--task-shadow);
+}
+
+.reward-history-entry__icon {
+  color: var(--task-orange);
+  background: rgb(255 121 0 / 10%);
+}
+
+.reward-history-entry[data-tone="signin"] .reward-history-entry__icon {
+  color: var(--task-orange);
+  background: rgb(255 121 0 / 10%);
+}
+
+.reward-history-entry[data-tone="commission"] .reward-history-entry__icon {
+  color: var(--task-green);
+  background: rgb(6 173 43 / 10%);
+}
+
+.claim-task-button {
+  min-width: 66px;
+}
+
+.claim-task-button:not(:disabled),
+.commission-panel__header button:not(:disabled) {
+  border-color: rgb(255 121 0 / 34%);
+  color: var(--task-orange);
+  background: rgb(255 255 255 / 82%);
+}
+
+.commission-panel__header button:not(:disabled) {
+  color: var(--task-ink);
+  background: rgb(255 121 0 / 10%);
+}
+
+.tasks-page__header button:focus-visible,
+.invite-button:focus-visible,
+.seven-day-check-in__header button:focus-visible,
+.commission-panel__header button:focus-visible,
+.task-list-state button:focus-visible,
+.claim-task-button:focus-visible,
+.task-category-tabs button:focus-visible,
+.referral-link-sheet__header button:focus-visible,
+.referral-link-sheet__actions button:focus-visible,
+.commission-confirm-dialog__header button:focus-visible,
+.commission-confirm-dialog__actions button:focus-visible {
+  outline-color: rgb(255 121 0 / 34%);
+}
+
+@media (width <= 380px) {
+  .invite-campaign-card__hero {
+    grid-template-columns: minmax(0, 1fr) 92px;
+  }
+
+  .invite-campaign-card__art {
+    height: 98px;
+  }
+
+  .invite-stats-panel {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .commission-panel__stats {
+    grid-template-columns: 1fr;
+  }
+}
+
 .referral-link-sheet,
 .commission-confirm-dialog {
   position: fixed;
@@ -11115,7 +11694,7 @@ a {
 
 .referral-link-sheet__header span,
 .commission-confirm-dialog__header span {
-  color: #1ce204;
+  color: var(--task-orange, #ff7900);
   font-size: 11px;
   font-weight: 950;
 }
@@ -11184,7 +11763,7 @@ a {
 }
 
 .commission-confirm-dialog__body strong {
-  color: #ff9c00;
+  color: var(--task-orange, #ff7900);
   font-size: 20px;
   font-weight: 950;
   line-height: 1;
@@ -11201,7 +11780,7 @@ a {
 .referral-link-sheet__actions button:focus-visible,
 .commission-confirm-dialog__header button:focus-visible,
 .commission-confirm-dialog__actions button:focus-visible {
-  outline: 3px solid rgb(28 226 4 / 34%);
+  outline: 3px solid rgb(255 121 0 / 34%);
   outline-offset: 2px;
 }
 

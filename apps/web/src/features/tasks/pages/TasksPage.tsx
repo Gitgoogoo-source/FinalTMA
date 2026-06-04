@@ -262,13 +262,6 @@ export function TasksPage() {
 
       <InviteStatsPanel stats={inviteStatsQuery.inviteStats} />
 
-      <CommissionStatsPanel
-        history={commissionQuery.commissionHistory}
-        isPending={claimCommission.isPending}
-        onClaim={() => void handleClaimCommission()}
-        stats={commissionQuery.commissionStats}
-      />
-
       <SevenDayCheckIn
         isPending={dailyCheckIn.isPending}
         onCheckIn={() => void handleDailyCheckIn()}
@@ -288,6 +281,13 @@ export function TasksPage() {
         onRetry={() => void taskQuery.refetch()}
         pendingTaskId={pendingTaskId}
         tasks={taskQuery.tasks}
+      />
+
+      <CommissionStatsPanel
+        history={commissionQuery.commissionHistory}
+        isPending={claimCommission.isPending}
+        onClaim={() => void handleClaimCommission()}
+        stats={commissionQuery.commissionStats}
       />
 
       <RewardHistoryPanel
