@@ -136,6 +136,10 @@ export type DrawResultItem = {
   rarityLabel: string | null;
   itemType: string | null;
   formId: string | null;
+  /**
+   * Fixed star form from item generation time.
+   * 1 means 1-star, 2 means 2-star, and upgrades do not change it.
+   */
   formIndex: number | null;
   formName: string | null;
   imageUrl: string | null;

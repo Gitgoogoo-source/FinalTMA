@@ -320,8 +320,8 @@ select 'form2_upgrade', api.inventory_upgrade_item(
 
 select is(((select payload from _ids where key = 'form2_upgrade') ->> 'to_level')::int, 2, 'form_index 2 item can upgrade from level 1 to level 2');
 select is(((select payload from _ids where key = 'form2_upgrade') ->> 'fgems_balance_before')::numeric, 100::numeric, 'upgrade returns FGEMS balance before debit');
-select is(((select payload from _ids where key = 'form2_upgrade') ->> 'fgems_balance_after')::numeric, 90::numeric, 'upgrade returns FGEMS balance after debit');
-select is(testutil.balance_of((select id from _ids where key = 'user'), 'FGEMS'), 90::numeric, 'form_index 2 upgrade debits FGEMS once');
+select is(((select payload from _ids where key = 'form2_upgrade') ->> 'fgems_balance_after')::numeric, 30::numeric, 'upgrade returns FGEMS balance after debit');
+select is(testutil.balance_of((select id from _ids where key = 'user'), 'FGEMS'), 30::numeric, 'form_index 2 upgrade debits FGEMS once');
 
 insert into _ids (key, payload)
 select 'form2_upgrade_repeat', api.inventory_upgrade_item(
@@ -331,10 +331,10 @@ select 'form2_upgrade_repeat', api.inventory_upgrade_item(
 );
 
 select is(((select payload from _ids where key = 'form2_upgrade_repeat') ->> 'to_level')::int, 2, 'repeating upgrade with the same idempotency key returns the original upgrade');
-select is(((select payload from _ids where key = 'form2_upgrade_repeat') ->> 'fgems_balance_after')::numeric, 90::numeric, 'idempotent upgrade repeat returns original FGEMS balance after debit');
+select is(((select payload from _ids where key = 'form2_upgrade_repeat') ->> 'fgems_balance_after')::numeric, 30::numeric, 'idempotent upgrade repeat returns original FGEMS balance after debit');
 select is((select level from inventory.item_instances where id = (select id from _ids where key = 'form2_upgrade_item')), 2, 'idempotent upgrade repeat does not upgrade the item twice');
 select is((select count(*)::int from inventory.upgrade_logs where idempotency_key = 'inventory-evolve-form2-upgrade-001'), 1, 'idempotent upgrade repeat does not create a second upgrade log');
-select is(testutil.balance_of((select id from _ids where key = 'user'), 'FGEMS'), 90::numeric, 'idempotent upgrade repeat does not debit FGEMS again');
+select is(testutil.balance_of((select id from _ids where key = 'user'), 'FGEMS'), 30::numeric, 'idempotent upgrade repeat does not debit FGEMS again');
 
 update inventory.evolution_rules set active = false where from_template_id = (select id from _ids where key = 'template') and from_form_id = (select id from _ids where key = 'form1');
 insert into inventory.evolution_rules (from_template_id, from_form_id, to_template_id, to_form_id, required_count, cost_kcoin, success_rate_bps, active)

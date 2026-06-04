@@ -12,6 +12,10 @@ export type CollectionSeries = {
 
 export type CollectionForm = {
   id: string | null;
+  /**
+   * Fixed star form from item generation time.
+   * 1 means 1-star, 2 means 2-star, and upgrades do not change it.
+   */
   index: number | null;
   displayName: string | null;
   description?: string | null;

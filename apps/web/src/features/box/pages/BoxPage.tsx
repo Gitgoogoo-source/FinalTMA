@@ -1,4 +1,3 @@
-import { RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { getApiErrorMessage } from "@/api/errors";
@@ -31,13 +30,15 @@ import type {
   CreateOpenOrderResponse,
   DrawResultResponse,
 } from "../box.types";
-import { useBoxes } from "../hooks/useBoxes";
 import { useCreateOpenOrder } from "../hooks/useCreateOpenOrder";
+import { useCachedBoxPity } from "../hooks/useCachedBoxPity";
 import { useDrawResult } from "../hooks/useDrawResult";
 import { usePaymentStatus } from "../hooks/usePaymentStatus";
 import { usePendingDrawOrder } from "../hooks/usePendingDrawOrder";
 import { usePaymentSupportConfig } from "../hooks/usePaymentSupportConfig";
+import { getCachedBoxIdBySlug } from "../box.pityCache";
 import { getStaticBoxRewards } from "../staticRewards";
+import { createStaticBoxes } from "../staticBoxes";
 import {
   clearPendingStarsPaymentOrder,
   useStarsPayment,
@@ -47,7 +48,7 @@ import {
 
 export function BoxPage() {
   const { pushToast } = useFeedback();
-  const [selectedBoxId, setSelectedBoxId] = useState<string | null>(null);
+  const [selectedBoxSlug, setSelectedBoxSlug] = useState<string | null>(null);
   const [rewardsOpen, setRewardsOpen] = useState(false);
   const [resultOrderId, setResultOrderId] = useState<string | null>(null);
   const [paymentPendingOrder, setPaymentPendingOrder] =
@@ -55,27 +56,38 @@ export function BoxPage() {
   const [paymentOpenNotice, setPaymentOpenNotice] =
     useState<PaymentOpenNotice | null>(null);
   const openRequestLockedRef = useRef(false);
-  const boxesQuery = useBoxes();
+  const {
+    error: pitySyncError,
+    hasUsableCache: hasUsablePityCache,
+    refresh: refreshPityCache,
+    snapshot: pitySnapshot,
+  } = useCachedBoxPity();
   const bannerQuery = useBanners("box_top");
   const paymentSupportQuery = usePaymentSupportConfig({
     enabled: paymentPendingOrder !== null || resultOrderId !== null,
   });
-  const boxes = boxesQuery.boxes;
-  const defaultBoxId = useMemo(() => getDefaultBoxId(boxes), [boxes]);
+  const boxes = useMemo(
+    () => createStaticBoxes(pitySnapshot),
+    [pitySnapshot],
+  );
+  const defaultBoxSlug = useMemo(() => getDefaultBoxSlug(boxes), [boxes]);
 
   useEffect(() => {
-    if (!defaultBoxId) {
-      setSelectedBoxId(null);
+    if (!defaultBoxSlug) {
+      setSelectedBoxSlug(null);
       return;
     }
 
-    if (!selectedBoxId || !boxes.some((box) => box.id === selectedBoxId)) {
-      setSelectedBoxId(defaultBoxId);
+    if (!selectedBoxSlug || !boxes.some((box) => box.slug === selectedBoxSlug)) {
+      setSelectedBoxSlug(defaultBoxSlug);
     }
-  }, [boxes, defaultBoxId, selectedBoxId]);
+  }, [boxes, defaultBoxSlug, selectedBoxSlug]);
 
   const selectedBox =
-    boxes.find((box) => box.id === selectedBoxId) ?? boxes[0] ?? null;
+    boxes.find((box) => box.slug === selectedBoxSlug) ?? boxes[0] ?? null;
+  const selectedServerBoxId = selectedBox
+    ? getCachedBoxIdBySlug(pitySnapshot, selectedBox.slug)
+    : null;
   const staticRewards = useMemo(
     () => getStaticBoxRewards(selectedBox),
     [selectedBox],
@@ -86,13 +98,14 @@ export function BoxPage() {
   const handleDrawCompleted = useCallback(
     (result: DrawResultResponse) => {
       clearPendingStarsPaymentOrder(result.orderId);
+      void refreshPityCache();
       pushToast({
         type: "success",
         title: "开盒完成",
         message: `获得 ${formatCurrencyAmount(result.results.length || result.quantity)} 件藏品，返还 ${formatCurrencyAmount(result.returnedKcoin)} K-coin。`,
       });
     },
-    [pushToast],
+    [pushToast, refreshPityCache],
   );
   const drawResultQuery = useDrawResult(resultOrderId, {
     enabled: Boolean(resultOrderId),
@@ -195,7 +208,8 @@ export function BoxPage() {
   const openActionDisabled =
     createOrder.isPending ||
     isPaymentOpenActionLocked(paymentPendingOrder) ||
-    !selectedBox?.isOpenable;
+    !selectedBox?.isOpenable ||
+    selectedServerBoxId === null;
   const handleInvoiceStatus = useCallback(
     (result: StarsInvoiceCallbackResult) => {
       setPaymentOpenNotice(getPaymentOpenNoticeFromInvoiceStatus(result));
@@ -265,11 +279,13 @@ export function BoxPage() {
         return;
       }
 
-      if (!selectedBox.isOpenable) {
+      if (!selectedBox.isOpenable || selectedServerBoxId === null) {
         pushToast({
           type: "error",
           title: "当前盲盒不可开启",
-          message: selectedBox.disabledReason ?? "请切换其他盲盒。",
+          message:
+            selectedBox.disabledReason ??
+            "保底信息还没有同步完成，请稍后再试。",
         });
         return;
       }
@@ -281,7 +297,7 @@ export function BoxPage() {
       openRequestLockedRef.current = true;
       createOrder.mutate(
         {
-          boxId: selectedBox.id,
+          boxId: selectedServerBoxId,
           drawCount,
           expectedPriceStars:
             drawCount === 1
@@ -328,33 +344,14 @@ export function BoxPage() {
         },
       );
     },
-    [createOrder, openInvoiceForOrder, pushToast, selectedBox],
+    [
+      createOrder,
+      openInvoiceForOrder,
+      pushToast,
+      selectedBox,
+      selectedServerBoxId,
+    ],
   );
-
-  if (boxesQuery.isLoading && boxes.length === 0) {
-    return (
-      <section className="box-page box-page--state" aria-busy="true">
-        <div className="box-page-state">
-          <span className="box-page-state__spinner" />
-          <strong>盲盒加载中</strong>
-        </div>
-      </section>
-    );
-  }
-
-  if (boxesQuery.isError && boxes.length === 0) {
-    return (
-      <section className="box-page box-page--state">
-        <div className="box-page-state">
-          <strong>盲盒读取失败</strong>
-          <button onClick={() => void boxesQuery.refetch()} type="button">
-            <RefreshCw aria-hidden="true" size={15} strokeWidth={2.4} />
-            重试
-          </button>
-        </div>
-      </section>
-    );
-  }
 
   if (!selectedBox) {
     return (
@@ -374,8 +371,8 @@ export function BoxPage() {
 
       <BoxTierSelector
         boxes={boxes}
-        selectedBoxId={selectedBox.id}
-        onSelect={setSelectedBoxId}
+        selectedBoxSlug={selectedBox.slug}
+        onSelect={setSelectedBoxSlug}
       />
 
       {shouldShowBoxStatus(selectedBox) ? (
@@ -394,6 +391,14 @@ export function BoxPage() {
       />
 
       <PityProgress box={selectedBox} />
+
+      {pitySyncError && !hasUsablePityCache ? (
+        <section className="box-page__status" aria-label="保底同步状态">
+          <span className="box-status-badge box-status-badge--warning">
+            保底同步失败 · 请稍后重试
+          </span>
+        </section>
+      ) : null}
 
       <section className="box-open-actions" aria-label="开盒操作">
         <OpenOnceButton
@@ -479,8 +484,8 @@ export function BoxPage() {
   );
 }
 
-function getDefaultBoxId(boxes: BlindBox[]): string | null {
-  return boxes.find((box) => box.isOpenable)?.id ?? boxes[0]?.id ?? null;
+function getDefaultBoxSlug(boxes: BlindBox[]): string | null {
+  return boxes.find((box) => box.isOpenable)?.slug ?? boxes[0]?.slug ?? null;
 }
 
 function shouldShowBoxStatus(box: BlindBox): boolean {

@@ -96,6 +96,10 @@ type CollectibleTemplateRow = {
 type CollectibleFormRow = {
   id: string;
   template_id: string;
+  /**
+   * Fixed star form from item generation time.
+   * 1 means 1-star, 2 means 2-star, and upgrades do not change it.
+   */
   form_index: number;
   form_slug: string;
   display_name: string;
@@ -386,11 +390,7 @@ function resolveVerifiedWalletFromPayload(
     );
   }
 
-  throw new ApiError(
-    403,
-    "WALLET_NOT_CONNECTED",
-    "请先连接钱包后再 Mint。",
-  );
+  throw new ApiError(403, "WALLET_NOT_CONNECTED", "请先连接钱包后再 Mint。");
 }
 
 function resolveActiveCollectionFromPayload(

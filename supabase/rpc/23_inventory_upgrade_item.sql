@@ -55,6 +55,9 @@ begin
 
   select * into v_form from catalog.collectible_forms where id = v_item.form_id;
 
+  -- form_index is the item's fixed star form from generation time.
+  -- The upgrade rule is matched by rarity + fixed star form + current level;
+  -- this RPC changes level and power only, never form_index.
   select * into v_rule
   from inventory.upgrade_rules
   where rarity_code = v_template.rarity_code

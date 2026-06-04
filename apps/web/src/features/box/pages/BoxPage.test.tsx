@@ -8,10 +8,13 @@ import { FeedbackProvider } from "@/app/providers/FeedbackProvider";
 import type { TelegramGlobal } from "@/types/telegram";
 
 import type {
-  BlindBox,
   CreateOpenOrderResponse,
   DrawResultResponse,
 } from "../box.types";
+import {
+  BOX_PITY_CACHE_STORAGE_KEY,
+  type CachedBoxPitySnapshot,
+} from "../box.pityCache";
 import { PENDING_STARS_PAYMENT_STORAGE_KEY } from "../hooks/useStarsPayment";
 import { BoxPage } from "./BoxPage";
 
@@ -22,25 +25,26 @@ type CreateOrderMutateOptions = {
 };
 
 const mocks = vi.hoisted(() => ({
-  boxes: [] as BlindBox[],
   createOrderMutate: vi.fn(),
   createOrderResult: null as CreateOpenOrderResponse | null,
   drawResultByOrderId: new Map<string, DrawResultResponse>(),
   drawResultRefetch: vi.fn(),
   paymentStatusByOrderId: new Map<string, DrawResultResponse>(),
   paymentStatusRefetch: vi.fn(),
+  pitySnapshot: null as CachedBoxPitySnapshot | null,
+  refreshBoxPity: vi.fn(),
   useDrawResult: vi.fn(),
   usePaymentStatus: vi.fn(),
 }));
 
-vi.mock("../hooks/useBoxes", () => ({
-  useBoxes: () => ({
-    boxes: mocks.boxes,
+vi.mock("../hooks/useCachedBoxPity", () => ({
+  useCachedBoxPity: () => ({
     error: null,
-    isError: false,
-    isLoading: false,
-    refetch: vi.fn(),
-    serverTime: "2026-05-28T00:00:00.000Z",
+    hasUsableCache: mocks.pitySnapshot !== null,
+    isInitialSyncing: false,
+    isSyncing: false,
+    refresh: mocks.refreshBoxPity,
+    snapshot: mocks.pitySnapshot,
   }),
 }));
 
@@ -74,12 +78,14 @@ vi.mock("../hooks/usePaymentStatus", () => ({
 
 describe("BoxPage Stars invoice flow", () => {
   beforeEach(() => {
-    mocks.boxes = [createBox()];
+    mocks.pitySnapshot = createPitySnapshot();
     mocks.createOrderResult = createOrder();
     mocks.drawResultByOrderId.clear();
     mocks.paymentStatusByOrderId.clear();
     mocks.drawResultRefetch.mockReset();
     mocks.paymentStatusRefetch.mockReset();
+    mocks.refreshBoxPity.mockReset();
+    mocks.refreshBoxPity.mockResolvedValue(mocks.pitySnapshot);
     mocks.createOrderMutate.mockReset();
     mocks.createOrderMutate.mockImplementation(
       (_input: unknown, options?: CreateOrderMutateOptions) => {
@@ -118,11 +124,13 @@ describe("BoxPage Stars invoice flow", () => {
       }),
     );
     globalThis.localStorage?.removeItem(PENDING_STARS_PAYMENT_STORAGE_KEY);
+    globalThis.localStorage?.removeItem(BOX_PITY_CACHE_STORAGE_KEY);
   });
 
   afterEach(() => {
     delete (globalThis as TelegramGlobal).Telegram;
     globalThis.localStorage?.removeItem(PENDING_STARS_PAYMENT_STORAGE_KEY);
+    globalThis.localStorage?.removeItem(BOX_PITY_CACHE_STORAGE_KEY);
     vi.clearAllMocks();
   });
 
@@ -152,35 +160,11 @@ describe("BoxPage Stars invoice flow", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /查看全部/ }));
 
-    expect(screen.getByRole("dialog", { name: "测试盲盒" })).toBeVisible();
+    expect(screen.getByRole("dialog", { name: "Normal Egg" })).toBeVisible();
     expect(screen.getByText("Forest Sproutling")).toBeVisible();
   });
 
   it("uses the configured launch box images for the three box tiers", () => {
-    mocks.boxes = [
-      createBox({
-        heroImageUrl: "https://cdn.example.test/old-normal-hero.png",
-        id: "11111111-1111-4111-8111-111111111111",
-        name: "Normal Egg",
-        slug: "starter_egg",
-        tier: "normal",
-      }),
-      createBox({
-        heroImageUrl: "https://cdn.example.test/old-rare-hero.png",
-        id: "22222222-2222-4222-8222-222222222222",
-        name: "Rare Egg",
-        slug: "premium_egg",
-        tier: "rare",
-      }),
-      createBox({
-        heroImageUrl: "https://cdn.example.test/old-legendary-hero.png",
-        id: "33333333-3333-4333-8333-333333333333",
-        name: "Legendary Egg",
-        slug: "legendary_egg",
-        tier: "legendary",
-      }),
-    ];
-
     renderBoxPage();
 
     expect(screen.getByRole("img", { name: "Normal Egg" })).toHaveAttribute(
@@ -377,20 +361,18 @@ describe("BoxPage Stars invoice flow", () => {
     expect(mocks.createOrderMutate).toHaveBeenCalledTimes(1);
   });
 
-  it("shows not_started boxes but keeps payment actions disabled", () => {
-    mocks.boxes = [
-      createBox({
-        disabledReason: "活动未开始",
-        isOpenable: false,
-        status: "not_started",
-      }),
-    ];
+  it("keeps payment actions disabled until cached server box ids are available", () => {
+    mocks.pitySnapshot = null;
 
     renderBoxPage();
 
-    expect(screen.getAllByText("未开始 · 活动未开始").length).toBeGreaterThan(
-      0,
-    );
+    expect(
+      screen.getAllByText("进行中 · 正在同步保底信息。").length,
+    ).toBeGreaterThan(0);
+
+    expect(
+      screen.getByRole("button", { name: /Normal Egg/ }),
+    ).toBeVisible();
 
     const openOnceButton = screen.getByRole("button", { name: /^开 1 次/ });
     expect(openOnceButton).toBeDisabled();
@@ -398,6 +380,20 @@ describe("BoxPage Stars invoice flow", () => {
     fireEvent.click(openOnceButton);
 
     expect(mocks.createOrderMutate).not.toHaveBeenCalled();
+  });
+
+  it("uses the cached real box id when creating an order", () => {
+    renderBoxPage();
+
+    fireEvent.click(screen.getByRole("button", { name: /^开 1 次/ }));
+
+    expect(mocks.createOrderMutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        boxId: "11111111-1111-4111-8111-111111111111",
+        expectedPriceStars: 10,
+      }),
+      expect.any(Object),
+    );
   });
 
   it("uses the displayed ten-draw price as the expected order price and shows the returned amount", async () => {
@@ -556,30 +552,68 @@ function renderBoxPage() {
   );
 }
 
-function createBox(overrides: Partial<BlindBox> = {}): BlindBox {
+function createPitySnapshot(): CachedBoxPitySnapshot {
   return {
-    coverImageUrl: null,
-    description: "测试盲盒",
-    disabledReason: null,
-    discountBps: 1000,
-    discountRate: 0.9,
-    heroImageUrl: null,
-    id: "11111111-1111-4111-8111-111111111111",
-    isOpenable: true,
-    kcoinReturnPerDraw: 100,
-    name: "测试盲盒",
-    pityProgress: null,
-    remainingStock: 100,
-    singleStarPrice: 10,
-    slug: "test-box",
-    sortOrder: 1,
-    status: "active",
-    stockStatus: "available",
-    tenDrawPrice: 90,
-    tier: "normal",
-    totalStock: 1000,
+    items: [
+      {
+        boxId: "11111111-1111-4111-8111-111111111111",
+        pityProgress: createPityProgress({
+          currentCount: 3,
+          remainingToGuaranteed: 27,
+          ruleId: "aaaa1111-1111-4111-8111-111111111111",
+          targetRarity: "rare",
+          threshold: 30,
+        }),
+        slug: "starter_egg",
+        updatedAt: "2026-05-28T00:00:00.000Z",
+      },
+      {
+        boxId: "22222222-2222-4222-8222-222222222222",
+        pityProgress: createPityProgress({
+          currentCount: 8,
+          remainingToGuaranteed: 42,
+          ruleId: "bbbb2222-2222-4222-8222-222222222222",
+          targetRarity: "epic",
+          threshold: 50,
+        }),
+        slug: "premium_egg",
+        updatedAt: "2026-05-28T00:00:00.000Z",
+      },
+      {
+        boxId: "33333333-3333-4333-8333-333333333333",
+        pityProgress: createPityProgress({
+          currentCount: 12,
+          remainingToGuaranteed: 68,
+          ruleId: "cccc3333-3333-4333-8333-333333333333",
+          targetRarity: "legendary",
+          threshold: 80,
+        }),
+        slug: "legendary_egg",
+        updatedAt: "2026-05-28T00:00:00.000Z",
+      },
+    ],
+    serverTime: "2026-05-28T00:00:00.000Z",
+    syncedAt: "2026-05-28T00:00:00.000Z",
+    version: 1,
+  };
+}
+
+function createPityProgress(input: {
+  currentCount: number;
+  remainingToGuaranteed: number;
+  ruleId: string;
+  targetRarity: string;
+  threshold: number;
+}) {
+  return {
+    currentCount: input.currentCount,
+    guaranteedNext: input.remainingToGuaranteed <= 0,
+    remainingToGuaranteed: input.remainingToGuaranteed,
+    ruleId: input.ruleId,
+    targetRarity: input.targetRarity,
+    threshold: input.threshold,
+    totalDraws: input.currentCount,
     updatedAt: "2026-05-28T00:00:00.000Z",
-    ...overrides,
   };
 }
 

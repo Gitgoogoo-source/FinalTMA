@@ -113,7 +113,9 @@ create table if not exists catalog.collectible_forms (
   unique (template_id, form_slug)
 );
 
-comment on table catalog.collectible_forms is 'Collectible evolution forms. A series can have low, middle and high form like Pokémon evolution.';
+comment on table catalog.collectible_forms is 'Star-form variants for a collectible template. The form_index is fixed when an item instance is generated; upgrades change level, not form_index.';
+comment on column catalog.collectible_forms.form_index is 'Immutable star form index for generated item instances: 1 means 1-star, 2 means 2-star, and so on. It is not an upgrade level.';
+comment on column catalog.collectible_forms.next_form_id is 'Optional catalog link to another configured form. Runtime item upgrades do not mutate form_index.';
 
 create table if not exists catalog.collectible_media (
   id uuid primary key default gen_random_uuid(),
@@ -146,6 +148,8 @@ create table if not exists catalog.power_rules (
   check (level_min > 0 and level_max >= level_min)
 );
 
+comment on column catalog.power_rules.form_index is 'Fixed star form index used with rarity and level when calculating collectible power.';
+
 create table if not exists catalog.market_price_rules (
   id uuid primary key default gen_random_uuid(),
   template_id uuid references catalog.collectible_templates(id) on delete cascade,
@@ -161,6 +165,8 @@ create table if not exists catalog.market_price_rules (
   check (min_price_kcoin >= 0),
   check (max_price_kcoin is null or max_price_kcoin >= min_price_kcoin)
 );
+
+comment on column catalog.market_price_rules.form_index is 'Optional fixed star form filter for market pricing. Null means the rule can apply to every star form.';
 
 create table if not exists catalog.item_tags (
   id uuid primary key default gen_random_uuid(),

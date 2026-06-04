@@ -70,7 +70,8 @@ create table if not exists inventory.upgrade_rules (
   unique (rarity_code, form_index, from_level, to_level, active)
 );
 
-comment on table inventory.upgrade_rules is 'Upgrade rules. Upgrade always succeeds and consumes FGEMS.';
+comment on table inventory.upgrade_rules is 'Upgrade rules. Upgrade always succeeds, consumes FGEMS, and changes level only.';
+comment on column inventory.upgrade_rules.form_index is 'Fixed star form index used with rarity_code and from_level to find the rule. Upgrading does not change form_index.';
 
 create table if not exists inventory.upgrade_logs (
   id uuid primary key default gen_random_uuid(),
@@ -142,6 +143,7 @@ create table if not exists inventory.decompose_rules (
 );
 
 comment on table inventory.decompose_rules is 'Decomposition rules. Duplicate collectibles can be decomposed into FGEMS.';
+comment on column inventory.decompose_rules.form_index is 'Fixed star form index used with rarity_code and min_level to find the reward rule. It is not a mutable evolution stage.';
 
 create table if not exists inventory.decompose_logs (
   id uuid primary key default gen_random_uuid(),

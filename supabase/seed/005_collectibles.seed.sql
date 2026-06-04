@@ -15,18 +15,18 @@ begin
   for rec in
     select *
     from (values
-      ('forest_sproutling', 'Forest Sproutling', 'Forest scout', 'A young scout watching the green borderlands.', 'COMMON', 'CHARACTER', 'forest_guardians', 'forest', 24, true, 10),
-      ('forest_ranger', 'Verdant Ranger', 'Forest ranger', 'A precise ranger trained by the Forest Pact.', 'RARE', 'CHARACTER', 'forest_guardians', 'forest', 72, true, 20),
-      ('ancient_leaf_sentinel', 'Ancient Leaf Sentinel', 'Forest sentinel', 'An old sentinel with roots under the launch gate.', 'EPIC', 'CHARACTER', 'forest_guardians', 'forest', 165, true, 30),
-      ('mooncap_bard', 'Mooncap Bard', 'Lunar singer', 'A tiny mushroom singer under the new moon.', 'COMMON', 'CHARACTER', 'moon_crown', 'lunar', 22, true, 40),
-      ('moonlit_minstrel', 'Moonlit Minstrel', 'Lunar performer', 'A silver-voiced performer of the Lunar Court.', 'RARE', 'CHARACTER', 'moon_crown', 'lunar', 76, true, 50),
-      ('moon_crown_guardian', 'Moon Crown Guardian', 'Lunar guardian', 'A legendary guardian shown in the hero banner.', 'LEGENDARY', 'CHARACTER', 'moon_crown', 'lunar', 390, true, 60),
-      ('crystal_otter', 'Crystal Otter', 'Cove pet', 'A playful otter carrying cove crystals.', 'COMMON', 'PET', 'crystal_cove', 'crystal', 26, true, 70),
-      ('tideglass_otter', 'Tideglass Otter', 'Cove guardian', 'A rare cove guardian with polished crystal armor.', 'RARE', 'PET', 'crystal_cove', 'crystal', 80, true, 80),
-      ('prism_tide_oracle', 'Prism Tide Oracle', 'Cove oracle', 'An epic oracle of the crystal tide.', 'EPIC', 'CHARACTER', 'crystal_cove', 'crystal', 178, true, 90),
-      ('ember_whelp', 'Ember Whelp', 'Flame pet', 'A rare hatchling from the Flame Nest.', 'RARE', 'PET', 'dragon_fire', 'flame', 88, true, 100),
-      ('blazewing_drake', 'Blazewing Drake', 'Flame drake', 'An epic drake that guards molten trails.', 'EPIC', 'PET', 'dragon_fire', 'flame', 188, true, 110),
-      ('inferno_crown_dragon', 'Inferno Crown Dragon', 'Flame dragon', 'A legendary dragon crowned by fire.', 'LEGENDARY', 'PET', 'dragon_fire', 'flame', 355, true, 120)
+      ('forest_sproutling', 'Forest Sproutling', 'Forest scout', 'A young scout watching the green borderlands.', 'COMMON', 'CHARACTER', 'forest_guardians', 'forest', 100, true, 10),
+      ('forest_ranger', 'Verdant Ranger', 'Forest ranger', 'A precise ranger trained by the Forest Pact.', 'RARE', 'CHARACTER', 'forest_guardians', 'forest', 140, true, 20),
+      ('ancient_leaf_sentinel', 'Ancient Leaf Sentinel', 'Forest sentinel', 'An old sentinel with roots under the launch gate.', 'EPIC', 'CHARACTER', 'forest_guardians', 'forest', 210, true, 30),
+      ('mooncap_bard', 'Mooncap Bard', 'Lunar singer', 'A tiny mushroom singer under the new moon.', 'COMMON', 'CHARACTER', 'moon_crown', 'lunar', 100, true, 40),
+      ('moonlit_minstrel', 'Moonlit Minstrel', 'Lunar performer', 'A silver-voiced performer of the Lunar Court.', 'RARE', 'CHARACTER', 'moon_crown', 'lunar', 140, true, 50),
+      ('moon_crown_guardian', 'Moon Crown Guardian', 'Lunar guardian', 'A legendary guardian shown in the hero banner.', 'LEGENDARY', 'CHARACTER', 'moon_crown', 'lunar', 330, true, 60),
+      ('crystal_otter', 'Crystal Otter', 'Cove pet', 'A playful otter carrying cove crystals.', 'COMMON', 'PET', 'crystal_cove', 'crystal', 100, true, 70),
+      ('tideglass_otter', 'Tideglass Otter', 'Cove guardian', 'A rare cove guardian with polished crystal armor.', 'RARE', 'PET', 'crystal_cove', 'crystal', 140, true, 80),
+      ('prism_tide_oracle', 'Prism Tide Oracle', 'Cove oracle', 'An epic oracle of the crystal tide.', 'EPIC', 'CHARACTER', 'crystal_cove', 'crystal', 210, true, 90),
+      ('ember_whelp', 'Ember Whelp', 'Flame pet', 'A rare hatchling from the Flame Nest.', 'RARE', 'PET', 'dragon_fire', 'flame', 140, true, 100),
+      ('blazewing_drake', 'Blazewing Drake', 'Flame drake', 'An epic drake that guards molten trails.', 'EPIC', 'PET', 'dragon_fire', 'flame', 210, true, 110),
+      ('inferno_crown_dragon', 'Inferno Crown Dragon', 'Flame dragon', 'A legendary dragon crowned by fire.', 'LEGENDARY', 'PET', 'dragon_fire', 'flame', 330, true, 120)
     ) as t(
       slug,
       display_name,

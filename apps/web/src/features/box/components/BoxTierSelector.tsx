@@ -5,25 +5,25 @@ import type { BlindBox } from "../box.types";
 
 type BoxTierSelectorProps = {
   boxes: BlindBox[];
-  selectedBoxId: string | null;
-  onSelect: (boxId: string) => void;
+  selectedBoxSlug: string | null;
+  onSelect: (boxSlug: string) => void;
 };
 
 export function BoxTierSelector({
   boxes,
-  selectedBoxId,
+  selectedBoxSlug,
   onSelect,
 }: BoxTierSelectorProps) {
   return (
     <section className="box-tier-selector" aria-label="选择盲盒档次">
       {boxes.map((box) => {
-        const selected = box.id === selectedBoxId;
+        const selected = box.slug === selectedBoxSlug;
 
         return (
           <button
             className={`box-tier-card${selected ? " box-tier-card--selected" : ""}`}
-            key={box.id}
-            onClick={() => onSelect(box.id)}
+            key={box.slug}
+            onClick={() => onSelect(box.slug)}
             type="button"
             aria-pressed={selected}
             aria-label={`${box.name}，${getTierQualityLabel(box.tier)}${selected ? "，已选中" : ""}`}

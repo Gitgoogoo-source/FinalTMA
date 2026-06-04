@@ -5,8 +5,8 @@
 -- `supabase db reset` runs migrations before catalog seeds, so this idempotent
 -- seed mirrors the growth-rule data after collectibles have been seeded.
 
-begin;
-
+do $$
+begin
 update inventory.evolution_rules er
 set active = false,
     metadata = er.metadata || jsonb_build_object(
@@ -332,4 +332,7 @@ set reward_fgems = excluded.reward_fgems,
     metadata = inventory.decompose_rules.metadata || excluded.metadata,
     updated_at = now();
 
-commit;
+drop table if exists _seed_evolution_steps;
+drop table if exists _seed_evolution_chain_definitions;
+end;
+$$;

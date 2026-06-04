@@ -62,6 +62,8 @@ begin
 
   select * into v_form from catalog.collectible_forms where id = v_item.form_id;
 
+  -- form_index is the item's fixed star form from generation time.
+  -- Decomposition rewards are matched by rarity + fixed star form + level.
   select * into v_rule
   from inventory.decompose_rules
   where rarity_code = v_template.rarity_code
