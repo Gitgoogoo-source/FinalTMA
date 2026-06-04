@@ -96,6 +96,9 @@ test("出售页未填写单价时仍展示确认出售和到手占位", async ({
   await expect(confirmButton).toBeVisible();
   await expect(confirmButton).toBeDisabled();
   await expect(page.locator(".sell-confirm__receive")).toHaveText("到手 -");
+  await expect(confirmButton).toHaveCSS("color", "rgb(255, 255, 255)");
+  await expect(confirmButton).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await expect(confirmButton).toHaveCSS("background-image", /linear-gradient/);
   await expect(page.getByText("请输入出售单价", { exact: true })).toBeVisible();
   expect(createRequests).toHaveLength(0);
 });
