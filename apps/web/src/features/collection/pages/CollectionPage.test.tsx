@@ -432,6 +432,53 @@ describe("CollectionPage stage-3 frontend states", () => {
     expect(within(nextSummary).getByText("高阶形态")).toBeVisible();
   });
 
+  it("groups character thumbs by the visible image even when template and form differ", () => {
+    const sharedImageUrl = "/storage/v1/object/public/collectibles/dragon.png";
+    const firstItem = makeItem({
+      name: "烈焰龙",
+      thumbnailUrl: sharedImageUrl,
+      templateId: TEMPLATE_ID,
+      templateSlug: "inferno_crown_dragon",
+    });
+    const sameImageItem = makeItem({
+      form: {
+        description: null,
+        displayName: "高阶形态",
+        id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        index: 2,
+      },
+      itemInstanceId: ITEM_B_ID,
+      name: "烈焰龙",
+      power: 40,
+      serialNo: 2,
+      templateId: "77777777-7777-4777-8777-777777777777",
+      templateSlug: "dragon_same_art",
+      thumbnailUrl: sharedImageUrl,
+    });
+    const otherImageItem = makeItem({
+      itemInstanceId: ITEM_C_ID,
+      name: "月冕守门人",
+      serialNo: 3,
+      templateId: "88888888-8888-4888-8888-888888888888",
+      templateSlug: "moon_crown_guardian",
+      thumbnailUrl: "/storage/v1/object/public/collectibles/moon.png",
+    });
+    setInventoryItems(firstItem, sameImageItem, otherImageItem);
+
+    renderCollectionPage();
+
+    const groupedDragonThumbs = screen.getAllByRole("button", {
+      name: /烈焰龙/,
+    });
+    expect(groupedDragonThumbs).toHaveLength(1);
+    expect(
+      groupedDragonThumbs[0]!.querySelector(".character-thumb__count"),
+    ).toHaveTextContent("x2");
+    expect(
+      within(screen.getByLabelText("藏品网格")).getAllByRole("button"),
+    ).toHaveLength(2);
+  });
+
   it("loads the next inventory page when more items are available", async () => {
     mocks.hasNextInventoryPage = true;
     mocks.inventoryFetchNextPage.mockResolvedValueOnce({});

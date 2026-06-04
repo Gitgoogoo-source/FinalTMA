@@ -460,6 +460,12 @@ function groupCollectionInventoryItems(
 }
 
 function getCollectionInventoryGroupKey(item: CollectionInventoryItem): string {
+  const imageKey = getCollectionInventoryImageKey(item);
+
+  if (imageKey) {
+    return `image:${imageKey}`;
+  }
+
   const templateKey = item.templateId ?? item.templateSlug;
 
   if (!templateKey) {
@@ -467,6 +473,20 @@ function getCollectionInventoryGroupKey(item: CollectionInventoryItem): string {
   }
 
   return `template:${templateKey}:form:${item.form?.id ?? "default-form"}`;
+}
+
+function getCollectionInventoryImageKey(
+  item: CollectionInventoryItem,
+): string | null {
+  const imageUrl = item.thumbnailUrl ?? item.avatarUrl ?? item.imageUrl;
+
+  if (!imageUrl) {
+    return null;
+  }
+
+  const trimmedImageUrl = imageUrl.trim();
+
+  return trimmedImageUrl.length > 0 ? trimmedImageUrl : null;
 }
 
 function getUpgradeResultMetrics(result: CollectionUpgradeItemResponse | null) {
