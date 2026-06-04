@@ -132,6 +132,31 @@ export type CollectionInventoryGroup = {
   latestObtainedAt: string | null;
 };
 
+export type CollectionInventoryStatusFilter =
+  | ""
+  | "available"
+  | "listed"
+  | "locked"
+  | "minting"
+  | "minted";
+
+export type CollectionInventorySort =
+  | "recently_obtained"
+  | "rarity_high_to_low"
+  | "rarity_low_to_high"
+  | "level_high_to_low"
+  | "level_low_to_high"
+  | "power_high_to_low"
+  | "power_low_to_high"
+  | "name_a_to_z";
+
+export type CollectionInventoryFilters = {
+  rarity: string;
+  typeCode: string;
+  status: CollectionInventoryStatusFilter;
+  sort: CollectionInventorySort;
+};
+
 export type CollectionInventoryDetail = CollectionInventoryItem & {
   formId: string | null;
   basePower: number | null;

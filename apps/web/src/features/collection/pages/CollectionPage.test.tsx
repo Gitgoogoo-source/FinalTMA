@@ -344,6 +344,23 @@ describe("CollectionPage stage-3 frontend states", () => {
     ).not.toBeInTheDocument();
     expect(screen.queryByText("我的藏品")).not.toBeInTheDocument();
     expect(screen.queryByText("2 件")).not.toBeInTheDocument();
+    expect(screen.queryByText("件藏品")).not.toBeInTheDocument();
+    expect(screen.queryByText("2 组")).not.toBeInTheDocument();
+    expect(
+      within(screen.getByLabelText("藏品筛选")).getByRole("button", {
+        name: /稀有度/,
+      }),
+    ).toBeVisible();
+    expect(
+      within(screen.getByLabelText("藏品筛选")).getByRole("button", {
+        name: /类型/,
+      }),
+    ).toBeVisible();
+    expect(
+      within(screen.getByLabelText("藏品筛选")).getByRole("button", {
+        name: /状态/,
+      }),
+    ).toBeVisible();
 
     const secondThumb = screen.getByRole("button", { name: /月冕守门人/ });
     expect(secondThumb).toHaveAttribute("aria-pressed", "false");
@@ -476,11 +493,67 @@ describe("CollectionPage stage-3 frontend states", () => {
       name: /烈焰龙/,
     });
     expect(groupedDragonThumbs).toHaveLength(2);
-    expect(groupedDragonThumbs[0]!.querySelector(".character-thumb__count")).toBeNull();
-    expect(groupedDragonThumbs[1]!.querySelector(".character-thumb__count")).toBeNull();
     expect(
-      within(screen.getByLabelText("藏品网格")).getAllByRole("button"),
+      groupedDragonThumbs[0]!.querySelector(".character-thumb__count"),
+    ).toBeNull();
+    expect(
+      groupedDragonThumbs[1]!.querySelector(".character-thumb__count"),
+    ).toBeNull();
+    expect(
+      screen.getByLabelText("藏品网格").querySelectorAll(".character-thumb"),
     ).toHaveLength(3);
+  });
+
+  it("filters owned collection groups by rarity and resets the filter bar", () => {
+    const firstItem = makeItem();
+    const secondItem = makeItem({
+      itemInstanceId: ITEM_B_ID,
+      name: "月冕守门人",
+      power: 88,
+      rarity: {
+        code: "legendary",
+        label: "传说",
+        sortOrder: 40,
+      },
+      templateId: "77777777-7777-4777-8777-777777777777",
+      templateSlug: "moon_crown_guardian",
+    });
+    setInventoryItems(firstItem, secondItem);
+
+    renderCollectionPage();
+
+    const filterBar = screen.getByLabelText("藏品筛选");
+    fireEvent.click(within(filterBar).getByRole("button", { name: /稀有度/ }));
+    fireEvent.click(within(filterBar).getByRole("button", { name: "传说" }));
+
+    expect(
+      screen.queryByRole("button", { name: /森林幼芽/ }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /月冕守门人/ })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+
+    fireEvent.click(within(filterBar).getByRole("button", { name: "传说" }));
+    expect(
+      within(filterBar).getByRole("button", { name: "普通" }),
+    ).toBeVisible();
+    fireEvent.click(within(filterBar).getByRole("button", { name: "普通" }));
+
+    expect(screen.getByRole("button", { name: /森林幼芽/ })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(
+      screen.queryByRole("button", { name: /月冕守门人/ }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(
+      within(filterBar).getByRole("button", { name: "重置藏品筛选" }),
+    );
+
+    expect(screen.getByRole("button", { name: /森林幼芽/ })).toBeVisible();
+    expect(screen.getByRole("button", { name: /月冕守门人/ })).toBeVisible();
   });
 
   it("does not show a manual load-more control when more items are available", () => {
@@ -1097,9 +1170,7 @@ describe("CollectionPage stage-3 frontend states", () => {
     expect(evolveDialog.closest(".evolve-panel--liquid-glass")).not.toBeNull();
     expect(within(evolveDialog).getByText("藏品进化")).toBeVisible();
     expect(within(evolveDialog).getByLabelText("目标藏品")).toBeVisible();
-    expect(
-      within(evolveDialog).getByText("Verdant Ranger"),
-    ).toBeVisible();
+    expect(within(evolveDialog).getByText("Verdant Ranger")).toBeVisible();
     expect(within(evolveDialog).getByLabelText("进化预览")).toBeVisible();
     expect(within(evolveDialog).getByText("KCOIN 消耗")).toBeVisible();
     expect(within(evolveDialog).getByText("成功率")).toBeVisible();

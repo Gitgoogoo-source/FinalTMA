@@ -23,8 +23,11 @@ import { UpgradePanel } from "../components/UpgradePanel";
 import type {
   CollectionDecomposeItemResponse,
   CollectionEvolveItemResponse,
+  CollectionInventoryFilters,
   CollectionInventoryGroup,
   CollectionInventoryItem,
+  CollectionInventorySort,
+  CollectionInventoryStatusFilter,
   CollectionUpgradeItemResponse,
 } from "../collection.types";
 import { useCancelInventorySell } from "../hooks/useCancelInventorySell";
@@ -40,6 +43,8 @@ export function CollectionPage() {
   const sellRulesQuery = useMarketSellRules();
   const items = inventoryQuery.items;
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [collectionFilters, setCollectionFilters] =
+    useState<CollectionInventoryFilters>(DEFAULT_COLLECTION_FILTERS);
   const [isSellOpen, setIsSellOpen] = useState(false);
   const [isUpgradeOpen, setIsUpgradeOpen] = useState(false);
   const [isEvolveOpen, setIsEvolveOpen] = useState(false);
@@ -69,13 +74,28 @@ export function CollectionPage() {
 
     return groupCollectionInventoryItems(items);
   }, [inventoryQuery.groups, items]);
-  const selectedItem = useMemo(
-    () =>
-      items.find((item) => item.itemInstanceId === selectedItemId) ??
-      groupedItems[0]?.representativeItem ??
-      null,
-    [groupedItems, items, selectedItemId],
+  const filteredGroups = useMemo(
+    () => filterAndSortCollectionGroups(groupedItems, collectionFilters),
+    [collectionFilters, groupedItems],
   );
+  const hasActiveCollectionFilters = hasActiveFilters(collectionFilters);
+  const selectedItem = useMemo(() => {
+    const visibleSelectedItem = selectedItemId
+      ? findGroupRepresentativeItem(filteredGroups, selectedItemId)
+      : null;
+    const selectedInventoryItem = selectedItemId
+      ? (items.find((item) => item.itemInstanceId === selectedItemId) ??
+        findGroupRepresentativeItem(groupedItems, selectedItemId))
+      : null;
+
+    return (
+      visibleSelectedItem ??
+      filteredGroups[0]?.representativeItem ??
+      selectedInventoryItem ??
+      groupedItems[0]?.representativeItem ??
+      null
+    );
+  }, [filteredGroups, groupedItems, items, selectedItemId]);
   const mintConfirmItem = useMemo(
     () =>
       mintConfirmTargetId
@@ -86,7 +106,7 @@ export function CollectionPage() {
   );
 
   useEffect(() => {
-    if (items.length === 0) {
+    if (groupedItems.length === 0) {
       setSelectedItemId(null);
       setIsSellOpen(false);
       setIsUpgradeOpen(false);
@@ -101,14 +121,35 @@ export function CollectionPage() {
       return;
     }
 
-    if (!selectedItem) {
+    if (filteredGroups.length === 0) {
       return;
     }
 
-    if (selectedItem.itemInstanceId !== selectedItemId) {
-      setSelectedItemId(selectedItem.itemInstanceId);
+    const selectedItemIsVisible = selectedItemId
+      ? filteredGroups.some((group) =>
+          group.itemInstanceIds.includes(selectedItemId),
+        )
+      : false;
+
+    if (!selectedItemIsVisible) {
+      setSelectedItemId(
+        filteredGroups[0]?.representativeItem.itemInstanceId ?? null,
+      );
     }
-  }, [items, selectedItem, selectedItemId]);
+  }, [filteredGroups, groupedItems.length, selectedItemId]);
+
+  function handleCollectionFilterChange<
+    Key extends keyof CollectionInventoryFilters,
+  >(key: Key, value: CollectionInventoryFilters[Key]) {
+    setCollectionFilters((current) => ({
+      ...current,
+      [key]: value,
+    }));
+  }
+
+  function handleResetCollectionFilters() {
+    setCollectionFilters({ ...DEFAULT_COLLECTION_FILTERS });
+  }
 
   function handleOpenUpgrade() {
     setIsSellOpen(false);
@@ -367,9 +408,13 @@ export function CollectionPage() {
         onUpgrade={handleOpenUpgrade}
       />
       <CharacterGrid
-        groups={groupedItems}
+        filterGroups={groupedItems}
+        filters={collectionFilters}
+        groups={filteredGroups}
+        hasActiveFilters={hasActiveCollectionFilters}
         selectedItemId={selectedItem.itemInstanceId}
-        totalCount={inventoryQuery.total}
+        onFilterChange={handleCollectionFilterChange}
+        onResetFilters={handleResetCollectionFilters}
         onSelect={setSelectedItemId}
       />
       <CollectionSellEntry
@@ -452,6 +497,215 @@ export function CollectionPage() {
         onClose={() => setDecomposeResult(null)}
       />
     </section>
+  );
+}
+
+const DEFAULT_COLLECTION_FILTERS: CollectionInventoryFilters = {
+  rarity: "",
+  typeCode: "",
+  status: "",
+  sort: "recently_obtained",
+};
+
+const RARITY_SORT_FALLBACK: Readonly<Record<string, number>> = {
+  common: 10,
+  rare: 20,
+  epic: 30,
+  legendary: 40,
+  mythic: 50,
+};
+
+function filterAndSortCollectionGroups(
+  groups: CollectionInventoryGroup[],
+  filters: CollectionInventoryFilters,
+): CollectionInventoryGroup[] {
+  const filtered = groups.filter((group) => {
+    const item = group.representativeItem;
+
+    if (filters.rarity && item.rarity.code !== filters.rarity) {
+      return false;
+    }
+
+    if (filters.typeCode && item.typeCode !== filters.typeCode) {
+      return false;
+    }
+
+    if (
+      filters.status &&
+      getCollectionGroupStatusCount(group, filters.status) === 0
+    ) {
+      return false;
+    }
+
+    return true;
+  });
+
+  return filtered.sort((first, second) =>
+    compareCollectionGroups(first, second, filters.sort),
+  );
+}
+
+function hasActiveFilters(filters: CollectionInventoryFilters): boolean {
+  return (
+    Boolean(filters.rarity) ||
+    Boolean(filters.typeCode) ||
+    Boolean(filters.status) ||
+    filters.sort !== DEFAULT_COLLECTION_FILTERS.sort
+  );
+}
+
+function findGroupRepresentativeItem(
+  groups: CollectionInventoryGroup[],
+  itemInstanceId: string,
+): CollectionInventoryItem | null {
+  return (
+    groups.find((group) => group.itemInstanceIds.includes(itemInstanceId))
+      ?.representativeItem ?? null
+  );
+}
+
+function compareCollectionGroups(
+  first: CollectionInventoryGroup,
+  second: CollectionInventoryGroup,
+  sort: CollectionInventorySort,
+): number {
+  if (sort === "rarity_high_to_low") {
+    return (
+      compareNullableNumbersDesc(
+        getRaritySortValue(first.representativeItem),
+        getRaritySortValue(second.representativeItem),
+      ) || compareCollectionGroupNames(first, second)
+    );
+  }
+
+  if (sort === "rarity_low_to_high") {
+    return (
+      compareNullableNumbersAsc(
+        getRaritySortValue(first.representativeItem),
+        getRaritySortValue(second.representativeItem),
+      ) || compareCollectionGroupNames(first, second)
+    );
+  }
+
+  if (sort === "level_high_to_low") {
+    return (
+      compareNullableNumbersDesc(first.maxLevel, second.maxLevel) ||
+      compareCollectionGroupNames(first, second)
+    );
+  }
+
+  if (sort === "level_low_to_high") {
+    return (
+      compareNullableNumbersAsc(first.maxLevel, second.maxLevel) ||
+      compareCollectionGroupNames(first, second)
+    );
+  }
+
+  if (sort === "power_high_to_low") {
+    return (
+      compareNullableNumbersDesc(first.maxPower, second.maxPower) ||
+      compareCollectionGroupNames(first, second)
+    );
+  }
+
+  if (sort === "power_low_to_high") {
+    return (
+      compareNullableNumbersAsc(first.maxPower, second.maxPower) ||
+      compareCollectionGroupNames(first, second)
+    );
+  }
+
+  if (sort === "name_a_to_z") {
+    return compareCollectionGroupNames(first, second);
+  }
+
+  return (
+    getCollectionGroupObtainedTime(second) -
+      getCollectionGroupObtainedTime(first) ||
+    compareCollectionGroupNames(first, second)
+  );
+}
+
+function getCollectionGroupStatusCount(
+  group: CollectionInventoryGroup,
+  status: CollectionInventoryStatusFilter,
+): number {
+  if (status === "available") {
+    return group.availableCount;
+  }
+  if (status === "listed") {
+    return group.listedCount;
+  }
+  if (status === "locked") {
+    return group.lockedCount;
+  }
+  if (status === "minting") {
+    return group.mintingCount;
+  }
+  if (status === "minted") {
+    return group.mintedCount;
+  }
+
+  return group.ownedCount;
+}
+
+function getRaritySortValue(item: CollectionInventoryItem): number | null {
+  return (
+    item.rarity.sortOrder ?? RARITY_SORT_FALLBACK[item.rarity.code] ?? null
+  );
+}
+
+function compareNullableNumbersAsc(
+  first: number | null,
+  second: number | null,
+): number {
+  if (first === null && second === null) {
+    return 0;
+  }
+  if (first === null) {
+    return 1;
+  }
+  if (second === null) {
+    return -1;
+  }
+
+  return first - second;
+}
+
+function compareNullableNumbersDesc(
+  first: number | null,
+  second: number | null,
+): number {
+  if (first === null && second === null) {
+    return 0;
+  }
+  if (first === null) {
+    return 1;
+  }
+  if (second === null) {
+    return -1;
+  }
+
+  return second - first;
+}
+
+function getCollectionGroupObtainedTime(
+  group: CollectionInventoryGroup,
+): number {
+  const value =
+    group.latestObtainedAt ?? group.representativeItem.obtainedAt ?? "";
+  const timestamp = Date.parse(value);
+
+  return Number.isFinite(timestamp) ? timestamp : 0;
+}
+
+function compareCollectionGroupNames(
+  first: CollectionInventoryGroup,
+  second: CollectionInventoryGroup,
+): number {
+  return first.representativeItem.name.localeCompare(
+    second.representativeItem.name,
+    "zh-CN",
   );
 }
 
