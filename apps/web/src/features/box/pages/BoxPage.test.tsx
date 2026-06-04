@@ -29,7 +29,6 @@ const mocks = vi.hoisted(() => ({
   drawResultRefetch: vi.fn(),
   paymentStatusByOrderId: new Map<string, DrawResultResponse>(),
   paymentStatusRefetch: vi.fn(),
-  rewardsRefetch: vi.fn(),
   useDrawResult: vi.fn(),
   usePaymentStatus: vi.fn(),
 }));
@@ -54,20 +53,6 @@ vi.mock("@/features/banners/hooks/useBanners", () => ({
     primaryBanner: null,
     refetch: vi.fn(),
     serverTime: null,
-  }),
-}));
-
-vi.mock("../hooks/useBoxRewards", () => ({
-  useBoxRewards: () => ({
-    error: null,
-    generatedAt: "2026-05-28T00:00:00.000Z",
-    isError: false,
-    isLoading: false,
-    pityRule: null,
-    poolVersion: 1,
-    poolVersionId: "33333333-3333-4333-8333-333333333333",
-    refetch: mocks.rewardsRefetch,
-    rewards: [],
   }),
 }));
 
@@ -162,15 +147,13 @@ describe("BoxPage Stars invoice flow", () => {
     expect(screen.getByText("支付窗口已打开")).toBeVisible();
   });
 
-  it("refreshes possible rewards when the sheet opens", async () => {
+  it("opens hardcoded possible rewards without refreshing the server", async () => {
     renderBoxPage();
 
     fireEvent.click(screen.getByRole("button", { name: /查看全部/ }));
 
-    await waitFor(() => {
-      expect(mocks.rewardsRefetch).toHaveBeenCalledTimes(1);
-    });
     expect(screen.getByRole("dialog", { name: "测试盲盒" })).toBeVisible();
+    expect(screen.getByText("Forest Sproutling")).toBeVisible();
   });
 
   it("keeps open buttons locked while an order is waiting for payment", async () => {
@@ -389,6 +372,9 @@ describe("BoxPage Stars invoice flow", () => {
         expectedPriceStars: 90,
       }),
       expect.any(Object),
+    );
+    expect(mocks.createOrderMutate.mock.calls[0]?.[0]).not.toHaveProperty(
+      "expectedPoolVersionId",
     );
     await waitFor(() => {
       expect(screen.getByText("90 Stars · 10 次")).toBeVisible();

@@ -31,13 +31,13 @@ import type {
   CreateOpenOrderResponse,
   DrawResultResponse,
 } from "../box.types";
-import { useBoxRewards } from "../hooks/useBoxRewards";
 import { useBoxes } from "../hooks/useBoxes";
 import { useCreateOpenOrder } from "../hooks/useCreateOpenOrder";
 import { useDrawResult } from "../hooks/useDrawResult";
 import { usePaymentStatus } from "../hooks/usePaymentStatus";
 import { usePendingDrawOrder } from "../hooks/usePendingDrawOrder";
 import { usePaymentSupportConfig } from "../hooks/usePaymentSupportConfig";
+import { getStaticBoxRewards } from "../staticRewards";
 import {
   clearPendingStarsPaymentOrder,
   useStarsPayment,
@@ -76,8 +76,10 @@ export function BoxPage() {
 
   const selectedBox =
     boxes.find((box) => box.id === selectedBoxId) ?? boxes[0] ?? null;
-  const rewardsQuery = useBoxRewards(selectedBox?.id);
-  const refetchRewards = rewardsQuery.refetch;
+  const staticRewards = useMemo(
+    () => getStaticBoxRewards(selectedBox),
+    [selectedBox],
+  );
   const createOrder = useCreateOpenOrder();
   const openStarsInvoice = useStarsPayment();
   const restoredPendingDrawOrder = usePendingDrawOrder();
@@ -102,11 +104,7 @@ export function BoxPage() {
   });
   const handleOpenRewards = useCallback(() => {
     setRewardsOpen(true);
-
-    if (selectedBox?.id) {
-      void refetchRewards();
-    }
-  }, [refetchRewards, selectedBox?.id]);
+  }, []);
 
   useEffect(() => {
     if (!restoredPendingDrawOrder || paymentPendingOrder || resultOrderId) {
@@ -289,7 +287,6 @@ export function BoxPage() {
             drawCount === 1
               ? selectedBox.singleStarPrice
               : selectedBox.tenDrawPrice,
-          expectedPoolVersionId: rewardsQuery.poolVersionId ?? undefined,
         },
         {
           onSuccess: (order) => {
@@ -331,13 +328,7 @@ export function BoxPage() {
         },
       );
     },
-    [
-      createOrder,
-      openInvoiceForOrder,
-      pushToast,
-      rewardsQuery.poolVersionId,
-      selectedBox,
-    ],
+    [createOrder, openInvoiceForOrder, pushToast, selectedBox],
   );
 
   if (boxesQuery.isLoading && boxes.length === 0) {
@@ -397,8 +388,8 @@ export function BoxPage() {
       ) : null}
 
       <PossibleRewardsRow
-        rewards={rewardsQuery.rewards}
-        isLoading={rewardsQuery.isLoading}
+        rewards={staticRewards.items}
+        isLoading={false}
         onOpen={handleOpenRewards}
       />
 
@@ -422,14 +413,14 @@ export function BoxPage() {
       <PossibleRewardsSheet
         open={rewardsOpen}
         box={selectedBox}
-        rewards={rewardsQuery.rewards}
-        isLoading={rewardsQuery.isLoading}
-        isError={rewardsQuery.isError}
-        poolVersion={rewardsQuery.poolVersion}
-        pityRule={rewardsQuery.pityRule}
-        generatedAt={rewardsQuery.generatedAt}
-        errorMessage={getRewardsErrorMessage(rewardsQuery.error)}
-        onRetry={() => void rewardsQuery.refetch()}
+        rewards={staticRewards.items}
+        isLoading={false}
+        isError={false}
+        poolVersion={staticRewards.poolVersion}
+        pityRule={staticRewards.pityRule}
+        generatedAt={staticRewards.generatedAt}
+        errorMessage={null}
+        onRetry={() => undefined}
         onClose={() => setRewardsOpen(false)}
       />
 
