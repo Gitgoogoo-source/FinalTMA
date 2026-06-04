@@ -36,6 +36,26 @@ describe("collection api", () => {
     expect(result.nextCursor).toBeNull();
   });
 
+  it("passes include_locked through the inventory list API", async () => {
+    mocks.apiRequest.mockResolvedValueOnce({
+      items: [],
+      total: 0,
+      limit: 100,
+      offset: 0,
+      next_cursor: null,
+      statuses: ["available", "locked", "listed", "minting", "minted"],
+    });
+
+    const { fetchInventory } = await import("./collection.api");
+    await fetchInventory({ includeLocked: true, limit: 100 });
+    const [url] = mocks.apiRequest.mock.calls[0] ?? [];
+    const params = new URLSearchParams(String(url).split("?")[1] ?? "");
+
+    expect(String(url).startsWith("/inventory/list?")).toBe(true);
+    expect(params.get("include_locked")).toBe("true");
+    expect(params.get("limit")).toBe("100");
+  });
+
   it("requests onchain status for inventory detail so Mint state is server-backed", async () => {
     mocks.apiRequest.mockResolvedValueOnce({
       item_instance_id: "66666666-6666-4666-8666-666666666666",

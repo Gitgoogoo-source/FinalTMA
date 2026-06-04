@@ -36,7 +36,7 @@ export function GrowthResultModal({
 
   return (
     <div
-      className={`growth-result-modal growth-result-modal--${tone}`}
+      className={`growth-result-modal growth-panel--liquid-glass growth-result-modal--${tone}`}
       role="presentation"
     >
       <button

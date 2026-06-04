@@ -37,6 +37,7 @@ const RARITY_LABELS: Record<string, string> = {
 
 type FetchInventoryParams = {
   cursor?: string | null;
+  includeLocked?: boolean;
   limit?: number;
 };
 
@@ -49,6 +50,9 @@ export async function fetchInventory(
 
   if (input.cursor) {
     params.set("cursor", input.cursor);
+  }
+  if (input.includeLocked) {
+    params.set("include_locked", "true");
   }
 
   const response = await apiRequest<unknown>(

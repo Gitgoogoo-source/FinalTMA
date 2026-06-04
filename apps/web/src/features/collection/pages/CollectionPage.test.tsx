@@ -1017,9 +1017,11 @@ describe("CollectionPage stage-3 frontend states", () => {
       itemInstanceId: ITEM_A_ID,
       targetLevel: 2,
     });
-    expect(
-      await screen.findByRole("dialog", { name: "升级成功" }),
-    ).toBeVisible();
+    const resultDialog = await screen.findByRole("dialog", {
+      name: "升级成功",
+    });
+    expect(resultDialog).toBeVisible();
+    expect(resultDialog.closest(".growth-panel--liquid-glass")).not.toBeNull();
     expect(screen.getByText("消耗 Fgems")).toBeVisible();
     expect(screen.getByText("80 -> 60")).toBeVisible();
   });

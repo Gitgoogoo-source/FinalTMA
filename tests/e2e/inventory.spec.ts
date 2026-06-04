@@ -73,6 +73,26 @@ test("升级面板完成升级并刷新藏品展示", async ({ page }) => {
 
   const resultDialog = page.getByRole("dialog", { name: "升级成功" });
   await expect(resultDialog).toBeVisible();
+  const resultChrome = await resultDialog.evaluate((node) => {
+    const panel = node as HTMLElement;
+    const root = panel.closest(".growth-result-modal");
+    const backdrop = root?.querySelector(".growth-result-modal__backdrop");
+    const panelStyle = window.getComputedStyle(panel);
+    const backdropStyle = backdrop
+      ? window.getComputedStyle(backdrop)
+      : null;
+
+    return {
+      backdropBackgroundImage: backdropStyle?.backgroundImage ?? "none",
+      panelBackgroundImage: panelStyle.backgroundImage,
+      panelBoxShadow: panelStyle.boxShadow,
+      rootHasGlass: root?.classList.contains("growth-panel--liquid-glass"),
+    };
+  });
+  expect(resultChrome.rootHasGlass).toBe(true);
+  expect(resultChrome.backdropBackgroundImage).not.toBe("none");
+  expect(resultChrome.panelBackgroundImage).not.toBe("none");
+  expect(resultChrome.panelBoxShadow).not.toBe("none");
   await expect(resultDialog.getByText("Lv.1 -> Lv.2")).toBeVisible();
   await expect(resultDialog.getByText("10 -> 18")).toBeVisible();
   await expect(resultDialog.getByText("80 -> 60")).toBeVisible();
