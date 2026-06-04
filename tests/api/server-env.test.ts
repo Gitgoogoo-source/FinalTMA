@@ -466,21 +466,27 @@ describe("server env validation", () => {
 function createFeatureFlagClient(rows: FeatureFlagRows) {
   return {
     schema: () => ({
-      from: () => ({
-        select: () => ({
-          eq: (_column: string, key: string) => ({
-            maybeSingle: async () => ({
-              data:
-                typeof rows[key] === "boolean"
-                  ? {
-                      enabled: rows[key],
-                    }
-                  : null,
-              error: null,
-            }),
-          }),
-        }),
-      }),
+      rpc: async (_rpcName: string, args: Record<string, unknown>) => {
+        const key = typeof args.p_key === "string" ? args.p_key : "";
+        const enabled = rows[key];
+
+        return {
+          data:
+            typeof enabled === "boolean"
+              ? {
+                  found: true,
+                  key,
+                  enabled,
+                }
+              : {
+                  found: false,
+                  key,
+                  enabled: null,
+                },
+          error: null,
+          count: null,
+        };
+      },
     }),
   } as never;
 }

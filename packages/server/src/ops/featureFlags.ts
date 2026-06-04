@@ -82,15 +82,6 @@ export async function readOpsFeatureFlag(
     ? readFeatureFlagEnv(options.envName, options.env)
     : undefined;
 
-  if (envValue !== undefined) {
-    return {
-      key: options.key,
-      enabled: envValue,
-      source: "env",
-      envName: options.envName,
-    };
-  }
-
   try {
     const row = await readFeatureFlagRow(options.key, options.client);
 

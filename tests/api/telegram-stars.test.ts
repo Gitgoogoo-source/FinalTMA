@@ -253,9 +253,13 @@ describe("telegramStars payment helpers", () => {
 
     expect(rpcCalls.map((call) => call.name)).toEqual([
       "payment_record_successful_payment",
+      "ops_read_feature_flag",
       "gacha_process_paid_order",
     ]);
     expect(rpcCalls[1]?.args).toMatchObject({
+      p_key: "FEATURE_PAYMENT_WEBHOOK_FULFILLMENT_ENABLED",
+    });
+    expect(rpcCalls[2]?.args).toMatchObject({
       p_star_order_id: STAR_ORDER_ID,
       p_telegram_payment_charge_id: "tg-charge-test-001",
       p_provider_payment_charge_id: "provider-charge-test-001",
@@ -345,7 +349,11 @@ describe("telegramStars payment helpers", () => {
 
     expect(rpcCalls.map((call) => call.name)).toEqual([
       "payment_record_successful_payment",
+      "ops_read_feature_flag",
     ]);
+    expect(rpcCalls[1]?.args).toMatchObject({
+      p_key: "FEATURE_PAYMENT_WEBHOOK_FULFILLMENT_ENABLED",
+    });
     expect(result).toMatchObject({
       eventType: "successful_payment",
       paymentRecorded: true,
@@ -532,8 +540,12 @@ describe("telegramStars payment helpers", () => {
 
     expect(rpcCalls.map((call) => call.name)).toEqual([
       "payment_record_successful_payment",
+      "ops_read_feature_flag",
       "gacha_process_paid_order",
     ]);
+    expect(rpcCalls[1]?.args).toMatchObject({
+      p_key: "FEATURE_PAYMENT_WEBHOOK_FULFILLMENT_ENABLED",
+    });
     expect(result).toMatchObject({
       eventType: "successful_payment",
       paymentRecorded: true,
