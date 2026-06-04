@@ -1999,49 +1999,14 @@ a {
     linear-gradient(155deg, #36434b, #ff9c00 55%, #1ce204);
 }
 
-.box-tier-card__name,
-.box-tier-card__price,
-.box-tier-card__quality,
-.box-tier-card__stock {
+.box-tier-card__name {
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.box-tier-card__name {
   font-size: 13px;
   font-weight: 900;
   line-height: 1.15;
-}
-
-.box-tier-card__quality {
-  color: rgba(54 67 75 / 58%);
-  font-size: 10px;
-  font-weight: 850;
-  line-height: 1.1;
-}
-
-.box-tier-card__price {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  color: rgba(54 67 75 / 68%);
-  font-size: 10px;
-  font-weight: 800;
-  line-height: 1.1;
-}
-
-.box-tier-card__price svg {
-  color: #8a9299;
-}
-
-.box-tier-card__stock {
-  color: rgba(54 67 75 / 56%);
-  font-size: 9px;
-  font-weight: 850;
-  line-height: 1.1;
 }
 
 .box-tier-card__check {
@@ -2056,35 +2021,6 @@ a {
   color: #fffdfa;
   background: #ff9c00;
   box-shadow: 0 5px 12px rgb(255 156 0 / 34%);
-}
-
-.box-tier-card__state {
-  width: 12px;
-  height: 12px;
-  position: absolute;
-  left: 50%;
-  bottom: 8px;
-  border: 2px solid #fffdfa;
-  border-radius: 999px;
-  transform: translateX(-50%);
-  background: #8a9299;
-  box-shadow: 0 3px 8px rgb(33 39 44 / 12%);
-}
-
-.box-tier-card__state--available {
-  background: #45bf35;
-}
-
-.box-tier-card__state--low {
-  background: #ff9c00;
-}
-
-.box-tier-card__state--sold {
-  background: #8a9299;
-}
-
-.box-tier-card__state--muted {
-  background: #ccd2d5;
 }
 
 .box-status-badge {
@@ -10259,11 +10195,6 @@ a {
 
   .box-tier-card__name {
     font-size: 12px;
-  }
-
-  .box-tier-card__price,
-  .box-tier-card__stock {
-    font-size: 9px;
   }
 
   .box-reward-avatar img,

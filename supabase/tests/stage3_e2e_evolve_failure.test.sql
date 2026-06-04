@@ -286,6 +286,12 @@ values (
   testutil.stage3_e2e_evolve_failure_create_catalog_fixture('stage3-e2e-evolve-failure')
 );
 
+insert into _ids (key, payload)
+values (
+  'target_catalog',
+  testutil.stage3_e2e_evolve_failure_create_catalog_fixture('stage3-e2e-evolve-failure-target')
+);
+
 insert into inventory.evolution_rules (
   from_template_id,
   from_form_id,
@@ -299,8 +305,8 @@ insert into inventory.evolution_rules (
 ) values (
   ((select payload from _ids where key = 'catalog') ->> 'template_id')::uuid,
   ((select payload from _ids where key = 'catalog') ->> 'base_form_id')::uuid,
-  ((select payload from _ids where key = 'catalog') ->> 'template_id')::uuid,
-  ((select payload from _ids where key = 'catalog') ->> 'evolved_form_id')::uuid,
+  ((select payload from _ids where key = 'target_catalog') ->> 'template_id')::uuid,
+  ((select payload from _ids where key = 'target_catalog') ->> 'base_form_id')::uuid,
   3,
   200,
   0,
@@ -364,7 +370,7 @@ select is(((select payload from _ids where key = 'detail_before') -> 'evolution_
 select is(((select payload from _ids where key = 'detail_before') -> 'evolution_preview' ->> 'kcoin_cost')::numeric, 200::numeric, 'evolution preview returns KCOIN cost');
 select is(((select payload from _ids where key = 'detail_before') -> 'evolution_preview' ->> 'user_kcoin_balance')::numeric, 1000::numeric, 'evolution preview sees enough KCOIN');
 select is(((select payload from _ids where key = 'detail_before') -> 'evolution_preview' ->> 'success_rate_bps')::integer, 0, 'evolution preview uses a low success rate rule');
-select is(((select payload from _ids where key = 'detail_before') -> 'evolution_preview' ->> 'target_form_id')::uuid, ((select payload from _ids where key = 'catalog') ->> 'evolved_form_id')::uuid, 'evolution preview exposes the target form');
+select is(((select payload from _ids where key = 'detail_before') -> 'evolution_preview' ->> 'target_form_id')::uuid, ((select payload from _ids where key = 'target_catalog') ->> 'base_form_id')::uuid, 'evolution preview exposes the target form');
 
 insert into _ids (key, payload)
 select

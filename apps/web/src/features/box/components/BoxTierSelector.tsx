@@ -1,6 +1,4 @@
-import { Check, Star } from "lucide-react";
-
-import { formatCurrencyAmount } from "@/shared/lib/formatCurrency";
+import { Check } from "lucide-react";
 
 import type { BlindBox } from "../box.types";
 
@@ -19,7 +17,6 @@ export function BoxTierSelector({
     <section className="box-tier-selector" aria-label="选择盲盒档次">
       {boxes.map((box) => {
         const selected = box.id === selectedBoxId;
-        const stock = getStockMeta(box);
 
         return (
           <button
@@ -28,27 +25,10 @@ export function BoxTierSelector({
             onClick={() => onSelect(box.id)}
             type="button"
             aria-pressed={selected}
-            aria-label={`${box.name}，${formatCurrencyAmount(
-              box.singleStarPrice,
-            )} Stars，${stock.label}${selected ? "，已选中" : ""}`}
+            aria-label={`${box.name}，${getTierQualityLabel(box.tier)}${selected ? "，已选中" : ""}`}
           >
             <BoxTierPreview box={box} />
             <span className="box-tier-card__name">{box.name}</span>
-            <span className="box-tier-card__quality">
-              {getTierQualityLabel(box.tier)}
-            </span>
-            <span className="box-tier-card__price">
-              <Star aria-hidden="true" size={12} strokeWidth={2.5} />
-              {formatCurrencyAmount(box.singleStarPrice)} Stars
-            </span>
-            <span className="box-tier-card__stock" title={stock.title}>
-              {stock.label}
-            </span>
-            <span
-              className={`box-tier-card__state box-tier-card__state--${stock.tone}`}
-              title={stock.title}
-              aria-hidden="true"
-            />
             <span className="box-tier-card__check" aria-hidden="true">
               {selected ? <Check size={13} strokeWidth={3} /> : null}
             </span>
@@ -110,16 +90,4 @@ function getTierQualityLabel(tier: string): string {
   }
 
   return "基础品质";
-}
-
-function getStockMeta(box: BlindBox): {
-  label: string;
-  title: string;
-  tone: "available" | "muted";
-} {
-  return {
-    label: "无限供应",
-    title: "盲盒无限供应",
-    tone: box.isOpenable ? "available" : "muted",
-  };
 }
