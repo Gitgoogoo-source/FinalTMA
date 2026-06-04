@@ -90,7 +90,17 @@ export async function fetchDrawResult(
 export async function fetchPaymentStatus(
   orderId: string,
 ): Promise<DrawResultResponse> {
-  return fetchBoxOrderResult(orderId, false);
+  const params = new URLSearchParams({
+    orderId,
+  });
+  const response = await apiRequest<unknown>(
+    `${API_ENDPOINTS.boxes.paymentStatus}?${params.toString()}`,
+    {
+      method: "GET",
+    },
+  );
+
+  return normalizePaymentStatusResponse(response, orderId);
 }
 
 export async function fetchPaymentSupportConfig(): Promise<PaymentSupportConfig> {
@@ -452,6 +462,92 @@ function normalizeDrawResultResponse(
     paymentOrderStatus,
     balances: normalizeDrawResultBalances(payload.balances),
     results: rawResults.map(normalizeDrawResultItem),
+    serverTime:
+      readString(payload.serverTime) ?? readString(payload.server_time),
+  };
+}
+
+function normalizePaymentStatusResponse(
+  response: unknown,
+  fallbackOrderId: string,
+): DrawResultResponse {
+  const payload = isRecord(response) ? response : {};
+  const drawOrder = isRecord(payload.drawOrder)
+    ? payload.drawOrder
+    : isRecord(payload.draw_order)
+      ? payload.draw_order
+      : {};
+  const payment = isRecord(payload.payment) ? payload.payment : {};
+  const starOrder = isRecord(payload.starOrder)
+    ? payload.starOrder
+    : isRecord(payload.star_order)
+      ? payload.star_order
+      : {};
+  const fulfillment = isRecord(payload.fulfillment) ? payload.fulfillment : {};
+  const orderStatus =
+    readString(drawOrder.status) ??
+    readString(payload.orderStatus) ??
+    readString(payload.order_status) ??
+    "unknown";
+  const paidAt =
+    readString(payment.paidAt) ??
+    readString(payment.paid_at) ??
+    readString(starOrder.paidAt) ??
+    readString(starOrder.paid_at) ??
+    readString(drawOrder.paidAt) ??
+    readString(drawOrder.paid_at);
+  const completedAt =
+    readString(fulfillment.completedAt) ??
+    readString(fulfillment.completed_at) ??
+    readString(starOrder.fulfilledAt) ??
+    readString(starOrder.fulfilled_at) ??
+    readString(drawOrder.completedAt) ??
+    readString(drawOrder.completed_at);
+  const paymentOrderStatus =
+    readPaymentOrderStatus(payload, orderStatus, payment) ??
+    normalizePaymentOrderStatus(starOrder.paymentOrderStatus) ??
+    normalizePaymentOrderStatus(starOrder.payment_order_status) ??
+    normalizePaymentOrderStatus(starOrder.status) ??
+    normalizePaymentOrderStatus(fulfillment.status);
+
+  return {
+    orderId:
+      readString(payload.orderId) ??
+      readString(payload.order_id) ??
+      readString(drawOrder.id) ??
+      fallbackOrderId,
+    status:
+      readBoolean(payload.resultReady) === true ||
+      readBoolean(payload.result_ready) === true
+        ? "completed"
+        : "pending",
+    orderStatus,
+    quantity:
+      readNumber(drawOrder.drawCount) ??
+      readNumber(drawOrder.draw_count) ??
+      readNumber(drawOrder.quantity) ??
+      0,
+    paidStars:
+      readNumber(drawOrder.totalPriceStars) ??
+      readNumber(drawOrder.total_price_stars) ??
+      readNumber(payment.xtrAmount) ??
+      readNumber(payment.xtr_amount) ??
+      readNumber(starOrder.xtrAmount) ??
+      readNumber(starOrder.xtr_amount) ??
+      0,
+    returnedKcoin:
+      readNumber(drawOrder.returnedKcoin) ??
+      readNumber(drawOrder.returned_kcoin) ??
+      0,
+    invoicePayload:
+      readString(payload.invoicePayload) ?? readString(payload.invoice_payload),
+    paidAt,
+    completedAt,
+    boxName: null,
+    paymentStatus: toPaymentDisplayStatus(paymentOrderStatus, paidAt),
+    paymentOrderStatus,
+    balances: null,
+    results: [],
     serverTime:
       readString(payload.serverTime) ?? readString(payload.server_time),
   };

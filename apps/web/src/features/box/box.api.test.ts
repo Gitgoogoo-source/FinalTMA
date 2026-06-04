@@ -111,15 +111,24 @@ describe("box api", () => {
 
   it("queries payment status without requesting result items", async () => {
     mocks.apiRequest.mockResolvedValueOnce({
-      draw_order_id: "11111111-1111-4111-8111-111111111111",
-      draw_count: 10,
-      invoice_payload: "gacha:test-payload",
-      order_status: "invoice_created",
-      payment: {
+      order_id: "11111111-1111-4111-8111-111111111111",
+      payment_order_status: "invoice_created",
+      result_ready: false,
+      draw_order: {
+        draw_count: 10,
+        id: "11111111-1111-4111-8111-111111111111",
+        paid_at: null,
+        quantity: 10,
+        returned_kcoin: 1000,
         status: "invoice_created",
+        total_price_stars: 90,
+      },
+      payment: {
+        paid_at: null,
+        status: "invoice_created",
+        xtr_amount: 90,
       },
       status: "pending",
-      total_price_stars: 90,
     });
 
     const { fetchPaymentStatus } = await import("./box.api");
@@ -128,15 +137,18 @@ describe("box api", () => {
     );
 
     expect(mocks.apiRequest).toHaveBeenCalledWith(
-      "/boxes/result?orderId=11111111-1111-4111-8111-111111111111&includeItems=false",
+      "/boxes/payment-status?orderId=11111111-1111-4111-8111-111111111111",
       {
         method: "GET",
       },
     );
     expect(result).toMatchObject({
       orderId: "11111111-1111-4111-8111-111111111111",
+      orderStatus: "invoice_created",
+      paidStars: 90,
       paymentStatus: "invoice_created",
       quantity: 10,
+      returnedKcoin: 1000,
       status: "pending",
     });
     expect(result.results).toEqual([]);
@@ -153,12 +165,9 @@ describe("box api", () => {
     const { fetchPaymentSupportConfig } = await import("./box.api");
     const result = await fetchPaymentSupportConfig();
 
-    expect(mocks.apiRequest).toHaveBeenCalledWith(
-      "/telegram/payment-support",
-      {
-        method: "GET",
-      },
-    );
+    expect(mocks.apiRequest).toHaveBeenCalledWith("/telegram/payment-support", {
+      method: "GET",
+    });
     expect(result).toEqual({
       configured: true,
       supportEmail: "pay@example.test",
