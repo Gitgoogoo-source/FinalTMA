@@ -448,12 +448,14 @@ select 'claim', api.vip_claim_daily_benefit(
 );
 
 select is(((select payload from _ids where key = 'claim') ->> 'fgems_amount')::numeric, 100::numeric, 'daily claim grants 100 FGEMS');
-select is(((select payload from _ids where key = 'claim') ->> 'free_box_count')::integer, 1, 'daily claim grants one free box counter');
-select is(((select payload from _ids where key = 'claim') ->> 'free_box_used_count')::integer, 0, 'daily free box starts unused');
+select is(((select payload from _ids where key = 'claim') ->> 'fgems_claimed')::boolean, true, 'daily FGEMS claim marks FGEMS claimed');
+select is(((select payload from _ids where key = 'claim') ->> 'free_box_claimed')::boolean, false, 'daily FGEMS claim does not claim the free box');
+select is(((select payload from _ids where key = 'claim') ->> 'free_box_count')::integer, 0, 'daily FGEMS claim does not grant a free box counter');
 select is((select count(*)::integer from vip.vip_daily_claims where user_id = (select id from _ids where key = 'user') and claim_date = (now() at time zone 'UTC')::date), 1, 'only one UTC daily claim row exists');
 select is(testutil.balance_of((select id from _ids where key = 'user'), 'FGEMS'), 100::numeric, 'daily claim credits FGEMS balance');
 select is((select count(*)::integer from economy.currency_ledger where user_id = (select id from _ids where key = 'user') and source_type = 'vip_daily_claim'), 1, 'daily claim writes one currency ledger row');
-select is((select count(*)::integer from vip.vip_benefit_ledger where user_id = (select id from _ids where key = 'user') and benefit_type = 'daily_free_box'), 1, 'daily free box grant is written to VIP benefit ledger');
+select is((select count(*)::integer from vip.vip_benefit_ledger where user_id = (select id from _ids where key = 'user') and benefit_type = 'daily_fgems'), 1, 'daily FGEMS grant is written to VIP benefit ledger');
+select is((select count(*)::integer from vip.vip_benefit_ledger where user_id = (select id from _ids where key = 'user') and benefit_type = 'daily_free_box'), 0, 'daily FGEMS claim does not write a free box grant ledger');
 
 insert into _ids (key, payload)
 select 'claim_repeat', api.vip_claim_daily_benefit(
@@ -478,7 +480,29 @@ select 'status_after_claim', api.vip_get_status((select id from _ids where key =
 
 select is(((select payload from _ids where key = 'status_after_claim') ->> 'is_vip')::boolean, true, 'status RPC reports active VIP after fulfillment');
 select is((((select payload from _ids where key = 'status_after_claim') -> 'today' ->> 'claimed')::boolean), true, 'status RPC reports today claimed after daily claim');
-select is((((select payload from _ids where key = 'status_after_claim') -> 'today' ->> 'free_box_used_count')::integer), 0, 'status RPC returns free box used counter from vip_daily_claims');
+select is((((select payload from _ids where key = 'status_after_claim') -> 'today' ->> 'fgems_claimed')::boolean), true, 'status RPC reports FGEMS claimed after daily FGEMS claim');
+select is((((select payload from _ids where key = 'status_after_claim') -> 'today' ->> 'free_box_claimed')::boolean), false, 'status RPC reports free box not claimed after FGEMS-only claim');
+select is((((select payload from _ids where key = 'status_after_claim') -> 'today' ->> 'can_claim_free_box')::boolean), true, 'status RPC allows separate free box claim after FGEMS claim');
+select is((((select payload from _ids where key = 'status_after_claim') -> 'today' ->> 'free_box_available')::boolean), false, 'status RPC does not expose free box availability before free box claim');
+
+select ok(testutil.raises_like(format(
+  'select api.vip_consume_daily_free_box(%L::uuid, %L)',
+  (select id::text from _ids where key = 'user'),
+  'vip-monthly-free-box-consume-before-claim'
+), '%VIP_DAILY_FREE_BOX_NOT_CLAIMED%'), 'daily free box cannot be consumed before the free box is claimed');
+
+insert into _ids (key, payload)
+select 'claim_free_box', api.vip_claim_daily_free_box(
+  (select id from _ids where key = 'user'),
+  'vip-monthly-free-box-claim-001'
+);
+
+select is(((select payload from _ids where key = 'claim_free_box') ->> 'fgems_claimed')::boolean, true, 'free box claim does not reset FGEMS claimed state');
+select is(((select payload from _ids where key = 'claim_free_box') ->> 'free_box_claimed')::boolean, true, 'separate free box claim marks free box claimed');
+select is(((select payload from _ids where key = 'claim_free_box') ->> 'free_box_count')::integer, 1, 'separate free box claim grants one free box counter');
+select is(((select payload from _ids where key = 'claim_free_box') ->> 'free_box_used_count')::integer, 0, 'separate free box claim starts unused');
+select is(((select payload from _ids where key = 'claim_free_box') ->> 'free_box_available')::boolean, true, 'separate free box claim makes the free box available');
+select is((select count(*)::integer from vip.vip_benefit_ledger where user_id = (select id from _ids where key = 'user') and benefit_type = 'daily_free_box' and entry_type = 'grant'), 1, 'separate free box grant is written to VIP benefit ledger');
 
 insert into _ids (key, payload)
 select 'consume_free_box', api.vip_consume_daily_free_box(
@@ -517,6 +541,21 @@ select 'free_open_vip', testutil.create_paid_vip_order(
   'vip-free-open-001',
   97010030
 );
+
+select ok(testutil.raises_like(format(
+  'select api.vip_open_daily_free_premium_egg(%L::uuid, %L)',
+  (select id::text from _ids where key = 'free_open_user'),
+  'vip-monthly-free-premium-open-before-claim'
+), '%VIP_DAILY_FREE_BOX_NOT_CLAIMED%'), 'VIP daily free premium egg cannot open before the free box is claimed');
+
+insert into _ids (key, payload)
+select 'free_open_claim_free_box', api.vip_claim_daily_free_box(
+  (select id from _ids where key = 'free_open_user'),
+  'vip-free-open-free-box-claim-001'
+);
+
+select is(((select payload from _ids where key = 'free_open_claim_free_box') ->> 'fgems_claimed')::boolean, false, 'claiming only the free box does not auto-credit FGEMS');
+select is(testutil.balance_of((select id from _ids where key = 'free_open_user'), 'FGEMS'), 0::numeric, 'free box claim keeps FGEMS balance unchanged');
 
 insert into _ids (key, payload)
 select 'free_premium_open', api.vip_open_daily_free_premium_egg(

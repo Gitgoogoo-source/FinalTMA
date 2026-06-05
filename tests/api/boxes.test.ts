@@ -638,6 +638,37 @@ describe("boxes API helpers", () => {
     expect(createTelegramStarsInvoiceMock).not.toHaveBeenCalled();
   });
 
+  it("/api/boxes/open-vip-daily requires the free box claim first", async () => {
+    callRpcRawMock.mockRejectedValueOnce(
+      new RpcError({
+        rpcName: "vip_open_daily_free_premium_egg",
+        error: {
+          message: "VIP_DAILY_FREE_BOX_NOT_CLAIMED",
+        },
+      }),
+    );
+
+    const { default: openVipDailyHandler } =
+      await import("../../api/boxes/open-vip-daily");
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      openVipDailyHandler,
+      {
+        method: "POST",
+        url: "/api/boxes/open-vip-daily",
+        headers: {
+          cookie: "tma_game_session=test-session-token-000000000000",
+          "content-type": "application/json",
+          "x-idempotency-key": IDEMPOTENCY_KEY,
+        },
+        body: {},
+      },
+    );
+
+    expect(result.statusCode).toBe(409);
+    expect(result.body.error.code).toBe("VIP_DAILY_FREE_BOX_NOT_CLAIMED");
+    expect(result.body.error.message).toBe("请先领取今日免费盲盒。");
+  });
+
   it("/api/payments/kcoin-topup/create-order creates a Stars invoice for K-coin recharge", async () => {
     const topupOrderId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
     const topupStarOrderId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";

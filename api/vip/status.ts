@@ -132,7 +132,22 @@ function normalizeVipToday(value: unknown): Record<string, unknown> | null {
   );
   const freeBoxAvailable =
     readBoolean(value.free_box_available ?? value.freeBoxAvailable) ??
-    remainingFreeBoxCount > 0;
+    ((readBoolean(value.free_box_claimed ?? value.freeBoxClaimed) ?? false) &&
+      remainingFreeBoxCount > 0);
+  const fgemsClaimed =
+    readBoolean(value.fgems_claimed ?? value.fgemsClaimed) ?? claimed;
+  const fgemsClaimedAt = readString(
+    value.fgems_claimed_at ?? value.fgemsClaimedAt,
+  );
+  const canClaimFgems =
+    readBoolean(value.can_claim_fgems ?? value.canClaimFgems) ?? canClaim;
+  const freeBoxClaimed =
+    readBoolean(value.free_box_claimed ?? value.freeBoxClaimed) ?? false;
+  const freeBoxClaimedAt = readString(
+    value.free_box_claimed_at ?? value.freeBoxClaimedAt,
+  );
+  const canClaimFreeBox =
+    readBoolean(value.can_claim_free_box ?? value.canClaimFreeBox) ?? false;
 
   return {
     ...value,
@@ -145,6 +160,12 @@ function normalizeVipToday(value: unknown): Record<string, unknown> | null {
     canClaim,
     fgems_amount: fgemsAmount,
     fgemsAmount,
+    fgems_claimed: fgemsClaimed,
+    fgemsClaimed,
+    fgems_claimed_at: fgemsClaimedAt,
+    fgemsClaimedAt,
+    can_claim_fgems: canClaimFgems,
+    canClaimFgems,
     free_box_count: freeBoxCount,
     freeBoxCount,
     free_box_used_count: freeBoxUsedCount,
@@ -153,6 +174,12 @@ function normalizeVipToday(value: unknown): Record<string, unknown> | null {
     remainingFreeBoxCount,
     free_box_available: freeBoxAvailable,
     freeBoxAvailable,
+    free_box_claimed: freeBoxClaimed,
+    freeBoxClaimed,
+    free_box_claimed_at: freeBoxClaimedAt,
+    freeBoxClaimedAt,
+    can_claim_free_box: canClaimFreeBox,
+    canClaimFreeBox,
   };
 }
 

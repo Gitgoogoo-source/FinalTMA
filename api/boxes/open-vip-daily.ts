@@ -216,7 +216,7 @@ function mapOpenVipDailyBoxRpcError(error: unknown): ApiError {
   }
 
   if (!(error instanceof RpcError)) {
-    return ApiError.internal("开启福利蛋失败。", {
+    return ApiError.internal("开启免费盲盒失败。", {
       cause: getErrorMessage(error),
     });
   }
@@ -231,7 +231,7 @@ function mapOpenVipDailyBoxRpcError(error: unknown): ApiError {
     return new ApiError(
       409,
       "IDEMPOTENCY_CONFLICT",
-      "幂等键已被其他福利蛋请求使用。",
+      "幂等键已被其他免费盲盒请求使用。",
     );
   }
 
@@ -239,11 +239,19 @@ function mapOpenVipDailyBoxRpcError(error: unknown): ApiError {
     return new ApiError(403, "VIP_REQUIRED", "月卡未生效或已过期。");
   }
 
+  if (message.includes("vip_daily_free_box_not_claimed")) {
+    return new ApiError(
+      409,
+      "VIP_DAILY_FREE_BOX_NOT_CLAIMED",
+      "请先领取今日免费盲盒。",
+    );
+  }
+
   if (message.includes("vip_daily_benefit_not_claimed")) {
     return new ApiError(
       409,
       "VIP_DAILY_BENEFIT_NOT_CLAIMED",
-      "请先领取今日月卡福利。",
+      "请先领取今日免费盲盒。",
     );
   }
 
@@ -251,7 +259,7 @@ function mapOpenVipDailyBoxRpcError(error: unknown): ApiError {
     return new ApiError(
       409,
       "VIP_FREE_BOX_ALREADY_USED",
-      "今日福利蛋已经用完。",
+      "今日免费盲盒已经用完。",
     );
   }
 
@@ -259,7 +267,7 @@ function mapOpenVipDailyBoxRpcError(error: unknown): ApiError {
     return new ApiError(
       409,
       "VIP_FREE_BOX_NOT_AVAILABLE",
-      "今日没有可用的福利蛋次数。",
+      "今日没有可用的免费盲盒次数。",
     );
   }
 
@@ -291,7 +299,7 @@ function mapOpenVipDailyBoxRpcError(error: unknown): ApiError {
     return new ApiError(
       409,
       "DROP_POOL_EMPTY",
-      "当前奖励池为空，暂时无法开福利蛋。",
+      "当前奖励池为空，暂时无法开免费盲盒。",
     );
   }
 
@@ -313,7 +321,7 @@ function mapOpenVipDailyBoxRpcError(error: unknown): ApiError {
     return new ApiError(
       503,
       "VIP_DATABASE_NOT_READY",
-      "月卡福利蛋数据库尚未初始化。",
+      "月卡免费盲盒数据库尚未初始化。",
       {
         expose: false,
         cause: error,
@@ -321,7 +329,7 @@ function mapOpenVipDailyBoxRpcError(error: unknown): ApiError {
     );
   }
 
-  return new ApiError(500, "VIP_FREE_BOX_OPEN_FAILED", "开启福利蛋失败。", {
+  return new ApiError(500, "VIP_FREE_BOX_OPEN_FAILED", "开启免费盲盒失败。", {
     expose: false,
     cause: error,
   });

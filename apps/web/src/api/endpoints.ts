@@ -25,6 +25,7 @@ export const API_ENDPOINTS = {
     status: "/vip/status",
     createOrder: "/vip/create-order",
     claimDaily: "/vip/claim-daily",
+    claimFreeBox: "/vip/claim-free-box",
   },
   boxes: {
     list: "/boxes/list",

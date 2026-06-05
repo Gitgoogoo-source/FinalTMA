@@ -58,7 +58,9 @@ function createVipDescription(
 ): string {
   const benefits = [
     plan?.dailyFgems ? `每日 ${plan.dailyFgems} FGEMS` : null,
-    plan?.dailyFreeBoxCount ? `每日 ${plan.dailyFreeBoxCount} 次福利蛋` : null,
+    plan?.dailyFreeBoxCount
+      ? `每日 ${plan.dailyFreeBoxCount} 次免费盲盒`
+      : null,
     plan?.feeRebateBps
       ? `手续费返还 ${formatBpsPercent(plan.feeRebateBps)}`
       : null,
