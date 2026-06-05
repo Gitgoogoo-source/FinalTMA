@@ -219,33 +219,40 @@ export function BoxPage() {
     : openVipDaily.isPending
       ? 1
       : null;
+  const isVip = vipStatusQuery.data?.isVip === true;
   const vipToday = vipStatusQuery.data?.today ?? null;
+  const vipDailyFgemsAmount =
+    vipToday?.fgemsAmount ?? vipStatusQuery.data?.plan?.dailyFgems ?? 0;
   const vipPlanFreeBoxCount = vipStatusQuery.data?.plan?.dailyFreeBoxCount ?? 0;
+  const vipHasDailyBenefit = vipDailyFgemsAmount > 0 || vipPlanFreeBoxCount > 0;
   const vipCanClaimDaily =
-    vipStatusQuery.data?.isVip === true &&
+    isVip &&
     vipToday?.canClaim === true &&
-    vipPlanFreeBoxCount > 0;
+    vipHasDailyBenefit;
   const vipHasFreeBoxAvailable =
-    vipStatusQuery.data?.isVip === true &&
+    isVip &&
     (vipToday?.freeBoxAvailable === true || vipFreeModeSelected);
+  const vipCanClaimFreeBox = vipCanClaimDaily && vipPlanFreeBoxCount > 0;
+  const shouldShowVipWelfareEntry = isVip;
   const selectedBoxUsesVipFreeOpen =
     selectedBox?.slug === "premium_egg" &&
-    (vipHasFreeBoxAvailable || vipCanClaimDaily);
+    (vipHasFreeBoxAvailable || vipCanClaimFreeBox);
   const vipWelfareActionDisabled =
     claimVipDaily.isPending ||
     openVipDaily.isPending ||
     vipStatusQuery.isLoading ||
-    vipStatusQuery.data?.isVip !== true ||
     (!vipCanClaimDaily && !vipHasFreeBoxAvailable);
   const vipWelfareButtonText = getVipWelfareButtonText({
+    fgemsAmount: vipDailyFgemsAmount,
     isLoading: vipStatusQuery.isLoading,
-    isVip: vipStatusQuery.data?.isVip === true,
+    isVip,
     isPending: claimVipDaily.isPending,
     canClaim: vipCanClaimDaily,
     hasFreeBox: vipHasFreeBoxAvailable,
   });
   const vipWelfareButtonDetail = getVipWelfareButtonDetail({
-    isVip: vipStatusQuery.data?.isVip === true,
+    freeBoxCount: vipPlanFreeBoxCount,
+    isVip,
     canClaim: vipCanClaimDaily,
     hasFreeBox: vipHasFreeBoxAvailable,
   });
@@ -262,7 +269,7 @@ export function BoxPage() {
   }, [vipCanClaimDaily, vipStatusQuery.data, vipToday?.freeBoxAvailable]);
 
   const handleVipWelfareClick = useCallback(() => {
-    if (vipStatusQuery.data?.isVip !== true) {
+    if (!isVip) {
       return;
     }
 
@@ -292,31 +299,32 @@ export function BoxPage() {
 
     claimVipDaily.mutate(undefined, {
       onSuccess: (claim) => {
-        setSelectedBoxSlug("premium_egg");
+        if (claim.freeBoxAvailable) {
+          setSelectedBoxSlug("premium_egg");
+        }
+
         setVipFreeModeSelected(claim.freeBoxAvailable);
         pushToast({
           type: "success",
-          title: "福利蛋已领取",
-          message: claim.freeBoxAvailable
-            ? "已自动选择稀有蛋，开 1 次价格已切换为免费。"
-            : "今日福利已领取，但没有可用免费开盒次数。",
+          title: "月卡福利已领取",
+          message: getVipClaimSuccessMessage(claim),
         });
       },
       onError: (error) => {
         pushToast({
           type: "error",
-          title: "领取福利蛋失败",
+          title: "领取月卡福利失败",
           message: getApiErrorMessage(error),
         });
       },
     });
   }, [
     claimVipDaily,
+    isVip,
     openVipDaily.isPending,
     pushToast,
     vipCanClaimDaily,
     vipHasFreeBoxAvailable,
-    vipStatusQuery.data?.isVip,
   ]);
 
   const handleVipFreeOpenSuccess = useCallback(
@@ -543,27 +551,29 @@ export function BoxPage() {
 
       <BoxHero box={selectedBox} />
 
-      <section className="box-welfare-entry" aria-label="月卡福利蛋">
-        <button
-          className="box-welfare-entry__button"
-          disabled={vipWelfareActionDisabled}
-          onClick={handleVipWelfareClick}
-          type="button"
-        >
-          {claimVipDaily.isPending ? (
-            <Loader2
-              className="box-welfare-entry__spinner"
-              aria-hidden="true"
-              size={18}
-              strokeWidth={2.4}
-            />
-          ) : (
-            <Gift aria-hidden="true" size={18} strokeWidth={2.4} />
-          )}
-          <span>{vipWelfareButtonText}</span>
-          <strong>{vipWelfareButtonDetail}</strong>
-        </button>
-      </section>
+      {shouldShowVipWelfareEntry ? (
+        <section className="box-welfare-entry" aria-label="月卡每日福利">
+          <button
+            className="box-welfare-entry__button"
+            disabled={vipWelfareActionDisabled}
+            onClick={handleVipWelfareClick}
+            type="button"
+          >
+            {claimVipDaily.isPending ? (
+              <Loader2
+                className="box-welfare-entry__spinner"
+                aria-hidden="true"
+                size={18}
+                strokeWidth={2.4}
+              />
+            ) : (
+              <Gift aria-hidden="true" size={18} strokeWidth={2.4} />
+            )}
+            <span>{vipWelfareButtonText}</span>
+            <strong>{vipWelfareButtonDetail}</strong>
+          </button>
+        </section>
+      ) : null}
 
       <BoxTierSelector
         boxes={boxes}
@@ -690,6 +700,7 @@ function shouldShowBoxStatus(box: BlindBox): boolean {
 }
 
 function getVipWelfareButtonText(input: {
+  fgemsAmount: number;
   isLoading: boolean;
   isVip: boolean;
   isPending: boolean;
@@ -709,17 +720,22 @@ function getVipWelfareButtonText(input: {
   }
 
   if (input.canClaim) {
-    return "领取福利蛋";
+    return input.fgemsAmount > 0
+      ? `领取 ${formatCurrencyAmount(input.fgemsAmount)} FGEMS`
+      : "领取月卡福利";
   }
 
   if (input.hasFreeBox) {
     return "使用福利蛋";
   }
 
-  return "今日已用";
+  return input.fgemsAmount > 0
+    ? `已领 ${formatCurrencyAmount(input.fgemsAmount)} FGEMS`
+    : "今日已领取";
 }
 
 function getVipWelfareButtonDetail(input: {
+  freeBoxCount: number;
   isVip: boolean;
   canClaim: boolean;
   hasFreeBox: boolean;
@@ -729,7 +745,7 @@ function getVipWelfareButtonDetail(input: {
   }
 
   if (input.canClaim) {
-    return "免费稀有蛋";
+    return input.freeBoxCount > 0 ? "含免费稀有蛋" : "今日可领";
   }
 
   if (input.hasFreeBox) {
@@ -737,6 +753,22 @@ function getVipWelfareButtonDetail(input: {
   }
 
   return "明天再领";
+}
+
+function getVipClaimSuccessMessage(claim: {
+  fgemsAmount: number;
+  freeBoxAvailable: boolean;
+}): string {
+  const fgemsText =
+    claim.fgemsAmount > 0
+      ? `已到账 ${formatCurrencyAmount(claim.fgemsAmount)} FGEMS`
+      : null;
+  const freeBoxText = claim.freeBoxAvailable
+    ? "已自动选择稀有蛋，开 1 次价格已切换为免费"
+    : null;
+  const message = [fgemsText, freeBoxText].filter(Boolean).join("，");
+
+  return message || "今日月卡福利已领取。";
 }
 
 function getRewardsErrorMessage(error: unknown): string | null {

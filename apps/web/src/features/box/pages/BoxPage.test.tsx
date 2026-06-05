@@ -29,6 +29,7 @@ type CreateClaimMutateOptions = {
 
 type ClaimVipDailyResult = {
   claimId: string;
+  fgemsAmount: number;
   freeBoxAvailable: boolean;
   freeBoxCount: number;
   freeBoxUsedCount: number;
@@ -52,6 +53,7 @@ type VipStatusMock = {
     freeBoxAvailable: boolean;
   } | null;
   plan: {
+    dailyFgems: number;
     dailyFreeBoxCount: number;
   } | null;
   serverTime: string | null;
@@ -196,6 +198,7 @@ describe("BoxPage K-coin open and recharge flow", () => {
     });
     mocks.claimVipDailyResult = {
       claimId: "88888888-8888-4888-8888-888888888888",
+      fgemsAmount: 100,
       freeBoxAvailable: true,
       freeBoxCount: 1,
       freeBoxUsedCount: 0,
@@ -355,6 +358,17 @@ describe("BoxPage K-coin open and recharge flow", () => {
 
     expect(
       screen.queryByRole("button", { name: "返回上一页" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("hides the VIP daily benefit entry for non-VIP users", () => {
+    renderBoxPage();
+
+    expect(
+      screen.queryByLabelText("月卡每日福利"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /领取 100 FGEMS/ }),
     ).not.toBeInTheDocument();
   });
 
@@ -575,7 +589,7 @@ describe("BoxPage K-coin open and recharge flow", () => {
     expect(input).not.toHaveProperty("expectedPoolVersionId");
   });
 
-  it("claims the VIP welfare egg and switches the single open price to free", async () => {
+  it("claims the VIP daily FGEMS benefit and switches the free egg open to free", async () => {
     mocks.vipStatus = createVipStatus({
       isVip: true,
       today: {
@@ -589,7 +603,7 @@ describe("BoxPage K-coin open and recharge flow", () => {
 
     renderBoxPage();
 
-    fireEvent.click(screen.getByRole("button", { name: /领取福利蛋/ }));
+    fireEvent.click(screen.getByRole("button", { name: /领取 100 FGEMS/ }));
 
     expect(mocks.claimVipDailyMutate).toHaveBeenCalledTimes(1);
     await waitFor(() => {
@@ -879,6 +893,7 @@ function createVipStatus(
     currentPeriodEnd: statusOverrides.isVip ? "2026-06-28T00:00:00.000Z" : null,
     isVip: false,
     plan: {
+      dailyFgems: 100,
       dailyFreeBoxCount: 1,
     },
     serverTime: "2026-05-28T00:00:00.000Z",

@@ -1,5 +1,6 @@
 import { Outlet } from "react-router-dom";
 
+import { VipStatusPreloader } from "@/features/vip/components/VipStatusPreloader";
 import { AppShell } from "@/shared/layout/AppShell";
 
 import { RequireSession } from "./guards/RequireSession";
@@ -17,8 +18,11 @@ export function App() {
 
 function AuthenticatedHome() {
   return (
-    <AppShell>
-      <Outlet />
-    </AppShell>
+    <>
+      <VipStatusPreloader />
+      <AppShell>
+        <Outlet />
+      </AppShell>
+    </>
   );
 }
