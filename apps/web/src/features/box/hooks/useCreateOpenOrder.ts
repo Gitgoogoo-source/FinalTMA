@@ -14,7 +14,7 @@ export function useCreateOpenOrder() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: queryKeys.box.list }),
         queryClient.invalidateQueries({
-          queryKey: queryKeys.box.rewards(input.boxId),
+          queryKey: queryKeys.box.rewards(input.boxSlug),
         }),
         queryClient.invalidateQueries({ queryKey: queryKeys.me.assetsRoot }),
         queryClient.invalidateQueries({ queryKey: queryKeys.inventory.root }),

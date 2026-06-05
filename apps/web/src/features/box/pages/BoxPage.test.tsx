@@ -7,10 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { FeedbackProvider } from "@/app/providers/FeedbackProvider";
 import type { TelegramGlobal } from "@/types/telegram";
 
-import type {
-  CreateOpenOrderResponse,
-  DrawResultResponse,
-} from "../box.types";
+import type { CreateOpenOrderResponse, DrawResultResponse } from "../box.types";
 import {
   BOX_PITY_CACHE_STORAGE_KEY,
   type CachedBoxPitySnapshot,
@@ -179,9 +176,10 @@ describe("BoxPage Stars invoice flow", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: /Legendary Egg/ }));
-    expect(
-      screen.getByRole("img", { name: "Legendary Egg" }),
-    ).toHaveAttribute("src", "/images/boxes/legendary_egg.png");
+    expect(screen.getByRole("img", { name: "Legendary Egg" })).toHaveAttribute(
+      "src",
+      "/images/boxes/legendary_egg.png",
+    );
   });
 
   it("does not render the custom hero back button", () => {
@@ -361,42 +359,49 @@ describe("BoxPage Stars invoice flow", () => {
     expect(mocks.createOrderMutate).toHaveBeenCalledTimes(1);
   });
 
-  it("keeps payment actions disabled until cached server box ids are available", () => {
+  it("keeps payment actions available while pity cache is syncing", () => {
     mocks.pitySnapshot = null;
 
     renderBoxPage();
 
-    expect(
-      screen.getAllByText("进行中 · 正在同步保底信息。").length,
-    ).toBeGreaterThan(0);
-
-    expect(
-      screen.getByRole("button", { name: /Normal Egg/ }),
-    ).toBeVisible();
+    expect(screen.getByRole("button", { name: /Normal Egg/ })).toBeVisible();
 
     const openOnceButton = screen.getByRole("button", { name: /^开 1 次/ });
-    expect(openOnceButton).toBeDisabled();
+    expect(openOnceButton).toBeEnabled();
 
     fireEvent.click(openOnceButton);
 
-    expect(mocks.createOrderMutate).not.toHaveBeenCalled();
-  });
-
-  it("uses the cached real box id when creating an order", () => {
-    renderBoxPage();
-
-    fireEvent.click(screen.getByRole("button", { name: /^开 1 次/ }));
-
     expect(mocks.createOrderMutate).toHaveBeenCalledWith(
       expect.objectContaining({
-        boxId: "11111111-1111-4111-8111-111111111111",
-        expectedPriceStars: 10,
+        boxSlug: "starter_egg",
+        drawCount: 1,
       }),
       expect.any(Object),
     );
   });
 
-  it("uses the displayed ten-draw price as the expected order price and shows the returned amount", async () => {
+  it("uses the selected static box slug when creating an order", () => {
+    renderBoxPage();
+
+    fireEvent.click(screen.getByRole("button", { name: /^开 1 次/ }));
+
+    const input = mocks.createOrderMutate.mock.calls[0]?.[0] as Record<
+      string,
+      unknown
+    >;
+    expect(mocks.createOrderMutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        boxSlug: "starter_egg",
+        drawCount: 1,
+      }),
+      expect.any(Object),
+    );
+    expect(input).not.toHaveProperty("boxId");
+    expect(input).not.toHaveProperty("expectedPriceStars");
+    expect(input).not.toHaveProperty("expectedPoolVersionId");
+  });
+
+  it("submits only the selected slug and ten-draw action while showing the returned amount", async () => {
     const openInvoice = vi.fn();
     mocks.createOrderResult = createOrder({
       drawCount: 10,
@@ -416,10 +421,13 @@ describe("BoxPage Stars invoice flow", () => {
 
     expect(mocks.createOrderMutate).toHaveBeenCalledWith(
       expect.objectContaining({
+        boxSlug: "starter_egg",
         drawCount: 10,
-        expectedPriceStars: 90,
       }),
       expect.any(Object),
+    );
+    expect(mocks.createOrderMutate.mock.calls[0]?.[0]).not.toHaveProperty(
+      "expectedPriceStars",
     );
     expect(mocks.createOrderMutate.mock.calls[0]?.[0]).not.toHaveProperty(
       "expectedPoolVersionId",

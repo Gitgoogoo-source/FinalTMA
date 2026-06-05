@@ -9,8 +9,9 @@ import { z } from "zod";
  * 3. 校验服务端盲盒、价格、奖励池、保底规则配置。
  *
  * 安全原则：
- * - 前端传 expectedPriceStars / expectedPoolVersionId 只用于防止用户看到旧价格。
- * - 最终价格、奖品库存、活动状态、概率、保底、奖励发放全部以后端和数据库事务为准。
+ * - 前端只传用户动作，例如选择的盲盒 slug 和开盒次数。
+ * - 最终价格由 Vercel 后端环境变量读取，再由后端传入数据库事务形成订单快照。
+ * - 奖品库存、活动状态、概率、保底、奖励发放全部以后端和数据库事务为准。
  * - 任何开盒结果不能由前端生成或提交。
  */
 
@@ -400,20 +401,8 @@ export const BoxRewardsResponseSchema = z
   .strict();
 
 const CreateBoxOpenOrderBaseSchema = z.object({
-  boxId: BoxIdSchema,
+  boxSlug: BoxSlugSchema,
   paymentProvider: BoxPaymentProviderSchema.default("telegram_stars"),
-
-  /**
-   * 前端看到的价格。
-   * 后端只用它做 stale price 检查，不以它作为最终扣款依据。
-   */
-  expectedPriceStars: BoxPositiveIntSchema.optional(),
-
-  /**
-   * 前端看到的奖励池版本。
-   * 后端只用它做 stale pool 检查，不以它作为最终抽卡依据。
-   */
-  expectedPoolVersionId: BoxUuidSchema.optional(),
 
   /**
    * 防重复点击、防重复创建订单。

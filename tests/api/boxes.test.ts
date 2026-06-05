@@ -161,6 +161,10 @@ describe("boxes API helpers", () => {
     process.env.NODE_ENV = "test";
     vi.stubEnv("SUPABASE_URL", "https://project-ref.supabase.co");
     vi.stubEnv("SUPABASE_STORAGE_PUBLIC_URL", "");
+    vi.stubEnv("GACHA_STARTER_EGG_PRICE_STARS", "10");
+    vi.stubEnv("GACHA_PREMIUM_EGG_PRICE_STARS", "30");
+    vi.stubEnv("GACHA_LEGENDARY_EGG_PRICE_STARS", "80");
+    vi.stubEnv("GACHA_TEN_DRAW_DISCOUNT_BPS", "1000");
     delete process.env.DEV_GACHA_PAYMENT_MODE;
     assertStarsPaymentCreateAllowedMock.mockReset();
     assertStarsPaymentCreateAllowedMock.mockResolvedValue(undefined);
@@ -184,14 +188,14 @@ describe("boxes API helpers", () => {
     expect(
       normalizeCreateOpenOrderInput(
         {
-          box_id: BOX_ID,
+          box_slug: "starter_egg",
           draw_count: 10,
           idempotency_key: IDEMPOTENCY_KEY,
         },
         null,
       ),
     ).toMatchObject({
-      boxId: BOX_ID,
+      boxSlug: "starter_egg",
       openType: "ten",
       quantity: 10,
       idempotencyKey: IDEMPOTENCY_KEY,
@@ -202,7 +206,7 @@ describe("boxes API helpers", () => {
     expect(
       normalizeCreateOpenOrderInput(
         {
-          box_id: BOX_ID,
+          box_slug: "starter_egg",
           draw_count: 1,
         },
         IDEMPOTENCY_KEY,
@@ -233,7 +237,7 @@ describe("boxes API helpers", () => {
         idempotent: false,
       },
       {
-        boxId: BOX_ID,
+        boxSlug: "starter_egg",
         openType: "ten",
         quantity: 10,
         paymentProvider: "telegram_stars",
@@ -474,10 +478,8 @@ describe("boxes API helpers", () => {
           "content-type": "application/json",
         },
         body: {
-          box_id: BOX_ID,
+          box_slug: "starter_egg",
           draw_count: 1,
-          expected_price_stars: 10,
-          expected_pool_version_id: POOL_VERSION_ID,
           idempotency_key: IDEMPOTENCY_KEY,
         },
       },
@@ -513,10 +515,8 @@ describe("boxes API helpers", () => {
           "x-forwarded-for": "127.0.0.23",
         },
         body: {
-          box_id: BOX_ID,
+          box_slug: "starter_egg",
           draw_count: 1,
-          expected_price_stars: 10,
-          expected_pool_version_id: POOL_VERSION_ID,
           idempotency_key: IDEMPOTENCY_KEY,
         },
       },
@@ -538,14 +538,14 @@ describe("boxes API helpers", () => {
       },
     });
     expect(callRpcRawMock).toHaveBeenCalledWith(
-      "gacha_create_order_checked",
+      "gacha_create_order_from_server_price",
       expect.objectContaining({
         p_user_id: USER_ID,
-        p_box_id: BOX_ID,
+        p_box_slug: "starter_egg",
         p_quantity: 1,
         p_idempotency_key: IDEMPOTENCY_KEY,
-        p_expected_price_stars: 10,
-        p_expected_pool_version_id: POOL_VERSION_ID,
+        p_unit_price_stars: 10,
+        p_discount_bps: 0,
       }),
       expect.any(Object),
     );
@@ -593,10 +593,8 @@ describe("boxes API helpers", () => {
           "x-request-id": "req-gacha-high-frequency",
         },
         body: {
-          box_id: BOX_ID,
+          box_slug: "starter_egg",
           draw_count: 1,
-          expected_price_stars: 10,
-          expected_pool_version_id: POOL_VERSION_ID,
           idempotency_key: IDEMPOTENCY_KEY,
         },
       },
@@ -677,7 +675,7 @@ describe("boxes API helpers", () => {
           "x-forwarded-for": "127.0.0.30",
         },
         body: {
-          box_id: BOX_ID,
+          box_slug: "starter_egg",
           draw_count: 1,
           idempotency_key: IDEMPOTENCY_KEY,
         },
@@ -698,14 +696,14 @@ describe("boxes API helpers", () => {
     });
     expect(callRpcRawMock).toHaveBeenNthCalledWith(
       1,
-      "gacha_create_order_checked",
+      "gacha_create_order_from_server_price",
       expect.objectContaining({
         p_user_id: USER_ID,
-        p_box_id: BOX_ID,
+        p_box_slug: "starter_egg",
         p_quantity: 1,
         p_idempotency_key: IDEMPOTENCY_KEY,
-        p_expected_price_stars: null,
-        p_expected_pool_version_id: null,
+        p_unit_price_stars: 10,
+        p_discount_bps: 0,
       }),
       expect.any(Object),
     );
@@ -760,7 +758,7 @@ describe("boxes API helpers", () => {
           "x-idempotency-key": IDEMPOTENCY_KEY,
         },
         body: {
-          box_id: BOX_ID,
+          box_slug: "starter_egg",
           draw_count: 1,
         },
       },
@@ -768,11 +766,12 @@ describe("boxes API helpers", () => {
 
     expect(result.statusCode).toBe(200);
     expect(callRpcRawMock).toHaveBeenCalledWith(
-      "gacha_create_order_checked",
+      "gacha_create_order_from_server_price",
       expect.objectContaining({
         p_idempotency_key: IDEMPOTENCY_KEY,
-        p_expected_price_stars: null,
-        p_expected_pool_version_id: null,
+        p_box_slug: "starter_egg",
+        p_unit_price_stars: 10,
+        p_discount_bps: 0,
       }),
       expect.any(Object),
     );
@@ -782,7 +781,7 @@ describe("boxes API helpers", () => {
   it("/api/boxes/create-open-order maps RPC idempotency conflicts", async () => {
     callRpcRawMock.mockRejectedValueOnce(
       new RpcError({
-        rpcName: "gacha_create_order_checked",
+        rpcName: "gacha_create_order_from_server_price",
         error: {
           message: "idempotency key conflict",
         },
@@ -802,7 +801,7 @@ describe("boxes API helpers", () => {
           "x-forwarded-for": "127.0.0.27",
         },
         body: {
-          box_id: BOX_ID,
+          box_slug: "starter_egg",
           draw_count: 1,
           idempotency_key: IDEMPOTENCY_KEY,
         },
@@ -818,15 +817,8 @@ describe("boxes API helpers", () => {
     });
   });
 
-  it("/api/boxes/create-open-order maps stale expected prices", async () => {
-    callRpcRawMock.mockRejectedValueOnce(
-      new RpcError({
-        rpcName: "gacha_create_order_checked",
-        error: {
-          message: "expected price changed",
-        },
-      }),
-    );
+  it("/api/boxes/create-open-order rejects missing server price config before RPC calls", async () => {
+    vi.stubEnv("GACHA_STARTER_EGG_PRICE_STARS", "");
 
     const { default: createOrderHandler } =
       await import("../../api/boxes/create-open-order");
@@ -841,38 +833,44 @@ describe("boxes API helpers", () => {
           "x-forwarded-for": "127.0.0.35",
         },
         body: {
-          box_id: BOX_ID,
+          box_slug: "starter_egg",
           draw_count: 1,
-          expected_price_stars: 9,
           idempotency_key: IDEMPOTENCY_KEY,
         },
       },
     );
 
-    expect(result.statusCode).toBe(409);
+    expect(result.statusCode).toBe(500);
     expect(result.body).toMatchObject({
       ok: false,
       error: {
-        code: "BOX_PRICE_CHANGED",
-        message: "盲盒价格已变化，请刷新后重试。",
+        code: "GACHA_PRICE_CONFIG_INVALID",
       },
     });
+    expect(callRpcRawMock).not.toHaveBeenCalled();
     expect(createTelegramStarsInvoiceMock).not.toHaveBeenCalled();
   });
 
-  it("/api/boxes/create-open-order maps stale expected pool versions", async () => {
-    callRpcRawMock.mockRejectedValueOnce(
-      new RpcError({
-        rpcName: "gacha_create_order_checked",
-        error: {
-          message: "expected pool version changed",
-        },
-      }),
-    );
+  it("/api/boxes/create-open-order uses Vercel ten-draw discount config", async () => {
+    vi.stubEnv("GACHA_STARTER_EGG_PRICE_STARS", "25");
+    vi.stubEnv("GACHA_TEN_DRAW_DISCOUNT_BPS", "1500");
+    callRpcRawMock
+      .mockResolvedValueOnce({
+        draw_order_id: ORDER_ID,
+        star_order_id: STAR_ORDER_ID,
+        invoice_payload: INVOICE_PAYLOAD,
+        xtr_amount: 213,
+        quantity: 10,
+        discount_bps: 1500,
+        idempotent: false,
+      })
+      .mockResolvedValueOnce({
+        count: 0,
+      });
 
     const { default: createOrderHandler } =
       await import("../../api/boxes/create-open-order");
-    const result = await invokeApiHandler<ApiErrorResponse>(
+    const result = await invokeApiHandler<ApiSuccessResponse>(
       createOrderHandler,
       {
         method: "POST",
@@ -883,29 +881,43 @@ describe("boxes API helpers", () => {
           "x-forwarded-for": "127.0.0.36",
         },
         body: {
-          box_id: BOX_ID,
-          draw_count: 1,
-          expected_pool_version_id: POOL_VERSION_ID,
-          idempotency_key: IDEMPOTENCY_KEY,
+          box_slug: "starter_egg",
+          draw_count: 10,
+          idempotency_key: "open:test-idempotency-036",
         },
       },
     );
 
-    expect(result.statusCode).toBe(409);
+    expect(result.statusCode).toBe(200);
     expect(result.body).toMatchObject({
-      ok: false,
-      error: {
-        code: "BOX_POOL_VERSION_CHANGED",
-        message: "奖励池版本已变化，请刷新后重试。",
+      ok: true,
+      data: {
+        draw_count: 10,
+        xtr_amount: 213,
       },
     });
-    expect(createTelegramStarsInvoiceMock).not.toHaveBeenCalled();
+    expect(callRpcRawMock).toHaveBeenNthCalledWith(
+      1,
+      "gacha_create_order_from_server_price",
+      expect.objectContaining({
+        p_box_slug: "starter_egg",
+        p_quantity: 10,
+        p_unit_price_stars: 25,
+        p_discount_bps: 1500,
+      }),
+      expect.any(Object),
+    );
+    expect(createTelegramStarsInvoiceMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        xtrAmount: 213,
+      }),
+    );
   });
 
   it("/api/boxes/create-open-order maps empty drop pools to the first-phase code", async () => {
     callRpcRawMock.mockRejectedValueOnce(
       new RpcError({
-        rpcName: "gacha_create_order_checked",
+        rpcName: "gacha_create_order_from_server_price",
         error: {
           message: "active drop pool not found",
         },
@@ -925,7 +937,7 @@ describe("boxes API helpers", () => {
           "x-forwarded-for": "127.0.0.28",
         },
         body: {
-          box_id: BOX_ID,
+          box_slug: "starter_egg",
           draw_count: 1,
           idempotency_key: IDEMPOTENCY_KEY,
         },
@@ -945,7 +957,7 @@ describe("boxes API helpers", () => {
   it("/api/boxes/create-open-order rejects paused boxes before invoice creation", async () => {
     callRpcRawMock.mockRejectedValueOnce(
       new RpcError({
-        rpcName: "gacha_create_order_checked",
+        rpcName: "gacha_create_order_from_server_price",
         error: {
           message: "blind box is not active: paused",
         },
@@ -965,7 +977,7 @@ describe("boxes API helpers", () => {
           "x-forwarded-for": "127.0.0.37",
         },
         body: {
-          box_id: BOX_ID,
+          box_slug: "starter_egg",
           draw_count: 1,
           idempotency_key: IDEMPOTENCY_KEY,
         },
@@ -986,7 +998,7 @@ describe("boxes API helpers", () => {
   it("/api/boxes/create-open-order keeps legacy stock RPC errors generic", async () => {
     callRpcRawMock.mockRejectedValueOnce(
       new RpcError({
-        rpcName: "gacha_create_order_checked",
+        rpcName: "gacha_create_order_from_server_price",
         error: {
           message: "blind box stock is insufficient",
         },
@@ -1006,7 +1018,7 @@ describe("boxes API helpers", () => {
           "x-forwarded-for": "127.0.0.38",
         },
         body: {
-          box_id: BOX_ID,
+          box_slug: "starter_egg",
           draw_count: 10,
           idempotency_key: "open:test-idempotency-038",
         },
@@ -1027,7 +1039,7 @@ describe("boxes API helpers", () => {
   it("/api/boxes/create-open-order maps ledger failures without exposing database details", async () => {
     callRpcRawMock.mockRejectedValueOnce(
       new RpcError({
-        rpcName: "gacha_create_order_checked",
+        rpcName: "gacha_create_order_from_server_price",
         error: {
           message:
             "currency ledger insert failed: duplicate key raw database detail",
@@ -1048,7 +1060,7 @@ describe("boxes API helpers", () => {
           "x-forwarded-for": "127.0.0.29",
         },
         body: {
-          box_id: BOX_ID,
+          box_slug: "starter_egg",
           draw_count: 1,
           idempotency_key: IDEMPOTENCY_KEY,
         },
@@ -1086,7 +1098,7 @@ describe("boxes API helpers", () => {
           "x-forwarded-for": "127.0.0.31",
         },
         body: {
-          box_id: BOX_ID,
+          box_slug: "starter_egg",
           draw_count: 1,
           idempotency_key: IDEMPOTENCY_KEY,
         },
@@ -1125,7 +1137,7 @@ describe("boxes API helpers", () => {
           "x-forwarded-for": "127.0.0.33",
         },
         body: {
-          box_id: BOX_ID,
+          box_slug: "starter_egg",
           draw_count: 1,
           idempotency_key: IDEMPOTENCY_KEY,
         },
@@ -1168,7 +1180,7 @@ describe("boxes API helpers", () => {
           "x-forwarded-for": "127.0.0.24",
         },
         body: {
-          box_id: BOX_ID,
+          box_slug: "starter_egg",
           draw_count: 10,
           idempotency_key: "open:test-idempotency-010",
         },
@@ -1187,9 +1199,12 @@ describe("boxes API helpers", () => {
       },
     });
     expect(callRpcRawMock).toHaveBeenCalledWith(
-      "gacha_create_order_checked",
+      "gacha_create_order_from_server_price",
       expect.objectContaining({
+        p_box_slug: "starter_egg",
         p_quantity: 10,
+        p_unit_price_stars: 10,
+        p_discount_bps: 1000,
       }),
       expect.any(Object),
     );
@@ -1234,7 +1249,7 @@ describe("boxes API helpers", () => {
           "x-forwarded-for": "127.0.0.34",
         },
         body: {
-          box_id: BOX_ID,
+          box_slug: "starter_egg",
           draw_count: 1,
           idempotency_key: IDEMPOTENCY_KEY,
         },

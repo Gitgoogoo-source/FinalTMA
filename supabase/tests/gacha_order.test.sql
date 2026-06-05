@@ -299,6 +299,35 @@ insert into _ids (key, payload) values ('fixture', testutil.create_gacha_fixture
 insert into _ids (key, id) select 'box', ((select payload from _ids where key = 'fixture') ->> 'box_id')::uuid;
 
 insert into _ids (key, payload)
+select 'server_price_order', api.gacha_create_order_from_server_price(
+  (select id from _ids where key = 'user'),
+  'gacha-order-box',
+  10,
+  'gacha-order-server-price-001',
+  25,
+  1500
+);
+insert into _ids (key, id) select 'server_price_draw_order', ((select payload from _ids where key = 'server_price_order') ->> 'draw_order_id')::uuid;
+select is(((select payload from _ids where key = 'server_price_order') ->> 'xtr_amount')::int, 213, 'server-priced create order uses Vercel-provided unit price and discount');
+select is((select unit_price_stars from gacha.draw_orders d join _ids i on i.id = d.id where i.key = 'server_price_draw_order'), 25, 'server-priced draw order stores server unit price snapshot');
+select is((select total_price_stars from gacha.draw_orders d join _ids i on i.id = d.id where i.key = 'server_price_draw_order'), 213, 'server-priced draw order total ignores blind_boxes.price_stars');
+select is((select discount_bps from gacha.draw_orders d join _ids i on i.id = d.id where i.key = 'server_price_draw_order'), 1500, 'server-priced draw order stores server discount snapshot');
+select is((select metadata ->> 'price_source' from gacha.draw_orders d join _ids i on i.id = d.id where i.key = 'server_price_draw_order'), 'vercel_env', 'server-priced draw order records Vercel env price source');
+
+insert into _ids (key, payload)
+select 'server_price_order_repeat', api.gacha_create_order_from_server_price(
+  (select id from _ids where key = 'user'),
+  'gacha-order-box',
+  10,
+  'gacha-order-server-price-001',
+  99,
+  0
+);
+select ok(((select payload from _ids where key = 'server_price_order_repeat') ->> 'idempotent')::boolean, 'server-priced repeat returns existing order idempotently');
+select is(((select payload from _ids where key = 'server_price_order_repeat') ->> 'draw_order_id')::uuid, (select id from _ids where key = 'server_price_draw_order'), 'server-priced repeat keeps original draw order');
+select is(((select payload from _ids where key = 'server_price_order_repeat') ->> 'xtr_amount')::int, 213, 'server-priced repeat keeps original price snapshot');
+
+insert into _ids (key, payload)
 select 'order1', api.gacha_create_order((select id from _ids where key = 'user'), (select id from _ids where key = 'box'), 1, 'gacha-order-single-001');
 insert into _ids (key, id) select 'draw_order1', ((select payload from _ids where key = 'order1') ->> 'draw_order_id')::uuid;
 insert into _ids (key, id) select 'star_order1', ((select payload from _ids where key = 'order1') ->> 'star_order_id')::uuid;

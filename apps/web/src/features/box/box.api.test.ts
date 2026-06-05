@@ -33,12 +33,21 @@ describe("box api", () => {
 
     const { createOpenOrder } = await import("./box.api");
     const order = await createOpenOrder({
-      boxId: "33333333-3333-4333-8333-333333333333",
+      boxSlug: "legendary_egg",
       drawCount: 10,
-      expectedPriceStars: 90,
-      expectedPoolVersionId: "44444444-4444-4444-8444-444444444444",
     });
 
+    const requestBody = mocks.apiRequest.mock.calls[0]?.[1]?.body as Record<
+      string,
+      unknown
+    >;
+    expect(requestBody).toEqual({
+      box_slug: "legendary_egg",
+      draw_count: 10,
+    });
+    expect(requestBody).not.toHaveProperty("box_id");
+    expect(requestBody).not.toHaveProperty("expected_price_stars");
+    expect(requestBody).not.toHaveProperty("expected_pool_version_id");
     expect(order).toMatchObject({
       devPaymentProcessed: false,
       drawCount: 10,
@@ -69,9 +78,8 @@ describe("box api", () => {
 
     const { createOpenOrder } = await import("./box.api");
     const order = await createOpenOrder({
-      boxId: "33333333-3333-4333-8333-333333333333",
+      boxSlug: "starter_egg",
       drawCount: 1,
-      expectedPriceStars: 10,
     });
 
     expect(order).toMatchObject({
@@ -100,6 +108,12 @@ describe("box api", () => {
       "11111111-1111-4111-8111-111111111111",
     );
 
+    expect(mocks.apiRequest).toHaveBeenCalledWith(
+      "/boxes/result?orderId=11111111-1111-4111-8111-111111111111&includeItems=true",
+      {
+        method: "GET",
+      },
+    );
     expect(result).toMatchObject({
       orderStatus: "failed",
       paidAt: "2026-05-28T00:01:00.000Z",

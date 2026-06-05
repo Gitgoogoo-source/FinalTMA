@@ -51,6 +51,15 @@ type GachaRecentOrderCountRpcResult = {
   count?: unknown;
 };
 
+type GachaBoxSlug = "starter_egg" | "premium_egg" | "legendary_egg";
+
+type GachaServerPriceSnapshot = {
+  boxSlug: GachaBoxSlug;
+  unitPriceStars: number;
+  discountBps: number;
+  totalPriceStars: number;
+};
+
 type CreateOpenOrderResponse = {
   order_id: string;
   star_order_id: string | null;
@@ -68,6 +77,13 @@ type CreateOpenOrderResponse = {
   result_ready: boolean;
 };
 
+const GACHA_BOX_PRICE_ENV_BY_SLUG: Record<GachaBoxSlug, string> = {
+  starter_egg: "GACHA_STARTER_EGG_PRICE_STARS",
+  premium_egg: "GACHA_PREMIUM_EGG_PRICE_STARS",
+  legendary_egg: "GACHA_LEGENDARY_EGG_PRICE_STARS",
+};
+
+const GACHA_TEN_DRAW_DISCOUNT_BPS_ENV = "GACHA_TEN_DRAW_DISCOUNT_BPS";
 const GACHA_HIGH_FREQUENCY_WINDOW_MS = 5 * 60 * 1000;
 const GACHA_HIGH_FREQUENCY_THRESHOLD = 5;
 
@@ -90,14 +106,15 @@ export default withApiHandler(
       action: "box.create_open_order",
       idempotencyKey: input.idempotencyKey,
       metadata: {
-        boxId: input.boxId,
+        boxSlug: input.boxSlug,
         drawCount: input.quantity,
-        expectedStarsAmount: input.expectedPriceStars ?? undefined,
       },
     });
 
+    const priceSnapshot = readGachaServerPriceSnapshot(input);
     const order = await callGachaCreateOrder(
       input,
+      priceSnapshot,
       session.userId,
       ctx.requestId,
     );
@@ -105,7 +122,7 @@ export default withApiHandler(
     await recordGachaHighFrequencyRiskIfNeeded({
       userId: session.userId,
       orderId,
-      boxId: input.boxId,
+      boxSlug: input.boxSlug,
       quantity: input.quantity,
       idempotencyKey: input.idempotencyKey,
       requestId: ctx.requestId,
@@ -161,13 +178,13 @@ export function normalizeCreateOpenOrderInput(
     body.openType ?? body.open_type ?? openTypeFromDrawCount(drawCount);
 
   return {
-    boxId: body.boxId ?? body.box_id,
+    boxSlug:
+      body.boxSlug ??
+      body.box_slug ??
+      boxSlugFromTier(body.boxTier ?? body.box_tier),
     openType,
     quantity: drawCount,
     paymentProvider: body.paymentProvider ?? body.payment_provider,
-    expectedPriceStars: body.expectedPriceStars ?? body.expected_price_stars,
-    expectedPoolVersionId:
-      body.expectedPoolVersionId ?? body.expected_pool_version_id,
     idempotencyKey:
       body.idempotencyKey ?? body.idempotency_key ?? headerIdempotencyKey,
     clientContext: body.clientContext ?? body.client_context,
@@ -222,30 +239,32 @@ export function buildCreateOpenOrderResponse(
 
 async function callGachaCreateOrder(
   input: CreateBoxOpenOrderRequest,
+  priceSnapshot: GachaServerPriceSnapshot,
   userId: string,
   requestId: string,
 ): Promise<CreateOrderRpcResult> {
   try {
     return await callRpcRaw<CreateOrderRpcResult>(
-      "gacha_create_order_checked",
+      "gacha_create_order_from_server_price",
       {
         p_user_id: userId,
-        p_box_id: input.boxId,
+        p_box_slug: input.boxSlug,
         p_quantity: input.quantity,
         p_idempotency_key: input.idempotencyKey,
-        p_expected_price_stars: input.expectedPriceStars ?? null,
-        p_expected_pool_version_id: input.expectedPoolVersionId ?? null,
+        p_unit_price_stars: priceSnapshot.unitPriceStars,
+        p_discount_bps: priceSnapshot.discountBps,
       },
       {
         schema: "api" as never,
         context: {
           requestId,
           userId,
-          boxId: input.boxId,
+          boxSlug: input.boxSlug,
           quantity: input.quantity,
           idempotencyKey: input.idempotencyKey,
-          expectedPriceStars: input.expectedPriceStars,
-          expectedPoolVersionId: input.expectedPoolVersionId,
+          serverUnitPriceStars: priceSnapshot.unitPriceStars,
+          serverDiscountBps: priceSnapshot.discountBps,
+          serverTotalPriceStars: priceSnapshot.totalPriceStars,
         },
       },
     );
@@ -284,7 +303,7 @@ async function callDevPaidOrder(
 async function recordGachaHighFrequencyRiskIfNeeded(input: {
   userId: string;
   orderId: string;
-  boxId: string;
+  boxSlug: string;
   quantity: 1 | 10;
   idempotencyKey: string;
   requestId: string;
@@ -292,7 +311,7 @@ async function recordGachaHighFrequencyRiskIfNeeded(input: {
   const since = new Date(
     Date.now() - GACHA_HIGH_FREQUENCY_WINDOW_MS,
   ).toISOString();
-  let recentOrderCount = 0;
+  let recentOrderCount: number;
 
   try {
     const result = await callRpcRaw<GachaRecentOrderCountRpcResult>(
@@ -307,7 +326,7 @@ async function recordGachaHighFrequencyRiskIfNeeded(input: {
           requestId: input.requestId,
           userId: input.userId,
           orderId: input.orderId,
-          boxId: input.boxId,
+          boxSlug: input.boxSlug,
         },
       },
     );
@@ -334,7 +353,7 @@ async function recordGachaHighFrequencyRiskIfNeeded(input: {
     detail: {
       request_id: input.requestId,
       action: "boxes.create_open_order",
-      box_id: input.boxId,
+      box_slug: input.boxSlug,
       draw_count: input.quantity,
       recent_order_count: recentOrderCount,
       window_seconds: Math.trunc(GACHA_HIGH_FREQUENCY_WINDOW_MS / 1000),
@@ -400,6 +419,10 @@ function mapGachaRpcError(error: unknown): ApiError {
 
   if (message.includes("idempotency_key is required")) {
     return ApiError.badRequest("缺少幂等键。");
+  }
+
+  if (message.includes("box slug is required")) {
+    return ApiError.badRequest("缺少盲盒档位。");
   }
 
   if (message.includes("idempotency key conflict")) {
@@ -473,6 +496,132 @@ function mapGachaRpcError(error: unknown): ApiError {
     expose: false,
     cause: error,
   });
+}
+
+function readGachaServerPriceSnapshot(
+  input: CreateBoxOpenOrderRequest,
+): GachaServerPriceSnapshot {
+  const boxSlug = normalizeGachaBoxSlug(input.boxSlug);
+  const unitPriceStars = readPositiveIntEnv(
+    GACHA_BOX_PRICE_ENV_BY_SLUG[boxSlug],
+  );
+  const discountBps =
+    input.quantity === 10
+      ? readDiscountBpsEnv(GACHA_TEN_DRAW_DISCOUNT_BPS_ENV)
+      : 0;
+  const totalPriceStars = Math.ceil(
+    (unitPriceStars * input.quantity * (10000 - discountBps)) / 10000,
+  );
+
+  if (totalPriceStars <= 0) {
+    throw new ApiError(
+      500,
+      "GACHA_PRICE_CONFIG_INVALID",
+      "盲盒价格配置无效。",
+      {
+        expose: false,
+        details: {
+          boxSlug,
+          quantity: input.quantity,
+        },
+      },
+    );
+  }
+
+  return {
+    boxSlug,
+    discountBps,
+    totalPriceStars,
+    unitPriceStars,
+  };
+}
+
+function normalizeGachaBoxSlug(value: string): GachaBoxSlug {
+  if (
+    value === "starter_egg" ||
+    value === "premium_egg" ||
+    value === "legendary_egg"
+  ) {
+    return value;
+  }
+
+  throw new ApiError(400, "BOX_NOT_FOUND", "盲盒不存在。");
+}
+
+function readPositiveIntEnv(name: string): number {
+  const value = process.env[name]?.trim();
+
+  if (!value || !/^[1-9]\d*$/.test(value)) {
+    throw new ApiError(
+      500,
+      "GACHA_PRICE_CONFIG_INVALID",
+      "盲盒价格配置无效。",
+      {
+        expose: false,
+        details: {
+          envName: name,
+        },
+      },
+    );
+  }
+
+  return Number(value);
+}
+
+function readDiscountBpsEnv(name: string): number {
+  const value = process.env[name]?.trim();
+
+  if (!value || !/^\d+$/.test(value)) {
+    throw new ApiError(
+      500,
+      "GACHA_PRICE_CONFIG_INVALID",
+      "盲盒折扣配置无效。",
+      {
+        expose: false,
+        details: {
+          envName: name,
+        },
+      },
+    );
+  }
+
+  const numberValue = Number(value);
+
+  if (
+    !Number.isInteger(numberValue) ||
+    numberValue < 0 ||
+    numberValue > 10000
+  ) {
+    throw new ApiError(
+      500,
+      "GACHA_PRICE_CONFIG_INVALID",
+      "盲盒折扣配置无效。",
+      {
+        expose: false,
+        details: {
+          envName: name,
+        },
+      },
+    );
+  }
+
+  return numberValue;
+}
+
+function boxSlugFromTier(value: unknown): GachaBoxSlug | undefined {
+  switch (String(value ?? "").trim()) {
+    case "normal":
+    case "ordinary":
+    case "starter":
+      return "starter_egg";
+    case "rare":
+    case "premium":
+      return "premium_egg";
+    case "legendary":
+      return "legendary_egg";
+    default:
+      return undefined;
+  }
 }
 
 function openTypeFromDrawCount(value: unknown): "single" | "ten" | undefined {

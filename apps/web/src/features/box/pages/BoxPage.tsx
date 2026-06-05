@@ -36,7 +36,6 @@ import { useDrawResult } from "../hooks/useDrawResult";
 import { usePaymentStatus } from "../hooks/usePaymentStatus";
 import { usePendingDrawOrder } from "../hooks/usePendingDrawOrder";
 import { usePaymentSupportConfig } from "../hooks/usePaymentSupportConfig";
-import { getCachedBoxIdBySlug } from "../box.pityCache";
 import { getStaticBoxRewards } from "../staticRewards";
 import { createStaticBoxes } from "../staticBoxes";
 import {
@@ -66,10 +65,7 @@ export function BoxPage() {
   const paymentSupportQuery = usePaymentSupportConfig({
     enabled: paymentPendingOrder !== null || resultOrderId !== null,
   });
-  const boxes = useMemo(
-    () => createStaticBoxes(pitySnapshot),
-    [pitySnapshot],
-  );
+  const boxes = useMemo(() => createStaticBoxes(pitySnapshot), [pitySnapshot]);
   const defaultBoxSlug = useMemo(() => getDefaultBoxSlug(boxes), [boxes]);
 
   useEffect(() => {
@@ -78,16 +74,16 @@ export function BoxPage() {
       return;
     }
 
-    if (!selectedBoxSlug || !boxes.some((box) => box.slug === selectedBoxSlug)) {
+    if (
+      !selectedBoxSlug ||
+      !boxes.some((box) => box.slug === selectedBoxSlug)
+    ) {
       setSelectedBoxSlug(defaultBoxSlug);
     }
   }, [boxes, defaultBoxSlug, selectedBoxSlug]);
 
   const selectedBox =
     boxes.find((box) => box.slug === selectedBoxSlug) ?? boxes[0] ?? null;
-  const selectedServerBoxId = selectedBox
-    ? getCachedBoxIdBySlug(pitySnapshot, selectedBox.slug)
-    : null;
   const staticRewards = useMemo(
     () => getStaticBoxRewards(selectedBox),
     [selectedBox],
@@ -208,8 +204,7 @@ export function BoxPage() {
   const openActionDisabled =
     createOrder.isPending ||
     isPaymentOpenActionLocked(paymentPendingOrder) ||
-    !selectedBox?.isOpenable ||
-    selectedServerBoxId === null;
+    !selectedBox?.isOpenable;
   const handleInvoiceStatus = useCallback(
     (result: StarsInvoiceCallbackResult) => {
       setPaymentOpenNotice(getPaymentOpenNoticeFromInvoiceStatus(result));
@@ -279,13 +274,12 @@ export function BoxPage() {
         return;
       }
 
-      if (!selectedBox.isOpenable || selectedServerBoxId === null) {
+      if (!selectedBox.isOpenable) {
         pushToast({
           type: "error",
           title: "当前盲盒不可开启",
           message:
-            selectedBox.disabledReason ??
-            "保底信息还没有同步完成，请稍后再试。",
+            selectedBox.disabledReason ?? "当前盲盒暂时不可开启，请稍后再试。",
         });
         return;
       }
@@ -297,12 +291,8 @@ export function BoxPage() {
       openRequestLockedRef.current = true;
       createOrder.mutate(
         {
-          boxId: selectedServerBoxId,
+          boxSlug: selectedBox.slug,
           drawCount,
-          expectedPriceStars:
-            drawCount === 1
-              ? selectedBox.singleStarPrice
-              : selectedBox.tenDrawPrice,
         },
         {
           onSuccess: (order) => {
@@ -344,13 +334,7 @@ export function BoxPage() {
         },
       );
     },
-    [
-      createOrder,
-      openInvoiceForOrder,
-      pushToast,
-      selectedBox,
-      selectedServerBoxId,
-    ],
+    [createOrder, openInvoiceForOrder, pushToast, selectedBox],
   );
 
   if (!selectedBox) {

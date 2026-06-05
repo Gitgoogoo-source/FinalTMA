@@ -38,7 +38,8 @@ export const STATIC_BOX_CONFIGS: readonly StaticBoxConfig[] = [
   {
     slug: "legendary_egg",
     name: "Legendary Egg",
-    description: "High-value box focused on Epic and Legendary launch collectibles.",
+    description:
+      "High-value box focused on Epic and Legendary launch collectibles.",
     tier: "legendary",
     singleStarPrice: 80,
     sortOrder: 30,
@@ -56,17 +57,16 @@ export function createStaticBoxes(
   return STATIC_BOX_CONFIGS.map((box) => {
     const serverBoxId = getCachedBoxIdBySlug(snapshot, box.slug);
     const pityProgress = getCachedPityBySlug(snapshot, box.slug);
-    const hasServerBoxId = serverBoxId !== null;
 
     return {
       coverImageUrl: `/images/boxes/${box.slug}.png`,
       description: box.description,
-      disabledReason: hasServerBoxId ? null : "正在同步保底信息。",
+      disabledReason: null,
       discountBps: TEN_DRAW_DISCOUNT_BPS,
       discountRate: (10000 - TEN_DRAW_DISCOUNT_BPS) / 10000,
       heroImageUrl: `/images/boxes/${box.slug}.png`,
       id: serverBoxId ?? box.slug,
-      isOpenable: hasServerBoxId,
+      isOpenable: true,
       kcoinReturnPerDraw: KCOIN_RETURN_PER_DRAW,
       name: box.name,
       pityProgress,
@@ -89,5 +89,7 @@ export function isStaticBoxSlug(value: string): value is StaticBoxSlug {
 }
 
 function getTenDrawPrice(singleStarPrice: number): number {
-  return Math.ceil((singleStarPrice * 10 * (10000 - TEN_DRAW_DISCOUNT_BPS)) / 10000);
+  return Math.ceil(
+    (singleStarPrice * 10 * (10000 - TEN_DRAW_DISCOUNT_BPS)) / 10000,
+  );
 }

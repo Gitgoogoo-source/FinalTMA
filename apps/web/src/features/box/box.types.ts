@@ -94,10 +94,8 @@ export type BoxRewardsResponse = {
 };
 
 export type CreateOpenOrderInput = {
-  boxId: string;
+  boxSlug: string;
   drawCount: 1 | 10;
-  expectedPriceStars: number;
-  expectedPoolVersionId?: string | undefined;
 };
 
 export type CreateOpenOrderResponse = {

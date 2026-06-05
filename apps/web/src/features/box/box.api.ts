@@ -52,20 +52,9 @@ export async function createOpenOrder(
 ): Promise<CreateOpenOrderResponse> {
   const idempotencyKey = createIdempotencyKey(input.drawCount);
   const body: Record<string, unknown> = {
-    box_id: input.boxId,
+    box_slug: input.boxSlug,
     draw_count: input.drawCount,
-    payment_provider: "telegram_stars",
-    expected_price_stars: input.expectedPriceStars,
-    idempotency_key: idempotencyKey,
-    client_context: {
-      source: "box_page",
-      clientOrderNonce: idempotencyKey,
-    },
   };
-
-  if (input.expectedPoolVersionId) {
-    body.expected_pool_version_id = input.expectedPoolVersionId;
-  }
 
   const response = await apiRequest<unknown>(
     API_ENDPOINTS.boxes.createOpenOrder,
@@ -123,7 +112,7 @@ async function fetchBoxOrderResult(
     includeItems: includeItems ? "true" : "false",
   });
   const response = await apiRequest<unknown>(
-    `${API_ENDPOINTS.boxes.paymentStatus}?${params.toString()}`,
+    `${API_ENDPOINTS.boxes.result}?${params.toString()}`,
     {
       method: "GET",
     },
