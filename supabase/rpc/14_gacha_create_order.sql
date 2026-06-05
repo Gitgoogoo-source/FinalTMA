@@ -170,11 +170,11 @@ begin
 
   insert into gacha.draw_orders (
     id, user_id, box_id, pool_version_id, payment_star_order_id, status,
-    quantity, unit_price_stars, discount_bps, total_price_stars,
+    quantity, draw_count, unit_price_stars, discount_bps, total_price_stars,
     open_reward_kcoin, invoice_payload, idempotency_key, metadata
   ) values (
     v_draw_order_id, p_user_id, p_box_id, v_pool.id, v_star_order_id, 'invoice_created',
-    p_quantity, v_unit_price, v_discount_bps, v_total_price,
+    p_quantity, p_quantity, v_unit_price, v_discount_bps, v_total_price,
     v_box.open_reward_kcoin, v_payload, v_idempotency_key,
     jsonb_build_object('box_slug', v_box.slug, 'box_tier', v_box.tier)
   );
