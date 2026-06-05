@@ -271,6 +271,144 @@ describe("telegramStars payment helpers", () => {
     });
   });
 
+  it("routes VIP monthly successful_payment fulfillment through the VIP RPC", async () => {
+    const rpcCalls: Array<{
+      schema: string;
+      name: string;
+      args: Record<string, unknown>;
+    }> = [];
+    const vipOrderId = "88888888-8888-4888-8888-888888888888";
+    const subscriptionId = "99999999-9999-4999-8999-999999999999";
+    const client = {
+      schema(schema: string) {
+        return {
+          rpc(name: string, args: Record<string, unknown>) {
+            rpcCalls.push({
+              schema,
+              name,
+              args,
+            });
+
+            if (name === "payment_record_successful_payment") {
+              return Promise.resolve({
+                data: {
+                  payment_recorded: true,
+                  idempotent: false,
+                  duplicate_update: false,
+                  duplicate_charge: false,
+                  event_id: "55555555-5555-4555-8555-555555555555",
+                  star_order_id: STAR_ORDER_ID,
+                  star_payment_id: "77777777-7777-4777-8777-777777777777",
+                  business_type: "vip_monthly",
+                  business_id: vipOrderId,
+                  draw_order_id: null,
+                  vip_order_id: vipOrderId,
+                  invoice_payload: PAYLOAD,
+                  telegram_payment_charge_id: "tg-charge-vip-001",
+                  reason_code: null,
+                  error_message: null,
+                  payment_order_status: "paid",
+                  process_status: "processed",
+                  paid_at: "2026-06-05T09:30:45.000Z",
+                },
+                error: null,
+                count: null,
+                status: 200,
+                statusText: "OK",
+              });
+            }
+
+            if (name === "ops_read_feature_flag") {
+              return Promise.resolve({
+                data: {
+                  key: "FEATURE_PAYMENT_WEBHOOK_FULFILLMENT_ENABLED",
+                  enabled: true,
+                },
+                error: null,
+                count: null,
+                status: 200,
+                statusText: "OK",
+              });
+            }
+
+            if (name === "vip_process_paid_order") {
+              return Promise.resolve({
+                data: {
+                  fulfilled: true,
+                  idempotent: false,
+                  retryable: false,
+                  business_type: "vip_monthly",
+                  star_order_id: STAR_ORDER_ID,
+                  vip_order_id: vipOrderId,
+                  subscription_id: subscriptionId,
+                  payment_order_status: "fulfilled",
+                },
+                error: null,
+                count: null,
+                status: 200,
+                statusText: "OK",
+              });
+            }
+
+            throw new Error(`Unexpected RPC ${name}`);
+          },
+        };
+      },
+    } as unknown as SupabaseAdminClient;
+
+    const result = await processTelegramSuccessfulPaymentUpdate({
+      update: {
+        update_id: 96060011,
+        message: {
+          from: {
+            id: 7050001,
+          },
+          successful_payment: {
+            currency: "XTR",
+            total_amount: 199,
+            invoice_payload: PAYLOAD,
+            telegram_payment_charge_id: "tg-charge-vip-001",
+            provider_payment_charge_id: "provider-charge-vip-001",
+          },
+        },
+      },
+      requestId: "req_test_successful_payment_vip_fulfillment",
+      requestHeadersHash: "headers-hash",
+      webhookSecretVerified: true,
+      client,
+      env: {
+        FEATURE_PAYMENT_WEBHOOK_FULFILLMENT_ENABLED: "true",
+      } as NodeJS.ProcessEnv,
+    });
+
+    expect(rpcCalls.map((call) => call.name)).toEqual([
+      "payment_record_successful_payment",
+      "ops_read_feature_flag",
+      "vip_process_paid_order",
+    ]);
+    expect(rpcCalls[2]?.args).toMatchObject({
+      p_star_order_id: STAR_ORDER_ID,
+      p_telegram_payment_charge_id: "tg-charge-vip-001",
+      p_provider_payment_charge_id: "provider-charge-vip-001",
+    });
+    expect(result).toMatchObject({
+      eventType: "successful_payment",
+      businessType: "vip_monthly",
+      vipOrderId,
+      paymentRecorded: true,
+      paymentOrderStatus: "fulfilled",
+      processStatus: "processed",
+      fulfillmentAttempted: true,
+      fulfillment: {
+        fulfilled: true,
+        businessType: "vip_monthly",
+        vipOrderId,
+        subscriptionId,
+        paymentOrderStatus: "fulfilled",
+      },
+    });
+  });
+
   it("records successful_payment without fulfillment when the webhook fulfillment switch is paused", async () => {
     const rpcCalls: Array<{
       schema: string;

@@ -116,7 +116,10 @@ export type PaymentRecordSuccessfulPaymentResult = {
   eventId: string;
   starOrderId: string | null;
   starPaymentId: string | null;
+  businessType: string | null;
+  businessId: string | null;
   drawOrderId: string | null;
+  vipOrderId: string | null;
   invoicePayload: string | null;
   telegramPaymentChargeId: string | null;
   reasonCode: string | null;
@@ -132,6 +135,9 @@ export type PaymentFulfillmentResult = {
   status: string | null;
   starOrderId: string | null;
   drawOrderId: string | null;
+  vipOrderId: string | null;
+  subscriptionId: string | null;
+  businessType: string | null;
   drawCount: number | null;
   quantity: number | null;
   resultCount: number | null;
@@ -1239,8 +1245,14 @@ async function fulfillTelegramSuccessfulPayment(input: {
     },
     ...(input.client ? { client: input.client } : {}),
   };
+  const businessType = input.recordResult.businessType;
+  const fulfillmentRpcName =
+    businessType === "vip_monthly"
+      ? "vip_process_paid_order"
+      : "gacha_process_paid_order";
+
   const rawResult = await callRpcRaw<Record<string, unknown>>(
-    "gacha_process_paid_order",
+    fulfillmentRpcName,
     {
       p_star_order_id: input.recordResult.starOrderId,
       p_telegram_payment_charge_id:
@@ -1254,7 +1266,7 @@ async function fulfillTelegramSuccessfulPayment(input: {
     rpcOptions,
   );
 
-  return normalizePaymentFulfillmentResult(rawResult);
+  return normalizePaymentFulfillmentResult(rawResult, fulfillmentRpcName);
 }
 
 async function answerPreCheckoutQuery(input: {
@@ -1684,7 +1696,10 @@ function normalizePaymentRecordSuccessfulPaymentResult(
     eventId,
     starOrderId: optionalString(value.star_order_id),
     starPaymentId: optionalString(value.star_payment_id),
+    businessType: optionalString(value.business_type),
+    businessId: optionalString(value.business_id),
     drawOrderId: optionalString(value.draw_order_id),
+    vipOrderId: optionalString(value.vip_order_id),
     invoicePayload: optionalString(value.invoice_payload),
     telegramPaymentChargeId: optionalString(value.telegram_payment_charge_id),
     reasonCode: optionalString(value.reason_code),
@@ -1727,10 +1742,11 @@ function normalizeTelegramWebhookReceivedResult(
 
 function normalizePaymentFulfillmentResult(
   value: Record<string, unknown>,
+  rpcName = "payment_fulfillment",
 ): PaymentFulfillmentResult {
   const fulfilled = requiredBoolean(
     value.fulfilled,
-    "gacha_process_paid_order.fulfilled",
+    `${rpcName}.fulfilled`,
   );
 
   return {
@@ -1739,6 +1755,9 @@ function normalizePaymentFulfillmentResult(
     status: optionalString(value.status),
     starOrderId: optionalString(value.star_order_id),
     drawOrderId: optionalString(value.draw_order_id),
+    vipOrderId: optionalString(value.vip_order_id),
+    subscriptionId: optionalString(value.subscription_id),
+    businessType: optionalString(value.business_type),
     drawCount: optionalNumber(value.draw_count),
     quantity: optionalNumber(value.quantity),
     resultCount: optionalNumber(value.result_count),
