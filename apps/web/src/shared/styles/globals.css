@@ -11061,7 +11061,8 @@ button.market-banner:disabled {
 .invite-button:disabled,
 .seven-day-check-in__header button:disabled,
 .commission-panel__header button:disabled,
-.claim-task-button:disabled {
+.claim-task-button:disabled,
+.check-in-reward-card__action:disabled {
   cursor: not-allowed;
   opacity: 0.55;
 }
@@ -11095,6 +11096,7 @@ button.market-banner:disabled {
 .task-row__copy span,
 .task-reward-badges,
 .check-in-reward-card em,
+.check-in-reward-card__action,
 .commission-panel__history em {
   color: rgba(54 67 75 / 60%);
   font-size: 11px;
@@ -11744,10 +11746,27 @@ button.market-banner:disabled {
 .task-row__copy span,
 .task-reward-badges,
 .check-in-reward-card em,
+.check-in-reward-card__action,
 .commission-panel__history em,
 .reward-history-entry__copy span,
 .reward-history-entry__copy time {
   color: var(--task-muted);
+}
+
+.check-in-reward-card__action {
+  min-width: 0;
+  justify-self: start;
+  border: 0;
+  padding: 0;
+  color: var(--task-muted);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.check-in-reward-card__action:not(:disabled) {
+  color: var(--task-orange);
 }
 
 .invite-stat-card span svg,
@@ -12061,6 +12080,7 @@ button.market-banner:disabled {
 .commission-panel__header button:focus-visible,
 .task-list-state button:focus-visible,
 .claim-task-button:focus-visible,
+.check-in-reward-card__action:focus-visible,
 .task-category-tabs button:focus-visible,
 .referral-link-sheet__header button:focus-visible,
 .referral-link-sheet__actions button:focus-visible,
@@ -12236,6 +12256,8 @@ button.market-banner:disabled {
 
 .invite-campaign-card__cta-shell {
   margin-top: 2px;
+  display: grid;
+  gap: 8px;
   border: 1px solid rgb(255 121 0 / 12%);
   border-radius: 8px;
   padding: 8px;
@@ -12284,6 +12306,28 @@ button.market-banner:disabled {
   color: var(--task-orange-deep);
   background: #fff;
   font-style: normal;
+}
+
+.invite-campaign-card__copy {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid rgb(54 67 75 / 13%);
+  border-radius: 8px;
+  color: var(--task-ink);
+  background: rgb(255 255 255 / 74%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 92%);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.invite-campaign-card__copy:disabled {
+  cursor: progress;
+  opacity: 0.58;
 }
 
 .invite-campaign-card__caption {
@@ -12396,7 +12440,8 @@ button.market-banner:disabled {
   font-weight: 850;
 }
 
-.invite-campaign-card__primary:focus-visible {
+.invite-campaign-card__primary:focus-visible,
+.invite-campaign-card__copy:focus-visible {
   outline: 3px solid rgb(255 121 0 / 34%);
   outline-offset: 3px;
 }
@@ -12635,6 +12680,7 @@ button.market-banner:disabled {
 .commission-panel__header button:focus-visible,
 .task-list-state button:focus-visible,
 .claim-task-button:focus-visible,
+.check-in-reward-card__action:focus-visible,
 .task-category-tabs button:focus-visible,
 .referral-link-sheet__header button:focus-visible,
 .referral-link-sheet__actions button:focus-visible,

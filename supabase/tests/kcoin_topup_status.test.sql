@@ -97,13 +97,13 @@ select throws_ok(
   $$
     select api.kcoin_topup_create_order(
       (select id from _ids where key = 'user'),
-      50,
-      'kcoin-topup-status-test-idem-0050'
+      0,
+      'kcoin-topup-status-test-idem-0000'
     );
   $$,
   'P0001',
   'kcoin topup amount is invalid',
-  '50 Star topup order is rejected'
+  'non-positive topup order is rejected'
 );
 
 insert into _payloads (key, payload)

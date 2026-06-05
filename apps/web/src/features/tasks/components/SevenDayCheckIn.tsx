@@ -1,5 +1,4 @@
 import type { CSSProperties } from "react";
-import { CalendarCheck, Clock } from "lucide-react";
 
 import type { CheckInStatus } from "../tasks.types";
 import { CheckInRewardCard } from "./CheckInRewardCard";
@@ -16,7 +15,9 @@ export function SevenDayCheckIn({
   status,
 }: SevenDayCheckInProps) {
   const canCheckIn = Boolean(
-    status?.campaign && !status.alreadyClaimedToday && status.nextDayIndex,
+    status?.campaign &&
+      !status.alreadyClaimedToday &&
+      status.nextDayIndex !== null,
   );
   const days = status?.days ?? [];
   const claimedCount = days.filter((day) => day.status === "claimed").length;
@@ -37,22 +38,6 @@ export function SevenDayCheckIn({
           <span>连续签到</span>
           <h2 id="check-in-title">{status?.campaign?.title ?? "7 日签到"}</h2>
         </div>
-        <button
-          disabled={!canCheckIn || isPending}
-          onClick={onCheckIn}
-          type="button"
-        >
-          {isPending ? (
-            <Clock aria-hidden="true" size={15} strokeWidth={2.5} />
-          ) : (
-            <CalendarCheck aria-hidden="true" size={15} strokeWidth={2.5} />
-          )}
-          {status?.alreadyClaimedToday
-            ? "今日已签"
-            : isPending
-              ? "签到中"
-              : "签到"}
-        </button>
       </header>
 
       <div className="seven-day-check-in__meta">
@@ -71,7 +56,13 @@ export function SevenDayCheckIn({
           </div>
           <div className="seven-day-check-in__days">
             {days.map((day) => (
-              <CheckInRewardCard day={day} key={day.dayIndex} />
+              <CheckInRewardCard
+                canCheckIn={canCheckIn}
+                day={day}
+                isPending={isPending}
+                key={day.dayIndex}
+                onCheckIn={onCheckIn}
+              />
             ))}
           </div>
         </>

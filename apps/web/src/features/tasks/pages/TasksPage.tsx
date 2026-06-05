@@ -14,7 +14,6 @@ import {
 import { CommissionStatsPanel } from "../components/CommissionStatsPanel";
 import { InviteCampaignCard } from "../components/InviteCampaignCard";
 import { InviteStatsPanel } from "../components/InviteStatsPanel";
-import { ReferralLinkSheet } from "../components/ReferralLinkSheet";
 import { RewardHistoryPanel } from "../components/RewardHistoryEntry";
 import { SevenDayCheckIn } from "../components/SevenDayCheckIn";
 import { TaskCategoryTabs } from "../components/TaskCategoryTabs";
@@ -43,7 +42,6 @@ export function TasksPage() {
   const [activeCategory, setActiveCategory] =
     useState<TaskCategoryFilter>("all");
   const [referralLink, setReferralLink] = useState<ReferralLink | null>(null);
-  const [isReferralSheetOpen, setReferralSheetOpen] = useState(false);
   const { pushToast, showRewardModal } = useFeedback();
   const taskListQuery = useMemo(
     () => ({
@@ -66,24 +64,10 @@ export function TasksPage() {
     ? (claimTask.variables?.taskId ?? null)
     : null;
   const isTaskCenterLoading = taskQuery.isLoading && !taskQuery.overview;
-
-  async function handleGenerateReferralLink() {
-    try {
-      const nextLink = await ensureReferralLink();
-      setReferralSheetOpen(true);
-      pushToast({
-        type: "success",
-        title: "邀请链接已生成",
-        message: nextLink.referralCode,
-      });
-    } catch (error) {
-      pushToast({
-        type: "error",
-        title: "生成失败",
-        message: getApiErrorMessage(error),
-      });
-    }
-  }
+  const isInviteActionPending =
+    referralLinkMutation.isPending ||
+    preparedShareMessage.isPending ||
+    inviteShare.isPending;
 
   async function handleCopyReferralLink() {
     try {
@@ -109,11 +93,9 @@ export function TasksPage() {
 
   async function handleShareReferralLink() {
     try {
-      const link = await ensureReferralLink();
-
       const shareResult = canUseTelegramPreparedShare()
         ? await sharePreparedReferralLink()
-        : openReferralLinkFallback(link);
+        : await shareReferralLinkFallback();
 
       if (shareResult.method === "prepared" && !shareResult.sent) {
         pushToast({
@@ -126,10 +108,7 @@ export function TasksPage() {
 
       await inviteShare.mutateAsync({
         scene: "TASK_PAGE",
-        referralCode:
-          shareResult.method === "prepared"
-            ? shareResult.referralCode
-            : link.referralCode,
+        referralCode: shareResult.referralCode,
         metadata: {
           share_method: shareResult.method,
         },
@@ -153,6 +132,7 @@ export function TasksPage() {
       scene: "TASK_PAGE",
       source: "task_center",
     });
+    setReferralLink(prepared);
     const result = await openTelegramPreparedShare({
       preparedMessageId: prepared.preparedMessageId,
       text: prepared.shareText,
@@ -165,7 +145,9 @@ export function TasksPage() {
     };
   }
 
-  function openReferralLinkFallback(link: ReferralLink) {
+  async function shareReferralLinkFallback() {
+    const link = await ensureReferralLink();
+
     openTelegramShareLink({
       text: link.shareText,
       url: link.inviteUrl,
@@ -277,10 +259,9 @@ export function TasksPage() {
       <ActivityBanner banner={bannerQuery.primaryBanner} label="任务活动" />
 
       <InviteCampaignCard
-        isGenerating={referralLinkMutation.isPending}
-        onGenerate={() => void handleGenerateReferralLink()}
-        onShowLink={() => setReferralSheetOpen(true)}
-        referralLink={referralLink}
+        isPending={isInviteActionPending}
+        onCopyLink={() => void handleCopyReferralLink()}
+        onInvite={() => void handleShareReferralLink()}
       />
 
       <InviteStatsPanel stats={inviteStatsQuery.inviteStats} />
@@ -320,14 +301,6 @@ export function TasksPage() {
         tasks={taskQuery.allTasks}
       />
 
-      <ReferralLinkSheet
-        isPending={inviteShare.isPending || preparedShareMessage.isPending}
-        onClose={() => setReferralSheetOpen(false)}
-        onCopy={() => void handleCopyReferralLink()}
-        onShare={() => void handleShareReferralLink()}
-        open={isReferralSheetOpen}
-        referralLink={referralLink}
-      />
     </section>
   );
 }

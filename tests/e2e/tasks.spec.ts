@@ -55,7 +55,7 @@ type TaskCaptureGlobal = typeof globalThis & {
   };
 };
 
-test("任务页邀请卡片可以生成、复制并打开 Telegram 分享", async ({ page }) => {
+test("任务页邀请卡片可以直接打开 Telegram 分享并复制邀请链接", async ({ page }) => {
   const state = createTaskMockState();
 
   await installTaskBrowserCaptures(page);
@@ -76,32 +76,55 @@ test("任务页邀请卡片可以生成、复制并打开 Telegram 分享", asyn
   await expect(inviteStats).toContainText("1,000");
   await expect(inviteStats).toContainText("分红收益");
   await expect(inviteStats).toContainText("165");
+  await expect(
+    inviteCard.getByRole("button", { name: "复制链接" }),
+  ).toBeEnabled();
 
+  await installRuntimeShareCapture(page);
   await inviteCard.getByRole("button", { name: "立即邀请" }).click();
 
-  await expect.poll(() => state.referralLinkRequests.length).toBe(1);
-  expect(state.referralLinkRequests[0]?.body).toMatchObject({
+  await expect.poll(() => state.preparedShareRequests.length).toBe(1);
+  await expect.poll(() => state.shareRequests.length).toBe(1);
+  await expect.poll(() => readTelegramPreparedMessageIds(page)).toEqual([
+    "prepared_invite_TASK_E2E",
+  ]);
+  await expect(page.getByRole("dialog", { name: "分享给好友" })).toHaveCount(0);
+  expect(state.referralLinkRequests).toHaveLength(0);
+  expect(state.preparedShareRequests[0]?.body).toMatchObject({
     scene: "TASK_PAGE",
     source: "task_center",
   });
-  const inviteSheet = page.getByRole("dialog", { name: "分享给好友" });
-
-  await expect(inviteSheet).toBeVisible();
-  await expect(page.getByText("邀请链接已生成", { exact: true })).toBeVisible();
-
-  const overviewRequestCount = state.overviewRequests.length;
-
-  await inviteSheet.getByRole("button", { name: "复制" }).click();
-
-  await expect.poll(() => state.shareRequests.length).toBe(1);
+  expect(state.preparedShareRequests[0]?.body).not.toHaveProperty("user_id");
+  expect(state.preparedShareRequests[0]?.body).not.toHaveProperty(
+    "telegram_user_id",
+  );
   expect(state.shareRequests[0]?.body).toMatchObject({
     scene: "TASK_PAGE",
     referral_code: "TASK_E2E",
+    metadata: {
+      share_method: "prepared",
+    },
     idempotency_key: expect.any(String),
   });
   expect(state.shareRequests[0]?.body).not.toHaveProperty("user_id");
   expect(state.shareRequests[0]?.headers["x-idempotency-key"]).toEqual(
     state.shareRequests[0]?.body.idempotency_key,
+  );
+  await expect(page.getByText("分享已记录", { exact: true })).toBeVisible();
+
+  const overviewRequestCount = state.overviewRequests.length;
+
+  await inviteCard.getByRole("button", { name: "复制链接" }).click();
+
+  await expect.poll(() => state.shareRequests.length).toBe(2);
+  expect(state.shareRequests[1]?.body).toMatchObject({
+    scene: "TASK_PAGE",
+    referral_code: "TASK_E2E",
+    idempotency_key: expect.any(String),
+  });
+  expect(state.shareRequests[1]?.body).not.toHaveProperty("user_id");
+  expect(state.shareRequests[1]?.headers["x-idempotency-key"]).toEqual(
+    state.shareRequests[1]?.body.idempotency_key,
   );
   await expect.poll(() => readCopiedText(page)).toBe(INVITE_URL);
   await expect(page.getByText("链接已复制", { exact: true })).toBeVisible();
@@ -116,31 +139,6 @@ test("任务页邀请卡片可以生成、复制并打开 Telegram 分享", asyn
   await expect(
     shareTaskRow.getByRole("button", { name: "领取" }),
   ).toBeEnabled();
-
-  await installRuntimeShareCapture(page);
-  await inviteSheet.getByRole("button", { name: "分享" }).click();
-
-  await expect.poll(() => state.preparedShareRequests.length).toBe(1);
-  await expect.poll(() => state.shareRequests.length).toBe(2);
-  await expect.poll(() => readTelegramPreparedMessageIds(page)).toEqual([
-    "prepared_invite_TASK_E2E",
-  ]);
-  expect(state.preparedShareRequests[0]?.body).toMatchObject({
-    scene: "TASK_PAGE",
-    source: "task_center",
-  });
-  expect(state.preparedShareRequests[0]?.body).not.toHaveProperty("user_id");
-  expect(state.preparedShareRequests[0]?.body).not.toHaveProperty(
-    "telegram_user_id",
-  );
-  expect(state.shareRequests[1]?.body).toMatchObject({
-    scene: "TASK_PAGE",
-    referral_code: "TASK_E2E",
-    metadata: {
-      share_method: "prepared",
-    },
-  });
-  await expect(page.getByText("分享已记录", { exact: true })).toBeVisible();
 });
 
 test("任务页展示签到状态，签到后刷新签到和资产数据", async ({ page }) => {

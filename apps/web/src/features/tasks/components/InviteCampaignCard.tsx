@@ -1,21 +1,17 @@
-import { ArrowRight, Gift, Percent } from "lucide-react";
-
-import type { ReferralLink } from "../tasks.types";
+import { ArrowRight, Copy, Gift, Percent } from "lucide-react";
 
 type InviteCampaignCardProps = {
-  referralLink: ReferralLink | null;
-  isGenerating: boolean;
-  onGenerate: () => void;
-  onShowLink: () => void;
+  isPending: boolean;
+  onCopyLink: () => void;
+  onInvite: () => void;
 };
 
 export function InviteCampaignCard({
-  isGenerating,
-  onGenerate,
-  onShowLink,
-  referralLink,
+  isPending,
+  onCopyLink,
+  onInvite,
 }: InviteCampaignCardProps) {
-  const primaryLabel = isGenerating ? "生成中" : "立即邀请";
+  const primaryLabel = isPending ? "处理中" : "立即邀请";
 
   return (
     <section className="invite-campaign-card" aria-labelledby="invite-title">
@@ -56,14 +52,23 @@ export function InviteCampaignCard({
       <div className="invite-campaign-card__cta-shell">
         <button
           className="invite-campaign-card__primary"
-          disabled={isGenerating}
-          onClick={referralLink ? onShowLink : onGenerate}
+          disabled={isPending}
+          onClick={onInvite}
           type="button"
         >
           <span>{primaryLabel}</span>
           <i aria-hidden="true">
             <ArrowRight size={24} strokeWidth={3} />
           </i>
+        </button>
+        <button
+          className="invite-campaign-card__copy"
+          disabled={isPending}
+          onClick={onCopyLink}
+          type="button"
+        >
+          <Copy aria-hidden="true" size={16} strokeWidth={2.5} />
+          复制链接
         </button>
       </div>
 

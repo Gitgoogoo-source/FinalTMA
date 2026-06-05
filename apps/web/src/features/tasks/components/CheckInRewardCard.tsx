@@ -4,12 +4,21 @@ import type { SignInDay } from "../tasks.types";
 import { RewardBadges } from "./TaskRow";
 
 type CheckInRewardCardProps = {
+  canCheckIn: boolean;
   day: SignInDay;
+  isPending: boolean;
+  onCheckIn: () => void;
 };
 
-export function CheckInRewardCard({ day }: CheckInRewardCardProps) {
+export function CheckInRewardCard({
+  canCheckIn,
+  day,
+  isPending,
+  onCheckIn,
+}: CheckInRewardCardProps) {
   const meta = getDayMeta(day.status);
   const Icon = meta.icon;
+  const isAvailable = day.status === "available";
 
   return (
     <article className="check-in-reward-card" data-status={day.status}>
@@ -19,7 +28,19 @@ export function CheckInRewardCard({ day }: CheckInRewardCardProps) {
       </header>
       <strong>{day.title}</strong>
       <RewardBadges rewards={day.rewards} />
-      <em>{meta.label}</em>
+      {isAvailable ? (
+        <button
+          aria-label={`签到 Day ${day.dayIndex}`}
+          className="check-in-reward-card__action"
+          disabled={!canCheckIn || isPending}
+          onClick={onCheckIn}
+          type="button"
+        >
+          {isPending ? "签到中" : meta.label}
+        </button>
+      ) : (
+        <em>{meta.label}</em>
+      )}
     </article>
   );
 }
