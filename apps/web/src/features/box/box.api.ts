@@ -8,6 +8,8 @@ import type {
   BoxRewardsResponse,
   BoxRewardPreviewItem,
   BoxStatus,
+  CreateKcoinTopupOrderInput,
+  CreateKcoinTopupOrderResponse,
   CreateOpenOrderInput,
   CreateOpenOrderResponse,
   DrawResultBalances,
@@ -68,6 +70,29 @@ export async function createOpenOrder(
   );
 
   return normalizeCreateOpenOrderResponse(response, input.drawCount);
+}
+
+export async function createKcoinTopupOrder(
+  input: CreateKcoinTopupOrderInput,
+): Promise<CreateKcoinTopupOrderResponse> {
+  const idempotencyKey = createScopedIdempotencyKey(
+    `kcoin:topup:${input.amount}`,
+  );
+  const response = await apiRequest<unknown>(
+    API_ENDPOINTS.payments.kcoinTopupCreateOrder,
+    {
+      method: "POST",
+      body: {
+        amount: input.amount,
+        idempotency_key: idempotencyKey,
+      },
+      headers: {
+        "X-Idempotency-Key": idempotencyKey,
+      },
+    },
+  );
+
+  return normalizeCreateKcoinTopupOrderResponse(response);
 }
 
 export async function openVipDailyBox(): Promise<CreateOpenOrderResponse> {
@@ -387,6 +412,14 @@ function normalizeCreateOpenOrderResponse(
       readString(payload.invoice_open_mode),
     xtrAmount:
       readNumber(payload.xtrAmount) ?? readNumber(payload.xtr_amount) ?? 0,
+    paidKcoin:
+      readNumber(payload.paidKcoin) ?? readNumber(payload.paid_kcoin) ?? 0,
+    totalPriceKcoin:
+      readNumber(payload.totalPriceKcoin) ??
+      readNumber(payload.total_price_kcoin) ??
+      readNumber(payload.paidKcoin) ??
+      readNumber(payload.paid_kcoin) ??
+      0,
     drawCount:
       normalizeDrawCount(payload.drawCount ?? payload.draw_count) ??
       fallbackDrawCount,
@@ -406,6 +439,58 @@ function normalizeCreateOpenOrderResponse(
       readBoolean(payload.resultReady) ??
       readBoolean(payload.result_ready) ??
       false,
+  };
+}
+
+function normalizeCreateKcoinTopupOrderResponse(
+  response: unknown,
+): CreateKcoinTopupOrderResponse {
+  const payload = isRecord(response) ? response : {};
+  const orderStatus =
+    readString(payload.orderStatus) ??
+    readString(payload.order_status) ??
+    "created";
+  const paymentOrderStatus =
+    readString(payload.paymentOrderStatus) ??
+    readString(payload.payment_order_status) ??
+    orderStatus;
+  const topupOrderId =
+    readString(payload.topupOrderId) ??
+    readString(payload.topup_order_id) ??
+    readString(payload.orderId) ??
+    readString(payload.order_id) ??
+    "";
+
+  return {
+    orderId:
+      readString(payload.orderId) ??
+      readString(payload.order_id) ??
+      topupOrderId,
+    topupOrderId,
+    starOrderId:
+      readString(payload.starOrderId) ?? readString(payload.star_order_id),
+    invoicePayload:
+      readString(payload.invoicePayload) ?? readString(payload.invoice_payload),
+    invoiceLink:
+      readString(payload.invoiceLink) ?? readString(payload.invoice_link),
+    invoiceOpenMode:
+      readString(payload.invoiceOpenMode) ??
+      readString(payload.invoice_open_mode),
+    xtrAmount:
+      readNumber(payload.xtrAmount) ?? readNumber(payload.xtr_amount) ?? 0,
+    kcoinAmount:
+      readNumber(payload.kcoinAmount) ?? readNumber(payload.kcoin_amount) ?? 0,
+    orderStatus,
+    paymentStatus:
+      readString(payload.paymentStatus) ??
+      readString(payload.payment_status) ??
+      paymentOrderStatus,
+    paymentOrderStatus,
+    expiresAt: readString(payload.expiresAt) ?? readString(payload.expires_at),
+    paidAt: readString(payload.paidAt) ?? readString(payload.paid_at),
+    fulfilledAt:
+      readString(payload.fulfilledAt) ?? readString(payload.fulfilled_at),
+    idempotent: readBoolean(payload.idempotent) ?? false,
   };
 }
 
@@ -446,8 +531,17 @@ function normalizeDrawResultResponse(
       readNumber(payload.draw_count) ??
       readNumber(payload.quantity) ??
       rawResults.length,
+    paymentProvider:
+      readString(payload.paymentProvider) ??
+      readString(payload.payment_provider),
     paidStars:
       readNumber(payload.paidStars) ?? readNumber(payload.paid_stars) ?? 0,
+    paidKcoin:
+      readNumber(payload.paidKcoin) ??
+      readNumber(payload.paid_kcoin) ??
+      readNumber(payload.totalPriceKcoin) ??
+      readNumber(payload.total_price_kcoin) ??
+      0,
     returnedKcoin:
       readNumber(payload.returnedKcoin) ??
       readNumber(payload.returned_kcoin) ??
@@ -531,6 +625,9 @@ function normalizePaymentStatusResponse(
       readNumber(drawOrder.draw_count) ??
       readNumber(drawOrder.quantity) ??
       0,
+    paymentProvider:
+      readString(drawOrder.paymentProvider) ??
+      readString(drawOrder.payment_provider),
     paidStars:
       readNumber(drawOrder.totalPriceStars) ??
       readNumber(drawOrder.total_price_stars) ??
@@ -538,6 +635,12 @@ function normalizePaymentStatusResponse(
       readNumber(payment.xtr_amount) ??
       readNumber(starOrder.xtrAmount) ??
       readNumber(starOrder.xtr_amount) ??
+      0,
+    paidKcoin:
+      readNumber(drawOrder.paidKcoin) ??
+      readNumber(drawOrder.paid_kcoin) ??
+      readNumber(drawOrder.totalPriceKcoin) ??
+      readNumber(drawOrder.total_price_kcoin) ??
       0,
     returnedKcoin:
       readNumber(drawOrder.returnedKcoin) ??

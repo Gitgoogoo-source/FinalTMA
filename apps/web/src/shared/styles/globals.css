@@ -360,6 +360,20 @@ a {
   -webkit-backdrop-filter: blur(18px) saturate(180%);
 }
 
+.asset-pill--button {
+  appearance: none;
+  cursor: pointer;
+}
+
+.asset-pill--button:active {
+  transform: translateY(1px);
+}
+
+.asset-pill--button:focus-visible {
+  outline: 2px solid rgb(28 226 4 / 54%);
+  outline-offset: 2px;
+}
+
 .asset-pill::before {
   content: "";
   position: absolute;
@@ -2063,17 +2077,30 @@ a {
 }
 
 .box-tier-card__check {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   display: grid;
   place-items: center;
   position: absolute;
-  right: 8px;
-  bottom: 8px;
+  left: 50%;
+  bottom: 10px;
   border-radius: 999px;
+  border: 2px solid rgb(54 67 75 / 78%);
+  color: transparent;
+  background: rgb(255 255 255 / 72%);
+  box-shadow:
+    0 4px 10px rgb(33 39 44 / 10%),
+    inset 0 1px 0 rgb(255 255 255 / 86%);
+  transform: translateX(-50%);
+}
+
+.box-tier-card--selected .box-tier-card__check {
+  border-color: #ff9c00;
   color: #fffdfa;
   background: #ff9c00;
-  box-shadow: 0 5px 12px rgb(255 156 0 / 34%);
+  box-shadow:
+    0 6px 14px rgb(255 156 0 / 38%),
+    inset 0 1px 0 rgb(255 255 255 / 34%);
 }
 
 .box-status-badge {
@@ -2931,6 +2958,344 @@ a {
   border-color: rgb(54 67 75 / 15%);
   color: #36434b;
   background: rgb(255 255 255 / 8%);
+}
+
+.kcoin-topup-sheet {
+  position: fixed;
+  z-index: 72;
+  inset: 0;
+  display: grid;
+  align-items: end;
+}
+
+.kcoin-topup-sheet__backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  background: rgb(0 0 0 / 56%);
+}
+
+.kcoin-topup-sheet__panel {
+  width: min(100%, 460px);
+  max-height: min(86vh, 720px);
+  margin: 0 auto;
+  position: relative;
+  display: grid;
+  gap: 14px;
+  overflow: auto;
+  border: 1px solid rgb(54 67 75 / 15%);
+  border-radius: 8px 8px 0 0;
+  padding: 16px;
+  background: #fffdfa;
+  box-shadow: 0 -20px 60px rgb(0 0 0 / 34%);
+}
+
+.kcoin-topup-sheet__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.kcoin-topup-sheet__header span {
+  color: #1ce204;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.kcoin-topup-sheet__header h2 {
+  margin: 2px 0 0;
+  color: #36434b;
+  font-size: 18px;
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
+.kcoin-topup-sheet__header p {
+  margin: 6px 0 0;
+  color: rgba(54 67 75 / 64%);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.kcoin-topup-sheet__header button {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgb(54 67 75 / 15%);
+  border-radius: 8px;
+  color: #36434b;
+  background: rgb(255 255 255 / 8%);
+  cursor: pointer;
+}
+
+.kcoin-topup-sheet__options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.kcoin-topup-sheet__option {
+  min-height: 58px;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 4px 8px;
+  border: 1px solid rgb(255 156 0 / 34%);
+  border-radius: 8px;
+  padding: 9px 10px;
+  color: #36434b;
+  background: linear-gradient(180deg, #fffdfa, rgb(255 247 233 / 86%));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 88%);
+  cursor: pointer;
+  text-align: left;
+}
+
+.kcoin-topup-sheet__option svg {
+  grid-row: 1 / span 2;
+  color: #ff9c00;
+}
+
+.kcoin-topup-sheet__option span,
+.kcoin-topup-sheet__option strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kcoin-topup-sheet__option span {
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.kcoin-topup-sheet__option strong {
+  color: rgba(54 67 75 / 60%);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.kcoin-topup-sheet__status {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgb(54 67 75 / 14%);
+  border-radius: 8px;
+  padding: 10px;
+  background: rgb(255 255 255 / 6%);
+}
+
+.kcoin-topup-sheet__status svg {
+  color: rgba(54 67 75 / 62%);
+}
+
+.kcoin-topup-sheet__status--progress {
+  border-color: rgb(28 226 4 / 34%);
+  background: rgb(28 226 4 / 10%);
+}
+
+.kcoin-topup-sheet__status--progress svg,
+.kcoin-topup-sheet__status--success svg {
+  color: #1ce204;
+}
+
+.kcoin-topup-sheet__status--success {
+  border-color: rgb(28 226 4 / 38%);
+  background: rgb(28 226 4 / 12%);
+}
+
+.kcoin-topup-sheet__status--warning,
+.kcoin-topup-sheet__status--danger {
+  border-color: rgb(255 156 0 / 36%);
+  background: rgb(255 156 0 / 10%);
+}
+
+.kcoin-topup-sheet__status--warning svg,
+.kcoin-topup-sheet__status--danger svg {
+  color: #ff9c00;
+}
+
+.kcoin-topup-sheet__status strong,
+.kcoin-topup-sheet__status span {
+  display: block;
+  min-width: 0;
+}
+
+.kcoin-topup-sheet__status strong {
+  color: #36434b;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.kcoin-topup-sheet__status span {
+  margin-top: 3px;
+  color: rgba(54 67 75 / 62%);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.kcoin-topup-sheet__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.kcoin-topup-sheet__actions button {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid rgb(255 156 0 / 44%);
+  border-radius: 999px;
+  padding: 0 14px;
+  color: #36434b;
+  background: #ff9c00;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.kcoin-topup-sheet__actions .kcoin-topup-sheet__secondary-action {
+  border-color: rgb(54 67 75 / 15%);
+  background: rgb(255 255 255 / 8%);
+}
+
+.kcoin-topup-sheet__option:disabled,
+.kcoin-topup-sheet__actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.kcoin-topup-sheet__spinner {
+  animation: spin 0.9s linear infinite;
+}
+
+.kcoin-recharge-dialog {
+  position: fixed;
+  z-index: 72;
+  inset: 0;
+  display: grid;
+  align-items: end;
+}
+
+.kcoin-recharge-dialog__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgb(0 0 0 / 56%);
+}
+
+.kcoin-recharge-dialog__panel {
+  width: min(100%, 460px);
+  margin: 0 auto;
+  position: relative;
+  display: grid;
+  gap: 14px;
+  border: 1px solid rgb(54 67 75 / 15%);
+  border-radius: 8px 8px 0 0;
+  padding: 16px;
+  background: #fffdfa;
+  box-shadow: 0 -20px 60px rgb(0 0 0 / 34%);
+}
+
+.kcoin-recharge-dialog__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.kcoin-recharge-dialog__header h2 {
+  margin: 0;
+  color: #36434b;
+  font-size: 18px;
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
+.kcoin-recharge-dialog__header p {
+  margin: 6px 0 0;
+  color: rgba(54 67 75 / 64%);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.kcoin-recharge-dialog__close {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgb(54 67 75 / 15%);
+  border-radius: 8px;
+  color: #36434b;
+  background: rgb(255 255 255 / 8%);
+  cursor: pointer;
+}
+
+.kcoin-recharge-dialog__options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.kcoin-recharge-dialog__option {
+  min-height: 54px;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 4px 8px;
+  border: 1px solid rgb(255 156 0 / 34%);
+  border-radius: 8px;
+  padding: 9px 10px;
+  color: #36434b;
+  background: linear-gradient(180deg, #fffdfa, rgb(255 247 233 / 86%));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 88%);
+  cursor: pointer;
+  text-align: left;
+}
+
+.kcoin-recharge-dialog__option svg {
+  grid-row: 1 / span 2;
+  color: #ff9c00;
+}
+
+.kcoin-recharge-dialog__option span,
+.kcoin-recharge-dialog__option strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kcoin-recharge-dialog__option span {
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.kcoin-recharge-dialog__option strong {
+  color: rgba(54 67 75 / 60%);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.kcoin-recharge-dialog__option:disabled,
+.kcoin-recharge-dialog__close:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.kcoin-recharge-dialog__spinner {
+  animation: box-spin 0.8s linear infinite;
 }
 
 .draw-result-summary {

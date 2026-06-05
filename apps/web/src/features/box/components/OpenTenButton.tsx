@@ -1,4 +1,4 @@
-import { Loader2, Star } from "lucide-react";
+import { Coins, Loader2 } from "lucide-react";
 
 import { formatCurrencyAmount } from "@/shared/lib/formatCurrency";
 
@@ -24,7 +24,7 @@ export function OpenTenButton({
       className="box-open-button box-open-button--primary"
       disabled={disabled}
       aria-busy={isPending}
-      aria-label={`开 10 次，${formatCurrencyAmount(box.tenDrawPrice)} Stars，9 折`}
+      aria-label={`开 10 次，${formatCurrencyAmount(box.tenDrawPrice)} K-coin，9 折`}
       onClick={onOpen}
       type="button"
     >
@@ -38,7 +38,7 @@ export function OpenTenButton({
             strokeWidth={2.4}
           />
         ) : (
-          <Star aria-hidden="true" size={15} strokeWidth={2.4} />
+          <Coins aria-hidden="true" size={15} strokeWidth={2.4} />
         )}
         {formatCurrencyAmount(box.tenDrawPrice)}
       </strong>

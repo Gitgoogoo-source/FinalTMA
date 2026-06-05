@@ -9,6 +9,10 @@ import {
   type TelegramStarsInvoiceResult,
 } from "../../packages/server/src/payments/telegramStars.js";
 import {
+  readVipMonthlyPriceXtr,
+  VipPriceConfigError,
+} from "../../packages/server/src/vip/vipPrice.js";
+import {
   ApiError,
   getIdempotencyKey,
   withApiHandler,
@@ -58,6 +62,7 @@ export default withApiHandler(
       VipCreateOrderRequestSchema,
       normalizeCreateVipOrderInput(body, getIdempotencyKey(req)),
     );
+    const serverPriceXtr = readVipMonthlyPriceXtrForApi();
 
     await assertStarsPaymentCreateAllowed();
     await assertUserRiskAllowed({
@@ -69,6 +74,7 @@ export default withApiHandler(
       metadata: {
         planId: input.planId,
         expectedPriceXtr: input.expectedPriceXtr ?? undefined,
+        serverPriceXtr,
       },
     });
 
@@ -76,6 +82,7 @@ export default withApiHandler(
       input,
       session.userId,
       ctx.requestId,
+      serverPriceXtr,
     );
     const vipOrderId = getRequiredString(order, "vip_order_id");
     const starOrderId = getRequiredString(order, "star_order_id");
@@ -158,14 +165,16 @@ async function callVipCreateOrder(
   input: VipCreateOrderRequest,
   userId: string,
   requestId: string,
+  serverPriceXtr: number,
 ): Promise<CreateVipOrderRpcResult> {
   try {
     return await callRpcRaw<CreateVipOrderRpcResult>(
-      "vip_create_order_checked",
+      "vip_create_order_with_server_price_checked",
       {
         p_user_id: userId,
         p_plan_id: input.planId,
         p_idempotency_key: input.idempotencyKey,
+        p_server_price_xtr: serverPriceXtr,
         p_expected_price_xtr: input.expectedPriceXtr ?? null,
       },
       {
@@ -174,6 +183,7 @@ async function callVipCreateOrder(
           requestId,
           userId,
           planId: input.planId,
+          serverPriceXtr,
           idempotencyKey: input.idempotencyKey,
         },
       },
@@ -236,6 +246,21 @@ function mapCreateVipOrderRpcError(error: unknown): ApiError {
   }
 
   if (
+    message.includes("server price xtr is invalid") ||
+    message.includes("server_price_xtr is required")
+  ) {
+    return new ApiError(503, "VIP_PRICE_CONFIG_INVALID", "月卡价格配置无效。", {
+      expose: false,
+      cause: error,
+    });
+  }
+
+  if (
+    message.includes(
+      "function api.vip_create_order_with_server_price_checked",
+    ) ||
+    (message.includes("vip_create_order_with_server_price_checked") &&
+      message.includes("could not find")) ||
     message.includes("function api.vip_create_order_checked") ||
     (message.includes("vip_create_order_checked") &&
       message.includes("could not find")) ||
@@ -262,6 +287,21 @@ function mapCreateVipOrderRpcError(error: unknown): ApiError {
       cause: error,
     },
   );
+}
+
+function readVipMonthlyPriceXtrForApi(): number {
+  try {
+    return readVipMonthlyPriceXtr();
+  } catch (error) {
+    if (error instanceof VipPriceConfigError) {
+      throw new ApiError(error.statusCode, error.code, "月卡价格配置无效。", {
+        expose: error.expose,
+        cause: error,
+      });
+    }
+
+    throw error;
+  }
 }
 
 function getRequiredString(

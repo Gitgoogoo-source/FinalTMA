@@ -6,7 +6,6 @@ import type {
 } from "../../api/_shared/handler";
 import {
   buildCreateOpenOrderResponse,
-  isDevGachaPaymentModeEnabled,
   normalizeCreateOpenOrderInput,
 } from "../../api/boxes/create-open-order";
 import {
@@ -222,49 +221,44 @@ describe("boxes API helpers", () => {
     });
   });
 
-  it("detects enabled dev gacha payment modes", () => {
-    expect(isDevGachaPaymentModeEnabled("true")).toBe(true);
-    expect(isDevGachaPaymentModeEnabled("1")).toBe(true);
-    expect(isDevGachaPaymentModeEnabled("false")).toBe(false);
-    expect(isDevGachaPaymentModeEnabled(undefined)).toBe(false);
-  });
-
-  it("marks dev-paid completed orders as result-ready", () => {
+  it("builds K-coin completed orders as result-ready", () => {
     const response = buildCreateOpenOrderResponse(
       {
         draw_order_id: ORDER_ID,
-        star_order_id: STAR_ORDER_ID,
-        invoice_payload: INVOICE_PAYLOAD,
-        xtr_amount: 90,
+        star_order_id: null,
+        xtr_amount: 0,
+        paid_kcoin: 90,
+        total_price_kcoin: 90,
         quantity: 10,
         discount_bps: 1000,
         idempotent: false,
+        status: "completed",
+        payment_status: "fulfilled",
+        result_ready: true,
       },
       {
         boxSlug: "starter_egg",
         openType: "ten",
         quantity: 10,
-        paymentProvider: "telegram_stars",
+        paymentProvider: "kcoin",
         idempotencyKey: IDEMPOTENCY_KEY,
-      },
-      {
-        draw_order_id: ORDER_ID,
-        status: "completed",
-        payment_status: "dev_paid",
       },
     );
 
     expect(response).toMatchObject({
       order_id: ORDER_ID,
-      star_order_id: STAR_ORDER_ID,
+      star_order_id: null,
       draw_count: 10,
+      xtr_amount: 0,
+      paid_kcoin: 90,
+      total_price_kcoin: 90,
       order_status: "completed",
       payment_status: "fulfilled",
       payment_order_status: "fulfilled",
       invoice_link: null,
       invoice_open_mode: null,
       expires_at: null,
-      dev_payment_processed: true,
+      dev_payment_processed: false,
       result_ready: true,
     });
   });
@@ -644,16 +638,105 @@ describe("boxes API helpers", () => {
     expect(createTelegramStarsInvoiceMock).not.toHaveBeenCalled();
   });
 
+  it("/api/payments/kcoin-topup/create-order creates a Stars invoice for K-coin recharge", async () => {
+    const topupOrderId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    const topupStarOrderId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+    const topupPayload =
+      "kcoin_topup_0123456789abcdef0123456789abcdef0123456789abcdef";
+    callRpcRawMock.mockResolvedValueOnce({
+      topup_order_id: topupOrderId,
+      star_order_id: topupStarOrderId,
+      invoice_payload: topupPayload,
+      xtr_amount: 500,
+      kcoin_amount: 500,
+      status: "created",
+      payment_order_status: "created",
+      expires_at: EXPIRES_AT,
+      idempotent: false,
+    });
+    createTelegramStarsInvoiceMock.mockResolvedValueOnce(
+      createInvoiceResult({
+        starOrderId: topupStarOrderId,
+        payload: topupPayload,
+        invoiceLink: "https://t.me/invoice/kcoin-topup",
+        paymentOrderStatus: "invoice_created",
+      }),
+    );
+
+    const { default: createTopupHandler } =
+      await import("../../api/payments/kcoin-topup/create-order");
+    const result = await invokeApiHandler<ApiSuccessResponse>(
+      createTopupHandler,
+      {
+        method: "POST",
+        url: "/api/payments/kcoin-topup/create-order",
+        headers: {
+          cookie: "tma_game_session=test-session-token-000000000000",
+          "content-type": "application/json",
+          "x-forwarded-for": "127.0.0.39",
+          "x-idempotency-key": "kcoin:topup:test-001",
+        },
+        body: {
+          amount: 500,
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(200);
+    expect(result.body).toMatchObject({
+      ok: true,
+      data: {
+        topup_order_id: topupOrderId,
+        star_order_id: topupStarOrderId,
+        invoice_link: "https://t.me/invoice/kcoin-topup",
+        xtr_amount: 500,
+        kcoin_amount: 500,
+        payment_order_status: "invoice_created",
+      },
+    });
+    expect(assertStarsPaymentCreateAllowedMock).toHaveBeenCalledOnce();
+    expect(callRpcRawMock).toHaveBeenCalledWith(
+      "kcoin_topup_create_order",
+      {
+        p_user_id: USER_ID,
+        p_amount: 500,
+        p_idempotency_key: "kcoin:topup:test-001",
+      },
+      expect.objectContaining({
+        schema: "api",
+        context: expect.objectContaining({
+          userId: USER_ID,
+          amount: 500,
+          idempotencyKey: "kcoin:topup:test-001",
+        }),
+      }),
+    );
+    expect(createTelegramStarsInvoiceMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        businessType: "kcoin_topup",
+        drawOrderId: topupOrderId,
+        invoicePayload: topupPayload,
+        starOrderId: topupStarOrderId,
+        userId: USER_ID,
+        xtrAmount: 500,
+      }),
+    );
+  });
+
   it("/api/boxes/create-open-order creates a single draw order", async () => {
     callRpcRawMock.mockResolvedValueOnce({
       draw_order_id: ORDER_ID,
-      star_order_id: STAR_ORDER_ID,
-      invoice_payload: INVOICE_PAYLOAD,
-      xtr_amount: 10,
+      star_order_id: null,
+      xtr_amount: 0,
+      paid_kcoin: 10,
+      total_price_kcoin: 10,
       quantity: 1,
       discount_bps: 0,
       pool_version_id: POOL_VERSION_ID,
       idempotent: false,
+      status: "completed",
+      payment_status: "fulfilled",
+      result_ready: true,
     });
 
     const { default: createOrderHandler } =
@@ -682,49 +765,47 @@ describe("boxes API helpers", () => {
       data: {
         order_id: ORDER_ID,
         draw_count: 1,
-        xtr_amount: 10,
-        payment_status: "created",
-        payment_order_status: "created",
-        invoice_link: INVOICE_LINK,
-        invoice_open_mode: "web_app_open_invoice",
-        expires_at: EXPIRES_AT,
-        result_ready: false,
+        xtr_amount: 0,
+        paid_kcoin: 10,
+        total_price_kcoin: 10,
+        payment_status: "fulfilled",
+        payment_order_status: "fulfilled",
+        invoice_link: null,
+        invoice_open_mode: null,
+        expires_at: null,
+        result_ready: true,
       },
     });
     expect(callRpcRawMock).toHaveBeenCalledWith(
-      "gacha_create_order_from_server_price",
+      "gacha_open_with_kcoin_from_server_price",
       expect.objectContaining({
         p_user_id: USER_ID,
         p_box_slug: "starter_egg",
         p_quantity: 1,
         p_idempotency_key: IDEMPOTENCY_KEY,
-        p_unit_price_stars: 10,
+        p_unit_price_kcoin: 10,
         p_discount_bps: 0,
       }),
       expect.any(Object),
     );
-    expect(createTelegramStarsInvoiceMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        starOrderId: STAR_ORDER_ID,
-        drawOrderId: ORDER_ID,
-        userId: USER_ID,
-        invoicePayload: INVOICE_PAYLOAD,
-        xtrAmount: 10,
-      }),
-    );
+    expect(createTelegramStarsInvoiceMock).not.toHaveBeenCalled();
   });
 
   it("/api/boxes/create-open-order records gacha_high_frequency risk events", async () => {
     callRpcRawMock
       .mockResolvedValueOnce({
         draw_order_id: ORDER_ID,
-        star_order_id: STAR_ORDER_ID,
-        invoice_payload: INVOICE_PAYLOAD,
-        xtr_amount: 10,
+        star_order_id: null,
+        xtr_amount: 0,
+        paid_kcoin: 10,
+        total_price_kcoin: 10,
         quantity: 1,
         discount_bps: 0,
         pool_version_id: POOL_VERSION_ID,
         idempotent: false,
+        status: "completed",
+        payment_status: "fulfilled",
+        result_ready: true,
       })
       .mockResolvedValueOnce({
         count: 6,
@@ -789,110 +870,20 @@ describe("boxes API helpers", () => {
     );
   });
 
-  it("/api/boxes/create-open-order processes the dev-paid draw loop when dev mode is enabled", async () => {
-    process.env.DEV_GACHA_PAYMENT_MODE = "true";
-    callRpcRawMock
-      .mockResolvedValueOnce({
-        draw_order_id: ORDER_ID,
-        star_order_id: STAR_ORDER_ID,
-        invoice_payload: INVOICE_PAYLOAD,
-        xtr_amount: 10,
-        quantity: 1,
-        discount_bps: 0,
-        idempotent: false,
-      })
-      .mockResolvedValueOnce({
-        count: 0,
-      })
-      .mockResolvedValueOnce({
-        draw_order_id: ORDER_ID,
-        status: "completed",
-        payment_status: "dev_paid",
-        results: [
-          {
-            draw_index: 1,
-            item_instance_id: "44444444-4444-4444-8444-444444444444",
-          },
-        ],
-      });
-
-    const { default: createOrderHandler } =
-      await import("../../api/boxes/create-open-order");
-    const result = await invokeApiHandler<ApiSuccessResponse>(
-      createOrderHandler,
-      {
-        method: "POST",
-        url: "/api/boxes/create-open-order",
-        headers: {
-          cookie: "tma_game_session=test-session-token-000000000000",
-          "content-type": "application/json",
-          "x-forwarded-for": "127.0.0.30",
-        },
-        body: {
-          box_slug: "starter_egg",
-          draw_count: 1,
-          idempotency_key: IDEMPOTENCY_KEY,
-        },
-      },
-    );
-
-    expect(result.statusCode).toBe(200);
-    expect(result.body).toMatchObject({
-      ok: true,
-      data: {
-        order_id: ORDER_ID,
-        order_status: "completed",
-        payment_status: "fulfilled",
-        invoice_link: null,
-        dev_payment_processed: true,
-        result_ready: true,
-      },
-    });
-    expect(callRpcRawMock).toHaveBeenNthCalledWith(
-      1,
-      "gacha_create_order_from_server_price",
-      expect.objectContaining({
-        p_user_id: USER_ID,
-        p_box_slug: "starter_egg",
-        p_quantity: 1,
-        p_idempotency_key: IDEMPOTENCY_KEY,
-        p_unit_price_stars: 10,
-        p_discount_bps: 0,
-      }),
-      expect.any(Object),
-    );
-    expect(callRpcRawMock).toHaveBeenNthCalledWith(
-      2,
-      "gacha_count_recent_draw_orders",
-      expect.objectContaining({
-        p_user_id: USER_ID,
-      }),
-      expect.objectContaining({
-        schema: "api",
-      }),
-    );
-    expect(callRpcRawMock).toHaveBeenNthCalledWith(
-      3,
-      "gacha_process_dev_paid_order",
-      expect.objectContaining({
-        p_order_id: ORDER_ID,
-        p_user_id: USER_ID,
-      }),
-      expect.any(Object),
-    );
-    expect(createTelegramStarsInvoiceMock).not.toHaveBeenCalled();
-  });
-
   it("/api/boxes/create-open-order accepts X-Idempotency-Key when the body omits it", async () => {
     callRpcRawMock
       .mockResolvedValueOnce({
         draw_order_id: ORDER_ID,
-        star_order_id: STAR_ORDER_ID,
-        invoice_payload: INVOICE_PAYLOAD,
-        xtr_amount: 10,
+        star_order_id: null,
+        xtr_amount: 0,
+        paid_kcoin: 10,
+        total_price_kcoin: 10,
         quantity: 1,
         discount_bps: 0,
         idempotent: false,
+        status: "completed",
+        payment_status: "fulfilled",
+        result_ready: true,
       })
       .mockResolvedValueOnce({
         count: 0,
@@ -920,22 +911,22 @@ describe("boxes API helpers", () => {
 
     expect(result.statusCode).toBe(200);
     expect(callRpcRawMock).toHaveBeenCalledWith(
-      "gacha_create_order_from_server_price",
+      "gacha_open_with_kcoin_from_server_price",
       expect.objectContaining({
         p_idempotency_key: IDEMPOTENCY_KEY,
         p_box_slug: "starter_egg",
-        p_unit_price_stars: 10,
+        p_unit_price_kcoin: 10,
         p_discount_bps: 0,
       }),
       expect.any(Object),
     );
-    expect(createTelegramStarsInvoiceMock).toHaveBeenCalledTimes(1);
+    expect(createTelegramStarsInvoiceMock).not.toHaveBeenCalled();
   });
 
   it("/api/boxes/create-open-order maps RPC idempotency conflicts", async () => {
     callRpcRawMock.mockRejectedValueOnce(
       new RpcError({
-        rpcName: "gacha_create_order_from_server_price",
+        rpcName: "gacha_open_with_kcoin_from_server_price",
         error: {
           message: "idempotency key conflict",
         },
@@ -1011,12 +1002,16 @@ describe("boxes API helpers", () => {
     callRpcRawMock
       .mockResolvedValueOnce({
         draw_order_id: ORDER_ID,
-        star_order_id: STAR_ORDER_ID,
-        invoice_payload: INVOICE_PAYLOAD,
-        xtr_amount: 213,
+        star_order_id: null,
+        xtr_amount: 0,
+        paid_kcoin: 213,
+        total_price_kcoin: 213,
         quantity: 10,
         discount_bps: 1500,
         idempotent: false,
+        status: "completed",
+        payment_status: "fulfilled",
+        result_ready: true,
       })
       .mockResolvedValueOnce({
         count: 0,
@@ -1047,31 +1042,29 @@ describe("boxes API helpers", () => {
       ok: true,
       data: {
         draw_count: 10,
-        xtr_amount: 213,
+        xtr_amount: 0,
+        paid_kcoin: 213,
+        total_price_kcoin: 213,
       },
     });
     expect(callRpcRawMock).toHaveBeenNthCalledWith(
       1,
-      "gacha_create_order_from_server_price",
+      "gacha_open_with_kcoin_from_server_price",
       expect.objectContaining({
         p_box_slug: "starter_egg",
         p_quantity: 10,
-        p_unit_price_stars: 25,
+        p_unit_price_kcoin: 25,
         p_discount_bps: 1500,
       }),
       expect.any(Object),
     );
-    expect(createTelegramStarsInvoiceMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        xtrAmount: 213,
-      }),
-    );
+    expect(createTelegramStarsInvoiceMock).not.toHaveBeenCalled();
   });
 
   it("/api/boxes/create-open-order maps empty drop pools to the first-phase code", async () => {
     callRpcRawMock.mockRejectedValueOnce(
       new RpcError({
-        rpcName: "gacha_create_order_from_server_price",
+        rpcName: "gacha_open_with_kcoin_from_server_price",
         error: {
           message: "active drop pool not found",
         },
@@ -1111,7 +1104,7 @@ describe("boxes API helpers", () => {
   it("/api/boxes/create-open-order rejects paused boxes before invoice creation", async () => {
     callRpcRawMock.mockRejectedValueOnce(
       new RpcError({
-        rpcName: "gacha_create_order_from_server_price",
+        rpcName: "gacha_open_with_kcoin_from_server_price",
         error: {
           message: "blind box is not active: paused",
         },
@@ -1152,7 +1145,7 @@ describe("boxes API helpers", () => {
   it("/api/boxes/create-open-order keeps legacy stock RPC errors generic", async () => {
     callRpcRawMock.mockRejectedValueOnce(
       new RpcError({
-        rpcName: "gacha_create_order_from_server_price",
+        rpcName: "gacha_open_with_kcoin_from_server_price",
         error: {
           message: "blind box stock is insufficient",
         },
@@ -1193,7 +1186,7 @@ describe("boxes API helpers", () => {
   it("/api/boxes/create-open-order maps ledger failures without exposing database details", async () => {
     callRpcRawMock.mockRejectedValueOnce(
       new RpcError({
-        rpcName: "gacha_create_order_from_server_price",
+        rpcName: "gacha_open_with_kcoin_from_server_price",
         error: {
           message:
             "currency ledger insert failed: duplicate key raw database detail",
@@ -1270,17 +1263,30 @@ describe("boxes API helpers", () => {
     expect(createTelegramStarsInvoiceMock).not.toHaveBeenCalled();
   });
 
-  it("/api/boxes/create-open-order rejects when Stars payment is disabled", async () => {
+  it("/api/boxes/create-open-order still opens with K-coin when Stars payment is disabled", async () => {
     assertStarsPaymentCreateAllowedMock.mockRejectedValueOnce({
       statusCode: 503,
       code: "FEATURE_STARS_PAYMENT_DISABLED",
       message: "Stars 支付暂未开放。",
       expose: true,
     });
+    callRpcRawMock.mockResolvedValueOnce({
+      draw_order_id: ORDER_ID,
+      star_order_id: null,
+      xtr_amount: 0,
+      paid_kcoin: 10,
+      total_price_kcoin: 10,
+      quantity: 1,
+      discount_bps: 0,
+      idempotent: false,
+      status: "completed",
+      payment_status: "fulfilled",
+      result_ready: true,
+    });
 
     const { default: createOrderHandler } =
       await import("../../api/boxes/create-open-order");
-    const result = await invokeApiHandler<ApiErrorResponse>(
+    const result = await invokeApiHandler<ApiSuccessResponse>(
       createOrderHandler,
       {
         method: "POST",
@@ -1298,27 +1304,33 @@ describe("boxes API helpers", () => {
       },
     );
 
-    expect(result.statusCode).toBe(503);
+    expect(result.statusCode).toBe(200);
     expect(result.body).toMatchObject({
-      ok: false,
-      error: {
-        code: "FEATURE_STARS_PAYMENT_DISABLED",
-        message: "Stars 支付暂未开放。",
+      ok: true,
+      data: {
+        order_id: ORDER_ID,
+        xtr_amount: 0,
+        paid_kcoin: 10,
+        payment_order_status: "fulfilled",
       },
     });
-    expect(callRpcRawMock).not.toHaveBeenCalled();
+    expect(assertStarsPaymentCreateAllowedMock).not.toHaveBeenCalled();
     expect(createTelegramStarsInvoiceMock).not.toHaveBeenCalled();
   });
 
   it("/api/boxes/create-open-order creates a ten-draw order", async () => {
     callRpcRawMock.mockResolvedValueOnce({
       draw_order_id: ORDER_ID,
-      star_order_id: STAR_ORDER_ID,
-      invoice_payload: INVOICE_PAYLOAD,
-      xtr_amount: 90,
+      star_order_id: null,
+      xtr_amount: 0,
+      paid_kcoin: 90,
+      total_price_kcoin: 90,
       quantity: 10,
       discount_bps: 1000,
       idempotent: false,
+      status: "completed",
+      payment_status: "fulfilled",
+      result_ready: true,
     });
 
     const { default: createOrderHandler } =
@@ -1347,78 +1359,24 @@ describe("boxes API helpers", () => {
       data: {
         order_id: ORDER_ID,
         draw_count: 10,
-        xtr_amount: 90,
-        invoice_link: INVOICE_LINK,
-        payment_order_status: "created",
+        xtr_amount: 0,
+        paid_kcoin: 90,
+        total_price_kcoin: 90,
+        invoice_link: null,
+        payment_order_status: "fulfilled",
       },
     });
     expect(callRpcRawMock).toHaveBeenCalledWith(
-      "gacha_create_order_from_server_price",
+      "gacha_open_with_kcoin_from_server_price",
       expect.objectContaining({
         p_box_slug: "starter_egg",
         p_quantity: 10,
-        p_unit_price_stars: 10,
+        p_unit_price_kcoin: 10,
         p_discount_bps: 1000,
       }),
       expect.any(Object),
     );
-    expect(createTelegramStarsInvoiceMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        starOrderId: STAR_ORDER_ID,
-        drawOrderId: ORDER_ID,
-        userId: USER_ID,
-        invoicePayload: INVOICE_PAYLOAD,
-        xtrAmount: 90,
-      }),
-    );
-  });
-
-  it("/api/boxes/create-open-order does not dev-fulfill when invoice creation fails", async () => {
-    createTelegramStarsInvoiceMock.mockRejectedValueOnce({
-      statusCode: 502,
-      code: "TELEGRAM_INVOICE_CREATE_FAILED",
-      message: "Telegram Stars invoice 创建失败，请稍后重试。",
-      expose: true,
-    });
-    callRpcRawMock.mockResolvedValueOnce({
-      draw_order_id: ORDER_ID,
-      star_order_id: STAR_ORDER_ID,
-      invoice_payload: INVOICE_PAYLOAD,
-      xtr_amount: 10,
-      quantity: 1,
-      discount_bps: 0,
-      idempotent: false,
-    });
-
-    const { default: createOrderHandler } =
-      await import("../../api/boxes/create-open-order");
-    const result = await invokeApiHandler<ApiErrorResponse>(
-      createOrderHandler,
-      {
-        method: "POST",
-        url: "/api/boxes/create-open-order",
-        headers: {
-          cookie: "tma_game_session=test-session-token-000000000000",
-          "content-type": "application/json",
-          "x-forwarded-for": "127.0.0.34",
-        },
-        body: {
-          box_slug: "starter_egg",
-          draw_count: 1,
-          idempotency_key: IDEMPOTENCY_KEY,
-        },
-      },
-    );
-
-    expect(result.statusCode).toBe(502);
-    expect(result.body).toMatchObject({
-      ok: false,
-      error: {
-        code: "TELEGRAM_INVOICE_CREATE_FAILED",
-      },
-    });
-    expect(callRpcRawMock).toHaveBeenCalledTimes(2);
-    expect(createTelegramStarsInvoiceMock).toHaveBeenCalledTimes(1);
+    expect(createTelegramStarsInvoiceMock).not.toHaveBeenCalled();
   });
 
   it("/api/boxes/result returns completed draw results", async () => {

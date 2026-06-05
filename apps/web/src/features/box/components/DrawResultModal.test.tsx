@@ -79,6 +79,43 @@ describe("DrawResultModal", () => {
       "https://t.me/tma_support",
     );
   });
+
+  it("shows K-coin spend for completed K-coin draw results", () => {
+    renderDrawResultModal({
+      paymentProvider: "kcoin",
+      paidKcoin: 10,
+      paidStars: 0,
+      results: [
+        {
+          description: null,
+          drawIndex: 1,
+          formId: null,
+          formIndex: null,
+          formName: null,
+          imageUrl: null,
+          isPityHit: false,
+          itemInstanceId: "44444444-4444-4444-8444-444444444444",
+          itemType: "character",
+          level: 1,
+          name: "测试藏品",
+          power: 10,
+          rarity: "COMMON",
+          rarityLabel: "普通",
+          rewardSource: "random",
+          serialNumber: 1,
+          subtitle: null,
+          templateId: "55555555-5555-4555-8555-555555555555",
+          templateSlug: "test-item",
+          thumbnailUrl: null,
+        },
+      ],
+      status: "completed",
+    });
+
+    expect(screen.getByText("10 K-coin")).toBeVisible();
+    expect(screen.getAllByText("K-coin").length).toBeGreaterThan(0);
+    expect(screen.queryByText("10 Stars")).not.toBeInTheDocument();
+  });
 });
 
 function renderDrawResultModal(overrides: Partial<DrawResultResponse> = {}) {
@@ -106,7 +143,9 @@ function createPendingResult(
     orderId: "11111111-1111-4111-8111-111111111111",
     orderStatus: "processing",
     paidAt: "2026-05-28T00:01:00.000Z",
+    paidKcoin: 0,
     paidStars: 10,
+    paymentProvider: "telegram_stars",
     paymentOrderStatus: "fulfilling",
     paymentStatus: "fulfilling",
     quantity: 1,

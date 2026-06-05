@@ -8,19 +8,17 @@ type KCoinPillProps = {
   balance: AssetBalance;
   isLoading?: boolean;
   isUnavailable?: boolean;
+  onClick?: () => void;
 };
 
 export function KCoinPill({
   balance,
   isLoading = false,
   isUnavailable = false,
+  onClick,
 }: KCoinPillProps) {
-  return (
-    <div
-      className="asset-pill asset-pill--kcoin"
-      aria-label="K-coin 余额"
-      title={isUnavailable ? "资产加载失败，请刷新" : undefined}
-    >
+  const content = (
+    <>
       <span className="asset-pill__icon" aria-hidden="true">
         <Coins size={16} strokeWidth={2.4} />
       </span>
@@ -32,6 +30,30 @@ export function KCoinPill({
             ? "--"
             : formatCurrencyAmount(balance.available)}
       </strong>
+    </>
+  );
+
+  if (onClick) {
+    return (
+      <button
+        className="asset-pill asset-pill--kcoin asset-pill--button"
+        aria-label="K-coin 余额，点击充值"
+        title={isUnavailable ? "资产加载失败，请刷新" : "充值 K-coin"}
+        onClick={onClick}
+        type="button"
+      >
+        {content}
+      </button>
+    );
+  }
+
+  return (
+    <div
+      className="asset-pill asset-pill--kcoin"
+      aria-label="K-coin 余额"
+      title={isUnavailable ? "资产加载失败，请刷新" : undefined}
+    >
+      {content}
     </div>
   );
 }

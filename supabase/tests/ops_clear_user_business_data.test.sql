@@ -490,7 +490,7 @@ values (
 with inserted as (
   insert into gacha.draw_orders (
   user_id, box_id, pool_version_id, payment_star_order_id, status,
-  quantity, unit_price_stars, total_price_stars, invoice_payload, idempotency_key
+  quantity, draw_count, unit_price_stars, total_price_stars, invoice_payload, idempotency_key
   )
   values (
     (select id from _ids where key = 'user'),
@@ -498,6 +498,7 @@ with inserted as (
     (select id from _ids where key = 'pool'),
     (select id from _ids where key = 'fulfilled_star_order'),
     'opened',
+    1,
     1,
     10,
     10,

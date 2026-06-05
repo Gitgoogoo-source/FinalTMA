@@ -23,7 +23,7 @@ export type TelegramStarsInvoiceResult = {
 export type CreateTelegramStarsInvoiceInput = {
   starOrderId: string;
   drawOrderId: string;
-  businessType?: "gacha_open" | "vip_monthly" | undefined;
+  businessType?: "gacha_open" | "vip_monthly" | "kcoin_topup" | undefined;
   userId: string;
   invoicePayload: string;
   xtrAmount: number;
@@ -121,6 +121,7 @@ export type PaymentRecordSuccessfulPaymentResult = {
   businessId: string | null;
   drawOrderId: string | null;
   vipOrderId: string | null;
+  topupOrderId: string | null;
   invoicePayload: string | null;
   telegramPaymentChargeId: string | null;
   reasonCode: string | null;
@@ -137,6 +138,7 @@ export type PaymentFulfillmentResult = {
   starOrderId: string | null;
   drawOrderId: string | null;
   vipOrderId: string | null;
+  topupOrderId: string | null;
   subscriptionId: string | null;
   businessType: string | null;
   drawCount: number | null;
@@ -1250,7 +1252,9 @@ async function fulfillTelegramSuccessfulPayment(input: {
   const fulfillmentRpcName =
     businessType === "vip_monthly"
       ? "vip_process_paid_order"
-      : "gacha_process_paid_order";
+      : businessType === "kcoin_topup"
+        ? "kcoin_topup_process_paid_order"
+        : "gacha_process_paid_order";
 
   const rawResult = await callRpcRaw<Record<string, unknown>>(
     fulfillmentRpcName,
@@ -1703,6 +1707,7 @@ function normalizePaymentRecordSuccessfulPaymentResult(
     businessId: optionalString(value.business_id),
     drawOrderId: optionalString(value.draw_order_id),
     vipOrderId: optionalString(value.vip_order_id),
+    topupOrderId: optionalString(value.topup_order_id),
     invoicePayload: optionalString(value.invoice_payload),
     telegramPaymentChargeId: optionalString(value.telegram_payment_charge_id),
     reasonCode: optionalString(value.reason_code),
@@ -1756,6 +1761,7 @@ function normalizePaymentFulfillmentResult(
     starOrderId: optionalString(value.star_order_id),
     drawOrderId: optionalString(value.draw_order_id),
     vipOrderId: optionalString(value.vip_order_id),
+    topupOrderId: optionalString(value.topup_order_id),
     subscriptionId: optionalString(value.subscription_id),
     businessType: optionalString(value.business_type),
     drawCount: optionalNumber(value.draw_count),

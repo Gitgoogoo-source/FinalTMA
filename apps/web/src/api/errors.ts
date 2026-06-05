@@ -47,6 +47,7 @@ const API_ERROR_MESSAGES: Readonly<Record<string, string>> = {
   LISTING_NOT_ACTIVE: "当前挂单状态不可操作。",
   CANNOT_BUY_OWN_LISTING: "不能购买自己的挂单。",
   KCOIN_NOT_ENOUGH: "余额不足。",
+  INSUFFICIENT_BALANCE: "K-coin 余额不足，请先充值。",
   LISTING_PRICE_CHANGED: "价格已变化，请刷新后重试。",
   LISTING_SOLD_OUT: "该商品已售罄。",
 

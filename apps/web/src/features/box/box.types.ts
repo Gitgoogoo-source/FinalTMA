@@ -105,6 +105,8 @@ export type CreateOpenOrderResponse = {
   invoiceLink: string | null;
   invoiceOpenMode: string | null;
   xtrAmount: number;
+  paidKcoin: number;
+  totalPriceKcoin: number;
   drawCount: 1 | 10;
   orderStatus: string;
   paymentStatus: string;
@@ -115,6 +117,30 @@ export type CreateOpenOrderResponse = {
   devPaymentProcessed: boolean;
   idempotent: boolean;
   resultReady: boolean;
+};
+
+export type KcoinTopupAmount = 1 | 500 | 1000 | 5000 | 10000;
+
+export type CreateKcoinTopupOrderInput = {
+  amount: KcoinTopupAmount;
+};
+
+export type CreateKcoinTopupOrderResponse = {
+  orderId: string;
+  topupOrderId: string;
+  starOrderId: string | null;
+  invoicePayload: string | null;
+  invoiceLink: string | null;
+  invoiceOpenMode: string | null;
+  xtrAmount: number;
+  kcoinAmount: number;
+  orderStatus: string;
+  paymentStatus: string;
+  paymentOrderStatus: string;
+  expiresAt: string | null;
+  paidAt: string | null;
+  fulfilledAt: string | null;
+  idempotent: boolean;
 };
 
 export type DrawResultStatus = "completed" | "pending";
@@ -157,7 +183,9 @@ export type DrawResultResponse = {
   status: DrawResultStatus;
   orderStatus: string;
   quantity: number;
+  paymentProvider: string | null;
   paidStars: number;
+  paidKcoin: number;
   returnedKcoin: number;
   invoicePayload: string | null;
   paidAt: string | null;

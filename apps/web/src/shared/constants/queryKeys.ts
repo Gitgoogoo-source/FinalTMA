@@ -11,6 +11,11 @@ export const queryKeys = {
       ["banners", placement ?? "none"] as const,
   },
   paymentSupport: ["payment-support"] as const,
+  payments: {
+    root: ["payments"] as const,
+    kcoinTopupStatus: (orderId: string | null | undefined) =>
+      ["payments", "kcoin-topup", "status", orderId ?? "none"] as const,
+  },
   vip: {
     root: ["vip"] as const,
     status: (userId: string | null | undefined) =>

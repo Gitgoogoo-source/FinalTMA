@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Gift, Loader2 } from "lucide-react";
 
-import { getApiErrorMessage } from "@/api/errors";
+import { getApiErrorMessage, isApiClientError } from "@/api/errors";
 import { useFeedback } from "@/app/providers/FeedbackProvider";
+import { useKcoinTopupSheet } from "@/features/assets/components/KcoinTopupProvider";
+import { useMyAssets } from "@/features/assets/hooks/useMyAssets";
 import { ActivityBanner } from "@/features/banners/components/ActivityBanner";
 import { useBanners } from "@/features/banners/hooks/useBanners";
 import { useClaimVipDailyBenefit } from "@/features/vip/hooks/useClaimVipDailyBenefit";
@@ -60,6 +62,7 @@ export function BoxPage() {
     useState<PaymentOpenNotice | null>(null);
   const [vipFreeModeSelected, setVipFreeModeSelected] = useState(false);
   const openRequestLockedRef = useRef(false);
+  const { openKcoinTopupSheet } = useKcoinTopupSheet();
   const {
     error: pitySyncError,
     hasUsableCache: hasUsablePityCache,
@@ -95,6 +98,11 @@ export function BoxPage() {
   const staticRewards = useMemo(
     () => getStaticBoxRewards(selectedBox),
     [selectedBox],
+  );
+  const assetsQuery = useMyAssets();
+  const kcoinAvailable = useMemo(
+    () => readAssetAmount(assetsQuery.assets.kcoin.available),
+    [assetsQuery.assets.kcoin.available],
   );
   const createOrder = useCreateOpenOrder();
   const openStarsInvoice = useStarsPayment();
@@ -357,6 +365,7 @@ export function BoxPage() {
     },
     [pushToast],
   );
+
   const openInvoiceForOrder = useCallback(
     (order: CreateOpenOrderResponse) => {
       if (order.resultReady || order.devPaymentProcessed) {
@@ -440,6 +449,15 @@ export function BoxPage() {
         return;
       }
 
+      const requiredKcoin = getOpenRequiredKcoin(selectedBox, drawCount);
+
+      if (kcoinAvailable < requiredKcoin) {
+        openKcoinTopupSheet({
+          requiredAmount: requiredKcoin,
+        });
+        return;
+      }
+
       openRequestLockedRef.current = true;
       createOrder.mutate(
         {
@@ -448,32 +466,42 @@ export function BoxPage() {
         },
         {
           onSuccess: (order) => {
-            const paymentStatusMeta = getPaymentStatusMeta(
-              getOrderPaymentStatus(order),
-            );
-
             if (order.resultReady && order.orderId) {
               clearPendingStarsPaymentOrder(order.orderId);
               setPaymentPendingOrder(null);
               setPaymentOpenNotice(null);
               setResultOrderId(order.orderId);
             } else {
+              const paymentStatusMeta = getPaymentStatusMeta(
+                getOrderPaymentStatus(order),
+              );
+
               setResultOrderId(null);
               setPaymentPendingOrder(order);
               openInvoiceForOrder(order);
+
+              pushToast({
+                type: paymentStatusMeta.toastType,
+                title: paymentStatusMeta.title,
+                message: `${paymentStatusMeta.detail} 金额 ${formatCurrencyAmount(order.xtrAmount)} Stars。`,
+              });
+              return;
             }
 
             pushToast({
-              type: order.resultReady ? "success" : paymentStatusMeta.toastType,
-              title: order.resultReady
-                ? "开盒结果已生成"
-                : paymentStatusMeta.title,
-              message: order.devPaymentProcessed
-                ? "开发支付模式已由后端处理，资产和保底正在刷新。"
-                : `${paymentStatusMeta.detail} 金额 ${formatCurrencyAmount(order.xtrAmount)} Stars。`,
+              type: "success",
+              title: "开盒成功",
+              message: `已消耗 ${formatCurrencyAmount(order.totalPriceKcoin || requiredKcoin)} K-coin，开盒结果正在展示。`,
             });
           },
           onError: (error) => {
+            if (isInsufficientBalanceError(error)) {
+              openKcoinTopupSheet({
+                requiredAmount: requiredKcoin,
+              });
+              return;
+            }
+
             pushToast({
               type: "error",
               title: "开盒请求失败",
@@ -489,6 +517,8 @@ export function BoxPage() {
     [
       createOrder,
       handleVipFreeOpenSuccess,
+      kcoinAvailable,
+      openKcoinTopupSheet,
       openInvoiceForOrder,
       openVipDaily,
       pushToast,
@@ -752,6 +782,32 @@ function isFulfilledPaymentStatus(status: string | null | undefined): boolean {
   return normalizePaymentStatus(status) === "fulfilled";
 }
 
+function getOpenRequiredKcoin(box: BlindBox, drawCount: 1 | 10): number {
+  return drawCount === 10 ? box.tenDrawPrice : box.singleStarPrice;
+}
+
+function readAssetAmount(value: string | number | null | undefined): number {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === "string" && value.trim().length > 0) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  return 0;
+}
+
+function isInsufficientBalanceError(error: unknown): boolean {
+  return (
+    isApiClientError(error) &&
+    (error.code === "INSUFFICIENT_BALANCE" ||
+      error.code === "INSUFFICIENT_KCOIN" ||
+      error.code === "KCOIN_NOT_ENOUGH")
+  );
+}
+
 function getOrderPaymentStatus(order: CreateOpenOrderResponse): string {
   return order.paymentOrderStatus || order.paymentStatus || order.orderStatus;
 }
@@ -783,6 +839,8 @@ function createRestoredPendingOrder(
     paymentStatus: "created",
     resultReady: false,
     starOrderId: null,
+    paidKcoin: 0,
+    totalPriceKcoin: 0,
     xtrAmount: 0,
   };
 }

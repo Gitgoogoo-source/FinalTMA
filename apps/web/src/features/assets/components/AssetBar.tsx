@@ -3,12 +3,14 @@ import { RefreshCw } from "lucide-react";
 import { useMyAssets } from "../hooks/useMyAssets";
 import { FgemsPill } from "./FgemsPill";
 import { KCoinPill } from "./KCoinPill";
+import { useKcoinTopupSheet } from "./KcoinTopupProvider";
 import { UserAvatar } from "./UserAvatar";
 import { WalletEntryButton } from "./WalletEntryButton";
 
 export function AssetBar() {
   const { assets, data, isError, isFetching, profile, refreshAssets } =
     useMyAssets();
+  const { openKcoinTopupSheet } = useKcoinTopupSheet();
   const showLoadingAmount = isFetching && data.updatedAt === null;
   const showUnavailableAmount =
     isError && !isFetching && data.updatedAt === null;
@@ -37,6 +39,7 @@ export function AssetBar() {
           balance={assets.kcoin}
           isLoading={showLoadingAmount}
           isUnavailable={showUnavailableAmount}
+          onClick={() => openKcoinTopupSheet()}
         />
         <FgemsPill
           balance={assets.fgems}

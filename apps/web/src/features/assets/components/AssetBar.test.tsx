@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { MyAssets } from "../assets.types";
@@ -16,6 +16,7 @@ type UseMyAssetsMockState = {
 };
 
 const mocks = vi.hoisted(() => ({
+  openKcoinTopupSheet: vi.fn(),
   refreshAssets: vi.fn(),
   useMyAssetsState: {
     assets: {
@@ -48,8 +49,15 @@ vi.mock("./WalletEntryButton", () => ({
   WalletEntryButton: () => <button type="button">Connect Wallet</button>,
 }));
 
+vi.mock("./KcoinTopupProvider", () => ({
+  useKcoinTopupSheet: () => ({
+    openKcoinTopupSheet: mocks.openKcoinTopupSheet,
+  }),
+}));
+
 describe("AssetBar", () => {
   beforeEach(() => {
+    mocks.openKcoinTopupSheet.mockReset();
     mocks.refreshAssets.mockReset();
     mocks.refreshAssets.mockResolvedValue(undefined);
     mocks.useMyAssetsState = createMyAssetsState({
@@ -69,9 +77,13 @@ describe("AssetBar", () => {
 
     render(<AssetBar />);
 
-    expect(screen.getByLabelText("K-coin 余额")).toHaveTextContent("--");
+    expect(screen.getByLabelText("K-coin 余额，点击充值")).toHaveTextContent(
+      "--",
+    );
     expect(screen.getByLabelText("Fgems 余额")).toHaveTextContent("--");
-    expect(screen.getByLabelText("K-coin 余额")).not.toHaveTextContent("0");
+    expect(
+      screen.getByLabelText("K-coin 余额，点击充值"),
+    ).not.toHaveTextContent("0");
     expect(screen.getByLabelText("Fgems 余额")).not.toHaveTextContent("0");
     expect(screen.getByRole("button", { name: "刷新" })).toBeVisible();
   });
@@ -91,7 +103,9 @@ describe("AssetBar", () => {
 
     render(<AssetBar />);
 
-    expect(screen.getByLabelText("K-coin 余额")).toHaveTextContent("1,200");
+    expect(screen.getByLabelText("K-coin 余额，点击充值")).toHaveTextContent(
+      "1,200",
+    );
     expect(screen.getByLabelText("Fgems 余额")).toHaveTextContent("35");
     expect(screen.getByRole("button", { name: "刷新" })).toBeVisible();
   });
@@ -99,7 +113,31 @@ describe("AssetBar", () => {
   it("does not render the avatar status dot", () => {
     const { container } = render(<AssetBar />);
 
-    expect(container.querySelector(".user-avatar__status")).not.toBeInTheDocument();
+    expect(
+      container.querySelector(".user-avatar__status"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("opens the K-coin topup sheet when the K-coin pill is clicked", () => {
+    mocks.useMyAssetsState = createMyAssetsState({
+      assets: {
+        kcoin: { currencyCode: "KCOIN", available: "1200", locked: "0" },
+        fgems: { currencyCode: "FGEMS", available: "35", locked: "0" },
+      },
+      data: {
+        updatedAt: "2026-06-02T00:00:00.000Z",
+      },
+      refreshAssets: mocks.refreshAssets,
+    });
+
+    render(<AssetBar />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "K-coin 余额，点击充值" }),
+    );
+
+    expect(mocks.openKcoinTopupSheet).toHaveBeenCalledTimes(1);
+    expect(mocks.openKcoinTopupSheet).toHaveBeenCalledWith();
   });
 });
 

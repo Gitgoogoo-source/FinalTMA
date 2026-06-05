@@ -309,6 +309,41 @@ select ok(testutil.raises_like(format(
   'vip-monthly-price-mismatch'
 ), '%expected price changed%'), 'VIP create order rejects stale expected price');
 
+select ok(
+  to_regprocedure('api.vip_create_order_with_server_price_checked(uuid,uuid,text,integer,integer)') is not null,
+  'server-priced VIP create order RPC exists'
+);
+
+insert into _ids (key, payload)
+select 'server_price_order', api.vip_create_order_with_server_price_checked(
+  (select id from _ids where key = 'user'),
+  (select id from _ids where key = 'plan'),
+  'vip-monthly-server-price-001',
+  299,
+  299
+);
+insert into _ids (key, id) select 'server_price_vip_order', ((select payload from _ids where key = 'server_price_order') ->> 'vip_order_id')::uuid;
+insert into _ids (key, id) select 'server_price_star_order', ((select payload from _ids where key = 'server_price_order') ->> 'star_order_id')::uuid;
+
+select is(((select payload from _ids where key = 'server_price_order') ->> 'xtr_amount')::integer, 299, 'server-priced VIP create order returns server env price');
+select is((select xtr_amount from vip.vip_orders where id = (select id from _ids where key = 'server_price_vip_order')), 299, 'server-priced VIP order stores server env price');
+select is((select xtr_amount from payments.star_orders where id = (select id from _ids where key = 'server_price_star_order')), 299, 'server-priced Stars order stores server env price');
+select is((select price_xtr from vip.vip_plans where id = (select id from _ids where key = 'plan')), 199, 'server-priced order does not mutate plan price');
+
+select ok(testutil.raises_like(format(
+  'select api.vip_create_order_with_server_price_checked(%L::uuid, %L::uuid, %L, 299, 198)',
+  (select id::text from _ids where key = 'user'),
+  (select id::text from _ids where key = 'plan'),
+  'vip-monthly-server-price-mismatch'
+), '%expected price changed%'), 'server-priced VIP create order rejects stale frontend expected price');
+
+select ok(testutil.raises_like(format(
+  'select api.vip_create_order_with_server_price_checked(%L::uuid, %L::uuid, %L, 0, null)',
+  (select id::text from _ids where key = 'user'),
+  (select id::text from _ids where key = 'plan'),
+  'vip-monthly-server-price-invalid'
+), '%server price xtr is invalid%'), 'server-priced VIP create order rejects invalid server price');
+
 insert into _ids (key, payload)
 select 'precheckout', api.payment_mark_precheckout_checked(
   97010001,

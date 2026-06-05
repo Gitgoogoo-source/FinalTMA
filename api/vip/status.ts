@@ -1,4 +1,8 @@
 import { callRpcRaw, RpcError } from "../../packages/server/src/db/rpc.js";
+import {
+  readVipMonthlyPriceXtr,
+  VipPriceConfigError,
+} from "../../packages/server/src/vip/vipPrice.js";
 import { ApiError, withApiHandler } from "../_shared/handler.js";
 import { requireSession } from "../_shared/requireSession.js";
 
@@ -26,9 +30,10 @@ type VipStatusResponse = {
 export default withApiHandler(
   async (req, _res, ctx) => {
     const session = await requireSession(req);
+    const priceXtr = readVipMonthlyPriceXtrForApi();
     const status = await callVipGetStatus(session.userId, ctx.requestId);
 
-    return normalizeVipStatusPayload(status);
+    return normalizeVipStatusPayload(status, { priceXtr });
   },
   {
     methods: ["GET"],
@@ -61,7 +66,10 @@ async function callVipGetStatus(
   }
 }
 
-export function normalizeVipStatusPayload(payload: unknown): VipStatusResponse {
+export function normalizeVipStatusPayload(
+  payload: unknown,
+  options: { priceXtr?: number | undefined } = {},
+): VipStatusResponse {
   if (!isRecord(payload)) {
     throw new ApiError(500, "VIP_STATUS_RESULT_INVALID", "月卡状态格式无效。", {
       expose: false,
@@ -69,7 +77,9 @@ export function normalizeVipStatusPayload(payload: unknown): VipStatusResponse {
   }
 
   const today = normalizeVipToday(payload.today);
-  const plan = isRecord(payload.plan) ? normalizeVipPlan(payload.plan) : null;
+  const plan = isRecord(payload.plan)
+    ? normalizeVipPlan(payload.plan, options.priceXtr)
+    : null;
   const isVip = readBoolean(payload.is_vip ?? payload.isVip) ?? false;
   const subscriptionId = readString(
     payload.subscription_id ?? payload.subscriptionId,
@@ -158,6 +168,7 @@ function normalizeVipToday(value: unknown): Record<string, unknown> | null {
 
 function normalizeVipPlan(
   plan: Record<string, unknown>,
+  priceXtrOverride?: number | undefined,
 ): Record<string, unknown> {
   const id = readString(plan.id ?? plan.plan_id);
 
@@ -169,7 +180,8 @@ function normalizeVipPlan(
   const displayName =
     readString(plan.display_name ?? plan.displayName ?? plan.name) ??
     "VIP 月卡";
-  const priceXtr = readNumber(plan.price_xtr ?? plan.priceXtr) ?? 0;
+  const priceXtr =
+    priceXtrOverride ?? readNumber(plan.price_xtr ?? plan.priceXtr) ?? 0;
   const durationDays = readNumber(plan.duration_days ?? plan.durationDays);
   const dailyFgems = readNumber(plan.daily_fgems ?? plan.dailyFgems) ?? 0;
   const dailyFreeBoxCount =
@@ -194,6 +206,21 @@ function normalizeVipPlan(
     fee_rebate_bps: feeRebateBps,
     feeRebateBps,
   };
+}
+
+function readVipMonthlyPriceXtrForApi(): number {
+  try {
+    return readVipMonthlyPriceXtr();
+  } catch (error) {
+    if (error instanceof VipPriceConfigError) {
+      throw new ApiError(error.statusCode, error.code, "月卡价格配置无效。", {
+        expose: error.expose,
+        cause: error,
+      });
+    }
+
+    throw error;
+  }
 }
 
 function mapVipStatusRpcError(error: unknown): ApiError {

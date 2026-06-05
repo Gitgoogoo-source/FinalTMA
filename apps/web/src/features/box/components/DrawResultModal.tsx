@@ -1,4 +1,11 @@
-import { Coins, RefreshCw, Star, Trophy, X } from "lucide-react";
+import {
+  Coins,
+  RefreshCw,
+  Star,
+  Trophy,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 
 import { formatCurrencyAmount } from "@/shared/lib/formatCurrency";
 
@@ -153,6 +160,8 @@ function getPendingResultState(result: DrawResultResponse): {
 
 function ResultSummary({ result }: { result: DrawResultResponse }) {
   const itemCount = result.results.length || result.quantity;
+  const spend = getSpendSummary(result);
+  const SpendIcon = spend.icon;
 
   return (
     <div className="draw-result-summary">
@@ -161,8 +170,8 @@ function ResultSummary({ result }: { result: DrawResultResponse }) {
         {formatCurrencyAmount(itemCount)} 件藏品
       </span>
       <span>
-        <Star aria-hidden="true" size={15} strokeWidth={2.4} />
-        {formatCurrencyAmount(result.paidStars)} Stars
+        <SpendIcon aria-hidden="true" size={15} strokeWidth={2.4} />
+        {formatCurrencyAmount(spend.amount)} {spend.label}
       </span>
       <span>返还 {formatCurrencyAmount(result.returnedKcoin)} K-coin</span>
     </div>
@@ -170,6 +179,9 @@ function ResultSummary({ result }: { result: DrawResultResponse }) {
 }
 
 function BalanceChanges({ result }: { result: DrawResultResponse }) {
+  const spend = getSpendSummary(result);
+  const SpendIcon = spend.icon;
+
   return (
     <div className="draw-result-balance">
       <div className="draw-result-balance__heading">
@@ -182,9 +194,9 @@ function BalanceChanges({ result }: { result: DrawResultResponse }) {
       </div>
       <div className="draw-result-balance__grid" aria-label="余额变化">
         <span>
-          <Star aria-hidden="true" size={15} strokeWidth={2.4} />
-          Stars
-          <strong>-{formatCurrencyAmount(result.paidStars)}</strong>
+          <SpendIcon aria-hidden="true" size={15} strokeWidth={2.4} />
+          {spend.label}
+          <strong>-{formatCurrencyAmount(spend.amount)}</strong>
         </span>
         <span>
           <Coins aria-hidden="true" size={15} strokeWidth={2.4} />
@@ -194,6 +206,26 @@ function BalanceChanges({ result }: { result: DrawResultResponse }) {
       </div>
     </div>
   );
+}
+
+function getSpendSummary(result: DrawResultResponse): {
+  amount: number;
+  label: "K-coin" | "Stars";
+  icon: LucideIcon;
+} {
+  if (result.paymentProvider === "kcoin" || result.paidKcoin > 0) {
+    return {
+      amount: result.paidKcoin,
+      label: "K-coin",
+      icon: Coins,
+    };
+  }
+
+  return {
+    amount: result.paidStars,
+    label: "Stars",
+    icon: Star,
+  };
 }
 
 function ResultItem({ item }: { item: DrawResultItem }) {

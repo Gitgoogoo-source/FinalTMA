@@ -1,4 +1,4 @@
-import { Gift, Loader2, Star } from "lucide-react";
+import { Coins, Gift, Loader2 } from "lucide-react";
 
 import { formatCurrencyAmount } from "@/shared/lib/formatCurrency";
 
@@ -29,7 +29,7 @@ export function OpenOnceButton({
       className={`box-open-button${isFree ? " box-open-button--free" : ""}`}
       disabled={disabled}
       aria-busy={isPending}
-      aria-label={`开 1 次，${isFree ? "免费" : `${priceLabel} Stars`}`}
+      aria-label={`开 1 次，${isFree ? "免费" : `${priceLabel} K-coin`}`}
       onClick={onOpen}
       type="button"
     >
@@ -45,7 +45,7 @@ export function OpenOnceButton({
         ) : isFree ? (
           <Gift aria-hidden="true" size={15} strokeWidth={2.4} />
         ) : (
-          <Star aria-hidden="true" size={15} strokeWidth={2.4} />
+          <Coins aria-hidden="true" size={15} strokeWidth={2.4} />
         )}
         {priceLabel}
       </strong>

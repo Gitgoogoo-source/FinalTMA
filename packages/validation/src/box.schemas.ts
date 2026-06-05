@@ -5,7 +5,7 @@ import { z } from "zod";
  *
  * 责任：
  * 1. 校验盲盒列表、奖励池、保底、开盒订单、开盒结果相关 API。
- * 2. 校验 Telegram Stars 开盒订单创建参数。
+ * 2. 校验 K-coin 开盒请求参数；Stars 只用于 K-coin 充值。
  * 3. 校验服务端盲盒、价格、奖励池、保底规则配置。
  *
  * 安全原则：
@@ -161,7 +161,7 @@ export const BoxStatusSchema = z.enum([
 
 export const BoxOpenTypeSchema = z.enum(["single", "ten"]);
 
-export const BoxPaymentProviderSchema = z.literal("telegram_stars");
+export const BoxPaymentProviderSchema = z.enum(["kcoin", "telegram_stars"]);
 
 export const BoxPaymentCurrencySchema = z.literal("XTR");
 
@@ -234,7 +234,7 @@ export const BoxPriceSchema = z
     paymentCurrency: BoxPaymentCurrencySchema,
 
     /**
-     * 单抽 Stars 数量。
+     * 单抽价格。历史字段名保留 Stars，当前业务按 K-coin 1:1 使用。
      */
     singleStars: BoxPositiveIntSchema,
 
@@ -402,7 +402,7 @@ export const BoxRewardsResponseSchema = z
 
 const CreateBoxOpenOrderBaseSchema = z.object({
   boxSlug: BoxSlugSchema,
-  paymentProvider: BoxPaymentProviderSchema.default("telegram_stars"),
+  paymentProvider: BoxPaymentProviderSchema.default("kcoin"),
 
   /**
    * 防重复点击、防重复创建订单。

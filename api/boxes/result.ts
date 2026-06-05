@@ -13,7 +13,10 @@ type RawDrawResultPayload = {
   status?: unknown;
   draw_count?: unknown;
   quantity?: unknown;
+  payment_provider?: unknown;
   total_price_stars?: unknown;
+  total_price_kcoin?: unknown;
+  paid_kcoin?: unknown;
   open_reward_kcoin?: unknown;
   returned_kcoin?: unknown;
   kcoin_reward?: unknown;
@@ -122,13 +125,20 @@ export function toDrawResultResponse(
     explicitKcoinReturn > 0
       ? explicitKcoinReturn
       : perDrawKcoinReturn * Math.max(quantity, 1);
+  const paymentProvider = stringOrNull(payload.payment_provider);
+  const legacyPrice = numberOrZero(payload.total_price_stars);
+  const paidKcoin =
+    numberOrZero(payload.paid_kcoin ?? payload.total_price_kcoin) ||
+    (paymentProvider === "kcoin" ? legacyPrice : 0);
 
   return {
     order_id: stringOrNull(payload.draw_order_id),
     status: isCompleted ? "completed" : "pending",
     order_status: rawOrderStatus,
     quantity,
-    paid_stars: numberOrZero(payload.total_price_stars),
+    payment_provider: paymentProvider,
+    paid_stars: paymentProvider === "kcoin" ? 0 : legacyPrice,
+    paid_kcoin: paidKcoin,
     returned_kcoin: returnedKcoin,
     invoice_payload: stringOrNull(payload.invoice_payload),
     paid_at: stringOrNull(payload.paid_at),
@@ -178,7 +188,9 @@ function toDrawResultItem(value: unknown) {
   };
 }
 
-function normalizeDrawResultBox(value: unknown): Record<string, unknown> | null {
+function normalizeDrawResultBox(
+  value: unknown,
+): Record<string, unknown> | null {
   if (!isRecord(value)) {
     return null;
   }

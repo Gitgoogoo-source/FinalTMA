@@ -192,10 +192,12 @@ function createOrder(
     invoicePayload: "invoice-payload",
     orderId: "11111111-1111-4111-8111-111111111111",
     orderStatus: "created",
+    paidKcoin: 0,
     paymentOrderStatus: "invoice_created",
     paymentStatus: "invoice_created",
     resultReady: false,
     starOrderId: "22222222-2222-4222-8222-222222222222",
+    totalPriceKcoin: 0,
     xtrAmount: 100,
     ...overrides,
   };

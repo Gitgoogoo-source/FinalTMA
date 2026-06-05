@@ -49,3 +49,91 @@ export type AssetProfileSource = {
   displayName?: string | null;
   avatarUrl?: string | null;
 };
+
+export type KcoinTopupAmount = 1 | 500 | 1000 | 5000 | 10000;
+
+export type CreateKcoinTopupOrderInput = {
+  amount: KcoinTopupAmount;
+};
+
+export type CreateKcoinTopupOrderResponse = {
+  orderId: string;
+  topupOrderId: string;
+  starOrderId: string | null;
+  invoicePayload: string | null;
+  invoiceLink: string | null;
+  invoiceOpenMode: string | null;
+  xtrAmount: number;
+  kcoinAmount: number;
+  orderStatus: string;
+  paymentStatus: string;
+  paymentOrderStatus: string;
+  expiresAt: string | null;
+  paidAt: string | null;
+  fulfilledAt: string | null;
+  idempotent: boolean;
+};
+
+export type KcoinTopupPaymentStatus =
+  | "created"
+  | "precheckout_checked"
+  | "paid"
+  | "fulfilling"
+  | "fulfilled"
+  | "failed"
+  | "refunded"
+  | "disputed"
+  | "expired";
+
+export type KcoinTopupStatusResponse = {
+  orderId: string;
+  topupOrderId: string;
+  starOrderId: string | null;
+  status: KcoinTopupPaymentStatus;
+  paymentOrderStatus: KcoinTopupPaymentStatus;
+  xtrAmount: number;
+  kcoinAmount: number;
+  paidAt: string | null;
+  fulfilledAt: string | null;
+  topupOrder: {
+    id: string;
+    status: string;
+    paymentOrderStatus: KcoinTopupPaymentStatus;
+    xtrAmount: number;
+    kcoinAmount: number;
+    paidAt: string | null;
+    fulfilledAt: string | null;
+    createdAt: string | null;
+    updatedAt: string | null;
+    hasError: boolean;
+  };
+  starOrder: {
+    id: string;
+    status: string;
+    paymentOrderStatus: KcoinTopupPaymentStatus;
+    xtrAmount: number;
+    expiresAt: string | null;
+    precheckoutAt: string | null;
+    paidAt: string | null;
+    fulfilledAt: string | null;
+    createdAt: string | null;
+    updatedAt: string | null;
+    hasError: boolean;
+  } | null;
+  payment: {
+    recorded: boolean;
+    status: KcoinTopupPaymentStatus;
+    currency: string;
+    xtrAmount: number;
+    paidAt: string | null;
+    createdAt: string | null;
+  };
+  fulfillment: {
+    status: KcoinTopupPaymentStatus;
+    credited: boolean;
+    completedAt: string | null;
+    failed: boolean;
+    retryable: boolean;
+  };
+  serverTime: string | null;
+};

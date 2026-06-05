@@ -64,6 +64,7 @@ type CreateVipStatusOverrides = Omit<Partial<VipStatusMock>, "today"> & {
 };
 
 const mocks = vi.hoisted(() => ({
+  assetsKcoinAvailable: "1000",
   createOrderMutate: vi.fn(),
   createOrderResult: null as CreateOpenOrderResponse | null,
   claimVipDailyMutate: vi.fn(),
@@ -71,14 +72,41 @@ const mocks = vi.hoisted(() => ({
   drawResultByOrderId: new Map<string, DrawResultResponse>(),
   openVipDailyMutate: vi.fn(),
   openVipDailyResult: null as CreateOpenOrderResponse | null,
+  openKcoinTopupSheet: vi.fn(),
   drawResultRefetch: vi.fn(),
   paymentStatusByOrderId: new Map<string, DrawResultResponse>(),
   paymentStatusRefetch: vi.fn(),
   pitySnapshot: null as CachedBoxPitySnapshot | null,
   refreshBoxPity: vi.fn(),
+  refreshAssets: vi.fn(),
   useDrawResult: vi.fn(),
   usePaymentStatus: vi.fn(),
   vipStatus: null as VipStatusMock | null,
+}));
+
+vi.mock("@/features/assets/hooks/useMyAssets", () => ({
+  useMyAssets: () => ({
+    assets: {
+      fgems: { available: "0", currencyCode: "FGEMS", locked: "0" },
+      kcoin: {
+        available: mocks.assetsKcoinAvailable,
+        currencyCode: "KCOIN",
+        locked: "0",
+      },
+      stars: { available: "0", currencyCode: "STAR_DISPLAY", locked: "0" },
+    },
+    error: null,
+    isError: false,
+    isLoading: false,
+    refreshAssets: mocks.refreshAssets,
+    serverTime: "2026-05-28T00:00:00.000Z",
+  }),
+}));
+
+vi.mock("@/features/assets/components/KcoinTopupProvider", () => ({
+  useKcoinTopupSheet: () => ({
+    openKcoinTopupSheet: mocks.openKcoinTopupSheet,
+  }),
 }));
 
 vi.mock("../hooks/useCachedBoxPity", () => ({
@@ -144,8 +172,9 @@ vi.mock("../hooks/usePaymentStatus", () => ({
   usePaymentStatus: mocks.usePaymentStatus,
 }));
 
-describe("BoxPage Stars invoice flow", () => {
+describe("BoxPage K-coin open and recharge flow", () => {
   beforeEach(() => {
+    mocks.assetsKcoinAvailable = "1000";
     mocks.pitySnapshot = createPitySnapshot();
     mocks.createOrderResult = createOrder();
     mocks.openVipDailyResult = createOrder({
@@ -157,10 +186,12 @@ describe("BoxPage Stars invoice flow", () => {
       invoicePayload: null,
       orderId: "99999999-9999-4999-8999-999999999999",
       orderStatus: "completed",
+      paidKcoin: 0,
       paymentOrderStatus: "fulfilled",
       paymentStatus: "fulfilled",
       resultReady: true,
       starOrderId: null,
+      totalPriceKcoin: 0,
       xtrAmount: 0,
     });
     mocks.claimVipDailyResult = {
@@ -176,10 +207,13 @@ describe("BoxPage Stars invoice flow", () => {
     });
     mocks.drawResultByOrderId.clear();
     mocks.paymentStatusByOrderId.clear();
+    mocks.openKcoinTopupSheet.mockReset();
     mocks.drawResultRefetch.mockReset();
     mocks.paymentStatusRefetch.mockReset();
     mocks.refreshBoxPity.mockReset();
     mocks.refreshBoxPity.mockResolvedValue(mocks.pitySnapshot);
+    mocks.refreshAssets.mockReset();
+    mocks.refreshAssets.mockResolvedValue(undefined);
     mocks.createOrderMutate.mockReset();
     mocks.createOrderMutate.mockImplementation(
       (_input: unknown, options?: CreateOrderMutateOptions) => {
@@ -250,8 +284,11 @@ describe("BoxPage Stars invoice flow", () => {
     vi.clearAllMocks();
   });
 
-  it("opens the Telegram Stars invoice after creating an order", async () => {
+  it("opens a box with K-coin without creating a Telegram Stars invoice", async () => {
     const openInvoice = vi.fn();
+    const order = createOrder();
+    mocks.createOrderResult = order;
+    mocks.drawResultByOrderId.set(order.orderId, createDrawResult(order));
     (globalThis as TelegramGlobal).Telegram = {
       WebApp: {
         openInvoice,
@@ -263,12 +300,24 @@ describe("BoxPage Stars invoice flow", () => {
     fireEvent.click(screen.getByRole("button", { name: /^开 1 次/ }));
 
     await waitFor(() => {
-      expect(openInvoice).toHaveBeenCalledWith(
-        "https://t.me/invoice/test-open-order",
-        expect.any(Function),
-      );
+      expect(
+        screen.getByRole("dialog", { name: "测试盲盒奖励" }),
+      ).toBeVisible();
     });
-    expect(screen.getByText("支付窗口已打开")).toBeVisible();
+    expect(openInvoice).not.toHaveBeenCalled();
+  });
+
+  it("opens the shared K-coin topup sheet instead of creating an open order when balance is low", async () => {
+    mocks.assetsKcoinAvailable = "0";
+
+    renderBoxPage();
+
+    fireEvent.click(screen.getByRole("button", { name: /^开 1 次/ }));
+
+    expect(mocks.createOrderMutate).not.toHaveBeenCalled();
+    expect(mocks.openKcoinTopupSheet).toHaveBeenCalledWith({
+      requiredAmount: 10,
+    });
   });
 
   it("opens hardcoded possible rewards without refreshing the server", async () => {
@@ -311,6 +360,7 @@ describe("BoxPage Stars invoice flow", () => {
 
   it("keeps open buttons locked while an order is waiting for payment", async () => {
     const openInvoice = vi.fn();
+    mocks.createOrderResult = createLegacyStarsOrder();
     (globalThis as TelegramGlobal).Telegram = {
       WebApp: {
         openInvoice,
@@ -338,7 +388,7 @@ describe("BoxPage Stars invoice flow", () => {
 
   it("does not reopen invoice when paymentOrderStatus is already server-controlled", async () => {
     const openInvoice = vi.fn();
-    mocks.createOrderResult = createOrder({
+    mocks.createOrderResult = createLegacyStarsOrder({
       orderStatus: "invoice_created",
       paymentOrderStatus: "paid",
       paymentStatus: "invoice_created",
@@ -368,6 +418,7 @@ describe("BoxPage Stars invoice flow", () => {
         callback?.("paid");
       },
     );
+    mocks.createOrderResult = createLegacyStarsOrder();
     (globalThis as TelegramGlobal).Telegram = {
       WebApp: {
         openInvoice,
@@ -390,6 +441,8 @@ describe("BoxPage Stars invoice flow", () => {
   });
 
   it("shows a retryable state when Telegram invoice opening is unavailable", async () => {
+    mocks.createOrderResult = createLegacyStarsOrder();
+
     renderBoxPage();
 
     fireEvent.click(screen.getByRole("button", { name: /^开 1 次/ }));
@@ -404,7 +457,7 @@ describe("BoxPage Stars invoice flow", () => {
 
   it("shows expired orders from the server without offering payment retry", async () => {
     const openInvoice = vi.fn();
-    const order = createOrder();
+    const order = createLegacyStarsOrder();
     mocks.createOrderResult = order;
     mocks.paymentStatusByOrderId.set(
       order.orderId,
@@ -439,6 +492,8 @@ describe("BoxPage Stars invoice flow", () => {
   });
 
   it("polls the payment status query while the payment sheet is open", async () => {
+    mocks.createOrderResult = createLegacyStarsOrder();
+
     renderBoxPage();
 
     fireEvent.click(screen.getByRole("button", { name: /^开 1 次/ }));
@@ -574,8 +629,13 @@ describe("BoxPage Stars invoice flow", () => {
     const openInvoice = vi.fn();
     mocks.createOrderResult = createOrder({
       drawCount: 10,
-      xtrAmount: 90,
+      paidKcoin: 90,
+      totalPriceKcoin: 90,
     });
+    mocks.drawResultByOrderId.set(
+      mocks.createOrderResult.orderId,
+      createDrawResult(mocks.createOrderResult),
+    );
     (globalThis as TelegramGlobal).Telegram = {
       WebApp: {
         openInvoice,
@@ -585,7 +645,7 @@ describe("BoxPage Stars invoice flow", () => {
     renderBoxPage();
 
     fireEvent.click(
-      screen.getByRole("button", { name: "开 10 次，90 Stars，9 折" }),
+      screen.getByRole("button", { name: "开 10 次，90 K-coin，9 折" }),
     );
 
     expect(mocks.createOrderMutate).toHaveBeenCalledWith(
@@ -602,8 +662,9 @@ describe("BoxPage Stars invoice flow", () => {
       "expectedPoolVersionId",
     );
     await waitFor(() => {
-      expect(screen.getByText("90 Stars · 10 次")).toBeVisible();
+      expect(screen.getByText("90 K-coin")).toBeVisible();
     });
+    expect(openInvoice).not.toHaveBeenCalled();
   });
 
   it("opens the result modal only after result polling is completed", async () => {
@@ -627,7 +688,7 @@ describe("BoxPage Stars invoice flow", () => {
   });
 
   it("does not keep retry payment available after polling sees fulfillment", async () => {
-    const order = createOrder();
+    const order = createLegacyStarsOrder();
     mocks.createOrderResult = order;
     mocks.paymentStatusByOrderId.set(
       order.orderId,
@@ -655,7 +716,7 @@ describe("BoxPage Stars invoice flow", () => {
 
   it("restores a pending order from local storage and checks server status", async () => {
     const openInvoice = vi.fn();
-    const order = createOrder({
+    const order = createLegacyStarsOrder({
       expiresAt: "2099-05-28T00:15:00.000Z",
     });
     (globalThis as TelegramGlobal).Telegram = {
@@ -836,20 +897,42 @@ function createOrder(
   return {
     devPaymentProcessed: false,
     drawCount: 1,
-    expiresAt: "2026-05-28T00:15:00.000Z",
+    expiresAt: null,
     idempotent: false,
+    invoiceLink: null,
+    invoiceOpenMode: null,
+    invoicePayload: null,
+    orderId: "22222222-2222-4222-8222-222222222222",
+    orderStatus: "completed",
+    paidKcoin: 10,
+    paymentOrderStatus: "fulfilled",
+    paymentStatus: "fulfilled",
+    resultReady: true,
+    starOrderId: null,
+    totalPriceKcoin: 10,
+    xtrAmount: 0,
+    ...overrides,
+  };
+}
+
+function createLegacyStarsOrder(
+  overrides: Partial<CreateOpenOrderResponse> = {},
+): CreateOpenOrderResponse {
+  return createOrder({
+    expiresAt: "2026-05-28T00:15:00.000Z",
     invoiceLink: "https://t.me/invoice/test-open-order",
     invoiceOpenMode: "web_app_open_invoice",
     invoicePayload: "invoice-payload",
-    orderId: "22222222-2222-4222-8222-222222222222",
     orderStatus: "created",
+    paidKcoin: 0,
     paymentOrderStatus: "invoice_created",
     paymentStatus: "invoice_created",
     resultReady: false,
     starOrderId: "44444444-4444-4444-8444-444444444444",
+    totalPriceKcoin: 0,
     xtrAmount: 10,
     ...overrides,
-  };
+  });
 }
 
 function createDrawResult(
@@ -868,7 +951,9 @@ function createDrawResult(
     orderId: order.orderId,
     orderStatus: "completed",
     paidAt: "2026-05-28T00:01:00.000Z",
+    paidKcoin: order.paidKcoin,
     paidStars: order.xtrAmount,
+    paymentProvider: order.starOrderId ? "telegram_stars" : "kcoin",
     paymentOrderStatus: "fulfilled",
     paymentStatus: "fulfilled",
     quantity: order.drawCount,

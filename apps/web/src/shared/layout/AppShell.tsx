@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { useLocation } from "react-router-dom";
 
 import { AssetBar } from "@/features/assets/components/AssetBar";
+import { KcoinTopupProvider } from "@/features/assets/components/KcoinTopupProvider";
 import { resolveAppRoute } from "@/shared/constants/routes";
 
 import { BottomNav } from "./BottomNav";
@@ -20,8 +21,10 @@ export function AppShell({ children }: AppShellProps) {
 
   return (
     <div className="app-shell">
-      <AssetBar />
-      <main className={contentClassName}>{children}</main>
+      <KcoinTopupProvider>
+        <AssetBar />
+        <main className={contentClassName}>{children}</main>
+      </KcoinTopupProvider>
       <BottomNav />
     </div>
   );

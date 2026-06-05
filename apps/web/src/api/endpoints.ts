@@ -17,6 +17,10 @@ export const API_ENDPOINTS = {
   telegram: {
     paymentSupport: "/telegram/payment-support",
   },
+  payments: {
+    kcoinTopupCreateOrder: "/payments/kcoin-topup/create-order",
+    kcoinTopupStatus: "/payments/kcoin-topup/status",
+  },
   vip: {
     status: "/vip/status",
     createOrder: "/vip/create-order",

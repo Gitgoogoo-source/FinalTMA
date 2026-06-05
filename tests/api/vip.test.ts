@@ -88,6 +88,7 @@ const INVOICE_LINK = "https://t.me/invoice/vip-test";
 describe("vip API", () => {
   beforeEach(() => {
     process.env.NODE_ENV = "test";
+    process.env.VIP_MONTHLY_PRICE_XTR = "299";
     callRpcRawMock.mockReset();
     assertStarsPaymentCreateAllowedMock.mockReset();
     assertStarsPaymentCreateAllowedMock.mockResolvedValue(undefined);
@@ -263,9 +264,24 @@ describe("vip API", () => {
       todayClaimed: false,
       plan: {
         id: PLAN_ID,
-        priceXtr: 199,
+        priceXtr: 299,
       },
     });
+  });
+
+  it("/api/vip/status rejects missing server monthly price config before RPC", async () => {
+    delete process.env.VIP_MONTHLY_PRICE_XTR;
+
+    const result = await invokeApiHandler<ApiErrorResponse>(statusHandler, {
+      method: "GET",
+      headers: {
+        "x-request-id": "req-vip-status-missing-price",
+      },
+    });
+
+    expect(result.statusCode).toBe(503);
+    expect(result.body.error.code).toBe("VIP_PRICE_CONFIG_INVALID");
+    expect(callRpcRawMock).not.toHaveBeenCalled();
   });
 
   it("/api/vip/create-order rejects forged user fields before calling RPC", async () => {
@@ -293,7 +309,7 @@ describe("vip API", () => {
       vip_order_id: VIP_ORDER_ID,
       star_order_id: STAR_ORDER_ID,
       invoice_payload: INVOICE_PAYLOAD,
-      xtr_amount: 199,
+      xtr_amount: 299,
       status: "created",
       payment_order_status: "created",
       expires_at: "2026-06-05T10:15:00.000Z",
@@ -310,7 +326,7 @@ describe("vip API", () => {
       },
       body: {
         plan_id: PLAN_ID,
-        expected_price_xtr: 199,
+        expected_price_xtr: 299,
       },
     });
 
@@ -322,17 +338,19 @@ describe("vip API", () => {
         idempotencyKey: IDEMPOTENCY_KEY,
         metadata: {
           planId: PLAN_ID,
-          expectedPriceXtr: 199,
+          expectedPriceXtr: 299,
+          serverPriceXtr: 299,
         },
       }),
     );
     expect(callRpcRawMock).toHaveBeenCalledWith(
-      "vip_create_order_checked",
+      "vip_create_order_with_server_price_checked",
       {
         p_user_id: USER_ID,
         p_plan_id: PLAN_ID,
         p_idempotency_key: IDEMPOTENCY_KEY,
-        p_expected_price_xtr: 199,
+        p_server_price_xtr: 299,
+        p_expected_price_xtr: 299,
       },
       expect.objectContaining({
         schema: "api",
@@ -340,6 +358,7 @@ describe("vip API", () => {
           requestId: "req-vip-create-order",
           userId: USER_ID,
           planId: PLAN_ID,
+          serverPriceXtr: 299,
           idempotencyKey: IDEMPOTENCY_KEY,
         }),
       }),
@@ -350,7 +369,7 @@ describe("vip API", () => {
       businessType: "vip_monthly",
       userId: USER_ID,
       invoicePayload: INVOICE_PAYLOAD,
-      xtrAmount: 199,
+      xtrAmount: 299,
       requestId: "req-vip-create-order",
     });
     expect(result.body.data).toMatchObject({
@@ -360,7 +379,7 @@ describe("vip API", () => {
       invoice_payload: INVOICE_PAYLOAD,
       invoice_link: INVOICE_LINK,
       invoice_open_mode: "web_app_open_invoice",
-      xtr_amount: 199,
+      xtr_amount: 299,
       payment_order_status: "created",
       idempotent: false,
     });

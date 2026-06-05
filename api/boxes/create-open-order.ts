@@ -7,11 +7,6 @@ import {
   inferPaymentOrderStatusFromDrawOrderStatus,
   normalizePaymentOrderStatus,
 } from "../../packages/server/src/payments/paymentEvents.js";
-import { assertStarsPaymentCreateAllowed } from "../../packages/server/src/payments/paymentGuards.js";
-import {
-  createTelegramStarsInvoice,
-  type TelegramStarsInvoiceResult,
-} from "../../packages/server/src/payments/telegramStars.js";
 import {
   ApiError,
   getIdempotencyKey,
@@ -28,6 +23,8 @@ type CreateOrderRpcResult = {
   star_order_id?: unknown;
   invoice_payload?: unknown;
   xtr_amount?: unknown;
+  paid_kcoin?: unknown;
+  total_price_kcoin?: unknown;
   draw_count?: unknown;
   quantity?: unknown;
   discount_bps?: unknown;
@@ -36,15 +33,7 @@ type CreateOrderRpcResult = {
   expires_at?: unknown;
   pool_version_id?: unknown;
   idempotent?: unknown;
-};
-
-type DevPaidRpcResult = {
-  draw_order_id?: unknown;
-  status?: unknown;
-  results?: unknown;
-  idempotent?: unknown;
-  payment_mode?: unknown;
-  payment_status?: unknown;
+  result_ready?: unknown;
 };
 
 type GachaRecentOrderCountRpcResult = {
@@ -55,9 +44,9 @@ type GachaBoxSlug = "starter_egg" | "premium_egg" | "legendary_egg";
 
 type GachaServerPriceSnapshot = {
   boxSlug: GachaBoxSlug;
-  unitPriceStars: number;
+  unitPriceKcoin: number;
   discountBps: number;
-  totalPriceStars: number;
+  totalPriceKcoin: number;
 };
 
 type CreateOpenOrderResponse = {
@@ -65,6 +54,8 @@ type CreateOpenOrderResponse = {
   star_order_id: string | null;
   invoice_payload: string | null;
   xtr_amount: number;
+  paid_kcoin: number;
+  total_price_kcoin: number;
   draw_count: 1 | 10;
   order_status: string;
   payment_status: string;
@@ -98,7 +89,6 @@ export default withApiHandler(
       normalizeCreateOpenOrderInput(body, getIdempotencyKey(req)),
     );
 
-    await assertStarsPaymentCreateAllowed();
     await assertUserRiskAllowed({
       req,
       ctx,
@@ -127,35 +117,8 @@ export default withApiHandler(
       idempotencyKey: input.idempotencyKey,
       requestId: ctx.requestId,
     });
-    const starOrderId = getRequiredString(order, "star_order_id");
-    const invoicePayload = getRequiredString(order, "invoice_payload");
-    const xtrAmount = numberOrZero(order.xtr_amount);
-    let devPaidResult: DevPaidRpcResult | null = null;
-    let invoiceResult: TelegramStarsInvoiceResult | null = null;
 
-    if (isDevGachaPaymentModeEnabled(process.env.DEV_GACHA_PAYMENT_MODE)) {
-      devPaidResult = await callDevPaidOrder(
-        orderId,
-        session.userId,
-        ctx.requestId,
-      );
-    } else {
-      invoiceResult = await createTelegramStarsInvoice({
-        starOrderId,
-        drawOrderId: orderId,
-        userId: session.userId,
-        invoicePayload,
-        xtrAmount,
-        requestId: ctx.requestId,
-      });
-    }
-
-    return buildCreateOpenOrderResponse(
-      order,
-      input,
-      devPaidResult,
-      invoiceResult,
-    );
+    return buildCreateOpenOrderResponse(order, input);
   },
   {
     methods: ["POST"],
@@ -191,49 +154,38 @@ export function normalizeCreateOpenOrderInput(
   };
 }
 
-export function isDevGachaPaymentModeEnabled(
-  value: string | undefined,
-): boolean {
-  return ["1", "true", "yes", "on"].includes(
-    String(value ?? "")
-      .trim()
-      .toLowerCase(),
-  );
-}
-
 export function buildCreateOpenOrderResponse(
   order: CreateOrderRpcResult,
   input: CreateBoxOpenOrderRequest,
-  devPaidResult: DevPaidRpcResult | null,
-  invoiceResult: TelegramStarsInvoiceResult | null = null,
 ): CreateOpenOrderResponse {
-  const orderStatus =
-    stringOrNull(devPaidResult?.status) ??
-    stringOrNull(order.status) ??
-    "invoice_created";
+  const orderStatus = stringOrNull(order.status) ?? "completed";
   const paymentStatus =
-    normalizePaymentOrderStatus(devPaidResult?.payment_status) ??
-    normalizePaymentOrderStatus(invoiceResult?.paymentOrderStatus) ??
     normalizePaymentOrderStatus(order.payment_status) ??
     inferPaymentOrderStatusFromDrawOrderStatus(orderStatus) ??
-    "created";
+    "fulfilled";
+  const paidKcoin =
+    numberOrZero(order.paid_kcoin) ||
+    numberOrZero(order.total_price_kcoin) ||
+    numberOrZero(order.xtr_amount);
 
   return {
     order_id: getRequiredString(order, "draw_order_id"),
     star_order_id: stringOrNull(order.star_order_id),
-    invoice_payload: stringOrNull(order.invoice_payload),
-    xtr_amount: numberOrZero(order.xtr_amount),
+    invoice_payload: null,
+    xtr_amount: 0,
+    paid_kcoin: paidKcoin,
+    total_price_kcoin: paidKcoin,
     draw_count: input.quantity,
     order_status: orderStatus,
     payment_status: paymentStatus,
     payment_order_status: paymentStatus,
-    invoice_link: invoiceResult?.invoiceLink ?? null,
-    invoice_open_mode: invoiceResult?.openMode ?? null,
-    expires_at:
-      invoiceResult?.expiresAt ?? stringOrNull(order.expires_at) ?? null,
-    dev_payment_processed: devPaidResult !== null,
-    idempotent: Boolean(order.idempotent) || Boolean(devPaidResult?.idempotent),
-    result_ready: isCompletedOrderStatus(orderStatus),
+    invoice_link: null,
+    invoice_open_mode: null,
+    expires_at: stringOrNull(order.expires_at),
+    dev_payment_processed: false,
+    idempotent: Boolean(order.idempotent),
+    result_ready:
+      Boolean(order.result_ready) || isCompletedOrderStatus(orderStatus),
   };
 }
 
@@ -245,13 +197,13 @@ async function callGachaCreateOrder(
 ): Promise<CreateOrderRpcResult> {
   try {
     return await callRpcRaw<CreateOrderRpcResult>(
-      "gacha_create_order_from_server_price",
+      "gacha_open_with_kcoin_from_server_price",
       {
         p_user_id: userId,
         p_box_slug: input.boxSlug,
         p_quantity: input.quantity,
         p_idempotency_key: input.idempotencyKey,
-        p_unit_price_stars: priceSnapshot.unitPriceStars,
+        p_unit_price_kcoin: priceSnapshot.unitPriceKcoin,
         p_discount_bps: priceSnapshot.discountBps,
       },
       {
@@ -262,36 +214,9 @@ async function callGachaCreateOrder(
           boxSlug: input.boxSlug,
           quantity: input.quantity,
           idempotencyKey: input.idempotencyKey,
-          serverUnitPriceStars: priceSnapshot.unitPriceStars,
+          serverUnitPriceKcoin: priceSnapshot.unitPriceKcoin,
           serverDiscountBps: priceSnapshot.discountBps,
-          serverTotalPriceStars: priceSnapshot.totalPriceStars,
-        },
-      },
-    );
-  } catch (error) {
-    throw mapGachaRpcError(error);
-  }
-}
-
-async function callDevPaidOrder(
-  orderId: string,
-  userId: string,
-  requestId: string,
-): Promise<DevPaidRpcResult> {
-  try {
-    return await callRpcRaw<DevPaidRpcResult>(
-      "gacha_process_dev_paid_order",
-      {
-        p_order_id: orderId,
-        p_user_id: userId,
-      },
-      {
-        schema: "api" as never,
-        context: {
-          requestId,
-          userId,
-          orderId,
-          paymentMode: "DEV_GACHA_PAYMENT_MODE",
+          serverTotalPriceKcoin: priceSnapshot.totalPriceKcoin,
         },
       },
     );
@@ -462,6 +387,22 @@ function mapGachaRpcError(error: unknown): ApiError {
     return new ApiError(409, "ORDER_ALREADY_PROCESSED", "订单已处理。");
   }
 
+  if (message.includes("insufficient balance")) {
+    return new ApiError(
+      402,
+      "INSUFFICIENT_BALANCE",
+      "K-coin 余额不足，请先充值。",
+    );
+  }
+
+  if (message.includes("user not found")) {
+    return new ApiError(404, "USER_NOT_FOUND", "登录用户不存在。");
+  }
+
+  if (message.includes("user is not active")) {
+    return ApiError.userBlocked("当前账号已被限制使用。");
+  }
+
   if (
     message.includes("currency ledger") ||
     message.includes("ledger write failed") ||
@@ -502,18 +443,18 @@ function readGachaServerPriceSnapshot(
   input: CreateBoxOpenOrderRequest,
 ): GachaServerPriceSnapshot {
   const boxSlug = normalizeGachaBoxSlug(input.boxSlug);
-  const unitPriceStars = readPositiveIntEnv(
+  const unitPriceKcoin = readPositiveIntEnv(
     GACHA_BOX_PRICE_ENV_BY_SLUG[boxSlug],
   );
   const discountBps =
     input.quantity === 10
       ? readDiscountRateEnvAsBps(GACHA_TEN_DRAW_DISCOUNT_RATE_ENV)
       : 0;
-  const totalPriceStars = Math.ceil(
-    (unitPriceStars * input.quantity * (10000 - discountBps)) / 10000,
+  const totalPriceKcoin = Math.ceil(
+    (unitPriceKcoin * input.quantity * (10000 - discountBps)) / 10000,
   );
 
-  if (totalPriceStars <= 0) {
+  if (totalPriceKcoin <= 0) {
     throw new ApiError(
       500,
       "GACHA_PRICE_CONFIG_INVALID",
@@ -531,8 +472,8 @@ function readGachaServerPriceSnapshot(
   return {
     boxSlug,
     discountBps,
-    totalPriceStars,
-    unitPriceStars,
+    totalPriceKcoin,
+    unitPriceKcoin,
   };
 }
 
