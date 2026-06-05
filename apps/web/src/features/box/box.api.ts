@@ -243,7 +243,10 @@ function normalizeBlindBox(value: unknown): BlindBox | null {
       readBoolean(value.isOpenable) ?? readBoolean(value.is_openable) ?? false,
     disabledReason:
       readString(value.disabledReason) ?? readString(value.disabled_reason),
-    kcoinReturnPerDraw: 0,
+    kcoinReturnPerDraw:
+      readNumber(value.kcoinReturnPerDraw) ??
+      readNumber(value.kcoin_return_per_draw) ??
+      0,
     sortOrder: readNumber(value.sortOrder) ?? readNumber(value.sort_order) ?? 0,
     updatedAt: readString(value.updatedAt) ?? readString(value.updated_at),
   };
@@ -539,7 +542,10 @@ function normalizeDrawResultResponse(
       readNumber(payload.totalPriceKcoin) ??
       readNumber(payload.total_price_kcoin) ??
       0,
-    returnedKcoin: 0,
+    returnedKcoin:
+      readNumber(payload.returnedKcoin) ??
+      readNumber(payload.returned_kcoin) ??
+      0,
     invoicePayload:
       readString(payload.invoicePayload) ?? readString(payload.invoice_payload),
     paidAt,
@@ -636,7 +642,10 @@ function normalizePaymentStatusResponse(
       readNumber(drawOrder.totalPriceKcoin) ??
       readNumber(drawOrder.total_price_kcoin) ??
       0,
-    returnedKcoin: 0,
+    returnedKcoin:
+      readNumber(drawOrder.returnedKcoin) ??
+      readNumber(drawOrder.returned_kcoin) ??
+      0,
     invoicePayload:
       readString(payload.invoicePayload) ?? readString(payload.invoice_payload),
     paidAt,

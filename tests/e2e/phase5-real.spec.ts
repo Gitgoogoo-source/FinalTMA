@@ -121,7 +121,7 @@ test("第五阶段真实链路：支付、钱包验证、Mint 队列和刷新恢
   await expect(page.getByText(fixture.itemName).first()).toBeVisible({
     timeout: 30_000,
   });
-  await expect(page.getByText(/返还 100 K-coin/).first()).not.toBeVisible();
+  await expect(page.getByText(/返还 100 K-coin/).first()).toBeVisible();
   await expectPaidOrderFulfilled(db, fixture);
 
   await page.getByRole("button", { name: "确认" }).click();

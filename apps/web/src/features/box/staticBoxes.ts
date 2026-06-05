@@ -50,6 +50,7 @@ export const STATIC_BOX_SLUGS = STATIC_BOX_CONFIGS.map((box) => box.slug);
 
 const TEN_DRAW_DISCOUNT_RATE = 0.1;
 const TEN_DRAW_DISCOUNT_BPS = Math.round(TEN_DRAW_DISCOUNT_RATE * 10000);
+const KCOIN_RETURN_PER_DRAW = 100;
 
 export function createStaticBoxes(
   snapshot: CachedBoxPitySnapshot | null,
@@ -67,7 +68,7 @@ export function createStaticBoxes(
       heroImageUrl: `/images/boxes/${box.slug}.png`,
       id: serverBoxId ?? box.slug,
       isOpenable: true,
-      kcoinReturnPerDraw: 0,
+      kcoinReturnPerDraw: KCOIN_RETURN_PER_DRAW,
       name: box.name,
       pityProgress,
       remainingStock: null,

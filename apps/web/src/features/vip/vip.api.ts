@@ -4,8 +4,6 @@ import { API_ENDPOINTS } from "@/api/endpoints";
 import type {
   ClaimVipDailyBenefitInput,
   ClaimVipDailyBenefitResponse,
-  ClaimVipFreeBoxInput,
-  ClaimVipFreeBoxResponse,
   CreateVipOrderInput,
   CreateVipOrderResponse,
   VipPlan,
@@ -60,24 +58,6 @@ export async function claimVipDailyBenefit(
   return normalizeClaimVipDailyBenefitResponse(response);
 }
 
-export async function claimVipFreeBox(
-  input: ClaimVipFreeBoxInput = {},
-): Promise<ClaimVipFreeBoxResponse> {
-  const idempotencyKey =
-    input.idempotencyKey ?? createIdempotencyKey("vip:claim-free-box");
-  const response = await apiRequest<unknown>(API_ENDPOINTS.vip.claimFreeBox, {
-    method: "POST",
-    body: {
-      idempotency_key: idempotencyKey,
-    },
-    headers: {
-      "X-Idempotency-Key": idempotencyKey,
-    },
-  });
-
-  return normalizeClaimVipFreeBoxResponse(response);
-}
-
 export function normalizeVipStatus(response: unknown): VipStatus {
   const payload = isRecord(response) ? response : {};
   const today = normalizeVipTodayStatus(payload.today);
@@ -121,14 +101,6 @@ export function normalizeClaimVipDailyBenefitResponse(
     readNumber(payload.remainingFreeBoxCount) ??
     readNumber(payload.remaining_free_box_count) ??
     Math.max(freeBoxCount - freeBoxUsedCount, 0);
-  const fgemsClaimed =
-    readBoolean(payload.fgemsClaimed) ??
-    readBoolean(payload.fgems_claimed) ??
-    true;
-  const freeBoxClaimed =
-    readBoolean(payload.freeBoxClaimed) ??
-    readBoolean(payload.free_box_claimed) ??
-    false;
 
   return {
     claimId: readString(payload.claimId) ?? readString(payload.claim_id) ?? "",
@@ -139,68 +111,13 @@ export function normalizeClaimVipDailyBenefitResponse(
       readNumber(payload.fgemsAmount) ?? readNumber(payload.fgems_amount) ?? 0,
     fgemsLedgerId:
       readString(payload.fgemsLedgerId) ?? readString(payload.fgems_ledger_id),
-    fgemsClaimed,
-    fgemsClaimedAt:
-      readString(payload.fgemsClaimedAt) ??
-      readString(payload.fgems_claimed_at),
     freeBoxCount,
     freeBoxUsedCount,
     remainingFreeBoxCount,
     freeBoxAvailable:
       readBoolean(payload.freeBoxAvailable) ??
       readBoolean(payload.free_box_available) ??
-      (freeBoxClaimed && remainingFreeBoxCount > 0),
-    freeBoxClaimed,
-    freeBoxClaimedAt:
-      readString(payload.freeBoxClaimedAt) ??
-      readString(payload.free_box_claimed_at),
-    alreadyClaimed:
-      readBoolean(payload.alreadyClaimed) ??
-      readBoolean(payload.already_claimed) ??
-      false,
-    idempotent: readBoolean(payload.idempotent) ?? false,
-  };
-}
-
-export function normalizeClaimVipFreeBoxResponse(
-  response: unknown,
-): ClaimVipFreeBoxResponse {
-  const payload = isRecord(response) ? response : {};
-  const freeBoxCount =
-    readNumber(payload.freeBoxCount) ?? readNumber(payload.free_box_count) ?? 0;
-  const freeBoxUsedCount =
-    readNumber(payload.freeBoxUsedCount) ??
-    readNumber(payload.free_box_used_count) ??
-    0;
-  const remainingFreeBoxCount =
-    readNumber(payload.remainingFreeBoxCount) ??
-    readNumber(payload.remaining_free_box_count) ??
-    Math.max(freeBoxCount - freeBoxUsedCount, 0);
-  const freeBoxClaimed =
-    readBoolean(payload.freeBoxClaimed) ??
-    readBoolean(payload.free_box_claimed) ??
-    true;
-
-  return {
-    claimId: readString(payload.claimId) ?? readString(payload.claim_id) ?? "",
-    subscriptionId:
-      readString(payload.subscriptionId) ?? readString(payload.subscription_id),
-    claimDate: readString(payload.claimDate) ?? readString(payload.claim_date),
-    freeBoxCount,
-    freeBoxUsedCount,
-    remainingFreeBoxCount,
-    freeBoxAvailable:
-      readBoolean(payload.freeBoxAvailable) ??
-      readBoolean(payload.free_box_available) ??
-      (freeBoxClaimed && remainingFreeBoxCount > 0),
-    freeBoxClaimed,
-    freeBoxClaimedAt:
-      readString(payload.freeBoxClaimedAt) ??
-      readString(payload.free_box_claimed_at),
-    fgemsClaimed:
-      readBoolean(payload.fgemsClaimed) ??
-      readBoolean(payload.fgems_claimed) ??
-      false,
+      remainingFreeBoxCount > 0,
     alreadyClaimed:
       readBoolean(payload.alreadyClaimed) ??
       readBoolean(payload.already_claimed) ??
@@ -305,29 +222,6 @@ function normalizeVipTodayStatus(value: unknown): VipTodayStatus | null {
     readNumber(value.freeBoxUsedCount) ??
     readNumber(value.free_box_used_count) ??
     0;
-  const fgemsClaimed =
-    readBoolean(value.fgemsClaimed) ??
-    readBoolean(value.fgems_claimed) ??
-    readBoolean(value.claimed) ??
-    false;
-  const fgemsClaimedAt =
-    readString(value.fgemsClaimedAt) ?? readString(value.fgems_claimed_at);
-  const canClaimFgems =
-    readBoolean(value.canClaimFgems) ??
-    readBoolean(value.can_claim_fgems) ??
-    readBoolean(value.canClaim) ??
-    readBoolean(value.can_claim) ??
-    false;
-  const freeBoxClaimed =
-    readBoolean(value.freeBoxClaimed) ??
-    readBoolean(value.free_box_claimed) ??
-    false;
-  const freeBoxClaimedAt =
-    readString(value.freeBoxClaimedAt) ?? readString(value.free_box_claimed_at);
-  const canClaimFreeBox =
-    readBoolean(value.canClaimFreeBox) ??
-    readBoolean(value.can_claim_free_box) ??
-    false;
   const remainingFreeBoxCount =
     readNumber(value.remainingFreeBoxCount) ??
     readNumber(value.remaining_free_box_count) ??
@@ -337,23 +231,18 @@ function normalizeVipTodayStatus(value: unknown): VipTodayStatus | null {
     businessDateUtc:
       readString(value.businessDateUtc) ?? readString(value.business_date_utc),
     claimId: readString(value.claimId) ?? readString(value.claim_id),
-    claimed: fgemsClaimed,
-    canClaim: canClaimFgems,
+    claimed: readBoolean(value.claimed) ?? false,
+    canClaim:
+      readBoolean(value.canClaim) ?? readBoolean(value.can_claim) ?? false,
     fgemsAmount:
       readNumber(value.fgemsAmount) ?? readNumber(value.fgems_amount) ?? 0,
-    fgemsClaimed,
-    fgemsClaimedAt,
-    canClaimFgems,
     freeBoxCount,
     freeBoxUsedCount,
     remainingFreeBoxCount,
     freeBoxAvailable:
       readBoolean(value.freeBoxAvailable) ??
       readBoolean(value.free_box_available) ??
-      (freeBoxClaimed && remainingFreeBoxCount > 0),
-    freeBoxClaimed,
-    freeBoxClaimedAt,
-    canClaimFreeBox,
+      remainingFreeBoxCount > 0,
   };
 }
 

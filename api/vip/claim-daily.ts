@@ -19,14 +19,8 @@ type ClaimDailyRpcResult = {
   claim_date?: unknown;
   fgems_amount?: unknown;
   fgems_ledger_id?: unknown;
-  fgems_claimed?: unknown;
-  fgems_claimed_at?: unknown;
   free_box_count?: unknown;
   free_box_used_count?: unknown;
-  remaining_free_box_count?: unknown;
-  free_box_available?: unknown;
-  free_box_claimed?: unknown;
-  free_box_claimed_at?: unknown;
   already_claimed?: unknown;
   idempotent?: unknown;
 };
@@ -42,10 +36,6 @@ type ClaimDailyResponse = {
   fgemsAmount: number;
   fgems_ledger_id: string | null;
   fgemsLedgerId: string | null;
-  fgems_claimed: boolean;
-  fgemsClaimed: boolean;
-  fgems_claimed_at: string | null;
-  fgemsClaimedAt: string | null;
   free_box_count: number;
   freeBoxCount: number;
   free_box_used_count: number;
@@ -54,10 +44,6 @@ type ClaimDailyResponse = {
   remainingFreeBoxCount: number;
   free_box_available: boolean;
   freeBoxAvailable: boolean;
-  free_box_claimed: boolean;
-  freeBoxClaimed: boolean;
-  free_box_claimed_at: string | null;
-  freeBoxClaimedAt: string | null;
   already_claimed: boolean;
   alreadyClaimed: boolean;
   idempotent: boolean;
@@ -81,7 +67,7 @@ export default withApiHandler(
       action: "vip.claim_daily_benefit",
       idempotencyKey: input.idempotencyKey,
       metadata: {
-        benefit: "daily_fgems",
+        benefit: "daily",
       },
     });
 
@@ -127,16 +113,7 @@ export function buildClaimDailyResponse(
   const claimId = getRequiredString(claim, "claim_id");
   const freeBoxCount = numberOrZero(claim.free_box_count);
   const freeBoxUsedCount = numberOrZero(claim.free_box_used_count);
-  const remainingFreeBoxCount = Math.max(
-    numberOrNull(claim.remaining_free_box_count) ??
-      freeBoxCount - freeBoxUsedCount,
-    0,
-  );
-  const fgemsClaimed = readBoolean(claim.fgems_claimed) ?? true;
-  const freeBoxClaimed = readBoolean(claim.free_box_claimed) ?? false;
-  const freeBoxAvailable =
-    readBoolean(claim.free_box_available) ??
-    (freeBoxClaimed && remainingFreeBoxCount > 0);
+  const remainingFreeBoxCount = Math.max(freeBoxCount - freeBoxUsedCount, 0);
 
   return {
     claim_id: claimId,
@@ -149,22 +126,14 @@ export function buildClaimDailyResponse(
     fgemsAmount: numberOrZero(claim.fgems_amount),
     fgems_ledger_id: stringOrNull(claim.fgems_ledger_id),
     fgemsLedgerId: stringOrNull(claim.fgems_ledger_id),
-    fgems_claimed: fgemsClaimed,
-    fgemsClaimed,
-    fgems_claimed_at: stringOrNull(claim.fgems_claimed_at),
-    fgemsClaimedAt: stringOrNull(claim.fgems_claimed_at),
     free_box_count: freeBoxCount,
     freeBoxCount,
     free_box_used_count: freeBoxUsedCount,
     freeBoxUsedCount,
     remaining_free_box_count: remainingFreeBoxCount,
     remainingFreeBoxCount,
-    free_box_available: freeBoxAvailable,
-    freeBoxAvailable,
-    free_box_claimed: freeBoxClaimed,
-    freeBoxClaimed,
-    free_box_claimed_at: stringOrNull(claim.free_box_claimed_at),
-    freeBoxClaimedAt: stringOrNull(claim.free_box_claimed_at),
+    free_box_available: remainingFreeBoxCount > 0,
+    freeBoxAvailable: remainingFreeBoxCount > 0,
     already_claimed: Boolean(claim.already_claimed),
     alreadyClaimed: Boolean(claim.already_claimed),
     idempotent: Boolean(claim.idempotent),
@@ -224,14 +193,6 @@ function mapVipClaimDailyRpcError(error: unknown): ApiError {
 
   if (message.includes("vip_expired")) {
     return new ApiError(403, "VIP_REQUIRED", "月卡未生效或已过期。");
-  }
-
-  if (message.includes("vip_daily_fgems_not_available")) {
-    return new ApiError(
-      409,
-      "VIP_DAILY_FGEMS_NOT_AVAILABLE",
-      "今日没有可领取的月卡 FGEMS。",
-    );
   }
 
   if (message.includes("user not found")) {
@@ -303,23 +264,6 @@ function numberOrZero(value: unknown): number {
   }
 
   return 0;
-}
-
-function numberOrNull(value: unknown): number | null {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return Math.trunc(value);
-  }
-
-  if (typeof value === "string" && value.trim().length > 0) {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? Math.trunc(parsed) : null;
-  }
-
-  return null;
-}
-
-function readBoolean(value: unknown): boolean | null {
-  return typeof value === "boolean" ? value : null;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

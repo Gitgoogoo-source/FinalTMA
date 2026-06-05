@@ -239,14 +239,6 @@ function mapOpenVipDailyBoxRpcError(error: unknown): ApiError {
     return new ApiError(403, "VIP_REQUIRED", "月卡未生效或已过期。");
   }
 
-  if (message.includes("vip_daily_free_box_not_claimed")) {
-    return new ApiError(
-      409,
-      "VIP_DAILY_FREE_BOX_NOT_CLAIMED",
-      "请先领取今日免费盲盒。",
-    );
-  }
-
   if (message.includes("vip_daily_benefit_not_claimed")) {
     return new ApiError(
       409,

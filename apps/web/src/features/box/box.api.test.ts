@@ -214,7 +214,7 @@ describe("box api", () => {
       paidKcoin: 0,
       paymentStatus: "invoice_created",
       quantity: 10,
-      returnedKcoin: 0,
+      returnedKcoin: 1000,
       status: "pending",
     });
     expect(result.results).toEqual([]);

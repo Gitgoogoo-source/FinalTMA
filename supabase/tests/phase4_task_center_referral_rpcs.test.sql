@@ -302,18 +302,18 @@ select is(
     from tasks.referral_commissions
     where source_id = (select id from _ids where key = 'second_draw_order')
   ),
-  1::numeric,
-  'configured referral commission bps controls commission amount from paid open price'
+  15::numeric,
+  'configured referral commission bps controls commission amount'
 );
 
 insert into _ids (key, payload) values ('invite_stats', api.referral_get_invite_stats((select id from _ids where key = 'inviter'), null, null));
 select is(((select payload from _ids where key = 'invite_stats') #>> '{referrals,total_count}')::int, 1, 'referral_get_invite_stats counts referral records');
 select is(((select payload from _ids where key = 'invite_stats') #>> '{referrals,first_open_count}')::int, 1, 'referral_get_invite_stats counts first-open referrals');
 select is(((select payload from _ids where key = 'invite_stats') #>> '{referrals,valid_count}')::int, 1, 'referral_get_invite_stats counts valid referrals by status or first open');
-select is(((select payload from _ids where key = 'invite_stats') #>> '{commissions,pending_amount_kcoin}')::numeric, 1::numeric, 'referral_get_invite_stats sums pending commission');
-select is(((select payload from _ids where key = 'invite_stats') #>> '{commissions,total_amount_kcoin}')::numeric, 1::numeric, 'referral_get_invite_stats sums pending plus granted commission');
+select is(((select payload from _ids where key = 'invite_stats') #>> '{commissions,pending_amount_kcoin}')::numeric, 15::numeric, 'referral_get_invite_stats sums pending commission');
+select is(((select payload from _ids where key = 'invite_stats') #>> '{commissions,total_amount_kcoin}')::numeric, 15::numeric, 'referral_get_invite_stats sums pending plus granted commission');
 select is(((select payload from _ids where key = 'invite_stats') #>> '{commissions,current_bps}')::int, 1500, 'referral_get_invite_stats returns configured commission bps');
-select is(((select payload from _ids where key = 'invite_stats') #>> '{summary,total_commission_kcoin}')::numeric, 1::numeric, 'referral_get_invite_stats summary exposes total generated commission');
+select is(((select payload from _ids where key = 'invite_stats') #>> '{summary,total_commission_kcoin}')::numeric, 15::numeric, 'referral_get_invite_stats summary exposes total generated commission');
 select is(((select payload from _ids where key = 'invite_stats') #>> '{summary,commission_rate}')::numeric, 0.15::numeric, 'referral_get_invite_stats summary exposes commission rate');
 
 insert into _ids (key, payload) values ('referral_records', api.referral_get_records((select id from _ids where key = 'inviter'), null, null, 10));

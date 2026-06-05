@@ -75,7 +75,7 @@ begin
       rec.tier,
       'active',
       rec.price_stars,
-      0,
+      100,
       rec.cover_image_url,
       rec.hero_image_url,
       now() - interval '1 hour',

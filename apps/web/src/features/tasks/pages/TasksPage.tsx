@@ -5,7 +5,11 @@ import { useFeedback } from "@/app/providers/FeedbackProvider";
 import { ActivityBanner } from "@/features/banners/components/ActivityBanner";
 import { useBanners } from "@/features/banners/hooks/useBanners";
 import type { RewardModalItem } from "@/features/feedback/feedback.types";
-import { openTelegramShareLink } from "@/shared/lib/telegramShare";
+import {
+  canUseTelegramPreparedShare,
+  openTelegramPreparedShare,
+  openTelegramShareLink,
+} from "@/shared/lib/telegramShare";
 
 import { CommissionStatsPanel } from "../components/CommissionStatsPanel";
 import { InviteCampaignCard } from "../components/InviteCampaignCard";
@@ -21,6 +25,7 @@ import { useCommissionHistory } from "../hooks/useCommissionHistory";
 import { useDailyCheckIn } from "../hooks/useDailyCheckIn";
 import { useInviteShare } from "../hooks/useInviteShare";
 import { useInviteStats } from "../hooks/useInviteStats";
+import { usePreparedShareMessage } from "../hooks/usePreparedShareMessage";
 import { useReferralLink } from "../hooks/useReferralLink";
 import { useTasks } from "../hooks/useTasks";
 import type {
@@ -52,6 +57,7 @@ export function TasksPage() {
   const claimTask = useClaimTask();
   const dailyCheckIn = useDailyCheckIn();
   const referralLinkMutation = useReferralLink();
+  const preparedShareMessage = usePreparedShareMessage();
   const inviteShare = useInviteShare();
   const claimCommission = useClaimCommission();
   const pendingTaskId = claimTask.isPending
@@ -59,11 +65,46 @@ export function TasksPage() {
     : null;
   const isTaskCenterLoading = taskQuery.isLoading && !taskQuery.overview;
   const isInviteActionPending =
-    referralLinkMutation.isPending || inviteShare.isPending;
+    referralLinkMutation.isPending ||
+    preparedShareMessage.isPending ||
+    inviteShare.isPending;
+
+  async function handleCopyReferralLink() {
+    try {
+      const link = await ensureReferralLink();
+      await copyText(link.inviteUrl);
+      await inviteShare.mutateAsync({
+        scene: "TASK_PAGE",
+        referralCode: link.referralCode,
+      });
+      pushToast({
+        type: "success",
+        title: "链接已复制",
+        message: "分享任务进度已刷新。",
+      });
+    } catch (error) {
+      pushToast({
+        type: "error",
+        title: "复制失败",
+        message: getApiErrorMessage(error),
+      });
+    }
+  }
 
   async function handleShareReferralLink() {
     try {
-      const shareResult = await shareReferralLinkWithTelegram();
+      const shareResult = canUseTelegramPreparedShare()
+        ? await sharePreparedReferralLink()
+        : await shareReferralLinkFallback();
+
+      if (shareResult.method === "prepared" && !shareResult.sent) {
+        pushToast({
+          type: "info",
+          title: "分享已取消",
+          message: "没有发送给好友，任务进度不会刷新。",
+        });
+        return;
+      }
 
       await inviteShare.mutateAsync({
         scene: "TASK_PAGE",
@@ -86,7 +127,25 @@ export function TasksPage() {
     }
   }
 
-  async function shareReferralLinkWithTelegram() {
+  async function sharePreparedReferralLink() {
+    const prepared = await preparedShareMessage.mutateAsync({
+      scene: "TASK_PAGE",
+      source: "task_center",
+    });
+    setReferralLink(prepared);
+    const result = await openTelegramPreparedShare({
+      preparedMessageId: prepared.preparedMessageId,
+      text: prepared.shareText,
+      url: prepared.inviteUrl,
+    });
+
+    return {
+      ...result,
+      referralCode: prepared.referralCode,
+    };
+  }
+
+  async function shareReferralLinkFallback() {
     const link = await ensureReferralLink();
 
     openTelegramShareLink({
@@ -201,6 +260,7 @@ export function TasksPage() {
 
       <InviteCampaignCard
         isPending={isInviteActionPending}
+        onCopyLink={() => void handleCopyReferralLink()}
         onInvite={() => void handleShareReferralLink()}
       />
 
@@ -243,6 +303,14 @@ export function TasksPage() {
 
     </section>
   );
+}
+
+async function copyText(text: string): Promise<void> {
+  if (!globalThis.navigator?.clipboard?.writeText) {
+    throw new Error("当前环境不支持复制。");
+  }
+
+  await globalThis.navigator.clipboard.writeText(text);
 }
 
 function toRewardModalItems(

@@ -108,7 +108,6 @@ type DrawOrderRow = {
   quantity: number | string;
   draw_count: number | string;
   open_reward_kcoin?: number | string | null | undefined;
-  total_price_stars?: number | string | null | undefined;
 };
 
 type DrawResultRow = {
@@ -2102,7 +2101,7 @@ async function collectReferralCommissionFindings(input: {
               .schema("gacha")
               .from("draw_orders")
               .select(
-                "id,user_id,payment_star_order_id,status,quantity,draw_count,open_reward_kcoin,total_price_stars",
+                "id,user_id,payment_star_order_id,status,quantity,draw_count,open_reward_kcoin",
               )
               .in("user_id", ids)
               .in("status", ["opening", "opened", "completed"])
@@ -2309,7 +2308,7 @@ async function collectReferralCommissionFindings(input: {
         const requiredResultCount = getRequiredDrawResultCount(drawOrder);
         const actualResultCount =
           drawResultsByOrder.get(drawOrder.id)?.length ?? 0;
-        const baseAmountKcoin = toNumber(drawOrder.total_price_stars ?? null);
+        const baseAmountKcoin = toNumber(drawOrder.open_reward_kcoin ?? null);
         if (baseAmountKcoin <= 0 || actualResultCount < requiredResultCount) {
           continue;
         }
@@ -2332,7 +2331,7 @@ async function collectReferralCommissionFindings(input: {
                 draw_order_status: drawOrder.status,
                 required_result_count: requiredResultCount,
                 actual_result_count: actualResultCount,
-                base_amount_kcoin: baseAmountKcoin,
+                open_reward_kcoin: baseAmountKcoin,
                 expected_source_type: "gacha_open",
               },
             }),

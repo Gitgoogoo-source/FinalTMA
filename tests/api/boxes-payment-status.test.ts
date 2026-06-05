@@ -119,7 +119,7 @@ describe("boxes payment-status API", () => {
           draw_count: 10,
           quantity: 10,
           total_price_stars: 90,
-          returned_kcoin: 0,
+          returned_kcoin: 1000,
         },
         star_order: {
           id: STAR_ORDER_ID,

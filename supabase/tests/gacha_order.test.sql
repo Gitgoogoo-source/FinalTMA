@@ -388,8 +388,8 @@ select is((select payment_provider from gacha.draw_orders d join _ids i on i.id 
 select is((select payment_status from gacha.draw_orders d join _ids i on i.id = d.id where i.key = 'draw_order1'), 'dev_paid', 'dev paid process records dev_paid payment_status on draw order');
 select is((select telegram_payment_charge_id from gacha.draw_orders d join _ids i on i.id = d.id where i.key = 'draw_order1'), 'dev:' || (select id::text from _ids where key = 'draw_order1'), 'dev paid process records Telegram payment charge placeholder');
 select is(jsonb_array_length((select payload from _ids where key = 'order1_dev_process') -> 'results'), 1, 'dev paid process creates one draw result for single draw');
-select is(testutil.balance_of((select id from _ids where key = 'user'), 'KCOIN'), 0::numeric, 'dev paid process does not credit KCOIN rebate');
-select is((select count(*)::int from economy.currency_ledger where user_id = (select id from _ids where key = 'user') and source_id = (select id from _ids where key = 'draw_order1') and source_type = 'open_box_rebate' and currency_code = 'KCOIN'), 0, 'dev paid process does not write open_box_rebate KCOIN ledger');
+select is(testutil.balance_of((select id from _ids where key = 'user'), 'KCOIN'), 100::numeric, 'dev paid process credits KCOIN reward');
+select ok(exists (select 1 from economy.currency_ledger where user_id = (select id from _ids where key = 'user') and source_id = (select id from _ids where key = 'draw_order1') and source_type = 'open_box_rebate' and entry_type = 'credit' and currency_code = 'KCOIN' and amount = 100), 'dev paid process writes open_box_rebate KCOIN ledger');
 select ok(exists (select 1 from inventory.item_instances ii join gacha.draw_results dr on dr.item_instance_id = ii.id where dr.draw_order_id = (select id from _ids where key = 'draw_order1') and ii.owner_user_id = (select id from _ids where key = 'user') and ii.status = 'available'), 'dev paid process creates available inventory item');
 select ok(exists (select 1 from inventory.item_instance_events e join gacha.draw_results dr on dr.item_instance_id = e.item_instance_id where dr.draw_order_id = (select id from _ids where key = 'draw_order1') and e.event_type = 'obtained_from_gacha' and e.source_type = 'gacha'), 'dev paid process writes obtained_from_gacha inventory event');
 
@@ -476,8 +476,8 @@ select is((
     and ii.source_type = 'gacha'
     and ii.source_id = (select id from _ids where key = 'draw_order10')
 ), 10, 'every ten-draw result has a matching owned gacha item_instance');
-select is(testutil.balance_of((select id from _ids where key = 'user'), 'KCOIN'), 0::numeric, 'single draw plus ten draw does not credit KCOIN rebate');
-select is((select count(*)::int from economy.currency_ledger where source_id = (select id from _ids where key = 'draw_order10') and source_type = 'open_box_rebate' and currency_code = 'KCOIN'), 0, 'ten-draw does not write open_box_rebate ledger');
+select is(testutil.balance_of((select id from _ids where key = 'user'), 'KCOIN'), 1100::numeric, 'single draw plus ten draw credits KCOIN reward per draw');
+select is((select amount from economy.currency_ledger where source_id = (select id from _ids where key = 'draw_order10') and source_type = 'open_box_rebate' and currency_code = 'KCOIN'), 1000::numeric, 'ten-draw open_box_rebate ledger amount is 1000');
 select ok(testutil.raises_like(format('select api.gacha_create_order(%L::uuid, %L::uuid, 2, %L)', (select id::text from _ids where key = 'user'), (select id::text from _ids where key = 'box'), 'invalid-quantity'), '%quantity must be 1 or 10%'), 'create order rejects unsupported quantity');
 
 update gacha.blind_boxes set remaining_stock = 0 where id = (select id from _ids where key = 'box');

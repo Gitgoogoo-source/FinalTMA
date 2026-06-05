@@ -15,16 +15,10 @@ export type VipTodayStatus = {
   claimed: boolean;
   canClaim: boolean;
   fgemsAmount: number;
-  fgemsClaimed: boolean;
-  fgemsClaimedAt: string | null;
-  canClaimFgems: boolean;
   freeBoxCount: number;
   freeBoxUsedCount: number;
   remainingFreeBoxCount: number;
   freeBoxAvailable: boolean;
-  freeBoxClaimed: boolean;
-  freeBoxClaimedAt: string | null;
-  canClaimFreeBox: boolean;
 };
 
 export type VipStatus = {
@@ -52,33 +46,10 @@ export type ClaimVipDailyBenefitResponse = {
   claimDate: string | null;
   fgemsAmount: number;
   fgemsLedgerId: string | null;
-  fgemsClaimed: boolean;
-  fgemsClaimedAt: string | null;
   freeBoxCount: number;
   freeBoxUsedCount: number;
   remainingFreeBoxCount: number;
   freeBoxAvailable: boolean;
-  freeBoxClaimed: boolean;
-  freeBoxClaimedAt: string | null;
-  alreadyClaimed: boolean;
-  idempotent: boolean;
-};
-
-export type ClaimVipFreeBoxInput = {
-  idempotencyKey?: string | undefined;
-};
-
-export type ClaimVipFreeBoxResponse = {
-  claimId: string;
-  subscriptionId: string | null;
-  claimDate: string | null;
-  freeBoxCount: number;
-  freeBoxUsedCount: number;
-  remainingFreeBoxCount: number;
-  freeBoxAvailable: boolean;
-  freeBoxClaimed: boolean;
-  freeBoxClaimedAt: string | null;
-  fgemsClaimed: boolean;
   alreadyClaimed: boolean;
   idempotent: boolean;
 };

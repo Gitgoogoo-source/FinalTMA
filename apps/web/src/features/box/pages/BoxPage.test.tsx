@@ -27,33 +27,12 @@ type CreateClaimMutateOptions = {
   onSettled?: () => void;
 };
 
-type CreateFreeBoxClaimMutateOptions = {
-  onSuccess?: (claim: ClaimVipFreeBoxResult) => void;
-  onError?: (error: unknown) => void;
-  onSettled?: () => void;
-};
-
 type ClaimVipDailyResult = {
   claimId: string;
   fgemsAmount: number;
-  fgemsClaimed: boolean;
-  fgemsClaimedAt: string | null;
   freeBoxAvailable: boolean;
-  freeBoxClaimed: boolean;
-  freeBoxClaimedAt: string | null;
   freeBoxCount: number;
   freeBoxUsedCount: number;
-  remainingFreeBoxCount: number;
-};
-
-type ClaimVipFreeBoxResult = {
-  claimId: string;
-  freeBoxAvailable: boolean;
-  freeBoxClaimed: boolean;
-  freeBoxClaimedAt: string | null;
-  freeBoxCount: number;
-  freeBoxUsedCount: number;
-  fgemsClaimed: boolean;
   remainingFreeBoxCount: number;
 };
 
@@ -68,16 +47,10 @@ type VipStatusMock = {
     claimed: boolean;
     canClaim: boolean;
     fgemsAmount: number;
-    fgemsClaimed: boolean;
-    fgemsClaimedAt: string | null;
-    canClaimFgems: boolean;
     freeBoxCount: number;
     freeBoxUsedCount: number;
     remainingFreeBoxCount: number;
     freeBoxAvailable: boolean;
-    freeBoxClaimed: boolean;
-    freeBoxClaimedAt: string | null;
-    canClaimFreeBox: boolean;
   } | null;
   plan: {
     dailyFgems: number;
@@ -98,8 +71,6 @@ const mocks = vi.hoisted(() => ({
   createOrderResult: null as CreateOpenOrderResponse | null,
   claimVipDailyMutate: vi.fn(),
   claimVipDailyResult: null as ClaimVipDailyResult | null,
-  claimVipFreeBoxMutate: vi.fn(),
-  claimVipFreeBoxResult: null as ClaimVipFreeBoxResult | null,
   drawResultByOrderId: new Map<string, DrawResultResponse>(),
   openVipDailyMutate: vi.fn(),
   openVipDailyResult: null as CreateOpenOrderResponse | null,
@@ -187,14 +158,6 @@ vi.mock("@/features/vip/hooks/useClaimVipDailyBenefit", () => ({
   }),
 }));
 
-vi.mock("@/features/vip/hooks/useClaimVipFreeBox", () => ({
-  useClaimVipFreeBox: () => ({
-    isPending: false,
-    mutate: mocks.claimVipFreeBoxMutate,
-    variables: null,
-  }),
-}));
-
 vi.mock("@/features/vip/hooks/useVipStatus", () => ({
   useVipStatus: () => ({
     data: mocks.vipStatus,
@@ -236,21 +199,7 @@ describe("BoxPage K-coin open and recharge flow", () => {
     mocks.claimVipDailyResult = {
       claimId: "88888888-8888-4888-8888-888888888888",
       fgemsAmount: 100,
-      fgemsClaimed: true,
-      fgemsClaimedAt: "2026-05-28T00:05:00.000Z",
-      freeBoxAvailable: false,
-      freeBoxClaimed: false,
-      freeBoxClaimedAt: null,
-      freeBoxCount: 1,
-      freeBoxUsedCount: 0,
-      remainingFreeBoxCount: 1,
-    };
-    mocks.claimVipFreeBoxResult = {
-      claimId: "88888888-8888-4888-8888-888888888888",
-      fgemsClaimed: false,
       freeBoxAvailable: true,
-      freeBoxClaimed: true,
-      freeBoxClaimedAt: "2026-05-28T00:06:00.000Z",
       freeBoxCount: 1,
       freeBoxUsedCount: 0,
       remainingFreeBoxCount: 1,
@@ -287,17 +236,6 @@ describe("BoxPage K-coin open and recharge flow", () => {
         }
 
         options?.onSuccess?.(mocks.claimVipDailyResult);
-        options?.onSettled?.();
-      },
-    );
-    mocks.claimVipFreeBoxMutate.mockReset();
-    mocks.claimVipFreeBoxMutate.mockImplementation(
-      (_input: unknown, options?: CreateFreeBoxClaimMutateOptions) => {
-        if (!mocks.claimVipFreeBoxResult) {
-          throw new Error("claimVipFreeBoxResult missing");
-        }
-
-        options?.onSuccess?.(mocks.claimVipFreeBoxResult);
         options?.onSettled?.();
       },
     );
@@ -426,7 +364,9 @@ describe("BoxPage K-coin open and recharge flow", () => {
   it("hides the VIP daily benefit entry for non-VIP users", () => {
     renderBoxPage();
 
-    expect(screen.queryByLabelText("月卡每日福利")).not.toBeInTheDocument();
+    expect(
+      screen.queryByLabelText("月卡每日福利"),
+    ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: /领取 100 FGEMS/ }),
     ).not.toBeInTheDocument();
@@ -649,17 +589,13 @@ describe("BoxPage K-coin open and recharge flow", () => {
     expect(input).not.toHaveProperty("expectedPoolVersionId");
   });
 
-  it("claims only the VIP daily FGEMS benefit from the FGEMS button", async () => {
+  it("claims the VIP daily FGEMS benefit and switches the free egg open to free", async () => {
     mocks.vipStatus = createVipStatus({
       isVip: true,
       today: {
         claimed: false,
         canClaim: true,
-        fgemsClaimed: false,
-        canClaimFgems: true,
         freeBoxAvailable: false,
-        freeBoxClaimed: false,
-        canClaimFreeBox: true,
         freeBoxCount: 1,
         freeBoxUsedCount: 0,
       },
@@ -670,35 +606,6 @@ describe("BoxPage K-coin open and recharge flow", () => {
     fireEvent.click(screen.getByRole("button", { name: /领取 100 FGEMS/ }));
 
     expect(mocks.claimVipDailyMutate).toHaveBeenCalledTimes(1);
-    expect(mocks.claimVipFreeBoxMutate).not.toHaveBeenCalled();
-    expect(screen.getByRole("img", { name: "Normal Egg" })).toBeVisible();
-    expect(
-      screen.getByRole("button", { name: /^开 1 次，10 K-coin/ }),
-    ).toBeEnabled();
-  });
-
-  it("claims the VIP free box separately and switches the free egg open to free", async () => {
-    mocks.vipStatus = createVipStatus({
-      isVip: true,
-      today: {
-        claimed: true,
-        canClaim: false,
-        fgemsClaimed: true,
-        canClaimFgems: false,
-        freeBoxAvailable: false,
-        freeBoxClaimed: false,
-        canClaimFreeBox: true,
-        freeBoxCount: 1,
-        freeBoxUsedCount: 0,
-      },
-    });
-
-    renderBoxPage();
-
-    fireEvent.click(screen.getByRole("button", { name: /领取免费盲盒/ }));
-
-    expect(mocks.claimVipFreeBoxMutate).toHaveBeenCalledTimes(1);
-    expect(mocks.claimVipDailyMutate).not.toHaveBeenCalled();
     await waitFor(() => {
       expect(screen.getByRole("img", { name: "Rare Egg" })).toBeVisible();
     });
@@ -711,11 +618,7 @@ describe("BoxPage K-coin open and recharge flow", () => {
       today: {
         claimed: true,
         canClaim: false,
-        fgemsClaimed: true,
-        canClaimFgems: false,
         freeBoxAvailable: true,
-        freeBoxClaimed: true,
-        canClaimFreeBox: false,
         freeBoxCount: 1,
         freeBoxUsedCount: 0,
       },
@@ -723,7 +626,7 @@ describe("BoxPage K-coin open and recharge flow", () => {
 
     renderBoxPage();
 
-    fireEvent.click(screen.getByRole("button", { name: /使用免费盲盒/ }));
+    fireEvent.click(screen.getByRole("button", { name: /使用福利蛋/ }));
     await waitFor(() => {
       expect(
         screen.getByRole("button", { name: "开 1 次，免费" }),
@@ -979,16 +882,10 @@ function createVipStatus(
           claimed: false,
           canClaim: false,
           fgemsAmount: 100,
-          fgemsClaimed: false,
-          fgemsClaimedAt: null,
-          canClaimFgems: false,
           freeBoxCount: 0,
           freeBoxUsedCount: 0,
           remainingFreeBoxCount: 0,
           freeBoxAvailable: false,
-          freeBoxClaimed: false,
-          freeBoxClaimedAt: null,
-          canClaimFreeBox: false,
           ...todayOverride,
         };
 
@@ -1099,7 +996,7 @@ function createDrawResult(
         thumbnailUrl: null,
       },
     ],
-    returnedKcoin: 0,
+    returnedKcoin: 100,
     serverTime: "2026-05-28T00:02:00.000Z",
     status: "completed",
     ...overrides,

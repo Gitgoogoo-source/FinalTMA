@@ -1868,15 +1868,13 @@ a {
   margin: -72px auto 42px;
   position: relative;
   z-index: 4;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+  display: flex;
+  justify-content: center;
   pointer-events: none;
 }
 
 .box-welfare-entry__button {
-  min-width: 0;
-  width: 100%;
+  min-width: 178px;
   max-width: 100%;
   min-height: 52px;
   display: inline-grid;
@@ -1887,8 +1885,8 @@ a {
   column-gap: 8px;
   align-items: center;
   border: 1px solid rgb(255 156 0 / 52%);
-  border-radius: 16px;
-  padding: 7px 11px 7px 10px;
+  border-radius: 999px;
+  padding: 7px 16px 7px 14px;
   color: #36434b;
   background: linear-gradient(
     180deg,
@@ -12310,6 +12308,28 @@ button.market-banner:disabled {
   font-style: normal;
 }
 
+.invite-campaign-card__copy {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid rgb(54 67 75 / 13%);
+  border-radius: 8px;
+  color: var(--task-ink);
+  background: rgb(255 255 255 / 74%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 92%);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.invite-campaign-card__copy:disabled {
+  cursor: progress;
+  opacity: 0.58;
+}
+
 .invite-campaign-card__caption {
   margin: 0;
   color: var(--task-ink);
@@ -12420,7 +12440,8 @@ button.market-banner:disabled {
   font-weight: 850;
 }
 
-.invite-campaign-card__primary:focus-visible {
+.invite-campaign-card__primary:focus-visible,
+.invite-campaign-card__copy:focus-visible {
   outline: 3px solid rgb(255 121 0 / 34%);
   outline-offset: 3px;
 }
@@ -12708,9 +12729,9 @@ button.market-banner:disabled {
   }
 
   .box-welfare-entry__button {
-    min-width: 0;
+    min-width: 166px;
     min-height: 50px;
-    padding-inline: 9px;
+    padding-inline: 13px;
   }
 
   .box-tier-card {

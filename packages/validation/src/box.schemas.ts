@@ -257,8 +257,8 @@ export const BoxPriceSchema = z
     tenDiscountBps: BoxBasisPointsSchema,
 
     /**
-     * Deprecated compatibility field. Open-box K-coin rebate is disabled and
-     * should be returned as 0.
+     * 每抽返还 K-coin。
+     * 如果十连每抽返还 100，则十连返还 1000。
      */
     kcoinReturnPerDraw: BoxNonNegativeIntSchema,
   })

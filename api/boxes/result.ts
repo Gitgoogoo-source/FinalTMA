@@ -117,6 +117,14 @@ export function toDrawResultResponse(
   const isCompleted = isCompletedOrderStatus(rawOrderStatus);
   const rawResults = Array.isArray(payload.results) ? payload.results : [];
   const quantity = numberOrZero(payload.draw_count ?? payload.quantity);
+  const explicitKcoinReturn = numberOrZero(
+    payload.returned_kcoin ?? payload.kcoin_reward,
+  );
+  const perDrawKcoinReturn = numberOrZero(payload.open_reward_kcoin);
+  const returnedKcoin =
+    explicitKcoinReturn > 0
+      ? explicitKcoinReturn
+      : perDrawKcoinReturn * Math.max(quantity, 1);
   const paymentProvider = stringOrNull(payload.payment_provider);
   const legacyPrice = numberOrZero(payload.total_price_stars);
   const paidKcoin =
@@ -131,7 +139,7 @@ export function toDrawResultResponse(
     payment_provider: paymentProvider,
     paid_stars: paymentProvider === "kcoin" ? 0 : legacyPrice,
     paid_kcoin: paidKcoin,
-    returned_kcoin: 0,
+    returned_kcoin: returnedKcoin,
     invoice_payload: stringOrNull(payload.invoice_payload),
     paid_at: stringOrNull(payload.paid_at),
     completed_at:

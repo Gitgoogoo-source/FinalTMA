@@ -39,20 +39,23 @@ type TaskMockState = {
 };
 
 type TaskCaptureGlobal = typeof globalThis & {
+  __copiedText?: string;
   __telegramShareUrls?: string[];
+  __telegramPreparedMessageIds?: string[];
   Telegram?: {
     WebApp?: {
       ready?: () => void;
       expand?: () => void;
       openTelegramLink?: (url: string) => void;
       openLink?: (url: string) => void;
+      shareMessage?: (msgId: string, callback?: (sent: boolean) => void) => void;
       onEvent?: () => void;
       offEvent?: () => void;
     };
   };
 };
 
-test("任务页邀请卡片可以直接打开 Telegram 分享", async ({ page }) => {
+test("任务页邀请卡片可以直接打开 Telegram 分享并复制邀请链接", async ({ page }) => {
   const state = createTaskMockState();
 
   await installTaskBrowserCaptures(page);
@@ -75,33 +78,31 @@ test("任务页邀请卡片可以直接打开 Telegram 分享", async ({ page })
   await expect(inviteStats).toContainText("165");
   await expect(
     inviteCard.getByRole("button", { name: "复制链接" }),
-  ).toHaveCount(0);
+  ).toBeEnabled();
 
-  await installRuntimeTelegramLinkCapture(page);
+  await installRuntimeShareCapture(page);
   await inviteCard.getByRole("button", { name: "立即邀请" }).click();
 
-  await expect.poll(() => state.referralLinkRequests.length).toBe(1);
+  await expect.poll(() => state.preparedShareRequests.length).toBe(1);
   await expect.poll(() => state.shareRequests.length).toBe(1);
+  await expect.poll(() => readTelegramPreparedMessageIds(page)).toEqual([
+    "prepared_invite_TASK_E2E",
+  ]);
   await expect(page.getByRole("dialog", { name: "分享给好友" })).toHaveCount(0);
-  expect(state.preparedShareRequests).toHaveLength(0);
-  expect(state.referralLinkRequests[0]?.body).toMatchObject({
+  expect(state.referralLinkRequests).toHaveLength(0);
+  expect(state.preparedShareRequests[0]?.body).toMatchObject({
     scene: "TASK_PAGE",
     source: "task_center",
   });
-  expect(state.referralLinkRequests[0]?.body).not.toHaveProperty("user_id");
-  const [shareUrl] = await readTelegramShareUrls(page);
-  expect(shareUrl).toBeDefined();
-  const parsedShareUrl = new URL(shareUrl ?? "");
-  expect(`${parsedShareUrl.origin}${parsedShareUrl.pathname}`).toBe(
-    "https://t.me/share/url",
+  expect(state.preparedShareRequests[0]?.body).not.toHaveProperty("user_id");
+  expect(state.preparedShareRequests[0]?.body).not.toHaveProperty(
+    "telegram_user_id",
   );
-  expect(parsedShareUrl.searchParams.get("url")).toBe(INVITE_URL);
-  expect(parsedShareUrl.searchParams.get("text")).toBe(SHARE_TEXT);
   expect(state.shareRequests[0]?.body).toMatchObject({
     scene: "TASK_PAGE",
     referral_code: "TASK_E2E",
     metadata: {
-      share_method: "link",
+      share_method: "prepared",
     },
     idempotency_key: expect.any(String),
   });
@@ -110,6 +111,26 @@ test("任务页邀请卡片可以直接打开 Telegram 分享", async ({ page })
     state.shareRequests[0]?.body.idempotency_key,
   );
   await expect(page.getByText("分享已记录", { exact: true })).toBeVisible();
+
+  const overviewRequestCount = state.overviewRequests.length;
+
+  await inviteCard.getByRole("button", { name: "复制链接" }).click();
+
+  await expect.poll(() => state.shareRequests.length).toBe(2);
+  expect(state.shareRequests[1]?.body).toMatchObject({
+    scene: "TASK_PAGE",
+    referral_code: "TASK_E2E",
+    idempotency_key: expect.any(String),
+  });
+  expect(state.shareRequests[1]?.body).not.toHaveProperty("user_id");
+  expect(state.shareRequests[1]?.headers["x-idempotency-key"]).toEqual(
+    state.shareRequests[1]?.body.idempotency_key,
+  );
+  await expect.poll(() => readCopiedText(page)).toBe(INVITE_URL);
+  await expect(page.getByText("链接已复制", { exact: true })).toBeVisible();
+  await expect
+    .poll(() => state.overviewRequests.length)
+    .toBeGreaterThan(overviewRequestCount);
 
   const shareTaskRow = page.locator(".task-row").filter({
     hasText: "分享一次邀请链接",
@@ -409,7 +430,18 @@ async function installTaskBrowserCaptures(page: Page): Promise<void> {
   await page.addInitScript(() => {
     const capture = globalThis as TaskCaptureGlobal;
 
+    delete capture.__copiedText;
     capture.__telegramShareUrls = [];
+    capture.__telegramPreparedMessageIds = [];
+
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: async (text: string) => {
+          capture.__copiedText = text;
+        },
+      },
+    });
 
     Object.defineProperty(globalThis, "open", {
       configurable: true,
@@ -439,12 +471,12 @@ async function installTaskBrowserCaptures(page: Page): Promise<void> {
   });
 }
 
-async function installRuntimeTelegramLinkCapture(page: Page): Promise<void> {
+async function installRuntimeShareCapture(page: Page): Promise<void> {
   await page.evaluate(() => {
     const capture = globalThis as TaskCaptureGlobal;
-    const webApp = { ...(capture.Telegram?.WebApp ?? {}) };
 
     capture.__telegramShareUrls = [];
+    capture.__telegramPreparedMessageIds = [];
 
     Object.defineProperty(globalThis, "open", {
       configurable: true,
@@ -460,12 +492,16 @@ async function installRuntimeTelegramLinkCapture(page: Page): Promise<void> {
     capture.Telegram = {
       ...(capture.Telegram ?? {}),
       WebApp: {
-        ...webApp,
+        ...(capture.Telegram?.WebApp ?? {}),
         openTelegramLink: (url: string) => {
           capture.__telegramShareUrls?.push(url);
         },
         openLink: (url: string) => {
           capture.__telegramShareUrls?.push(url);
+        },
+        shareMessage: (msgId: string, callback?: (sent: boolean) => void) => {
+          capture.__telegramPreparedMessageIds?.push(msgId);
+          callback?.(true);
         },
       },
     };
@@ -473,9 +509,7 @@ async function installRuntimeTelegramLinkCapture(page: Page): Promise<void> {
 }
 
 async function gotoTasks(page: Page): Promise<void> {
-  await page.goto(`/tasks?mockInitData=${encodeURIComponent(TEST_INIT_DATA)}`, {
-    waitUntil: "domcontentloaded",
-  });
+  await page.goto(`/tasks?mockInitData=${encodeURIComponent(TEST_INIT_DATA)}`);
   await expect(page.getByTestId("tasks-page")).toBeVisible();
 }
 
@@ -682,7 +716,7 @@ function taskItemsPayload(state: TaskMockState) {
       task_id: SHARE_TASK_ID,
       code: "DAILY_SHARE_INVITE",
       title: "分享一次邀请链接",
-      description: "分享到 Telegram 后由后端记录进度。",
+      description: "复制或分享到 Telegram 后由后端记录进度。",
       category: "social",
       action_type: "share_invite",
       status: state.shareRecorded ? "claimable" : "in_progress",
@@ -1027,9 +1061,19 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+async function readCopiedText(page: Page): Promise<string | undefined> {
+  return page.evaluate(() => (globalThis as TaskCaptureGlobal).__copiedText);
+}
+
 async function readTelegramShareUrls(page: Page): Promise<string[]> {
   return page.evaluate(
     () => (globalThis as TaskCaptureGlobal).__telegramShareUrls ?? [],
+  );
+}
+
+async function readTelegramPreparedMessageIds(page: Page): Promise<string[]> {
+  return page.evaluate(
+    () => (globalThis as TaskCaptureGlobal).__telegramPreparedMessageIds ?? [],
   );
 }
 

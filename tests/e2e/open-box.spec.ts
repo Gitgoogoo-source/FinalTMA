@@ -11,8 +11,8 @@ test("开盒后展示服务端返回的结果", async ({ page }) => {
   const resultDialog = page.getByRole("dialog", { name: "测试盲盒" });
   await expect(resultDialog).toBeVisible();
   await expect(resultDialog.getByText("森林幼芽")).toBeVisible();
-  await expect(resultDialog.getByText("返还 100 K-coin")).not.toBeVisible();
-  await expect(resultDialog.getByText("当前 1,200 K-coin")).toBeVisible();
+  await expect(resultDialog.getByText("返还 100 K-coin")).toBeVisible();
+  await expect(resultDialog.getByText("当前 1,300 K-coin")).toBeVisible();
 });
 
 test("Stars 支付取消后不展示结果并可刷新恢复订单", async ({ page }) => {
@@ -90,8 +90,8 @@ test("Stars 支付成功后展示服务端发货结果", async ({ page }) => {
   const resultDialog = page.getByRole("dialog", { name: "测试盲盒" });
   await expect(resultDialog).toBeVisible();
   await expect(resultDialog.getByText("森林幼芽")).toBeVisible();
-  await expect(resultDialog.getByText("返还 100 K-coin")).not.toBeVisible();
-  await expect(resultDialog.getByText("当前 1,200 K-coin")).toBeVisible();
+  await expect(resultDialog.getByText("返还 100 K-coin")).toBeVisible();
+  await expect(resultDialog.getByText("当前 1,300 K-coin")).toBeVisible();
   await expect(
     page.getByRole("dialog", { name: "等待 Stars 支付" }),
   ).not.toBeVisible();
