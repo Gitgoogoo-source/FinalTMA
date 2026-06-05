@@ -254,10 +254,17 @@ select ok(exists (
   from information_schema.columns
   where table_schema = 'vip'
     and table_name = 'vip_daily_claims'
-    and column_name in ('free_box_count', 'free_box_used_count')
+    and column_name in (
+      'free_box_count',
+      'free_box_used_count',
+      'fgems_claimed_at',
+      'fgems_idempotency_key',
+      'free_box_claimed_at',
+      'free_box_idempotency_key'
+    )
   group by table_schema, table_name
-  having count(*) = 2
-), 'daily free box counters live on vip_daily_claims');
+  having count(*) = 6
+), 'split daily benefit markers live on vip_daily_claims');
 select ok((select relrowsecurity from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = 'vip' and c.relname = 'vip_orders'), 'vip_orders has RLS enabled');
 select ok((select relrowsecurity from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = 'vip' and c.relname = 'vip_daily_claims'), 'vip_daily_claims has RLS enabled');
 
@@ -312,6 +319,10 @@ select ok(testutil.raises_like(format(
 select ok(
   to_regprocedure('api.vip_create_order_with_server_price_checked(uuid,uuid,text,integer,integer)') is not null,
   'server-priced VIP create order RPC exists'
+);
+select ok(
+  to_regprocedure('api.vip_claim_daily_free_box(uuid,text)') is not null,
+  'split VIP daily free-box claim RPC exists'
 );
 
 insert into _ids (key, payload)
@@ -448,12 +459,15 @@ select 'claim', api.vip_claim_daily_benefit(
 );
 
 select is(((select payload from _ids where key = 'claim') ->> 'fgems_amount')::numeric, 100::numeric, 'daily claim grants 100 FGEMS');
-select is(((select payload from _ids where key = 'claim') ->> 'free_box_count')::integer, 1, 'daily claim grants one free box counter');
-select is(((select payload from _ids where key = 'claim') ->> 'free_box_used_count')::integer, 0, 'daily free box starts unused');
+select is(((select payload from _ids where key = 'claim') ->> 'free_box_count')::integer, 0, 'daily FGEMS claim does not grant a free box counter');
+select is(((select payload from _ids where key = 'claim') ->> 'free_box_claimed')::boolean, false, 'daily FGEMS claim leaves free box unclaimed');
 select is((select count(*)::integer from vip.vip_daily_claims where user_id = (select id from _ids where key = 'user') and claim_date = (now() at time zone 'UTC')::date), 1, 'only one UTC daily claim row exists');
+select isnt((select fgems_claimed_at from vip.vip_daily_claims where user_id = (select id from _ids where key = 'user') and claim_date = (now() at time zone 'UTC')::date), null::timestamptz, 'FGEMS claim timestamp is stored');
+select is((select free_box_claimed_at from vip.vip_daily_claims where user_id = (select id from _ids where key = 'user') and claim_date = (now() at time zone 'UTC')::date), null::timestamptz, 'free box claim timestamp is not set by FGEMS claim');
 select is(testutil.balance_of((select id from _ids where key = 'user'), 'FGEMS'), 100::numeric, 'daily claim credits FGEMS balance');
 select is((select count(*)::integer from economy.currency_ledger where user_id = (select id from _ids where key = 'user') and source_type = 'vip_daily_claim'), 1, 'daily claim writes one currency ledger row');
-select is((select count(*)::integer from vip.vip_benefit_ledger where user_id = (select id from _ids where key = 'user') and benefit_type = 'daily_free_box'), 1, 'daily free box grant is written to VIP benefit ledger');
+select is((select count(*)::integer from vip.vip_benefit_ledger where user_id = (select id from _ids where key = 'user') and benefit_type = 'daily_fgems'), 1, 'daily FGEMS claim writes one FGEMS benefit ledger');
+select is((select count(*)::integer from vip.vip_benefit_ledger where user_id = (select id from _ids where key = 'user') and benefit_type = 'daily_free_box'), 0, 'daily FGEMS claim does not write free box benefit ledger');
 
 insert into _ids (key, payload)
 select 'claim_repeat', api.vip_claim_daily_benefit(
@@ -473,11 +487,53 @@ select 'claim_same_day_other_key', api.vip_claim_daily_benefit(
 select ok(((select payload from _ids where key = 'claim_same_day_other_key') ->> 'already_claimed')::boolean, 'same UTC day with another key returns already_claimed');
 select is(testutil.balance_of((select id from _ids where key = 'user'), 'FGEMS'), 100::numeric, 'same UTC day with another key does not credit twice');
 
+select ok(testutil.raises_like(format(
+  'select api.vip_consume_daily_free_box(%L::uuid, %L)',
+  (select id::text from _ids where key = 'user'),
+  'vip-monthly-free-box-consume-before-claim'
+), '%VIP_DAILY_FREE_BOX_NOT_CLAIMED%'), 'daily free box cannot be consumed before the explicit free-box claim');
+
+insert into _ids (key, payload)
+select 'claim_free_box', api.vip_claim_daily_free_box(
+  (select id from _ids where key = 'user'),
+  'vip-monthly-free-box-claim-001'
+);
+
+select is(((select payload from _ids where key = 'claim_free_box') ->> 'free_box_count')::integer, 1, 'free box claim grants one free box counter');
+select is(((select payload from _ids where key = 'claim_free_box') ->> 'free_box_used_count')::integer, 0, 'free box claim starts unused');
+select is(((select payload from _ids where key = 'claim_free_box') ->> 'fgems_claimed')::boolean, true, 'free box claim reports existing FGEMS claim without crediting again');
+select is(testutil.balance_of((select id from _ids where key = 'user'), 'FGEMS'), 100::numeric, 'free box claim does not credit FGEMS balance');
+select is((select free_box_count from vip.vip_daily_claims where user_id = (select id from _ids where key = 'user') and claim_date = (now() at time zone 'UTC')::date), 1, 'free box counter is stored on vip_daily_claims after explicit claim');
+select isnt((select free_box_claimed_at from vip.vip_daily_claims where user_id = (select id from _ids where key = 'user') and claim_date = (now() at time zone 'UTC')::date), null::timestamptz, 'free box claim timestamp is stored');
+select is((select count(*)::integer from vip.vip_benefit_ledger where user_id = (select id from _ids where key = 'user') and benefit_type = 'daily_free_box' and entry_type = 'grant'), 1, 'free box claim writes one grant benefit ledger');
+
+insert into _ids (key, payload)
+select 'claim_free_box_repeat', api.vip_claim_daily_free_box(
+  (select id from _ids where key = 'user'),
+  'vip-monthly-free-box-claim-001'
+);
+
+select ok(((select payload from _ids where key = 'claim_free_box_repeat') ->> 'idempotent')::boolean, 'free box claim is idempotent for same key');
+select is((select count(*)::integer from vip.vip_benefit_ledger where user_id = (select id from _ids where key = 'user') and benefit_type = 'daily_free_box' and entry_type = 'grant'), 1, 'repeat free box claim does not duplicate grant ledger');
+
+insert into _ids (key, payload)
+select 'claim_free_box_same_day_other_key', api.vip_claim_daily_free_box(
+  (select id from _ids where key = 'user'),
+  'vip-monthly-free-box-claim-002'
+);
+
+select ok(((select payload from _ids where key = 'claim_free_box_same_day_other_key') ->> 'already_claimed')::boolean, 'same UTC day free box claim with another key returns already_claimed');
+select is((select count(*)::integer from vip.vip_benefit_ledger where user_id = (select id from _ids where key = 'user') and benefit_type = 'daily_free_box' and entry_type = 'grant'), 1, 'same day free box claim with another key does not duplicate grant ledger');
+
 insert into _ids (key, payload)
 select 'status_after_claim', api.vip_get_status((select id from _ids where key = 'user'));
 
 select is(((select payload from _ids where key = 'status_after_claim') ->> 'is_vip')::boolean, true, 'status RPC reports active VIP after fulfillment');
 select is((((select payload from _ids where key = 'status_after_claim') -> 'today' ->> 'claimed')::boolean), true, 'status RPC reports today claimed after daily claim');
+select is((((select payload from _ids where key = 'status_after_claim') -> 'today' ->> 'fgems_claimed')::boolean), true, 'status RPC reports today FGEMS claimed');
+select is((((select payload from _ids where key = 'status_after_claim') -> 'today' ->> 'can_claim_fgems')::boolean), false, 'status RPC reports FGEMS cannot be claimed again');
+select is((((select payload from _ids where key = 'status_after_claim') -> 'today' ->> 'free_box_claimed')::boolean), true, 'status RPC reports free box claimed separately');
+select is((((select payload from _ids where key = 'status_after_claim') -> 'today' ->> 'can_claim_free_box')::boolean), false, 'status RPC reports free box cannot be claimed again');
 select is((((select payload from _ids where key = 'status_after_claim') -> 'today' ->> 'free_box_used_count')::integer), 0, 'status RPC returns free box used counter from vip_daily_claims');
 
 insert into _ids (key, payload)
@@ -518,6 +574,20 @@ select 'free_open_vip', testutil.create_paid_vip_order(
   97010030
 );
 
+select ok(testutil.raises_like(format(
+  'select api.vip_open_daily_free_premium_egg(%L::uuid, %L)',
+  (select id::text from _ids where key = 'free_open_user'),
+  'vip-monthly-free-premium-open-unclaimed'
+), '%VIP_DAILY_FREE_BOX_NOT_CLAIMED%'), 'VIP daily free premium egg requires explicit free box claim first');
+
+insert into _ids (key, payload)
+select 'free_open_claim_free_box', api.vip_claim_daily_free_box(
+  (select id from _ids where key = 'free_open_user'),
+  'vip-free-open-claim-free-box-001'
+);
+
+select is(testutil.balance_of((select id from _ids where key = 'free_open_user'), 'FGEMS'), 0::numeric, 'claiming only the free box does not auto-credit FGEMS');
+
 insert into _ids (key, payload)
 select 'free_premium_open', api.vip_open_daily_free_premium_egg(
   (select id from _ids where key = 'free_open_user'),
@@ -538,6 +608,7 @@ select is((select count(*)::integer from gacha.draw_results where draw_order_id 
 select is((select count(*)::integer from inventory.item_instances where owner_user_id = (select id from _ids where key = 'free_open_user') and source_id = (select id from _ids where key = 'free_premium_draw_order')), 1, 'free premium draw grants one inventory item');
 select is((select free_box_used_count from vip.vip_daily_claims where user_id = (select id from _ids where key = 'free_open_user') and claim_date = (now() at time zone 'UTC')::date), 1, 'free premium draw consumes today free box counter');
 select is((select count(*)::integer from vip.vip_benefit_ledger where user_id = (select id from _ids where key = 'free_open_user') and benefit_type = 'daily_free_box' and entry_type = 'consume'), 1, 'free premium draw writes one consume benefit ledger');
+select is(testutil.balance_of((select id from _ids where key = 'free_open_user'), 'FGEMS'), 0::numeric, 'free premium draw does not auto-claim FGEMS');
 select is((
   select metadata ->> 'draw_order_id'
   from vip.vip_benefit_ledger
@@ -567,6 +638,12 @@ select ok(testutil.raises_like(format(
   (select id::text from _ids where key = 'non_vip_user'),
   'vip-non-member-claim'
 ), '%VIP_EXPIRED%'), 'non-VIP user cannot claim daily benefit');
+
+select ok(testutil.raises_like(format(
+  'select api.vip_claim_daily_free_box(%L::uuid, %L)',
+  (select id::text from _ids where key = 'non_vip_user'),
+  'vip-non-member-free-box-claim'
+), '%VIP_EXPIRED%'), 'non-VIP user cannot claim daily free box');
 
 select ok(testutil.raises_like(format(
   'select api.vip_open_daily_free_premium_egg(%L::uuid, %L)',

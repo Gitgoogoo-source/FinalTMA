@@ -173,7 +173,6 @@ function ResultSummary({ result }: { result: DrawResultResponse }) {
         <SpendIcon aria-hidden="true" size={15} strokeWidth={2.4} />
         {formatCurrencyAmount(spend.amount)} {spend.label}
       </span>
-      <span>返还 {formatCurrencyAmount(result.returnedKcoin)} K-coin</span>
     </div>
   );
 }
@@ -197,11 +196,6 @@ function BalanceChanges({ result }: { result: DrawResultResponse }) {
           <SpendIcon aria-hidden="true" size={15} strokeWidth={2.4} />
           {spend.label}
           <strong>-{formatCurrencyAmount(spend.amount)}</strong>
-        </span>
-        <span>
-          <Coins aria-hidden="true" size={15} strokeWidth={2.4} />
-          K-coin
-          <strong>+{formatCurrencyAmount(result.returnedKcoin)}</strong>
         </span>
       </div>
     </div>

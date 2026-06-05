@@ -9,6 +9,10 @@ import claimDailyHandler, {
   buildClaimDailyResponse,
   normalizeVipDailyClaimInput,
 } from "../../api/vip/claim-daily";
+import claimFreeBoxHandler, {
+  buildClaimFreeBoxResponse,
+  normalizeVipFreeBoxClaimInput,
+} from "../../api/vip/claim-free-box";
 import createVipOrderHandler from "../../api/vip/create-order";
 import {
   buildCreateVipOrderResponse,
@@ -138,6 +142,12 @@ describe("vip API", () => {
     });
   });
 
+  it("normalizes free-box claim input from the idempotency header", () => {
+    expect(normalizeVipFreeBoxClaimInput({}, IDEMPOTENCY_KEY)).toEqual({
+      idempotencyKey: IDEMPOTENCY_KEY,
+    });
+  });
+
   it("builds daily claim responses with remaining free box counters", () => {
     expect(
       buildClaimDailyResponse({
@@ -146,18 +156,49 @@ describe("vip API", () => {
         claim_date: "2026-06-05",
         fgems_amount: "100",
         fgems_ledger_id: "77777777-7777-4777-8777-777777777777",
-        free_box_count: 1,
+        fgems_claimed: true,
+        free_box_count: 0,
         free_box_used_count: 0,
+        free_box_claimed: false,
         already_claimed: false,
         idempotent: false,
       }),
     ).toMatchObject({
       claim_id: "66666666-6666-4666-8666-666666666666",
       fgems_amount: 100,
-      free_box_count: 1,
+      fgems_claimed: true,
+      free_box_count: 0,
       free_box_used_count: 0,
+      remaining_free_box_count: 0,
+      free_box_available: false,
+      free_box_claimed: false,
+      already_claimed: false,
+    });
+  });
+
+  it("builds free-box claim responses without granting FGEMS", () => {
+    expect(
+      buildClaimFreeBoxResponse({
+        claim_id: "66666666-6666-4666-8666-666666666666",
+        subscription_id: SUBSCRIPTION_ID,
+        claim_date: "2026-06-05",
+        free_box_count: 1,
+        free_box_used_count: 0,
+        remaining_free_box_count: 1,
+        free_box_available: true,
+        free_box_claimed: true,
+        free_box_claimed_at: "2026-06-05T00:05:00.000Z",
+        fgems_claimed: false,
+        already_claimed: false,
+        idempotent: false,
+      }),
+    ).toMatchObject({
+      claim_id: "66666666-6666-4666-8666-666666666666",
+      free_box_count: 1,
       remaining_free_box_count: 1,
       free_box_available: true,
+      free_box_claimed: true,
+      fgems_claimed: false,
       already_claimed: false,
     });
   });
@@ -169,7 +210,10 @@ describe("vip API", () => {
         subscription_id: SUBSCRIPTION_ID,
         current_period_end: "2026-07-05T00:00:00.000Z",
         today: {
-          claimed: true,
+          fgems_claimed: true,
+          can_claim_fgems: false,
+          free_box_claimed: false,
+          can_claim_free_box: true,
           free_box_count: 1,
           free_box_used_count: 0,
         },
@@ -195,6 +239,14 @@ describe("vip API", () => {
       todayClaimed: true,
       today: {
         claimed: true,
+        fgems_claimed: true,
+        fgemsClaimed: true,
+        can_claim_fgems: false,
+        canClaimFgems: false,
+        free_box_claimed: false,
+        freeBoxClaimed: false,
+        can_claim_free_box: true,
+        canClaimFreeBox: true,
         free_box_count: 1,
         freeBoxCount: 1,
         free_box_used_count: 0,
@@ -466,6 +518,26 @@ describe("vip API", () => {
     expect(callRpcRawMock).not.toHaveBeenCalled();
   });
 
+  it("/api/vip/claim-free-box rejects forged user fields before RPC", async () => {
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      claimFreeBoxHandler,
+      {
+        method: "POST",
+        headers: {
+          "x-idempotency-key": "vip:claim-free-box:test-0001",
+        },
+        body: {
+          user_id: FORGED_USER_ID,
+          idempotency_key: "vip:claim-free-box:test-0001",
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(400);
+    expect(result.body.error.code).toBe("VALIDATION_ERROR");
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+  });
+
   it("/api/vip/claim-daily claims through the session user", async () => {
     callRpcRawMock.mockResolvedValueOnce({
       claim_id: "66666666-6666-4666-8666-666666666666",
@@ -473,8 +545,10 @@ describe("vip API", () => {
       claim_date: "2026-06-05",
       fgems_amount: 100,
       fgems_ledger_id: "77777777-7777-4777-8777-777777777777",
-      free_box_count: 1,
+      fgems_claimed: true,
+      free_box_count: 0,
       free_box_used_count: 0,
+      free_box_claimed: false,
       already_claimed: false,
       idempotent: false,
     });
@@ -495,6 +569,9 @@ describe("vip API", () => {
       expect.objectContaining({
         action: "vip.claim_daily_benefit",
         idempotencyKey: "vip:claim-daily:test-0001",
+        metadata: {
+          benefit: "daily_fgems",
+        },
       }),
     );
     expect(callRpcRawMock).toHaveBeenCalledWith(
@@ -514,7 +591,71 @@ describe("vip API", () => {
     );
     expect(result.body.data).toMatchObject({
       claim_id: "66666666-6666-4666-8666-666666666666",
+      fgems_amount: 100,
+      fgems_claimed: true,
+      free_box_available: false,
+      free_box_claimed: false,
+      remaining_free_box_count: 0,
+    });
+  });
+
+  it("/api/vip/claim-free-box claims free box through the session user", async () => {
+    callRpcRawMock.mockResolvedValueOnce({
+      claim_id: "66666666-6666-4666-8666-666666666666",
+      subscription_id: SUBSCRIPTION_ID,
+      claim_date: "2026-06-05",
+      free_box_count: 1,
+      free_box_used_count: 0,
+      remaining_free_box_count: 1,
       free_box_available: true,
+      free_box_claimed: true,
+      free_box_claimed_at: "2026-06-05T00:05:00.000Z",
+      fgems_claimed: false,
+      already_claimed: false,
+      idempotent: false,
+    });
+
+    const result = await invokeApiHandler<
+      ApiSuccessResponse<Record<string, unknown>>
+    >(claimFreeBoxHandler, {
+      method: "POST",
+      headers: {
+        "x-request-id": "req-vip-claim-free-box",
+        "x-idempotency-key": "vip:claim-free-box:test-0001",
+      },
+      body: {},
+    });
+
+    expect(result.statusCode).toBe(200);
+    expect(assertUserRiskAllowedMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "vip.claim_daily_free_box",
+        idempotencyKey: "vip:claim-free-box:test-0001",
+        metadata: {
+          benefit: "daily_free_box",
+        },
+      }),
+    );
+    expect(callRpcRawMock).toHaveBeenCalledWith(
+      "vip_claim_daily_free_box",
+      {
+        p_user_id: USER_ID,
+        p_idempotency_key: "vip:claim-free-box:test-0001",
+      },
+      expect.objectContaining({
+        schema: "api",
+        context: expect.objectContaining({
+          requestId: "req-vip-claim-free-box",
+          userId: USER_ID,
+          idempotencyKey: "vip:claim-free-box:test-0001",
+        }),
+      }),
+    );
+    expect(result.body.data).toMatchObject({
+      claim_id: "66666666-6666-4666-8666-666666666666",
+      free_box_available: true,
+      free_box_claimed: true,
+      fgems_claimed: false,
       remaining_free_box_count: 1,
     });
   });

@@ -114,6 +114,7 @@ describe("DrawResultModal", () => {
 
     expect(screen.getByText("10 K-coin")).toBeVisible();
     expect(screen.getAllByText("K-coin").length).toBeGreaterThan(0);
+    expect(screen.queryByText(/返还/)).not.toBeInTheDocument();
     expect(screen.queryByText("10 Stars")).not.toBeInTheDocument();
   });
 });
@@ -150,7 +151,7 @@ function createPendingResult(
     paymentStatus: "fulfilling",
     quantity: 1,
     results: [],
-    returnedKcoin: 100,
+    returnedKcoin: 0,
     serverTime: "2026-05-28T00:02:00.000Z",
     status: "pending",
     ...overrides,

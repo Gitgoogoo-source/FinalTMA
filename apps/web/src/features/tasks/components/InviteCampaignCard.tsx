@@ -1,14 +1,12 @@
-import { ArrowRight, Copy, Gift, Percent } from "lucide-react";
+import { ArrowRight, Gift, Percent } from "lucide-react";
 
 type InviteCampaignCardProps = {
   isPending: boolean;
-  onCopyLink: () => void;
   onInvite: () => void;
 };
 
 export function InviteCampaignCard({
   isPending,
-  onCopyLink,
   onInvite,
 }: InviteCampaignCardProps) {
   const primaryLabel = isPending ? "处理中" : "立即邀请";
@@ -60,15 +58,6 @@ export function InviteCampaignCard({
           <i aria-hidden="true">
             <ArrowRight size={24} strokeWidth={3} />
           </i>
-        </button>
-        <button
-          className="invite-campaign-card__copy"
-          disabled={isPending}
-          onClick={onCopyLink}
-          type="button"
-        >
-          <Copy aria-hidden="true" size={16} strokeWidth={2.5} />
-          复制链接
         </button>
       </div>
 

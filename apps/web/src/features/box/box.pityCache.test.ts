@@ -54,7 +54,7 @@ function createBoxListResponse(): BoxListResponse {
         heroImageUrl: "/images/boxes/starter_egg.png",
         id: "11111111-1111-4111-8111-111111111111",
         isOpenable: true,
-        kcoinReturnPerDraw: 100,
+        kcoinReturnPerDraw: 0,
         name: "Normal Egg",
         pityProgress: {
           currentCount: 3,

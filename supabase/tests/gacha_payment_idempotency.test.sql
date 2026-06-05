@@ -62,6 +62,44 @@ $$;
 
 select no_plan();
 
+insert into tasks.task_definitions (
+  code,
+  task_type,
+  title,
+  description,
+  period_type,
+  target_count,
+  reward,
+  action_type,
+  active,
+  sort_order,
+  metadata
+) values (
+  'DAILY_OPEN_BOX_10',
+  'daily',
+  'Open 10 boxes',
+  'Open ten blind boxes today.',
+  'daily',
+  10,
+  '[{"currency":"FGEMS","amount":10}]'::jsonb,
+  'open_box',
+  true,
+  30,
+  '{"test_fixture":true,"progress_source":"gacha_open_success"}'::jsonb
+)
+on conflict (code) do update
+set task_type = excluded.task_type,
+    title = excluded.title,
+    description = excluded.description,
+    period_type = excluded.period_type,
+    target_count = excluded.target_count,
+    reward = excluded.reward,
+    action_type = excluded.action_type,
+    active = true,
+    sort_order = excluded.sort_order,
+    metadata = tasks.task_definitions.metadata || excluded.metadata,
+    updated_at = now();
+
 
 create or replace function testutil.create_catalog_fixture(
   p_prefix text,
@@ -337,7 +375,7 @@ select is((select payment_status from gacha.draw_orders where id = (select id fr
 select is((select telegram_payment_charge_id from gacha.draw_orders where id = (select id from _ids where key = 'draw_order')), 'tg-charge-idempotency-001', 'formal successful_payment records Telegram charge id on draw order');
 select is((select count(*)::int from gacha.draw_results where draw_order_id = (select id from _ids where key = 'draw_order')), 1, 'duplicate payment processing does not create duplicate draw results');
 select is((select count(*)::int from inventory.item_instances where source_type = 'gacha' and source_id = (select id from _ids where key = 'draw_order')), 1, 'duplicate payment processing does not create duplicate inventory items');
-select is(testutil.balance_of((select id from _ids where key = 'user'), 'KCOIN'), 100::numeric, 'duplicate payment processing does not double-credit open reward');
+select is(testutil.balance_of((select id from _ids where key = 'user'), 'KCOIN'), 0::numeric, 'duplicate payment processing does not credit open-box rebate');
 select is(
   (
     select count(*)::int
@@ -347,20 +385,9 @@ select is(
       and entry_type = 'credit'
       and source_type = 'open_box_rebate'
       and source_id = (select id from _ids where key = 'draw_order')
-      and idempotency_key = 'open_box_rebate:' || (select id::text from _ids where key = 'draw_order')
-      and amount = 100
   ),
-  1,
-  'fulfillment writes one KCOIN rebate ledger row'
-);
-select is(
-  (
-    select available_after
-    from economy.currency_ledger
-    where idempotency_key = 'open_box_rebate:' || (select id::text from _ids where key = 'draw_order')
-  ),
-  testutil.balance_of((select id from _ids where key = 'user'), 'KCOIN'),
-  'KCOIN rebate ledger available_after matches balance after fulfillment'
+  0,
+  'fulfillment does not write KCOIN rebate ledger row'
 );
 select is(
   (
@@ -453,7 +480,7 @@ select is(((select payload from _ids where key = 'duplicate_fulfilled_attempt') 
 select is(((select payload from _ids where key = 'duplicate_fulfilled_attempt') ->> 'reason_code'), 'ORDER_ALREADY_FULFILLED', 'fulfilled order duplicate attempt returns fulfilled-order reason');
 select is((select count(*)::int from payments.star_payments where telegram_payment_charge_id = 'tg-charge-idempotency-duplicate-001'), 0, 'fulfilled order duplicate attempt does not insert another payment row');
 select is((select count(*)::int from gacha.draw_results where draw_order_id = (select id from _ids where key = 'draw_order')), 1, 'fulfilled order duplicate attempt does not create more draw results');
-select is(testutil.balance_of((select id from _ids where key = 'user'), 'KCOIN'), 100::numeric, 'fulfilled order duplicate attempt does not credit another open reward');
+select is(testutil.balance_of((select id from _ids where key = 'user'), 'KCOIN'), 0::numeric, 'fulfilled order duplicate attempt does not credit KCOIN rebate');
 select is(
   (
     select count(*)::int
@@ -511,7 +538,7 @@ select is((select status from payments.star_orders where id = (select id from _i
 select is((select status from gacha.draw_orders where id = (select id from _ids where key = 'retry_draw_order')), 'completed', 'zero-stock paid order completes draw order');
 select is((select count(*)::int from payments.star_payments where telegram_payment_charge_id = 'tg-charge-idempotency-retry-001'), 1, 'zero-stock paid order records successful payment row');
 select is((select count(*)::int from gacha.draw_results where draw_order_id = (select id from _ids where key = 'retry_draw_order')), 1, 'zero-stock paid order creates one draw result');
-select is(testutil.balance_of((select id from _ids where key = 'user'), 'KCOIN'), 200::numeric, 'zero-stock paid order credits open reward once');
+select is(testutil.balance_of((select id from _ids where key = 'user'), 'KCOIN'), 0::numeric, 'zero-stock paid order does not credit KCOIN rebate');
 select is((select process_status from payments.telegram_webhook_events where update_id = 97070002), 'processed', 'zero-stock paid order marks webhook event processed');
 select is((select status_context #>> '{fulfillment,status}' from payments.telegram_webhook_events where update_id = 97070002), 'fulfilled', 'zero-stock paid order records fulfilled context');
 select ok((select next_retry_at is null from payments.telegram_webhook_events where update_id = 97070002), 'zero-stock paid order does not schedule a stock retry');
@@ -559,7 +586,7 @@ select is((select status from payments.star_orders where id = (select id from _i
 select is((select status from gacha.draw_orders where id = (select id from _ids where key = 'amount_mismatch_draw_order')), 'failed', 'amount mismatch marks draw order failed');
 select is((select count(*)::int from payments.star_payments where telegram_payment_charge_id = 'tg-charge-idempotency-amount-mismatch-001'), 0, 'amount mismatch does not insert payment row during fulfillment');
 select is((select count(*)::int from gacha.draw_results where draw_order_id = (select id from _ids where key = 'amount_mismatch_draw_order')), 0, 'amount mismatch does not create draw results');
-select is(testutil.balance_of((select id from _ids where key = 'user'), 'KCOIN'), 200::numeric, 'amount mismatch does not credit another open reward');
+select is(testutil.balance_of((select id from _ids where key = 'user'), 'KCOIN'), 0::numeric, 'amount mismatch does not credit KCOIN rebate');
 select is(
   (
     select count(*)::int
@@ -610,7 +637,7 @@ select is(((select payload from _ids where key = 'conflict_process') ->> 'fulfil
 select is(((select payload from _ids where key = 'conflict_process') ->> 'reason_code'), 'PAYMENT_CHARGE_CONFLICT', 'reused successful_payment charge id returns conflict reason');
 select is((select count(*)::int from gacha.draw_results where draw_order_id = (select id from _ids where key = 'conflict_draw_order')), 0, 'conflicting charge id does not create draw results');
 select is((select count(*)::int from inventory.item_instances where source_type = 'gacha' and source_id = (select id from _ids where key = 'conflict_draw_order')), 0, 'conflicting charge id does not create inventory items');
-select is(testutil.balance_of((select id from _ids where key = 'user'), 'KCOIN'), 200::numeric, 'conflicting charge id does not credit another open reward');
+select is(testutil.balance_of((select id from _ids where key = 'user'), 'KCOIN'), 0::numeric, 'conflicting charge id does not credit KCOIN rebate');
 select is((select count(*)::int from ops.risk_events where source_id = (select id from _ids where key = 'conflict_star_order') and event_type = 'gacha_fulfillment_validation_failed'), 1, 'conflicting charge id writes one risk event');
 select is((select process_status from payments.telegram_webhook_events where update_id = 97070003), 'failed', 'conflicting charge marks webhook event failed');
 select is((select status_context #>> '{fulfillment,reason_code}' from payments.telegram_webhook_events where update_id = 97070003), 'PAYMENT_CHARGE_CONFLICT', 'conflicting charge records fulfillment reason');
@@ -687,21 +714,12 @@ select is(
 );
 select is(
   (
-    select amount
+    select count(*)::int
     from economy.currency_ledger
     where idempotency_key = 'open_box_rebate:' || (select id::text from _ids where key = 'multi_draw_order')
   ),
-  1000::numeric,
-  'ten-draw fulfillment credits KCOIN rebate by open_reward times draw_count'
-);
-select is(
-  (
-    select available_after
-    from economy.currency_ledger
-    where idempotency_key = 'open_box_rebate:' || (select id::text from _ids where key = 'multi_draw_order')
-  ),
-  testutil.balance_of((select id from _ids where key = 'user'), 'KCOIN'),
-  'ten-draw rebate ledger available_after matches cumulative balance'
+  0,
+  'ten-draw fulfillment does not credit KCOIN rebate'
 );
 select is(
   (

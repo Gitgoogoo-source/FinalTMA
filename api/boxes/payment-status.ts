@@ -212,9 +212,7 @@ export async function getPaymentStatus(
       draw_count: numberOrZero(drawOrder.draw_count),
       quantity: numberOrZero(drawOrder.quantity),
       total_price_stars: numberOrZero(drawOrder.total_price_stars),
-      returned_kcoin:
-        numberOrZero(drawOrder.open_reward_kcoin) *
-        Math.max(numberOrZero(drawOrder.quantity), 1),
+      returned_kcoin: 0,
       paid_at: drawOrder.paid_at,
       completed_at: drawOrder.opened_at,
       created_at: drawOrder.created_at,

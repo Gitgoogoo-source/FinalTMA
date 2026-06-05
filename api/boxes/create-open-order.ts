@@ -77,6 +77,11 @@ const GACHA_BOX_PRICE_ENV_BY_SLUG: Record<GachaBoxSlug, string> = {
 const GACHA_TEN_DRAW_DISCOUNT_RATE_ENV = "GACHA_TEN_DRAW_DISCOUNT_RATE";
 const GACHA_HIGH_FREQUENCY_WINDOW_MS = 5 * 60 * 1000;
 const GACHA_HIGH_FREQUENCY_THRESHOLD = 5;
+const LOG_TEXT_MAX_LENGTH = 500;
+const LOG_SENSITIVE_ASSIGNMENT_PATTERN =
+  /(authorization|cookie|set-cookie|token|secret|service[_-]?role|api[_-]?key|private[_-]?key|mnemonic|seed|init[_-]?data|signature|webhook[_-]?secret|bot[_-]?token|payload|idempotency[_-]?key)\s*[:=]\s*[^,\s})]+/gi;
+const LOG_IDEMPOTENCY_KEY_DETAIL_PATTERN =
+  /(key\s*\([^)]*idempotency[^)]*\)\s*=\s*\()[^)]+(\))/gi;
 
 export default withApiHandler(
   async (req, _res, ctx) => {
@@ -221,8 +226,43 @@ async function callGachaCreateOrder(
       },
     );
   } catch (error) {
+    logGachaCreateOrderRpcFailure({
+      error,
+      input,
+      priceSnapshot,
+      userId,
+      requestId,
+    });
     throw mapGachaRpcError(error);
   }
+}
+
+function logGachaCreateOrderRpcFailure(input: {
+  error: unknown;
+  input: CreateBoxOpenOrderRequest;
+  priceSnapshot: GachaServerPriceSnapshot;
+  userId: string;
+  requestId: string;
+}): void {
+  const error = input.error;
+  const rpcError = error instanceof RpcError ? error : null;
+
+  console.error("[gacha:create-open-order:rpc-failed]", {
+    requestId: input.requestId,
+    userId: input.userId,
+    boxSlug: input.input.boxSlug,
+    quantity: input.input.quantity,
+    rpcName: rpcError?.rpcName ?? null,
+    rpcCode: rpcError?.code ?? null,
+    rpcStatus: rpcError?.status ?? null,
+    rpcStatusText: sanitizeLogText(rpcError?.statusText),
+    rpcMessage: sanitizeLogText(getErrorMessage(error)),
+    rpcDetails: sanitizeLogText(rpcError?.details),
+    rpcHint: sanitizeLogText(rpcError?.hint),
+    serverUnitPriceKcoin: input.priceSnapshot.unitPriceKcoin,
+    serverDiscountBps: input.priceSnapshot.discountBps,
+    serverTotalPriceKcoin: input.priceSnapshot.totalPriceKcoin,
+  });
 }
 
 async function recordGachaHighFrequencyRiskIfNeeded(input: {
@@ -617,6 +657,26 @@ function numberOrZero(value: unknown): number {
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function sanitizeLogText(value: string | null | undefined): string | null {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    return null;
+  }
+
+  const sanitized = value
+    .replace(
+      LOG_IDEMPOTENCY_KEY_DETAIL_PATTERN,
+      "$1[REDACTED]$2",
+    )
+    .replace(
+      LOG_SENSITIVE_ASSIGNMENT_PATTERN,
+      (_match, key: string) => `${key}=[REDACTED]`,
+    );
+
+  return sanitized.length > LOG_TEXT_MAX_LENGTH
+    ? `${sanitized.slice(0, LOG_TEXT_MAX_LENGTH)}...`
+    : sanitized;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

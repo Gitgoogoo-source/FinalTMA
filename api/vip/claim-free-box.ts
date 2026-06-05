@@ -1,6 +1,6 @@
 import {
-  VipDailyClaimRequestSchema,
-  type VipDailyClaimRequest,
+  VipFreeBoxClaimRequestSchema,
+  type VipFreeBoxClaimRequest,
 } from "../../packages/validation/src/vip.schemas.js";
 import { callRpcRaw, RpcError } from "../../packages/server/src/db/rpc.js";
 import {
@@ -13,39 +13,28 @@ import { requireSession } from "../_shared/requireSession.js";
 import { assertUserRiskAllowed } from "../_shared/riskGuards.js";
 import { validate } from "../_shared/validate.js";
 
-type ClaimDailyRpcResult = {
+type ClaimFreeBoxRpcResult = {
   claim_id?: unknown;
   subscription_id?: unknown;
   claim_date?: unknown;
-  fgems_amount?: unknown;
-  fgems_ledger_id?: unknown;
-  fgems_claimed?: unknown;
-  fgems_claimed_at?: unknown;
   free_box_count?: unknown;
   free_box_used_count?: unknown;
   remaining_free_box_count?: unknown;
   free_box_available?: unknown;
   free_box_claimed?: unknown;
   free_box_claimed_at?: unknown;
+  fgems_claimed?: unknown;
   already_claimed?: unknown;
   idempotent?: unknown;
 };
 
-type ClaimDailyResponse = {
+type ClaimFreeBoxResponse = {
   claim_id: string;
   claimId: string;
   subscription_id: string | null;
   subscriptionId: string | null;
   claim_date: string | null;
   claimDate: string | null;
-  fgems_amount: number;
-  fgemsAmount: number;
-  fgems_ledger_id: string | null;
-  fgemsLedgerId: string | null;
-  fgems_claimed: boolean;
-  fgemsClaimed: boolean;
-  fgems_claimed_at: string | null;
-  fgemsClaimedAt: string | null;
   free_box_count: number;
   freeBoxCount: number;
   free_box_used_count: number;
@@ -58,6 +47,8 @@ type ClaimDailyResponse = {
   freeBoxClaimed: boolean;
   free_box_claimed_at: string | null;
   freeBoxClaimedAt: string | null;
+  fgems_claimed: boolean;
+  fgemsClaimed: boolean;
   already_claimed: boolean;
   alreadyClaimed: boolean;
   idempotent: boolean;
@@ -70,34 +61,38 @@ export default withApiHandler(
       maxBytes: 16 * 1024,
     });
     const input = validate(
-      VipDailyClaimRequestSchema,
-      normalizeVipDailyClaimInput(body, getIdempotencyKey(req)),
+      VipFreeBoxClaimRequestSchema,
+      normalizeVipFreeBoxClaimInput(body, getIdempotencyKey(req)),
     );
 
     await assertUserRiskAllowed({
       req,
       ctx,
       session,
-      action: "vip.claim_daily_benefit",
+      action: "vip.claim_daily_free_box",
       idempotencyKey: input.idempotencyKey,
       metadata: {
-        benefit: "daily_fgems",
+        benefit: "daily_free_box",
       },
     });
 
-    const claim = await callVipClaimDaily(input, session.userId, ctx.requestId);
+    const claim = await callVipClaimFreeBox(
+      input,
+      session.userId,
+      ctx.requestId,
+    );
 
-    return buildClaimDailyResponse(claim);
+    return buildClaimFreeBoxResponse(claim);
   },
   {
     methods: ["POST"],
     rateLimit: {
-      action: "vip.claim_daily_benefit",
+      action: "vip.claim_daily_free_box",
     },
   },
 );
 
-export function normalizeVipDailyClaimInput(
+export function normalizeVipFreeBoxClaimInput(
   body: unknown,
   headerIdempotencyKey: string | null,
 ): Record<string, unknown> {
@@ -121,22 +116,20 @@ export function normalizeVipDailyClaimInput(
   };
 }
 
-export function buildClaimDailyResponse(
-  claim: ClaimDailyRpcResult,
-): ClaimDailyResponse {
+export function buildClaimFreeBoxResponse(
+  claim: ClaimFreeBoxRpcResult,
+): ClaimFreeBoxResponse {
   const claimId = getRequiredString(claim, "claim_id");
   const freeBoxCount = numberOrZero(claim.free_box_count);
   const freeBoxUsedCount = numberOrZero(claim.free_box_used_count);
-  const remainingFreeBoxCount = Math.max(
+  const remainingFreeBoxCount =
     numberOrNull(claim.remaining_free_box_count) ??
-      freeBoxCount - freeBoxUsedCount,
-    0,
-  );
-  const fgemsClaimed = readBoolean(claim.fgems_claimed) ?? true;
-  const freeBoxClaimed = readBoolean(claim.free_box_claimed) ?? false;
+    Math.max(freeBoxCount - freeBoxUsedCount, 0);
   const freeBoxAvailable =
-    readBoolean(claim.free_box_available) ??
-    (freeBoxClaimed && remainingFreeBoxCount > 0);
+    readBoolean(claim.free_box_available) ?? remainingFreeBoxCount > 0;
+  const freeBoxClaimed = readBoolean(claim.free_box_claimed) ?? true;
+  const fgemsClaimed = readBoolean(claim.fgems_claimed) ?? false;
+  const freeBoxClaimedAt = stringOrNull(claim.free_box_claimed_at);
 
   return {
     claim_id: claimId,
@@ -145,14 +138,6 @@ export function buildClaimDailyResponse(
     subscriptionId: stringOrNull(claim.subscription_id),
     claim_date: stringOrNull(claim.claim_date),
     claimDate: stringOrNull(claim.claim_date),
-    fgems_amount: numberOrZero(claim.fgems_amount),
-    fgemsAmount: numberOrZero(claim.fgems_amount),
-    fgems_ledger_id: stringOrNull(claim.fgems_ledger_id),
-    fgemsLedgerId: stringOrNull(claim.fgems_ledger_id),
-    fgems_claimed: fgemsClaimed,
-    fgemsClaimed,
-    fgems_claimed_at: stringOrNull(claim.fgems_claimed_at),
-    fgemsClaimedAt: stringOrNull(claim.fgems_claimed_at),
     free_box_count: freeBoxCount,
     freeBoxCount,
     free_box_used_count: freeBoxUsedCount,
@@ -163,22 +148,24 @@ export function buildClaimDailyResponse(
     freeBoxAvailable,
     free_box_claimed: freeBoxClaimed,
     freeBoxClaimed,
-    free_box_claimed_at: stringOrNull(claim.free_box_claimed_at),
-    freeBoxClaimedAt: stringOrNull(claim.free_box_claimed_at),
+    free_box_claimed_at: freeBoxClaimedAt,
+    freeBoxClaimedAt,
+    fgems_claimed: fgemsClaimed,
+    fgemsClaimed,
     already_claimed: Boolean(claim.already_claimed),
     alreadyClaimed: Boolean(claim.already_claimed),
     idempotent: Boolean(claim.idempotent),
   };
 }
 
-async function callVipClaimDaily(
-  input: VipDailyClaimRequest,
+async function callVipClaimFreeBox(
+  input: VipFreeBoxClaimRequest,
   userId: string,
   requestId: string,
-): Promise<ClaimDailyRpcResult> {
+): Promise<ClaimFreeBoxRpcResult> {
   try {
-    return await callRpcRaw<ClaimDailyRpcResult>(
-      "vip_claim_daily_benefit",
+    return await callRpcRaw<ClaimFreeBoxRpcResult>(
+      "vip_claim_daily_free_box",
       {
         p_user_id: userId,
         p_idempotency_key: input.idempotencyKey,
@@ -193,17 +180,17 @@ async function callVipClaimDaily(
       },
     );
   } catch (error) {
-    throw mapVipClaimDailyRpcError(error);
+    throw mapVipClaimFreeBoxRpcError(error);
   }
 }
 
-function mapVipClaimDailyRpcError(error: unknown): ApiError {
+function mapVipClaimFreeBoxRpcError(error: unknown): ApiError {
   if (error instanceof ApiError) {
     return error;
   }
 
   if (!(error instanceof RpcError)) {
-    return ApiError.internal("领取月卡每日福利失败。", {
+    return ApiError.internal("领取月卡免费盲盒失败。", {
       cause: getErrorMessage(error),
     });
   }
@@ -218,7 +205,7 @@ function mapVipClaimDailyRpcError(error: unknown): ApiError {
     return new ApiError(
       409,
       "IDEMPOTENCY_CONFLICT",
-      "幂等键已被其他月卡福利请求使用。",
+      "幂等键已被其他月卡免费盲盒请求使用。",
     );
   }
 
@@ -226,11 +213,11 @@ function mapVipClaimDailyRpcError(error: unknown): ApiError {
     return new ApiError(403, "VIP_REQUIRED", "月卡未生效或已过期。");
   }
 
-  if (message.includes("vip_daily_fgems_not_available")) {
+  if (message.includes("vip_free_box_not_available")) {
     return new ApiError(
       409,
-      "VIP_DAILY_FGEMS_NOT_AVAILABLE",
-      "今日没有可领取的月卡 FGEMS。",
+      "VIP_FREE_BOX_NOT_AVAILABLE",
+      "今日没有可领取的月卡免费盲盒。",
     );
   }
 
@@ -243,8 +230,8 @@ function mapVipClaimDailyRpcError(error: unknown): ApiError {
   }
 
   if (
-    message.includes("function api.vip_claim_daily_benefit") ||
-    (message.includes("vip_claim_daily_benefit") &&
+    message.includes("function api.vip_claim_daily_free_box") ||
+    (message.includes("vip_claim_daily_free_box") &&
       message.includes("could not find")) ||
     message.includes('schema "vip" does not exist') ||
     message.includes('relation "vip.')
@@ -252,7 +239,7 @@ function mapVipClaimDailyRpcError(error: unknown): ApiError {
     return new ApiError(
       503,
       "VIP_DATABASE_NOT_READY",
-      "月卡数据库尚未初始化。",
+      "月卡免费盲盒数据库尚未初始化。",
       {
         expose: false,
         cause: error,
@@ -260,15 +247,20 @@ function mapVipClaimDailyRpcError(error: unknown): ApiError {
     );
   }
 
-  return new ApiError(500, "VIP_DAILY_CLAIM_FAILED", "领取月卡每日福利失败。", {
-    expose: false,
-    cause: error,
-  });
+  return new ApiError(
+    500,
+    "VIP_FREE_BOX_CLAIM_FAILED",
+    "领取月卡免费盲盒失败。",
+    {
+      expose: false,
+      cause: error,
+    },
+  );
 }
 
 function getRequiredString(
-  value: ClaimDailyRpcResult,
-  key: keyof ClaimDailyRpcResult,
+  value: ClaimFreeBoxRpcResult,
+  key: keyof ClaimFreeBoxRpcResult,
 ): string {
   const fieldValue = value[key];
 
@@ -293,16 +285,7 @@ function stringOrNull(value: unknown): string | null {
 }
 
 function numberOrZero(value: unknown): number {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return Math.trunc(value);
-  }
-
-  if (typeof value === "string" && value.trim().length > 0) {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? Math.trunc(parsed) : 0;
-  }
-
-  return 0;
+  return numberOrNull(value) ?? 0;
 }
 
 function numberOrNull(value: unknown): number | null {

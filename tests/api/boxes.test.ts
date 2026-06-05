@@ -34,11 +34,33 @@ vi.mock("../../packages/server/src/db/rpc.js", () => ({
   callRpcRaw: callRpcRawMock,
   RpcError: class RpcError extends Error {
     public readonly rpcName: string;
+    public readonly code: string | null | undefined;
+    public readonly details: string | null | undefined;
+    public readonly hint: string | null | undefined;
+    public readonly status: number | undefined;
+    public readonly statusText: string | undefined;
 
-    constructor(params: { rpcName: string; error?: { message?: string } }) {
-      super(params.error?.message ?? "RPC error");
+    constructor(params: {
+      rpcName: string;
+      error?: {
+        message?: string;
+        code?: string | null;
+        details?: string | null;
+        hint?: string | null;
+      };
+      status?: number;
+      statusText?: string;
+    }) {
+      const message = params.error?.message ?? "RPC error";
+
+      super(`Supabase RPC "${params.rpcName}" failed: ${message}`);
       this.name = "RpcError";
       this.rpcName = params.rpcName;
+      this.code = params.error?.code;
+      this.details = params.error?.details;
+      this.hint = params.error?.hint;
+      this.status = params.status;
+      this.statusText = params.statusText;
     }
   },
 }));
@@ -301,7 +323,7 @@ describe("boxes API helpers", () => {
     });
   });
 
-  it("returns total K-coin reward for ten draw results", () => {
+  it("does not return K-coin rebate for draw results", () => {
     const response = toDrawResultResponse(
       {
         draw_order_id: ORDER_ID,
@@ -335,7 +357,7 @@ describe("boxes API helpers", () => {
       status: "completed",
       quantity: 10,
       paid_stars: 90,
-      returned_kcoin: 1000,
+      returned_kcoin: 0,
     });
     expect(response.results).toHaveLength(1);
     expect(response.results[0]).toMatchObject({
@@ -1225,6 +1247,83 @@ describe("boxes API helpers", () => {
     expect(JSON.stringify(result.body)).not.toContain("duplicate key");
   });
 
+  it("/api/boxes/create-open-order logs sanitized RPC failures", async () => {
+    const consoleErrorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+
+    try {
+      callRpcRawMock.mockRejectedValueOnce(
+        new RpcError({
+          rpcName: "gacha_open_with_kcoin_from_server_price",
+          error: {
+            message:
+              "referral commission setting invalid idempotency_key=secret-key payload=secret-payload",
+            code: "P0001",
+            details:
+              "Key (idempotency_key)=(open:secret-idempotency) already exists",
+            hint: "authorization=secret-token",
+          },
+          status: 400,
+          statusText: "token=secret-status",
+        }),
+      );
+
+      const { default: createOrderHandler } =
+        await import("../../api/boxes/create-open-order");
+      const result = await invokeApiHandler<ApiErrorResponse>(
+        createOrderHandler,
+        {
+          method: "POST",
+          url: "/api/boxes/create-open-order",
+          headers: {
+            cookie: "tma_game_session=test-session-token-000000000000",
+            "content-type": "application/json",
+            "x-request-id": "req-gacha-rpc-log",
+          },
+          body: {
+            box_slug: "starter_egg",
+            draw_count: 1,
+            idempotency_key: IDEMPOTENCY_KEY,
+          },
+        },
+      );
+
+      const rpcLogCall = consoleErrorSpy.mock.calls.find(
+        ([label]) => label === "[gacha:create-open-order:rpc-failed]",
+      );
+      const rpcLogPayload = rpcLogCall?.[1] as Record<string, unknown>;
+      const serializedLogPayload = JSON.stringify(rpcLogPayload);
+
+      expect(result.statusCode).toBe(500);
+      expect(result.body.error.code).toBe("GACHA_CREATE_ORDER_FAILED");
+      expect(rpcLogPayload).toEqual(
+        expect.objectContaining({
+          requestId: "req-gacha-rpc-log",
+          userId: USER_ID,
+          boxSlug: "starter_egg",
+          quantity: 1,
+          rpcName: "gacha_open_with_kcoin_from_server_price",
+          rpcCode: "P0001",
+          rpcStatus: 400,
+          rpcStatusText: "token=[REDACTED]",
+          serverUnitPriceKcoin: 10,
+          serverDiscountBps: 0,
+          serverTotalPriceKcoin: 10,
+        }),
+      );
+      expect(serializedLogPayload).not.toContain("secret-key");
+      expect(serializedLogPayload).not.toContain("secret-payload");
+      expect(serializedLogPayload).not.toContain("secret-token");
+      expect(serializedLogPayload).not.toContain("secret-status");
+      expect(serializedLogPayload).not.toContain("open:secret-idempotency");
+      expect(String(rpcLogPayload.rpcMessage)).toContain("[REDACTED]");
+      expect(String(rpcLogPayload.rpcDetails)).toContain("[REDACTED]");
+    } finally {
+      consoleErrorSpy.mockRestore();
+    }
+  });
+
   it("/api/boxes/create-open-order returns 401 before RPC calls without a session", async () => {
     requireSessionMock.mockRejectedValueOnce({
       statusCode: 401,
@@ -1424,7 +1523,7 @@ describe("boxes API helpers", () => {
       data: {
         order_id: ORDER_ID,
         status: "completed",
-        returned_kcoin: 100,
+        returned_kcoin: 0,
         results: [
           {
             draw_index: 1,

@@ -3,6 +3,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { API_ENDPOINTS } from "@/api/endpoints";
 
 import {
+  claimVipDailyBenefit,
+  claimVipFreeBox,
+  normalizeClaimVipDailyBenefitResponse,
+  normalizeClaimVipFreeBoxResponse,
   createVipOrder,
   normalizeCreateVipOrderResponse,
   normalizeVipStatus,
@@ -39,6 +43,20 @@ describe("vip.api", () => {
           fee_rebate_bps: 2000,
         },
         server_time: "2026-06-05T00:00:00.000Z",
+        today: {
+          business_date_utc: "2026-06-05",
+          claimed: false,
+          can_claim: true,
+          fgems_amount: "100",
+          fgems_claimed: false,
+          can_claim_fgems: true,
+          free_box_count: 1,
+          free_box_used_count: 0,
+          remaining_free_box_count: 0,
+          free_box_claimed: false,
+          can_claim_free_box: true,
+          free_box_available: false,
+        },
       }),
     ).toEqual({
       currentPeriodEnd: "2026-07-05T00:00:00.000Z",
@@ -55,8 +73,89 @@ describe("vip.api", () => {
       },
       serverTime: "2026-06-05T00:00:00.000Z",
       subscriptionId: "sub-1",
-      today: null,
+      today: {
+        businessDateUtc: "2026-06-05",
+        canClaim: true,
+        canClaimFgems: true,
+        canClaimFreeBox: true,
+        claimId: null,
+        claimed: false,
+        fgemsAmount: 100,
+        fgemsClaimed: false,
+        fgemsClaimedAt: null,
+        freeBoxAvailable: false,
+        freeBoxClaimed: false,
+        freeBoxClaimedAt: null,
+        freeBoxCount: 1,
+        freeBoxUsedCount: 0,
+        remainingFreeBoxCount: 0,
+      },
       todayClaimed: false,
+    });
+  });
+
+  it("normalizes split daily FGEMS claim responses without free-box auto availability", () => {
+    expect(
+      normalizeClaimVipDailyBenefitResponse({
+        claim_id: "claim-1",
+        subscription_id: "sub-1",
+        claim_date: "2026-06-05",
+        fgems_amount: "100",
+        fgems_ledger_id: "ledger-1",
+        fgems_claimed: true,
+        fgems_claimed_at: "2026-06-05T00:01:00.000Z",
+        free_box_count: 1,
+        free_box_used_count: 0,
+        remaining_free_box_count: 1,
+        free_box_claimed: false,
+        free_box_available: false,
+      }),
+    ).toEqual({
+      alreadyClaimed: false,
+      claimDate: "2026-06-05",
+      claimId: "claim-1",
+      fgemsAmount: 100,
+      fgemsClaimed: true,
+      fgemsClaimedAt: "2026-06-05T00:01:00.000Z",
+      fgemsLedgerId: "ledger-1",
+      freeBoxAvailable: false,
+      freeBoxClaimed: false,
+      freeBoxClaimedAt: null,
+      freeBoxCount: 1,
+      freeBoxUsedCount: 0,
+      idempotent: false,
+      remainingFreeBoxCount: 1,
+      subscriptionId: "sub-1",
+    });
+  });
+
+  it("normalizes split free-box claim responses", () => {
+    expect(
+      normalizeClaimVipFreeBoxResponse({
+        claim_id: "claim-2",
+        subscription_id: "sub-1",
+        claim_date: "2026-06-05",
+        free_box_count: 1,
+        free_box_used_count: 0,
+        remaining_free_box_count: 1,
+        free_box_available: true,
+        free_box_claimed: true,
+        free_box_claimed_at: "2026-06-05T00:02:00.000Z",
+        fgems_claimed: false,
+      }),
+    ).toEqual({
+      alreadyClaimed: false,
+      claimDate: "2026-06-05",
+      claimId: "claim-2",
+      fgemsClaimed: false,
+      freeBoxAvailable: true,
+      freeBoxClaimed: true,
+      freeBoxClaimedAt: "2026-06-05T00:02:00.000Z",
+      freeBoxCount: 1,
+      freeBoxUsedCount: 0,
+      idempotent: false,
+      remainingFreeBoxCount: 1,
+      subscriptionId: "sub-1",
     });
   });
 
@@ -107,6 +206,73 @@ describe("vip.api", () => {
           "X-Idempotency-Key": "vip:create-order:test",
         },
       },
+    );
+  });
+
+  it("claims daily FGEMS through the split endpoint", async () => {
+    mocks.apiRequest.mockResolvedValue({
+      claim_id: "claim-1",
+      fgems_amount: 100,
+      fgems_ledger_id: "ledger-1",
+      free_box_count: 0,
+      free_box_used_count: 0,
+      free_box_available: false,
+    });
+
+    await expect(
+      claimVipDailyBenefit({
+        idempotencyKey: "vip:claim-daily:test-0001",
+      }),
+    ).resolves.toMatchObject({
+      claimId: "claim-1",
+      fgemsAmount: 100,
+      freeBoxAvailable: false,
+    });
+
+    expect(mocks.apiRequest).toHaveBeenCalledWith(
+      API_ENDPOINTS.vip.claimDaily,
+      expect.objectContaining({
+        method: "POST",
+        body: {
+          idempotency_key: "vip:claim-daily:test-0001",
+        },
+        headers: {
+          "X-Idempotency-Key": "vip:claim-daily:test-0001",
+        },
+      }),
+    );
+  });
+
+  it("claims the daily free box through its own endpoint", async () => {
+    mocks.apiRequest.mockResolvedValue({
+      claim_id: "claim-2",
+      free_box_count: 1,
+      free_box_used_count: 0,
+      free_box_available: true,
+      free_box_claimed: true,
+    });
+
+    await expect(
+      claimVipFreeBox({
+        idempotencyKey: "vip:claim-free-box:test-0001",
+      }),
+    ).resolves.toMatchObject({
+      claimId: "claim-2",
+      freeBoxAvailable: true,
+      freeBoxClaimed: true,
+    });
+
+    expect(mocks.apiRequest).toHaveBeenCalledWith(
+      API_ENDPOINTS.vip.claimFreeBox,
+      expect.objectContaining({
+        method: "POST",
+        body: {
+          idempotency_key: "vip:claim-free-box:test-0001",
+        },
+        headers: {
+          "X-Idempotency-Key": "vip:claim-free-box:test-0001",
+        },
+      }),
     );
   });
 

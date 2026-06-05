@@ -980,6 +980,7 @@ describe("phase 5 reconciliation job", () => {
           quantity: 1,
           draw_count: 1,
           open_reward_kcoin: 100,
+          total_price_stars: 100,
         },
         {
           id: missingOrderId,
@@ -989,6 +990,7 @@ describe("phase 5 reconciliation job", () => {
           quantity: 1,
           draw_count: 1,
           open_reward_kcoin: 100,
+          total_price_stars: 100,
         },
         {
           id: pendingOrderId,
@@ -998,6 +1000,7 @@ describe("phase 5 reconciliation job", () => {
           quantity: 1,
           draw_count: 1,
           open_reward_kcoin: 100,
+          total_price_stars: 100,
         },
         {
           id: grantedOrderId,
@@ -1007,6 +1010,7 @@ describe("phase 5 reconciliation job", () => {
           quantity: 1,
           draw_count: 1,
           open_reward_kcoin: 100,
+          total_price_stars: 100,
         },
       ],
       "gacha.draw_results": [

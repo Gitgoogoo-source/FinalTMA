@@ -26,3 +26,13 @@ export const VipDailyClaimRequestSchema = z
   .strict();
 
 export type VipDailyClaimRequest = z.infer<typeof VipDailyClaimRequestSchema>;
+
+export const VipFreeBoxClaimRequestSchema = z
+  .object({
+    idempotencyKey: VipIdempotencyKeySchema,
+  })
+  .strict();
+
+export type VipFreeBoxClaimRequest = z.infer<
+  typeof VipFreeBoxClaimRequestSchema
+>;

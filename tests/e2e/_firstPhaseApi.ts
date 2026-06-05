@@ -400,7 +400,7 @@ export async function mockFirstPhaseApi(
             order_status: "completed",
             quantity: 1,
             paid_stars: 10,
-            returned_kcoin: 100,
+            returned_kcoin: 0,
             paid_at: "2026-05-21T00:00:00.000Z",
             completed_at: "2026-05-21T00:00:01.000Z",
             box: {
@@ -411,7 +411,7 @@ export async function mockFirstPhaseApi(
             },
             balances: {
               kcoin: {
-                available: "1300",
+                available: "1200",
               },
             },
             results: [inventoryItemResult()],
@@ -694,7 +694,7 @@ function starsPaymentResultPayload(
     order_status: orderStatus,
     quantity: drawCount,
     paid_stars: drawCount === 10 ? 90 : 10,
-    returned_kcoin: drawCount * 100,
+    returned_kcoin: 0,
     invoice_payload: `gacha:${ORDER_ID}`,
     paid_at: paidAt,
     completed_at: completedAt,
@@ -710,7 +710,7 @@ function starsPaymentResultPayload(
       paymentStatus === "fulfilled"
         ? {
             kcoin: {
-              available: String(1200 + drawCount * 100),
+              available: "1200",
             },
           }
         : null,
@@ -951,7 +951,7 @@ function boxPayload() {
     },
     is_openable: true,
     disabled_reason: null,
-    kcoin_return_per_draw: 100,
+    kcoin_return_per_draw: 0,
     sort_order: 1,
     updated_at: "2026-05-21T00:00:00.000Z",
   };

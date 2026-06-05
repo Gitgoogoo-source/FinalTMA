@@ -118,13 +118,32 @@ function normalizeVipToday(value: unknown): Record<string, unknown> | null {
     value.business_date_utc ?? value.businessDateUtc,
   );
   const claimId = readString(value.claim_id ?? value.claimId);
-  const claimed = readBoolean(value.claimed) ?? false;
-  const canClaim = readBoolean(value.can_claim ?? value.canClaim) ?? false;
+  const fgemsClaimed =
+    readBoolean(value.fgems_claimed ?? value.fgemsClaimed) ??
+    readBoolean(value.claimed ?? value.today_claimed ?? value.todayClaimed) ??
+    false;
+  const fgemsClaimedAt = readString(
+    value.fgems_claimed_at ?? value.fgemsClaimedAt,
+  );
+  const canClaimFgems =
+    readBoolean(value.can_claim_fgems ?? value.canClaimFgems) ??
+    readBoolean(value.can_claim ?? value.canClaim) ??
+    false;
+  const claimed = fgemsClaimed;
+  const canClaim = canClaimFgems;
   const fgemsAmount = readNumber(value.fgems_amount ?? value.fgemsAmount) ?? 0;
   const freeBoxCount =
     readNumber(value.free_box_count ?? value.freeBoxCount) ?? 0;
   const freeBoxUsedCount =
     readNumber(value.free_box_used_count ?? value.freeBoxUsedCount) ?? 0;
+  const freeBoxClaimed =
+    readBoolean(value.free_box_claimed ?? value.freeBoxClaimed) ??
+    (freeBoxCount > 0 || freeBoxUsedCount > 0);
+  const freeBoxClaimedAt = readString(
+    value.free_box_claimed_at ?? value.freeBoxClaimedAt,
+  );
+  const canClaimFreeBox =
+    readBoolean(value.can_claim_free_box ?? value.canClaimFreeBox) ?? false;
   const remainingFreeBoxCount = Math.max(
     readNumber(value.remaining_free_box_count ?? value.remainingFreeBoxCount) ??
       freeBoxCount - freeBoxUsedCount,
@@ -132,7 +151,7 @@ function normalizeVipToday(value: unknown): Record<string, unknown> | null {
   );
   const freeBoxAvailable =
     readBoolean(value.free_box_available ?? value.freeBoxAvailable) ??
-    remainingFreeBoxCount > 0;
+    (freeBoxClaimed && remainingFreeBoxCount > 0);
 
   return {
     ...value,
@@ -145,12 +164,24 @@ function normalizeVipToday(value: unknown): Record<string, unknown> | null {
     canClaim,
     fgems_amount: fgemsAmount,
     fgemsAmount,
+    fgems_claimed: fgemsClaimed,
+    fgemsClaimed,
+    fgems_claimed_at: fgemsClaimedAt,
+    fgemsClaimedAt,
+    can_claim_fgems: canClaimFgems,
+    canClaimFgems,
     free_box_count: freeBoxCount,
     freeBoxCount,
     free_box_used_count: freeBoxUsedCount,
     freeBoxUsedCount,
     remaining_free_box_count: remainingFreeBoxCount,
     remainingFreeBoxCount,
+    free_box_claimed: freeBoxClaimed,
+    freeBoxClaimed,
+    free_box_claimed_at: freeBoxClaimedAt,
+    freeBoxClaimedAt,
+    can_claim_free_box: canClaimFreeBox,
+    canClaimFreeBox,
     free_box_available: freeBoxAvailable,
     freeBoxAvailable,
   };
