@@ -33,7 +33,6 @@ export type VipStatus = {
 
 export type CreateVipOrderInput = {
   planId: string;
-  expectedPriceXtr: number;
   idempotencyKey?: string | undefined;
 };
 

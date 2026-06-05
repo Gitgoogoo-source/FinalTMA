@@ -60,7 +60,7 @@ describe("vip.api", () => {
     });
   });
 
-  it("creates a VIP order with plan id, expected price and idempotency key", async () => {
+  it("creates a VIP order with plan id and idempotency key", async () => {
     mocks.apiRequest.mockResolvedValue({
       vip_order_id: "vip-order-1",
       star_order_id: "star-order-1",
@@ -77,7 +77,6 @@ describe("vip.api", () => {
     await expect(
       createVipOrder({
         planId: "plan-1",
-        expectedPriceXtr: 199,
         idempotencyKey: "vip:create-order:test",
       }),
     ).resolves.toEqual({
@@ -101,7 +100,6 @@ describe("vip.api", () => {
       {
         method: "POST",
         body: {
-          expected_price_xtr: 199,
           idempotency_key: "vip:create-order:test",
           plan_id: "plan-1",
         },

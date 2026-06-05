@@ -2,14 +2,6 @@ import { z } from "zod";
 
 const VIP_IDEMPOTENCY_KEY_RE = /^[A-Za-z0-9:_-]{16,128}$/;
 
-const blankToUndefined = (value: unknown): unknown => {
-  if (value === "" || value === null) {
-    return undefined;
-  }
-
-  return value;
-};
-
 export const VipIdempotencyKeySchema = z
   .string()
   .trim()
@@ -21,10 +13,6 @@ export const VipIdempotencyKeySchema = z
 export const VipCreateOrderRequestSchema = z
   .object({
     planId: z.string().uuid(),
-    expectedPriceXtr: z.preprocess(
-      blankToUndefined,
-      z.coerce.number().int().positive().optional(),
-    ),
     idempotencyKey: VipIdempotencyKeySchema,
   })
   .strict();

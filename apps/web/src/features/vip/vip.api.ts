@@ -30,7 +30,6 @@ export async function createVipOrder(
     method: "POST",
     body: {
       plan_id: input.planId,
-      expected_price_xtr: input.expectedPriceXtr,
       idempotency_key: idempotencyKey,
     },
     headers: {

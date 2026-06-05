@@ -117,7 +117,7 @@ describe("vip API", () => {
     });
   });
 
-  it("normalizes create-order input from snake_case and header idempotency", () => {
+  it("normalizes create-order input from snake_case and ignores frontend price", () => {
     expect(
       normalizeCreateVipOrderInput(
         {
@@ -128,7 +128,6 @@ describe("vip API", () => {
       ),
     ).toEqual({
       planId: PLAN_ID,
-      expectedPriceXtr: "199",
       idempotencyKey: IDEMPOTENCY_KEY,
     });
   });
@@ -264,24 +263,48 @@ describe("vip API", () => {
       todayClaimed: false,
       plan: {
         id: PLAN_ID,
-        priceXtr: 299,
+        priceXtr: 199,
       },
     });
   });
 
-  it("/api/vip/status rejects missing server monthly price config before RPC", async () => {
+  it("/api/vip/status does not require server monthly price config", async () => {
     delete process.env.VIP_MONTHLY_PRICE_XTR;
+    callRpcRawMock.mockResolvedValueOnce({
+      is_vip: false,
+      subscription_id: null,
+      current_period_end: null,
+      today: {
+        claimed: false,
+      },
+      plan: {
+        id: PLAN_ID,
+        code: "vip_monthly",
+        display_name: "VIP 月卡",
+        price_xtr: 199,
+        daily_fgems: 100,
+        daily_free_box_count: 1,
+        fee_rebate_bps: 2000,
+      },
+      server_time: "2026-06-05T00:00:00.000Z",
+    });
 
-    const result = await invokeApiHandler<ApiErrorResponse>(statusHandler, {
+    const result = await invokeApiHandler<
+      ApiSuccessResponse<Record<string, unknown>>
+    >(statusHandler, {
       method: "GET",
       headers: {
         "x-request-id": "req-vip-status-missing-price",
       },
     });
 
-    expect(result.statusCode).toBe(503);
-    expect(result.body.error.code).toBe("VIP_PRICE_CONFIG_INVALID");
-    expect(callRpcRawMock).not.toHaveBeenCalled();
+    expect(result.statusCode).toBe(200);
+    expect(result.body.data).toMatchObject({
+      plan: {
+        id: PLAN_ID,
+        priceXtr: 199,
+      },
+    });
   });
 
   it("/api/vip/create-order rejects forged user fields before calling RPC", async () => {
@@ -291,7 +314,6 @@ describe("vip API", () => {
         method: "POST",
         body: {
           plan_id: PLAN_ID,
-          expected_price_xtr: 199,
           idempotency_key: IDEMPOTENCY_KEY,
           user_id: FORGED_USER_ID,
         },
@@ -300,6 +322,29 @@ describe("vip API", () => {
 
     expect(result.statusCode).toBe(400);
     expect(result.body.error.code).toBe("VALIDATION_ERROR");
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+    expect(createTelegramStarsInvoiceMock).not.toHaveBeenCalled();
+  });
+
+  it("/api/vip/create-order rejects missing server monthly price config before RPC", async () => {
+    delete process.env.VIP_MONTHLY_PRICE_XTR;
+
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      createVipOrderHandler,
+      {
+        method: "POST",
+        headers: {
+          "x-idempotency-key": IDEMPOTENCY_KEY,
+        },
+        body: {
+          plan_id: PLAN_ID,
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(503);
+    expect(result.body.error.code).toBe("VIP_PRICE_CONFIG_INVALID");
+    expect(assertStarsPaymentCreateAllowedMock).not.toHaveBeenCalled();
     expect(callRpcRawMock).not.toHaveBeenCalled();
     expect(createTelegramStarsInvoiceMock).not.toHaveBeenCalled();
   });
@@ -326,7 +371,6 @@ describe("vip API", () => {
       },
       body: {
         plan_id: PLAN_ID,
-        expected_price_xtr: 299,
       },
     });
 
@@ -338,7 +382,6 @@ describe("vip API", () => {
         idempotencyKey: IDEMPOTENCY_KEY,
         metadata: {
           planId: PLAN_ID,
-          expectedPriceXtr: 299,
           serverPriceXtr: 299,
         },
       }),
@@ -350,7 +393,6 @@ describe("vip API", () => {
         p_plan_id: PLAN_ID,
         p_idempotency_key: IDEMPOTENCY_KEY,
         p_server_price_xtr: 299,
-        p_expected_price_xtr: 299,
       },
       expect.objectContaining({
         schema: "api",
@@ -396,7 +438,6 @@ describe("vip API", () => {
         method: "POST",
         body: {
           plan_id: PLAN_ID,
-          expected_price_xtr: 199,
           idempotency_key: IDEMPOTENCY_KEY,
         },
       },

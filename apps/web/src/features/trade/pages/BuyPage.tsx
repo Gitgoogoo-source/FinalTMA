@@ -141,18 +141,8 @@ export function BuyPage() {
         return;
       }
 
-      if (plan.priceXtr <= 0) {
-        pushToast({
-          type: "error",
-          title: "暂时不能购买月卡",
-          message: "服务端返回的月卡价格无效，请稍后再试。",
-        });
-        return;
-      }
-
       const order = await createVipOrder.mutateAsync({
         planId: plan.id,
-        expectedPriceXtr: plan.priceXtr,
       });
       const openAttempt = openVipStarsInvoice(order, handleVipInvoiceStatus);
 

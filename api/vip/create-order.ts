@@ -73,7 +73,6 @@ export default withApiHandler(
       idempotencyKey: input.idempotencyKey,
       metadata: {
         planId: input.planId,
-        expectedPriceXtr: input.expectedPriceXtr ?? undefined,
         serverPriceXtr,
       },
     });
@@ -120,7 +119,6 @@ export function normalizeCreateVipOrderInput(
 
   return {
     planId: body.planId ?? body.plan_id,
-    expectedPriceXtr: body.expectedPriceXtr ?? body.expected_price_xtr,
     idempotencyKey:
       body.idempotencyKey ?? body.idempotency_key ?? headerIdempotencyKey,
     ...(body.user_id !== undefined ? { user_id: body.user_id } : {}),
@@ -175,7 +173,6 @@ async function callVipCreateOrder(
         p_plan_id: input.planId,
         p_idempotency_key: input.idempotencyKey,
         p_server_price_xtr: serverPriceXtr,
-        p_expected_price_xtr: input.expectedPriceXtr ?? null,
       },
       {
         schema: "api" as never,
@@ -227,14 +224,6 @@ function mapCreateVipOrderRpcError(error: unknown): ApiError {
     message.includes("vip plan is unavailable")
   ) {
     return new ApiError(409, "VIP_PLAN_NOT_ACTIVE", "当前月卡套餐不可购买。");
-  }
-
-  if (message.includes("expected price changed")) {
-    return new ApiError(
-      409,
-      "VIP_PRICE_CHANGED",
-      "月卡价格已变化，请刷新后重试。",
-    );
   }
 
   if (message.includes("user not found")) {

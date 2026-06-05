@@ -2,6 +2,9 @@ import { ChevronRight, Crown, Loader2 } from "lucide-react";
 
 import type { VipPlan } from "../vip.types";
 
+// 展示用价格，真实 Telegram Stars 发票金额以后端配置为准。
+const VIP_MONTHLY_DISPLAY_PRICE_XTR = 199;
+
 type VipSubscriptionBannerProps = {
   isVip: boolean;
   currentPeriodEnd: string | null;
@@ -62,7 +65,7 @@ function createVipDescription(
   ]
     .filter(Boolean)
     .join(" · ");
-  const price = plan?.priceXtr ? `${plan.priceXtr} Stars` : "Stars";
+  const price = `${VIP_MONTHLY_DISPLAY_PRICE_XTR} Stars`;
   const duration = plan?.durationDays ? `${plan.durationDays} 天` : "30 天";
   const activeHint =
     isVip && currentPeriodEnd

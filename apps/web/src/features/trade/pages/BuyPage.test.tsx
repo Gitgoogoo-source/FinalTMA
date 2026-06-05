@@ -174,17 +174,17 @@ describe("BuyPage VIP subscription banner", () => {
     render(<BuyPage />);
 
     expect(screen.getByRole("button", { name: "订阅 VIP 月卡" })).toBeVisible();
+    expect(screen.getByText(/199 Stars/)).toBeVisible();
     expect(screen.queryByText("精选藏品交易")).not.toBeInTheDocument();
   });
 
-  it("uses VIP status plan to create an order and open invoice", async () => {
+  it("uses VIP status plan id to create an order and open invoice", async () => {
     render(<BuyPage />);
 
     fireEvent.click(screen.getByRole("button", { name: "订阅 VIP 月卡" }));
 
     await waitFor(() => {
       expect(mocks.createVipOrder).toHaveBeenCalledWith({
-        expectedPriceXtr: 199,
         planId: "plan-1",
       });
     });
@@ -216,7 +216,6 @@ describe("BuyPage VIP subscription banner", () => {
       expect(mocks.vipRefetch).toHaveBeenCalledOnce();
     });
     expect(mocks.createVipOrder).toHaveBeenCalledWith({
-      expectedPriceXtr: 199,
       planId: "plan-1",
     });
   });
