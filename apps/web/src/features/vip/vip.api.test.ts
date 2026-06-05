@@ -55,6 +55,7 @@ describe("vip.api", () => {
       },
       serverTime: "2026-06-05T00:00:00.000Z",
       subscriptionId: "sub-1",
+      today: null,
       todayClaimed: false,
     });
   });
