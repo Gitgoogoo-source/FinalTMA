@@ -1,0 +1,229 @@
+import { callRpcRaw, RpcError } from "../../packages/server/src/db/rpc.js";
+import { ApiError, withApiHandler } from "../_shared/handler.js";
+import { requireSession } from "../_shared/requireSession.js";
+
+type VipStatusRpcResult = Record<string, unknown>;
+
+type VipStatusResponse = {
+  is_vip: boolean;
+  isVip: boolean;
+  subscription_id: string | null;
+  subscriptionId: string | null;
+  current_period_start: string | null;
+  currentPeriodStart: string | null;
+  current_period_end: string | null;
+  currentPeriodEnd: string | null;
+  auto_renew_enabled: boolean;
+  autoRenewEnabled: boolean;
+  today_claimed: boolean;
+  todayClaimed: boolean;
+  today: Record<string, unknown> | null;
+  plan: Record<string, unknown> | null;
+  server_time: string | null;
+  serverTime: string | null;
+};
+
+export default withApiHandler(
+  async (req, _res, ctx) => {
+    const session = await requireSession(req);
+    const status = await callVipGetStatus(session.userId, ctx.requestId);
+
+    return normalizeVipStatusPayload(status);
+  },
+  {
+    methods: ["GET"],
+    rateLimit: {
+      action: "vip.status",
+    },
+  },
+);
+
+async function callVipGetStatus(
+  userId: string,
+  requestId: string,
+): Promise<VipStatusRpcResult> {
+  try {
+    return await callRpcRaw<VipStatusRpcResult>(
+      "vip_get_status",
+      {
+        p_user_id: userId,
+      },
+      {
+        schema: "api" as never,
+        context: {
+          requestId,
+          userId,
+        },
+      },
+    );
+  } catch (error) {
+    throw mapVipStatusRpcError(error);
+  }
+}
+
+export function normalizeVipStatusPayload(payload: unknown): VipStatusResponse {
+  if (!isRecord(payload)) {
+    throw new ApiError(500, "VIP_STATUS_RESULT_INVALID", "月卡状态格式无效。", {
+      expose: false,
+    });
+  }
+
+  const today = isRecord(payload.today) ? payload.today : null;
+  const plan = isRecord(payload.plan) ? normalizeVipPlan(payload.plan) : null;
+  const isVip = readBoolean(payload.is_vip ?? payload.isVip) ?? false;
+  const subscriptionId = readString(
+    payload.subscription_id ?? payload.subscriptionId,
+  );
+  const currentPeriodStart = readString(
+    payload.current_period_start ?? payload.currentPeriodStart,
+  );
+  const currentPeriodEnd = readString(
+    payload.current_period_end ?? payload.currentPeriodEnd,
+  );
+  const autoRenewEnabled =
+    readBoolean(payload.auto_renew_enabled ?? payload.autoRenewEnabled) ??
+    false;
+  const todayClaimed =
+    readBoolean(
+      payload.today_claimed ?? payload.todayClaimed ?? today?.claimed,
+    ) ?? false;
+  const serverTime = readString(payload.server_time ?? payload.serverTime);
+
+  return {
+    is_vip: isVip,
+    isVip,
+    subscription_id: subscriptionId,
+    subscriptionId,
+    current_period_start: currentPeriodStart,
+    currentPeriodStart,
+    current_period_end: currentPeriodEnd,
+    currentPeriodEnd,
+    auto_renew_enabled: autoRenewEnabled,
+    autoRenewEnabled,
+    today_claimed: todayClaimed,
+    todayClaimed,
+    today,
+    plan,
+    server_time: serverTime,
+    serverTime,
+  };
+}
+
+function normalizeVipPlan(
+  plan: Record<string, unknown>,
+): Record<string, unknown> {
+  const id = readString(plan.id ?? plan.plan_id);
+
+  if (!id) {
+    return {};
+  }
+
+  const code = readString(plan.code ?? plan.plan_code);
+  const displayName =
+    readString(plan.display_name ?? plan.displayName ?? plan.name) ??
+    "VIP 月卡";
+  const priceXtr = readNumber(plan.price_xtr ?? plan.priceXtr) ?? 0;
+  const durationDays = readNumber(plan.duration_days ?? plan.durationDays);
+  const dailyFgems = readNumber(plan.daily_fgems ?? plan.dailyFgems) ?? 0;
+  const dailyFreeBoxCount =
+    readNumber(plan.daily_free_box_count ?? plan.dailyFreeBoxCount) ?? 0;
+  const feeRebateBps =
+    readNumber(plan.fee_rebate_bps ?? plan.feeRebateBps) ?? 0;
+
+  return {
+    ...plan,
+    id,
+    code,
+    display_name: displayName,
+    displayName,
+    price_xtr: priceXtr,
+    priceXtr,
+    duration_days: durationDays,
+    durationDays,
+    daily_fgems: dailyFgems,
+    dailyFgems,
+    daily_free_box_count: dailyFreeBoxCount,
+    dailyFreeBoxCount,
+    fee_rebate_bps: feeRebateBps,
+    feeRebateBps,
+  };
+}
+
+function mapVipStatusRpcError(error: unknown): ApiError {
+  if (error instanceof ApiError) {
+    return error;
+  }
+
+  if (!(error instanceof RpcError)) {
+    return ApiError.internal("获取月卡状态失败。", {
+      cause: getErrorMessage(error),
+    });
+  }
+
+  const message = getRpcErrorText(error);
+
+  if (message.includes("user not found")) {
+    return new ApiError(404, "USER_NOT_FOUND", "登录用户不存在。");
+  }
+
+  if (
+    message.includes("function api.vip_get_status") ||
+    (message.includes("vip_get_status") &&
+      message.includes("could not find")) ||
+    message.includes('schema "vip" does not exist') ||
+    message.includes('relation "vip.')
+  ) {
+    return new ApiError(
+      503,
+      "VIP_DATABASE_NOT_READY",
+      "月卡数据库尚未初始化。",
+      {
+        expose: false,
+        cause: error,
+      },
+    );
+  }
+
+  return new ApiError(500, "VIP_STATUS_RPC_FAILED", "获取月卡状态失败。", {
+    expose: false,
+    cause: error,
+  });
+}
+
+function readString(value: unknown): string | null {
+  return typeof value === "string" && value.trim().length > 0
+    ? value.trim()
+    : null;
+}
+
+function readNumber(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === "string" && value.trim().length > 0) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  return null;
+}
+
+function readBoolean(value: unknown): boolean | null {
+  return typeof value === "boolean" ? value : null;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function getRpcErrorText(error: RpcError): string {
+  return [error.message, error.details, error.hint]
+    .filter((item): item is string => typeof item === "string")
+    .join(" ")
+    .toLowerCase();
+}
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}

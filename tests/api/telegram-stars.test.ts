@@ -813,11 +813,60 @@ describe("telegramStars payment helpers", () => {
     });
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  it("creates invoice links for VIP monthly Stars orders", async () => {
+    const vipOrderId = "77777777-7777-4777-8777-777777777777";
+    const vipPayload =
+      "vip_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+    const { client, state } = createSupabaseClientMock({
+      starOrder: {
+        business_type: "vip_monthly",
+        business_id: vipOrderId,
+        telegram_invoice_payload: vipPayload,
+        title: "VIP 月卡",
+        description: "VIP monthly card for 30 days",
+        xtr_amount: 199,
+      },
+    });
+    const fetchMock = vi.fn(
+      async (_input: string | URL, _init?: RequestInit) =>
+        new Response(JSON.stringify({ ok: true, result: INVOICE_LINK })),
+    );
+
+    const result = await createTelegramStarsInvoice({
+      starOrderId: STAR_ORDER_ID,
+      drawOrderId: vipOrderId,
+      businessType: "vip_monthly",
+      userId: USER_ID,
+      invoicePayload: vipPayload,
+      xtrAmount: 199,
+      requestId: "req_test_vip_invoice",
+      client,
+      fetchImpl: fetchMock,
+      env: {
+        TELEGRAM_BOT_TOKEN: "local-test-telegram-bot-token",
+        TELEGRAM_STARS_CURRENCY: "XTR",
+      } as NodeJS.ProcessEnv,
+    });
+
+    expect(result).toMatchObject({
+      starOrderId: STAR_ORDER_ID,
+      payload: vipPayload,
+      invoiceLink: INVOICE_LINK,
+      reused: false,
+    });
+    expect(state.rpcCalls[3]?.args).toMatchObject({
+      p_star_order_id: STAR_ORDER_ID,
+      p_draw_order_id: vipOrderId,
+      p_invoice_payload: vipPayload,
+    });
+  });
 });
 
 function createSupabaseClientMock(
   options: {
     existingInvoice?: Record<string, unknown> | null;
+    starOrder?: Partial<Record<string, unknown>>;
   } = {},
 ): {
   client: SupabaseAdminClient;
@@ -837,6 +886,7 @@ function createSupabaseClientMock(
     title: "Legendary Box",
     description: "Open blind box x10",
     expires_at: EXPIRES_AT,
+    ...options.starOrder,
   };
 
   const client = {

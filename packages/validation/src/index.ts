@@ -33,6 +33,7 @@ export * as WalletValidation from "./wallet.schemas.js";
 export * as InventoryValidation from "./inventory.schemas.js";
 export * as GameValidation from "./game.schemas.js";
 export * as MarketValidation from "./market.schemas.js";
+export * as VipValidation from "./vip.schemas.js";
 
 /**
  * Direct exports.
@@ -59,3 +60,4 @@ export * from "./wallet.schemas.js";
 export * from "./inventory.schemas.js";
 export * from "./game.schemas.js";
 export * from "./market.schemas.js";
+export * from "./vip.schemas.js";

@@ -23,6 +23,7 @@ export type TelegramStarsInvoiceResult = {
 export type CreateTelegramStarsInvoiceInput = {
   starOrderId: string;
   drawOrderId: string;
+  businessType?: "gacha_open" | "vip_monthly" | undefined;
   userId: string;
   invoicePayload: string;
   xtrAmount: number;
@@ -1537,7 +1538,9 @@ function assertStarOrderMatchesInput(
     );
   }
 
-  if (row.business_type !== "gacha_open") {
+  const expectedBusinessType = input.businessType ?? "gacha_open";
+
+  if (row.business_type !== expectedBusinessType) {
     throw new TelegramStarsInvoiceError(
       409,
       "STAR_ORDER_BUSINESS_TYPE_INVALID",
@@ -1744,10 +1747,7 @@ function normalizePaymentFulfillmentResult(
   value: Record<string, unknown>,
   rpcName = "payment_fulfillment",
 ): PaymentFulfillmentResult {
-  const fulfilled = requiredBoolean(
-    value.fulfilled,
-    `${rpcName}.fulfilled`,
-  );
+  const fulfilled = requiredBoolean(value.fulfilled, `${rpcName}.fulfilled`);
 
   return {
     fulfilled,
