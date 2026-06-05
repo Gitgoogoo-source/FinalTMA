@@ -10517,20 +10517,6 @@ button.market-banner:disabled {
   align-self: start;
 }
 
-.tasks-page__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.tasks-page__header div {
-  min-width: 0;
-  display: grid;
-  gap: 3px;
-}
-
-.tasks-page__header span,
 .invite-campaign-card__copy span,
 .seven-day-check-in__header span,
 .commission-panel__header span,
@@ -10541,7 +10527,6 @@ button.market-banner:disabled {
   line-height: 1;
 }
 
-.tasks-page__header h1,
 .invite-campaign-card__copy h2,
 .seven-day-check-in__header h2,
 .commission-panel__header h2,
@@ -10551,24 +10536,6 @@ button.market-banner:disabled {
   font-size: 20px;
   font-weight: 950;
   line-height: 1.15;
-}
-
-.tasks-page__header button {
-  width: 38px;
-  min-height: 38px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid rgb(54 67 75 / 15%);
-  border-radius: 8px;
-  color: #36434b;
-  background: rgb(255 255 255 / 9%);
-  cursor: pointer;
-}
-
-.tasks-page__header button:disabled {
-  cursor: progress;
-  opacity: 0.58;
 }
 
 .invite-campaign-card,
@@ -11122,14 +11089,6 @@ button.market-banner:disabled {
   color: var(--task-ink);
 }
 
-.tasks-page__header {
-  min-height: 52px;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 12px;
-}
-
-.tasks-page__header span,
 .invite-campaign-card__copy span,
 .seven-day-check-in__header span,
 .commission-panel__header span,
@@ -11137,21 +11096,11 @@ button.market-banner:disabled {
   color: var(--task-orange);
 }
 
-.tasks-page__header h1,
 .invite-campaign-card__copy h2,
 .seven-day-check-in__header h2,
 .commission-panel__header h2,
 .reward-history-panel__header h2 {
   color: var(--task-ink);
-}
-
-.tasks-page__header button {
-  width: 42px;
-  min-height: 42px;
-  border-color: var(--task-line);
-  color: var(--task-ink);
-  background: var(--task-card);
-  box-shadow: var(--task-shadow);
 }
 
 .invite-campaign-card,
@@ -11647,7 +11596,6 @@ button.market-banner:disabled {
   background: rgb(255 121 0 / 10%);
 }
 
-.tasks-page__header button:focus-visible,
 .invite-button:focus-visible,
 .seven-day-check-in__header button:focus-visible,
 .commission-panel__header button:focus-visible,
@@ -12222,7 +12170,6 @@ button.market-banner:disabled {
   line-height: 1;
 }
 
-.tasks-page__header button:focus-visible,
 .invite-button:focus-visible,
 .seven-day-check-in__header button:focus-visible,
 .commission-panel__header button:focus-visible,

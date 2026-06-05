@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { RefreshCw } from "lucide-react";
 
 import { getApiErrorMessage } from "@/api/errors";
 import { useFeedback } from "@/app/providers/FeedbackProvider";
@@ -60,16 +59,7 @@ export function TasksPage() {
   const pendingTaskId = claimTask.isPending
     ? (claimTask.variables?.taskId ?? null)
     : null;
-  const isRefreshing =
-    taskQuery.isFetching ||
-    checkInQuery.isFetching ||
-    inviteStatsQuery.isFetching ||
-    commissionQuery.isFetching;
   const isTaskCenterLoading = taskQuery.isLoading && !taskQuery.overview;
-
-  function handleRefresh() {
-    void taskQuery.refetch();
-  }
 
   async function handleGenerateReferralLink() {
     try {
@@ -232,22 +222,6 @@ export function TasksPage() {
 
   return (
     <section className="tasks-page" data-testid="tasks-page">
-      <header className="tasks-page__header">
-        <div>
-          <span>成长系统</span>
-          <h1>任务中心</h1>
-        </div>
-        <button
-          aria-label="刷新任务中心"
-          disabled={isRefreshing}
-          onClick={handleRefresh}
-          title="刷新任务中心"
-          type="button"
-        >
-          <RefreshCw aria-hidden="true" size={16} strokeWidth={2.5} />
-        </button>
-      </header>
-
       <ActivityBanner banner={bannerQuery.primaryBanner} label="任务活动" />
 
       <InviteCampaignCard
