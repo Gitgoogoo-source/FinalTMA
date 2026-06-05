@@ -64,21 +64,17 @@ test("任务页邀请卡片可以生成、复制并打开 Telegram 分享", asyn
   const inviteStats = page.locator(".invite-stats-panel");
 
   await expect(page.getByTestId("tasks-page")).toBeVisible();
-  await expect(inviteCard.getByRole("button", { name: "分享" })).toBeDisabled();
-  await expect(inviteCard.getByRole("button", { name: "复制" })).toBeDisabled();
-  await expect(inviteStats).toContainText("邀请人数");
+  await expect(
+    inviteCard.getByRole("button", { name: "立即邀请" }),
+  ).toBeEnabled();
+  await expect(inviteStats).toContainText("已邀请");
   await expect(inviteStats).toContainText("3");
-  await expect(inviteStats).toContainText("有效邀请");
-  await expect(inviteStats).toContainText("2");
-  await expect(inviteStats).toContainText("首开人数");
-  await expect(inviteStats).toContainText("邀请奖励");
+  await expect(inviteStats).toContainText("累计奖励");
   await expect(inviteStats).toContainText("1,000");
-  await expect(inviteStats).toContainText("累计生成分红");
+  await expect(inviteStats).toContainText("分红收益");
   await expect(inviteStats).toContainText("165");
-  await expect(inviteStats).toContainText("当前分红比例");
-  await expect(inviteStats).toContainText("10%");
 
-  await inviteCard.getByRole("button", { name: "生成链接" }).click();
+  await inviteCard.getByRole("button", { name: "立即邀请" }).click();
 
   await expect.poll(() => state.referralLinkRequests.length).toBe(1);
   expect(state.referralLinkRequests[0]?.body).toMatchObject({
@@ -89,8 +85,6 @@ test("任务页邀请卡片可以生成、复制并打开 Telegram 分享", asyn
 
   await expect(inviteSheet).toBeVisible();
   await expect(page.getByText("邀请链接已生成", { exact: true })).toBeVisible();
-  await expect(inviteCard.getByRole("button", { name: "分享" })).toBeEnabled();
-  await expect(inviteCard.getByRole("button", { name: "复制" })).toBeEnabled();
 
   const overviewRequestCount = state.overviewRequests.length;
 
@@ -403,21 +397,16 @@ test("任务页空任务、未开放签到和无分红时不报错", async ({ pa
 
   await expect(page.getByTestId("tasks-page")).toBeVisible();
   const inviteStats = page.locator(".invite-stats-panel");
-  await expect(inviteStats.locator(".invite-stat-card")).toHaveCount(6);
+  await expect(inviteStats.locator(".invite-stat-card")).toHaveCount(3);
   await expect(
-    inviteStats.locator(".invite-stat-card").filter({ hasText: "邀请人数" }),
+    inviteStats.locator(".invite-stat-card").filter({ hasText: "已邀请" }),
   ).toContainText("0");
   await expect(
-    inviteStats.locator(".invite-stat-card").filter({ hasText: "有效邀请" }),
+    inviteStats.locator(".invite-stat-card").filter({ hasText: "累计奖励" }),
   ).toContainText("0");
   await expect(
-    inviteStats.locator(".invite-stat-card").filter({ hasText: "邀请奖励" }),
-  ).toContainText("0KCOIN");
-  await expect(
-    inviteStats
-      .locator(".invite-stat-card")
-      .filter({ hasText: "累计生成分红" }),
-  ).toContainText("0KCOIN");
+    inviteStats.locator(".invite-stat-card").filter({ hasText: "分红收益" }),
+  ).toContainText("0");
   await expect(page.getByText("签到活动未开放", { exact: true })).toBeVisible();
   await expect(page.getByText("暂无任务", { exact: true })).toBeVisible();
   await expect(page.getByText("暂无分红明细", { exact: true })).toBeVisible();

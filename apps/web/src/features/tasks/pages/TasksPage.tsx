@@ -252,10 +252,7 @@ export function TasksPage() {
 
       <InviteCampaignCard
         isGenerating={referralLinkMutation.isPending}
-        isSharing={inviteShare.isPending}
-        onCopy={() => void handleCopyReferralLink()}
         onGenerate={() => void handleGenerateReferralLink()}
-        onShare={() => void handleShareReferralLink()}
         onShowLink={() => setReferralSheetOpen(true)}
         referralLink={referralLink}
       />
