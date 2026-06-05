@@ -30,3 +30,11 @@ export const VipCreateOrderRequestSchema = z
   .strict();
 
 export type VipCreateOrderRequest = z.infer<typeof VipCreateOrderRequestSchema>;
+
+export const VipDailyClaimRequestSchema = z
+  .object({
+    idempotencyKey: VipIdempotencyKeySchema,
+  })
+  .strict();
+
+export type VipDailyClaimRequest = z.infer<typeof VipDailyClaimRequestSchema>;

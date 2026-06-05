@@ -9,11 +9,24 @@ export type VipPlan = {
   feeRebateBps: number;
 };
 
+export type VipTodayStatus = {
+  businessDateUtc: string | null;
+  claimId: string | null;
+  claimed: boolean;
+  canClaim: boolean;
+  fgemsAmount: number;
+  freeBoxCount: number;
+  freeBoxUsedCount: number;
+  remainingFreeBoxCount: number;
+  freeBoxAvailable: boolean;
+};
+
 export type VipStatus = {
   isVip: boolean;
   subscriptionId: string | null;
   currentPeriodEnd: string | null;
   todayClaimed: boolean;
+  today: VipTodayStatus | null;
   plan: VipPlan | null;
   serverTime: string | null;
 };
@@ -22,6 +35,24 @@ export type CreateVipOrderInput = {
   planId: string;
   expectedPriceXtr: number;
   idempotencyKey?: string | undefined;
+};
+
+export type ClaimVipDailyBenefitInput = {
+  idempotencyKey?: string | undefined;
+};
+
+export type ClaimVipDailyBenefitResponse = {
+  claimId: string;
+  subscriptionId: string | null;
+  claimDate: string | null;
+  fgemsAmount: number;
+  fgemsLedgerId: string | null;
+  freeBoxCount: number;
+  freeBoxUsedCount: number;
+  remainingFreeBoxCount: number;
+  freeBoxAvailable: boolean;
+  alreadyClaimed: boolean;
+  idempotent: boolean;
 };
 
 export type CreateVipOrderResponse = {

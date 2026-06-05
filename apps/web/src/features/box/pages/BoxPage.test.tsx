@@ -21,10 +21,56 @@ type CreateOrderMutateOptions = {
   onSettled?: () => void;
 };
 
+type CreateClaimMutateOptions = {
+  onSuccess?: (claim: ClaimVipDailyResult) => void;
+  onError?: (error: unknown) => void;
+  onSettled?: () => void;
+};
+
+type ClaimVipDailyResult = {
+  claimId: string;
+  freeBoxAvailable: boolean;
+  freeBoxCount: number;
+  freeBoxUsedCount: number;
+  remainingFreeBoxCount: number;
+};
+
+type VipStatusMock = {
+  isVip: boolean;
+  subscriptionId: string | null;
+  currentPeriodEnd: string | null;
+  todayClaimed: boolean;
+  today: {
+    businessDateUtc: string | null;
+    claimId: string | null;
+    claimed: boolean;
+    canClaim: boolean;
+    fgemsAmount: number;
+    freeBoxCount: number;
+    freeBoxUsedCount: number;
+    remainingFreeBoxCount: number;
+    freeBoxAvailable: boolean;
+  } | null;
+  plan: {
+    dailyFreeBoxCount: number;
+  } | null;
+  serverTime: string | null;
+};
+
+type VipTodayMock = NonNullable<VipStatusMock["today"]>;
+
+type CreateVipStatusOverrides = Omit<Partial<VipStatusMock>, "today"> & {
+  today?: Partial<VipTodayMock> | null;
+};
+
 const mocks = vi.hoisted(() => ({
   createOrderMutate: vi.fn(),
   createOrderResult: null as CreateOpenOrderResponse | null,
+  claimVipDailyMutate: vi.fn(),
+  claimVipDailyResult: null as ClaimVipDailyResult | null,
   drawResultByOrderId: new Map<string, DrawResultResponse>(),
+  openVipDailyMutate: vi.fn(),
+  openVipDailyResult: null as CreateOpenOrderResponse | null,
   drawResultRefetch: vi.fn(),
   paymentStatusByOrderId: new Map<string, DrawResultResponse>(),
   paymentStatusRefetch: vi.fn(),
@@ -32,6 +78,7 @@ const mocks = vi.hoisted(() => ({
   refreshBoxPity: vi.fn(),
   useDrawResult: vi.fn(),
   usePaymentStatus: vi.fn(),
+  vipStatus: null as VipStatusMock | null,
 }));
 
 vi.mock("../hooks/useCachedBoxPity", () => ({
@@ -65,6 +112,30 @@ vi.mock("../hooks/useCreateOpenOrder", () => ({
   }),
 }));
 
+vi.mock("../hooks/useOpenVipDailyBox", () => ({
+  useOpenVipDailyBox: () => ({
+    isPending: false,
+    mutate: mocks.openVipDailyMutate,
+    variables: null,
+  }),
+}));
+
+vi.mock("@/features/vip/hooks/useClaimVipDailyBenefit", () => ({
+  useClaimVipDailyBenefit: () => ({
+    isPending: false,
+    mutate: mocks.claimVipDailyMutate,
+    variables: null,
+  }),
+}));
+
+vi.mock("@/features/vip/hooks/useVipStatus", () => ({
+  useVipStatus: () => ({
+    data: mocks.vipStatus,
+    isError: false,
+    isLoading: false,
+  }),
+}));
+
 vi.mock("../hooks/useDrawResult", () => ({
   useDrawResult: mocks.useDrawResult,
 }));
@@ -77,6 +148,32 @@ describe("BoxPage Stars invoice flow", () => {
   beforeEach(() => {
     mocks.pitySnapshot = createPitySnapshot();
     mocks.createOrderResult = createOrder();
+    mocks.openVipDailyResult = createOrder({
+      devPaymentProcessed: false,
+      drawCount: 1,
+      expiresAt: null,
+      invoiceLink: null,
+      invoiceOpenMode: null,
+      invoicePayload: null,
+      orderId: "99999999-9999-4999-8999-999999999999",
+      orderStatus: "completed",
+      paymentOrderStatus: "fulfilled",
+      paymentStatus: "fulfilled",
+      resultReady: true,
+      starOrderId: null,
+      xtrAmount: 0,
+    });
+    mocks.claimVipDailyResult = {
+      claimId: "88888888-8888-4888-8888-888888888888",
+      freeBoxAvailable: true,
+      freeBoxCount: 1,
+      freeBoxUsedCount: 0,
+      remainingFreeBoxCount: 1,
+    };
+    mocks.vipStatus = createVipStatus({
+      isVip: false,
+      today: null,
+    });
     mocks.drawResultByOrderId.clear();
     mocks.paymentStatusByOrderId.clear();
     mocks.drawResultRefetch.mockReset();
@@ -91,6 +188,28 @@ describe("BoxPage Stars invoice flow", () => {
         }
 
         options?.onSuccess?.(mocks.createOrderResult);
+        options?.onSettled?.();
+      },
+    );
+    mocks.claimVipDailyMutate.mockReset();
+    mocks.claimVipDailyMutate.mockImplementation(
+      (_input: unknown, options?: CreateClaimMutateOptions) => {
+        if (!mocks.claimVipDailyResult) {
+          throw new Error("claimVipDailyResult missing");
+        }
+
+        options?.onSuccess?.(mocks.claimVipDailyResult);
+        options?.onSettled?.();
+      },
+    );
+    mocks.openVipDailyMutate.mockReset();
+    mocks.openVipDailyMutate.mockImplementation(
+      (_input: unknown, options?: CreateOrderMutateOptions) => {
+        if (!mocks.openVipDailyResult) {
+          throw new Error("openVipDailyResult missing");
+        }
+
+        options?.onSuccess?.(mocks.openVipDailyResult);
         options?.onSettled?.();
       },
     );
@@ -401,6 +520,56 @@ describe("BoxPage Stars invoice flow", () => {
     expect(input).not.toHaveProperty("expectedPoolVersionId");
   });
 
+  it("claims the VIP welfare egg and switches the single open price to free", async () => {
+    mocks.vipStatus = createVipStatus({
+      isVip: true,
+      today: {
+        claimed: false,
+        canClaim: true,
+        freeBoxAvailable: false,
+        freeBoxCount: 1,
+        freeBoxUsedCount: 0,
+      },
+    });
+
+    renderBoxPage();
+
+    fireEvent.click(screen.getByRole("button", { name: /领取福利蛋/ }));
+
+    expect(mocks.claimVipDailyMutate).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(screen.getByRole("img", { name: "Rare Egg" })).toBeVisible();
+    });
+    expect(screen.getByRole("button", { name: "开 1 次，免费" })).toBeEnabled();
+  });
+
+  it("uses the VIP free premium egg RPC instead of creating a Stars order", async () => {
+    mocks.vipStatus = createVipStatus({
+      isVip: true,
+      today: {
+        claimed: true,
+        canClaim: false,
+        freeBoxAvailable: true,
+        freeBoxCount: 1,
+        freeBoxUsedCount: 0,
+      },
+    });
+
+    renderBoxPage();
+
+    fireEvent.click(screen.getByRole("button", { name: /使用福利蛋/ }));
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: "开 1 次，免费" }),
+      ).toBeEnabled();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "开 1 次，免费" }));
+
+    expect(mocks.openVipDailyMutate).toHaveBeenCalledTimes(1);
+    expect(mocks.createOrderMutate).not.toHaveBeenCalled();
+  });
+
   it("submits only the selected slug and ten-draw action while showing the returned amount", async () => {
     const openInvoice = vi.fn();
     mocks.createOrderResult = createOrder({
@@ -622,6 +791,42 @@ function createPityProgress(input: {
     threshold: input.threshold,
     totalDraws: input.currentCount,
     updatedAt: "2026-05-28T00:00:00.000Z",
+  };
+}
+
+function createVipStatus(
+  overrides: CreateVipStatusOverrides = {},
+): VipStatusMock {
+  const { today: todayOverride, ...statusOverrides } = overrides;
+  const today =
+    todayOverride === null
+      ? null
+      : {
+          businessDateUtc: "2026-05-28",
+          claimId: null,
+          claimed: false,
+          canClaim: false,
+          fgemsAmount: 100,
+          freeBoxCount: 0,
+          freeBoxUsedCount: 0,
+          remainingFreeBoxCount: 0,
+          freeBoxAvailable: false,
+          ...todayOverride,
+        };
+
+  return {
+    currentPeriodEnd: statusOverrides.isVip ? "2026-06-28T00:00:00.000Z" : null,
+    isVip: false,
+    plan: {
+      dailyFreeBoxCount: 1,
+    },
+    serverTime: "2026-05-28T00:00:00.000Z",
+    subscriptionId: statusOverrides.isVip
+      ? "77777777-7777-4777-8777-777777777777"
+      : null,
+    ...statusOverrides,
+    today,
+    todayClaimed: statusOverrides.todayClaimed ?? today?.claimed ?? false,
   };
 }
 

@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Gift, Loader2 } from "lucide-react";
 
 import { getApiErrorMessage } from "@/api/errors";
 import { useFeedback } from "@/app/providers/FeedbackProvider";
 import { ActivityBanner } from "@/features/banners/components/ActivityBanner";
 import { useBanners } from "@/features/banners/hooks/useBanners";
+import { useClaimVipDailyBenefit } from "@/features/vip/hooks/useClaimVipDailyBenefit";
+import { useVipStatus } from "@/features/vip/hooks/useVipStatus";
 import { formatCurrencyAmount } from "@/shared/lib/formatCurrency";
 
 import { BoxHero } from "../components/BoxHero";
@@ -33,6 +36,7 @@ import type {
 import { useCreateOpenOrder } from "../hooks/useCreateOpenOrder";
 import { useCachedBoxPity } from "../hooks/useCachedBoxPity";
 import { useDrawResult } from "../hooks/useDrawResult";
+import { useOpenVipDailyBox } from "../hooks/useOpenVipDailyBox";
 import { usePaymentStatus } from "../hooks/usePaymentStatus";
 import { usePendingDrawOrder } from "../hooks/usePendingDrawOrder";
 import { usePaymentSupportConfig } from "../hooks/usePaymentSupportConfig";
@@ -54,6 +58,7 @@ export function BoxPage() {
     useState<CreateOpenOrderResponse | null>(null);
   const [paymentOpenNotice, setPaymentOpenNotice] =
     useState<PaymentOpenNotice | null>(null);
+  const [vipFreeModeSelected, setVipFreeModeSelected] = useState(false);
   const openRequestLockedRef = useRef(false);
   const {
     error: pitySyncError,
@@ -62,6 +67,9 @@ export function BoxPage() {
     snapshot: pitySnapshot,
   } = useCachedBoxPity();
   const bannerQuery = useBanners("box_top");
+  const vipStatusQuery = useVipStatus();
+  const claimVipDaily = useClaimVipDailyBenefit();
+  const openVipDaily = useOpenVipDailyBox();
   const paymentSupportQuery = usePaymentSupportConfig({
     enabled: paymentPendingOrder !== null || resultOrderId !== null,
   });
@@ -200,9 +208,130 @@ export function BoxPage() {
   }, [paymentPendingOrder, pendingStatusQuery.result]);
   const pendingDrawCount = createOrder.isPending
     ? (createOrder.variables?.drawCount ?? null)
-    : null;
+    : openVipDaily.isPending
+      ? 1
+      : null;
+  const vipToday = vipStatusQuery.data?.today ?? null;
+  const vipPlanFreeBoxCount = vipStatusQuery.data?.plan?.dailyFreeBoxCount ?? 0;
+  const vipCanClaimDaily =
+    vipStatusQuery.data?.isVip === true &&
+    vipToday?.canClaim === true &&
+    vipPlanFreeBoxCount > 0;
+  const vipHasFreeBoxAvailable =
+    vipStatusQuery.data?.isVip === true &&
+    (vipToday?.freeBoxAvailable === true || vipFreeModeSelected);
+  const selectedBoxUsesVipFreeOpen =
+    selectedBox?.slug === "premium_egg" &&
+    (vipHasFreeBoxAvailable || vipCanClaimDaily);
+  const vipWelfareActionDisabled =
+    claimVipDaily.isPending ||
+    openVipDaily.isPending ||
+    vipStatusQuery.isLoading ||
+    vipStatusQuery.data?.isVip !== true ||
+    (!vipCanClaimDaily && !vipHasFreeBoxAvailable);
+  const vipWelfareButtonText = getVipWelfareButtonText({
+    isLoading: vipStatusQuery.isLoading,
+    isVip: vipStatusQuery.data?.isVip === true,
+    isPending: claimVipDaily.isPending,
+    canClaim: vipCanClaimDaily,
+    hasFreeBox: vipHasFreeBoxAvailable,
+  });
+  const vipWelfareButtonDetail = getVipWelfareButtonDetail({
+    isVip: vipStatusQuery.data?.isVip === true,
+    canClaim: vipCanClaimDaily,
+    hasFreeBox: vipHasFreeBoxAvailable,
+  });
+
+  useEffect(() => {
+    if (
+      vipStatusQuery.data &&
+      vipStatusQuery.data.isVip === true &&
+      vipToday?.freeBoxAvailable !== true &&
+      !vipCanClaimDaily
+    ) {
+      setVipFreeModeSelected(false);
+    }
+  }, [vipCanClaimDaily, vipStatusQuery.data, vipToday?.freeBoxAvailable]);
+
+  const handleVipWelfareClick = useCallback(() => {
+    if (vipStatusQuery.data?.isVip !== true) {
+      return;
+    }
+
+    if (claimVipDaily.isPending || openVipDaily.isPending) {
+      return;
+    }
+
+    if (vipHasFreeBoxAvailable) {
+      setSelectedBoxSlug("premium_egg");
+      setVipFreeModeSelected(true);
+      pushToast({
+        type: "info",
+        title: "已选择稀有蛋",
+        message: "开 1 次将优先使用今日月卡福利次数。",
+      });
+      return;
+    }
+
+    if (!vipCanClaimDaily) {
+      pushToast({
+        type: "info",
+        title: "今日福利蛋已用完",
+        message: "明天可以继续领取一次免费稀有蛋机会。",
+      });
+      return;
+    }
+
+    claimVipDaily.mutate(undefined, {
+      onSuccess: (claim) => {
+        setSelectedBoxSlug("premium_egg");
+        setVipFreeModeSelected(claim.freeBoxAvailable);
+        pushToast({
+          type: "success",
+          title: "福利蛋已领取",
+          message: claim.freeBoxAvailable
+            ? "已自动选择稀有蛋，开 1 次价格已切换为免费。"
+            : "今日福利已领取，但没有可用免费开盒次数。",
+        });
+      },
+      onError: (error) => {
+        pushToast({
+          type: "error",
+          title: "领取福利蛋失败",
+          message: getApiErrorMessage(error),
+        });
+      },
+    });
+  }, [
+    claimVipDaily,
+    openVipDaily.isPending,
+    pushToast,
+    vipCanClaimDaily,
+    vipHasFreeBoxAvailable,
+    vipStatusQuery.data?.isVip,
+  ]);
+
+  const handleVipFreeOpenSuccess = useCallback(
+    (order: CreateOpenOrderResponse) => {
+      setSelectedBoxSlug("premium_egg");
+      setVipFreeModeSelected(false);
+      setPaymentPendingOrder(null);
+      setPaymentOpenNotice(null);
+      setResultOrderId(order.orderId);
+      clearPendingStarsPaymentOrder(order.orderId);
+      pushToast({
+        type: "success",
+        title: "福利蛋已开启",
+        message: "已消耗今日月卡免费次数，开盒结果正在展示。",
+      });
+    },
+    [pushToast],
+  );
+
   const openActionDisabled =
     createOrder.isPending ||
+    openVipDaily.isPending ||
+    claimVipDaily.isPending ||
     isPaymentOpenActionLocked(paymentPendingOrder) ||
     !selectedBox?.isOpenable;
   const handleInvoiceStatus = useCallback(
@@ -284,6 +413,29 @@ export function BoxPage() {
         return;
       }
 
+      if (drawCount === 1 && selectedBoxUsesVipFreeOpen) {
+        if (openVipDaily.isPending || openRequestLockedRef.current) {
+          return;
+        }
+
+        openRequestLockedRef.current = true;
+        openVipDaily.mutate(undefined, {
+          onSuccess: handleVipFreeOpenSuccess,
+          onError: (error) => {
+            setVipFreeModeSelected(false);
+            pushToast({
+              type: "error",
+              title: "福利蛋开启失败",
+              message: getApiErrorMessage(error),
+            });
+          },
+          onSettled: () => {
+            openRequestLockedRef.current = false;
+          },
+        });
+        return;
+      }
+
       if (createOrder.isPending || openRequestLockedRef.current) {
         return;
       }
@@ -334,7 +486,15 @@ export function BoxPage() {
         },
       );
     },
-    [createOrder, openInvoiceForOrder, pushToast, selectedBox],
+    [
+      createOrder,
+      handleVipFreeOpenSuccess,
+      openInvoiceForOrder,
+      openVipDaily,
+      pushToast,
+      selectedBox,
+      selectedBoxUsesVipFreeOpen,
+    ],
   );
 
   if (!selectedBox) {
@@ -352,6 +512,28 @@ export function BoxPage() {
       <ActivityBanner banner={bannerQuery.primaryBanner} label="开盒活动" />
 
       <BoxHero box={selectedBox} />
+
+      <section className="box-welfare-entry" aria-label="月卡福利蛋">
+        <button
+          className="box-welfare-entry__button"
+          disabled={vipWelfareActionDisabled}
+          onClick={handleVipWelfareClick}
+          type="button"
+        >
+          {claimVipDaily.isPending ? (
+            <Loader2
+              className="box-welfare-entry__spinner"
+              aria-hidden="true"
+              size={18}
+              strokeWidth={2.4}
+            />
+          ) : (
+            <Gift aria-hidden="true" size={18} strokeWidth={2.4} />
+          )}
+          <span>{vipWelfareButtonText}</span>
+          <strong>{vipWelfareButtonDetail}</strong>
+        </button>
+      </section>
 
       <BoxTierSelector
         boxes={boxes}
@@ -389,6 +571,7 @@ export function BoxPage() {
           box={selectedBox}
           isPending={pendingDrawCount === 1}
           isDisabled={openActionDisabled}
+          isFree={selectedBoxUsesVipFreeOpen}
           onOpen={() => handleOpen(1)}
         />
         <OpenTenButton
@@ -474,6 +657,56 @@ function getDefaultBoxSlug(boxes: BlindBox[]): string | null {
 
 function shouldShowBoxStatus(box: BlindBox): boolean {
   return box.status !== "active" || !box.isOpenable;
+}
+
+function getVipWelfareButtonText(input: {
+  isLoading: boolean;
+  isVip: boolean;
+  isPending: boolean;
+  canClaim: boolean;
+  hasFreeBox: boolean;
+}): string {
+  if (input.isPending) {
+    return "领取中";
+  }
+
+  if (input.isLoading) {
+    return "福利蛋";
+  }
+
+  if (!input.isVip) {
+    return "月卡福利";
+  }
+
+  if (input.canClaim) {
+    return "领取福利蛋";
+  }
+
+  if (input.hasFreeBox) {
+    return "使用福利蛋";
+  }
+
+  return "今日已用";
+}
+
+function getVipWelfareButtonDetail(input: {
+  isVip: boolean;
+  canClaim: boolean;
+  hasFreeBox: boolean;
+}): string {
+  if (!input.isVip) {
+    return "需月卡";
+  }
+
+  if (input.canClaim) {
+    return "免费稀有蛋";
+  }
+
+  if (input.hasFreeBox) {
+    return "开 1 次免费";
+  }
+
+  return "明天再领";
 }
 
 function getRewardsErrorMessage(error: unknown): string | null {

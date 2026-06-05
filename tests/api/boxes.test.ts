@@ -9,6 +9,10 @@ import {
   isDevGachaPaymentModeEnabled,
   normalizeCreateOpenOrderInput,
 } from "../../api/boxes/create-open-order";
+import {
+  buildOpenVipDailyBoxResponse,
+  normalizeOpenVipDailyBoxInput,
+} from "../../api/boxes/open-vip-daily";
 import { toDrawResultResponse } from "../../api/boxes/result";
 import { RpcError } from "../../packages/server/src/db/rpc";
 import { invokeApiHandler } from "./_utils";
@@ -265,6 +269,44 @@ describe("boxes API helpers", () => {
     });
   });
 
+  it("normalizes VIP daily free open input from the idempotency header only", () => {
+    expect(normalizeOpenVipDailyBoxInput({}, IDEMPOTENCY_KEY)).toEqual({
+      idempotencyKey: IDEMPOTENCY_KEY,
+    });
+  });
+
+  it("builds VIP daily free open responses as result-ready zero-Star orders", () => {
+    expect(
+      buildOpenVipDailyBoxResponse({
+        draw_order_id: ORDER_ID,
+        status: "completed",
+        payment_status: "vip_daily_free",
+        draw_count: 1,
+        quantity: 1,
+        xtr_amount: 0,
+        total_price_stars: 0,
+        claim_id: "88888888-8888-4888-8888-888888888888",
+        free_box_count: 1,
+        free_box_used_count: 1,
+        consume_ledger_id: "99999999-9999-4999-8999-999999999999",
+        idempotent: false,
+        result_ready: true,
+      }),
+    ).toMatchObject({
+      order_id: ORDER_ID,
+      star_order_id: null,
+      invoice_payload: null,
+      xtr_amount: 0,
+      draw_count: 1,
+      order_status: "completed",
+      payment_status: "fulfilled",
+      payment_order_status: "fulfilled",
+      result_ready: true,
+      free_box_count: 1,
+      free_box_used_count: 1,
+    });
+  });
+
   it("returns total K-coin reward for ten draw results", () => {
     const response = toDrawResultResponse(
       {
@@ -488,6 +530,118 @@ describe("boxes API helpers", () => {
     expect(result.statusCode).toBe(403);
     expect(result.body.error.code).toBe("RISK_REJECTED");
     expect(callRpcRawMock).not.toHaveBeenCalled();
+  });
+
+  it("/api/boxes/open-vip-daily rejects forged box and user fields before RPC", async () => {
+    const { default: openVipDailyHandler } =
+      await import("../../api/boxes/open-vip-daily");
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      openVipDailyHandler,
+      {
+        method: "POST",
+        url: "/api/boxes/open-vip-daily",
+        headers: {
+          cookie: "tma_game_session=test-session-token-000000000000",
+          "content-type": "application/json",
+          "x-idempotency-key": IDEMPOTENCY_KEY,
+        },
+        body: {
+          user_id: "99999999-9999-4999-8999-999999999999",
+          box_slug: "legendary_egg",
+          draw_count: 10,
+          xtr_amount: 1,
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(400);
+    expect(result.body.error.code).toBe("VALIDATION_ERROR");
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+  });
+
+  it("/api/boxes/open-vip-daily opens one premium egg through the session user", async () => {
+    callRpcRawMock
+      .mockResolvedValueOnce({
+        draw_order_id: ORDER_ID,
+        box_slug: "premium_egg",
+        status: "completed",
+        payment_status: "vip_daily_free",
+        draw_count: 1,
+        quantity: 1,
+        xtr_amount: 0,
+        total_price_stars: 0,
+        claim_id: "88888888-8888-4888-8888-888888888888",
+        free_box_count: 1,
+        free_box_used_count: 1,
+        consume_ledger_id: "99999999-9999-4999-8999-999999999999",
+        idempotent: false,
+        result_ready: true,
+      })
+      .mockResolvedValueOnce({
+        risk_event_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        status: "open",
+      });
+
+    const { default: openVipDailyHandler } =
+      await import("../../api/boxes/open-vip-daily");
+    const result = await invokeApiHandler<ApiSuccessResponse>(
+      openVipDailyHandler,
+      {
+        method: "POST",
+        url: "/api/boxes/open-vip-daily",
+        headers: {
+          cookie: "tma_game_session=test-session-token-000000000000",
+          "content-type": "application/json",
+          "x-request-id": "req-vip-free-box",
+          "x-idempotency-key": IDEMPOTENCY_KEY,
+        },
+        body: {},
+      },
+    );
+
+    expect(result.statusCode).toBe(200);
+    expect(result.body).toMatchObject({
+      ok: true,
+      data: {
+        order_id: ORDER_ID,
+        star_order_id: null,
+        xtr_amount: 0,
+        draw_count: 1,
+        payment_status: "fulfilled",
+        result_ready: true,
+      },
+    });
+    expect(callRpcRawMock).toHaveBeenNthCalledWith(
+      1,
+      "vip_open_daily_free_premium_egg",
+      {
+        p_user_id: USER_ID,
+        p_idempotency_key: IDEMPOTENCY_KEY,
+      },
+      expect.objectContaining({
+        schema: "api",
+        context: expect.objectContaining({
+          requestId: "req-vip-free-box",
+          userId: USER_ID,
+          boxSlug: "premium_egg",
+          quantity: 1,
+          idempotencyKey: IDEMPOTENCY_KEY,
+        }),
+      }),
+    );
+    expect(callRpcRawMock).toHaveBeenNthCalledWith(
+      2,
+      "risk_record_event",
+      expect.objectContaining({
+        p_event_type: "vip_daily_free_box_open",
+        p_source_type: "gacha_order",
+        p_source_id: ORDER_ID,
+      }),
+      expect.objectContaining({
+        schema: "api",
+      }),
+    );
+    expect(createTelegramStarsInvoiceMock).not.toHaveBeenCalled();
   });
 
   it("/api/boxes/create-open-order creates a single draw order", async () => {

@@ -406,6 +406,21 @@ export const ReferralLinkResponseSchema = z.object({
   expiresAt: IsoDateTimeSchema.optional(),
 });
 
+export const PreparedShareMessageBodySchema = z.object({
+  campaignId: UUIDSchema.optional(),
+  scene: ShareSceneSchema.optional(),
+  source: z.string().trim().min(1).max(64).optional(),
+});
+
+export const PreparedShareMessageResponseSchema = z.object({
+  preparedMessageId: z.string().trim().min(1).max(256),
+  expiresAt: IsoDateTimeSchema,
+  referralCode: ReferralCodeSchema,
+  startPayload: z.string().trim().min(1).max(128),
+  inviteUrl: z.string().url(),
+  shareText: z.string().trim().min(1).max(500),
+});
+
 export const BindReferralBodySchema = z.object({
   inviteCode: ReferralCodeSchema,
   metadata: z.record(z.string(), z.unknown()).optional(),
@@ -566,6 +581,12 @@ export type CheckInResponse = z.infer<typeof CheckInResponseSchema>;
 
 export type ReferralLinkQuery = z.infer<typeof ReferralLinkQuerySchema>;
 export type ReferralLinkResponse = z.infer<typeof ReferralLinkResponseSchema>;
+export type PreparedShareMessageBody = z.infer<
+  typeof PreparedShareMessageBodySchema
+>;
+export type PreparedShareMessageResponse = z.infer<
+  typeof PreparedShareMessageResponseSchema
+>;
 export type BindReferralBody = z.infer<typeof BindReferralBodySchema>;
 export type BindReferralResponse = z.infer<typeof BindReferralResponseSchema>;
 export type InviteStatsQuery = z.infer<typeof InviteStatsQuerySchema>;

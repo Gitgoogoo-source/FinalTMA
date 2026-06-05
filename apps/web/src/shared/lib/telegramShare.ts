@@ -5,6 +5,56 @@ type OpenTelegramShareInput = {
   text: string;
 };
 
+type OpenTelegramPreparedShareInput = OpenTelegramShareInput & {
+  preparedMessageId: string;
+};
+
+export type TelegramShareResult =
+  | {
+      method: "prepared";
+      sent: true;
+    }
+  | {
+      method: "prepared";
+      sent: false;
+    }
+  | {
+      method: "link";
+      sent: null;
+    };
+
+export function canUseTelegramPreparedShare(): boolean {
+  const webApp = getTelegramWebApp();
+  return typeof webApp?.shareMessage === "function";
+}
+
+export async function openTelegramPreparedShare({
+  preparedMessageId,
+  text,
+  url,
+}: OpenTelegramPreparedShareInput): Promise<TelegramShareResult> {
+  const webApp = getTelegramWebApp();
+
+  if (typeof webApp?.shareMessage !== "function") {
+    openTelegramShareLink({ text, url });
+    return {
+      method: "link",
+      sent: null,
+    };
+  }
+
+  const sent = await new Promise<boolean>((resolve) => {
+    webApp.shareMessage?.(preparedMessageId, (result) => {
+      resolve(Boolean(result));
+    });
+  });
+
+  return {
+    method: "prepared",
+    sent,
+  };
+}
+
 export function openTelegramShareLink({
   text,
   url,

@@ -248,10 +248,18 @@ export type ReferralLink = {
   source: string | null;
 };
 
+export type PreparedShareMessageInput = ReferralLinkInput;
+
+export type PreparedShareMessage = ReferralLink & {
+  preparedMessageId: string;
+  expiresAt: string;
+};
+
 export type InviteShareInput = {
   scene: "TASK_PAGE" | "INVITE_CARD";
   referralCode?: string | null;
   campaignId?: string | null;
+  metadata?: Record<string, unknown> | null;
   idempotencyKey?: string | null;
 };
 

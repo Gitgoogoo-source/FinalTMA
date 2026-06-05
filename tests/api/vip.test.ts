@@ -5,6 +5,10 @@ import type {
   ApiSuccessResponse,
 } from "../../api/_shared/handler";
 import { ApiError } from "../../api/_shared/handler";
+import claimDailyHandler, {
+  buildClaimDailyResponse,
+  normalizeVipDailyClaimInput,
+} from "../../api/vip/claim-daily";
 import createVipOrderHandler from "../../api/vip/create-order";
 import {
   buildCreateVipOrderResponse,
@@ -128,6 +132,36 @@ describe("vip API", () => {
     });
   });
 
+  it("normalizes daily claim input from the idempotency header", () => {
+    expect(normalizeVipDailyClaimInput({}, IDEMPOTENCY_KEY)).toEqual({
+      idempotencyKey: IDEMPOTENCY_KEY,
+    });
+  });
+
+  it("builds daily claim responses with remaining free box counters", () => {
+    expect(
+      buildClaimDailyResponse({
+        claim_id: "66666666-6666-4666-8666-666666666666",
+        subscription_id: SUBSCRIPTION_ID,
+        claim_date: "2026-06-05",
+        fgems_amount: "100",
+        fgems_ledger_id: "77777777-7777-4777-8777-777777777777",
+        free_box_count: 1,
+        free_box_used_count: 0,
+        already_claimed: false,
+        idempotent: false,
+      }),
+    ).toMatchObject({
+      claim_id: "66666666-6666-4666-8666-666666666666",
+      fgems_amount: 100,
+      free_box_count: 1,
+      free_box_used_count: 0,
+      remaining_free_box_count: 1,
+      free_box_available: true,
+      already_claimed: false,
+    });
+  });
+
   it("normalizes VIP status for existing frontend readers", () => {
     expect(
       normalizeVipStatusPayload({
@@ -136,6 +170,8 @@ describe("vip API", () => {
         current_period_end: "2026-07-05T00:00:00.000Z",
         today: {
           claimed: true,
+          free_box_count: 1,
+          free_box_used_count: 0,
         },
         plan: {
           id: PLAN_ID,
@@ -157,6 +193,15 @@ describe("vip API", () => {
       currentPeriodEnd: "2026-07-05T00:00:00.000Z",
       today_claimed: true,
       todayClaimed: true,
+      today: {
+        claimed: true,
+        free_box_count: 1,
+        freeBoxCount: 1,
+        free_box_used_count: 0,
+        freeBoxUsedCount: 0,
+        remaining_free_box_count: 1,
+        remainingFreeBoxCount: 1,
+      },
       plan: {
         id: PLAN_ID,
         code: "vip_monthly",
@@ -342,6 +387,76 @@ describe("vip API", () => {
     expect(result.body.error.code).toBe("AUTH_SESSION_EXPIRED");
     expect(callRpcRawMock).not.toHaveBeenCalled();
     expect(createTelegramStarsInvoiceMock).not.toHaveBeenCalled();
+  });
+
+  it("/api/vip/claim-daily rejects forged user fields before RPC", async () => {
+    const result = await invokeApiHandler<ApiErrorResponse>(claimDailyHandler, {
+      method: "POST",
+      headers: {
+        "x-idempotency-key": "vip:claim-daily:test-0001",
+      },
+      body: {
+        user_id: FORGED_USER_ID,
+        idempotency_key: "vip:claim-daily:test-0001",
+      },
+    });
+
+    expect(result.statusCode).toBe(400);
+    expect(result.body.error.code).toBe("VALIDATION_ERROR");
+    expect(callRpcRawMock).not.toHaveBeenCalled();
+  });
+
+  it("/api/vip/claim-daily claims through the session user", async () => {
+    callRpcRawMock.mockResolvedValueOnce({
+      claim_id: "66666666-6666-4666-8666-666666666666",
+      subscription_id: SUBSCRIPTION_ID,
+      claim_date: "2026-06-05",
+      fgems_amount: 100,
+      fgems_ledger_id: "77777777-7777-4777-8777-777777777777",
+      free_box_count: 1,
+      free_box_used_count: 0,
+      already_claimed: false,
+      idempotent: false,
+    });
+
+    const result = await invokeApiHandler<
+      ApiSuccessResponse<Record<string, unknown>>
+    >(claimDailyHandler, {
+      method: "POST",
+      headers: {
+        "x-request-id": "req-vip-claim-daily",
+        "x-idempotency-key": "vip:claim-daily:test-0001",
+      },
+      body: {},
+    });
+
+    expect(result.statusCode).toBe(200);
+    expect(assertUserRiskAllowedMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "vip.claim_daily_benefit",
+        idempotencyKey: "vip:claim-daily:test-0001",
+      }),
+    );
+    expect(callRpcRawMock).toHaveBeenCalledWith(
+      "vip_claim_daily_benefit",
+      {
+        p_user_id: USER_ID,
+        p_idempotency_key: "vip:claim-daily:test-0001",
+      },
+      expect.objectContaining({
+        schema: "api",
+        context: expect.objectContaining({
+          requestId: "req-vip-claim-daily",
+          userId: USER_ID,
+          idempotencyKey: "vip:claim-daily:test-0001",
+        }),
+      }),
+    );
+    expect(result.body.data).toMatchObject({
+      claim_id: "66666666-6666-4666-8666-666666666666",
+      free_box_available: true,
+      remaining_free_box_count: 1,
+    });
   });
 
   it("builds create-order responses with reused invoice idempotency", () => {

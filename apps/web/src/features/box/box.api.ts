@@ -70,6 +70,21 @@ export async function createOpenOrder(
   return normalizeCreateOpenOrderResponse(response, input.drawCount);
 }
 
+export async function openVipDailyBox(): Promise<CreateOpenOrderResponse> {
+  const idempotencyKey = createScopedIdempotencyKey("vip:free-premium-egg");
+  const response = await apiRequest<unknown>(API_ENDPOINTS.boxes.openVipDaily, {
+    method: "POST",
+    body: {
+      idempotency_key: idempotencyKey,
+    },
+    headers: {
+      "X-Idempotency-Key": idempotencyKey,
+    },
+  });
+
+  return normalizeCreateOpenOrderResponse(response, 1);
+}
+
 export async function fetchDrawResult(
   orderId: string,
 ): Promise<DrawResultResponse> {
@@ -713,12 +728,16 @@ function toPaymentDisplayStatus(
 }
 
 function createIdempotencyKey(drawCount: 1 | 10): string {
+  return createScopedIdempotencyKey(`box:${drawCount}`);
+}
+
+function createScopedIdempotencyKey(scope: string): string {
   const randomPart =
     typeof crypto !== "undefined" && "randomUUID" in crypto
       ? crypto.randomUUID()
       : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
-  return `box:${drawCount}:${randomPart}`;
+  return `${scope}:${randomPart}`;
 }
 
 function isBlindBox(value: BlindBox | null): value is BlindBox {

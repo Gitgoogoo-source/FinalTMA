@@ -471,11 +471,73 @@ select ok(testutil.raises_like(format(
   'vip-monthly-free-box-consume-002'
 ), '%VIP_FREE_BOX_ALREADY_USED%'), 'daily free box cannot be consumed twice with a different key');
 
+insert into _ids (key, id)
+values ('free_open_user', testutil.make_user(9901000005, 'vip_free_open_user'));
+
+insert into _ids (key, payload)
+select 'free_open_vip', testutil.create_paid_vip_order(
+  (select id from _ids where key = 'free_open_user'),
+  9901000005,
+  (select id from _ids where key = 'plan'),
+  'vip-free-open-001',
+  97010030
+);
+
+insert into _ids (key, payload)
+select 'free_premium_open', api.vip_open_daily_free_premium_egg(
+  (select id from _ids where key = 'free_open_user'),
+  'vip-monthly-free-premium-open-001'
+);
+insert into _ids (key, id)
+select 'free_premium_draw_order', ((select payload from _ids where key = 'free_premium_open') ->> 'draw_order_id')::uuid;
+
+select is(((select payload from _ids where key = 'free_premium_open') ->> 'status'), 'completed', 'VIP daily free premium egg opens immediately');
+select is(((select payload from _ids where key = 'free_premium_open') ->> 'box_slug'), 'premium_egg', 'VIP daily free egg always opens premium_egg');
+select is(((select payload from _ids where key = 'free_premium_open') ->> 'xtr_amount')::integer, 0, 'VIP daily free egg costs 0 Stars');
+select is((select total_price_stars from gacha.draw_orders where id = (select id from _ids where key = 'free_premium_draw_order')), 0, 'free premium draw order stores zero Stars total');
+select is((select unit_price_stars from gacha.draw_orders where id = (select id from _ids where key = 'free_premium_draw_order')), 0, 'free premium draw order stores zero Stars unit price');
+select is((select payment_star_order_id from gacha.draw_orders where id = (select id from _ids where key = 'free_premium_draw_order')), null::uuid, 'free premium draw order does not create a Stars order');
+select is((select payment_provider from gacha.draw_orders where id = (select id from _ids where key = 'free_premium_draw_order')), 'vip_daily_free', 'free premium draw order uses vip_daily_free provider marker');
+select is((select payment_status from gacha.draw_orders where id = (select id from _ids where key = 'free_premium_draw_order')), 'paid', 'free premium draw order is internally marked paid without Telegram payment');
+select is((select count(*)::integer from gacha.draw_results where draw_order_id = (select id from _ids where key = 'free_premium_draw_order')), 1, 'free premium draw writes one draw result');
+select is((select count(*)::integer from inventory.item_instances where owner_user_id = (select id from _ids where key = 'free_open_user') and source_id = (select id from _ids where key = 'free_premium_draw_order')), 1, 'free premium draw grants one inventory item');
+select is((select free_box_used_count from vip.vip_daily_claims where user_id = (select id from _ids where key = 'free_open_user') and claim_date = (now() at time zone 'UTC')::date), 1, 'free premium draw consumes today free box counter');
+select is((select count(*)::integer from vip.vip_benefit_ledger where user_id = (select id from _ids where key = 'free_open_user') and benefit_type = 'daily_free_box' and entry_type = 'consume'), 1, 'free premium draw writes one consume benefit ledger');
+select is((
+  select metadata ->> 'draw_order_id'
+  from vip.vip_benefit_ledger
+  where user_id = (select id from _ids where key = 'free_open_user')
+    and benefit_type = 'daily_free_box'
+    and entry_type = 'consume'
+  limit 1
+), (select id::text from _ids where key = 'free_premium_draw_order'), 'consume benefit ledger links to the free draw order');
+
+insert into _ids (key, payload)
+select 'free_premium_open_repeat', api.vip_open_daily_free_premium_egg(
+  (select id from _ids where key = 'free_open_user'),
+  'vip-monthly-free-premium-open-001'
+);
+
+select ok(((select payload from _ids where key = 'free_premium_open_repeat') ->> 'idempotent')::boolean, 'free premium draw is idempotent for the same key');
+select is(((select payload from _ids where key = 'free_premium_open_repeat') ->> 'draw_order_id'), (select id::text from _ids where key = 'free_premium_draw_order'), 'idempotent free premium draw returns same order');
+select is((select count(*)::integer from gacha.draw_orders where user_id = (select id from _ids where key = 'free_open_user') and metadata ->> 'source_type' = 'vip_daily_free_box'), 1, 'idempotent free premium draw does not duplicate orders');
+select ok(testutil.raises_like(format(
+  'select api.vip_open_daily_free_premium_egg(%L::uuid, %L)',
+  (select id::text from _ids where key = 'free_open_user'),
+  'vip-monthly-free-premium-open-002'
+), '%VIP_FREE_BOX_ALREADY_USED%'), 'VIP daily free premium egg cannot open twice with another key');
+
 select ok(testutil.raises_like(format(
   'select api.vip_claim_daily_benefit(%L::uuid, %L)',
   (select id::text from _ids where key = 'non_vip_user'),
   'vip-non-member-claim'
 ), '%VIP_EXPIRED%'), 'non-VIP user cannot claim daily benefit');
+
+select ok(testutil.raises_like(format(
+  'select api.vip_open_daily_free_premium_egg(%L::uuid, %L)',
+  (select id::text from _ids where key = 'non_vip_user'),
+  'vip-non-member-free-open'
+), '%VIP_EXPIRED%'), 'non-VIP user cannot open VIP daily free premium egg');
 
 insert into _ids (key, payload)
 values ('catalog', testutil.create_catalog_fixture('vip-market-rebate', 'RARE'));

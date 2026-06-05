@@ -260,10 +260,18 @@ export type ReferralLink = {
   source: string | null;
 };
 
+export type PreparedShareMessageInput = ReferralLinkInput;
+
+export type PreparedShareMessage = ReferralLink & {
+  preparedMessageId: string;
+  expiresAt: string;
+};
+
 export type InviteShareInput = {
   scene: "TASK_PAGE" | "INVITE_CARD";
   referralCode?: string | null;
   campaignId?: string | null;
+  metadata?: Record<string, unknown> | null;
   idempotencyKey?: string | null;
 };
 
@@ -300,6 +308,9 @@ export type TasksClient = {
   claimTaskReward: (input: ClaimTaskInput) => Promise<ClaimTaskResult>;
   dailyCheckIn: (input?: DailyCheckInInput) => Promise<DailyCheckInResult>;
   createReferralLink: (input?: ReferralLinkInput) => Promise<ReferralLink>;
+  createPreparedShareMessage: (
+    input?: PreparedShareMessageInput,
+  ) => Promise<PreparedShareMessage>;
   recordInviteShare: (input: InviteShareInput) => Promise<InviteShareResult>;
   claimCommission: (
     input?: ClaimCommissionInput,
@@ -332,6 +343,7 @@ export const TASK_API_ENDPOINTS = {
   claim: "/tasks/claim",
   checkIn: "/tasks/check-in",
   referralLink: "/tasks/referral-link",
+  preparedShareMessage: "/tasks/prepared-share-message",
   shareEvent: "/tasks/share-event",
   claimCommission: "/tasks/claim-commission",
 } as const;
@@ -421,6 +433,18 @@ export function createTasksClient(
       return normalizeReferralLink(response);
     },
 
+    async createPreparedShareMessage(input = {}) {
+      const response = await request(TASK_API_ENDPOINTS.preparedShareMessage, {
+        method: "POST",
+        body: compactRecord({
+          scene: input.scene ?? "TASK_PAGE",
+          source: input.source,
+        }),
+      });
+
+      return normalizePreparedShareMessage(response);
+    },
+
     async recordInviteShare(input) {
       const idempotencyKey = input.idempotencyKey ?? createKey("task:share");
       const response = await request(TASK_API_ENDPOINTS.shareEvent, {
@@ -429,6 +453,7 @@ export function createTasksClient(
           scene: input.scene,
           referral_code: input.referralCode,
           campaign_id: input.campaignId,
+          metadata: input.metadata,
           idempotency_key: idempotencyKey,
         }),
         headers: {
@@ -1075,6 +1100,29 @@ function normalizeReferralLink(response: unknown): ReferralLink {
     shareText,
     scene: readString(payload.scene),
     source: readString(payload.source),
+  };
+}
+
+function normalizePreparedShareMessage(response: unknown): PreparedShareMessage {
+  const payload = assertRecord(
+    response,
+    "Invalid prepared share message response.",
+  );
+  const referralLink = normalizeReferralLink(payload);
+  const preparedMessageId =
+    readString(payload.prepared_message_id) ??
+    readString(payload.preparedMessageId);
+  const expiresAt =
+    readIsoString(payload.expires_at) ?? readIsoString(payload.expiresAt);
+
+  if (!preparedMessageId || !expiresAt) {
+    throw new Error("Invalid prepared share message response.");
+  }
+
+  return {
+    ...referralLink,
+    preparedMessageId,
+    expiresAt,
   };
 }
 

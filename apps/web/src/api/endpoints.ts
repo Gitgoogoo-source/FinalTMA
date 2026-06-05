@@ -20,11 +20,13 @@ export const API_ENDPOINTS = {
   vip: {
     status: "/vip/status",
     createOrder: "/vip/create-order",
+    claimDaily: "/vip/claim-daily",
   },
   boxes: {
     list: "/boxes/list",
     rewards: "/boxes/rewards",
     createOpenOrder: "/boxes/create-open-order",
+    openVipDaily: "/boxes/open-vip-daily",
     paymentStatus: "/boxes/payment-status",
     result: "/boxes/result",
   },
@@ -55,6 +57,7 @@ export const API_ENDPOINTS = {
     checkIn: "/tasks/check-in",
     inviteStats: "/tasks/invite-stats",
     referralLink: "/tasks/referral-link",
+    preparedShareMessage: "/tasks/prepared-share-message",
     bindReferral: "/tasks/bind-referral",
     referralRecords: "/tasks/referral-records",
     shareEvent: "/tasks/share-event",

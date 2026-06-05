@@ -1,4 +1,4 @@
-import { Loader2, Star } from "lucide-react";
+import { Gift, Loader2, Star } from "lucide-react";
 
 import { formatCurrencyAmount } from "@/shared/lib/formatCurrency";
 
@@ -8,6 +8,7 @@ type OpenOnceButtonProps = {
   box: BlindBox;
   isPending: boolean;
   isDisabled?: boolean;
+  isFree?: boolean;
   onOpen: () => void;
 };
 
@@ -15,20 +16,24 @@ export function OpenOnceButton({
   box,
   isPending,
   isDisabled = false,
+  isFree = false,
   onOpen,
 }: OpenOnceButtonProps) {
   const disabled = isPending || isDisabled || !box.isOpenable;
+  const priceLabel = isFree
+    ? "免费"
+    : formatCurrencyAmount(box.singleStarPrice);
 
   return (
     <button
-      className="box-open-button"
+      className={`box-open-button${isFree ? " box-open-button--free" : ""}`}
       disabled={disabled}
       aria-busy={isPending}
-      aria-label={`开 1 次，${formatCurrencyAmount(box.singleStarPrice)} Stars`}
+      aria-label={`开 1 次，${isFree ? "免费" : `${priceLabel} Stars`}`}
       onClick={onOpen}
       type="button"
     >
-      <span>{isPending ? "创建中" : "开 1 次"}</span>
+      <span>{isPending ? (isFree ? "开启中" : "创建中") : "开 1 次"}</span>
       <strong>
         {isPending ? (
           <Loader2
@@ -37,10 +42,12 @@ export function OpenOnceButton({
             size={15}
             strokeWidth={2.4}
           />
+        ) : isFree ? (
+          <Gift aria-hidden="true" size={15} strokeWidth={2.4} />
         ) : (
           <Star aria-hidden="true" size={15} strokeWidth={2.4} />
         )}
-        {formatCurrencyAmount(box.singleStarPrice)}
+        {priceLabel}
       </strong>
     </button>
   );

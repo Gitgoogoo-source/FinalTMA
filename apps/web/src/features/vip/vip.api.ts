@@ -2,10 +2,13 @@ import { apiRequest } from "@/api/client";
 import { API_ENDPOINTS } from "@/api/endpoints";
 
 import type {
+  ClaimVipDailyBenefitInput,
+  ClaimVipDailyBenefitResponse,
   CreateVipOrderInput,
   CreateVipOrderResponse,
   VipPlan,
   VipStatus,
+  VipTodayStatus,
 } from "./vip.types";
 
 type JsonRecord = Record<string, unknown>;
@@ -38,8 +41,27 @@ export async function createVipOrder(
   return normalizeCreateVipOrderResponse(response);
 }
 
+export async function claimVipDailyBenefit(
+  input: ClaimVipDailyBenefitInput = {},
+): Promise<ClaimVipDailyBenefitResponse> {
+  const idempotencyKey =
+    input.idempotencyKey ?? createIdempotencyKey("vip:claim-daily");
+  const response = await apiRequest<unknown>(API_ENDPOINTS.vip.claimDaily, {
+    method: "POST",
+    body: {
+      idempotency_key: idempotencyKey,
+    },
+    headers: {
+      "X-Idempotency-Key": idempotencyKey,
+    },
+  });
+
+  return normalizeClaimVipDailyBenefitResponse(response);
+}
+
 export function normalizeVipStatus(response: unknown): VipStatus {
   const payload = isRecord(response) ? response : {};
+  const today = normalizeVipTodayStatus(payload.today);
 
   return {
     isVip:
@@ -55,12 +77,53 @@ export function normalizeVipStatus(response: unknown): VipStatus {
     todayClaimed:
       readBoolean(payload.todayClaimed) ??
       readBoolean(payload.today_claimed) ??
+      today?.claimed ??
       false,
+    today,
     plan: normalizeVipPlan(
       payload.plan ?? payload.current_plan ?? payload.active_plan,
     ),
     serverTime:
       readString(payload.serverTime) ?? readString(payload.server_time),
+  };
+}
+
+export function normalizeClaimVipDailyBenefitResponse(
+  response: unknown,
+): ClaimVipDailyBenefitResponse {
+  const payload = isRecord(response) ? response : {};
+  const freeBoxCount =
+    readNumber(payload.freeBoxCount) ?? readNumber(payload.free_box_count) ?? 0;
+  const freeBoxUsedCount =
+    readNumber(payload.freeBoxUsedCount) ??
+    readNumber(payload.free_box_used_count) ??
+    0;
+  const remainingFreeBoxCount =
+    readNumber(payload.remainingFreeBoxCount) ??
+    readNumber(payload.remaining_free_box_count) ??
+    Math.max(freeBoxCount - freeBoxUsedCount, 0);
+
+  return {
+    claimId: readString(payload.claimId) ?? readString(payload.claim_id) ?? "",
+    subscriptionId:
+      readString(payload.subscriptionId) ?? readString(payload.subscription_id),
+    claimDate: readString(payload.claimDate) ?? readString(payload.claim_date),
+    fgemsAmount:
+      readNumber(payload.fgemsAmount) ?? readNumber(payload.fgems_amount) ?? 0,
+    fgemsLedgerId:
+      readString(payload.fgemsLedgerId) ?? readString(payload.fgems_ledger_id),
+    freeBoxCount,
+    freeBoxUsedCount,
+    remainingFreeBoxCount,
+    freeBoxAvailable:
+      readBoolean(payload.freeBoxAvailable) ??
+      readBoolean(payload.free_box_available) ??
+      remainingFreeBoxCount > 0,
+    alreadyClaimed:
+      readBoolean(payload.alreadyClaimed) ??
+      readBoolean(payload.already_claimed) ??
+      false,
+    idempotent: readBoolean(payload.idempotent) ?? false,
   };
 }
 
@@ -146,6 +209,41 @@ function normalizeVipPlan(value: unknown): VipPlan | null {
       0,
     feeRebateBps:
       readNumber(value.feeRebateBps) ?? readNumber(value.fee_rebate_bps) ?? 0,
+  };
+}
+
+function normalizeVipTodayStatus(value: unknown): VipTodayStatus | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const freeBoxCount =
+    readNumber(value.freeBoxCount) ?? readNumber(value.free_box_count) ?? 0;
+  const freeBoxUsedCount =
+    readNumber(value.freeBoxUsedCount) ??
+    readNumber(value.free_box_used_count) ??
+    0;
+  const remainingFreeBoxCount =
+    readNumber(value.remainingFreeBoxCount) ??
+    readNumber(value.remaining_free_box_count) ??
+    Math.max(freeBoxCount - freeBoxUsedCount, 0);
+
+  return {
+    businessDateUtc:
+      readString(value.businessDateUtc) ?? readString(value.business_date_utc),
+    claimId: readString(value.claimId) ?? readString(value.claim_id),
+    claimed: readBoolean(value.claimed) ?? false,
+    canClaim:
+      readBoolean(value.canClaim) ?? readBoolean(value.can_claim) ?? false,
+    fgemsAmount:
+      readNumber(value.fgemsAmount) ?? readNumber(value.fgems_amount) ?? 0,
+    freeBoxCount,
+    freeBoxUsedCount,
+    remainingFreeBoxCount,
+    freeBoxAvailable:
+      readBoolean(value.freeBoxAvailable) ??
+      readBoolean(value.free_box_available) ??
+      remainingFreeBoxCount > 0,
   };
 }
 

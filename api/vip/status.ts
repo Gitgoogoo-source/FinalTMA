@@ -68,7 +68,7 @@ export function normalizeVipStatusPayload(payload: unknown): VipStatusResponse {
     });
   }
 
-  const today = isRecord(payload.today) ? payload.today : null;
+  const today = normalizeVipToday(payload.today);
   const plan = isRecord(payload.plan) ? normalizeVipPlan(payload.plan) : null;
   const isVip = readBoolean(payload.is_vip ?? payload.isVip) ?? false;
   const subscriptionId = readString(
@@ -106,6 +106,53 @@ export function normalizeVipStatusPayload(payload: unknown): VipStatusResponse {
     plan,
     server_time: serverTime,
     serverTime,
+  };
+}
+
+function normalizeVipToday(value: unknown): Record<string, unknown> | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const businessDateUtc = readString(
+    value.business_date_utc ?? value.businessDateUtc,
+  );
+  const claimId = readString(value.claim_id ?? value.claimId);
+  const claimed = readBoolean(value.claimed) ?? false;
+  const canClaim = readBoolean(value.can_claim ?? value.canClaim) ?? false;
+  const fgemsAmount = readNumber(value.fgems_amount ?? value.fgemsAmount) ?? 0;
+  const freeBoxCount =
+    readNumber(value.free_box_count ?? value.freeBoxCount) ?? 0;
+  const freeBoxUsedCount =
+    readNumber(value.free_box_used_count ?? value.freeBoxUsedCount) ?? 0;
+  const remainingFreeBoxCount = Math.max(
+    readNumber(value.remaining_free_box_count ?? value.remainingFreeBoxCount) ??
+      freeBoxCount - freeBoxUsedCount,
+    0,
+  );
+  const freeBoxAvailable =
+    readBoolean(value.free_box_available ?? value.freeBoxAvailable) ??
+    remainingFreeBoxCount > 0;
+
+  return {
+    ...value,
+    business_date_utc: businessDateUtc,
+    businessDateUtc,
+    claim_id: claimId,
+    claimId,
+    claimed,
+    can_claim: canClaim,
+    canClaim,
+    fgems_amount: fgemsAmount,
+    fgemsAmount,
+    free_box_count: freeBoxCount,
+    freeBoxCount,
+    free_box_used_count: freeBoxUsedCount,
+    freeBoxUsedCount,
+    remaining_free_box_count: remainingFreeBoxCount,
+    remainingFreeBoxCount,
+    free_box_available: freeBoxAvailable,
+    freeBoxAvailable,
   };
 }
 

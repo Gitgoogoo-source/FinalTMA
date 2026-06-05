@@ -81,7 +81,9 @@ export type TelegramEventName =
   | "contentSafeAreaChanged"
   | "fullscreenChanged"
   | "fullscreenFailed"
-  | "backButtonClicked";
+  | "backButtonClicked"
+  | "shareMessageSent"
+  | "shareMessageFailed";
 
 export type TelegramEventHandler = (eventData?: unknown) => void;
 
@@ -120,6 +122,7 @@ export type TelegramWebApp = {
     callback?: (status: TelegramInvoiceStatus | string) => void,
   ) => void;
   openTelegramLink?: (url: string) => void;
+  shareMessage?: (msgId: string, callback?: (sent: boolean) => void) => void;
   ready?: () => void;
   expand?: () => void;
   enableVerticalSwipes?: () => void;

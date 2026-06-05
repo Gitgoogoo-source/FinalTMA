@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type {
   ApiErrorResponse,
@@ -14,6 +14,7 @@ import commissionHistoryHandler from "../../api/tasks/commission-history";
 import inviteStatsHandler from "../../api/tasks/invite-stats";
 import listHandler from "../../api/tasks/list";
 import overviewHandler from "../../api/tasks/overview";
+import preparedShareMessageHandler from "../../api/tasks/prepared-share-message";
 import referralLinkHandler from "../../api/tasks/referral-link";
 import referralRecordsHandler from "../../api/tasks/referral-records";
 import rewardHistoryHandler from "../../api/tasks/reward-history";
@@ -82,8 +83,14 @@ describe("tasks API", () => {
   beforeEach(() => {
     process.env.NODE_ENV = "test";
     process.env.TELEGRAM_BOT_USERNAME = "test_bot";
+    process.env.TELEGRAM_BOT_TOKEN = "test_bot_token";
     delete process.env.TELEGRAM_MINI_APP_SHORT_NAME;
     delete process.env.TELEGRAM_SHARE_TEXT;
+    delete process.env.TELEGRAM_SHARE_TITLE;
+    delete process.env.TELEGRAM_SHARE_DESCRIPTION;
+    delete process.env.TELEGRAM_SHARE_IMAGE_URL;
+    delete process.env.TELEGRAM_SHARE_THUMBNAIL_URL;
+    delete process.env.TELEGRAM_SHARE_BUTTON_TEXT;
     callRpcRawMock.mockReset();
     getSupabaseAdminMock.mockReset();
     requireSessionMock.mockReset();
@@ -95,6 +102,10 @@ describe("tasks API", () => {
       expiresAt: "2026-05-28T00:00:00.000Z",
       sessionTokenHash: "session-hash",
     });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it("overview calls get_user_task_center with the verified session user", async () => {
@@ -833,6 +844,135 @@ describe("tasks API", () => {
 
     expect(result.statusCode).toBe(500);
     expect(result.body.error.code).toBe("REFERRAL_INVITE_CODE_MISSING");
+  });
+
+  it("prepared-share-message creates a Telegram prepared message for the session user", async () => {
+    mockInviteCodeQuery("INVITE7001");
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          ok: true,
+          result: {
+            id: "prepared_invite_7001",
+            expiration_date: 1790000000,
+          },
+        }),
+        {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await invokeApiHandler<ApiSuccessResponse>(
+      preparedShareMessageHandler,
+      {
+        method: "POST",
+        body: {
+          scene: "TASK_PAGE",
+          source: "task-center",
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(200);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "https://api.telegram.org/bottest_bot_token/savePreparedInlineMessage",
+    );
+
+    const telegramRequest = JSON.parse(
+      String(fetchMock.mock.calls[0]?.[1]?.body),
+    ) as Record<string, unknown>;
+    expect(telegramRequest).toMatchObject({
+      user_id: 7001,
+      allow_user_chats: true,
+      allow_group_chats: true,
+      allow_channel_chats: true,
+    });
+    expect(telegramRequest).not.toHaveProperty("telegram_user_id");
+    expect(telegramRequest.result).toMatchObject({
+      type: "article",
+      id: "invite_share",
+      title: "邀请好友开盲盒",
+      url: "https://t.me/test_bot?start=INVITE7001",
+      hide_url: true,
+      input_message_content: {
+        parse_mode: "HTML",
+        link_preview_options: {
+          url: "https://t.me/test_bot?start=INVITE7001",
+          prefer_large_media: true,
+        },
+      },
+      reply_markup: {
+        inline_keyboard: [
+          [
+            {
+              text: "打开游戏",
+              url: "https://t.me/test_bot?start=INVITE7001",
+            },
+          ],
+        ],
+      },
+    });
+    expect(result.body.data).toMatchObject({
+      prepared_message_id: "prepared_invite_7001",
+      expires_at: "2026-09-21T14:13:20.000Z",
+      referral_code: "INVITE7001",
+      invite_url: "https://t.me/test_bot?start=INVITE7001",
+    });
+  });
+
+  it("prepared-share-message rejects forged user fields before reading invite_code", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      preparedShareMessageHandler,
+      {
+        method: "POST",
+        body: {
+          scene: "TASK_PAGE",
+          telegram_user_id: 999999,
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(400);
+    expect(result.body.error.code).toBe("VALIDATION_ERROR");
+    expect(getSupabaseAdminMock).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("prepared-share-message fails closed when the session lacks Telegram user id", async () => {
+    requireSessionMock.mockResolvedValueOnce({
+      sessionId: "session-tasks-api-test",
+      userId: USER_ID,
+      telegramUserId: null,
+      userStatus: "active",
+      expiresAt: "2026-05-28T00:00:00.000Z",
+      sessionTokenHash: "session-hash",
+    });
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      preparedShareMessageHandler,
+      {
+        method: "POST",
+        body: {
+          scene: "TASK_PAGE",
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(409);
+    expect(result.body.error.code).toBe("TELEGRAM_USER_ID_MISSING");
+    expect(getSupabaseAdminMock).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("bind-referral calls referral_bind_inviter for the current session user only", async () => {

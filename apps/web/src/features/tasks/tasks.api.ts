@@ -15,6 +15,8 @@ import type {
   InviteShareInput,
   InviteShareResult,
   InviteStats,
+  PreparedShareMessage,
+  PreparedShareMessageInput,
   ReferralLink,
   ReferralLinkInput,
   ReferralRecord,
@@ -95,6 +97,23 @@ export async function createReferralLink(
   return normalizeReferralLink(response);
 }
 
+export async function createPreparedShareMessage(
+  input: PreparedShareMessageInput = {},
+): Promise<PreparedShareMessage> {
+  const response = await apiRequest<unknown>(
+    API_ENDPOINTS.tasks.preparedShareMessage,
+    {
+      method: "POST",
+      body: compactRecord({
+        scene: input.scene ?? "TASK_PAGE",
+        source: input.source,
+      }),
+    },
+  );
+
+  return normalizePreparedShareMessage(response);
+}
+
 export async function recordInviteShare(
   input: InviteShareInput,
 ): Promise<InviteShareResult> {
@@ -106,6 +125,7 @@ export async function recordInviteShare(
       scene: input.scene,
       referral_code: input.referralCode,
       campaign_id: input.campaignId,
+      metadata: input.metadata,
       idempotency_key: idempotencyKey,
     }),
     headers: {
@@ -684,6 +704,29 @@ function normalizeReferralLink(response: unknown): ReferralLink {
     shareText,
     scene: readString(payload.scene),
     source: readString(payload.source),
+  };
+}
+
+function normalizePreparedShareMessage(response: unknown): PreparedShareMessage {
+  const payload = assertRecord(
+    response,
+    "Invalid prepared share message response.",
+  );
+  const referralLink = normalizeReferralLink(payload);
+  const preparedMessageId =
+    readString(payload.prepared_message_id) ??
+    readString(payload.preparedMessageId);
+  const expiresAt =
+    readIsoString(payload.expires_at) ?? readIsoString(payload.expiresAt);
+
+  if (!preparedMessageId || !expiresAt) {
+    throw new Error("Invalid prepared share message response.");
+  }
+
+  return {
+    ...referralLink,
+    preparedMessageId,
+    expiresAt,
   };
 }
 

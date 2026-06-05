@@ -427,6 +427,16 @@ export const CreateBoxOpenOrderRequestSchema = z.discriminatedUnion(
   ],
 );
 
+export const OpenVipDailyBoxRequestSchema = z
+  .object({
+    idempotencyKey: BoxIdempotencyKeySchema,
+  })
+  .strict();
+
+export type OpenVipDailyBoxRequest = z.infer<
+  typeof OpenVipDailyBoxRequestSchema
+>;
+
 export const CreateBoxOpenOrderResponseSchema = z
   .object({
     orderId: BoxUuidSchema,

@@ -32,14 +32,21 @@ describe("packages/api-client tasks client", () => {
       periodKey: "2026-05-27",
     });
     await client.dailyCheckIn({ campaignId: CAMPAIGN_ID });
+    await client.createPreparedShareMessage({
+      scene: "TASK_PAGE",
+      source: "task_center",
+    });
     await client.recordInviteShare({
       scene: "TASK_PAGE",
       referralCode: "TASKUNIT",
       campaignId: CAMPAIGN_ID,
+      metadata: {
+        share_method: "prepared",
+      },
     });
     await client.claimCommission({ commissionIds: [COMMISSION_ID] });
 
-    expect(calls).toHaveLength(4);
+    expect(calls).toHaveLength(5);
     expect(calls[0]).toMatchObject({
       path: TASK_API_ENDPOINTS.claim,
       options: {
@@ -68,6 +75,16 @@ describe("packages/api-client tasks client", () => {
       },
     });
     expect(calls[2]).toMatchObject({
+      path: TASK_API_ENDPOINTS.preparedShareMessage,
+      options: {
+        method: "POST",
+        body: {
+          scene: "TASK_PAGE",
+          source: "task_center",
+        },
+      },
+    });
+    expect(calls[3]).toMatchObject({
       path: TASK_API_ENDPOINTS.shareEvent,
       options: {
         method: "POST",
@@ -75,6 +92,9 @@ describe("packages/api-client tasks client", () => {
           scene: "TASK_PAGE",
           referral_code: "TASKUNIT",
           campaign_id: CAMPAIGN_ID,
+          metadata: {
+            share_method: "prepared",
+          },
           idempotency_key: "task:share:unit-key",
         },
         headers: {
@@ -82,7 +102,7 @@ describe("packages/api-client tasks client", () => {
         },
       },
     });
-    expect(calls[3]).toMatchObject({
+    expect(calls[4]).toMatchObject({
       path: TASK_API_ENDPOINTS.claimCommission,
       options: {
         method: "POST",
@@ -252,6 +272,15 @@ function responseForPath(path: string): unknown {
         event_id: "44444444-4444-4444-8444-444444444444",
         share_type: "copy_link",
         idempotent: false,
+      };
+    case TASK_API_ENDPOINTS.preparedShareMessage:
+      return {
+        prepared_message_id: "prepared_task_unit",
+        expires_at: "2026-05-27T00:10:00.000Z",
+        referral_code: "TASKUNIT",
+        start_payload: "TASKUNIT",
+        invite_url: "https://t.me/test_bot/app?startapp=TASKUNIT",
+        share_text: "来开盒。",
       };
     case TASK_API_ENDPOINTS.claimCommission:
       return {
