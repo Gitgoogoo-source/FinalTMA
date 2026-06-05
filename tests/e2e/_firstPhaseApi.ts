@@ -172,6 +172,26 @@ export async function mockFirstPhaseApi(
     }),
   );
 
+  await page.route("**/api/vip/status", (route) =>
+    fulfillOk(route, {
+      is_vip: false,
+      subscription_id: null,
+      current_period_end: null,
+      today_claimed: false,
+      plan: {
+        id: "abababab-abab-4aba-8aba-abababababab",
+        code: "vip_monthly",
+        display_name: "VIP 月卡",
+        price_xtr: 199,
+        duration_days: 30,
+        daily_fgems: 100,
+        daily_free_box_count: 1,
+        fee_rebate_bps: 2000,
+      },
+      server_time: "2026-05-21T00:00:00.000Z",
+    }),
+  );
+
   await page.route("**/api/wallet/status", (route) =>
     fulfillOk(route, walletStatusPayload(walletStatus, mintQueueStatus)),
   );

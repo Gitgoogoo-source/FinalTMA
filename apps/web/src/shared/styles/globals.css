@@ -3795,6 +3795,19 @@ a {
   cursor: pointer;
 }
 
+button.market-banner {
+  width: 100%;
+  border: 1px solid rgb(54 67 75 / 15%);
+  font: inherit;
+  text-align: left;
+  appearance: none;
+}
+
+button.market-banner:disabled {
+  cursor: wait;
+  opacity: 0.78;
+}
+
 .market-banner__image {
   position: absolute;
   inset: 0;
@@ -3855,6 +3868,27 @@ a {
   border-radius: 999px;
   color: #36434b;
   background: #1ce204;
+}
+
+.vip-subscription-banner {
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.vip-subscription-banner:not(:disabled):active {
+  transform: translateY(1px);
+}
+
+.vip-subscription-banner__spinner {
+  animation: vip-subscription-spin 780ms linear infinite;
+}
+
+@keyframes vip-subscription-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .market-filters {
@@ -4916,6 +4950,7 @@ a {
 
 .market-featured-listing__actions button:focus-visible,
 .market-featured-listing__media:focus-visible,
+.vip-subscription-banner:focus-visible,
 .market-filter input:focus-visible,
 .market-filter select:focus-visible,
 .market-filters__reset:focus-visible,

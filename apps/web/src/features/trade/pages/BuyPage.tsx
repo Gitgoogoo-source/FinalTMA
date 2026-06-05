@@ -1,17 +1,16 @@
 import { useCallback, useState } from "react";
-import {
-  Coins,
-  Eye,
-  PackageCheck,
-  ShoppingBag,
-  Sparkles,
-  Store,
-} from "lucide-react";
+import { Store } from "lucide-react";
 
 import { getApiErrorMessage } from "@/api/errors";
 import { useFeedback } from "@/app/providers/FeedbackProvider";
 import { useMyAssets } from "@/features/assets/hooks/useMyAssets";
-import { ActivityBanner } from "@/features/banners/components/ActivityBanner";
+import { VipSubscriptionBanner } from "@/features/vip/components/VipSubscriptionBanner";
+import { useCreateVipOrder } from "@/features/vip/hooks/useCreateVipOrder";
+import {
+  useVipStarsPayment,
+  type VipStarsInvoiceCallbackResult,
+} from "@/features/vip/hooks/useVipStarsPayment";
+import { useVipStatus } from "@/features/vip/hooks/useVipStatus";
 
 import { BuyConfirmDialog } from "../components/BuyConfirmDialog";
 import { ListingDetailSheet } from "../components/ListingDetailSheet";
@@ -24,13 +23,7 @@ import { useBuyListing } from "../hooks/useBuyListing";
 import { useMarketFilters } from "../hooks/useMarketFilters";
 import { useMarketListings } from "../hooks/useMarketListings";
 import type { MarketListingCard, MarketListingDetail } from "../trade.types";
-import {
-  formatKcoinWithUnit,
-  getItemTypeLabel,
-  getListingStatusLabel,
-  getMarketBuyDisabledReason,
-  getMarketRarityTone,
-} from "../trade.utils";
+import { formatKcoinWithUnit } from "../trade.utils";
 
 export function BuyPage() {
   const { pushToast } = useFeedback();
@@ -39,6 +32,9 @@ export function BuyPage() {
     useMarketFilters();
   const { isError, isLoading, listings, refetch } = useMarketListings(query);
   const buyListing = useBuyListing();
+  const vipStatusQuery = useVipStatus();
+  const createVipOrder = useCreateVipOrder();
+  const openVipStarsInvoice = useVipStarsPayment();
   const [detailListingId, setDetailListingId] = useState<string | null>(null);
   const [detailPreviewListing, setDetailPreviewListing] =
     useState<MarketListingCard | null>(null);
@@ -47,7 +43,6 @@ export function BuyPage() {
   >(null);
   const kcoinAvailable = assets.kcoin.available;
   const visibleListings = listings.filter(isVisibleBuyListing);
-  const featuredListing = visibleListings[0] ?? null;
 
   const handleOpenDetail = useCallback((listing: MarketListingCard) => {
     setDetailPreviewListing(listing);
@@ -103,6 +98,93 @@ export function BuyPage() {
     );
   }, [buyListing, confirmListing, pushToast]);
 
+  const handleVipInvoiceStatus = useCallback(
+    (result: VipStarsInvoiceCallbackResult) => {
+      if (result.status === "paid") {
+        void vipStatusQuery.refetch();
+        pushToast({
+          type: "info",
+          title: "支付已返回",
+          message: "正在等待 Telegram webhook 和服务端开通月卡。",
+        });
+        return;
+      }
+
+      if (result.status === "cancelled" || result.status === "failed") {
+        pushToast({
+          type: result.status === "failed" ? "error" : "info",
+          title: result.status === "failed" ? "支付未完成" : "支付窗口已关闭",
+          message: "服务端尚未确认支付成功，可重新点击月卡入口购买。",
+        });
+      }
+    },
+    [pushToast, vipStatusQuery],
+  );
+
+  const handleSubscribeVip = useCallback(async () => {
+    if (createVipOrder.isPending) {
+      return;
+    }
+
+    try {
+      const status = vipStatusQuery.data?.plan
+        ? vipStatusQuery.data
+        : (await vipStatusQuery.refetch()).data;
+      const plan = status?.plan ?? null;
+
+      if (!plan) {
+        pushToast({
+          type: "error",
+          title: "暂时不能购买月卡",
+          message: "服务端还没有返回可购买的月卡套餐，请稍后再试。",
+        });
+        return;
+      }
+
+      if (plan.priceXtr <= 0) {
+        pushToast({
+          type: "error",
+          title: "暂时不能购买月卡",
+          message: "服务端返回的月卡价格无效，请稍后再试。",
+        });
+        return;
+      }
+
+      const order = await createVipOrder.mutateAsync({
+        planId: plan.id,
+        expectedPriceXtr: plan.priceXtr,
+      });
+      const openAttempt = openVipStarsInvoice(order, handleVipInvoiceStatus);
+
+      if (!openAttempt.ok) {
+        pushToast({
+          type: "error",
+          title: "支付未打开，可重试支付",
+          message: openAttempt.message,
+        });
+        return;
+      }
+
+      pushToast({
+        type: "info",
+        title: "月卡订单已创建",
+        message: `请在 Telegram 支付窗口完成 ${order.xtrAmount} Stars 支付。`,
+      });
+    } catch (error) {
+      pushToast({
+        type: "error",
+        title: "月卡订单创建失败",
+        message: getApiErrorMessage(error),
+      });
+    }
+  }, [
+    createVipOrder,
+    handleVipInvoiceStatus,
+    openVipStarsInvoice,
+    pushToast,
+    vipStatusQuery,
+  ]);
+
   return (
     <section
       aria-labelledby="trade-tab-buy"
@@ -113,20 +195,14 @@ export function BuyPage() {
       tabIndex={0}
     >
       <div className="buy-market">
-        {featuredListing ? (
-          <FeaturedMarketListing
-            balanceAvailable={kcoinAvailable}
-            listing={featuredListing}
-            onBuy={handleOpenConfirm}
-            onOpenDetail={handleOpenDetail}
-          />
-        ) : (
-          <ActivityBanner
-            fallbackDescription="用 K-coin 购买出售中的藏品，市场状态以服务端返回为准。"
-            fallbackTitle="精选藏品交易"
-            label="市场活动"
-          />
-        )}
+        <VipSubscriptionBanner
+          currentPeriodEnd={vipStatusQuery.data?.currentPeriodEnd ?? null}
+          isLoading={vipStatusQuery.isLoading}
+          isPending={createVipOrder.isPending}
+          isVip={vipStatusQuery.data?.isVip ?? false}
+          onSubscribe={handleSubscribeVip}
+          plan={vipStatusQuery.data?.plan ?? null}
+        />
         <MarketActivityStrip listings={visibleListings} />
       </div>
       <MarketFilters
@@ -170,121 +246,6 @@ export function BuyPage() {
   );
 }
 
-type FeaturedMarketListingProps = {
-  listing: MarketListingCard;
-  balanceAvailable: string;
-  onBuy: (listing: MarketListingCard) => void;
-  onOpenDetail: (listing: MarketListingCard) => void;
-};
-
-function FeaturedMarketListing({
-  balanceAvailable,
-  listing,
-  onBuy,
-  onOpenDetail,
-}: FeaturedMarketListingProps) {
-  const disabledReason = getMarketBuyDisabledReason(listing, balanceAvailable);
-  const disabled = Boolean(disabledReason);
-
-  const handleBuy = () => {
-    if (!disabled) {
-      onBuy(listing);
-    }
-  };
-
-  return (
-    <article
-      className={`market-featured-listing market-featured-listing--${getMarketRarityTone(
-        listing.rarityCode,
-      )}`}
-    >
-      <div className="market-featured-listing__content">
-        <span className="market-featured-listing__eyebrow">
-          <Sparkles aria-hidden="true" size={15} strokeWidth={2.4} />
-          精选挂单
-        </span>
-        <h2>{listing.itemName}</h2>
-        <div className="market-featured-listing__badges">
-          <span>{listing.rarityLabel}</span>
-          <span>{formatSerialNo(listing.serialNo)}</span>
-        </div>
-        <dl className="market-featured-listing__metrics">
-          <FeaturedMetric
-            icon="coins"
-            label="挂单价"
-            value={formatKcoinWithUnit(listing.unitPriceKcoin)}
-          />
-          <FeaturedMetric
-            icon="stock"
-            label="剩余"
-            value={`${listing.remainingCount} 件`}
-          />
-          <FeaturedMetric
-            label="类型"
-            value={getItemTypeLabel(listing.typeCode)}
-          />
-          <FeaturedMetric
-            label="状态"
-            value={getListingStatusLabel(listing.status)}
-          />
-        </dl>
-        <div className="market-featured-listing__actions">
-          <button onClick={() => onOpenDetail(listing)} type="button">
-            <Eye aria-hidden="true" size={16} strokeWidth={2.4} />
-            详情
-          </button>
-          <button
-            disabled={disabled}
-            onClick={handleBuy}
-            title={disabledReason ?? undefined}
-            type="button"
-          >
-            <ShoppingBag aria-hidden="true" size={16} strokeWidth={2.5} />
-            {getFeaturedBuyLabel(listing, disabledReason)}
-          </button>
-        </div>
-      </div>
-      <button
-        aria-label={`查看 ${listing.itemName} 详情`}
-        className="market-featured-listing__media"
-        onClick={() => onOpenDetail(listing)}
-        type="button"
-      >
-        {listing.imageUrl ? (
-          <img src={listing.imageUrl} alt="" />
-        ) : (
-          <span aria-hidden="true">{listing.itemName.slice(0, 1)}</span>
-        )}
-      </button>
-    </article>
-  );
-}
-
-function FeaturedMetric({
-  icon,
-  label,
-  value,
-}: {
-  icon?: "coins" | "stock";
-  label: string;
-  value: string;
-}) {
-  return (
-    <div>
-      <dt>
-        {icon === "coins" ? (
-          <Coins aria-hidden="true" size={13} strokeWidth={2.4} />
-        ) : null}
-        {icon === "stock" ? (
-          <PackageCheck aria-hidden="true" size={13} strokeWidth={2.4} />
-        ) : null}
-        {label}
-      </dt>
-      <dd>{value}</dd>
-    </div>
-  );
-}
-
 function MarketActivityStrip({ listings }: { listings: MarketListingCard[] }) {
   const listing = listings[0];
 
@@ -314,19 +275,4 @@ function MarketActivityStrip({ listings }: { listings: MarketListingCard[] }) {
 
 function formatSerialNo(serialNo: number | null): string {
   return serialNo ? `#${serialNo}` : "暂无编号";
-}
-
-function getFeaturedBuyLabel(
-  listing: MarketListingCard,
-  disabledReason: string | null,
-): string {
-  if (listing.isOwnListing) {
-    return "自己的挂单";
-  }
-
-  if (disabledReason === "K-coin 余额不足") {
-    return "余额不足";
-  }
-
-  return "购买";
 }

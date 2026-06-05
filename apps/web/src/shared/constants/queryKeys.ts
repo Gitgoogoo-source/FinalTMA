@@ -11,6 +11,11 @@ export const queryKeys = {
       ["banners", placement ?? "none"] as const,
   },
   paymentSupport: ["payment-support"] as const,
+  vip: {
+    root: ["vip"] as const,
+    status: (userId: string | null | undefined) =>
+      ["vip", "status", userId ?? "anonymous"] as const,
+  },
   box: {
     root: ["box"] as const,
     list: ["box", "list"] as const,
