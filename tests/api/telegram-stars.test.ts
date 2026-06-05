@@ -23,17 +23,10 @@ const INVOICE_LINK = "https://t.me/invoice/test-open-order";
 const EXPIRES_AT = "2026-05-28T00:15:00.000Z";
 
 type MockState = {
-  upserts: Array<{
+  rpcCalls: Array<{
     schema: string;
-    table: string;
-    values: Record<string, unknown>;
-  }>;
-  updates: Array<{
-    schema: string;
-    table: string;
-    values: Record<string, unknown>;
-    column: string;
-    value: string;
+    name: string;
+    args: Record<string, unknown>;
   }>;
 };
 
@@ -474,7 +467,8 @@ describe("telegramStars payment helpers", () => {
                   star_payment_id: "77777777-7777-4777-8777-777777777778",
                   draw_order_id: ORDER_ID,
                   invoice_payload: PAYLOAD,
-                  telegram_payment_charge_id: "tg-charge-fulfillment-failed-001",
+                  telegram_payment_charge_id:
+                    "tg-charge-fulfillment-failed-001",
                   reason_code: null,
                   error_message: null,
                   payment_order_status: "paid",
@@ -620,37 +614,27 @@ describe("telegramStars payment helpers", () => {
       reused: false,
     });
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(state.upserts[0]?.values).toMatchObject({
-      star_order_id: STAR_ORDER_ID,
-      invoice_link: INVOICE_LINK,
-      payload: PAYLOAD,
-      status: "created",
-      bot_api_method: "createInvoiceLink",
+    expect(state.rpcCalls.map((call) => call.name)).toEqual([
+      "payment_get_star_order_for_invoice",
+      "payment_get_star_invoice_by_payload",
+      "payment_upsert_star_invoice_success",
+      "payment_mark_order_invoice_created",
+    ]);
+    expect(state.rpcCalls[2]?.args).toMatchObject({
+      p_star_order_id: STAR_ORDER_ID,
+      p_invoice_link: INVOICE_LINK,
+      p_payload: PAYLOAD,
+      p_open_mode: "web_app_open_invoice",
+      p_raw_request: expect.objectContaining({
+        provider_token_configured: false,
+        currency: "XTR",
+      }),
     });
-    expect(state.upserts[0]?.values.raw_request).toMatchObject({
-      provider_token_configured: false,
-      currency: "XTR",
+    expect(state.rpcCalls[3]?.args).toMatchObject({
+      p_star_order_id: STAR_ORDER_ID,
+      p_draw_order_id: ORDER_ID,
+      p_invoice_payload: PAYLOAD,
     });
-    expect(state.updates).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          schema: "payments",
-          table: "star_orders",
-          values: expect.objectContaining({
-            error_message: null,
-          }),
-        }),
-        expect.objectContaining({
-          schema: "gacha",
-          table: "draw_orders",
-          values: expect.objectContaining({
-            status: "invoice_created",
-            payment_status: "pending",
-            telegram_invoice_payload: PAYLOAD,
-          }),
-        }),
-      ]),
-    );
   });
 
   it("reuses an existing invoice for an idempotent repeat without calling Telegram again", async () => {
@@ -702,8 +686,7 @@ function createSupabaseClientMock(
   state: MockState;
 } {
   const state: MockState = {
-    upserts: [],
-    updates: [],
+    rpcCalls: [],
   };
   const starOrder = {
     id: STAR_ORDER_ID,
@@ -721,82 +704,72 @@ function createSupabaseClientMock(
   const client = {
     schema(schema: string) {
       return {
-        from(table: string) {
-          return {
-            select(_columns: string) {
-              return {
-                eq(_column: string, _value: string) {
-                  return {
-                    async maybeSingle() {
-                      if (schema === "payments" && table === "star_orders") {
-                        return {
-                          data: starOrder,
-                          error: null,
-                        };
-                      }
+        rpc(name: string, args: Record<string, unknown>) {
+          state.rpcCalls.push({
+            schema,
+            name,
+            args,
+          });
 
-                      if (schema === "payments" && table === "star_invoices") {
-                        return {
-                          data: options.existingInvoice ?? null,
-                          error: null,
-                        };
-                      }
+          if (name === "payment_get_star_order_for_invoice") {
+            return Promise.resolve({
+              data: starOrder,
+              error: null,
+              count: null,
+              status: 200,
+              statusText: "OK",
+            });
+          }
 
-                      return {
-                        data: null,
-                        error: null,
-                      };
-                    },
-                  };
-                },
-              };
-            },
-            update(values: Record<string, unknown>) {
-              return {
-                async eq(column: string, value: string) {
-                  state.updates.push({
-                    schema,
-                    table,
-                    values,
-                    column,
-                    value,
-                  });
+          if (name === "payment_get_star_invoice_by_payload") {
+            return Promise.resolve({
+              data: options.existingInvoice ?? null,
+              error: null,
+              count: null,
+              status: 200,
+              statusText: "OK",
+            });
+          }
 
-                  return {
-                    error: null,
-                  };
-                },
-              };
-            },
-            upsert(values: Record<string, unknown>) {
-              state.upserts.push({
-                schema,
-                table,
-                values,
-              });
+          if (name === "payment_upsert_star_invoice_success") {
+            return Promise.resolve({
+              data: {
+                star_order_id: args.p_star_order_id,
+                invoice_link: args.p_invoice_link,
+                payload: args.p_payload,
+                status: "created",
+                open_mode: args.p_open_mode,
+                bot_api_method: "createInvoiceLink",
+                expires_at: args.p_expires_at ?? null,
+              },
+              error: null,
+              count: null,
+              status: 200,
+              statusText: "OK",
+            });
+          }
 
-              return {
-                select(_columns: string) {
-                  return {
-                    async single() {
-                      return {
-                        data: {
-                          star_order_id: values.star_order_id,
-                          invoice_link: values.invoice_link ?? null,
-                          payload: values.payload,
-                          status: values.status,
-                          open_mode: values.open_mode,
-                          bot_api_method: values.bot_api_method,
-                          expires_at: values.expires_at ?? null,
-                        },
-                        error: null,
-                      };
-                    },
-                  };
-                },
-              };
-            },
-          };
+          if (name === "payment_mark_order_invoice_created") {
+            return Promise.resolve({
+              data: {
+                star_order_id: args.p_star_order_id,
+                draw_order_id: args.p_draw_order_id,
+                invoice_payload: args.p_invoice_payload,
+              },
+              error: null,
+              count: null,
+              status: 200,
+              statusText: "OK",
+            });
+          }
+
+          return Promise.resolve({
+            data: {},
+            error: null,
+            count: null,
+            status: 200,
+            statusText: "OK",
+          });
         },
       };
     },

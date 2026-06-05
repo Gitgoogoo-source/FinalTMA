@@ -18,7 +18,7 @@ import {
   withApiHandler,
 } from "../_shared/handler.js";
 import { parseJsonBody } from "../_shared/parseBody.js";
-import { getSupabaseAdmin, requireSession } from "../_shared/requireSession.js";
+import { requireSession } from "../_shared/requireSession.js";
 import { recordRiskEventSafely } from "../_shared/riskEvents.js";
 import { assertUserRiskAllowed } from "../_shared/riskGuards.js";
 import { validate } from "../_shared/validate.js";
@@ -45,6 +45,10 @@ type DevPaidRpcResult = {
   idempotent?: unknown;
   payment_mode?: unknown;
   payment_status?: unknown;
+};
+
+type GachaRecentOrderCountRpcResult = {
+  count?: unknown;
 };
 
 type CreateOpenOrderResponse = {
@@ -288,23 +292,35 @@ async function recordGachaHighFrequencyRiskIfNeeded(input: {
   const since = new Date(
     Date.now() - GACHA_HIGH_FREQUENCY_WINDOW_MS,
   ).toISOString();
-  const { count, error } = await getSupabaseAdmin()
-    .schema("gacha")
-    .from("draw_orders")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", input.userId)
-    .gte("created_at", since);
+  let recentOrderCount = 0;
 
-  if (error) {
+  try {
+    const result = await callRpcRaw<GachaRecentOrderCountRpcResult>(
+      "gacha_count_recent_draw_orders",
+      {
+        p_user_id: input.userId,
+        p_since: since,
+      },
+      {
+        schema: "api" as never,
+        context: {
+          requestId: input.requestId,
+          userId: input.userId,
+          orderId: input.orderId,
+          boxId: input.boxId,
+        },
+      },
+    );
+
+    recentOrderCount = numberOrZero(result?.count);
+  } catch (error) {
     console.error("[risk-event:gacha-frequency-count-failed]", {
       requestId: input.requestId,
       userId: input.userId,
-      error: error.message,
+      error: error instanceof Error ? error.message : String(error),
     });
     return;
   }
-
-  const recentOrderCount = count ?? 0;
 
   if (recentOrderCount < GACHA_HIGH_FREQUENCY_THRESHOLD) {
     return;

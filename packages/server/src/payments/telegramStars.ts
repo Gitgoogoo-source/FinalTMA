@@ -1,7 +1,4 @@
-import {
-  getSupabaseAdminClient,
-  type SupabaseAdminClient,
-} from "../db/supabaseAdmin.js";
+import type { SupabaseAdminClient } from "../db/supabaseAdmin.js";
 import { callRpcRaw } from "../db/rpc.js";
 import { isPaymentWebhookFulfillmentEnabled } from "./paymentGuards.js";
 
@@ -198,21 +195,6 @@ export type TelegramWebhookReceivedResult = {
 
 type FetchImpl = (input: string | URL, init?: RequestInit) => Promise<Response>;
 
-type DbError = {
-  message?: string | undefined;
-  code?: string | undefined;
-  details?: string | undefined;
-};
-
-type DbResponse<T> = {
-  data: T | null;
-  error: DbError | null;
-};
-
-type DbMutationResponse = {
-  error: DbError | null;
-};
-
 type StarOrderRow = {
   id: string;
   user_id: string;
@@ -234,41 +216,6 @@ type StarInvoiceRow = {
   open_mode: string;
   bot_api_method: string | null;
   expires_at: string | null;
-};
-
-type MaybeSingleQuery<T> = {
-  maybeSingle(): PromiseLike<DbResponse<T>>;
-};
-
-type SingleQuery<T> = {
-  single(): PromiseLike<DbResponse<T>>;
-};
-
-type SelectQuery<T> = {
-  eq(column: string, value: string): MaybeSingleQuery<T>;
-};
-
-type UpdateQuery = {
-  eq(column: string, value: string): PromiseLike<DbMutationResponse>;
-};
-
-type UpsertQuery<T> = {
-  select(columns: string): SingleQuery<T>;
-};
-
-type TableClient = {
-  select(columns: string): SelectQuery<Record<string, unknown>>;
-  update(values: Record<string, unknown>): UpdateQuery;
-  upsert(
-    values: Record<string, unknown>,
-    options?: { onConflict?: string | undefined },
-  ): UpsertQuery<Record<string, unknown>>;
-};
-
-type SchemaClient = {
-  schema(schema: string): {
-    from(table: string): TableClient;
-  };
 };
 
 type TelegramBotApiPayload = {
@@ -738,12 +685,18 @@ export async function processTelegramSuccessfulPaymentUpdate(
 export async function createTelegramStarsInvoice(
   input: CreateTelegramStarsInvoiceInput,
 ): Promise<TelegramStarsInvoiceResult> {
-  const db = getSchemaClient(input.client);
-  const starOrder = await fetchStarOrder(db, input.starOrderId);
+  const starOrder = await fetchStarOrder(input.starOrderId, {
+    client: input.client,
+    requestId: input.requestId,
+  });
 
   assertStarOrderMatchesInput(starOrder, input);
 
-  const existingInvoice = await fetchExistingInvoice(db, input.invoicePayload);
+  const existingInvoice = await fetchExistingInvoice(input.invoicePayload, {
+    client: input.client,
+    requestId: input.requestId,
+    starOrderId: input.starOrderId,
+  });
   const openMode = input.openMode ?? DEFAULT_OPEN_MODE;
 
   if (existingInvoice && existingInvoice.star_order_id !== input.starOrderId) {
@@ -761,10 +714,12 @@ export async function createTelegramStarsInvoice(
   }
 
   if (existingInvoice?.invoice_link && existingInvoice.status !== "failed") {
-    await markOrderInvoiceCreated(db, {
+    await markOrderInvoiceCreated({
       starOrderId: input.starOrderId,
       drawOrderId: input.drawOrderId,
       invoicePayload: input.invoicePayload,
+      client: input.client,
+      requestId: input.requestId,
     });
 
     return {
@@ -800,7 +755,7 @@ export async function createTelegramStarsInvoice(
     });
     invoiceLink = parseCreateInvoiceLinkResponse(rawResponse);
   } catch (error) {
-    await recordInvoiceFailure(db, {
+    await recordInvoiceFailure({
       starOrderId: input.starOrderId,
       drawOrderId: input.drawOrderId,
       payload: input.invoicePayload,
@@ -809,6 +764,8 @@ export async function createTelegramStarsInvoice(
       rawRequest: sanitizedRequest,
       rawResponse: getInvoiceFailureResponse(error),
       errorMessage: getPublicErrorMessage(error),
+      client: input.client,
+      requestId: input.requestId,
     });
 
     if (error instanceof TelegramStarsInvoiceError) {
@@ -830,7 +787,7 @@ export async function createTelegramStarsInvoice(
     );
   }
 
-  const invoice = await recordInvoiceSuccess(db, {
+  const invoice = await recordInvoiceSuccess({
     starOrderId: input.starOrderId,
     payload: input.invoicePayload,
     invoiceLink,
@@ -838,12 +795,16 @@ export async function createTelegramStarsInvoice(
     expiresAt: starOrder.expires_at,
     rawRequest: sanitizedRequest,
     rawResponse,
+    client: input.client,
+    requestId: input.requestId,
   });
 
-  await markOrderInvoiceCreated(db, {
+  await markOrderInvoiceCreated({
     starOrderId: input.starOrderId,
     drawOrderId: input.drawOrderId,
     invoicePayload: input.invoicePayload,
+    client: input.client,
+    requestId: input.requestId,
   });
 
   return {
@@ -933,49 +894,39 @@ export function parseCreateInvoiceLinkResponse(payload: unknown): string {
   return payload.result.trim();
 }
 
-function getSchemaClient(
-  client: SupabaseAdminClient | undefined,
-): SchemaClient {
-  return (client ?? getSupabaseAdminClient()) as unknown as SchemaClient;
-}
-
 async function fetchStarOrder(
-  db: SchemaClient,
   starOrderId: string,
+  options: {
+    client?: SupabaseAdminClient | undefined;
+    requestId?: string | undefined;
+  } = {},
 ): Promise<StarOrderRow> {
-  const response = await db
-    .schema("payments")
-    .from("star_orders")
-    .select(
-      [
-        "id",
-        "user_id",
-        "business_type",
-        "business_id",
-        "status",
-        "xtr_amount",
-        "telegram_invoice_payload",
-        "title",
-        "description",
-        "expires_at",
-      ].join(","),
-    )
-    .eq("id", starOrderId)
-    .maybeSingle();
+  let result: Record<string, unknown> | null;
 
-  if (response.error) {
+  try {
+    result = await callRpcRaw<Record<string, unknown> | null>(
+      "payment_get_star_order_for_invoice",
+      {
+        p_star_order_id: starOrderId,
+      },
+      createPaymentRpcOptions(options, {
+        rpcPurpose: "fetch_star_order_for_invoice",
+        starOrderId,
+      }),
+    );
+  } catch (error) {
     throw new TelegramStarsInvoiceError(
       500,
       "STAR_ORDER_READ_FAILED",
       "读取 Stars 支付订单失败。",
       {
         expose: false,
-        cause: response.error,
+        cause: error,
       },
     );
   }
 
-  if (!response.data) {
+  if (!result) {
     throw new TelegramStarsInvoiceError(
       404,
       "STAR_ORDER_NOT_FOUND",
@@ -988,165 +939,122 @@ async function fetchStarOrder(
     );
   }
 
-  return normalizeStarOrderRow(response.data);
+  return normalizeStarOrderRow(result);
 }
 
 async function fetchExistingInvoice(
-  db: SchemaClient,
   payload: string,
+  options: {
+    client?: SupabaseAdminClient | undefined;
+    requestId?: string | undefined;
+    starOrderId?: string | undefined;
+  } = {},
 ): Promise<StarInvoiceRow | null> {
-  const response = await db
-    .schema("payments")
-    .from("star_invoices")
-    .select(
-      [
-        "star_order_id",
-        "invoice_link",
-        "payload",
-        "status",
-        "open_mode",
-        "bot_api_method",
-        "expires_at",
-      ].join(","),
-    )
-    .eq("payload", payload)
-    .maybeSingle();
+  let result: Record<string, unknown> | null;
 
-  if (response.error) {
+  try {
+    result = await callRpcRaw<Record<string, unknown> | null>(
+      "payment_get_star_invoice_by_payload",
+      {
+        p_payload: payload,
+      },
+      createPaymentRpcOptions(options, {
+        rpcPurpose: "fetch_existing_invoice",
+        starOrderId: options.starOrderId,
+      }),
+    );
+  } catch (error) {
     throw new TelegramStarsInvoiceError(
       500,
       "STAR_INVOICE_READ_FAILED",
       "读取 Stars invoice 失败。",
       {
         expose: false,
-        cause: response.error,
+        cause: error,
       },
     );
   }
 
-  return response.data ? normalizeStarInvoiceRow(response.data) : null;
+  return result ? normalizeStarInvoiceRow(result) : null;
 }
 
-async function recordInvoiceSuccess(
-  db: SchemaClient,
-  input: {
-    starOrderId: string;
-    payload: string;
-    invoiceLink: string;
-    openMode: TelegramInvoiceOpenMode;
-    expiresAt: string | null;
-    rawRequest: Record<string, unknown>;
-    rawResponse: Record<string, unknown>;
-  },
-): Promise<StarInvoiceRow> {
-  const response = await db
-    .schema("payments")
-    .from("star_invoices")
-    .upsert(
-      {
-        star_order_id: input.starOrderId,
-        invoice_link: input.invoiceLink,
-        payload: input.payload,
-        status: "created",
-        open_mode: input.openMode,
-        bot_api_method: CREATE_INVOICE_LINK_METHOD,
-        expires_at: input.expiresAt,
-        raw_request: input.rawRequest,
-        raw_response: input.rawResponse,
-      },
-      {
-        onConflict: "payload",
-      },
-    )
-    .select(
-      [
-        "star_order_id",
-        "invoice_link",
-        "payload",
-        "status",
-        "open_mode",
-        "bot_api_method",
-        "expires_at",
-      ].join(","),
-    )
-    .single();
+async function recordInvoiceSuccess(input: {
+  starOrderId: string;
+  payload: string;
+  invoiceLink: string;
+  openMode: TelegramInvoiceOpenMode;
+  expiresAt: string | null;
+  rawRequest: Record<string, unknown>;
+  rawResponse: Record<string, unknown>;
+  client?: SupabaseAdminClient | undefined;
+  requestId?: string | undefined;
+}): Promise<StarInvoiceRow> {
+  let result: Record<string, unknown>;
 
-  if (response.error || !response.data) {
+  try {
+    result = await callRpcRaw<Record<string, unknown>>(
+      "payment_upsert_star_invoice_success",
+      {
+        p_star_order_id: input.starOrderId,
+        p_payload: input.payload,
+        p_invoice_link: input.invoiceLink,
+        p_open_mode: input.openMode,
+        p_expires_at: input.expiresAt,
+        p_raw_request: input.rawRequest,
+        p_raw_response: input.rawResponse,
+      },
+      createPaymentRpcOptions(input, {
+        rpcPurpose: "record_invoice_success",
+        starOrderId: input.starOrderId,
+      }),
+    );
+  } catch (error) {
     throw new TelegramStarsInvoiceError(
       500,
       "STAR_INVOICE_WRITE_FAILED",
       "保存 Stars invoice 失败。",
       {
         expose: false,
-        cause: response.error,
+        cause: error,
       },
     );
   }
 
-  return normalizeStarInvoiceRow(response.data);
+  return normalizeStarInvoiceRow(result);
 }
 
-async function recordInvoiceFailure(
-  db: SchemaClient,
-  input: {
-    starOrderId: string;
-    drawOrderId: string;
-    payload: string;
-    openMode: TelegramInvoiceOpenMode;
-    expiresAt: string | null;
-    rawRequest: Record<string, unknown>;
-    rawResponse: Record<string, unknown>;
-    errorMessage: string;
-  },
-): Promise<void> {
-  const [invoiceResult, starOrderResult, drawOrderResult] = await Promise.all([
-    db
-      .schema("payments")
-      .from("star_invoices")
-      .upsert(
-        {
-          star_order_id: input.starOrderId,
-          invoice_link: null,
-          payload: input.payload,
-          status: "failed",
-          open_mode: input.openMode,
-          bot_api_method: CREATE_INVOICE_LINK_METHOD,
-          expires_at: input.expiresAt,
-          raw_request: input.rawRequest,
-          raw_response: input.rawResponse,
-        },
-        {
-          onConflict: "payload",
-        },
-      )
-      .select(
-        "star_order_id,payload,status,open_mode,bot_api_method,expires_at",
-      )
-      .single(),
-    db
-      .schema("payments")
-      .from("star_orders")
-      .update({
-        status: "failed",
-        error_message: truncateErrorMessage(input.errorMessage),
-      })
-      .eq("id", input.starOrderId),
-    db
-      .schema("gacha")
-      .from("draw_orders")
-      .update({
-        status: "failed",
-        payment_status: "failed",
-        telegram_invoice_payload: input.payload,
-        error_message: truncateErrorMessage(input.errorMessage),
-      })
-      .eq("id", input.drawOrderId),
-  ]);
-
-  const error =
-    invoiceResult.error ?? starOrderResult.error ?? drawOrderResult.error;
-
-  if (error) {
+async function recordInvoiceFailure(input: {
+  starOrderId: string;
+  drawOrderId: string;
+  payload: string;
+  openMode: TelegramInvoiceOpenMode;
+  expiresAt: string | null;
+  rawRequest: Record<string, unknown>;
+  rawResponse: Record<string, unknown>;
+  errorMessage: string;
+  client?: SupabaseAdminClient | undefined;
+  requestId?: string | undefined;
+}): Promise<void> {
+  try {
+    await callRpcRaw<Record<string, unknown>>(
+      "payment_record_star_invoice_failure",
+      {
+        p_star_order_id: input.starOrderId,
+        p_draw_order_id: input.drawOrderId,
+        p_payload: input.payload,
+        p_open_mode: input.openMode,
+        p_expires_at: input.expiresAt,
+        p_raw_request: input.rawRequest,
+        p_raw_response: input.rawResponse,
+        p_error_message: truncateErrorMessage(input.errorMessage),
+      },
+      createPaymentRpcOptions(input, {
+        rpcPurpose: "record_invoice_failure",
+        starOrderId: input.starOrderId,
+        drawOrderId: input.drawOrderId,
+      }),
+    );
+  } catch (error) {
     throw new TelegramStarsInvoiceError(
       500,
       "STAR_INVOICE_FAILURE_RECORD_FAILED",
@@ -1159,37 +1067,28 @@ async function recordInvoiceFailure(
   }
 }
 
-async function markOrderInvoiceCreated(
-  db: SchemaClient,
-  input: {
-    starOrderId: string;
-    drawOrderId: string;
-    invoicePayload: string;
-  },
-): Promise<void> {
-  const [starOrderResult, drawOrderResult] = await Promise.all([
-    db
-      .schema("payments")
-      .from("star_orders")
-      .update({
-        error_message: null,
-      })
-      .eq("id", input.starOrderId),
-    db
-      .schema("gacha")
-      .from("draw_orders")
-      .update({
-        status: "invoice_created",
-        payment_status: "pending",
-        telegram_invoice_payload: input.invoicePayload,
-        error_message: null,
-      })
-      .eq("id", input.drawOrderId),
-  ]);
-
-  const error = starOrderResult.error ?? drawOrderResult.error;
-
-  if (error) {
+async function markOrderInvoiceCreated(input: {
+  starOrderId: string;
+  drawOrderId: string;
+  invoicePayload: string;
+  client?: SupabaseAdminClient | undefined;
+  requestId?: string | undefined;
+}): Promise<void> {
+  try {
+    await callRpcRaw<Record<string, unknown>>(
+      "payment_mark_order_invoice_created",
+      {
+        p_star_order_id: input.starOrderId,
+        p_draw_order_id: input.drawOrderId,
+        p_invoice_payload: input.invoicePayload,
+      },
+      createPaymentRpcOptions(input, {
+        rpcPurpose: "mark_order_invoice_created",
+        starOrderId: input.starOrderId,
+        drawOrderId: input.drawOrderId,
+      }),
+    );
+  } catch (error) {
     throw new TelegramStarsInvoiceError(
       500,
       "STAR_ORDER_STATUS_UPDATE_FAILED",
@@ -1200,6 +1099,23 @@ async function markOrderInvoiceCreated(
       },
     );
   }
+}
+
+function createPaymentRpcOptions(
+  input: {
+    client?: SupabaseAdminClient | undefined;
+    requestId?: string | undefined;
+  },
+  context: Record<string, unknown> = {},
+) {
+  return {
+    schema: "api" as never,
+    ...(input.client ? { client: input.client } : {}),
+    context: {
+      ...(input.requestId ? { requestId: input.requestId } : {}),
+      ...context,
+    },
+  };
 }
 
 async function markTelegramPreCheckoutChecked(input: {
@@ -1373,23 +1289,26 @@ async function markWebhookEventAnswerFailed(input: {
     return;
   }
 
-  const db = getSchemaClient(input.client);
   const errorMessage = truncateErrorMessage(
     getWebhookPublicErrorMessage(input.error),
   );
-  const response = await db
-    .schema("payments")
-    .from("telegram_webhook_events")
-    .update({
-      process_status: "failed",
-      error_message: errorMessage,
-      processed_at: new Date().toISOString(),
-    })
-    .eq("id", input.eventId);
 
-  if (response.error) {
+  try {
+    await callRpcRaw<Record<string, unknown> | null>(
+      "payment_mark_webhook_event_failed",
+      {
+        p_event_id: input.eventId,
+        p_error_message: errorMessage,
+        p_processed_at: new Date().toISOString(),
+      },
+      createPaymentRpcOptions(input, {
+        rpcPurpose: "mark_pre_checkout_event_failed",
+        eventId: input.eventId,
+      }),
+    );
+  } catch (error) {
     console.error(
-      `[${input.requestId}] TELEGRAM_PRE_CHECKOUT_EVENT_MARK_FAILED: ${response.error.message ?? "unknown error"}`,
+      `[${input.requestId}] TELEGRAM_PRE_CHECKOUT_EVENT_MARK_FAILED: ${getPublicErrorMessage(error)}`,
       {
         eventId: input.eventId,
       },
@@ -1407,23 +1326,26 @@ async function markWebhookEventFulfillmentFailed(input: {
     return;
   }
 
-  const db = getSchemaClient(input.client);
   const errorMessage = truncateErrorMessage(
     getWebhookFulfillmentErrorMessage(input.error),
   );
-  const response = await db
-    .schema("payments")
-    .from("telegram_webhook_events")
-    .update({
-      process_status: "failed",
-      error_message: errorMessage,
-      processed_at: new Date().toISOString(),
-    })
-    .eq("id", input.eventId);
 
-  if (response.error) {
+  try {
+    await callRpcRaw<Record<string, unknown> | null>(
+      "payment_mark_webhook_event_failed",
+      {
+        p_event_id: input.eventId,
+        p_error_message: errorMessage,
+        p_processed_at: new Date().toISOString(),
+      },
+      createPaymentRpcOptions(input, {
+        rpcPurpose: "mark_fulfillment_event_failed",
+        eventId: input.eventId,
+      }),
+    );
+  } catch (error) {
     console.error(
-      `[${input.requestId}] TELEGRAM_FULFILLMENT_EVENT_MARK_FAILED: ${response.error.message ?? "unknown error"}`,
+      `[${input.requestId}] TELEGRAM_FULFILLMENT_EVENT_MARK_FAILED: ${getPublicErrorMessage(error)}`,
       {
         eventId: input.eventId,
       },

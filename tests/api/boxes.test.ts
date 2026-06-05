@@ -105,51 +105,6 @@ function createNoRiskDbMock() {
   };
 }
 
-function createHighFrequencyGachaDbMock(recentOrderCount: number) {
-  const riskBuilder = {
-    select: vi.fn(() => riskBuilder),
-    eq: vi.fn(() => riskBuilder),
-    limit: vi.fn(() => Promise.resolve({ data: [], count: 0, error: null })),
-    then: (
-      resolve: (value: {
-        data: unknown[];
-        count: number;
-        error: null;
-      }) => unknown,
-      reject?: (reason: unknown) => unknown,
-    ) =>
-      Promise.resolve(resolve({ data: [], count: 0, error: null })).catch(
-        reject,
-      ),
-  };
-  const drawOrdersBuilder = {
-    select: vi.fn(() => drawOrdersBuilder),
-    eq: vi.fn(() => drawOrdersBuilder),
-    gte: vi.fn(() => drawOrdersBuilder),
-    then: (
-      resolve: (value: {
-        data: unknown[];
-        count: number;
-        error: null;
-      }) => unknown,
-      reject?: (reason: unknown) => unknown,
-    ) =>
-      Promise.resolve(
-        resolve({ data: [], count: recentOrderCount, error: null }),
-      ).catch(reject),
-  };
-
-  return {
-    schema: vi.fn((schema: string) => ({
-      from: vi.fn((table: string) =>
-        schema === "gacha" && table === "draw_orders"
-          ? drawOrdersBuilder
-          : riskBuilder,
-      ),
-    })),
-  };
-}
-
 function createRiskFlagDbMock(flagCode: string) {
   const builder = {
     select: vi.fn(() => builder),
@@ -606,7 +561,6 @@ describe("boxes API helpers", () => {
   });
 
   it("/api/boxes/create-open-order records gacha_high_frequency risk events", async () => {
-    getSupabaseAdminMock.mockReturnValue(createHighFrequencyGachaDbMock(6));
     callRpcRawMock
       .mockResolvedValueOnce({
         draw_order_id: ORDER_ID,
@@ -617,6 +571,9 @@ describe("boxes API helpers", () => {
         discount_bps: 0,
         pool_version_id: POOL_VERSION_ID,
         idempotent: false,
+      })
+      .mockResolvedValueOnce({
+        count: 6,
       })
       .mockResolvedValueOnce({
         risk_event_id: "99999999-9999-4999-8999-999999999999",
@@ -648,6 +605,21 @@ describe("boxes API helpers", () => {
     expect(result.statusCode).toBe(200);
     expect(callRpcRawMock).toHaveBeenNthCalledWith(
       2,
+      "gacha_count_recent_draw_orders",
+      expect.objectContaining({
+        p_user_id: USER_ID,
+      }),
+      expect.objectContaining({
+        schema: "api",
+        context: expect.objectContaining({
+          requestId: "req-gacha-high-frequency",
+          userId: USER_ID,
+          orderId: ORDER_ID,
+        }),
+      }),
+    );
+    expect(callRpcRawMock).toHaveBeenNthCalledWith(
+      3,
       "risk_record_event",
       expect.objectContaining({
         p_event_type: "gacha_high_frequency",
@@ -676,6 +648,9 @@ describe("boxes API helpers", () => {
         quantity: 1,
         discount_bps: 0,
         idempotent: false,
+      })
+      .mockResolvedValueOnce({
+        count: 0,
       })
       .mockResolvedValueOnce({
         draw_order_id: ORDER_ID,
@@ -736,6 +711,16 @@ describe("boxes API helpers", () => {
     );
     expect(callRpcRawMock).toHaveBeenNthCalledWith(
       2,
+      "gacha_count_recent_draw_orders",
+      expect.objectContaining({
+        p_user_id: USER_ID,
+      }),
+      expect.objectContaining({
+        schema: "api",
+      }),
+    );
+    expect(callRpcRawMock).toHaveBeenNthCalledWith(
+      3,
       "gacha_process_dev_paid_order",
       expect.objectContaining({
         p_order_id: ORDER_ID,
@@ -747,15 +732,19 @@ describe("boxes API helpers", () => {
   });
 
   it("/api/boxes/create-open-order accepts X-Idempotency-Key when the body omits it", async () => {
-    callRpcRawMock.mockResolvedValueOnce({
-      draw_order_id: ORDER_ID,
-      star_order_id: STAR_ORDER_ID,
-      invoice_payload: INVOICE_PAYLOAD,
-      xtr_amount: 10,
-      quantity: 1,
-      discount_bps: 0,
-      idempotent: false,
-    });
+    callRpcRawMock
+      .mockResolvedValueOnce({
+        draw_order_id: ORDER_ID,
+        star_order_id: STAR_ORDER_ID,
+        invoice_payload: INVOICE_PAYLOAD,
+        xtr_amount: 10,
+        quantity: 1,
+        discount_bps: 0,
+        idempotent: false,
+      })
+      .mockResolvedValueOnce({
+        count: 0,
+      });
 
     const { default: createOrderHandler } =
       await import("../../api/boxes/create-open-order");
@@ -1259,7 +1248,7 @@ describe("boxes API helpers", () => {
         code: "TELEGRAM_INVOICE_CREATE_FAILED",
       },
     });
-    expect(callRpcRawMock).toHaveBeenCalledTimes(1);
+    expect(callRpcRawMock).toHaveBeenCalledTimes(2);
     expect(createTelegramStarsInvoiceMock).toHaveBeenCalledTimes(1);
   });
 

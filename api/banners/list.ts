@@ -1,4 +1,4 @@
-import { getSupabaseAdminClient } from "../../packages/server/src/db/supabaseAdmin.js";
+import { callRpcRaw } from "../../packages/server/src/db/rpc.js";
 import { ApiError, withApiHandler } from "../_shared/handler.js";
 import { normalizePublicStorageUrl } from "../_shared/publicStorageUrl.js";
 
@@ -41,40 +41,30 @@ const BANNER_PLACEMENTS: readonly BannerPlacement[] = [
   "album_top",
 ];
 
-const BANNER_COLUMNS = [
-  "id",
-  "code",
-  "title",
-  "description",
-  "image_url",
-  "placement",
-  "target_type",
-  "target_ref",
-  "target_payload",
-  "sort_order",
-  "starts_at",
-  "ends_at",
-  "created_at",
-  "updated_at",
-].join(",");
-
 export default withApiHandler(
-  async (req) => {
+  async (req, _res, ctx) => {
     const placement = normalizePlacement(firstQueryValue(req.query.placement));
     const limit = normalizeLimit(firstQueryValue(req.query.limit));
     const serverTime = new Date();
+    let data: unknown;
 
-    const { data, error } = await getSupabaseAdminClient()
-      .schema("catalog")
-      .from("banner_campaigns")
-      .select(BANNER_COLUMNS)
-      .eq("placement", placement)
-      .eq("status", "active")
-      .order("sort_order", { ascending: true })
-      .order("created_at", { ascending: false })
-      .limit(Math.min(limit * 4, 50));
-
-    if (error) {
+    try {
+      data = await callRpcRaw<unknown>(
+        "catalog_list_banner_campaigns",
+        {
+          p_placement: placement,
+          p_limit: Math.min(limit * 4, 50),
+        },
+        {
+          schema: "api" as never,
+          context: {
+            requestId: ctx.requestId,
+            placement,
+            limit,
+          },
+        },
+      );
+    } catch (error) {
       throw new ApiError(
         500,
         "BANNER_LIST_FAILED",
@@ -86,7 +76,7 @@ export default withApiHandler(
       );
     }
 
-    const items = ((data ?? []) as unknown as BannerRow[])
+    const items = normalizeBannerRows(data)
       .filter((row) => isBannerVisibleAt(row, serverTime))
       .slice(0, limit)
       .map(mapBannerRow);
@@ -104,6 +94,14 @@ export default withApiHandler(
     },
   },
 );
+
+function normalizeBannerRows(value: unknown): BannerRow[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.filter(isBannerRow);
+}
 
 function mapBannerRow(row: BannerRow) {
   const targetType = normalizeTargetType(row.target_type);
@@ -227,6 +225,28 @@ function readString(value: unknown): string | null {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isBannerRow(value: unknown): value is BannerRow {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    typeof value.id === "string" &&
+    typeof value.code === "string" &&
+    typeof value.title === "string" &&
+    (typeof value.description === "string" || value.description === null) &&
+    typeof value.image_url === "string" &&
+    typeof value.placement === "string" &&
+    typeof value.target_type === "string" &&
+    (typeof value.target_ref === "string" || value.target_ref === null) &&
+    typeof value.sort_order === "number" &&
+    (typeof value.starts_at === "string" || value.starts_at === null) &&
+    (typeof value.ends_at === "string" || value.ends_at === null) &&
+    typeof value.created_at === "string" &&
+    typeof value.updated_at === "string"
+  );
 }
 
 function isBannerVisibleAt(row: BannerRow, now: Date): boolean {
