@@ -20,7 +20,7 @@ type RewardSeed = {
   isPityEligible: boolean;
 };
 
-const COLLECTIBLE_IMAGE_BASE = "/storage/v1/object/public/collectibles/";
+const COLLECTIBLE_IMAGE_BASE = "/images/collectibles/";
 
 const STATIC_BOX_REWARDS = {
   starter_egg: createConfig("starter_egg", {
@@ -227,7 +227,7 @@ function toPreviewItem(
     rarityLabel: getRarityLabel(item.rarity),
     itemType: item.itemType,
     itemTypeLabel: item.itemTypeLabel,
-    imageUrl: `${COLLECTIBLE_IMAGE_BASE}${item.slug}_hero.png`,
+    imageUrl: `${COLLECTIBLE_IMAGE_BASE}${item.slug}.png`,
     displayProbability: formatProbability(item.probabilityBps),
     probabilityBps: item.probabilityBps,
     remainingStock: null,
