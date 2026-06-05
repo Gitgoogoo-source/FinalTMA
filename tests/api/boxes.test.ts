@@ -164,7 +164,7 @@ describe("boxes API helpers", () => {
     vi.stubEnv("GACHA_STARTER_EGG_PRICE_STARS", "10");
     vi.stubEnv("GACHA_PREMIUM_EGG_PRICE_STARS", "30");
     vi.stubEnv("GACHA_LEGENDARY_EGG_PRICE_STARS", "80");
-    vi.stubEnv("GACHA_TEN_DRAW_DISCOUNT_BPS", "1000");
+    vi.stubEnv("GACHA_TEN_DRAW_DISCOUNT_RATE", "0.1");
     delete process.env.DEV_GACHA_PAYMENT_MODE;
     assertStarsPaymentCreateAllowedMock.mockReset();
     assertStarsPaymentCreateAllowedMock.mockResolvedValue(undefined);
@@ -851,9 +851,9 @@ describe("boxes API helpers", () => {
     expect(createTelegramStarsInvoiceMock).not.toHaveBeenCalled();
   });
 
-  it("/api/boxes/create-open-order uses Vercel ten-draw discount config", async () => {
+  it("/api/boxes/create-open-order uses Vercel ten-draw discount rate config", async () => {
     vi.stubEnv("GACHA_STARTER_EGG_PRICE_STARS", "25");
-    vi.stubEnv("GACHA_TEN_DRAW_DISCOUNT_BPS", "1500");
+    vi.stubEnv("GACHA_TEN_DRAW_DISCOUNT_RATE", "0.15");
     callRpcRawMock
       .mockResolvedValueOnce({
         draw_order_id: ORDER_ID,

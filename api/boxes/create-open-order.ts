@@ -83,7 +83,7 @@ const GACHA_BOX_PRICE_ENV_BY_SLUG: Record<GachaBoxSlug, string> = {
   legendary_egg: "GACHA_LEGENDARY_EGG_PRICE_STARS",
 };
 
-const GACHA_TEN_DRAW_DISCOUNT_BPS_ENV = "GACHA_TEN_DRAW_DISCOUNT_BPS";
+const GACHA_TEN_DRAW_DISCOUNT_RATE_ENV = "GACHA_TEN_DRAW_DISCOUNT_RATE";
 const GACHA_HIGH_FREQUENCY_WINDOW_MS = 5 * 60 * 1000;
 const GACHA_HIGH_FREQUENCY_THRESHOLD = 5;
 
@@ -507,7 +507,7 @@ function readGachaServerPriceSnapshot(
   );
   const discountBps =
     input.quantity === 10
-      ? readDiscountBpsEnv(GACHA_TEN_DRAW_DISCOUNT_BPS_ENV)
+      ? readDiscountRateEnvAsBps(GACHA_TEN_DRAW_DISCOUNT_RATE_ENV)
       : 0;
   const totalPriceStars = Math.ceil(
     (unitPriceStars * input.quantity * (10000 - discountBps)) / 10000,
@@ -568,10 +568,10 @@ function readPositiveIntEnv(name: string): number {
   return Number(value);
 }
 
-function readDiscountBpsEnv(name: string): number {
+function readDiscountRateEnvAsBps(name: string): number {
   const value = process.env[name]?.trim();
 
-  if (!value || !/^\d+$/.test(value)) {
+  if (!value || !/^(?:0|0?\.\d+)$/.test(value)) {
     throw new ApiError(
       500,
       "GACHA_PRICE_CONFIG_INVALID",
@@ -587,11 +587,7 @@ function readDiscountBpsEnv(name: string): number {
 
   const numberValue = Number(value);
 
-  if (
-    !Number.isInteger(numberValue) ||
-    numberValue < 0 ||
-    numberValue > 10000
-  ) {
+  if (!Number.isFinite(numberValue) || numberValue < 0 || numberValue >= 1) {
     throw new ApiError(
       500,
       "GACHA_PRICE_CONFIG_INVALID",
@@ -605,7 +601,7 @@ function readDiscountBpsEnv(name: string): number {
     );
   }
 
-  return numberValue;
+  return Math.round(numberValue * 10000);
 }
 
 function boxSlugFromTier(value: unknown): GachaBoxSlug | undefined {

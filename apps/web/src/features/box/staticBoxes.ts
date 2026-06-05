@@ -48,7 +48,8 @@ export const STATIC_BOX_CONFIGS: readonly StaticBoxConfig[] = [
 
 export const STATIC_BOX_SLUGS = STATIC_BOX_CONFIGS.map((box) => box.slug);
 
-const TEN_DRAW_DISCOUNT_BPS = 1000;
+const TEN_DRAW_DISCOUNT_RATE = 0.1;
+const TEN_DRAW_DISCOUNT_BPS = Math.round(TEN_DRAW_DISCOUNT_RATE * 10000);
 const KCOIN_RETURN_PER_DRAW = 100;
 
 export function createStaticBoxes(
@@ -63,7 +64,7 @@ export function createStaticBoxes(
       description: box.description,
       disabledReason: null,
       discountBps: TEN_DRAW_DISCOUNT_BPS,
-      discountRate: (10000 - TEN_DRAW_DISCOUNT_BPS) / 10000,
+      discountRate: 1 - TEN_DRAW_DISCOUNT_RATE,
       heroImageUrl: `/images/boxes/${box.slug}.png`,
       id: serverBoxId ?? box.slug,
       isOpenable: true,
@@ -89,7 +90,5 @@ export function isStaticBoxSlug(value: string): value is StaticBoxSlug {
 }
 
 function getTenDrawPrice(singleStarPrice: number): number {
-  return Math.ceil(
-    (singleStarPrice * 10 * (10000 - TEN_DRAW_DISCOUNT_BPS)) / 10000,
-  );
+  return Math.ceil(singleStarPrice * 10 * (1 - TEN_DRAW_DISCOUNT_RATE));
 }
