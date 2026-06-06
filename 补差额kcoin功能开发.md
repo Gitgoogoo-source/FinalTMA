@@ -1,7 +1,3 @@
-下面是把前面 2 次回答合并后的整理版，可以直接作为功能开发说明给 AI Vibe Coding / Codex 使用。
-
----
-
 # k-coin 不足时使用 Telegram Stars 充值功能设计
 
 ## 1. 功能目标
