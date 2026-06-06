@@ -1,3 +1,8 @@
+import {
+  openTelegramLink as sdkOpenTelegramLink,
+  shareURL as sdkShareURL,
+} from "@tma.js/sdk-react";
+
 import { getTelegramWebApp } from "@/types/telegram";
 
 type OpenTelegramShareInput = {
@@ -19,7 +24,7 @@ export type TelegramShareResult =
       sent: false;
     }
   | {
-      method: "link";
+      method: "share_url";
       sent: null;
     };
 
@@ -36,11 +41,7 @@ export async function openTelegramPreparedShare({
   const webApp = getTelegramWebApp();
 
   if (typeof webApp?.shareMessage !== "function") {
-    openTelegramShareLink({ text, url });
-    return {
-      method: "link",
-      sent: null,
-    };
+    return openTelegramShareLink({ text, url });
   }
 
   const sent = await new Promise<boolean>((resolve) => {
@@ -58,21 +59,66 @@ export async function openTelegramPreparedShare({
 export function openTelegramShareLink({
   text,
   url,
-}: OpenTelegramShareInput): void {
-  const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(
-    url,
-  )}&text=${encodeURIComponent(text)}`;
+}: OpenTelegramShareInput): TelegramShareResult {
+  if (openWithSdkShareURL({ text, url })) {
+    return {
+      method: "share_url",
+      sent: null,
+    };
+  }
+
+  const shareUrl = createTelegramShareUrl({ text, url });
+
+  if (openWithSdkTelegramLink(shareUrl)) {
+    return {
+      method: "share_url",
+      sent: null,
+    };
+  }
+
   const webApp = getTelegramWebApp();
 
   if (webApp?.openTelegramLink) {
     webApp.openTelegramLink(shareUrl);
-    return;
+    return {
+      method: "share_url",
+      sent: null,
+    };
   }
 
   if (webApp?.openLink) {
     webApp.openLink(shareUrl);
-    return;
+    return {
+      method: "share_url",
+      sent: null,
+    };
   }
 
   globalThis.open(shareUrl, "_blank", "noopener,noreferrer");
+  return {
+    method: "share_url",
+    sent: null,
+  };
+}
+
+function openWithSdkShareURL(input: OpenTelegramShareInput): boolean {
+  try {
+    return sdkShareURL.ifAvailable(input.url, input.text).ok;
+  } catch {
+    return false;
+  }
+}
+
+function openWithSdkTelegramLink(url: string): boolean {
+  try {
+    return sdkOpenTelegramLink.ifAvailable(url).ok;
+  } catch {
+    return false;
+  }
+}
+
+function createTelegramShareUrl({ text, url }: OpenTelegramShareInput): string {
+  return `https://t.me/share/url?url=${encodeURIComponent(
+    url,
+  )}&text=${encodeURIComponent(text)}`;
 }
