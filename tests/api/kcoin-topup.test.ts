@@ -61,6 +61,7 @@ const INVOICE_PAYLOAD =
 describe("K-coin topup APIs", () => {
   beforeEach(() => {
     process.env.NODE_ENV = "test";
+    process.env.VIP_MONTHLY_PRICE_KCOIN = "199";
     assertStarsPaymentCreateAllowedMock.mockReset();
     assertStarsPaymentCreateAllowedMock.mockResolvedValue(undefined);
     assertUserRiskAllowedMock.mockReset();
@@ -220,6 +221,73 @@ describe("K-coin topup APIs", () => {
         p_box_slug: "starter_egg",
         p_draw_count: 1,
         p_required_kcoin: 10,
+      },
+      expect.objectContaining({
+        schema: "api",
+      }),
+    );
+  });
+
+  it("creates a shortage topup order with VIP monthly context", async () => {
+    callRpcRawMock.mockResolvedValueOnce({
+      topup_order_id: TOPUP_ORDER_ID,
+      star_order_id: STAR_ORDER_ID,
+      invoice_payload: INVOICE_PAYLOAD,
+      xtr_amount: 198,
+      kcoin_amount: "198",
+      status: "created",
+      payment_order_status: "created",
+      expires_at: "2026-06-05T12:15:00.000Z",
+      idempotent: false,
+    });
+    createTelegramStarsInvoiceMock.mockResolvedValueOnce({
+      starOrderId: STAR_ORDER_ID,
+      payload: INVOICE_PAYLOAD,
+      invoiceLink: "https://t.me/invoice/kcoin-topup-vip-198",
+      openMode: "web_app_open_invoice",
+      botApiMethod: "createInvoiceLink",
+      expiresAt: "2026-06-05T12:15:00.000Z",
+      invoiceStatus: "created",
+      paymentOrderStatus: "created",
+      reused: false,
+    });
+
+    const { default: createOrderHandler } =
+      await import("../../api/payments/kcoin-topup/create-order");
+    const result = await invokeApiHandler<ApiSuccessResponse>(
+      createOrderHandler,
+      {
+        method: "POST",
+        url: "/api/payments/kcoin-topup/create-order",
+        headers: {
+          "x-idempotency-key": "kcoin:topup:vip:0198",
+        },
+        body: {
+          amount: 198,
+          intent: "VIP_MONTHLY",
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(200);
+    expect(result.body).toMatchObject({
+      ok: true,
+      data: {
+        xtr_amount: 198,
+        kcoin_amount: 198,
+        invoice_link: "https://t.me/invoice/kcoin-topup-vip-198",
+      },
+    });
+    expect(callRpcRawMock).toHaveBeenCalledWith(
+      "kcoin_topup_create_order",
+      {
+        p_user_id: USER_ID,
+        p_amount: 198,
+        p_idempotency_key: "kcoin:topup:vip:0198",
+        p_intent: "VIP_MONTHLY",
+        p_box_slug: null,
+        p_draw_count: null,
+        p_required_kcoin: 199,
       },
       expect.objectContaining({
         schema: "api",

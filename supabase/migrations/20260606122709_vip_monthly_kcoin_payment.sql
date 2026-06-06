@@ -45,7 +45,7 @@ alter table vip.vip_orders
   add constraint vip_orders_payment_amount_check check (
     (payment_currency_code = 'XTR' and xtr_amount is not null and kcoin_amount is null)
     or
-    (payment_currency_code = 'KCOIN' and kcoin_amount is not null)
+    (payment_currency_code = 'KCOIN' and kcoin_amount is not null and xtr_amount is null)
   );
 
 comment on column vip.vip_orders.payment_currency_code is

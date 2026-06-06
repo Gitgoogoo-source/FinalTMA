@@ -237,11 +237,11 @@ describe("BuyPage VIP subscription banner", () => {
     fireEvent.click(screen.getByRole("button", { name: "订阅 VIP 月卡" }));
 
     await waitFor(() => {
-      expect(mocks.vipRefetch).toHaveBeenCalledOnce();
+      expect(mocks.createVipOrder).toHaveBeenCalledWith({
+        planId: "plan-1",
+      });
     });
-    expect(mocks.createVipOrder).toHaveBeenCalledWith({
-      planId: "plan-1",
-    });
+    expect(mocks.vipRefetch).toHaveBeenCalledTimes(2);
   });
 });
 

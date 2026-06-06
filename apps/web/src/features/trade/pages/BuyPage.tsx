@@ -107,6 +107,7 @@ export function BuyPage() {
         ? vipStatusQuery.data
         : (await vipStatusQuery.refetch()).data;
       const plan = status?.plan ?? null;
+      const isVipActive = status?.isVip ?? false;
 
       if (!plan) {
         pushToast({
@@ -146,7 +147,7 @@ export function BuyPage() {
       await Promise.all([refreshAssets(), vipStatusQuery.refetch()]);
       pushToast({
         type: "success",
-        title: status.isVip ? "月卡已续费" : "月卡已开通",
+        title: isVipActive ? "月卡已续费" : "月卡已开通",
         message: `已消耗 ${formatCurrencyAmount(order.kcoinAmount || requiredKcoin)} K-coin。`,
       });
     } catch (error) {

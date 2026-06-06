@@ -244,6 +244,7 @@ where code = 'vip_monthly';
 
 select isnt((select id from _ids where key = 'plan'), null::uuid, 'seeded vip_monthly plan exists');
 select is((select price_xtr from vip.vip_plans where id = (select id from _ids where key = 'plan')), 199, 'vip_monthly price is 199 XTR');
+select is((select price_kcoin from vip.vip_plans where id = (select id from _ids where key = 'plan')), 199, 'vip_monthly price is 199 KCOIN');
 select is((select duration_days from vip.vip_plans where id = (select id from _ids where key = 'plan')), 30, 'vip_monthly duration is 30 days');
 select is((select daily_fgems from vip.vip_plans where id = (select id from _ids where key = 'plan')), 100::numeric, 'vip_monthly grants 100 daily FGEMS');
 select is((select daily_free_box_count from vip.vip_plans where id = (select id from _ids where key = 'plan')), 1, 'vip_monthly grants one daily free box counter');
@@ -270,11 +271,19 @@ values ('non_vip_user', testutil.make_user(9901000002, 'vip_non_member_user'));
 insert into _ids (key, id)
 values ('buyer', testutil.make_user(9901000003, 'vip_market_buyer'));
 
+insert into _ids (key, id)
+values ('kcoin_user', testutil.make_user(9901000006, 'vip_kcoin_monthly_user'));
+
+insert into _ids (key, id)
+values ('kcoin_poor_user', testutil.make_user(9901000007, 'vip_kcoin_poor_user'));
+
 insert into _ids (key, payload)
 select 'status_before', api.vip_get_status((select id from _ids where key = 'user'));
 
 select is(((select payload from _ids where key = 'status_before') ->> 'is_vip')::boolean, false, 'new user is not VIP before payment');
 select is((((select payload from _ids where key = 'status_before') -> 'plan' ->> 'price_xtr')::integer), 199, 'status RPC exposes the 199 XTR plan');
+select is((((select payload from _ids where key = 'status_before') -> 'plan' ->> 'price_kcoin')::integer), 199, 'status RPC exposes the 199 KCOIN plan');
+select is(((select payload from _ids where key = 'status_before') -> 'plan' ->> 'currency_code'), 'KCOIN', 'status RPC exposes KCOIN as VIP purchase currency');
 
 insert into _ids (key, payload)
 select 'order', api.vip_create_order_checked(
@@ -343,6 +352,107 @@ select ok(testutil.raises_like(format(
   (select id::text from _ids where key = 'plan'),
   'vip-monthly-server-price-invalid'
 ), '%server price xtr is invalid%'), 'server-priced VIP create order rejects invalid server price');
+
+select ok(
+  to_regprocedure('api.vip_create_order_with_server_kcoin_checked(uuid,uuid,text,integer,integer)') is not null,
+  'server-priced KCOIN VIP create order RPC exists'
+);
+
+do $$
+begin
+  perform api._credit_balance(
+    (select id from _ids where key = 'kcoin_user'),
+    'KCOIN',
+    500,
+    'test_setup',
+    null,
+    null,
+    'vip-monthly-kcoin-user-seed',
+    'fixture',
+    '{}'::jsonb
+  );
+
+  perform api._credit_balance(
+    (select id from _ids where key = 'kcoin_poor_user'),
+    'KCOIN',
+    1,
+    'test_setup',
+    null,
+    null,
+    'vip-monthly-kcoin-poor-user-seed',
+    'fixture',
+    '{}'::jsonb
+  );
+end;
+$$;
+
+insert into _ids (key, payload)
+select 'kcoin_order', api.vip_create_order_with_server_kcoin_checked(
+  (select id from _ids where key = 'kcoin_user'),
+  (select id from _ids where key = 'plan'),
+  'vip-monthly-kcoin-order-001',
+  199,
+  199
+);
+insert into _ids (key, id) select 'kcoin_vip_order', ((select payload from _ids where key = 'kcoin_order') ->> 'vip_order_id')::uuid;
+insert into _ids (key, id) select 'kcoin_subscription', ((select payload from _ids where key = 'kcoin_order') ->> 'subscription_id')::uuid;
+insert into _ids (key, id) select 'kcoin_ledger', ((select payload from _ids where key = 'kcoin_order') ->> 'kcoin_ledger_id')::uuid;
+insert into _times (key, ts)
+select 'kcoin_period_end_after_first', current_period_end
+from vip.vip_subscriptions
+where id = (select id from _ids where key = 'kcoin_subscription');
+
+select is(((select payload from _ids where key = 'kcoin_order') ->> 'status'), 'fulfilled', 'KCOIN VIP order is fulfilled immediately');
+select is(((select payload from _ids where key = 'kcoin_order') ->> 'payment_order_status'), 'fulfilled', 'KCOIN VIP order payment status is fulfilled');
+select is(((select payload from _ids where key = 'kcoin_order') ->> 'kcoin_amount')::numeric, 199::numeric, 'KCOIN VIP order returns KCOIN amount');
+select is(((select payload from _ids where key = 'kcoin_order') ->> 'currency_code'), 'KCOIN', 'KCOIN VIP order returns KCOIN currency');
+select is(((select payload from _ids where key = 'kcoin_order') ->> 'star_order_id'), null::text, 'KCOIN VIP order does not create a Stars order');
+select is(((select payload from _ids where key = 'kcoin_order') ->> 'invoice_payload'), null::text, 'KCOIN VIP order does not create invoice payload');
+select is(testutil.balance_of((select id from _ids where key = 'kcoin_user'), 'KCOIN'), 301::numeric, 'KCOIN VIP purchase debits the user balance');
+select is((select payment_currency_code from vip.vip_orders where id = (select id from _ids where key = 'kcoin_vip_order')), 'KCOIN', 'KCOIN VIP order stores payment currency');
+select is((select xtr_amount from vip.vip_orders where id = (select id from _ids where key = 'kcoin_vip_order')), null::numeric, 'KCOIN VIP order does not store XTR amount');
+select is((select kcoin_amount from vip.vip_orders where id = (select id from _ids where key = 'kcoin_vip_order')), 199::numeric, 'KCOIN VIP order stores KCOIN amount');
+select is((select kcoin_ledger_id from vip.vip_orders where id = (select id from _ids where key = 'kcoin_vip_order')), (select id from _ids where key = 'kcoin_ledger'), 'KCOIN VIP order links debit ledger');
+select is((select entry_type from economy.currency_ledger where id = (select id from _ids where key = 'kcoin_ledger')), 'debit', 'KCOIN VIP purchase writes debit ledger');
+select is((select amount from economy.currency_ledger where id = (select id from _ids where key = 'kcoin_ledger')), 199::numeric, 'KCOIN VIP debit ledger records the charged amount');
+select is((select available_after from economy.currency_ledger where id = (select id from _ids where key = 'kcoin_ledger')), 301::numeric, 'KCOIN VIP debit ledger records balance after charge');
+select is((select count(*)::integer from vip.vip_benefit_ledger where vip_order_id = (select id from _ids where key = 'kcoin_vip_order') and benefit_type = 'subscription_activation'), 1, 'KCOIN VIP activation writes benefit ledger');
+
+insert into _ids (key, payload)
+select 'kcoin_order_repeat', api.vip_create_order_with_server_kcoin_checked(
+  (select id from _ids where key = 'kcoin_user'),
+  (select id from _ids where key = 'plan'),
+  'vip-monthly-kcoin-order-001',
+  199,
+  199
+);
+
+select ok(((select payload from _ids where key = 'kcoin_order_repeat') ->> 'idempotent')::boolean, 'KCOIN VIP create order is idempotent for the same key');
+select is(((select payload from _ids where key = 'kcoin_order_repeat') ->> 'vip_order_id'), ((select payload from _ids where key = 'kcoin_order') ->> 'vip_order_id'), 'KCOIN VIP idempotent create returns same order');
+select is(testutil.balance_of((select id from _ids where key = 'kcoin_user'), 'KCOIN'), 301::numeric, 'KCOIN VIP idempotent create does not debit twice');
+select is((select count(*)::integer from economy.currency_ledger where source_type = 'vip_monthly_subscription' and source_id = (select id from _ids where key = 'kcoin_vip_order')), 1, 'KCOIN VIP idempotent create writes one debit ledger');
+
+insert into _ids (key, payload)
+select 'kcoin_renewal', api.vip_create_order_with_server_kcoin_checked(
+  (select id from _ids where key = 'kcoin_user'),
+  (select id from _ids where key = 'plan'),
+  'vip-monthly-kcoin-order-002',
+  199,
+  199
+);
+
+select is(testutil.balance_of((select id from _ids where key = 'kcoin_user'), 'KCOIN'), 102::numeric, 'KCOIN VIP renewal debits the second monthly price');
+select is((select count(*)::integer from vip.vip_subscriptions where user_id = (select id from _ids where key = 'kcoin_user') and status = 'active'), 1, 'KCOIN VIP renewal keeps one active subscription row');
+select is((select current_period_end from vip.vip_subscriptions where id = (select id from _ids where key = 'kcoin_subscription')), (select ts + interval '30 days' from _times where key = 'kcoin_period_end_after_first'), 'KCOIN VIP renewal extends current period by 30 days');
+
+select ok(testutil.raises_like(format(
+  'select api.vip_create_order_with_server_kcoin_checked(%L::uuid, %L::uuid, %L, 199, 199)',
+  (select id::text from _ids where key = 'kcoin_poor_user'),
+  (select id::text from _ids where key = 'plan'),
+  'vip-monthly-kcoin-insufficient'
+), '%insufficient balance: required=199, balance=1, shortage=198%'), 'KCOIN VIP create order reports exact shortage when balance is insufficient');
+select is(testutil.balance_of((select id from _ids where key = 'kcoin_poor_user'), 'KCOIN'), 1::numeric, 'KCOIN VIP insufficient balance does not debit');
+select is((select count(*)::integer from vip.vip_orders where user_id = (select id from _ids where key = 'kcoin_poor_user')), 0, 'KCOIN VIP insufficient balance writes no order');
 
 insert into _ids (key, payload)
 select 'precheckout', api.payment_mark_precheckout_checked(
