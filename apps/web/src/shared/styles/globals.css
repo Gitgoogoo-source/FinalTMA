@@ -3063,6 +3063,15 @@ a {
   color: #ff9c00;
 }
 
+.kcoin-topup-sheet__option--recommended {
+  border-color: rgb(28 226 4 / 42%);
+  background: rgb(28 226 4 / 10%);
+}
+
+.kcoin-topup-sheet__option--recommended svg {
+  color: #1ce204;
+}
+
 .kcoin-topup-sheet__option span,
 .kcoin-topup-sheet__option strong {
   min-width: 0;

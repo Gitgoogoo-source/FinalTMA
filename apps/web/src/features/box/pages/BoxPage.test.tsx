@@ -1,9 +1,16 @@
 import "@testing-library/jest-dom/vitest";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { ApiClientError } from "@/api/errors";
 import { FeedbackProvider } from "@/app/providers/FeedbackProvider";
 import type { TelegramGlobal } from "@/types/telegram";
 
@@ -380,8 +387,81 @@ describe("BoxPage K-coin open and recharge flow", () => {
     fireEvent.click(screen.getByRole("button", { name: /^开 1 次/ }));
 
     expect(mocks.createOrderMutate).not.toHaveBeenCalled();
-    expect(mocks.openKcoinTopupSheet).toHaveBeenCalledWith({
-      requiredAmount: 10,
+    expect(mocks.openKcoinTopupSheet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        boxSlug: "starter_egg",
+        drawCount: 1,
+        intent: "OPEN_BOX",
+        requiredAmount: 10,
+        onFulfilled: expect.any(Function),
+      }),
+    );
+  });
+
+  it("uses backend shortage details when the open order API reports low balance", async () => {
+    mocks.assetsKcoinAvailable = "1000";
+    mocks.createOrderMutate.mockImplementationOnce(
+      (_input: unknown, options?: CreateOrderMutateOptions) => {
+        options?.onError?.(
+          new ApiClientError({
+            code: "INSUFFICIENT_KCOIN",
+            message: "K-coin 余额不足，请先充值。",
+            status: 402,
+            details: {
+              required: 10,
+              balance: 1,
+              shortage: 9,
+              canTopup: true,
+              fixedTopupPackages: [500, 1000, 5000, 10000],
+            },
+          }),
+        );
+        options?.onSettled?.();
+      },
+    );
+
+    renderBoxPage();
+
+    fireEvent.click(screen.getByRole("button", { name: /^开 1 次/ }));
+
+    await waitFor(() => {
+      expect(mocks.openKcoinTopupSheet).toHaveBeenCalledWith(
+        expect.objectContaining({
+          boxSlug: "starter_egg",
+          currentBalance: 1,
+          drawCount: 1,
+          intent: "OPEN_BOX",
+          requiredAmount: 10,
+          onFulfilled: expect.any(Function),
+        }),
+      );
+    });
+  });
+
+  it("retries the original open request after the shortage topup is fulfilled", async () => {
+    mocks.assetsKcoinAvailable = "1";
+
+    renderBoxPage();
+
+    fireEvent.click(screen.getByRole("button", { name: /^开 1 次/ }));
+
+    const topupOptions = mocks.openKcoinTopupSheet.mock.calls[0]?.[0] as {
+      onFulfilled?: () => void | Promise<void>;
+    };
+
+    expect(mocks.createOrderMutate).not.toHaveBeenCalled();
+    await act(async () => {
+      await topupOptions.onFulfilled?.();
+    });
+
+    await waitFor(() => {
+      expect(mocks.createOrderMutate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          boxSlug: "starter_egg",
+          drawCount: 1,
+        }),
+        expect.any(Object),
+      );
     });
   });
 

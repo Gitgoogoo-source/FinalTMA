@@ -19,7 +19,14 @@ import type {
 } from "../assets.types";
 import type { KcoinTopupInvoiceCallbackStatus } from "../hooks/useKcoinTopupPayment";
 
-const TOPUP_AMOUNTS: KcoinTopupAmount[] = [1, 500, 1000, 5000, 10000];
+const FIXED_TOPUP_AMOUNTS: KcoinTopupAmount[] = [500, 1000, 5000, 10000];
+
+type KcoinTopupOption = {
+  amount: KcoinTopupAmount;
+  label: string;
+  detail: string;
+  recommended: boolean;
+};
 
 export type KcoinTopupNotice = {
   status:
@@ -69,6 +76,7 @@ export function KcoinTopupSheet({
   }
 
   const shortfall = Math.max(requiredAmount - currentBalance, 0);
+  const topupOptions = createTopupOptions(shortfall);
   const activeStatus =
     statusSnapshot?.paymentOrderStatus ??
     normalizePaymentStatus(activeOrder?.paymentOrderStatus);
@@ -110,7 +118,7 @@ export function KcoinTopupSheet({
             <h2 id="kcoin-topup-title">充值 K-coin</h2>
             <p>
               {shortfall > 0
-                ? `还差 ${formatCurrencyAmount(shortfall)} K-coin，当前余额 ${formatCurrencyAmount(currentBalance)}。`
+                ? `本次开盲盒需要 ${formatCurrencyAmount(requiredAmount)} K-coin，当前余额 ${formatCurrencyAmount(currentBalance)}，还差 ${formatCurrencyAmount(shortfall)}。`
                 : "选择充值档位后，会打开 Telegram Stars 支付账单。"}
             </p>
           </div>
@@ -120,15 +128,20 @@ export function KcoinTopupSheet({
         </header>
 
         <div className="kcoin-topup-sheet__options">
-          {TOPUP_AMOUNTS.map((amount) => {
-            const isPending = isCreating && pendingAmount === amount;
+          {topupOptions.map((option) => {
+            const isPending = isCreating && pendingAmount === option.amount;
+            const OptionIcon = option.recommended ? Coins : Star;
 
             return (
               <button
-                className="kcoin-topup-sheet__option"
+                className={
+                  option.recommended
+                    ? "kcoin-topup-sheet__option kcoin-topup-sheet__option--recommended"
+                    : "kcoin-topup-sheet__option"
+                }
                 disabled={!canSelectAmount || isCreating}
-                key={amount}
-                onClick={() => onSelectAmount(amount)}
+                key={`${option.recommended ? "shortage" : "package"}:${option.amount}`}
+                onClick={() => onSelectAmount(option.amount)}
                 type="button"
               >
                 {isPending ? (
@@ -139,10 +152,10 @@ export function KcoinTopupSheet({
                     strokeWidth={2.4}
                   />
                 ) : (
-                  <Star aria-hidden="true" size={17} strokeWidth={2.4} />
+                  <OptionIcon aria-hidden="true" size={17} strokeWidth={2.4} />
                 )}
-                <span>{formatCurrencyAmount(amount)} Stars</span>
-                <strong>{formatCurrencyAmount(amount)} K-coin</strong>
+                <span>{option.label}</span>
+                <strong>{option.detail}</strong>
               </button>
             );
           })}
@@ -201,6 +214,36 @@ export function KcoinTopupSheet({
       </section>
     </div>
   );
+}
+
+function createTopupOptions(shortfall: number): KcoinTopupOption[] {
+  const normalizedShortfall =
+    Number.isFinite(shortfall) && shortfall > 0 ? Math.ceil(shortfall) : 0;
+  const options: KcoinTopupOption[] = [];
+
+  if (normalizedShortfall > 0) {
+    options.push({
+      amount: normalizedShortfall,
+      label: `补足 ${formatCurrencyAmount(normalizedShortfall)} K-coin`,
+      detail: `推荐，支付 ${formatCurrencyAmount(normalizedShortfall)} Stars`,
+      recommended: true,
+    });
+  }
+
+  for (const amount of FIXED_TOPUP_AMOUNTS) {
+    if (amount === normalizedShortfall) {
+      continue;
+    }
+
+    options.push({
+      amount,
+      label: `${formatCurrencyAmount(amount)} K-coin`,
+      detail: `${formatCurrencyAmount(amount)} Stars`,
+      recommended: false,
+    });
+  }
+
+  return options;
 }
 
 function getTopupStatusMeta(input: {

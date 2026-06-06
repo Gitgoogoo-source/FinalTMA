@@ -64,11 +64,14 @@ create temp table _payloads (
 insert into _ids (key, id)
 values ('user', testutil.make_user(9905142608, 'kcoin_topup_user'));
 
+insert into _ids (key, id)
+values ('shortage_user', testutil.make_user(9905142609, 'kcoin_shortage_user'));
+
 insert into _payloads (key, payload)
 select 'created_order', api.kcoin_topup_create_order(
   (select id from _ids where key = 'user'),
-  1,
-  'kcoin-topup-status-test-idem-0001'
+  500,
+  'kcoin-topup-status-test-idem-0500'
 );
 
 insert into _ids (key, id)
@@ -83,14 +86,14 @@ where key = 'created_order';
 
 select is(
   ((select payload from _payloads where key = 'created_order') ->> 'xtr_amount')::integer,
-  1,
-  '1 Star topup order is allowed'
+  500,
+  '500 Star topup order is allowed'
 );
 
 select is(
   ((select payload from _payloads where key = 'created_order') ->> 'kcoin_amount')::numeric,
-  1::numeric,
-  '1 Star maps to 1 K-coin'
+  500::numeric,
+  '500 Stars map to 500 K-coin'
 );
 
 select throws_ok(
@@ -104,6 +107,54 @@ select throws_ok(
   'P0001',
   'kcoin topup amount is invalid',
   'non-positive topup order is rejected'
+);
+
+select throws_ok(
+  $$
+    select api.kcoin_topup_create_order(
+      (select id from _ids where key = 'user'),
+      9,
+      'kcoin-topup-status-test-idem-manual-0009'
+    );
+  $$,
+  'P0001',
+  'kcoin topup amount is invalid',
+  'manual non-package topup order is rejected'
+);
+
+select api._credit_balance(
+  (select id from _ids where key = 'shortage_user'),
+  'KCOIN',
+  1,
+  'test_fixture',
+  null,
+  null,
+  'kcoin-topup-status-shortage-user-seed',
+  'Seed shortage topup test balance',
+  '{}'::jsonb
+);
+
+insert into _payloads (key, payload)
+select 'shortage_order', api.kcoin_topup_create_order(
+  (select id from _ids where key = 'shortage_user'),
+  9,
+  'kcoin-topup-status-test-idem-shortage-0009',
+  'OPEN_BOX',
+  'starter_egg',
+  1,
+  10
+);
+
+select is(
+  ((select payload from _payloads where key = 'shortage_order') ->> 'topup_type'),
+  'SHORTAGE',
+  'open-box shortage topup is marked as SHORTAGE'
+);
+
+select is(
+  ((select payload from _payloads where key = 'shortage_order') ->> 'shortage_kcoin')::numeric,
+  9::numeric,
+  'open-box shortage topup uses current K-coin balance'
 );
 
 insert into _payloads (key, payload)
@@ -139,8 +190,8 @@ select ok(
 
 select is(
   testutil.balance_of((select id from _ids where key = 'user'), 'KCOIN'),
-  1::numeric,
-  'paid topup credits exactly 1 K-coin'
+  500::numeric,
+  'paid topup credits exactly 500 K-coin'
 );
 
 select is(
@@ -171,7 +222,7 @@ select ok(
 
 select is(
   testutil.balance_of((select id from _ids where key = 'user'), 'KCOIN'),
-  1::numeric,
+  500::numeric,
   'replayed topup fulfillment does not credit again'
 );
 

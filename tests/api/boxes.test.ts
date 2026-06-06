@@ -732,12 +732,17 @@ describe("boxes API helpers", () => {
         p_user_id: USER_ID,
         p_amount: 500,
         p_idempotency_key: "kcoin:topup:test-001",
+        p_intent: "MANUAL_TOPUP",
+        p_box_slug: null,
+        p_draw_count: null,
+        p_required_kcoin: null,
       },
       expect.objectContaining({
         schema: "api",
         context: expect.objectContaining({
           userId: USER_ID,
           amount: 500,
+          intent: "MANUAL_TOPUP",
           idempotencyKey: "kcoin:topup:test-001",
         }),
       }),
@@ -819,6 +824,53 @@ describe("boxes API helpers", () => {
       }),
       expect.any(Object),
     );
+    expect(createTelegramStarsInvoiceMock).not.toHaveBeenCalled();
+  });
+
+  it("/api/boxes/create-open-order returns K-coin shortage details when balance is low", async () => {
+    callRpcRawMock.mockRejectedValueOnce(
+      new RpcError({
+        rpcName: "gacha_open_with_kcoin_from_server_price",
+        error: {
+          message: "insufficient balance: required=10, balance=1, shortage=9",
+        },
+      }),
+    );
+
+    const { default: createOrderHandler } =
+      await import("../../api/boxes/create-open-order");
+    const result = await invokeApiHandler<ApiErrorResponse>(
+      createOrderHandler,
+      {
+        method: "POST",
+        url: "/api/boxes/create-open-order",
+        headers: {
+          cookie: "tma_game_session=test-session-token-000000000000",
+          "content-type": "application/json",
+          "x-forwarded-for": "127.0.0.24",
+        },
+        body: {
+          box_slug: "starter_egg",
+          draw_count: 1,
+          idempotency_key: IDEMPOTENCY_KEY,
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(402);
+    expect(result.body).toMatchObject({
+      ok: false,
+      error: {
+        code: "INSUFFICIENT_KCOIN",
+        details: {
+          required: 10,
+          balance: 1,
+          shortage: 9,
+          canTopup: true,
+          fixedTopupPackages: [500, 1000, 5000, 10000],
+        },
+      },
+    });
     expect(createTelegramStarsInvoiceMock).not.toHaveBeenCalled();
   });
 

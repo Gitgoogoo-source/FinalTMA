@@ -32,6 +32,17 @@ type KcoinTopupCreateOrderRpcResult = {
   idempotent?: unknown;
 };
 
+type GachaBoxSlug = "starter_egg" | "premium_egg" | "legendary_egg";
+
+type OpenBoxTopupContext = {
+  intent: "OPEN_BOX";
+  boxSlug: GachaBoxSlug;
+  drawCount: 1 | 10;
+  requiredKcoin: number;
+  unitPriceKcoin: number;
+  discountBps: number;
+};
+
 type KcoinTopupCreateOrderResponse = {
   order_id: string;
   topup_order_id: string;
@@ -50,6 +61,14 @@ type KcoinTopupCreateOrderResponse = {
   idempotent: boolean;
 };
 
+const GACHA_BOX_PRICE_ENV_BY_SLUG: Record<GachaBoxSlug, string> = {
+  starter_egg: "GACHA_STARTER_EGG_PRICE_STARS",
+  premium_egg: "GACHA_PREMIUM_EGG_PRICE_STARS",
+  legendary_egg: "GACHA_LEGENDARY_EGG_PRICE_STARS",
+};
+
+const GACHA_TEN_DRAW_DISCOUNT_RATE_ENV = "GACHA_TEN_DRAW_DISCOUNT_RATE";
+
 export default withApiHandler(
   async (req, _res, ctx) => {
     const session = await requireSession(req);
@@ -61,6 +80,8 @@ export default withApiHandler(
       normalizeKcoinTopupCreateOrderInput(body, getIdempotencyKey(req)),
     );
 
+    const openBoxContext = readOpenBoxTopupContext(input);
+
     await assertStarsPaymentCreateAllowed();
     await assertUserRiskAllowed({
       req,
@@ -70,6 +91,9 @@ export default withApiHandler(
       idempotencyKey: input.idempotencyKey,
       metadata: {
         amount: input.amount,
+        intent: input.intent,
+        boxSlug: openBoxContext?.boxSlug ?? input.boxSlug,
+        drawCount: openBoxContext?.drawCount ?? input.drawCount,
       },
     });
 
@@ -77,6 +101,7 @@ export default withApiHandler(
       input,
       session.userId,
       ctx.requestId,
+      openBoxContext,
     );
     const topupOrderId = getRequiredString(order, "topup_order_id");
     const starOrderId = getRequiredString(order, "star_order_id");
@@ -115,6 +140,11 @@ export function normalizeKcoinTopupCreateOrderInput(
       payload.kcoin_amount ??
       payload.xtrAmount ??
       payload.xtr_amount,
+    intent: normalizeTopupIntent(
+      payload.intent ?? payload.topupIntent ?? payload.topup_intent,
+    ),
+    boxSlug: payload.boxSlug ?? payload.box_slug,
+    drawCount: payload.drawCount ?? payload.draw_count ?? payload.quantity,
     idempotencyKey:
       payload.idempotencyKey ?? payload.idempotency_key ?? headerIdempotencyKey,
   };
@@ -155,6 +185,7 @@ async function callKcoinTopupCreateOrder(
   input: KcoinTopupCreateOrderRequest,
   userId: string,
   requestId: string,
+  openBoxContext: OpenBoxTopupContext | null,
 ): Promise<KcoinTopupCreateOrderRpcResult> {
   try {
     return await callRpcRaw<KcoinTopupCreateOrderRpcResult>(
@@ -163,6 +194,10 @@ async function callKcoinTopupCreateOrder(
         p_user_id: userId,
         p_amount: input.amount,
         p_idempotency_key: input.idempotencyKey,
+        p_intent: openBoxContext?.intent ?? "MANUAL_TOPUP",
+        p_box_slug: openBoxContext?.boxSlug ?? null,
+        p_draw_count: openBoxContext?.drawCount ?? null,
+        p_required_kcoin: openBoxContext?.requiredKcoin ?? null,
       },
       {
         schema: "api" as never,
@@ -170,6 +205,10 @@ async function callKcoinTopupCreateOrder(
           requestId,
           userId,
           amount: input.amount,
+          intent: openBoxContext?.intent ?? input.intent,
+          boxSlug: openBoxContext?.boxSlug ?? input.boxSlug,
+          drawCount: openBoxContext?.drawCount ?? input.drawCount,
+          requiredKcoin: openBoxContext?.requiredKcoin,
           idempotencyKey: input.idempotencyKey,
         },
       },
@@ -211,6 +250,22 @@ function mapKcoinTopupRpcError(error: unknown): ApiError {
     return new ApiError(400, "KCOIN_TOPUP_AMOUNT_INVALID", "充值档位无效。");
   }
 
+  if (message.includes("topup amount is not enough for open box")) {
+    return new ApiError(
+      400,
+      "KCOIN_TOPUP_AMOUNT_NOT_ENOUGH",
+      "本次充值不足以完成开盒，请选择补足差额或更高档位。",
+    );
+  }
+
+  if (message.includes("open box topup context is invalid")) {
+    return new ApiError(
+      400,
+      "KCOIN_TOPUP_CONTEXT_INVALID",
+      "开盒补差额参数无效，请刷新后重试。",
+    );
+  }
+
   if (message.includes("user not found")) {
     return new ApiError(404, "USER_NOT_FOUND", "登录用户不存在。");
   }
@@ -228,6 +283,136 @@ function mapKcoinTopupRpcError(error: unknown): ApiError {
       cause: error,
     },
   );
+}
+
+function readOpenBoxTopupContext(
+  input: KcoinTopupCreateOrderRequest,
+): OpenBoxTopupContext | null {
+  if (input.intent !== "OPEN_BOX") {
+    return null;
+  }
+
+  const boxSlug = normalizeGachaBoxSlug(input.boxSlug ?? "");
+  const drawCount = input.drawCount;
+
+  if (drawCount !== 1 && drawCount !== 10) {
+    throw new ApiError(
+      400,
+      "KCOIN_TOPUP_CONTEXT_INVALID",
+      "开盒补差额参数无效，请刷新后重试。",
+    );
+  }
+
+  const unitPriceKcoin = readPositiveIntEnv(
+    GACHA_BOX_PRICE_ENV_BY_SLUG[boxSlug],
+  );
+  const discountBps =
+    drawCount === 10
+      ? readDiscountRateEnvAsBps(GACHA_TEN_DRAW_DISCOUNT_RATE_ENV)
+      : 0;
+  const requiredKcoin = Math.ceil(
+    (unitPriceKcoin * drawCount * (10000 - discountBps)) / 10000,
+  );
+
+  if (requiredKcoin <= 0) {
+    throw new ApiError(
+      500,
+      "GACHA_PRICE_CONFIG_INVALID",
+      "盲盒价格配置无效。",
+      {
+        expose: false,
+        details: {
+          boxSlug,
+          drawCount,
+        },
+      },
+    );
+  }
+
+  return {
+    intent: "OPEN_BOX",
+    boxSlug,
+    drawCount,
+    requiredKcoin,
+    unitPriceKcoin,
+    discountBps,
+  };
+}
+
+function normalizeTopupIntent(value: unknown): "MANUAL_TOPUP" | "OPEN_BOX" {
+  const normalized = String(value ?? "MANUAL_TOPUP")
+    .trim()
+    .toUpperCase();
+
+  return normalized === "OPEN_BOX" ? "OPEN_BOX" : "MANUAL_TOPUP";
+}
+
+function normalizeGachaBoxSlug(value: string): GachaBoxSlug {
+  if (
+    value === "starter_egg" ||
+    value === "premium_egg" ||
+    value === "legendary_egg"
+  ) {
+    return value;
+  }
+
+  throw new ApiError(400, "BOX_NOT_FOUND", "盲盒不存在。");
+}
+
+function readPositiveIntEnv(name: string): number {
+  const value = process.env[name]?.trim();
+
+  if (!value || !/^[1-9]\d*$/.test(value)) {
+    throw new ApiError(
+      500,
+      "GACHA_PRICE_CONFIG_INVALID",
+      "盲盒价格配置无效。",
+      {
+        expose: false,
+        details: {
+          envName: name,
+        },
+      },
+    );
+  }
+
+  return Number(value);
+}
+
+function readDiscountRateEnvAsBps(name: string): number {
+  const value = process.env[name]?.trim();
+
+  if (!value || !/^(?:0|0?\.\d+)$/.test(value)) {
+    throw new ApiError(
+      500,
+      "GACHA_PRICE_CONFIG_INVALID",
+      "盲盒折扣配置无效。",
+      {
+        expose: false,
+        details: {
+          envName: name,
+        },
+      },
+    );
+  }
+
+  const numberValue = Number(value);
+
+  if (!Number.isFinite(numberValue) || numberValue < 0 || numberValue >= 1) {
+    throw new ApiError(
+      500,
+      "GACHA_PRICE_CONFIG_INVALID",
+      "盲盒折扣配置无效。",
+      {
+        expose: false,
+        details: {
+          envName: name,
+        },
+      },
+    );
+  }
+
+  return Math.round(numberValue * 10000);
 }
 
 function getRequiredString(

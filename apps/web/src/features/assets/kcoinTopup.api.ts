@@ -20,6 +20,9 @@ export async function createKcoinTopupOrder(
       method: "POST",
       body: {
         amount: input.amount,
+        intent: input.intent,
+        box_slug: input.boxSlug,
+        draw_count: input.drawCount,
         idempotency_key: idempotencyKey,
       },
       headers: {

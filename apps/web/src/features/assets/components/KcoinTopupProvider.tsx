@@ -26,6 +26,11 @@ import { KcoinTopupSheet, type KcoinTopupNotice } from "./KcoinTopupSheet";
 
 type OpenKcoinTopupSheetOptions = {
   requiredAmount?: number | null;
+  currentBalance?: number | null;
+  intent?: "MANUAL_TOPUP" | "OPEN_BOX";
+  boxSlug?: string | null;
+  drawCount?: 1 | 10 | null;
+  onFulfilled?: (() => void | Promise<void>) | null;
 };
 
 type KcoinTopupContextValue = {
@@ -34,6 +39,12 @@ type KcoinTopupContextValue = {
 
 type KcoinTopupProviderProps = {
   children: ReactNode;
+};
+
+type KcoinTopupOpenBoxContext = {
+  intent: "OPEN_BOX";
+  boxSlug: string;
+  drawCount: 1 | 10;
 };
 
 const KcoinTopupContext = createContext<KcoinTopupContextValue>({
@@ -50,6 +61,7 @@ export function KcoinTopupProvider({ children }: KcoinTopupProviderProps) {
   );
   const [open, setOpen] = useState(false);
   const [requiredAmount, setRequiredAmount] = useState(0);
+  const [balanceOverride, setBalanceOverride] = useState<number | null>(null);
   const [pendingAmount, setPendingAmount] = useState<KcoinTopupAmount | null>(
     null,
   );
@@ -58,7 +70,10 @@ export function KcoinTopupProvider({ children }: KcoinTopupProviderProps) {
   const [invoiceNotice, setInvoiceNotice] = useState<KcoinTopupNotice | null>(
     null,
   );
+  const [topupContext, setTopupContext] =
+    useState<KcoinTopupOpenBoxContext | null>(null);
   const completedOrderRef = useRef<string | null>(null);
+  const onFulfilledRef = useRef<(() => void | Promise<void>) | null>(null);
   const createOrder = useCreateKcoinTopupOrder();
   const openInvoice = useKcoinTopupPayment();
   const activeOrderId = activeOrder?.topupOrderId ?? null;
@@ -68,7 +83,23 @@ export function KcoinTopupProvider({ children }: KcoinTopupProviderProps) {
 
   const openKcoinTopupSheet = useCallback(
     (options: OpenKcoinTopupSheetOptions = {}) => {
+      const drawCount = options.drawCount;
+      const boxSlug = options.boxSlug?.trim();
+
       setRequiredAmount(Math.max(Number(options.requiredAmount ?? 0), 0));
+      setBalanceOverride(readOptionalAssetAmount(options.currentBalance));
+      setTopupContext(
+        options.intent === "OPEN_BOX" &&
+          boxSlug &&
+          (drawCount === 1 || drawCount === 10)
+          ? {
+              intent: "OPEN_BOX",
+              boxSlug,
+              drawCount,
+            }
+          : null,
+      );
+      onFulfilledRef.current = options.onFulfilled ?? null;
       setOpen(true);
     },
     [],
@@ -153,6 +184,9 @@ export function KcoinTopupProvider({ children }: KcoinTopupProviderProps) {
       createOrder.mutate(
         {
           amount,
+          intent: topupContext?.intent ?? "MANUAL_TOPUP",
+          boxSlug: topupContext?.boxSlug ?? null,
+          drawCount: topupContext?.drawCount ?? null,
         },
         {
           onSuccess: (order) => {
@@ -173,7 +207,7 @@ export function KcoinTopupProvider({ children }: KcoinTopupProviderProps) {
         },
       );
     },
-    [activeOrder, createOrder, openInvoiceForOrder, pushToast],
+    [activeOrder, createOrder, openInvoiceForOrder, pushToast, topupContext],
   );
 
   const handleRetryPayment = useCallback(() => {
@@ -188,6 +222,16 @@ export function KcoinTopupProvider({ children }: KcoinTopupProviderProps) {
     setActiveOrder(null);
     setInvoiceNotice(null);
   }, []);
+
+  const handleClose = useCallback(() => {
+    setOpen(false);
+
+    if (!activeOrder) {
+      setTopupContext(null);
+      onFulfilledRef.current = null;
+      setBalanceOverride(null);
+    }
+  }, [activeOrder]);
 
   useEffect(() => {
     const snapshot = statusQuery.statusSnapshot;
@@ -209,17 +253,35 @@ export function KcoinTopupProvider({ children }: KcoinTopupProviderProps) {
       }
 
       completedOrderRef.current = snapshot.topupOrderId;
-      void refreshAssets();
-      setInvoiceNotice({
-        status: "fulfilled",
-      });
-      setActiveOrder(null);
-      setOpen(false);
-      pushToast({
-        type: "success",
-        title: "K-coin 已到账",
-        message: `${formatCurrencyAmount(snapshot.kcoinAmount)} K-coin 已刷新到顶部资产栏。`,
-      });
+      const onFulfilled = onFulfilledRef.current;
+      onFulfilledRef.current = null;
+      setTopupContext(null);
+      setBalanceOverride(null);
+      void (async () => {
+        await refreshAssets();
+        setInvoiceNotice({
+          status: "fulfilled",
+        });
+        setActiveOrder(null);
+        setOpen(false);
+        pushToast({
+          type: "success",
+          title: "K-coin 已到账",
+          message: `${formatCurrencyAmount(snapshot.kcoinAmount)} K-coin 已刷新到顶部资产栏。`,
+        });
+
+        if (onFulfilled) {
+          try {
+            await onFulfilled();
+          } catch (error) {
+            pushToast({
+              type: "error",
+              title: "自动开盒失败",
+              message: getApiErrorMessage(error),
+            });
+          }
+        }
+      })();
       return;
     }
 
@@ -254,7 +316,7 @@ export function KcoinTopupProvider({ children }: KcoinTopupProviderProps) {
       {children}
       <KcoinTopupSheet
         open={open}
-        currentBalance={currentBalance}
+        currentBalance={balanceOverride ?? currentBalance}
         requiredAmount={requiredAmount}
         activeOrder={activeOrder}
         statusSnapshot={statusQuery.statusSnapshot}
@@ -266,7 +328,7 @@ export function KcoinTopupProvider({ children }: KcoinTopupProviderProps) {
         onRetryPayment={handleRetryPayment}
         onCheckStatus={() => void statusQuery.refetch()}
         onClearOrder={handleClearOrder}
-        onClose={() => setOpen(false)}
+        onClose={handleClose}
       />
     </KcoinTopupContext.Provider>
   );
@@ -288,4 +350,15 @@ function readAssetAmount(value: string | number | null | undefined): number {
   }
 
   return 0;
+}
+
+function readOptionalAssetAmount(
+  value: string | number | null | undefined,
+): number | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  const parsed = readAssetAmount(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 }

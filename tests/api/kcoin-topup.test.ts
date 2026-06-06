@@ -5,6 +5,7 @@ import type {
   ApiSuccessResponse,
 } from "../../api/_shared/handler";
 import { ApiError } from "../../api/_shared/handler";
+import { RpcError } from "../../packages/server/src/db/rpc";
 import { invokeApiHandler } from "./_utils";
 
 const {
@@ -23,7 +24,15 @@ const {
 
 vi.mock("../../packages/server/src/db/rpc.js", () => ({
   callRpcRaw: callRpcRawMock,
-  RpcError: class RpcError extends Error {},
+  RpcError: class RpcError extends Error {
+    public readonly rpcName: string;
+
+    constructor(params: { rpcName: string; error?: { message?: string } }) {
+      super(params.error?.message ?? "RPC error");
+      this.name = "RpcError";
+      this.rpcName = params.rpcName;
+    }
+  },
 }));
 
 vi.mock("../../packages/server/src/payments/paymentGuards.js", () => ({
@@ -69,13 +78,13 @@ describe("K-coin topup APIs", () => {
     });
   });
 
-  it("creates a 1 Star K-coin topup order and invoice for the session user", async () => {
+  it("creates a fixed-package K-coin topup order and invoice for the session user", async () => {
     callRpcRawMock.mockResolvedValueOnce({
       topup_order_id: TOPUP_ORDER_ID,
       star_order_id: STAR_ORDER_ID,
       invoice_payload: INVOICE_PAYLOAD,
-      xtr_amount: 1,
-      kcoin_amount: "1",
+      xtr_amount: 500,
+      kcoin_amount: "500",
       status: "created",
       payment_order_status: "created",
       expires_at: "2026-06-05T12:15:00.000Z",
@@ -84,7 +93,7 @@ describe("K-coin topup APIs", () => {
     createTelegramStarsInvoiceMock.mockResolvedValueOnce({
       starOrderId: STAR_ORDER_ID,
       payload: INVOICE_PAYLOAD,
-      invoiceLink: "https://t.me/invoice/kcoin-topup-1",
+      invoiceLink: "https://t.me/invoice/kcoin-topup-500",
       openMode: "web_app_open_invoice",
       botApiMethod: "createInvoiceLink",
       expiresAt: "2026-06-05T12:15:00.000Z",
@@ -101,10 +110,10 @@ describe("K-coin topup APIs", () => {
         method: "POST",
         url: "/api/payments/kcoin-topup/create-order",
         headers: {
-          "x-idempotency-key": "kcoin:topup:test:0001",
+          "x-idempotency-key": "kcoin:topup:test:0500",
         },
         body: {
-          amount: 1,
+          amount: 500,
         },
       },
     );
@@ -116,9 +125,9 @@ describe("K-coin topup APIs", () => {
         order_id: TOPUP_ORDER_ID,
         topup_order_id: TOPUP_ORDER_ID,
         star_order_id: STAR_ORDER_ID,
-        invoice_link: "https://t.me/invoice/kcoin-topup-1",
-        xtr_amount: 1,
-        kcoin_amount: 1,
+        invoice_link: "https://t.me/invoice/kcoin-topup-500",
+        xtr_amount: 500,
+        kcoin_amount: 500,
         payment_order_status: "created",
       },
     });
@@ -126,8 +135,12 @@ describe("K-coin topup APIs", () => {
       "kcoin_topup_create_order",
       {
         p_user_id: USER_ID,
-        p_amount: 1,
-        p_idempotency_key: "kcoin:topup:test:0001",
+        p_amount: 500,
+        p_idempotency_key: "kcoin:topup:test:0500",
+        p_intent: "MANUAL_TOPUP",
+        p_box_slug: null,
+        p_draw_count: null,
+        p_required_kcoin: null,
       },
       expect.objectContaining({
         schema: "api",
@@ -139,12 +152,91 @@ describe("K-coin topup APIs", () => {
         drawOrderId: TOPUP_ORDER_ID,
         starOrderId: STAR_ORDER_ID,
         userId: USER_ID,
-        xtrAmount: 1,
+        xtrAmount: 500,
       }),
     );
   });
 
-  it("rejects unsupported K-coin topup amounts before hitting the database", async () => {
+  it("creates a shortage topup order with open-box context", async () => {
+    vi.stubEnv("GACHA_STARTER_EGG_PRICE_STARS", "10");
+    vi.stubEnv("GACHA_TEN_DRAW_DISCOUNT_RATE", "0.1");
+    callRpcRawMock.mockResolvedValueOnce({
+      topup_order_id: TOPUP_ORDER_ID,
+      star_order_id: STAR_ORDER_ID,
+      invoice_payload: INVOICE_PAYLOAD,
+      xtr_amount: 9,
+      kcoin_amount: "9",
+      status: "created",
+      payment_order_status: "created",
+      expires_at: "2026-06-05T12:15:00.000Z",
+      idempotent: false,
+    });
+    createTelegramStarsInvoiceMock.mockResolvedValueOnce({
+      starOrderId: STAR_ORDER_ID,
+      payload: INVOICE_PAYLOAD,
+      invoiceLink: "https://t.me/invoice/kcoin-topup-9",
+      openMode: "web_app_open_invoice",
+      botApiMethod: "createInvoiceLink",
+      expiresAt: "2026-06-05T12:15:00.000Z",
+      invoiceStatus: "created",
+      paymentOrderStatus: "created",
+      reused: false,
+    });
+
+    const { default: createOrderHandler } =
+      await import("../../api/payments/kcoin-topup/create-order");
+    const result = await invokeApiHandler<ApiSuccessResponse>(
+      createOrderHandler,
+      {
+        method: "POST",
+        url: "/api/payments/kcoin-topup/create-order",
+        headers: {
+          "x-idempotency-key": "kcoin:topup:shortage:0009",
+        },
+        body: {
+          amount: 9,
+          intent: "OPEN_BOX",
+          box_slug: "starter_egg",
+          draw_count: 1,
+        },
+      },
+    );
+
+    expect(result.statusCode).toBe(200);
+    expect(result.body).toMatchObject({
+      ok: true,
+      data: {
+        xtr_amount: 9,
+        kcoin_amount: 9,
+      },
+    });
+    expect(callRpcRawMock).toHaveBeenCalledWith(
+      "kcoin_topup_create_order",
+      {
+        p_user_id: USER_ID,
+        p_amount: 9,
+        p_idempotency_key: "kcoin:topup:shortage:0009",
+        p_intent: "OPEN_BOX",
+        p_box_slug: "starter_egg",
+        p_draw_count: 1,
+        p_required_kcoin: 10,
+      },
+      expect.objectContaining({
+        schema: "api",
+      }),
+    );
+  });
+
+  it("maps unsupported manual K-coin topup amounts from the database", async () => {
+    callRpcRawMock.mockRejectedValueOnce(
+      new RpcError({
+        rpcName: "kcoin_topup_create_order",
+        error: {
+          message: "kcoin topup amount is invalid",
+        },
+      }),
+    );
+
     const { default: createOrderHandler } =
       await import("../../api/payments/kcoin-topup/create-order");
     const result = await invokeApiHandler<ApiErrorResponse>(
@@ -165,10 +257,17 @@ describe("K-coin topup APIs", () => {
     expect(result.body).toMatchObject({
       ok: false,
       error: {
-        code: "VALIDATION_ERROR",
+        code: "KCOIN_TOPUP_AMOUNT_INVALID",
       },
     });
-    expect(callRpcRawMock).not.toHaveBeenCalled();
+    expect(callRpcRawMock).toHaveBeenCalledWith(
+      "kcoin_topup_create_order",
+      expect.objectContaining({
+        p_amount: 50,
+        p_intent: "MANUAL_TOPUP",
+      }),
+      expect.any(Object),
+    );
     expect(createTelegramStarsInvoiceMock).not.toHaveBeenCalled();
   });
 

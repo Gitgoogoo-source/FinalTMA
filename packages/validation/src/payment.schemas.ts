@@ -3,6 +3,7 @@ import { z } from "zod";
 import { commonUuidSchema } from "./common.schemas.js";
 
 const PAYMENT_IDEMPOTENCY_KEY_RE = /^[A-Za-z0-9:_-]{16,128}$/;
+const PAYMENT_BOX_SLUG_RE = /^[a-z0-9][a-z0-9_-]{0,79}$/;
 
 export const paymentOrderStatusSchema = z.enum([
   "created",
@@ -35,13 +36,9 @@ export const paymentWebhookProcessStatusSchema = z.enum([
 
 export const paymentStatusSchema = paymentOrderStatusSchema;
 
-export const KcoinTopupAmountSchema = z.union([
-  z.literal(1),
-  z.literal(500),
-  z.literal(1000),
-  z.literal(5000),
-  z.literal(10000),
-]);
+export const KcoinTopupAmountSchema = z.coerce.number().int().min(1).max(10000);
+
+export const KcoinTopupIntentSchema = z.enum(["MANUAL_TOPUP", "OPEN_BOX"]);
 
 export const KcoinTopupStatusQuerySchema = z
   .object({
@@ -51,7 +48,13 @@ export const KcoinTopupStatusQuerySchema = z
 
 export const KcoinTopupCreateOrderRequestSchema = z
   .object({
-    amount: z.coerce.number().pipe(KcoinTopupAmountSchema),
+    amount: KcoinTopupAmountSchema,
+    intent: KcoinTopupIntentSchema.default("MANUAL_TOPUP"),
+    boxSlug: z.string().trim().regex(PAYMENT_BOX_SLUG_RE).optional(),
+    drawCount: z.coerce
+      .number()
+      .pipe(z.union([z.literal(1), z.literal(10)]))
+      .optional(),
     idempotencyKey: z
       .string()
       .trim()
@@ -60,7 +63,28 @@ export const KcoinTopupCreateOrderRequestSchema = z
         "Idempotency key must be 16-128 chars and use letters, numbers, colon, underscore or dash.",
       ),
   })
-  .strict();
+  .strict()
+  .superRefine((value, ctx) => {
+    if (value.intent !== "OPEN_BOX") {
+      return;
+    }
+
+    if (!value.boxSlug) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "boxSlug is required for OPEN_BOX topup intent.",
+        path: ["boxSlug"],
+      });
+    }
+
+    if (!value.drawCount) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "drawCount is required for OPEN_BOX topup intent.",
+        path: ["drawCount"],
+      });
+    }
+  });
 
 export type PaymentOrderStatus = z.infer<typeof paymentOrderStatusSchema>;
 export type RawPaymentOrderStatus = z.infer<typeof rawPaymentOrderStatusSchema>;
@@ -68,6 +92,7 @@ export type PaymentWebhookProcessStatus = z.infer<
   typeof paymentWebhookProcessStatusSchema
 >;
 export type KcoinTopupAmount = z.infer<typeof KcoinTopupAmountSchema>;
+export type KcoinTopupIntent = z.infer<typeof KcoinTopupIntentSchema>;
 export type KcoinTopupCreateOrderRequest = z.infer<
   typeof KcoinTopupCreateOrderRequestSchema
 >;

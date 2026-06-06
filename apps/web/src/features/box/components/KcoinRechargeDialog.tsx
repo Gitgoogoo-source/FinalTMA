@@ -4,7 +4,7 @@ import { formatCurrencyAmount } from "@/shared/lib/formatCurrency";
 
 import type { KcoinTopupAmount } from "../box.types";
 
-const TOPUP_AMOUNTS: KcoinTopupAmount[] = [1, 500, 1000, 5000, 10000];
+const FIXED_TOPUP_AMOUNTS: KcoinTopupAmount[] = [500, 1000, 5000, 10000];
 
 type KcoinRechargeDialogProps = {
   open: boolean;
@@ -30,6 +30,12 @@ export function KcoinRechargeDialog({
   }
 
   const shortfall = Math.max(requiredAmount - currentBalance, 0);
+  const topupAmounts =
+    shortfall > 0
+      ? [Math.ceil(shortfall), ...FIXED_TOPUP_AMOUNTS].filter(
+          (amount, index, all) => all.indexOf(amount) === index,
+        )
+      : FIXED_TOPUP_AMOUNTS;
 
   return (
     <div
@@ -60,8 +66,10 @@ export function KcoinRechargeDialog({
         </header>
 
         <div className="kcoin-recharge-dialog__options">
-          {TOPUP_AMOUNTS.map((amount) => {
+          {topupAmounts.map((amount) => {
             const isLoading = isPending && pendingAmount === amount;
+            const isShortfall =
+              shortfall > 0 && amount === Math.ceil(shortfall);
 
             return (
               <button
@@ -81,7 +89,11 @@ export function KcoinRechargeDialog({
                 ) : (
                   <Coins aria-hidden="true" size={16} strokeWidth={2.4} />
                 )}
-                <span>{formatCurrencyAmount(amount)} K-coin</span>
+                <span>
+                  {isShortfall
+                    ? `补足 ${formatCurrencyAmount(amount)} K-coin`
+                    : `${formatCurrencyAmount(amount)} K-coin`}
+                </span>
                 <strong>{formatCurrencyAmount(amount)} Stars</strong>
               </button>
             );

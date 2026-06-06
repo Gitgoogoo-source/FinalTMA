@@ -50,10 +50,13 @@ export type AssetProfileSource = {
   avatarUrl?: string | null;
 };
 
-export type KcoinTopupAmount = 1 | 500 | 1000 | 5000 | 10000;
+export type KcoinTopupAmount = number;
 
 export type CreateKcoinTopupOrderInput = {
   amount: KcoinTopupAmount;
+  intent?: "MANUAL_TOPUP" | "OPEN_BOX";
+  boxSlug?: string | null;
+  drawCount?: 1 | 10 | null;
 };
 
 export type CreateKcoinTopupOrderResponse = {

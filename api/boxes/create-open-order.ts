@@ -77,6 +77,7 @@ const GACHA_BOX_PRICE_ENV_BY_SLUG: Record<GachaBoxSlug, string> = {
 const GACHA_TEN_DRAW_DISCOUNT_RATE_ENV = "GACHA_TEN_DRAW_DISCOUNT_RATE";
 const GACHA_HIGH_FREQUENCY_WINDOW_MS = 5 * 60 * 1000;
 const GACHA_HIGH_FREQUENCY_THRESHOLD = 5;
+const KCOIN_FIXED_TOPUP_PACKAGES = [500, 1000, 5000, 10000] as const;
 
 export default withApiHandler(
   async (req, _res, ctx) => {
@@ -303,7 +304,10 @@ function mapGachaRpcError(error: unknown): ApiError {
         });
   }
 
-  const message = error.message.toLowerCase();
+  const rpcMessage = [error.message, error.details, error.hint]
+    .filter((item): item is string => typeof item === "string")
+    .join(" ");
+  const message = rpcMessage.toLowerCase();
 
   if (message.includes("blind box not found")) {
     return new ApiError(404, "BOX_NOT_FOUND", "盲盒不存在。");
@@ -388,10 +392,21 @@ function mapGachaRpcError(error: unknown): ApiError {
   }
 
   if (message.includes("insufficient balance")) {
+    const shortageDetails = readInsufficientKcoinDetails(rpcMessage);
+
     return new ApiError(
       402,
-      "INSUFFICIENT_BALANCE",
+      "INSUFFICIENT_KCOIN",
       "K-coin 余额不足，请先充值。",
+      {
+        details: {
+          required: shortageDetails?.required ?? null,
+          balance: shortageDetails?.balance ?? null,
+          shortage: shortageDetails?.shortage ?? null,
+          canTopup: true,
+          fixedTopupPackages: [...KCOIN_FIXED_TOPUP_PACKAGES],
+        },
+      },
     );
   }
 
@@ -437,6 +452,38 @@ function mapGachaRpcError(error: unknown): ApiError {
     expose: false,
     cause: error,
   });
+}
+
+function readInsufficientKcoinDetails(message: string): {
+  required: number;
+  balance: number;
+  shortage: number;
+} | null {
+  const required = readNamedNumber(message, "required");
+  const balance = readNamedNumber(message, "balance");
+  const shortage = readNamedNumber(message, "shortage");
+
+  if (required === null || balance === null || shortage === null) {
+    return null;
+  }
+
+  return {
+    required,
+    balance,
+    shortage,
+  };
+}
+
+function readNamedNumber(message: string, key: string): number | null {
+  const match = new RegExp(`${key}=([0-9]+(?:\\.[0-9]+)?)`).exec(message);
+  const value = match?.[1];
+
+  if (!value) {
+    return null;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 function readGachaServerPriceSnapshot(

@@ -52,6 +52,12 @@ import {
   type StarsInvoiceCallbackResult,
 } from "../hooks/useStarsPayment";
 
+type PendingOpenRequest = {
+  boxSlug: string;
+  drawCount: 1 | 10;
+  requiredKcoin: number;
+};
+
 export function BoxPage() {
   const { pushToast } = useFeedback();
   const [selectedBoxSlug, setSelectedBoxSlug] = useState<string | null>(null);
@@ -61,6 +67,8 @@ export function BoxPage() {
     useState<CreateOpenOrderResponse | null>(null);
   const [paymentOpenNotice, setPaymentOpenNotice] =
     useState<PaymentOpenNotice | null>(null);
+  const [resumeOpenRequest, setResumeOpenRequest] =
+    useState<PendingOpenRequest | null>(null);
   const [vipFreeModeSelected, setVipFreeModeSelected] = useState(false);
   const openRequestLockedRef = useRef(false);
   const { openKcoinTopupSheet } = useKcoinTopupSheet();
@@ -484,6 +492,88 @@ export function BoxPage() {
     [handleInvoiceStatus, openStarsInvoice, pushToast],
   );
 
+  const submitOpenOrder = useCallback(
+    (request: PendingOpenRequest) => {
+      if (createOrder.isPending || openRequestLockedRef.current) {
+        return;
+      }
+
+      openRequestLockedRef.current = true;
+      createOrder.mutate(
+        {
+          boxSlug: request.boxSlug,
+          drawCount: request.drawCount,
+        },
+        {
+          onSuccess: (order) => {
+            if (order.resultReady && order.orderId) {
+              clearPendingStarsPaymentOrder(order.orderId);
+              setPaymentPendingOrder(null);
+              setPaymentOpenNotice(null);
+              setResultOrderId(order.orderId);
+            } else {
+              const paymentStatusMeta = getPaymentStatusMeta(
+                getOrderPaymentStatus(order),
+              );
+
+              setResultOrderId(null);
+              setPaymentPendingOrder(order);
+              openInvoiceForOrder(order);
+
+              pushToast({
+                type: paymentStatusMeta.toastType,
+                title: paymentStatusMeta.title,
+                message: `${paymentStatusMeta.detail} 金额 ${formatCurrencyAmount(order.xtrAmount)} Stars。`,
+              });
+              return;
+            }
+
+            pushToast({
+              type: "success",
+              title: "开盒成功",
+              message: `已消耗 ${formatCurrencyAmount(order.totalPriceKcoin || request.requiredKcoin)} K-coin，开盒结果正在展示。`,
+            });
+          },
+          onError: (error) => {
+            if (isInsufficientBalanceError(error)) {
+              const shortageDetails = readInsufficientKcoinTopupDetails(error);
+
+              openKcoinTopupSheet({
+                requiredAmount:
+                  shortageDetails?.requiredAmount ?? request.requiredKcoin,
+                currentBalance: shortageDetails?.currentBalance ?? null,
+                intent: "OPEN_BOX",
+                boxSlug: request.boxSlug,
+                drawCount: request.drawCount,
+                onFulfilled: () => setResumeOpenRequest(request),
+              });
+              return;
+            }
+
+            pushToast({
+              type: "error",
+              title: "开盒请求失败",
+              message: getApiErrorMessage(error),
+            });
+          },
+          onSettled: () => {
+            openRequestLockedRef.current = false;
+          },
+        },
+      );
+    },
+    [createOrder, openInvoiceForOrder, openKcoinTopupSheet, pushToast],
+  );
+
+  useEffect(() => {
+    if (!resumeOpenRequest) {
+      return;
+    }
+
+    setResumeOpenRequest(null);
+    submitOpenOrder(resumeOpenRequest);
+  }, [resumeOpenRequest, submitOpenOrder]);
+
   const handleOpen = useCallback(
     (drawCount: 1 | 10) => {
       if (!selectedBox) {
@@ -528,80 +618,34 @@ export function BoxPage() {
       }
 
       const requiredKcoin = getOpenRequiredKcoin(selectedBox, drawCount);
+      const openRequest: PendingOpenRequest = {
+        boxSlug: selectedBox.slug,
+        drawCount,
+        requiredKcoin,
+      };
 
       if (kcoinAvailable < requiredKcoin) {
         openKcoinTopupSheet({
           requiredAmount: requiredKcoin,
+          intent: "OPEN_BOX",
+          boxSlug: selectedBox.slug,
+          drawCount,
+          onFulfilled: () => setResumeOpenRequest(openRequest),
         });
         return;
       }
 
-      openRequestLockedRef.current = true;
-      createOrder.mutate(
-        {
-          boxSlug: selectedBox.slug,
-          drawCount,
-        },
-        {
-          onSuccess: (order) => {
-            if (order.resultReady && order.orderId) {
-              clearPendingStarsPaymentOrder(order.orderId);
-              setPaymentPendingOrder(null);
-              setPaymentOpenNotice(null);
-              setResultOrderId(order.orderId);
-            } else {
-              const paymentStatusMeta = getPaymentStatusMeta(
-                getOrderPaymentStatus(order),
-              );
-
-              setResultOrderId(null);
-              setPaymentPendingOrder(order);
-              openInvoiceForOrder(order);
-
-              pushToast({
-                type: paymentStatusMeta.toastType,
-                title: paymentStatusMeta.title,
-                message: `${paymentStatusMeta.detail} 金额 ${formatCurrencyAmount(order.xtrAmount)} Stars。`,
-              });
-              return;
-            }
-
-            pushToast({
-              type: "success",
-              title: "开盒成功",
-              message: `已消耗 ${formatCurrencyAmount(order.totalPriceKcoin || requiredKcoin)} K-coin，开盒结果正在展示。`,
-            });
-          },
-          onError: (error) => {
-            if (isInsufficientBalanceError(error)) {
-              openKcoinTopupSheet({
-                requiredAmount: requiredKcoin,
-              });
-              return;
-            }
-
-            pushToast({
-              type: "error",
-              title: "开盒请求失败",
-              message: getApiErrorMessage(error),
-            });
-          },
-          onSettled: () => {
-            openRequestLockedRef.current = false;
-          },
-        },
-      );
+      submitOpenOrder(openRequest);
     },
     [
-      createOrder,
       handleVipFreeOpenSuccess,
       kcoinAvailable,
       openKcoinTopupSheet,
-      openInvoiceForOrder,
       openVipDaily,
       pushToast,
       selectedBox,
       selectedBoxUsesVipFreeOpen,
+      submitOpenOrder,
     ],
   );
 
@@ -925,6 +969,44 @@ function isInsufficientBalanceError(error: unknown): boolean {
       error.code === "INSUFFICIENT_KCOIN" ||
       error.code === "KCOIN_NOT_ENOUGH")
   );
+}
+
+function readInsufficientKcoinTopupDetails(error: unknown): {
+  requiredAmount: number;
+  currentBalance: number;
+} | null {
+  if (!isApiClientError(error) || !isRecord(error.details)) {
+    return null;
+  }
+
+  const requiredAmount = readDetailAmount(error.details.required);
+  const currentBalance = readDetailAmount(error.details.balance);
+
+  if (requiredAmount === null || currentBalance === null) {
+    return null;
+  }
+
+  return {
+    requiredAmount,
+    currentBalance,
+  };
+}
+
+function readDetailAmount(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value) && value >= 0) {
+    return value;
+  }
+
+  if (typeof value === "string" && value.trim().length > 0) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+  }
+
+  return null;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
 }
 
 function getOrderPaymentStatus(order: CreateOpenOrderResponse): string {
