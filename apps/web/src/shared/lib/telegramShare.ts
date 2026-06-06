@@ -28,19 +28,17 @@ export function canUseTelegramPreparedShare(): boolean {
   return typeof webApp?.shareMessage === "function";
 }
 
-export async function openTelegramPreparedShare({
-  preparedMessageId,
-  text,
-  url,
-}: OpenTelegramPreparedShareInput): Promise<TelegramShareResult> {
+export async function openTelegramPreparedShare(
+  input: OpenTelegramPreparedShareInput,
+): Promise<TelegramShareResult> {
   const webApp = getTelegramWebApp();
 
   if (typeof webApp?.shareMessage !== "function") {
-    return openTelegramShareLink({ text, url });
+    throw new Error("当前 Telegram 客户端不支持应用内分享弹窗。");
   }
 
   const sent = await new Promise<boolean>((resolve) => {
-    webApp.shareMessage?.(preparedMessageId, (result) => {
+    webApp.shareMessage?.(input.preparedMessageId, (result) => {
       resolve(Boolean(result));
     });
   });

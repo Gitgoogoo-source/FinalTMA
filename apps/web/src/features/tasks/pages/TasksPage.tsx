@@ -5,7 +5,10 @@ import { useFeedback } from "@/app/providers/FeedbackProvider";
 import { ActivityBanner } from "@/features/banners/components/ActivityBanner";
 import { useBanners } from "@/features/banners/hooks/useBanners";
 import type { RewardModalItem } from "@/features/feedback/feedback.types";
-import { openTelegramShareLink } from "@/shared/lib/telegramShare";
+import {
+  canUseTelegramPreparedShare,
+  openTelegramPreparedShare,
+} from "@/shared/lib/telegramShare";
 
 import { CommissionStatsPanel } from "../components/CommissionStatsPanel";
 import { InviteCampaignCard } from "../components/InviteCampaignCard";
@@ -21,6 +24,7 @@ import { useCommissionHistory } from "../hooks/useCommissionHistory";
 import { useDailyCheckIn } from "../hooks/useDailyCheckIn";
 import { useInviteShare } from "../hooks/useInviteShare";
 import { useInviteStats } from "../hooks/useInviteStats";
+import { usePreparedShareMessage } from "../hooks/usePreparedShareMessage";
 import { useReferralLink } from "../hooks/useReferralLink";
 import { useTasks } from "../hooks/useTasks";
 import type {
@@ -52,6 +56,7 @@ export function TasksPage() {
   const claimTask = useClaimTask();
   const dailyCheckIn = useDailyCheckIn();
   const referralLinkMutation = useReferralLink();
+  const preparedShareMessage = usePreparedShareMessage();
   const inviteShare = useInviteShare();
   const claimCommission = useClaimCommission();
   const pendingTaskId = claimTask.isPending
@@ -59,7 +64,9 @@ export function TasksPage() {
     : null;
   const isTaskCenterLoading = taskQuery.isLoading && !taskQuery.overview;
   const isInviteActionPending =
-    referralLinkMutation.isPending || inviteShare.isPending;
+    referralLinkMutation.isPending ||
+    preparedShareMessage.isPending ||
+    inviteShare.isPending;
 
   async function handleCopyReferralLink() {
     try {
@@ -85,7 +92,17 @@ export function TasksPage() {
 
   async function handleShareReferralLink() {
     try {
-      const shareResult = await shareReferralLink();
+      const shareResult = await sharePreparedReferralLink();
+
+      if (shareResult.method === "prepared" && !shareResult.sent) {
+        pushToast({
+          type: "info",
+          title: "分享已取消",
+          message: "没有发送给好友，任务进度不会刷新。",
+        });
+        return;
+      }
+
       await inviteShare.mutateAsync({
         scene: "TASK_PAGE",
         referralCode: shareResult.referralCode,
@@ -107,17 +124,28 @@ export function TasksPage() {
     }
   }
 
-  async function shareReferralLink() {
-    const link = await ensureReferralLink();
+  async function sharePreparedReferralLink() {
+    if (!canUseTelegramPreparedShare()) {
+      throw new Error(
+        "当前 Telegram 客户端不支持应用内分享弹窗，请使用复制链接。",
+      );
+    }
 
-    const result = openTelegramShareLink({
-      text: link.shareText,
-      url: link.inviteUrl,
+    const prepared = await preparedShareMessage.mutateAsync({
+      scene: "TASK_PAGE",
+      source: "task_center",
+    });
+    setReferralLink(prepared);
+
+    const result = await openTelegramPreparedShare({
+      preparedMessageId: prepared.preparedMessageId,
+      text: prepared.shareText,
+      url: prepared.inviteUrl,
     });
 
     return {
       ...result,
-      referralCode: link.referralCode,
+      referralCode: prepared.referralCode,
     };
   }
 
