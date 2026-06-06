@@ -1,22 +1,16 @@
 # 开盒功能
 
-## 说明来源
-
-这份说明根据当前项目代码整理，主要看了开盒页、开盒接口、K-coin 充值接口、VIP 每日福利接口、数据库迁移和 seed 文件。
-
-没有在代码里确认的规则，不写成确定结论。
-
 ## 功能描述
 
 开盒功能在开盒页中。用户进入 TMA 后，根路径会自动跳到 `/box`，底部导航栏里的“开盒”入口也会进入 `/box`。
 
-当前代码里有 3 个盲盒档次：
+一共有 3 个盲盒档次：
 
 | 页面显示 | 代码名称 | 档次 | 单抽展示价 | 十连展示价 | 当前保底 |
 | --- | --- | --- | ---: | ---: | --- |
 | Normal Egg | starter_egg | 普通 | 10 K-coin | 90 K-coin | 30 抽保底稀有或以上 |
-| Rare Egg | premium_egg | 稀有 | 30 K-coin | 270 K-coin | 50 抽保底史诗或以上 |
-| Legendary Egg | legendary_egg | 传奇 | 80 K-coin | 720 K-coin | 80 抽保底传说或以上 |
+| Rare Egg | premium_egg | 稀有 |40 K-coin | 360 K-coin | 50 抽保底史诗或以上 |
+| Legendary Egg | legendary_egg | 传奇 | 120 K-coin | 1080 K-coin | 80 抽保底传说或以上 |
 
 十连是 9 折。前端有自己的展示价格，服务端也会从后端环境配置里读取真实价格。真正扣款以后端为准，不能以前端展示或用户提交内容为准。
 
@@ -35,7 +29,6 @@
 开盒页主要有这些内容：
 
 - 顶部资产栏：头像、K-coin、FGEMS、钱包入口。
-- 开盒活动 Banner。
 - 当前盲盒主视觉图。
 - VIP 月卡每日福利入口。
 - 盲盒档位选择：Normal Egg、Rare Egg、Legendary Egg。
@@ -52,25 +45,19 @@
 
 当前盲盒主视觉图来自前端静态配置，用于展示。
 
-“可能获得”也来自前端静态配置，用于减少页面请求。页面上只展示前几个奖励，用户点击“查看全部”后，会打开完整奖励弹窗。
+“可能获得”也来自前端静态配置，用于减少页面请求。页面上只展示前几个藏品概率，用户点击“查看全部”后，会打开完整藏品概率弹窗。
 
-完整奖励弹窗会展示：
+完整藏品概率弹窗会展示：
 
-- 藏品图片。
+- 藏品缩略图。
 - 藏品名字。
 - 稀有度。
-- 藏品类型。
 - 概率。
-- 是否在保底池。
-- 是否限量。
 
 开盒结果弹窗会展示：
 
 - 本次获得了几件藏品。
-- 本次消耗了多少 K-coin。
-- 本次返还了多少 K-coin。
-- 当前 K-coin 余额。
-- 每个抽中的藏品图片、名字、稀有度、形态、编号。
+- 每个抽中的藏品信息：包括图片、名字、稀有度、进化阶级。
 - 如果某个结果是保底命中，会显示“保底”标记。
 
 ## 开盒主流程
@@ -138,11 +125,11 @@ VIP 每日福利拆成两个动作：
 
 保底配置方案：
 
-| 档次   | 保底进度 | 保底奖励  | 是否推荐 |
+| 档次   | 保底进度 | 保底奖励  |  
 | ---- | ---: | ----- |  ---- |
-| 普通盲盒 | 50 抽 | 稀有或以上 |  推荐   |
-| 高级盲盒 | 30 抽 | 史诗或以上 |  推荐   |
-| 豪华盲盒 | 15 抽 | 传说或以上 |  推荐   |
+| 普通盲盒 | 50 抽 | 稀有或以上 |
+| 高级盲盒 | 30 抽 | 史诗或以上 |
+| 豪华盲盒 | 15 抽 | 传说或以上 |
 
 
 
@@ -177,7 +164,7 @@ VIP 每日福利拆成两个动作：
 | 开 10 次 | 使用 K-coin 十连，不使用 VIP 免费次数 |
 | K-coin 余额不足 | 打开 K-coin 充值弹窗 |
 | 选择充值档位 | 创建充值订单，并打开 Telegram Stars 支付窗口 |
-| 刷新到账状态 | 查询服务端是否已确认充值到账 |
+| 刷新到账状态 | 充值订单完成后前端自动刷新顶部资产烂数据 |
 | 领取每日 FGEMS | 调用 VIP 每日 FGEMS 领取逻辑 |
 | 领取免费盲盒 | 领取今日免费 Rare Egg 次数，并选中 Rare Egg |
 | 重试结果 | 重新读取服务端开盒结果 |
@@ -228,7 +215,7 @@ VIP 每日福利拆成两个动作：
 
 开盒真实逻辑在服务端和数据库事务里完成，前端只负责展示和发起用户操作。
 
-当前代码里主要涉及这些服务端接口：
+推荐api命名：
 
 - `/boxes/create-open-order`：普通 K-coin 开盒。
 - `/boxes/open-vip-daily`：VIP 免费 Rare Egg 单抽。
@@ -240,24 +227,6 @@ VIP 每日福利拆成两个动作：
 - `/vip/claim-daily`：领取每日 FGEMS。
 - `/vip/claim-free-box`：领取每日免费盲盒次数。
 
-当前数据库里主要涉及这些表：
-
-- `gacha.blind_boxes`：盲盒配置。
-- `gacha.drop_pool_versions`：奖励池版本。
-- `gacha.drop_pool_items`：奖励池里的藏品。
-- `gacha.pity_rules`：保底规则。
-- `gacha.user_pity_states`：用户每个盲盒的保底进度。
-- `gacha.draw_orders`：开盒订单。
-- `gacha.draw_results`：开盒结果。
-- `inventory.item_instances`：用户库存里的具体藏品。
-- `album.user_discoveries`：用户图鉴发现记录。
-- `economy.user_balances`：用户资产余额。
-- `economy.currency_ledger`：资产流水。
-- `payments.kcoin_topup_orders`：K-coin 充值订单。
-- `payments.star_orders`：Telegram Stars 支付订单。
-- `payments.star_payments`：Telegram Stars 支付记录。
-- `vip.vip_daily_claims`：VIP 每日领取记录。
-- `vip.vip_benefit_ledger`：VIP 福利流水。
 
 ## 当前不要写死的内容
 
@@ -272,23 +241,3 @@ VIP 每日福利拆成两个动作：
 
 如果要确认这些内容，需要看当前线上环境配置、数据库 seed 或后台配置，不能只看前端页面。
 
-## 代码依据
-
-- `apps/web/src/app/router.tsx`：确认根路径跳到开盒页。
-- `apps/web/src/shared/layout/AppShell.tsx`：确认顶部资产栏和底部导航是全局布局。
-- `apps/web/src/features/box/pages/BoxPage.tsx`：确认开盒页主要交互。
-- `apps/web/src/features/box/staticBoxes.ts`：确认前端静态盲盒展示。
-- `apps/web/src/features/box/staticRewards.ts`：确认前端静态奖励预览。
-- `apps/web/src/features/assets/components/KcoinTopupSheet.tsx`：确认 K-coin 充值弹窗展示。
-- `api/boxes/create-open-order.ts`：确认普通 K-coin 开盒入口。
-- `api/boxes/open-vip-daily.ts`：确认 VIP 免费 Rare Egg 开盒入口。
-- `api/boxes/result.ts`：确认开盒结果读取。
-- `api/payments/kcoin-topup/create-order.ts`：确认 K-coin 充值订单创建。
-- `api/payments/kcoin-topup/status.ts`：确认 K-coin 充值状态读取。
-- `api/vip/claim-daily.ts`：确认每日 FGEMS 领取。
-- `api/vip/claim-free-box.ts`：确认每日免费盲盒领取。
-- `supabase/seed/006_boxes.seed.sql`：确认初始盲盒配置。
-- `supabase/seed/007_drop_pools.seed.sql`：确认初始奖励池和保底配置。
-- `supabase/migrations/20260605141107_kcoin_open_and_topup.sql`：确认 K-coin 开盒和 K-coin 充值主事务。
-- `supabase/migrations/20260605121556_vip_daily_free_premium_egg.sql`：确认 VIP 免费 Rare Egg 主事务。
-- `supabase/migrations/20260605154705_split_vip_daily_benefits.sql`：确认 VIP 每日 FGEMS 和免费盲盒拆成两个动作。
