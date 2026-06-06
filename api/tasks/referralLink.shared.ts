@@ -94,7 +94,9 @@ function buildTelegramInviteUrl(startPayload: string): string {
     )}?startapp=${encodedPayload}`;
   }
 
-  return `https://t.me/${encodeURIComponent(botUsername)}?start=${encodedPayload}`;
+  return `https://t.me/${encodeURIComponent(
+    botUsername,
+  )}?startapp=${encodedPayload}`;
 }
 
 function buildShareText(input: Pick<ReferralLinkBuildInput, "source">): string {

@@ -781,7 +781,7 @@ describe("tasks API", () => {
     expect(result.body.data).toMatchObject({
       referral_code: "INVITE7001",
       start_payload: "INVITE7001",
-      invite_url: "https://t.me/test_bot?start=INVITE7001",
+      invite_url: "https://t.me/test_bot?startapp=INVITE7001",
       share_text: "来一起开盲盒 task-center，完成首次开盒还能获得奖励。",
       scene: "TASK_PAGE",
       source: "task-center",
@@ -898,12 +898,12 @@ describe("tasks API", () => {
       type: "article",
       id: "invite_share",
       title: "邀请好友开盲盒",
-      url: "https://t.me/test_bot?start=INVITE7001",
+      url: "https://t.me/test_bot?startapp=INVITE7001",
       hide_url: true,
       input_message_content: {
         parse_mode: "HTML",
         link_preview_options: {
-          url: "https://t.me/test_bot?start=INVITE7001",
+          url: "https://t.me/test_bot?startapp=INVITE7001",
           prefer_large_media: true,
         },
       },
@@ -912,7 +912,7 @@ describe("tasks API", () => {
           [
             {
               text: "打开游戏",
-              url: "https://t.me/test_bot?start=INVITE7001",
+              url: "https://t.me/test_bot?startapp=INVITE7001",
             },
           ],
         ],
@@ -922,7 +922,7 @@ describe("tasks API", () => {
       prepared_message_id: "prepared_invite_7001",
       expires_at: "2026-09-21T14:13:20.000Z",
       referral_code: "INVITE7001",
-      invite_url: "https://t.me/test_bot?start=INVITE7001",
+      invite_url: "https://t.me/test_bot?startapp=INVITE7001",
     });
   });
 

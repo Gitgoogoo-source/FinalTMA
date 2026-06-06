@@ -1,9 +1,4 @@
-import {
-  openTelegramLink as sdkOpenTelegramLink,
-  shareURL as sdkShareURL,
-} from "@tma.js/sdk-react";
-
-import { getTelegramWebApp } from "@/types/telegram";
+import { getTelegramWebApp, getTelegramWebView } from "@/types/telegram";
 
 type OpenTelegramShareInput = {
   url: string;
@@ -60,22 +55,7 @@ export function openTelegramShareLink({
   text,
   url,
 }: OpenTelegramShareInput): TelegramShareResult {
-  if (openWithSdkShareURL({ text, url })) {
-    return {
-      method: "share_url",
-      sent: null,
-    };
-  }
-
   const shareUrl = createTelegramShareUrl({ text, url });
-
-  if (openWithSdkTelegramLink(shareUrl)) {
-    return {
-      method: "share_url",
-      sent: null,
-    };
-  }
-
   const webApp = getTelegramWebApp();
 
   if (webApp?.openTelegramLink) {
@@ -86,39 +66,28 @@ export function openTelegramShareLink({
     };
   }
 
-  if (webApp?.openLink) {
-    webApp.openLink(shareUrl);
+  const webView = getTelegramWebView();
+
+  if (webView?.postEvent) {
+    webView.postEvent("web_app_open_tg_link", false, {
+      path_full: createTelegramSharePath(shareUrl),
+    });
     return {
       method: "share_url",
       sent: null,
     };
   }
 
-  globalThis.open(shareUrl, "_blank", "noopener,noreferrer");
-  return {
-    method: "share_url",
-    sent: null,
-  };
-}
-
-function openWithSdkShareURL(input: OpenTelegramShareInput): boolean {
-  try {
-    return sdkShareURL.ifAvailable(input.url, input.text).ok;
-  } catch {
-    return false;
-  }
-}
-
-function openWithSdkTelegramLink(url: string): boolean {
-  try {
-    return sdkOpenTelegramLink.ifAvailable(url).ok;
-  } catch {
-    return false;
-  }
+  throw new Error("当前 Telegram 客户端不支持原生分享弹窗。");
 }
 
 function createTelegramShareUrl({ text, url }: OpenTelegramShareInput): string {
   return `https://t.me/share/url?url=${encodeURIComponent(
     url,
   )}&text=${encodeURIComponent(text)}`;
+}
+
+function createTelegramSharePath(shareUrl: string): string {
+  const parsed = new URL(shareUrl);
+  return `${parsed.pathname}${parsed.search}`;
 }

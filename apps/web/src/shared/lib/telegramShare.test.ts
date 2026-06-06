@@ -1,20 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { TelegramGlobal, TelegramWebApp } from "@/types/telegram";
-
-const sdkMocks = vi.hoisted(() => ({
-  openTelegramLink: {
-    ifAvailable: vi.fn(),
-  },
-  shareURL: {
-    ifAvailable: vi.fn(),
-  },
-}));
-
-vi.mock("@tma.js/sdk-react", () => ({
-  openTelegramLink: sdkMocks.openTelegramLink,
-  shareURL: sdkMocks.shareURL,
-}));
+import type {
+  TelegramGlobal,
+  TelegramWebApp,
+  TelegramWebView,
+} from "@/types/telegram";
 
 import { openTelegramShareLink } from "./telegramShare";
 
@@ -27,11 +17,13 @@ describe("telegramShare", () => {
     vi.unstubAllGlobals();
   });
 
-  it("uses SDK shareURL first", () => {
-    sdkMocks.shareURL.ifAvailable.mockReturnValue({
-      ok: true,
-      data: undefined,
-    });
+  it("uses WebApp.openTelegramLink for the native Telegram share dialog", () => {
+    const openTelegramLink = vi.fn();
+    (globalThis as TelegramGlobal).Telegram = {
+      WebApp: {
+        openTelegramLink,
+      } as TelegramWebApp,
+    };
 
     const result = openTelegramShareLink({
       text: SHARE_TEXT,
@@ -42,45 +34,16 @@ describe("telegramShare", () => {
       method: "share_url",
       sent: null,
     });
-    expect(sdkMocks.shareURL.ifAvailable).toHaveBeenCalledWith(
-      INVITE_URL,
-      SHARE_TEXT,
-    );
-    expect(sdkMocks.openTelegramLink.ifAvailable).not.toHaveBeenCalled();
+    expect(openTelegramLink).toHaveBeenCalledOnce();
+    expectTelegramShareLink(openTelegramLink.mock.calls[0]?.[0]);
   });
 
-  it("falls back to SDK openTelegramLink with a Telegram share link", () => {
-    sdkMocks.shareURL.ifAvailable.mockReturnValue({
-      ok: false,
-    });
-    sdkMocks.openTelegramLink.ifAvailable.mockReturnValue({
-      ok: true,
-      data: undefined,
-    });
-
-    openTelegramShareLink({
-      text: SHARE_TEXT,
-      url: INVITE_URL,
-    });
-
-    expect(sdkMocks.openTelegramLink.ifAvailable).toHaveBeenCalledOnce();
-    expectTelegramShareLink(
-      sdkMocks.openTelegramLink.ifAvailable.mock.calls[0]?.[0],
-    );
-  });
-
-  it("keeps the WebApp openTelegramLink fallback for test shells and old clients", () => {
-    const openTelegramLink = vi.fn();
-    sdkMocks.shareURL.ifAvailable.mockReturnValue({
-      ok: false,
-    });
-    sdkMocks.openTelegramLink.ifAvailable.mockReturnValue({
-      ok: false,
-    });
+  it("falls back to Telegram WebView postEvent without navigating to a web page", () => {
+    const postEvent = vi.fn();
     (globalThis as TelegramGlobal).Telegram = {
-      WebApp: {
-        openTelegramLink,
-      } as TelegramWebApp,
+      WebView: {
+        postEvent,
+      } as TelegramWebView,
     };
 
     openTelegramShareLink({
@@ -88,8 +51,31 @@ describe("telegramShare", () => {
       url: INVITE_URL,
     });
 
-    expect(openTelegramLink).toHaveBeenCalledOnce();
-    expectTelegramShareLink(openTelegramLink.mock.calls[0]?.[0]);
+    expect(postEvent).toHaveBeenCalledWith("web_app_open_tg_link", false, {
+      path_full: expect.any(String),
+    });
+    expectTelegramSharePath(postEvent.mock.calls[0]?.[2]?.path_full);
+  });
+
+  it("does not open the share URL as a normal web page when native sharing is unavailable", () => {
+    const openLink = vi.fn();
+    const browserOpen = vi.fn();
+    vi.stubGlobal("open", browserOpen);
+    (globalThis as TelegramGlobal).Telegram = {
+      WebApp: {
+        openLink,
+      } as TelegramWebApp,
+    };
+
+    expect(() =>
+      openTelegramShareLink({
+        text: SHARE_TEXT,
+        url: INVITE_URL,
+      }),
+    ).toThrow("当前 Telegram 客户端不支持原生分享弹窗。");
+
+    expect(openLink).not.toHaveBeenCalled();
+    expect(browserOpen).not.toHaveBeenCalled();
   });
 });
 
@@ -100,4 +86,9 @@ function expectTelegramShareLink(value: unknown): void {
   expect(`${parsed.origin}${parsed.pathname}`).toBe("https://t.me/share/url");
   expect(parsed.searchParams.get("url")).toBe(INVITE_URL);
   expect(parsed.searchParams.get("text")).toBe(SHARE_TEXT);
+}
+
+function expectTelegramSharePath(value: unknown): void {
+  expect(typeof value).toBe("string");
+  expectTelegramShareLink(`https://t.me${String(value)}`);
 }
