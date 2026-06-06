@@ -1,16 +1,14 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Store } from "lucide-react";
 
-import { getApiErrorMessage } from "@/api/errors";
+import { getApiErrorMessage, isApiClientError } from "@/api/errors";
 import { useFeedback } from "@/app/providers/FeedbackProvider";
+import { useKcoinTopupSheet } from "@/features/assets/components/KcoinTopupProvider";
 import { useMyAssets } from "@/features/assets/hooks/useMyAssets";
 import { VipSubscriptionBanner } from "@/features/vip/components/VipSubscriptionBanner";
 import { useCreateVipOrder } from "@/features/vip/hooks/useCreateVipOrder";
-import {
-  useVipStarsPayment,
-  type VipStarsInvoiceCallbackResult,
-} from "@/features/vip/hooks/useVipStarsPayment";
 import { useVipStatus } from "@/features/vip/hooks/useVipStatus";
+import { formatCurrencyAmount } from "@/shared/lib/formatCurrency";
 
 import { BuyConfirmDialog } from "../components/BuyConfirmDialog";
 import { ListingDetailSheet } from "../components/ListingDetailSheet";
@@ -27,14 +25,15 @@ import { formatKcoinWithUnit } from "../trade.utils";
 
 export function BuyPage() {
   const { pushToast } = useFeedback();
-  const { assets } = useMyAssets();
+  const { assets, refreshAssets } = useMyAssets();
+  const { openKcoinTopupSheet } = useKcoinTopupSheet();
   const { filters, hasActiveFilters, query, resetFilters, updateFilter } =
     useMarketFilters();
   const { isError, isLoading, listings, refetch } = useMarketListings(query);
   const buyListing = useBuyListing();
   const vipStatusQuery = useVipStatus();
   const createVipOrder = useCreateVipOrder();
-  const openVipStarsInvoice = useVipStarsPayment();
+  const [resumeVipSubscribe, setResumeVipSubscribe] = useState(false);
   const [detailListingId, setDetailListingId] = useState<string | null>(null);
   const [detailPreviewListing, setDetailPreviewListing] =
     useState<MarketListingCard | null>(null);
@@ -98,29 +97,6 @@ export function BuyPage() {
     );
   }, [buyListing, confirmListing, pushToast]);
 
-  const handleVipInvoiceStatus = useCallback(
-    (result: VipStarsInvoiceCallbackResult) => {
-      if (result.status === "paid") {
-        void vipStatusQuery.refetch();
-        pushToast({
-          type: "info",
-          title: "支付已返回",
-          message: "正在等待 Telegram webhook 和服务端开通月卡。",
-        });
-        return;
-      }
-
-      if (result.status === "cancelled" || result.status === "failed") {
-        pushToast({
-          type: result.status === "failed" ? "error" : "info",
-          title: result.status === "failed" ? "支付未完成" : "支付窗口已关闭",
-          message: "服务端尚未确认支付成功，可重新点击月卡入口购买。",
-        });
-      }
-    },
-    [pushToast, vipStatusQuery],
-  );
-
   const handleSubscribeVip = useCallback(async () => {
     if (createVipOrder.isPending) {
       return;
@@ -141,26 +117,53 @@ export function BuyPage() {
         return;
       }
 
-      const order = await createVipOrder.mutateAsync({
-        planId: plan.id,
-      });
-      const openAttempt = openVipStarsInvoice(order, handleVipInvoiceStatus);
+      const requiredKcoin = plan.priceKcoin;
+      const currentKcoin = readKcoinAmount(kcoinAvailable);
 
-      if (!openAttempt.ok) {
+      if (requiredKcoin <= 0) {
         pushToast({
           type: "error",
-          title: "支付未打开，可重试支付",
-          message: openAttempt.message,
+          title: "暂时不能购买月卡",
+          message: "月卡价格配置无效，请稍后再试。",
         });
         return;
       }
 
+      if (currentKcoin < requiredKcoin) {
+        openKcoinTopupSheet({
+          requiredAmount: requiredKcoin,
+          currentBalance: currentKcoin,
+          intent: "VIP_MONTHLY",
+          onFulfilled: () => setResumeVipSubscribe(true),
+        });
+        return;
+      }
+
+      const order = await createVipOrder.mutateAsync({
+        planId: plan.id,
+      });
+
+      await Promise.all([refreshAssets(), vipStatusQuery.refetch()]);
       pushToast({
-        type: "info",
-        title: "月卡订单已创建",
-        message: `请在 Telegram 支付窗口完成 ${order.xtrAmount} Stars 支付。`,
+        type: "success",
+        title: status.isVip ? "月卡已续费" : "月卡已开通",
+        message: `已消耗 ${formatCurrencyAmount(order.kcoinAmount || requiredKcoin)} K-coin。`,
       });
     } catch (error) {
+      if (isInsufficientKcoinError(error)) {
+        const shortageDetails = readInsufficientKcoinTopupDetails(error);
+        const fallbackRequired = vipStatusQuery.data?.plan?.priceKcoin ?? 0;
+
+        openKcoinTopupSheet({
+          requiredAmount:
+            shortageDetails?.requiredAmount || fallbackRequired || 0,
+          currentBalance: shortageDetails?.currentBalance ?? null,
+          intent: "VIP_MONTHLY",
+          onFulfilled: () => setResumeVipSubscribe(true),
+        });
+        return;
+      }
+
       pushToast({
         type: "error",
         title: "月卡订单创建失败",
@@ -169,11 +172,21 @@ export function BuyPage() {
     }
   }, [
     createVipOrder,
-    handleVipInvoiceStatus,
-    openVipStarsInvoice,
+    kcoinAvailable,
+    openKcoinTopupSheet,
     pushToast,
+    refreshAssets,
     vipStatusQuery,
   ]);
+
+  useEffect(() => {
+    if (!resumeVipSubscribe) {
+      return;
+    }
+
+    setResumeVipSubscribe(false);
+    void handleSubscribeVip();
+  }, [handleSubscribeVip, resumeVipSubscribe]);
 
   return (
     <section
@@ -234,6 +247,67 @@ export function BuyPage() {
       />
     </section>
   );
+}
+
+function readKcoinAmount(value: string | number | null | undefined): number {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === "string" && value.trim().length > 0) {
+    const parsed = Number(value);
+
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  return 0;
+}
+
+function isInsufficientKcoinError(error: unknown): boolean {
+  return (
+    isApiClientError(error) &&
+    (error.code === "INSUFFICIENT_KCOIN" ||
+      error.code === "INSUFFICIENT_BALANCE")
+  );
+}
+
+function readInsufficientKcoinTopupDetails(error: unknown): {
+  requiredAmount: number;
+  currentBalance: number;
+} | null {
+  if (!isApiClientError(error) || !isRecord(error.details)) {
+    return null;
+  }
+
+  const requiredAmount = readDetailAmount(error.details.required);
+  const currentBalance = readDetailAmount(error.details.balance);
+
+  if (requiredAmount === null || currentBalance === null) {
+    return null;
+  }
+
+  return {
+    requiredAmount,
+    currentBalance,
+  };
+}
+
+function readDetailAmount(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === "string" && value.trim().length > 0) {
+    const parsed = Number(value);
+
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  return null;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function MarketActivityStrip({ listings }: { listings: MarketListingCard[] }) {

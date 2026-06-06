@@ -27,7 +27,7 @@ import { KcoinTopupSheet, type KcoinTopupNotice } from "./KcoinTopupSheet";
 type OpenKcoinTopupSheetOptions = {
   requiredAmount?: number | null;
   currentBalance?: number | null;
-  intent?: "MANUAL_TOPUP" | "OPEN_BOX";
+  intent?: "MANUAL_TOPUP" | "OPEN_BOX" | "VIP_MONTHLY";
   boxSlug?: string | null;
   drawCount?: 1 | 10 | null;
   onFulfilled?: (() => void | Promise<void>) | null;
@@ -46,6 +46,12 @@ type KcoinTopupOpenBoxContext = {
   boxSlug: string;
   drawCount: 1 | 10;
 };
+
+type KcoinTopupVipContext = {
+  intent: "VIP_MONTHLY";
+};
+
+type KcoinTopupActionContext = KcoinTopupOpenBoxContext | KcoinTopupVipContext;
 
 const KcoinTopupContext = createContext<KcoinTopupContextValue>({
   openKcoinTopupSheet: () => undefined,
@@ -71,7 +77,7 @@ export function KcoinTopupProvider({ children }: KcoinTopupProviderProps) {
     null,
   );
   const [topupContext, setTopupContext] =
-    useState<KcoinTopupOpenBoxContext | null>(null);
+    useState<KcoinTopupActionContext | null>(null);
   const completedOrderRef = useRef<string | null>(null);
   const onFulfilledRef = useRef<(() => void | Promise<void>) | null>(null);
   const createOrder = useCreateKcoinTopupOrder();
@@ -88,17 +94,23 @@ export function KcoinTopupProvider({ children }: KcoinTopupProviderProps) {
 
       setRequiredAmount(Math.max(Number(options.requiredAmount ?? 0), 0));
       setBalanceOverride(readOptionalAssetAmount(options.currentBalance));
-      setTopupContext(
+      if (
         options.intent === "OPEN_BOX" &&
-          boxSlug &&
-          (drawCount === 1 || drawCount === 10)
-          ? {
-              intent: "OPEN_BOX",
-              boxSlug,
-              drawCount,
-            }
-          : null,
-      );
+        boxSlug &&
+        (drawCount === 1 || drawCount === 10)
+      ) {
+        setTopupContext({
+          intent: "OPEN_BOX",
+          boxSlug,
+          drawCount,
+        });
+      } else if (options.intent === "VIP_MONTHLY") {
+        setTopupContext({
+          intent: "VIP_MONTHLY",
+        });
+      } else {
+        setTopupContext(null);
+      }
       onFulfilledRef.current = options.onFulfilled ?? null;
       setOpen(true);
     },
@@ -185,8 +197,10 @@ export function KcoinTopupProvider({ children }: KcoinTopupProviderProps) {
         {
           amount,
           intent: topupContext?.intent ?? "MANUAL_TOPUP",
-          boxSlug: topupContext?.boxSlug ?? null,
-          drawCount: topupContext?.drawCount ?? null,
+          boxSlug:
+            topupContext?.intent === "OPEN_BOX" ? topupContext.boxSlug : null,
+          drawCount:
+            topupContext?.intent === "OPEN_BOX" ? topupContext.drawCount : null,
         },
         {
           onSuccess: (order) => {

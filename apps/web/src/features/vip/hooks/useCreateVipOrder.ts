@@ -16,9 +16,14 @@ export function useCreateVipOrder() {
       skipGlobalErrorToast: true,
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: queryKeys.vip.status(session.user?.id ?? null),
-      });
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.vip.status(session.user?.id ?? null),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.me.assets(session.user?.id ?? null),
+        }),
+      ]);
     },
   });
 }

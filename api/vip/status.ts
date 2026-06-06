@@ -197,6 +197,10 @@ function normalizeVipPlan(
     readString(plan.display_name ?? plan.displayName ?? plan.name) ??
     "VIP 月卡";
   const priceXtr = readNumber(plan.price_xtr ?? plan.priceXtr) ?? 0;
+  const priceKcoin =
+    readNumber(plan.price_kcoin ?? plan.priceKcoin) ?? priceXtr;
+  const currencyCode =
+    readString(plan.currency_code ?? plan.currencyCode) ?? "KCOIN";
   const durationDays = readNumber(plan.duration_days ?? plan.durationDays);
   const dailyFgems = readNumber(plan.daily_fgems ?? plan.dailyFgems) ?? 0;
   const dailyFreeBoxCount =
@@ -212,6 +216,10 @@ function normalizeVipPlan(
     displayName,
     price_xtr: priceXtr,
     priceXtr,
+    price_kcoin: priceKcoin,
+    priceKcoin,
+    currency_code: currencyCode,
+    currencyCode,
     duration_days: durationDays,
     durationDays,
     daily_fgems: dailyFgems,

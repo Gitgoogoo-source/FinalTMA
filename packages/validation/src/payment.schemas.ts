@@ -38,7 +38,11 @@ export const paymentStatusSchema = paymentOrderStatusSchema;
 
 export const KcoinTopupAmountSchema = z.coerce.number().int().min(1).max(10000);
 
-export const KcoinTopupIntentSchema = z.enum(["MANUAL_TOPUP", "OPEN_BOX"]);
+export const KcoinTopupIntentSchema = z.enum([
+  "MANUAL_TOPUP",
+  "OPEN_BOX",
+  "VIP_MONTHLY",
+]);
 
 export const KcoinTopupStatusQuerySchema = z
   .object({

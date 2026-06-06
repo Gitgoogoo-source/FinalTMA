@@ -3,6 +3,8 @@ export type VipPlan = {
   code: string | null;
   displayName: string;
   priceXtr: number;
+  priceKcoin: number;
+  currencyCode: "KCOIN";
   durationDays: number | null;
   dailyFgems: number;
   dailyFreeBoxCount: number;
@@ -90,6 +92,12 @@ export type CreateVipOrderResponse = {
   invoiceLink: string | null;
   invoiceOpenMode: string | null;
   xtrAmount: number;
+  kcoinAmount: number;
+  currencyCode: "KCOIN";
+  subscriptionId: string | null;
+  currentPeriodStart: string | null;
+  currentPeriodEnd: string | null;
+  kcoinLedgerId: string | null;
   orderStatus: string;
   paymentStatus: string;
   paymentOrderStatus: string;

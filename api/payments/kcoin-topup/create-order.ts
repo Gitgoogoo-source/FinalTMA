@@ -9,6 +9,10 @@ import {
   type TelegramStarsInvoiceResult,
 } from "../../../packages/server/src/payments/telegramStars.js";
 import {
+  readVipMonthlyPriceKcoin,
+  VipPriceConfigError,
+} from "../../../packages/server/src/vip/vipPrice.js";
+import {
   ApiError,
   getIdempotencyKey,
   withApiHandler,
@@ -42,6 +46,13 @@ type OpenBoxTopupContext = {
   unitPriceKcoin: number;
   discountBps: number;
 };
+
+type VipMonthlyTopupContext = {
+  intent: "VIP_MONTHLY";
+  requiredKcoin: number;
+};
+
+type KcoinTopupContext = OpenBoxTopupContext | VipMonthlyTopupContext;
 
 type KcoinTopupCreateOrderResponse = {
   order_id: string;
@@ -80,7 +91,7 @@ export default withApiHandler(
       normalizeKcoinTopupCreateOrderInput(body, getIdempotencyKey(req)),
     );
 
-    const openBoxContext = readOpenBoxTopupContext(input);
+    const topupContext = readKcoinTopupContext(input);
 
     await assertStarsPaymentCreateAllowed();
     await assertUserRiskAllowed({
@@ -92,8 +103,15 @@ export default withApiHandler(
       metadata: {
         amount: input.amount,
         intent: input.intent,
-        boxSlug: openBoxContext?.boxSlug ?? input.boxSlug,
-        drawCount: openBoxContext?.drawCount ?? input.drawCount,
+        boxSlug:
+          topupContext?.intent === "OPEN_BOX"
+            ? topupContext.boxSlug
+            : input.boxSlug,
+        drawCount:
+          topupContext?.intent === "OPEN_BOX"
+            ? topupContext.drawCount
+            : input.drawCount,
+        requiredKcoin: topupContext?.requiredKcoin,
       },
     });
 
@@ -101,7 +119,7 @@ export default withApiHandler(
       input,
       session.userId,
       ctx.requestId,
-      openBoxContext,
+      topupContext,
     );
     const topupOrderId = getRequiredString(order, "topup_order_id");
     const starOrderId = getRequiredString(order, "star_order_id");
@@ -185,7 +203,7 @@ async function callKcoinTopupCreateOrder(
   input: KcoinTopupCreateOrderRequest,
   userId: string,
   requestId: string,
-  openBoxContext: OpenBoxTopupContext | null,
+  topupContext: KcoinTopupContext | null,
 ): Promise<KcoinTopupCreateOrderRpcResult> {
   try {
     return await callRpcRaw<KcoinTopupCreateOrderRpcResult>(
@@ -194,10 +212,12 @@ async function callKcoinTopupCreateOrder(
         p_user_id: userId,
         p_amount: input.amount,
         p_idempotency_key: input.idempotencyKey,
-        p_intent: openBoxContext?.intent ?? "MANUAL_TOPUP",
-        p_box_slug: openBoxContext?.boxSlug ?? null,
-        p_draw_count: openBoxContext?.drawCount ?? null,
-        p_required_kcoin: openBoxContext?.requiredKcoin ?? null,
+        p_intent: topupContext?.intent ?? "MANUAL_TOPUP",
+        p_box_slug:
+          topupContext?.intent === "OPEN_BOX" ? topupContext.boxSlug : null,
+        p_draw_count:
+          topupContext?.intent === "OPEN_BOX" ? topupContext.drawCount : null,
+        p_required_kcoin: topupContext?.requiredKcoin ?? null,
       },
       {
         schema: "api" as never,
@@ -205,10 +225,16 @@ async function callKcoinTopupCreateOrder(
           requestId,
           userId,
           amount: input.amount,
-          intent: openBoxContext?.intent ?? input.intent,
-          boxSlug: openBoxContext?.boxSlug ?? input.boxSlug,
-          drawCount: openBoxContext?.drawCount ?? input.drawCount,
-          requiredKcoin: openBoxContext?.requiredKcoin,
+          intent: topupContext?.intent ?? input.intent,
+          boxSlug:
+            topupContext?.intent === "OPEN_BOX"
+              ? topupContext.boxSlug
+              : input.boxSlug,
+          drawCount:
+            topupContext?.intent === "OPEN_BOX"
+              ? topupContext.drawCount
+              : input.drawCount,
+          requiredKcoin: topupContext?.requiredKcoin,
           idempotencyKey: input.idempotencyKey,
         },
       },
@@ -250,19 +276,25 @@ function mapKcoinTopupRpcError(error: unknown): ApiError {
     return new ApiError(400, "KCOIN_TOPUP_AMOUNT_INVALID", "充值档位无效。");
   }
 
-  if (message.includes("topup amount is not enough for open box")) {
+  if (
+    message.includes("topup amount is not enough for open box") ||
+    message.includes("topup amount is not enough for purchase")
+  ) {
     return new ApiError(
       400,
       "KCOIN_TOPUP_AMOUNT_NOT_ENOUGH",
-      "本次充值不足以完成开盒，请选择补足差额或更高档位。",
+      "本次充值不足以完成操作，请选择补足差额或更高档位。",
     );
   }
 
-  if (message.includes("open box topup context is invalid")) {
+  if (
+    message.includes("open box topup context is invalid") ||
+    message.includes("kcoin topup context is invalid")
+  ) {
     return new ApiError(
       400,
       "KCOIN_TOPUP_CONTEXT_INVALID",
-      "开盒补差额参数无效，请刷新后重试。",
+      "补差额参数无效，请刷新后重试。",
     );
   }
 
@@ -285,9 +317,16 @@ function mapKcoinTopupRpcError(error: unknown): ApiError {
   );
 }
 
-function readOpenBoxTopupContext(
+function readKcoinTopupContext(
   input: KcoinTopupCreateOrderRequest,
-): OpenBoxTopupContext | null {
+): KcoinTopupContext | null {
+  if (input.intent === "VIP_MONTHLY") {
+    return {
+      intent: "VIP_MONTHLY",
+      requiredKcoin: readVipMonthlyPriceKcoinForApi(),
+    };
+  }
+
   if (input.intent !== "OPEN_BOX") {
     return null;
   }
@@ -339,12 +378,33 @@ function readOpenBoxTopupContext(
   };
 }
 
-function normalizeTopupIntent(value: unknown): "MANUAL_TOPUP" | "OPEN_BOX" {
+function readVipMonthlyPriceKcoinForApi(): number {
+  try {
+    return readVipMonthlyPriceKcoin();
+  } catch (error) {
+    if (error instanceof VipPriceConfigError) {
+      throw new ApiError(error.statusCode, error.code, "月卡价格配置无效。", {
+        expose: error.expose,
+        cause: error,
+      });
+    }
+
+    throw error;
+  }
+}
+
+function normalizeTopupIntent(
+  value: unknown,
+): "MANUAL_TOPUP" | "OPEN_BOX" | "VIP_MONTHLY" {
   const normalized = String(value ?? "MANUAL_TOPUP")
     .trim()
     .toUpperCase();
 
-  return normalized === "OPEN_BOX" ? "OPEN_BOX" : "MANUAL_TOPUP";
+  if (normalized === "OPEN_BOX" || normalized === "VIP_MONTHLY") {
+    return normalized;
+  }
+
+  return "MANUAL_TOPUP";
 }
 
 function normalizeGachaBoxSlug(value: string): GachaBoxSlug {

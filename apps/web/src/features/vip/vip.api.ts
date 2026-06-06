@@ -242,6 +242,19 @@ export function normalizeCreateVipOrderResponse(
       readString(payload.invoice_open_mode),
     xtrAmount:
       readNumber(payload.xtrAmount) ?? readNumber(payload.xtr_amount) ?? 0,
+    kcoinAmount:
+      readNumber(payload.kcoinAmount) ?? readNumber(payload.kcoin_amount) ?? 0,
+    currencyCode: "KCOIN",
+    subscriptionId:
+      readString(payload.subscriptionId) ?? readString(payload.subscription_id),
+    currentPeriodStart:
+      readString(payload.currentPeriodStart) ??
+      readString(payload.current_period_start),
+    currentPeriodEnd:
+      readString(payload.currentPeriodEnd) ??
+      readString(payload.current_period_end),
+    kcoinLedgerId:
+      readString(payload.kcoinLedgerId) ?? readString(payload.kcoin_ledger_id),
     orderStatus,
     paymentStatus:
       readString(payload.paymentStatus) ??
@@ -281,6 +294,15 @@ function normalizeVipPlan(value: unknown): VipPlan | null {
       readNumber(value.xtrAmount) ??
       readNumber(value.xtr_amount) ??
       0,
+    priceKcoin:
+      readNumber(value.priceKcoin) ??
+      readNumber(value.price_kcoin) ??
+      readNumber(value.kcoinAmount) ??
+      readNumber(value.kcoin_amount) ??
+      readNumber(value.priceXtr) ??
+      readNumber(value.price_xtr) ??
+      0,
+    currencyCode: "KCOIN",
     durationDays:
       readNumber(value.durationDays) ?? readNumber(value.duration_days),
     dailyFgems:

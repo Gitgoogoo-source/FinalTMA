@@ -123,7 +123,7 @@ export type KcoinTopupAmount = number;
 
 export type CreateKcoinTopupOrderInput = {
   amount: KcoinTopupAmount;
-  intent?: "MANUAL_TOPUP" | "OPEN_BOX";
+  intent?: "MANUAL_TOPUP" | "OPEN_BOX" | "VIP_MONTHLY";
   boxSlug?: string | null;
   drawCount?: 1 | 10 | null;
 };

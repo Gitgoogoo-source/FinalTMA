@@ -8,9 +8,11 @@ import { BuyPage } from "./BuyPage";
 const mocks = vi.hoisted(() => ({
   buyMutate: vi.fn(),
   createVipOrder: vi.fn(),
+  kcoinAvailable: "1000",
   marketRefetch: vi.fn(),
-  openVipStarsInvoice: vi.fn(),
+  openKcoinTopupSheet: vi.fn(),
   pushToast: vi.fn(),
+  refreshAssets: vi.fn(),
   resetFilters: vi.fn(),
   updateFilter: vi.fn(),
   vipRefetch: vi.fn(),
@@ -25,6 +27,8 @@ type VipStatusMock = {
     code: string | null;
     displayName: string;
     priceXtr: number;
+    priceKcoin: number;
+    currencyCode: "KCOIN";
     durationDays: number | null;
     dailyFgems: number;
     dailyFreeBoxCount: number;
@@ -53,9 +57,16 @@ vi.mock("@/features/assets/hooks/useMyAssets", () => ({
   useMyAssets: () => ({
     assets: {
       kcoin: {
-        available: "1000",
+        available: mocks.kcoinAvailable,
       },
     },
+    refreshAssets: mocks.refreshAssets,
+  }),
+}));
+
+vi.mock("@/features/assets/components/KcoinTopupProvider", () => ({
+  useKcoinTopupSheet: () => ({
+    openKcoinTopupSheet: mocks.openKcoinTopupSheet,
   }),
 }));
 
@@ -72,10 +83,6 @@ vi.mock("@/features/vip/hooks/useCreateVipOrder", () => ({
     isPending: false,
     mutateAsync: mocks.createVipOrder,
   }),
-}));
-
-vi.mock("@/features/vip/hooks/useVipStarsPayment", () => ({
-  useVipStarsPayment: () => mocks.openVipStarsInvoice,
 }));
 
 vi.mock("../hooks/useBuyListing", () => ({
@@ -156,29 +163,31 @@ describe("BuyPage VIP subscription banner", () => {
   beforeEach(() => {
     mocks.buyMutate.mockReset();
     mocks.createVipOrder.mockReset();
+    mocks.kcoinAvailable = "1000";
     mocks.marketRefetch.mockReset();
-    mocks.openVipStarsInvoice.mockReset();
+    mocks.openKcoinTopupSheet.mockReset();
     mocks.pushToast.mockReset();
+    mocks.refreshAssets.mockReset();
+    mocks.refreshAssets.mockResolvedValue(undefined);
     mocks.resetFilters.mockReset();
     mocks.updateFilter.mockReset();
     mocks.vipRefetch.mockReset();
+    mocks.vipRefetch.mockResolvedValue({
+      data: createVipStatus(),
+    });
     mocks.vipStatus = createVipStatus();
     mocks.createVipOrder.mockResolvedValue(createVipOrderResponse());
-    mocks.openVipStarsInvoice.mockReturnValue({
-      ok: true,
-      status: "opening",
-    });
   });
 
   it("replaces the old market banner with VIP subscription entry", () => {
     render(<BuyPage />);
 
     expect(screen.getByRole("button", { name: "订阅 VIP 月卡" })).toBeVisible();
-    expect(screen.getByText(/199 Stars/)).toBeVisible();
+    expect(screen.getByText(/199 K-coin/)).toBeVisible();
     expect(screen.queryByText("精选藏品交易")).not.toBeInTheDocument();
   });
 
-  it("uses VIP status plan id to create an order and open invoice", async () => {
+  it("uses VIP status plan id to create a KCOIN order", async () => {
     render(<BuyPage />);
 
     fireEvent.click(screen.getByRole("button", { name: "订阅 VIP 月卡" }));
@@ -188,15 +197,30 @@ describe("BuyPage VIP subscription banner", () => {
         planId: "plan-1",
       });
     });
-    expect(mocks.openVipStarsInvoice).toHaveBeenCalledWith(
-      createVipOrderResponse(),
-      expect.any(Function),
-    );
     expect(mocks.pushToast).toHaveBeenCalledWith({
-      type: "info",
-      title: "月卡订单已创建",
-      message: "请在 Telegram 支付窗口完成 199 Stars 支付。",
+      type: "success",
+      title: "月卡已开通",
+      message: "已消耗 199 K-coin。",
     });
+  });
+
+  it("opens KCOIN topup sheet when local balance is not enough", async () => {
+    mocks.kcoinAvailable = "1";
+
+    render(<BuyPage />);
+
+    fireEvent.click(screen.getByRole("button", { name: "订阅 VIP 月卡" }));
+
+    await waitFor(() => {
+      expect(mocks.openKcoinTopupSheet).toHaveBeenCalledWith(
+        expect.objectContaining({
+          currentBalance: 1,
+          intent: "VIP_MONTHLY",
+          requiredAmount: 199,
+        }),
+      );
+    });
+    expect(mocks.createVipOrder).not.toHaveBeenCalled();
   });
 
   it("refetches VIP status before creating order when no plan is cached", async () => {
@@ -233,6 +257,8 @@ function createVipStatus(): VipStatusMock {
       durationDays: 30,
       feeRebateBps: 2000,
       id: "plan-1",
+      currencyCode: "KCOIN",
+      priceKcoin: 199,
       priceXtr: 199,
     },
   };
@@ -243,15 +269,21 @@ function createVipOrderResponse() {
     expiresAt: "2026-06-05T00:15:00.000Z",
     fulfilledAt: null,
     idempotent: false,
-    invoiceLink: "https://t.me/invoice/vip-test",
-    invoiceOpenMode: "web_app_open_invoice",
-    invoicePayload: "vip:payload",
+    invoiceLink: null,
+    invoiceOpenMode: null,
+    invoicePayload: null,
+    kcoinAmount: 199,
+    currencyCode: "KCOIN",
+    subscriptionId: "subscription-1",
+    currentPeriodStart: "2026-06-05T00:00:00.000Z",
+    currentPeriodEnd: "2026-07-05T00:00:00.000Z",
+    kcoinLedgerId: "ledger-1",
     orderId: "vip-order-1",
-    orderStatus: "invoice_created",
+    orderStatus: "fulfilled",
     paidAt: null,
-    paymentOrderStatus: "invoice_created",
-    paymentStatus: "invoice_created",
-    starOrderId: "star-order-1",
-    xtrAmount: 199,
+    paymentOrderStatus: "fulfilled",
+    paymentStatus: "fulfilled",
+    starOrderId: null,
+    xtrAmount: 0,
   };
 }

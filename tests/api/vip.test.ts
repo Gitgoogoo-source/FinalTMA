@@ -22,16 +22,12 @@ import statusHandler, { normalizeVipStatusPayload } from "../../api/vip/status";
 import { invokeApiHandler } from "./_utils";
 
 const {
-  assertStarsPaymentCreateAllowedMock,
   assertUserRiskAllowedMock,
   callRpcRawMock,
-  createTelegramStarsInvoiceMock,
   requireSessionMock,
 } = vi.hoisted(() => ({
-  assertStarsPaymentCreateAllowedMock: vi.fn(),
   assertUserRiskAllowedMock: vi.fn(),
   callRpcRawMock: vi.fn(),
-  createTelegramStarsInvoiceMock: vi.fn(),
   requireSessionMock: vi.fn(),
 }));
 
@@ -66,14 +62,6 @@ vi.mock("../../api/_shared/requireSession.js", () => ({
   requireSession: requireSessionMock,
 }));
 
-vi.mock("../../packages/server/src/payments/paymentGuards.js", () => ({
-  assertStarsPaymentCreateAllowed: assertStarsPaymentCreateAllowedMock,
-}));
-
-vi.mock("../../packages/server/src/payments/telegramStars.js", () => ({
-  createTelegramStarsInvoice: createTelegramStarsInvoiceMock,
-}));
-
 vi.mock("../../api/_shared/riskGuards.js", () => ({
   assertUserRiskAllowed: assertUserRiskAllowedMock,
 }));
@@ -82,34 +70,17 @@ const USER_ID = "11111111-1111-4111-8111-111111111111";
 const FORGED_USER_ID = "99999999-9999-4999-8999-999999999999";
 const PLAN_ID = "22222222-2222-4222-8222-222222222222";
 const VIP_ORDER_ID = "33333333-3333-4333-8333-333333333333";
-const STAR_ORDER_ID = "44444444-4444-4444-8444-444444444444";
 const SUBSCRIPTION_ID = "55555555-5555-4555-8555-555555555555";
+const LEDGER_ID = "66666666-6666-4666-8666-666666666666";
 const IDEMPOTENCY_KEY = "vip:create-order:test-0001";
-const INVOICE_PAYLOAD =
-  "vip_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
-const INVOICE_LINK = "https://t.me/invoice/vip-test";
 
 describe("vip API", () => {
   beforeEach(() => {
     process.env.NODE_ENV = "test";
-    process.env.VIP_MONTHLY_PRICE_XTR = "299";
+    process.env.VIP_MONTHLY_PRICE_KCOIN = "299";
     callRpcRawMock.mockReset();
-    assertStarsPaymentCreateAllowedMock.mockReset();
-    assertStarsPaymentCreateAllowedMock.mockResolvedValue(undefined);
     assertUserRiskAllowedMock.mockReset();
     assertUserRiskAllowedMock.mockResolvedValue(undefined);
-    createTelegramStarsInvoiceMock.mockReset();
-    createTelegramStarsInvoiceMock.mockResolvedValue({
-      starOrderId: STAR_ORDER_ID,
-      payload: INVOICE_PAYLOAD,
-      invoiceLink: INVOICE_LINK,
-      openMode: "web_app_open_invoice",
-      botApiMethod: "createInvoiceLink",
-      expiresAt: "2026-06-05T10:15:00.000Z",
-      invoiceStatus: "created",
-      paymentOrderStatus: "created",
-      reused: false,
-    });
     requireSessionMock.mockReset();
     requireSessionMock.mockResolvedValue({
       sessionId: "session-vip-test",
@@ -220,6 +191,8 @@ describe("vip API", () => {
           code: "vip_monthly",
           display_name: "VIP 月卡",
           price_xtr: "199",
+          price_kcoin: "199",
+          currency_code: "KCOIN",
           daily_fgems: "100",
           daily_free_box_count: 1,
           fee_rebate_bps: 2000,
@@ -251,6 +224,10 @@ describe("vip API", () => {
         displayName: "VIP 月卡",
         price_xtr: 199,
         priceXtr: 199,
+        price_kcoin: 199,
+        priceKcoin: 199,
+        currency_code: "KCOIN",
+        currencyCode: "KCOIN",
       },
       server_time: "2026-06-05T00:00:00.000Z",
       serverTime: "2026-06-05T00:00:00.000Z",
@@ -270,6 +247,8 @@ describe("vip API", () => {
         code: "vip_monthly",
         display_name: "VIP 月卡",
         price_xtr: 199,
+        price_kcoin: 199,
+        currency_code: "KCOIN",
         daily_fgems: 100,
         daily_free_box_count: 1,
         fee_rebate_bps: 2000,
@@ -306,12 +285,13 @@ describe("vip API", () => {
       plan: {
         id: PLAN_ID,
         priceXtr: 199,
+        priceKcoin: 199,
       },
     });
   });
 
   it("/api/vip/status does not require server monthly price config", async () => {
-    delete process.env.VIP_MONTHLY_PRICE_XTR;
+    delete process.env.VIP_MONTHLY_PRICE_KCOIN;
     callRpcRawMock.mockResolvedValueOnce({
       is_vip: false,
       subscription_id: null,
@@ -324,6 +304,8 @@ describe("vip API", () => {
         code: "vip_monthly",
         display_name: "VIP 月卡",
         price_xtr: 199,
+        price_kcoin: 199,
+        currency_code: "KCOIN",
         daily_fgems: 100,
         daily_free_box_count: 1,
         fee_rebate_bps: 2000,
@@ -345,6 +327,7 @@ describe("vip API", () => {
       plan: {
         id: PLAN_ID,
         priceXtr: 199,
+        priceKcoin: 199,
       },
     });
   });
@@ -365,11 +348,10 @@ describe("vip API", () => {
     expect(result.statusCode).toBe(400);
     expect(result.body.error.code).toBe("VALIDATION_ERROR");
     expect(callRpcRawMock).not.toHaveBeenCalled();
-    expect(createTelegramStarsInvoiceMock).not.toHaveBeenCalled();
   });
 
   it("/api/vip/create-order rejects missing server monthly price config before RPC", async () => {
-    delete process.env.VIP_MONTHLY_PRICE_XTR;
+    delete process.env.VIP_MONTHLY_PRICE_KCOIN;
 
     const result = await invokeApiHandler<ApiErrorResponse>(
       createVipOrderHandler,
@@ -386,20 +368,26 @@ describe("vip API", () => {
 
     expect(result.statusCode).toBe(503);
     expect(result.body.error.code).toBe("VIP_PRICE_CONFIG_INVALID");
-    expect(assertStarsPaymentCreateAllowedMock).not.toHaveBeenCalled();
     expect(callRpcRawMock).not.toHaveBeenCalled();
-    expect(createTelegramStarsInvoiceMock).not.toHaveBeenCalled();
   });
 
-  it("/api/vip/create-order creates a VIP Stars invoice with the session user", async () => {
+  it("/api/vip/create-order pays VIP monthly with KCOIN through the session user", async () => {
     callRpcRawMock.mockResolvedValueOnce({
       vip_order_id: VIP_ORDER_ID,
-      star_order_id: STAR_ORDER_ID,
-      invoice_payload: INVOICE_PAYLOAD,
-      xtr_amount: 299,
-      status: "created",
-      payment_order_status: "created",
-      expires_at: "2026-06-05T10:15:00.000Z",
+      star_order_id: null,
+      invoice_payload: null,
+      xtr_amount: 0,
+      kcoin_amount: 299,
+      currency_code: "KCOIN",
+      subscription_id: SUBSCRIPTION_ID,
+      current_period_start: "2026-06-05T10:00:00.000Z",
+      current_period_end: "2026-07-05T10:00:00.000Z",
+      kcoin_ledger_id: LEDGER_ID,
+      status: "fulfilled",
+      payment_status: "fulfilled",
+      payment_order_status: "fulfilled",
+      paid_at: "2026-06-05T10:00:00.000Z",
+      fulfilled_at: "2026-06-05T10:00:01.000Z",
       idempotent: false,
     });
 
@@ -417,24 +405,24 @@ describe("vip API", () => {
     });
 
     expect(result.statusCode).toBe(200);
-    expect(assertStarsPaymentCreateAllowedMock).toHaveBeenCalledOnce();
     expect(assertUserRiskAllowedMock).toHaveBeenCalledWith(
       expect.objectContaining({
         action: "vip.create_order",
         idempotencyKey: IDEMPOTENCY_KEY,
         metadata: {
           planId: PLAN_ID,
-          serverPriceXtr: 299,
+          serverPriceKcoin: 299,
+          paymentCurrency: "KCOIN",
         },
       }),
     );
     expect(callRpcRawMock).toHaveBeenCalledWith(
-      "vip_create_order_with_server_price_checked",
+      "vip_create_order_with_server_kcoin_checked",
       {
         p_user_id: USER_ID,
         p_plan_id: PLAN_ID,
         p_idempotency_key: IDEMPOTENCY_KEY,
-        p_server_price_xtr: 299,
+        p_server_price_kcoin: 299,
       },
       expect.objectContaining({
         schema: "api",
@@ -442,29 +430,24 @@ describe("vip API", () => {
           requestId: "req-vip-create-order",
           userId: USER_ID,
           planId: PLAN_ID,
-          serverPriceXtr: 299,
+          serverPriceKcoin: 299,
           idempotencyKey: IDEMPOTENCY_KEY,
         }),
       }),
     );
-    expect(createTelegramStarsInvoiceMock).toHaveBeenCalledWith({
-      starOrderId: STAR_ORDER_ID,
-      drawOrderId: VIP_ORDER_ID,
-      businessType: "vip_monthly",
-      userId: USER_ID,
-      invoicePayload: INVOICE_PAYLOAD,
-      xtrAmount: 299,
-      requestId: "req-vip-create-order",
-    });
     expect(result.body.data).toMatchObject({
       order_id: VIP_ORDER_ID,
       vip_order_id: VIP_ORDER_ID,
-      star_order_id: STAR_ORDER_ID,
-      invoice_payload: INVOICE_PAYLOAD,
-      invoice_link: INVOICE_LINK,
-      invoice_open_mode: "web_app_open_invoice",
-      xtr_amount: 299,
-      payment_order_status: "created",
+      star_order_id: null,
+      invoice_payload: null,
+      invoice_link: null,
+      invoice_open_mode: null,
+      xtr_amount: 0,
+      kcoin_amount: 299,
+      currency_code: "KCOIN",
+      subscription_id: SUBSCRIPTION_ID,
+      kcoin_ledger_id: LEDGER_ID,
+      payment_order_status: "fulfilled",
       idempotent: false,
     });
   });
@@ -488,7 +471,6 @@ describe("vip API", () => {
     expect(result.statusCode).toBe(401);
     expect(result.body.error.code).toBe("AUTH_SESSION_EXPIRED");
     expect(callRpcRawMock).not.toHaveBeenCalled();
-    expect(createTelegramStarsInvoiceMock).not.toHaveBeenCalled();
   });
 
   it("/api/vip/claim-daily rejects forged user fields before RPC", async () => {
@@ -651,35 +633,28 @@ describe("vip API", () => {
     });
   });
 
-  it("builds create-order responses with reused invoice idempotency", () => {
+  it("builds KCOIN create-order responses with idempotency", () => {
     expect(
-      buildCreateVipOrderResponse(
-        {
-          vip_order_id: VIP_ORDER_ID,
-          star_order_id: STAR_ORDER_ID,
-          invoice_payload: INVOICE_PAYLOAD,
-          xtr_amount: "199",
-          status: "created",
-          payment_order_status: "created",
-          expires_at: "2026-06-05T10:15:00.000Z",
-          idempotent: true,
-        },
-        {
-          starOrderId: STAR_ORDER_ID,
-          payload: INVOICE_PAYLOAD,
-          invoiceLink: INVOICE_LINK,
-          openMode: "web_app_open_invoice",
-          botApiMethod: "createInvoiceLink",
-          expiresAt: "2026-06-05T10:15:00.000Z",
-          invoiceStatus: "created",
-          paymentOrderStatus: "created",
-          reused: true,
-        },
-      ),
+      buildCreateVipOrderResponse({
+        vip_order_id: VIP_ORDER_ID,
+        star_order_id: null,
+        invoice_payload: null,
+        xtr_amount: "0",
+        kcoin_amount: "199",
+        subscription_id: SUBSCRIPTION_ID,
+        current_period_end: "2026-07-05T10:15:00.000Z",
+        kcoin_ledger_id: LEDGER_ID,
+        status: "fulfilled",
+        payment_order_status: "fulfilled",
+        idempotent: true,
+      }),
     ).toMatchObject({
       order_id: VIP_ORDER_ID,
-      xtr_amount: 199,
-      invoice_link: INVOICE_LINK,
+      xtr_amount: 0,
+      kcoin_amount: 199,
+      invoice_link: null,
+      subscription_id: SUBSCRIPTION_ID,
+      kcoin_ledger_id: LEDGER_ID,
       idempotent: true,
     });
   });

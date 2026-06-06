@@ -3,13 +3,8 @@ import {
   type VipCreateOrderRequest,
 } from "../../packages/validation/src/vip.schemas.js";
 import { callRpcRaw, RpcError } from "../../packages/server/src/db/rpc.js";
-import { assertStarsPaymentCreateAllowed } from "../../packages/server/src/payments/paymentGuards.js";
 import {
-  createTelegramStarsInvoice,
-  type TelegramStarsInvoiceResult,
-} from "../../packages/server/src/payments/telegramStars.js";
-import {
-  readVipMonthlyPriceXtr,
+  readVipMonthlyPriceKcoin,
   VipPriceConfigError,
 } from "../../packages/server/src/vip/vipPrice.js";
 import {
@@ -27,7 +22,16 @@ type CreateVipOrderRpcResult = {
   star_order_id?: unknown;
   invoice_payload?: unknown;
   xtr_amount?: unknown;
+  kcoin_amount?: unknown;
+  currency_code?: unknown;
+  subscription_id?: unknown;
+  current_period_start?: unknown;
+  current_period_end?: unknown;
+  starts_at?: unknown;
+  ends_at?: unknown;
+  kcoin_ledger_id?: unknown;
   status?: unknown;
+  payment_status?: unknown;
   payment_order_status?: unknown;
   expires_at?: unknown;
   paid_at?: unknown;
@@ -43,6 +47,16 @@ type CreateVipOrderResponse = {
   invoice_link: string | null;
   invoice_open_mode: string | null;
   xtr_amount: number;
+  kcoin_amount: number;
+  currency_code: "KCOIN";
+  subscription_id: string | null;
+  subscriptionId: string | null;
+  current_period_start: string | null;
+  currentPeriodStart: string | null;
+  current_period_end: string | null;
+  currentPeriodEnd: string | null;
+  kcoin_ledger_id: string | null;
+  kcoinLedgerId: string | null;
   order_status: string;
   payment_status: string;
   payment_order_status: string;
@@ -62,9 +76,8 @@ export default withApiHandler(
       VipCreateOrderRequestSchema,
       normalizeCreateVipOrderInput(body, getIdempotencyKey(req)),
     );
-    const serverPriceXtr = readVipMonthlyPriceXtrForApi();
+    const serverPriceKcoin = readVipMonthlyPriceKcoinForApi();
 
-    await assertStarsPaymentCreateAllowed();
     await assertUserRiskAllowed({
       req,
       ctx,
@@ -73,7 +86,8 @@ export default withApiHandler(
       idempotencyKey: input.idempotencyKey,
       metadata: {
         planId: input.planId,
-        serverPriceXtr,
+        serverPriceKcoin,
+        paymentCurrency: "KCOIN",
       },
     });
 
@@ -81,23 +95,10 @@ export default withApiHandler(
       input,
       session.userId,
       ctx.requestId,
-      serverPriceXtr,
+      serverPriceKcoin,
     );
-    const vipOrderId = getRequiredString(order, "vip_order_id");
-    const starOrderId = getRequiredString(order, "star_order_id");
-    const invoicePayload = getRequiredString(order, "invoice_payload");
-    const xtrAmount = numberOrZero(order.xtr_amount);
-    const invoiceResult = await createTelegramStarsInvoice({
-      starOrderId,
-      drawOrderId: vipOrderId,
-      businessType: "vip_monthly",
-      userId: session.userId,
-      invoicePayload,
-      xtrAmount,
-      requestId: ctx.requestId,
-    });
 
-    return buildCreateVipOrderResponse(order, invoiceResult);
+    return buildCreateVipOrderResponse(order);
   },
   {
     methods: ["POST"],
@@ -130,32 +131,44 @@ export function normalizeCreateVipOrderInput(
 
 export function buildCreateVipOrderResponse(
   order: CreateVipOrderRpcResult,
-  invoiceResult: TelegramStarsInvoiceResult | null,
 ): CreateVipOrderResponse {
   const vipOrderId = getRequiredString(order, "vip_order_id");
   const paymentOrderStatus =
-    stringOrNull(invoiceResult?.paymentOrderStatus) ??
     stringOrNull(order.payment_order_status) ??
+    stringOrNull(order.payment_status) ??
     stringOrNull(order.status) ??
-    "created";
-  const orderStatus = stringOrNull(order.status) ?? "created";
+    "fulfilled";
+  const orderStatus = stringOrNull(order.status) ?? "fulfilled";
+  const currentPeriodStart = stringOrNull(order.current_period_start);
+  const currentPeriodEnd = stringOrNull(order.current_period_end);
+  const kcoinLedgerId = stringOrNull(order.kcoin_ledger_id);
+  const subscriptionId = stringOrNull(order.subscription_id);
 
   return {
     order_id: vipOrderId,
     vip_order_id: vipOrderId,
     star_order_id: stringOrNull(order.star_order_id),
     invoice_payload: stringOrNull(order.invoice_payload),
-    invoice_link: invoiceResult?.invoiceLink ?? null,
-    invoice_open_mode: invoiceResult?.openMode ?? null,
+    invoice_link: null,
+    invoice_open_mode: null,
     xtr_amount: numberOrZero(order.xtr_amount),
+    kcoin_amount: numberOrZero(order.kcoin_amount),
+    currency_code: "KCOIN",
+    subscription_id: subscriptionId,
+    subscriptionId,
+    current_period_start: currentPeriodStart,
+    currentPeriodStart,
+    current_period_end: currentPeriodEnd,
+    currentPeriodEnd,
+    kcoin_ledger_id: kcoinLedgerId,
+    kcoinLedgerId,
     order_status: orderStatus,
     payment_status: paymentOrderStatus,
     payment_order_status: paymentOrderStatus,
-    expires_at:
-      invoiceResult?.expiresAt ?? stringOrNull(order.expires_at) ?? null,
+    expires_at: stringOrNull(order.expires_at),
     paid_at: stringOrNull(order.paid_at),
     fulfilled_at: stringOrNull(order.fulfilled_at),
-    idempotent: Boolean(order.idempotent) || Boolean(invoiceResult?.reused),
+    idempotent: Boolean(order.idempotent),
   };
 }
 
@@ -163,16 +176,16 @@ async function callVipCreateOrder(
   input: VipCreateOrderRequest,
   userId: string,
   requestId: string,
-  serverPriceXtr: number,
+  serverPriceKcoin: number,
 ): Promise<CreateVipOrderRpcResult> {
   try {
     return await callRpcRaw<CreateVipOrderRpcResult>(
-      "vip_create_order_with_server_price_checked",
+      "vip_create_order_with_server_kcoin_checked",
       {
         p_user_id: userId,
         p_plan_id: input.planId,
         p_idempotency_key: input.idempotencyKey,
-        p_server_price_xtr: serverPriceXtr,
+        p_server_price_kcoin: serverPriceKcoin,
       },
       {
         schema: "api" as never,
@@ -180,7 +193,7 @@ async function callVipCreateOrder(
           requestId,
           userId,
           planId: input.planId,
-          serverPriceXtr,
+          serverPriceKcoin,
           idempotencyKey: input.idempotencyKey,
         },
       },
@@ -235,8 +248,8 @@ function mapCreateVipOrderRpcError(error: unknown): ApiError {
   }
 
   if (
-    message.includes("server price xtr is invalid") ||
-    message.includes("server_price_xtr is required")
+    message.includes("server price kcoin is invalid") ||
+    message.includes("server_price_kcoin is required")
   ) {
     return new ApiError(503, "VIP_PRICE_CONFIG_INVALID", "月卡价格配置无效。", {
       expose: false,
@@ -244,11 +257,34 @@ function mapCreateVipOrderRpcError(error: unknown): ApiError {
     });
   }
 
+  if (message.includes("insufficient balance")) {
+    const shortageDetails = readInsufficientKcoinDetails(
+      [error.message, error.details, error.hint]
+        .filter((item): item is string => typeof item === "string")
+        .join(" "),
+    );
+
+    return new ApiError(
+      402,
+      "INSUFFICIENT_KCOIN",
+      "K-coin 余额不足，请先充值。",
+      {
+        details: {
+          required: shortageDetails?.required ?? null,
+          balance: shortageDetails?.balance ?? null,
+          shortage: shortageDetails?.shortage ?? null,
+          canTopup: true,
+          fixedTopupPackages: [...KCOIN_FIXED_TOPUP_PACKAGES],
+        },
+      },
+    );
+  }
+
   if (
     message.includes(
-      "function api.vip_create_order_with_server_price_checked",
+      "function api.vip_create_order_with_server_kcoin_checked",
     ) ||
-    (message.includes("vip_create_order_with_server_price_checked") &&
+    (message.includes("vip_create_order_with_server_kcoin_checked") &&
       message.includes("could not find")) ||
     message.includes("function api.vip_create_order_checked") ||
     (message.includes("vip_create_order_checked") &&
@@ -278,9 +314,11 @@ function mapCreateVipOrderRpcError(error: unknown): ApiError {
   );
 }
 
-function readVipMonthlyPriceXtrForApi(): number {
+const KCOIN_FIXED_TOPUP_PACKAGES = [500, 1000, 5000, 10000] as const;
+
+function readVipMonthlyPriceKcoinForApi(): number {
   try {
-    return readVipMonthlyPriceXtr();
+    return readVipMonthlyPriceKcoin();
   } catch (error) {
     if (error instanceof VipPriceConfigError) {
       throw new ApiError(error.statusCode, error.code, "月卡价格配置无效。", {
@@ -291,6 +329,38 @@ function readVipMonthlyPriceXtrForApi(): number {
 
     throw error;
   }
+}
+
+function readInsufficientKcoinDetails(message: string): {
+  required: number;
+  balance: number;
+  shortage: number;
+} | null {
+  const required = readNamedNumber(message, "required");
+  const balance = readNamedNumber(message, "balance");
+  const shortage = readNamedNumber(message, "shortage");
+
+  if (required === null || balance === null || shortage === null) {
+    return null;
+  }
+
+  return {
+    required,
+    balance,
+    shortage,
+  };
+}
+
+function readNamedNumber(message: string, key: string): number | null {
+  const match = new RegExp(`${key}=([0-9]+(?:\\.[0-9]+)?)`).exec(message);
+  const value = match?.[1];
+
+  if (!value) {
+    return null;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 function getRequiredString(

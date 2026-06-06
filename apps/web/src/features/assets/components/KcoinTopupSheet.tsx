@@ -118,7 +118,7 @@ export function KcoinTopupSheet({
             <h2 id="kcoin-topup-title">充值 K-coin</h2>
             <p>
               {shortfall > 0
-                ? `本次开盲盒需要 ${formatCurrencyAmount(requiredAmount)} K-coin，当前余额 ${formatCurrencyAmount(currentBalance)}，还差 ${formatCurrencyAmount(shortfall)}。`
+                ? `本次操作需要 ${formatCurrencyAmount(requiredAmount)} K-coin，当前余额 ${formatCurrencyAmount(currentBalance)}，还差 ${formatCurrencyAmount(shortfall)}。`
                 : "选择充值档位后，会打开 Telegram Stars 支付账单。"}
             </p>
           </div>
