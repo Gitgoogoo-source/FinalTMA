@@ -8,9 +8,9 @@
 
 | 页面显示 | 代码名称 | 档次 | 单抽展示价 | 十连展示价 | 当前保底 |
 | --- | --- | --- | ---: | ---: | --- |
-| Normal Egg | starter_egg | 普通 | 10 K-coin | 90 K-coin | 30 抽保底稀有或以上 |
-| Rare Egg | premium_egg | 稀有 |40 K-coin | 360 K-coin | 50 抽保底史诗或以上 |
-| Legendary Egg | legendary_egg | 传奇 | 120 K-coin | 1080 K-coin | 80 抽保底传说或以上 |
+| Normal Egg | starter_egg | 普通 | 10 K-coin | 90 K-coin | 50 抽保底稀有或以上 |
+| Rare Egg | premium_egg | 稀有 |40 K-coin | 360 K-coin | 30 抽保底史诗或以上 |
+| Legendary Egg | legendary_egg | 传奇 | 120 K-coin | 1080 K-coin | 15 抽保底传说或以上 |
 
 十连是 9 折。前端有自己的展示价格，服务端也会从后端环境配置里读取真实价格。真正扣款以后端为准，不能以前端展示或用户提交内容为准。
 
