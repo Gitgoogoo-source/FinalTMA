@@ -1,8 +1,15 @@
 node_modules/
 **/node_modules/
 .pnpm-store/
+.codex_tmp/
 
 .DS_Store
+*.swp
+*.swo
+*~
+*.log
+*.tmp
+*.temp
 
 .env
 .env.*
