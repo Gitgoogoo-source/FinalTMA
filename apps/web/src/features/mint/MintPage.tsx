@@ -1,14 +1,13 @@
 import { Cell } from "@ton/core";
 import { useTonConnectUI, useTonWallet } from "@tonconnect/ui-react";
 import { ChevronLeft, Link2, ShieldAlert } from "lucide-react";
-import { useCallback, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useState, type ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { apiRequest, newIdempotencyKey } from "../../platform/api/client.ts";
 import { useApiQuery } from "../../platform/query/index.ts";
 import { useTelegramBackButton } from "../../platform/telegram/index.ts";
 import { useOperation } from "../../shared/feedback/OperationContext.ts";
-import { number, records, text } from "../../shared/lib/data.ts";
 import {
   Badge,
   Button,
@@ -27,17 +26,11 @@ export function MintPage(): ReactNode {
   const inventory = useApiQuery("inventory.detail", {
     template_id: templateId,
   });
-  const walletStatus = useApiQuery("wallet.status");
+  const walletStatus = useApiQuery("wallet.get");
   const navigate = useNavigate();
   const back = useCallback(() => navigate(-1), [navigate]);
   useTelegramBackButton(true, back);
-  const item = useMemo(
-    () =>
-      records(inventory.data?.items).find(
-        (candidate) => candidate.template_id === templateId,
-      ),
-    [inventory.data, templateId],
-  );
+  const item = inventory.data;
   const [tonConnect] = useTonConnectUI();
   const tonWallet = useTonWallet();
   const { blocked, run } = useOperation();
@@ -48,40 +41,43 @@ export function MintPage(): ReactNode {
       "正在锁定 1 个藏品并签发 Mint 凭证",
       async () => {
         const response = await apiRequest(
-          "wallet.mint",
-          { action: "reserve", template_id: templateId },
+          "mint.reserve",
+          { template_id: templateId },
           { idempotencyKey: newIdempotencyKey() },
         );
         return { data: response.data, operationId: response.operationId };
       },
     );
     if (!reserved) return;
-    const mintId = text(reserved.mint_id, "");
+    const mintId = reserved.mint.id;
+    const signed = JSON.parse(reserved.permit) as { transaction: Transaction };
+    const transaction = signed.transaction;
+    let result: Awaited<ReturnType<typeof tonConnect.sendTransaction>>;
     try {
-      const transaction = reserved.transaction as Transaction;
-      const result = await tonConnect.sendTransaction({
+      result = await tonConnect.sendTransaction({
         validUntil: transaction.valid_until,
         messages: transaction.messages,
-      });
-      const messageHash = Cell.fromBase64(result.boc).hash().toString("hex");
-      await run("交易已提交，正在等待链上确认", async () => {
-        const response = await apiRequest(
-          "wallet.mint",
-          { action: "submit", mint_id: mintId, transaction_hash: messageHash },
-          { idempotencyKey: newIdempotencyKey() },
-        );
-        return { data: response.data, operationId: response.operationId };
       });
     } catch {
       await run("正在取消未提交的 Mint", async () => {
         const response = await apiRequest(
-          "wallet.mint",
-          { action: "cancel", mint_id: mintId },
+          "mint.cancel",
+          { mint_id: mintId },
           { idempotencyKey: newIdempotencyKey() },
         );
         return { data: response.data, operationId: response.operationId };
       });
+      return;
     }
+    const messageHash = Cell.fromBase64(result.boc).hash().toString("hex");
+    await run("交易已提交，正在等待链上确认", async () => {
+      const response = await apiRequest(
+        "mint.submit",
+        { mint_id: mintId, transaction_hash: messageHash },
+        { idempotencyKey: newIdempotencyKey() },
+      );
+      return { data: response.data, operationId: response.operationId };
+    });
   };
   return (
     <main className="page fullscreen">
@@ -107,23 +103,23 @@ export function MintPage(): ReactNode {
           <Card className="mint-card">
             <CatalogImage
               path={item.image_path}
-              alt={text(item.name)}
+              alt={item.name}
               onAvailability={setImageReady}
             />
             <Badge>
-              {text(item.rarity)} · 第 {text(item.stage)} 阶
+              {item.rarity} · 第 {item.stage} 阶
             </Badge>
-            <h2>{text(item.name)}</h2>
+            <h2>{item.name}</h2>
             <div className="mint-checks">
               <p>
                 <span>游戏内可用数量</span>
-                <strong>{text(item.available)}</strong>
+                <strong>{item.available}</strong>
               </p>
               <p>
                 <span>TON 主钱包</span>
                 <strong>
-                  {walletStatus.data?.verified
-                    ? text(walletStatus.data.address)
+                  {walletStatus.data?.connected
+                    ? walletStatus.data.address
                     : "未验证"}
                 </strong>
               </p>
@@ -143,8 +139,8 @@ export function MintPage(): ReactNode {
               disabled={
                 blocked ||
                 !imageReady ||
-                number(item.available) < 1 ||
-                !walletStatus.data?.verified ||
+                item.available < 1 ||
+                !walletStatus.data?.connected ||
                 !tonWallet
               }
               onClick={() => void mint()}

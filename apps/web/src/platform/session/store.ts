@@ -5,6 +5,7 @@ export type Session = {
   userId: string;
   accountStatus: "normal" | "banned";
   expiresAt: string;
+  generation: string;
   recovering?: boolean;
 };
 

@@ -5,34 +5,28 @@ import { apiRequest, newIdempotencyKey } from "../../platform/api/client.ts";
 import { useApiQuery } from "../../platform/query/index.ts";
 import { telegram } from "../../platform/telegram/index.ts";
 import { useOperation } from "../../shared/feedback/OperationContext.ts";
-import { records, text } from "../../shared/lib/data.ts";
 import { Button } from "../../shared/ui/index.tsx";
 
 export function TopupDialog({ close }: { close(): void }): ReactNode {
   const [amount, setAmount] = useState("");
-  const bootstrap = useApiQuery("me.bootstrap");
-  const status = useApiQuery("topup.status");
+  const status = useApiQuery("topup.bootstrap");
   const { blocked, run } = useOperation();
   const create = () =>
     void run("正在创建 Telegram Stars 订单", async () => {
       const response = await apiRequest(
         "topup.create_order",
-        { amount: Number(amount) },
+        { mode: "fixed", amount: Number(amount) as 50 | 500 | 1000 | 5000 | 10000 },
         { idempotencyKey: newIdempotencyKey() },
       );
-      const invoice = text(response.data.invoice_url, "");
+      const invoice = response.data.invoice_url ?? "";
       if (invoice)
         telegram()?.openInvoice(invoice, () => {
           void status.refetch();
         });
       return { data: response.data, operationId: response.operationId };
     });
-  const amounts = Array.isArray(bootstrap.data?.topup_amounts)
-    ? bootstrap.data.topup_amounts.filter(
-        (value): value is number => typeof value === "number",
-      )
-    : [];
-  const payments = records(status.data?.payments);
+  const amounts = status.data?.products ?? [];
+  const payments = status.data?.orders ?? [];
   return (
     <div className="modal-backdrop">
       <div className="modal topup">
@@ -46,10 +40,10 @@ export function TopupDialog({ close }: { close(): void }): ReactNode {
             <strong>待恢复订单</strong>
             {payments.map((payment) => (
               <button
-                key={text(payment.id)}
+                key={payment.id}
                 onClick={() => void status.refetch()}
               >
-                <span>{text(payment.stars_amount)} Stars</span>
+                <span>{payment.stars_amount} Stars</span>
                 <small>
                   {payment.status === "paid" ? "正在确认到账" : "等待支付确认"}
                 </small>
@@ -57,10 +51,10 @@ export function TopupDialog({ close }: { close(): void }): ReactNode {
             ))}
           </div>
         )}
-        {bootstrap.isLoading ? (
+        {status.isLoading ? (
           <p>正在读取充值档位</p>
-        ) : bootstrap.error ? (
-          <Button onClick={() => void bootstrap.refetch()}>重新加载</Button>
+        ) : status.error ? (
+          <Button onClick={() => void status.refetch()}>重新加载</Button>
         ) : (
           <div className="amount-grid">
             {amounts.map((value) => (

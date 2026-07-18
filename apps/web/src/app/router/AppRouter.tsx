@@ -3,37 +3,37 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { AppShell } from "../shell/AppShell.tsx";
 
 const AlbumPage = lazy(() =>
-  import("../../features/album/AlbumPage.tsx").then((module) => ({
+  import("../../features/album/index.ts").then((module) => ({
     default: module.AlbumPage,
   })),
 );
 const GamePage = lazy(() =>
-  import("../../features/expedition/GamePage.tsx").then((module) => ({
+  import("../../features/game/index.ts").then((module) => ({
     default: module.GamePage,
   })),
 );
 const GachaPage = lazy(() =>
-  import("../../features/gacha/GachaPage.tsx").then((module) => ({
+  import("../../features/gacha/index.ts").then((module) => ({
     default: module.GachaPage,
   })),
 );
 const InventoryPage = lazy(() =>
-  import("../../features/inventory/InventoryPage.tsx").then((module) => ({
+  import("../../features/inventory/index.ts").then((module) => ({
     default: module.InventoryPage,
   })),
 );
 const MarketPage = lazy(() =>
-  import("../../features/market/MarketPage.tsx").then((module) => ({
+  import("../../features/market/index.ts").then((module) => ({
     default: module.MarketPage,
   })),
 );
 const MintPage = lazy(() =>
-  import("../../features/mint/MintPage.tsx").then((module) => ({
+  import("../../features/mint/index.ts").then((module) => ({
     default: module.MintPage,
   })),
 );
 const TasksPage = lazy(() =>
-  import("../../features/tasks/TasksPage.tsx").then((module) => ({
+  import("../../features/tasks/index.ts").then((module) => ({
     default: module.TasksPage,
   })),
 );

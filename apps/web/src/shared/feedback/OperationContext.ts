@@ -2,7 +2,7 @@ import { createContext, useContext } from "react";
 
 export type OperationContextValue = {
   blocked: boolean;
-  run<T extends Record<string, unknown>>(
+  run<T>(
     label: string,
     action: () => Promise<{ data: T; operationId: string | null }>,
   ): Promise<T | null>;

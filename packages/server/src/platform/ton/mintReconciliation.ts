@@ -6,7 +6,6 @@ import { getEnv } from "../env/index.ts";
 
 type Candidate = {
   mint_id: string;
-  operation_id: string;
   nft_number: number;
   template_id: string;
   transaction_hash: string;
@@ -28,7 +27,7 @@ export async function reconcileSubmittedMints(): Promise<
     apiKey: env.TON_API_KEY,
   });
   const candidates = await rpc<Candidate[]>(
-    "list_mint_reconciliation_candidates",
+    "mint_reconciliation_candidates",
     { p_limit: 100 },
   );
   let succeeded = 0;
@@ -50,7 +49,7 @@ export async function reconcileSubmittedMints(): Promise<
           unknown += 1;
           continue;
         }
-        await rpc("complete_mint", {
+        await rpc("mint_complete", {
           p_mint_id: candidate.mint_id,
           p_success: false,
           p_nft_address: null,
@@ -72,7 +71,7 @@ export async function reconcileSubmittedMints(): Promise<
           { trait_type: "Combat Power", value: candidate.combat_power },
         ],
       };
-      await rpc("complete_mint", {
+      await rpc("mint_complete", {
         p_mint_id: candidate.mint_id,
         p_success: true,
         p_nft_address: nftAddress.toString(),
@@ -81,6 +80,7 @@ export async function reconcileSubmittedMints(): Promise<
       });
       succeeded += 1;
     } catch {
+      await rpc("mint_mark_unknown", { p_mint_id: candidate.mint_id });
       unknown += 1;
     }
   }

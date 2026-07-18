@@ -5,7 +5,6 @@ import { useSearchParams } from "react-router-dom";
 import { apiRequest, newIdempotencyKey } from "../../platform/api/client.ts";
 import { useApiQuery } from "../../platform/query/index.ts";
 import { useOperation } from "../../shared/feedback/OperationContext.ts";
-import { number, records, text } from "../../shared/lib/data.ts";
 import {
   Badge,
   Button,
@@ -21,17 +20,17 @@ export function MarketPage(): ReactNode {
   const [params] = useSearchParams();
   const [tab, setTab] = useState<Tab>(params.has("sell") ? "sell" : "buy");
   const [vipOpen, setVipOpen] = useState(false);
-  const vip = useApiQuery("vip.status");
-  const listings = useApiQuery("market.listings", {}, tab === "buy");
-  const sellable = useApiQuery("market.sellable_items", {}, tab === "sell");
+  const vip = useApiQuery("vip.get");
+  const listings = useApiQuery("market.bootstrap", {}, tab === "buy");
+  const sellable = useApiQuery("market.bootstrap", {}, tab === "sell");
   const mine = useApiQuery("market.my_listings", {}, tab === "manage");
   const { blocked, run } = useOperation();
-  const data =
+  const data: MarketViewItem[] =
     tab === "buy"
-      ? records(listings.data?.templates)
+      ? (listings.data?.templates ?? []).map((item) => ({ ...item, available: item.available_quantity }))
       : tab === "sell"
-        ? records(sellable.data?.items)
-        : records(mine.data?.listings);
+        ? (sellable.data?.sellable_items ?? []).map((item) => ({ ...item, available: item.available }))
+        : (mine.data?.listings ?? []).map((item) => ({ ...item, available: item.quantity }));
   const state = tab === "buy" ? listings : tab === "sell" ? sellable : mine;
   const preset = params.get("sell");
   const sorted = useMemo(
@@ -41,21 +40,13 @@ export function MarketPage(): ReactNode {
         : data,
     [data, preset],
   );
-  const submit = (
-    route: string,
-    item: Record<string, unknown>,
-    quantity: number,
-    label: string,
-  ) =>
-    void run(label, async () => {
-      const response = await apiRequest(
-        route,
-        {
-          template_id: item.template_id,
-          ...(route === "market.cancel_listing" ? {} : { quantity }),
-        },
-        { idempotencyKey: newIdempotencyKey() },
-      );
+  const submit = (item: MarketViewItem, quantity: number) => void run(tab === "buy" ? "正在确认市场购买" : tab === "sell" ? "正在创建出售" : "正在下架未成交藏品", async () => {
+      const options = { idempotencyKey: newIdempotencyKey() };
+      const response = tab === "buy"
+        ? await apiRequest("market.purchase", { template_id: item.template_id, quantity }, options)
+        : tab === "sell"
+          ? await apiRequest("market.create_listing", { template_id: item.template_id, quantity }, options)
+          : await apiRequest("market.cancel_listing", { listing_id: item.listing_id ?? "" }, options);
       return { data: response.data, operationId: response.operationId };
     });
   return (
@@ -71,7 +62,7 @@ export function MarketPage(): ReactNode {
           <strong>{vip.data?.active ? "VIP 月卡已生效" : "VIP 月卡"}</strong>
           <small>
             {vip.data?.active
-              ? `有效期至 ${text(vip.data.ends_on)}`
+              ? `有效期至 ${vip.data.ends_on}`
               : "查看真实价格、有效期与每日权益"}
           </small>
         </div>
@@ -108,7 +99,7 @@ export function MarketPage(): ReactNode {
         <div className="market-grid">
           {sorted.map((item) => (
             <MarketCard
-              key={text(item.template_id)}
+              key={item.listing_id ?? item.template_id}
               item={item}
               tab={tab}
               blocked={blocked}
@@ -122,50 +113,41 @@ export function MarketPage(): ReactNode {
   );
 }
 
+type MarketViewItem = { template_id: string; name: string; rarity?: string; image_path: string; unit_price: number; available: number; listing_id?: string };
+
 function MarketCard({
   item,
   tab,
   blocked,
   onSubmit,
 }: {
-  item: Record<string, unknown>;
+  item: MarketViewItem;
   tab: Tab;
   blocked: boolean;
-  onSubmit(
-    route: string,
-    item: Record<string, unknown>,
-    quantity: number,
-    label: string,
-  ): void;
+  onSubmit(item: MarketViewItem, quantity: number): void;
 }): ReactNode {
   const [quantity, setQuantity] = useState(1);
   const [imageReady, setImageReady] = useState(tab === "manage");
-  const available = number(
-    tab === "buy"
-      ? item.available_quantity
-      : tab === "sell"
-        ? item.available
-        : item.quantity,
-  );
-  const price = item.unit_price ?? item.market_price;
+  const available = item.available;
+  const price = item.unit_price;
   return (
     <Card className="market-card">
       {tab !== "manage" && (
         <CatalogImage
           path={item.image_path}
-          alt={text(item.name)}
+          alt={item.name}
           onAvailability={setImageReady}
         />
       )}
       <div className="market-copy">
-        <Badge>{text(item.rarity, tab === "manage" ? "出售中" : "")}</Badge>
-        <h2>{text(item.name, text(item.template_id))}</h2>
+        <Badge>{item.rarity ?? (tab === "manage" ? "出售中" : "")}</Badge>
+        <h2>{item.name}</h2>
         <p>
-          官方单价 <strong>{text(price)} K</strong>
+          官方单价 <strong>{price} K</strong>
         </p>
         <p>
           {tab === "buy" ? "可买" : tab === "sell" ? "可用" : "出售中"}{" "}
-          {text(available)}
+          {available}
         </p>
       </div>
       {tab !== "manage" && (
@@ -190,16 +172,7 @@ function MarketCard({
           blocked || !imageReady || available < 1 || quantity > available
         }
         onClick={() =>
-          tab === "buy"
-            ? onSubmit("market.buy", item, quantity, "正在确认市场购买")
-            : tab === "sell"
-              ? onSubmit(
-                  "market.create_listing",
-                  item,
-                  quantity,
-                  "正在创建出售",
-                )
-              : onSubmit("market.cancel_listing", item, 1, "正在下架未成交藏品")
+          onSubmit(item, quantity)
         }
       >
         {tab === "buy" ? (

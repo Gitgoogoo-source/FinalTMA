@@ -4,23 +4,22 @@ import { useState, type ReactNode } from "react";
 import { apiRequest, newIdempotencyKey } from "../../platform/api/client.ts";
 import { useApiQuery } from "../../platform/query/index.ts";
 import { useOperation } from "../../shared/feedback/OperationContext.ts";
-import { number, records, text } from "../../shared/lib/data.ts";
 import { Badge, Button, Card, PageState } from "../../shared/ui/index.tsx";
-import { ReferralPanel } from "../referral/ReferralPanel.tsx";
+import { ReferralPanel } from "../referral/index.ts";
 
 export function TasksPage(): ReactNode {
   const [tab, setTab] = useState<"tasks" | "referral">("tasks");
-  const tasks = useApiQuery("tasks.overview", {}, tab === "tasks");
-  const checkin = useApiQuery("tasks.check_in_status", {}, tab === "tasks");
+  const tasks = useApiQuery("tasks.get", {}, tab === "tasks");
   const { blocked, run } = useOperation();
-  const act = (route: string, input: Record<string, unknown>, label: string) =>
-    void run(label, async () => {
-      const response = await apiRequest(route, input, {
-        idempotencyKey: newIdempotencyKey(),
-      });
+  const checkIn = () => void run("正在确认今日签到", async () => {
+      const response = await apiRequest("tasks.check_in", {}, { idempotencyKey: newIdempotencyKey() });
       return { data: response.data, operationId: response.operationId };
     });
-  const items = records(tasks.data?.tasks);
+  const claim = (taskCode: string) => void run("正在领取任务奖励", async () => {
+      const response = await apiRequest("tasks.claim", { task_code: taskCode }, { idempotencyKey: newIdempotencyKey() });
+      return { data: response.data, operationId: response.operationId };
+    });
+  const items = tasks.data?.tasks ?? [];
   return (
     <main className="page">
       <header className="hero tasks-hero">
@@ -48,46 +47,42 @@ export function TasksPage(): ReactNode {
         <ReferralPanel />
       ) : (
         <PageState
-          loading={tasks.isLoading || checkin.isLoading}
-          error={(tasks.error ?? checkin.error) as Error | null}
-          onRetry={() => {
-            void tasks.refetch();
-            void checkin.refetch();
-          }}
+          loading={tasks.isLoading}
+          error={tasks.error as Error | null}
+          onRetry={() => void tasks.refetch()}
           empty={false}
         >
           <Card className="checkin-card">
             <div>
               <CalendarCheck />
               <span>连续签到</span>
-              <strong>第 {text(checkin.data?.next_day)} 天</strong>
+              <strong>第 {tasks.data?.checkin.next_day ?? 1} 天</strong>
             </div>
             <Button
-              disabled={blocked || Boolean(checkin.data?.claimed_today)}
-              onClick={() => act("tasks.check_in", {}, "正在确认今日签到")}
+              disabled={blocked || Boolean(tasks.data?.checkin.claimed_today)}
+              onClick={checkIn}
             >
-              {checkin.data?.claimed_today ? "今日已签到" : "立即签到"}
+              {tasks.data?.checkin.claimed_today ? "今日已签到" : "立即签到"}
             </Button>
           </Card>
           <div className="task-list">
             {items.map((task) => {
-              const complete = number(task.progress) >= number(task.target);
+              const complete = task.progress >= task.target;
               return (
-                <Card key={text(task.code)} className="task-row">
+                <Card key={task.code} className="task-row">
                   <div className="task-icon">
                     <Gift />
                   </div>
                   <div>
-                    <Badge>{text(task.category)}</Badge>
-                    <h3>{text(task.name)}</h3>
+                    <Badge>{task.category}</Badge>
+                    <h3>{task.name}</h3>
                     <p>
-                      {text(task.progress)} / {text(task.target)} · 奖励{" "}
-                      {text(task.reward_fgems)} Fgems
+                      {task.progress} / {task.target} · 奖励 {task.reward_fgems} Fgems
                     </p>
                     <div className="meter">
                       <i
                         style={{
-                          width: `${Math.min(100, (number(task.progress) / Math.max(1, number(task.target))) * 100)}%`,
+                          width: `${Math.min(100, (task.progress / Math.max(1, task.target)) * 100)}%`,
                         }}
                       />
                     </div>
@@ -95,11 +90,7 @@ export function TasksPage(): ReactNode {
                   <Button
                     disabled={blocked || !complete || Boolean(task.claimed)}
                     onClick={() =>
-                      act(
-                        "tasks.claim",
-                        { task_code: task.code },
-                        "正在领取任务奖励",
-                      )
+                      claim(task.code)
                     }
                   >
                     {task.claimed ? "已领取" : complete ? "领取" : "进行中"}

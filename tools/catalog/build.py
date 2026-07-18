@@ -12,8 +12,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 PRODUCT = ROOT / "docs/product/功能说明文档.md"
-MIGRATION = ROOT / "supabase/migrations/20260718000200_catalog_v1.sql"
-MANIFEST = ROOT / "docs/architecture/catalog-v1.manifest.json"
+MIGRATION = ROOT / "supabase/migrations/20260718182513_catalog_v1.sql"
+MANIFEST = ROOT / "generated/catalog/catalog-v1.json"
+PLACEHOLDERS = ROOT / "generated/assets/placeholders.json"
 ASSET_ROOT = ROOT / "apps/web/public/assets"
 
 CHAIN_TYPES = {
@@ -172,7 +173,7 @@ insert into catalog.boxes (tier, display_name, image_path, single_price, ten_pri
 
 insert into catalog.topup_products (amount, sort_order) values (50, 1), (500, 2), (1000, 3), (5000, 4), (10000, 5);
 
-insert into gameplay.task_definitions (code, sort_order, category, display_name, target, reward_fgems) values
+insert into tasks.definitions (code, sort_order, category, display_name, target, reward_fgems) values
 {task_values};
 """
 
@@ -184,6 +185,7 @@ def asset_files(templates: list[dict[str, object]]) -> list[Path]:
         ASSET_ROOT / "boxes/rare.webp",
         ASSET_ROOT / "boxes/legendary.webp",
         ASSET_ROOT / "share/preview.webp",
+        ASSET_ROOT / "ton/tonconnect-icon.png",
     ]
     return required
 
@@ -193,7 +195,13 @@ def pin_assets(templates: list[dict[str, object]]) -> dict[str, str]:
     missing = [str(path.relative_to(ROOT)) for path in required if not path.is_file() or path.stat().st_size == 0]
     if missing:
         raise SystemExit("Missing required assets:\n" + "\n".join(missing))
-    return {str(path.relative_to(ROOT)): hashlib.sha256(path.read_bytes()).hexdigest() for path in required}
+    pinned = {str(path.relative_to(ROOT)): hashlib.sha256(path.read_bytes()).hexdigest() for path in required}
+    placeholder_manifest = json.loads(PLACEHOLDERS.read_text(encoding="utf-8")) if PLACEHOLDERS.is_file() else {}
+    forbidden = set(placeholder_manifest.get("files", {}).values())
+    placeholders = sorted(name for name, value in pinned.items() if value in forbidden)
+    if placeholders:
+        raise SystemExit("Cannot pin development placeholders as production assets:\n" + "\n".join(placeholders))
+    return pinned
 
 
 def check_assets(templates: list[dict[str, object]], expected: object) -> None:
@@ -214,20 +222,22 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--check-assets", action="store_true")
     parser.add_argument("--pin-assets", action="store_true")
+    parser.add_argument("--migration-path", type=Path, default=MIGRATION)
+    parser.add_argument("--manifest-path", type=Path, default=MANIFEST)
     args = parser.parse_args()
     if args.check_assets and args.pin_assets:
         raise SystemExit("Choose either --check-assets or --pin-assets")
     markdown = PRODUCT.read_text(encoding="utf-8")
     checksum = hashlib.sha256(markdown.encode()).hexdigest()
     chains, templates = parse_catalog(markdown)
-    MIGRATION.parent.mkdir(parents=True, exist_ok=True)
-    MANIFEST.parent.mkdir(parents=True, exist_ok=True)
-    MIGRATION.write_text(build_sql(chains, templates, checksum), encoding="utf-8")
-    previous = json.loads(MANIFEST.read_text(encoding="utf-8")) if MANIFEST.is_file() else {}
+    args.migration_path.parent.mkdir(parents=True, exist_ok=True)
+    args.manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    args.migration_path.write_text(build_sql(chains, templates, checksum), encoding="utf-8")
+    previous = json.loads(args.manifest_path.read_text(encoding="utf-8")) if args.manifest_path.is_file() else {}
     assets = previous.get("assets", {}) if previous.get("product_checksum") == checksum else {}
     if args.pin_assets:
         assets = pin_assets(templates)
-    MANIFEST.write_text(json.dumps({"version": "v1", "product_checksum": checksum, "chains": chains, "templates": templates, "assets": assets}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    args.manifest_path.write_text(json.dumps({"version": "v1", "product_checksum": checksum, "chains": chains, "templates": templates, "assets": assets}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     if args.check_assets:
         check_assets(templates, assets)
     print(f"catalog v1: {len(chains)} chains, {len(templates)} templates, {checksum}")

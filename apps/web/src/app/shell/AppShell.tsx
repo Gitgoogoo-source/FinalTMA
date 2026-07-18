@@ -21,13 +21,12 @@ import { Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import { useApiQuery } from "../../platform/query/index.ts";
 import { useOperation } from "../../shared/feedback/OperationContext.ts";
-import { child, records, text } from "../../shared/lib/data.ts";
 import { Button } from "../../shared/ui/index.tsx";
-import { TopupDialog } from "../../features/topup/TopupDialog.tsx";
-import { VipDialog } from "../../features/vip/VipDialog.tsx";
+import { TopupDialog } from "../../features/topup/index.ts";
+import { VipDialog } from "../../features/vip/index.ts";
 
 const WalletDialog = lazy(() =>
-  import("../../features/wallet/WalletDialog.tsx").then((module) => ({
+  import("../../features/wallet/index.ts").then((module) => ({
     default: module.WalletDialog,
   })),
 );
@@ -41,24 +40,22 @@ const navigation = [
 ];
 
 export function AppShell(): ReactNode {
-  const bootstrap = useApiQuery("me.bootstrap");
-  const assets = useApiQuery("me.assets");
-  const vip = useApiQuery("vip.status");
-  const wallet = useApiQuery("wallet.status");
-  const pendingPayments = useApiQuery("topup.status");
+  const bootstrap = useApiQuery("identity.bootstrap");
+  const vip = useApiQuery("vip.get");
+  const wallet = useApiQuery("wallet.get");
+  const pendingPayments = useApiQuery("topup.bootstrap");
   const [dialog, setDialog] = useState<"topup" | "vip" | "wallet" | null>(null);
   const paymentRecoveryShown = useRef(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { blocked } = useOperation();
-  const balances = child(assets.data, "assets");
-  const kcoin = child(balances, "kcoin");
-  const fgems = child(balances, "fgems");
-  const user = child(bootstrap.data, "user");
+  const kcoin = bootstrap.data?.assets.kcoin;
+  const fgems = bootstrap.data?.assets.fgems;
+  const user = bootstrap.data?.user;
   useEffect(() => {
     if (
       !paymentRecoveryShown.current &&
-      records(pendingPayments.data?.payments).length > 0
+      (pendingPayments.data?.orders.length ?? 0) > 0
     ) {
       paymentRecoveryShown.current = true;
       setDialog("topup");
@@ -69,21 +66,21 @@ export function AppShell(): ReactNode {
       <header className="topbar">
         <div className="identity">
           <span className="avatar">
-            {text(user.first_name, "P").slice(0, 1).toUpperCase()}
+            {(user?.first_name ?? "P").slice(0, 1).toUpperCase()}
           </span>
           <div>
-            <strong>{text(user.first_name, "—")}</strong>
-            <small>@{text(user.username, text(user.id).slice(0, 8))}</small>
+            <strong>{user?.first_name ?? "—"}</strong>
+            <small>@{user?.username ?? user?.id.slice(0, 8) ?? "—"}</small>
           </div>
         </div>
         <div className="asset-actions">
           <button onClick={() => setDialog("topup")}>
             <Coins />
-            <span>{text(kcoin.available, assets.isLoading ? "…" : "—")}</span>
+            <span>{kcoin?.available ?? (bootstrap.isLoading ? "…" : "—")}</span>
           </button>
           <button className="fgems">
             <i>◆</i>
-            <span>{text(fgems.available, assets.isLoading ? "…" : "—")}</span>
+            <span>{fgems?.available ?? (bootstrap.isLoading ? "…" : "—")}</span>
           </button>
           {Boolean(vip.data?.active) && (
             <button className="active" onClick={() => setDialog("vip")}>
@@ -91,7 +88,7 @@ export function AppShell(): ReactNode {
             </button>
           )}
           <button
-            className={wallet.data?.verified ? "active" : ""}
+            className={wallet.data?.connected ? "active" : ""}
             onClick={() => setDialog("wallet")}
           >
             <WalletCards />
@@ -101,7 +98,6 @@ export function AppShell(): ReactNode {
             aria-label="刷新真实状态"
             onClick={() => {
               void bootstrap.refetch();
-              void assets.refetch();
               void vip.refetch();
               void wallet.refetch();
             }}

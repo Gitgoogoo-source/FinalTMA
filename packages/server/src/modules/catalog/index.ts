@@ -1,6 +1,6 @@
-import type { DomainModule } from "../module.ts";
+import { rpc } from "../../platform/db/index.ts";
+import type { HandlerMap } from "../types.ts";
 
-export const catalogModule = {
-  domain: "catalog",
-  routePrefixes: ["catalog"],
-} as const satisfies DomainModule;
+export const catalogHandlers = {
+  "catalog.get": async () => ({ data: await rpc("catalog_get", {}) }),
+} satisfies HandlerMap;

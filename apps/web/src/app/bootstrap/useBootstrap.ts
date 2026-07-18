@@ -42,14 +42,8 @@ export function useBootstrap(): BootstrapState & { retry(): void } {
         session: null,
       });
       try {
-        const login = await apiRequest<{
-          access_token: string;
-          user_id: string;
-          account_status: "normal" | "banned";
-          expires_at: string;
-          start_param: string | null;
-        }>(
-          "auth.telegram",
+        const login = await apiRequest(
+          "identity.authenticate",
           { init_data: app.initData },
           { recoverSession: false },
         );
@@ -59,6 +53,7 @@ export function useBootstrap(): BootstrapState & { retry(): void } {
           userId: login.data.user_id,
           accountStatus: login.data.account_status,
           expiresAt: login.data.expires_at,
+          generation: crypto.randomUUID(),
         } satisfies Session;
         replaceSession(session);
         queryClient.clear();
@@ -82,7 +77,7 @@ export function useBootstrap(): BootstrapState & { retry(): void } {
           message: "正在加载当前账号数据",
           session,
         });
-        await apiRequest("me.bootstrap");
+        await apiRequest("identity.bootstrap", {});
         if (current === generation.current)
           setState({ phase: "ready", message: "", session });
       } catch (cause) {
@@ -109,14 +104,14 @@ async function settleReferralCandidate(
   idempotencyKey: string,
 ): Promise<void> {
   try {
-    await apiRequest("tasks.bind_referral", { code }, { idempotencyKey });
+    await apiRequest("referral.bind", { code }, { idempotencyKey });
   } catch (cause) {
     if (!(cause instanceof ApiFailure)) throw cause;
     if (cause.code.startsWith("REFERRAL_") && cause.code !== "RATE_LIMITED")
       return;
     if (!cause.operationId) throw cause;
     try {
-      const recovered = await apiRequest("operations.result", {
+      const recovered = await apiRequest("operations.get", {
         operation_id: cause.operationId,
       });
       if (["succeeded", "failed"].includes(String(recovered.data.status)))
@@ -127,7 +122,7 @@ async function settleReferralCandidate(
         recoveryCause.code === "OPERATION_NOT_FOUND"
       ) {
         await apiRequest(
-          "tasks.bind_referral",
+          "referral.bind",
           { code },
           { idempotencyKey },
         ).catch((retryCause: unknown) => {

@@ -1,35 +1,27 @@
-import {
-  QueryClient,
-  useQuery,
-  type UseQueryResult,
-} from "@tanstack/react-query";
+import { QueryClient, useQuery, type UseQueryResult } from "@tanstack/react-query";
+import type { RouteId, RouteInput, RouteOutput } from "@pokepets/contracts";
 
 import { apiRequest } from "../api/client.ts";
 import { getSession, registerSessionCacheClearer } from "../session/store.ts";
 
 export const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: { retry: false, staleTime: 20_000, refetchOnWindowFocus: false },
-    mutations: { retry: false },
-  },
+  defaultOptions: { queries: { retry: false, staleTime: 20_000, refetchOnWindowFocus: false }, mutations: { retry: false } },
 });
 registerSessionCacheClearer(() => queryClient.clear());
 
-export function useApiQuery<
-  T extends Record<string, unknown> = Record<string, unknown>,
->(
-  routeId: string,
-  input: Record<string, unknown> = {},
+export function useApiQuery<Id extends RouteId>(
+  routeId: Id,
+  input: RouteInput<Id> = {} as RouteInput<Id>,
   enabled = true,
-): UseQueryResult<T> {
+): UseQueryResult<RouteOutput<Id>> {
+  const session = getSession();
   return useQuery({
-    queryKey: [getSession()?.userId ?? "public", routeId, input],
-    queryFn: async ({ signal }) =>
-      (await apiRequest<T>(routeId, input, { signal })).data,
+    queryKey: [session?.generation ?? "public", "v1", routeId, input],
+    queryFn: async ({ signal }) => (await apiRequest(routeId, input, { signal })).data,
     enabled,
   });
 }
 
 export async function refreshUserState(): Promise<void> {
-  await queryClient.invalidateQueries({ queryKey: [getSession()?.userId] });
+  await queryClient.invalidateQueries({ queryKey: [getSession()?.generation] });
 }

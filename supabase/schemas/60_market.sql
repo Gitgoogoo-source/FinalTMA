@@ -1,12 +1,12 @@
 create table market.listings (
   id uuid primary key default extensions.gen_random_uuid(),
-  seller_id uuid not null references core.users(id) on delete cascade,
+  seller_id uuid not null references identity.users(id) on delete cascade,
   template_id text not null references catalog.templates(id),
   unit_price bigint not null check (unit_price > 0),
   quantity bigint not null check (quantity > 0),
   remaining bigint not null check (remaining >= 0 and remaining <= quantity),
   status text not null default 'active' check (status in ('active', 'sold', 'cancelled')),
-  operation_id uuid not null references core.operations(id),
+  operation_id uuid not null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -16,11 +16,11 @@ create index listings_seller_active_idx on market.listings (seller_id, template_
 
 create table market.trades (
   id uuid primary key default extensions.gen_random_uuid(),
-  buyer_id uuid not null references core.users(id) on delete cascade,
+  buyer_id uuid not null references identity.users(id) on delete cascade,
   template_id text not null references catalog.templates(id),
   quantity bigint not null check (quantity > 0),
   total_price bigint not null check (total_price > 0),
-  operation_id uuid not null unique references core.operations(id),
+  operation_id uuid not null unique,
   created_at timestamptz not null default now()
 );
 
@@ -31,7 +31,7 @@ create table market.trade_details (
   id bigint generated always as identity primary key,
   trade_id uuid not null references market.trades(id) on delete cascade,
   listing_id uuid not null references market.listings(id),
-  seller_id uuid not null references core.users(id),
+  seller_id uuid not null references identity.users(id),
   quantity bigint not null check (quantity > 0),
   gross bigint not null check (gross > 0),
   fee bigint not null check (fee >= 0),

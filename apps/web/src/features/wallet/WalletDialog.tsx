@@ -5,13 +5,12 @@ import { useTonConnectUI, useTonWallet } from "@tonconnect/ui-react";
 import { apiRequest, newIdempotencyKey } from "../../platform/api/client.ts";
 import { useApiQuery } from "../../platform/query/index.ts";
 import { useOperation } from "../../shared/feedback/OperationContext.ts";
-import { text } from "../../shared/lib/data.ts";
 import { Badge, Button } from "../../shared/ui/index.tsx";
 
 type Challenge = { payload: string; expiresAt: string };
 
 export function WalletDialog({ close }: { close(): void }): ReactNode {
-  const status = useApiQuery("wallet.status");
+  const status = useApiQuery("wallet.get");
   const [tonConnect] = useTonConnectUI();
   const wallet = useTonWallet();
   const pending = useRef<Challenge | null>(null);
@@ -22,8 +21,8 @@ export function WalletDialog({ close }: { close(): void }): ReactNode {
   useEffect(() => {
     if (!wallet || !pending.current || phase !== "opening") return;
     const connection = wallet as unknown as {
-      account: Record<string, unknown>;
-      connectItems?: { tonProof?: { proof?: Record<string, unknown> } };
+      account: { address: string; chain: string; publicKey?: string; walletStateInit?: string };
+      connectItems?: { tonProof?: { proof?: { timestamp: number; domain: { lengthBytes: number; value: string }; payload: string; signature: string } } };
     };
     const proof = connection.connectItems?.tonProof?.proof;
     if (!proof) {
@@ -35,24 +34,12 @@ export function WalletDialog({ close }: { close(): void }): ReactNode {
     }
     queueMicrotask(() => setPhase("verifying"));
     void run("正在验证 TON 钱包", async () => {
-      await apiRequest(
-        "wallet.connect",
-        {
-          account: connection.account,
-          wallet_app_name: (
-            wallet as unknown as { device?: { appName?: string } }
-          ).device?.appName,
-        },
-        { idempotencyKey: newIdempotencyKey() },
-      );
       const response = await apiRequest(
-        "wallet.proof",
+        "wallet.verify",
         {
-          account: connection.account,
-          proof,
-          wallet_app_name: (
-            wallet as unknown as { device?: { appName?: string } }
-          ).device?.appName,
+          account: { address: connection.account.address, chain: connection.account.chain, ...(connection.account.publicKey ? { public_key: connection.account.publicKey } : {}), ...(connection.account.walletStateInit ? { wallet_state_init: connection.account.walletStateInit } : {}) },
+          proof: { timestamp: proof.timestamp, domain: { length_bytes: proof.domain.lengthBytes, value: proof.domain.value }, payload: proof.payload, signature: proof.signature },
+          wallet_app_name: (wallet as unknown as { device?: { appName?: string } }).device?.appName ?? null,
         },
         { idempotencyKey: newIdempotencyKey() },
       );
@@ -67,8 +54,8 @@ export function WalletDialog({ close }: { close(): void }): ReactNode {
     setPhase("opening");
     try {
       const response = await apiRequest("wallet.challenge", {});
-      const payload = text(response.data.ton_proof_payload, "");
-      pending.current = { payload, expiresAt: text(response.data.expires_at) };
+      const payload = response.data.payload;
+      pending.current = { payload, expiresAt: response.data.expires_at };
       tonConnect.setConnectRequestParameters({
         state: "ready",
         value: { tonProof: payload },
@@ -93,21 +80,20 @@ export function WalletDialog({ close }: { close(): void }): ReactNode {
     <div className="modal-backdrop">
       <div className="modal wallet">
         <WalletCards size={42} />
-        <Badge>{status.data?.verified ? "已验证" : "未连接"}</Badge>
+        <Badge>{status.data?.connected ? "已验证" : "未连接"}</Badge>
         <h2>TON 主钱包</h2>
         {status.isLoading ? (
           <p>正在读取钱包状态</p>
         ) : status.error ? (
           <Button onClick={() => void status.refetch()}>重新加载</Button>
-        ) : status.data?.verified ? (
+        ) : status.data?.connected ? (
           <>
             <div className="verified-wallet">
               <CheckCircle2 />
               <div>
-                <strong>{shortAddress(text(status.data.address))}</strong>
+                <strong>{shortAddress(status.data.address ?? "")}</strong>
                 <small>
-                  {text(status.data.walletAppName)} ·{" "}
-                  {text(status.data.network)}
+                  {status.data.wallet_app_name ?? "TON Wallet"} · {status.data.network}
                 </small>
               </div>
             </div>

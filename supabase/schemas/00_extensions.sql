@@ -1,12 +1,20 @@
 create schema if not exists extensions;
 create extension if not exists pgcrypto with schema extensions;
 
-create schema if not exists core;
+create schema if not exists identity;
 create schema if not exists catalog;
 create schema if not exists economy;
 create schema if not exists inventory;
-create schema if not exists gameplay;
+create schema if not exists gacha;
+create schema if not exists expedition;
+create schema if not exists wheel;
 create schema if not exists market;
+create schema if not exists payments;
+create schema if not exists vip;
+create schema if not exists tasks;
+create schema if not exists referral;
+create schema if not exists album;
 create schema if not exists onchain;
-create schema if not exists ops;
+create schema if not exists operations;
+create schema if not exists risk;
 create schema if not exists api;

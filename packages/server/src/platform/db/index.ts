@@ -26,10 +26,9 @@ export async function rpc<T>(
 ): Promise<T> {
   const { data, error } = await db().schema("api").rpc(name, parameters);
   if (error) {
-    const match = /^([A-Z][A-Z0-9_]+):(.+)$/.exec(error.message);
-    if (match) {
-      const [, code, message] = match;
-      if (code && message) throw new ApiError(statusFor(code), code, message);
+    if (error.code === "P0001") {
+      const detail = parseDetail(error.details);
+      if (detail) throw new ApiError(statusFor(detail.code), detail.code, detail.message);
     }
     throw new ApiError(500, "DATABASE_RPC_FAILED", "数据库操作失败", false, {
       name,
@@ -38,6 +37,16 @@ export async function rpc<T>(
     });
   }
   return data as T;
+}
+
+function parseDetail(value: string | undefined): { code: string; message: string } | null {
+  if (!value) return null;
+  try {
+    const parsed = JSON.parse(value) as { code?: unknown; message?: unknown };
+    return typeof parsed.code === "string" && typeof parsed.message === "string" ? { code: parsed.code, message: parsed.message } : null;
+  } catch {
+    return null;
+  }
 }
 
 function statusFor(code: string): number {

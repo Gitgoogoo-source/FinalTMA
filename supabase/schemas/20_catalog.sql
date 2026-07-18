@@ -4,7 +4,7 @@ create table catalog.chains (
   chain_type text not null check (chain_type in ('normal', 'advanced', 'top')),
   theme text not null,
   continuity text not null,
-  catalog_version text not null
+  catalog_version text not null check (catalog_version = 'v1')
 );
 
 create table catalog.templates (
@@ -20,7 +20,7 @@ create table catalog.templates (
   expedition_fgems bigint not null check (expedition_fgems > 0),
   image_path text not null unique,
   draw_weight integer not null default 1 check (draw_weight > 0),
-  catalog_version text not null,
+  catalog_version text not null check (catalog_version = 'v1'),
   unique (chain_id, stage)
 );
 
@@ -42,3 +42,18 @@ create table catalog.topup_products (
   amount bigint primary key check (amount > 0),
   sort_order smallint not null unique check (sort_order > 0)
 );
+
+create table catalog.versions (
+  id text primary key check (id = 'v1'),
+  product_checksum text not null check (product_checksum ~ '^[0-9a-f]{64}$'),
+  activated_at timestamptz not null default now()
+);
+
+create or replace function catalog.rarity_rank(p_rarity text)
+returns smallint
+language sql
+immutable
+set search_path = ''
+as $$
+  select case p_rarity when 'common' then 1 when 'rare' then 2 when 'epic' then 3 when 'legendary' then 4 when 'mythic' then 5 else 0 end::smallint
+$$;

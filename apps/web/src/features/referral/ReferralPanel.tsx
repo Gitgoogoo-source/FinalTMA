@@ -5,24 +5,23 @@ import { apiRequest, newIdempotencyKey } from "../../platform/api/client.ts";
 import { useApiQuery } from "../../platform/query/index.ts";
 import { telegram } from "../../platform/telegram/index.ts";
 import { useOperation } from "../../shared/feedback/OperationContext.ts";
-import { text } from "../../shared/lib/data.ts";
 import { Badge, Button, Card } from "../../shared/ui/index.tsx";
 
 export function ReferralPanel(): ReactNode {
-  const query = useApiQuery("tasks.invite_stats");
+  const query = useApiQuery("referral.get");
   const { blocked, run } = useOperation();
   const event = (name: "copy_link" | "telegram_invite") =>
     void run(
       name === "copy_link" ? "正在记录复制邀请" : "正在打开 Telegram 邀请",
       async () => {
-        const link = text(query.data?.link, "");
+        const link = query.data?.link ?? "";
         if (name === "copy_link") await navigator.clipboard.writeText(link);
         else
           telegram()?.openTelegramLink(
-            `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text(query.data?.share_text, ""))}`,
+            `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(query.data?.share_text ?? "")}`,
           );
         const response = await apiRequest(
-          "tasks.share_event",
+          "referral.share_event",
           { event: name },
           { idempotencyKey: newIdempotencyKey() },
         );
@@ -48,8 +47,8 @@ export function ReferralPanel(): ReactNode {
         <span>邀请好友一起开盲盒</span>
         <p>好友通过你的链接加入并完成首次有效充值后，你可获得 500 Fgems。</p>
         <p>累计 5 位与 10 位有效充值好友可分别获得免费普通、稀有盲盒资格。</p>
-        <strong>{text(query.data?.referral_code)}</strong>
-        <code>{text(query.data?.link)}</code>
+        <strong>{query.data?.referral_code}</strong>
+        <code>{query.data?.link}</code>
         <div className="button-row">
           <Button disabled={blocked} onClick={() => event("copy_link")}>
             <Copy />
@@ -68,26 +67,24 @@ export function ReferralPanel(): ReactNode {
       <div className="stats-row">
         <Card>
           <Badge>已绑定好友</Badge>
-          <strong>{text(query.data?.bound_friends, "0")}</strong>
+          <strong>{query.data?.bound_friends ?? 0}</strong>
         </Card>
         <Card>
           <Badge>有效充值好友</Badge>
-          <strong>{text(query.data?.valid_recharge_friends, "0")}</strong>
+          <strong>{query.data?.valid_recharge_friends ?? 0}</strong>
         </Card>
         <Card>
           <Badge>累计奖励</Badge>
-          <strong>{text(query.data?.reward_fgems_total, "0")} Fgems</strong>
+          <strong>{query.data?.reward_fgems_total ?? 0} Fgems</strong>
         </Card>
       </div>
       <Card className="milestone-summary">
         <h3>奖励名额与阶梯进度</h3>
         <p>
-          今日 {text(query.data?.rewarded_today, "0")} / 20 · 生命周期{" "}
-          {text(query.data?.rewarded_lifetime, "0")} / 300
+          今日 {query.data?.rewarded_today ?? 0} / 20 · 生命周期 {query.data?.rewarded_lifetime ?? 0} / 300
         </p>
         <p>
-          5 人普通盲盒：{text(query.data?.milestone_5_status, "未达成")} · 10
-          人稀有盲盒：{text(query.data?.milestone_10_status, "未达成")}
+          5 人普通盲盒：{query.data?.milestone_5_status ?? "pending"} · 10 人稀有盲盒：{query.data?.milestone_10_status ?? "pending"}
         </p>
       </Card>
     </div>

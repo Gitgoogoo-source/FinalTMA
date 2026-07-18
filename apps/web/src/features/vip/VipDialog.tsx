@@ -5,21 +5,22 @@ import { apiRequest, newIdempotencyKey } from "../../platform/api/client.ts";
 import { useApiQuery } from "../../platform/query/index.ts";
 import { telegram } from "../../platform/telegram/index.ts";
 import { useOperation } from "../../shared/feedback/OperationContext.ts";
-import { text } from "../../shared/lib/data.ts";
 import { Badge, Button } from "../../shared/ui/index.tsx";
 
 export function VipDialog({ close }: { close(): void }): ReactNode {
-  const query = useApiQuery("vip.status");
+  const query = useApiQuery("vip.get");
   const { blocked, run } = useOperation();
-  const act = (route: string, label: string) =>
-    void run(label, async () => {
-      const response = await apiRequest(
-        route,
-        {},
-        { idempotencyKey: newIdempotencyKey() },
-      );
-      if (route === "vip.create_order" && response.data.invoice_url)
-        telegram()?.openInvoice(text(response.data.invoice_url, ""));
+  const order = () => void run("正在创建 VIP 月卡订单", async () => {
+      const response = await apiRequest("vip.create_order", {}, { idempotencyKey: newIdempotencyKey() });
+      if (response.data.invoice_url) telegram()?.openInvoice(response.data.invoice_url);
+      return { data: response.data, operationId: response.operationId };
+    });
+  const claimFgems = () => void run("正在领取 VIP 每日 Fgems", async () => {
+      const response = await apiRequest("vip.claim_fgems", {}, { idempotencyKey: newIdempotencyKey() });
+      return { data: response.data, operationId: response.operationId };
+    });
+  const claimBox = () => void run("正在领取 VIP 免费盲盒资格", async () => {
+      const response = await apiRequest("vip.claim_free_box", {}, { idempotencyKey: newIdempotencyKey() });
       return { data: response.data, operationId: response.operationId };
     });
   return (
@@ -36,7 +37,7 @@ export function VipDialog({ close }: { close(): void }): ReactNode {
           <>
             <p>
               {query.data?.active
-                ? `有效期至 ${text(query.data?.ends_on)}`
+                ? `有效期至 ${query.data?.ends_on}`
                 : "购买价格与有效期将在订单中确认"}
             </p>
             {query.data?.active ? (
@@ -44,7 +45,7 @@ export function VipDialog({ close }: { close(): void }): ReactNode {
                 <Button
                   disabled={blocked || Boolean(query.data?.fgems_claimed_today)}
                   onClick={() =>
-                    act("vip.claim_daily", "正在领取 VIP 每日 Fgems")
+                    claimFgems()
                   }
                 >
                   <Gift />
@@ -57,7 +58,7 @@ export function VipDialog({ close }: { close(): void }): ReactNode {
                     blocked || Boolean(query.data?.free_box_claimed_today)
                   }
                   onClick={() =>
-                    act("vip.claim_free_box", "正在领取 VIP 免费盲盒资格")
+                    claimBox()
                   }
                 >
                   <Gift />
@@ -69,7 +70,7 @@ export function VipDialog({ close }: { close(): void }): ReactNode {
             ) : (
               <Button
                 disabled={blocked}
-                onClick={() => act("vip.create_order", "正在创建 VIP 月卡订单")}
+                onClick={order}
               >
                 使用 Telegram Stars 购买
               </Button>

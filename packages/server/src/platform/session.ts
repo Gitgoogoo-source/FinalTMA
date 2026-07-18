@@ -2,6 +2,7 @@ import { createHash, createHmac, randomBytes } from "node:crypto";
 
 import { rpc } from "./db/index.ts";
 import { getEnv } from "./env/index.ts";
+import { ApiError } from "../http/errors.ts";
 
 export type Session = {
   session_id: string;
@@ -35,18 +36,18 @@ export function referralCode(telegramId: number): string {
 export async function resolveSession(request: Request): Promise<Session> {
   const authorization = request.headers.get("authorization");
   if (!authorization?.startsWith("Bearer "))
-    throw new Error("SESSION_REQUIRED:请从 Telegram 重新打开 Mini App");
+    throw new ApiError(401, "SESSION_REQUIRED", "请从 Telegram 重新打开 Mini App");
   const token = authorization.slice(7).trim();
-  const session = await rpc<Session | null>("resolve_session", {
+  const session = await rpc<Session | null>("identity_resolve_session", {
     p_token_hash: hashToken(token),
   });
   if (!session)
-    throw new Error("SESSION_REQUIRED:请从 Telegram 重新打开 Mini App");
+    throw new ApiError(401, "SESSION_REQUIRED", "请从 Telegram 重新打开 Mini App");
   if (session.account_status === "banned")
-    throw new Error("ACCOUNT_RESTRICTED:账号不可用");
+    throw new ApiError(403, "ACCOUNT_RESTRICTED", "账号不可用");
   if (session.session_state === "replaced")
-    throw new Error("SESSION_REPLACED:会话已被新登录替换");
+    throw new ApiError(401, "SESSION_REPLACED", "会话已被新登录替换");
   if (session.session_state === "expired")
-    throw new Error("SESSION_EXPIRED:会话已过期");
+    throw new ApiError(401, "SESSION_EXPIRED", "会话已过期");
   return session;
 }
