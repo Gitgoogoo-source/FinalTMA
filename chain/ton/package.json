@@ -1,0 +1,23 @@
+{
+  "name": "@pokepets/ton",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tact --config tact.config.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "deploy:testnet": "node --experimental-strip-types commands/deploy.ts testnet",
+    "deploy:mainnet": "node --experimental-strip-types commands/deploy.ts mainnet",
+    "verify": "node --experimental-strip-types commands/verify.ts"
+  },
+  "dependencies": {
+    "@tact-lang/compiler": "1.6.13",
+    "@ton/core": "catalog:",
+    "@ton/crypto": "catalog:",
+    "@ton/ton": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "typescript": "catalog:"
+  }
+}

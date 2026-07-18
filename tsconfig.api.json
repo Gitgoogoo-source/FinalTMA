@@ -1,19 +1,11 @@
 {
-  "$schema": "https://json.schemastore.org/tsconfig",
-  "display": "tmaGame Vercel API TypeScript Config",
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "types": ["node"]
   },
-  "include": ["api/**/*.ts"],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "build",
-    ".turbo",
-    ".vercel",
-    "coverage",
-    "playwright-report",
-    "test-results"
+  "include": [
+    "api/*.ts",
+    "packages/server/src/**/*.ts",
+    "packages/contracts/src/**/*.ts"
   ]
 }

@@ -2,76 +2,28 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "vite",
   "installCommand": "pnpm install --frozen-lockfile",
-  "buildCommand": "pnpm build:web",
-  "devCommand": "pnpm --filter @tma-game/web exec cross-env VITE_ENABLE_MOCKS=true vite --host 0.0.0.0 --port $PORT",
+  "buildCommand": "pnpm build",
+  "devCommand": "pnpm --filter @pokepets/web dev",
   "outputDirectory": "apps/web/dist",
-  "crons": [
-    {
-      "path": "/api/cron/rebuild-market-stats",
-      "schedule": "*/10 * * * *"
-    },
-    {
-      "path": "/api/cron/rebuild-leaderboard",
-      "schedule": "5 0 * * *"
-    },
-    {
-      "path": "/api/cron/reconciliation?runTypes=payment",
-      "schedule": "*/15 * * * *"
-    },
-    {
-      "path": "/api/cron/reconciliation?runTypes=mint",
-      "schedule": "0 * * * *"
-    },
-    {
-      "path": "/api/cron/reconciliation?runTypes=ledger,market",
-      "schedule": "10 0 * * *"
-    },
-    {
-      "path": "/api/cron/retry-payments",
-      "schedule": "*/5 * * * *"
-    },
-    {
-      "path": "/api/cron/retry-mints",
-      "schedule": "*/5 * * * *"
-    },
-    {
-      "path": "/api/cron/expire-listings",
-      "schedule": "*/15 * * * *"
-    },
-    {
-      "path": "/api/cron/sync-onchain-transactions",
-      "schedule": "*/5 * * * *"
-    },
-    {
-      "path": "/api/cron/close-ended-campaigns",
-      "schedule": "*/5 * * * *"
-    },
-    {
-      "path": "/api/cron/cleanup-idempotency",
-      "schedule": "35 2 * * *"
-    },
-    {
-      "path": "/api/cron/build-daily-reports",
-      "schedule": "10 17 * * *"
-    },
-    {
-      "path": "/api/cron/monitoring-alert-scan",
-      "schedule": "*/5 * * * *"
-    }
-  ],
   "functions": {
-    "api/**/*.ts": {
-      "maxDuration": 30
-    }
+    "api/*.ts": { "maxDuration": 30 }
   },
+  "crons": [
+    { "path": "/api/jobs/reconcile-payments", "schedule": "*/5 * * * *" },
+    { "path": "/api/jobs/reconcile-mints", "schedule": "*/5 * * * *" },
+    { "path": "/api/jobs/cleanup-idempotency", "schedule": "35 2 * * *" },
+    { "path": "/api/jobs/monitor-invariants", "schedule": "*/5 * * * *" }
+  ],
   "rewrites": [
     {
-      "source": "/api/:path*",
-      "destination": "/api/:path*"
+      "source": "/api/telegram/webhook",
+      "destination": "/api/integrations?__route=telegram/webhook"
     },
     {
-      "source": "/((?!api/|@vite/|@id/|@fs/|@react-refresh$|src/|node_modules/.vite/).*)",
-      "destination": "/index.html"
-    }
+      "source": "/api/jobs/:path*",
+      "destination": "/api/jobs?__route=jobs/:path*"
+    },
+    { "source": "/api/:path*", "destination": "/api/app?__route=:path*" },
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }

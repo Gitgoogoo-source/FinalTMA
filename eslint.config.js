@@ -8,64 +8,78 @@ export default tseslint.config(
   {
     ignores: [
       "**/dist/**",
-      "**/coverage/**",
       "**/node_modules/**",
-      "**/playwright-report/**",
-      "**/test-results/**",
       ".vercel/**",
-      ".pnpm-store/**",
-      "packages/db-types/src/database.types.ts",
+      "chain/ton/build/**",
     ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    files: ["**/*.{js,mjs,cjs,ts,tsx}"],
-    languageOptions: {
-      ecmaVersion: "latest",
-      sourceType: "module",
-      globals: {
-        ...globals.es2024,
-        ...globals.node,
-      },
-    },
+    files: ["**/*.{js,mjs,ts,tsx}"],
+    languageOptions: { globals: { ...globals.es2024, ...globals.node } },
     rules: {
       "no-console": "off",
-    },
-  },
-  {
-    files: ["**/*.{ts,tsx}"],
-    rules: {
-      "no-undef": "off",
-      "no-unused-vars": "off",
-      "@typescript-eslint/no-explicit-any": "off",
-      "@typescript-eslint/no-unused-vars": "off",
+      "@typescript-eslint/no-explicit-any": "error",
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        { argsIgnorePattern: "^_" },
+      ],
     },
   },
   {
     files: ["apps/web/src/**/*.{ts,tsx}"],
-    languageOptions: {
-      globals: {
-        ...globals.browser,
-      },
-    },
-    plugins: {
-      "react-hooks": reactHooks,
-      "react-refresh": reactRefresh,
-    },
+    languageOptions: { globals: { ...globals.browser } },
+    plugins: { "react-hooks": reactHooks, "react-refresh": reactRefresh },
     rules: {
-      "react-hooks/rules-of-hooks": "error",
-      "react-hooks/exhaustive-deps": "off",
-      "react-refresh/only-export-components": "off",
+      ...reactHooks.configs.recommended.rules,
+      "react-refresh/only-export-components": [
+        "warn",
+        { allowConstantExport: true },
+      ],
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: [
+                "@pokepets/server",
+                "@pokepets/server/*",
+                "@pokepets/contracts/*",
+                "@supabase/*",
+              ],
+              message: "Web 只能依赖公开 API 契约。",
+            },
+          ],
+        },
+      ],
     },
   },
   {
-    files: ["tests/**/*.{ts,tsx}", "**/*.test.{ts,tsx}", "**/*.spec.{ts,tsx}"],
-    languageOptions: {
-      globals: {
-        ...globals.browser,
-        ...globals.node,
-      },
+    files: ["api/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@pokepets/server",
+              message: "API 入口只能依赖 @pokepets/server/http。",
+            },
+          ],
+          patterns: [
+            {
+              group: [
+                "../packages/*/src/*",
+                "../apps/*",
+                "@pokepets/server/src/*",
+                "@pokepets/contracts/*",
+              ],
+              message: "API 入口只能依赖 @pokepets/server/http。",
+            },
+          ],
+        },
+      ],
     },
   },
 );

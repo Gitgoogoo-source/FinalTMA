@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["name", "description", "image", "social_links"],
+  "properties": {
+    "name": { "const": "PokePets" },
+    "description": { "type": "string", "minLength": 1 },
+    "image": { "type": "string", "format": "uri", "pattern": "^https://" },
+    "social_links": {
+      "type": "array",
+      "items": { "type": "string", "format": "uri", "pattern": "^https://" }
+    }
+  }
+}

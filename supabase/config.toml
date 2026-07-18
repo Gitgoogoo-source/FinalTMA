@@ -1,90 +1,22 @@
-# =============================================================================
-# supabase/config.toml
-# Telegram Mini App Blind Box Card Game
-#
-# 项目定位：
-# - Telegram Mini App 开盲盒抽卡小游戏
-# - Vercel Functions 作为后端 API
-# - Supabase 负责 Postgres / RPC / RLS / Storage / Realtime / Studio
-#
-# 核心原则：
-# - 前端只展示数据和发起请求。
-# - 前端不直接修改余额、库存、抽卡结果、交易状态、任务奖励。
-# - 开盒、支付确认、库存、市场交易、积分、保底、任务、进化、分解、Mint
-#   全部以后端 API + Supabase RPC + Postgres 事务为准。
-#
-# 安全注意：
-# - 不要把 service_role key 写入本文件。
-# - 不要把 Telegram Bot Token 写入本文件。
-# - 不要把 TON 私钥、Mint 私钥、钱包私钥写入本文件。
-# - 需要密钥时使用 env(NAME)，真实值放到项目根目录 .env 或部署平台环境变量。
-# =============================================================================
+project_id = "pokepets"
 
-project_id = "tma-game"
-
-# -----------------------------------------------------------------------------
-# API / PostgREST
-# -----------------------------------------------------------------------------
 [api]
 enabled = true
 port = 54321
-
-# 方案 A 临时恢复登录：暴露登录 API 当前依赖的 api / core schema。
-#
-# 项目中的核心 schema：
-# - core
-# - economy
-# - catalog
-# - gacha
-# - inventory
-# - market
-# - payments
-# - tasks
-# - album
-# - onchain
-# - ops
-#
-# 长期不建议直接暴露给前端；后续方案 B 应把登录查询收回 RPC 后移除 core。
-# 核心写操作必须通过 Vercel API 调用 Supabase RPC 完成。
-#
-# 如果未来建立专门只读 schema，例如 api_public，可以改成：
-# schemas = ["public", "graphql_public", "api_public"]
-schemas = ["public", "graphql_public", "api", "core"]
-
-# 每个 PostgREST 请求的 search_path。
-# extensions 用于 pgcrypto、uuid、pg_net 等扩展函数。
-extra_search_path = ["public", "extensions"]
-
-# 限制单次请求最多返回行数。
-# 用于避免市场列表、图鉴、排行榜被恶意拉取过大。
+schemas = ["api"]
+extra_search_path = ["extensions"]
 max_rows = 1000
 
 [api.tls]
 enabled = false
 
-# 本地需要 HTTPS 调试 Telegram WebApp / TON Connect 时再开启。
-# cert_path = "../certs/local-cert.pem"
-# key_path = "../certs/local-key.pem"
-
-
-# -----------------------------------------------------------------------------
-# Database
-# -----------------------------------------------------------------------------
 [db]
 port = 54322
 shadow_port = 54320
 health_timeout = "2m"
-
-# 必须与远程 Supabase 项目的 Postgres major version 保持一致。
-# 远程查询方式：
-#   select version();
-# 或：
-#   show server_version;
 major_version = 17
 
 [db.pooler]
-# 本项目 API 主要通过 Supabase REST/RPC 调用，不依赖本地 PgBouncer。
-# 如果后续脚本或服务端需要直连池化连接，可改为 true。
 enabled = false
 port = 54329
 pool_mode = "transaction"
@@ -93,469 +25,36 @@ max_client_conn = 100
 
 [db.migrations]
 enabled = true
-
-# 本项目使用 supabase/migrations/ 下的版本化 SQL。
-# schema_paths 主要用于 declarative schemas；这里保持为空。
-schema_paths = []
+schema_paths = ["./schemas/*.sql"]
 
 [db.seed]
-enabled = true
-
-# db reset 后按顺序灌入初始化数据。
-# 路径相对于 supabase/ 目录。
-sql_paths = [
-  "./seed/001_currencies.seed.sql",
-  "./seed/002_rarities.seed.sql",
-  "./seed/003_item_types.seed.sql",
-  "./seed/004_series_factions.seed.sql",
-  "./seed/005_collectibles.seed.sql",
-  "./seed/006_boxes.seed.sql",
-  "./seed/007_drop_pools.seed.sql",
-  "./seed/008_tasks.seed.sql",
-  "./seed/009_album.seed.sql",
-  "./seed/010_market_rules.seed.sql",
-  "./seed/011_feature_flags.seed.sql",
-  "./seed/012_growth_rules.seed.sql",
-  "./seed/013_nft_metadata.seed.sql"
-]
+enabled = false
+sql_paths = []
 
 [db.network_restrictions]
-# 本地开发默认关闭。
-# 生产环境建议单独限制允许访问数据库的 IP 段。
 enabled = false
 allowed_cidrs = ["0.0.0.0/0"]
 allowed_cidrs_v6 = ["::/0"]
 
-# 生产环境建议开启数据库 SSL 强制。
-# [db.ssl_enforcement]
-# enabled = true
-
-# 可选：本地数据库性能/安全参数。
-# 这些参数是否可用取决于 Supabase CLI 版本和远程项目限制。
-#
-# [db.settings]
-# statement_timeout = "5s"
-# lock_timeout = "2s"
-# idle_in_transaction_session_timeout = "10s"
-# work_mem = "16MB"
-# max_connections = 100
-
-
-# -----------------------------------------------------------------------------
-# Realtime
-# -----------------------------------------------------------------------------
 [realtime]
-enabled = true
+enabled = false
 
-# 本项目可将 Realtime 用于：
-# - 用户通知 core.notifications
-# - Mint 队列状态 onchain.mint_queue
-# - 市场成交 / 挂单刷新 market.listings
-#
-# 具体哪些表开放 Realtime，应在 migration 中通过 publication 控制。
-# 不要把 payments、ledger、admin audit 等敏感表开放 Realtime。
-#
-# ip_version = "IPv4"
-# max_header_length = 4096
-
-
-# -----------------------------------------------------------------------------
-# Studio
-# -----------------------------------------------------------------------------
 [studio]
 enabled = true
 port = 54323
-
-# Supabase Studio 连接的本地 API URL。
 api_url = "http://127.0.0.1:54321"
 
-# 不需要 Supabase Studio AI 功能时保持 env 读取即可。
-# 如果需要，在根目录 .env 中配置：
-# OPENAI_API_KEY=...
-openai_api_key = "env(OPENAI_API_KEY)"
-
-
-# -----------------------------------------------------------------------------
-# Local email inbox
-# -----------------------------------------------------------------------------
 [inbucket]
-# 本项目不使用 Supabase Auth 邮件登录。
-# 但保留本地邮件调试服务，便于后续后台管理员邀请、运营邮件模板测试。
-enabled = true
-port = 54324
+enabled = false
 
-# 可选：暴露 SMTP / POP3 端口给外部工具测试。
-# smtp_port = 54325
-# pop3_port = 54326
-# admin_email = "admin@tma-game.local"
-# sender_name = "TMA Game Admin"
-
-
-# -----------------------------------------------------------------------------
-# Storage
-# -----------------------------------------------------------------------------
 [storage]
-enabled = true
-
-# 全局默认文件大小上限。
-# 各 bucket 可以单独覆盖。
-file_size_limit = "50MiB"
-
-# 藏品图片：
-# - 角色大图
-# - 角色缩略图
-# - 卡片图
-# - 稀有度展示图
-[storage.buckets.collectibles]
-public = true
-file_size_limit = "20MiB"
-allowed_mime_types = [
-  "image/png",
-  "image/jpeg",
-  "image/webp",
-  "image/gif"
-]
-objects_path = "../storage/collectibles"
-
-# 盲盒资源：
-# - 蛋图片
-# - 开盒动画
-# - 抽卡背景
-# - 结果展示动效
-[storage.buckets.boxes]
-public = true
-file_size_limit = "30MiB"
-allowed_mime_types = [
-  "image/png",
-  "image/jpeg",
-  "image/webp",
-  "image/gif",
-  "video/webm",
-  "video/mp4"
-]
-objects_path = "../storage/boxes"
-
-# 活动 banner：
-# - 交易页顶部活动图
-# - 任务页邀请图
-# - 月卡折扣图
-# - 限时市场活动图
-[storage.buckets.banners]
-public = true
-file_size_limit = "10MiB"
-allowed_mime_types = [
-  "image/png",
-  "image/jpeg",
-  "image/webp",
-  "image/gif"
-]
-objects_path = "../storage/banners"
-
-# 图标资源：
-# - K-coin
-# - Fgems
-# - Stars
-# - 稀有度
-# - 任务图标
-# - 市场图标
-[storage.buckets.icons]
-public = true
-file_size_limit = "5MiB"
-allowed_mime_types = [
-  "image/png",
-  "image/svg+xml",
-  "image/webp"
-]
-objects_path = "../storage/icons"
-
-# NFT metadata：
-# - Collection metadata JSON
-# - Item metadata JSON
-# - 链上 NFT 公开图片
-#
-# 链上 NFT metadata 通常需要公开访问，所以这里 public = true。
-[storage.buckets."nft-metadata"]
-public = true
-file_size_limit = "10MiB"
-allowed_mime_types = [
-  "application/json",
-  "image/png",
-  "image/jpeg",
-  "image/webp",
-  "image/gif"
-]
-objects_path = "../storage/nft-metadata"
-
-# 用户头像缓存：
-# 默认私有。
-# 前端展示头像时，建议使用 Telegram 头像 URL 或后端签名 URL。
-[storage.buckets.avatars]
-public = false
-file_size_limit = "5MiB"
-allowed_mime_types = [
-  "image/png",
-  "image/jpeg",
-  "image/webp"
-]
-objects_path = "../storage/avatars"
-
-# 后台临时上传：
-# 运营上传素材后，先放到 admin-temp。
-# 审核 / 裁剪 / 压缩后，再移动到 collectibles、boxes、banners 等正式 bucket。
-[storage.buckets."admin-temp"]
-public = false
-file_size_limit = "50MiB"
-allowed_mime_types = [
-  "image/png",
-  "image/jpeg",
-  "image/webp",
-  "image/gif",
-  "video/webm",
-  "video/mp4",
-  "application/json"
-]
-objects_path = "../storage/admin-temp"
-
-[storage.s3_protocol]
-# 开启 S3 compatible API。
-# 便于后续用脚本批量上传藏品素材、banner、NFT metadata。
-enabled = true
-
-# 本地和免费环境通常不需要开启图片转换。
-# [storage.image_transformation]
-# enabled = true
-
-[storage.analytics]
 enabled = false
-max_namespaces = 5
-max_tables = 10
-max_catalogs = 2
 
-[storage.vector]
-enabled = false
-max_buckets = 10
-max_indexes = 5
-
-
-# -----------------------------------------------------------------------------
-# Auth
-# -----------------------------------------------------------------------------
 [auth]
-# 保持 Auth 服务开启，用于：
-# - 生成 anon key / service_role key
-# - RLS 测试
-# - 未来可选后台 Auth
-#
-# Telegram Mini App 用户身份仍由后端验证 Telegram initData 后写入 core.users。
-enabled = true
-
-# 本地 TMA 前端地址。
-# Vite 默认端口为 5173。
-site_url = "http://127.0.0.1:5173"
-
-additional_redirect_urls = [
-  "http://127.0.0.1:5173",
-  "http://localhost:5173",
-  "http://127.0.0.1:3000",
-  "http://localhost:3000",
-  "https://t.me"
-]
-
-# Supabase Auth JWT 有效期。
-# 本项目实际用户 session 建议由 core.app_sessions 管理。
-# API 通过 requireSession 校验，不直接信任前端 user_id。
-jwt_expiry = 3600
-
-enable_refresh_token_rotation = true
-refresh_token_reuse_interval = 10
-
-# 不开放 Supabase 原生注册。
-# Telegram 用户通过 /api/auth/telegram 创建。
-enable_signup = false
-enable_anonymous_sign_ins = false
-enable_manual_linking = false
-
-minimum_password_length = 8
-password_requirements = "lower_upper_letters_digits"
-
-[auth.sessions]
-# 仅影响 Supabase Auth session。
-# Telegram App session 应在 core.app_sessions 单独控制。
-timebox = "24h"
-inactivity_timeout = "8h"
-
-[auth.rate_limit]
-email_sent = 2
-sms_sent = 10
-anonymous_users = 10
-token_refresh = 150
-sign_in_sign_ups = 30
-token_verifications = 30
-web3 = 30
-
-[auth.email]
-# 不使用 Supabase 邮箱注册 / 登录。
-enable_signup = false
-double_confirm_changes = true
-enable_confirmations = false
-secure_password_change = true
-max_frequency = "1m"
-otp_length = 6
-otp_expiry = 3600
-
-[auth.email.smtp]
-enabled = false
-host = ""
-port = 587
-user = ""
-
-# 不要写死 SMTP 密码。
-# 在根目录 .env 中配置：
-# SUPABASE_AUTH_SMTP_PASS=...
-pass = "env(SUPABASE_AUTH_SMTP_PASS)"
-
-admin_email = "admin@tma-game.local"
-sender_name = "TMA Game"
-
-[auth.sms]
-enable_signup = false
-enable_confirmations = false
-template = "Your code is {{ .Code }}"
-max_frequency = "1m"
-
-[auth.sms.twilio]
-enabled = false
-account_sid = ""
-message_service_sid = ""
-
-# 不要写死 Twilio token。
-# 在根目录 .env 中配置：
-# SUPABASE_AUTH_SMS_TWILIO_AUTH_TOKEN=...
-auth_token = "env(SUPABASE_AUTH_SMS_TWILIO_AUTH_TOKEN)"
-
-[auth.mfa]
-max_enrolled_factors = 10
-
-[auth.mfa.totp]
-enroll_enabled = false
-verify_enabled = false
-
-[auth.mfa.phone]
-enroll_enabled = false
-verify_enabled = false
-otp_length = 6
-template = "Your code is {{ .Code }}"
-max_frequency = "1m"
-
-# 关闭所有第三方 OAuth。
-# Telegram Mini App 不走 Supabase OAuth。
-[auth.external.apple]
-enabled = false
-client_id = ""
-secret = "env(SUPABASE_AUTH_EXTERNAL_APPLE_SECRET)"
-redirect_uri = ""
-url = ""
-skip_nonce_check = false
-email_optional = false
-
-[auth.external.google]
-enabled = false
-client_id = ""
-secret = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET)"
-redirect_uri = ""
-url = ""
-skip_nonce_check = false
-email_optional = false
-
-[auth.external.github]
-enabled = false
-client_id = ""
-secret = "env(SUPABASE_AUTH_EXTERNAL_GITHUB_SECRET)"
-redirect_uri = ""
-url = ""
-skip_nonce_check = false
-email_optional = false
-
-[auth.web3.solana]
 enabled = false
 
-[auth.third_party.firebase]
-enabled = false
-# project_id = ""
-
-[auth.third_party.auth0]
-enabled = false
-# tenant = ""
-# tenant_region = ""
-
-[auth.third_party.aws_cognito]
-enabled = false
-# user_pool_id = ""
-# user_pool_region = ""
-
-[auth.third_party.clerk]
-enabled = false
-# domain = ""
-
-[auth.oauth_server]
-enabled = false
-authorization_url_path = "/oauth/consent"
-allow_dynamic_registration = false
-
-
-# -----------------------------------------------------------------------------
-# Edge Runtime / Supabase Edge Functions
-# -----------------------------------------------------------------------------
 [edge_runtime]
-# 本项目后端主方案是 Vercel Functions。
-# 因此本地默认关闭 Supabase Edge Runtime。
-#
-# 如果未来把 Telegram webhook、钱包同步、Mint 队列或定时任务迁移到
-# Supabase Edge Functions，再改成 true。
 enabled = false
-policy = "per_worker"
-inspector_port = 8083
-deno_version = 2
 
-# 示例：如果未来启用 Supabase Edge Function 处理 Telegram webhook，
-# webhook 必须允许无 JWT 请求，然后在函数内部验证 Telegram secret token。
-#
-# Supabase 支持按函数配置 verify_jwt；例如外部 webhook 可以设置 verify_jwt = false。
-# 由于当前项目使用 Vercel Functions，下面保持注释。
-#
-# [functions.telegram-webhook]
-# enabled = true
-# verify_jwt = false
-# entrypoint = "./supabase/functions/telegram-webhook/index.ts"
-#
-# [functions.wallet-sync]
-# enabled = true
-# verify_jwt = true
-# entrypoint = "./supabase/functions/wallet-sync/index.ts"
-#
-# [functions.retry-mint-queue]
-# enabled = true
-# verify_jwt = true
-# entrypoint = "./supabase/functions/retry-mint-queue/index.ts"
-
-
-# -----------------------------------------------------------------------------
-# Analytics
-# -----------------------------------------------------------------------------
 [analytics]
-enabled = true
-port = 54327
-backend = "postgres"
-
-
-# -----------------------------------------------------------------------------
-# Experimental
-# -----------------------------------------------------------------------------
-[experimental]
-# 保持为空，避免本地开发受实验功能影响。
-#
-# orioledb_version = ""
-# s3_host = "env(S3_HOST)"
-# s3_region = "env(S3_REGION)"
-# s3_access_key = "env(S3_ACCESS_KEY)"
-# s3_secret_key = "env(S3_SECRET_KEY)"
+enabled = false

@@ -1,21 +1,16 @@
-import React from "react";
+import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { RouterProvider } from "react-router-dom";
 
-import { bootstrapTelegramApp } from "./app/bootstrap";
-import { router } from "./app/router";
-import "./shared/styles/globals.css";
+import { App } from "./app/App.tsx";
+import { AppProviders } from "./app/providers/AppProviders.tsx";
+import "./shared/styles/global.css";
 
-bootstrapTelegramApp();
-
-const rootElement = document.getElementById("root");
-
-if (!rootElement) {
-  throw new Error("Missing #root element.");
-}
-
-createRoot(rootElement).render(
-  <React.StrictMode>
-    <RouterProvider router={router} />
-  </React.StrictMode>,
+const root = document.getElementById("root");
+if (!root) throw new Error("APP_ROOT_MISSING");
+createRoot(root).render(
+  <StrictMode>
+    <AppProviders>
+      <App />
+    </AppProviders>
+  </StrictMode>,
 );

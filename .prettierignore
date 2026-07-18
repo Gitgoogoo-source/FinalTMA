@@ -1,2 +1,7 @@
 .agents/
 supabase/.temp/
+AGENTS.md
+docs/product/
+docs/architecture/重构规划文档.md
+chain/ton/contracts/
+chain/ton/build/
