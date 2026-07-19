@@ -4,7 +4,7 @@
 
 ```text
 场景：
-环境：test / production-smoke
+环境：development / production-smoke
 Git commit：
 Migration：填写 `supabase/migrations` 中按文件名排序的三条实际迁移及校验和
 设备、Telegram 版本、浅色/深色：

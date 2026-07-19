@@ -12,7 +12,9 @@
     "pnpm": "11.1.3"
   },
   "scripts": {
+    "predev": "pnpm --filter @pokepets/api-contracts build && pnpm --filter @pokepets/api build",
     "dev": "vercel dev",
+    "predev:web": "pnpm --filter @pokepets/api-contracts build",
     "dev:web": "pnpm --filter @pokepets/web dev",
     "build": "pnpm --filter @pokepets/api-contracts build && pnpm --filter @pokepets/api build && pnpm --filter @pokepets/web build && pnpm typecheck:api",
     "build:web": "pnpm --filter @pokepets/web build",

@@ -18,4 +18,4 @@ TON Connect Provider 只在 Wallet 弹窗和 Mint 页面加载。普通页面启
 
 ## 部署
 
-Web 与三个 Functions 位于同一 Vercel Pro Project，运行时为 Node.js 24。普通构建只构建 API 契约、API 与 Web；`contracts/ton` 使用独立 `pnpm chain:build` 门禁。测试与生产使用同一 Git commit 和迁移序列。
+Web 与三个 Functions 位于同一 Vercel Pro Project，运行时为 Node.js 24。普通构建只构建 API 契约、API 与 Web；`contracts/ton` 使用独立 `pnpm chain:build` 门禁。真实开发环境与未来生产环境使用同一 Git commit 和迁移序列。

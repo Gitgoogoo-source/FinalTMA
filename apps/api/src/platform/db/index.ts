@@ -2,13 +2,13 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { errorDefinition, isErrorCode } from "@pokepets/api-contracts/common";
 
 import { ApiError } from "../../http/errors.ts";
-import { getEnv } from "../env/index.ts";
+import { getDatabaseEnv } from "../env/index.ts";
 
 let client: SupabaseClient | undefined;
 
 function db(): SupabaseClient {
   if (!client) {
-    const env = getEnv();
+    const env = getDatabaseEnv();
     client = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
       auth: {
         persistSession: false,

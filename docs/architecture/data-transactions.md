@@ -16,4 +16,4 @@
 
 ## 迁移
 
-初始空库只有三个迁移：`*_baseline.sql`、`*_product_data_v1.sql`、`*_api_security.sql`。baseline 由声明式 Schema 确定，product data 由 `tools/product_data/build.py` 统一生成，安全权限由显式迁移确定。初始基线进入真实测试环境后，只新增前向迁移，不覆盖现有迁移名或历史文件。
+初始空库只有三个迁移：`*_baseline.sql`、`*_product_data_v1.sql`、`*_api_security.sql`。baseline 由声明式 Schema 确定，product data 由 `tools/product_data/build.py` 统一生成，安全权限由显式迁移确定。初始基线进入真实开发环境后，只新增前向迁移，不覆盖现有迁移名或历史文件。

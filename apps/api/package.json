@@ -5,10 +5,13 @@
   "type": "module",
   "sideEffects": false,
   "exports": {
-    "./entrypoints": "./src/entrypoints/index.ts"
+    "./entrypoints": {
+      "types": "./src/entrypoints/index.ts",
+      "default": "./dist/entrypoints/index.js"
+    }
   },
   "scripts": {
-    "build": "tsc --noEmit -p tsconfig.json",
+    "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {

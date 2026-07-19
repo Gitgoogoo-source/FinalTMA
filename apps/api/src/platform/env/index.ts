@@ -24,10 +24,22 @@ const schema = z.object({
   NFT_METADATA_BASE_URL: z.string().url(),
 });
 
+const databaseSchema = schema.pick({
+  SUPABASE_URL: true,
+  SUPABASE_SERVICE_ROLE_KEY: true,
+});
+
 export type ServerEnv = z.infer<typeof schema>;
+export type DatabaseEnv = z.infer<typeof databaseSchema>;
 let cached: ServerEnv | undefined;
+let cachedDatabase: DatabaseEnv | undefined;
 
 export function getEnv(): ServerEnv {
   cached ??= schema.parse(process.env);
   return cached;
+}
+
+export function getDatabaseEnv(): DatabaseEnv {
+  cachedDatabase ??= databaseSchema.parse(process.env);
+  return cachedDatabase;
 }

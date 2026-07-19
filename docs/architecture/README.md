@@ -16,7 +16,7 @@ c44702ff9e0f9e1b3c3042bae18269dd706245e78b7903af0b8841cc0867f651
 - API：同一 Vercel Project 内的 `app`、`integrations`、`jobs` 三个 Node.js 24 Function 网关。
 - Database：Supabase Postgres 17，仅暴露 `api` schema；浏览器不加载 Supabase SDK。
 - Blockchain：TON Connect 验证钱包，Tact 合约完成 NFT Mint。
-- Deployment：Vercel Pro；测试与生产使用相同 Git commit 和 migration 序列。
+- Deployment：Vercel Pro；真实开发环境与未来生产环境使用相同 Git commit 和 migration 序列。
 
 ## 依赖方向
 
@@ -69,3 +69,4 @@ contracts/ton -> TON blockchain
 - [安全边界](security-boundaries.md)
 - [技术裁决](adr/ADR-001-runtime-and-deployment.md)
 - [模块边界与网关隔离](adr/ADR-007-module-boundaries-and-gateway-isolation.md)
+- [Vercel 函数打包与配置隔离](adr/ADR-008-vercel-packaging-and-config-isolation.md)

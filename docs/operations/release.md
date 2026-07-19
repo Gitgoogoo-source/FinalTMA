@@ -4,10 +4,10 @@
 
 在执行任何外部写入前，由负责人逐项记录证据：
 
-- 测试、生产 Supabase 的 migration history 均为空；生产无须保留业务数据。
+- 真实开发 Supabase 在首次初始化前 migration history 为空；未来生产 Supabase 在上线前保持空库且无须保留业务数据。
 - 正式 210 张藏品图、3 张盲盒图、Telegram 分享图和 TON Connect 图标已提供。
-- 测试/生产 Supabase、Vercel、Telegram、Stars、TON RPC 与观测平台配置齐全。
-- 测试和生产将部署同一 Git commit、同一三条 migration、同一目录 manifest。
+- 真实开发/生产 Supabase、Vercel、Telegram、Stars、TON RPC 与观测平台配置齐全。
+- 生产将部署已在真实开发环境完成验收的同一 Git commit、同一 migration 序列和同一目录 manifest。
 - Vercel 套餐支持 `vercel.json` 中四个 cron 的执行频率。
 
 任何一项不成立：停止发布，不恢复旧 migration、占位素材、mock、默认业务值或功能开关。
@@ -45,13 +45,15 @@ python3 tools/web/build_manifest.py \
 
 正式素材首次上传后运行 `pnpm catalog:pin-assets`，复核变更并提交 checksum；此后所有环境运行 `pnpm assets:check:production`，不得重新 pin 不一致的文件。
 
-## 3. 测试环境
+## 3. 真实开发环境
 
-1. 将三条 migration 按文件名顺序应用到空测试库。
-2. 对测试项目执行 `supabase db lint --linked --schema api,identity,catalog,operations,economy,inventory,gacha,expedition,wheel,market,payments,vip,tasks,referral,album,onchain,risk --level warning --fail-on error`。
-3. 部署同一 Git commit 到测试 Vercel 项目并配置测试 secrets。
+`final-tma-real-test` 已于 2026-07-19 完成首次初始化，远端 migration history 依次为 `20260719104533_baseline`、`20260719104602_product_data_v1`、`20260719104614_api_security`；仓库中的迁移文件名必须与该历史保持一致。
+
+1. 核对三条 migration 已按文件名顺序应用，且远端历史与仓库完全一致。
+2. 对开发项目执行 `supabase db lint --linked --schema api,identity,catalog,operations,economy,inventory,gacha,expedition,wheel,market,payments,vip,tasks,referral,album,onchain,risk --level warning --fail-on error`。
+3. 部署当前 Git commit 到 `final-tma` Vercel Project 并配置开发 secrets。
 4. 发布 testnet collection，记录地址、交易 hash、owner、permit 公钥和 1% 版税验证结果。
-5. 配置测试 Bot webhook/Mini App URL。
+5. 配置开发 Bot webhook/Mini App URL。
 6. 按 `docs/operations/acceptance.md` 完成 Telegram 真机、支付、并发与 Mint 验收。
 7. 执行四个 job；`monitor-invariants` 必须返回 0 个新增 violation。
 
@@ -65,7 +67,7 @@ python3 tools/web/build_manifest.py \
 4. 用户明确授权并提供部署钱包后，设置 `TON_MAINNET_DEPLOY_APPROVED=I_UNDERSTAND_MAINNET` 发布 mainnet collection。
 5. 验证链上 owner、permit 公钥、不可变 collection content 与 1% royalty。
 6. 将真实 collection 地址和所有密钥写入平台 secrets。
-7. 部署与测试环境完全相同的 Git commit。
+7. 部署与真实开发环境验收通过的完全相同 Git commit。
 8. 设置 Telegram webhook 与 Mini App 地址。
 9. 执行生产 smoke check 与四个 job；保存 request/operation/ledger/inventory 证据。
 

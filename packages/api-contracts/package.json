@@ -5,14 +5,29 @@
   "type": "module",
   "sideEffects": false,
   "exports": {
-    "./app": "./src/app.ts",
-    "./common": "./src/common.ts",
-    "./integrations": "./src/integrations.ts",
-    "./jobs": "./src/jobs.ts",
-    "./server": "./src/server.ts"
+    "./app": {
+      "types": "./src/app.ts",
+      "default": "./dist/app.js"
+    },
+    "./common": {
+      "types": "./src/common.ts",
+      "default": "./dist/common.js"
+    },
+    "./integrations": {
+      "types": "./src/integrations.ts",
+      "default": "./dist/integrations.js"
+    },
+    "./jobs": {
+      "types": "./src/jobs.ts",
+      "default": "./dist/jobs.js"
+    },
+    "./server": {
+      "types": "./src/server.ts",
+      "default": "./dist/server.js"
+    }
   },
   "scripts": {
-    "build": "tsc --noEmit -p tsconfig.json",
+    "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "openapi": "node --experimental-strip-types scripts/generate-openapi.ts"
   },

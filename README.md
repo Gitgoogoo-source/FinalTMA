@@ -29,4 +29,4 @@ pnpm chain:build
 pnpm assets:check:production
 ```
 
-`pnpm build` 不编译 TON 合约。项目不包含本地功能测试；功能验收只在独立真实测试环境按 [验收清单](docs/operations/acceptance.md) 执行。
+`pnpm build` 不编译 TON 合约。项目不包含本地功能测试；功能验收只在独立真实开发环境按 [验收清单](docs/operations/acceptance.md) 执行。
