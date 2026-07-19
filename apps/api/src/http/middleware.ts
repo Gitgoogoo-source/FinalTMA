@@ -57,7 +57,9 @@ export async function parseInput(
       );
     return validate(route, {
       ...Object.fromEntries(
-        [...url.searchParams.entries()].filter(([key]) => key !== "__route"),
+        [...url.searchParams.entries()].filter(
+          ([key]) => key !== "__route" && key !== "path",
+        ),
       ),
       ...params,
     });
