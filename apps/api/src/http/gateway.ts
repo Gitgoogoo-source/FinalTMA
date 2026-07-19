@@ -1,6 +1,10 @@
 import { randomUUID } from "node:crypto";
 
-import type { Gateway, RouteDefinition } from "@pokepets/api-contracts/common";
+import type {
+  ErrorCode,
+  Gateway,
+  RouteDefinition,
+} from "@pokepets/api-contracts/common";
 
 import { writeLog } from "../platform/logging/index.ts";
 import { normalizeError } from "./errors.ts";
@@ -71,7 +75,7 @@ export function createGateway<Route extends RouteDefinition>(
   };
 }
 
-function preRouteErrors(gateway: Gateway) {
+function preRouteErrors(gateway: Gateway): readonly ErrorCode[] {
   return [
     "API_ROUTE_NOT_FOUND",
     "METHOD_NOT_ALLOWED",
