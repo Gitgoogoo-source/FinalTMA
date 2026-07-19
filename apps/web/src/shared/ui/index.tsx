@@ -1,6 +1,8 @@
 import { AlertCircle, LoaderCircle, RefreshCw } from "lucide-react";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 
+export { CatalogImage } from "./CatalogImage.tsx";
+
 export function Button({
   className = "",
   children,

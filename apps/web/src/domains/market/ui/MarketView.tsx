@@ -1,21 +1,18 @@
-import { Crown, PackageMinus, PackagePlus, ShoppingCart } from "lucide-react";
+import { PackageMinus, PackagePlus, ShoppingCart } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 import { useSearchParams } from "react-router-dom";
 
-import { CatalogImage } from "../../catalog/index.ts";
+import { CatalogImage } from "../../../shared/ui/index.tsx";
 import { useApiQuery } from "../../../platform/query/index.ts";
 import { Badge, Button, Card, PageState } from "../../../shared/ui/index.tsx";
 import { useOperationRegistry } from "../../../workflows/operation-recovery/index.ts";
-import { useNavigationIntent } from "../../../workflows/navigation-intent-resume/index.ts";
-import { VipDialog } from "../../vip/index.ts";
+import { useNavigationIntent } from "../../../workflows/payment-recovery/index.ts";
 
 type Tab = "buy" | "sell" | "manage";
 
-export function MarketView(): ReactNode {
+export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
   const [params, setParams] = useSearchParams();
   const [tab, setTab] = useState<Tab>(params.has("sell") ? "sell" : "buy");
-  const [vipOpen, setVipOpen] = useState(false);
-  const vip = useApiQuery("vip.get");
   const identity = useApiQuery("identity.bootstrap");
   const listings = useApiQuery("market.bootstrap", {}, tab === "buy");
   const sellable = useApiQuery("market.bootstrap", {}, tab === "sell");
@@ -89,20 +86,7 @@ export function MarketView(): ReactNode {
         <h1>交易市场</h1>
         <p>官方价格 · FIFO 撮合 · 不展示卖家身份</p>
       </header>
-      <Card className="vip-banner">
-        <Crown />
-        <div>
-          <strong>{vip.data?.active ? "VIP 月卡已生效" : "VIP 月卡"}</strong>
-          <small>
-            {vip.data?.active
-              ? `有效期至 ${vip.data.ends_on}`
-              : "查看真实价格、有效期与每日权益"}
-          </small>
-        </div>
-        <Button disabled={vip.isLoading} onClick={() => setVipOpen(true)}>
-          {vip.data?.active ? "查看" : "购买"}
-        </Button>
-      </Card>
+      {vipBanner}
       {resumedTemplate && (
         <Card className="resume-intent">
           <strong>充值已到账</strong>
@@ -166,7 +150,6 @@ export function MarketView(): ReactNode {
           ))}
         </div>
       </PageState>
-      {vipOpen && <VipDialog close={() => setVipOpen(false)} />}
     </main>
   );
 }

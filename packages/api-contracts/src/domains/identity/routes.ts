@@ -2,9 +2,7 @@ import { z } from "zod";
 
 import {
   assetsSchema,
-  mintSchema,
   operationSummarySchema,
-  paymentSchema,
   userSchema,
 } from "../../common/models.ts";
 import { defineRoute } from "../../common/route.ts";
@@ -14,6 +12,8 @@ import {
   timestampSchema,
   uuidSchema,
 } from "../../common/schemas.ts";
+import { mintSchema } from "../mint/models.ts";
+import { paymentSchema } from "../topup/models.ts";
 
 const healthOutput = z
   .object({

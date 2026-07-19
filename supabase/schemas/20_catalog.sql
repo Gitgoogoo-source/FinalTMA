@@ -27,22 +27,6 @@ create table catalog.templates (
 create index templates_chain_id_idx on catalog.templates (chain_id, stage);
 create index templates_rarity_draw_idx on catalog.templates (rarity, sort_order);
 
-create table catalog.boxes (
-  tier text primary key check (tier in ('normal', 'rare', 'legendary')),
-  display_name text not null,
-  image_path text not null unique,
-  single_price bigint not null check (single_price > 0),
-  ten_price bigint not null check (ten_price = single_price * 9),
-  pity_limit smallint not null check (pity_limit > 0),
-  pity_rarity text not null check (pity_rarity in ('rare', 'epic', 'legendary')),
-  rarity_weights jsonb not null
-);
-
-create table catalog.topup_products (
-  amount bigint primary key check (amount > 0),
-  sort_order smallint not null unique check (sort_order > 0)
-);
-
 create table catalog.versions (
   id text primary key check (id = 'v1'),
   product_checksum text not null check (product_checksum ~ '^[0-9a-f]{64}$'),
@@ -56,20 +40,4 @@ immutable
 set search_path = ''
 as $$
   select case p_rarity when 'common' then 1 when 'rare' then 2 when 'epic' then 3 when 'legendary' then 4 when 'mythic' then 5 else 0 end::smallint
-$$;
-
-create or replace function api.catalog_get()
-returns jsonb
-language sql
-security definer
-set search_path = ''
-as $$
-  select jsonb_build_object(
-    'version', 'v1',
-    'product_checksum', (select product_checksum from catalog.versions where id = 'v1'),
-    'chains', coalesce((select jsonb_agg(to_jsonb(c) order by c.global_order) from catalog.chains c), '[]'::jsonb),
-    'templates', coalesce((select jsonb_agg(to_jsonb(t) order by t.sort_order) from catalog.templates t), '[]'::jsonb),
-    'boxes', coalesce((select jsonb_agg(to_jsonb(b) order by case b.tier when 'normal' then 1 when 'rare' then 2 else 3 end) from catalog.boxes b), '[]'::jsonb),
-    'topup_products', coalesce((select jsonb_agg(p.amount order by p.sort_order) from catalog.topup_products p), '[]'::jsonb)
-  )
 $$;

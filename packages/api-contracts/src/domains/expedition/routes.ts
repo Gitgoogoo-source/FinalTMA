@@ -1,10 +1,5 @@
 import { z } from "zod";
 
-import {
-  expeditionInputItemSchema,
-  expeditionSchema,
-  inventoryItemSchema,
-} from "../../common/models.ts";
 import { defineRoute } from "../../common/route.ts";
 import {
   emptyObjectSchema,
@@ -12,6 +7,8 @@ import {
   timestampSchema,
   uuidSchema,
 } from "../../common/schemas.ts";
+import { inventoryItemSchema } from "../inventory/models.ts";
+import { expeditionInputItemSchema, expeditionSchema } from "./models.ts";
 
 const ruleSchema = z
   .object({

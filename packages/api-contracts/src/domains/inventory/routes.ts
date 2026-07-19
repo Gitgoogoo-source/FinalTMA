@@ -1,12 +1,13 @@
 import { z } from "zod";
 
-import { assetsSchema, inventoryItemSchema } from "../../common/models.ts";
+import { assetsSchema } from "../../common/models.ts";
 import { defineRoute } from "../../common/route.ts";
 import {
   emptyObjectSchema,
   identifierSchema,
   raritySchema,
 } from "../../common/schemas.ts";
+import { inventoryItemSchema } from "./models.ts";
 
 export const inventoryRoutes = [
   defineRoute({

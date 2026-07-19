@@ -1,7 +1,7 @@
 import { Compass, Timer } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
-import { CatalogImage } from "../../catalog/index.ts";
+import { CatalogImage } from "../../../shared/ui/index.tsx";
 import { useApiQuery } from "../../../platform/query/index.ts";
 import { Badge, Button, Card } from "../../../shared/ui/index.tsx";
 import { useOperationRegistry } from "../../../workflows/operation-recovery/index.ts";

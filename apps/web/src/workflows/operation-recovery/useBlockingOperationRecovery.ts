@@ -3,7 +3,7 @@ import {
   parseRecoveredOperation,
   type RouteOutput,
   type TypedOperationSummary,
-} from "@pokepets/api-contracts";
+} from "@pokepets/api-contracts/app";
 
 import { useOperationRegistry } from "./context.ts";
 

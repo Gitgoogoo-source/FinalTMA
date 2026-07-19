@@ -15,7 +15,7 @@ import {
   type RouteInput,
   type RouteOutput,
   type TypedOperationSummary,
-} from "@pokepets/api-contracts";
+} from "@pokepets/api-contracts/app";
 
 import {
   ApiFailure,

@@ -3,13 +3,13 @@ import { createInvoiceLink } from "../../platform/telegram/bot.ts";
 import {
   operationResult,
   type OperationEnvelope,
-} from "../../domains/operations/mappers.ts";
+} from "../../http/operation-result.ts";
 import {
   requireOperationId,
   requireSession,
   type HandlerMap,
   type HandlerResult,
-} from "../../domains/types.ts";
+} from "../../http/handlers.ts";
 
 type Payment = {
   id: string;

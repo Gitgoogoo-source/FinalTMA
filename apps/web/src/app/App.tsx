@@ -1,17 +1,17 @@
 import { LoaderCircle, RotateCw } from "lucide-react";
 import type { ReactNode } from "react";
 
-import { RestrictedView } from "../domains/risk/index.ts";
 import { Button } from "../shared/ui/index.tsx";
 import { useSession } from "../platform/session/store.ts";
 import { useBootstrap } from "../workflows/session-bootstrap/index.ts";
+import { AccountGate } from "./guards/AccountGate.tsx";
 import { AppRouter } from "./router/AppRouter.tsx";
 
 export function App(): ReactNode {
   const bootstrap = useBootstrap();
   const session = useSession();
   if (bootstrap.phase === "banned" || session?.accountStatus === "banned")
-    return <RestrictedView />;
+    return <AccountGate restricted />;
   if (session?.recovering)
     return (
       <main className="startup">
@@ -63,5 +63,9 @@ export function App(): ReactNode {
         <p>请重新从 Telegram 打开 Mini App</p>
       </main>
     );
-  return <AppRouter />;
+  return (
+    <AccountGate restricted={false}>
+      <AppRouter />
+    </AccountGate>
+  );
 }

@@ -2,7 +2,7 @@ import {
   errorDefinition,
   isErrorCode,
   type ErrorCode,
-} from "@pokepets/api-contracts";
+} from "@pokepets/api-contracts/common";
 
 export class ApiError extends Error {
   constructor(

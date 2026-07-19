@@ -1,7 +1,7 @@
 import {
   parseRecoveredOperation,
   type TypedOperationSummary,
-} from "@pokepets/api-contracts";
+} from "@pokepets/api-contracts/app";
 
 import { rpc } from "../../platform/db/index.ts";
 

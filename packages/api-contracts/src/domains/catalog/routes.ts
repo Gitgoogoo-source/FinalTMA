@@ -1,12 +1,9 @@
 import { z } from "zod";
 
-import {
-  boxSchema,
-  catalogChainSchema,
-  catalogTemplateSchema,
-} from "../../common/models.ts";
 import { defineRoute } from "../../common/route.ts";
 import { emptyObjectSchema } from "../../common/schemas.ts";
+import { boxSchema } from "../gacha/models.ts";
+import { catalogChainSchema, catalogTemplateSchema } from "./models.ts";
 
 export const catalogOutputSchema = z
   .object({

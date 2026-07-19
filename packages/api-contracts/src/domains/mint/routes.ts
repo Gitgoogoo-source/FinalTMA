@@ -1,6 +1,5 @@
 import { z } from "zod";
 
-import { mintSchema } from "../../common/models.ts";
 import { defineRoute } from "../../common/route.ts";
 import {
   emptyObjectSchema,
@@ -8,6 +7,7 @@ import {
   timestampSchema,
   uuidSchema,
 } from "../../common/schemas.ts";
+import { mintSchema } from "./models.ts";
 
 export const nftMetadataSchema = z
   .object({

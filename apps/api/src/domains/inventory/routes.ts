@@ -1,13 +1,5 @@
 import { rpc } from "../../platform/db/index.ts";
-import {
-  operationResult,
-  type OperationEnvelope,
-} from "../operations/mappers.ts";
-import {
-  requireOperationId,
-  requireSession,
-  type HandlerMap,
-} from "../types.ts";
+import { requireSession, type HandlerMap } from "../../http/handlers.ts";
 
 export const inventoryHandlers = {
   "inventory.list": async (context) => ({
@@ -21,21 +13,4 @@ export const inventoryHandlers = {
       p_template_id: context.input.template_id,
     }),
   }),
-  "inventory.evolve": async (context) =>
-    operationResult(
-      await rpc<OperationEnvelope>("inventory_evolve", {
-        p_session_id: requireSession(context).session_id,
-        p_operation_id: requireOperationId(context),
-        p_template_id: context.input.template_id,
-      }),
-    ),
-  "inventory.decompose": async (context) =>
-    operationResult(
-      await rpc<OperationEnvelope>("inventory_decompose", {
-        p_session_id: requireSession(context).session_id,
-        p_operation_id: requireOperationId(context),
-        p_template_id: context.input.template_id,
-        p_quantity: context.input.quantity,
-      }),
-    ),
 } satisfies HandlerMap;

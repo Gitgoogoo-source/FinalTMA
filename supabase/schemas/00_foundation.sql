@@ -6,6 +6,7 @@ create schema if not exists catalog;
 create schema if not exists economy;
 create schema if not exists inventory;
 create schema if not exists gacha;
+create schema if not exists evolution;
 create schema if not exists expedition;
 create schema if not exists wheel;
 create schema if not exists market;

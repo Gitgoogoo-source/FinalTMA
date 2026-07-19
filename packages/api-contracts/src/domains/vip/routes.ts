@@ -1,8 +1,9 @@
 import { z } from "zod";
 
-import { paymentSchema, vipStatusSchema } from "../../common/models.ts";
 import { defineRoute } from "../../common/route.ts";
 import { emptyObjectSchema } from "../../common/schemas.ts";
+import { paymentSchema } from "../topup/models.ts";
+import { vipStatusSchema } from "./models.ts";
 
 export const vipRoutes = [
   defineRoute({

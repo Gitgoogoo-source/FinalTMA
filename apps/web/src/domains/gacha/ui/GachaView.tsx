@@ -2,11 +2,11 @@ import { Gift, ShieldCheck, Sparkles } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { useSearchParams } from "react-router-dom";
 
-import { CatalogImage } from "../../catalog/index.ts";
+import { CatalogImage } from "../../../shared/ui/index.tsx";
 import { useApiQuery } from "../../../platform/query/index.ts";
 import { Badge, Button, Card, PageState } from "../../../shared/ui/index.tsx";
 import { useOperationRegistry } from "../../../workflows/operation-recovery/index.ts";
-import { useNavigationIntent } from "../../../workflows/navigation-intent-resume/index.ts";
+import { useNavigationIntent } from "../../../workflows/payment-recovery/index.ts";
 
 export function GachaView(): ReactNode {
   const boxes = useApiQuery("gacha.bootstrap");

@@ -11,7 +11,7 @@ import {
   standardErrorSchema,
   successEnvelopeSchema,
   type ErrorCode,
-} from "../src/index.ts";
+} from "../src/server.ts";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const explicitOutput = process.argv[2];

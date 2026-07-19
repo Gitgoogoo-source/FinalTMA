@@ -1,17 +1,18 @@
-import { BookOpen, Dna, Flame, Link2, ShoppingBag } from "lucide-react";
+import { BookOpen } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { CatalogImage } from "../../catalog/index.ts";
+import { CatalogImage } from "../../../shared/ui/index.tsx";
 import { useApiQuery } from "../../../platform/query/index.ts";
 import { Badge, Button, Card, PageState } from "../../../shared/ui/index.tsx";
-import { useOperationRegistry } from "../../../workflows/operation-recovery/index.ts";
+import type { InventoryItem } from "../types.ts";
 
-export function InventoryView(): ReactNode {
+export function InventoryView({
+  renderActions,
+}: {
+  renderActions(item: InventoryItem, imageReady: boolean): ReactNode;
+}): ReactNode {
   const query = useApiQuery("inventory.list");
-  const { isBlocked, run } = useOperationRegistry();
-  const blocked =
-    isBlocked("inventory.evolve") || isBlocked("inventory.decompose");
   const navigate = useNavigate();
   const items = query.data?.items ?? [];
   const [selectedId, setSelectedId] = useState("");
@@ -20,15 +21,6 @@ export function InventoryView(): ReactNode {
     ? selectedId
     : (items[0]?.template_id ?? "");
   const item = items.find((candidate) => candidate.template_id === effectiveId);
-  const evolve = (templateId: string) =>
-    void run("正在确认进化结果", "inventory.evolve", {
-      template_id: templateId,
-    });
-  const decompose = (templateId: string) =>
-    void run("正在确认分解结果", "inventory.decompose", {
-      template_id: templateId,
-      quantity: 1,
-    });
   return (
     <main className="page">
       <header className="page-heading">
@@ -86,47 +78,7 @@ export function InventoryView(): ReactNode {
                 </div>
               </div>
             </Card>
-            <div className="action-grid">
-              <Button
-                disabled={
-                  blocked ||
-                  !imageReady ||
-                  item.available < 3 ||
-                  item.stage >= 3
-                }
-                onClick={() => evolve(item.template_id)}
-              >
-                <Dna />
-                进化
-              </Button>
-              <Button
-                disabled={blocked || !imageReady || item.available < 1}
-                onClick={() => decompose(item.template_id)}
-              >
-                <Flame />
-                分解
-              </Button>
-              <Button
-                disabled={blocked || !imageReady || item.available < 1}
-                onClick={() =>
-                  navigate(
-                    `/market?sell=${encodeURIComponent(item.template_id)}`,
-                  )
-                }
-              >
-                <ShoppingBag />
-                出售
-              </Button>
-              <Button
-                disabled={blocked || !imageReady || item.available < 1}
-                onClick={() =>
-                  navigate(`/mint/${encodeURIComponent(item.template_id)}`)
-                }
-              >
-                <Link2 />
-                Mint
-              </Button>
-            </div>
+            <div className="action-grid">{renderActions(item, imageReady)}</div>
             <div className="thumbnail-strip">
               {items.map((candidate) => (
                 <button

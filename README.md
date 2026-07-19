@@ -11,9 +11,10 @@ apps/api/               Functions 领域、工作流与平台适配
 packages/api-contracts/ REST 契约、错误注册表与 OpenAPI
 contracts/ton/          Tact 合约、部署与验证命令
 supabase/schemas/       声明式业务 Schema
-supabase/migrations/    baseline、catalog_v1、api_security
+supabase/migrations/    baseline、product_data_v1、api_security
 generated/              目录与资产校验清单
-tools/                  契约、目录、数据库、资产、Manifest 门禁
+tools/product_data/     目录、盲盒、充值与任务数据生成链
+tools/                  契约、数据库、架构、资产与 Manifest 门禁
 docs/                   产品、架构、ADR 与运维资料
 ```
 
@@ -21,6 +22,8 @@ docs/                   产品、架构、ADR 与运维资料
 
 ```sh
 pnpm install --frozen-lockfile
+pnpm product-data:build
+pnpm contracts:openapi
 pnpm validate:static
 pnpm chain:build
 pnpm assets:check:production

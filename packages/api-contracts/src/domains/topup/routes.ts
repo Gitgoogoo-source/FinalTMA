@@ -1,8 +1,8 @@
 import { z } from "zod";
 
-import { paymentIntentSchema, paymentSchema } from "../../common/models.ts";
 import { defineRoute } from "../../common/route.ts";
 import { emptyObjectSchema, uuidSchema } from "../../common/schemas.ts";
+import { paymentIntentSchema, paymentSchema } from "./models.ts";
 
 const fixedTopupSchema = z
   .object({

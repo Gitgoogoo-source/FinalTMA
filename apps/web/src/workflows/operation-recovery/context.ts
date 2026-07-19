@@ -4,7 +4,7 @@ import type {
   RouteInput,
   RouteOutput,
   TypedOperationSummary,
-} from "@pokepets/api-contracts";
+} from "@pokepets/api-contracts/app";
 
 export type OperationPhase =
   | "confirming"

@@ -4,7 +4,7 @@ import {
   successEnvelopeSchema,
   type SuccessEnvelope,
 } from "./common/envelope.ts";
-import { routeById, type RouteById, type RouteId } from "./registry.ts";
+import { routeById, type RouteById, type RouteId } from "./registries/app.ts";
 
 export type RouteInput<Id extends RouteId> = z.input<RouteById<Id>["input"]>;
 export type RouteOutput<Id extends RouteId> = z.output<RouteById<Id>["output"]>;

@@ -5,7 +5,11 @@
   "type": "module",
   "sideEffects": false,
   "exports": {
-    ".": "./src/index.ts"
+    "./app": "./src/app.ts",
+    "./common": "./src/common.ts",
+    "./integrations": "./src/integrations.ts",
+    "./jobs": "./src/jobs.ts",
+    "./server": "./src/server.ts"
   },
   "scripts": {
     "build": "tsc --noEmit -p tsconfig.json",

@@ -4,7 +4,7 @@ import { ChevronLeft, Link2, ShieldAlert } from "lucide-react";
 import { useCallback, useState, type ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
-import { CatalogImage } from "../../catalog/index.ts";
+import { CatalogImage } from "../../../shared/ui/index.tsx";
 import { useApiQuery } from "../../../platform/query/index.ts";
 import { useTelegramBackButton } from "../../../platform/telegram/index.ts";
 import { Badge, Button, Card, PageState } from "../../../shared/ui/index.tsx";

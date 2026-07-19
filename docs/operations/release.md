@@ -57,7 +57,7 @@ python3 tools/web/build_manifest.py \
 
 1. `pnpm assets:check:production` 成功。
 2. 再次证明生产 migration history 为空且无须迁移数据。
-3. 按 `find supabase/migrations -maxdepth 1 -name '*.sql' | sort` 输出的唯一三条迁移应用，后缀依次必须是 `_baseline.sql`、`_catalog_v1.sql`、`_api_security.sql`。
+3. 按 `find supabase/migrations -maxdepth 1 -name '*.sql' | sort` 输出的唯一三条迁移应用，后缀依次必须是 `_baseline.sql`、`_product_data_v1.sql`、`_api_security.sql`。
 4. 用户明确授权并提供部署钱包后，设置 `TON_MAINNET_DEPLOY_APPROVED=I_UNDERSTAND_MAINNET` 发布 mainnet collection。
 5. 验证链上 owner、permit 公钥、不可变 collection content 与 1% royalty。
 6. 将真实 collection 地址和所有密钥写入平台 secrets。

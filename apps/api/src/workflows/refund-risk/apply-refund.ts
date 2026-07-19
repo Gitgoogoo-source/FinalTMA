@@ -1,4 +1,4 @@
-import { recordTelegramRefund } from "../../domains/risk/commands.ts";
+import { rpc } from "../../platform/db/index.ts";
 
 type TelegramRefund = {
   telegram_payment_charge_id?: unknown;
@@ -10,5 +10,10 @@ export async function applyTelegramRefund(
   refund: TelegramRefund,
   payload: Record<string, unknown>,
 ): Promise<void> {
-  await recordTelegramRefund(updateId, refund, payload);
+  await rpc("payment_apply_refund", {
+    p_update_id: updateId,
+    p_telegram_charge_id: refund.telegram_payment_charge_id,
+    p_stars: refund.total_amount,
+    p_payload: payload,
+  });
 }

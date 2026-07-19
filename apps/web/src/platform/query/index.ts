@@ -10,7 +10,7 @@ import {
   type RouteId,
   type RouteInput,
   type RouteOutput,
-} from "@pokepets/api-contracts";
+} from "@pokepets/api-contracts/app";
 
 import { apiRequest } from "../api/client.ts";
 import { getSession, registerSessionCacheClearer } from "../session/store.ts";

@@ -2,12 +2,12 @@ import { rpc } from "../../platform/db/index.ts";
 import {
   operationResult,
   type OperationEnvelope,
-} from "../operations/mappers.ts";
+} from "../../http/operation-result.ts";
 import {
   requireOperationId,
   requireSession,
   type HandlerMap,
-} from "../types.ts";
+} from "../../http/handlers.ts";
 
 export const marketHandlers = {
   "market.bootstrap": async (context) => ({

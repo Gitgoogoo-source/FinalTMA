@@ -1,3 +1,8 @@
+create table payments.topup_products (
+  amount bigint primary key check (amount > 0),
+  sort_order smallint not null unique check (sort_order > 0)
+);
+
 create table payments.orders (
   id uuid primary key default extensions.gen_random_uuid(),
   user_id uuid not null references identity.users(id) on delete cascade,
@@ -53,7 +58,7 @@ declare
   v_user_id uuid := api.session_user(p_session_id);
 begin
   return jsonb_build_object(
-    'products', coalesce((select jsonb_agg(amount order by sort_order) from catalog.topup_products), '[]'::jsonb),
+    'products', coalesce((select jsonb_agg(amount order by sort_order) from payments.topup_products), '[]'::jsonb),
     'orders', coalesce((
       select jsonb_agg(payments.order_json(p) order by p.created_at desc)
       from (
@@ -107,7 +112,7 @@ declare
   v_tier text;
   v_count integer;
   v_template catalog.templates%rowtype;
-  v_box catalog.boxes%rowtype;
+  v_box gacha.boxes%rowtype;
   v_order payments.orders%rowtype;
   v_result jsonb;
   v_detail text;
@@ -125,7 +130,7 @@ begin
       select available into v_balance from economy.balances where user_id = v_user_id and currency = 'KCOIN' for update;
       if p_intent->>'kind' = 'gacha' then
         v_tier := p_intent->>'tier'; v_count := (p_intent->>'draw_count')::integer;
-        select * into v_box from catalog.boxes where tier = v_tier;
+        select * into v_box from gacha.boxes where tier = v_tier;
         if v_box.tier is null or v_count not in (1, 10) then perform api.raise_business_error('TOPUP_AMOUNT_INVALID', '开盒补差意图无效'); end if;
         v_required := case when v_count = 10 then v_box.ten_price else v_box.single_price end;
         if v_count = 1 and v_tier in ('normal', 'rare') and exists (
@@ -147,7 +152,7 @@ begin
       if v_required = 0 then perform api.raise_business_error('TOPUP_NOT_REQUIRED', '当前余额无需补差'); end if;
     end if;
     if p_mode = 'fixed' then
-      if p_amount is null or not exists (select 1 from catalog.topup_products where amount = p_amount) then perform api.raise_business_error('TOPUP_AMOUNT_INVALID', '充值档位无效'); end if;
+      if p_amount is null or not exists (select 1 from payments.topup_products where amount = p_amount) then perform api.raise_business_error('TOPUP_AMOUNT_INVALID', '充值档位无效'); end if;
       if p_intent is not null and p_intent <> '{}'::jsonb and p_amount < v_required then perform api.raise_business_error('TOPUP_AMOUNT_INVALID', '充值档位不足以覆盖最新差额'); end if;
       v_required := p_amount;
     elsif p_mode = 'exact_gap' then

@@ -9,6 +9,7 @@ create schema if not exists catalog;
 create schema if not exists economy;
 create schema if not exists inventory;
 create schema if not exists gacha;
+create schema if not exists evolution;
 create schema if not exists expedition;
 create schema if not exists wheel;
 create schema if not exists market;
@@ -302,22 +303,6 @@ create table catalog.templates (
 create index templates_chain_id_idx on catalog.templates (chain_id, stage);
 create index templates_rarity_draw_idx on catalog.templates (rarity, sort_order);
 
-create table catalog.boxes (
-  tier text primary key check (tier in ('normal', 'rare', 'legendary')),
-  display_name text not null,
-  image_path text not null unique,
-  single_price bigint not null check (single_price > 0),
-  ten_price bigint not null check (ten_price = single_price * 9),
-  pity_limit smallint not null check (pity_limit > 0),
-  pity_rarity text not null check (pity_rarity in ('rare', 'epic', 'legendary')),
-  rarity_weights jsonb not null
-);
-
-create table catalog.topup_products (
-  amount bigint primary key check (amount > 0),
-  sort_order smallint not null unique check (sort_order > 0)
-);
-
 create table catalog.versions (
   id text primary key check (id = 'v1'),
   product_checksum text not null check (product_checksum ~ '^[0-9a-f]{64}$'),
@@ -331,22 +316,6 @@ immutable
 set search_path = ''
 as $$
   select case p_rarity when 'common' then 1 when 'rare' then 2 when 'epic' then 3 when 'legendary' then 4 when 'mythic' then 5 else 0 end::smallint
-$$;
-
-create or replace function api.catalog_get()
-returns jsonb
-language sql
-security definer
-set search_path = ''
-as $$
-  select jsonb_build_object(
-    'version', 'v1',
-    'product_checksum', (select product_checksum from catalog.versions where id = 'v1'),
-    'chains', coalesce((select jsonb_agg(to_jsonb(c) order by c.global_order) from catalog.chains c), '[]'::jsonb),
-    'templates', coalesce((select jsonb_agg(to_jsonb(t) order by t.sort_order) from catalog.templates t), '[]'::jsonb),
-    'boxes', coalesce((select jsonb_agg(to_jsonb(b) order by case b.tier when 'normal' then 1 when 'rare' then 2 else 3 end) from catalog.boxes b), '[]'::jsonb),
-    'topup_products', coalesce((select jsonb_agg(p.amount order by p.sort_order) from catalog.topup_products p), '[]'::jsonb)
-  )
 $$;
 
 -- source: 30_operations.sql
@@ -793,74 +762,7 @@ begin
 end;
 $$;
 
-create or replace function api.inventory_evolve(
-  p_session_id uuid,
-  p_operation_id uuid,
-  p_template_id text
-)
-returns jsonb
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-  v_operation operations.operations%rowtype;
-  v_replay jsonb;
-  v_user_id uuid;
-  v_source catalog.templates%rowtype;
-  v_target catalog.templates%rowtype;
-  v_rate integer;
-  v_cost bigint;
-  v_guarantee integer;
-  v_failures integer;
-  v_success boolean;
-  v_new_album boolean := false;
-  v_result jsonb;
-  v_detail text;
-begin
-  v_operation := operations.begin_command(p_session_id, 'inventory.evolve', p_operation_id, jsonb_build_object('template_id', p_template_id));
-  v_replay := operations.replay_if_finished(v_operation);
-  if v_replay is not null then return v_replay; end if;
-  v_user_id := v_operation.user_id;
-  begin
-    select * into v_source from catalog.templates where id = p_template_id;
-    if v_source.id is null or v_source.stage >= 3 then perform api.raise_business_error('EVOLUTION_NOT_AVAILABLE', '当前藏品不能进化'); end if;
-    select * into v_target from catalog.templates where chain_id = v_source.chain_id and stage = v_source.stage + 1;
-    if inventory.available_quantity(v_user_id, v_source.id) < 3 then perform api.raise_business_error('INSUFFICIENT_INVENTORY', '需要三个可用材料'); end if;
-    select case v_target.rarity when 'rare' then 95 when 'epic' then 60 when 'legendary' then 35 else 20 end,
-           case v_target.rarity when 'rare' then 30 when 'epic' then 120 when 'legendary' then 500 else 2000 end,
-           case v_target.rarity when 'rare' then 2 when 'epic' then 3 when 'legendary' then 5 else 8 end
-    into v_rate, v_cost, v_guarantee;
-    insert into gacha.evolution_pity (user_id, from_template_id) values (v_user_id, v_source.id) on conflict do nothing;
-    select failures into v_failures from gacha.evolution_pity where user_id = v_user_id and from_template_id = v_source.id for update;
-    perform economy.change_balance(v_user_id, 'FGEMS', -v_cost, 'evolution', p_operation_id, v_source.id);
-    v_success := v_failures + 1 >= v_guarantee or identity.random_basis_points() < v_rate * 100;
-    if v_success then
-      perform inventory.change_holding(v_user_id, v_source.id, -3);
-      perform inventory.change_holding(v_user_id, v_target.id, 1);
-      v_new_album := album.unlock_template(v_user_id, v_target.id, p_operation_id);
-      update gacha.evolution_pity set failures = 0, updated_at = now() where user_id = v_user_id and from_template_id = v_source.id;
-      perform tasks.progress(v_user_id, 'evolution_success');
-      if v_new_album then perform tasks.progress(v_user_id, 'album_unlock'); end if;
-    else
-      perform inventory.change_holding(v_user_id, v_source.id, -2);
-      update gacha.evolution_pity set failures = failures + 1, updated_at = now() where user_id = v_user_id and from_template_id = v_source.id;
-    end if;
-    perform tasks.progress(v_user_id, 'evolution_attempt');
-    v_result := jsonb_build_object(
-      'success', v_success, 'source_template_id', v_source.id, 'target_template_id', v_target.id,
-      'target_name', v_target.name, 'target_rarity', v_target.rarity, 'fgems_spent', v_cost,
-      'failure_count', case when v_success then 0 else v_failures + 1 end,
-      'new_album', v_new_album, 'assets', economy.assets(v_user_id)
-    );
-    return operations.complete_command(p_operation_id, v_result);
-  exception when others then
-    get stacked diagnostics v_detail = pg_exception_detail;
-    return operations.fail_command(p_operation_id, case when sqlstate = 'P0001' then sqlerrm else 'INTERNAL_ERROR' end, jsonb_build_object('detail', coalesce(v_detail, '{}')));
-  end;
-end;
-$$;
-
+-- source: 33_decomposition.sql
 create or replace function api.inventory_decompose(
   p_session_id uuid,
   p_operation_id uuid,
@@ -907,20 +809,23 @@ end;
 $$;
 
 -- source: 40_gacha.sql
+create table gacha.boxes (
+  tier text primary key check (tier in ('normal', 'rare', 'legendary')),
+  display_name text not null,
+  image_path text not null unique,
+  single_price bigint not null check (single_price > 0),
+  ten_price bigint not null check (ten_price = single_price * 9),
+  pity_limit smallint not null check (pity_limit > 0),
+  pity_rarity text not null check (pity_rarity in ('rare', 'epic', 'legendary')),
+  rarity_weights jsonb not null
+);
+
 create table gacha.pity (
   user_id uuid not null references identity.users(id) on delete cascade,
-  tier text not null references catalog.boxes(tier),
+  tier text not null references gacha.boxes(tier),
   progress smallint not null default 0 check (progress >= 0),
   updated_at timestamptz not null default now(),
   primary key (user_id, tier)
-);
-
-create table gacha.evolution_pity (
-  user_id uuid not null references identity.users(id) on delete cascade,
-  from_template_id text not null references catalog.templates(id),
-  failures smallint not null default 0 check (failures >= 0),
-  updated_at timestamptz not null default now(),
-  primary key (user_id, from_template_id)
 );
 
 create or replace function api.gacha_bootstrap(p_session_id uuid)
@@ -935,7 +840,7 @@ begin
   return jsonb_build_object(
     'boxes', coalesce((
       select jsonb_agg(to_jsonb(b) order by case b.tier when 'normal' then 1 when 'rare' then 2 else 3 end)
-      from catalog.boxes b
+      from gacha.boxes b
     ), '[]'::jsonb),
     'pity', coalesce((
       select jsonb_agg(jsonb_build_object(
@@ -944,7 +849,7 @@ begin
         'limit', b.pity_limit,
         'target_rarity', b.pity_rarity
       ) order by case b.tier when 'normal' then 1 when 'rare' then 2 else 3 end)
-      from catalog.boxes b
+      from gacha.boxes b
       left join gacha.pity p on p.user_id = v_user_id and p.tier = b.tier
     ), '[]'::jsonb),
     'entitlements', jsonb_build_object(
@@ -970,7 +875,7 @@ declare
   v_operation operations.operations%rowtype;
   v_replay jsonb;
   v_user_id uuid;
-  v_box catalog.boxes%rowtype;
+  v_box gacha.boxes%rowtype;
   v_template catalog.templates%rowtype;
   v_entitlement_id uuid;
   v_entitlement_kind text;
@@ -996,7 +901,7 @@ begin
     if p_draw_count not in (1, 10) then
       perform api.raise_business_error('DRAW_COUNT_INVALID', '开盒次数无效');
     end if;
-    select * into v_box from catalog.boxes where tier = p_tier;
+    select * into v_box from gacha.boxes where tier = p_tier;
     if v_box.tier is null then perform api.raise_business_error('BOX_TIER_INVALID', '盲盒档次无效'); end if;
 
     if p_draw_count = 1 and p_tier in ('normal', 'rare') then
@@ -1413,6 +1318,83 @@ begin
 end;
 $$;
 
+-- source: 43_evolution.sql
+create table evolution.pity (
+  user_id uuid not null references identity.users(id) on delete cascade,
+  from_template_id text not null references catalog.templates(id),
+  failures smallint not null default 0 check (failures >= 0),
+  updated_at timestamptz not null default now(),
+  primary key (user_id, from_template_id)
+);
+
+create or replace function api.inventory_evolve(
+  p_session_id uuid,
+  p_operation_id uuid,
+  p_template_id text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_operation operations.operations%rowtype;
+  v_replay jsonb;
+  v_user_id uuid;
+  v_source catalog.templates%rowtype;
+  v_target catalog.templates%rowtype;
+  v_rate integer;
+  v_cost bigint;
+  v_guarantee integer;
+  v_failures integer;
+  v_success boolean;
+  v_new_album boolean := false;
+  v_result jsonb;
+  v_detail text;
+begin
+  v_operation := operations.begin_command(p_session_id, 'inventory.evolve', p_operation_id, jsonb_build_object('template_id', p_template_id));
+  v_replay := operations.replay_if_finished(v_operation);
+  if v_replay is not null then return v_replay; end if;
+  v_user_id := v_operation.user_id;
+  begin
+    select * into v_source from catalog.templates where id = p_template_id;
+    if v_source.id is null or v_source.stage >= 3 then perform api.raise_business_error('EVOLUTION_NOT_AVAILABLE', '当前藏品不能进化'); end if;
+    select * into v_target from catalog.templates where chain_id = v_source.chain_id and stage = v_source.stage + 1;
+    if inventory.available_quantity(v_user_id, v_source.id) < 3 then perform api.raise_business_error('INSUFFICIENT_INVENTORY', '需要三个可用材料'); end if;
+    select case v_target.rarity when 'rare' then 95 when 'epic' then 60 when 'legendary' then 35 else 20 end,
+           case v_target.rarity when 'rare' then 30 when 'epic' then 120 when 'legendary' then 500 else 2000 end,
+           case v_target.rarity when 'rare' then 2 when 'epic' then 3 when 'legendary' then 5 else 8 end
+    into v_rate, v_cost, v_guarantee;
+    insert into evolution.pity (user_id, from_template_id) values (v_user_id, v_source.id) on conflict do nothing;
+    select failures into v_failures from evolution.pity where user_id = v_user_id and from_template_id = v_source.id for update;
+    perform economy.change_balance(v_user_id, 'FGEMS', -v_cost, 'evolution', p_operation_id, v_source.id);
+    v_success := v_failures + 1 >= v_guarantee or identity.random_basis_points() < v_rate * 100;
+    if v_success then
+      perform inventory.change_holding(v_user_id, v_source.id, -3);
+      perform inventory.change_holding(v_user_id, v_target.id, 1);
+      v_new_album := album.unlock_template(v_user_id, v_target.id, p_operation_id);
+      update evolution.pity set failures = 0, updated_at = now() where user_id = v_user_id and from_template_id = v_source.id;
+      perform tasks.progress(v_user_id, 'evolution_success');
+      if v_new_album then perform tasks.progress(v_user_id, 'album_unlock'); end if;
+    else
+      perform inventory.change_holding(v_user_id, v_source.id, -2);
+      update evolution.pity set failures = failures + 1, updated_at = now() where user_id = v_user_id and from_template_id = v_source.id;
+    end if;
+    perform tasks.progress(v_user_id, 'evolution_attempt');
+    v_result := jsonb_build_object(
+      'success', v_success, 'source_template_id', v_source.id, 'target_template_id', v_target.id,
+      'target_name', v_target.name, 'target_rarity', v_target.rarity, 'fgems_spent', v_cost,
+      'failure_count', case when v_success then 0 else v_failures + 1 end,
+      'new_album', v_new_album, 'assets', economy.assets(v_user_id)
+    );
+    return operations.complete_command(p_operation_id, v_result);
+  exception when others then
+    get stacked diagnostics v_detail = pg_exception_detail;
+    return operations.fail_command(p_operation_id, case when sqlstate = 'P0001' then sqlerrm else 'INTERNAL_ERROR' end, jsonb_build_object('detail', coalesce(v_detail, '{}')));
+  end;
+end;
+$$;
+
 -- source: 50_market.sql
 create table market.listings (
   id uuid primary key default extensions.gen_random_uuid(),
@@ -1730,6 +1712,11 @@ end;
 $$;
 
 -- source: 60_payments.sql
+create table payments.topup_products (
+  amount bigint primary key check (amount > 0),
+  sort_order smallint not null unique check (sort_order > 0)
+);
+
 create table payments.orders (
   id uuid primary key default extensions.gen_random_uuid(),
   user_id uuid not null references identity.users(id) on delete cascade,
@@ -1785,7 +1772,7 @@ declare
   v_user_id uuid := api.session_user(p_session_id);
 begin
   return jsonb_build_object(
-    'products', coalesce((select jsonb_agg(amount order by sort_order) from catalog.topup_products), '[]'::jsonb),
+    'products', coalesce((select jsonb_agg(amount order by sort_order) from payments.topup_products), '[]'::jsonb),
     'orders', coalesce((
       select jsonb_agg(payments.order_json(p) order by p.created_at desc)
       from (
@@ -1839,7 +1826,7 @@ declare
   v_tier text;
   v_count integer;
   v_template catalog.templates%rowtype;
-  v_box catalog.boxes%rowtype;
+  v_box gacha.boxes%rowtype;
   v_order payments.orders%rowtype;
   v_result jsonb;
   v_detail text;
@@ -1857,7 +1844,7 @@ begin
       select available into v_balance from economy.balances where user_id = v_user_id and currency = 'KCOIN' for update;
       if p_intent->>'kind' = 'gacha' then
         v_tier := p_intent->>'tier'; v_count := (p_intent->>'draw_count')::integer;
-        select * into v_box from catalog.boxes where tier = v_tier;
+        select * into v_box from gacha.boxes where tier = v_tier;
         if v_box.tier is null or v_count not in (1, 10) then perform api.raise_business_error('TOPUP_AMOUNT_INVALID', '开盒补差意图无效'); end if;
         v_required := case when v_count = 10 then v_box.ten_price else v_box.single_price end;
         if v_count = 1 and v_tier in ('normal', 'rare') and exists (
@@ -1879,7 +1866,7 @@ begin
       if v_required = 0 then perform api.raise_business_error('TOPUP_NOT_REQUIRED', '当前余额无需补差'); end if;
     end if;
     if p_mode = 'fixed' then
-      if p_amount is null or not exists (select 1 from catalog.topup_products where amount = p_amount) then perform api.raise_business_error('TOPUP_AMOUNT_INVALID', '充值档位无效'); end if;
+      if p_amount is null or not exists (select 1 from payments.topup_products where amount = p_amount) then perform api.raise_business_error('TOPUP_AMOUNT_INVALID', '充值档位无效'); end if;
       if p_intent is not null and p_intent <> '{}'::jsonb and p_amount < v_required then perform api.raise_business_error('TOPUP_AMOUNT_INVALID', '充值档位不足以覆盖最新差额'); end if;
       v_required := p_amount;
     elsif p_mode = 'exact_gap' then
@@ -2460,7 +2447,24 @@ begin
 end;
 $$;
 
--- source: 70_onchain.sql
+-- source: 65_catalog_api.sql
+create or replace function api.catalog_get()
+returns jsonb
+language sql
+security definer
+set search_path = ''
+as $$
+  select jsonb_build_object(
+    'version', 'v1',
+    'product_checksum', (select product_checksum from catalog.versions where id = 'v1'),
+    'chains', coalesce((select jsonb_agg(to_jsonb(c) order by c.global_order) from catalog.chains c), '[]'::jsonb),
+    'templates', coalesce((select jsonb_agg(to_jsonb(t) order by t.sort_order) from catalog.templates t), '[]'::jsonb),
+    'boxes', coalesce((select jsonb_agg(to_jsonb(b) order by case b.tier when 'normal' then 1 when 'rare' then 2 else 3 end) from gacha.boxes b), '[]'::jsonb),
+    'topup_products', coalesce((select jsonb_agg(p.amount order by p.sort_order) from payments.topup_products p), '[]'::jsonb)
+  )
+$$;
+
+-- source: 70_wallet.sql
 create table onchain.wallet_challenges (
   id uuid primary key default extensions.gen_random_uuid(),
   user_id uuid not null references identity.users(id) on delete cascade,
@@ -2486,56 +2490,6 @@ create table onchain.wallets (
 );
 
 create unique index wallets_user_verified_idx on onchain.wallets (user_id) where status = 'verified';
-
-create table onchain.mints (
-  id uuid primary key default extensions.gen_random_uuid(),
-  user_id uuid not null references identity.users(id) on delete cascade,
-  wallet_id uuid not null references onchain.wallets(id),
-  template_id text not null references catalog.templates(id),
-  operation_id uuid not null unique references operations.operations(id),
-  nft_number bigint generated always as identity (start with 0 minvalue 0) unique,
-  nonce uuid not null default extensions.gen_random_uuid() unique,
-  permit text,
-  status text not null default 'reserved' check (status in ('reserved', 'submitted', 'succeeded', 'failed', 'cancelled', 'unknown')),
-  permit_expires_at timestamptz not null,
-  transaction_hash text unique,
-  nft_address text unique,
-  metadata_uri text,
-  submitted_at timestamptz,
-  completed_at timestamptz,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
-create index mints_pending_idx on onchain.mints (status, created_at) where status in ('reserved', 'submitted', 'unknown');
-create index mints_user_created_idx on onchain.mints (user_id, created_at desc);
-create unique index mints_user_template_active_idx on onchain.mints (user_id, template_id) where status in ('reserved', 'submitted', 'unknown');
-
-create table onchain.nft_metadata (
-  nft_number bigint primary key,
-  mint_id uuid not null unique references onchain.mints(id),
-  snapshot jsonb not null,
-  checksum text not null,
-  created_at timestamptz not null default now()
-);
-
-create or replace function onchain.mint_json(p_mint onchain.mints)
-returns jsonb
-language sql
-stable
-set search_path = ''
-as $$
-  select jsonb_build_object(
-    'id', p_mint.id,
-    'template_id', p_mint.template_id,
-    'status', p_mint.status,
-    'nft_number', p_mint.nft_number,
-    'transaction_hash', p_mint.transaction_hash,
-    'permit_expires_at', p_mint.permit_expires_at,
-    'submitted_at', p_mint.submitted_at,
-    'completed_at', p_mint.completed_at
-  )
-$$;
 
 create or replace function api.wallet_get(p_session_id uuid)
 returns jsonb
@@ -2583,58 +2537,6 @@ begin
   insert into onchain.wallet_challenges (user_id, challenge, expires_at)
   values (v_user_id, p_payload, p_expires_at);
   return jsonb_build_object('payload', p_payload, 'expires_at', p_expires_at);
-end;
-$$;
-
-create or replace function api.mint_list(p_session_id uuid)
-returns jsonb
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-  v_user_id uuid := api.session_user(p_session_id);
-begin
-  return jsonb_build_object('mints', coalesce((
-    select jsonb_agg(onchain.mint_json(m) order by m.created_at desc)
-    from onchain.mints m where m.user_id = v_user_id
-  ), '[]'::jsonb));
-end;
-$$;
-
-create or replace function api.mint_get(p_session_id uuid, p_mint_id uuid)
-returns jsonb
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-  v_user_id uuid := api.session_user(p_session_id);
-  v_result jsonb;
-begin
-  select onchain.mint_json(m) into v_result
-  from onchain.mints m where m.id = p_mint_id and m.user_id = v_user_id;
-  if v_result is null then
-    perform api.raise_business_error('MINT_NOT_FOUND', 'Mint 记录不存在');
-  end if;
-  return v_result;
-end;
-$$;
-
-create or replace function api.mint_metadata(p_nft_id bigint)
-returns jsonb
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-  v_result jsonb;
-begin
-  select snapshot into v_result from onchain.nft_metadata where nft_number = p_nft_id;
-  if v_result is null then
-    perform api.raise_business_error('NFT_METADATA_NOT_FOUND', 'NFT 元数据不存在');
-  end if;
-  return v_result;
 end;
 $$;
 
@@ -2716,6 +2618,109 @@ begin
     get stacked diagnostics v_detail = pg_exception_detail;
     return operations.fail_command(p_operation_id, case when sqlstate = 'P0001' then sqlerrm else 'INTERNAL_ERROR' end, jsonb_build_object('detail', coalesce(v_detail, '{}')));
   end;
+end;
+$$;
+
+-- source: 71_mint.sql
+create table onchain.mints (
+  id uuid primary key default extensions.gen_random_uuid(),
+  user_id uuid not null references identity.users(id) on delete cascade,
+  wallet_id uuid not null references onchain.wallets(id),
+  template_id text not null references catalog.templates(id),
+  operation_id uuid not null unique references operations.operations(id),
+  nft_number bigint generated always as identity (start with 0 minvalue 0) unique,
+  nonce uuid not null default extensions.gen_random_uuid() unique,
+  permit text,
+  status text not null default 'reserved' check (status in ('reserved', 'submitted', 'succeeded', 'failed', 'cancelled', 'unknown')),
+  permit_expires_at timestamptz not null,
+  transaction_hash text unique,
+  nft_address text unique,
+  metadata_uri text,
+  submitted_at timestamptz,
+  completed_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index mints_pending_idx on onchain.mints (status, created_at) where status in ('reserved', 'submitted', 'unknown');
+create index mints_user_created_idx on onchain.mints (user_id, created_at desc);
+create unique index mints_user_template_active_idx on onchain.mints (user_id, template_id) where status in ('reserved', 'submitted', 'unknown');
+
+create table onchain.nft_metadata (
+  nft_number bigint primary key,
+  mint_id uuid not null unique references onchain.mints(id),
+  snapshot jsonb not null,
+  checksum text not null,
+  created_at timestamptz not null default now()
+);
+
+create or replace function onchain.mint_json(p_mint onchain.mints)
+returns jsonb
+language sql
+stable
+set search_path = ''
+as $$
+  select jsonb_build_object(
+    'id', p_mint.id,
+    'template_id', p_mint.template_id,
+    'status', p_mint.status,
+    'nft_number', p_mint.nft_number,
+    'transaction_hash', p_mint.transaction_hash,
+    'permit_expires_at', p_mint.permit_expires_at,
+    'submitted_at', p_mint.submitted_at,
+    'completed_at', p_mint.completed_at
+  )
+$$;
+
+create or replace function api.mint_list(p_session_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_user_id uuid := api.session_user(p_session_id);
+begin
+  return jsonb_build_object('mints', coalesce((
+    select jsonb_agg(onchain.mint_json(m) order by m.created_at desc)
+    from onchain.mints m where m.user_id = v_user_id
+  ), '[]'::jsonb));
+end;
+$$;
+
+create or replace function api.mint_get(p_session_id uuid, p_mint_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_user_id uuid := api.session_user(p_session_id);
+  v_result jsonb;
+begin
+  select onchain.mint_json(m) into v_result
+  from onchain.mints m where m.id = p_mint_id and m.user_id = v_user_id;
+  if v_result is null then
+    perform api.raise_business_error('MINT_NOT_FOUND', 'Mint 记录不存在');
+  end if;
+  return v_result;
+end;
+$$;
+
+create or replace function api.mint_metadata(p_nft_id bigint)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_result jsonb;
+begin
+  select snapshot into v_result from onchain.nft_metadata where nft_number = p_nft_id;
+  if v_result is null then
+    perform api.raise_business_error('NFT_METADATA_NOT_FOUND', 'NFT 元数据不存在');
+  end if;
+  return v_result;
 end;
 $$;
 
@@ -2855,7 +2860,7 @@ create table risk.refunds (
 
 create index refunds_payment_idx on risk.refunds (payment_id);
 
--- source: 90_integrations.sql
+-- source: 90_payment_callbacks.sql
 create or replace function payments.process_first_recharge(p_user_id uuid, p_operation_id uuid)
 returns void
 language plpgsql
@@ -3018,6 +3023,7 @@ begin
 end;
 $$;
 
+-- source: 91_mint_reconciliation.sql
 create or replace function api.mint_reconciliation_candidates(p_limit integer default 100)
 returns jsonb
 language sql

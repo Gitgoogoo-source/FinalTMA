@@ -1,10 +1,6 @@
 import { z } from "zod";
 
-import {
-  assetsSchema,
-  inventoryItemSchema,
-  vipStatusSchema,
-} from "../../common/models.ts";
+import { assetsSchema } from "../../common/models.ts";
 import { defineRoute } from "../../common/route.ts";
 import {
   emptyObjectSchema,
@@ -13,6 +9,8 @@ import {
   timestampSchema,
   uuidSchema,
 } from "../../common/schemas.ts";
+import { inventoryItemSchema } from "../inventory/models.ts";
+import { vipStatusSchema } from "../vip/models.ts";
 
 const marketTemplateSchema = z
   .object({

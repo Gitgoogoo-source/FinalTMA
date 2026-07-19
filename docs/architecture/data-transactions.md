@@ -2,7 +2,7 @@
 
 ## Schema 所有权
 
-`supabase/schemas` 按业务上下文编号：foundation、identity、catalog、operations、economy、inventory、gacha、expedition、wheel、market、payments、vip、tasks、referral、album、onchain、risk、integrations、jobs。同一文件拥有本领域表、约束、内部函数及查询/命令 RPC。
+`supabase/schemas` 按业务上下文编号。`catalog` 拥有链、模板、版本和共享固定属性；`33_decomposition.sql` 与 `43_evolution.sql` 分别拥有对应命令声明，进化保底表为 `evolution.pity`；`gacha` 拥有 `gacha.boxes`；`payments` 拥有 `payments.topup_products`；`70_wallet.sql` 与 `71_mint.sql` 分别声明钱包和 Mint，但继续使用内部 `onchain` schema；`90_payment_callbacks.sql` 与 `91_mint_reconciliation.sql` 分别声明支付回调和 Mint 对账。查询读模型 `api.catalog_get` 在所有依赖对象之后声明。
 
 ## 写入规则
 
@@ -14,4 +14,4 @@
 
 ## 迁移
 
-初始空库只有三个迁移：`*_baseline.sql`、`*_catalog_v1.sql`、`*_api_security.sql`。baseline 由声明式 Schema 确定，目录 DML 与安全权限显式迁移。初始基线进入真实测试环境后，只新增前向迁移，不覆盖现有迁移名或历史文件。
+初始空库只有三个迁移：`*_baseline.sql`、`*_product_data_v1.sql`、`*_api_security.sql`。baseline 由声明式 Schema 确定，product data 由 `tools/product_data/build.py` 统一生成，安全权限由显式迁移确定。初始基线进入真实测试环境后，只新增前向迁移，不覆盖现有迁移名或历史文件。

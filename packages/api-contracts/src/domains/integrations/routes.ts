@@ -1,7 +1,6 @@
 import { z } from "zod";
 
 import { defineRoute } from "../../common/route.ts";
-import { emptyObjectSchema } from "../../common/schemas.ts";
 
 const telegramUserSchema = z.object({
   id: z.number().int().positive(),
@@ -46,19 +45,6 @@ const telegramUpdateSchema = z.object({
 });
 
 export const integrationRoutes = [
-  defineRoute({
-    id: "telegram.payment_support",
-    method: "GET",
-    path: "/api/telegram/payment-support",
-    gateway: "app",
-    auth: false,
-    idempotent: false,
-    input: emptyObjectSchema,
-    output: z
-      .object({ command: z.literal("/paysupport"), text: z.string().min(1) })
-      .strict(),
-    errors: ["INTERNAL_ERROR"],
-  }),
   defineRoute({
     id: "telegram.webhook",
     method: "POST",

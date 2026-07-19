@@ -1,3 +1,2 @@
-export * from "./api.ts";
-export * from "./model.ts";
+export { VipBanner } from "./ui/VipBanner.tsx";
 export { VipDialog } from "./ui/VipDialog.tsx";

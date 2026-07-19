@@ -1,12 +1,13 @@
 import { z } from "zod";
 
-import { assetsSchema, boxSchema } from "../../common/models.ts";
+import { assetsSchema } from "../../common/models.ts";
 import { defineRoute } from "../../common/route.ts";
 import {
   boxTierSchema,
   emptyObjectSchema,
   raritySchema,
 } from "../../common/schemas.ts";
+import { boxSchema } from "./models.ts";
 
 const pitySchema = z
   .object({

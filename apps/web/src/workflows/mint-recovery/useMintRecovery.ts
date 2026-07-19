@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import type { RouteOutput } from "@pokepets/api-contracts";
+import type { RouteOutput } from "@pokepets/api-contracts/app";
 
 import { queryClient } from "../../platform/query/index.ts";
 import { getSession } from "../../platform/session/store.ts";

@@ -1,10 +1,10 @@
 import { randomUUID } from "node:crypto";
 
-import type { AppRoute, Gateway } from "@pokepets/api-contracts";
+import type { Gateway, RouteDefinition } from "@pokepets/api-contracts/common";
 
-import { handlerFor } from "../domains/index.ts";
 import { writeLog } from "../platform/logging/index.ts";
 import { normalizeError } from "./errors.ts";
+import type { RouteHandler } from "./handlers.ts";
 import {
   authenticateGateway,
   authenticateRoute,
@@ -12,22 +12,35 @@ import {
   parseInput,
 } from "./middleware.ts";
 import { failureResponse, successResponse } from "./response.ts";
+import type { RouteMatcher } from "./router.ts";
 import { matchRequest } from "./router.ts";
 
-export function createGateway(
-  gateway: Gateway,
+export type GatewayRegistry<Route extends RouteDefinition> = {
+  gateway: Gateway;
+  findRoute: RouteMatcher<Route>["findRoute"];
+  findRouteByPath: RouteMatcher<Route>["findRouteByPath"];
+  handlers: Readonly<Record<Route["id"], RouteHandler>>;
+};
+
+export function createGateway<Route extends RouteDefinition>(
+  registry: GatewayRegistry<Route>,
 ): (request: Request) => Promise<Response> {
+  const { gateway, handlers } = registry;
   return async (request) => {
     const requestId = randomUUID();
     const startedAt = Date.now();
-    let route: AppRoute | null = null;
+    let route: Route | null = null;
     try {
       authenticateGateway(request, gateway);
-      const match = matchRequest(request, gateway);
+      const match = matchRequest(request, registry);
       route = match.route;
       const session = await authenticateRoute(request, route);
       const input = await parseInput(request, route, gateway, match.params);
-      const result = await handlerFor(route.id)({
+      const handler = (handlers as Readonly<Record<string, RouteHandler>>)[
+        route.id
+      ];
+      if (!handler) throw new Error(`Missing handler: ${route.id}`);
+      const result = await handler({
         request,
         input,
         session,

@@ -1,10 +1,10 @@
-import type { AppRoute } from "@pokepets/api-contracts";
+import type { RouteDefinition } from "@pokepets/api-contracts/common";
 
-import type { HandlerResult } from "../domains/types.ts";
+import type { HandlerResult } from "./handlers.ts";
 import { ApiError } from "./errors.ts";
 
 export function successResponse(
-  route: AppRoute,
+  route: RouteDefinition,
   result: HandlerResult,
   requestId: string,
 ): Response {

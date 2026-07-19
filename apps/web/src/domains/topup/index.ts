@@ -1,3 +1,2 @@
-export * from "./api.ts";
-export * from "./model.ts";
+export type { PaymentOrder } from "./types.ts";
 export { TopupDialog } from "./ui/TopupDialog.tsx";

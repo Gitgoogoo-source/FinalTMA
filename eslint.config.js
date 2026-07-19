@@ -40,14 +40,16 @@ export default tseslint.config(
       "no-restricted-imports": [
         "error",
         {
+          paths: [
+            "@pokepets/api-contracts",
+            "@pokepets/api-contracts/common",
+            "@pokepets/api-contracts/integrations",
+            "@pokepets/api-contracts/jobs",
+            "@pokepets/api-contracts/server",
+          ],
           patterns: [
             {
-              group: [
-                "@pokepets/api",
-                "@pokepets/api/*",
-                "@pokepets/api-contracts/*",
-                "@supabase/*",
-              ],
+              group: ["@pokepets/api", "@pokepets/api/*", "@supabase/*"],
               message: "Web 只能依赖公开 API 契约。",
             },
           ],

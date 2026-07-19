@@ -1,17 +1,20 @@
+create table gacha.boxes (
+  tier text primary key check (tier in ('normal', 'rare', 'legendary')),
+  display_name text not null,
+  image_path text not null unique,
+  single_price bigint not null check (single_price > 0),
+  ten_price bigint not null check (ten_price = single_price * 9),
+  pity_limit smallint not null check (pity_limit > 0),
+  pity_rarity text not null check (pity_rarity in ('rare', 'epic', 'legendary')),
+  rarity_weights jsonb not null
+);
+
 create table gacha.pity (
   user_id uuid not null references identity.users(id) on delete cascade,
-  tier text not null references catalog.boxes(tier),
+  tier text not null references gacha.boxes(tier),
   progress smallint not null default 0 check (progress >= 0),
   updated_at timestamptz not null default now(),
   primary key (user_id, tier)
-);
-
-create table gacha.evolution_pity (
-  user_id uuid not null references identity.users(id) on delete cascade,
-  from_template_id text not null references catalog.templates(id),
-  failures smallint not null default 0 check (failures >= 0),
-  updated_at timestamptz not null default now(),
-  primary key (user_id, from_template_id)
 );
 
 create or replace function api.gacha_bootstrap(p_session_id uuid)
@@ -26,7 +29,7 @@ begin
   return jsonb_build_object(
     'boxes', coalesce((
       select jsonb_agg(to_jsonb(b) order by case b.tier when 'normal' then 1 when 'rare' then 2 else 3 end)
-      from catalog.boxes b
+      from gacha.boxes b
     ), '[]'::jsonb),
     'pity', coalesce((
       select jsonb_agg(jsonb_build_object(
@@ -35,7 +38,7 @@ begin
         'limit', b.pity_limit,
         'target_rarity', b.pity_rarity
       ) order by case b.tier when 'normal' then 1 when 'rare' then 2 else 3 end)
-      from catalog.boxes b
+      from gacha.boxes b
       left join gacha.pity p on p.user_id = v_user_id and p.tier = b.tier
     ), '[]'::jsonb),
     'entitlements', jsonb_build_object(
@@ -61,7 +64,7 @@ declare
   v_operation operations.operations%rowtype;
   v_replay jsonb;
   v_user_id uuid;
-  v_box catalog.boxes%rowtype;
+  v_box gacha.boxes%rowtype;
   v_template catalog.templates%rowtype;
   v_entitlement_id uuid;
   v_entitlement_kind text;
@@ -87,7 +90,7 @@ begin
     if p_draw_count not in (1, 10) then
       perform api.raise_business_error('DRAW_COUNT_INVALID', '开盒次数无效');
     end if;
-    select * into v_box from catalog.boxes where tier = p_tier;
+    select * into v_box from gacha.boxes where tier = p_tier;
     if v_box.tier is null then perform api.raise_business_error('BOX_TIER_INVALID', '盲盒档次无效'); end if;
 
     if p_draw_count = 1 and p_tier in ('normal', 'rare') then

@@ -21,10 +21,12 @@
 ## 依赖方向
 
 ```text
-apps/web -> packages/api-contracts
-api -> apps/api/http
-apps/api/http -> apps/api/domains + apps/api/workflows
-apps/api/domains -> packages/api-contracts + api schema RPC
+apps/web -> @pokepets/api-contracts/app
+api -> apps/api/entrypoints
+apps/api/entrypoints -> gateway-specific contracts + http
+apps/api/http -> injected route registry + handler map
+apps/api/domains -> one api schema RPC per handler
+apps/api/workflows -> domain capabilities + platform adapters
 api schema RPC -> private database schemas
 contracts/ton -> TON blockchain
 ```
@@ -51,7 +53,9 @@ contracts/ton -> TON blockchain
 
 - `generated/catalog/catalog-v1.json`
 - `packages/api-contracts/openapi/openapi.json`
-- `supabase/migrations/*.sql`
+- `supabase/migrations/*_baseline.sql`
+- `supabase/migrations/*_product_data_v1.sql`
+- `supabase/migrations/*_api_security.sql`
 - `apps/web/public/tonconnect-manifest.json`
 
 生成物禁止手工维护；漂移检查必须在临时目录生成后比较。
@@ -64,3 +68,4 @@ contracts/ton -> TON blockchain
 - [操作恢复](operation-recovery.md)
 - [安全边界](security-boundaries.md)
 - [技术裁决](adr/ADR-001-runtime-and-deployment.md)
+- [模块边界与网关隔离](adr/ADR-007-module-boundaries-and-gateway-isolation.md)

@@ -4,12 +4,9 @@ import { rpc } from "../../platform/db/index.ts";
 import { getEnv } from "../../platform/env/index.ts";
 import { issueToken, referralCode } from "../../platform/session.ts";
 import { verifyTelegramInitData } from "../../platform/telegram/initData.ts";
-import { requireSession, type HandlerMap } from "../types.ts";
+import { requireSession, type HandlerMap } from "../../http/handlers.ts";
 
 export const identityHandlers = {
-  "health.get": async () => ({
-    data: { status: "ok", service: "pokepets", time: new Date().toISOString() },
-  }),
   "identity.authenticate": async (context) => {
     const initData = String(context.input.init_data);
     const source =

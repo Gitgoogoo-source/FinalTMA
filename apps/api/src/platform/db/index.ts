@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { errorDefinition, isErrorCode } from "@pokepets/api-contracts";
+import { errorDefinition, isErrorCode } from "@pokepets/api-contracts/common";
 
 import { ApiError } from "../../http/errors.ts";
 import { getEnv } from "../env/index.ts";

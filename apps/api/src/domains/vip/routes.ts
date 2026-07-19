@@ -3,12 +3,12 @@ import { createStarsOrder } from "../../workflows/stars-payment/create-order.ts"
 import {
   operationResult,
   type OperationEnvelope,
-} from "../operations/mappers.ts";
+} from "../../http/operation-result.ts";
 import {
   requireOperationId,
   requireSession,
   type HandlerMap,
-} from "../types.ts";
+} from "../../http/handlers.ts";
 
 export const vipHandlers = {
   "vip.get": async (context) => ({

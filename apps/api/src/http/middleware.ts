@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import type { AppRoute, Gateway } from "@pokepets/api-contracts";
+import type { Gateway, RouteDefinition } from "@pokepets/api-contracts/common";
 
 import { resolveSession, type Session } from "../platform/session.ts";
 import { getEnv } from "../platform/env/index.ts";
@@ -24,14 +24,14 @@ export function authenticateGateway(request: Request, gateway: Gateway): void {
 
 export async function authenticateRoute(
   request: Request,
-  route: AppRoute,
+  route: RouteDefinition,
 ): Promise<Session | null> {
   return route.auth ? resolveSession(request) : null;
 }
 
 export function idempotencyKey(
   request: Request,
-  route: AppRoute,
+  route: RouteDefinition,
 ): string | null {
   if (!route.idempotent) return null;
   const value = request.headers.get("idempotency-key");
@@ -43,7 +43,7 @@ export function idempotencyKey(
 
 export async function parseInput(
   request: Request,
-  route: AppRoute,
+  route: RouteDefinition,
   gateway: Gateway,
   params: Record<string, string>,
 ): Promise<Record<string, unknown>> {
@@ -89,7 +89,10 @@ export async function parseInput(
   return validate(route, { ...(body as Record<string, unknown>), ...params });
 }
 
-function validate(route: AppRoute, input: unknown): Record<string, unknown> {
+function validate(
+  route: RouteDefinition,
+  input: unknown,
+): Record<string, unknown> {
   const result = route.input.safeParse(input);
   if (!result.success)
     throw new ApiError(400, "REQUEST_INVALID", "请求参数无效", false, {

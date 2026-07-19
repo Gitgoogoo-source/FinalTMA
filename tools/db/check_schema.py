@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import argparse
 import subprocess
 import sys
 import tempfile
@@ -20,21 +21,26 @@ EXPECTED_SCHEMA_NAMES = {
     "30_operations.sql",
     "31_economy.sql",
     "32_inventory.sql",
+    "33_decomposition.sql",
     "40_gacha.sql",
     "41_expedition.sql",
     "42_wheel.sql",
+    "43_evolution.sql",
     "50_market.sql",
     "60_payments.sql",
     "61_vip.sql",
     "62_tasks.sql",
     "63_referral.sql",
     "64_album.sql",
-    "70_onchain.sql",
+    "65_catalog_api.sql",
+    "70_wallet.sql",
+    "71_mint.sql",
     "80_risk.sql",
-    "90_integrations.sql",
+    "90_payment_callbacks.sql",
+    "91_mint_reconciliation.sql",
     "95_jobs.sql",
 }
-EXPECTED_SUFFIXES = ("_baseline.sql", "_catalog_v1.sql", "_api_security.sql")
+EXPECTED_SUFFIXES = ("_baseline.sql", "_product_data_v1.sql", "_api_security.sql")
 ERROR_REGISTRY = ROOT / "packages/api-contracts/src/common/errors.ts"
 SUPABASE_CONFIG = ROOT / "supabase/config.toml"
 
@@ -112,6 +118,9 @@ def verify_database_boundaries() -> None:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--write-baseline", action="store_true")
+    args = parser.parse_args()
     schema_names = {path.name for path in SCHEMAS.glob("*.sql")}
     if schema_names != EXPECTED_SCHEMA_NAMES:
         raise SystemExit(f"Schema inventory mismatch: {sorted(schema_names)}")
@@ -119,9 +128,11 @@ def main() -> None:
     migrations = sorted(MIGRATIONS.glob("*.sql"))
     if len(migrations) != 3:
         raise SystemExit(f"Expected three initial migrations, found {[path.name for path in migrations]}")
-    baseline, catalog, security = (one_migration(suffix) for suffix in EXPECTED_SUFFIXES)
-    if not (baseline.name < catalog.name < security.name):
-        raise SystemExit("Migration order must be baseline, catalog_v1, api_security")
+    baseline, product_data, security = (one_migration(suffix) for suffix in EXPECTED_SUFFIXES)
+    if not (baseline.name < product_data.name < security.name):
+        raise SystemExit("Migration order must be baseline, product_data_v1, api_security")
+    if args.write_baseline:
+        baseline.write_text(rendered_baseline(), encoding="utf-8")
     if baseline.read_text(encoding="utf-8") != rendered_baseline():
         raise SystemExit("Baseline migration does not match declarative schemas")
     verify_security(security)
@@ -130,21 +141,21 @@ def main() -> None:
 
     with tempfile.TemporaryDirectory(prefix="pokepets-db-check-") as temporary:
         output = Path(temporary)
-        generated_catalog = output / catalog.name
+        generated_product_data = output / product_data.name
         subprocess.run(
             [
                 "python3",
-                "tools/catalog/build.py",
+                "tools/product_data/build.py",
                 "--migration-path",
-                str(generated_catalog),
+                str(generated_product_data),
                 "--manifest-path",
                 str(output / "catalog-v1.json"),
             ],
             cwd=ROOT,
             check=True,
         )
-        if catalog.read_bytes() != generated_catalog.read_bytes():
-            print("Catalog migration is stale", file=sys.stderr)
+        if product_data.read_bytes() != generated_product_data.read_bytes():
+            print("Product data migration is stale", file=sys.stderr)
             raise SystemExit(1)
     print("declarative schemas and three initial migrations are synchronized")
 

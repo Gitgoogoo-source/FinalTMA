@@ -6,7 +6,7 @@ import {
   type RouteId,
   type RouteInput,
   type RouteOutput,
-} from "@pokepets/api-contracts";
+} from "@pokepets/api-contracts/app";
 
 import {
   clearSessionCache,

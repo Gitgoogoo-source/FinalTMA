@@ -5,7 +5,7 @@ import { useApiQuery } from "../../../platform/query/index.ts";
 import { telegram } from "../../../platform/telegram/index.ts";
 import { Button } from "../../../shared/ui/index.tsx";
 import { useOperationRegistry } from "../../../workflows/operation-recovery/index.ts";
-import type { TopupRequest } from "../../../workflows/navigation-intent-resume/index.ts";
+import type { TopupRequest } from "../../../workflows/payment-recovery/index.ts";
 
 export function TopupDialog({
   close,

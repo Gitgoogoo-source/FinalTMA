@@ -1,7 +1,14 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 import { MarketView } from "../../domains/market/index.ts";
+import { VipBanner, VipDialog } from "../../domains/vip/index.ts";
 
 export function MarketPage(): ReactNode {
-  return <MarketView />;
+  const [vipOpen, setVipOpen] = useState(false);
+  return (
+    <>
+      <MarketView vipBanner={<VipBanner open={() => setVipOpen(true)} />} />
+      {vipOpen && <VipDialog close={() => setVipOpen(false)} />}
+    </>
+  );
 }

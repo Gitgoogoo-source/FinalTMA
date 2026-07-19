@@ -1,4 +1,4 @@
-import type { RecoverableRouteId } from "@pokepets/api-contracts";
+import type { RecoverableRouteId } from "@pokepets/api-contracts/app";
 
 const labels: Partial<Record<RecoverableRouteId, string>> = {
   "album.claim": "正在领取图鉴奖励",

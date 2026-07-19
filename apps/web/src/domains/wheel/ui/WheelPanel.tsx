@@ -5,7 +5,7 @@ import { useSearchParams } from "react-router-dom";
 import { useApiQuery } from "../../../platform/query/index.ts";
 import { Button, Card } from "../../../shared/ui/index.tsx";
 import { useOperationRegistry } from "../../../workflows/operation-recovery/index.ts";
-import { useNavigationIntent } from "../../../workflows/navigation-intent-resume/index.ts";
+import { useNavigationIntent } from "../../../workflows/payment-recovery/index.ts";
 
 export function WheelPanel(): ReactNode {
   const query = useApiQuery("wheel.get");
