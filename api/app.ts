@@ -1,3 +1,3 @@
 import { createAppGateway } from "@pokepets/api/entrypoints";
 
-export default createAppGateway();
+export default { fetch: createAppGateway() };

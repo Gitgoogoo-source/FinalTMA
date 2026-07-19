@@ -11,7 +11,7 @@ Vercel 将根目录三个 Function 入口编译为 JavaScript，但不会把 wor
 
 ## 决策
 
-`@pokepets/api` 与 `@pokepets/api-contracts` 增加独立 TypeScript 构建配置。类型条件固定指向 `src/*.ts`，运行时条件固定指向 `dist/*.js`；构建阶段必须先生成两个 workspace 的 `dist`，再构建 Web 和打包 Vercel Functions。根目录三个 Function 入口仍只依赖 `@pokepets/api/entrypoints`，不绕过模块边界。
+`@pokepets/api` 与 `@pokepets/api-contracts` 增加独立 TypeScript 构建配置。类型条件固定指向 `src/*.ts`，运行时条件固定指向 `dist/*.js`；构建阶段必须先生成两个 workspace 的 `dist`，再构建 Web 和打包 Vercel Functions。根目录三个 Function 入口仍只依赖 `@pokepets/api/entrypoints`，并以 Vercel 支持的 `export default { fetch }` Web Standard 签名返回 `Response`，不绕过模块边界。
 
 数据库适配器只解析 `SUPABASE_URL` 与 `SUPABASE_SERVICE_ROLE_KEY`。需要 Telegram、TON、会话、Cron 或支付支持配置的模块继续通过全量 `getEnv()` 校验自身真实配置；不得以占位值绕过校验。
 
