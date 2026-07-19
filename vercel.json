@@ -6,7 +6,9 @@
   "devCommand": "pnpm --filter @pokepets/web dev",
   "outputDirectory": "apps/web/dist",
   "functions": {
-    "api/*.ts": { "maxDuration": 30 }
+    "api/app.ts": { "maxDuration": 30 },
+    "api/integrations.ts": { "maxDuration": 30 },
+    "api/jobs.ts": { "maxDuration": 300 }
   },
   "crons": [
     { "path": "/api/jobs/reconcile-payments", "schedule": "*/5 * * * *" },

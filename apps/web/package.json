@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@pokepets/contracts": "workspace:*",
+    "@pokepets/api-contracts": "workspace:*",
     "@tanstack/react-query": "5.100.11",
     "@ton/core": "0.63.1",
     "@tonconnect/ui-react": "2.4.4",

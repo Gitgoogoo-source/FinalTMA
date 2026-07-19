@@ -1,16 +1,17 @@
 import { LoaderCircle, RotateCw } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { RestrictedView } from "../domains/risk/index.ts";
 import { Button } from "../shared/ui/index.tsx";
 import { useSession } from "../platform/session/store.ts";
-import { useBootstrap } from "./bootstrap/useBootstrap.ts";
+import { useBootstrap } from "../workflows/session-bootstrap/index.ts";
 import { AppRouter } from "./router/AppRouter.tsx";
 
 export function App(): ReactNode {
   const bootstrap = useBootstrap();
   const session = useSession();
   if (bootstrap.phase === "banned" || session?.accountStatus === "banned")
-    return <div className="banned" />;
+    return <RestrictedView />;
   if (session?.recovering)
     return (
       <main className="startup">

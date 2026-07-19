@@ -5,7 +5,7 @@
   },
   "include": [
     "api/*.ts",
-    "packages/server/src/**/*.ts",
-    "packages/contracts/src/**/*.ts"
+    "apps/api/src/**/*.ts",
+    "packages/api-contracts/src/**/*.ts"
   ]
 }

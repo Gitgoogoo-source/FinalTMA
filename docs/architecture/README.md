@@ -1,4 +1,4 @@
-# PokePets 运行架构
+# PokePets 系统总览
 
 ## 事实来源
 
@@ -21,11 +21,12 @@
 ## 依赖方向
 
 ```text
-apps/web -> packages/contracts
-api -> packages/server/http
-packages/server/http -> packages/server/modules
-packages/server/modules -> packages/contracts + api schema RPC
+apps/web -> packages/api-contracts
+api -> apps/api/http
+apps/api/http -> apps/api/domains + apps/api/workflows
+apps/api/domains -> packages/api-contracts + api schema RPC
 api schema RPC -> private database schemas
+contracts/ton -> TON blockchain
 ```
 
 禁止反向依赖、跨领域深层导入、浏览器访问 Supabase、Node 层组合多次资产写入。
@@ -40,17 +41,26 @@ api schema RPC -> private database schemas
 
 ## 数据库权限
 
-内部 schema 对 `public`、`anon`、`authenticated` 和 `service_role` 撤销直接表权限。`service_role` 只获得 `api` schema 中明确列出的函数执行权。玩家 RPC 使用 `session_id` 再次验证会话、账号和资源归属。
+内部 schema 对 `public`、`anon`、`authenticated` 和 `service_role` 撤销 schema、表、序列和函数权限。`service_role` 只获得 `api` schema 的使用权和其中函数的执行权。玩家 RPC 使用 `session_id` 再次验证会话、账号和资源归属。
 
 ## 操作恢复
 
-写操作状态固定为 `pending`、`succeeded`、`failed`、`unknown`。随机结果和资产结果只生成一次。前端遇到 `unknown` 后禁止相关导航，只通过 `GET /api/operations/:operation_id` 恢复原操作。
+前端内存操作阶段固定为 `confirming → submitting → pending/unknown → succeeded/failed`；数据库持久状态为 `pending`、`unknown`、`succeeded`、`failed`。随机结果和资产结果只生成一次。`unknown` 仅阻止同一 `use_case` 再次提交，不阻断主导航；恢复只查询原 `operation_id`。
 
 ## 生成物
 
 - `generated/catalog/catalog-v1.json`
-- `packages/contracts/openapi/openapi.json`
+- `packages/api-contracts/openapi/openapi.json`
 - `supabase/migrations/*.sql`
 - `apps/web/public/tonconnect-manifest.json`
 
 生成物禁止手工维护；漂移检查必须在临时目录生成后比较。
+
+## 架构资料
+
+- [领域映射](domain-map.md)
+- [运行时](runtime.md)
+- [事务与数据](data-transactions.md)
+- [操作恢复](operation-recovery.md)
+- [安全边界](security-boundaries.md)
+- [技术裁决](adr/ADR-001-runtime-and-deployment.md)

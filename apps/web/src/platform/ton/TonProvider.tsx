@@ -1,6 +1,8 @@
 import { TonConnectUIProvider } from "@tonconnect/ui-react";
 import type { ReactNode } from "react";
 
+import { getWebPublicConfig } from "../env/index.ts";
+
 export default function TonProvider({
   children,
 }: {
@@ -8,7 +10,7 @@ export default function TonProvider({
 }): ReactNode {
   return (
     <TonConnectUIProvider
-      manifestUrl={`${window.location.origin}/tonconnect-manifest.json`}
+      manifestUrl={getWebPublicConfig().tonConnectManifestUrl}
     >
       {children}
     </TonConnectUIProvider>

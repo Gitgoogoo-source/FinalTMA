@@ -9,9 +9,35 @@ declare
   v_count integer := 0;
   v_added integer := 0;
   v_row record;
+  v_scan_from timestamptz;
+  v_scan_to timestamptz := now();
+  v_active_run operations.job_runs%rowtype;
 begin
   if p_job_name not in ('reconcile-payments', 'reconcile-mints', 'cleanup-idempotency', 'monitor-invariants') then perform api.raise_business_error('JOB_NOT_FOUND', '后台任务不存在'); end if;
-  insert into operations.job_runs (job_name, status) values (p_job_name, 'running') returning id into v_run;
+  select max(finished_at) into v_scan_from from operations.job_runs where job_name = p_job_name and status = 'succeeded';
+  if not pg_try_advisory_xact_lock(hashtextextended('pokepets:job:' || p_job_name, 0)) then
+    insert into operations.job_runs (job_name, status, details, scan_from, scan_to, finished_at)
+    values (p_job_name, 'skipped', jsonb_build_object('reason', 'already_running'), v_scan_from, v_scan_to, now())
+    returning id into v_run;
+    return jsonb_build_object('job_run_id', v_run, 'job_name', p_job_name, 'status', 'skipped', 'processed_count', 0, 'scan_from', v_scan_from, 'scan_to', v_scan_to);
+  end if;
+  if p_job_name = 'reconcile-mints' then
+    select * into v_active_run from operations.job_runs
+    where job_name = p_job_name and status = 'running'
+    order by started_at desc limit 1 for update;
+    if v_active_run.id is not null and v_active_run.started_at > now() - interval '10 minutes' then
+      insert into operations.job_runs (job_name, status, details, scan_from, scan_to, finished_at)
+      values (p_job_name, 'skipped', jsonb_build_object('reason', 'active_lease', 'active_job_run_id', v_active_run.id), v_scan_from, v_scan_to, now())
+      returning id into v_run;
+      return jsonb_build_object('job_run_id', v_run, 'job_name', p_job_name, 'status', 'skipped', 'processed_count', 0, 'scan_from', v_scan_from, 'scan_to', v_scan_to);
+    elsif v_active_run.id is not null then
+      update operations.job_runs
+      set status = 'failed', details = jsonb_build_object('error', 'lease_expired'), finished_at = now()
+      where id = v_active_run.id;
+    end if;
+  end if;
+  insert into operations.job_runs (job_name, status, scan_from, scan_to) values (p_job_name, 'running', v_scan_from, v_scan_to) returning id into v_run;
+  begin
   if p_job_name = 'reconcile-payments' then
     with expired as (
       update payments.orders set status = 'expired', updated_at = now()
@@ -71,10 +97,51 @@ begin
     on conflict do nothing;
     get diagnostics v_added = row_count; v_count := v_count + v_added;
   end if;
+  if p_job_name = 'reconcile-mints' then
+    update operations.job_runs set processed_count = v_count, details = jsonb_build_object('phase', 'chain_reconciliation') where id = v_run;
+    return jsonb_build_object('job_run_id', v_run, 'job_name', p_job_name, 'status', 'running', 'processed_count', v_count, 'scan_from', v_scan_from, 'scan_to', v_scan_to);
+  end if;
   update operations.job_runs set status = 'succeeded', processed_count = v_count, finished_at = now() where id = v_run;
-  return jsonb_build_object('job_run_id', v_run, 'job_name', p_job_name, 'processed_count', v_count);
+  return jsonb_build_object('job_run_id', v_run, 'job_name', p_job_name, 'status', 'succeeded', 'processed_count', v_count, 'scan_from', v_scan_from, 'scan_to', v_scan_to);
 exception when others then
-  if v_run is not null then update operations.job_runs set status = 'failed', details = jsonb_build_object('error', sqlerrm), finished_at = now() where id = v_run; end if;
-  raise;
+  update operations.job_runs set status = 'failed', details = jsonb_build_object('error', sqlerrm), finished_at = now() where id = v_run;
+  return jsonb_build_object('job_run_id', v_run, 'job_name', p_job_name, 'status', 'failed', 'processed_count', v_count, 'scan_from', v_scan_from, 'scan_to', v_scan_to, 'error', sqlerrm);
+  end;
+end;
+$$;
+
+create or replace function api.finish_job(
+  p_job_run_id uuid,
+  p_processed_count integer,
+  p_details jsonb,
+  p_error text default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_run operations.job_runs%rowtype;
+begin
+  select * into v_run from operations.job_runs where id = p_job_run_id for update;
+  if v_run.id is null or v_run.status <> 'running' then
+    perform api.raise_business_error('JOB_NOT_FOUND', '后台任务运行不存在或已经结束');
+  end if;
+  update operations.job_runs
+  set status = case when p_error is null then 'succeeded' else 'failed' end,
+      processed_count = greatest(0, p_processed_count),
+      details = coalesce(p_details, '{}'::jsonb) || case when p_error is null then '{}'::jsonb else jsonb_build_object('error', p_error) end,
+      finished_at = now()
+  where id = p_job_run_id
+  returning * into v_run;
+  return jsonb_build_object(
+    'job_run_id', v_run.id,
+    'job_name', v_run.job_name,
+    'status', v_run.status,
+    'processed_count', v_run.processed_count,
+    'scan_from', v_run.scan_from,
+    'scan_to', v_run.scan_to
+  );
 end;
 $$;

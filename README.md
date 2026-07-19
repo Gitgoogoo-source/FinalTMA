@@ -1,0 +1,29 @@
+# PokePets Telegram Mini App
+
+PokePets 是盲盒类 Telegram Mini App。产品唯一事实来源是 [功能说明文档](docs/product/功能说明文档.md)，技术边界从 [系统总览](docs/architecture/README.md) 开始，发布与验收从 [发布手册](docs/operations/release.md) 开始。
+
+## 项目结构
+
+```text
+api/                    Vercel 三个薄网关
+apps/web/               React + Vite Mini App
+apps/api/               Functions 领域、工作流与平台适配
+packages/api-contracts/ REST 契约、错误注册表与 OpenAPI
+contracts/ton/          Tact 合约、部署与验证命令
+supabase/schemas/       声明式业务 Schema
+supabase/migrations/    baseline、catalog_v1、api_security
+generated/              目录与资产校验清单
+tools/                  契约、目录、数据库、资产、Manifest 门禁
+docs/                   产品、架构、ADR 与运维资料
+```
+
+## 静态门禁
+
+```sh
+pnpm install --frozen-lockfile
+pnpm validate:static
+pnpm chain:build
+pnpm assets:check:production
+```
+
+`pnpm build` 不编译 TON 合约。项目不包含本地功能测试；功能验收只在独立真实测试环境按 [验收清单](docs/operations/acceptance.md) 执行。

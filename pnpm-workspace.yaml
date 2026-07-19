@@ -1,7 +1,7 @@
 packages:
   - "apps/*"
   - "packages/*"
-  - "chain/*"
+  - "contracts/*"
 
 allowBuilds:
   esbuild: true

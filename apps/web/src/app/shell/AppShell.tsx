@@ -9,25 +9,24 @@ import {
   ShoppingBasket,
   WalletCards,
 } from "lucide-react";
-import {
-  lazy,
-  Suspense,
-  useEffect,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { lazy, Suspense, useCallback, useState, type ReactNode } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import { useApiQuery } from "../../platform/query/index.ts";
-import { useOperation } from "../../shared/feedback/OperationContext.ts";
 import { Button } from "../../shared/ui/index.tsx";
-import { TopupDialog } from "../../features/topup/index.ts";
-import { VipDialog } from "../../features/vip/index.ts";
+import { TopupDialog } from "../../domains/topup/index.ts";
+import { VipDialog } from "../../domains/vip/index.ts";
+import { useMintRecovery } from "../../workflows/mint-recovery/index.ts";
+import {
+  useNavigationIntent,
+  useNavigationIntentResume,
+} from "../../workflows/navigation-intent-resume/index.ts";
+import { useBlockingOperationRecovery } from "../../workflows/operation-recovery/index.ts";
+import { useStarsPaymentRecovery } from "../../workflows/stars-payment-recovery/index.ts";
 
 const WalletDialog = lazy(() =>
-  import("../../features/wallet/index.ts").then((module) => ({
-    default: module.WalletDialog,
+  import("../../domains/wallet/index.ts").then((module) => ({
+    default: module.WalletCapabilityDialog,
   })),
 );
 
@@ -42,25 +41,31 @@ const navigation = [
 export function AppShell(): ReactNode {
   const bootstrap = useApiQuery("identity.bootstrap");
   const vip = useApiQuery("vip.get");
-  const wallet = useApiQuery("wallet.get");
   const pendingPayments = useApiQuery("topup.bootstrap");
   const [dialog, setDialog] = useState<"topup" | "vip" | "wallet" | null>(null);
-  const paymentRecoveryShown = useRef(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { blocked } = useOperation();
+  const { topupRequest, clearTopupRequest } = useNavigationIntent();
+  const activeDialog = topupRequest ? "topup" : dialog;
+  const openPaymentRecovery = useCallback(
+    (kind: "kcoin_topup" | "vip") =>
+      setDialog(kind === "vip" ? "vip" : "topup"),
+    [],
+  );
+  const recoveryPayments = bootstrap.data?.pending_payments.length
+    ? bootstrap.data.pending_payments
+    : pendingPayments.data?.orders;
+  const resumeNavigation = useCallback(() => {
+    clearTopupRequest();
+    setDialog(null);
+  }, [clearTopupRequest]);
+  useBlockingOperationRecovery(bootstrap.data?.blocking_operations);
+  useMintRecovery(bootstrap.data?.pending_mints);
+  useStarsPaymentRecovery(recoveryPayments, openPaymentRecovery);
+  useNavigationIntentResume(pendingPayments.data?.orders, resumeNavigation);
   const kcoin = bootstrap.data?.assets.kcoin;
   const fgems = bootstrap.data?.assets.fgems;
   const user = bootstrap.data?.user;
-  useEffect(() => {
-    if (
-      !paymentRecoveryShown.current &&
-      (pendingPayments.data?.orders.length ?? 0) > 0
-    ) {
-      paymentRecoveryShown.current = true;
-      setDialog("topup");
-    }
-  }, [pendingPayments.data]);
   return (
     <div className="app-shell">
       <header className="topbar">
@@ -74,7 +79,12 @@ export function AppShell(): ReactNode {
           </div>
         </div>
         <div className="asset-actions">
-          <button onClick={() => setDialog("topup")}>
+          <button
+            onClick={() => {
+              clearTopupRequest();
+              setDialog("topup");
+            }}
+          >
             <Coins />
             <span>{kcoin?.available ?? (bootstrap.isLoading ? "…" : "—")}</span>
           </button>
@@ -87,10 +97,7 @@ export function AppShell(): ReactNode {
               <Crown />
             </button>
           )}
-          <button
-            className={wallet.data?.connected ? "active" : ""}
-            onClick={() => setDialog("wallet")}
-          >
+          <button onClick={() => setDialog("wallet")}>
             <WalletCards />
           </button>
           <Button
@@ -99,7 +106,7 @@ export function AppShell(): ReactNode {
             onClick={() => {
               void bootstrap.refetch();
               void vip.refetch();
-              void wallet.refetch();
+              void pendingPayments.refetch();
             }}
           >
             <RefreshCw />
@@ -122,7 +129,6 @@ export function AppShell(): ReactNode {
                 ? "active"
                 : ""
             }
-            disabled={blocked}
             onClick={() => navigate(path)}
           >
             <Icon />
@@ -130,9 +136,17 @@ export function AppShell(): ReactNode {
           </button>
         ))}
       </nav>
-      {dialog === "topup" && <TopupDialog close={() => setDialog(null)} />}
-      {dialog === "vip" && <VipDialog close={() => setDialog(null)} />}
-      {dialog === "wallet" && (
+      {activeDialog === "topup" && (
+        <TopupDialog
+          request={topupRequest}
+          close={() => {
+            clearTopupRequest();
+            setDialog(null);
+          }}
+        />
+      )}
+      {activeDialog === "vip" && <VipDialog close={() => setDialog(null)} />}
+      {activeDialog === "wallet" && (
         <Suspense fallback={<div className="modal-backdrop">正在加载钱包</div>}>
           <WalletDialog close={() => setDialog(null)} />
         </Suspense>

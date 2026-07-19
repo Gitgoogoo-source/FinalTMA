@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 PRODUCT = ROOT / "docs/product/功能说明文档.md"
-MIGRATION = ROOT / "supabase/migrations/20260718182513_catalog_v1.sql"
+MIGRATIONS = ROOT / "supabase/migrations"
 MANIFEST = ROOT / "generated/catalog/catalog-v1.json"
 PLACEHOLDERS = ROOT / "generated/assets/placeholders.json"
 ASSET_ROOT = ROOT / "apps/web/public/assets"
@@ -55,6 +55,13 @@ TASKS = [
     ("wallet_verified", 18, "wallet", "钱包验证成功", 1, 50),
     ("mint_success", 19, "mint", "上链成功", 1, 100),
 ]
+
+
+def catalog_migration() -> Path:
+    matches = sorted(MIGRATIONS.glob("*_catalog_v1.sql"))
+    if len(matches) != 1:
+        raise RuntimeError(f"Expected one *_catalog_v1.sql migration, found {len(matches)}")
+    return matches[0]
 
 
 def parse_catalog(markdown: str) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
@@ -222,7 +229,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--check-assets", action="store_true")
     parser.add_argument("--pin-assets", action="store_true")
-    parser.add_argument("--migration-path", type=Path, default=MIGRATION)
+    parser.add_argument("--migration-path", type=Path, default=catalog_migration())
     parser.add_argument("--manifest-path", type=Path, default=MANIFEST)
     args = parser.parse_args()
     if args.check_assets and args.pin_assets:

@@ -10,7 +10,7 @@ export default tseslint.config(
       "**/dist/**",
       "**/node_modules/**",
       ".vercel/**",
-      "chain/ton/build/**",
+      "contracts/ton/build/**",
     ],
   },
   js.configs.recommended,
@@ -43,9 +43,9 @@ export default tseslint.config(
           patterns: [
             {
               group: [
-                "@pokepets/server",
-                "@pokepets/server/*",
-                "@pokepets/contracts/*",
+                "@pokepets/api",
+                "@pokepets/api/*",
+                "@pokepets/api-contracts/*",
                 "@supabase/*",
               ],
               message: "Web 只能依赖公开 API 契约。",
@@ -63,8 +63,8 @@ export default tseslint.config(
         {
           paths: [
             {
-              name: "@pokepets/server",
-              message: "API 入口只能依赖 @pokepets/server/http。",
+              name: "@pokepets/api",
+              message: "API 入口只能依赖 @pokepets/api/entrypoints。",
             },
           ],
           patterns: [
@@ -72,10 +72,10 @@ export default tseslint.config(
               group: [
                 "../packages/*/src/*",
                 "../apps/*",
-                "@pokepets/server/src/*",
-                "@pokepets/contracts/*",
+                "@pokepets/api/src/*",
+                "@pokepets/api-contracts/*",
               ],
-              message: "API 入口只能依赖 @pokepets/server/http。",
+              message: "API 入口只能依赖 @pokepets/api/entrypoints。",
             },
           ],
         },

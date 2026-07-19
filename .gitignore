@@ -30,6 +30,6 @@ test-results/
 *.tsbuildinfo
 **/__pycache__/
 **/*.pyc
-chain/ton/build/
+contracts/ton/build/
 supabase/.branches/
 supabase/.temp/

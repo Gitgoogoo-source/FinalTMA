@@ -1,41 +1,152 @@
 #!/usr/bin/env python3
-"""Fail when declarative schemas, generated migrations, or migration inventory drift."""
+"""Verify declarative schemas and the three immutable initial migrations without repository writes."""
 
 from __future__ import annotations
 
 import subprocess
 import sys
 import tempfile
+import re
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
-EXPECTED = {
-    "20260718182511_baseline.sql",
-    "20260718182513_catalog_v1.sql",
-    "20260718182514_api_grants.sql",
+SCHEMAS = ROOT / "supabase/schemas"
+MIGRATIONS = ROOT / "supabase/migrations"
+EXPECTED_SCHEMA_NAMES = {
+    "00_foundation.sql",
+    "10_identity.sql",
+    "20_catalog.sql",
+    "30_operations.sql",
+    "31_economy.sql",
+    "32_inventory.sql",
+    "40_gacha.sql",
+    "41_expedition.sql",
+    "42_wheel.sql",
+    "50_market.sql",
+    "60_payments.sql",
+    "61_vip.sql",
+    "62_tasks.sql",
+    "63_referral.sql",
+    "64_album.sql",
+    "70_onchain.sql",
+    "80_risk.sql",
+    "90_integrations.sql",
+    "95_jobs.sql",
 }
+EXPECTED_SUFFIXES = ("_baseline.sql", "_catalog_v1.sql", "_api_security.sql")
+ERROR_REGISTRY = ROOT / "packages/api-contracts/src/common/errors.ts"
+SUPABASE_CONFIG = ROOT / "supabase/config.toml"
+
+
+def one_migration(suffix: str) -> Path:
+    matches = sorted(MIGRATIONS.glob(f"*{suffix}"))
+    if len(matches) != 1:
+        raise SystemExit(f"Expected exactly one *{suffix} migration, found {[path.name for path in matches]}")
+    return matches[0]
+
+
+def rendered_baseline() -> str:
+    sections = ["-- Generated from supabase/schemas. Edit declarative schemas, then run supabase db diff for future changes.\n"]
+    for path in sorted(SCHEMAS.glob("*.sql")):
+        sections.append(f"\n-- source: {path.name}\n")
+        sections.append(path.read_text(encoding="utf-8").rstrip() + "\n")
+    return "".join(sections)
+
+
+def verify_security(path: Path) -> None:
+    sql = path.read_text(encoding="utf-8").lower()
+    required = (
+        "enable row level security",
+        "revoke all on schema",
+        "revoke execute on all functions",
+        "revoke all on sequence",
+        "grant usage on schema api to service_role",
+        "grant execute on all functions in schema api to service_role",
+        "alter default privileges",
+        "revoke all on tables from public, anon, authenticated, service_role",
+        "revoke all on sequences from public, anon, authenticated, service_role",
+    )
+    missing = [statement for statement in required if statement not in sql]
+    if missing:
+        raise SystemExit(f"Security migration is incomplete: {missing}")
+
+
+def verify_database_error_codes() -> None:
+    schema_sql = "\n".join(path.read_text(encoding="utf-8") for path in SCHEMAS.glob("*.sql"))
+    database_codes = set(re.findall(r"raise_business_error\('([A-Z0-9_]+)'", schema_sql))
+    database_codes.update(re.findall(r"error_code\s*=\s*'([A-Z0-9_]+)'", schema_sql))
+    registry_codes = set(re.findall(r"^  ([A-Z0-9_]+): error", ERROR_REGISTRY.read_text(encoding="utf-8"), re.MULTILINE))
+    missing = sorted(database_codes - registry_codes)
+    if missing:
+        raise SystemExit(f"Database error codes missing from shared registry: {missing}")
+
+
+def verify_database_boundaries() -> None:
+    schema_sql = "\n".join(path.read_text(encoding="utf-8") for path in SCHEMAS.glob("*.sql"))
+    functions = re.findall(
+        r"create\s+or\s+replace\s+function\s+([^\s(]+).*?\$\$;",
+        schema_sql,
+        re.IGNORECASE | re.DOTALL,
+    )
+    blocks = re.findall(
+        r"create\s+or\s+replace\s+function\s+[^\s(]+.*?\$\$;",
+        schema_sql,
+        re.IGNORECASE | re.DOTALL,
+    )
+    insecure = [
+        name
+        for name, block in zip(functions, blocks, strict=True)
+        if "security definer" in block.lower() and "set search_path = ''" not in block.lower()
+    ]
+    if insecure:
+        raise SystemExit(f"SECURITY DEFINER functions require an empty search_path: {insecure}")
+    if "auth.uid()" in schema_sql.lower() or "auth.users" in schema_sql.lower():
+        raise SystemExit("Business authorization cannot depend on Supabase Auth")
+    direct_reservation_writes = len(re.findall(r"insert\s+into\s+inventory\.reservations", schema_sql, re.IGNORECASE))
+    if direct_reservation_writes != 1:
+        raise SystemExit("All inventory reservations must be created by inventory.reserve")
+    config = SUPABASE_CONFIG.read_text(encoding="utf-8")
+    if 'schemas = ["api"]' not in config or 'enabled = false\n\n[edge_runtime]' not in config:
+        raise SystemExit("The Data API must expose only api and Supabase Auth must remain disabled")
 
 
 def main() -> None:
-    migrations = ROOT / "supabase/migrations"
-    actual = {path.name for path in migrations.glob("*.sql")}
-    if actual != EXPECTED:
-        print(f"migration inventory mismatch: {sorted(actual)}", file=sys.stderr)
-        raise SystemExit(1)
+    schema_names = {path.name for path in SCHEMAS.glob("*.sql")}
+    if schema_names != EXPECTED_SCHEMA_NAMES:
+        raise SystemExit(f"Schema inventory mismatch: {sorted(schema_names)}")
+
+    migrations = sorted(MIGRATIONS.glob("*.sql"))
+    if len(migrations) != 3:
+        raise SystemExit(f"Expected three initial migrations, found {[path.name for path in migrations]}")
+    baseline, catalog, security = (one_migration(suffix) for suffix in EXPECTED_SUFFIXES)
+    if not (baseline.name < catalog.name < security.name):
+        raise SystemExit("Migration order must be baseline, catalog_v1, api_security")
+    if baseline.read_text(encoding="utf-8") != rendered_baseline():
+        raise SystemExit("Baseline migration does not match declarative schemas")
+    verify_security(security)
+    verify_database_error_codes()
+    verify_database_boundaries()
+
     with tempfile.TemporaryDirectory(prefix="pokepets-db-check-") as temporary:
         output = Path(temporary)
-        subprocess.run(["python3", "tools/db/build_baseline.py", "--output-dir", str(output)], cwd=ROOT, check=True)
-        subprocess.run([
-            "python3", "tools/catalog/build.py",
-            "--migration-path", str(output / "20260718182513_catalog_v1.sql"),
-            "--manifest-path", str(output / "catalog-v1.json"),
-        ], cwd=ROOT, check=True)
-        drift = sorted(name for name in EXPECTED if (migrations / name).read_bytes() != (output / name).read_bytes())
-    if drift:
-        print(f"generated migrations were stale: {drift}", file=sys.stderr)
-        raise SystemExit(1)
-    print("declarative schemas and three migrations are synchronized without repository writes")
+        generated_catalog = output / catalog.name
+        subprocess.run(
+            [
+                "python3",
+                "tools/catalog/build.py",
+                "--migration-path",
+                str(generated_catalog),
+                "--manifest-path",
+                str(output / "catalog-v1.json"),
+            ],
+            cwd=ROOT,
+            check=True,
+        )
+        if catalog.read_bytes() != generated_catalog.read_bytes():
+            print("Catalog migration is stale", file=sys.stderr)
+            raise SystemExit(1)
+    print("declarative schemas and three initial migrations are synchronized")
 
 
 if __name__ == "__main__":

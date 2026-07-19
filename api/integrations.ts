@@ -1,3 +1,3 @@
-import { createGateway } from "@pokepets/server/http";
+import { createIntegrationsGateway } from "@pokepets/api/entrypoints";
 
-export default createGateway("integrations");
+export default createIntegrationsGateway();

@@ -23,13 +23,7 @@
     "useUnknownInCatchVariables": true,
     "allowSyntheticDefaultImports": true,
     "allowImportingTsExtensions": true,
-    "ignoreDeprecations": "6.0",
-    "baseUrl": ".",
-    "paths": {
-      "@pokepets/contracts": ["packages/contracts/src/index.ts"],
-      "@pokepets/server": ["packages/server/src/index.ts"],
-      "@pokepets/server/http": ["packages/server/src/http/index.ts"]
-    }
+    "ignoreDeprecations": "6.0"
   },
-  "exclude": ["node_modules", "dist", ".vercel", ".vite", "chain/ton/build"]
+  "exclude": ["node_modules", "dist", ".vercel", ".vite", "contracts/ton/build"]
 }

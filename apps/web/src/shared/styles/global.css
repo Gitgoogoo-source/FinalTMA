@@ -818,6 +818,11 @@ input:focus {
 .operation-mark.pending {
   animation: pulse 1s infinite;
 }
+.operation-mark.confirming,
+.operation-mark.submitting,
+.operation-mark.unknown {
+  animation: pulse 1s infinite;
+}
 .operation-mark.succeeded {
   color: #61e69a;
   background: rgba(34, 197, 94, 0.13);
@@ -825,6 +830,30 @@ input:focus {
 .operation-mark.failed {
   color: #ff7891;
   background: rgba(239, 68, 68, 0.13);
+}
+.operation-resume {
+  position: fixed;
+  z-index: 70;
+  right: calc(var(--safe-right) + 12px);
+  bottom: calc(var(--safe-bottom) + 82px);
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid rgba(250, 204, 21, 0.35);
+  border-radius: 999px;
+  color: #fff1a8;
+  background: rgba(34, 27, 9, 0.94);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+}
+.resume-intent {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 14px;
+  border-color: rgba(97, 230, 154, 0.3);
+  background: rgba(34, 197, 94, 0.08);
+}
+.resume-intent p {
+  margin: 0;
+  color: var(--muted);
 }
 .result-summary {
   display: grid;

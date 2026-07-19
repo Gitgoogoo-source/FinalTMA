@@ -9,14 +9,21 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-MIGRATION = ROOT / "supabase/migrations/20260718182513_catalog_v1.sql"
 MANIFEST = ROOT / "generated/catalog/catalog-v1.json"
 
 
+def catalog_migration() -> Path:
+    matches = sorted((ROOT / "supabase/migrations").glob("*_catalog_v1.sql"))
+    if len(matches) != 1:
+        raise SystemExit(f"Expected one catalog migration, found {len(matches)}")
+    return matches[0]
+
+
 def main() -> None:
+    migration_source = catalog_migration()
     with tempfile.TemporaryDirectory(prefix="pokepets-catalog-") as temporary:
         directory = Path(temporary)
-        migration = directory / MIGRATION.name
+        migration = directory / migration_source.name
         manifest = directory / "catalog-v1.json"
         shutil.copy2(MANIFEST, manifest)
         subprocess.run([
@@ -25,7 +32,7 @@ def main() -> None:
             "--manifest-path", str(manifest),
         ], cwd=ROOT, check=True)
         drift = [name for name, expected, actual in [
-            (MIGRATION.name, MIGRATION, migration),
+            (migration_source.name, migration_source, migration),
             ("generated/catalog/catalog-v1.json", MANIFEST, manifest),
         ] if expected.read_bytes() != actual.read_bytes()]
         if drift:
