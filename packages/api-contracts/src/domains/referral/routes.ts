@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { defineRoute } from "../../common/route.ts";
-import { emptyObjectSchema, identifierSchema } from "../../common/schemas.ts";
+import { emptyObjectSchema } from "../../common/schemas.ts";
 
 const referralOutput = z
   .object({
@@ -38,12 +38,17 @@ export const referralRoutes = [
     auth: true,
     idempotent: true,
     refreshScopes: ["all"],
-    input: z.object({ code: identifierSchema }).strict(),
+    input: z.object({ code: z.string().regex(/^TMA[A-F0-9]{20}$/) }).strict(),
     output: z
       .object({ bound: z.literal(true), referral_code: z.string() })
       .strict(),
     errors: [
-      "REFERRAL_INVALID",
+      "REFERRAL_ALREADY_RECHARGED",
+      "REFERRAL_CANDIDATE_EXPIRED",
+      "REFERRAL_CODE_INVALID",
+      "REFERRAL_INELIGIBLE",
+      "REFERRAL_INVITER_UNAVAILABLE",
+      "REFERRAL_OLD_USER",
       "REFERRAL_SELF_BIND",
       "REFERRAL_ALREADY_BOUND",
       "IDEMPOTENCY_KEY_REUSED",

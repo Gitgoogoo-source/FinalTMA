@@ -9,9 +9,10 @@ import {
 } from "@pokepets/api-contracts/app";
 
 import {
-  clearSessionCache,
+  clearSensitiveState,
   getSession,
   replaceSession,
+  seedSessionBootstrap,
 } from "../session/store.ts";
 import { getWebPublicConfig } from "../env/index.ts";
 import { telegram } from "../telegram/index.ts";
@@ -43,11 +44,18 @@ type Options = {
 let recoveryAttempted = false;
 let recovery: Promise<void> | null = null;
 
+class SessionBootstrapFailure extends Error {
+  constructor(readonly failure: ApiFailure) {
+    super(failure.message);
+  }
+}
+
 export async function apiRequest<Id extends RouteId>(
   routeId: Id,
   input: RouteInput<Id>,
   options: Options = {},
 ): Promise<ApiResult<RouteOutput<Id>>> {
+  const requestGeneration = getSession()?.generation;
   const parsedInput = parseRouteInput(routeId, input) as Record<
     string,
     unknown
@@ -55,8 +63,8 @@ export async function apiRequest<Id extends RouteId>(
   const result = await send(routeId, parsedInput, options);
   if (result instanceof ApiFailure && result.code === "ACCOUNT_RESTRICTED") {
     const session = getSession();
+    clearSensitiveState();
     if (session) replaceSession({ ...session, accountStatus: "banned" });
-    clearSessionCache();
   }
   if (
     result instanceof ApiFailure &&
@@ -64,6 +72,13 @@ export async function apiRequest<Id extends RouteId>(
     options.recoverSession !== false &&
     routeId !== "identity.authenticate"
   ) {
+    if (getSession()?.accountStatus !== "normal") throw result;
+    if (
+      requestGeneration &&
+      getSession()?.generation !== requestGeneration &&
+      getSession()?.accountStatus === "normal"
+    )
+      return apiRequest(routeId, input, { ...options, recoverSession: false });
     try {
       if (!recovery) {
         if (recoveryAttempted) {
@@ -75,7 +90,9 @@ export async function apiRequest<Id extends RouteId>(
       await recoverSession();
       return apiRequest(routeId, input, { ...options, recoverSession: false });
     } catch (cause) {
-      clearSession();
+      if (cause instanceof SessionBootstrapFailure) throw cause.failure;
+      if (!(cause instanceof ApiFailure && cause.code === "ACCOUNT_RESTRICTED"))
+        clearSession();
       throw cause;
     }
   }
@@ -90,6 +107,41 @@ export async function apiRequest<Id extends RouteId>(
 
 export function newIdempotencyKey(): string {
   return crypto.randomUUID();
+}
+
+export function resetSessionRecovery(): void {
+  recoveryAttempted = false;
+  recovery = null;
+}
+
+export async function retryRecoveredBootstrap(): Promise<void> {
+  const session = getSession();
+  if (!session || session.accountStatus !== "normal") return;
+  replaceSession({ ...session, recovering: true, bootstrapFailed: false });
+  const result = await send(
+    "identity.bootstrap",
+    {},
+    { recoverSession: false },
+  );
+  if (result instanceof ApiFailure) {
+    if (result.code === "ACCOUNT_RESTRICTED") {
+      clearSensitiveState();
+      replaceSession({ ...session, accountStatus: "banned" });
+    } else if (
+      ["SESSION_EXPIRED", "SESSION_REPLACED", "SESSION_REQUIRED"].includes(
+        result.code,
+      )
+    ) {
+      clearSession();
+    } else {
+      replaceSession({ ...session, recovering: false, bootstrapFailed: true });
+    }
+    throw result;
+  }
+  if (getSession()?.generation !== session.generation) return;
+  clearSensitiveState();
+  replaceSession({ ...session, recovering: false, bootstrapFailed: false });
+  seedSessionBootstrap(session.generation, result.data);
 }
 
 async function send<Id extends RouteId>(
@@ -200,6 +252,7 @@ async function send<Id extends RouteId>(
 
 async function recoverSession(): Promise<void> {
   recoveryAttempted = true;
+  const expiredGeneration = getSession()?.generation;
   recovery ??= (async () => {
     const initData = telegram()?.initData;
     if (!initData)
@@ -213,17 +266,67 @@ async function recoverSession(): Promise<void> {
     const result = await send(
       "identity.authenticate",
       { init_data: initData },
-      { recoverSession: false },
+      {
+        recoverSession: false,
+        idempotencyKey: newIdempotencyKey(),
+      },
     );
     if (result instanceof ApiFailure) throw result;
-    replaceSession({
+    if (result.data.account_status === "banned") {
+      clearSensitiveState();
+      const current = getSession();
+      if (current) replaceSession({ ...current, accountStatus: "banned" });
+      throw new ApiFailure(
+        403,
+        "ACCOUNT_RESTRICTED",
+        "账户当前不可执行此操作",
+        false,
+        null,
+      );
+    }
+    if (getSession()?.generation !== expiredGeneration)
+      throw new ApiFailure(
+        401,
+        "TELEGRAM_REENTRY_REQUIRED",
+        "请从 Telegram Mini App 重新打开应用",
+        false,
+        null,
+      );
+    const next = {
       token: result.data.access_token,
       userId: result.data.user_id,
       accountStatus: result.data.account_status,
       expiresAt: result.data.expires_at,
       generation: crypto.randomUUID(),
-    });
-    clearSessionCache();
+      recovering: true,
+    } as const;
+    replaceSession(next);
+    const bootstrap = await send(
+      "identity.bootstrap",
+      {},
+      { recoverSession: false },
+    );
+    if (bootstrap instanceof ApiFailure) {
+      if (bootstrap.code === "ACCOUNT_RESTRICTED") {
+        clearSensitiveState();
+        replaceSession({ ...next, accountStatus: "banned" });
+        throw bootstrap;
+      }
+      clearSensitiveState();
+      replaceSession({ ...next, recovering: false, bootstrapFailed: true });
+      throw new SessionBootstrapFailure(bootstrap);
+    }
+    if (getSession()?.generation !== next.generation)
+      throw new ApiFailure(
+        401,
+        "TELEGRAM_REENTRY_REQUIRED",
+        "请从 Telegram Mini App 重新打开应用",
+        false,
+        null,
+      );
+    clearSensitiveState();
+    replaceSession({ ...next, recovering: false, bootstrapFailed: false });
+    seedSessionBootstrap(next.generation, bootstrap.data);
   })().finally(() => {
     recovery = null;
   });
@@ -232,11 +335,11 @@ async function recoverSession(): Promise<void> {
 
 function markSessionRecovering(): void {
   const session = getSession();
+  clearSensitiveState();
   if (session) replaceSession({ ...session, recovering: true });
-  clearSessionCache();
 }
 
 function clearSession(): void {
+  clearSensitiveState();
   replaceSession(null);
-  clearSessionCache();
 }

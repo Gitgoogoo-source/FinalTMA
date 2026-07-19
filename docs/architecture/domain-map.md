@@ -19,7 +19,7 @@
 | 13 图鉴       | album                    | album                                    | album、economy                       | 永久点亮、整链奖励唯一领取                          |
 | 14 开盒       | gacha                    | gacha                                    | gacha、inventory、economy            | 单抽/十连全成全败、结果只生成一次                   |
 | 15 VIP        | vip                      | vip、integrations                        | vip、payments、economy               | 30 UTC 日、续费上限、每日手动领取                   |
-| 16 登录       | session-bootstrap        | identity                                 | identity、operations                 | initData、时间边界、3 次/分钟、短会话               |
+| 16 登录       | session-bootstrap        | identity                                 | identity、operations                 | initData、时间边界、30/10/3 限流、幂等短会话        |
 | 17 藏品       | inventory                | inventory                                | inventory                            | 模板加数量、预留不可重复使用                        |
 | 18 进化       | inventory、evolution     | evolution                                | 43_evolution、inventory、economy     | 三材料、Fgems、路线保底和任务原子变化               |
 | 19 顶部资产栏 | app/shell                | identity                                 | economy、vip、onchain                | 真实资产回正、钱包和 VIP 状态同步                   |

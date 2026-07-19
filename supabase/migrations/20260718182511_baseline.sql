@@ -31,6 +31,7 @@ create table identity.users (
   first_name text not null,
   last_name text,
   language_code text,
+  photo_url text,
   status text not null default 'normal' check (status in ('normal', 'banned')),
   referral_code text not null unique,
   invited_by uuid references identity.users(id),
@@ -52,18 +53,58 @@ create table identity.sessions (
   referral_processed_at timestamptz,
   revoked_at timestamptz,
   created_at timestamptz not null default now(),
-  check (expires_at > created_at)
+  check (expires_at > created_at),
+  check (start_param is null or start_param ~ '^TMA[A-F0-9]{20}$')
 );
 
-create index sessions_user_active_idx on identity.sessions (user_id, expires_at desc) where revoked_at is null;
+create unique index sessions_one_active_per_user_idx on identity.sessions (user_id) where revoked_at is null;
 
 create table identity.auth_attempts (
   id bigint generated always as identity primary key,
-  key_hash text not null,
+  scope text not null check (scope in ('source', 'user', 'init_data')),
+  key_hash text not null check (key_hash ~ '^[0-9a-f]{64}$'),
   attempted_at timestamptz not null default now()
 );
 
-create index auth_attempts_key_time_idx on identity.auth_attempts (key_hash, attempted_at desc);
+create index auth_attempts_scope_key_time_idx on identity.auth_attempts (scope, key_hash, attempted_at desc);
+create index auth_attempts_time_idx on identity.auth_attempts (attempted_at);
+
+create table identity.login_requests (
+  operation_id uuid primary key,
+  request_hash text not null check (request_hash ~ '^[0-9a-f]{64}$'),
+  user_id uuid not null references identity.users(id) on delete cascade,
+  account_status text not null check (account_status in ('normal', 'banned')),
+  session_id uuid references identity.sessions(id),
+  expires_at timestamptz,
+  start_param text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  check (start_param is null or start_param ~ '^TMA[A-F0-9]{20}$'),
+  check (
+    (account_status = 'normal' and session_id is not null and expires_at is not null)
+    or (account_status = 'banned' and session_id is null and expires_at is null)
+  )
+);
+
+create index login_requests_user_created_idx on identity.login_requests (user_id, created_at desc);
+
+create table identity.entry_candidates (
+  user_id uuid primary key references identity.users(id) on delete cascade,
+  code text not null check (code ~ '^TMA[A-F0-9]{20}$'),
+  status text not null default 'pending' check (status in ('pending', 'bound', 'rejected')),
+  result_code text,
+  operation_id uuid unique,
+  inviter_id uuid references identity.users(id),
+  created_at timestamptz not null default now(),
+  expires_at timestamptz not null,
+  settled_at timestamptz,
+  check (expires_at = created_at + interval '10 minutes'),
+  check (
+    (status = 'pending' and result_code is null and operation_id is null and settled_at is null)
+    or (status <> 'pending' and result_code is not null and operation_id is not null and settled_at is not null)
+  ),
+  check (status <> 'bound' or inviter_id is not null)
+);
 
 create or replace function identity.utc_day()
 returns date
@@ -128,7 +169,7 @@ begin
 end;
 $$;
 
-create or replace function api.identity_check_rate_limit(p_key_hash text)
+create or replace function api.identity_consume_login_rate_limit(p_scope text, p_key_hash text)
 returns void
 language plpgsql
 security definer
@@ -136,15 +177,28 @@ set search_path = ''
 as $$
 declare
   v_count integer;
+  v_limit integer;
 begin
-  perform pg_advisory_xact_lock(hashtextextended(p_key_hash, 0));
+  v_limit := case p_scope
+    when 'source' then 30
+    when 'user' then 10
+    when 'init_data' then 3
+    else null
+  end;
+  if v_limit is null or p_key_hash !~ '^[0-9a-f]{64}$' then
+    perform api.raise_business_error('REQUEST_INVALID', '登录限流参数无效');
+  end if;
+  perform pg_advisory_xact_lock(hashtextextended(p_scope || ':' || p_key_hash, 0));
+  delete from identity.auth_attempts where attempted_at < now() - interval '5 minutes';
+  delete from identity.auth_attempts
+  where scope = p_scope and key_hash = p_key_hash and attempted_at < now() - interval '1 minute';
   select count(*) into v_count
   from identity.auth_attempts
-  where key_hash = p_key_hash and attempted_at >= now() - interval '1 minute';
-  if v_count >= 3 then
+  where scope = p_scope and key_hash = p_key_hash and attempted_at >= now() - interval '1 minute';
+  if v_count >= v_limit then
     perform api.raise_business_error('RATE_LIMITED', '操作过于频繁，请稍后重试');
   end if;
-  insert into identity.auth_attempts (key_hash) values (p_key_hash);
+  insert into identity.auth_attempts (scope, key_hash) values (p_scope, p_key_hash);
 end;
 $$;
 
@@ -170,16 +224,18 @@ as $$
   where s.token_hash = p_token_hash
 $$;
 
-create or replace function api.identity_create_session(
+create or replace function api.identity_authenticate(
+  p_operation_id uuid,
+  p_request_hash text,
   p_telegram_id bigint,
   p_username text,
   p_first_name text,
   p_last_name text,
   p_language_code text,
+  p_photo_url text,
   p_referral_code text,
   p_token_hash text,
   p_auth_date timestamptz,
-  p_expires_at timestamptz,
   p_start_param text
 )
 returns jsonb
@@ -189,38 +245,89 @@ set search_path = ''
 as $$
 declare
   v_user identity.users%rowtype;
+  v_login identity.login_requests%rowtype;
   v_session_id uuid;
   v_new_user boolean;
+  v_expires_at timestamptz;
 begin
+  if p_request_hash !~ '^[0-9a-f]{64}$' or p_token_hash !~ '^[0-9a-f]{64}$' then
+    perform api.raise_business_error('REQUEST_INVALID', '登录请求摘要无效');
+  end if;
+  if p_start_param is not null and p_start_param !~ '^TMA[A-F0-9]{20}$' then
+    perform api.raise_business_error('TELEGRAM_START_PARAM_INVALID', '入口参数无效');
+  end if;
+  perform pg_advisory_xact_lock(hashtextextended('identity.login:' || p_operation_id::text, 0));
+  select * into v_login from identity.login_requests where operation_id = p_operation_id for update;
+  if v_login.operation_id is not null then
+    if v_login.request_hash <> p_request_hash then
+      perform api.raise_business_error('IDEMPOTENCY_KEY_REUSED', '幂等键已用于不同登录请求');
+    end if;
+    select * into v_user from identity.users where id = v_login.user_id for update;
+    if v_user.status = 'banned' then
+      update identity.sessions set revoked_at = coalesce(revoked_at, now())
+      where user_id = v_user.id and revoked_at is null;
+    end if;
+    if v_login.account_status = 'banned' or v_user.status = 'banned' then
+      return jsonb_build_object('account_status', 'banned');
+    end if;
+    return jsonb_build_object(
+      'session_id', v_login.session_id,
+      'user_id', v_login.user_id,
+      'account_status', 'normal',
+      'expires_at', v_login.expires_at,
+      'start_param', v_login.start_param
+    );
+  end if;
+
   perform pg_advisory_xact_lock(p_telegram_id);
-  insert into identity.users (telegram_id, username, first_name, last_name, language_code, referral_code)
-  values (p_telegram_id, p_username, p_first_name, p_last_name, p_language_code, p_referral_code)
+  insert into identity.users (telegram_id, username, first_name, last_name, language_code, photo_url, referral_code)
+  values (p_telegram_id, p_username, p_first_name, p_last_name, p_language_code, p_photo_url, p_referral_code)
   on conflict (telegram_id) do nothing
   returning * into v_user;
   v_new_user := v_user.id is not null;
   if not v_new_user then
     update identity.users
     set username = p_username, first_name = p_first_name, last_name = p_last_name,
-        language_code = p_language_code, updated_at = now()
-    where telegram_id = p_telegram_id
+        language_code = p_language_code, photo_url = p_photo_url, updated_at = now()
+    where telegram_id = p_telegram_id and status = 'normal'
     returning * into v_user;
+    if v_user.id is null then
+      select * into v_user from identity.users where telegram_id = p_telegram_id;
+    end if;
   end if;
 
-  update identity.sessions set revoked_at = now()
-  where user_id = v_user.id and revoked_at is null;
-  insert into identity.sessions (user_id, token_hash, auth_date, expires_at, new_user, start_param)
-  values (v_user.id, p_token_hash, p_auth_date, p_expires_at, v_new_user, p_start_param)
-  returning id into v_session_id;
+  if v_new_user and p_start_param is not null then
+    insert into identity.entry_candidates (user_id, code, expires_at)
+    values (v_user.id, p_start_param, now() + interval '10 minutes');
+  end if;
   insert into economy.balances (user_id, currency)
   values (v_user.id, 'KCOIN'), (v_user.id, 'FGEMS')
   on conflict do nothing;
+
+  update identity.sessions set revoked_at = now()
+  where user_id = v_user.id and revoked_at is null;
+  if v_user.status = 'banned' then
+    insert into identity.login_requests (
+      operation_id, request_hash, user_id, account_status, session_id, expires_at, start_param
+    ) values (p_operation_id, p_request_hash, v_user.id, 'banned', null, null, null);
+    return jsonb_build_object('account_status', 'banned');
+  end if;
+
+  v_expires_at := now() + interval '15 minutes';
+  insert into identity.sessions (user_id, token_hash, auth_date, expires_at, new_user, start_param)
+  values (v_user.id, p_token_hash, p_auth_date, v_expires_at, v_new_user, p_start_param)
+  returning id into v_session_id;
+  insert into identity.login_requests (
+    operation_id, request_hash, user_id, account_status, session_id, expires_at, start_param
+  ) values (
+    p_operation_id, p_request_hash, v_user.id, 'normal', v_session_id, v_expires_at, p_start_param
+  );
 
   return jsonb_build_object(
     'session_id', v_session_id,
     'user_id', v_user.id,
     'account_status', v_user.status,
-    'new_user', v_new_user,
-    'expires_at', p_expires_at,
+    'expires_at', v_expires_at,
     'start_param', p_start_param
   );
 end;
@@ -242,6 +349,8 @@ begin
       'telegram_id', u.telegram_id::text,
       'username', u.username,
       'first_name', u.first_name,
+      'last_name', u.last_name,
+      'photo_url', u.photo_url,
       'status', u.status,
       'referral_code', u.referral_code
     ),
@@ -2282,36 +2391,87 @@ declare
   v_operation operations.operations%rowtype;
   v_replay jsonb;
   v_user_id uuid;
-  v_session identity.sessions%rowtype;
+  v_candidate identity.entry_candidates%rowtype;
   v_inviter_id uuid;
+  v_inviter_status text;
   v_result jsonb;
-  v_detail text;
 begin
-  v_operation := operations.begin_command(p_session_id, 'referral.bind', p_operation_id, jsonb_build_object('code', upper(p_code)));
+  v_operation := operations.begin_command(p_session_id, 'referral.bind', p_operation_id, jsonb_build_object('code', p_code));
   v_replay := operations.replay_if_finished(v_operation);
   if v_replay is not null then return v_replay; end if;
   v_user_id := v_operation.user_id;
-  begin
-    select * into v_session from identity.sessions where id = p_session_id and user_id = v_user_id for update;
-    if exists (select 1 from referral.relationships where invitee_id = v_user_id) then perform api.raise_business_error('REFERRAL_ALREADY_BOUND', '邀请关系已绑定'); end if;
-    if not v_session.new_user or v_session.created_at < now() - interval '10 minutes' or v_session.start_param is distinct from p_code then perform api.raise_business_error('REFERRAL_INVALID', '邀请关系不符合绑定条件'); end if;
-    select id into v_inviter_id from identity.users where referral_code = upper(p_code) and status = 'normal';
-    if v_inviter_id is null then perform api.raise_business_error('REFERRAL_INVALID', '邀请码无效'); end if;
-    if v_inviter_id = v_user_id then perform api.raise_business_error('REFERRAL_SELF_BIND', '不能绑定自己的邀请码'); end if;
-    if exists (select 1 from payments.orders where user_id = v_user_id and status = 'delivered')
-      or exists (select 1 from referral.relationships where inviter_id = v_user_id)
-      or exists (select 1 from identity.users where id = v_inviter_id and invited_by is not null) then
-      perform api.raise_business_error('REFERRAL_INVALID', '邀请关系不符合单层规则');
+  select * into v_candidate from identity.entry_candidates where user_id = v_user_id for update;
+
+  if exists (select 1 from referral.relationships where invitee_id = v_user_id) then
+    if v_candidate.user_id is not null and v_candidate.status = 'pending' then
+      update identity.entry_candidates
+      set status = 'rejected', result_code = 'REFERRAL_ALREADY_BOUND', operation_id = p_operation_id,
+          settled_at = now()
+      where user_id = v_user_id;
     end if;
-    update identity.users set invited_by = v_inviter_id, updated_at = now() where id = v_user_id and invited_by is null;
-    insert into referral.relationships (invitee_id, inviter_id) values (v_user_id, v_inviter_id);
-    update identity.sessions set referral_processed_at = now() where id = p_session_id;
-    v_result := jsonb_build_object('bound', true, 'referral_code', upper(p_code));
-    return operations.complete_command(p_operation_id, v_result);
-  exception when others then
-    get stacked diagnostics v_detail = pg_exception_detail;
-    return operations.fail_command(p_operation_id, case when sqlstate = 'P0001' then sqlerrm else 'INTERNAL_ERROR' end, jsonb_build_object('detail', coalesce(v_detail, '{}')));
-  end;
+    return operations.fail_command(p_operation_id, 'REFERRAL_ALREADY_BOUND', '{}'::jsonb);
+  end if;
+  if v_candidate.user_id is null then
+    return operations.fail_command(p_operation_id, 'REFERRAL_OLD_USER', '{}'::jsonb);
+  end if;
+  if v_candidate.code is distinct from p_code then
+    return operations.fail_command(p_operation_id, 'REFERRAL_INELIGIBLE', '{}'::jsonb);
+  end if;
+  if v_candidate.status = 'rejected' then
+    return operations.fail_command(p_operation_id, v_candidate.result_code, '{}'::jsonb);
+  end if;
+  if v_candidate.status = 'bound' then
+    return operations.fail_command(p_operation_id, 'REFERRAL_ALREADY_BOUND', '{}'::jsonb);
+  end if;
+  if now() > v_candidate.expires_at then
+    update identity.entry_candidates
+    set status = 'rejected', result_code = 'REFERRAL_CANDIDATE_EXPIRED', operation_id = p_operation_id,
+        settled_at = now()
+    where user_id = v_user_id;
+    return operations.fail_command(p_operation_id, 'REFERRAL_CANDIDATE_EXPIRED', '{}'::jsonb);
+  end if;
+  if exists (select 1 from payments.orders where user_id = v_user_id and status = 'delivered') then
+    update identity.entry_candidates
+    set status = 'rejected', result_code = 'REFERRAL_ALREADY_RECHARGED', operation_id = p_operation_id,
+        settled_at = now()
+    where user_id = v_user_id;
+    return operations.fail_command(p_operation_id, 'REFERRAL_ALREADY_RECHARGED', '{}'::jsonb);
+  end if;
+
+  select id, status into v_inviter_id, v_inviter_status
+  from identity.users where referral_code = p_code;
+  if v_inviter_id is null then
+    update identity.entry_candidates
+    set status = 'rejected', result_code = 'REFERRAL_CODE_INVALID', operation_id = p_operation_id,
+        settled_at = now()
+    where user_id = v_user_id;
+    return operations.fail_command(p_operation_id, 'REFERRAL_CODE_INVALID', '{}'::jsonb);
+  end if;
+  if v_inviter_id = v_user_id then
+    update identity.entry_candidates
+    set status = 'rejected', result_code = 'REFERRAL_SELF_BIND', operation_id = p_operation_id,
+        settled_at = now()
+    where user_id = v_user_id;
+    return operations.fail_command(p_operation_id, 'REFERRAL_SELF_BIND', '{}'::jsonb);
+  end if;
+  if v_inviter_status <> 'normal' then
+    update identity.entry_candidates
+    set status = 'rejected', result_code = 'REFERRAL_INVITER_UNAVAILABLE', operation_id = p_operation_id,
+        settled_at = now()
+    where user_id = v_user_id;
+    return operations.fail_command(p_operation_id, 'REFERRAL_INVITER_UNAVAILABLE', '{}'::jsonb);
+  end if;
+
+  update identity.users set invited_by = v_inviter_id, updated_at = now()
+  where id = v_user_id and invited_by is null;
+  insert into referral.relationships (invitee_id, inviter_id) values (v_user_id, v_inviter_id);
+  update identity.entry_candidates
+  set status = 'bound', result_code = 'REFERRAL_BOUND', operation_id = p_operation_id,
+      inviter_id = v_inviter_id, settled_at = now()
+  where user_id = v_user_id;
+  update identity.sessions set referral_processed_at = now() where id = p_session_id;
+  v_result := jsonb_build_object('bound', true, 'referral_code', p_code);
+  return operations.complete_command(p_operation_id, v_result);
 end;
 $$;
 

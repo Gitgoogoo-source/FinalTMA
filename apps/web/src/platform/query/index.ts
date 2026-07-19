@@ -13,7 +13,11 @@ import {
 } from "@pokepets/api-contracts/app";
 
 import { apiRequest } from "../api/client.ts";
-import { getSession, registerSessionCacheClearer } from "../session/store.ts";
+import {
+  getSession,
+  registerBootstrapCacheSeeder,
+  registerSessionCacheClearer,
+} from "../session/store.ts";
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -21,7 +25,43 @@ export const queryClient = new QueryClient({
     mutations: { retry: false },
   },
 });
-registerSessionCacheClearer(() => queryClient.clear());
+registerSessionCacheClearer(() => {
+  void queryClient.cancelQueries();
+  queryClient.clear();
+});
+registerBootstrapCacheSeeder((generation, data) => {
+  queryClient.setQueryData([generation, "v1", "identity.bootstrap", {}], data);
+});
+
+export function routeQueryKey<Id extends RouteId>(
+  routeId: Id,
+  input: RouteInput<Id> = {} as RouteInput<Id>,
+): readonly unknown[] {
+  return [getSession()?.generation ?? "public", "v1", routeId, input];
+}
+
+export function seedApiQuery<Id extends RouteId>(
+  routeId: Id,
+  input: RouteInput<Id>,
+  data: RouteOutput<Id>,
+): void {
+  queryClient.setQueryData(routeQueryKey(routeId, input), data);
+}
+
+export function prefetchApiQuery<Id extends RouteId>(
+  routeId: Id,
+  input: RouteInput<Id> = {} as RouteInput<Id>,
+): Promise<void> {
+  const generation = getSession()?.generation ?? "public";
+  return queryClient.prefetchQuery({
+    queryKey: [generation, "v1", routeId, input],
+    queryFn: async ({ signal }) => {
+      const result = await apiRequest(routeId, input, { signal });
+      assertCurrentGeneration(generation);
+      return result.data;
+    },
+  });
+}
 
 export function useApiQuery<Id extends RouteId>(
   routeId: Id,
@@ -29,10 +69,14 @@ export function useApiQuery<Id extends RouteId>(
   enabled = true,
 ): UseQueryResult<RouteOutput<Id>> {
   const session = getSession();
+  const generation = session?.generation ?? "public";
   return useQuery({
-    queryKey: [session?.generation ?? "public", "v1", routeId, input],
-    queryFn: async ({ signal }) =>
-      (await apiRequest(routeId, input, { signal })).data,
+    queryKey: [generation, "v1", routeId, input],
+    queryFn: async ({ signal }) => {
+      const result = await apiRequest(routeId, input, { signal });
+      assertCurrentGeneration(generation);
+      return result.data;
+    },
     enabled,
   });
 }
@@ -70,4 +114,9 @@ export async function refreshRouteScopes(
       return typeof id === "string" && prefixes.has(id.split(".")[0] ?? "");
     },
   });
+}
+
+function assertCurrentGeneration(expected: string): void {
+  if ((getSession()?.generation ?? "public") !== expected)
+    throw new DOMException("Stale session generation", "AbortError");
 }

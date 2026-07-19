@@ -12,6 +12,8 @@
 
 操作 UUID 同时是 `Idempotency-Key` 与 `operation_id`。数据库对规范化请求计算 SHA-256；同键同请求回放持久结果，同键不同请求返回 `IDEMPOTENCY_KEY_REUSED`。市场购买响应不包含卖家身份；库存满足 `total = available + listed + trading + minting + expedition`。
 
+预认证登录使用独立的 `identity.login_requests` 幂等表和域隔离 HMAC 请求摘要；用户创建、资料更新、首次入口候选、旧会话撤销和新会话创建由 `api.identity_authenticate` 在同一事务完成。`banned` 分支只撤销会话，不创建新会话。
+
 ## 迁移
 
 初始空库只有三个迁移：`*_baseline.sql`、`*_product_data_v1.sql`、`*_api_security.sql`。baseline 由声明式 Schema 确定，product data 由 `tools/product_data/build.py` 统一生成，安全权限由显式迁移确定。初始基线进入真实测试环境后，只新增前向迁移，不覆盖现有迁移名或历史文件。

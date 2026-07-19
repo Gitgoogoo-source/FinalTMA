@@ -1,4 +1,6 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+
+import { registerSensitiveStateResetter } from "../../platform/session/store.ts";
 
 import {
   NavigationIntentContext,
@@ -13,6 +15,10 @@ export function NavigationIntentProvider({
   children: ReactNode;
 }): ReactNode {
   const [topupRequest, setTopupRequest] = useState<TopupRequest | null>(null);
+  useEffect(
+    () => registerSensitiveStateResetter(() => setTopupRequest(null)),
+    [],
+  );
   const value = useMemo<NavigationIntentValue>(
     () => ({
       topupRequest,

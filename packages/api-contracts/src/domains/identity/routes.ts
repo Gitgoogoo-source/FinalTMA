@@ -7,7 +7,6 @@ import {
 } from "../../common/models.ts";
 import { defineRoute } from "../../common/route.ts";
 import {
-  accountStatusSchema,
   emptyObjectSchema,
   timestampSchema,
   uuidSchema,
@@ -22,15 +21,25 @@ const healthOutput = z
     time: timestampSchema,
   })
   .strict();
-const authOutput = z
+const normalAuthOutput = z
   .object({
+    account_status: z.literal("normal"),
     access_token: z.string().min(32),
     user_id: uuidSchema,
-    account_status: accountStatusSchema,
     expires_at: timestampSchema,
-    start_param: z.string().nullable(),
+    start_param: z
+      .string()
+      .regex(/^TMA[A-F0-9]{20}$/)
+      .nullable(),
   })
   .strict();
+const bannedAuthOutput = z
+  .object({ account_status: z.literal("banned") })
+  .strict();
+const authOutput = z.discriminatedUnion("account_status", [
+  normalAuthOutput,
+  bannedAuthOutput,
+]);
 const bootstrapOutput = z
   .object({
     user: userSchema,
@@ -67,13 +76,17 @@ export const identityRoutes = [
     path: "/api/auth/telegram",
     gateway: "app",
     auth: false,
-    idempotent: false,
+    idempotent: true,
+    refreshScopes: ["session"],
     input: z.object({ init_data: z.string().min(1).max(16_384) }).strict(),
     output: authOutput,
     errors: [
       "TELEGRAM_INIT_DATA_INVALID",
       "TELEGRAM_INIT_DATA_EXPIRED",
+      "TELEGRAM_INIT_DATA_TIME_INVALID",
+      "TELEGRAM_START_PARAM_INVALID",
       "RATE_LIMITED",
+      "IDEMPOTENCY_KEY_REUSED",
       "INTERNAL_ERROR",
     ],
   }),

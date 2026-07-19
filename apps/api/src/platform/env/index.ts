@@ -5,6 +5,9 @@ const schema = z.object({
   APP_BASE_URL: z.string().url(),
   SUPABASE_URL: z.string().url(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(32),
+  IDENTITY_SECURITY_SECRET: z
+    .string()
+    .refine((value) => Buffer.byteLength(value, "utf8") >= 32),
   TELEGRAM_BOT_TOKEN: z.string().min(20),
   TELEGRAM_BOT_USERNAME: z.string().min(1),
   TELEGRAM_MINI_APP_SHORT_NAME: z.string().min(1),

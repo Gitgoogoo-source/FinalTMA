@@ -1,4 +1,5 @@
 import { rpc } from "../../platform/db/index.ts";
+import { getEnv } from "../../platform/env/index.ts";
 import {
   operationResult,
   type OperationEnvelope,
@@ -10,11 +11,16 @@ import {
 } from "../../http/handlers.ts";
 
 export const referralHandlers = {
-  "referral.get": async (context) => ({
-    data: await rpc("referral_get", {
-      p_session_id: requireSession(context).session_id,
-    }),
-  }),
+  "referral.get": async (context) => {
+    const env = getEnv();
+    return {
+      data: await rpc("referral_get", {
+        p_session_id: requireSession(context).session_id,
+        p_bot_username: env.TELEGRAM_BOT_USERNAME,
+        p_mini_app_short_name: env.TELEGRAM_MINI_APP_SHORT_NAME,
+      }),
+    };
+  },
   "referral.bind": async (context) =>
     operationResult(
       await rpc<OperationEnvelope>("referral_bind", {

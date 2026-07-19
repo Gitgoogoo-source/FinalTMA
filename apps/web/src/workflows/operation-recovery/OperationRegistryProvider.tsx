@@ -23,6 +23,11 @@ import {
   newIdempotencyKey,
 } from "../../platform/api/client.ts";
 import { refreshRouteScopes } from "../../platform/query/index.ts";
+import {
+  getSession,
+  registerSensitiveStateResetter,
+  useSession,
+} from "../../platform/session/store.ts";
 import { haptic, telegram } from "../../platform/telegram/index.ts";
 import { Button } from "../../shared/ui/index.tsx";
 import {
@@ -34,6 +39,7 @@ import { operationLabel } from "./labels.ts";
 
 type RegisteredOperation = {
   id: string;
+  sessionGeneration: string;
   routeId: RecoverableRouteId;
   label: string;
   phase: OperationPhase;
@@ -47,6 +53,7 @@ export function OperationRegistryProvider({
 }: {
   children: ReactNode;
 }): ReactNode {
+  const session = useSession();
   const [operations, setOperations] = useState<
     Record<string, RegisteredOperation>
   >({});
@@ -67,6 +74,17 @@ export function OperationRegistryProvider({
     operationsRef.current = operations;
   }, [operations]);
 
+  useEffect(
+    () =>
+      registerSensitiveStateResetter(() => {
+        operationsRef.current = {};
+        setOperations({});
+        setActiveId(null);
+        telegram()?.disableClosingConfirmation();
+      }),
+    [],
+  );
+
   useEffect(() => {
     if (closingBlocked) telegram()?.enableClosingConfirmation();
     else telegram()?.disableClosingConfirmation();
@@ -76,7 +94,12 @@ export function OperationRegistryProvider({
   const update = useCallback(
     (id: string, change: Partial<RegisteredOperation>) => {
       const current = operationsRef.current;
-      if (!current[id]) return;
+      if (
+        !current[id] ||
+        current[id].sessionGeneration !== getSession()?.generation ||
+        getSession()?.accountStatus !== "normal"
+      )
+        return;
       const next = { ...current, [id]: { ...current[id], ...change } };
       operationsRef.current = next;
       setOperations(next);
@@ -90,8 +113,12 @@ export function OperationRegistryProvider({
       routeId: Id,
       input: RouteInput<Id>,
     ): Promise<RouteOutput<Id> | null> => {
+      const sessionGeneration = getSession()?.generation;
+      if (!sessionGeneration || getSession()?.accountStatus !== "normal")
+        return null;
       const existing = Object.values(operationsRef.current).find(
         (operation) =>
+          operation.sessionGeneration === sessionGeneration &&
           operation.routeId === routeId &&
           ["confirming", "submitting", "pending", "unknown"].includes(
             operation.phase,
@@ -106,6 +133,7 @@ export function OperationRegistryProvider({
         ...operationsRef.current,
         [id]: {
           id,
+          sessionGeneration,
           routeId,
           label,
           phase: "confirming",
@@ -120,6 +148,7 @@ export function OperationRegistryProvider({
       await new Promise<void>((resolve) =>
         requestAnimationFrame(() => resolve()),
       );
+      if (!isCurrentNormalSession(sessionGeneration)) return null;
       update(id, {
         phase: "submitting",
         message: "已提交，正在等待服务器裁决",
@@ -128,6 +157,11 @@ export function OperationRegistryProvider({
         const response = await apiRequest(routeId, input, {
           idempotencyKey: id,
         });
+        if (!isCurrentNormalSession(sessionGeneration)) {
+          if (getSession()?.accountStatus === "normal")
+            await refreshRouteScopes(routeId);
+          return null;
+        }
         const pending = response.status === 202;
         update(id, {
           phase: pending ? "pending" : "succeeded",
@@ -140,6 +174,11 @@ export function OperationRegistryProvider({
         await refreshRouteScopes(routeId);
         return response.data;
       } catch (cause) {
+        if (!isCurrentNormalSession(sessionGeneration)) {
+          if (getSession()?.accountStatus === "normal")
+            await refreshRouteScopes(routeId);
+          return null;
+        }
         const failure =
           cause instanceof ApiFailure
             ? cause
@@ -168,6 +207,8 @@ export function OperationRegistryProvider({
   );
 
   const hydrate = useCallback((incoming: readonly TypedOperationSummary[]) => {
+    const sessionGeneration = getSession()?.generation;
+    if (!sessionGeneration || getSession()?.accountStatus !== "normal") return;
     setOperations((current) => {
       const next = { ...current };
       for (const operation of incoming) {
@@ -178,6 +219,7 @@ export function OperationRegistryProvider({
           continue;
         next[operation.operation_id] = {
           id: operation.operation_id,
+          sessionGeneration,
           routeId: operation.use_case,
           label: operationLabel(operation.use_case),
           phase: operation.status === "unknown" ? "unknown" : "pending",
@@ -196,11 +238,13 @@ export function OperationRegistryProvider({
 
   const recover = useCallback(
     async (operation: RegisteredOperation) => {
+      if (operation.sessionGeneration !== getSession()?.generation) return;
       update(operation.id, { phase: "pending", message: "正在查询原操作" });
       try {
         const response = await apiRequest("operations.get", {
           operation_id: operation.id,
         });
+        if (operation.sessionGeneration !== getSession()?.generation) return;
         const recovered = parseRecoveredOperation(response.data);
         if (recovered.status === "succeeded") {
           update(operation.id, {
@@ -248,6 +292,7 @@ export function OperationRegistryProvider({
       isBlocked: (routeId) =>
         Object.values(operations).some(
           (operation) =>
+            operation.sessionGeneration === getSession()?.generation &&
             operation.routeId === routeId &&
             ["confirming", "submitting", "pending", "unknown"].includes(
               operation.phase,
@@ -273,15 +318,17 @@ export function OperationRegistryProvider({
   return (
     <OperationRegistryContext.Provider value={value}>
       {children}
-      {!active && unresolved.length > 0 && (
-        <button
-          className="operation-resume"
-          onClick={() => setActiveId(unresolved[0]?.id ?? null)}
-        >
-          {unresolved.length} 个操作待确认
-        </button>
-      )}
-      {active && (
+      {session?.accountStatus === "normal" &&
+        !active &&
+        unresolved.length > 0 && (
+          <button
+            className="operation-resume"
+            onClick={() => setActiveId(unresolved[0]?.id ?? null)}
+          >
+            {unresolved.length} 个操作待确认
+          </button>
+        )}
+      {session?.accountStatus === "normal" && active && (
         <div className="modal-backdrop" role="dialog" aria-modal="true">
           <div className="modal">
             <div className={`operation-mark ${active.phase}`}>
@@ -311,5 +358,12 @@ export function OperationRegistryProvider({
         </div>
       )}
     </OperationRegistryContext.Provider>
+  );
+}
+
+function isCurrentNormalSession(generation: string): boolean {
+  const session = getSession();
+  return (
+    session?.generation === generation && session.accountStatus === "normal"
   );
 }

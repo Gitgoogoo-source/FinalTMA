@@ -33,11 +33,23 @@ for (const route of routes) {
           : route.auth
             ? [{ bearerAuth: [] }]
             : [],
-    parameters: buildParameters(route.path, route.input, route.method),
+    parameters: [
+      ...buildParameters(route.path, route.input, route.method),
+      ...(route.idempotent
+        ? [
+            {
+              name: "Idempotency-Key",
+              in: "header",
+              required: true,
+              schema: { type: "string", format: "uuid" },
+            },
+          ]
+        : []),
+    ],
     responses: buildResponses(
       route.output,
       "rawResponse" in route && route.rawResponse === true,
-      route.idempotent,
+      route.idempotent && route.id !== "identity.authenticate",
       route.errors,
     ),
     "x-idempotency-required": route.idempotent,

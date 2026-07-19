@@ -20,12 +20,16 @@ pnpm format:check
 pnpm lint
 pnpm typecheck
 pnpm contracts:openapi
+pnpm contracts:check
+pnpm product-data:check
 pnpm build
 pnpm db:migrations:check
 pnpm db:lint
 pnpm db:diff:check
+pnpm architecture:check
 pnpm chain:build
 pnpm assets:check:production
+pnpm manifest:check
 pnpm manifest:check:production
 ```
 

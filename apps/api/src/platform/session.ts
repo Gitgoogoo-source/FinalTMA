@@ -1,4 +1,4 @@
-import { createHash, createHmac, randomBytes } from "node:crypto";
+import { createHash, createHmac } from "node:crypto";
 
 import { rpc } from "./db/index.ts";
 import { getEnv } from "./env/index.ts";
@@ -12,13 +12,20 @@ export type Session = {
   session_state: "active" | "expired" | "replaced";
 };
 
-export function issueToken(): { token: string; hash: string; expiresAt: Date } {
-  const token = randomBytes(32).toString("base64url");
-  return {
-    token,
-    hash: hashToken(token),
-    expiresAt: new Date(Date.now() + 15 * 60 * 1000),
-  };
+export function issueToken(operationId: string): {
+  token: string;
+  hash: string;
+} {
+  const token = createHmac("sha256", getEnv().IDENTITY_SECURITY_SECRET)
+    .update(`pokepets-login-token-v1:${operationId}`)
+    .digest("base64url");
+  return { token, hash: hashToken(token) };
+}
+
+export function identityFingerprint(domain: string, value: string): string {
+  return createHmac("sha256", getEnv().IDENTITY_SECURITY_SECRET)
+    .update(`pokepets-identity-v1:${domain}:${value}`)
+    .digest("hex");
 }
 
 export function hashToken(token: string): string {

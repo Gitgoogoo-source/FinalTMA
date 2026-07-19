@@ -132,7 +132,14 @@
         "operationId": "identity_authenticate",
         "tags": ["identity"],
         "security": [],
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful response",
@@ -143,35 +150,59 @@
                   "type": "object",
                   "properties": {
                     "data": {
-                      "type": "object",
-                      "properties": {
-                        "access_token": { "type": "string", "minLength": 32 },
-                        "user_id": {
-                          "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "account_status": {
+                              "type": "string",
+                              "const": "normal"
+                            },
+                            "access_token": {
+                              "type": "string",
+                              "minLength": 32
+                            },
+                            "user_id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                            },
+                            "expires_at": {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            },
+                            "start_param": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "pattern": "^TMA[A-F0-9]{20}$"
+                                },
+                                { "type": "null" }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "account_status",
+                            "access_token",
+                            "user_id",
+                            "expires_at",
+                            "start_param"
+                          ],
+                          "additionalProperties": false
                         },
-                        "account_status": {
-                          "type": "string",
-                          "enum": ["normal", "banned"]
-                        },
-                        "expires_at": {
-                          "type": "string",
-                          "format": "date-time",
-                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
-                        },
-                        "start_param": {
-                          "anyOf": [{ "type": "string" }, { "type": "null" }]
+                        {
+                          "type": "object",
+                          "properties": {
+                            "account_status": {
+                              "type": "string",
+                              "const": "banned"
+                            }
+                          },
+                          "required": ["account_status"],
+                          "additionalProperties": false
                         }
-                      },
-                      "required": [
-                        "access_token",
-                        "user_id",
-                        "account_status",
-                        "expires_at",
-                        "start_param"
-                      ],
-                      "additionalProperties": false
+                      ]
                     },
                     "request_id": {
                       "type": "string",
@@ -196,7 +227,7 @@
             }
           },
           "400": {
-            "description": "Errors: REQUEST_INVALID",
+            "description": "Errors: REQUEST_INVALID, IDEMPOTENCY_KEY_INVALID, IDEMPOTENCY_KEY_REQUIRED, TELEGRAM_START_PARAM_INVALID",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/StandardError" }
@@ -204,7 +235,15 @@
             }
           },
           "401": {
-            "description": "Errors: TELEGRAM_INIT_DATA_INVALID, TELEGRAM_INIT_DATA_EXPIRED",
+            "description": "Errors: TELEGRAM_INIT_DATA_INVALID, TELEGRAM_INIT_DATA_EXPIRED, TELEGRAM_INIT_DATA_TIME_INVALID",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "409": {
+            "description": "Errors: IDEMPOTENCY_KEY_REUSED",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/StandardError" }
@@ -252,7 +291,7 @@
             }
           }
         },
-        "x-idempotency-required": false,
+        "x-idempotency-required": true,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -260,9 +299,14 @@
           "RESPONSE_INVALID",
           "CONTENT_TYPE_INVALID",
           "REQUEST_TOO_LARGE",
+          "IDEMPOTENCY_KEY_INVALID",
+          "IDEMPOTENCY_KEY_REQUIRED",
           "TELEGRAM_INIT_DATA_INVALID",
           "TELEGRAM_INIT_DATA_EXPIRED",
-          "RATE_LIMITED"
+          "TELEGRAM_INIT_DATA_TIME_INVALID",
+          "TELEGRAM_START_PARAM_INVALID",
+          "RATE_LIMITED",
+          "IDEMPOTENCY_KEY_REUSED"
         ],
         "x-error-definitions": {
           "DATABASE_RPC_FAILED": {
@@ -307,16 +351,44 @@
             "refreshScope": "none",
             "recoveryAction": "none"
           },
+          "IDEMPOTENCY_KEY_INVALID": {
+            "status": 400,
+            "message": "幂等键必须是 UUID",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "IDEMPOTENCY_KEY_REQUIRED": {
+            "status": 400,
+            "message": "缺少幂等键",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
           "TELEGRAM_INIT_DATA_INVALID": {
             "status": 401,
-            "message": "Telegram 登录信息无效",
+            "message": "Telegram 登录校验失败，请重新进入应用",
             "retryable": false,
             "refreshScope": "session",
             "recoveryAction": "reauthenticate"
           },
           "TELEGRAM_INIT_DATA_EXPIRED": {
             "status": 401,
-            "message": "Telegram 登录信息已过期",
+            "message": "登录凭证已过期，请重新进入应用",
+            "retryable": false,
+            "refreshScope": "session",
+            "recoveryAction": "reauthenticate"
+          },
+          "TELEGRAM_INIT_DATA_TIME_INVALID": {
+            "status": 401,
+            "message": "Telegram 登录凭证时间无效，请重新进入应用",
+            "retryable": false,
+            "refreshScope": "session",
+            "recoveryAction": "reauthenticate"
+          },
+          "TELEGRAM_START_PARAM_INVALID": {
+            "status": 400,
+            "message": "入口参数无效，请重新从 Telegram 进入应用",
             "retryable": false,
             "refreshScope": "session",
             "recoveryAction": "reauthenticate"
@@ -324,12 +396,19 @@
           "RATE_LIMITED": {
             "status": 429,
             "message": "操作过于频繁，请稍后重试",
-            "retryable": true,
+            "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
+          },
+          "IDEMPOTENCY_KEY_REUSED": {
+            "status": 409,
+            "message": "幂等键已用于不同请求",
+            "retryable": false,
+            "refreshScope": "all",
+            "recoveryAction": "query_operation"
           }
         },
-        "x-refresh-scopes": [],
+        "x-refresh-scopes": ["session"],
         "requestBody": {
           "required": true,
           "content": {
@@ -389,6 +468,18 @@
                               ]
                             },
                             "first_name": { "type": "string" },
+                            "last_name": {
+                              "anyOf": [
+                                { "type": "string" },
+                                { "type": "null" }
+                              ]
+                            },
+                            "photo_url": {
+                              "anyOf": [
+                                { "type": "string", "format": "uri" },
+                                { "type": "null" }
+                              ]
+                            },
                             "status": {
                               "type": "string",
                               "enum": ["normal", "banned"]
@@ -400,6 +491,8 @@
                             "telegram_id",
                             "username",
                             "first_name",
+                            "last_name",
+                            "photo_url",
                             "status",
                             "referral_code"
                           ],
@@ -554,7 +647,13 @@
                                       "PAYMENT_NOT_FOUND",
                                       "RATE_LIMITED",
                                       "REFERRAL_ALREADY_BOUND",
+                                      "REFERRAL_ALREADY_RECHARGED",
+                                      "REFERRAL_CANDIDATE_EXPIRED",
+                                      "REFERRAL_CODE_INVALID",
+                                      "REFERRAL_INELIGIBLE",
                                       "REFERRAL_INVALID",
+                                      "REFERRAL_INVITER_UNAVAILABLE",
+                                      "REFERRAL_OLD_USER",
                                       "REFERRAL_SELF_BIND",
                                       "REQUEST_BODY_NOT_ALLOWED",
                                       "REQUEST_INVALID",
@@ -570,6 +669,8 @@
                                       "TELEGRAM_API_FAILED",
                                       "TELEGRAM_INIT_DATA_EXPIRED",
                                       "TELEGRAM_INIT_DATA_INVALID",
+                                      "TELEGRAM_INIT_DATA_TIME_INVALID",
+                                      "TELEGRAM_START_PARAM_INVALID",
                                       "TELEGRAM_REENTRY_REQUIRED",
                                       "TELEGRAM_UPDATE_INVALID",
                                       "TEMPLATE_NOT_FOUND",
@@ -1720,7 +1821,14 @@
         "operationId": "gacha_open",
         "tags": ["gacha"],
         "security": [{ "bearerAuth": [] }],
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful response",
@@ -2892,7 +3000,14 @@
         "operationId": "inventory_evolve",
         "tags": ["inventory"],
         "security": [{ "bearerAuth": [] }],
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful response",
@@ -3362,7 +3477,14 @@
         "operationId": "inventory_decompose",
         "tags": ["inventory"],
         "security": [{ "bearerAuth": [] }],
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful response",
@@ -4098,7 +4220,14 @@
         "operationId": "expedition_create",
         "tags": ["expedition"],
         "security": [{ "bearerAuth": [] }],
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful response",
@@ -4861,6 +4990,12 @@
               "format": "uuid",
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
           }
         ],
         "responses": {
@@ -5388,7 +5523,14 @@
         "operationId": "wheel_spin",
         "tags": ["wheel"],
         "security": [{ "bearerAuth": [] }],
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful response",
@@ -6741,7 +6883,14 @@
         "operationId": "market_create_listing",
         "tags": ["market"],
         "security": [{ "bearerAuth": [] }],
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful response",
@@ -7134,6 +7283,12 @@
               "format": "uuid",
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
           }
         ],
         "responses": {
@@ -7453,7 +7608,14 @@
         "operationId": "market_purchase",
         "tags": ["market"],
         "security": [{ "bearerAuth": [] }],
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful response",
@@ -8320,7 +8482,14 @@
         "operationId": "topup_create_order",
         "tags": ["topup"],
         "security": [{ "bearerAuth": [] }],
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful response",
@@ -9752,7 +9921,14 @@
         "operationId": "vip_create_order",
         "tags": ["vip"],
         "security": [{ "bearerAuth": [] }],
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful response",
@@ -10325,7 +10501,14 @@
         "operationId": "vip_claim_fgems",
         "tags": ["vip"],
         "security": [{ "bearerAuth": [] }],
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful response",
@@ -10626,7 +10809,14 @@
         "operationId": "vip_claim_free_box",
         "tags": ["vip"],
         "security": [{ "bearerAuth": [] }],
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful response",
@@ -11159,7 +11349,14 @@
         "operationId": "tasks_check_in",
         "tags": ["tasks"],
         "security": [{ "bearerAuth": [] }],
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful response",
@@ -11484,6 +11681,12 @@
             "in": "path",
             "required": true,
             "schema": { "type": "string", "minLength": 1, "maxLength": 128 }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
           }
         ],
         "responses": {
@@ -12015,7 +12218,14 @@
         "operationId": "referral_bind",
         "tags": ["referral"],
         "security": [{ "bearerAuth": [] }],
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful response",
@@ -12096,7 +12306,7 @@
             }
           },
           "400": {
-            "description": "Errors: REQUEST_INVALID, IDEMPOTENCY_KEY_INVALID, IDEMPOTENCY_KEY_REQUIRED, REFERRAL_INVALID",
+            "description": "Errors: REQUEST_INVALID, IDEMPOTENCY_KEY_INVALID, IDEMPOTENCY_KEY_REQUIRED, REFERRAL_CODE_INVALID",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/StandardError" }
@@ -12120,7 +12330,15 @@
             }
           },
           "409": {
-            "description": "Errors: REFERRAL_SELF_BIND, REFERRAL_ALREADY_BOUND, IDEMPOTENCY_KEY_REUSED",
+            "description": "Errors: REFERRAL_ALREADY_RECHARGED, REFERRAL_INELIGIBLE, REFERRAL_INVITER_UNAVAILABLE, REFERRAL_OLD_USER, REFERRAL_SELF_BIND, REFERRAL_ALREADY_BOUND, IDEMPOTENCY_KEY_REUSED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "410": {
+            "description": "Errors: REFERRAL_CANDIDATE_EXPIRED",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/StandardError" }
@@ -12174,7 +12392,12 @@
           "SESSION_REQUIRED",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
-          "REFERRAL_INVALID",
+          "REFERRAL_ALREADY_RECHARGED",
+          "REFERRAL_CANDIDATE_EXPIRED",
+          "REFERRAL_CODE_INVALID",
+          "REFERRAL_INELIGIBLE",
+          "REFERRAL_INVITER_UNAVAILABLE",
+          "REFERRAL_OLD_USER",
           "REFERRAL_SELF_BIND",
           "REFERRAL_ALREADY_BOUND",
           "IDEMPOTENCY_KEY_REUSED"
@@ -12264,16 +12487,51 @@
             "refreshScope": "none",
             "recoveryAction": "none"
           },
-          "REFERRAL_INVALID": {
+          "REFERRAL_ALREADY_RECHARGED": {
+            "status": 409,
+            "message": "已有充值记录的账号不能绑定邀请码",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "REFERRAL_CANDIDATE_EXPIRED": {
+            "status": 410,
+            "message": "邀请链接已失效，请重新通过原邀请链接进入",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "REFERRAL_CODE_INVALID": {
             "status": 400,
-            "message": "邀请码无效",
+            "message": "邀请链接无效或已失效",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "REFERRAL_INELIGIBLE": {
+            "status": 409,
+            "message": "当前账号暂不符合邀请绑定条件",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "REFERRAL_INVITER_UNAVAILABLE": {
+            "status": 409,
+            "message": "当前邀请链接暂不可用",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "REFERRAL_OLD_USER": {
+            "status": 409,
+            "message": "老用户不能绑定邀请码",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
           },
           "REFERRAL_SELF_BIND": {
             "status": 409,
-            "message": "不能绑定自己的邀请码",
+            "message": "不能使用自己的邀请码",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
@@ -12302,7 +12560,7 @@
                 "$schema": "https://json-schema.org/draft/2020-12/schema",
                 "type": "object",
                 "properties": {
-                  "code": { "type": "string", "minLength": 1, "maxLength": 128 }
+                  "code": { "type": "string", "pattern": "^TMA[A-F0-9]{20}$" }
                 },
                 "required": ["code"],
                 "additionalProperties": false
@@ -12317,7 +12575,14 @@
         "operationId": "referral_share_event",
         "tags": ["referral"],
         "security": [{ "bearerAuth": [] }],
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful response",
@@ -12819,6 +13084,12 @@
             "in": "path",
             "required": true,
             "schema": { "type": "string", "minLength": 1, "maxLength": 128 }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
           }
         ],
         "responses": {
@@ -13521,7 +13792,14 @@
         "operationId": "wallet_verify",
         "tags": ["wallet"],
         "security": [{ "bearerAuth": [] }],
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful response",
@@ -13924,7 +14202,14 @@
         "operationId": "wallet_disconnect",
         "tags": ["wallet"],
         "security": [{ "bearerAuth": [] }],
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful response",
@@ -14701,7 +14986,14 @@
         "operationId": "mint_reserve",
         "tags": ["mint"],
         "security": [{ "bearerAuth": [] }],
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful response",
@@ -15165,6 +15457,12 @@
               "format": "uuid",
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
           }
         ],
         "responses": {
@@ -15604,6 +15902,12 @@
               "format": "uuid",
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
           }
         ],
         "responses": {
@@ -16257,7 +16561,13 @@
                                 "PAYMENT_NOT_FOUND",
                                 "RATE_LIMITED",
                                 "REFERRAL_ALREADY_BOUND",
+                                "REFERRAL_ALREADY_RECHARGED",
+                                "REFERRAL_CANDIDATE_EXPIRED",
+                                "REFERRAL_CODE_INVALID",
+                                "REFERRAL_INELIGIBLE",
                                 "REFERRAL_INVALID",
+                                "REFERRAL_INVITER_UNAVAILABLE",
+                                "REFERRAL_OLD_USER",
                                 "REFERRAL_SELF_BIND",
                                 "REQUEST_BODY_NOT_ALLOWED",
                                 "REQUEST_INVALID",
@@ -16273,6 +16583,8 @@
                                 "TELEGRAM_API_FAILED",
                                 "TELEGRAM_INIT_DATA_EXPIRED",
                                 "TELEGRAM_INIT_DATA_INVALID",
+                                "TELEGRAM_INIT_DATA_TIME_INVALID",
+                                "TELEGRAM_START_PARAM_INVALID",
                                 "TELEGRAM_REENTRY_REQUIRED",
                                 "TELEGRAM_UPDATE_INVALID",
                                 "TEMPLATE_NOT_FOUND",
@@ -17918,7 +18230,13 @@
                   "PAYMENT_NOT_FOUND",
                   "RATE_LIMITED",
                   "REFERRAL_ALREADY_BOUND",
+                  "REFERRAL_ALREADY_RECHARGED",
+                  "REFERRAL_CANDIDATE_EXPIRED",
+                  "REFERRAL_CODE_INVALID",
+                  "REFERRAL_INELIGIBLE",
                   "REFERRAL_INVALID",
+                  "REFERRAL_INVITER_UNAVAILABLE",
+                  "REFERRAL_OLD_USER",
                   "REFERRAL_SELF_BIND",
                   "REQUEST_BODY_NOT_ALLOWED",
                   "REQUEST_INVALID",
@@ -17934,6 +18252,8 @@
                   "TELEGRAM_API_FAILED",
                   "TELEGRAM_INIT_DATA_EXPIRED",
                   "TELEGRAM_INIT_DATA_INVALID",
+                  "TELEGRAM_INIT_DATA_TIME_INVALID",
+                  "TELEGRAM_START_PARAM_INVALID",
                   "TELEGRAM_REENTRY_REQUIRED",
                   "TELEGRAM_UPDATE_INVALID",
                   "TEMPLATE_NOT_FOUND",

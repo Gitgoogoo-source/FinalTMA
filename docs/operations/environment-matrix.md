@@ -12,4 +12,4 @@
 
 测试与生产只允许域名、项目 ID、Bot、合约地址和密钥不同。两者必须使用相同 Git commit、相同 OpenAPI、相同目录版本和相同迁移序列。
 
-Web 公开构建当前不需要 `VITE_*`。API 机密配置以根 `.env.example` 为唯一名称清单，真实值只进入对应 Vercel Project Secret。任何 `SUPABASE_SERVICE_ROLE_KEY`、`TELEGRAM_BOT_TOKEN`、`CRON_SECRET`、`TELEGRAM_WEBHOOK_SECRET`、TON API Key 或签名私钥均不得进入浏览器环境。
+Web 公开构建当前不需要 `VITE_*`。API 机密配置以根 `.env.example` 为唯一名称清单，真实值只进入对应 Vercel Project Secret。测试与生产必须分别配置至少 32 字节的 `IDENTITY_SECURITY_SECRET`，且不得与 `REFERRAL_CODE_SECRET` 共用。任何 `SUPABASE_SERVICE_ROLE_KEY`、`IDENTITY_SECURITY_SECRET`、`TELEGRAM_BOT_TOKEN`、`CRON_SECRET`、`TELEGRAM_WEBHOOK_SECRET`、TON API Key 或签名私钥均不得进入浏览器环境。

@@ -117,6 +117,36 @@ def verify_database_boundaries() -> None:
         raise SystemExit("The Data API must expose only api and Supabase Auth must remain disabled")
 
 
+def verify_identity_login_contract() -> None:
+    sql = (SCHEMAS / "10_identity.sql").read_text(encoding="utf-8").lower()
+    required = (
+        "create table identity.login_requests",
+        "operation_id uuid primary key",
+        "create table identity.entry_candidates",
+        "user_id uuid primary key",
+        "create unique index sessions_one_active_per_user_idx",
+        "where revoked_at is null",
+        "scope in ('source', 'user', 'init_data')",
+        "when 'source' then 30",
+        "when 'user' then 10",
+        "when 'init_data' then 3",
+        "create or replace function api.identity_consume_login_rate_limit",
+        "create or replace function api.identity_authenticate",
+        "p_operation_id uuid",
+        "p_request_hash text",
+        "if v_user.status = 'banned'",
+        "now() + interval '15 minutes'",
+        "now() + interval '10 minutes'",
+    )
+    missing = [fragment for fragment in required if fragment not in sql]
+    if missing:
+        raise SystemExit(f"Identity login contract is incomplete: {missing}")
+
+    referral_sql = (SCHEMAS / "63_referral.sql").read_text(encoding="utf-8").lower()
+    if "identity.entry_candidates" not in referral_sql or "v_session.new_user" in referral_sql:
+        raise SystemExit("Referral binding must consume the persistent entry candidate")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--write-baseline", action="store_true")
@@ -138,6 +168,7 @@ def main() -> None:
     verify_security(security)
     verify_database_error_codes()
     verify_database_boundaries()
+    verify_identity_login_contract()
 
     with tempfile.TemporaryDirectory(prefix="pokepets-db-check-") as temporary:
         output = Path(temporary)

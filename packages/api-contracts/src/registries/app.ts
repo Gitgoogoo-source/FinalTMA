@@ -46,7 +46,10 @@ assertContractRegistry(routes);
 export type AppRoute = (typeof routes)[number];
 export type RouteId = AppRoute["id"];
 export type RouteById<Id extends RouteId> = Extract<AppRoute, { id: Id }>;
-export type RecoverableRoute = Extract<AppRoute, { idempotent: true }>;
+export type RecoverableRoute = Exclude<
+  Extract<AppRoute, { idempotent: true }>,
+  RouteById<"identity.authenticate">
+>;
 export type RecoverableRouteId = RecoverableRoute["id"];
 export type TypedOperationSummary = {
   [Route in RecoverableRoute as Route["id"]]: {
@@ -69,7 +72,12 @@ export function routeById<Id extends RouteId>(id: Id): RouteById<Id> {
 export function isRecoverableRouteId(
   value: string,
 ): value is RecoverableRouteId {
-  return routes.some((route) => route.id === value && route.idempotent);
+  return routes.some(
+    (route) =>
+      route.id === value &&
+      route.idempotent &&
+      route.id !== "identity.authenticate",
+  );
 }
 
 export function parseRecoveredOperation(value: unknown): TypedOperationSummary {
@@ -80,7 +88,9 @@ export function parseRecoveredOperation(value: unknown): TypedOperationSummary {
     throw new Error("Operation use_case is missing");
   const route = routes.find(
     (candidate): candidate is RecoverableRoute =>
-      candidate.id === summary.use_case && candidate.idempotent,
+      candidate.id === summary.use_case &&
+      candidate.idempotent &&
+      candidate.id !== "identity.authenticate",
   );
   if (!route)
     throw new Error(

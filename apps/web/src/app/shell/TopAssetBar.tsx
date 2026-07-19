@@ -1,5 +1,5 @@
 import { Coins, Crown, RefreshCw, WalletCards } from "lucide-react";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 import { useApiQuery } from "../../platform/query/index.ts";
 import { Button } from "../../shared/ui/index.tsx";
@@ -13,19 +13,24 @@ export function TopAssetBar({
 }): ReactNode {
   const bootstrap = useApiQuery("identity.bootstrap");
   const vip = useApiQuery("vip.get");
-  const pendingPayments = useApiQuery("topup.bootstrap");
+  const wallet = useApiQuery("wallet.get");
   const kcoin = bootstrap.data?.assets.kcoin;
   const fgems = bootstrap.data?.assets.fgems;
   const user = bootstrap.data?.user;
+  const displayName = [user?.first_name, user?.last_name]
+    .filter(Boolean)
+    .join(" ");
   return (
     <header className="topbar">
       <div className="identity">
-        <span className="avatar">
-          {(user?.first_name ?? "P").slice(0, 1).toUpperCase()}
-        </span>
+        <Avatar name={displayName || "PokePets"} photoUrl={user?.photo_url} />
         <div>
-          <strong>{user?.first_name ?? "—"}</strong>
-          <small>@{user?.username ?? user?.id.slice(0, 8) ?? "—"}</small>
+          <strong>{displayName || "—"}</strong>
+          <small>
+            {user?.username
+              ? `@${user.username}`
+              : (user?.id.slice(0, 8) ?? "—")}
+          </small>
         </div>
       </div>
       <div className="asset-actions">
@@ -37,26 +42,67 @@ export function TopAssetBar({
           <i>◆</i>
           <span>{fgems?.available ?? (bootstrap.isLoading ? "…" : "—")}</span>
         </button>
-        {Boolean(vip.data?.active) && (
-          <button className="active" onClick={() => openDialog("vip")}>
+        {vip.error ? (
+          <button className="summary-retry" onClick={() => void vip.refetch()}>
+            VIP 重试
+          </button>
+        ) : (
+          <button
+            className={vip.data?.active ? "active" : ""}
+            onClick={() => openDialog("vip")}
+          >
             <Crown />
           </button>
         )}
-        <button onClick={() => openDialog("wallet")}>
+        <button
+          disabled={Boolean(wallet.error)}
+          onClick={() => openDialog("wallet")}
+        >
           <WalletCards />
         </button>
+        {wallet.error ? (
+          <button
+            className="summary-retry"
+            onClick={() => void wallet.refetch()}
+          >
+            钱包重试
+          </button>
+        ) : null}
         <Button
           className="refresh"
           aria-label="刷新真实状态"
           onClick={() => {
             void bootstrap.refetch();
             void vip.refetch();
-            void pendingPayments.refetch();
+            void wallet.refetch();
           }}
         >
           <RefreshCw />
         </Button>
       </div>
     </header>
+  );
+}
+
+function Avatar({
+  name,
+  photoUrl,
+}: {
+  name: string;
+  photoUrl: string | null | undefined;
+}): ReactNode {
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  return (
+    <span className="avatar">
+      {photoUrl && failedUrl !== photoUrl ? (
+        <img
+          src={photoUrl}
+          alt={`${name}头像`}
+          onError={() => setFailedUrl(photoUrl)}
+        />
+      ) : (
+        name.slice(0, 1).toUpperCase()
+      )}
+    </span>
   );
 }

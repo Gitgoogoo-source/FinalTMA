@@ -122,6 +122,12 @@ html[data-theme="light"] .hero {
   font-weight: 900;
   background: linear-gradient(145deg, #9b8aff, #5a3ee5);
   box-shadow: 0 8px 22px rgba(124, 92, 255, 0.28);
+  overflow: hidden;
+}
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 .asset-actions {
   display: flex;
@@ -143,6 +149,12 @@ html[data-theme="light"] .hero {
 }
 .asset-actions button svg {
   width: 16px;
+}
+.asset-actions .summary-retry {
+  max-width: 54px;
+  padding: 0 5px;
+  font-size: 9px;
+  line-height: 1.1;
 }
 .asset-actions button.active {
   color: #ffd868;
@@ -1042,6 +1054,21 @@ input:focus {
 }
 .startup p {
   color: var(--muted);
+}
+.entry-notice {
+  position: fixed;
+  z-index: 90;
+  top: calc(var(--safe-top) + 76px);
+  left: 50%;
+  width: min(92vw, 440px);
+  padding: 10px 14px;
+  border: 1px solid rgba(124, 92, 255, 0.35);
+  border-radius: 12px;
+  color: var(--text);
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  box-shadow: 0 12px 36px rgba(15, 23, 42, 0.24);
+  text-align: center;
+  transform: translateX(-50%);
 }
 .brand-orbit {
   width: 86px;

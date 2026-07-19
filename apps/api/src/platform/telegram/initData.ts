@@ -354,9 +354,36 @@ function isTelegramWebAppUser(value: unknown): value is TelegramWebAppUser {
 
   return (
     Number.isSafeInteger(value.id) &&
+    Number(value.id) > 0 &&
     typeof value.first_name === "string" &&
-    value.first_name.length > 0
+    value.first_name.length > 0 &&
+    optionalBoolean(value.is_bot) &&
+    optionalBoolean(value.is_premium) &&
+    optionalBoolean(value.added_to_attachment_menu) &&
+    optionalBoolean(value.allows_write_to_pm) &&
+    optionalText(value.last_name) &&
+    optionalText(value.username) &&
+    optionalText(value.language_code) &&
+    optionalHttpsUrl(value.photo_url)
   );
+}
+
+function optionalBoolean(value: unknown): boolean {
+  return value === undefined || typeof value === "boolean";
+}
+
+function optionalText(value: unknown): boolean {
+  return value === undefined || typeof value === "string";
+}
+
+function optionalHttpsUrl(value: unknown): boolean {
+  if (value === undefined) return true;
+  if (typeof value !== "string") return false;
+  try {
+    return new URL(value).protocol === "https:";
+  } catch {
+    return false;
+  }
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
