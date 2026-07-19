@@ -70,6 +70,28 @@ export function WheelPanel(): ReactNode {
             <span>已转 {query.data?.spin_count ?? 0}</span>
             <span>今日上限 {query.data?.daily_limit ?? 20}</span>
           </div>
+          <div className="wheel-progress-track" aria-hidden="true">
+            <i
+              style={{
+                width: `${Math.min(
+                  100,
+                  ((query.data?.spin_count ?? 0) /
+                    Math.max(1, query.data?.daily_limit ?? 20)) *
+                    100,
+                )}%`,
+              }}
+            />
+          </div>
+          <div className="wheel-milestones">
+            <span className={query.data?.milestone_10_claimed ? "claimed" : ""}>
+              <i>10</i>
+              +25 Fgems
+            </span>
+            <span className={query.data?.milestone_20_claimed ? "claimed" : ""}>
+              <i>20</i>
+              +25 Fgems
+            </span>
+          </div>
           <div className="button-row">
             <Button
               disabled={blocked || Number(query.data?.remaining) < 1}

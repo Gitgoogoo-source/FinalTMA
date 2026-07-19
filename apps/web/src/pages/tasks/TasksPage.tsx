@@ -1,35 +1,43 @@
-import { Check, Users } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { ListChecks, Users } from "lucide-react";
+import type { ReactNode } from "react";
 
 import { ReferralPanel } from "../../domains/referral/index.ts";
 import { TasksView } from "../../domains/tasks/index.ts";
 
 export function TasksPage(): ReactNode {
-  const [tab, setTab] = useState<"tasks" | "referral">("tasks");
   return (
-    <main className="page">
-      <header className="hero tasks-hero">
-        <span>DAILY MISSIONS</span>
-        <h1>任务中心</h1>
-        <p>任务事实与奖励由同一数据库事务确认。</p>
+    <main className="page tasks-page">
+      <header className="page-heading tasks-heading">
+        <div>
+          <span>DAILY MISSIONS</span>
+          <h1>任务中心</h1>
+        </div>
+        <ListChecks aria-hidden="true" />
       </header>
-      <nav className="segmented">
-        <button
-          className={tab === "tasks" ? "active" : ""}
-          onClick={() => setTab("tasks")}
-        >
-          <Check />
-          任务与签到
-        </button>
-        <button
-          className={tab === "referral" ? "active" : ""}
-          onClick={() => setTab("referral")}
-        >
-          <Users />
-          分享邀请
-        </button>
-      </nav>
-      {tab === "tasks" ? <TasksView /> : <ReferralPanel />}
+      <section className="task-section referral-section">
+        <div className="section-heading">
+          <span className="section-icon">
+            <Users aria-hidden="true" />
+          </span>
+          <div>
+            <small>GROW TOGETHER</small>
+            <h2>邀请好友</h2>
+          </div>
+        </div>
+        <ReferralPanel />
+      </section>
+      <section className="task-section mission-section">
+        <div className="section-heading">
+          <span className="section-icon">
+            <ListChecks aria-hidden="true" />
+          </span>
+          <div>
+            <small>TODAY</small>
+            <h2>签到与任务</h2>
+          </div>
+        </div>
+        <TasksView />
+      </section>
     </main>
   );
 }

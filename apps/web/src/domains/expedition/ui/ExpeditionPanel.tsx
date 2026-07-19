@@ -93,17 +93,24 @@ export function ExpeditionPanel(): ReactNode {
             const running = active.find((item) => item.tier === tier);
             const isReady = running?.status === "claimable";
             return (
-              <Card key={tier} className="expedition-card">
-                <strong>{tierNames[tier]}远征</strong>
-                <small>
-                  {rule.allowed_rarities
-                    .map((rarity) => rarityNames[rarity] ?? rarity)
-                    .join(" · ")}
-                </small>
-                <span>
-                  {rule.duration_minutes} 分钟 · 今日 {usedToday[tier]}/
-                  {rule.daily_limit}
-                </span>
+              <Card key={tier} className={`expedition-card ${tier}`}>
+                <div className="expedition-route">
+                  <span className="route-icon">
+                    <Compass aria-hidden="true" />
+                  </span>
+                  <div>
+                    <strong>{tierNames[tier]}远征</strong>
+                    <small>
+                      {rule.allowed_rarities
+                        .map((rarity) => rarityNames[rarity] ?? rarity)
+                        .join(" · ")}
+                    </small>
+                  </div>
+                  <span className="route-count">
+                    {usedToday[tier]}/{rule.daily_limit}
+                  </span>
+                </div>
+                <span>{rule.duration_minutes} 分钟完成</span>
                 {running ? (
                   <div className="active-expedition">
                     <Timer />

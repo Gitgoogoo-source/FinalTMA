@@ -1,4 +1,9 @@
-import { PackageMinus, PackagePlus, ShoppingCart } from "lucide-react";
+import {
+  PackageMinus,
+  PackagePlus,
+  ShoppingBag,
+  ShoppingCart,
+} from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 import { useSearchParams } from "react-router-dom";
 
@@ -80,11 +85,13 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
     });
   };
   return (
-    <main className="page">
-      <header className="hero market-hero">
-        <span>OFFICIAL MARKET</span>
-        <h1>交易市场</h1>
-        <p>官方价格 · FIFO 撮合 · 不展示卖家身份</p>
+    <main className="page market-page">
+      <header className="page-heading market-heading">
+        <div>
+          <span>OFFICIAL MARKET</span>
+          <h1>交易市场</h1>
+        </div>
+        <ShoppingBag aria-hidden="true" />
       </header>
       {vipBanner}
       {resumedTemplate && (
@@ -158,6 +165,7 @@ type MarketViewItem = {
   template_id: string;
   name: string;
   rarity?: string;
+  stage?: number | undefined;
   image_path: string;
   unit_price: number;
   available: number;
@@ -176,28 +184,33 @@ function MarketCard({
   onSubmit(item: MarketViewItem, quantity: number): void;
 }): ReactNode {
   const [quantity, setQuantity] = useState(1);
-  const [imageReady, setImageReady] = useState(tab === "manage");
+  const [imageReady, setImageReady] = useState(false);
   const available = item.available;
   const price = item.unit_price;
   return (
     <Card className="market-card">
-      {tab !== "manage" && (
+      <div className="market-art">
         <CatalogImage
           path={item.image_path}
           alt={item.name}
           onAvailability={setImageReady}
         />
-      )}
+        <Badge>
+          {item.rarity ?? (tab === "manage" ? "出售中" : "")}
+          {item.stage ? ` · 第 ${item.stage} 阶` : ""}
+        </Badge>
+      </div>
       <div className="market-copy">
-        <Badge>{item.rarity ?? (tab === "manage" ? "出售中" : "")}</Badge>
         <h2>{item.name}</h2>
-        <p>
-          官方单价 <strong>{price} K</strong>
-        </p>
-        <p>
-          {tab === "buy" ? "可买" : tab === "sell" ? "可用" : "出售中"}{" "}
-          {available}
-        </p>
+        <div className="market-meta">
+          <p>
+            官方单价 <strong>{price} K</strong>
+          </p>
+          <p>
+            {tab === "buy" ? "可买" : tab === "sell" ? "可用" : "出售中"}{" "}
+            <strong>{available}</strong>
+          </p>
+        </div>
       </div>
       {tab !== "manage" && (
         <div className="quantity">
@@ -218,7 +231,10 @@ function MarketCard({
       )}
       <Button
         disabled={
-          blocked || !imageReady || available < 1 || quantity > available
+          blocked ||
+          (tab !== "manage" && !imageReady) ||
+          available < 1 ||
+          quantity > available
         }
         onClick={() => onSubmit(item, quantity)}
       >

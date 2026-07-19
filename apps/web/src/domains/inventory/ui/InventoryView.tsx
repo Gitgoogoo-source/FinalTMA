@@ -22,8 +22,8 @@ export function InventoryView({
     : (items[0]?.template_id ?? "");
   const item = items.find((candidate) => candidate.template_id === effectiveId);
   return (
-    <main className="page">
-      <header className="page-heading">
+    <main className="page inventory-page">
+      <header className="page-heading inventory-heading">
         <div>
           <span>COLLECTION</span>
           <h1>我的藏品</h1>
@@ -51,6 +51,7 @@ export function InventoryView({
                 />
               </div>
               <div className="detail-copy">
+                <span className="detail-eyebrow">CURRENT POKEPET</span>
                 <Badge>
                   {item.rarity} · 第 {item.stage} 阶
                 </Badge>
@@ -86,6 +87,8 @@ export function InventoryView({
                   className={
                     candidate.template_id === effectiveId ? "selected" : ""
                   }
+                  aria-pressed={candidate.template_id === effectiveId}
+                  aria-label={`选择${candidate.name}，共 ${candidate.total} 个`}
                   onClick={() => {
                     setSelectedId(candidate.template_id);
                     setImageReady(false);
@@ -95,6 +98,7 @@ export function InventoryView({
                     path={candidate.image_path}
                     alt={candidate.name}
                   />
+                  <i className={`rarity-mark ${candidate.rarity}`} />
                   <span>×{candidate.total}</span>
                 </button>
               ))}

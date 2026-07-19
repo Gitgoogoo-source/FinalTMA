@@ -14,31 +14,33 @@ const navigation = [
   { path: "/", label: "开盒", icon: Boxes },
   { path: "/inventory", label: "藏品", icon: PackageSearch },
   { path: "/tasks", label: "任务", icon: ListChecks },
-];
+] as const;
 
 export function BottomNavigation(): ReactNode {
   const location = useLocation();
   const navigate = useNavigate();
   return (
     <nav className="bottom-nav">
-      {navigation.map(({ path, label, icon: Icon }) => (
-        <button
-          key={path}
-          className={
-            (
-              path === "/"
-                ? location.pathname === "/"
-                : location.pathname.startsWith(path)
-            )
-              ? "active"
-              : ""
-          }
-          onClick={() => navigate(path)}
-        >
-          <Icon />
-          <span>{label}</span>
-        </button>
-      ))}
+      {navigation.map(({ path, label, icon: Icon }) => {
+        const active =
+          path === "/"
+            ? location.pathname === "/"
+            : location.pathname.startsWith(path);
+        return (
+          <button
+            key={path}
+            className={active ? "active" : ""}
+            aria-current={active ? "page" : undefined}
+            aria-label={`前往${label}`}
+            onClick={() => navigate(path)}
+          >
+            <span className="nav-icon">
+              <Icon />
+            </span>
+            <span>{label}</span>
+          </button>
+        );
+      })}
     </nav>
   );
 }
