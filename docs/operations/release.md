@@ -6,9 +6,9 @@
 
 - 真实开发 Supabase 在首次初始化前 migration history 为空；未来生产 Supabase 在上线前保持空库且无须保留业务数据。
 - 正式 210 张藏品图、3 张盲盒图、Telegram 分享图和 TON Connect 图标已提供。
-- 真实开发/生产 Supabase、Vercel、Telegram、Stars、TON RPC 与观测平台配置齐全。
+- 本次真实开发部署的 Supabase、Vercel、Telegram、Stars 与观测平台配置齐全；TON RPC 和链上配置在启用 TON 前补齐。
 - 生产将部署已在真实开发环境完成验收的同一 Git commit、同一 migration 序列和同一目录 manifest。
-- Vercel 套餐支持 `vercel.json` 中四个 cron 的执行频率。
+- Vercel 套餐支持 `vercel.json` 中三项当前 Cron 的执行频率；启用 TON 时同一套餐还必须支持第四项 Mint 对账 Cron。
 
 任何一项不成立：停止发布，不恢复旧 migration、占位素材、mock、默认业务值或功能开关。
 
@@ -51,11 +51,13 @@ python3 tools/web/build_manifest.py \
 
 1. 核对三条 migration 已按文件名顺序应用，且远端历史与仓库完全一致。
 2. 对开发项目执行 `supabase db lint --linked --schema api,identity,catalog,operations,economy,inventory,gacha,expedition,wheel,market,payments,vip,tasks,referral,album,onchain,risk --level warning --fail-on error`。
-3. 部署当前 Git commit 到 `final-tma` Vercel Project 并配置开发 secrets。
-4. 发布 testnet collection，记录地址、交易 hash、owner、permit 公钥和 1% 版税验证结果。
+3. 在 Supabase Data API 设置中把 Exposed schemas 固定为 `public,graphql_public,api`，不得暴露任何业务表 schema。
+4. 部署当前 Git commit 到 `final-tma` Vercel Project 并配置开发 secrets。
 5. 配置开发 Bot webhook/Mini App URL。
-6. 按 `docs/operations/acceptance.md` 完成 Telegram 真机、支付、并发与 Mint 验收。
-7. 执行四个 job；`monitor-invariants` 必须返回 0 个新增 violation。
+6. 按 `docs/operations/acceptance.md` 完成 Telegram 真机、支付与并发验收。
+7. 执行 `reconcile-payments`、`cleanup-idempotency` 和 `monitor-invariants`；`monitor-invariants` 必须返回 0 个新增 violation。
+
+本次真实开发部署不发布 TON testnet Collection，不配置 TON runtime secrets，不调度 `reconcile-mints`，也不执行钱包与 Mint 验收。后续启用 TON 时必须先完成 testnet Collection 部署、链上 owner/permit 公钥/1% 版税验证和全部真实 TON 配置，再把 `reconcile-mints` 恢复到 Vercel Cron 并完成 `docs/operations/acceptance.md` 中的 TON 场景。
 
 ## 4. 生产切换
 

@@ -1,5 +1,5 @@
 import { rpc } from "../../platform/db/index.ts";
-import { getEnv } from "../../platform/env/index.ts";
+import { getReferralEnv } from "../../platform/env/index.ts";
 import {
   operationResult,
   type OperationEnvelope,
@@ -12,7 +12,7 @@ import {
 
 export const referralHandlers = {
   "referral.get": async (context) => {
-    const env = getEnv();
+    const env = getReferralEnv();
     return {
       data: await rpc("referral_get", {
         p_session_id: requireSession(context).session_id,

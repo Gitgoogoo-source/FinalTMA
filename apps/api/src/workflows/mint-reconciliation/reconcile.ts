@@ -2,7 +2,7 @@ import { Address } from "@ton/core";
 import { TonClient } from "@ton/ton";
 
 import { rpc } from "../../platform/db/index.ts";
-import { getEnv } from "../../platform/env/index.ts";
+import { getTonEnv } from "../../platform/env/index.ts";
 
 type Candidate = {
   mint_id: string;
@@ -24,7 +24,7 @@ export async function reconcileSubmittedMints(): Promise<{
   failed: number;
   unknown: number;
 }> {
-  const env = getEnv();
+  const env = getTonEnv();
   const client = new TonClient({
     endpoint: env.TON_API_BASE_URL,
     apiKey: env.TON_API_KEY,

@@ -15,7 +15,7 @@ Vercel 将根目录三个 Function 入口编译为 JavaScript，但不会把 wor
 
 Vercel rewrite 使用 `__route` 传递原始 API 路径，并会把 source 的命名捕获 `path` 自动附加到查询字符串。两者都是部署基础设施字段，必须在严格业务输入校验前剥离；业务契约不得声明名为 `__route` 或 `path` 的输入字段。
 
-数据库适配器只解析 `SUPABASE_URL` 与 `SUPABASE_SERVICE_ROLE_KEY`。需要 Telegram、TON、会话、Cron 或支付支持配置的模块继续通过全量 `getEnv()` 校验自身真实配置；不得以占位值绕过校验。
+数据库适配器只解析 `SUPABASE_URL` 与 `SUPABASE_SERVICE_ROLE_KEY`。核心会话、Telegram、Cron 与支付支持配置由 `getEnv()` 校验；邀请链接由 `getReferralEnv()` 校验 Bot 用户名与 Mini App short name；钱包链上公钥查询、Mint permit 与 Mint 对账只通过 `getTonEnv()` 校验 TON 配置。未启用的外部集成不得以占位值绕过校验，也不得阻塞不依赖该集成的 API。
 
 ## 不变量
 

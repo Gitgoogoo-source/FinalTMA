@@ -9,12 +9,19 @@ const schema = z.object({
     .string()
     .refine((value) => Buffer.byteLength(value, "utf8") >= 32),
   TELEGRAM_BOT_TOKEN: z.string().min(20),
-  TELEGRAM_BOT_USERNAME: z.string().min(1),
-  TELEGRAM_MINI_APP_SHORT_NAME: z.string().min(1),
   TELEGRAM_WEBHOOK_SECRET: z.string().min(16),
   REFERRAL_CODE_SECRET: z.string().min(32),
   CRON_SECRET: z.string().min(32),
   PAYMENT_SUPPORT_URL: z.string().url(),
+});
+
+const referralSchema = z.object({
+  TELEGRAM_BOT_USERNAME: z.string().min(1),
+  TELEGRAM_MINI_APP_SHORT_NAME: z.string().min(1),
+});
+
+const tonSchema = z.object({
+  APP_BASE_URL: z.string().url(),
   TON_NETWORK: z.enum(["mainnet", "testnet"]),
   TON_API_BASE_URL: z.string().url(),
   TON_API_KEY: z.string().min(1),
@@ -31,8 +38,12 @@ const databaseSchema = schema.pick({
 
 export type ServerEnv = z.infer<typeof schema>;
 export type DatabaseEnv = z.infer<typeof databaseSchema>;
+export type ReferralEnv = z.infer<typeof referralSchema>;
+export type TonEnv = z.infer<typeof tonSchema>;
 let cached: ServerEnv | undefined;
 let cachedDatabase: DatabaseEnv | undefined;
+let cachedReferral: ReferralEnv | undefined;
+let cachedTon: TonEnv | undefined;
 
 export function getEnv(): ServerEnv {
   cached ??= schema.parse(process.env);
@@ -42,4 +53,14 @@ export function getEnv(): ServerEnv {
 export function getDatabaseEnv(): DatabaseEnv {
   cachedDatabase ??= databaseSchema.parse(process.env);
   return cachedDatabase;
+}
+
+export function getReferralEnv(): ReferralEnv {
+  cachedReferral ??= referralSchema.parse(process.env);
+  return cachedReferral;
+}
+
+export function getTonEnv(): TonEnv {
+  cachedTon ??= tonSchema.parse(process.env);
+  return cachedTon;
 }

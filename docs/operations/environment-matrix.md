@@ -7,9 +7,13 @@
 | Vercel      | `vercel dev`          | `final-tma` Project，`APP_ENV=development`                             | 未来独立 Pro Project     |
 | Supabase    | 本地 Postgres 17      | `final-tma-real-test`（ref `ebewtjerusxcioegpzjd`）Postgres 17 Project | 未来独立 Postgres 17     |
 | Telegram    | 开发 Bot              | 开发 Bot 与开发 webhook                                                | 生产 Bot 与生产 webhook  |
-| TON         | testnet               | testnet collection                                                     | mainnet collection       |
+| TON         | testnet               | 本次部署不发布 Collection、不启用 Mint 对账 Cron                       | mainnet collection       |
 | 数据        | 非业务本地数据        | 独立真实开发与验收数据                                                 | 真实生产数据             |
 
 真实开发与生产只允许域名、项目 ID、Bot、合约地址和密钥不同。生产必须使用在真实开发环境完成验收的同一 Git commit、同一 OpenAPI、同一目录版本和同一迁移序列。
+
+当前真实开发部署固定启用 Web、API、Supabase、Telegram webhook、支付对账、幂等清理和不变量监控。TON 配置为空，`reconcile-mints` 不进入 Vercel Cron；钱包验签、Mint permit 和 Mint 对账只有在后续完成 testnet Collection 部署并写入全部真实 TON 配置后才启用。非 TON API 只解析自身所需配置，不接受任何 TON 占位值。
+
+Supabase Data API 的 Exposed schemas 固定为 `public,graphql_public,api`。Vercel Functions 只以 `service_role` 调用 `api` schema RPC；浏览器不持有 Supabase key，也不直接访问任何 Supabase schema。业务表 schema 不加入 Exposed schemas。
 
 Web 公开构建当前不需要 `VITE_*`。API 机密配置以根 `.env.example` 为唯一名称清单，真实值只进入对应 Vercel Project Secret。真实开发与生产必须分别配置至少 32 字节的 `IDENTITY_SECURITY_SECRET`，且不得与 `REFERRAL_CODE_SECRET` 共用。任何 `SUPABASE_SERVICE_ROLE_KEY`、`IDENTITY_SECURITY_SECRET`、`TELEGRAM_BOT_TOKEN`、`CRON_SECRET`、`TELEGRAM_WEBHOOK_SECRET`、TON API Key 或签名私钥均不得进入浏览器环境。

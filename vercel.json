@@ -12,7 +12,6 @@
   },
   "crons": [
     { "path": "/api/jobs/reconcile-payments", "schedule": "*/5 * * * *" },
-    { "path": "/api/jobs/reconcile-mints", "schedule": "*/5 * * * *" },
     { "path": "/api/jobs/cleanup-idempotency", "schedule": "35 2 * * *" },
     { "path": "/api/jobs/monitor-invariants", "schedule": "*/5 * * * *" }
   ],

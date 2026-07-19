@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { Address, beginCell } from "@ton/core";
 import { sign } from "@ton/crypto";
 
-import { getEnv } from "../env/index.ts";
+import { getTonEnv } from "../env/index.ts";
 
 export const MINT_WITH_PERMIT_OPCODE = 0x504d494e;
 
@@ -26,7 +26,7 @@ export type SignedMintPermit = {
 };
 
 export function signMintPermit(permit: MintPermit): SignedMintPermit {
-  const env = getEnv();
+  const env = getTonEnv();
   const receiver = Address.parse(permit.receiver);
   const templateHash = createHash("sha256")
     .update(permit.template_id, "utf8")
