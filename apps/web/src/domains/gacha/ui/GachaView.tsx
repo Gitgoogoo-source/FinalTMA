@@ -58,16 +58,12 @@ export function GachaView({
     params.get("resume") && isBoxTier(requestedTier) ? requestedTier : null;
   const resumedCount = params.get("count") === "10" ? 10 : 1;
   const remembered = session ? viewStates.get(session.userId) : undefined;
-  const [selection, setSelection] = useState<{
-    tier: BoxTier;
-    manual: boolean;
-  }>(() => ({
-    tier: isBoxTier(requestedTier)
+  const [selectedTier, setSelectedTier] = useState<BoxTier>(() =>
+    isBoxTier(requestedTier)
       ? requestedTier
       : (remembered?.selectedTier ?? "normal"),
-    manual: isBoxTier(requestedTier) || Boolean(remembered),
-  }));
-  const selectedTierRef = useRef(selection.tier);
+  );
+  const selectedTierRef = useRef(selectedTier);
   const rememberedScrollY = remembered?.scrollY ?? 0;
   const restoreScrollY = useRef(rememberedScrollY);
   const scrollRestored = useRef(rememberedScrollY === 0);
@@ -79,11 +75,6 @@ export function GachaView({
   const rulesComplete = boxes.data?.rules_complete === true;
   const freeNormalCount = Number(boxes.data?.entitlements.free_normal_box ?? 0);
   const freeRareCount = Number(boxes.data?.entitlements.free_rare_box ?? 0);
-  const selectedTier = isBoxTier(requestedTier)
-    ? requestedTier
-    : freeRareCount > 0 && !selection.manual
-      ? "rare"
-      : selection.tier;
   const selectedBox =
     items.find((box) => box.tier === selectedTier) ?? items[0];
   const selectedPity = pityItems.find(
@@ -107,16 +98,27 @@ export function GachaView({
     Boolean(boxes.error) || Boolean(selectedPity && !validPity);
   const selectTier = useCallback((tier: BoxTier) => {
     selectedTierRef.current = tier;
-    setSelection({ tier, manual: true });
+    setSelectedTier(tier);
   }, []);
   const handleFreeRareClaimed = useCallback(() => {
-    setSelection({ tier: "rare", manual: true });
+    setSelectedTier("rare");
     if (requestedTier) setParams({}, { replace: true });
   }, [requestedTier, setParams]);
 
   useEffect(() => {
-    void refetchBoxes();
-  }, [refetchBoxes]);
+    let active = true;
+    void refetchBoxes().then((result) => {
+      if (
+        active &&
+        result.isSuccess &&
+        Number(result.data.entitlements.free_rare_box) > 0
+      )
+        selectTier("rare");
+    });
+    return () => {
+      active = false;
+    };
+  }, [refetchBoxes, selectTier]);
 
   useEffect(() => {
     selectedTierRef.current = selectedTier;
