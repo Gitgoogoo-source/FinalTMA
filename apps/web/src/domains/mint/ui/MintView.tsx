@@ -1,4 +1,3 @@
-import { Cell } from "@ton/core";
 import { useTonConnectUI, useTonWallet } from "@tonconnect/ui-react";
 import { ChevronLeft, Link2, ShieldAlert } from "lucide-react";
 import { useCallback, useState, type ReactNode } from "react";
@@ -54,6 +53,7 @@ export function MintView(): ReactNode {
       await run("正在取消未提交的 Mint", "mint.cancel", { mint_id: mintId });
       return;
     }
+    const { Cell } = await import("@ton/core");
     const messageHash = Cell.fromBase64(result.boc).hash().toString("hex");
     await run("交易已提交，正在等待链上确认", "mint.submit", {
       mint_id: mintId,
