@@ -53,6 +53,9 @@ for (const route of routes) {
       route.errors,
     ),
     "x-idempotency-required": route.idempotent,
+    "x-allow-pending-entry-handoff":
+      "allowPendingEntryHandoff" in route &&
+      route.allowPendingEntryHandoff === true,
     "x-error-codes": route.errors,
     "x-error-definitions": Object.fromEntries(
       route.errors.map((code) => [code, errorRegistry[code]]),

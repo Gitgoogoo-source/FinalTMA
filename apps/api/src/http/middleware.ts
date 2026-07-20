@@ -26,7 +26,19 @@ export async function authenticateRoute(
   request: Request,
   route: RouteDefinition,
 ): Promise<Session | null> {
-  return route.auth ? resolveSession(request) : null;
+  if (!route.auth) return null;
+  const session = await resolveSession(request);
+  if (
+    session.entry_handoff_state === "pending" &&
+    !route.allowPendingEntryHandoff
+  )
+    throw new ApiError(
+      409,
+      "ENTRY_HANDOFF_PENDING",
+      "邀请绑定结果确认中，请稍后刷新",
+      true,
+    );
+  return session;
 }
 
 export function idempotencyKey(

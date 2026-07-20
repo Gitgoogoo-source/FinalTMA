@@ -115,7 +115,32 @@ begin
 end;
 $$;
 
-create or replace function api.session_user(p_session_id uuid)
+create or replace function identity.session_entry_handoff(p_session_id uuid)
+returns jsonb
+language sql
+stable
+security invoker
+set search_path = ''
+as $$
+  select jsonb_build_object(
+    'entry_handoff_state', case when s.referral_processed_at is null then 'pending' else 'complete' end,
+    'entry_handoff_code', coalesce(c.code, s.start_param),
+    'entry_handoff_result', case
+      when s.referral_processed_at is null then null
+      when c.status in ('bound', 'rejected') then c.result_code
+      when not s.new_user and s.start_param is not null then 'REFERRAL_OLD_USER'
+      else null
+    end
+  )
+  from identity.sessions s
+  left join identity.entry_candidates c on c.user_id = s.user_id
+  where s.id = p_session_id
+$$;
+
+create or replace function api.session_user(
+  p_session_id uuid,
+  p_allow_pending_entry_handoff boolean default false
+)
 returns uuid
 language plpgsql
 security definer
@@ -138,6 +163,9 @@ begin
   select status into v_status from identity.users where id = v_session.user_id;
   if v_status <> 'normal' then
     perform api.raise_business_error('ACCOUNT_RESTRICTED', '账号不可用');
+  end if;
+  if v_session.referral_processed_at is null and not coalesce(p_allow_pending_entry_handoff, false) then
+    perform api.raise_business_error('ENTRY_HANDOFF_PENDING', '邀请绑定结果确认中，请稍后刷新');
   end if;
   return v_session.user_id;
 end;
@@ -192,7 +220,7 @@ as $$
       when s.expires_at <= now() then 'expired'
       else 'active'
     end
-  )
+  ) || identity.session_entry_handoff(s.id)
   from identity.sessions s
   join identity.users u on u.id = s.user_id
   where s.token_hash = p_token_hash
@@ -223,6 +251,9 @@ declare
   v_session_id uuid;
   v_new_user boolean;
   v_expires_at timestamptz;
+  v_candidate identity.entry_candidates%rowtype;
+  v_entry_code text;
+  v_referral_processed_at timestamptz;
 begin
   if p_request_hash !~ '^[0-9a-f]{64}$' or p_token_hash !~ '^[0-9a-f]{64}$' then
     perform api.raise_business_error('REQUEST_INVALID', '登录请求摘要无效');
@@ -248,9 +279,8 @@ begin
       'session_id', v_login.session_id,
       'user_id', v_login.user_id,
       'account_status', 'normal',
-      'expires_at', v_login.expires_at,
-      'start_param', v_login.start_param
-    );
+      'expires_at', v_login.expires_at
+    ) || identity.session_entry_handoff(v_login.session_id);
   end if;
 
   perform pg_advisory_xact_lock(p_telegram_id);
@@ -274,6 +304,21 @@ begin
     insert into identity.entry_candidates (user_id, code, expires_at)
     values (v_user.id, p_start_param, now() + interval '10 minutes');
   end if;
+  select * into v_candidate
+  from identity.entry_candidates
+  where user_id = v_user.id
+  for update;
+  if v_candidate.user_id is not null then
+    v_entry_code := v_candidate.code;
+    if v_candidate.status = 'pending' then
+      v_referral_processed_at := null;
+    else
+      v_referral_processed_at := coalesce(v_candidate.settled_at, now());
+    end if;
+  else
+    v_entry_code := p_start_param;
+    v_referral_processed_at := now();
+  end if;
   insert into economy.balances (user_id, currency)
   values (v_user.id, 'KCOIN'), (v_user.id, 'FGEMS')
   on conflict do nothing;
@@ -288,22 +333,25 @@ begin
   end if;
 
   v_expires_at := now() + interval '15 minutes';
-  insert into identity.sessions (user_id, token_hash, auth_date, expires_at, new_user, start_param)
-  values (v_user.id, p_token_hash, p_auth_date, v_expires_at, v_new_user, p_start_param)
+  insert into identity.sessions (
+    user_id, token_hash, auth_date, expires_at, new_user, start_param, referral_processed_at
+  ) values (
+    v_user.id, p_token_hash, p_auth_date, v_expires_at, v_new_user, v_entry_code,
+    v_referral_processed_at
+  )
   returning id into v_session_id;
   insert into identity.login_requests (
     operation_id, request_hash, user_id, account_status, session_id, expires_at, start_param
   ) values (
-    p_operation_id, p_request_hash, v_user.id, 'normal', v_session_id, v_expires_at, p_start_param
+    p_operation_id, p_request_hash, v_user.id, 'normal', v_session_id, v_expires_at, v_entry_code
   );
 
   return jsonb_build_object(
     'session_id', v_session_id,
     'user_id', v_user.id,
     'account_status', v_user.status,
-    'expires_at', v_expires_at,
-    'start_param', p_start_param
-  );
+    'expires_at', v_expires_at
+  ) || identity.session_entry_handoff(v_session_id);
 end;
 $$;
 

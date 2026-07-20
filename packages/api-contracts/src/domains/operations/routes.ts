@@ -12,8 +12,14 @@ export const operationRoutes = [
     gateway: "app",
     auth: true,
     idempotent: false,
+    allowPendingEntryHandoff: true,
     input: z.object({ operation_id: uuidSchema }).strict(),
     output: operationSummarySchema,
-    errors: ["OPERATION_NOT_FOUND", "ACCOUNT_RESTRICTED", "INTERNAL_ERROR"],
+    errors: [
+      "OPERATION_NOT_FOUND",
+      "ENTRY_HANDOFF_PENDING",
+      "ACCOUNT_RESTRICTED",
+      "INTERNAL_ERROR",
+    ],
   }),
 ] as const;

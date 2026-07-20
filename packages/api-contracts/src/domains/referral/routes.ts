@@ -37,6 +37,7 @@ export const referralRoutes = [
     gateway: "app",
     auth: true,
     idempotent: true,
+    allowPendingEntryHandoff: true,
     refreshScopes: ["all"],
     input: z.object({ code: z.string().regex(/^TMA[A-F0-9]{20}$/) }).strict(),
     output: z

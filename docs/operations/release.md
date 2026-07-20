@@ -4,11 +4,12 @@
 
 在执行任何外部写入前，由负责人逐项记录证据：
 
-- 真实开发 Supabase 在首次初始化前 migration history 为空；未来生产 Supabase 在上线前保持空库且无须保留业务数据。
+- 外部写入目标已核对为真实开发 Supabase `final-tma-real-test`（`ebewtjerusxcioegpzjd`）与 Vercel `final-tma`，未来生产 Supabase 在上线前保持空库且无须保留业务数据。
 - 正式 210 张藏品图、3 张盲盒图、Telegram 分享图和 TON Connect 图标已提供。
 - 本次真实开发部署的 Supabase、Vercel、Telegram、Stars 与观测平台配置齐全；TON RPC 和链上配置在启用 TON 前补齐。
 - 生产将部署已在真实开发环境完成验收的同一 Git commit、同一 migration 序列和同一目录 manifest。
 - Vercel 套餐支持 `vercel.json` 中三项当前 Cron 的执行频率；启用 TON 时同一套餐还必须支持第四项 Mint 对账 Cron。
+- Vercel Production 环境变量名称核查同时包含 `TELEGRAM_BOT_USERNAME` 与 `TELEGRAM_MINI_APP_SHORT_NAME`，开发 short name 固定为 `pokepets_dev`。
 
 任何一项不成立：停止发布，不恢复旧 migration、占位素材、mock、默认业务值或功能开关。
 
@@ -47,15 +48,19 @@ python3 tools/web/build_manifest.py \
 
 ## 3. 真实开发环境
 
-`final-tma-real-test` 已于 2026-07-19 完成首次初始化，远端 migration history 依次为 `20260719104533_baseline`、`20260719104602_product_data_v1`、`20260719104614_api_security`；仓库中的迁移文件名必须与该历史保持一致。
+用户明确宣布正式生产上线前，真实开发环境不保留迁移历史。每次数据库定义调整都执行以下固定顺序：
 
-1. 核对三条 migration 已按文件名顺序应用，且远端历史与仓库完全一致。
-2. 对开发项目执行 `supabase db lint --linked --schema api,identity,catalog,operations,economy,inventory,gacha,expedition,wheel,market,payments,vip,tasks,referral,album,onchain,risk --level warning --fail-on error`。
-3. 在 Supabase Data API 设置中把 Exposed schemas 固定为 `public,graphql_public,api`，不得暴露任何业务表 schema。
-4. 部署当前 Git commit 到 `final-tma` Vercel Project 并配置开发 secrets。
-5. 配置开发 Bot webhook/Mini App URL。
-6. 按 `docs/operations/acceptance.md` 完成 Telegram 真机、支付与并发验收。
-7. 执行 `reconcile-payments`、`cleanup-idempotency` 和 `monitor-invariants`；`monitor-invariants` 必须返回 0 个新增 violation。
+1. 记录当前 commit、三条 migration 文件名及校验和，核对目标 ref 为 `ebewtjerusxcioegpzjd`。
+2. 完成本地静态门禁；关闭开发 Bot webhook/Mini App 入口并暂停三项 Vercel Cron。
+3. 清空真实开发数据库与 migration history，从空库依次执行仓库内唯一的 `*_baseline.sql`、`*_product_data_v1.sql`、`*_api_security.sql`。
+4. 验证远端 migration history、RPC 定义、入口交接门禁、RLS、函数权限与仓库一致。
+5. 对开发项目执行 `supabase db lint --linked --schema api,identity,catalog,operations,economy,inventory,gacha,expedition,wheel,market,payments,vip,tasks,referral,album,onchain,risk --level warning --fail-on error` 并运行 Supabase security/performance advisors。
+6. 在 Supabase Data API 设置中把 Exposed schemas 固定为 `public,graphql_public,api`，不得暴露任何业务表 schema。
+7. 核对 Vercel Production 同时存在 `TELEGRAM_BOT_USERNAME` 与 `TELEGRAM_MINI_APP_SHORT_NAME=pokepets_dev`，环境变量变更后部署包含全部修改的同一 Git commit。
+8. 验证 `/api/health`、登录交接门禁、`/api/referrals` 与三个手工 job，再恢复开发 Bot 入口和 Cron。
+9. 按 `docs/operations/acceptance.md` 完成 Telegram 真机、支付与并发验收；`monitor-invariants` 必须返回 0 个新增 violation。
+
+任一步失败都保持入口与 Cron 关闭，修正原始 Schema 或迁移并从第 1 条重新执行。禁止为尚未生产发布的错误定义追加修补 migration。
 
 本次真实开发部署不发布 TON testnet Collection，不配置 TON runtime secrets，不调度 `reconcile-mints`，也不执行钱包与 Mint 验收。后续启用 TON 时必须先完成 testnet Collection 部署、链上 owner/permit 公钥/1% 版税验证和全部真实 TON 配置，再把 `reconcile-mints` 恢复到 Vercel Cron 并完成 `docs/operations/acceptance.md` 中的 TON 场景。
 
@@ -75,4 +80,4 @@ python3 tools/web/build_manifest.py \
 
 ## 5. 回滚边界
 
-不回滚数据库到旧 schema，不重新开放旧 API。部署前失败直接停止；部署后应用层故障回滚到本次重构的前一个可验证 commit，但如果该 commit 不支持三条新 migration，则保持流量关闭并前滚修复。已经 Mint 的 NFT 和已确认 Stars 支付只能通过恢复 job 完成，不能重复交付或撤销链上事实。
+不回滚数据库到旧 schema，不重新开放旧 API。正式生产上线前，部署失败时保持流量关闭，修正原始三条迁移并从空真实开发数据库重建；正式生产上线后才使用只追加的前向修复。已经 Mint 的 NFT 和已确认 Stars 支付只能通过恢复 job 完成，不能重复交付或撤销链上事实。

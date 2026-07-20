@@ -13,6 +13,7 @@ import {
   getSession,
   replaceSession,
   seedSessionBootstrap,
+  transitionToBanned,
 } from "../session/store.ts";
 import { getWebPublicConfig } from "../env/index.ts";
 import { telegram } from "../telegram/index.ts";
@@ -62,9 +63,7 @@ export async function apiRequest<Id extends RouteId>(
   >;
   const result = await send(routeId, parsedInput, options);
   if (result instanceof ApiFailure && result.code === "ACCOUNT_RESTRICTED") {
-    const session = getSession();
-    clearSensitiveState();
-    if (session) replaceSession({ ...session, accountStatus: "banned" });
+    transitionToBanned();
   }
   if (
     result instanceof ApiFailure &&
@@ -91,7 +90,12 @@ export async function apiRequest<Id extends RouteId>(
       return apiRequest(routeId, input, { ...options, recoverSession: false });
     } catch (cause) {
       if (cause instanceof SessionBootstrapFailure) throw cause.failure;
-      if (!(cause instanceof ApiFailure && cause.code === "ACCOUNT_RESTRICTED"))
+      if (
+        !(
+          cause instanceof ApiFailure &&
+          ["ACCOUNT_RESTRICTED", "ENTRY_HANDOFF_PENDING"].includes(cause.code)
+        )
+      )
         clearSession();
       throw cause;
     }
@@ -102,6 +106,7 @@ export async function apiRequest<Id extends RouteId>(
   )
     clearSession();
   if (result instanceof ApiFailure) throw result;
+  if (routeById(routeId).auth) assertCurrentNormalSession(requestGeneration);
   return result;
 }
 
@@ -125,8 +130,7 @@ export async function retryRecoveredBootstrap(): Promise<void> {
   );
   if (result instanceof ApiFailure) {
     if (result.code === "ACCOUNT_RESTRICTED") {
-      clearSensitiveState();
-      replaceSession({ ...session, accountStatus: "banned" });
+      transitionToBanned();
     } else if (
       ["SESSION_EXPIRED", "SESSION_REPLACED", "SESSION_REQUIRED"].includes(
         result.code,
@@ -138,7 +142,7 @@ export async function retryRecoveredBootstrap(): Promise<void> {
     }
     throw result;
   }
-  if (getSession()?.generation !== session.generation) return;
+  assertCurrentNormalSession(session.generation);
   clearSensitiveState();
   replaceSession({ ...session, recovering: false, bootstrapFailed: false });
   seedSessionBootstrap(session.generation, result.data);
@@ -273,9 +277,7 @@ async function recoverSession(): Promise<void> {
     );
     if (result instanceof ApiFailure) throw result;
     if (result.data.account_status === "banned") {
-      clearSensitiveState();
-      const current = getSession();
-      if (current) replaceSession({ ...current, accountStatus: "banned" });
+      transitionToBanned();
       throw new ApiFailure(
         403,
         "ACCOUNT_RESTRICTED",
@@ -298,9 +300,20 @@ async function recoverSession(): Promise<void> {
       accountStatus: result.data.account_status,
       expiresAt: result.data.expires_at,
       generation: crypto.randomUUID(),
+      entryHandoffState: result.data.entry_handoff_state,
+      entryHandoffCode: result.data.entry_handoff_code,
+      entryHandoffResult: result.data.entry_handoff_result,
       recovering: true,
     } as const;
     replaceSession(next);
+    if (next.entryHandoffState === "pending")
+      throw new ApiFailure(
+        409,
+        "ENTRY_HANDOFF_PENDING",
+        "邀请绑定结果确认中，请稍后刷新",
+        true,
+        null,
+      );
     const bootstrap = await send(
       "identity.bootstrap",
       {},
@@ -308,22 +321,14 @@ async function recoverSession(): Promise<void> {
     );
     if (bootstrap instanceof ApiFailure) {
       if (bootstrap.code === "ACCOUNT_RESTRICTED") {
-        clearSensitiveState();
-        replaceSession({ ...next, accountStatus: "banned" });
+        transitionToBanned();
         throw bootstrap;
       }
       clearSensitiveState();
       replaceSession({ ...next, recovering: false, bootstrapFailed: true });
       throw new SessionBootstrapFailure(bootstrap);
     }
-    if (getSession()?.generation !== next.generation)
-      throw new ApiFailure(
-        401,
-        "TELEGRAM_REENTRY_REQUIRED",
-        "请从 Telegram Mini App 重新打开应用",
-        false,
-        null,
-      );
+    assertCurrentNormalSession(next.generation);
     clearSensitiveState();
     replaceSession({ ...next, recovering: false, bootstrapFailed: false });
     seedSessionBootstrap(next.generation, bootstrap.data);
@@ -335,11 +340,28 @@ async function recoverSession(): Promise<void> {
 
 function markSessionRecovering(): void {
   const session = getSession();
+  if (session)
+    replaceSession({
+      ...session,
+      generation: crypto.randomUUID(),
+      recovering: true,
+    });
   clearSensitiveState();
-  if (session) replaceSession({ ...session, recovering: true });
 }
 
 function clearSession(): void {
-  clearSensitiveState();
   replaceSession(null);
+  clearSensitiveState();
+}
+
+function assertCurrentNormalSession(
+  expectedGeneration: string | undefined,
+): void {
+  const session = getSession();
+  if (
+    !expectedGeneration ||
+    session?.generation !== expectedGeneration ||
+    session.accountStatus !== "normal"
+  )
+    throw new DOMException("Stale session generation", "AbortError");
 }

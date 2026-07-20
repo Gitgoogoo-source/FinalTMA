@@ -27,9 +27,23 @@ const normalAuthOutput = z
     access_token: z.string().min(32),
     user_id: uuidSchema,
     expires_at: timestampSchema,
-    start_param: z
+    entry_handoff_state: z.enum(["pending", "complete"]),
+    entry_handoff_code: z
       .string()
       .regex(/^TMA[A-F0-9]{20}$/)
+      .nullable(),
+    entry_handoff_result: z
+      .enum([
+        "REFERRAL_BOUND",
+        "REFERRAL_ALREADY_BOUND",
+        "REFERRAL_ALREADY_RECHARGED",
+        "REFERRAL_CANDIDATE_EXPIRED",
+        "REFERRAL_CODE_INVALID",
+        "REFERRAL_INELIGIBLE",
+        "REFERRAL_INVITER_UNAVAILABLE",
+        "REFERRAL_OLD_USER",
+        "REFERRAL_SELF_BIND",
+      ])
       .nullable(),
   })
   .strict();

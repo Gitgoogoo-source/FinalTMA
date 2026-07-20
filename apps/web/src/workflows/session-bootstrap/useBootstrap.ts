@@ -12,9 +12,12 @@ import {
   clearSensitiveState,
   getSession,
   replaceSession,
+  transitionToBanned,
+  useSession,
+  type EntryHandoffResult,
   type Session,
 } from "../../platform/session/store.ts";
-import { initializeTelegram } from "../../platform/telegram/index.ts";
+import { telegram } from "../../platform/telegram/index.ts";
 
 export type BootstrapPhase =
   | "initializing"
@@ -39,7 +42,9 @@ type BootstrapState = {
 };
 type LoginContext = {
   session: Session;
-  startParam: string | null;
+  entryHandoffState: "pending" | "complete";
+  entryHandoffCode: string | null;
+  entryHandoffResult: EntryHandoffResult | null;
   notice: string | null;
 };
 
@@ -54,6 +59,7 @@ const initialState: BootstrapState = {
 };
 
 export function useBootstrap(): BootstrapState & { retry(): void } {
+  const observedSession = useSession();
   const [version, setVersion] = useState(0);
   const [state, setState] = useState<BootstrapState>(initialState);
   const generation = useRef(0);
@@ -80,7 +86,7 @@ export function useBootstrap(): BootstrapState & { retry(): void } {
     void (async () => {
       try {
         if (target === "login") {
-          const app = initializeTelegram();
+          const app = telegram();
           if (!app?.initData) {
             setState({
               ...initialState,
@@ -113,8 +119,7 @@ export function useBootstrap(): BootstrapState & { retry(): void } {
           );
           if (!active()) return;
           if (login.data.account_status === "banned") {
-            clearSensitiveState();
-            replaceSession(null);
+            transitionToBanned();
             setState({ ...initialState, phase: "banned" });
             return;
           }
@@ -124,15 +129,20 @@ export function useBootstrap(): BootstrapState & { retry(): void } {
             accountStatus: "normal",
             expiresAt: login.data.expires_at,
             generation: crypto.randomUUID(),
+            entryHandoffState: login.data.entry_handoff_state,
+            entryHandoffCode: login.data.entry_handoff_code,
+            entryHandoffResult: login.data.entry_handoff_result,
           } satisfies Session;
-          clearSensitiveState();
           replaceSession(session);
+          clearSensitiveState();
           window.history.replaceState({}, "", "/");
           window.scrollTo({ top: 0, left: 0, behavior: "auto" });
           loginContext.current = {
             session,
-            startParam: login.data.start_param,
-            notice: null,
+            entryHandoffState: login.data.entry_handoff_state,
+            entryHandoffCode: login.data.entry_handoff_code,
+            entryHandoffResult: login.data.entry_handoff_result,
+            notice: referralNotice(login.data.entry_handoff_result),
           };
         }
 
@@ -147,7 +157,11 @@ export function useBootstrap(): BootstrapState & { retry(): void } {
           return;
         }
 
-        if (target !== "bootstrap" && context.startParam) {
+        if (
+          target !== "bootstrap" &&
+          context.entryHandoffState === "pending" &&
+          context.entryHandoffCode
+        ) {
           stage = "referral";
           setState({
             ...initialState,
@@ -156,7 +170,7 @@ export function useBootstrap(): BootstrapState & { retry(): void } {
             session: context.session,
           });
           const settlement = await settleReferralCandidate(
-            context.startParam,
+            context.entryHandoffCode,
             referralOperation.current,
             referralResubmitted,
             referralQueryOnly,
@@ -177,7 +191,21 @@ export function useBootstrap(): BootstrapState & { retry(): void } {
             return;
           }
           context.notice = settlement.notice;
-          context.startParam = null;
+          context.entryHandoffState = "complete";
+          context.entryHandoffResult = settlement.result;
+          const settledSession = getSession();
+          if (
+            settledSession?.generation === context.session.generation &&
+            settledSession.accountStatus === "normal"
+          ) {
+            context.session = {
+              ...settledSession,
+              entryHandoffState: "complete",
+              entryHandoffResult: settlement.result,
+              recovering: false,
+            };
+            replaceSession(context.session);
+          }
         }
 
         retryTarget.current = "bootstrap";
@@ -217,6 +245,30 @@ export function useBootstrap(): BootstrapState & { retry(): void } {
           return;
         }
         const session = getSession();
+        if (
+          failure.code === "ENTRY_HANDOFF_PENDING" &&
+          session?.accountStatus === "normal" &&
+          session.entryHandoffCode
+        ) {
+          loginContext.current = {
+            session,
+            entryHandoffState: "pending",
+            entryHandoffCode: session.entryHandoffCode,
+            entryHandoffResult: null,
+            notice: null,
+          };
+          retryTarget.current = "referral";
+          setState({
+            ...initialState,
+            phase: "settling_referral",
+            message: failure.message,
+            session,
+            canRetry: true,
+            failed: true,
+            retryLabel: "继续确认",
+          });
+          return;
+        }
         if (stage === "bootstrap" && session?.accountStatus === "normal") {
           if (session.bootstrapFailed)
             replaceSession({ ...session, bootstrapFailed: false });
@@ -247,8 +299,8 @@ export function useBootstrap(): BootstrapState & { retry(): void } {
         }
         if (isCurrentPageLoginRetry(failure.code)) {
           retryTarget.current = "login";
-          clearSensitiveState();
           replaceSession(null);
+          clearSensitiveState();
           setState({
             ...initialState,
             phase: "authenticating",
@@ -258,8 +310,8 @@ export function useBootstrap(): BootstrapState & { retry(): void } {
           });
           return;
         }
-        clearSensitiveState();
         replaceSession(null);
+        clearSensitiveState();
         setState({
           ...initialState,
           phase: "reentry_required",
@@ -274,6 +326,61 @@ export function useBootstrap(): BootstrapState & { retry(): void } {
       generation.current += 1;
     };
   }, [version]);
+
+  useEffect(() => {
+    const session = observedSession;
+    if (
+      !session ||
+      session.accountStatus !== "normal" ||
+      loginContext.current?.session.generation === session.generation
+    )
+      return;
+    const timer = window.setTimeout(() => {
+      if (getSession()?.generation !== session.generation) return;
+      if (session.entryHandoffState === "complete") {
+        const notice = referralNotice(session.entryHandoffResult);
+        if (notice)
+          setState((current) =>
+            current.phase === "ready"
+              ? { ...current, session, notice }
+              : current,
+          );
+        return;
+      }
+      if (!session.entryHandoffCode) {
+        replaceSession(null);
+        clearSensitiveState();
+        setState({
+          ...initialState,
+          phase: "reentry_required",
+          message: "邀请交接状态无效，请重新从 Telegram 进入应用",
+          failed: true,
+        });
+        return;
+      }
+      const pendingSession = { ...session, recovering: false };
+      replaceSession(pendingSession);
+      loginContext.current = {
+        session: pendingSession,
+        entryHandoffState: "pending",
+        entryHandoffCode: pendingSession.entryHandoffCode,
+        entryHandoffResult: null,
+        notice: null,
+      };
+      referralOperation.current = newIdempotencyKey();
+      referralResubmitted.current = false;
+      referralQueryOnly.current = false;
+      retryTarget.current = "referral";
+      setState({
+        ...initialState,
+        phase: "settling_referral",
+        message: "正在确认邀请关系",
+        session: pendingSession,
+      });
+      setVersion((value) => value + 1);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [observedSession]);
 
   const retry = useCallback(() => {
     setState((current) => ({
@@ -299,7 +406,8 @@ async function settleReferralCandidate(
   queryOnly: { current: boolean },
   signal: AbortSignal,
 ): Promise<
-  { kind: "settled"; notice: string } | { kind: "pending"; message: string }
+  | { kind: "settled"; notice: string; result: EntryHandoffResult }
+  | { kind: "pending"; message: string }
 > {
   if (!queryOnly.current) {
     try {
@@ -311,11 +419,16 @@ async function settleReferralCandidate(
       return {
         kind: "settled",
         notice: "邀请关系已绑定，完成首次有效充值后可为邀请人解锁奖励",
+        result: "REFERRAL_BOUND",
       };
     } catch (cause) {
       const failure = toFailure(cause);
       if (isSettledReferralError(failure.code))
-        return { kind: "settled", notice: failure.message };
+        return {
+          kind: "settled",
+          notice: failure.message,
+          result: failure.code,
+        };
       if (!isUnknownReferralResult(failure.code)) throw failure;
       queryOnly.current = true;
     }
@@ -331,6 +444,7 @@ async function settleReferralCandidate(
       return {
         kind: "settled",
         notice: "邀请关系已绑定，完成首次有效充值后可为邀请人解锁奖励",
+        result: "REFERRAL_BOUND",
       };
     if (recovered.data.status === "failed") {
       const code = recovered.data.error_code;
@@ -340,6 +454,8 @@ async function settleReferralCandidate(
           code && isErrorCode(code)
             ? errorDefinition(code).message
             : "当前账号暂不符合邀请绑定条件",
+        result:
+          code && isSettledReferralError(code) ? code : "REFERRAL_INELIGIBLE",
       };
     }
     return { kind: "pending", message: "邀请绑定结果确认中，请稍后刷新" };
@@ -373,8 +489,15 @@ const settledReferralErrors = new Set([
   "REFERRAL_SELF_BIND",
 ]);
 
-function isSettledReferralError(code: string): boolean {
+function isSettledReferralError(code: string): code is EntryHandoffResult {
   return settledReferralErrors.has(code);
+}
+
+function referralNotice(result: EntryHandoffResult | null): string | null {
+  if (!result) return null;
+  return result === "REFERRAL_BOUND"
+    ? "邀请关系已绑定，完成首次有效充值后可为邀请人解锁奖励"
+    : errorDefinition(result).message;
 }
 
 function isUnknownReferralResult(code: string): boolean {
@@ -418,7 +541,13 @@ function loginFailureMessage(failure: ApiFailure): string {
 }
 
 function prefetchSummaries(sessionGeneration: string): void {
-  if (getSession()?.generation !== sessionGeneration) return;
+  const session = getSession();
+  if (
+    session?.generation !== sessionGeneration ||
+    session.accountStatus !== "normal" ||
+    session.entryHandoffState !== "complete"
+  )
+    return;
   void prefetchApiQuery("vip.get");
   void prefetchApiQuery("wallet.get");
   void prefetchApiQuery("gacha.bootstrap");

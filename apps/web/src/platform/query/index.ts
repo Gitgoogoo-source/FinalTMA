@@ -30,6 +30,7 @@ registerSessionCacheClearer(() => {
   queryClient.clear();
 });
 registerBootstrapCacheSeeder((generation, data) => {
+  assertCurrentSession(generation, true);
   queryClient.setQueryData([generation, "v1", "identity.bootstrap", {}], data);
 });
 
@@ -45,7 +46,9 @@ export function seedApiQuery<Id extends RouteId>(
   input: RouteInput<Id>,
   data: RouteOutput<Id>,
 ): void {
-  queryClient.setQueryData(routeQueryKey(routeId, input), data);
+  const generation = getSession()?.generation ?? "public";
+  assertCurrentSession(generation, routeById(routeId).auth);
+  queryClient.setQueryData([generation, "v1", routeId, input], data);
 }
 
 export function prefetchApiQuery<Id extends RouteId>(
@@ -57,7 +60,7 @@ export function prefetchApiQuery<Id extends RouteId>(
     queryKey: [generation, "v1", routeId, input],
     queryFn: async ({ signal }) => {
       const result = await apiRequest(routeId, input, { signal });
-      assertCurrentGeneration(generation);
+      assertCurrentSession(generation, routeById(routeId).auth);
       return result.data;
     },
   });
@@ -74,7 +77,7 @@ export function useApiQuery<Id extends RouteId>(
     queryKey: [generation, "v1", routeId, input],
     queryFn: async ({ signal }) => {
       const result = await apiRequest(routeId, input, { signal });
-      assertCurrentGeneration(generation);
+      assertCurrentSession(generation, routeById(routeId).auth);
       return result.data;
     },
     enabled,
@@ -116,7 +119,13 @@ export async function refreshRouteScopes(
   });
 }
 
-function assertCurrentGeneration(expected: string): void {
-  if ((getSession()?.generation ?? "public") !== expected)
+function assertCurrentSession(expected: string, authenticated: boolean): void {
+  const session = getSession();
+  if (
+    (session?.generation ?? "public") !== expected ||
+    (authenticated &&
+      (session?.accountStatus !== "normal" ||
+        session.entryHandoffState !== "complete"))
+  )
     throw new DOMException("Stale session generation", "AbortError");
 }

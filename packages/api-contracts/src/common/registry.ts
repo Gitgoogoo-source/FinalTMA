@@ -20,6 +20,13 @@ export function assertContractRegistry(
       throw new Error(
         `Idempotent route ${route.id} must declare refreshScopes`,
       );
+    if (
+      route.allowPendingEntryHandoff &&
+      !["referral.bind", "operations.get"].includes(route.id)
+    )
+      throw new Error(
+        `Only referral.bind and operations.get may allow pending entry handoff: ${route.id}`,
+      );
   }
 }
 

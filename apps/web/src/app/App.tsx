@@ -25,6 +25,18 @@ export function App(): ReactNode {
         <LoaderCircle className="spin" />
       </main>
     );
+  if (session?.entryHandoffState === "pending" && bootstrap.phase === "ready")
+    return (
+      <main className="startup">
+        <div className="brand-orbit">
+          <i />
+          <strong>PP</strong>
+        </div>
+        <h1>邀请关系确认中</h1>
+        <p>正在恢复原邀请绑定结果</p>
+        <LoaderCircle className="spin" />
+      </main>
+    );
   if (session?.bootstrapFailed) return <RecoveredBootstrapFailure />;
   if (!bootstrap.failed && bootstrap.phase !== "ready")
     return (

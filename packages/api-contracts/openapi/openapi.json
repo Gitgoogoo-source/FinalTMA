@@ -80,6 +80,7 @@
           }
         },
         "x-idempotency-required": false,
+        "x-allow-pending-entry-handoff": false,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -172,11 +173,34 @@
                               "format": "date-time",
                               "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
                             },
-                            "start_param": {
+                            "entry_handoff_state": {
+                              "type": "string",
+                              "enum": ["pending", "complete"]
+                            },
+                            "entry_handoff_code": {
                               "anyOf": [
                                 {
                                   "type": "string",
                                   "pattern": "^TMA[A-F0-9]{20}$"
+                                },
+                                { "type": "null" }
+                              ]
+                            },
+                            "entry_handoff_result": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "REFERRAL_BOUND",
+                                    "REFERRAL_ALREADY_BOUND",
+                                    "REFERRAL_ALREADY_RECHARGED",
+                                    "REFERRAL_CANDIDATE_EXPIRED",
+                                    "REFERRAL_CODE_INVALID",
+                                    "REFERRAL_INELIGIBLE",
+                                    "REFERRAL_INVITER_UNAVAILABLE",
+                                    "REFERRAL_OLD_USER",
+                                    "REFERRAL_SELF_BIND"
+                                  ]
                                 },
                                 { "type": "null" }
                               ]
@@ -187,7 +211,9 @@
                             "access_token",
                             "user_id",
                             "expires_at",
-                            "start_param"
+                            "entry_handoff_state",
+                            "entry_handoff_code",
+                            "entry_handoff_result"
                           ],
                           "additionalProperties": false
                         },
@@ -292,6 +318,7 @@
           }
         },
         "x-idempotency-required": true,
+        "x-allow-pending-entry-handoff": false,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -608,6 +635,7 @@
                                       "CRON_UNAUTHORIZED",
                                       "DATABASE_RPC_FAILED",
                                       "DRAW_COUNT_INVALID",
+                                      "ENTRY_HANDOFF_PENDING",
                                       "EVOLUTION_NOT_AVAILABLE",
                                       "EXPEDITION_ALREADY_ACTIVE",
                                       "EXPEDITION_ITEMS_INVALID",
@@ -1035,6 +1063,14 @@
               }
             }
           },
+          "409": {
+            "description": "Errors: ENTRY_HANDOFF_PENDING",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "500": {
             "description": "Errors: DATABASE_RPC_FAILED, INTERNAL_ERROR",
             "content": {
@@ -1053,6 +1089,7 @@
           }
         },
         "x-idempotency-required": false,
+        "x-allow-pending-entry-handoff": false,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -1062,7 +1099,8 @@
           "ACCOUNT_RESTRICTED",
           "SESSION_EXPIRED",
           "SESSION_REPLACED",
-          "SESSION_REQUIRED"
+          "SESSION_REQUIRED",
+          "ENTRY_HANDOFF_PENDING"
         ],
         "x-error-definitions": {
           "DATABASE_RPC_FAILED": {
@@ -1127,6 +1165,13 @@
             "retryable": false,
             "refreshScope": "session",
             "recoveryAction": "reauthenticate"
+          },
+          "ENTRY_HANDOFF_PENDING": {
+            "status": 409,
+            "message": "邀请绑定结果确认中，请稍后刷新",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
           }
         },
         "x-refresh-scopes": []
@@ -1445,6 +1490,7 @@
           }
         },
         "x-idempotency-required": false,
+        "x-allow-pending-entry-handoff": false,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -1719,6 +1765,14 @@
               }
             }
           },
+          "409": {
+            "description": "Errors: ENTRY_HANDOFF_PENDING",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "500": {
             "description": "Errors: DATABASE_RPC_FAILED, INTERNAL_ERROR",
             "content": {
@@ -1737,6 +1791,7 @@
           }
         },
         "x-idempotency-required": false,
+        "x-allow-pending-entry-handoff": false,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -1746,7 +1801,8 @@
           "ACCOUNT_RESTRICTED",
           "SESSION_EXPIRED",
           "SESSION_REPLACED",
-          "SESSION_REQUIRED"
+          "SESSION_REQUIRED",
+          "ENTRY_HANDOFF_PENDING"
         ],
         "x-error-definitions": {
           "DATABASE_RPC_FAILED": {
@@ -1811,6 +1867,13 @@
             "retryable": false,
             "refreshScope": "session",
             "recoveryAction": "reauthenticate"
+          },
+          "ENTRY_HANDOFF_PENDING": {
+            "status": 409,
+            "message": "邀请绑定结果确认中，请稍后刷新",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
           }
         },
         "x-refresh-scopes": []
@@ -2243,7 +2306,7 @@
             }
           },
           "409": {
-            "description": "Errors: INSUFFICIENT_BALANCE, FREE_ENTITLEMENT_UNAVAILABLE, IDEMPOTENCY_KEY_REUSED",
+            "description": "Errors: ENTRY_HANDOFF_PENDING, INSUFFICIENT_BALANCE, FREE_ENTITLEMENT_UNAVAILABLE, IDEMPOTENCY_KEY_REUSED",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/StandardError" }
@@ -2284,6 +2347,7 @@
           }
         },
         "x-idempotency-required": true,
+        "x-allow-pending-entry-handoff": false,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -2295,6 +2359,7 @@
           "SESSION_EXPIRED",
           "SESSION_REPLACED",
           "SESSION_REQUIRED",
+          "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
           "BOX_TIER_INVALID",
@@ -2374,6 +2439,13 @@
             "retryable": false,
             "refreshScope": "session",
             "recoveryAction": "reauthenticate"
+          },
+          "ENTRY_HANDOFF_PENDING": {
+            "status": 409,
+            "message": "邀请绑定结果确认中，请稍后刷新",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
           },
           "IDEMPOTENCY_KEY_INVALID": {
             "status": 400,
@@ -2629,6 +2701,14 @@
               }
             }
           },
+          "409": {
+            "description": "Errors: ENTRY_HANDOFF_PENDING",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "500": {
             "description": "Errors: DATABASE_RPC_FAILED, INTERNAL_ERROR",
             "content": {
@@ -2647,6 +2727,7 @@
           }
         },
         "x-idempotency-required": false,
+        "x-allow-pending-entry-handoff": false,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -2656,7 +2737,8 @@
           "ACCOUNT_RESTRICTED",
           "SESSION_EXPIRED",
           "SESSION_REPLACED",
-          "SESSION_REQUIRED"
+          "SESSION_REQUIRED",
+          "ENTRY_HANDOFF_PENDING"
         ],
         "x-error-definitions": {
           "DATABASE_RPC_FAILED": {
@@ -2721,6 +2803,13 @@
             "retryable": false,
             "refreshScope": "session",
             "recoveryAction": "reauthenticate"
+          },
+          "ENTRY_HANDOFF_PENDING": {
+            "status": 409,
+            "message": "邀请绑定结果确认中，请稍后刷新",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
           }
         },
         "x-refresh-scopes": []
@@ -2890,6 +2979,14 @@
               }
             }
           },
+          "409": {
+            "description": "Errors: ENTRY_HANDOFF_PENDING",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "500": {
             "description": "Errors: DATABASE_RPC_FAILED, INTERNAL_ERROR",
             "content": {
@@ -2908,6 +3005,7 @@
           }
         },
         "x-idempotency-required": false,
+        "x-allow-pending-entry-handoff": false,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -2918,6 +3016,7 @@
           "SESSION_EXPIRED",
           "SESSION_REPLACED",
           "SESSION_REQUIRED",
+          "ENTRY_HANDOFF_PENDING",
           "INVENTORY_ITEM_NOT_FOUND"
         ],
         "x-error-definitions": {
@@ -2983,6 +3082,13 @@
             "retryable": false,
             "refreshScope": "session",
             "recoveryAction": "reauthenticate"
+          },
+          "ENTRY_HANDOFF_PENDING": {
+            "status": 409,
+            "message": "邀请绑定结果确认中，请稍后刷新",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
           },
           "INVENTORY_ITEM_NOT_FOUND": {
             "status": 404,
@@ -3276,7 +3382,7 @@
             }
           },
           "409": {
-            "description": "Errors: EVOLUTION_NOT_AVAILABLE, INSUFFICIENT_INVENTORY, INSUFFICIENT_BALANCE, IDEMPOTENCY_KEY_REUSED",
+            "description": "Errors: ENTRY_HANDOFF_PENDING, EVOLUTION_NOT_AVAILABLE, INSUFFICIENT_INVENTORY, INSUFFICIENT_BALANCE, IDEMPOTENCY_KEY_REUSED",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/StandardError" }
@@ -3317,6 +3423,7 @@
           }
         },
         "x-idempotency-required": true,
+        "x-allow-pending-entry-handoff": false,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -3328,6 +3435,7 @@
           "SESSION_EXPIRED",
           "SESSION_REPLACED",
           "SESSION_REQUIRED",
+          "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
           "EVOLUTION_NOT_AVAILABLE",
@@ -3405,6 +3513,13 @@
             "retryable": false,
             "refreshScope": "session",
             "recoveryAction": "reauthenticate"
+          },
+          "ENTRY_HANDOFF_PENDING": {
+            "status": 409,
+            "message": "邀请绑定结果确认中，请稍后刷新",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
           },
           "IDEMPOTENCY_KEY_INVALID": {
             "status": 400,
@@ -3727,7 +3842,7 @@
             }
           },
           "409": {
-            "description": "Errors: INSUFFICIENT_INVENTORY, INVENTORY_RESERVED, IDEMPOTENCY_KEY_REUSED",
+            "description": "Errors: ENTRY_HANDOFF_PENDING, INSUFFICIENT_INVENTORY, INVENTORY_RESERVED, IDEMPOTENCY_KEY_REUSED",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/StandardError" }
@@ -3768,6 +3883,7 @@
           }
         },
         "x-idempotency-required": true,
+        "x-allow-pending-entry-handoff": false,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -3779,6 +3895,7 @@
           "SESSION_EXPIRED",
           "SESSION_REPLACED",
           "SESSION_REQUIRED",
+          "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
           "INSUFFICIENT_INVENTORY",
@@ -3855,6 +3972,13 @@
             "retryable": false,
             "refreshScope": "session",
             "recoveryAction": "reauthenticate"
+          },
+          "ENTRY_HANDOFF_PENDING": {
+            "status": 409,
+            "message": "邀请绑定结果确认中，请稍后刷新",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
           },
           "IDEMPOTENCY_KEY_INVALID": {
             "status": 400,
@@ -4120,6 +4244,14 @@
               }
             }
           },
+          "409": {
+            "description": "Errors: ENTRY_HANDOFF_PENDING",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "500": {
             "description": "Errors: DATABASE_RPC_FAILED, INTERNAL_ERROR",
             "content": {
@@ -4138,6 +4270,7 @@
           }
         },
         "x-idempotency-required": false,
+        "x-allow-pending-entry-handoff": false,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -4147,7 +4280,8 @@
           "ACCOUNT_RESTRICTED",
           "SESSION_EXPIRED",
           "SESSION_REPLACED",
-          "SESSION_REQUIRED"
+          "SESSION_REQUIRED",
+          "ENTRY_HANDOFF_PENDING"
         ],
         "x-error-definitions": {
           "DATABASE_RPC_FAILED": {
@@ -4212,6 +4346,13 @@
             "retryable": false,
             "refreshScope": "session",
             "recoveryAction": "reauthenticate"
+          },
+          "ENTRY_HANDOFF_PENDING": {
+            "status": 409,
+            "message": "邀请绑定结果确认中，请稍后刷新",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
           }
         },
         "x-refresh-scopes": []
@@ -4474,7 +4615,7 @@
             }
           },
           "409": {
-            "description": "Errors: EXPEDITION_LIMIT_REACHED, EXPEDITION_ALREADY_ACTIVE, INSUFFICIENT_INVENTORY, IDEMPOTENCY_KEY_REUSED",
+            "description": "Errors: ENTRY_HANDOFF_PENDING, EXPEDITION_LIMIT_REACHED, EXPEDITION_ALREADY_ACTIVE, INSUFFICIENT_INVENTORY, IDEMPOTENCY_KEY_REUSED",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/StandardError" }
@@ -4515,6 +4656,7 @@
           }
         },
         "x-idempotency-required": true,
+        "x-allow-pending-entry-handoff": false,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -4526,6 +4668,7 @@
           "SESSION_EXPIRED",
           "SESSION_REPLACED",
           "SESSION_REQUIRED",
+          "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
           "EXPEDITION_LIMIT_REACHED",
@@ -4604,6 +4747,13 @@
             "retryable": false,
             "refreshScope": "session",
             "recoveryAction": "reauthenticate"
+          },
+          "ENTRY_HANDOFF_PENDING": {
+            "status": 409,
+            "message": "邀请绑定结果确认中，请稍后刷新",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
           },
           "IDEMPOTENCY_KEY_INVALID": {
             "status": 400,
@@ -4870,6 +5020,14 @@
               }
             }
           },
+          "409": {
+            "description": "Errors: ENTRY_HANDOFF_PENDING",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "500": {
             "description": "Errors: DATABASE_RPC_FAILED, INTERNAL_ERROR",
             "content": {
@@ -4888,6 +5046,7 @@
           }
         },
         "x-idempotency-required": false,
+        "x-allow-pending-entry-handoff": false,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -4898,6 +5057,7 @@
           "SESSION_EXPIRED",
           "SESSION_REPLACED",
           "SESSION_REQUIRED",
+          "ENTRY_HANDOFF_PENDING",
           "EXPEDITION_TIER_INVALID"
         ],
         "x-error-definitions": {
@@ -4963,6 +5123,13 @@
             "retryable": false,
             "refreshScope": "session",
             "recoveryAction": "reauthenticate"
+          },
+          "ENTRY_HANDOFF_PENDING": {
+            "status": 409,
+            "message": "邀请绑定结果确认中，请稍后刷新",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
           },
           "EXPEDITION_TIER_INVALID": {
             "status": 400,
@@ -5148,7 +5315,7 @@
             }
           },
           "409": {
-            "description": "Errors: EXPEDITION_NOT_READY, IDEMPOTENCY_KEY_REUSED",
+            "description": "Errors: ENTRY_HANDOFF_PENDING, EXPEDITION_NOT_READY, IDEMPOTENCY_KEY_REUSED",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/StandardError" }
@@ -5189,6 +5356,7 @@
           }
         },
         "x-idempotency-required": true,
+        "x-allow-pending-entry-handoff": false,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -5200,6 +5368,7 @@
           "SESSION_EXPIRED",
           "SESSION_REPLACED",
           "SESSION_REQUIRED",
+          "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
           "EXPEDITION_NOT_FOUND",
@@ -5276,6 +5445,13 @@
             "retryable": false,
             "refreshScope": "session",
             "recoveryAction": "reauthenticate"
+          },
+          "ENTRY_HANDOFF_PENDING": {
+            "status": 409,
+            "message": "邀请绑定结果确认中，请稍后刷新",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
           },
           "IDEMPOTENCY_KEY_INVALID": {
             "status": 400,
@@ -5421,6 +5597,14 @@
               }
             }
           },
+          "409": {
+            "description": "Errors: ENTRY_HANDOFF_PENDING",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "500": {
             "description": "Errors: DATABASE_RPC_FAILED, INTERNAL_ERROR",
             "content": {
@@ -5439,6 +5623,7 @@
           }
         },
         "x-idempotency-required": false,
+        "x-allow-pending-entry-handoff": false,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -5448,7 +5633,8 @@
           "ACCOUNT_RESTRICTED",
           "SESSION_EXPIRED",
           "SESSION_REPLACED",
-          "SESSION_REQUIRED"
+          "SESSION_REQUIRED",
+          "ENTRY_HANDOFF_PENDING"
         ],
         "x-error-definitions": {
           "DATABASE_RPC_FAILED": {
@@ -5513,6 +5699,13 @@
             "retryable": false,
             "refreshScope": "session",
             "recoveryAction": "reauthenticate"
+          },
+          "ENTRY_HANDOFF_PENDING": {
+            "status": 409,
+            "message": "邀请绑定结果确认中，请稍后刷新",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
           }
         },
         "x-refresh-scopes": []
@@ -5877,7 +6070,7 @@
             }
           },
           "409": {
-            "description": "Errors: WHEEL_DAILY_LIMIT, INSUFFICIENT_BALANCE, IDEMPOTENCY_KEY_REUSED",
+            "description": "Errors: ENTRY_HANDOFF_PENDING, WHEEL_DAILY_LIMIT, INSUFFICIENT_BALANCE, IDEMPOTENCY_KEY_REUSED",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/StandardError" }
@@ -5918,6 +6111,7 @@
           }
         },
         "x-idempotency-required": true,
+        "x-allow-pending-entry-handoff": false,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -5929,6 +6123,7 @@
           "SESSION_EXPIRED",
           "SESSION_REPLACED",
           "SESSION_REQUIRED",
+          "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
           "WHEEL_COUNT_INVALID",
@@ -6006,6 +6201,13 @@
             "retryable": false,
             "refreshScope": "session",
             "recoveryAction": "reauthenticate"
+          },
+          "ENTRY_HANDOFF_PENDING": {
+            "status": 409,
+            "message": "邀请绑定结果确认中，请稍后刷新",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
           },
           "IDEMPOTENCY_KEY_INVALID": {
             "status": 400,
@@ -6341,6 +6543,14 @@
               }
             }
           },
+          "409": {
+            "description": "Errors: ENTRY_HANDOFF_PENDING",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "500": {
             "description": "Errors: DATABASE_RPC_FAILED, INTERNAL_ERROR",
             "content": {
@@ -6359,6 +6569,7 @@
           }
         },
         "x-idempotency-required": false,
+        "x-allow-pending-entry-handoff": false,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -6368,7 +6579,8 @@
           "ACCOUNT_RESTRICTED",
           "SESSION_EXPIRED",
           "SESSION_REPLACED",
-          "SESSION_REQUIRED"
+          "SESSION_REQUIRED",
+          "ENTRY_HANDOFF_PENDING"
         ],
         "x-error-definitions": {
           "DATABASE_RPC_FAILED": {
@@ -6433,6 +6645,13 @@
             "retryable": false,
             "refreshScope": "session",
             "recoveryAction": "reauthenticate"
+          },
+          "ENTRY_HANDOFF_PENDING": {
+            "status": 409,
+            "message": "邀请绑定结果确认中，请稍后刷新",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
           }
         },
         "x-refresh-scopes": []
@@ -6556,6 +6775,14 @@
               }
             }
           },
+          "409": {
+            "description": "Errors: ENTRY_HANDOFF_PENDING",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "500": {
             "description": "Errors: DATABASE_RPC_FAILED, INTERNAL_ERROR",
             "content": {
@@ -6574,6 +6801,7 @@
           }
         },
         "x-idempotency-required": false,
+        "x-allow-pending-entry-handoff": false,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -6584,6 +6812,7 @@
           "SESSION_EXPIRED",
           "SESSION_REPLACED",
           "SESSION_REQUIRED",
+          "ENTRY_HANDOFF_PENDING",
           "TEMPLATE_NOT_FOUND"
         ],
         "x-error-definitions": {
@@ -6649,6 +6878,13 @@
             "retryable": false,
             "refreshScope": "session",
             "recoveryAction": "reauthenticate"
+          },
+          "ENTRY_HANDOFF_PENDING": {
+            "status": 409,
+            "message": "邀请绑定结果确认中，请稍后刷新",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
           },
           "TEMPLATE_NOT_FOUND": {
             "status": 404,
@@ -6781,6 +7017,14 @@
               }
             }
           },
+          "409": {
+            "description": "Errors: ENTRY_HANDOFF_PENDING",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "500": {
             "description": "Errors: DATABASE_RPC_FAILED, INTERNAL_ERROR",
             "content": {
@@ -6799,6 +7043,7 @@
           }
         },
         "x-idempotency-required": false,
+        "x-allow-pending-entry-handoff": false,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -6808,7 +7053,8 @@
           "ACCOUNT_RESTRICTED",
           "SESSION_EXPIRED",
           "SESSION_REPLACED",
-          "SESSION_REQUIRED"
+          "SESSION_REQUIRED",
+          "ENTRY_HANDOFF_PENDING"
         ],
         "x-error-definitions": {
           "DATABASE_RPC_FAILED": {
@@ -6873,6 +7119,13 @@
             "retryable": false,
             "refreshScope": "session",
             "recoveryAction": "reauthenticate"
+          },
+          "ENTRY_HANDOFF_PENDING": {
+            "status": 409,
+            "message": "邀请绑定结果确认中，请稍后刷新",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
           }
         },
         "x-refresh-scopes": []
@@ -7075,7 +7328,7 @@
             }
           },
           "409": {
-            "description": "Errors: MARKET_ACTIVE_TEMPLATE_LIMIT, INSUFFICIENT_INVENTORY, IDEMPOTENCY_KEY_REUSED",
+            "description": "Errors: ENTRY_HANDOFF_PENDING, MARKET_ACTIVE_TEMPLATE_LIMIT, INSUFFICIENT_INVENTORY, IDEMPOTENCY_KEY_REUSED",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/StandardError" }
@@ -7116,6 +7369,7 @@
           }
         },
         "x-idempotency-required": true,
+        "x-allow-pending-entry-handoff": false,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -7127,6 +7381,7 @@
           "SESSION_EXPIRED",
           "SESSION_REPLACED",
           "SESSION_REQUIRED",
+          "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
           "MARKET_ACTIVE_TEMPLATE_LIMIT",
@@ -7203,6 +7458,13 @@
             "retryable": false,
             "refreshScope": "session",
             "recoveryAction": "reauthenticate"
+          },
+          "ENTRY_HANDOFF_PENDING": {
+            "status": 409,
+            "message": "邀请绑定结果确认中，请稍后刷新",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
           },
           "IDEMPOTENCY_KEY_INVALID": {
             "status": 400,
@@ -7421,7 +7683,7 @@
             }
           },
           "409": {
-            "description": "Errors: LISTING_NOT_CANCELLABLE, IDEMPOTENCY_KEY_REUSED",
+            "description": "Errors: ENTRY_HANDOFF_PENDING, LISTING_NOT_CANCELLABLE, IDEMPOTENCY_KEY_REUSED",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/StandardError" }
@@ -7462,6 +7724,7 @@
           }
         },
         "x-idempotency-required": true,
+        "x-allow-pending-entry-handoff": false,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -7473,6 +7736,7 @@
           "SESSION_EXPIRED",
           "SESSION_REPLACED",
           "SESSION_REQUIRED",
+          "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
           "LISTING_NOT_FOUND",
@@ -7549,6 +7813,13 @@
             "retryable": false,
             "refreshScope": "session",
             "recoveryAction": "reauthenticate"
+          },
+          "ENTRY_HANDOFF_PENDING": {
+            "status": 409,
+            "message": "邀请绑定结果确认中，请稍后刷新",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
           },
           "IDEMPOTENCY_KEY_INVALID": {
             "status": 400,
@@ -7944,7 +8215,7 @@
             }
           },
           "409": {
-            "description": "Errors: MARKET_STOCK_INSUFFICIENT, INSUFFICIENT_BALANCE, IDEMPOTENCY_KEY_REUSED",
+            "description": "Errors: ENTRY_HANDOFF_PENDING, MARKET_STOCK_INSUFFICIENT, INSUFFICIENT_BALANCE, IDEMPOTENCY_KEY_REUSED",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/StandardError" }
@@ -7985,6 +8256,7 @@
           }
         },
         "x-idempotency-required": true,
+        "x-allow-pending-entry-handoff": false,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -7996,6 +8268,7 @@
           "SESSION_EXPIRED",
           "SESSION_REPLACED",
           "SESSION_REQUIRED",
+          "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
           "MARKET_STOCK_INSUFFICIENT",
@@ -8072,6 +8345,13 @@
             "retryable": false,
             "refreshScope": "session",
             "recoveryAction": "reauthenticate"
+          },
+          "ENTRY_HANDOFF_PENDING": {
+            "status": 409,
+            "message": "邀请绑定结果确认中，请稍后刷新",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
           },
           "IDEMPOTENCY_KEY_INVALID": {
             "status": 400,
@@ -8380,6 +8660,14 @@
               }
             }
           },
+          "409": {
+            "description": "Errors: ENTRY_HANDOFF_PENDING",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "500": {
             "description": "Errors: DATABASE_RPC_FAILED, INTERNAL_ERROR",
             "content": {
@@ -8398,6 +8686,7 @@
           }
         },
         "x-idempotency-required": false,
+        "x-allow-pending-entry-handoff": false,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -8407,7 +8696,8 @@
           "ACCOUNT_RESTRICTED",
           "SESSION_EXPIRED",
           "SESSION_REPLACED",
-          "SESSION_REQUIRED"
+          "SESSION_REQUIRED",
+          "ENTRY_HANDOFF_PENDING"
         ],
         "x-error-definitions": {
           "DATABASE_RPC_FAILED": {
@@ -8472,6 +8762,13 @@
             "retryable": false,
             "refreshScope": "session",
             "recoveryAction": "reauthenticate"
+          },
+          "ENTRY_HANDOFF_PENDING": {
+            "status": 409,
+            "message": "邀请绑定结果确认中，请稍后刷新",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
           }
         },
         "x-refresh-scopes": []
@@ -8876,7 +9173,7 @@
             }
           },
           "409": {
-            "description": "Errors: TOPUP_NOT_REQUIRED, PAYMENT_ALREADY_PENDING, PAYMENT_EXPIRED, IDEMPOTENCY_KEY_REUSED",
+            "description": "Errors: ENTRY_HANDOFF_PENDING, TOPUP_NOT_REQUIRED, PAYMENT_ALREADY_PENDING, PAYMENT_EXPIRED, IDEMPOTENCY_KEY_REUSED",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/StandardError" }
@@ -8917,6 +9214,7 @@
           }
         },
         "x-idempotency-required": true,
+        "x-allow-pending-entry-handoff": false,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -8928,6 +9226,7 @@
           "SESSION_EXPIRED",
           "SESSION_REPLACED",
           "SESSION_REQUIRED",
+          "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
           "TOPUP_AMOUNT_INVALID",
@@ -9006,6 +9305,13 @@
             "retryable": false,
             "refreshScope": "session",
             "recoveryAction": "reauthenticate"
+          },
+          "ENTRY_HANDOFF_PENDING": {
+            "status": 409,
+            "message": "邀请绑定结果确认中，请稍后刷新",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
           },
           "IDEMPOTENCY_KEY_INVALID": {
             "status": 400,
@@ -9433,6 +9739,14 @@
               }
             }
           },
+          "409": {
+            "description": "Errors: ENTRY_HANDOFF_PENDING",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "500": {
             "description": "Errors: DATABASE_RPC_FAILED, INTERNAL_ERROR",
             "content": {
@@ -9451,6 +9765,7 @@
           }
         },
         "x-idempotency-required": false,
+        "x-allow-pending-entry-handoff": false,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -9461,6 +9776,7 @@
           "SESSION_EXPIRED",
           "SESSION_REPLACED",
           "SESSION_REQUIRED",
+          "ENTRY_HANDOFF_PENDING",
           "PAYMENT_NOT_FOUND"
         ],
         "x-error-definitions": {
@@ -9526,6 +9842,13 @@
             "retryable": false,
             "refreshScope": "session",
             "recoveryAction": "reauthenticate"
+          },
+          "ENTRY_HANDOFF_PENDING": {
+            "status": 409,
+            "message": "邀请绑定结果确认中，请稍后刷新",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
           },
           "PAYMENT_NOT_FOUND": {
             "status": 404,
@@ -9819,6 +10142,14 @@
               }
             }
           },
+          "409": {
+            "description": "Errors: ENTRY_HANDOFF_PENDING",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "500": {
             "description": "Errors: DATABASE_RPC_FAILED, INTERNAL_ERROR",
             "content": {
@@ -9837,6 +10168,7 @@
           }
         },
         "x-idempotency-required": false,
+        "x-allow-pending-entry-handoff": false,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -9846,7 +10178,8 @@
           "ACCOUNT_RESTRICTED",
           "SESSION_EXPIRED",
           "SESSION_REPLACED",
-          "SESSION_REQUIRED"
+          "SESSION_REQUIRED",
+          "ENTRY_HANDOFF_PENDING"
         ],
         "x-error-definitions": {
           "DATABASE_RPC_FAILED": {
@@ -9911,6 +10244,13 @@
             "retryable": false,
             "refreshScope": "session",
             "recoveryAction": "reauthenticate"
+          },
+          "ENTRY_HANDOFF_PENDING": {
+            "status": 409,
+            "message": "邀请绑定结果确认中，请稍后刷新",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
           }
         },
         "x-refresh-scopes": []
@@ -10315,7 +10655,7 @@
             }
           },
           "409": {
-            "description": "Errors: VIP_RENEWAL_LIMIT, PAYMENT_ALREADY_PENDING, IDEMPOTENCY_KEY_REUSED",
+            "description": "Errors: ENTRY_HANDOFF_PENDING, VIP_RENEWAL_LIMIT, PAYMENT_ALREADY_PENDING, IDEMPOTENCY_KEY_REUSED",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/StandardError" }
@@ -10356,6 +10696,7 @@
           }
         },
         "x-idempotency-required": true,
+        "x-allow-pending-entry-handoff": false,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -10367,6 +10708,7 @@
           "SESSION_EXPIRED",
           "SESSION_REPLACED",
           "SESSION_REQUIRED",
+          "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
           "VIP_RENEWAL_LIMIT",
@@ -10443,6 +10785,13 @@
             "retryable": false,
             "refreshScope": "session",
             "recoveryAction": "reauthenticate"
+          },
+          "ENTRY_HANDOFF_PENDING": {
+            "status": 409,
+            "message": "邀请绑定结果确认中，请稍后刷新",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
           },
           "IDEMPOTENCY_KEY_INVALID": {
             "status": 400,
@@ -10615,7 +10964,7 @@
             }
           },
           "409": {
-            "description": "Errors: VIP_INACTIVE, VIP_ALREADY_CLAIMED, IDEMPOTENCY_KEY_REUSED",
+            "description": "Errors: ENTRY_HANDOFF_PENDING, VIP_INACTIVE, VIP_ALREADY_CLAIMED, IDEMPOTENCY_KEY_REUSED",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/StandardError" }
@@ -10656,6 +11005,7 @@
           }
         },
         "x-idempotency-required": true,
+        "x-allow-pending-entry-handoff": false,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -10667,6 +11017,7 @@
           "SESSION_EXPIRED",
           "SESSION_REPLACED",
           "SESSION_REQUIRED",
+          "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
           "VIP_BENEFIT_INVALID",
@@ -10744,6 +11095,13 @@
             "retryable": false,
             "refreshScope": "session",
             "recoveryAction": "reauthenticate"
+          },
+          "ENTRY_HANDOFF_PENDING": {
+            "status": 409,
+            "message": "邀请绑定结果确认中，请稍后刷新",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
           },
           "IDEMPOTENCY_KEY_INVALID": {
             "status": 400,
@@ -10923,7 +11281,7 @@
             }
           },
           "409": {
-            "description": "Errors: VIP_INACTIVE, VIP_ALREADY_CLAIMED, IDEMPOTENCY_KEY_REUSED",
+            "description": "Errors: ENTRY_HANDOFF_PENDING, VIP_INACTIVE, VIP_ALREADY_CLAIMED, IDEMPOTENCY_KEY_REUSED",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/StandardError" }
@@ -10964,6 +11322,7 @@
           }
         },
         "x-idempotency-required": true,
+        "x-allow-pending-entry-handoff": false,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -10975,6 +11334,7 @@
           "SESSION_EXPIRED",
           "SESSION_REPLACED",
           "SESSION_REQUIRED",
+          "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
           "VIP_BENEFIT_INVALID",
@@ -11052,6 +11412,13 @@
             "retryable": false,
             "refreshScope": "session",
             "recoveryAction": "reauthenticate"
+          },
+          "ENTRY_HANDOFF_PENDING": {
+            "status": 409,
+            "message": "邀请绑定结果确认中，请稍后刷新",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
           },
           "IDEMPOTENCY_KEY_INVALID": {
             "status": 400,
@@ -11247,6 +11614,14 @@
               }
             }
           },
+          "409": {
+            "description": "Errors: ENTRY_HANDOFF_PENDING",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "500": {
             "description": "Errors: DATABASE_RPC_FAILED, INTERNAL_ERROR",
             "content": {
@@ -11265,6 +11640,7 @@
           }
         },
         "x-idempotency-required": false,
+        "x-allow-pending-entry-handoff": false,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -11274,7 +11650,8 @@
           "ACCOUNT_RESTRICTED",
           "SESSION_EXPIRED",
           "SESSION_REPLACED",
-          "SESSION_REQUIRED"
+          "SESSION_REQUIRED",
+          "ENTRY_HANDOFF_PENDING"
         ],
         "x-error-definitions": {
           "DATABASE_RPC_FAILED": {
@@ -11339,6 +11716,13 @@
             "retryable": false,
             "refreshScope": "session",
             "recoveryAction": "reauthenticate"
+          },
+          "ENTRY_HANDOFF_PENDING": {
+            "status": 409,
+            "message": "邀请绑定结果确认中，请稍后刷新",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
           }
         },
         "x-refresh-scopes": []
@@ -11497,7 +11881,7 @@
             }
           },
           "409": {
-            "description": "Errors: CHECKIN_ALREADY_CLAIMED, IDEMPOTENCY_KEY_REUSED",
+            "description": "Errors: ENTRY_HANDOFF_PENDING, CHECKIN_ALREADY_CLAIMED, IDEMPOTENCY_KEY_REUSED",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/StandardError" }
@@ -11538,6 +11922,7 @@
           }
         },
         "x-idempotency-required": true,
+        "x-allow-pending-entry-handoff": false,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -11549,6 +11934,7 @@
           "SESSION_EXPIRED",
           "SESSION_REPLACED",
           "SESSION_REQUIRED",
+          "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
           "CHECKIN_ALREADY_CLAIMED",
@@ -11624,6 +12010,13 @@
             "retryable": false,
             "refreshScope": "session",
             "recoveryAction": "reauthenticate"
+          },
+          "ENTRY_HANDOFF_PENDING": {
+            "status": 409,
+            "message": "邀请绑定结果确认中，请稍后刷新",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
           },
           "IDEMPOTENCY_KEY_INVALID": {
             "status": 400,
@@ -11811,7 +12204,7 @@
             }
           },
           "409": {
-            "description": "Errors: TASK_NOT_COMPLETE, TASK_ALREADY_CLAIMED, IDEMPOTENCY_KEY_REUSED",
+            "description": "Errors: ENTRY_HANDOFF_PENDING, TASK_NOT_COMPLETE, TASK_ALREADY_CLAIMED, IDEMPOTENCY_KEY_REUSED",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/StandardError" }
@@ -11852,6 +12245,7 @@
           }
         },
         "x-idempotency-required": true,
+        "x-allow-pending-entry-handoff": false,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -11863,6 +12257,7 @@
           "SESSION_EXPIRED",
           "SESSION_REPLACED",
           "SESSION_REQUIRED",
+          "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
           "TASK_NOT_FOUND",
@@ -11940,6 +12335,13 @@
             "retryable": false,
             "refreshScope": "session",
             "recoveryAction": "reauthenticate"
+          },
+          "ENTRY_HANDOFF_PENDING": {
+            "status": 409,
+            "message": "邀请绑定结果确认中，请稍后刷新",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
           },
           "IDEMPOTENCY_KEY_INVALID": {
             "status": 400,
@@ -12116,6 +12518,14 @@
               }
             }
           },
+          "409": {
+            "description": "Errors: ENTRY_HANDOFF_PENDING",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "500": {
             "description": "Errors: DATABASE_RPC_FAILED, INTERNAL_ERROR",
             "content": {
@@ -12134,6 +12544,7 @@
           }
         },
         "x-idempotency-required": false,
+        "x-allow-pending-entry-handoff": false,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -12143,7 +12554,8 @@
           "ACCOUNT_RESTRICTED",
           "SESSION_EXPIRED",
           "SESSION_REPLACED",
-          "SESSION_REQUIRED"
+          "SESSION_REQUIRED",
+          "ENTRY_HANDOFF_PENDING"
         ],
         "x-error-definitions": {
           "DATABASE_RPC_FAILED": {
@@ -12208,6 +12620,13 @@
             "retryable": false,
             "refreshScope": "session",
             "recoveryAction": "reauthenticate"
+          },
+          "ENTRY_HANDOFF_PENDING": {
+            "status": 409,
+            "message": "邀请绑定结果确认中，请稍后刷新",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
           }
         },
         "x-refresh-scopes": []
@@ -12379,6 +12798,7 @@
           }
         },
         "x-idempotency-required": true,
+        "x-allow-pending-entry-handoff": true,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -12693,7 +13113,7 @@
             }
           },
           "409": {
-            "description": "Errors: IDEMPOTENCY_KEY_REUSED",
+            "description": "Errors: ENTRY_HANDOFF_PENDING, IDEMPOTENCY_KEY_REUSED",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/StandardError" }
@@ -12734,6 +13154,7 @@
           }
         },
         "x-idempotency-required": true,
+        "x-allow-pending-entry-handoff": false,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -12745,6 +13166,7 @@
           "SESSION_EXPIRED",
           "SESSION_REPLACED",
           "SESSION_REQUIRED",
+          "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
           "SHARE_EVENT_INVALID",
@@ -12820,6 +13242,13 @@
             "retryable": false,
             "refreshScope": "session",
             "recoveryAction": "reauthenticate"
+          },
+          "ENTRY_HANDOFF_PENDING": {
+            "status": 409,
+            "message": "邀请绑定结果确认中，请稍后刷新",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
           },
           "IDEMPOTENCY_KEY_INVALID": {
             "status": 400,
@@ -12976,6 +13405,14 @@
               }
             }
           },
+          "409": {
+            "description": "Errors: ENTRY_HANDOFF_PENDING",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "500": {
             "description": "Errors: DATABASE_RPC_FAILED, INTERNAL_ERROR",
             "content": {
@@ -12994,6 +13431,7 @@
           }
         },
         "x-idempotency-required": false,
+        "x-allow-pending-entry-handoff": false,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -13003,7 +13441,8 @@
           "ACCOUNT_RESTRICTED",
           "SESSION_EXPIRED",
           "SESSION_REPLACED",
-          "SESSION_REQUIRED"
+          "SESSION_REQUIRED",
+          "ENTRY_HANDOFF_PENDING"
         ],
         "x-error-definitions": {
           "DATABASE_RPC_FAILED": {
@@ -13068,6 +13507,13 @@
             "retryable": false,
             "refreshScope": "session",
             "recoveryAction": "reauthenticate"
+          },
+          "ENTRY_HANDOFF_PENDING": {
+            "status": 409,
+            "message": "邀请绑定结果确认中，请稍后刷新",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
           }
         },
         "x-refresh-scopes": []
@@ -13206,7 +13652,7 @@
             }
           },
           "409": {
-            "description": "Errors: ALBUM_CHAIN_INCOMPLETE, ALBUM_REWARD_ALREADY_CLAIMED, IDEMPOTENCY_KEY_REUSED",
+            "description": "Errors: ENTRY_HANDOFF_PENDING, ALBUM_CHAIN_INCOMPLETE, ALBUM_REWARD_ALREADY_CLAIMED, IDEMPOTENCY_KEY_REUSED",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/StandardError" }
@@ -13247,6 +13693,7 @@
           }
         },
         "x-idempotency-required": true,
+        "x-allow-pending-entry-handoff": false,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -13258,6 +13705,7 @@
           "SESSION_EXPIRED",
           "SESSION_REPLACED",
           "SESSION_REQUIRED",
+          "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
           "ALBUM_CHAIN_INCOMPLETE",
@@ -13334,6 +13782,13 @@
             "retryable": false,
             "refreshScope": "session",
             "recoveryAction": "reauthenticate"
+          },
+          "ENTRY_HANDOFF_PENDING": {
+            "status": 409,
+            "message": "邀请绑定结果确认中，请稍后刷新",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
           },
           "IDEMPOTENCY_KEY_INVALID": {
             "status": 400,
@@ -13482,6 +13937,14 @@
               }
             }
           },
+          "409": {
+            "description": "Errors: ENTRY_HANDOFF_PENDING",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "500": {
             "description": "Errors: DATABASE_RPC_FAILED, INTERNAL_ERROR",
             "content": {
@@ -13500,6 +13963,7 @@
           }
         },
         "x-idempotency-required": false,
+        "x-allow-pending-entry-handoff": false,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -13509,7 +13973,8 @@
           "ACCOUNT_RESTRICTED",
           "SESSION_EXPIRED",
           "SESSION_REPLACED",
-          "SESSION_REQUIRED"
+          "SESSION_REQUIRED",
+          "ENTRY_HANDOFF_PENDING"
         ],
         "x-error-definitions": {
           "DATABASE_RPC_FAILED": {
@@ -13574,6 +14039,13 @@
             "retryable": false,
             "refreshScope": "session",
             "recoveryAction": "reauthenticate"
+          },
+          "ENTRY_HANDOFF_PENDING": {
+            "status": 409,
+            "message": "邀请绑定结果确认中，请稍后刷新",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
           }
         },
         "x-refresh-scopes": []
@@ -13653,6 +14125,14 @@
               }
             }
           },
+          "409": {
+            "description": "Errors: ENTRY_HANDOFF_PENDING",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "413": {
             "description": "Errors: REQUEST_TOO_LARGE",
             "content": {
@@ -13687,6 +14167,7 @@
           }
         },
         "x-idempotency-required": false,
+        "x-allow-pending-entry-handoff": false,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -13697,7 +14178,8 @@
           "ACCOUNT_RESTRICTED",
           "SESSION_EXPIRED",
           "SESSION_REPLACED",
-          "SESSION_REQUIRED"
+          "SESSION_REQUIRED",
+          "ENTRY_HANDOFF_PENDING"
         ],
         "x-error-definitions": {
           "DATABASE_RPC_FAILED": {
@@ -13769,6 +14251,13 @@
             "retryable": false,
             "refreshScope": "session",
             "recoveryAction": "reauthenticate"
+          },
+          "ENTRY_HANDOFF_PENDING": {
+            "status": 409,
+            "message": "邀请绑定结果确认中，请稍后刷新",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
           }
         },
         "x-refresh-scopes": [],
@@ -13934,7 +14423,7 @@
             }
           },
           "409": {
-            "description": "Errors: WALLET_CHALLENGE_INVALID, WALLET_ADDRESS_IN_USE, IDEMPOTENCY_KEY_REUSED",
+            "description": "Errors: ENTRY_HANDOFF_PENDING, WALLET_CHALLENGE_INVALID, WALLET_ADDRESS_IN_USE, IDEMPOTENCY_KEY_REUSED",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/StandardError" }
@@ -13975,6 +14464,7 @@
           }
         },
         "x-idempotency-required": true,
+        "x-allow-pending-entry-handoff": false,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -13986,6 +14476,7 @@
           "SESSION_EXPIRED",
           "SESSION_REPLACED",
           "SESSION_REQUIRED",
+          "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
           "WALLET_CHALLENGE_INVALID",
@@ -14063,6 +14554,13 @@
             "retryable": false,
             "refreshScope": "session",
             "recoveryAction": "reauthenticate"
+          },
+          "ENTRY_HANDOFF_PENDING": {
+            "status": 409,
+            "message": "邀请绑定结果确认中，请稍后刷新",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
           },
           "IDEMPOTENCY_KEY_INVALID": {
             "status": 400,
@@ -14312,7 +14810,7 @@
             }
           },
           "409": {
-            "description": "Errors: WALLET_NOT_CONNECTED, MINT_IN_PROGRESS, IDEMPOTENCY_KEY_REUSED",
+            "description": "Errors: ENTRY_HANDOFF_PENDING, WALLET_NOT_CONNECTED, MINT_IN_PROGRESS, IDEMPOTENCY_KEY_REUSED",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/StandardError" }
@@ -14353,6 +14851,7 @@
           }
         },
         "x-idempotency-required": true,
+        "x-allow-pending-entry-handoff": false,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -14364,6 +14863,7 @@
           "SESSION_EXPIRED",
           "SESSION_REPLACED",
           "SESSION_REQUIRED",
+          "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
           "WALLET_NOT_CONNECTED",
@@ -14440,6 +14940,13 @@
             "retryable": false,
             "refreshScope": "session",
             "recoveryAction": "reauthenticate"
+          },
+          "ENTRY_HANDOFF_PENDING": {
+            "status": 409,
+            "message": "邀请绑定结果确认中，请稍后刷新",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
           },
           "IDEMPOTENCY_KEY_INVALID": {
             "status": 400,
@@ -14633,6 +15140,14 @@
               }
             }
           },
+          "409": {
+            "description": "Errors: ENTRY_HANDOFF_PENDING",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "500": {
             "description": "Errors: DATABASE_RPC_FAILED, INTERNAL_ERROR",
             "content": {
@@ -14651,6 +15166,7 @@
           }
         },
         "x-idempotency-required": false,
+        "x-allow-pending-entry-handoff": false,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -14660,7 +15176,8 @@
           "ACCOUNT_RESTRICTED",
           "SESSION_EXPIRED",
           "SESSION_REPLACED",
-          "SESSION_REQUIRED"
+          "SESSION_REQUIRED",
+          "ENTRY_HANDOFF_PENDING"
         ],
         "x-error-definitions": {
           "DATABASE_RPC_FAILED": {
@@ -14725,6 +15242,13 @@
             "retryable": false,
             "refreshScope": "session",
             "recoveryAction": "reauthenticate"
+          },
+          "ENTRY_HANDOFF_PENDING": {
+            "status": 409,
+            "message": "邀请绑定结果确认中，请稍后刷新",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
           }
         },
         "x-refresh-scopes": []
@@ -14876,6 +15400,14 @@
               }
             }
           },
+          "409": {
+            "description": "Errors: ENTRY_HANDOFF_PENDING",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "500": {
             "description": "Errors: DATABASE_RPC_FAILED, INTERNAL_ERROR",
             "content": {
@@ -14894,6 +15426,7 @@
           }
         },
         "x-idempotency-required": false,
+        "x-allow-pending-entry-handoff": false,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -14904,6 +15437,7 @@
           "SESSION_EXPIRED",
           "SESSION_REPLACED",
           "SESSION_REQUIRED",
+          "ENTRY_HANDOFF_PENDING",
           "MINT_NOT_FOUND"
         ],
         "x-error-definitions": {
@@ -14969,6 +15503,13 @@
             "retryable": false,
             "refreshScope": "session",
             "recoveryAction": "reauthenticate"
+          },
+          "ENTRY_HANDOFF_PENDING": {
+            "status": 409,
+            "message": "邀请绑定结果确认中，请稍后刷新",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
           },
           "MINT_NOT_FOUND": {
             "status": 404,
@@ -15246,7 +15787,7 @@
             }
           },
           "409": {
-            "description": "Errors: WALLET_NOT_VERIFIED, INSUFFICIENT_INVENTORY, MINT_ALREADY_ACTIVE, IDEMPOTENCY_KEY_REUSED",
+            "description": "Errors: ENTRY_HANDOFF_PENDING, WALLET_NOT_VERIFIED, INSUFFICIENT_INVENTORY, MINT_ALREADY_ACTIVE, IDEMPOTENCY_KEY_REUSED",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/StandardError" }
@@ -15287,6 +15828,7 @@
           }
         },
         "x-idempotency-required": true,
+        "x-allow-pending-entry-handoff": false,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -15298,6 +15840,7 @@
           "SESSION_EXPIRED",
           "SESSION_REPLACED",
           "SESSION_REQUIRED",
+          "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
           "WALLET_NOT_VERIFIED",
@@ -15375,6 +15918,13 @@
             "retryable": false,
             "refreshScope": "session",
             "recoveryAction": "reauthenticate"
+          },
+          "ENTRY_HANDOFF_PENDING": {
+            "status": 409,
+            "message": "邀请绑定结果确认中，请稍后刷新",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
           },
           "IDEMPOTENCY_KEY_INVALID": {
             "status": 400,
@@ -15691,7 +16241,7 @@
             }
           },
           "409": {
-            "description": "Errors: MINT_NOT_SUBMITTABLE, TRANSACTION_ALREADY_USED, IDEMPOTENCY_KEY_REUSED",
+            "description": "Errors: ENTRY_HANDOFF_PENDING, MINT_NOT_SUBMITTABLE, TRANSACTION_ALREADY_USED, IDEMPOTENCY_KEY_REUSED",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/StandardError" }
@@ -15732,6 +16282,7 @@
           }
         },
         "x-idempotency-required": true,
+        "x-allow-pending-entry-handoff": false,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -15743,6 +16294,7 @@
           "SESSION_EXPIRED",
           "SESSION_REPLACED",
           "SESSION_REQUIRED",
+          "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
           "MINT_NOT_FOUND",
@@ -15820,6 +16372,13 @@
             "retryable": false,
             "refreshScope": "session",
             "recoveryAction": "reauthenticate"
+          },
+          "ENTRY_HANDOFF_PENDING": {
+            "status": 409,
+            "message": "邀请绑定结果确认中，请稍后刷新",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
           },
           "IDEMPOTENCY_KEY_INVALID": {
             "status": 400,
@@ -16136,7 +16695,7 @@
             }
           },
           "409": {
-            "description": "Errors: MINT_NOT_CANCELLABLE, IDEMPOTENCY_KEY_REUSED",
+            "description": "Errors: ENTRY_HANDOFF_PENDING, MINT_NOT_CANCELLABLE, IDEMPOTENCY_KEY_REUSED",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/StandardError" }
@@ -16177,6 +16736,7 @@
           }
         },
         "x-idempotency-required": true,
+        "x-allow-pending-entry-handoff": false,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -16188,6 +16748,7 @@
           "SESSION_EXPIRED",
           "SESSION_REPLACED",
           "SESSION_REQUIRED",
+          "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
           "MINT_NOT_FOUND",
@@ -16264,6 +16825,13 @@
             "retryable": false,
             "refreshScope": "session",
             "recoveryAction": "reauthenticate"
+          },
+          "ENTRY_HANDOFF_PENDING": {
+            "status": 409,
+            "message": "邀请绑定结果确认中，请稍后刷新",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
           },
           "IDEMPOTENCY_KEY_INVALID": {
             "status": 400,
@@ -16405,6 +16973,7 @@
           }
         },
         "x-idempotency-required": false,
+        "x-allow-pending-entry-handoff": false,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -16522,6 +17091,7 @@
                                 "CRON_UNAUTHORIZED",
                                 "DATABASE_RPC_FAILED",
                                 "DRAW_COUNT_INVALID",
+                                "ENTRY_HANDOFF_PENDING",
                                 "EVOLUTION_NOT_AVAILABLE",
                                 "EXPEDITION_ALREADY_ACTIVE",
                                 "EXPEDITION_ITEMS_INVALID",
@@ -16705,6 +17275,14 @@
               }
             }
           },
+          "409": {
+            "description": "Errors: ENTRY_HANDOFF_PENDING",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "500": {
             "description": "Errors: DATABASE_RPC_FAILED, INTERNAL_ERROR",
             "content": {
@@ -16723,6 +17301,7 @@
           }
         },
         "x-idempotency-required": false,
+        "x-allow-pending-entry-handoff": true,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -16733,7 +17312,8 @@
           "SESSION_EXPIRED",
           "SESSION_REPLACED",
           "SESSION_REQUIRED",
-          "OPERATION_NOT_FOUND"
+          "OPERATION_NOT_FOUND",
+          "ENTRY_HANDOFF_PENDING"
         ],
         "x-error-definitions": {
           "DATABASE_RPC_FAILED": {
@@ -16805,6 +17385,13 @@
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
+          },
+          "ENTRY_HANDOFF_PENDING": {
+            "status": 409,
+            "message": "邀请绑定结果确认中，请稍后刷新",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
           }
         },
         "x-refresh-scopes": []
@@ -16882,6 +17469,7 @@
           }
         },
         "x-idempotency-required": false,
+        "x-allow-pending-entry-handoff": false,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -17008,6 +17596,7 @@
           }
         },
         "x-idempotency-required": false,
+        "x-allow-pending-entry-handoff": false,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -17384,6 +17973,7 @@
           }
         },
         "x-idempotency-required": false,
+        "x-allow-pending-entry-handoff": false,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -17618,6 +18208,7 @@
           }
         },
         "x-idempotency-required": false,
+        "x-allow-pending-entry-handoff": false,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -17852,6 +18443,7 @@
           }
         },
         "x-idempotency-required": false,
+        "x-allow-pending-entry-handoff": false,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -18086,6 +18678,7 @@
           }
         },
         "x-idempotency-required": false,
+        "x-allow-pending-entry-handoff": false,
         "x-error-codes": [
           "DATABASE_RPC_FAILED",
           "INTERNAL_ERROR",
@@ -18191,6 +18784,7 @@
                   "CRON_UNAUTHORIZED",
                   "DATABASE_RPC_FAILED",
                   "DRAW_COUNT_INVALID",
+                  "ENTRY_HANDOFF_PENDING",
                   "EVOLUTION_NOT_AVAILABLE",
                   "EXPEDITION_ALREADY_ACTIVE",
                   "EXPEDITION_ITEMS_INVALID",

@@ -46,6 +46,29 @@ begin
 end;
 $$;
 
+create or replace function referral.reject_bind(
+  p_session_id uuid,
+  p_operation_id uuid,
+  p_user_id uuid,
+  p_code text
+)
+returns jsonb
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+begin
+  update identity.entry_candidates
+  set status = 'rejected', result_code = p_code, operation_id = p_operation_id,
+      settled_at = now()
+  where user_id = p_user_id and status = 'pending';
+  update identity.sessions
+  set referral_processed_at = coalesce(referral_processed_at, now())
+  where id = p_session_id and user_id = p_user_id;
+  return operations.fail_command(p_operation_id, p_code, '{}'::jsonb);
+end;
+$$;
+
 create or replace function api.referral_bind(
   p_session_id uuid,
   p_operation_id uuid,
@@ -67,68 +90,49 @@ declare
 begin
   v_operation := operations.begin_command(p_session_id, 'referral.bind', p_operation_id, jsonb_build_object('code', p_code));
   v_replay := operations.replay_if_finished(v_operation);
-  if v_replay is not null then return v_replay; end if;
+  if v_replay is not null then
+    if v_operation.status in ('succeeded', 'failed') then
+      update identity.sessions
+      set referral_processed_at = coalesce(referral_processed_at, now())
+      where id = p_session_id and user_id = v_operation.user_id;
+    end if;
+    return v_replay;
+  end if;
   v_user_id := v_operation.user_id;
   select * into v_candidate from identity.entry_candidates where user_id = v_user_id for update;
 
   if exists (select 1 from referral.relationships where invitee_id = v_user_id) then
-    if v_candidate.user_id is not null and v_candidate.status = 'pending' then
-      update identity.entry_candidates
-      set status = 'rejected', result_code = 'REFERRAL_ALREADY_BOUND', operation_id = p_operation_id,
-          settled_at = now()
-      where user_id = v_user_id;
-    end if;
-    return operations.fail_command(p_operation_id, 'REFERRAL_ALREADY_BOUND', '{}'::jsonb);
+    return referral.reject_bind(p_session_id, p_operation_id, v_user_id, 'REFERRAL_ALREADY_BOUND');
   end if;
   if v_candidate.user_id is null then
-    return operations.fail_command(p_operation_id, 'REFERRAL_OLD_USER', '{}'::jsonb);
+    return referral.reject_bind(p_session_id, p_operation_id, v_user_id, 'REFERRAL_OLD_USER');
   end if;
   if v_candidate.code is distinct from p_code then
-    return operations.fail_command(p_operation_id, 'REFERRAL_INELIGIBLE', '{}'::jsonb);
+    return referral.reject_bind(p_session_id, p_operation_id, v_user_id, 'REFERRAL_INELIGIBLE');
   end if;
   if v_candidate.status = 'rejected' then
-    return operations.fail_command(p_operation_id, v_candidate.result_code, '{}'::jsonb);
+    return referral.reject_bind(p_session_id, p_operation_id, v_user_id, v_candidate.result_code);
   end if;
   if v_candidate.status = 'bound' then
-    return operations.fail_command(p_operation_id, 'REFERRAL_ALREADY_BOUND', '{}'::jsonb);
+    return referral.reject_bind(p_session_id, p_operation_id, v_user_id, 'REFERRAL_ALREADY_BOUND');
   end if;
   if now() > v_candidate.expires_at then
-    update identity.entry_candidates
-    set status = 'rejected', result_code = 'REFERRAL_CANDIDATE_EXPIRED', operation_id = p_operation_id,
-        settled_at = now()
-    where user_id = v_user_id;
-    return operations.fail_command(p_operation_id, 'REFERRAL_CANDIDATE_EXPIRED', '{}'::jsonb);
+    return referral.reject_bind(p_session_id, p_operation_id, v_user_id, 'REFERRAL_CANDIDATE_EXPIRED');
   end if;
   if exists (select 1 from payments.orders where user_id = v_user_id and status = 'delivered') then
-    update identity.entry_candidates
-    set status = 'rejected', result_code = 'REFERRAL_ALREADY_RECHARGED', operation_id = p_operation_id,
-        settled_at = now()
-    where user_id = v_user_id;
-    return operations.fail_command(p_operation_id, 'REFERRAL_ALREADY_RECHARGED', '{}'::jsonb);
+    return referral.reject_bind(p_session_id, p_operation_id, v_user_id, 'REFERRAL_ALREADY_RECHARGED');
   end if;
 
   select id, status into v_inviter_id, v_inviter_status
   from identity.users where referral_code = p_code;
   if v_inviter_id is null then
-    update identity.entry_candidates
-    set status = 'rejected', result_code = 'REFERRAL_CODE_INVALID', operation_id = p_operation_id,
-        settled_at = now()
-    where user_id = v_user_id;
-    return operations.fail_command(p_operation_id, 'REFERRAL_CODE_INVALID', '{}'::jsonb);
+    return referral.reject_bind(p_session_id, p_operation_id, v_user_id, 'REFERRAL_CODE_INVALID');
   end if;
   if v_inviter_id = v_user_id then
-    update identity.entry_candidates
-    set status = 'rejected', result_code = 'REFERRAL_SELF_BIND', operation_id = p_operation_id,
-        settled_at = now()
-    where user_id = v_user_id;
-    return operations.fail_command(p_operation_id, 'REFERRAL_SELF_BIND', '{}'::jsonb);
+    return referral.reject_bind(p_session_id, p_operation_id, v_user_id, 'REFERRAL_SELF_BIND');
   end if;
   if v_inviter_status <> 'normal' then
-    update identity.entry_candidates
-    set status = 'rejected', result_code = 'REFERRAL_INVITER_UNAVAILABLE', operation_id = p_operation_id,
-        settled_at = now()
-    where user_id = v_user_id;
-    return operations.fail_command(p_operation_id, 'REFERRAL_INVITER_UNAVAILABLE', '{}'::jsonb);
+    return referral.reject_bind(p_session_id, p_operation_id, v_user_id, 'REFERRAL_INVITER_UNAVAILABLE');
   end if;
 
   update identity.users set invited_by = v_inviter_id, updated_at = now()
@@ -138,7 +142,9 @@ begin
   set status = 'bound', result_code = 'REFERRAL_BOUND', operation_id = p_operation_id,
       inviter_id = v_inviter_id, settled_at = now()
   where user_id = v_user_id;
-  update identity.sessions set referral_processed_at = now() where id = p_session_id;
+  update identity.sessions
+  set referral_processed_at = coalesce(referral_processed_at, now())
+  where id = p_session_id and user_id = v_user_id;
   v_result := jsonb_build_object('bound', true, 'referral_code', p_code);
   return operations.complete_command(p_operation_id, v_result);
 end;

@@ -61,8 +61,16 @@ function syncTelegramLayout(): void {
       `${content.top}px`,
     );
     document.documentElement.style.setProperty(
+      "--tg-content-safe-area-inset-right",
+      `${content.right}px`,
+    );
+    document.documentElement.style.setProperty(
       "--tg-content-safe-area-inset-bottom",
       `${content.bottom}px`,
+    );
+    document.documentElement.style.setProperty(
+      "--tg-content-safe-area-inset-left",
+      `${content.left}px`,
     );
   }
   if (app.viewportStableHeight)
@@ -75,6 +83,9 @@ function syncTelegramLayout(): void {
     (app.colorScheme === "light" ? "#ffffff" : "#0b1020");
   app.setHeaderColor(background);
   app.setBackgroundColor(background);
+  document
+    .querySelector('meta[name="theme-color"]')
+    ?.setAttribute("content", background);
 }
 
 export function useTelegramBackButton(

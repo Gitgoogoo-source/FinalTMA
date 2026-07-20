@@ -80,7 +80,10 @@ security definer
 set search_path = ''
 as $$
 declare
-  v_user_id uuid := api.session_user(p_session_id);
+  v_user_id uuid := api.session_user(
+    p_session_id,
+    p_use_case is not distinct from 'referral.bind'
+  );
   v_hash text := encode(extensions.digest(convert_to(p_request::text, 'UTF8'), 'sha256'), 'hex');
   v_operation operations.operations%rowtype;
 begin
@@ -162,15 +165,24 @@ security definer
 set search_path = ''
 as $$
 declare
-  v_user_id uuid := api.session_user(p_session_id);
+  v_user_id uuid := api.session_user(p_session_id, true);
+  v_entry_handoff_pending boolean;
+  v_operation operations.operations%rowtype;
   v_result jsonb;
 begin
-  select operations.operation_json(o) into v_result
+  select s.referral_processed_at is null into v_entry_handoff_pending
+  from identity.sessions s
+  where s.id = p_session_id;
+  select * into v_operation
   from operations.operations o
   where o.id = p_operation_id and o.user_id = v_user_id;
-  if v_result is null then
+  if v_operation.id is null then
     perform api.raise_business_error('OPERATION_NOT_FOUND', '操作记录不存在');
   end if;
+  if v_entry_handoff_pending and v_operation.use_case <> 'referral.bind' then
+    perform api.raise_business_error('ENTRY_HANDOFF_PENDING', '邀请绑定结果确认中，请稍后刷新');
+  end if;
+  v_result := operations.operation_json(v_operation);
   return v_result;
 end;
 $$;

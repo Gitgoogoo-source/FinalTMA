@@ -61,7 +61,19 @@ export const identityHandlers = {
       account_status: "normal" | "banned";
       user_id?: string;
       expires_at?: string;
-      start_param?: string | null;
+      entry_handoff_state?: "pending" | "complete";
+      entry_handoff_code?: string | null;
+      entry_handoff_result?:
+        | "REFERRAL_BOUND"
+        | "REFERRAL_ALREADY_BOUND"
+        | "REFERRAL_ALREADY_RECHARGED"
+        | "REFERRAL_CANDIDATE_EXPIRED"
+        | "REFERRAL_CODE_INVALID"
+        | "REFERRAL_INELIGIBLE"
+        | "REFERRAL_INVITER_UNAVAILABLE"
+        | "REFERRAL_OLD_USER"
+        | "REFERRAL_SELF_BIND"
+        | null;
     }>("identity_authenticate", {
       p_operation_id: operationId,
       p_request_hash: identityFingerprint(
@@ -81,7 +93,7 @@ export const identityHandlers = {
     });
     if (session.account_status === "banned")
       return { data: { account_status: "banned" as const } };
-    if (!session.user_id || !session.expires_at)
+    if (!session.user_id || !session.expires_at || !session.entry_handoff_state)
       throw new ApiError(500, "INTERNAL_ERROR", "登录结果不完整", true);
     return {
       data: {
@@ -89,7 +101,9 @@ export const identityHandlers = {
         access_token: issued.token,
         user_id: session.user_id,
         expires_at: session.expires_at,
-        start_param: session.start_param ?? null,
+        entry_handoff_state: session.entry_handoff_state,
+        entry_handoff_code: session.entry_handoff_code ?? null,
+        entry_handoff_result: session.entry_handoff_result ?? null,
       },
     };
   },

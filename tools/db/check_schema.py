@@ -147,6 +147,48 @@ def verify_identity_login_contract() -> None:
         raise SystemExit("Referral binding must consume the persistent entry candidate")
 
 
+def verify_entry_handoff_contract() -> None:
+    identity_sql = (SCHEMAS / "10_identity.sql").read_text(encoding="utf-8").lower()
+    identity_required = (
+        "create or replace function identity.session_entry_handoff",
+        "'entry_handoff_state'",
+        "'entry_handoff_code'",
+        "'entry_handoff_result'",
+        "p_allow_pending_entry_handoff boolean default false",
+        "raise_business_error('entry_handoff_pending'",
+        "identity.session_entry_handoff(s.id)",
+        "referral_processed_at is null",
+    )
+    missing = [fragment for fragment in identity_required if fragment not in identity_sql]
+    if missing:
+        raise SystemExit(f"Entry handoff identity contract is incomplete: {missing}")
+
+    operations_sql = (SCHEMAS / "30_operations.sql").read_text(encoding="utf-8").lower()
+    operations_required = (
+        "p_use_case is not distinct from 'referral.bind'",
+        "api.session_user(p_session_id, true)",
+        "v_operation.use_case <> 'referral.bind'",
+        "raise_business_error('entry_handoff_pending'",
+    )
+    missing = [fragment for fragment in operations_required if fragment not in operations_sql]
+    if missing:
+        raise SystemExit(f"Entry handoff operation recovery contract is incomplete: {missing}")
+
+    referral_sql = (SCHEMAS / "63_referral.sql").read_text(encoding="utf-8").lower()
+    referral_required = (
+        "create or replace function referral.reject_bind",
+        "set referral_processed_at = coalesce(referral_processed_at, now())",
+        "v_operation.status in ('succeeded', 'failed')",
+        "return referral.reject_bind",
+    )
+    missing = [fragment for fragment in referral_required if fragment not in referral_sql]
+    if missing or referral_sql.count("return referral.reject_bind") != 10:
+        raise SystemExit(
+            f"Entry handoff settlement contract is incomplete: missing={missing}, "
+            f"rejection_branches={referral_sql.count('return referral.reject_bind')}"
+        )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--write-baseline", action="store_true")
@@ -169,6 +211,7 @@ def main() -> None:
     verify_database_error_codes()
     verify_database_boundaries()
     verify_identity_login_contract()
+    verify_entry_handoff_contract()
 
     with tempfile.TemporaryDirectory(prefix="pokepets-db-check-") as temporary:
         output = Path(temporary)

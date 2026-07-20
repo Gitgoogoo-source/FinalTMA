@@ -1,11 +1,25 @@
 import { useSyncExternalStore } from "react";
 
+export type EntryHandoffResult =
+  | "REFERRAL_BOUND"
+  | "REFERRAL_ALREADY_BOUND"
+  | "REFERRAL_ALREADY_RECHARGED"
+  | "REFERRAL_CANDIDATE_EXPIRED"
+  | "REFERRAL_CODE_INVALID"
+  | "REFERRAL_INELIGIBLE"
+  | "REFERRAL_INVITER_UNAVAILABLE"
+  | "REFERRAL_OLD_USER"
+  | "REFERRAL_SELF_BIND";
+
 export type Session = {
   token: string;
   userId: string;
   accountStatus: "normal" | "banned";
   expiresAt: string;
   generation: string;
+  entryHandoffState: "pending" | "complete";
+  entryHandoffCode: string | null;
+  entryHandoffResult: EntryHandoffResult | null;
   recovering?: boolean;
   bootstrapFailed?: boolean;
 };
@@ -40,7 +54,27 @@ export function registerBootstrapCacheSeeder(
 }
 
 export function seedSessionBootstrap(generation: string, data: unknown): void {
+  if (
+    current?.generation !== generation ||
+    current.accountStatus !== "normal" ||
+    current.entryHandoffState !== "complete"
+  )
+    throw new DOMException("Stale session generation", "AbortError");
   bootstrapCacheSeeder(generation, data);
+}
+
+export function transitionToBanned(): void {
+  const session = current;
+  if (session)
+    replaceSession({
+      ...session,
+      accountStatus: "banned",
+      generation: crypto.randomUUID(),
+      recovering: false,
+      bootstrapFailed: false,
+    });
+  else replaceSession(null);
+  clearSensitiveState();
 }
 
 export function clearSensitiveState(): void {

@@ -10,6 +10,19 @@ export type Session = {
   account_status: "normal" | "banned";
   expires_at: string;
   session_state: "active" | "expired" | "replaced";
+  entry_handoff_state: "pending" | "complete";
+  entry_handoff_code: string | null;
+  entry_handoff_result:
+    | "REFERRAL_BOUND"
+    | "REFERRAL_ALREADY_BOUND"
+    | "REFERRAL_ALREADY_RECHARGED"
+    | "REFERRAL_CANDIDATE_EXPIRED"
+    | "REFERRAL_CODE_INVALID"
+    | "REFERRAL_INELIGIBLE"
+    | "REFERRAL_INVITER_UNAVAILABLE"
+    | "REFERRAL_OLD_USER"
+    | "REFERRAL_SELF_BIND"
+    | null;
 };
 
 export function issueToken(operationId: string): {

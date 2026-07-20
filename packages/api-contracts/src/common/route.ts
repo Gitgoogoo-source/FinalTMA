@@ -16,6 +16,7 @@ export type RouteDefinition<
   gateway: Gateway;
   auth: boolean;
   idempotent: boolean;
+  allowPendingEntryHandoff?: true;
   refreshScopes?: readonly RefreshScope[];
   rawResponse?: boolean;
   input: Input;
@@ -41,6 +42,8 @@ export function defineRoute<const Route extends RouteDefinition>(
       "SESSION_REPLACED",
       "SESSION_REQUIRED",
     );
+  if (route.auth && !route.allowPendingEntryHandoff)
+    errors.push("ENTRY_HANDOFF_PENDING");
   if (route.idempotent)
     errors.push("IDEMPOTENCY_KEY_INVALID", "IDEMPOTENCY_KEY_REQUIRED");
   if (route.gateway === "jobs") errors.push("CRON_UNAUTHORIZED");

@@ -55,6 +55,13 @@ export const errorRegistry = {
     "query_operation",
   ),
   DRAW_COUNT_INVALID: error(400, "开盒次数无效"),
+  ENTRY_HANDOFF_PENDING: error(
+    409,
+    "邀请绑定结果确认中，请稍后刷新",
+    true,
+    "session",
+    "refresh",
+  ),
   EVOLUTION_NOT_AVAILABLE: error(409, "当前藏品不能进化"),
   EXPEDITION_ALREADY_ACTIVE: error(
     409,
