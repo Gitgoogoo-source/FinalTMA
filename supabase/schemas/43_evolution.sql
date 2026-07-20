@@ -233,7 +233,6 @@ begin
       v_new_album := album.unlock_template(v_user_id, v_target.id, p_operation_id);
       update evolution.pity set failures = 0, updated_at = now() where user_id = v_user_id and from_template_id = v_source.id;
       perform tasks.progress(v_user_id, 'evolution_success');
-      if v_new_album then perform tasks.progress(v_user_id, 'album_unlock'); end if;
       v_current_failures := 0;
     else
       perform inventory.change_holding(v_user_id, v_source.id, -2);

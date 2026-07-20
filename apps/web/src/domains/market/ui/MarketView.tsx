@@ -18,8 +18,14 @@ type Tab = "buy" | "sell" | "manage";
 export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
   const [params, setParams] = useSearchParams();
   const [tab, setTab] = useState<Tab>(params.has("sell") ? "sell" : "buy");
+  const purchaseTarget = params.get("buy");
   const identity = useApiQuery("identity.bootstrap");
   const listings = useApiQuery("market.bootstrap", {}, tab === "buy");
+  const targetListing = useApiQuery(
+    "market.template",
+    { template_id: purchaseTarget ?? "" },
+    tab === "buy" && Boolean(purchaseTarget),
+  );
   const sellable = useApiQuery("market.bootstrap", {}, tab === "sell");
   const mine = useApiQuery("market.my_listings", {}, tab !== "buy");
   const { isBlocked, run } = useOperationRegistry();
@@ -32,12 +38,16 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
     isBlocked("market.purchase") ||
     isBlocked("market.create_listing") ||
     isBlocked("market.cancel_template_listings");
+  const purchaseTemplates = (listings.data?.templates ?? []).map((item) => {
+    const current =
+      item.template_id === purchaseTarget && targetListing.data
+        ? targetListing.data
+        : item;
+    return { ...current, available: current.available_quantity };
+  });
   const data: MarketViewItem[] =
     tab === "buy"
-      ? (listings.data?.templates ?? []).map((item) => ({
-          ...item,
-          available: item.available_quantity,
-        }))
+      ? purchaseTemplates
       : tab === "sell"
         ? (sellable.data?.sellable_items ?? []).map((item) => ({
             ...item,
@@ -48,7 +58,8 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
             available: item.listed_quantity,
           }));
   const state = tab === "buy" ? listings : tab === "sell" ? sellable : mine;
-  const preset = params.get("sell");
+  const preset =
+    tab === "buy" ? purchaseTarget : tab === "sell" ? params.get("sell") : null;
   const resumedTemplate = params.get("resume")
     ? params.get("template_id")
     : null;
@@ -56,13 +67,21 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
   const sorted = useMemo(
     () =>
       preset
-        ? [...data].sort((a) => (a.template_id === preset ? -1 : 1))
+        ? [...data].sort(
+            (left, right) =>
+              Number(right.template_id === preset) -
+              Number(left.template_id === preset),
+          )
         : data,
     [data, preset],
   );
   const activeTemplateIds = new Set(
     (mine.data?.listings ?? []).map((item) => item.template_id),
   );
+  const selectTab = (next: Tab) => {
+    setTab(next);
+    setParams({});
+  };
   const submit = (item: MarketViewItem, quantity: number) => {
     setFeedback(null);
     if (tab === "buy") {
@@ -119,6 +138,29 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
         <ShoppingBag aria-hidden="true" />
       </header>
       {vipBanner}
+      {tab === "buy" && purchaseTarget && targetListing.data && (
+        <Card className="market-target" role="status">
+          <strong>已定位：{targetListing.data.name}</strong>
+          <p>
+            当前可买 {targetListing.data.available_quantity} 个；数量为 0
+            表示市场当前没有在售。
+          </p>
+          <Button className="secondary" onClick={() => setParams({})}>
+            查看全部藏品
+          </Button>
+        </Card>
+      )}
+      {tab === "buy" && purchaseTarget && targetListing.isLoading && (
+        <Card className="market-target" role="status">
+          正在定位图鉴藏品的实时市场状态
+        </Card>
+      )}
+      {tab === "buy" && purchaseTarget && targetListing.error && (
+        <Card className="market-target" role="alert">
+          <strong>目标藏品定位失败</strong>
+          <p>完整市场目录仍可浏览，请重新进入图鉴后再试。</p>
+        </Card>
+      )}
       {resumedTemplate && (
         <Card className="resume-intent">
           <strong>充值已到账</strong>
@@ -150,19 +192,19 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
       <nav className="segmented">
         <button
           className={tab === "buy" ? "active" : ""}
-          onClick={() => setTab("buy")}
+          onClick={() => selectTab("buy")}
         >
           购买
         </button>
         <button
           className={tab === "sell" ? "active" : ""}
-          onClick={() => setTab("sell")}
+          onClick={() => selectTab("sell")}
         >
           出售
         </button>
         <button
           className={tab === "manage" ? "active" : ""}
-          onClick={() => setTab("manage")}
+          onClick={() => selectTab("manage")}
         >
           管理
         </button>
@@ -336,7 +378,7 @@ function MarketCard({
         ) : tab === "buy" ? (
           <>
             <ShoppingCart />
-            确认购买
+            {available < 1 ? "暂无在售" : "确认购买"}
           </>
         ) : tab === "sell" ? (
           <>

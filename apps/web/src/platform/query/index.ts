@@ -93,7 +93,16 @@ const scopePrefixes: Record<
   readonly string[]
 > = {
   session: ["identity", "vip", "wallet"],
-  assets: ["identity", "gacha", "wheel", "vip", "tasks", "topup", "market"],
+  assets: [
+    "identity",
+    "gacha",
+    "wheel",
+    "vip",
+    "tasks",
+    "topup",
+    "market",
+    "album",
+  ],
   inventory: ["identity", "inventory", "market", "expedition", "mint", "album"],
   payments: ["identity", "topup", "vip"],
   mint: ["identity", "mint", "wallet", "inventory"],

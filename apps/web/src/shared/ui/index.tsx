@@ -1,5 +1,5 @@
 import { AlertCircle, LoaderCircle, RefreshCw } from "lucide-react";
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import type { ButtonHTMLAttributes, ComponentProps, ReactNode } from "react";
 
 export { CatalogImage } from "./CatalogImage.tsx";
 
@@ -18,11 +18,13 @@ export function Button({
 export function Card({
   children,
   className = "",
-}: {
-  children: ReactNode;
-  className?: string;
-}): ReactNode {
-  return <section className={`card ${className}`}>{children}</section>;
+  ...props
+}: ComponentProps<"section">): ReactNode {
+  return (
+    <section className={`card ${className}`} {...props}>
+      {children}
+    </section>
+  );
 }
 
 export function PageState({

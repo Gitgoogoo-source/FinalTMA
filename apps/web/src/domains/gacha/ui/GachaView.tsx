@@ -3,6 +3,7 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -21,6 +22,7 @@ import { useNavigationIntent } from "../../../workflows/payment-recovery/index.t
 import { GachaPoolDialog } from "./GachaPoolDialog.tsx";
 
 type BoxTier = "normal" | "rare" | "legendary";
+type Rarity = "common" | "rare" | "epic" | "legendary" | "mythic";
 type GachaViewState = { selectedTier: BoxTier; scrollY: number };
 
 const viewStates = new Map<string, GachaViewState>();
@@ -54,6 +56,8 @@ export function GachaView({
   const blocked = isBlocked("gacha.open");
   const [params, setParams] = useSearchParams();
   const requestedTier = params.get("tier");
+  const requestedRarity = params.get("rarity");
+  const targetRarity = isRarity(requestedRarity) ? requestedRarity : null;
   const resumedTier =
     params.get("resume") && isBoxTier(requestedTier) ? requestedTier : null;
   const resumedCount = params.get("count") === "10" ? 10 : 1;
@@ -70,13 +74,22 @@ export function GachaView({
   const [ready, setReady] = useState<Record<string, boolean>>({});
   const [poolOpen, setPoolOpen] = useState(false);
   const poolTrigger = useRef<HTMLButtonElement>(null);
-  const items = boxes.data?.boxes ?? [];
+  const items = useMemo(() => boxes.data?.boxes ?? [], [boxes.data?.boxes]);
+  const visibleItems = useMemo(
+    () =>
+      targetRarity
+        ? items.filter((box) => box.rarity_weights[targetRarity] > 0)
+        : items,
+    [items, targetRarity],
+  );
   const pityItems = boxes.data?.pity ?? [];
   const rulesComplete = boxes.data?.rules_complete === true;
   const freeNormalCount = Number(boxes.data?.entitlements.free_normal_box ?? 0);
   const freeRareCount = Number(boxes.data?.entitlements.free_rare_box ?? 0);
   const selectedBox =
-    items.find((box) => box.tier === selectedTier) ?? items[0];
+    visibleItems.find((box) => box.tier === selectedTier) ??
+    visibleItems[0] ??
+    items[0];
   const selectedPity = pityItems.find(
     (item) => item.tier === selectedBox?.tier,
   );
@@ -101,9 +114,13 @@ export function GachaView({
     setSelectedTier(tier);
   }, []);
   const handleFreeRareClaimed = useCallback(() => {
-    setSelectedTier("rare");
+    if (
+      !targetRarity ||
+      items.find((box) => box.tier === "rare")?.rarity_weights[targetRarity]
+    )
+      setSelectedTier("rare");
     if (requestedTier) setParams({}, { replace: true });
-  }, [requestedTier, setParams]);
+  }, [items, requestedTier, setParams, targetRarity]);
 
   useEffect(() => {
     let active = true;
@@ -112,17 +129,20 @@ export function GachaView({
         active &&
         result.isSuccess &&
         Number(result.data.entitlements.free_rare_box) > 0
-      )
-        selectTier("rare");
+      ) {
+        const rareBox = result.data.boxes.find((box) => box.tier === "rare");
+        if (!targetRarity || (rareBox?.rarity_weights[targetRarity] ?? 0) > 0)
+          selectTier("rare");
+      }
     });
     return () => {
       active = false;
     };
-  }, [refetchBoxes, selectTier]);
+  }, [refetchBoxes, selectTier, targetRarity]);
 
   useEffect(() => {
-    selectedTierRef.current = selectedTier;
-  }, [selectedTier]);
+    if (selectedBox) selectedTierRef.current = selectedBox.tier;
+  }, [selectedBox]);
 
   useLayoutEffect(() => {
     if (scrollRestored.current) return;
@@ -186,6 +206,17 @@ export function GachaView({
         <Sparkles aria-hidden="true" />
       </header>
       {dailyBenefits(handleFreeRareClaimed)}
+      {targetRarity && visibleItems.length > 0 && (
+        <Card className="gacha-target" role="status">
+          <strong>可产出{rarityLabels[targetRarity]}的盲盒</strong>
+          <p>
+            共 {visibleItems.length} 档；下方概率、价格与保底均为当前真实规则。
+          </p>
+          <Button className="secondary" onClick={() => setParams({})}>
+            查看全部盲盒
+          </Button>
+        </Card>
+      )}
       {resumedTier && (
         <Card className="resume-intent">
           <strong>充值已到账</strong>
@@ -237,7 +268,7 @@ export function GachaView({
               role="group"
               aria-label="盲盒档次"
             >
-              {items.map((box) => {
+              {visibleItems.map((box) => {
                 const active = box.tier === selectedBox.tier;
                 return (
                   <button
@@ -250,7 +281,11 @@ export function GachaView({
                         selectTier(box.tier);
                         void boxes.refetch();
                       }
-                      if (requestedTier) setParams({}, { replace: true });
+                      if (requestedTier)
+                        setParams(
+                          targetRarity ? { rarity: targetRarity } : {},
+                          { replace: true },
+                        );
                     }}
                   >
                     <span className="tier-art">
@@ -427,4 +462,14 @@ export function GachaView({
 
 function isBoxTier(value: string | null): value is BoxTier {
   return value === "normal" || value === "rare" || value === "legendary";
+}
+
+function isRarity(value: string | null): value is Rarity {
+  return (
+    value === "common" ||
+    value === "rare" ||
+    value === "epic" ||
+    value === "legendary" ||
+    value === "mythic"
+  );
 }

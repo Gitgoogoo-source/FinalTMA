@@ -323,7 +323,6 @@ begin
       if v_template.id is null then perform api.raise_business_error('CATALOG_INVALID', '目录缺少抽取候选'); end if;
       perform inventory.change_holding(v_user_id, v_template.id, 1);
       v_new_album := album.unlock_template(v_user_id, v_template.id, p_operation_id);
-      if v_new_album then perform tasks.progress(v_user_id, 'album_unlock'); end if;
       v_results := v_results || jsonb_build_array(jsonb_build_object(
         'order', v_i, 'template_id', v_template.id, 'name', v_template.name,
         'rarity', v_template.rarity, 'stage', v_template.stage, 'quantity', 1,

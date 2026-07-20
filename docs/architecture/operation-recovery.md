@@ -10,6 +10,8 @@
 
 开盒结果关闭、再次开盒或前往藏品页之前，前端调用 `POST /api/gacha/results/:operation_id/acknowledge`；转盘结果关闭前调用 `POST /api/wheel/results/:operation_id/acknowledge`；进化成功、随机失败或拒绝结果执行规定动作前调用 `POST /api/inventory/evolution/results/:operation_id/acknowledge`。数据库只允许当前用户确认匹配固定 `use_case` 的本人终态，并以首次确认时间幂等落库。确认响应丢失时弹窗保持打开并允许重试；确认完成后启动与领域恢复查询都不再返回该结果。前端内存和浏览器存储都不充当结果或确认事实来源。
 
+`album.claim` 成功且结果通过该命令输出 Schema 校验时展示图鉴奖励专用结果，包含服务端返回的链条名称、真实 Fgems 奖励和操作号；确认前不提前显示奖励。图鉴是脱离主壳层的全屏页面，因此页面自身消费 `identity.bootstrap.blocking_operations` 并注入同一操作注册中心，网络中断后只查询原 `operation_id`。成功、失败或未知恢复都会按 `album.claim` 声明的资产与图鉴刷新范围重新读取 `album.get` 和顶部资产事实，不从临时弹窗状态重放领取。
+
 每日幂等清理不得删除尚未确认展示的开盒、转盘或进化终态；确认完成后，该操作才按通用终态规则在创建满 30 天后清理。
 
 每条前端操作记录绑定创建时的 session generation。会话过期、被替换或重新登录时先切换 generation，再清空全局操作、导航和查询状态；封禁时同时先切换为 `banned` 和新 generation。旧 generation 的请求、查询、动画及恢复结果全部丢弃。自然过期的并发请求共享一次认证交换，恢复只允许一次；新会话为 `pending` 时只继续邀请交接，不自动重做首屏或资产业务。

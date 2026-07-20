@@ -470,23 +470,302 @@ p {
   display: grid;
   gap: 12px;
 }
+.album-page {
+  width: min(100%, 720px);
+  margin: 0 auto;
+  background:
+    radial-gradient(circle at 50% 0, rgba(124, 92, 255, 0.18), transparent 26%),
+    var(--tg-bg-color, #0b1020);
+}
+.album-heading .badge {
+  flex: 0 0 auto;
+}
+.album-overview {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.album-overview div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  text-align: center;
+}
+.album-overview span {
+  color: var(--muted);
+  font-size: 11px;
+}
+.album-overview strong {
+  font-size: clamp(16px, 4.5vw, 22px);
+}
+.album-filters {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 14px;
+  padding: 5px;
+  border: 1px solid var(--border);
+  border-radius: 17px;
+  background: rgba(255, 255, 255, 0.035);
+}
+.album-filters button {
+  min-height: 40px;
+  border: 0;
+  border-radius: 12px;
+  color: var(--muted);
+  background: transparent;
+  font-size: 12px;
+  font-weight: 800;
+}
+.album-filters button.active {
+  color: var(--accent-text);
+  background: var(--accent);
+}
+.album-filter-empty {
+  min-height: 160px;
+  display: grid;
+  place-items: center;
+  border: 1px dashed var(--border);
+  border-radius: 18px;
+  color: var(--muted);
+}
+.album-filter-summary {
+  margin: -6px 2px 10px;
+  color: var(--muted);
+  font-size: 11px;
+  text-align: right;
+}
+.album-chain-card {
+  display: grid;
+  gap: 12px;
+}
+.album-chain-card h2 {
+  margin: 7px 0 0;
+  font-size: 20px;
+}
+.chain-progress {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+}
+.chain-progress span {
+  color: var(--muted);
+  font-size: 11px;
+}
 .chain-nodes {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 7px;
-  margin: 12px 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
-.chain-nodes div {
-  min-height: 64px;
+.album-node {
+  width: 100%;
+  min-width: 0;
+  min-height: 188px;
   display: grid;
+  grid-template-rows: 76px auto auto auto auto;
   place-items: center;
+  gap: 4px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 8px 5px;
+  color: inherit;
   text-align: center;
-  border-radius: 12px;
   background: rgba(255, 255, 255, 0.05);
 }
-.chain-nodes .locked {
+.album-node.locked {
   color: var(--muted);
-  filter: grayscale(1);
+  background: rgba(255, 255, 255, 0.025);
+}
+.album-node-art,
+.album-node-art .catalog-image,
+.album-node-art .image-missing {
+  width: 70px;
+  height: 70px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+}
+.album-node-art {
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.05);
+}
+.album-node-art > svg {
+  width: 34px;
+  height: 34px;
+}
+.album-node-stage,
+.album-node small,
+.album-node-owned {
+  color: var(--muted);
+  font-size: 10px;
+}
+.album-node strong {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.album-node-owned {
+  min-height: 24px;
+  display: flex;
+  align-items: center;
+  color: inherit;
+  font-weight: 800;
+}
+.album-gift {
+  width: 100%;
+}
+.album-gift > span {
+  display: grid;
+}
+.album-gift small {
+  font-size: 10px;
+  opacity: 0.75;
+}
+.album-gift.claimable {
+  box-shadow: 0 0 24px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+.album-page button:focus-visible,
+.album-node-dialog button:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent) 55%, #fff);
+  outline-offset: 2px;
+}
+.album-node-dialog {
+  position: fixed;
+  inset: auto 0 0;
+  width: min(100%, 560px);
+  max-width: none;
+  max-height: calc(100dvh - var(--safe-top) - 12px);
+  display: none;
+  gap: 12px;
+  margin: 0 auto;
+  padding: 20px calc(var(--safe-right) + 16px) calc(var(--safe-bottom) + 18px)
+    calc(var(--safe-left) + 16px);
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 26px 26px 0 0;
+  color: var(--tg-text-color, #f8fafc);
+  background: var(--tg-secondary-bg-color, #182038);
+}
+.album-node-dialog[open] {
+  display: grid;
+  animation: sheet 0.24s ease-out;
+}
+.album-node-dialog::backdrop {
+  background: rgba(2, 5, 14, 0.72);
+  backdrop-filter: blur(8px);
+}
+.album-node-dialog > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.album-node-dialog > header span {
+  color: #a89aff;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+.album-node-dialog h2,
+.album-node-dialog p {
+  margin: 0;
+}
+.album-node-dialog h2 {
+  margin-top: 3px;
+}
+.album-node-dialog p {
+  color: var(--muted);
+  line-height: 1.5;
+}
+.album-dialog-close {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  color: inherit;
+  background: rgba(255, 255, 255, 0.06);
+}
+.album-dialog-art {
+  min-height: min(52vw, 280px);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 20px;
+  background: radial-gradient(
+    circle,
+    rgba(124, 92, 255, 0.24),
+    transparent 68%
+  );
+}
+.album-dialog-art .catalog-image,
+.album-dialog-art .image-missing {
+  width: 100%;
+  height: min(52vw, 280px);
+}
+.album-dialog-art.locked > svg {
+  width: 80px;
+  height: 80px;
+  color: var(--muted);
+}
+.album-dialog-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.album-owned-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.album-owned-summary span {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border-radius: 14px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.05);
+  font-size: 11px;
+}
+.album-owned-summary strong {
+  color: inherit;
+  font-size: 18px;
+}
+.album-acquisition-actions {
+  display: grid;
+  gap: 8px;
+}
+.album-claim-result > div > span {
+  color: var(--muted);
+  font-size: 11px;
+}
+.album-claim-result h2 {
+  margin-top: 3px;
+}
+.album-claim-success {
+  width: 52px;
+  height: 52px;
+  color: #5ee389;
+}
+.album-claim-result > p {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #78e9ff;
+  font-size: 20px;
+  font-weight: 900;
 }
 .segmented {
   display: grid;
@@ -2051,6 +2330,34 @@ input:focus {
   border-color: rgba(77, 187, 57, 0.18);
   background: rgba(235, 249, 233, 0.8);
 }
+.app-shell .gacha-target,
+.app-shell .market-target {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 10px;
+  align-items: center;
+  margin-bottom: 10px;
+  padding: 12px;
+}
+.app-shell .gacha-target strong,
+.app-shell .market-target strong {
+  color: var(--sprout-orange);
+  font-size: 12px;
+}
+.app-shell .gacha-target p,
+.app-shell .market-target p {
+  grid-column: 1;
+  margin: 0;
+  color: var(--muted);
+  font-size: 10px;
+}
+.app-shell .gacha-target .button,
+.app-shell .market-target .button {
+  grid-column: 2;
+  grid-row: 1 / 3;
+  min-height: 36px;
+  padding: 7px 10px;
+}
 
 /* Gacha */
 .app-shell .gacha-heading {
@@ -3065,6 +3372,42 @@ input:focus {
   min-height: 40px;
   border-radius: 20px;
 }
+.app-shell .inventory-location {
+  margin: 0 0 10px;
+  padding: 9px 12px;
+  border-radius: 13px;
+  color: #317b2d;
+  background: rgba(77, 187, 57, 0.09);
+  font-size: 11px;
+  font-weight: 850;
+}
+.app-shell .inventory-target-empty {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.app-shell .inventory-target-empty .catalog-image,
+.app-shell .inventory-target-empty .image-missing {
+  width: 88px;
+  height: 88px;
+  border-radius: 16px;
+}
+.app-shell .inventory-target-empty h2,
+.app-shell .inventory-target-empty p {
+  margin: 5px 0 0;
+}
+.app-shell .inventory-target-empty p {
+  color: var(--muted);
+  font-size: 11px;
+}
+.app-shell .detail-copy:focus-visible,
+.app-shell .action-grid:focus-visible,
+.app-shell .inventory-target-empty:focus-visible {
+  outline: 3px solid rgba(255, 156, 0, 0.34);
+  outline-offset: 3px;
+}
 .app-shell .inventory-detail {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -3754,7 +4097,11 @@ input:focus {
 @media (prefers-reduced-motion: reduce) {
   .app-shell *,
   .app-shell *::before,
-  .app-shell *::after {
+  .app-shell *::after,
+  .album-page *,
+  .album-page *::before,
+  .album-page *::after,
+  .album-node-dialog {
     scroll-behavior: auto !important;
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;

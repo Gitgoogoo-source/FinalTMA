@@ -36,6 +36,7 @@ import { haptic, telegram } from "../../platform/telegram/index.ts";
 import { Button } from "../../shared/ui/index.tsx";
 import { useNewMarkers } from "../new-markers/index.ts";
 import { useNavigationIntent } from "../payment-recovery/index.ts";
+import { AlbumClaimResultDialog } from "./AlbumClaimResultDialog.tsx";
 import {
   OperationRegistryContext,
   type OperationPhase,
@@ -113,6 +114,12 @@ export function OperationRegistryProvider({
     const parsed = routeById("wheel.spin").output.safeParse(active.result);
     return parsed.success ? parsed.data : null;
   }, [active]);
+  const albumClaimResult = useMemo(() => {
+    if (active?.routeId !== "album.claim" || active.phase !== "succeeded")
+      return null;
+    const parsed = routeById("album.claim").output.safeParse(active.result);
+    return parsed.success ? parsed.data : null;
+  }, [active]);
   const invalidGachaSuccess = Boolean(
     active?.routeId === "gacha.open" &&
     active.phase === "succeeded" &&
@@ -123,7 +130,13 @@ export function OperationRegistryProvider({
     active.phase === "succeeded" &&
     !wheelResult,
   );
-  const invalidDedicatedSuccess = invalidGachaSuccess || invalidWheelSuccess;
+  const invalidAlbumClaimSuccess = Boolean(
+    active?.routeId === "album.claim" &&
+    active.phase === "succeeded" &&
+    !albumClaimResult,
+  );
+  const invalidDedicatedSuccess =
+    invalidGachaSuccess || invalidWheelSuccess || invalidAlbumClaimSuccess;
   const unresolved = Object.values(operations).filter((operation) =>
     unresolvedPhases.has(operation.phase),
   );
@@ -728,8 +741,19 @@ export function OperationRegistryProvider({
         phase: "unknown",
         message: "转盘结果详情暂时无法确认，请查询原操作",
       });
+    if (invalidAlbumClaimSuccess)
+      update(active.id, {
+        phase: "unknown",
+        message: "图鉴奖励详情暂时无法确认，请查询原操作",
+      });
     setActiveId(null);
-  }, [active, invalidGachaSuccess, invalidWheelSuccess, update]);
+  }, [
+    active,
+    invalidAlbumClaimSuccess,
+    invalidGachaSuccess,
+    invalidWheelSuccess,
+    update,
+  ]);
 
   const trapDialogFocus = (event: ReactKeyboardEvent<HTMLDivElement>) => {
     if (event.key === "Escape") {
@@ -785,7 +809,9 @@ export function OperationRegistryProvider({
                 ? "gacha-result-title"
                 : wheelResult
                   ? "wheel-result-title"
-                  : "operation-dialog-title"
+                  : albumClaimResult
+                    ? "album-claim-result-title"
+                    : "operation-dialog-title"
           }
           tabIndex={-1}
           onKeyDown={trapDialogFocus}
@@ -839,6 +865,12 @@ export function OperationRegistryProvider({
               }
               onConfirm={() => void acknowledgeWheelResult(active)}
             />
+          ) : albumClaimResult ? (
+            <AlbumClaimResultDialog
+              operationId={active.id}
+              result={albumClaimResult}
+              onConfirm={dismiss}
+            />
           ) : (
             <div className="modal">
               <div
@@ -858,7 +890,9 @@ export function OperationRegistryProvider({
                   ? "开盒结果详情暂时无法确认，请查询原操作"
                   : invalidWheelSuccess
                     ? "转盘结果详情暂时无法确认，请查询原操作"
-                    : active.message}
+                    : invalidAlbumClaimSuccess
+                      ? "图鉴奖励详情暂时无法确认，请查询原操作"
+                      : active.message}
               </p>
               <code>操作号 {active.id}</code>
               {acknowledgedResultRouteIds.has(active.routeId) &&
