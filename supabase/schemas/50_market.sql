@@ -60,16 +60,16 @@ begin
         'stage', t.stage,
         'image_thumbnail_path', t.image_thumbnail_path,
         'unit_price', t.market_price,
-        'available_quantity', x.quantity
+        'available_quantity', coalesce(x.quantity, 0)
       ) order by t.sort_order)
-      from (
+      from catalog.templates t
+      left join (
         select l.template_id, sum(l.remaining) quantity
         from market.listings l
         join identity.users u on u.id = l.seller_id
         where l.status = 'active' and l.remaining > 0 and u.status = 'normal' and l.seller_id <> v_user_id
         group by l.template_id
-      ) x
-      join catalog.templates t on t.id = x.template_id
+      ) x on x.template_id = t.id
     ), '[]'::jsonb),
     'sellable_items', coalesce((
       select jsonb_agg(inventory.item_json(v_user_id, h.template_id) || jsonb_build_object('unit_price', t.market_price) order by t.sort_order)
@@ -78,7 +78,7 @@ begin
       where h.user_id = v_user_id and inventory.available_quantity(v_user_id, h.template_id) > 0
     ), '[]'::jsonb),
     'vip', vip.status_json(v_user_id),
-    'max_active_templates', 50,
+    'max_active_templates', 10,
     'fee_bps', 500,
     'vip_rebate_bps', 2000
   );
@@ -129,18 +129,41 @@ declare
 begin
   return jsonb_build_object('listings', coalesce((
     select jsonb_agg(jsonb_build_object(
-      'listing_id', l.id,
-      'template_id', l.template_id,
+      'template_id', a.template_id,
       'name', t.name,
       'rarity', t.rarity,
+      'stage', t.stage,
       'image_thumbnail_path', t.image_thumbnail_path,
-      'quantity', l.remaining,
-      'unit_price', l.unit_price,
-      'created_at', l.created_at
-    ) order by l.created_at)
-    from market.listings l
-    join catalog.templates t on t.id = l.template_id
-    where l.seller_id = v_user_id and l.status = 'active' and l.remaining > 0
+      'listed_quantity', a.listed_quantity,
+      'sold_quantity', coalesce(s.sold_quantity, 0),
+      'unit_price', t.market_price,
+      'estimated_gross', a.listed_quantity * t.market_price,
+      'estimated_fee', floor(a.listed_quantity * t.market_price * 500.0 / 10000.0),
+      'estimated_net', a.listed_quantity * t.market_price - floor(a.listed_quantity * t.market_price * 500.0 / 10000.0),
+      'estimated_vip_rebate', case
+        when exists (
+          select 1 from vip.subscriptions v
+          where v.user_id = v_user_id and identity.utc_day() between v.starts_on and v.ends_on
+        )
+        then floor(floor(a.listed_quantity * t.market_price * 500.0 / 10000.0) * 2000.0 / 10000.0)
+        else 0
+      end,
+      'status', case when coalesce(s.sold_quantity, 0) > 0 then 'partially_sold' else 'active' end,
+      'first_listed_at', a.first_listed_at
+    ) order by t.sort_order)
+    from (
+      select l.template_id, sum(l.remaining) listed_quantity, min(l.created_at) first_listed_at
+      from market.listings l
+      where l.seller_id = v_user_id and l.status = 'active' and l.remaining > 0
+      group by l.template_id
+    ) a
+    join catalog.templates t on t.id = a.template_id
+    left join (
+      select l.template_id, sum(l.quantity - l.remaining) sold_quantity
+      from market.listings l
+      where l.seller_id = v_user_id and l.quantity > l.remaining
+      group by l.template_id
+    ) s on s.template_id = a.template_id
   ), '[]'::jsonb));
 end;
 $$;
@@ -175,9 +198,14 @@ begin
     if v_template.id is null then perform api.raise_business_error('TEMPLATE_NOT_FOUND', '藏品模板不存在'); end if;
     if p_quantity <= 0 then perform api.raise_business_error('INSUFFICIENT_INVENTORY', '可用藏品不足'); end if;
     perform pg_advisory_xact_lock(hashtextextended(v_user_id::text || ':market-listings', 0));
-    select count(distinct template_id) into v_active_count from market.listings where seller_id = v_user_id and status = 'active';
-    if v_active_count >= 50 and not exists (select 1 from market.listings where seller_id = v_user_id and template_id = p_template_id and status = 'active') then
-      perform api.raise_business_error('MARKET_ACTIVE_TEMPLATE_LIMIT', '在售藏品种类已达上限');
+    select count(distinct template_id) into v_active_count
+    from market.listings
+    where seller_id = v_user_id and status = 'active' and remaining > 0;
+    if v_active_count >= 10 and not exists (
+      select 1 from market.listings
+      where seller_id = v_user_id and template_id = p_template_id and status = 'active' and remaining > 0
+    ) then
+      perform api.raise_business_error('MARKET_ACTIVE_TEMPLATE_LIMIT', '最多同时出售 10 种藏品，请先售罄或下架一种藏品');
     end if;
     insert into market.listings (seller_id, template_id, unit_price, quantity, remaining, operation_id)
     values (v_user_id, p_template_id, v_template.market_price, p_quantity, p_quantity, p_operation_id) returning * into v_listing;
@@ -192,10 +220,10 @@ begin
 end;
 $$;
 
-create or replace function api.market_cancel_listing(
+create or replace function api.market_cancel_template_listings(
   p_session_id uuid,
   p_operation_id uuid,
-  p_listing_id uuid
+  p_template_id text
 )
 returns jsonb
 language plpgsql
@@ -206,21 +234,39 @@ declare
   v_operation operations.operations%rowtype;
   v_replay jsonb;
   v_user_id uuid;
-  v_listing market.listings%rowtype;
+  v_released bigint;
   v_result jsonb;
   v_detail text;
 begin
-  v_operation := operations.begin_command(p_session_id, 'market.cancel_listing', p_operation_id, jsonb_build_object('listing_id', p_listing_id));
+  v_operation := operations.begin_command(p_session_id, 'market.cancel_template_listings', p_operation_id, jsonb_build_object('template_id', p_template_id));
   v_replay := operations.replay_if_finished(v_operation);
   if v_replay is not null then return v_replay; end if;
   v_user_id := v_operation.user_id;
   begin
-    select * into v_listing from market.listings where id = p_listing_id and seller_id = v_user_id for update;
-    if v_listing.id is null then perform api.raise_business_error('LISTING_NOT_FOUND', '挂单不存在'); end if;
-    if v_listing.status <> 'active' or v_listing.remaining <= 0 then perform api.raise_business_error('LISTING_NOT_CANCELLABLE', '挂单不可下架'); end if;
-    update market.listings set status = 'cancelled', remaining = 0, updated_at = now() where id = p_listing_id;
-    update inventory.reservations set status = 'released', released_at = now() where kind = 'listing' and reference_id = p_listing_id and status = 'active';
-    v_result := jsonb_build_object('listing_id', p_listing_id, 'status', 'cancelled', 'released_quantity', v_listing.remaining);
+    if not exists (select 1 from catalog.templates where id = p_template_id) then
+      perform api.raise_business_error('TEMPLATE_NOT_FOUND', '藏品模板不存在');
+    end if;
+    perform pg_advisory_xact_lock(hashtextextended(v_user_id::text || ':market-listings', 0));
+    perform 1
+    from market.listings
+    where seller_id = v_user_id and template_id = p_template_id and status = 'active' and remaining > 0
+    order by created_at, id
+    for update;
+    select coalesce(sum(remaining), 0) into v_released
+    from market.listings
+    where seller_id = v_user_id and template_id = p_template_id and status = 'active' and remaining > 0;
+    update inventory.reservations r
+    set status = 'released', released_at = now()
+    where r.kind = 'listing' and r.status = 'active' and exists (
+      select 1
+      from market.listings l
+      where l.id = r.reference_id and l.seller_id = v_user_id and l.template_id = p_template_id
+        and l.status = 'active' and l.remaining > 0
+    );
+    update market.listings
+    set status = 'cancelled', remaining = 0, updated_at = now()
+    where seller_id = v_user_id and template_id = p_template_id and status = 'active' and remaining > 0;
+    v_result := jsonb_build_object('template_id', p_template_id, 'status', 'cancelled', 'released_quantity', v_released);
     return operations.complete_command(p_operation_id, v_result);
   exception when others then
     get stacked diagnostics v_detail = pg_exception_detail;

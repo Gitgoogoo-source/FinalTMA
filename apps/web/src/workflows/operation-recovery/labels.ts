@@ -7,7 +7,7 @@ const labels: Partial<Record<RecoverableRouteId, string>> = {
   "gacha.open": "正在开启盲盒",
   "inventory.decompose": "正在分解藏品",
   "inventory.evolve": "正在进化藏品",
-  "market.cancel_listing": "正在取消挂单",
+  "market.cancel_template_listings": "正在全部下架",
   "market.create_listing": "正在创建挂单",
   "market.purchase": "正在确认市场购买",
   "mint.cancel": "正在取消 Mint",

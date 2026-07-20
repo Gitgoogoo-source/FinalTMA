@@ -115,17 +115,9 @@ export const errorRegistry = {
     "refresh",
   ),
   JOB_NOT_FOUND: error(404, "后台任务不存在"),
-  LISTING_NOT_CANCELLABLE: error(
-    409,
-    "挂单当前不能取消",
-    false,
-    "inventory",
-    "refresh",
-  ),
-  LISTING_NOT_FOUND: error(404, "挂单不存在"),
   MARKET_ACTIVE_TEMPLATE_LIMIT: error(
     409,
-    "活跃挂单种类已达上限",
+    "最多同时出售 10 种藏品，请先售罄或下架一种藏品",
     false,
     "inventory",
     "refresh",

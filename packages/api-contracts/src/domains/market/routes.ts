@@ -23,7 +23,7 @@ const marketTemplateSchema = z
     available_quantity: z.number().int().min(0),
   })
   .strict();
-const listingSchema = z
+const createdListingSchema = z
   .object({
     listing_id: uuidSchema,
     template_id: z.string(),
@@ -33,6 +33,24 @@ const listingSchema = z
     quantity: z.number().int().positive(),
     unit_price: z.number().int().positive(),
     created_at: timestampSchema,
+  })
+  .strict();
+const managedTemplateSchema = z
+  .object({
+    template_id: z.string(),
+    name: z.string(),
+    rarity: raritySchema,
+    stage: z.number().int().min(1).max(3),
+    image_thumbnail_path: z.string().startsWith("/assets/catalog/v1/thumb/"),
+    listed_quantity: z.number().int().positive(),
+    sold_quantity: z.number().int().min(0),
+    unit_price: z.number().int().positive(),
+    estimated_gross: z.number().int().positive(),
+    estimated_fee: z.number().int().min(0),
+    estimated_net: z.number().int().positive(),
+    estimated_vip_rebate: z.number().int().min(0),
+    status: z.enum(["active", "partially_sold"]),
+    first_listed_at: timestampSchema,
   })
   .strict();
 const tradeDetailSchema = z
@@ -55,14 +73,14 @@ export const marketRoutes = [
     input: emptyObjectSchema,
     output: z
       .object({
-        templates: z.array(marketTemplateSchema),
+        templates: z.array(marketTemplateSchema).length(210),
         sellable_items: z.array(
           inventoryItemSchema.extend({
             unit_price: z.number().int().positive(),
           }),
         ),
         vip: vipStatusSchema,
-        max_active_templates: z.literal(50),
+        max_active_templates: z.literal(10),
         fee_bps: z.literal(500),
         vip_rebate_bps: z.literal(2000),
       })
@@ -88,7 +106,9 @@ export const marketRoutes = [
     auth: true,
     idempotent: false,
     input: emptyObjectSchema,
-    output: z.object({ listings: z.array(listingSchema) }).strict(),
+    output: z
+      .object({ listings: z.array(managedTemplateSchema).max(10) })
+      .strict(),
     errors: ["ACCOUNT_RESTRICTED", "INTERNAL_ERROR"],
   }),
   defineRoute({
@@ -105,36 +125,32 @@ export const marketRoutes = [
         quantity: z.number().int().positive(),
       })
       .strict(),
-    output: listingSchema,
+    output: createdListingSchema,
     errors: [
       "MARKET_ACTIVE_TEMPLATE_LIMIT",
       "INSUFFICIENT_INVENTORY",
+      "TEMPLATE_NOT_FOUND",
       "IDEMPOTENCY_KEY_REUSED",
       "INTERNAL_ERROR",
     ],
   }),
   defineRoute({
-    id: "market.cancel_listing",
+    id: "market.cancel_template_listings",
     method: "POST",
-    path: "/api/market/listings/:listing_id/cancel",
+    path: "/api/market/templates/:template_id/cancel",
     gateway: "app",
     auth: true,
     idempotent: true,
     refreshScopes: ["assets", "inventory"],
-    input: z.object({ listing_id: uuidSchema }).strict(),
+    input: z.object({ template_id: identifierSchema }).strict(),
     output: z
       .object({
-        listing_id: uuidSchema,
+        template_id: identifierSchema,
         status: z.literal("cancelled"),
-        released_quantity: z.number().int().positive(),
+        released_quantity: z.number().int().min(0),
       })
       .strict(),
-    errors: [
-      "LISTING_NOT_FOUND",
-      "LISTING_NOT_CANCELLABLE",
-      "IDEMPOTENCY_KEY_REUSED",
-      "INTERNAL_ERROR",
-    ],
+    errors: ["TEMPLATE_NOT_FOUND", "IDEMPOTENCY_KEY_REUSED", "INTERNAL_ERROR"],
   }),
   defineRoute({
     id: "market.purchase",
@@ -164,6 +180,7 @@ export const marketRoutes = [
     errors: [
       "MARKET_STOCK_INSUFFICIENT",
       "INSUFFICIENT_BALANCE",
+      "TEMPLATE_NOT_FOUND",
       "IDEMPOTENCY_KEY_REUSED",
       "INTERNAL_ERROR",
     ],

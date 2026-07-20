@@ -276,7 +276,7 @@ export function OperationRegistryProvider({
           phase: pending ? "pending" : "succeeded",
           message: pending
             ? "服务器已接收，最终结果仍在确认"
-            : "结果已由服务器确认",
+            : confirmedMessage(routeId, response.data),
           result: response.data,
         });
         if (!pending)
@@ -385,7 +385,7 @@ export function OperationRegistryProvider({
         if (recovered.status === "succeeded") {
           update(operation.id, {
             phase: "succeeded",
-            message: "原操作已确认成功",
+            message: confirmedMessage(operation.routeId, recovered.result),
             result: recovered.result,
             errorCode: null,
           });
@@ -836,7 +836,8 @@ function isCurrentNormalSession(generation: string): boolean {
 }
 
 function recoveredMessage(operation: RecoverableOperationSummary): string {
-  if (operation.status === "succeeded") return "原操作已确认成功";
+  if (operation.status === "succeeded")
+    return confirmedMessage(operation.use_case, operation.result);
   if (operation.status === "failed")
     return operation.error_code && isErrorCode(operation.error_code)
       ? errorDefinition(operation.error_code).message
@@ -844,4 +845,17 @@ function recoveredMessage(operation: RecoverableOperationSummary): string {
   return operation.status === "unknown"
     ? "原操作结果未知，需要继续查询"
     : "原操作仍在处理中";
+}
+
+function confirmedMessage(
+  routeId: RecoverableRouteId,
+  result: unknown,
+): string {
+  if (routeId !== "market.cancel_template_listings")
+    return "结果已由服务器确认";
+  const parsed = routeById(routeId).output.safeParse(result);
+  if (!parsed.success) return "已下架，真实状态已刷新";
+  return parsed.data.released_quantity > 0
+    ? `已下架，已释放 ${parsed.data.released_quantity} 个未成交藏品`
+    : "已下架，当前没有有效挂单";
 }

@@ -8,7 +8,7 @@
 
 所有玩家写操作只调用一个 `api` 命令 RPC。RPC 内依次验证会话、账号状态、资源归属、请求前置条件和幂等键，在一个 PostgreSQL 事务中完成资产、账本、库存、预留、奖励和业务状态写入。Functions 只能传递用户意图和目标标识。
 
-库存占用统一调用 `inventory.reserve`：先锁定用户持有行，再重算全部活跃 reservation，最后写入出售、远征或 Mint 占用。库存扣减不得低于仍活跃的 reservation；市场成交和 Mint 成功先消费对应 reservation，再扣减总量。支付创建按用户和商品类型加事务锁，Mint 按用户和模板加事务锁并受活跃唯一约束，邀请奖励按邀请人加事务锁。
+库存占用统一调用 `inventory.reserve`：先锁定用户持有行，再重算全部活跃 reservation，最后写入出售、远征或 Mint 占用。库存扣减不得低于仍活跃的 reservation；市场成交和 Mint 成功先消费对应 reservation，再扣减总量。市场上架和按模板全部下架使用同一用户级事务 advisory lock；锁内按仍有剩余数量的不同模板计数，已有 10 种时只允许向现有模板追加。全部下架再按 FIFO 稳定顺序锁定本人该模板的全部有效挂单，原子取消并释放其剩余 reservation；没有有效挂单也以释放 0 的结果幂等成功。支付创建按用户和商品类型加事务锁，Mint 按用户和模板加事务锁并受活跃唯一约束，邀请奖励按邀请人加事务锁。
 
 操作 UUID 同时是 `Idempotency-Key` 与 `operation_id`。数据库对规范化请求计算 SHA-256；同键同请求回放持久结果，同键不同请求返回 `IDEMPOTENCY_KEY_REUSED`。开盒与转盘结果确认时间和原操作同表保存，各领域确认 RPC 锁定当前用户、原用例与终态并使用首次确认时间，重复与并发确认不改变结果。市场购买响应不包含卖家身份；库存满足 `total = available + listed + trading + minting + expedition`。
 

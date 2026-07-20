@@ -21,13 +21,17 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
   const identity = useApiQuery("identity.bootstrap");
   const listings = useApiQuery("market.bootstrap", {}, tab === "buy");
   const sellable = useApiQuery("market.bootstrap", {}, tab === "sell");
-  const mine = useApiQuery("market.my_listings", {}, tab === "manage");
+  const mine = useApiQuery("market.my_listings", {}, tab !== "buy");
   const { isBlocked, run } = useOperationRegistry();
   const { requestTopup } = useNavigationIntent();
+  const [feedback, setFeedback] = useState<string | null>(null);
+  const [pendingDelist, setPendingDelist] = useState<MarketViewItem | null>(
+    null,
+  );
   const blocked =
     isBlocked("market.purchase") ||
     isBlocked("market.create_listing") ||
-    isBlocked("market.cancel_listing");
+    isBlocked("market.cancel_template_listings");
   const data: MarketViewItem[] =
     tab === "buy"
       ? (listings.data?.templates ?? []).map((item) => ({
@@ -41,7 +45,7 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
           }))
         : (mine.data?.listings ?? []).map((item) => ({
             ...item,
-            available: item.quantity,
+            available: item.listed_quantity,
           }));
   const state = tab === "buy" ? listings : tab === "sell" ? sellable : mine;
   const preset = params.get("sell");
@@ -56,7 +60,11 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
         : data,
     [data, preset],
   );
+  const activeTemplateIds = new Set(
+    (mine.data?.listings ?? []).map((item) => item.template_id),
+  );
   const submit = (item: MarketViewItem, quantity: number) => {
+    setFeedback(null);
     if (tab === "buy") {
       const balance = identity.data?.assets.kcoin.available;
       const total = item.unit_price * quantity;
@@ -74,15 +82,32 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
       return;
     }
     if (tab === "sell") {
+      const limit = sellable.data?.max_active_templates ?? 10;
+      if (
+        mine.data &&
+        activeTemplateIds.size >= limit &&
+        !activeTemplateIds.has(item.template_id)
+      ) {
+        setFeedback(`最多同时出售 ${limit} 种藏品，请先售罄或下架一种藏品`);
+        return;
+      }
       void run("正在创建出售", "market.create_listing", {
         template_id: item.template_id,
         quantity,
       });
       return;
     }
-    void run("正在下架未成交藏品", "market.cancel_listing", {
-      listing_id: item.listing_id ?? "",
-    });
+    setPendingDelist(item);
+  };
+  const confirmDelist = () => {
+    if (!pendingDelist) return;
+    const templateId = pendingDelist.template_id;
+    setPendingDelist(null);
+    void run(
+      "正在下架该藏品的全部未成交数量",
+      "market.cancel_template_listings",
+      { template_id: templateId },
+    );
   };
   return (
     <main className="page market-page">
@@ -103,13 +128,16 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
           <Button
             disabled={
               blocked ||
-              !data.some((item) => item.template_id === resumedTemplate)
+              !data.some(
+                (item) =>
+                  item.template_id === resumedTemplate && item.available > 0,
+              )
             }
             onClick={() => {
               const item = data.find(
                 (candidate) => candidate.template_id === resumedTemplate,
               );
-              if (item) {
+              if (item && item.available > 0) {
                 setParams({});
                 submit(item, Math.min(item.available, resumedQuantity));
               }
@@ -139,6 +167,13 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
           管理
         </button>
       </nav>
+      {feedback && (
+        <Card className="resume-intent">
+          <strong>{feedback}</strong>
+          <p>管理页中的模板售罄或全部下架后会立即释放一个名额。</p>
+          <Button onClick={() => void mine.refetch()}>刷新在售状态</Button>
+        </Card>
+      )}
       <PageState
         loading={state.isLoading}
         error={state.error as Error | null}
@@ -148,7 +183,7 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
         <div className="market-grid">
           {sorted.map((item) => (
             <MarketCard
-              key={item.listing_id ?? item.template_id}
+              key={item.template_id}
               item={item}
               tab={tab}
               blocked={blocked}
@@ -157,6 +192,34 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
           ))}
         </div>
       </PageState>
+      {pendingDelist && (
+        <div
+          className="modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="market-delist-confirm-title"
+        >
+          <div className="modal">
+            <div className="operation-mark confirming">!</div>
+            <h2 id="market-delist-confirm-title">确认全部下架</h2>
+            <p>
+              将下架“{pendingDelist.name}
+              ”结算时仍未成交的全部数量。当前显示出售中
+              {pendingDelist.available} 个，最终释放数量以后端原子裁决为准。
+            </p>
+            <Button disabled={blocked} onClick={confirmDelist}>
+              确认全部下架
+            </Button>
+            <Button
+              className="secondary"
+              disabled={blocked}
+              onClick={() => setPendingDelist(null)}
+            >
+              取消
+            </Button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
@@ -169,7 +232,12 @@ type MarketViewItem = {
   image_thumbnail_path: string;
   unit_price: number;
   available: number;
-  listing_id?: string;
+  sold_quantity?: number;
+  estimated_gross?: number;
+  estimated_fee?: number;
+  estimated_net?: number;
+  estimated_vip_rebate?: number;
+  status?: "active" | "partially_sold";
 };
 
 function MarketCard({
@@ -198,7 +266,11 @@ function MarketCard({
           onAvailability={setImageReady}
         />
         <Badge>
-          {item.rarity ?? (tab === "manage" ? "出售中" : "")}
+          {tab === "manage"
+            ? item.status === "partially_sold"
+              ? "部分成交"
+              : "出售中"
+            : item.rarity}
           {item.stage ? ` · 第 ${item.stage} 阶` : ""}
         </Badge>
       </div>
@@ -212,9 +284,28 @@ function MarketCard({
             {tab === "buy" ? "可买" : tab === "sell" ? "可用" : "出售中"}{" "}
             <strong>{available}</strong>
           </p>
+          {tab === "manage" && (
+            <>
+              <p>
+                累计已售 <strong>{item.sold_quantity ?? 0}</strong>
+              </p>
+              <p>
+                预计成交 <strong>{item.estimated_gross ?? 0} K</strong>
+              </p>
+              <p>
+                预计手续费 <strong>{item.estimated_fee ?? 0} K</strong>
+              </p>
+              <p>
+                预计到账 <strong>{item.estimated_net ?? 0} K</strong>
+              </p>
+              <p>
+                月卡预计返还 <strong>{item.estimated_vip_rebate ?? 0} K</strong>
+              </p>
+            </>
+          )}
         </div>
       </div>
-      {tab !== "manage" && (
+      {tab !== "manage" && available > 0 && (
         <div className="quantity">
           <Button
             onClick={() => setQuantity((value) => Math.max(1, value - 1))}
@@ -240,7 +331,9 @@ function MarketCard({
         }
         onClick={() => onSubmit(item, quantity)}
       >
-        {tab === "buy" ? (
+        {tab === "buy" && available < 1 ? (
+          <>售罄</>
+        ) : tab === "buy" ? (
           <>
             <ShoppingCart />
             确认购买

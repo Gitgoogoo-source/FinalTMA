@@ -653,8 +653,6 @@
                                       "INVENTORY_ITEM_NOT_FOUND",
                                       "INVENTORY_RESERVED",
                                       "JOB_NOT_FOUND",
-                                      "LISTING_NOT_CANCELLABLE",
-                                      "LISTING_NOT_FOUND",
                                       "MARKET_ACTIVE_TEMPLATE_LIMIT",
                                       "MARKET_STOCK_INSUFFICIENT",
                                       "METHOD_NOT_ALLOWED",
@@ -2019,8 +2017,6 @@
                                       "INVENTORY_ITEM_NOT_FOUND",
                                       "INVENTORY_RESERVED",
                                       "JOB_NOT_FOUND",
-                                      "LISTING_NOT_CANCELLABLE",
-                                      "LISTING_NOT_FOUND",
                                       "MARKET_ACTIVE_TEMPLATE_LIMIT",
                                       "MARKET_STOCK_INSUFFICIENT",
                                       "METHOD_NOT_ALLOWED",
@@ -6881,8 +6877,6 @@
                                       "INVENTORY_ITEM_NOT_FOUND",
                                       "INVENTORY_RESERVED",
                                       "JOB_NOT_FOUND",
-                                      "LISTING_NOT_CANCELLABLE",
-                                      "LISTING_NOT_FOUND",
                                       "MARKET_ACTIVE_TEMPLATE_LIMIT",
                                       "MARKET_STOCK_INSUFFICIENT",
                                       "METHOD_NOT_ALLOWED",
@@ -8217,6 +8211,8 @@
                       "type": "object",
                       "properties": {
                         "templates": {
+                          "minItems": 210,
+                          "maxItems": 210,
                           "type": "array",
                           "items": {
                             "type": "object",
@@ -8428,7 +8424,7 @@
                         },
                         "max_active_templates": {
                           "type": "number",
-                          "const": 50
+                          "const": 10
                         },
                         "fee_bps": { "type": "number", "const": 500 },
                         "vip_rebate_bps": { "type": "number", "const": 2000 }
@@ -8865,15 +8861,11 @@
                       "type": "object",
                       "properties": {
                         "listings": {
+                          "maxItems": 10,
                           "type": "array",
                           "items": {
                             "type": "object",
                             "properties": {
-                              "listing_id": {
-                                "type": "string",
-                                "format": "uuid",
-                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                              },
                               "template_id": { "type": "string" },
                               "name": { "type": "string" },
                               "rarity": {
@@ -8886,13 +8878,23 @@
                                   "mythic"
                                 ]
                               },
+                              "stage": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 3
+                              },
                               "image_thumbnail_path": {
                                 "type": "string",
                                 "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
                               },
-                              "quantity": {
+                              "listed_quantity": {
                                 "type": "integer",
                                 "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "sold_quantity": {
+                                "type": "integer",
+                                "minimum": 0,
                                 "maximum": 9007199254740991
                               },
                               "unit_price": {
@@ -8900,21 +8902,51 @@
                                 "exclusiveMinimum": 0,
                                 "maximum": 9007199254740991
                               },
-                              "created_at": {
+                              "estimated_gross": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "estimated_fee": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "estimated_net": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "estimated_vip_rebate": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": ["active", "partially_sold"]
+                              },
+                              "first_listed_at": {
                                 "type": "string",
                                 "format": "date-time",
                                 "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
                               }
                             },
                             "required": [
-                              "listing_id",
                               "template_id",
                               "name",
                               "rarity",
+                              "stage",
                               "image_thumbnail_path",
-                              "quantity",
+                              "listed_quantity",
+                              "sold_quantity",
                               "unit_price",
-                              "created_at"
+                              "estimated_gross",
+                              "estimated_fee",
+                              "estimated_net",
+                              "estimated_vip_rebate",
+                              "status",
+                              "first_listed_at"
                             ],
                             "additionalProperties": false
                           }
@@ -9285,6 +9317,14 @@
               }
             }
           },
+          "404": {
+            "description": "Errors: TEMPLATE_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "409": {
             "description": "Errors: ENTRY_HANDOFF_PENDING, MARKET_ACTIVE_TEMPLATE_LIMIT, INSUFFICIENT_INVENTORY, IDEMPOTENCY_KEY_REUSED",
             "content": {
@@ -9344,6 +9384,7 @@
           "IDEMPOTENCY_KEY_REQUIRED",
           "MARKET_ACTIVE_TEMPLATE_LIMIT",
           "INSUFFICIENT_INVENTORY",
+          "TEMPLATE_NOT_FOUND",
           "IDEMPOTENCY_KEY_REUSED"
         ],
         "x-error-definitions": {
@@ -9440,7 +9481,7 @@
           },
           "MARKET_ACTIVE_TEMPLATE_LIMIT": {
             "status": 409,
-            "message": "活跃挂单种类已达上限",
+            "message": "最多同时出售 10 种藏品，请先售罄或下架一种藏品",
             "retryable": false,
             "refreshScope": "inventory",
             "recoveryAction": "refresh"
@@ -9451,6 +9492,13 @@
             "retryable": false,
             "refreshScope": "inventory",
             "recoveryAction": "refresh"
+          },
+          "TEMPLATE_NOT_FOUND": {
+            "status": 404,
+            "message": "藏品模板不存在",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
           },
           "IDEMPOTENCY_KEY_REUSED": {
             "status": 409,
@@ -9488,21 +9536,17 @@
         }
       }
     },
-    "/api/market/listings/{listing_id}/cancel": {
+    "/api/market/templates/{template_id}/cancel": {
       "post": {
-        "operationId": "market_cancel_listing",
+        "operationId": "market_cancel_template_listings",
         "tags": ["market"],
         "security": [{ "bearerAuth": [] }],
         "parameters": [
           {
-            "name": "listing_id",
+            "name": "template_id",
             "in": "path",
             "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-            }
+            "schema": { "type": "string", "minLength": 1, "maxLength": 128 }
           },
           {
             "name": "Idempotency-Key",
@@ -9523,19 +9567,23 @@
                     "data": {
                       "type": "object",
                       "properties": {
-                        "listing_id": {
+                        "template_id": {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "minLength": 1,
+                          "maxLength": 128
                         },
                         "status": { "type": "string", "const": "cancelled" },
                         "released_quantity": {
                           "type": "integer",
-                          "exclusiveMinimum": 0,
+                          "minimum": 0,
                           "maximum": 9007199254740991
                         }
                       },
-                      "required": ["listing_id", "status", "released_quantity"],
+                      "required": [
+                        "template_id",
+                        "status",
+                        "released_quantity"
+                      ],
                       "additionalProperties": false
                     },
                     "request_id": {
@@ -9571,19 +9619,23 @@
                     "data": {
                       "type": "object",
                       "properties": {
-                        "listing_id": {
+                        "template_id": {
                           "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "minLength": 1,
+                          "maxLength": 128
                         },
                         "status": { "type": "string", "const": "cancelled" },
                         "released_quantity": {
                           "type": "integer",
-                          "exclusiveMinimum": 0,
+                          "minimum": 0,
                           "maximum": 9007199254740991
                         }
                       },
-                      "required": ["listing_id", "status", "released_quantity"],
+                      "required": [
+                        "template_id",
+                        "status",
+                        "released_quantity"
+                      ],
                       "additionalProperties": false
                     },
                     "request_id": {
@@ -9633,7 +9685,7 @@
             }
           },
           "404": {
-            "description": "Errors: LISTING_NOT_FOUND",
+            "description": "Errors: TEMPLATE_NOT_FOUND",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/StandardError" }
@@ -9641,7 +9693,7 @@
             }
           },
           "409": {
-            "description": "Errors: ENTRY_HANDOFF_PENDING, LISTING_NOT_CANCELLABLE, IDEMPOTENCY_KEY_REUSED",
+            "description": "Errors: ENTRY_HANDOFF_PENDING, IDEMPOTENCY_KEY_REUSED",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/StandardError" }
@@ -9697,8 +9749,7 @@
           "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
-          "LISTING_NOT_FOUND",
-          "LISTING_NOT_CANCELLABLE",
+          "TEMPLATE_NOT_FOUND",
           "IDEMPOTENCY_KEY_REUSED"
         ],
         "x-error-definitions": {
@@ -9793,19 +9844,12 @@
             "refreshScope": "none",
             "recoveryAction": "none"
           },
-          "LISTING_NOT_FOUND": {
+          "TEMPLATE_NOT_FOUND": {
             "status": 404,
-            "message": "挂单不存在",
+            "message": "藏品模板不存在",
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
-          },
-          "LISTING_NOT_CANCELLABLE": {
-            "status": 409,
-            "message": "挂单当前不能取消",
-            "retryable": false,
-            "refreshScope": "inventory",
-            "recoveryAction": "refresh"
           },
           "IDEMPOTENCY_KEY_REUSED": {
             "status": 409,
@@ -10172,6 +10216,14 @@
               }
             }
           },
+          "404": {
+            "description": "Errors: TEMPLATE_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "409": {
             "description": "Errors: ENTRY_HANDOFF_PENDING, MARKET_STOCK_INSUFFICIENT, INSUFFICIENT_BALANCE, IDEMPOTENCY_KEY_REUSED",
             "content": {
@@ -10231,6 +10283,7 @@
           "IDEMPOTENCY_KEY_REQUIRED",
           "MARKET_STOCK_INSUFFICIENT",
           "INSUFFICIENT_BALANCE",
+          "TEMPLATE_NOT_FOUND",
           "IDEMPOTENCY_KEY_REUSED"
         ],
         "x-error-definitions": {
@@ -10338,6 +10391,13 @@
             "retryable": false,
             "refreshScope": "assets",
             "recoveryAction": "refresh"
+          },
+          "TEMPLATE_NOT_FOUND": {
+            "status": 404,
+            "message": "藏品模板不存在",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
           },
           "IDEMPOTENCY_KEY_REUSED": {
             "status": 409,
@@ -20752,8 +20812,6 @@
                                 "INVENTORY_ITEM_NOT_FOUND",
                                 "INVENTORY_RESERVED",
                                 "JOB_NOT_FOUND",
-                                "LISTING_NOT_CANCELLABLE",
-                                "LISTING_NOT_FOUND",
                                 "MARKET_ACTIVE_TEMPLATE_LIMIT",
                                 "MARKET_STOCK_INSUFFICIENT",
                                 "METHOD_NOT_ALLOWED",
@@ -22459,8 +22517,6 @@
                   "INVENTORY_ITEM_NOT_FOUND",
                   "INVENTORY_RESERVED",
                   "JOB_NOT_FOUND",
-                  "LISTING_NOT_CANCELLABLE",
-                  "LISTING_NOT_FOUND",
                   "MARKET_ACTIVE_TEMPLATE_LIMIT",
                   "MARKET_STOCK_INSUFFICIENT",
                   "METHOD_NOT_ALLOWED",

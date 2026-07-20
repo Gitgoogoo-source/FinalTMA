@@ -35,12 +35,12 @@ export const marketHandlers = {
         p_quantity: context.input.quantity,
       }),
     ),
-  "market.cancel_listing": async (context) =>
+  "market.cancel_template_listings": async (context) =>
     operationResult(
-      await rpc<OperationEnvelope>("market_cancel_listing", {
+      await rpc<OperationEnvelope>("market_cancel_template_listings", {
         p_session_id: requireSession(context).session_id,
         p_operation_id: requireOperationId(context),
-        p_listing_id: context.input.listing_id,
+        p_template_id: context.input.template_id,
       }),
     ),
   "market.purchase": async (context) =>
