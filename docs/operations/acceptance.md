@@ -26,6 +26,8 @@ Mint id / tx hash / NFT address：
 
 ## 必须覆盖的场景
 
+执行 Telegram 登录场景前，先保存入口配置证据：Bot API `getMe.result.username` 必须等于当前环境 Bot，`getMe.result.has_main_web_app` 必须为 `true`，默认菜单按钮必须为 `web_app` 类型并指向当前环境 named Mini App 链接；随后只能从该 Bot 的 Main Mini App、菜单按钮或 named Mini App 链接启动，不得用浏览器直接访问部署 URL 代替 Telegram 真机验收。
+
 - Telegram 登录：首次、再次和并发首次登录；同键同 `initData` 回放；同键不同请求拒绝；资料与头像更新；无参数默认开盒页；严格大写 TMA 邀请码；小写、长度错误、非十六进制和其他非空入口参数在建号前拒绝。
 - Telegram 边界：签名伪造、机器人、恰好与超过 24 小时、恰好与超过未来 5 分钟；来源第 31 次、用户第 11 次和同 `initData` 第 4 次拒绝且页面不自动重试。
 - 会话与封禁：15 分钟绝对失效、多个并发请求只恢复一次、恢复后的第二次失效、会话替换不恢复，以及初始和使用中封禁时 DOM、弹窗、导航、查询及迟到结果全部清空。
