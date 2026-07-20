@@ -18,4 +18,4 @@ Supabase Data API 的 Exposed schemas 固定为 `public,graphql_public,api`。Ve
 
 Web 公开构建当前不需要 `VITE_*`。API 机密配置以根 `.env.example` 为唯一名称清单，真实值只进入对应 Vercel Project Secret。真实开发与生产必须分别配置至少 32 字节的 `IDENTITY_SECURITY_SECRET`，且不得与 `REFERRAL_CODE_SECRET` 共用。任何 `SUPABASE_SERVICE_ROLE_KEY`、`IDENTITY_SECURITY_SECRET`、`TELEGRAM_BOT_TOKEN`、`CRON_SECRET`、`TELEGRAM_WEBHOOK_SECRET`、TON API Key 或签名私钥均不得进入浏览器环境。
 
-真实开发 Vercel Production 固定配置 `TELEGRAM_BOT_USERNAME=final_tma_ebewtjerusxc_dev_bot` 与 `TELEGRAM_MINI_APP_SHORT_NAME=pokepets_dev`。邀请链接必须为 `https://t.me/final_tma_ebewtjerusxc_dev_bot/pokepets_dev?startapp=<当前用户邀请码>`；环境变量变更必须由新部署生效。
+真实开发 Vercel Production 固定配置 `TELEGRAM_BOT_USERNAME=FinalTMA_bot` 与 `TELEGRAM_MINI_APP_SHORT_NAME=pokepets_dev`。邀请链接必须为 `https://t.me/FinalTMA_bot/pokepets_dev?startapp=<当前用户邀请码>`；环境变量变更必须由新部署生效。
