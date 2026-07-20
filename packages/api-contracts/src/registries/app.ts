@@ -52,6 +52,10 @@ export type RecoverableRoute = Exclude<
   RouteById<"identity.authenticate">
 >;
 export type RecoverableRouteId = RecoverableRoute["id"];
+export type RecoverableOperationSummary = Omit<
+  import("zod").output<typeof operationSummarySchema>,
+  "use_case"
+> & { use_case: RecoverableRouteId };
 export type TypedOperationSummary = {
   [Route in RecoverableRoute as Route["id"]]: {
     operation_id: string;
@@ -82,18 +86,20 @@ export function isRecoverableRouteId(
   );
 }
 
-export function parseRecoveredOperation(value: unknown): TypedOperationSummary {
+export function parseRecoverableOperationSummary(
+  value: unknown,
+): RecoverableOperationSummary {
   const summary = operationSummarySchema.parse(value);
-  const route = routes.find(
-    (candidate): candidate is RecoverableRoute =>
-      candidate.id === summary.use_case &&
-      candidate.idempotent &&
-      candidate.id !== "identity.authenticate",
-  );
-  if (!route)
+  if (!isRecoverableRouteId(summary.use_case))
     throw new Error(
       `Operation use_case is not recoverable: ${summary.use_case}`,
     );
+  return summary as RecoverableOperationSummary;
+}
+
+export function parseRecoveredOperation(value: unknown): TypedOperationSummary {
+  const summary = parseRecoverableOperationSummary(value);
+  const route = routeById(summary.use_case);
   if (summary.status === "succeeded" && summary.result !== null)
     route.output.parse(summary.result);
   return summary as TypedOperationSummary;

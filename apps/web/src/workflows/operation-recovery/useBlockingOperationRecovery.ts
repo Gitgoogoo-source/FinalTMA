@@ -1,8 +1,8 @@
 import { useEffect } from "react";
 import {
-  parseRecoveredOperation,
+  parseRecoverableOperationSummary,
+  type RecoverableOperationSummary,
   type RouteOutput,
-  type TypedOperationSummary,
 } from "@pokepets/api-contracts/app";
 
 import { useOperationRegistry } from "./context.ts";
@@ -16,10 +16,10 @@ export function useBlockingOperationRecovery(
   const { hydrate } = useOperationRegistry();
   useEffect(() => {
     if (!operations) return;
-    const parsed: TypedOperationSummary[] = [];
+    const parsed: RecoverableOperationSummary[] = [];
     for (const operation of operations) {
       try {
-        parsed.push(parseRecoveredOperation(operation));
+        parsed.push(parseRecoverableOperationSummary(operation));
       } catch {
         continue;
       }

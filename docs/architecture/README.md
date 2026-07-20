@@ -5,7 +5,7 @@
 `docs/product/功能说明文档.md` 是唯一产品功能来源。本次实现固定使用 SHA-256：
 
 ```text
-17d23b205b715ad5db2a43dbd23cf2849b22fd455648a8f9f10297e99a7a5317
+566ec916f0719d12bc285146fb73c42de04777295f5ecf32b6fc0edad934aab0
 ```
 
 架构文档只记录技术边界，不复制价格、概率、奖励或产品状态规则。目录、OpenAPI 和 migration 均为生成物，生成结果必须与上述文档校验和绑定。
@@ -47,7 +47,7 @@ contracts/ton -> TON blockchain
 
 ## 操作恢复
 
-前端内存操作阶段固定为 `confirming → submitting → pending/unknown → succeeded/failed`；数据库持久状态为 `pending`、`unknown`、`succeeded`、`failed`。随机结果和资产结果只生成一次。`unknown` 仅阻止同一 `use_case` 再次提交，不阻断主导航；恢复只查询原 `operation_id`。开盒成功或失败结果在服务端确认展示前持续恢复，确认时间由当前用户的专用 RPC 原子记录。
+前端内存操作阶段固定为 `confirming → submitting → pending/unknown → succeeded/failed`；数据库持久状态为 `pending`、`unknown`、`succeeded`、`failed`。随机结果和资产结果只生成一次。`unknown` 默认只阻止同一 `use_case` 再次提交；开盒与转盘同时锁定底部导航，恢复只查询原 `operation_id`。开盒或转盘的成功、失败结果在服务端确认展示前持续恢复，确认时间由当前用户的领域 RPC 原子记录。
 
 ## 生成物
 

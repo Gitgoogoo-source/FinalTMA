@@ -414,7 +414,7 @@ begin
       where o.user_id = v_user_id and (
         o.status in ('pending', 'unknown')
         or (
-          o.use_case = 'gacha.open'
+          o.use_case in ('gacha.open', 'wheel.spin')
           and o.status in ('succeeded', 'failed')
           and o.result_acknowledged_at is null
         )
@@ -506,8 +506,8 @@ create table operations.operations (
 
 create index operations_user_created_idx on operations.operations (user_id, created_at desc);
 create index operations_pending_idx on operations.operations (created_at) where status in ('pending', 'unknown');
-create index operations_gacha_recovery_idx on operations.operations (user_id, created_at)
-where use_case = 'gacha.open' and result_acknowledged_at is null;
+create index operations_result_recovery_idx on operations.operations (user_id, use_case, created_at)
+where use_case in ('gacha.open', 'wheel.spin') and result_acknowledged_at is null;
 
 create table operations.webhook_events (
   provider text not null,
@@ -1615,6 +1615,65 @@ begin
 end;
 $$;
 
+create or replace function api.wheel_recoverable_results(p_session_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_user_id uuid := api.session_user(p_session_id);
+begin
+  return jsonb_build_object(
+    'operations', coalesce((
+      select jsonb_agg(operations.operation_json(o) order by o.created_at)
+      from operations.operations o
+      where o.user_id = v_user_id
+        and o.use_case = 'wheel.spin'
+        and o.result_acknowledged_at is null
+    ), '[]'::jsonb)
+  );
+end;
+$$;
+
+create or replace function api.wheel_acknowledge_result(
+  p_session_id uuid,
+  p_operation_id uuid
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_user_id uuid := api.session_user(p_session_id);
+  v_operation operations.operations%rowtype;
+begin
+  select * into v_operation
+  from operations.operations o
+  where o.id = p_operation_id
+    and o.user_id = v_user_id
+    and o.use_case = 'wheel.spin'
+  for update;
+  if v_operation.id is null then
+    perform api.raise_business_error('OPERATION_NOT_FOUND', '转盘操作记录不存在');
+  end if;
+  if v_operation.status not in ('succeeded', 'failed') then
+    perform api.raise_business_error('OPERATION_NOT_ACKNOWLEDGEABLE', '转盘结果尚未确定');
+  end if;
+  if v_operation.result_acknowledged_at is null then
+    update operations.operations
+    set result_acknowledged_at = now(), updated_at = now()
+    where id = p_operation_id
+    returning * into v_operation;
+  end if;
+  return jsonb_build_object(
+    'operation_id', v_operation.id,
+    'acknowledged_at', v_operation.result_acknowledged_at
+  );
+end;
+$$;
+
 create or replace function api.wheel_spin(
   p_session_id uuid,
   p_operation_id uuid,
@@ -1639,6 +1698,12 @@ declare
   v_amount bigint;
   v_replaced text;
   v_milestone bigint := 0;
+  v_reward_fgems bigint := 0;
+  v_reward_kcoin bigint := 0;
+  v_reward_normal integer := 0;
+  v_reward_rare integer := 0;
+  v_replaced_normal integer := 0;
+  v_replaced_rare integer := 0;
   v_rewards jsonb := '[]'::jsonb;
   v_result jsonb;
   v_detail text;
@@ -1681,6 +1746,14 @@ begin
       else
         insert into economy.entitlements (user_id, kind, source, operation_id) values (v_user_id, v_kind, 'wheel', p_operation_id);
       end if;
+      if v_kind = 'fgems' then v_reward_fgems := v_reward_fgems + v_amount;
+      elsif v_kind = 'kcoin' then v_reward_kcoin := v_reward_kcoin + v_amount;
+      elsif v_kind = 'free_normal_box' then v_reward_normal := v_reward_normal + v_amount;
+      else v_reward_rare := v_reward_rare + v_amount;
+      end if;
+      if v_replaced = 'free_normal_box' then v_replaced_normal := v_replaced_normal + 1;
+      elsif v_replaced = 'free_rare_box' then v_replaced_rare := v_replaced_rare + 1;
+      end if;
       insert into wheel.results (operation_id, sequence, rolled_kind, delivered_kind, amount, replaced)
       values (p_operation_id, v_i, v_rolled, v_kind, v_amount, v_replaced is not null);
       v_rewards := v_rewards || jsonb_build_array(jsonb_build_object('order', v_i, 'kind', v_kind, 'amount', v_amount, 'replaced_kind', v_replaced));
@@ -1691,7 +1764,40 @@ begin
     update wheel.daily set spin_count = v_spin_count + p_count, normal_entitlements = v_normal, rare_entitlements = v_rare, updated_at = now()
     where user_id = v_user_id and business_date = identity.utc_day();
     perform tasks.progress(v_user_id, 'wheel_spin');
-    v_result := jsonb_build_object('count', p_count, 'cost_kcoin', v_cost, 'rewards', v_rewards, 'milestone_fgems', v_milestone, 'spin_count', v_spin_count + p_count, 'assets', economy.assets(v_user_id));
+    v_result := jsonb_build_object(
+      'count', p_count,
+      'cost_kcoin', v_cost,
+      'kcoin_returned', v_reward_kcoin,
+      'net_kcoin_change', v_reward_kcoin - v_cost,
+      'rewards', v_rewards,
+      'reward_summary', jsonb_build_object(
+        'fgems', v_reward_fgems,
+        'kcoin', v_reward_kcoin,
+        'free_normal_box', v_reward_normal,
+        'free_rare_box', v_reward_rare,
+        'replaced_free_normal_box', v_replaced_normal,
+        'replaced_free_rare_box', v_replaced_rare
+      ),
+      'milestone', jsonb_build_object(
+        'awarded_fgems', v_milestone,
+        'milestone_10_claimed', v_spin_count + p_count >= 10,
+        'milestone_20_claimed', v_spin_count + p_count >= 20
+      ),
+      'entitlements', jsonb_build_object(
+        'free_normal_box', (
+          select count(*) from economy.entitlements
+          where user_id = v_user_id and kind = 'free_normal_box' and status = 'unused'
+        ),
+        'free_rare_box', (
+          select count(*) from economy.entitlements
+          where user_id = v_user_id and kind = 'free_rare_box' and status = 'unused'
+        )
+      ),
+      'spin_count', v_spin_count + p_count,
+      'remaining', 20 - v_spin_count - p_count,
+      'daily_limit', 20,
+      'assets', economy.assets(v_user_id)
+    );
     return operations.complete_command(p_operation_id, v_result);
   exception when others then
     get stacked diagnostics v_detail = pg_exception_detail;
@@ -3777,7 +3883,7 @@ begin
   elsif p_job_name = 'cleanup-idempotency' then
     delete from operations.operations where id in (
       select id from operations.operations where created_at < now() - interval '30 days' and status in ('succeeded', 'failed')
-        and not (use_case = 'gacha.open' and result_acknowledged_at is null)
+        and not (use_case in ('gacha.open', 'wheel.spin') and result_acknowledged_at is null)
         and not exists (select 1 from payments.orders p where p.operation_id = operations.operations.id and p.status in ('pending', 'processing', 'paid'))
         and not exists (select 1 from onchain.mints m where m.operation_id = operations.operations.id and m.status in ('reserved', 'submitted', 'unknown'))
       order by created_at limit greatest(1, least(p_limit, 500))

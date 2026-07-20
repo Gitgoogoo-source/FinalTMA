@@ -21,6 +21,7 @@ export function WheelPanel(): ReactNode {
         ? 1
         : null;
   const spin = (count: 1 | 10) => {
+    if (blocked) return;
     const cost = count === 10 ? query.data?.ten_cost : query.data?.single_cost;
     const balance = identity.data?.assets.kcoin.available;
     if (cost !== undefined && balance !== undefined && balance < cost) {
@@ -29,6 +30,7 @@ export function WheelPanel(): ReactNode {
     }
     void run("幸运转盘正在转动", "wheel.spin", { count });
   };
+  const remaining = query.data?.remaining ?? 0;
   return (
     <Card className="game-panel wheel">
       <div className="panel-title">
@@ -61,10 +63,15 @@ export function WheelPanel(): ReactNode {
         <Button onClick={() => void query.refetch()}>重新加载转盘</Button>
       ) : (
         <>
-          <div className="wheel-disc">
+          <div
+            className={`wheel-disc${blocked ? " spinning" : ""}`}
+            aria-busy={blocked}
+          >
             <RotateCw />
-            <strong>{query.data?.remaining ?? 0}</strong>
-            <span>今日剩余</span>
+            <strong>{blocked ? "…" : remaining}</strong>
+            <span aria-live="polite">
+              {blocked ? "结果确认中" : "今日剩余"}
+            </span>
           </div>
           <div className="progress-line">
             <span>已转 {query.data?.spin_count ?? 0}</span>
@@ -93,18 +100,23 @@ export function WheelPanel(): ReactNode {
             </span>
           </div>
           <div className="button-row">
-            <Button
-              disabled={blocked || Number(query.data?.remaining) < 1}
-              onClick={() => spin(1)}
-            >
-              转动 1 次 · {query.data?.single_cost ?? 20} K
+            <Button disabled={blocked || remaining < 1} onClick={() => spin(1)}>
+              {blocked
+                ? "转动中..."
+                : remaining < 1
+                  ? "今日次数已用完"
+                  : `转动 1 次 · ${query.data?.single_cost ?? 20} K-coin`}
             </Button>
             <Button
               className="secondary"
-              disabled={blocked || Number(query.data?.remaining) < 10}
+              disabled={blocked || remaining < 10}
               onClick={() => spin(10)}
             >
-              转动 10 次 · {query.data?.ten_cost ?? 180} K
+              {blocked
+                ? "转动中..."
+                : remaining < 10
+                  ? "剩余次数不足"
+                  : `转动 10 次 · ${query.data?.ten_cost ?? 180} K-coin`}
             </Button>
           </div>
         </>

@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import {
-  parseRecoveredOperation,
-  type TypedOperationSummary,
+  parseRecoverableOperationSummary,
+  type RecoverableOperationSummary,
 } from "@pokepets/api-contracts/app";
 
 import { apiRequest } from "../../platform/api/client.ts";
@@ -11,6 +11,14 @@ import { useOperationRegistry } from "./context.ts";
 const discoveryDelays = [1_000, 2_000, 3_000, 5_000, 30_000] as const;
 
 export function useGachaResultRecovery(): void {
+  useResultRecovery("gacha.recovery");
+}
+
+export function useWheelResultRecovery(): void {
+  useResultRecovery("wheel.recovery");
+}
+
+function useResultRecovery(routeId: "gacha.recovery" | "wheel.recovery"): void {
   const session = useSession();
   const { hydrate } = useOperationRegistry();
   useEffect(() => {
@@ -27,12 +35,12 @@ export function useGachaResultRecovery(): void {
     const discover = async () => {
       if (cancelled || getSession()?.generation !== generation) return;
       try {
-        const response = await apiRequest("gacha.recovery", {});
+        const response = await apiRequest(routeId, {});
         if (cancelled || getSession()?.generation !== generation) return;
-        const recovered: TypedOperationSummary[] = [];
+        const recovered: RecoverableOperationSummary[] = [];
         for (const operation of response.data.operations) {
           try {
-            recovered.push(parseRecoveredOperation(operation));
+            recovered.push(parseRecoverableOperationSummary(operation));
           } catch {
             continue;
           }
@@ -53,5 +61,5 @@ export function useGachaResultRecovery(): void {
       cancelled = true;
       if (timer !== undefined) window.clearTimeout(timer);
     };
-  }, [hydrate, session]);
+  }, [hydrate, routeId, session]);
 }

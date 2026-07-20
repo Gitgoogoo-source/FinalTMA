@@ -14,10 +14,10 @@ import {
   isRecoverableRouteId,
   parseRecoveredOperation,
   routeById,
+  type RecoverableOperationSummary,
   type RecoverableRouteId,
   type RouteInput,
   type RouteOutput,
-  type TypedOperationSummary,
 } from "@pokepets/api-contracts/app";
 import { useNavigate } from "react-router-dom";
 
@@ -43,6 +43,7 @@ import {
 } from "./context.ts";
 import { GachaResultDialog } from "./GachaResultDialog.tsx";
 import { operationLabel } from "./labels.ts";
+import { WheelResultDialog } from "./WheelResultDialog.tsx";
 
 type RegisteredOperation = {
   id: string;
@@ -62,6 +63,10 @@ const unresolvedPhases = new Set<OperationPhase>([
   "submitting",
   "pending",
   "unknown",
+]);
+const acknowledgedResultRouteIds = new Set<RecoverableRouteId>([
+  "gacha.open",
+  "wheel.spin",
 ]);
 
 export function OperationRegistryProvider({
@@ -93,18 +98,30 @@ export function OperationRegistryProvider({
     const parsed = routeById("gacha.open").output.safeParse(active.result);
     return parsed.success ? parsed.data : null;
   }, [active]);
+  const wheelResult = useMemo(() => {
+    if (active?.routeId !== "wheel.spin" || active.phase !== "succeeded")
+      return null;
+    const parsed = routeById("wheel.spin").output.safeParse(active.result);
+    return parsed.success ? parsed.data : null;
+  }, [active]);
   const invalidGachaSuccess = Boolean(
     active?.routeId === "gacha.open" &&
     active.phase === "succeeded" &&
     !gachaResult,
   );
+  const invalidWheelSuccess = Boolean(
+    active?.routeId === "wheel.spin" &&
+    active.phase === "succeeded" &&
+    !wheelResult,
+  );
+  const invalidDedicatedSuccess = invalidGachaSuccess || invalidWheelSuccess;
   const unresolved = Object.values(operations).filter((operation) =>
     unresolvedPhases.has(operation.phase),
   );
   const navigationLocked = Object.values(operations).some(
     (operation) =>
       operation.sessionGeneration === session?.generation &&
-      operation.routeId === "gacha.open",
+      acknowledgedResultRouteIds.has(operation.routeId),
   );
   const closingBlocked = unresolved.some(
     (operation) =>
@@ -213,7 +230,8 @@ export function OperationRegistryProvider({
         (operation) =>
           operation.sessionGeneration === sessionGeneration &&
           operation.routeId === routeId &&
-          (unresolvedPhases.has(operation.phase) || routeId === "gacha.open"),
+          (unresolvedPhases.has(operation.phase) ||
+            acknowledgedResultRouteIds.has(routeId)),
       );
       if (existing) {
         setActiveId(existing.id);
@@ -283,11 +301,18 @@ export function OperationRegistryProvider({
                 id,
               );
         const unknown =
-          failure.code === "NETWORK_ERROR" && Boolean(failure.operationId);
+          Boolean(failure.operationId) &&
+          [
+            "NETWORK_ERROR",
+            "OPERATION_RESULT_INVALID",
+            "RESPONSE_INVALID",
+          ].includes(failure.code);
         update(id, {
           phase: unknown ? "unknown" : "failed",
           message: unknown
-            ? "网络中断，必须查询原操作，不能重复提交"
+            ? failure.code === "NETWORK_ERROR"
+              ? "网络中断，必须查询原操作，不能重复提交"
+              : "原操作结果详情暂时无法确认，必须查询原操作"
             : failure.message,
           errorCode: failure.code,
         });
@@ -300,7 +325,7 @@ export function OperationRegistryProvider({
   );
 
   const hydrate = useCallback(
-    (incoming: readonly TypedOperationSummary[]) => {
+    (incoming: readonly RecoverableOperationSummary[]) => {
       const sessionGeneration = getSession()?.generation;
       if (!sessionGeneration || getSession()?.accountStatus !== "normal")
         return;
@@ -369,6 +394,8 @@ export function OperationRegistryProvider({
             recovered.result,
             markNew,
           );
+          if (acknowledgedResultRouteIds.has(operation.routeId))
+            setActiveId((current) => current ?? operation.id);
           haptic("success");
           await refreshRouteScopes(operation.routeId);
         } else if (recovered.status === "failed") {
@@ -381,6 +408,8 @@ export function OperationRegistryProvider({
             message: definition?.message ?? "原操作已确认失败",
             errorCode: recovered.error_code,
           });
+          if (acknowledgedResultRouteIds.has(operation.routeId))
+            setActiveId((current) => current ?? operation.id);
           await refreshRouteScopes(operation.routeId);
         } else {
           update(operation.id, {
@@ -404,15 +433,20 @@ export function OperationRegistryProvider({
     [markNew, remove, update],
   );
 
-  const pollingGachaId =
-    active?.routeId === "gacha.open" &&
+  const pollingResultId =
+    active &&
+    acknowledgedResultRouteIds.has(active.routeId) &&
     ["pending", "unknown"].includes(active.phase)
       ? active.id
-      : null;
+      : (Object.values(operations).find(
+          (operation) =>
+            acknowledgedResultRouteIds.has(operation.routeId) &&
+            ["pending", "unknown"].includes(operation.phase),
+        )?.id ?? null);
 
   useEffect(() => {
-    if (!pollingGachaId) return;
-    const operationId = pollingGachaId;
+    if (!pollingResultId) return;
+    const operationId = pollingResultId;
     const delays = [1_000, 2_000, 3_000, 5_000] as const;
     let attempt = 0;
     let cancelled = false;
@@ -444,7 +478,7 @@ export function OperationRegistryProvider({
       cancelled = true;
       if (timer !== undefined) window.clearTimeout(timer);
     };
-  }, [pollingGachaId, recover]);
+  }, [pollingResultId, recover]);
 
   const value = useMemo<OperationRegistryValue>(
     () => ({
@@ -454,7 +488,8 @@ export function OperationRegistryProvider({
           (operation) =>
             operation.sessionGeneration === getSession()?.generation &&
             operation.routeId === routeId &&
-            (unresolvedPhases.has(operation.phase) || routeId === "gacha.open"),
+            (unresolvedPhases.has(operation.phase) ||
+              acknowledgedResultRouteIds.has(routeId)),
         ),
       navigationLocked,
       hydrate,
@@ -569,6 +604,42 @@ export function OperationRegistryProvider({
     [acknowledgingId, navigate, remove, requestTopup, run],
   );
 
+  const acknowledgeWheelResult = useCallback(
+    async (operation: RegisteredOperation) => {
+      if (
+        operation.routeId !== "wheel.spin" ||
+        !["succeeded", "failed"].includes(operation.phase) ||
+        acknowledgingId
+      )
+        return;
+      const generation = operation.sessionGeneration;
+      setAcknowledgingId(operation.id);
+      setAcknowledgementError(null);
+      try {
+        await apiRequest("wheel.acknowledge_result", {
+          operation_id: operation.id,
+        });
+        if (!isCurrentNormalSession(generation)) return;
+        acknowledgedIds.current.add(operation.id);
+        remove(operation.id);
+      } catch (cause) {
+        if (!isCurrentNormalSession(generation)) return;
+        setAcknowledgementError({
+          operationId: operation.id,
+          message:
+            cause instanceof ApiFailure && cause.code !== "NETWORK_ERROR"
+              ? cause.message
+              : "结果确认状态保存失败，请重试",
+        });
+      } finally {
+        setAcknowledgingId((current) =>
+          current === operation.id ? null : current,
+        );
+      }
+    },
+    [acknowledgingId, remove],
+  );
+
   const defer = useCallback(() => {
     if (!active) return;
     if (invalidGachaSuccess)
@@ -576,8 +647,13 @@ export function OperationRegistryProvider({
         phase: "unknown",
         message: "开盒结果详情暂时无法确认，请查询原操作",
       });
+    if (invalidWheelSuccess)
+      update(active.id, {
+        phase: "unknown",
+        message: "转盘结果详情暂时无法确认，请查询原操作",
+      });
     setActiveId(null);
-  }, [active, invalidGachaSuccess, update]);
+  }, [active, invalidGachaSuccess, invalidWheelSuccess, update]);
 
   const trapDialogFocus = (event: ReactKeyboardEvent<HTMLDivElement>) => {
     if (event.key === "Escape") {
@@ -627,7 +703,11 @@ export function OperationRegistryProvider({
           role="dialog"
           aria-modal="true"
           aria-labelledby={
-            gachaResult ? "gacha-result-title" : "operation-dialog-title"
+            gachaResult
+              ? "gacha-result-title"
+              : wheelResult
+                ? "wheel-result-title"
+                : "operation-dialog-title"
           }
           tabIndex={-1}
           onKeyDown={trapDialogFocus}
@@ -648,12 +728,24 @@ export function OperationRegistryProvider({
               }
               onConfirm={() => void acknowledgeGachaResult(active, "close")}
             />
+          ) : wheelResult ? (
+            <WheelResultDialog
+              operationId={active.id}
+              result={wheelResult}
+              busy={acknowledgingId === active.id}
+              error={
+                acknowledgementError?.operationId === active.id
+                  ? acknowledgementError.message
+                  : null
+              }
+              onConfirm={() => void acknowledgeWheelResult(active)}
+            />
           ) : (
             <div className="modal">
               <div
-                className={`operation-mark ${invalidGachaSuccess ? "unknown" : active.phase}`}
+                className={`operation-mark ${invalidDedicatedSuccess ? "unknown" : active.phase}`}
               >
-                {invalidGachaSuccess
+                {invalidDedicatedSuccess
                   ? "…"
                   : active.phase === "succeeded"
                     ? "✓"
@@ -665,10 +757,12 @@ export function OperationRegistryProvider({
               <p>
                 {invalidGachaSuccess
                   ? "开盒结果详情暂时无法确认，请查询原操作"
-                  : active.message}
+                  : invalidWheelSuccess
+                    ? "转盘结果详情暂时无法确认，请查询原操作"
+                    : active.message}
               </p>
               <code>操作号 {active.id}</code>
-              {active.routeId === "gacha.open" &&
+              {acknowledgedResultRouteIds.has(active.routeId) &&
               acknowledgementError?.operationId === active.id ? (
                 <p className="operation-ack-error">
                   {acknowledgementError.message}
@@ -676,18 +770,18 @@ export function OperationRegistryProvider({
               ) : null}
               {(active.phase === "pending" ||
                 active.phase === "unknown" ||
-                invalidGachaSuccess) && (
+                invalidDedicatedSuccess) && (
                 <Button onClick={() => void recover(active)}>查询原操作</Button>
               )}
               {(active.phase === "pending" ||
                 active.phase === "unknown" ||
-                invalidGachaSuccess) && (
+                invalidDedicatedSuccess) && (
                 <Button className="secondary" onClick={defer}>
                   稍后处理
                 </Button>
               )}
-              {!invalidGachaSuccess &&
-                active.routeId !== "gacha.open" &&
+              {!invalidDedicatedSuccess &&
+                !acknowledgedResultRouteIds.has(active.routeId) &&
                 (active.phase === "succeeded" || active.phase === "failed") && (
                   <Button className="secondary" onClick={dismiss}>
                     完成
@@ -698,6 +792,15 @@ export function OperationRegistryProvider({
                   className="secondary"
                   disabled={acknowledgingId === active.id}
                   onClick={() => void acknowledgeGachaResult(active, "close")}
+                >
+                  {acknowledgingId === active.id ? "正在确认结果" : "确定"}
+                </Button>
+              ) : null}
+              {active.routeId === "wheel.spin" && active.phase === "failed" ? (
+                <Button
+                  className="secondary"
+                  disabled={acknowledgingId === active.id}
+                  onClick={() => void acknowledgeWheelResult(active)}
                 >
                   {acknowledgingId === active.id ? "正在确认结果" : "确定"}
                 </Button>
@@ -732,7 +835,7 @@ function isCurrentNormalSession(generation: string): boolean {
   );
 }
 
-function recoveredMessage(operation: TypedOperationSummary): string {
+function recoveredMessage(operation: RecoverableOperationSummary): string {
   if (operation.status === "succeeded") return "原操作已确认成功";
   if (operation.status === "failed")
     return operation.error_code && isErrorCode(operation.error_code)

@@ -1,9 +1,9 @@
 import { createContext, useContext } from "react";
 import type {
   RecoverableRouteId,
+  RecoverableOperationSummary,
   RouteInput,
   RouteOutput,
-  TypedOperationSummary,
 } from "@pokepets/api-contracts/app";
 
 export type OperationPhase =
@@ -23,7 +23,7 @@ export type OperationRegistryValue = {
   ): Promise<RouteOutput<Id> | null>;
   isBlocked(routeId: RecoverableRouteId): boolean;
   navigationLocked: boolean;
-  hydrate(operations: readonly TypedOperationSummary[]): void;
+  hydrate(operations: readonly RecoverableOperationSummary[]): void;
 };
 
 export const OperationRegistryContext =

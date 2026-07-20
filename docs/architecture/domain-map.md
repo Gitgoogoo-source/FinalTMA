@@ -7,7 +7,7 @@
 | 1 正式目录    | album、gacha、inventory     | catalog                                  | catalog                                  | 70 条链、210 个模板、420 张运行时图及双路径一致     |
 | 2 盲盒保底    | gacha                       | gacha                                    | gacha                                    | 三档独立、仅付费推进、逐抽重置                      |
 | 3 远征        | expedition                  | expedition                               | expedition、inventory、economy           | 正好 3 个单位、跨日、领取原子释放                   |
-| 4 幸运转盘    | wheel                       | wheel                                    | wheel、economy                           | 1/10 次原子结算、每日 20 次、资格替换               |
+| 4 幸运转盘    | wheel、operation-recovery   | wheel                                    | wheel、economy、operations               | 1/10 次原子结算、结果明细与确认前持续恢复           |
 | 5 K-coin 充值 | topup、payment-recovery     | topup、stars-payment workflow            | payments、economy                        | 付款前可取消、提交后锁定、成功唯一交付、无充值冷却  |
 | 6 TON 钱包    | wallet                      | wallet                                   | onchain、identity                        | challenge、proof、防重放、地址唯一                  |
 | 7 Mint        | mint                        | mint、jobs                               | onchain、inventory、operations           | reserve、submit、reconcile、metadata 快照           |
