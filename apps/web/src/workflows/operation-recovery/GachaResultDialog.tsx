@@ -14,6 +14,9 @@ const rarityOrder = [
   "legendary",
   "mythic",
 ] as const satisfies readonly Rarity[];
+const rarityRanks = Object.fromEntries(
+  rarityOrder.map((rarity, index) => [rarity, index]),
+) as Record<Rarity, number>;
 const rarityLabels: Record<Rarity, string> = {
   common: "普通",
   rare: "稀有",
@@ -50,6 +53,16 @@ export function GachaResultDialog({
   const pityPositions = orderedResults
     .filter((item) => item.pity_triggered)
     .map((item) => `第 ${item.order} 抽`);
+  const paid = result.entitlement_used === null;
+  const naturalResetPositions = paid
+    ? orderedResults
+        .filter(
+          (item) =>
+            !item.pity_triggered &&
+            reachesPityTarget(item.rarity, result.pity.target_rarity),
+        )
+        .map((item) => `第 ${item.order} 抽`)
+    : [];
   const cost = result.entitlement_used
     ? `${result.entitlement_used === "free_normal_box" ? "免费普通" : "免费稀有"}盲盒资格 ×1`
     : `${result.paid_kcoin} K-coin`;
@@ -69,9 +82,16 @@ export function GachaResultDialog({
       </header>
 
       {result.draw_count === 1 ? (
-        <SingleResult item={orderedResults[0]!} />
+        <SingleResult
+          item={orderedResults[0]!}
+          naturalPityReset={naturalResetPositions.length === 1}
+        />
       ) : (
-        <TenDrawResults results={orderedResults} />
+        <TenDrawResults
+          results={orderedResults}
+          paid={paid}
+          pityTarget={result.pity.target_rarity}
+        />
       )}
 
       <dl className="result-summary gacha-result-summary">
@@ -80,9 +100,17 @@ export function GachaResultDialog({
           <dd>{cost}</dd>
         </div>
         <div>
-          <dt>保底触发</dt>
+          <dt>固定保底触发</dt>
           <dd>
             {pityPositions.length ? pityPositions.join("、") : "本次未触发"}
+          </dd>
+        </div>
+        <div>
+          <dt>自然命中重置</dt>
+          <dd>
+            {naturalResetPositions.length
+              ? naturalResetPositions.join("、")
+              : "本次未重置"}
           </dd>
         </div>
         <div>
@@ -113,8 +141,10 @@ export function GachaResultDialog({
 
 function SingleResult({
   item,
+  naturalPityReset,
 }: {
   item: GachaResult["results"][number];
+  naturalPityReset: boolean;
 }): ReactNode {
   return (
     <article className={`gacha-single-result rarity-${item.rarity}`}>
@@ -135,7 +165,9 @@ function SingleResult({
         </span>
         <small>数量 ×{item.quantity}</small>
         {item.pity_triggered ? (
-          <em className="pity-triggered">触发保底</em>
+          <em className="pity-triggered">触发固定保底，进度重置</em>
+        ) : naturalPityReset ? (
+          <em className="pity-natural-reset">自然命中，进度重置</em>
         ) : null}
       </div>
     </article>
@@ -144,8 +176,12 @@ function SingleResult({
 
 function TenDrawResults({
   results,
+  paid,
+  pityTarget,
 }: {
   results: GachaResult["results"];
+  paid: boolean;
+  pityTarget: Rarity;
 }): ReactNode {
   const summary = rarityOrder.map((rarity) => ({
     rarity,
@@ -182,7 +218,9 @@ function TenDrawResults({
               <small>
                 <b className="new-indicator">NEW</b>
                 {item.pity_triggered ? (
-                  <em className="pity-triggered">触发保底</em>
+                  <em className="pity-triggered">触发固定保底，进度重置</em>
+                ) : paid && reachesPityTarget(item.rarity, pityTarget) ? (
+                  <em className="pity-natural-reset">自然命中，进度重置</em>
                 ) : null}
               </small>
             </div>
@@ -191,4 +229,8 @@ function TenDrawResults({
       </ol>
     </div>
   );
+}
+
+function reachesPityTarget(rarity: Rarity, target: Rarity): boolean {
+  return rarityRanks[rarity] >= rarityRanks[target];
 }

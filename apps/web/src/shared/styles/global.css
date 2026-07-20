@@ -1135,7 +1135,8 @@ input:focus {
   color: var(--muted);
 }
 .new-indicator,
-.pity-triggered {
+.pity-triggered,
+.pity-natural-reset {
   width: fit-content;
   display: inline-flex;
   align-items: center;
@@ -1154,6 +1155,10 @@ input:focus {
 .pity-triggered {
   color: #ffe9a8;
   background: rgba(181, 115, 0, 0.82);
+}
+.pity-natural-reset {
+  color: #d9fbe8;
+  background: rgba(20, 128, 85, 0.82);
 }
 .gacha-ten-result {
   min-height: 0;
@@ -2339,6 +2344,11 @@ input:focus {
   margin: 0;
   color: var(--sprout-green);
   font-size: 10px;
+}
+.app-shell .pity-reset-note {
+  color: #8a6b45;
+  font-size: 9px;
+  font-weight: 750;
 }
 .app-shell .pity-placeholder,
 .app-shell .pity-status {

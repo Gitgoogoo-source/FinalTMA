@@ -314,6 +314,11 @@ export function GachaView({
                           <strong className="pity-target">
                             {`再开 ${validPity.limit - validPity.progress} 次，必得${rarityLabels[validPity.target_rarity]}或以上藏品`}
                           </strong>
+                          <small className="pity-reset-note">
+                            自然抽到
+                            {rarityLabels[validPity.target_rarity]}
+                            或以上时，本档进度重置
+                          </small>
                         </>
                       ) : !pityFailed ? (
                         <span className="pity-placeholder">保底进度加载中</span>
