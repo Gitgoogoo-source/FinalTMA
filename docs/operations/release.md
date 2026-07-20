@@ -5,8 +5,8 @@
 在执行任何外部写入前，由负责人逐项记录证据：
 
 - 外部写入目标已核对为真实开发 Supabase `final-tma-real-test`（`ebewtjerusxcioegpzjd`）与 Vercel `final-tma`，未来生产 Supabase 在上线前保持空库且无须保留业务数据。
-- 当前真实开发环境 `APP_ENV=development` 只使用 `generated/assets/catalog-v1.development.json` 锁定的 210 张开发占位藏品图；该组图片已经用户明确批准用于当前真实开发环境，不得改名、替换、增删或用于正式生产。
-- 正式生产环境 `APP_ENV=production` 部署前，必须一次性整体替换上述 210 张开发占位藏品图，并提供正式 3 张盲盒图、Telegram 分享图和 TON Connect 图标；任一已知开发占位 checksum 仍存在时禁止生产发布。
+- 当前真实开发环境与未来生产环境使用同一组 210 张正式藏品母版生成的 420 张运行时图片；母版、缩略图、详情图、模板路径与 checksum 必须一一对应。
+- 正式生产环境 `APP_ENV=production` 部署前，还必须提供正式 Telegram 分享图和 TON Connect 图标；任一已知开发占位 checksum 仍存在时禁止生产发布。
 - 本次真实开发部署的 Supabase、Vercel、Telegram、Stars 与观测平台配置齐全；TON RPC 和链上配置在启用 TON 前补齐。
 - 生产将部署已在真实开发环境完成验收的同一 Git commit、同一 migration 序列和同一目录 manifest。
 - Vercel 套餐支持 `vercel.json` 中三项当前 Cron 的执行频率；启用 TON 时同一套餐还必须支持第四项 Mint 对账 Cron。
@@ -25,6 +25,9 @@ pnpm typecheck
 pnpm contracts:openapi
 pnpm contracts:check
 pnpm product-data:check
+pnpm catalog:generate-assets
+pnpm catalog:pin-assets
+pnpm assets:check:catalog
 APP_ENV=development pnpm build
 pnpm db:migrations:check
 pnpm db:lint
@@ -36,7 +39,7 @@ pnpm manifest:check
 pnpm manifest:check:production
 ```
 
-`APP_ENV=development pnpm build` 在生成 `apps/web/dist` 后自动运行环境对应的资产门禁；`pnpm assets:check:development` 可重复核对公开目录和构建产物，并要求 210 个 `template_id`、`image_path`、文件 basename、WebP 格式、文件内容和当前开发 checksum 一一对应且全局唯一。该门禁只接受已经批准的固定开发占位组；`APP_ENV=test` 与 `APP_ENV=production` 均执行正式素材门禁。
+`pnpm catalog:generate-assets` 要求 210 张母版均为 1024×1024 WebP，并生成 256×256 缩略图和 768×768 详情图。`pnpm assets:check:catalog` 强制核对 210 个 `template_id`、两个路径、420 个文件、WebP 格式、尺寸、单文件体积、50 MiB 总上限、内容唯一性和正式 checksum。`APP_ENV=development pnpm build` 在生成 `apps/web/dist` 后继续核对构建复制结果；`APP_ENV=test` 与 `APP_ENV=production` 额外拒绝 Telegram 分享图和 TON Connect 图标的已知开发 checksum。
 
 生成正式 TON Connect manifest：
 
@@ -48,9 +51,7 @@ python3 tools/web/build_manifest.py \
   --privacy-url https://APP_HOST/privacy
 ```
 
-当前真实开发环境使用 `pnpm catalog:pin-development-assets` 写入这组已批准开发图片的交付 checksum，随后固定运行 `pnpm assets:check:development`，不得重新批准另一组开发占位图片。
-
-正式生产上线前唯一替换动作是：一次性用 210 张正式 WebP 覆盖 `apps/web/public/assets/catalog/v1/` 中全部同名文件，补齐其余正式发布图片，运行 `pnpm catalog:pin-assets`，复核并提交新的 checksum，再运行 `APP_ENV=production pnpm build` 和 `pnpm assets:check:production`。生产门禁会拒绝 `generated/assets/catalog-v1.development.json` 与 `generated/assets/placeholders.json` 中任一已知开发 checksum，禁止通过重新 pin 绕过替换要求。
+正式藏品资源固定按以下顺序更新：把 210 张新母版写入新的目录版本，运行 `pnpm catalog:generate-assets`，运行 `pnpm catalog:pin-assets`，复核并提交 checksum，再运行藏品、开发和 production 资产门禁。已经发布的 `v1` 不得覆盖；后续内容变化必须创建新版本并同步数据库路径。production 门禁会继续拒绝 `generated/assets/placeholders.json` 中 Telegram 分享图和 TON Connect 图标的已知开发 checksum，禁止通过重新 pin 绕过正式替换要求。
 
 ## 3. 真实开发环境
 

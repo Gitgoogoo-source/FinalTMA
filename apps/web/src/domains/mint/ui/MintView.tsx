@@ -83,8 +83,11 @@ export function MintView(): ReactNode {
         {item && (
           <Card className="mint-card">
             <CatalogImage
-              path={item.image_path}
+              path={item.image_detail_path}
               alt={item.name}
+              variant="detail"
+              loading="eager"
+              fetchPriority="high"
               onAvailability={setImageReady}
             />
             <Badge>

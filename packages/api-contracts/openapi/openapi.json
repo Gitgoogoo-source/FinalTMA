@@ -1338,9 +1338,13 @@
                                 "exclusiveMinimum": 0,
                                 "maximum": 9007199254740991
                               },
-                              "image_path": {
+                              "image_thumbnail_path": {
                                 "type": "string",
-                                "pattern": "^\\/assets\\/.*"
+                                "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                              },
+                              "image_detail_path": {
+                                "type": "string",
+                                "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
                               },
                               "draw_weight": {
                                 "type": "integer",
@@ -1363,7 +1367,8 @@
                               "market_price",
                               "decompose_fgems",
                               "expedition_fgems",
-                              "image_path",
+                              "image_thumbnail_path",
+                              "image_detail_path",
                               "draw_weight",
                               "catalog_version"
                             ],
@@ -2681,9 +2686,9 @@
                                       "minimum": 1,
                                       "maximum": 3
                                     },
-                                    "image_path": {
+                                    "image_thumbnail_path": {
                                       "type": "string",
-                                      "pattern": "^\\/assets\\/.*"
+                                      "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
                                     },
                                     "catalog_weight": {
                                       "type": "integer",
@@ -2701,7 +2706,7 @@
                                     "name",
                                     "rarity",
                                     "stage",
-                                    "image_path",
+                                    "image_thumbnail_path",
                                     "catalog_weight",
                                     "single_probability_percent"
                                   ],
@@ -2986,9 +2991,13 @@
                                 ]
                               },
                               "quantity": { "type": "number", "const": 1 },
-                              "image_path": {
+                              "image_thumbnail_path": {
                                 "type": "string",
-                                "pattern": "^\\/assets\\/.*"
+                                "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                              },
+                              "image_detail_path": {
+                                "type": "string",
+                                "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
                               },
                               "new_album": { "type": "boolean" },
                               "pity_triggered": { "type": "boolean" }
@@ -3000,7 +3009,8 @@
                               "rarity",
                               "stage",
                               "quantity",
-                              "image_path",
+                              "image_thumbnail_path",
+                              "image_detail_path",
                               "new_album",
                               "pity_triggered"
                             ],
@@ -3193,9 +3203,13 @@
                                 ]
                               },
                               "quantity": { "type": "number", "const": 1 },
-                              "image_path": {
+                              "image_thumbnail_path": {
                                 "type": "string",
-                                "pattern": "^\\/assets\\/.*"
+                                "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                              },
+                              "image_detail_path": {
+                                "type": "string",
+                                "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
                               },
                               "new_album": { "type": "boolean" },
                               "pity_triggered": { "type": "boolean" }
@@ -3207,7 +3221,8 @@
                               "rarity",
                               "stage",
                               "quantity",
-                              "image_path",
+                              "image_thumbnail_path",
+                              "image_detail_path",
                               "new_album",
                               "pity_triggered"
                             ],
@@ -3631,7 +3646,14 @@
                                 "type": "string",
                                 "enum": ["normal", "advanced", "top"]
                               },
-                              "image_path": { "type": "string" },
+                              "image_thumbnail_path": {
+                                "type": "string",
+                                "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                              },
+                              "image_detail_path": {
+                                "type": "string",
+                                "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                              },
                               "combat_power": {
                                 "type": "integer",
                                 "exclusiveMinimum": 0,
@@ -3680,7 +3702,8 @@
                               "stage",
                               "chain_id",
                               "chain_type",
-                              "image_path",
+                              "image_thumbnail_path",
+                              "image_detail_path",
                               "combat_power",
                               "expedition_fgems",
                               "total",
@@ -3916,7 +3939,14 @@
                           "type": "string",
                           "enum": ["normal", "advanced", "top"]
                         },
-                        "image_path": { "type": "string" },
+                        "image_thumbnail_path": {
+                          "type": "string",
+                          "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                        },
+                        "image_detail_path": {
+                          "type": "string",
+                          "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                        },
                         "combat_power": {
                           "type": "integer",
                           "exclusiveMinimum": 0,
@@ -3965,7 +3995,8 @@
                         "stage",
                         "chain_id",
                         "chain_type",
-                        "image_path",
+                        "image_thumbnail_path",
+                        "image_detail_path",
                         "combat_power",
                         "expedition_fgems",
                         "total",
@@ -5954,7 +5985,14 @@
                                 "type": "string",
                                 "enum": ["normal", "advanced", "top"]
                               },
-                              "image_path": { "type": "string" },
+                              "image_thumbnail_path": {
+                                "type": "string",
+                                "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                              },
+                              "image_detail_path": {
+                                "type": "string",
+                                "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                              },
                               "combat_power": {
                                 "type": "integer",
                                 "exclusiveMinimum": 0,
@@ -6008,7 +6046,8 @@
                               "stage",
                               "chain_id",
                               "chain_type",
-                              "image_path",
+                              "image_thumbnail_path",
+                              "image_detail_path",
                               "combat_power",
                               "expedition_fgems",
                               "total",
@@ -7368,7 +7407,10 @@
                                 "minimum": 1,
                                 "maximum": 3
                               },
-                              "image_path": { "type": "string" },
+                              "image_thumbnail_path": {
+                                "type": "string",
+                                "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                              },
                               "unit_price": {
                                 "type": "integer",
                                 "exclusiveMinimum": 0,
@@ -7384,7 +7426,7 @@
                               "template_id",
                               "name",
                               "rarity",
-                              "image_path",
+                              "image_thumbnail_path",
                               "unit_price",
                               "available_quantity"
                             ],
@@ -7420,7 +7462,14 @@
                                 "type": "string",
                                 "enum": ["normal", "advanced", "top"]
                               },
-                              "image_path": { "type": "string" },
+                              "image_thumbnail_path": {
+                                "type": "string",
+                                "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                              },
+                              "image_detail_path": {
+                                "type": "string",
+                                "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                              },
                               "combat_power": {
                                 "type": "integer",
                                 "exclusiveMinimum": 0,
@@ -7474,7 +7523,8 @@
                               "stage",
                               "chain_id",
                               "chain_type",
-                              "image_path",
+                              "image_thumbnail_path",
+                              "image_detail_path",
                               "combat_power",
                               "expedition_fgems",
                               "total",
@@ -7764,7 +7814,10 @@
                           "minimum": 1,
                           "maximum": 3
                         },
-                        "image_path": { "type": "string" },
+                        "image_thumbnail_path": {
+                          "type": "string",
+                          "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                        },
                         "unit_price": {
                           "type": "integer",
                           "exclusiveMinimum": 0,
@@ -7780,7 +7833,7 @@
                         "template_id",
                         "name",
                         "rarity",
-                        "image_path",
+                        "image_thumbnail_path",
                         "unit_price",
                         "available_quantity"
                       ],
@@ -8002,7 +8055,10 @@
                                   "mythic"
                                 ]
                               },
-                              "image_path": { "type": "string" },
+                              "image_thumbnail_path": {
+                                "type": "string",
+                                "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                              },
                               "quantity": {
                                 "type": "integer",
                                 "exclusiveMinimum": 0,
@@ -8024,7 +8080,7 @@
                               "template_id",
                               "name",
                               "rarity",
-                              "image_path",
+                              "image_thumbnail_path",
                               "quantity",
                               "unit_price",
                               "created_at"
@@ -8238,7 +8294,10 @@
                             "mythic"
                           ]
                         },
-                        "image_path": { "type": "string" },
+                        "image_thumbnail_path": {
+                          "type": "string",
+                          "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                        },
                         "quantity": {
                           "type": "integer",
                           "exclusiveMinimum": 0,
@@ -8260,7 +8319,7 @@
                         "template_id",
                         "name",
                         "rarity",
-                        "image_path",
+                        "image_thumbnail_path",
                         "quantity",
                         "unit_price",
                         "created_at"
@@ -8317,7 +8376,10 @@
                             "mythic"
                           ]
                         },
-                        "image_path": { "type": "string" },
+                        "image_thumbnail_path": {
+                          "type": "string",
+                          "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                        },
                         "quantity": {
                           "type": "integer",
                           "exclusiveMinimum": 0,
@@ -8339,7 +8401,7 @@
                         "template_id",
                         "name",
                         "rarity",
-                        "image_path",
+                        "image_thumbnail_path",
                         "quantity",
                         "unit_price",
                         "created_at"

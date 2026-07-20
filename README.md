@@ -10,6 +10,7 @@ apps/web/               React + Vite Mini App
 apps/api/               Functions 领域、工作流与平台适配
 packages/api-contracts/ REST 契约、错误注册表与 OpenAPI
 contracts/ton/          Tact 合约、部署与验证命令
+assets/source/          不进入 Web 构建的正式藏品母版
 supabase/schemas/       声明式业务 Schema
 supabase/migrations/    baseline、product_data_v1、api_security
 generated/              目录与资产校验清单
@@ -23,10 +24,13 @@ docs/                   产品、架构、ADR 与运维资料
 ```sh
 pnpm install --frozen-lockfile
 pnpm product-data:build
+pnpm catalog:generate-assets
+pnpm catalog:pin-assets
 pnpm contracts:openapi
 pnpm validate:static
 pnpm chain:build
+pnpm assets:check:catalog
 pnpm assets:check:development
 ```
 
-`pnpm build` 不编译 TON 合约，并依据 `APP_ENV` 在 Web 构建后执行对应资产门禁；当前真实开发只接受已锁定的 210 张 development-only 藏品图，正式生产规则见[发布手册](docs/operations/release.md)。项目不包含本地功能测试；功能验收只在独立真实开发环境按[验收清单](docs/operations/acceptance.md)执行。
+`pnpm build` 不编译 TON 合约，并依据 `APP_ENV` 在 Web 构建后执行对应资产门禁；真实开发与未来生产使用同一组 210 张正式母版生成的 420 张运行时藏品图。Telegram 分享图和 TON Connect 图标仍由全局 production 门禁独立检查，完整规则见[发布手册](docs/operations/release.md)。项目不包含本地功能测试；功能验收只在独立真实开发环境按[验收清单](docs/operations/acceptance.md)执行。

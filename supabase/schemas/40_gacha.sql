@@ -146,7 +146,7 @@ begin
         'name', c.name,
         'rarity', c.rarity,
         'stage', c.stage,
-        'image_path', c.image_path,
+        'image_thumbnail_path', c.image_thumbnail_path,
         'catalog_weight', c.draw_weight,
         'single_probability_percent', round(c.rarity_probability_basis_points::numeric * c.draw_weight / (c.catalog_total_weight * 100), 6)
       ) order by c.sort_order) as items
@@ -327,7 +327,8 @@ begin
       v_results := v_results || jsonb_build_array(jsonb_build_object(
         'order', v_i, 'template_id', v_template.id, 'name', v_template.name,
         'rarity', v_template.rarity, 'stage', v_template.stage, 'quantity', 1,
-        'image_path', v_template.image_path,
+        'image_thumbnail_path', v_template.image_thumbnail_path,
+        'image_detail_path', v_template.image_detail_path,
         'new_album', v_new_album, 'pity_triggered', v_triggered
       ));
     end loop;

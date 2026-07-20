@@ -10,6 +10,17 @@
     "api/integrations.ts": { "maxDuration": 30 },
     "api/jobs.ts": { "maxDuration": 300 }
   },
+  "headers": [
+    {
+      "source": "/assets/catalog/:path*",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    }
+  ],
   "crons": [
     { "path": "/api/jobs/reconcile-payments", "schedule": "*/5 * * * *" },
     { "path": "/api/jobs/cleanup-idempotency", "schedule": "35 2 * * *" },

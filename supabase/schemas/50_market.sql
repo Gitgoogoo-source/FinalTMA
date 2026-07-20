@@ -58,7 +58,7 @@ begin
         'name', t.name,
         'rarity', t.rarity,
         'stage', t.stage,
-        'image_path', t.image_path,
+        'image_thumbnail_path', t.image_thumbnail_path,
         'unit_price', t.market_price,
         'available_quantity', x.quantity
       ) order by t.sort_order)
@@ -100,7 +100,7 @@ begin
     'name', t.name,
     'rarity', t.rarity,
     'stage', t.stage,
-    'image_path', t.image_path,
+    'image_thumbnail_path', t.image_thumbnail_path,
     'unit_price', t.market_price,
     'available_quantity', coalesce((
       select sum(l.remaining)
@@ -133,7 +133,7 @@ begin
       'template_id', l.template_id,
       'name', t.name,
       'rarity', t.rarity,
-      'image_path', t.image_path,
+      'image_thumbnail_path', t.image_thumbnail_path,
       'quantity', l.remaining,
       'unit_price', l.unit_price,
       'created_at', l.created_at
@@ -183,7 +183,7 @@ begin
     values (v_user_id, p_template_id, v_template.market_price, p_quantity, p_quantity, p_operation_id) returning * into v_listing;
     perform inventory.reserve(v_user_id, p_template_id, p_quantity, 'listing', v_listing.id);
     perform tasks.progress(v_user_id, 'market_list');
-    v_result := jsonb_build_object('listing_id', v_listing.id, 'template_id', p_template_id, 'name', v_template.name, 'rarity', v_template.rarity, 'image_path', v_template.image_path, 'quantity', p_quantity, 'unit_price', v_template.market_price, 'created_at', v_listing.created_at);
+    v_result := jsonb_build_object('listing_id', v_listing.id, 'template_id', p_template_id, 'name', v_template.name, 'rarity', v_template.rarity, 'image_thumbnail_path', v_template.image_thumbnail_path, 'quantity', p_quantity, 'unit_price', v_template.market_price, 'created_at', v_listing.created_at);
     return operations.complete_command(p_operation_id, v_result);
   exception when others then
     get stacked diagnostics v_detail = pg_exception_detail;

@@ -48,8 +48,11 @@ export function InventoryView({
               <div className="art-panel">
                 <CatalogImage
                   key={effectiveId}
-                  path={item.image_path}
+                  path={item.image_detail_path}
                   alt={item.name}
+                  variant="detail"
+                  loading="eager"
+                  fetchPriority="high"
                   onAvailability={setImageReady}
                 />
               </div>
@@ -105,8 +108,10 @@ export function InventoryView({
                     }}
                   >
                     <CatalogImage
-                      path={candidate.image_path}
+                      path={candidate.image_thumbnail_path}
                       alt={candidate.name}
+                      variant="thumbnail"
+                      loading="lazy"
                     />
                     <i className={`rarity-mark ${candidate.rarity}`} />
                     {isNew && <b className="new-marker">NEW</b>}

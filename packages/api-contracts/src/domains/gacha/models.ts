@@ -55,7 +55,9 @@ export const gachaPoolSchema = z
                     name: z.string(),
                     rarity: raritySchema,
                     stage: z.number().int().min(1).max(3),
-                    image_path: z.string().startsWith("/assets/"),
+                    image_thumbnail_path: z
+                      .string()
+                      .startsWith("/assets/catalog/v1/thumb/"),
                     catalog_weight: z.number().int().positive(),
                     single_probability_percent: z.number().positive().max(100),
                   })

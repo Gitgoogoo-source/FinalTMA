@@ -219,6 +219,9 @@ export function GachaView({
                 key={selectedBox.tier}
                 path={selectedBox.image_path}
                 alt={selectedBox.display_name}
+                variant="detail"
+                loading="eager"
+                fetchPriority="high"
                 onAvailability={(available) =>
                   setReady((state) =>
                     state[selectedBox.tier] === available
@@ -251,7 +254,12 @@ export function GachaView({
                     }}
                   >
                     <span className="tier-art">
-                      <CatalogImage path={box.image_path} alt="" />
+                      <CatalogImage
+                        path={box.image_path}
+                        alt=""
+                        variant="thumbnail"
+                        loading="lazy"
+                      />
                     </span>
                     <strong>{box.display_name}</strong>
                     <small>{box.single_price} K-coin</small>

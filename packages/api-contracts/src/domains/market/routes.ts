@@ -18,7 +18,7 @@ const marketTemplateSchema = z
     name: z.string(),
     rarity: raritySchema,
     stage: z.number().int().min(1).max(3).optional(),
-    image_path: z.string(),
+    image_thumbnail_path: z.string().startsWith("/assets/catalog/v1/thumb/"),
     unit_price: z.number().int().positive(),
     available_quantity: z.number().int().min(0),
   })
@@ -29,7 +29,7 @@ const listingSchema = z
     template_id: z.string(),
     name: z.string(),
     rarity: raritySchema,
-    image_path: z.string(),
+    image_thumbnail_path: z.string().startsWith("/assets/catalog/v1/thumb/"),
     quantity: z.number().int().positive(),
     unit_price: z.number().int().positive(),
     created_at: timestampSchema,

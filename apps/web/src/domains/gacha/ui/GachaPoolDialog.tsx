@@ -130,8 +130,9 @@ function PoolRarityGroup({ rarity }: { rarity: PoolRarity }): ReactNode {
         {rarity.items.map((item) => (
           <article key={item.template_id} className="gacha-pool-item">
             <CatalogImage
-              path={item.image_path}
+              path={item.image_thumbnail_path}
               alt={item.name}
+              variant="thumbnail"
               loading="lazy"
             />
             <div className="gacha-pool-item-copy">

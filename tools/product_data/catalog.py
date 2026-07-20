@@ -69,7 +69,8 @@ def parse(markdown: str) -> tuple[list[dict[str, object]], list[dict[str, object
                 "market_price": price,
                 "decompose_fgems": decompose,
                 "expedition_fgems": expedition,
-                "image_path": f"/assets/catalog/v1/{template_id.lower()}.webp",
+                "image_thumbnail_path": f"/assets/catalog/v1/thumb/{template_id.lower()}.webp",
+                "image_detail_path": f"/assets/catalog/v1/detail/{template_id.lower()}.webp",
             })
     validate(chains, templates)
     return chains, templates
@@ -120,12 +121,13 @@ def render(chains: list[dict[str, object]], templates: list[dict[str, object]]) 
             sql_string(item["id"]), sql_string(item["chain_id"]), str(item["stage"]),
             sql_string(item["rarity"]), sql_string(item["name"]), str(item["sort_order"]),
             str(item["combat_power"]), str(item["market_price"]), str(item["decompose_fgems"]),
-            str(item["expedition_fgems"]), sql_string(item["image_path"]), "1", sql_string("v1")
+            str(item["expedition_fgems"]), sql_string(item["image_thumbnail_path"]),
+            sql_string(item["image_detail_path"]), "1", sql_string("v1")
         ]) + ")" for item in templates
     )
     return f"""insert into catalog.chains (id, global_order, chain_type, theme, continuity, catalog_version) values
 {chain_values};
 
-insert into catalog.templates (id, chain_id, stage, rarity, name, sort_order, combat_power, market_price, decompose_fgems, expedition_fgems, image_path, draw_weight, catalog_version) values
+insert into catalog.templates (id, chain_id, stage, rarity, name, sort_order, combat_power, market_price, decompose_fgems, expedition_fgems, image_thumbnail_path, image_detail_path, draw_weight, catalog_version) values
 {template_values};
 """

@@ -6,7 +6,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import os
 from pathlib import Path
 
 import catalog
@@ -19,8 +18,6 @@ ROOT = Path(__file__).resolve().parents[2]
 PRODUCT = ROOT / "docs/product/功能说明文档.md"
 MIGRATIONS = ROOT / "supabase/migrations"
 MANIFEST = ROOT / "generated/catalog/catalog-v1.json"
-PLACEHOLDERS = ROOT / "generated/assets/placeholders.json"
-DEVELOPMENT_CATALOG = ROOT / "generated/assets/catalog-v1.development.json"
 ASSET_ROOT = ROOT / "apps/web/public/assets"
 
 
@@ -47,7 +44,11 @@ def build_sql(chains: list[dict[str, object]], templates: list[dict[str, object]
 
 
 def asset_files(templates: list[dict[str, object]]) -> list[Path]:
-    required = [ROOT / "apps/web/public" / str(item["image_path"]).lstrip("/") for item in templates]
+    required = [
+        ROOT / "apps/web/public" / str(item[key]).lstrip("/")
+        for item in templates
+        for key in ("image_thumbnail_path", "image_detail_path")
+    ]
     required += [
         ASSET_ROOT / "boxes/normal.webp",
         ASSET_ROOT / "boxes/rare.webp",
@@ -58,43 +59,12 @@ def asset_files(templates: list[dict[str, object]]) -> list[Path]:
     return required
 
 
-def development_assets(templates: list[dict[str, object]]) -> dict[str, str]:
-    catalog_names = {
-        str((ROOT / "apps/web/public" / str(item["image_path"]).lstrip("/")).relative_to(ROOT))
-        for item in templates
-    }
-    manifest = json.loads(DEVELOPMENT_CATALOG.read_text(encoding="utf-8")) if DEVELOPMENT_CATALOG.is_file() else {}
-    files = manifest.get("files")
-    if (
-        manifest.get("catalog_version") != "v1"
-        or manifest.get("environment") != "development"
-        or not isinstance(files, dict)
-        or set(files) != catalog_names
-        or len(set(files.values())) != 210
-    ):
-        raise SystemExit("Development catalog checksum manifest is missing or invalid")
-    return files
-
-
-def pin_assets(templates: list[dict[str, object]], allow_development_assets: bool) -> dict[str, str]:
+def pin_assets(templates: list[dict[str, object]]) -> dict[str, str]:
     required = asset_files(templates)
     missing = [str(path.relative_to(ROOT)) for path in required if not path.is_file() or path.stat().st_size == 0]
     if missing:
         raise SystemExit("Missing required assets:\n" + "\n".join(missing))
     pinned = {str(path.relative_to(ROOT)): hashlib.sha256(path.read_bytes()).hexdigest() for path in required}
-    placeholder_manifest = json.loads(PLACEHOLDERS.read_text(encoding="utf-8")) if PLACEHOLDERS.is_file() else {}
-    known_development = placeholder_manifest.get("files", {}) | development_assets(templates)
-    forbidden = set(known_development.values())
-    placeholders = sorted(name for name, value in pinned.items() if value in forbidden)
-    if placeholders and not allow_development_assets:
-        raise SystemExit("Cannot pin development placeholders as production assets:\n" + "\n".join(placeholders))
-    if allow_development_assets:
-        if os.environ.get("APP_ENV") != "development":
-            raise SystemExit("Development assets can only be pinned with APP_ENV=development")
-        misplaced = sorted(name for name in placeholders if known_development.get(name) != pinned[name])
-        catalog_development = development_assets(templates)
-        if misplaced or any(pinned[name] != checksum for name, checksum in catalog_development.items()):
-            raise SystemExit("Development assets do not match the approved path-specific checksum manifest")
     return pinned
 
 
@@ -116,14 +86,11 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--check-assets", action="store_true")
     parser.add_argument("--pin-assets", action="store_true")
-    parser.add_argument("--allow-development-assets", action="store_true")
     parser.add_argument("--migration-path", type=Path, default=product_data_migration())
     parser.add_argument("--manifest-path", type=Path, default=MANIFEST)
     args = parser.parse_args()
     if args.check_assets and args.pin_assets:
         raise SystemExit("Choose either --check-assets or --pin-assets")
-    if args.allow_development_assets and not args.pin_assets:
-        raise SystemExit("--allow-development-assets requires --pin-assets")
     markdown = PRODUCT.read_text(encoding="utf-8")
     checksum = hashlib.sha256(markdown.encode()).hexdigest()
     chains, templates = catalog.parse(markdown)
@@ -134,7 +101,7 @@ def main() -> None:
     assets = previous.get("assets", {}) if previous.get("product_checksum") == checksum else {}
     args.manifest_path.write_text(json.dumps({"version": "v1", "product_checksum": checksum, "chains": chains, "templates": templates, "assets": assets}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     if args.pin_assets:
-        assets = pin_assets(templates, args.allow_development_assets)
+        assets = pin_assets(templates)
         args.manifest_path.write_text(json.dumps({"version": "v1", "product_checksum": checksum, "chains": chains, "templates": templates, "assets": assets}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     if args.check_assets:
         check_assets(templates, assets)

@@ -119,7 +119,13 @@ function SingleResult({
   return (
     <article className={`gacha-single-result rarity-${item.rarity}`}>
       <div className="gacha-result-art">
-        <CatalogImage path={item.image_path} alt={item.name} />
+        <CatalogImage
+          path={item.image_detail_path}
+          alt={item.name}
+          variant="detail"
+          loading="eager"
+          fetchPriority="high"
+        />
         <span className="new-indicator">NEW</span>
       </div>
       <div className="gacha-result-copy">
@@ -161,7 +167,12 @@ function TenDrawResults({
         {results.map((item) => (
           <li key={`${item.order}-${item.template_id}`}>
             <span className="gacha-result-order">{item.order}</span>
-            <CatalogImage path={item.image_path} alt={item.name} />
+            <CatalogImage
+              path={item.image_thumbnail_path}
+              alt={item.name}
+              variant="thumbnail"
+              loading="eager"
+            />
             <div>
               <strong>{item.name}</strong>
               <span>

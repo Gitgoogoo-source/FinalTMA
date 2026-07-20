@@ -27,7 +27,8 @@ const resultItemSchema = z
     rarity: raritySchema,
     stage: z.union([z.literal(1), z.literal(2), z.literal(3)]),
     quantity: z.literal(1),
-    image_path: z.string().startsWith("/assets/"),
+    image_thumbnail_path: z.string().startsWith("/assets/catalog/v1/thumb/"),
+    image_detail_path: z.string().startsWith("/assets/catalog/v1/detail/"),
     new_album: z.boolean(),
     pity_triggered: z.boolean(),
   })

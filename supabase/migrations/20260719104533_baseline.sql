@@ -461,7 +461,8 @@ create table catalog.templates (
   market_price bigint not null check (market_price > 0),
   decompose_fgems bigint not null check (decompose_fgems > 0),
   expedition_fgems bigint not null check (expedition_fgems > 0),
-  image_path text not null unique,
+  image_thumbnail_path text not null unique check (image_thumbnail_path ~ '^/assets/catalog/v1/thumb/pet-[nat]-[0-9]{3}-[123]\.webp$'),
+  image_detail_path text not null unique check (image_detail_path ~ '^/assets/catalog/v1/detail/pet-[nat]-[0-9]{3}-[123]\.webp$'),
   draw_weight integer not null default 1 check (draw_weight > 0),
   catalog_version text not null check (catalog_version = 'v1'),
   unique (chain_id, stage)
@@ -891,7 +892,8 @@ as $$
     'stage', t.stage,
     'chain_id', t.chain_id,
     'chain_type', c.chain_type,
-    'image_path', t.image_path,
+    'image_thumbnail_path', t.image_thumbnail_path,
+    'image_detail_path', t.image_detail_path,
     'combat_power', t.combat_power,
     'expedition_fgems', t.expedition_fgems,
     'total', h.quantity,
@@ -1142,7 +1144,7 @@ begin
         'name', c.name,
         'rarity', c.rarity,
         'stage', c.stage,
-        'image_path', c.image_path,
+        'image_thumbnail_path', c.image_thumbnail_path,
         'catalog_weight', c.draw_weight,
         'single_probability_percent', round(c.rarity_probability_basis_points::numeric * c.draw_weight / (c.catalog_total_weight * 100), 6)
       ) order by c.sort_order) as items
@@ -1323,7 +1325,8 @@ begin
       v_results := v_results || jsonb_build_array(jsonb_build_object(
         'order', v_i, 'template_id', v_template.id, 'name', v_template.name,
         'rarity', v_template.rarity, 'stage', v_template.stage, 'quantity', 1,
-        'image_path', v_template.image_path,
+        'image_thumbnail_path', v_template.image_thumbnail_path,
+        'image_detail_path', v_template.image_detail_path,
         'new_album', v_new_album, 'pity_triggered', v_triggered
       ));
     end loop;
@@ -1835,7 +1838,7 @@ begin
         'name', t.name,
         'rarity', t.rarity,
         'stage', t.stage,
-        'image_path', t.image_path,
+        'image_thumbnail_path', t.image_thumbnail_path,
         'unit_price', t.market_price,
         'available_quantity', x.quantity
       ) order by t.sort_order)
@@ -1877,7 +1880,7 @@ begin
     'name', t.name,
     'rarity', t.rarity,
     'stage', t.stage,
-    'image_path', t.image_path,
+    'image_thumbnail_path', t.image_thumbnail_path,
     'unit_price', t.market_price,
     'available_quantity', coalesce((
       select sum(l.remaining)
@@ -1910,7 +1913,7 @@ begin
       'template_id', l.template_id,
       'name', t.name,
       'rarity', t.rarity,
-      'image_path', t.image_path,
+      'image_thumbnail_path', t.image_thumbnail_path,
       'quantity', l.remaining,
       'unit_price', l.unit_price,
       'created_at', l.created_at
@@ -1960,7 +1963,7 @@ begin
     values (v_user_id, p_template_id, v_template.market_price, p_quantity, p_quantity, p_operation_id) returning * into v_listing;
     perform inventory.reserve(v_user_id, p_template_id, p_quantity, 'listing', v_listing.id);
     perform tasks.progress(v_user_id, 'market_list');
-    v_result := jsonb_build_object('listing_id', v_listing.id, 'template_id', p_template_id, 'name', v_template.name, 'rarity', v_template.rarity, 'image_path', v_template.image_path, 'quantity', p_quantity, 'unit_price', v_template.market_price, 'created_at', v_listing.created_at);
+    v_result := jsonb_build_object('listing_id', v_listing.id, 'template_id', p_template_id, 'name', v_template.name, 'rarity', v_template.rarity, 'image_thumbnail_path', v_template.image_thumbnail_path, 'quantity', p_quantity, 'unit_price', v_template.market_price, 'created_at', v_listing.created_at);
     return operations.complete_command(p_operation_id, v_result);
   exception when others then
     get stacked diagnostics v_detail = pg_exception_detail;
@@ -3631,7 +3634,7 @@ as $$
   select coalesce(jsonb_agg(to_jsonb(candidate) order by candidate.submitted_at), '[]'::jsonb)
   from (
     select m.id mint_id, m.nft_number, m.template_id, m.transaction_hash, m.submitted_at,
-           w.address receiver, t.name, t.rarity, t.stage, t.combat_power, t.image_path
+           w.address receiver, t.name, t.rarity, t.stage, t.combat_power, t.image_detail_path
     from onchain.mints m
     join onchain.wallets w on w.id = m.wallet_id
     join catalog.templates t on t.id = m.template_id

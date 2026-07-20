@@ -7,7 +7,7 @@ as $$
   select coalesce(jsonb_agg(to_jsonb(candidate) order by candidate.submitted_at), '[]'::jsonb)
   from (
     select m.id mint_id, m.nft_number, m.template_id, m.transaction_hash, m.submitted_at,
-           w.address receiver, t.name, t.rarity, t.stage, t.combat_power, t.image_path
+           w.address receiver, t.name, t.rarity, t.stage, t.combat_power, t.image_detail_path
     from onchain.mints m
     join onchain.wallets w on w.id = m.wallet_id
     join catalog.templates t on t.id = m.template_id

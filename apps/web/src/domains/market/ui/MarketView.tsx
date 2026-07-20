@@ -166,7 +166,7 @@ type MarketViewItem = {
   name: string;
   rarity?: string;
   stage?: number | undefined;
-  image_path: string;
+  image_thumbnail_path: string;
   unit_price: number;
   available: number;
   listing_id?: string;
@@ -191,8 +191,10 @@ function MarketCard({
     <Card className="market-card">
       <div className="market-art">
         <CatalogImage
-          path={item.image_path}
+          path={item.image_thumbnail_path}
           alt={item.name}
+          variant="thumbnail"
+          loading="lazy"
           onAvailability={setImageReady}
         />
         <Badge>

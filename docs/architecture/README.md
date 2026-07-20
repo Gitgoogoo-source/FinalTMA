@@ -5,7 +5,7 @@
 `docs/product/功能说明文档.md` 是唯一产品功能来源。本次实现固定使用 SHA-256：
 
 ```text
-40eeaf24159d361a500daaee83a298998cf57e4f6043fee78b519bac61543759
+17d23b205b715ad5db2a43dbd23cf2849b22fd455648a8f9f10297e99a7a5317
 ```
 
 架构文档只记录技术边界，不复制价格、概率、奖励或产品状态规则。目录、OpenAPI 和 migration 均为生成物，生成结果必须与上述文档校验和绑定。
@@ -71,3 +71,4 @@ contracts/ton -> TON blockchain
 - [模块边界与网关隔离](adr/ADR-007-module-boundaries-and-gateway-isolation.md)
 - [Vercel 函数打包与配置隔离](adr/ADR-008-vercel-packaging-and-config-isolation.md)
 - [开盒页运行期视图状态](adr/ADR-009-gacha-runtime-view-state.md)
+- [正式藏品图片资源](adr/ADR-010-catalog-image-assets.md)

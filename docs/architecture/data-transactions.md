@@ -2,7 +2,7 @@
 
 ## Schema 所有权
 
-`supabase/schemas` 按业务上下文编号。`catalog` 拥有链、模板、版本和共享固定属性；`33_decomposition.sql` 与 `43_evolution.sql` 分别拥有对应命令声明，进化保底表为 `evolution.pity`；`gacha` 拥有 `gacha.boxes`；`payments` 拥有 `payments.topup_products`；`70_wallet.sql` 与 `71_mint.sql` 分别声明钱包和 Mint，但继续使用内部 `onchain` schema；`90_payment_callbacks.sql` 与 `91_mint_reconciliation.sql` 分别声明支付回调和 Mint 对账。查询读模型 `api.catalog_get` 在所有依赖对象之后声明。
+`supabase/schemas` 按业务上下文编号。`catalog` 拥有链、模板、版本、共享固定属性以及 `image_thumbnail_path`、`image_detail_path` 两个版本化相对路径，不保存图片二进制；`33_decomposition.sql` 与 `43_evolution.sql` 分别拥有对应命令声明，进化保底表为 `evolution.pity`；`gacha` 拥有 `gacha.boxes`；`payments` 拥有 `payments.topup_products`；`70_wallet.sql` 与 `71_mint.sql` 分别声明钱包和 Mint，但继续使用内部 `onchain` schema；`90_payment_callbacks.sql` 与 `91_mint_reconciliation.sql` 分别声明支付回调和 Mint 对账。查询读模型 `api.catalog_get` 在所有依赖对象之后声明。
 
 ## 写入规则
 

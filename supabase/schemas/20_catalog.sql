@@ -18,7 +18,8 @@ create table catalog.templates (
   market_price bigint not null check (market_price > 0),
   decompose_fgems bigint not null check (decompose_fgems > 0),
   expedition_fgems bigint not null check (expedition_fgems > 0),
-  image_path text not null unique,
+  image_thumbnail_path text not null unique check (image_thumbnail_path ~ '^/assets/catalog/v1/thumb/pet-[nat]-[0-9]{3}-[123]\.webp$'),
+  image_detail_path text not null unique check (image_detail_path ~ '^/assets/catalog/v1/detail/pet-[nat]-[0-9]{3}-[123]\.webp$'),
   draw_weight integer not null default 1 check (draw_weight > 0),
   catalog_version text not null check (catalog_version = 'v1'),
   unique (chain_id, stage)

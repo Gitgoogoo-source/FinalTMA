@@ -8,6 +8,8 @@ Web 只导入 `@pokepets/api-contracts/app`。领域 UI 不导入其他领域，
 
 Telegram WebApp 在 `createRoot().render()` 前同步初始化，首帧即写入主题、稳定视口、四边设备安全区、四边内容安全区、Header/Background 和 HTML `theme-color`；运行中继续监听主题、安全区和视口事件。TON Connect Provider 只在 Wallet 弹窗和 Mint 页面加载。普通页面启动不下载或初始化钱包能力。访问令牌只保存在 JavaScript 运行内存中，页面重载后重新使用 Telegram `initData` 交换。
 
+正式藏品图片由仓库内 210 张非公开母版生成 420 张版本化 WebP。列表只读取 256×256 缩略图，主视觉和 NFT 元数据读取 768×768 详情图；浏览器不通过 Function 或 Supabase 读取图片二进制。
+
 ## Functions
 
 根目录 `api/app.ts`、`api/integrations.ts`、`api/jobs.ts` 是三个薄适配器，只创建 `@pokepets/api/entrypoints` 网关。每个 entrypoint 显式注入本网关的 route registry 与完整 handler map；三个 registry 互不导入。请求按“网关认证、路由匹配、会话认证、入口交接门禁、契约输入解析、领域查询或工作流、契约输出解析、标准信封”执行。只有 `referral.bind` 和 `operations.get` 声明 `allowPendingEntryHandoff`。
@@ -18,4 +20,4 @@ Telegram WebApp 在 `createRoot().render()` 前同步初始化，首帧即写入
 
 ## 部署
 
-Web 与三个 Functions 位于同一 Vercel Pro Project，运行时为 Node.js 24。普通构建只构建 API 契约、API 与 Web；`contracts/ton` 使用独立 `pnpm chain:build` 门禁。真实开发环境与未来生产环境使用同一 Git commit 和迁移序列。
+Web 与三个 Functions 位于同一 Vercel Pro Project，运行时为 Node.js 24。版本化藏品静态资源使用一年 immutable 缓存，已发布目录不可覆盖。普通构建只构建 API 契约、API 与 Web；`contracts/ton` 使用独立 `pnpm chain:build` 门禁。真实开发环境与未来生产环境使用同一 Git commit 和迁移序列。
