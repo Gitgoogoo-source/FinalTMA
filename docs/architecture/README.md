@@ -5,7 +5,7 @@
 `docs/product/功能说明文档.md` 是唯一产品功能来源。本次实现固定使用 SHA-256：
 
 ```text
-cf28b26ad2f4345d4cc7df3adaf6127edc4028a99a5fafdcabcde88ed4c7d075
+be2cc660b78abc99d0a4cde14a7f7c04d1a4237d0d776692ef3ae92639257f4d
 ```
 
 架构文档只记录技术边界，不复制价格、概率、奖励或产品状态规则。目录、OpenAPI 和 migration 均为生成物，生成结果必须与上述文档校验和绑定。

@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 import { ReferralPanel } from "../../domains/referral/index.ts";
 import { TasksView } from "../../domains/tasks/index.ts";
+import { TaskHighlightBanner } from "../../workflows/task-navigation/index.ts";
 
 export function TasksPage(): ReactNode {
   return (
@@ -14,7 +15,12 @@ export function TasksPage(): ReactNode {
         </div>
         <ListChecks aria-hidden="true" />
       </header>
-      <section className="task-section referral-section">
+      <TaskHighlightBanner />
+      <section
+        id="task-referral"
+        className="task-section referral-section"
+        tabIndex={-1}
+      >
         <div className="section-heading">
           <span className="section-icon">
             <Users aria-hidden="true" />

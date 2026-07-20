@@ -1,19 +1,23 @@
 import { AlertCircle, LoaderCircle, RefreshCw } from "lucide-react";
-import type { ButtonHTMLAttributes, ComponentProps, ReactNode } from "react";
+import {
+  forwardRef,
+  type ButtonHTMLAttributes,
+  type ComponentProps,
+  type ReactNode,
+} from "react";
 
 export { CatalogImage } from "./CatalogImage.tsx";
 
-export function Button({
-  className = "",
-  children,
-  ...props
-}: ButtonHTMLAttributes<HTMLButtonElement>): ReactNode {
+export const Button = forwardRef<
+  HTMLButtonElement,
+  ButtonHTMLAttributes<HTMLButtonElement>
+>(function Button({ className = "", children, ...props }, ref) {
   return (
-    <button className={`button ${className}`} {...props}>
+    <button ref={ref} className={`button ${className}`} {...props}>
       {children}
     </button>
   );
-}
+});
 
 export function Card({
   children,

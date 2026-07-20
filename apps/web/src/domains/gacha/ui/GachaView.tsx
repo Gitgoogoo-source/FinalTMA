@@ -17,6 +17,7 @@ import {
   useSession,
 } from "../../../platform/session/store.ts";
 import { Badge, Button, Card, PageState } from "../../../shared/ui/index.tsx";
+import { focusTaskTarget } from "../../../shared/navigation/focusTaskTarget.ts";
 import { useOperationRegistry } from "../../../workflows/operation-recovery/index.ts";
 import { useNavigationIntent } from "../../../workflows/payment-recovery/index.ts";
 import { GachaPoolDialog } from "./GachaPoolDialog.tsx";
@@ -58,6 +59,7 @@ export function GachaView({
   const requestedTier = params.get("tier");
   const requestedRarity = params.get("rarity");
   const targetRarity = isRarity(requestedRarity) ? requestedRarity : null;
+  const requestedFocus = params.get("focus");
   const resumedTier =
     params.get("resume") && isBoxTier(requestedTier) ? requestedTier : null;
   const resumedCount = params.get("count") === "10" ? 10 : 1;
@@ -74,6 +76,8 @@ export function GachaView({
   const [ready, setReady] = useState<Record<string, boolean>>({});
   const [poolOpen, setPoolOpen] = useState(false);
   const poolTrigger = useRef<HTMLButtonElement>(null);
+  const singleAction = useRef<HTMLButtonElement>(null);
+  const tenAction = useRef<HTMLButtonElement>(null);
   const items = useMemo(() => boxes.data?.boxes ?? [], [boxes.data?.boxes]);
   const visibleItems = useMemo(
     () =>
@@ -143,6 +147,16 @@ export function GachaView({
   useEffect(() => {
     if (selectedBox) selectedTierRef.current = selectedBox.tier;
   }, [selectedBox]);
+
+  useEffect(() => {
+    const target =
+      requestedFocus === "gacha-single"
+        ? singleAction.current
+        : requestedFocus === "gacha-ten"
+          ? tenAction.current
+          : null;
+    return target ? focusTaskTarget(target) : undefined;
+  }, [ready, requestedFocus, selectedBox?.tier]);
 
   useLayoutEffect(() => {
     if (scrollRestored.current) return;
@@ -398,6 +412,7 @@ export function GachaView({
 
             <div className="gacha-actions">
               <Button
+                ref={singleAction}
                 className="single-draw"
                 disabled={
                   blocked || !rulesComplete || ready[selectedBox.tier] !== true
@@ -426,6 +441,7 @@ export function GachaView({
                 )}
               </Button>
               <Button
+                ref={tenAction}
                 className="ten-draw"
                 disabled={
                   blocked || !rulesComplete || ready[selectedBox.tier] !== true

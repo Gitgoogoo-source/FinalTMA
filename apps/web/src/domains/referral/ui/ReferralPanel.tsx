@@ -45,11 +45,16 @@ export function ReferralPanel(): ReactNode {
         <strong>{query.data?.referral_code}</strong>
         <code>{query.data?.link}</code>
         <div className="button-row">
-          <Button disabled={blocked} onClick={() => void event("copy_link")}>
+          <Button
+            id="task-referral-copy"
+            disabled={blocked}
+            onClick={() => void event("copy_link")}
+          >
             <Copy />
             复制链接
           </Button>
           <Button
+            id="task-referral-telegram"
             className="secondary"
             disabled={blocked}
             onClick={() => void event("telegram_invite")}
@@ -80,10 +85,30 @@ export function ReferralPanel(): ReactNode {
           {query.data?.rewarded_lifetime ?? 0} / 300
         </p>
         <p>
-          5 人普通盲盒：{query.data?.milestone_5_status ?? "pending"} · 10
-          人稀有盲盒：{query.data?.milestone_10_status ?? "pending"}
+          5 人普通盲盒：
+          {milestoneLabel(
+            query.data?.milestone_5_status ?? "pending",
+            5,
+            query.data?.valid_recharge_friends ?? 0,
+          )}
+          · 10 人稀有盲盒：
+          {milestoneLabel(
+            query.data?.milestone_10_status ?? "pending",
+            10,
+            query.data?.valid_recharge_friends ?? 0,
+          )}
         </p>
       </Card>
     </div>
   );
+}
+
+function milestoneLabel(
+  status: "pending" | "granted",
+  threshold: 5 | 10,
+  progress: number,
+): string {
+  return status === "granted"
+    ? "已发放"
+    : `还差 ${Math.max(0, threshold - progress)} 人`;
 }

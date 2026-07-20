@@ -16506,14 +16506,75 @@
                           "items": {
                             "type": "object",
                             "properties": {
-                              "code": { "type": "string" },
+                              "code": {
+                                "type": "string",
+                                "enum": [
+                                  "gacha_1",
+                                  "gacha_10",
+                                  "gacha_ten",
+                                  "wheel_spin",
+                                  "copy_referral",
+                                  "telegram_invite",
+                                  "market_buy",
+                                  "market_list",
+                                  "market_sold",
+                                  "evolution_success",
+                                  "evolution_attempt",
+                                  "decompose",
+                                  "expedition_normal",
+                                  "expedition_intermediate",
+                                  "expedition_advanced",
+                                  "album_unlock",
+                                  "album_chain",
+                                  "wallet_verified",
+                                  "mint_success"
+                                ]
+                              },
                               "order": {
                                 "type": "integer",
-                                "exclusiveMinimum": 0,
-                                "maximum": 9007199254740991
+                                "minimum": 1,
+                                "maximum": 19
                               },
-                              "category": { "type": "string" },
-                              "name": { "type": "string" },
+                              "category": {
+                                "type": "string",
+                                "enum": [
+                                  "gacha",
+                                  "daily",
+                                  "social",
+                                  "market",
+                                  "inventory",
+                                  "expedition",
+                                  "album",
+                                  "wallet",
+                                  "mint"
+                                ]
+                              },
+                              "title": { "type": "string", "minLength": 1 },
+                              "description": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "completion_action": {
+                                "type": "string",
+                                "enum": [
+                                  "gacha_single",
+                                  "gacha_ten",
+                                  "wheel",
+                                  "referral_copy",
+                                  "referral_telegram",
+                                  "market_buy",
+                                  "market_sell",
+                                  "market_manage",
+                                  "inventory_evolution",
+                                  "inventory_decomposition",
+                                  "expedition_normal",
+                                  "expedition_intermediate",
+                                  "expedition_advanced",
+                                  "album",
+                                  "wallet",
+                                  "inventory_mint"
+                                ]
+                              },
                               "target": {
                                 "type": "integer",
                                 "exclusiveMinimum": 0,
@@ -16529,17 +16590,27 @@
                                 "exclusiveMinimum": 0,
                                 "maximum": 9007199254740991
                               },
-                              "claimed": { "type": "boolean" }
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "not_started",
+                                  "in_progress",
+                                  "claimable",
+                                  "claimed"
+                                ]
+                              }
                             },
                             "required": [
                               "code",
                               "order",
                               "category",
-                              "name",
+                              "title",
+                              "description",
+                              "completion_action",
                               "target",
                               "progress",
                               "reward_fgems",
-                              "claimed"
+                              "status"
                             ],
                             "additionalProperties": false
                           }
@@ -17075,7 +17146,30 @@
             "name": "task_code",
             "in": "path",
             "required": true,
-            "schema": { "type": "string", "minLength": 1, "maxLength": 128 }
+            "schema": {
+              "type": "string",
+              "enum": [
+                "gacha_1",
+                "gacha_10",
+                "gacha_ten",
+                "wheel_spin",
+                "copy_referral",
+                "telegram_invite",
+                "market_buy",
+                "market_list",
+                "market_sold",
+                "evolution_success",
+                "evolution_attempt",
+                "decompose",
+                "expedition_normal",
+                "expedition_intermediate",
+                "expedition_advanced",
+                "album_unlock",
+                "album_chain",
+                "wallet_verified",
+                "mint_success"
+              ]
+            }
           },
           {
             "name": "Idempotency-Key",
@@ -17096,7 +17190,30 @@
                     "data": {
                       "type": "object",
                       "properties": {
-                        "task_code": { "type": "string" },
+                        "task_code": {
+                          "type": "string",
+                          "enum": [
+                            "gacha_1",
+                            "gacha_10",
+                            "gacha_ten",
+                            "wheel_spin",
+                            "copy_referral",
+                            "telegram_invite",
+                            "market_buy",
+                            "market_list",
+                            "market_sold",
+                            "evolution_success",
+                            "evolution_attempt",
+                            "decompose",
+                            "expedition_normal",
+                            "expedition_intermediate",
+                            "expedition_advanced",
+                            "album_unlock",
+                            "album_chain",
+                            "wallet_verified",
+                            "mint_success"
+                          ]
+                        },
                         "reward_fgems": {
                           "type": "integer",
                           "exclusiveMinimum": 0,
@@ -17140,7 +17257,30 @@
                     "data": {
                       "type": "object",
                       "properties": {
-                        "task_code": { "type": "string" },
+                        "task_code": {
+                          "type": "string",
+                          "enum": [
+                            "gacha_1",
+                            "gacha_10",
+                            "gacha_ten",
+                            "wheel_spin",
+                            "copy_referral",
+                            "telegram_invite",
+                            "market_buy",
+                            "market_list",
+                            "market_sold",
+                            "evolution_success",
+                            "evolution_attempt",
+                            "decompose",
+                            "expedition_normal",
+                            "expedition_intermediate",
+                            "expedition_advanced",
+                            "album_unlock",
+                            "album_chain",
+                            "wallet_verified",
+                            "mint_success"
+                          ]
+                        },
                         "reward_fgems": {
                           "type": "integer",
                           "exclusiveMinimum": 0,

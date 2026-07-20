@@ -3587,6 +3587,57 @@ input:focus {
     ),
     linear-gradient(180deg, #fffefa, #fff 62%, #f9fbfd);
 }
+.app-shell .task-highlight {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+  padding: 12px;
+  border-color: rgba(255, 143, 24, 0.18);
+  background: linear-gradient(135deg, #fff8e9, #fff 70%);
+  box-shadow: 0 13px 28px rgba(255, 122, 0, 0.1);
+}
+.app-shell .task-highlight-icon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  color: #fff;
+  background: linear-gradient(145deg, #ffad27, #ff7200);
+}
+.app-shell .task-highlight-icon svg {
+  width: 20px;
+}
+.app-shell .task-highlight > div {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+.app-shell .task-highlight small {
+  color: #d57417;
+  font-size: 8px;
+  font-weight: 900;
+}
+.app-shell .task-highlight strong {
+  color: #2b3a41;
+  font-size: 13px;
+}
+.app-shell .task-highlight p {
+  margin: 0;
+  overflow: hidden;
+  color: #7d8983;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-shell .task-highlight > .button {
+  min-width: 66px;
+  min-height: 34px;
+  padding: 7px 9px;
+  font-size: 9px;
+}
 .app-shell .task-section {
   display: grid;
   gap: 9px;
@@ -3835,14 +3886,38 @@ input:focus {
   margin: 4px 0 2px;
   font-size: 12px;
 }
-.app-shell .task-row p {
+.app-shell .task-card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.app-shell .task-status {
+  color: #7e8984;
+  font-size: 8px;
+  font-weight: 850;
+}
+.app-shell .task-status.claimable {
+  color: #d76b0b;
+}
+.app-shell .task-status.claimed {
+  color: #439d39;
+}
+.app-shell .task-row .task-description {
+  margin: 0 0 5px;
+  color: #75817b;
+  font-size: 9px;
+  line-height: 1.4;
+}
+.app-shell .task-row .task-progress {
   display: flex;
   justify-content: space-between;
   gap: 5px;
+  margin: 0;
   color: #8b9590;
   font-size: 8px;
 }
-.app-shell .task-row p strong {
+.app-shell .task-row .task-progress strong {
   color: #d76b0b;
   font-size: 8px;
 }
@@ -3862,6 +3937,20 @@ input:focus {
 }
 .app-shell .meter i {
   background: linear-gradient(90deg, #62bf51, #ff9c00);
+}
+.app-shell .inventory-action-target {
+  display: flex;
+  min-width: 0;
+  border-radius: 15px;
+}
+.app-shell .inventory-action-target > .button {
+  width: 100%;
+}
+.task-navigation-focus {
+  scroll-margin-block: 96px;
+  outline: 3px solid rgba(255, 136, 18, 0.55) !important;
+  outline-offset: 3px;
+  animation: task-focus-pulse 0.8s ease-in-out 2;
 }
 
 /* Shell dialogs opened from the scoped pages */
@@ -4113,6 +4202,12 @@ input:focus {
   from {
     opacity: 0;
     transform: translateY(6px);
+  }
+}
+
+@keyframes task-focus-pulse {
+  50% {
+    outline-color: rgba(255, 136, 18, 0.16);
   }
 }
 

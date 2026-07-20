@@ -1,8 +1,9 @@
 import { RotateCw, Sparkles } from "lucide-react";
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import { useApiQuery } from "../../../platform/query/index.ts";
+import { focusTaskTarget } from "../../../shared/navigation/focusTaskTarget.ts";
 import { Button, Card } from "../../../shared/ui/index.tsx";
 import { useOperationRegistry } from "../../../workflows/operation-recovery/index.ts";
 import { useNavigationIntent } from "../../../workflows/payment-recovery/index.ts";
@@ -14,6 +15,7 @@ export function WheelPanel(): ReactNode {
   const { requestTopup } = useNavigationIntent();
   const blocked = isBlocked("wheel.spin");
   const [params, setParams] = useSearchParams();
+  const heading = useRef<HTMLDivElement>(null);
   const resumedCount =
     params.get("resume") && params.get("count") === "10"
       ? 10
@@ -31,9 +33,13 @@ export function WheelPanel(): ReactNode {
     void run("幸运转盘正在转动", "wheel.spin", { count });
   };
   const remaining = query.data?.remaining ?? 0;
+  useEffect(() => {
+    if (params.get("focus") !== "wheel") return;
+    return focusTaskTarget(heading.current);
+  }, [params]);
   return (
     <Card className="game-panel wheel">
-      <div className="panel-title">
+      <div ref={heading} className="panel-title" tabIndex={-1}>
         <Sparkles />
         <div>
           <span>LUCKY WHEEL</span>

@@ -4,10 +4,11 @@ import {
   ShoppingBag,
   ShoppingCart,
 } from "lucide-react";
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import { CatalogImage } from "../../../shared/ui/index.tsx";
+import { focusTaskTarget } from "../../../shared/navigation/focusTaskTarget.ts";
 import { useApiQuery } from "../../../platform/query/index.ts";
 import { Badge, Button, Card, PageState } from "../../../shared/ui/index.tsx";
 import { useOperationRegistry } from "../../../workflows/operation-recovery/index.ts";
@@ -17,7 +18,16 @@ type Tab = "buy" | "sell" | "manage";
 
 export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
   const [params, setParams] = useSearchParams();
-  const [tab, setTab] = useState<Tab>(params.has("sell") ? "sell" : "buy");
+  const requestedTab = parseTab(params.get("tab"));
+  const [selectedTab, setSelectedTab] = useState<Tab>(
+    requestedTab ?? (params.has("sell") ? "sell" : "buy"),
+  );
+  const tab = requestedTab ?? selectedTab;
+  const tabButtons = useRef<Record<Tab, HTMLButtonElement | null>>({
+    buy: null,
+    sell: null,
+    manage: null,
+  });
   const purchaseTarget = params.get("buy");
   const identity = useApiQuery("identity.bootstrap");
   const listings = useApiQuery("market.bootstrap", {}, tab === "buy");
@@ -78,9 +88,13 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
   const activeTemplateIds = new Set(
     (mine.data?.listings ?? []).map((item) => item.template_id),
   );
-  const selectTab = (next: Tab) => {
-    setTab(next);
-    setParams({});
+  useEffect(() => {
+    if (params.get("focus") !== `market-${tab}`) return;
+    return focusTaskTarget(tabButtons.current[tab] ?? null);
+  }, [params, state.isLoading, tab]);
+  const selectTab = (nextTab: Tab) => {
+    setSelectedTab(nextTab);
+    setParams({}, { replace: true });
   };
   const submit = (item: MarketViewItem, quantity: number) => {
     setFeedback(null);
@@ -191,18 +205,27 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
       )}
       <nav className="segmented">
         <button
+          ref={(element) => {
+            tabButtons.current.buy = element;
+          }}
           className={tab === "buy" ? "active" : ""}
           onClick={() => selectTab("buy")}
         >
           购买
         </button>
         <button
+          ref={(element) => {
+            tabButtons.current.sell = element;
+          }}
           className={tab === "sell" ? "active" : ""}
           onClick={() => selectTab("sell")}
         >
           出售
         </button>
         <button
+          ref={(element) => {
+            tabButtons.current.manage = element;
+          }}
           className={tab === "manage" ? "active" : ""}
           onClick={() => selectTab("manage")}
         >
@@ -264,6 +287,12 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
       )}
     </main>
   );
+}
+
+function parseTab(value: string | null): Tab | null {
+  return value === "buy" || value === "sell" || value === "manage"
+    ? value
+    : null;
 }
 
 type MarketViewItem = {

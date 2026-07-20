@@ -123,7 +123,12 @@ export function WalletDialog({ close }: { close(): void }): ReactNode {
               </div>
             </div>
             <p>该地址是当前账号唯一经过 TON Proof 验证的主钱包。</p>
-            <Button className="danger" disabled={blocked} onClick={disconnect}>
+            <Button
+              autoFocus
+              className="danger"
+              disabled={blocked}
+              onClick={disconnect}
+            >
               <Link2Off />
               断开钱包
             </Button>
@@ -135,6 +140,7 @@ export function WalletDialog({ close }: { close(): void }): ReactNode {
               连接钱包后必须完成 TON Proof；钱包地址不能替代 Telegram 登录。
             </p>
             <Button
+              autoFocus
               disabled={blocked || phase !== "idle"}
               onClick={() => void connect()}
             >

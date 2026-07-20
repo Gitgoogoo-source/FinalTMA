@@ -1,8 +1,10 @@
 create table tasks.definitions (
   code text primary key,
   sort_order smallint not null unique check (sort_order between 1 and 19),
-  category text not null,
-  display_name text not null,
+  category text not null check (category in ('gacha', 'daily', 'social', 'market', 'inventory', 'expedition', 'album', 'wallet', 'mint')),
+  title text not null check (btrim(title) <> ''),
+  description text not null check (btrim(description) <> ''),
+  completion_action text not null check (completion_action in ('gacha_single', 'gacha_ten', 'wheel', 'referral_copy', 'referral_telegram', 'market_buy', 'market_sell', 'market_manage', 'inventory_evolution', 'inventory_decomposition', 'expedition_normal', 'expedition_intermediate', 'expedition_advanced', 'album', 'wallet', 'inventory_mint')),
   target bigint not null check (target > 0),
   reward_fgems bigint not null check (reward_fgems > 0)
 );
@@ -73,11 +75,18 @@ begin
         'code', d.code,
         'order', d.sort_order,
         'category', d.category,
-        'name', d.display_name,
+        'title', d.title,
+        'description', d.description,
+        'completion_action', d.completion_action,
         'target', d.target,
         'progress', least(coalesce(p.progress, 0), d.target),
         'reward_fgems', d.reward_fgems,
-        'claimed', p.claimed_at is not null
+        'status', case
+          when p.claimed_at is not null then 'claimed'
+          when coalesce(p.progress, 0) >= d.target then 'claimable'
+          when coalesce(p.progress, 0) > 0 then 'in_progress'
+          else 'not_started'
+        end
       ) order by d.sort_order)
       from tasks.definitions d
       left join tasks.daily_progress p

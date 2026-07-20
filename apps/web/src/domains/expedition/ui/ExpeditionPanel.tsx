@@ -1,8 +1,10 @@
 import { Compass, Timer } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import { CatalogImage } from "../../../shared/ui/index.tsx";
 import { useApiQuery } from "../../../platform/query/index.ts";
+import { focusTaskTarget } from "../../../shared/navigation/focusTaskTarget.ts";
 import { Badge, Button, Card } from "../../../shared/ui/index.tsx";
 import { useOperationRegistry } from "../../../workflows/operation-recovery/index.ts";
 
@@ -21,6 +23,7 @@ const rarityNames: Record<string, string> = {
 type Tier = keyof typeof tierNames;
 
 export function ExpeditionPanel(): ReactNode {
+  const [params] = useSearchParams();
   const query = useApiQuery("expedition.list");
   const refetchExpeditions = query.refetch;
   const { isBlocked, run } = useOperationRegistry();
@@ -28,13 +31,14 @@ export function ExpeditionPanel(): ReactNode {
     isBlocked("expedition.create") || isBlocked("expedition.claim");
   const [selectionTier, setSelectionTier] = useState<Tier | null>(null);
   const [selection, setSelection] = useState<Record<string, number>>({});
+  const grid = useRef<HTMLDivElement>(null);
   const eligible = useApiQuery(
     "expedition.eligible_items",
     { tier: selectionTier ?? "normal" },
     selectionTier !== null,
   );
   const active = query.data?.active ?? [];
-  const rules = query.data?.rules ?? [];
+  const rules = query.data?.rules;
   const usedToday = query.data?.used_today ?? {
     normal: 0,
     intermediate: 0,
@@ -54,6 +58,18 @@ export function ExpeditionPanel(): ReactNode {
     const timer = window.setInterval(() => void refetchExpeditions(), 30_000);
     return () => window.clearInterval(timer);
   }, [refetchExpeditions]);
+  useEffect(() => {
+    const focus = params.get("focus");
+    const tier = focus?.startsWith("expedition-")
+      ? focus.slice("expedition-".length)
+      : null;
+    if (!isTier(tier)) return;
+    return focusTaskTarget(
+      grid.current?.querySelector<HTMLElement>(
+        `[data-expedition-tier="${tier}"]`,
+      ) ?? null,
+    );
+  }, [params, rules]);
 
   const create = () => {
     if (!selectionTier) return;
@@ -87,14 +103,18 @@ export function ExpeditionPanel(): ReactNode {
       ) : query.error ? (
         <Button onClick={() => void query.refetch()}>重新加载远征</Button>
       ) : (
-        <div className="expedition-grid">
-          {rules.map((rule) => {
+        <div ref={grid} className="expedition-grid">
+          {(rules ?? []).map((rule) => {
             const tier = rule.tier;
             const running = active.find((item) => item.tier === tier);
             const isReady = running?.status === "claimable";
             return (
               <Card key={tier} className={`expedition-card ${tier}`}>
-                <div className="expedition-route">
+                <div
+                  className="expedition-route"
+                  data-expedition-tier={tier}
+                  tabIndex={-1}
+                >
                   <span className="route-icon">
                     <Compass aria-hidden="true" />
                   </span>
@@ -221,4 +241,8 @@ export function ExpeditionPanel(): ReactNode {
       )}
     </Card>
   );
+}
+
+function isTier(value: string | null): value is Tier {
+  return value === "normal" || value === "intermediate" || value === "advanced";
 }
