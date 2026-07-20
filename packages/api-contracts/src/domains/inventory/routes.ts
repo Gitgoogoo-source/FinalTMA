@@ -1,13 +1,13 @@
 import { z } from "zod";
 
-import { assetsSchema } from "../../common/models.ts";
+import { assetsSchema, operationSummarySchema } from "../../common/models.ts";
 import { defineRoute } from "../../common/route.ts";
+import { emptyObjectSchema, identifierSchema } from "../../common/schemas.ts";
 import {
-  emptyObjectSchema,
-  identifierSchema,
-  raritySchema,
-} from "../../common/schemas.ts";
-import { inventoryItemSchema } from "./models.ts";
+  evolutionPreviewSchema,
+  evolutionResultSchema,
+  inventoryItemSchema,
+} from "./models.ts";
 
 export const inventoryRoutes = [
   defineRoute({
@@ -43,6 +43,53 @@ export const inventoryRoutes = [
     ],
   }),
   defineRoute({
+    id: "inventory.evolution_preview",
+    method: "GET",
+    path: "/api/inventory/:template_id/evolution-preview",
+    gateway: "app",
+    auth: true,
+    idempotent: false,
+    input: z.object({ template_id: identifierSchema }).strict(),
+    output: evolutionPreviewSchema,
+    errors: [
+      "INVENTORY_ITEM_NOT_FOUND",
+      "ACCOUNT_RESTRICTED",
+      "INTERNAL_ERROR",
+    ],
+  }),
+  defineRoute({
+    id: "inventory.evolution_recovery",
+    method: "GET",
+    path: "/api/inventory/evolution/recovery",
+    gateway: "app",
+    auth: true,
+    idempotent: false,
+    input: emptyObjectSchema,
+    output: z.object({ operations: z.array(operationSummarySchema) }).strict(),
+    errors: ["SESSION_REQUIRED", "ACCOUNT_RESTRICTED", "INTERNAL_ERROR"],
+  }),
+  defineRoute({
+    id: "inventory.acknowledge_evolution_result",
+    method: "POST",
+    path: "/api/inventory/evolution/results/:operation_id/acknowledge",
+    gateway: "app",
+    auth: true,
+    idempotent: false,
+    input: z.object({ operation_id: z.string().uuid() }).strict(),
+    output: z
+      .object({
+        operation_id: z.string().uuid(),
+        acknowledged_at: z.string().datetime({ offset: true }),
+      })
+      .strict(),
+    errors: [
+      "OPERATION_NOT_FOUND",
+      "OPERATION_NOT_ACKNOWLEDGEABLE",
+      "ACCOUNT_RESTRICTED",
+      "INTERNAL_ERROR",
+    ],
+  }),
+  defineRoute({
     id: "inventory.evolve",
     method: "POST",
     path: "/api/inventory/evolve",
@@ -51,19 +98,7 @@ export const inventoryRoutes = [
     idempotent: true,
     refreshScopes: ["assets", "inventory"],
     input: z.object({ template_id: identifierSchema }).strict(),
-    output: z
-      .object({
-        success: z.boolean(),
-        source_template_id: z.string(),
-        target_template_id: z.string(),
-        target_name: z.string(),
-        target_rarity: raritySchema,
-        fgems_spent: z.number().int().positive(),
-        failure_count: z.number().int().min(0),
-        new_album: z.boolean(),
-        assets: assetsSchema,
-      })
-      .strict(),
+    output: evolutionResultSchema,
     errors: [
       "EVOLUTION_NOT_AVAILABLE",
       "INSUFFICIENT_INVENTORY",

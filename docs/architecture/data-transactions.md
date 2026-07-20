@@ -10,7 +10,7 @@
 
 库存占用统一调用 `inventory.reserve`：先锁定用户持有行，再重算全部活跃 reservation，最后写入出售、远征或 Mint 占用。库存扣减不得低于仍活跃的 reservation；市场成交和 Mint 成功先消费对应 reservation，再扣减总量。市场上架和按模板全部下架使用同一用户级事务 advisory lock；锁内按仍有剩余数量的不同模板计数，已有 10 种时只允许向现有模板追加。全部下架再按 FIFO 稳定顺序锁定本人该模板的全部有效挂单，原子取消并释放其剩余 reservation；没有有效挂单也以释放 0 的结果幂等成功。支付创建按用户和商品类型加事务锁，Mint 按用户和模板加事务锁并受活跃唯一约束，邀请奖励按邀请人加事务锁。
 
-操作 UUID 同时是 `Idempotency-Key` 与 `operation_id`。数据库对规范化请求计算 SHA-256；同键同请求回放持久结果，同键不同请求返回 `IDEMPOTENCY_KEY_REUSED`。开盒与转盘结果确认时间和原操作同表保存，各领域确认 RPC 锁定当前用户、原用例与终态并使用首次确认时间，重复与并发确认不改变结果。市场购买响应不包含卖家身份；库存满足 `total = available + listed + trading + minting + expedition`。
+操作 UUID 同时是 `Idempotency-Key` 与 `operation_id`。数据库对规范化请求计算 SHA-256；同键同请求回放持久结果，同键不同请求返回 `IDEMPOTENCY_KEY_REUSED`。开盒、转盘与进化结果的确认时间同原操作保存；领域专用确认 RPC 锁定当前用户、匹配固定 `use_case` 和终态，并只写入首次确认时间，重复与并发确认不改变结果。进化预览 RPC 只读取目录、真实可用数量、Fgems 和路线保底；最终结算仍由 `api.inventory_evolve` 在单一事务内重新校验并裁决。市场购买响应不包含卖家身份；库存满足 `total = available + listed + trading + minting + expedition`。
 
 预认证登录使用独立的 `identity.login_requests` 幂等表和域隔离 HMAC 请求摘要；用户创建、资料更新、首次入口候选、入口交接状态、旧会话撤销和新会话创建由 `api.identity_authenticate` 在同一事务完成。`banned` 分支只撤销会话，不创建新会话。邀请绑定的候选终态、邀请关系、操作终态和 `referral_processed_at` 必须在同一事务提交；异常回滚后交接仍为 `pending`。
 

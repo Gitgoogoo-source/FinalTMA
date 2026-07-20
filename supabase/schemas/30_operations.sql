@@ -18,7 +18,7 @@ create table operations.operations (
 create index operations_user_created_idx on operations.operations (user_id, created_at desc);
 create index operations_pending_idx on operations.operations (created_at) where status in ('pending', 'unknown');
 create index operations_result_recovery_idx on operations.operations (user_id, use_case, created_at)
-where use_case in ('gacha.open', 'wheel.spin') and result_acknowledged_at is null;
+where use_case in ('gacha.open', 'wheel.spin', 'inventory.evolve') and result_acknowledged_at is null;
 
 create table operations.webhook_events (
   provider text not null,

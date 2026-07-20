@@ -4180,6 +4180,1045 @@
         "x-refresh-scopes": []
       }
     },
+    "/api/inventory/{template_id}/evolution-preview": {
+      "get": {
+        "operationId": "inventory_evolution_preview",
+        "tags": ["inventory"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "minLength": 1, "maxLength": 128 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "source": {
+                          "type": "object",
+                          "properties": {
+                            "template_id": { "type": "string" },
+                            "name": { "type": "string" },
+                            "rarity": {
+                              "type": "string",
+                              "enum": [
+                                "common",
+                                "rare",
+                                "epic",
+                                "legendary",
+                                "mythic"
+                              ]
+                            },
+                            "stage": {
+                              "anyOf": [
+                                { "type": "number", "const": 1 },
+                                { "type": "number", "const": 2 },
+                                { "type": "number", "const": 3 }
+                              ]
+                            },
+                            "image_thumbnail_path": {
+                              "type": "string",
+                              "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                            },
+                            "image_detail_path": {
+                              "type": "string",
+                              "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                            }
+                          },
+                          "required": [
+                            "template_id",
+                            "name",
+                            "rarity",
+                            "stage",
+                            "image_thumbnail_path",
+                            "image_detail_path"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "target": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "template_id": { "type": "string" },
+                                "name": { "type": "string" },
+                                "rarity": {
+                                  "type": "string",
+                                  "enum": [
+                                    "common",
+                                    "rare",
+                                    "epic",
+                                    "legendary",
+                                    "mythic"
+                                  ]
+                                },
+                                "stage": {
+                                  "anyOf": [
+                                    { "type": "number", "const": 1 },
+                                    { "type": "number", "const": 2 },
+                                    { "type": "number", "const": 3 }
+                                  ]
+                                },
+                                "image_thumbnail_path": {
+                                  "type": "string",
+                                  "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                                },
+                                "image_detail_path": {
+                                  "type": "string",
+                                  "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                                }
+                              },
+                              "required": [
+                                "template_id",
+                                "name",
+                                "rarity",
+                                "stage",
+                                "image_thumbnail_path",
+                                "image_detail_path"
+                              ],
+                              "additionalProperties": false
+                            },
+                            { "type": "null" }
+                          ]
+                        },
+                        "materials": {
+                          "type": "object",
+                          "properties": {
+                            "required": { "type": "number", "const": 3 },
+                            "available": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "failure_consumed": {
+                              "type": "number",
+                              "const": 2
+                            },
+                            "failure_retained": { "type": "number", "const": 1 }
+                          },
+                          "required": [
+                            "required",
+                            "available",
+                            "failure_consumed",
+                            "failure_retained"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "success_rate_percent": {
+                          "anyOf": [
+                            { "type": "integer", "minimum": 1, "maximum": 100 },
+                            { "type": "null" }
+                          ]
+                        },
+                        "fgems": {
+                          "type": "object",
+                          "properties": {
+                            "cost": {
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "exclusiveMinimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                { "type": "null" }
+                              ]
+                            },
+                            "available": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            }
+                          },
+                          "required": ["cost", "available"],
+                          "additionalProperties": false
+                        },
+                        "pity": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "failure_count": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "guarantee_attempt": {
+                                  "type": "integer",
+                                  "exclusiveMinimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "failures_until_guaranteed": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "guaranteed_this_attempt": { "type": "boolean" }
+                              },
+                              "required": [
+                                "failure_count",
+                                "guarantee_attempt",
+                                "failures_until_guaranteed",
+                                "guaranteed_this_attempt"
+                              ],
+                              "additionalProperties": false
+                            },
+                            { "type": "null" }
+                          ]
+                        },
+                        "eligibility": {
+                          "type": "object",
+                          "properties": {
+                            "eligible": { "type": "boolean" },
+                            "reason": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "final_stage",
+                                    "target_unavailable",
+                                    "insufficient_materials",
+                                    "insufficient_fgems"
+                                  ]
+                                },
+                                { "type": "null" }
+                              ]
+                            }
+                          },
+                          "required": ["eligible", "reason"],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "source",
+                        "target",
+                        "materials",
+                        "success_rate_percent",
+                        "fgems",
+                        "pity",
+                        "eligibility"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "request_id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "operation_id": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        { "type": "null" }
+                      ]
+                    }
+                  },
+                  "required": ["data", "request_id", "operation_id"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Errors: REQUEST_INVALID, REQUEST_BODY_NOT_ALLOWED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "401": {
+            "description": "Errors: SESSION_EXPIRED, SESSION_REPLACED, SESSION_REQUIRED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "403": {
+            "description": "Errors: ACCOUNT_RESTRICTED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "404": {
+            "description": "Errors: INVENTORY_ITEM_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "409": {
+            "description": "Errors: ENTRY_HANDOFF_PENDING",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "500": {
+            "description": "Errors: DATABASE_RPC_FAILED, INTERNAL_ERROR",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "502": {
+            "description": "Errors: RESPONSE_INVALID",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          }
+        },
+        "x-idempotency-required": false,
+        "x-allow-pending-entry-handoff": false,
+        "x-error-codes": [
+          "DATABASE_RPC_FAILED",
+          "INTERNAL_ERROR",
+          "REQUEST_INVALID",
+          "RESPONSE_INVALID",
+          "REQUEST_BODY_NOT_ALLOWED",
+          "ACCOUNT_RESTRICTED",
+          "SESSION_EXPIRED",
+          "SESSION_REPLACED",
+          "SESSION_REQUIRED",
+          "ENTRY_HANDOFF_PENDING",
+          "INVENTORY_ITEM_NOT_FOUND"
+        ],
+        "x-error-definitions": {
+          "DATABASE_RPC_FAILED": {
+            "status": 500,
+            "message": "数据库操作失败",
+            "retryable": true,
+            "refreshScope": "all",
+            "recoveryAction": "query_operation"
+          },
+          "INTERNAL_ERROR": {
+            "status": 500,
+            "message": "服务暂时不可用",
+            "retryable": true,
+            "refreshScope": "all",
+            "recoveryAction": "query_operation"
+          },
+          "REQUEST_INVALID": {
+            "status": 400,
+            "message": "请求参数无效",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "RESPONSE_INVALID": {
+            "status": 502,
+            "message": "服务响应格式无效",
+            "retryable": true,
+            "refreshScope": "all",
+            "recoveryAction": "refresh"
+          },
+          "REQUEST_BODY_NOT_ALLOWED": {
+            "status": 400,
+            "message": "GET 请求不能携带请求体",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "ACCOUNT_RESTRICTED": {
+            "status": 403,
+            "message": "账户当前不可执行此操作",
+            "retryable": false,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
+          },
+          "SESSION_EXPIRED": {
+            "status": 401,
+            "message": "会话已过期",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "reauthenticate"
+          },
+          "SESSION_REPLACED": {
+            "status": 401,
+            "message": "会话已被替换",
+            "retryable": false,
+            "refreshScope": "session",
+            "recoveryAction": "reauthenticate"
+          },
+          "SESSION_REQUIRED": {
+            "status": 401,
+            "message": "请从 Telegram 重新进入应用",
+            "retryable": false,
+            "refreshScope": "session",
+            "recoveryAction": "reauthenticate"
+          },
+          "ENTRY_HANDOFF_PENDING": {
+            "status": 409,
+            "message": "邀请绑定结果确认中，请稍后刷新",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
+          },
+          "INVENTORY_ITEM_NOT_FOUND": {
+            "status": 404,
+            "message": "藏品不存在",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          }
+        },
+        "x-refresh-scopes": []
+      }
+    },
+    "/api/inventory/evolution/recovery": {
+      "get": {
+        "operationId": "inventory_evolution_recovery",
+        "tags": ["inventory"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "operations": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "operation_id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              "use_case": { "type": "string" },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "pending",
+                                  "succeeded",
+                                  "failed",
+                                  "unknown"
+                                ]
+                              },
+                              "result": {
+                                "anyOf": [
+                                  { "$ref": "#/$defs/__schema0" },
+                                  { "type": "null" }
+                                ]
+                              },
+                              "error_code": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "ACCOUNT_RESTRICTED",
+                                      "ALBUM_CHAIN_INCOMPLETE",
+                                      "ALBUM_REWARD_ALREADY_CLAIMED",
+                                      "API_ROUTE_NOT_FOUND",
+                                      "BOX_TIER_INVALID",
+                                      "CATALOG_INVALID",
+                                      "CATALOG_UNAVAILABLE",
+                                      "CHECKIN_ALREADY_CLAIMED",
+                                      "CONTENT_TYPE_INVALID",
+                                      "CRON_UNAUTHORIZED",
+                                      "DATABASE_RPC_FAILED",
+                                      "DRAW_COUNT_INVALID",
+                                      "ENTRY_HANDOFF_PENDING",
+                                      "EVOLUTION_NOT_AVAILABLE",
+                                      "EXPEDITION_ALREADY_ACTIVE",
+                                      "EXPEDITION_ITEMS_INVALID",
+                                      "EXPEDITION_LIMIT_REACHED",
+                                      "EXPEDITION_NOT_FOUND",
+                                      "EXPEDITION_NOT_READY",
+                                      "EXPEDITION_TIER_INVALID",
+                                      "FREE_ENTITLEMENT_UNAVAILABLE",
+                                      "IDEMPOTENCY_KEY_INVALID",
+                                      "IDEMPOTENCY_KEY_REQUIRED",
+                                      "IDEMPOTENCY_KEY_REUSED",
+                                      "INSUFFICIENT_BALANCE",
+                                      "INSUFFICIENT_INVENTORY",
+                                      "INTERNAL_ERROR",
+                                      "INVENTORY_ITEM_NOT_FOUND",
+                                      "INVENTORY_RESERVED",
+                                      "JOB_NOT_FOUND",
+                                      "MARKET_ACTIVE_TEMPLATE_LIMIT",
+                                      "MARKET_STOCK_INSUFFICIENT",
+                                      "METHOD_NOT_ALLOWED",
+                                      "MINT_ALREADY_ACTIVE",
+                                      "MINT_IN_PROGRESS",
+                                      "MINT_RESULT_INCOMPLETE",
+                                      "MINT_NOT_CANCELLABLE",
+                                      "MINT_NOT_FOUND",
+                                      "MINT_NOT_SUBMITTABLE",
+                                      "NFT_METADATA_NOT_FOUND",
+                                      "OPERATION_FAILED",
+                                      "OPERATION_NOT_ACKNOWLEDGEABLE",
+                                      "OPERATION_NOT_FOUND",
+                                      "OPERATION_RESULT_INVALID",
+                                      "PAYMENT_ALREADY_PENDING",
+                                      "PAYMENT_ALREADY_PROCESSING",
+                                      "PAYMENT_CANCELLED",
+                                      "PAYMENT_EXPIRED",
+                                      "PAYMENT_MISMATCH",
+                                      "PAYMENT_NOT_DELIVERABLE",
+                                      "PAYMENT_NOT_FOUND",
+                                      "RATE_LIMITED",
+                                      "REFERRAL_ALREADY_BOUND",
+                                      "REFERRAL_ALREADY_RECHARGED",
+                                      "REFERRAL_CANDIDATE_EXPIRED",
+                                      "REFERRAL_CODE_INVALID",
+                                      "REFERRAL_INELIGIBLE",
+                                      "REFERRAL_INVALID",
+                                      "REFERRAL_INVITER_UNAVAILABLE",
+                                      "REFERRAL_OLD_USER",
+                                      "REFERRAL_SELF_BIND",
+                                      "REQUEST_BODY_NOT_ALLOWED",
+                                      "REQUEST_INVALID",
+                                      "REQUEST_TOO_LARGE",
+                                      "RESPONSE_INVALID",
+                                      "SESSION_EXPIRED",
+                                      "SESSION_REPLACED",
+                                      "SESSION_REQUIRED",
+                                      "SHARE_EVENT_INVALID",
+                                      "TASK_ALREADY_CLAIMED",
+                                      "TASK_NOT_COMPLETE",
+                                      "TASK_NOT_FOUND",
+                                      "TELEGRAM_API_FAILED",
+                                      "TELEGRAM_INIT_DATA_EXPIRED",
+                                      "TELEGRAM_INIT_DATA_INVALID",
+                                      "TELEGRAM_INIT_DATA_TIME_INVALID",
+                                      "TELEGRAM_START_PARAM_INVALID",
+                                      "TELEGRAM_REENTRY_REQUIRED",
+                                      "TELEGRAM_UPDATE_INVALID",
+                                      "TEMPLATE_NOT_FOUND",
+                                      "TOPUP_AMOUNT_INVALID",
+                                      "TOPUP_NOT_REQUIRED",
+                                      "TRANSACTION_ALREADY_USED",
+                                      "VIP_ALREADY_CLAIMED",
+                                      "VIP_BENEFIT_INVALID",
+                                      "VIP_INACTIVE",
+                                      "VIP_RENEWAL_LIMIT",
+                                      "WALLET_ADDRESS_IN_USE",
+                                      "WALLET_CHALLENGE_INVALID",
+                                      "WALLET_NOT_CONNECTED",
+                                      "WALLET_NOT_VERIFIED",
+                                      "WALLET_PROOF_INVALID",
+                                      "WEBHOOK_UNAUTHORIZED",
+                                      "WHEEL_COUNT_INVALID",
+                                      "WHEEL_DAILY_LIMIT"
+                                    ]
+                                  },
+                                  { "type": "null" }
+                                ]
+                              },
+                              "acknowledged_at": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "format": "date-time",
+                                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                  },
+                                  { "type": "null" }
+                                ]
+                              },
+                              "created_at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                              },
+                              "updated_at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                              }
+                            },
+                            "required": [
+                              "operation_id",
+                              "use_case",
+                              "status",
+                              "result",
+                              "error_code",
+                              "acknowledged_at",
+                              "created_at",
+                              "updated_at"
+                            ],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": ["operations"],
+                      "additionalProperties": false
+                    },
+                    "request_id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "operation_id": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        { "type": "null" }
+                      ]
+                    }
+                  },
+                  "required": ["data", "request_id", "operation_id"],
+                  "additionalProperties": false,
+                  "$defs": {
+                    "__schema0": {
+                      "anyOf": [
+                        { "type": "string" },
+                        { "type": "number" },
+                        { "type": "boolean" },
+                        { "type": "null" },
+                        {
+                          "type": "array",
+                          "items": { "$ref": "#/$defs/__schema0" }
+                        },
+                        {
+                          "type": "object",
+                          "propertyNames": { "type": "string" },
+                          "additionalProperties": {
+                            "$ref": "#/$defs/__schema0"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Errors: REQUEST_INVALID, REQUEST_BODY_NOT_ALLOWED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "401": {
+            "description": "Errors: SESSION_EXPIRED, SESSION_REPLACED, SESSION_REQUIRED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "403": {
+            "description": "Errors: ACCOUNT_RESTRICTED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "409": {
+            "description": "Errors: ENTRY_HANDOFF_PENDING",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "500": {
+            "description": "Errors: DATABASE_RPC_FAILED, INTERNAL_ERROR",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "502": {
+            "description": "Errors: RESPONSE_INVALID",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          }
+        },
+        "x-idempotency-required": false,
+        "x-allow-pending-entry-handoff": false,
+        "x-error-codes": [
+          "DATABASE_RPC_FAILED",
+          "INTERNAL_ERROR",
+          "REQUEST_INVALID",
+          "RESPONSE_INVALID",
+          "REQUEST_BODY_NOT_ALLOWED",
+          "ACCOUNT_RESTRICTED",
+          "SESSION_EXPIRED",
+          "SESSION_REPLACED",
+          "SESSION_REQUIRED",
+          "ENTRY_HANDOFF_PENDING"
+        ],
+        "x-error-definitions": {
+          "DATABASE_RPC_FAILED": {
+            "status": 500,
+            "message": "数据库操作失败",
+            "retryable": true,
+            "refreshScope": "all",
+            "recoveryAction": "query_operation"
+          },
+          "INTERNAL_ERROR": {
+            "status": 500,
+            "message": "服务暂时不可用",
+            "retryable": true,
+            "refreshScope": "all",
+            "recoveryAction": "query_operation"
+          },
+          "REQUEST_INVALID": {
+            "status": 400,
+            "message": "请求参数无效",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "RESPONSE_INVALID": {
+            "status": 502,
+            "message": "服务响应格式无效",
+            "retryable": true,
+            "refreshScope": "all",
+            "recoveryAction": "refresh"
+          },
+          "REQUEST_BODY_NOT_ALLOWED": {
+            "status": 400,
+            "message": "GET 请求不能携带请求体",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "ACCOUNT_RESTRICTED": {
+            "status": 403,
+            "message": "账户当前不可执行此操作",
+            "retryable": false,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
+          },
+          "SESSION_EXPIRED": {
+            "status": 401,
+            "message": "会话已过期",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "reauthenticate"
+          },
+          "SESSION_REPLACED": {
+            "status": 401,
+            "message": "会话已被替换",
+            "retryable": false,
+            "refreshScope": "session",
+            "recoveryAction": "reauthenticate"
+          },
+          "SESSION_REQUIRED": {
+            "status": 401,
+            "message": "请从 Telegram 重新进入应用",
+            "retryable": false,
+            "refreshScope": "session",
+            "recoveryAction": "reauthenticate"
+          },
+          "ENTRY_HANDOFF_PENDING": {
+            "status": 409,
+            "message": "邀请绑定结果确认中，请稍后刷新",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
+          }
+        },
+        "x-refresh-scopes": []
+      }
+    },
+    "/api/inventory/evolution/results/{operation_id}/acknowledge": {
+      "post": {
+        "operationId": "inventory_acknowledge_evolution_result",
+        "tags": ["inventory"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "operation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "operation_id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "acknowledged_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                        }
+                      },
+                      "required": ["operation_id", "acknowledged_at"],
+                      "additionalProperties": false
+                    },
+                    "request_id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "operation_id": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        { "type": "null" }
+                      ]
+                    }
+                  },
+                  "required": ["data", "request_id", "operation_id"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Errors: REQUEST_INVALID",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "401": {
+            "description": "Errors: SESSION_EXPIRED, SESSION_REPLACED, SESSION_REQUIRED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "403": {
+            "description": "Errors: ACCOUNT_RESTRICTED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "404": {
+            "description": "Errors: OPERATION_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "409": {
+            "description": "Errors: ENTRY_HANDOFF_PENDING, OPERATION_NOT_ACKNOWLEDGEABLE",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "413": {
+            "description": "Errors: REQUEST_TOO_LARGE",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "415": {
+            "description": "Errors: CONTENT_TYPE_INVALID",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "500": {
+            "description": "Errors: DATABASE_RPC_FAILED, INTERNAL_ERROR",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "502": {
+            "description": "Errors: RESPONSE_INVALID",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          }
+        },
+        "x-idempotency-required": false,
+        "x-allow-pending-entry-handoff": false,
+        "x-error-codes": [
+          "DATABASE_RPC_FAILED",
+          "INTERNAL_ERROR",
+          "REQUEST_INVALID",
+          "RESPONSE_INVALID",
+          "CONTENT_TYPE_INVALID",
+          "REQUEST_TOO_LARGE",
+          "ACCOUNT_RESTRICTED",
+          "SESSION_EXPIRED",
+          "SESSION_REPLACED",
+          "SESSION_REQUIRED",
+          "ENTRY_HANDOFF_PENDING",
+          "OPERATION_NOT_FOUND",
+          "OPERATION_NOT_ACKNOWLEDGEABLE"
+        ],
+        "x-error-definitions": {
+          "DATABASE_RPC_FAILED": {
+            "status": 500,
+            "message": "数据库操作失败",
+            "retryable": true,
+            "refreshScope": "all",
+            "recoveryAction": "query_operation"
+          },
+          "INTERNAL_ERROR": {
+            "status": 500,
+            "message": "服务暂时不可用",
+            "retryable": true,
+            "refreshScope": "all",
+            "recoveryAction": "query_operation"
+          },
+          "REQUEST_INVALID": {
+            "status": 400,
+            "message": "请求参数无效",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "RESPONSE_INVALID": {
+            "status": 502,
+            "message": "服务响应格式无效",
+            "retryable": true,
+            "refreshScope": "all",
+            "recoveryAction": "refresh"
+          },
+          "CONTENT_TYPE_INVALID": {
+            "status": 415,
+            "message": "请求体必须使用 application/json",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "REQUEST_TOO_LARGE": {
+            "status": 413,
+            "message": "请求体过大",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "ACCOUNT_RESTRICTED": {
+            "status": 403,
+            "message": "账户当前不可执行此操作",
+            "retryable": false,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
+          },
+          "SESSION_EXPIRED": {
+            "status": 401,
+            "message": "会话已过期",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "reauthenticate"
+          },
+          "SESSION_REPLACED": {
+            "status": 401,
+            "message": "会话已被替换",
+            "retryable": false,
+            "refreshScope": "session",
+            "recoveryAction": "reauthenticate"
+          },
+          "SESSION_REQUIRED": {
+            "status": 401,
+            "message": "请从 Telegram 重新进入应用",
+            "retryable": false,
+            "refreshScope": "session",
+            "recoveryAction": "reauthenticate"
+          },
+          "ENTRY_HANDOFF_PENDING": {
+            "status": 409,
+            "message": "邀请绑定结果确认中，请稍后刷新",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
+          },
+          "OPERATION_NOT_FOUND": {
+            "status": 404,
+            "message": "操作记录不存在",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "OPERATION_NOT_ACKNOWLEDGEABLE": {
+            "status": 409,
+            "message": "操作结果尚未确定",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          }
+        },
+        "x-refresh-scopes": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/inventory/evolve": {
       "post": {
         "operationId": "inventory_evolve",
@@ -4206,28 +5245,157 @@
                       "type": "object",
                       "properties": {
                         "success": { "type": "boolean" },
-                        "source_template_id": { "type": "string" },
-                        "target_template_id": { "type": "string" },
-                        "target_name": { "type": "string" },
-                        "target_rarity": {
-                          "type": "string",
-                          "enum": [
-                            "common",
-                            "rare",
-                            "epic",
-                            "legendary",
-                            "mythic"
-                          ]
+                        "source": {
+                          "type": "object",
+                          "properties": {
+                            "template_id": { "type": "string" },
+                            "name": { "type": "string" },
+                            "rarity": {
+                              "type": "string",
+                              "enum": [
+                                "common",
+                                "rare",
+                                "epic",
+                                "legendary",
+                                "mythic"
+                              ]
+                            },
+                            "stage": {
+                              "anyOf": [
+                                { "type": "number", "const": 1 },
+                                { "type": "number", "const": 2 },
+                                { "type": "number", "const": 3 }
+                              ]
+                            },
+                            "image_thumbnail_path": {
+                              "type": "string",
+                              "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                            },
+                            "image_detail_path": {
+                              "type": "string",
+                              "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                            }
+                          },
+                          "required": [
+                            "template_id",
+                            "name",
+                            "rarity",
+                            "stage",
+                            "image_thumbnail_path",
+                            "image_detail_path"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "target": {
+                          "type": "object",
+                          "properties": {
+                            "template_id": { "type": "string" },
+                            "name": { "type": "string" },
+                            "rarity": {
+                              "type": "string",
+                              "enum": [
+                                "common",
+                                "rare",
+                                "epic",
+                                "legendary",
+                                "mythic"
+                              ]
+                            },
+                            "stage": {
+                              "anyOf": [
+                                { "type": "number", "const": 1 },
+                                { "type": "number", "const": 2 },
+                                { "type": "number", "const": 3 }
+                              ]
+                            },
+                            "image_thumbnail_path": {
+                              "type": "string",
+                              "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                            },
+                            "image_detail_path": {
+                              "type": "string",
+                              "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                            }
+                          },
+                          "required": [
+                            "template_id",
+                            "name",
+                            "rarity",
+                            "stage",
+                            "image_thumbnail_path",
+                            "image_detail_path"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "materials": {
+                          "type": "object",
+                          "properties": {
+                            "required": { "type": "number", "const": 3 },
+                            "consumed": {
+                              "anyOf": [
+                                { "type": "number", "const": 2 },
+                                { "type": "number", "const": 3 }
+                              ]
+                            },
+                            "retained": {
+                              "anyOf": [
+                                { "type": "number", "const": 0 },
+                                { "type": "number", "const": 1 }
+                              ]
+                            }
+                          },
+                          "required": ["required", "consumed", "retained"],
+                          "additionalProperties": false
+                        },
+                        "success_rate_percent": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 100
                         },
                         "fgems_spent": {
                           "type": "integer",
                           "exclusiveMinimum": 0,
                           "maximum": 9007199254740991
                         },
-                        "failure_count": {
-                          "type": "integer",
-                          "minimum": 0,
-                          "maximum": 9007199254740991
+                        "pity": {
+                          "type": "object",
+                          "properties": {
+                            "previous_failure_count": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "current_failure_count": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "guarantee_attempt": {
+                              "type": "integer",
+                              "exclusiveMinimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "failures_until_guaranteed": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "guaranteed_this_attempt": { "type": "boolean" }
+                          },
+                          "required": [
+                            "previous_failure_count",
+                            "current_failure_count",
+                            "guarantee_attempt",
+                            "failures_until_guaranteed",
+                            "guaranteed_this_attempt"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "target_awarded": {
+                          "anyOf": [
+                            { "type": "number", "const": 0 },
+                            { "type": "number", "const": 1 }
+                          ]
                         },
                         "new_album": { "type": "boolean" },
                         "assets": {
@@ -4282,12 +5450,13 @@
                       },
                       "required": [
                         "success",
-                        "source_template_id",
-                        "target_template_id",
-                        "target_name",
-                        "target_rarity",
+                        "source",
+                        "target",
+                        "materials",
+                        "success_rate_percent",
                         "fgems_spent",
-                        "failure_count",
+                        "pity",
+                        "target_awarded",
                         "new_album",
                         "assets"
                       ],
@@ -4327,28 +5496,157 @@
                       "type": "object",
                       "properties": {
                         "success": { "type": "boolean" },
-                        "source_template_id": { "type": "string" },
-                        "target_template_id": { "type": "string" },
-                        "target_name": { "type": "string" },
-                        "target_rarity": {
-                          "type": "string",
-                          "enum": [
-                            "common",
-                            "rare",
-                            "epic",
-                            "legendary",
-                            "mythic"
-                          ]
+                        "source": {
+                          "type": "object",
+                          "properties": {
+                            "template_id": { "type": "string" },
+                            "name": { "type": "string" },
+                            "rarity": {
+                              "type": "string",
+                              "enum": [
+                                "common",
+                                "rare",
+                                "epic",
+                                "legendary",
+                                "mythic"
+                              ]
+                            },
+                            "stage": {
+                              "anyOf": [
+                                { "type": "number", "const": 1 },
+                                { "type": "number", "const": 2 },
+                                { "type": "number", "const": 3 }
+                              ]
+                            },
+                            "image_thumbnail_path": {
+                              "type": "string",
+                              "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                            },
+                            "image_detail_path": {
+                              "type": "string",
+                              "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                            }
+                          },
+                          "required": [
+                            "template_id",
+                            "name",
+                            "rarity",
+                            "stage",
+                            "image_thumbnail_path",
+                            "image_detail_path"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "target": {
+                          "type": "object",
+                          "properties": {
+                            "template_id": { "type": "string" },
+                            "name": { "type": "string" },
+                            "rarity": {
+                              "type": "string",
+                              "enum": [
+                                "common",
+                                "rare",
+                                "epic",
+                                "legendary",
+                                "mythic"
+                              ]
+                            },
+                            "stage": {
+                              "anyOf": [
+                                { "type": "number", "const": 1 },
+                                { "type": "number", "const": 2 },
+                                { "type": "number", "const": 3 }
+                              ]
+                            },
+                            "image_thumbnail_path": {
+                              "type": "string",
+                              "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                            },
+                            "image_detail_path": {
+                              "type": "string",
+                              "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                            }
+                          },
+                          "required": [
+                            "template_id",
+                            "name",
+                            "rarity",
+                            "stage",
+                            "image_thumbnail_path",
+                            "image_detail_path"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "materials": {
+                          "type": "object",
+                          "properties": {
+                            "required": { "type": "number", "const": 3 },
+                            "consumed": {
+                              "anyOf": [
+                                { "type": "number", "const": 2 },
+                                { "type": "number", "const": 3 }
+                              ]
+                            },
+                            "retained": {
+                              "anyOf": [
+                                { "type": "number", "const": 0 },
+                                { "type": "number", "const": 1 }
+                              ]
+                            }
+                          },
+                          "required": ["required", "consumed", "retained"],
+                          "additionalProperties": false
+                        },
+                        "success_rate_percent": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 100
                         },
                         "fgems_spent": {
                           "type": "integer",
                           "exclusiveMinimum": 0,
                           "maximum": 9007199254740991
                         },
-                        "failure_count": {
-                          "type": "integer",
-                          "minimum": 0,
-                          "maximum": 9007199254740991
+                        "pity": {
+                          "type": "object",
+                          "properties": {
+                            "previous_failure_count": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "current_failure_count": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "guarantee_attempt": {
+                              "type": "integer",
+                              "exclusiveMinimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "failures_until_guaranteed": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "guaranteed_this_attempt": { "type": "boolean" }
+                          },
+                          "required": [
+                            "previous_failure_count",
+                            "current_failure_count",
+                            "guarantee_attempt",
+                            "failures_until_guaranteed",
+                            "guaranteed_this_attempt"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "target_awarded": {
+                          "anyOf": [
+                            { "type": "number", "const": 0 },
+                            { "type": "number", "const": 1 }
+                          ]
                         },
                         "new_album": { "type": "boolean" },
                         "assets": {
@@ -4403,12 +5701,13 @@
                       },
                       "required": [
                         "success",
-                        "source_template_id",
-                        "target_template_id",
-                        "target_name",
-                        "target_rarity",
+                        "source",
+                        "target",
+                        "materials",
+                        "success_rate_percent",
                         "fgems_spent",
-                        "failure_count",
+                        "pity",
+                        "target_awarded",
                         "new_album",
                         "assets"
                       ],

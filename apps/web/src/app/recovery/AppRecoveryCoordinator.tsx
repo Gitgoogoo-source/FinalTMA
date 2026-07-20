@@ -9,6 +9,7 @@ import {
 } from "../../workflows/payment-recovery/index.ts";
 import {
   useBlockingOperationRecovery,
+  useEvolutionResultRecovery,
   useGachaResultRecovery,
   useWheelResultRecovery,
 } from "../../workflows/operation-recovery/index.ts";
@@ -37,6 +38,7 @@ export function AppRecoveryCoordinator({
     closeDialogs();
   }, [clearTopupRequest, closeDialogs]);
   useBlockingOperationRecovery(bootstrap.data?.blocking_operations);
+  useEvolutionResultRecovery();
   useGachaResultRecovery();
   useWheelResultRecovery();
   useMintRecovery(bootstrap.data?.pending_mints);

@@ -1,6 +1,6 @@
 import { BookOpen } from "lucide-react";
-import { useState, type ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState, type ReactNode } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { CatalogImage } from "../../../shared/ui/index.tsx";
 import { useApiQuery } from "../../../platform/query/index.ts";
@@ -16,14 +16,30 @@ export function InventoryView({
   const query = useApiQuery("inventory.list");
   const { templateIds: newTemplateIds, clearNew } = useNewMarkers();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const items = query.data?.items ?? [];
   const [selectedId, setSelectedId] = useState("");
   const [imageReady, setImageReady] = useState(false);
-  const effectiveId = items.some((item) => item.template_id === selectedId)
-    ? selectedId
-    : (items[0]?.template_id ?? "");
+  const requestedId = searchParams.get("template") ?? "";
+  const effectiveId = items.some((item) => item.template_id === requestedId)
+    ? requestedId
+    : items.some((item) => item.template_id === selectedId)
+      ? selectedId
+      : (items[0]?.template_id ?? "");
   const item = items.find((candidate) => candidate.template_id === effectiveId);
   const itemIsNew = Boolean(item && newTemplateIds.has(item.template_id));
+  useEffect(() => {
+    if (
+      !item ||
+      searchParams.get("view") !== "details" ||
+      requestedId !== item.template_id
+    )
+      return;
+    clearNew(item.template_id);
+    const next = new URLSearchParams(searchParams);
+    next.delete("view");
+    setSearchParams(next, { replace: true });
+  }, [clearNew, item, requestedId, searchParams, setSearchParams]);
   return (
     <main className="page inventory-page">
       <header className="page-heading inventory-heading">
@@ -103,6 +119,7 @@ export function InventoryView({
                       if (!selected) {
                         setSelectedId(candidate.template_id);
                         setImageReady(false);
+                        setSearchParams({}, { replace: true });
                       }
                       if (isNew) clearNew(candidate.template_id);
                     }}

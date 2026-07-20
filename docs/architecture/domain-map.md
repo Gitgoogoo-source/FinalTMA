@@ -21,7 +21,7 @@
 | 15 VIP        | vip                         | vip、integrations                        | vip、payments、economy                   | 30 UTC 日、续费上限、每日手动领取                   |
 | 16 登录       | session-bootstrap、platform | identity                                 | identity、operations                     | initData、交接状态、限流、短会话、封禁迟到响应隔离  |
 | 17 藏品       | inventory                   | inventory                                | inventory                                | 模板加数量、预留不可重复使用                        |
-| 18 进化       | inventory、evolution        | evolution                                | 43_evolution、inventory、economy         | 三材料、Fgems、路线保底和任务原子变化               |
+| 18 进化       | inventory、evolution        | evolution                                | 43_evolution、inventory、economy         | 只读预览、二次确认、原子结算、结果恢复与会话 NEW    |
 | 19 顶部资产栏 | app/shell                   | identity                                 | economy、vip、onchain                    | 真实资产回正、钱包和 VIP 状态同步                   |
 | 20 风控退款   | app/guards                  | refund-risk workflow、integrations、jobs | risk、payments、operations               | 重复退款无副作用、封禁空白门禁                      |
 
