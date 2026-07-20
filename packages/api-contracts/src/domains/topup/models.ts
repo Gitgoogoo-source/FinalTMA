@@ -36,8 +36,11 @@ export const paymentSchema = z
     kind: z.enum(["kcoin_topup", "vip"]),
     status: z.enum([
       "pending",
+      "processing",
       "paid",
       "delivered",
+      "failed",
+      "cancelled",
       "expired",
       "refunded",
       "rejected",
@@ -46,8 +49,11 @@ export const paymentSchema = z
     kcoin_amount: nonNegativeIntegerSchema,
     invoice_url: z.string().url().nullable(),
     expires_at: timestampSchema,
+    checkout_started_at: timestampSchema.nullable(),
     paid_at: timestampSchema.nullable(),
     delivered_at: timestampSchema.nullable(),
+    failed_at: timestampSchema.nullable(),
+    cancelled_at: timestampSchema.nullable(),
     intent: paymentIntentSchema.nullable(),
   })
   .strict();

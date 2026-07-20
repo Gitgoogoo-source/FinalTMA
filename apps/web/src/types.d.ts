@@ -27,7 +27,10 @@ interface TelegramWebApp {
   ready(): void;
   expand(): void;
   close(): void;
-  openInvoice(url: string, callback?: (status: string) => void): void;
+  openInvoice(
+    url: string,
+    callback?: (status: "paid" | "cancelled" | "failed" | "pending") => void,
+  ): void;
   openTelegramLink(url: string): void;
   enableClosingConfirmation(): void;
   disableClosingConfirmation(): void;

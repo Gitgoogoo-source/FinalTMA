@@ -19,6 +19,7 @@ export type OperationRegistryValue = {
     label: string,
     routeId: Id,
     input: RouteInput<Id>,
+    options?: { background?: boolean },
   ): Promise<RouteOutput<Id> | null>;
   isBlocked(routeId: RecoverableRouteId): boolean;
   hydrate(operations: readonly TypedOperationSummary[]): void;

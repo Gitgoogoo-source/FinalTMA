@@ -32,6 +32,8 @@ export const vipRoutes = [
     errors: [
       "VIP_RENEWAL_LIMIT",
       "PAYMENT_ALREADY_PENDING",
+      "PAYMENT_NOT_FOUND",
+      "TELEGRAM_API_FAILED",
       "IDEMPOTENCY_KEY_REUSED",
       "INTERNAL_ERROR",
     ],

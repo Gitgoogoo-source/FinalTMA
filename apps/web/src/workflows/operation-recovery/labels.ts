@@ -18,6 +18,8 @@ const labels: Partial<Record<RecoverableRouteId, string>> = {
   "tasks.check_in": "正在领取签到奖励",
   "tasks.claim": "正在领取任务奖励",
   "topup.create_order": "正在创建 Telegram Stars 订单",
+  "topup.cancel_order": "正在取消未付款订单",
+  "topup.fail_order": "正在确认充值失败结果",
   "vip.claim_fgems": "正在领取 VIP F-gems",
   "vip.claim_free_box": "正在领取 VIP 盲盒",
   "vip.create_order": "正在创建 VIP Stars 订单",

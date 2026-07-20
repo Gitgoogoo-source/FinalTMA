@@ -39,14 +39,29 @@ begin
   insert into operations.job_runs (job_name, status, scan_from, scan_to) values (p_job_name, 'running', v_scan_from, v_scan_to) returning id into v_run;
   begin
   if p_job_name = 'reconcile-payments' then
-    with expired as (
-      update payments.orders set status = 'expired', updated_at = now()
-      where id in (select id from payments.orders where status = 'pending' and expires_at <= now() order by expires_at limit greatest(1, least(p_limit, 500)) for update skip locked)
-      returning operation_id, id
-    )
-    update operations.operations o set status = 'failed', error_code = 'PAYMENT_EXPIRED', result = jsonb_build_object('payment_id', expired.id, 'status', 'expired'), completed_at = now(), updated_at = now()
-    from expired where o.id = expired.operation_id;
-    get diagnostics v_count = row_count;
+    for v_row in
+      update payments.orders
+      set status = case when status = 'pending' then 'expired' else 'failed' end,
+          failed_at = case when status = 'processing' then now() else failed_at end,
+          updated_at = now()
+      where id in (
+        select id from payments.orders
+        where status in ('pending', 'processing') and expires_at <= now()
+        order by expires_at limit greatest(1, least(p_limit, 500))
+        for update skip locked
+      )
+      returning operation_id, id, status
+    loop
+      update operations.operations
+      set status = 'failed', error_code = 'PAYMENT_EXPIRED',
+          result = jsonb_build_object('payment_id', v_row.id, 'status', v_row.status),
+          completed_at = now(), updated_at = now()
+      where id = v_row.operation_id and status in ('pending', 'unknown');
+      update operations.operations
+      set result = (select payments.order_json(p) from payments.orders p where p.id = v_row.id), updated_at = now()
+      where id = v_row.operation_id and status = 'succeeded';
+      v_count := v_count + 1;
+    end loop;
     for v_row in select id from payments.orders where status = 'paid' order by paid_at limit greatest(1, least(p_limit, 500)) for update skip locked loop
       perform payments.deliver(v_row.id);
       v_count := v_count + 1;
@@ -59,7 +74,7 @@ begin
   elsif p_job_name = 'cleanup-idempotency' then
     delete from operations.operations where id in (
       select id from operations.operations where created_at < now() - interval '30 days' and status in ('succeeded', 'failed')
-        and not exists (select 1 from payments.orders p where p.operation_id = operations.operations.id and p.status in ('pending', 'paid'))
+        and not exists (select 1 from payments.orders p where p.operation_id = operations.operations.id and p.status in ('pending', 'processing', 'paid'))
         and not exists (select 1 from onchain.mints m where m.operation_id = operations.operations.id and m.status in ('reserved', 'submitted', 'unknown'))
       order by created_at limit greatest(1, least(p_limit, 500))
     );
@@ -92,7 +107,7 @@ begin
     insert into operations.invariant_violations (code, subject, details)
     select 'OPEN_OPERATION_WITHOUT_SUBJECT', o.id::text, jsonb_build_object('use_case', o.use_case, 'status', o.status)
     from operations.operations o where o.status in ('pending', 'unknown') and o.created_at < now() - interval '1 day'
-      and not exists (select 1 from payments.orders p where p.operation_id = o.id and p.status in ('pending', 'paid'))
+      and not exists (select 1 from payments.orders p where p.operation_id = o.id and p.status in ('pending', 'processing', 'paid'))
       and not exists (select 1 from onchain.mints m where m.operation_id = o.id and m.status in ('reserved', 'submitted', 'unknown'))
     on conflict do nothing;
     get diagnostics v_added = row_count; v_count := v_count + v_added;

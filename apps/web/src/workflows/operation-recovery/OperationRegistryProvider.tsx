@@ -112,10 +112,27 @@ export function OperationRegistryProvider({
       label: string,
       routeId: Id,
       input: RouteInput<Id>,
+      options?: { background?: boolean },
     ): Promise<RouteOutput<Id> | null> => {
       const sessionGeneration = getSession()?.generation;
       if (!sessionGeneration || getSession()?.accountStatus !== "normal")
         return null;
+      if (options?.background) {
+        try {
+          const response = await apiRequest(routeId, input, {
+            idempotencyKey: newIdempotencyKey(),
+          });
+          if (isCurrentNormalSession(sessionGeneration))
+            await refreshRouteScopes(routeId).catch(() => undefined);
+          return isCurrentNormalSession(sessionGeneration)
+            ? response.data
+            : null;
+        } catch {
+          if (isCurrentNormalSession(sessionGeneration))
+            await refreshRouteScopes(routeId).catch(() => undefined);
+          return null;
+        }
+      }
       const existing = Object.values(operationsRef.current).find(
         (operation) =>
           operation.sessionGeneration === sessionGeneration &&

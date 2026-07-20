@@ -8,7 +8,7 @@
 | 2 盲盒保底    | gacha                       | gacha                                    | gacha                                    | 三档独立、仅付费推进、逐抽重置                      |
 | 3 远征        | expedition                  | expedition                               | expedition、inventory、economy           | 正好 3 个单位、跨日、领取原子释放                   |
 | 4 幸运转盘    | wheel                       | wheel                                    | wheel、economy                           | 1/10 次原子结算、每日 20 次、资格替换               |
-| 5 K-coin 充值 | topup、payment-recovery     | topup、stars-payment workflow            | payments、economy                        | Stars 成功后唯一交付、15 分钟过期、原意图只恢复确认 |
+| 5 K-coin 充值 | topup、payment-recovery     | topup、stars-payment workflow            | payments、economy                        | 付款前可取消、提交后锁定、成功唯一交付、无充值冷却  |
 | 6 TON 钱包    | wallet                      | wallet                                   | onchain、identity                        | challenge、proof、防重放、地址唯一                  |
 | 7 Mint        | mint                        | mint、jobs                               | onchain、inventory、operations           | reserve、submit、reconcile、metadata 快照           |
 | 8 市场        | market                      | market                                   | market、inventory、economy、vip          | FIFO、整笔购买、逐卖家手续费和返还                  |

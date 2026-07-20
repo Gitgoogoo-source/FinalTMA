@@ -416,7 +416,10 @@ begin
     'pending_payments', coalesce((
       select jsonb_agg(payments.order_json(p) order by p.created_at desc)
       from payments.orders p
-      where p.user_id = v_user_id and p.status in ('pending', 'paid')
+      where p.user_id = v_user_id and (
+        p.status in ('processing', 'paid')
+        or (p.kind = 'vip' and p.status = 'pending')
+      )
     ), '[]'::jsonb),
     'pending_mints', coalesce((
       select jsonb_agg(onchain.mint_json(m) order by m.created_at desc)
@@ -689,6 +692,7 @@ create table economy.ledger (
 
 create index ledger_user_created_idx on economy.ledger (user_id, created_at desc);
 create index ledger_operation_idx on economy.ledger (operation_id) where operation_id is not null;
+create unique index ledger_stars_topup_reference_unique_idx on economy.ledger (reference) where reason = 'stars_topup';
 
 create table economy.entitlements (
   id uuid primary key default extensions.gen_random_uuid(),
@@ -1893,23 +1897,27 @@ create table payments.orders (
   kind text not null check (kind in ('kcoin_topup', 'vip')),
   stars_amount bigint not null check (stars_amount > 0),
   kcoin_amount bigint not null default 0 check (kcoin_amount >= 0),
-  status text not null default 'pending' check (status in ('pending', 'paid', 'delivered', 'expired', 'refunded', 'rejected')),
+  status text not null default 'pending' check (status in ('pending', 'processing', 'paid', 'delivered', 'failed', 'cancelled', 'expired', 'refunded', 'rejected')),
   invoice_payload text not null unique,
   invoice_url text,
+  pre_checkout_query_id text unique,
   telegram_payment_charge_id text unique,
   provider_payment_charge_id text,
   intent jsonb not null default '{}'::jsonb,
   expires_at timestamptz not null,
+  checkout_started_at timestamptz,
   paid_at timestamptz,
   delivered_at timestamptz,
+  failed_at timestamptz,
+  cancelled_at timestamptz,
   refunded_stars bigint not null default 0 check (refunded_stars >= 0),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
-create index payment_orders_pending_idx on payments.orders (expires_at, created_at) where status in ('pending', 'paid');
+create index payment_orders_pending_idx on payments.orders (expires_at, created_at) where status in ('pending', 'processing', 'paid');
 create index payment_orders_user_created_idx on payments.orders (user_id, created_at desc);
-create unique index payment_orders_user_kind_open_idx on payments.orders (user_id, kind) where status in ('pending', 'paid');
+create unique index payment_orders_user_kind_open_idx on payments.orders (user_id, kind) where status in ('pending', 'processing', 'paid');
 
 create or replace function payments.order_json(p_order payments.orders)
 returns jsonb
@@ -1925,8 +1933,11 @@ as $$
     'kcoin_amount', p_order.kcoin_amount,
     'invoice_url', p_order.invoice_url,
     'expires_at', p_order.expires_at,
+    'checkout_started_at', p_order.checkout_started_at,
     'paid_at', p_order.paid_at,
     'delivered_at', p_order.delivered_at,
+    'failed_at', p_order.failed_at,
+    'cancelled_at', p_order.cancelled_at,
     'intent', nullif(p_order.intent, '{}'::jsonb)
   )
 $$;
@@ -1997,6 +2008,7 @@ declare
   v_template catalog.templates%rowtype;
   v_box gacha.boxes%rowtype;
   v_order payments.orders%rowtype;
+  v_stale payments.orders%rowtype;
   v_result jsonb;
   v_detail text;
 begin
@@ -2006,8 +2018,24 @@ begin
   v_user_id := v_operation.user_id;
   begin
     perform pg_advisory_xact_lock(hashtextextended('pokepets:payment:' || v_user_id::text || ':kcoin_topup', 0));
-    if exists (select 1 from payments.orders where user_id = v_user_id and kind = 'kcoin_topup' and status in ('pending', 'paid')) then
-      perform api.raise_business_error('PAYMENT_ALREADY_PENDING', '已有待处理充值订单');
+    for v_stale in
+      select * from payments.orders
+      where user_id = v_user_id and kind = 'kcoin_topup' and status = 'pending' and checkout_started_at is null
+      for update
+    loop
+      update payments.orders
+      set status = 'cancelled', cancelled_at = now(), updated_at = now()
+      where id = v_stale.id
+      returning * into v_stale;
+      if exists (select 1 from operations.operations where id = v_stale.operation_id and status in ('pending', 'unknown')) then
+        perform operations.fail_command(v_stale.operation_id, 'PAYMENT_CANCELLED', payments.order_json(v_stale));
+      else
+        update operations.operations set result = payments.order_json(v_stale), updated_at = now()
+        where id = v_stale.operation_id;
+      end if;
+    end loop;
+    if exists (select 1 from payments.orders where user_id = v_user_id and kind = 'kcoin_topup' and status in ('processing', 'paid')) then
+      perform api.raise_business_error('PAYMENT_ALREADY_PROCESSING', '已有已提交支付的充值订单');
     end if;
     if p_intent is not null and p_intent <> '{}'::jsonb then
       select available into v_balance from economy.balances where user_id = v_user_id and currency = 'KCOIN' for update;
@@ -2078,7 +2106,7 @@ begin
     perform pg_advisory_xact_lock(hashtextextended('pokepets:payment:' || v_user_id::text || ':vip', 0));
     v_status := vip.status_json(v_user_id);
     if not coalesce((v_status->>'can_purchase')::boolean, false) and not coalesce((v_status->>'can_renew')::boolean, false) then perform api.raise_business_error('VIP_RENEWAL_LIMIT', '月卡续费次数已达上限'); end if;
-    if exists (select 1 from payments.orders where user_id = v_user_id and kind = 'vip' and status in ('pending', 'paid')) then perform api.raise_business_error('PAYMENT_ALREADY_PENDING', '已有待处理月卡订单'); end if;
+    if exists (select 1 from payments.orders where user_id = v_user_id and kind = 'vip' and status in ('pending', 'processing', 'paid')) then perform api.raise_business_error('PAYMENT_ALREADY_PENDING', '已有待处理月卡订单'); end if;
     insert into payments.orders (user_id, operation_id, kind, stars_amount, invoice_payload, expires_at)
     values (v_user_id, p_operation_id, 'vip', 199, 'pokepets:' || extensions.gen_random_uuid(), now() + interval '15 minutes') returning * into v_order;
     v_result := payments.order_json(v_order);
@@ -2102,8 +2130,102 @@ begin
   where id = p_order_id and status = 'pending' returning * into v_order;
   if v_order.id is null then perform api.raise_business_error('PAYMENT_NOT_FOUND', '支付订单不存在'); end if;
   v_result := payments.order_json(v_order);
-  update operations.operations set result = v_result, updated_at = now() where id = v_order.operation_id and status = 'pending';
-  return v_result;
+  return operations.complete_command(v_order.operation_id, v_result);
+end;
+$$;
+
+create or replace function api.payment_fail_invoice_creation(p_order_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare v_order payments.orders%rowtype;
+begin
+  select * into v_order from payments.orders where id = p_order_id for update;
+  if v_order.id is null then perform api.raise_business_error('PAYMENT_NOT_FOUND', '支付订单不存在'); end if;
+  if v_order.status = 'pending' and v_order.invoice_url is null then
+    update payments.orders set status = 'failed', failed_at = now(), updated_at = now()
+    where id = v_order.id returning * into v_order;
+    return operations.fail_command(v_order.operation_id, 'TELEGRAM_API_FAILED', payments.order_json(v_order));
+  end if;
+  return (select operations.operation_json(o) from operations.operations o where o.id = v_order.operation_id);
+end;
+$$;
+
+create or replace function api.topup_cancel_order(p_session_id uuid, p_operation_id uuid, p_order_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_operation operations.operations%rowtype;
+  v_replay jsonb;
+  v_user_id uuid;
+  v_order payments.orders%rowtype;
+  v_detail text;
+begin
+  v_operation := operations.begin_command(p_session_id, 'topup.cancel_order', p_operation_id, jsonb_build_object('order_id', p_order_id));
+  v_replay := operations.replay_if_finished(v_operation);
+  if v_replay is not null then return v_replay; end if;
+  v_user_id := v_operation.user_id;
+  begin
+    perform pg_advisory_xact_lock(hashtextextended('pokepets:payment:' || v_user_id::text || ':kcoin_topup', 0));
+    select * into v_order from payments.orders
+    where id = p_order_id and user_id = v_user_id and kind = 'kcoin_topup'
+    for update;
+    if v_order.id is null then perform api.raise_business_error('PAYMENT_NOT_FOUND', '支付订单不存在'); end if;
+    if v_order.status = 'pending' and v_order.checkout_started_at is null then
+      update payments.orders set status = 'cancelled', cancelled_at = now(), updated_at = now()
+      where id = v_order.id returning * into v_order;
+    elsif v_order.status in ('processing', 'paid') then
+      perform api.raise_business_error('PAYMENT_ALREADY_PROCESSING', '支付已经提交，当前不能取消');
+    end if;
+    update operations.operations set result = payments.order_json(v_order), updated_at = now()
+    where id = v_order.operation_id;
+    return operations.complete_command(p_operation_id, payments.order_json(v_order));
+  exception when others then
+    get stacked diagnostics v_detail = pg_exception_detail;
+    return operations.fail_command(p_operation_id, case when sqlstate = 'P0001' then sqlerrm else 'INTERNAL_ERROR' end, jsonb_build_object('detail', coalesce(v_detail, '{}')));
+  end;
+end;
+$$;
+
+create or replace function api.topup_fail_order(p_session_id uuid, p_operation_id uuid, p_order_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_operation operations.operations%rowtype;
+  v_replay jsonb;
+  v_user_id uuid;
+  v_order payments.orders%rowtype;
+  v_detail text;
+begin
+  v_operation := operations.begin_command(p_session_id, 'topup.fail_order', p_operation_id, jsonb_build_object('order_id', p_order_id));
+  v_replay := operations.replay_if_finished(v_operation);
+  if v_replay is not null then return v_replay; end if;
+  v_user_id := v_operation.user_id;
+  begin
+    perform pg_advisory_xact_lock(hashtextextended('pokepets:payment:' || v_user_id::text || ':kcoin_topup', 0));
+    select * into v_order from payments.orders
+    where id = p_order_id and user_id = v_user_id and kind = 'kcoin_topup'
+    for update;
+    if v_order.id is null then perform api.raise_business_error('PAYMENT_NOT_FOUND', '支付订单不存在'); end if;
+    if v_order.status in ('pending', 'processing') and v_order.telegram_payment_charge_id is null then
+      update payments.orders set status = 'failed', failed_at = now(), updated_at = now()
+      where id = v_order.id returning * into v_order;
+    end if;
+    update operations.operations set result = payments.order_json(v_order), updated_at = now()
+    where id = v_order.operation_id;
+    return operations.complete_command(p_operation_id, payments.order_json(v_order));
+  exception when others then
+    get stacked diagnostics v_detail = pg_exception_detail;
+    return operations.fail_command(p_operation_id, case when sqlstate = 'P0001' then sqlerrm else 'INTERNAL_ERROR' end, jsonb_build_object('detail', coalesce(v_detail, '{}')));
+  end;
 end;
 $$;
 
@@ -2164,7 +2286,7 @@ declare
 begin
   select payments.order_json(p) into v_pending
   from payments.orders p
-  where p.user_id = v_user_id and p.kind = 'vip' and p.status in ('pending', 'paid')
+  where p.user_id = v_user_id and p.kind = 'vip' and p.status in ('pending', 'processing', 'paid')
   order by p.created_at desc limit 1;
   return vip.status_json(v_user_id) || jsonb_build_object('pending_order', v_pending);
 end;
@@ -3138,7 +3260,7 @@ begin
   if v_order.status = 'delivered' then return payments.order_json(v_order); end if;
   if v_order.status <> 'paid' then perform api.raise_business_error('PAYMENT_NOT_DELIVERABLE', '支付订单尚不可交付'); end if;
   select * into v_user from identity.users where id = v_order.user_id for update;
-  if v_user.status <> 'normal' then
+  if v_order.kind = 'vip' and v_user.status <> 'normal' then
     update payments.orders set status = 'rejected', updated_at = now() where id = p_order_id returning * into v_order;
     perform operations.fail_command(v_order.operation_id, 'PAYMENT_DELIVERY_BLOCKED', payments.order_json(v_order));
     return payments.order_json(v_order);
@@ -3177,16 +3299,33 @@ as $$
   from payments.orders where id = p_order_id and status = 'pending'
 $$;
 
-create or replace function api.payment_validate(p_invoice_payload text, p_stars bigint)
+create or replace function api.payment_begin_checkout(p_pre_checkout_query_id text, p_invoice_payload text, p_stars bigint)
 returns jsonb
-language sql
+language plpgsql
 security definer
 set search_path = ''
 as $$
-  select coalesce((
-    select jsonb_build_object('valid', p.status = 'pending' and p.expires_at > now() and p.stars_amount = p_stars and u.status = 'normal', 'payment_id', p.id)
-    from payments.orders p join identity.users u on u.id = p.user_id where p.invoice_payload = p_invoice_payload
-  ), jsonb_build_object('valid', false, 'payment_id', null))
+declare
+  v_order payments.orders%rowtype;
+  v_user identity.users%rowtype;
+begin
+  select * into v_order from payments.orders where invoice_payload = p_invoice_payload for update;
+  if v_order.id is null or v_order.stars_amount <> p_stars then
+    return jsonb_build_object('valid', false, 'payment_id', null);
+  end if;
+  if v_order.status = 'processing' and v_order.pre_checkout_query_id = p_pre_checkout_query_id then
+    return jsonb_build_object('valid', true, 'payment_id', v_order.id);
+  end if;
+  select * into v_user from identity.users where id = v_order.user_id for update;
+  if v_order.status <> 'pending' or v_order.pre_checkout_query_id is not null or v_order.expires_at <= now() or v_user.status <> 'normal' then
+    return jsonb_build_object('valid', false, 'payment_id', v_order.id);
+  end if;
+  update payments.orders
+  set status = 'processing', pre_checkout_query_id = p_pre_checkout_query_id,
+      checkout_started_at = now(), updated_at = now()
+  where id = v_order.id;
+  return jsonb_build_object('valid', true, 'payment_id', v_order.id);
+end;
 $$;
 
 create or replace function api.payment_apply_success(
@@ -3208,12 +3347,15 @@ begin
   if not found then return jsonb_build_object('duplicate', true); end if;
   select * into v_order from payments.orders where invoice_payload = p_invoice_payload for update;
   if v_order.id is null or v_order.stars_amount <> p_stars then perform api.raise_business_error('PAYMENT_MISMATCH', '支付订单不匹配'); end if;
-  if v_order.telegram_payment_charge_id = p_telegram_charge_id and v_order.status in ('paid', 'delivered', 'refunded') then
+  if v_order.telegram_payment_charge_id = p_telegram_charge_id then
     update operations.webhook_events set processed_at = now() where provider = 'telegram_update' and event_id = p_update_id;
-    return jsonb_build_object('duplicate', true, 'order', payments.order_json(v_order));
+    return jsonb_build_object('duplicate', true, 'order', case when v_order.status = 'paid' then payments.deliver(v_order.id) else payments.order_json(v_order) end);
   end if;
-  if v_order.status <> 'pending' or v_order.expires_at <= now() then perform api.raise_business_error('PAYMENT_NOT_DELIVERABLE', '支付订单已失效'); end if;
-  update payments.orders set status = 'paid', telegram_payment_charge_id = p_telegram_charge_id, provider_payment_charge_id = p_provider_charge_id, paid_at = now(), updated_at = now() where id = v_order.id;
+  if v_order.telegram_payment_charge_id is not null then perform api.raise_business_error('PAYMENT_MISMATCH', '支付订单已绑定其他付款凭据'); end if;
+  update payments.orders
+  set status = 'paid', telegram_payment_charge_id = p_telegram_charge_id,
+      provider_payment_charge_id = p_provider_charge_id, paid_at = now(), updated_at = now()
+  where id = v_order.id;
   update operations.webhook_events set processed_at = now() where provider = 'telegram_update' and event_id = p_update_id;
   return jsonb_build_object('duplicate', false, 'order', payments.deliver(v_order.id));
 end;
@@ -3367,14 +3509,29 @@ begin
   insert into operations.job_runs (job_name, status, scan_from, scan_to) values (p_job_name, 'running', v_scan_from, v_scan_to) returning id into v_run;
   begin
   if p_job_name = 'reconcile-payments' then
-    with expired as (
-      update payments.orders set status = 'expired', updated_at = now()
-      where id in (select id from payments.orders where status = 'pending' and expires_at <= now() order by expires_at limit greatest(1, least(p_limit, 500)) for update skip locked)
-      returning operation_id, id
-    )
-    update operations.operations o set status = 'failed', error_code = 'PAYMENT_EXPIRED', result = jsonb_build_object('payment_id', expired.id, 'status', 'expired'), completed_at = now(), updated_at = now()
-    from expired where o.id = expired.operation_id;
-    get diagnostics v_count = row_count;
+    for v_row in
+      update payments.orders
+      set status = case when status = 'pending' then 'expired' else 'failed' end,
+          failed_at = case when status = 'processing' then now() else failed_at end,
+          updated_at = now()
+      where id in (
+        select id from payments.orders
+        where status in ('pending', 'processing') and expires_at <= now()
+        order by expires_at limit greatest(1, least(p_limit, 500))
+        for update skip locked
+      )
+      returning operation_id, id, status
+    loop
+      update operations.operations
+      set status = 'failed', error_code = 'PAYMENT_EXPIRED',
+          result = jsonb_build_object('payment_id', v_row.id, 'status', v_row.status),
+          completed_at = now(), updated_at = now()
+      where id = v_row.operation_id and status in ('pending', 'unknown');
+      update operations.operations
+      set result = (select payments.order_json(p) from payments.orders p where p.id = v_row.id), updated_at = now()
+      where id = v_row.operation_id and status = 'succeeded';
+      v_count := v_count + 1;
+    end loop;
     for v_row in select id from payments.orders where status = 'paid' order by paid_at limit greatest(1, least(p_limit, 500)) for update skip locked loop
       perform payments.deliver(v_row.id);
       v_count := v_count + 1;
@@ -3387,7 +3544,7 @@ begin
   elsif p_job_name = 'cleanup-idempotency' then
     delete from operations.operations where id in (
       select id from operations.operations where created_at < now() - interval '30 days' and status in ('succeeded', 'failed')
-        and not exists (select 1 from payments.orders p where p.operation_id = operations.operations.id and p.status in ('pending', 'paid'))
+        and not exists (select 1 from payments.orders p where p.operation_id = operations.operations.id and p.status in ('pending', 'processing', 'paid'))
         and not exists (select 1 from onchain.mints m where m.operation_id = operations.operations.id and m.status in ('reserved', 'submitted', 'unknown'))
       order by created_at limit greatest(1, least(p_limit, 500))
     );
@@ -3420,7 +3577,7 @@ begin
     insert into operations.invariant_violations (code, subject, details)
     select 'OPEN_OPERATION_WITHOUT_SUBJECT', o.id::text, jsonb_build_object('use_case', o.use_case, 'status', o.status)
     from operations.operations o where o.status in ('pending', 'unknown') and o.created_at < now() - interval '1 day'
-      and not exists (select 1 from payments.orders p where p.operation_id = o.id and p.status in ('pending', 'paid'))
+      and not exists (select 1 from payments.orders p where p.operation_id = o.id and p.status in ('pending', 'processing', 'paid'))
       and not exists (select 1 from onchain.mints m where m.operation_id = o.id and m.status in ('reserved', 'submitted', 'unknown'))
     on conflict do nothing;
     get diagnostics v_added = row_count; v_count := v_count + v_added;

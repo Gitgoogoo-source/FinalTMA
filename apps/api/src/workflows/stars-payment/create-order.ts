@@ -36,27 +36,41 @@ export async function createStarsOrder(
   });
   const mapped = operationResult(operation);
   const payment = mapped.data as Payment;
-  if (payment.invoice_url) return mapped;
-  const details = await rpc<InvoiceDetails>("payment_invoice_details", {
-    p_order_id: payment.id,
-  });
-  const invoiceUrl = await createInvoiceLink({
-    title:
-      details.kind === "vip"
-        ? "PokePets VIP 月卡"
-        : `充值 ${details.stars_amount} K-coin`,
-    description:
-      details.kind === "vip"
-        ? "30 个 UTC 自然日的 PokePets VIP 权益"
-        : `${details.stars_amount} Telegram Stars 兑换 ${details.stars_amount} K-coin`,
-    payload: details.invoice_payload,
-    stars: details.stars_amount,
-  });
-  return {
-    ...mapped,
-    data: await rpc("payment_set_invoice_url", {
+  if (payment.invoice_url) {
+    if (operation.status === "succeeded") return mapped;
+    return operationResult(
+      await rpc<OperationEnvelope>("payment_set_invoice_url", {
+        p_order_id: payment.id,
+        p_invoice_url: payment.invoice_url,
+      }),
+    );
+  }
+  try {
+    const details = await rpc<InvoiceDetails>("payment_invoice_details", {
       p_order_id: payment.id,
-      p_invoice_url: invoiceUrl,
-    }),
-  };
+    });
+    const invoiceUrl = await createInvoiceLink({
+      title:
+        details.kind === "vip"
+          ? "PokePets VIP 月卡"
+          : `充值 ${details.stars_amount} K-coin`,
+      description:
+        details.kind === "vip"
+          ? "30 个 UTC 自然日的 PokePets VIP 权益"
+          : `${details.stars_amount} Telegram Stars 兑换 ${details.stars_amount} K-coin`,
+      payload: details.invoice_payload,
+      stars: details.stars_amount,
+    });
+    return operationResult(
+      await rpc<OperationEnvelope>("payment_set_invoice_url", {
+        p_order_id: payment.id,
+        p_invoice_url: invoiceUrl,
+      }),
+    );
+  } catch (cause) {
+    await rpc("payment_fail_invoice_creation", {
+      p_order_id: payment.id,
+    }).catch(() => undefined);
+    throw cause;
+  }
 }

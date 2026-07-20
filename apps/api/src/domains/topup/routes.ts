@@ -1,4 +1,12 @@
-import { requireSession, type HandlerMap } from "../../http/handlers.ts";
+import {
+  requireOperationId,
+  requireSession,
+  type HandlerMap,
+} from "../../http/handlers.ts";
+import {
+  operationResult,
+  type OperationEnvelope,
+} from "../../http/operation-result.ts";
 import { rpc } from "../../platform/db/index.ts";
 import { createStarsOrder } from "../../workflows/stars-payment/create-order.ts";
 
@@ -20,4 +28,20 @@ export const topupHandlers = {
       p_amount: context.input.amount ?? null,
       p_intent: context.input.intent ?? null,
     }),
+  "topup.cancel_order": async (context) =>
+    operationResult(
+      await rpc<OperationEnvelope>("topup_cancel_order", {
+        p_session_id: requireSession(context).session_id,
+        p_operation_id: requireOperationId(context),
+        p_order_id: context.input.order_id,
+      }),
+    ),
+  "topup.fail_order": async (context) =>
+    operationResult(
+      await rpc<OperationEnvelope>("topup_fail_order", {
+        p_session_id: requireSession(context).session_id,
+        p_operation_id: requireOperationId(context),
+        p_order_id: context.input.order_id,
+      }),
+    ),
 } satisfies HandlerMap;

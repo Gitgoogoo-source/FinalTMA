@@ -185,6 +185,20 @@ export const errorRegistry = {
     "payments",
     "refresh",
   ),
+  PAYMENT_ALREADY_PROCESSING: error(
+    409,
+    "已有已提交的支付正在确认",
+    false,
+    "payments",
+    "refresh",
+  ),
+  PAYMENT_CANCELLED: error(
+    409,
+    "未付款订单已取消",
+    false,
+    "payments",
+    "refresh",
+  ),
   PAYMENT_EXPIRED: error(409, "支付订单已经过期", false, "payments", "refresh"),
   PAYMENT_MISMATCH: error(
     409,

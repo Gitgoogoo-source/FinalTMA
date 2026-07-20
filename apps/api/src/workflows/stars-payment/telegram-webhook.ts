@@ -11,10 +11,14 @@ export const telegramWebhookHandlers = {
       | Record<string, unknown>
       | undefined;
     if (checkout) {
-      const validation = await rpc<{ valid: boolean }>("payment_validate", {
-        p_invoice_payload: checkout.invoice_payload,
-        p_stars: checkout.total_amount,
-      });
+      const validation = await rpc<{ valid: boolean }>(
+        "payment_begin_checkout",
+        {
+          p_pre_checkout_query_id: checkout.id,
+          p_invoice_payload: checkout.invoice_payload,
+          p_stars: checkout.total_amount,
+        },
+      );
       await answerPreCheckout(
         String(checkout.id),
         validation.valid,

@@ -9,7 +9,10 @@ export function useStarsPaymentRecovery(
 ): void {
   const shown = useRef<string | null>(null);
   const pendingOrder = orders?.find(
-    (order) => order.status === "pending" || order.status === "paid",
+    (order) =>
+      order.status === "processing" ||
+      order.status === "paid" ||
+      (order.kind === "vip" && order.status === "pending"),
   );
   const settlementKey =
     orders

@@ -390,7 +390,10 @@ begin
     'pending_payments', coalesce((
       select jsonb_agg(payments.order_json(p) order by p.created_at desc)
       from payments.orders p
-      where p.user_id = v_user_id and p.status in ('pending', 'paid')
+      where p.user_id = v_user_id and (
+        p.status in ('processing', 'paid')
+        or (p.kind = 'vip' and p.status = 'pending')
+      )
     ), '[]'::jsonb),
     'pending_mints', coalesce((
       select jsonb_agg(onchain.mint_json(m) order by m.created_at desc)

@@ -42,10 +42,11 @@ export function VipDialog({ close }: { close(): void }): ReactNode {
                 ? `有效期至 ${query.data?.ends_on}`
                 : "购买价格与有效期将在订单中确认"}
             </p>
-            {pending && ["pending", "paid"].includes(pending.status) ? (
+            {pending &&
+            ["pending", "processing", "paid"].includes(pending.status) ? (
               <div className="payment-recovery">
                 <strong>
-                  {pending.status === "paid"
+                  {pending.status === "processing" || pending.status === "paid"
                     ? "月卡付款确认中"
                     : "等待月卡付款确认"}
                 </strong>

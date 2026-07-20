@@ -189,6 +189,62 @@ def verify_entry_handoff_contract() -> None:
         )
 
 
+def verify_stars_payment_contract() -> None:
+    payments_sql = (SCHEMAS / "60_payments.sql").read_text(encoding="utf-8").lower()
+    callbacks_sql = (SCHEMAS / "90_payment_callbacks.sql").read_text(encoding="utf-8").lower()
+    economy_sql = (SCHEMAS / "31_economy.sql").read_text(encoding="utf-8").lower()
+    identity_sql = (SCHEMAS / "10_identity.sql").read_text(encoding="utf-8").lower()
+    jobs_sql = (SCHEMAS / "95_jobs.sql").read_text(encoding="utf-8").lower()
+    required = {
+        "payments": (
+            "'processing'",
+            "'failed'",
+            "'cancelled'",
+            "pre_checkout_query_id text unique",
+            "checkout_started_at timestamptz",
+            "create or replace function api.topup_cancel_order",
+            "create or replace function api.topup_fail_order",
+            "create or replace function api.payment_fail_invoice_creation",
+            "return operations.complete_command(v_order.operation_id, v_result)",
+            "raise_business_error('payment_already_processing'",
+        ),
+        "callbacks": (
+            "create or replace function api.payment_begin_checkout",
+            "set status = 'processing'",
+            "pre_checkout_query_id = p_pre_checkout_query_id",
+            "v_order.kind = 'vip' and v_user.status <> 'normal'",
+            "telegram_payment_charge_id = p_telegram_charge_id",
+            "payments.deliver(v_order.id)",
+        ),
+        "economy": (
+            "create unique index ledger_stars_topup_reference_unique_idx",
+            "where reason = 'stars_topup'",
+        ),
+        "identity": (
+            "p.status in ('processing', 'paid')",
+            "p.kind = 'vip' and p.status = 'pending'",
+        ),
+        "jobs": (
+            "status in ('pending', 'processing') and expires_at <= now()",
+            "case when status = 'pending' then 'expired' else 'failed' end",
+        ),
+    }
+    sources = {
+        "payments": payments_sql,
+        "callbacks": callbacks_sql,
+        "economy": economy_sql,
+        "identity": identity_sql,
+        "jobs": jobs_sql,
+    }
+    missing = {
+        name: [fragment for fragment in fragments if fragment not in sources[name]]
+        for name, fragments in required.items()
+    }
+    missing = {name: fragments for name, fragments in missing.items() if fragments}
+    if missing:
+        raise SystemExit(f"Stars payment contract is incomplete: {missing}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--write-baseline", action="store_true")
@@ -212,6 +268,7 @@ def main() -> None:
     verify_database_boundaries()
     verify_identity_login_contract()
     verify_entry_handoff_contract()
+    verify_stars_payment_contract()
 
     with tempfile.TemporaryDirectory(prefix="pokepets-db-check-") as temporary:
         output = Path(temporary)

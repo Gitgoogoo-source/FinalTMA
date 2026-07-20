@@ -54,7 +54,7 @@ declare
 begin
   select payments.order_json(p) into v_pending
   from payments.orders p
-  where p.user_id = v_user_id and p.kind = 'vip' and p.status in ('pending', 'paid')
+  where p.user_id = v_user_id and p.kind = 'vip' and p.status in ('pending', 'processing', 'paid')
   order by p.created_at desc limit 1;
   return vip.status_json(v_user_id) || jsonb_build_object('pending_order', v_pending);
 end;

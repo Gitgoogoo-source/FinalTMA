@@ -21,6 +21,7 @@ create table economy.ledger (
 
 create index ledger_user_created_idx on economy.ledger (user_id, created_at desc);
 create index ledger_operation_idx on economy.ledger (operation_id) where operation_id is not null;
+create unique index ledger_stars_topup_reference_unique_idx on economy.ledger (reference) where reason = 'stars_topup';
 
 create table economy.entitlements (
   id uuid primary key default extensions.gen_random_uuid(),
