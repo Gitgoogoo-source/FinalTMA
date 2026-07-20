@@ -5,7 +5,7 @@
 `docs/product/功能说明文档.md` 是唯一产品功能来源。本次实现固定使用 SHA-256：
 
 ```text
-c44702ff9e0f9e1b3c3042bae18269dd706245e78b7903af0b8841cc0867f651
+40eeaf24159d361a500daaee83a298998cf57e4f6043fee78b519bac61543759
 ```
 
 架构文档只记录技术边界，不复制价格、概率、奖励或产品状态规则。目录、OpenAPI 和 migration 均为生成物，生成结果必须与上述文档校验和绑定。
@@ -47,7 +47,7 @@ contracts/ton -> TON blockchain
 
 ## 操作恢复
 
-前端内存操作阶段固定为 `confirming → submitting → pending/unknown → succeeded/failed`；数据库持久状态为 `pending`、`unknown`、`succeeded`、`failed`。随机结果和资产结果只生成一次。`unknown` 仅阻止同一 `use_case` 再次提交，不阻断主导航；恢复只查询原 `operation_id`。
+前端内存操作阶段固定为 `confirming → submitting → pending/unknown → succeeded/failed`；数据库持久状态为 `pending`、`unknown`、`succeeded`、`failed`。随机结果和资产结果只生成一次。`unknown` 仅阻止同一 `use_case` 再次提交，不阻断主导航；恢复只查询原 `operation_id`。开盒成功或失败结果在服务端确认展示前持续恢复，确认时间由当前用户的专用 RPC 原子记录。
 
 ## 生成物
 
@@ -70,3 +70,4 @@ contracts/ton -> TON blockchain
 - [技术裁决](adr/ADR-001-runtime-and-deployment.md)
 - [模块边界与网关隔离](adr/ADR-007-module-boundaries-and-gateway-isolation.md)
 - [Vercel 函数打包与配置隔离](adr/ADR-008-vercel-packaging-and-config-isolation.md)
+- [开盒页运行期视图状态](adr/ADR-009-gacha-runtime-view-state.md)

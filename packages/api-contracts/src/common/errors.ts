@@ -42,7 +42,13 @@ export const errorRegistry = {
   ALBUM_REWARD_ALREADY_CLAIMED: error(409, "该图鉴奖励已经领取"),
   API_ROUTE_NOT_FOUND: error(404, "接口不存在"),
   BOX_TIER_INVALID: error(400, "盲盒档次无效"),
-  CATALOG_INVALID: error(500, "目录数据无效", true, "all", "refresh"),
+  CATALOG_INVALID: error(
+    500,
+    "开盒规则加载失败，请重新加载",
+    true,
+    "all",
+    "refresh",
+  ),
   CATALOG_UNAVAILABLE: error(503, "图鉴数据暂时不可用", true, "all", "refresh"),
   CHECKIN_ALREADY_CLAIMED: error(409, "今日签到奖励已经领取"),
   CONTENT_TYPE_INVALID: error(415, "请求体必须使用 application/json"),
@@ -170,6 +176,7 @@ export const errorRegistry = {
   ),
   NFT_METADATA_NOT_FOUND: error(404, "NFT 元数据不存在"),
   OPERATION_FAILED: error(409, "原操作已确认失败", false, "all", "refresh"),
+  OPERATION_NOT_ACKNOWLEDGEABLE: error(409, "操作结果尚未确定"),
   OPERATION_NOT_FOUND: error(404, "操作记录不存在"),
   OPERATION_RESULT_INVALID: error(
     500,

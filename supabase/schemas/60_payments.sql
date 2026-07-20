@@ -196,6 +196,15 @@ begin
 end;
 $$;
 
+create or replace function payments.vip_stars_price()
+returns integer
+language sql
+immutable
+set search_path = ''
+as $$
+  select 199
+$$;
+
 create or replace function api.vip_create_order(p_session_id uuid, p_operation_id uuid)
 returns jsonb
 language plpgsql
@@ -221,7 +230,7 @@ begin
     if not coalesce((v_status->>'can_purchase')::boolean, false) and not coalesce((v_status->>'can_renew')::boolean, false) then perform api.raise_business_error('VIP_RENEWAL_LIMIT', '月卡续费次数已达上限'); end if;
     if exists (select 1 from payments.orders where user_id = v_user_id and kind = 'vip' and status in ('pending', 'processing', 'paid')) then perform api.raise_business_error('PAYMENT_ALREADY_PENDING', '已有待处理月卡订单'); end if;
     insert into payments.orders (user_id, operation_id, kind, stars_amount, invoice_payload, expires_at)
-    values (v_user_id, p_operation_id, 'vip', 199, 'pokepets:' || extensions.gen_random_uuid(), now() + interval '15 minutes') returning * into v_order;
+    values (v_user_id, p_operation_id, 'vip', payments.vip_stars_price(), 'pokepets:' || extensions.gen_random_uuid(), now() + interval '15 minutes') returning * into v_order;
     v_result := payments.order_json(v_order);
     return operations.pending_command(p_operation_id, v_result);
   exception when others then

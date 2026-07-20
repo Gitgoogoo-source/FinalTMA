@@ -26,7 +26,7 @@ pnpm product-data:build
 pnpm contracts:openapi
 pnpm validate:static
 pnpm chain:build
-pnpm assets:check:production
+pnpm assets:check:development
 ```
 
-`pnpm build` 不编译 TON 合约。项目不包含本地功能测试；功能验收只在独立真实开发环境按 [验收清单](docs/operations/acceptance.md) 执行。
+`pnpm build` 不编译 TON 合约，并依据 `APP_ENV` 在 Web 构建后执行对应资产门禁；当前真实开发只接受已锁定的 210 张 development-only 藏品图，正式生产规则见[发布手册](docs/operations/release.md)。项目不包含本地功能测试；功能验收只在独立真实开发环境按[验收清单](docs/operations/acceptance.md)执行。

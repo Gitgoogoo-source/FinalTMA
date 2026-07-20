@@ -1,16 +1,17 @@
 # 环境矩阵
 
-| 项目        | 本地                  | 真实开发                                                               | 真实生产                 |
-| ----------- | --------------------- | ---------------------------------------------------------------------- | ------------------------ |
-| Git commit  | 当前工作提交          | 持续开发提交                                                           | 与开发验收通过的提交相同 |
-| Node / pnpm | Node 24 / pnpm 11.1.3 | Node 24 / pnpm 11.1.3                                                  | Node 24 / pnpm 11.1.3    |
-| Vercel      | `vercel dev`          | `final-tma` Project，`APP_ENV=development`                             | 未来独立 Pro Project     |
-| Supabase    | 本地 Postgres 17      | `final-tma-real-test`（ref `ebewtjerusxcioegpzjd`）Postgres 17 Project | 未来独立 Postgres 17     |
-| Telegram    | 开发 Bot              | 开发 Bot 与开发 webhook                                                | 生产 Bot 与生产 webhook  |
-| TON         | testnet               | 本次部署不发布 Collection、不启用 Mint 对账 Cron                       | mainnet collection       |
-| 数据        | 非业务本地数据        | 独立真实开发与验收数据                                                 | 真实生产数据             |
+| 项目        | 本地                  | 真实开发                                                               | 真实生产                  |
+| ----------- | --------------------- | ---------------------------------------------------------------------- | ------------------------- |
+| Git commit  | 当前工作提交          | 持续开发提交                                                           | 与开发验收通过的提交相同  |
+| Node / pnpm | Node 24 / pnpm 11.1.3 | Node 24 / pnpm 11.1.3                                                  | Node 24 / pnpm 11.1.3     |
+| Vercel      | `vercel dev`          | `final-tma` Project，`APP_ENV=development`                             | 未来独立 Pro Project      |
+| Supabase    | 本地 Postgres 17      | `final-tma-real-test`（ref `ebewtjerusxcioegpzjd`）Postgres 17 Project | 未来独立 Postgres 17      |
+| Telegram    | 开发 Bot              | 开发 Bot 与开发 webhook                                                | 生产 Bot 与生产 webhook   |
+| TON         | testnet               | 本次部署不发布 Collection、不启用 Mint 对账 Cron                       | mainnet collection        |
+| 藏品图片    | 固定开发 checksum 组  | 仅限 `APP_ENV=development` 的固定 210 张开发占位图                     | 整体替换后的 210 张正式图 |
+| 数据        | 非业务本地数据        | 独立真实开发与验收数据                                                 | 真实生产数据              |
 
-真实开发与生产只允许域名、项目 ID、Bot、合约地址和密钥不同。生产必须使用在真实开发环境完成验收的同一 Git commit、同一 OpenAPI、同一目录版本和同一迁移序列。
+当前真实开发阶段额外允许使用 `generated/assets/catalog-v1.development.json` 锁定的 210 张开发占位图。正式生产前必须整体替换该组图片，并在真实开发环境重新验收替换后的同一 Git commit；完成替换后，真实开发与生产只允许域名、项目 ID、Bot、合约地址和密钥不同，生产必须使用同一 Git commit、同一 OpenAPI、同一目录版本、同一资产 checksum 和同一迁移序列。
 
 当前真实开发部署固定启用 Web、API、Supabase、Telegram webhook、支付对账、幂等清理和不变量监控。TON 配置为空，`reconcile-mints` 不进入 Vercel Cron；钱包验签、Mint permit 和 Mint 对账只有在后续完成 testnet Collection 部署并写入全部真实 TON 配置后才启用。非 TON API 只解析自身所需配置，不接受任何 TON 占位值。
 

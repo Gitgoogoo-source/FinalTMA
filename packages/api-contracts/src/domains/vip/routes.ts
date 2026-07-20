@@ -1,7 +1,11 @@
 import { z } from "zod";
 
 import { defineRoute } from "../../common/route.ts";
-import { emptyObjectSchema } from "../../common/schemas.ts";
+import {
+  emptyObjectSchema,
+  nonNegativeIntegerSchema,
+  positiveIntegerSchema,
+} from "../../common/schemas.ts";
 import { paymentSchema } from "../topup/models.ts";
 import { vipStatusSchema } from "./models.ts";
 
@@ -15,7 +19,11 @@ export const vipRoutes = [
     idempotent: false,
     input: emptyObjectSchema,
     output: vipStatusSchema
-      .extend({ pending_order: paymentSchema.nullable() })
+      .extend({
+        stars_price: positiveIntegerSchema,
+        free_rare_box_available: nonNegativeIntegerSchema,
+        pending_order: paymentSchema.nullable(),
+      })
       .strict(),
     errors: ["ACCOUNT_RESTRICTED", "INTERNAL_ERROR"],
   }),

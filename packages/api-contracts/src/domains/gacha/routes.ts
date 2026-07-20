@@ -1,13 +1,15 @@
 import { z } from "zod";
 
-import { assetsSchema } from "../../common/models.ts";
+import { assetsSchema, operationSummarySchema } from "../../common/models.ts";
 import { defineRoute } from "../../common/route.ts";
 import {
   boxTierSchema,
   emptyObjectSchema,
   raritySchema,
+  timestampSchema,
+  uuidSchema,
 } from "../../common/schemas.ts";
-import { boxSchema } from "./models.ts";
+import { boxSchema, gachaPoolSchema } from "./models.ts";
 
 const pitySchema = z
   .object({
@@ -23,11 +25,42 @@ const resultItemSchema = z
     template_id: z.string(),
     name: z.string(),
     rarity: raritySchema,
-    image_path: z.string(),
+    stage: z.union([z.literal(1), z.literal(2), z.literal(3)]),
+    quantity: z.literal(1),
+    image_path: z.string().startsWith("/assets/"),
     new_album: z.boolean(),
     pity_triggered: z.boolean(),
   })
   .strict();
+const gachaOpenOutputSchema = z
+  .object({
+    tier: boxTierSchema,
+    draw_count: z.union([z.literal(1), z.literal(10)]),
+    paid_kcoin: z.number().int().min(0),
+    entitlement_used: z.enum(["free_normal_box", "free_rare_box"]).nullable(),
+    results: z.array(resultItemSchema).min(1).max(10),
+    pity: pitySchema,
+    assets: assetsSchema,
+  })
+  .strict()
+  .superRefine(({ draw_count, results }, context) => {
+    if (results.length !== draw_count)
+      context.addIssue({
+        code: "custom",
+        message: "Result count must equal draw_count",
+        path: ["results"],
+      });
+    if (
+      [...results]
+        .sort((left, right) => left.order - right.order)
+        .some((item, index) => item.order !== index + 1)
+    )
+      context.addIssue({
+        code: "custom",
+        message: "Result order must be unique and contiguous",
+        path: ["results"],
+      });
+  });
 
 export const gachaRoutes = [
   defineRoute({
@@ -48,9 +81,59 @@ export const gachaRoutes = [
             free_rare_box: z.number().int().min(0),
           })
           .strict(),
+        rules_complete: z.boolean(),
       })
       .strict(),
     errors: ["SESSION_REQUIRED", "ACCOUNT_RESTRICTED", "INTERNAL_ERROR"],
+  }),
+  defineRoute({
+    id: "gacha.recovery",
+    method: "GET",
+    path: "/api/gacha/recovery",
+    gateway: "app",
+    auth: true,
+    idempotent: false,
+    input: emptyObjectSchema,
+    output: z.object({ operations: z.array(operationSummarySchema) }).strict(),
+    errors: ["SESSION_REQUIRED", "ACCOUNT_RESTRICTED", "INTERNAL_ERROR"],
+  }),
+  defineRoute({
+    id: "gacha.acknowledge_result",
+    method: "POST",
+    path: "/api/gacha/results/:operation_id/acknowledge",
+    gateway: "app",
+    auth: true,
+    idempotent: false,
+    input: z.object({ operation_id: uuidSchema }).strict(),
+    output: z
+      .object({
+        operation_id: uuidSchema,
+        acknowledged_at: timestampSchema,
+      })
+      .strict(),
+    errors: [
+      "OPERATION_NOT_FOUND",
+      "OPERATION_NOT_ACKNOWLEDGEABLE",
+      "ACCOUNT_RESTRICTED",
+      "INTERNAL_ERROR",
+    ],
+  }),
+  defineRoute({
+    id: "gacha.pool",
+    method: "GET",
+    path: "/api/gacha/pool",
+    gateway: "app",
+    auth: true,
+    idempotent: false,
+    input: z.object({ tier: boxTierSchema }).strict(),
+    output: gachaPoolSchema,
+    errors: [
+      "BOX_TIER_INVALID",
+      "CATALOG_INVALID",
+      "SESSION_REQUIRED",
+      "ACCOUNT_RESTRICTED",
+      "INTERNAL_ERROR",
+    ],
   }),
   defineRoute({
     id: "gacha.open",
@@ -66,19 +149,7 @@ export const gachaRoutes = [
         draw_count: z.union([z.literal(1), z.literal(10)]),
       })
       .strict(),
-    output: z
-      .object({
-        tier: boxTierSchema,
-        draw_count: z.union([z.literal(1), z.literal(10)]),
-        paid_kcoin: z.number().int().min(0),
-        entitlement_used: z
-          .enum(["free_normal_box", "free_rare_box"])
-          .nullable(),
-        results: z.array(resultItemSchema).min(1).max(10),
-        pity: pitySchema,
-        assets: assetsSchema,
-      })
-      .strict(),
+    output: gachaOpenOutputSchema,
     errors: [
       "BOX_TIER_INVALID",
       "DRAW_COUNT_INVALID",

@@ -10,11 +10,15 @@ create table operations.operations (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   completed_at timestamptz,
+  result_acknowledged_at timestamptz,
+  check (result_acknowledged_at is null or status in ('succeeded', 'failed')),
   unique (user_id, use_case, id)
 );
 
 create index operations_user_created_idx on operations.operations (user_id, created_at desc);
 create index operations_pending_idx on operations.operations (created_at) where status in ('pending', 'unknown');
+create index operations_gacha_recovery_idx on operations.operations (user_id, created_at)
+where use_case = 'gacha.open' and result_acknowledged_at is null;
 
 create table operations.webhook_events (
   provider text not null,
@@ -63,6 +67,7 @@ as $$
     'status', p_operation.status,
     'result', p_operation.result,
     'error_code', p_operation.error_code,
+    'acknowledged_at', p_operation.result_acknowledged_at,
     'created_at', p_operation.created_at,
     'updated_at', p_operation.updated_at
   )

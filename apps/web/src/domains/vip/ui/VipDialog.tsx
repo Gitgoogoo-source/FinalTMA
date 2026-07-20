@@ -1,4 +1,4 @@
-import { Crown, Gift } from "lucide-react";
+import { Crown } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { useApiQuery } from "../../../platform/query/index.ts";
@@ -9,10 +9,7 @@ import { useOperationRegistry } from "../../../workflows/operation-recovery/inde
 export function VipDialog({ close }: { close(): void }): ReactNode {
   const query = useApiQuery("vip.get");
   const { isBlocked, run } = useOperationRegistry();
-  const blocked =
-    isBlocked("vip.create_order") ||
-    isBlocked("vip.claim_fgems") ||
-    isBlocked("vip.claim_free_box");
+  const blocked = isBlocked("vip.create_order");
   const pending = query.data?.pending_order;
   const order = () =>
     void run("正在创建 VIP 月卡订单", "vip.create_order", {}).then((result) => {
@@ -21,15 +18,16 @@ export function VipDialog({ close }: { close(): void }): ReactNode {
           void query.refetch();
         });
     });
-  const claimFgems = () =>
-    void run("正在领取 VIP 每日 Fgems", "vip.claim_fgems", {});
-  const claimBox = () =>
-    void run("正在领取 VIP 免费盲盒资格", "vip.claim_free_box", {});
+  const data = query.data;
+  const activeOrder =
+    pending && ["pending", "processing", "paid"].includes(pending.status)
+      ? pending
+      : null;
   return (
     <div className="modal-backdrop">
       <div className="modal vip">
         <Crown size={42} />
-        <Badge>{query.data?.active ? "VIP 已生效" : "VIP 未生效"}</Badge>
+        <Badge>{vipDetailStatus(data, Boolean(activeOrder))}</Badge>
         <h2>PokePets VIP 月卡</h2>
         {query.isLoading ? (
           <p>正在读取真实权益</p>
@@ -37,48 +35,73 @@ export function VipDialog({ close }: { close(): void }): ReactNode {
           <Button onClick={() => void query.refetch()}>重新加载</Button>
         ) : (
           <>
-            <p>
-              {query.data?.active
-                ? `有效期至 ${query.data?.ends_on}`
-                : "购买价格与有效期将在订单中确认"}
+            <div className="vip-detail-list">
+              <span>
+                价格<strong>{data?.stars_price} Stars</strong>
+              </span>
+              <span>
+                UTC+0 有效期
+                <strong>
+                  {data?.starts_on && data.ends_on
+                    ? `${data.starts_on} 至 ${data.ends_on}`
+                    : "尚未开通"}
+                </strong>
+              </span>
+              <span>
+                剩余权益日<strong>{data?.remaining_days ?? 0} 天</strong>
+              </span>
+              <span>
+                本有效期续费<strong>{data?.renewals_used ?? 0}/2</strong>
+              </span>
+              <span>
+                今日 100 Fgems
+                <strong>
+                  {data?.active
+                    ? data.fgems_claimed_today
+                      ? "已领取"
+                      : "可在开盒页领取"
+                    : "不可领取"}
+                </strong>
+              </span>
+              <span>
+                今日免费稀有盲盒
+                <strong>{freeBoxStatus(data)}</strong>
+              </span>
+              <span>
+                全部来源可用免费稀有盲盒
+                <strong>{data?.free_rare_box_available ?? 0} 次</strong>
+              </span>
+            </div>
+            <p className="vip-detail-note">
+              两项每日权益仅在开盒页按 UTC+0
+              分别手动领取，未领取不补领；有效月卡卖家的真实成交手续费返还按系统结果结算。
             </p>
-            {pending &&
-            ["pending", "processing", "paid"].includes(pending.status) ? (
+            {activeOrder ? (
               <div className="payment-recovery">
                 <strong>
-                  {pending.status === "processing" || pending.status === "paid"
+                  {activeOrder.status === "processing" ||
+                  activeOrder.status === "paid"
                     ? "月卡付款确认中"
                     : "等待月卡付款确认"}
                 </strong>
-                <small>{pending.stars_amount} Stars</small>
+                <small>{activeOrder.stars_amount} Stars</small>
                 <Button onClick={() => void query.refetch()}>刷新结果</Button>
               </div>
-            ) : query.data?.active ? (
-              <div className="benefit-actions">
-                <Button
-                  disabled={blocked || Boolean(query.data?.fgems_claimed_today)}
-                  onClick={() => claimFgems()}
-                >
-                  <Gift />
-                  {query.data?.fgems_claimed_today
-                    ? "Fgems 已领取"
-                    : "领取每日 Fgems"}
-                </Button>
-                <Button
-                  disabled={
-                    blocked || Boolean(query.data?.free_box_claimed_today)
-                  }
-                  onClick={() => claimBox()}
-                >
-                  <Gift />
-                  {query.data?.free_box_claimed_today
-                    ? "盲盒资格已领取"
-                    : "领取免费盲盒资格"}
-                </Button>
-              </div>
             ) : (
-              <Button disabled={blocked} onClick={order}>
-                使用 Telegram Stars 购买
+              <Button
+                disabled={
+                  blocked ||
+                  Boolean(data?.active ? !data.can_renew : !data?.can_purchase)
+                }
+                onClick={order}
+              >
+                {blocked
+                  ? "处理中"
+                  : data?.active
+                    ? data.can_renew
+                      ? `使用 ${data.stars_price} Stars 续费`
+                      : "已达续费上限"
+                    : `使用 ${data?.stars_price} Stars 购买`}
               </Button>
             )}
           </>
@@ -89,4 +112,18 @@ export function VipDialog({ close }: { close(): void }): ReactNode {
       </div>
     </div>
   );
+}
+
+type VipData = ReturnType<typeof useApiQuery<"vip.get">>["data"];
+
+function vipDetailStatus(data: VipData, paymentPending: boolean): string {
+  if (paymentPending) return "确认中";
+  if (data?.active) return "VIP 已生效";
+  return data?.ends_on ? "VIP 已过期" : "VIP 未开通";
+}
+
+function freeBoxStatus(data: VipData): string {
+  if (!data?.active) return "不可领取";
+  if (!data.free_box_claimed_today) return "可在开盒页领取";
+  return data.free_box_used_today ? "今日已使用" : "今日已领取";
 }

@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { CatalogImage } from "../../../shared/ui/index.tsx";
 import { useApiQuery } from "../../../platform/query/index.ts";
 import { Badge, Button, Card, PageState } from "../../../shared/ui/index.tsx";
+import { useNewMarkers } from "../../../workflows/new-markers/index.ts";
 import type { InventoryItem } from "../types.ts";
 
 export function InventoryView({
@@ -13,6 +14,7 @@ export function InventoryView({
   renderActions(item: InventoryItem, imageReady: boolean): ReactNode;
 }): ReactNode {
   const query = useApiQuery("inventory.list");
+  const { templateIds: newTemplateIds, clearNew } = useNewMarkers();
   const navigate = useNavigate();
   const items = query.data?.items ?? [];
   const [selectedId, setSelectedId] = useState("");
@@ -21,6 +23,7 @@ export function InventoryView({
     ? selectedId
     : (items[0]?.template_id ?? "");
   const item = items.find((candidate) => candidate.template_id === effectiveId);
+  const itemIsNew = Boolean(item && newTemplateIds.has(item.template_id));
   return (
     <main className="page inventory-page">
       <header className="page-heading inventory-heading">
@@ -57,6 +60,9 @@ export function InventoryView({
                 </Badge>
                 <h2>{item.name}</h2>
                 <p>战斗力 {item.combat_power}</p>
+                {itemIsNew && (
+                  <span className="detail-new-acquisition">本次新获得</span>
+                )}
                 <div className="stock-grid">
                   <span>
                     总数<strong>{item.total}</strong>
@@ -81,27 +87,33 @@ export function InventoryView({
             </Card>
             <div className="action-grid">{renderActions(item, imageReady)}</div>
             <div className="thumbnail-strip">
-              {items.map((candidate) => (
-                <button
-                  key={candidate.template_id}
-                  className={
-                    candidate.template_id === effectiveId ? "selected" : ""
-                  }
-                  aria-pressed={candidate.template_id === effectiveId}
-                  aria-label={`选择${candidate.name}，共 ${candidate.total} 个`}
-                  onClick={() => {
-                    setSelectedId(candidate.template_id);
-                    setImageReady(false);
-                  }}
-                >
-                  <CatalogImage
-                    path={candidate.image_path}
-                    alt={candidate.name}
-                  />
-                  <i className={`rarity-mark ${candidate.rarity}`} />
-                  <span>×{candidate.total}</span>
-                </button>
-              ))}
+              {items.map((candidate) => {
+                const selected = candidate.template_id === effectiveId;
+                const isNew = newTemplateIds.has(candidate.template_id);
+                return (
+                  <button
+                    key={candidate.template_id}
+                    className={selected ? "selected" : ""}
+                    aria-pressed={selected}
+                    aria-label={`选择${candidate.name}，共 ${candidate.total} 个${isNew ? "，本次新获得" : ""}`}
+                    onClick={() => {
+                      if (!selected) {
+                        setSelectedId(candidate.template_id);
+                        setImageReady(false);
+                      }
+                      if (isNew) clearNew(candidate.template_id);
+                    }}
+                  >
+                    <CatalogImage
+                      path={candidate.image_path}
+                      alt={candidate.name}
+                    />
+                    <i className={`rarity-mark ${candidate.rarity}`} />
+                    {isNew && <b className="new-marker">NEW</b>}
+                    <span>×{candidate.total}</span>
+                  </button>
+                );
+              })}
             </div>
           </>
         )}

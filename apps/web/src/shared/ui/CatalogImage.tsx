@@ -4,10 +4,12 @@ import { useState, type ReactNode } from "react";
 export function CatalogImage({
   path,
   alt,
+  loading,
   onAvailability,
 }: {
   path: unknown;
   alt: string;
+  loading?: "eager" | "lazy";
   onAvailability?: (available: boolean) => void;
 }): ReactNode {
   const [source, setSource] = useState(path ? String(path) : "");
@@ -24,6 +26,7 @@ export function CatalogImage({
       className="catalog-image"
       src={source}
       alt={alt}
+      loading={loading}
       onLoad={() => onAvailability?.(true)}
       onError={() => {
         if (

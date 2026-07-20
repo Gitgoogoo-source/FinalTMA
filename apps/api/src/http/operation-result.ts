@@ -9,6 +9,7 @@ export type OperationEnvelope = {
   status: "pending" | "succeeded" | "failed" | "unknown";
   result: unknown;
   error_code: string | null;
+  acknowledged_at: string | null;
   created_at: string;
   updated_at: string;
 };

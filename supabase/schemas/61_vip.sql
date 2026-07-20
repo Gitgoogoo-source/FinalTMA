@@ -31,13 +31,21 @@ begin
   v_active := v_subscription.user_id is not null and identity.utc_day() between v_subscription.starts_on and v_subscription.ends_on;
   return jsonb_build_object(
     'active', v_active,
+    'benefit_date', identity.utc_day(),
     'starts_on', case when v_subscription.user_id is null then null else v_subscription.starts_on end,
     'ends_on', case when v_subscription.user_id is null then null else v_subscription.ends_on end,
+    'remaining_days', case when v_active then v_subscription.ends_on - identity.utc_day() + 1 else 0 end,
     'renewals_used', coalesce(v_subscription.renewal_count, 0),
     'can_purchase', not v_active,
     'can_renew', v_active and v_subscription.renewal_count < 2,
     'fgems_claimed_today', exists(select 1 from vip.claims where user_id = p_user_id and benefit_date = identity.utc_day() and benefit = 'fgems'),
-    'free_box_claimed_today', exists(select 1 from vip.claims where user_id = p_user_id and benefit_date = identity.utc_day() and benefit = 'free_rare_box')
+    'free_box_claimed_today', exists(select 1 from vip.claims where user_id = p_user_id and benefit_date = identity.utc_day() and benefit = 'free_rare_box'),
+    'free_box_used_today', exists(
+      select 1
+      from vip.claims c
+      join economy.entitlements e on e.user_id = c.user_id and e.operation_id = c.operation_id and e.kind = 'free_rare_box'
+      where c.user_id = p_user_id and c.benefit_date = identity.utc_day() and c.benefit = 'free_rare_box' and e.status = 'used'
+    )
   );
 end;
 $$;
@@ -56,7 +64,14 @@ begin
   from payments.orders p
   where p.user_id = v_user_id and p.kind = 'vip' and p.status in ('pending', 'processing', 'paid')
   order by p.created_at desc limit 1;
-  return vip.status_json(v_user_id) || jsonb_build_object('pending_order', v_pending);
+  return vip.status_json(v_user_id) || jsonb_build_object(
+    'stars_price', payments.vip_stars_price(),
+    'free_rare_box_available', (
+      select count(*) from economy.entitlements
+      where user_id = v_user_id and kind = 'free_rare_box' and status = 'unused'
+    ),
+    'pending_order', v_pending
+  );
 end;
 $$;
 

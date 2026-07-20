@@ -41,6 +41,7 @@ export const operationSummarySchema = z
     status: operationStatusSchema,
     result: z.json().nullable(),
     error_code: z.enum(errorCodes).nullable(),
+    acknowledged_at: timestampSchema.nullable(),
     created_at: timestampSchema,
     updated_at: timestampSchema,
   })

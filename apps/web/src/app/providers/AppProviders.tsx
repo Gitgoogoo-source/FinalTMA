@@ -4,19 +4,22 @@ import { useEffect, useRef, type ReactNode } from "react";
 
 import { queryClient } from "../../platform/query/index.ts";
 import { useSession } from "../../platform/session/store.ts";
+import { NewMarkerProvider } from "../../workflows/new-markers/index.ts";
 import { NavigationIntentProvider } from "../../workflows/payment-recovery/index.ts";
 import { OperationRegistryProvider } from "../../workflows/operation-recovery/index.ts";
 
 export function AppProviders({ children }: { children: ReactNode }): ReactNode {
   return (
     <QueryClientProvider client={queryClient}>
-      <OperationRegistryProvider>
-        <NavigationIntentProvider>
-          <BrowserRouter>
-            <CacheBoundary>{children}</CacheBoundary>
-          </BrowserRouter>
-        </NavigationIntentProvider>
-      </OperationRegistryProvider>
+      <BrowserRouter>
+        <NewMarkerProvider>
+          <NavigationIntentProvider>
+            <OperationRegistryProvider>
+              <CacheBoundary>{children}</CacheBoundary>
+            </OperationRegistryProvider>
+          </NavigationIntentProvider>
+        </NewMarkerProvider>
+      </BrowserRouter>
     </QueryClientProvider>
   );
 }

@@ -17,7 +17,7 @@
 | 11 分解       | inventory、decomposition    | decomposition                            | 33_decomposition、inventory、economy     | 数量与 Fgems 在同一事务变化                         |
 | 12 官方价格   | market、inventory、gacha    | catalog                                  | catalog、market                          | 前端不提交价格，服务端读取目录                      |
 | 13 图鉴       | album                       | album                                    | album、economy                           | 永久点亮、整链奖励唯一领取                          |
-| 14 开盒       | gacha                       | gacha                                    | gacha、inventory、economy                | 单抽/十连全成全败、结果只生成一次                   |
+| 14 开盒       | gacha、operation-recovery   | gacha                                    | gacha、inventory、economy、operations    | 单抽/十连全成全败、结果只生成一次、确认前持续恢复   |
 | 15 VIP        | vip                         | vip、integrations                        | vip、payments、economy                   | 30 UTC 日、续费上限、每日手动领取                   |
 | 16 登录       | session-bootstrap、platform | identity                                 | identity、operations                     | initData、交接状态、限流、短会话、封禁迟到响应隔离  |
 | 17 藏品       | inventory                   | inventory                                | inventory                                | 模板加数量、预留不可重复使用                        |

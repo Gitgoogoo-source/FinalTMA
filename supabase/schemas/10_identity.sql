@@ -385,7 +385,14 @@ begin
     'blocking_operations', coalesce((
       select jsonb_agg(operations.operation_json(o) order by o.created_at)
       from operations.operations o
-      where o.user_id = v_user_id and o.status in ('pending', 'unknown')
+      where o.user_id = v_user_id and (
+        o.status in ('pending', 'unknown')
+        or (
+          o.use_case = 'gacha.open'
+          and o.status in ('succeeded', 'failed')
+          and o.result_acknowledged_at is null
+        )
+      )
     ), '[]'::jsonb),
     'pending_payments', coalesce((
       select jsonb_agg(payments.order_json(p) order by p.created_at desc)

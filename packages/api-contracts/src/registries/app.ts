@@ -5,6 +5,7 @@ import {
   findRouteIn,
 } from "../common/registry.ts";
 import type { RouteDefinition } from "../common/route.ts";
+import { operationSummarySchema } from "../common/models.ts";
 import { albumRoutes } from "../domains/album/routes.ts";
 import { catalogRoutes } from "../domains/catalog/routes.ts";
 import { expeditionRoutes } from "../domains/expedition/routes.ts";
@@ -58,6 +59,7 @@ export type TypedOperationSummary = {
     status: "pending" | "succeeded" | "failed" | "unknown";
     result: import("zod").output<Route["output"]> | null;
     error_code: ErrorCode | null;
+    acknowledged_at: string | null;
     created_at: string;
     updated_at: string;
   };
@@ -81,11 +83,7 @@ export function isRecoverableRouteId(
 }
 
 export function parseRecoveredOperation(value: unknown): TypedOperationSummary {
-  if (!value || typeof value !== "object")
-    throw new Error("Invalid operation summary");
-  const summary = value as Record<string, unknown>;
-  if (typeof summary.use_case !== "string")
-    throw new Error("Operation use_case is missing");
+  const summary = operationSummarySchema.parse(value);
   const route = routes.find(
     (candidate): candidate is RecoverableRoute =>
       candidate.id === summary.use_case &&
@@ -98,7 +96,7 @@ export function parseRecoveredOperation(value: unknown): TypedOperationSummary {
     );
   if (summary.status === "succeeded" && summary.result !== null)
     route.output.parse(summary.result);
-  return value as TypedOperationSummary;
+  return summary as TypedOperationSummary;
 }
 
 export function findRoute(method: string, pathname: string) {
