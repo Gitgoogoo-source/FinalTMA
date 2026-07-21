@@ -66,6 +66,38 @@ export function GachaResultDialog({
   const cost = result.entitlement_used
     ? `${result.entitlement_used === "free_normal_box" ? "免费普通" : "免费稀有"}盲盒资格 ×1`
     : `${result.paid_kcoin} K-coin`;
+  const resultDetails = (
+    <>
+      <dl className="result-summary gacha-result-summary">
+        <div>
+          <dt>实际消耗</dt>
+          <dd>{cost}</dd>
+        </div>
+        <div>
+          <dt>固定保底触发</dt>
+          <dd>
+            {pityPositions.length ? pityPositions.join("、") : "本次未触发"}
+          </dd>
+        </div>
+        <div>
+          <dt>自然命中重置</dt>
+          <dd>
+            {naturalResetPositions.length
+              ? naturalResetPositions.join("、")
+              : "本次未重置"}
+          </dd>
+        </div>
+        <div>
+          <dt>最新保底</dt>
+          <dd>
+            {result.pity.progress} / {result.pity.limit} · 目标
+            {rarityLabels[result.pity.target_rarity]}
+          </dd>
+        </div>
+      </dl>
+      <code className="gacha-operation-id">操作号 {operationId}</code>
+    </>
+  );
 
   return (
     <div className="modal gacha-result-modal">
@@ -94,43 +126,35 @@ export function GachaResultDialog({
         />
       )}
 
-      <dl className="result-summary gacha-result-summary">
-        <div>
-          <dt>实际消耗</dt>
-          <dd>{cost}</dd>
-        </div>
-        <div>
-          <dt>固定保底触发</dt>
-          <dd>
-            {pityPositions.length ? pityPositions.join("、") : "本次未触发"}
-          </dd>
-        </div>
-        <div>
-          <dt>自然命中重置</dt>
-          <dd>
-            {naturalResetPositions.length
-              ? naturalResetPositions.join("、")
-              : "本次未重置"}
-          </dd>
-        </div>
-        <div>
-          <dt>最新保底</dt>
-          <dd>
-            {result.pity.progress} / {result.pity.limit} · 目标
-            {rarityLabels[result.pity.target_rarity]}
-          </dd>
-        </div>
-      </dl>
-
-      <code className="gacha-operation-id">操作号 {operationId}</code>
+      {result.draw_count === 1 ? (
+        <details className="gacha-result-details">
+          <summary>查看本次详情</summary>
+          {resultDetails}
+        </details>
+      ) : (
+        resultDetails
+      )}
       {error ? <p className="operation-ack-error">{error}</p> : null}
       <div className="gacha-result-actions">
-        <Button disabled={busy} onClick={onRepeat}>
-          {busy ? "正在确认结果" : "再开一次"}
-        </Button>
-        <Button className="secondary" disabled={busy} onClick={onInventory}>
-          去藏品查看
-        </Button>
+        {result.draw_count === 1 ? (
+          <>
+            <Button disabled={busy} onClick={onInventory}>
+              {busy ? "正在确认结果" : "去藏品查看"}
+            </Button>
+            <Button className="secondary" disabled={busy} onClick={onRepeat}>
+              再开一次
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button disabled={busy} onClick={onRepeat}>
+              {busy ? "正在确认结果" : "再开一次"}
+            </Button>
+            <Button className="secondary" disabled={busy} onClick={onInventory}>
+              去藏品查看
+            </Button>
+          </>
+        )}
         <Button className="secondary" disabled={busy} onClick={onConfirm}>
           确定
         </Button>

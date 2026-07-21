@@ -1,4 +1,10 @@
-import { ChevronRight, Gift, RefreshCw, Sparkles } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Gift,
+  RefreshCw,
+  Sparkles,
+} from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -9,7 +15,7 @@ import {
   type CSSProperties,
   type ReactNode,
 } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { CatalogImage } from "../../../shared/ui/index.tsx";
 import { useApiQuery } from "../../../platform/query/index.ts";
@@ -43,8 +49,8 @@ const rarityLabels = {
 } as const;
 const boxArtPaths: Record<BoxTier, string> = {
   normal: "/assets/boxes/normal.webp",
-  rare: "/assets/boxes/rare-reference.webp",
-  legendary: "/assets/boxes/legendary-reference.webp",
+  rare: "/assets/boxes/legendary.webp",
+  legendary: "/assets/boxes/rare.webp",
 };
 
 const pityLoadError = new Error("保底进度加载失败，请重试");
@@ -57,6 +63,7 @@ export function GachaView({
   const boxes = useApiQuery("gacha.bootstrap");
   const refetchBoxes = boxes.refetch;
   const identity = useApiQuery("identity.bootstrap");
+  const navigate = useNavigate();
   const session = useSession();
   const { isBlocked, run } = useOperationRegistry();
   const { requestTopup } = useNavigationIntent();
@@ -295,8 +302,18 @@ export function GachaView({
       >
         {selectedBox && (
           <section className="gacha-showcase">
+            <header className="gacha-screen-title">
+              <button
+                type="button"
+                aria-label="返回上一页"
+                onClick={() => navigate(-1)}
+              >
+                <ChevronLeft aria-hidden="true" />
+              </button>
+              <strong>{selectedBox.display_name}</strong>
+              <span aria-hidden="true" />
+            </header>
             <div className="gacha-hero">
-              {dailyBenefits(handleFreeRareClaimed)}
               <div className={`gacha-stage ${selectedBox.tier}`}>
                 <span className="stage-glow" aria-hidden="true" />
                 <CatalogImage
@@ -481,14 +498,6 @@ export function GachaView({
                       <Gift />
                     </span>
                   </div>
-                  <div className="gacha-free-summary">
-                    <span>
-                      免费普通<strong>{freeNormalCount}</strong>
-                    </span>
-                    <span>
-                      免费稀有<strong>{freeRareCount}</strong>
-                    </span>
-                  </div>
                 </>
               ) : (
                 <div className="gacha-rule-failure" role="alert">
@@ -519,7 +528,6 @@ export function GachaView({
                   "开盒中"
                 ) : (
                   <>
-                    <Gift size={17} />
                     <span>
                       {rulesComplete ? "开 1 次" : "加载失败"}
                       {rulesComplete && (
@@ -549,7 +557,6 @@ export function GachaView({
                   "开盒中"
                 ) : (
                   <>
-                    <Sparkles size={17} />
                     <span>
                       {rulesComplete ? "开 10 次" : "加载失败"}
                       {rulesComplete && (
@@ -560,6 +567,20 @@ export function GachaView({
                 )}
               </Button>
             </div>
+            <section
+              className="gacha-business-extras"
+              aria-label="更多开盒权益"
+            >
+              <div className="gacha-free-summary">
+                <span>
+                  免费普通<strong>{freeNormalCount}</strong>
+                </span>
+                <span>
+                  免费稀有<strong>{freeRareCount}</strong>
+                </span>
+              </div>
+              {dailyBenefits(handleFreeRareClaimed)}
+            </section>
           </section>
         )}
       </PageState>

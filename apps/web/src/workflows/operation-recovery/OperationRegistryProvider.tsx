@@ -58,6 +58,7 @@ type RegisteredOperation = {
   result: unknown;
   errorCode: string | null;
   persistent: boolean;
+  input: unknown;
 };
 
 type GachaResultAction = "again" | "inventory" | "close";
@@ -274,6 +275,7 @@ export function OperationRegistryProvider({
           result: null,
           errorCode: null,
           persistent: false,
+          input,
         },
       } satisfies Record<string, RegisteredOperation>;
       operationsRef.current = next;
@@ -377,6 +379,7 @@ export function OperationRegistryProvider({
           result: operation.result,
           errorCode: operation.error_code,
           persistent: true,
+          input: null,
         };
         if (operation.status === "succeeded")
           markOperationNewTemplates(
@@ -799,7 +802,11 @@ export function OperationRegistryProvider({
       {session?.accountStatus === "normal" && active && (
         <div
           ref={dialogRef}
-          className="modal-backdrop"
+          className={`modal-backdrop ${
+            active.routeId === "gacha.open"
+              ? `gacha-operation-backdrop phase-${active.phase}`
+              : ""
+          }`}
           role="dialog"
           aria-modal="true"
           aria-labelledby={
@@ -872,28 +879,66 @@ export function OperationRegistryProvider({
               onConfirm={dismiss}
             />
           ) : (
-            <div className="modal">
-              <div
-                className={`operation-mark ${invalidDedicatedSuccess ? "unknown" : active.phase}`}
-              >
-                {invalidDedicatedSuccess
-                  ? "…"
-                  : active.phase === "succeeded"
-                    ? "✓"
-                    : active.phase === "failed"
-                      ? "!"
-                      : "…"}
-              </div>
-              <h2 id="operation-dialog-title">{active.label}</h2>
-              <p>
-                {invalidGachaSuccess
-                  ? "开盒结果详情暂时无法确认，请查询原操作"
-                  : invalidWheelSuccess
-                    ? "转盘结果详情暂时无法确认，请查询原操作"
-                    : invalidAlbumClaimSuccess
-                      ? "图鉴奖励详情暂时无法确认，请查询原操作"
+            <div
+              className={`modal ${
+                active.routeId === "gacha.open"
+                  ? `gacha-operation-modal phase-${active.phase}`
+                  : ""
+              }`}
+            >
+              {active.routeId === "gacha.open" && active.phase !== "failed" ? (
+                <>
+                  <div className="gacha-opening-art" aria-hidden="true">
+                    <img
+                      src={gachaReferencePath(active.input)}
+                      alt=""
+                      width="180"
+                      height="180"
+                    />
+                  </div>
+                  <h2 id="operation-dialog-title">
+                    {active.phase === "confirming" ||
+                    active.phase === "submitting"
+                      ? "开盒中…"
+                      : "结果确认中…"}
+                  </h2>
+                  <p>
+                    {invalidGachaSuccess
+                      ? "开盒结果详情暂时无法确认，请查询原操作"
                       : active.message}
-              </p>
+                  </p>
+                  <span className="gacha-opening-track" aria-hidden="true">
+                    <i />
+                  </span>
+                </>
+              ) : (
+                <>
+                  <div
+                    className={`operation-mark ${invalidDedicatedSuccess ? "unknown" : active.phase}`}
+                  >
+                    {invalidDedicatedSuccess
+                      ? "…"
+                      : active.phase === "succeeded"
+                        ? "✓"
+                        : active.phase === "failed"
+                          ? "!"
+                          : "…"}
+                  </div>
+                  <h2 id="operation-dialog-title">
+                    {active.routeId === "gacha.open" &&
+                    active.phase === "failed"
+                      ? "开盒失败"
+                      : active.label}
+                  </h2>
+                  <p>
+                    {invalidWheelSuccess
+                      ? "转盘结果详情暂时无法确认，请查询原操作"
+                      : invalidAlbumClaimSuccess
+                        ? "图鉴奖励详情暂时无法确认，请查询原操作"
+                        : active.message}
+                  </p>
+                </>
+              )}
               <code>操作号 {active.id}</code>
               {acknowledgedResultRouteIds.has(active.routeId) &&
               acknowledgementError?.operationId === active.id ? (
@@ -951,6 +996,16 @@ function isCurrentNormalSession(generation: string): boolean {
   return (
     session?.generation === generation && session.accountStatus === "normal"
   );
+}
+
+function gachaReferencePath(input: unknown): string {
+  if (input && typeof input === "object" && "tier" in input) {
+    const tier = input.tier;
+    if (tier === "normal") return "/assets/boxes/normal.webp";
+    if (tier === "rare") return "/assets/boxes/legendary.webp";
+    if (tier === "legendary") return "/assets/boxes/rare.webp";
+  }
+  return "/assets/boxes/legendary.webp";
 }
 
 function recoveredMessage(operation: RecoverableOperationSummary): string {

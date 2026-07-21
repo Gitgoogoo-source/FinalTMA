@@ -40,6 +40,7 @@ export function TopupDialog({
   request: TopupRequest | null;
 }): ReactNode {
   const [amount, setAmount] = useState("");
+  const [showOptions, setShowOptions] = useState(!request);
   const [activeOrder, setActiveOrder] = useState<PaymentOrder | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [pollFailed, setPollFailed] = useState(false);
@@ -270,6 +271,29 @@ export function TopupDialog({
     order?.status === "cancelled" ||
     order?.status === "expired" ||
     order?.status === "rejected";
+
+  if (request && !showOptions && !order) {
+    return (
+      <div className="modal-backdrop topup-shortage-backdrop">
+        <div className="modal topup topup-shortage">
+          <span className="topup-shortage-mark" aria-hidden="true">
+            <Coins />
+          </span>
+          <h2>K-coin 余额不足</h2>
+          <p>
+            本次操作还差 {request.estimatedGap}{" "}
+            K-coin，请返回重新选择或前往获取。
+          </p>
+          <div className="button-row">
+            <Button className="secondary" onClick={closeDialog}>
+              返回
+            </Button>
+            <Button onClick={() => setShowOptions(true)}>去获取</Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="modal-backdrop">
