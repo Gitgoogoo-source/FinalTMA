@@ -2397,6 +2397,7 @@ input:focus {
 .app-shell .vip-daily-benefits {
   min-width: 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
   gap: 4px;
   position: absolute;
@@ -2461,7 +2462,8 @@ input:focus {
 }
 .app-shell .vip-benefit-grid {
   width: auto;
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr;
   gap: 4px;
 }
 .app-shell .vip-benefit-grid article {
@@ -2537,8 +2539,8 @@ input:focus {
   width: max-content;
   max-width: 128px;
   position: absolute;
-  top: 47px;
-  left: 50%;
+  top: 50%;
+  left: calc(100% + 4px);
   padding: 3px 6px;
   border-radius: 999px;
   color: #4b9d3c;
@@ -2548,7 +2550,7 @@ input:focus {
   font-weight: 800;
   line-height: 1.25;
   text-align: center;
-  transform: translateX(-50%);
+  transform: translateY(-50%);
 }
 .app-shell .vip-benefit-feedback.error-text {
   color: #b84b3d;
@@ -2997,25 +2999,6 @@ input:focus {
   min-height: 36px;
   flex: 0 0 auto;
   padding: 0 12px;
-}
-.app-shell .gacha-free-summary {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-}
-.app-shell .gacha-free-summary span {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 5px 9px;
-  border-radius: 12px;
-  color: #7e8a84;
-  background: rgba(54, 67, 75, 0.04);
-  font-size: 8px;
-}
-.app-shell .gacha-free-summary strong {
-  color: var(--sprout-green);
-  font-size: 11px;
 }
 .app-shell .gacha-actions {
   display: grid;
@@ -4597,24 +4580,6 @@ body,
   font-size: 9px;
   line-height: 22px;
 }
-.app-shell .gacha-business-extras {
-  display: grid;
-  gap: 10px;
-  margin-top: clamp(120px, calc(100dvh - 690px), 250px);
-  padding: 14px 4px 4px;
-  border-top: 1px solid rgba(54, 67, 75, 0.07);
-}
-.app-shell .gacha-business-extras .vip-daily-benefits {
-  width: 100%;
-  position: static;
-  justify-content: center;
-  padding: 5px;
-}
-.app-shell .gacha-business-extras .gacha-free-summary {
-  width: min(100%, 250px);
-  margin: 0 auto;
-}
-
 .app-shell .gacha-operation-backdrop,
 .app-shell .topup-shortage-backdrop {
   place-items: center;

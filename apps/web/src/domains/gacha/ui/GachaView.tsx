@@ -106,8 +106,6 @@ export function GachaView({
   );
   const pityItems = boxes.data?.pity ?? [];
   const rulesComplete = boxes.data?.rules_complete === true;
-  const freeNormalCount = Number(boxes.data?.entitlements.free_normal_box ?? 0);
-  const freeRareCount = Number(boxes.data?.entitlements.free_rare_box ?? 0);
   const selectedBox =
     visibleItems.find((box) => box.tier === selectedTier) ??
     visibleItems[0] ??
@@ -314,6 +312,7 @@ export function GachaView({
               <span aria-hidden="true" />
             </header>
             <div className="gacha-hero">
+              {dailyBenefits(handleFreeRareClaimed)}
               <div className={`gacha-stage ${selectedBox.tier}`}>
                 <span className="stage-glow" aria-hidden="true" />
                 <CatalogImage
@@ -567,20 +566,6 @@ export function GachaView({
                 )}
               </Button>
             </div>
-            <section
-              className="gacha-business-extras"
-              aria-label="更多开盒权益"
-            >
-              <div className="gacha-free-summary">
-                <span>
-                  免费普通<strong>{freeNormalCount}</strong>
-                </span>
-                <span>
-                  免费稀有<strong>{freeRareCount}</strong>
-                </span>
-              </div>
-              {dailyBenefits(handleFreeRareClaimed)}
-            </section>
           </section>
         )}
       </PageState>
