@@ -1,4 +1,4 @@
-import { ChevronRight, Gift, ShieldCheck, Sparkles } from "lucide-react";
+import { ChevronRight, Gift, RefreshCw, Sparkles } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -6,6 +6,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
   type ReactNode,
 } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -16,7 +17,7 @@ import {
   registerSensitiveStateResetter,
   useSession,
 } from "../../../platform/session/store.ts";
-import { Badge, Button, Card, PageState } from "../../../shared/ui/index.tsx";
+import { Button, Card, PageState } from "../../../shared/ui/index.tsx";
 import { focusTaskTarget } from "../../../shared/navigation/focusTaskTarget.ts";
 import { useOperationRegistry } from "../../../workflows/operation-recovery/index.ts";
 import { useNavigationIntent } from "../../../workflows/payment-recovery/index.ts";
@@ -40,6 +41,11 @@ const rarityLabels = {
   legendary: "传说",
   mythic: "神话",
 } as const;
+const boxArtPaths: Record<BoxTier, string> = {
+  normal: "/assets/boxes/normal.webp",
+  rare: "/assets/boxes/rare-reference.webp",
+  legendary: "/assets/boxes/legendary-reference.webp",
+};
 
 const pityLoadError = new Error("保底进度加载失败，请重试");
 
@@ -68,6 +74,11 @@ export function GachaView({
     isBoxTier(requestedTier)
       ? requestedTier
       : (remembered?.selectedTier ?? "normal"),
+  );
+  const pool = useApiQuery(
+    "gacha.pool",
+    { tier: selectedTier },
+    boxes.data?.rules_complete === true,
   );
   const selectedTierRef = useRef(selectedTier);
   const rememberedScrollY = remembered?.scrollY ?? 0;
@@ -101,6 +112,33 @@ export function GachaView({
     selectedPity && selectedPity.progress < selectedPity.limit
       ? selectedPity
       : null;
+  const previewItems = useMemo(() => {
+    const rarities = pool.data?.rarities ?? [];
+    const items = rarities.flatMap((rarity) => rarity.items);
+    const representative = rarities.flatMap((rarity) =>
+      rarity.items.slice(0, 1),
+    );
+    const picked = new Map(
+      representative.map((item) => [item.template_id, item]),
+    );
+    for (const item of items) {
+      if (picked.size >= 5) break;
+      picked.set(item.template_id, item);
+    }
+    return [...picked.values()].slice(0, 5);
+  }, [pool.data?.rarities]);
+  const raritySummary = selectedBox
+    ? Object.entries(selectedBox.rarity_weights)
+        .filter(([, weight]) => weight > 0)
+        .map(
+          ([rarity, weight]) =>
+            `${rarityLabels[rarity as keyof typeof rarityLabels]} ${weight / 100}%`,
+        )
+        .join(" · ")
+    : "";
+  const pityPercent = validPity
+    ? Math.min(100, Math.max(0, (validPity.progress / validPity.limit) * 100))
+    : 0;
   const freeSingleCount =
     selectedBox?.tier === "normal"
       ? boxes.data?.entitlements.free_normal_box
@@ -263,7 +301,7 @@ export function GachaView({
                 <span className="stage-glow" aria-hidden="true" />
                 <CatalogImage
                   key={selectedBox.tier}
-                  path={selectedBox.image_path}
+                  path={boxArtPaths[selectedBox.tier]}
                   alt={selectedBox.display_name}
                   variant="detail"
                   loading="eager"
@@ -306,7 +344,7 @@ export function GachaView({
                   >
                     <span className="tier-art">
                       <CatalogImage
-                        path={box.image_path}
+                        path={boxArtPaths[box.tier]}
                         alt=""
                         variant="thumbnail"
                         loading="lazy"
@@ -321,9 +359,15 @@ export function GachaView({
             </div>
 
             <Card className="gacha-details">
-              <div className="gacha-detail-title">
-                <div className="gacha-detail-heading">
-                  <Badge>{selectedBox.display_name}</Badge>
+              <section className="gacha-reward-preview">
+                <header>
+                  <div>
+                    <strong>
+                      <Sparkles aria-hidden="true" />
+                      可能获得
+                    </strong>
+                    <small>{raritySummary}</small>
+                  </div>
                   <button
                     ref={poolTrigger}
                     type="button"
@@ -332,43 +376,88 @@ export function GachaView({
                     aria-expanded={poolOpen}
                     onClick={() => setPoolOpen(true)}
                   >
-                    <span>
-                      <strong>可能获得</strong>
-                      <small>查看全部正式候选</small>
-                    </span>
+                    查看全部
                     <ChevronRight aria-hidden="true" />
                   </button>
-                </div>
-                <span>概率由服务器最终确认</span>
-              </div>
+                </header>
+                {pool.isPending || (pool.isFetching && !pool.data) ? (
+                  <div className="gacha-preview-state" role="status">
+                    <RefreshCw className="spin" aria-hidden="true" />
+                    正在加载真实奖池
+                  </div>
+                ) : pool.error || previewItems.length === 0 ? (
+                  <button
+                    type="button"
+                    className="gacha-preview-state error"
+                    disabled={pool.isFetching}
+                    onClick={() => void pool.refetch()}
+                  >
+                    <RefreshCw
+                      className={pool.isFetching ? "spin" : ""}
+                      aria-hidden="true"
+                    />
+                    {pool.isFetching
+                      ? "正在重新加载"
+                      : "奖池加载失败，点击重试"}
+                  </button>
+                ) : (
+                  <div className="gacha-preview-items">
+                    {previewItems.map((item) => (
+                      <button
+                        key={item.template_id}
+                        type="button"
+                        aria-label={`${item.name}，${rarityLabels[item.rarity]}，查看全部可能获得`}
+                        onClick={() => setPoolOpen(true)}
+                      >
+                        <span className={`preview-art rarity-${item.rarity}`}>
+                          <CatalogImage
+                            path={item.image_thumbnail_path}
+                            alt={item.name}
+                            variant="thumbnail"
+                            loading="lazy"
+                          />
+                        </span>
+                        <strong className={`rarity-${item.rarity}`}>
+                          {rarityLabels[item.rarity]}
+                        </strong>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </section>
               {rulesComplete ? (
                 <>
-                  <div className="rarity-odds">
-                    {Object.entries(selectedBox.rarity_weights).map(
-                      ([rarity, weight]) =>
-                        weight > 0 ? (
-                          <span key={rarity} className={`rarity-${rarity}`}>
-                            <i />
-                            {rarityLabels[rarity as keyof typeof rarityLabels]}
-                            <strong>{weight / 100}%</strong>
-                          </span>
-                        ) : null,
-                    )}
-                  </div>
                   <div className="pity-capsule" aria-live="polite">
+                    <span
+                      className="pity-ring"
+                      aria-label={
+                        validPity
+                          ? `当前进度 ${validPity.progress} / ${validPity.limit}`
+                          : "保底进度暂不可用"
+                      }
+                      style={
+                        {
+                          "--pity-progress": `${pityPercent}%`,
+                        } as CSSProperties
+                      }
+                    >
+                      <i>
+                        {validPity
+                          ? `${validPity.progress}/${validPity.limit}`
+                          : "—"}
+                      </i>
+                    </span>
                     <div className="pity-copy">
                       {validPity ? (
                         <>
-                          <span className="pity-progress">
-                            当前进度：{validPity.progress} / {validPity.limit}
-                          </span>
                           <strong className="pity-target">
                             {`再开 ${validPity.limit - validPity.progress} 次，必得${rarityLabels[validPity.target_rarity]}或以上藏品`}
                           </strong>
                           <small className="pity-reset-note">
+                            当前进度 {validPity.progress}/{validPity.limit} ·
                             自然抽到
                             {rarityLabels[validPity.target_rarity]}
-                            或以上时，本档进度重置
+                            或以上时重置
                           </small>
                         </>
                       ) : !pityFailed ? (
@@ -388,7 +477,9 @@ export function GachaView({
                         </span>
                       ) : null}
                     </div>
-                    <ShieldCheck aria-hidden="true" />
+                    <span className="pity-gift" aria-hidden="true">
+                      <Gift />
+                    </span>
                   </div>
                   <div className="gacha-free-summary">
                     <span>
@@ -453,6 +544,7 @@ export function GachaView({
                 }
                 onClick={() => open(selectedBox.tier, 10)}
               >
+                <b className="draw-discount">9折</b>
                 {blocked ? (
                   "开盒中"
                 ) : (

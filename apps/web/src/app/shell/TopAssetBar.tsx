@@ -36,6 +36,15 @@ export function TopAssetBar({
       </div>
       <div className="asset-actions">
         <button
+          className={`wallet-action ${wallet.data?.verified_at ? "verified" : ""}`}
+          disabled={Boolean(wallet.error)}
+          aria-label={`TON 钱包：${walletLabel}`}
+          onClick={() => openDialog("wallet")}
+        >
+          <WalletCards />
+          <small>{walletLabel}</small>
+        </button>
+        <button
           className="asset-pill kcoin"
           aria-label={`K-coin：${kcoin?.available ?? "加载中"}，打开充值`}
           onClick={() => openDialog("topup")}
@@ -69,15 +78,6 @@ export function TopAssetBar({
             <Crown />
           </button>
         ) : null}
-        <button
-          className={`wallet-action ${wallet.data?.verified_at ? "verified" : ""}`}
-          disabled={Boolean(wallet.error)}
-          aria-label={`TON 钱包：${walletLabel}`}
-          onClick={() => openDialog("wallet")}
-        >
-          <WalletCards />
-          <small>{walletLabel}</small>
-        </button>
         {wallet.error ? (
           <button
             className="summary-retry"
