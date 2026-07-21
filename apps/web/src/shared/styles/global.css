@@ -2360,233 +2360,248 @@ input:focus {
 }
 
 /* Gacha */
+.app-shell .gacha-page {
+  padding-top: 0;
+}
 .app-shell .gacha-heading {
-  margin-bottom: 0;
+  width: 1px;
+  height: 1px;
+  min-height: 0;
+  position: absolute;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 .app-shell .vip-daily-benefits {
-  display: grid;
-  gap: 11px;
-  margin: 8px 0 14px;
-  padding: 13px;
-  border-color: rgba(255, 185, 58, 0.24);
-  background:
-    radial-gradient(circle at 5% 0, rgba(255, 219, 123, 0.3), transparent 38%),
-    rgba(255, 253, 246, 0.9);
-}
-.app-shell .vip-benefit-heading {
-  display: grid;
-  grid-template-columns: 38px 1fr auto;
-  align-items: center;
-  gap: 9px;
-}
-.app-shell .vip-benefit-mark,
-.app-shell .benefit-icon {
-  display: grid;
-  place-items: center;
-  border-radius: 13px;
-}
-.app-shell .vip-benefit-mark {
-  width: 38px;
-  height: 38px;
-  color: #d8910d;
-  background: rgba(255, 196, 68, 0.16);
-}
-.app-shell .vip-benefit-mark svg {
-  width: 20px;
-}
-.app-shell .vip-benefit-heading > div {
   min-width: 0;
   display: grid;
-  gap: 1px;
+  align-content: center;
+  gap: 6px;
+  z-index: 3;
 }
-.app-shell .vip-benefit-heading > div > span {
-  color: #c58a20;
+.app-shell .vip-benefit-heading {
+  width: 76px;
+  min-height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  color: #c86d18;
+}
+.app-shell .vip-benefit-heading > svg {
+  width: 12px;
+  height: 12px;
+  stroke-width: 2.5;
+}
+.app-shell .vip-benefit-heading > span {
   font-size: 7px;
-  font-weight: 900;
-  letter-spacing: 0.12em;
+  font-weight: 950;
+  letter-spacing: 0.08em;
 }
-.app-shell .vip-benefit-heading strong {
-  color: #3f3a2f;
-  font-size: 14px;
-}
-.app-shell .vip-benefit-heading small {
+.app-shell .vip-benefit-heading > strong {
+  max-width: 38px;
   overflow: hidden;
-  color: #8d877b;
-  font-size: 8px;
+  padding: 2px 4px;
+  border-radius: 999px;
+  color: #a45e1a;
+  background: rgba(255, 150, 54, 0.11);
+  font-size: 6px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.app-shell .vip-benefit-heading > .badge {
-  color: #9b6610;
-  background: rgba(255, 191, 51, 0.13);
+.app-shell .vip-benefit-retry {
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(190, 84, 67, 0.16);
+  border-radius: 50%;
+  color: #b84b3d;
+  background: rgba(255, 255, 255, 0.78);
+}
+.app-shell .vip-benefit-retry svg {
+  width: 11px;
 }
 .app-shell .vip-benefit-grid {
+  width: 76px;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 .app-shell .vip-benefit-grid article {
   min-width: 0;
   display: grid;
-  grid-template-columns: 32px 1fr;
-  align-content: start;
-  gap: 8px;
-  padding: 9px;
-  border: 1px solid rgba(96, 79, 49, 0.08);
-  border-radius: 15px;
-  background: rgba(255, 255, 255, 0.68);
+  justify-items: center;
+  gap: 3px;
 }
-.app-shell .benefit-icon {
-  width: 32px;
-  height: 32px;
-}
-.app-shell .benefit-icon svg {
-  width: 16px;
-}
-.app-shell .benefit-icon.fgems {
-  color: #3e90e8;
-  background: rgba(62, 144, 232, 0.1);
-}
-.app-shell .benefit-icon.free-box {
-  color: #f07833;
-  background: rgba(240, 120, 51, 0.1);
-}
-.app-shell .vip-benefit-grid article > div {
-  min-width: 0;
-  display: grid;
-  gap: 2px;
-}
-.app-shell .vip-benefit-grid article strong {
-  overflow: hidden;
-  color: #46524d;
-  font-size: 10px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.app-shell .vip-benefit-grid article small,
-.app-shell .vip-benefit-grid article div > span {
-  color: #919a95;
-  font-size: 7px;
-  line-height: 1.35;
-}
-.app-shell .vip-benefit-grid article > .button {
-  min-height: 34px;
-  grid-column: 1 / -1;
-  padding: 7px 6px;
-  border-radius: 17px;
-  font-size: 8px;
-}
-.app-shell .vip-benefit-error {
+.app-shell .vip-benefit-grid .vip-benefit-tile {
+  width: 76px;
+  min-height: 92px;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  color: #bc4d5b;
-  font-size: 10px;
+  flex-direction: column;
+  gap: 1px;
+  padding: 7px 5px 6px;
+  border: 1px solid rgba(231, 224, 214, 0.94);
+  border-radius: 20px;
+  color: #4b5550;
+  background: rgba(255, 255, 255, 0.84);
+  box-shadow:
+    0 10px 24px rgba(72, 55, 40, 0.08),
+    inset 0 1px 0 #fff;
+  backdrop-filter: blur(18px) saturate(145%);
 }
-.app-shell .vip-benefit-error .button {
-  min-height: 34px;
-  padding: 7px 10px;
-  border-radius: 17px;
-  font-size: 9px;
+.app-shell .vip-benefit-grid .vip-benefit-tile:disabled {
+  opacity: 0.72;
+}
+.app-shell .vip-benefit-grid .vip-benefit-tile:not(:disabled):active {
+  transform: scale(0.96);
+}
+.app-shell .vip-benefit-tile .benefit-icon {
+  width: 29px;
+  height: 29px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 2px;
+  border-radius: 11px;
+}
+.app-shell .vip-benefit-tile .benefit-icon svg {
+  width: 15px;
+}
+.app-shell .vip-benefit-tile.fgems .benefit-icon {
+  color: #4f9edc;
+  background: rgba(79, 158, 220, 0.1);
+}
+.app-shell .vip-benefit-tile.free-box .benefit-icon {
+  color: #f08032;
+  background: rgba(240, 128, 50, 0.1);
+}
+.app-shell .vip-benefit-tile > strong {
+  font-size: 10px;
+  font-weight: 950;
+  line-height: 1.1;
+}
+.app-shell .vip-benefit-tile > small {
+  color: #8c9691;
+  font-size: 7px;
+  font-weight: 800;
+}
+.app-shell .vip-benefit-tile > span:last-child {
+  width: 100%;
+  min-height: 21px;
+  display: grid;
+  place-items: center;
+  margin-top: 2px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(75, 85, 80, 0.07);
+  color: #db6c16;
+  font-size: 6px;
+  font-weight: 900;
+  line-height: 1.25;
+  text-align: center;
+}
+.app-shell .vip-benefit-feedback {
+  width: 76px;
+  color: #4b9d3c;
+  font-size: 6px;
+  font-weight: 800;
+  line-height: 1.25;
+  text-align: center;
+}
+.app-shell .vip-benefit-feedback.error-text {
+  color: #b84b3d;
 }
 .app-shell .gacha-showcase {
   display: grid;
+  gap: 0;
+}
+.app-shell .gacha-hero {
+  min-height: 282px;
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  align-items: center;
+  gap: 0;
+  position: relative;
+  margin: -2px 0 -6px;
+  isolation: isolate;
 }
 .app-shell .gacha-stage {
-  height: clamp(250px, 70vw, 330px);
+  --gacha-glow: rgba(255, 177, 65, 0.25);
+  min-width: 0;
+  height: 282px;
   display: grid;
   place-items: center;
   position: relative;
-  overflow: hidden;
-  border-radius: 38% 38% 28px 28px;
-  background:
-    radial-gradient(
-      circle at 50% 48%,
-      rgba(255, 177, 65, 0.28),
-      transparent 39%
-    ),
-    radial-gradient(circle at 50% 86%, rgba(77, 187, 57, 0.08), transparent 35%);
+  overflow: visible;
 }
 .app-shell .gacha-stage.rare {
-  background:
-    radial-gradient(
-      circle at 50% 48%,
-      rgba(65, 151, 255, 0.24),
-      transparent 40%
-    ),
-    radial-gradient(circle at 50% 86%, rgba(77, 187, 57, 0.08), transparent 35%);
+  --gacha-glow: rgba(85, 162, 89, 0.21);
 }
 .app-shell .gacha-stage.legendary {
-  background:
-    radial-gradient(
-      circle at 50% 48%,
-      rgba(255, 123, 45, 0.3),
-      transparent 41%
-    ),
-    radial-gradient(
-      circle at 50% 86%,
-      rgba(255, 200, 76, 0.13),
-      transparent 36%
-    );
+  --gacha-glow: rgba(255, 123, 45, 0.32);
+}
+.app-shell .gacha-stage .stage-glow {
+  width: min(65vw, 268px);
+  height: min(65vw, 268px);
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--gacha-glow), transparent 68%);
+  filter: blur(4px);
 }
 .app-shell .gacha-stage::after {
   content: "";
   position: absolute;
-  left: 15%;
-  right: 15%;
+  left: 17%;
+  right: 17%;
   bottom: 24px;
-  height: 22px;
+  height: 18px;
   border-radius: 50%;
-  background: rgba(54, 67, 75, 0.12);
-  filter: blur(14px);
+  background: rgba(54, 49, 44, 0.15);
+  filter: blur(12px);
 }
 .app-shell .gacha-stage .catalog-image,
 .app-shell .gacha-stage .image-missing {
-  width: min(74vw, 286px);
-  height: min(65vw, 278px);
+  width: min(67vw, 284px);
+  max-width: 100%;
+  height: min(67vw, 284px);
   z-index: 1;
-  filter: drop-shadow(0 24px 28px rgba(74, 55, 38, 0.2));
+  filter: drop-shadow(0 23px 24px rgba(74, 55, 38, 0.19));
   animation: egg-float 3.8s ease-in-out infinite;
 }
 .app-shell .gacha-tier-selector {
-  width: min(100%, 330px);
+  width: min(100%, 352px);
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 9px;
-  margin: -5px auto 12px;
+  gap: 8px;
+  margin: 0 auto 12px;
   z-index: 2;
 }
 .app-shell .gacha-tier-selector button {
   min-width: 0;
-  height: 112px;
+  height: 104px;
   display: grid;
-  grid-template-rows: 50px auto auto 12px;
+  grid-template-rows: 52px auto auto 11px;
   justify-items: center;
   align-items: center;
   gap: 0;
-  padding: 7px 5px 5px;
-  border: 1px solid rgba(228, 224, 216, 0.78);
-  border-radius: 18px;
+  padding: 5px 5px 4px;
+  border: 1px solid rgba(228, 224, 216, 0.9);
+  border-radius: 20px;
   color: var(--sprout-ink);
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.96),
-    rgba(255, 255, 255, 0.67)
-  );
+  background: rgba(255, 255, 255, 0.78);
   box-shadow:
-    0 9px 20px rgba(54, 45, 38, 0.07),
+    0 9px 22px rgba(54, 45, 38, 0.065),
     inset 0 1px 0 #fff;
+  backdrop-filter: blur(18px) saturate(145%);
 }
 .app-shell .gacha-tier-selector button.active {
-  border-color: rgba(255, 122, 0, 0.6);
+  border-color: rgba(255, 122, 0, 0.72);
   box-shadow:
-    0 12px 24px rgba(255, 122, 0, 0.14),
+    0 12px 25px rgba(255, 122, 0, 0.13),
     inset 0 1px 0 #fff;
 }
 .app-shell .gacha-tier-selector .tier-art {
-  width: 48px;
-  height: 48px;
+  width: 51px;
+  height: 51px;
 }
 .app-shell .gacha-tier-selector strong {
   max-width: 100%;
@@ -2614,7 +2629,13 @@ input:focus {
 .app-shell .gacha-details {
   display: grid;
   gap: 10px;
-  padding: 13px;
+  padding: 4px 2px 0;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
 }
 .app-shell .gacha-detail-title {
   display: flex;
@@ -2632,7 +2653,7 @@ input:focus {
   font-size: 8px;
 }
 .app-shell .gacha-pool-trigger {
-  min-height: 44px;
+  min-height: 39px;
   display: flex;
   align-items: center;
   gap: 7px;
@@ -2661,12 +2682,12 @@ input:focus {
 .app-shell .rarity-odds {
   display: flex;
   gap: 5px;
-  overflow-x: auto;
+  overflow: hidden;
   scrollbar-width: none;
 }
 .app-shell .rarity-odds > span {
-  min-width: 58px;
-  flex: 1 0 auto;
+  min-width: 0;
+  flex: 1 1 0;
   display: grid;
   grid-template-columns: 8px 1fr;
   gap: 2px 4px;
@@ -2701,7 +2722,7 @@ input:focus {
   background: #ec577a;
 }
 .app-shell .pity-capsule {
-  min-height: 42px;
+  min-height: 52px;
   display: grid;
   grid-template-columns: 1fr 28px;
   align-items: center;
@@ -2796,11 +2817,11 @@ input:focus {
   display: grid;
   grid-template-columns: 1fr 1.05fr;
   gap: 10px;
-  margin-top: 10px;
+  margin-top: 12px;
 }
 .app-shell .gacha-actions .button {
-  min-height: 58px;
-  border-radius: 29px;
+  min-height: 60px;
+  border-radius: 30px;
 }
 .app-shell .gacha-actions .single-draw {
   border-color: rgba(54, 67, 75, 0.1);

@@ -3,7 +3,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { useApiQuery } from "../../../platform/query/index.ts";
-import { Badge, Button, Card } from "../../../shared/ui/index.tsx";
+import { Button } from "../../../shared/ui/index.tsx";
 import { useOperationRegistry } from "../../../workflows/operation-recovery/index.ts";
 
 type Benefit = "fgems" | "freeBox";
@@ -93,97 +93,101 @@ export function VipDailyBenefits({
     freeBoxFeedback && freeBoxFeedback.benefitDate === data?.benefit_date
       ? freeBoxFeedback.status
       : undefined;
+  const statusBadge = vipStatusBadge(
+    data,
+    paymentPending,
+    vip.isLoading,
+    vip.error,
+  );
+  const statusText = vipStatusText(data, paymentPending, vip.isLoading);
+  const fgemsAction = benefitButtonText({
+    active,
+    expired,
+    claimed: fgemsClaimed,
+    pending: fgemsPending,
+    loading: unavailable,
+    loadFailed,
+    available: "领取 100 Fgems",
+  });
+  const freeBoxAction = benefitButtonText({
+    active,
+    expired,
+    claimed: freeBoxClaimed,
+    used: Boolean(data?.free_box_used_today),
+    pending: freeBoxPending,
+    loading: unavailable,
+    loadFailed,
+    available: "领取免费稀有盲盒",
+  });
 
   return (
-    <Card className="vip-daily-benefits" aria-live="polite">
+    <aside
+      className="vip-daily-benefits"
+      aria-label={`月卡每日权益，${statusBadge}，${statusText}`}
+      aria-live="polite"
+      title={statusText}
+    >
       <div className="vip-benefit-heading">
-        <span className="vip-benefit-mark">
-          <Crown aria-hidden="true" />
-        </span>
-        <div>
-          <span>VIP MONTHLY PASS</span>
-          <strong>月卡每日权益</strong>
-          <small>{vipStatusText(data, paymentPending, vip.isLoading)}</small>
-        </div>
-        <Badge>
-          {vipStatusBadge(data, paymentPending, vip.isLoading, vip.error)}
-        </Badge>
+        <Crown aria-hidden="true" />
+        <span>VIP</span>
+        <strong>{statusBadge}</strong>
+        {loadFailed && (
+          <button
+            type="button"
+            className="vip-benefit-retry"
+            aria-label="月卡状态加载失败，重新加载"
+            onClick={() => void vip.refetch()}
+          >
+            <RefreshCw aria-hidden="true" />
+          </button>
+        )}
       </div>
-
-      {loadFailed && (
-        <div className="vip-benefit-error">
-          <span>月卡状态加载失败，领取入口已停用</span>
-          <Button onClick={() => void vip.refetch()}>
-            <RefreshCw size={15} />
-            重新加载
-          </Button>
-        </div>
-      )}
       <div className="vip-benefit-grid">
         <article>
-          <span className="benefit-icon fgems">
-            <Gem aria-hidden="true" />
-          </span>
-          <div>
-            <strong>100 Fgems</strong>
-            <small>每个 UTC+0 日手动领取</small>
-            <BenefitFeedback
-              feedback={fgemsFeedbackStatus}
-              claimed={fgemsClaimed}
-              success="领取成功，Fgems +100"
-            />
-          </div>
           <Button
+            className="vip-benefit-tile fgems"
             disabled={unavailable || fgemsPending || (active && fgemsClaimed)}
+            aria-label={`100 Fgems，每个 UTC+0 日手动领取，${fgemsAction}`}
             onClick={() => (active ? void claim("fgems") : openDetails())}
           >
-            {benefitButtonText({
-              active,
-              expired,
-              claimed: fgemsClaimed,
-              pending: fgemsPending,
-              loading: unavailable,
-              loadFailed,
-              available: "领取 100 Fgems",
-            })}
+            <span className="benefit-icon">
+              <Gem aria-hidden="true" />
+            </span>
+            <strong>100</strong>
+            <small>Fgems</small>
+            <span>{fgemsAction}</span>
           </Button>
+          <BenefitFeedback
+            feedback={fgemsFeedbackStatus}
+            claimed={fgemsClaimed}
+            success="领取成功，Fgems +100"
+          />
         </article>
 
         <article>
-          <span className="benefit-icon free-box">
-            <Gift aria-hidden="true" />
-          </span>
-          <div>
-            <strong>免费稀有盲盒 ×1</strong>
-            <small>
-              全部来源当前可用 {data?.free_rare_box_available ?? "—"} 次
-            </small>
-            <BenefitFeedback
-              feedback={freeBoxFeedbackStatus}
-              claimed={freeBoxClaimed}
-              success="领取成功，免费稀有盲盒次数 +1"
-            />
-          </div>
           <Button
+            className="vip-benefit-tile free-box"
             disabled={
               unavailable || freeBoxPending || (active && freeBoxClaimed)
             }
+            aria-label={`免费稀有盲盒 1 次，全部来源当前可用 ${data?.free_rare_box_available ?? "—"} 次，${freeBoxAction}`}
             onClick={() => (active ? void claim("freeBox") : openDetails())}
           >
-            {benefitButtonText({
-              active,
-              expired,
-              claimed: freeBoxClaimed,
-              used: Boolean(data?.free_box_used_today),
-              pending: freeBoxPending,
-              loading: unavailable,
-              loadFailed,
-              available: "领取免费稀有盲盒",
-            })}
+            <span className="benefit-icon">
+              <Gift aria-hidden="true" />
+            </span>
+            <strong>稀有盒</strong>
+            <small>{data?.free_rare_box_available ?? "—"} 次可用</small>
+            <span>{freeBoxAction}</span>
           </Button>
+          <BenefitFeedback
+            feedback={freeBoxFeedbackStatus}
+            claimed={freeBoxClaimed}
+            success="领取成功，免费稀有盲盒次数 +1"
+          />
         </article>
       </div>
-    </Card>
+    </aside>
   );
 }
 
@@ -198,7 +202,9 @@ function BenefitFeedback({
 }): ReactNode {
   if (!feedback) return null;
   return (
-    <span className={feedback === "failed" && !claimed ? "error-text" : ""}>
+    <span
+      className={`vip-benefit-feedback ${feedback === "failed" && !claimed ? "error-text" : ""}`}
+    >
       {feedback === "success"
         ? success
         : claimed

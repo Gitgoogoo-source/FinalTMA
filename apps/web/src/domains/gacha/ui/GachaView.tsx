@@ -219,7 +219,6 @@ export function GachaView({
         </div>
         <Sparkles aria-hidden="true" />
       </header>
-      {dailyBenefits(handleFreeRareClaimed)}
       {targetRarity && visibleItems.length > 0 && (
         <Card className="gacha-target" role="status">
           <strong>可产出{rarityLabels[targetRarity]}的盲盒</strong>
@@ -258,23 +257,26 @@ export function GachaView({
       >
         {selectedBox && (
           <section className="gacha-showcase">
-            <div className={`gacha-stage ${selectedBox.tier}`}>
-              <span className="stage-glow" aria-hidden="true" />
-              <CatalogImage
-                key={selectedBox.tier}
-                path={selectedBox.image_path}
-                alt={selectedBox.display_name}
-                variant="detail"
-                loading="eager"
-                fetchPriority="high"
-                onAvailability={(available) =>
-                  setReady((state) =>
-                    state[selectedBox.tier] === available
-                      ? state
-                      : { ...state, [selectedBox.tier]: available },
-                  )
-                }
-              />
+            <div className="gacha-hero">
+              {dailyBenefits(handleFreeRareClaimed)}
+              <div className={`gacha-stage ${selectedBox.tier}`}>
+                <span className="stage-glow" aria-hidden="true" />
+                <CatalogImage
+                  key={selectedBox.tier}
+                  path={selectedBox.image_path}
+                  alt={selectedBox.display_name}
+                  variant="detail"
+                  loading="eager"
+                  fetchPriority="high"
+                  onAvailability={(available) =>
+                    setReady((state) =>
+                      state[selectedBox.tier] === available
+                        ? state
+                        : { ...state, [selectedBox.tier]: available },
+                    )
+                  }
+                />
+              </div>
             </div>
 
             <div
