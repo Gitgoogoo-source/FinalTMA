@@ -925,10 +925,7 @@ export function OperationRegistryProvider({
                           : "…"}
                   </div>
                   <h2 id="operation-dialog-title">
-                    {active.routeId === "gacha.open" &&
-                    active.phase === "failed"
-                      ? "开盒失败"
-                      : active.label}
+                    {operationDialogTitle(active)}
                   </h2>
                   <p>
                     {invalidWheelSuccess
@@ -1018,6 +1015,17 @@ function recoveredMessage(operation: RecoverableOperationSummary): string {
   return operation.status === "unknown"
     ? "原操作结果未知，需要继续查询"
     : "原操作仍在处理中";
+}
+
+function operationDialogTitle(operation: RegisteredOperation): string {
+  if (operation.phase === "succeeded") {
+    if (operation.routeId === "market.create_listing") return "上架成功";
+    if (operation.routeId === "market.cancel_template_listings")
+      return "已下架";
+  }
+  return operation.routeId === "gacha.open" && operation.phase === "failed"
+    ? "开盒失败"
+    : operation.label;
 }
 
 function confirmedMessage(
