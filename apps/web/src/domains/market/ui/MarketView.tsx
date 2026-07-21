@@ -144,6 +144,18 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
       );
     return filtered;
   }, [buySort, priceFilter, rarityFilter, sorted, stageFilter, tab]);
+  const manageSummary = useMemo(
+    () =>
+      data.reduce(
+        (summary, item) => ({
+          listed: summary.listed + item.available,
+          gross: summary.gross + (item.estimated_gross ?? 0),
+          net: summary.net + (item.estimated_net ?? 0),
+        }),
+        { listed: 0, gross: 0, net: 0 },
+      ),
+    [data],
+  );
   const selectedSellItem =
     tab === "sell"
       ? (visible.find((item) => item.template_id === params.get("sell")) ??
@@ -218,16 +230,6 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
             <span>{sorted.length} 种藏品可出售</span>
           </div>
         </header>
-      ) : tab !== "buy" ? (
-        <header className="page-heading market-heading">
-          <div>
-            <span>OFFICIAL MARKET</span>
-            <h1>交易市场</h1>
-          </div>
-          <div className="market-heading-actions">
-            <ShoppingBag aria-hidden="true" />
-          </div>
-        </header>
       ) : null}
       {tab === "buy" && purchaseTarget && targetListing.data && (
         <Card className="market-target" role="status">
@@ -280,7 +282,27 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
           </Button>
         </Card>
       )}
-      {tab !== "sell" && vipBanner}
+      {tab === "buy" && vipBanner}
+      {tab === "manage" && sorted.length > 0 && (
+        <Card className="market-listing-summary" aria-label="出售汇总">
+          <MarketListingSummaryMetric
+            label="出售中"
+            value={formatKCoin(manageSummary.listed)}
+          />
+          <MarketListingSummaryMetric
+            label="总价值"
+            value={formatKCoin(manageSummary.gross)}
+            unit="K"
+            accent
+          />
+          <MarketListingSummaryMetric
+            label="预计到账"
+            value={formatKCoin(manageSummary.net)}
+            unit="K"
+            accent
+          />
+        </Card>
+      )}
       {tab === "buy" && (
         <div className="market-buy-controls">
           <div className="market-filter-strip">
@@ -476,16 +498,25 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
         >
           {visible.length ? (
             <div className={`market-grid market-grid-${tab}`}>
-              {visible.map((item) => (
-                <MarketCard
-                  key={item.template_id}
-                  item={item}
-                  tab={tab}
-                  blocked={blocked}
-                  balance={identity.data?.assets.kcoin.available}
-                  onSubmit={submit}
-                />
-              ))}
+              {visible.map((item) =>
+                tab === "manage" ? (
+                  <MarketListingCard
+                    key={item.template_id}
+                    item={item}
+                    blocked={blocked}
+                    onDelist={() => submit(item, 1)}
+                  />
+                ) : (
+                  <MarketCard
+                    key={item.template_id}
+                    item={item}
+                    tab={tab}
+                    blocked={blocked}
+                    balance={identity.data?.assets.kcoin.available}
+                    onSubmit={submit}
+                  />
+                ),
+              )}
             </div>
           ) : (
             <div className="market-filter-empty">
@@ -596,6 +627,10 @@ function rarityLabel(value: string | undefined): string {
   );
 }
 
+function formatKCoin(value: number): string {
+  return new Intl.NumberFormat("zh-CN").format(value);
+}
+
 function sortLabel(value: BuySort): string {
   return {
     catalog: "排序",
@@ -630,6 +665,77 @@ type MarketViewItem = {
   estimated_vip_rebate?: number;
   status?: "active" | "partially_sold";
 };
+
+function MarketListingSummaryMetric({
+  label,
+  value,
+  unit,
+  accent = false,
+}: {
+  label: string;
+  value: string;
+  unit?: string;
+  accent?: boolean;
+}): ReactNode {
+  return (
+    <span className={accent ? "accent" : ""}>
+      <small>{label}</small>
+      <strong>
+        {value}
+        {unit && <i>{unit}</i>}
+      </strong>
+    </span>
+  );
+}
+
+function MarketListingCard({
+  item,
+  blocked,
+  onDelist,
+}: {
+  item: MarketViewItem;
+  blocked: boolean;
+  onDelist(): void;
+}): ReactNode {
+  return (
+    <Card className="market-listing-card">
+      <div className="market-listing-art">
+        <CatalogImage
+          path={item.image_thumbnail_path}
+          alt={item.name}
+          variant="thumbnail"
+          loading="lazy"
+        />
+      </div>
+      <div className="market-listing-copy">
+        <h2>{item.name}</h2>
+        <div className="market-listing-tags">
+          <Badge>
+            {rarityLabel(item.rarity)}
+            {item.stage ? ` · 第 ${item.stage} 阶` : ""}
+          </Badge>
+          <span className="market-listing-status">
+            {item.status === "partially_sold" ? "部分成交" : "出售中"}
+          </span>
+        </div>
+        <p>
+          官方单价
+          <strong>
+            {formatKCoin(item.unit_price)} <small>K-coin</small>
+          </strong>
+        </p>
+      </div>
+      <Button
+        className="market-listing-delist"
+        disabled={blocked || item.available < 1}
+        onClick={onDelist}
+      >
+        <PackageMinus />
+        下架
+      </Button>
+    </Card>
+  );
+}
 
 function MarketSellWorkbench({
   items,

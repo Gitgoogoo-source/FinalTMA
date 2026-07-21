@@ -63,6 +63,135 @@
 
 final result: passed
 
+# 管理分页删减 Final Design QA — 2026-07-21
+
+**Comparison target**
+
+- Deletion reference 1: `/var/folders/__/ffcc9r1113l4c8cd1z4m8tp80000gn/T/codex-clipboard-0a49739e-2a47-45d5-8fb4-f4f68ba48849.png`
+- Deletion reference 2: `/var/folders/__/ffcc9r1113l4c8cd1z4m8tp80000gn/T/codex-clipboard-2c4d0e90-5c8c-47de-b9f3-0c12502e6336.png`
+- Implemented screen: `https://final-tma-pi.vercel.app/market?tab=manage`
+- Deployment: `dpl_2HmKBA9sLEQSviJxtLgrhiK6WZZh`
+- Viewport: authenticated Telegram Mini App window, 420 × 714 captured pixels
+- State: real development account with 3 active listings
+- Final Telegram capture: `/var/folders/__/ffcc9r1113l4c8cd1z4m8tp80000gn/T/com.openai.sky.CUAService/Telegram Screenshot 2026-07-21 at 10.43.56 PM.jpeg`
+- Combined deletion references and final implementation: `/private/tmp/market-manage-removal-comparison.png`
+
+**Required fidelity surfaces**
+
+- The manage page must not render the “出售中 NFT” title or “管理您的市场挂牌” description.
+- The manage page must not render the VIP monthly-card banner, benefits, price, or purchase action.
+- The shared purchase/sell/manage segmented tabs remain the first market-page surface.
+- The real listing summary follows the shared tabs directly, without a residual title or membership-banner spacer.
+- Existing real listing cards, summary values, delist actions, asset bar, and fixed application navigation remain unchanged.
+
+**Full-view and focused evidence**
+
+- Accessibility inspection lists `交易市场页签` immediately followed by `出售汇总`; the removed title, description, and VIP controls are absent from the final tree.
+- The final Telegram capture shows the tabs and summary as adjacent surfaces with the project’s normal section spacing.
+- The combined comparison image verifies that both user-marked regions are absent while the surrounding management layout remains intact.
+
+**Primary interactions checked**
+
+- Closed and reopened the Telegram Mini App to load the latest aliased deployment.
+- Entered the market from the production bottom navigation and activated the manage tab.
+- Confirmed all 3 real listings and their existing delist buttons still render.
+- No delist confirmation, Telegram Stars payment, K-coin purchase, listing mutation, or other asset-changing action was submitted.
+
+**Console and build evidence**
+
+- The authenticated Telegram WebView does not expose console logs through the available Computer Use surface.
+- Prettier, ESLint with zero warnings, TypeScript, frontend production build, `git diff --check`, and the complete Vercel deployment build passed.
+- Deployment validation also passed the existing 425-asset release check.
+
+**Findings**
+
+- No P0, P1, or P2 visual or interaction defect remains.
+- The deletion is scoped to the manage tab. The purchase tab retains its existing VIP surface.
+- No API, database, migration, SQL, or business-rule implementation changed.
+
+final result: passed
+
+# 管理分页 Design QA — 2026-07-21
+
+**Comparison target**
+
+- Source visual truth: `/Users/mac/Desktop/图片/listing.png`
+- Reference implementation source: `/Users/mac/Desktop/旧项目本地保留/tmaGameOld/screens-2.jsx`
+- Implemented screen: `https://final-tma-pi.vercel.app/market`
+- Deployment: `dpl_BTajVLC6cUNC7CemoCnHfbmNMreh`
+- Authenticated Telegram top capture: `/var/folders/__/ffcc9r1113l4c8cd1z4m8tp80000gn/T/com.openai.sky.CUAService/Telegram Screenshot 2026-07-21 at 10.32.40 PM.jpeg`
+- Authenticated Telegram listing-card capture: `/var/folders/__/ffcc9r1113l4c8cd1z4m8tp80000gn/T/com.openai.sky.CUAService/Telegram Screenshot 2026-07-21 at 10.32.49 PM.jpeg`
+- Authenticated Telegram delist-dialog capture: `/var/folders/__/ffcc9r1113l4c8cd1z4m8tp80000gn/T/com.openai.sky.CUAService/Telegram Screenshot 2026-07-21 at 10.33.08 PM.jpeg`
+- Combined reference and implementation input: `/private/tmp/market-manage-design-comparison.png`
+- Viewport: authenticated Telegram Mini App window, 420 × 714 captured pixels
+- State: 3 个真实在售模板；每个模板出售中 1 个；总价值 12 K-coin；预计到账 12 K-coin
+
+**Required fidelity surfaces**
+
+- Fonts and typography: passed. “出售中 NFT”使用紧凑黑色粗标题，副标题、三项汇总、卡片名称、稀有度、状态、单价与明细形成与来源一致的清晰层级；数字使用表格数字样式且无截断。
+- Spacing and layout rhythm: passed. 页面按“标题与副标题、三段页签、现有月卡横幅、三项汇总、单列挂牌卡片”排列；卡片采用缩略图、主要信息、橙色下架按钮和底部聚合明细，页面仅纵向滚动，固定底部导航未遮挡可操作按钮。
+- Colors and visual tokens: passed. 暖白画布、深色文字、橙色激活页签与按钮、细分隔线、柔和阴影和大圆角与来源方向一致，并复用项目现有视觉变量。
+- Image quality and asset fidelity: passed. 所有挂牌卡片使用真实目录缩略图与项目既有图片降级逻辑，没有复制来源中的示例 NFT、占位图、CSS 图形或新增生成资产。
+- Copy and content: passed. 页面保留真实中文藏品名称、项目稀有度与阶级、K-coin 官方固定价格、出售数量、累计售出、预计成交、手续费、到账、月卡返还和当前状态。
+
+**Full-view comparison evidence**
+
+- `/private/tmp/market-manage-design-comparison.png` 将来源图、真实 Telegram 顶部状态和真实挂牌卡片状态放在同一比较输入中。
+- 标题、副标题、三段圆角页签、三列汇总、白色圆角卡片、左侧方形缩略图、右侧橙色操作按钮及浮动底部导航保持同一视觉语法。
+- 真实页面保留项目要求的全局资产栏和月卡横幅；来源中的搜索、管理筛选、管理排序、玩家报价、STAR 价格与 NFT 序号不属于当前管理功能，因此没有复制。
+
+**Focused region comparison evidence**
+
+- 顶部区域：10.32.40 PM 截图确认标题与副标题位于共享页签上方，管理页签保持橙色激活状态，真实月卡横幅和三项挂牌汇总完整显示。
+- 卡片区域：10.32.49 PM 截图确认三张真实挂牌卡片的缩略图、名称、稀有度、阶级、出售状态、官方单价、六项聚合明细和下架按钮均无横向溢出或裁切。
+- 下架交互：10.33.08 PM 截图确认点击“下架”立即打开“确认全部下架”弹窗，明确处理结算时仍未成交的全部数量；随后点击“取消”，3 个真实挂牌保持不变。
+
+**Intentional source differences**
+
+- 当前产品规则只允许官方固定 K-coin 价格，管理页不提供改价，因此来源中的“改价”按钮被明确省略。
+- 当前管理页没有真实筛选或排序能力，因此来源中的筛选、排序、搜索和筛选快捷入口被明确省略。
+- 项目功能文档要求购买页和管理页展示真实月卡横幅，因此该横幅保留在管理页。
+- 来源中的 STAR、玩家报价、示例 NFT 名称和序号被真实 K-coin 规则、真实目录内容与模板聚合挂牌替换。
+
+**Primary interactions checked**
+
+- 从底部“交易”进入市场，并切换购买、管理共享页签。
+- 管理页真实数据加载后显示 3 个聚合挂牌及正确汇总。
+- 纵向滚动后每个“下架”按钮保持可见可点。
+- 点击首个“下架”后立即显示确认弹窗；点击“取消”关闭弹窗。
+- 未点击“确认全部下架”，未创建、购买、成交或取消任何真实挂单，未触发 Telegram Stars 支付。
+
+**Console errors checked**
+
+- 真实 Telegram WebView 的当前检查界面不暴露控制台日志。
+- 非 Telegram 浏览器入口按项目安全规则显示“请从 Telegram Mini App 打开应用”；该入口只出现 Telegram SDK 在非 Telegram 6.0 环境中的兼容性警告，没有项目前端运行错误。
+- TypeScript、ESLint、前端生产构建、Vercel 完整构建和 425 个开发发布资产校验均通过。
+
+**Findings**
+
+- 没有待处理的 P0、P1 或 P2 视觉、响应式或交互问题。
+- 来源差异均来自用户确认的真实功能边界或已冻结项目规则，不是设计漂移。
+
+**Comparison history**
+
+1. 部署后的旧 Telegram WebView 会话仍缓存前一版本；关闭并重新打开 Mini App 后加载部署 `dpl_BTajVLC6cUNC7CemoCnHfbmNMreh`。
+2. 最新顶部与卡片截图确认新标题、汇总、单列挂牌卡片和“下架”按钮均已生效。
+3. 下架确认弹窗检查完成后取消操作，真实挂牌数据未变化。
+
+**Implementation checklist**
+
+- 真实 Telegram Mini App 顶部默认状态已检查。
+- 真实挂牌列表滚动状态已检查。
+- 下架确认与取消状态已检查。
+- 来源图与两个真实实现状态已在一个比较输入中复核。
+- 静态检查、生产构建、发布资产校验和真实开发环境部署已完成。
+
+**Follow-up polish**
+
+- 无剩余 P3 项目。
+
+final result: passed
+
 # 出售分页 Design QA — 2026-07-21
 
 **Comparison target**
@@ -171,7 +300,7 @@ final result: blocked
 
 - No P0, P1, or P2 visual or interaction defect remains.
 - The shared tab component has a single implementation and a single style contract; no page-specific duplicate navigation exists.
-- The sell page retains its hidden-VIP rule, while purchase and manage retain the existing VIP surface.
+- The purchase page retains its existing VIP surface; later user rulings hide the VIP surface on both sell and manage.
 
 **Verification**
 
@@ -179,5 +308,57 @@ final result: blocked
 - TypeScript and the frontend production build passed.
 - All 425 development release assets passed path, format, hash, and build-presence validation.
 - Vercel deployment completed and the aliased real-development Mini App was reopened before the final Telegram captures.
+
+final result: passed
+
+# 管理分页藏品卡片数据栏删减 Final Design QA — 2026-07-21
+
+**Comparison target**
+
+- Deletion reference: `/var/folders/__/ffcc9r1113l4c8cd1z4m8tp80000gn/T/codex-clipboard-f7450d07-a81a-4ccd-a7f5-d2744226e1ec.png`
+- Implemented screen: `https://final-tma-pi.vercel.app/market?tab=manage`
+- Deployment: `dpl_24aY9FN2E41gpGqxNhLe3kA1mgKP`
+- Viewport: authenticated Telegram Mini App window, 420 × 714 captured pixels
+- State: real development account with 3 active listings
+- Final Telegram capture: `/var/folders/__/ffcc9r1113l4c8cd1z4m8tp80000gn/T/com.openai.sky.CUAService/Telegram Screenshot 2026-07-21 at 10.59.10 PM.jpeg`
+- Combined deletion reference and final implementation: `/private/tmp/market-manage-card-metrics-removal-comparison.png`
+
+**Required fidelity surfaces**
+
+- Copy and content: the six-field row—出售中、累计已售、预计成交、预计手续费、预计到账、月卡返还—is absent from every listing card.
+- Spacing and layout rhythm: each card collapses to one 82-pixel content row with 8-pixel outer padding and no empty second row.
+- Fonts and typography: the remaining name, rarity, stage, status, official unit price, and delist label retain their existing type hierarchy.
+- Colors and visual tokens: card backgrounds, badges, status color, K-coin price, and orange delist button remain unchanged.
+- Image quality and asset fidelity: real catalog thumbnails retain their original crop, radius, sharpness, and loading behavior.
+
+**Full-view and focused evidence**
+
+- The final Telegram capture shows all 3 real listing cards in the compact single-row layout without a bottom data strip.
+- Accessibility inspection lists image, name, rarity/stage/status, official unit price, and delist button for each card; none of the six removed metric labels remain.
+- The focused combined comparison makes the deleted strip readable and confirms there is no residual blank panel or second-row spacing in the implementation.
+
+**Primary interactions checked**
+
+- Opened the latest deployment through the fixed named Telegram Mini App entry.
+- Entered the market and switched from purchase to manage.
+- Confirmed the top aggregate listing summary remains and all 3 existing delist buttons still render.
+- No delist confirmation, Telegram Stars payment, K-coin purchase, listing mutation, or other asset-changing action was submitted.
+
+**Comparison history**
+
+- Earlier state: every listing card contained the six-column metric strip shown in the deletion reference.
+- Fix: removed the card-level metric markup and its dedicated styles, then collapsed the card grid to one row.
+- Post-fix evidence: the final Telegram capture and accessibility tree show three compact cards with no removed labels and no empty metric area.
+
+**Findings**
+
+- No P0, P1, or P2 visual or interaction defect remains.
+- The deletion is limited to per-card metrics; the top aggregate 出售汇总 and real delist behavior are unchanged.
+- No API, database, migration, SQL, or business-rule implementation changed.
+
+**Verification**
+
+- Prettier, ESLint with zero warnings, TypeScript, frontend production build, and `git diff --check` passed.
+- Vercel deployment completed successfully, including the API-contract, API, frontend, TypeScript, and 425-asset release checks.
 
 final result: passed
