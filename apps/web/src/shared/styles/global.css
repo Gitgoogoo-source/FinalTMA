@@ -4645,10 +4645,41 @@ input:focus {
 }
 
 /* Inventory */
-.app-shell .inventory-heading .icon-button {
-  min-width: 80px;
-  min-height: 40px;
-  border-radius: 20px;
+.app-shell .inventory-page {
+  position: relative;
+  width: min(100%, 430px);
+  margin: 0 auto;
+  padding-top: 8px;
+  padding-bottom: 10px;
+  color: #24333b;
+}
+.app-shell .inventory-atlas-button {
+  position: absolute;
+  z-index: 5;
+  top: 18px;
+  right: 24px;
+  width: 42px;
+  min-width: 42px;
+  height: 42px;
+  min-height: 42px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  color: #fff;
+  background: var(--sprout-orange);
+  box-shadow: 0 12px 24px rgba(255, 122, 0, 0.22);
+}
+.app-shell .inventory-atlas-button svg {
+  width: 20px;
+  height: 20px;
+}
+.app-shell .inventory-atlas-button span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 .app-shell .inventory-location {
   margin: 0 0 10px;
@@ -4680,99 +4711,199 @@ input:focus {
   color: var(--muted);
   font-size: 11px;
 }
-.app-shell .detail-copy:focus-visible,
-.app-shell .action-grid:focus-visible,
+.app-shell .inventory-title-board:focus-visible,
+.app-shell .inventory-action-grid:focus-visible,
 .app-shell .inventory-target-empty:focus-visible {
   outline: 3px solid rgba(255, 156, 0, 0.34);
   outline-offset: 3px;
 }
-.app-shell .inventory-detail {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 0;
-  padding: 0;
+.app-shell .inventory-showcase {
+  position: relative;
+  padding: 10px;
   overflow: hidden;
+  border: 1px solid rgba(54, 67, 75, 0.12);
+  border-radius: 28px;
+  background: #fffdfa;
+  box-shadow: 0 22px 54px rgba(54, 67, 75, 0.1);
 }
-.app-shell .art-panel {
-  min-height: clamp(250px, 72vw, 340px);
-  padding: 20px;
-  border-radius: 0;
-  background:
-    radial-gradient(
-      circle at 50% 43%,
-      rgba(255, 180, 91, 0.3),
-      transparent 37%
-    ),
-    linear-gradient(160deg, #f6faf2, #eef5ee);
+.app-shell .inventory-title-board,
+.app-shell .inventory-metric-grid,
+.app-shell .inventory-action-grid,
+.app-shell .inventory-thumbnail-viewport {
+  position: relative;
+  z-index: 2;
 }
-.app-shell .art-panel .catalog-image {
-  filter: drop-shadow(0 25px 26px rgba(54, 67, 75, 0.2));
+.app-shell .inventory-title-board {
+  width: 64%;
+  min-height: 72px;
+  padding: 11px 12px;
+  border: 1px solid rgba(54, 67, 75, 0.18);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 13px 28px rgba(54, 67, 75, 0.08);
+  backdrop-filter: blur(16px);
 }
-.app-shell .detail-copy {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 4px 8px;
-  padding: 15px;
-  background: rgba(255, 255, 255, 0.72);
-}
-.app-shell .detail-eyebrow {
-  grid-column: 1 / -1;
+.app-shell .inventory-title-board > span {
   color: var(--sprout-orange);
   font-size: 9px;
-  font-weight: 900;
-  letter-spacing: 0.12em;
+  font-weight: 950;
+  letter-spacing: 0.14em;
 }
-.app-shell .detail-new-acquisition {
-  grid-column: 1 / -1;
+.app-shell .inventory-title-board h2 {
+  max-width: 100%;
+  margin: 4px 0 0;
+  overflow: hidden;
+  color: #163246;
+  font-size: clamp(21px, 6.5vw, 29px);
+  font-style: italic;
+  font-weight: 950;
+  letter-spacing: -0.05em;
+  line-height: 1.02;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-shell .inventory-title-board .detail-new-acquisition {
   width: max-content;
-  padding: 3px 8px;
+  margin-top: 5px;
+  padding: 3px 7px;
   border-radius: 999px;
   color: #b44911;
   background: rgba(240, 100, 32, 0.12);
-  font-size: 9px;
-  font-weight: 900;
-}
-.app-shell .detail-copy > .badge {
-  grid-column: 2;
-  grid-row: 2;
-  align-self: center;
-}
-.app-shell .detail-copy h2 {
-  grid-column: 1;
-  margin: 2px 0 0;
-  color: #24333b;
-  font-size: 28px;
-  font-style: italic;
+  font-size: 8px;
   font-weight: 950;
-  letter-spacing: -0.035em;
 }
-.app-shell .detail-copy > p {
-  grid-column: 1 / -1;
-  margin: 0;
-  color: #77827d;
-  font-size: 11px;
-  font-weight: 800;
+.app-shell .inventory-hero-art {
+  position: absolute;
+  z-index: 1;
+  top: 10px;
+  right: -20px;
+  width: 61%;
+  height: 312px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.94);
+  border-radius: 42px 0 0 42px;
+  background: #f1f3f1;
+  box-shadow: 0 24px 42px rgba(54, 67, 75, 0.18);
 }
-.app-shell .stock-grid {
-  grid-column: 1 / -1;
-  grid-template-columns: repeat(3, 1fr);
+.app-shell .inventory-hero-art .catalog-image,
+.app-shell .inventory-hero-art .image-missing {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  border: 0;
+  border-radius: inherit;
+  object-fit: cover;
+}
+.app-shell .inventory-metric-grid {
+  width: 64%;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 6px;
   margin-top: 8px;
 }
-.app-shell .stock-grid span {
-  padding: 8px;
-  color: #89948f;
-  background: rgba(54, 67, 75, 0.04);
+.app-shell .inventory-metric {
+  min-width: 0;
+  min-height: 80px;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 3px;
+  padding: 6px 3px;
+  border: 1px solid rgba(54, 67, 75, 0.18);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 12px 24px rgba(54, 67, 75, 0.07);
+  text-align: center;
+}
+.app-shell .inventory-metric > span {
+  overflow: hidden;
+  color: #314957;
   font-size: 8px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.app-shell .stock-grid strong {
-  color: #53615b;
+.app-shell .inventory-metric > i {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 2px solid #7e878b;
+  border-radius: 10px;
+  color: #68747a;
+  background: #f5f6f5;
+  font-style: normal;
+}
+.app-shell .inventory-metric > i svg {
+  width: 17px;
+  height: 17px;
+}
+.app-shell .inventory-metric > strong {
+  max-width: 100%;
+  overflow: hidden;
+  color: #17354a;
   font-size: 14px;
+  font-weight: 950;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.app-shell .action-grid {
-  grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
-  margin: 10px 0;
+.app-shell .inventory-metric > small {
+  color: var(--sprout-orange);
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  line-height: 0.6;
+}
+.app-shell .inventory-metric.common > strong,
+.app-shell .inventory-metric.common > i {
+  color: #6d7873;
+}
+.app-shell .inventory-metric.rare > strong,
+.app-shell .inventory-metric.rare > i {
+  color: #397ed8;
+  border-color: #5c99e5;
+}
+.app-shell .inventory-metric.epic > strong,
+.app-shell .inventory-metric.epic > i {
+  color: #8753d3;
+  border-color: #a57be1;
+}
+.app-shell .inventory-metric.legendary > strong,
+.app-shell .inventory-metric.legendary > i {
+  color: #e16e12;
+  border-color: #ef913d;
+}
+.app-shell .inventory-metric.mythic > strong,
+.app-shell .inventory-metric.mythic > i {
+  color: #d84068;
+  border-color: #e66c8c;
+}
+.app-shell .inventory-action-grid {
+  width: 64%;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin: 8px 0 0;
+}
+.app-shell .inventory-action-grid .button {
+  min-height: 38px;
+  border: 1px solid rgba(255, 122, 0, 0.34);
+  border-radius: 13px;
+  color: #17354a;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 10px 20px rgba(54, 67, 75, 0.07);
+  font-size: 11px;
+}
+.app-shell .inventory-action-grid .button svg {
+  color: var(--sprout-orange);
+}
+.app-shell .inventory-action-grid .button:disabled {
+  opacity: 1;
+  border-color: rgba(54, 67, 75, 0.12);
+  color: #9ba29f;
+  background: rgba(247, 247, 245, 0.9);
+}
+.app-shell .inventory-action-grid .button:disabled svg {
+  color: #a9afac;
 }
 .app-shell .evolution-action {
   display: grid;
@@ -4782,10 +4913,10 @@ input:focus {
   width: 100%;
 }
 .app-shell .evolution-action > small {
-  min-height: 24px;
+  min-height: 13px;
   padding: 0 4px;
   color: #8c4d25;
-  font-size: 8px;
+  font-size: 6px;
   line-height: 1.35;
   text-align: center;
 }
@@ -4797,33 +4928,55 @@ input:focus {
   font-size: 9px;
   font-weight: 900;
 }
-.app-shell .thumbnail-strip {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 7px;
+.app-shell .inventory-thumbnail-viewport {
+  margin-top: 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-inline: contain;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
 }
-.app-shell .thumbnail-strip button {
+.app-shell .inventory-thumbnail-viewport::-webkit-scrollbar {
+  display: none;
+}
+.app-shell .inventory-thumbnail-pages {
+  display: flex;
+  gap: 10px;
+}
+.app-shell .inventory-thumbnail-page {
+  flex: 0 0 100%;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  scroll-snap-align: start;
+}
+.app-shell .inventory-thumbnail-page button {
   height: auto;
-  aspect-ratio: 3 / 4;
+  aspect-ratio: 1;
   min-width: 0;
   padding: 4px;
   border: 2px solid rgba(54, 67, 75, 0.12);
-  border-radius: 18px;
+  border-radius: 15px;
   color: #fff;
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.86),
-    rgba(240, 244, 239, 0.72)
-  );
+  background: #f4f6f3;
   box-shadow: 0 10px 20px rgba(54, 67, 75, 0.07);
   overflow: hidden;
 }
-.app-shell .thumbnail-strip button.selected {
+.app-shell .inventory-thumbnail-page button .catalog-image,
+.app-shell .inventory-thumbnail-page button .image-missing {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  border: 0;
+  border-radius: 12px;
+  object-fit: cover;
+}
+.app-shell .inventory-thumbnail-page button.selected {
   outline: 0;
   border-color: var(--sprout-orange);
   transform: translateY(-2px);
   box-shadow: 0 12px 22px rgba(255, 122, 0, 0.14);
 }
-.app-shell .thumbnail-strip button span {
+.app-shell .inventory-thumbnail-page button span {
   right: 4px;
   bottom: 4px;
   padding: 2px 5px;

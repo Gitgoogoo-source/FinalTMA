@@ -1,4 +1,4 @@
-import { BookOpen } from "lucide-react";
+import { BookOpen, ChevronsUp, Crosshair, Star } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
@@ -12,6 +12,16 @@ import {
 } from "../../../shared/ui/index.tsx";
 import { useNewMarkers } from "../../../workflows/new-markers/index.ts";
 import type { InventoryItem } from "../types.ts";
+
+const rarityLabels: Record<InventoryItem["rarity"], string> = {
+  common: "普通",
+  rare: "稀有",
+  epic: "史诗",
+  legendary: "传说",
+  mythic: "神话",
+};
+
+const thumbnailPageSize = 8;
 
 export function InventoryView({
   renderActions,
@@ -55,6 +65,11 @@ export function InventoryView({
     (candidate) => candidate.id === targetId,
   );
   const itemIsNew = Boolean(item && newTemplateIds.has(item.template_id));
+  const thumbnailPages = Array.from(
+    { length: Math.ceil(items.length / thumbnailPageSize) },
+    (_, index) =>
+      items.slice(index * thumbnailPageSize, (index + 1) * thumbnailPageSize),
+  );
   useEffect(() => {
     if (!item || targetId !== item.template_id || targetAction === "evolve")
       return;
@@ -87,16 +102,14 @@ export function InventoryView({
   }, [query.isLoading, targetAction, targetId, targetOwned, targetTemplate]);
   return (
     <main className="page inventory-page">
-      <header className="page-heading inventory-heading">
-        <div>
-          <span>COLLECTION</span>
-          <h1>我的藏品</h1>
-        </div>
-        <Button className="icon-button" onClick={() => navigate("/album")}>
-          <BookOpen />
-          图鉴
-        </Button>
-      </header>
+      <Button
+        className="inventory-atlas-button"
+        aria-label="打开图鉴"
+        onClick={() => navigate("/album")}
+      >
+        <BookOpen />
+        <span>图鉴</span>
+      </Button>
       <PageState
         loading={query.isLoading}
         error={query.error as Error | null}
@@ -111,8 +124,23 @@ export function InventoryView({
         )}
         {item && (
           <>
-            <Card className="inventory-detail">
-              <div className="art-panel">
+            <section
+              className="inventory-showcase"
+              aria-labelledby="inventory-selected-name"
+            >
+              <div
+                ref={item.template_id === targetId ? detailRef : undefined}
+                className="inventory-title-board"
+                tabIndex={item.template_id === targetId ? -1 : undefined}
+              >
+                <span>当前藏品</span>
+                <h2 id="inventory-selected-name">{item.name}</h2>
+                {itemIsNew && (
+                  <strong className="detail-new-acquisition">本次新获得</strong>
+                )}
+              </div>
+
+              <div className="inventory-hero-art">
                 <CatalogImage
                   key={effectiveId}
                   path={item.image_detail_path}
@@ -125,93 +153,88 @@ export function InventoryView({
                   }
                 />
               </div>
+
+              <div className="inventory-metric-grid">
+                <InventoryMetric
+                  label="稀有度"
+                  value={rarityLabels[item.rarity]}
+                  tone={item.rarity}
+                  icon={<Star />}
+                />
+                <InventoryMetric
+                  label="进化阶段"
+                  value={`${item.stage} 阶`}
+                  icon={<ChevronsUp />}
+                />
+                <InventoryMetric
+                  label="战斗力"
+                  value={item.combat_power.toLocaleString("zh-CN")}
+                  icon={<Crosshair />}
+                />
+              </div>
+
               <div
-                ref={item.template_id === targetId ? detailRef : undefined}
-                className="detail-copy"
-                tabIndex={item.template_id === targetId ? -1 : undefined}
+                ref={item.template_id === targetId ? actionsRef : undefined}
+                className="action-grid inventory-action-grid"
+                tabIndex={
+                  item.template_id === targetId && targetAction === "evolve"
+                    ? -1
+                    : undefined
+                }
+                aria-label={
+                  item.template_id === targetId && targetAction === "evolve"
+                    ? `${item.name}进化操作`
+                    : "藏品操作"
+                }
               >
-                <span className="detail-eyebrow">CURRENT POKEPET</span>
-                <Badge>
-                  {item.rarity} · 第 {item.stage} 阶
-                </Badge>
-                <h2>{item.name}</h2>
-                <p>战斗力 {item.combat_power}</p>
-                {itemIsNew && (
-                  <span className="detail-new-acquisition">本次新获得</span>
-                )}
-                <div className="stock-grid">
-                  <span>
-                    总数<strong>{item.total}</strong>
-                  </span>
-                  <span>
-                    可用<strong>{item.available}</strong>
-                  </span>
-                  <span>
-                    出售中<strong>{item.listed}</strong>
-                  </span>
-                  <span>
-                    交易中<strong>{item.trading}</strong>
-                  </span>
-                  <span>
-                    远征中<strong>{item.expedition}</strong>
-                  </span>
-                  <span>
-                    Mint 中<strong>{item.minting}</strong>
-                  </span>
+                {renderActions(item, imageReady)}
+              </div>
+
+              <div className="inventory-thumbnail-viewport">
+                <div className="inventory-thumbnail-pages">
+                  {thumbnailPages.map((page, pageIndex) => (
+                    <div
+                      key={page[0]?.template_id ?? pageIndex}
+                      className="thumbnail-strip inventory-thumbnail-page"
+                      aria-label={`藏品选择第 ${pageIndex + 1} 页，共 ${thumbnailPages.length} 页`}
+                    >
+                      {page.map((candidate) => {
+                        const selected = candidate.template_id === effectiveId;
+                        const isNew = newTemplateIds.has(candidate.template_id);
+                        return (
+                          <button
+                            key={candidate.template_id}
+                            className={selected ? "selected" : ""}
+                            aria-pressed={selected}
+                            aria-label={`选择${candidate.name}，${rarityLabels[candidate.rarity]}，第 ${candidate.stage} 阶${isNew ? "，本次新获得" : ""}`}
+                            onClick={() => {
+                              if (!selected) {
+                                setSelection({
+                                  targetId: "",
+                                  selectedId: candidate.template_id,
+                                });
+                                setImageState({ templateId: "", ready: false });
+                                setSearchParams({}, { replace: true });
+                              }
+                              if (isNew) clearNew(candidate.template_id);
+                            }}
+                          >
+                            <CatalogImage
+                              path={candidate.image_thumbnail_path}
+                              alt={candidate.name}
+                              variant="thumbnail"
+                              loading="lazy"
+                            />
+                            <i className={`rarity-mark ${candidate.rarity}`} />
+                            {isNew && <b className="new-marker">NEW</b>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ))}
                 </div>
               </div>
-            </Card>
-            <div
-              ref={item.template_id === targetId ? actionsRef : undefined}
-              className="action-grid"
-              tabIndex={
-                item.template_id === targetId && targetAction === "evolve"
-                  ? -1
-                  : undefined
-              }
-              aria-label={
-                item.template_id === targetId && targetAction === "evolve"
-                  ? `${item.name}进化操作`
-                  : undefined
-              }
-            >
-              {renderActions(item, imageReady)}
-            </div>
-            <div className="thumbnail-strip">
-              {items.map((candidate) => {
-                const selected = candidate.template_id === effectiveId;
-                const isNew = newTemplateIds.has(candidate.template_id);
-                return (
-                  <button
-                    key={candidate.template_id}
-                    className={selected ? "selected" : ""}
-                    aria-pressed={selected}
-                    aria-label={`选择${candidate.name}，共 ${candidate.total} 个${isNew ? "，本次新获得" : ""}`}
-                    onClick={() => {
-                      if (!selected) {
-                        setSelection({
-                          targetId: "",
-                          selectedId: candidate.template_id,
-                        });
-                        setImageState({ templateId: "", ready: false });
-                        setSearchParams({}, { replace: true });
-                      }
-                      if (isNew) clearNew(candidate.template_id);
-                    }}
-                  >
-                    <CatalogImage
-                      path={candidate.image_thumbnail_path}
-                      alt={candidate.name}
-                      variant="thumbnail"
-                      loading="lazy"
-                    />
-                    <i className={`rarity-mark ${candidate.rarity}`} />
-                    {isNew && <b className="new-marker">NEW</b>}
-                    <span>×{candidate.total}</span>
-                  </button>
-                );
-              })}
-            </div>
+            </section>
           </>
         )}
         {targetId && !targetOwned && targetTemplate && (
@@ -269,5 +292,26 @@ export function InventoryView({
         </Card>
       )}
     </main>
+  );
+}
+
+function InventoryMetric({
+  label,
+  value,
+  icon,
+  tone = "",
+}: {
+  label: string;
+  value: string;
+  icon: ReactNode;
+  tone?: string;
+}): ReactNode {
+  return (
+    <div className={`inventory-metric ${tone}`}>
+      <span>{label}</span>
+      <i>{icon}</i>
+      <strong>{value}</strong>
+      <small aria-hidden="true">••••</small>
+    </div>
   );
 }

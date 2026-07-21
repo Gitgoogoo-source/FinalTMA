@@ -362,3 +362,64 @@ final result: passed
 - Vercel deployment completed successfully, including the API-contract, API, frontend, TypeScript, and 425-asset release checks.
 
 final result: passed
+
+# 藏品页单屏主视觉 Final Design QA — 2026-07-21
+
+**Comparison target**
+
+- Primary visual truth: `/Users/mac/Desktop/图片/藏品.png`
+- Secondary interaction/layout source: `/Users/mac/Desktop/旧项目本地保留/tmaGameOld/`
+- Implemented screen: `https://final-tma-pi.vercel.app/inventory`
+- Deployment: `dpl_ExmzvqLVxgTc2WAHnNSX7xLB9DJM`
+- Viewport: authenticated Telegram Mini App window, 421 × 715 captured pixels
+- State: real development account, 9 real collection templates, selected 炭尾狐
+- Final Telegram capture: `/private/tmp/finaltma-inventory-final-compact.png`
+- Same-pass visual comparison: primary reference, old project capture, and final implementation were inspected together; order was reference → old project → current implementation.
+
+**Required fidelity surfaces**
+
+- Composition: one selected-item hero fills the collection surface, with name, rarity, stage, combat power, four existing actions, and a 4 × 2 thumbnail page visible in one screen.
+- Horizontal paging: real templates are grouped into pages of 8 and the thumbnail viewport uses horizontal overflow plus scroll snapping.
+- Copy and content: selected name, rarity, stage, combat power, image, NEW state, and every action target come from the existing real collection response; no mock collection record was introduced.
+- Quantity and occupation visibility: total, available, listed, trading, Mint, expedition, and per-thumbnail quantity/occupation badges are intentionally not shown, following the latest user ruling.
+- Fonts and typography: the selected-item title uses the project’s dark navy display treatment; compact metric and action labels remain legible in the Telegram viewport.
+- Colors and visual tokens: ivory paper surfaces, dark navy type, and orange selection/action accents match the reference direction while preserving the project shell.
+- Image quality and asset fidelity: the hero and thumbnails use the current catalog’s real image paths and preserve their square crop and sharpness.
+
+**Full-view evidence**
+
+- The final Telegram capture shows the fixed top asset bar, the complete selected-item visual, all four action buttons, the full first 4 × 2 thumbnail page, and the fixed bottom navigation without overlap.
+- The reference, old project, and implementation were inspected in the same comparison pass. A separate focused crop was unnecessary because the complete 421-pixel implementation viewport remains readable at original resolution.
+
+**Primary interactions checked**
+
+- Opened the latest deployment through the logged-in Telegram Mini App and entered 藏品.
+- Selected the second real thumbnail 砾甲龟; the name, hero image, combat power, and selected outline changed immediately before any server mutation.
+- Confirmed the existing action buttons render their real availability and reason states. No evolution, decomposition, sale, Mint, Telegram Stars payment, or other asset-changing action was submitted.
+- Confirmed two 4 × 2 pages are rendered for the 9 real templates. Telegram Desktop mouse automation could not faithfully simulate a mobile touch swipe, so touch-gesture execution remains a device-verification gap; the horizontal overflow and scroll-snap implementation is present.
+
+**Intentional source differences**
+
+- Fictional character artwork from the supplied visual and old project was not copied; the current real catalog image paths remain the source of truth.
+- The project’s Telegram asset bar, album entry, and fixed bottom navigation remain because the user explicitly required the existing global shell.
+- The source’s quantity/occupation concepts are omitted from the visible collection page because the latest user ruling explicitly overrides the older product-document visibility requirement.
+
+**Comparison history**
+
+- Earlier implementation left part of the second thumbnail row behind the bottom navigation.
+- Fix: removed the redundant page heading and compacted metric, action, and track spacing without changing the real data or action implementations.
+- Post-fix evidence: the final 421 × 715 Telegram capture shows all 8 first-page thumbnails completely above the bottom navigation.
+
+**Findings**
+
+- No P0, P1, or P2 visual or interaction defect remains.
+- The single-screen hierarchy, selected-item response, and full 4 × 2 first page match the confirmed target.
+- Authenticated browser-console inspection is unavailable outside Telegram because the application correctly rejects requests without Telegram init data; the deployed authenticated visual and selection behavior were verified in Telegram Desktop.
+
+**Verification**
+
+- Frontend production build and `git diff --check` passed.
+- Vercel deployment completed successfully, including the repository’s API-contract, API, frontend, TypeScript, and 425-asset release checks.
+- No API, database, migration, SQL, or business-rule implementation changed.
+
+final result: passed
