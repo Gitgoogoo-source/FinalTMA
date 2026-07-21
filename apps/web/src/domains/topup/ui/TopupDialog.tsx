@@ -56,6 +56,18 @@ export function TopupDialog({
   const order = activeOrder ?? recoveryOrder ?? null;
   const locked =
     submitted || order?.status === "processing" || order?.status === "paid";
+  const amounts = status.data?.products ?? [];
+  const exactGapMatchesFixed = request
+    ? amounts.some((value) => value === request.estimatedGap)
+    : false;
+  const defaultAmount = status.data
+    ? request
+      ? exactGapMatchesFixed
+        ? String(request.estimatedGap)
+        : "exact_gap"
+      : String(amounts[0])
+    : "";
+  const selectedAmount = amount || defaultAmount;
 
   const resetOrder = useCallback(() => {
     setAmount("");
@@ -171,11 +183,11 @@ export function TopupDialog({
 
   const create = async () => {
     const input =
-      amount === "exact_gap" && request
+      selectedAmount === "exact_gap" && request
         ? ({ mode: "exact_gap", intent: request.intent } as const)
         : ({
             mode: "fixed",
-            amount: Number(amount) as 50 | 500 | 1000 | 5000 | 10000,
+            amount: Number(selectedAmount) as 50 | 500 | 1000 | 5000 | 10000,
             ...(request ? { intent: request.intent } : {}),
           } as const);
     setCreating(true);
@@ -250,10 +262,6 @@ export function TopupDialog({
     return () => telegram()?.disableClosingConfirmation();
   }, [locked]);
 
-  const amounts = status.data?.products ?? [];
-  const exactGapMatchesFixed = request
-    ? amounts.some((value) => value === request.estimatedGap)
-    : false;
   const succeeded =
     order?.status === "delivered" ||
     (order?.status === "refunded" && Boolean(order.delivered_at));
@@ -298,7 +306,7 @@ export function TopupDialog({
           <div className="amount-grid">
             {request && !exactGapMatchesFixed && (
               <button
-                className={amount === "exact_gap" ? "selected" : ""}
+                className={selectedAmount === "exact_gap" ? "selected" : ""}
                 onClick={() => {
                   setAmount("exact_gap");
                   setCreateError(null);
@@ -310,7 +318,7 @@ export function TopupDialog({
             {amounts.map((value) => (
               <button
                 key={value}
-                className={amount === String(value) ? "selected" : ""}
+                className={selectedAmount === String(value) ? "selected" : ""}
                 onClick={() => {
                   setAmount(String(value));
                   setCreateError(null);
@@ -343,7 +351,8 @@ export function TopupDialog({
           ) : (
             <Button
               disabled={
-                creating || (amount !== "exact_gap" && Number(amount) <= 0)
+                creating ||
+                (selectedAmount !== "exact_gap" && Number(selectedAmount) <= 0)
               }
               onClick={() => void create()}
             >
