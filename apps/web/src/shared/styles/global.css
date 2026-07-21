@@ -2377,6 +2377,10 @@ input:focus {
   display: grid;
   align-content: center;
   gap: 6px;
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
   z-index: 3;
 }
 .app-shell .vip-benefit-heading {
@@ -2517,9 +2521,8 @@ input:focus {
 .app-shell .gacha-hero {
   min-height: 282px;
   display: grid;
-  grid-template-columns: 76px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   align-items: center;
-  gap: 0;
   position: relative;
   margin: -2px 0 -6px;
   isolation: isolate;
@@ -2628,7 +2631,7 @@ input:focus {
 }
 .app-shell .gacha-details {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   padding: 4px 2px 0;
   overflow: visible;
   border: 0;
@@ -2639,21 +2642,22 @@ input:focus {
 }
 .app-shell .gacha-detail-title {
   display: flex;
-  align-items: start;
+  align-items: center;
   justify-content: space-between;
   gap: 8px;
 }
 .app-shell .gacha-detail-heading {
-  display: grid;
-  gap: 5px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 .app-shell .gacha-detail-title > span {
-  padding-top: 2px;
   color: #8a948f;
   font-size: 8px;
+  text-align: right;
 }
 .app-shell .gacha-pool-trigger {
-  min-height: 39px;
+  min-height: 36px;
   display: flex;
   align-items: center;
   gap: 7px;
@@ -2722,7 +2726,7 @@ input:focus {
   background: #ec577a;
 }
 .app-shell .pity-capsule {
-  min-height: 52px;
+  min-height: 48px;
   display: grid;
   grid-template-columns: 1fr 28px;
   align-items: center;
