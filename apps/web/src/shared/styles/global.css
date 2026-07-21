@@ -3288,7 +3288,6 @@ input:focus {
   align-items: center;
   gap: 7px;
 }
-.app-shell .market-heading-actions > button,
 .app-shell .market-heading-actions > svg {
   width: 43px;
   height: 43px;
@@ -3303,59 +3302,9 @@ input:focus {
     0 12px 25px rgba(54, 67, 75, 0.08),
     inset 0 1px 0 #fff;
 }
-.app-shell .market-heading-actions > button.active {
-  color: var(--sprout-orange);
-  border-color: rgba(255, 122, 0, 0.22);
-}
 .app-shell .market-heading-actions svg {
   width: 20px;
   height: 20px;
-}
-.app-shell .market-search {
-  height: 46px;
-  display: grid;
-  grid-template-columns: 20px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 10px;
-  padding: 0 12px;
-  border: 1px solid rgba(54, 67, 75, 0.09);
-  border-radius: 23px;
-  color: #758188;
-  background: rgba(255, 255, 255, 0.82);
-  box-shadow:
-    0 12px 26px rgba(54, 67, 75, 0.07),
-    inset 0 1px 0 #fff;
-  animation: sprout-enter 0.18s ease-out;
-}
-.app-shell .market-search > svg {
-  width: 18px;
-}
-.app-shell .market-search input {
-  min-width: 0;
-  border: 0;
-  outline: 0;
-  color: var(--sprout-ink);
-  background: transparent;
-  font-size: 12px;
-  font-weight: 750;
-}
-.app-shell .market-search input::placeholder {
-  color: #a2aaa6;
-}
-.app-shell .market-search button {
-  width: 28px;
-  height: 28px;
-  display: grid;
-  place-items: center;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  color: #7a858a;
-  background: rgba(54, 67, 75, 0.055);
-}
-.app-shell .market-search button svg {
-  width: 14px;
 }
 .app-shell .vip-banner {
   margin: 0 0 12px;
@@ -3917,6 +3866,427 @@ input:focus {
   color: #c65332;
   font-size: 9px;
   text-align: left;
+}
+.app-shell .market-sell-heading {
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  color: #22333e;
+}
+.app-shell .market-sell-heading > svg {
+  width: 28px;
+  height: 28px;
+  padding: 6px;
+  border: 1px solid rgba(255, 122, 0, 0.18);
+  border-radius: 11px;
+  color: var(--sprout-orange);
+  background: rgba(255, 248, 240, 0.92);
+}
+.app-shell .market-sell-heading > div {
+  display: grid;
+  justify-items: center;
+  gap: 1px;
+}
+.app-shell .market-sell-heading h1 {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.015em;
+}
+.app-shell .market-sell-heading span {
+  color: #98a09d;
+  font-size: 8px;
+  font-weight: 800;
+}
+.app-shell .market-sell-workbench {
+  display: grid;
+  gap: 8px;
+}
+.app-shell .market-sell-hero {
+  min-height: 194px;
+  display: grid;
+  grid-template-columns: minmax(0, 51%) minmax(0, 49%);
+  padding: 0;
+  overflow: hidden;
+  border-radius: 25px;
+  background: rgba(255, 253, 250, 0.9);
+  box-shadow:
+    0 18px 42px rgba(54, 67, 75, 0.075),
+    inset 0 1px 0 rgba(255, 255, 255, 0.96);
+}
+.app-shell .market-sell-hero-art {
+  min-width: 0;
+  position: relative;
+  overflow: hidden;
+  background: rgba(248, 246, 241, 0.88);
+}
+.app-shell .market-sell-hero-art::after {
+  content: "";
+  position: absolute;
+  left: 20%;
+  right: 16%;
+  bottom: 12px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(54, 67, 75, 0.12);
+  filter: blur(8px);
+}
+.app-shell .market-sell-hero-art .catalog-image,
+.app-shell .market-sell-hero-art .image-missing {
+  width: 112%;
+  height: 100%;
+  position: relative;
+  z-index: 1;
+  transform: translateX(-6%);
+  object-fit: cover;
+  object-position: center;
+  filter: drop-shadow(0 15px 22px rgba(54, 67, 75, 0.17));
+}
+.app-shell .market-sell-hero-copy {
+  min-width: 0;
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  gap: 6px;
+  padding: 15px 13px 13px;
+}
+.app-shell .market-sell-hero-copy > .badge {
+  padding: 4px 8px;
+  color: var(--sprout-orange);
+  background: rgba(255, 122, 0, 0.08);
+}
+.app-shell .market-sell-hero-copy h2 {
+  width: 100%;
+  margin: 0;
+  overflow: hidden;
+  color: #21333f;
+  font-size: 18px;
+  line-height: 22px;
+  font-weight: 950;
+  letter-spacing: -0.02em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-shell .market-sell-hero-copy > p {
+  width: 100%;
+  margin: -2px 0 0;
+  overflow: hidden;
+  color: #657078;
+  font-size: 9px;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-shell .market-sell-owned {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 5px 9px;
+  border: 1px solid rgba(54, 67, 75, 0.07);
+  border-radius: 13px;
+  color: #536068;
+  background: rgba(255, 255, 255, 0.74);
+  font-size: 8px;
+  font-weight: 800;
+}
+.app-shell .market-sell-owned strong {
+  color: #19a85b;
+  font-size: 11px;
+}
+.app-shell .market-sell-hero-facts {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
+  margin-top: 3px;
+}
+.app-shell .market-sell-hero-facts > span {
+  min-width: 0;
+  min-height: 47px;
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  column-gap: 5px;
+  align-content: center;
+  padding: 6px;
+  border: 1px solid rgba(54, 67, 75, 0.07);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.65);
+}
+.app-shell .market-sell-hero-facts svg {
+  width: 18px;
+  height: 18px;
+  grid-row: 1 / -1;
+  align-self: center;
+  color: #283b48;
+}
+.app-shell .market-sell-hero-facts small,
+.app-shell .market-sell-hero-facts strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-shell .market-sell-hero-facts small {
+  color: #939b98;
+  font-size: 6px;
+}
+.app-shell .market-sell-hero-facts strong {
+  color: #384952;
+  font-size: 8px;
+}
+.app-shell .market-sell-gallery {
+  height: 144px;
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(2, 68px);
+  grid-auto-columns: 68px;
+  gap: 8px 10px;
+  padding: 1px 2px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.app-shell .market-sell-gallery::-webkit-scrollbar {
+  display: none;
+}
+.app-shell .market-sell-gallery > button {
+  width: 68px;
+  height: 68px;
+  position: relative;
+  padding: 0;
+  overflow: hidden;
+  scroll-snap-align: start;
+  border: 1px solid rgba(54, 67, 75, 0.08);
+  border-radius: 17px;
+  background: rgba(255, 255, 255, 0.74);
+  box-shadow:
+    0 9px 18px rgba(54, 67, 75, 0.065),
+    inset 0 1px 0 #fff;
+}
+.app-shell .market-sell-gallery > button.active {
+  border: 2px solid var(--sprout-orange);
+  box-shadow:
+    0 11px 22px rgba(255, 106, 0, 0.2),
+    inset 0 1px 0 #fff;
+}
+.app-shell .market-sell-gallery .catalog-image,
+.app-shell .market-sell-gallery .image-missing {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.app-shell .market-sell-gallery > button > span {
+  min-width: 24px;
+  height: 18px;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  display: grid;
+  place-items: center;
+  padding: 0 5px;
+  border-radius: 9px;
+  color: #40505a;
+  background: rgba(255, 255, 255, 0.9);
+  font-size: 7px;
+  font-weight: 900;
+}
+.app-shell .market-sell-gallery > button > i {
+  width: 22px;
+  height: 22px;
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  display: grid;
+  place-items: center;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  color: #fff;
+  background: var(--sprout-orange);
+  box-shadow: 0 6px 13px rgba(255, 106, 0, 0.3);
+}
+.app-shell .market-sell-gallery > button > i svg {
+  width: 12px;
+  height: 12px;
+}
+.app-shell .market-sell-metrics {
+  min-height: 78px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+  border-radius: 22px;
+  background: rgba(255, 253, 250, 0.84);
+}
+.app-shell .market-sell-metrics > span {
+  min-width: 0;
+  position: relative;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 4px;
+  padding: 10px 4px;
+  text-align: center;
+}
+.app-shell .market-sell-metrics > span + span::before {
+  content: "";
+  width: 1px;
+  position: absolute;
+  top: 14px;
+  bottom: 14px;
+  left: 0;
+  background: rgba(54, 67, 75, 0.09);
+}
+.app-shell .market-sell-metrics small {
+  max-width: 100%;
+  overflow: hidden;
+  color: #929a97;
+  font-size: 7px;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-shell .market-sell-metrics strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #263843;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.app-shell .market-sell-metrics strong svg {
+  width: 15px;
+  height: 15px;
+  color: var(--sprout-orange);
+}
+.app-shell .market-sell-form {
+  display: grid;
+  gap: 9px;
+  padding: 12px;
+  border-radius: 22px;
+  background: rgba(255, 253, 250, 0.9);
+}
+.app-shell .market-sell-quantity-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 132px;
+  align-items: center;
+  gap: 10px;
+}
+.app-shell .market-sell-quantity-row > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #263843;
+  font-size: 11px;
+  font-weight: 900;
+}
+.app-shell .market-sell-quantity-row > span svg {
+  width: 14px;
+  height: 14px;
+  color: #778188;
+}
+.app-shell .market-sell-quantity-row .quantity {
+  grid-template-columns: 34px 1fr 34px;
+}
+.app-shell .market-sell-quantity-row .button {
+  min-height: 34px;
+  padding: 0;
+  border-radius: 12px;
+}
+.app-shell .market-sell-settlement {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px 12px;
+  padding-top: 9px;
+  border-top: 1px solid rgba(54, 67, 75, 0.07);
+}
+.app-shell .market-sell-settlement > span {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+  color: #939b98;
+  font-size: 7px;
+}
+.app-shell .market-sell-settlement > span:last-of-type {
+  text-align: right;
+}
+.app-shell .market-sell-settlement strong {
+  overflow: hidden;
+  color: #40515a;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-shell .market-sell-settlement > small {
+  grid-column: 1 / -1;
+  color: #9a8a7d;
+  font-size: 7px;
+  line-height: 1.35;
+}
+.app-shell .market-sell-confirm.button {
+  width: 100%;
+  min-height: 44px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr);
+  align-items: center;
+  gap: 7px;
+  padding: 7px 12px;
+  border-radius: 22px;
+  font-size: 10px;
+}
+.app-shell .market-sell-confirm > span {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-shell .market-sell-confirm > span svg {
+  width: 15px;
+  height: 15px;
+}
+.app-shell .market-sell-confirm > span strong {
+  color: #d8fff0;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.app-shell .market-sell-confirm > i {
+  width: 1px;
+  height: 22px;
+  background: rgba(255, 255, 255, 0.56);
+}
+
+@media (max-width: 360px) {
+  .app-shell .market-sell-hero {
+    grid-template-columns: minmax(0, 48%) minmax(0, 52%);
+  }
+  .app-shell .market-sell-hero-copy {
+    padding-right: 9px;
+    padding-left: 9px;
+  }
+  .app-shell .market-sell-hero-copy h2 {
+    font-size: 15px;
+  }
+  .app-shell .market-sell-hero-facts > span {
+    grid-template-columns: 16px minmax(0, 1fr);
+    padding: 5px;
+  }
+  .app-shell .market-sell-hero-facts svg {
+    width: 15px;
+    height: 15px;
+  }
 }
 
 /* Game */

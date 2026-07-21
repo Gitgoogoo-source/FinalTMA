@@ -1,45 +1,40 @@
 import {
   ArrowDownUp,
+  Check,
   ChevronDown,
   Coins,
+  Crown,
+  Info,
   Layers3,
   PackageMinus,
   PackagePlus,
   PackageSearch,
-  Search,
+  Percent,
+  ShieldCheck,
   ShoppingBag,
   ShoppingCart,
-  SlidersHorizontal,
   Tags,
-  X,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import { CatalogImage } from "../../../shared/ui/index.tsx";
-import { focusTaskTarget } from "../../../shared/navigation/focusTaskTarget.ts";
 import { useApiQuery } from "../../../platform/query/index.ts";
 import { Badge, Button, Card, PageState } from "../../../shared/ui/index.tsx";
 import { useOperationRegistry } from "../../../workflows/operation-recovery/index.ts";
 import { useNavigationIntent } from "../../../workflows/payment-recovery/index.ts";
+import { MarketTabs, type MarketTab } from "./MarketTabs.tsx";
 
-type Tab = "buy" | "sell" | "manage";
 type BuyFilter = "price" | "rarity" | "stage" | "sort";
 type BuySort = "catalog" | "price-asc" | "price-desc" | "available";
 
 export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
   const [params, setParams] = useSearchParams();
   const requestedTab = parseTab(params.get("tab"));
-  const [selectedTab, setSelectedTab] = useState<Tab>(
+  const [selectedTab, setSelectedTab] = useState<MarketTab>(
     requestedTab ?? (params.has("sell") ? "sell" : "buy"),
   );
   const tab = requestedTab ?? selectedTab;
-  const tabButtons = useRef<Record<Tab, HTMLButtonElement | null>>({
-    buy: null,
-    sell: null,
-    manage: null,
-  });
-  const buyControls = useRef<HTMLDivElement | null>(null);
   const purchaseTarget = params.get("buy");
   const identity = useApiQuery("identity.bootstrap");
   const listings = useApiQuery("market.bootstrap", {}, tab === "buy");
@@ -53,8 +48,6 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
   const { isBlocked, run } = useOperationRegistry();
   const { requestTopup } = useNavigationIntent();
   const [feedback, setFeedback] = useState<string | null>(null);
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [search, setSearch] = useState("");
   const [priceFilter, setPriceFilter] = useState<number | null>(null);
   const [rarityFilter, setRarityFilter] = useState<string | null>(null);
   const [stageFilter, setStageFilter] = useState<number | null>(null);
@@ -131,10 +124,8 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
   );
   const visible = useMemo(() => {
     if (tab !== "buy") return sorted;
-    const keyword = search.trim().toLocaleLowerCase("zh-CN");
     const filtered = sorted.filter(
       (item) =>
-        (!keyword || item.name.toLocaleLowerCase("zh-CN").includes(keyword)) &&
         (priceFilter === null || item.unit_price === priceFilter) &&
         (rarityFilter === null || item.rarity === rarityFilter) &&
         (stageFilter === null || item.stage === stageFilter),
@@ -152,15 +143,16 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
         (left, right) => right.available - left.available,
       );
     return filtered;
-  }, [buySort, priceFilter, rarityFilter, search, sorted, stageFilter, tab]);
+  }, [buySort, priceFilter, rarityFilter, sorted, stageFilter, tab]);
+  const selectedSellItem =
+    tab === "sell"
+      ? (visible.find((item) => item.template_id === params.get("sell")) ??
+        visible[0])
+      : undefined;
   const activeTemplateIds = new Set(
     (mine.data?.listings ?? []).map((item) => item.template_id),
   );
-  useEffect(() => {
-    if (params.get("focus") !== `market-${tab}`) return;
-    return focusTaskTarget(tabButtons.current[tab] ?? null);
-  }, [params, state.isLoading, tab]);
-  const selectTab = (nextTab: Tab) => {
+  const selectTab = (nextTab: MarketTab) => {
     setSelectedTab(nextTab);
     setParams({}, { replace: true });
   };
@@ -212,61 +204,31 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
   };
   return (
     <main className="page market-page">
-      <header className="page-heading market-heading">
-        <div>
-          <span>OFFICIAL MARKET</span>
-          <h1>交易市场</h1>
-        </div>
-        <div className="market-heading-actions">
-          {tab === "buy" && (
-            <>
-              <button
-                type="button"
-                className={searchOpen ? "active" : ""}
-                aria-label={searchOpen ? "关闭藏品搜索" : "搜索藏品"}
-                aria-expanded={searchOpen}
-                onClick={() => setSearchOpen((value) => !value)}
-              >
-                <Search />
-              </button>
-              <button
-                type="button"
-                aria-label="查看购买筛选"
-                onClick={() =>
-                  buyControls.current?.scrollIntoView({
-                    behavior: "smooth",
-                    block: "center",
-                  })
-                }
-              >
-                <SlidersHorizontal />
-              </button>
-            </>
-          )}
-          {tab !== "buy" && <ShoppingBag aria-hidden="true" />}
-        </div>
-      </header>
-      {tab === "buy" && searchOpen && (
-        <label className="market-search">
-          <Search aria-hidden="true" />
-          <input
-            autoFocus
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="搜索藏品名称"
-            aria-label="搜索藏品名称"
-          />
-          {search && (
-            <button
-              type="button"
-              aria-label="清空搜索"
-              onClick={() => setSearch("")}
-            >
-              <X />
-            </button>
-          )}
-        </label>
-      )}
+      <MarketTabs
+        activeTab={tab}
+        focusActive={params.get("focus") === `market-${tab}`}
+        focusReady={!state.isLoading}
+        onSelect={selectTab}
+      />
+      {tab === "sell" ? (
+        <header className="market-sell-heading">
+          <Tags aria-hidden="true" />
+          <div>
+            <h1>出售 NFT</h1>
+            <span>{sorted.length} 种藏品可出售</span>
+          </div>
+        </header>
+      ) : tab !== "buy" ? (
+        <header className="page-heading market-heading">
+          <div>
+            <span>OFFICIAL MARKET</span>
+            <h1>交易市场</h1>
+          </div>
+          <div className="market-heading-actions">
+            <ShoppingBag aria-hidden="true" />
+          </div>
+        </header>
+      ) : null}
       {tab === "buy" && purchaseTarget && targetListing.data && (
         <Card className="market-target" role="status">
           <strong>已定位：{targetListing.data.name}</strong>
@@ -318,41 +280,9 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
           </Button>
         </Card>
       )}
-      <nav className="segmented market-tabs" aria-label="交易市场页签">
-        <button
-          ref={(element) => {
-            tabButtons.current.buy = element;
-          }}
-          className={tab === "buy" ? "active" : ""}
-          onClick={() => selectTab("buy")}
-        >
-          <ShoppingBag aria-hidden="true" />
-          购买
-        </button>
-        <button
-          ref={(element) => {
-            tabButtons.current.sell = element;
-          }}
-          className={tab === "sell" ? "active" : ""}
-          onClick={() => selectTab("sell")}
-        >
-          <Tags aria-hidden="true" />
-          出售
-        </button>
-        <button
-          ref={(element) => {
-            tabButtons.current.manage = element;
-          }}
-          className={tab === "manage" ? "active" : ""}
-          onClick={() => selectTab("manage")}
-        >
-          <PackageSearch aria-hidden="true" />
-          管理
-        </button>
-      </nav>
-      {vipBanner}
+      {tab !== "sell" && vipBanner}
       {tab === "buy" && (
-        <div className="market-buy-controls" ref={buyControls}>
+        <div className="market-buy-controls">
           <div className="market-filter-strip">
             <MarketFilterButton
               icon={<Coins />}
@@ -487,15 +417,13 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
           )}
           <div className="market-result-summary" aria-live="polite">
             <span>{visible.length} 件藏品</span>
-            {(search ||
-              priceFilter !== null ||
+            {(priceFilter !== null ||
               rarityFilter !== null ||
               stageFilter !== null ||
               buySort !== "catalog") && (
               <button
                 type="button"
                 onClick={() => {
-                  setSearch("");
                   setPriceFilter(null);
                   setRarityFilter(null);
                   setStageFilter(null);
@@ -516,33 +444,58 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
           <Button onClick={() => void mine.refetch()}>刷新在售状态</Button>
         </Card>
       )}
-      <PageState
-        loading={state.isLoading}
-        error={state.error as Error | null}
-        onRetry={() => void state.refetch()}
-        empty={sorted.length === 0}
-      >
-        {visible.length ? (
-          <div className={`market-grid market-grid-${tab}`}>
-            {visible.map((item) => (
-              <MarketCard
-                key={item.template_id}
-                item={item}
-                tab={tab}
-                blocked={blocked}
-                balance={identity.data?.assets.kcoin.available}
-                onSubmit={submit}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="market-filter-empty">
-            <Search aria-hidden="true" />
-            <strong>没有符合条件的藏品</strong>
-            <span>调整搜索或筛选后再试</span>
-          </div>
-        )}
-      </PageState>
+      {tab === "sell" ? (
+        <PageState
+          loading={state.isLoading}
+          error={state.error as Error | null}
+          onRetry={() => void state.refetch()}
+          empty={!selectedSellItem}
+        >
+          {selectedSellItem && (
+            <MarketSellWorkbench
+              key={selectedSellItem.template_id}
+              items={visible}
+              selected={selectedSellItem}
+              blocked={blocked}
+              feeBps={sellable.data?.fee_bps ?? 500}
+              vipActive={sellable.data?.vip.active ?? false}
+              vipRebateBps={sellable.data?.vip_rebate_bps ?? 2000}
+              onSelect={(templateId) =>
+                setParams({ sell: templateId }, { replace: true })
+              }
+              onSubmit={submit}
+            />
+          )}
+        </PageState>
+      ) : (
+        <PageState
+          loading={state.isLoading}
+          error={state.error as Error | null}
+          onRetry={() => void state.refetch()}
+          empty={sorted.length === 0}
+        >
+          {visible.length ? (
+            <div className={`market-grid market-grid-${tab}`}>
+              {visible.map((item) => (
+                <MarketCard
+                  key={item.template_id}
+                  item={item}
+                  tab={tab}
+                  blocked={blocked}
+                  balance={identity.data?.assets.kcoin.available}
+                  onSubmit={submit}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="market-filter-empty">
+              <PackageSearch aria-hidden="true" />
+              <strong>没有符合条件的藏品</strong>
+              <span>调整筛选后再试</span>
+            </div>
+          )}
+        </PageState>
+      )}
       {pendingDelist && (
         <div
           className="modal-backdrop"
@@ -652,7 +605,7 @@ function sortLabel(value: BuySort): string {
   }[value];
 }
 
-function parseTab(value: string | null): Tab | null {
+function parseTab(value: string | null): MarketTab | null {
   return value === "buy" || value === "sell" || value === "manage"
     ? value
     : null;
@@ -663,9 +616,13 @@ type MarketViewItem = {
   name: string;
   rarity?: string;
   stage?: number | undefined;
+  chain_type?: "normal" | "advanced" | "top";
   image_thumbnail_path: string;
+  image_detail_path?: string;
   unit_price: number;
   available: number;
+  total?: number;
+  listed?: number;
   sold_quantity?: number;
   estimated_gross?: number;
   estimated_fee?: number;
@@ -673,6 +630,206 @@ type MarketViewItem = {
   estimated_vip_rebate?: number;
   status?: "active" | "partially_sold";
 };
+
+function MarketSellWorkbench({
+  items,
+  selected,
+  blocked,
+  feeBps,
+  vipActive,
+  vipRebateBps,
+  onSelect,
+  onSubmit,
+}: {
+  items: MarketViewItem[];
+  selected: MarketViewItem;
+  blocked: boolean;
+  feeBps: number;
+  vipActive: boolean;
+  vipRebateBps: number;
+  onSelect(templateId: string): void;
+  onSubmit(item: MarketViewItem, quantity: number): void;
+}): ReactNode {
+  const [quantity, setQuantity] = useState(1);
+  const [imageReady, setImageReady] = useState(false);
+  const available = selected.available;
+  const gross = selected.unit_price * quantity;
+  const fee = Math.floor((gross * feeBps) / 10_000);
+  const net = gross - fee;
+  const vipRebate = vipActive ? Math.floor((fee * vipRebateBps) / 10_000) : 0;
+  const finalNet = net + vipRebate;
+  return (
+    <div className="market-sell-workbench">
+      <Card className="market-sell-hero" aria-label="当前选中的出售藏品">
+        <div className="market-sell-hero-art">
+          <CatalogImage
+            path={selected.image_detail_path ?? selected.image_thumbnail_path}
+            alt={selected.name}
+            variant={selected.image_detail_path ? "detail" : "thumbnail"}
+            loading="eager"
+            fetchPriority="high"
+            onAvailability={setImageReady}
+          />
+        </div>
+        <div className="market-sell-hero-copy">
+          <Badge>{rarityLabel(selected.rarity)}</Badge>
+          <h2>{selected.name}</h2>
+          <p>
+            {chainLabel(selected.chain_type)} · 第 {selected.stage ?? 1} 阶
+          </p>
+          <span className="market-sell-owned">
+            你拥有 <strong>{selected.total ?? available}</strong> 份 · 出售中
+            <strong>{selected.listed ?? 0}</strong>
+          </span>
+          <div className="market-sell-hero-facts">
+            <span>
+              <Crown aria-hidden="true" />
+              <small>稀有度</small>
+              <strong>{rarityLabel(selected.rarity)}</strong>
+            </span>
+            <span>
+              <Layers3 aria-hidden="true" />
+              <small>当前状态</small>
+              <strong>可售 {available} 份</strong>
+            </span>
+          </div>
+        </div>
+      </Card>
+
+      <div className="market-sell-gallery" aria-label="选择要出售的藏品">
+        {items.map((item) => {
+          const active = item.template_id === selected.template_id;
+          return (
+            <button
+              key={item.template_id}
+              type="button"
+              className={active ? "active" : ""}
+              aria-label={`选择${item.name}，可出售 ${item.available} 份`}
+              aria-pressed={active}
+              onClick={() => onSelect(item.template_id)}
+            >
+              <CatalogImage
+                path={item.image_thumbnail_path}
+                alt={item.name}
+                variant="thumbnail"
+                loading="lazy"
+              />
+              {item.available > 1 && <span>x{item.available}</span>}
+              {active && (
+                <i aria-hidden="true">
+                  <Check />
+                </i>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      <Card className="market-sell-metrics" aria-live="polite">
+        <MarketSellMetric
+          icon={<Coins />}
+          label="官方单价"
+          value={`${selected.unit_price} K`}
+          detail="固定价格"
+        />
+        <MarketSellMetric
+          icon={<ShieldCheck />}
+          label="预计成交"
+          value={`${gross} K`}
+          detail={`${quantity} 份藏品`}
+        />
+        <MarketSellMetric
+          icon={<Percent />}
+          label="平台手续费"
+          value={`${fee} K`}
+          detail={`${feeBps / 100}%`}
+        />
+      </Card>
+
+      <Card className="market-sell-form">
+        <div className="market-sell-quantity-row">
+          <span>
+            出售数量 <Info aria-hidden="true" />
+          </span>
+          <div className="quantity">
+            <Button
+              aria-label="减少出售数量"
+              disabled={quantity <= 1}
+              onClick={() => setQuantity((value) => Math.max(1, value - 1))}
+            >
+              −
+            </Button>
+            <strong>{quantity}</strong>
+            <Button
+              aria-label="增加出售数量"
+              disabled={quantity >= available}
+              onClick={() =>
+                setQuantity((value) => Math.min(available, value + 1))
+              }
+            >
+              ＋
+            </Button>
+          </div>
+        </div>
+        <div className="market-sell-settlement">
+          <span>
+            预计基础到账<strong>{net} K-coin</strong>
+          </span>
+          <span>
+            月卡预计返还
+            <strong>{vipActive ? `${vipRebate} K-coin` : "未开通"}</strong>
+          </span>
+          <small>实际手续费和返还按后续每次真实成交明细计算</small>
+        </div>
+        <Button
+          className="market-sell-confirm"
+          disabled={blocked || !imageReady || available < 1}
+          onClick={() => onSubmit(selected, quantity)}
+        >
+          <span>
+            <Tags aria-hidden="true" />
+            确认出售
+          </span>
+          <i aria-hidden="true" />
+          <span>
+            预计到手 <strong>{finalNet}</strong> K
+          </span>
+        </Button>
+      </Card>
+    </div>
+  );
+}
+
+function MarketSellMetric({
+  icon,
+  label,
+  value,
+  detail,
+}: {
+  icon: ReactNode;
+  label: string;
+  value: string;
+  detail: string;
+}): ReactNode {
+  return (
+    <span>
+      <small>{label}</small>
+      <strong>
+        {icon}
+        {value}
+      </strong>
+      <small>{detail}</small>
+    </span>
+  );
+}
+
+function chainLabel(value: MarketViewItem["chain_type"]): string {
+  return {
+    normal: "普通链",
+    advanced: "高级链",
+    top: "顶级链",
+  }[value ?? "normal"];
+}
 
 function MarketCard({
   item,
@@ -682,7 +839,7 @@ function MarketCard({
   onSubmit,
 }: {
   item: MarketViewItem;
-  tab: Tab;
+  tab: MarketTab;
   blocked: boolean;
   balance: number | undefined;
   onSubmit(item: MarketViewItem, quantity: number): void;
