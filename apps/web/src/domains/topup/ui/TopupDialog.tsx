@@ -251,6 +251,9 @@ export function TopupDialog({
   }, [locked]);
 
   const amounts = status.data?.products ?? [];
+  const exactGapMatchesFixed = request
+    ? amounts.some((value) => value === request.estimatedGap)
+    : false;
   const succeeded =
     order?.status === "delivered" ||
     (order?.status === "refunded" && Boolean(order.delivered_at));
@@ -293,7 +296,7 @@ export function TopupDialog({
           <Button onClick={() => void status.refetch()}>重新加载</Button>
         ) : (
           <div className="amount-grid">
-            {request && (
+            {request && !exactGapMatchesFixed && (
               <button
                 className={amount === "exact_gap" ? "selected" : ""}
                 onClick={() => {
@@ -301,7 +304,7 @@ export function TopupDialog({
                   setCreateError(null);
                 }}
               >
-                补足预计差额
+                {request.estimatedGap} K-coin
               </button>
             )}
             {amounts.map((value) => (
