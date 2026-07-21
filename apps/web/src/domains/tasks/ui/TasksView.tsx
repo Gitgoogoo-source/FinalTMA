@@ -1,5 +1,19 @@
 import type { RouteOutput } from "@pokepets/api-contracts/app";
-import { CalendarCheck, Gift } from "lucide-react";
+import {
+  BookOpen,
+  Boxes,
+  CalendarCheck,
+  Check,
+  Gem,
+  Link2,
+  LockKeyhole,
+  Rocket,
+  ShoppingBasket,
+  Sparkles,
+  UsersRound,
+  WalletCards,
+  type LucideIcon,
+} from "lucide-react";
 import {
   useEffect,
   useLayoutEffect,
@@ -60,7 +74,26 @@ const taskStatusLabels: Record<Task["status"], string> = {
   claimed: "已领取",
 };
 
-const checkInRewards = ["20", "30", "50", "80", "100", "150", "稀有盒"];
+const taskCategoryIcons: Record<TaskCategory, LucideIcon> = {
+  gacha: Boxes,
+  daily: CalendarCheck,
+  social: UsersRound,
+  market: ShoppingBasket,
+  inventory: Sparkles,
+  expedition: Rocket,
+  album: BookOpen,
+  wallet: WalletCards,
+  mint: Link2,
+};
+const checkInRewards = [
+  { amount: "20", unit: "Fgems", kind: "fgems" },
+  { amount: "30", unit: "Fgems", kind: "fgems" },
+  { amount: "50", unit: "Fgems", kind: "fgems" },
+  { amount: "80", unit: "Fgems", kind: "fgems" },
+  { amount: "100", unit: "Fgems", kind: "fgems" },
+  { amount: "150", unit: "Fgems", kind: "fgems" },
+  { amount: "1", unit: "稀有盒资格", kind: "box" },
+] as const;
 
 export function TasksView(): ReactNode {
   const tasks = useApiQuery("tasks.get");
@@ -140,11 +173,8 @@ export function TasksView(): ReactNode {
       <div id="task-checkin" tabIndex={-1}>
         <Card className="checkin-card">
           <div className="checkin-heading">
-            <span className="checkin-icon">
-              <CalendarCheck aria-hidden="true" />
-            </span>
             <div>
-              <span>七日签到</span>
+              <span>7 日签到</span>
               <strong>
                 本轮签到：第 {tasks.data?.checkin.next_day ?? 1} 天 / 7 天
               </strong>
@@ -157,6 +187,9 @@ export function TasksView(): ReactNode {
               {claimedToday ? "今日已签到" : checkingIn ? "领取中" : "立即签到"}
             </Button>
           </div>
+          <div className="checkin-orbit" aria-hidden="true">
+            <Sparkles />
+          </div>
           <div className="checkin-days" role="list" aria-label="七日签到奖励">
             {checkInRewards.map((reward, index) => {
               const day = index + 1;
@@ -168,16 +201,32 @@ export function TasksView(): ReactNode {
                   role="listitem"
                   className={`${claimed ? "claimed" : ""} ${active ? "active" : ""}`}
                 >
-                  <small>DAY {day}</small>
-                  <i>{claimed ? "✓" : day === 7 ? "◇" : "✦"}</i>
-                  <strong>{reward}</strong>
+                  <small>第 {day} 天</small>
+                  <span className="checkin-reward-art">
+                    {claimed ? (
+                      <Check aria-hidden="true" />
+                    ) : reward.kind === "box" ? (
+                      <img src="/assets/boxes/rare.webp" alt="" />
+                    ) : (
+                      <Gem aria-hidden="true" />
+                    )}
+                  </span>
+                  <strong>{reward.amount}</strong>
+                  <em>{reward.unit}</em>
+                  {!claimed && !active ? (
+                    <LockKeyhole className="checkin-lock" aria-hidden="true" />
+                  ) : null}
                 </span>
               );
             })}
           </div>
         </Card>
       </div>
-      <nav className="task-filter-strip" aria-label="任务分类">
+      <nav
+        id="task-filters"
+        className="task-filter-strip"
+        aria-label="任务分类"
+      >
         {taskFilters.map((item) => (
           <button
             key={item.key}
@@ -191,6 +240,7 @@ export function TasksView(): ReactNode {
       </nav>
       <div className="task-list">
         {visibleItems.map((task) => {
+          const TaskIcon = taskCategoryIcons[task.category];
           const claiming = claimingCode === task.code;
           const canClaim = task.status === "claimable";
           const canComplete =
@@ -198,7 +248,7 @@ export function TasksView(): ReactNode {
           return (
             <Card key={task.code} className="task-row">
               <div className="task-icon">
-                <Gift aria-hidden="true" />
+                <TaskIcon aria-hidden="true" />
               </div>
               <div id={`task-card-${task.code}`} tabIndex={-1}>
                 <div className="task-card-meta">

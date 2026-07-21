@@ -5010,36 +5010,92 @@ input:focus {
 
 /* Tasks */
 .app-shell .tasks-page {
+  width: min(100%, 430px);
+  margin: 0 auto;
+  padding: 0 12px 28px;
+  color: #071d3b;
   background:
     radial-gradient(
       circle at 50% 0,
-      rgba(255, 238, 216, 0.62),
-      transparent 24%
+      rgba(255, 241, 226, 0.58),
+      transparent 22%
     ),
-    linear-gradient(180deg, #fffefa, #fff 62%, #f9fbfd);
+    #fff;
+}
+.app-shell:has(.tasks-page) .identity {
+  max-width: 94px;
+  flex-basis: 92px;
+}
+.app-shell:has(.tasks-page) .asset-pill {
+  width: clamp(60px, 16vw, 66px);
+}
+.app-shell:has(.tasks-page) .asset-actions .wallet-action {
+  width: clamp(58px, 15vw, 64px);
+}
+.app-shell:has(.tasks-page) .bottom-nav {
+  bottom: calc(var(--safe-bottom) + 7px);
+}
+.app-shell .tasks-screen-heading {
+  min-height: 70px;
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr) 46px;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 2px 7px;
+}
+.app-shell .tasks-screen-heading h1 {
+  margin: 0;
+  color: #071d3b;
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  text-align: center;
+}
+.app-shell .tasks-screen-heading button {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(7, 29, 59, 0.08);
+  border-radius: 50%;
+  color: #071d3b;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow:
+    0 12px 28px rgba(7, 29, 59, 0.08),
+    inset 0 1px 0 #fff;
+}
+.app-shell .tasks-screen-heading button:active {
+  transform: scale(0.94);
+}
+.app-shell .tasks-screen-heading svg {
+  width: 23px;
+  height: 23px;
+  stroke-width: 2.2;
 }
 .app-shell .task-highlight {
   display: grid;
-  grid-template-columns: 42px minmax(0, 1fr) auto;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 15px;
-  padding: 12px;
-  border-color: rgba(255, 143, 24, 0.18);
-  background: linear-gradient(135deg, #fff8e9, #fff 70%);
-  box-shadow: 0 13px 28px rgba(255, 122, 0, 0.1);
+  gap: 9px;
+  margin-bottom: 8px;
+  padding: 8px 12px;
+  border-color: rgba(255, 122, 0, 0.14);
+  border-radius: 20px;
+  background: #fffaf4;
+  box-shadow: 0 10px 24px rgba(7, 29, 59, 0.05);
 }
 .app-shell .task-highlight-icon {
-  width: 42px;
-  height: 42px;
+  width: 40px;
+  height: 40px;
   display: grid;
   place-items: center;
-  border-radius: 14px;
-  color: #fff;
-  background: linear-gradient(145deg, #ffad27, #ff7200);
+  border-radius: 13px;
+  color: #ff7100;
+  background: #fff0df;
 }
 .app-shell .task-highlight-icon svg {
-  width: 20px;
+  width: 19px;
 }
 .app-shell .task-highlight > div {
   display: grid;
@@ -5047,188 +5103,283 @@ input:focus {
   gap: 2px;
 }
 .app-shell .task-highlight small {
-  color: #d57417;
-  font-size: 8px;
+  color: #ff7100;
+  font-size: 7px;
   font-weight: 900;
 }
 .app-shell .task-highlight strong {
-  color: #2b3a41;
-  font-size: 13px;
+  color: #071d3b;
+  font-size: 12px;
 }
 .app-shell .task-highlight p {
   margin: 0;
   overflow: hidden;
-  color: #7d8983;
-  font-size: 9px;
+  color: #738198;
+  font-size: 8px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .app-shell .task-highlight > .button {
-  min-width: 66px;
-  min-height: 34px;
-  padding: 7px 9px;
-  font-size: 9px;
+  min-width: 64px;
+  min-height: 32px;
+  padding: 6px 10px;
+  border-radius: 16px;
+  font-size: 8px;
 }
 .app-shell .task-section {
   display: grid;
-  gap: 9px;
-  margin-bottom: 15px;
-}
-.app-shell .section-heading {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 0 2px;
-}
-.app-shell .section-heading .section-icon {
-  width: 37px;
-  height: 37px;
-  display: grid;
-  place-items: center;
-  border-radius: 13px;
-  color: var(--sprout-orange);
-  background: rgba(255, 156, 0, 0.1);
-}
-.app-shell .section-heading svg {
-  width: 18px;
-}
-.app-shell .section-heading h2 {
-  margin: 1px 0 0;
-  color: #2b3a41;
-  font-size: 17px;
+  gap: 8px;
+  margin-bottom: 8px;
 }
 .app-shell .referral-stack {
-  gap: 8px;
+  display: grid;
+  gap: 7px;
 }
 .app-shell .invite-card {
-  padding: 16px;
-  color: #fff;
+  min-height: 238px;
+  padding: 14px 16px 12px;
+  overflow: hidden;
+  border-color: rgba(255, 122, 0, 0.16);
+  color: #071d3b;
   background:
     radial-gradient(
-      circle at 90% 10%,
-      rgba(255, 255, 255, 0.25),
-      transparent 28%
+      circle at 88% 24%,
+      rgba(255, 192, 137, 0.14),
+      transparent 34%
     ),
-    linear-gradient(135deg, #ffad27, #ff7200 64%, #ec5d00);
-  box-shadow: 0 17px 34px rgba(255, 122, 0, 0.24);
+    #fffdfa;
+  box-shadow:
+    0 18px 44px rgba(7, 29, 59, 0.06),
+    inset 0 1px 0 #fff;
 }
-.app-shell .invite-card::after {
-  content: "✦";
-  position: absolute;
-  right: 18px;
-  top: 13px;
-  color: rgba(255, 255, 255, 0.65);
-  font-size: 31px;
+.app-shell .invite-copy {
+  width: 65%;
+  position: relative;
+  z-index: 2;
 }
-.app-shell .invite-card > span {
-  font-size: 17px;
+.app-shell .invite-copy > span {
+  color: #ff7100;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+.app-shell .invite-copy h2 {
+  display: grid;
+  gap: 1px;
+  margin: 3px 0 5px;
+  color: #071d3b;
+  font-size: clamp(24px, 7vw, 29px);
   font-weight: 950;
+  letter-spacing: -0.045em;
+  line-height: 1.04;
 }
-.app-shell .invite-card p {
-  max-width: 88%;
-  margin: 6px 0;
-  color: rgba(255, 255, 255, 0.85);
+.app-shell .invite-copy h2 em {
+  color: #ff6800;
+  font-style: normal;
+}
+.app-shell .invite-copy > p {
+  margin: 0;
+  color: #5e6f86;
   font-size: 9px;
   line-height: 1.45;
 }
-.app-shell .invite-card strong {
-  margin: 10px 0 6px;
-  color: #fff;
-  font-size: 25px;
+.app-shell .invite-art {
+  width: 49%;
+  height: 160px;
+  position: absolute;
+  z-index: 1;
+  top: 11px;
+  right: -2px;
+  object-fit: contain;
+  object-position: center;
+  mix-blend-mode: multiply;
 }
-.app-shell .invite-card code {
-  padding: 8px 10px;
-  color: rgba(255, 255, 255, 0.86);
-  background: rgba(111, 45, 0, 0.18);
+.app-shell .invite-benefits {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 6px;
+}
+.app-shell .invite-benefits > span {
+  min-width: 0;
+  min-height: 48px;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  gap: 1px 5px;
+  align-content: center;
+  padding: 6px;
+  border: 1px solid rgba(255, 122, 0, 0.11);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.82);
+}
+.app-shell .invite-benefits svg {
+  width: 20px;
+  height: 20px;
+  grid-row: 1 / -1;
+  align-self: center;
+  color: #ff7100;
+}
+.app-shell .invite-benefits small,
+.app-shell .invite-benefits strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-shell .invite-benefits small {
+  color: #8390a1;
+  font-size: 7px;
+}
+.app-shell .invite-benefits strong {
+  color: #071d3b;
   font-size: 8px;
 }
-.app-shell .invite-card .button {
-  min-height: 38px;
-  border-color: rgba(255, 255, 255, 0.44);
-  color: #c85800;
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 8px 16px rgba(123, 50, 0, 0.13);
+.app-shell .invite-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 126px;
+  gap: 8px;
+  position: relative;
+  z-index: 3;
+  margin-top: 8px;
 }
-.app-shell .invite-card .button.secondary {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.16);
+.app-shell .invite-actions .button {
+  min-width: 0;
+  min-height: 42px;
+  border-radius: 25px;
+  font-size: 12px;
+}
+.app-shell .invite-actions .invite-primary {
+  justify-content: space-between;
+  padding-inline: 18px;
+}
+.app-shell .invite-actions .invite-primary svg:last-child {
+  width: 29px;
+  height: 29px;
+  padding: 7px;
+  border-radius: 50%;
+  color: #ff7100;
+  background: #fff;
+}
+.app-shell .invite-actions .invite-copy-button {
+  padding: 8px 10px;
+  color: #ff7100;
+  border-color: rgba(255, 122, 0, 0.4);
+  background: #fff;
+  font-size: 9px;
 }
 .app-shell .stats-row {
+  display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 7px;
+  gap: 6px;
 }
 .app-shell .stats-row .card {
   min-width: 0;
-  gap: 5px;
-  padding: 10px;
+  min-height: 64px;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  gap: 2px 6px;
+  align-content: center;
+  padding: 8px;
+  border-radius: 18px;
+  box-shadow: 0 10px 24px rgba(7, 29, 59, 0.045);
+}
+.app-shell .stats-row .stat-icon {
+  width: 28px;
+  height: 28px;
+  grid-row: 1 / -1;
+  display: grid;
+  place-items: center;
+  align-self: center;
+  border-radius: 10px;
+  color: #ff7100;
+  background: #fff2e5;
+}
+.app-shell .stats-row .stat-icon svg {
+  width: 16px;
 }
 .app-shell .stats-row .badge {
   max-width: 100%;
   overflow: hidden;
+  padding: 0;
+  border: 0;
+  color: #718096;
+  background: transparent;
   font-size: 7px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .app-shell .stats-row strong {
-  color: #4f5e57;
-  font-size: 16px;
-  overflow-wrap: anywhere;
-}
-.app-shell .milestone-summary {
-  padding: 12px;
-}
-.app-shell .milestone-summary h3 {
-  margin: 0 0 6px;
-  font-size: 13px;
-}
-.app-shell .milestone-summary p {
-  margin: 3px 0;
-  color: #7e8984;
-  font-size: 9px;
+  min-width: 0;
+  overflow: hidden;
+  color: #0cad37;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .app-shell .checkin-card {
+  min-height: 238px;
+  position: relative;
   display: grid;
-  gap: 12px;
+  align-content: start;
+  gap: 16px;
   margin: 0;
-  padding: 13px;
+  padding: 17px 14px 16px;
+  overflow: hidden;
+  border-color: rgba(7, 29, 59, 0.07);
+  border-radius: 22px;
   background:
-    radial-gradient(circle at 85% 0, rgba(255, 194, 77, 0.15), transparent 34%),
-    rgba(255, 255, 255, 0.77);
+    radial-gradient(
+      circle at 86% 2%,
+      rgba(232, 238, 246, 0.8),
+      transparent 25%
+    ),
+    #fff;
+  box-shadow: 0 15px 36px rgba(7, 29, 59, 0.06);
 }
 .app-shell .checkin-heading {
   display: grid;
-  grid-template-columns: 38px 1fr auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
 }
-.app-shell .checkin-icon {
-  width: 38px;
-  height: 38px;
-  display: grid;
-  place-items: center;
-  border-radius: 13px;
-  color: var(--sprout-orange);
-  background: rgba(255, 156, 0, 0.11);
-}
-.app-shell .checkin-icon svg {
-  width: 19px;
-}
 .app-shell .checkin-heading > div {
   display: grid;
-  gap: 2px;
+  gap: 3px;
 }
 .app-shell .checkin-heading span {
-  font-size: 13px;
-  font-weight: 900;
+  color: #071d3b;
+  font-size: 22px;
+  font-weight: 950;
 }
 .app-shell .checkin-heading strong {
-  color: #84908a;
-  font-size: 8px;
+  color: #6f7f95;
+  font-size: 9px;
 }
 .app-shell .checkin-heading .button {
-  min-height: 34px;
-  padding: 7px 10px;
+  min-height: 36px;
+  position: relative;
+  z-index: 2;
+  padding: 7px 12px;
+  border-radius: 18px;
   font-size: 9px;
+}
+.app-shell .checkin-orbit {
+  width: 62px;
+  height: 40px;
+  position: absolute;
+  top: 13px;
+  right: 83px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(130, 145, 168, 0.15);
+  border-radius: 50%;
+  color: #cad2dd;
+  transform: rotate(-13deg);
+}
+.app-shell .checkin-orbit svg {
+  width: 18px;
 }
 .app-shell .checkin-days {
   display: grid;
@@ -5237,85 +5388,134 @@ input:focus {
 }
 .app-shell .checkin-days > span {
   min-width: 0;
-  min-height: 66px;
+  min-height: 135px;
+  position: relative;
   display: grid;
   justify-items: center;
-  align-content: center;
-  gap: 3px;
-  border: 1px solid rgba(54, 67, 75, 0.06);
-  border-radius: 12px;
-  color: #84908a;
-  background: rgba(54, 67, 75, 0.035);
+  align-content: start;
+  gap: 4px;
+  padding: 9px 2px 8px;
+  border: 1px solid rgba(7, 29, 59, 0.07);
+  border-radius: 16px;
+  color: #738198;
+  background: #fafbfc;
 }
 .app-shell .checkin-days > span.active {
-  border-color: rgba(255, 156, 0, 0.48);
-  color: #d96a00;
-  background: rgba(255, 156, 0, 0.08);
-  box-shadow: 0 8px 16px rgba(255, 122, 0, 0.1);
+  border-color: #ff7a00;
+  color: #ff6500;
+  background: #fffaf5;
+  box-shadow: 0 12px 24px rgba(255, 122, 0, 0.12);
 }
 .app-shell .checkin-days > span.claimed {
-  color: #3f9e35;
-  background: rgba(77, 187, 57, 0.08);
+  color: #0ca838;
+  background: #f4fbf5;
 }
 .app-shell .checkin-days small {
-  font-size: 5px;
+  color: inherit;
+  font-size: 6px;
   font-weight: 900;
 }
-.app-shell .checkin-days i {
-  width: 23px;
-  height: 23px;
+.app-shell .checkin-reward-art {
+  width: 34px;
+  height: 34px;
   display: grid;
   place-items: center;
-  border-radius: 50%;
-  color: inherit;
-  background: rgba(255, 255, 255, 0.82);
-  font-size: 11px;
-  font-style: normal;
+  margin-top: 5px;
+  border-radius: 12px;
+  color: #36c85b;
+  background: #effcf2;
+  box-shadow: inset 0 1px 0 #fff;
+}
+.app-shell .checkin-reward-art svg {
+  width: 19px;
+}
+.app-shell .checkin-reward-art img {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+}
+.app-shell .checkin-days > span.active .checkin-reward-art {
+  color: #ff7a00;
+  background: #fff0df;
 }
 .app-shell .checkin-days strong {
   max-width: 100%;
   overflow: hidden;
-  font-size: 7px;
+  color: #071d3b;
+  font-size: 10px;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.app-shell .checkin-days em {
+  max-width: 100%;
+  overflow: visible;
+  color: #738198;
+  font-size: 6px;
+  font-style: normal;
+  white-space: nowrap;
+}
+.app-shell .checkin-lock {
+  width: 12px;
+  height: 12px;
+  position: absolute;
+  bottom: 9px;
+  color: #a6afbd;
 }
 .app-shell .task-filter-strip {
   display: flex;
   gap: 6px;
-  margin: 9px 0;
+  margin: 10px 0 8px;
   padding: 2px 1px 6px;
   overflow-x: auto;
+  scroll-margin-top: 90px;
   scrollbar-width: none;
 }
+.app-shell .task-filter-strip::-webkit-scrollbar {
+  display: none;
+}
 .app-shell .task-filter-strip button {
-  min-width: 50px;
-  height: 30px;
+  min-width: 54px;
+  height: 32px;
   flex: 0 0 auto;
-  border: 1px solid rgba(54, 67, 75, 0.08);
+  border: 1px solid rgba(7, 29, 59, 0.08);
   border-radius: 16px;
-  color: #7d8983;
-  background: rgba(255, 255, 255, 0.73);
+  color: #738198;
+  background: #fff;
   font-size: 9px;
   font-weight: 800;
 }
 .app-shell .task-filter-strip button.active {
-  border-color: var(--sprout-orange);
+  border-color: #ff7a00;
   color: #fff;
-  background: linear-gradient(180deg, #ff9c00, #ff7200);
-  box-shadow: 0 7px 14px rgba(255, 122, 0, 0.18);
+  background: #ff7a00;
+  box-shadow: 0 8px 16px rgba(255, 122, 0, 0.2);
 }
 .app-shell .task-list {
-  gap: 7px;
+  display: grid;
+  gap: 8px;
 }
 .app-shell .task-row {
-  grid-template-columns: 42px minmax(0, 1fr) auto;
+  min-height: 92px;
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 68px;
+  align-items: center;
   gap: 9px;
-  padding: 10px;
-  border-radius: 18px;
+  padding: 10px 11px;
+  border-color: rgba(7, 29, 59, 0.07);
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 11px 26px rgba(7, 29, 59, 0.05);
+}
+.app-shell .task-row > div:nth-child(2) {
+  min-width: 0;
 }
 .app-shell .task-row h3 {
-  margin: 4px 0 2px;
+  margin: 4px 0 1px;
+  overflow: hidden;
+  color: #071d3b;
   font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .app-shell .task-card-meta {
   display: flex;
@@ -5324,50 +5524,74 @@ input:focus {
   gap: 6px;
 }
 .app-shell .task-status {
-  color: #7e8984;
-  font-size: 8px;
+  color: #78869a;
+  font-size: 7px;
   font-weight: 850;
 }
 .app-shell .task-status.claimable {
-  color: #d76b0b;
+  color: #ff6800;
 }
 .app-shell .task-status.claimed {
-  color: #439d39;
+  color: #0ca838;
 }
 .app-shell .task-row .task-description {
-  margin: 0 0 5px;
-  color: #75817b;
+  margin: 0 0 4px;
+  overflow: hidden;
+  color: #718096;
   font-size: 9px;
-  line-height: 1.4;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .app-shell .task-row .task-progress {
   display: flex;
   justify-content: space-between;
   gap: 5px;
   margin: 0;
-  color: #8b9590;
+  color: #7b899c;
   font-size: 8px;
 }
 .app-shell .task-row .task-progress strong {
-  color: #d76b0b;
+  color: #0ca838;
   font-size: 8px;
 }
 .app-shell .task-icon {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
   border-radius: 14px;
-  color: var(--sprout-orange);
-  background: rgba(255, 156, 0, 0.1);
+  color: #ff7100;
+  background: #fff1e2;
+}
+.app-shell .task-icon svg {
+  width: 22px;
 }
 .app-shell .task-row > .button {
-  min-width: 62px;
+  min-width: 68px;
   min-height: 34px;
-  padding: 7px 9px;
+  grid-column: 3;
+  padding: 7px 8px;
+  border-radius: 17px;
+  color: #ff7100;
+  border-color: #ff7a00;
+  background: #fff;
+  box-shadow: none;
   font-size: 9px;
 }
+.app-shell .task-row > .button:disabled {
+  color: #7b899c;
+  border-color: rgba(7, 29, 59, 0.1);
+  background: #f7f8fa;
+  opacity: 1;
+}
 .app-shell .meter {
-  background: rgba(54, 67, 75, 0.06);
+  height: 3px;
+  margin-top: 4px;
+  background: rgba(7, 29, 59, 0.06);
 }
 .app-shell .meter i {
-  background: linear-gradient(90deg, #62bf51, #ff9c00);
+  background: #19b843;
 }
 .app-shell .inventory-action-target {
   display: flex;

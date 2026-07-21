@@ -1,4 +1,12 @@
-import { Copy, Send } from "lucide-react";
+import {
+  ArrowRight,
+  BadgeCheck,
+  Copy,
+  Gem,
+  Gift,
+  Send,
+  UsersRound,
+} from "lucide-react";
 import type { ReactNode } from "react";
 
 import { useApiQuery } from "../../../platform/query/index.ts";
@@ -39,76 +47,79 @@ export function ReferralPanel(): ReactNode {
   return (
     <div className="referral-stack">
       <Card className="invite-card">
-        <span>邀请好友一起开盲盒</span>
-        <p>好友通过你的链接加入并完成首次有效充值后，你可获得 500 Fgems。</p>
-        <p>累计 5 位与 10 位有效充值好友可分别获得免费普通、稀有盲盒资格。</p>
-        <strong>{query.data?.referral_code}</strong>
-        <code>{query.data?.link}</code>
-        <div className="button-row">
-          <Button
-            id="task-referral-copy"
-            disabled={blocked}
-            onClick={() => void event("copy_link")}
-          >
-            <Copy />
-            复制链接
-          </Button>
+        <div className="invite-copy">
+          <span>好友邀请奖励</span>
+          <h2>
+            邀请好友
+            <em>一起开盲盒</em>
+          </h2>
+          <p>好友通过你的链接加入并完成首次有效充值后，你可获得 500 Fgems。</p>
+          <div className="invite-benefits">
+            <span>
+              <Gift aria-hidden="true" />
+              <small>首次有效充值</small>
+              <strong>邀请人 +500 Fgems</strong>
+            </span>
+            <span>
+              <BadgeCheck aria-hidden="true" />
+              <small>5 / 10 阶梯资格</small>
+              <strong>
+                {Math.min(query.data?.valid_recharge_friends ?? 0, 10)} / 10
+                位好友
+              </strong>
+            </span>
+          </div>
+        </div>
+        <img
+          className="invite-art"
+          src="/assets/tasks/invite-gifts.png"
+          alt="半透明橙色礼盒"
+        />
+        <div className="invite-actions">
           <Button
             id="task-referral-telegram"
-            className="secondary"
+            className="invite-primary"
             disabled={blocked}
             onClick={() => void event("telegram_invite")}
           >
-            <Send />
-            Telegram 邀请
+            <Send aria-hidden="true" />
+            立即邀请
+            <ArrowRight aria-hidden="true" />
+          </Button>
+          <Button
+            id="task-referral-copy"
+            className="secondary invite-copy-button"
+            disabled={blocked}
+            onClick={() => void event("copy_link")}
+          >
+            <Copy aria-hidden="true" />
+            复制邀请链接
           </Button>
         </div>
       </Card>
       <div className="stats-row">
         <Card>
+          <span className="stat-icon">
+            <UsersRound aria-hidden="true" />
+          </span>
           <Badge>已绑定好友</Badge>
           <strong>{query.data?.bound_friends ?? 0}</strong>
         </Card>
         <Card>
+          <span className="stat-icon">
+            <BadgeCheck aria-hidden="true" />
+          </span>
           <Badge>有效充值好友</Badge>
           <strong>{query.data?.valid_recharge_friends ?? 0}</strong>
         </Card>
         <Card>
+          <span className="stat-icon">
+            <Gem aria-hidden="true" />
+          </span>
           <Badge>累计奖励</Badge>
           <strong>{query.data?.reward_fgems_total ?? 0} Fgems</strong>
         </Card>
       </div>
-      <Card className="milestone-summary">
-        <h3>奖励名额与阶梯进度</h3>
-        <p>
-          今日 {query.data?.rewarded_today ?? 0} / 20 · 生命周期{" "}
-          {query.data?.rewarded_lifetime ?? 0} / 300
-        </p>
-        <p>
-          5 人普通盲盒：
-          {milestoneLabel(
-            query.data?.milestone_5_status ?? "pending",
-            5,
-            query.data?.valid_recharge_friends ?? 0,
-          )}
-          · 10 人稀有盲盒：
-          {milestoneLabel(
-            query.data?.milestone_10_status ?? "pending",
-            10,
-            query.data?.valid_recharge_friends ?? 0,
-          )}
-        </p>
-      </Card>
     </div>
   );
-}
-
-function milestoneLabel(
-  status: "pending" | "granted",
-  threshold: 5 | 10,
-  progress: number,
-): string {
-  return status === "granted"
-    ? "已发放"
-    : `还差 ${Math.max(0, threshold - progress)} 人`;
 }

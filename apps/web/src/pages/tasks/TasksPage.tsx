@@ -1,47 +1,38 @@
-import { ListChecks, Users } from "lucide-react";
+import { ArrowLeft, SlidersHorizontal } from "lucide-react";
 import type { ReactNode } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { ReferralPanel } from "../../domains/referral/index.ts";
 import { TasksView } from "../../domains/tasks/index.ts";
-import { TaskHighlightBanner } from "../../workflows/task-navigation/index.ts";
+import { focusTaskTarget } from "../../shared/navigation/focusTaskTarget.ts";
 
 export function TasksPage(): ReactNode {
+  const navigate = useNavigate();
   return (
     <main className="page tasks-page">
-      <header className="page-heading tasks-heading">
-        <div>
-          <span>DAILY MISSIONS</span>
-          <h1>任务中心</h1>
-        </div>
-        <ListChecks aria-hidden="true" />
+      <header className="tasks-screen-heading">
+        <button aria-label="返回上一页" onClick={() => navigate(-1)}>
+          <ArrowLeft aria-hidden="true" />
+        </button>
+        <h1>任务中心</h1>
+        <button
+          aria-label="查看任务分类"
+          onClick={() =>
+            focusTaskTarget(document.getElementById("task-filters"))
+          }
+        >
+          <SlidersHorizontal aria-hidden="true" />
+        </button>
       </header>
-      <TaskHighlightBanner />
       <section
         id="task-referral"
         className="task-section referral-section"
         tabIndex={-1}
+        aria-label="邀请好友"
       >
-        <div className="section-heading">
-          <span className="section-icon">
-            <Users aria-hidden="true" />
-          </span>
-          <div>
-            <small>GROW TOGETHER</small>
-            <h2>邀请好友</h2>
-          </div>
-        </div>
         <ReferralPanel />
       </section>
-      <section className="task-section mission-section">
-        <div className="section-heading">
-          <span className="section-icon">
-            <ListChecks aria-hidden="true" />
-          </span>
-          <div>
-            <small>TODAY</small>
-            <h2>签到与任务</h2>
-          </div>
-        </div>
+      <section className="task-section mission-section" aria-label="签到与任务">
         <TasksView />
       </section>
     </main>
