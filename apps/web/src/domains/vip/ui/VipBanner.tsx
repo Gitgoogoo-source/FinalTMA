@@ -1,4 +1,4 @@
-import { Crown } from "lucide-react";
+import { Crown, Gift, Gem, ReceiptText } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { useApiQuery } from "../../../platform/query/index.ts";
@@ -11,10 +11,13 @@ export function VipBanner({ open }: { open(): void }): ReactNode {
     ["pending", "processing", "paid"].includes(vip.data.pending_order.status),
   );
   return (
-    <Card className="vip-banner">
+    <Card className="vip-banner vip-market-hero">
       <button className="vip-banner-summary" onClick={open}>
-        <Crown />
+        <span className="vip-market-icon">
+          <Crown />
+        </span>
         <span>
+          <small>POKEPETS MEMBERSHIP</small>
           <strong>
             {pending
               ? "VIP 月卡付款确认中"
@@ -31,24 +34,49 @@ export function VipBanner({ open }: { open(): void }): ReactNode {
           </small>
         </span>
       </button>
-      <Button
-        disabled={
-          vip.isLoading ||
-          pending ||
-          Boolean(vip.data?.active && !vip.data.can_renew)
-        }
-        onClick={vip.error ? () => void vip.refetch() : open}
-      >
-        {vip.error
-          ? "重新加载"
-          : pending
-            ? "确认中"
-            : vip.data?.active
-              ? vip.data.can_renew
-                ? "续费"
-                : "已达续费上限"
-              : "购买"}
-      </Button>
+      <div className="vip-market-benefits" aria-label="VIP 月卡权益">
+        <span>
+          <Gem />
+          每日 100 Fgems
+        </span>
+        <span>
+          <Gift />
+          每日免费稀有盲盒
+        </span>
+        <span>
+          <ReceiptText />
+          交易手续费返还
+        </span>
+      </div>
+      <div className="vip-market-action">
+        <span>
+          {vip.isLoading
+            ? "正在读取真实权益"
+            : vip.error
+              ? "月卡状态加载失败"
+              : vip.data?.active
+                ? `剩余 ${vip.data.remaining_days} 天`
+                : `${vip.data?.stars_price ?? "—"} Stars · 30 天`}
+        </span>
+        <Button
+          disabled={
+            vip.isLoading ||
+            pending ||
+            Boolean(vip.data?.active && !vip.data.can_renew)
+          }
+          onClick={vip.error ? () => void vip.refetch() : open}
+        >
+          {vip.error
+            ? "重新加载"
+            : pending
+              ? "确认中"
+              : vip.data?.active
+                ? vip.data.can_renew
+                  ? "续费"
+                  : "已达续费上限"
+                : "购买"}
+        </Button>
+      </div>
     </Card>
   );
 }

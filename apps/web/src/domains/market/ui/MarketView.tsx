@@ -1,8 +1,17 @@
 import {
+  ArrowDownUp,
+  ChevronDown,
+  Coins,
+  Layers3,
   PackageMinus,
   PackagePlus,
+  PackageSearch,
+  Search,
   ShoppingBag,
   ShoppingCart,
+  SlidersHorizontal,
+  Tags,
+  X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -15,6 +24,8 @@ import { useOperationRegistry } from "../../../workflows/operation-recovery/inde
 import { useNavigationIntent } from "../../../workflows/payment-recovery/index.ts";
 
 type Tab = "buy" | "sell" | "manage";
+type BuyFilter = "price" | "rarity" | "stage" | "sort";
+type BuySort = "catalog" | "price-asc" | "price-desc" | "available";
 
 export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
   const [params, setParams] = useSearchParams();
@@ -28,6 +39,7 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
     sell: null,
     manage: null,
   });
+  const buyControls = useRef<HTMLDivElement | null>(null);
   const purchaseTarget = params.get("buy");
   const identity = useApiQuery("identity.bootstrap");
   const listings = useApiQuery("market.bootstrap", {}, tab === "buy");
@@ -41,6 +53,13 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
   const { isBlocked, run } = useOperationRegistry();
   const { requestTopup } = useNavigationIntent();
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [priceFilter, setPriceFilter] = useState<number | null>(null);
+  const [rarityFilter, setRarityFilter] = useState<string | null>(null);
+  const [stageFilter, setStageFilter] = useState<number | null>(null);
+  const [buySort, setBuySort] = useState<BuySort>("catalog");
+  const [openFilter, setOpenFilter] = useState<BuyFilter | null>(null);
   const [pendingDelist, setPendingDelist] = useState<MarketViewItem | null>(
     null,
   );
@@ -85,6 +104,55 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
         : data,
     [data, preset],
   );
+  const priceOptions = useMemo(
+    () =>
+      [...new Set(purchaseTemplates.map((item) => item.unit_price))].sort(
+        (left, right) => left - right,
+      ),
+    [purchaseTemplates],
+  );
+  const rarityOptions = useMemo(
+    () =>
+      [...new Set(purchaseTemplates.map((item) => item.rarity).filter(Boolean))]
+        .map(String)
+        .sort((left, right) => rarityOrder(left) - rarityOrder(right)),
+    [purchaseTemplates],
+  );
+  const stageOptions = useMemo(
+    () =>
+      [
+        ...new Set(
+          purchaseTemplates
+            .map((item) => item.stage)
+            .filter((value): value is number => typeof value === "number"),
+        ),
+      ].sort((left, right) => left - right),
+    [purchaseTemplates],
+  );
+  const visible = useMemo(() => {
+    if (tab !== "buy") return sorted;
+    const keyword = search.trim().toLocaleLowerCase("zh-CN");
+    const filtered = sorted.filter(
+      (item) =>
+        (!keyword || item.name.toLocaleLowerCase("zh-CN").includes(keyword)) &&
+        (priceFilter === null || item.unit_price === priceFilter) &&
+        (rarityFilter === null || item.rarity === rarityFilter) &&
+        (stageFilter === null || item.stage === stageFilter),
+    );
+    if (buySort === "price-asc")
+      return [...filtered].sort(
+        (left, right) => left.unit_price - right.unit_price,
+      );
+    if (buySort === "price-desc")
+      return [...filtered].sort(
+        (left, right) => right.unit_price - left.unit_price,
+      );
+    if (buySort === "available")
+      return [...filtered].sort(
+        (left, right) => right.available - left.available,
+      );
+    return filtered;
+  }, [buySort, priceFilter, rarityFilter, search, sorted, stageFilter, tab]);
   const activeTemplateIds = new Set(
     (mine.data?.listings ?? []).map((item) => item.template_id),
   );
@@ -149,9 +217,56 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
           <span>OFFICIAL MARKET</span>
           <h1>交易市场</h1>
         </div>
-        <ShoppingBag aria-hidden="true" />
+        <div className="market-heading-actions">
+          {tab === "buy" && (
+            <>
+              <button
+                type="button"
+                className={searchOpen ? "active" : ""}
+                aria-label={searchOpen ? "关闭藏品搜索" : "搜索藏品"}
+                aria-expanded={searchOpen}
+                onClick={() => setSearchOpen((value) => !value)}
+              >
+                <Search />
+              </button>
+              <button
+                type="button"
+                aria-label="查看购买筛选"
+                onClick={() =>
+                  buyControls.current?.scrollIntoView({
+                    behavior: "smooth",
+                    block: "center",
+                  })
+                }
+              >
+                <SlidersHorizontal />
+              </button>
+            </>
+          )}
+          {tab !== "buy" && <ShoppingBag aria-hidden="true" />}
+        </div>
       </header>
-      {vipBanner}
+      {tab === "buy" && searchOpen && (
+        <label className="market-search">
+          <Search aria-hidden="true" />
+          <input
+            autoFocus
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="搜索藏品名称"
+            aria-label="搜索藏品名称"
+          />
+          {search && (
+            <button
+              type="button"
+              aria-label="清空搜索"
+              onClick={() => setSearch("")}
+            >
+              <X />
+            </button>
+          )}
+        </label>
+      )}
       {tab === "buy" && purchaseTarget && targetListing.data && (
         <Card className="market-target" role="status">
           <strong>已定位：{targetListing.data.name}</strong>
@@ -203,7 +318,7 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
           </Button>
         </Card>
       )}
-      <nav className="segmented">
+      <nav className="segmented market-tabs" aria-label="交易市场页签">
         <button
           ref={(element) => {
             tabButtons.current.buy = element;
@@ -211,6 +326,7 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
           className={tab === "buy" ? "active" : ""}
           onClick={() => selectTab("buy")}
         >
+          <ShoppingBag aria-hidden="true" />
           购买
         </button>
         <button
@@ -220,6 +336,7 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
           className={tab === "sell" ? "active" : ""}
           onClick={() => selectTab("sell")}
         >
+          <Tags aria-hidden="true" />
           出售
         </button>
         <button
@@ -229,9 +346,169 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
           className={tab === "manage" ? "active" : ""}
           onClick={() => selectTab("manage")}
         >
+          <PackageSearch aria-hidden="true" />
           管理
         </button>
       </nav>
+      {vipBanner}
+      {tab === "buy" && (
+        <div className="market-buy-controls" ref={buyControls}>
+          <div className="market-filter-strip">
+            <MarketFilterButton
+              icon={<Coins />}
+              label={priceFilter === null ? "价格" : `${priceFilter} K`}
+              active={priceFilter !== null || openFilter === "price"}
+              expanded={openFilter === "price"}
+              onClick={() =>
+                setOpenFilter((value) => (value === "price" ? null : "price"))
+              }
+            />
+            <MarketFilterButton
+              icon={<ShoppingBag />}
+              label={
+                rarityFilter === null ? "稀有度" : rarityLabel(rarityFilter)
+              }
+              active={rarityFilter !== null || openFilter === "rarity"}
+              expanded={openFilter === "rarity"}
+              onClick={() =>
+                setOpenFilter((value) => (value === "rarity" ? null : "rarity"))
+              }
+            />
+            <MarketFilterButton
+              icon={<Layers3 />}
+              label={stageFilter === null ? "阶级" : `第 ${stageFilter} 阶`}
+              active={stageFilter !== null || openFilter === "stage"}
+              expanded={openFilter === "stage"}
+              onClick={() =>
+                setOpenFilter((value) => (value === "stage" ? null : "stage"))
+              }
+            />
+            <MarketFilterButton
+              icon={<ArrowDownUp />}
+              label={sortLabel(buySort)}
+              active={buySort !== "catalog" || openFilter === "sort"}
+              expanded={openFilter === "sort"}
+              onClick={() =>
+                setOpenFilter((value) => (value === "sort" ? null : "sort"))
+              }
+            />
+          </div>
+          {openFilter && (
+            <div className="market-filter-panel" role="group">
+              {openFilter === "price" && (
+                <>
+                  <FilterOption
+                    label="全部价格"
+                    selected={priceFilter === null}
+                    onClick={() => {
+                      setPriceFilter(null);
+                      setOpenFilter(null);
+                    }}
+                  />
+                  {priceOptions.map((price) => (
+                    <FilterOption
+                      key={price}
+                      label={`${price} K-coin`}
+                      selected={priceFilter === price}
+                      onClick={() => {
+                        setPriceFilter(price);
+                        setOpenFilter(null);
+                      }}
+                    />
+                  ))}
+                </>
+              )}
+              {openFilter === "rarity" && (
+                <>
+                  <FilterOption
+                    label="全部稀有度"
+                    selected={rarityFilter === null}
+                    onClick={() => {
+                      setRarityFilter(null);
+                      setOpenFilter(null);
+                    }}
+                  />
+                  {rarityOptions.map((rarity) => (
+                    <FilterOption
+                      key={rarity}
+                      label={rarityLabel(rarity)}
+                      selected={rarityFilter === rarity}
+                      onClick={() => {
+                        setRarityFilter(rarity);
+                        setOpenFilter(null);
+                      }}
+                    />
+                  ))}
+                </>
+              )}
+              {openFilter === "stage" && (
+                <>
+                  <FilterOption
+                    label="全部阶级"
+                    selected={stageFilter === null}
+                    onClick={() => {
+                      setStageFilter(null);
+                      setOpenFilter(null);
+                    }}
+                  />
+                  {stageOptions.map((stage) => (
+                    <FilterOption
+                      key={stage}
+                      label={`第 ${stage} 阶`}
+                      selected={stageFilter === stage}
+                      onClick={() => {
+                        setStageFilter(stage);
+                        setOpenFilter(null);
+                      }}
+                    />
+                  ))}
+                </>
+              )}
+              {openFilter === "sort" &&
+                (
+                  [
+                    ["catalog", "默认排序"],
+                    ["price-asc", "价格从低到高"],
+                    ["price-desc", "价格从高到低"],
+                    ["available", "可买数量优先"],
+                  ] as const
+                ).map(([value, label]) => (
+                  <FilterOption
+                    key={value}
+                    label={label}
+                    selected={buySort === value}
+                    onClick={() => {
+                      setBuySort(value);
+                      setOpenFilter(null);
+                    }}
+                  />
+                ))}
+            </div>
+          )}
+          <div className="market-result-summary" aria-live="polite">
+            <span>{visible.length} 件藏品</span>
+            {(search ||
+              priceFilter !== null ||
+              rarityFilter !== null ||
+              stageFilter !== null ||
+              buySort !== "catalog") && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearch("");
+                  setPriceFilter(null);
+                  setRarityFilter(null);
+                  setStageFilter(null);
+                  setBuySort("catalog");
+                  setOpenFilter(null);
+                }}
+              >
+                重置
+              </button>
+            )}
+          </div>
+        </div>
+      )}
       {feedback && (
         <Card className="resume-intent">
           <strong>{feedback}</strong>
@@ -245,17 +522,26 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
         onRetry={() => void state.refetch()}
         empty={sorted.length === 0}
       >
-        <div className="market-grid">
-          {sorted.map((item) => (
-            <MarketCard
-              key={item.template_id}
-              item={item}
-              tab={tab}
-              blocked={blocked}
-              onSubmit={submit}
-            />
-          ))}
-        </div>
+        {visible.length ? (
+          <div className={`market-grid market-grid-${tab}`}>
+            {visible.map((item) => (
+              <MarketCard
+                key={item.template_id}
+                item={item}
+                tab={tab}
+                blocked={blocked}
+                balance={identity.data?.assets.kcoin.available}
+                onSubmit={submit}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="market-filter-empty">
+            <Search aria-hidden="true" />
+            <strong>没有符合条件的藏品</strong>
+            <span>调整搜索或筛选后再试</span>
+          </div>
+        )}
       </PageState>
       {pendingDelist && (
         <div
@@ -289,6 +575,83 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
   );
 }
 
+function MarketFilterButton({
+  icon,
+  label,
+  active,
+  expanded,
+  onClick,
+}: {
+  icon: ReactNode;
+  label: string;
+  active: boolean;
+  expanded: boolean;
+  onClick(): void;
+}): ReactNode {
+  return (
+    <button
+      type="button"
+      className={active ? "active" : ""}
+      aria-expanded={expanded}
+      onClick={onClick}
+    >
+      {icon}
+      <span>{label}</span>
+      <ChevronDown aria-hidden="true" />
+    </button>
+  );
+}
+
+function FilterOption({
+  label,
+  selected,
+  onClick,
+}: {
+  label: string;
+  selected: boolean;
+  onClick(): void;
+}): ReactNode {
+  return (
+    <button
+      type="button"
+      className={selected ? "active" : ""}
+      aria-pressed={selected}
+      onClick={onClick}
+    >
+      {label}
+    </button>
+  );
+}
+
+function rarityOrder(value: string): number {
+  return ["common", "rare", "epic", "legendary", "mythic"].indexOf(
+    value.toLowerCase(),
+  );
+}
+
+function rarityLabel(value: string | undefined): string {
+  return (
+    {
+      common: "普通",
+      rare: "稀有",
+      epic: "史诗",
+      legendary: "传说",
+      mythic: "神话",
+    }[value?.toLowerCase() ?? ""] ??
+    value ??
+    "未知"
+  );
+}
+
+function sortLabel(value: BuySort): string {
+  return {
+    catalog: "排序",
+    "price-asc": "价格升序",
+    "price-desc": "价格降序",
+    available: "数量优先",
+  }[value];
+}
+
 function parseTab(value: string | null): Tab | null {
   return value === "buy" || value === "sell" || value === "manage"
     ? value
@@ -315,19 +678,22 @@ function MarketCard({
   item,
   tab,
   blocked,
+  balance,
   onSubmit,
 }: {
   item: MarketViewItem;
   tab: Tab;
   blocked: boolean;
+  balance: number | undefined;
   onSubmit(item: MarketViewItem, quantity: number): void;
 }): ReactNode {
   const [quantity, setQuantity] = useState(1);
   const [imageReady, setImageReady] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const available = item.available;
   const price = item.unit_price;
   return (
-    <Card className="market-card">
+    <Card className={`market-card market-card-${tab}`}>
       <div className="market-art">
         <CatalogImage
           path={item.image_thumbnail_path}
@@ -336,17 +702,25 @@ function MarketCard({
           loading="lazy"
           onAvailability={setImageReady}
         />
-        <Badge>
-          {tab === "manage"
-            ? item.status === "partially_sold"
-              ? "部分成交"
-              : "出售中"
-            : item.rarity}
-          {item.stage ? ` · 第 ${item.stage} 阶` : ""}
-        </Badge>
+        {tab !== "buy" && (
+          <Badge>
+            {tab === "manage"
+              ? item.status === "partially_sold"
+                ? "部分成交"
+                : "出售中"
+              : rarityLabel(item.rarity)}
+            {item.stage ? ` · 第 ${item.stage} 阶` : ""}
+          </Badge>
+        )}
       </div>
       <div className="market-copy">
         <h2>{item.name}</h2>
+        {tab === "buy" && (
+          <Badge>
+            {rarityLabel(item.rarity)}
+            {item.stage ? ` · 第 ${item.stage} 阶` : ""}
+          </Badge>
+        )}
         <div className="market-meta">
           <p>
             官方单价 <strong>{price} K</strong>
@@ -376,7 +750,7 @@ function MarketCard({
           )}
         </div>
       </div>
-      {tab !== "manage" && available > 0 && (
+      {tab === "sell" && available > 0 && (
         <div className="quantity">
           <Button
             onClick={() => setQuantity((value) => Math.max(1, value - 1))}
@@ -400,14 +774,16 @@ function MarketCard({
           available < 1 ||
           quantity > available
         }
-        onClick={() => onSubmit(item, quantity)}
+        onClick={() =>
+          tab === "buy" ? setConfirming(true) : onSubmit(item, quantity)
+        }
       >
         {tab === "buy" && available < 1 ? (
           <>售罄</>
         ) : tab === "buy" ? (
           <>
             <ShoppingCart />
-            {available < 1 ? "暂无在售" : "确认购买"}
+            {available < 1 ? "暂无在售" : "购买"}
           </>
         ) : tab === "sell" ? (
           <>
@@ -421,6 +797,86 @@ function MarketCard({
           </>
         )}
       </Button>
+      {confirming && (
+        <div
+          className="modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={`market-purchase-${item.template_id}`}
+        >
+          <div className="modal market-purchase-dialog">
+            <div className="market-purchase-preview">
+              <CatalogImage
+                path={item.image_thumbnail_path}
+                alt={item.name}
+                variant="thumbnail"
+                loading="eager"
+              />
+              <div>
+                <Badge>
+                  {rarityLabel(item.rarity)}
+                  {item.stage ? ` · 第 ${item.stage} 阶` : ""}
+                </Badge>
+                <h2 id={`market-purchase-${item.template_id}`}>{item.name}</h2>
+                <span>当前可买 {available} 个</span>
+              </div>
+            </div>
+            <div className="market-purchase-price">
+              <span>官方单价</span>
+              <strong>{price} K-coin</strong>
+            </div>
+            <div className="market-purchase-quantity">
+              <span>购买数量</span>
+              <div className="quantity">
+                <Button
+                  aria-label="减少购买数量"
+                  onClick={() => setQuantity((value) => Math.max(1, value - 1))}
+                >
+                  −
+                </Button>
+                <strong>{quantity}</strong>
+                <Button
+                  aria-label="增加购买数量"
+                  onClick={() =>
+                    setQuantity((value) => Math.min(available, value + 1))
+                  }
+                >
+                  ＋
+                </Button>
+              </div>
+            </div>
+            <div className="market-purchase-totals">
+              <span>
+                预计总价<strong>{price * quantity} K-coin</strong>
+              </span>
+              <span>
+                当前余额
+                <strong>
+                  {balance === undefined ? "正在读取" : `${balance} K-coin`}
+                </strong>
+              </span>
+            </div>
+            {balance !== undefined && balance < price * quantity && (
+              <p className="market-purchase-warning">
+                K-coin 余额不足，确认后将进入充值流程。
+              </p>
+            )}
+            <Button
+              disabled={blocked || quantity > available}
+              onClick={() => {
+                setConfirming(false);
+                onSubmit(item, quantity);
+              }}
+            >
+              <ShoppingCart />
+              确认购买
+            </Button>
+            <Button className="secondary" onClick={() => setConfirming(false)}>
+              取消
+            </Button>
+          </div>
+        </div>
+      )}
     </Card>
   );
 }

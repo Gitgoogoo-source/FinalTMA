@@ -1,54 +1,67 @@
-**Baseline Comparison Target Through Iteration 3**
+**Comparison target**
 
-- Source visual truth: Figma `FinalTMA - 开盒界面`, Screens / `01 · 默认态（普通蛋）`, node `14:2692`; capture `/tmp/finaltma-figma-source.png`.
-- Implementation capture: `/tmp/finaltma-gacha-default-430x932.png`.
-- Combined full-view and focused evidence: `/tmp/finaltma-gacha-comparison.png`, `/tmp/finaltma-gacha-focused-comparison.png`.
-- Viewport: 430 × 932, light theme, default normal-box state.
-- Additional states: selected rare `/tmp/finaltma-gacha-selected-rare-430x932.png`; opening `/tmp/finaltma-gacha-opening-430x932.png`; success `/tmp/finaltma-gacha-success-430x932.png`; insufficient balance `/tmp/finaltma-gacha-shortage-430x932.png`; responsive 390 × 844 `/tmp/finaltma-gacha-narrow-390x844.png`.
+- Source visual truth: `/Users/mac/Desktop/图片/buy.png`
+- Implemented screen: `https://final-tma-pi.vercel.app/market`
+- Latest captured default implementation: `/var/folders/__/ffcc9r1113l4c8cd1z4m8tp80000gn/T/com.openai.sky.CUAService/Telegram Screenshot 2026-07-21 at 8.47.14 PM.jpeg`
+- Latest captured search state: `/var/folders/__/ffcc9r1113l4c8cd1z4m8tp80000gn/T/com.openai.sky.CUAService/Telegram Screenshot 2026-07-21 at 8.47.41 PM.jpeg`
+- Pre-fix filter evidence: `/var/folders/__/ffcc9r1113l4c8cd1z4m8tp80000gn/T/com.openai.sky.CUAService/Telegram Screenshot 2026-07-21 at 8.48.24 PM.jpeg`
+- Full-view side-by-side comparison: `/private/tmp/market-design-comparison.png`
+- Viewport: Telegram Mini App window, 420 × 714 captured pixels
+- State: 购买页；真实开发环境账号；210 个真实目录模板；当前可买数量均为 0
 
-**Baseline Findings Through Iteration 3**
+**Required fidelity surfaces**
 
-- No actionable P0/P1/P2 mismatch remains.
-- Fonts and typography: the implementation uses the existing Apple/SF rounded system stack and matches the Figma hierarchy, optical weights, truncation, and compact mobile labels.
-- Spacing and layout rhythm: top bar, title row, 240px hero, 124px tier cards, reward row, pity capsule, 76px actions, and shared bottom navigation align with the 430 × 932 Figma frame. The 390 × 844 and 320px checks have no horizontal overflow; the 390px primary actions remain above the shared navigation.
-- Colors and visual tokens: warm paper background, orange selected/action states, translucent white surfaces, low-contrast borders, and soft elevation match the Figma palette.
-- Image quality and asset fidelity: the final implementation reuses the project's alpha-enabled `normal.webp`, `legendary.webp`, and `rare.webp` assets with the Figma tier mapping. No placeholder, missing image, or opaque background halo remains.
-- Copy and content: real API-provided box names, prices, reward data, pity text, balances, and user identity are intentionally preserved where the Figma sample copy differs.
+- Fonts and typography: passed for the captured default state. The implementation preserves the app’s SF Pro Rounded/system stack and matches the reference hierarchy with a heavy page title, compact uppercase eyebrow, strong VIP title, small filter labels, and tabular prices.
+- Spacing and layout rhythm: the captured second iteration confirms the reference order of heading, three-way segmented navigation, large hero, four compact filters, and two-column cards. The fixed bottom navigation remains intentionally project-specific.
+- Colors and visual tokens: passed for the captured default state. White and warm ivory surfaces, dark blue-gray text, orange active controls, thin gray borders, soft shadows, and large rounded corners match the reference direction while retaining project tokens.
+- Image quality and asset fidelity: passed for the captured default state. Product cards use the project’s real catalog images and existing image fallback behavior. The reference’s character hero was intentionally replaced by the real VIP monthly-card entry as explicitly decided by the user; no unsupported product image or placeholder was introduced.
+- Copy and content: passed for the captured default state. Prices remain K-coin, rarity and stage use simplified Chinese mappings, and seller identity, NFT serial numbers, TON prices, recent sales, market activity, floor price, and last-sale data are absent because the product documentation forbids them.
 
-**Focused Region Comparison**
+**Full-view comparison evidence**
 
-- The focused side-by-side evidence compares the complete 430 × 932 source frame and implementation at equal size. The mechanical egg art, tier-card proportions, selected ring, reward thumbnails, pity capsule, draw actions, and bottom navigation are readable and aligned, so no additional crop was required.
+- The side-by-side comparison shows the same main visual grammar: light mobile canvas, orange active tab, large rounded hero, pill filters, dense two-column cards, and floating bottom navigation.
+- Project constraints intentionally replace the reference NFT hero with the VIP monthly-card entry and retain the existing Telegram asset bar and five-item app navigation.
 
-**Comparison History**
+**Focused region comparison evidence**
 
-- Iteration 1 — P1: the deployed view had missing rare/legendary images and a crowded VIP block above the hero. Fix: corrected tier asset mapping and moved existing VIP/free-entitlement content below the primary Figma viewport while retaining its business behavior.
-- Iteration 2 — P2: the first implementation was vertically compressed and left excessive blank space above the bottom navigation. Fix: matched the Figma vertical metrics with responsive `clamp()` sizing and moved the shared navigation to the Figma inset. Post-fix evidence: `/tmp/finaltma-gacha-focused-comparison.png`.
-- Iteration 3 — P2: temporary replacement egg images differed from Figma's mechanical eggs. Fix: removed the replacements and reused the current project's transparent originals with the correct visual tier mapping. Post-fix evidence: all five final state captures listed above.
-- Iteration 4 — User-approved layout correction: removed the separate free-normal/free-rare summary and moved the existing VIP status, 100 Fgems, and rare-box entries into a vertical absolute-positioned group below the back control at the left of the unchanged hero art. This user-approved region supersedes the earlier Figma placement while retaining the existing business behavior.
+- Header and segmented navigation: the 8.47.14 PM capture confirms the three tabs now appear before the VIP hero, matching the source hierarchy.
+- VIP hero: the 8.47.14 PM capture confirms the real VIP price, duration, benefits, state, and action are presented as the sole large hero without fabricating a featured collectible.
+- Search: the 8.47.41 PM capture confirms immediate expansion without page overflow or clipped controls.
+- Filter panel: the 8.48.24 PM capture exposed a P2 obstruction by the fixed bottom navigation. The implementation was changed to position the filter panel above the bottom navigation and redeployed as deployment `dpl_9GRJeMfFAwYVWH3Z8d2Vk4kvbt9H`.
 
-**Iteration 4 Deployment Verification**
+**Comparison history**
 
-- Vercel production deployment `dpl_8jKt3p5ZsLgKdCQXQbsjY2CNemjq` is Ready and owns `https://final-tma-pi.vercel.app`.
-- The production gacha chunk renders the VIP daily-benefit component as the first child of `gacha-hero` and contains none of `gacha-business-extras`, `gacha-free-summary`, or the removed free-normal/free-rare summary copy.
-- The production stylesheet fixes the group at `top: 6px; left: 2px` with `position: absolute` and `flex-direction: column`; claim feedback is also absolutely positioned to the right and does not enter layout flow.
-- The pre-deployment Telegram WebView was closed after the alias changed. Telegram Desktop did not expose the chat's `Open PokePets` control to the computer-use accessibility interface, so no post-deployment Telegram screenshot is recorded as accepted. The required acceptance action is to reopen `Open PokePets` in Telegram and inspect the default open-box page; if the vertical group obscures an interactive control at the real viewport width, restore the preceding stable deployment `https://final-pk9esape5-googoos-projects-4fca1021.vercel.app` and correct the layout before acceptance.
+1. First implementation capture found a P1 hierarchy mismatch: the VIP hero appeared before the segmented navigation. The navigation was moved above the hero. The 8.47.14 PM capture confirms the corrected hierarchy.
+2. Filter interaction capture found a P2 obstruction: the expanded filter options extended behind the fixed bottom navigation. The panel was changed to a fixed, centered surface whose bottom edge sits above the navigation, and the corrected CSS was deployed.
 
-**Primary Interactions and Browser Checks Through Iteration 3**
+**Findings**
 
-- Verified default and rare selected states, opening progress, single-result success, and insufficient-balance modal using the final component classes, CSS, assets, and real business copy structure.
-- Verified 430 × 932, 390 × 844, and 320px widths; no horizontal overflow.
-- Browser console errors checked: none. Existing unauthenticated Telegram SDK capability warnings were unrelated to the QA surface.
+- [P2] Latest filter-panel correction lacks a post-fix Telegram screenshot.
+  Location: 购买页筛选浮层.
+  Evidence: the pre-fix capture shows obstruction; the corrected deployment is live, but Telegram is currently on the bot conversation page and the Computer Use surface cannot activate its `Open PokePets` button.
+  Impact: the final rendered placement cannot be visually certified from the latest deployment in this QA pass.
+  Fix: reopen PokePets once in Telegram, open any filter, and capture the panel above the bottom navigation.
 
-**Follow-up Polish**
+**Primary interactions checked**
 
-- The Figma sample brand label and example values intentionally differ from the runtime Telegram identity and API data; no visual fix is required.
+- Search control opens immediately.
+- Price filter opens immediately.
+- No Telegram Stars payment, K-coin purchase, or asset-changing action was submitted.
+- Production frontend build, TypeScript, ESLint, formatting, asset validation, and Vercel deployment completed successfully.
 
-**Implementation Checklist**
+**Console errors checked**
 
-- [x] Shared top asset bar and bottom navigation retained globally.
-- [x] Default, selected, opening, success, insufficient-balance, and failure presentation covered.
-- [x] Real API/data/interaction boundaries preserved.
-- [x] Phone-width desktop containment and narrow-screen responsiveness verified.
-- [x] Formatting, TypeScript production build, asset integrity, and browser console checks passed.
+- The authenticated Telegram WebView does not expose console logs through the available Computer Use surface. Build and deployment logs contain no frontend compilation errors.
 
-final result: iteration 4 implementation and production deployment passed; post-deployment Telegram visual acceptance requires the recorded manual reopen action
+**Implementation checklist**
+
+- Reopen the deployed Mini App in Telegram.
+- Open the price filter.
+- Capture the corrected filter panel above the fixed bottom navigation.
+- Replace this blocker with the final post-fix evidence and set the result to passed if no P0/P1/P2 issue remains.
+
+**Follow-up polish**
+
+- No P3 polish item is recorded before the blocking post-fix capture.
+
+final result: blocked
