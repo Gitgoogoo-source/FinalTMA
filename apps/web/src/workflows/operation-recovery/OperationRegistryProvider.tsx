@@ -689,7 +689,7 @@ export function OperationRegistryProvider({
       );
       if (
         action !== "acknowledge" &&
-        (!parsed.success || !parsed.data.success)
+        (!parsed.success || parsed.data.success_count < 1)
       ) {
         setAcknowledgementError({
           operationId: operation.id,
@@ -712,7 +712,11 @@ export function OperationRegistryProvider({
         acknowledgedIds.current.add(operation.id);
         remove(operation.id);
         await refreshRouteScopes("inventory.evolve");
-        if (action === "inventory" && parsed.success)
+        if (
+          action === "inventory" &&
+          parsed.success &&
+          parsed.data.success_count > 0
+        )
           navigate(
             `/inventory?template=${encodeURIComponent(parsed.data.target.template_id)}&view=details`,
           );

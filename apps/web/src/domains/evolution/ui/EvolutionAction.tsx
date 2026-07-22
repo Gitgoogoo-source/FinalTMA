@@ -51,11 +51,12 @@ export function EvolutionAction({
   });
   const readyPreview = reason === null ? preview.data : undefined;
 
-  const confirm = async () => {
+  const confirm = async (quantity: number) => {
     if (!readyPreview) return;
     setConfirming(false);
     await run("正在确认进化结果", "inventory.evolve", {
       template_id: readyPreview.source.template_id,
+      quantity,
     });
   };
 
@@ -78,7 +79,7 @@ export function EvolutionAction({
         <EvolutionConfirmationDialog
           preview={readyPreview}
           onCancel={() => setConfirming(false)}
-          onConfirm={() => void confirm()}
+          onConfirm={(quantity) => void confirm(quantity)}
         />
       ) : null}
     </div>

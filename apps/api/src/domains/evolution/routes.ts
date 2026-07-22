@@ -33,6 +33,7 @@ export const evolutionHandlers = {
         p_session_id: requireSession(context).session_id,
         p_operation_id: requireOperationId(context),
         p_template_id: context.input.template_id,
+        p_quantity: context.input.quantity,
       }),
     ),
 } satisfies HandlerMap;

@@ -896,6 +896,7 @@ as $$
     'image_detail_path', t.image_detail_path,
     'combat_power', t.combat_power,
     'expedition_fgems', t.expedition_fgems,
+    'decompose_fgems', t.decompose_fgems,
     'total', h.quantity,
     'available', inventory.available_quantity(p_user_id, t.id),
     'listed', coalesce((select sum(r.quantity) from inventory.reservations r where r.user_id = p_user_id and r.template_id = t.id and r.kind = 'listing' and r.status = 'active'), 0),
@@ -923,10 +924,24 @@ begin
       select jsonb_agg(inventory.item_json(v_user_id, h.template_id) order by t.sort_order)
       from inventory.holdings h
       join catalog.templates t on t.id = h.template_id
-      where h.user_id = v_user_id and h.quantity > 0
+      where h.user_id = v_user_id
+        and h.quantity > 0
+        and inventory.available_quantity(v_user_id, h.template_id) > 0
     ), '[]'::jsonb),
-    'template_count', (select count(*) from inventory.holdings where user_id = v_user_id and quantity > 0),
-    'total_quantity', (select coalesce(sum(quantity), 0) from inventory.holdings where user_id = v_user_id)
+    'template_count', (
+      select count(*)
+      from inventory.holdings h
+      where h.user_id = v_user_id
+        and h.quantity > 0
+        and inventory.available_quantity(v_user_id, h.template_id) > 0
+    ),
+    'total_quantity', (
+      select coalesce(sum(inventory.available_quantity(v_user_id, h.template_id)), 0)
+      from inventory.holdings h
+      where h.user_id = v_user_id
+        and h.quantity > 0
+        and inventory.available_quantity(v_user_id, h.template_id) > 0
+    )
   );
 end;
 $$;
@@ -1987,7 +2002,8 @@ $$;
 create or replace function api.inventory_evolve(
   p_session_id uuid,
   p_operation_id uuid,
-  p_template_id text
+  p_template_id text,
+  p_quantity bigint
 )
 returns jsonb
 language plpgsql
@@ -2003,70 +2019,98 @@ declare
   v_rate integer;
   v_cost bigint;
   v_guarantee integer;
-  v_failures integer;
+  v_previous_failures integer;
   v_current_failures integer;
   v_available bigint;
   v_fgems bigint;
+  v_fgems_required bigint;
+  v_attempts bigint;
+  v_attempt bigint := 0;
+  v_successes bigint := 0;
+  v_failures bigint := 0;
+  v_guaranteed_attempts bigint := 0;
+  v_materials_consumed bigint;
   v_guaranteed boolean;
   v_success boolean;
   v_new_album boolean := false;
   v_result jsonb;
   v_error_code text;
 begin
-  v_operation := operations.begin_command(p_session_id, 'inventory.evolve', p_operation_id, jsonb_build_object('template_id', p_template_id));
+  v_operation := operations.begin_command(p_session_id, 'inventory.evolve', p_operation_id, jsonb_build_object('template_id', p_template_id, 'quantity', p_quantity));
   v_replay := operations.replay_if_finished(v_operation);
   if v_replay is not null then return v_replay; end if;
   v_user_id := v_operation.user_id;
   begin
+    if p_quantity <= 0 or p_quantity % 3 <> 0 then
+      perform api.raise_business_error('EVOLUTION_NOT_AVAILABLE', '进化材料数量必须是 3 的正整数倍');
+    end if;
+    v_attempts := p_quantity / 3;
     select * into v_source from catalog.templates where id = p_template_id;
     if v_source.id is null or v_source.stage >= 3 then perform api.raise_business_error('EVOLUTION_NOT_AVAILABLE', '当前藏品不能进化'); end if;
     select * into v_target from catalog.templates where chain_id = v_source.chain_id and stage = v_source.stage + 1;
     if v_target.id is null then perform api.raise_business_error('EVOLUTION_NOT_AVAILABLE', '当前藏品不能进化'); end if;
     select * into v_rate, v_cost, v_guarantee from evolution.rule(v_target.rarity);
     if v_rate is null then perform api.raise_business_error('EVOLUTION_NOT_AVAILABLE', '当前藏品不能进化'); end if;
+    perform 1
+    from inventory.holdings
+    where user_id = v_user_id and template_id = v_source.id
+    for update;
     v_available := inventory.available_quantity(v_user_id, v_source.id);
-    if v_available < 3 then perform api.raise_business_error('INSUFFICIENT_INVENTORY', '需要三个可用材料'); end if;
+    if v_available < p_quantity then perform api.raise_business_error('INSUFFICIENT_INVENTORY', '可用进化材料数量不足'); end if;
     select coalesce(b.available, 0) into v_fgems
     from economy.balances b
     where b.user_id = v_user_id and b.currency = 'FGEMS';
     v_fgems := coalesce(v_fgems, 0);
+    v_fgems_required := v_cost * v_attempts;
+    if v_fgems < v_fgems_required then perform api.raise_business_error('INSUFFICIENT_BALANCE', 'Fgems 不足'); end if;
     insert into evolution.pity (user_id, from_template_id) values (v_user_id, v_source.id) on conflict do nothing;
-    select failures into v_failures from evolution.pity where user_id = v_user_id and from_template_id = v_source.id for update;
-    perform economy.change_balance(v_user_id, 'FGEMS', -v_cost, 'evolution', p_operation_id, v_source.id);
-    v_guaranteed := v_failures + 1 >= v_guarantee;
-    v_success := v_guaranteed or identity.random_basis_points() < v_rate * 100;
-    if v_success then
-      perform inventory.change_holding(v_user_id, v_source.id, -3);
-      perform inventory.change_holding(v_user_id, v_target.id, 1);
+    select failures into v_previous_failures from evolution.pity where user_id = v_user_id and from_template_id = v_source.id for update;
+    v_current_failures := v_previous_failures;
+    perform economy.change_balance(v_user_id, 'FGEMS', -v_fgems_required, 'evolution', p_operation_id, v_source.id);
+    while v_attempt < v_attempts loop
+      v_attempt := v_attempt + 1;
+      v_guaranteed := v_current_failures + 1 >= v_guarantee;
+      v_success := v_guaranteed or identity.random_basis_points() < v_rate * 100;
+      if v_success then
+        v_successes := v_successes + 1;
+        if v_guaranteed then v_guaranteed_attempts := v_guaranteed_attempts + 1; end if;
+        v_current_failures := 0;
+      else
+        v_failures := v_failures + 1;
+        v_current_failures := v_current_failures + 1;
+      end if;
+    end loop;
+    v_materials_consumed := v_successes * 3 + v_failures * 2;
+    perform inventory.change_holding(v_user_id, v_source.id, -v_materials_consumed);
+    if v_successes > 0 then
+      perform inventory.change_holding(v_user_id, v_target.id, v_successes);
       v_new_album := album.unlock_template(v_user_id, v_target.id, p_operation_id);
-      update evolution.pity set failures = 0, updated_at = now() where user_id = v_user_id and from_template_id = v_source.id;
-      perform tasks.progress(v_user_id, 'evolution_success');
-      v_current_failures := 0;
-    else
-      perform inventory.change_holding(v_user_id, v_source.id, -2);
-      update evolution.pity set failures = failures + 1, updated_at = now() where user_id = v_user_id and from_template_id = v_source.id;
-      v_current_failures := v_failures + 1;
+      perform tasks.progress(v_user_id, 'evolution_success', v_successes);
     end if;
-    perform tasks.progress(v_user_id, 'evolution_attempt');
+    update evolution.pity set failures = v_current_failures, updated_at = now() where user_id = v_user_id and from_template_id = v_source.id;
+    perform tasks.progress(v_user_id, 'evolution_attempt', v_attempts);
     v_result := jsonb_build_object(
-      'success', v_success,
+      'attempt_count', v_attempts,
+      'success_count', v_successes,
+      'failure_count', v_failures,
       'source', evolution.template_json(v_source),
       'target', evolution.template_json(v_target),
       'materials', jsonb_build_object(
-        'required', 3,
-        'consumed', case when v_success then 3 else 2 end,
-        'retained', case when v_success then 0 else 1 end
+        'selected', p_quantity,
+        'consumed', v_materials_consumed,
+        'retained', v_failures
       ),
       'success_rate_percent', v_rate,
-      'fgems_spent', v_cost,
+      'fgems_cost_per_attempt', v_cost,
+      'fgems_spent', v_fgems_required,
       'pity', jsonb_build_object(
-        'previous_failure_count', v_failures,
+        'previous_failure_count', v_previous_failures,
         'current_failure_count', v_current_failures,
         'guarantee_attempt', v_guarantee,
         'failures_until_guaranteed', greatest(v_guarantee - v_current_failures - 1, 0),
-        'guaranteed_this_attempt', v_guaranteed
+        'guaranteed_attempts', v_guaranteed_attempts
       ),
-      'target_awarded', case when v_success then 1 else 0 end,
+      'target_awarded', v_successes,
       'new_album', v_new_album,
       'assets', economy.assets(v_user_id)
     );

@@ -69,3 +69,61 @@ export function PageState({
 export function Badge({ children }: { children: ReactNode }): ReactNode {
   return <span className="badge">{children}</span>;
 }
+
+export function QuantityControl({
+  label,
+  value,
+  min = 1,
+  max,
+  step = 1,
+  disabled = false,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min?: number;
+  max: number;
+  step?: number;
+  disabled?: boolean;
+  onChange(value: number): void;
+}): ReactNode {
+  return (
+    <div className="inventory-quantity-control">
+      <span>{label}</span>
+      <div>
+        <Button
+          aria-label={`减少${label}`}
+          disabled={disabled || value <= min}
+          onClick={() => onChange(Math.max(min, value - step))}
+        >
+          −
+        </Button>
+        <input
+          aria-label={label}
+          type="number"
+          inputMode="numeric"
+          min={min}
+          max={max}
+          step={step}
+          value={value}
+          disabled={disabled}
+          onChange={(event) => onChange(Number(event.target.value))}
+        />
+        <Button
+          aria-label={`增加${label}`}
+          disabled={disabled || value >= max}
+          onClick={() => onChange(Math.min(max, value + step))}
+        >
+          ＋
+        </Button>
+      </div>
+      <Button
+        className="secondary inventory-quantity-all"
+        disabled={disabled || value === max}
+        onClick={() => onChange(max)}
+      >
+        全部
+      </Button>
+    </div>
+  );
+}

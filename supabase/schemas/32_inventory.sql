@@ -116,6 +116,7 @@ as $$
     'image_detail_path', t.image_detail_path,
     'combat_power', t.combat_power,
     'expedition_fgems', t.expedition_fgems,
+    'decompose_fgems', t.decompose_fgems,
     'total', h.quantity,
     'available', inventory.available_quantity(p_user_id, t.id),
     'listed', coalesce((select sum(r.quantity) from inventory.reservations r where r.user_id = p_user_id and r.template_id = t.id and r.kind = 'listing' and r.status = 'active'), 0),
@@ -143,10 +144,24 @@ begin
       select jsonb_agg(inventory.item_json(v_user_id, h.template_id) order by t.sort_order)
       from inventory.holdings h
       join catalog.templates t on t.id = h.template_id
-      where h.user_id = v_user_id and h.quantity > 0
+      where h.user_id = v_user_id
+        and h.quantity > 0
+        and inventory.available_quantity(v_user_id, h.template_id) > 0
     ), '[]'::jsonb),
-    'template_count', (select count(*) from inventory.holdings where user_id = v_user_id and quantity > 0),
-    'total_quantity', (select coalesce(sum(quantity), 0) from inventory.holdings where user_id = v_user_id)
+    'template_count', (
+      select count(*)
+      from inventory.holdings h
+      where h.user_id = v_user_id
+        and h.quantity > 0
+        and inventory.available_quantity(v_user_id, h.template_id) > 0
+    ),
+    'total_quantity', (
+      select coalesce(sum(inventory.available_quantity(v_user_id, h.template_id)), 0)
+      from inventory.holdings h
+      where h.user_id = v_user_id
+        and h.quantity > 0
+        and inventory.available_quantity(v_user_id, h.template_id) > 0
+    )
   );
 end;
 $$;

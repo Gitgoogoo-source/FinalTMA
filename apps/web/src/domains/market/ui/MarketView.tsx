@@ -85,7 +85,7 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
   const resumedTemplate = params.get("resume")
     ? params.get("template_id")
     : null;
-  const resumedQuantity = Math.max(1, Number(params.get("quantity") ?? 1));
+  const requestedQuantity = parsePositiveQuantity(params.get("quantity"));
   const sorted = useMemo(
     () =>
       preset
@@ -274,7 +274,7 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
               );
               if (item && item.available > 0) {
                 setParams({});
-                submit(item, Math.min(item.available, resumedQuantity));
+                submit(item, Math.min(item.available, requestedQuantity));
               }
             }}
           >
@@ -475,9 +475,10 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
         >
           {selectedSellItem && (
             <MarketSellWorkbench
-              key={selectedSellItem.template_id}
+              key={`${selectedSellItem.template_id}:${requestedQuantity}`}
               items={visible}
               selected={selectedSellItem}
+              initialQuantity={requestedQuantity}
               blocked={blocked}
               feeBps={sellable.data?.fee_bps ?? 500}
               vipActive={sellable.data?.vip.active ?? false}
@@ -646,6 +647,11 @@ function parseTab(value: string | null): MarketTab | null {
     : null;
 }
 
+function parsePositiveQuantity(value: string | null): number {
+  const quantity = Number(value ?? 1);
+  return Number.isSafeInteger(quantity) && quantity > 0 ? quantity : 1;
+}
+
 type MarketViewItem = {
   template_id: string;
   name: string;
@@ -740,6 +746,7 @@ function MarketListingCard({
 function MarketSellWorkbench({
   items,
   selected,
+  initialQuantity,
   blocked,
   feeBps,
   vipActive,
@@ -749,6 +756,7 @@ function MarketSellWorkbench({
 }: {
   items: MarketViewItem[];
   selected: MarketViewItem;
+  initialQuantity: number;
   blocked: boolean;
   feeBps: number;
   vipActive: boolean;
@@ -756,9 +764,11 @@ function MarketSellWorkbench({
   onSelect(templateId: string): void;
   onSubmit(item: MarketViewItem, quantity: number): void;
 }): ReactNode {
-  const [quantity, setQuantity] = useState(1);
-  const [imageReady, setImageReady] = useState(false);
   const available = selected.available;
+  const [quantity, setQuantity] = useState(() =>
+    Math.min(available, initialQuantity),
+  );
+  const [imageReady, setImageReady] = useState(false);
   const gross = selected.unit_price * quantity;
   const fee = Math.floor((gross * feeBps) / 10_000);
   const net = gross - fee;

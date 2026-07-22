@@ -1,11 +1,12 @@
 import { Link2, ShoppingBag } from "lucide-react";
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { DecompositionAction } from "../../domains/decomposition/index.ts";
 import { EvolutionAction } from "../../domains/evolution/index.ts";
 import {
   InventoryView,
+  SellQuantityDialog,
   type InventoryItem,
 } from "../../domains/inventory/index.ts";
 import { Button } from "../../shared/ui/index.tsx";
@@ -15,6 +16,7 @@ import { useOperationRegistry } from "../../workflows/operation-recovery/index.t
 export function InventoryPage(): ReactNode {
   const navigate = useNavigate();
   const [params] = useSearchParams();
+  const [sellItem, setSellItem] = useState<InventoryItem | null>(null);
   const requestedFocus = params.get("focus");
   const { isBlocked } = useOperationRegistry();
   const blocked =
@@ -38,9 +40,7 @@ export function InventoryPage(): ReactNode {
       <TaskActionTarget active={false}>
         <Button
           disabled={blocked || !imageReady || item.available < 1}
-          onClick={() =>
-            navigate(`/market?sell=${encodeURIComponent(item.template_id)}`)
-          }
+          onClick={() => setSellItem(item)}
         >
           <ShoppingBag />
           出售
@@ -59,7 +59,24 @@ export function InventoryPage(): ReactNode {
       </TaskActionTarget>
     </>
   );
-  return <InventoryView renderActions={actions} />;
+  return (
+    <>
+      <InventoryView renderActions={actions} />
+      {sellItem ? (
+        <SellQuantityDialog
+          item={sellItem}
+          onCancel={() => setSellItem(null)}
+          onConfirm={(quantity) => {
+            const templateId = sellItem.template_id;
+            setSellItem(null);
+            navigate(
+              `/market?sell=${encodeURIComponent(templateId)}&quantity=${quantity}`,
+            );
+          }}
+        />
+      ) : null}
+    </>
+  );
 }
 
 function TaskActionTarget({

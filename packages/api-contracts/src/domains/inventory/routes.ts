@@ -97,7 +97,12 @@ export const inventoryRoutes = [
     auth: true,
     idempotent: true,
     refreshScopes: ["assets", "inventory"],
-    input: z.object({ template_id: identifierSchema }).strict(),
+    input: z
+      .object({
+        template_id: identifierSchema,
+        quantity: z.number().int().positive().multipleOf(3),
+      })
+      .strict(),
     output: evolutionResultSchema,
     errors: [
       "EVOLUTION_NOT_AVAILABLE",

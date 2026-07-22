@@ -36,7 +36,7 @@ export function InventoryView({
   const catalog = useApiQuery("catalog.get", {}, Boolean(targetId));
   const { templateIds: newTemplateIds, clearNew } = useNewMarkers();
   const navigate = useNavigate();
-  const items = query.data?.items ?? [];
+  const items = (query.data?.items ?? []).filter((item) => item.available > 0);
   const [selection, setSelection] = useState({
     targetId,
     selectedId: targetId,
@@ -173,6 +173,8 @@ export function InventoryView({
                 />
               </div>
 
+              <InventoryQuantitySummary item={item} />
+
               <div
                 ref={item.template_id === targetId ? actionsRef : undefined}
                 className="action-grid inventory-action-grid"
@@ -206,7 +208,7 @@ export function InventoryView({
                             key={candidate.template_id}
                             className={selected ? "selected" : ""}
                             aria-pressed={selected}
-                            aria-label={`选择${candidate.name}，${rarityLabels[candidate.rarity]}，第 ${candidate.stage} 阶${isNew ? "，本次新获得" : ""}`}
+                            aria-label={`选择${candidate.name}，${rarityLabels[candidate.rarity]}，第 ${candidate.stage} 阶，可用 ${candidate.available} 个${isNew ? "，本次新获得" : ""}`}
                             onClick={() => {
                               if (!selected) {
                                 setSelection({
@@ -226,6 +228,9 @@ export function InventoryView({
                               loading="lazy"
                             />
                             <i className={`rarity-mark ${candidate.rarity}`} />
+                            <span className="inventory-quantity-badge">
+                              ×{candidate.available}
+                            </span>
                             {isNew && <b className="new-marker">NEW</b>}
                           </button>
                         );
@@ -255,7 +260,7 @@ export function InventoryView({
                 {targetTemplate.rarity} · 第 {targetTemplate.stage} 阶
               </Badge>
               <h2 id="inventory-target-empty-title">{targetTemplate.name}</h2>
-              <p>当前拥有：0</p>
+              <p>当前可用：0</p>
               {targetAction === "evolve" && (
                 <p>当前没有这只上一阶材料，无法进行进化。</p>
               )}
@@ -286,12 +291,37 @@ export function InventoryView({
       </PageState>
       {!query.isLoading && items.length === 0 && !targetId && (
         <Card>
-          <h2>你还没有任何藏品。</h2>
-          <p>去开盲盒，获得你的第一个藏品。</p>
+          <h2>当前没有可用藏品。</h2>
+          <p>出售中、Mint 中或远征中的藏品不会出现在选择区域。</p>
           <Button onClick={() => navigate("/")}>去开盲盒</Button>
         </Card>
       )}
     </main>
+  );
+}
+
+function InventoryQuantitySummary({
+  item,
+}: {
+  item: InventoryItem;
+}): ReactNode {
+  const quantities = [
+    ["可用", item.available],
+    ["出售中", item.listed],
+    ["交易中", item.trading],
+    ["Mint 中", item.minting],
+    ["远征中", item.expedition],
+  ] as const;
+  return (
+    <div className="inventory-quantity-summary" aria-label="藏品状态数量">
+      {quantities
+        .filter(([label, quantity]) => label === "可用" || quantity > 0)
+        .map(([label, quantity]) => (
+          <span key={label}>
+            {label} <strong>×{quantity}</strong>
+          </span>
+        ))}
+    </div>
   );
 }
 

@@ -87,17 +87,20 @@ export const evolutionPreviewSchema = z
 
 export const evolutionResultSchema = z
   .object({
-    success: z.boolean(),
+    attempt_count: z.number().int().positive(),
+    success_count: nonNegativeIntegerSchema,
+    failure_count: nonNegativeIntegerSchema,
     source: evolutionTemplateSchema,
     target: evolutionTemplateSchema,
     materials: z
       .object({
-        required: z.literal(3),
-        consumed: z.union([z.literal(2), z.literal(3)]),
-        retained: z.union([z.literal(0), z.literal(1)]),
+        selected: z.number().int().positive().multipleOf(3),
+        consumed: z.number().int().positive(),
+        retained: nonNegativeIntegerSchema,
       })
       .strict(),
     success_rate_percent: z.number().int().min(1).max(100),
+    fgems_cost_per_attempt: z.number().int().positive(),
     fgems_spent: z.number().int().positive(),
     pity: z
       .object({
@@ -105,32 +108,30 @@ export const evolutionResultSchema = z
         current_failure_count: nonNegativeIntegerSchema,
         guarantee_attempt: z.number().int().positive(),
         failures_until_guaranteed: nonNegativeIntegerSchema,
-        guaranteed_this_attempt: z.boolean(),
+        guaranteed_attempts: nonNegativeIntegerSchema,
       })
       .strict(),
-    target_awarded: z.union([z.literal(0), z.literal(1)]),
+    target_awarded: nonNegativeIntegerSchema,
     new_album: z.boolean(),
     assets: assetsSchema,
   })
   .strict()
   .superRefine((result, context) => {
-    const expected = result.success
-      ? { consumed: 3, retained: 0, awarded: 1, failures: 0 }
-      : {
-          consumed: 2,
-          retained: 1,
-          awarded: 0,
-          failures: result.pity.previous_failure_count + 1,
-        };
     if (
-      result.materials.consumed !== expected.consumed ||
-      result.materials.retained !== expected.retained ||
-      result.target_awarded !== expected.awarded ||
-      result.pity.current_failure_count !== expected.failures
+      result.attempt_count !== result.success_count + result.failure_count ||
+      result.materials.selected !== result.attempt_count * 3 ||
+      result.materials.consumed !==
+        result.success_count * 3 + result.failure_count * 2 ||
+      result.materials.retained !== result.failure_count ||
+      result.target_awarded !== result.success_count ||
+      result.fgems_spent !==
+        result.fgems_cost_per_attempt * result.attempt_count ||
+      result.pity.guaranteed_attempts > result.success_count ||
+      (result.success_count === 0 && result.new_album)
     )
       context.addIssue({
         code: "custom",
-        message: "Evolution result settlement fields are inconsistent",
+        message: "Batch evolution settlement fields are inconsistent",
       });
   });
 
@@ -163,6 +164,7 @@ export const inventoryItemSchema = z
     image_detail_path: z.string().startsWith("/assets/catalog/v1/detail/"),
     combat_power: z.number().int().positive(),
     expedition_fgems: z.number().int().positive(),
+    decompose_fgems: z.number().int().positive(),
     total: nonNegativeIntegerSchema,
     available: nonNegativeIntegerSchema,
     listed: nonNegativeIntegerSchema,

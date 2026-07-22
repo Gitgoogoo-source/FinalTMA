@@ -52,7 +52,7 @@ export function EvolutionOperationDialog({
 }): ReactNode {
   const parsed = routeById("inventory.evolve").output.safeParse(result);
   if (phase === "succeeded" && parsed.success)
-    return parsed.data.success ? (
+    return parsed.data.success_count > 0 ? (
       <EvolutionSuccess
         operationId={operationId}
         result={parsed.data}
@@ -136,7 +136,9 @@ function EvolutionSuccess({
           <Sparkles />
         </span>
         <div>
-          <small>进化成功</small>
+          <small>
+            {result.attempt_count > 1 ? "批量进化完成" : "进化成功"}
+          </small>
           <h2 id="evolution-result-title">{result.target.name}</h2>
         </div>
       </header>
@@ -161,10 +163,21 @@ function EvolutionSuccess({
       </div>
       <dl className="result-summary">
         <div>
+          <dt>结算结果</dt>
+          <dd>
+            {result.attempt_count} 次 · 成功 {result.success_count} · 失败{" "}
+            {result.failure_count}
+          </dd>
+        </div>
+        <div>
           <dt>实际扣除材料</dt>
           <dd>
             {result.source.name} ×{result.materials.consumed}
           </dd>
+        </div>
+        <div>
+          <dt>失败保留材料</dt>
+          <dd>×{result.materials.retained}</dd>
         </div>
         <div>
           <dt>实际扣除 Fgems</dt>
@@ -173,13 +186,13 @@ function EvolutionSuccess({
         <div>
           <dt>本次成功率</dt>
           <dd>
-            {result.success_rate_percent}%
-            {result.pity.guaranteed_this_attempt ? " · 已触发保底" : ""}
+            {result.success_rate_percent}% · 保底成功{" "}
+            {result.pity.guaranteed_attempts}次
           </dd>
         </div>
         <div>
           <dt>路线保底</dt>
-          <dd>已清空</dd>
+          <dd>当前连续失败 {result.pity.current_failure_count} 次</dd>
         </div>
       </dl>
       <code>操作号 {operationId}</code>
@@ -220,9 +233,18 @@ function EvolutionFailure({
       <span className="operation-mark failed" aria-hidden="true">
         !
       </span>
-      <h2 id="evolution-result-title">进化失败</h2>
-      <p>本次没有获得 {result.target.name}，路线保底已经推进。</p>
+      <h2 id="evolution-result-title">
+        {result.attempt_count > 1 ? "批量进化完成" : "进化失败"}
+      </h2>
+      <p>
+        {result.attempt_count} 次进化均未获得 {result.target.name}
+        ，路线保底已经按顺序推进。
+      </p>
       <dl className="result-summary">
+        <div>
+          <dt>结算结果</dt>
+          <dd>失败 {result.failure_count} 次</dd>
+        </div>
         <div>
           <dt>实际扣除材料</dt>
           <dd>

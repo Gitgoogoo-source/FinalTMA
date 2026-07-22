@@ -14,7 +14,7 @@ export function markOperationNewTemplates(
       markNew(parsed.data.results.map((item) => item.template_id));
   } else if (routeId === "inventory.evolve") {
     const parsed = routeById(routeId).output.safeParse(result);
-    if (parsed.success && parsed.data.success)
+    if (parsed.success && parsed.data.success_count > 0)
       markNew([parsed.data.target.template_id]);
   }
 }
