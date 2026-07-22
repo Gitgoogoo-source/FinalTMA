@@ -4,9 +4,9 @@ from catalog import sql_string
 
 
 TASKS = [
-    ("gacha_1", 1, "gacha", "今日开盒 1 次", "当日完成 1 次付费单抽或免费资格单抽", "gacha_single", 1, 20),
-    ("gacha_10", 2, "gacha", "今日开盒 10 次", "当日累计完成 10 次付费单抽或免费资格单抽", "gacha_single", 10, 80),
-    ("gacha_ten", 3, "gacha", "完成 1 次十连", "当日一次十连整批成功", "gacha_ten", 1, 50),
+    ("gacha_1", 1, "gacha", "今日单抽 1 次", "当日完成 1 次付费单抽或使用免费资格单抽；十连不计入", "gacha_single", 1, 20),
+    ("gacha_10", 2, "gacha", "今日单抽 10 次", "当日累计完成 10 次付费单抽或使用免费资格单抽；十连不计入", "gacha_single", 10, 80),
+    ("gacha_ten", 3, "gacha", "完成 1 次十连", "当日一次十连整批成功；不计入单抽任务", "gacha_ten", 1, 50),
     ("wheel_spin", 4, "daily", "每日转动转盘 1 次", "当日单次转盘或十次转盘整批成功", "wheel", 1, 15),
     ("copy_referral", 5, "social", "复制邀请链接", "当日复制邀请链接成功且任务结果获得确认", "referral_copy", 1, 5),
     ("telegram_invite", 6, "social", "点击 Telegram 邀请", "当日成功打开 Telegram 原生分享弹窗", "referral_telegram", 1, 10),
