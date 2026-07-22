@@ -19,7 +19,7 @@ export type OperationRegistryValue = {
     label: string,
     routeId: Id,
     input: RouteInput<Id>,
-    options?: { background?: boolean },
+    options?: { background?: boolean; dialog?: boolean },
   ): Promise<RouteOutput<Id> | null>;
   isBlocked(routeId: RecoverableRouteId): boolean;
   navigationLocked: boolean;

@@ -79,6 +79,24 @@ const navigationLockedThroughResultRouteIds = new Set<RecoverableRouteId>([
   "gacha.open",
   "wheel.spin",
 ]);
+const externallyRenderedSuccessRouteIds = new Set<RecoverableRouteId>([
+  "expedition.create",
+  "mint.cancel",
+  "mint.reserve",
+  "referral.bind",
+  "referral.share_event",
+  "topup.cancel_order",
+  "topup.create_order",
+  "topup.fail_order",
+  "vip.claim_fgems",
+  "vip.claim_free_box",
+  "vip.create_order",
+  "wallet.disconnect",
+  "wallet.verify",
+]);
+const inlineOperationRouteIds = new Set<RecoverableRouteId>([
+  "referral.share_event",
+]);
 
 export function OperationRegistryProvider({
   children,
@@ -140,6 +158,12 @@ export function OperationRegistryProvider({
     invalidGachaSuccess || invalidWheelSuccess || invalidAlbumClaimSuccess;
   const unresolved = Object.values(operations).filter((operation) =>
     unresolvedPhases.has(operation.phase),
+  );
+  const resumableUnresolved = unresolved.filter(
+    (operation) =>
+      !inlineOperationRouteIds.has(operation.routeId) ||
+      operation.phase === "pending" ||
+      operation.phase === "unknown",
   );
   const navigationLocked = Object.values(operations).some(
     (operation) =>
@@ -227,7 +251,7 @@ export function OperationRegistryProvider({
       label: string,
       routeId: Id,
       input: RouteInput<Id>,
-      options?: { background?: boolean },
+      options?: { background?: boolean; dialog?: boolean },
     ): Promise<RouteOutput<Id> | null> => {
       const sessionGeneration = getSession()?.generation;
       if (!sessionGeneration || getSession()?.accountStatus !== "normal")
@@ -259,7 +283,7 @@ export function OperationRegistryProvider({
             navigationLockedThroughResultRouteIds.has(routeId)),
       );
       if (existing) {
-        setActiveId(existing.id);
+        if (options?.dialog !== false) setActiveId(existing.id);
         return null;
       }
       const id = newIdempotencyKey();
@@ -280,7 +304,7 @@ export function OperationRegistryProvider({
       } satisfies Record<string, RegisteredOperation>;
       operationsRef.current = next;
       setOperations(next);
-      setActiveId(id);
+      if (options?.dialog !== false) setActiveId(id);
       await new Promise<void>((resolve) =>
         requestAnimationFrame(() => resolve()),
       );
@@ -299,14 +323,17 @@ export function OperationRegistryProvider({
           return null;
         }
         const pending = response.status === 202;
-        update(id, {
-          phase: pending ? "pending" : "succeeded",
-          message: pending
-            ? "服务器已接收，最终结果仍在确认"
-            : confirmedMessage(routeId, response.data),
-          result: response.data,
-          persistent: true,
-        });
+        if (!pending && externallyRenderedSuccessRouteIds.has(routeId))
+          remove(id);
+        else
+          update(id, {
+            phase: pending ? "pending" : "succeeded",
+            message: pending
+              ? "服务器已接收，最终结果仍在确认"
+              : confirmedMessage(routeId, response.data),
+            result: response.data,
+            persistent: true,
+          });
         if (!pending)
           markOperationNewTemplates(routeId, response.data, markNew);
         haptic(pending ? "warning" : "success");
@@ -336,22 +363,24 @@ export function OperationRegistryProvider({
             "RESPONSE_INVALID",
           ].includes(failure.code) ||
             !(cause instanceof ApiFailure));
-        update(id, {
-          phase: unknown ? "unknown" : "failed",
-          message: unknown
-            ? failure.code === "NETWORK_ERROR"
-              ? "网络中断，必须查询原操作，不能重复提交"
-              : "原操作结果详情暂时无法确认，必须查询原操作"
-            : failure.message,
-          errorCode: failure.code,
-          persistent: Boolean(failure.operationId),
-        });
+        if (options?.dialog === false && !unknown) remove(id);
+        else
+          update(id, {
+            phase: unknown ? "unknown" : "failed",
+            message: unknown
+              ? failure.code === "NETWORK_ERROR"
+                ? "网络中断，必须查询原操作，不能重复提交"
+                : "原操作结果详情暂时无法确认，必须查询原操作"
+              : failure.message,
+            errorCode: failure.code,
+            persistent: Boolean(failure.operationId),
+          });
         haptic("error");
         if (!unknown) await refreshRouteScopes(routeId).catch(() => undefined);
         return null;
       }
     },
-    [markNew, update],
+    [markNew, remove, update],
   );
 
   const hydrate = useCallback(
@@ -360,6 +389,7 @@ export function OperationRegistryProvider({
       if (!sessionGeneration || getSession()?.accountStatus !== "normal")
         return;
       const next = { ...operationsRef.current };
+      const completedOutsideRegistry = new Set<string>();
       let firstId: string | null = null;
       for (const operation of incoming) {
         if (
@@ -368,7 +398,21 @@ export function OperationRegistryProvider({
           acknowledgedIds.current.has(operation.operation_id)
         )
           continue;
-        firstId ??= operation.operation_id;
+        if (
+          operation.status === "succeeded" &&
+          externallyRenderedSuccessRouteIds.has(operation.use_case)
+        ) {
+          delete next[operation.operation_id];
+          completedOutsideRegistry.add(operation.operation_id);
+          markOperationNewTemplates(
+            operation.use_case,
+            operation.result,
+            markNew,
+          );
+          continue;
+        }
+        if (!inlineOperationRouteIds.has(operation.use_case))
+          firstId ??= operation.operation_id;
         next[operation.operation_id] = {
           id: operation.operation_id,
           sessionGeneration,
@@ -390,7 +434,11 @@ export function OperationRegistryProvider({
       }
       operationsRef.current = next;
       setOperations(next);
-      setActiveId((current) => current ?? firstId);
+      setActiveId((current) =>
+        current && completedOutsideRegistry.has(current)
+          ? firstId
+          : (current ?? firstId),
+      );
     },
     [markNew],
   );
@@ -415,19 +463,25 @@ export function OperationRegistryProvider({
           return;
         }
         if (recovered.status === "succeeded") {
-          update(operation.id, {
-            phase: "succeeded",
-            message: confirmedMessage(operation.routeId, recovered.result),
-            result: recovered.result,
-            errorCode: null,
-            persistent: true,
-          });
+          if (externallyRenderedSuccessRouteIds.has(operation.routeId))
+            remove(operation.id);
+          else
+            update(operation.id, {
+              phase: "succeeded",
+              message: confirmedMessage(operation.routeId, recovered.result),
+              result: recovered.result,
+              errorCode: null,
+              persistent: true,
+            });
           markOperationNewTemplates(
             operation.routeId,
             recovered.result,
             markNew,
           );
-          if (acknowledgedResultRouteIds.has(operation.routeId))
+          if (
+            !externallyRenderedSuccessRouteIds.has(operation.routeId) &&
+            acknowledgedResultRouteIds.has(operation.routeId)
+          )
             setActiveId((current) => current ?? operation.id);
           haptic("success");
           await refreshRouteScopes(operation.routeId);
@@ -795,12 +849,12 @@ export function OperationRegistryProvider({
       {children}
       {session?.accountStatus === "normal" &&
         !active &&
-        unresolved.length > 0 && (
+        resumableUnresolved.length > 0 && (
           <button
             className="operation-resume"
-            onClick={() => setActiveId(unresolved[0]?.id ?? null)}
+            onClick={() => setActiveId(resumableUnresolved[0]?.id ?? null)}
           >
-            {unresolved.length} 个操作待确认
+            {resumableUnresolved.length} 个操作待确认
           </button>
         )}
       {session?.accountStatus === "normal" && active && (

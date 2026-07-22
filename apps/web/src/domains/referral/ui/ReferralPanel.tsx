@@ -7,7 +7,7 @@ import {
   Send,
   UsersRound,
 } from "lucide-react";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 import { useApiQuery } from "../../../platform/query/index.ts";
 import { telegram } from "../../../platform/telegram/index.ts";
@@ -17,19 +17,56 @@ import { useOperationRegistry } from "../../../workflows/operation-recovery/inde
 export function ReferralPanel(): ReactNode {
   const query = useApiQuery("referral.get");
   const { isBlocked, run } = useOperationRegistry();
-  const blocked = isBlocked("referral.share_event");
+  const [recording, setRecording] = useState(false);
+  const [feedback, setFeedback] = useState<{
+    kind: "success" | "pending" | "error";
+    message: string;
+  } | null>(null);
+  const blocked = recording || isBlocked("referral.share_event");
   const event = async (name: "copy_link" | "telegram_invite") => {
     const link = query.data?.link ?? "";
-    if (name === "copy_link") await navigator.clipboard.writeText(link);
-    else
-      telegram()?.openTelegramLink(
-        `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(query.data?.share_text ?? "")}`,
+    setRecording(true);
+    setFeedback(null);
+    try {
+      if (name === "copy_link") {
+        await navigator.clipboard.writeText(link);
+        setFeedback({ kind: "success", message: "链接已复制" });
+      } else {
+        const app = telegram();
+        if (!app) {
+          setFeedback({ kind: "error", message: "请在 Telegram 内打开" });
+          return;
+        }
+        app.openTelegramLink(
+          `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(query.data?.share_text ?? "")}`,
+        );
+        setFeedback({ kind: "success", message: "已打开 Telegram 分享" });
+      }
+      const result = await run(
+        name === "copy_link" ? "正在记录复制邀请" : "正在记录 Telegram 邀请",
+        "referral.share_event",
+        { event: name },
+        { dialog: false },
       );
-    await run(
-      name === "copy_link" ? "正在记录复制邀请" : "正在记录 Telegram 邀请",
-      "referral.share_event",
-      { event: name },
-    );
+      if (!result)
+        setFeedback({
+          kind: "pending",
+          message:
+            name === "copy_link"
+              ? "链接已复制，任务进度待刷新"
+              : "已打开 Telegram 分享，任务进度待刷新",
+        });
+    } catch {
+      setFeedback({
+        kind: "error",
+        message:
+          name === "copy_link"
+            ? "复制失败，请稍后重试"
+            : "分享失败，请复制邀请链接",
+      });
+    } finally {
+      setRecording(false);
+    }
   };
   if (query.isLoading)
     return (
@@ -95,6 +132,15 @@ export function ReferralPanel(): ReactNode {
             <Copy aria-hidden="true" />
             复制邀请链接
           </Button>
+          {feedback ? (
+            <p
+              className={`invite-feedback ${feedback.kind}`}
+              role="status"
+              aria-live="polite"
+            >
+              {feedback.message}
+            </p>
+          ) : null}
         </div>
       </Card>
       <div className="stats-row">

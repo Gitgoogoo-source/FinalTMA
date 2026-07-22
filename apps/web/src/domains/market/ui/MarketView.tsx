@@ -60,13 +60,15 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
     isBlocked("market.purchase") ||
     isBlocked("market.create_listing") ||
     isBlocked("market.cancel_template_listings");
-  const purchaseTemplates = (listings.data?.templates ?? []).map((item) => {
-    const current =
-      item.template_id === purchaseTarget && targetListing.data
-        ? targetListing.data
-        : item;
-    return { ...current, available: current.available_quantity };
-  });
+  const purchaseTemplates = (listings.data?.templates ?? [])
+    .map((item) => {
+      const current =
+        item.template_id === purchaseTarget && targetListing.data
+          ? targetListing.data
+          : item;
+      return { ...current, available: current.available_quantity };
+    })
+    .filter((item) => item.available + item.own_listed_quantity > 0);
   const data: MarketViewItem[] =
     tab === "buy"
       ? purchaseTemplates
@@ -235,11 +237,14 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
         <Card className="market-target" role="status">
           <strong>已定位：{targetListing.data.name}</strong>
           <p>
-            当前可买 {targetListing.data.available_quantity} 个；数量为 0
-            表示市场当前没有在售。
+            {targetListing.data.available_quantity > 0
+              ? `当前可买 ${targetListing.data.available_quantity} 个。`
+              : targetListing.data.own_listed_quantity > 0
+                ? "市场当前仅有你的挂单，不能购买自己的挂单。"
+                : "市场当前没有有效挂单，该藏品不在购买列表中。"}
           </p>
           <Button className="secondary" onClick={() => setParams({})}>
-            查看全部藏品
+            查看全部在售藏品
           </Button>
         </Card>
       )}
@@ -495,7 +500,7 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
           loading={state.isLoading}
           error={state.error as Error | null}
           onRetry={() => void state.refetch()}
-          empty={sorted.length === 0}
+          empty={tab === "manage" && sorted.length === 0}
         >
           {visible.length ? (
             <div className={`market-grid market-grid-${tab}`}>
@@ -522,8 +527,12 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
           ) : (
             <div className="market-filter-empty">
               <PackageSearch aria-hidden="true" />
-              <strong>没有符合条件的藏品</strong>
-              <span>调整筛选后再试</span>
+              <strong>
+                {sorted.length ? "没有符合条件的藏品" : "市场暂无有效挂单"}
+              </strong>
+              <span>
+                {sorted.length ? "调整筛选后再试" : "有玩家上架后将在这里显示"}
+              </span>
             </div>
           )}
         </PageState>
@@ -662,6 +671,7 @@ type MarketViewItem = {
   image_detail_path?: string;
   unit_price: number;
   available: number;
+  own_listed_quantity?: number;
   total?: number;
   listed?: number;
   sold_quantity?: number;
@@ -1052,7 +1062,7 @@ function MarketCard({
         }
       >
         {tab === "buy" && available < 1 ? (
-          <>售罄</>
+          <>{item.own_listed_quantity ? "自己的挂单" : "暂无挂单"}</>
         ) : tab === "buy" ? (
           <>
             <ShoppingCart />

@@ -5388,6 +5388,20 @@ input:focus {
   background: #fff;
   font-size: 9px;
 }
+.app-shell .invite-feedback {
+  grid-column: 1 / -1;
+  margin: -2px 0 0;
+  color: #4b9d3c;
+  font-size: 9px;
+  font-weight: 800;
+  text-align: center;
+}
+.app-shell .invite-feedback.pending {
+  color: #a66a14;
+}
+.app-shell .invite-feedback.error {
+  color: #b84b3d;
+}
 .app-shell .stats-row {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

@@ -8,6 +8,8 @@
 
 操作弹窗先按 `use_case` 选择展示组件，再校验该命令的唯一输出 Schema。`gacha.open`、`wheel.spin` 与 `inventory.evolve` 的展示组件位于操作恢复工作流，`OperationRegistryProvider` 只负责编排阶段、原操作查询、导航锁、刷新范围和服务端结果回执；领域组件直接消费持久结果，不在注册中心复制结果字段。开盒、转盘和进化只有在持久状态为 `succeeded` 且完整结果通过各自命令输出 Schema 校验时才展示对应业务内容；进化的随机失败仍是已完成结算，使用同一完整输出 Schema，前置拒绝则使用持久错误码和拒绝快照展示。Schema 不完整的成功结果只查询原操作且不得确认。专用弹窗的字段与动作唯一引用产品主文档第 14.4.6、4.3.6 和 18.6 节。
 
+已经由领域页面、Telegram/钱包原生界面或支付恢复界面展示真实结果的操作，不再追加只含“服务器已确认”和操作号的通用成功弹窗。固定范围为 `expedition.create`、`mint.reserve`、`mint.cancel`、`referral.bind`、`referral.share_event`、`topup.create_order`、`topup.cancel_order`、`topup.fail_order`、`vip.create_order`、`vip.claim_fgems`、`vip.claim_free_box`、`wallet.verify` 与 `wallet.disconnect`；这些操作成功后立即移除前端通用操作记录并刷新路由声明的真实状态。`referral.share_event` 的复制或 Telegram 分享结果由邀请卡片行内反馈承载，提交时不激活全局操作弹窗；`pending` 与 `unknown` 保留原操作恢复能力，明确失败则刷新任务真实状态并允许用户重新执行分享动作。行内反馈只证明复制或 Telegram 分享入口已经成功，不得当作任务进度已经成功。签到、任务领取、远征领取、分解、交易、Mint 最终结果以及所有专用结果弹窗不属于该范围。
+
 开盒结果关闭、再次开盒或前往藏品页之前，前端调用 `POST /api/gacha/results/:operation_id/acknowledge`；转盘结果关闭前调用 `POST /api/wheel/results/:operation_id/acknowledge`；进化成功、随机失败或拒绝结果执行规定动作前调用 `POST /api/inventory/evolution/results/:operation_id/acknowledge`。数据库只允许当前用户确认匹配固定 `use_case` 的本人终态，并以首次确认时间幂等落库。确认响应丢失时弹窗保持打开并允许重试；确认完成后启动与领域恢复查询都不再返回该结果。前端内存和浏览器存储都不充当结果或确认事实来源。
 
 `album.claim` 成功且结果通过该命令输出 Schema 校验时展示图鉴奖励专用结果，包含服务端返回的链条名称、真实 Fgems 奖励和操作号；确认前不提前显示奖励。图鉴是脱离主壳层的全屏页面，因此页面自身消费 `identity.bootstrap.blocking_operations` 并注入同一操作注册中心，网络中断后只查询原 `operation_id`。成功、失败或未知恢复都会按 `album.claim` 声明的资产与图鉴刷新范围重新读取 `album.get` 和顶部资产事实，不从临时弹窗状态重放领取。

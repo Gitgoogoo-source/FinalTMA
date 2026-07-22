@@ -21,6 +21,7 @@ const marketTemplateSchema = z
     image_thumbnail_path: z.string().startsWith("/assets/catalog/v1/thumb/"),
     unit_price: z.number().int().positive(),
     available_quantity: z.number().int().min(0),
+    own_listed_quantity: z.number().int().min(0),
   })
   .strict();
 const createdListingSchema = z
@@ -73,7 +74,7 @@ export const marketRoutes = [
     input: emptyObjectSchema,
     output: z
       .object({
-        templates: z.array(marketTemplateSchema).length(210),
+        templates: z.array(marketTemplateSchema).max(210),
         sellable_items: z.array(
           inventoryItemSchema.extend({
             unit_price: z.number().int().positive(),

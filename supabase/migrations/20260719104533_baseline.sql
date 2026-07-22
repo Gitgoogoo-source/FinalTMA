@@ -2193,14 +2193,18 @@ begin
         'stage', t.stage,
         'image_thumbnail_path', t.image_thumbnail_path,
         'unit_price', t.market_price,
-        'available_quantity', coalesce(x.quantity, 0)
+        'available_quantity', x.available_quantity,
+        'own_listed_quantity', x.own_listed_quantity
       ) order by t.sort_order)
       from catalog.templates t
-      left join (
-        select l.template_id, sum(l.remaining) quantity
+      join (
+        select
+          l.template_id,
+          coalesce(sum(l.remaining) filter (where l.seller_id <> v_user_id), 0) available_quantity,
+          coalesce(sum(l.remaining) filter (where l.seller_id = v_user_id), 0) own_listed_quantity
         from market.listings l
         join identity.users u on u.id = l.seller_id
-        where l.status = 'active' and l.remaining > 0 and u.status = 'normal' and l.seller_id <> v_user_id
+        where l.status = 'active' and l.remaining > 0 and u.status = 'normal'
         group by l.template_id
       ) x on x.template_id = t.id
     ), '[]'::jsonb),
@@ -2235,15 +2239,21 @@ begin
     'stage', t.stage,
     'image_thumbnail_path', t.image_thumbnail_path,
     'unit_price', t.market_price,
-    'available_quantity', coalesce((
-      select sum(l.remaining)
-      from market.listings l
-      join identity.users u on u.id = l.seller_id
-      where l.template_id = t.id and l.status = 'active' and l.remaining > 0
-        and u.status = 'normal' and l.seller_id <> v_user_id
-    ), 0)
+    'available_quantity', coalesce(x.available_quantity, 0),
+    'own_listed_quantity', coalesce(x.own_listed_quantity, 0)
   ) into v_result
-  from catalog.templates t where t.id = p_template_id;
+  from catalog.templates t
+  left join (
+    select
+      l.template_id,
+      coalesce(sum(l.remaining) filter (where l.seller_id <> v_user_id), 0) available_quantity,
+      coalesce(sum(l.remaining) filter (where l.seller_id = v_user_id), 0) own_listed_quantity
+    from market.listings l
+    join identity.users u on u.id = l.seller_id
+    where l.template_id = p_template_id and l.status = 'active' and l.remaining > 0 and u.status = 'normal'
+    group by l.template_id
+  ) x on x.template_id = t.id
+  where t.id = p_template_id;
   if v_result is null then
     perform api.raise_business_error('TEMPLATE_NOT_FOUND', '藏品模板不存在');
   end if;

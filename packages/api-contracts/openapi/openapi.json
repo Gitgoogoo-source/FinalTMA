@@ -9590,7 +9590,6 @@
                       "type": "object",
                       "properties": {
                         "templates": {
-                          "minItems": 210,
                           "maxItems": 210,
                           "type": "array",
                           "items": {
@@ -9626,6 +9625,11 @@
                                 "type": "integer",
                                 "minimum": 0,
                                 "maximum": 9007199254740991
+                              },
+                              "own_listed_quantity": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
                               }
                             },
                             "required": [
@@ -9634,7 +9638,8 @@
                               "rarity",
                               "image_thumbnail_path",
                               "unit_price",
-                              "available_quantity"
+                              "available_quantity",
+                              "own_listed_quantity"
                             ],
                             "additionalProperties": false
                           }
@@ -10039,6 +10044,11 @@
                           "type": "integer",
                           "minimum": 0,
                           "maximum": 9007199254740991
+                        },
+                        "own_listed_quantity": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
                         }
                       },
                       "required": [
@@ -10047,7 +10057,8 @@
                         "rarity",
                         "image_thumbnail_path",
                         "unit_price",
-                        "available_quantity"
+                        "available_quantity",
+                        "own_listed_quantity"
                       ],
                       "additionalProperties": false
                     },
