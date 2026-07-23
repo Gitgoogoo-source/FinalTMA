@@ -1,70 +1,84 @@
-# 开盒页多屏自适应设计 QA
+# 出售页全竖屏自适应设计 QA
 
-- Source visual truth: `/Users/mac/Desktop/图片/开盒.png`
-- Reference implementation: `/Users/mac/Desktop/旧项目本地保留/tmaGameOld/screens-1.jsx`
-- Deployed implementation: `https://final-tma-pi.vercel.app/`
-- Deployment: `dpl_4mQmfFavrPULpYNtSponNxRRde8g`
-- State: 普通盲盒；使用当前正式 CSS、现有组件类结构、正式盲盒与藏品资源渲染响应式布局
-- Tested CSS viewports: `401 × 646 px`、`401 × 852 px`、`430 × 932 px`
-- Source pixels: `941 × 1670 px`
-- Implementation screenshot: `/private/tmp/finaltma-gacha-responsive-frame-qa.png`（`1330 × 980 px`，三种视口并排）
-- Full-view comparison: `/private/tmp/finaltma-gacha-adaptive-comparison.jpg`
-- Focused action comparison: `/private/tmp/finaltma-gacha-adaptive-actions.jpg`
-- Density normalization: 来源图按高度缩放至 `980 px` 后与实现截图并排；实现中的三个应用视口均以 CSS 像素 1:1 渲染
+- Source visual truth:
+  - `/var/folders/__/ffcc9r1113l4c8cd1z4m8tp80000gn/T/codex-clipboard-b5f0dbd8-3b44-4d37-b37d-81ff355bbb0c.png`
+  - `/private/tmp/finaltma-market-sell-before.png`
+- Deployed implementation: `https://final-tma-pi.vercel.app/market?sell=PET-N-006-1`
+- Deployment: `dpl_E1uxGHuu8XKvoABg7xm8H4vX1b1R`
+- State: 出售页；真实 Telegram 用户、真实可售藏品与真实价格摘要；未提交出售
+- Real Telegram viewport capture: `421 × 715 px`，其中 Mini App 内容区约为 `401 × 646 CSS px`
+- Tested responsive CSS viewports:
+  - `320 × 568 px`，安全区 `20 / 0 px`
+  - `360 × 640 px`，安全区 `24 / 24 px`
+  - `375 × 667 px`，安全区 `20 / 0 px`
+  - `390 × 844 px`，安全区 `47 / 34 px`
+  - `430 × 932 px`，安全区 `59 / 34 px`
+- Implementation screenshot: `/private/tmp/finaltma-market-sell-final-live.png`
+- Full-view comparison: `/private/tmp/finaltma-market-sell-final-comparison.png`
+- Focused lower-controls comparison: `/private/tmp/finaltma-market-sell-final-focus-comparison.png`
+- Multi-viewport evidence:
+  - `/private/tmp/finaltma-market-sell-qa-release-320x568-se.png`
+  - `/private/tmp/finaltma-market-sell-qa-release-360x640-android.png`
+  - `/private/tmp/finaltma-market-sell-qa-release-375x667-ios.png`
+  - `/private/tmp/finaltma-market-sell-qa-release-390x844-ios.png`
+  - `/private/tmp/finaltma-market-sell-qa-release-430x932-ios.png`
+- Density normalization: 前后真实 Telegram 截图均为 `421 × 715 px`，未缩放；多尺寸验证均按对应 CSS 视口以 `deviceScaleFactor 1` 捕获
 
 ## Findings
 
 没有剩余可执行的 P0、P1 或 P2 问题。
 
-- [P3] 五位数 Fgems 在真实 Telegram 顶部资产胶囊中可能继续使用省略显示。
-  - Location: 顶部资产栏。
-  - Evidence: 本任务修改前的真实 Telegram 截图显示 `10,4…`，无障碍名称包含完整真实值。
-  - Impact: 不影响首屏按钮、纵向自适应或资产事实读取。
-  - Follow-up: 后续统一处理顶部资产栏时增加五位数余额文本空间。
+- [P3] `320 × 568 px` 的辅助说明文字采用最小字号。
+  - Location: 藏品事实、价格说明与结算说明。
+  - Evidence: 最短视口中主按钮、数量值和金额仍清晰，辅助说明保持可见但密度较高。
+  - Impact: 不影响出售对象选择、数量调整、金额确认与提交入口。
+  - Follow-up: 不继续放大；否则会破坏已确认的“无需页面滚动”目标。
 
 ## Comparison history
 
 ### Iteration 1
 
-- [P1] 原 Telegram 首屏只显示到档次选择与部分奖池内容，两个开盒按钮必须滚动后才能看到。
-- Fix: 对短移动视口压缩页面标题、主视觉、档次卡、奖池、保底和操作按钮，不删除业务信息或交互。
-- Post-fix evidence: `/private/tmp/finaltma-gacha-telegram-compact.png` 中全部功能按钮进入 `401 × 646 px` 首屏。
+- [P1] 原出售页首屏只显示标题、藏品大图和缩略图；官方价格、出售数量、结算与确认出售均在首屏之外。
+- Fix: 删除重复的“出售 NFT / 可出售藏品数量”标题，并压缩大图、缩略图、价格摘要与表单。
+- Post-fix evidence: `/private/tmp/finaltma-market-sell-after.png` 中价格、数量、结算、确认出售和主导航首次同时进入真实 Telegram 首屏。
 
 ### Iteration 2
 
-- [P1] 第一轮仅在 `max-height: 820px` 下启用固定紧凑尺寸；更高手机仍沿用紧凑上半屏，导致开盒按钮下方出现大块空白。
-- Fix: 将移动端布局改为全高度连续响应式。页面标题、盲盒主视觉、档次卡、奖池缩略图、保底胶囊和操作按钮均通过 `clamp()` 与 `dvh` 随真实视口高度增长；内容区使用真实稳定视口高度分配纵向空间。
-- [P2] 初次多屏测量发现开盒按钮底边进入固定底部导航约 `6 px`。
-- Fix: 将内容区终点上移，保证按钮与导航之间保留安全间距。
-- Post-fix evidence:
-  - `401 × 646 px`: 文档高度 `646 px`，操作区底边 `546.4 px`，导航顶边 `560 px`，间距 `13.6 px`。
-  - `401 × 852 px`: 文档高度 `852 px`，操作区底边 `746 px`，导航顶边 `766 px`，间距 `20 px`。
-  - `430 × 932 px`: 文档高度 `932 px`，操作区底边 `826 px`，导航顶边 `846 px`，间距 `20 px`。
-  - 三种视口的 `scrollHeight` 均等于视口高度，页面无需滚动。
-  - `/private/tmp/finaltma-gacha-adaptive-actions.jpg` 显示两个开盒按钮均完整位于底部导航上方，没有裁切、遮挡或大块下半屏留白。
+- [P2] 第一轮尺寸依据原始 `dvh` 缩放，没有把 Telegram 上下安全区从内容高度中共同扣除；短屏与大安全区组合仍可能产生纵向挤压。
+- Fix: 以 `min(Telegram stable viewport, 100dvh) - safe top - safe bottom` 计算工作区，再按 `31% / 21.5% / 12% / 29%` 分配大图、缩略图、价格摘要与表单。
+- Post-fix evidence: 五种 iOS/Android 竖屏测试的 `document.scrollHeight` 均等于视口高度，确认出售按钮底边均位于主导航顶边之上。
+
+### Iteration 3
+
+- [P1] 缩略图使用自动隐式列宽时，在真实 42 种藏品数据中列宽坍缩并出现卡片挤叠。
+- Fix: 使用工作区容器高度单位计算明确的方形缩略图列宽，并提供 `dvh` 回退值；双行结构继续横向滚动。
+- Post-fix evidence: `/private/tmp/finaltma-market-sell-final-live.png` 中真实数据缩略图互不重叠；五种尺寸中每张缩略图均为方形，测试样本均形成 5 个独立列位。
 
 ## Required fidelity surfaces
 
-- Fonts and typography: 延续项目现有系统圆角字体、粗细与橙色强调；价格、概率、保底和按钮文案随屏幕高度缩放但不隐藏。
-- Spacing and layout rhythm: 保留“主视觉 → 档次 → 可能获得 → 保底 → 开盒操作 → 主导航”顺序；矮屏压缩、长屏放大并均匀使用纵向空间。
-- Colors and visual tokens: 沿用暖白背景、橙色主操作、浅色玻璃卡片与现有稀有度颜色，没有引入第二套视觉变量。
-- Image quality and asset fidelity: 主盲盒、档次缩略图和藏品缩略图继续使用项目正式资源，没有占位图、CSS 绘图或新外部素材。
-- Copy and content: 保留真实页面的盲盒名称、K-coin 价格、概率、保底与全部功能入口；参考图中的示例 Points/Star 数据未进入项目。
+- Fonts and typography: 延续项目现有系统圆角字体、粗细与橙色强调；主名称、数量、金额和确认文案保持最高层级，短屏只压缩辅助文字。
+- Spacing and layout rhythm: 保留“页签 → 选中藏品 → 双行缩略图 → 价格摘要 → 数量与结算 → 确认出售 → 主导航”的唯一顺序；长屏按比例放大，短屏按安全区后的可用高度收缩。
+- Colors and visual tokens: 沿用暖白背景、橙色主操作、浅色卡片和现有稀有度颜色，没有引入第二套视觉变量。
+- Image quality and asset fidelity: 大图和全部缩略图继续使用项目正式藏品资源，没有新增占位素材、CSS 绘图或外部图标替代。
+- Copy and content: 已删除用户指定的重复标题与数量文案；官方单价、预计成交、手续费、出售数量、到账、月卡返还和确认出售均保留。
+- Icons and states: 继续使用现有图标体系、选中描边、数量禁用态与橙色主按钮；真实页面的可售数量状态由后端数据决定。
+- Accessibility: 所有交互仍为语义按钮；真实 Telegram 无障碍树可读取页签、藏品选择、数量增减、确认出售和五项主导航。
 
-## Interaction and runtime checks
+## Runtime and interaction checks
 
-- 三种视口都可同时看到三档盲盒、查看全部、五个奖池入口、保底、两个开盒按钮和五项底部导航。
-- 所有视口均无页面纵向滚动，操作区与底部导航之间存在明确安全间距。
-- 未点击开盒、充值、购买月卡或领取权益，没有消耗 K-coin、Fgems、资格、道具或 Telegram Stars。
-- 最新部署已进入 `READY` 并绑定 `https://final-tma-pi.vercel.app/`。
-- 当前 Telegram Mini App 会话已过期，外部应用唤起被浏览器安全策略拦截，因此本轮没有取得最新部署的真实 Telegram WebView 截图；多屏视觉结论来自当前正式 CSS 与组件结构的 1:1 隔离渲染。
+- 真实 Telegram 首屏同时包含购买/出售/管理页签、选中藏品、双行缩略图、三项价格摘要、数量控件、结算信息、确认出售和五项底部导航。
+- “出售 NFT”及“42 种藏品可出售”不再出现在真实 Telegram 无障碍树和画面中。
+- 五种测试视口均无页面纵向滚动，确认出售按钮未与底部导航重叠。
+- 五种测试视口的缩略图均保持方形且存在独立列位，横向列表可继续滚动。
+- 未点击确认出售、购买、充值或月卡，也未消耗 K-coin、Fgems、藏品、道具或 Telegram Stars。
 
 ## Automated verification
 
-- `pnpm exec prettier --check apps/web/src/shared/styles/global.css`: passed
+- `pnpm exec prettier --check apps/web/src/domains/market/ui/MarketView.tsx apps/web/src/domains/market/ui/market-density.css docs/product/功能说明文档.md design-qa.md`: passed
 - `pnpm --filter @pokepets/web build`: passed
 - Vercel production build: passed
 - Development release assets: all 425 path-valid, format-valid, hash-locked, and present
-- `git diff --check`: passed
+- Multi-viewport browser console errors: `0`
+- `git diff --check -- apps/web/src/domains/market/ui/MarketView.tsx apps/web/src/domains/market/ui/market-density.css docs/product/功能说明文档.md design-qa.md`: passed
 
 final result: passed

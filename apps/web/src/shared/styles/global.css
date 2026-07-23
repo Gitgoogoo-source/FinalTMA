@@ -35,6 +35,14 @@ body,
   min-height: 100%;
   background: var(--tg-bg-color, #0b1020);
 }
+html,
+body {
+  scrollbar-width: none;
+}
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none;
+}
 body {
   min-width: 320px;
   min-height: 100dvh;

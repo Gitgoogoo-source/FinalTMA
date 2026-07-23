@@ -299,3 +299,236 @@
     font-size: 11px;
   }
 }
+
+@media (max-width: 720px) {
+  .app-shell .market-page-sell {
+    padding-bottom: 4px;
+  }
+
+  .app-shell .market-page-sell .market-tabs {
+    margin-bottom: clamp(6px, 1dvh, 10px);
+  }
+
+  .app-shell .market-page-sell .market-sell-workbench {
+    --market-sell-workbench-height: calc(
+      min(var(--tg-viewport-stable-height, 100dvh), 100dvh) - var(--safe-top) -
+        var(--safe-bottom) - var(--size-topbar) - 136px
+    );
+    height: var(--market-sell-workbench-height);
+    min-height: 0;
+    grid-template-rows: 31% 21.5% 12% clamp(104px, 29%, 160px);
+    align-content: space-between;
+    container-type: size;
+    gap: clamp(3px, 0.9dvh, 8px);
+  }
+
+  .app-shell .market-page-sell .market-sell-hero {
+    min-height: 0;
+    height: 100%;
+    border-radius: clamp(17px, 3dvh, 25px);
+  }
+
+  .app-shell .market-page-sell .market-sell-hero-copy {
+    gap: clamp(1px, 0.7dvh, 6px);
+    padding: clamp(4px, calc(2.47dvh - 10px), 13px);
+  }
+
+  .app-shell .market-page-sell .market-sell-hero-copy > .badge {
+    padding: clamp(2px, 0.5dvh, 4px) clamp(5px, 1dvh, 8px);
+    font-size: clamp(6px, 1dvh, 9px);
+  }
+
+  .app-shell .market-page-sell .market-sell-hero-copy h2 {
+    font-size: clamp(12px, calc(1.65dvh + 3px), 18px);
+    line-height: clamp(14px, calc(2.2dvh + 1px), 22px);
+  }
+
+  .app-shell .market-page-sell .market-sell-hero-copy > p {
+    font-size: clamp(6px, 1dvh, 9px);
+    line-height: 1.1;
+  }
+
+  .app-shell .market-page-sell .market-sell-owned {
+    gap: clamp(2px, 0.7dvh, 6px);
+    padding: clamp(2px, 0.5dvh, 5px) clamp(4px, 1dvh, 9px);
+    border-radius: clamp(8px, 1.6dvh, 13px);
+    font-size: clamp(6px, 0.9dvh, 8px);
+  }
+
+  .app-shell .market-page-sell .market-sell-owned strong {
+    font-size: clamp(8px, 1.3dvh, 11px);
+  }
+
+  .app-shell .market-page-sell .market-sell-hero-facts {
+    gap: clamp(3px, 0.7dvh, 5px);
+    margin-top: clamp(0px, 0.4dvh, 3px);
+  }
+
+  .app-shell .market-page-sell .market-sell-hero-facts > span {
+    min-height: clamp(24px, calc(6.32dvh - 12px), 47px);
+    grid-template-columns:
+      clamp(12px, 2.1dvh, 20px)
+      minmax(0, 1fr);
+    column-gap: clamp(2px, 0.7dvh, 5px);
+    padding: clamp(2px, 0.7dvh, 6px);
+    border-radius: clamp(8px, 1.8dvh, 14px);
+  }
+
+  .app-shell .market-page-sell .market-sell-hero-facts svg {
+    width: clamp(12px, 2.1dvh, 18px);
+    height: clamp(12px, 2.1dvh, 18px);
+  }
+
+  .app-shell .market-page-sell .market-sell-hero-facts small {
+    font-size: clamp(5px, 0.7dvh, 6px);
+  }
+
+  .app-shell .market-page-sell .market-sell-hero-facts strong {
+    font-size: clamp(6px, 1dvh, 8px);
+  }
+
+  .app-shell .market-page-sell .market-sell-gallery {
+    height: 100%;
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+    grid-auto-columns: clamp(32px, calc(7.5dvh - 8px), 66px);
+    grid-auto-columns: clamp(32px, calc(10.75cqh - 4px), 66px);
+    gap: clamp(4px, 0.9dvh, 8px) clamp(6px, 1.2dvh, 10px);
+  }
+
+  .app-shell .market-page-sell .market-sell-gallery > button {
+    width: 100%;
+    height: auto;
+    align-self: center;
+    aspect-ratio: 1;
+    border-radius: clamp(10px, 2dvh, 17px);
+  }
+
+  .app-shell .market-page-sell .market-sell-gallery > button > span {
+    min-width: clamp(18px, 3dvh, 24px);
+    height: clamp(13px, 2.3dvh, 18px);
+    padding-inline: clamp(3px, 0.7dvh, 5px);
+    border-radius: clamp(6px, 1.2dvh, 9px);
+    font-size: clamp(5px, 0.9dvh, 7px);
+  }
+
+  .app-shell .market-page-sell .market-sell-gallery > button > i {
+    width: clamp(16px, 2.8dvh, 22px);
+    height: clamp(16px, 2.8dvh, 22px);
+  }
+
+  .app-shell .market-page-sell .market-sell-gallery > button > i svg {
+    width: clamp(9px, 1.6dvh, 12px);
+    height: clamp(9px, 1.6dvh, 12px);
+  }
+
+  .app-shell .market-page-sell .market-sell-metrics {
+    min-height: 0;
+    height: 100%;
+    border-radius: clamp(14px, 2.7dvh, 22px);
+  }
+
+  .app-shell .market-page-sell .market-sell-metrics > span {
+    gap: clamp(1px, 0.6dvh, 4px);
+    padding: clamp(3px, 1.1dvh, 10px) 3px;
+  }
+
+  .app-shell .market-page-sell .market-sell-metrics > span + span::before {
+    top: clamp(8px, 1.6dvh, 14px);
+    bottom: clamp(8px, 1.6dvh, 14px);
+  }
+
+  .app-shell .market-page-sell .market-sell-metrics small {
+    font-size: clamp(5px, 0.8dvh, 7px);
+  }
+
+  .app-shell .market-page-sell .market-sell-metrics strong {
+    gap: clamp(2px, 0.6dvh, 4px);
+    font-size: clamp(9px, 1.5dvh, 13px);
+  }
+
+  .app-shell .market-page-sell .market-sell-metrics strong svg {
+    width: clamp(10px, 1.8dvh, 15px);
+    height: clamp(10px, 1.8dvh, 15px);
+  }
+
+  .app-shell .market-page-sell .market-sell-form {
+    min-height: 0;
+    height: 100%;
+    align-content: space-between;
+    gap: clamp(3px, 0.9dvh, 9px);
+    padding: clamp(5px, 1.3dvh, 12px);
+    border-radius: clamp(15px, 2.7dvh, 22px);
+  }
+
+  .app-shell .market-page-sell .market-sell-quantity-row {
+    grid-template-columns:
+      minmax(0, 1fr)
+      clamp(104px, 31vw, 132px);
+    gap: clamp(5px, 1.2dvh, 10px);
+  }
+
+  .app-shell .market-page-sell .market-sell-quantity-row > span {
+    gap: clamp(3px, 0.7dvh, 5px);
+    font-size: clamp(8px, 1.3dvh, 11px);
+  }
+
+  .app-shell .market-page-sell .market-sell-quantity-row > span svg {
+    width: clamp(11px, 1.7dvh, 14px);
+    height: clamp(11px, 1.7dvh, 14px);
+  }
+
+  .app-shell .market-page-sell .market-sell-quantity-row .quantity {
+    grid-template-columns:
+      clamp(26px, 4dvh, 34px)
+      1fr
+      clamp(26px, 4dvh, 34px);
+  }
+
+  .app-shell .market-page-sell .market-sell-quantity-row .button {
+    min-height: clamp(26px, 4dvh, 34px);
+    border-radius: clamp(9px, 1.5dvh, 12px);
+  }
+
+  .app-shell .market-page-sell .market-sell-settlement {
+    gap: clamp(2px, 0.7dvh, 5px) clamp(7px, 1.4dvh, 12px);
+    padding-top: clamp(3px, 1dvh, 9px);
+  }
+
+  .app-shell .market-page-sell .market-sell-settlement > span {
+    gap: clamp(1px, 0.3dvh, 2px);
+    font-size: clamp(5px, 0.8dvh, 7px);
+  }
+
+  .app-shell .market-page-sell .market-sell-settlement strong {
+    font-size: clamp(8px, 1.2dvh, 10px);
+  }
+
+  .app-shell .market-page-sell .market-sell-settlement > small {
+    font-size: clamp(5px, 0.8dvh, 7px);
+    line-height: 1.2;
+  }
+
+  .app-shell .market-page-sell .market-sell-confirm.button {
+    min-height: clamp(34px, 5dvh, 44px);
+    padding: clamp(5px, 0.9dvh, 7px) clamp(8px, 1.5dvh, 12px);
+    border-radius: clamp(17px, 2.7dvh, 22px);
+    font-size: clamp(8px, 1.2dvh, 10px);
+  }
+
+  .app-shell .market-page-sell .market-sell-confirm > span {
+    gap: clamp(3px, 0.7dvh, 5px);
+  }
+
+  .app-shell .market-page-sell .market-sell-confirm > span svg {
+    width: clamp(11px, 1.8dvh, 15px);
+    height: clamp(11px, 1.8dvh, 15px);
+  }
+
+  .app-shell .market-page-sell .market-sell-confirm > span strong {
+    font-size: clamp(10px, 1.6dvh, 13px);
+  }
+
+  .app-shell .market-page-sell .market-sell-confirm > i {
+    height: clamp(18px, 2.8dvh, 22px);
+  }
+}

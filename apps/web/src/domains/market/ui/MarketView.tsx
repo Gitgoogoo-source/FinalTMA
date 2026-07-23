@@ -225,15 +225,6 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
         focusReady={!state.isLoading}
         onSelect={selectTab}
       />
-      {tab === "sell" ? (
-        <header className="market-sell-heading">
-          <Tags aria-hidden="true" />
-          <div>
-            <h1>出售 NFT</h1>
-            <span>{sorted.length} 种藏品可出售</span>
-          </div>
-        </header>
-      ) : null}
       {tab === "buy" && purchaseTarget && targetListing.data && (
         <Card className="market-target" role="status">
           <strong>已定位：{targetListing.data.name}</strong>
