@@ -16,23 +16,39 @@
 - Viewport: browser `1280 × 720` CSS px, device scale factor `1`; implementation app shell cropped at its native `430 × 720` CSS px.
 - Density normalization: old implementation rendered and captured at `430 × 900`, then cropped to `430 × 720`; FinalTMA implementation rendered in a native `430px` app shell and cropped to `430 × 720`. Both comparison inputs are `430 × 720` pixels at `1x`.
 - State: 交易 → 购买的紧凑内容，以及同一个市场页签组件依次切换购买、出售、管理三个分页面。
+- Live shared-shell verification: Telegram Desktop Mini App at `https://final-tma-pi.vercel.app`, Vercel deployment `dpl_8WEuPZpfPUYxwubkmnmEhDy7tXvQ`, checked on 2026-07-24 across 交易、游戏、开盒、藏品、任务.
 
 ## Full-view comparison evidence
 
 The final comparison preserves FinalTMA's existing product content while matching the old project's compact layout rhythm:
 
-- top asset bar: unchanged from the shared application layout;
-- shared top bar/wallet control: `72px` / `42px`, inherited from the application layout;
+- top asset bar in this historical screenshot pass: unchanged from the shared application layout that existed when the screenshots were captured;
+- historical shared top bar/wallet control captured in this pass: `72px` / `42px`;
 - shared market tab container/button: `402 × 38px` / `34px` on buy, sell, and manage;
 - filter buttons: `31px` high with `7px` gaps;
 - purchase grid: three equal columns with `7px` gaps;
-- bottom navigation: `406 × 58px`.
+- historical bottom navigation captured in this pass: `406 × 58px`.
 
 The old rendered reference measured `31px` filter controls, `7px` grid gaps, cards at approximately `123 × 196px`, and purchase actions at `38 × 24px`. The current purchase grid keeps the same three-column density while inheriting the shared `14px` market-page padding.
 
+## 2026-07-24 shared-shell adjudication
+
+The user’s 2026-07-24 adjudication replaces the historical `72px` top-bar height, `42px` wallet control, and `406 × 58px` bottom navigation as the current shared-shell geometry. The single current baseline is:
+
+- top asset content height: `54px`;
+- top asset inner maximum width: `382px`;
+- avatar: `48 × 48px`;
+- wallet control: `48 × 38px`;
+- K-coin and Fgems controls: `82 × 38px` each;
+- bottom navigation: `378 × 60px`;
+- bottom-navigation offset: `10px` above the device bottom safe area;
+- each bottom-navigation button: `46px` high.
+
+All five main pages use this same shell geometry. The 2026-07-24 Telegram live pass confirmed that the same top asset bar and bottom navigation render without horizontal overflow on 交易、游戏、开盒、藏品、任务, including the task page’s formerly higher-specificity shell rules.
+
 ## Focused comparison evidence
 
-The navigation correction used `/private/tmp/finaltma-market-navigation-correction-comparison.png` as focused evidence. It confirms that the top asset bar keeps its shared size and the market switcher uses the same position and dimensions in all three active states.
+The navigation correction used `/private/tmp/finaltma-market-navigation-correction-comparison.png` as focused historical evidence. It confirms that, in that captured implementation, the top asset bar kept the then-current shared size and the market switcher used the same position and dimensions in all three active states. It does not verify the 2026-07-24 shared-shell dimensions.
 
 ## Required fidelity surfaces
 
@@ -47,7 +63,7 @@ The navigation correction used `/private/tmp/finaltma-market-navigation-correcti
 
 ## Findings
 
-No actionable P0, P1, or P2 visual mismatches remain.
+No actionable P0, P1, or P2 market purchase-density mismatch remained in the historical screenshot pass. The 2026-07-24 Telegram live pass found no shared-shell clipping, horizontal overflow, or page-specific size override across the five main pages.
 
 Accepted product differences:
 
@@ -67,8 +83,8 @@ Accepted product differences:
    - Fix: removed every market-specific top asset bar override and moved the compact switcher styling to the shared `.market-page .market-tabs` component used by all three subpages.
 3. Final implementation pass:
    - Evidence: the three-column grid and `7px` spacing retain the old layout rhythm; all labels remain readable.
-   - Evidence: the top asset bar remains `72px` high with the existing `42px` wallet control, while the exact same `402 × 38px` market switcher and `34px` tab buttons render on buy, sell, and manage.
-   - Result: no remaining P0/P1/P2 findings.
+   - Historical evidence: the captured top asset bar was `72px` high with a `42px` wallet control, while the exact same `402 × 38px` market switcher and `34px` tab buttons rendered on buy, sell, and manage.
+   - Historical result: no remaining P0/P1/P2 market purchase-density findings in that captured shell.
 
 ## Implementation checklist
 
@@ -78,5 +94,6 @@ Accepted product differences:
 - [x] Keep purchase-specific card and filter density scoped to the buy page.
 - [x] Verify formatting, lint, TypeScript, and the web production build.
 - [x] Verify the rendered purchase layout and filter interaction.
+- [x] Verify the shared top asset bar and bottom navigation on all five main pages in Telegram.
 
-final result: passed
+final result: historical market purchase-density pass retained; the 2026-07-24 shared-shell geometry passed Telegram live verification on all five main pages
