@@ -11,6 +11,7 @@ export function initializeTelegram(): TelegramWebApp | null {
   if (!app) return null;
   app.ready();
   app.expand();
+  app.disableVerticalSwipes?.();
   syncTelegramLayout();
   if (!listening) {
     listening = true;

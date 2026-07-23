@@ -20,6 +20,7 @@
   --content-safe-bottom: var(--tg-content-safe-area-inset-bottom, 0px);
   --content-safe-left: var(--tg-content-safe-area-inset-left, 0px);
   --content-safe-right: var(--tg-content-safe-area-inset-right, 0px);
+  --shell-top-inset: max(var(--safe-top), var(--content-safe-top));
 }
 html[data-theme="light"] {
   --border: rgba(15, 23, 42, 0.12);
@@ -57,7 +58,7 @@ button {
 }
 .app-shell {
   min-height: var(--tg-viewport-stable-height, 100dvh);
-  padding-top: calc(var(--safe-top) + 66px);
+  padding-top: calc(var(--shell-top-inset) + 66px);
   padding-bottom: calc(var(--safe-bottom) + 78px);
   padding-left: var(--safe-left);
   padding-right: var(--safe-right);
@@ -92,9 +93,9 @@ html[data-theme="light"] .hero {
   top: 0;
   left: 0;
   right: 0;
-  height: calc(var(--safe-top) + 66px);
-  padding: calc(var(--safe-top) + 10px) calc(var(--safe-right) + 12px) 8px
-    calc(var(--safe-left) + 12px);
+  height: calc(var(--shell-top-inset) + 66px);
+  padding: calc(var(--shell-top-inset) + 10px) calc(var(--safe-right) + 12px)
+    8px calc(var(--safe-left) + 12px);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1940,7 +1941,7 @@ input:focus {
   --size-bottomnav: 64px;
   --size-avatar: 46px;
   min-height: var(--tg-viewport-stable-height, 100dvh);
-  padding-top: calc(var(--safe-top) + 72px);
+  padding-top: calc(var(--shell-top-inset) + 72px);
   padding-bottom: calc(var(--safe-bottom) + 84px);
   color: var(--sprout-ink);
   background:
@@ -2076,9 +2077,9 @@ input:focus {
   left: 50%;
   right: auto;
   width: min(100%, var(--app-width));
-  height: calc(var(--safe-top) + var(--size-topbar));
+  height: calc(var(--shell-top-inset) + var(--size-topbar));
   gap: 5px;
-  padding: calc(var(--safe-top) + 8px) 10px 6px;
+  padding: calc(var(--shell-top-inset) + 8px) 10px 6px;
   transform: translateX(-50%);
   border: 0;
   color: var(--sprout-ink);
@@ -5907,15 +5908,15 @@ body,
   width: min(100%, var(--app-width));
   margin: 0 auto;
   position: relative;
-  padding-top: calc(var(--safe-top) + var(--size-topbar));
+  padding-top: calc(var(--shell-top-inset) + var(--size-topbar));
   padding-bottom: calc(var(--safe-bottom) + 82px);
   background: #fff9f3;
   box-shadow: 0 0 44px rgba(48, 43, 37, 0.14);
 }
 .app-shell .topbar {
-  height: calc(var(--safe-top) + var(--size-topbar));
+  height: calc(var(--shell-top-inset) + var(--size-topbar));
   gap: 6px;
-  padding: calc(var(--safe-top) + 8px) 12px 6px;
+  padding: calc(var(--shell-top-inset) + 8px) 12px 6px;
   border: 0;
   background: transparent;
   box-shadow: none;
@@ -6021,7 +6022,7 @@ body,
 
 .app-shell .gacha-page {
   min-height: calc(
-    var(--tg-viewport-stable-height, 100dvh) - var(--safe-top) -
+    var(--tg-viewport-stable-height, 100dvh) - var(--shell-top-inset) -
       var(--safe-bottom) - var(--size-topbar) - 82px
   );
   padding-inline: 14px;
@@ -6393,7 +6394,7 @@ body,
   }
   .app-shell .gacha-showcase {
     min-height: calc(
-      var(--tg-viewport-stable-height, 100dvh) - var(--safe-top) -
+      var(--tg-viewport-stable-height, 100dvh) - var(--shell-top-inset) -
         var(--safe-bottom) - var(--size-topbar) - 106px
     );
     align-content: space-between;

@@ -27,6 +27,7 @@ interface TelegramWebApp {
   };
   ready(): void;
   expand(): void;
+  disableVerticalSwipes?(): void;
   requestFullscreen?(): void;
   close(): void;
   openInvoice(

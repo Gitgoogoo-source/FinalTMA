@@ -311,8 +311,8 @@
 
   .app-shell .market-page-sell .market-sell-workbench {
     --market-sell-workbench-height: calc(
-      min(var(--tg-viewport-stable-height, 100dvh), 100dvh) - var(--safe-top) -
-        var(--safe-bottom) - var(--size-topbar) - 136px
+      min(var(--tg-viewport-stable-height, 100dvh), 100dvh) -
+        var(--shell-top-inset) - var(--safe-bottom) - var(--size-topbar) - 136px
     );
     height: var(--market-sell-workbench-height);
     min-height: 0;
