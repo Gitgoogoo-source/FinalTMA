@@ -12,6 +12,6 @@
 
 只有目标 commit 与当前三条迁移完全兼容时才能回滚应用。不存在兼容 commit 时关闭 Telegram 入口和 Cron，修正原始定义、从空库重建并部署新的兼容 commit。用户明确宣布正式生产上线后，才切换为保留数据并只追加前向修复 migration。
 
-Monster Tamer 回滚必须选择同时包含 `/monster-tamer`、`/monster-tamer/` 路由和完整静态资源树的兼容 commit，禁止只回滚 launcher 或只回滚部分资源。回滚不执行数据库、API、账本、库存或 Catalog 操作，也不得清除用户浏览器中的 `MONSTER_TAMER_DATA`；部署后重新验证独立入口、完整玩法、资源 200、返回 `/game` 和业务零请求。
+Monster Tamer 回滚必须选择与当前 `monster_tamer` Schema、三条 API 契约、固定内容版本和 Phaser bridge 同时兼容的 commit，禁止只回滚入口、前端或 RPC。正式生产上线前按本项目规则修正原始 Schema 并从空开发库重建；上线后只能使用保留进度数据的前向修复。回滚后重新验证旧公开路径仍受登录门禁、跨设备进度可读取、逐回合战斗可恢复、返回 `/game` 正常且 TMA 资产无变化。
 
 Stars 已确认付款、已交付资产与 TON 链上事实不可通过代码回滚撤销。支付和 Mint 必须通过原订单、原操作和对账任务完成，不得创建替代订单、重复发放或伪造链上状态。

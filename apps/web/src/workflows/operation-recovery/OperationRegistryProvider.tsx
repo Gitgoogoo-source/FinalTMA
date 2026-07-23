@@ -75,6 +75,11 @@ const acknowledgedResultRouteIds = new Set<RecoverableRouteId>([
   "wheel.spin",
   "inventory.evolve",
 ]);
+const automaticallyPolledRouteIds = new Set<RecoverableRouteId>([
+  ...acknowledgedResultRouteIds,
+  "monster_tamer.battle",
+  "monster_tamer.checkpoint",
+]);
 const navigationLockedThroughResultRouteIds = new Set<RecoverableRouteId>([
   "gacha.open",
   "wheel.spin",
@@ -83,6 +88,8 @@ const externallyRenderedSuccessRouteIds = new Set<RecoverableRouteId>([
   "expedition.create",
   "mint.cancel",
   "mint.reserve",
+  "monster_tamer.battle",
+  "monster_tamer.checkpoint",
   "referral.bind",
   "referral.share_event",
   "topup.cancel_order",
@@ -120,6 +127,10 @@ export function OperationRegistryProvider({
   } | null>(null);
   const recoveringIds = useRef(new Set<string>());
   const acknowledgedIds = useRef(new Set<string>());
+  const notFoundResubmittedIds = useRef(new Set<string>());
+  const terminalWaiters = useRef(
+    new Map<string, Set<(result: unknown | null) => void>>(),
+  );
   const active = activeId ? operations[activeId] : undefined;
   const gachaResult = useMemo(() => {
     if (active?.routeId !== "gacha.open" || active.phase !== "succeeded")
@@ -184,9 +195,13 @@ export function OperationRegistryProvider({
   useEffect(
     () =>
       registerSensitiveStateResetter(() => {
+        for (const waiters of terminalWaiters.current.values())
+          for (const resolve of waiters) resolve(null);
+        terminalWaiters.current.clear();
         operationsRef.current = {};
         recoveringIds.current.clear();
         acknowledgedIds.current.clear();
+        notFoundResubmittedIds.current.clear();
         setOperations({});
         setActiveId(null);
         setAcknowledgingId(null);
@@ -246,12 +261,34 @@ export function OperationRegistryProvider({
     );
   }, []);
 
+  const waitForTerminal = useCallback(
+    (id: string) =>
+      new Promise<unknown | null>((resolve) => {
+        const waiters = terminalWaiters.current.get(id) ?? new Set();
+        waiters.add(resolve);
+        terminalWaiters.current.set(id, waiters);
+      }),
+    [],
+  );
+
+  const settleWaiters = useCallback((id: string, result: unknown | null) => {
+    const waiters = terminalWaiters.current.get(id);
+    if (!waiters) return;
+    terminalWaiters.current.delete(id);
+    for (const resolve of waiters) resolve(result);
+  }, []);
+
   const run: OperationRegistryValue["run"] = useCallback(
     async <Id extends RecoverableRouteId>(
       label: string,
       routeId: Id,
       input: RouteInput<Id>,
-      options?: { background?: boolean; dialog?: boolean },
+      options?: {
+        background?: boolean;
+        dialog?: boolean;
+        idempotencyKey?: string;
+        waitForRecovery?: boolean;
+      },
     ): Promise<RouteOutput<Id> | null> => {
       const sessionGeneration = getSession()?.generation;
       if (!sessionGeneration || getSession()?.accountStatus !== "normal")
@@ -259,7 +296,7 @@ export function OperationRegistryProvider({
       if (options?.background) {
         try {
           const response = await apiRequest(routeId, input, {
-            idempotencyKey: newIdempotencyKey(),
+            idempotencyKey: options.idempotencyKey ?? newIdempotencyKey(),
           });
           if (isCurrentNormalSession(sessionGeneration)) {
             if (response.status !== 202)
@@ -275,6 +312,20 @@ export function OperationRegistryProvider({
           return null;
         }
       }
+      const requestedId = options?.idempotencyKey;
+      const existingById = requestedId
+        ? operationsRef.current[requestedId]
+        : undefined;
+      if (existingById) {
+        if (
+          existingById.sessionGeneration !== sessionGeneration ||
+          existingById.routeId !== routeId ||
+          !sameOperationInput(existingById.input, input)
+        )
+          return null;
+        if (options?.dialog !== false) setActiveId(existingById.id);
+        return null;
+      }
       const existing = Object.values(operationsRef.current).find(
         (operation) =>
           operation.sessionGeneration === sessionGeneration &&
@@ -286,7 +337,7 @@ export function OperationRegistryProvider({
         if (options?.dialog !== false) setActiveId(existing.id);
         return null;
       }
-      const id = newIdempotencyKey();
+      const id = requestedId ?? newIdempotencyKey();
       const next = {
         ...operationsRef.current,
         [id]: {
@@ -338,7 +389,9 @@ export function OperationRegistryProvider({
           markOperationNewTemplates(routeId, response.data, markNew);
         haptic(pending ? "warning" : "success");
         await refreshRouteScopes(routeId).catch(() => undefined);
-        return response.data;
+        return pending && options?.waitForRecovery
+          ? ((await waitForTerminal(id)) as RouteOutput<Id> | null)
+          : response.data;
       } catch (cause) {
         if (!isCurrentNormalSession(sessionGeneration)) {
           if (getSession()?.accountStatus === "normal")
@@ -377,10 +430,12 @@ export function OperationRegistryProvider({
           });
         haptic("error");
         if (!unknown) await refreshRouteScopes(routeId).catch(() => undefined);
-        return null;
+        return unknown && options?.waitForRecovery
+          ? ((await waitForTerminal(id)) as RouteOutput<Id> | null)
+          : null;
       }
     },
-    [markNew, remove, update],
+    [markNew, remove, update, waitForTerminal],
   );
 
   const hydrate = useCallback(
@@ -404,6 +459,7 @@ export function OperationRegistryProvider({
         ) {
           delete next[operation.operation_id];
           completedOutsideRegistry.add(operation.operation_id);
+          settleWaiters(operation.operation_id, operation.result);
           markOperationNewTemplates(
             operation.use_case,
             operation.result,
@@ -431,6 +487,8 @@ export function OperationRegistryProvider({
             operation.result,
             markNew,
           );
+        if (operation.status === "failed")
+          settleWaiters(operation.operation_id, null);
       }
       operationsRef.current = next;
       setOperations(next);
@@ -440,7 +498,7 @@ export function OperationRegistryProvider({
           : (current ?? firstId),
       );
     },
-    [markNew],
+    [markNew, settleWaiters],
   );
 
   const recover = useCallback(
@@ -458,8 +516,19 @@ export function OperationRegistryProvider({
         });
         if (operation.sessionGeneration !== getSession()?.generation) return;
         const recovered = parseRecoveredOperation(response.data);
+        if (
+          recovered.operation_id !== operation.id ||
+          recovered.use_case !== operation.routeId
+        ) {
+          update(operation.id, {
+            phase: "unknown",
+            message: "原操作身份不匹配，拒绝接收并继续查询",
+          });
+          return;
+        }
         if (recovered.acknowledged_at !== null) {
           remove(operation.id);
+          settleWaiters(operation.id, null);
           return;
         }
         if (recovered.status === "succeeded") {
@@ -478,6 +547,7 @@ export function OperationRegistryProvider({
             recovered.result,
             markNew,
           );
+          settleWaiters(operation.id, recovered.result);
           if (
             !externallyRenderedSuccessRouteIds.has(operation.routeId) &&
             acknowledgedResultRouteIds.has(operation.routeId)
@@ -490,15 +560,19 @@ export function OperationRegistryProvider({
             recovered.error_code && isErrorCode(recovered.error_code)
               ? errorDefinition(recovered.error_code)
               : null;
-          update(operation.id, {
-            phase: "failed",
-            message: definition?.message ?? "原操作已确认失败",
-            result: recovered.result,
-            errorCode: recovered.error_code,
-            persistent: true,
-          });
+          if (externallyRenderedSuccessRouteIds.has(operation.routeId))
+            remove(operation.id);
+          else
+            update(operation.id, {
+              phase: "failed",
+              message: definition?.message ?? "原操作已确认失败",
+              result: recovered.result,
+              errorCode: recovered.error_code,
+              persistent: true,
+            });
           if (acknowledgedResultRouteIds.has(operation.routeId))
             setActiveId((current) => current ?? operation.id);
+          settleWaiters(operation.id, null);
           await refreshRouteScopes(operation.routeId);
         } else {
           update(operation.id, {
@@ -510,6 +584,94 @@ export function OperationRegistryProvider({
           });
         }
       } catch (cause) {
+        if (
+          cause instanceof ApiFailure &&
+          cause.code === "OPERATION_NOT_FOUND" &&
+          operation.input !== null &&
+          !notFoundResubmittedIds.current.has(operation.id)
+        ) {
+          notFoundResubmittedIds.current.add(operation.id);
+          update(operation.id, {
+            phase: "pending",
+            message: "原操作尚未入库，正在使用同一操作编号单次重提",
+          });
+          try {
+            const response = await apiRequest(
+              operation.routeId,
+              operation.input as never,
+              { idempotencyKey: operation.id },
+            );
+            if (operation.sessionGeneration !== getSession()?.generation)
+              return;
+            if (response.status === 202) {
+              update(operation.id, {
+                phase: "pending",
+                message: "服务器已接收，最终结果仍在确认",
+                persistent: true,
+              });
+            } else {
+              if (externallyRenderedSuccessRouteIds.has(operation.routeId))
+                remove(operation.id);
+              else
+                update(operation.id, {
+                  phase: "succeeded",
+                  message: confirmedMessage(operation.routeId, response.data),
+                  result: response.data,
+                  errorCode: null,
+                  persistent: true,
+                });
+              markOperationNewTemplates(
+                operation.routeId,
+                response.data,
+                markNew,
+              );
+              settleWaiters(operation.id, response.data);
+              haptic("success");
+              await refreshRouteScopes(operation.routeId);
+            }
+          } catch (resubmitCause) {
+            if (operation.sessionGeneration !== getSession()?.generation)
+              return;
+            const failure =
+              resubmitCause instanceof ApiFailure
+                ? resubmitCause
+                : new ApiFailure(
+                    0,
+                    "INTERNAL_ERROR",
+                    "操作结果暂时无法确认",
+                    true,
+                    operation.id,
+                  );
+            const unknown = [
+              "NETWORK_ERROR",
+              "OPERATION_RESULT_INVALID",
+              "RESPONSE_INVALID",
+            ].includes(failure.code);
+            if (unknown)
+              update(operation.id, {
+                phase: "unknown",
+                message: "单次重提结果未知，继续查询同一原操作",
+                errorCode: failure.code,
+                persistent: true,
+              });
+            else {
+              if (externallyRenderedSuccessRouteIds.has(operation.routeId))
+                remove(operation.id);
+              else
+                update(operation.id, {
+                  phase: "failed",
+                  message: failure.message,
+                  errorCode: failure.code,
+                  persistent: Boolean(failure.operationId),
+                });
+              settleWaiters(operation.id, null);
+              await refreshRouteScopes(operation.routeId).catch(
+                () => undefined,
+              );
+            }
+          }
+          return;
+        }
         update(operation.id, {
           phase: "unknown",
           message:
@@ -519,17 +681,17 @@ export function OperationRegistryProvider({
         recoveringIds.current.delete(operation.id);
       }
     },
-    [markNew, remove, update],
+    [markNew, remove, settleWaiters, update],
   );
 
   const pollingOperationId =
     active &&
-    acknowledgedResultRouteIds.has(active.routeId) &&
+    automaticallyPolledRouteIds.has(active.routeId) &&
     ["pending", "unknown"].includes(active.phase)
       ? active.id
       : (Object.values(operations).find(
           (operation) =>
-            acknowledgedResultRouteIds.has(operation.routeId) &&
+            automaticallyPolledRouteIds.has(operation.routeId) &&
             ["pending", "unknown"].includes(operation.phase),
         )?.id ?? null);
 
@@ -1051,6 +1213,10 @@ function isCurrentNormalSession(generation: string): boolean {
   return (
     session?.generation === generation && session.accountStatus === "normal"
   );
+}
+
+function sameOperationInput(left: unknown, right: unknown): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
 }
 
 function gachaReferencePath(input: unknown): string {

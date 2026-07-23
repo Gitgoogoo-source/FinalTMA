@@ -46,6 +46,10 @@ export function AppRouter(): ReactNode {
           <Route index element={<GachaPage />} />
           <Route path="market" element={<MarketPage />} />
           <Route path="game" element={<GamePage />} />
+          <Route
+            path="monster-tamer"
+            element={<Navigate to="/game" replace />}
+          />
           <Route path="inventory" element={<InventoryPage />} />
           <Route path="tasks" element={<TasksPage />} />
         </Route>

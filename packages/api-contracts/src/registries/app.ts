@@ -14,6 +14,7 @@ import { identityRoutes } from "../domains/identity/routes.ts";
 import { inventoryRoutes } from "../domains/inventory/routes.ts";
 import { marketRoutes } from "../domains/market/routes.ts";
 import { mintRoutes } from "../domains/mint/routes.ts";
+import { monsterTamerRoutes } from "../domains/monster-tamer/routes.ts";
 import { operationRoutes } from "../domains/operations/routes.ts";
 import { paymentSupportRoutes } from "../domains/payment-support/routes.ts";
 import { referralRoutes } from "../domains/referral/routes.ts";
@@ -38,6 +39,7 @@ export const routes = [
   ...albumRoutes,
   ...walletRoutes,
   ...mintRoutes,
+  ...monsterTamerRoutes,
   ...operationRoutes,
   ...paymentSupportRoutes,
 ] as const;

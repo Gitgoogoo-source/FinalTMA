@@ -20,13 +20,15 @@
 
 确认 Mint、交易 hash、接收地址、链上 NFT 地址和 `job_runs`。手工触发 `reconcile-mints` 前先确认没有 10 分钟内的活动租约；并发触发应记录 `skipped`。链上事实只能由对账 RPC 写回。
 
-## Monster Tamer 静态游戏
+## Monster Tamer 嵌入式游戏
 
-`/monster-tamer` 或 `/monster-tamer/` 返回 SPA、404 或资源加载失败时，先核对 Vercel 重写顺序、当前 commit 的 `apps/web/public/monster-tamer` 文件清单和大小写敏感资源路径，再部署包含完整静态树的修正 commit。不得通过修改 FinalTMA API、数据库、session、Catalog 或用户资产恢复游戏。
+入口无法打开时先核对主应用会话、账号门禁、React 覆盖层和 Phaser 延迟 chunk；`/monster-tamer` 与 `/monster-tamer/` 应进入主应用而不是独立文档。禁止临时恢复旧公开 HTML、本地怪兽、本地存档或绕过认证。
 
-存档无法读取时只检查浏览器对 `MONSTER_TAMER_DATA` 的可用性和内容解析日志，不得读取、迁移或清除其他 FinalTMA 存储；恢复部署不得主动删除该键。发现静态游戏请求 `/api/*`、Supabase、Catalog、FinalTMA token 或业务用户数据时立即停止该版本发布并恢复符合独立边界的静态 commit。
+bootstrap 或进度无法读取时按 `request_id` 核对 session、`monster_tamer.player_progress`、权威区域与 `resume_position`、可用藏品投影和契约输出。版本、路径、节点或遭遇位置冲突必须刷新权威快照并让 Phaser 回到服务端坐标；不得直接降低版本、手写进度或绕过固定 `walkable` 资料。活动战斗恢复失败时查询原 `battle_id` 和原 `operation_id`，不能另开一场代替未知结果。
 
-发现图片没有直接授权证据、许可证或第三方声明缺失时停止该版本发布，补齐项目原创替换和声明后重新执行完整玩法与静态资源验收；不得以隐藏文件、关闭检查或删除玩法绕过。
+藏品在营地、区域进入或战斗开始前失效时，固定回营刷新并重新组队，不得恢复旧 available 快照。目录图片故障只恢复同模板正式路径，不能复制另一模板或本地占位怪兽。
+
+任何事故处理中都不得修改 holdings、reservations、余额、账本、远征、市场、进化、分解、Mint、任务、邀请、VIP 或支付来“修复”游戏。若发现 Phaser 直接持有 token/API、客户端提交伤害或胜负、浏览器持久化进度或公开免登录入口，立即停止该版本并恢复到满足 ADR-011 的兼容提交。
 
 ## 不变量
 

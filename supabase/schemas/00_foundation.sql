@@ -18,4 +18,5 @@ create schema if not exists album;
 create schema if not exists onchain;
 create schema if not exists operations;
 create schema if not exists risk;
+create schema if not exists monster_tamer;
 create schema if not exists api;

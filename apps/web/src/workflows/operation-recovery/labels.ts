@@ -13,6 +13,8 @@ const labels: Partial<Record<RecoverableRouteId, string>> = {
   "mint.cancel": "正在取消 Mint",
   "mint.reserve": "正在锁定藏品并签发 Mint 凭证",
   "mint.submit": "正在等待链上确认",
+  "monster_tamer.battle": "正在裁决战斗回合",
+  "monster_tamer.checkpoint": "正在保存探索进度",
   "referral.bind": "正在确认邀请关系",
   "referral.share_event": "正在记录邀请动作",
   "tasks.check_in": "正在领取签到奖励",

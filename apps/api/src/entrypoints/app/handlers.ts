@@ -10,6 +10,7 @@ import { identityHandlers } from "../../domains/identity/routes.ts";
 import { inventoryHandlers } from "../../domains/inventory/routes.ts";
 import { marketHandlers } from "../../domains/market/routes.ts";
 import { mintHandlers } from "../../domains/mint/routes.ts";
+import { monsterTamerHandlers } from "../../domains/monster-tamer/routes.ts";
 import { referralHandlers } from "../../domains/referral/routes.ts";
 import { taskHandlers } from "../../domains/tasks/routes.ts";
 import { topupHandlers } from "../../domains/topup/routes.ts";
@@ -39,6 +40,7 @@ export const appHandlers = {
   ...albumHandlers,
   ...walletHandlers,
   ...mintHandlers,
+  ...monsterTamerHandlers,
   ...operationRecoveryHandlers,
   ...paymentSupportHandlers,
 } satisfies Record<RouteId, RouteHandler>;

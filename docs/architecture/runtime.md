@@ -10,13 +10,13 @@ Telegram WebApp 在 `createRoot().render()` 前按 `ready → expand → disable
 
 正式藏品图片由仓库内 210 张非公开母版生成 420 张版本化 WebP。列表只读取 256×256 缩略图，主视觉和 NFT 元数据读取 768×768 详情图；浏览器不通过 Function 或 Supabase 读取图片二进制。
 
-## Monster Tamer 静态子应用
+## Monster Tamer 嵌入式运行时
 
-`apps/web/src/domains/monster-tamer` 只拥有游戏页启动卡片。卡片通过普通链接打开 `/monster-tamer/`，游戏页组合顺序固定为 `Monster Tamer → Expedition → Wheel`；launcher 不调用 API，也不导入其他业务领域。
+`apps/web/src/domains/monster-tamer` 在游戏页首位渲染启动卡片，并在当前 React 树内打开 native modal 全屏覆盖层。游戏页组合顺序固定为 `Monster Tamer → Expedition → Wheel`；关闭覆盖层只卸载游戏运行时，不重建远征或转盘。
 
-`apps/web/public/monster-tamer` 是独立 HTML、CSS、JavaScript、数据与资源树。Phaser 3.60.0、Web Font Loader 1.6.28 和 Tweakpane 4.0.3 从自身 `vendor` 目录加载；运行时不进入 React bundle。唯一持久化键为 `MONSTER_TAMER_DATA`，不跨设备同步，不写入 FinalTMA session、查询缓存、API、数据库或 Catalog 资产。
+覆盖层先通过统一 API client 获取已验证的 bootstrap，再延迟加载 Phaser 3.60.0。React 负责准备页、真实藏品、队伍、HUD、小地图、背包、错误状态、Telegram BackButton 和 API；Phaser 负责八张 64px 网格 Tilemap、移动、碰撞、可见敌人、相机与战斗表现。二者只通过带类型的 bridge 交换服务端快照和动作意图。Phaser 不接收 access token、session、用户 ID、API client 或 Supabase client。
 
-静态子应用公开可访问。Telegram WebApp SDK 负责 ready、expand、原生 fullscreen、稳定视口、设备/内容安全区、垂直滑动保护和 BackButton；原生全屏不可用时回退到已展开稳定视口，不存在 SDK 时仍使用普通 `/game` 返回链接运行。Phaser 画布占满稳定视口，逻辑高度随宽高比调整；世界场景把地图点击或拖动转换为 64px 网格目标并逐格移动，到达目标或遇到碰撞后停止。A、B、世界菜单保留为安全区内紧凑浮层，其他菜单使用点击或滑动选择；失焦、隐藏、Telegram 停用和 pointer cancel 均清空移动目标与输入。
+每个区域按进入时创建、离开时销毁，目录缩略图与详情图只按当前地图和战斗按需加载。打开 React 面板、切到后台、会话 generation 变化或覆盖层关闭时立即停止世界输入；卸载时销毁 Phaser、监听器、动态纹理和音频。游戏进度不写浏览器持久存储，跨设备恢复只读取服务端权威进度。
 
 ## Functions
 
@@ -28,4 +28,4 @@ Telegram WebApp 在 `createRoot().render()` 前按 `ready → expand → disable
 
 ## 部署
 
-Web、Monster Tamer 静态子应用与三个 Functions 位于同一 Vercel Pro Project，Functions 运行时为 Node.js 24。`/monster-tamer` 与 `/monster-tamer/` 在 SPA catch-all 前重写到独立静态文档。版本化藏品静态资源使用一年 immutable 缓存，已发布目录不可覆盖。普通构建只构建 API 契约、API 与 Web，并原样复制 Monster Tamer 静态树；`contracts/ton` 使用独立 `pnpm chain:build` 门禁。真实开发环境与未来生产环境使用同一 Git commit 和迁移序列。
+Web、嵌入式 Monster Tamer 与三个 Functions 位于同一 Vercel Pro Project，Functions 运行时为 Node.js 24。`/monster-tamer` 与 `/monster-tamer/` 由 SPA catch-all 接管并在统一账号门禁后回到 `/game`，仓库不发布独立游戏文档。版本化藏品静态资源使用一年 immutable 缓存，已发布目录不可覆盖。普通构建构建 API 契约、API 与包含 Phaser 延迟 chunk 的 Web；`contracts/ton` 使用独立 `pnpm chain:build` 门禁。真实开发环境与未来生产环境使用同一 Git commit 和迁移序列。

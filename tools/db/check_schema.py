@@ -26,6 +26,7 @@ EXPECTED_SCHEMA_NAMES = {
     "41_expedition.sql",
     "42_wheel.sql",
     "43_evolution.sql",
+    "44_monster_tamer.sql",
     "50_market.sql",
     "60_payments.sql",
     "61_vip.sql",

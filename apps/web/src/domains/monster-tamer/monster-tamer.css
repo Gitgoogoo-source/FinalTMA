@@ -3,7 +3,11 @@
   gap: 14px;
   overflow: hidden;
   background:
-    radial-gradient(circle at 100% 0, rgba(90, 180, 73, 0.18), transparent 42%),
+    radial-gradient(
+      circle at 100% 0,
+      rgba(77, 180, 109, 0.22),
+      transparent 42%
+    ),
     rgba(255, 255, 255, 0.78);
 }
 
@@ -19,12 +23,16 @@
   justify-content: center;
   gap: 8px;
   min-height: 44px;
+  border: 0;
   border-radius: 14px;
   color: #fff;
-  font-weight: 800;
-  text-decoration: none;
-  background: #4f9f42;
-  box-shadow: 0 8px 18px rgba(79, 159, 66, 0.2);
+  font: inherit;
+  font-weight: 850;
+  background: linear-gradient(180deg, #62bc63, #369348);
+  box-shadow:
+    0 10px 22px rgba(55, 147, 72, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.38);
+  cursor: pointer;
 }
 
 .monster-tamer-launch > svg {
@@ -34,6 +42,1934 @@
 }
 
 .monster-tamer-launch:focus-visible {
-  outline: 3px solid rgba(79, 159, 66, 0.3);
+  outline: 3px solid rgba(79, 159, 66, 0.32);
   outline-offset: 3px;
+}
+
+.monster-tamer-overlay {
+  --monster-bg: #0b1720;
+  --monster-panel: rgba(17, 35, 42, 0.94);
+  --monster-panel-solid: #12242b;
+  --monster-border: rgba(220, 244, 218, 0.17);
+  --monster-text: #f5faee;
+  --monster-muted: #a9bcb1;
+  --monster-green: #9de56e;
+  --monster-gold: #f5d075;
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  width: 100%;
+  max-width: none;
+  height: var(--tg-viewport-stable-height, 100dvh);
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  color: var(--monster-text);
+  background: var(--monster-bg);
+  overflow: hidden;
+  overscroll-behavior: none;
+  isolation: isolate;
+}
+
+.monster-tamer-overlay[open] {
+  display: block;
+}
+
+.monster-tamer-overlay::backdrop {
+  background: #071015;
+}
+
+.monster-tamer-overlay button {
+  color: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.monster-tamer-overlay button:focus-visible {
+  outline: 3px solid rgba(157, 229, 110, 0.6);
+  outline-offset: 2px;
+}
+
+.monster-tamer-overlay .button {
+  min-height: 46px;
+  border: 1px solid rgba(188, 247, 143, 0.34);
+  border-radius: 14px;
+  color: #102117;
+  background: linear-gradient(180deg, #b9f489, #78d466);
+  box-shadow:
+    0 10px 24px rgba(70, 171, 85, 0.26),
+    inset 0 1px 0 rgba(255, 255, 255, 0.68);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.monster-tamer-overlay .button.secondary {
+  border-color: var(--monster-border);
+  color: var(--monster-text);
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: none;
+}
+
+.monster-tamer-overlay .button:disabled {
+  opacity: 0.42;
+}
+
+.monster-tamer-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.monster-tamer-overlay-state {
+  position: relative;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 13px;
+  width: 100%;
+  min-height: 100%;
+  padding: calc(max(var(--safe-top), var(--content-safe-top)) + 28px)
+    calc(max(var(--safe-right), var(--content-safe-right)) + 24px)
+    calc(max(var(--safe-bottom), var(--content-safe-bottom)) + 28px)
+    calc(max(var(--safe-left), var(--content-safe-left)) + 24px);
+  text-align: center;
+  background:
+    radial-gradient(
+      circle at 50% 30%,
+      rgba(81, 177, 105, 0.2),
+      transparent 30%
+    ),
+    linear-gradient(155deg, #0b161e, #10262a 65%, #0b171d);
+}
+
+.monster-tamer-state-close,
+.monster-tamer-preparation-close,
+.monster-tamer-close {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--monster-border);
+  border-radius: 14px;
+  background: rgba(7, 18, 22, 0.76);
+  backdrop-filter: blur(14px);
+  cursor: pointer;
+}
+
+.monster-tamer-state-close {
+  position: absolute;
+  top: calc(max(var(--safe-top), var(--content-safe-top)) + 12px);
+  right: calc(max(var(--safe-right), var(--content-safe-right)) + 12px);
+}
+
+.monster-tamer-state-close svg,
+.monster-tamer-preparation-close svg,
+.monster-tamer-close svg {
+  width: 21px;
+  height: 21px;
+}
+
+.monster-tamer-state-mark {
+  display: grid;
+  place-items: center;
+  width: 82px;
+  height: 82px;
+  border: 1px solid rgba(176, 238, 139, 0.3);
+  border-radius: 28px;
+  color: var(--monster-green);
+  background:
+    radial-gradient(
+      circle at 30% 20%,
+      rgba(255, 255, 255, 0.18),
+      transparent 35%
+    ),
+    rgba(104, 199, 101, 0.14);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.24);
+}
+
+.monster-tamer-state-mark svg {
+  width: 34px;
+  height: 34px;
+}
+
+.monster-tamer-overlay-state > span,
+.monster-tamer-camp-hero span,
+.monster-tamer-team-builder header span,
+.monster-tamer-region-picker header span,
+.monster-tamer-drawer header span,
+.monster-tamer-battle-controls header span {
+  color: var(--monster-green);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+}
+
+.monster-tamer-overlay-state h2 {
+  margin: 0;
+  font-size: clamp(24px, 6vw, 38px);
+  line-height: 1.05;
+}
+
+.monster-tamer-overlay-state p {
+  max-width: 440px;
+  margin: 0 0 5px;
+  color: var(--monster-muted);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.monster-tamer-empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+.monster-tamer-preparation-screen {
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  background:
+    radial-gradient(
+      circle at 8% 0%,
+      rgba(157, 229, 110, 0.22),
+      transparent 28%
+    ),
+    radial-gradient(
+      circle at 100% 25%,
+      rgba(99, 181, 201, 0.18),
+      transparent 25%
+    ),
+    linear-gradient(
+      165deg,
+      rgba(12, 24, 32, 0.62) 0%,
+      rgba(19, 43, 45, 0.55) 48%,
+      rgba(10, 23, 30, 0.72) 100%
+    );
+  backdrop-filter: blur(1.5px) saturate(0.9);
+}
+
+.monster-tamer-preparation-screen::-webkit-scrollbar,
+.monster-tamer-drawer::-webkit-scrollbar {
+  display: none;
+}
+
+.monster-tamer-preparation-close {
+  position: fixed;
+  z-index: 5;
+  top: calc(max(var(--safe-top), var(--content-safe-top)) + 12px);
+  right: calc(max(var(--safe-right), var(--content-safe-right)) + 12px);
+}
+
+.monster-tamer-camp {
+  display: grid;
+  gap: 18px;
+  width: min(1180px, 100%);
+  min-height: 100%;
+  margin: 0 auto;
+  padding: calc(max(var(--safe-top), var(--content-safe-top)) + 24px)
+    calc(max(var(--safe-right), var(--content-safe-right)) + 18px)
+    calc(max(var(--safe-bottom), var(--content-safe-bottom)) + 34px)
+    calc(max(var(--safe-left), var(--content-safe-left)) + 18px);
+}
+
+.monster-tamer-camp-hero {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  min-height: 142px;
+  padding: 24px 76px 24px 24px;
+  border: 1px solid var(--monster-border);
+  border-radius: 28px;
+  background:
+    linear-gradient(105deg, rgba(30, 67, 58, 0.96), rgba(16, 41, 43, 0.88)),
+    var(--monster-panel);
+  box-shadow: 0 20px 50px rgba(2, 10, 13, 0.3);
+}
+
+.monster-tamer-camp-mark {
+  display: grid;
+  place-items: center;
+  width: 78px;
+  height: 78px;
+  border: 1px solid rgba(191, 247, 148, 0.28);
+  border-radius: 25px;
+  color: var(--monster-green);
+  background: rgba(186, 239, 143, 0.1);
+}
+
+.monster-tamer-camp-mark svg {
+  width: 38px;
+  height: 38px;
+}
+
+.monster-tamer-camp-hero h2 {
+  margin: 4px 0 7px;
+  font-size: clamp(26px, 4vw, 42px);
+  line-height: 1;
+}
+
+.monster-tamer-camp-hero p {
+  margin: 0;
+  color: var(--monster-muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.monster-tamer-camp-recovery {
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: center;
+  gap: 3px 8px;
+  min-width: 180px;
+  padding: 13px 15px;
+  border: 1px solid rgba(176, 237, 141, 0.2);
+  border-radius: 17px;
+  background: rgba(5, 20, 19, 0.32);
+}
+
+.monster-tamer-camp-recovery svg {
+  grid-row: 1 / 3;
+  width: 25px;
+  height: 25px;
+  color: #99e88b;
+}
+
+.monster-tamer-camp-recovery span {
+  color: var(--monster-muted);
+  font-size: 10px;
+  letter-spacing: 0;
+}
+
+.monster-tamer-camp-recovery strong {
+  font-size: 12px;
+}
+
+.monster-tamer-inline-alert,
+.monster-tamer-global-alert {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 11px 13px;
+  border: 1px solid rgba(255, 199, 98, 0.32);
+  border-radius: 14px;
+  color: #ffdda0;
+  background: rgba(95, 60, 12, 0.58);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.monster-tamer-completion-banner {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  align-items: center;
+  gap: 11px;
+  padding: 12px 15px;
+  border: 1px solid rgba(245, 208, 117, 0.32);
+  border-radius: 17px;
+  color: var(--monster-gold);
+  background:
+    linear-gradient(90deg, rgba(245, 208, 117, 0.12), transparent),
+    var(--monster-panel);
+}
+
+.monster-tamer-completion-banner > svg {
+  width: 42px;
+  height: 42px;
+  padding: 10px;
+  border-radius: 13px;
+  background: rgba(245, 208, 117, 0.11);
+}
+
+.monster-tamer-completion-banner > div {
+  display: grid;
+  gap: 3px;
+}
+
+.monster-tamer-completion-banner strong {
+  font-size: 12px;
+}
+
+.monster-tamer-completion-banner span {
+  color: var(--monster-muted);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.monster-tamer-global-alert {
+  position: sticky;
+  z-index: 6;
+  top: calc(max(var(--safe-top), var(--content-safe-top)) + 10px);
+  width: min(720px, calc(100% - 100px));
+  margin: 0 auto -6px;
+  backdrop-filter: blur(15px);
+}
+
+.monster-tamer-global-alert svg {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+}
+
+.monster-tamer-global-alert span {
+  flex: 1;
+}
+
+.monster-tamer-global-alert button {
+  flex: 0 0 auto;
+  min-height: 34px;
+  padding: 5px 10px;
+  border: 1px solid rgba(255, 224, 166, 0.25);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.monster-tamer-team-builder,
+.monster-tamer-region-picker {
+  display: grid;
+  gap: 15px;
+  padding: 20px;
+  border: 1px solid var(--monster-border);
+  border-radius: 24px;
+  background: var(--monster-panel);
+  box-shadow: 0 16px 40px rgba(2, 10, 13, 0.23);
+}
+
+.monster-tamer-team-builder > header,
+.monster-tamer-region-picker > header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.monster-tamer-team-builder h3,
+.monster-tamer-region-picker h3 {
+  margin: 3px 0 0;
+  font-size: 20px;
+}
+
+.monster-tamer-team-builder header > strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--monster-green);
+  font-size: 13px;
+}
+
+.monster-tamer-team-builder header > strong svg {
+  width: 17px;
+  height: 17px;
+}
+
+.monster-tamer-region-picker header small {
+  color: var(--monster-muted);
+  font-size: 11px;
+}
+
+.monster-tamer-collection-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.monster-tamer-collection-choice {
+  --element: #9de56e;
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr);
+  align-items: stretch;
+  min-width: 0;
+  min-height: 104px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--monster-border);
+  border-radius: 18px;
+  color: var(--monster-text);
+  text-align: left;
+  background: rgba(255, 255, 255, 0.045);
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    transform 160ms ease;
+}
+
+.monster-tamer-collection-choice:not(:disabled):active {
+  transform: scale(0.985);
+}
+
+.monster-tamer-collection-choice.selected {
+  border-color: color-mix(in srgb, var(--element) 72%, white);
+  background: color-mix(
+    in srgb,
+    var(--element) 12%,
+    var(--monster-panel-solid)
+  );
+  box-shadow: inset 0 0 0 1px
+    color-mix(in srgb, var(--element) 18%, transparent);
+}
+
+.monster-tamer-collection-choice:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.monster-tamer-collection-choice.selected:disabled {
+  opacity: 0.85;
+}
+
+.monster-tamer-collection-art {
+  position: relative;
+  display: grid;
+  place-items: end center;
+  min-width: 0;
+  padding: 7px;
+  background:
+    radial-gradient(
+      circle,
+      color-mix(in srgb, var(--element) 22%, transparent),
+      transparent 67%
+    ),
+    rgba(0, 0, 0, 0.15);
+}
+
+.monster-tamer-collection-art .catalog-image,
+.monster-tamer-collection-art .image-missing {
+  width: 100%;
+  height: 76px;
+  object-fit: contain;
+}
+
+.monster-tamer-collection-art > i {
+  position: absolute;
+  left: 7px;
+  bottom: 7px;
+  min-width: 22px;
+  padding: 3px 6px;
+  border-radius: 999px;
+  color: #0e1e17;
+  background: var(--element);
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 900;
+  text-align: center;
+}
+
+.monster-tamer-collection-art > b {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  color: #102116;
+  background: var(--element);
+}
+
+.monster-tamer-collection-art > b svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 3;
+}
+
+.monster-tamer-collection-copy {
+  display: grid;
+  align-content: center;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px;
+}
+
+.monster-tamer-collection-copy strong {
+  overflow: hidden;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.monster-tamer-collection-copy small {
+  color: var(--element);
+  font-size: 10px;
+}
+
+.monster-tamer-collection-copy > span {
+  display: grid;
+  gap: 2px;
+  color: var(--monster-muted);
+  font-size: 10px;
+}
+
+.monster-tamer-collection-copy em {
+  color: #dbe7de;
+  font-style: normal;
+}
+
+.monster-tamer-team-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding-top: 13px;
+  border-top: 1px solid var(--monster-border);
+}
+
+.monster-tamer-selected-team {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  min-width: 0;
+  color: var(--monster-muted);
+  font-size: 11px;
+}
+
+.monster-tamer-selected-team > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 4px 9px 4px 5px;
+  border: 1px solid var(--monster-border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.monster-tamer-selected-team i {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  color: #152016;
+  background: var(--monster-green);
+  font-style: normal;
+  font-weight: 900;
+}
+
+.monster-tamer-confirm-team {
+  flex: 0 0 auto;
+}
+
+.monster-tamer-region-picker > div {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.monster-tamer-region-card {
+  --element: #a7b9ad;
+  position: relative;
+  display: grid;
+  gap: 4px;
+  min-height: 88px;
+  padding: 15px 42px 15px 15px;
+  overflow: hidden;
+  border: 1px solid
+    color-mix(in srgb, var(--element) 30%, var(--monster-border));
+  border-radius: 17px;
+  color: var(--monster-text);
+  text-align: left;
+  background:
+    radial-gradient(
+      circle at 100% 20%,
+      color-mix(in srgb, var(--element) 21%, transparent),
+      transparent 43%
+    ),
+    rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+}
+
+.monster-tamer-region-card > span {
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.monster-tamer-region-card > small {
+  color: var(--element);
+  font-size: 10px;
+}
+
+.monster-tamer-region-card > svg {
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  width: 18px;
+  height: 18px;
+  color: var(--element);
+  transform: translateY(-50%);
+}
+
+.monster-tamer-region-card:disabled {
+  opacity: 0.43;
+  cursor: not-allowed;
+}
+
+.element-water {
+  --element: #6bd6ef;
+}
+
+.element-fire {
+  --element: #ff896f;
+}
+
+.element-wood {
+  --element: #9de56e;
+}
+
+.element-wind {
+  --element: #b7e8d2;
+}
+
+.element-lightning {
+  --element: #ffe066;
+}
+
+.element-neutral {
+  --element: #a7b9ad;
+}
+
+.monster-tamer-world-screen {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(
+      circle at 50% 30%,
+      rgba(101, 169, 125, 0.14),
+      transparent 32%
+    ),
+    #0b171e;
+  touch-action: none;
+}
+
+.monster-tamer-world-viewport,
+.monster-tamer-game-host {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.monster-tamer-world-viewport canvas,
+.monster-tamer-game-host canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover;
+  image-rendering: pixelated;
+  touch-action: none;
+}
+
+.monster-tamer-runtime-state {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
+  padding: 24px;
+  color: var(--monster-muted);
+  text-align: center;
+  background:
+    radial-gradient(circle, rgba(73, 159, 92, 0.18), transparent 33%), #0b171e;
+}
+
+.monster-tamer-game-notice {
+  position: absolute;
+  z-index: 18;
+  top: calc(max(var(--safe-top), var(--content-safe-top)) + 114px);
+  left: 50%;
+  max-width: min(420px, calc(100% - 32px));
+  padding: 8px 12px;
+  border: 1px solid var(--monster-border);
+  border-radius: 999px;
+  color: var(--monster-text);
+  background: rgba(5, 16, 20, 0.82);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.22);
+  font-size: 10px;
+  text-align: center;
+  backdrop-filter: blur(12px);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.monster-tamer-runtime-state svg {
+  width: 28px;
+  height: 28px;
+  color: var(--monster-green);
+}
+
+.monster-tamer-runtime-state button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 42px;
+  padding: 8px 13px;
+  border: 1px solid rgba(188, 247, 143, 0.32);
+  border-radius: 13px;
+  color: #112017;
+  background: var(--monster-green);
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.monster-tamer-runtime-state button svg {
+  width: 16px;
+  height: 16px;
+  color: currentColor;
+}
+
+.monster-tamer-hud {
+  position: absolute;
+  z-index: 20;
+  inset: 0;
+  padding: calc(max(var(--safe-top), var(--content-safe-top)) + 10px)
+    calc(max(var(--safe-right), var(--content-safe-right)) + 10px)
+    calc(max(var(--safe-bottom), var(--content-safe-bottom)) + 10px)
+    calc(max(var(--safe-left), var(--content-safe-left)) + 10px);
+  pointer-events: none;
+}
+
+.monster-tamer-party-hud {
+  position: absolute;
+  top: calc(max(var(--safe-top), var(--content-safe-top)) + 10px);
+  left: calc(max(var(--safe-left), var(--content-safe-left)) + 10px);
+  display: grid;
+  gap: 6px;
+  width: min(220px, 34vw);
+  pointer-events: none;
+}
+
+.monster-tamer-party-member {
+  --element: #9de56e;
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  min-height: 54px;
+  padding: 4px 9px 4px 4px;
+  border: 1px solid rgba(217, 241, 217, 0.18);
+  border-left: 3px solid color-mix(in srgb, var(--element) 70%, transparent);
+  border-radius: 15px;
+  background: rgba(5, 16, 20, 0.8);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(12px);
+}
+
+.monster-tamer-party-member.active {
+  border-color: color-mix(in srgb, var(--element) 60%, white);
+  background: rgba(7, 23, 23, 0.92);
+}
+
+.monster-tamer-party-member > .catalog-image,
+.monster-tamer-party-member > .image-missing {
+  width: 46px;
+  height: 46px;
+  object-fit: contain;
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--element) 12%, rgba(0, 0, 0, 0.2));
+}
+
+.monster-tamer-party-member > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.monster-tamer-party-member strong {
+  overflow: hidden;
+  font-size: 11px;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.monster-tamer-party-member div > span,
+.monster-tamer-enemy-health > span {
+  display: block;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.11);
+}
+
+.monster-tamer-party-member div > span i,
+.monster-tamer-enemy-health > span i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #54ba62, #a7e879);
+  transition: width 240ms ease;
+}
+
+.monster-tamer-party-member small {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--monster-muted);
+  font-size: 9px;
+}
+
+.monster-tamer-party-member small svg {
+  width: 10px;
+  height: 10px;
+  color: #ff8b87;
+  fill: currentColor;
+}
+
+.monster-tamer-region-hud {
+  position: absolute;
+  top: calc(max(var(--safe-top), var(--content-safe-top)) + 10px);
+  left: 50%;
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: center;
+  gap: 1px 12px;
+  min-width: 180px;
+  padding: 8px 10px 8px 13px;
+  border: 1px solid var(--monster-border);
+  border-radius: 15px;
+  background: rgba(5, 16, 20, 0.78);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(12px);
+  transform: translateX(-50%);
+  pointer-events: auto;
+}
+
+.monster-tamer-region-hud > span {
+  color: var(--monster-muted);
+  font-size: 9px;
+}
+
+.monster-tamer-region-hud > strong {
+  grid-row: 2;
+  font-size: 12px;
+}
+
+.monster-tamer-region-hud > button {
+  grid-column: 2;
+  grid-row: 1 / 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 34px;
+  padding: 4px 8px;
+  border: 1px solid rgba(181, 239, 146, 0.18);
+  border-radius: 10px;
+  color: var(--monster-green);
+  background: rgba(157, 229, 110, 0.08);
+  font-size: 10px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.monster-tamer-region-hud svg {
+  width: 14px;
+  height: 14px;
+}
+
+.monster-tamer-close {
+  position: absolute;
+  top: calc(max(var(--safe-top), var(--content-safe-top)) + 10px);
+  right: calc(max(var(--safe-right), var(--content-safe-right)) + 10px);
+  pointer-events: auto;
+}
+
+.monster-tamer-hud-tools {
+  position: absolute;
+  bottom: calc(max(var(--safe-bottom), var(--content-safe-bottom)) + 12px);
+  left: calc(max(var(--safe-left), var(--content-safe-left)) + 12px);
+  display: flex;
+  gap: 7px;
+  pointer-events: auto;
+}
+
+.monster-tamer-hud-tools > button {
+  display: grid;
+  place-items: center;
+  gap: 2px;
+  min-width: 58px;
+  min-height: 54px;
+  padding: 6px 8px;
+  border: 1px solid var(--monster-border);
+  border-radius: 15px;
+  color: var(--monster-text);
+  background: rgba(5, 16, 20, 0.82);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(12px);
+  cursor: pointer;
+}
+
+.monster-tamer-hud-tools > button.active {
+  border-color: rgba(184, 241, 147, 0.42);
+  color: #172118;
+  background: var(--monster-green);
+}
+
+.monster-tamer-hud-tools > button:disabled {
+  opacity: 0.4;
+}
+
+.monster-tamer-hud-tools svg {
+  width: 19px;
+  height: 19px;
+}
+
+.monster-tamer-hud-tools span {
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.monster-tamer-save-status {
+  position: absolute;
+  top: calc(max(var(--safe-top), var(--content-safe-top)) + 98px);
+  left: 50%;
+  padding: 7px 11px;
+  border: 1px solid var(--monster-border);
+  border-radius: 999px;
+  color: var(--monster-muted);
+  background: rgba(4, 15, 18, 0.8);
+  font-size: 10px;
+  backdrop-filter: blur(12px);
+  transform: translateX(-50%);
+}
+
+.monster-tamer-regional-boost-status {
+  position: absolute;
+  top: calc(max(var(--safe-top), var(--content-safe-top)) + 68px);
+  left: 50%;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 9px;
+  border: 1px solid rgba(255, 224, 102, 0.28);
+  border-radius: 999px;
+  color: #ffe78b;
+  background: rgba(38, 34, 14, 0.78);
+  font-size: 9px;
+  font-weight: 800;
+  backdrop-filter: blur(12px);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.monster-tamer-regional-boost-status svg {
+  width: 12px;
+  height: 12px;
+}
+
+.monster-tamer-drawer {
+  position: absolute;
+  z-index: 35;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(390px, 92vw);
+  padding: calc(max(var(--safe-top), var(--content-safe-top)) + 18px)
+    calc(max(var(--safe-right), var(--content-safe-right)) + 16px)
+    calc(max(var(--safe-bottom), var(--content-safe-bottom)) + 18px) 16px;
+  overflow-y: auto;
+  border-left: 1px solid var(--monster-border);
+  background:
+    radial-gradient(
+      circle at 100% 0,
+      rgba(131, 211, 119, 0.14),
+      transparent 28%
+    ),
+    rgba(10, 26, 31, 0.97);
+  box-shadow: -18px 0 48px rgba(0, 0, 0, 0.32);
+  backdrop-filter: blur(20px);
+  scrollbar-width: none;
+}
+
+.monster-tamer-drawer > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.monster-tamer-drawer h2 {
+  margin: 3px 0 0;
+  font-size: 21px;
+}
+
+.monster-tamer-drawer header button {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 1px solid var(--monster-border);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+}
+
+.monster-tamer-drawer header button svg {
+  width: 19px;
+  height: 19px;
+}
+
+.monster-tamer-map-list,
+.monster-tamer-ability-list {
+  display: grid;
+  gap: 9px;
+}
+
+.monster-tamer-map-guidance {
+  margin: 0;
+  padding: 9px 11px;
+  border: 1px solid rgba(245, 208, 117, 0.2);
+  border-radius: 12px;
+  color: var(--monster-muted);
+  background: rgba(245, 208, 117, 0.07);
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.monster-tamer-map-region {
+  --element: #a7b9ad;
+  display: grid;
+  gap: 10px;
+  padding: 13px;
+  border: 1px solid
+    color-mix(in srgb, var(--element) 25%, var(--monster-border));
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--element) 6%, rgba(255, 255, 255, 0.035));
+}
+
+.monster-tamer-map-region.active {
+  border-color: color-mix(in srgb, var(--element) 62%, white 8%);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--element) 22%, transparent);
+}
+
+.monster-tamer-map-region > header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+}
+
+.monster-tamer-map-region header > svg {
+  width: 17px;
+  height: 17px;
+  color: var(--element);
+}
+
+.monster-tamer-map-region header > div {
+  display: grid;
+  gap: 2px;
+}
+
+.monster-tamer-map-region header strong {
+  font-size: 12px;
+}
+
+.monster-tamer-map-region header span,
+.monster-tamer-map-region > div small {
+  color: var(--monster-muted);
+  font-size: 9px;
+}
+
+.monster-tamer-map-region header b {
+  color: var(--element);
+  font-size: 11px;
+}
+
+.monster-tamer-map-progress {
+  height: 5px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.monster-tamer-map-progress i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--element);
+}
+
+.monster-tamer-map-region > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 8px;
+}
+
+.monster-tamer-map-region > div small {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.monster-tamer-map-region > div svg {
+  width: 11px;
+  height: 11px;
+  color: var(--monster-green);
+}
+
+.monster-tamer-map-region > .monster-tamer-mini-map {
+  position: relative;
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--element) 18%, transparent);
+  border-radius: 11px;
+  background: rgba(2, 11, 16, 0.72);
+  aspect-ratio: 3 / 2;
+}
+
+.monster-tamer-map-region > .monster-tamer-mini-map > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  color: inherit;
+}
+
+.monster-tamer-mini-map-ground {
+  fill: rgba(5, 15, 20, 0.92);
+}
+
+.monster-tamer-mini-map-revealed {
+  fill: color-mix(in srgb, var(--element) 34%, #253832);
+  stroke: color-mix(in srgb, var(--element) 12%, transparent);
+  stroke-width: 0.04;
+}
+
+.monster-tamer-mini-map-marker {
+  stroke: #071016;
+  stroke-width: 0.28;
+  vector-effect: non-scaling-stroke;
+}
+
+.monster-tamer-mini-map-marker.node {
+  fill: #f5d075;
+}
+
+.monster-tamer-mini-map-marker.node.complete {
+  fill: #9de56e;
+}
+
+.monster-tamer-mini-map-marker.node.exit {
+  fill: #78c9ff;
+}
+
+.monster-tamer-mini-map-marker.node.rematch {
+  fill: #ff8b74;
+}
+
+.monster-tamer-mini-map-marker.encounter circle {
+  fill: #dd8459;
+}
+
+.monster-tamer-mini-map-marker.encounter path {
+  fill: #fff5df;
+  stroke: none;
+}
+
+.monster-tamer-mini-map-marker.encounter.boss circle,
+.monster-tamer-mini-map-marker.encounter.guardian circle {
+  fill: #ff5d67;
+  stroke: #ffe39b;
+  stroke-width: 0.42;
+}
+
+.monster-tamer-mini-map-marker.encounter.guardian circle {
+  fill: #b982ff;
+}
+
+.monster-tamer-mini-map-marker.player circle:first-of-type {
+  fill: #f7fbff;
+  stroke: #0b7bff;
+  stroke-width: 0.5;
+}
+
+.monster-tamer-mini-map-marker.player circle:last-of-type {
+  fill: #0b7bff;
+  stroke: none;
+}
+
+.monster-tamer-mini-map-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+
+.monster-tamer-mini-map-legend small {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--monster-muted);
+  font-size: 8px;
+}
+
+.monster-tamer-mini-map-legend i {
+  display: block;
+  width: 7px;
+  height: 7px;
+  border: 1px solid #071016;
+  background: #f5d075;
+  transform: rotate(45deg);
+}
+
+.monster-tamer-mini-map-legend i.elite {
+  border-radius: 50%;
+  background: #dd8459;
+  transform: none;
+}
+
+.monster-tamer-mini-map-legend i.boss {
+  border-color: #ffe39b;
+  border-radius: 50%;
+  background: #ff5d67;
+  transform: none;
+}
+
+.monster-tamer-mini-map-legend i.exit {
+  background: #78c9ff;
+}
+
+.monster-tamer-mini-map-legend i.rematch {
+  background: #ff8b74;
+}
+
+.monster-tamer-mini-map-legend i.player {
+  border: 2px solid #0b7bff;
+  border-radius: 50%;
+  background: #f7fbff;
+  transform: none;
+}
+
+.monster-tamer-backpack-content {
+  display: grid;
+  gap: 12px;
+}
+
+.monster-tamer-supply-summary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  padding: 12px;
+  border: 1px solid rgba(245, 208, 117, 0.23);
+  border-radius: 15px;
+  background: rgba(245, 208, 117, 0.08);
+}
+
+.monster-tamer-supply-summary svg {
+  width: 20px;
+  height: 20px;
+  color: var(--monster-gold);
+}
+
+.monster-tamer-supply-summary span {
+  font-size: 11px;
+}
+
+.monster-tamer-supply-summary strong {
+  color: var(--monster-gold);
+  font-size: 13px;
+}
+
+.monster-tamer-backpack-list {
+  display: grid;
+  gap: 7px;
+}
+
+.monster-tamer-backpack-list > article {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--monster-border);
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.monster-tamer-backpack-list .catalog-image,
+.monster-tamer-backpack-list .image-missing {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.monster-tamer-backpack-list article > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.monster-tamer-backpack-list strong {
+  overflow: hidden;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.monster-tamer-backpack-list span,
+.monster-tamer-backpack-list small {
+  color: var(--monster-muted);
+  font-size: 9px;
+}
+
+.monster-tamer-backpack-list .button {
+  min-height: 35px;
+  padding: 6px 9px;
+  border-radius: 10px;
+  font-size: 10px;
+}
+
+.monster-tamer-ability-list > article {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 11px;
+  border: 1px solid var(--monster-border);
+  border-radius: 15px;
+  color: #80938a;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.monster-tamer-ability-list > article.owned {
+  border-color: rgba(177, 237, 139, 0.25);
+  color: var(--monster-green);
+  background: rgba(157, 229, 110, 0.06);
+}
+
+.monster-tamer-ability-list article > svg {
+  width: 40px;
+  height: 40px;
+  padding: 10px;
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.monster-tamer-ability-list article > div {
+  display: grid;
+  gap: 2px;
+}
+
+.monster-tamer-ability-list strong {
+  color: var(--monster-text);
+  font-size: 12px;
+}
+
+.monster-tamer-ability-list span {
+  color: currentColor;
+  font-size: 9px;
+}
+
+.monster-tamer-battle-controls {
+  position: absolute;
+  z-index: 30;
+  right: max(calc(var(--safe-right) + 12px), 12px);
+  bottom: max(calc(var(--safe-bottom) + 12px), 12px);
+  display: grid;
+  gap: 9px;
+  width: min(590px, calc(100% - 190px));
+  padding: 13px;
+  border: 1px solid rgba(225, 241, 222, 0.22);
+  border-radius: 19px;
+  background: rgba(5, 16, 20, 0.91);
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.34);
+  backdrop-filter: blur(16px);
+}
+
+.monster-tamer-battle-controls > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.monster-tamer-battle-controls h2 {
+  margin: 2px 0 0;
+  overflow: hidden;
+  font-size: 15px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.monster-tamer-battle-controls header > strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: 0 0 auto;
+  color: var(--monster-gold);
+  font-size: 10px;
+}
+
+.monster-tamer-battle-controls header svg {
+  width: 15px;
+  height: 15px;
+}
+
+.monster-tamer-enemy-health {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.monster-tamer-enemy-health > span i {
+  background: linear-gradient(90deg, #d94d4d, #ff9b75);
+}
+
+.monster-tamer-enemy-health > small {
+  min-width: 62px;
+  color: var(--monster-muted);
+  font-size: 9px;
+  text-align: right;
+}
+
+.monster-tamer-battle-notices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.monster-tamer-battle-notices > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 24px;
+  padding: 4px 7px;
+  border: 1px solid rgba(107, 214, 239, 0.2);
+  border-radius: 999px;
+  color: #bdeff5;
+  background: rgba(107, 214, 239, 0.08);
+  font-size: 8px;
+}
+
+.monster-tamer-battle-notices > span.boost {
+  border-color: rgba(255, 224, 102, 0.24);
+  color: #ffe78b;
+  background: rgba(255, 224, 102, 0.09);
+}
+
+.monster-tamer-battle-notices svg {
+  width: 11px;
+  height: 11px;
+}
+
+.monster-tamer-skill-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.monster-tamer-skill-grid > button {
+  --element: #9de56e;
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  min-height: 62px;
+  padding: 8px 10px;
+  overflow: hidden;
+  border: 1px solid
+    color-mix(in srgb, var(--element) 36%, var(--monster-border));
+  border-radius: 13px;
+  color: var(--monster-text);
+  text-align: left;
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--element) 12%, transparent),
+      transparent
+    ),
+    rgba(255, 255, 255, 0.045);
+  cursor: pointer;
+}
+
+.monster-tamer-skill-grid > button:disabled {
+  opacity: 0.45;
+}
+
+.monster-tamer-skill-grid button > span {
+  color: var(--element);
+  font-size: 8px;
+  font-weight: 900;
+}
+
+.monster-tamer-skill-grid button > strong {
+  overflow: hidden;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.monster-tamer-skill-grid button > small {
+  overflow: hidden;
+  color: var(--monster-muted);
+  font-size: 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.monster-tamer-battle-result {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 10px;
+  align-items: center;
+}
+
+.monster-tamer-battle-result > strong {
+  color: var(--monster-green);
+  font-size: 13px;
+}
+
+.monster-tamer-battle-result > span {
+  grid-column: 1;
+  color: var(--monster-muted);
+  font-size: 9px;
+}
+
+.monster-tamer-battle-result > .button {
+  grid-column: 2;
+  grid-row: 1 / 3;
+  min-height: 38px;
+}
+
+.monster-tamer-battle-controls.result-lost
+  .monster-tamer-battle-result
+  > strong {
+  color: #ff9a86;
+}
+
+.monster-tamer-global-alert.world {
+  position: absolute;
+  z-index: 50;
+  top: auto;
+  right: 12px;
+  bottom: calc(max(var(--safe-bottom), var(--content-safe-bottom)) + 92px);
+  left: 12px;
+  width: min(560px, calc(100% - 24px));
+  margin: 0 auto;
+}
+
+@media (max-width: 960px) {
+  .monster-tamer-collection-grid,
+  .monster-tamer-region-picker > div {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 680px) {
+  .monster-tamer-camp {
+    gap: 12px;
+    padding: calc(max(var(--safe-top), var(--content-safe-top)) + 12px)
+      calc(max(var(--safe-right), var(--content-safe-right)) + 10px)
+      calc(max(var(--safe-bottom), var(--content-safe-bottom)) + 22px)
+      calc(max(var(--safe-left), var(--content-safe-left)) + 10px);
+  }
+
+  .monster-tamer-camp-hero {
+    grid-template-columns: 56px minmax(0, 1fr);
+    gap: 11px;
+    min-height: 114px;
+    padding: 16px 55px 16px 13px;
+    border-radius: 21px;
+  }
+
+  .monster-tamer-camp-mark {
+    width: 56px;
+    height: 56px;
+    border-radius: 19px;
+  }
+
+  .monster-tamer-camp-mark svg {
+    width: 28px;
+    height: 28px;
+  }
+
+  .monster-tamer-camp-hero h2 {
+    font-size: 26px;
+  }
+
+  .monster-tamer-camp-hero p {
+    font-size: 11px;
+  }
+
+  .monster-tamer-camp-recovery {
+    grid-column: 1 / -1;
+    display: flex;
+    min-width: 0;
+    padding: 7px 9px;
+  }
+
+  .monster-tamer-camp-recovery strong {
+    margin-left: auto;
+  }
+
+  .monster-tamer-team-builder,
+  .monster-tamer-region-picker {
+    gap: 12px;
+    padding: 13px;
+    border-radius: 19px;
+  }
+
+  .monster-tamer-team-builder h3,
+  .monster-tamer-region-picker h3 {
+    font-size: 17px;
+  }
+
+  .monster-tamer-region-picker header {
+    align-items: start;
+  }
+
+  .monster-tamer-region-picker header small {
+    max-width: 110px;
+    text-align: right;
+  }
+
+  .monster-tamer-collection-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+  }
+
+  .monster-tamer-collection-choice {
+    grid-template-columns: 62px minmax(0, 1fr);
+    min-height: 88px;
+    border-radius: 15px;
+  }
+
+  .monster-tamer-collection-art {
+    padding: 5px;
+  }
+
+  .monster-tamer-collection-art .catalog-image,
+  .monster-tamer-collection-art .image-missing {
+    height: 64px;
+  }
+
+  .monster-tamer-collection-copy {
+    padding: 7px;
+  }
+
+  .monster-tamer-collection-copy strong {
+    font-size: 11px;
+  }
+
+  .monster-tamer-collection-copy small,
+  .monster-tamer-collection-copy > span {
+    font-size: 8px;
+  }
+
+  .monster-tamer-team-footer {
+    display: grid;
+  }
+
+  .monster-tamer-confirm-team {
+    width: 100%;
+  }
+
+  .monster-tamer-region-picker > div {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+  }
+
+  .monster-tamer-region-card {
+    min-height: 76px;
+    padding: 12px 36px 12px 12px;
+  }
+
+  .monster-tamer-party-hud {
+    width: 142px;
+  }
+
+  .monster-tamer-party-member {
+    grid-template-columns: 36px minmax(0, 1fr);
+    gap: 5px;
+    min-height: 42px;
+    padding: 3px 6px 3px 3px;
+    border-radius: 12px;
+  }
+
+  .monster-tamer-party-member > .catalog-image,
+  .monster-tamer-party-member > .image-missing {
+    width: 36px;
+    height: 36px;
+    border-radius: 9px;
+  }
+
+  .monster-tamer-party-member strong {
+    font-size: 9px;
+  }
+
+  .monster-tamer-party-member small {
+    font-size: 7px;
+  }
+
+  .monster-tamer-region-hud {
+    top: calc(max(var(--safe-top), var(--content-safe-top)) + 10px);
+    left: auto;
+    right: calc(max(var(--safe-right), var(--content-safe-right)) + 60px);
+    min-width: 0;
+    width: 112px;
+    padding: 6px 7px;
+    gap: 1px 5px;
+    transform: none;
+  }
+
+  .monster-tamer-region-hud > strong {
+    overflow: hidden;
+    max-width: 68px;
+    font-size: 9px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .monster-tamer-region-hud > button {
+    min-height: 30px;
+    padding: 3px 6px;
+  }
+
+  .monster-tamer-save-status {
+    top: calc(max(var(--safe-top), var(--content-safe-top)) + 91px);
+    right: calc(max(var(--safe-right), var(--content-safe-right)) + 10px);
+    left: auto;
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    transform: none;
+  }
+
+  .monster-tamer-regional-boost-status {
+    top: calc(max(var(--safe-top), var(--content-safe-top)) + 56px);
+    right: calc(max(var(--safe-right), var(--content-safe-right)) + 10px);
+    left: auto;
+    max-width: 170px;
+    transform: none;
+  }
+
+  .monster-tamer-hud-tools {
+    gap: 5px;
+  }
+
+  .monster-tamer-hud-tools > button {
+    min-width: 50px;
+    min-height: 48px;
+    border-radius: 13px;
+  }
+
+  .monster-tamer-hud-tools svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  .monster-tamer-battle-controls {
+    right: max(calc(var(--safe-right) + 8px), 8px);
+    bottom: max(calc(var(--safe-bottom) + 8px), 8px);
+    left: max(calc(var(--safe-left) + 8px), 8px);
+    width: auto;
+    padding: 10px;
+    border-radius: 16px;
+  }
+
+  .monster-tamer-game-notice {
+    top: calc(max(var(--safe-top), var(--content-safe-top)) + 98px);
+  }
+
+  .monster-tamer-battle-controls h2 {
+    font-size: 13px;
+  }
+
+  .monster-tamer-skill-grid {
+    gap: 5px;
+  }
+
+  .monster-tamer-skill-grid > button {
+    min-height: 58px;
+    padding: 7px;
+    border-radius: 11px;
+  }
+
+  .monster-tamer-skill-grid button > strong {
+    font-size: 10px;
+  }
+
+  .monster-tamer-skill-grid button > small {
+    font-size: 7px;
+  }
+
+  .monster-tamer-global-alert.world {
+    bottom: calc(max(var(--safe-bottom), var(--content-safe-bottom)) + 74px);
+  }
+}
+
+@media (max-width: 380px) {
+  .monster-tamer-collection-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .monster-tamer-region-hud > span {
+    display: none;
+  }
+
+  .monster-tamer-region-hud > strong {
+    grid-row: 1;
+  }
+
+  .monster-tamer-region-hud > button {
+    grid-row: 1;
+  }
+}
+
+@media (max-height: 520px) and (orientation: landscape) {
+  .monster-tamer-party-hud {
+    display: flex;
+    width: min(58vw, 520px);
+  }
+
+  .monster-tamer-party-member {
+    flex: 1;
+  }
+
+  .monster-tamer-hud-tools > button {
+    min-height: 42px;
+    grid-template-columns: auto auto;
+    gap: 5px;
+  }
+
+  .monster-tamer-battle-controls {
+    left: auto;
+    width: min(570px, calc(100% - 180px));
+  }
+
+  .monster-tamer-drawer {
+    width: min(380px, 70vw);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .monster-tamer-overlay *,
+  .monster-tamer-overlay *::before,
+  .monster-tamer-overlay *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }

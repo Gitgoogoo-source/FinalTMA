@@ -120,6 +120,9 @@ importers:
       lucide-react:
         specifier: 1.16.0
         version: 1.16.0(react@19.2.6)
+      phaser:
+        specifier: 3.60.0
+        version: 3.60.0
       react:
         specifier: 19.2.6
         version: 19.2.6
@@ -3197,6 +3200,12 @@ packages:
       }
     engines: { node: ">= 0.6" }
 
+  eventemitter3@5.0.4:
+    resolution:
+      {
+        integrity: sha512-mlsTRyGaPBjPedk6Bvw+aqbsXDtoAyAzm5MO7JgU+yVRyMQ5O8bD4Kcci7BS85f93veegeCPkL8R4GLClnjLFw==,
+      }
+
   events-intercept@2.0.0:
     resolution:
       {
@@ -4407,6 +4416,12 @@ packages:
     resolution:
       {
         integrity: sha512-F3asv42UuXchdzt+xXqfW1OGlVBe+mxa2mqI0pg5yAHZPvFmY3Y6drSf/GQ1A86WgWEN9Kzh/WrgKa6iGcHXLg==,
+      }
+
+  phaser@3.60.0:
+    resolution:
+      {
+        integrity: sha512-IKUy35EnoEVcl2EmJ8WOyK4X8OoxHYdlhZLgRGpNrvD1fEagYffhVmwHcapE/tGiLgyrnezmXIo5RrH2NcrTHw==,
       }
 
   picocolors@1.0.0:
@@ -7154,6 +7169,8 @@ snapshots:
 
   etag@1.8.1: {}
 
+  eventemitter3@5.0.4: {}
+
   events-intercept@2.0.0: {}
 
   events-universal@1.0.1:
@@ -7794,6 +7811,10 @@ snapshots:
   path-to-regexp@8.3.0: {}
 
   pend@1.2.0: {}
+
+  phaser@3.60.0:
+    dependencies:
+      eventemitter3: 5.0.4
 
   picocolors@1.0.0: {}
 

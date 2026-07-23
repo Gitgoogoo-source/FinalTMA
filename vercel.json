@@ -36,14 +36,6 @@
       "destination": "/api/jobs?__route=jobs/:path*"
     },
     { "source": "/api/:path*", "destination": "/api/app?__route=:path*" },
-    {
-      "source": "/monster-tamer",
-      "destination": "/monster-tamer/index.html"
-    },
-    {
-      "source": "/monster-tamer/",
-      "destination": "/monster-tamer/index.html"
-    },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }

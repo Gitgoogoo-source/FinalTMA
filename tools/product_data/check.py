@@ -26,9 +26,9 @@ def product_data_migration() -> Path:
 
 def main() -> None:
     product_data_source, product_extensions = split_product_document(PRODUCT.read_text(encoding="utf-8"))
-    if "## 21. Monster Tamer 独立游戏功能说明" not in product_extensions:
+    if "## 21. Monster Tamer 嵌入式游戏功能说明" not in product_extensions:
         raise SystemExit("Product extension after the checksum boundary must contain chapter 21 Monster Tamer")
-    if "## 21. Monster Tamer 独立游戏功能说明" in product_data_source:
+    if "## 21. Monster Tamer 嵌入式游戏功能说明" in product_data_source:
         raise SystemExit("Monster Tamer must remain outside the frozen catalog v1 product-data source")
     source_checksum = hashlib.sha256(product_data_source.encode()).hexdigest()
     migration_source = product_data_migration()

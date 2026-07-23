@@ -12,10 +12,12 @@ Data API 只暴露 `api` schema。安全迁移撤销 `PUBLIC`、`anon`、`authen
 
 Telegram webhook 使用 secret token，Cron 使用 `CRON_SECRET`。支付回调按 Telegram update 与 charge 唯一键去重；Cron 同时使用任务名 advisory lock、运行租约、状态扫描和幂等 RPC。
 
-## Monster Tamer 公开静态边界
+## Monster Tamer 可信边界
 
-`/monster-tamer/` 是公开静态子应用，不执行 FinalTMA 认证。它不接收 Telegram `initData`、access token、session generation、用户标识或账号状态，不导入 `@pokepets/api-contracts`，不请求 `/api/*`、Supabase 或 Catalog 资源，也不创建操作、账本、库存、任务或奖励记录。
+Monster Tamer 只能从已经通过统一 Telegram 登录和账号门禁的 TMA React 页面打开。`/monster-tamer` 与 `/monster-tamer/` 不再提供独立文档，统一进入 SPA；无有效会话时只能执行主应用登录流程，不能加载藏品、地图或战斗。
 
-静态游戏只把本地进度写入 `MONSTER_TAMER_DATA`。本地怪物、道具、捕捉、经验和随机结果均不可信且只影响单机存档，不能证明或触发 FinalTMA 业务结果。Telegram SDK 只允许处理 ready、视口、安全区和返回按钮。
+React 通过 `@pokepets/api-contracts/app` 与统一 API client 提交动作意图。Phaser 不接收 token、session generation、用户标识、API client 或 Supabase 能力，也不自行发送网络请求。会话替换、过期或封禁会使现有 React 树和 Phaser 实例一起失效，迟到结果受 session generation 隔离。
 
-游戏页 launcher 领域只允许 React、Lucide 和本领域相对导入；唯一动作是链接到 `/monster-tamer/`。架构门禁同时验证 launcher 无业务导入、静态源码无 FinalTMA API/session/资产引用、路由先于 SPA catch-all，以及游戏页组合顺序。
+`monster_tamer` RPC 每次重新解析 session 和账号状态。确认队伍、区域进入及战斗开始都在事务内按模板顺序锁定并重算 `inventory.available_quantity`；客户端不能提交归属、数量、战斗力、稀有度、阶段、属性、技能、敌方数值、伤害、奖励或胜负。服务端保存当前区域与网格坐标，按固定地图逐格验证经过路径，只接受路径两格范围内的迷雾，并按权威位置裁决节点邻接、出口、接战半径和再战祭坛。客户端不能通过直接调用节点或遭遇 ID 隔空推进。逐回合命令使用幂等操作、请求摘要、版本条件和行锁。
+
+内部游戏只写 `monster_tamer` schema 的进度与战斗。它对目录和可用库存只读，不写 holdings、reservations、余额、账本、远征、市场、进化、分解、Mint、任务、邀请、VIP、支付或链上状态。浏览器不使用本地持久存储保存队伍、进度或战斗；数据库始终是最终事实来源。
