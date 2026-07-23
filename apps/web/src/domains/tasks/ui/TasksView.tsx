@@ -4,6 +4,7 @@ import {
   Boxes,
   CalendarCheck,
   Check,
+  Circle,
   Gem,
   Link2,
   LockKeyhole,
@@ -136,6 +137,10 @@ export function TasksView(): ReactNode {
       : items.filter((task) => task.category === category);
   const cycleProgress = tasks.data?.checkin.cycle_progress ?? 0;
   const claimedToday = Boolean(tasks.data?.checkin.claimed_today);
+  const currentCheckInDay = Math.min(
+    7,
+    claimedToday ? Math.max(1, cycleProgress) : cycleProgress + 1,
+  );
   useEffect(() => {
     categoryRef.current = category;
   }, [category]);
@@ -190,6 +195,19 @@ export function TasksView(): ReactNode {
           <div className="checkin-orbit" aria-hidden="true">
             <Sparkles />
           </div>
+          <div className="checkin-progress" aria-hidden="true">
+            {checkInRewards.map((_, index) => {
+              const day = index + 1;
+              return (
+                <span
+                  key={day}
+                  className={`${day <= cycleProgress ? "claimed" : ""} ${day === currentCheckInDay ? "active" : ""}`}
+                >
+                  <i>{day}</i>
+                </span>
+              );
+            })}
+          </div>
           <div className="checkin-days" role="list" aria-label="七日签到奖励">
             {checkInRewards.map((reward, index) => {
               const day = index + 1;
@@ -200,22 +218,27 @@ export function TasksView(): ReactNode {
                   key={day}
                   role="listitem"
                   className={`${claimed ? "claimed" : ""} ${active ? "active" : ""}`}
+                  aria-label={`第 ${day} 天，${reward.amount} ${reward.unit}，${claimed ? "已领取" : active ? "当前待领取" : "未解锁"}`}
                 >
                   <small>第 {day} 天</small>
                   <span className="checkin-reward-art">
-                    {claimed ? (
-                      <Check aria-hidden="true" />
-                    ) : reward.kind === "box" ? (
+                    {reward.kind === "box" ? (
                       <img src="/assets/boxes/rare.webp" alt="" />
                     ) : (
                       <Gem aria-hidden="true" />
                     )}
                   </span>
-                  <strong>{reward.amount}</strong>
-                  <em>{reward.unit}</em>
-                  {!claimed && !active ? (
+                  <span className="checkin-reward-copy">
+                    <strong>{reward.amount}</strong>
+                    <em>{reward.unit}</em>
+                  </span>
+                  {claimed ? (
+                    <Check className="checkin-state-icon" aria-hidden="true" />
+                  ) : active ? (
+                    <Circle className="checkin-state-icon" aria-hidden="true" />
+                  ) : (
                     <LockKeyhole className="checkin-lock" aria-hidden="true" />
-                  ) : null}
+                  )}
                 </span>
               );
             })}

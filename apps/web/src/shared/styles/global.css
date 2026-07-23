@@ -5448,13 +5448,13 @@ input:focus {
   white-space: nowrap;
 }
 .app-shell .checkin-card {
-  min-height: 238px;
+  min-height: 304px;
   position: relative;
   display: grid;
   align-content: start;
-  gap: 16px;
+  gap: 13px;
   margin: 0;
-  padding: 17px 14px 16px;
+  padding: 17px 13px 15px;
   overflow: hidden;
   border-color: rgba(7, 29, 59, 0.07);
   border-radius: 22px;
@@ -5510,85 +5510,191 @@ input:focus {
 .app-shell .checkin-orbit svg {
   width: 18px;
 }
+.app-shell .checkin-progress {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  align-items: center;
+  padding: 0 6px;
+}
+.app-shell .checkin-progress > span {
+  min-width: 0;
+  position: relative;
+  display: grid;
+  place-items: center;
+  color: #8490a1;
+}
+.app-shell .checkin-progress > span::before {
+  width: calc(100% - 18px);
+  height: 2px;
+  position: absolute;
+  right: calc(50% + 9px);
+  content: "";
+  background: #e4e8ed;
+  box-shadow: 0 1px 4px rgba(7, 29, 59, 0.08);
+}
+.app-shell .checkin-progress > span:first-child::before {
+  display: none;
+}
+.app-shell .checkin-progress > span.claimed::before,
+.app-shell .checkin-progress > span.active::before {
+  background: #ff8a22;
+}
+.app-shell .checkin-progress i {
+  width: 20px;
+  height: 20px;
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  border: 1px solid #e2e6eb;
+  border-radius: 50%;
+  color: inherit;
+  background: #f7f8fa;
+  box-shadow:
+    0 3px 8px rgba(7, 29, 59, 0.1),
+    inset 0 1px 0 #fff;
+  font-size: 8px;
+  font-style: normal;
+  font-weight: 800;
+}
+.app-shell .checkin-progress > span.claimed i {
+  border-color: #bde7c8;
+  color: #0ca838;
+  background: #f0faf3;
+}
+.app-shell .checkin-progress > span.active i {
+  border: 2px solid #ff7a00;
+  color: #ff6500;
+  background: #fff;
+  box-shadow:
+    0 0 0 3px rgba(255, 122, 0, 0.1),
+    0 4px 9px rgba(255, 122, 0, 0.14);
+}
 .app-shell .checkin-days {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 4px;
+  gap: 3px;
 }
 .app-shell .checkin-days > span {
   min-width: 0;
-  min-height: 135px;
+  min-height: 168px;
   position: relative;
   display: grid;
   justify-items: center;
-  align-content: start;
-  gap: 4px;
-  padding: 9px 2px 8px;
+  grid-template-rows: 22px 54px minmax(34px, auto) 20px;
+  align-items: center;
+  align-content: stretch;
+  gap: 1px;
+  padding: 8px 2px 7px;
   border: 1px solid rgba(7, 29, 59, 0.07);
-  border-radius: 16px;
+  border-radius: 19px;
   color: #738198;
-  background: #fafbfc;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.9), transparent 42%), #f7f8fa;
+  box-shadow:
+    0 8px 18px rgba(7, 29, 59, 0.07),
+    inset 0 1px 0 #fff;
 }
 .app-shell .checkin-days > span.active {
-  border-color: #ff7a00;
+  border-color: #ffb26f;
   color: #ff6500;
-  background: #fffaf5;
-  box-shadow: 0 12px 24px rgba(255, 122, 0, 0.12);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), transparent 44%), #fff8f1;
+  box-shadow:
+    0 10px 22px rgba(255, 122, 0, 0.15),
+    inset 0 1px 0 #fff;
 }
 .app-shell .checkin-days > span.claimed {
   color: #0ca838;
-  background: #f4fbf5;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92), transparent 44%), #f1faf3;
+  box-shadow:
+    0 8px 18px rgba(12, 168, 56, 0.08),
+    inset 0 1px 0 #fff;
 }
 .app-shell .checkin-days small {
+  align-self: start;
+  padding-top: 2px;
   color: inherit;
-  font-size: 6px;
+  font-size: 7px;
   font-weight: 900;
-}
-.app-shell .checkin-reward-art {
-  width: 34px;
-  height: 34px;
-  display: grid;
-  place-items: center;
-  margin-top: 5px;
-  border-radius: 12px;
-  color: #36c85b;
-  background: #effcf2;
-  box-shadow: inset 0 1px 0 #fff;
-}
-.app-shell .checkin-reward-art svg {
-  width: 19px;
-}
-.app-shell .checkin-reward-art img {
-  width: 42px;
-  height: 42px;
-  object-fit: contain;
-}
-.app-shell .checkin-days > span.active .checkin-reward-art {
-  color: #ff7a00;
-  background: #fff0df;
-}
-.app-shell .checkin-days strong {
-  max-width: 100%;
-  overflow: hidden;
-  color: #071d3b;
-  font-size: 10px;
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
-.app-shell .checkin-days em {
+.app-shell .checkin-reward-art {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  position: relative;
+  z-index: 1;
+  border-radius: 50%;
+  color: #36c85b;
+  background: #effcf2;
+  box-shadow:
+    0 7px 13px rgba(54, 200, 91, 0.16),
+    inset 0 1px 0 #fff;
+}
+.app-shell .checkin-reward-art svg {
+  width: 24px;
+  height: 24px;
+  fill: rgba(54, 200, 91, 0.12);
+}
+.app-shell .checkin-reward-art img {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  filter: drop-shadow(0 7px 7px rgba(7, 29, 59, 0.17));
+}
+.app-shell .checkin-days > span.active .checkin-reward-art {
+  color: #36c85b;
+  background: #fff0df;
+  box-shadow:
+    0 8px 15px rgba(255, 122, 0, 0.2),
+    inset 0 1px 0 #fff;
+}
+.app-shell .checkin-days > span.claimed .checkin-reward-art {
+  color: #0ca838;
+}
+.app-shell .checkin-reward-copy {
+  min-width: 0;
+  width: 100%;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 1px;
+}
+.app-shell .checkin-reward-copy strong {
   max-width: 100%;
-  overflow: visible;
+  grid-column: auto;
+  color: #071d3b;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.app-shell .checkin-reward-copy em {
+  max-width: 100%;
   color: #738198;
   font-size: 6px;
   font-style: normal;
-  white-space: nowrap;
+  line-height: 1.15;
+  text-align: center;
 }
+.app-shell .checkin-state-icon,
 .app-shell .checkin-lock {
-  width: 12px;
-  height: 12px;
-  position: absolute;
-  bottom: 9px;
+  width: 13px;
+  height: 13px;
   color: #a6afbd;
+}
+.app-shell .checkin-days > span.claimed .checkin-state-icon {
+  color: #0ca838;
+  stroke-width: 3;
+}
+.app-shell .checkin-days > span.active .checkin-state-icon {
+  width: 9px;
+  height: 9px;
+  color: #ff9a29;
+  fill: currentColor;
+  stroke-width: 0;
 }
 .app-shell .task-filter-strip {
   display: flex;
@@ -6599,6 +6705,49 @@ body,
 }
 
 @media (max-width: 350px) {
+  .app-shell .checkin-card {
+    padding-inline: 9px;
+  }
+  .app-shell .checkin-heading span {
+    font-size: 20px;
+  }
+  .app-shell .checkin-heading strong,
+  .app-shell .checkin-heading .button {
+    font-size: 8px;
+  }
+  .app-shell .checkin-heading .button {
+    padding-inline: 9px;
+  }
+  .app-shell .checkin-progress {
+    padding-inline: 2px;
+  }
+  .app-shell .checkin-days {
+    gap: 2px;
+  }
+  .app-shell .checkin-days > span {
+    border-radius: 15px;
+  }
+  .app-shell .checkin-days small {
+    font-size: 6px;
+  }
+  .app-shell .checkin-reward-art {
+    width: 30px;
+    height: 30px;
+  }
+  .app-shell .checkin-reward-art svg {
+    width: 20px;
+    height: 20px;
+  }
+  .app-shell .checkin-reward-art img {
+    width: 34px;
+    height: 34px;
+  }
+  .app-shell .checkin-reward-copy strong {
+    font-size: 10px;
+  }
+  .app-shell .checkin-reward-copy em {
+    font-size: 5.5px;
+  }
   .app-shell .market-grid {
     grid-template-columns: 1fr;
   }
