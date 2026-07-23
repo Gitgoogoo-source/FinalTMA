@@ -168,11 +168,6 @@ html[data-theme="light"] .hero {
   color: #75e5ff;
   font-style: normal;
 }
-.asset-actions .refresh {
-  min-width: 30px;
-  padding: 0;
-  color: var(--muted);
-}
 .content {
   width: min(100%, 1080px);
   margin: 0 auto;
@@ -1870,9 +1865,6 @@ input:focus {
   .asset-actions button {
     padding: 0 5px;
   }
-  .asset-actions .refresh {
-    display: none;
-  }
 }
 
 @media (max-width: 410px) {
@@ -2187,7 +2179,6 @@ input:focus {
   fill: rgba(77, 187, 57, 0.12);
 }
 .app-shell .asset-actions .icon-action,
-.app-shell .asset-actions .refresh,
 .app-shell .asset-actions .summary-retry {
   width: 34px;
   padding: 0;
@@ -2199,8 +2190,7 @@ input:focus {
 .app-shell .asset-actions:has(.summary-retry) .wallet-action:disabled {
   display: none;
 }
-.app-shell .asset-actions .icon-action svg,
-.app-shell .asset-actions .refresh svg {
+.app-shell .asset-actions .icon-action svg {
   width: 15px;
 }
 .app-shell .asset-actions .vip.active {
@@ -2247,10 +2237,6 @@ input:focus {
   font-size: 8px;
   font-weight: 900;
 }
-.app-shell .asset-actions .refresh.is-refreshing svg {
-  animation: spin 0.8s linear infinite;
-}
-
 /* Bottom navigation */
 .app-shell .bottom-nav {
   left: 50%;
@@ -5920,25 +5906,97 @@ body,
 }
 .app-shell .topbar {
   height: calc(var(--safe-top) + var(--size-topbar));
-  padding: calc(var(--safe-top) + 8px) 12px 8px;
-  border-bottom: 1px solid rgba(74, 65, 56, 0.055);
-  background: rgba(255, 252, 247, 0.94);
+  gap: 6px;
+  padding: calc(var(--safe-top) + 8px) 12px 6px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
 }
 .app-shell .identity {
-  flex: 1 1 104px;
-  max-width: 112px;
+  flex: 0 0 var(--size-avatar);
+  max-width: var(--size-avatar);
 }
 .app-shell .identity > div {
-  width: clamp(38px, 12vw, 58px);
+  display: none;
 }
 .app-shell .asset-actions {
-  flex: 0 1 auto;
+  min-width: 0;
+  flex: 1 1 auto;
+  justify-content: flex-start;
+  gap: 6px;
 }
-.app-shell .asset-pill {
-  width: clamp(50px, 14vw, 62px);
+.app-shell .asset-actions .asset-pill {
+  width: clamp(72px, 19vw, 82px);
+  height: 42px;
+  flex: 0 0 auto;
+  justify-content: flex-start;
+  gap: 7px;
+  padding: 0 9px;
+  border-color: rgba(226, 226, 226, 0.84);
+  border-radius: 22px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.96),
+    rgba(248, 247, 244, 0.82)
+  );
+  box-shadow:
+    0 10px 24px rgba(33, 39, 44, 0.1),
+    inset 0 1px 0 #fff,
+    inset 0 -1px 0 rgba(214, 219, 218, 0.34);
+}
+.app-shell .asset-pill svg {
+  width: 18px;
+  height: 18px;
+}
+.app-shell .asset-pill .asset-copy {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+  overflow: hidden;
+  line-height: 1;
+}
+.app-shell .asset-pill .asset-copy strong,
+.app-shell .asset-pill .asset-copy small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-shell .asset-pill .asset-copy strong {
+  color: #30383e;
+  font-size: 11px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+.app-shell .asset-pill .asset-copy small {
+  color: #929894;
+  font-size: 7px;
+  font-weight: 750;
 }
 .app-shell .asset-actions .wallet-action {
-  width: clamp(54px, 14vw, 66px);
+  width: clamp(50px, 14vw, 60px);
+  height: 42px;
+  border-radius: 22px;
+  background: linear-gradient(180deg, #4c5862, #27333d);
+  box-shadow:
+    0 12px 25px rgba(28, 39, 50, 0.23),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.24);
+}
+.app-shell .asset-actions .icon-action,
+.app-shell .asset-actions .summary-retry {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow:
+    0 10px 22px rgba(54, 67, 75, 0.09),
+    inset 0 1px 0 #fff;
+}
+.app-shell .asset-actions button:active,
+.app-shell button.asset-pill:active {
+  transform: translateY(1px) scale(0.98);
 }
 .app-shell .bottom-nav {
   bottom: calc(var(--safe-bottom) + 20px);
@@ -6322,21 +6380,17 @@ body,
 }
 
 @media (max-width: 410px) {
-  .app-shell .identity > div {
-    width: 45px;
-  }
-  .app-shell .identity strong {
-    font-size: 10px;
-  }
   .app-shell .asset-actions {
     gap: 3px;
   }
-  .app-shell .asset-pill {
-    width: 58px;
-    padding: 0 5px;
+  .app-shell .asset-actions .asset-pill {
+    width: 80px;
+    gap: 5px;
+    padding: 0 7px;
   }
-  .app-shell .asset-actions .refresh {
-    display: inline-flex;
+  .app-shell .asset-actions .wallet-action {
+    width: 52px;
+    padding: 0 5px;
   }
   .app-shell .market-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -6351,20 +6405,35 @@ body,
 
 @media (max-width: 370px) {
   .app-shell .identity {
-    flex: 0 0 auto;
-  }
-  .app-shell .identity > div {
-    display: none;
+    flex-basis: 40px;
   }
   .app-shell .avatar {
-    width: 42px;
-    height: 42px;
+    width: 40px;
+    height: 40px;
   }
-  .app-shell .asset-pill {
-    width: 52px;
+  .app-shell .asset-actions .asset-pill {
+    width: 60px;
+    gap: 3px;
+    padding: 0 4px;
+  }
+  .app-shell .asset-pill svg {
+    width: 14px;
+    height: 14px;
+  }
+  .app-shell .asset-pill .asset-copy strong {
+    font-size: 10px;
   }
   .app-shell .asset-actions .wallet-action {
-    width: 52px;
+    width: 42px;
+    padding: 0;
+  }
+  .app-shell .wallet-action small,
+  .app-shell .asset-pill .asset-copy small {
+    display: none;
+  }
+  .app-shell .asset-actions .icon-action,
+  .app-shell .asset-actions .summary-retry {
+    width: 36px;
   }
 }
 

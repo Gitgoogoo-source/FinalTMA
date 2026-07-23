@@ -1,4 +1,4 @@
-import { Coins, Crown, Gem, RefreshCw, WalletCards } from "lucide-react";
+import { Coins, Crown, Gem, WalletCards } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
 import { useApiQuery } from "../../platform/query/index.ts";
@@ -36,6 +36,7 @@ export function TopAssetBar({
       </div>
       <div className="asset-actions">
         <button
+          type="button"
           className={`wallet-action ${wallet.data?.verified_at ? "verified" : ""}`}
           disabled={Boolean(wallet.error)}
           aria-label={`TON 钱包：${walletLabel}`}
@@ -45,12 +46,18 @@ export function TopAssetBar({
           <small>{walletLabel}</small>
         </button>
         <button
+          type="button"
           className="asset-pill kcoin"
           aria-label={`K-coin：${kcoin?.available ?? "加载中"}，打开充值`}
           onClick={() => openDialog("topup")}
         >
           <Coins />
-          <span>{formatAsset(kcoin?.available, bootstrap.isLoading)}</span>
+          <span className="asset-copy">
+            <strong>
+              {formatAsset(kcoin?.available, bootstrap.isLoading)}
+            </strong>
+            <small>K-coin</small>
+          </span>
         </button>
         <div
           className="asset-pill fgems"
@@ -59,10 +66,16 @@ export function TopAssetBar({
           aria-label={`Fgems：${fgems?.available ?? "加载中"}`}
         >
           <Gem />
-          <span>{formatAsset(fgems?.available, bootstrap.isLoading)}</span>
+          <span className="asset-copy">
+            <strong>
+              {formatAsset(fgems?.available, bootstrap.isLoading)}
+            </strong>
+            <small>Fgems</small>
+          </span>
         </div>
         {vip.error ? (
           <button
+            type="button"
             className="summary-retry"
             aria-label="VIP 状态加载失败，重新加载"
             onClick={() => void vip.refetch()}
@@ -71,6 +84,7 @@ export function TopAssetBar({
           </button>
         ) : vip.data?.active ? (
           <button
+            type="button"
             className="icon-action vip active"
             aria-label="查看有效 VIP 月卡"
             onClick={() => openDialog("vip")}
@@ -80,6 +94,7 @@ export function TopAssetBar({
         ) : null}
         {wallet.error ? (
           <button
+            type="button"
             className="summary-retry"
             aria-label="钱包状态加载失败，重新加载"
             onClick={() => void wallet.refetch()}
@@ -87,18 +102,6 @@ export function TopAssetBar({
             TON
           </button>
         ) : null}
-        <button
-          className={`refresh ${bootstrap.isFetching || vip.isFetching || wallet.isFetching ? "is-refreshing" : ""}`}
-          aria-label="刷新真实状态"
-          disabled={bootstrap.isFetching || vip.isFetching || wallet.isFetching}
-          onClick={() => {
-            void bootstrap.refetch();
-            void vip.refetch();
-            void wallet.refetch();
-          }}
-        >
-          <RefreshCw />
-        </button>
       </div>
     </header>
   );
