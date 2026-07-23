@@ -79,6 +79,16 @@ FORBIDDEN_REFERENCES = (
     "70_onchain.sql",
     "90_integrations.sql",
 )
+RETIRED_GAME_PATHS = (
+    "apps/web/src/domains/world-rpg",
+    "apps/web/public/assets/world-rpg",
+    "assets/source/world-rpg",
+    "generated/assets/world-rpg-v1.json",
+    "tools/assets/generate-world-rpg.mjs",
+    "docs/architecture/adr/ADR-011-world-rpg-local-runtime.md",
+    "pokemon游戏开发规划.md",
+    "游戏方案.md",
+)
 WEB_DOMAINS = {
     "album",
     "decomposition",
@@ -121,6 +131,9 @@ def main() -> None:
     missing = [path for path in REQUIRED_PATHS if not (ROOT / path).exists()]
     if missing:
         raise SystemExit(f"Refactored architecture paths are missing: {missing}")
+    retired = [path for path in RETIRED_GAME_PATHS if (ROOT / path).exists()]
+    if retired:
+        raise SystemExit(f"Retired Pet World paths must remain deleted: {retired}")
     assert_directories(WEB_ROOT / "domains", WEB_DOMAINS, "Web domains")
     assert_directories(API_ROOT / "domains", API_DOMAINS, "API domains")
     assert_nonempty_domains(WEB_ROOT / "domains")
@@ -313,12 +326,11 @@ def verify_monster_tamer_boundary() -> None:
         raise SystemExit(f"Monster Tamer runtime dependencies must be local: {used_cdns}")
 
     game_page = GAME_PAGE.read_text(encoding="utf-8")
-    panel_tokens = ("<MonsterTamerPanel", "<ExpeditionPanel", "<WheelPanel")
-    panel_positions = [game_page.find(token) for token in panel_tokens]
-    if any(position < 0 for position in panel_positions) or panel_positions != sorted(panel_positions):
-        raise SystemExit("Game page order must be MonsterTamerPanel, ExpeditionPanel, then WheelPanel")
-    if game_page.count("MonsterTamerPanel") != 2:
-        raise SystemExit("Game page must import and render MonsterTamerPanel exactly once")
+    expected_panels = ("MonsterTamerPanel", "ExpeditionPanel", "WheelPanel")
+    stack = re.search(r'<div className="game-stack">(.*?)</div>', game_page, re.DOTALL)
+    rendered_panels = tuple(re.findall(r"<([A-Z]\w*)\s*/>", stack.group(1))) if stack else ()
+    if rendered_panels != expected_panels or any(game_page.count(panel) != 2 for panel in expected_panels):
+        raise SystemExit("Game page must contain only MonsterTamerPanel, ExpeditionPanel, and WheelPanel in order")
 
     vercel = json.loads((ROOT / "vercel.json").read_text(encoding="utf-8"))
     rewrites = vercel.get("rewrites", [])
