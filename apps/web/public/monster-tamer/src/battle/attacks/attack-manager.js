@@ -1,5 +1,6 @@
 import Phaser from '../../lib/phaser.js';
 import { exhaustiveGuard } from '../../utils/guard.js';
+import { getBattleLayout } from '../battle-layout.js';
 import { ATTACK_KEYS } from './attack-keys.js';
 import { IceShard } from './ice-shard.js';
 import { Slash } from './slash.js';
@@ -46,11 +47,10 @@ export class AttackManager {
     }
 
     // if attack target is enemy
-    let x = 745;
-    let y = 140;
+    const layout = getBattleLayout(this.#scene);
+    let { x, y } = layout.enemyAttack;
     if (target === ATTACK_TARGET.PLAYER) {
-      x = 256;
-      y = 344;
+      ({ x, y } = layout.playerAttack);
     }
 
     switch (attack) {

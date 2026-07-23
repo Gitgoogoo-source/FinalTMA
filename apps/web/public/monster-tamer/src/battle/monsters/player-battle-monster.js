@@ -1,13 +1,8 @@
 import { KENNEY_FUTURE_NARROW_FONT_NAME } from '../../assets/font-keys.js';
 import { ExpBar } from '../../common/exp-bar.js';
 import { calculateExpBarCurrentValue, handleMonsterGainingExperience } from '../../utils/leveling-utils.js';
+import { getBattleLayout } from '../battle-layout.js';
 import { BattleMonster } from './battle-monster.js';
-
-/** @type {import('../../types/typedef').Coordinate} */
-const PLAYER_POSITION = Object.freeze({
-  x: 256,
-  y: 316,
-});
 
 export class PlayerBattleMonster extends BattleMonster {
   /** @type {Phaser.GameObjects.Text} */
@@ -19,12 +14,22 @@ export class PlayerBattleMonster extends BattleMonster {
    * @param {import('../../types/typedef.js').BattleMonsterConfig} config
    */
   constructor(config) {
-    super(config, PLAYER_POSITION);
+    super(config, getBattleLayout(config.scene).playerMonster);
     this._phaserGameObject.setFlipX(true);
-    this._phaserHealthBarGameContainer.setPosition(556, 318);
 
     this.#addHealthBarComponents();
     this.#addExpBarComponents();
+    this.layout();
+  }
+
+  layout() {
+    const layout = getBattleLayout(this._scene);
+    if (!this._scene.tweens.isTweening(this._phaserGameObject)) {
+      this._phaserGameObject.setPosition(layout.playerMonster.x, layout.playerMonster.y);
+    }
+    if (!this._scene.tweens.isTweening(this._phaserHealthBarGameContainer)) {
+      this._phaserHealthBarGameContainer.setPosition(layout.playerHealthBar.x, layout.playerHealthBar.y);
+    }
   }
 
   #setHealthBarText() {
@@ -59,13 +64,15 @@ export class PlayerBattleMonster extends BattleMonster {
    * @returns {void}
    */
   playMonsterAppearAnimation(callback) {
+    const playerPosition = getBattleLayout(this._scene).playerMonster;
     const startXPos = -30;
-    const endXPos = PLAYER_POSITION.x;
-    this._phaserGameObject.setPosition(startXPos, PLAYER_POSITION.y);
+    const endXPos = playerPosition.x;
+    this._phaserGameObject.setPosition(startXPos, playerPosition.y);
     this._phaserGameObject.setAlpha(1);
 
     if (this._skipBattleAnimations) {
       this._phaserGameObject.setX(endXPos);
+      this.layout();
       callback();
       return;
     }
@@ -80,6 +87,7 @@ export class PlayerBattleMonster extends BattleMonster {
       },
       targets: this._phaserGameObject,
       onComplete: () => {
+        this.layout();
         callback();
       },
     });
@@ -90,13 +98,15 @@ export class PlayerBattleMonster extends BattleMonster {
    * @returns {void}
    */
   playMonsterHealthBarAppearAnimation(callback) {
+    const playerHealthBarPosition = getBattleLayout(this._scene).playerHealthBar;
     const startXPos = 800;
-    const endXPos = this._phaserHealthBarGameContainer.x;
-    this._phaserHealthBarGameContainer.setPosition(startXPos, this._phaserHealthBarGameContainer.y);
+    const endXPos = playerHealthBarPosition.x;
+    this._phaserHealthBarGameContainer.setPosition(startXPos, playerHealthBarPosition.y);
     this._phaserHealthBarGameContainer.setAlpha(1);
 
     if (this._skipBattleAnimations) {
       this._phaserHealthBarGameContainer.setX(endXPos);
+      this.layout();
       callback();
       return;
     }
@@ -111,6 +121,7 @@ export class PlayerBattleMonster extends BattleMonster {
       },
       targets: this._phaserHealthBarGameContainer,
       onComplete: () => {
+        this.layout();
         callback();
       },
     });

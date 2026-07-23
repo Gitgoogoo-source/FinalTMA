@@ -34,8 +34,9 @@ function getUnionBoundsForCameraBounds(cameraRegions) {
  * @param {Phaser.GameObjects.Sprite} gameObject
  * @param {import("../types/typedef").CameraRegion[]} cameraRegions
  * @param {{ x: number, y: number, width: number, height: number }} fallbackBounds
+ * @param {number | undefined} preferredZoom
  */
-export function updateMainCameraBounds(scene, gameObject, cameraRegions, fallbackBounds) {
+export function updateMainCameraBounds(scene, gameObject, cameraRegions, fallbackBounds, preferredZoom) {
   const filteredRegions = getCameraRegionsForGameObject(gameObject, cameraRegions);
   const unionBounds =
     filteredRegions.length === 0 ? fallbackBounds : getUnionBoundsForCameraBounds(filteredRegions);
@@ -43,13 +44,18 @@ export function updateMainCameraBounds(scene, gameObject, cameraRegions, fallbac
     return;
   }
   const { width: viewportWidth, height: viewportHeight } = scene.scale.gameSize;
-  const zoom = Math.max(
-    0.8,
-    viewportWidth / unionBounds.width,
-    viewportHeight / unionBounds.height
-  );
+  const zoom =
+    preferredZoom ?? Math.max(0.8, viewportWidth / unionBounds.width, viewportHeight / unionBounds.height);
+  const horizontalPadding = Math.max(0, viewportWidth / zoom - unionBounds.width);
+  const verticalPadding = Math.max(0, viewportHeight / zoom - unionBounds.height);
   scene.cameras.main
-    .setBounds(unionBounds.x, unionBounds.y, unionBounds.width, unionBounds.height)
+    .setBounds(
+      unionBounds.x - horizontalPadding / 2,
+      unionBounds.y - verticalPadding / 2,
+      unionBounds.width + horizontalPadding,
+      unionBounds.height + verticalPadding
+    )
     .setZoom(zoom)
     .setRoundPixels(true);
+  return zoom;
 }

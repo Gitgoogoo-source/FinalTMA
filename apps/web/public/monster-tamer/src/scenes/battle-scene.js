@@ -22,6 +22,7 @@ import { sleep } from '../utils/time-utils.js';
 import { generateUuid } from '../utils/random.js';
 import { calculateMonsterCaptureResults } from '../utils/catch-utils.js';
 import { EnemyBattleNpc } from '../battle/enemy-battle-npc.js';
+import { getBattleLayout } from '../battle/battle-layout.js';
 
 const BATTLE_STATES = Object.freeze({
   INTRO: 'INTRO',
@@ -49,6 +50,7 @@ const BATTLE_STATES = Object.freeze({
  * @property {import('../types/typedef.js').Monster[]} playerMonsters
  * @property {import('../types/typedef.js').Monster[]} enemyMonsters
  * @property {boolean} [isTrainerBattle=false]
+ * @property {number} [worldCameraZoom]
  * @property {object} [npc]
  * @property {number} npc.id
  * @property {string} npc.assetKey
@@ -196,6 +198,11 @@ export class BattleScene extends BaseScene {
       assetFrame: 0,
       scale: 0.1,
       skipBattleAnimations: this.#skipAnimations,
+    });
+    this.#layoutBattlefield();
+    this.scale.on(Phaser.Scale.Events.RESIZE, this.#layoutBattlefield, this);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.scale.off(Phaser.Scale.Events.RESIZE, this.#layoutBattlefield, this);
     });
 
     this._controls.lockInput = true;
@@ -450,6 +457,7 @@ export class BattleScene extends BaseScene {
     /** @type {import('./world-scene.js').WorldSceneData} */
     const sceneDataToPass = {
       isPlayerKnockedOut: this.#playerKnockedOut,
+      cameraZoom: this.#sceneData.worldCameraZoom,
     };
     this.cameras.main.fadeOut(600, 0, 0, 0);
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
@@ -982,7 +990,8 @@ export class BattleScene extends BaseScene {
    * @returns {void}
    */
   #createAvailableMonstersUi() {
-    this.#availableMonstersUiContainerForPlayer = this.add.container(this.scale.width - 24, 304, []);
+    const layout = getBattleLayout(this);
+    this.#availableMonstersUiContainerForPlayer = this.add.container(layout.playerParty.x, layout.playerParty.y, []);
     this.#sceneData.playerMonsters.forEach((monster, index) => {
       const alpha = monster.currentHp > 0 ? 1 : 0.4;
       const ball = this.add
@@ -995,7 +1004,7 @@ export class BattleScene extends BaseScene {
 
     // add logic to show available enemy monsters during trainer battles
     if (this.#isTrainerBattle) {
-      this.#availableMonstersUiContainerForNpc = this.add.container(24, 116, []);
+      this.#availableMonstersUiContainerForNpc = this.add.container(layout.enemyParty.x, layout.enemyParty.y, []);
       this.#sceneData.enemyMonsters.forEach((monster, index) => {
         const alpha = monster.currentHp > 0 ? 1 : 0.4;
         const ball = this.add
@@ -1006,6 +1015,16 @@ export class BattleScene extends BaseScene {
       });
       this.#availableMonstersUiContainerForNpc.setAlpha(0);
     }
+  }
+
+  #layoutBattlefield() {
+    const layout = getBattleLayout(this);
+    this.#activeEnemyMonster?.layout();
+    this.#activePlayerMonster?.layout();
+    this.#enemyBattleNpc?.layout();
+    this.#ball?.layout();
+    this.#availableMonstersUiContainerForPlayer?.setPosition(layout.playerParty.x, layout.playerParty.y);
+    this.#availableMonstersUiContainerForNpc?.setPosition(layout.enemyParty.x, layout.enemyParty.y);
   }
 
   /**

@@ -42,6 +42,7 @@ import {
  * @property {boolean} [isPlayerKnockedOut]
  * @property {string} [area]
  * @property {boolean} [isInterior]
+ * @property {number} [cameraZoom]
  */
 
 export class WorldScene extends BaseScene {
@@ -105,6 +106,8 @@ export class WorldScene extends BaseScene {
   #movementMarker;
   /** @type {(() => void) | undefined} */
   #cancelMovementHandler;
+  /** @type {number | undefined} */
+  #cameraZoom;
 
   constructor() {
     super({
@@ -129,11 +132,16 @@ export class WorldScene extends BaseScene {
       isInterior = dataManager.store.get(DATA_MANAGER_STORE_KEYS.PLAYER_LOCATION).isInterior;
     }
     const isPlayerKnockedOut = this.#sceneData?.isPlayerKnockedOut || false;
+    const cameraZoom =
+      Number.isFinite(this.#sceneData?.cameraZoom) && this.#sceneData.cameraZoom > 0
+        ? this.#sceneData.cameraZoom
+        : undefined;
 
     this.#sceneData = {
       area,
       isInterior,
       isPlayerKnockedOut,
+      cameraZoom,
     };
 
     // update player location, and map data if the player was knocked out in a battle
@@ -206,6 +214,7 @@ export class WorldScene extends BaseScene {
     this.#movementTarget = undefined;
     this.#movementMarker = undefined;
     this.#cancelMovementHandler = undefined;
+    this.#cameraZoom = cameraZoom;
   }
 
   /**
@@ -213,6 +222,7 @@ export class WorldScene extends BaseScene {
    */
   create() {
     super.create();
+    this.cameras.main.setBackgroundColor('#091416');
 
     // create rectangles for checking for overlaps between game objects, added so we can recycle game objects
     this.#rectangleForOverlapCheck1 = new Phaser.Geom.Rectangle();
@@ -285,7 +295,13 @@ export class WorldScene extends BaseScene {
 
     // update camera bounds for the given level
     this.#cameraRegions = TiledUtils.createCameraRegions(map);
-    CameraUtils.updateMainCameraBounds(this, this.#player.sprite, this.#cameraRegions, this.#mapBounds);
+    this.#cameraZoom = CameraUtils.updateMainCameraBounds(
+      this,
+      this.#player.sprite,
+      this.#cameraRegions,
+      this.#mapBounds,
+      this.#cameraZoom
+    );
 
     // update our collisions with npcs
     this.#npcs.forEach((npc) => {
@@ -525,7 +541,13 @@ export class WorldScene extends BaseScene {
 
   #handleViewportResize() {
     if (this.#player) {
-      CameraUtils.updateMainCameraBounds(this, this.#player.sprite, this.#cameraRegions, this.#mapBounds);
+      CameraUtils.updateMainCameraBounds(
+        this,
+        this.#player.sprite,
+        this.#cameraRegions,
+        this.#mapBounds,
+        this.#cameraZoom
+      );
     }
   }
 
@@ -639,7 +661,13 @@ export class WorldScene extends BaseScene {
     });
 
     // update camera bounds for given level after player moves
-    CameraUtils.updateMainCameraBounds(this, this.#player.sprite, this.#cameraRegions, this.#mapBounds);
+    CameraUtils.updateMainCameraBounds(
+      this,
+      this.#player.sprite,
+      this.#cameraRegions,
+      this.#mapBounds,
+      this.#cameraZoom
+    );
 
     // check to see if the player encountered cut scene zone
     this.#player.sprite.getBounds(this.#rectangleForOverlapCheck1);
@@ -1487,6 +1515,7 @@ export class WorldScene extends BaseScene {
    * @param {import('./battle-scene.js').BattleSceneData} battleSceneData
    */
   #startBattleScene(battleSceneData) {
+    battleSceneData.worldCameraZoom = this.#cameraZoom ?? this.cameras.main.zoom;
     this.cameras.main.fadeOut(2000);
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
       this.scene.start(SCENE_KEYS.BATTLE_SCENE, battleSceneData);

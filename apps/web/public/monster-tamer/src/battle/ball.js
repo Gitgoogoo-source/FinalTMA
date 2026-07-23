@@ -1,4 +1,5 @@
 import Phaser from '../lib/phaser.js';
+import { getBattleLayout } from './battle-layout.js';
 
 /**
  * @typedef BallConfig
@@ -48,20 +49,27 @@ export class Ball {
    * @returns {void}
    */
   #createCurvePath() {
+    const { start, control, end } = getBattleLayout(this.#scene).ball;
     // create curved path for ball to follow
-    const startPoint = new Phaser.Math.Vector2(0, 500);
-    const controlPoint1 = new Phaser.Math.Vector2(200, 100);
-    const controlPoint2 = new Phaser.Math.Vector2(725, 180);
-    const endPoint = new Phaser.Math.Vector2(725, 180);
+    const startPoint = new Phaser.Math.Vector2(start.x, start.y);
+    const controlPoint1 = new Phaser.Math.Vector2(control.x, control.y);
+    const controlPoint2 = new Phaser.Math.Vector2(end.x, end.y);
+    const endPoint = new Phaser.Math.Vector2(end.x, end.y);
     const curve = new Phaser.Curves.CubicBezier(startPoint, controlPoint1, controlPoint2, endPoint);
-    this.#ballPath = new Phaser.Curves.Path(0, 500).add(curve);
+    this.#ballPath = new Phaser.Curves.Path(start.x, start.y).add(curve);
 
     // draw curve (for debugging)
+    this.#ballPathGraphics?.destroy();
     this.#ballPathGraphics = this.#scene.add.graphics();
     this.#ballPathGraphics.clear();
     this.#ballPathGraphics.lineStyle(4, 0x00ff00, 1);
     this.#ballPath.draw(this.#ballPathGraphics);
     this.#ballPathGraphics.setAlpha(0);
+  }
+
+  layout() {
+    this.#createCurvePath();
+    this.#ball.setPath(this.#ballPath);
   }
 
   /**
@@ -90,14 +98,16 @@ export class Ball {
    */
   playThrowBallAnimation() {
     return new Promise((resolve) => {
+      const { start, end } = getBattleLayout(this.#scene).ball;
       if (this.#skipBattleAnimations) {
-        this.#ball.setPosition(725, 180);
+        this.#ball.setPosition(end.x, end.y);
         this.#ball.setAlpha(1);
         resolve();
         return;
       }
 
-      this.#ball.setPosition(0, 500);
+      this.layout();
+      this.#ball.setPosition(start.x, start.y);
       this.#ball.setAlpha(1);
       this.#ball.startFollow({
         delay: 0,
