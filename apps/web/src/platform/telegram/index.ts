@@ -11,7 +11,7 @@ export function initializeTelegram(): TelegramWebApp | null {
   if (!app) return null;
   app.ready();
   app.expand();
-  app.disableVerticalSwipes?.();
+  attemptTelegramMethod(() => app.disableVerticalSwipes?.());
   syncTelegramLayout();
   if (!listening) {
     listening = true;
@@ -25,7 +25,7 @@ export function initializeTelegram(): TelegramWebApp | null {
     ])
       app.onEvent(event, syncTelegramLayout);
   }
-  if (!app.isFullscreen) app.requestFullscreen?.();
+  if (!app.isFullscreen) attemptTelegramMethod(() => app.requestFullscreen?.());
   return app;
 }
 
@@ -85,11 +85,19 @@ function syncTelegramLayout(): void {
   const background =
     app.themeParams.bg_color ??
     (app.colorScheme === "light" ? "#ffffff" : "#0b1020");
-  app.setHeaderColor(background);
-  app.setBackgroundColor(background);
+  attemptTelegramMethod(() => app.setHeaderColor(background));
+  attemptTelegramMethod(() => app.setBackgroundColor(background));
   document
     .querySelector('meta[name="theme-color"]')
     ?.setAttribute("content", background);
+}
+
+function attemptTelegramMethod(action: () => void): void {
+  try {
+    action();
+  } catch {
+    // Telegram exposes unsupported methods on older clients and throws when called.
+  }
 }
 
 export function useTelegramBackButton(
