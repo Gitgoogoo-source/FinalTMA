@@ -24,6 +24,7 @@ import { Badge, Button, Card, PageState } from "../../../shared/ui/index.tsx";
 import { useOperationRegistry } from "../../../workflows/operation-recovery/index.ts";
 import { useNavigationIntent } from "../../../workflows/payment-recovery/index.ts";
 import { MarketTabs, type MarketTab } from "./MarketTabs.tsx";
+import "./market-density.css";
 
 type BuyFilter = "price" | "rarity" | "stage" | "sort";
 type BuySort = "catalog" | "price-asc" | "price-desc" | "available";
@@ -217,7 +218,7 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
     );
   };
   return (
-    <main className="page market-page">
+    <main className={`page market-page market-page-${tab}`}>
       <MarketTabs
         activeTab={tab}
         focusActive={params.get("focus") === `market-${tab}`}
@@ -1004,35 +1005,44 @@ function MarketCard({
             {item.stage ? ` · 第 ${item.stage} 阶` : ""}
           </Badge>
         )}
-        <div className="market-meta">
-          <p>
-            官方单价 <strong>{price} K</strong>
-          </p>
-          <p>
-            {tab === "buy" ? "可买" : tab === "sell" ? "可用" : "出售中"}{" "}
-            <strong>{available}</strong>
-          </p>
-          {tab === "manage" && (
-            <>
-              <p>
-                累计已售 <strong>{item.sold_quantity ?? 0}</strong>
-              </p>
-              <p>
-                预计成交 <strong>{item.estimated_gross ?? 0} K</strong>
-              </p>
-              <p>
-                预计手续费 <strong>{item.estimated_fee ?? 0} K</strong>
-              </p>
-              <p>
-                预计到账 <strong>{item.estimated_net ?? 0} K</strong>
-              </p>
-              <p>
-                月卡预计返还 <strong>{item.estimated_vip_rebate ?? 0} K</strong>
-              </p>
-            </>
-          )}
-        </div>
+        {tab !== "buy" && (
+          <div className="market-meta">
+            <p>
+              官方单价 <strong>{price} K</strong>
+            </p>
+            <p>
+              {tab === "sell" ? "可用" : "出售中"} <strong>{available}</strong>
+            </p>
+            {tab === "manage" && (
+              <>
+                <p>
+                  累计已售 <strong>{item.sold_quantity ?? 0}</strong>
+                </p>
+                <p>
+                  预计成交 <strong>{item.estimated_gross ?? 0} K</strong>
+                </p>
+                <p>
+                  预计手续费 <strong>{item.estimated_fee ?? 0} K</strong>
+                </p>
+                <p>
+                  预计到账 <strong>{item.estimated_net ?? 0} K</strong>
+                </p>
+                <p>
+                  月卡预计返还{" "}
+                  <strong>{item.estimated_vip_rebate ?? 0} K</strong>
+                </p>
+              </>
+            )}
+          </div>
+        )}
       </div>
+      {tab === "buy" && (
+        <div className="market-buy-facts">
+          <small>官方单价</small>
+          <strong>{price} K</strong>
+          <span>可买 {available}</span>
+        </div>
+      )}
       {tab === "sell" && available > 0 && (
         <div className="quantity">
           <Button
