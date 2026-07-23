@@ -11,6 +11,9 @@ const CONTROL = Object.freeze({
 
 const DIRECTION_CONTROLS = Object.freeze([CONTROL.LEFT, CONTROL.RIGHT, CONTROL.UP, CONTROL.DOWN]);
 const RETURN_PATH = '/game';
+const JOYSTICK_DEADZONE = 0.18;
+const JOYSTICK_RADIUS = 56;
+const JOYSTICK_KNOB_TRAVEL = 32;
 
 class TouchControls {
   /** @type {Map<number, { control: string, button: HTMLButtonElement }>} */
@@ -24,9 +27,18 @@ class TouchControls {
   #buttonsByControl = new Map();
   /** @type {'menu' | 'world'} */
   #inputMode = 'menu';
+  /** @type {HTMLElement | null} */
+  #joystick = null;
+  /** @type {number | null} */
+  #joystickPointerId = null;
+  /** @type {{ x: number, y: number }} */
+  #joystickVector = { x: 0, y: 0 };
+  /** @type {string | undefined} */
+  #joystickDirection;
 
   constructor() {
     this.#bindButtons();
+    this.#bindJoystick();
     this.#bindGameGestures();
     this.#bindLifecycle();
     this.#initializeTelegram();
@@ -41,7 +53,14 @@ class TouchControls {
   setWorldPointerMode(enabled) {
     this.#inputMode = enabled ? 'world' : 'menu';
     document.documentElement.classList.toggle('is-world-scene', enabled);
+    this.#joystick?.setAttribute('aria-hidden', String(!enabled));
     this.#gesturePointers.clear();
+    this.#resetJoystick();
+  }
+
+  releaseWorldMovement() {
+    DIRECTION_CONTROLS.forEach((control) => this.#pressed.delete(control));
+    this.#resetJoystick();
   }
 
   /**
@@ -79,7 +98,22 @@ class TouchControls {
    * @returns {string | undefined}
    */
   getHeldDirection() {
-    return DIRECTION_CONTROLS.find((control) => this.isDown(control));
+    const { x, y } = this.getJoystickVector();
+    if (Math.max(Math.abs(x), Math.abs(y)) === 0) {
+      return DIRECTION_CONTROLS.find((control) => this.isDown(control));
+    }
+    if (Math.abs(x) >= Math.abs(y)) {
+      return x < 0 ? CONTROL.LEFT : CONTROL.RIGHT;
+    }
+    return y < 0 ? CONTROL.UP : CONTROL.DOWN;
+  }
+
+  /**
+   * Returns the normalized radial joystick vector after applying its deadzone.
+   * @returns {{ x: number, y: number }}
+   */
+  getJoystickVector() {
+    return { ...this.#joystickVector };
   }
 
   #bindButtons() {
@@ -104,6 +138,116 @@ class TouchControls {
     });
   }
 
+  #bindJoystick() {
+    const joystick = document.querySelector('#movement-joystick');
+    if (!(joystick instanceof HTMLElement)) {
+      return;
+    }
+    this.#joystick = joystick;
+    joystick.dataset.active = 'false';
+
+    joystick.addEventListener('pointerdown', (event) => {
+      if (
+        this.#inputMode !== 'world' ||
+        this.#joystickPointerId !== null ||
+        (event.pointerType === 'mouse' && event.button !== 0)
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      this.#resumeAudio();
+      this.#joystickPointerId = event.pointerId;
+      joystick.dataset.active = 'true';
+      try {
+        joystick.setPointerCapture(event.pointerId);
+      } catch {
+        // Lifecycle and pointer terminal events still clear the vector.
+      }
+      this.#updateJoystick(event);
+    });
+    joystick.addEventListener('pointermove', (event) => {
+      if (event.pointerId === this.#joystickPointerId) {
+        event.preventDefault();
+        this.#updateJoystick(event);
+      }
+    });
+    joystick.addEventListener('pointerup', (event) => this.#releaseJoystickPointer(event.pointerId));
+    joystick.addEventListener('pointercancel', (event) => this.#releaseJoystickPointer(event.pointerId));
+    joystick.addEventListener('lostpointercapture', (event) => this.#releaseJoystickPointer(event.pointerId));
+    joystick.addEventListener('contextmenu', (event) => event.preventDefault());
+    window.addEventListener('pointerup', (event) => this.#releaseJoystickPointer(event.pointerId));
+    window.addEventListener('pointercancel', (event) => this.#releaseJoystickPointer(event.pointerId));
+  }
+
+  /**
+   * @param {PointerEvent} event
+   */
+  #updateJoystick(event) {
+    if (!this.#joystick) {
+      return;
+    }
+
+    const bounds = this.#joystick.getBoundingClientRect();
+    const rawX = (event.clientX - (bounds.left + bounds.width / 2)) / JOYSTICK_RADIUS;
+    const rawY = (event.clientY - (bounds.top + bounds.height / 2)) / JOYSTICK_RADIUS;
+    const rawMagnitude = Math.hypot(rawX, rawY);
+    const clampedMagnitude = Math.min(rawMagnitude, 1);
+    const unitX = rawMagnitude === 0 ? 0 : rawX / rawMagnitude;
+    const unitY = rawMagnitude === 0 ? 0 : rawY / rawMagnitude;
+    const adjustedMagnitude =
+      clampedMagnitude <= JOYSTICK_DEADZONE
+        ? 0
+        : (clampedMagnitude - JOYSTICK_DEADZONE) / (1 - JOYSTICK_DEADZONE);
+    this.#joystickVector = {
+      x: unitX * adjustedMagnitude,
+      y: unitY * adjustedMagnitude,
+    };
+    let direction;
+    if (adjustedMagnitude > 0) {
+      if (Math.abs(this.#joystickVector.x) >= Math.abs(this.#joystickVector.y)) {
+        direction = this.#joystickVector.x < 0 ? CONTROL.LEFT : CONTROL.RIGHT;
+      } else {
+        direction = this.#joystickVector.y < 0 ? CONTROL.UP : CONTROL.DOWN;
+      }
+    }
+    if (direction && direction !== this.#joystickDirection) {
+      this.#markPressed(direction);
+    }
+    this.#joystickDirection = direction;
+    this.#joystick.style.setProperty('--joystick-x', `${unitX * clampedMagnitude * JOYSTICK_KNOB_TRAVEL}px`);
+    this.#joystick.style.setProperty('--joystick-y', `${unitY * clampedMagnitude * JOYSTICK_KNOB_TRAVEL}px`);
+  }
+
+  /**
+   * @param {number} pointerId
+   */
+  #releaseJoystickPointer(pointerId) {
+    if (pointerId === this.#joystickPointerId) {
+      this.#resetJoystick();
+    }
+  }
+
+  #resetJoystick() {
+    const pointerId = this.#joystickPointerId;
+    this.#joystickPointerId = null;
+    this.#joystickVector = { x: 0, y: 0 };
+    this.#joystickDirection = undefined;
+    if (!this.#joystick) {
+      return;
+    }
+    if (pointerId !== null && this.#joystick.hasPointerCapture(pointerId)) {
+      try {
+        this.#joystick.releasePointerCapture(pointerId);
+      } catch {
+        // Pointer terminal events still leave the logical input released.
+      }
+    }
+    this.#joystick.dataset.active = 'false';
+    this.#joystick.style.setProperty('--joystick-x', '0px');
+    this.#joystick.style.setProperty('--joystick-y', '0px');
+  }
+
   #bindGameGestures() {
     const container = document.querySelector('#game-container');
     if (!(container instanceof HTMLElement)) {
@@ -111,7 +255,7 @@ class TouchControls {
     }
 
     container.addEventListener('pointerdown', (event) => {
-      if (event.pointerType === 'mouse' && event.button !== 0) {
+      if (this.#inputMode === 'world' || (event.pointerType === 'mouse' && event.button !== 0)) {
         return;
       }
       this.#gesturePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
@@ -200,6 +344,7 @@ class TouchControls {
     this.#activePointers.clear();
     this.#gesturePointers.clear();
     this.#pressed.clear();
+    this.#resetJoystick();
     this.#buttonsByControl.forEach((_, control) => this.#setPressedVisual(control, false));
   }
 
@@ -221,6 +366,7 @@ class TouchControls {
   #bindLifecycle() {
     window.addEventListener('blur', () => this.#releaseAll());
     window.addEventListener('pagehide', () => this.#releaseAll());
+    window.addEventListener('resize', () => this.#releaseAll());
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState !== 'visible') {
         this.#releaseAll();
@@ -263,6 +409,7 @@ class TouchControls {
     const returnToGame = () => window.location.assign(RETURN_PATH);
     const releaseAll = () => this.#releaseAll();
     const syncLayout = () => {
+      this.#releaseAll();
       this.#setInsets('--tg-safe-area-inset', telegram.safeAreaInset);
       this.#setInsets('--tg-content-safe-area-inset', telegram.contentSafeAreaInset);
       if (telegram.viewportStableHeight) {

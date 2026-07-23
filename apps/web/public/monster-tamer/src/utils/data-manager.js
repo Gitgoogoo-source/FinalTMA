@@ -7,6 +7,11 @@ import { DataUtils } from './data-utils.js';
 import { GAME_FLAG } from '../types/typedef.js';
 
 const LOCAL_STORAGE_KEY = 'MONSTER_TAMER_DATA';
+const WORLD_VERSION = 2;
+const WORLD_SPAWN_POSITION = Object.freeze({
+  x: 240 * 64,
+  y: 126 * 64,
+});
 
 /**
  * @typedef PlayerLocation
@@ -24,6 +29,7 @@ const LOCAL_STORAGE_KEY = 'MONSTER_TAMER_DATA';
 /**
  * @typedef GlobalState
  * @type {object}
+ * @property {number} worldVersion
  * @property {object} player
  * @property {object} player.position
  * @property {number} player.position.x
@@ -49,6 +55,7 @@ const LOCAL_STORAGE_KEY = 'MONSTER_TAMER_DATA';
 
 /** @type {GlobalState} */
 const initialState = {
+  worldVersion: WORLD_VERSION,
   player: {
     position: {
       x: 0,
@@ -147,8 +154,31 @@ class DataManager extends Phaser.Events.EventEmitter {
       // TODO: we should add error handling and data validation at this step to make sure we get the data we expect.
       /** @type {GlobalState} */
       const parsedData = JSON.parse(savedData);
+      const savedWorldVersion = parsedData.worldVersion ?? 1;
+      if (!Number.isInteger(savedWorldVersion) || savedWorldVersion < 1) {
+        throw new Error('The saved Monster Tamer world version is invalid.');
+      }
+      if (savedWorldVersion > WORLD_VERSION) {
+        console.warn(
+          `[${DataManager.name}:loadData] ignored a save from newer world version ${savedWorldVersion}.`
+        );
+        return;
+      }
+      const migratedFromRetiredMap = savedWorldVersion < WORLD_VERSION;
+      if (migratedFromRetiredMap) {
+        parsedData.worldVersion = WORLD_VERSION;
+        parsedData.player.position = { ...WORLD_SPAWN_POSITION };
+        parsedData.player.direction = DIRECTION.DOWN;
+        parsedData.player.location = {
+          area: 'main_1',
+          isInterior: false,
+        };
+      }
       // update the state with the saved data
       this.#updateDataManger(parsedData);
+      if (migratedFromRetiredMap) {
+        this.saveData();
+      }
     } catch {
       console.warn(
         `[${DataManager.name}:loadData] encountered an error while attempting to load and parse saved data.`
@@ -390,6 +420,7 @@ class DataManager extends Phaser.Events.EventEmitter {
    */
   #dataManagerDataToGlobalStateObject() {
     return {
+      worldVersion: WORLD_VERSION,
       player: {
         position: {
           x: this.#store.get(DATA_MANAGER_STORE_KEYS.PLAYER_POSITION).x,

@@ -28,7 +28,8 @@ export class Item {
     this.#scene = config.scene;
     this.#phaserGameObject = this.#scene.add
       .image(config.position.x, config.position.y, WORLD_ASSET_KEYS.BEACH, 22)
-      .setOrigin(0);
+      .setOrigin(0)
+      .setDepth(config.position.y + 32);
   }
 
   /** @type {Phaser.GameObjects.Image} */

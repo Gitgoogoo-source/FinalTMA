@@ -1,4 +1,4 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -8,15 +8,7 @@ const SCRIPT_DIRECTORY = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(SCRIPT_DIRECTORY, "../..");
 const GAME_ROOT = path.join(ROOT, "apps/web/public/monster-tamer");
 const IMAGE_ROOT = path.join(GAME_ROOT, "assets/images/monster-tamer");
-const DATA_ROOT = path.join(GAME_ROOT, "assets/data");
 const TILE = 64;
-
-const xml = (value) =>
-  String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;");
 
 async function renderSvg(
   relativePath,
@@ -36,234 +28,6 @@ async function renderSvg(
     .ensureAlpha()
     .png({ compressionLevel: 9 })
     .toFile(output);
-}
-
-function findLayer(layers, name) {
-  for (const layer of layers) {
-    if (layer.name === name) return layer;
-    const nested = layer.layers ? findLayer(layer.layers, name) : undefined;
-    if (nested) return nested;
-  }
-  return undefined;
-}
-
-function findObjectLayer(layers, name) {
-  const layer = findLayer(layers, name);
-  return layer?.objects ?? [];
-}
-
-function encounterTiles(layers) {
-  const group = findLayer(layers, "Encounter");
-  const indexes = new Set();
-  for (const layer of group?.layers ?? []) {
-    for (let index = 0; index < (layer.data?.length ?? 0); index += 1) {
-      if (layer.data[index]) indexes.add(index);
-    }
-  }
-  return indexes;
-}
-
-function tileTexture(x, y, blocked, encounter) {
-  const left = x * TILE;
-  const top = y * TILE;
-  const shade = (x * 17 + y * 29) % 4;
-  if (blocked) {
-    const rock = (x * 11 + y * 7) % 5 === 0;
-    if (rock) {
-      return `
-        <rect x="${left}" y="${top}" width="64" height="64" fill="${shade % 2 ? "#263d45" : "#2d4850"}"/>
-        <path d="M${left + 7} ${top + 54} L${left + 15} ${top + 20} L${left + 34} ${top + 8} L${left + 55} ${top + 27} L${left + 58} ${top + 54} Z"
-          fill="#587079" stroke="#172b31" stroke-width="4"/>
-        <path d="M${left + 16} ${top + 25} L${left + 33} ${top + 14} L${left + 45} ${top + 27}" fill="none"
-          stroke="#82949a" stroke-width="4"/>
-      `;
-    }
-    return `
-      <rect x="${left}" y="${top}" width="64" height="64" fill="${shade % 2 ? "#173f36" : "#1b493d"}"/>
-      <rect x="${left + 27}" y="${top + 29}" width="10" height="35" rx="3" fill="#604431"/>
-      <circle cx="${left + 32}" cy="${top + 24}" r="25" fill="#285e42" stroke="#123327" stroke-width="4"/>
-      <circle cx="${left + 22}" cy="${top + 19}" r="11" fill="#39744e"/>
-      <circle cx="${left + 43}" cy="${top + 28}" r="12" fill="#34704b"/>
-    `;
-  }
-  return `
-    <rect x="${left}" y="${top}" width="64" height="64" fill="${shade % 2 ? "#6d9c55" : "#75a65a"}"/>
-    <path d="M${left + 7} ${top + 50} l4 -7 l4 7 M${left + 45} ${top + 18} l4 -7 l4 7"
-      fill="none" stroke="#4f7d42" stroke-width="3" stroke-linecap="round"/>
-    ${
-      encounter
-        ? `<path d="M${left + 4} ${top + 60} Q${left + 11} ${top + 28} ${left + 18} ${top + 60}
-             M${left + 20} ${top + 60} Q${left + 29} ${top + 20} ${left + 37} ${top + 60}
-             M${left + 39} ${top + 60} Q${left + 49} ${top + 25} ${left + 59} ${top + 60}"
-             fill="none" stroke="#2e6c42" stroke-width="7" stroke-linecap="round"/>`
-        : ""
-    }
-  `;
-}
-
-function marker(object, color, glyph) {
-  const width = Math.max(24, object.width || TILE);
-  const height = Math.max(24, object.height || TILE);
-  const centerX = (object.x ?? 0) + width / 2;
-  const centerY = (object.y ?? 0) + height / 2;
-  return `
-    <circle cx="${centerX}" cy="${centerY}" r="20" fill="${color}" fill-opacity=".72" stroke="#e9f6dc" stroke-width="4"/>
-    <text x="${centerX}" y="${centerY + 8}" text-anchor="middle" font-family="Arial, sans-serif" font-size="22"
-      font-weight="900" fill="#ffffff">${xml(glyph)}</text>
-  `;
-}
-
-async function renderOutdoorMap(name, backgroundPath, foregroundPath) {
-  const map = JSON.parse(
-    await readFile(path.join(DATA_ROOT, `${name}.json`), "utf8"),
-  );
-  const collision = findLayer(map.layers, "Collision")?.data ?? [];
-  const encounters = encounterTiles(map.layers);
-  const width = map.width * TILE;
-  const height = map.height * TILE;
-  const background = [];
-  for (let y = 0; y < map.height; y += 1) {
-    for (let x = 0; x < map.width; x += 1) {
-      const index = y * map.width + x;
-      background.push(
-        tileTexture(x, y, Boolean(collision[index]), encounters.has(index)),
-      );
-    }
-  }
-  for (const object of findObjectLayer(map.layers, "Scene-Transitions")) {
-    background.push(marker(object, "#36b8c4", "↟"));
-  }
-  for (const object of findObjectLayer(map.layers, "Sign")) {
-    const x = object.x ?? 0;
-    const y = object.y ?? 0;
-    background.push(`
-      <rect x="${x + 18}" y="${y + 17}" width="30" height="22" rx="3" fill="#b98a50" stroke="#593e2b" stroke-width="4"/>
-      <rect x="${x + 29}" y="${y + 38}" width="8" height="24" fill="#67472f"/>
-    `);
-  }
-  for (const object of findObjectLayer(map.layers, "Item")) {
-    background.push(marker(object, "#e2b84d", "✦"));
-  }
-  await renderSvg(
-    backgroundPath,
-    width,
-    height,
-    background.join(""),
-    "#6d9c55",
-  );
-
-  const foregroundLayer = findLayer(map.layers, "Foreground")?.data ?? [];
-  const foreground = [];
-  for (let index = 0; index < foregroundLayer.length; index += 1) {
-    if (!foregroundLayer[index]) continue;
-    const x = (index % map.width) * TILE;
-    const y = Math.floor(index / map.width) * TILE;
-    foreground.push(`
-      <path d="M${x - 8} ${y + 42} C${x + 4} ${y + 3}, ${x + 58} ${y + 1}, ${x + 73} ${y + 39}
-        C${x + 65} ${y + 61}, ${x + 7} ${y + 64}, ${x - 8} ${y + 42} Z"
-        fill="#20553b" stroke="#123529" stroke-width="4"/>
-      <circle cx="${x + 22}" cy="${y + 29}" r="15" fill="#34744c"/>
-      <circle cx="${x + 46}" cy="${y + 31}" r="17" fill="#2d6946"/>
-    `);
-  }
-  await renderSvg(foregroundPath, width, height, foreground.join(""));
-}
-
-async function renderBuilding(name, backgroundPath, foregroundPath, accent) {
-  const map = JSON.parse(
-    await readFile(path.join(DATA_ROOT, `${name}.json`), "utf8"),
-  );
-  const collision = findLayer(map.layers, "Collision")?.data ?? [];
-  const width = map.width * TILE;
-  const height = map.height * TILE;
-  const background = [];
-  for (let y = 0; y < map.height; y += 1) {
-    for (let x = 0; x < map.width; x += 1) {
-      const index = y * map.width + x;
-      const left = x * TILE;
-      const top = y * TILE;
-      if (collision[index]) {
-        background.push(`
-          <rect x="${left}" y="${top}" width="64" height="64" fill="#28363d"/>
-          <rect x="${left + 5}" y="${top + 6}" width="54" height="50" rx="7" fill="${accent}" fill-opacity=".72"
-            stroke="#19272d" stroke-width="4"/>
-          <path d="M${left + 12} ${top + 18} H${left + 52} M${left + 12} ${top + 43} H${left + 52}"
-            stroke="#d7c29a" stroke-opacity=".42" stroke-width="4"/>
-        `);
-      } else {
-        const floor = (x + y) % 2 ? "#b99165" : "#c49c6d";
-        background.push(`
-          <rect x="${left}" y="${top}" width="64" height="64" fill="${floor}"/>
-          <path d="M${left} ${top + 32} H${left + 64} M${left + 32} ${top} V${top + 64}"
-            stroke="#8b6748" stroke-opacity=".32" stroke-width="2"/>
-        `);
-      }
-    }
-  }
-  for (const object of findObjectLayer(map.layers, "Scene-Transitions")) {
-    background.push(marker(object, "#36b8c4", "↟"));
-  }
-  for (const object of findObjectLayer(map.layers, "Revive-Location")) {
-    background.push(marker(object, "#79d9a0", "+"));
-  }
-  await renderSvg(
-    backgroundPath,
-    width,
-    height,
-    background.join(""),
-    "#28363d",
-  );
-
-  const foregroundLayer = findLayer(map.layers, "Foreground")?.data ?? [];
-  const foreground = [];
-  for (let index = 0; index < foregroundLayer.length; index += 1) {
-    if (!foregroundLayer[index]) continue;
-    const x = (index % map.width) * TILE;
-    const y = Math.floor(index / map.width) * TILE;
-    foreground.push(`
-      <rect x="${x + 2}" y="${y + 5}" width="60" height="28" rx="8" fill="#19333a" stroke="#d7c29a" stroke-width="4"/>
-      <path d="M${x + 13} ${y + 22} H${x + 51}" stroke="${accent}" stroke-width="7"/>
-    `);
-  }
-  await renderSvg(foregroundPath, width, height, foreground.join(""));
-}
-
-async function renderLegacyLevel() {
-  const width = 1280;
-  const height = 2176;
-  const columns = width / TILE;
-  const rows = height / TILE;
-  const background = [];
-  const foreground = [];
-  for (let y = 0; y < rows; y += 1) {
-    for (let x = 0; x < columns; x += 1) {
-      const blocked =
-        x < 3 ||
-        x > columns - 4 ||
-        ((x + y * 3) % 19 === 0 && Math.abs(x - columns / 2) > 3);
-      background.push(tileTexture(x, y, blocked, false));
-      if (blocked && (x + y) % 3 === 0) {
-        const left = x * TILE;
-        const top = y * TILE;
-        foreground.push(
-          `<circle cx="${left + 32}" cy="${top + 22}" r="27" fill="#235b3e" stroke="#123529" stroke-width="4"/>`,
-        );
-      }
-    }
-  }
-  await renderSvg(
-    "map/level_background.png",
-    width,
-    height,
-    background.join(""),
-    "#6d9c55",
-  );
-  await renderSvg(
-    "map/level_foreground.png",
-    width,
-    height,
-    foreground.join(""),
-  );
 }
 
 async function renderBushes() {
@@ -468,35 +232,6 @@ async function renderFavicon() {
 }
 
 await Promise.all([
-  renderOutdoorMap(
-    "main_1",
-    "map/main_1_level_background.png",
-    "map/main_1_level_foreground.png",
-  ),
-  renderOutdoorMap(
-    "forest_1",
-    "map/forest_1_level_background.png",
-    "map/forest_1_level_foreground.png",
-  ),
-  renderBuilding(
-    "building_1",
-    "map/buildings/building_1_level_background.png",
-    "map/buildings/building_1_level_foreground.png",
-    "#3d7670",
-  ),
-  renderBuilding(
-    "building_2",
-    "map/buildings/building_2_level_background.png",
-    "map/buildings/building_2_level_foreground.png",
-    "#765f8f",
-  ),
-  renderBuilding(
-    "building_3",
-    "map/buildings/building_3_level_background.png",
-    "map/buildings/building_3_level_foreground.png",
-    "#9a6647",
-  ),
-  renderLegacyLevel(),
   renderBushes(),
   renderUi(),
   renderBattleItems(),
@@ -505,5 +240,5 @@ await Promise.all([
 ]);
 
 console.log(
-  "Generated original Monster Tamer maps, UI, battle items, and favicon.",
+  "Generated original Monster Tamer UI, battle items, hidden tiles, and favicon.",
 );

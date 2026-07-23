@@ -30,7 +30,11 @@ function getGameHeight() {
 
 const game = new Phaser.Game({
   type: Phaser.CANVAS,
-  pixelArt: false,
+  pixelArt: true,
+  render: {
+    antialias: false,
+    roundPixels: true,
+  },
   scale: {
     parent: 'game-container',
     width: GAME_WIDTH,

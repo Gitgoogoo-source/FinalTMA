@@ -2,7 +2,7 @@
   {
     "key": "PLAYER_DOWN",
     "frames": [6, 7, 8],
-    "frameRate": 6,
+    "frameRate": 9,
     "repeat": -1,
     "delay": 0,
     "yoyo": true,
@@ -11,7 +11,7 @@
   {
     "key": "PLAYER_RIGHT",
     "frames": [3, 4, 5],
-    "frameRate": 6,
+    "frameRate": 9,
     "repeat": -1,
     "delay": 0,
     "yoyo": true,
@@ -20,7 +20,7 @@
   {
     "key": "PLAYER_LEFT",
     "frames": [9, 10, 11],
-    "frameRate": 6,
+    "frameRate": 9,
     "repeat": -1,
     "delay": 0,
     "yoyo": true,
@@ -29,7 +29,7 @@
   {
     "key": "PLAYER_UP",
     "frames": [0, 1, 2],
-    "frameRate": 6,
+    "frameRate": 9,
     "repeat": -1,
     "delay": 0,
     "yoyo": true,

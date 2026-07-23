@@ -1,7 +1,7 @@
 import Phaser from '../../lib/phaser.js';
 import { DIRECTION } from '../../common/direction.js';
+import { PLAYER_RUN_DURATION, PLAYER_WALK_DURATION, TILE_SIZE } from '../../config.js';
 import { getTargetPositionFromGameObjectPositionAndDirection } from '../../utils/grid-utils.js';
-import { exhaustiveGuard } from '../../utils/guard.js';
 
 /**
  * @typedef CharacterIdleFrameConfig
@@ -135,29 +135,14 @@ export class Character {
    * @returns {void}
    */
   update(time) {
+    this._phaserGameObject.setDepth(Math.round(this._phaserGameObject.y + TILE_SIZE));
     if (this._isMoving) {
       return;
     }
 
     // stop current animation and show idle frame
-    const idleFrame = this._phaserGameObject.anims.currentAnim?.frames[1].frame.name;
     this._phaserGameObject.anims.stop();
-    if (!idleFrame) {
-      return;
-    }
-    switch (this._direction) {
-      case DIRECTION.DOWN:
-      case DIRECTION.LEFT:
-      case DIRECTION.RIGHT:
-      case DIRECTION.UP:
-        this._phaserGameObject.setFrame(idleFrame);
-        break;
-      case DIRECTION.NONE:
-        break;
-      default:
-        // We should never reach this default case
-        exhaustiveGuard(this._direction);
-    }
+    this._phaserGameObject.setFrame(this._getIdleFrame());
   }
 
   /**
@@ -230,7 +215,7 @@ export class Character {
 
     this._scene.add.tween({
       delay: 0,
-      duration: this._isRunning ? 300 : 600,
+      duration: this._isRunning ? PLAYER_RUN_DURATION : PLAYER_WALK_DURATION,
       y: {
         from: this._phaserGameObject.y,
         start: this._phaserGameObject.y,
@@ -242,6 +227,9 @@ export class Character {
         to: this._targetPosition.x,
       },
       targets: this._phaserGameObject,
+      onUpdate: () => {
+        this._phaserGameObject.setDepth(Math.round(this._phaserGameObject.y + TILE_SIZE));
+      },
       onComplete: () => {
         this._isMoving = false;
         this._isRunning = false;

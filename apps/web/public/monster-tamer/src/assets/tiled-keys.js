@@ -1,11 +1,9 @@
 export const OBJECT_LAYER_NAMES = Object.freeze({
   AREA_METADATA: 'Area-Metadata',
-  CAMERA_BOUNDS: 'Camera-Bounds',
   EVENTS: 'Events',
   ITEM: 'Item',
   PLAYER_SPAWN_LOCATION: 'Player-Spawn-Location',
   REVIVE_LOCATION: 'Revive-Location',
-  SCENE_TRANSITIONS: 'Scene-Transitions',
   SIGN: 'Sign',
 });
 

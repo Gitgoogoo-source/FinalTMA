@@ -3,7 +3,12 @@ import { AUDIO_ASSET_KEYS, WORLD_ASSET_KEYS } from '../assets/asset-keys.js';
 import { SCENE_KEYS } from './scene-keys.js';
 import { Player } from '../world/characters/player.js';
 import { DIRECTION } from '../common/direction.js';
-import { ENABLE_ZONE_DEBUGGING, TILED_COLLISION_LAYER_ALPHA, TILE_SIZE } from '../config.js';
+import {
+  ENABLE_ZONE_DEBUGGING,
+  TILED_COLLISION_LAYER_ALPHA,
+  TILE_SIZE,
+  WORLD_CAMERA_LERP,
+} from '../config.js';
 import { DATA_MANAGER_STORE_KEYS, dataManager } from '../utils/data-manager.js';
 import {
   getTargetDirectionFromGameObjectPosition,
@@ -23,8 +28,6 @@ import { exhaustiveGuard } from '../utils/guard.js';
 import { sleep } from '../utils/time-utils.js';
 import { CutsceneScene } from './cutscene-scene.js';
 import { DialogScene } from './dialog-scene.js';
-import * as TiledUtils from '../utils/tiled-utils.js';
-import * as CameraUtils from '../utils/camera-utils.js';
 import {
   CUSTOM_TILED_TYPES,
   OBJECT_LAYER_NAMES,
@@ -35,6 +38,8 @@ import {
   TILED_NPC_PROPERTY,
   TILED_SIGN_PROPERTY,
 } from '../assets/tiled-keys.js';
+
+const MOVEMENT_PROGRESS_EPSILON = 1e-9;
 
 /**
  * @typedef WorldSceneData
@@ -66,8 +71,6 @@ export class WorldScene extends BaseScene {
   #sceneData;
   /** @type {Item[]} */
   #items;
-  /** @type {Phaser.Tilemaps.ObjectLayer | undefined} */
-  #entranceLayer;
   /** @type {number} */
   #lastNpcEventHandledIndex;
   /** @type {boolean} */
@@ -94,20 +97,16 @@ export class WorldScene extends BaseScene {
   #specialEncounterTileImageGameObjectGroup;
   /** @type {Phaser.Tilemaps.TilemapLayer | undefined} */
   #encounterZonePlayerIsEntering;
-  /** @type {import('../types/typedef.js').CameraRegion[]} */
-  #cameraRegions;
   /** @type {{ [key: string]: Phaser.Tilemaps.Tilemap}} */
   #tiledLevelMaps;
-  /** @type {{ x: number, y: number, width: number, height: number }} */
-  #mapBounds;
-  /** @type {import('../types/typedef.js').Coordinate | undefined} */
-  #movementTarget;
-  /** @type {Phaser.GameObjects.Arc | undefined} */
-  #movementMarker;
-  /** @type {(() => void) | undefined} */
-  #cancelMovementHandler;
-  /** @type {number | undefined} */
-  #cameraZoom;
+  /** @type {string | undefined} */
+  #movementInputSignature;
+  /** @type {number} */
+  #secondaryMovementProgress;
+  /** @type {boolean} */
+  #wasPlayerInputLocked;
+  /** @type {boolean} */
+  #movementInputNeedsRelease;
 
   constructor() {
     super({
@@ -125,38 +124,27 @@ export class WorldScene extends BaseScene {
     this.#tiledLevelMaps = {};
 
     // handle when some of the fields for scene data are not populated, default to values provided, otherwise use safe defaults
-    /** @type {string} */
-    const area = this.#sceneData?.area || dataManager.store.get(DATA_MANAGER_STORE_KEYS.PLAYER_LOCATION).area;
-    let isInterior = this.#sceneData?.isInterior;
-    if (isInterior === undefined) {
-      isInterior = dataManager.store.get(DATA_MANAGER_STORE_KEYS.PLAYER_LOCATION).isInterior;
-    }
+    const area = 'main_1';
+    const isInterior = false;
     const isPlayerKnockedOut = this.#sceneData?.isPlayerKnockedOut || false;
-    const cameraZoom =
-      Number.isFinite(this.#sceneData?.cameraZoom) && this.#sceneData.cameraZoom > 0
-        ? this.#sceneData.cameraZoom
-        : undefined;
 
     this.#sceneData = {
       area,
       isInterior,
       isPlayerKnockedOut,
-      cameraZoom,
+      cameraZoom: 1,
     };
 
     // update player location, and map data if the player was knocked out in a battle
     if (this.#sceneData.isPlayerKnockedOut) {
       // get the nearest knocked out spawn location from the map meta data
-      let map = this.#getLevelTileMap(`${this.#sceneData.area.toUpperCase()}_LEVEL`);
+      const map = this.#getLevelTileMap(WORLD_ASSET_KEYS.MAIN_1_LEVEL);
       const areaMetaDataProperties = map.getObjectLayer(OBJECT_LAYER_NAMES.AREA_METADATA).objects[0].properties;
       const knockOutSpawnLocation = /** @type {import('../types/typedef.js').TiledObjectProperty[]} */ (
         areaMetaDataProperties
       ).find((property) => property.name === TILED_AREA_METADATA_PROPERTY.FAINT_LOCATION)?.value;
-
-      // check to see if the level data we need to load is different and load that map to get player spawn data
-      if (knockOutSpawnLocation !== this.#sceneData.area) {
-        this.#sceneData.area = knockOutSpawnLocation;
-        map = this.#getLevelTileMap(`${this.#sceneData.area.toUpperCase()}_LEVEL`);
+      if (knockOutSpawnLocation !== 'main_1') {
+        throw new Error(`Unsupported revive map: ${knockOutSpawnLocation}`);
       }
 
       // set players spawn location to that map and finds the revive location based on that object
@@ -201,7 +189,6 @@ export class WorldScene extends BaseScene {
     this.#isProcessingNpcEvent = false;
     this.#encounterLayers = [];
     this.#signLayer = undefined;
-    this.#entranceLayer = undefined;
     this.#eventZones = {};
     this.#debugEventZoneObjects = {};
     this.#rectangleForOverlapCheck1 = undefined;
@@ -213,12 +200,10 @@ export class WorldScene extends BaseScene {
     this.#lastCutSceneEventHandledIndex = -1;
     this.#specialEncounterTileImageGameObjectGroup = undefined;
     this.#encounterZonePlayerIsEntering = undefined;
-    this.#cameraRegions = [];
-    this.#mapBounds = { x: 0, y: 0, width: 0, height: 0 };
-    this.#movementTarget = undefined;
-    this.#movementMarker = undefined;
-    this.#cancelMovementHandler = undefined;
-    this.#cameraZoom = cameraZoom;
+    this.#movementInputSignature = undefined;
+    this.#secondaryMovementProgress = 0;
+    this.#wasPlayerInputLocked = false;
+    this.#movementInputNeedsRelease = false;
   }
 
   /**
@@ -233,22 +218,36 @@ export class WorldScene extends BaseScene {
     this.#rectangleForOverlapCheck2 = new Phaser.Geom.Rectangle();
     this.#rectangleOverlapResult = new Phaser.Geom.Rectangle();
 
-    // create map and collision layer
-    const map = this.#getLevelTileMap(`${this.#sceneData.area.toUpperCase()}_LEVEL`);
-    this.#mapBounds = { x: 0, y: 0, width: map.widthInPixels, height: map.heightInPixels };
-    // The first parameter is the name of the tileset in Tiled and the second parameter is the key
-    // of the tileset image used when loading the file in preload.
+    // Create the single seamless valley map. Visual layers use small tile atlases,
+    // so Phaser only draws camera-visible tiles instead of decoding one giant bitmap.
+    const map = this.#getLevelTileMap(WORLD_ASSET_KEYS.MAIN_1_LEVEL);
+    const visualTilesets = [
+      map.addTilesetImage('tiny-town', WORLD_ASSET_KEYS.TINY_TOWN),
+      map.addTilesetImage('tiny-farm', WORLD_ASSET_KEYS.TINY_FARM),
+      map.addTilesetImage('tiny-battle', WORLD_ASSET_KEYS.TINY_BATTLE),
+    ];
+    if (visualTilesets.some((tileset) => !tileset)) {
+      throw new Error('The valley visual tilesets could not be created.');
+    }
+    const groundLayer = map.createLayer('Ground', visualTilesets, 0, 0);
+    const terrainLayer = map.createLayer('Terrain', visualTilesets, 0, 0);
+    const structuresLayer = map.createLayer('Structures', visualTilesets, 0, 0);
+    if (!groundLayer || !terrainLayer || !structuresLayer) {
+      throw new Error('The valley visual layers could not be created.');
+    }
+    groundLayer.setDepth(-30);
+    terrainLayer.setDepth(-20);
+    structuresLayer.setDepth(-10);
+
     const collisionTiles = map.addTilesetImage('collision', WORLD_ASSET_KEYS.WORLD_COLLISION);
     if (!collisionTiles) {
-      console.log(`[${WorldScene.name}:create] encountered error while creating collision tiles from tiled`);
-      return;
+      throw new Error('The valley collision tileset could not be created.');
     }
     const collisionLayer = map.createLayer('Collision', collisionTiles, 0, 0);
     if (!collisionLayer) {
-      console.log(`[${WorldScene.name}:create] encountered error while creating collision layer using data from tiled`);
-      return;
+      throw new Error('The valley collision layer could not be created.');
     }
-    collisionLayer.setAlpha(TILED_COLLISION_LAYER_ALPHA).setDepth(2);
+    collisionLayer.setAlpha(TILED_COLLISION_LAYER_ALPHA).setDepth(-5);
 
     // create interactive layer
     const hasSignLayer = map.getObjectLayer(OBJECT_LAYER_NAMES.SIGN) !== null;
@@ -256,16 +255,8 @@ export class WorldScene extends BaseScene {
       this.#signLayer = map.getObjectLayer(OBJECT_LAYER_NAMES.SIGN);
     }
 
-    // create layer for scene transitions entrances
-    const hasSceneTransitionLayer = map.getObjectLayer(OBJECT_LAYER_NAMES.SCENE_TRANSITIONS) !== null;
-    if (hasSceneTransitionLayer) {
-      this.#entranceLayer = map.getObjectLayer(OBJECT_LAYER_NAMES.SCENE_TRANSITIONS);
-    }
-
     // create collision layers for encounters
     this.#createEncounterAreas(map);
-
-    this.add.image(0, 0, `${this.#sceneData.area.toUpperCase()}_BACKGROUND`, 0).setOrigin(0);
 
     // create items and collisions
     this.#createItems(map);
@@ -287,38 +278,27 @@ export class WorldScene extends BaseScene {
       },
       otherCharactersToCheckForCollisionsWith: this.#npcs,
       objectsToCheckForCollisionsWith: this.#items,
-      entranceLayer: this.#entranceLayer,
-      enterEntranceCallback: (entranceName, entranceId, isBuildingEntrance) => {
-        this.#handleEntranceEnteredCallback(entranceName, entranceId, isBuildingEntrance);
-      },
       spriteGridMovementStartedCallback: (position) => {
         this.#handlePlayerMovementStarted(position);
       },
     });
-    this.cameras.main.startFollow(this.#player.sprite);
-
-    // update camera bounds for the given level
-    this.#cameraRegions = TiledUtils.createCameraRegions(map);
-    this.#cameraZoom = CameraUtils.updateMainCameraBounds(
-      this,
-      this.#player.sprite,
-      this.#cameraRegions,
-      this.#mapBounds,
-      this.#cameraZoom
-    );
+    this.cameras.main
+      .setBounds(0, 0, map.widthInPixels, map.heightInPixels)
+      .setZoom(1)
+      .setRoundPixels(true)
+      .startFollow(this.#player.sprite, true, WORLD_CAMERA_LERP, WORLD_CAMERA_LERP)
+      .setDeadzone(TILE_SIZE, TILE_SIZE * 0.75);
 
     // update our collisions with npcs
     this.#npcs.forEach((npc) => {
       npc.addCharacterToCheckForCollisionsWith(this.#player);
     });
 
-    // create foreground for depth
-    this.add.image(0, 0, `${this.#sceneData.area.toUpperCase()}_FOREGROUND`, 0).setOrigin(0);
-    this.#movementMarker = this.add
-      .circle(0, 0, TILE_SIZE * 0.22, 0x78f3d1, 0.18)
-      .setStrokeStyle(6, 0xffffff, 0.92)
-      .setDepth(10_000)
-      .setVisible(false);
+    const foregroundLayer = map.createLayer('Foreground', visualTilesets, 0, 0);
+    if (!foregroundLayer) {
+      throw new Error('The valley foreground layer could not be created.');
+    }
+    foregroundLayer.setDepth(100_000);
 
     // create menu
     this.#menu = new WorldMenu(this);
@@ -352,16 +332,6 @@ export class WorldScene extends BaseScene {
     this.scene.launch(SCENE_KEYS.DIALOG_SCENE);
     this.#dialogUi = /** @type {DialogScene} */ (this.scene.get(SCENE_KEYS.DIALOG_SCENE));
     this.#specialEncounterTileImageGameObjectGroup = this.add.group({ classType: Phaser.GameObjects.Image });
-
-    this.input.on(Phaser.Input.Events.POINTER_DOWN, this.#handlePointerTarget, this);
-    this.input.on(Phaser.Input.Events.POINTER_MOVE, this.#handlePointerMove, this);
-    this.scale.on(Phaser.Scale.Events.RESIZE, this.#handleViewportResize, this);
-    this.#cancelMovementHandler = () => this.#clearMovementTarget();
-    this.game.canvas.addEventListener('pointercancel', this.#cancelMovementHandler);
-    window.addEventListener('blur', this.#cancelMovementHandler);
-    window.addEventListener('pagehide', this.#cancelMovementHandler);
-    document.addEventListener('visibilitychange', this.#cancelMovementHandler);
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.#handleWorldSceneShutdown, this);
   }
 
   /**
@@ -372,14 +342,27 @@ export class WorldScene extends BaseScene {
     super.update(time);
 
     if (this.#wildMonsterEncountered) {
+      this._controls.releaseWorldMovement();
+      this.#movementInputNeedsRelease = true;
       this.#player.update(time);
       return;
     }
 
+    const isPlayerInputLocked = this.#isPlayerInputLocked();
+    if (isPlayerInputLocked !== this.#wasPlayerInputLocked) {
+      this._controls.releaseWorldMovement();
+      this.#movementInputNeedsRelease = true;
+      this.#wasPlayerInputLocked = isPlayerInputLocked;
+    }
+
     const wasSpaceKeyPressed = this._controls.wasSpaceKeyPressed();
-    const selectedDirectionHeldDown = this._controls.getDirectionKeyPressedDown();
+    const movementDirections = this._controls.getMovementDirections();
     const selectedDirectionPressedOnce = this._controls.getDirectionKeyJustPressed();
     const isShiftKeyDown = this._controls.isShiftKeyDown();
+    if (this.#movementInputNeedsRelease && movementDirections.length === 0) {
+      this.#movementInputNeedsRelease = false;
+    }
+    const activeMovementDirections = this.#movementInputNeedsRelease ? [] : movementDirections;
 
     if (this.#isProcessingCutSceneEvent) {
       this.#player.update(time);
@@ -392,14 +375,8 @@ export class WorldScene extends BaseScene {
       return;
     }
 
-    const isPlayerInputLocked = this.#isPlayerInputLocked();
-    if (isPlayerInputLocked) {
-      this.#clearMovementTarget();
-    } else if (selectedDirectionHeldDown !== DIRECTION.NONE) {
-      this.#clearMovementTarget();
-      this.#player.moveCharacter(selectedDirectionHeldDown, isShiftKeyDown);
-    } else if (!this.#player.isMoving) {
-      this.#movePlayerTowardTarget(isShiftKeyDown);
+    if (!isPlayerInputLocked && !this.#player.isMoving) {
+      this.#movePlayerFromDirections(activeMovementDirections, isShiftKeyDown);
     }
 
     if (wasSpaceKeyPressed && !this.#player.isMoving && !this.#menu.isVisible) {
@@ -479,93 +456,53 @@ export class WorldScene extends BaseScene {
   }
 
   /**
-   * @param {Phaser.Input.Pointer} pointer
-   * @returns {void}
-   */
-  #handlePointerTarget(pointer) {
-    if (this.#isPlayerInputLocked() || this.#wildMonsterEncountered) {
-      return;
-    }
-
-    const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
-    const maxX = Math.max(0, this.#mapBounds.width - TILE_SIZE);
-    const maxY = Math.max(0, this.#mapBounds.height - TILE_SIZE);
-    this.#movementTarget = {
-      x: Phaser.Math.Clamp(Math.floor(worldPoint.x / TILE_SIZE) * TILE_SIZE, 0, maxX),
-      y: Phaser.Math.Clamp(Math.floor(worldPoint.y / TILE_SIZE) * TILE_SIZE, 0, maxY),
-    };
-    this.#movementMarker
-      ?.setPosition(this.#movementTarget.x + TILE_SIZE / 2, this.#movementTarget.y + TILE_SIZE / 2)
-      .setVisible(true);
-  }
-
-  /**
-   * @param {Phaser.Input.Pointer} pointer
-   * @returns {void}
-   */
-  #handlePointerMove(pointer) {
-    if (pointer.isDown) {
-      this.#handlePointerTarget(pointer);
-    }
-  }
-
-  /**
+   * Uses weighted grid steps to preserve the joystick's primary/secondary axis
+   * ratio. If the scheduled axis is blocked, the other axis is attempted in the
+   * same frame so movement slides along water, buildings, fences, and cliffs.
+   * @param {{ direction: import('../common/direction.js').Direction, strength: number }[]} directions
    * @param {boolean} isRunning
-   * @returns {void}
    */
-  #movePlayerTowardTarget(isRunning) {
-    if (!this.#movementTarget) {
+  #movePlayerFromDirections(directions, isRunning) {
+    if (directions.length === 0) {
+      this.#movementInputSignature = undefined;
+      this.#secondaryMovementProgress = 0;
       return;
     }
 
-    const current = this.#player.gridPosition;
-    const deltaX = this.#movementTarget.x - current.x;
-    const deltaY = this.#movementTarget.y - current.y;
-    if (deltaX === 0 && deltaY === 0) {
-      this.#clearMovementTarget();
-      return;
+    const [primaryDirection, secondaryDirection] = directions;
+    const inputSignature = directions.map(({ direction }) => direction).join(':');
+    if (inputSignature !== this.#movementInputSignature) {
+      this.#movementInputSignature = inputSignature;
+      this.#secondaryMovementProgress = 0;
     }
 
-    let direction;
-    if (Math.abs(deltaX) >= Math.abs(deltaY) && deltaX !== 0) {
-      direction = deltaX > 0 ? DIRECTION.RIGHT : DIRECTION.LEFT;
-    } else {
-      direction = deltaY > 0 ? DIRECTION.DOWN : DIRECTION.UP;
+    const orderedDirections = [...directions];
+    let isSecondaryDirectionScheduled = false;
+    if (secondaryDirection) {
+      const combinedStrength = primaryDirection.strength + secondaryDirection.strength;
+      this.#secondaryMovementProgress += secondaryDirection.strength / combinedStrength;
+      isSecondaryDirectionScheduled =
+        this.#secondaryMovementProgress >= 1 - MOVEMENT_PROGRESS_EPSILON;
+      if (isSecondaryDirectionScheduled) {
+        orderedDirections.reverse();
+      }
     }
 
-    if (!this.#player.moveCharacter(direction, isRunning)) {
-      this.#clearMovementTarget();
-    }
-  }
+    let movedDirection;
+    orderedDirections.some((movementDirection) => {
+      if (!this.#player.moveCharacter(movementDirection.direction, isRunning)) {
+        return false;
+      }
+      movedDirection = movementDirection.direction;
+      return true;
+    });
 
-  #clearMovementTarget() {
-    this.#movementTarget = undefined;
-    this.#movementMarker?.setVisible(false);
-  }
-
-  #handleViewportResize() {
-    if (this.#player) {
-      CameraUtils.updateMainCameraBounds(
-        this,
-        this.#player.sprite,
-        this.#cameraRegions,
-        this.#mapBounds,
-        this.#cameraZoom
-      );
+    if (secondaryDirection && movedDirection === secondaryDirection.direction) {
+      this.#secondaryMovementProgress = Math.max(0, this.#secondaryMovementProgress - 1);
+    } else if (secondaryDirection && isSecondaryDirectionScheduled) {
+      // Do not build up a movement debt while the scheduled axis is blocked.
+      this.#secondaryMovementProgress = 1;
     }
-  }
-
-  #handleWorldSceneShutdown() {
-    this.input.off(Phaser.Input.Events.POINTER_DOWN, this.#handlePointerTarget, this);
-    this.input.off(Phaser.Input.Events.POINTER_MOVE, this.#handlePointerMove, this);
-    this.scale.off(Phaser.Scale.Events.RESIZE, this.#handleViewportResize, this);
-    if (this.#cancelMovementHandler) {
-      this.game.canvas.removeEventListener('pointercancel', this.#cancelMovementHandler);
-      window.removeEventListener('blur', this.#cancelMovementHandler);
-      window.removeEventListener('pagehide', this.#cancelMovementHandler);
-      document.removeEventListener('visibilitychange', this.#cancelMovementHandler);
-    }
-    this.#clearMovementTarget();
   }
 
   /**
@@ -663,15 +600,6 @@ export class WorldScene extends BaseScene {
       x: this.#player.sprite.x,
       y: this.#player.sprite.y,
     });
-
-    // update camera bounds for given level after player moves
-    CameraUtils.updateMainCameraBounds(
-      this,
-      this.#player.sprite,
-      this.#cameraRegions,
-      this.#mapBounds,
-      this.#cameraZoom
-    );
 
     // check to see if the player encountered cut scene zone
     this.#player.sprite.getBounds(this.#rectangleForOverlapCheck1);
@@ -902,53 +830,6 @@ export class WorldScene extends BaseScene {
       });
       this.#items.push(item);
     }
-  }
-
-  /**
-   * @param {string} entranceName
-   * @param {string} entranceId
-   * @param {boolean} isBuildingEntrance
-   * @returns {void}
-   */
-  #handleEntranceEnteredCallback(entranceName, entranceId, isBuildingEntrance) {
-    this._controls.lockInput = true;
-
-    // update player position to match the new entrance data
-    // create tilemap using the provided entrance data
-    const map = this.#getLevelTileMap(`${entranceName.toUpperCase()}_LEVEL`);
-    // get the position of the entrance object using the entrance id
-    const entranceObjectLayer = map.getObjectLayer(OBJECT_LAYER_NAMES.SCENE_TRANSITIONS);
-    const entranceObject = entranceObjectLayer.objects.find((object) => {
-      const tempEntranceName = object.properties.find((property) => property.name === 'connects_to').value;
-      const tempEntranceId = object.properties.find((property) => property.name === 'entrance_id').value;
-
-      return tempEntranceName === this.#sceneData.area && tempEntranceId === entranceId;
-    });
-    // create position player will be placed at and update based on players facing direction
-    let x = entranceObject.x;
-    let y = entranceObject.y - TILE_SIZE;
-    if (this.#player.direction === DIRECTION.UP) {
-      y -= TILE_SIZE;
-    }
-    if (this.#player.direction === DIRECTION.DOWN) {
-      y += TILE_SIZE;
-    }
-
-    this.cameras.main.fadeOut(1000, 0, 0, 0, (camera, progress) => {
-      if (progress === 1) {
-        dataManager.store.set(DATA_MANAGER_STORE_KEYS.PLAYER_POSITION, {
-          x,
-          y,
-        });
-
-        /** @type {WorldSceneData} */
-        const dataToPass = {
-          area: entranceName,
-          isInterior: isBuildingEntrance,
-        };
-        this.scene.start(SCENE_KEYS.WORLD_SCENE, dataToPass);
-      }
-    });
   }
 
   /**
@@ -1461,6 +1342,7 @@ export class WorldScene extends BaseScene {
         const object = this.#specialEncounterTileImageGameObjectGroup
           .getFirstDead(true, encounterTile.pixelX, encounterTile.pixelY, WORLD_ASSET_KEYS.GRASS, 1, true)
           .setOrigin(0)
+          .setDepth(encounterTile.pixelY + TILE_SIZE + 1)
           .setVisible(true)
           .setActive(true);
         // if player is moving up or down, don't show grass so they don't appear to be moving under it, will show after they reach the destination
@@ -1510,7 +1392,7 @@ export class WorldScene extends BaseScene {
     if (this.#tiledLevelMaps[key]) {
       return this.#tiledLevelMaps[key];
     }
-    this.#tiledLevelMaps[key] = this.make.tilemap({ key });
+    this.#tiledLevelMaps[key] = this.make.tilemap({ key, insertNull: true });
     return this.#tiledLevelMaps[key];
   }
 
@@ -1519,7 +1401,7 @@ export class WorldScene extends BaseScene {
    * @param {import('./battle-scene.js').BattleSceneData} battleSceneData
    */
   #startBattleScene(battleSceneData) {
-    battleSceneData.worldCameraZoom = this.#cameraZoom ?? this.cameras.main.zoom;
+    battleSceneData.worldCameraZoom = this.cameras.main.zoom;
     this.cameras.main.fadeOut(2000);
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
       this.scene.start(SCENE_KEYS.BATTLE_SCENE, battleSceneData);

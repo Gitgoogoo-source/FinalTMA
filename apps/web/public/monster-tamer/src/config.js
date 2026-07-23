@@ -2,6 +2,9 @@ export const ENABLE_ZONE_DEBUGGING = false;
 export const SHOW_SOCIAL_LINKS = false;
 export const TILE_SIZE = 64;
 export const TILED_COLLISION_LAYER_ALPHA = 0;
+export const PLAYER_WALK_DURATION = 400;
+export const PLAYER_RUN_DURATION = 220;
+export const WORLD_CAMERA_LERP = 0.16;
 export const TEXT_SPEED = Object.freeze({
   SLOW: 50,
   MEDIUM: 30,
