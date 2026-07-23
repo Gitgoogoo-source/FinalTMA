@@ -1,41 +1,14 @@
 /*
- * Purchase-page density follows the retained tmaGameOld market layout:
- * 38px asset controls, a 38px mode switcher, 31px filters, and a
- * three-column collectible grid. Selectors stay purchase-page scoped so
- * the sell/manage layouts and shared application shell keep their sizing.
+ * Market density follows the retained tmaGameOld layout: one shared 38px
+ * market switcher for buy/sell/manage, plus purchase-only filters and cards.
+ * The shared top asset bar intentionally keeps its application-wide layout.
  */
 
-.app-shell:has(.market-page-buy) {
-  --size-topbar: 62px;
+.app-shell:has(.market-page) {
   --size-bottomnav: 58px;
 }
 
-.app-shell:has(.market-page-buy) .topbar {
-  padding: calc(var(--safe-top) + 6px) 10px 4px;
-}
-
-.app-shell:has(.market-page-buy) .asset-actions {
-  gap: 6px;
-}
-
-.app-shell:has(.market-page-buy) .asset-actions button,
-.app-shell:has(.market-page-buy) .asset-actions .asset-pill {
-  height: 38px;
-  border-radius: 19px;
-}
-
-.app-shell:has(.market-page-buy) .asset-actions .wallet-action {
-  width: 48px;
-  padding: 0;
-}
-
-.app-shell:has(.market-page-buy) .asset-actions .icon-action,
-.app-shell:has(.market-page-buy) .asset-actions .refresh,
-.app-shell:has(.market-page-buy) .asset-actions .summary-retry {
-  width: 38px;
-}
-
-.app-shell:has(.market-page-buy) .bottom-nav {
+.app-shell:has(.market-page) .bottom-nav {
   bottom: calc(var(--safe-bottom) + 10px);
   width: min(calc(100% - 24px), 406px);
   height: 58px;
@@ -43,23 +16,19 @@
   border-radius: 27px;
 }
 
-.app-shell:has(.market-page-buy) .bottom-nav button {
+.app-shell:has(.market-page) .bottom-nav button {
   height: 46px;
   gap: 3px;
   border-radius: 19px;
   font-size: 11px;
 }
 
-.app-shell:has(.market-page-buy) .bottom-nav button.active,
-.app-shell:has(.market-page-buy) .bottom-nav button.active:active {
+.app-shell:has(.market-page) .bottom-nav button.active,
+.app-shell:has(.market-page) .bottom-nav button.active:active {
   transform: none;
 }
 
-.app-shell .market-page-buy {
-  padding-inline: 10px;
-}
-
-.app-shell .market-page-buy .market-tabs {
+.app-shell .market-page .market-tabs {
   height: 38px;
   min-height: 38px;
   margin: 8px 0 10px;
@@ -67,7 +36,7 @@
   border-radius: 22px;
 }
 
-.app-shell .market-page-buy .market-tabs button {
+.app-shell .market-page .market-tabs button {
   min-height: 34px;
   height: 34px;
   gap: 8px;
@@ -75,7 +44,7 @@
   font-size: 12px;
 }
 
-.app-shell .market-page-buy .market-tabs button svg {
+.app-shell .market-page .market-tabs button svg {
   width: 17px;
   height: 17px;
 }
@@ -322,15 +291,6 @@
 }
 
 @media (max-width: 370px) {
-  .app-shell:has(.market-page-buy) .asset-actions {
-    gap: 4px;
-  }
-
-  .app-shell:has(.market-page-buy) .asset-actions .asset-pill {
-    width: 60px;
-    padding-inline: 6px;
-  }
-
   .app-shell .market-page-buy .market-grid-buy {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }

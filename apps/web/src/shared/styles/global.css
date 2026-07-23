@@ -6379,6 +6379,158 @@ body,
   }
 }
 
+@media (max-width: 720px) {
+  .app-shell .gacha-page {
+    padding-bottom: 4px;
+  }
+  .app-shell .gacha-showcase {
+    min-height: calc(
+      var(--tg-viewport-stable-height, 100dvh) - var(--safe-top) -
+        var(--safe-bottom) - var(--size-topbar) - 106px
+    );
+    align-content: space-between;
+  }
+  .app-shell .gacha-screen-title {
+    height: clamp(48px, calc(8.66dvh - 8px), 70px);
+    padding-top: clamp(4px, 1.5dvh, 12px);
+  }
+  .app-shell .gacha-screen-title button {
+    width: clamp(34px, 4.2dvh, 36px);
+    height: clamp(34px, 4.2dvh, 36px);
+  }
+  .app-shell .gacha-hero,
+  .app-shell .gacha-stage {
+    min-height: clamp(150px, calc(35.43dvh - 79px), 240px);
+    height: clamp(150px, calc(35.43dvh - 79px), 240px);
+  }
+  .app-shell .gacha-stage .stage-glow {
+    width: clamp(156px, calc(32.28dvh - 53px), 238px);
+    height: clamp(156px, calc(32.28dvh - 53px), 238px);
+  }
+  .app-shell .gacha-stage::after {
+    bottom: clamp(5px, 1.4dvh, 13px);
+    height: clamp(10px, 1.7dvh, 13px);
+  }
+  .app-shell .gacha-stage .catalog-image,
+  .app-shell .gacha-stage.rare .catalog-image,
+  .app-shell .gacha-stage .image-missing {
+    width: min(66vw, clamp(192px, calc(23.62dvh + 39px), 252px));
+    height: clamp(144px, calc(29.13dvh - 44px), 218px);
+    transform: translateY(clamp(-7px, -0.5dvh, -2px));
+  }
+  .app-shell .gacha-tier-selector {
+    width: min(100%, 332px);
+    gap: clamp(7px, 1dvh, 10px);
+    margin: 0 auto clamp(6px, 1.2dvh, 11px);
+  }
+  .app-shell .gacha-tier-selector button {
+    height: clamp(76px, calc(17.32dvh - 36px), 120px);
+    grid-template-rows:
+      clamp(38px, calc(10.24dvh - 28px), 64px)
+      auto auto 9px;
+    padding: clamp(3px, 0.6dvh, 5px) 6px clamp(2px, 0.5dvh, 4px);
+    border-radius: clamp(15px, 2.1dvh, 19px);
+  }
+  .app-shell .gacha-tier-selector .tier-art {
+    width: clamp(38px, calc(10.24dvh - 28px), 64px);
+    height: clamp(38px, calc(10.24dvh - 28px), 64px);
+  }
+  .app-shell .gacha-tier-selector strong {
+    font-size: clamp(10px, 1.2dvh, 11px);
+  }
+  .app-shell .gacha-tier-selector small {
+    font-size: clamp(7px, 0.9dvh, 8px);
+  }
+  .app-shell .gacha-tier-selector i {
+    width: clamp(9px, 1.2dvh, 11px);
+    height: clamp(9px, 1.2dvh, 11px);
+  }
+  .app-shell .gacha-details {
+    gap: clamp(6px, 1.2dvh, 11px);
+  }
+  .app-shell .gacha-reward-preview {
+    gap: clamp(3px, 0.8dvh, 7px);
+  }
+  .app-shell .gacha-reward-preview > header {
+    min-height: clamp(20px, 3dvh, 27px);
+  }
+  .app-shell .gacha-reward-preview > header strong {
+    font-size: clamp(9px, 1.25dvh, 11px);
+  }
+  .app-shell .gacha-reward-preview > header small {
+    font-size: clamp(6px, 0.8dvh, 7px);
+  }
+  .app-shell .gacha-reward-preview .gacha-pool-trigger {
+    min-height: clamp(20px, 3dvh, 28px);
+  }
+  .app-shell .gacha-preview-items {
+    gap: clamp(6px, 0.9dvh, 8px);
+  }
+  .app-shell .gacha-preview-items button {
+    gap: clamp(1px, 0.4dvh, 3px);
+  }
+  .app-shell .gacha-preview-items .preview-art {
+    width: clamp(34px, calc(5.51dvh - 2px), 48px);
+    height: clamp(34px, calc(5.51dvh - 2px), 48px);
+  }
+  .app-shell .gacha-preview-items > button > strong {
+    font-size: clamp(7px, 0.9dvh, 8px);
+  }
+  .app-shell .gacha-preview-state {
+    min-height: clamp(36px, calc(5.51dvh), 48px);
+  }
+  .app-shell .pity-capsule {
+    min-height: clamp(42px, calc(6.3dvh + 1px), 58px);
+    grid-template-columns:
+      clamp(34px, calc(4.72dvh + 4px), 46px)
+      minmax(0, 1fr)
+      clamp(30px, calc(4.72dvh), 38px);
+    gap: clamp(6px, 1dvh, 9px);
+    padding: clamp(3px, 0.6dvh, 5px) clamp(5px, 0.8dvh, 7px);
+    border-radius: clamp(22px, 3.2dvh, 29px);
+  }
+  .app-shell .pity-ring {
+    width: clamp(34px, calc(4.72dvh + 4px), 46px);
+    height: clamp(34px, calc(4.72dvh + 4px), 46px);
+  }
+  .app-shell .pity-ring i {
+    width: clamp(26px, calc(3.54dvh + 3px), 35px);
+    height: clamp(26px, calc(3.54dvh + 3px), 35px);
+    font-size: clamp(7px, 0.9dvh, 8px);
+  }
+  .app-shell .pity-capsule .pity-target {
+    font-size: clamp(9px, 1.25dvh, 11px);
+  }
+  .app-shell .pity-reset-note {
+    font-size: clamp(6px, 0.8dvh, 7px);
+  }
+  .app-shell .pity-gift {
+    width: clamp(30px, calc(4.72dvh), 38px);
+    height: clamp(30px, calc(4.72dvh), 38px);
+  }
+  .app-shell .gacha-actions {
+    gap: clamp(10px, 1.6dvh, 14px);
+    margin-top: clamp(7px, 1.7dvh, 15px);
+  }
+  .app-shell .gacha-actions .button {
+    min-height: clamp(48px, calc(8.66dvh - 8px), 70px);
+    border-radius: clamp(26px, 4.2dvh, 35px);
+  }
+  .app-shell .gacha-actions .button > span {
+    font-size: clamp(14px, calc(1.57dvh + 4px), 18px);
+  }
+  .app-shell .gacha-actions .button small {
+    font-size: clamp(8px, 1.1dvh, 10px);
+  }
+  .app-shell .gacha-actions .draw-discount {
+    top: clamp(-10px, -1.1dvh, -7px);
+    height: clamp(19px, 2.7dvh, 23px);
+    padding-inline: clamp(7px, 1dvh, 9px);
+    font-size: clamp(8px, 1dvh, 9px);
+    line-height: clamp(18px, 2.6dvh, 22px);
+  }
+}
+
 @media (max-width: 410px) {
   .app-shell .asset-actions {
     gap: 3px;

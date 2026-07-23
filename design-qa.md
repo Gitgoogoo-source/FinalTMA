@@ -1,75 +1,70 @@
-# Task Page Design QA
+# 开盒页多屏自适应设计 QA
 
-- Source visual truth: `/Users/mac/Desktop/图片/任务.png`
-- Deployed implementation: `https://final-tma-pi.vercel.app/tasks`
-- Final deployment: `dpl_978grsvt4pxsQ641teWxek8pAov9`
-- Telegram viewport: `420 × 731`; application content width: `400 px`
-- Tested state: authenticated Telegram Mini App with live account, referral, check-in, and task responses
-- Final top capture: `/private/tmp/finaltma-tasks-telegram-iteration3-top.png`
-- Final check-in capture: `/private/tmp/finaltma-tasks-telegram-iteration3-checkin.png`
-- Final task-list capture: `/private/tmp/finaltma-tasks-telegram-iteration3-mid.png`
+- Source visual truth: `/Users/mac/Desktop/图片/开盒.png`
+- Reference implementation: `/Users/mac/Desktop/旧项目本地保留/tmaGameOld/screens-1.jsx`
+- Deployed implementation: `https://final-tma-pi.vercel.app/`
+- Deployment: `dpl_4mQmfFavrPULpYNtSponNxRRde8g`
+- State: 普通盲盒；使用当前正式 CSS、现有组件类结构、正式盲盒与藏品资源渲染响应式布局
+- Tested CSS viewports: `401 × 646 px`、`401 × 852 px`、`430 × 932 px`
+- Source pixels: `941 × 1670 px`
+- Implementation screenshot: `/private/tmp/finaltma-gacha-responsive-frame-qa.png`（`1330 × 980 px`，三种视口并排）
+- Full-view comparison: `/private/tmp/finaltma-gacha-adaptive-comparison.jpg`
+- Focused action comparison: `/private/tmp/finaltma-gacha-adaptive-actions.jpg`
+- Density normalization: 来源图按高度缩放至 `980 px` 后与实现截图并排；实现中的三个应用视口均以 CSS 像素 1:1 渲染
 
-## Comparison evidence
+## Findings
 
-- Full-view side-by-side: `/private/tmp/finaltma-task-design-compare-final.png`
-- Check-in side-by-side: `/private/tmp/finaltma-task-checkin-compare-final.png`
-- Iteration 2 side-by-side: `/private/tmp/finaltma-task-design-compare-iteration2.png`
-- Iteration 2 invitation focus: `/private/tmp/finaltma-task-hero-compare-iteration2.png`
+没有剩余可执行的 P0、P1 或 P2 问题。
 
-The reference and Telegram captures were normalized to the same `400 px` content width before review. The Telegram chrome was excluded from the implementation crop. The live application viewport is shorter than the reference device, so the fixed navigation appears earlier vertically; the page remains scrollable and no content is unreachable.
+- [P3] 五位数 Fgems 在真实 Telegram 顶部资产胶囊中可能继续使用省略显示。
+  - Location: 顶部资产栏。
+  - Evidence: 本任务修改前的真实 Telegram 截图显示 `10,4…`，无障碍名称包含完整真实值。
+  - Impact: 不影响首屏按钮、纵向自适应或资产事实读取。
+  - Follow-up: 后续统一处理顶部资产栏时增加五位数余额文本空间。
 
-## Findings and fixes
+## Comparison history
 
 ### Iteration 1
 
-- [P1] The invitation block consumed too much of the first viewport and pushed the statistics and check-in content behind the fixed navigation.
-  - Fix: reduced invitation artwork and card height, compacted spacing and actions, and lowered the fixed navigation within the safe area.
-- [P2] Four-digit asset balances were truncated in the task-page top bar.
-  - Fix: added task-route-specific pill widths and a narrower identity area. The final Telegram capture shows `9,918` and `9,999` in full.
-- [P2] Referral-code and raw-link rows increased visual density and did not exist in the reference layout.
-  - Fix: removed those visible rows while preserving both real copy and Telegram-share actions through the existing API response.
-- [P2] Check-in units and task metadata were too small.
-  - Fix: increased check-in unit, task description, progress, and reward typography.
+- [P1] 原 Telegram 首屏只显示到档次选择与部分奖池内容，两个开盒按钮必须滚动后才能看到。
+- Fix: 对短移动视口压缩页面标题、主视觉、档次卡、奖池、保底和操作按钮，不删除业务信息或交互。
+- Post-fix evidence: `/private/tmp/finaltma-gacha-telegram-compact.png` 中全部功能按钮进入 `401 × 646 px` 首屏。
 
 ### Iteration 2
 
-- [P1] The “今日重点” card duplicated the check-in/task entry and still displaced the reference page hierarchy.
-  - Fix: removed the duplicate visual entry from the task page; the real check-in and task actions remain in their canonical sections.
-- [P1] The invitation benefit displayed a fixed `5 / 10` value while the live account had `0` valid recharge friends.
-  - Fix: bound the displayed benefit progress to `valid_recharge_friends` from `referral.get`. The final capture shows the live value `0 / 10`.
-- [P2] The milestone explanation repeated progress already represented by the benefit and statistics rows.
-  - Fix: removed the redundant visual summary, retained live friend counts and cumulative reward values, and exposed the real milestone thresholds in the benefit label.
-- [P2] The invitation and statistics sections remained taller than the reference rhythm.
-  - Fix: compacted card padding, benefit height, action height, artwork height, section gaps, and statistics height.
+- [P1] 第一轮仅在 `max-height: 820px` 下启用固定紧凑尺寸；更高手机仍沿用紧凑上半屏，导致开盒按钮下方出现大块空白。
+- Fix: 将移动端布局改为全高度连续响应式。页面标题、盲盒主视觉、档次卡、奖池缩略图、保底胶囊和操作按钮均通过 `clamp()` 与 `dvh` 随真实视口高度增长；内容区使用真实稳定视口高度分配纵向空间。
+- [P2] 初次多屏测量发现开盒按钮底边进入固定底部导航约 `6 px`。
+- Fix: 将内容区终点上移，保证按钮与导航之间保留安全间距。
+- Post-fix evidence:
+  - `401 × 646 px`: 文档高度 `646 px`，操作区底边 `546.4 px`，导航顶边 `560 px`，间距 `13.6 px`。
+  - `401 × 852 px`: 文档高度 `852 px`，操作区底边 `746 px`，导航顶边 `766 px`，间距 `20 px`。
+  - `430 × 932 px`: 文档高度 `932 px`，操作区底边 `826 px`，导航顶边 `846 px`，间距 `20 px`。
+  - 三种视口的 `scrollHeight` 均等于视口高度，页面无需滚动。
+  - `/private/tmp/finaltma-gacha-adaptive-actions.jpg` 显示两个开盒按钮均完整位于底部导航上方，没有裁切、遮挡或大块下半屏留白。
 
-### Final review
+## Required fidelity surfaces
 
-No actionable P0, P1, or P2 visual defects remain in the captured Telegram states. The final layout matches the reference hierarchy: centered task heading, orange invitation hero with real artwork, benefit panels, primary invitation action, three live statistics, seven-day check-in, horizontal category filters, task cards, and fixed bottom navigation.
-
-Content differences from the reference are intentional and required: the implementation displays the current product's real Fgems rewards, live referral counts, current check-in day, real task titles, real progress, and real claimability states rather than the reference image's sample values.
-
-## Fidelity surfaces
-
-- Typography: dark navy hierarchy and orange emphasis match the reference; live content remains legible at the Telegram viewport.
-- Spacing: invitation, statistics, check-in, filters, and task rows follow the reference's compact card rhythm without unreachable content.
-- Color: warm white surfaces, pale orange borders, navy text, orange actions, and green reward values match the source palette.
-- Assets: `/assets/tasks/invite-gifts.png` is a real `1024 × 768` raster asset, sized with `object-fit: contain`; existing box assets and Lucide icons are used for the remaining reward and navigation imagery.
-- Data fidelity: balances, referral progress, referral totals, check-in state, task progress, reward values, and claimability are rendered from existing live responses. No mock task data was introduced.
+- Fonts and typography: 延续项目现有系统圆角字体、粗细与橙色强调；价格、概率、保底和按钮文案随屏幕高度缩放但不隐藏。
+- Spacing and layout rhythm: 保留“主视觉 → 档次 → 可能获得 → 保底 → 开盒操作 → 主导航”顺序；矮屏压缩、长屏放大并均匀使用纵向空间。
+- Colors and visual tokens: 沿用暖白背景、橙色主操作、浅色玻璃卡片与现有稀有度颜色，没有引入第二套视觉变量。
+- Image quality and asset fidelity: 主盲盒、档次缩略图和藏品缩略图继续使用项目正式资源，没有占位图、CSS 绘图或新外部素材。
+- Copy and content: 保留真实页面的盲盒名称、K-coin 价格、概率、保底与全部功能入口；参考图中的示例 Points/Star 数据未进入项目。
 
 ## Interaction and runtime checks
 
-- Verified the real Telegram Mini App loading state transitions into the populated task page.
-- Verified navigation from the live bottom navigation to `/tasks`.
-- Verified vertical scrolling through invitation, check-in, filters, and task cards.
-- Verified the category strip and all task/action controls remain present in the accessibility tree.
-- Sign-in, claim, invite, copy, purchase, and other state-changing business actions were deliberately not triggered during visual QA.
-- Telegram Computer Use does not expose the embedded WebView console. No visual runtime error, loading failure, or broken asset appeared in the final authenticated captures; the production build and Vercel build completed successfully.
+- 三种视口都可同时看到三档盲盒、查看全部、五个奖池入口、保底、两个开盒按钮和五项底部导航。
+- 所有视口均无页面纵向滚动，操作区与底部导航之间存在明确安全间距。
+- 未点击开盒、充值、购买月卡或领取权益，没有消耗 K-coin、Fgems、资格、道具或 Telegram Stars。
+- 最新部署已进入 `READY` 并绑定 `https://final-tma-pi.vercel.app/`。
+- 当前 Telegram Mini App 会话已过期，外部应用唤起被浏览器安全策略拦截，因此本轮没有取得最新部署的真实 Telegram WebView 截图；多屏视觉结论来自当前正式 CSS 与组件结构的 1:1 隔离渲染。
 
 ## Automated verification
 
-- `pnpm --filter @pokepets/web typecheck`: passed
+- `pnpm exec prettier --check apps/web/src/shared/styles/global.css`: passed
 - `pnpm --filter @pokepets/web build`: passed
+- Vercel production build: passed
+- Development release assets: all 425 path-valid, format-valid, hash-locked, and present
 - `git diff --check`: passed
-- Vercel release checks: all 425 development release assets path-valid, format-valid, hash-locked, and present
 
 final result: passed
