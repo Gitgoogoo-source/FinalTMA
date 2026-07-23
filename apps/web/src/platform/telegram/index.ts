@@ -19,9 +19,12 @@ export function initializeTelegram(): TelegramWebApp | null {
       "safeAreaChanged",
       "contentSafeAreaChanged",
       "viewportChanged",
+      "fullscreenChanged",
+      "fullscreenFailed",
     ])
       app.onEvent(event, syncTelegramLayout);
   }
+  if (!app.isFullscreen) app.requestFullscreen?.();
   return app;
 }
 

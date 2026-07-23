@@ -6,6 +6,7 @@ interface TelegramWebApp {
   };
   colorScheme: "light" | "dark";
   themeParams: Record<string, string>;
+  isFullscreen?: boolean;
   safeAreaInset?: { top: number; right: number; bottom: number; left: number };
   contentSafeAreaInset?: {
     top: number;
@@ -26,6 +27,7 @@ interface TelegramWebApp {
   };
   ready(): void;
   expand(): void;
+  requestFullscreen?(): void;
   close(): void;
   openInvoice(
     url: string,
