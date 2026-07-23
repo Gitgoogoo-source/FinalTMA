@@ -20,10 +20,6 @@ const ATTACK_MENU_CURSOR_POS = Object.freeze({
   y: 38,
 });
 
-const PLAYER_INPUT_CURSOR_POS = Object.freeze({
-  y: 488,
-});
-
 export class BattleMenu {
   /** @type {Phaser.Scene} */
   #scene;
@@ -71,6 +67,8 @@ export class BattleMenu {
   #wasItemUsed;
   /** @type {boolean} */
   #isTrainerBattle;
+  /** @type {Phaser.GameObjects.Rectangle} */
+  #mainInfoPane;
 
   /**
    *
@@ -99,6 +97,8 @@ export class BattleMenu {
     this.#createMainBattleMenu();
     this.#createMonsterAttackSubMenu();
     this.#createPlayerInputCursor();
+    this.#scene.scale.on(Phaser.Scale.Events.RESIZE, this.#layout, this);
+    this.#layout();
 
     // Conditionally disable FLEE button
     if (this.#isTrainerBattle) {
@@ -110,6 +110,7 @@ export class BattleMenu {
       Phaser.Scenes.Events.SHUTDOWN,
       () => {
         this.#scene.events.off(Phaser.Scenes.Events.RESUME, this.#handleSceneResume, this);
+        this.#scene.scale.off(Phaser.Scale.Events.RESIZE, this.#layout, this);
       },
       this
     );
@@ -360,7 +361,8 @@ export class BattleMenu {
    * @returns {void}
    */
   #createMainBattleMenu() {
-    this.#battleTextGameObjectLine1 = this.#scene.add.text(20, 468, 'what should', {
+    const menuTop = this.#getMenuTop();
+    this.#battleTextGameObjectLine1 = this.#scene.add.text(20, menuTop + 20, 'what should', {
       ...BATTLE_UI_TEXT_STYLE,
       ...{
         wordWrap: {
@@ -370,7 +372,7 @@ export class BattleMenu {
     });
     this.#battleTextGameObjectLine2 = this.#scene.add.text(
       20,
-      512,
+      menuTop + 64,
       `${this.#activePlayerMonster.name} do next?`,
       BATTLE_UI_TEXT_STYLE
     );
@@ -380,7 +382,7 @@ export class BattleMenu {
       .setOrigin(0.5)
       .setScale(2.5);
 
-    this.#mainBattleMenuPhaserContainerGameObject = this.#scene.add.container(520, 448, [
+    this.#mainBattleMenuPhaserContainerGameObject = this.#scene.add.container(520, menuTop, [
       this.#createMainInfoSubPane(),
       this.#scene.add.text(55, 22, BATTLE_MENU_OPTIONS.FIGHT, BATTLE_UI_TEXT_STYLE),
       this.#scene.add.text(240, 22, BATTLE_MENU_OPTIONS.SWITCH, BATTLE_UI_TEXT_STYLE),
@@ -396,6 +398,7 @@ export class BattleMenu {
    * @returns {void}
    */
   #createMonsterAttackSubMenu() {
+    const menuTop = this.#getMenuTop();
     this.#attackBattleMenuCursorPhaserImageGameObject = this.#scene.add
       .image(ATTACK_MENU_CURSOR_POS.x, ATTACK_MENU_CURSOR_POS.y, UI_ASSET_KEYS.CURSOR, 0)
       .setOrigin(0.5)
@@ -407,7 +410,7 @@ export class BattleMenu {
       attackNames.push(this.#activePlayerMonster.attacks[i]?.name || '-');
     }
 
-    this.#moveSelectionSubBattleMenuPhaserContainerGameObject = this.#scene.add.container(0, 448, [
+    this.#moveSelectionSubBattleMenuPhaserContainerGameObject = this.#scene.add.container(0, menuTop, [
       this.#scene.add.text(55, 22, attackNames[0], BATTLE_UI_TEXT_STYLE),
       this.#scene.add.text(240, 22, attackNames[1], BATTLE_UI_TEXT_STYLE),
       this.#scene.add.text(55, 70, attackNames[2], BATTLE_UI_TEXT_STYLE),
@@ -424,7 +427,7 @@ export class BattleMenu {
     const padding = 4;
     const rectHeight = 124;
 
-    this.#scene.add
+    this.#mainInfoPane = this.#scene.add
       .rectangle(
         padding,
         this.#scene.scale.height - rectHeight - padding,
@@ -757,6 +760,7 @@ export class BattleMenu {
    * @returns {void}
    */
   #createPlayerInputCursor() {
+    const cursorY = this.#scene.scale.height - 88;
     this.#userInputCursorPhaserImageGameObject = this.#scene.add.image(0, 0, UI_ASSET_KEYS.CURSOR);
     this.#userInputCursorPhaserImageGameObject.setAngle(90).setScale(2.5, 1.25);
     this.#userInputCursorPhaserImageGameObject.setAlpha(0);
@@ -766,13 +770,29 @@ export class BattleMenu {
       duration: 500,
       repeat: -1,
       y: {
-        from: PLAYER_INPUT_CURSOR_POS.y,
-        start: PLAYER_INPUT_CURSOR_POS.y,
-        to: PLAYER_INPUT_CURSOR_POS.y + 6,
+        from: cursorY,
+        start: cursorY,
+        to: cursorY + 6,
       },
       targets: this.#userInputCursorPhaserImageGameObject,
     });
     this.#userInputCursorPhaserTween.pause();
+  }
+
+  #getMenuTop() {
+    return this.#scene.scale.height - 128;
+  }
+
+  #layout() {
+    const menuTop = this.#getMenuTop();
+    const cursorY = this.#scene.scale.height - 88;
+    this.#mainInfoPane?.setPosition(4, menuTop);
+    this.#battleTextGameObjectLine1?.setPosition(20, menuTop + 20);
+    this.#battleTextGameObjectLine2?.setPosition(20, menuTop + 64);
+    this.#mainBattleMenuPhaserContainerGameObject?.setPosition(520, menuTop);
+    this.#moveSelectionSubBattleMenuPhaserContainerGameObject?.setPosition(0, menuTop);
+    this.#userInputCursorPhaserImageGameObject?.setY(cursorY);
+    this.#userInputCursorPhaserTween?.updateTo('y', cursorY + 6, true);
   }
 
   /**

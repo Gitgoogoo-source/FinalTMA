@@ -12,18 +12,52 @@ import { InventoryScene } from './scenes/inventory-scene.js';
 import { CutsceneScene } from './scenes/cutscene-scene.js';
 import { DialogScene } from './scenes/dialog-scene.js';
 
+const GAME_WIDTH = 1024;
+const MIN_GAME_HEIGHT = 576;
+const gameContainer = document.querySelector('#game-container');
+
+if (!(gameContainer instanceof HTMLElement)) {
+  throw new Error('Monster Tamer game container was not found.');
+}
+
+function getGameHeight() {
+  const { width, height } = gameContainer.getBoundingClientRect();
+  if (width <= 0 || height <= 0) {
+    return MIN_GAME_HEIGHT;
+  }
+  return Math.max(MIN_GAME_HEIGHT, Math.round((GAME_WIDTH * height) / width));
+}
+
 const game = new Phaser.Game({
   type: Phaser.CANVAS,
   pixelArt: false,
   scale: {
     parent: 'game-container',
-    width: 1024,
-    height: 576,
+    width: GAME_WIDTH,
+    height: getGameHeight(),
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
   backgroundColor: '#000000',
 });
+
+const resizeGame = () => {
+  const height = getGameHeight();
+  if (game.scale.gameSize.width !== GAME_WIDTH || game.scale.gameSize.height !== height) {
+    game.scale.resize(GAME_WIDTH, height);
+  }
+};
+const resizeObserver = new ResizeObserver(resizeGame);
+resizeObserver.observe(gameContainer);
+window.addEventListener('resize', resizeGame);
+window.addEventListener(
+  'pagehide',
+  () => {
+    resizeObserver.disconnect();
+    window.removeEventListener('resize', resizeGame);
+  },
+  { once: true }
+);
 
 game.scene.add(SCENE_KEYS.PRELOAD_SCENE, PreloadScene);
 game.scene.add(SCENE_KEYS.WORLD_SCENE, WorldScene);

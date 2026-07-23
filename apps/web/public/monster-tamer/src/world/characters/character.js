@@ -104,17 +104,22 @@ export class Character {
     return this._direction;
   }
 
+  /** @type {import('../../types/typedef.js').Coordinate} */
+  get gridPosition() {
+    return { ...this._targetPosition };
+  }
+
   /**
    * @param {import('../../common/direction.js').Direction} direction
    * @param {boolean} [isRunning=false]
-   * @returns {void}
+   * @returns {boolean}
    */
   moveCharacter(direction, isRunning = false) {
-    if (this._isMoving) {
-      return;
+    if (this._isMoving || direction === DIRECTION.NONE) {
+      return false;
     }
     this._isRunning = isRunning;
-    this._moveSprite(direction);
+    return this._moveSprite(direction);
   }
 
   /**
@@ -166,7 +171,7 @@ export class Character {
   /**
    * @protected
    * @param {import('../../common/direction.js').Direction} direction
-   * @returns {void}
+   * @returns {boolean}
    */
   _moveSprite(direction) {
     const changedDirection = this._direction !== direction;
@@ -179,11 +184,12 @@ export class Character {
     }
 
     if (this._isBlockingTile()) {
-      return;
+      return false;
     }
 
     this._isMoving = true;
     this.#handleSpriteMovement();
+    return true;
   }
 
   /**

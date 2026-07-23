@@ -16,7 +16,7 @@ Telegram WebApp 在 `createRoot().render()` 前同步初始化，首帧即写入
 
 `apps/web/public/monster-tamer` 是独立 HTML、CSS、JavaScript、数据与资源树。Phaser 3.60.0、Web Font Loader 1.6.28 和 Tweakpane 4.0.3 从自身 `vendor` 目录加载；运行时不进入 React bundle。唯一持久化键为 `MONSTER_TAMER_DATA`，不跨设备同步，不写入 FinalTMA session、查询缓存、API、数据库或 Catalog 资产。
 
-静态子应用公开可访问。Telegram WebApp SDK 只提供视口、安全区和 BackButton；不存在 SDK 时仍使用普通 `/game` 返回链接运行。移动输入由静态子应用自身把方向、确认、返回/跑步、菜单和全屏映射到原游戏控制抽象，并在失焦、隐藏和 pointer cancel 时清空输入。
+静态子应用公开可访问。Telegram WebApp SDK 负责 ready、expand、原生 fullscreen、稳定视口、设备/内容安全区、垂直滑动保护和 BackButton；原生全屏不可用时回退到已展开稳定视口，不存在 SDK 时仍使用普通 `/game` 返回链接运行。Phaser 画布占满稳定视口，逻辑高度随宽高比调整；世界场景把地图点击或拖动转换为 64px 网格目标并逐格移动，到达目标或遇到碰撞后停止。A、B、世界菜单保留为安全区内紧凑浮层，其他菜单使用点击或滑动选择；失焦、隐藏、Telegram 停用和 pointer cancel 均清空移动目标与输入。
 
 ## Functions
 

@@ -33,15 +33,23 @@ function getUnionBoundsForCameraBounds(cameraRegions) {
  * @param {Phaser.Scene} scene
  * @param {Phaser.GameObjects.Sprite} gameObject
  * @param {import("../types/typedef").CameraRegion[]} cameraRegions
+ * @param {{ x: number, y: number, width: number, height: number }} fallbackBounds
  */
-export function updateMainCameraBounds(scene, gameObject, cameraRegions) {
+export function updateMainCameraBounds(scene, gameObject, cameraRegions, fallbackBounds) {
   const filteredRegions = getCameraRegionsForGameObject(gameObject, cameraRegions);
-  if (filteredRegions.length === 0) {
-    return;
-  }
-  const unionBounds = getUnionBoundsForCameraBounds(filteredRegions);
+  const unionBounds =
+    filteredRegions.length === 0 ? fallbackBounds : getUnionBoundsForCameraBounds(filteredRegions);
   if (unionBounds === undefined) {
     return;
   }
-  scene.cameras.main.setBounds(unionBounds.x, unionBounds.y, unionBounds.width, unionBounds.height);
+  const { width: viewportWidth, height: viewportHeight } = scene.scale.gameSize;
+  const zoom = Math.max(
+    0.8,
+    viewportWidth / unionBounds.width,
+    viewportHeight / unionBounds.height
+  );
+  scene.cameras.main
+    .setBounds(unionBounds.x, unionBounds.y, unionBounds.width, unionBounds.height)
+    .setZoom(zoom)
+    .setRoundPixels(true);
 }

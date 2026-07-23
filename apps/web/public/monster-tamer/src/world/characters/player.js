@@ -46,10 +46,10 @@ export class Player extends Character {
   /**
    * @param {import('../../common/direction.js').Direction} direction
    * @param {boolean} [isRunning=false]
-   * @returns {void}
+   * @returns {boolean}
    */
   moveCharacter(direction, isRunning = false) {
-    super.moveCharacter(direction, isRunning);
+    const didMove = super.moveCharacter(direction, isRunning);
 
     switch (this._direction) {
       case DIRECTION.DOWN:
@@ -85,7 +85,7 @@ export class Player extends Character {
       });
 
       if (!nearbyEntrance) {
-        return;
+        return didMove;
       }
 
       // entrance is nearby and the player is trying to enter that location
@@ -95,5 +95,6 @@ export class Player extends Character {
         nearbyEntrance.properties.find((property) => property.name === 'is_building')?.value || false;
       this.#enterEntranceCallback(entranceName, entranceId, isBuildingEntrance);
     }
+    return didMove;
   }
 }

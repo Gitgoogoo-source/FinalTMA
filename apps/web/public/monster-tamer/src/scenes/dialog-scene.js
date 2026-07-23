@@ -25,6 +25,8 @@ export class DialogScene extends BaseScene {
   #height;
   /** @type {Phaser.GameObjects.Container} */
   #container;
+  /** @type {Phaser.GameObjects.Rectangle} */
+  #panel;
   /** @type {boolean} */
   #isVisible;
   /** @type {Phaser.GameObjects.Image} */
@@ -63,25 +65,28 @@ export class DialogScene extends BaseScene {
    * @returns {void}
    */
   create() {
-    this.#padding = 90;
-    this.#width = 1280 - this.#padding * 2;
-    this.#height = 124;
+    this.#padding = 36;
+    this.#width = this.scale.width - this.#padding * 2;
+    this.#height = 180;
     this.#textAnimationPlaying = false;
     this.#messagesToShow = [];
-    this.cameras.main.setZoom(0.8);
 
     const menuColor = this.#getMenuColorsFromDataManager();
-    const panel = this.add
+    this.#panel = this.add
       .rectangle(0, 0, this.#width, this.#height, menuColor.main, 0.9)
       .setOrigin(0)
       .setStrokeStyle(8, menuColor.border, 1);
-    this.#container = this.add.container(0, 0, [panel]);
+    this.#container = this.add.container(0, 0, [this.#panel]);
     this.#uiText = this.add.text(18, 12, '', {
       ...UI_TEXT_STYLE,
       ...{ wordWrap: { width: this.#width - 18 } },
     });
     this.#container.add(this.#uiText);
     this.#createPlayerInputCursor();
+    this.scale.on(Phaser.Scale.Events.RESIZE, this.#layout, this);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.scale.off(Phaser.Scale.Events.RESIZE, this.#layout, this);
+    });
     this.hideDialogModal();
     this.scene.bringToTop();
   }
@@ -95,7 +100,7 @@ export class DialogScene extends BaseScene {
 
     const { x, bottom } = this.cameras.main.worldView;
     const startX = x + this.#padding;
-    const startY = bottom - this.#height - this.#padding / 4;
+    const startY = bottom - this.#height - this.#padding;
 
     this.#container.setPosition(startX, startY);
     this.#userInputCursorTween.restart();
@@ -153,6 +158,17 @@ export class DialogScene extends BaseScene {
     });
     this.#userInputCursorTween.pause();
     this.#container.add(this.#userInputCursor);
+  }
+
+  #layout() {
+    this.#width = this.scale.width - this.#padding * 2;
+    this.#panel.setDisplaySize(this.#width, this.#height);
+    this.#uiText.setWordWrapWidth(this.#width - 36);
+    this.#userInputCursor.setPosition(this.#width - 24, this.#height - 30);
+    if (this.#isVisible) {
+      const { x, bottom } = this.cameras.main.worldView;
+      this.#container.setPosition(x + this.#padding, bottom - this.#height - this.#padding);
+    }
   }
 
   /**

@@ -54,7 +54,7 @@ Monster Tamer 使用单独的验收记录，不填写 `request_id`、`operation_
 1. `/monster-tamer` 与 `/monster-tamer/` 均返回独立游戏文档，刷新任一游戏内状态不落入 FinalTMA SPA；所有大小写敏感的脚本、样式、字体、音频、地图、数据和图片路径均返回 200。
 2. normal 用户进入主应用“游戏”页时，内容顺序严格为 `Monster Tamer → 藏品远征 → 幸运转盘`；Monster Tamer 卡片只通过普通链接打开 `/monster-tamer/`，不得提交命令或改变 Expedition、Wheel 的状态。
 3. 在浏览器直接打开、Telegram iOS、Telegram Android、Telegram Desktop 与 Telegram Web 中，游戏均能进入开始菜单并保留上游固定提交的完整探索、对话、战斗、捕捉、队伍、背包、设置、存档和读档流程。
-4. 桌面键盘方向键、`Enter`、`Space`、`Shift`、`Esc` 与移动端方向、A、B、菜单、全屏控件逐项有效；按钮触控目标可操作，Telegram 视口、安全区、主题切换和前后台恢复不遮挡关键画面或破坏输入状态。
+4. 桌面键盘方向键、`Enter`、`Space`、`Shift`、`Esc`、`F` 与移动端地图点击/拖动、菜单滑动、A、B、菜单逐项有效；画布占满 Telegram 稳定视口，原生全屏成功和不支持回退两种结果下均可操作。连续改点、到点停止、碰撞停止、按住 B 跑步、设备/内容安全区、视口变化和前后台恢复不遮挡关键画面，也不产生后台移动或卡键。
 5. 首次进入不创建 FinalTMA 账号或会话；网络记录中没有 `/api/*`、Supabase、Catalog 资源、FinalTMA access token、Telegram `initData` 或业务用户标识。
 6. 保存后仅出现一个键 `MONSTER_TAMER_DATA`；刷新与重新进入恢复同一存档，新游戏按原游戏规则重置存档，FinalTMA 的 session、查询缓存、资产和业务存储均无变化。
 7. Phaser、Web Font Loader、Tweakpane 及游戏源码全部从 `/monster-tamer/` 自身静态目录加载，不访问 jsDelivr 或其他第三方运行时 CDN。

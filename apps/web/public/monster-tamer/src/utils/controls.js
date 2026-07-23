@@ -35,6 +35,11 @@ export class Controls {
     this.#lockPlayerInput = val;
   }
 
+  /** @param {boolean} enabled */
+  setWorldPointerMode(enabled) {
+    touchControls.setWorldPointerMode(enabled);
+  }
+
   /** @returns {boolean} */
   wasEnterKeyPressed() {
     const wasTouched = touchControls.consumePress(CONTROL.MENU);

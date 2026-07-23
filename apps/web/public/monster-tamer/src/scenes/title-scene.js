@@ -42,6 +42,14 @@ export class TitleScene extends BaseScene {
   #isContinueButtonEnabled;
   /** @type {NineSlice} */
   #nineSliceMenu;
+  /** @type {Phaser.GameObjects.Image} */
+  #background;
+  /** @type {Phaser.GameObjects.Image} */
+  #titlePanel;
+  /** @type {Phaser.GameObjects.Image} */
+  #titleText;
+  /** @type {Phaser.GameObjects.Container} */
+  #menuContainer;
 
   constructor() {
     super({ key: SCENE_KEYS.TITLE_SCENE });
@@ -70,15 +78,9 @@ export class TitleScene extends BaseScene {
     this.#isContinueButtonEnabled = dataManager.store.get(DATA_MANAGER_STORE_KEYS.GAME_STARTED) || false;
 
     // create title scene background
-    this.add.image(0, 0, TITLE_ASSET_KEYS.BACKGROUND).setOrigin(0).setScale(0.58);
-    this.add
-      .image(this.scale.width / 2, 150, TITLE_ASSET_KEYS.PANEL)
-      .setScale(0.25, 0.25)
-      .setAlpha(0.5);
-    this.add
-      .image(this.scale.width / 2, 150, TITLE_ASSET_KEYS.TITLE)
-      .setScale(0.55)
-      .setAlpha(0.5);
+    this.#background = this.add.image(0, 0, TITLE_ASSET_KEYS.BACKGROUND).setOrigin(0.5);
+    this.#titlePanel = this.add.image(0, 0, TITLE_ASSET_KEYS.PANEL).setScale(0.25).setAlpha(0.5);
+    this.#titleText = this.add.image(0, 0, TITLE_ASSET_KEYS.TITLE).setScale(0.55).setAlpha(0.72);
 
     // create menu
     const menuBgWidth = 500;
@@ -88,14 +90,29 @@ export class TitleScene extends BaseScene {
       200,
       UI_ASSET_KEYS.MENU_BACKGROUND
     );
-    const newGameText = this.add.text(menuBgWidth / 2, 40, 'New Game', MENU_TEXT_STYLE).setOrigin(0.5);
-    const continueText = this.add.text(menuBgWidth / 2, 90, 'Continue', MENU_TEXT_STYLE).setOrigin(0.5);
+    const newGameText = this.add
+      .text(menuBgWidth / 2, 40, 'New Game', MENU_TEXT_STYLE)
+      .setOrigin(0.5)
+      .setPadding(24, 10)
+      .setInteractive({ useHandCursor: true });
+    const continueText = this.add
+      .text(menuBgWidth / 2, 90, 'Continue', MENU_TEXT_STYLE)
+      .setOrigin(0.5)
+      .setPadding(24, 10);
     if (!this.#isContinueButtonEnabled) {
       continueText.setAlpha(0.5);
+    } else {
+      continueText.setInteractive({ useHandCursor: true });
     }
-    const optionText = this.add.text(menuBgWidth / 2, 140, 'Options', MENU_TEXT_STYLE).setOrigin(0.5);
-    const menuContainer = this.add.container(0, 0, [menuBgContainer, newGameText, continueText, optionText]);
-    menuContainer.setPosition(this.scale.width / 2 - menuBgWidth / 2, 300);
+    const optionText = this.add
+      .text(menuBgWidth / 2, 140, 'Options', MENU_TEXT_STYLE)
+      .setOrigin(0.5)
+      .setPadding(24, 10)
+      .setInteractive({ useHandCursor: true });
+    this.#menuContainer = this.add.container(0, 0, [menuBgContainer, newGameText, continueText, optionText]);
+    newGameText.on(Phaser.Input.Events.POINTER_DOWN, () => this.#selectAndConfirm(MAIN_MENU_OPTIONS.NEW_GAME));
+    continueText.on(Phaser.Input.Events.POINTER_DOWN, () => this.#selectAndConfirm(MAIN_MENU_OPTIONS.CONTINUE));
+    optionText.on(Phaser.Input.Events.POINTER_DOWN, () => this.#selectAndConfirm(MAIN_MENU_OPTIONS.OPTIONS));
 
     // create cursors
     this.#mainMenuCursorPhaserImageGameObject = this.add
@@ -103,6 +120,11 @@ export class TitleScene extends BaseScene {
       .setOrigin(0.5)
       .setScale(2.5);
     menuBgContainer.add(this.#mainMenuCursorPhaserImageGameObject);
+    this.#layout();
+    this.scale.on(Phaser.Scale.Events.RESIZE, this.#layout, this);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.scale.off(Phaser.Scale.Events.RESIZE, this.#layout, this);
+    });
     this.tweens.add({
       delay: 0,
       duration: 500,
@@ -150,8 +172,7 @@ export class TitleScene extends BaseScene {
 
     const wasSpaceKeyPressed = this._controls.wasSpaceKeyPressed();
     if (wasSpaceKeyPressed) {
-      this.cameras.main.fadeOut(500, 0, 0, 0);
-      this._controls.lockInput = true;
+      this.#confirmSelection();
       return;
     }
 
@@ -159,6 +180,41 @@ export class TitleScene extends BaseScene {
     if (selectedDirection !== DIRECTION.NONE) {
       this.#moveMenuSelectCursor(selectedDirection);
     }
+  }
+
+  #confirmSelection() {
+    if (this.#selectedMenuOption === MAIN_MENU_OPTIONS.CONTINUE && !this.#isContinueButtonEnabled) {
+      return;
+    }
+    this.cameras.main.fadeOut(500, 0, 0, 0);
+    this._controls.lockInput = true;
+  }
+
+  /**
+   * @param {MainMenuOptions} option
+   */
+  #selectAndConfirm(option) {
+    if (this._controls.isInputLocked || (option === MAIN_MENU_OPTIONS.CONTINUE && !this.#isContinueButtonEnabled)) {
+      return;
+    }
+    this.#selectedMenuOption = option;
+    this.#moveMenuSelectCursor(DIRECTION.NONE);
+    this.#confirmSelection();
+  }
+
+  #layout() {
+    const { width, height } = this.scale.gameSize;
+    const backgroundScale = Math.max(width / this.#background.width, height / this.#background.height);
+    const titleY = height <= 700 ? 150 : height * 0.22;
+    const menuScale = height <= 700 ? 1 : 1.75;
+    const menuCenterY = height <= 700 ? 400 : height * 0.58;
+
+    this.#background.setPosition(width / 2, height / 2).setScale(backgroundScale);
+    this.#titlePanel.setPosition(width / 2, titleY);
+    this.#titleText.setPosition(width / 2, titleY);
+    this.#menuContainer
+      .setScale(menuScale)
+      .setPosition(width / 2 - (500 * menuScale) / 2, menuCenterY - (200 * menuScale) / 2);
   }
 
   /**

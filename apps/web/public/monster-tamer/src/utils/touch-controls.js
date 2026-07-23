@@ -15,17 +15,33 @@ const RETURN_PATH = '/game';
 class TouchControls {
   /** @type {Map<number, { control: string, button: HTMLButtonElement }>} */
   #activePointers = new Map();
+  /** @type {Map<number, { x: number, y: number }>} */
+  #gesturePointers = new Map();
   /** @type {Map<string, number>} */
   #pressed = new Map();
   #pressSequence = 0;
   /** @type {Map<string, Set<HTMLButtonElement>>} */
   #buttonsByControl = new Map();
+  /** @type {'menu' | 'world'} */
+  #inputMode = 'menu';
 
   constructor() {
     this.#bindButtons();
+    this.#bindGameGestures();
     this.#bindLifecycle();
     this.#initializeTelegram();
     this.#bindAudioResume();
+  }
+
+  /**
+   * World movement owns map gestures; every other scene maps a tap to confirm
+   * and a swipe to one menu direction.
+   * @param {boolean} enabled
+   */
+  setWorldPointerMode(enabled) {
+    this.#inputMode = enabled ? 'world' : 'menu';
+    document.documentElement.classList.toggle('is-world-scene', enabled);
+    this.#gesturePointers.clear();
   }
 
   /**
@@ -88,6 +104,44 @@ class TouchControls {
     });
   }
 
+  #bindGameGestures() {
+    const container = document.querySelector('#game-container');
+    if (!(container instanceof HTMLElement)) {
+      return;
+    }
+
+    container.addEventListener('pointerdown', (event) => {
+      if (event.pointerType === 'mouse' && event.button !== 0) {
+        return;
+      }
+      this.#gesturePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    });
+    container.addEventListener('pointerup', (event) => {
+      const start = this.#gesturePointers.get(event.pointerId);
+      this.#gesturePointers.delete(event.pointerId);
+      if (!start || this.#inputMode === 'world') {
+        return;
+      }
+
+      const deltaX = event.clientX - start.x;
+      const deltaY = event.clientY - start.y;
+      const swipeThreshold = Math.max(36, Math.min(window.innerWidth, window.innerHeight) * 0.05);
+      if (Math.max(Math.abs(deltaX), Math.abs(deltaY)) < swipeThreshold) {
+        this.#markPressed(CONTROL.CONFIRM);
+        return;
+      }
+
+      if (Math.abs(deltaX) > Math.abs(deltaY)) {
+        this.#markPressed(deltaX > 0 ? CONTROL.RIGHT : CONTROL.LEFT);
+        return;
+      }
+      this.#markPressed(deltaY > 0 ? CONTROL.DOWN : CONTROL.UP);
+    });
+    container.addEventListener('pointercancel', (event) => {
+      this.#gesturePointers.delete(event.pointerId);
+    });
+  }
+
   /**
    * @param {PointerEvent} event
    * @param {string} control
@@ -144,6 +198,7 @@ class TouchControls {
 
   #releaseAll() {
     this.#activePointers.clear();
+    this.#gesturePointers.clear();
     this.#pressed.clear();
     this.#buttonsByControl.forEach((_, control) => this.#setPressedVisual(control, false));
   }
@@ -204,7 +259,9 @@ class TouchControls {
       return;
     }
 
+    document.documentElement.classList.add('is-telegram');
     const returnToGame = () => window.location.assign(RETURN_PATH);
+    const releaseAll = () => this.#releaseAll();
     const syncLayout = () => {
       this.#setInsets('--tg-safe-area-inset', telegram.safeAreaInset);
       this.#setInsets('--tg-content-safe-area-inset', telegram.contentSafeAreaInset);
@@ -215,21 +272,30 @@ class TouchControls {
 
     telegram.ready();
     telegram.expand();
+    telegram.disableVerticalSwipes?.();
+    try {
+      telegram.requestFullscreen?.();
+    } catch {
+      // Expanded mode remains the deterministic fallback on older clients.
+    }
     telegram.BackButton?.show();
     telegram.BackButton?.onClick(returnToGame);
-    ['safeAreaChanged', 'contentSafeAreaChanged', 'viewportChanged'].forEach((eventName) =>
-      telegram.onEvent(eventName, syncLayout)
+    ['safeAreaChanged', 'contentSafeAreaChanged', 'viewportChanged', 'fullscreenChanged', 'fullscreenFailed'].forEach(
+      (eventName) => telegram.onEvent(eventName, syncLayout)
     );
+    telegram.onEvent('deactivated', releaseAll);
     syncLayout();
 
     window.addEventListener(
       'pagehide',
       () => {
+        telegram.enableVerticalSwipes?.();
         telegram.BackButton?.offClick(returnToGame);
         telegram.BackButton?.hide();
-        ['safeAreaChanged', 'contentSafeAreaChanged', 'viewportChanged'].forEach((eventName) =>
-          telegram.offEvent(eventName, syncLayout)
+        ['safeAreaChanged', 'contentSafeAreaChanged', 'viewportChanged', 'fullscreenChanged', 'fullscreenFailed'].forEach(
+          (eventName) => telegram.offEvent(eventName, syncLayout)
         );
+        telegram.offEvent('deactivated', releaseAll);
       },
       { once: true }
     );
