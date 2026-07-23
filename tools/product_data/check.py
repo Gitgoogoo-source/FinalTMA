@@ -3,14 +3,18 @@
 
 from __future__ import annotations
 
+import hashlib
 import shutil
 import subprocess
 import tempfile
 from pathlib import Path
 
+from build import split_product_document
+
 
 ROOT = Path(__file__).resolve().parents[2]
 MANIFEST = ROOT / "generated/catalog/catalog-v1.json"
+PRODUCT = ROOT / "docs/product/功能说明文档.md"
 
 
 def product_data_migration() -> Path:
@@ -21,6 +25,12 @@ def product_data_migration() -> Path:
 
 
 def main() -> None:
+    product_data_source, product_extensions = split_product_document(PRODUCT.read_text(encoding="utf-8"))
+    if "## 21. Monster Tamer 独立游戏功能说明" not in product_extensions:
+        raise SystemExit("Product extension after the checksum boundary must contain chapter 21 Monster Tamer")
+    if "## 21. Monster Tamer 独立游戏功能说明" in product_data_source:
+        raise SystemExit("Monster Tamer must remain outside the frozen catalog v1 product-data source")
+    source_checksum = hashlib.sha256(product_data_source.encode()).hexdigest()
     migration_source = product_data_migration()
     with tempfile.TemporaryDirectory(prefix="pokepets-product-data-") as temporary:
         directory = Path(temporary)
@@ -38,7 +48,10 @@ def main() -> None:
         ] if expected.read_bytes() != actual.read_bytes()]
         if drift:
             raise SystemExit("Product data drift detected: " + ", ".join(drift))
-    print("product data SQL and generated catalog match the frozen product document")
+    print(
+        "product data SQL and generated catalog match the immutable catalog v1 release; "
+        f"pre-boundary source checksum: {source_checksum}"
+    )
 
 
 if __name__ == "__main__":

@@ -1,0 +1,359 @@
+[
+  {
+    "key": "PLAYER_DOWN",
+    "frames": [6, 7, 8],
+    "frameRate": 6,
+    "repeat": -1,
+    "delay": 0,
+    "yoyo": true,
+    "assetKey": "PLAYER"
+  },
+  {
+    "key": "PLAYER_RIGHT",
+    "frames": [3, 4, 5],
+    "frameRate": 6,
+    "repeat": -1,
+    "delay": 0,
+    "yoyo": true,
+    "assetKey": "PLAYER"
+  },
+  {
+    "key": "PLAYER_LEFT",
+    "frames": [9, 10, 11],
+    "frameRate": 6,
+    "repeat": -1,
+    "delay": 0,
+    "yoyo": true,
+    "assetKey": "PLAYER"
+  },
+  {
+    "key": "PLAYER_UP",
+    "frames": [0, 1, 2],
+    "frameRate": 6,
+    "repeat": -1,
+    "delay": 0,
+    "yoyo": true,
+    "assetKey": "PLAYER"
+  },
+  {
+    "key": "ICE_SHARD_START",
+    "frameRate": 8,
+    "repeat": 0,
+    "delay": 0,
+    "yoyo": false,
+    "assetKey": "ICE_SHARD_START"
+  },
+  {
+    "key": "ICE_SHARD",
+    "frameRate": 8,
+    "repeat": 0,
+    "delay": 0,
+    "yoyo": false,
+    "assetKey": "ICE_SHARD"
+  },
+  {
+    "key": "SLASH",
+    "frameRate": 4,
+    "repeat": 0,
+    "delay": 0,
+    "yoyo": false,
+    "assetKey": "SLASH"
+  },
+  {
+    "key": "NPC_1_RIGHT",
+    "frames": [8, 2, 9],
+    "frameRate": 6,
+    "repeat": -1,
+    "delay": 0,
+    "yoyo": true,
+    "assetKey": "NPC"
+  },
+  {
+    "key": "NPC_1_UP",
+    "frames": [6, 1, 7],
+    "frameRate": 6,
+    "repeat": -1,
+    "delay": 0,
+    "yoyo": true,
+    "assetKey": "NPC"
+  },
+  {
+    "key": "NPC_1_DOWN",
+    "frames": [4, 0, 5],
+    "frameRate": 6,
+    "repeat": -1,
+    "delay": 0,
+    "yoyo": true,
+    "assetKey": "NPC"
+  },
+  {
+    "key": "NPC_2_RIGHT",
+    "frames": [18, 12, 19],
+    "frameRate": 6,
+    "repeat": -1,
+    "delay": 0,
+    "yoyo": true,
+    "assetKey": "NPC"
+  },
+  {
+    "key": "NPC_2_UP",
+    "frames": [16, 11, 17],
+    "frameRate": 6,
+    "repeat": -1,
+    "delay": 0,
+    "yoyo": true,
+    "assetKey": "NPC"
+  },
+  {
+    "key": "NPC_2_DOWN",
+    "frames": [14, 10, 15],
+    "frameRate": 6,
+    "repeat": -1,
+    "delay": 0,
+    "yoyo": true,
+    "assetKey": "NPC"
+  },
+  {
+    "key": "NPC_3_RIGHT",
+    "frames": [28, 22, 29],
+    "frameRate": 6,
+    "repeat": -1,
+    "delay": 0,
+    "yoyo": true,
+    "assetKey": "NPC"
+  },
+  {
+    "key": "NPC_3_UP",
+    "frames": [26, 21, 27],
+    "frameRate": 6,
+    "repeat": -1,
+    "delay": 0,
+    "yoyo": true,
+    "assetKey": "NPC"
+  },
+  {
+    "key": "NPC_3_DOWN",
+    "frames": [24, 20, 25],
+    "frameRate": 6,
+    "repeat": -1,
+    "delay": 0,
+    "yoyo": true,
+    "assetKey": "NPC"
+  },
+  {
+    "key": "NPC_4_RIGHT",
+    "frames": [38, 32, 39],
+    "frameRate": 6,
+    "repeat": -1,
+    "delay": 0,
+    "yoyo": true,
+    "assetKey": "NPC"
+  },
+  {
+    "key": "NPC_4_UP",
+    "frames": [36, 31, 37],
+    "frameRate": 6,
+    "repeat": -1,
+    "delay": 0,
+    "yoyo": true,
+    "assetKey": "NPC"
+  },
+  {
+    "key": "NPC_4_DOWN",
+    "frames": [34, 30, 35],
+    "frameRate": 6,
+    "repeat": -1,
+    "delay": 0,
+    "yoyo": true,
+    "assetKey": "NPC"
+  },
+  {
+    "key": "NPC_5_RIGHT",
+    "frames": [48, 42, 49],
+    "frameRate": 6,
+    "repeat": -1,
+    "delay": 0,
+    "yoyo": true,
+    "assetKey": "NPC"
+  },
+  {
+    "key": "NPC_5_UP",
+    "frames": [46, 41, 47],
+    "frameRate": 6,
+    "repeat": -1,
+    "delay": 0,
+    "yoyo": true,
+    "assetKey": "NPC"
+  },
+  {
+    "key": "NPC_5_DOWN",
+    "frames": [44, 40, 45],
+    "frameRate": 6,
+    "repeat": -1,
+    "delay": 0,
+    "yoyo": true,
+    "assetKey": "NPC"
+  },
+  {
+    "key": "NPC_6_RIGHT",
+    "frames": [58, 52, 59],
+    "frameRate": 6,
+    "repeat": -1,
+    "delay": 0,
+    "yoyo": true,
+    "assetKey": "NPC"
+  },
+  {
+    "key": "NPC_6_UP",
+    "frames": [56, 51, 57],
+    "frameRate": 6,
+    "repeat": -1,
+    "delay": 0,
+    "yoyo": true,
+    "assetKey": "NPC"
+  },
+  {
+    "key": "NPC_6_DOWN",
+    "frames": [54, 50, 55],
+    "frameRate": 6,
+    "repeat": -1,
+    "delay": 0,
+    "yoyo": true,
+    "assetKey": "NPC"
+  },
+  {
+    "key": "NPC_7_RIGHT",
+    "frames": [68, 62, 69],
+    "frameRate": 6,
+    "repeat": -1,
+    "delay": 0,
+    "yoyo": true,
+    "assetKey": "NPC"
+  },
+  {
+    "key": "NPC_7_UP",
+    "frames": [66, 61, 67],
+    "frameRate": 6,
+    "repeat": -1,
+    "delay": 0,
+    "yoyo": true,
+    "assetKey": "NPC"
+  },
+  {
+    "key": "NPC_7_DOWN",
+    "frames": [64, 60, 65],
+    "frameRate": 6,
+    "repeat": -1,
+    "delay": 0,
+    "yoyo": true,
+    "assetKey": "NPC"
+  },
+  {
+    "key": "NPC_8_RIGHT",
+    "frames": [78, 72, 79],
+    "frameRate": 6,
+    "repeat": -1,
+    "delay": 0,
+    "yoyo": true,
+    "assetKey": "NPC"
+  },
+  {
+    "key": "NPC_8_UP",
+    "frames": [76, 71, 77],
+    "frameRate": 6,
+    "repeat": -1,
+    "delay": 0,
+    "yoyo": true,
+    "assetKey": "NPC"
+  },
+  {
+    "key": "NPC_8_DOWN",
+    "frames": [74, 70, 75],
+    "frameRate": 6,
+    "repeat": -1,
+    "delay": 0,
+    "yoyo": true,
+    "assetKey": "NPC"
+  },
+  {
+    "key": "NPC_16_RIGHT",
+    "frames": [158, 152, 159],
+    "frameRate": 6,
+    "repeat": -1,
+    "delay": 0,
+    "yoyo": true,
+    "assetKey": "NPC"
+  },
+  {
+    "key": "NPC_16_UP",
+    "frames": [156, 151, 157],
+    "frameRate": 6,
+    "repeat": -1,
+    "delay": 0,
+    "yoyo": true,
+    "assetKey": "NPC"
+  },
+  {
+    "key": "NPC_16_DOWN",
+    "frames": [154, 150, 155],
+    "frameRate": 6,
+    "repeat": -1,
+    "delay": 0,
+    "yoyo": true,
+    "assetKey": "NPC"
+  },
+  {
+    "key": "NPC_19_RIGHT",
+    "frames": [188, 182, 189],
+    "frameRate": 6,
+    "repeat": -1,
+    "delay": 0,
+    "yoyo": true,
+    "assetKey": "NPC"
+  },
+  {
+    "key": "NPC_19_UP",
+    "frames": [186, 181, 187],
+    "frameRate": 6,
+    "repeat": -1,
+    "delay": 0,
+    "yoyo": true,
+    "assetKey": "NPC"
+  },
+  {
+    "key": "NPC_19_DOWN",
+    "frames": [184, 180, 185],
+    "frameRate": 6,
+    "repeat": -1,
+    "delay": 0,
+    "yoyo": true,
+    "assetKey": "NPC"
+  },
+  {
+    "key": "NPC_20_RIGHT",
+    "frames": [198, 192, 199],
+    "frameRate": 6,
+    "repeat": -1,
+    "delay": 0,
+    "yoyo": true,
+    "assetKey": "NPC"
+  },
+  {
+    "key": "NPC_20_UP",
+    "frames": [196, 191, 197],
+    "frameRate": 6,
+    "repeat": -1,
+    "delay": 0,
+    "yoyo": true,
+    "assetKey": "NPC"
+  },
+  {
+    "key": "NPC_20_DOWN",
+    "frames": [194, 190, 195],
+    "frameRate": 6,
+    "repeat": -1,
+    "delay": 0,
+    "yoyo": true,
+    "assetKey": "NPC"
+  }
+]

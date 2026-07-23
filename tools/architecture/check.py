@@ -13,7 +13,11 @@ MATRIX = ROOT / "docs/architecture/domain-map.md"
 WEB_ROOT = ROOT / "apps/web/src"
 API_ROOT = ROOT / "apps/api/src"
 CONTRACT_ROOT = ROOT / "packages/api-contracts/src"
+STATIC_GAME_ROOT = ROOT / "apps/web/public/monster-tamer"
+MONSTER_LAUNCHER_ROOT = WEB_ROOT / "domains/monster-tamer"
+GAME_PAGE = WEB_ROOT / "pages/game/GamePage.tsx"
 IMPORT_PATTERN = re.compile(r"(?:from\s+|import\()\s*[\"']([^\"']+)[\"']")
+MODULE_IMPORT_PATTERN = re.compile(r"(?:from\s+|import\s*(?:\(\s*)?)[\"']([^\"']+)[\"']")
 
 REQUIRED_PATHS = (
     "apps/web/src/app/guards",
@@ -23,7 +27,32 @@ REQUIRED_PATHS = (
     "apps/web/src/app/shell",
     "apps/web/src/pages",
     "apps/web/src/domains",
+    "apps/web/src/domains/monster-tamer",
     "apps/web/src/workflows/payment-recovery",
+    "apps/web/public/monster-tamer/index.html",
+    "apps/web/public/monster-tamer/styles.css",
+    "apps/web/public/monster-tamer/LICENSE",
+    "apps/web/public/monster-tamer/THIRD_PARTY_NOTICES.md",
+    "apps/web/public/monster-tamer/ORIGINAL_ASSET_PROVENANCE.md",
+    "apps/web/public/monster-tamer/src/main.js",
+    "apps/web/public/monster-tamer/src/utils/data-manager.js",
+    "apps/web/public/monster-tamer/src/utils/touch-controls.js",
+    "apps/web/public/monster-tamer/src/scenes/world-scene.js",
+    "apps/web/public/monster-tamer/src/scenes/battle-scene.js",
+    "apps/web/public/monster-tamer/src/scenes/monster-party-scene.js",
+    "apps/web/public/monster-tamer/src/scenes/inventory-scene.js",
+    "apps/web/public/monster-tamer/src/scenes/options-scene.js",
+    "apps/web/public/monster-tamer/assets/data/monsters.json",
+    "apps/web/public/monster-tamer/assets/data/encounters.json",
+    "apps/web/public/monster-tamer/assets/data/items.json",
+    "apps/web/public/monster-tamer/vendor/phaser-3.60.0.min.js",
+    "apps/web/public/monster-tamer/vendor/webfontloader-1.6.28.min.js",
+    "apps/web/public/monster-tamer/vendor/tweakpane-4.0.3.min.js",
+    "apps/web/public/monster-tamer/vendor/licenses/PHASER-LICENSE.md",
+    "apps/web/public/monster-tamer/vendor/licenses/WEBFONTLOADER-LICENSE",
+    "apps/web/public/monster-tamer/vendor/licenses/TWEAKPANE-LICENSE.txt",
+    "tools/monster-tamer/generate-original-assets.mjs",
+    "docs/architecture/adr/ADR-011-monster-tamer-static-subapplication.md",
     "apps/api/src/entrypoints/app",
     "apps/api/src/entrypoints/integrations",
     "apps/api/src/entrypoints/jobs",
@@ -59,6 +88,7 @@ WEB_DOMAINS = {
     "inventory",
     "market",
     "mint",
+    "monster-tamer",
     "referral",
     "tasks",
     "topup",
@@ -96,19 +126,20 @@ def main() -> None:
     assert_nonempty_domains(WEB_ROOT / "domains")
     assert_nonempty_domains(API_ROOT / "domains")
     verify_web_boundaries()
+    verify_monster_tamer_boundary()
     verify_api_boundaries()
     verify_contract_boundaries()
     verify_documentation()
     verify_package_exports()
     verify_typescript_configuration()
-    print("module ownership, gateway isolation, and twenty product domains are traceable")
+    print("module ownership, gateway isolation, and twenty-one product domains are traceable")
 
 
 def verify_domain_matrix() -> None:
     text = MATRIX.read_text(encoding="utf-8")
     chapters = [int(value) for value in re.findall(r"^\|\s*(\d+)\s+", text, re.MULTILINE)]
-    if chapters != list(range(1, 21)):
-        raise SystemExit(f"Domain matrix must contain chapters 1 through 20 exactly once: {chapters}")
+    if chapters != list(range(1, 22)):
+        raise SystemExit(f"Domain matrix must contain chapters 1 through 21 exactly once: {chapters}")
     rows = [line.split("|")[1:-1] for line in text.splitlines() if re.match(r"^\|\s*\d+\s+", line)]
     if any(len(row) != 5 or any(not cell.strip() for cell in row) for row in rows):
         raise SystemExit("Every domain matrix row must identify Web, API, database, and acceptance ownership")
@@ -147,6 +178,169 @@ def verify_web_boundaries() -> None:
     missing_boundaries = [path.parent.name for path in (WEB_ROOT / "domains").glob("*/ui") if not (path.parent / "index.ts").is_file()]
     if missing_boundaries:
         raise SystemExit(f"Web domains must expose one public index.ts: {missing_boundaries}")
+
+
+def verify_monster_tamer_boundary() -> None:
+    launcher_files = typescript_files(MONSTER_LAUNCHER_ROOT)
+    launcher_source = "\n".join(path.read_text(encoding="utf-8") for path in launcher_files)
+    launcher_violations: list[str] = []
+    allowed_packages = {"lucide-react", "react"}
+    for source in launcher_files:
+        for specifier in MODULE_IMPORT_PATTERN.findall(source.read_text(encoding="utf-8")):
+            if specifier.startswith("."):
+                target = (source.parent / specifier).resolve()
+                if MONSTER_LAUNCHER_ROOT.resolve() not in (target, *target.parents):
+                    launcher_violations.append(f"{relative(source)} imports outside the launcher boundary")
+            elif specifier not in allowed_packages:
+                launcher_violations.append(f"{relative(source)} imports forbidden package {specifier}")
+    forbidden_launcher_references = (
+        "@pokepets",
+        "/api/",
+        "apirequest(",
+        "useapiquery(",
+        "supabase",
+        "initdata",
+        "platform/",
+        "session",
+    )
+    lowered_launcher = launcher_source.lower()
+    for reference in forbidden_launcher_references:
+        if reference in lowered_launcher:
+            launcher_violations.append(f"launcher contains forbidden business reference {reference}")
+    if launcher_source.count('href="/monster-tamer/"') != 1:
+        launcher_violations.append("launcher must contain exactly one ordinary /monster-tamer/ link")
+    if launcher_violations:
+        raise SystemExit("Monster Tamer launcher boundary violations:\n" + "\n".join(sorted(launcher_violations)))
+
+    static_files = [
+        STATIC_GAME_ROOT / "index.html",
+        STATIC_GAME_ROOT / "styles.css",
+        *sorted((STATIC_GAME_ROOT / "src").rglob("*.js")),
+    ]
+    static_source = "\n".join(path.read_text(encoding="utf-8") for path in static_files)
+    lowered_static = static_source.lower()
+    forbidden_static_references = (
+        "@pokepets",
+        "/api/",
+        "supabase",
+        "initdata",
+        "authorization",
+        "idempotency-key",
+        "/assets/catalog/",
+        "access_token",
+        "session_generation",
+        "session_token",
+        "finaltma",
+        "fgems",
+        "k-coin",
+    )
+    static_violations = [
+        reference for reference in forbidden_static_references if reference in lowered_static
+    ]
+    if static_violations:
+        raise SystemExit(f"Monster Tamer static source references FinalTMA business state: {static_violations}")
+    network_primitives = ("fetch(", "xmlhttprequest", "websocket(", "navigator.sendbeacon")
+    used_network_primitives = [value for value in network_primitives if value in lowered_static]
+    if used_network_primitives:
+        raise SystemExit(f"Monster Tamer static source performs network calls: {used_network_primitives}")
+
+    data_manager_path = STATIC_GAME_ROOT / "src/utils/data-manager.js"
+    data_manager = data_manager_path.read_text(encoding="utf-8")
+    if data_manager.count("const LOCAL_STORAGE_KEY = 'MONSTER_TAMER_DATA';") != 1:
+        raise SystemExit("Monster Tamer must define MONSTER_TAMER_DATA as its only storage key")
+    required_storage_calls = (
+        "localStorage.getItem(LOCAL_STORAGE_KEY)",
+        "localStorage.setItem(LOCAL_STORAGE_KEY",
+    )
+    missing_storage_calls = [value for value in required_storage_calls if value not in data_manager]
+    if missing_storage_calls:
+        raise SystemExit(f"Monster Tamer local save contract is incomplete: {missing_storage_calls}")
+    storage_owners = [
+        path
+        for path in static_files
+        if "localStorage" in path.read_text(encoding="utf-8") and path != data_manager_path
+    ]
+    if storage_owners or any(value in static_source for value in ("sessionStorage", "document.cookie", "indexedDB")):
+        raise SystemExit(
+            f"Monster Tamer may persist only through its data manager: {[relative(path) for path in storage_owners]}"
+        )
+
+    index = (STATIC_GAME_ROOT / "index.html").read_text(encoding="utf-8")
+    required_local_runtime = (
+        '<base href="/monster-tamer/" />',
+        'src="vendor/webfontloader-1.6.28.min.js"',
+        'src="vendor/phaser-3.60.0.min.js"',
+        'src="src/main.js"',
+    )
+    missing_runtime = [value for value in required_local_runtime if value not in index]
+    tweakpane = (STATIC_GAME_ROOT / "src/lib/tweakpane.js").read_text(encoding="utf-8")
+    if missing_runtime or "../../vendor/tweakpane-4.0.3.min.js" not in tweakpane:
+        raise SystemExit(f"Monster Tamer local runtime references are incomplete: {missing_runtime}")
+    notices = (STATIC_GAME_ROOT / "THIRD_PARTY_NOTICES.md").read_text(encoding="utf-8")
+    provenance = (STATIC_GAME_ROOT / "ORIGINAL_ASSET_PROVENANCE.md").read_text(encoding="utf-8")
+    release_blockers = ("unverified", "replacement required", "不可发布")
+    present_blockers = [
+        marker for marker in release_blockers if marker in f"{notices}\n{provenance}".lower()
+    ]
+    required_original_terms = (
+        "Every file under `assets/images/monster-tamer/**` and `favicon.ico`",
+        "generate-original-assets.mjs",
+        "No uncleared upstream Monster Tamer raster remains",
+    )
+    missing_original_terms = [term for term in required_original_terms if term not in notices]
+    if present_blockers or missing_original_terms:
+        raise SystemExit(
+            "Monster Tamer visual release evidence is incomplete: "
+            f"blockers={present_blockers}, missing={missing_original_terms}"
+        )
+    preload = (STATIC_GAME_ROOT / "src/scenes/preload-scene.js").read_text(encoding="utf-8")
+    required_music = (
+        "And-the-Journey-Begins.mp3",
+        "Decisive-Battle.mp3",
+        "Title-Theme.mp3",
+    )
+    music_directory = STATIC_GAME_ROOT / "assets/audio/xDeviruchi"
+    missing_music = [name for name in required_music if not (music_directory / name).is_file()]
+    legacy_music = sorted(path.name for path in music_directory.glob("*.wav"))
+    if any(name not in preload for name in required_music) or missing_music or legacy_music:
+        raise SystemExit("Monster Tamer music must use the local mobile MP3 assets")
+    external_documents = re.findall(r'(?:src|href)=["\'](https?://[^"\']+)["\']', index)
+    if external_documents != ["https://telegram.org/js/telegram-web-app.js"]:
+        raise SystemExit(f"Monster Tamer HTML has unexpected external runtime resources: {external_documents}")
+    forbidden_cdns = ("cdn.jsdelivr.net", "cdnjs.cloudflare.com", "unpkg.com", "esm.sh")
+    used_cdns = [value for value in forbidden_cdns if value in lowered_static]
+    if used_cdns:
+        raise SystemExit(f"Monster Tamer runtime dependencies must be local: {used_cdns}")
+
+    game_page = GAME_PAGE.read_text(encoding="utf-8")
+    panel_tokens = ("<MonsterTamerPanel", "<ExpeditionPanel", "<WheelPanel")
+    panel_positions = [game_page.find(token) for token in panel_tokens]
+    if any(position < 0 for position in panel_positions) or panel_positions != sorted(panel_positions):
+        raise SystemExit("Game page order must be MonsterTamerPanel, ExpeditionPanel, then WheelPanel")
+    if game_page.count("MonsterTamerPanel") != 2:
+        raise SystemExit("Game page must import and render MonsterTamerPanel exactly once")
+
+    vercel = json.loads((ROOT / "vercel.json").read_text(encoding="utf-8"))
+    rewrites = vercel.get("rewrites", [])
+    expected_routes = {
+        "/monster-tamer": "/monster-tamer/index.html",
+        "/monster-tamer/": "/monster-tamer/index.html",
+    }
+    rewrite_sources = [rewrite.get("source") for rewrite in rewrites]
+    for source, destination in expected_routes.items():
+        matches = [index for index, rewrite in enumerate(rewrites) if rewrite.get("source") == source]
+        if len(matches) != 1 or rewrites[matches[0]].get("destination") != destination:
+            raise SystemExit(f"Vercel must rewrite {source} exactly once to {destination}")
+    catch_all = [index for index, source in enumerate(rewrite_sources) if source == "/((?!api/).*)"]
+    route_positions = [rewrite_sources.index(source) for source in expected_routes]
+    if len(catch_all) != 1 or not all(position < catch_all[0] for position in route_positions):
+        raise SystemExit("Monster Tamer rewrites must appear before the Web SPA catch-all")
+
+    product = (ROOT / "docs/product/功能说明文档.md").read_text(encoding="utf-8")
+    boundary = "<!-- PRODUCT_DATA_CHECKSUM_BOUNDARY -->"
+    chapter = "## 21. Monster Tamer 独立游戏功能说明"
+    if product.count(boundary) != 1 or product.count(chapter) != 1 or product.find(chapter) < product.find(boundary):
+        raise SystemExit("Product chapter 21 must appear exactly once after the product-data checksum boundary")
 
 
 def verify_api_boundaries() -> None:
@@ -208,6 +402,18 @@ def verify_documentation() -> None:
     missing = [value for value in required if value not in data]
     if missing:
         raise SystemExit(f"Database ownership documentation is incomplete: {missing}")
+    monster_tamer_adr = ROOT / "docs/architecture/adr/ADR-011-monster-tamer-static-subapplication.md"
+    required_monster_tamer_terms = (
+        "/monster-tamer/",
+        "MONSTER_TAMER_DATA",
+        "MonsterTamerPanel → ExpeditionPanel → WheelPanel",
+    )
+    monster_tamer_documentation = monster_tamer_adr.read_text(encoding="utf-8")
+    missing_monster_tamer_terms = [
+        value for value in required_monster_tamer_terms if value not in monster_tamer_documentation
+    ]
+    if missing_monster_tamer_terms:
+        raise SystemExit(f"Monster Tamer ADR is incomplete: {missing_monster_tamer_terms}")
 
 
 def verify_package_exports() -> None:

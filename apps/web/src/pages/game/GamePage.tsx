@@ -2,6 +2,7 @@ import { Gamepad2 } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { ExpeditionPanel } from "../../domains/expedition/index.ts";
+import { MonsterTamerPanel } from "../../domains/monster-tamer/index.ts";
 import { WheelPanel } from "../../domains/wheel/index.ts";
 
 export function GamePage(): ReactNode {
@@ -15,6 +16,7 @@ export function GamePage(): ReactNode {
         <Gamepad2 aria-hidden="true" />
       </header>
       <div className="game-stack">
+        <MonsterTamerPanel />
         <ExpeditionPanel />
         <WheelPanel />
       </div>

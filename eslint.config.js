@@ -11,6 +11,8 @@ export default tseslint.config(
       "**/node_modules/**",
       ".vercel/**",
       "contracts/ton/build/**",
+      "apps/web/public/monster-tamer/src/types/**",
+      "apps/web/public/monster-tamer/vendor/**",
     ],
   },
   js.configs.recommended,
@@ -55,6 +57,18 @@ export default tseslint.config(
           ],
         },
       ],
+    },
+  },
+  {
+    files: ["apps/web/public/monster-tamer/src/**/*.js"],
+    languageOptions: {
+      globals: { ...globals.browser, Phaser: "readonly" },
+    },
+    rules: {
+      "no-case-declarations": "off",
+      "no-useless-assignment": "off",
+      "@typescript-eslint/ban-ts-comment": "off",
+      "@typescript-eslint/no-unused-vars": "off",
     },
   },
   {

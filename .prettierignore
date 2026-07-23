@@ -5,3 +5,4 @@ docs/product/
 docs/architecture/重构规划文档.md
 contracts/ton/contracts/
 contracts/ton/build/
+apps/web/public/monster-tamer/

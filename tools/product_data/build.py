@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 from pathlib import Path
 
 import catalog
@@ -19,6 +20,17 @@ PRODUCT = ROOT / "docs/product/功能说明文档.md"
 MIGRATIONS = ROOT / "supabase/migrations"
 MANIFEST = ROOT / "generated/catalog/catalog-v1.json"
 ASSET_ROOT = ROOT / "apps/web/public/assets"
+PRODUCT_DATA_CHECKSUM_BOUNDARY = "<!-- PRODUCT_DATA_CHECKSUM_BOUNDARY -->"
+
+
+def split_product_document(markdown: str) -> tuple[str, str]:
+    parts = markdown.split(PRODUCT_DATA_CHECKSUM_BOUNDARY)
+    if len(parts) != 2:
+        raise RuntimeError("Product document must contain exactly one product-data checksum boundary")
+    product_data_source, product_extensions = parts
+    if not product_data_source.strip() or not product_extensions.strip():
+        raise RuntimeError("Product-data checksum boundary must separate the frozen source from product extensions")
+    return product_data_source, product_extensions
 
 
 def product_data_migration() -> Path:
@@ -26,6 +38,21 @@ def product_data_migration() -> Path:
     if len(matches) != 1:
         raise RuntimeError(f"Expected one *_product_data_v1.sql migration, found {len(matches)}")
     return matches[0]
+
+
+def released_product_checksum() -> str:
+    manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
+    checksum = manifest.get("product_checksum")
+    if manifest.get("version") != "v1" or not isinstance(checksum, str) or re.fullmatch(r"[0-9a-f]{64}", checksum) is None:
+        raise RuntimeError("Tracked catalog v1 manifest has an invalid immutable product checksum")
+    migration = product_data_migration().read_text(encoding="utf-8")
+    required = (
+        f"-- Product checksum: {checksum}",
+        f"insert into catalog.versions (id, product_checksum) values ('v1', '{checksum}');",
+    )
+    if any(value not in migration for value in required):
+        raise RuntimeError("Tracked catalog v1 manifest and product-data migration checksums differ")
+    return checksum
 
 
 def build_sql(chains: list[dict[str, object]], templates: list[dict[str, object]], checksum: str) -> str:
@@ -92,8 +119,10 @@ def main() -> None:
     if args.check_assets and args.pin_assets:
         raise SystemExit("Choose either --check-assets or --pin-assets")
     markdown = PRODUCT.read_text(encoding="utf-8")
-    checksum = hashlib.sha256(markdown.encode()).hexdigest()
-    chains, templates = catalog.parse(markdown)
+    product_data_source, _ = split_product_document(markdown)
+    source_checksum = hashlib.sha256(product_data_source.encode()).hexdigest()
+    checksum = released_product_checksum()
+    chains, templates = catalog.parse(product_data_source)
     args.migration_path.parent.mkdir(parents=True, exist_ok=True)
     args.manifest_path.parent.mkdir(parents=True, exist_ok=True)
     args.migration_path.write_text(build_sql(chains, templates, checksum), encoding="utf-8")
@@ -105,7 +134,10 @@ def main() -> None:
         args.manifest_path.write_text(json.dumps({"version": "v1", "product_checksum": checksum, "chains": chains, "templates": templates, "assets": assets}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     if args.check_assets:
         check_assets(templates, assets)
-    print(f"product data v1: {len(chains)} chains, {len(templates)} templates, {checksum}")
+    print(
+        f"product data v1: {len(chains)} chains, {len(templates)} templates, "
+        f"release_checksum={checksum}, source_checksum={source_checksum}"
+    )
 
 
 if __name__ == "__main__":

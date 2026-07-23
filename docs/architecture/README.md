@@ -2,17 +2,20 @@
 
 ## 事实来源
 
-`docs/product/功能说明文档.md` 是唯一产品功能来源。本次实现固定使用 SHA-256：
+`docs/product/功能说明文档.md` 的全部章节是唯一产品功能来源。`PRODUCT_DATA_CHECKSUM_BOUNDARY` 上方内容由 Catalog v1 数据生成器解析；下方产品扩展不进入 Catalog v1 migration 或 manifest。
+
+已发布 Catalog v1 的 immutable `product_checksum` / release identity 固定为：
 
 ```text
-be2cc660b78abc99d0a4cde14a7f7c04d1a4237d0d776692ef3ae92639257f4d
+de521f2687086cb358fb557a4a7ada3bc3c5fc132d673f0256b4573028ddba46
 ```
 
-架构文档只记录技术边界，不复制价格、概率、奖励或产品状态规则。目录、OpenAPI 和 migration 均为生成物，生成结果必须与上述文档校验和绑定。
+该值不是当前产品文档全文 SHA。生成器另计算并打印 boundary 上方源文档 SHA-256，仅用于诊断；Catalog v1 release identity 必须同时与 tracked manifest 和 product-data migration 一致。架构文档只记录技术边界，不复制价格、概率、奖励或产品状态规则。
 
 ## 运行时
 
 - Web：React、Vite、TypeScript，运行在 Telegram Mini App。
+- Monster Tamer：同一 Web 部署下的 `/monster-tamer/` 公开独立静态子应用，使用独立本地存档，不进入 React、API 或数据库业务链。
 - API：同一 Vercel Project 内的 `app`、`integrations`、`jobs` 三个 Node.js 24 Function 网关。
 - Database：Supabase Postgres 17，仅暴露 `api` schema；浏览器不加载 Supabase SDK。
 - Blockchain：TON Connect 验证钱包，Tact 合约完成 NFT Mint。
@@ -22,6 +25,8 @@ be2cc660b78abc99d0a4cde14a7f7c04d1a4237d0d776692ef3ae92639257f4d
 
 ```text
 apps/web -> @pokepets/api-contracts/app
+apps/web/src/domains/monster-tamer -> /monster-tamer/ ordinary link
+/monster-tamer/ -> self-contained static runtime + MONSTER_TAMER_DATA
 api -> apps/api/entrypoints
 apps/api/entrypoints -> gateway-specific contracts + http
 apps/api/http -> injected route registry + handler map
@@ -32,6 +37,8 @@ contracts/ton -> TON blockchain
 ```
 
 禁止反向依赖、跨领域深层导入、浏览器访问 Supabase、Node 层组合多次资产写入。
+
+Monster Tamer launcher 领域只拥有启动卡片与普通链接，不导入业务领域、平台会话或 API 契约。静态子应用不读取 FinalTMA session、API、Catalog 资产或数据库；Telegram SDK 只处理视口、安全区和返回按钮。
 
 ## 可信边界
 
@@ -72,3 +79,4 @@ contracts/ton -> TON blockchain
 - [Vercel 函数打包与配置隔离](adr/ADR-008-vercel-packaging-and-config-isolation.md)
 - [开盒页运行期视图状态](adr/ADR-009-gacha-runtime-view-state.md)
 - [正式藏品图片资源](adr/ADR-010-catalog-image-assets.md)
+- [Monster Tamer 独立静态子应用](adr/ADR-011-monster-tamer-static-subapplication.md)

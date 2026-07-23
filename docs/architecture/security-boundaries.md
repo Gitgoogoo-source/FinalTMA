@@ -11,3 +11,11 @@ Data API 只暴露 `api` schema。安全迁移撤销 `PUBLIC`、`anon`、`authen
 账号封禁切换先把内存账号状态设为 `banned` 并生成新 session generation，再取消请求并清空查询、操作、弹窗和导航。任何请求、预取或缓存种子写入前都同时验证原 generation 与当前 `normal` 状态，迟到响应只能作为 `AbortError` 丢弃。
 
 Telegram webhook 使用 secret token，Cron 使用 `CRON_SECRET`。支付回调按 Telegram update 与 charge 唯一键去重；Cron 同时使用任务名 advisory lock、运行租约、状态扫描和幂等 RPC。
+
+## Monster Tamer 公开静态边界
+
+`/monster-tamer/` 是公开静态子应用，不执行 FinalTMA 认证。它不接收 Telegram `initData`、access token、session generation、用户标识或账号状态，不导入 `@pokepets/api-contracts`，不请求 `/api/*`、Supabase 或 Catalog 资源，也不创建操作、账本、库存、任务或奖励记录。
+
+静态游戏只把本地进度写入 `MONSTER_TAMER_DATA`。本地怪物、道具、捕捉、经验和随机结果均不可信且只影响单机存档，不能证明或触发 FinalTMA 业务结果。Telegram SDK 只允许处理 ready、视口、安全区和返回按钮。
+
+游戏页 launcher 领域只允许 React、Lucide 和本领域相对导入；唯一动作是链接到 `/monster-tamer/`。架构门禁同时验证 launcher 无业务导入、静态源码无 FinalTMA API/session/资产引用、路由先于 SPA catch-all，以及游戏页组合顺序。

@@ -1,0 +1,39 @@
+.monster-tamer-panel {
+  display: grid;
+  gap: 14px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 100% 0, rgba(90, 180, 73, 0.18), transparent 42%),
+    rgba(255, 255, 255, 0.78);
+}
+
+.monster-tamer-panel > p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.monster-tamer-launch {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  border-radius: 14px;
+  color: #fff;
+  font-weight: 800;
+  text-decoration: none;
+  background: #4f9f42;
+  box-shadow: 0 8px 18px rgba(79, 159, 66, 0.2);
+}
+
+.monster-tamer-launch > svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+
+.monster-tamer-launch:focus-visible {
+  outline: 3px solid rgba(79, 159, 66, 0.3);
+  outline-offset: 3px;
+}
