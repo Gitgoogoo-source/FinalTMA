@@ -24,7 +24,7 @@
 | 18 进化          | inventory、evolution            | evolution                                | 43_evolution、inventory、economy         | 只读预览、二次确认、原子结算、结果恢复与会话 NEW    |
 | 19 顶部资产栏    | app/shell                       | identity                                 | economy、vip、onchain                    | 真实资产回正、钱包和 VIP 状态同步                   |
 | 20 风控退款      | app/guards                      | refund-risk workflow、integrations、jobs | risk、payments、operations               | 重复退款无副作用、封禁空白门禁                      |
-| 21 Monster Tamer | monster-tamer launcher          | 无                                       | 无                                       | 公开静态运行、完整玩法、本地存档、零业务依赖        |
+| 21 Monster Tamer | monster-tamer launcher          | 无                                       | 无                                       | 公开静态运行、自由探索玩法、本地存档、零业务依赖    |
 
 ## 横切约束
 

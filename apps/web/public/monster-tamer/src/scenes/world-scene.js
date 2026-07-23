@@ -171,15 +171,19 @@ export class WorldScene extends BaseScene {
     // During a new game flow, find the players starting location from the map data, and update
     // the data manager. Originally, this was a hard coded value, and was updated to be dynamic
     // based on our level data in Tiled.
-    let isNewGame = !(dataManager.store.get(DATA_MANAGER_STORE_KEYS.GAME_STARTED) || false);
+    const isNewGame = !(dataManager.store.get(DATA_MANAGER_STORE_KEYS.GAME_STARTED) || false);
     if (isNewGame) {
-      // find player spawn location and update the data manager
       const map = this.#getLevelTileMap(WORLD_ASSET_KEYS.MAIN_1_LEVEL);
       const playerSpawnLocationObject = map.getObjectLayer(OBJECT_LAYER_NAMES.PLAYER_SPAWN_LOCATION).objects[0];
+      const starterMonster = DataUtils.getMonsterById(this, 1);
+      if (starterMonster === undefined) {
+        throw new Error('Starter monster 1 was not found.');
+      }
       dataManager.store.set(DATA_MANAGER_STORE_KEYS.PLAYER_POSITION, {
         x: playerSpawnLocationObject.x,
         y: playerSpawnLocationObject.y - TILE_SIZE,
       });
+      dataManager.store.set(DATA_MANAGER_STORE_KEYS.MONSTERS_IN_PARTY, [starterMonster]);
     }
 
     dataManager.store.set(
@@ -971,7 +975,7 @@ export class WorldScene extends BaseScene {
     const eventToHandle = this.#npcPlayerIsInteractingWith.events[this.#lastNpcEventHandledIndex];
     const eventType = eventToHandle.type;
 
-    // check to see if this event should be handled based on story flags
+    // check to see if this event should be handled based on event flags
     const currentGameFlags = dataManager.getFlags();
     const eventRequirementsMet = eventToHandle.requires.every((flag) => {
       if (flag === BATTLE_FLAG.TRAINER_DEFEATED) {

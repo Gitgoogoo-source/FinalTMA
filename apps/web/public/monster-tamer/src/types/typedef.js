@@ -305,10 +305,7 @@ export const GAME_EVENT_TYPE = Object.freeze({
  */
 
 /** @enum {GameFlag} */
-export const GAME_FLAG = Object.freeze({
-  LOOKING_FOR_PROFESSOR: 'LOOKING_FOR_PROFESSOR',
-  FOUND_PROFESSOR: 'FOUND_PROFESSOR',
-});
+export const GAME_FLAG = Object.freeze({});
 
 /**
  * @typedef {keyof typeof BATTLE_FLAG} BattleFlag
