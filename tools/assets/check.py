@@ -107,8 +107,8 @@ def assert_source_tree(templates: list[dict[str, object]]) -> None:
     hashes = set()
     for name in expected:
         path = SOURCE / name
-        if assert_format(path) != (1024, 1024):
-            raise SystemExit(f"Catalog master must be 1024x1024: {path.relative_to(ROOT)}")
+        if assert_format(path) != (768, 768):
+            raise SystemExit(f"Catalog master must be 768x768: {path.relative_to(ROOT)}")
         hashes.add(digest(path))
     if len(hashes) != 210:
         raise SystemExit("Catalog masters must contain 210 unique files")

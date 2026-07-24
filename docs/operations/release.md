@@ -40,7 +40,7 @@ pnpm manifest:check
 pnpm manifest:check:production
 ```
 
-`pnpm catalog:generate-assets` 要求 210 张母版均为 1024×1024 WebP，并生成 256×256 缩略图和 768×768 详情图。`pnpm assets:check:catalog` 强制核对 210 个 `template_id`、两个路径、420 个文件、WebP 格式、尺寸、单文件体积、50 MiB 总上限、内容唯一性和正式 checksum。`APP_ENV=development pnpm build` 在生成 `apps/web/dist` 后继续核对构建复制结果；`APP_ENV=test` 与 `APP_ENV=production` 额外拒绝 Telegram 分享图和 TON Connect 图标的已知开发 checksum。
+`pnpm catalog:generate-assets` 要求 210 张母版均为 768×768 WebP，并生成 256×256 缩略图和 768×768 详情图。`pnpm assets:check:catalog` 强制核对 210 个 `template_id`、两个路径、420 个文件、WebP 格式、尺寸、单文件体积、50 MiB 总上限、内容唯一性和正式 checksum。`APP_ENV=development pnpm build` 在生成 `apps/web/dist` 后继续核对构建复制结果；`APP_ENV=test` 与 `APP_ENV=production` 额外拒绝 Telegram 分享图和 TON Connect 图标的已知开发 checksum。
 
 `pnpm architecture:check` 同时验证 Monster Tamer 静态入口、launcher 纯链接、游戏页顺序、独立本地存档、业务引用为零、Vercel 路由优先级、唯一 480×240 `main_1` 地图、旧地图删除、图层和对象数量契约、虚拟摇杆、WASD、平滑相机，以及 Tuxemon 固定提交、四张允许源图 SHA-256、CC BY-SA 4.0 许可证和单运行时图集边界。`APP_ENV=development pnpm build` 后必须确认 `apps/web/dist/monster-tamer` 与源静态树文件清单一致；缺失任一脚本、样式、字体、音频、地图、数据、图片、许可证或第三方声明时停止发布。
 

@@ -12,7 +12,7 @@ const OUTPUT = resolve(ROOT, "apps/web/public/assets/catalog/v1");
 const MANIFEST = resolve(ROOT, "generated/catalog/catalog-v1.json");
 const VARIANTS = {
   thumb: { width: 256, quality: 82, maxBytes: 50 * 1024 },
-  detail: { width: 768, quality: 88, maxBytes: 180 * 1024 },
+  detail: { width: 768, quality: 74, maxBytes: 180 * 1024 },
 };
 
 const catalog = JSON.parse(await readFile(MANIFEST, "utf8"));
@@ -43,11 +43,11 @@ async function generate(name) {
   const metadata = await sharp(source).metadata();
   if (
     metadata.format !== "webp" ||
-    metadata.width !== 1024 ||
-    metadata.height !== 1024 ||
+    metadata.width !== 768 ||
+    metadata.height !== 768 ||
     (metadata.pages ?? 1) !== 1
   )
-    throw new Error(`${name} must be a single-frame 1024x1024 WebP source`);
+    throw new Error(`${name} must be a single-frame 768x768 WebP source`);
   await Promise.all(
     Object.entries(VARIANTS).map(async ([variant, config]) => {
       const info = await sharp(source)
