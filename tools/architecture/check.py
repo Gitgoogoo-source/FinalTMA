@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from pathlib import Path
@@ -47,18 +48,16 @@ REQUIRED_PATHS = (
     "apps/web/public/monster-tamer/assets/data/encounters.json",
     "apps/web/public/monster-tamer/assets/data/items.json",
     "apps/web/public/monster-tamer/assets/data/main_1.json",
-    "apps/web/public/monster-tamer/assets/images/kenney-tiny/tiny-town-4x.png",
-    "apps/web/public/monster-tamer/assets/images/kenney-tiny/tiny-farm-4x.png",
-    "apps/web/public/monster-tamer/assets/images/kenney-tiny/tiny-battle-4x.png",
-    "apps/web/public/monster-tamer/assets/licenses/kenney-tiny/tiny-town-1.1-LICENSE.txt",
-    "apps/web/public/monster-tamer/assets/licenses/kenney-tiny/tiny-farm-1.0-LICENSE.txt",
-    "apps/web/public/monster-tamer/assets/licenses/kenney-tiny/tiny-battle-1.0-LICENSE.txt",
-    "assets/source/monster-tamer/kenney-tiny/tiny-town-1.1/tilemap_packed.png",
-    "assets/source/monster-tamer/kenney-tiny/tiny-town-1.1/License.txt",
-    "assets/source/monster-tamer/kenney-tiny/tiny-farm-1.0/tilemap_packed.png",
-    "assets/source/monster-tamer/kenney-tiny/tiny-farm-1.0/License.txt",
-    "assets/source/monster-tamer/kenney-tiny/tiny-battle-1.0/tilemap_packed.png",
-    "assets/source/monster-tamer/kenney-tiny/tiny-battle-1.0/License.txt",
+    "apps/web/public/monster-tamer/assets/images/tuxemon/tuxemon-valley-4x-extruded.png",
+    "apps/web/public/monster-tamer/assets/licenses/tuxemon/ATTRIBUTIONS.md",
+    "apps/web/public/monster-tamer/assets/licenses/tuxemon/CC-BY-SA-4.0.txt",
+    "apps/web/public/monster-tamer/assets/licenses/tuxemon/SOURCE.json",
+    "assets/source/monster-tamer/tuxemon/c34a9c727129999671e4206ade7425cbb45745b4/ATTRIBUTIONS.md",
+    "assets/source/monster-tamer/tuxemon/c34a9c727129999671e4206ade7425cbb45745b4/SOURCE.json",
+    "assets/source/monster-tamer/tuxemon/c34a9c727129999671e4206ade7425cbb45745b4/core_outdoor.png",
+    "assets/source/monster-tamer/tuxemon/c34a9c727129999671e4206ade7425cbb45745b4/core_outdoor_nature.png",
+    "assets/source/monster-tamer/tuxemon/c34a9c727129999671e4206ade7425cbb45745b4/core_outdoor_water.png",
+    "assets/source/monster-tamer/tuxemon/c34a9c727129999671e4206ade7425cbb45745b4/core_city_and_country.png",
     "apps/web/public/monster-tamer/vendor/phaser-3.60.0.min.js",
     "apps/web/public/monster-tamer/vendor/webfontloader-1.6.28.min.js",
     "apps/web/public/monster-tamer/vendor/tweakpane-4.0.3.min.js",
@@ -326,24 +325,25 @@ def verify_monster_tamer_boundary() -> None:
     present_blockers = [
         marker for marker in release_blockers if marker in f"{notices}\n{provenance}".lower()
     ]
-    kenney_evidence = (
-        "Tiny Town",
-        "1.1",
-        "https://kenney.nl/assets/tiny-town",
-        "9768692dccff1d706408a5aedd6ca4f6cd1409506cbc84cb2f862919764be977",
-        "assets/licenses/kenney-tiny/tiny-town-1.1-LICENSE.txt",
-        "Tiny Farm",
-        "1.0",
-        "https://kenney.nl/assets/tiny-farm",
-        "a06f75f312c27eff15a2288475612e6f6699411be7259d408323cd15a790decc",
-        "assets/licenses/kenney-tiny/tiny-farm-1.0-LICENSE.txt",
-        "Tiny Battle",
-        "https://kenney.nl/assets/tiny-battle",
-        "7751ec7d9a07e57baa9fa1174d6f78fcd779a050377227afee77993c73cb5f9e",
-        "assets/licenses/kenney-tiny/tiny-battle-1.0-LICENSE.txt",
-        "Creative Commons Zero",
+    tuxemon_evidence = (
+        "Tuxemon valley map art",
+        "c34a9c727129999671e4206ade7425cbb45745b4",
+        "https://github.com/Tuxemon/Tuxemon",
+        "Creative Commons",
+        "Attribution-ShareAlike 4.0",
+        "a3b62b7113408450f6af3c8d86ef287fe78cabd1bb7b9580414bcace4d90ff08",
+        "c1c58c5115c35a730743c4e0bd9b48c05b77d38f1873d16216b924f9a33712aa",
+        "571fc2ad3a648424da78fb9d1abfe9027b7a9a6ef39e8f2b4d28e0eb2e3cc2f6",
+        "1cdf4a534a7e3078f3d18022c690022582b3a84cfefef4f7d02c739872b39178",
+        "assets/images/tuxemon/tuxemon-valley-4x-extruded.png",
+        "assets/licenses/tuxemon/SOURCE.json",
+        "assets/licenses/tuxemon/ATTRIBUTIONS.md",
+        "assets/licenses/tuxemon/CC-BY-SA-4.0.txt",
+        "single 1056×1056 compact atlas",
     )
-    missing_kenney_evidence = [term for term in kenney_evidence if term not in notices]
+    missing_tuxemon_evidence = [
+        term for term in tuxemon_evidence if term not in notices
+    ]
     stale_original_claims = (
         "Every file under `assets/images/monster-tamer/**` and `favicon.ico`",
         "world and interior backgrounds and foregrounds",
@@ -352,13 +352,13 @@ def verify_monster_tamer_boundary() -> None:
     present_stale_claims = [
         term for term in stale_original_claims if term in f"{notices}\n{provenance}"
     ]
-    if present_blockers or missing_kenney_evidence or present_stale_claims:
+    if present_blockers or missing_tuxemon_evidence or present_stale_claims:
         raise SystemExit(
             "Monster Tamer visual release evidence is incomplete: "
-            f"blockers={present_blockers}, missing_kenney={missing_kenney_evidence}, "
+            f"blockers={present_blockers}, missing_tuxemon={missing_tuxemon_evidence}, "
             f"stale_original_claims={present_stale_claims}"
         )
-    verify_monster_tamer_kenney_assets()
+    verify_monster_tamer_tuxemon_assets()
     verify_monster_tamer_map()
 
     controls = (STATIC_GAME_ROOT / "src/utils/controls.js").read_text(encoding="utf-8")
@@ -424,6 +424,19 @@ def verify_monster_tamer_boundary() -> None:
         or "tilemapTiledJSON(WORLD_ASSET_KEYS.MAIN_1_LEVEL, `assets/data/main_1.json`)" not in preload
     ):
         raise SystemExit("Monster Tamer runtime must preload main_1 as its only world tilemap")
+    compact_atlas_path = (
+        "assets/images/tuxemon/tuxemon-valley-4x-extruded.png"
+    )
+    if (
+        preload.count(compact_atlas_path) != 1
+        or world_scene.count(
+            "map.addTilesetImage('tuxemon-valley', WORLD_ASSET_KEYS.TUXEMON_VALLEY)"
+        )
+        != 1
+    ):
+        raise SystemExit(
+            "Monster Tamer runtime must load and bind the compact Tuxemon atlas exactly once"
+        )
     retired_preload_assets = (
         "forest_1",
         "building_1",
@@ -431,6 +444,10 @@ def verify_monster_tamer_boundary() -> None:
         "building_3",
         "level_background",
         "level_foreground",
+        "kenney-tiny",
+        "tiny-town",
+        "tiny-farm",
+        "tiny-battle",
     )
     present_retired_preload_assets = [
         value for value in retired_preload_assets if value in preload
@@ -489,9 +506,8 @@ def verify_monster_tamer_boundary() -> None:
     required_map_decisions = (
         "480 × 240",
         "3 分 12 秒",
-        "Tiny Town",
-        "Tiny Farm",
-        "Tiny Battle",
+        "Tuxemon",
+        "1056 × 1056",
         "WASD",
         "虚拟摇杆",
         "MONSTER_TAMER_DATA",
@@ -506,73 +522,109 @@ def verify_monster_tamer_boundary() -> None:
         )
 
 
-def verify_monster_tamer_kenney_assets() -> None:
+def verify_monster_tamer_tuxemon_assets() -> None:
+    commit = "c34a9c727129999671e4206ade7425cbb45745b4"
+    source_root = ROOT / "assets/source/monster-tamer/tuxemon" / commit
     asset_contract = (
         (
-            "assets/images/kenney-tiny/tiny-town-4x.png",
-            (768, 704),
-            "assets/source/monster-tamer/kenney-tiny/tiny-town-1.1/tilemap_packed.png",
-            (192, 176),
-            "assets/licenses/kenney-tiny/tiny-town-1.1-LICENSE.txt",
-            "assets/source/monster-tamer/kenney-tiny/tiny-town-1.1/License.txt",
-            "Tiny Town (1.1)",
+            "core_outdoor.png",
+            (592, 1200),
+            "a3b62b7113408450f6af3c8d86ef287fe78cabd1bb7b9580414bcace4d90ff08",
         ),
         (
-            "assets/images/kenney-tiny/tiny-farm-4x.png",
-            (768, 704),
-            "assets/source/monster-tamer/kenney-tiny/tiny-farm-1.0/tilemap_packed.png",
-            (192, 176),
-            "assets/licenses/kenney-tiny/tiny-farm-1.0-LICENSE.txt",
-            "assets/source/monster-tamer/kenney-tiny/tiny-farm-1.0/License.txt",
-            "Tiny Farm (1.0)",
+            "core_outdoor_nature.png",
+            (1024, 2048),
+            "c1c58c5115c35a730743c4e0bd9b48c05b77d38f1873d16216b924f9a33712aa",
         ),
         (
-            "assets/images/kenney-tiny/tiny-battle-4x.png",
-            (704, 64),
-            "assets/source/monster-tamer/kenney-tiny/tiny-battle-1.0/tilemap_packed.png",
-            (288, 176),
-            "assets/licenses/kenney-tiny/tiny-battle-1.0-LICENSE.txt",
-            "assets/source/monster-tamer/kenney-tiny/tiny-battle-1.0/License.txt",
-            "Tiny Battle (1.0)",
+            "core_outdoor_water.png",
+            (1024, 2048),
+            "571fc2ad3a648424da78fb9d1abfe9027b7a9a6ef39e8f2b4d28e0eb2e3cc2f6",
+        ),
+        (
+            "core_city_and_country.png",
+            (640, 576),
+            "1cdf4a534a7e3078f3d18022c690022582b3a84cfefef4f7d02c739872b39178",
         ),
     )
     violations: list[str] = []
-    for (
-        image_name,
-        expected_dimensions,
-        source_image_name,
-        expected_source_dimensions,
-        license_name,
-        source_license_name,
-        license_heading,
-    ) in asset_contract:
-        image_path = STATIC_GAME_ROOT / image_name
-        dimensions = png_dimensions(image_path)
+    for source_name, expected_dimensions, expected_hash in asset_contract:
+        source_path = source_root / source_name
+        dimensions = png_dimensions(source_path)
         if dimensions != expected_dimensions:
             violations.append(
-                f"{image_name} must be {expected_dimensions[0]}x{expected_dimensions[1]}, found {dimensions}"
+                f"{relative(source_path)} must be {expected_dimensions[0]}x"
+                f"{expected_dimensions[1]}, found {dimensions}"
             )
-        source_image_path = ROOT / source_image_name
-        source_dimensions = png_dimensions(source_image_path)
-        if source_dimensions != expected_source_dimensions:
+        actual_hash = hashlib.sha256(source_path.read_bytes()).hexdigest()
+        if actual_hash != expected_hash:
             violations.append(
-                f"{source_image_name} must be {expected_source_dimensions[0]}x"
-                f"{expected_source_dimensions[1]}, found {source_dimensions}"
+                f"{relative(source_path)} SHA-256 must be {expected_hash}, found {actual_hash}"
             )
-        license_text = (STATIC_GAME_ROOT / license_name).read_text(encoding="utf-8")
-        required_license_terms = (
-            license_heading,
-            "License: (Creative Commons Zero, CC0)",
-            "creativecommons.org/publicdomain/zero/1.0/",
-            "commercial",
+
+    runtime_atlas = (
+        STATIC_GAME_ROOT
+        / "assets/images/tuxemon/tuxemon-valley-4x-extruded.png"
+    )
+    if png_dimensions(runtime_atlas) != (1056, 1056):
+        violations.append(
+            "assets/images/tuxemon/tuxemon-valley-4x-extruded.png must be 1056x1056"
         )
-        missing = [term for term in required_license_terms if term not in license_text]
-        if missing:
-            violations.append(f"{license_name} is missing {missing}")
-        if (STATIC_GAME_ROOT / license_name).read_bytes() != (ROOT / source_license_name).read_bytes():
-            violations.append(f"{license_name} must be an exact copy of {source_license_name}")
+    public_tuxemon_images = sorted(
+        relative(path)
+        for path in (STATIC_GAME_ROOT / "assets/images/tuxemon").glob("*.png")
+    )
+    if public_tuxemon_images != [relative(runtime_atlas)]:
+        violations.append(
+            "Monster Tamer runtime must publish only the compact Tuxemon atlas: "
+            f"{public_tuxemon_images}"
+        )
+
+    public_license_root = STATIC_GAME_ROOT / "assets/licenses/tuxemon"
+    for published_name, source_name in (
+        ("SOURCE.json", "SOURCE.json"),
+        ("ATTRIBUTIONS.md", "ATTRIBUTIONS.md"),
+    ):
+        published = public_license_root / published_name
+        source = source_root / source_name
+        if published.read_bytes() != source.read_bytes():
+            violations.append(
+                f"{relative(published)} must be an exact copy of {relative(source)}"
+            )
+    license_text = (public_license_root / "CC-BY-SA-4.0.txt").read_text(
+        encoding="utf-8"
+    )
+    required_license_terms = (
+        "Attribution-ShareAlike 4.0 International",
+        "Creative Commons Attribution-ShareAlike 4.0 International Public License",
+        "Section 3 -- License Conditions.",
+    )
+    missing_license_terms = [
+        term for term in required_license_terms if term not in license_text
+    ]
+    if missing_license_terms:
+        violations.append(
+            "assets/licenses/tuxemon/CC-BY-SA-4.0.txt is missing "
+            f"{missing_license_terms}"
+        )
+
+    retired_kenney_roots = (
+        STATIC_GAME_ROOT / "assets/images/kenney-tiny",
+        STATIC_GAME_ROOT / "assets/licenses/kenney-tiny",
+        ROOT / "assets/source/monster-tamer/kenney-tiny",
+    )
+    present_retired_roots = [
+        relative(path) for path in retired_kenney_roots if path.exists()
+    ]
+    if present_retired_roots:
+        violations.append(
+            f"Retired Kenney Tiny map roots remain: {present_retired_roots}"
+        )
     if violations:
-        raise SystemExit("Monster Tamer Kenney asset contract violations:\n" + "\n".join(violations))
+        raise SystemExit(
+            "Monster Tamer Tuxemon asset contract violations:\n"
+            + "\n".join(violations)
+        )
 
 
 def verify_monster_tamer_map() -> None:
@@ -612,15 +664,43 @@ def verify_monster_tamer_map() -> None:
             f"Monster Tamer main_1 geometry mismatch: expected {expected_geometry}, found {actual_geometry}"
         )
 
-    expected_tilesets = {"tiny-town", "tiny-farm", "tiny-battle", "collision", "encounter"}
+    expected_tilesets = {"tuxemon-valley", "collision", "encounter"}
     tilesets = {entry.get("name"): entry for entry in map_data.get("tilesets", [])}
     if len(map_data.get("tilesets", [])) != len(expected_tilesets) or set(tilesets) != expected_tilesets:
         raise SystemExit(
             f"Monster Tamer main_1 tilesets mismatch: expected {sorted(expected_tilesets)}, "
             f"found {sorted(str(name) for name in tilesets)}"
         )
-    if tilesets["tiny-battle"].get("firstgid") != 265:
-        raise SystemExit("Monster Tamer Tiny Battle tileset must keep firstgid 265")
+    expected_tuxemon_tileset = {
+        "columns": 16,
+        "firstgid": 1,
+        "image": "../images/tuxemon/tuxemon-valley-4x-extruded.png",
+        "imageheight": 1056,
+        "imagewidth": 1056,
+        "margin": 1,
+        "name": "tuxemon-valley",
+        "spacing": 2,
+        "tilecount": 256,
+        "tileheight": 64,
+        "tilewidth": 64,
+    }
+    actual_tuxemon_tileset = {
+        key: tilesets["tuxemon-valley"].get(key)
+        for key in expected_tuxemon_tileset
+    }
+    if actual_tuxemon_tileset != expected_tuxemon_tileset:
+        raise SystemExit(
+            "Monster Tamer compact Tuxemon tileset mismatch: "
+            f"expected {expected_tuxemon_tileset}, found {actual_tuxemon_tileset}"
+        )
+    if (
+        tilesets["collision"].get("firstgid") != 257
+        or tilesets["encounter"].get("firstgid") != 258
+    ):
+        raise SystemExit(
+            "Monster Tamer hidden tiles must use collision firstgid 257 and "
+            "encounter firstgid 258"
+        )
 
     expected_layer_types = {
         "Ground": "tilelayer",
@@ -746,30 +826,29 @@ def verify_monster_tamer_map() -> None:
             f"faint_location={object_property(area_metadata, 'faint_location')}"
         )
 
-    battle_tileset = tilesets["tiny-battle"]
-    if battle_tileset.get("columns") != 11 or battle_tileset.get("tilecount") != 11:
-        raise SystemExit(
-            "Monster Tamer Tiny Battle runtime atlas must contain exactly eleven natural tiles"
-        )
-    allowed_battle_indices = set(range(11))
-    battle_firstgid = tilesets["tiny-battle"]["firstgid"]
-    later_firstgids = [
-        entry["firstgid"]
-        for entry in map_data["tilesets"]
-        if entry.get("firstgid", 0) > battle_firstgid
-    ]
-    battle_end = min(later_firstgids)
-    used_battle_indices = {
-        gid - battle_firstgid
-        for layer in all_layers
-        if layer.get("type") == "tilelayer"
-        for value in layer.get("data", [])
-        if battle_firstgid <= (gid := tile_gid(value)) < battle_end
+    invalid_visual_gids = {
+        tile_gid(value)
+        for name in ("Ground", "Terrain", "Structures", "Foreground")
+        for value in layers[name].get("data", [])
+        if tile_gid(value) not in range(257)
     }
-    if not used_battle_indices or not used_battle_indices <= allowed_battle_indices:
+    invalid_collision_gids = {
+        tile_gid(value)
+        for value in layers["Collision"].get("data", [])
+        if tile_gid(value) not in {0, 257}
+    }
+    invalid_encounter_gids = {
+        tile_gid(value)
+        for layer in encounter_layers
+        for value in layer.get("data", [])
+        if tile_gid(value) not in {0, 258}
+    }
+    if invalid_visual_gids or invalid_collision_gids or invalid_encounter_gids:
         raise SystemExit(
-            "Monster Tamer Tiny Battle usage must contain natural water/shore tiles only: "
-            f"used={sorted(used_battle_indices)}, allowed={sorted(allowed_battle_indices)}"
+            "Monster Tamer main_1 uses GIDs outside the compact atlas contract: "
+            f"visual={sorted(invalid_visual_gids)}, "
+            f"collision={sorted(invalid_collision_gids)}, "
+            f"encounter={sorted(invalid_encounter_gids)}"
         )
 
 
@@ -873,7 +952,8 @@ def verify_documentation() -> None:
         "MONSTER_TAMER_DATA",
         "MonsterTamerPanel → ExpeditionPanel → WheelPanel",
         "480×240",
-        "Tiny Town `1.1`",
+        "Tuxemon 提交",
+        "1056×1056",
         "WASD",
         "虚拟摇杆",
     )

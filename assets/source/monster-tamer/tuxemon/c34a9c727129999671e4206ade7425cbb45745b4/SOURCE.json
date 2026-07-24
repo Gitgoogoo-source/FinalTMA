@@ -1,0 +1,54 @@
+{
+  "repository": "https://github.com/Tuxemon/Tuxemon",
+  "branch": "development",
+  "commit": "c34a9c727129999671e4206ade7425cbb45745b4",
+  "license": "CC BY-SA 4.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "attributionUrl": "https://github.com/Tuxemon/Tuxemon/blob/c34a9c727129999671e4206ade7425cbb45745b4/ATTRIBUTIONS.md#L332-L470",
+  "files": [
+    {
+      "path": "mods/tuxemon/gfx/tilesets/core_outdoor.png",
+      "sha256": "a3b62b7113408450f6af3c8d86ef287fe78cabd1bb7b9580414bcace4d90ff08",
+      "width": 592,
+      "height": 1200,
+      "tileSize": 16
+    },
+    {
+      "path": "mods/tuxemon/gfx/tilesets/core_outdoor_nature.png",
+      "sha256": "c1c58c5115c35a730743c4e0bd9b48c05b77d38f1873d16216b924f9a33712aa",
+      "width": 1024,
+      "height": 2048,
+      "tileSize": 16
+    },
+    {
+      "path": "mods/tuxemon/gfx/tilesets/core_outdoor_water.png",
+      "sha256": "571fc2ad3a648424da78fb9d1abfe9027b7a9a6ef39e8f2b4d28e0eb2e3cc2f6",
+      "width": 1024,
+      "height": 2048,
+      "tileSize": 16
+    },
+    {
+      "path": "mods/tuxemon/gfx/tilesets/core_city_and_country.png",
+      "sha256": "1cdf4a534a7e3078f3d18022c690022582b3a84cfefef4f7d02c739872b39178",
+      "width": 640,
+      "height": 576,
+      "tileSize": 16
+    }
+  ],
+  "runtimeDerivative": {
+    "path": "apps/web/public/monster-tamer/assets/images/tuxemon/tuxemon-valley-4x-extruded.png",
+    "changes": [
+      "selected only the tiles used by the new original valley layout",
+      "repacked selected tiles into a compact atlas",
+      "upscaled tiles from 16x16 to 64x64 with nearest-neighbor resampling",
+      "added a one-pixel copied-edge extrusion around every runtime tile"
+    ],
+    "license": "CC BY-SA 4.0"
+  },
+  "excluded": [
+    "Tuxemon source code",
+    "Tuxemon TMX maps and layouts",
+    "Tuxemon TSX tileset definitions",
+    "tiles with non-commercial, purchased, XYG, or unresolved provenance"
+  ]
+}

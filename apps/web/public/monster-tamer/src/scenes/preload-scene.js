@@ -157,9 +157,10 @@ export class PreloadScene extends BaseScene {
       frameHeight: 64,
     });
     this.load.tilemapTiledJSON(WORLD_ASSET_KEYS.MAIN_1_LEVEL, `assets/data/main_1.json`);
-    this.load.image(WORLD_ASSET_KEYS.TINY_TOWN, 'assets/images/kenney-tiny/tiny-town-4x.png');
-    this.load.image(WORLD_ASSET_KEYS.TINY_FARM, 'assets/images/kenney-tiny/tiny-farm-4x.png');
-    this.load.image(WORLD_ASSET_KEYS.TINY_BATTLE, 'assets/images/kenney-tiny/tiny-battle-4x.png');
+    this.load.image(
+      WORLD_ASSET_KEYS.TUXEMON_VALLEY,
+      'assets/images/tuxemon/tuxemon-valley-4x-extruded.png'
+    );
     this.load.image(WORLD_ASSET_KEYS.WORLD_COLLISION, `${monsterTamerAssetPath}/map/collision.png`);
     this.load.image(WORLD_ASSET_KEYS.WORLD_ENCOUNTER_ZONE, `${monsterTamerAssetPath}/map/encounter.png`);
     this.load.spritesheet(WORLD_ASSET_KEYS.BEACH, `${axulArtAssetPath}/beach/crushed.png`, {

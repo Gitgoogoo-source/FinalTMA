@@ -218,20 +218,15 @@ export class WorldScene extends BaseScene {
     this.#rectangleForOverlapCheck2 = new Phaser.Geom.Rectangle();
     this.#rectangleOverlapResult = new Phaser.Geom.Rectangle();
 
-    // Create the single seamless valley map. Visual layers use small tile atlases,
-    // so Phaser only draws camera-visible tiles instead of decoding one giant bitmap.
+    // Create the single seamless valley map from one curated runtime atlas.
     const map = this.#getLevelTileMap(WORLD_ASSET_KEYS.MAIN_1_LEVEL);
-    const visualTilesets = [
-      map.addTilesetImage('tiny-town', WORLD_ASSET_KEYS.TINY_TOWN),
-      map.addTilesetImage('tiny-farm', WORLD_ASSET_KEYS.TINY_FARM),
-      map.addTilesetImage('tiny-battle', WORLD_ASSET_KEYS.TINY_BATTLE),
-    ];
-    if (visualTilesets.some((tileset) => !tileset)) {
+    const visualTileset = map.addTilesetImage('tuxemon-valley', WORLD_ASSET_KEYS.TUXEMON_VALLEY);
+    if (!visualTileset) {
       throw new Error('The valley visual tilesets could not be created.');
     }
-    const groundLayer = map.createLayer('Ground', visualTilesets, 0, 0);
-    const terrainLayer = map.createLayer('Terrain', visualTilesets, 0, 0);
-    const structuresLayer = map.createLayer('Structures', visualTilesets, 0, 0);
+    const groundLayer = map.createLayer('Ground', visualTileset, 0, 0);
+    const terrainLayer = map.createLayer('Terrain', visualTileset, 0, 0);
+    const structuresLayer = map.createLayer('Structures', visualTileset, 0, 0);
     if (!groundLayer || !terrainLayer || !structuresLayer) {
       throw new Error('The valley visual layers could not be created.');
     }
@@ -294,7 +289,7 @@ export class WorldScene extends BaseScene {
       npc.addCharacterToCheckForCollisionsWith(this.#player);
     });
 
-    const foregroundLayer = map.createLayer('Foreground', visualTilesets, 0, 0);
+    const foregroundLayer = map.createLayer('Foreground', visualTileset, 0, 0);
     if (!foregroundLayer) {
       throw new Error('The valley foreground layer could not be created.');
     }

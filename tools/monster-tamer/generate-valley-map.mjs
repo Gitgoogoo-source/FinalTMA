@@ -1,4 +1,5 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -7,49 +8,135 @@ import sharp from "sharp";
 const SCRIPT_DIRECTORY = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(SCRIPT_DIRECTORY, "../..");
 const GAME_ROOT = path.join(ROOT, "apps/web/public/monster-tamer");
-const SOURCE_ROOT = path.join(ROOT, "assets/source/monster-tamer/kenney-tiny");
-const RUNTIME_IMAGE_ROOT = path.join(GAME_ROOT, "assets/images/kenney-tiny");
+const TUXEMON_COMMIT = "c34a9c727129999671e4206ade7425cbb45745b4";
+const SOURCE_ROOT = path.join(
+  ROOT,
+  "assets/source/monster-tamer/tuxemon",
+  TUXEMON_COMMIT,
+);
+const RUNTIME_IMAGE_ROOT = path.join(
+  GAME_ROOT,
+  "assets/images/tuxemon",
+);
+const RUNTIME_ATLAS_PATH = path.join(
+  RUNTIME_IMAGE_ROOT,
+  "tuxemon-valley-4x-extruded.png",
+);
 const MAP_PATH = path.join(GAME_ROOT, "assets/data/main_1.json");
 
 const WIDTH = 480;
 const HEIGHT = 240;
 const TILE_SIZE = 64;
 const SIZE = WIDTH * HEIGHT;
+const SOURCE_TILE_SIZE = 16;
+const ATLAS_COLUMNS = 16;
+const ATLAS_ROWS = 16;
+const ATLAS_MARGIN = 1;
+const ATLAS_SPACING = 2;
+const ATLAS_CELL_SIZE = TILE_SIZE + ATLAS_SPACING;
+const ATLAS_SIZE = ATLAS_COLUMNS * ATLAS_CELL_SIZE;
 
 const FIRST_GID = Object.freeze({
-  TOWN: 1,
-  FARM: 133,
-  BATTLE: 265,
-  COLLISION: 276,
-  ENCOUNTER: 277,
+  TUXEMON: 1,
+  COLLISION: 257,
+  ENCOUNTER: 258,
 });
 
-const BATTLE_SOURCE_TILE_INDICES = Object.freeze([
-  18, 19, 20, 36, 37, 38, 55, 72, 73, 74, 91,
-]);
-const BATTLE_LOCAL_TILE_INDEX = new Map(
-  BATTLE_SOURCE_TILE_INDICES.map((sourceIndex, localIndex) => [
-    sourceIndex,
-    localIndex,
+const SOURCE_DEFINITIONS = Object.freeze({
+  city: Object.freeze({
+    file: "core_city_and_country.png",
+    width: 640,
+    height: 576,
+    columns: 40,
+    sha256:
+      "1cdf4a534a7e3078f3d18022c690022582b3a84cfefef4f7d02c739872b39178",
+  }),
+  nature: Object.freeze({
+    file: "core_outdoor_nature.png",
+    width: 1024,
+    height: 2048,
+    columns: 64,
+    sha256:
+      "c1c58c5115c35a730743c4e0bd9b48c05b77d38f1873d16216b924f9a33712aa",
+  }),
+  outdoor: Object.freeze({
+    file: "core_outdoor.png",
+    width: 592,
+    height: 1200,
+    columns: 37,
+    sha256:
+      "a3b62b7113408450f6af3c8d86ef287fe78cabd1bb7b9580414bcace4d90ff08",
+  }),
+  water: Object.freeze({
+    file: "core_outdoor_water.png",
+    width: 1024,
+    height: 2048,
+    columns: 64,
+    sha256:
+      "571fc2ad3a648424da78fb9d1abfe9027b7a9a6ef39e8f2b4d28e0eb2e3cc2f6",
+  }),
+});
+
+const CURATED_TILE_INDICES = Object.freeze({
+  city: Object.freeze([
+    0, 1, 7, 8, 9, 12, 13, 14, 46, 47, 48, 49, 50, 51, 52, 53, 54,
+    55, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 126, 127, 128, 129,
+    130, 131, 132, 133, 134, 135, 166, 167, 168, 169, 170, 171, 172,
+    173, 174, 175, 320, 321, 382, 383, 384, 422, 423, 424, 443, 462,
+    463, 464, 483, 1160, 1162, 1174, 1175, 1176, 1200, 1201, 1202,
+    1240, 1241, 1242, 1280, 1281, 1282, 1320, 1321, 1360, 1361, 1400,
+    1401,
+  ]),
+  nature: Object.freeze([
+    40, 41, 42, 43, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57,
+    58, 59, 60, 61, 62, 63, 110, 111, 112, 113, 114, 115, 116, 123,
+    124, 125, 126, 127, 168, 169, 170, 171, 174, 175, 176, 177, 178,
+    179, 180, 187, 188, 189, 190, 191, 232, 233, 234, 235,
+  ]),
+  outdoor: Object.freeze([
+    953, 954, 955, 978, 979, 980, 990, 991, 992, 1015, 1016, 1017,
+    1052, 1053, 1054, 1060, 1061, 1062, 1063, 1064, 1065, 1097, 1098,
+    1099, 1134, 1135, 1136, 1137, 1283, 1284, 1285, 1288, 1289, 1322,
+    1323, 1324, 1325, 1326, 1327, 1328, 1329, 1359,
+    1360, 1361, 1362, 1364, 1365, 1366, 1367, 1368,
+  ]),
+  water: Object.freeze([
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
+    18, 19, 20, 21, 22, 23, 24, 25, 64, 65, 66, 67, 68, 69,
+  ]),
+});
+
+const TUXEMON_TILE_MANIFEST = Object.freeze(
+  Object.entries(CURATED_TILE_INDICES).flatMap(([source, indices]) =>
+    indices.map((sourceIndex) => Object.freeze({ source, sourceIndex })),
+  ),
+);
+if (TUXEMON_TILE_MANIFEST.length > 256) {
+  throw new Error(
+    `The curated Tuxemon atlas exceeds 256 slots: ${TUXEMON_TILE_MANIFEST.length}.`,
+  );
+}
+const TUXEMON_TILE_SLOT = new Map(
+  TUXEMON_TILE_MANIFEST.map(({ source, sourceIndex }, slot) => [
+    `${source}:${sourceIndex}`,
+    slot,
   ]),
 );
-const town = (index) => FIRST_GID.TOWN + index;
-const farm = (index) => FIRST_GID.FARM + index;
-const battle = (sourceIndex) => {
-  const localIndex = BATTLE_LOCAL_TILE_INDEX.get(sourceIndex);
-  if (localIndex === undefined) {
+const tuxemon = (source, sourceIndex) => {
+  const slot = TUXEMON_TILE_SLOT.get(`${source}:${sourceIndex}`);
+  if (slot === undefined) {
     throw new Error(
-      `Tiny Battle tile ${sourceIndex} is not in the natural-only runtime atlas.`,
+      `Tuxemon tile ${source}:${sourceIndex} is not in the curated atlas.`,
     );
   }
-  return FIRST_GID.BATTLE + localIndex;
+  return FIRST_GID.TUXEMON + slot;
 };
 const indexOf = (x, y) => y * WIDTH + x;
 const isInsideMap = (x, y) => x >= 0 && y >= 0 && x < WIDTH && y < HEIGHT;
 const hash = (x, y, salt = 0) =>
   Math.abs(((x * 73_856_093) ^ (y * 19_349_663) ^ salt) >>> 0);
 
-const ground = Array(SIZE).fill(town(0));
+const ground = Array(SIZE).fill(tuxemon("city", 0));
 const terrain = Array(SIZE).fill(0);
 const structures = Array(SIZE).fill(0);
 const foreground = Array(SIZE).fill(0);
@@ -59,6 +146,7 @@ const encounter2 = Array(SIZE).fill(0);
 const encounter3 = Array(SIZE).fill(0);
 const waterMask = new Uint8Array(SIZE);
 const roadMask = new Uint8Array(SIZE);
+const bridgeMask = new Uint8Array(SIZE);
 
 function setTile(layer, x, y, gid) {
   if (isInsideMap(x, y)) {
@@ -92,30 +180,41 @@ function markRoad(x, y) {
   roadMask[indexOf(x, y)] = 1;
 }
 
-function drawRoad(x, y, width, height) {
-  for (let tileY = y; tileY < y + height; tileY += 1) {
-    for (let tileX = x; tileX < x + width; tileX += 1) {
-      markRoad(tileX, tileY);
+function drawRoadDisk(centerX, centerY, radius) {
+  for (let y = centerY - radius; y <= centerY + radius; y += 1) {
+    for (let x = centerX - radius; x <= centerX + radius; x += 1) {
+      if (Math.abs(x - centerX) + Math.abs(y - centerY) <= radius + 1) {
+        markRoad(x, y);
+      }
+    }
+  }
+}
+
+function drawRoadPath(points, width = 3) {
+  const radius = Math.max(1, Math.floor(width / 2));
+  for (let index = 0; index < points.length - 1; index += 1) {
+    const [startX, startY] = points[index];
+    const [endX, endY] = points[index + 1];
+    const steps = Math.max(Math.abs(endX - startX), Math.abs(endY - startY));
+    for (let step = 0; step <= steps; step += 1) {
+      const progress = steps === 0 ? 0 : step / steps;
+      drawRoadDisk(
+        Math.round(startX + (endX - startX) * progress),
+        Math.round(startY + (endY - startY) * progress),
+        radius,
+      );
     }
   }
 }
 
 function renderRoadTiles() {
-  const roadTiles = [
-    [12, 13, 14],
-    [24, 25, 26],
-    [36, 37, 38],
-  ];
   for (let y = 0; y < HEIGHT; y += 1) {
     for (let x = 0; x < WIDTH; x += 1) {
       if (!roadMask[indexOf(x, y)]) continue;
-      const north = y > 0 && roadMask[indexOf(x, y - 1)] === 1;
-      const south = y < HEIGHT - 1 && roadMask[indexOf(x, y + 1)] === 1;
-      const west = x > 0 && roadMask[indexOf(x - 1, y)] === 1;
-      const east = x < WIDTH - 1 && roadMask[indexOf(x + 1, y)] === 1;
-      const row = north ? (south ? 1 : 2) : 0;
-      const column = west ? (east ? 1 : 2) : 0;
-      setTile(terrain, x, y, town(roadTiles[row][column]));
+      const gid = bridgeMask[indexOf(x, y)]
+        ? tuxemon("outdoor", 1288 + (hash(x, y, 19) % 2))
+        : tuxemon("city", hash(x, y, 17) % 11 === 0 ? 1401 : 1201);
+      setTile(terrain, x, y, gid);
     }
   }
 }
@@ -131,20 +230,7 @@ function isWater(x, y) {
 }
 
 function waterTileAt(x, y) {
-  const north = isWater(x, y - 1);
-  const east = isWater(x + 1, y);
-  const south = isWater(x, y + 1);
-  const west = isWater(x - 1, y);
-
-  if (!north && !west) return battle(18);
-  if (!north && !east) return battle(20);
-  if (!north) return battle(19);
-  if (!south && !west) return battle(72);
-  if (!south && !east) return battle(74);
-  if (!south) return battle(73);
-  if (!west) return battle(36);
-  if (!east) return battle(38);
-  return battle([37, 55, 91][hash(x, y, 11) % 3]);
+  return tuxemon("water", hash(x, y, 11) % 18);
 }
 
 function applyWater() {
@@ -153,6 +239,30 @@ function applyWater() {
       if (!isWater(x, y)) continue;
       setTile(terrain, x, y, waterTileAt(x, y));
       blockTile(x, y);
+    }
+  }
+  const sandTiles = [64, 65, 66, 67, 68, 69];
+  for (let y = 1; y < HEIGHT - 1; y += 1) {
+    for (let x = 1; x < WIDTH - 1; x += 1) {
+      if (isWater(x, y) || roadMask[indexOf(x, y)]) continue;
+      const touchesWater = [
+        [x - 1, y],
+        [x + 1, y],
+        [x, y - 1],
+        [x, y + 1],
+        [x - 1, y - 1],
+        [x + 1, y - 1],
+        [x - 1, y + 1],
+        [x + 1, y + 1],
+      ].some(([waterX, waterY]) => isWater(waterX, waterY));
+      if (touchesWater) {
+        setTile(
+          terrain,
+          x,
+          y,
+          tuxemon("water", sandTiles[hash(x, y, 23) % sandTiles.length]),
+        );
+      }
     }
   }
 }
@@ -168,47 +278,86 @@ function drawBridge(startY, height = 5) {
   for (let y = startY; y < startY + height; y += 1) {
     for (let x = startX; x <= endX; x += 1) {
       markRoad(x, y);
+      bridgeMask[indexOf(x, y)] = 1;
       clearCollision(x, y);
     }
   }
 
   for (let x = startX; x <= endX; x += 1) {
-    setTile(structures, x, startY - 1, town(81));
-    setTile(foreground, x, startY + height, town(81));
+    setTile(
+      structures,
+      x,
+      startY - 1,
+      tuxemon("outdoor", 978 + (hash(x, startY, 29) % 3)),
+    );
+    setTile(
+      foreground,
+      x,
+      startY + height,
+      tuxemon("outdoor", 978 + (hash(x, startY, 31) % 3)),
+    );
     blockTile(x, startY - 1);
     blockTile(x, startY + height);
   }
 }
 
 function placeTree(x, y, variant = 0) {
-  const treePairs = [
-    [3, 15],
-    [4, 16],
+  const pineStamps = [
+    [
+      [46, 47],
+      [110, 111],
+      [174, 175],
+    ],
+    [
+      [48, 49],
+      [112, 113],
+      [176, 177],
+    ],
+    [
+      [50, 51],
+      [114, 115],
+      [178, 179],
+    ],
   ];
   if (
     !isInsideMap(x, y) ||
-    !isInsideMap(x, y - 1) ||
+    !isInsideMap(x + 1, y - 2) ||
     isWater(x, y) ||
+    isWater(x + 1, y) ||
     roadMask[indexOf(x, y)] ||
-    roadMask[indexOf(x, y - 1)] ||
+    roadMask[indexOf(x + 1, y)] ||
     collision[indexOf(x, y)] ||
-    collision[indexOf(x, y - 1)]
+    collision[indexOf(x + 1, y)]
   ) {
     return false;
   }
-  const [top, bottom] = treePairs[variant % treePairs.length];
-  setTile(foreground, x, y - 1, town(top));
-  setTile(structures, x, y, town(bottom));
-  blockTile(x, y - 1);
+  const stamp = pineStamps[variant % pineStamps.length];
+  for (let row = 0; row < stamp.length; row += 1) {
+    for (let column = 0; column < stamp[row].length; column += 1) {
+      setTile(
+        row < stamp.length - 1 ? foreground : structures,
+        x + column,
+        y - 2 + row,
+        tuxemon("nature", stamp[row][column]),
+      );
+    }
+  }
   blockTile(x, y);
+  blockTile(x + 1, y);
   return true;
 }
 
 function scatterTrees(x, y, width, height, density, salt) {
-  for (let tileY = y + 1; tileY < y + height; tileY += 2) {
-    for (let tileX = x; tileX < x + width; tileX += 2) {
-      if (hash(tileX, tileY, salt) % 100 >= density) continue;
-      placeTree(tileX, tileY, hash(tileX, tileY, salt + 1) % 6);
+  for (let tileY = y + 3; tileY < y + height; tileY += 5) {
+    for (let tileX = x + 1; tileX < x + width - 2; tileX += 4) {
+      const candidateX = tileX + (hash(tileX, tileY, salt + 2) % 3) - 1;
+      const candidateY = tileY + (hash(tileX, tileY, salt + 3) % 3) - 1;
+      if (hash(candidateX, candidateY, salt) % 100 >= density) continue;
+      placeTree(
+        candidateX,
+        candidateY,
+        hash(candidateX, candidateY, salt + 1) % 3,
+      );
     }
   }
 }
@@ -223,13 +372,50 @@ function placeShrub(x, y, salt) {
   ) {
     return false;
   }
-  const shrubTiles = [39, 54, 56, 78];
-  setTile(structures, x, y, farm(shrubTiles[hash(x, y, salt) % 4]));
+  const shrubTiles = [1134, 1135, 1136, 1137];
+  setTile(
+    structures,
+    x,
+    y,
+    tuxemon("outdoor", shrubTiles[hash(x, y, salt) % shrubTiles.length]),
+  );
   blockTile(x, y);
   return true;
 }
 
+function placeFlower(x, y, salt) {
+  if (
+    !isInsideMap(x, y) ||
+    isWater(x, y) ||
+    roadMask[indexOf(x, y)] ||
+    collision[indexOf(x, y)] ||
+    structures[indexOf(x, y)]
+  ) {
+    return false;
+  }
+  const flowers = [
+    ["outdoor", 953],
+    ["outdoor", 954],
+    ["outdoor", 955],
+    ["outdoor", 990],
+    ["outdoor", 991],
+    ["outdoor", 992],
+    ["outdoor", 1063],
+    ["outdoor", 1064],
+    ["outdoor", 1065],
+    ["nature", 59],
+    ["nature", 60],
+    ["nature", 61],
+    ["nature", 62],
+    ["nature", 63],
+  ];
+  const [source, sourceIndex] = flowers[hash(x, y, salt) % flowers.length];
+  setTile(structures, x, y, tuxemon(source, sourceIndex));
+  return true;
+}
+
 function decorateLandscapeCluster(x, y, width, height, salt) {
+  const grassTiles = [0, 1174, 1175, 1176];
   for (let tileY = y; tileY < y + height; tileY += 1) {
     for (let tileX = x; tileX < x + width; tileX += 1) {
       if (
@@ -240,27 +426,33 @@ function decorateLandscapeCluster(x, y, width, height, salt) {
       ) {
         continue;
       }
-      if (hash(tileX, tileY, salt) % 100 < 24) {
+      if (hash(tileX, tileY, salt) % 100 < 34) {
         setTile(
           ground,
           tileX,
           tileY,
-          town(hash(tileX, tileY, salt + 1) % 3 === 0 ? 2 : 1),
+          tuxemon(
+            "city",
+            grassTiles[hash(tileX, tileY, salt + 1) % grassTiles.length],
+          ),
         );
+      }
+      if (hash(tileX, tileY, salt + 2) % 100 < 7) {
+        placeFlower(tileX, tileY, salt + 3);
       }
     }
   }
   for (let tileY = y + 2; tileY < y + height - 1; tileY += 4) {
     for (let tileX = x + 2; tileX < x + width - 1; tileX += 4) {
-      if (hash(tileX, tileY, salt + 2) % 100 < 28) {
-        placeShrub(tileX, tileY, salt + 3);
+      if (hash(tileX, tileY, salt + 4) % 100 < 24) {
+        placeShrub(tileX, tileY, salt + 5);
       }
     }
   }
   for (let tileY = y + 3; tileY < y + height - 1; tileY += 7) {
     for (let tileX = x + 3; tileX < x + width - 1; tileX += 7) {
-      if (hash(tileX, tileY, salt + 4) % 100 < 42) {
-        placeTree(tileX, tileY, hash(tileX, tileY, salt + 5) % 2);
+      if (hash(tileX, tileY, salt + 6) % 100 < 38) {
+        placeTree(tileX, tileY, hash(tileX, tileY, salt + 7) % 3);
       }
     }
   }
@@ -271,37 +463,42 @@ function drawFenceRect(x, y, width, height, gateTiles = []) {
   for (let tileX = x; tileX < x + width; tileX += 1) {
     for (const tileY of [y, y + height - 1]) {
       if (gates.has(`${tileX},${tileY}`)) continue;
-      setTile(structures, tileX, tileY, town(45));
+      setTile(
+        structures,
+        tileX,
+        tileY,
+        tuxemon("outdoor", 978 + (hash(tileX, tileY, 101) % 3)),
+      );
       blockTile(tileX, tileY);
     }
   }
   for (let tileY = y + 1; tileY < y + height - 1; tileY += 1) {
     for (const tileX of [x, x + width - 1]) {
       if (gates.has(`${tileX},${tileY}`)) continue;
-      setTile(structures, tileX, tileY, town(56));
+      setTile(
+        structures,
+        tileX,
+        tileY,
+        tuxemon("outdoor", 1015 + (hash(tileX, tileY, 102) % 3)),
+      );
       blockTile(tileX, tileY);
     }
   }
-  setTile(structures, x, y, town(44));
-  setTile(structures, x + width - 1, y, town(46));
-  setTile(structures, x, y + height - 1, town(68));
-  setTile(structures, x + width - 1, y + height - 1, town(70));
 }
 
 function drawField(x, y, width, height, gateX, gateOnTop) {
   fillRect(terrain, x + 1, y + 1, width - 2, height - 2, (tileX, tileY) =>
-    farm((tileX + tileY) % 5 === 0 ? 0 : 1),
+    tuxemon("city", (tileX + tileY) % 7 === 0 ? 1401 : 1282),
   );
   const gateY = gateOnTop ? y : y + height - 1;
   drawFenceRect(x, y, width, height, [
     [gateX, gateY],
     [gateX + 1, gateY],
   ]);
-  for (let tileY = y + 3; tileY < y + height - 2; tileY += 3) {
-    for (let tileX = x + 3; tileX < x + width - 2; tileX += 3) {
-      const crop = [4, 16, 28, 40, 52, 64][hash(tileX, tileY, 30) % 6];
-      setTile(structures, tileX, tileY, farm(crop));
-      blockTile(tileX, tileY);
+  for (let tileY = y + 3; tileY < y + height - 2; tileY += 2) {
+    for (let tileX = x + 3; tileX < x + width - 2; tileX += 2) {
+      const crop = [1360, 1361, 1400][hash(tileX, tileY, 30) % 3];
+      setTile(structures, tileX, tileY, tuxemon("city", crop));
     }
   }
 }
@@ -310,60 +507,137 @@ function placeTownHouse(x, y, palette = "blue") {
   const rows =
     palette === "red"
       ? [
-          [52, 53, 54],
-          [64, 65, 66],
-          [72, 86, 75],
+          [0, 12, 13, 14, 0],
+          [51, 52, 53, 54, 55],
+          [91, 92, 93, 94, 95],
+          [131, 132, 133, 134, 135],
+          [171, 172, 173, 174, 175],
         ]
       : [
-          [48, 49, 50],
-          [60, 61, 62],
-          [76, 89, 79],
+          [0, 7, 8, 9, 0],
+          [46, 47, 48, 49, 50],
+          [86, 87, 88, 89, 90],
+          [126, 127, 128, 129, 130],
+          [166, 167, 168, 169, 170],
         ];
   rows.forEach((row, rowIndex) => {
     row.forEach((tile, columnIndex) => {
-      setTile(structures, x + columnIndex, y + rowIndex, town(tile));
+      if (!tile) return;
+      setTile(
+        rowIndex < 3 ? foreground : structures,
+        x + columnIndex,
+        y + rowIndex,
+        tuxemon("city", tile),
+      );
       blockTile(x + columnIndex, y + rowIndex);
     });
   });
+  placeFlower(x, y + 5, x + y + 113);
+  placeFlower(x + 4, y + 5, x + y + 127);
 }
 
 function placeBarn(x, y) {
+  placeTownHouse(x, y, "red");
+  const hayTiles = [1325, 1326, 1327, 1328, 1329, 1362, 1364, 1365, 1366, 1367, 1368];
+  for (const [offsetX, offsetY] of [
+    [6, 2],
+    [7, 2],
+    [6, 3],
+    [7, 3],
+  ]) {
+    setTile(
+      structures,
+      x + offsetX,
+      y + offsetY,
+      tuxemon(
+        "outdoor",
+        hayTiles[hash(x + offsetX, y + offsetY, 131) % hayTiles.length],
+      ),
+    );
+    blockTile(x + offsetX, y + offsetY);
+  }
+}
+
+function placeFountain(x, y) {
   const rows = [
-    [90, 91, 92],
-    [102, 103, 104],
-    [114, 115, 116],
-    [126, 127, 128],
+    [382, 383, 384],
+    [422, 423, 424],
+    [462, 463, 464],
   ];
   rows.forEach((row, rowIndex) => {
-    row.forEach((tile, columnIndex) => {
-      setTile(structures, x + columnIndex, y + rowIndex, farm(tile));
+    row.forEach((sourceIndex, columnIndex) => {
+      setTile(
+        rowIndex === 0 ? foreground : structures,
+        x + columnIndex,
+        y + rowIndex,
+        tuxemon("city", sourceIndex),
+      );
       blockTile(x + columnIndex, y + rowIndex);
     });
   });
 }
 
+function placeBoulder(x, y, variant) {
+  const stamps = [
+    [
+      [168, 169],
+      [232, 233],
+    ],
+    [
+      [170, 171],
+      [234, 235],
+    ],
+  ];
+  const stamp = stamps[variant % stamps.length];
+  for (let row = 0; row < 2; row += 1) {
+    for (let column = 0; column < 2; column += 1) {
+      setTile(
+        row === 0 ? foreground : structures,
+        x + column,
+        y + row,
+        tuxemon("nature", stamp[row][column]),
+      );
+      blockTile(x + column, y + row);
+    }
+  }
+}
+
 function drawMountainEllipse(centerX, centerY, radiusX, radiusY, salt) {
-  for (let y = centerY - radiusY; y <= centerY + radiusY; y += 1) {
-    for (let x = centerX - radiusX; x <= centerX + radiusX; x += 1) {
+  for (
+    let scanY = centerY - radiusY;
+    scanY <= centerY + radiusY;
+    scanY += 3
+  ) {
+    for (
+      let scanX = centerX - radiusX;
+      scanX <= centerX + radiusX;
+      scanX += 3
+    ) {
+      const x = scanX + (hash(scanX, scanY, salt + 1) % 2);
+      const y = scanY + (hash(scanX, scanY, salt + 2) % 2);
       const normalized =
         ((x - centerX) * (x - centerX)) / (radiusX * radiusX) +
         ((y - centerY) * (y - centerY)) / (radiusY * radiusY);
       if (
+        hash(x, y, salt + 3) % 100 >= 58 ||
         normalized > 1 ||
         !isInsideMap(x, y) ||
+        !isInsideMap(x + 1, y + 1) ||
         isWater(x, y) ||
-        roadMask[indexOf(x, y)]
+        roadMask[indexOf(x, y)] ||
+        roadMask[indexOf(x + 1, y + 1)] ||
+        collision[indexOf(x, y)] ||
+        collision[indexOf(x + 1, y + 1)]
       ) {
         continue;
       }
-      setTile(structures, x, y, town(120 + (hash(x, y, salt) % 3)));
-      blockTile(x, y);
+      placeBoulder(x, y, hash(x, y, salt) % 2);
     }
   }
 }
 
 function placeSignVisual(x, y) {
-  setTile(structures, x, y, town(83));
+  setTile(structures, x, y, tuxemon("nature", 53 + (hash(x, y, 137) % 6)));
   blockTile(x, y);
   setTile(encounter1, x, y, 0);
   setTile(encounter2, x, y, 0);
@@ -373,39 +647,121 @@ function placeSignVisual(x, y) {
 for (let y = 0; y < HEIGHT; y += 1) {
   for (let x = 0; x < WIDTH; x += 1) {
     const variation = hash(x, y, 3);
-    if (variation % 149 === 0) {
-      setTile(ground, x, y, town(1));
-    } else if (variation % 211 === 0) {
-      setTile(ground, x, y, town(2));
+    if (variation % 67 === 0) {
+      setTile(ground, x, y, tuxemon("city", 1174));
+    } else if (variation % 89 === 0) {
+      setTile(ground, x, y, tuxemon("city", 1175));
+    } else if (variation % 113 === 0) {
+      setTile(ground, x, y, tuxemon("city", 1176));
     }
   }
 }
 
-// Primary roads keep the 480-tile-wide valley readable and traversable.
-drawRoad(4, 125, 466, 3);
-drawRoad(52, 10, 5, 116);
-drawRoad(108, 78, 5, 132);
-drawRoad(239, 20, 3, 207);
-drawRoad(458, 74, 5, 135);
-drawRoad(52, 78, 411, 5);
-drawRoad(108, 184, 355, 5);
-drawRoad(228, 117, 28, 3);
-drawRoad(228, 136, 28, 3);
-drawRoad(228, 117, 3, 22);
-drawRoad(253, 117, 3, 22);
+// Hand-drawn paths preserve the original macro connections while avoiding
+// the previous ruler-straight road grid.
+drawRoadPath(
+  [
+    [4, 126],
+    [50, 124],
+    [104, 127],
+    [160, 123],
+    [208, 126],
+    [240, 126],
+    [287, 124],
+    [335, 126],
+    [383, 123],
+    [428, 127],
+    [470, 126],
+  ],
+  3,
+);
+drawRoadPath(
+  [
+    [52, 10],
+    [54, 40],
+    [52, 78],
+    [80, 81],
+    [108, 80],
+  ],
+  3,
+);
+drawRoadPath(
+  [
+    [52, 80],
+    [105, 81],
+    [158, 78],
+    [213, 82],
+    [269, 79],
+    [335, 80],
+    [398, 78],
+    [462, 80],
+  ],
+  5,
+);
+drawRoadPath(
+  [
+    [108, 78],
+    [106, 113],
+    [109, 151],
+    [108, 185],
+    [112, 208],
+  ],
+  3,
+);
+drawRoadPath(
+  [
+    [240, 20],
+    [238, 66],
+    [241, 108],
+    [240, 126],
+    [242, 165],
+    [239, 207],
+    [241, 227],
+  ],
+  3,
+);
+drawRoadPath(
+  [
+    [460, 74],
+    [458, 112],
+    [461, 151],
+    [459, 188],
+    [461, 208],
+  ],
+  3,
+);
+drawRoadPath(
+  [
+    [108, 186],
+    [160, 184],
+    [218, 187],
+    [278, 184],
+    [335, 186],
+    [398, 183],
+    [462, 186],
+  ],
+  5,
+);
+drawRoadPath([[60, 136], [108, 134], [158, 137]], 3);
+drawRoadPath([[52, 206], [111, 208], [174, 204], [241, 207]], 3);
 
-// Western farm lanes and a southern return trail.
-drawRoad(60, 134, 104, 4);
-drawRoad(101, 90, 5, 92);
-drawRoad(154, 90, 5, 94);
-drawRoad(52, 205, 191, 5);
+// A softened village loop frames the central square and joins the main spine.
+drawRoadPath([[218, 116], [240, 117], [263, 116]], 3);
+drawRoadPath([[218, 139], [241, 138], [264, 140]], 3);
+drawRoadPath([[219, 116], [218, 128], [219, 140]], 3);
+drawRoadPath([[262, 116], [264, 128], [263, 141]], 3);
+drawRoadDisk(240, 126, 4);
 
 // The eastern coast has an irregular sand-colored shoreline.
 for (let y = 3; y < HEIGHT - 3; y += 1) {
   const shoreX = 472 + Math.round(Math.sin(y / 13) + Math.sin(y / 31));
   for (let x = shoreX - 6; x < shoreX; x += 1) {
-    const localX = x - (shoreX - 6);
-    setTile(terrain, x, y, town(localX === 0 ? 24 : localX === 5 ? 26 : 25));
+    setTile(
+      terrain,
+      x,
+      y,
+      tuxemon("water", 64 + (hash(x, y, 37) % 6)),
+    );
   }
   for (let x = shoreX; x < WIDTH; x += 1) {
     setWater(x, y);
@@ -442,39 +798,42 @@ drawField(116, 140, 35, 29, 133, true);
 placeBarn(164, 100);
 placeTownHouse(164, 132, "red");
 placeTownHouse(180, 147, "blue");
-fillRect(structures, 160, 115, 24, 1, farm(83));
+for (const [x, y] of [
+  [161, 115],
+  [164, 115],
+  [168, 115],
+  [173, 115],
+  [178, 115],
+]) {
+  placeFlower(x, y, 149);
+}
 
 // The central village is a compact, non-enterable outdoor landmark.
-placeTownHouse(214, 99, "blue");
-placeTownHouse(233, 111, "red");
-placeTownHouse(263, 99, "blue");
-placeTownHouse(233, 130, "blue");
-placeTownHouse(247, 130, "red");
-placeTownHouse(275, 136, "red");
-placeTownHouse(244, 121, "blue");
-setTile(structures, 243, 130, town(104));
-blockTile(243, 130);
+placeTownHouse(214, 102, "blue");
+placeTownHouse(232, 107, "red");
+placeTownHouse(250, 108, "blue");
+placeTownHouse(269, 102, "red");
+placeTownHouse(224, 144, "red");
+placeTownHouse(246, 145, "blue");
+placeTownHouse(270, 144, "red");
+placeTownHouse(279, 130, "blue");
+placeFountain(243, 130);
 for (const [x, y] of [
-  [220, 114],
-  [236, 122],
-  [269, 115],
-  [258, 142],
+  [226, 122],
+  [229, 121],
+  [235, 122],
+  [251, 124],
+  [255, 132],
+  [231, 134],
+  [250, 136],
+  [267, 133],
 ]) {
-  setTile(structures, x, y, town(94));
-  blockTile(x, y);
+  placeFlower(x, y, 151);
 }
-for (const [x, y] of [
-  [234, 124],
-  [237, 121],
-  [241, 121],
-  [247, 126],
-  [236, 133],
-  [249, 134],
-]) {
-  setTile(ground, x, y, town(2));
-}
-placeTree(234, 122, 1);
-placeTree(250, 122, 4);
+placeTree(209, 115, 1);
+placeTree(268, 115, 2);
+placeTree(213, 140, 0);
+placeTree(276, 140, 1);
 
 // Hand-shaped meadow clusters keep long travel scenic without narrowing roads.
 decorateLandscapeCluster(188, 111, 29, 30, 71);
@@ -491,6 +850,17 @@ decorateLandscapeCluster(363, 194, 38, 37, 78);
 decorateLandscapeCluster(408, 143, 41, 35, 79);
 decorateLandscapeCluster(298, 195, 27, 32, 80);
 decorateLandscapeCluster(347, 197, 18, 29, 81);
+decorateLandscapeCluster(96, 14, 39, 47, 85);
+decorateLandscapeCluster(144, 28, 43, 40, 86);
+decorateLandscapeCluster(193, 31, 36, 41, 87);
+decorateLandscapeCluster(97, 84, 48, 28, 88);
+decorateLandscapeCluster(153, 84, 47, 25, 89);
+decorateLandscapeCluster(19, 116, 32, 37, 90);
+decorateLandscapeCluster(72, 174, 29, 28, 91);
+decorateLandscapeCluster(121, 173, 36, 31, 92);
+decorateLandscapeCluster(158, 190, 37, 35, 93);
+decorateLandscapeCluster(351, 84, 37, 42, 94);
+decorateLandscapeCluster(397, 104, 48, 31, 95);
 
 // Stone ridges establish the mountain region while retaining two wide passes.
 drawMountainEllipse(184, 14, 62, 18, 41);
@@ -870,41 +1240,15 @@ const map = {
   tileheight: TILE_SIZE,
   tilesets: [
     {
-      columns: 12,
-      firstgid: FIRST_GID.TOWN,
-      image: "../images/kenney-tiny/tiny-town-4x.png",
-      imageheight: 704,
-      imagewidth: 768,
-      margin: 0,
-      name: "tiny-town",
-      spacing: 0,
-      tilecount: 132,
-      tileheight: TILE_SIZE,
-      tilewidth: TILE_SIZE,
-    },
-    {
-      columns: 12,
-      firstgid: FIRST_GID.FARM,
-      image: "../images/kenney-tiny/tiny-farm-4x.png",
-      imageheight: 704,
-      imagewidth: 768,
-      margin: 0,
-      name: "tiny-farm",
-      spacing: 0,
-      tilecount: 132,
-      tileheight: TILE_SIZE,
-      tilewidth: TILE_SIZE,
-    },
-    {
-      columns: 11,
-      firstgid: FIRST_GID.BATTLE,
-      image: "../images/kenney-tiny/tiny-battle-4x.png",
-      imageheight: 64,
-      imagewidth: 704,
-      margin: 0,
-      name: "tiny-battle",
-      spacing: 0,
-      tilecount: 11,
+      columns: ATLAS_COLUMNS,
+      firstgid: FIRST_GID.TUXEMON,
+      image: "../images/tuxemon/tuxemon-valley-4x-extruded.png",
+      imageheight: ATLAS_SIZE,
+      imagewidth: ATLAS_SIZE,
+      margin: ATLAS_MARGIN,
+      name: "tuxemon-valley",
+      spacing: ATLAS_SPACING,
+      tilecount: ATLAS_COLUMNS * ATLAS_ROWS,
       tileheight: TILE_SIZE,
       tilewidth: TILE_SIZE,
     },
@@ -947,74 +1291,153 @@ const map = {
   width: WIDTH,
 };
 
-const atlasJobs = [
-  {
-    source: path.join(SOURCE_ROOT, "tiny-town-1.1/tilemap_packed.png"),
-    output: path.join(RUNTIME_IMAGE_ROOT, "tiny-town-4x.png"),
-  },
-  {
-    source: path.join(SOURCE_ROOT, "tiny-farm-1.0/tilemap_packed.png"),
-    output: path.join(RUNTIME_IMAGE_ROOT, "tiny-farm-4x.png"),
-  },
-  {
-    source: path.join(SOURCE_ROOT, "tiny-battle-1.0/tilemap_packed.png"),
-    output: path.join(RUNTIME_IMAGE_ROOT, "tiny-battle-4x.png"),
-    naturalBattleTilesOnly: true,
-  },
-];
+for (const [label, layer] of [
+  ["Ground", ground],
+  ["Terrain", terrain],
+  ["Structures", structures],
+  ["Foreground", foreground],
+]) {
+  if (
+    layer.some(
+      (gid) =>
+        gid !== 0 &&
+        (gid < FIRST_GID.TUXEMON || gid >= FIRST_GID.COLLISION),
+    )
+  ) {
+    throw new Error(`${label} contains a GID outside the Tuxemon atlas.`);
+  }
+}
+if (collision.some((gid) => gid !== 0 && gid !== FIRST_GID.COLLISION)) {
+  throw new Error("Collision contains an unexpected GID.");
+}
+for (const [label, layer] of [
+  ["Encounter-Area-1", encounter1],
+  ["Encounter-Area-2", encounter2],
+  ["Encounter-Area-3", encounter3],
+]) {
+  if (layer.some((gid) => gid !== 0 && gid !== FIRST_GID.ENCOUNTER)) {
+    throw new Error(`${label} contains an unexpected GID.`);
+  }
+}
+
+const sourceImages = new Map();
+for (const [source, definition] of Object.entries(SOURCE_DEFINITIONS)) {
+  const sourcePath = path.join(SOURCE_ROOT, definition.file);
+  const sourceBytes = await readFile(sourcePath);
+  const sha256 = createHash("sha256").update(sourceBytes).digest("hex");
+  if (sha256 !== definition.sha256) {
+    throw new Error(
+      `Tuxemon source hash mismatch for ${definition.file}: ${sha256}.`,
+    );
+  }
+  const {
+    data,
+    info: { width, height, channels },
+  } = await sharp(sourceBytes)
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  if (
+    width !== definition.width ||
+    height !== definition.height ||
+    channels !== 4
+  ) {
+    throw new Error(
+      `Unexpected Tuxemon source geometry for ${definition.file}: ${width}x${height}x${channels}.`,
+    );
+  }
+  sourceImages.set(source, { data, width, height, channels });
+}
+
+const atlasPixels = Buffer.alloc(ATLAS_SIZE * ATLAS_SIZE * 4);
+const copyPixel = (from, fromOffset, to, toOffset) => {
+  from.copy(to, toOffset, fromOffset, fromOffset + 4);
+};
+TUXEMON_TILE_MANIFEST.forEach(({ source, sourceIndex }, slot) => {
+  const definition = SOURCE_DEFINITIONS[source];
+  const sourceImage = sourceImages.get(source);
+  const sourceX = (sourceIndex % definition.columns) * SOURCE_TILE_SIZE;
+  const sourceY =
+    Math.floor(sourceIndex / definition.columns) * SOURCE_TILE_SIZE;
+  if (
+    sourceX + SOURCE_TILE_SIZE > sourceImage.width ||
+    sourceY + SOURCE_TILE_SIZE > sourceImage.height
+  ) {
+    throw new Error(`Tuxemon source tile is out of range: ${source}:${sourceIndex}.`);
+  }
+  let opaquePixelCount = 0;
+  const destinationX = (slot % ATLAS_COLUMNS) * ATLAS_CELL_SIZE;
+  const destinationY = Math.floor(slot / ATLAS_COLUMNS) * ATLAS_CELL_SIZE;
+  for (let y = 0; y < TILE_SIZE; y += 1) {
+    for (let x = 0; x < TILE_SIZE; x += 1) {
+      const sampledX = sourceX + Math.floor(x / 4);
+      const sampledY = sourceY + Math.floor(y / 4);
+      const sourceOffset =
+        (sampledY * sourceImage.width + sampledX) * sourceImage.channels;
+      const destinationOffset =
+        ((destinationY + ATLAS_MARGIN + y) * ATLAS_SIZE +
+          destinationX +
+          ATLAS_MARGIN +
+          x) *
+        4;
+      copyPixel(sourceImage.data, sourceOffset, atlasPixels, destinationOffset);
+      if (sourceImage.data[sourceOffset + 3] !== 0) opaquePixelCount += 1;
+    }
+  }
+  if (opaquePixelCount === 0) {
+    throw new Error(`Tuxemon source tile is fully transparent: ${source}:${sourceIndex}.`);
+  }
+  for (let y = 0; y < TILE_SIZE; y += 1) {
+    const row = destinationY + ATLAS_MARGIN + y;
+    const leftInteriorOffset =
+      (row * ATLAS_SIZE + destinationX + ATLAS_MARGIN) * 4;
+    const rightInteriorOffset =
+      (row * ATLAS_SIZE + destinationX + ATLAS_MARGIN + TILE_SIZE - 1) * 4;
+    copyPixel(
+      atlasPixels,
+      leftInteriorOffset,
+      atlasPixels,
+      (row * ATLAS_SIZE + destinationX) * 4,
+    );
+    copyPixel(
+      atlasPixels,
+      rightInteriorOffset,
+      atlasPixels,
+      (row * ATLAS_SIZE + destinationX + ATLAS_CELL_SIZE - 1) * 4,
+    );
+  }
+  const firstInteriorRow =
+    ((destinationY + ATLAS_MARGIN) * ATLAS_SIZE + destinationX) * 4;
+  const lastInteriorRow =
+    ((destinationY + ATLAS_MARGIN + TILE_SIZE - 1) * ATLAS_SIZE +
+      destinationX) *
+    4;
+  atlasPixels.copy(
+    atlasPixels,
+    (destinationY * ATLAS_SIZE + destinationX) * 4,
+    firstInteriorRow,
+    firstInteriorRow + ATLAS_CELL_SIZE * 4,
+  );
+  atlasPixels.copy(
+    atlasPixels,
+    ((destinationY + ATLAS_CELL_SIZE - 1) * ATLAS_SIZE + destinationX) * 4,
+    lastInteriorRow,
+    lastInteriorRow + ATLAS_CELL_SIZE * 4,
+  );
+});
 
 await mkdir(RUNTIME_IMAGE_ROOT, { recursive: true });
-await Promise.all(
-  atlasJobs.map(async ({ source, output, naturalBattleTilesOnly = false }) => {
-    if (naturalBattleTilesOnly) {
-      const tiles = await Promise.all(
-        BATTLE_SOURCE_TILE_INDICES.map((sourceIndex) =>
-          sharp(source)
-            .extract({
-              left: (sourceIndex % 18) * 16,
-              top: Math.floor(sourceIndex / 18) * 16,
-              width: 16,
-              height: 16,
-            })
-            .resize(64, 64, { kernel: sharp.kernel.nearest })
-            .png({ compressionLevel: 9 })
-            .toBuffer(),
-        ),
-      );
-      await sharp({
-        create: {
-          width: tiles.length * 64,
-          height: 64,
-          channels: 4,
-          background: { r: 0, g: 0, b: 0, alpha: 0 },
-        },
-      })
-        .composite(
-          tiles.map((input, index) => ({
-            input,
-            left: index * 64,
-            top: 0,
-          })),
-        )
-        .png({ compressionLevel: 9 })
-        .toFile(output);
-      return;
-    }
-    const image = sharp(source);
-    const metadata = await image.metadata();
-    if (!metadata.width || !metadata.height) {
-      throw new Error(`Unable to read atlas dimensions: ${source}`);
-    }
-    await image
-      .resize(metadata.width * 4, metadata.height * 4, {
-        kernel: sharp.kernel.nearest,
-      })
-      .png({ compressionLevel: 9 })
-      .toFile(output);
-  }),
-);
+await sharp(atlasPixels, {
+  raw: {
+    width: ATLAS_SIZE,
+    height: ATLAS_SIZE,
+    channels: 4,
+  },
+})
+  .png({ compressionLevel: 9, palette: true })
+  .toFile(RUNTIME_ATLAS_PATH);
 await writeFile(MAP_PATH, `${JSON.stringify(map)}\n`);
 
 console.log(
-  `Generated main_1 (${WIDTH}x${HEIGHT}, ${TILE_SIZE}px tiles), 3 runtime atlases, 10 NPCs, 6 items, 9 signs, and 3 encounter areas.`,
+  `Generated main_1 (${WIDTH}x${HEIGHT}, ${TILE_SIZE}px tiles), 1 curated Tuxemon atlas (${TUXEMON_TILE_MANIFEST.length}/256 populated slots), 10 NPCs, 6 items, 9 signs, and 3 encounter areas.`,
 );

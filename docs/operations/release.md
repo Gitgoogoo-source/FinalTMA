@@ -12,7 +12,7 @@
 - Vercel 套餐支持 `vercel.json` 中三项当前 Cron 的执行频率；启用 TON 时同一套餐还必须支持第四项 Mint 对账 Cron。
 - Vercel Production 环境变量名称核查同时包含 `TELEGRAM_BOT_USERNAME` 与 `TELEGRAM_MINI_APP_SHORT_NAME`，开发 short name 固定为 `pokepets_dev`。
 - 真实开发 Bot 固定为 `@FinalTMA_bot`；Main Mini App URL 固定为 `https://final-tma-pi.vercel.app/`；named Mini App 固定为 `https://t.me/FinalTMA_bot/pokepets_dev`；默认菜单按钮固定为 `Open PokePets` 并指向该 named Mini App 链接。
-- Monster Tamer 的 `apps/web/public/monster-tamer` 静态树完整，固定上游提交、MIT 许可证、第三方声明和资源来源记录均已提交；Tiny Town 1.1、Tiny Farm 1.0、Tiny Battle 1.0 的 CC0 许可证、来源 ZIP 与 SHA-256 已核对，三张运行时图集均来自已审计源包，Tiny Battle 只含本次地图使用的自然环境图块。
+- Monster Tamer 的 `apps/web/public/monster-tamer` 静态树完整，固定上游提交、MIT 许可证、第三方声明和资源来源记录均已提交；Tuxemon 提交 `c34a9c727129999671e4206ade7425cbb45745b4`、四张允许源图的路径与 SHA-256、CC BY-SA 4.0 许可证、完整署名和修改说明已核对。运行时只发布并加载一张由精选图块组成的 `tuxemon-valley-4x-extruded.png`，不发布或加载四张完整源图。
 
 任何一项与目标环境对应的前提不成立：停止发布，不恢复旧 migration、未获批准的占位素材、mock、默认业务值或功能开关。
 
@@ -42,7 +42,7 @@ pnpm manifest:check:production
 
 `pnpm catalog:generate-assets` 要求 210 张母版均为 1024×1024 WebP，并生成 256×256 缩略图和 768×768 详情图。`pnpm assets:check:catalog` 强制核对 210 个 `template_id`、两个路径、420 个文件、WebP 格式、尺寸、单文件体积、50 MiB 总上限、内容唯一性和正式 checksum。`APP_ENV=development pnpm build` 在生成 `apps/web/dist` 后继续核对构建复制结果；`APP_ENV=test` 与 `APP_ENV=production` 额外拒绝 Telegram 分享图和 TON Connect 图标的已知开发 checksum。
 
-`pnpm architecture:check` 同时验证 Monster Tamer 静态入口、launcher 纯链接、游戏页顺序、独立本地存档、业务引用为零、Vercel 路由优先级、唯一 480×240 `main_1` 地图、旧地图删除、图层和对象数量契约、虚拟摇杆、WASD、平滑相机，以及 Kenney 三套资源的版本、SHA-256 和许可证。`APP_ENV=development pnpm build` 后必须确认 `apps/web/dist/monster-tamer` 与源静态树文件清单一致；缺失任一脚本、样式、字体、音频、地图、数据、图片、许可证或第三方声明时停止发布。
+`pnpm architecture:check` 同时验证 Monster Tamer 静态入口、launcher 纯链接、游戏页顺序、独立本地存档、业务引用为零、Vercel 路由优先级、唯一 480×240 `main_1` 地图、旧地图删除、图层和对象数量契约、虚拟摇杆、WASD、平滑相机，以及 Tuxemon 固定提交、四张允许源图 SHA-256、CC BY-SA 4.0 许可证和单运行时图集边界。`APP_ENV=development pnpm build` 后必须确认 `apps/web/dist/monster-tamer` 与源静态树文件清单一致；缺失任一脚本、样式、字体、音频、地图、数据、图片、许可证或第三方声明时停止发布。
 
 生成正式 TON Connect manifest：
 
@@ -68,7 +68,7 @@ python3 tools/web/build_manifest.py \
 6. 在 Supabase Data API 设置中把 Exposed schemas 固定为 `public,graphql_public,api`，不得暴露任何业务表 schema。
 7. 核对 Vercel Production 同时存在 `TELEGRAM_BOT_USERNAME=FinalTMA_bot` 与 `TELEGRAM_MINI_APP_SHORT_NAME=pokepets_dev`，环境变量变更后部署包含全部修改的同一 Git commit；在 BotFather 的 `/mybots` → `@FinalTMA_bot` → `Bot Settings` → `Configure Mini App` 中启用 Main Mini App 并将 URL 固定为 `https://final-tma-pi.vercel.app/`，同时保持 named Mini App `pokepets_dev` 与默认菜单按钮 `Open PokePets` 指向 `https://t.me/FinalTMA_bot/pokepets_dev`。
 8. 调用 Bot API，确认 `getMe.result.has_main_web_app=true` 且 `getChatMenuButton.result.web_app.url=https://t.me/FinalTMA_bot/pokepets_dev`；再验证 `/api/health`、Telegram 真机登录、登录交接门禁、`/api/referrals` 与三个手工 job，最后恢复 Cron。
-9. 对当前 Vercel 部署分别请求 `/monster-tamer` 与 `/monster-tamer/`，确认两者返回独立游戏文档且全部静态资源成功；按 `docs/operations/acceptance.md` 完成 Monster Tamer 唯一无缝地图、3 分 12 秒普通步行横穿、原有玩法、WASD、虚拟摇杆、动画停止帧、碰撞贴边滑动、平滑相机、旧存档位置迁移、业务零请求和 Kenney 授权验收。
+9. 对当前 Vercel 部署分别请求 `/monster-tamer` 与 `/monster-tamer/`，确认两者返回独立游戏文档且全部静态资源成功；按 `docs/operations/acceptance.md` 完成 Monster Tamer 唯一无缝地图、3 分 12 秒普通步行横穿、原有玩法、WASD、虚拟摇杆、动画停止帧、碰撞贴边滑动、平滑相机、旧存档位置迁移、业务零请求、单运行时图集边界和 Tuxemon 授权署名验收。
 10. 按 `docs/operations/acceptance.md` 完成 Telegram 真机、支付与并发验收；`monitor-invariants` 必须返回 0 个新增 violation。
 
 任一步失败都保持入口与 Cron 关闭，修正原始 Schema 或迁移并从第 1 条重新执行。禁止为尚未生产发布的错误定义追加修补 migration。
@@ -87,7 +87,7 @@ python3 tools/web/build_manifest.py \
 6. 将真实 collection 地址和所有密钥写入平台 secrets。
 7. 部署与真实开发环境验收通过的完全相同 Git commit。
 8. 设置 Telegram webhook；启用生产 Bot 的 Main Mini App，将 Main Mini App 与 named Mini App 固定到该次部署的唯一生产域名，默认菜单按钮固定指向 named Mini App 链接，并用 Bot API 验证 `has_main_web_app=true` 与菜单 URL 完全一致。
-9. 对生产域名执行 `/monster-tamer`、`/monster-tamer/`、游戏内返回、唯一 `main_1`、三张 Kenney 图集、三份 Kenney 许可证和全部静态资源 smoke check，确认其使用同一提交中的完整静态树且没有新增环境变量、API、数据库、Catalog 或第三方运行时依赖。
+9. 对生产域名执行 `/monster-tamer`、`/monster-tamer/`、游戏内返回、唯一 `main_1`、唯一 `tuxemon-valley-4x-extruded.png` 图集、Tuxemon 来源记录、署名和 CC BY-SA 4.0 许可证以及全部静态资源 smoke check，确认其使用同一提交中的完整静态树，不请求四张完整 Tuxemon 源图，且没有新增环境变量、API、数据库、Catalog 或第三方运行时依赖。
 10. 执行生产 smoke check 与四个 job；保存 request/operation/ledger/inventory 证据。
 
 ## 5. 回滚边界
