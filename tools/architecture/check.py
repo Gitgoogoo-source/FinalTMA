@@ -48,16 +48,12 @@ REQUIRED_PATHS = (
     "apps/web/public/monster-tamer/assets/data/encounters.json",
     "apps/web/public/monster-tamer/assets/data/items.json",
     "apps/web/public/monster-tamer/assets/data/main_1.json",
-    "apps/web/public/monster-tamer/assets/images/tuxemon/tuxemon-valley-4x-extruded.png",
-    "apps/web/public/monster-tamer/assets/licenses/tuxemon/ATTRIBUTIONS.md",
-    "apps/web/public/monster-tamer/assets/licenses/tuxemon/CC-BY-SA-4.0.txt",
-    "apps/web/public/monster-tamer/assets/licenses/tuxemon/SOURCE.json",
-    "assets/source/monster-tamer/tuxemon/c34a9c727129999671e4206ade7425cbb45745b4/ATTRIBUTIONS.md",
-    "assets/source/monster-tamer/tuxemon/c34a9c727129999671e4206ade7425cbb45745b4/SOURCE.json",
-    "assets/source/monster-tamer/tuxemon/c34a9c727129999671e4206ade7425cbb45745b4/core_outdoor.png",
-    "assets/source/monster-tamer/tuxemon/c34a9c727129999671e4206ade7425cbb45745b4/core_outdoor_nature.png",
-    "assets/source/monster-tamer/tuxemon/c34a9c727129999671e4206ade7425cbb45745b4/core_outdoor_water.png",
-    "assets/source/monster-tamer/tuxemon/c34a9c727129999671e4206ade7425cbb45745b4/core_city_and_country.png",
+    "apps/web/public/monster-tamer/assets/images/tiny-swords/tiny-swords-terrain-extruded.png",
+    "apps/web/public/monster-tamer/assets/licenses/tiny-swords/SOURCE.json",
+    "apps/web/public/monster-tamer/assets/licenses/tiny-swords/TERMS.md",
+    "apps/web/public/monster-tamer/src/assets/tiny-swords-world.js",
+    "assets/source/monster-tamer/tiny-swords/free-pack-2026-07-25/SOURCE.json",
+    "assets/source/monster-tamer/tiny-swords/free-pack-2026-07-25/TERMS.md",
     "apps/web/public/monster-tamer/vendor/phaser-3.60.0.min.js",
     "apps/web/public/monster-tamer/vendor/webfontloader-1.6.28.min.js",
     "apps/web/public/monster-tamer/vendor/tweakpane-4.0.3.min.js",
@@ -65,7 +61,7 @@ REQUIRED_PATHS = (
     "apps/web/public/monster-tamer/vendor/licenses/WEBFONTLOADER-LICENSE",
     "apps/web/public/monster-tamer/vendor/licenses/TWEAKPANE-LICENSE.txt",
     "tools/monster-tamer/generate-original-assets.mjs",
-    "tools/monster-tamer/generate-valley-map.mjs",
+    "tools/monster-tamer/generate-island-map.mjs",
     "docs/architecture/adr/ADR-011-monster-tamer-static-subapplication.md",
     "apps/api/src/entrypoints/app",
     "apps/api/src/entrypoints/integrations",
@@ -283,13 +279,13 @@ def verify_monster_tamer_boundary() -> None:
     if missing_storage_calls:
         raise SystemExit(f"Monster Tamer local save contract is incomplete: {missing_storage_calls}")
     required_world_migration = (
-        "const WORLD_VERSION = 2;",
-        "const migratedFromRetiredMap = savedWorldVersion < WORLD_VERSION;",
+        "const WORLD_VERSION = 3;",
+        "const migratedFromPreviousWorld = savedWorldVersion < WORLD_VERSION;",
         "if (savedWorldVersion > WORLD_VERSION)",
         "parsedData.player.position = { ...WORLD_SPAWN_POSITION };",
         "parsedData.player.direction = DIRECTION.DOWN;",
         "area: 'main_1'",
-        "if (migratedFromRetiredMap) {\n        this.saveData();",
+        "if (migratedFromPreviousWorld) {\n        this.saveData();",
     )
     missing_world_migration = [
         value for value in required_world_migration if value not in data_manager
@@ -325,24 +321,20 @@ def verify_monster_tamer_boundary() -> None:
     present_blockers = [
         marker for marker in release_blockers if marker in f"{notices}\n{provenance}".lower()
     ]
-    tuxemon_evidence = (
-        "Tuxemon valley map art",
-        "c34a9c727129999671e4206ade7425cbb45745b4",
-        "https://github.com/Tuxemon/Tuxemon",
-        "Creative Commons",
-        "Attribution-ShareAlike 4.0",
-        "a3b62b7113408450f6af3c8d86ef287fe78cabd1bb7b9580414bcace4d90ff08",
-        "c1c58c5115c35a730743c4e0bd9b48c05b77d38f1873d16216b924f9a33712aa",
-        "571fc2ad3a648424da78fb9d1abfe9027b7a9a6ef39e8f2b4d28e0eb2e3cc2f6",
-        "1cdf4a534a7e3078f3d18022c690022582b3a84cfefef4f7d02c739872b39178",
-        "assets/images/tuxemon/tuxemon-valley-4x-extruded.png",
-        "assets/licenses/tuxemon/SOURCE.json",
-        "assets/licenses/tuxemon/ATTRIBUTIONS.md",
-        "assets/licenses/tuxemon/CC-BY-SA-4.0.txt",
-        "single 1056×1056 compact atlas",
+    tiny_swords_evidence = (
+        "Tiny Swords free-pack map art",
+        "Pixel Frog",
+        "https://pixelfrog-assets.itch.io/tiny-swords",
+        "Tilemap_color1",
+        "Blue Buildings",
+        "#47ABA9",
+        "assets/images/tiny-swords/tiny-swords-terrain-extruded.png",
+        "assets/licenses/tiny-swords/SOURCE.json",
+        "assets/licenses/tiny-swords/TERMS.md",
+        "32 selected source PNG files",
     )
-    missing_tuxemon_evidence = [
-        term for term in tuxemon_evidence if term not in notices
+    missing_tiny_swords_evidence = [
+        term for term in tiny_swords_evidence if term not in notices
     ]
     stale_original_claims = (
         "Every file under `assets/images/monster-tamer/**` and `favicon.ico`",
@@ -352,13 +344,13 @@ def verify_monster_tamer_boundary() -> None:
     present_stale_claims = [
         term for term in stale_original_claims if term in f"{notices}\n{provenance}"
     ]
-    if present_blockers or missing_tuxemon_evidence or present_stale_claims:
+    if present_blockers or missing_tiny_swords_evidence or present_stale_claims:
         raise SystemExit(
             "Monster Tamer visual release evidence is incomplete: "
-            f"blockers={present_blockers}, missing_tuxemon={missing_tuxemon_evidence}, "
+            f"blockers={present_blockers}, missing_tiny_swords={missing_tiny_swords_evidence}, "
             f"stale_original_claims={present_stale_claims}"
         )
-    verify_monster_tamer_tuxemon_assets()
+    verify_monster_tamer_tiny_swords_assets()
     verify_monster_tamer_map()
 
     controls = (STATIC_GAME_ROOT / "src/utils/controls.js").read_text(encoding="utf-8")
@@ -424,18 +416,16 @@ def verify_monster_tamer_boundary() -> None:
         or "tilemapTiledJSON(WORLD_ASSET_KEYS.MAIN_1_LEVEL, `assets/data/main_1.json`)" not in preload
     ):
         raise SystemExit("Monster Tamer runtime must preload main_1 as its only world tilemap")
-    compact_atlas_path = (
-        "assets/images/tuxemon/tuxemon-valley-4x-extruded.png"
-    )
+    compact_atlas_path = "assets/images/tiny-swords/tiny-swords-terrain-extruded.png"
     if (
         preload.count(compact_atlas_path) != 1
         or world_scene.count(
-            "map.addTilesetImage('tuxemon-valley', WORLD_ASSET_KEYS.TUXEMON_VALLEY)"
+            "map.addTilesetImage('tiny-swords-terrain', WORLD_ASSET_KEYS.TINY_SWORDS_TERRAIN)"
         )
         != 1
     ):
         raise SystemExit(
-            "Monster Tamer runtime must load and bind the compact Tuxemon atlas exactly once"
+            "Monster Tamer runtime must load and bind the compact Tiny Swords atlas exactly once"
         )
     retired_preload_assets = (
         "forest_1",
@@ -504,10 +494,11 @@ def verify_monster_tamer_boundary() -> None:
         raise SystemExit("Product chapter 21 must appear exactly once after the product-data checksum boundary")
     chapter_text = product[product.index(chapter) :]
     required_map_decisions = (
-        "480 × 240",
-        "3 分 12 秒",
-        "Tuxemon",
-        "1056 × 1056",
+        "240 × 120",
+        "81.6 秒",
+        "Tilemap_color1",
+        "Blue Buildings",
+        "#47ABA9",
         "WASD",
         "虚拟摇杆",
         "MONSTER_TAMER_DATA",
@@ -522,107 +513,161 @@ def verify_monster_tamer_boundary() -> None:
         )
 
 
-def verify_monster_tamer_tuxemon_assets() -> None:
-    commit = "c34a9c727129999671e4206ade7425cbb45745b4"
-    source_root = ROOT / "assets/source/monster-tamer/tuxemon" / commit
-    asset_contract = (
-        (
-            "core_outdoor.png",
-            (592, 1200),
-            "a3b62b7113408450f6af3c8d86ef287fe78cabd1bb7b9580414bcace4d90ff08",
-        ),
-        (
-            "core_outdoor_nature.png",
-            (1024, 2048),
-            "c1c58c5115c35a730743c4e0bd9b48c05b77d38f1873d16216b924f9a33712aa",
-        ),
-        (
-            "core_outdoor_water.png",
-            (1024, 2048),
-            "571fc2ad3a648424da78fb9d1abfe9027b7a9a6ef39e8f2b4d28e0eb2e3cc2f6",
-        ),
-        (
-            "core_city_and_country.png",
-            (640, 576),
-            "1cdf4a534a7e3078f3d18022c690022582b3a84cfefef4f7d02c739872b39178",
-        ),
+def verify_monster_tamer_tiny_swords_assets() -> None:
+    source_root = (
+        ROOT
+        / "assets/source/monster-tamer/tiny-swords/free-pack-2026-07-25"
     )
+    manifest_path = source_root / "SOURCE.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    expected_source_paths = {
+        "Buildings/Blue Buildings/Archery.png",
+        "Buildings/Blue Buildings/Barracks.png",
+        "Buildings/Blue Buildings/Castle.png",
+        "Buildings/Blue Buildings/House1.png",
+        "Buildings/Blue Buildings/House2.png",
+        "Buildings/Blue Buildings/House3.png",
+        "Buildings/Blue Buildings/Monastery.png",
+        "Buildings/Blue Buildings/Tower.png",
+        "Terrain/Decorations/Bushes/Bushe1.png",
+        "Terrain/Decorations/Bushes/Bushe2.png",
+        "Terrain/Decorations/Bushes/Bushe3.png",
+        "Terrain/Decorations/Bushes/Bushe4.png",
+        "Terrain/Decorations/Rocks in the Water/Water Rocks_01.png",
+        "Terrain/Decorations/Rocks in the Water/Water Rocks_02.png",
+        "Terrain/Decorations/Rocks in the Water/Water Rocks_03.png",
+        "Terrain/Decorations/Rocks in the Water/Water Rocks_04.png",
+        "Terrain/Decorations/Rocks/Rock1.png",
+        "Terrain/Decorations/Rocks/Rock2.png",
+        "Terrain/Decorations/Rocks/Rock3.png",
+        "Terrain/Decorations/Rocks/Rock4.png",
+        "Terrain/Resources/Wood/Trees/Stump 1.png",
+        "Terrain/Resources/Wood/Trees/Stump 2.png",
+        "Terrain/Resources/Wood/Trees/Stump 3.png",
+        "Terrain/Resources/Wood/Trees/Stump 4.png",
+        "Terrain/Resources/Wood/Trees/Tree1.png",
+        "Terrain/Resources/Wood/Trees/Tree2.png",
+        "Terrain/Resources/Wood/Trees/Tree3.png",
+        "Terrain/Resources/Wood/Trees/Tree4.png",
+        "Terrain/Tileset/Shadow.png",
+        "Terrain/Tileset/Tilemap_color1.png",
+        "Terrain/Tileset/Water Background color.png",
+        "Terrain/Tileset/Water Foam.png",
+    }
+    runtime_copies = {
+        "Buildings/Blue Buildings/Archery.png": "buildings/archery.png",
+        "Buildings/Blue Buildings/Barracks.png": "buildings/barracks.png",
+        "Buildings/Blue Buildings/Castle.png": "buildings/castle.png",
+        "Buildings/Blue Buildings/House1.png": "buildings/house-1.png",
+        "Buildings/Blue Buildings/House2.png": "buildings/house-2.png",
+        "Buildings/Blue Buildings/House3.png": "buildings/house-3.png",
+        "Buildings/Blue Buildings/Monastery.png": "buildings/monastery.png",
+        "Buildings/Blue Buildings/Tower.png": "buildings/tower.png",
+        "Terrain/Decorations/Bushes/Bushe1.png": "environment/bush-1.png",
+        "Terrain/Decorations/Bushes/Bushe2.png": "environment/bush-2.png",
+        "Terrain/Decorations/Bushes/Bushe3.png": "environment/bush-3.png",
+        "Terrain/Decorations/Bushes/Bushe4.png": "environment/bush-4.png",
+        "Terrain/Decorations/Rocks in the Water/Water Rocks_01.png": "environment/water-rock-1.png",
+        "Terrain/Decorations/Rocks in the Water/Water Rocks_02.png": "environment/water-rock-2.png",
+        "Terrain/Decorations/Rocks in the Water/Water Rocks_03.png": "environment/water-rock-3.png",
+        "Terrain/Decorations/Rocks in the Water/Water Rocks_04.png": "environment/water-rock-4.png",
+        "Terrain/Decorations/Rocks/Rock1.png": "environment/rock-1.png",
+        "Terrain/Decorations/Rocks/Rock2.png": "environment/rock-2.png",
+        "Terrain/Decorations/Rocks/Rock3.png": "environment/rock-3.png",
+        "Terrain/Decorations/Rocks/Rock4.png": "environment/rock-4.png",
+        "Terrain/Resources/Wood/Trees/Stump 1.png": "environment/stump-1.png",
+        "Terrain/Resources/Wood/Trees/Stump 2.png": "environment/stump-2.png",
+        "Terrain/Resources/Wood/Trees/Stump 3.png": "environment/stump-3.png",
+        "Terrain/Resources/Wood/Trees/Stump 4.png": "environment/stump-4.png",
+        "Terrain/Resources/Wood/Trees/Tree1.png": "environment/tree-1.png",
+        "Terrain/Resources/Wood/Trees/Tree2.png": "environment/tree-2.png",
+        "Terrain/Resources/Wood/Trees/Tree3.png": "environment/tree-3.png",
+        "Terrain/Resources/Wood/Trees/Tree4.png": "environment/tree-4.png",
+        "Terrain/Tileset/Shadow.png": "environment/shadow.png",
+        "Terrain/Tileset/Water Foam.png": "environment/water-foam.png",
+    }
     violations: list[str] = []
-    for source_name, expected_dimensions, expected_hash in asset_contract:
-        source_path = source_root / source_name
-        dimensions = png_dimensions(source_path)
-        if dimensions != expected_dimensions:
-            violations.append(
-                f"{relative(source_path)} must be {expected_dimensions[0]}x"
-                f"{expected_dimensions[1]}, found {dimensions}"
-            )
-        actual_hash = hashlib.sha256(source_path.read_bytes()).hexdigest()
-        if actual_hash != expected_hash:
-            violations.append(
-                f"{relative(source_path)} SHA-256 must be {expected_hash}, found {actual_hash}"
-            )
-
-    runtime_atlas = (
-        STATIC_GAME_ROOT
-        / "assets/images/tuxemon/tuxemon-valley-4x-extruded.png"
-    )
-    if png_dimensions(runtime_atlas) != (1056, 1056):
-        violations.append(
-            "assets/images/tuxemon/tuxemon-valley-4x-extruded.png must be 1056x1056"
-        )
-    public_tuxemon_images = sorted(
-        relative(path)
-        for path in (STATIC_GAME_ROOT / "assets/images/tuxemon").glob("*.png")
-    )
-    if public_tuxemon_images != [relative(runtime_atlas)]:
-        violations.append(
-            "Monster Tamer runtime must publish only the compact Tuxemon atlas: "
-            f"{public_tuxemon_images}"
-        )
-
-    public_license_root = STATIC_GAME_ROOT / "assets/licenses/tuxemon"
-    for published_name, source_name in (
-        ("SOURCE.json", "SOURCE.json"),
-        ("ATTRIBUTIONS.md", "ATTRIBUTIONS.md"),
+    definitions = {
+        entry.get("path"): entry
+        for entry in manifest.get("files", [])
+        if isinstance(entry, dict)
+    }
+    actual_source_paths = {
+        path.relative_to(source_root).as_posix()
+        for path in source_root.rglob("*.png")
+    }
+    if (
+        manifest.get("project") != "Tiny Swords (Free Pack)"
+        or set(definitions) != expected_source_paths
+        or actual_source_paths != expected_source_paths
     ):
+        violations.append(
+            "Tiny Swords source selection must contain exactly the 32 approved PNG files"
+        )
+    for source_name, definition in definitions.items():
+        source_path = source_root / str(source_name)
+        dimensions = png_dimensions(source_path)
+        expected_dimensions = (definition.get("width"), definition.get("height"))
+        actual_hash = hashlib.sha256(source_path.read_bytes()).hexdigest()
+        if dimensions != expected_dimensions or actual_hash != definition.get("sha256"):
+            violations.append(
+                f"{relative(source_path)} does not match its recorded dimensions/SHA-256"
+            )
+
+    runtime_root = STATIC_GAME_ROOT / "assets/images/tiny-swords"
+    runtime_atlas = runtime_root / "tiny-swords-terrain-extruded.png"
+    if png_dimensions(runtime_atlas) != (528, 528):
+        violations.append(
+            "assets/images/tiny-swords/tiny-swords-terrain-extruded.png must be 528x528"
+        )
+    expected_runtime_pngs = {
+        "tiny-swords-terrain-extruded.png",
+        *runtime_copies.values(),
+    }
+    actual_runtime_pngs = {
+        path.relative_to(runtime_root).as_posix()
+        for path in runtime_root.rglob("*.png")
+    }
+    if actual_runtime_pngs != expected_runtime_pngs:
+        violations.append(
+            "Monster Tamer runtime Tiny Swords PNG set differs from the approved whitelist: "
+            f"{sorted(actual_runtime_pngs ^ expected_runtime_pngs)}"
+        )
+    for source_name, runtime_name in runtime_copies.items():
+        source_path = source_root / source_name
+        runtime_path = runtime_root / runtime_name
+        if runtime_path.read_bytes() != source_path.read_bytes():
+            violations.append(
+                f"{relative(runtime_path)} must be an exact runtime copy of {relative(source_path)}"
+            )
+
+    public_license_root = STATIC_GAME_ROOT / "assets/licenses/tiny-swords"
+    for published_name in ("SOURCE.json", "TERMS.md"):
         published = public_license_root / published_name
-        source = source_root / source_name
+        source = source_root / published_name
         if published.read_bytes() != source.read_bytes():
             violations.append(
                 f"{relative(published)} must be an exact copy of {relative(source)}"
             )
-    license_text = (public_license_root / "CC-BY-SA-4.0.txt").read_text(
-        encoding="utf-8"
-    )
-    required_license_terms = (
-        "Attribution-ShareAlike 4.0 International",
-        "Creative Commons Attribution-ShareAlike 4.0 International Public License",
-        "Section 3 -- License Conditions.",
-    )
-    missing_license_terms = [
-        term for term in required_license_terms if term not in license_text
-    ]
-    if missing_license_terms:
-        violations.append(
-            "assets/licenses/tuxemon/CC-BY-SA-4.0.txt is missing "
-            f"{missing_license_terms}"
-        )
 
-    retired_kenney_roots = (
+    retired_roots = (
+        STATIC_GAME_ROOT / "assets/images/tuxemon",
+        STATIC_GAME_ROOT / "assets/licenses/tuxemon",
+        ROOT / "assets/source/monster-tamer/tuxemon",
         STATIC_GAME_ROOT / "assets/images/kenney-tiny",
         STATIC_GAME_ROOT / "assets/licenses/kenney-tiny",
         ROOT / "assets/source/monster-tamer/kenney-tiny",
     )
     present_retired_roots = [
-        relative(path) for path in retired_kenney_roots if path.exists()
+        relative(path) for path in retired_roots if path.exists()
     ]
     if present_retired_roots:
         violations.append(
-            f"Retired Kenney Tiny map roots remain: {present_retired_roots}"
+            f"Retired Monster Tamer map-art roots remain: {present_retired_roots}"
         )
     if violations:
         raise SystemExit(
-            "Monster Tamer Tuxemon asset contract violations:\n"
+            "Monster Tamer Tiny Swords asset contract violations:\n"
             + "\n".join(violations)
         )
 
@@ -657,55 +702,59 @@ def verify_monster_tamer_map() -> None:
 
     map_path = data_root / "main_1.json"
     map_data = json.loads(map_path.read_text(encoding="utf-8"))
-    expected_geometry = {"width": 480, "height": 240, "tilewidth": 64, "tileheight": 64}
+    expected_geometry = {"width": 240, "height": 120, "tilewidth": 64, "tileheight": 64}
     actual_geometry = {name: map_data.get(name) for name in expected_geometry}
     if actual_geometry != expected_geometry:
         raise SystemExit(
             f"Monster Tamer main_1 geometry mismatch: expected {expected_geometry}, found {actual_geometry}"
         )
 
-    expected_tilesets = {"tuxemon-valley", "collision", "encounter"}
+    expected_tilesets = {"tiny-swords-terrain", "collision", "encounter"}
     tilesets = {entry.get("name"): entry for entry in map_data.get("tilesets", [])}
     if len(map_data.get("tilesets", [])) != len(expected_tilesets) or set(tilesets) != expected_tilesets:
         raise SystemExit(
             f"Monster Tamer main_1 tilesets mismatch: expected {sorted(expected_tilesets)}, "
             f"found {sorted(str(name) for name in tilesets)}"
         )
-    expected_tuxemon_tileset = {
-        "columns": 16,
+    expected_tiny_swords_tileset = {
+        "columns": 8,
         "firstgid": 1,
-        "image": "../images/tuxemon/tuxemon-valley-4x-extruded.png",
-        "imageheight": 1056,
-        "imagewidth": 1056,
+        "image": "../images/tiny-swords/tiny-swords-terrain-extruded.png",
+        "imageheight": 528,
+        "imagewidth": 528,
         "margin": 1,
-        "name": "tuxemon-valley",
+        "name": "tiny-swords-terrain",
         "spacing": 2,
-        "tilecount": 256,
+        "tilecount": 64,
         "tileheight": 64,
         "tilewidth": 64,
     }
-    actual_tuxemon_tileset = {
-        key: tilesets["tuxemon-valley"].get(key)
-        for key in expected_tuxemon_tileset
+    actual_tiny_swords_tileset = {
+        key: tilesets["tiny-swords-terrain"].get(key)
+        for key in expected_tiny_swords_tileset
     }
-    if actual_tuxemon_tileset != expected_tuxemon_tileset:
+    if actual_tiny_swords_tileset != expected_tiny_swords_tileset:
         raise SystemExit(
-            "Monster Tamer compact Tuxemon tileset mismatch: "
-            f"expected {expected_tuxemon_tileset}, found {actual_tuxemon_tileset}"
+            "Monster Tamer compact Tiny Swords tileset mismatch: "
+            f"expected {expected_tiny_swords_tileset}, found {actual_tiny_swords_tileset}"
         )
     if (
-        tilesets["collision"].get("firstgid") != 257
-        or tilesets["encounter"].get("firstgid") != 258
+        tilesets["collision"].get("firstgid") != 65
+        or tilesets["encounter"].get("firstgid") != 66
     ):
         raise SystemExit(
-            "Monster Tamer hidden tiles must use collision firstgid 257 and "
-            "encounter firstgid 258"
+            "Monster Tamer hidden tiles must use collision firstgid 65 and "
+            "encounter firstgid 66"
         )
 
     expected_layer_types = {
-        "Ground": "tilelayer",
-        "Terrain": "tilelayer",
-        "Structures": "tilelayer",
+        "Water-Scenery": "objectgroup",
+        "Flat-Ground": "tilelayer",
+        "Shadow-Level-1": "objectgroup",
+        "Elevation-Level-1": "tilelayer",
+        "Shadow-Level-2": "objectgroup",
+        "Elevation-Level-2": "tilelayer",
+        "Scenery": "objectgroup",
         "Collision": "tilelayer",
         "Encounter": "group",
         "Item": "objectgroup",
@@ -714,7 +763,6 @@ def verify_monster_tamer_map() -> None:
         "Sign": "objectgroup",
         "Player-Spawn-Location": "objectgroup",
         "NPC": "group",
-        "Foreground": "tilelayer",
     }
     layers = {layer.get("name"): layer for layer in map_data.get("layers", [])}
     actual_layer_types = {name: layer.get("type") for name, layer in layers.items()}
@@ -744,7 +792,7 @@ def verify_monster_tamer_map() -> None:
         )
     empty_required_layers = [
         name
-        for name in ("Ground", "Terrain", "Structures", "Collision", "Foreground")
+        for name in ("Flat-Ground", "Elevation-Level-1", "Elevation-Level-2", "Collision")
         if not any(tile_gid(value) for value in layers[name].get("data", []))
     ]
     if empty_required_layers:
@@ -762,12 +810,49 @@ def verify_monster_tamer_map() -> None:
         raise SystemExit(
             f"Monster Tamer main_1 must retain six item identities: expected {item_contract}, found {items}"
         )
+    expected_item_positions = {
+        1: (30, 66),
+        2: (74, 104),
+        3: (90, 44),
+        4: (216, 84),
+        5: (194, 104),
+        6: (120, 34),
+    }
+    item_positions = {
+        object_property(item, "id"): object_grid_position(item)
+        for item in item_objects
+    }
+    if item_positions != expected_item_positions:
+        raise SystemExit(
+            f"Monster Tamer item placement mismatch: expected {expected_item_positions}, "
+            f"found {item_positions}"
+        )
     sign_objects = layers["Sign"].get("objects", [])
     sign_ids = [object_property(sign, "id") for sign in sign_objects]
     if len(sign_objects) != 9 or set(sign_ids) != set(range(1, 10)):
         raise SystemExit(
             "Monster Tamer main_1 must retain sign ids 1 through 9 exactly once: "
             f"{sorted(sign_ids, key=str)}"
+        )
+    expected_sign_positions = {
+        1: (52, 84),
+        2: (116, 74),
+        3: (164, 64),
+        4: (114, 66),
+        5: (178, 72),
+        6: (152, 60),
+        7: (172, 60),
+        8: (84, 88),
+        9: (48, 58),
+    }
+    sign_positions = {
+        object_property(sign, "id"): object_grid_position(sign)
+        for sign in sign_objects
+    }
+    if sign_positions != expected_sign_positions:
+        raise SystemExit(
+            f"Monster Tamer sign placement mismatch: expected {expected_sign_positions}, "
+            f"found {sign_positions}"
         )
 
     npc_layers = layers["NPC"].get("layers", [])
@@ -789,6 +874,27 @@ def verify_monster_tamer_map() -> None:
             "Monster Tamer main_1 must retain NPC ids 1 through 10 exactly once: "
             f"layers={sorted(str(name) for name in npc_layer_names)}, "
             f"ids={sorted(npc_ids, key=str)}"
+        )
+    expected_npc_positions = {
+        1: (124, 66),
+        2: (114, 68),
+        3: (122, 70),
+        4: (184, 72),
+        5: (94, 96),
+        6: (168, 62),
+        7: (46, 56),
+        8: (126, 72),
+        9: (120, 40),
+        10: (82, 90),
+    }
+    npc_positions = {
+        object_property(npc, "id"): object_grid_position(npc)
+        for npc in npc_objects
+    }
+    if npc_positions != expected_npc_positions:
+        raise SystemExit(
+            f"Monster Tamer NPC placement mismatch: expected {expected_npc_positions}, "
+            f"found {npc_positions}"
         )
 
     encounter_layers = layers["Encounter"].get("layers", [])
@@ -825,23 +931,77 @@ def verify_monster_tamer_map() -> None:
             f"invalid_singletons={invalid_singletons}, "
             f"faint_location={object_property(area_metadata, 'faint_location')}"
         )
+    player_spawn = layers["Player-Spawn-Location"]["objects"][0]
+    revive_location = layers["Revive-Location"]["objects"][0]
+    if (
+        object_grid_position(player_spawn) != (118, 68)
+        or object_grid_position(revive_location) != (122, 66)
+    ):
+        raise SystemExit(
+            "Monster Tamer main_1 spawn/revive placement must remain "
+            "spawn=(118, 68), revive=(122, 66)"
+        )
+
+    scenery_objects = layers["Scenery"].get("objects", [])
+    expected_building_positions = {
+        "castle": (118, 28),
+        "tower-west": (91, 30),
+        "tower-east": (147, 30),
+        "tower-south": (65, 98),
+        "barracks": (103, 36),
+        "archery": (135, 36),
+        "monastery": (159, 78),
+        "house-1-a": (165, 56),
+        "house-1-b": (195, 70),
+        "house-2-a": (177, 52),
+        "house-2-b": (205, 58),
+        "house-3-a": (189, 62),
+        "house-3-b": (175, 72),
+    }
+    building_positions = {
+        entry.get("name"): object_grid_position(entry)
+        for entry in scenery_objects
+        if entry.get("name") in expected_building_positions
+    }
+    scenery_asset_keys = {
+        object_property(entry, "asset_key")
+        for layer_name in (
+            "Water-Scenery",
+            "Shadow-Level-1",
+            "Shadow-Level-2",
+            "Scenery",
+        )
+        for entry in layers[layer_name].get("objects", [])
+    }
+    if (
+        building_positions != expected_building_positions
+        or not scenery_asset_keys
+        or any(
+            not isinstance(key, str) or not key.startswith("TINY_SWORDS_")
+            for key in scenery_asset_keys
+        )
+    ):
+        raise SystemExit(
+            "Monster Tamer Tiny Swords scenery/building contract mismatch: "
+            f"buildings={building_positions}, assets={sorted(map(str, scenery_asset_keys))}"
+        )
 
     invalid_visual_gids = {
         tile_gid(value)
-        for name in ("Ground", "Terrain", "Structures", "Foreground")
+        for name in ("Flat-Ground", "Elevation-Level-1", "Elevation-Level-2")
         for value in layers[name].get("data", [])
-        if tile_gid(value) not in range(257)
+        if tile_gid(value) not in range(65)
     }
     invalid_collision_gids = {
         tile_gid(value)
         for value in layers["Collision"].get("data", [])
-        if tile_gid(value) not in {0, 257}
+        if tile_gid(value) not in {0, 65}
     }
     invalid_encounter_gids = {
         tile_gid(value)
         for layer in encounter_layers
         for value in layer.get("data", [])
-        if tile_gid(value) not in {0, 258}
+        if tile_gid(value) not in {0, 66}
     }
     if invalid_visual_gids or invalid_collision_gids or invalid_encounter_gids:
         raise SystemExit(
@@ -873,6 +1033,13 @@ def object_property(entry: dict[str, object], name: str) -> object | None:
             if isinstance(prop, dict) and prop.get("name") == name
         ),
         None,
+    )
+
+
+def object_grid_position(entry: dict[str, object]) -> tuple[int, int]:
+    return (
+        round(float(entry.get("x", 0)) / 64),
+        round(float(entry.get("y", 0)) / 64) - 1,
     )
 
 
@@ -951,9 +1118,11 @@ def verify_documentation() -> None:
         "/monster-tamer/",
         "MONSTER_TAMER_DATA",
         "MonsterTamerPanel → ExpeditionPanel → WheelPanel",
-        "480×240",
-        "Tuxemon 提交",
-        "1056×1056",
+        "240×120",
+        "Tilemap_color1",
+        "Blue Buildings",
+        "#47ABA9",
+        "81.6 秒",
         "WASD",
         "虚拟摇杆",
     )

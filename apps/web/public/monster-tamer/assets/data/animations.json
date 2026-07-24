@@ -355,5 +355,109 @@
     "delay": 0,
     "yoyo": true,
     "assetKey": "NPC"
+  },
+  {
+    "key": "TINY_SWORDS_BUSH_1_MOVE",
+    "frameRate": 10,
+    "repeat": -1,
+    "delay": 0,
+    "yoyo": false,
+    "assetKey": "TINY_SWORDS_BUSH_1"
+  },
+  {
+    "key": "TINY_SWORDS_BUSH_2_MOVE",
+    "frameRate": 10,
+    "repeat": -1,
+    "delay": 0,
+    "yoyo": false,
+    "assetKey": "TINY_SWORDS_BUSH_2"
+  },
+  {
+    "key": "TINY_SWORDS_BUSH_3_MOVE",
+    "frameRate": 10,
+    "repeat": -1,
+    "delay": 0,
+    "yoyo": false,
+    "assetKey": "TINY_SWORDS_BUSH_3"
+  },
+  {
+    "key": "TINY_SWORDS_BUSH_4_MOVE",
+    "frameRate": 10,
+    "repeat": -1,
+    "delay": 0,
+    "yoyo": false,
+    "assetKey": "TINY_SWORDS_BUSH_4"
+  },
+  {
+    "key": "TINY_SWORDS_WATER_ROCK_1_MOVE",
+    "frameRate": 10,
+    "repeat": -1,
+    "delay": 0,
+    "yoyo": false,
+    "assetKey": "TINY_SWORDS_WATER_ROCK_1"
+  },
+  {
+    "key": "TINY_SWORDS_WATER_ROCK_2_MOVE",
+    "frameRate": 10,
+    "repeat": -1,
+    "delay": 0,
+    "yoyo": false,
+    "assetKey": "TINY_SWORDS_WATER_ROCK_2"
+  },
+  {
+    "key": "TINY_SWORDS_WATER_ROCK_3_MOVE",
+    "frameRate": 10,
+    "repeat": -1,
+    "delay": 0,
+    "yoyo": false,
+    "assetKey": "TINY_SWORDS_WATER_ROCK_3"
+  },
+  {
+    "key": "TINY_SWORDS_WATER_ROCK_4_MOVE",
+    "frameRate": 10,
+    "repeat": -1,
+    "delay": 0,
+    "yoyo": false,
+    "assetKey": "TINY_SWORDS_WATER_ROCK_4"
+  },
+  {
+    "key": "TINY_SWORDS_TREE_1_SWAY",
+    "frameRate": 10,
+    "repeat": -1,
+    "delay": 0,
+    "yoyo": false,
+    "assetKey": "TINY_SWORDS_TREE_1"
+  },
+  {
+    "key": "TINY_SWORDS_TREE_2_SWAY",
+    "frameRate": 10,
+    "repeat": -1,
+    "delay": 0,
+    "yoyo": false,
+    "assetKey": "TINY_SWORDS_TREE_2"
+  },
+  {
+    "key": "TINY_SWORDS_TREE_3_SWAY",
+    "frameRate": 10,
+    "repeat": -1,
+    "delay": 0,
+    "yoyo": false,
+    "assetKey": "TINY_SWORDS_TREE_3"
+  },
+  {
+    "key": "TINY_SWORDS_TREE_4_SWAY",
+    "frameRate": 10,
+    "repeat": -1,
+    "delay": 0,
+    "yoyo": false,
+    "assetKey": "TINY_SWORDS_TREE_4"
+  },
+  {
+    "key": "TINY_SWORDS_WATER_FOAM_MOVE",
+    "frameRate": 10,
+    "repeat": -1,
+    "delay": 0,
+    "yoyo": false,
+    "assetKey": "TINY_SWORDS_WATER_FOAM"
   }
 ]

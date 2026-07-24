@@ -36,6 +36,7 @@ import {
   TILED_EVENT_PROPERTY,
   TILED_ITEM_PROPERTY,
   TILED_NPC_PROPERTY,
+  TILED_SCENERY_PROPERTY,
   TILED_SIGN_PROPERTY,
 } from '../assets/tiled-keys.js';
 
@@ -211,36 +212,40 @@ export class WorldScene extends BaseScene {
    */
   create() {
     super.create();
-    this.cameras.main.setBackgroundColor('#091416');
+    this.cameras.main.setBackgroundColor('#47aba9');
 
     // create rectangles for checking for overlaps between game objects, added so we can recycle game objects
     this.#rectangleForOverlapCheck1 = new Phaser.Geom.Rectangle();
     this.#rectangleForOverlapCheck2 = new Phaser.Geom.Rectangle();
     this.#rectangleOverlapResult = new Phaser.Geom.Rectangle();
 
-    // Create the single seamless valley map from one curated runtime atlas.
+    // Create the single seamless Tiny Swords island from the curated runtime atlas and scenery.
     const map = this.#getLevelTileMap(WORLD_ASSET_KEYS.MAIN_1_LEVEL);
-    const visualTileset = map.addTilesetImage('tuxemon-valley', WORLD_ASSET_KEYS.TUXEMON_VALLEY);
+    const visualTileset = map.addTilesetImage('tiny-swords-terrain', WORLD_ASSET_KEYS.TINY_SWORDS_TERRAIN);
     if (!visualTileset) {
-      throw new Error('The valley visual tilesets could not be created.');
+      throw new Error('The Tiny Swords terrain tileset could not be created.');
     }
-    const groundLayer = map.createLayer('Ground', visualTileset, 0, 0);
-    const terrainLayer = map.createLayer('Terrain', visualTileset, 0, 0);
-    const structuresLayer = map.createLayer('Structures', visualTileset, 0, 0);
-    if (!groundLayer || !terrainLayer || !structuresLayer) {
-      throw new Error('The valley visual layers could not be created.');
+    const flatGroundLayer = map.createLayer('Flat-Ground', visualTileset, 0, 0);
+    const elevationLevel1Layer = map.createLayer('Elevation-Level-1', visualTileset, 0, 0);
+    const elevationLevel2Layer = map.createLayer('Elevation-Level-2', visualTileset, 0, 0);
+    if (!flatGroundLayer || !elevationLevel1Layer || !elevationLevel2Layer) {
+      throw new Error('The Tiny Swords island terrain layers could not be created.');
     }
-    groundLayer.setDepth(-30);
-    terrainLayer.setDepth(-20);
-    structuresLayer.setDepth(-10);
+    this.#createSceneryObjects(map, OBJECT_LAYER_NAMES.WATER_SCENERY);
+    flatGroundLayer.setDepth(-40);
+    this.#createSceneryObjects(map, OBJECT_LAYER_NAMES.SHADOW_LEVEL_1);
+    elevationLevel1Layer.setDepth(-30);
+    this.#createSceneryObjects(map, OBJECT_LAYER_NAMES.SHADOW_LEVEL_2);
+    elevationLevel2Layer.setDepth(-20);
+    this.#createSceneryObjects(map, OBJECT_LAYER_NAMES.SCENERY);
 
     const collisionTiles = map.addTilesetImage('collision', WORLD_ASSET_KEYS.WORLD_COLLISION);
     if (!collisionTiles) {
-      throw new Error('The valley collision tileset could not be created.');
+      throw new Error('The island collision tileset could not be created.');
     }
     const collisionLayer = map.createLayer('Collision', collisionTiles, 0, 0);
     if (!collisionLayer) {
-      throw new Error('The valley collision layer could not be created.');
+      throw new Error('The island collision layer could not be created.');
     }
     collisionLayer.setAlpha(TILED_COLLISION_LAYER_ALPHA).setDepth(-5);
 
@@ -288,12 +293,6 @@ export class WorldScene extends BaseScene {
     this.#npcs.forEach((npc) => {
       npc.addCharacterToCheckForCollisionsWith(this.#player);
     });
-
-    const foregroundLayer = map.createLayer('Foreground', visualTileset, 0, 0);
-    if (!foregroundLayer) {
-      throw new Error('The valley foreground layer could not be created.');
-    }
-    foregroundLayer.setDepth(100_000);
 
     // create menu
     this.#menu = new WorldMenu(this);
@@ -1389,6 +1388,48 @@ export class WorldScene extends BaseScene {
     }
     this.#tiledLevelMaps[key] = this.make.tilemap({ key, insertNull: true });
     return this.#tiledLevelMaps[key];
+  }
+
+  /**
+   * @param {Phaser.Tilemaps.Tilemap} map
+   * @param {string} layerName
+   * @returns {void}
+   */
+  #createSceneryObjects(map, layerName) {
+    const layer = map.getObjectLayer(layerName);
+    if (!layer) {
+      throw new Error(`The Tiny Swords scenery layer "${layerName}" could not be created.`);
+    }
+    layer.objects.forEach((object) => {
+      const propertyValue = (name) => object.properties?.find((property) => property.name === name)?.value;
+      const assetKey = propertyValue(TILED_SCENERY_PROPERTY.ASSET_KEY);
+      const animationKey = propertyValue(TILED_SCENERY_PROPERTY.ANIMATION_KEY);
+      const originX = propertyValue(TILED_SCENERY_PROPERTY.ORIGIN_X);
+      const originY = propertyValue(TILED_SCENERY_PROPERTY.ORIGIN_Y);
+      const depthMode = propertyValue(TILED_SCENERY_PROPERTY.DEPTH_MODE);
+      const fixedDepth = propertyValue(TILED_SCENERY_PROPERTY.FIXED_DEPTH);
+      const frameCount = propertyValue(TILED_SCENERY_PROPERTY.FRAME_COUNT);
+      if (
+        typeof assetKey !== 'string' ||
+        typeof originX !== 'number' ||
+        typeof originY !== 'number' ||
+        !Number.isInteger(frameCount) ||
+        frameCount < 1 ||
+        (depthMode !== 'WORLD' && depthMode !== 'FIXED') ||
+        (depthMode === 'FIXED' && typeof fixedDepth !== 'number')
+      ) {
+        throw new Error(`Tiny Swords scenery object ${object.id} has invalid rendering properties.`);
+      }
+      const gameObject =
+        typeof animationKey === 'string' && animationKey.length > 0
+          ? this.add
+              .sprite(object.x, object.y, assetKey)
+              .play({ key: animationKey, startFrame: object.id % frameCount })
+          : this.add.image(object.x, object.y, assetKey);
+      gameObject
+        .setOrigin(originX, originY)
+        .setDepth(depthMode === 'WORLD' ? Math.round(object.y) : fixedDepth);
+    });
   }
 
   /**

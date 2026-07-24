@@ -23,6 +23,10 @@ import { dataManager } from '../utils/data-manager.js';
 import { SHOW_SOCIAL_LINKS } from '../config.js';
 import { BaseScene } from './base-scene.js';
 import { setGlobalSoundSettings } from '../utils/audio-utils.js';
+import {
+  TINY_SWORDS_IMAGE_ASSETS,
+  TINY_SWORDS_SPRITESHEET_ASSETS,
+} from '../assets/tiny-swords-world.js';
 
 export class PreloadScene extends BaseScene {
   constructor() {
@@ -158,8 +162,12 @@ export class PreloadScene extends BaseScene {
     });
     this.load.tilemapTiledJSON(WORLD_ASSET_KEYS.MAIN_1_LEVEL, `assets/data/main_1.json`);
     this.load.image(
-      WORLD_ASSET_KEYS.TUXEMON_VALLEY,
-      'assets/images/tuxemon/tuxemon-valley-4x-extruded.png'
+      WORLD_ASSET_KEYS.TINY_SWORDS_TERRAIN,
+      'assets/images/tiny-swords/tiny-swords-terrain-extruded.png'
+    );
+    TINY_SWORDS_IMAGE_ASSETS.forEach(({ key, path }) => this.load.image(key, path));
+    TINY_SWORDS_SPRITESHEET_ASSETS.forEach(({ key, path, frameWidth, frameHeight }) =>
+      this.load.spritesheet(key, path, { frameWidth, frameHeight })
     );
     this.load.image(WORLD_ASSET_KEYS.WORLD_COLLISION, `${monsterTamerAssetPath}/map/collision.png`);
     this.load.image(WORLD_ASSET_KEYS.WORLD_ENCOUNTER_ZONE, `${monsterTamerAssetPath}/map/encounter.png`);

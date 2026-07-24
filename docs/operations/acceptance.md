@@ -55,17 +55,17 @@ Monster Tamer 使用单独的验收记录，不填写 `request_id`、`operation_
 
 1. `/monster-tamer` 与 `/monster-tamer/` 均返回独立游戏文档，刷新任一游戏内状态不落入 FinalTMA SPA；所有大小写敏感的脚本、样式、字体、音频、地图、数据和图片路径均返回 200。
 2. normal 用户进入主应用“游戏”页时，内容顺序严格为 `Monster Tamer → 藏品远征 → 幸运转盘`；Monster Tamer 卡片只通过普通链接打开 `/monster-tamer/`，不得提交命令或改变 Expedition、Wheel 的状态。
-3. 在浏览器直接打开、Telegram iOS、Telegram Android、Telegram Desktop 与 Telegram Web 中，游戏均能进入开始菜单并完成探索、对话、地图拾取、告示牌、随机遭遇、训练师战、捕捉、队伍、背包、设置、音频、存档和读档流程；本次地图改造没有增加采集、NPC、怪物、剧情、建筑室内或其他玩法。
-4. 运行时只加载 `main_1` 世界地图。记录地图数据证据，确认尺寸为 480×240、格子为 64×64，并且旧 `forest_1`、`building_1`、`building_2`、`building_3`、`level`、`level_old`、旧 background/foreground 地图大图和 `Scene-Transitions` 均不存在。
-5. 从中央村庄与农田出发，实际走通森林、湖泊、河流、山地、海岸、道路和所有桥梁；房屋、农舍和谷仓均不可进入。逐项验证出生点、10 个原有 NPC、6 个原有 Item、9 个原有 Sign 与 `area=1/2/3` 三个 Encounter 区域可达且身份未变。
-6. 沿地图横向连续主路全程使用普通步行计时，目标结果约为 3 分 12 秒；全程不得切图、传送或进入室内。另记录 Shift 和 B 跑步每格约 220ms，不得用跑步结果代替普通步行计时证据。
-7. 桌面分别验证 WASD、方向键、`Enter`、`Space`、`Shift`、`Esc`、`F`；移动端分别验证虚拟摇杆、菜单滑动、A、B 和菜单。持续双轴输入朝障碍移动时，角色先尝试主方向并在受阻后沿次方向贴边滑动，不能穿过水体、悬崖、树干、建筑、围栏、NPC、Item 或地图边界。
+3. 在浏览器直接打开、Telegram iOS、Telegram Android、Telegram Desktop 与 Telegram Web 中，游戏均能进入开始菜单并完成探索、对话、地图拾取、告示牌、随机遭遇、训练师战、捕捉、队伍、背包、设置、音频、存档和读档流程；本次地图改造没有改变主角、移动、操控、动画规则、相机或玩法，也没有增加采集、NPC、怪物、剧情、建筑室内或其他玩法。
+4. 运行时只加载 `main_1` 世界地图。记录地图数据证据，确认尺寸为 `240×120`、格子为 `64×64`、水色为 `#47ABA9`，并且旧 `forest_1`、`building_1`、`building_2`、`building_3`、`level`、`level_old`、旧 background/foreground 地图大图、Tuxemon 地图素材和 `Scene-Transitions` 均不存在。
+5. 从 `(118,68)` 出生点实际走通北部城堡、中部主路与森林、东部蓝色建筑村落、南部探索区和两级阶梯；全部建筑不可进入、不可交互。逐项验证 `(122,66)` 复活点、10 个原有 NPC、6 个原有 Item、9 个原有 Sign 与 `area=1/2/3` 三个 Encounter 区域可达且身份未变。
+6. 从 `(18,68)` 到 `(222,68)` 沿横向连续主路全程普通步行计时，目标结果为 `81.6 秒`；全程不得切图、传送或进入室内。另记录 Shift 和 B 跑步每格约 220ms，不得用跑步结果代替普通步行计时证据。
+7. 桌面分别验证 WASD、方向键、`Enter`、`Space`、`Shift`、`Esc`、`F`；移动端分别验证虚拟摇杆、菜单滑动、A、B 和菜单。持续双轴输入朝障碍移动时，角色先尝试主方向并在受阻后沿次方向贴边滑动，不能穿过水体、悬崖、树干、建筑、岩石、NPC、Item 或地图边界。
 8. 记录连续移动、改变方向、碰撞停止和松开输入的视频：主角只有实际位移时播放保留素材的四向动画，每格结束或阻挡后立即保持正确朝向站立帧；相机以 lerp 平滑跟随，不瞬移、不抖动、不露出世界外区域。
 9. 画布占满 Telegram 稳定视口，原生全屏成功和不支持回退两种结果下均可操作。iOS、Android、Desktop、Web 和普通移动浏览器的方向、视口、设备安全区、内容安全区和前后台状态变化不得遮挡虚拟摇杆、A、B、菜单、对话、战斗菜单或返回入口；恢复后不得后台移动、卡键或保留摇杆位移。
 10. 使用包含旧地图位置、队伍、背包、拾取状态和 NPC 状态的旧 `MONSTER_TAMER_DATA` 执行升级验收。首次加载必须只把位置迁移到新 `main_1` 安全出生点，其他玩法进度逐项保持，并立即写回同一个键；刷新后不得再次回到出生点，始终只有 `MONSTER_TAMER_DATA` 一个键。
-11. 首次进入不创建 FinalTMA 账号或会话；网络记录中没有 `/api/*`、Supabase、Catalog、FinalTMA access token、Telegram `initData`、业务用户标识、Tuxemon 或其他第三方资源请求。
-12. Phaser 3.60.0、Web Font Loader 1.6.28、Tweakpane 4.0.3、游戏源码和唯一的 `tuxemon-valley-4x-extruded.png` 运行时图集全部从 `/monster-tamer/` 自身静态目录加载。网络记录确认只请求这一张地图图集，不请求四张完整源图；Tuxemon 固定提交、四张允许源图的路径和 SHA-256 与 `THIRD_PARTY_NOTICES.md` 和 `assets/licenses/tuxemon/SOURCE.json` 完全一致。
-13. 上游 MIT 许可证、运行库许可证、Tuxemon CC BY-SA 4.0 许可证、完整署名、修改说明、第三方声明和原创资源来源记录均随静态目录发布；派生图集与可见地图层明确采用 CC BY-SA 4.0，应用代码许可保持分离。
+11. 首次进入不创建 FinalTMA 账号或会话；网络记录中没有 `/api/*`、Supabase、Catalog、FinalTMA access token、Telegram `initData`、业务用户标识、itch.io、Pixel Frog 或其他第三方资源请求。
+12. Phaser 3.60.0、Web Font Loader 1.6.28、Tweakpane 4.0.3、游戏源码、`tiny-swords-terrain-extruded.png`、Blue Buildings 和允许的环境 spritesheet 全部从 `/monster-tamer/` 自身静态目录加载。网络记录和文件清单确认 Tiny Swords 运行时只包含 32 文件白名单的派生结果，且没有人物、动物、资源、工具、FX、UI、云、橡皮鸭、Aseprite、其他阵营颜色或 Enemy Pack。
+13. 上游 MIT 许可证、运行库许可证、Tiny Swords 来源、Pixel Frog 署名、条款快照、32 个源 PNG 的路径/尺寸/SHA-256、修改说明、第三方声明和原创资源来源记录均随静态目录发布，并与 `THIRD_PARTY_NOTICES.md`、`assets/licenses/tiny-swords/SOURCE.json` 和 `TERMS.md` 完全一致。
 14. 从游戏内返回按钮和 Telegram BackButton 均回到 `/game`；返回后 Expedition、Wheel、顶部资产与主导航仍由 FinalTMA 当前真实状态渲染，Monster Tamer 存档不参与任何业务判断。
 
 ## 用户与登录第 16.11 节验收

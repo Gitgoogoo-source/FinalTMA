@@ -1,0 +1,230 @@
+{
+  "project": "Tiny Swords (Free Pack)",
+  "creator": "Pixel Frog",
+  "sourceUrl": "https://pixelfrog-assets.itch.io/tiny-swords",
+  "tilemapGuideUrl": "https://pixelfrog-assets.itch.io/tiny-swords/devlog/1138989/tilemap-guide",
+  "capturedAt": "2026-07-25",
+  "downloadedFileCount": 428,
+  "downloadedTreeSha256": "3f0405bae2dab2a13de5ee215cf004b62dc4a9242d44d3900b9b43aa11852161",
+  "selection": {
+    "grassPalette": "Tilemap_color1",
+    "buildingPalette": "Blue Buildings",
+    "fileCount": 32,
+    "excluded": [
+      "Units",
+      "animals",
+      "gatherable resources",
+      "tools",
+      "Particle FX",
+      "UI Elements",
+      "Clouds",
+      "Rubber Duck",
+      "Aseprite files",
+      "Red Buildings",
+      "Purple Buildings",
+      "Yellow Buildings",
+      "Black Buildings",
+      "Enemy Pack"
+    ]
+  },
+  "modifications": [
+    "Selected files are renamed into lowercase runtime paths.",
+    "Tilemap_color1 tiles are repacked with copied-edge extrusion and no scaling.",
+    "Buildings and environment sprite sheets retain their original pixel dimensions.",
+    "Only files used by the Monster Tamer island map are published."
+  ],
+  "files": [
+    {
+      "path": "Buildings/Blue Buildings/Archery.png",
+      "width": 192,
+      "height": 256,
+      "sha256": "04880ff5af0965f66777e87d4229782f2090233da79f08170cf9240eda3881d9"
+    },
+    {
+      "path": "Buildings/Blue Buildings/Barracks.png",
+      "width": 192,
+      "height": 256,
+      "sha256": "8d4658300cbab598ad9a18855c48305935a95870259bbcf8d25bf2ab00f613b4"
+    },
+    {
+      "path": "Buildings/Blue Buildings/Castle.png",
+      "width": 320,
+      "height": 256,
+      "sha256": "a4ec9de93fbe416359043cc6b58a32119b08c7623ef2e09b3aef9d3adf439c1b"
+    },
+    {
+      "path": "Buildings/Blue Buildings/House1.png",
+      "width": 128,
+      "height": 192,
+      "sha256": "f68fbce236ca663e2c1d86484f4617586bc99f4f9b634c493e62fa7eeece5c63"
+    },
+    {
+      "path": "Buildings/Blue Buildings/House2.png",
+      "width": 128,
+      "height": 192,
+      "sha256": "21e35d4d47e778c996cc56d95170908f663ca8858f08a6f8637fa15c1236448f"
+    },
+    {
+      "path": "Buildings/Blue Buildings/House3.png",
+      "width": 128,
+      "height": 192,
+      "sha256": "e2be60c4202ceffb55a6d06851ab6b08ffb530867e64da19ae578b09d18097fd"
+    },
+    {
+      "path": "Buildings/Blue Buildings/Monastery.png",
+      "width": 192,
+      "height": 320,
+      "sha256": "19ceee020215c572f9365f27ee5bd35cd52e17f796d81b082f16206e0ea7da5c"
+    },
+    {
+      "path": "Buildings/Blue Buildings/Tower.png",
+      "width": 128,
+      "height": 256,
+      "sha256": "ac0f01128d951c9da4cfe811af175a35868b6d91cdda04fabbe9dcf909caf868"
+    },
+    {
+      "path": "Terrain/Decorations/Bushes/Bushe1.png",
+      "width": 1024,
+      "height": 128,
+      "sha256": "38ea6583e856d4670ce43b843aaa3ef3e675b351b02353118f04b01ba3daa4eb"
+    },
+    {
+      "path": "Terrain/Decorations/Bushes/Bushe2.png",
+      "width": 1024,
+      "height": 128,
+      "sha256": "34b4312fe94ec9e8783e8782cfda26c172878155f5002727c53bc77f9a3a4ad6"
+    },
+    {
+      "path": "Terrain/Decorations/Bushes/Bushe3.png",
+      "width": 1024,
+      "height": 128,
+      "sha256": "273a528e5400257fabfa5146eee4ecdca526f2fa7ef0803382439c785886d3df"
+    },
+    {
+      "path": "Terrain/Decorations/Bushes/Bushe4.png",
+      "width": 1024,
+      "height": 128,
+      "sha256": "b5334fb3d9cc49e46b9553a8d6c197618d88ebefa025e849f31b05503684b5e5"
+    },
+    {
+      "path": "Terrain/Decorations/Rocks in the Water/Water Rocks_01.png",
+      "width": 1024,
+      "height": 64,
+      "sha256": "83d1a8925a9294c42bc421710d263718d958570006f43e6c7c65f4c7f5e115b4"
+    },
+    {
+      "path": "Terrain/Decorations/Rocks in the Water/Water Rocks_02.png",
+      "width": 1024,
+      "height": 64,
+      "sha256": "46514c0759f84490cb517c53236f54e7306cc57a348df3c96fb32313d2001934"
+    },
+    {
+      "path": "Terrain/Decorations/Rocks in the Water/Water Rocks_03.png",
+      "width": 1024,
+      "height": 64,
+      "sha256": "ad0fbdbceec0ee8ea37e545f88280fe697486e86efcdf3c4bedcf0c0cd6aeceb"
+    },
+    {
+      "path": "Terrain/Decorations/Rocks in the Water/Water Rocks_04.png",
+      "width": 1024,
+      "height": 64,
+      "sha256": "592bb0f38cfe92092dc4f579cda64b066da580923a17c5f3c79662f59d199a93"
+    },
+    {
+      "path": "Terrain/Decorations/Rocks/Rock1.png",
+      "width": 64,
+      "height": 64,
+      "sha256": "de9f1d954577003e278bae7ee71338c76b4799c9aabf34a002219ca2c67c7c00"
+    },
+    {
+      "path": "Terrain/Decorations/Rocks/Rock2.png",
+      "width": 64,
+      "height": 64,
+      "sha256": "a121425512ad1cf3a10b5731f507beed83507d2e7b5d180aa32f0d967e81299c"
+    },
+    {
+      "path": "Terrain/Decorations/Rocks/Rock3.png",
+      "width": 64,
+      "height": 64,
+      "sha256": "75afe7539d9fb2bff0e1eca6870e48dd0d592bcf2cc89eb929ab3a3287e7a8ef"
+    },
+    {
+      "path": "Terrain/Decorations/Rocks/Rock4.png",
+      "width": 64,
+      "height": 64,
+      "sha256": "a1830f25a6189e5043697004dbf1bb25f0998cf4c7346278764fb1e10a5fdb01"
+    },
+    {
+      "path": "Terrain/Resources/Wood/Trees/Stump 1.png",
+      "width": 192,
+      "height": 256,
+      "sha256": "7fc1ca1a45489c5dbc9a5d47f3b6a5cd7eb2d5e0a1a9d4497a7d19379fa59ca4"
+    },
+    {
+      "path": "Terrain/Resources/Wood/Trees/Stump 2.png",
+      "width": 192,
+      "height": 256,
+      "sha256": "3b870fd5e164d2b7a9c9b5dd9c15936eef386c6c2adaa04c122e095d936ba0e9"
+    },
+    {
+      "path": "Terrain/Resources/Wood/Trees/Stump 3.png",
+      "width": 192,
+      "height": 256,
+      "sha256": "2621197d2e69e2493119a428ef5ba818fd421996c4337156699852426fbd70f6"
+    },
+    {
+      "path": "Terrain/Resources/Wood/Trees/Stump 4.png",
+      "width": 192,
+      "height": 256,
+      "sha256": "d7ce36460157a3879decc25ba9d3a6613b400dafd35c604d1d6075418b8c9556"
+    },
+    {
+      "path": "Terrain/Resources/Wood/Trees/Tree1.png",
+      "width": 1536,
+      "height": 256,
+      "sha256": "ee3f285f992842987df5aae0e07a364a7a535e78d605f6d469115559e87df7e5"
+    },
+    {
+      "path": "Terrain/Resources/Wood/Trees/Tree2.png",
+      "width": 1536,
+      "height": 256,
+      "sha256": "62de877a4732bee98e170c1a4aac44c3bd39929205923176a4acbec812d2630a"
+    },
+    {
+      "path": "Terrain/Resources/Wood/Trees/Tree3.png",
+      "width": 1536,
+      "height": 192,
+      "sha256": "e2317a54bb801e52f4c2fbfd4d9d91611036d7b001fe623a92b55539feddaae2"
+    },
+    {
+      "path": "Terrain/Resources/Wood/Trees/Tree4.png",
+      "width": 1536,
+      "height": 192,
+      "sha256": "ac9094dba8939210726cbcfffec250790081e1eed998edb5e4772ed6bd31d5cc"
+    },
+    {
+      "path": "Terrain/Tileset/Shadow.png",
+      "width": 192,
+      "height": 192,
+      "sha256": "20094ec53d6929b18f01ea163a34955767335e4113b1c5dd33c5114a0302a27a"
+    },
+    {
+      "path": "Terrain/Tileset/Tilemap_color1.png",
+      "width": 576,
+      "height": 384,
+      "sha256": "3ae8f00b92b4ecd46b63b14ad4117fdda42afcf485f340724db033f0e229be8e"
+    },
+    {
+      "path": "Terrain/Tileset/Water Background color.png",
+      "width": 64,
+      "height": 64,
+      "sha256": "5ef30a00bbff22590eabb5acabb8aca6cc415557e7ab5f60db07714f01a4dba1"
+    },
+    {
+      "path": "Terrain/Tileset/Water Foam.png",
+      "width": 3072,
+      "height": 192,
+      "sha256": "aba91e12e08d108ce43446a269c9fb7e05b55580872152d675f8c78f72835e37"
+    }
+  ]
+}

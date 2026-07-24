@@ -37,18 +37,18 @@ the remaining original artwork:
 - capture ball, damaged capture ball; and
 - the application favicon.
 
-The seamless valley's source tiles are not project-original artwork. The
-`tools/monster-tamer/generate-valley-map.mjs` generator selects only the
-audited CC BY-SA 4.0 Tuxemon tiles documented in
-`THIRD_PARTY_NOTICES.md`, repacks them into one compact 16×16-slot atlas,
-enlarges each tile from 16×16 to 64×64 with nearest-neighbor resampling, and
-adds a one-pixel copied-edge extrusion to every slot. The four complete source
-sheets are retained only as build-time provenance; the game publishes and
-loads the single 1056×1056
-`assets/images/tuxemon/tuxemon-valley-4x-extruded.png` atlas.
+The three-level island's source art is not project-original. The
+`tools/monster-tamer/generate-island-map.mjs` generator uses only the 32
+Tiny Swords free-pack PNG files recorded in `THIRD_PARTY_NOTICES.md` and
+`assets/licenses/tiny-swords/SOURCE.json`. It extracts the used 64×64
+Tilemap_color1 tiles into a 528×528 copied-edge atlas and places the approved
+Blue Buildings, trees, stumps, bushes, rocks, water rocks, water foam, and
+terrain shadows as local scenery.
 
-The new `main_1` visual layer arrangement was drawn for this integration and
-does not copy a Tuxemon map, TMX file, TSX definition, source code, or gameplay.
-Because it adapts the selected Tuxemon artwork, the compact atlas and the
-visual map layers are distributed under CC BY-SA 4.0. The application code
-remains separately licensed.
+The `main_1` island layout, collision mask, two elevations, roads, scenery
+placement, and migration of retained gameplay objects were authored for this
+integration. No Tiny Swords character, animal, resource, tool, Particle FX, UI,
+cloud, rubber duck, Aseprite file, alternate faction color, or Enemy Pack
+asset is used. Tiny Swords remains third-party art credited to Pixel Frog; the
+application code and the project-original illustrations listed above remain
+separately licensed.

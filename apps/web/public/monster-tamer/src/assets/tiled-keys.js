@@ -4,7 +4,21 @@ export const OBJECT_LAYER_NAMES = Object.freeze({
   ITEM: 'Item',
   PLAYER_SPAWN_LOCATION: 'Player-Spawn-Location',
   REVIVE_LOCATION: 'Revive-Location',
+  SCENERY: 'Scenery',
+  SHADOW_LEVEL_1: 'Shadow-Level-1',
+  SHADOW_LEVEL_2: 'Shadow-Level-2',
   SIGN: 'Sign',
+  WATER_SCENERY: 'Water-Scenery',
+});
+
+export const TILED_SCENERY_PROPERTY = Object.freeze({
+  ANIMATION_KEY: 'animation_key',
+  ASSET_KEY: 'asset_key',
+  DEPTH_MODE: 'depth_mode',
+  FIXED_DEPTH: 'fixed_depth',
+  FRAME_COUNT: 'frame_count',
+  ORIGIN_X: 'origin_x',
+  ORIGIN_Y: 'origin_y',
 });
 
 export const TILED_SIGN_PROPERTY = Object.freeze({

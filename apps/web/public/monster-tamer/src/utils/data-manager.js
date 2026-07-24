@@ -7,10 +7,10 @@ import { DataUtils } from './data-utils.js';
 import { GAME_FLAG } from '../types/typedef.js';
 
 const LOCAL_STORAGE_KEY = 'MONSTER_TAMER_DATA';
-const WORLD_VERSION = 2;
+const WORLD_VERSION = 3;
 const WORLD_SPAWN_POSITION = Object.freeze({
-  x: 240 * 64,
-  y: 126 * 64,
+  x: 118 * 64,
+  y: 68 * 64,
 });
 
 /**
@@ -164,8 +164,8 @@ class DataManager extends Phaser.Events.EventEmitter {
         );
         return;
       }
-      const migratedFromRetiredMap = savedWorldVersion < WORLD_VERSION;
-      if (migratedFromRetiredMap) {
+      const migratedFromPreviousWorld = savedWorldVersion < WORLD_VERSION;
+      if (migratedFromPreviousWorld) {
         parsedData.worldVersion = WORLD_VERSION;
         parsedData.player.position = { ...WORLD_SPAWN_POSITION };
         parsedData.player.direction = DIRECTION.DOWN;
@@ -176,7 +176,7 @@ class DataManager extends Phaser.Events.EventEmitter {
       }
       // update the state with the saved data
       this.#updateDataManger(parsedData);
-      if (migratedFromRetiredMap) {
+      if (migratedFromPreviousWorld) {
         this.saveData();
       }
     } catch {

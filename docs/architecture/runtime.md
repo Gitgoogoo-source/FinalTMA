@@ -16,7 +16,7 @@ Telegram WebApp 在 `createRoot().render()` 前按 `ready → expand → disable
 
 `apps/web/public/monster-tamer` 是独立 HTML、CSS、JavaScript、数据与资源树。Phaser 3.60.0、Web Font Loader 1.6.28 和 Tweakpane 4.0.3 从自身 `vendor` 目录加载；运行时不进入 React bundle。唯一持久化键为 `MONSTER_TAMER_DATA`，不跨设备同步，不写入 FinalTMA session、查询缓存、API、数据库或 Catalog 资产。旧存档缺少当前世界版本时只把地图位置迁移到新 `main_1` 安全出生点，继续保留设置、队伍、背包、拾取状态、NPC 状态和其他玩法进度，并在首次加载后立即写回同一个键。
 
-世界运行时只加载 480×240、64px/格的 `main_1` tilemap。`Ground`、`Terrain`、`Structures` 和 `Foreground` 构成可见世界，`Collision` 提供静态阻挡；地图不存在室内入口或 `Scene-Transitions`。中央村庄和农田、森林、湖泊、河流、山地、海岸、道路与桥梁均位于同一世界，原有 10 个 NPC、6 个 Item、9 个 Sign 和三个 Encounter 区域继续使用原身份。地图视觉只绑定一张 1056×1056 的 `tuxemon-valley-4x-extruded.png` 紧凑图集；该图集只包含从 Tuxemon 固定提交四张 CC BY-SA 4.0 户外源图中审计并精选的图块，完整源图不进入运行时，也不访问第三方资源。派生图集和可见地图层按 CC BY-SA 4.0 发布，应用代码许可保持分离。
+世界运行时只加载 `240×120`、`64px/格` 的 `main_1` tilemap，水体底色固定为 `#47ABA9`。`Water-Scenery`、`Flat-Ground`、`Shadow-Level-1`、`Elevation-Level-1`、`Shadow-Level-2`、`Elevation-Level-2` 和 `Scenery` 构成三层海岛可见世界，`Collision` 提供静态阻挡；地图不存在室内入口或 `Scene-Transitions`。北部城堡、中部主路与森林、东部村落和南部探索区位于同一世界，原有 10 个 NPC、6 个 Item、9 个 Sign 和三个 Encounter 区域继续使用原身份。地图地形只绑定由 Tiny Swords Free Pack 的 `Tilemap_color1` 生成的 `528×528` 紧凑图集，建筑只加载 `Blue Buildings`，其余 scenery 只加载白名单内的树、树桩、灌木、岩石、水中岩石、水泡沫和阴影；人物、动物、资源、工具、FX、UI、云、橡皮鸭、Aseprite、其他阵营颜色和 Enemy Pack 均不进入运行时，也不访问第三方资源。
 
 静态子应用公开可访问。Telegram WebApp SDK 负责 ready、expand、原生 fullscreen、稳定视口、设备/内容安全区、垂直滑动保护和 BackButton；原生全屏不可用时回退到已展开稳定视口，不存在 SDK 时仍使用普通 `/game` 返回链接运行。桌面以 WASD 或方向键逐格移动，移动端使用虚拟摇杆；每次双轴输入先尝试主方向，主方向受阻时尝试次方向。步行固定 400ms/格，Shift 或 B 跑步固定 220ms/格。相机使用非零 lerp 跟随并限制在世界边界，主角只在实际位移时播放保留素材的四向动画。A、B、世界菜单和摇杆保留为安全区内浮层，其他菜单使用点击或滑动选择；失焦、隐藏、Telegram 停用、pointer cancel 和 lost pointer capture 均释放全部输入。
 
