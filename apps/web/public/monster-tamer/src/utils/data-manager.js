@@ -7,10 +7,10 @@ import { DataUtils } from './data-utils.js';
 import { GAME_FLAG } from '../types/typedef.js';
 
 const LOCAL_STORAGE_KEY = 'MONSTER_TAMER_DATA';
-const WORLD_VERSION = 3;
+const WORLD_VERSION = 4;
 const WORLD_SPAWN_POSITION = Object.freeze({
-  x: 118 * 64,
-  y: 68 * 64,
+  x: 60 * 64,
+  y: 34 * 64,
 });
 
 /**

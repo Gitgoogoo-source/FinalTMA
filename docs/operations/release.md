@@ -42,7 +42,7 @@ pnpm manifest:check:production
 
 `pnpm catalog:generate-assets` 要求 210 张母版均为 768×768 WebP，并生成 256×256 缩略图和 768×768 详情图。`pnpm assets:check:catalog` 强制核对 210 个 `template_id`、两个路径、420 个文件、WebP 格式、尺寸、单文件体积、50 MiB 总上限、内容唯一性和正式 checksum。`APP_ENV=development pnpm build` 在生成 `apps/web/dist` 后继续核对构建复制结果；`APP_ENV=test` 与 `APP_ENV=production` 额外拒绝 Telegram 分享图和 TON Connect 图标的已知开发 checksum。
 
-`pnpm architecture:check` 同时验证 Monster Tamer 静态入口、launcher 纯链接、游戏页顺序、独立本地存档、业务引用为零、Vercel 路由优先级、唯一 `240×120` `main_1` 地图、旧地图删除、图层和对象坐标契约、虚拟摇杆、WASD、平滑相机，以及 Tiny Swords 32 文件白名单、每个源文件 SHA-256、运行时文件集和本地条款记录。`APP_ENV=development pnpm build` 后必须确认 `apps/web/dist/monster-tamer` 与源静态树文件清单一致；缺失任一脚本、样式、字体、音频、地图、数据、图片、许可证或第三方声明时停止发布。
+`pnpm architecture:check` 同时验证 Monster Tamer 静态入口、launcher 纯链接、游戏页顺序、独立本地存档、业务引用为零、Vercel 路由优先级、唯一 `120×64` `main_1` 地图、152 个陆地景观对象、38 个水域景观对象、旧地图删除、图层和对象坐标契约、虚拟摇杆、WASD、平滑相机，以及 Tiny Swords 32 文件白名单、每个源文件 SHA-256、运行时文件集和本地条款记录。`APP_ENV=development pnpm build` 后必须确认 `apps/web/dist/monster-tamer` 与源静态树文件清单一致；缺失任一脚本、样式、字体、音频、地图、数据、图片、许可证或第三方声明时停止发布。
 
 生成正式 TON Connect manifest：
 
@@ -68,7 +68,7 @@ python3 tools/web/build_manifest.py \
 6. 在 Supabase Data API 设置中把 Exposed schemas 固定为 `public,graphql_public,api`，不得暴露任何业务表 schema。
 7. 核对 Vercel Production 同时存在 `TELEGRAM_BOT_USERNAME=FinalTMA_bot` 与 `TELEGRAM_MINI_APP_SHORT_NAME=pokepets_dev`，环境变量变更后部署包含全部修改的同一 Git commit；在 BotFather 的 `/mybots` → `@FinalTMA_bot` → `Bot Settings` → `Configure Mini App` 中启用 Main Mini App 并将 URL 固定为 `https://final-tma-pi.vercel.app/`，同时保持 named Mini App `pokepets_dev` 与默认菜单按钮 `Open PokePets` 指向 `https://t.me/FinalTMA_bot/pokepets_dev`。
 8. 调用 Bot API，确认 `getMe.result.has_main_web_app=true` 且 `getChatMenuButton.result.web_app.url=https://t.me/FinalTMA_bot/pokepets_dev`；再验证 `/api/health`、Telegram 真机登录、登录交接门禁、`/api/referrals` 与三个手工 job，最后恢复 Cron。
-9. 对当前 Vercel 部署分别请求 `/monster-tamer` 与 `/monster-tamer/`，确认两者返回独立游戏文档且全部静态资源成功；按 `docs/operations/acceptance.md` 完成 Monster Tamer 三层海岛、`81.6 秒`普通步行横穿、两级阶梯和全部保留对象可达、原有玩法、WASD、虚拟摇杆、碰撞贴边滑动、平滑相机、旧存档位置迁移、业务零请求、Tiny Swords 运行时白名单和来源条款验收。
+9. 对当前 Vercel 部署分别请求 `/monster-tamer` 与 `/monster-tamer/`，确认两者返回独立游戏文档且全部静态资源成功；按 `docs/operations/acceptance.md` 完成 Monster Tamer 紧凑三层海岛、出生首屏层次、`36.8 秒`普通步行横穿、两级阶梯和全部保留对象可达、原有玩法、WASD、虚拟摇杆、碰撞贴边滑动、平滑相机、旧存档位置迁移、业务零请求、Tiny Swords 运行时白名单和来源条款验收。
 10. 按 `docs/operations/acceptance.md` 完成 Telegram 真机、支付与并发验收；`monitor-invariants` 必须返回 0 个新增 violation。
 
 任一步失败都保持入口与 Cron 关闭，修正原始 Schema 或迁移并从第 1 条重新执行。禁止为尚未生产发布的错误定义追加修补 migration。

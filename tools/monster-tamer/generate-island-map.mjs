@@ -30,10 +30,12 @@ const PUBLISHED_EVIDENCE_ROOT = path.join(
 );
 const MAP_PATH = path.join(GAME_ROOT, "assets/data/main_1.json");
 
-const WIDTH = 240;
-const HEIGHT = 120;
+const WIDTH = 120;
+const HEIGHT = 64;
 const TILE_SIZE = 64;
 const SIZE = WIDTH * HEIGHT;
+const PLAYER_SPAWN = Object.freeze([60, 34]);
+const REVIVE_LOCATION = Object.freeze([62, 34]);
 const TERRAIN_SOURCE_COLUMNS = 9;
 const ATLAS_COLUMNS = 8;
 const ATLAS_ROWS = 8;
@@ -176,7 +178,7 @@ function hasMaskTile(mask, x, y) {
   return isInsideMap(x, y) && mask[indexOf(x, y)] === 1;
 }
 
-function fillRoundedRect(mask, x, y, width, height, radius) {
+function paintRoundedRect(mask, x, y, width, height, radius, value) {
   const right = x + width - 1;
   const bottom = y + height - 1;
   for (let tileY = y; tileY <= bottom; tileY += 1) {
@@ -194,10 +196,18 @@ function fillRoundedRect(mask, x, y, width, height, radius) {
             ? tileY - (bottom - radius)
             : 0;
       if (dx * dx + dy * dy <= radius * radius) {
-        mask[indexOf(tileX, tileY)] = 1;
+        mask[indexOf(tileX, tileY)] = value;
       }
     }
   }
+}
+
+function fillRoundedRect(mask, x, y, width, height, radius) {
+  paintRoundedRect(mask, x, y, width, height, radius, 1);
+}
+
+function clearRoundedRect(mask, x, y, width, height, radius) {
+  paintRoundedRect(mask, x, y, width, height, radius, 0);
 }
 
 function tileForMask(mask, x, y, palette) {
@@ -444,12 +454,29 @@ function fixedScenery({
   });
 }
 
-fillRoundedRect(baseLandMask, 12, 38, 218, 72, 10);
-fillRoundedRect(baseLandMask, 34, 78, 168, 35, 8);
-fillRoundedRect(baseLandMask, 78, 6, 84, 62, 10);
-fillRoundedRect(baseLandMask, 144, 28, 84, 60, 10);
-fillRoundedRect(elevationLevel1Mask, 80, 14, 80, 48, 7);
-fillRoundedRect(elevationLevel2Mask, 86, 14, 68, 26, 6);
+fillRoundedRect(baseLandMask, 5, 5, 110, 48, 8);
+fillRoundedRect(baseLandMask, 3, 20, 28, 31, 6);
+fillRoundedRect(baseLandMask, 73, 19, 44, 36, 6);
+clearRoundedRect(baseLandMask, 43, 39, 24, 18, 4);
+clearRoundedRect(baseLandMask, 3, 45, 12, 10, 3);
+clearRoundedRect(baseLandMask, 108, 46, 10, 9, 3);
+fillRoundedRect(baseLandMask, 53, 56, 14, 7, 3);
+
+fillRoundedRect(elevationLevel1Mask, 10, 7, 47, 24, 5);
+fillRoundedRect(elevationLevel1Mask, 40, 11, 31, 19, 4);
+fillRoundedRect(elevationLevel1Mask, 64, 7, 44, 24, 5);
+fillRoundedRect(elevationLevel2Mask, 15, 8, 34, 14, 4);
+
+for (let index = 0; index < SIZE; index += 1) {
+  if (
+    (elevationLevel1Mask[index] && !baseLandMask[index]) ||
+    (elevationLevel2Mask[index] && !elevationLevel1Mask[index])
+  ) {
+    throw new Error(
+      "Every elevated tile must be nested inside the level below.",
+    );
+  }
+}
 
 paintMask(flatGround, baseLandMask, FLAT_PALETTE);
 
@@ -538,108 +565,108 @@ function renderElevation(mask, layer, level, stairX) {
   elevationBottomEdges.push({ bottomEdges, level });
 }
 
-renderElevation(elevationLevel1Mask, elevationLevel1, 1, 118);
-renderElevation(elevationLevel2Mask, elevationLevel2, 2, 118);
+renderElevation(elevationLevel1Mask, elevationLevel1, 1, 59);
+renderElevation(elevationLevel2Mask, elevationLevel2, 2, 29);
 
 drawRoadPath(
   [
-    [18, 68],
-    [222, 68],
+    [14, 34],
+    [106, 34],
   ],
   5,
 );
 drawRoadPath(
   [
-    [118, 68],
-    [118, 32],
+    [60, 34],
+    [60, 24],
   ],
   3,
 );
 drawRoadPath(
   [
-    [118, 68],
-    [118, 104],
+    [60, 25],
+    [30, 25],
+    [30, 16],
   ],
   3,
 );
 drawRoadPath(
   [
-    [118, 94],
-    [82, 94],
+    [60, 34],
+    [70, 34],
+    [70, 49],
   ],
   3,
 );
 drawRoadPath(
   [
-    [118, 94],
-    [194, 94],
+    [70, 34],
+    [106, 34],
   ],
   3,
 );
 drawRoadPath(
   [
-    [152, 68],
-    [152, 58],
-    [208, 58],
+    [82, 34],
+    [82, 46],
   ],
   3,
 );
 drawRoadPath(
   [
-    [172, 58],
-    [172, 78],
-    [206, 78],
+    [94, 34],
+    [94, 48],
   ],
   3,
 );
 drawRoadPath(
   [
-    [52, 68],
-    [52, 56],
-    [28, 56],
+    [20, 34],
+    [20, 42],
+    [13, 42],
   ],
   3,
 );
 
 const signPlacements = Object.freeze([
-  [1, 52, 84],
-  [2, 116, 74],
-  [3, 164, 64],
-  [4, 114, 66],
-  [5, 178, 72],
-  [6, 152, 60],
-  [7, 172, 60],
-  [8, 84, 88],
-  [9, 48, 58],
+  [1, 25, 36],
+  [2, 68, 40],
+  [3, 75, 36],
+  [4, 57, 37],
+  [5, 93, 39],
+  [6, 84, 36],
+  [7, 99, 36],
+  [8, 72, 44],
+  [9, 20, 39],
 ]);
 const itemPlacements = Object.freeze([
-  [1, 1, 30, 66],
-  [2, 1, 74, 104],
-  [3, 2, 90, 44],
-  [4, 1, 216, 84],
-  [5, 2, 194, 104],
-  [6, 1, 120, 34],
+  [1, 1, 14, 34],
+  [2, 1, 29, 49],
+  [3, 2, 82, 22],
+  [4, 1, 108, 46],
+  [5, 2, 94, 50],
+  [6, 1, 31, 13],
 ]);
 const npcPlacements = Object.freeze([
-  [1, 124, 66, "IDLE"],
-  [2, 114, 68, "CLOCKWISE"],
-  [3, 122, 70, "IDLE"],
-  [4, 184, 72, "IDLE"],
-  [5, 94, 96, "IDLE"],
-  [6, 168, 62, "IDLE"],
-  [7, 46, 56, "IDLE"],
-  [8, 126, 72, "IDLE"],
-  [9, 120, 40, "IDLE"],
-  [10, 82, 90, "IDLE"],
+  [1, 64, 34, "IDLE"],
+  [2, 55, 34, "CLOCKWISE"],
+  [3, 62, 37, "IDLE"],
+  [4, 93, 35, "IDLE"],
+  [5, 72, 48, "IDLE"],
+  [6, 84, 37, "IDLE"],
+  [7, 18, 39, "IDLE"],
+  [8, 66, 37, "IDLE"],
+  [9, 31, 18, "IDLE"],
+  [10, 33, 46, "IDLE"],
 ]);
 const npc2Path = Object.freeze([
-  [114, 69],
-  [115, 69],
-  [116, 69],
-  [116, 68],
-  [116, 67],
-  [115, 67],
-  [114, 67],
+  [55, 35],
+  [56, 35],
+  [57, 35],
+  [57, 34],
+  [57, 33],
+  [56, 33],
+  [55, 33],
 ]);
 
 const sceneryObjects = [];
@@ -651,8 +678,8 @@ const buildingPlacements = Object.freeze([
   {
     name: "castle",
     assetKey: TINY_SWORDS_ASSET_KEYS.CASTLE,
-    x: 118,
-    y: 28,
+    x: 27,
+    y: 17,
     width: 5,
     height: 4,
     collisionDepth: 2,
@@ -660,8 +687,8 @@ const buildingPlacements = Object.freeze([
   {
     name: "tower-west",
     assetKey: TINY_SWORDS_ASSET_KEYS.TOWER,
-    x: 91,
-    y: 30,
+    x: 11,
+    y: 43,
     width: 2,
     height: 4,
     collisionDepth: 1,
@@ -669,8 +696,8 @@ const buildingPlacements = Object.freeze([
   {
     name: "tower-east",
     assetKey: TINY_SWORDS_ASSET_KEYS.TOWER,
-    x: 147,
-    y: 30,
+    x: 105,
+    y: 22,
     width: 2,
     height: 4,
     collisionDepth: 1,
@@ -678,8 +705,8 @@ const buildingPlacements = Object.freeze([
   {
     name: "tower-south",
     assetKey: TINY_SWORDS_ASSET_KEYS.TOWER,
-    x: 65,
-    y: 98,
+    x: 59,
+    y: 61,
     width: 2,
     height: 4,
     collisionDepth: 1,
@@ -687,8 +714,8 @@ const buildingPlacements = Object.freeze([
   {
     name: "barracks",
     assetKey: TINY_SWORDS_ASSET_KEYS.BARRACKS,
-    x: 103,
-    y: 36,
+    x: 16,
+    y: 20,
     width: 3,
     height: 4,
     collisionDepth: 1,
@@ -696,8 +723,8 @@ const buildingPlacements = Object.freeze([
   {
     name: "archery",
     assetKey: TINY_SWORDS_ASSET_KEYS.ARCHERY,
-    x: 135,
-    y: 36,
+    x: 39,
+    y: 20,
     width: 3,
     height: 4,
     collisionDepth: 1,
@@ -705,8 +732,8 @@ const buildingPlacements = Object.freeze([
   {
     name: "monastery",
     assetKey: TINY_SWORDS_ASSET_KEYS.MONASTERY,
-    x: 159,
-    y: 78,
+    x: 73,
+    y: 50,
     width: 3,
     height: 5,
     collisionDepth: 1,
@@ -714,8 +741,8 @@ const buildingPlacements = Object.freeze([
   {
     name: "house-1-a",
     assetKey: TINY_SWORDS_ASSET_KEYS.HOUSE_1,
-    x: 165,
-    y: 56,
+    x: 79,
+    y: 42,
     width: 2,
     height: 3,
     collisionDepth: 1,
@@ -723,8 +750,8 @@ const buildingPlacements = Object.freeze([
   {
     name: "house-1-b",
     assetKey: TINY_SWORDS_ASSET_KEYS.HOUSE_1,
-    x: 195,
-    y: 70,
+    x: 104,
+    y: 45,
     width: 2,
     height: 3,
     collisionDepth: 1,
@@ -732,8 +759,8 @@ const buildingPlacements = Object.freeze([
   {
     name: "house-2-a",
     assetKey: TINY_SWORDS_ASSET_KEYS.HOUSE_2,
-    x: 177,
-    y: 52,
+    x: 87,
+    y: 40,
     width: 2,
     height: 3,
     collisionDepth: 1,
@@ -741,8 +768,8 @@ const buildingPlacements = Object.freeze([
   {
     name: "house-2-b",
     assetKey: TINY_SWORDS_ASSET_KEYS.HOUSE_2,
-    x: 205,
-    y: 58,
+    x: 88,
+    y: 49,
     width: 2,
     height: 3,
     collisionDepth: 1,
@@ -750,8 +777,8 @@ const buildingPlacements = Object.freeze([
   {
     name: "house-3-a",
     assetKey: TINY_SWORDS_ASSET_KEYS.HOUSE_3,
-    x: 189,
-    y: 62,
+    x: 98,
+    y: 40,
     width: 2,
     height: 3,
     collisionDepth: 1,
@@ -759,8 +786,8 @@ const buildingPlacements = Object.freeze([
   {
     name: "house-3-b",
     assetKey: TINY_SWORDS_ASSET_KEYS.HOUSE_3,
-    x: 175,
-    y: 72,
+    x: 96,
+    y: 49,
     width: 2,
     height: 3,
     collisionDepth: 1,
@@ -815,8 +842,8 @@ for (const [, x, y] of signPlacements) {
 for (const [, , x, y] of itemPlacements) reserveTile(x, y, 1);
 for (const [, x, y] of npcPlacements) reserveTile(x, y, 1);
 for (const [x, y] of npc2Path) reserveTile(x, y, 1);
-reserveTile(118, 68, 2);
-reserveTile(122, 66, 2);
+reserveTile(...PLAYER_SPAWN, 2);
+reserveTile(...REVIVE_LOCATION, 2);
 
 function chooseSceneryTiles({
   count,
@@ -876,10 +903,11 @@ function chooseSceneryTiles({
 }
 
 const forestRegions = Object.freeze([
-  [18, 40, 68, 78],
-  [54, 72, 112, 108],
-  [130, 76, 198, 108],
-  [188, 36, 226, 108],
+  [7, 7, 24, 32],
+  [43, 7, 63, 28],
+  [69, 7, 111, 30],
+  [7, 30, 37, 51],
+  [68, 41, 111, 53],
 ]);
 const treeVariants = Object.freeze([
   [TINY_SWORDS_ASSET_KEYS.TREE_1, TINY_SWORDS_ANIMATION_KEYS.TREE_1, 256],
@@ -887,8 +915,45 @@ const treeVariants = Object.freeze([
   [TINY_SWORDS_ASSET_KEYS.TREE_3, TINY_SWORDS_ANIMATION_KEYS.TREE_3, 192],
   [TINY_SWORDS_ASSET_KEYS.TREE_4, TINY_SWORDS_ANIMATION_KEYS.TREE_4, 192],
 ]);
+const landmarkTreePositions = Object.freeze([
+  [22, 15],
+  [35, 14],
+  [52, 38],
+  [73, 38],
+  [76, 41],
+  [108, 39],
+  [24, 42],
+  [36, 40],
+  [101, 25],
+  [72, 28],
+]);
+landmarkTreePositions.forEach(([x, y], index) => {
+  if (
+    !hasMaskTile(baseLandMask, x, y) ||
+    collision[indexOf(x, y)] !== 0 ||
+    roadMask[indexOf(x, y)] !== 0 ||
+    isReserved(x, y)
+  ) {
+    throw new Error(`Landmark tree ${index + 1} cannot occupy (${x}, ${y}).`);
+  }
+  const [assetKey, animationKey, height] = treeVariants[index % 4];
+  sceneryObjects.push(
+    worldScenery({
+      name: `landmark-tree-${index + 1}`,
+      assetKey,
+      animationKey,
+      frameCount: 8,
+      tileX: x,
+      tileY: y,
+      width: 192,
+      height,
+    }),
+  );
+  blockTile(x, y);
+  reserveTile(x, y, 2);
+});
 chooseSceneryTiles({
-  count: 48,
+  count: 56,
   regions: forestRegions,
   salt: 201,
   padding: 2,
@@ -916,7 +981,7 @@ const stumpKeys = Object.freeze([
   TINY_SWORDS_ASSET_KEYS.STUMP_4,
 ]);
 chooseSceneryTiles({
-  count: 8,
+  count: 12,
   regions: forestRegions,
   salt: 301,
   padding: 1,
@@ -941,7 +1006,7 @@ const bushVariants = Object.freeze([
   [TINY_SWORDS_ASSET_KEYS.BUSH_4, TINY_SWORDS_ANIMATION_KEYS.BUSH_4],
 ]);
 chooseSceneryTiles({
-  count: 16,
+  count: 24,
   regions: forestRegions,
   salt: 401,
   width: 2,
@@ -973,7 +1038,7 @@ const rockKeys = Object.freeze([
   TINY_SWORDS_ASSET_KEYS.ROCK_4,
 ]);
 chooseSceneryTiles({
-  count: 20,
+  count: 28,
   regions: forestRegions,
   salt: 501,
   padding: 1,
@@ -992,30 +1057,28 @@ chooseSceneryTiles({
 });
 
 const waterFoamPositions = Object.freeze([
-  [20, 40],
-  [32, 38],
-  [50, 36],
-  [70, 38],
-  [84, 10],
-  [110, 6],
-  [140, 8],
-  [160, 24],
-  [180, 28],
-  [210, 30],
-  [228, 48],
-  [232, 68],
-  [228, 90],
-  [212, 108],
-  [190, 112],
-  [164, 114],
-  [138, 110],
-  [110, 114],
-  [82, 112],
-  [52, 114],
-  [34, 106],
-  [14, 92],
-  [10, 70],
-  [12, 50],
+  [8, 12],
+  [20, 6],
+  [36, 5],
+  [54, 5],
+  [72, 5],
+  [92, 6],
+  [110, 12],
+  [114, 28],
+  [113, 44],
+  [106, 53],
+  [93, 55],
+  [72, 54],
+  [68, 59],
+  [52, 59],
+  [40, 52],
+  [24, 53],
+  [8, 48],
+  [4, 34],
+  [5, 22],
+  [45, 43],
+  [55, 47],
+  [65, 43],
 ]);
 for (const [x, y] of waterFoamPositions) {
   waterSceneryObjects.push(
@@ -1034,18 +1097,22 @@ for (const [x, y] of waterFoamPositions) {
 }
 
 const waterRockPositions = Object.freeze([
-  [6, 30],
-  [24, 20],
-  [52, 28],
-  [70, 6],
-  [172, 14],
-  [208, 16],
-  [234, 38],
-  [236, 96],
-  [218, 116],
-  [154, 116],
-  [74, 116],
-  [8, 106],
+  [3, 10],
+  [10, 3],
+  [32, 2],
+  [58, 2],
+  [85, 3],
+  [116, 8],
+  [118, 25],
+  [117, 55],
+  [105, 59],
+  [76, 59],
+  [47, 59],
+  [23, 60],
+  [3, 55],
+  [2, 34],
+  [43, 47],
+  [65, 49],
 ]);
 const waterRockVariants = Object.freeze([
   [
@@ -1090,7 +1157,7 @@ for (const { bottomEdges, level } of elevationBottomEdges) {
   bottomEdges
     .sort(([ax, ay], [bx, by]) => ay - by || ax - bx)
     .filter((_, index) => index % 5 === 0)
-    .slice(0, 16)
+    .slice(0, 24)
     .forEach(([x, y], index) => {
       target.push(
         fixedScenery({
@@ -1122,9 +1189,9 @@ function fillEncounter(layer, left, top, width, height) {
   }
 }
 
-fillEncounter(encounter1, 48, 84, 57, 27);
-fillEncounter(encounter2, 184, 78, 41, 31);
-fillEncounter(encounter3, 16, 38, 47, 39);
+fillEncounter(encounter1, 8, 34, 32, 18);
+fillEncounter(encounter2, 70, 36, 42, 18);
+fillEncounter(encounter3, 68, 8, 41, 22);
 
 function reachableTilesFrom(startX, startY) {
   const reachable = new Uint8Array(SIZE);
@@ -1155,14 +1222,14 @@ function reachableTilesFrom(startX, startY) {
   return reachable;
 }
 
-const reachable = reachableTilesFrom(118, 68);
+const reachable = reachableTilesFrom(...PLAYER_SPAWN);
 for (const [x, y, label] of [
-  [118, 68, "player spawn"],
-  [122, 66, "revive location"],
-  [18, 68, "west road endpoint"],
-  [222, 68, "east road endpoint"],
-  [120, 34, "castle plateau"],
-  [118, 104, "south exploration endpoint"],
+  [...PLAYER_SPAWN, "player spawn"],
+  [...REVIVE_LOCATION, "revive location"],
+  [14, 34, "west road endpoint"],
+  [106, 34, "east road endpoint"],
+  [30, 15, "castle plateau"],
+  [70, 49, "south exploration endpoint"],
   ...itemPlacements.map(([, , x, y]) => [x, y, "item"]),
   ...npcPlacements.map(([, x, y]) => [x, y, "npc"]),
   ...npc2Path.map(([x, y]) => [x, y, "NPC 2 path"]),
@@ -1318,17 +1385,21 @@ const map = {
     objectLayer("Area-Metadata", [
       tiledObject({
         name: "area_metadata",
-        x: 118,
-        y: 68,
+        x: PLAYER_SPAWN[0],
+        y: PLAYER_SPAWN[1],
         properties: [
           property("faint_location", "string", "main_1"),
           property("id", "int", 0),
         ],
       }),
     ]),
-    objectLayer("Revive-Location", [tiledObject({ x: 122, y: 66 })]),
+    objectLayer("Revive-Location", [
+      tiledObject({ x: REVIVE_LOCATION[0], y: REVIVE_LOCATION[1] }),
+    ]),
     signLayer,
-    objectLayer("Player-Spawn-Location", [tiledObject({ x: 118, y: 68 })]),
+    objectLayer("Player-Spawn-Location", [
+      tiledObject({ x: PLAYER_SPAWN[0], y: PLAYER_SPAWN[1] }),
+    ]),
     npcGroup,
   ],
   nextlayerid: nextLayerId,

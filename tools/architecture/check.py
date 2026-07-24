@@ -279,7 +279,7 @@ def verify_monster_tamer_boundary() -> None:
     if missing_storage_calls:
         raise SystemExit(f"Monster Tamer local save contract is incomplete: {missing_storage_calls}")
     required_world_migration = (
-        "const WORLD_VERSION = 3;",
+        "const WORLD_VERSION = 4;",
         "const migratedFromPreviousWorld = savedWorldVersion < WORLD_VERSION;",
         "if (savedWorldVersion > WORLD_VERSION)",
         "parsedData.player.position = { ...WORLD_SPAWN_POSITION };",
@@ -494,8 +494,8 @@ def verify_monster_tamer_boundary() -> None:
         raise SystemExit("Product chapter 21 must appear exactly once after the product-data checksum boundary")
     chapter_text = product[product.index(chapter) :]
     required_map_decisions = (
-        "240 × 120",
-        "81.6 秒",
+        "120 × 64",
+        "36.8 秒",
         "Tilemap_color1",
         "Blue Buildings",
         "#47ABA9",
@@ -702,7 +702,7 @@ def verify_monster_tamer_map() -> None:
 
     map_path = data_root / "main_1.json"
     map_data = json.loads(map_path.read_text(encoding="utf-8"))
-    expected_geometry = {"width": 240, "height": 120, "tilewidth": 64, "tileheight": 64}
+    expected_geometry = {"width": 120, "height": 64, "tilewidth": 64, "tileheight": 64}
     actual_geometry = {name: map_data.get(name) for name in expected_geometry}
     if actual_geometry != expected_geometry:
         raise SystemExit(
@@ -811,12 +811,12 @@ def verify_monster_tamer_map() -> None:
             f"Monster Tamer main_1 must retain six item identities: expected {item_contract}, found {items}"
         )
     expected_item_positions = {
-        1: (30, 66),
-        2: (74, 104),
-        3: (90, 44),
-        4: (216, 84),
-        5: (194, 104),
-        6: (120, 34),
+        1: (14, 34),
+        2: (29, 49),
+        3: (82, 22),
+        4: (108, 46),
+        5: (94, 50),
+        6: (31, 13),
     }
     item_positions = {
         object_property(item, "id"): object_grid_position(item)
@@ -835,15 +835,15 @@ def verify_monster_tamer_map() -> None:
             f"{sorted(sign_ids, key=str)}"
         )
     expected_sign_positions = {
-        1: (52, 84),
-        2: (116, 74),
-        3: (164, 64),
-        4: (114, 66),
-        5: (178, 72),
-        6: (152, 60),
-        7: (172, 60),
-        8: (84, 88),
-        9: (48, 58),
+        1: (25, 36),
+        2: (68, 40),
+        3: (75, 36),
+        4: (57, 37),
+        5: (93, 39),
+        6: (84, 36),
+        7: (99, 36),
+        8: (72, 44),
+        9: (20, 39),
     }
     sign_positions = {
         object_property(sign, "id"): object_grid_position(sign)
@@ -876,16 +876,16 @@ def verify_monster_tamer_map() -> None:
             f"ids={sorted(npc_ids, key=str)}"
         )
     expected_npc_positions = {
-        1: (124, 66),
-        2: (114, 68),
-        3: (122, 70),
-        4: (184, 72),
-        5: (94, 96),
-        6: (168, 62),
-        7: (46, 56),
-        8: (126, 72),
-        9: (120, 40),
-        10: (82, 90),
+        1: (64, 34),
+        2: (55, 34),
+        3: (62, 37),
+        4: (93, 35),
+        5: (72, 48),
+        6: (84, 37),
+        7: (18, 39),
+        8: (66, 37),
+        9: (31, 18),
+        10: (33, 46),
     }
     npc_positions = {
         object_property(npc, "id"): object_grid_position(npc)
@@ -934,29 +934,29 @@ def verify_monster_tamer_map() -> None:
     player_spawn = layers["Player-Spawn-Location"]["objects"][0]
     revive_location = layers["Revive-Location"]["objects"][0]
     if (
-        object_grid_position(player_spawn) != (118, 68)
-        or object_grid_position(revive_location) != (122, 66)
+        object_grid_position(player_spawn) != (60, 34)
+        or object_grid_position(revive_location) != (62, 34)
     ):
         raise SystemExit(
             "Monster Tamer main_1 spawn/revive placement must remain "
-            "spawn=(118, 68), revive=(122, 66)"
+            "spawn=(60, 34), revive=(62, 34)"
         )
 
     scenery_objects = layers["Scenery"].get("objects", [])
     expected_building_positions = {
-        "castle": (118, 28),
-        "tower-west": (91, 30),
-        "tower-east": (147, 30),
-        "tower-south": (65, 98),
-        "barracks": (103, 36),
-        "archery": (135, 36),
-        "monastery": (159, 78),
-        "house-1-a": (165, 56),
-        "house-1-b": (195, 70),
-        "house-2-a": (177, 52),
-        "house-2-b": (205, 58),
-        "house-3-a": (189, 62),
-        "house-3-b": (175, 72),
+        "castle": (27, 17),
+        "tower-west": (11, 43),
+        "tower-east": (105, 22),
+        "tower-south": (59, 61),
+        "barracks": (16, 20),
+        "archery": (39, 20),
+        "monastery": (73, 50),
+        "house-1-a": (79, 42),
+        "house-1-b": (104, 45),
+        "house-2-a": (87, 40),
+        "house-2-b": (88, 49),
+        "house-3-a": (98, 40),
+        "house-3-b": (96, 49),
     }
     building_positions = {
         entry.get("name"): object_grid_position(entry)
@@ -973,8 +973,16 @@ def verify_monster_tamer_map() -> None:
         )
         for entry in layers[layer_name].get("objects", [])
     }
+    landmark_trees = {
+        entry.get("name")
+        for entry in scenery_objects
+        if str(entry.get("name", "")).startswith("landmark-tree-")
+    }
     if (
         building_positions != expected_building_positions
+        or len(scenery_objects) != 152
+        or len(layers["Water-Scenery"].get("objects", [])) != 38
+        or landmark_trees != {f"landmark-tree-{value}" for value in range(1, 11)}
         or not scenery_asset_keys
         or any(
             not isinstance(key, str) or not key.startswith("TINY_SWORDS_")
@@ -983,7 +991,10 @@ def verify_monster_tamer_map() -> None:
     ):
         raise SystemExit(
             "Monster Tamer Tiny Swords scenery/building contract mismatch: "
-            f"buildings={building_positions}, assets={sorted(map(str, scenery_asset_keys))}"
+            f"buildings={building_positions}, scenery={len(scenery_objects)}, "
+            f"water={len(layers['Water-Scenery'].get('objects', []))}, "
+            f"landmarks={sorted(map(str, landmark_trees))}, "
+            f"assets={sorted(map(str, scenery_asset_keys))}"
         )
 
     invalid_visual_gids = {
@@ -1118,11 +1129,11 @@ def verify_documentation() -> None:
         "/monster-tamer/",
         "MONSTER_TAMER_DATA",
         "MonsterTamerPanel → ExpeditionPanel → WheelPanel",
-        "240×120",
+        "120×64",
         "Tilemap_color1",
         "Blue Buildings",
         "#47ABA9",
-        "81.6 秒",
+        "36.8 秒",
         "WASD",
         "虚拟摇杆",
     )
