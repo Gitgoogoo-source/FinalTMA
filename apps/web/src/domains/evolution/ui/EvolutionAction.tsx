@@ -62,11 +62,15 @@ export function EvolutionAction({
 
   return (
     <div className="evolution-action">
-      <Button disabled={reason !== null} onClick={() => setConfirming(true)}>
+      <Button
+        aria-label={reason ? `进化：${reason}` : "进化"}
+        disabled={reason !== null}
+        title={reason ?? undefined}
+        onClick={() => setConfirming(true)}
+      >
         <Dna />
         进化
       </Button>
-      {reason ? <small>{reason}</small> : null}
       {preview.isError ? (
         <button
           className="evolution-retry"

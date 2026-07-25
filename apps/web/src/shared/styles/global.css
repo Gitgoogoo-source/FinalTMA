@@ -4730,18 +4730,18 @@ input:focus {
   z-index: 2;
 }
 .app-shell .inventory-title-board {
-  width: 64%;
-  min-height: 72px;
-  padding: 11px 12px;
+  width: 56%;
+  min-height: 62px;
+  padding: 9px 10px;
   border: 1px solid rgba(54, 67, 75, 0.18);
-  border-radius: 20px;
+  border-radius: 17px;
   background: rgba(255, 255, 255, 0.9);
   box-shadow: 0 13px 28px rgba(54, 67, 75, 0.08);
   backdrop-filter: blur(16px);
 }
 .app-shell .inventory-title-board > span {
   color: var(--sprout-orange);
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 950;
   letter-spacing: 0.14em;
 }
@@ -4750,7 +4750,7 @@ input:focus {
   margin: 4px 0 0;
   overflow: hidden;
   color: #163246;
-  font-size: clamp(21px, 6.5vw, 29px);
+  font-size: clamp(19px, 5.7vw, 25px);
   font-style: italic;
   font-weight: 950;
   letter-spacing: -0.05em;
@@ -4791,22 +4791,22 @@ input:focus {
   object-fit: cover;
 }
 .app-shell .inventory-metric-grid {
-  width: 64%;
+  width: 56%;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
-  margin-top: 8px;
+  gap: 5px;
+  margin-top: 7px;
 }
 .app-shell .inventory-metric {
   min-width: 0;
-  min-height: 80px;
+  min-height: 70px;
   display: grid;
   justify-items: center;
   align-content: center;
-  gap: 3px;
-  padding: 6px 3px;
+  gap: 2px;
+  padding: 5px 2px;
   border: 1px solid rgba(54, 67, 75, 0.18);
-  border-radius: 16px;
+  border-radius: 14px;
   background: rgba(255, 255, 255, 0.92);
   box-shadow: 0 12px 24px rgba(54, 67, 75, 0.07);
   text-align: center;
@@ -4814,31 +4814,31 @@ input:focus {
 .app-shell .inventory-metric > span {
   overflow: hidden;
   color: #314957;
-  font-size: 8px;
+  font-size: 7px;
   font-weight: 900;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .app-shell .inventory-metric > i {
-  width: 30px;
-  height: 30px;
+  width: 26px;
+  height: 26px;
   display: grid;
   place-items: center;
   border: 2px solid #7e878b;
-  border-radius: 10px;
+  border-radius: 8px;
   color: #68747a;
   background: #f5f6f5;
   font-style: normal;
 }
 .app-shell .inventory-metric > i svg {
-  width: 17px;
-  height: 17px;
+  width: 14px;
+  height: 14px;
 }
 .app-shell .inventory-metric > strong {
   max-width: 100%;
   overflow: hidden;
   color: #17354a;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 950;
   line-height: 1;
   text-overflow: ellipsis;
@@ -4846,7 +4846,7 @@ input:focus {
 }
 .app-shell .inventory-metric > small {
   color: var(--sprout-orange);
-  font-size: 8px;
+  font-size: 7px;
   letter-spacing: 0.08em;
   line-height: 0.6;
 }
@@ -4875,40 +4875,43 @@ input:focus {
   border-color: #e66c8c;
 }
 .app-shell .inventory-quantity-summary {
-  width: 64%;
+  width: 56%;
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
-  margin-top: 6px;
+  gap: 3px;
+  margin-top: 5px;
 }
 .app-shell .inventory-quantity-summary > span {
-  padding: 3px 6px;
+  padding: 2px 5px;
   border: 1px solid rgba(54, 67, 75, 0.1);
   border-radius: 999px;
   color: #68747a;
   background: rgba(255, 255, 255, 0.92);
-  font-size: 8px;
+  font-size: 7px;
   font-weight: 800;
 }
 .app-shell .inventory-quantity-summary strong {
   color: #17354a;
 }
 .app-shell .inventory-action-grid {
-  width: 64%;
+  width: 56%;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
-  margin: 8px 0 0;
+  gap: 5px;
+  margin: 7px 0 0;
 }
 .app-shell .inventory-action-grid .button {
-  min-height: 38px;
+  min-height: 34px;
   border: 1px solid rgba(255, 122, 0, 0.34);
-  border-radius: 13px;
+  border-radius: 11px;
+  padding: 7px 9px;
   color: #17354a;
   background: rgba(255, 255, 255, 0.94);
   box-shadow: 0 10px 20px rgba(54, 67, 75, 0.07);
-  font-size: 11px;
+  font-size: 10px;
 }
 .app-shell .inventory-action-grid .button svg {
+  width: 15px;
+  height: 15px;
   color: var(--sprout-orange);
 }
 .app-shell .inventory-action-grid .button:disabled {
@@ -4922,18 +4925,9 @@ input:focus {
 }
 .app-shell .evolution-action {
   display: grid;
-  gap: 4px;
 }
 .app-shell .evolution-action > .button {
   width: 100%;
-}
-.app-shell .evolution-action > small {
-  min-height: 13px;
-  padding: 0 4px;
-  color: #8c4d25;
-  font-size: 6px;
-  line-height: 1.35;
-  text-align: center;
 }
 .app-shell .evolution-retry {
   min-height: 28px;
