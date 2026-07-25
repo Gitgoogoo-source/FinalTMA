@@ -4929,14 +4929,6 @@ input:focus {
 .app-shell .evolution-action > .button {
   width: 100%;
 }
-.app-shell .evolution-retry {
-  min-height: 28px;
-  border: 0;
-  color: #b85a12;
-  background: transparent;
-  font-size: 9px;
-  font-weight: 900;
-}
 .app-shell .inventory-thumbnail-viewport {
   margin-top: 12px;
   overflow-x: auto;
@@ -5940,43 +5932,238 @@ input:focus {
   font-size: 10px;
   font-weight: 800;
 }
-.evolution-route-preview {
+.evolution-fusion-preview {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 24px minmax(0, 1fr);
+  grid-template-columns:
+    minmax(64px, 0.85fr) 18px minmax(100px, 1.25fr) 18px
+    minmax(64px, 0.85fr);
+  grid-template-areas:
+    ". . material-one . ."
+    ". . connector-top . ."
+    "material-two connector-left target connector-right material-three";
+  grid-template-rows: auto 20px auto;
   align-items: center;
-  gap: 7px;
+  gap: 4px;
+  padding: 13px 8px;
+  border: 1px solid rgba(255, 122, 0, 0.12);
+  border-radius: 22px;
+  background:
+    radial-gradient(
+      circle at 50% 68%,
+      rgba(255, 156, 0, 0.14),
+      transparent 36%
+    ),
+    rgba(255, 255, 255, 0.68);
 }
-.evolution-route-preview > svg {
-  width: 22px;
+.evolution-material-slot {
+  width: 100%;
+  max-width: 96px;
+  min-width: 0;
+  margin: 0;
+  display: grid;
+  gap: 4px;
+  justify-self: center;
+  text-align: center;
+}
+.evolution-material-slot.material-one {
+  grid-area: material-one;
+}
+.evolution-material-slot.material-two {
+  grid-area: material-two;
+}
+.evolution-material-slot.material-three {
+  grid-area: material-three;
+}
+.evolution-material-slot .catalog-image,
+.evolution-material-slot .image-missing,
+.evolution-empty-material {
+  width: 100%;
+  aspect-ratio: 1;
+  height: auto;
+  border: 1px solid rgba(54, 67, 75, 0.1);
+  border-radius: 16px;
+  background: rgba(247, 246, 242, 0.88);
+}
+.evolution-material-slot.filled .catalog-image {
+  border-color: rgba(255, 122, 0, 0.22);
+  background: rgba(255, 248, 239, 0.92);
+  box-shadow: 0 9px 22px rgba(54, 67, 75, 0.09);
+}
+.evolution-empty-material {
+  display: grid;
+  place-items: center;
+  border-style: dashed;
+  color: #a5ada9;
+}
+.evolution-empty-material svg {
+  width: 25px;
+  height: 25px;
+}
+.evolution-material-slot figcaption {
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 850;
+  line-height: 1.2;
+}
+.evolution-connector {
+  width: 18px;
+  height: 18px;
   color: #f07816;
 }
-.evolution-route-preview article {
+.evolution-connector.connector-top {
+  grid-area: connector-top;
+  justify-self: center;
+}
+.evolution-connector.connector-left {
+  grid-area: connector-left;
+}
+.evolution-connector.connector-right {
+  grid-area: connector-right;
+}
+.evolution-target-card {
+  grid-area: target;
+  width: 100%;
+  max-width: 142px;
   min-width: 0;
   display: grid;
   gap: 4px;
+  justify-self: center;
   padding: 8px;
-  border: 1px solid rgba(54, 67, 75, 0.09);
-  border-radius: 15px;
-  background: rgba(54, 67, 75, 0.035);
+  border: 1px solid rgba(255, 122, 0, 0.24);
+  border-radius: 19px;
+  background: rgba(255, 252, 246, 0.96);
+  box-shadow:
+    0 14px 30px rgba(255, 122, 0, 0.13),
+    inset 0 1px 0 #fff;
   text-align: center;
 }
-.evolution-route-preview .catalog-image,
-.evolution-route-preview .image-missing {
+.evolution-target-card .catalog-image,
+.evolution-target-card .image-missing {
   width: 100%;
-  height: 104px;
+  aspect-ratio: 1;
+  height: auto;
+  border-radius: 14px;
+  background: rgba(255, 248, 239, 0.86);
 }
-.evolution-route-preview strong,
-.evolution-route-preview span,
-.evolution-route-preview small {
+.evolution-target-card strong,
+.evolution-target-card span,
+.evolution-target-card small {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.evolution-route-preview span,
-.evolution-route-preview small,
+.evolution-target-card strong {
+  color: #17354a;
+  font-size: 12px;
+}
+.evolution-target-card span,
+.evolution-target-card small,
 .evolution-risk-copy {
   color: var(--muted);
   font-size: 9px;
+}
+.evolution-target-card small {
+  color: var(--sprout-orange);
+  font-weight: 900;
+}
+.evolution-rule-summary {
+  display: grid;
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid rgba(54, 67, 75, 0.08);
+  border-radius: 17px;
+  background: rgba(54, 67, 75, 0.07);
+}
+.evolution-rule-summary > div {
+  min-height: 42px;
+  display: grid;
+  grid-template-columns: 22px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.9);
+}
+.evolution-rule-summary svg {
+  width: 18px;
+  height: 18px;
+  color: var(--sprout-orange);
+}
+.evolution-rule-summary span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+}
+.evolution-rule-summary strong {
+  color: #17354a;
+  font-size: 13px;
+  font-weight: 950;
+}
+.evolution-rule-summary .evolution-rarity-change {
+  grid-template-columns: 1fr 24px 1fr;
+  text-align: center;
+}
+.evolution-rarity-change span,
+.evolution-rarity-change strong {
+  font-size: 15px;
+}
+.evolution-rarity-change svg {
+  justify-self: center;
+}
+.evolution-quantity-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.evolution-quantity-heading > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.evolution-quantity-heading strong {
+  color: #17354a;
+  font-size: 12px;
+}
+.evolution-quantity-heading > strong {
+  flex: 0 0 auto;
+  color: var(--sprout-orange);
+}
+.evolution-quantity-heading span {
+  color: var(--muted);
+  font-size: 9px;
+}
+.evolution-risk-copy {
+  margin: 0;
+  line-height: 1.65;
+}
+.evolution-start-unavailable {
+  margin: 0;
+  padding: 9px 11px;
+  border: 1px solid rgba(54, 67, 75, 0.08);
+  border-radius: 12px;
+  color: #7b8580;
+  background: rgba(54, 67, 75, 0.045);
+  font-size: 10px;
+  font-weight: 800;
+  text-align: center;
+}
+@media (max-width: 350px) {
+  .evolution-confirmation-content {
+    padding-inline: 12px;
+  }
+  .evolution-fusion-preview {
+    grid-template-columns:
+      minmax(58px, 0.85fr) 16px minmax(92px, 1.2fr) 16px
+      minmax(58px, 0.85fr);
+    padding-inline: 5px;
+  }
+  .evolution-connector {
+    width: 16px;
+    height: 16px;
+  }
+  .evolution-material-slot figcaption {
+    font-size: 7px;
+  }
 }
 .evolution-success-target {
   display: grid;

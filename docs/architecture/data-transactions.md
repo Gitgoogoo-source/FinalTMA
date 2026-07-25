@@ -10,7 +10,7 @@
 
 库存占用统一调用 `inventory.reserve`：先锁定用户持有行，再重算全部活跃 reservation，最后写入出售、远征或 Mint 占用。库存扣减不得低于仍活跃的 reservation；市场成交和 Mint 成功先消费对应 reservation，再扣减总量。市场上架和按模板全部下架使用同一用户级事务 advisory lock；锁内按仍有剩余数量的不同模板计数，已有 10 种时只允许向现有模板追加。全部下架再按 FIFO 稳定顺序锁定本人该模板的全部有效挂单，原子取消并释放其剩余 reservation；没有有效挂单也以释放 0 的结果幂等成功。支付创建按用户和商品类型加事务锁，Mint 按用户和模板加事务锁并受活跃唯一约束，邀请奖励按邀请人加事务锁。
 
-操作 UUID 同时是 `Idempotency-Key` 与 `operation_id`。数据库对规范化请求计算 SHA-256；同键同请求回放持久结果，同键不同请求返回 `IDEMPOTENCY_KEY_REUSED`。开盒、转盘与进化结果的确认时间同原操作保存；领域专用确认 RPC 锁定当前用户、匹配固定 `use_case` 和终态，并只写入首次确认时间，重复与并发确认不改变结果。进化预览 RPC 只读取目录、真实可用数量、Fgems 和路线保底；最终结算仍由 `api.inventory_evolve` 在单一事务内重新校验并裁决。市场购买响应不包含卖家身份；库存满足 `total = available + listed + trading + minting + expedition`。
+操作 UUID 同时是 `Idempotency-Key` 与 `operation_id`。数据库对规范化请求计算 SHA-256；同键同请求回放持久结果，同键不同请求返回 `IDEMPOTENCY_KEY_REUSED`。开盒、转盘与进化结果的确认时间同原操作保存；领域专用确认 RPC 锁定当前用户、匹配固定 `use_case` 和终态，并只写入首次确认时间，重复与并发确认不改变结果。当前 Web 打开进化确认页不调用预览 RPC；兼容保留的进化预览 RPC 仍只读取目录、真实可用数量、Fgems 和路线保底。无论前端静态预检查结果如何，最终结算都由 `api.inventory_evolve` 在单一事务内重新校验并裁决。市场购买响应不包含卖家身份；库存满足 `total = available + listed + trading + minting + expedition`。
 
 `api.album_get` 是图鉴唯一读取模型：在同一次数据库读取中按 `catalog.chains.global_order` 聚合固定 70 条链和每链 3 个模板节点，并直接返回 `album.nodes` 的节点级永久点亮事实、`inventory.holdings.quantity` 的当前拥有总数、`album.rewards` 的领取事实以及完成链、可领取汇总。Web 不再联接公开目录补节点，也不得用链条点亮数量推断节点状态。`album.unlock_template` 只在节点主键首次插入成功时推进当日点亮任务，并以“用户 + 链”事务锁串行裁决第三个显式节点、仅推进一次完成链任务；所有合法获得方式共用这一事务边界。`api.album_claim` 通过操作幂等记录、`album.rewards (user_id, chain_id)` 主键、Fgems 账本唯一写入和同一数据库事务保证并发领取最多成功一次。
 

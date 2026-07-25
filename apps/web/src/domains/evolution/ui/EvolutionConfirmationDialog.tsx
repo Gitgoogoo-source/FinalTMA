@@ -1,19 +1,31 @@
-import { ArrowRight, ShieldCheck } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowLeft,
+  ArrowRight,
+  Gem,
+  PackageOpen,
+  ShieldCheck,
+} from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import type { RouteOutput } from "@pokepets/api-contracts/app";
 
 import {
-  Badge,
   Button,
   CatalogImage,
   QuantityControl,
 } from "../../../shared/ui/index.tsx";
+import type { EvolutionRarity, EvolutionRoute } from "../config.ts";
 
-type Preview = RouteOutput<"inventory.evolution_preview">;
-type Rarity = Preview["source"]["rarity"];
+type EvolutionSource = {
+  template_id: string;
+  name: string;
+  rarity: EvolutionRarity;
+  stage: number;
+  available: number;
+  image_thumbnail_path: string;
+};
 
-const rarityLabels: Record<Rarity, string> = {
+const rarityLabels: Record<EvolutionRarity, string> = {
   common: "普通",
   rare: "稀有",
   epic: "史诗",
@@ -22,46 +34,28 @@ const rarityLabels: Record<Rarity, string> = {
 };
 
 export function EvolutionConfirmationDialog({
-  preview,
+  source,
+  route,
+  availableFgems,
   onCancel,
   onConfirm,
 }: {
-  preview: Preview;
+  source: EvolutionSource;
+  route: EvolutionRoute;
+  availableFgems: number | undefined;
   onCancel(): void;
   onConfirm(quantity: number): void;
 }): ReactNode {
-  const { target, pity, success_rate_percent: successRate } = preview;
-  if (!preview.eligibility.eligible || !target || !pity || !successRate)
-    return null;
-  const maxAttempts = Math.min(
-    Math.floor(preview.materials.available / 3),
-    Math.floor(preview.fgems.available / (preview.fgems.cost ?? Infinity)),
-  );
+  const materialAttempts = Math.floor(source.available / 3);
+  const affordableAttempts =
+    availableFgems === undefined
+      ? 0
+      : Math.floor(availableFgems / route.fgems_cost);
+  const maxAttempts = Math.min(materialAttempts, affordableAttempts);
   const maxQuantity = maxAttempts * 3;
-  return (
-    <EvolutionConfirmationContent
-      preview={preview}
-      maxQuantity={maxQuantity}
-      onCancel={onCancel}
-      onConfirm={onConfirm}
-    />
-  );
-}
-
-function EvolutionConfirmationContent({
-  preview,
-  maxQuantity,
-  onCancel,
-  onConfirm,
-}: {
-  preview: Preview;
-  maxQuantity: number;
-  onCancel(): void;
-  onConfirm(quantity: number): void;
-}): ReactNode {
-  const { target, pity, success_rate_percent: successRate } = preview;
-  const [quantity, setQuantity] = useState(3);
+  const [requestedQuantity, setRequestedQuantity] = useState(3);
   const dialog = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const rootOverflow = document.documentElement.style.overflow;
     const bodyOverflow = document.body.style.overflow;
@@ -73,13 +67,30 @@ function EvolutionConfirmationContent({
       document.body.style.overflow = bodyOverflow;
     };
   }, []);
-  if (!target || !pity || !successRate || !preview.fgems.cost) return null;
+
+  const quantity =
+    maxQuantity < 3
+      ? 3
+      : requestedQuantity > maxQuantity
+        ? maxQuantity
+        : requestedQuantity;
+  const attempts =
+    Number.isInteger(quantity) && quantity >= 3 && quantity % 3 === 0
+      ? quantity / 3
+      : 0;
+  const totalCost = attempts * route.fgems_cost;
   const valid =
-    Number.isInteger(quantity) &&
-    quantity >= 3 &&
-    quantity <= maxQuantity &&
-    quantity % 3 === 0;
-  const attempts = valid ? quantity / 3 : 0;
+    attempts >= 1 &&
+    quantity <= source.available &&
+    availableFgems !== undefined &&
+    totalCost <= availableFgems;
+  const unavailableReason = startUnavailableReason({
+    available: source.available,
+    availableFgems,
+    cost: route.fgems_cost,
+    valid,
+  });
+
   return createPortal(
     <div className="app-shell modal-backdrop evolution-confirmation-backdrop">
       <div
@@ -98,81 +109,77 @@ function EvolutionConfirmationContent({
         <header>
           <ShieldCheck aria-hidden="true" />
           <div>
-            <small>进化结果不可撤销</small>
-            <h2 id="evolution-confirmation-title">确认进化该藏品？</h2>
+            <small>每 3 个相同藏品进化 1 次</small>
+            <h2 id="evolution-confirmation-title">藏品进化</h2>
           </div>
         </header>
+
         <div className="evolution-confirmation-content">
-          <div className="evolution-route-preview">
-            <EvolutionTemplateCard
-              template={preview.source}
-              label={`材料藏品 ×${valid ? quantity : 0}`}
-            />
-            <ArrowRight aria-hidden="true" />
-            <EvolutionTemplateCard template={target} label="每次成功获得 ×1" />
+          <EvolutionFusionPreview source={source} route={route} />
+
+          <section className="evolution-rule-summary" aria-label="进化规则">
+            <div className="evolution-rarity-change">
+              <span>{rarityLabels[source.rarity]}</span>
+              <ArrowRight aria-hidden="true" />
+              <strong>{rarityLabels[route.target.rarity]}</strong>
+            </div>
+            <div>
+              <ShieldCheck aria-hidden="true" />
+              <span>基础成功率</span>
+              <strong>{route.success_rate_percent}%</strong>
+            </div>
+            <div>
+              <Gem aria-hidden="true" />
+              <span>预计消耗</span>
+              <strong>{totalCost} Fgems</strong>
+            </div>
+          </section>
+
+          <div className="evolution-quantity-heading">
+            <div>
+              <strong>批量进化</strong>
+              <span>当前可用 ×{source.available} · 每次使用 3 个</span>
+            </div>
+            <strong>{attempts} 次</strong>
           </div>
           <QuantityControl
             label="进化材料数量"
             value={quantity}
             min={3}
-            max={maxQuantity}
+            max={Math.max(3, maxQuantity)}
             step={3}
-            onChange={setQuantity}
+            disabled={maxQuantity < 3}
+            onChange={setRequestedQuantity}
           />
-          <dl className="result-summary">
-            <div>
-              <dt>当前可用数量</dt>
-              <dd>{preview.materials.available}</dd>
-            </div>
-            <div>
-              <dt>基础成功率</dt>
-              <dd>{successRate}%</dd>
-            </div>
-            <div>
-              <dt>进化次数</dt>
-              <dd>{attempts}</dd>
-            </div>
-            <div>
-              <dt>预计消耗</dt>
-              <dd>{valid ? preview.fgems.cost * attempts : 0} Fgems</dd>
-            </div>
-            <div>
-              <dt>当前 Fgems</dt>
-              <dd>{preview.fgems.available}</dd>
-            </div>
-            <div>
-              <dt>失败损耗</dt>
-              <dd>扣材料 ×2 与 Fgems，保留材料 ×1</dd>
-            </div>
-            <div>
-              <dt>路线保底</dt>
-              <dd>
-                已连续失败 {pity.failure_count} 次 · 第 {pity.guarantee_attempt}{" "}
-                次必成
-              </dd>
-            </div>
-            <div>
-              <dt>距离必成</dt>
-              <dd>{pityDistanceLabel(pity)}</dd>
-            </div>
-          </dl>
-          {pity.guaranteed_this_attempt ? (
-            <Badge>本次进化已触发保底，必定成功</Badge>
-          ) : null}
+
           <p className="evolution-risk-copy">
-            每 3 个材料独立结算一次，并按顺序推进保底。每次成功扣除 3
-            个材料；失败扣除 2 个并保留 1 个。整批结算全部写入或全部不写入。
+            基础成功率不包含当前路线保底；提交后由系统按真实保底、材料和 Fgems
+            状态裁决。每次失败扣除 2 个材料并保留 1
+            个，整批变化全部写入或全部不写入。
           </p>
-          {!valid ? (
-            <p role="alert">请选择 3 到当前可用上限之间的 3 的整数倍</p>
+          {unavailableReason ? (
+            <p
+              id="evolution-start-unavailable"
+              className="evolution-start-unavailable"
+              role="status"
+            >
+              {unavailableReason}
+            </p>
           ) : null}
         </div>
+
         <footer className="evolution-confirmation-actions">
           <Button className="secondary" onClick={onCancel}>
             取消
           </Button>
-          <Button disabled={!valid} onClick={() => onConfirm(quantity)}>
-            确认进化 {attempts} 次
+          <Button
+            disabled={!valid}
+            aria-describedby={
+              unavailableReason ? "evolution-start-unavailable" : undefined
+            }
+            onClick={() => onConfirm(quantity)}
+          >
+            开始进化
           </Button>
         </footer>
       </div>
@@ -181,32 +188,97 @@ function EvolutionConfirmationContent({
   );
 }
 
-function EvolutionTemplateCard({
-  template,
-  label,
+function EvolutionFusionPreview({
+  source,
+  route,
 }: {
-  template: Preview["source"];
-  label: string;
+  source: EvolutionSource;
+  route: EvolutionRoute;
 }): ReactNode {
   return (
-    <article>
-      <CatalogImage
-        path={template.image_thumbnail_path}
-        alt={template.name}
-        variant="thumbnail"
-        loading="eager"
+    <section
+      className="evolution-fusion-preview"
+      aria-label={`使用 3 个${source.name}进化为${route.target.name}`}
+    >
+      <MaterialSlot source={source} index={0} className="material-one" />
+      <ArrowDown
+        className="evolution-connector connector-top"
+        aria-hidden="true"
       />
-      <strong>{template.name}</strong>
-      <span>
-        {rarityLabels[template.rarity]} · 第 {template.stage} 阶
-      </span>
-      <small>{label}</small>
-    </article>
+      <MaterialSlot source={source} index={1} className="material-two" />
+      <ArrowRight
+        className="evolution-connector connector-left"
+        aria-hidden="true"
+      />
+      <article className="evolution-target-card">
+        <CatalogImage
+          path={route.target.image_thumbnail_path}
+          alt={route.target.name}
+          variant="thumbnail"
+          loading="eager"
+        />
+        <small>目标藏品预览</small>
+        <strong>{route.target.name}</strong>
+        <span>
+          {rarityLabels[route.target.rarity]} · 第 {route.target.stage} 阶
+        </span>
+      </article>
+      <ArrowLeft
+        className="evolution-connector connector-right"
+        aria-hidden="true"
+      />
+      <MaterialSlot source={source} index={2} className="material-three" />
+    </section>
   );
 }
 
-function pityDistanceLabel(pity: NonNullable<Preview["pity"]>): string {
-  if (pity.guaranteed_this_attempt) return "本次必定成功";
-  if (pity.failures_until_guaranteed === 0) return "下次进化必定成功";
-  return `再失败 ${pity.failures_until_guaranteed} 次后，下次进化必定成功`;
+function MaterialSlot({
+  source,
+  index,
+  className,
+}: {
+  source: EvolutionSource;
+  index: number;
+  className: string;
+}): ReactNode {
+  const filled = source.available > index;
+  return (
+    <figure
+      className={`evolution-material-slot ${className} ${filled ? "filled" : "empty"}`}
+      aria-label={`材料藏品 ${index + 1}：${filled ? source.name : "空缺"}`}
+    >
+      {filled ? (
+        <CatalogImage
+          path={source.image_thumbnail_path}
+          alt=""
+          variant="thumbnail"
+          loading="eager"
+        />
+      ) : (
+        <span className="evolution-empty-material" aria-hidden="true">
+          <PackageOpen />
+        </span>
+      )}
+      <figcaption>材料藏品 {index + 1}</figcaption>
+    </figure>
+  );
+}
+
+function startUnavailableReason({
+  available,
+  availableFgems,
+  cost,
+  valid,
+}: {
+  available: number;
+  availableFgems: number | undefined;
+  cost: number;
+  valid: boolean;
+}): string | null {
+  if (available < 3)
+    return `还缺 ${3 - available} 个相同藏品，集齐 3 个后即可开始`;
+  if (availableFgems === undefined) return "正在读取当前 Fgems 余额";
+  if (availableFgems < cost) return `Fgems 不足，本次至少需要 ${cost} Fgems`;
+  if (!valid) return "材料数量必须是 3 的正整数倍";
+  return null;
 }

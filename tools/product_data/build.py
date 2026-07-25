@@ -19,8 +19,17 @@ ROOT = Path(__file__).resolve().parents[2]
 PRODUCT = ROOT / "docs/product/功能说明文档.md"
 MIGRATIONS = ROOT / "supabase/migrations"
 MANIFEST = ROOT / "generated/catalog/catalog-v1.json"
+WEB_EVOLUTION_MANIFEST = (
+    ROOT / "apps/web/src/domains/evolution/evolution-catalog-v1.json"
+)
 ASSET_ROOT = ROOT / "apps/web/public/assets"
 PRODUCT_DATA_CHECKSUM_BOUNDARY = "<!-- PRODUCT_DATA_CHECKSUM_BOUNDARY -->"
+EVOLUTION_RULES = {
+    "rare": {"success_rate_percent": 95, "fgems_cost": 30},
+    "epic": {"success_rate_percent": 60, "fgems_cost": 120},
+    "legendary": {"success_rate_percent": 35, "fgems_cost": 500},
+    "mythic": {"success_rate_percent": 20, "fgems_cost": 2000},
+}
 
 
 def split_product_document(markdown: str) -> tuple[str, str]:
@@ -70,6 +79,37 @@ def build_sql(chains: list[dict[str, object]], templates: list[dict[str, object]
     return "".join(sections)
 
 
+def build_web_evolution_manifest(
+    templates: list[dict[str, object]],
+) -> dict[str, object]:
+    by_chain_stage = {
+        (template["chain_id"], template["stage"]): template
+        for template in templates
+    }
+    routes = []
+    for source in templates:
+        target = by_chain_stage.get((source["chain_id"], int(source["stage"]) + 1))
+        if target is None:
+            continue
+        rule = EVOLUTION_RULES[str(target["rarity"])]
+        routes.append(
+            {
+                "source_template_id": source["id"],
+                "target": {
+                    "template_id": target["id"],
+                    "name": target["name"],
+                    "rarity": target["rarity"],
+                    "stage": target["stage"],
+                    "image_thumbnail_path": target["image_thumbnail_path"],
+                },
+                **rule,
+            }
+        )
+    if len(routes) != 140:
+        raise RuntimeError(f"Expected 140 evolution routes, got {len(routes)}")
+    return {"version": "v1", "routes": routes}
+
+
 def asset_files(templates: list[dict[str, object]]) -> list[Path]:
     required = [
         ROOT / "apps/web/public" / str(item[key]).lstrip("/")
@@ -115,6 +155,11 @@ def main() -> None:
     parser.add_argument("--pin-assets", action="store_true")
     parser.add_argument("--migration-path", type=Path, default=product_data_migration())
     parser.add_argument("--manifest-path", type=Path, default=MANIFEST)
+    parser.add_argument(
+        "--web-evolution-manifest-path",
+        type=Path,
+        default=WEB_EVOLUTION_MANIFEST,
+    )
     args = parser.parse_args()
     if args.check_assets and args.pin_assets:
         raise SystemExit("Choose either --check-assets or --pin-assets")
@@ -125,10 +170,20 @@ def main() -> None:
     chains, templates = catalog.parse(product_data_source)
     args.migration_path.parent.mkdir(parents=True, exist_ok=True)
     args.manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    args.web_evolution_manifest_path.parent.mkdir(parents=True, exist_ok=True)
     args.migration_path.write_text(build_sql(chains, templates, checksum), encoding="utf-8")
     previous = json.loads(args.manifest_path.read_text(encoding="utf-8")) if args.manifest_path.is_file() else {}
     assets = previous.get("assets", {}) if previous.get("product_checksum") == checksum else {}
     args.manifest_path.write_text(json.dumps({"version": "v1", "product_checksum": checksum, "chains": chains, "templates": templates, "assets": assets}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    args.web_evolution_manifest_path.write_text(
+        json.dumps(
+            build_web_evolution_manifest(templates),
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
     if args.pin_assets:
         assets = pin_assets(templates)
         args.manifest_path.write_text(json.dumps({"version": "v1", "product_checksum": checksum, "chains": chains, "templates": templates, "assets": assets}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

@@ -14,6 +14,9 @@ from build import split_product_document
 
 ROOT = Path(__file__).resolve().parents[2]
 MANIFEST = ROOT / "generated/catalog/catalog-v1.json"
+WEB_EVOLUTION_MANIFEST = (
+    ROOT / "apps/web/src/domains/evolution/evolution-catalog-v1.json"
+)
 PRODUCT = ROOT / "docs/product/功能说明文档.md"
 
 
@@ -36,15 +39,22 @@ def main() -> None:
         directory = Path(temporary)
         migration = directory / migration_source.name
         manifest = directory / "catalog-v1.json"
+        web_evolution_manifest = directory / "evolution-catalog-v1.json"
         shutil.copy2(MANIFEST, manifest)
         subprocess.run([
             "python3", "tools/product_data/build.py",
             "--migration-path", str(migration),
             "--manifest-path", str(manifest),
+            "--web-evolution-manifest-path", str(web_evolution_manifest),
         ], cwd=ROOT, check=True)
         drift = [name for name, expected, actual in [
             (migration_source.name, migration_source, migration),
             ("generated/catalog/catalog-v1.json", MANIFEST, manifest),
+            (
+                "apps/web/src/domains/evolution/evolution-catalog-v1.json",
+                WEB_EVOLUTION_MANIFEST,
+                web_evolution_manifest,
+            ),
         ] if expected.read_bytes() != actual.read_bytes()]
         if drift:
             raise SystemExit("Product data drift detected: " + ", ".join(drift))

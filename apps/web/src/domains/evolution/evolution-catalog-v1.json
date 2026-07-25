@@ -1,0 +1,1685 @@
+{
+  "version": "v1",
+  "routes": [
+    {
+      "source_template_id": "PET-N-001-1",
+      "target": {
+        "template_id": "PET-N-001-2",
+        "name": "焰鬃狐",
+        "rarity": "rare",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-001-2.webp"
+      },
+      "success_rate_percent": 95,
+      "fgems_cost": 30
+    },
+    {
+      "source_template_id": "PET-N-001-2",
+      "target": {
+        "template_id": "PET-N-001-3",
+        "name": "赤曜火狐",
+        "rarity": "epic",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-001-3.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-N-002-1",
+      "target": {
+        "template_id": "PET-N-002-2",
+        "name": "潮纹獭",
+        "rarity": "rare",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-002-2.webp"
+      },
+      "success_rate_percent": 95,
+      "fgems_cost": 30
+    },
+    {
+      "source_template_id": "PET-N-002-2",
+      "target": {
+        "template_id": "PET-N-002-3",
+        "name": "沧浪王獭",
+        "rarity": "epic",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-002-3.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-N-003-1",
+      "target": {
+        "template_id": "PET-N-003-2",
+        "name": "森跃兔",
+        "rarity": "rare",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-003-2.webp"
+      },
+      "success_rate_percent": 95,
+      "fgems_cost": 30
+    },
+    {
+      "source_template_id": "PET-N-003-2",
+      "target": {
+        "template_id": "PET-N-003-3",
+        "name": "翠冠灵兔",
+        "rarity": "epic",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-003-3.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-N-004-1",
+      "target": {
+        "template_id": "PET-N-004-2",
+        "name": "岩垒龟",
+        "rarity": "rare",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-004-2.webp"
+      },
+      "success_rate_percent": 95,
+      "fgems_cost": 30
+    },
+    {
+      "source_template_id": "PET-N-004-2",
+      "target": {
+        "template_id": "PET-N-004-3",
+        "name": "玄岳巨龟",
+        "rarity": "epic",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-004-3.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-N-005-1",
+      "target": {
+        "template_id": "PET-N-005-2",
+        "name": "岚翼雀",
+        "rarity": "rare",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-005-2.webp"
+      },
+      "success_rate_percent": 95,
+      "fgems_cost": 30
+    },
+    {
+      "source_template_id": "PET-N-005-2",
+      "target": {
+        "template_id": "PET-N-005-3",
+        "name": "青穹翔雀",
+        "rarity": "epic",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-005-3.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-N-006-1",
+      "target": {
+        "template_id": "PET-N-006-2",
+        "name": "月灯蛾",
+        "rarity": "rare",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-006-2.webp"
+      },
+      "success_rate_percent": 95,
+      "fgems_cost": 30
+    },
+    {
+      "source_template_id": "PET-N-006-2",
+      "target": {
+        "template_id": "PET-N-006-3",
+        "name": "辉幕幻蛾",
+        "rarity": "epic",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-006-3.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-N-007-1",
+      "target": {
+        "template_id": "PET-N-007-2",
+        "name": "霆尾鼠",
+        "rarity": "rare",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-007-2.webp"
+      },
+      "success_rate_percent": 95,
+      "fgems_cost": 30
+    },
+    {
+      "source_template_id": "PET-N-007-2",
+      "target": {
+        "template_id": "PET-N-007-3",
+        "name": "雷极迅鼠",
+        "rarity": "epic",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-007-3.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-N-008-1",
+      "target": {
+        "template_id": "PET-N-008-2",
+        "name": "漠脊蜥",
+        "rarity": "rare",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-008-2.webp"
+      },
+      "success_rate_percent": 95,
+      "fgems_cost": 30
+    },
+    {
+      "source_template_id": "PET-N-008-2",
+      "target": {
+        "template_id": "PET-N-008-3",
+        "name": "金尘龙蜥",
+        "rarity": "epic",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-008-3.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-N-009-1",
+      "target": {
+        "template_id": "PET-N-009-2",
+        "name": "冰冠企鹅",
+        "rarity": "rare",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-009-2.webp"
+      },
+      "success_rate_percent": 95,
+      "fgems_cost": 30
+    },
+    {
+      "source_template_id": "PET-N-009-2",
+      "target": {
+        "template_id": "PET-N-009-3",
+        "name": "极光帝企鹅",
+        "rarity": "epic",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-009-3.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-N-010-1",
+      "target": {
+        "template_id": "PET-N-010-2",
+        "name": "翠拳熊",
+        "rarity": "rare",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-010-2.webp"
+      },
+      "success_rate_percent": 95,
+      "fgems_cost": 30
+    },
+    {
+      "source_template_id": "PET-N-010-2",
+      "target": {
+        "template_id": "PET-N-010-3",
+        "name": "青竹武熊",
+        "rarity": "epic",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-010-3.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-N-011-1",
+      "target": {
+        "template_id": "PET-N-011-2",
+        "name": "礁甲蟹",
+        "rarity": "rare",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-011-2.webp"
+      },
+      "success_rate_percent": 95,
+      "fgems_cost": 30
+    },
+    {
+      "source_template_id": "PET-N-011-2",
+      "target": {
+        "template_id": "PET-N-011-3",
+        "name": "赤潮巨蟹",
+        "rarity": "epic",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-011-3.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-N-012-1",
+      "target": {
+        "template_id": "PET-N-012-2",
+        "name": "花冠鹿",
+        "rarity": "rare",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-012-2.webp"
+      },
+      "success_rate_percent": 95,
+      "fgems_cost": 30
+    },
+    {
+      "source_template_id": "PET-N-012-2",
+      "target": {
+        "template_id": "PET-N-012-3",
+        "name": "森庭圣鹿",
+        "rarity": "epic",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-012-3.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-N-013-1",
+      "target": {
+        "template_id": "PET-N-013-2",
+        "name": "霭角羊",
+        "rarity": "rare",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-013-2.webp"
+      },
+      "success_rate_percent": 95,
+      "fgems_cost": 30
+    },
+    {
+      "source_template_id": "PET-N-013-2",
+      "target": {
+        "template_id": "PET-N-013-3",
+        "name": "天幕云羊",
+        "rarity": "epic",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-013-3.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-N-014-1",
+      "target": {
+        "template_id": "PET-N-014-2",
+        "name": "墨旋鱿",
+        "rarity": "rare",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-014-2.webp"
+      },
+      "success_rate_percent": 95,
+      "fgems_cost": 30
+    },
+    {
+      "source_template_id": "PET-N-014-2",
+      "target": {
+        "template_id": "PET-N-014-3",
+        "name": "深海墨皇",
+        "rarity": "epic",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-014-3.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-N-015-1",
+      "target": {
+        "template_id": "PET-N-015-2",
+        "name": "锻角甲",
+        "rarity": "rare",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-015-2.webp"
+      },
+      "success_rate_percent": 95,
+      "fgems_cost": 30
+    },
+    {
+      "source_template_id": "PET-N-015-2",
+      "target": {
+        "template_id": "PET-N-015-3",
+        "name": "熔金战甲",
+        "rarity": "epic",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-015-3.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-N-016-1",
+      "target": {
+        "template_id": "PET-N-016-2",
+        "name": "荷冠蛙",
+        "rarity": "rare",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-016-2.webp"
+      },
+      "success_rate_percent": 95,
+      "fgems_cost": 30
+    },
+    {
+      "source_template_id": "PET-N-016-2",
+      "target": {
+        "template_id": "PET-N-016-3",
+        "name": "青泉灵蛙",
+        "rarity": "epic",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-016-3.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-N-017-1",
+      "target": {
+        "template_id": "PET-N-017-2",
+        "name": "灰焰浣熊",
+        "rarity": "rare",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-017-2.webp"
+      },
+      "success_rate_percent": 95,
+      "fgems_cost": 30
+    },
+    {
+      "source_template_id": "PET-N-017-2",
+      "target": {
+        "template_id": "PET-N-017-3",
+        "name": "焚林火浣",
+        "rarity": "epic",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-017-3.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-N-018-1",
+      "target": {
+        "template_id": "PET-N-018-2",
+        "name": "霜翼鸮",
+        "rarity": "rare",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-018-2.webp"
+      },
+      "success_rate_percent": 95,
+      "fgems_cost": 30
+    },
+    {
+      "source_template_id": "PET-N-018-2",
+      "target": {
+        "template_id": "PET-N-018-3",
+        "name": "极夜雪鸮",
+        "rarity": "epic",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-018-3.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-N-019-1",
+      "target": {
+        "template_id": "PET-N-019-2",
+        "name": "金巢蜂",
+        "rarity": "rare",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-019-2.webp"
+      },
+      "success_rate_percent": 95,
+      "fgems_cost": 30
+    },
+    {
+      "source_template_id": "PET-N-019-2",
+      "target": {
+        "template_id": "PET-N-019-3",
+        "name": "琥珀蜂后",
+        "rarity": "epic",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-019-3.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-N-020-1",
+      "target": {
+        "template_id": "PET-N-020-2",
+        "name": "陶甲豚",
+        "rarity": "rare",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-020-2.webp"
+      },
+      "success_rate_percent": 95,
+      "fgems_cost": 30
+    },
+    {
+      "source_template_id": "PET-N-020-2",
+      "target": {
+        "template_id": "PET-N-020-3",
+        "name": "地脉岩豚",
+        "rarity": "epic",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-020-3.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-N-021-1",
+      "target": {
+        "template_id": "PET-N-021-2",
+        "name": "沼纹猫",
+        "rarity": "rare",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-021-2.webp"
+      },
+      "success_rate_percent": 95,
+      "fgems_cost": 30
+    },
+    {
+      "source_template_id": "PET-N-021-2",
+      "target": {
+        "template_id": "PET-N-021-3",
+        "name": "碧泽灵猫",
+        "rarity": "epic",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-021-3.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-N-022-1",
+      "target": {
+        "template_id": "PET-N-022-2",
+        "name": "旭冠鸟",
+        "rarity": "rare",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-022-2.webp"
+      },
+      "success_rate_percent": 95,
+      "fgems_cost": 30
+    },
+    {
+      "source_template_id": "PET-N-022-2",
+      "target": {
+        "template_id": "PET-N-022-3",
+        "name": "曦光金翎",
+        "rarity": "epic",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-022-3.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-N-023-1",
+      "target": {
+        "template_id": "PET-N-023-2",
+        "name": "暮翼蝠",
+        "rarity": "rare",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-023-2.webp"
+      },
+      "success_rate_percent": 95,
+      "fgems_cost": 30
+    },
+    {
+      "source_template_id": "PET-N-023-2",
+      "target": {
+        "template_id": "PET-N-023-3",
+        "name": "蚀月夜蝠",
+        "rarity": "epic",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-023-3.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-N-024-1",
+      "target": {
+        "template_id": "PET-N-024-2",
+        "name": "松针飞鼠",
+        "rarity": "rare",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-024-2.webp"
+      },
+      "success_rate_percent": 95,
+      "fgems_cost": 30
+    },
+    {
+      "source_template_id": "PET-N-024-2",
+      "target": {
+        "template_id": "PET-N-024-3",
+        "name": "森藏王鼠",
+        "rarity": "epic",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-024-3.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-N-025-1",
+      "target": {
+        "template_id": "PET-N-025-2",
+        "name": "镜海水母",
+        "rarity": "rare",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-025-2.webp"
+      },
+      "success_rate_percent": 95,
+      "fgems_cost": 30
+    },
+    {
+      "source_template_id": "PET-N-025-2",
+      "target": {
+        "template_id": "PET-N-025-3",
+        "name": "虹幕水母",
+        "rarity": "epic",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-025-3.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-N-026-1",
+      "target": {
+        "template_id": "PET-N-026-2",
+        "name": "霜梅猞",
+        "rarity": "rare",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-026-2.webp"
+      },
+      "success_rate_percent": 95,
+      "fgems_cost": 30
+    },
+    {
+      "source_template_id": "PET-N-026-2",
+      "target": {
+        "template_id": "PET-N-026-3",
+        "name": "寒梅影猞",
+        "rarity": "epic",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-026-3.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-N-027-1",
+      "target": {
+        "template_id": "PET-N-027-2",
+        "name": "云脊牦",
+        "rarity": "rare",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-027-2.webp"
+      },
+      "success_rate_percent": 95,
+      "fgems_cost": 30
+    },
+    {
+      "source_template_id": "PET-N-027-2",
+      "target": {
+        "template_id": "PET-N-027-3",
+        "name": "雪岭天牦",
+        "rarity": "epic",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-027-3.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-N-028-1",
+      "target": {
+        "template_id": "PET-N-028-2",
+        "name": "熔纹螈",
+        "rarity": "rare",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-028-2.webp"
+      },
+      "success_rate_percent": 95,
+      "fgems_cost": 30
+    },
+    {
+      "source_template_id": "PET-N-028-2",
+      "target": {
+        "template_id": "PET-N-028-3",
+        "name": "火山帝螈",
+        "rarity": "epic",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-028-3.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-N-029-1",
+      "target": {
+        "template_id": "PET-N-029-2",
+        "name": "莲冠鸭",
+        "rarity": "rare",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-029-2.webp"
+      },
+      "success_rate_percent": 95,
+      "fgems_cost": 30
+    },
+    {
+      "source_template_id": "PET-N-029-2",
+      "target": {
+        "template_id": "PET-N-029-3",
+        "name": "碧池莲皇",
+        "rarity": "epic",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-029-3.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-N-030-1",
+      "target": {
+        "template_id": "PET-N-030-2",
+        "name": "矿脊鼹",
+        "rarity": "rare",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-030-2.webp"
+      },
+      "success_rate_percent": 95,
+      "fgems_cost": 30
+    },
+    {
+      "source_template_id": "PET-N-030-2",
+      "target": {
+        "template_id": "PET-N-030-3",
+        "name": "晶窟巨鼹",
+        "rarity": "epic",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-030-3.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-N-031-1",
+      "target": {
+        "template_id": "PET-N-031-2",
+        "name": "香雾狸",
+        "rarity": "rare",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-031-2.webp"
+      },
+      "success_rate_percent": 95,
+      "fgems_cost": 30
+    },
+    {
+      "source_template_id": "PET-N-031-2",
+      "target": {
+        "template_id": "PET-N-031-3",
+        "name": "茶境灵狸",
+        "rarity": "epic",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-031-3.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-N-032-1",
+      "target": {
+        "template_id": "PET-N-032-2",
+        "name": "潮笛豚",
+        "rarity": "rare",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-032-2.webp"
+      },
+      "success_rate_percent": 95,
+      "fgems_cost": 30
+    },
+    {
+      "source_template_id": "PET-N-032-2",
+      "target": {
+        "template_id": "PET-N-032-3",
+        "name": "蓝海歌豚",
+        "rarity": "epic",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-032-3.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-N-033-1",
+      "target": {
+        "template_id": "PET-N-033-2",
+        "name": "藤甲壁虎",
+        "rarity": "rare",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-033-2.webp"
+      },
+      "success_rate_percent": 95,
+      "fgems_cost": 30
+    },
+    {
+      "source_template_id": "PET-N-033-2",
+      "target": {
+        "template_id": "PET-N-033-3",
+        "name": "古森龙壁",
+        "rarity": "epic",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-033-3.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-N-034-1",
+      "target": {
+        "template_id": "PET-N-034-2",
+        "name": "蜜风鼯",
+        "rarity": "rare",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-034-2.webp"
+      },
+      "success_rate_percent": 95,
+      "fgems_cost": 30
+    },
+    {
+      "source_template_id": "PET-N-034-2",
+      "target": {
+        "template_id": "PET-N-034-3",
+        "name": "云糖飞鼯",
+        "rarity": "epic",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-034-3.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-N-035-1",
+      "target": {
+        "template_id": "PET-N-035-2",
+        "name": "针叶刺猬",
+        "rarity": "rare",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-035-2.webp"
+      },
+      "success_rate_percent": 95,
+      "fgems_cost": 30
+    },
+    {
+      "source_template_id": "PET-N-035-2",
+      "target": {
+        "template_id": "PET-N-035-3",
+        "name": "苍松甲猬",
+        "rarity": "epic",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-035-3.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-N-036-1",
+      "target": {
+        "template_id": "PET-N-036-2",
+        "name": "霖翎鹭",
+        "rarity": "rare",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-036-2.webp"
+      },
+      "success_rate_percent": 95,
+      "fgems_cost": 30
+    },
+    {
+      "source_template_id": "PET-N-036-2",
+      "target": {
+        "template_id": "PET-N-036-3",
+        "name": "天雨玄鹭",
+        "rarity": "epic",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-036-3.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-N-037-1",
+      "target": {
+        "template_id": "PET-N-037-2",
+        "name": "豆甲猿",
+        "rarity": "rare",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-037-2.webp"
+      },
+      "success_rate_percent": 95,
+      "fgems_cost": 30
+    },
+    {
+      "source_template_id": "PET-N-037-2",
+      "target": {
+        "template_id": "PET-N-037-3",
+        "name": "醇香森猿",
+        "rarity": "epic",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-037-3.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-N-038-1",
+      "target": {
+        "template_id": "PET-N-038-2",
+        "name": "晶潮海星",
+        "rarity": "rare",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-038-2.webp"
+      },
+      "success_rate_percent": 95,
+      "fgems_cost": 30
+    },
+    {
+      "source_template_id": "PET-N-038-2",
+      "target": {
+        "template_id": "PET-N-038-3",
+        "name": "五曜星冠",
+        "rarity": "epic",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-038-3.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-N-039-1",
+      "target": {
+        "template_id": "PET-N-039-2",
+        "name": "珠纹蜗",
+        "rarity": "rare",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-039-2.webp"
+      },
+      "success_rate_percent": 95,
+      "fgems_cost": 30
+    },
+    {
+      "source_template_id": "PET-N-039-2",
+      "target": {
+        "template_id": "PET-N-039-3",
+        "name": "珊宫宝蜗",
+        "rarity": "epic",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-039-3.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-N-040-1",
+      "target": {
+        "template_id": "PET-N-040-2",
+        "name": "云帆鳐",
+        "rarity": "rare",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-040-2.webp"
+      },
+      "success_rate_percent": 95,
+      "fgems_cost": 30
+    },
+    {
+      "source_template_id": "PET-N-040-2",
+      "target": {
+        "template_id": "PET-N-040-3",
+        "name": "天幕巨鳐",
+        "rarity": "epic",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-040-3.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-A-001-1",
+      "target": {
+        "template_id": "PET-A-001-2",
+        "name": "寒镜灵狐",
+        "rarity": "epic",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-001-2.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-A-001-2",
+      "target": {
+        "template_id": "PET-A-001-3",
+        "name": "九霄冰狐",
+        "rarity": "legendary",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-001-3.webp"
+      },
+      "success_rate_percent": 35,
+      "fgems_cost": 500
+    },
+    {
+      "source_template_id": "PET-A-002-1",
+      "target": {
+        "template_id": "PET-A-002-2",
+        "name": "霆铠狮",
+        "rarity": "epic",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-002-2.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-A-002-2",
+      "target": {
+        "template_id": "PET-A-002-3",
+        "name": "天罚雷狮",
+        "rarity": "legendary",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-002-3.webp"
+      },
+      "success_rate_percent": 35,
+      "fgems_cost": 500
+    },
+    {
+      "source_template_id": "PET-A-003-1",
+      "target": {
+        "template_id": "PET-A-003-2",
+        "name": "沧海蛟",
+        "rarity": "epic",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-003-2.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-A-003-2",
+      "target": {
+        "template_id": "PET-A-003-3",
+        "name": "镇海苍蛟",
+        "rarity": "legendary",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-003-3.webp"
+      },
+      "success_rate_percent": 35,
+      "fgems_cost": 500
+    },
+    {
+      "source_template_id": "PET-A-004-1",
+      "target": {
+        "template_id": "PET-A-004-2",
+        "name": "夜幕鸦",
+        "rarity": "epic",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-004-2.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-A-004-2",
+      "target": {
+        "template_id": "PET-A-004-3",
+        "name": "冥月玄鸦",
+        "rarity": "legendary",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-004-3.webp"
+      },
+      "success_rate_percent": 35,
+      "fgems_cost": 500
+    },
+    {
+      "source_template_id": "PET-A-005-1",
+      "target": {
+        "template_id": "PET-A-005-2",
+        "name": "熔冠鹿",
+        "rarity": "epic",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-005-2.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-A-005-2",
+      "target": {
+        "template_id": "PET-A-005-3",
+        "name": "烈阳圣鹿",
+        "rarity": "legendary",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-005-3.webp"
+      },
+      "success_rate_percent": 35,
+      "fgems_cost": 500
+    },
+    {
+      "source_template_id": "PET-A-006-1",
+      "target": {
+        "template_id": "PET-A-006-2",
+        "name": "镜华蝶",
+        "rarity": "epic",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-006-2.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-A-006-2",
+      "target": {
+        "template_id": "PET-A-006-3",
+        "name": "幻晶蝶后",
+        "rarity": "legendary",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-006-3.webp"
+      },
+      "success_rate_percent": 35,
+      "fgems_cost": 500
+    },
+    {
+      "source_template_id": "PET-A-007-1",
+      "target": {
+        "template_id": "PET-A-007-2",
+        "name": "山铠猿",
+        "rarity": "epic",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-007-2.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-A-007-2",
+      "target": {
+        "template_id": "PET-A-007-3",
+        "name": "擎岳神猿",
+        "rarity": "legendary",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-007-3.webp"
+      },
+      "success_rate_percent": 35,
+      "fgems_cost": 500
+    },
+    {
+      "source_template_id": "PET-A-008-1",
+      "target": {
+        "template_id": "PET-A-008-2",
+        "name": "曜影豹",
+        "rarity": "epic",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-008-2.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-A-008-2",
+      "target": {
+        "template_id": "PET-A-008-3",
+        "name": "星陨猎豹",
+        "rarity": "legendary",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-008-3.webp"
+      },
+      "success_rate_percent": 35,
+      "fgems_cost": 500
+    },
+    {
+      "source_template_id": "PET-A-009-1",
+      "target": {
+        "template_id": "PET-A-009-2",
+        "name": "岚音鹤",
+        "rarity": "epic",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-009-2.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-A-009-2",
+      "target": {
+        "template_id": "PET-A-009-3",
+        "name": "九天风鹤",
+        "rarity": "legendary",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-009-3.webp"
+      },
+      "success_rate_percent": 35,
+      "fgems_cost": 500
+    },
+    {
+      "source_template_id": "PET-A-010-1",
+      "target": {
+        "template_id": "PET-A-010-2",
+        "name": "幽棘蝎",
+        "rarity": "epic",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-010-2.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-A-010-2",
+      "target": {
+        "template_id": "PET-A-010-3",
+        "name": "紫冥蝎王",
+        "rarity": "legendary",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-010-3.webp"
+      },
+      "success_rate_percent": 35,
+      "fgems_cost": 500
+    },
+    {
+      "source_template_id": "PET-A-011-1",
+      "target": {
+        "template_id": "PET-A-011-2",
+        "name": "蓝穹鲸",
+        "rarity": "epic",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-011-2.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-A-011-2",
+      "target": {
+        "template_id": "PET-A-011-3",
+        "name": "深渊歌鲸",
+        "rarity": "legendary",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-011-3.webp"
+      },
+      "success_rate_percent": 35,
+      "fgems_cost": 500
+    },
+    {
+      "source_template_id": "PET-A-012-1",
+      "target": {
+        "template_id": "PET-A-012-2",
+        "name": "曜金鹰",
+        "rarity": "epic",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-012-2.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-A-012-2",
+      "target": {
+        "template_id": "PET-A-012-3",
+        "name": "苍穹帝鹰",
+        "rarity": "legendary",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-012-3.webp"
+      },
+      "success_rate_percent": 35,
+      "fgems_cost": 500
+    },
+    {
+      "source_template_id": "PET-A-013-1",
+      "target": {
+        "template_id": "PET-A-013-2",
+        "name": "银月狼",
+        "rarity": "epic",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-013-2.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-A-013-2",
+      "target": {
+        "template_id": "PET-A-013-3",
+        "name": "啸月狼皇",
+        "rarity": "legendary",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-013-3.webp"
+      },
+      "success_rate_percent": 35,
+      "fgems_cost": 500
+    },
+    {
+      "source_template_id": "PET-A-014-1",
+      "target": {
+        "template_id": "PET-A-014-2",
+        "name": "赤钢犀",
+        "rarity": "epic",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-014-2.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-A-014-2",
+      "target": {
+        "template_id": "PET-A-014-3",
+        "name": "熔城巨犀",
+        "rarity": "legendary",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-014-3.webp"
+      },
+      "success_rate_percent": 35,
+      "fgems_cost": 500
+    },
+    {
+      "source_template_id": "PET-A-015-1",
+      "target": {
+        "template_id": "PET-A-015-2",
+        "name": "幻沙貘",
+        "rarity": "epic",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-015-2.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-A-015-2",
+      "target": {
+        "template_id": "PET-A-015-3",
+        "name": "永梦灵貘",
+        "rarity": "legendary",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-015-3.webp"
+      },
+      "success_rate_percent": 35,
+      "fgems_cost": 500
+    },
+    {
+      "source_template_id": "PET-A-016-1",
+      "target": {
+        "template_id": "PET-A-016-2",
+        "name": "碧炎蟒",
+        "rarity": "epic",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-016-2.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-A-016-2",
+      "target": {
+        "template_id": "PET-A-016-3",
+        "name": "苍炎蛇皇",
+        "rarity": "legendary",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-016-3.webp"
+      },
+      "success_rate_percent": 35,
+      "fgems_cost": 500
+    },
+    {
+      "source_template_id": "PET-A-017-1",
+      "target": {
+        "template_id": "PET-A-017-2",
+        "name": "万华鹿",
+        "rarity": "epic",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-017-2.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-A-017-2",
+      "target": {
+        "template_id": "PET-A-017-3",
+        "name": "百花圣鹿",
+        "rarity": "legendary",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-017-3.webp"
+      },
+      "success_rate_percent": 35,
+      "fgems_cost": 500
+    },
+    {
+      "source_template_id": "PET-A-018-1",
+      "target": {
+        "template_id": "PET-A-018-2",
+        "name": "极光熊",
+        "rarity": "epic",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-018-2.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-A-018-2",
+      "target": {
+        "template_id": "PET-A-018-3",
+        "name": "北辰巨熊",
+        "rarity": "legendary",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-018-3.webp"
+      },
+      "success_rate_percent": 35,
+      "fgems_cost": 500
+    },
+    {
+      "source_template_id": "PET-A-019-1",
+      "target": {
+        "template_id": "PET-A-019-2",
+        "name": "星湖天鹅",
+        "rarity": "epic",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-019-2.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-A-019-2",
+      "target": {
+        "template_id": "PET-A-019-3",
+        "name": "星河天鹅",
+        "rarity": "legendary",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-019-3.webp"
+      },
+      "success_rate_percent": 35,
+      "fgems_cost": 500
+    },
+    {
+      "source_template_id": "PET-A-020-1",
+      "target": {
+        "template_id": "PET-A-020-2",
+        "name": "机芯灵猫",
+        "rarity": "epic",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-020-2.webp"
+      },
+      "success_rate_percent": 60,
+      "fgems_cost": 120
+    },
+    {
+      "source_template_id": "PET-A-020-2",
+      "target": {
+        "template_id": "PET-A-020-3",
+        "name": "天工圣猫",
+        "rarity": "legendary",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-020-3.webp"
+      },
+      "success_rate_percent": 35,
+      "fgems_cost": 500
+    },
+    {
+      "source_template_id": "PET-T-001-1",
+      "target": {
+        "template_id": "PET-T-001-2",
+        "name": "天穹星龙",
+        "rarity": "legendary",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-t-001-2.webp"
+      },
+      "success_rate_percent": 35,
+      "fgems_cost": 500
+    },
+    {
+      "source_template_id": "PET-T-001-2",
+      "target": {
+        "template_id": "PET-T-001-3",
+        "name": "创界星神龙",
+        "rarity": "mythic",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-t-001-3.webp"
+      },
+      "success_rate_percent": 20,
+      "fgems_cost": 2000
+    },
+    {
+      "source_template_id": "PET-T-002-1",
+      "target": {
+        "template_id": "PET-T-002-2",
+        "name": "裂界天鲸",
+        "rarity": "legendary",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-t-002-2.webp"
+      },
+      "success_rate_percent": 35,
+      "fgems_cost": 500
+    },
+    {
+      "source_template_id": "PET-T-002-2",
+      "target": {
+        "template_id": "PET-T-002-3",
+        "name": "无垠虚空鲸",
+        "rarity": "mythic",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-t-002-3.webp"
+      },
+      "success_rate_percent": 20,
+      "fgems_cost": 2000
+    },
+    {
+      "source_template_id": "PET-T-003-1",
+      "target": {
+        "template_id": "PET-T-003-2",
+        "name": "炽天炎凰",
+        "rarity": "legendary",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-t-003-2.webp"
+      },
+      "success_rate_percent": 35,
+      "fgems_cost": 500
+    },
+    {
+      "source_template_id": "PET-T-003-2",
+      "target": {
+        "template_id": "PET-T-003-3",
+        "name": "永昼太阳神凰",
+        "rarity": "mythic",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-t-003-3.webp"
+      },
+      "success_rate_percent": 20,
+      "fgems_cost": 2000
+    },
+    {
+      "source_template_id": "PET-T-004-1",
+      "target": {
+        "template_id": "PET-T-004-2",
+        "name": "月蚀九尾",
+        "rarity": "legendary",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-t-004-2.webp"
+      },
+      "success_rate_percent": 35,
+      "fgems_cost": 500
+    },
+    {
+      "source_template_id": "PET-T-004-2",
+      "target": {
+        "template_id": "PET-T-004-3",
+        "name": "太阴月神狐",
+        "rarity": "mythic",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-t-004-3.webp"
+      },
+      "success_rate_percent": 20,
+      "fgems_cost": 2000
+    },
+    {
+      "source_template_id": "PET-T-005-1",
+      "target": {
+        "template_id": "PET-T-005-2",
+        "name": "岁轮玄龟",
+        "rarity": "legendary",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-t-005-2.webp"
+      },
+      "success_rate_percent": 35,
+      "fgems_cost": 500
+    },
+    {
+      "source_template_id": "PET-T-005-2",
+      "target": {
+        "template_id": "PET-T-005-3",
+        "name": "万古时轮神龟",
+        "rarity": "mythic",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-t-005-3.webp"
+      },
+      "success_rate_percent": 20,
+      "fgems_cost": 2000
+    },
+    {
+      "source_template_id": "PET-T-006-1",
+      "target": {
+        "template_id": "PET-T-006-2",
+        "name": "界王圣狮",
+        "rarity": "legendary",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-t-006-2.webp"
+      },
+      "success_rate_percent": 35,
+      "fgems_cost": 500
+    },
+    {
+      "source_template_id": "PET-T-006-2",
+      "target": {
+        "template_id": "PET-T-006-3",
+        "name": "混沌创世神狮",
+        "rarity": "mythic",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-t-006-3.webp"
+      },
+      "success_rate_percent": 20,
+      "fgems_cost": 2000
+    },
+    {
+      "source_template_id": "PET-T-007-1",
+      "target": {
+        "template_id": "PET-T-007-2",
+        "name": "银河圣鹿",
+        "rarity": "legendary",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-t-007-2.webp"
+      },
+      "success_rate_percent": 35,
+      "fgems_cost": 500
+    },
+    {
+      "source_template_id": "PET-T-007-2",
+      "target": {
+        "template_id": "PET-T-007-3",
+        "name": "森罗宇宙神鹿",
+        "rarity": "mythic",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-t-007-3.webp"
+      },
+      "success_rate_percent": 20,
+      "fgems_cost": 2000
+    },
+    {
+      "source_template_id": "PET-T-008-1",
+      "target": {
+        "template_id": "PET-T-008-2",
+        "name": "九霄雷麟",
+        "rarity": "legendary",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-t-008-2.webp"
+      },
+      "success_rate_percent": 35,
+      "fgems_cost": 500
+    },
+    {
+      "source_template_id": "PET-T-008-2",
+      "target": {
+        "template_id": "PET-T-008-3",
+        "name": "万雷天劫麒麟",
+        "rarity": "mythic",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-t-008-3.webp"
+      },
+      "success_rate_percent": 20,
+      "fgems_cost": 2000
+    },
+    {
+      "source_template_id": "PET-T-009-1",
+      "target": {
+        "template_id": "PET-T-009-2",
+        "name": "灭界巨蟒",
+        "rarity": "legendary",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-t-009-2.webp"
+      },
+      "success_rate_percent": 35,
+      "fgems_cost": 500
+    },
+    {
+      "source_template_id": "PET-T-009-2",
+      "target": {
+        "template_id": "PET-T-009-3",
+        "name": "无光深渊神蛇",
+        "rarity": "mythic",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-t-009-3.webp"
+      },
+      "success_rate_percent": 20,
+      "fgems_cost": 2000
+    },
+    {
+      "source_template_id": "PET-T-010-1",
+      "target": {
+        "template_id": "PET-T-010-2",
+        "name": "因果天蝶",
+        "rarity": "legendary",
+        "stage": 2,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-t-010-2.webp"
+      },
+      "success_rate_percent": 35,
+      "fgems_cost": 500
+    },
+    {
+      "source_template_id": "PET-T-010-2",
+      "target": {
+        "template_id": "PET-T-010-3",
+        "name": "命运法则神蝶",
+        "rarity": "mythic",
+        "stage": 3,
+        "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-t-010-3.webp"
+      },
+      "success_rate_percent": 20,
+      "fgems_cost": 2000
+    }
+  ]
+}
