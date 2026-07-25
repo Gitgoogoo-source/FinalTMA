@@ -80,3 +80,4 @@ Monster Tamer launcher 领域只拥有启动卡片与普通链接，不导入业
 - [开盒页运行期视图状态](adr/ADR-009-gacha-runtime-view-state.md)
 - [正式藏品图片资源](adr/ADR-010-catalog-image-assets.md)
 - [Monster Tamer 独立静态子应用](adr/ADR-011-monster-tamer-static-subapplication.md)
+- [进化顶层全屏确认页](adr/ADR-012-evolution-fullscreen-confirmation.md)
