@@ -7,6 +7,10 @@ import {
 } from "react";
 
 export { CatalogImage } from "./CatalogImage.tsx";
+export {
+  CollectionDetailShowcase,
+  type CollectionDetailItem,
+} from "./CollectionDetailShowcase.tsx";
 
 export const Button = forwardRef<
   HTMLButtonElement,

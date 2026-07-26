@@ -12,10 +12,12 @@ Data API 只暴露 `api` schema。安全迁移撤销 `PUBLIC`、`anon`、`authen
 
 Telegram webhook 使用 secret token，Cron 使用 `CRON_SECRET`。支付回调按 Telegram update 与 charge 唯一键去重；Cron 同时使用任务名 advisory lock、运行租约、状态扫描和幂等 RPC。
 
-## Monster Tamer 公开静态边界
+## Monster Tamer 只读渲染边界
 
-`/monster-tamer/` 是公开静态子应用，不执行 FinalTMA 认证。它不接收 Telegram `initData`、access token、session generation、用户标识或账号状态，不导入 `@pokepets/api-contracts`，不请求 `/api/*`、Supabase 或 Catalog 资源，也不创建操作、账本、库存、任务或奖励记录。
+Monster Tamer 业务入口位于已登录 React 主应用。领域组件只通过现有认证查询 `inventory.list` 读取数据库裁决后的藏品状态，过滤 `available > 0` 并按 `template_id` 去重；它不接受 Phaser 提交的归属、数量、图片、稀有度、阶段或战斗力。
 
-静态游戏不使用浏览器持久化；怪物、道具、捕捉、经验和随机结果均不可信且只影响当前页面生命周期内存态，不能证明或触发 FinalTMA 业务结果。旧 `MONSTER_TAMER_DATA` 不读取、不写入、不迁移也不清除。Telegram SDK 只允许处理 ready、视口、安全区和返回按钮。
+`/monster-tamer/` 是公开可请求但业务上无能力的同源渲染文档。它不接收 Telegram `initData`、access token、session generation、用户标识或账号状态，不请求 `/api/*`、Supabase 或数据库。未收到父页面消息时不创建可用家园。
 
-游戏页 launcher 领域只允许 React、Lucide 和本领域相对导入；唯一动作是链接到 `/monster-tamer/`。架构门禁同时验证 launcher 无业务导入、静态源码无 FinalTMA API/session/资产引用、路由先于 SPA catch-all，以及游戏页组合顺序。
+父页面与 `iframe` 的消息必须同时验证 `event.origin === window.location.origin` 和预期窗口对象。父页面只注入 `templateId`、名称和 `/assets/catalog/v1/thumb/` 正式图片路径；点击消息只返回 `template_id`，React 必须在当前认证查询结果中重新匹配。
+
+静态渲染器不使用 `fetch`、XMLHttpRequest、WebSocket、浏览器持久化或业务命令。宠物位置、方向和漫游只存在于当前 `iframe` 页面生命周期，不能证明或改变藏品、资产、任务或任何业务结果。

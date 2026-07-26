@@ -20,13 +20,15 @@
 
 确认 Mint、交易 hash、接收地址、链上 NFT 地址和 `job_runs`。手工触发 `reconcile-mints` 前先确认没有 10 分钟内的活动租约；并发触发应记录 `skipped`。链上事实只能由对账 RPC 写回。
 
-## Monster Tamer 静态游戏
+## Monster Tamer 藏品家园
 
-`/monster-tamer` 或 `/monster-tamer/` 返回 SPA、404 或资源加载失败时，先核对 Vercel 重写顺序、当前 commit 的 `apps/web/public/monster-tamer` 文件清单和大小写敏感资源路径，再部署包含完整静态树的修正 commit。不得通过修改 FinalTMA API、数据库、session、Catalog 或用户资产恢复游戏。
+家园无法打开时先区分 React 认证查询、父子消息和 Phaser 资源三条链路。`inventory.list` 失败沿用主应用请求错误与重试，不向 Phaser 注入旧数据；`/monster-tamer` 返回 SPA、404 或静态资源失败时核对 Vercel 重写顺序、完整静态树和大小写路径。
 
-刷新后未恢复初始状态，或运行时出现 `localStorage`、`sessionStorage`、IndexedDB、Cookie、Cache Storage、`MONSTER_TAMER_DATA` 读写时，立即停止该版本发布并恢复“只使用页面生命周期内存态”的静态 commit；恢复部署不得主动删除浏览器中既有的旧键。发现静态游戏请求 `/api/*`、Supabase、Catalog、FinalTMA token 或业务用户数据时同样停止发布并恢复符合独立边界的静态 commit。
+父页面已取得藏品但地图无宠物时，核对双方 `origin`、消息窗口、`template_id`、`available > 0` 过滤和正式缩略图路径。不得把 access token、session 或完整库存对象传入 Phaser，也不得让静态渲染器自行请求 API。
 
-发现图片没有直接授权证据、许可证或第三方声明缺失时停止该版本发布，补齐项目原创替换和声明后重新执行完整玩法与静态资源验收；不得以隐藏文件、关闭检查或删除玩法绕过。
+出现浏览器持久化、Supabase 直连、业务写请求、宠物进入障碍、重复模板生成多只、详情打开后场景仍移动，或旧玩家/NPC/遭遇/战斗资源重新出现时，立即停止该版本发布并恢复完整兼容 commit。修复不得修改库存数据、手工伪造图片路径或关闭架构门禁。
+
+Tiny Swords、Phaser 或 Catalog 图片的来源记录、许可证或第三方声明缺失时停止发布，补齐同一提交中的证据后重新执行静态资源与真实环境验收。
 
 ## 不变量
 

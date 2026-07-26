@@ -15,7 +15,7 @@ de521f2687086cb358fb557a4a7ada3bc3c5fc132d673f0256b4573028ddba46
 ## 运行时
 
 - Web：React、Vite、TypeScript，运行在 Telegram Mini App。
-- Monster Tamer：同一 Web 部署下的 `/monster-tamer/` 公开独立静态子应用，直接进入世界且仅使用页面生命周期内存态，不进入 React、API 或数据库业务链。
+- Monster Tamer：登录后 React 全屏藏品家园，读取现有 `inventory.list`，并通过同源 `/monster-tamer/` Phaser 渲染文档展示真实可用藏品；只读且不新增业务写入。
 - API：同一 Vercel Project 内的 `app`、`integrations`、`jobs` 三个 Node.js 24 Function 网关。
 - Database：Supabase Postgres 17，仅暴露 `api` schema；浏览器不加载 Supabase SDK。
 - Blockchain：TON Connect 验证钱包，Tact 合约完成 NFT Mint。
@@ -25,8 +25,9 @@ de521f2687086cb358fb557a4a7ada3bc3c5fc132d673f0256b4573028ddba46
 
 ```text
 apps/web -> @pokepets/api-contracts/app
-apps/web/src/domains/monster-tamer -> /monster-tamer/ ordinary link
-/monster-tamer/ -> self-contained static runtime + page-lifetime memory state
+apps/web/src/domains/monster-tamer -> authenticated inventory.list + top-level home portal
+React home portal -> same-origin /monster-tamer/ renderer via minimal postMessage
+/monster-tamer/ -> Phaser map rendering only, no API or session
 api -> apps/api/entrypoints
 apps/api/entrypoints -> gateway-specific contracts + http
 apps/api/http -> injected route registry + handler map
@@ -38,7 +39,7 @@ contracts/ton -> TON blockchain
 
 禁止反向依赖、跨领域深层导入、浏览器访问 Supabase、Node 层组合多次资产写入。
 
-Monster Tamer launcher 领域只拥有启动卡片与普通链接，不导入业务领域、平台会话或 API 契约。静态子应用不读取 FinalTMA session、API、Catalog 资产或数据库；Telegram SDK 只处理视口、安全区和返回按钮。
+Monster Tamer 领域拥有启动卡片、全屏 Portal、`inventory.list` 只读查询适配和藏品详情覆盖层。静态渲染器不读取 FinalTMA session、不请求 API 或数据库；它只接受父页面注入的正式缩略图路径并返回被点击的 `template_id`。
 
 ## 可信边界
 
@@ -79,5 +80,5 @@ Monster Tamer launcher 领域只拥有启动卡片与普通链接，不导入业
 - [Vercel 函数打包与配置隔离](adr/ADR-008-vercel-packaging-and-config-isolation.md)
 - [开盒页运行期视图状态](adr/ADR-009-gacha-runtime-view-state.md)
 - [正式藏品图片资源](adr/ADR-010-catalog-image-assets.md)
-- [Monster Tamer 独立静态子应用](adr/ADR-011-monster-tamer-static-subapplication.md)
+- [Monster Tamer 认证藏品家园](adr/ADR-011-monster-tamer-static-subapplication.md)
 - [进化顶层底部确认弹窗](adr/ADR-012-evolution-bottom-sheet-confirmation.md)

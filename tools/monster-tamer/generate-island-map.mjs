@@ -5,11 +5,6 @@ import { fileURLToPath } from "node:url";
 
 import sharp from "sharp";
 
-import {
-  TINY_SWORDS_ANIMATION_KEYS,
-  TINY_SWORDS_ASSET_KEYS,
-} from "../../apps/web/public/monster-tamer/src/assets/tiny-swords-world.js";
-
 const SCRIPT_DIRECTORY = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(SCRIPT_DIRECTORY, "../..");
 const GAME_ROOT = path.join(ROOT, "apps/web/public/monster-tamer");
@@ -30,12 +25,11 @@ const PUBLISHED_EVIDENCE_ROOT = path.join(
 );
 const MAP_PATH = path.join(GAME_ROOT, "assets/data/main_1.json");
 
-const WIDTH = 120;
-const HEIGHT = 64;
+const WIDTH = 50;
+const HEIGHT = 50;
 const TILE_SIZE = 64;
 const SIZE = WIDTH * HEIGHT;
-const PLAYER_SPAWN = Object.freeze([60, 34]);
-const REVIVE_LOCATION = Object.freeze([62, 34]);
+const OUTER_WATER_RING = 2;
 const TERRAIN_SOURCE_COLUMNS = 9;
 const ATLAS_COLUMNS = 8;
 const ATLAS_ROWS = 8;
@@ -45,20 +39,10 @@ const ATLAS_CELL_SIZE = TILE_SIZE + ATLAS_SPACING;
 const ATLAS_SIZE = ATLAS_COLUMNS * ATLAS_CELL_SIZE;
 const WATER_COLOR = Object.freeze([71, 171, 169, 255]);
 
-const FIRST_GID = Object.freeze({
-  TERRAIN: 1,
-  COLLISION: 65,
-  ENCOUNTER: 66,
-});
-
-const TERRAIN_SOURCE_INDICES = Object.freeze([
-  0, 1, 2, 9, 10, 11, 18, 19, 20, 5, 6, 7, 14, 15, 16, 23, 24, 25, 41, 42, 43,
-  44, 50, 51, 52, 53, 36, 39, 45, 48,
-]);
+const TERRAIN_SOURCE_INDICES = Object.freeze([0, 1, 2, 9, 10, 11, 18, 19, 20]);
 const TERRAIN_SLOT_BY_SOURCE_INDEX = new Map(
   TERRAIN_SOURCE_INDICES.map((sourceIndex, slot) => [sourceIndex, slot]),
 );
-
 const FLAT_PALETTE = Object.freeze({
   topLeft: 0,
   top: 1,
@@ -69,33 +53,6 @@ const FLAT_PALETTE = Object.freeze({
   bottomLeft: 18,
   bottom: 19,
   bottomRight: 20,
-});
-const ELEVATED_PALETTE = Object.freeze({
-  topLeft: 5,
-  top: 6,
-  topRight: 7,
-  left: 14,
-  center: 15,
-  right: 16,
-  bottomLeft: 23,
-  bottom: 24,
-  bottomRight: 25,
-});
-const CLIFF_PALETTE = Object.freeze({
-  upperLeft: 41,
-  upper: 42,
-  upperRight: 43,
-  upperSingle: 44,
-  lowerLeft: 50,
-  lower: 51,
-  lowerRight: 52,
-  lowerSingle: 53,
-});
-const STAIR_PALETTE = Object.freeze({
-  upperLeft: 36,
-  upperRight: 39,
-  lowerLeft: 45,
-  lowerRight: 48,
 });
 
 const RUNTIME_ASSET_COPIES = Object.freeze([
@@ -144,1266 +101,348 @@ const RUNTIME_ASSET_COPIES = Object.freeze([
 ]);
 
 const indexOf = (x, y) => y * WIDTH + x;
-const isInsideMap = (x, y) => x >= 0 && y >= 0 && x < WIDTH && y < HEIGHT;
-const hash = (x, y, salt = 0) =>
-  Math.abs(((x * 73_856_093) ^ (y * 19_349_663) ^ salt) >>> 0);
+const isInside = (x, y) => x >= 0 && y >= 0 && x < WIDTH && y < HEIGHT;
+const landMask = new Uint8Array(SIZE);
+const collision = Array(SIZE).fill(1);
+const ground = Array(SIZE).fill(0);
+
+for (let y = 3; y <= 46; y += 1) {
+  const normalizedY = (y - 24.5) / 22;
+  const halfWidth = Math.floor(
+    21.5 * Math.sqrt(Math.max(0, 1 - normalizedY * normalizedY)),
+  );
+  const leftNoise = [1, 0, -1, 0, 1, 1, 0][y % 7];
+  const rightNoise = [0, 1, 0, -1, 0, 1, 1][y % 7];
+  const left = Math.max(3, 24 - halfWidth + leftNoise);
+  const right = Math.min(46, 25 + halfWidth + rightNoise);
+  for (let x = left; x <= right; x += 1) {
+    landMask[indexOf(x, y)] = 1;
+  }
+}
+
+const hasLand = (x, y) => isInside(x, y) && landMask[indexOf(x, y)] === 1;
 const terrainGid = (sourceIndex) => {
   const slot = TERRAIN_SLOT_BY_SOURCE_INDEX.get(sourceIndex);
-  if (slot === undefined) {
+  if (slot === undefined)
     throw new Error(`Tiny Swords source tile ${sourceIndex} is not curated.`);
-  }
-  return FIRST_GID.TERRAIN + slot;
+  return slot + 1;
 };
-
-const flatGround = Array(SIZE).fill(0);
-const elevationLevel1 = Array(SIZE).fill(0);
-const elevationLevel2 = Array(SIZE).fill(0);
-const collision = Array(SIZE).fill(0);
-const encounter1 = Array(SIZE).fill(0);
-const encounter2 = Array(SIZE).fill(0);
-const encounter3 = Array(SIZE).fill(0);
-const baseLandMask = new Uint8Array(SIZE);
-const elevationLevel1Mask = new Uint8Array(SIZE);
-const elevationLevel2Mask = new Uint8Array(SIZE);
-const roadMask = new Uint8Array(SIZE);
-const reservedTiles = new Set();
-
-function setTile(layer, x, y, gid) {
-  if (isInsideMap(x, y)) {
-    layer[indexOf(x, y)] = gid;
-  }
-}
-
-function hasMaskTile(mask, x, y) {
-  return isInsideMap(x, y) && mask[indexOf(x, y)] === 1;
-}
-
-function paintRoundedRect(mask, x, y, width, height, radius, value) {
-  const right = x + width - 1;
-  const bottom = y + height - 1;
-  for (let tileY = y; tileY <= bottom; tileY += 1) {
-    for (let tileX = x; tileX <= right; tileX += 1) {
-      const dx =
-        tileX < x + radius
-          ? x + radius - tileX
-          : tileX > right - radius
-            ? tileX - (right - radius)
-            : 0;
-      const dy =
-        tileY < y + radius
-          ? y + radius - tileY
-          : tileY > bottom - radius
-            ? tileY - (bottom - radius)
-            : 0;
-      if (dx * dx + dy * dy <= radius * radius) {
-        mask[indexOf(tileX, tileY)] = value;
-      }
-    }
-  }
-}
-
-function fillRoundedRect(mask, x, y, width, height, radius) {
-  paintRoundedRect(mask, x, y, width, height, radius, 1);
-}
-
-function clearRoundedRect(mask, x, y, width, height, radius) {
-  paintRoundedRect(mask, x, y, width, height, radius, 0);
-}
-
-function tileForMask(mask, x, y, palette) {
-  const north = hasMaskTile(mask, x, y - 1);
-  const south = hasMaskTile(mask, x, y + 1);
-  const west = hasMaskTile(mask, x - 1, y);
-  const east = hasMaskTile(mask, x + 1, y);
-  if (!north && !west) return palette.topLeft;
-  if (!north && !east) return palette.topRight;
-  if (!south && !west) return palette.bottomLeft;
-  if (!south && !east) return palette.bottomRight;
-  if (!north) return palette.top;
-  if (!south) return palette.bottom;
-  if (!west) return palette.left;
-  if (!east) return palette.right;
-  return palette.center;
-}
-
-function paintMask(layer, mask, palette) {
-  for (let y = 0; y < HEIGHT; y += 1) {
-    for (let x = 0; x < WIDTH; x += 1) {
-      if (hasMaskTile(mask, x, y)) {
-        setTile(layer, x, y, terrainGid(tileForMask(mask, x, y, palette)));
-      }
-    }
-  }
-}
-
-function blockTile(x, y) {
-  setTile(collision, x, y, FIRST_GID.COLLISION);
-}
-
-function clearCollision(x, y) {
-  setTile(collision, x, y, 0);
-}
-
-function markRoadDisk(centerX, centerY, radius) {
-  for (let y = centerY - radius; y <= centerY + radius; y += 1) {
-    for (let x = centerX - radius; x <= centerX + radius; x += 1) {
-      if (
-        isInsideMap(x, y) &&
-        Math.abs(x - centerX) + Math.abs(y - centerY) <= radius + 1
-      ) {
-        roadMask[indexOf(x, y)] = 1;
-      }
-    }
-  }
-}
-
-function drawRoadPath(points, width = 3) {
-  const radius = Math.max(1, Math.floor(width / 2));
-  for (let index = 0; index < points.length - 1; index += 1) {
-    const [startX, startY] = points[index];
-    const [endX, endY] = points[index + 1];
-    if (startX !== endX && startY !== endY) {
-      throw new Error("Road paths must use orthogonal segments.");
-    }
-    const stepX = Math.sign(endX - startX);
-    const stepY = Math.sign(endY - startY);
-    let x = startX;
-    let y = startY;
-    markRoadDisk(x, y, radius);
-    while (x !== endX || y !== endY) {
-      x += stepX;
-      y += stepY;
-      markRoadDisk(x, y, radius);
-    }
-  }
-}
-
-function reserveTile(x, y, radius = 0) {
-  for (let tileY = y - radius; tileY <= y + radius; tileY += 1) {
-    for (let tileX = x - radius; tileX <= x + radius; tileX += 1) {
-      if (isInsideMap(tileX, tileY)) {
-        reservedTiles.add(`${tileX},${tileY}`);
-      }
-    }
-  }
-}
-
-function reserveRect(x, y, width, height, padding = 0) {
-  for (let tileY = y - height + 1 - padding; tileY <= y + padding; tileY += 1) {
-    for (let tileX = x - padding; tileX < x + width + padding; tileX += 1) {
-      if (isInsideMap(tileX, tileY)) {
-        reservedTiles.add(`${tileX},${tileY}`);
-      }
-    }
-  }
-}
-
-function isReserved(x, y) {
-  return reservedTiles.has(`${x},${y}`);
-}
-
-function property(name, type, value) {
-  return { name, type, value };
-}
-
-let nextLayerId = 1;
-let nextObjectId = 1;
-
-function tileLayer(name, data, visible = true, properties) {
-  return {
-    data,
-    height: HEIGHT,
-    id: nextLayerId++,
-    name,
-    opacity: 1,
-    type: "tilelayer",
-    visible,
-    width: WIDTH,
-    x: 0,
-    y: 0,
-    ...(properties ? { properties } : {}),
-  };
-}
-
-function objectLayer(name, objects, visible = false) {
-  return {
-    draworder: "topdown",
-    id: nextLayerId++,
-    name,
-    objects,
-    opacity: 1,
-    type: "objectgroup",
-    visible,
-    x: 0,
-    y: 0,
-  };
-}
-
-function tiledObject({
-  name = "",
-  type = "",
-  x,
-  y,
-  width = TILE_SIZE,
-  height = TILE_SIZE,
-  properties,
-}) {
-  return {
-    height,
-    id: nextObjectId++,
-    name,
-    rotation: 0,
-    type,
-    visible: true,
-    width,
-    x: x * TILE_SIZE,
-    y: (y + 1) * TILE_SIZE,
-    ...(properties ? { properties } : {}),
-  };
-}
-
-function sceneryObject({
-  name,
-  assetKey,
-  animationKey,
-  frameCount = 1,
-  x,
-  y,
-  width,
-  height,
-  originX,
-  originY,
-  depthMode,
-  fixedDepth = 0,
-}) {
-  return {
-    height,
-    id: nextObjectId++,
-    name,
-    rotation: 0,
-    type: "scenery",
-    visible: true,
-    width,
-    x,
-    y,
-    properties: [
-      property("asset_key", "string", assetKey),
-      property("animation_key", "string", animationKey || ""),
-      property("frame_count", "int", frameCount),
-      property("origin_x", "float", originX),
-      property("origin_y", "float", originY),
-      property("depth_mode", "string", depthMode),
-      property("fixed_depth", "int", fixedDepth),
-    ],
-  };
-}
-
-function worldScenery({
-  name,
-  assetKey,
-  animationKey,
-  frameCount = 1,
-  tileX,
-  tileY,
-  width,
-  height,
-  originX = 0.5,
-  originY = 1,
-}) {
-  return sceneryObject({
-    name,
-    assetKey,
-    animationKey,
-    frameCount,
-    x: (tileX + originX) * TILE_SIZE,
-    y: (tileY + 1) * TILE_SIZE,
-    width,
-    height,
-    originX,
-    originY,
-    depthMode: "WORLD",
-  });
-}
-
-function fixedScenery({
-  name,
-  assetKey,
-  animationKey,
-  frameCount = 1,
-  tileX,
-  tileY,
-  width,
-  height,
-  originX = 0.5,
-  originY = 0.5,
-  fixedDepth,
-}) {
-  return sceneryObject({
-    name,
-    assetKey,
-    animationKey,
-    frameCount,
-    x: (tileX + 0.5) * TILE_SIZE,
-    y: (tileY + 0.5) * TILE_SIZE,
-    width,
-    height,
-    originX,
-    originY,
-    depthMode: "FIXED",
-    fixedDepth,
-  });
-}
-
-fillRoundedRect(baseLandMask, 5, 5, 110, 48, 8);
-fillRoundedRect(baseLandMask, 3, 20, 28, 31, 6);
-fillRoundedRect(baseLandMask, 73, 19, 44, 36, 6);
-clearRoundedRect(baseLandMask, 43, 39, 24, 18, 4);
-clearRoundedRect(baseLandMask, 3, 45, 12, 10, 3);
-clearRoundedRect(baseLandMask, 108, 46, 10, 9, 3);
-fillRoundedRect(baseLandMask, 53, 56, 14, 7, 3);
-
-fillRoundedRect(elevationLevel1Mask, 10, 7, 47, 24, 5);
-fillRoundedRect(elevationLevel1Mask, 40, 11, 31, 19, 4);
-fillRoundedRect(elevationLevel1Mask, 64, 7, 44, 24, 5);
-fillRoundedRect(elevationLevel2Mask, 15, 8, 34, 14, 4);
-
-for (let index = 0; index < SIZE; index += 1) {
-  if (
-    (elevationLevel1Mask[index] && !baseLandMask[index]) ||
-    (elevationLevel2Mask[index] && !elevationLevel1Mask[index])
-  ) {
-    throw new Error(
-      "Every elevated tile must be nested inside the level below.",
-    );
-  }
-}
-
-paintMask(flatGround, baseLandMask, FLAT_PALETTE);
+const tileForMask = (x, y) => {
+  const north = hasLand(x, y - 1);
+  const south = hasLand(x, y + 1);
+  const west = hasLand(x - 1, y);
+  const east = hasLand(x + 1, y);
+  if (!north && !west) return FLAT_PALETTE.topLeft;
+  if (!north && !east) return FLAT_PALETTE.topRight;
+  if (!south && !west) return FLAT_PALETTE.bottomLeft;
+  if (!south && !east) return FLAT_PALETTE.bottomRight;
+  if (!north) return FLAT_PALETTE.top;
+  if (!south) return FLAT_PALETTE.bottom;
+  if (!west) return FLAT_PALETTE.left;
+  if (!east) return FLAT_PALETTE.right;
+  return FLAT_PALETTE.center;
+};
 
 for (let y = 0; y < HEIGHT; y += 1) {
   for (let x = 0; x < WIDTH; x += 1) {
-    if (!hasMaskTile(baseLandMask, x, y)) {
-      blockTile(x, y);
-    }
+    if (!hasLand(x, y)) continue;
+    ground[indexOf(x, y)] = terrainGid(tileForMask(x, y));
+    const shoreline =
+      !hasLand(x - 1, y) ||
+      !hasLand(x + 1, y) ||
+      !hasLand(x, y - 1) ||
+      !hasLand(x, y + 1);
+    collision[indexOf(x, y)] = shoreline ? 1 : 0;
   }
 }
 
-const elevationBottomEdges = [];
+const sceneryDefinitions = [
+  {
+    asset: "castle",
+    kind: "building",
+    tileX: 21,
+    tileY: 12,
+    footprint: [5, 4],
+  },
+  {
+    asset: "barracks",
+    kind: "building",
+    tileX: 14,
+    tileY: 15,
+    footprint: [3, 4],
+  },
+  {
+    asset: "archery",
+    kind: "building",
+    tileX: 30,
+    tileY: 15,
+    footprint: [3, 4],
+  },
+  {
+    asset: "tower",
+    kind: "building",
+    tileX: 9,
+    tileY: 27,
+    footprint: [2, 4],
+  },
+  {
+    asset: "monastery",
+    kind: "building",
+    tileX: 14,
+    tileY: 38,
+    footprint: [3, 5],
+  },
+  {
+    asset: "house-1",
+    kind: "building",
+    tileX: 35,
+    tileY: 24,
+    footprint: [2, 3],
+  },
+  {
+    asset: "house-2",
+    kind: "building",
+    tileX: 39,
+    tileY: 28,
+    footprint: [2, 3],
+  },
+  {
+    asset: "house-3",
+    kind: "building",
+    tileX: 34,
+    tileY: 33,
+    footprint: [2, 3],
+  },
+  {
+    asset: "house-1",
+    kind: "building",
+    tileX: 39,
+    tileY: 36,
+    footprint: [2, 3],
+  },
+  {
+    asset: "tower",
+    kind: "building",
+    tileX: 26,
+    tileY: 43,
+    footprint: [2, 4],
+  },
+  ...[
+    [11, 11],
+    [16, 8],
+    [33, 10],
+    [38, 14],
+    [8, 20],
+    [10, 35],
+    [18, 42],
+    [31, 42],
+    [42, 22],
+    [42, 33],
+    [21, 7],
+    [29, 7],
+    [6, 27],
+    [44, 27],
+  ].map(([tileX, tileY], index) => ({
+    asset: `tree-${(index % 4) + 1}`,
+    kind: "tree",
+    tileX,
+    tileY,
+    footprint: [1, 1],
+  })),
+  ...[
+    [12, 19],
+    [18, 18],
+    [30, 19],
+    [25, 39],
+    [29, 35],
+    [19, 37],
+  ].map(([tileX, tileY], index) => ({
+    asset: `stump-${(index % 4) + 1}`,
+    kind: "stump",
+    tileX,
+    tileY,
+    footprint: [1, 1],
+  })),
+  ...[
+    [13, 28],
+    [17, 31],
+    [22, 20],
+    [27, 18],
+    [29, 29],
+    [32, 37],
+    [37, 18],
+    [40, 32],
+    [21, 41],
+    [11, 32],
+  ].map(([tileX, tileY], index) => ({
+    asset: `rock-${(index % 4) + 1}`,
+    kind: "rock",
+    tileX,
+    tileY,
+    footprint: [1, 1],
+  })),
+  ...[
+    [15, 25],
+    [18, 27],
+    [21, 30],
+    [25, 23],
+    [27, 32],
+    [31, 25],
+    [34, 18],
+    [36, 38],
+  ].map(([tileX, tileY], index) => ({
+    asset: `bush-${(index % 4) + 1}`,
+    kind: "bush",
+    tileX,
+    tileY,
+    footprint: [0, 0],
+  })),
+];
 
-function renderElevation(mask, layer, level, stairX) {
-  paintMask(layer, mask, ELEVATED_PALETTE);
-  const bottomEdges = [];
-  for (let y = 0; y < HEIGHT; y += 1) {
-    for (let x = 0; x < WIDTH; x += 1) {
-      if (!hasMaskTile(mask, x, y)) continue;
-      const boundary =
-        !hasMaskTile(mask, x - 1, y) ||
-        !hasMaskTile(mask, x + 1, y) ||
-        !hasMaskTile(mask, x, y - 1) ||
-        !hasMaskTile(mask, x, y + 1);
-      if (boundary) blockTile(x, y);
-      if (hasMaskTile(mask, x, y + 1)) continue;
-      const left = !hasMaskTile(mask, x - 1, y);
-      const right = !hasMaskTile(mask, x + 1, y);
-      const upper =
-        left && right
-          ? CLIFF_PALETTE.upperSingle
-          : left
-            ? CLIFF_PALETTE.upperLeft
-            : right
-              ? CLIFF_PALETTE.upperRight
-              : CLIFF_PALETTE.upper;
-      const lower =
-        left && right
-          ? CLIFF_PALETTE.lowerSingle
-          : left
-            ? CLIFF_PALETTE.lowerLeft
-            : right
-              ? CLIFF_PALETTE.lowerRight
-              : CLIFF_PALETTE.lower;
-      setTile(layer, x, y + 1, terrainGid(upper));
-      setTile(layer, x, y + 2, terrainGid(lower));
-      blockTile(x, y + 1);
-      blockTile(x, y + 2);
-      bottomEdges.push([x, y]);
-    }
-  }
-  const stairBottomY = Math.max(
-    ...bottomEdges
-      .filter(([x]) => x === stairX || x === stairX + 1)
-      .map(([, y]) => y),
-  );
-  setTile(
-    layer,
-    stairX - 1,
-    stairBottomY + 1,
-    terrainGid(STAIR_PALETTE.upperLeft),
-  );
-  setTile(
-    layer,
-    stairX + 2,
-    stairBottomY + 1,
-    terrainGid(STAIR_PALETTE.upperRight),
-  );
-  setTile(
-    layer,
-    stairX - 1,
-    stairBottomY + 2,
-    terrainGid(STAIR_PALETTE.lowerLeft),
-  );
-  setTile(
-    layer,
-    stairX + 2,
-    stairBottomY + 2,
-    terrainGid(STAIR_PALETTE.lowerRight),
-  );
-  for (let y = stairBottomY - 1; y <= stairBottomY + 2; y += 1) {
-    for (let x = stairX; x <= stairX + 2; x += 1) {
-      clearCollision(x, y);
-    }
-  }
-  elevationBottomEdges.push({ bottomEdges, level });
-}
-
-renderElevation(elevationLevel1Mask, elevationLevel1, 1, 59);
-renderElevation(elevationLevel2Mask, elevationLevel2, 2, 29);
-
-drawRoadPath(
-  [
-    [14, 34],
-    [106, 34],
-  ],
-  5,
-);
-drawRoadPath(
-  [
-    [60, 34],
-    [60, 24],
-  ],
-  3,
-);
-drawRoadPath(
-  [
-    [60, 25],
-    [30, 25],
-    [30, 16],
-  ],
-  3,
-);
-drawRoadPath(
-  [
-    [60, 34],
-    [70, 34],
-    [70, 49],
-  ],
-  3,
-);
-drawRoadPath(
-  [
-    [70, 34],
-    [106, 34],
-  ],
-  3,
-);
-drawRoadPath(
-  [
-    [82, 34],
-    [82, 46],
-  ],
-  3,
-);
-drawRoadPath(
-  [
-    [94, 34],
-    [94, 48],
-  ],
-  3,
-);
-drawRoadPath(
-  [
-    [20, 34],
-    [20, 42],
-    [13, 42],
-  ],
-  3,
-);
-
-const signPlacements = Object.freeze([
-  [1, 25, 36],
-  [2, 68, 40],
-  [3, 75, 36],
-  [4, 57, 37],
-  [5, 93, 39],
-  [6, 84, 36],
-  [7, 99, 36],
-  [8, 72, 44],
-  [9, 20, 39],
-]);
-const itemPlacements = Object.freeze([
-  [1, 1, 14, 34],
-  [2, 1, 29, 49],
-  [3, 2, 82, 22],
-  [4, 1, 108, 46],
-  [5, 2, 94, 50],
-  [6, 1, 31, 13],
-]);
-const npcPlacements = Object.freeze([
-  [1, 64, 34, "IDLE"],
-  [2, 55, 34, "CLOCKWISE"],
-  [3, 62, 37, "IDLE"],
-  [4, 93, 35, "IDLE"],
-  [5, 72, 48, "IDLE"],
-  [6, 84, 37, "IDLE"],
-  [7, 18, 39, "IDLE"],
-  [8, 66, 37, "IDLE"],
-  [9, 31, 18, "IDLE"],
-  [10, 33, 46, "IDLE"],
-]);
-const npc2Path = Object.freeze([
-  [55, 35],
-  [56, 35],
-  [57, 35],
-  [57, 34],
-  [57, 33],
-  [56, 33],
-  [55, 33],
-]);
-
-const sceneryObjects = [];
-const waterSceneryObjects = [];
-const shadowLevel1Objects = [];
-const shadowLevel2Objects = [];
-
-const buildingPlacements = Object.freeze([
-  {
-    name: "castle",
-    assetKey: TINY_SWORDS_ASSET_KEYS.CASTLE,
-    x: 27,
-    y: 17,
-    width: 5,
-    height: 4,
-    collisionDepth: 2,
-  },
-  {
-    name: "tower-west",
-    assetKey: TINY_SWORDS_ASSET_KEYS.TOWER,
-    x: 11,
-    y: 43,
-    width: 2,
-    height: 4,
-    collisionDepth: 1,
-  },
-  {
-    name: "tower-east",
-    assetKey: TINY_SWORDS_ASSET_KEYS.TOWER,
-    x: 105,
-    y: 22,
-    width: 2,
-    height: 4,
-    collisionDepth: 1,
-  },
-  {
-    name: "tower-south",
-    assetKey: TINY_SWORDS_ASSET_KEYS.TOWER,
-    x: 59,
-    y: 61,
-    width: 2,
-    height: 4,
-    collisionDepth: 1,
-  },
-  {
-    name: "barracks",
-    assetKey: TINY_SWORDS_ASSET_KEYS.BARRACKS,
-    x: 16,
-    y: 20,
-    width: 3,
-    height: 4,
-    collisionDepth: 1,
-  },
-  {
-    name: "archery",
-    assetKey: TINY_SWORDS_ASSET_KEYS.ARCHERY,
-    x: 39,
-    y: 20,
-    width: 3,
-    height: 4,
-    collisionDepth: 1,
-  },
-  {
-    name: "monastery",
-    assetKey: TINY_SWORDS_ASSET_KEYS.MONASTERY,
-    x: 73,
-    y: 50,
-    width: 3,
-    height: 5,
-    collisionDepth: 1,
-  },
-  {
-    name: "house-1-a",
-    assetKey: TINY_SWORDS_ASSET_KEYS.HOUSE_1,
-    x: 79,
-    y: 42,
-    width: 2,
-    height: 3,
-    collisionDepth: 1,
-  },
-  {
-    name: "house-1-b",
-    assetKey: TINY_SWORDS_ASSET_KEYS.HOUSE_1,
-    x: 104,
-    y: 45,
-    width: 2,
-    height: 3,
-    collisionDepth: 1,
-  },
-  {
-    name: "house-2-a",
-    assetKey: TINY_SWORDS_ASSET_KEYS.HOUSE_2,
-    x: 87,
-    y: 40,
-    width: 2,
-    height: 3,
-    collisionDepth: 1,
-  },
-  {
-    name: "house-2-b",
-    assetKey: TINY_SWORDS_ASSET_KEYS.HOUSE_2,
-    x: 88,
-    y: 49,
-    width: 2,
-    height: 3,
-    collisionDepth: 1,
-  },
-  {
-    name: "house-3-a",
-    assetKey: TINY_SWORDS_ASSET_KEYS.HOUSE_3,
-    x: 98,
-    y: 40,
-    width: 2,
-    height: 3,
-    collisionDepth: 1,
-  },
-  {
-    name: "house-3-b",
-    assetKey: TINY_SWORDS_ASSET_KEYS.HOUSE_3,
-    x: 96,
-    y: 49,
-    width: 2,
-    height: 3,
-    collisionDepth: 1,
-  },
-]);
-
-for (const building of buildingPlacements) {
-  sceneryObjects.push(
-    worldScenery({
-      name: building.name,
-      assetKey: building.assetKey,
-      tileX: building.x,
-      tileY: building.y,
-      width: building.width * TILE_SIZE,
-      height: building.height * TILE_SIZE,
-      originX: 0,
-      originY: 1,
-    }),
-  );
-  for (
-    let y = building.y - building.collisionDepth + 1;
-    y <= building.y;
-    y += 1
-  ) {
-    for (let x = building.x; x < building.x + building.width; x += 1) {
-      if (!hasMaskTile(baseLandMask, x, y)) {
+for (const definition of sceneryDefinitions) {
+  const [width, height] = definition.footprint;
+  for (let offsetY = 0; offsetY < height; offsetY += 1) {
+    for (let offsetX = 0; offsetX < width; offsetX += 1) {
+      const x = definition.tileX + offsetX - Math.floor(width / 2);
+      const y = definition.tileY - offsetY;
+      if (!hasLand(x, y))
         throw new Error(
-          `${building.name} is outside the island at (${x}, ${y}).`,
+          `${definition.asset} footprint leaves the island at (${x}, ${y}).`,
         );
-      }
-      blockTile(x, y);
-    }
-  }
-  reserveRect(building.x, building.y, building.width, building.height, 1);
-}
-
-for (const [, x, y] of signPlacements) {
-  blockTile(x, y);
-  reserveTile(x, y, 1);
-  sceneryObjects.push(
-    worldScenery({
-      name: "stone-sign-marker",
-      assetKey: TINY_SWORDS_ASSET_KEYS.ROCK_4,
-      tileX: x,
-      tileY: y,
-      width: TILE_SIZE,
-      height: TILE_SIZE,
-    }),
-  );
-}
-
-for (const [, , x, y] of itemPlacements) reserveTile(x, y, 1);
-for (const [, x, y] of npcPlacements) reserveTile(x, y, 1);
-for (const [x, y] of npc2Path) reserveTile(x, y, 1);
-reserveTile(...PLAYER_SPAWN, 2);
-reserveTile(...REVIVE_LOCATION, 2);
-
-function chooseSceneryTiles({
-  count,
-  regions,
-  salt,
-  width = 1,
-  height = 1,
-  padding = 1,
-}) {
-  const candidates = new Map();
-  for (const [left, top, right, bottom] of regions) {
-    for (let y = top; y <= bottom; y += 1) {
-      for (let x = left; x <= right; x += 1) {
-        let valid = true;
-        for (
-          let footprintY = y - height + 1;
-          footprintY <= y;
-          footprintY += 1
-        ) {
-          for (let footprintX = x; footprintX < x + width; footprintX += 1) {
-            if (
-              !hasMaskTile(baseLandMask, footprintX, footprintY) ||
-              collision[indexOf(footprintX, footprintY)] !== 0 ||
-              roadMask[indexOf(footprintX, footprintY)] !== 0 ||
-              isReserved(footprintX, footprintY)
-            ) {
-              valid = false;
-            }
-          }
-        }
-        if (valid) candidates.set(`${x},${y}`, [x, y]);
-      }
-    }
-  }
-  const ordered = [...candidates.values()].sort(
-    ([ax, ay], [bx, by]) => hash(ax, ay, salt) - hash(bx, by, salt),
-  );
-  const selected = [];
-  for (const [x, y] of ordered) {
-    if (selected.length === count) break;
-    let valid = true;
-    for (let footprintY = y - height + 1; footprintY <= y; footprintY += 1) {
-      for (let footprintX = x; footprintX < x + width; footprintX += 1) {
-        if (isReserved(footprintX, footprintY)) valid = false;
-      }
-    }
-    if (!valid) continue;
-    selected.push([x, y]);
-    reserveRect(x, y, width, height, padding);
-  }
-  if (selected.length !== count) {
-    throw new Error(
-      `Unable to place ${count} scenery objects; placed ${selected.length}.`,
-    );
-  }
-  return selected;
-}
-
-const forestRegions = Object.freeze([
-  [7, 7, 24, 32],
-  [43, 7, 63, 28],
-  [69, 7, 111, 30],
-  [7, 30, 37, 51],
-  [68, 41, 111, 53],
-]);
-const treeVariants = Object.freeze([
-  [TINY_SWORDS_ASSET_KEYS.TREE_1, TINY_SWORDS_ANIMATION_KEYS.TREE_1, 256],
-  [TINY_SWORDS_ASSET_KEYS.TREE_2, TINY_SWORDS_ANIMATION_KEYS.TREE_2, 256],
-  [TINY_SWORDS_ASSET_KEYS.TREE_3, TINY_SWORDS_ANIMATION_KEYS.TREE_3, 192],
-  [TINY_SWORDS_ASSET_KEYS.TREE_4, TINY_SWORDS_ANIMATION_KEYS.TREE_4, 192],
-]);
-const landmarkTreePositions = Object.freeze([
-  [22, 15],
-  [35, 14],
-  [52, 38],
-  [73, 38],
-  [76, 41],
-  [108, 39],
-  [24, 42],
-  [36, 40],
-  [101, 25],
-  [72, 28],
-]);
-landmarkTreePositions.forEach(([x, y], index) => {
-  if (
-    !hasMaskTile(baseLandMask, x, y) ||
-    collision[indexOf(x, y)] !== 0 ||
-    roadMask[indexOf(x, y)] !== 0 ||
-    isReserved(x, y)
-  ) {
-    throw new Error(`Landmark tree ${index + 1} cannot occupy (${x}, ${y}).`);
-  }
-  const [assetKey, animationKey, height] = treeVariants[index % 4];
-  sceneryObjects.push(
-    worldScenery({
-      name: `landmark-tree-${index + 1}`,
-      assetKey,
-      animationKey,
-      frameCount: 8,
-      tileX: x,
-      tileY: y,
-      width: 192,
-      height,
-    }),
-  );
-  blockTile(x, y);
-  reserveTile(x, y, 2);
-});
-chooseSceneryTiles({
-  count: 56,
-  regions: forestRegions,
-  salt: 201,
-  padding: 2,
-}).forEach(([x, y], index) => {
-  const [assetKey, animationKey, height] = treeVariants[index % 4];
-  sceneryObjects.push(
-    worldScenery({
-      name: `tree-${index + 1}`,
-      assetKey,
-      animationKey,
-      frameCount: 8,
-      tileX: x,
-      tileY: y,
-      width: 192,
-      height,
-    }),
-  );
-  blockTile(x, y);
-});
-
-const stumpKeys = Object.freeze([
-  TINY_SWORDS_ASSET_KEYS.STUMP_1,
-  TINY_SWORDS_ASSET_KEYS.STUMP_2,
-  TINY_SWORDS_ASSET_KEYS.STUMP_3,
-  TINY_SWORDS_ASSET_KEYS.STUMP_4,
-]);
-chooseSceneryTiles({
-  count: 12,
-  regions: forestRegions,
-  salt: 301,
-  padding: 1,
-}).forEach(([x, y], index) => {
-  sceneryObjects.push(
-    worldScenery({
-      name: `stump-${index + 1}`,
-      assetKey: stumpKeys[index % 4],
-      tileX: x,
-      tileY: y,
-      width: 192,
-      height: 256,
-    }),
-  );
-  blockTile(x, y);
-});
-
-const bushVariants = Object.freeze([
-  [TINY_SWORDS_ASSET_KEYS.BUSH_1, TINY_SWORDS_ANIMATION_KEYS.BUSH_1],
-  [TINY_SWORDS_ASSET_KEYS.BUSH_2, TINY_SWORDS_ANIMATION_KEYS.BUSH_2],
-  [TINY_SWORDS_ASSET_KEYS.BUSH_3, TINY_SWORDS_ANIMATION_KEYS.BUSH_3],
-  [TINY_SWORDS_ASSET_KEYS.BUSH_4, TINY_SWORDS_ANIMATION_KEYS.BUSH_4],
-]);
-chooseSceneryTiles({
-  count: 24,
-  regions: forestRegions,
-  salt: 401,
-  width: 2,
-  padding: 1,
-}).forEach(([x, y], index) => {
-  const [assetKey, animationKey] = bushVariants[index % 4];
-  sceneryObjects.push(
-    worldScenery({
-      name: `bush-${index + 1}`,
-      assetKey,
-      animationKey,
-      frameCount: 8,
-      tileX: x,
-      tileY: y,
-      width: 128,
-      height: 128,
-      originX: 0,
-      originY: 1,
-    }),
-  );
-  blockTile(x, y);
-  blockTile(x + 1, y);
-});
-
-const rockKeys = Object.freeze([
-  TINY_SWORDS_ASSET_KEYS.ROCK_1,
-  TINY_SWORDS_ASSET_KEYS.ROCK_2,
-  TINY_SWORDS_ASSET_KEYS.ROCK_3,
-  TINY_SWORDS_ASSET_KEYS.ROCK_4,
-]);
-chooseSceneryTiles({
-  count: 28,
-  regions: forestRegions,
-  salt: 501,
-  padding: 1,
-}).forEach(([x, y], index) => {
-  sceneryObjects.push(
-    worldScenery({
-      name: `rock-${index + 1}`,
-      assetKey: rockKeys[index % 4],
-      tileX: x,
-      tileY: y,
-      width: TILE_SIZE,
-      height: TILE_SIZE,
-    }),
-  );
-  blockTile(x, y);
-});
-
-const waterFoamPositions = Object.freeze([
-  [8, 12],
-  [20, 6],
-  [36, 5],
-  [54, 5],
-  [72, 5],
-  [92, 6],
-  [110, 12],
-  [114, 28],
-  [113, 44],
-  [106, 53],
-  [93, 55],
-  [72, 54],
-  [68, 59],
-  [52, 59],
-  [40, 52],
-  [24, 53],
-  [8, 48],
-  [4, 34],
-  [5, 22],
-  [45, 43],
-  [55, 47],
-  [65, 43],
-]);
-for (const [x, y] of waterFoamPositions) {
-  waterSceneryObjects.push(
-    fixedScenery({
-      name: "water-foam",
-      assetKey: TINY_SWORDS_ASSET_KEYS.WATER_FOAM,
-      animationKey: TINY_SWORDS_ANIMATION_KEYS.WATER_FOAM,
-      frameCount: 16,
-      tileX: x,
-      tileY: y,
-      width: 192,
-      height: 192,
-      fixedDepth: -45,
-    }),
-  );
-}
-
-const waterRockPositions = Object.freeze([
-  [3, 10],
-  [10, 3],
-  [32, 2],
-  [58, 2],
-  [85, 3],
-  [116, 8],
-  [118, 25],
-  [117, 55],
-  [105, 59],
-  [76, 59],
-  [47, 59],
-  [23, 60],
-  [3, 55],
-  [2, 34],
-  [43, 47],
-  [65, 49],
-]);
-const waterRockVariants = Object.freeze([
-  [
-    TINY_SWORDS_ASSET_KEYS.WATER_ROCK_1,
-    TINY_SWORDS_ANIMATION_KEYS.WATER_ROCK_1,
-  ],
-  [
-    TINY_SWORDS_ASSET_KEYS.WATER_ROCK_2,
-    TINY_SWORDS_ANIMATION_KEYS.WATER_ROCK_2,
-  ],
-  [
-    TINY_SWORDS_ASSET_KEYS.WATER_ROCK_3,
-    TINY_SWORDS_ANIMATION_KEYS.WATER_ROCK_3,
-  ],
-  [
-    TINY_SWORDS_ASSET_KEYS.WATER_ROCK_4,
-    TINY_SWORDS_ANIMATION_KEYS.WATER_ROCK_4,
-  ],
-]);
-waterRockPositions.forEach(([x, y], index) => {
-  const [assetKey, animationKey] = waterRockVariants[index % 4];
-  waterSceneryObjects.push(
-    fixedScenery({
-      name: `water-rock-${index + 1}`,
-      assetKey,
-      animationKey,
-      frameCount: 16,
-      tileX: x,
-      tileY: y,
-      width: TILE_SIZE,
-      height: TILE_SIZE,
-      originX: 0.5,
-      originY: 1,
-      fixedDepth: -44,
-    }),
-  );
-});
-
-for (const { bottomEdges, level } of elevationBottomEdges) {
-  const target = level === 1 ? shadowLevel1Objects : shadowLevel2Objects;
-  const depth = level === 1 ? -35 : -25;
-  bottomEdges
-    .sort(([ax, ay], [bx, by]) => ay - by || ax - bx)
-    .filter((_, index) => index % 5 === 0)
-    .slice(0, 24)
-    .forEach(([x, y], index) => {
-      target.push(
-        fixedScenery({
-          name: `level-${level}-shadow-${index + 1}`,
-          assetKey: TINY_SWORDS_ASSET_KEYS.SHADOW,
-          tileX: x,
-          tileY: y + 1,
-          width: 192,
-          height: 192,
-          fixedDepth: depth,
-        }),
-      );
-    });
-}
-
-function fillEncounter(layer, left, top, width, height) {
-  for (let y = top; y < top + height; y += 1) {
-    for (let x = left; x < left + width; x += 1) {
-      if (
-        !isInsideMap(x, y) ||
-        !hasMaskTile(baseLandMask, x, y) ||
-        collision[indexOf(x, y)] !== 0 ||
-        roadMask[indexOf(x, y)] !== 0
-      ) {
-        continue;
-      }
-      setTile(layer, x, y, FIRST_GID.ENCOUNTER);
+      collision[indexOf(x, y)] = 1;
     }
   }
 }
 
-fillEncounter(encounter1, 8, 34, 32, 18);
-fillEncounter(encounter2, 70, 36, 42, 18);
-fillEncounter(encounter3, 68, 8, 41, 22);
+const sceneryObjects = sceneryDefinitions.map((definition, index) => ({
+  id: index + 1,
+  name: definition.asset,
+  type: definition.kind,
+  x: (definition.tileX + 0.5) * TILE_SIZE,
+  y: (definition.tileY + 1) * TILE_SIZE,
+  point: true,
+  rotation: 0,
+  visible: true,
+}));
+const waterDefinitions = [
+  ["water-rock-1", 8, 8],
+  ["water-rock-2", 41, 8],
+  ["water-rock-3", 2, 24],
+  ["water-rock-4", 47, 18],
+  ["water-rock-2", 8, 42],
+  ["water-rock-1", 42, 42],
+  ["water-foam", 18, 2],
+  ["water-foam", 32, 2],
+  ["water-foam", 2, 31],
+  ["water-foam", 47, 31],
+  ["water-foam", 20, 47],
+  ["water-foam", 33, 47],
+];
+const waterSceneryObjects = waterDefinitions.map(
+  ([asset, tileX, tileY], index) => {
+    if (
+      tileX < OUTER_WATER_RING ||
+      tileY < OUTER_WATER_RING ||
+      tileX >= WIDTH - OUTER_WATER_RING ||
+      tileY >= HEIGHT - OUTER_WATER_RING ||
+      hasLand(tileX, tileY)
+    )
+      throw new Error(`Invalid water scenery placement for ${asset}.`);
+    return {
+      id: sceneryObjects.length + index + 1,
+      name: asset,
+      type: "water",
+      x: (tileX + 0.5) * TILE_SIZE,
+      y: (tileY + 1) * TILE_SIZE,
+      point: true,
+      rotation: 0,
+      visible: true,
+    };
+  },
+);
 
-function reachableTilesFrom(startX, startY) {
-  const reachable = new Uint8Array(SIZE);
-  const queue = new Int32Array(SIZE);
-  let readIndex = 0;
-  let writeIndex = 0;
-  const startIndex = indexOf(startX, startY);
-  if (collision[startIndex]) return reachable;
-  reachable[startIndex] = 1;
-  queue[writeIndex++] = startIndex;
-  while (readIndex < writeIndex) {
-    const index = queue[readIndex++];
-    const x = index % WIDTH;
-    const y = Math.floor(index / WIDTH);
-    for (const [nextX, nextY] of [
-      [x - 1, y],
-      [x + 1, y],
-      [x, y - 1],
-      [x, y + 1],
-    ]) {
-      if (!isInsideMap(nextX, nextY)) continue;
-      const nextIndex = indexOf(nextX, nextY);
-      if (reachable[nextIndex] || collision[nextIndex]) continue;
-      reachable[nextIndex] = 1;
-      queue[writeIndex++] = nextIndex;
+for (let y = 0; y < HEIGHT; y += 1) {
+  for (let x = 0; x < WIDTH; x += 1) {
+    if (
+      x < OUTER_WATER_RING ||
+      y < OUTER_WATER_RING ||
+      x >= WIDTH - OUTER_WATER_RING ||
+      y >= HEIGHT - OUTER_WATER_RING
+    ) {
+      if (ground[indexOf(x, y)] !== 0 || collision[indexOf(x, y)] !== 1)
+        throw new Error(
+          `The outer two-tile water ring is broken at (${x}, ${y}).`,
+        );
     }
   }
-  return reachable;
 }
 
-const reachable = reachableTilesFrom(...PLAYER_SPAWN);
-for (const [x, y, label] of [
-  [...PLAYER_SPAWN, "player spawn"],
-  [...REVIVE_LOCATION, "revive location"],
-  [14, 34, "west road endpoint"],
-  [106, 34, "east road endpoint"],
-  [30, 15, "castle plateau"],
-  [70, 49, "south exploration endpoint"],
-  ...itemPlacements.map(([, , x, y]) => [x, y, "item"]),
-  ...npcPlacements.map(([, x, y]) => [x, y, "npc"]),
-  ...npc2Path.map(([x, y]) => [x, y, "NPC 2 path"]),
-]) {
-  if (
-    !isInsideMap(x, y) ||
-    collision[indexOf(x, y)] !== 0 ||
-    reachable[indexOf(x, y)] !== 1
-  ) {
-    throw new Error(`${label} is not spawn-reachable at (${x}, ${y}).`);
-  }
-}
-
-for (const [id, x, y] of signPlacements) {
-  const hasReachableInteractionTile = [
+const walkable = collision
+  .map((blocked, index) => (blocked === 0 ? index : -1))
+  .filter((index) => index >= 0);
+if (walkable.length < 210)
+  throw new Error(`The island has only ${walkable.length} walkable cells.`);
+const reachable = new Set([walkable[0]]);
+const queue = [walkable[0]];
+for (let read = 0; read < queue.length; read += 1) {
+  const index = queue[read];
+  const x = index % WIDTH;
+  const y = Math.floor(index / WIDTH);
+  for (const [nextX, nextY] of [
     [x - 1, y],
     [x + 1, y],
     [x, y - 1],
     [x, y + 1],
-  ].some(
-    ([nextX, nextY]) =>
-      isInsideMap(nextX, nextY) && reachable[indexOf(nextX, nextY)] === 1,
+  ]) {
+    if (!isInside(nextX, nextY)) continue;
+    const next = indexOf(nextX, nextY);
+    if (collision[next] || reachable.has(next)) continue;
+    reachable.add(next);
+    queue.push(next);
+  }
+}
+if (reachable.size !== walkable.length)
+  throw new Error(
+    `Walkable island is disconnected: ${reachable.size}/${walkable.length}.`,
   );
-  if (!hasReachableInteractionTile) {
-    throw new Error(`Sign ${id} has no reachable interaction tile.`);
-  }
-}
 
-for (const layer of [encounter1, encounter2, encounter3]) {
-  for (let index = 0; index < SIZE; index += 1) {
-    if (layer[index] && !reachable[index]) layer[index] = 0;
-  }
-  if (!layer.some(Boolean)) {
-    throw new Error("Every encounter area must retain reachable tiles.");
-  }
-}
-
-const occupiedGameplayTiles = new Map();
-for (const [kind, id, x, y] of [
-  ...itemPlacements.map(([id, , x, y]) => ["item", id, x, y]),
-  ...npcPlacements.map(([id, x, y]) => ["npc", id, x, y]),
-]) {
-  const key = `${x},${y}`;
-  const previous = occupiedGameplayTiles.get(key);
-  if (previous) {
-    throw new Error(`${kind} ${id} overlaps ${previous} at (${x}, ${y}).`);
-  }
-  occupiedGameplayTiles.set(key, `${kind} ${id}`);
-}
-
-const encounterGroup = {
+let nextLayerId = 1;
+const tileLayer = (name, data, visible = true) => ({
   id: nextLayerId++,
-  layers: [
-    tileLayer("Encounter-Area-1", encounter1, true, [
-      property("area", "int", 1),
-      property("tileType", "string", "GRASS"),
-    ]),
-    tileLayer("Encounter-Area-2", encounter2, true, [
-      property("area", "int", 2),
-      property("tileType", "string", "GRASS"),
-    ]),
-    tileLayer("Encounter-Area-3", encounter3, true, [
-      property("area", "int", 3),
-      property("tileType", "string", "GRASS"),
-    ]),
-  ],
-  name: "Encounter",
-  opacity: 1,
-  type: "group",
-  visible: false,
+  name,
+  type: "tilelayer",
+  width: WIDTH,
+  height: HEIGHT,
   x: 0,
   y: 0,
-};
-
-const itemLayer = objectLayer(
-  "Item",
-  itemPlacements.map(([id, itemId, x, y]) =>
-    tiledObject({
-      name: "item",
-      x,
-      y,
-      properties: [
-        property("id", "int", id),
-        property("item_id", "int", itemId),
-      ],
-    }),
-  ),
-);
-const signLayer = objectLayer(
-  "Sign",
-  signPlacements.map(([id, x, y]) =>
-    tiledObject({
-      name: "sign",
-      x,
-      y,
-      properties: [property("id", "int", id)],
-    }),
-  ),
-);
-const npcLayers = npcPlacements.map(([id, x, y, movementPattern]) => {
-  const objects = [
-    tiledObject({
-      name: "npc",
-      type: "npc",
-      x,
-      y,
-      properties: [
-        property("id", "int", id),
-        property("movement_pattern", "string", movementPattern),
-      ],
-    }),
-  ];
-  if (id === 2) {
-    npc2Path.forEach(([pathX, pathY], pathIndex) => {
-      objects.push(
-        tiledObject({
-          name: String(pathIndex + 1),
-          type: "npc_path",
-          x: pathX,
-          y: pathY,
-        }),
-      );
-    });
-  }
-  return objectLayer(`NPC${id}`, objects, true);
+  opacity: 1,
+  visible,
+  data,
 });
-const npcGroup = {
+const objectLayer = (name, objects) => ({
   id: nextLayerId++,
-  layers: npcLayers,
-  name: "NPC",
+  name,
+  type: "objectgroup",
+  draworder: "topdown",
   opacity: 1,
-  type: "group",
-  visible: false,
+  visible: true,
   x: 0,
   y: 0,
-};
+  objects,
+});
 
 const map = {
   compressionlevel: -1,
   height: HEIGHT,
   infinite: false,
   layers: [
-    objectLayer("Water-Scenery", waterSceneryObjects, true),
-    tileLayer("Flat-Ground", flatGround),
-    objectLayer("Shadow-Level-1", shadowLevel1Objects, true),
-    tileLayer("Elevation-Level-1", elevationLevel1),
-    objectLayer("Shadow-Level-2", shadowLevel2Objects, true),
-    tileLayer("Elevation-Level-2", elevationLevel2),
-    objectLayer("Scenery", sceneryObjects, true),
+    objectLayer("Water-Scenery", waterSceneryObjects),
+    tileLayer("Flat-Ground", ground),
+    objectLayer("Scenery", sceneryObjects),
     tileLayer("Collision", collision, false),
-    encounterGroup,
-    itemLayer,
-    objectLayer("Area-Metadata", [
-      tiledObject({
-        name: "area_metadata",
-        x: PLAYER_SPAWN[0],
-        y: PLAYER_SPAWN[1],
-        properties: [
-          property("faint_location", "string", "main_1"),
-          property("id", "int", 0),
-        ],
-      }),
-    ]),
-    objectLayer("Revive-Location", [
-      tiledObject({ x: REVIVE_LOCATION[0], y: REVIVE_LOCATION[1] }),
-    ]),
-    signLayer,
-    objectLayer("Player-Spawn-Location", [
-      tiledObject({ x: PLAYER_SPAWN[0], y: PLAYER_SPAWN[1] }),
-    ]),
-    npcGroup,
   ],
   nextlayerid: nextLayerId,
-  nextobjectid: nextObjectId,
+  nextobjectid: sceneryObjects.length + waterSceneryObjects.length + 1,
   orientation: "orthogonal",
   renderorder: "right-down",
   tiledversion: "1.11.2",
@@ -1411,7 +450,7 @@ const map = {
   tilesets: [
     {
       columns: ATLAS_COLUMNS,
-      firstgid: FIRST_GID.TERRAIN,
+      firstgid: 1,
       image: "../images/tiny-swords/tiny-swords-terrain-extruded.png",
       imageheight: ATLAS_SIZE,
       imagewidth: ATLAS_SIZE,
@@ -1419,32 +458,6 @@ const map = {
       name: "tiny-swords-terrain",
       spacing: ATLAS_SPACING,
       tilecount: ATLAS_COLUMNS * ATLAS_ROWS,
-      tileheight: TILE_SIZE,
-      tilewidth: TILE_SIZE,
-    },
-    {
-      columns: 1,
-      firstgid: FIRST_GID.COLLISION,
-      image: "../images/monster-tamer/map/collision.png",
-      imageheight: TILE_SIZE,
-      imagewidth: TILE_SIZE,
-      margin: 0,
-      name: "collision",
-      spacing: 0,
-      tilecount: 1,
-      tileheight: TILE_SIZE,
-      tilewidth: TILE_SIZE,
-    },
-    {
-      columns: 1,
-      firstgid: FIRST_GID.ENCOUNTER,
-      image: "../images/monster-tamer/map/encounter.png",
-      imageheight: TILE_SIZE,
-      imagewidth: TILE_SIZE,
-      margin: 0,
-      name: "encounter",
-      spacing: 0,
-      tilecount: 1,
       tileheight: TILE_SIZE,
       tilewidth: TILE_SIZE,
     },
@@ -1459,9 +472,8 @@ const sourceManifest = JSON.parse(await readFile(SOURCE_MANIFEST_PATH, "utf8"));
 if (
   sourceManifest.project !== "Tiny Swords (Free Pack)" ||
   sourceManifest.files.length !== 32
-) {
+)
   throw new Error("Tiny Swords source manifest selection is invalid.");
-}
 const sourceFiles = new Map();
 for (const definition of sourceManifest.files) {
   const sourcePath = path.join(SOURCE_ROOT, definition.path);
@@ -1472,12 +484,8 @@ for (const definition of sourceManifest.files) {
     metadata.width !== definition.width ||
     metadata.height !== definition.height ||
     sha256 !== definition.sha256
-  ) {
-    throw new Error(
-      `Tiny Swords source mismatch for ${definition.path}: ` +
-        `${metadata.width}x${metadata.height} ${sha256}.`,
-    );
-  }
+  )
+    throw new Error(`Tiny Swords source mismatch for ${definition.path}.`);
   sourceFiles.set(definition.path, bytes);
 }
 
@@ -1494,19 +502,16 @@ if (
   [...waterPixels].some(
     (value, index) => value !== WATER_COLOR[index % WATER_COLOR.length],
   )
-) {
+)
   throw new Error("Tiny Swords water background must remain solid #47aba9.");
-}
 
 const tilemapBytes = sourceFiles.get("Terrain/Tileset/Tilemap_color1.png");
 const composites = [];
 for (const [sourceIndex, slot] of TERRAIN_SLOT_BY_SOURCE_INDEX) {
-  const sourceX = (sourceIndex % TERRAIN_SOURCE_COLUMNS) * TILE_SIZE;
-  const sourceY = Math.floor(sourceIndex / TERRAIN_SOURCE_COLUMNS) * TILE_SIZE;
   const tile = await sharp(tilemapBytes)
     .extract({
-      left: sourceX,
-      top: sourceY,
+      left: (sourceIndex % TERRAIN_SOURCE_COLUMNS) * TILE_SIZE,
+      top: Math.floor(sourceIndex / TERRAIN_SOURCE_COLUMNS) * TILE_SIZE,
       width: TILE_SIZE,
       height: TILE_SIZE,
     })
@@ -1526,7 +531,7 @@ for (const [sourceIndex, slot] of TERRAIN_SLOT_BY_SOURCE_INDEX) {
   });
 }
 
-await mkdir(RUNTIME_ROOT, { recursive: true });
+await mkdir(path.dirname(RUNTIME_TERRAIN_PATH), { recursive: true });
 await sharp({
   create: {
     width: ATLAS_SIZE,
@@ -1536,15 +541,14 @@ await sharp({
   },
 })
   .composite(composites)
-  .png({ compressionLevel: 9, palette: true })
+  .png()
   .toFile(RUNTIME_TERRAIN_PATH);
 
 for (const [sourceRelativePath, runtimeRelativePath] of RUNTIME_ASSET_COPIES) {
-  const destination = path.join(RUNTIME_ROOT, runtimeRelativePath);
-  await mkdir(path.dirname(destination), { recursive: true });
-  await copyFile(path.join(SOURCE_ROOT, sourceRelativePath), destination);
+  const target = path.join(RUNTIME_ROOT, runtimeRelativePath);
+  await mkdir(path.dirname(target), { recursive: true });
+  await writeFile(target, sourceFiles.get(sourceRelativePath));
 }
-
 await mkdir(PUBLISHED_EVIDENCE_ROOT, { recursive: true });
 await copyFile(
   SOURCE_MANIFEST_PATH,
@@ -1554,11 +558,12 @@ await copyFile(
   SOURCE_TERMS_PATH,
   path.join(PUBLISHED_EVIDENCE_ROOT, "TERMS.md"),
 );
-await writeFile(MAP_PATH, `${JSON.stringify(map)}\n`);
+await mkdir(path.dirname(MAP_PATH), { recursive: true });
+await writeFile(MAP_PATH, `${JSON.stringify(map, null, 2)}\n`, "utf8");
 
 console.log(
-  `Generated Tiny Swords main_1 (${WIDTH}x${HEIGHT}, ${TILE_SIZE}px tiles), ` +
-    `${sceneryObjects.length} world scenery objects, ` +
-    `${waterSceneryObjects.length} water objects, 10 NPCs, 6 items, ` +
-    "9 signs, and 3 encounter areas.",
+  `Generated Monster Tamer water home ${WIDTH}x${HEIGHT}: ` +
+    `${walkable.length} connected walkable cells, ` +
+    `${sceneryObjects.length} island objects, ` +
+    `${waterSceneryObjects.length} water objects.`,
 );

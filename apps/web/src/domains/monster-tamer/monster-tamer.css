@@ -2,9 +2,7 @@
   display: grid;
   gap: 14px;
   overflow: hidden;
-  background:
-    radial-gradient(circle at 100% 0, rgba(90, 180, 73, 0.18), transparent 42%),
-    rgba(255, 255, 255, 0.78);
+  background: rgba(255, 255, 255, 0.82);
 }
 
 .monster-tamer-panel > p {
@@ -14,17 +12,18 @@
 }
 
 .monster-tamer-launch {
+  min-height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 44px;
+  border: 0;
   border-radius: 14px;
   color: #fff;
+  background: #327e68;
+  box-shadow: 0 8px 18px rgba(24, 93, 76, 0.24);
   font-weight: 800;
-  text-decoration: none;
-  background: #4f9f42;
-  box-shadow: 0 8px 18px rgba(79, 159, 66, 0.2);
+  cursor: pointer;
 }
 
 .monster-tamer-launch > svg {
@@ -33,7 +32,209 @@
   fill: currentColor;
 }
 
-.monster-tamer-launch:focus-visible {
-  outline: 3px solid rgba(79, 159, 66, 0.3);
+.monster-tamer-launch:focus-visible,
+.monster-home-close:focus-visible,
+.monster-home-detail-close:focus-visible {
+  outline: 3px solid rgba(255, 255, 255, 0.9);
   outline-offset: 3px;
+}
+
+.monster-home-portal.app-shell {
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  width: 100%;
+  min-width: 0;
+  height: var(--tg-viewport-stable-height, 100dvh);
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  color: #17354a;
+  background: #47aba9;
+  isolation: isolate;
+}
+
+.monster-home-frame {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #47aba9;
+}
+
+.monster-home-close {
+  position: absolute;
+  z-index: 4;
+  top: calc(max(var(--safe-top), var(--content-safe-top)) + 10px);
+  left: calc(max(var(--safe-left), var(--content-safe-left)) + 10px);
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 13px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 999px;
+  color: #fff;
+  background: rgba(13, 55, 57, 0.82);
+  box-shadow: 0 8px 20px rgba(10, 48, 50, 0.22);
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.monster-home-close svg {
+  width: 18px;
+  height: 18px;
+}
+
+.monster-home-status {
+  position: absolute;
+  z-index: 5;
+  top: 50%;
+  left: 50%;
+  width: min(86vw, 330px);
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 24px;
+  color: #17354a;
+  background: rgba(255, 253, 250, 0.94);
+  box-shadow: 0 22px 54px rgba(20, 62, 64, 0.24);
+  text-align: center;
+  transform: translate(-50%, -50%);
+}
+
+.monster-home-status > svg {
+  width: 30px;
+  height: 30px;
+  color: #347e68;
+}
+
+.monster-home-status h2,
+.monster-home-status p {
+  margin: 0;
+}
+
+.monster-home-status h2 {
+  font-size: 20px;
+}
+
+.monster-home-status p {
+  color: #5c7077;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.monster-home-empty,
+.monster-home-warning {
+  position: absolute;
+  z-index: 4;
+  left: 50%;
+  bottom: calc(max(var(--safe-bottom), var(--content-safe-bottom)) + 18px);
+  margin: 0;
+  padding: 9px 13px;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 999px;
+  color: #fff;
+  background: rgba(13, 55, 57, 0.82);
+  box-shadow: 0 8px 20px rgba(10, 48, 50, 0.2);
+  font-size: 11px;
+  font-weight: 850;
+  transform: translateX(-50%);
+}
+
+.monster-home-warning {
+  color: #6d3d12;
+  background: rgba(255, 244, 222, 0.94);
+}
+
+.monster-home-detail-backdrop {
+  position: absolute;
+  z-index: 8;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: calc(max(var(--safe-top), var(--content-safe-top)) + 18px)
+    calc(max(var(--safe-right), var(--content-safe-right)) + 18px)
+    calc(max(var(--safe-bottom), var(--content-safe-bottom)) + 18px)
+    calc(max(var(--safe-left), var(--content-safe-left)) + 18px);
+  background: rgba(18, 48, 52, 0.34);
+  backdrop-filter: blur(5px);
+}
+
+.monster-home-detail {
+  position: relative;
+  width: min(440px, 48vw);
+  max-height: 100%;
+  overflow: auto;
+  overscroll-behavior: contain;
+  border-radius: 30px;
+  box-shadow: 0 28px 80px rgba(16, 45, 48, 0.34);
+}
+
+.monster-home-detail-close {
+  position: absolute;
+  z-index: 5;
+  top: 20px;
+  right: 20px;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(54, 67, 75, 0.16);
+  border-radius: 50%;
+  color: #17354a;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 8px 18px rgba(54, 67, 75, 0.12);
+  cursor: pointer;
+}
+
+.monster-home-detail-close svg {
+  width: 18px;
+  height: 18px;
+}
+
+.app-shell .monster-home-detail-showcase {
+  min-height: 358px;
+  border-radius: 30px;
+}
+
+@media (max-width: 680px) {
+  .monster-home-close span {
+    display: none;
+  }
+
+  .monster-home-close {
+    width: 42px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .monster-home-detail-backdrop {
+    align-items: flex-end;
+    padding: calc(max(var(--safe-top), var(--content-safe-top)) + 58px)
+      calc(max(var(--safe-right), var(--content-safe-right)) + 10px)
+      calc(max(var(--safe-bottom), var(--content-safe-bottom)) + 10px)
+      calc(max(var(--safe-left), var(--content-safe-left)) + 10px);
+  }
+
+  .monster-home-detail {
+    width: 100%;
+  }
+
+  .app-shell .monster-home-detail-showcase {
+    min-height: 338px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .monster-home-portal *,
+  .monster-tamer-panel * {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }

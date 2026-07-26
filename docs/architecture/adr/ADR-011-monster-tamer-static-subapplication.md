@@ -1,40 +1,40 @@
-# ADR-011：Monster Tamer 独立静态子应用与 Tiny Swords 三层海岛
+# ADR-011：Monster Tamer 认证藏品家园与受控 Phaser 渲染边界
 
 ## 状态
 
-已接受。
+已接受，替代原“公开独立探索游戏与三层海岛”裁决。
 
 ## 背景
 
-产品第 21 章要求 Monster Tamer 继续作为 FinalTMA 游戏页中的独立本地游戏，并将地图地形、地图装饰和建筑替换为 Tiny Swords 风格。本次变更允许重新设计地形与建筑布局，但不改变主角、移动、操控、动画规则、相机、玩法对象或玩法规则，不增加人物、动物、资源采集、室内或其他玩法。
+Monster Tamer 的唯一产品目标已经改为展示玩家在 FinalTMA 中真实可用的藏品。原公开静态游戏拥有自己的玩家、怪物、NPC、道具、遭遇、战斗、捕捉、队伍、背包和页面内存状态，这些内容与藏品家园目标冲突，必须删除。
 
-把游戏源码导入 React bundle、复用 FinalTMA session 或接入业务 API 会扩大可信边界。完整世界仍需由 Phaser tile layer 和按底部锚点排序的 scenery object 构成，避免把 `7,680×4,096` 世界烘焙为单张巨型背景。
+家园需要同时满足两条边界：真实藏品仍只能由已登录 React 主应用通过认证接口读取；Phaser 只负责高频地图渲染、漫游和点击，不能持有会话或请求业务 API。
 
 ## 决策
 
-Monster Tamer 固定采用以下架构：
+1. 游戏页顺序保持 `MonsterTamerPanel → ExpeditionPanel → WheelPanel`。Monster Tamer 启动卡改为 React 按钮，通过 Portal 在 `document.body` 打开全屏家园，不再离开主应用。
+2. React 领域组件只调用现有 `inventory.list` 查询，固定过滤 `available > 0` 并按 `template_id` 去重。同一模板无论数量多少，一种只显示一只；没有展示总数上限，也不提供用户选择名单。
+3. `apps/web/public/monster-tamer` 保留为同源、受控 Phaser 渲染文档。`/monster-tamer/` 直接访问时不请求 API、不读取 Catalog 列表，只显示“请从 FinalTMA 游戏中心进入”。
+4. React 父页面通过同源 `postMessage` 向 `iframe` 注入最小只读字段：`templateId`、名称和 `imageThumbnailPath`。双方同时校验 `origin` 与消息窗口；不传 access token、session generation、Telegram `initData` 或用户标识。
+5. 地图固定为 `50×50`、每格 `64px` 的 `main_1`。最外两格连续水域；中央只有一块不规则、连续、漂浮在 `#47ABA9` 水面上的草地岛。
+6. 地图只保留 `Water-Scenery`、`Flat-Ground`、`Scenery` 和 `Collision`。水域、岸边、Blue Buildings、树木、树桩和岩石占地不可通行，其余至少 210 个陆地格全部连通。
+7. 地形继续从 Tiny Swords `Tilemap_color1` 生成复制边缘图集；场景只使用 Blue Buildings、树木、树桩、灌木、陆地岩石、水中岩石、水泡沫和阴影。来源、32 文件清单、SHA-256 与条款快照继续随部署保存。
+8. 宠物只使用正式 `/assets/catalog/v1/thumb/` 路径。每个实体逐格选择相邻可通行格，使用占用格与预定格集合避免进入障碍或与其他宠物重叠。
+9. 静态缩略图通过水平翻转、上下浮动、压缩伸展和 Tiny Swords 阴影形成活动效果，不生成第二套方向、战斗或养成素材。
+10. 窄屏保持可点击的镜头比例并允许拖动地图；桌面宽屏优先展示完整岛屿并支持滚轮缩放。地图不保留玩家输入、摇杆、A/B、战斗 HUD 或宠物列表。
+11. 点击宠物时 Phaser 暂停场景，只返回 `template_id`。React 在当前认证查询结果中重新匹配后，通过现有藏品详情组件在游戏上方展示正式详情；关闭详情向 Phaser 发送恢复消息，镜头和宠物位置不重建。
+12. 家园只读，不新增 API、RPC、数据库对象、migration、操作、账本、浏览器持久化或恢复工作流。关闭整个家园后销毁 `iframe` 与 Phaser 页面内存状态。
+13. 原玩家、NPC、告示牌、探索与战斗、遭遇、捕捉、队伍、背包、道具、菜单、过场、音频、旧 JSON、相关图片、Web Font Loader 和 Tweakpane 从运行树删除。
+14. `/monster-tamer` 与 `/monster-tamer/` 的 Vercel 重写继续位于 SPA catch-all 之前，只为同源 `iframe` 提供渲染文档，不构成业务入口。
 
-1. 完整运行树位于 `apps/web/public/monster-tamer`，入口固定为 `/monster-tamer/`；`/monster-tamer` 与 `/monster-tamer/` 在 SPA catch-all 前重写到独立 `index.html`。
-2. `apps/web/src/domains/monster-tamer` 只渲染启动卡片并使用普通链接。游戏页顺序固定为 `MonsterTamerPanel → ExpeditionPanel → WheelPanel`。
-3. 静态子应用不导入 React 应用、API 契约或业务领域，不读取 FinalTMA session、Telegram `initData`、Catalog、业务资产或数据库，不发起业务网络请求。
-4. Phaser 保持本地 `3.60.0`；Web Font Loader `1.6.28` 与 Tweakpane `4.0.3` 也从本地 `vendor` 目录加载，不执行引擎升级。
-5. 运行时世界只保留 `main_1`。地图固定为 `120×64` 个 `64px` 图块，世界尺寸为 `7,680×4,096`；水体底色固定为 `#47ABA9`。旧地图 JSON、旧 background/foreground 地图大图和 Tuxemon 地图素材删除。
-6. 地图构图固定为水域环绕的紧凑三层海岛：西北最高层是城堡区，东北第一层是森林高地，中央是出生点与道路交叉口，东部低地是蓝顶村落，西部是岸塔与树林，南部水湾通向隔水的独立塔岛。出生首屏必须同时出现崖壁、阶梯、道路、地标树、岩石、NPC 和水岸。建筑只作为不可进入、不可交互的场景与碰撞障碍，不创建 `Scene-Transitions`。
-7. 可见地图固定使用 `Water-Scenery`、`Flat-Ground`、`Shadow-Level-1`、`Elevation-Level-1`、`Shadow-Level-2`、`Elevation-Level-2` 与 `Scenery`；静态阻挡固定使用 `Collision`。树木、灌木、岩石和建筑按底部锚点进行世界深度排序。地图固定包含 152 个陆地景观对象与 38 个水域景观对象，并继续承载原有 10 个 NPC、6 个 Item、9 个 Sign 与 `area=1/2/3` 三个 Encounter 区域，不增加玩法对象。
-8. 地图美术固定使用 Pixel Frog 的 `Tiny Swords (Free Pack)`。地形只使用 `Tilemap_color1` 黄绿色草地、水体、泡沫、阴影、两级高差和阶梯；建筑只使用 `Blue Buildings` 的 Castle、Tower、Barracks、Archery、Monastery、House1、House2 和 House3；装饰只使用树、树桩、灌木、陆地岩石与水中岩石。
-9. Tiny Swords 白名单固定为 32 个 PNG。人物、单位、动物、羊、金矿、食物、工具、粒子特效、UI、云、橡皮鸭、Aseprite、其他阵营颜色和 Enemy Pack 均不得进入源码白名单或运行时。源路径、尺寸和 SHA-256 固定记录在 `assets/source/monster-tamer/tiny-swords/free-pack-2026-07-25/SOURCE.json`；运行时发布 `528×528` 复制边缘地形图集和白名单中的建筑、动画装饰，不访问第三方。
-10. 建筑左下锚点固定为：Castle `(27,17)`；Tower `(11,43)`、`(105,22)`、`(59,61)`；Barracks `(16,20)`；Archery `(39,20)`；Monastery `(73,50)`；House1 `(79,42)`、`(104,45)`；House2 `(87,40)`、`(88,49)`；House3 `(98,40)`、`(96,49)`。
-11. 玩家出生点固定为 `(60,34)`，复活点固定为 `(62,34)`。横向主路从 `(14,34)` 到 `(106,34)`；普通步行 `400ms/格`，完整横穿 `92` 格为 `36.8 秒`。主角素材、WASD、方向键、虚拟摇杆、Shift/B 跑步、64px 逐格移动、碰撞贴边滑动和相机 lerp 全部保持原规则。
-12. Telegram SDK 只处理 ready、expand、原生 fullscreen、稳定视口、安全区、垂直滑动保护和 BackButton；虚拟摇杆、A、B 与世界菜单位于设备安全区和内容安全区内。失焦、页面隐藏、Telegram 停用和 pointer cancel 均释放全部输入。
-13. 静态资源预加载完成后直接启动 `main_1`，不注册标题场景或设置场景，不提供 `New Game`、`Continue`、`Options` 和手动保存入口。运行时不使用浏览器持久化，不读取、不写入、不迁移也不清除旧 `MONSTER_TAMER_DATA`；全部游戏状态只保留在当前页面生命周期内存中，刷新页面后从固定出生点和初始状态重新开始。本次不接入服务端状态。
-14. 上游 MIT 许可证、运行库许可证、Tiny Swords 来源页面、Pixel Frog 署名、32 个白名单文件记录、条款快照、修改说明、第三方 notices 和原创资源来源记录随静态树发布。发布门禁验证白名单、源文件 SHA-256、运行时文件集、地图契约和第三方网络请求为零。
+## 可信边界
 
-## 边界
+数据库与 `inventory.list` 是藏品事实来源。React 只把服务端已确认的显示字段传给 Phaser；Phaser 返回的点击消息只作为用户意图，React 必须用 `template_id` 在当前查询结果中重新解析。
 
-Monster Tamer 不拥有 API route、OpenAPI schema、Function、环境变量、Supabase schema、RPC、migration、operation、ledger、reservation 或 recovery workflow。FinalTMA 不读取本地游戏存档，也不把游戏内怪物、道具、战斗、捕捉或经验映射为藏品、Fgems、K-coin、任务或奖励。
-
-Catalog v1 product-data checksum boundary 位于产品第 21 章之前。第 21 章不改变 Catalog v1 immutable release identity，不生成或修改目录 manifest 与 product-data migration。
+静态渲染器不得使用 `fetch`、XMLHttpRequest、WebSocket、Supabase 或业务命令，并且不使用浏览器持久化。正式 Catalog 图片是同源静态资源，不把图片加载等同于藏品归属验证。
 
 ## 结果
 
-三层 tilemap 避免巨型全图纹理，scenery object 在不改变碰撞规则的前提下正确遮挡角色。紧凑构图与固定景观密度避免玩家视野退化为连续空草地。直接启动世界移除本地存档菜单和旧浏览器持久化边界。发布门禁必须验证静态边界、唯一路由、唯一地图、图层和对象契约、旧地图与旧地图素材删除、直接进入与无浏览器持久化契约、输入契约、Tiny Swords 白名单与条款证据和本地运行库。真实功能验收必须覆盖直接进入出生区域、刷新恢复初始状态、`36.8 秒`主路横穿、出生首屏层次、两级阶梯和全部保留对象可达、桌面与移动输入、碰撞贴边滑动、相机跟随及原有玩法回归。
+Monster Tamer 不再形成第二套怪物玩法，只把玩家真实可用藏品呈现在可活动的水上家园中。React DOM 保留认证、错误状态、无藏品状态与现有藏品详情；Phaser 保留地图、镜头、宠物移动和点击所需的最小渲染职责。
+
+真实 Telegram iOS、Android、Desktop 与 Web 验收必须覆盖安全区、全屏关闭、窄屏拖动、宠物点击、详情暂停/恢复和无可用藏品空岛。静态构建与架构检查不能替代这些真实环境验收。

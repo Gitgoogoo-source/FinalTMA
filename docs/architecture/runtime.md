@@ -12,15 +12,17 @@ Telegram WebApp 在 `createRoot().render()` 前按 `ready → expand → disable
 
 正式藏品图片由仓库内 210 张非公开母版生成 420 张版本化 WebP。列表只读取 256×256 缩略图，主视觉和 NFT 元数据读取 768×768 详情图；浏览器不通过 Function 或 Supabase 读取图片二进制。
 
-## Monster Tamer 静态子应用
+## Monster Tamer 藏品展示家园
 
-`apps/web/src/domains/monster-tamer` 只拥有游戏页启动卡片。卡片通过普通链接打开 `/monster-tamer/`，游戏页组合顺序固定为 `Monster Tamer → Expedition → Wheel`；launcher 不调用 API，也不导入其他业务领域。
+`apps/web/src/domains/monster-tamer` 拥有游戏页启动卡片和顶层全屏家园。打开家园时通过现有 `useApiQuery("inventory.list")` 读取认证结果，只保留 `available > 0` 并按 `template_id` 去重；React 不提交写操作，也不直连 Supabase。
 
-`apps/web/public/monster-tamer` 是独立 HTML、CSS、JavaScript、数据与资源树。Phaser 3.60.0、Web Font Loader 1.6.28 和 Tweakpane 4.0.3 从自身 `vendor` 目录加载；运行时不进入 React bundle。静态资源预加载完成后直接启动 `main_1`，不注册标题场景或设置场景，不提供新游戏、继续游戏和手动保存入口。游戏状态只位于当前页面生命周期内存中；运行时不使用浏览器持久化，不读取、写入、迁移或清除旧 `MONSTER_TAMER_DATA`，也不写入 FinalTMA session、查询缓存、API、数据库或 Catalog 资产。
+`apps/web/public/monster-tamer` 是同源 Phaser 3.60.0 渲染文档。直接访问时只显示从游戏中心进入的门禁文案；它不读取 session、不请求 `/api/*`，只有在已登录 React 父页面通过同源 `postMessage` 注入最小展示数据后才创建 Phaser。
 
-世界运行时只加载 `120×64`、`64px/格` 的 `main_1` tilemap，水体底色固定为 `#47ABA9`。`Water-Scenery`、`Flat-Ground`、`Shadow-Level-1`、`Elevation-Level-1`、`Shadow-Level-2`、`Elevation-Level-2` 和 `Scenery` 构成三层海岛可见世界，`Collision` 提供静态阻挡；地图不存在室内入口或 `Scene-Transitions`。西北城堡、东北森林高地、中央交叉口、东部村落、西部岸塔、南部水湾和独立塔岛位于同一世界；152 个陆地景观对象和 38 个水域景观对象保证主要视野持续出现高差、植被、建筑或水岸。原有 10 个 NPC、6 个 Item、9 个 Sign 和三个 Encounter 区域继续使用原身份。地图地形只绑定由 Tiny Swords Free Pack 的 `Tilemap_color1` 生成的 `528×528` 紧凑图集，建筑只加载 `Blue Buildings`，其余 scenery 只加载白名单内的树、树桩、灌木、岩石、水中岩石、水泡沫和阴影；人物、动物、资源、工具、FX、UI、云、橡皮鸭、Aseprite、其他阵营颜色和 Enemy Pack 均不进入运行时，也不访问第三方资源。
+世界只加载 `50×50`、`64px/格` 的 `main_1`。最外两格保持连续水域；`Flat-Ground`、`Collision`、`Scenery` 与 `Water-Scenery` 构成唯一不规则水上岛屿。可通行陆地保持连通，水域、岸边、建筑、树干、树桩和岩石不可通行。Tiny Swords `Tilemap_color1`、Blue Buildings 和环境白名单继续从本地加载，Catalog 宠物使用主应用注入的正式缩略图路径。
 
-静态子应用公开可访问。Telegram WebApp SDK 负责 ready、expand、原生 fullscreen、稳定视口、设备/内容安全区、垂直滑动保护和 BackButton；原生全屏不可用时回退到已展开稳定视口，不存在 SDK 时仍使用普通 `/game` 返回链接运行。桌面以 WASD 或方向键逐格移动，移动端使用虚拟摇杆；每次双轴输入先尝试主方向，主方向受阻时尝试次方向。步行固定 400ms/格，Shift 或 B 跑步固定 220ms/格。相机使用非零 lerp 跟随并限制在世界边界，主角只在实际位移时播放保留素材的四向动画。A、B、世界菜单和摇杆保留为安全区内浮层，其他菜单使用点击或滑动选择；失焦、隐藏、Telegram 停用、pointer cancel 和 lost pointer capture 均释放全部输入。
+每个不同模板生成一个宠物实体。Phaser 用占用格和预定格避免宠物互相重叠，以相邻格移动、翻转、浮动和压缩伸展表现活动；不包含玩家角色、NPC、探索、遭遇、战斗、捕捉、队伍、背包、道具、菜单或音频。
+
+窄屏镜头允许拖动查看全岛，桌面支持滚轮缩放。点击宠物先暂停 Phaser，再把 `template_id` 返回 React；React 用当前认证结果重新匹配，并通过共享的现有藏品详情组件在游戏上方打开只读详情。关闭详情后恢复同一 Phaser 场景状态，关闭整个家园后销毁该页面内存状态。
 
 ## Functions
 
@@ -32,4 +34,4 @@ Telegram WebApp 在 `createRoot().render()` 前按 `ready → expand → disable
 
 ## 部署
 
-Web、Monster Tamer 静态子应用与三个 Functions 位于同一 Vercel Pro Project，Functions 运行时为 Node.js 24。`/monster-tamer` 与 `/monster-tamer/` 在 SPA catch-all 前重写到独立静态文档。版本化藏品静态资源使用一年 immutable 缓存，已发布目录不可覆盖。普通构建只构建 API 契约、API 与 Web，并原样复制 Monster Tamer 静态树；`contracts/ton` 使用独立 `pnpm chain:build` 门禁。真实开发环境与未来生产环境使用同一 Git commit 和迁移序列。
+Web、Monster Tamer 同源渲染文档与三个 Functions 位于同一 Vercel Pro Project，Functions 运行时为 Node.js 24。`/monster-tamer` 与 `/monster-tamer/` 在 SPA catch-all 前重写到渲染文档，但业务入口只存在于登录后的 React 游戏页。版本化藏品静态资源使用一年 immutable 缓存，已发布目录不可覆盖。普通构建同时复制 Monster Tamer 静态树；`contracts/ton` 使用独立 `pnpm chain:build` 门禁。真实开发环境与未来生产环境使用同一 Git commit 和迁移序列。

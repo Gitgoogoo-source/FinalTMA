@@ -1,4 +1,4 @@
-import { BookOpen, ChevronsUp, Crosshair, Star } from "lucide-react";
+import { BookOpen } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
@@ -8,6 +8,7 @@ import {
   Button,
   Card,
   CatalogImage,
+  CollectionDetailShowcase,
   PageState,
 } from "../../../shared/ui/index.tsx";
 import { useNewMarkers } from "../../../workflows/new-markers/index.ts";
@@ -124,57 +125,16 @@ export function InventoryView({
         )}
         {item && (
           <>
-            <section
-              className="inventory-showcase"
-              aria-labelledby="inventory-selected-name"
+            <CollectionDetailShowcase
+              item={item}
+              headingId="inventory-selected-name"
+              titleRef={item.template_id === targetId ? detailRef : undefined}
+              titleTabIndex={item.template_id === targetId ? -1 : undefined}
+              newAcquisition={itemIsNew}
+              onImageAvailability={(ready) =>
+                setImageState({ templateId: effectiveId, ready })
+              }
             >
-              <div
-                ref={item.template_id === targetId ? detailRef : undefined}
-                className="inventory-title-board"
-                tabIndex={item.template_id === targetId ? -1 : undefined}
-              >
-                <span>当前藏品</span>
-                <h2 id="inventory-selected-name">{item.name}</h2>
-                {itemIsNew && (
-                  <strong className="detail-new-acquisition">本次新获得</strong>
-                )}
-              </div>
-
-              <div className="inventory-hero-art">
-                <CatalogImage
-                  key={effectiveId}
-                  path={item.image_detail_path}
-                  alt={item.name}
-                  variant="detail"
-                  loading="eager"
-                  fetchPriority="high"
-                  onAvailability={(ready) =>
-                    setImageState({ templateId: effectiveId, ready })
-                  }
-                />
-              </div>
-
-              <div className="inventory-metric-grid">
-                <InventoryMetric
-                  label="稀有度"
-                  value={rarityLabels[item.rarity]}
-                  tone={item.rarity}
-                  icon={<Star />}
-                />
-                <InventoryMetric
-                  label="进化阶段"
-                  value={`${item.stage} 阶`}
-                  icon={<ChevronsUp />}
-                />
-                <InventoryMetric
-                  label="战斗力"
-                  value={item.combat_power.toLocaleString("zh-CN")}
-                  icon={<Crosshair />}
-                />
-              </div>
-
-              <InventoryQuantitySummary item={item} />
-
               <div
                 ref={item.template_id === targetId ? actionsRef : undefined}
                 className="action-grid inventory-action-grid"
@@ -239,7 +199,7 @@ export function InventoryView({
                   ))}
                 </div>
               </div>
-            </section>
+            </CollectionDetailShowcase>
           </>
         )}
         {targetId && !targetOwned && targetTemplate && (
@@ -297,51 +257,5 @@ export function InventoryView({
         </Card>
       )}
     </main>
-  );
-}
-
-function InventoryQuantitySummary({
-  item,
-}: {
-  item: InventoryItem;
-}): ReactNode {
-  const quantities = [
-    ["可用", item.available],
-    ["出售中", item.listed],
-    ["交易中", item.trading],
-    ["Mint 中", item.minting],
-    ["远征中", item.expedition],
-  ] as const;
-  return (
-    <div className="inventory-quantity-summary" aria-label="藏品状态数量">
-      {quantities
-        .filter(([label, quantity]) => label === "可用" || quantity > 0)
-        .map(([label, quantity]) => (
-          <span key={label}>
-            {label} <strong>×{quantity}</strong>
-          </span>
-        ))}
-    </div>
-  );
-}
-
-function InventoryMetric({
-  label,
-  value,
-  icon,
-  tone = "",
-}: {
-  label: string;
-  value: string;
-  icon: ReactNode;
-  tone?: string;
-}): ReactNode {
-  return (
-    <div className={`inventory-metric ${tone}`}>
-      <span>{label}</span>
-      <i>{icon}</i>
-      <strong>{value}</strong>
-      <small aria-hidden="true">••••</small>
-    </div>
   );
 }

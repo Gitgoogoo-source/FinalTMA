@@ -49,24 +49,25 @@ Mint id / tx hash / NFT address：
 - 全局顶部资产栏：五个主页只出现同一个资产栏；分别记录 Telegram iOS、Android、Desktop 与 Web 在原生全屏成功和不支持回退时的截图，确认设备安全区、内容安全区、视口与方向变化后，返回、关闭和更多控件始终位于资产栏上方且不重叠。
 - 藏品图片：210 张正式母版对应 420 个公开版本；全部 URL 为 WebP、尺寸与路径正确、返回一年 immutable 缓存，列表只请求缩略图，藏品主图、单抽结果和 Mint 页面请求详情图。
 
-## Monster Tamer 独立游戏验收
+## Monster Tamer 藏品展示家园验收
 
-Monster Tamer 使用单独的验收记录，不填写 `request_id`、`operation_id`、账本、库存、支付或 Mint 字段；这些字段统一记录为“不适用”。直接访问公开路径 `/monster-tamer/` 是本节的正式验收方式，不替代上文规定的 Telegram 登录与主应用真机验收。
+Monster Tamer 是认证只读功能，不产生 `operation_id`、账本、库存写入、支付或 Mint 结果。验收必须从真实登录后的游戏页进入；直接访问 `/monster-tamer/` 只用于确认渲染器门禁与静态资源，不能代替登录链路。
 
-1. `/monster-tamer` 与 `/monster-tamer/` 均返回独立游戏文档，刷新任一游戏内状态不落入 FinalTMA SPA；所有大小写敏感的脚本、样式、字体、音频、地图、数据和图片路径均返回 200。
-2. normal 用户进入主应用“游戏”页时，内容顺序严格为 `Monster Tamer → 藏品远征 → 幸运转盘`；Monster Tamer 卡片只通过普通链接打开 `/monster-tamer/`，不得提交命令或改变 Expedition、Wheel 的状态。
-3. 在浏览器直接打开、Telegram iOS、Telegram Android、Telegram Desktop 与 Telegram Web 中，游戏均在预加载后直接显示 `main_1` 出生区域，不出现标题页、`New Game`、`Continue` 或 `Options`，并可完成探索、对话、地图拾取、告示牌、随机遭遇、训练师战、捕捉、队伍、背包和固定音频流程；本次改造没有改变主角、移动、操控、动画规则、相机或其余玩法，也没有增加采集、NPC、怪物、剧情、建筑室内或其他玩法。
-4. 运行时只加载 `main_1` 世界地图。记录地图数据证据，确认尺寸为 `120×64`、格子为 `64×64`、水色为 `#47ABA9`，并且旧 `forest_1`、`building_1`、`building_2`、`building_3`、`level`、`level_old`、旧 background/foreground 地图大图、Tuxemon 地图素材和 `Scene-Transitions` 均不存在。
-5. 从 `(60,34)` 出生点实际走通西北城堡、东北森林高地、中央交叉口、东部蓝顶村落、西部岸塔、南部水湾和两级阶梯；确认出生首屏同时可见崖壁、阶梯、道路、地标树、岩石、NPC 和水岸，全部建筑不可进入、不可交互。逐项验证 `(62,34)` 复活点、10 个原有 NPC、6 个原有 Item、9 个原有 Sign 与 `area=1/2/3` 三个 Encounter 区域可达且身份未变。
-6. 从 `(14,34)` 到 `(106,34)` 沿横向连续主路全程普通步行计时，目标结果为 `36.8 秒`；全程不得切图、传送或进入室内。另记录 Shift 和 B 跑步每格约 220ms，不得用跑步结果代替普通步行计时证据。
-7. 桌面分别验证 WASD、方向键、`Enter`、`Space`、`Shift`、`Esc`、`F`；移动端分别验证虚拟摇杆、菜单滑动、A、B 和菜单。持续双轴输入朝障碍移动时，角色先尝试主方向并在受阻后沿次方向贴边滑动，不能穿过水体、悬崖、树干、建筑、岩石、NPC、Item 或地图边界。
-8. 记录连续移动、改变方向、碰撞停止和松开输入的视频：主角只有实际位移时播放保留素材的四向动画，每格结束或阻挡后立即保持正确朝向站立帧；相机以 lerp 平滑跟随，不瞬移、不抖动、不露出世界外区域。
-9. 画布占满 Telegram 稳定视口，原生全屏成功和不支持回退两种结果下均可操作。iOS、Android、Desktop、Web 和普通移动浏览器的方向、视口、设备安全区、内容安全区和前后台状态变化不得遮挡虚拟摇杆、A、B、菜单、对话、战斗菜单或返回入口；恢复后不得后台移动、卡键或保留摇杆位移。
-10. 在浏览器预置旧 `MONSTER_TAMER_DATA` 后打开游戏，运行时不得读取、写入、迁移或清除该键；探索产生的数据不得写入 `localStorage`、`sessionStorage`、IndexedDB、Cookie 或 Cache Storage。刷新、关闭再打开后固定回到出生点、初始怪物和初始背包。
-11. 首次进入不创建 FinalTMA 账号或会话；网络记录中没有 `/api/*`、Supabase、Catalog、FinalTMA access token、Telegram `initData`、业务用户标识、itch.io、Pixel Frog 或其他第三方资源请求。
-12. Phaser 3.60.0、Web Font Loader 1.6.28、Tweakpane 4.0.3、游戏源码、`tiny-swords-terrain-extruded.png`、Blue Buildings 和允许的环境 spritesheet 全部从 `/monster-tamer/` 自身静态目录加载。网络记录和文件清单确认 Tiny Swords 运行时只包含 32 文件白名单的派生结果，且没有人物、动物、资源、工具、FX、UI、云、橡皮鸭、Aseprite、其他阵营颜色或 Enemy Pack。
-13. 上游 MIT 许可证、运行库许可证、Tiny Swords 来源、Pixel Frog 署名、条款快照、32 个源 PNG 的路径/尺寸/SHA-256、修改说明、第三方声明和原创资源来源记录均随静态目录发布，并与 `THIRD_PARTY_NOTICES.md`、`assets/licenses/tiny-swords/SOURCE.json` 和 `TERMS.md` 完全一致。
-14. 从游戏内返回按钮和 Telegram BackButton 均回到 `/game`；返回后 Expedition、Wheel、顶部资产与主导航仍由 FinalTMA 当前真实状态渲染，Monster Tamer 页面内存态不参与任何业务判断。
+1. normal 用户游戏页顺序严格为 `Monster Tamer → 藏品远征 → 幸运转盘`。点击“进入家园”立即打开顶层全屏覆盖层，不离开 React 应用；关闭后原游戏页、远征和转盘状态保持不变。
+2. 记录 `inventory.list` 响应与地图实体清单：只显示 `available > 0` 的不同 `template_id`，同模板拥有 1 只或 20 只都只生成一个实体，`available = 0` 不生成，不存在总数截断或用户选择名单。
+3. 直接访问 `/monster-tamer/` 固定显示“请从 FinalTMA 游戏中心进入”，不请求 `/api/*`、不获得会话或藏品；登录父页面只通过同源消息注入 `templateId`、名称和正式缩略图路径。
+4. `main_1.json` 固定 `50×50`、每格 `64×64`、水色 `#47ABA9`。逐格核对最外两圈 Ground 全为 0、Collision 全为 1，外圈没有场景物件。
+5. 地图只有 `Water-Scenery`、`Flat-Ground`、`Scenery`、`Collision`；所有可通行格连通且不少于 210，水体、岸边、Blue Buildings、树干、树桩和岩石均不可通行。
+6. 静态树不存在玩家、NPC、Sign、Item、Encounter、战斗、捕捉、队伍、背包、道具、菜单、旧怪物 JSON、旧图片和音频；Web Font Loader 与 Tweakpane 不再发布。
+7. 全部宠物图片请求均位于 `/assets/catalog/v1/thumb/`。不存在旧 Monster Tamer 怪物或新生成方向帧；移动中能观察到翻转、浮动、轻微压缩伸展和正式 Tiny Swords 阴影。
+8. 同时观察全部不同藏品：宠物只能逐格进入相邻可通行格，不穿过水体或静态障碍，不与另一只宠物占用或预定同一格。
+9. 桌面宽屏可查看完整岛屿并用滚轮缩放；窄屏可拖动查看全岛。拖动不误触宠物，地图不显示宠物名单、重复数量、血条、队伍、摇杆或战斗 HUD。
+10. 点击任一宠物后场景立即暂停，游戏上方显示当前认证结果匹配的现有藏品详情：正式名称、详情图、稀有度、阶段、战斗力与现有数量摘要；不显示进化、分解、出售、Mint 或藏品切换。
+11. 详情打开期间连续观察宠物位置不变化；关闭详情后从相同镜头和位置继续。关闭整个家园再打开时允许重新生成漫游位置，但不得写入浏览器或服务端存档。
+12. 分别验证加载、接口失败、无可用藏品、缩略图失败、点击模板已失效和 Phaser 运行错误；任何失败都不注入默认宠物、不沿用旧数据、不伪造详情。
+13. 网络记录中只有主应用的认证 `inventory.list` 与同源静态资源；Phaser 不直接请求 API、Supabase、第三方资源或业务写接口，也不接收 access token、session generation 或 Telegram `initData`。
+14. Phaser 3.60.0、Tiny Swords 31 个运行文件、32 个源文件记录、Catalog 图片、MIT/Phaser 许可证、Pixel Frog 来源与条款快照均在大小写敏感部署返回 200。
+15. Telegram iOS、Android、Desktop 与 Web 分别记录全屏、安全区、窄屏拖动、宠物点击、详情暂停/恢复和返回游戏页。普通浏览器验证不能替代 Telegram 真机结果。
 
 ## 用户与登录第 16.11 节验收
 

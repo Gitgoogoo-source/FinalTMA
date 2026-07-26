@@ -1,21 +1,31 @@
 import { PawPrint, Play } from "lucide-react";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+
+import { MonsterTamerHome } from "./MonsterTamerHome.tsx";
 
 export function MonsterTamerPanel(): ReactNode {
+  const [open, setOpen] = useState(false);
   return (
-    <section className="card game-panel monster-tamer-panel">
-      <div className="panel-title">
-        <PawPrint aria-hidden="true" />
-        <div>
-          <span>MONSTER TAMER</span>
-          <h2>Monster Tamer</h2>
+    <>
+      <section className="card game-panel monster-tamer-panel">
+        <div className="panel-title">
+          <PawPrint aria-hidden="true" />
+          <div>
+            <span>MONSTER HOME</span>
+            <h2>Monster Tamer</h2>
+          </div>
         </div>
-      </div>
-      <p>探索独立怪兽世界，驯服怪兽并完成冒险。</p>
-      <a className="monster-tamer-launch" href="/monster-tamer/">
-        <Play aria-hidden="true" />
-        进入游戏
-      </a>
-    </section>
+        <p>让你真实拥有的 Monster 在 50×50 水上家园中自由活动。</p>
+        <button
+          className="monster-tamer-launch"
+          type="button"
+          onClick={() => setOpen(true)}
+        >
+          <Play aria-hidden="true" />
+          进入家园
+        </button>
+      </section>
+      {open ? <MonsterTamerHome onClose={() => setOpen(false)} /> : null}
+    </>
   );
 }

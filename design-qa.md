@@ -1,42 +1,49 @@
-# 藏品进化预览设计 QA
+# Monster Tamer Design QA
 
-- Source visual truth: `/var/folders/__/ffcc9r1113l4c8cd1z4m8tp80000gn/T/codex-clipboard-3936ec3e-77f9-4306-920d-785975c3b331.png`
-- Implementation screenshot: blocked; local browser reached the required Telegram authentication gate instead of the inventory route
-- Blocker screenshot: `/tmp/finaltma-evolution-local-auth-gate.png`
-- Intended viewport: `430 × 900 CSS px`
-- Source pixels: `380 × 650 px`
-- Blocker screenshot pixels: `430 × 900 px`
-- Density normalization: browser capture used `deviceScaleFactor 1`; no implementation comparison was possible
-- Intended state: current material available quantity `1`, two empty material slots, disabled “开始进化”
+## Comparison Target
+
+- Source visual truth:
+  `/Users/mac/.codex/generated_images/019f9c8d-ab52-7480-8ad8-0bae36c5b698/call_j3GnummKiURuLtf4wmUoFBFG.png`
+- Source pixels: `1487 × 1058`
+- Intended state: 50×50 water home with several owned Monster entities and the selected collection detail shown above the map
+- Implementation route: authenticated FinalTMA game page opening the Monster Tamer top-level Portal
+- Implementation screenshot: unavailable
+- CSS viewport and density normalization: unavailable
+
+## Full-view Comparison Evidence
+
+The source visual was opened at original resolution. A browser-rendered implementation capture was not produced because Product Design requires the user's selected browser before browser automation, while this repository explicitly prohibits local functional testing. Static source, build output, and map JSON are not substituted for rendered visual evidence.
+
+## Focused Region Comparison Evidence
+
+Blocked. The map, pet sprites, and collection detail overlay cannot be compared at equal viewport, state, scale, and density without a browser-rendered implementation capture.
+
+## Required Fidelity Surfaces
+
+- Fonts and typography: blocked without rendered evidence.
+- Spacing and layout rhythm: blocked without rendered evidence.
+- Colors and visual tokens: source uses turquoise water, yellow-green island terrain, and a cream collection panel; implementation source selects the corresponding existing Tiny Swords and inventory tokens, but rendered fidelity is not verified.
+- Image quality and asset fidelity: implementation references existing Tiny Swords map assets and official Catalog v1 images; crop, transparency halos, scale, and sharpness are not verified in a browser.
+- Copy and content: source detail content is represented by the reused collection detail component, but wrapping and visual density are not verified.
 
 ## Findings
 
-- [P0] The real evolution preview could not be rendered in the local browser.
-  - Location: local `/inventory` route.
-  - Evidence: the application correctly stopped at “请从 Telegram Mini App 打开应用” because the browser had no real Telegram `initData`.
-  - Impact: the source image and the implemented preview cannot be placed into a valid same-state visual comparison, so layout, responsive fit and disabled-button appearance are not visually accepted.
-  - Fix: deploy the same commit to the authorized real development environment, open it from the real Telegram Mini App, and capture the one-material and three-or-more-material states without submitting an evolution.
+- [P1] Browser-rendered comparison evidence is missing.
+  - Location: full Monster Tamer home and selected-detail state.
+  - Evidence: source visual is available; implementation screenshot is unavailable.
+  - Impact: layout, map density, pet scale, image crop, safe areas, and overlay fidelity cannot receive a visual pass.
+  - Fix: after choosing the browser and using the real authenticated development environment, capture the same selected-detail state at a matching viewport and compare it with the source in one combined visual.
 
-## Required fidelity surfaces
+## Implementation Checklist
 
-- Fonts and typography: implemented with the existing FinalTMA `SF Pro Rounded / Inter / system-ui` stack; browser-rendered preview evidence is blocked.
-- Spacing and layout rhythm: code defines the requested top material, central target, left/right material layout with a fixed footer; browser-rendered preview evidence is blocked.
-- Colors and visual tokens: implementation uses the existing warm white, orange and blue-gray FinalTMA tokens rather than the reference image palette; browser-rendered preview evidence is blocked.
-- Image quality and asset fidelity: implementation uses the official Catalog v1 thumbnail assets for all filled material and target slots, and the existing icon library for empty slots and connectors; browser-rendered preview evidence is blocked.
-- Copy and content: static inspection confirms “藏品进化”, dynamic rarity transition, base success rate, total Fgems, batch quantity, shortage reason and “开始进化”; browser-rendered preview evidence is blocked.
+1. Open the deployed authenticated game page in the user's chosen browser.
+2. Enter Monster Tamer with a real account that owns multiple distinct available templates.
+3. Capture the normal map and selected-detail state at the target desktop and Telegram mobile viewports.
+4. Check console and failed resource requests.
+5. Combine the source and implementation captures, fix every P0/P1/P2 mismatch, and repeat the comparison.
 
-## Runtime and interaction checks
+## Comparison History
 
-- Local browser used the requested `430 × 900` mobile viewport.
-- The authentication gate rendered without layout overflow.
-- Browser logs contained only expected Telegram SDK capability warnings caused by the non-Telegram browser; the preview component did not mount.
-- No evolution request, asset mutation or other business operation was executed.
-- ESLint, Web TypeScript, Web production build, architecture check, contracts check and changed-file formatting passed.
-- Full-project format check remains blocked by the pre-existing unrelated `monster玩法说明.md` formatting drift.
-- Product-data check remains blocked by the pre-existing unrelated task-definition drift in `20260719104602_product_data_v1.sql`; the new 140-route frontend evolution manifest independently regenerates byte-for-byte and has zero Catalog target or chain-stage mismatches.
-
-## Comparison history
-
-No visual comparison iteration was valid because the implementation state could not be rendered outside a real Telegram session.
+No visual iteration was possible because the first implementation capture is blocked.
 
 final result: blocked
