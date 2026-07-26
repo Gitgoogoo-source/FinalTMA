@@ -10,10 +10,8 @@
 
 页面切换不失效或重新读取任何 React Query 数据。服务端确认业务结果后继续按 API 契约的 `refreshScopes` 精确失效；顶部人工刷新只重新读取 `identity.bootstrap`、`vip.get` 和 `wallet.get`。Mini App 以 Telegram `deactivated`/`activated` 作为客户端内前后台边界，并以浏览器 `visibilitychange` 作为普通浏览器与旧客户端回退；重复事件只记录最早离开时间且只执行一次恢复。后台连续停留不足五分钟时回到前台不读取数据；达到五分钟时保留当前界面并静默刷新顶部摘要与当前路由所属查询。市场不轮询，外部变化只在人工刷新、业务结果、服务端拒绝回正或五分钟后台恢复时读取。
 
-Monster Tamer 的 iframe 在普通主页面切换和详情覆盖期间保持挂载。隐藏时父页面发送 `pause`，Phaser 暂停场景和主循环并清除持续按键；重新显示时发送 `resume`，恢复同一镜头、人物和宠物位置。只有 `inventory.list` 中 `available > 0` 的模板或正式缩略图路径签名发生变化时才受控重建家园。
-
 页面保活和查询缓存只存在于当前内存登录会话，不写入 `localStorage`、`sessionStorage`、IndexedDB 或服务端。Session generation 改变、身份恢复失败、会话清理或账号封禁时，全部持久页面、页内状态和查询缓存一并清除，旧 generation 的迟到结果不得恢复。
 
 ## 结果
 
-主页面代码、图片、iframe 与页内状态只在当前会话首次需要时创建。React Query 的 `20 秒` `staleTime` 继续管理首次挂载和普通查询，但不会因主导航切换触发重新请求。页面刷新、WebView 重载或 Mini App 关闭仍重新执行 Telegram 身份交换与首屏启动。
+主页面代码、图片与页内状态只在当前会话首次需要时创建。React Query 的 `20 秒` `staleTime` 继续管理首次挂载和普通查询，但不会因主导航切换触发重新请求。页面刷新、WebView 重载或 Mini App 关闭仍重新执行 Telegram 身份交换与首屏启动。

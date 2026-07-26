@@ -20,16 +20,6 @@
 
 确认 Mint、交易 hash、接收地址、链上 NFT 地址和 `job_runs`。手工触发 `reconcile-mints` 前先确认没有 10 分钟内的活动租约；并发触发应记录 `skipped`。链上事实只能由对账 RPC 写回。
 
-## Monster Tamer 藏品家园
-
-游戏页直接家园无法打开时先区分 React 认证查询、父子消息和 Phaser 资源三条链路。`inventory.list` 失败沿用主应用请求错误与重试，不向 Phaser 注入旧数据；`/monster-tamer` 返回 SPA、404 或静态资源失败时核对 Vercel 重写顺序、完整静态树和大小写路径。
-
-父页面已取得藏品但地图无宠物时，核对双方 `origin`、消息窗口、`template_id`、`available > 0` 过滤和正式缩略图路径。不得把 access token、session 或完整库存对象传入 Phaser，也不得让静态渲染器自行请求 API。
-
-出现浏览器持久化、Supabase 直连、业务写请求、宠物进入障碍、重复模板生成多只、详情打开后场景仍移动、镜头可拖动或缩放、鼠标非左键触发移动、WASD 穿墙或跳格、方向键触发移动，或旧玩家控制器/NPC/遭遇/战斗资源重新出现时，立即停止该版本发布并恢复完整兼容 commit。只允许保留已审核的 AxulArt 默认玩家精灵及许可证；修复不得修改库存数据、手工伪造图片路径或关闭架构门禁。
-
-Tiny Swords、Phaser 或 Catalog 图片的来源记录、许可证或第三方声明缺失时停止发布，补齐同一提交中的证据后重新执行静态资源与真实环境验收。
-
 ## 不变量
 
 运行 `monitor-invariants`，处理 `BALANCE_LEDGER_MISMATCH`、`DUPLICATE_PAYMENT_DELIVERY`、`RESERVATION_OVERFLOW`、`ILLEGAL_RESERVATION` 和 `OPEN_OPERATION_WITHOUT_SUBJECT`。正式生产上线前的结构修复直接修改原始声明式 Schema，并从空真实开发数据库重建三条迁移；正式生产上线后的数据修复使用审计过的前向 SQL 或既有 RPC。任何阶段都保存变更前后证据且不直接改写账本历史。

@@ -12,7 +12,6 @@
 - Vercel 套餐支持 `vercel.json` 中三项当前 Cron 的执行频率；启用 TON 时同一套餐还必须支持第四项 Mint 对账 Cron。
 - Vercel Production 环境变量名称核查同时包含 `TELEGRAM_BOT_USERNAME` 与 `TELEGRAM_MINI_APP_SHORT_NAME`，开发 short name 固定为 `pokepets_dev`。
 - 真实开发 Bot 固定为 `@FinalTMA_bot`；Main Mini App URL 固定为 `https://final-tma-pi.vercel.app/`；named Mini App 固定为 `https://t.me/FinalTMA_bot/pokepets_dev`；默认菜单按钮固定为 `Open PokePets` 并指向该 named Mini App 链接。
-- Monster Tamer 的 React 家园与 `apps/web/public/monster-tamer` 渲染树完整；`inventory.list` 只读适配、同源消息边界、50×50 地图、现有详情组件、Phaser/MIT 许可证和资源来源记录均已提交。Tiny Swords Free Pack 来源、Pixel Frog 署名、条款快照和 32 个源 PNG 的路径/尺寸/SHA-256 已核对；运行时不包含旧探索、玩家、NPC、战斗、捕捉、背包、音频或不再使用的库。
 
 任何一项与目标环境对应的前提不成立：停止发布，不恢复旧 migration、未获批准的占位素材、mock、默认业务值或功能开关。
 
@@ -42,7 +41,7 @@ pnpm manifest:check:production
 
 `pnpm catalog:generate-assets` 要求 210 张母版均为 768×768 WebP，并生成 256×256 缩略图和 768×768 详情图。`pnpm assets:check:catalog` 强制核对 210 个 `template_id`、两个路径、420 个文件、WebP 格式、尺寸、单文件体积、50 MiB 总上限、内容唯一性和正式 checksum。`APP_ENV=development pnpm build` 在生成 `apps/web/dist` 后继续核对构建复制结果；`APP_ENV=test` 与 `APP_ENV=production` 额外拒绝 Telegram 分享图和 TON Connect 图标的已知开发 checksum。
 
-`pnpm architecture:check` 同时验证 `/game` 只直接渲染水上家园、任务页转盘位置、远征筛选/任务/横幅隐藏、认证 `inventory.list` 查询、`available > 0` 过滤、按模板去重、同源消息、现有详情组件、场景暂停恢复、Vercel 路由优先级、唯一 `50×50` 地图、最外两格水域、四层结构、全部可通行格连通、210 个以上可用格、旧探索战斗文件删除、业务零写入、浏览器持久化为零，以及 Tiny Swords 32 文件来源、运行时文件集和本地条款记录。`APP_ENV=development pnpm build` 后必须确认 `apps/web/dist/monster-tamer` 与源渲染树文件清单一致；缺失任一脚本、样式、地图、图片、许可证或第三方声明时停止发布。
+`pnpm architecture:check` 同时验证 `/game` 保留为空页面、任务页转盘位置、远征筛选/任务/横幅隐藏、已退役游戏目录持续不存在，以及其余模块边界、网关隔离和文档归属。
 
 生成正式 TON Connect manifest：
 
@@ -68,8 +67,7 @@ python3 tools/web/build_manifest.py \
 6. 在 Supabase Data API 设置中把 Exposed schemas 固定为 `public,graphql_public,api`，不得暴露任何业务表 schema。
 7. 核对 Vercel Production 同时存在 `TELEGRAM_BOT_USERNAME=FinalTMA_bot` 与 `TELEGRAM_MINI_APP_SHORT_NAME=pokepets_dev`，环境变量变更后部署包含全部修改的同一 Git commit；在 BotFather 的 `/mybots` → `@FinalTMA_bot` → `Bot Settings` → `Configure Mini App` 中启用 Main Mini App 并将 URL 固定为 `https://final-tma-pi.vercel.app/`，同时保持 named Mini App `pokepets_dev` 与默认菜单按钮 `Open PokePets` 指向 `https://t.me/FinalTMA_bot/pokepets_dev`。
 8. 调用 Bot API，确认 `getMe.result.has_main_web_app=true` 且 `getChatMenuButton.result.web_app.url=https://t.me/FinalTMA_bot/pokepets_dev`；再验证 `/api/health`、Telegram 真机登录、登录交接门禁、`/api/referrals` 与三个手工 job，最后恢复 Cron。
-9. 对当前 Vercel 部署分别请求 `/monster-tamer` 与 `/monster-tamer/`，确认两者返回受控渲染文档且直接访问只显示入口门禁；从真实登录后的 `/game` 直接家园按 `docs/operations/acceptance.md` 完成 50×50 水上家园、真实可用模板去重、全部宠物漫游、碰撞与互斥占位、手机触摸与桌面鼠标寻路、桌面 WASD 逐格移动、固定镜头跟随、现有详情暂停恢复、业务零写入、Tiny Swords 与 AxulArt 白名单和来源条款验收，并确认任务页转盘位置和远征界面隐藏。
-10. 按 `docs/operations/acceptance.md` 完成 Telegram 真机、支付与并发验收；`monitor-invariants` 必须返回 0 个新增 violation。
+9. 按 `docs/operations/acceptance.md` 完成 Telegram 真机、支付与并发验收，并确认 `/game` 不发起业务查询或专属资源请求；`monitor-invariants` 必须返回 0 个新增 violation。
 
 任一步失败都保持入口与 Cron 关闭，修正原始 Schema 或迁移并从第 1 条重新执行。禁止为尚未生产发布的错误定义追加修补 migration。
 
@@ -87,7 +85,7 @@ python3 tools/web/build_manifest.py \
 6. 将真实 collection 地址和所有密钥写入平台 secrets。
 7. 部署与真实开发环境验收通过的完全相同 Git commit。
 8. 设置 Telegram webhook；启用生产 Bot 的 Main Mini App，将 Main Mini App 与 named Mini App 固定到该次部署的唯一生产域名，默认菜单按钮固定指向 named Mini App 链接，并用 Bot API 验证 `has_main_web_app=true` 与菜单 URL 完全一致。
-9. 对生产域名执行 `/monster-tamer` 门禁、登录后 `/game` 直接家园、任务页转盘位置、远征界面隐藏、唯一 50×50 `main_1`、正式 Catalog 图片、`tiny-swords-terrain-extruded.png`、Blue Buildings、允许的环境 spritesheet、Tiny Swords 来源与条款、详情暂停恢复和全部静态资源 smoke check，确认父页面只读现有 `inventory.list`、Phaser 不请求业务 API、不发布白名单外素材，且没有新增环境变量、数据库或业务写依赖。
+9. 对生产域名确认 `/game` 保留为空页面且不发起业务查询或专属资源请求，同时确认任务页转盘位置和远征界面隐藏。
 10. 执行生产 smoke check 与四个 job；保存 request/operation/ledger/inventory 证据。
 
 ## 5. 回滚边界

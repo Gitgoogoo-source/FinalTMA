@@ -15,7 +15,6 @@ de521f2687086cb358fb557a4a7ada3bc3c5fc132d673f0256b4573028ddba46
 ## 运行时
 
 - Web：React、Vite、TypeScript，运行在 Telegram Mini App。
-- Monster Tamer：登录后 `/game` 直接展示的 React 藏品家园，读取现有 `inventory.list`，并通过同源 `/monster-tamer/` Phaser 渲染文档展示真实可用藏品；只读且不新增业务写入。
 - API：同一 Vercel Project 内的 `app`、`integrations`、`jobs` 三个 Node.js 24 Function 网关。
 - Database：Supabase Postgres 17，仅暴露 `api` schema；浏览器不加载 Supabase SDK。
 - Blockchain：TON Connect 验证钱包，Tact 合约完成 NFT Mint。
@@ -25,9 +24,6 @@ de521f2687086cb358fb557a4a7ada3bc3c5fc132d673f0256b4573028ddba46
 
 ```text
 apps/web -> @pokepets/api-contracts/app
-apps/web/src/domains/monster-tamer -> authenticated inventory.list + direct /game home surface
-React game page -> same-origin /monster-tamer/ renderer via minimal postMessage
-/monster-tamer/ -> Phaser map rendering only, no API or session
 api -> apps/api/entrypoints
 apps/api/entrypoints -> gateway-specific contracts + http
 apps/api/http -> injected route registry + handler map
@@ -39,9 +35,7 @@ contracts/ton -> TON blockchain
 
 禁止反向依赖、跨领域深层导入、浏览器访问 Supabase、Node 层组合多次资产写入。
 
-Monster Tamer 领域拥有 `/game` 直接家园、`inventory.list` 只读查询适配和藏品详情覆盖层。静态渲染器不读取 FinalTMA session、不请求 API 或数据库；它只接受父页面注入的正式缩略图路径并返回被点击的 `template_id`。
-
-TMA 首次同步加载只覆盖应用壳、会话与账号门禁及默认开盒页；首屏完成后后台优先预加载 Monster Tamer 页面、认证查询和静态资源，再预加载其余普通主导航页面。`/game` 即使早于预加载完成被点击，也直接显示游戏背景，不显示渲染器门禁或居中加载卡。
+TMA 首次同步加载只覆盖应用壳、会话与账号门禁及默认开盒页；首屏完成后后台预加载其余普通主导航页面。`/game` 保留为空页面，不发起业务查询或专属资源请求。
 
 五个主导航页面在当前登录会话内首次访问后保持挂载。切换页面只恢复各自滚动、筛选和页内状态，不触发查询或资源重载；业务结果按契约范围精确刷新，后台连续五分钟后回到前台只静默回正顶部摘要与当前页面。
 
@@ -84,6 +78,5 @@ TMA 首次同步加载只覆盖应用壳、会话与账号门禁及默认开盒�
 - [Vercel 函数打包与配置隔离](adr/ADR-008-vercel-packaging-and-config-isolation.md)
 - [开盒页运行期视图状态](adr/ADR-009-gacha-runtime-view-state.md)
 - [正式藏品图片资源](adr/ADR-010-catalog-image-assets.md)
-- [Monster Tamer 认证藏品家园](adr/ADR-011-monster-tamer-static-subapplication.md)
 - [进化顶层底部确认弹窗](adr/ADR-012-evolution-bottom-sheet-confirmation.md)
 - [登录会话内页面保活与事件驱动刷新](adr/ADR-013-session-page-lifecycle.md)

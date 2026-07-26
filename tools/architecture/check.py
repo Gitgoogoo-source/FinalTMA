@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 import re
 from pathlib import Path
@@ -14,8 +13,6 @@ MATRIX = ROOT / "docs/architecture/domain-map.md"
 WEB_ROOT = ROOT / "apps/web/src"
 API_ROOT = ROOT / "apps/api/src"
 CONTRACT_ROOT = ROOT / "packages/api-contracts/src"
-STATIC_GAME_ROOT = ROOT / "apps/web/public/monster-tamer"
-MONSTER_LAUNCHER_ROOT = WEB_ROOT / "domains/monster-tamer"
 GAME_PAGE = WEB_ROOT / "pages/game/GamePage.tsx"
 IMPORT_PATTERN = re.compile(r"(?:from\s+|import\()\s*[\"']([^\"']+)[\"']")
 MODULE_IMPORT_PATTERN = re.compile(r"(?:from\s+|import\s*(?:\(\s*)?)[\"']([^\"']+)[\"']")
@@ -30,31 +27,7 @@ REQUIRED_PATHS = (
     "apps/web/src/shared/navigation/pageActivity.tsx",
     "apps/web/src/pages",
     "apps/web/src/domains",
-    "apps/web/src/domains/monster-tamer",
     "apps/web/src/workflows/payment-recovery",
-    "apps/web/public/monster-tamer/index.html",
-    "apps/web/public/monster-tamer/styles.css",
-    "apps/web/public/monster-tamer/LICENSE",
-    "apps/web/public/monster-tamer/THIRD_PARTY_NOTICES.md",
-    "apps/web/public/monster-tamer/ORIGINAL_ASSET_PROVENANCE.md",
-    "apps/web/public/monster-tamer/src/main.js",
-    "apps/web/public/monster-tamer/src/bridge.js",
-    "apps/web/public/monster-tamer/src/scenes/pet-home-scene.js",
-    "apps/web/public/monster-tamer/src/systems/grid-pathfinder.js",
-    "apps/web/public/monster-tamer/src/assets/player-character.js",
-    "apps/web/public/monster-tamer/assets/data/main_1.json",
-    "apps/web/public/monster-tamer/assets/images/axulart/character/custom.png",
-    "apps/web/public/monster-tamer/assets/images/axulart/character/license.txt",
-    "apps/web/public/monster-tamer/assets/images/tiny-swords/tiny-swords-terrain-extruded.png",
-    "apps/web/public/monster-tamer/assets/licenses/tiny-swords/SOURCE.json",
-    "apps/web/public/monster-tamer/assets/licenses/tiny-swords/TERMS.md",
-    "apps/web/public/monster-tamer/src/assets/tiny-swords-world.js",
-    "assets/source/monster-tamer/tiny-swords/free-pack-2026-07-25/SOURCE.json",
-    "assets/source/monster-tamer/tiny-swords/free-pack-2026-07-25/TERMS.md",
-    "apps/web/public/monster-tamer/vendor/phaser-3.60.0.min.js",
-    "apps/web/public/monster-tamer/vendor/licenses/PHASER-LICENSE.md",
-    "tools/monster-tamer/generate-island-map.mjs",
-    "docs/architecture/adr/ADR-011-monster-tamer-static-subapplication.md",
     "docs/architecture/adr/ADR-013-session-page-lifecycle.md",
     "apps/api/src/entrypoints/app",
     "apps/api/src/entrypoints/integrations",
@@ -91,6 +64,17 @@ RETIRED_GAME_PATHS = (
     "docs/architecture/adr/ADR-011-world-rpg-local-runtime.md",
     "pokemon游戏开发规划.md",
     "游戏方案.md",
+    "apps/web/src/domains/monster-tamer",
+    "apps/web/public/monster-tamer",
+    "assets/source/monster-tamer",
+    "tools/monster-tamer",
+    "docs/architecture/adr/ADR-011-monster-tamer-static-subapplication.md",
+    "apps/web/src/app/router/backgroundPreload.ts",
+    "monster玩法说明.md",
+    "design-qa.md",
+    "apps/api/dist/domains/monster-tamer",
+    "apps/web/dist/monster-tamer",
+    "packages/api-contracts/dist/domains/monster-tamer",
 )
 WEB_DOMAINS = {
     "album",
@@ -101,7 +85,6 @@ WEB_DOMAINS = {
     "inventory",
     "market",
     "mint",
-    "monster-tamer",
     "referral",
     "tasks",
     "topup",
@@ -136,26 +119,26 @@ def main() -> None:
         raise SystemExit(f"Refactored architecture paths are missing: {missing}")
     retired = [path for path in RETIRED_GAME_PATHS if (ROOT / path).exists()]
     if retired:
-        raise SystemExit(f"Retired Pet World paths must remain deleted: {retired}")
+        raise SystemExit(f"Retired game paths must remain deleted: {retired}")
     assert_directories(WEB_ROOT / "domains", WEB_DOMAINS, "Web domains")
     assert_directories(API_ROOT / "domains", API_DOMAINS, "API domains")
     assert_nonempty_domains(WEB_ROOT / "domains")
     assert_nonempty_domains(API_ROOT / "domains")
     verify_web_boundaries()
-    verify_monster_tamer_boundary()
+    verify_game_page_boundary()
     verify_api_boundaries()
     verify_contract_boundaries()
     verify_documentation()
     verify_package_exports()
     verify_typescript_configuration()
-    print("module ownership, gateway isolation, and twenty-one product domains are traceable")
+    print("module ownership, gateway isolation, and twenty product domains are traceable")
 
 
 def verify_domain_matrix() -> None:
     text = MATRIX.read_text(encoding="utf-8")
     chapters = [int(value) for value in re.findall(r"^\|\s*(\d+)\s+", text, re.MULTILINE)]
-    if chapters != list(range(1, 22)):
-        raise SystemExit(f"Domain matrix must contain chapters 1 through 21 exactly once: {chapters}")
+    if chapters != list(range(1, 21)):
+        raise SystemExit(f"Domain matrix must contain chapters 1 through 20 exactly once: {chapters}")
     rows = [line.split("|")[1:-1] for line in text.splitlines() if re.match(r"^\|\s*\d+\s+", line)]
     if any(len(row) != 5 or any(not cell.strip() for cell in row) for row in rows):
         raise SystemExit("Every domain matrix row must identify Web, API, database, and acceptance ownership")
@@ -239,210 +222,13 @@ def verify_web_boundaries() -> None:
         )
 
 
-def verify_monster_tamer_boundary() -> None:
-    required_paths = (
-        STATIC_GAME_ROOT / "index.html",
-        STATIC_GAME_ROOT / "styles.css",
-        STATIC_GAME_ROOT / "src/main.js",
-        STATIC_GAME_ROOT / "src/bridge.js",
-        STATIC_GAME_ROOT / "src/lib/phaser.js",
-        STATIC_GAME_ROOT / "src/scenes/pet-home-scene.js",
-        STATIC_GAME_ROOT / "src/systems/grid-pathfinder.js",
-        STATIC_GAME_ROOT / "src/assets/player-character.js",
-        STATIC_GAME_ROOT / "src/assets/tiny-swords-world.js",
-        STATIC_GAME_ROOT / "assets/data/main_1.json",
-        STATIC_GAME_ROOT / "assets/images/axulart/character/custom.png",
-        STATIC_GAME_ROOT / "assets/images/axulart/character/license.txt",
-        STATIC_GAME_ROOT / "vendor/phaser-3.60.0.min.js",
-        STATIC_GAME_ROOT / "vendor/licenses/PHASER-LICENSE.md",
-        STATIC_GAME_ROOT / "THIRD_PARTY_NOTICES.md",
-        STATIC_GAME_ROOT / "ORIGINAL_ASSET_PROVENANCE.md",
-        ROOT / "tools/monster-tamer/generate-island-map.mjs",
-    )
-    missing = [relative(path) for path in required_paths if not path.is_file()]
-    if missing:
-        raise SystemExit(f"Monster Tamer home files are missing: {missing}")
-
-    retired_paths = (
-        "assets/audio",
-        "assets/fonts",
-        "assets/images/axulart/beach",
-        "assets/images/kenneys-assets",
-        "assets/images/monster-tamer",
-        "assets/images/parabellum-games",
-        "assets/images/pimen",
-        "src/battle",
-        "src/common",
-        "src/party",
-        "src/types",
-        "src/utils",
-        "src/world",
-        "src/scenes/battle-scene.js",
-        "src/scenes/world-scene.js",
-        "src/scenes/inventory-scene.js",
-        "src/scenes/monster-party-scene.js",
-        "src/scenes/dialog-scene.js",
-        "vendor/tweakpane-4.0.3.min.js",
-        "vendor/webfontloader-1.6.28.min.js",
-    )
-    present_retired = [
-        path for path in retired_paths if (STATIC_GAME_ROOT / path).exists()
-    ]
-    legacy_data = sorted(
-        path.name
-        for path in (STATIC_GAME_ROOT / "assets/data").glob("*.json")
-        if path.name != "main_1.json"
-    )
-    if present_retired or legacy_data:
-        raise SystemExit(
-            "Retired Monster Tamer exploration/battle files remain: "
-            f"paths={present_retired}, data={legacy_data}"
-        )
-
-    launcher_files = typescript_files(MONSTER_LAUNCHER_ROOT)
-    launcher_source = "\n".join(
-        path.read_text(encoding="utf-8") for path in launcher_files
-    )
-    required_launcher_terms = (
-        'useApiQuery("inventory.list")',
-        ".filter((item) => item.available > 0)",
-        "new Map(",
-        'src="/monster-tamer/?embedded=1"',
-        'sandbox="allow-scripts allow-same-origin"',
-        'event.origin !== window.location.origin',
-        'event.source !== iframe.current?.contentWindow',
-        'className="monster-home-surface"',
-        "CollectionDetailShowcase",
-        "resumeFrame(",
-        "usePageActive()",
-        'type: active && !selected ? "resume" : "pause"',
-    )
-    missing_launcher_terms = [
-        value for value in required_launcher_terms if value not in launcher_source
-    ]
-    forbidden_launcher_terms = (
-        'href="/monster-tamer/"',
-        "apiRequest(",
-        "supabase",
-        ".slice(",
-        "localStorage",
-        "sessionStorage",
-        "createPortal(",
-        "monster-tamer-launch",
-    )
-    present_launcher_terms = [
-        value for value in forbidden_launcher_terms if value in launcher_source
-    ]
-    if missing_launcher_terms or present_launcher_terms:
-        raise SystemExit(
-            "Monster Tamer authenticated home contract is incomplete: "
-            f"missing={missing_launcher_terms}, forbidden={present_launcher_terms}"
-        )
-
-    static_files = [
-        STATIC_GAME_ROOT / "index.html",
-        STATIC_GAME_ROOT / "styles.css",
-        *sorted((STATIC_GAME_ROOT / "src").rglob("*.js")),
-    ]
-    static_source = "\n".join(
-        path.read_text(encoding="utf-8") for path in static_files
-    )
-    lowered_static = static_source.lower()
-    forbidden_static_terms = (
-        "/api/",
-        "supabase",
-        "initdata",
-        "authorization",
-        "idempotency-key",
-        "access_token",
-        "session_generation",
-        "localstorage",
-        "sessionstorage",
-        "indexeddb",
-        "document.cookie",
-        "fetch(",
-        "xmlhttprequest",
-        "websocket(",
-        "navigator.sendbeacon",
-        "battle",
-        "encounter",
-        "capture",
-    )
-    present_static_terms = [
-        value for value in forbidden_static_terms if value in lowered_static
-    ]
-    required_static_terms = (
-        'event.origin !== window.location.origin',
-        "event.source !== window.parent",
-        "/assets/catalog/v1/thumb/",
-        "this.scene.pause()",
-        'game?.scene.resume("PET_HOME")',
-        'event.data.type === "pause"',
-        "game?.loop.sleep()",
-        "game?.loop.wake()",
-        "this.reserved.add(targetKey)",
-        "this.occupied.add(targetKey)",
-        "findGridPath(",
-        "isTouchPointer(pointer)",
-        "isPrimaryMovePointer(pointer)",
-        "this.input.keyboard",
-        "KEY_MOVEMENT[event.code]",
-        'this.input.keyboard?.on("keyup"',
-        "event.repeat",
-        "this.heldMovementKeys",
-        "this.queueKeyboardStep()",
-        'this.game.events.on("blur"',
-        "const PET_SIZE = 56;",
-        "camera.setZoom(0.5)",
-        "camera.startFollow(",
-        "PLAYER_ASSET_PATH",
-    )
-    forbidden_input_terms = (
-        "KeyCodes",
-        'this.input.on("pointermove"',
-        'this.input.on("wheel"',
-        ".setScroll(",
-    )
-    missing_static_terms = [
-        value for value in required_static_terms if value not in static_source
-    ]
-    present_input_terms = [
-        value for value in forbidden_input_terms if value in static_source
-    ]
-    if present_static_terms or missing_static_terms or present_input_terms:
-        raise SystemExit(
-            "Monster Tamer renderer boundary is incomplete: "
-            f"forbidden={present_static_terms + present_input_terms}, "
-            f"missing={missing_static_terms}"
-        )
-
-    index = (STATIC_GAME_ROOT / "index.html").read_text(encoding="utf-8")
-    for value in (
-        '<base href="/monster-tamer/" />',
-        'src="vendor/phaser-3.60.0.min.js"',
-        'src="src/main.js"',
-        "请从 FinalTMA 游戏中心进入",
-    ):
-        if value not in index:
-            raise SystemExit(f"Monster Tamer index is missing {value}")
-    external_documents = re.findall(
-        r'(?:src|href)=["\'](https?://[^"\']+)["\']', index
-    )
-    if external_documents:
-        raise SystemExit(
-            f"Monster Tamer renderer has external resources: {external_documents}"
-        )
-
+def verify_game_page_boundary() -> None:
     game_page = GAME_PAGE.read_text(encoding="utf-8")
     if (
-        "<MonsterTamerHome />" not in game_page
-        or "monster-home-page" not in game_page
-        or any(
-            value in game_page
-            for value in ("MonsterTamerPanel", "ExpeditionPanel", "WheelPanel")
-        )
+        '<main className="page game-page" aria-label="游戏" />' not in game_page
+        or "domains/" in game_page
     ):
-        raise SystemExit("Game page must directly render only the Monster Tamer home")
+        raise SystemExit("Game page must remain present without game content")
 
     tasks_view = (
         WEB_ROOT / "domains/tasks/ui/TasksView.tsx"
@@ -472,312 +258,6 @@ def verify_monster_tamer_boundary() -> None:
         raise SystemExit(
             "Tasks page must own Wheel and hide Expedition filters, cards, and highlights"
         )
-
-    vercel = json.loads((ROOT / "vercel.json").read_text(encoding="utf-8"))
-    rewrites = vercel.get("rewrites", [])
-    rewrite_sources = [rewrite.get("source") for rewrite in rewrites]
-    expected_routes = {
-        "/monster-tamer": "/monster-tamer/index.html",
-        "/monster-tamer/": "/monster-tamer/index.html",
-    }
-    for source, destination in expected_routes.items():
-        matches = [
-            index
-            for index, rewrite in enumerate(rewrites)
-            if rewrite.get("source") == source
-            and rewrite.get("destination") == destination
-        ]
-        if len(matches) != 1:
-            raise SystemExit(
-                f"Vercel must rewrite {source} once to {destination}"
-            )
-    catch_all = [
-        index
-        for index, source in enumerate(rewrite_sources)
-        if source == "/((?!api/).*)"
-    ]
-    if len(catch_all) != 1 or any(
-        rewrite_sources.index(source) > catch_all[0] for source in expected_routes
-    ):
-        raise SystemExit(
-            "Monster Tamer renderer rewrites must precede the SPA catch-all"
-        )
-
-    verify_monster_tamer_assets()
-    verify_monster_tamer_map()
-
-    product = (ROOT / "docs/product/功能说明文档.md").read_text(
-        encoding="utf-8"
-    )
-    boundary = "<!-- PRODUCT_DATA_CHECKSUM_BOUNDARY -->"
-    chapter = "## 21. Monster Tamer 藏品展示家园功能说明"
-    if (
-        product.count(boundary) != 1
-        or product.count(chapter) != 1
-        or product.find(chapter) < product.find(boundary)
-    ):
-        raise SystemExit(
-            "Product chapter 21 must appear once after the checksum boundary"
-        )
-    chapter_text = product[product.index(chapter) :]
-    required_decisions = (
-        "50 × 50",
-        "最外侧两格",
-        "`available > 0`",
-        "同一模板无论拥有多少只，地图上只显示一只",
-        "不设置展示总数上限",
-        "现有藏品详情视觉组件",
-        "手机触摸或桌面鼠标左键点按",
-        "桌面 `W/A/S/D`",
-        "主体世界尺寸固定为 `56 × 56` 像素",
-        "镜头固定为 `0.5` 倍",
-        "方向键、地图拖动",
-        "旧玩家控制器、NPC、对话、告示牌",
-    )
-    missing_decisions = [
-        value for value in required_decisions if value not in chapter_text
-    ]
-    if missing_decisions:
-        raise SystemExit(
-            f"Product chapter 21 is missing home decisions: {missing_decisions}"
-        )
-
-
-def verify_monster_tamer_assets() -> None:
-    source_root = (
-        ROOT
-        / "assets/source/monster-tamer/tiny-swords/free-pack-2026-07-25"
-    )
-    manifest = json.loads((source_root / "SOURCE.json").read_text(encoding="utf-8"))
-    definitions = [
-        entry for entry in manifest.get("files", []) if isinstance(entry, dict)
-    ]
-    actual_source_paths = {
-        path.relative_to(source_root).as_posix()
-        for path in source_root.rglob("*.png")
-    }
-    recorded_source_paths = {
-        str(entry.get("path")) for entry in definitions
-    }
-    violations: list[str] = []
-    if (
-        manifest.get("project") != "Tiny Swords (Free Pack)"
-        or len(definitions) != 32
-        or actual_source_paths != recorded_source_paths
-    ):
-        violations.append(
-            "Tiny Swords source selection must contain exactly 32 recorded PNG files"
-        )
-    for definition in definitions:
-        source_path = source_root / str(definition.get("path"))
-        header = source_path.read_bytes()[:24]
-        dimensions = (
-            int.from_bytes(header[16:20], "big"),
-            int.from_bytes(header[20:24], "big"),
-        )
-        digest = hashlib.sha256(source_path.read_bytes()).hexdigest()
-        if dimensions != (
-            definition.get("width"),
-            definition.get("height"),
-        ) or digest != definition.get("sha256"):
-            violations.append(
-                f"{relative(source_path)} differs from its recorded source evidence"
-            )
-
-    runtime_root = STATIC_GAME_ROOT / "assets/images/tiny-swords"
-    expected_runtime = {
-        "tiny-swords-terrain-extruded.png",
-        "buildings/archery.png",
-        "buildings/barracks.png",
-        "buildings/castle.png",
-        "buildings/house-1.png",
-        "buildings/house-2.png",
-        "buildings/house-3.png",
-        "buildings/monastery.png",
-        "buildings/tower.png",
-        *{f"environment/bush-{value}.png" for value in range(1, 5)},
-        *{f"environment/rock-{value}.png" for value in range(1, 5)},
-        *{f"environment/stump-{value}.png" for value in range(1, 5)},
-        *{f"environment/tree-{value}.png" for value in range(1, 5)},
-        *{f"environment/water-rock-{value}.png" for value in range(1, 5)},
-        "environment/shadow.png",
-        "environment/water-foam.png",
-    }
-    actual_runtime = {
-        path.relative_to(runtime_root).as_posix()
-        for path in runtime_root.rglob("*.png")
-    }
-    if actual_runtime != expected_runtime:
-        violations.append(
-            "Runtime Tiny Swords files differ from the 31-file generated set: "
-            f"{sorted(actual_runtime ^ expected_runtime)}"
-        )
-    atlas = runtime_root / "tiny-swords-terrain-extruded.png"
-    atlas_header = atlas.read_bytes()[:24]
-    atlas_dimensions = (
-        int.from_bytes(atlas_header[16:20], "big"),
-        int.from_bytes(atlas_header[20:24], "big"),
-    )
-    if atlas_dimensions != (528, 528):
-        violations.append("Tiny Swords runtime atlas must remain 528x528")
-    axulart_root = STATIC_GAME_ROOT / "assets/images/axulart"
-    player_root = axulart_root / "character"
-    player_files = {
-        path.relative_to(axulart_root).as_posix()
-        for path in axulart_root.rglob("*")
-        if path.is_file()
-    }
-    if player_files != {"character/custom.png", "character/license.txt"}:
-        violations.append(
-            "AxulArt runtime selection must contain only custom.png and license.txt"
-        )
-    player_image = player_root / "custom.png"
-    player_header = player_image.read_bytes()[:24]
-    player_dimensions = (
-        int.from_bytes(player_header[16:20], "big"),
-        int.from_bytes(player_header[20:24], "big"),
-    )
-    if (
-        player_dimensions != (256, 264)
-        or hashlib.sha256(player_image.read_bytes()).hexdigest()
-        != "c51b6b8b2a6912512c2aa9a5a5cb315514f60199b68bc49ffff25f36b4211739"
-        or hashlib.sha256((player_root / "license.txt").read_bytes()).hexdigest()
-        != "caeb5fceed22c537c4ad2d6ff36bc74fec9e2f5e46b8a02c6d2f13a6546d9240"
-    ):
-        violations.append("AxulArt default player or local license differs")
-    for published_name in ("SOURCE.json", "TERMS.md"):
-        published = (
-            STATIC_GAME_ROOT / "assets/licenses/tiny-swords" / published_name
-        )
-        source = source_root / published_name
-        if published.read_bytes() != source.read_bytes():
-            violations.append(
-                f"{relative(published)} must match the checked source evidence"
-            )
-    notices = (STATIC_GAME_ROOT / "THIRD_PARTY_NOTICES.md").read_text(
-        encoding="utf-8"
-    )
-    for term in (
-        "Phaser 3.60.0",
-        "Tiny Swords free-pack map art",
-        "Pixel Frog",
-        "32-file selection",
-        "AxulArt default player character",
-        "FinalTMA Catalog v1",
-    ):
-        if term not in notices:
-            violations.append(f"Third-party notices are missing {term}")
-    if violations:
-        raise SystemExit(
-            "Monster Tamer asset contract violations:\n"
-            + "\n".join(violations)
-        )
-
-
-def verify_monster_tamer_map() -> None:
-    map_data = json.loads(
-        (STATIC_GAME_ROOT / "assets/data/main_1.json").read_text(
-            encoding="utf-8"
-        )
-    )
-    expected_geometry = {
-        "width": 50,
-        "height": 50,
-        "tilewidth": 64,
-        "tileheight": 64,
-    }
-    actual_geometry = {
-        name: map_data.get(name) for name in expected_geometry
-    }
-    if actual_geometry != expected_geometry:
-        raise SystemExit(
-            f"Monster Tamer map geometry mismatch: {actual_geometry}"
-        )
-    layers = {
-        str(layer.get("name")): layer for layer in map_data.get("layers", [])
-    }
-    expected_layers = {
-        "Water-Scenery": "objectgroup",
-        "Flat-Ground": "tilelayer",
-        "Scenery": "objectgroup",
-        "Collision": "tilelayer",
-    }
-    actual_layers = {
-        name: layer.get("type") for name, layer in layers.items()
-    }
-    if actual_layers != expected_layers:
-        raise SystemExit(
-            f"Monster Tamer map layer mismatch: {actual_layers}"
-        )
-    ground = layers["Flat-Ground"].get("data", [])
-    collision = layers["Collision"].get("data", [])
-    if len(ground) != 2500 or len(collision) != 2500:
-        raise SystemExit("Monster Tamer tile layers must contain 2500 cells")
-    for y in range(50):
-        for x in range(50):
-            if x < 2 or y < 2 or x >= 48 or y >= 48:
-                index = y * 50 + x
-                if ground[index] != 0 or collision[index] != 1:
-                    raise SystemExit(
-                        "Monster Tamer outer two-tile water ring is broken at "
-                        f"({x}, {y})"
-                    )
-    walkable = {index for index, blocked in enumerate(collision) if blocked == 0}
-    if len(walkable) < 210:
-        raise SystemExit(
-            f"Monster Tamer requires at least 210 walkable cells, found {len(walkable)}"
-        )
-    reachable = {next(iter(walkable))}
-    queue = list(reachable)
-    for index in queue:
-        x, y = index % 50, index // 50
-        for next_x, next_y in (
-            (x - 1, y),
-            (x + 1, y),
-            (x, y - 1),
-            (x, y + 1),
-        ):
-            next_index = next_y * 50 + next_x
-            if (
-                0 <= next_x < 50
-                and 0 <= next_y < 50
-                and next_index in walkable
-                and next_index not in reachable
-            ):
-                reachable.add(next_index)
-                queue.append(next_index)
-    if reachable != walkable:
-        raise SystemExit(
-            f"Monster Tamer walkable island is disconnected: {len(reachable)}/{len(walkable)}"
-        )
-    allowed_assets = {
-        "archery",
-        "barracks",
-        "castle",
-        "house-1",
-        "house-2",
-        "house-3",
-        "monastery",
-        "tower",
-        *{f"bush-{value}" for value in range(1, 5)},
-        *{f"rock-{value}" for value in range(1, 5)},
-        *{f"stump-{value}" for value in range(1, 5)},
-        *{f"tree-{value}" for value in range(1, 5)},
-        *{f"water-rock-{value}" for value in range(1, 5)},
-        "water-foam",
-    }
-    for layer_name in ("Water-Scenery", "Scenery"):
-        for entry in layers[layer_name].get("objects", []):
-            if entry.get("name") not in allowed_assets:
-                raise SystemExit(
-                    f"Monster Tamer map references forbidden scenery {entry.get('name')}"
-                )
-            tile_x = int(float(entry.get("x", 0)) // 64)
-            tile_y = int(float(entry.get("y", 0)) // 64) - 1
-            if tile_x < 2 or tile_y < 2 or tile_x >= 48 or tile_y >= 48:
-                raise SystemExit(
-                    f"Monster Tamer scenery enters the outer water ring at ({tile_x}, {tile_y})"
-                )
 
 
 def verify_api_boundaries() -> None:
@@ -839,34 +319,6 @@ def verify_documentation() -> None:
     missing = [value for value in required if value not in data]
     if missing:
         raise SystemExit(f"Database ownership documentation is incomplete: {missing}")
-    monster_tamer_adr = ROOT / "docs/architecture/adr/ADR-011-monster-tamer-static-subapplication.md"
-    required_monster_tamer_terms = (
-        "/monster-tamer/",
-        "`/game` 直接渲染水上家园",
-        "50×50",
-        "两格连续水域",
-        "inventory.list",
-        "available > 0",
-        "一种只显示一只",
-        "Tilemap_color1",
-        "Blue Buildings",
-        "#47ABA9",
-        "现有藏品详情",
-        "探索与战斗",
-        "AxulArt",
-        "手机触摸和桌面鼠标左键点按",
-        "桌面 `W/A/S/D`",
-        "主体世界尺寸固定为 `56×56` 像素",
-        "镜头固定 `0.5` 倍",
-        "按住时连续逐格移动",
-        "不使用浏览器持久化",
-    )
-    monster_tamer_documentation = monster_tamer_adr.read_text(encoding="utf-8")
-    missing_monster_tamer_terms = [
-        value for value in required_monster_tamer_terms if value not in monster_tamer_documentation
-    ]
-    if missing_monster_tamer_terms:
-        raise SystemExit(f"Monster Tamer ADR is incomplete: {missing_monster_tamer_terms}")
     lifecycle_adr = ROOT / "docs/architecture/adr/ADR-013-session-page-lifecycle.md"
     lifecycle_documentation = lifecycle_adr.read_text(encoding="utf-8")
     required_lifecycle_terms = (
@@ -875,8 +327,6 @@ def verify_documentation() -> None:
         "不因路由切换卸载",
         "五分钟",
         "refreshScopes",
-        "`pause`",
-        "`resume`",
         "Session generation",
         "不写入 `localStorage`",
     )

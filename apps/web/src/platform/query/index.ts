@@ -174,7 +174,6 @@ export async function refreshRouteScopes(
 function foregroundPrefixes(pathname: string): readonly string[] {
   if (pathname === "/") return ["gacha"];
   if (pathname === "/market") return ["market"];
-  if (pathname === "/game") return ["inventory"];
   if (pathname === "/inventory") return ["inventory", "catalog"];
   if (pathname === "/tasks") return ["tasks", "referral", "wheel"];
   if (pathname === "/album") return ["album"];

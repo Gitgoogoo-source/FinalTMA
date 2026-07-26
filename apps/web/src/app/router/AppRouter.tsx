@@ -2,7 +2,6 @@ import { lazy, Suspense, useEffect, type ReactNode } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AppShell } from "../shell/AppShell.tsx";
 import {
-  loadGamePage,
   loadInventoryPage,
   loadMarketPage,
   loadTasksPage,
@@ -59,18 +58,11 @@ function useBackgroundPreload(): void {
       if (backgroundPreloadStarted) return;
       backgroundPreloadStarted = true;
       void Promise.allSettled([
-        loadGamePage(),
-        import("./backgroundPreload.ts").then(({ preloadMonsterTamer }) =>
-          preloadMonsterTamer(),
-        ),
-      ]).then(() =>
-        Promise.allSettled([
-          loadMarketPage(),
-          loadInventoryPage(),
-          loadTasksPage(),
-          loadAlbumPage(),
-        ]),
-      );
+        loadMarketPage(),
+        loadInventoryPage(),
+        loadTasksPage(),
+        loadAlbumPage(),
+      ]);
     };
     const schedule = () => {
       if (idleWindow.requestIdleCallback)

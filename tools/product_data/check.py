@@ -28,11 +28,9 @@ def product_data_migration() -> Path:
 
 
 def main() -> None:
-    product_data_source, product_extensions = split_product_document(PRODUCT.read_text(encoding="utf-8"))
-    if "## 21. Monster Tamer 藏品展示家园功能说明" not in product_extensions:
-        raise SystemExit("Product extension after the checksum boundary must contain chapter 21 Monster Tamer")
-    if "## 21. Monster Tamer 藏品展示家园功能说明" in product_data_source:
-        raise SystemExit("Monster Tamer must remain outside the frozen catalog v1 product-data source")
+    product_data_source, _ = split_product_document(
+        PRODUCT.read_text(encoding="utf-8")
+    )
     source_checksum = hashlib.sha256(product_data_source.encode()).hexdigest()
     migration_source = product_data_migration()
     with tempfile.TemporaryDirectory(prefix="pokepets-product-data-") as temporary:
