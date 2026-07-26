@@ -14,10 +14,12 @@ call FinalTMA APIs or write business state.
 - Copyright: Copyright (c) 2024 Dev Share Academy
 - Full license text: `LICENSE`
 
-The original exploration, player, NPC, encounter, battle, capture, party,
-inventory, item, dialog, audio, and local-state systems are not shipped. The
-remaining integration keeps the locally hosted Phaser boundary and replaces
-the game runtime with project-authored collection-home code.
+The original exploration, player controller, NPC, encounter, battle, capture,
+party, inventory, item, dialog, audio, and local-state systems are not
+shipped. The single original default player sprite is separately retained
+under the AxulArt terms below. The remaining integration keeps the locally
+hosted Phaser boundary and replaces the game runtime with project-authored
+collection-home code.
 
 ## Phaser 3.60.0
 
@@ -63,6 +65,21 @@ Pixel Frog is credited here. The captured source terms prohibit
 redistributing, reselling, or repackaging the assets as an asset pack. The
 selected files are published only as components of this game.
 
+## AxulArt default player character
+
+- Pack: `Small 8-direction Characters`
+- Creator: AlexDreamer / AxulArt
+- Source: <https://axulart.itch.io/small-8-direction-characters>
+- Runtime file: `assets/images/axulart/character/custom.png`
+- Local terms: `assets/images/axulart/character/license.txt`
+- License: Creative Commons Attribution-ShareAlike 4.0 International
+
+The local terms permit free and commercial project use and modification with
+appropriate credit, and prohibit redistribution or resale. Monster Tamer uses
+the already retained default player sheet only for four-direction walking; it
+does not ship the old character controller, NPC sheet, battle trainers, or
+other exploration assets.
+
 ## FinalTMA catalog images
 
 Pet entities use FinalTMA Catalog v1 images from
@@ -74,5 +91,7 @@ a second pet image set or generate directional and battle frames.
 
 `tools/monster-tamer/generate-island-map.mjs` generates the 50×50 island,
 collision data, scenery placement, runtime atlas, and source-evidence copies.
-`src/scenes/pet-home-scene.js` implements read-only pet rendering, collision
-aware roaming, camera movement, and the parent click bridge.
+`src/systems/grid-pathfinder.js` implements four-direction touch navigation.
+`src/scenes/pet-home-scene.js` adapts that path to the restored default player
+animation, fixed follow camera, read-only pet rendering, collision-aware
+roaming, and the parent click bridge.

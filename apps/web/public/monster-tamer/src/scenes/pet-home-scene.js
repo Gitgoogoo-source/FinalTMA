@@ -4,7 +4,15 @@ import {
   TINY_SWORDS_IMAGE_ASSETS,
   TINY_SWORDS_SPRITESHEET_ASSETS,
 } from "../assets/tiny-swords-world.js";
+import {
+  PLAYER_ASSET_KEY,
+  PLAYER_ASSET_PATH,
+  PLAYER_DIRECTIONS,
+  PLAYER_FRAME_HEIGHT,
+  PLAYER_FRAME_WIDTH,
+} from "../assets/player-character.js";
 import { postToParent } from "../bridge.js";
+import { findGridPath } from "../systems/grid-pathfinder.js";
 
 const SCENE_KEY = "PET_HOME";
 const MAP_KEY = "PET_HOME_MAP";
@@ -13,6 +21,7 @@ const TILE_SIZE = 64;
 const MAP_TILES = 50;
 const WORLD_SIZE = MAP_TILES * TILE_SIZE;
 const PET_SIZE = 112;
+const PLAYER_MOVE_DURATION = 320;
 const PET_TEXTURE_PREFIX = "PET:";
 const ASSET_KEYS = Object.freeze({
   archery: TINY_SWORDS_ASSET_KEYS.ARCHERY,
@@ -55,7 +64,10 @@ export class PetHomeScene extends Phaser.Scene {
     this.walkableKeys = new Set();
     this.occupied = new Set();
     this.reserved = new Set();
-    this.drag = undefined;
+    this.player = undefined;
+    this.playerReserved = "";
+    this.groundPointerDown = undefined;
+    this.suppressGroundTap = false;
     this.failedImages = 0;
   }
 
@@ -72,6 +84,10 @@ export class PetHomeScene extends Phaser.Scene {
       ({ key, path, frameWidth, frameHeight }) =>
         this.load.spritesheet(key, path, { frameWidth, frameHeight }),
     );
+    this.load.spritesheet(PLAYER_ASSET_KEY, PLAYER_ASSET_PATH, {
+      frameWidth: PLAYER_FRAME_WIDTH,
+      frameHeight: PLAYER_FRAME_HEIGHT,
+    });
     this.items.forEach((item) =>
       this.load.image(
         `${PET_TEXTURE_PREFIX}${item.templateId}`,
@@ -116,10 +132,10 @@ export class PetHomeScene extends Phaser.Scene {
 
     this.createScenery(rawMap, "Water-Scenery", -60);
     this.createScenery(rawMap, "Scenery", 0);
+    this.createPlayer();
     this.spawnPets();
     this.configureCamera();
-    this.configureCameraInput();
-    this.scale.on("resize", () => this.configureCamera(false));
+    this.configureTapMovement();
     postToParent({ type: "asset-error", failed: this.failedImages });
   }
 
@@ -160,7 +176,10 @@ export class PetHomeScene extends Phaser.Scene {
       )
       .sort((left, right) => left.templateId.localeCompare(right.templateId));
     const spawnCells = this.walkable.filter(
-      (cell) => cell.x % 2 === 0 && cell.y % 2 === 0,
+      (cell) =>
+        cell.x % 2 === 0 &&
+        cell.y % 2 === 0 &&
+        cellKey(cell) !== cellKey(this.player.cell),
     );
     if (availableItems.length > spawnCells.length)
       throw new Error("Monster Tamer island cannot place every owned Monster.");
@@ -207,10 +226,15 @@ export class PetHomeScene extends Phaser.Scene {
     this.startIdle(entity);
     pet.on("pointerdown", (pointer, _x, _y, event) => {
       event.stopPropagation();
+      this.suppressGroundTap = true;
       entity.pointerDown = { x: pointer.x, y: pointer.y };
     });
     pet.on("pointerup", (pointer, _x, _y, event) => {
       event.stopPropagation();
+      this.suppressGroundTap = true;
+      queueMicrotask(() => {
+        this.suppressGroundTap = false;
+      });
       if (
         !entity.pointerDown ||
         Phaser.Math.Distance.Between(
@@ -300,6 +324,12 @@ export class PetHomeScene extends Phaser.Scene {
   }
 
   isPetCellAvailable(candidate, ignoredKey) {
+    const candidateKey = cellKey(candidate);
+    if (
+      candidateKey === cellKey(this.player.cell) ||
+      candidateKey === this.playerReserved
+    )
+      return false;
     for (const key of [...this.occupied, ...this.reserved]) {
       if (key === ignoredKey) continue;
       const [x, y] = key.split(",").map(Number);
@@ -311,54 +341,182 @@ export class PetHomeScene extends Phaser.Scene {
     return true;
   }
 
-  configureCamera(resetCenter = true) {
-    const camera = this.cameras.main;
-    camera.setBounds(0, 0, WORLD_SIZE, WORLD_SIZE);
-    const fit =
-      Math.min(this.scale.width / WORLD_SIZE, this.scale.height / WORLD_SIZE) *
-      0.96;
-    const targetZoom =
-      this.scale.width < 700 ? Math.max(fit, 0.34) : Math.max(fit, 0.2);
-    camera.setZoom(Phaser.Math.Clamp(targetZoom, 0.2, 0.85));
-    if (resetCenter) camera.centerOn(WORLD_SIZE / 2, WORLD_SIZE / 2);
+  createPlayer() {
+    const center = { x: MAP_TILES / 2, y: MAP_TILES / 2 };
+    const cell = this.walkable.reduce((closest, candidate) =>
+      Phaser.Math.Distance.Squared(candidate.x, candidate.y, center.x, center.y) <
+      Phaser.Math.Distance.Squared(closest.x, closest.y, center.x, center.y)
+        ? candidate
+        : closest,
+    );
+    for (const [direction, definition] of Object.entries(PLAYER_DIRECTIONS)) {
+      const key = playerAnimationKey(direction);
+      if (this.anims.exists(key)) continue;
+      this.anims.create({
+        key,
+        frames: definition.frames.map((frame) => ({
+          key: PLAYER_ASSET_KEY,
+          frame,
+        })),
+        frameRate: 9,
+        repeat: -1,
+        yoyo: true,
+      });
+    }
+    const sprite = this.add
+      .sprite(
+        (cell.x + 0.5) * TILE_SIZE,
+        (cell.y + 0.78) * TILE_SIZE,
+        PLAYER_ASSET_KEY,
+        PLAYER_DIRECTIONS.down.idle,
+      )
+      .setOrigin(0.5, 0.78)
+      .setDepth((cell.y + 1) * TILE_SIZE + 2);
+    this.player = {
+      sprite,
+      cell,
+      direction: "down",
+      goal: undefined,
+      path: [],
+      moving: false,
+    };
   }
 
-  configureCameraInput() {
+  configureCamera() {
+    const camera = this.cameras.main;
+    camera.setBounds(0, 0, WORLD_SIZE, WORLD_SIZE);
+    camera.setZoom(1);
+    camera.startFollow(this.player.sprite, true, 0.14, 0.14);
+  }
+
+  configureTapMovement() {
     this.input.on("pointerdown", (pointer) => {
-      this.drag = {
-        x: pointer.x,
-        y: pointer.y,
-        scrollX: this.cameras.main.scrollX,
-        scrollY: this.cameras.main.scrollY,
+      if (!isTouchPointer(pointer)) return;
+      this.groundPointerDown = { x: pointer.x, y: pointer.y };
+    });
+    this.input.on("pointerup", (pointer) => {
+      const pointerDown = this.groundPointerDown;
+      this.groundPointerDown = undefined;
+      if (
+        !pointerDown ||
+        this.suppressGroundTap ||
+        !isTouchPointer(pointer) ||
+        Phaser.Math.Distance.Between(
+          pointerDown.x,
+          pointerDown.y,
+          pointer.x,
+          pointer.y,
+        ) > 14
+      )
+        return;
+      const world = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+      const goal = {
+        x: Math.floor(world.x / TILE_SIZE),
+        y: Math.floor(world.y / TILE_SIZE),
       };
+      const goalKey = cellKey(goal);
+      if (
+        !this.walkableKeys.has(goalKey) ||
+        this.occupied.has(goalKey) ||
+        this.reserved.has(goalKey)
+      )
+        return;
+      this.player.goal = goal;
+      this.player.path = [];
+      if (!this.player.moving) this.planPlayerPath();
     });
-    this.input.on("pointermove", (pointer) => {
-      if (!pointer.isDown || !this.drag) return;
-      const camera = this.cameras.main;
-      camera.setScroll(
-        this.drag.scrollX - (pointer.x - this.drag.x) / camera.zoom,
-        this.drag.scrollY - (pointer.y - this.drag.y) / camera.zoom,
-      );
+  }
+
+  planPlayerPath() {
+    if (!this.player.goal) return;
+    const blocked = new Set([...this.occupied, ...this.reserved]);
+    blocked.delete(cellKey(this.player.cell));
+    this.player.path = findGridPath(
+      this.player.cell,
+      this.player.goal,
+      this.walkableKeys,
+      blocked,
+    );
+    if (this.player.path.length === 0) {
+      this.player.goal = undefined;
+      this.setPlayerIdle();
+      return;
+    }
+    this.movePlayerStep();
+  }
+
+  movePlayerStep() {
+    if (this.player.moving) return;
+    const target = this.player.path.shift();
+    if (!target) {
+      this.player.goal = undefined;
+      this.setPlayerIdle();
+      return;
+    }
+    const targetKey = cellKey(target);
+    if (this.occupied.has(targetKey) || this.reserved.has(targetKey)) {
+      this.planPlayerPath();
+      return;
+    }
+
+    const direction = directionBetween(this.player.cell, target);
+    this.player.direction = direction;
+    this.player.moving = true;
+    this.playerReserved = targetKey;
+    if (this.reducedMotion) {
+      this.player.sprite
+        .anims.stop()
+        .setFrame(PLAYER_DIRECTIONS[direction].idle);
+    } else {
+      this.player.sprite.play(playerAnimationKey(direction), true);
+    }
+    this.tweens.add({
+      targets: this.player.sprite,
+      x: (target.x + 0.5) * TILE_SIZE,
+      y: (target.y + 0.78) * TILE_SIZE,
+      duration: PLAYER_MOVE_DURATION,
+      ease: "Linear",
+      onUpdate: () =>
+        this.player.sprite.setDepth(this.player.sprite.y + TILE_SIZE + 2),
+      onComplete: () => {
+        this.player.cell = target;
+        this.player.moving = false;
+        this.playerReserved = "";
+        if (
+          this.player.goal &&
+          cellKey(this.player.goal) !== cellKey(this.player.cell)
+        ) {
+          this.planPlayerPath();
+          return;
+        }
+        this.player.goal = undefined;
+        this.setPlayerIdle();
+      },
     });
-    this.input.on("pointerup", () => {
-      this.drag = undefined;
-    });
-    this.input.on("wheel", (pointer, _objects, _dx, deltaY) => {
-      const camera = this.cameras.main;
-      const worldPoint = camera.getWorldPoint(pointer.x, pointer.y);
-      const nextZoom = Phaser.Math.Clamp(
-        camera.zoom * (deltaY > 0 ? 0.9 : 1.1),
-        0.2,
-        0.85,
-      );
-      camera.setZoom(nextZoom);
-      const nextWorldPoint = camera.getWorldPoint(pointer.x, pointer.y);
-      camera.scrollX += worldPoint.x - nextWorldPoint.x;
-      camera.scrollY += worldPoint.y - nextWorldPoint.y;
-    });
+  }
+
+  setPlayerIdle() {
+    const definition = PLAYER_DIRECTIONS[this.player.direction];
+    this.player.sprite.anims.stop().setFrame(definition.idle);
   }
 }
 
 function cellKey(cell) {
   return `${cell.x},${cell.y}`;
+}
+
+function playerAnimationKey(direction) {
+  return `PLAYER_${direction.toUpperCase()}`;
+}
+
+function directionBetween(current, target) {
+  if (target.x < current.x) return "left";
+  if (target.x > current.x) return "right";
+  if (target.y < current.y) return "up";
+  return "down";
+}
+
+function isTouchPointer(pointer) {
+  const type = String(pointer.event?.pointerType ?? pointer.event?.type ?? "");
+  return type === "touch" || type.startsWith("touch");
 }

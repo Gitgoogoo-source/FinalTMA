@@ -38,7 +38,11 @@ REQUIRED_PATHS = (
     "apps/web/public/monster-tamer/src/main.js",
     "apps/web/public/monster-tamer/src/bridge.js",
     "apps/web/public/monster-tamer/src/scenes/pet-home-scene.js",
+    "apps/web/public/monster-tamer/src/systems/grid-pathfinder.js",
+    "apps/web/public/monster-tamer/src/assets/player-character.js",
     "apps/web/public/monster-tamer/assets/data/main_1.json",
+    "apps/web/public/monster-tamer/assets/images/axulart/character/custom.png",
+    "apps/web/public/monster-tamer/assets/images/axulart/character/license.txt",
     "apps/web/public/monster-tamer/assets/images/tiny-swords/tiny-swords-terrain-extruded.png",
     "apps/web/public/monster-tamer/assets/licenses/tiny-swords/SOURCE.json",
     "apps/web/public/monster-tamer/assets/licenses/tiny-swords/TERMS.md",
@@ -197,8 +201,12 @@ def verify_monster_tamer_boundary() -> None:
         STATIC_GAME_ROOT / "src/bridge.js",
         STATIC_GAME_ROOT / "src/lib/phaser.js",
         STATIC_GAME_ROOT / "src/scenes/pet-home-scene.js",
+        STATIC_GAME_ROOT / "src/systems/grid-pathfinder.js",
+        STATIC_GAME_ROOT / "src/assets/player-character.js",
         STATIC_GAME_ROOT / "src/assets/tiny-swords-world.js",
         STATIC_GAME_ROOT / "assets/data/main_1.json",
+        STATIC_GAME_ROOT / "assets/images/axulart/character/custom.png",
+        STATIC_GAME_ROOT / "assets/images/axulart/character/license.txt",
         STATIC_GAME_ROOT / "vendor/phaser-3.60.0.min.js",
         STATIC_GAME_ROOT / "vendor/licenses/PHASER-LICENSE.md",
         STATIC_GAME_ROOT / "THIRD_PARTY_NOTICES.md",
@@ -212,7 +220,7 @@ def verify_monster_tamer_boundary() -> None:
     retired_paths = (
         "assets/audio",
         "assets/fonts",
-        "assets/images/axulart",
+        "assets/images/axulart/beach",
         "assets/images/kenneys-assets",
         "assets/images/monster-tamer",
         "assets/images/parabellum-games",
@@ -321,15 +329,30 @@ def verify_monster_tamer_boundary() -> None:
         'game?.scene.resume("PET_HOME")',
         "this.reserved.add(targetKey)",
         "this.occupied.add(targetKey)",
-        "configureCameraInput()",
+        "findGridPath(",
+        "isTouchPointer(pointer)",
+        "camera.setZoom(1)",
+        "camera.startFollow(",
+        "PLAYER_ASSET_PATH",
+    )
+    forbidden_input_terms = (
+        "this.input.keyboard",
+        "KeyCodes",
+        'this.input.on("pointermove"',
+        'this.input.on("wheel"',
+        ".setScroll(",
     )
     missing_static_terms = [
         value for value in required_static_terms if value not in static_source
     ]
-    if present_static_terms or missing_static_terms:
+    present_input_terms = [
+        value for value in forbidden_input_terms if value in static_source
+    ]
+    if present_static_terms or missing_static_terms or present_input_terms:
         raise SystemExit(
             "Monster Tamer renderer boundary is incomplete: "
-            f"forbidden={present_static_terms}, missing={missing_static_terms}"
+            f"forbidden={present_static_terms + present_input_terms}, "
+            f"missing={missing_static_terms}"
         )
 
     index = (STATIC_GAME_ROOT / "index.html").read_text(encoding="utf-8")
@@ -416,7 +439,10 @@ def verify_monster_tamer_boundary() -> None:
         "同一模板无论拥有多少只，地图上只显示一只",
         "不设置展示总数上限",
         "现有藏品详情视觉组件",
-        "旧玩家、NPC、对话、告示牌、探索、遭遇、战斗",
+        "手机屏幕点按",
+        "镜头固定为 `1` 倍",
+        "桌面键盘、WASD、方向键、鼠标点地移动",
+        "旧玩家控制器、NPC、对话、告示牌",
     )
     missing_decisions = [
         value for value in required_decisions if value not in chapter_text
@@ -504,6 +530,31 @@ def verify_monster_tamer_assets() -> None:
     )
     if atlas_dimensions != (528, 528):
         violations.append("Tiny Swords runtime atlas must remain 528x528")
+    axulart_root = STATIC_GAME_ROOT / "assets/images/axulart"
+    player_root = axulart_root / "character"
+    player_files = {
+        path.relative_to(axulart_root).as_posix()
+        for path in axulart_root.rglob("*")
+        if path.is_file()
+    }
+    if player_files != {"character/custom.png", "character/license.txt"}:
+        violations.append(
+            "AxulArt runtime selection must contain only custom.png and license.txt"
+        )
+    player_image = player_root / "custom.png"
+    player_header = player_image.read_bytes()[:24]
+    player_dimensions = (
+        int.from_bytes(player_header[16:20], "big"),
+        int.from_bytes(player_header[20:24], "big"),
+    )
+    if (
+        player_dimensions != (256, 264)
+        or hashlib.sha256(player_image.read_bytes()).hexdigest()
+        != "c51b6b8b2a6912512c2aa9a5a5cb315514f60199b68bc49ffff25f36b4211739"
+        or hashlib.sha256((player_root / "license.txt").read_bytes()).hexdigest()
+        != "caeb5fceed22c537c4ad2d6ff36bc74fec9e2f5e46b8a02c6d2f13a6546d9240"
+    ):
+        violations.append("AxulArt default player or local license differs")
     for published_name in ("SOURCE.json", "TERMS.md"):
         published = (
             STATIC_GAME_ROOT / "assets/licenses/tiny-swords" / published_name
@@ -521,6 +572,7 @@ def verify_monster_tamer_assets() -> None:
         "Tiny Swords free-pack map art",
         "Pixel Frog",
         "32-file selection",
+        "AxulArt default player character",
         "FinalTMA Catalog v1",
     ):
         if term not in notices:
@@ -711,6 +763,10 @@ def verify_documentation() -> None:
         "#47ABA9",
         "现有藏品详情",
         "探索与战斗",
+        "AxulArt",
+        "手机触摸点按",
+        "镜头固定 `1` 倍",
+        "鼠标点地",
         "不使用浏览器持久化",
     )
     monster_tamer_documentation = monster_tamer_adr.read_text(encoding="utf-8")

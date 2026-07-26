@@ -68,7 +68,7 @@ python3 tools/web/build_manifest.py \
 6. 在 Supabase Data API 设置中把 Exposed schemas 固定为 `public,graphql_public,api`，不得暴露任何业务表 schema。
 7. 核对 Vercel Production 同时存在 `TELEGRAM_BOT_USERNAME=FinalTMA_bot` 与 `TELEGRAM_MINI_APP_SHORT_NAME=pokepets_dev`，环境变量变更后部署包含全部修改的同一 Git commit；在 BotFather 的 `/mybots` → `@FinalTMA_bot` → `Bot Settings` → `Configure Mini App` 中启用 Main Mini App 并将 URL 固定为 `https://final-tma-pi.vercel.app/`，同时保持 named Mini App `pokepets_dev` 与默认菜单按钮 `Open PokePets` 指向 `https://t.me/FinalTMA_bot/pokepets_dev`。
 8. 调用 Bot API，确认 `getMe.result.has_main_web_app=true` 且 `getChatMenuButton.result.web_app.url=https://t.me/FinalTMA_bot/pokepets_dev`；再验证 `/api/health`、Telegram 真机登录、登录交接门禁、`/api/referrals` 与三个手工 job，最后恢复 Cron。
-9. 对当前 Vercel 部署分别请求 `/monster-tamer` 与 `/monster-tamer/`，确认两者返回受控渲染文档且直接访问只显示入口门禁；从真实登录游戏页按 `docs/operations/acceptance.md` 完成 50×50 水上家园、真实可用模板去重、全部宠物漫游、碰撞与互斥占位、窄屏拖动、现有详情暂停恢复、业务零写入、Tiny Swords 白名单和来源条款验收。
+9. 对当前 Vercel 部署分别请求 `/monster-tamer` 与 `/monster-tamer/`，确认两者返回受控渲染文档且直接访问只显示入口门禁；从真实登录游戏页按 `docs/operations/acceptance.md` 完成 50×50 水上家园、真实可用模板去重、全部宠物漫游、碰撞与互斥占位、手机触摸寻路、固定镜头跟随、桌面移动禁用、现有详情暂停恢复、业务零写入、Tiny Swords 与 AxulArt 白名单和来源条款验收。
 10. 按 `docs/operations/acceptance.md` 完成 Telegram 真机、支付与并发验收；`monitor-invariants` 必须返回 0 个新增 violation。
 
 任一步失败都保持入口与 Cron 关闭，修正原始 Schema 或迁移并从第 1 条重新执行。禁止为尚未生产发布的错误定义追加修补 migration。
