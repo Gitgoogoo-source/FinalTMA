@@ -42,9 +42,9 @@ TMA 首次同步加载只覆盖应用壳、会话与账号门禁及默认开盒�
 
 ## 可信边界
 
-前端只提交动作、目标标识、数量和幂等键。价格、余额、库存、资格、奖励、Battle 属性与技能数值、命中、伤害、行动顺序、胜负、结算、随机结果、任务进度和链上状态均由服务端重新校验，并由单个数据库事务裁决。
+前端只提交动作、目标标识、数量和 operation-backed 命令所需的幂等键。价格、余额、库存、资格、奖励、Battle 属性与技能数值、命中、伤害、行动顺序、胜负、结算、随机结果、任务进度和链上状态均由服务端重新校验，并由单个数据库事务裁决。
 
-所有玩家写请求以 UUID `Idempotency-Key` 作为 `operation_id`。数据库对规范化请求计算哈希；相同键和相同请求返回原结果，相同键和不同请求返回 `IDEMPOTENCY_KEY_REUSED`。
+创建 operation 的玩家写请求以 UUID `Idempotency-Key` 作为 `operation_id`。数据库对规范化请求计算哈希；相同键和相同请求返回原结果，相同键和不同请求返回 `IDEMPOTENCY_KEY_REUSED`。Battle 只有创建、取消、接受、正常动作和强制换宠属于这一范围；heartbeat、offline 和 acknowledge 不接收幂等键、不创建 operation，分别由单调服务端时间、幂等离线状态转换和首次确认时间写入实现数据库语义幂等。
 
 会话令牌只在运行内存保存，绝对有效期 15 分钟。只有 `POST /api/auth/telegram` 接收 Telegram `initData`。账号为 `banned` 时前端立即清空全部业务内容，只渲染空白界面。
 
@@ -54,7 +54,7 @@ TMA 首次同步加载只覆盖应用壳、会话与账号门禁及默认开盒�
 
 ## 操作恢复
 
-前端内存操作阶段固定为 `confirming → submitting → pending/unknown → succeeded/failed`；数据库持久状态为 `pending`、`unknown`、`succeeded`、`failed`。随机结果和资产结果只生成一次，`unknown` 只查询原 `operation_id`。开盒与转盘从提交前反馈到结果确认完成持续锁定领域操作和底部导航；进化在未决阶段锁定新提交和底部导航，终态由专用覆盖弹窗处理；Battle 创建、接受和动作恢复原 operation 后必须读取 viewer-specific room snapshot，终局只恢复最新未确认当场结果。其余命令只阻止同一 `use_case` 再次提交。开盒、转盘、进化及 Battle 当场结果在服务端确认展示前持续恢复，确认时间由当前用户的领域专用 RPC 原子记录。
+前端内存操作阶段固定为 `confirming → submitting → pending/unknown → succeeded/failed`；数据库持久状态为 `pending`、`unknown`、`succeeded`、`failed`。随机结果和资产结果只生成一次，`unknown` 只查询原 `operation_id`。开盒与转盘从提交前反馈到结果确认完成持续锁定领域操作和底部导航；进化在未决阶段锁定新提交和底部导航，终态由专用覆盖弹窗处理；Battle 创建、取消、接受、正常动作和强制换宠恢复原 operation 后必须读取 viewer-specific room snapshot，终局只恢复最新未确认当场结果。Battle heartbeat、offline 和 acknowledge 直接重试原 room 语义，不进入 operation 恢复。其余命令只阻止同一 `use_case` 再次提交。开盒、转盘、进化及 Battle 当场结果在服务端确认展示前持续恢复，确认时间由当前用户的领域专用 RPC 原子记录。
 
 ## 生成物
 

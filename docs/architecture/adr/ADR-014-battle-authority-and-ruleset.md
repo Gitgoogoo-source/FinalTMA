@@ -6,7 +6,7 @@
 
 ## 决定
 
-Battle 使用 React + TypeScript 呈现界面，不引入 Phaser，也不在浏览器运行战斗模拟器。客户端只提交产品主文档第 21 章允许的房间档位、三个有序模板 ID、技能位置、换宠槽位和 UUID 幂等键；Vercel Function 只完成 Telegram 身份、REST 契约、viewer 上下文和外部服务编排。
+Battle 使用 React + TypeScript 呈现界面，不引入 Phaser，也不在浏览器运行战斗模拟器。客户端只提交产品主文档第 21 章允许的房间档位、三个有序模板 ID、技能位置、换宠槽位和 operation-backed 命令的 UUID 幂等键；heartbeat、offline 和 acknowledge 不提交幂等键。Vercel Function 只完成 Telegram 身份、REST 契约、viewer 上下文和外部服务编排。
 
 Supabase PostgreSQL 是 Battle 的唯一裁判。房间、参与资格、三宠 reservation、K-coin stake、秘密行动、deadline 托管、确定随机命中、伤害、行动顺序、强制换宠、终局、退款、结算、私有审计和 outbox 都由具名 RPC 在事务内完成。room 行是同房间写入的首个业务锁，涉及双方余额时再按用户 UUID 排序锁定；唯一约束、stake 状态和 ledger reference 保证重复恢复不重复改变资产。
 

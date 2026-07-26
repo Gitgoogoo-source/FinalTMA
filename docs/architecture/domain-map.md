@@ -28,12 +28,12 @@
 
 ## 横切约束
 
-- 所有玩家业务写入均需要 UUID 幂等键。
+- 所有创建 operation 的玩家业务写入均需要 UUID 幂等键；Battle heartbeat、offline 和 acknowledge 不创建 operation，并由数据库状态语义保证幂等。
 - 所有资产写入均由一个具名 RPC 在单个事务内完成。
 - 所有错误均使用契约声明的稳定错误码。
-- 所有结果未知状态均恢复原 `operation_id`，不得重新提交。
+- 所有 operation-backed 命令的结果未知状态均恢复原 `operation_id`，不得生成新键；不创建 operation 的语义幂等命令只按原目标资源重试并读取数据库权威状态。
 - 所有认证业务接口默认拒绝未完成入口交接，唯一例外是邀请绑定与受限的原邀请操作查询。
 - 所有前端异步结果写入前同时验证 session generation 与 `normal` 账号状态。
-- Battle 前端只提交房间档位、三个有序模板、技能位置、换宠槽位和幂等键；命中、伤害、顺序、终局、退款与结算全部由数据库裁决。
+- Battle 前端只为创建、取消、接受、正常动作和强制换宠提交对应意图与幂等键；heartbeat、offline 和 acknowledge 只提交目标房间且不提交幂等键。命中、伤害、顺序、终局、退款与结算全部由数据库裁决。
 - Battle 的 Ably 消息只使 `state_version` 失效，viewer-specific 权威内容只通过 REST 读取。
 - 真实开发环境与未来生产环境使用相同 commit、相同 migration、不同环境密钥。

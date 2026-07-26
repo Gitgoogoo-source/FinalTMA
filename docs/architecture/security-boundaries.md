@@ -12,6 +12,8 @@ Data API 只暴露 `api` schema。安全迁移撤销 `PUBLIC`、`anon`、`authen
 
 Battle 分享卡、接受页、己方、对手和 resolution event 使用五个独立 Schema。数据库 RPC 直接生成 viewer-specific JSON，不允许 Functions 取得全量双边状态后再过滤。`battle` 不加入 Exposed schemas；永久私有 seed、roll、审计与 ledger 关联不进入玩家响应。
 
+Battle 创建、取消、接受、正常动作和强制换宠必须携带 UUID `Idempotency-Key`，数据库 request hash 阻止同键篡改与重放产生第二次业务结果。heartbeat、offline 和 acknowledge 禁止携带 `Idempotency-Key` 且不创建 operation；数据库分别以服务端时间单调更新、受 room 锁保护的幂等离线状态转换和仅空值可写的首次确认时间吸收重复、并发与请求重放。
+
 Ably token 的 capability 只允许当前用户、当前参与 room 或当前 invite 状态频道的 subscribe，浏览器不能 publish、presence-enter 或管理频道。Ably 消息只携带失效元数据，不携带业务状态。`/api/integrations/battle-share` 与 `/api/integrations/battle-outbox` 以 Vercel Secret 和 Supabase Vault 共同持有的 `BATTLE_OUTBOX_SECRET` 鉴权；请求 body 只作唤醒信号，真实任务由受保护 RPC 领取。
 
 账号封禁切换先把内存账号状态设为 `banned` 并生成新 session generation，再取消请求并清空查询、操作、弹窗和导航。任何请求、预取或缓存种子写入前都同时验证原 generation 与当前 `normal` 状态，迟到响应只能作为 `AbortError` 丢弃。
