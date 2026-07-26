@@ -68,7 +68,14 @@ export function MonsterTamerHome(): ReactNode {
   }, [items]);
 
   useEffect(() => {
-    if (!frameReady || !query.data || !iframe.current?.contentWindow) return;
+    if (
+      !frameReady ||
+      !query.data ||
+      query.isFetching ||
+      query.error ||
+      !iframe.current?.contentWindow
+    )
+      return;
     iframe.current.contentWindow.postMessage(
       {
         source: "pokepets.monster-home",
@@ -83,7 +90,7 @@ export function MonsterTamerHome(): ReactNode {
       },
       window.location.origin,
     );
-  }, [frameReady, items, query.data]);
+  }, [frameReady, items, query.data, query.error, query.isFetching]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -105,12 +112,7 @@ export function MonsterTamerHome(): ReactNode {
     void query.refetch();
   };
 
-  const content = query.isLoading ? (
-    <HomeStatus
-      title="正在读取你的藏品"
-      detail="地图将在真实藏品返回后打开。"
-    />
-  ) : query.error ? (
+  const content = query.error ? (
     <HomeStatus
       title="藏品读取失败"
       detail={(query.error as Error).message}
@@ -145,7 +147,7 @@ export function MonsterTamerHome(): ReactNode {
         sandbox="allow-scripts allow-same-origin"
       />
       {content}
-      {!content && items.length === 0 ? (
+      {!content && query.data && !query.isFetching && items.length === 0 ? (
         <p className="monster-home-empty" role="status">
           当前没有可展示的藏品
         </p>

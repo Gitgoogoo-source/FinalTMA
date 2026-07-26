@@ -68,6 +68,7 @@ body {
   font-size: 12px;
 }
 
-.entry-status[hidden] {
+.entry-status[hidden],
+html[data-embedded="true"] .entry-status {
   display: none;
 }

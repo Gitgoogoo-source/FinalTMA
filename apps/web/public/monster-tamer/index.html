@@ -9,6 +9,10 @@
     <meta name="theme-color" content="#47aba9" />
     <title>Monster Tamer 藏品展示家园</title>
     <base href="/monster-tamer/" />
+    <script>
+      if (new URLSearchParams(location.search).get("embedded") === "1")
+        document.documentElement.dataset.embedded = "true";
+    </script>
     <link rel="icon" href="favicon.ico" />
     <link rel="stylesheet" href="styles.css" />
     <script src="vendor/phaser-3.60.0.min.js"></script>

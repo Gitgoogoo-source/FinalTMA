@@ -9,6 +9,8 @@ let game;
 
 if (!(container instanceof HTMLElement) || !(status instanceof HTMLElement))
   throw new Error("Monster Tamer mount points are missing.");
+if (new URLSearchParams(location.search).get("embedded") === "1")
+  status.hidden = true;
 
 window.addEventListener("message", (event) => {
   if (

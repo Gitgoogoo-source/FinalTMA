@@ -74,6 +74,7 @@ export class PetHomeScene extends Phaser.Scene {
     this.playerReserved = "";
     this.groundPointerDown = undefined;
     this.suppressGroundTap = false;
+    this.heldMovementKeys = [];
     this.failedImages = 0;
   }
 
@@ -252,6 +253,7 @@ export class PetHomeScene extends Phaser.Scene {
         ) > 12
       )
         return;
+      this.heldMovementKeys = [];
       postToParent({ type: "select", templateId: item.templateId });
       this.scene.pause();
     });
@@ -431,13 +433,33 @@ export class PetHomeScene extends Phaser.Scene {
       const movement = KEY_MOVEMENT[event.code];
       if (!movement) return;
       event.preventDefault();
-      const base = this.player.stepTarget ?? this.player.cell;
-      this.player.goal = undefined;
-      this.player.path = [];
-      this.setPlayerGoal({
-        x: base.x + movement.x,
-        y: base.y + movement.y,
-      });
+      if (event.repeat || this.heldMovementKeys.includes(event.code)) return;
+      this.heldMovementKeys.push(event.code);
+      this.queueKeyboardStep();
+    });
+    this.input.keyboard?.on("keyup", (event) => {
+      if (!KEY_MOVEMENT[event.code]) return;
+      event.preventDefault();
+      this.heldMovementKeys = this.heldMovementKeys.filter(
+        (code) => code !== event.code,
+      );
+      if (this.heldMovementKeys.length > 0) this.queueKeyboardStep();
+    });
+    this.game.events.on("blur", () => {
+      this.heldMovementKeys = [];
+    });
+  }
+
+  queueKeyboardStep() {
+    const code = this.heldMovementKeys[this.heldMovementKeys.length - 1];
+    const movement = KEY_MOVEMENT[code];
+    if (!movement) return false;
+    const base = this.player.stepTarget ?? this.player.cell;
+    this.player.goal = undefined;
+    this.player.path = [];
+    return this.setPlayerGoal({
+      x: base.x + movement.x,
+      y: base.y + movement.y,
     });
   }
 
@@ -448,10 +470,11 @@ export class PetHomeScene extends Phaser.Scene {
       this.occupied.has(goalKey) ||
       this.reserved.has(goalKey)
     )
-      return;
+      return false;
     this.player.goal = goal;
     this.player.path = [];
     if (!this.player.moving) this.planPlayerPath();
+    return true;
   }
 
   planPlayerPath() {
@@ -511,6 +534,7 @@ export class PetHomeScene extends Phaser.Scene {
         this.player.moving = false;
         this.player.stepTarget = undefined;
         this.playerReserved = "";
+        if (this.queueKeyboardStep()) return;
         if (
           this.player.goal &&
           cellKey(this.player.goal) !== cellKey(this.player.cell)

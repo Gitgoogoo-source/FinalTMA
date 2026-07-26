@@ -16,7 +16,7 @@ Telegram webhook 使用 secret token，Cron 使用 `CRON_SECRET`。支付回调�
 
 Monster Tamer 业务入口位于已登录 React 主应用。领域组件只通过现有认证查询 `inventory.list` 读取数据库裁决后的藏品状态，过滤 `available > 0` 并按 `template_id` 去重；它不接受 Phaser 提交的归属、数量、图片、稀有度、阶段或战斗力。
 
-`/monster-tamer/` 是公开可请求但业务上无能力的同源渲染文档。它不接收 Telegram `initData`、access token、session generation、用户标识或账号状态，不请求 `/api/*`、Supabase 或数据库。未收到父页面消息时不创建可用家园。
+`/monster-tamer/` 是公开可请求但业务上无能力的同源渲染文档。它不接收 Telegram `initData`、access token、session generation、用户标识或账号状态，不请求 `/api/*`、Supabase 或数据库。直接访问时显示入口门禁；React 的 `?embedded=1` 等待态隐藏门禁并只显示水面背景。两种模式未收到父页面消息时都不创建可用家园。
 
 父页面与 `iframe` 的消息必须同时验证 `event.origin === window.location.origin` 和预期窗口对象。父页面只注入 `templateId`、名称和 `/assets/catalog/v1/thumb/` 正式图片路径；点击消息只返回 `template_id`，React 必须在当前认证查询结果中重新匹配。
 
