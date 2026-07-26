@@ -13,8 +13,8 @@ contracts/ton/          Tact 合约、部署与验证命令
 assets/source/          不进入 Web 构建的正式藏品母版
 supabase/schemas/       声明式业务 Schema
 supabase/migrations/    baseline、product_data_v1、api_security
-generated/              目录与资产校验清单
-tools/product_data/     目录、盲盒、充值与任务数据生成链
+generated/              Catalog、Battle 与资产校验清单
+tools/product_data/     目录、盲盒、充值、任务与 Battle 数据生成链
 tools/                  契约、数据库、架构、资产与 Manifest 门禁
 docs/                   产品、架构、ADR 与运维资料
 ```

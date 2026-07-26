@@ -4,7 +4,11 @@
 
 网络失败不会展示业务成功。`unknown`、`pending` 通过 `GET /api/operations/:operation_id` 查询；只有明确返回 `OPERATION_NOT_FOUND` 时才用原 UUID 单次重提。恢复成功时，`use_case` 对应的原命令输出 Schema 会重新校验 `result`，随后按该路由声明的 refresh scope 刷新真实状态。入口交接未完成时，该查询只能读取当前用户的原 `referral.bind` 操作。
 
-重新进入应用时，`identity.bootstrap.blocking_operations` 交给操作恢复工作流，`pending_payments` 和 `pending_mints` 分别交给支付与 Mint 恢复工作流。开盒、幸运转盘与进化的 `pending`、`unknown` 以及尚未确认展示的 `succeeded`、`failed` 都进入 `blocking_operations`；前端分别通过 `GET /api/gacha/recovery`、`GET /api/wheel/recovery` 与 `GET /api/inventory/evolution/recovery` 使用同一通用发现 Hook，按 1 秒、2 秒、3 秒、5 秒、此后每 30 秒发现事务提交晚于首屏读取的原操作，发现后停止对应发现轮询并只按原 `operation_id` 查询终态。K-coin 创建订单命令在 invoice URL 持久化后立即完成，不作为长期阻塞操作；未提交 Stars 的 `pending` K-coin 订单不恢复、不打开弹窗。只有 `processing`、`paid` K-coin 订单恢复锁定弹窗，并按 1 秒、2 秒、3 秒、此后每 5 秒查询唯一终态；VIP 继续使用自身既有恢复交互。充值订单交付后，只恢复开盒、市场购买或转盘的确认界面，不自动执行原业务。
+重新进入应用时，`identity.bootstrap.blocking_operations` 交给操作恢复工作流，`pending_payments` 和 `pending_mints` 分别交给支付与 Mint 恢复工作流，当前 `battle_participation` 与最新未确认 `battle_current_result` 交给 Battle 恢复工作流。开盒、幸运转盘与进化的 `pending`、`unknown` 以及尚未确认展示的 `succeeded`、`failed` 都进入 `blocking_operations`；前端分别通过 `GET /api/gacha/recovery`、`GET /api/wheel/recovery` 与 `GET /api/inventory/evolution/recovery` 使用同一通用发现 Hook，按 1 秒、2 秒、3 秒、5 秒、此后每 30 秒发现事务提交晚于首屏读取的原操作，发现后停止对应发现轮询并只按原 `operation_id` 查询终态。K-coin 创建订单命令在 invoice URL 持久化后立即完成，不作为长期阻塞操作；未提交 Stars 的 `pending` K-coin 订单不恢复、不打开弹窗。只有 `processing`、`paid` K-coin 订单恢复锁定弹窗，并按 1 秒、2 秒、3 秒、此后每 5 秒查询唯一终态；VIP 继续使用自身既有恢复交互。充值订单交付后，只恢复开盒、市场购买、转盘、`battle_create` 或 `battle_accept` 的确认界面，不自动执行原业务。
+
+Battle 创建响应丢失时查询原 operation；`battle-share` integration 以原 `create_operation_id` 恢复同一 room 和同一 bearer token。接受或动作响应丢失时查询原 operation 与 `GET /api/battle/rooms/:room_id`，不得再次锁币、再次创建 reservation 或重选已经锁定的动作。Ably 只触发 REST 回正；等待/接受状态每 2 秒、选择/强制换宠状态每 1 秒短轮询，并用 `state_version` 丢弃重复或乱序失效通知。
+
+Battle 终局只通过 `BattleCurrentResult` 恢复本人的最新未确认当场结果。结果覆盖层调用 `POST /api/battle/results/:room_id/acknowledge`，数据库只记录本人首次确认时间；响应丢失时保持结果层并允许重试，确认完成后 identity bootstrap 与 Battle bootstrap 都不再返回。玩家端不恢复旧回合列表、审计或 replay。
 
 操作弹窗先按 `use_case` 选择展示组件，再校验该命令的唯一输出 Schema。`gacha.open`、`wheel.spin` 与 `inventory.evolve` 的展示组件位于操作恢复工作流，`OperationRegistryProvider` 只负责编排阶段、原操作查询、导航锁、刷新范围和服务端结果回执；领域组件直接消费持久结果，不在注册中心复制结果字段。开盒、转盘和进化只有在持久状态为 `succeeded` 且完整结果通过各自命令输出 Schema 校验时才展示对应业务内容；进化的随机失败仍是已完成结算，使用同一完整输出 Schema，前置拒绝则使用持久错误码和拒绝快照展示。Schema 不完整的成功结果只查询原操作且不得确认。专用弹窗的字段与动作唯一引用产品主文档第 14.4.6、4.3.6 和 18.6 节。
 

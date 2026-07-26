@@ -11,6 +11,8 @@
 - 生产将部署已在真实开发环境完成验收的同一 Git commit、同一 migration 序列和同一目录 manifest。
 - Vercel 套餐支持 `vercel.json` 中三项当前 Cron 的执行频率；启用 TON 时同一套餐还必须支持第四项 Mint 对账 Cron。
 - Vercel Production 环境变量名称核查同时包含 `TELEGRAM_BOT_USERNAME` 与 `TELEGRAM_MINI_APP_SHORT_NAME`，开发 short name 固定为 `pokepets_dev`。
+- Battle 发布环境已经配置互不共用且至少 32 字节的 `BATTLE_INVITE_SECRET`、`BATTLE_OUTBOX_SECRET`，并配置环境隔离的 `ABLY_API_KEY`；Supabase Vault 的两个 Battle callback URL 与 outbox secret 已和对应 Vercel 环境逐项核对。
+- Supabase 已安装 `pg_cron`、`pg_net`、Vault 和 `pgcrypto`，套餐与项目配置支持 `battle-tick-v1` 每秒执行；Ably 套餐固定为 Standard。
 - 真实开发 Bot 固定为 `@FinalTMA_bot`；Main Mini App URL 固定为 `https://final-tma-pi.vercel.app/`；named Mini App 固定为 `https://t.me/FinalTMA_bot/pokepets_dev`；默认菜单按钮固定为 `Open PokePets` 并指向该 named Mini App 链接。
 
 任何一项与目标环境对应的前提不成立：停止发布，不恢复旧 migration、未获批准的占位素材、mock、默认业务值或功能开关。
@@ -41,7 +43,19 @@ pnpm manifest:check:production
 
 `pnpm catalog:generate-assets` 要求 210 张母版均为 768×768 WebP，并生成 256×256 缩略图和 768×768 详情图。`pnpm assets:check:catalog` 强制核对 210 个 `template_id`、两个路径、420 个文件、WebP 格式、尺寸、单文件体积、50 MiB 总上限、内容唯一性和正式 checksum。`APP_ENV=development pnpm build` 在生成 `apps/web/dist` 后继续核对构建复制结果；`APP_ENV=test` 与 `APP_ENV=production` 额外拒绝 Telegram 分享图和 TON Connect 图标的已知开发 checksum。
 
-`pnpm architecture:check` 同时验证 `/game` 保留为空页面、任务页转盘位置、远征筛选/任务/横幅隐藏、已退役游戏目录持续不存在，以及其余模块边界、网关隔离和文档归属。
+`pnpm architecture:check` 同时验证 `/game` 只承载 React + TypeScript Battle、没有 Phaser 或客户端战斗模拟器，任务页转盘位置、远征筛选/任务/横幅隐藏、已退役游戏目录持续不存在，以及其余模块边界、网关隔离和文档归属。
+
+### 2.1 基线既有 product-data 漂移
+
+在 Battle 文档任务起点 `main@f8bf62df5c7e6290de2d8f449b7bf487bfbd2830`，`pnpm product-data:check` 已因 `supabase/migrations/20260719104602_product_data_v1.sql` 中三条任务文案与当前生成器输出不一致而失败：
+
+| 任务        | migration 既有文案                                           | 当前生成器确定文案                                                           |
+| ----------- | ------------------------------------------------------------ | ---------------------------------------------------------------------------- |
+| `gacha_1`   | `今日开盒 1 次`；`当日完成 1 次付费单抽或免费资格单抽`       | `今日单抽 1 次`；`当日完成 1 次付费单抽或使用免费资格单抽；十连不计入`       |
+| `gacha_10`  | `今日开盒 10 次`；`当日累计完成 10 次付费单抽或免费资格单抽` | `今日单抽 10 次`；`当日累计完成 10 次付费单抽或使用免费资格单抽；十连不计入` |
+| `gacha_ten` | `完成 1 次十连`；`当日一次十连整批成功`                      | `完成 1 次十连`；`当日一次十连整批成功；不计入单抽任务`                      |
+
+这是 Battle 任务前已经存在的基线漂移，不是 Battle 业务变更。本产品与架构文档任务不得修改 migration 或生成物；数据库任务必须通过当前产品数据生成器重生成原 `*_product_data_v1.sql`，把这三条确定文案与 Battle 配置一次写入同一条干净的原始 product-data migration，禁止追加修补 migration。
 
 生成正式 TON Connect manifest：
 
@@ -60,14 +74,14 @@ python3 tools/web/build_manifest.py \
 用户明确宣布正式生产上线前，真实开发环境不保留迁移历史。每次数据库定义调整都执行以下固定顺序：
 
 1. 记录当前 commit、三条 migration 文件名及校验和，核对目标 ref 为 `ebewtjerusxcioegpzjd`。
-2. 完成本地静态门禁；关闭开发 Bot webhook/Mini App 入口并暂停三项 Vercel Cron。
+2. 完成本地静态门禁；关闭开发 Bot webhook/Mini App 入口和 Battle 新建/接受入口，确认没有活动 room 后暂停三项 Vercel Cron 与 `battle-tick-v1`。
 3. 清空真实开发数据库与 migration history，从空库依次执行仓库内唯一的 `*_baseline.sql`、`*_product_data_v1.sql`、`*_api_security.sql`。
 4. 验证远端 migration history、RPC 定义、入口交接门禁、RLS、函数权限与仓库一致。
-5. 对开发项目执行 `supabase db lint --linked --schema api,identity,catalog,operations,economy,inventory,gacha,expedition,wheel,market,payments,vip,tasks,referral,album,onchain,risk --level warning --fail-on error` 并运行 Supabase security/performance advisors。
+5. 对开发项目执行 `supabase db lint --linked --schema api,identity,catalog,operations,economy,inventory,gacha,expedition,wheel,battle,market,payments,vip,tasks,referral,album,onchain,risk --level warning --fail-on error` 并运行 Supabase security/performance advisors。
 6. 在 Supabase Data API 设置中把 Exposed schemas 固定为 `public,graphql_public,api`，不得暴露任何业务表 schema。
-7. 核对 Vercel Production 同时存在 `TELEGRAM_BOT_USERNAME=FinalTMA_bot` 与 `TELEGRAM_MINI_APP_SHORT_NAME=pokepets_dev`，环境变量变更后部署包含全部修改的同一 Git commit；在 BotFather 的 `/mybots` → `@FinalTMA_bot` → `Bot Settings` → `Configure Mini App` 中启用 Main Mini App 并将 URL 固定为 `https://final-tma-pi.vercel.app/`，同时保持 named Mini App `pokepets_dev` 与默认菜单按钮 `Open PokePets` 指向 `https://t.me/FinalTMA_bot/pokepets_dev`。
-8. 调用 Bot API，确认 `getMe.result.has_main_web_app=true` 且 `getChatMenuButton.result.web_app.url=https://t.me/FinalTMA_bot/pokepets_dev`；再验证 `/api/health`、Telegram 真机登录、登录交接门禁、`/api/referrals` 与三个手工 job，最后恢复 Cron。
-9. 按 `docs/operations/acceptance.md` 完成 Telegram 真机、支付与并发验收，并确认 `/game` 不发起业务查询或专属资源请求；`monitor-invariants` 必须返回 0 个新增 violation。
+7. 核对 Vercel Production 同时存在 `TELEGRAM_BOT_USERNAME=FinalTMA_bot`、`TELEGRAM_MINI_APP_SHORT_NAME=pokepets_dev`、`ABLY_API_KEY`、`BATTLE_INVITE_SECRET` 与 `BATTLE_OUTBOX_SECRET`；核对 Supabase Vault 的 Battle share/outbox callback URL 和相同 outbox secret；环境变量变更后部署包含全部修改的同一 Git commit。在 BotFather 的 `/mybots` → `@FinalTMA_bot` → `Bot Settings` → `Configure Mini App` 中启用 Main Mini App 并将 URL 固定为 `https://final-tma-pi.vercel.app/`，同时保持 named Mini App `pokepets_dev` 与默认菜单按钮 `Open PokePets` 指向 `https://t.me/FinalTMA_bot/pokepets_dev`。
+8. 调用 Bot API，确认 `getMe.result.has_main_web_app=true` 且 `getChatMenuButton.result.web_app.url=https://t.me/FinalTMA_bot/pokepets_dev`；验证 `battle-v1` checksum、`battle-tick-v1` 每秒 job、两个 pg_net callback、Ably subscribe-only token、`/api/health`、Telegram 真机登录、登录交接门禁、`/api/referrals` 与三个手工 Vercel job，最后恢复所有调度。
+9. 按 `docs/operations/acceptance.md` 完成 Telegram 真机、Battle、支付与并发验收，并确认 `/game` 只发起当前 viewer 所需的 Battle 请求、离开游戏页停止 waiting 心跳和 UI 轮询；`monitor-invariants` 必须返回 0 个新增 violation。
 
 任一步失败都保持入口与 Cron 关闭，修正原始 Schema 或迁移并从第 1 条重新执行。禁止为尚未生产发布的错误定义追加修补 migration。
 
@@ -85,9 +99,9 @@ python3 tools/web/build_manifest.py \
 6. 将真实 collection 地址和所有密钥写入平台 secrets。
 7. 部署与真实开发环境验收通过的完全相同 Git commit。
 8. 设置 Telegram webhook；启用生产 Bot 的 Main Mini App，将 Main Mini App 与 named Mini App 固定到该次部署的唯一生产域名，默认菜单按钮固定指向 named Mini App 链接，并用 Bot API 验证 `has_main_web_app=true` 与菜单 URL 完全一致。
-9. 对生产域名确认 `/game` 保留为空页面且不发起业务查询或专属资源请求，同时确认任务页转盘位置和远征界面隐藏。
-10. 执行生产 smoke check 与四个 job；保存 request/operation/ledger/inventory 证据。
+9. 对生产域名确认 `/game` 完整提供 Battle、远征界面仍隐藏、Ably capability 为 subscribe-only、REST fallback 与 `battle-tick-v1` 正常，同时确认任务页转盘位置。
+10. 执行生产 smoke check、四个 Vercel job、Battle tick 和两个 Battle integrations；保存 request/operation/room/state_version/stake/settlement/outbox/ledger/inventory 证据。
 
 ## 5. 回滚边界
 
-不回滚数据库到旧 schema，不重新开放旧 API。正式生产上线前，部署失败时保持流量关闭，修正原始三条迁移并从空真实开发数据库重建；正式生产上线后才使用只追加的前向修复。已经 Mint 的 NFT 和已确认 Stars 支付只能通过恢复 job 完成，不能重复交付或撤销链上事实。
+不回滚数据库到旧 schema，不重新开放旧 API。正式生产上线前，部署失败时保持流量关闭，修正原始三条迁移并从空真实开发数据库重建；正式生产上线后才使用只追加的前向修复。已经 Mint 的 NFT、已确认 Stars 支付和已锁定或结算的 Battle 只能通过原 operation、数据库 tick 与恢复流程完成，不能重复交付、改判、退款或撤销既有事实。

@@ -2,7 +2,7 @@
 
 ## 事实来源
 
-`docs/product/功能说明文档.md` 的全部章节是唯一产品功能来源。`PRODUCT_DATA_CHECKSUM_BOUNDARY` 上方内容由 Catalog v1 数据生成器解析；下方产品扩展不进入 Catalog v1 migration 或 manifest。
+`docs/product/功能说明文档.md` 的全部章节是唯一产品功能来源。`PRODUCT_DATA_CHECKSUM_BOUNDARY` 上方第 1—20 章由 Catalog v1 数据生成器解析；下方第 21 章 Battle 是产品扩展，不进入 Catalog v1 migration 或 manifest。Battle 的金额、时限、状态、DTO、错误与公共接口只引用第 21 章或正式契约。
 
 已发布 Catalog v1 的 immutable `product_checksum` / release identity 固定为：
 
@@ -17,6 +17,7 @@ de521f2687086cb358fb557a4a7ada3bc3c5fc132d673f0256b4573028ddba46
 - Web：React、Vite、TypeScript，运行在 Telegram Mini App。
 - API：同一 Vercel Project 内的 `app`、`integrations`、`jobs` 三个 Node.js 24 Function 网关。
 - Database：Supabase Postgres 17，仅暴露 `api` schema；浏览器不加载 Supabase SDK。
+- Realtime：Ably Standard 只发送 Battle 状态失效通知；REST 与数据库 `state_version` 回正权威状态。
 - Blockchain：TON Connect 验证钱包，Tact 合约完成 NFT Mint。
 - Deployment：Vercel Pro；真实开发环境与未来生产环境使用相同 Git commit 和 migration 序列。
 
@@ -35,13 +36,13 @@ contracts/ton -> TON blockchain
 
 禁止反向依赖、跨领域深层导入、浏览器访问 Supabase、Node 层组合多次资产写入。
 
-TMA 首次同步加载只覆盖应用壳、会话与账号门禁及默认开盒页；首屏完成后后台预加载其余普通主导航页面。`/game` 保留为空页面，不发起业务查询或专属资源请求。
+TMA 首次同步加载只覆盖应用壳、会话与账号门禁及默认开盒页；首屏完成后后台预加载其余普通主导航页面。`/game` 固定承载 React + TypeScript Battle，不引入 Phaser；Battle 只有在游戏页可见或当前 session 需要恢复 Battle participation/未确认结果时读取专属状态，waiting 心跳只在页面可见时发送。
 
 五个主导航页面在当前登录会话内首次访问后保持挂载。切换页面只恢复各自滚动、筛选和页内状态，不触发查询或资源重载；业务结果按契约范围精确刷新，后台连续五分钟后回到前台只静默回正顶部摘要与当前页面。
 
 ## 可信边界
 
-前端只提交动作、目标标识、数量和幂等键。价格、余额、库存、资格、奖励、随机结果、任务进度和链上状态均由服务端重新校验，并由单个数据库事务裁决。
+前端只提交动作、目标标识、数量和幂等键。价格、余额、库存、资格、奖励、Battle 属性与技能数值、命中、伤害、行动顺序、胜负、结算、随机结果、任务进度和链上状态均由服务端重新校验，并由单个数据库事务裁决。
 
 所有玩家写请求以 UUID `Idempotency-Key` 作为 `operation_id`。数据库对规范化请求计算哈希；相同键和相同请求返回原结果，相同键和不同请求返回 `IDEMPOTENCY_KEY_REUSED`。
 
@@ -53,11 +54,12 @@ TMA 首次同步加载只覆盖应用壳、会话与账号门禁及默认开盒�
 
 ## 操作恢复
 
-前端内存操作阶段固定为 `confirming → submitting → pending/unknown → succeeded/failed`；数据库持久状态为 `pending`、`unknown`、`succeeded`、`failed`。随机结果和资产结果只生成一次，`unknown` 只查询原 `operation_id`。开盒与转盘从提交前反馈到结果确认完成持续锁定领域操作和底部导航；进化在未决阶段锁定新提交和底部导航，终态由专用覆盖弹窗处理；其余命令只阻止同一 `use_case` 再次提交。开盒、转盘及进化的成功或失败结果在服务端确认展示前持续恢复，确认时间由当前用户的领域专用 RPC 原子记录。
+前端内存操作阶段固定为 `confirming → submitting → pending/unknown → succeeded/failed`；数据库持久状态为 `pending`、`unknown`、`succeeded`、`failed`。随机结果和资产结果只生成一次，`unknown` 只查询原 `operation_id`。开盒与转盘从提交前反馈到结果确认完成持续锁定领域操作和底部导航；进化在未决阶段锁定新提交和底部导航，终态由专用覆盖弹窗处理；Battle 创建、接受和动作恢复原 operation 后必须读取 viewer-specific room snapshot，终局只恢复最新未确认当场结果。其余命令只阻止同一 `use_case` 再次提交。开盒、转盘、进化及 Battle 当场结果在服务端确认展示前持续恢复，确认时间由当前用户的领域专用 RPC 原子记录。
 
 ## 生成物
 
 - `generated/catalog/catalog-v1.json`
+- `generated/battle/battle-v1.json`
 - `packages/api-contracts/openapi/openapi.json`
 - `supabase/migrations/*_baseline.sql`
 - `supabase/migrations/*_product_data_v1.sql`
@@ -80,3 +82,5 @@ TMA 首次同步加载只覆盖应用壳、会话与账号门禁及默认开盒�
 - [正式藏品图片资源](adr/ADR-010-catalog-image-assets.md)
 - [进化顶层底部确认弹窗](adr/ADR-012-evolution-bottom-sheet-confirmation.md)
 - [登录会话内页面保活与事件驱动刷新](adr/ADR-013-session-page-lifecycle.md)
+- [Battle 数据库权威与规则快照](adr/ADR-014-battle-authority-and-ruleset.md)
+- [Battle 实时失效通知、调度与 outbox](adr/ADR-015-battle-realtime-and-scheduler.md)
