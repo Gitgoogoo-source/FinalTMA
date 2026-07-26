@@ -1,0 +1,1039 @@
+# PokePets 宠物藏品 Battle 功能开发方案
+
+> 文档状态：已完成产品裁决后的唯一开发方案
+>
+> 项目基线：`main`，`521c481fc36041a208e20473eb240ba3abe21099`，2026-07-27
+>
+> 适用范围：当前 Telegram Mini App、真实开发环境与未来独立生产环境
+>
+> 输入依据：用户在本次对话中的最新裁决、[Battle功能方向说明.md](Battle功能方向说明.md)、当前仓库与真实开发环境的只读核对结果
+
+## 1. 最终结论
+
+Battle 进入现有底部导航的“游戏”页，采用 React + TypeScript 渲染战斗界面，沿用 210 张正式藏品图片；Vercel REST API 负责身份、契约和 Telegram/Ably 外部服务编排；Supabase PostgreSQL RPC 是房间、资产、库存、出招、随机命中、回合结算和最终结算的唯一裁判；Ably Standard 只发送状态失效通知；Supabase `pg_cron` 每秒推进到期房间和超时动作；Ably 不可用时由短轮询恢复权威状态。
+
+浏览器不运行战斗模拟器，不计算伤害，不生成命中结果，不决定行动顺序，不提交金额、属性、技能数值或结算结果。客户端只提交房间档位、按顺序排列的三个模板 ID、技能位置、换宠目标和幂等键。
+
+Battle 一次性完整上线，不发布只有界面、只有房间、只有人机模拟或没有资产闭环的中间版本。
+
+## 2. 功能范围
+
+### 2.1 包含
+
+- 玩家使用自己真实拥有且当前可用的藏品组建三宠队伍。
+- 创建固定 K-coin 档位的持卡挑战房。
+- 通过 Telegram 原生分享把挑战卡发送到用户私聊、好友或群组。
+- 挑战卡被转发后继续有效，第一个原子接受成功的正常账号成为对手。
+- 同步秘密选招、主动换宠、强制换宠、超时托管、断线托管和 20 回合裁决。
+- K-coin 锁定、获胜结算、平台手续费、平局退款和异常退款。
+- Battle 占用藏品与出售、分解、进化、远征、Mint 的统一库存互斥。
+- 永久私有审计包与不向用户开放的精简对战摘要。
+
+### 2.2 明确不包含
+
+- 捕捉、地图掉落、免费战斗宠物、宠物升级、培养、装备或天赋。
+- PVE、人机对战、全局匹配、群组匹配池、公开房间列表。
+- 观战、认输、重赛、排行榜、赛季、段位、战斗任务和额外奖励。
+- 被动技能、异常状态、能力变化、治疗、护盾、能量、次数、冷却、暴击和随机伤害浮动。
+- 用户历史页、逐回合回放、审计查询接口。
+- Pokémon、PokeAPI 或开源项目中的角色、数值、图片、音频、数据和战斗代码。
+
+Battle 的唯一经济结果是双方等额入场费形成的奖池、胜者结算、平台手续费或平局退款。Battle 不推进现有每日任务、有效充值、邀请奖励或 VIP 手续费返还。
+
+## 3. 当前项目接入事实
+
+| 当前事实                                                                    | Battle 接入结论                                                                      |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `apps/web/src/pages/game/GamePage.tsx` 目前为空页面                         | Battle 直接占用现有“游戏”页，不新增第六个底部导航                                    |
+| Web 为 React + Vite + TypeScript，主页面在会话内保持挂载                    | Battle 页面继续保持挂载，但只有路由为 `/game` 且 WebView 可见时发送等待房心跳        |
+| 仓库没有 Phaser 依赖，藏品只有正式 WebP 图片而非逐帧精灵                    | Battle 使用 React、CSS 与 Web Animations API，不引入 Phaser                          |
+| `catalog.templates` 已有 210 个固定模板、链、阶段、稀有度、战斗力和图片路径 | Battle 新建独立、版本化的战斗配置，不改写目录身份字段；`combat_power` 只保留综合展示 |
+| `inventory.reservations` 已统一扣减可用数量                                 | reservation 新增 `battle` 类型，每名参战者的三个模板各占用 1 份                      |
+| `economy.balances` 已有 `available` 与 `locked`                             | 入场费在创建或接受时从 available 转入 locked，终局再退款或结算                       |
+| 写操作已经采用 `operations.begin_command` 和单事务 RPC                      | Battle 的创建、取消、接受、行动和强制换宠沿用同一幂等模型                            |
+| 当前 Telegram `start_param` 只接受推荐码格式                                | 身份入口增加 Battle 专用 bearer token 类型，Battle 入口不触发推荐关系绑定            |
+| 浏览器不直连 Supabase，Functions 使用 `service_role` 调用 `api` RPC         | Battle 保持相同可信边界，Ably 也不获得数据库裁决能力                                 |
+| 初始 migration 尚未作为正式生产历史发布                                     | 实现时直接修改声明式 Schema 和三份原始 migration，并从空库重建真实开发数据库         |
+
+## 4. 冻结产品规则
+
+### 4.1 队伍与藏品
+
+1. 每队固定三个不同 `template_id`。
+2. 同一进化链的不同阶段属于不同模板，允许同时上阵。
+3. 组队时固定三个槽位顺序，第 1 位自动首发。
+4. 创建者创建房间时立即占用所选三个模板各 1 份；接受者接受时在同一事务内完成相同占用。
+5. 等待与战斗期间，被占用的具体数量不能出售、分解、进化、远征或 Mint；同模板仍有额外可用数量时，额外数量不受影响。
+6. 取消、过期、平局、正常结算或系统异常作废时释放全部 Battle reservation。
+7. 每个账号最多存在一条 `preparing_share`、`waiting` 或 `active` 参与记录。
+
+### 4.2 挑战档位与结算
+
+| 每人入场费 | 奖池 | 胜者到账 | 平台手续费 | 胜者净变化 | 败者净变化 |
+| ---------: | ---: | -------: | ---------: | ---------: | ---------: |
+|  20 K-coin |   40 |       36 |          4 |        +16 |        -20 |
+| 100 K-coin |  200 |      180 |         20 |        +80 |       -100 |
+| 500 K-coin | 1000 |      900 |        100 |       +400 |       -500 |
+
+- 创建者在创建房间的数据库事务内锁定入场费。
+- 接受者在接受房间的数据库事务内锁定相同入场费。
+- 胜者获得奖池的 90%，平台取得奖池的 10%。
+- 平局时双方各自原额退款，平台手续费为 0。
+- 系统永久性不变量错误导致房间作废时双方原额退款，平台手续费为 0。
+- K-coin 不能提现，Battle 不提供玩家间自由转账。
+
+### 4.3 房间、在线与分享
+
+1. 分享卡准备完成后的等待有效期固定为 30 分钟。
+2. 创建者在对手成功接受前允许取消。
+3. 创建者只有停留在可见的 Battle 等待页并持续心跳时才算在线。
+4. 心跳每 5 秒发送一次，最近一次服务端心跳不超过 10 秒才允许接受。
+5. 创建者离开等待页、WebView 进入后台或显式断开时立即进入离线状态；异常断网以最后一次心跳判断。
+6. 离线期间禁止接受；从最后一次有效心跳或显式离线时间起保留 90 秒重连期。
+7. 90 秒内重新进入等待页并成功发送心跳，房间恢复可接受；到达 90 秒仍未恢复，房间自动取消、退款并释放藏品。
+8. 挑战卡允许分享到 Telegram 用户私聊和群组，不允许发到 Bot 会话或频道。
+9. 挑战卡允许转发，不校验原分享群、不校验群成员身份。
+10. 除创建者本人外，任何正常账号拿到有效卡片都允许尝试接受；只有第一个数据库事务成功者成为对手。
+11. 接受失败、并发竞争失败、创建者离线或房间失效时，尝试者不扣款、不占用藏品。
+
+### 4.4 挑战卡与接受页隐私
+
+挑战卡和接受页只公开以下内容：
+
+- 创建者的 Telegram 展示名和头像。
+- 固定入场费。
+- 创建者三只宠物的稀有度组合，按 `普通 → 稀有 → 史诗 → 传说 → 神话` 排序并省略数量为 0 的项，例如 `史诗 ×2、传说 ×1`。
+- 30 分钟有效提示、当前剩余时间和创建者在线状态。
+
+挑战卡和接受页不得返回或嵌入以下信息：
+
+- 三个 `template_id`、名称、图片或进化链。
+- 属性、生命、攻击、防御、速度。
+- 四个技能、技能威力、命中率和优先级。
+- `combat_power` 或由其推导的队伍总战斗力。
+
+稀有度组合由服务端从已锁定阵容快照生成，前端不能提交。双方不强制同稀有度、同阶段、同档强度或同属性。
+
+### 4.5 开战后的信息
+
+- 双方接受完成前，创建者看不到接受者阵容，接受者只看到创建者的稀有度组合。
+- 接受事务完成后，双方同时看到对方三个模板的名称、图片、稀有度、阶段、存活状态和当前出战位置。
+- 对手生命只显示百分比血条，不显示固定最大生命和精确剩余生命。
+- 对手属性、固定四维、技能列表和 `combat_power` 不直接展示。
+- 对手已经使用的技能只在该回合结算动画中显示技能名称、命中或未命中及克制结果，不形成可翻阅的回合日志。
+- 自己的三个模板显示精确四维、属性、当前/最大生命和四个技能。
+- 当前回合双方行动在两边都锁定或超时补齐前保持秘密。
+
+### 4.6 回合规则
+
+1. 正常战斗回合的选择时间固定为 15 秒。
+2. 点击技能或换宠目标后立即提交，服务端成功锁定后本回合不可撤回。
+3. 双方都锁定后立即结算，不等待倒计时结束。
+4. 每次回合结算后的展示窗口固定为 3 秒，期间不能提交下一动作。
+5. 超时自动选择当前宠物命中率最高的技能；命中率相同按该宠物四个技能的固定位置从前到后取第一项。
+6. 每次超时都自动出招，不累计超时判负；断线玩家允许由系统打完整场。
+7. 主动换宠始终先于所有攻击。
+8. 一方换宠、一方攻击时，换入宠物承受本回合攻击。
+9. 双方都换宠时同时换宠，本回合不造成伤害。
+10. 双方都攻击时先比较技能优先级，再比较当前宠物速度。
+11. 优先级和速度都相同时，两次攻击使用同一结算前快照同时计算并同时生效；即使其中一只会被击倒，两次攻击仍都执行。
+12. 顺序不相同时，先手攻击造成击倒后，已被击倒的后手宠物不再执行攻击。
+13. 主动换宠消耗一个正常战斗回合。
+
+### 4.7 强制换宠
+
+- 宠物被击倒且队伍仍有存活宠物时，进入独立强制换宠状态，限时 15 秒。
+- 只有需要换宠的一方提交目标，另一方不能攻击。
+- 双方同时需要换宠时同时秘密选择；两边锁定后立即完成。
+- 超时按队伍槽位顺序换入第一只存活宠物。
+- 强制换宠不计入 20 个战斗回合。
+- 换入完成后直接开始下一个正常战斗回合。
+
+### 4.8 终局
+
+每次正常回合结算后按以下固定顺序判断：
+
+1. 双方都没有存活宠物：平局。
+2. 只有一方没有存活宠物：另一方获胜。
+3. 第 20 个正常战斗回合已经结算：先比较存活宠物数量。
+4. 存活数量相同：比较三只宠物精确剩余生命百分比之和。
+5. 百分比之和仍完全相同：平局。
+6. 未到第 20 回合且双方仍能继续：进入强制换宠或下一回合。
+
+剩余生命百分比使用 PostgreSQL `numeric` 直接比较 `Σ(current_hp / max_hp)`，不先四舍五入为页面百分比。双方最后一只宠物同时倒下直接平局。
+
+开战后不提供认输、取消或退出结算。退出和断线只会停止玩家心跳及输入，系统继续按超时规则出招。
+
+## 5. Battle v1 固定平衡数据
+
+### 5.1 版本与快照
+
+正式规则版本固定为 `battle-v1`。配置构建产物同时生成 SHA-256 checksum，包含：
+
+- 五属性克制表。
+- 五档稀有度强度系数。
+- 14 个基础角色档案。
+- 10 个技能数值槽位。
+- 14 组四技能组合。
+- 70 条进化链的属性和角色档案映射。
+- 210 个模板的最终生命、攻击、防御、速度、属性与四技能配置。
+- 房间时限、行动时限、展示时限、最大回合数和结算档位。
+
+房间创建时固定 `ruleset_id` 与 checksum，并把三只宠物的实际配置复制为不可变快照。配置发布新版本不会改变已经创建的等待房、进行中的战斗或永久审计结果。
+
+### 5.2 五属性与克制
+
+唯一属性循环为：
+
+```text
+火焰 → 草系 → 土系 → 雷电 → 水系 → 火焰
+```
+
+| 关系                   | 倍率 |
+| ---------------------- | ---: |
+| 攻击属性克制防守属性   | 1.50 |
+| 攻击属性被防守属性克制 | 0.75 |
+| 同属性或不相邻属性     | 1.00 |
+
+每只宠物只有一个属性，同一进化链三个阶段保持同一属性；四个技能全部与宠物属性一致。不存在双属性、无属性或特殊属性。
+
+### 5.3 稀有度强度
+
+| 稀有度 | 系数 basis points | 目标平衡预算 |
+| ------ | ----------------: | -----------: |
+| 普通   |             10000 |          400 |
+| 稀有   |             11500 |          460 |
+| 史诗   |             13200 |          528 |
+| 传说   |             15200 |          608 |
+| 神话   |             17500 |          700 |
+
+平衡预算定义为：
+
+```text
+预算 = 生命 / 3 + 攻击 + 防御 + 速度
+```
+
+同稀有度的所有档案预算完全相同。高稀有度拥有更高预算，属于明确的真实战斗优势。`combat_power`、链类型和阶段编号不再额外参与 Battle 计算，避免重复加成；进化带来的实际强化只通过新模板对应的更高稀有度四维体现。
+
+### 5.4 14 个基础角色档案
+
+| 档案 | 定位名 | 基础生命 | 基础攻击 | 基础防御 | 基础速度 | 四技能组合 |
+| ---: | ------ | -------: | -------: | -------: | -------: | ---------- |
+|    1 | 均衡   |      300 |      100 |      100 |      100 | L01        |
+|    2 | 强攻   |      285 |      115 |       90 |      100 | L02        |
+|    3 | 疾攻   |      270 |      110 |       85 |      115 | L03        |
+|    4 | 铁壁   |      330 |       85 |      115 |       90 | L04        |
+|    5 | 守势   |      315 |       95 |      110 |       90 | L05        |
+|    6 | 前锋   |      300 |      110 |      100 |       90 | L06        |
+|    7 | 决斗   |      285 |      105 |       95 |      105 | L07        |
+|    8 | 迅捷   |      270 |       95 |       90 |      125 | L08        |
+|    9 | 粉碎   |      300 |      120 |       85 |       95 | L09        |
+|   10 | 厚甲   |      345 |       85 |      105 |       95 | L10        |
+|   11 | 猎手   |      285 |      110 |       85 |      110 | L11        |
+|   12 | 哨卫   |      300 |       90 |      115 |       95 | L12        |
+|   13 | 斗士   |      315 |      110 |       90 |       95 | L13        |
+|   14 | 灵动   |      300 |       95 |       95 |      110 | L14        |
+
+每个基础档案的预算均为 400。
+
+### 5.5 进化后的精确整数四维
+
+对模板稀有度系数 `M` 和基础档案四维 `H0/A0/D0/S0`，使用以下唯一算法：
+
+```text
+攻击 A = floor((A0 × M + 5000) / 10000)
+防御 D = floor((D0 × M + 5000) / 10000)
+速度 S = floor((S0 × M + 5000) / 10000)
+三倍目标预算 B3 = 1200 × M / 10000
+生命 H = B3 - 3 × (A + D + S)
+```
+
+该算法同时满足：
+
+- 所有实际数值均为正整数。
+- 同稀有度所有档案严格满足相同目标预算。
+- 同一档案从普通到稀有、史诗、传说、神话时，生命、攻击、防御、速度四项都严格上升。
+- 同一进化链保持同一角色定位和同一四技能组合，但每次进化的攻击力和其余三维都真实增强。
+
+产品数据构建门禁必须逐行验证上述四项性质，并把 210 行最终值写入版本化种子数据；运行时不临时推导或接受客户端数值。
+
+### 5.6 70 条链的属性与档案映射
+
+表内每一格代表一条进化链；该链三个阶段共用本行档案和本列属性。档案 1–8 对应普通链，9–12 对应高级链，13–14 对应顶级链。
+
+| 档案 | 火焰        | 草系        | 土系        | 雷电        | 水系        |
+| ---: | ----------- | ----------- | ----------- | ----------- | ----------- |
+|    1 | CHAIN-N-001 | CHAIN-N-003 | CHAIN-N-004 | CHAIN-N-005 | CHAIN-N-002 |
+|    2 | CHAIN-N-015 | CHAIN-N-010 | CHAIN-N-008 | CHAIN-N-006 | CHAIN-N-009 |
+|    3 | CHAIN-N-017 | CHAIN-N-012 | CHAIN-N-020 | CHAIN-N-007 | CHAIN-N-011 |
+|    4 | CHAIN-N-019 | CHAIN-N-016 | CHAIN-N-023 | CHAIN-N-013 | CHAIN-N-014 |
+|    5 | CHAIN-N-022 | CHAIN-N-021 | CHAIN-N-027 | CHAIN-N-018 | CHAIN-N-025 |
+|    6 | CHAIN-N-028 | CHAIN-N-024 | CHAIN-N-030 | CHAIN-N-026 | CHAIN-N-029 |
+|    7 | CHAIN-N-037 | CHAIN-N-031 | CHAIN-N-035 | CHAIN-N-034 | CHAIN-N-032 |
+|    8 | CHAIN-N-038 | CHAIN-N-033 | CHAIN-N-039 | CHAIN-N-040 | CHAIN-N-036 |
+|    9 | CHAIN-A-005 | CHAIN-A-006 | CHAIN-A-004 | CHAIN-A-002 | CHAIN-A-001 |
+|   10 | CHAIN-A-008 | CHAIN-A-013 | CHAIN-A-007 | CHAIN-A-009 | CHAIN-A-003 |
+|   11 | CHAIN-A-014 | CHAIN-A-015 | CHAIN-A-010 | CHAIN-A-012 | CHAIN-A-011 |
+|   12 | CHAIN-A-016 | CHAIN-A-017 | CHAIN-A-020 | CHAIN-A-018 | CHAIN-A-019 |
+|   13 | CHAIN-T-003 | CHAIN-T-007 | CHAIN-T-005 | CHAIN-T-001 | CHAIN-T-002 |
+|   14 | CHAIN-T-006 | CHAIN-T-010 | CHAIN-T-009 | CHAIN-T-008 | CHAIN-T-004 |
+
+因此每个属性恰好拥有 14 条链、42 个模板和同一套数值生态，只替换模板身份、属性、技能名称与元素视觉。
+
+### 5.7 10 个技能数值槽位
+
+全部技能都是同级主动直接伤害技能，只由威力、命中率和优先级形成差异；不存在基础/战术/强力分类，也没有被动、冷却、次数、能量、异常状态或能力变化。
+
+| 数值槽位 | 威力 | 命中率 basis points | 页面命中率 | 优先级 | 结算视觉轨迹 |
+| -------: | ---: | ------------------: | ---------: | -----: | ------------ |
+|      S01 |   45 |               10000 |       100% |     +1 | 单段突进     |
+|      S02 |   60 |                9000 |        90% |     +1 | 双段疾行     |
+|      S03 |   80 |                7000 |        70% |     +1 | 折线闪击     |
+|      S04 |   55 |               10000 |       100% |      0 | 球形投射     |
+|      S05 |   70 |                9500 |        95% |      0 | 环形冲击     |
+|      S06 |   85 |                8500 |        85% |      0 | 垂直重击     |
+|      S07 |  105 |                7000 |        70% |      0 | 径向爆发     |
+|      S08 |   75 |               10000 |       100% |     -1 | 横向轰流     |
+|      S09 |   95 |                9000 |        90% |     -1 | 全场风暴     |
+|      S10 |  125 |                7000 |        70% |     -1 | 天降聚合     |
+
+五个属性使用完全相同的数值槽位。视觉效果由“数值槽位轨迹 × 属性粒子”唯一组合而成：
+
+| 属性 | 粒子、配色与命中特征         |
+| ---- | ---------------------------- |
+| 火焰 | 橙红火星、焰尾、炽热爆点     |
+| 草系 | 翠绿叶片、藤蔓、花粉光点     |
+| 土系 | 土黄岩片、尘浪、地裂纹       |
+| 雷电 | 金黄电弧、蓝白闪光、雷击残影 |
+| 水系 | 青蓝水滴、潮纹、泡沫飞溅     |
+
+每个技能拥有独立 `effect_key = <element>-<01..10>`，共 50 个效果键；轨迹和元素粒子的组合使 50 个技能在视觉上保持不同，同时不改变数值对称性。
+
+### 5.8 五属性技能名称
+
+| 槽位 | 火焰     | 草系       | 土系     | 雷电     | 水系     |
+| ---: | -------- | ---------- | -------- | -------- | -------- |
+|  S01 | 火花突袭 | 飞叶突袭   | 砂砾突袭 | 电光突袭 | 水流突袭 |
+|  S02 | 炽焰快攻 | 藤刺快攻   | 岩针快攻 | 雷针快攻 | 水刃快攻 |
+|  S03 | 爆炎闪击 | 荆棘闪击   | 地裂闪击 | 霆光闪击 | 潮汐闪击 |
+|  S04 | 灼热火球 | 种子弹     | 泥岩弹   | 电弧弹   | 泡沫弹   |
+|  S05 | 烈焰冲击 | 叶刃冲击   | 岩崩冲击 | 雷鸣冲击 | 激流冲击 |
+|  S06 | 熔岩重击 | 巨藤重击   | 山岳重击 | 霹雳重击 | 巨浪重击 |
+|  S07 | 日炎爆破 | 森罗爆破   | 地脉爆破 | 雷暴爆破 | 海啸爆破 |
+|  S08 | 焰流轰击 | 古木轰击   | 巨岩轰击 | 磁极轰击 | 深潮轰击 |
+|  S09 | 炼狱坠火 | 万叶风暴   | 大地震荡 | 九霄天雷 | 沧海怒涛 |
+|  S10 | 终焉天火 | 世界树坠击 | 天陨坠岩 | 万雷天劫 | 天河坠潮 |
+
+### 5.9 14 组固定四技能组合
+
+| 组合 | 固定槽位           |
+| ---- | ------------------ |
+| L01  | S01、S04、S06、S09 |
+| L02  | S01、S05、S07、S08 |
+| L03  | S01、S05、S06、S10 |
+| L04  | S02、S04、S06、S08 |
+| L05  | S02、S04、S07、S09 |
+| L06  | S02、S05、S07、S08 |
+| L07  | S03、S04、S06、S09 |
+| L08  | S03、S05、S07、S08 |
+| L09  | S03、S04、S07、S10 |
+| L10  | S01、S04、S07、S10 |
+| L11  | S01、S06、S08、S10 |
+| L12  | S02、S04、S06、S10 |
+| L13  | S02、S05、S08、S09 |
+| L14  | S03、S04、S08、S10 |
+
+每个组合都至少包含一个 100% 命中技能。玩家不能替换、重排或解锁技能；同链三个阶段保持相同四技能位置。
+
+### 5.10 确定伤害公式
+
+命中后的计算只读取攻击者实际攻击 `A`、防守者实际防御 `D`、技能威力 `P` 和属性倍率 `T_bps`：
+
+```text
+raw_damage =
+  floor(
+    2 × P × A × A × T_bps
+    ÷ ((A + D) × 100 × 10000)
+  )
+
+single_hit_cap = max(1, floor(defender_max_hp × 80 / 100))
+damage = min(single_hit_cap, max(1, raw_damage))
+applied_damage = min(defender_current_hp, damage)
+defender_current_hp = max(0, defender_current_hp - damage)
+```
+
+全部计算使用 PostgreSQL `bigint` 的固定运算顺序。单次命中伤害不超过防守宠物最大生命的 80%，因此满生命宠物不会被一招击倒；当前生命已经低于伤害时仍正常被击倒。公式没有等级、`combat_power`、阶段加成、同属性加成、暴击、随机区间、状态或客户端参数。
+
+当双方四维按同一稀有度系数放大时，伤害和生命同步放大，镜像对局的击倒节奏保持稳定；高稀有度对低稀有度同时获得更高生命、攻击、防御和速度形成明确优势。
+
+### 5.11 唯一随机结果
+
+接受成功时数据库使用 `gen_random_bytes(32)` 生成房间私有种子，永不返回客户端。每个攻击行动的命中随机数为：
+
+```text
+digest = HMAC-SHA256(
+  room_private_seed,
+  battle_id | turn_no | actor_side | action_ordinal | skill_id
+)
+
+roll = unsigned_first_32_bits(digest) mod 10000
+hit = roll < accuracy_bps
+```
+
+- 同一行动重复恢复时得到完全相同的 roll。
+- 行动处理先后顺序不会改变 roll。
+- 100% 命中仍记录 roll 和阈值，便于审计。
+- 审计事件永久保存 roll、阈值、命中结果、计算伤害和实际扣除生命。
+
+## 6. 权威状态机
+
+```mermaid
+stateDiagram-v2
+    [*] --> PreparingShare: "创建事务锁币并占用三宠"
+    PreparingShare --> Waiting: "PreparedInlineMessage 已持久化"
+    PreparingShare --> Cancelled: "创建者取消"
+    PreparingShare --> Voided: "60 秒仍未完成分享卡准备"
+
+    Waiting --> ActiveSelect: "首位接受者原子锁币与占用三宠"
+    Waiting --> Cancelled: "创建者主动取消"
+    Waiting --> Cancelled: "离线满 90 秒"
+    Waiting --> Expired: "等待满 30 分钟"
+
+    ActiveSelect --> Reveal: "双方锁定或超时动作补齐并立即结算"
+    Reveal --> ActiveSelect: "3 秒结束且无需强制换宠"
+    Reveal --> ForcedSwitch: "3 秒结束且仍有替补"
+    Reveal --> Finished: "3 秒结束且胜负已经确定"
+    Reveal --> Draw: "3 秒结束且平局已经确定"
+    ForcedSwitch --> ActiveSelect: "所需目标全部锁定或超时补齐"
+
+    ActiveSelect --> Voided: "检测到永久性战斗不变量错误"
+
+    Finished --> [*]
+    Draw --> [*]
+    Cancelled --> [*]
+    Expired --> [*]
+    Voided --> [*]
+```
+
+`Reveal` 固定 3 秒；`ForcedSwitch` 不增加正常回合编号。终局结果在攻击结算时写为不可变待终结结果，3 秒展示到期后由同一终结事务结算 K-coin、释放 reservation、解除参与锁并写入 `finished/draw`。服务中断时 tick 恢复同一待终结结果，不能重新计算或重复结算。20 个正常回合全部用满且四次强制换宠分别用满时，服务端时限约为 7 分钟，符合 5–8 分钟目标。
+
+## 7. 数据库设计
+
+### 7.1 固定配置表
+
+新建内部 `battle` schema：
+
+| 表                        | 唯一职责                                                 |
+| ------------------------- | -------------------------------------------------------- |
+| `battle.rulesets`         | 规则版本、checksum、固定时限、最大回合、手续费和启用状态 |
+| `battle.entry_tiers`      | 20、100、500 三档及对应奖池、到账、手续费                |
+| `battle.rarity_factors`   | 五档稀有度系数和目标预算                                 |
+| `battle.type_matchups`    | 五属性唯一克制矩阵                                       |
+| `battle.skill_slots`      | 十组威力、命中率、优先级和视觉轨迹                       |
+| `battle.skills`           | 50 个属性技能名称与 `effect_key`                         |
+| `battle.role_profiles`    | 14 个基础四维档案                                        |
+| `battle.profile_loadouts` | 14 组固定四技能槽位                                      |
+| `battle.chain_configs`    | 70 条链的属性与角色档案                                  |
+| `battle.template_configs` | 210 个模板的最终固定四维、属性和四技能配置               |
+
+配置表一经激活不得原地修改。开发期调整 `battle-v1` 时重建产品数据；正式上线后的调整创建新规则版本。
+
+### 7.2 运行表
+
+| 表                           | 核心内容与约束                                                                              |
+| ---------------------------- | ------------------------------------------------------------------------------------------- |
+| `battle.rooms`               | 创建者、规则快照、档位、状态、当前回合、当前状态、版本号、全部 deadline、私有随机种子、终局 |
+| `battle.prepared_shares`     | Telegram prepared message ID、Telegram 到期时间、准备状态和尝试次数                         |
+| `battle.participants`        | 创建者/接受者、用户、参与状态、加入操作和结果确认时间                                       |
+| `battle.team_members`        | 槽位 1–3、模板及战斗配置快照、当前/最大生命、存活和出战状态                                 |
+| `battle.stakes`              | 每名参与者锁定额、状态、锁定/退款/到账 ledger ID                                            |
+| `battle.turns`               | 回合开始快照 hash、deadline、结算结果 hash                                                  |
+| `battle.actions`             | 唯一玩家行动、技能/换宠目标、player/timeout 来源、锁定时间                                  |
+| `battle.events`              | 永久私有事件序列、命中 roll、伤害、换宠、终局和状态 hash                                    |
+| `battle.settlements`         | 唯一终局、胜者、奖池、手续费、双方到账与 ledger ID                                          |
+| `battle.summaries`           | 双方各一条私有摘要：对手、胜负、入场费、到账、净变化、结束时间                              |
+| `battle.outbox`              | Ably 失效通知、投递租约、重试次数和投递状态                                                 |
+| `battle.rate_limit_attempts` | 用户、动作、invite hash 和一分钟持久限流记录                                                |
+
+关键约束：
+
+- `rooms.invite_token_hash` 唯一，只保存 SHA-256，不保存原始 bearer token。
+- `participants` 对 `preparing_share/waiting/active` 状态建立用户部分唯一索引。
+- 每个房间最多一个 creator 和一个 opponent。
+- `team_members` 唯一键为 `(participant_id, slot)` 与 `(participant_id, template_id)`。
+- `actions` 唯一键为 `(room_id, turn_no, participant_id)`。
+- `settlements` 对 `room_id` 唯一。
+- `events` 对 `(room_id, sequence)` 唯一且只追加。
+- 到期房间、到期行动、到期强制换宠和待投递 outbox 都建立部分索引。
+- Battle 审计表永久保留，不进入 30 天操作清理。
+
+### 7.3 库存
+
+`inventory.reservations.kind` 增加 `battle`，`reference_id` 固定使用 `battle.participants.id`。创建和接受 RPC 对三个模板按 `template_id` 排序锁定 holding，再分别调用统一 reservation 逻辑。
+
+库存读模型增加：
+
+```text
+total = available + listed + trading + minting + expedition + battling
+```
+
+`inventory.item_json` 返回 `battling`。市场、分解、进化、远征和 Mint 继续只读取 `inventory.available_quantity`，因此无需在前端互相调用领域逻辑也能阻止重复使用。
+
+### 7.4 K-coin 锁定与账本
+
+锁定、退款和结算都在对应 Battle RPC 的同一事务内完成。
+
+| 动作                        | available | locked | ledger                                      |
+| --------------------------- | --------: | -----: | ------------------------------------------- |
+| 锁定入场费 `x`              |      `-x` |   `+x` | `battle_stake_lock`，amount `-x`            |
+| 取消/过期/平局/作废退款 `x` |      `+x` |   `-x` | `battle_stake_refund`，amount `+x`          |
+| 胜者结算                    |   `+1.8x` |   `-x` | `battle_win_payout`，amount `+1.8x`         |
+| 败者结算                    |      不变 |   `-x` | 初始负向 lock ledger 已代表最终可用余额变化 |
+
+`battle.stakes` 记录 locked 的去向；`battle.settlements` 记录败者 locked 被消费和平台手续费。Battle ledger 的 `(reason, reference)` 建立部分唯一索引，重复恢复不能重复退款或到账。
+
+涉及双方余额的结算统一按用户 UUID 排序锁定 balance 行。房间行始终先于该房间的参与者、余额、reservation、行动和结算行锁定。
+
+### 7.5 原子命令
+
+| RPC                               | 单事务结果                                                                                                                                                        |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `api.battle_prepare_room`         | 验证服务端生成的 room ID/token hash、账号、唯一参与、规则、档位、三个不同模板、余额和可用数量；创建 room/creator/snapshot；占用三宠；锁定入场费；操作进入 pending |
+| `api.battle_activate_share`       | 保存 prepared message ID，开始 30 分钟等待计时，完成创建操作                                                                                                      |
+| `api.battle_abort_share`          | 分享准备明确失败或 60 秒超时；退款、释放、终结创建操作                                                                                                            |
+| `api.battle_cancel_room`          | 只允许创建者在接受成功前取消；退款、释放并终结                                                                                                                    |
+| `api.battle_accept_room`          | 锁房间；验证有效期、创建者在线、非本人、唯一参与、档位、余额和阵容；首位成功者占用三宠和锁币；创建快照、种子和第 1 回合                                           |
+| `api.battle_submit_action`        | 验证参与者、状态、deadline 和动作；不可逆插入；双方齐备时在同一事务立即结算                                                                                       |
+| `api.battle_submit_forced_switch` | 验证仅需换宠方、存活目标和 deadline；双方齐备时立即换入并开始下一回合                                                                                             |
+| `api.battle_heartbeat`            | 只更新等待房创建者的服务端在线时间，不产生资产结果                                                                                                                |
+| `api.battle_mark_offline`         | 幂等进入离线重连期                                                                                                                                                |
+| `api.battle_process_due`          | 自动取消离线/过期房，补齐超时技能/强制换宠，结束 3 秒展示窗口                                                                                                     |
+| `api.battle_acknowledge_result`   | 只允许本人确认本人终局展示，首次确认时间幂等落库                                                                                                                  |
+| `api.battle_claim_outbox`         | 只供受保护的 integration 领取待投递通知                                                                                                                           |
+| `api.battle_complete_outbox`      | 确认投递或记录重试，不改变 Battle 业务状态                                                                                                                        |
+
+房间的接受、取消、过期和离线取消都先锁定同一 room 行。动作提交和 deadline 托管也先锁定同一 room 行。数据库时间满足 `now < deadline` 时接收玩家动作；`now >= deadline` 时由托管结果获胜。
+
+创建操作的 request hash 只覆盖客户端提交的档位与有序三个模板，不包含服务端派生 token。相同 `operation_id` 的 pending/succeeded 重试返回已经存在的 room 与 `create_operation_id`，绝不插入第二个 room。
+
+### 7.6 永久审计
+
+服务端永久保存：
+
+- 双方用户、锁定阵容与队伍顺序。
+- 规则版本、checksum 和所有模板战斗快照。
+- 每回合 deadline、两边动作、动作来源和结算顺序。
+- 每次命中 roll、命中阈值、属性倍率、计算伤害和实际伤害。
+- 每次换宠、击倒、强制换宠和超时补齐。
+- 最终生命、存活数量、生命百分比比较值和终局原因。
+- reservation ID、stake 状态、settlement 与全部 ledger ID。
+- 最终 canonical audit SHA-256。
+
+这些数据不进入任何 Web/API 用户历史或回放响应。终局结果确认后，旧房间的参与者读取接口也不再返回审计内容。
+
+## 8. 服务端与实时架构
+
+```mermaid
+flowchart LR
+    Web["Telegram Mini App\nReact Battle UI"] -->|"REST JSON + access token"| App["Vercel app Function"]
+    App -->|"一个业务命令 RPC"| DB["Supabase PostgreSQL\n唯一战斗裁判"]
+    App -->|"savePreparedInlineMessage"| TG["Telegram Bot API"]
+    App -->|"服务端发布"| Ably["Ably Standard"]
+    Ably -->|"仅状态失效通知"| Web
+    Web -->|"Ably 断线时 1–2 秒短轮询"| App
+    Cron["pg_cron 每 1 秒"] --> Tick["battle.process_due"]
+    Tick --> DB
+    DB --> Outbox["battle.outbox"]
+    Outbox -->|"pg_net + Vault 机密"| Integration["Vercel integrations Function"]
+    Integration -->|"领取、发布、确认"| Ably
+```
+
+### 8.1 PostgreSQL 战斗引擎
+
+战斗引擎全部位于 `battle` 内部函数：
+
+- 输入只使用数据库快照和已经锁定的动作。
+- 命中、伤害、先后手、换宠、击倒、终局和经济结算都在同一事务内。
+- 每次状态变化递增 `rooms.state_version` 和 `events.sequence`。
+- RPC 返回按当前用户裁剪的读模型，不把私有审计 JSON 交给 Functions 再过滤。
+- 检测到规则缺失、快照不完整、负生命、重复活动宠物或账本不变量错误时，不继续猜测结算；系统在独立安全事务把房间标为 `voided`、双方原额退款、释放藏品并记录 `operations.invariant_violations`。
+
+### 8.2 每秒 deadline 推进
+
+真实开发与生产 Supabase 安装 `pg_cron` 与 `pg_net`。唯一 cron job `battle-tick-v1` 每秒调用 `battle.process_due(limit => 100)`：
+
+- advisory lock 阻止同一时刻重叠 tick。
+- 到期 room 使用索引和 `FOR UPDATE SKIP LOCKED` 分批处理。
+- `preparing_share` 的下一次外部尝试到期时，tick 只在存在待恢复任务时通过 `pg_net` 唤醒 `/api/integrations/battle-share`。
+- 一次 tick 未处理完时下一秒继续。
+- 服务恢复后按数据库 deadline 追赶，不依据浏览器计时器补算。
+- 每次状态变化与 outbox 写入同一事务。
+
+当前真实开发 Supabase 在 2026-07-27 已列出 `pg_cron 1.6.4`、`pg_net 0.20.4`，Vault `0.3.1` 已安装；实现时仍通过从空库执行完整 migration 确认扩展和 job 真实可用。
+
+### 8.3 Ably
+
+前后端锁定 `ably@2.26.0`：
+
+- 服务端使用 `ABLY_API_KEY` 发布。
+- Web 通过 `/api/battle/realtime-token` 获取 5 分钟短期 token。
+- token capability 只允许 subscribe 当前用户频道、当前参与房间频道，或当前 Battle 入口对应的邀请状态频道。
+- 浏览器不能 publish、presence-enter 或管理频道。
+- Ably 消息只包含 `event_id`、`room_id`、`state_version` 和 `event_kind`，不包含阵容、行动、命中、伤害、余额或结算。
+- 客户端收到消息后用 REST 读取最新权威快照，并丢弃低于当前 `state_version` 的重复通知。
+- Ably presence 不参与创建者在线裁决；REST 心跳才是唯一依据。
+
+### 8.4 outbox 与短轮询
+
+- 玩家命令 RPC 提交后，当前 Vercel 请求立即尝试投递本次 outbox，降低延迟。
+- `pg_cron` 产生的超时状态通过 `pg_net` 调用 `/api/integrations/battle-outbox`。
+- 分享卡外部结果未知时，`pg_net` 调用 `/api/integrations/battle-share`；该接口领取原 pending room，并由 `create_operation_id` 重建同一 bearer token。
+- integration 使用 Supabase Vault 与 Vercel 共同持有的 `BATTLE_OUTBOX_SECRET` 鉴权，body 只作为唤醒信号；真实 outbox 仍由受保护 RPC 领取。
+- 没有到期 share task 或待投递 outbox 时不发出 HTTP 请求。
+- 发布失败时保留 outbox，采用 1、2、5、10、30 秒重试，之后每 30 秒重试；重复消息由 `event_id/state_version` 消除影响。
+- Ably 为 `disconnected/suspended/failed` 时，等待页和接受页每 2 秒轮询，战斗选择/强制换宠状态每 1 秒轮询。
+- 页面隐藏时停止 UI 轮询并让超时托管继续；重新可见时立即读取完整快照。
+- 即使 Ably 显示连接，客户端在 deadline 到达后仍执行一次权威读取，避免遗漏状态变化。
+
+## 9. Telegram 挑战卡与入口
+
+### 9.1 创建外部事务
+
+创建房间是固定外部 saga：
+
+1. Web 立即禁用创建按钮并显示“正在创建挑战”，但不提前显示扣款成功。
+2. Vercel 以本次固定 `operation_id` 计算 `HMAC-SHA256(BATTLE_INVITE_SECRET, "battle-invite-v1|" + operation_id)`，取前 24 字节生成 32 位 base64url token；同一幂等操作在任何恢复请求中都得到同一 token。
+3. `api.battle_prepare_room` 原子锁币、占用三宠，并只保存完整 `BTL_` token 的 SHA-256；原始 token 不进入数据库。
+4. Vercel 使用创建者 Telegram user ID 调用 Bot API `savePreparedInlineMessage`。
+5. Prepared inline message 使用文字卡片，不包含宠物图片或模板信息，固定内容为创建者、入场费、稀有度组合、30 分钟提示和“接受挑战”按钮。
+6. 参数固定允许 user chats 与 group chats，禁止 bot chats 与 channel chats。
+7. 按钮链接为 `https://t.me/<bot>/<mini_app>?startapp=BTL_<32位base64url>`。
+8. 服务端恢复任务只读取 room 的 `create_operation_id`，并使用同一机密重新生成同一 token，不需要持久化 bearer token。
+9. `api.battle_activate_share` 持久化 prepared message ID，并从该事务提交时间开始计算 30 分钟。
+10. Web 收到完整成功结果后才启用 `Telegram.WebApp.shareMessage(prepared_message_id)`。
+
+Telegram 明确返回失败时立即调用 `api.battle_abort_share`。响应未知时 integration 在 60 秒内重试；重复生成的 prepared message 都指向同一个 bearer invite，不会生成第二个房间或第二次锁币。60 秒仍未激活则自动退款、释放并返回 `BATTLE_SHARE_FAILED`。
+
+原生分享弹窗被用户关闭或发送失败不会自动取消已经激活的等待房；创建者继续重试分享或主动取消房间。
+
+### 9.2 Battle 入口参数
+
+身份入口只接受两种互斥格式：
+
+```text
+推荐入口：TMA[A-F0-9]{20}
+Battle 入口：BTL_[A-Za-z0-9_-]{32}
+```
+
+- API 在 Telegram `initData` 验证成功后先分类入口。
+- 推荐入口沿用现有新用户推荐交接。
+- Battle 入口不创建 referral candidate，不绑定邀请人，新老正常账号都直接完成登录。
+- Function 只在内存中读取原始 Battle token，立即计算 SHA-256 后传给数据库；session 只保存 `entry_kind = battle` 和 token hash。
+- Battle token 不进入日志、错误详情、分析事件或 URL 之外的客户端持久化。
+- 无效、已取消、已接受或已过期 token 不阻止账号登录；Game 页显示真实不可用状态。
+- `chat_type` 和 `chat_instance` 不参与授权。
+
+### 9.3 Web Telegram 适配
+
+更新 Web 类型和 wrapper，支持：
+
+- `shareMessage(messageId, callback)`。
+- `shareMessageSent`。
+- `shareMessageFailed`。
+
+客户端只做能力检测。缺少 `shareMessage` 时显示固定提示“当前 Telegram 版本不支持发送挑战卡，请更新 Telegram 后重试”，不降级为客户端拼接一张可能泄漏阵容的消息。
+
+## 10. REST 与 OpenAPI
+
+### 10.1 玩家接口
+
+| 路由                                            | 用途                                           | 客户端允许提交                                                       |
+| ----------------------------------------------- | ---------------------------------------------- | -------------------------------------------------------------------- |
+| `GET /api/battle/bootstrap`                     | 档位、规则摘要、当前活动房、最新未确认当场结果 | 无                                                                   |
+| `GET /api/battle/team-options`                  | 本人当前可用模板与本人可见战斗配置             | 无                                                                   |
+| `GET /api/battle/invites/current`               | 当前 Battle 入口的脱敏挑战预览                 | 无                                                                   |
+| `GET /api/battle/rooms/:room_id`                | 参与者专属当前快照                             | `room_id`                                                            |
+| `POST /api/battle/rooms`                        | 创建房和 prepared share saga                   | `tier`、有序三个 `template_id`、幂等键                               |
+| `POST /api/battle/rooms/:room_id/cancel`        | 创建者取消未接受房间                           | `room_id`、幂等键                                                    |
+| `POST /api/battle/invites/current/accept`       | 接受当前 bearer invite                         | 有序三个 `template_id`、幂等键                                       |
+| `POST /api/battle/rooms/:room_id/actions`       | 当前正常回合直接锁定动作                       | `turn_no`、`attack + skill_position` 或 `switch + team_slot`、幂等键 |
+| `POST /api/battle/rooms/:room_id/forced-switch` | 强制换宠直接锁定目标                           | `turn_no`、`team_slot`、幂等键                                       |
+| `POST /api/battle/rooms/:room_id/heartbeat`     | 创建者等待页在线心跳                           | `room_id`                                                            |
+| `POST /api/battle/rooms/:room_id/offline`       | 页面离开时尽力标记离线                         | `room_id`                                                            |
+| `POST /api/battle/results/:room_id/acknowledge` | 确认当场结果已展示                             | `room_id`                                                            |
+| `POST /api/battle/realtime-token`               | 获取最小权限 Ably token                        | 当前上下文，不接受频道名                                             |
+
+服务器自行读取档位金额、稀有度、战斗配置、技能数值、属性、持有数量、余额、deadline 和当前状态。
+
+### 10.2 内部接口
+
+| 路由                                   | 网关         | 鉴权                                     |
+| -------------------------------------- | ------------ | ---------------------------------------- |
+| `POST /api/integrations/battle-share`  | integrations | `BATTLE_OUTBOX_SECRET` + 待处理任务 RPC  |
+| `POST /api/integrations/battle-outbox` | integrations | `BATTLE_OUTBOX_SECRET` + outbox 领取租约 |
+
+不存在 history、replay、audit、spectator 或公开 room API。
+
+### 10.3 稳定错误码
+
+新增错误码至少覆盖：
+
+- `BATTLE_RULESET_UNAVAILABLE`
+- `BATTLE_TIER_INVALID`
+- `BATTLE_TEAM_INVALID`
+- `BATTLE_TEAM_TEMPLATE_DUPLICATE`
+- `BATTLE_ALREADY_PARTICIPATING`
+- `BATTLE_SHARE_PREPARING`
+- `BATTLE_SHARE_FAILED`
+- `BATTLE_INVITE_INVALID`
+- `BATTLE_ROOM_NOT_FOUND`
+- `BATTLE_ROOM_EXPIRED`
+- `BATTLE_ROOM_CANCELLED`
+- `BATTLE_ROOM_ALREADY_ACCEPTED`
+- `BATTLE_CREATOR_OFFLINE`
+- `BATTLE_SELF_ACCEPT_FORBIDDEN`
+- `BATTLE_NOT_PARTICIPANT`
+- `BATTLE_ACTION_PHASE_INVALID`
+- `BATTLE_ACTION_ALREADY_LOCKED`
+- `BATTLE_ACTION_INVALID`
+- `BATTLE_SWITCH_TARGET_INVALID`
+- `BATTLE_RESULT_NOT_ACKNOWLEDGEABLE`
+- `BATTLE_STATE_CONFLICT`
+- `BATTLE_VOIDED`
+
+余额与库存继续使用现有 `INSUFFICIENT_BALANCE`、`INSUFFICIENT_INVENTORY`、`INVENTORY_RESERVED`。每个错误在 `errorRegistry` 固定 HTTP 状态、用户文案、刷新范围和恢复动作，并在各 route contract 显式声明。
+
+## 11. Web 页面与交互
+
+### 11.1 页面状态
+
+“游戏”页只渲染当前用户唯一对应的状态：
+
+1. Battle 首页：玩法摘要、三个档位、创建入口。
+2. 三槽队伍选择：按槽位选择模板、查看本人四维与技能、调整顺序。
+3. 正在准备挑战卡：按钮锁定、原操作恢复。
+4. 等待页：本人队伍、入场费、倒计时、在线状态、分享和取消。
+5. 接受页：创建者稀有度组合、入场费、在线状态和接受者三槽选择。
+6. 战斗页：对手区域、己方区域、4 技能和换宠入口、服务端倒计时。
+7. 强制换宠覆盖层：只向需要换宠的一方显示存活目标。
+8. 当场结果覆盖层：胜/负/平/作废、入场费、到账、净变化、手续费或退款。
+
+结果覆盖层确认成功后返回 Battle 首页。页面没有“历史”“回放”“再次挑战”按钮。
+
+### 11.2 前端先行反馈
+
+- 选择宠物时立即填入槽位。
+- 点击创建时立即禁用提交和编辑，显示不带成功结论的准备动画。
+- 点击接受时立即锁定本地表单并显示“正在确认对战资格”，不提前扣减页面余额。
+- 点击技能或换宠后立即显示“已提交”，禁用本回合全部动作；只有服务端成功响应才显示“已锁定”。
+- 服务端拒绝、状态过期或快照冲突时撤销临时状态，重新读取 room、inventory 和 assets。
+- 命中、伤害和击倒动画只消费服务端 resolution event，不在浏览器重算。
+- `prefers-reduced-motion` 下使用静态状态切换，服务端 3 秒展示窗口和业务时序不变。
+
+### 11.3 战斗布局
+
+- 对手三宠位于上半区，当前宠物使用正式 768px 图片，其余使用 256px 缩略图。
+- 己方三宠位于下半区。
+- 对手只显示百分比血条；己方显示精确生命。
+- 四技能按钮显示技能名、威力、命中率和优先级。
+- 换宠按钮打开两只替补，倒下和当前宠物禁用。
+- 15 秒计时使用服务器 `deadline` 与 `server_time` 校准；本地计时归零只触发读取，不自行选招。
+- 战斗页不生成可回滚的客户端战斗状态；刷新或重新进入直接展示数据库当前快照，错过的旧回合不补播。
+
+### 11.4 K-coin 不足
+
+创建或接受前端预检查到 K-coin 不足时立即打开现有充值弹窗：
+
+- 创建场景保存档位与本人三个槽位。
+- 接受场景保存当前 invite 上下文与本人三个槽位。
+- 充值到账后返回原确认界面，重新读取房间、创建者在线状态、余额、库存和唯一参与状态。
+- 充值成功绝不自动创建或自动接受。
+- 返回时房间已取消、过期、被接受或创建者离线，则停止原动作，已充值 K-coin 保留。
+
+## 12. 安全、并发与恢复
+
+### 12.1 权限与数据最小化
+
+- 所有 Battle 玩家接口要求正常 Telegram 会话。
+- invite preview 只能由当前 session 的 `battle` token hash 解析。
+- participant snapshot 只能由房间参与者读取。
+- 创建者本人不能接受自己的 token。
+- 分享卡脱敏 DTO、接受页 DTO、己方 DTO、对手 DTO 是四个独立 Schema；API 不允许先返回完整对象再让 CSS 隐藏。
+- `battle` schema 不加入 Supabase Exposed schemas。
+- `anon` 与 `authenticated` 无表权限和函数执行权限；`service_role` 只执行显式 `api` RPC。
+- Ably token 由服务端决定频道，客户端不能请求任意频道名。
+- `BATTLE_OUTBOX_SECRET` 只存在 Vercel Secret 与 Supabase Vault。
+
+### 12.2 持久限流
+
+认证后 Battle 请求使用 PostgreSQL 用户级固定一分钟窗口：
+
+| 动作                       | 每用户上限 |
+| -------------------------- | ---------: |
+| 创建房                     |  3 次/分钟 |
+| 读取 invite preview        | 60 次/分钟 |
+| 尝试接受                   | 10 次/分钟 |
+| 提交正常动作与强制换宠合计 | 30 次/分钟 |
+| 心跳                       | 30 次/分钟 |
+| 获取 Ably token            | 10 次/分钟 |
+
+限流记录五分钟后清理，命中统一返回 `RATE_LIMITED`；限流不替代 room lock、唯一索引或业务校验。
+
+### 12.3 并发裁决
+
+| 竞争                 | 唯一结果                                                                   |
+| -------------------- | -------------------------------------------------------------------------- |
+| 多人同时接受         | 首个锁定 waiting room 并完成全部校验的事务成功，其余零扣款、零 reservation |
+| 接受与取消           | 先取得 room lock 的合法事务生效，另一方读取终态并失败                      |
+| 接受与到期           | `now >= expires_at` 时到期结果优先，接受者无副作用                         |
+| 玩家提交与超时托管   | `now < deadline` 接受玩家动作；等于或超过 deadline 使用托管动作            |
+| 同一动作重复请求     | operation request hash 相同则回放；不同则 `IDEMPOTENCY_KEY_REUSED`         |
+| 两边最后一次动作并发 | room lock 串行插入；第二个合法动作在同一事务触发一次结算                   |
+| 结算重复执行         | settlement 唯一键、stake 状态和 ledger reference 保证只结算一次            |
+
+### 12.4 恢复
+
+| 故障                  | 固定处理                                                              |
+| --------------------- | --------------------------------------------------------------------- |
+| 创建 API 响应丢失     | 查询原 operation；share integration 继续同一 room，绝不创建第二个房间 |
+| Telegram 明确创建失败 | 原操作失败、立即退款并释放                                            |
+| Telegram 结果未知     | 60 秒内服务端恢复；超时作废并退款                                     |
+| 接受响应丢失          | 查询原 operation 与当前 Battle snapshot；不再次锁币                   |
+| 动作响应丢失          | 查询原 operation/room；已锁定动作不可重选                             |
+| Ably 断线             | 自动进入 1–2 秒短轮询                                                 |
+| WebView 关闭          | 等待房进入 90 秒重连；战斗中按超时技能继续                            |
+| pg_cron 短暂停止      | 恢复后按数据库 deadline 追赶                                          |
+| 永久状态不变量错误    | 原子 `voided`、双方退款、释放、写 invariant violation                 |
+| 等待期间创建者被封禁  | 房间取消并退款；账号继续遵循全局空白门禁                              |
+| 开战后任一账号被封禁  | 前端保持全局空白，战斗继续托管至正常终局                              |
+| 规则版本更新          | 旧房使用创建时快照，新房使用新激活版本                                |
+
+### 12.5 当场结果恢复
+
+`identity.bootstrap` 增加当前 Battle participation 和最新未确认当场结果摘要。用户在终局瞬间断线时，重新进入只显示该场最终结果；确认后不再返回。
+
+用户界面不提供已确认结果列表。服务端 `battle.summaries` 和完整审计继续永久保留，但没有面向用户或管理端的 HTTP 回放接口。
+
+## 13. 全项目文件改动清单
+
+本次实现必须在同一个完整交付中同步以下文件；任何一层缺失都不允许开放 Battle 入口。
+
+### 13.1 产品与架构文档
+
+- `docs/product/功能说明文档.md`
+  - 新增第 21 章 Battle 主功能说明。
+  - 同步第 3、5、7、8、11、17、18、19、20 章的库存、充值、资产栏、风险与跨功能关系。
+- `docs/architecture/README.md`
+- `docs/architecture/domain-map.md`
+- `docs/architecture/runtime.md`
+- `docs/architecture/data-transactions.md`
+- `docs/architecture/security-boundaries.md`
+- `docs/architecture/operation-recovery.md`
+- 新增 `docs/architecture/adr/ADR-014-battle-authority-and-ruleset.md`
+- 新增 `docs/architecture/adr/ADR-015-battle-realtime-and-scheduler.md`
+- `docs/operations/acceptance.md`
+- `docs/operations/environment-matrix.md`
+- `docs/operations/release.md`
+- `docs/operations/rollback.md`
+- `docs/operations/incident-recovery.md`
+
+### 13.2 产品数据与数据库
+
+- 新增 `tools/product_data/battle.py`。
+- 更新 `tools/product_data/build.py` 与 `tools/product_data/check.py`。
+- 生成版本化 Battle 配置 JSON/checksum 与 product-data SQL。
+- `supabase/schemas/00_foundation.sql`：`battle` schema、所需扩展。
+- `supabase/schemas/10_identity.sql`：区分 referral/Battle 入口并只保存 Battle token hash。
+- `supabase/schemas/30_operations.sql`：Battle 创建恢复和清理保护。
+- `supabase/schemas/31_economy.sql`：Battle ledger 唯一性与 locked 不变量。
+- `supabase/schemas/32_inventory.sql`：`battle` reservation 与 `battling` 读模型。
+- 新增 `supabase/schemas/44_battle.sql`：配置、运行表、引擎、RPC、审计与 outbox。
+- `supabase/schemas/95_jobs.sql`：Battle 不变量监控。
+- 重新生成 `supabase/migrations/20260719104533_baseline.sql`。
+- 重新生成 `supabase/migrations/20260719104602_product_data_v1.sql`。
+- 更新 `supabase/migrations/20260719104614_api_security.sql`。
+- 更新根 `db:lint` schema 清单和 `tools/db/check_schema.py` 的顺序。
+
+数据库实现不能追加一份“修复 Battle”migration；本地初始序列直接成为唯一正确定义。
+
+### 13.3 API 契约与服务端
+
+- 新增 `packages/api-contracts/src/domains/battle/models.ts`。
+- 新增 `packages/api-contracts/src/domains/battle/routes.ts`。
+- 更新 app/integrations registries、公共错误表和生成的 OpenAPI 3.1。
+- 新增 `apps/api/src/domains/battle/routes.ts`。
+- 新增 `apps/api/src/workflows/battle-share/`。
+- 新增 `apps/api/src/workflows/battle-outbox/`。
+- 更新 `apps/api/src/platform/telegram/bot.ts`，接入 `savePreparedInlineMessage`。
+- 更新 `apps/api/src/domains/identity/routes.ts` 与 session 类型。
+- 更新 app/integrations handler map。
+- 更新 `apps/api/src/platform/env/index.ts`、根 `.env.example` 和配置隔离检查。
+
+### 13.4 Web
+
+- 用 Battle 页面替换 `apps/web/src/pages/game/GamePage.tsx` 的空内容。
+- 新增 `apps/web/src/domains/battle/`，只拥有 Battle UI、读模型和交互。
+- 新增 `apps/web/src/workflows/battle-realtime/`，管理 Ably token、订阅、state version 和轮询降级。
+- 更新 `apps/web/src/platform/telegram/index.ts` 与 `apps/web/src/types.d.ts`。
+- 更新 session bootstrap 与 app recovery coordinator。
+- 更新充值 navigation intent，加入创建和接受两种 Battle 恢复。
+- 更新 inventory 类型/UI，显示 `battling` 数量。
+- 更新全局 CSS 与移动端安全区布局。
+- Web 与 API package 固定增加 `ably@2.26.0`，同步 workspace catalog 与 `pnpm-lock.yaml`。
+
+### 13.5 环境
+
+Vercel 新增：
+
+- `ABLY_API_KEY`
+- `BATTLE_OUTBOX_SECRET`
+- `BATTLE_INVITE_SECRET`，每个环境独立且至少 32 字节，只用于可重复生成 30 分钟 bearer invite
+
+Supabase Vault 新增环境独立的：
+
+- Battle outbox callback URL。
+- Battle share callback URL。
+- 与对应 Vercel 环境一致的 `BATTLE_OUTBOX_SECRET`。
+
+真实开发与未来生产使用相同代码、OpenAPI、Battle checksum 和 migration，只使用各自 Bot、Ably key、callback URL、数据库项目与机密。
+
+## 14. 一次性交付依赖顺序
+
+以下顺序只表示依赖关系，不构成分批上线：
+
+1. 把本方案的产品规则同步进主功能文档、架构文档与 ADR。
+2. 固化 Battle v1 生成器、210 模板配置、checksum 和契约模型。
+3. 完成声明式 Schema、原始 migration、权限、RPC、deadline tick 和审计。
+4. 完成 REST handlers、Telegram prepared share、Ably token/outbox 与错误映射。
+5. 完成 Game 页、队伍选择、等待、接受、战斗、强制换宠、结果和充值恢复。
+6. 运行全部静态门禁。
+7. 清空并从零重建真实开发数据库，配置 Vault、Ably 和 Vercel Secret，部署同一 Git commit。
+8. 在真实 Telegram、真实 Vercel、真实 Supabase 和真实 Ably 上完成全部验收。
+
+第 8 步全部通过前，Battle 不能被视为完成或允许进入正式生产。
+
+## 15. 验收方案
+
+项目不新增本地功能 test 代码。仓库内只运行现有静态门禁；业务验收全部在真实开发环境通过真实 API、真实数据库事务、真实 Telegram 客户端和真实 Ably 完成。
+
+### 15.1 静态门禁
+
+必须通过：
+
+```text
+pnpm product-data:build
+pnpm product-data:check
+pnpm contracts:openapi
+pnpm validate:static
+git diff --check
+```
+
+产品数据门禁额外断言：
+
+- 70 链、210 模板、每属性 14 链/42 模板。
+- 每链三个阶段属性和技能组合完全一致。
+- 五属性的档案、技能数值和稀有度分布完全镜像。
+- 50 个技能名和 `effect_key` 唯一。
+- 每模板恰好四技能，至少一个 100% 命中技能。
+- 所有同稀有度模板预算相同。
+- 每个档案的五档四维逐档严格上升。
+- checksum 与数据库种子、API ruleset 完全一致。
+
+### 15.2 数据库重建
+
+- 清空当前真实开发数据库和 migration history。
+- 从三份原始 migration 连续重建。
+- 确认 `battle` 不在 Exposed schemas。
+- 确认 `anon/authenticated` 无访问权限。
+- 确认 `pg_cron` 每秒 job、`pg_net` callback、Vault 和 outbox 真实工作。
+- 确认本地声明式 Schema 与远端结构无差异。
+
+### 15.3 真实 Telegram
+
+至少使用创建者、两个普通接受者和一个并发竞争账号：
+
+- 分享到用户私聊。
+- 分享到普通群和超级群。
+- 把原卡转发到另一个群后接受。
+- Bot 不在目标群时仍能分享和接受。
+- 卡片与接受页只出现稀有度组合，不出现模板或战斗配置。
+- 创建者本人打开卡片不能接受。
+- 两个账号同时接受时仅一人成功，失败者余额和库存完全不变。
+- 创建者在线、显式离开、突然断网、89 秒重连、90 秒到期分别得到规定结果。
+- 房间 30 分钟到期和创建者主动取消都立即退款、释放。
+- 原生分享关闭、发送失败和旧 Telegram 缺少 `shareMessage` 时结果正确。
+
+### 15.4 资产与并发
+
+- 三个档位逐一核对 lock、winner payout、fee、loser、draw refund。
+- 创建、接受、取消、过期、结算和作废的重复调用不重复改余额。
+- Battle reservation 阻止出售、分解、进化、远征和 Mint。
+- 同模板有两份、Battle 只占一份时，剩余一份仍可使用。
+- 一个账号不能同时创建、等待或接受第二场。
+- 接受/取消、接受/过期、动作/超时、双方动作并发都只有一个终态。
+- 每个终局后 `available + locked`、reservation、stake、settlement、ledger 与审计一致。
+
+### 15.5 战斗规则
+
+在真实开发数据库使用受控开发账号和正式 RPC/API 验证：
+
+- 五属性的 1.5、0.75、1.0 三种结果。
+- 十组技能命中边界与 timeout 最高命中率规则。
+- 优先级、速度和完全相同的同时攻击。
+- 先手击倒后后手不行动。
+- 单方换宠承伤、双方换宠无伤害。
+- 单方和双方强制换宠、15 秒超时和槽位顺序。
+- 普通超时连续托管直至完赛。
+- 单方全灭、同时全灭、第 20 回合三种裁决。
+- 平局不收手续费。
+- 断线重进直接同步当前快照，不补播历史回合。
+
+验收不得增加测试专用 API、跳过权限的代码路径或生产不可用的战斗开关。
+
+### 15.6 实时与性能
+
+- 两边动作锁定到数据库提交完成，真实开发环境 p95 不超过 800ms。
+- deadline 到达后的托管状态在 2 秒内完成数据库提交。
+- 正常 Ably 通知从数据库提交到另一端收到，p95 不超过 1 秒。
+- 断开 Ably 后，战斗状态在 2 秒内通过短轮询回正。
+- 重复、乱序和迟到的 Ably 消息不覆盖更高 `state_version`。
+- Vercel Function 重启、Ably 中断和单次 pg_net 失败均不改变最终战斗或资产结果。
+
+## 16. 开源项目与官方资料裁决
+
+用户提供的 [共享对话](https://chatgpt.com/share/6a663e34-63fc-83e8-bb8e-90dcdcdfeada) 仅作为研究线索，项目结论以仓库事实、用户裁决和上游原始资料为准。
+
+已核对：
+
+- [Pokémon Showdown](https://github.com/smogon/pokemon-showdown)：MIT；采用“客户端选择、服务端模拟、双方 choice commit 后结算、稳定行动队列、种子与输入日志可恢复”的架构思想，不复制其完整 Pokémon 规则和代码。
+- [pkmn/ps](https://github.com/pkmn/ps)：MIT；属于 Showdown 模块化生态，不作为运行依赖。
+- [pkmn/dmg](https://github.com/pkmn/dmg)、[Smogon Damage Calculator](https://github.com/smogon/damage-calc)：面向完整 Pokémon 伤害体系，与本项目固定四维、单属性、无状态规则不一致，不作为依赖。
+- [pkmn/engine](https://github.com/pkmn/engine)：仍标明处于重度开发和 breaking change 状态，不进入上线链路。
+- [PokeAPI](https://github.com/PokeAPI/pokeapi) 与 [pokeemerald-expansion](https://github.com/rh-hideout/pokeemerald-expansion)：数据、平台和许可边界均不适合当前 210 个原创固定模板。
+
+最终依赖裁决：Battle 不引入任何 Pokémon 战斗引擎、伤害库或数据 API；只借鉴服务端权威、稳定行动排序、确定随机输入和审计日志模式，独立实现本方案的 PostgreSQL 引擎。
+
+官方能力依据：
+
+- [Telegram Bot API：Prepared Inline Message](https://core.telegram.org/bots/api#savepreparedinlinemessage)
+- [Telegram Mini Apps](https://core.telegram.org/bots/webapps)
+- [Ably Token Authentication](https://ably.com/docs/auth/token)
+- [Ably Capabilities](https://ably.com/docs/auth/capabilities)
+- [Supabase Cron](https://supabase.com/docs/guides/cron)
+- [Supabase pg_net](https://supabase.com/docs/guides/database/extensions/pg_net)
+- [PostgreSQL pgcrypto](https://www.postgresql.org/docs/17/pgcrypto.html)
+
+## 17. 完成定义
+
+只有以下条件全部成立，Battle 才算完成：
+
+- 210 个模板拥有唯一、版本化、经过 checksum 校验的固定 Battle 配置。
+- 高稀有度四维与预算严格更高，每次进化四维严格上升。
+- 三宠占用、双方 K-coin 锁定、接受竞争、结算和退款全部由数据库原子裁决。
+- 挑战卡和接受页只公开创建者稀有度组合。
+- 15 秒选择、3 秒展示、强制换宠、20 回合、断线托管和所有终局规则完全生效。
+- Ably 只负责通知，短轮询和数据库 deadline 在其故障时仍能完成战斗。
+- 用户没有历史、回放、认输、观战或匹配入口。
+- 永久私有审计包能从规则、动作、命中、终局和 ledger 解释每一场结果。
+- 主文档、架构、OpenAPI、Schema、迁移、环境矩阵、恢复手册与验收文档不存在互相冲突。
+- 同一 commit 已在真实开发 Telegram/Vercel/Supabase/Ably 环境通过全部验收。
