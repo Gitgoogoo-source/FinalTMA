@@ -20,7 +20,7 @@ const TERRAIN_KEY = "PET_HOME_TERRAIN";
 const TILE_SIZE = 64;
 const MAP_TILES = 50;
 const WORLD_SIZE = MAP_TILES * TILE_SIZE;
-const PET_SIZE = 112;
+const PET_SIZE = 56;
 const PLAYER_MOVE_DURATION = 320;
 const PET_TEXTURE_PREFIX = "PET:";
 const ASSET_KEYS = Object.freeze({
@@ -255,7 +255,7 @@ export class PetHomeScene extends Phaser.Scene {
     if (this.reducedMotion) return;
     entity.idle = this.tweens.add({
       targets: entity.body,
-      y: -PET_SIZE * 0.16 - 4,
+      y: -PET_SIZE * 0.16 - 2,
       duration: 900 + Math.random() * 600,
       ease: "Sine.inOut",
       yoyo: true,
@@ -385,7 +385,7 @@ export class PetHomeScene extends Phaser.Scene {
   configureCamera() {
     const camera = this.cameras.main;
     camera.setBounds(0, 0, WORLD_SIZE, WORLD_SIZE);
-    camera.setZoom(1);
+    camera.setZoom(0.5);
     camera.startFollow(this.player.sprite, true, 0.14, 0.14);
   }
 

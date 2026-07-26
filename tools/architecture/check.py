@@ -331,7 +331,8 @@ def verify_monster_tamer_boundary() -> None:
         "this.occupied.add(targetKey)",
         "findGridPath(",
         "isTouchPointer(pointer)",
-        "camera.setZoom(1)",
+        "const PET_SIZE = 56;",
+        "camera.setZoom(0.5)",
         "camera.startFollow(",
         "PLAYER_ASSET_PATH",
     )
@@ -440,7 +441,8 @@ def verify_monster_tamer_boundary() -> None:
         "不设置展示总数上限",
         "现有藏品详情视觉组件",
         "手机屏幕点按",
-        "镜头固定为 `1` 倍",
+        "主体世界尺寸固定为 `56 × 56` 像素",
+        "镜头固定为 `0.5` 倍",
         "桌面键盘、WASD、方向键、鼠标点地移动",
         "旧玩家控制器、NPC、对话、告示牌",
     )
@@ -765,7 +767,8 @@ def verify_documentation() -> None:
         "探索与战斗",
         "AxulArt",
         "手机触摸点按",
-        "镜头固定 `1` 倍",
+        "主体世界尺寸固定为 `56×56` 像素",
+        "镜头固定 `0.5` 倍",
         "鼠标点地",
         "不使用浏览器持久化",
     )
