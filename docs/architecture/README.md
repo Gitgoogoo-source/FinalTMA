@@ -15,7 +15,7 @@ de521f2687086cb358fb557a4a7ada3bc3c5fc132d673f0256b4573028ddba46
 ## 运行时
 
 - Web：React、Vite、TypeScript，运行在 Telegram Mini App。
-- Monster Tamer：登录后 React 全屏藏品家园，读取现有 `inventory.list`，并通过同源 `/monster-tamer/` Phaser 渲染文档展示真实可用藏品；只读且不新增业务写入。
+- Monster Tamer：登录后 `/game` 直接展示的 React 藏品家园，读取现有 `inventory.list`，并通过同源 `/monster-tamer/` Phaser 渲染文档展示真实可用藏品；只读且不新增业务写入。
 - API：同一 Vercel Project 内的 `app`、`integrations`、`jobs` 三个 Node.js 24 Function 网关。
 - Database：Supabase Postgres 17，仅暴露 `api` schema；浏览器不加载 Supabase SDK。
 - Blockchain：TON Connect 验证钱包，Tact 合约完成 NFT Mint。
@@ -25,8 +25,8 @@ de521f2687086cb358fb557a4a7ada3bc3c5fc132d673f0256b4573028ddba46
 
 ```text
 apps/web -> @pokepets/api-contracts/app
-apps/web/src/domains/monster-tamer -> authenticated inventory.list + top-level home portal
-React home portal -> same-origin /monster-tamer/ renderer via minimal postMessage
+apps/web/src/domains/monster-tamer -> authenticated inventory.list + direct /game home surface
+React game page -> same-origin /monster-tamer/ renderer via minimal postMessage
 /monster-tamer/ -> Phaser map rendering only, no API or session
 api -> apps/api/entrypoints
 apps/api/entrypoints -> gateway-specific contracts + http
@@ -39,7 +39,7 @@ contracts/ton -> TON blockchain
 
 禁止反向依赖、跨领域深层导入、浏览器访问 Supabase、Node 层组合多次资产写入。
 
-Monster Tamer 领域拥有启动卡片、全屏 Portal、`inventory.list` 只读查询适配和藏品详情覆盖层。静态渲染器不读取 FinalTMA session、不请求 API 或数据库；它只接受父页面注入的正式缩略图路径并返回被点击的 `template_id`。
+Monster Tamer 领域拥有 `/game` 直接家园、`inventory.list` 只读查询适配和藏品详情覆盖层。静态渲染器不读取 FinalTMA session、不请求 API 或数据库；它只接受父页面注入的正式缩略图路径并返回被点击的 `template_id`。
 
 ## 可信边界
 

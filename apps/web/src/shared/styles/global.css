@@ -5682,6 +5682,9 @@ input:focus {
   fill: currentColor;
   stroke-width: 0;
 }
+.app-shell .task-wheel {
+  margin-top: 10px;
+}
 .app-shell .task-filter-strip {
   display: flex;
   gap: 6px;

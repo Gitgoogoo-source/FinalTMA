@@ -14,7 +14,7 @@ Telegram WebApp 在 `createRoot().render()` 前按 `ready → expand → disable
 
 ## Monster Tamer 藏品展示家园
 
-`apps/web/src/domains/monster-tamer` 拥有游戏页启动卡片和顶层全屏家园。打开家园时通过现有 `useApiQuery("inventory.list")` 读取认证结果，只保留 `available > 0` 并按 `template_id` 去重；React 不提交写操作，也不直连 Supabase。
+`apps/web/src/domains/monster-tamer` 拥有游戏页内直接渲染的水上家园。进入 `/game` 时立即通过现有 `useApiQuery("inventory.list")` 读取认证结果，只保留 `available > 0` 并按 `template_id` 去重；React 不提交写操作，也不直连 Supabase。家园占用顶部资产栏与底部导航之间的全部可用视口，不存在启动卡片、进入按钮或顶层 Portal。
 
 `apps/web/public/monster-tamer` 是同源 Phaser 3.60.0 渲染文档。直接访问时只显示从游戏中心进入的门禁文案；它不读取 session、不请求 `/api/*`，只有在已登录 React 父页面通过同源 `postMessage` 注入最小展示数据后才创建 Phaser。
 
@@ -22,9 +22,9 @@ Telegram WebApp 在 `createRoot().render()` 前按 `ready → expand → disable
 
 每个不同模板生成一个宠物实体。宠物主体世界尺寸固定为 `56×56` 像素，在 `0.5` 倍镜头下显示为原宠物尺寸的 `50%`；阴影、点击区域和动画位移同步缩小 `50%`。Phaser 用占用格和预定格避免宠物互相重叠，以相邻格移动、翻转、浮动和压缩伸展表现活动；不包含 NPC、探索、遭遇、战斗、捕捉、队伍、背包、道具、菜单或音频。
 
-Phaser 恢复原开放 RPG 的 AxulArt 默认玩家精灵和四方向三帧动画。镜头固定 `0.5` 倍并平滑跟随人物，地图、人物与宠物以原 `1` 倍镜头的 `50%` 尺寸显示，横向和纵向可视范围各扩大到原来的 `2` 倍；运行时不注册拖动、滚轮、双指缩放、键盘、WASD、方向键、鼠标点地或摇杆输入。手机触摸点按可通行地面后，独立网格寻路系统避开静态障碍与宠物占用/预定格，场景只负责逐格动画和镜头适配。
+Phaser 恢复原开放 RPG 的 AxulArt 默认玩家精灵和四方向三帧动画。镜头固定 `0.5` 倍并平滑跟随人物，地图、人物与宠物以原 `1` 倍镜头的 `50%` 尺寸显示，横向和纵向可视范围各扩大到原来的 `2` 倍。手机触摸和桌面鼠标左键点按可通行地面时共用网格寻路；桌面 `W/A/S/D` 每次提交相邻一格，按住时连续逐格移动，移动中只缓存落地后的下一格。全部输入避开静态障碍与宠物占用/预定格；运行时不注册拖动、滚轮、双指缩放、方向键或摇杆输入，场景只负责逐格动画和镜头适配。
 
-点击宠物先暂停 Phaser，再把 `template_id` 返回 React；该点击不触发人物移动。React 用当前认证结果重新匹配，并通过共享的现有藏品详情组件在游戏上方打开只读详情。关闭详情后恢复同一 Phaser 场景状态，关闭整个家园后销毁该页面内存状态。
+点击宠物先暂停 Phaser，再把 `template_id` 返回 React；该点击不触发人物移动。React 用当前认证结果重新匹配，并通过共享的现有藏品详情组件在游戏上方打开只读详情。关闭详情后恢复同一 Phaser 场景状态，离开游戏页后销毁该页面内存状态。
 
 ## Functions
 

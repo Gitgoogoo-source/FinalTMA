@@ -1,53 +1,23 @@
-.monster-tamer-panel {
-  display: grid;
-  gap: 14px;
+.monster-home-page {
+  height: calc(
+    var(--tg-viewport-stable-height, 100dvh) - var(--shell-top-inset) -
+      var(--size-topbar) - var(--safe-bottom) - 80px
+  );
+  padding: 0;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.82);
+  background: #47aba9;
+  animation: none;
 }
 
-.monster-tamer-panel > p {
-  margin: 0;
-  color: var(--muted);
-  line-height: 1.6;
-}
-
-.monster-tamer-launch {
-  min-height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  border: 0;
-  border-radius: 14px;
-  color: #fff;
-  background: #327e68;
-  box-shadow: 0 8px 18px rgba(24, 93, 76, 0.24);
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.monster-tamer-launch > svg {
-  width: 18px;
-  height: 18px;
-  fill: currentColor;
-}
-
-.monster-tamer-launch:focus-visible,
-.monster-home-close:focus-visible,
 .monster-home-detail-close:focus-visible {
   outline: 3px solid rgba(255, 255, 255, 0.9);
   outline-offset: 3px;
 }
 
-.monster-home-portal.app-shell {
-  position: fixed;
-  z-index: 1000;
-  inset: 0;
+.monster-home-surface {
+  position: relative;
   width: 100%;
-  min-width: 0;
-  height: var(--tg-viewport-stable-height, 100dvh);
-  min-height: 0;
-  padding: 0;
+  height: 100%;
   overflow: hidden;
   color: #17354a;
   background: #47aba9;
@@ -64,36 +34,12 @@
   background: #47aba9;
 }
 
-.monster-home-close {
-  position: absolute;
-  z-index: 4;
-  top: calc(max(var(--safe-top), var(--content-safe-top)) + 10px);
-  left: calc(max(var(--safe-left), var(--content-safe-left)) + 10px);
-  min-height: 42px;
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 9px 13px;
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  border-radius: 999px;
-  color: #fff;
-  background: rgba(13, 55, 57, 0.82);
-  box-shadow: 0 8px 20px rgba(10, 48, 50, 0.22);
-  font-weight: 850;
-  cursor: pointer;
-}
-
-.monster-home-close svg {
-  width: 18px;
-  height: 18px;
-}
-
 .monster-home-status {
   position: absolute;
   z-index: 5;
   top: 50%;
   left: 50%;
-  width: min(86vw, 330px);
+  width: min(calc(100% - 32px), 330px);
   display: grid;
   justify-items: center;
   gap: 10px;
@@ -204,19 +150,9 @@
 }
 
 @media (max-width: 680px) {
-  .monster-home-close span {
-    display: none;
-  }
-
-  .monster-home-close {
-    width: 42px;
-    padding: 0;
-    justify-content: center;
-  }
-
   .monster-home-detail-backdrop {
     align-items: flex-end;
-    padding: calc(max(var(--safe-top), var(--content-safe-top)) + 58px)
+    padding: calc(max(var(--safe-top), var(--content-safe-top)) + 10px)
       calc(max(var(--safe-right), var(--content-safe-right)) + 10px)
       calc(max(var(--safe-bottom), var(--content-safe-bottom)) + 10px)
       calc(max(var(--safe-left), var(--content-safe-left)) + 10px);
@@ -232,8 +168,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .monster-home-portal *,
-  .monster-tamer-panel * {
+  .monster-home-surface * {
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
   }

@@ -23,6 +23,12 @@ const WORLD_SIZE = MAP_TILES * TILE_SIZE;
 const PET_SIZE = 56;
 const PLAYER_MOVE_DURATION = 320;
 const PET_TEXTURE_PREFIX = "PET:";
+const KEY_MOVEMENT = Object.freeze({
+  KeyW: { x: 0, y: -1 },
+  KeyA: { x: -1, y: 0 },
+  KeyS: { x: 0, y: 1 },
+  KeyD: { x: 1, y: 0 },
+});
 const ASSET_KEYS = Object.freeze({
   archery: TINY_SWORDS_ASSET_KEYS.ARCHERY,
   barracks: TINY_SWORDS_ASSET_KEYS.BARRACKS,
@@ -135,7 +141,8 @@ export class PetHomeScene extends Phaser.Scene {
     this.createPlayer();
     this.spawnPets();
     this.configureCamera();
-    this.configureTapMovement();
+    this.configurePointerMovement();
+    this.configureKeyboardMovement();
     postToParent({ type: "asset-error", failed: this.failedImages });
   }
 
@@ -379,6 +386,7 @@ export class PetHomeScene extends Phaser.Scene {
       goal: undefined,
       path: [],
       moving: false,
+      stepTarget: undefined,
     };
   }
 
@@ -389,9 +397,9 @@ export class PetHomeScene extends Phaser.Scene {
     camera.startFollow(this.player.sprite, true, 0.14, 0.14);
   }
 
-  configureTapMovement() {
+  configurePointerMovement() {
     this.input.on("pointerdown", (pointer) => {
-      if (!isTouchPointer(pointer)) return;
+      if (!isPrimaryMovePointer(pointer)) return;
       this.groundPointerDown = { x: pointer.x, y: pointer.y };
     });
     this.input.on("pointerup", (pointer) => {
@@ -400,7 +408,7 @@ export class PetHomeScene extends Phaser.Scene {
       if (
         !pointerDown ||
         this.suppressGroundTap ||
-        !isTouchPointer(pointer) ||
+        !isPrimaryMovePointer(pointer) ||
         Phaser.Math.Distance.Between(
           pointerDown.x,
           pointerDown.y,
@@ -414,17 +422,36 @@ export class PetHomeScene extends Phaser.Scene {
         x: Math.floor(world.x / TILE_SIZE),
         y: Math.floor(world.y / TILE_SIZE),
       };
-      const goalKey = cellKey(goal);
-      if (
-        !this.walkableKeys.has(goalKey) ||
-        this.occupied.has(goalKey) ||
-        this.reserved.has(goalKey)
-      )
-        return;
-      this.player.goal = goal;
-      this.player.path = [];
-      if (!this.player.moving) this.planPlayerPath();
+      this.setPlayerGoal(goal);
     });
+  }
+
+  configureKeyboardMovement() {
+    this.input.keyboard?.on("keydown", (event) => {
+      const movement = KEY_MOVEMENT[event.code];
+      if (!movement) return;
+      event.preventDefault();
+      const base = this.player.stepTarget ?? this.player.cell;
+      this.player.goal = undefined;
+      this.player.path = [];
+      this.setPlayerGoal({
+        x: base.x + movement.x,
+        y: base.y + movement.y,
+      });
+    });
+  }
+
+  setPlayerGoal(goal) {
+    const goalKey = cellKey(goal);
+    if (
+      !this.walkableKeys.has(goalKey) ||
+      this.occupied.has(goalKey) ||
+      this.reserved.has(goalKey)
+    )
+      return;
+    this.player.goal = goal;
+    this.player.path = [];
+    if (!this.player.moving) this.planPlayerPath();
   }
 
   planPlayerPath() {
@@ -462,6 +489,7 @@ export class PetHomeScene extends Phaser.Scene {
     const direction = directionBetween(this.player.cell, target);
     this.player.direction = direction;
     this.player.moving = true;
+    this.player.stepTarget = target;
     this.playerReserved = targetKey;
     if (this.reducedMotion) {
       this.player.sprite
@@ -481,6 +509,7 @@ export class PetHomeScene extends Phaser.Scene {
       onComplete: () => {
         this.player.cell = target;
         this.player.moving = false;
+        this.player.stepTarget = undefined;
         this.playerReserved = "";
         if (
           this.player.goal &&
@@ -519,4 +548,8 @@ function directionBetween(current, target) {
 function isTouchPointer(pointer) {
   const type = String(pointer.event?.pointerType ?? pointer.event?.type ?? "");
   return type === "touch" || type.startsWith("touch");
+}
+
+function isPrimaryMovePointer(pointer) {
+  return isTouchPointer(pointer) || pointer.event?.button === 0;
 }

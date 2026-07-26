@@ -265,7 +265,7 @@ def verify_monster_tamer_boundary() -> None:
         'sandbox="allow-scripts allow-same-origin"',
         'event.origin !== window.location.origin',
         'event.source !== iframe.current?.contentWindow',
-        "createPortal(",
+        'className="monster-home-surface"',
         "CollectionDetailShowcase",
         "resumeFrame(",
     )
@@ -279,13 +279,15 @@ def verify_monster_tamer_boundary() -> None:
         ".slice(",
         "localStorage",
         "sessionStorage",
+        "createPortal(",
+        "monster-tamer-launch",
     )
     present_launcher_terms = [
         value for value in forbidden_launcher_terms if value in launcher_source
     ]
     if missing_launcher_terms or present_launcher_terms:
         raise SystemExit(
-            "Monster Tamer authenticated launcher contract is incomplete: "
+            "Monster Tamer authenticated home contract is incomplete: "
             f"missing={missing_launcher_terms}, forbidden={present_launcher_terms}"
         )
 
@@ -331,13 +333,15 @@ def verify_monster_tamer_boundary() -> None:
         "this.occupied.add(targetKey)",
         "findGridPath(",
         "isTouchPointer(pointer)",
+        "isPrimaryMovePointer(pointer)",
+        "this.input.keyboard",
+        "KEY_MOVEMENT[event.code]",
         "const PET_SIZE = 56;",
         "camera.setZoom(0.5)",
         "camera.startFollow(",
         "PLAYER_ASSET_PATH",
     )
     forbidden_input_terms = (
-        "this.input.keyboard",
         "KeyCodes",
         'this.input.on("pointermove"',
         'this.input.on("wheel"',
@@ -374,16 +378,43 @@ def verify_monster_tamer_boundary() -> None:
         )
 
     game_page = GAME_PAGE.read_text(encoding="utf-8")
-    expected_panels = ("MonsterTamerPanel", "ExpeditionPanel", "WheelPanel")
-    stack = re.search(
-        r'<div className="game-stack">(.*?)</div>', game_page, re.DOTALL
-    )
-    rendered_panels = (
-        tuple(re.findall(r"<([A-Z]\w*)\s*/>", stack.group(1))) if stack else ()
-    )
-    if rendered_panels != expected_panels:
+    if (
+        "<MonsterTamerHome />" not in game_page
+        or "monster-home-page" not in game_page
+        or any(
+            value in game_page
+            for value in ("MonsterTamerPanel", "ExpeditionPanel", "WheelPanel")
+        )
+    ):
+        raise SystemExit("Game page must directly render only the Monster Tamer home")
+
+    tasks_view = (
+        WEB_ROOT / "domains/tasks/ui/TasksView.tsx"
+    ).read_text(encoding="utf-8")
+    tasks_page = (
+        WEB_ROOT / "pages/tasks/TasksPage.tsx"
+    ).read_text(encoding="utf-8")
+    task_highlight = (
+        WEB_ROOT / "workflows/task-navigation/TaskHighlightBanner.tsx"
+    ).read_text(encoding="utf-8")
+    payment_resume = (
+        WEB_ROOT
+        / "workflows/payment-recovery/useNavigationIntentResume.ts"
+    ).read_text(encoding="utf-8")
+    if (
+        "{afterCheckIn}" not in tasks_view
+        or tasks_view.index("{afterCheckIn}")
+        > tasks_view.index('id="task-filters"')
+        or "<TasksView afterCheckIn={<WheelPanel />} />" not in tasks_page
+        or 'key: "expedition"' in tasks_view
+        or 'task.category !== "expedition"' not in tasks_view
+        or "/tasks?focus=wheel" not in tasks_view
+        or 'task.category !== "expedition"' not in task_highlight
+        or "/tasks?focus=wheel" not in task_highlight
+        or "navigate(`/tasks?${params.toString()}`)" not in payment_resume
+    ):
         raise SystemExit(
-            "Game page must render Monster Tamer, Expedition, and Wheel in order"
+            "Tasks page must own Wheel and hide Expedition filters, cards, and highlights"
         )
 
     vercel = json.loads((ROOT / "vercel.json").read_text(encoding="utf-8"))
@@ -440,10 +471,11 @@ def verify_monster_tamer_boundary() -> None:
         "同一模板无论拥有多少只，地图上只显示一只",
         "不设置展示总数上限",
         "现有藏品详情视觉组件",
-        "手机屏幕点按",
+        "手机触摸或桌面鼠标左键点按",
+        "桌面 `W/A/S/D`",
         "主体世界尺寸固定为 `56 × 56` 像素",
         "镜头固定为 `0.5` 倍",
-        "桌面键盘、WASD、方向键、鼠标点地移动",
+        "方向键、地图拖动",
         "旧玩家控制器、NPC、对话、告示牌",
     )
     missing_decisions = [
@@ -754,7 +786,7 @@ def verify_documentation() -> None:
     monster_tamer_adr = ROOT / "docs/architecture/adr/ADR-011-monster-tamer-static-subapplication.md"
     required_monster_tamer_terms = (
         "/monster-tamer/",
-        "MonsterTamerPanel → ExpeditionPanel → WheelPanel",
+        "`/game` 直接渲染水上家园",
         "50×50",
         "两格连续水域",
         "inventory.list",
@@ -766,10 +798,11 @@ def verify_documentation() -> None:
         "现有藏品详情",
         "探索与战斗",
         "AxulArt",
-        "手机触摸点按",
+        "手机触摸和桌面鼠标左键点按",
+        "桌面 `W/A/S/D`",
         "主体世界尺寸固定为 `56×56` 像素",
         "镜头固定 `0.5` 倍",
-        "鼠标点地",
+        "按住时连续逐格移动",
         "不使用浏览器持久化",
     )
     monster_tamer_documentation = monster_tamer_adr.read_text(encoding="utf-8")

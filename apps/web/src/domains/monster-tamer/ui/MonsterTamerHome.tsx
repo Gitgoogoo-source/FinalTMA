@@ -1,7 +1,6 @@
 import type { RouteOutput } from "@pokepets/api-contracts/app";
-import { AlertCircle, ArrowLeft, RefreshCw, X } from "lucide-react";
+import { AlertCircle, RefreshCw, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { createPortal } from "react-dom";
 
 import { useApiQuery } from "../../../platform/query/index.ts";
 import { Button, CollectionDetailShowcase } from "../../../shared/ui/index.tsx";
@@ -25,10 +24,10 @@ type FrameMessage =
       message: string;
     };
 
-export function MonsterTamerHome({ onClose }: { onClose(): void }): ReactNode {
+export function MonsterTamerHome(): ReactNode {
   const query = useApiQuery("inventory.list");
   const iframe = useRef<HTMLIFrameElement>(null);
-  const closeButton = useRef<HTMLButtonElement>(null);
+  const [frameRevision, setFrameRevision] = useState(0);
   const [frameReady, setFrameReady] = useState(false);
   const [selected, setSelected] = useState<InventoryItem | null>(null);
   const [runtimeError, setRuntimeError] = useState("");
@@ -43,18 +42,6 @@ export function MonsterTamerHome({ onClose }: { onClose(): void }): ReactNode {
     ],
     [query.data?.items],
   );
-
-  useEffect(() => {
-    const rootOverflow = document.documentElement.style.overflow;
-    const bodyOverflow = document.body.style.overflow;
-    document.documentElement.style.overflow = "hidden";
-    document.body.style.overflow = "hidden";
-    closeButton.current?.focus();
-    return () => {
-      document.documentElement.style.overflow = rootOverflow;
-      document.body.style.overflow = bodyOverflow;
-    };
-  }, []);
 
   useEffect(() => {
     const receive = (event: MessageEvent<unknown>) => {
@@ -73,7 +60,7 @@ export function MonsterTamerHome({ onClose }: { onClose(): void }): ReactNode {
           (candidate) => candidate.template_id === message.templateId,
         );
         if (item) setSelected(item);
-        else setRuntimeError("藏品状态已经变化，请关闭家园后重新进入。");
+        else setRuntimeError("藏品状态已经变化，请重新加载家园。");
       }
     };
     window.addEventListener("message", receive);
@@ -100,18 +87,23 @@ export function MonsterTamerHome({ onClose }: { onClose(): void }): ReactNode {
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
+      if (event.key !== "Escape" || !selected) return;
       event.preventDefault();
-      if (selected) {
-        resumeFrame(iframe.current);
-        setSelected(null);
-      } else {
-        onClose();
-      }
+      resumeFrame(iframe.current);
+      setSelected(null);
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onClose, selected]);
+  }, [selected]);
+
+  const restartFrame = () => {
+    setFrameReady(false);
+    setSelected(null);
+    setRuntimeError("");
+    setFailedImages(0);
+    setFrameRevision((current) => current + 1);
+    void query.refetch();
+  };
 
   const content = query.isLoading ? (
     <HomeStatus
@@ -134,38 +126,24 @@ export function MonsterTamerHome({ onClose }: { onClose(): void }): ReactNode {
       title="家园暂时无法打开"
       detail={runtimeError}
       action={
-        <Button onClick={onClose}>
-          <ArrowLeft aria-hidden="true" />
-          返回游戏中心
+        <Button onClick={restartFrame}>
+          <RefreshCw aria-hidden="true" />
+          重新加载家园
         </Button>
       }
     />
   ) : null;
 
-  return createPortal(
-    <div
-      className="app-shell monster-home-portal"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Monster Tamer 藏品展示家园"
-    >
+  return (
+    <section className="monster-home-surface" aria-label="水上家园">
       <iframe
+        key={frameRevision}
         ref={iframe}
         className="monster-home-frame"
         src="/monster-tamer/?embedded=1"
         title="Monster Tamer 藏品展示家园地图"
         sandbox="allow-scripts allow-same-origin"
       />
-      <button
-        ref={closeButton}
-        className="monster-home-close"
-        type="button"
-        aria-label="关闭 Monster Tamer 家园"
-        onClick={onClose}
-      >
-        <ArrowLeft aria-hidden="true" />
-        <span>返回游戏</span>
-      </button>
       {content}
       {!content && items.length === 0 ? (
         <p className="monster-home-empty" role="status">
@@ -213,8 +191,7 @@ export function MonsterTamerHome({ onClose }: { onClose(): void }): ReactNode {
           </div>
         </div>
       ) : null}
-    </div>,
-    document.body,
+    </section>
   );
 }
 

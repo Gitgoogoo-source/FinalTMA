@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 
 import { ReferralPanel } from "../../domains/referral/index.ts";
 import { TasksView } from "../../domains/tasks/index.ts";
+import { WheelPanel } from "../../domains/wheel/index.ts";
 import { focusTaskTarget } from "../../shared/navigation/focusTaskTarget.ts";
 
 export function TasksPage(): ReactNode {
@@ -33,7 +34,7 @@ export function TasksPage(): ReactNode {
         <ReferralPanel />
       </section>
       <section className="task-section mission-section" aria-label="签到与任务">
-        <TasksView />
+        <TasksView afterCheckIn={<WheelPanel />} />
       </section>
     </main>
   );

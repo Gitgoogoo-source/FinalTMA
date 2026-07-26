@@ -33,6 +33,6 @@ export function useNavigationIntentResume(
       return;
     }
     params.set("count", String(order.intent.count));
-    navigate(`/game?${params.toString()}`);
+    navigate(`/tasks?${params.toString()}`);
   }, [navigate, onResume, orders]);
 }

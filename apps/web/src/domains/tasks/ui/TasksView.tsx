@@ -8,7 +8,6 @@ import {
   Gem,
   Link2,
   LockKeyhole,
-  Rocket,
   ShoppingBasket,
   Sparkles,
   UsersRound,
@@ -35,7 +34,9 @@ import { useOperationRegistry } from "../../../workflows/operation-recovery/inde
 
 type Task = RouteOutput<"tasks.get">["tasks"][number];
 type TaskCategory = Task["category"];
-type TaskFilter = "all" | TaskCategory;
+type VisibleTaskCategory = Exclude<TaskCategory, "expedition">;
+type VisibleTask = Task & { category: VisibleTaskCategory };
+type TaskFilter = "all" | VisibleTaskCategory;
 type TaskViewState = { category: TaskFilter; scrollY: number };
 
 const viewStates = new Map<string, TaskViewState>();
@@ -45,13 +46,12 @@ registerSensitiveStateResetter(() => {
   viewStates.clear();
 });
 
-const taskCategoryLabels: Record<TaskCategory, string> = {
+const taskCategoryLabels: Record<VisibleTaskCategory, string> = {
   gacha: "开盒",
   daily: "每日",
   social: "社交",
   market: "交易",
   inventory: "藏品",
-  expedition: "远征",
   album: "图鉴",
   wallet: "钱包",
   mint: "链上",
@@ -63,7 +63,6 @@ const taskFilters: ReadonlyArray<{ key: TaskFilter; label: string }> = [
   { key: "social", label: "社交" },
   { key: "market", label: "交易" },
   { key: "inventory", label: "藏品" },
-  { key: "expedition", label: "远征" },
   { key: "album", label: "图鉴" },
   { key: "wallet", label: "钱包" },
   { key: "mint", label: "链上" },
@@ -75,13 +74,12 @@ const taskStatusLabels: Record<Task["status"], string> = {
   claimed: "已领取",
 };
 
-const taskCategoryIcons: Record<TaskCategory, LucideIcon> = {
+const taskCategoryIcons: Record<VisibleTaskCategory, LucideIcon> = {
   gacha: Boxes,
   daily: CalendarCheck,
   social: UsersRound,
   market: ShoppingBasket,
   inventory: Sparkles,
-  expedition: Rocket,
   album: BookOpen,
   wallet: WalletCards,
   mint: Link2,
@@ -96,7 +94,11 @@ const checkInRewards = [
   { amount: "1", unit: "稀有盒资格", kind: "box" },
 ] as const;
 
-export function TasksView(): ReactNode {
+export function TasksView({
+  afterCheckIn,
+}: {
+  afterCheckIn: ReactNode;
+}): ReactNode {
   const tasks = useApiQuery("tasks.get");
   const { isBlocked, run } = useOperationRegistry();
   const navigate = useNavigate();
@@ -130,7 +132,9 @@ export function TasksView(): ReactNode {
       setClaimingCode(null);
     }
   };
-  const items = tasks.data?.tasks ?? [];
+  const items = (tasks.data?.tasks ?? []).filter(
+    (task): task is VisibleTask => task.category !== "expedition",
+  );
   const visibleItems =
     category === "all" || category === "daily"
       ? items
@@ -245,6 +249,7 @@ export function TasksView(): ReactNode {
           </div>
         </Card>
       </div>
+      <div className="task-wheel">{afterCheckIn}</div>
       <nav
         id="task-filters"
         className="task-filter-strip"
@@ -328,15 +333,12 @@ function goComplete(
   const routes: Partial<Record<Task["completion_action"], string>> = {
     gacha_single: "/?focus=gacha-single",
     gacha_ten: "/?focus=gacha-ten",
-    wheel: "/game?focus=wheel",
+    wheel: "/tasks?focus=wheel",
     market_buy: "/market?tab=buy&focus=market-buy",
     market_sell: "/market?tab=sell&focus=market-sell",
     market_manage: "/market?tab=manage&focus=market-manage",
     inventory_evolution: "/inventory?focus=evolution",
     inventory_decomposition: "/inventory?focus=decomposition",
-    expedition_normal: "/game?focus=expedition-normal",
-    expedition_intermediate: "/game?focus=expedition-intermediate",
-    expedition_advanced: "/game?focus=expedition-advanced",
     album: "/album",
     wallet: "/tasks?dialog=wallet",
     inventory_mint: "/inventory?focus=mint",

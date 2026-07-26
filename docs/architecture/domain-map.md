@@ -6,13 +6,13 @@
 | ---------------- | ------------------------------- | ---------------------------------------- | ---------------------------------------- | --------------------------------------------------- |
 | 1 正式目录       | album、gacha、inventory         | catalog                                  | catalog                                  | 70 条链、210 个模板、420 张运行时图及双路径一致     |
 | 2 盲盒保底       | gacha                           | gacha                                    | gacha                                    | 三档独立、仅付费推进、逐抽重置                      |
-| 3 远征           | expedition                      | expedition                               | expedition、inventory、economy           | 正好 3 个单位、跨日、领取原子释放                   |
+| 3 远征           | expedition（当前隐藏）          | expedition                               | expedition、inventory、economy           | 前端无入口，保留事务与存量数据边界                  |
 | 4 幸运转盘       | wheel、operation-recovery       | wheel                                    | wheel、economy、operations               | 1/10 次原子结算、结果明细与确认前持续恢复           |
 | 5 K-coin 充值    | topup、payment-recovery         | topup、stars-payment workflow            | payments、economy                        | 付款前可取消、提交后锁定、成功唯一交付、无充值冷却  |
 | 6 TON 钱包       | wallet                          | wallet                                   | onchain、identity                        | challenge、proof、防重放、地址唯一                  |
 | 7 Mint           | mint                            | mint、jobs                               | onchain、inventory、operations           | reserve、submit、reconcile、metadata 快照           |
 | 8 市场           | market                          | market                                   | market、inventory、economy、vip          | FIFO、整笔购买、逐卖家手续费和返还                  |
-| 9 任务与签到     | tasks                           | tasks                                    | tasks、economy                           | UTC 日、19 项任务、奖励唯一发放                     |
+| 9 任务与签到     | tasks、wheel                    | tasks                                    | tasks、economy                           | 16 项可见任务、转盘固定位置、奖励唯一发放           |
 | 10 分享邀请      | referral、session-bootstrap     | referral                                 | referral、identity、operations、payments | 服务端交接门禁、唯一绑定、有效充值、日/生命周期上限 |
 | 11 分解          | inventory、decomposition        | decomposition                            | 33_decomposition、inventory、economy     | 数量与 Fgems 在同一事务变化                         |
 | 12 官方价格      | market、inventory、gacha        | catalog                                  | catalog、market                          | 前端不提交价格，服务端读取目录                      |
@@ -24,7 +24,7 @@
 | 18 进化          | inventory、evolution            | evolution                                | 43_evolution、inventory、economy         | 只读预览、二次确认、原子结算、结果恢复与会话 NEW    |
 | 19 顶部资产栏    | app/shell                       | identity                                 | economy、vip、onchain                    | 真实资产回正、钱包和 VIP 状态同步                   |
 | 20 风控退款      | app/guards                      | refund-risk workflow、integrations、jobs | risk、payments、operations               | 重复退款无副作用、封禁空白门禁                      |
-| 21 Monster Tamer | monster-tamer、shared detail UI | inventory 只读查询                       | inventory 只读事实                       | 50×50 水上家园、触摸寻路、跟随镜头、漫游与详情暂停  |
+| 21 Monster Tamer | monster-tamer、shared detail UI | inventory 只读查询                       | inventory 只读事实                       | 50×50 水上家园、触摸/鼠标寻路、WASD、漫游与详情暂停 |
 
 ## 横切约束
 

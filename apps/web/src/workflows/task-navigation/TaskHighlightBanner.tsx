@@ -29,7 +29,9 @@ export function TaskHighlightBanner(): ReactNode {
   const tasks = useApiQuery("tasks.get");
   const referral = useApiQuery("referral.get");
   const { isBlocked } = useOperationRegistry();
-  const orderedTasks = tasks.data?.tasks ?? [];
+  const orderedTasks = (tasks.data?.tasks ?? []).filter(
+    (task) => task.category !== "expedition",
+  );
   const claimable = orderedTasks.find((task) => task.status === "claimable");
   const unfinished = orderedTasks.find(
     (task) => task.status === "not_started" || task.status === "in_progress",
@@ -87,7 +89,7 @@ export function TaskHighlightBanner(): ReactNode {
       focusTaskTarget(document.getElementById("task-referral"));
       return;
     }
-    navigate(highlight.kind === "wheel" ? "/game?focus=wheel" : "/album");
+    navigate(highlight.kind === "wheel" ? "/tasks?focus=wheel" : "/album");
   };
   return (
     <Card className={`task-highlight ${highlight.kind}`}>
@@ -147,7 +149,7 @@ function selectHighlight(
     return {
       kind: "wheel",
       title: "幸运转盘",
-      description: "前往游戏页查看今日转盘状态",
+      description: "在任务页查看今日转盘状态",
       action: "去转盘",
     };
   if (albumAvailable)
