@@ -9,6 +9,7 @@ import { Outlet, useLocation, useSearchParams } from "react-router-dom";
 
 import { refreshForegroundState } from "../../platform/query/index.ts";
 import { useSession } from "../../platform/session/store.ts";
+import { telegram } from "../../platform/telegram/index.ts";
 import { useNavigationIntent } from "../../workflows/payment-recovery/index.ts";
 import { AppRecoveryCoordinator } from "../recovery/AppRecoveryCoordinator.tsx";
 import { PersistentPages } from "../router/PersistentPages.tsx";
@@ -80,21 +81,35 @@ function useForegroundRefresh(
   const hiddenAt = useRef<number | null>(null);
   useEffect(() => {
     hiddenAt.current =
-      document.visibilityState === "hidden" ? Date.now() : null;
+      document.visibilityState === "hidden" || telegram()?.isActive === false
+        ? Date.now()
+        : null;
   }, [generation]);
   useEffect(() => {
-    const onVisibilityChange = () => {
-      if (document.visibilityState === "hidden") {
-        hiddenAt.current = Date.now();
-        return;
-      }
+    const markInactive = () => {
+      hiddenAt.current ??= Date.now();
+    };
+    const restore = () => {
       const started = hiddenAt.current;
       hiddenAt.current = null;
       if (started !== null && Date.now() - started >= 300_000)
         void refreshForegroundState(pathname);
     };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        markInactive();
+        return;
+      }
+      restore();
+    };
+    const app = telegram();
     document.addEventListener("visibilitychange", onVisibilityChange);
-    return () =>
+    app?.onEvent("deactivated", markInactive);
+    app?.onEvent("activated", restore);
+    return () => {
       document.removeEventListener("visibilitychange", onVisibilityChange);
+      app?.offEvent("deactivated", markInactive);
+      app?.offEvent("activated", restore);
+    };
   }, [generation, pathname]);
 }

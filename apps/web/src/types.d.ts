@@ -6,6 +6,7 @@ interface TelegramWebApp {
   };
   colorScheme: "light" | "dark";
   themeParams: Record<string, string>;
+  isActive?: boolean;
   isFullscreen?: boolean;
   safeAreaInset?: { top: number; right: number; bottom: number; left: number };
   contentSafeAreaInset?: {

@@ -218,6 +218,25 @@ def verify_web_boundaries() -> None:
         raise SystemExit(
             f"Session page lifecycle is incomplete: {missing_lifecycle_terms}"
         )
+    shell_source = (WEB_ROOT / "app/shell/AppShell.tsx").read_text(
+        encoding="utf-8"
+    )
+    missing_foreground_terms = [
+        value
+        for value in (
+            "refreshForegroundState",
+            "300_000",
+            '"deactivated"',
+            '"activated"',
+            '"visibilitychange"',
+        )
+        if value not in shell_source
+    ]
+    if missing_foreground_terms:
+        raise SystemExit(
+            "Foreground correction boundary is incomplete: "
+            f"{missing_foreground_terms}"
+        )
 
 
 def verify_monster_tamer_boundary() -> None:
