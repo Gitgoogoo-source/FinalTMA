@@ -24,7 +24,7 @@
 | 18 进化          | inventory、evolution            | evolution                                | 43_evolution、inventory、economy         | 只读预览、二次确认、原子结算、结果恢复与会话 NEW    |
 | 19 顶部资产栏    | app/shell                       | identity                                 | economy、vip、onchain                    | 真实资产回正、钱包和 VIP 状态同步                   |
 | 20 风控退款      | app/guards                      | refund-risk workflow、integrations、jobs | risk、payments、operations               | 重复退款无副作用、封禁空白门禁                      |
-| 21 Monster Tamer | monster-tamer launcher          | 无                                       | 无                                       | 公开静态运行、自由探索玩法、本地存档、零业务依赖    |
+| 21 Monster Tamer | monster-tamer launcher          | 无                                       | 无                                       | 直接进入世界、页面内存态、自由探索、零业务依赖      |
 
 ## 横切约束
 
@@ -35,4 +35,4 @@
 - 所有认证业务接口默认拒绝未完成入口交接，唯一例外是邀请绑定与受限的原邀请操作查询。
 - 所有前端异步结果写入前同时验证 session generation 与 `normal` 账号状态。
 - 真实开发环境与未来生产环境使用相同 commit、相同 migration、不同环境密钥。
-- Monster Tamer 只允许写入 `MONSTER_TAMER_DATA` 本地存档；launcher 只链接静态路径，静态源码不得导入或请求 FinalTMA session、API、业务资产与数据库。
+- Monster Tamer launcher 只链接静态路径；静态源码不得使用浏览器持久化，不得导入或请求 FinalTMA session、API、业务资产与数据库。

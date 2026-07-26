@@ -15,7 +15,7 @@ de521f2687086cb358fb557a4a7ada3bc3c5fc132d673f0256b4573028ddba46
 ## 运行时
 
 - Web：React、Vite、TypeScript，运行在 Telegram Mini App。
-- Monster Tamer：同一 Web 部署下的 `/monster-tamer/` 公开独立静态子应用，使用独立本地存档，不进入 React、API 或数据库业务链。
+- Monster Tamer：同一 Web 部署下的 `/monster-tamer/` 公开独立静态子应用，直接进入世界且仅使用页面生命周期内存态，不进入 React、API 或数据库业务链。
 - API：同一 Vercel Project 内的 `app`、`integrations`、`jobs` 三个 Node.js 24 Function 网关。
 - Database：Supabase Postgres 17，仅暴露 `api` schema；浏览器不加载 Supabase SDK。
 - Blockchain：TON Connect 验证钱包，Tact 合约完成 NFT Mint。
@@ -26,7 +26,7 @@ de521f2687086cb358fb557a4a7ada3bc3c5fc132d673f0256b4573028ddba46
 ```text
 apps/web -> @pokepets/api-contracts/app
 apps/web/src/domains/monster-tamer -> /monster-tamer/ ordinary link
-/monster-tamer/ -> self-contained static runtime + MONSTER_TAMER_DATA
+/monster-tamer/ -> self-contained static runtime + page-lifetime memory state
 api -> apps/api/entrypoints
 apps/api/entrypoints -> gateway-specific contracts + http
 apps/api/http -> injected route registry + handler map
@@ -80,4 +80,4 @@ Monster Tamer launcher 领域只拥有启动卡片与普通链接，不导入业
 - [开盒页运行期视图状态](adr/ADR-009-gacha-runtime-view-state.md)
 - [正式藏品图片资源](adr/ADR-010-catalog-image-assets.md)
 - [Monster Tamer 独立静态子应用](adr/ADR-011-monster-tamer-static-subapplication.md)
-- [进化顶层全屏确认页](adr/ADR-012-evolution-fullscreen-confirmation.md)
+- [进化顶层底部确认弹窗](adr/ADR-012-evolution-bottom-sheet-confirmation.md)

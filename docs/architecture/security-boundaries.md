@@ -16,6 +16,6 @@ Telegram webhook 使用 secret token，Cron 使用 `CRON_SECRET`。支付回调�
 
 `/monster-tamer/` 是公开静态子应用，不执行 FinalTMA 认证。它不接收 Telegram `initData`、access token、session generation、用户标识或账号状态，不导入 `@pokepets/api-contracts`，不请求 `/api/*`、Supabase 或 Catalog 资源，也不创建操作、账本、库存、任务或奖励记录。
 
-静态游戏只把本地进度写入 `MONSTER_TAMER_DATA`。本地怪物、道具、捕捉、经验和随机结果均不可信且只影响单机存档，不能证明或触发 FinalTMA 业务结果。Telegram SDK 只允许处理 ready、视口、安全区和返回按钮。
+静态游戏不使用浏览器持久化；怪物、道具、捕捉、经验和随机结果均不可信且只影响当前页面生命周期内存态，不能证明或触发 FinalTMA 业务结果。旧 `MONSTER_TAMER_DATA` 不读取、不写入、不迁移也不清除。Telegram SDK 只允许处理 ready、视口、安全区和返回按钮。
 
 游戏页 launcher 领域只允许 React、Lucide 和本领域相对导入；唯一动作是链接到 `/monster-tamer/`。架构门禁同时验证 launcher 无业务导入、静态源码无 FinalTMA API/session/资产引用、路由先于 SPA catch-all，以及游戏页组合顺序。

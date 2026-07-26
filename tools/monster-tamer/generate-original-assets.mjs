@@ -63,42 +63,6 @@ async function renderUi() {
     '<path d="M0 0 L7 5.5 L0 11 Z" fill="#ffffff"/><path d="M1 3 L4.5 5.5 L1 8 Z" fill="#8dd8d2"/>',
   );
   await renderSvg(
-    "ui/title/title_background.png",
-    2048,
-    2048,
-    `
-      <defs>
-        <radialGradient id="panel" cx="50%" cy="42%" r="65%">
-          <stop offset="0" stop-color="#2b7775" stop-opacity=".94"/>
-          <stop offset=".68" stop-color="#123c47" stop-opacity=".9"/>
-          <stop offset="1" stop-color="#071b24" stop-opacity=".76"/>
-        </radialGradient>
-      </defs>
-      <circle cx="1024" cy="1024" r="860" fill="url(#panel)" stroke="#e0b964" stroke-width="56"/>
-      <circle cx="1024" cy="1024" r="735" fill="none" stroke="#73d5c6" stroke-width="18" stroke-dasharray="42 28"/>
-      <path d="M1024 210 L1105 430 L1345 454 L1160 608 L1214 846 L1024 720 L834 846 L888 608 L703 454 L943 430 Z"
-        fill="#e0b964" fill-opacity=".22" stroke="#f3d58c" stroke-width="18"/>
-    `,
-  );
-  await renderSvg(
-    "ui/title/title_text.png",
-    694,
-    109,
-    `
-      <defs>
-        <linearGradient id="title" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0" stop-color="#fff0a9"/>
-          <stop offset=".52" stop-color="#efbb4f"/>
-          <stop offset="1" stop-color="#b76531"/>
-        </linearGradient>
-      </defs>
-      <text x="347" y="80" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="66"
-        font-weight="900" letter-spacing="2" fill="#102f39" stroke="#102f39" stroke-width="13">MONSTER TAMER</text>
-      <text x="347" y="80" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="66"
-        font-weight="900" letter-spacing="2" fill="url(#title)" stroke="#fff2bd" stroke-width="3">MONSTER TAMER</text>
-    `,
-  );
-  await renderSvg(
     "ui/monster-party/background.png",
     32,
     32,

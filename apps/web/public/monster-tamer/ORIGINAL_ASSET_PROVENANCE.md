@@ -17,7 +17,6 @@ below.
 | `exec-afb23e35-845c-460a-99c4-715a94af37c8.png` | Square pixel-art portrait of an original electric storm creature, isolated on a pure chroma-key background, no text, logo, existing character, or franchise reference.                                                       | `assets/images/monster-tamer/monsters/ignivolt.png`                                      |
 | `exec-c5fc1a6d-201c-43bb-962d-15d44e518407.png` | Square pixel-art portrait of an original aquatic guardian monster, isolated on a pure chroma-key background, no text, logo, existing character, or franchise reference.                                                      | `assets/images/monster-tamer/monsters/aquavalor.png`, compatibility alias `jivy.png`     |
 | `exec-55027fd6-b1e1-4262-bc41-54a7101236c1.png` | Square pixel-art portrait of an original frost saber-cat monster, isolated on a pure chroma-key background, no text, logo, existing character, or franchise reference.                                                       | `assets/images/monster-tamer/monsters/frostsaber.png`                                    |
-| `exec-6b7c5914-59a9-4bb8-bb68-8bd8d13521f5.png` | Wide original pixel-art title landscape with floating basalt islands, waterfalls, an observatory, ancient teal waystones, sunrise, no characters, logos, or text.                                                            | `assets/images/monster-tamer/ui/title/background.png`                                    |
 | `exec-a0d3f6aa-6cc9-40c0-a851-2236328660e1.png` | Wide original pixel-art forest battle clearing at night, circular stone arena, waterfall, blue luminous mushrooms, no characters, logos, or text.                                                                            | `assets/images/monster-tamer/battle-backgrounds/forest-background.png`                   |
 | `exec-cf026c02-3a0a-4ace-96ac-ca051a33e925.png` | Full-body original young monster-field researcher in teal and burnt orange, pixel-art game sprite illustration, pure chroma-key background, no existing character or franchise reference.                                    | `assets/images/monster-tamer/battle/trainer_youth_boy.png`                               |
 | `exec-1ab06ccd-2715-499e-8a1e-3d871efd192f.png` | Full-body original young monster-field researcher in violet exploration clothing with map and crystal compass, pixel-art game sprite illustration, pure chroma-key background, no existing character or franchise reference. | `assets/images/monster-tamer/battle/trainer_youth_girl.png`                              |
@@ -32,7 +31,6 @@ runtime and written as PNG with the required alpha channel.
 the remaining original artwork:
 
 - encounter grass, hidden collision and encounter tiles;
-- title panel and title lettering;
 - party and inventory backgrounds, bag, cursors;
 - capture ball, damaged capture ball; and
 - the application favicon.

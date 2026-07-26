@@ -16,7 +16,7 @@ Telegram WebApp 在 `createRoot().render()` 前按 `ready → expand → disable
 
 `apps/web/src/domains/monster-tamer` 只拥有游戏页启动卡片。卡片通过普通链接打开 `/monster-tamer/`，游戏页组合顺序固定为 `Monster Tamer → Expedition → Wheel`；launcher 不调用 API，也不导入其他业务领域。
 
-`apps/web/public/monster-tamer` 是独立 HTML、CSS、JavaScript、数据与资源树。Phaser 3.60.0、Web Font Loader 1.6.28 和 Tweakpane 4.0.3 从自身 `vendor` 目录加载；运行时不进入 React bundle。唯一持久化键为 `MONSTER_TAMER_DATA`，不跨设备同步，不写入 FinalTMA session、查询缓存、API、数据库或 Catalog 资产。旧存档缺少当前世界版本时只把地图位置迁移到新 `main_1` 安全出生点，继续保留设置、队伍、背包、拾取状态、NPC 状态和其他玩法进度，并在首次加载后立即写回同一个键。
+`apps/web/public/monster-tamer` 是独立 HTML、CSS、JavaScript、数据与资源树。Phaser 3.60.0、Web Font Loader 1.6.28 和 Tweakpane 4.0.3 从自身 `vendor` 目录加载；运行时不进入 React bundle。静态资源预加载完成后直接启动 `main_1`，不注册标题场景或设置场景，不提供新游戏、继续游戏和手动保存入口。游戏状态只位于当前页面生命周期内存中；运行时不使用浏览器持久化，不读取、写入、迁移或清除旧 `MONSTER_TAMER_DATA`，也不写入 FinalTMA session、查询缓存、API、数据库或 Catalog 资产。
 
 世界运行时只加载 `120×64`、`64px/格` 的 `main_1` tilemap，水体底色固定为 `#47ABA9`。`Water-Scenery`、`Flat-Ground`、`Shadow-Level-1`、`Elevation-Level-1`、`Shadow-Level-2`、`Elevation-Level-2` 和 `Scenery` 构成三层海岛可见世界，`Collision` 提供静态阻挡；地图不存在室内入口或 `Scene-Transitions`。西北城堡、东北森林高地、中央交叉口、东部村落、西部岸塔、南部水湾和独立塔岛位于同一世界；152 个陆地景观对象和 38 个水域景观对象保证主要视野持续出现高差、植被、建筑或水岸。原有 10 个 NPC、6 个 Item、9 个 Sign 和三个 Encounter 区域继续使用原身份。地图地形只绑定由 Tiny Swords Free Pack 的 `Tilemap_color1` 生成的 `528×528` 紧凑图集，建筑只加载 `Blue Buildings`，其余 scenery 只加载白名单内的树、树桩、灌木、岩石、水中岩石、水泡沫和阴影；人物、动物、资源、工具、FX、UI、云、橡皮鸭、Aseprite、其他阵营颜色和 Enemy Pack 均不进入运行时，也不访问第三方资源。
 

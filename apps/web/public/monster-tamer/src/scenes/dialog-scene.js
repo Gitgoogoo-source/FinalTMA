@@ -3,10 +3,8 @@ import { SCENE_KEYS } from './scene-keys.js';
 import { BaseScene } from './base-scene.js';
 import { KENNEY_FUTURE_NARROW_FONT_NAME } from '../assets/font-keys.js';
 import { animateText } from '../utils/text-utils.js';
-import { DATA_MANAGER_STORE_KEYS, dataManager } from '../utils/data-manager.js';
 import { UI_ASSET_KEYS } from '../assets/asset-keys.js';
-import { MENU_COLOR } from '../config.js';
-import { exhaustiveGuard } from '../utils/guard.js';
+import { DIALOG_TEXT_SPEED, MENU_COLOR } from '../config.js';
 
 /** @type {Phaser.Types.GameObjects.Text.TextStyle} */
 const UI_TEXT_STYLE = Object.freeze({
@@ -71,11 +69,10 @@ export class DialogScene extends BaseScene {
     this.#textAnimationPlaying = false;
     this.#messagesToShow = [];
 
-    const menuColor = this.#getMenuColorsFromDataManager();
     this.#panel = this.add
-      .rectangle(0, 0, this.#width, this.#height, menuColor.main, 0.9)
+      .rectangle(0, 0, this.#width, this.#height, MENU_COLOR.main, 0.9)
       .setOrigin(0)
-      .setStrokeStyle(8, menuColor.border, 1);
+      .setStrokeStyle(8, MENU_COLOR.border, 1);
     this.#container = this.add.container(0, 0, [this.#panel]);
     this.#uiText = this.add.text(18, 12, '', {
       ...UI_TEXT_STYLE,
@@ -120,7 +117,7 @@ export class DialogScene extends BaseScene {
 
     this.#uiText.setText('').setAlpha(1);
     animateText(this, this.#uiText, this.#messagesToShow.shift(), {
-      delay: dataManager.getAnimatedTextSpeed(),
+      delay: DIALOG_TEXT_SPEED,
       callback: () => {
         this.#textAnimationPlaying = false;
       },
@@ -171,25 +168,4 @@ export class DialogScene extends BaseScene {
     }
   }
 
-  /**
-   * @returns {{ main: number; border: number}}
-   */
-  #getMenuColorsFromDataManager() {
-    /** @type {import('../common/options.js').MenuColorOptions} */
-    const chosenMenuColor = dataManager.store.get(DATA_MANAGER_STORE_KEYS.OPTIONS_MENU_COLOR);
-    if (chosenMenuColor === undefined) {
-      return MENU_COLOR[1];
-    }
-
-    switch (chosenMenuColor) {
-      case 0:
-        return MENU_COLOR[1];
-      case 1:
-        return MENU_COLOR[2];
-      case 2:
-        return MENU_COLOR[3];
-      default:
-        exhaustiveGuard(chosenMenuColor);
-    }
-  }
 }

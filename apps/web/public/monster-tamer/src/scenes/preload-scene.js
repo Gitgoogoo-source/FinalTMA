@@ -3,13 +3,11 @@ import {
   BATTLE_ASSET_KEYS,
   BATTLE_BACKGROUND_ASSET_KEYS,
   CHARACTER_ASSET_KEYS,
-  EXTERNAL_LINKS_ASSET_KEYS,
   DATA_ASSET_KEYS,
   HEALTH_BAR_ASSET_KEYS,
   INVENTORY_ASSET_KEYS,
   MONSTER_ASSET_KEYS,
   MONSTER_PARTY_ASSET_KEYS,
-  TITLE_ASSET_KEYS,
   UI_ASSET_KEYS,
   WORLD_ASSET_KEYS,
   AUDIO_ASSET_KEYS,
@@ -19,10 +17,8 @@ import { SCENE_KEYS } from './scene-keys.js';
 import { KENNEY_FUTURE_NARROW_FONT_NAME } from '../assets/font-keys.js';
 import { WebFontFileLoader } from '../assets/web-font-file-loader.js';
 import { DataUtils } from '../utils/data-utils.js';
-import { dataManager } from '../utils/data-manager.js';
-import { SHOW_SOCIAL_LINKS } from '../config.js';
 import { BaseScene } from './base-scene.js';
-import { setGlobalSoundSettings } from '../utils/audio-utils.js';
+import { initializeGlobalSound } from '../utils/audio-utils.js';
 import {
   TINY_SWORDS_IMAGE_ASSETS,
   TINY_SWORDS_SPRITESHEET_ASSETS,
@@ -46,20 +42,6 @@ export class PreloadScene extends BaseScene {
     const pimenAssetPath = 'assets/images/pimen';
     const axulArtAssetPath = 'assets/images/axulart';
     const pbGamesAssetPath = 'assets/images/parabellum-games';
-
-    // external social links assets
-    if (SHOW_SOCIAL_LINKS) {
-      this.load.image(
-        EXTERNAL_LINKS_ASSET_KEYS.GITHUB_BANNER,
-        'assets/images/external-social/forkme_right_red_aa0000.webp'
-      );
-      this.load.image(
-        EXTERNAL_LINKS_ASSET_KEYS.YOUTUBE_BUTTON,
-        'assets/images/external-social/WatchonYouTube-white-3xPNG.png'
-      );
-      this.load.image(EXTERNAL_LINKS_ASSET_KEYS.LEARN_MORE_BACKGROUND, 'assets/images/external-social/blank.png');
-      this.load.image(EXTERNAL_LINKS_ASSET_KEYS.YOUTUBE_THUMB_NAIL, 'assets/images/external-social/thumbnail.jpeg');
-    }
 
     // battle backgrounds
     this.load.image(
@@ -120,11 +102,6 @@ export class PreloadScene extends BaseScene {
     this.load.image(UI_ASSET_KEYS.CURSOR, `${monsterTamerAssetPath}/ui/cursor.png`);
     this.load.image(UI_ASSET_KEYS.CURSOR_WHITE, `${monsterTamerAssetPath}/ui/cursor_white.png`);
     this.load.image(UI_ASSET_KEYS.MENU_BACKGROUND, `${kenneysAssetPath}/ui-space-expansion/glassPanel.png`);
-    this.load.image(
-      UI_ASSET_KEYS.MENU_BACKGROUND_PURPLE,
-      `${kenneysAssetPath}/ui-space-expansion/glassPanel_purple.png`
-    );
-    this.load.image(UI_ASSET_KEYS.MENU_BACKGROUND_GREEN, `${kenneysAssetPath}/ui-space-expansion/glassPanel_green.png`);
     this.load.image(UI_ASSET_KEYS.BLUE_BUTTON, `${kenneysAssetPath}/ui-pack/blue_button01.png`);
     this.load.image(UI_ASSET_KEYS.BLUE_BUTTON_SELECTED, `${kenneysAssetPath}/ui-pack/blue_button00.png`);
 
@@ -186,11 +163,6 @@ export class PreloadScene extends BaseScene {
       frameHeight: 16,
     });
 
-    // ui components for title
-    this.load.image(TITLE_ASSET_KEYS.BACKGROUND, `${monsterTamerAssetPath}/ui/title/background.png`);
-    this.load.image(TITLE_ASSET_KEYS.PANEL, `${monsterTamerAssetPath}/ui/title/title_background.png`);
-    this.load.image(TITLE_ASSET_KEYS.TITLE, `${monsterTamerAssetPath}/ui/title/title_text.png`);
-
     // ui components for monster party
     this.load.image(
       MONSTER_PARTY_ASSET_KEYS.PARTY_BACKGROUND,
@@ -212,7 +184,6 @@ export class PreloadScene extends BaseScene {
     this.load.setPath('assets/audio/xDeviruchi');
     this.load.audio(AUDIO_ASSET_KEYS.MAIN, 'And-the-Journey-Begins.mp3');
     this.load.audio(AUDIO_ASSET_KEYS.BATTLE, 'Decisive-Battle.mp3');
-    this.load.audio(AUDIO_ASSET_KEYS.TITLE, 'Title-Theme.mp3');
     this.load.setPath('assets/audio/leohpaz');
     this.load.audio(AUDIO_ASSET_KEYS.CLAW, '03_Claw_03.wav');
     this.load.audio(AUDIO_ASSET_KEYS.GRASS, '03_Step_grass_03.wav');
@@ -229,12 +200,10 @@ export class PreloadScene extends BaseScene {
     // create animations from json file
     this.#createAnimations();
 
-    // attempt to populate data manager with saved data and initialize
-    dataManager.loadData();
-    // set global audio based on data manager settings
-    setGlobalSoundSettings(this);
+    // initialize the fixed runtime audio state before entering the world
+    initializeGlobalSound(this);
 
-    this.scene.start(SCENE_KEYS.TITLE_SCENE);
+    this.scene.start(SCENE_KEYS.WORLD_SCENE);
   }
 
   /**

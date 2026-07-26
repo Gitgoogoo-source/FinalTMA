@@ -157,11 +157,9 @@ export class WorldScene extends BaseScene {
       dataManager.store.set(DATA_MANAGER_STORE_KEYS.PLAYER_DIRECTION, DIRECTION.UP);
     }
 
-    // During a new game flow, find the players starting location from the map data, and update
-    // the data manager. Originally, this was a hard coded value, and was updated to be dynamic
-    // based on our level data in Tiled.
-    const isNewGame = !(dataManager.store.get(DATA_MANAGER_STORE_KEYS.GAME_STARTED) || false);
-    if (isNewGame) {
+    // Initialize the page-lifetime world state from the map on the first direct entry.
+    const isFirstWorldEntry = !(dataManager.store.get(DATA_MANAGER_STORE_KEYS.WORLD_INITIALIZED) || false);
+    if (isFirstWorldEntry) {
       const map = this.#getLevelTileMap(WORLD_ASSET_KEYS.MAIN_1_LEVEL);
       const playerSpawnLocationObject = map.getObjectLayer(OBJECT_LAYER_NAMES.PLAYER_SPAWN_LOCATION).objects[0];
       const starterMonster = DataUtils.getMonsterById(this, 1);
@@ -317,7 +315,7 @@ export class WorldScene extends BaseScene {
         }
       }
     });
-    dataManager.store.set(DATA_MANAGER_STORE_KEYS.GAME_STARTED, true);
+    dataManager.store.set(DATA_MANAGER_STORE_KEYS.WORLD_INITIALIZED, true);
 
     // add audio
     playBackgroundMusic(this, AUDIO_ASSET_KEYS.MAIN);
@@ -397,12 +395,6 @@ export class WorldScene extends BaseScene {
 
       if (wasSpaceKeyPressed) {
         this.#menu.handlePlayerInput('OK');
-
-        if (this.#menu.selectedMenuOption === 'SAVE') {
-          this.#menu.hide();
-          dataManager.saveData();
-          this.#dialogUi.showDialogModal(['Game progress has been saved']);
-        }
 
         if (this.#menu.selectedMenuOption === 'MONSTERS') {
           // at start of the game, handle when we have no monsters in our party

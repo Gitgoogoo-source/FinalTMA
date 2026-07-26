@@ -42,7 +42,7 @@ pnpm manifest:check:production
 
 `pnpm catalog:generate-assets` 要求 210 张母版均为 768×768 WebP，并生成 256×256 缩略图和 768×768 详情图。`pnpm assets:check:catalog` 强制核对 210 个 `template_id`、两个路径、420 个文件、WebP 格式、尺寸、单文件体积、50 MiB 总上限、内容唯一性和正式 checksum。`APP_ENV=development pnpm build` 在生成 `apps/web/dist` 后继续核对构建复制结果；`APP_ENV=test` 与 `APP_ENV=production` 额外拒绝 Telegram 分享图和 TON Connect 图标的已知开发 checksum。
 
-`pnpm architecture:check` 同时验证 Monster Tamer 静态入口、launcher 纯链接、游戏页顺序、独立本地存档、业务引用为零、Vercel 路由优先级、唯一 `120×64` `main_1` 地图、152 个陆地景观对象、38 个水域景观对象、旧地图删除、图层和对象坐标契约、虚拟摇杆、WASD、平滑相机，以及 Tiny Swords 32 文件白名单、每个源文件 SHA-256、运行时文件集和本地条款记录。`APP_ENV=development pnpm build` 后必须确认 `apps/web/dist/monster-tamer` 与源静态树文件清单一致；缺失任一脚本、样式、字体、音频、地图、数据、图片、许可证或第三方声明时停止发布。
+`pnpm architecture:check` 同时验证 Monster Tamer 静态入口、launcher 纯链接、游戏页顺序、预加载后直接进入世界、标题/设置/保存路径已删除、浏览器持久化为零、业务引用为零、Vercel 路由优先级、唯一 `120×64` `main_1` 地图、152 个陆地景观对象、38 个水域景观对象、旧地图删除、图层和对象坐标契约、虚拟摇杆、WASD、平滑相机，以及 Tiny Swords 32 文件白名单、每个源文件 SHA-256、运行时文件集和本地条款记录。`APP_ENV=development pnpm build` 后必须确认 `apps/web/dist/monster-tamer` 与源静态树文件清单一致；缺失任一脚本、样式、字体、音频、地图、数据、图片、许可证或第三方声明时停止发布。
 
 生成正式 TON Connect manifest：
 

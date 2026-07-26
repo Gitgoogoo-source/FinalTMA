@@ -9,6 +9,7 @@ import { animateText } from '../../../utils/text-utils.js';
 import { dataManager } from '../../../utils/data-manager.js';
 import { SCENE_KEYS } from '../../../scenes/scene-keys.js';
 import { ITEM_CATEGORY } from '../../../types/typedef.js';
+import { DIALOG_TEXT_SPEED } from '../../../config.js';
 
 const BATTLE_MENU_CURSOR_POS = Object.freeze({
   x: 42,
@@ -278,7 +279,7 @@ export class BattleMenu {
     }
 
     animateText(this.#scene, this.#battleTextGameObjectLine1, message, {
-      delay: dataManager.getAnimatedTextSpeed(),
+      delay: DIALOG_TEXT_SPEED,
       callback: () => {
         this.#waitingForPlayerInput = false;
         if (callback) {
@@ -348,7 +349,7 @@ export class BattleMenu {
 
     this.#queuedMessageAnimationPlaying = true;
     animateText(this.#scene, this.#battleTextGameObjectLine1, messageToDisplay, {
-      delay: dataManager.getAnimatedTextSpeed(),
+      delay: DIALOG_TEXT_SPEED,
       callback: () => {
         this.playInputCursorAnimation();
         this.#waitingForPlayerInput = true;

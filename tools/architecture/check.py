@@ -43,7 +43,6 @@ REQUIRED_PATHS = (
     "apps/web/public/monster-tamer/src/scenes/battle-scene.js",
     "apps/web/public/monster-tamer/src/scenes/monster-party-scene.js",
     "apps/web/public/monster-tamer/src/scenes/inventory-scene.js",
-    "apps/web/public/monster-tamer/src/scenes/options-scene.js",
     "apps/web/public/monster-tamer/assets/data/monsters.json",
     "apps/web/public/monster-tamer/assets/data/encounters.json",
     "apps/web/public/monster-tamer/assets/data/items.json",
@@ -267,42 +266,51 @@ def verify_monster_tamer_boundary() -> None:
     if used_network_primitives:
         raise SystemExit(f"Monster Tamer static source performs network calls: {used_network_primitives}")
 
-    data_manager_path = STATIC_GAME_ROOT / "src/utils/data-manager.js"
-    data_manager = data_manager_path.read_text(encoding="utf-8")
-    if data_manager.count("const LOCAL_STORAGE_KEY = 'MONSTER_TAMER_DATA';") != 1:
-        raise SystemExit("Monster Tamer must define MONSTER_TAMER_DATA as its only storage key")
-    required_storage_calls = (
-        "localStorage.getItem(LOCAL_STORAGE_KEY)",
-        "localStorage.setItem(LOCAL_STORAGE_KEY",
+    removed_feature_paths = (
+        "src/scenes/title-scene.js",
+        "src/scenes/options-scene.js",
+        "src/common/options.js",
+        "src/world-menu.js",
+        "assets/images/monster-tamer/ui/title/background.png",
+        "assets/images/monster-tamer/ui/title/title_background.png",
+        "assets/images/monster-tamer/ui/title/title_text.png",
+        "assets/images/kenneys-assets/ui-space-expansion/glassPanel_green.png",
+        "assets/images/kenneys-assets/ui-space-expansion/glassPanel_purple.png",
+        "assets/audio/xDeviruchi/Title-Theme.mp3",
     )
-    missing_storage_calls = [value for value in required_storage_calls if value not in data_manager]
-    if missing_storage_calls:
-        raise SystemExit(f"Monster Tamer local save contract is incomplete: {missing_storage_calls}")
-    required_world_migration = (
-        "const WORLD_VERSION = 4;",
-        "const migratedFromPreviousWorld = savedWorldVersion < WORLD_VERSION;",
-        "if (savedWorldVersion > WORLD_VERSION)",
-        "parsedData.player.position = { ...WORLD_SPAWN_POSITION };",
-        "parsedData.player.direction = DIRECTION.DOWN;",
-        "area: 'main_1'",
-        "if (migratedFromPreviousWorld) {\n        this.saveData();",
+    remaining_removed_features = [
+        path for path in removed_feature_paths if (STATIC_GAME_ROOT / path).exists()
+    ]
+    if remaining_removed_features:
+        raise SystemExit(
+            f"Monster Tamer removed menu feature files remain: {remaining_removed_features}"
+        )
+    forbidden_persistence = (
+        "localStorage",
+        "sessionStorage",
+        "indexedDB",
+        "document.cookie",
+        "caches.open(",
+        "MONSTER_TAMER_DATA",
+        ".saveData(",
+        ".loadData(",
+        ".startNewGame(",
     )
-    missing_world_migration = [
-        value for value in required_world_migration if value not in data_manager
-    ]
-    if missing_world_migration:
+    present_persistence = [value for value in forbidden_persistence if value in static_source]
+    if present_persistence:
         raise SystemExit(
-            f"Monster Tamer retired-map save migration is incomplete: {missing_world_migration}"
+            f"Monster Tamer runtime still contains browser persistence: {present_persistence}"
         )
-    storage_owners = [
-        path
-        for path in static_files
-        if "localStorage" in path.read_text(encoding="utf-8") and path != data_manager_path
-    ]
-    if storage_owners or any(value in static_source for value in ("sessionStorage", "document.cookie", "indexedDB")):
-        raise SystemExit(
-            f"Monster Tamer may persist only through its data manager: {[relative(path) for path in storage_owners]}"
-        )
+    preload = (STATIC_GAME_ROOT / "src/scenes/preload-scene.js").read_text(encoding="utf-8")
+    world_menu = (STATIC_GAME_ROOT / "src/world/world-menu.js").read_text(encoding="utf-8")
+    if (
+        preload.count("this.scene.start(SCENE_KEYS.WORLD_SCENE);") != 1
+        or "TITLE_SCENE" in static_source
+        or "OPTIONS_SCENE" in static_source
+        or "MENU_OPTIONS.SAVE" in world_menu
+        or "MENU_OPTIONS.OPTIONS" in world_menu
+    ):
+        raise SystemExit("Monster Tamer must enter the world directly without title, options, or save menus")
 
     index = (STATIC_GAME_ROOT / "index.html").read_text(encoding="utf-8")
     required_local_runtime = (
@@ -449,7 +457,6 @@ def verify_monster_tamer_boundary() -> None:
     required_music = (
         "And-the-Journey-Begins.mp3",
         "Decisive-Battle.mp3",
-        "Title-Theme.mp3",
     )
     music_directory = STATIC_GAME_ROOT / "assets/audio/xDeviruchi"
     missing_music = [name for name in required_music if not (music_directory / name).is_file()]
@@ -501,7 +508,8 @@ def verify_monster_tamer_boundary() -> None:
         "#47ABA9",
         "WASD",
         "虚拟摇杆",
-        "MONSTER_TAMER_DATA",
+        "点击“进入游戏”后直接显示",
+        "不使用 `localStorage`",
         "不新增采集系统、NPC、怪物",
     )
     missing_map_decisions = [
@@ -1127,7 +1135,6 @@ def verify_documentation() -> None:
     monster_tamer_adr = ROOT / "docs/architecture/adr/ADR-011-monster-tamer-static-subapplication.md"
     required_monster_tamer_terms = (
         "/monster-tamer/",
-        "MONSTER_TAMER_DATA",
         "MonsterTamerPanel → ExpeditionPanel → WheelPanel",
         "120×64",
         "Tilemap_color1",
@@ -1136,6 +1143,8 @@ def verify_documentation() -> None:
         "36.8 秒",
         "WASD",
         "虚拟摇杆",
+        "直接启动 `main_1`",
+        "不使用浏览器持久化",
     )
     monster_tamer_documentation = monster_tamer_adr.read_text(encoding="utf-8")
     missing_monster_tamer_terms = [

@@ -9,7 +9,6 @@ import { Background } from '../battle/background.js';
 import { ATTACK_TARGET, AttackManager } from '../battle/attacks/attack-manager.js';
 import { createSceneTransition } from '../utils/scene-transition.js';
 import { DATA_MANAGER_STORE_KEYS, dataManager } from '../utils/data-manager.js';
-import { BATTLE_SCENE_OPTIONS } from '../common/options.js';
 import { BaseScene } from './base-scene.js';
 import { DataUtils } from '../utils/data-utils.js';
 import { AUDIO_ASSET_KEYS, BATTLE_ASSET_KEYS } from '../assets/asset-keys.js';
@@ -138,7 +137,7 @@ export class BattleScene extends BaseScene {
     this.#activeEnemyAttackIndex = -1;
     this.#activePlayerMonsterPartyIndex = 0;
     this.#activeEnemyMonsterPartyIndex = 0;
-    this.#skipAnimations = true;
+    this.#skipAnimations = false;
     this.#playerKnockedOut = false;
     this.#switchingActiveMonster = false;
     this.#activeMonsterKnockedOut = false;
@@ -146,11 +145,6 @@ export class BattleScene extends BaseScene {
     this.#availableMonstersUiContainerForNpc = undefined;
     this.#enemyBattleNpc = undefined;
 
-    /** @type {import('../common/options.js').BattleSceneMenuOptions | undefined} */
-    const chosenBattleSceneOption = dataManager.store.get(DATA_MANAGER_STORE_KEYS.OPTIONS_BATTLE_SCENE_ANIMATIONS);
-    if (chosenBattleSceneOption === undefined || chosenBattleSceneOption === BATTLE_SCENE_OPTIONS.ON) {
-      this.#skipAnimations = false;
-    }
   }
 
   /**

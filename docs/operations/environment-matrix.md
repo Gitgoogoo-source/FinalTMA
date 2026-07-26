@@ -16,7 +16,7 @@
 
 当前真实开发部署固定启用 Web、API、Supabase、Telegram webhook、支付对账、幂等清理和不变量监控。TON 配置为空，`reconcile-mints` 不进入 Vercel Cron；钱包验签、Mint permit 和 Mint 对账只有在后续完成 testnet Collection 部署并写入全部真实 TON 配置后才启用。非 TON API 只解析自身所需配置，不接受任何 TON 占位值。
 
-Monster Tamer 在三个环境中均由同一 Git commit 内的 `apps/web/public/monster-tamer` 提供，不使用环境变量、FinalTMA session、API、Supabase、Catalog、支付或链上配置。它只在当前浏览器使用 `MONSTER_TAMER_DATA` 保存进度；本地、真实开发和真实生产之间不迁移、不同步该存档。
+Monster Tamer 在三个环境中均由同一 Git commit 内的 `apps/web/public/monster-tamer` 提供，不使用环境变量、FinalTMA session、API、Supabase、Catalog、支付或链上配置。它只使用当前页面生命周期内存态，不使用浏览器持久化；本地、真实开发和真实生产之间不存在游戏状态迁移或同步。
 
 Supabase Data API 的 Exposed schemas 固定为 `public,graphql_public,api`。Vercel Functions 只以 `service_role` 调用 `api` schema RPC；浏览器不持有 Supabase key，也不直接访问任何 Supabase schema。业务表 schema 不加入 Exposed schemas。
 
