@@ -1,11 +1,11 @@
 import { useState, type ReactNode } from "react";
-import { useSearchParams } from "react-router-dom";
 
 import { MarketView } from "../../domains/market/index.ts";
+import { usePageSearchParams } from "../../shared/navigation/pageActivity.tsx";
 import { VipBanner, VipDialog } from "../../domains/vip/index.ts";
 
 export function MarketPage(): ReactNode {
-  const [params, setParams] = useSearchParams();
+  const [params, setParams] = usePageSearchParams();
   const requested = params.get("vip") === "details";
   const [manuallyOpen, setManuallyOpen] = useState(false);
   const vipOpen = requested || manuallyOpen;

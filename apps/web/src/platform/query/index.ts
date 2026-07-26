@@ -88,6 +88,49 @@ export async function refreshUserState(): Promise<void> {
   await queryClient.invalidateQueries({ queryKey: [getSession()?.generation] });
 }
 
+const topAssetRouteIds = [
+  "identity.bootstrap",
+  "vip.get",
+  "wallet.get",
+] as const;
+
+export async function refreshTopAssetSummary(): Promise<boolean> {
+  const generation = getSession()?.generation;
+  if (!generation) return false;
+  await queryClient.refetchQueries({
+    type: "active",
+    predicate: (query) =>
+      query.queryKey[0] === generation &&
+      topAssetRouteIds.includes(
+        query.queryKey[2] as (typeof topAssetRouteIds)[number],
+      ),
+  });
+  return topAssetRouteIds.every(
+    (routeId) =>
+      queryClient.getQueryState([generation, "v1", routeId, {}])?.status ===
+      "success",
+  );
+}
+
+export async function refreshForegroundState(pathname: string): Promise<void> {
+  const generation = getSession()?.generation;
+  if (!generation) return;
+  const prefixes = new Set([
+    "identity",
+    "vip",
+    "wallet",
+    ...foregroundPrefixes(pathname),
+  ]);
+  await queryClient.invalidateQueries({
+    refetchType: "active",
+    predicate: (query) => {
+      if (query.queryKey[0] !== generation) return false;
+      const id = query.queryKey[2];
+      return typeof id === "string" && prefixes.has(id.split(".")[0] ?? "");
+    },
+  });
+}
+
 const scopePrefixes: Record<
   Exclude<RefreshScope, "none" | "all">,
   readonly string[]
@@ -126,6 +169,17 @@ export async function refreshRouteScopes(
       return typeof id === "string" && prefixes.has(id.split(".")[0] ?? "");
     },
   });
+}
+
+function foregroundPrefixes(pathname: string): readonly string[] {
+  if (pathname === "/") return ["gacha"];
+  if (pathname === "/market") return ["market"];
+  if (pathname === "/game") return ["inventory"];
+  if (pathname === "/inventory") return ["inventory", "catalog"];
+  if (pathname === "/tasks") return ["tasks", "referral", "wheel"];
+  if (pathname === "/album") return ["album"];
+  if (pathname.startsWith("/mint/")) return ["inventory", "mint"];
+  return [];
 }
 
 function assertCurrentSession(expected: string, authenticated: boolean): void {

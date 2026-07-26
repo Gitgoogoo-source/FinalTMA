@@ -16,10 +16,10 @@ import {
   Tags,
 } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
-import { useSearchParams } from "react-router-dom";
 
 import { CatalogImage } from "../../../shared/ui/index.tsx";
 import { useApiQuery } from "../../../platform/query/index.ts";
+import { usePageSearchParams } from "../../../shared/navigation/pageActivity.tsx";
 import { Badge, Button, Card, PageState } from "../../../shared/ui/index.tsx";
 import { useOperationRegistry } from "../../../workflows/operation-recovery/index.ts";
 import { useNavigationIntent } from "../../../workflows/payment-recovery/index.ts";
@@ -30,7 +30,7 @@ type BuyFilter = "price" | "rarity" | "stage" | "sort";
 type BuySort = "catalog" | "price-asc" | "price-desc" | "available";
 
 export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
-  const [params, setParams] = useSearchParams();
+  const [params, setParams] = usePageSearchParams();
   const requestedTab = parseTab(params.get("tab"));
   const [selectedTab, setSelectedTab] = useState<MarketTab>(
     requestedTab ?? (params.has("sell") ? "sell" : "buy"),

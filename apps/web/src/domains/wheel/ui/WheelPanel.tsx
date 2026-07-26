@@ -1,9 +1,9 @@
 import { RotateCw, Sparkles } from "lucide-react";
 import { useEffect, useRef, type ReactNode } from "react";
-import { useSearchParams } from "react-router-dom";
 
 import { useApiQuery } from "../../../platform/query/index.ts";
 import { focusTaskTarget } from "../../../shared/navigation/focusTaskTarget.ts";
+import { usePageSearchParams } from "../../../shared/navigation/pageActivity.tsx";
 import { Button, Card } from "../../../shared/ui/index.tsx";
 import { useOperationRegistry } from "../../../workflows/operation-recovery/index.ts";
 import { useNavigationIntent } from "../../../workflows/payment-recovery/index.ts";
@@ -14,7 +14,7 @@ export function WheelPanel(): ReactNode {
   const { isBlocked, run } = useOperationRegistry();
   const { requestTopup } = useNavigationIntent();
   const blocked = isBlocked("wheel.spin");
-  const [params, setParams] = useSearchParams();
+  const [params, setParams] = usePageSearchParams();
   const heading = useRef<HTMLDivElement>(null);
   const resumedCount =
     params.get("resume") && params.get("count") === "10"

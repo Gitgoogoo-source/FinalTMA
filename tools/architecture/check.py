@@ -26,6 +26,8 @@ REQUIRED_PATHS = (
     "apps/web/src/app/recovery",
     "apps/web/src/app/router",
     "apps/web/src/app/shell",
+    "apps/web/src/app/router/PersistentPages.tsx",
+    "apps/web/src/shared/navigation/pageActivity.tsx",
     "apps/web/src/pages",
     "apps/web/src/domains",
     "apps/web/src/domains/monster-tamer",
@@ -53,6 +55,7 @@ REQUIRED_PATHS = (
     "apps/web/public/monster-tamer/vendor/licenses/PHASER-LICENSE.md",
     "tools/monster-tamer/generate-island-map.mjs",
     "docs/architecture/adr/ADR-011-monster-tamer-static-subapplication.md",
+    "docs/architecture/adr/ADR-013-session-page-lifecycle.md",
     "apps/api/src/entrypoints/app",
     "apps/api/src/entrypoints/integrations",
     "apps/api/src/entrypoints/jobs",
@@ -191,6 +194,30 @@ def verify_web_boundaries() -> None:
     missing_boundaries = [path.parent.name for path in (WEB_ROOT / "domains").glob("*/ui") if not (path.parent / "index.ts").is_file()]
     if missing_boundaries:
         raise SystemExit(f"Web domains must expose one public index.ts: {missing_boundaries}")
+    persistent_pages = (WEB_ROOT / "app/router/PersistentPages.tsx").read_text(
+        encoding="utf-8"
+    )
+    page_activity = (WEB_ROOT / "shared/navigation/pageActivity.tsx").read_text(
+        encoding="utf-8"
+    )
+    lifecycle_terms = (
+        "setVisitState({",
+        "visitState.visited",
+        "scrollPositions.current",
+        "hidden={!active}",
+        "inert={!active}",
+        "PageActivityProvider",
+        "search: active ? search : snapshot.search",
+        'history.scrollRestoration = "manual"',
+    )
+    lifecycle_source = persistent_pages + page_activity
+    missing_lifecycle_terms = [
+        value for value in lifecycle_terms if value not in lifecycle_source
+    ]
+    if missing_lifecycle_terms:
+        raise SystemExit(
+            f"Session page lifecycle is incomplete: {missing_lifecycle_terms}"
+        )
 
 
 def verify_monster_tamer_boundary() -> None:
@@ -268,6 +295,8 @@ def verify_monster_tamer_boundary() -> None:
         'className="monster-home-surface"',
         "CollectionDetailShowcase",
         "resumeFrame(",
+        "usePageActive()",
+        'type: active && !selected ? "resume" : "pause"',
     )
     missing_launcher_terms = [
         value for value in required_launcher_terms if value not in launcher_source
@@ -329,6 +358,9 @@ def verify_monster_tamer_boundary() -> None:
         "/assets/catalog/v1/thumb/",
         "this.scene.pause()",
         'game?.scene.resume("PET_HOME")',
+        'event.data.type === "pause"',
+        "game?.loop.sleep()",
+        "game?.loop.wake()",
         "this.reserved.add(targetKey)",
         "this.occupied.add(targetKey)",
         "findGridPath(",
@@ -816,6 +848,29 @@ def verify_documentation() -> None:
     ]
     if missing_monster_tamer_terms:
         raise SystemExit(f"Monster Tamer ADR is incomplete: {missing_monster_tamer_terms}")
+    lifecycle_adr = ROOT / "docs/architecture/adr/ADR-013-session-page-lifecycle.md"
+    lifecycle_documentation = lifecycle_adr.read_text(encoding="utf-8")
+    required_lifecycle_terms = (
+        "五个主页面",
+        "首次访问时挂载",
+        "不因路由切换卸载",
+        "五分钟",
+        "refreshScopes",
+        "`pause`",
+        "`resume`",
+        "Session generation",
+        "不写入 `localStorage`",
+    )
+    missing_lifecycle_documentation = [
+        value
+        for value in required_lifecycle_terms
+        if value not in lifecycle_documentation
+    ]
+    if missing_lifecycle_documentation:
+        raise SystemExit(
+            "Session page lifecycle ADR is incomplete: "
+            f"{missing_lifecycle_documentation}"
+        )
 
 
 def verify_package_exports() -> None:

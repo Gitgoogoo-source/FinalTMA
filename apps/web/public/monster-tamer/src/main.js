@@ -22,7 +22,14 @@ window.addEventListener("message", (event) => {
   )
     return;
   if (event.data.type === "resume") {
+    game?.loop.wake();
     game?.scene.resume("PET_HOME");
+    return;
+  }
+  if (event.data.type === "pause") {
+    game?.events.emit("blur");
+    game?.scene.pause("PET_HOME");
+    game?.loop.sleep();
     return;
   }
   if (event.data.type !== "init" || game) return;

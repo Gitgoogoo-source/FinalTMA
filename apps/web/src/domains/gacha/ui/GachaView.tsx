@@ -15,7 +15,7 @@ import {
   type CSSProperties,
   type ReactNode,
 } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import { CatalogImage } from "../../../shared/ui/index.tsx";
 import { useApiQuery } from "../../../platform/query/index.ts";
@@ -25,6 +25,7 @@ import {
 } from "../../../platform/session/store.ts";
 import { Button, Card, PageState } from "../../../shared/ui/index.tsx";
 import { focusTaskTarget } from "../../../shared/navigation/focusTaskTarget.ts";
+import { usePageSearchParams } from "../../../shared/navigation/pageActivity.tsx";
 import { useOperationRegistry } from "../../../workflows/operation-recovery/index.ts";
 import { useNavigationIntent } from "../../../workflows/payment-recovery/index.ts";
 import { GachaPoolDialog } from "./GachaPoolDialog.tsx";
@@ -61,14 +62,13 @@ export function GachaView({
   dailyBenefits(onFreeRareClaimed: () => void): ReactNode;
 }): ReactNode {
   const boxes = useApiQuery("gacha.bootstrap");
-  const refetchBoxes = boxes.refetch;
   const identity = useApiQuery("identity.bootstrap");
   const navigate = useNavigate();
   const session = useSession();
   const { isBlocked, run } = useOperationRegistry();
   const { requestTopup } = useNavigationIntent();
   const blocked = isBlocked("gacha.open");
-  const [params, setParams] = useSearchParams();
+  const [params, setParams] = usePageSearchParams();
   const requestedTier = params.get("tier");
   const requestedRarity = params.get("rarity");
   const targetRarity = isRarity(requestedRarity) ? requestedRarity : null;
@@ -77,11 +77,19 @@ export function GachaView({
     params.get("resume") && isBoxTier(requestedTier) ? requestedTier : null;
   const resumedCount = params.get("count") === "10" ? 10 : 1;
   const remembered = session ? viewStates.get(session.userId) : undefined;
-  const [selectedTier, setSelectedTier] = useState<BoxTier>(() =>
-    isBoxTier(requestedTier)
-      ? requestedTier
-      : (remembered?.selectedTier ?? "normal"),
-  );
+  const rareBox = boxes.data?.boxes.find((box) => box.tier === "rare");
+  const autoSelectRare =
+    Number(boxes.data?.entitlements.free_rare_box) > 0 &&
+    (!targetRarity || (rareBox?.rarity_weights[targetRarity] ?? 0) > 0);
+  const [selection, setSelection] = useState(() => ({
+    tier: remembered?.selectedTier ?? "normal",
+    touched: false,
+  }));
+  const selectedTier = isBoxTier(requestedTier)
+    ? requestedTier
+    : !selection.touched && autoSelectRare
+      ? "rare"
+      : selection.tier;
   const pool = useApiQuery(
     "gacha.pool",
     { tier: selectedTier },
@@ -156,36 +164,20 @@ export function GachaView({
     freeSingleCount > 0;
   const pityFailed =
     Boolean(boxes.error) || Boolean(selectedPity && !validPity);
-  const selectTier = useCallback((tier: BoxTier) => {
-    selectedTierRef.current = tier;
-    setSelectedTier(tier);
-  }, []);
+  const selectTier = useCallback(
+    (tier: BoxTier) => {
+      setSelection({ tier, touched: true });
+    },
+    [setSelection],
+  );
   const handleFreeRareClaimed = useCallback(() => {
     if (
       !targetRarity ||
       items.find((box) => box.tier === "rare")?.rarity_weights[targetRarity]
     )
-      setSelectedTier("rare");
+      selectTier("rare");
     if (requestedTier) setParams({}, { replace: true });
-  }, [items, requestedTier, setParams, targetRarity]);
-
-  useEffect(() => {
-    let active = true;
-    void refetchBoxes().then((result) => {
-      if (
-        active &&
-        result.isSuccess &&
-        Number(result.data.entitlements.free_rare_box) > 0
-      ) {
-        const rareBox = result.data.boxes.find((box) => box.tier === "rare");
-        if (!targetRarity || (rareBox?.rarity_weights[targetRarity] ?? 0) > 0)
-          selectTier("rare");
-      }
-    });
-    return () => {
-      active = false;
-    };
-  }, [refetchBoxes, selectTier, targetRarity]);
+  }, [items, requestedTier, selectTier, setParams, targetRarity]);
 
   useEffect(() => {
     if (selectedBox) selectedTierRef.current = selectedBox.tier;
@@ -347,10 +339,7 @@ export function GachaView({
                     aria-pressed={active}
                     onClick={() => {
                       setPoolOpen(false);
-                      if (!active) {
-                        selectTier(box.tier);
-                        void boxes.refetch();
-                      }
+                      if (!active) selectTier(box.tier);
                       if (requestedTier)
                         setParams(
                           targetRarity ? { rarity: targetRarity } : {},

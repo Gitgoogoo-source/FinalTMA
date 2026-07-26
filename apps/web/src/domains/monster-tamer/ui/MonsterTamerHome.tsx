@@ -1,8 +1,16 @@
 import type { RouteOutput } from "@pokepets/api-contracts/app";
 import { AlertCircle, RefreshCw, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 
 import { useApiQuery } from "../../../platform/query/index.ts";
+import { usePageActive } from "../../../shared/navigation/pageActivity.tsx";
 import { Button, CollectionDetailShowcase } from "../../../shared/ui/index.tsx";
 
 type InventoryItem = RouteOutput<"inventory.list">["items"][number];
@@ -25,8 +33,10 @@ type FrameMessage =
     };
 
 export function MonsterTamerHome(): ReactNode {
+  const active = usePageActive();
   const query = useApiQuery("inventory.list");
   const iframe = useRef<HTMLIFrameElement>(null);
+  const sentItemSignature = useRef<string | null>(null);
   const [frameRevision, setFrameRevision] = useState(0);
   const [frameReady, setFrameReady] = useState(false);
   const [selected, setSelected] = useState<InventoryItem | null>(null);
@@ -42,6 +52,22 @@ export function MonsterTamerHome(): ReactNode {
     ],
     [query.data?.items],
   );
+  const itemSignature = useMemo(
+    () =>
+      items
+        .map((item) => `${item.template_id}\u0000${item.image_thumbnail_path}`)
+        .sort()
+        .join("\u0001"),
+    [items],
+  );
+  const rebuildFrame = useCallback(() => {
+    sentItemSignature.current = null;
+    setFrameReady(false);
+    setSelected(null);
+    setRuntimeError("");
+    setFailedImages(0);
+    setFrameRevision((current) => current + 1);
+  }, []);
 
   useEffect(() => {
     const receive = (event: MessageEvent<unknown>) => {
@@ -76,6 +102,14 @@ export function MonsterTamerHome(): ReactNode {
       !iframe.current?.contentWindow
     )
       return;
+    if (
+      sentItemSignature.current !== null &&
+      sentItemSignature.current !== itemSignature
+    ) {
+      rebuildFrame();
+      return;
+    }
+    if (sentItemSignature.current === itemSignature) return;
     iframe.current.contentWindow.postMessage(
       {
         source: "pokepets.monster-home",
@@ -90,7 +124,27 @@ export function MonsterTamerHome(): ReactNode {
       },
       window.location.origin,
     );
-  }, [frameReady, items, query.data, query.error, query.isFetching]);
+    sentItemSignature.current = itemSignature;
+  }, [
+    frameReady,
+    itemSignature,
+    items,
+    query.data,
+    query.error,
+    query.isFetching,
+    rebuildFrame,
+  ]);
+
+  useEffect(() => {
+    if (!frameReady || !iframe.current?.contentWindow) return;
+    iframe.current.contentWindow.postMessage(
+      {
+        source: "pokepets.monster-home",
+        type: active && !selected ? "resume" : "pause",
+      },
+      window.location.origin,
+    );
+  }, [active, frameReady, selected]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -104,11 +158,7 @@ export function MonsterTamerHome(): ReactNode {
   }, [selected]);
 
   const restartFrame = () => {
-    setFrameReady(false);
-    setSelected(null);
-    setRuntimeError("");
-    setFailedImages(0);
-    setFrameRevision((current) => current + 1);
+    rebuildFrame();
     void query.refetch();
   };
 

@@ -1,43 +1,23 @@
 import { lazy, Suspense, useEffect, type ReactNode } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AppShell } from "../shell/AppShell.tsx";
+import {
+  loadGamePage,
+  loadInventoryPage,
+  loadMarketPage,
+  loadTasksPage,
+} from "./pageRoutes.ts";
 
 const loadAlbumPage = () =>
   import("../../pages/album/AlbumPage.tsx").then((module) => ({
     default: module.AlbumPage,
   }));
-const loadGamePage = () =>
-  import("../../pages/game/GamePage.tsx").then((module) => ({
-    default: module.GamePage,
-  }));
-const loadGachaPage = () =>
-  import("../../pages/gacha/GachaPage.tsx").then((module) => ({
-    default: module.GachaPage,
-  }));
-const loadInventoryPage = () =>
-  import("../../pages/inventory/InventoryPage.tsx").then((module) => ({
-    default: module.InventoryPage,
-  }));
-const loadMarketPage = () =>
-  import("../../pages/market/MarketPage.tsx").then((module) => ({
-    default: module.MarketPage,
-  }));
 const loadMintPage = () =>
   import("../../pages/mint/MintPage.tsx").then((module) => ({
     default: module.MintPage,
   }));
-const loadTasksPage = () =>
-  import("../../pages/tasks/TasksPage.tsx").then((module) => ({
-    default: module.TasksPage,
-  }));
-
 const AlbumPage = lazy(loadAlbumPage);
-const GamePage = lazy(loadGamePage);
-const GachaPage = lazy(loadGachaPage);
-const InventoryPage = lazy(loadInventoryPage);
-const MarketPage = lazy(loadMarketPage);
 const MintPage = lazy(loadMintPage);
-const TasksPage = lazy(loadTasksPage);
 
 let backgroundPreloadStarted = false;
 
@@ -46,15 +26,18 @@ export function AppRouter(): ReactNode {
   return (
     <Routes>
       <Route element={<AppShell />}>
-        <Route index element={withPageLoading(<GachaPage />)} />
-        <Route path="market" element={withPageLoading(<MarketPage />)} />
-        <Route path="game" element={withGameLoading(<GamePage />)} />
-        <Route path="inventory" element={withPageLoading(<InventoryPage />)} />
-        <Route path="tasks" element={withPageLoading(<TasksPage />)} />
+        <Route index />
+        <Route path="market" />
+        <Route path="game" />
+        <Route path="inventory" />
+        <Route path="tasks" />
+        <Route path="album" element={withPageLoading(<AlbumPage />)} />
+        <Route
+          path="mint/:templateId"
+          element={withPageLoading(<MintPage />)}
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
-      <Route path="album" element={withPageLoading(<AlbumPage />)} />
-      <Route path="mint/:templateId" element={withPageLoading(<MintPage />)} />
-      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
@@ -109,21 +92,6 @@ function useBackgroundPreload(): void {
 function withPageLoading(page: ReactNode): ReactNode {
   return (
     <Suspense fallback={<main className="page-state">正在加载页面</main>}>
-      {page}
-    </Suspense>
-  );
-}
-
-function withGameLoading(page: ReactNode): ReactNode {
-  return (
-    <Suspense
-      fallback={
-        <main
-          className="page game-page monster-home-page"
-          aria-label="水上家园"
-        />
-      }
-    >
       {page}
     </Suspense>
   );

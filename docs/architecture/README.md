@@ -43,6 +43,8 @@ Monster Tamer 领域拥有 `/game` 直接家园、`inventory.list` 只读查询�
 
 TMA 首次同步加载只覆盖应用壳、会话与账号门禁及默认开盒页；首屏完成后后台优先预加载 Monster Tamer 页面、认证查询和静态资源，再预加载其余普通主导航页面。`/game` 即使早于预加载完成被点击，也直接显示游戏背景，不显示渲染器门禁或居中加载卡。
 
+五个主导航页面在当前登录会话内首次访问后保持挂载。切换页面只恢复各自滚动、筛选和页内状态，不触发查询或资源重载；业务结果按契约范围精确刷新，后台连续五分钟后回到前台只静默回正顶部摘要与当前页面。
+
 ## 可信边界
 
 前端只提交动作、目标标识、数量和幂等键。价格、余额、库存、资格、奖励、随机结果、任务进度和链上状态均由服务端重新校验，并由单个数据库事务裁决。
@@ -84,3 +86,4 @@ TMA 首次同步加载只覆盖应用壳、会话与账号门禁及默认开盒�
 - [正式藏品图片资源](adr/ADR-010-catalog-image-assets.md)
 - [Monster Tamer 认证藏品家园](adr/ADR-011-monster-tamer-static-subapplication.md)
 - [进化顶层底部确认弹窗](adr/ADR-012-evolution-bottom-sheet-confirmation.md)
+- [登录会话内页面保活与事件驱动刷新](adr/ADR-013-session-page-lifecycle.md)

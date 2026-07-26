@@ -1,6 +1,6 @@
 import { Link2, ShoppingBag } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import { DecompositionAction } from "../../domains/decomposition/index.ts";
 import { EvolutionAction } from "../../domains/evolution/index.ts";
@@ -11,11 +11,12 @@ import {
 } from "../../domains/inventory/index.ts";
 import { Button } from "../../shared/ui/index.tsx";
 import { focusTaskTarget } from "../../shared/navigation/focusTaskTarget.ts";
+import { usePageSearchParams } from "../../shared/navigation/pageActivity.tsx";
 import { useOperationRegistry } from "../../workflows/operation-recovery/index.ts";
 
 export function InventoryPage(): ReactNode {
   const navigate = useNavigate();
-  const [params] = useSearchParams();
+  const [params] = usePageSearchParams();
   const [sellItem, setSellItem] = useState<InventoryItem | null>(null);
   const requestedFocus = params.get("focus");
   const { isBlocked } = useOperationRegistry();

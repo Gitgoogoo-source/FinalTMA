@@ -1,8 +1,9 @@
 import { BookOpen } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import { useApiQuery } from "../../../platform/query/index.ts";
+import { usePageSearchParams } from "../../../shared/navigation/pageActivity.tsx";
 import {
   Badge,
   Button,
@@ -30,7 +31,7 @@ export function InventoryView({
   renderActions(item: InventoryItem, imageReady: boolean): ReactNode;
 }): ReactNode {
   const query = useApiQuery("inventory.list");
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = usePageSearchParams();
   const targetId =
     searchParams.get("template") ?? searchParams.get("template_id") ?? "";
   const targetAction = searchParams.get("action");
