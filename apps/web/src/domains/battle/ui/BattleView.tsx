@@ -21,7 +21,7 @@ import {
   apiRequest,
 } from "../../../platform/api/client.ts";
 import {
-  refreshTopAssetSummary,
+  refreshScopes,
   seedApiQuery,
   useApiQuery,
 } from "../../../platform/query/index.ts";
@@ -234,7 +234,7 @@ export function BattleView(): ReactNode {
 
   useEffect(() => {
     if (!resultRoomId) return;
-    void refreshTopAssetSummary();
+    void refreshScopes(["battle", "assets", "inventory"]);
   }, [resultRoomId]);
 
   useEffect(() => {
