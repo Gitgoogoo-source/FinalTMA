@@ -1,7 +1,7 @@
 create schema if not exists extensions;
 create extension if not exists pgcrypto with schema extensions;
 create extension if not exists pg_cron;
-create extension if not exists pg_net;
+create extension if not exists pg_net with schema extensions;
 create extension if not exists supabase_vault;
 
 create schema if not exists identity;
