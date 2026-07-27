@@ -34,4 +34,137 @@ revoke all on schema identity, catalog, economy, inventory, gacha, evolution, ex
 revoke execute on all functions in schema identity, catalog, economy, inventory, gacha, evolution, expedition, wheel, battle, market, payments, vip, tasks, referral, album, onchain, operations, risk, api from public, anon, authenticated, service_role;
 
 grant usage on schema api to service_role;
-grant execute on all functions in schema api to service_role;
+do $$
+declare
+  v_function record;
+  v_missing text[];
+  v_allowed text[] := array[
+    'album_claim',
+    'album_get',
+    'battle_abort_share',
+    'battle_accept_room',
+    'battle_ack_outbox',
+    'battle_acknowledge_result',
+    'battle_activate_share',
+    'battle_bootstrap',
+    'battle_cancel_room',
+    'battle_claim_outbox',
+    'battle_claim_prepared_shares',
+    'battle_complete_outbox',
+    'battle_current_invite',
+    'battle_heartbeat',
+    'battle_mark_offline',
+    'battle_nack_outbox',
+    'battle_nack_prepared_share',
+    'battle_prepare_room',
+    'battle_process_due',
+    'battle_realtime_context',
+    'battle_room',
+    'battle_submit_action',
+    'battle_submit_forced_switch',
+    'battle_team_options',
+    'battle_validate_recovery_context',
+    'catalog_get',
+    'expedition_claim',
+    'expedition_create',
+    'expedition_eligible_items',
+    'expedition_list',
+    'finish_job',
+    'gacha_acknowledge_result',
+    'gacha_bootstrap',
+    'gacha_open',
+    'gacha_pool',
+    'gacha_recoverable_results',
+    'identity_authenticate',
+    'identity_bootstrap',
+    'identity_consume_login_rate_limit',
+    'identity_resolve_session',
+    'inventory_decompose',
+    'inventory_detail',
+    'inventory_evolution_acknowledge_result',
+    'inventory_evolution_preview',
+    'inventory_evolution_recoverable_results',
+    'inventory_evolve',
+    'inventory_list',
+    'market_bootstrap',
+    'market_cancel_template_listings',
+    'market_create_listing',
+    'market_my_listings',
+    'market_purchase',
+    'market_template',
+    'mint_attach_permit',
+    'mint_cancel',
+    'mint_complete',
+    'mint_get',
+    'mint_list',
+    'mint_mark_unknown',
+    'mint_metadata',
+    'mint_reconciliation_candidates',
+    'mint_reserve',
+    'mint_submit',
+    'operations_get',
+    'payment_apply_refund',
+    'payment_apply_success',
+    'payment_begin_checkout',
+    'payment_fail_invoice_creation',
+    'payment_invoice_details',
+    'payment_set_invoice_url',
+    'referral_bind',
+    'referral_get',
+    'referral_share_event',
+    'run_job',
+    'tasks_check_in',
+    'tasks_claim',
+    'tasks_get',
+    'topup_bootstrap',
+    'topup_cancel_order',
+    'topup_create_order',
+    'topup_fail_order',
+    'topup_order',
+    'vip_claim',
+    'vip_create_order',
+    'vip_get',
+    'wallet_create_challenge',
+    'wallet_disconnect',
+    'wallet_get',
+    'wallet_save_verified',
+    'wheel_acknowledge_result',
+    'wheel_get',
+    'wheel_recoverable_results',
+    'wheel_spin'
+  ];
+begin
+  select array_agg(allowed_name order by allowed_name)
+  into v_missing
+  from unnest(v_allowed) allowed_name
+  where not exists (
+    select 1
+    from pg_proc function_definition
+    join pg_namespace function_schema
+      on function_schema.oid = function_definition.pronamespace
+    where function_schema.nspname = 'api'
+      and function_definition.proname = allowed_name
+  );
+  if v_missing is not null then
+    raise exception 'Missing allowlisted api functions: %', v_missing;
+  end if;
+  for v_function in
+    select
+      function_schema.nspname as schema_name,
+      function_definition.proname as function_name,
+      pg_get_function_identity_arguments(function_definition.oid) as arguments
+    from pg_proc function_definition
+    join pg_namespace function_schema
+      on function_schema.oid = function_definition.pronamespace
+    where function_schema.nspname = 'api'
+      and function_definition.proname = any(v_allowed)
+  loop
+    execute format(
+      'grant execute on function %I.%I(%s) to service_role',
+      v_function.schema_name,
+      v_function.function_name,
+      v_function.arguments
+    );
+  end loop;
+end
+$$;

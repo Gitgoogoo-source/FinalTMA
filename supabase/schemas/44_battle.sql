@@ -1502,6 +1502,63 @@ begin
 end;
 $$;
 
+create or replace function battle.validate_team_selection(
+  p_user_id uuid,
+  p_ruleset_id text,
+  p_template_ids jsonb
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_distinct integer;
+  v_total integer;
+begin
+  if p_template_ids is null or jsonb_typeof(p_template_ids) <> 'array' then
+    perform api.raise_business_error('BATTLE_TEAM_INVALID', '请选择三个可用且不同的藏品');
+  end if;
+  if jsonb_array_length(p_template_ids) <> 3
+     or exists (
+       select 1
+       from jsonb_array_elements(p_template_ids) item
+       where jsonb_typeof(item) <> 'string'
+     ) then
+    perform api.raise_business_error('BATTLE_TEAM_INVALID', '请选择三个可用且不同的藏品');
+  end if;
+  select count(distinct value), count(*) into v_distinct, v_total
+  from jsonb_array_elements_text(p_template_ids);
+  if v_total <> 3 then
+    perform api.raise_business_error('BATTLE_TEAM_INVALID', '请选择三个可用且不同的藏品');
+  end if;
+  if v_distinct <> 3 then
+    perform api.raise_business_error(
+      'BATTLE_TEAM_TEMPLATE_DUPLICATE',
+      'Battle 队伍中的藏品模板不能重复'
+    );
+  end if;
+  if (
+    select count(*) <> 3
+    from jsonb_array_elements_text(p_template_ids) selected(template_id)
+    join catalog.templates template on template.id = selected.template_id
+    join battle.template_configs config
+      on config.ruleset_id = p_ruleset_id
+     and config.template_id = selected.template_id
+  ) then
+    perform api.raise_business_error('BATTLE_TEAM_INVALID', '请选择三个可用且不同的藏品');
+  end if;
+  if exists (
+    select 1
+    from jsonb_array_elements_text(p_template_ids) selected(template_id)
+    where inventory.available_quantity(p_user_id, selected.template_id) < 1
+  ) then
+    perform api.raise_business_error('INSUFFICIENT_INVENTORY', '可用藏品数量不足');
+  end if;
+  return p_template_ids;
+end;
+$$;
+
 create or replace function battle.create_team(
   p_participant_id uuid,
   p_user_id uuid,
@@ -1514,26 +1571,13 @@ security definer
 set search_path = ''
 as $$
 declare
-  v_distinct integer;
-  v_total integer;
   v_item record;
   v_template catalog.templates%rowtype;
   v_config battle.template_configs%rowtype;
 begin
-  if p_template_ids is null or jsonb_typeof(p_template_ids) <> 'array' then
-    perform api.raise_business_error('BATTLE_TEAM_INVALID', '请选择三个可用且不同的藏品');
-  end if;
-  if jsonb_array_length(p_template_ids) <> 3 then
-    perform api.raise_business_error('BATTLE_TEAM_INVALID', '请选择三个可用且不同的藏品');
-  end if;
-  select count(distinct value), count(*) into v_distinct, v_total
-  from jsonb_array_elements_text(p_template_ids);
-  if v_total <> 3 then
-    perform api.raise_business_error('BATTLE_TEAM_INVALID', '请选择三个可用且不同的藏品');
-  end if;
-  if v_distinct <> 3 then
-    perform api.raise_business_error('BATTLE_TEAM_TEMPLATE_DUPLICATE', 'Battle 队伍中的藏品模板不能重复');
-  end if;
+  perform battle.validate_team_selection(
+    p_user_id, p_ruleset_id, p_template_ids
+  );
   perform 1
   from inventory.holdings h
   join (
@@ -1729,7 +1773,15 @@ begin
     perform pg_advisory_xact_lock(hashtextextended('battle-user:' || v_user_id::text, 0));
     if exists (
       select 1 from battle.participants
-      where user_id = v_user_id and status in ('preparing_share', 'waiting', 'active')
+      where user_id = v_user_id and status = 'preparing_share'
+    ) then
+      perform api.raise_business_error(
+        'BATTLE_SHARE_PREPARING',
+        '挑战卡正在准备，请勿重复创建'
+      );
+    elsif exists (
+      select 1 from battle.participants
+      where user_id = v_user_id and status in ('waiting', 'active')
     ) then
       perform api.raise_business_error('BATTLE_ALREADY_PARTICIPATING', '当前已有未结束的 Battle');
     end if;
@@ -1949,6 +2001,11 @@ begin
       perform api.raise_business_error('BATTLE_ROOM_EXPIRED', '挑战已过期');
     elsif v_room.status = 'cancelled' then
       perform api.raise_business_error('BATTLE_ROOM_CANCELLED', '挑战已取消');
+    elsif v_room.status = 'voided' then
+      perform api.raise_business_error(
+        'BATTLE_VOIDED',
+        'Battle 已安全作废，入场费和藏品已恢复'
+      );
     elsif v_room.status not in ('preparing_share', 'waiting') then
       perform api.raise_business_error('BATTLE_ROOM_ALREADY_ACCEPTED', '挑战已被其他玩家接受');
     end if;
@@ -1975,14 +2032,47 @@ as $$
 declare
   v_user_id uuid := api.session_user(p_session_id);
   v_room battle.rooms%rowtype;
+  v_result jsonb;
 begin
   perform battle.consume_rate_limit(v_user_id, 'heartbeat');
   select * into v_room from battle.rooms where id = p_room_id for update;
   if v_room.id is null or v_room.creator_user_id <> v_user_id then
     perform api.raise_business_error('BATTLE_NOT_PARTICIPANT', '当前账号不是该 Battle 的参与者');
   end if;
-  if v_room.status <> 'waiting' or v_room.expires_at <= now() then
+  if v_room.status in ('cancelled', 'expired', 'voided') then
+    return jsonb_build_object(
+      'room_id', p_room_id,
+      'status', v_room.status,
+      'creator_online', false,
+      'server_time', now(),
+      'expires_at', v_room.expires_at
+    );
+  elsif v_room.status <> 'waiting' then
     perform api.raise_business_error('BATTLE_STATE_CONFLICT', 'Battle 状态已更新');
+  end if;
+  if v_room.expires_at <= now() then
+    v_result := battle.close_unstarted_room(
+      p_room_id, 'expired', 'waiting_expired'
+    );
+    return v_result || jsonb_build_object(
+      'creator_online', false,
+      'server_time', now(),
+      'expires_at', v_room.expires_at
+    );
+  end if;
+  if coalesce(v_room.creator_offline_since, v_room.creator_last_heartbeat_at)
+       + make_interval(
+         secs => battle.rule_int(v_room.ruleset_id, 'offline_reconnect_seconds')
+       ) <= now()
+  then
+    v_result := battle.close_unstarted_room(
+      p_room_id, 'cancelled', 'creator_offline_timeout'
+    );
+    return v_result || jsonb_build_object(
+      'creator_online', false,
+      'server_time', now(),
+      'expires_at', v_room.expires_at
+    );
   end if;
   update battle.rooms
   set creator_last_heartbeat_at = greatest(
@@ -1994,6 +2084,7 @@ begin
   returning * into v_room;
   return jsonb_build_object(
     'room_id', p_room_id,
+    'status', v_room.status,
     'creator_online', true,
     'server_time', now(),
     'expires_at', v_room.expires_at
@@ -2060,11 +2151,13 @@ declare
   v_replay jsonb;
   v_invite_hash text;
   v_room battle.rooms%rowtype;
+  v_creator identity.users%rowtype;
   v_tier battle.entry_tiers%rowtype;
   v_participant_id uuid := extensions.gen_random_uuid();
   v_seed bytea := extensions.gen_random_bytes(32);
   v_ledger_id bigint;
   v_result jsonb;
+  v_terminal jsonb;
 begin
   select s.battle_invite_token_hash into v_invite_hash
   from identity.sessions s
@@ -2097,19 +2190,64 @@ begin
       perform api.raise_business_error('BATTLE_INVITE_INVALID', 'Battle 邀请无效');
     end if;
     perform battle.consume_rate_limit(v_operation.user_id, 'accept', v_invite_hash);
-    if v_room.status = 'expired' or v_room.expires_at <= now() then
+    select * into v_creator
+    from identity.users
+    where id = v_room.creator_user_id
+    for update;
+    if v_room.status = 'expired' then
       perform api.raise_business_error('BATTLE_ROOM_EXPIRED', '挑战已过期');
     elsif v_room.status = 'cancelled' then
       perform api.raise_business_error('BATTLE_ROOM_CANCELLED', '挑战已取消');
+    elsif v_room.status = 'voided' then
+      perform api.raise_business_error(
+        'BATTLE_VOIDED',
+        'Battle 已安全作废，入场费和藏品已恢复'
+      );
     elsif v_room.status <> 'waiting' then
       perform api.raise_business_error('BATTLE_ROOM_ALREADY_ACCEPTED', '挑战已被其他玩家接受');
+    end if;
+    if v_room.expires_at <= now() then
+      v_terminal := battle.close_unstarted_room(
+        v_room.id, 'expired', 'waiting_expired'
+      );
+      return operations.fail_command(
+        p_operation_id,
+        'BATTLE_ROOM_EXPIRED',
+        v_terminal || jsonb_build_object('error_code', 'BATTLE_ROOM_EXPIRED')
+      );
+    elsif v_creator.status = 'banned' then
+      v_terminal := battle.close_unstarted_room(
+        v_room.id, 'cancelled', 'creator_banned'
+      );
+      return operations.fail_command(
+        p_operation_id,
+        'BATTLE_ROOM_CANCELLED',
+        v_terminal || jsonb_build_object('error_code', 'BATTLE_ROOM_CANCELLED')
+      );
+    elsif coalesce(
+      v_room.creator_offline_since,
+      v_room.creator_last_heartbeat_at
+    ) + make_interval(
+      secs => battle.rule_int(v_room.ruleset_id, 'offline_reconnect_seconds')
+    ) <= now() then
+      v_terminal := battle.close_unstarted_room(
+        v_room.id, 'cancelled', 'creator_offline_timeout'
+      );
+      return operations.fail_command(
+        p_operation_id,
+        'BATTLE_ROOM_CANCELLED',
+        v_terminal || jsonb_build_object('error_code', 'BATTLE_ROOM_CANCELLED')
+      );
     elsif v_room.creator_user_id = v_operation.user_id then
-      perform api.raise_business_error('BATTLE_SELF_ACCEPT_FORBIDDEN', '不能接受自己的 Battle 邀请');
+      perform api.raise_business_error(
+        'BATTLE_SELF_ACCEPT_FORBIDDEN',
+        '不能接受自己创建的挑战'
+      );
     elsif v_room.creator_offline_since is not null
        or v_room.creator_last_heartbeat_at < now() - make_interval(
          secs => battle.rule_int(v_room.ruleset_id, 'creator_online_window_seconds')
        ) then
-      perform api.raise_business_error('BATTLE_CREATOR_OFFLINE', '发起者当前离线');
+      perform api.raise_business_error('BATTLE_CREATOR_OFFLINE', '创建者当前不在线');
     end if;
     perform pg_advisory_xact_lock(hashtextextended('battle-user:' || v_operation.user_id::text, 0));
     if exists (
@@ -2177,7 +2315,17 @@ begin
         'ruleset_checksum', v_room.ruleset_checksum
       )
     );
-    v_result := battle.room_snapshot_json(v_room.id, v_operation.user_id);
+    v_result := battle.room_snapshot_json(v_room.id, v_participant_id);
+    if v_result is null then
+      raise exception using
+        errcode = 'P0001',
+        message = 'BATTLE_INVARIANT',
+        detail = jsonb_build_object(
+          'kind', 'accept_snapshot_missing',
+          'room_id', v_room.id,
+          'participant_id', v_participant_id
+        )::text;
+    end if;
     return operations.complete_command(p_operation_id, v_result);
   exception
     when sqlstate 'P0001' then
@@ -2688,6 +2836,161 @@ begin
 end;
 $$;
 
+create or replace function battle.void_room_after_invariant(
+  p_room_id uuid,
+  p_error_detail text
+)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_room battle.rooms%rowtype;
+  v_tier battle.entry_tiers%rowtype;
+  v_participant battle.participants%rowtype;
+  v_ledgers jsonb;
+  v_audit_hash text;
+  v_error_hash text := encode(
+    extensions.digest(
+      convert_to(coalesce(p_error_detail, ''), 'UTF8'),
+      'sha256'
+    ),
+    'hex'
+  );
+begin
+  select * into v_room from battle.rooms where id = p_room_id for update;
+  if v_room.status in ('finished', 'draw', 'voided') then return; end if;
+  select * into v_tier
+  from battle.entry_tiers
+  where ruleset_id = v_room.ruleset_id and id = v_room.entry_tier_id;
+  v_ledgers := battle.refund_locked_stakes(p_room_id, 'battle_invariant_void');
+  perform battle.release_reservations(p_room_id);
+  update battle.participants
+  set status = 'voided', finished_at = now()
+  where room_id = p_room_id;
+  for v_participant in
+    select * from battle.participants where room_id = p_room_id order by side
+  loop
+    insert into battle.summaries (
+      participant_id, room_id, user_id, opponent_display_name,
+      result, entry_fee, payout, net_change, fee, reason, finished_at
+    )
+    select
+      v_participant.id, p_room_id, v_participant.user_id,
+      coalesce(
+        btrim(opponent.first_name || ' ' || coalesce(opponent.last_name, '')),
+        'Battle'
+      ),
+      'void', v_tier.entry_fee, v_tier.entry_fee, 0, 0,
+      'system_invariant_void', now()
+    from battle.participants other
+    join identity.users opponent on opponent.id = other.user_id
+    where other.room_id = p_room_id and other.id <> v_participant.id
+    limit 1;
+  end loop;
+  insert into operations.invariant_violations (code, subject, details)
+  values (
+    'BATTLE_INVARIANT',
+    p_room_id::text,
+    jsonb_build_object(
+      'room_status', v_room.status,
+      'error_detail_sha256', v_error_hash
+    )
+  )
+  on conflict do nothing;
+  v_audit_hash := battle.append_audit(
+    p_room_id, 'invariant_void',
+    jsonb_build_object(
+      'error_detail_sha256', v_error_hash,
+      'refund_ledger_ids', v_ledgers
+    )
+  );
+  insert into battle.settlements (
+    room_id, result, pool, winner_payout, fee, ledger_ids, reason, audit_hash
+  ) values (
+    p_room_id, 'void', v_tier.pool, 0, 0, v_ledgers,
+    'system_invariant_void', v_audit_hash
+  );
+  update battle.rooms
+  set status = 'voided', finished_at = now(), phase_deadline = null,
+      reveal_ends_at = null, pending_result = null,
+      pending_winner_participant_id = null,
+      pending_result_reason = 'system_invariant_void',
+      updated_at = now()
+  where id = p_room_id;
+  perform battle.record_event(
+    p_room_id, 'battle_voided',
+    jsonb_build_object('reason', 'system_invariant_void'),
+    jsonb_build_object('audit_hash', v_audit_hash, 'refund_ledger_ids', v_ledgers)
+  );
+end;
+$$;
+
+create or replace function battle.safe_resolve_normal_turn(p_room_id uuid)
+returns boolean
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_detail text;
+  v_message text;
+  v_state text;
+begin
+  begin
+    perform battle.resolve_normal_turn(p_room_id);
+    return true;
+  exception
+    when others then
+      v_state := sqlstate;
+      v_message := sqlerrm;
+      get stacked diagnostics v_detail = pg_exception_detail;
+  end;
+  perform battle.void_room_after_invariant(
+    p_room_id,
+    coalesce(v_state, '')
+      || ':'
+      || coalesce(v_message, '')
+      || ':'
+      || coalesce(v_detail, '')
+  );
+  return false;
+end;
+$$;
+
+create or replace function battle.safe_resolve_forced_switch(p_room_id uuid)
+returns boolean
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_detail text;
+  v_message text;
+  v_state text;
+begin
+  begin
+    perform battle.resolve_forced_switch(p_room_id);
+    return true;
+  exception
+    when others then
+      v_state := sqlstate;
+      v_message := sqlerrm;
+      get stacked diagnostics v_detail = pg_exception_detail;
+  end;
+  perform battle.void_room_after_invariant(
+    p_room_id,
+    coalesce(v_state, '')
+      || ':'
+      || coalesce(v_message, '')
+      || ':'
+      || coalesce(v_detail, '')
+  );
+  return false;
+end;
+$$;
+
 create or replace function api.battle_submit_action(
   p_session_id uuid,
   p_operation_id uuid,
@@ -2722,6 +3025,14 @@ begin
   if v_replay is not null then return v_replay; end if;
   begin
     select * into v_room from battle.rooms where id = p_room_id for update;
+    if v_room.id is null then
+      perform api.raise_business_error('BATTLE_ROOM_NOT_FOUND', 'Battle 房间不存在');
+    elsif v_room.status = 'voided' then
+      perform api.raise_business_error(
+        'BATTLE_VOIDED',
+        'Battle 已安全作废，入场费和藏品已恢复'
+      );
+    end if;
     select * into v_participant
     from battle.participants
     where room_id = p_room_id and user_id = v_operation.user_id and status = 'active';
@@ -2729,7 +3040,12 @@ begin
       perform api.raise_business_error('BATTLE_NOT_PARTICIPANT', '当前账号不是该 Battle 的参与者');
     end if;
     perform battle.consume_rate_limit(v_operation.user_id, 'combat_action');
-    if v_room.status <> 'active_select' or v_room.current_turn_no <> p_turn_no
+    if v_room.status <> 'active_select' then
+      perform api.raise_business_error(
+        'BATTLE_ACTION_PHASE_INVALID',
+        '当前阶段不能提交该动作'
+      );
+    elsif v_room.current_turn_no <> p_turn_no
        or now() >= v_room.phase_deadline then
       perform api.raise_business_error('BATTLE_STATE_CONFLICT', 'Battle 状态已更新');
     end if;
@@ -2754,7 +3070,7 @@ begin
         where participant_id = v_participant.id
           and slot = p_target_slot and alive and not active
       ) then
-        perform api.raise_business_error('BATTLE_SWITCH_INVALID', '无法切换到该藏品');
+        perform api.raise_business_error('BATTLE_SWITCH_TARGET_INVALID', '换宠目标无效');
       end if;
       insert into battle.actions (
         room_id, turn_no, phase, participant_id, kind, source,
@@ -2779,7 +3095,15 @@ begin
       from battle.actions
       where room_id = p_room_id and turn_no = p_turn_no and phase = 'normal'
     ) then
-      perform battle.resolve_normal_turn(p_room_id);
+      if not battle.safe_resolve_normal_turn(p_room_id) then
+        v_result := battle.room_snapshot_json(p_room_id, v_participant.id);
+        return operations.fail_command(
+          p_operation_id,
+          'BATTLE_VOIDED',
+          coalesce(v_result, '{}'::jsonb)
+            || jsonb_build_object('error_code', 'BATTLE_VOIDED')
+        );
+      end if;
     end if;
     v_result := battle.room_snapshot_json(p_room_id, v_participant.id);
     return operations.complete_command(p_operation_id, v_result);
@@ -2827,6 +3151,14 @@ begin
   if v_replay is not null then return v_replay; end if;
   begin
     select * into v_room from battle.rooms where id = p_room_id for update;
+    if v_room.id is null then
+      perform api.raise_business_error('BATTLE_ROOM_NOT_FOUND', 'Battle 房间不存在');
+    elsif v_room.status = 'voided' then
+      perform api.raise_business_error(
+        'BATTLE_VOIDED',
+        'Battle 已安全作废，入场费和藏品已恢复'
+      );
+    end if;
     select * into v_participant
     from battle.participants
     where room_id = p_room_id and user_id = v_operation.user_id and status = 'active';
@@ -2834,9 +3166,15 @@ begin
       perform api.raise_business_error('BATTLE_NOT_PARTICIPANT', '当前账号不是该 Battle 的参与者');
     end if;
     perform battle.consume_rate_limit(v_operation.user_id, 'combat_action');
-    if v_room.status <> 'forced_switch' or v_room.current_turn_no <> p_turn_no
-       or now() >= v_room.phase_deadline
-       or exists (
+    if v_room.status <> 'forced_switch' then
+      perform api.raise_business_error(
+        'BATTLE_ACTION_PHASE_INVALID',
+        '当前阶段不能提交该动作'
+      );
+    elsif v_room.current_turn_no <> p_turn_no
+       or now() >= v_room.phase_deadline then
+      perform api.raise_business_error('BATTLE_STATE_CONFLICT', 'Battle 状态已更新');
+    elsif exists (
          select 1 from battle.team_members
          where participant_id = v_participant.id and active
        )
@@ -2846,7 +3184,7 @@ begin
            and slot = p_target_slot and alive and not active
        )
     then
-      perform api.raise_business_error('BATTLE_SWITCH_INVALID', '无法切换到该藏品');
+      perform api.raise_business_error('BATTLE_SWITCH_TARGET_INVALID', '换宠目标无效');
     end if;
     insert into battle.actions (
       room_id, turn_no, phase, participant_id, kind, source,
@@ -2876,7 +3214,15 @@ begin
             and a.phase = 'forced_switch' and a.participant_id = p.id
         )
     ) then
-      perform battle.resolve_forced_switch(p_room_id);
+      if not battle.safe_resolve_forced_switch(p_room_id) then
+        v_result := battle.room_snapshot_json(p_room_id, v_participant.id);
+        return operations.fail_command(
+          p_operation_id,
+          'BATTLE_VOIDED',
+          coalesce(v_result, '{}'::jsonb)
+            || jsonb_build_object('error_code', 'BATTLE_VOIDED')
+        );
+      end if;
     end if;
     v_result := battle.room_snapshot_json(p_room_id, v_participant.id);
     return operations.complete_command(p_operation_id, v_result);
@@ -3072,81 +3418,6 @@ begin
 end;
 $$;
 
-create or replace function battle.void_room_after_invariant(
-  p_room_id uuid,
-  p_error_detail text
-)
-returns void
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-  v_room battle.rooms%rowtype;
-  v_tier battle.entry_tiers%rowtype;
-  v_participant battle.participants%rowtype;
-  v_ledgers jsonb;
-  v_audit_hash text;
-begin
-  select * into v_room from battle.rooms where id = p_room_id for update;
-  if v_room.status in ('finished', 'draw', 'voided') then return; end if;
-  select * into v_tier
-  from battle.entry_tiers
-  where ruleset_id = v_room.ruleset_id and id = v_room.entry_tier_id;
-  v_ledgers := battle.refund_locked_stakes(p_room_id, 'battle_invariant_void');
-  perform battle.release_reservations(p_room_id);
-  update battle.participants
-  set status = 'voided', finished_at = now()
-  where room_id = p_room_id;
-  for v_participant in
-    select * from battle.participants where room_id = p_room_id order by side
-  loop
-    insert into battle.summaries (
-      participant_id, room_id, user_id, opponent_display_name,
-      result, entry_fee, payout, net_change, fee, reason, finished_at
-    )
-    select
-      v_participant.id, p_room_id, v_participant.user_id,
-      coalesce(
-        btrim(opponent.first_name || ' ' || coalesce(opponent.last_name, '')),
-        'Battle'
-      ),
-      'void', v_tier.entry_fee, v_tier.entry_fee, 0, 0,
-      'system_invariant_void', now()
-    from battle.participants other
-    join identity.users opponent on opponent.id = other.user_id
-    where other.room_id = p_room_id and other.id <> v_participant.id
-    limit 1;
-  end loop;
-  v_audit_hash := battle.append_audit(
-    p_room_id, 'invariant_void',
-    jsonb_build_object(
-      'error_detail_sha256',
-      encode(extensions.digest(convert_to(p_error_detail, 'UTF8'), 'sha256'), 'hex'),
-      'refund_ledger_ids', v_ledgers
-    )
-  );
-  insert into battle.settlements (
-    room_id, result, pool, winner_payout, fee, ledger_ids, reason, audit_hash
-  ) values (
-    p_room_id, 'void', coalesce(v_tier.pool, 0), 0, 0, v_ledgers,
-    'system_invariant_void', v_audit_hash
-  );
-  update battle.rooms
-  set status = 'voided', finished_at = now(), phase_deadline = null,
-      reveal_ends_at = null, pending_result = null,
-      pending_winner_participant_id = null,
-      pending_result_reason = 'system_invariant_void',
-      updated_at = now()
-  where id = p_room_id;
-  perform battle.record_event(
-    p_room_id, 'battle_voided',
-    jsonb_build_object('reason', 'system_invariant_void'),
-    jsonb_build_object('audit_hash', v_audit_hash, 'refund_ledger_ids', v_ledgers)
-  );
-end;
-$$;
-
 create or replace function battle.safe_finalize_room(p_room_id uuid)
 returns void
 language plpgsql
@@ -3155,17 +3426,27 @@ set search_path = ''
 as $$
 declare
   v_detail text;
+  v_message text;
+  v_state text;
 begin
   begin
     perform battle.finalize_room(p_room_id);
   exception
-    when sqlstate 'P0001' then
-      if sqlerrm <> 'BATTLE_INVARIANT' then raise; end if;
+    when others then
+      v_state := sqlstate;
+      v_message := sqlerrm;
       get stacked diagnostics v_detail = pg_exception_detail;
-      perform battle.void_room_after_invariant(
-        p_room_id, coalesce(sqlerrm, '') || ':' || coalesce(v_detail, '')
-      );
   end;
+  if v_state is not null then
+    perform battle.void_room_after_invariant(
+      p_room_id,
+      coalesce(v_state, '')
+        || ':'
+        || coalesce(v_message, '')
+        || ':'
+        || coalesce(v_detail, '')
+    );
+  end if;
 end;
 $$;
 
@@ -3249,7 +3530,15 @@ declare
   v_participant battle.participants%rowtype;
   v_processed integer := 0;
   v_ruleset_id text;
+  v_error_state text;
+  v_error_message text;
+  v_error_detail text;
 begin
+  if not pg_try_advisory_xact_lock(
+    hashtextextended('pokepets:battle:process_due:v1', 0)
+  ) then
+    return 0;
+  end if;
   select id into v_ruleset_id from battle.rulesets where status = 'active';
   if p_limit < 1
      or p_limit > battle.rule_int(v_ruleset_id, 'tick_batch_limit') then
@@ -3262,6 +3551,18 @@ begin
   ) then
     perform battle.wake_integration('share');
   end if;
+  if exists (
+    select 1
+    from battle.outbox
+    where published_at is null
+      and next_attempt_at <= now()
+      and (
+        status = 'pending'
+        or (status = 'leased' and lease_expires_at <= now())
+      )
+  ) then
+    perform battle.wake_integration('outbox');
+  end if;
   for v_room in
     select r.*
     from battle.rooms r
@@ -3272,9 +3573,7 @@ begin
         and (
           r.expires_at <= now()
           or coalesce(r.creator_offline_since, r.creator_last_heartbeat_at)
-             + make_interval(
-               secs => battle.rule_int(r.ruleset_id, 'offline_reconnect_seconds')
-             ) <= now()
+             + interval '90 seconds' <= now()
           or exists (
             select 1 from identity.users u
             where u.id = r.creator_user_id and u.status = 'banned'
@@ -3287,61 +3586,107 @@ begin
     order by least(
       coalesce(r.prepare_deadline, 'infinity'::timestamptz),
       coalesce(r.expires_at, 'infinity'::timestamptz),
+      coalesce(
+        coalesce(r.creator_offline_since, r.creator_last_heartbeat_at)
+          + interval '90 seconds',
+        'infinity'::timestamptz
+      ),
       coalesce(r.phase_deadline, 'infinity'::timestamptz),
       coalesce(r.reveal_ends_at, 'infinity'::timestamptz)
     ), r.id
     limit p_limit
     for update skip locked
   loop
-    if v_room.status = 'preparing_share' then
-      perform api.battle_abort_share(v_room.id, 'share_timeout');
-    elsif v_room.status = 'waiting' then
-      perform battle.close_unstarted_room(
-        v_room.id,
-        case
-          when v_room.expires_at <= now() then 'expired'
-          else 'cancelled'
-        end,
-        case
-          when v_room.expires_at <= now() then 'waiting_expired'
-          when exists (
-            select 1 from identity.users
-            where id = v_room.creator_user_id and status = 'banned'
-          ) then 'creator_banned'
-          else 'creator_offline_timeout'
-        end
-      );
-    elsif v_room.status = 'active_select' then
-      for v_participant in
-        select * from battle.participants
-        where room_id = v_room.id and status = 'active'
-        order by side
-      loop
-        perform battle.lock_timeout_action(
-          v_room.id, v_room.current_turn_no, 'normal', v_participant.id
-        );
-      end loop;
-      perform battle.resolve_normal_turn(v_room.id);
-    elsif v_room.status = 'forced_switch' then
-      for v_participant in
-        select p.*
-        from battle.participants p
-        where p.room_id = v_room.id and p.status = 'active'
-          and not exists (
-            select 1 from battle.team_members tm
-            where tm.participant_id = p.id and tm.active
+    begin
+      begin
+        if v_room.status = 'preparing_share' then
+          perform api.battle_abort_share(v_room.id, 'share_timeout');
+        elsif v_room.status = 'waiting' then
+          perform battle.close_unstarted_room(
+            v_room.id,
+            case
+              when v_room.expires_at <= now() then 'expired'
+              else 'cancelled'
+            end,
+            case
+              when v_room.expires_at <= now() then 'waiting_expired'
+              when exists (
+                select 1 from identity.users
+                where id = v_room.creator_user_id and status = 'banned'
+              ) then 'creator_banned'
+              else 'creator_offline_timeout'
+            end
+          );
+        elsif v_room.status = 'active_select' then
+          for v_participant in
+            select * from battle.participants
+            where room_id = v_room.id and status = 'active'
+            order by side
+          loop
+            perform battle.lock_timeout_action(
+              v_room.id, v_room.current_turn_no, 'normal', v_participant.id
+            );
+          end loop;
+          perform battle.safe_resolve_normal_turn(v_room.id);
+        elsif v_room.status = 'forced_switch' then
+          for v_participant in
+            select p.*
+            from battle.participants p
+            where p.room_id = v_room.id and p.status = 'active'
+              and not exists (
+                select 1 from battle.team_members tm
+                where tm.participant_id = p.id and tm.active
+              )
+            order by p.side
+          loop
+            perform battle.lock_timeout_action(
+              v_room.id, v_room.current_turn_no, 'forced_switch', v_participant.id
+            );
+          end loop;
+          perform battle.safe_resolve_forced_switch(v_room.id);
+        else
+          perform battle.advance_reveal(v_room.id);
+        end if;
+        v_processed := v_processed + 1;
+      exception
+        when sqlstate 'P0001' then
+          if sqlerrm <> 'BATTLE_INVARIANT' then raise; end if;
+          v_error_message := sqlerrm;
+          get stacked diagnostics v_error_detail = pg_exception_detail;
+          perform battle.void_room_after_invariant(
+            v_room.id,
+            coalesce(v_error_message, '') || ':' || coalesce(v_error_detail, '')
+          );
+          v_processed := v_processed + 1;
+      end;
+    exception
+      when others then
+        v_error_state := sqlstate;
+        v_error_message := sqlerrm;
+        get stacked diagnostics v_error_detail = pg_exception_detail;
+        insert into operations.invariant_violations (code, subject, details)
+        values (
+          'BATTLE_TICK_ROOM_FAILURE',
+          v_room.id::text,
+          jsonb_build_object(
+            'sqlstate', v_error_state,
+            'error_sha256',
+            encode(
+              extensions.digest(
+                convert_to(
+                  coalesce(v_error_message, '')
+                    || ':'
+                    || coalesce(v_error_detail, ''),
+                  'UTF8'
+                ),
+                'sha256'
+              ),
+              'hex'
+            )
           )
-        order by p.side
-      loop
-        perform battle.lock_timeout_action(
-          v_room.id, v_room.current_turn_no, 'forced_switch', v_participant.id
-        );
-      end loop;
-      perform battle.resolve_forced_switch(v_room.id);
-    else
-      perform battle.advance_reveal(v_room.id);
-    end if;
-    v_processed := v_processed + 1;
+        )
+        on conflict do nothing;
+    end;
   end loop;
   return v_processed;
 end;
@@ -3368,7 +3713,10 @@ begin
     perform api.raise_business_error('BATTLE_NOT_PARTICIPANT', '当前账号不是该 Battle 的参与者');
   end if;
   if v_participant.status not in ('finished', 'draw', 'voided') then
-    perform api.raise_business_error('BATTLE_STATE_CONFLICT', 'Battle 结果尚未生成');
+    perform api.raise_business_error(
+      'BATTLE_RESULT_NOT_ACKNOWLEDGEABLE',
+      '当前没有可确认的 Battle 结果'
+    );
   end if;
   update battle.participants
   set result_acknowledged_at = coalesce(result_acknowledged_at, now())
@@ -3588,34 +3936,6 @@ security definer
 set search_path = ''
 as $$
   select battle.process_due(p_limit)
-$$;
-
-create or replace function api.battle_internal_room_context(p_room_id uuid)
-returns jsonb
-language sql
-stable
-security definer
-set search_path = ''
-as $$
-  select jsonb_build_object(
-    'room_id', r.id,
-    'state_version', r.state_version,
-    'status', r.status,
-    'private_seed_hex', encode(r.private_seed, 'hex'),
-    'seed_commitment', r.seed_commitment,
-    'participants', coalesce((
-      select jsonb_agg(jsonb_build_object(
-        'participant_id', p.id,
-        'side', p.side,
-        'telegram_user_id', u.telegram_id
-      ) order by p.side)
-      from battle.participants p
-      join identity.users u on u.id = p.user_id
-      where p.room_id = r.id
-    ), '[]'::jsonb)
-  )
-  from battle.rooms r
-  where r.id = p_room_id
 $$;
 
 create or replace function api.battle_validate_recovery_context(

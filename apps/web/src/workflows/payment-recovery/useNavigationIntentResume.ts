@@ -32,6 +32,13 @@ export function useNavigationIntentResume(
       navigate(`/market?${params.toString()}`);
       return;
     }
+    if (
+      order.intent.kind === "battle_create" ||
+      order.intent.kind === "battle_accept"
+    ) {
+      navigate(`/game?${params.toString()}`);
+      return;
+    }
     params.set("count", String(order.intent.count));
     navigate(`/tasks?${params.toString()}`);
   }, [navigate, onResume, orders]);

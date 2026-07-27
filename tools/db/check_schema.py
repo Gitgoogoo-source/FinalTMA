@@ -69,7 +69,8 @@ def verify_security(path: Path) -> None:
         "revoke execute on all functions",
         "revoke all on sequence",
         "grant usage on schema api to service_role",
-        "grant execute on all functions in schema api to service_role",
+        "grant execute on function %i.%i(%s) to service_role",
+        "v_allowed text[] := array[",
         "alter default privileges",
         "revoke all on tables from public, anon, authenticated, service_role",
         "revoke all on sequences from public, anon, authenticated, service_role",
@@ -77,6 +78,28 @@ def verify_security(path: Path) -> None:
     missing = [statement for statement in required if statement not in sql]
     if missing:
         raise SystemExit(f"Security migration is incomplete: {missing}")
+    if "grant execute on all functions in schema api to service_role" in sql:
+        raise SystemExit("service_role API execution must use an explicit function allowlist")
+
+    schema_sql = "\n".join(path.read_text(encoding="utf-8").lower() for path in SCHEMAS.glob("*.sql"))
+    api_functions = set(
+        re.findall(r"create\s+or\s+replace\s+function\s+api\.([a-z0-9_]+)", schema_sql)
+    )
+    allowlist_match = re.search(
+        r"v_allowed\s+text\[\]\s*:=\s*array\[(.*?)\];",
+        sql,
+        re.DOTALL,
+    )
+    if allowlist_match is None:
+        raise SystemExit("Security migration API allowlist is missing")
+    allowlisted = set(re.findall(r"'([a-z0-9_]+)'", allowlist_match.group(1)))
+    expected = api_functions - {"raise_business_error", "session_user"}
+    if allowlisted != expected:
+        raise SystemExit(
+            "Security migration API allowlist mismatch: "
+            f"missing={sorted(expected - allowlisted)}, "
+            f"unexpected={sorted(allowlisted - expected)}"
+        )
 
 
 def verify_database_error_codes() -> None:
@@ -215,6 +238,10 @@ def verify_stars_payment_contract() -> None:
             "create or replace function api.payment_fail_invoice_creation",
             "return operations.complete_command(v_order.operation_id, v_result)",
             "raise_business_error('payment_already_processing'",
+            "'battle_create'",
+            "'battle_accept'",
+            "'battle_invite_token_hash'",
+            "battle.validate_team_selection",
         ),
         "callbacks": (
             "create or replace function api.payment_begin_checkout",
@@ -265,18 +292,24 @@ def verify_battle_contract() -> None:
         "create or replace function api.battle_accept_room",
         "create or replace function api.battle_submit_action",
         "create or replace function api.battle_submit_forced_switch",
+        "create or replace function battle.safe_resolve_normal_turn",
+        "create or replace function battle.safe_resolve_forced_switch",
         "create or replace function battle.safe_finalize_room",
         "create or replace function api.battle_claim_outbox",
         "create or replace function battle.monitor_invariants",
         "'battle-tick-v1'",
         "'1 second'",
         "for update skip locked",
+        "pg_try_advisory_xact_lock",
+        "perform battle.wake_integration('outbox')",
         "extensions.hmac(",
         "gen_random_bytes(32)",
     )
     missing = [fragment for fragment in required if fragment not in battle_sql]
     if missing:
         raise SystemExit(f"Battle database contract is incomplete: {missing}")
+    if "battle_internal_room_context" in battle_sql or "private_seed_hex" in battle_sql:
+        raise SystemExit("Battle private seed cannot be exposed through an api RPC")
     if re.search(r"\bstart_param\s+text\b", identity_sql) or re.search(
         r"\bbattle_invite_token\s+text\b", identity_sql
     ):

@@ -7,6 +7,12 @@ import {
   uuidSchema,
 } from "../../common/schemas.ts";
 
+const battleTeamSelectionSchema = z.tuple([
+  z.string().min(1),
+  z.string().min(1),
+  z.string().min(1),
+]);
+
 export const paymentIntentSchema = z.discriminatedUnion("kind", [
   z
     .object({
@@ -26,6 +32,20 @@ export const paymentIntentSchema = z.discriminatedUnion("kind", [
     .object({
       kind: z.literal("wheel"),
       count: z.union([z.literal(1), z.literal(10)]),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal("battle_create"),
+      tier: z.enum(["tier-20", "tier-100", "tier-500"]),
+      template_ids: battleTeamSelectionSchema,
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal("battle_accept"),
+      room_id: uuidSchema,
+      template_ids: battleTeamSelectionSchema,
     })
     .strict(),
 ]);

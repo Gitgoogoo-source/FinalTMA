@@ -149,6 +149,7 @@ const scopePrefixes: Record<
   inventory: ["identity", "inventory", "market", "expedition", "mint", "album"],
   payments: ["identity", "topup", "vip"],
   mint: ["identity", "mint", "wallet", "inventory"],
+  battle: ["battle"],
 };
 
 export async function refreshRouteScopes(

@@ -5,6 +5,7 @@ export type RefreshScope =
   | "inventory"
   | "payments"
   | "mint"
+  | "battle"
   | "all";
 export type RecoveryAction =
   | "none"
@@ -16,7 +17,7 @@ export type ErrorDefinition = {
   status: number;
   message: string;
   retryable: boolean;
-  refreshScope: RefreshScope;
+  refreshScope: RefreshScope | readonly RefreshScope[];
   recoveryAction: RecoveryAction;
 };
 
@@ -24,7 +25,7 @@ function error(
   status: number,
   message: string,
   retryable = false,
-  refreshScope: RefreshScope = "none",
+  refreshScope: RefreshScope | readonly RefreshScope[] = "none",
   recoveryAction: RecoveryAction = "none",
 ): ErrorDefinition {
   return { status, message, retryable, refreshScope, recoveryAction };
@@ -45,62 +46,150 @@ export const errorRegistry = {
     409,
     "本回合动作已经锁定",
     false,
-    "all",
+    "battle",
     "refresh",
   ),
-  BATTLE_ACTION_INVALID: error(400, "Battle 动作无效"),
+  BATTLE_ACTION_INVALID: error(
+    400,
+    "Battle 动作无效",
+    false,
+    "battle",
+    "refresh",
+  ),
+  BATTLE_ACTION_PHASE_INVALID: error(
+    409,
+    "当前阶段不能提交该动作",
+    false,
+    "battle",
+    "refresh",
+  ),
   BATTLE_ALREADY_PARTICIPATING: error(
     409,
-    "当前已有进行中的 Battle",
+    "当前已有未结束的 Battle",
     false,
-    "all",
+    "battle",
     "refresh",
   ),
-  BATTLE_CREATOR_OFFLINE: error(409, "发起者当前离线", false, "all", "refresh"),
-  BATTLE_INVITE_INVALID: error(404, "Battle 邀请无效", false, "all", "refresh"),
-  BATTLE_NOT_PARTICIPANT: error(403, "当前账号不是该 Battle 的参与者"),
+  BATTLE_CREATOR_OFFLINE: error(
+    409,
+    "创建者当前不在线",
+    true,
+    "battle",
+    "refresh",
+  ),
+  BATTLE_INVITE_INVALID: error(404, "挑战已失效", false, "battle", "refresh"),
+  BATTLE_NOT_PARTICIPANT: error(
+    403,
+    "当前账号不是该 Battle 的参与者",
+    false,
+    "battle",
+    "refresh",
+  ),
+  BATTLE_RESULT_NOT_ACKNOWLEDGEABLE: error(
+    409,
+    "当前没有可确认的 Battle 结果",
+    false,
+    "battle",
+    "refresh",
+  ),
   BATTLE_ROOM_ALREADY_ACCEPTED: error(
     409,
     "挑战已被其他玩家接受",
     false,
-    "all",
+    "battle",
     "refresh",
   ),
-  BATTLE_ROOM_CANCELLED: error(409, "挑战已取消", false, "all", "refresh"),
-  BATTLE_ROOM_EXPIRED: error(409, "挑战已过期", false, "all", "refresh"),
+  BATTLE_ROOM_CANCELLED: error(
+    410,
+    "挑战已取消",
+    false,
+    ["battle", "assets", "inventory"],
+    "refresh",
+  ),
+  BATTLE_ROOM_EXPIRED: error(
+    410,
+    "挑战已过期",
+    false,
+    ["battle", "assets", "inventory"],
+    "refresh",
+  ),
   BATTLE_ROOM_NOT_FOUND: error(
     404,
     "Battle 房间不存在",
     false,
-    "all",
+    "battle",
     "refresh",
   ),
   BATTLE_RULESET_UNAVAILABLE: error(
     503,
-    "Battle 规则暂不可用",
+    "Battle 规则暂不可用，请稍后重试",
     true,
-    "all",
+    "battle",
     "refresh",
   ),
-  BATTLE_SELF_ACCEPT_FORBIDDEN: error(409, "不能接受自己的 Battle 邀请"),
+  BATTLE_SELF_ACCEPT_FORBIDDEN: error(
+    403,
+    "不能接受自己创建的挑战",
+    false,
+    "battle",
+    "refresh",
+  ),
   BATTLE_SHARE_FAILED: error(
     502,
-    "Battle 分享卡创建失败",
+    "挑战卡创建失败，入场费和藏品已恢复",
     true,
-    "all",
+    ["battle", "assets", "inventory"],
+    "query_operation",
+  ),
+  BATTLE_SHARE_PREPARING: error(
+    409,
+    "挑战卡正在准备，请勿重复创建",
+    true,
+    "battle",
     "query_operation",
   ),
   BATTLE_STATE_CONFLICT: error(
     409,
     "Battle 状态已更新",
     false,
-    "all",
+    "battle",
     "refresh",
   ),
-  BATTLE_SWITCH_INVALID: error(400, "无法切换到该藏品"),
-  BATTLE_TEAM_INVALID: error(400, "请选择三个可用且不同的藏品"),
-  BATTLE_TEAM_TEMPLATE_DUPLICATE: error(400, "Battle 队伍中的藏品模板不能重复"),
-  BATTLE_TIER_INVALID: error(400, "Battle 入场档位无效"),
+  BATTLE_SWITCH_TARGET_INVALID: error(
+    400,
+    "换宠目标无效",
+    false,
+    "battle",
+    "refresh",
+  ),
+  BATTLE_TEAM_INVALID: error(
+    400,
+    "请选择三个可用且不同的藏品",
+    false,
+    "inventory",
+    "refresh",
+  ),
+  BATTLE_TEAM_TEMPLATE_DUPLICATE: error(
+    400,
+    "Battle 队伍中的藏品模板不能重复",
+    false,
+    "inventory",
+    "refresh",
+  ),
+  BATTLE_TIER_INVALID: error(
+    400,
+    "Battle 入场档位无效",
+    false,
+    "battle",
+    "refresh",
+  ),
+  BATTLE_VOIDED: error(
+    409,
+    "Battle 已安全作废，入场费和藏品已恢复",
+    false,
+    ["battle", "assets", "inventory"],
+    "refresh",
+  ),
   BOX_TIER_INVALID: error(400, "盲盒档次无效"),
   CATALOG_INVALID: error(
     500,

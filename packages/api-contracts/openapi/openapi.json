@@ -629,10 +629,12 @@
                                       "API_ROUTE_NOT_FOUND",
                                       "BATTLE_ACTION_ALREADY_LOCKED",
                                       "BATTLE_ACTION_INVALID",
+                                      "BATTLE_ACTION_PHASE_INVALID",
                                       "BATTLE_ALREADY_PARTICIPATING",
                                       "BATTLE_CREATOR_OFFLINE",
                                       "BATTLE_INVITE_INVALID",
                                       "BATTLE_NOT_PARTICIPANT",
+                                      "BATTLE_RESULT_NOT_ACKNOWLEDGEABLE",
                                       "BATTLE_ROOM_ALREADY_ACCEPTED",
                                       "BATTLE_ROOM_CANCELLED",
                                       "BATTLE_ROOM_EXPIRED",
@@ -640,11 +642,13 @@
                                       "BATTLE_RULESET_UNAVAILABLE",
                                       "BATTLE_SELF_ACCEPT_FORBIDDEN",
                                       "BATTLE_SHARE_FAILED",
+                                      "BATTLE_SHARE_PREPARING",
                                       "BATTLE_STATE_CONFLICT",
-                                      "BATTLE_SWITCH_INVALID",
+                                      "BATTLE_SWITCH_TARGET_INVALID",
                                       "BATTLE_TEAM_INVALID",
                                       "BATTLE_TEAM_TEMPLATE_DUPLICATE",
                                       "BATTLE_TIER_INVALID",
+                                      "BATTLE_VOIDED",
                                       "BOX_TIER_INVALID",
                                       "CATALOG_INVALID",
                                       "CATALOG_UNAVAILABLE",
@@ -946,6 +950,83 @@
                                           }
                                         },
                                         "required": ["kind", "count"],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "kind": {
+                                            "type": "string",
+                                            "const": "battle_create"
+                                          },
+                                          "tier": {
+                                            "type": "string",
+                                            "enum": [
+                                              "tier-20",
+                                              "tier-100",
+                                              "tier-500"
+                                            ]
+                                          },
+                                          "template_ids": {
+                                            "type": "array",
+                                            "prefixItems": [
+                                              {
+                                                "type": "string",
+                                                "minLength": 1
+                                              },
+                                              {
+                                                "type": "string",
+                                                "minLength": 1
+                                              },
+                                              {
+                                                "type": "string",
+                                                "minLength": 1
+                                              }
+                                            ]
+                                          }
+                                        },
+                                        "required": [
+                                          "kind",
+                                          "tier",
+                                          "template_ids"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "kind": {
+                                            "type": "string",
+                                            "const": "battle_accept"
+                                          },
+                                          "room_id": {
+                                            "type": "string",
+                                            "format": "uuid",
+                                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                          },
+                                          "template_ids": {
+                                            "type": "array",
+                                            "prefixItems": [
+                                              {
+                                                "type": "string",
+                                                "minLength": 1
+                                              },
+                                              {
+                                                "type": "string",
+                                                "minLength": 1
+                                              },
+                                              {
+                                                "type": "string",
+                                                "minLength": 1
+                                              }
+                                            ]
+                                          }
+                                        },
+                                        "required": [
+                                          "kind",
+                                          "room_id",
+                                          "template_ids"
+                                        ],
                                         "additionalProperties": false
                                       }
                                     ]
@@ -2011,10 +2092,12 @@
                                       "API_ROUTE_NOT_FOUND",
                                       "BATTLE_ACTION_ALREADY_LOCKED",
                                       "BATTLE_ACTION_INVALID",
+                                      "BATTLE_ACTION_PHASE_INVALID",
                                       "BATTLE_ALREADY_PARTICIPATING",
                                       "BATTLE_CREATOR_OFFLINE",
                                       "BATTLE_INVITE_INVALID",
                                       "BATTLE_NOT_PARTICIPANT",
+                                      "BATTLE_RESULT_NOT_ACKNOWLEDGEABLE",
                                       "BATTLE_ROOM_ALREADY_ACCEPTED",
                                       "BATTLE_ROOM_CANCELLED",
                                       "BATTLE_ROOM_EXPIRED",
@@ -2022,11 +2105,13 @@
                                       "BATTLE_RULESET_UNAVAILABLE",
                                       "BATTLE_SELF_ACCEPT_FORBIDDEN",
                                       "BATTLE_SHARE_FAILED",
+                                      "BATTLE_SHARE_PREPARING",
                                       "BATTLE_STATE_CONFLICT",
-                                      "BATTLE_SWITCH_INVALID",
+                                      "BATTLE_SWITCH_TARGET_INVALID",
                                       "BATTLE_TEAM_INVALID",
                                       "BATTLE_TEAM_TEMPLATE_DUPLICATE",
                                       "BATTLE_TIER_INVALID",
+                                      "BATTLE_VOIDED",
                                       "BOX_TIER_INVALID",
                                       "CATALOG_INVALID",
                                       "CATALOG_UNAVAILABLE",
@@ -4689,10 +4774,12 @@
                                       "API_ROUTE_NOT_FOUND",
                                       "BATTLE_ACTION_ALREADY_LOCKED",
                                       "BATTLE_ACTION_INVALID",
+                                      "BATTLE_ACTION_PHASE_INVALID",
                                       "BATTLE_ALREADY_PARTICIPATING",
                                       "BATTLE_CREATOR_OFFLINE",
                                       "BATTLE_INVITE_INVALID",
                                       "BATTLE_NOT_PARTICIPANT",
+                                      "BATTLE_RESULT_NOT_ACKNOWLEDGEABLE",
                                       "BATTLE_ROOM_ALREADY_ACCEPTED",
                                       "BATTLE_ROOM_CANCELLED",
                                       "BATTLE_ROOM_EXPIRED",
@@ -4700,11 +4787,13 @@
                                       "BATTLE_RULESET_UNAVAILABLE",
                                       "BATTLE_SELF_ACCEPT_FORBIDDEN",
                                       "BATTLE_SHARE_FAILED",
+                                      "BATTLE_SHARE_PREPARING",
                                       "BATTLE_STATE_CONFLICT",
-                                      "BATTLE_SWITCH_INVALID",
+                                      "BATTLE_SWITCH_TARGET_INVALID",
                                       "BATTLE_TEAM_INVALID",
                                       "BATTLE_TEAM_TEMPLATE_DUPLICATE",
                                       "BATTLE_TIER_INVALID",
+                                      "BATTLE_VOIDED",
                                       "BOX_TIER_INVALID",
                                       "CATALOG_INVALID",
                                       "CATALOG_UNAVAILABLE",
@@ -8286,10 +8375,12 @@
                                       "API_ROUTE_NOT_FOUND",
                                       "BATTLE_ACTION_ALREADY_LOCKED",
                                       "BATTLE_ACTION_INVALID",
+                                      "BATTLE_ACTION_PHASE_INVALID",
                                       "BATTLE_ALREADY_PARTICIPATING",
                                       "BATTLE_CREATOR_OFFLINE",
                                       "BATTLE_INVITE_INVALID",
                                       "BATTLE_NOT_PARTICIPANT",
+                                      "BATTLE_RESULT_NOT_ACKNOWLEDGEABLE",
                                       "BATTLE_ROOM_ALREADY_ACCEPTED",
                                       "BATTLE_ROOM_CANCELLED",
                                       "BATTLE_ROOM_EXPIRED",
@@ -8297,11 +8388,13 @@
                                       "BATTLE_RULESET_UNAVAILABLE",
                                       "BATTLE_SELF_ACCEPT_FORBIDDEN",
                                       "BATTLE_SHARE_FAILED",
+                                      "BATTLE_SHARE_PREPARING",
                                       "BATTLE_STATE_CONFLICT",
-                                      "BATTLE_SWITCH_INVALID",
+                                      "BATTLE_SWITCH_TARGET_INVALID",
                                       "BATTLE_TEAM_INVALID",
                                       "BATTLE_TEAM_TEMPLATE_DUPLICATE",
                                       "BATTLE_TIER_INVALID",
+                                      "BATTLE_VOIDED",
                                       "BOX_TIER_INVALID",
                                       "CATALOG_INVALID",
                                       "CATALOG_UNAVAILABLE",
@@ -12107,6 +12200,83 @@
                                         },
                                         "required": ["kind", "count"],
                                         "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "kind": {
+                                            "type": "string",
+                                            "const": "battle_create"
+                                          },
+                                          "tier": {
+                                            "type": "string",
+                                            "enum": [
+                                              "tier-20",
+                                              "tier-100",
+                                              "tier-500"
+                                            ]
+                                          },
+                                          "template_ids": {
+                                            "type": "array",
+                                            "prefixItems": [
+                                              {
+                                                "type": "string",
+                                                "minLength": 1
+                                              },
+                                              {
+                                                "type": "string",
+                                                "minLength": 1
+                                              },
+                                              {
+                                                "type": "string",
+                                                "minLength": 1
+                                              }
+                                            ]
+                                          }
+                                        },
+                                        "required": [
+                                          "kind",
+                                          "tier",
+                                          "template_ids"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "kind": {
+                                            "type": "string",
+                                            "const": "battle_accept"
+                                          },
+                                          "room_id": {
+                                            "type": "string",
+                                            "format": "uuid",
+                                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                          },
+                                          "template_ids": {
+                                            "type": "array",
+                                            "prefixItems": [
+                                              {
+                                                "type": "string",
+                                                "minLength": 1
+                                              },
+                                              {
+                                                "type": "string",
+                                                "minLength": 1
+                                              },
+                                              {
+                                                "type": "string",
+                                                "minLength": 1
+                                              }
+                                            ]
+                                          }
+                                        },
+                                        "required": [
+                                          "kind",
+                                          "room_id",
+                                          "template_ids"
+                                        ],
+                                        "additionalProperties": false
                                       }
                                     ]
                                   },
@@ -12480,6 +12650,61 @@
                                   },
                                   "required": ["kind", "count"],
                                   "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "battle_create"
+                                    },
+                                    "tier": {
+                                      "type": "string",
+                                      "enum": [
+                                        "tier-20",
+                                        "tier-100",
+                                        "tier-500"
+                                      ]
+                                    },
+                                    "template_ids": {
+                                      "type": "array",
+                                      "prefixItems": [
+                                        { "type": "string", "minLength": 1 },
+                                        { "type": "string", "minLength": 1 },
+                                        { "type": "string", "minLength": 1 }
+                                      ]
+                                    }
+                                  },
+                                  "required": ["kind", "tier", "template_ids"],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "battle_accept"
+                                    },
+                                    "room_id": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    "template_ids": {
+                                      "type": "array",
+                                      "prefixItems": [
+                                        { "type": "string", "minLength": 1 },
+                                        { "type": "string", "minLength": 1 },
+                                        { "type": "string", "minLength": 1 }
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "room_id",
+                                    "template_ids"
+                                  ],
+                                  "additionalProperties": false
                                 }
                               ]
                             },
@@ -12696,6 +12921,61 @@
                                   },
                                   "required": ["kind", "count"],
                                   "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "battle_create"
+                                    },
+                                    "tier": {
+                                      "type": "string",
+                                      "enum": [
+                                        "tier-20",
+                                        "tier-100",
+                                        "tier-500"
+                                      ]
+                                    },
+                                    "template_ids": {
+                                      "type": "array",
+                                      "prefixItems": [
+                                        { "type": "string", "minLength": 1 },
+                                        { "type": "string", "minLength": 1 },
+                                        { "type": "string", "minLength": 1 }
+                                      ]
+                                    }
+                                  },
+                                  "required": ["kind", "tier", "template_ids"],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "battle_accept"
+                                    },
+                                    "room_id": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    "template_ids": {
+                                      "type": "array",
+                                      "prefixItems": [
+                                        { "type": "string", "minLength": 1 },
+                                        { "type": "string", "minLength": 1 },
+                                        { "type": "string", "minLength": 1 }
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "room_id",
+                                    "template_ids"
+                                  ],
+                                  "additionalProperties": false
                                 }
                               ]
                             },
@@ -12743,7 +13023,7 @@
             }
           },
           "400": {
-            "description": "Errors: REQUEST_INVALID, IDEMPOTENCY_KEY_INVALID, IDEMPOTENCY_KEY_REQUIRED, TOPUP_AMOUNT_INVALID",
+            "description": "Errors: REQUEST_INVALID, IDEMPOTENCY_KEY_INVALID, IDEMPOTENCY_KEY_REQUIRED, TOPUP_AMOUNT_INVALID, BATTLE_TIER_INVALID, BATTLE_TEAM_INVALID, BATTLE_TEAM_TEMPLATE_DUPLICATE",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/StandardError" }
@@ -12759,7 +13039,7 @@
             }
           },
           "403": {
-            "description": "Errors: ACCOUNT_RESTRICTED",
+            "description": "Errors: ACCOUNT_RESTRICTED, BATTLE_SELF_ACCEPT_FORBIDDEN",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/StandardError" }
@@ -12767,7 +13047,7 @@
             }
           },
           "404": {
-            "description": "Errors: PAYMENT_NOT_FOUND",
+            "description": "Errors: PAYMENT_NOT_FOUND, BATTLE_INVITE_INVALID",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/StandardError" }
@@ -12775,7 +13055,15 @@
             }
           },
           "409": {
-            "description": "Errors: ENTRY_HANDOFF_PENDING, TOPUP_NOT_REQUIRED, PAYMENT_ALREADY_PROCESSING, PAYMENT_CANCELLED, PAYMENT_EXPIRED, IDEMPOTENCY_KEY_REUSED",
+            "description": "Errors: ENTRY_HANDOFF_PENDING, TOPUP_NOT_REQUIRED, PAYMENT_ALREADY_PROCESSING, PAYMENT_CANCELLED, PAYMENT_EXPIRED, BATTLE_SHARE_PREPARING, BATTLE_ALREADY_PARTICIPATING, BATTLE_ROOM_ALREADY_ACCEPTED, BATTLE_CREATOR_OFFLINE, BATTLE_VOIDED, INSUFFICIENT_INVENTORY, IDEMPOTENCY_KEY_REUSED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "410": {
+            "description": "Errors: BATTLE_ROOM_EXPIRED, BATTLE_ROOM_CANCELLED",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/StandardError" }
@@ -12813,6 +13101,14 @@
                 "schema": { "$ref": "#/components/schemas/StandardError" }
               }
             }
+          },
+          "503": {
+            "description": "Errors: BATTLE_RULESET_UNAVAILABLE",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
           }
         },
         "x-idempotency-required": true,
@@ -12838,6 +13134,20 @@
           "PAYMENT_EXPIRED",
           "PAYMENT_NOT_FOUND",
           "TELEGRAM_API_FAILED",
+          "BATTLE_RULESET_UNAVAILABLE",
+          "BATTLE_TIER_INVALID",
+          "BATTLE_TEAM_INVALID",
+          "BATTLE_TEAM_TEMPLATE_DUPLICATE",
+          "BATTLE_SHARE_PREPARING",
+          "BATTLE_ALREADY_PARTICIPATING",
+          "BATTLE_INVITE_INVALID",
+          "BATTLE_ROOM_EXPIRED",
+          "BATTLE_ROOM_CANCELLED",
+          "BATTLE_ROOM_ALREADY_ACCEPTED",
+          "BATTLE_CREATOR_OFFLINE",
+          "BATTLE_SELF_ACCEPT_FORBIDDEN",
+          "BATTLE_VOIDED",
+          "INSUFFICIENT_INVENTORY",
           "IDEMPOTENCY_KEY_REUSED"
         ],
         "x-error-definitions": {
@@ -12981,6 +13291,104 @@
             "refreshScope": "payments",
             "recoveryAction": "refresh"
           },
+          "BATTLE_RULESET_UNAVAILABLE": {
+            "status": 503,
+            "message": "Battle 规则暂不可用，请稍后重试",
+            "retryable": true,
+            "refreshScope": "battle",
+            "recoveryAction": "refresh"
+          },
+          "BATTLE_TIER_INVALID": {
+            "status": 400,
+            "message": "Battle 入场档位无效",
+            "retryable": false,
+            "refreshScope": "battle",
+            "recoveryAction": "refresh"
+          },
+          "BATTLE_TEAM_INVALID": {
+            "status": 400,
+            "message": "请选择三个可用且不同的藏品",
+            "retryable": false,
+            "refreshScope": "inventory",
+            "recoveryAction": "refresh"
+          },
+          "BATTLE_TEAM_TEMPLATE_DUPLICATE": {
+            "status": 400,
+            "message": "Battle 队伍中的藏品模板不能重复",
+            "retryable": false,
+            "refreshScope": "inventory",
+            "recoveryAction": "refresh"
+          },
+          "BATTLE_SHARE_PREPARING": {
+            "status": 409,
+            "message": "挑战卡正在准备，请勿重复创建",
+            "retryable": true,
+            "refreshScope": "battle",
+            "recoveryAction": "query_operation"
+          },
+          "BATTLE_ALREADY_PARTICIPATING": {
+            "status": 409,
+            "message": "当前已有未结束的 Battle",
+            "retryable": false,
+            "refreshScope": "battle",
+            "recoveryAction": "refresh"
+          },
+          "BATTLE_INVITE_INVALID": {
+            "status": 404,
+            "message": "挑战已失效",
+            "retryable": false,
+            "refreshScope": "battle",
+            "recoveryAction": "refresh"
+          },
+          "BATTLE_ROOM_EXPIRED": {
+            "status": 410,
+            "message": "挑战已过期",
+            "retryable": false,
+            "refreshScope": ["battle", "assets", "inventory"],
+            "recoveryAction": "refresh"
+          },
+          "BATTLE_ROOM_CANCELLED": {
+            "status": 410,
+            "message": "挑战已取消",
+            "retryable": false,
+            "refreshScope": ["battle", "assets", "inventory"],
+            "recoveryAction": "refresh"
+          },
+          "BATTLE_ROOM_ALREADY_ACCEPTED": {
+            "status": 409,
+            "message": "挑战已被其他玩家接受",
+            "retryable": false,
+            "refreshScope": "battle",
+            "recoveryAction": "refresh"
+          },
+          "BATTLE_CREATOR_OFFLINE": {
+            "status": 409,
+            "message": "创建者当前不在线",
+            "retryable": true,
+            "refreshScope": "battle",
+            "recoveryAction": "refresh"
+          },
+          "BATTLE_SELF_ACCEPT_FORBIDDEN": {
+            "status": 403,
+            "message": "不能接受自己创建的挑战",
+            "retryable": false,
+            "refreshScope": "battle",
+            "recoveryAction": "refresh"
+          },
+          "BATTLE_VOIDED": {
+            "status": 409,
+            "message": "Battle 已安全作废，入场费和藏品已恢复",
+            "retryable": false,
+            "refreshScope": ["battle", "assets", "inventory"],
+            "recoveryAction": "refresh"
+          },
+          "INSUFFICIENT_INVENTORY": {
+            "status": 409,
+            "message": "可用藏品数量不足",
+            "retryable": false,
+            "refreshScope": "inventory",
+            "recoveryAction": "refresh"
+          },
           "IDEMPOTENCY_KEY_REUSED": {
             "status": 409,
             "message": "幂等键已用于不同请求",
@@ -12989,7 +13397,7 @@
             "recoveryAction": "query_operation"
           }
         },
-        "x-refresh-scopes": ["payments", "assets"],
+        "x-refresh-scopes": ["payments", "assets", "battle"],
         "requestBody": {
           "required": true,
           "content": {
@@ -13060,6 +13468,53 @@
                             },
                             "required": ["kind", "count"],
                             "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "battle_create"
+                              },
+                              "tier": {
+                                "type": "string",
+                                "enum": ["tier-20", "tier-100", "tier-500"]
+                              },
+                              "template_ids": {
+                                "type": "array",
+                                "prefixItems": [
+                                  { "type": "string", "minLength": 1 },
+                                  { "type": "string", "minLength": 1 },
+                                  { "type": "string", "minLength": 1 }
+                                ]
+                              }
+                            },
+                            "required": ["kind", "tier", "template_ids"],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "battle_accept"
+                              },
+                              "room_id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              "template_ids": {
+                                "type": "array",
+                                "prefixItems": [
+                                  { "type": "string", "minLength": 1 },
+                                  { "type": "string", "minLength": 1 },
+                                  { "type": "string", "minLength": 1 }
+                                ]
+                              }
+                            },
+                            "required": ["kind", "room_id", "template_ids"],
+                            "additionalProperties": false
                           }
                         ]
                       }
@@ -13120,6 +13575,53 @@
                               }
                             },
                             "required": ["kind", "count"],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "battle_create"
+                              },
+                              "tier": {
+                                "type": "string",
+                                "enum": ["tier-20", "tier-100", "tier-500"]
+                              },
+                              "template_ids": {
+                                "type": "array",
+                                "prefixItems": [
+                                  { "type": "string", "minLength": 1 },
+                                  { "type": "string", "minLength": 1 },
+                                  { "type": "string", "minLength": 1 }
+                                ]
+                              }
+                            },
+                            "required": ["kind", "tier", "template_ids"],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "battle_accept"
+                              },
+                              "room_id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              "template_ids": {
+                                "type": "array",
+                                "prefixItems": [
+                                  { "type": "string", "minLength": 1 },
+                                  { "type": "string", "minLength": 1 },
+                                  { "type": "string", "minLength": 1 }
+                                ]
+                              }
+                            },
+                            "required": ["kind", "room_id", "template_ids"],
                             "additionalProperties": false
                           }
                         ]
@@ -13329,6 +13831,61 @@
                                   },
                                   "required": ["kind", "count"],
                                   "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "battle_create"
+                                    },
+                                    "tier": {
+                                      "type": "string",
+                                      "enum": [
+                                        "tier-20",
+                                        "tier-100",
+                                        "tier-500"
+                                      ]
+                                    },
+                                    "template_ids": {
+                                      "type": "array",
+                                      "prefixItems": [
+                                        { "type": "string", "minLength": 1 },
+                                        { "type": "string", "minLength": 1 },
+                                        { "type": "string", "minLength": 1 }
+                                      ]
+                                    }
+                                  },
+                                  "required": ["kind", "tier", "template_ids"],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "battle_accept"
+                                    },
+                                    "room_id": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    "template_ids": {
+                                      "type": "array",
+                                      "prefixItems": [
+                                        { "type": "string", "minLength": 1 },
+                                        { "type": "string", "minLength": 1 },
+                                        { "type": "string", "minLength": 1 }
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "room_id",
+                                    "template_ids"
+                                  ],
+                                  "additionalProperties": false
                                 }
                               ]
                             },
@@ -13544,6 +14101,61 @@
                                     }
                                   },
                                   "required": ["kind", "count"],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "battle_create"
+                                    },
+                                    "tier": {
+                                      "type": "string",
+                                      "enum": [
+                                        "tier-20",
+                                        "tier-100",
+                                        "tier-500"
+                                      ]
+                                    },
+                                    "template_ids": {
+                                      "type": "array",
+                                      "prefixItems": [
+                                        { "type": "string", "minLength": 1 },
+                                        { "type": "string", "minLength": 1 },
+                                        { "type": "string", "minLength": 1 }
+                                      ]
+                                    }
+                                  },
+                                  "required": ["kind", "tier", "template_ids"],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "battle_accept"
+                                    },
+                                    "room_id": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    "template_ids": {
+                                      "type": "array",
+                                      "prefixItems": [
+                                        { "type": "string", "minLength": 1 },
+                                        { "type": "string", "minLength": 1 },
+                                        { "type": "string", "minLength": 1 }
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "room_id",
+                                    "template_ids"
+                                  ],
                                   "additionalProperties": false
                                 }
                               ]
@@ -13798,7 +14410,7 @@
             "recoveryAction": "query_operation"
           }
         },
-        "x-refresh-scopes": ["payments", "assets"],
+        "x-refresh-scopes": ["payments", "assets", "battle"],
         "requestBody": {
           "required": true,
           "content": {
@@ -14008,6 +14620,61 @@
                                     }
                                   },
                                   "required": ["kind", "count"],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "battle_create"
+                                    },
+                                    "tier": {
+                                      "type": "string",
+                                      "enum": [
+                                        "tier-20",
+                                        "tier-100",
+                                        "tier-500"
+                                      ]
+                                    },
+                                    "template_ids": {
+                                      "type": "array",
+                                      "prefixItems": [
+                                        { "type": "string", "minLength": 1 },
+                                        { "type": "string", "minLength": 1 },
+                                        { "type": "string", "minLength": 1 }
+                                      ]
+                                    }
+                                  },
+                                  "required": ["kind", "tier", "template_ids"],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "battle_accept"
+                                    },
+                                    "room_id": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    "template_ids": {
+                                      "type": "array",
+                                      "prefixItems": [
+                                        { "type": "string", "minLength": 1 },
+                                        { "type": "string", "minLength": 1 },
+                                        { "type": "string", "minLength": 1 }
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "room_id",
+                                    "template_ids"
+                                  ],
                                   "additionalProperties": false
                                 }
                               ]
@@ -14224,6 +14891,61 @@
                                     }
                                   },
                                   "required": ["kind", "count"],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "battle_create"
+                                    },
+                                    "tier": {
+                                      "type": "string",
+                                      "enum": [
+                                        "tier-20",
+                                        "tier-100",
+                                        "tier-500"
+                                      ]
+                                    },
+                                    "template_ids": {
+                                      "type": "array",
+                                      "prefixItems": [
+                                        { "type": "string", "minLength": 1 },
+                                        { "type": "string", "minLength": 1 },
+                                        { "type": "string", "minLength": 1 }
+                                      ]
+                                    }
+                                  },
+                                  "required": ["kind", "tier", "template_ids"],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "battle_accept"
+                                    },
+                                    "room_id": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    "template_ids": {
+                                      "type": "array",
+                                      "prefixItems": [
+                                        { "type": "string", "minLength": 1 },
+                                        { "type": "string", "minLength": 1 },
+                                        { "type": "string", "minLength": 1 }
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "room_id",
+                                    "template_ids"
+                                  ],
                                   "additionalProperties": false
                                 }
                               ]
@@ -14470,7 +15192,7 @@
             "recoveryAction": "query_operation"
           }
         },
-        "x-refresh-scopes": ["payments", "assets"],
+        "x-refresh-scopes": ["payments", "assets", "battle"],
         "requestBody": {
           "required": true,
           "content": {
@@ -14674,6 +15396,61 @@
                                     }
                                   },
                                   "required": ["kind", "count"],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "battle_create"
+                                    },
+                                    "tier": {
+                                      "type": "string",
+                                      "enum": [
+                                        "tier-20",
+                                        "tier-100",
+                                        "tier-500"
+                                      ]
+                                    },
+                                    "template_ids": {
+                                      "type": "array",
+                                      "prefixItems": [
+                                        { "type": "string", "minLength": 1 },
+                                        { "type": "string", "minLength": 1 },
+                                        { "type": "string", "minLength": 1 }
+                                      ]
+                                    }
+                                  },
+                                  "required": ["kind", "tier", "template_ids"],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "battle_accept"
+                                    },
+                                    "room_id": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    "template_ids": {
+                                      "type": "array",
+                                      "prefixItems": [
+                                        { "type": "string", "minLength": 1 },
+                                        { "type": "string", "minLength": 1 },
+                                        { "type": "string", "minLength": 1 }
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "room_id",
+                                    "template_ids"
+                                  ],
                                   "additionalProperties": false
                                 }
                               ]
@@ -15125,6 +15902,83 @@
                                           },
                                           "required": ["kind", "count"],
                                           "additionalProperties": false
+                                        },
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "kind": {
+                                              "type": "string",
+                                              "const": "battle_create"
+                                            },
+                                            "tier": {
+                                              "type": "string",
+                                              "enum": [
+                                                "tier-20",
+                                                "tier-100",
+                                                "tier-500"
+                                              ]
+                                            },
+                                            "template_ids": {
+                                              "type": "array",
+                                              "prefixItems": [
+                                                {
+                                                  "type": "string",
+                                                  "minLength": 1
+                                                },
+                                                {
+                                                  "type": "string",
+                                                  "minLength": 1
+                                                },
+                                                {
+                                                  "type": "string",
+                                                  "minLength": 1
+                                                }
+                                              ]
+                                            }
+                                          },
+                                          "required": [
+                                            "kind",
+                                            "tier",
+                                            "template_ids"
+                                          ],
+                                          "additionalProperties": false
+                                        },
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "kind": {
+                                              "type": "string",
+                                              "const": "battle_accept"
+                                            },
+                                            "room_id": {
+                                              "type": "string",
+                                              "format": "uuid",
+                                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                            },
+                                            "template_ids": {
+                                              "type": "array",
+                                              "prefixItems": [
+                                                {
+                                                  "type": "string",
+                                                  "minLength": 1
+                                                },
+                                                {
+                                                  "type": "string",
+                                                  "minLength": 1
+                                                },
+                                                {
+                                                  "type": "string",
+                                                  "minLength": 1
+                                                }
+                                              ]
+                                            }
+                                          },
+                                          "required": [
+                                            "kind",
+                                            "room_id",
+                                            "template_ids"
+                                          ],
+                                          "additionalProperties": false
                                         }
                                       ]
                                     },
@@ -15515,6 +16369,61 @@
                                   },
                                   "required": ["kind", "count"],
                                   "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "battle_create"
+                                    },
+                                    "tier": {
+                                      "type": "string",
+                                      "enum": [
+                                        "tier-20",
+                                        "tier-100",
+                                        "tier-500"
+                                      ]
+                                    },
+                                    "template_ids": {
+                                      "type": "array",
+                                      "prefixItems": [
+                                        { "type": "string", "minLength": 1 },
+                                        { "type": "string", "minLength": 1 },
+                                        { "type": "string", "minLength": 1 }
+                                      ]
+                                    }
+                                  },
+                                  "required": ["kind", "tier", "template_ids"],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "battle_accept"
+                                    },
+                                    "room_id": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    "template_ids": {
+                                      "type": "array",
+                                      "prefixItems": [
+                                        { "type": "string", "minLength": 1 },
+                                        { "type": "string", "minLength": 1 },
+                                        { "type": "string", "minLength": 1 }
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "room_id",
+                                    "template_ids"
+                                  ],
+                                  "additionalProperties": false
                                 }
                               ]
                             },
@@ -15730,6 +16639,61 @@
                                     }
                                   },
                                   "required": ["kind", "count"],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "battle_create"
+                                    },
+                                    "tier": {
+                                      "type": "string",
+                                      "enum": [
+                                        "tier-20",
+                                        "tier-100",
+                                        "tier-500"
+                                      ]
+                                    },
+                                    "template_ids": {
+                                      "type": "array",
+                                      "prefixItems": [
+                                        { "type": "string", "minLength": 1 },
+                                        { "type": "string", "minLength": 1 },
+                                        { "type": "string", "minLength": 1 }
+                                      ]
+                                    }
+                                  },
+                                  "required": ["kind", "tier", "template_ids"],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "battle_accept"
+                                    },
+                                    "room_id": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    "template_ids": {
+                                      "type": "array",
+                                      "prefixItems": [
+                                        { "type": "string", "minLength": 1 },
+                                        { "type": "string", "minLength": 1 },
+                                        { "type": "string", "minLength": 1 }
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "room_id",
+                                    "template_ids"
+                                  ],
                                   "additionalProperties": false
                                 }
                               ]
@@ -22515,10 +23479,12 @@
                                 "API_ROUTE_NOT_FOUND",
                                 "BATTLE_ACTION_ALREADY_LOCKED",
                                 "BATTLE_ACTION_INVALID",
+                                "BATTLE_ACTION_PHASE_INVALID",
                                 "BATTLE_ALREADY_PARTICIPATING",
                                 "BATTLE_CREATOR_OFFLINE",
                                 "BATTLE_INVITE_INVALID",
                                 "BATTLE_NOT_PARTICIPANT",
+                                "BATTLE_RESULT_NOT_ACKNOWLEDGEABLE",
                                 "BATTLE_ROOM_ALREADY_ACCEPTED",
                                 "BATTLE_ROOM_CANCELLED",
                                 "BATTLE_ROOM_EXPIRED",
@@ -22526,11 +23492,13 @@
                                 "BATTLE_RULESET_UNAVAILABLE",
                                 "BATTLE_SELF_ACCEPT_FORBIDDEN",
                                 "BATTLE_SHARE_FAILED",
+                                "BATTLE_SHARE_PREPARING",
                                 "BATTLE_STATE_CONFLICT",
-                                "BATTLE_SWITCH_INVALID",
+                                "BATTLE_SWITCH_TARGET_INVALID",
                                 "BATTLE_TEAM_INVALID",
                                 "BATTLE_TEAM_TEMPLATE_DUPLICATE",
                                 "BATTLE_TIER_INVALID",
+                                "BATTLE_VOIDED",
                                 "BOX_TIER_INVALID",
                                 "CATALOG_INVALID",
                                 "CATALOG_UNAVAILABLE",
@@ -24238,10 +25206,12 @@
                   "API_ROUTE_NOT_FOUND",
                   "BATTLE_ACTION_ALREADY_LOCKED",
                   "BATTLE_ACTION_INVALID",
+                  "BATTLE_ACTION_PHASE_INVALID",
                   "BATTLE_ALREADY_PARTICIPATING",
                   "BATTLE_CREATOR_OFFLINE",
                   "BATTLE_INVITE_INVALID",
                   "BATTLE_NOT_PARTICIPANT",
+                  "BATTLE_RESULT_NOT_ACKNOWLEDGEABLE",
                   "BATTLE_ROOM_ALREADY_ACCEPTED",
                   "BATTLE_ROOM_CANCELLED",
                   "BATTLE_ROOM_EXPIRED",
@@ -24249,11 +25219,13 @@
                   "BATTLE_RULESET_UNAVAILABLE",
                   "BATTLE_SELF_ACCEPT_FORBIDDEN",
                   "BATTLE_SHARE_FAILED",
+                  "BATTLE_SHARE_PREPARING",
                   "BATTLE_STATE_CONFLICT",
-                  "BATTLE_SWITCH_INVALID",
+                  "BATTLE_SWITCH_TARGET_INVALID",
                   "BATTLE_TEAM_INVALID",
                   "BATTLE_TEAM_TEMPLATE_DUPLICATE",
                   "BATTLE_TIER_INVALID",
+                  "BATTLE_VOIDED",
                   "BOX_TIER_INVALID",
                   "CATALOG_INVALID",
                   "CATALOG_UNAVAILABLE",
