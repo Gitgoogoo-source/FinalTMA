@@ -38,7 +38,7 @@ export function InventoryView({
   const catalog = useApiQuery("catalog.get", {}, Boolean(targetId));
   const { templateIds: newTemplateIds, clearNew } = useNewMarkers();
   const navigate = useNavigate();
-  const items = (query.data?.items ?? []).filter((item) => item.available > 0);
+  const items = (query.data?.items ?? []).filter((item) => item.total > 0);
   const [selection, setSelection] = useState({
     targetId,
     selectedId: targetId,
@@ -169,7 +169,7 @@ export function InventoryView({
                             key={candidate.template_id}
                             className={selected ? "selected" : ""}
                             aria-pressed={selected}
-                            aria-label={`选择${candidate.name}，${rarityLabels[candidate.rarity]}，第 ${candidate.stage} 阶，可用 ${candidate.available} 个${isNew ? "，本次新获得" : ""}`}
+                            aria-label={`选择${candidate.name}，${rarityLabels[candidate.rarity]}，第 ${candidate.stage} 阶，可用 ${candidate.available} 个${candidate.battling > 0 ? `，Battle 中 ${candidate.battling} 个` : ""}${isNew ? "，本次新获得" : ""}`}
                             onClick={() => {
                               if (!selected) {
                                 setSelection({
@@ -190,7 +190,7 @@ export function InventoryView({
                             />
                             <i className={`rarity-mark ${candidate.rarity}`} />
                             <span className="inventory-quantity-badge">
-                              ×{candidate.available}
+                              ×{candidate.total}
                             </span>
                             {isNew && <b className="new-marker">NEW</b>}
                           </button>
@@ -253,7 +253,7 @@ export function InventoryView({
       {!query.isLoading && items.length === 0 && !targetId && (
         <Card>
           <h2>当前没有可用藏品。</h2>
-          <p>出售中、Mint 中或远征中的藏品不会出现在选择区域。</p>
+          <p>当前账号尚未持有藏品。</p>
           <Button onClick={() => navigate("/")}>去开盲盒</Button>
         </Card>
       )}

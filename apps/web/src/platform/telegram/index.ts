@@ -135,3 +135,44 @@ export function sharePreparedMessage(
     return false;
   }
 }
+
+export type TelegramShareFailure =
+  | "UNSUPPORTED"
+  | "MESSAGE_EXPIRED"
+  | "MESSAGE_SEND_FAILED"
+  | "USER_DECLINED"
+  | "UNKNOWN_ERROR";
+
+export function supportsPreparedMessageSharing(): boolean {
+  return typeof telegram()?.shareMessage === "function";
+}
+
+export function subscribeTelegramActivity(
+  activated: () => void,
+  deactivated: () => void,
+): () => void {
+  const app = telegram();
+  if (!app) return () => undefined;
+  app.onEvent("activated", activated);
+  app.onEvent("deactivated", deactivated);
+  return () => {
+    app.offEvent("activated", activated);
+    app.offEvent("deactivated", deactivated);
+  };
+}
+
+export function subscribePreparedMessageShareEvents(
+  sent: () => void,
+  failed: (error: TelegramShareFailure) => void,
+): () => void {
+  const app = telegram();
+  if (!app) return () => undefined;
+  const onFailure = (payload: { error: TelegramShareFailure }) =>
+    failed(payload.error);
+  app.onEvent("shareMessageSent", sent);
+  app.onEvent("shareMessageFailed", onFailure);
+  return () => {
+    app.offEvent("shareMessageSent", sent);
+    app.offEvent("shareMessageFailed", onFailure);
+  };
+}

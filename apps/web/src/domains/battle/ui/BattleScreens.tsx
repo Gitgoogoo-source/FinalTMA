@@ -1,0 +1,689 @@
+import {
+  ArrowLeft,
+  Check,
+  Clock3,
+  Coins,
+  Radio,
+  RefreshCw,
+  Send,
+  ShieldCheck,
+  Swords,
+  Users,
+  X,
+} from "lucide-react";
+import type { ReactNode } from "react";
+import type {
+  BattleCurrentResult,
+  BattleEntryTier,
+  BattleParticipation,
+  BattleRoomSnapshotDto,
+  RouteOutput,
+} from "@pokepets/api-contracts/app";
+
+import { Button, CatalogImage } from "../../../shared/ui/index.tsx";
+import {
+  battleRarityLabels,
+  battleResultLabels,
+  battleStatusLabels,
+  formatBattleTime,
+  tierTitle,
+} from "../labels.ts";
+import { TeamSelector, type BattleTeamSlots } from "./TeamSelector.tsx";
+
+type TeamOption = RouteOutput<"battle.team_options">["items"][number];
+type InviteRoom = Extract<
+  RouteOutput<"battle.current_invite">,
+  { room_id: string }
+>;
+
+export function BattleHome({
+  tiers,
+  participation,
+  loading,
+  onChooseTier,
+  onRefresh,
+}: {
+  tiers: readonly BattleEntryTier[];
+  participation: BattleParticipation | null;
+  loading: boolean;
+  onChooseTier(tier: BattleEntryTier["id"]): void;
+  onRefresh(): void;
+}): ReactNode {
+  return (
+    <div className="battle-home">
+      <section className="battle-home-hero">
+        <span className="battle-kicker">POKEPETS BATTLE</span>
+        <h1>三宠同步回合对战</h1>
+        <p>
+          使用本人真实可用藏品组队。双方秘密选择技能或换宠，命中、伤害、超时与结算全部由服务器和数据库裁决。
+        </p>
+        <div className="battle-rule-strip">
+          <span>
+            <Users />3 对 3
+          </span>
+          <span>
+            <Clock3 />
+            15 秒选择
+          </span>
+          <span>
+            <Swords />
+            最多 20 回合
+          </span>
+          <span>
+            <ShieldCheck />
+            无认输与重赛
+          </span>
+        </div>
+      </section>
+
+      {participation ? (
+        <section className="battle-participation-notice" aria-live="polite">
+          <div>
+            <Radio />
+            <span>
+              <strong>{battleStatusLabels[participation.status]}</strong>
+              当前入场费 {participation.entry_fee} K-coin
+            </span>
+          </div>
+          <Button onClick={onRefresh}>
+            <RefreshCw />
+            恢复当前 Battle
+          </Button>
+        </section>
+      ) : null}
+
+      <section
+        className="battle-tier-stage"
+        aria-labelledby="battle-tier-title"
+      >
+        <header>
+          <span>固定档位</span>
+          <h2 id="battle-tier-title">选择本场入场费</h2>
+          <p>胜者获得双方奖池的 90%；平局原额退回。</p>
+        </header>
+        <div className="battle-tier-list">
+          {tiers.map((tier) => (
+            <button
+              key={tier.id}
+              type="button"
+              disabled={loading || Boolean(participation)}
+              onClick={() => onChooseTier(tier.id)}
+            >
+              <span>
+                <Coins />
+                每人入场
+              </span>
+              <strong>{tierTitle(tier)}</strong>
+              <dl>
+                <div>
+                  <dt>双方奖池</dt>
+                  <dd>{tier.pool}</dd>
+                </div>
+                <div>
+                  <dt>胜者到账</dt>
+                  <dd>{tier.winner_payout}</dd>
+                </div>
+                <div>
+                  <dt>平台费</dt>
+                  <dd>{tier.fee}</dd>
+                </div>
+              </dl>
+              <b>选择队伍</b>
+            </button>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+export function BattleTeamSelect({
+  tier,
+  items,
+  slots,
+  balance,
+  loading,
+  disabled,
+  onChange,
+  onBack,
+  onConfirm,
+}: {
+  tier: BattleEntryTier;
+  items: readonly TeamOption[];
+  slots: BattleTeamSlots;
+  balance: number | null;
+  loading: boolean;
+  disabled: boolean;
+  onChange(slots: BattleTeamSlots): void;
+  onBack(): void;
+  onConfirm(): void;
+}): ReactNode {
+  const complete = slots.every(
+    (value) =>
+      value !== null &&
+      items.some(
+        (item) => item.template_id === value && item.available_quantity > 0,
+      ),
+  );
+  return (
+    <div className="battle-team-page">
+      <BattleScreenHeader
+        kicker="CREATE CHALLENGE"
+        title="排列三宠队伍"
+        description={`固定入场费 ${tier.entry_fee} K-coin，第 1 位自动首发。`}
+        back={onBack}
+        disabled={disabled}
+      />
+      <TeamSelector
+        items={items}
+        slots={slots}
+        disabled={disabled}
+        loading={loading}
+        onChange={onChange}
+      />
+      <div className="battle-confirm-bar">
+        <span>
+          当前可用 K-coin <strong>{balance ?? "—"}</strong>
+        </span>
+        <Button disabled={disabled || !complete || loading} onClick={onConfirm}>
+          <Swords />
+          {disabled ? "正在确认原操作" : `确认创建 · ${tier.entry_fee}`}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+export function BattlePreparingShare({
+  snapshot,
+  remainingSeconds,
+  progressPercent,
+  onRefresh,
+}: {
+  snapshot: BattleRoomSnapshotDto;
+  remainingSeconds: number | null;
+  progressPercent: number | null;
+  onRefresh(): void;
+}): ReactNode {
+  return (
+    <section className="battle-preparing" aria-live="polite">
+      <span className="battle-kicker">PREPARING SHARE</span>
+      <div className="battle-preparing-orbit">
+        <Send />
+        <i />
+      </div>
+      <h1>正在准备挑战卡</h1>
+      <p>入场费和三宠占用只以后端事务为准。页面只读取原房间，不会重复创建。</p>
+      <div
+        className="battle-prepare-progress"
+        role="progressbar"
+        aria-label="挑战卡准备时限"
+        aria-valuemin={0}
+        aria-valuemax={60}
+        aria-valuenow={
+          remainingSeconds === null ? undefined : 60 - remainingSeconds
+        }
+      >
+        <i style={{ width: `${100 - (progressPercent ?? 100)}%` }} />
+      </div>
+      <strong>{formatBattleTime(remainingSeconds)}</strong>
+      <small>房间 {snapshot.room_id.slice(0, 8)}</small>
+      <Button className="secondary" onClick={onRefresh}>
+        <RefreshCw />
+        重新读取服务器状态
+      </Button>
+    </section>
+  );
+}
+
+export function BattleWaiting({
+  snapshot,
+  entryFee,
+  remainingSeconds,
+  realtimeOffline,
+  onlineState,
+  shareState,
+  shareSupported,
+  commandPending,
+  onShare,
+  onCancel,
+  onRefresh,
+}: {
+  snapshot: BattleRoomSnapshotDto;
+  entryFee: BattleParticipation["entry_fee"];
+  remainingSeconds: number | null;
+  realtimeOffline: boolean;
+  onlineState: "syncing" | "online" | "offline";
+  shareState: string | null;
+  shareSupported: boolean;
+  commandPending: boolean;
+  onShare(): void;
+  onCancel(): void;
+  onRefresh(): void;
+}): ReactNode {
+  return (
+    <div className="battle-waiting">
+      <BattleScreenHeader
+        kicker="WAITING ROOM"
+        title="挑战卡已准备"
+        description="保持当前页面可见和 Telegram 激活，等待首位对手原子接受。"
+      />
+      <section className="battle-waiting-stage">
+        <div className="battle-waiting-ring">
+          <Clock3 />
+          <strong>{formatBattleTime(remainingSeconds)}</strong>
+          <span>30 分钟等待期</span>
+          <small>已锁定入场费 {entryFee} K-coin</small>
+        </div>
+        <div className="battle-online-line">
+          <i className={onlineState} aria-hidden="true" />
+          <span>
+            {onlineState === "online"
+              ? "服务端已确认在线等待"
+              : onlineState === "offline"
+                ? "当前未确认在线，对手不能支付接受"
+                : "正在同步服务端在线状态"}
+          </span>
+        </div>
+        {realtimeOffline ? (
+          <p className="battle-offline-note" role="status">
+            实时通知不可用，页面正按固定 2 秒间隔通过 REST 回正。
+          </p>
+        ) : null}
+        {shareState ? (
+          <p className="battle-share-note" role="status" aria-live="polite">
+            {shareState}
+          </p>
+        ) : null}
+        {!shareSupported ? (
+          <p className="battle-share-note" role="alert">
+            当前 Telegram 版本不支持发送挑战卡，请更新 Telegram 后重试
+          </p>
+        ) : null}
+        <div className="battle-waiting-actions">
+          <Button
+            disabled={
+              !shareSupported || !snapshot.prepared_message_id || commandPending
+            }
+            onClick={onShare}
+          >
+            <Send />
+            分享挑战卡
+          </Button>
+          <Button className="secondary" onClick={onRefresh}>
+            <RefreshCw />
+            刷新状态
+          </Button>
+          <Button
+            className="danger"
+            disabled={commandPending}
+            onClick={onCancel}
+          >
+            <X />
+            取消挑战
+          </Button>
+        </div>
+      </section>
+      <SelfTeamSummary snapshot={snapshot} />
+    </div>
+  );
+}
+
+export function BattleInviteMissing({
+  invalid,
+  loading,
+  onHome,
+  onRefresh,
+}: {
+  invalid: boolean;
+  loading: boolean;
+  onHome(): void;
+  onRefresh(): void;
+}): ReactNode {
+  return (
+    <div className="battle-accept">
+      <BattleScreenHeader
+        kicker="INVITED BATTLE"
+        title={invalid ? "这张挑战卡不可用" : "没有可接受的挑战"}
+        description="页面未发现可支付、可占用藏品的权威邀请。"
+        back={onHome}
+        disabled={loading}
+      />
+      <section className="battle-invite-unavailable">
+        <h2>{invalid ? "挑战标识无效或已失效" : "当前入口没有有效挑战"}</h2>
+        <p>
+          前端不会猜测房间或继续提交接受请求。请重新读取权威状态，或返回 Battle
+          首页。
+        </p>
+        <div>
+          <Button className="secondary" disabled={loading} onClick={onHome}>
+            <ArrowLeft />
+            返回首页
+          </Button>
+          <Button disabled={loading} onClick={onRefresh}>
+            <RefreshCw />
+            {loading ? "正在读取" : "重新读取"}
+          </Button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+export function BattleAccept({
+  invite,
+  items,
+  slots,
+  balance,
+  remainingSeconds,
+  loading,
+  disabled,
+  realtimeOffline,
+  resumeNotice,
+  onChange,
+  onConfirm,
+  onHome,
+  onRefresh,
+}: {
+  invite: InviteRoom;
+  items: readonly TeamOption[];
+  slots: BattleTeamSlots;
+  balance: number | null;
+  remainingSeconds: number | null;
+  loading: boolean;
+  disabled: boolean;
+  realtimeOffline: boolean;
+  resumeNotice: string | null;
+  onChange(slots: BattleTeamSlots): void;
+  onConfirm(): void;
+  onHome(): void;
+  onRefresh(): void;
+}): ReactNode {
+  const available =
+    invite.invite_status === "available" && invite.can_select_team;
+  const complete = slots.every(
+    (value) =>
+      value !== null &&
+      items.some(
+        (item) => item.template_id === value && item.available_quantity > 0,
+      ),
+  );
+  return (
+    <div className="battle-accept">
+      <BattleScreenHeader
+        kicker="INVITED BATTLE"
+        title={`${invite.creator_display_name} 发起挑战`}
+        description={`固定入场费 ${invite.entry_fee} K-coin。接受前不会公开创建者模板、属性、四维或技能。`}
+        back={onHome}
+        disabled={disabled}
+      />
+      <section className="battle-invite-summary">
+        {invite.creator_avatar_url ? (
+          <img
+            src={invite.creator_avatar_url}
+            alt={`${invite.creator_display_name}头像`}
+            width={64}
+            height={64}
+          />
+        ) : (
+          <span aria-hidden="true">
+            {invite.creator_display_name.slice(0, 1).toLocaleUpperCase("zh-CN")}
+          </span>
+        )}
+        <div>
+          <strong>{invite.creator_display_name}</strong>
+          <p>
+            {invite.rarity_summary
+              .map(
+                (item) => `${battleRarityLabels[item.rarity]} ×${item.count}`,
+              )
+              .join("、")}
+          </p>
+        </div>
+        <dl>
+          <div>
+            <dt>入场费</dt>
+            <dd>{invite.entry_fee}</dd>
+          </div>
+          <div>
+            <dt>剩余</dt>
+            <dd>{formatBattleTime(remainingSeconds)}</dd>
+          </div>
+          <div>
+            <dt>创建者</dt>
+            <dd>{invite.creator_online ? "在线" : "离线"}</dd>
+          </div>
+        </dl>
+      </section>
+      {resumeNotice ? (
+        <p className="battle-resume-note" role="status">
+          {resumeNotice}
+        </p>
+      ) : null}
+      {realtimeOffline ? (
+        <p className="battle-offline-note" role="status">
+          实时通知不可用，接受页正按固定 2 秒间隔通过 REST 回正。
+        </p>
+      ) : null}
+      {!available ? (
+        <section className="battle-invite-unavailable">
+          <h2>{inviteStatusText(invite.invite_status)}</h2>
+          <p>
+            页面不会尝试支付或占用藏品。请刷新权威状态，或返回 Battle 首页。
+          </p>
+          <div>
+            <Button className="secondary" onClick={onHome}>
+              <ArrowLeft />
+              返回首页
+            </Button>
+            <Button onClick={onRefresh}>
+              <RefreshCw />
+              重新读取
+            </Button>
+          </div>
+        </section>
+      ) : (
+        <>
+          <TeamSelector
+            items={items}
+            slots={slots}
+            disabled={disabled}
+            loading={loading}
+            onChange={onChange}
+          />
+          <div className="battle-confirm-bar">
+            <span>
+              当前可用 K-coin <strong>{balance ?? "—"}</strong>
+            </span>
+            <Button
+              disabled={disabled || loading || !complete}
+              onClick={onConfirm}
+            >
+              <Check />
+              {disabled ? "正在确认原操作" : `确认接受 · ${invite.entry_fee}`}
+            </Button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+export function BattleResult({
+  result,
+  acknowledging,
+  onAcknowledge,
+}: {
+  result: BattleCurrentResult;
+  acknowledging: boolean;
+  onAcknowledge(): void;
+}): ReactNode {
+  const refund = result.result === "draw" || result.result === "void";
+  return (
+    <section
+      className={`battle-result ${result.result}`}
+      aria-labelledby="battle-result-title"
+    >
+      <span className="battle-kicker">AUTHORITATIVE RESULT</span>
+      <div className="battle-result-mark" aria-hidden="true">
+        {result.result === "win" ? <Swords /> : <ShieldCheck />}
+      </div>
+      <h1 id="battle-result-title">{battleResultLabels[result.result]}</h1>
+      <p>对手：{result.opponent_display_name}</p>
+      <dl>
+        <div>
+          <dt>本人入场费</dt>
+          <dd>{result.entry_fee} K-coin</dd>
+        </div>
+        <div>
+          <dt>{refund ? "权威退款" : "权威到账"}</dt>
+          <dd>{result.payout} K-coin</dd>
+        </div>
+        <div>
+          <dt>净变化</dt>
+          <dd>
+            {result.net_change > 0 ? "+" : ""}
+            {result.net_change} K-coin
+          </dd>
+        </div>
+        <div>
+          <dt>平台手续费</dt>
+          <dd>{result.fee} K-coin</dd>
+        </div>
+      </dl>
+      <small>结算原因：{result.reason}</small>
+      <time dateTime={result.finished_at}>
+        {new Intl.DateTimeFormat("zh-CN", {
+          dateStyle: "medium",
+          timeStyle: "short",
+        }).format(new Date(result.finished_at))}
+      </time>
+      <Button disabled={acknowledging} onClick={onAcknowledge}>
+        <Check />
+        {acknowledging ? "正在确认结果" : "确认并返回 Battle 首页"}
+      </Button>
+    </section>
+  );
+}
+
+export function BattleResultPending({
+  onRefresh,
+}: {
+  onRefresh(): void;
+}): ReactNode {
+  return (
+    <section className="battle-result" aria-live="polite">
+      <span className="battle-kicker">AUTHORITATIVE RESULT</span>
+      <div className="battle-result-mark" aria-hidden="true">
+        <Clock3 />
+      </div>
+      <h1>正在读取权威结算</h1>
+      <p>房间已经终局。页面不会根据最后一帧生命值推测胜负、退款或到账结果。</p>
+      <Button onClick={onRefresh}>
+        <RefreshCw />
+        重新读取结算
+      </Button>
+    </section>
+  );
+}
+
+export function BattleCancelSheet({
+  pending,
+  onClose,
+  onConfirm,
+}: {
+  pending: boolean;
+  onClose(): void;
+  onConfirm(): void;
+}): ReactNode {
+  return (
+    <div className="battle-sheet-backdrop" role="dialog" aria-modal="true">
+      <div className="battle-cancel-sheet">
+        <span className="battle-sheet-kicker">CANCEL CHALLENGE</span>
+        <h2>取消等待中的挑战？</h2>
+        <p>
+          服务端将在同一终结事务中退款并释放三宠占用。前端不会提前宣称成功。
+        </p>
+        <div>
+          <Button className="secondary" disabled={pending} onClick={onClose}>
+            继续等待
+          </Button>
+          <Button className="danger" disabled={pending} onClick={onConfirm}>
+            {pending ? "正在等待服务器裁决" : "确认取消"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BattleScreenHeader({
+  kicker,
+  title,
+  description,
+  back,
+  disabled = false,
+}: {
+  kicker: string;
+  title: string;
+  description: string;
+  back?: (() => void) | undefined;
+  disabled?: boolean;
+}): ReactNode {
+  return (
+    <header className="battle-screen-header">
+      {back ? (
+        <button
+          type="button"
+          aria-label="返回"
+          disabled={disabled}
+          onClick={back}
+        >
+          <ArrowLeft />
+        </button>
+      ) : null}
+      <div>
+        <span>{kicker}</span>
+        <h1>{title}</h1>
+        <p>{description}</p>
+      </div>
+    </header>
+  );
+}
+
+function SelfTeamSummary({
+  snapshot,
+}: {
+  snapshot: BattleRoomSnapshotDto;
+}): ReactNode {
+  return (
+    <section className="battle-waiting-team" aria-label="本人锁定队伍">
+      {snapshot.self_team.map((member) => (
+        <div key={member.slot}>
+          <CatalogImage
+            path={member.image_thumbnail_path}
+            alt={member.name}
+            variant="thumbnail"
+            loading="lazy"
+          />
+          <span>{member.slot === 1 ? "首发" : `${member.slot} 号位`}</span>
+          <strong>{member.name}</strong>
+          <small>
+            {battleRarityLabels[member.rarity]} · {member.stage} 阶
+          </small>
+        </div>
+      ))}
+    </section>
+  );
+}
+
+function inviteStatusText(status: InviteRoom["invite_status"]): string {
+  const labels: Record<InviteRoom["invite_status"], string> = {
+    available: "挑战可以接受",
+    accepted: "挑战已被其他玩家接受",
+    cancelled: "挑战已取消",
+    expired: "挑战已过期",
+    voided: "挑战已安全作废",
+  };
+  return labels[status];
+}

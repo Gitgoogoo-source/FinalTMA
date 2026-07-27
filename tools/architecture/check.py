@@ -27,7 +27,9 @@ REQUIRED_PATHS = (
     "apps/web/src/shared/navigation/pageActivity.tsx",
     "apps/web/src/pages",
     "apps/web/src/domains",
+    "apps/web/src/domains/battle",
     "apps/web/src/workflows/payment-recovery",
+    "apps/web/src/workflows/battle-realtime",
     "docs/architecture/adr/ADR-013-session-page-lifecycle.md",
     "apps/api/src/entrypoints/app",
     "apps/api/src/entrypoints/integrations",
@@ -82,6 +84,7 @@ RETIRED_GAME_PATHS = (
 )
 WEB_DOMAINS = {
     "album",
+    "battle",
     "decomposition",
     "evolution",
     "expedition",
@@ -230,10 +233,60 @@ def verify_web_boundaries() -> None:
 def verify_game_page_boundary() -> None:
     game_page = GAME_PAGE.read_text(encoding="utf-8")
     if (
-        '<main className="page game-page" aria-label="游戏" />' not in game_page
-        or "domains/" in game_page
+        'import { BattleView } from "../../domains/battle/index.ts";'
+        not in game_page
+        or '<main className="page game-page" aria-label="Battle">'
+        not in game_page
+        or "<BattleView />" not in game_page
     ):
-        raise SystemExit("Game page must remain present without game content")
+        raise SystemExit("Game page must compose the Battle Web domain")
+
+    battle_source = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in (WEB_ROOT / "domains/battle").rglob("*")
+        if path.suffix in {".ts", ".tsx"}
+    )
+    battle_realtime = (
+        WEB_ROOT / "workflows/battle-realtime/useBattleRealtime.ts"
+    ).read_text(encoding="utf-8")
+    required_battle_terms = (
+        'data-battle-page-state={pageState}',
+        "viewer_action_state",
+        "prepared_message_id",
+        "prepare_deadline",
+        "effect_key",
+        "prefers-reduced-motion: reduce",
+        'apiKeepaliveRequest("battle.offline"',
+        'apiRequest("battle.heartbeat"',
+    )
+    missing_battle_terms = [
+        value
+        for value in required_battle_terms
+        if value not in battle_source
+        and value
+        not in (WEB_ROOT / "domains/battle/ui/battle.css").read_text(
+            encoding="utf-8"
+        )
+    ]
+    if missing_battle_terms:
+        raise SystemExit(
+            f"Battle Web authority and lifecycle are incomplete: {missing_battle_terms}"
+        )
+    required_realtime_terms = (
+        '"battle.realtime_token"',
+        "battleRealtimeInvalidationSchema.safeParse",
+        "return 1_000",
+        "return 2_000",
+        "channel.unsubscribe",
+        "client.close()",
+    )
+    missing_realtime_terms = [
+        value for value in required_realtime_terms if value not in battle_realtime
+    ]
+    if missing_realtime_terms:
+        raise SystemExit(
+            f"Battle realtime invalidation boundary is incomplete: {missing_realtime_terms}"
+        )
 
     tasks_view = (
         WEB_ROOT / "domains/tasks/ui/TasksView.tsx"

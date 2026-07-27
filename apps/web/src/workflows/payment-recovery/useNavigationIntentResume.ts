@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 
 import type { PaymentOrder } from "../../domains/topup/index.ts";
 
+const resumedPayments = new Set<string>();
+
 export function useNavigationIntentResume(
   orders: readonly PaymentOrder[] | undefined,
   onResume: () => void,
@@ -13,11 +15,10 @@ export function useNavigationIntentResume(
       (candidate) =>
         candidate.status === "delivered" &&
         candidate.intent &&
-        sessionStorage.getItem(`pokepets:resumed-payment:${candidate.id}`) !==
-          "1",
+        !resumedPayments.has(candidate.id),
     );
     if (!order?.intent) return;
-    sessionStorage.setItem(`pokepets:resumed-payment:${order.id}`, "1");
+    resumedPayments.add(order.id);
     onResume();
     const params = new URLSearchParams({ resume: order.id });
     if (order.intent.kind === "gacha") {

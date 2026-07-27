@@ -119,6 +119,52 @@ export function resetSessionRecovery(): void {
   recovery = null;
 }
 
+export function apiKeepaliveRequest<Id extends RouteId>(
+  routeId: Id,
+  input: RouteInput<Id>,
+): boolean {
+  const route = routeById(routeId);
+  if (route.method === "GET" || route.idempotent)
+    throw new Error(
+      `Keepalive is only available for semantic commands: ${routeId}`,
+    );
+  const parsedInput = parseRouteInput(routeId, input) as Record<
+    string,
+    unknown
+  >;
+  const pathParams = new Set<string>();
+  const path = route.path.replace(
+    /:([A-Za-z0-9_]+)/g,
+    (_match, name: string) => {
+      pathParams.add(name);
+      return encodeURIComponent(String(parsedInput[name]));
+    },
+  );
+  const token = getSession()?.token;
+  if (route.auth && !token) return false;
+  const headers = new Headers({
+    accept: "application/json",
+    "content-type": "application/json",
+  });
+  if (token) headers.set("authorization", `Bearer ${token}`);
+  const body = JSON.stringify(
+    Object.fromEntries(
+      Object.entries(parsedInput).filter(([key]) => !pathParams.has(key)),
+    ),
+  );
+  try {
+    void fetch(new URL(path, getWebPublicConfig().apiBaseUrl), {
+      method: route.method,
+      headers,
+      body,
+      keepalive: true,
+    }).catch(() => undefined);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function retryRecoveredBootstrap(): Promise<void> {
   const session = getSession();
   if (!session || session.accountStatus !== "normal") return;

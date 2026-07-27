@@ -155,8 +155,12 @@ const scopePrefixes: Record<
 export async function refreshRouteScopes(
   routeId: RecoverableRouteId,
 ): Promise<void> {
-  const route = routeById(routeId);
-  const scopes: readonly RefreshScope[] = route.refreshScopes;
+  return refreshScopes(routeById(routeId).refreshScopes);
+}
+
+export async function refreshScopes(
+  scopes: readonly RefreshScope[],
+): Promise<void> {
   if (scopes.includes("all")) return refreshUserState();
   const prefixes = new Set(
     scopes.flatMap((scope) =>
@@ -177,6 +181,7 @@ function foregroundPrefixes(pathname: string): readonly string[] {
   if (pathname === "/market") return ["market"];
   if (pathname === "/inventory") return ["inventory", "catalog"];
   if (pathname === "/tasks") return ["tasks", "referral", "wheel"];
+  if (pathname === "/game") return ["battle"];
   if (pathname === "/album") return ["album"];
   if (pathname.startsWith("/mint/")) return ["inventory", "mint"];
   return [];

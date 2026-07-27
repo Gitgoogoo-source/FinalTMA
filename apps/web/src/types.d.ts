@@ -41,6 +41,7 @@ interface TelegramWebApp {
   disableClosingConfirmation(): void;
   setHeaderColor(color: string): void;
   setBackgroundColor(color: string): void;
+  onEvent(event: "activated" | "deactivated", callback: () => void): void;
   onEvent(event: "shareMessageSent", callback: () => void): void;
   onEvent(
     event: "shareMessageFailed",
@@ -54,6 +55,7 @@ interface TelegramWebApp {
     }) => void,
   ): void;
   onEvent(event: string, callback: () => void): void;
+  offEvent(event: "activated" | "deactivated", callback: () => void): void;
   offEvent(event: "shareMessageSent", callback: () => void): void;
   offEvent(
     event: "shareMessageFailed",

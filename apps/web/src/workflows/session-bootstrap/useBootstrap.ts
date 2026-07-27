@@ -136,7 +136,12 @@ export function useBootstrap(): BootstrapState & { retry(): void } {
           } satisfies Session;
           replaceSession(session);
           clearSensitiveState();
-          window.history.replaceState({}, "", "/");
+          replaceBrowserPath(
+            login.data.entry_kind === "battle" ||
+              window.location.pathname === "/game"
+              ? "/game"
+              : "/",
+          );
           window.scrollTo({ top: 0, left: 0, behavior: "auto" });
           loginContext.current = {
             session,
@@ -556,4 +561,9 @@ function prefetchSummaries(sessionGeneration: string): void {
 
 function nextFrame(): Promise<void> {
   return new Promise((resolve) => requestAnimationFrame(() => resolve()));
+}
+
+function replaceBrowserPath(path: "/" | "/game"): void {
+  window.history.replaceState({}, "", path);
+  window.dispatchEvent(new PopStateEvent("popstate"));
 }

@@ -120,6 +120,9 @@ importers:
       "@tonconnect/ui-react":
         specifier: 2.4.4
         version: 2.4.4(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      ably:
+        specifier: 2.26.0
+        version: 2.26.0(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       lucide-react:
         specifier: 1.16.0
         version: 1.16.0(react@19.2.6)

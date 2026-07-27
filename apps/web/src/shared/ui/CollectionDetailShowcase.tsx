@@ -15,6 +15,7 @@ export type CollectionDetailItem = {
   trading: number;
   expedition: number;
   minting: number;
+  battling: number;
 };
 
 const rarityLabels: Record<CollectionDetailItem["rarity"], string> = {
@@ -111,6 +112,7 @@ function InventoryQuantitySummary({
     ["交易中", item.trading],
     ["Mint 中", item.minting],
     ["远征中", item.expedition],
+    ["Battle 中", item.battling],
   ] as const;
   return (
     <div className="inventory-quantity-summary" aria-label="藏品状态数量">
