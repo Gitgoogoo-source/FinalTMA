@@ -23,12 +23,20 @@ create table identity.sessions (
   auth_date timestamptz not null,
   expires_at timestamptz not null,
   new_user boolean not null,
-  start_param text,
+  entry_kind text not null check (entry_kind in ('direct', 'referral', 'battle')),
+  referral_code text,
+  battle_invite_token_hash text,
   referral_processed_at timestamptz,
   revoked_at timestamptz,
   created_at timestamptz not null default now(),
   check (expires_at > created_at),
-  check (start_param is null or start_param ~ '^TMA[A-F0-9]{20}$')
+  check (referral_code is null or referral_code ~ '^TMA[A-F0-9]{20}$'),
+  check (battle_invite_token_hash is null or battle_invite_token_hash ~ '^[0-9a-f]{64}$'),
+  check (
+    (entry_kind = 'direct' and referral_code is null and battle_invite_token_hash is null)
+    or (entry_kind = 'referral' and referral_code is not null and battle_invite_token_hash is null)
+    or (entry_kind = 'battle' and referral_code is null and battle_invite_token_hash is not null)
+  )
 );
 
 create unique index sessions_one_active_per_user_idx on identity.sessions (user_id) where revoked_at is null;
@@ -50,10 +58,18 @@ create table identity.login_requests (
   account_status text not null check (account_status in ('normal', 'banned')),
   session_id uuid references identity.sessions(id),
   expires_at timestamptz,
-  start_param text,
+  entry_kind text not null check (entry_kind in ('direct', 'referral', 'battle')),
+  referral_code text,
+  battle_invite_token_hash text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  check (start_param is null or start_param ~ '^TMA[A-F0-9]{20}$'),
+  check (referral_code is null or referral_code ~ '^TMA[A-F0-9]{20}$'),
+  check (battle_invite_token_hash is null or battle_invite_token_hash ~ '^[0-9a-f]{64}$'),
+  check (
+    (entry_kind = 'direct' and referral_code is null and battle_invite_token_hash is null)
+    or (entry_kind = 'referral' and referral_code is not null and battle_invite_token_hash is null)
+    or (entry_kind = 'battle' and referral_code is null and battle_invite_token_hash is not null)
+  ),
   check (
     (account_status = 'normal' and session_id is not null and expires_at is not null)
     or (account_status = 'banned' and session_id is null and expires_at is null)
@@ -123,12 +139,13 @@ security invoker
 set search_path = ''
 as $$
   select jsonb_build_object(
-    'entry_handoff_state', case when s.referral_processed_at is null then 'pending' else 'complete' end,
-    'entry_handoff_code', coalesce(c.code, s.start_param),
+    'entry_handoff_state', case when s.entry_kind = 'referral' and s.referral_processed_at is null then 'pending' else 'complete' end,
+    'entry_handoff_code', case when s.entry_kind = 'referral' then coalesce(c.code, s.referral_code) else null end,
     'entry_handoff_result', case
+      when s.entry_kind <> 'referral' then null
       when s.referral_processed_at is null then null
       when c.status in ('bound', 'rejected') then c.result_code
-      when not s.new_user and s.start_param is not null then 'REFERRAL_OLD_USER'
+      when not s.new_user and s.referral_code is not null then 'REFERRAL_OLD_USER'
       else null
     end
   )
@@ -164,7 +181,10 @@ begin
   if v_status <> 'normal' then
     perform api.raise_business_error('ACCOUNT_RESTRICTED', '账号不可用');
   end if;
-  if v_session.referral_processed_at is null and not coalesce(p_allow_pending_entry_handoff, false) then
+  if v_session.entry_kind = 'referral'
+    and v_session.referral_processed_at is null
+    and not coalesce(p_allow_pending_entry_handoff, false)
+  then
     perform api.raise_business_error('ENTRY_HANDOFF_PENDING', '邀请绑定结果确认中，请稍后刷新');
   end if;
   return v_session.user_id;
@@ -214,6 +234,7 @@ as $$
     'session_id', s.id,
     'user_id', s.user_id,
     'account_status', u.status,
+    'entry_kind', s.entry_kind,
     'expires_at', s.expires_at,
     'session_state', case
       when s.revoked_at is not null then 'replaced'
@@ -238,7 +259,9 @@ create or replace function api.identity_authenticate(
   p_referral_code text,
   p_token_hash text,
   p_auth_date timestamptz,
-  p_start_param text
+  p_entry_kind text,
+  p_entry_referral_code text,
+  p_battle_invite_token_hash text
 )
 returns jsonb
 language plpgsql
@@ -252,13 +275,16 @@ declare
   v_new_user boolean;
   v_expires_at timestamptz;
   v_candidate identity.entry_candidates%rowtype;
-  v_entry_code text;
   v_referral_processed_at timestamptz;
 begin
   if p_request_hash !~ '^[0-9a-f]{64}$' or p_token_hash !~ '^[0-9a-f]{64}$' then
     perform api.raise_business_error('REQUEST_INVALID', '登录请求摘要无效');
   end if;
-  if p_start_param is not null and p_start_param !~ '^TMA[A-F0-9]{20}$' then
+  if p_entry_kind not in ('direct', 'referral', 'battle')
+    or (p_entry_kind = 'direct' and (p_entry_referral_code is not null or p_battle_invite_token_hash is not null))
+    or (p_entry_kind = 'referral' and (p_entry_referral_code is null or p_entry_referral_code !~ '^TMA[A-F0-9]{20}$' or p_battle_invite_token_hash is not null))
+    or (p_entry_kind = 'battle' and (p_entry_referral_code is not null or p_battle_invite_token_hash is null or p_battle_invite_token_hash !~ '^[0-9a-f]{64}$'))
+  then
     perform api.raise_business_error('TELEGRAM_START_PARAM_INVALID', '入口参数无效');
   end if;
   perform pg_advisory_xact_lock(hashtextextended('identity.login:' || p_operation_id::text, 0));
@@ -279,6 +305,7 @@ begin
       'session_id', v_login.session_id,
       'user_id', v_login.user_id,
       'account_status', 'normal',
+      'entry_kind', v_login.entry_kind,
       'expires_at', v_login.expires_at
     ) || identity.session_entry_handoff(v_login.session_id);
   end if;
@@ -300,23 +327,21 @@ begin
     end if;
   end if;
 
-  if v_new_user and p_start_param is not null then
+  if v_new_user and p_entry_kind = 'referral' then
     insert into identity.entry_candidates (user_id, code, expires_at)
-    values (v_user.id, p_start_param, now() + interval '10 minutes');
+    values (v_user.id, p_entry_referral_code, now() + interval '10 minutes');
   end if;
   select * into v_candidate
   from identity.entry_candidates
   where user_id = v_user.id
   for update;
   if v_candidate.user_id is not null then
-    v_entry_code := v_candidate.code;
     if v_candidate.status = 'pending' then
       v_referral_processed_at := null;
     else
       v_referral_processed_at := coalesce(v_candidate.settled_at, now());
     end if;
   else
-    v_entry_code := p_start_param;
     v_referral_processed_at := now();
   end if;
   insert into economy.balances (user_id, currency)
@@ -327,29 +352,37 @@ begin
   where user_id = v_user.id and revoked_at is null;
   if v_user.status = 'banned' then
     insert into identity.login_requests (
-      operation_id, request_hash, user_id, account_status, session_id, expires_at, start_param
-    ) values (p_operation_id, p_request_hash, v_user.id, 'banned', null, null, null);
+      operation_id, request_hash, user_id, account_status, session_id, expires_at,
+      entry_kind, referral_code, battle_invite_token_hash
+    ) values (
+      p_operation_id, p_request_hash, v_user.id, 'banned', null, null,
+      p_entry_kind, p_entry_referral_code, p_battle_invite_token_hash
+    );
     return jsonb_build_object('account_status', 'banned');
   end if;
 
   v_expires_at := now() + interval '15 minutes';
   insert into identity.sessions (
-    user_id, token_hash, auth_date, expires_at, new_user, start_param, referral_processed_at
+    user_id, token_hash, auth_date, expires_at, new_user, entry_kind,
+    referral_code, battle_invite_token_hash, referral_processed_at
   ) values (
-    v_user.id, p_token_hash, p_auth_date, v_expires_at, v_new_user, v_entry_code,
-    v_referral_processed_at
+    v_user.id, p_token_hash, p_auth_date, v_expires_at, v_new_user, p_entry_kind,
+    p_entry_referral_code, p_battle_invite_token_hash, v_referral_processed_at
   )
   returning id into v_session_id;
   insert into identity.login_requests (
-    operation_id, request_hash, user_id, account_status, session_id, expires_at, start_param
+    operation_id, request_hash, user_id, account_status, session_id, expires_at,
+    entry_kind, referral_code, battle_invite_token_hash
   ) values (
-    p_operation_id, p_request_hash, v_user.id, 'normal', v_session_id, v_expires_at, v_entry_code
+    p_operation_id, p_request_hash, v_user.id, 'normal', v_session_id, v_expires_at,
+    p_entry_kind, p_entry_referral_code, p_battle_invite_token_hash
   );
 
   return jsonb_build_object(
     'session_id', v_session_id,
     'user_id', v_user.id,
     'account_status', v_user.status,
+    'entry_kind', p_entry_kind,
     'expires_at', v_expires_at
   ) || identity.session_entry_handoff(v_session_id);
 end;
@@ -407,6 +440,8 @@ begin
       from onchain.mints m
       where m.user_id = v_user_id and m.status in ('reserved', 'submitted', 'unknown')
     ), '[]'::jsonb),
+    'battle_participation', battle.participation_json(v_user_id),
+    'battle_result', battle.current_result_json(v_user_id),
     'server_time', now()
   ) into v_result
   from identity.users u where u.id = v_user_id;

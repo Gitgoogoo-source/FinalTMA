@@ -9,6 +9,7 @@ declare
   v_count integer := 0;
   v_added integer := 0;
   v_row record;
+  v_details jsonb;
   v_scan_from timestamptz;
   v_scan_to timestamptz := now();
   v_active_run operations.job_runs%rowtype;
@@ -75,12 +76,17 @@ begin
     delete from operations.operations where id in (
       select id from operations.operations where created_at < now() - interval '30 days' and status in ('succeeded', 'failed')
         and not (use_case in ('gacha.open', 'wheel.spin', 'inventory.evolve') and result_acknowledged_at is null)
+        and use_case not like 'battle.%'
         and not exists (select 1 from payments.orders p where p.operation_id = operations.operations.id and p.status in ('pending', 'processing', 'paid'))
         and not exists (select 1 from onchain.mints m where m.operation_id = operations.operations.id and m.status in ('reserved', 'submitted', 'unknown'))
       order by created_at limit greatest(1, least(p_limit, 500))
     );
     get diagnostics v_count = row_count;
     delete from identity.auth_attempts where attempted_at < now() - interval '1 day';
+    v_details := battle.cleanup_operational_data(greatest(1, least(p_limit, 5000)));
+    v_count := v_count
+      + coalesce((v_details->>'rate_limit_attempts_deleted')::integer, 0)
+      + coalesce((v_details->>'published_outbox_deleted')::integer, 0);
   else
     insert into operations.invariant_violations (code, subject, details)
     select 'BALANCE_LEDGER_MISMATCH', b.user_id::text || ':' || b.currency, jsonb_build_object('balance', b.available, 'ledger', coalesce(sum(l.amount), 0))
@@ -112,6 +118,8 @@ begin
       and not exists (select 1 from onchain.mints m where m.operation_id = o.id and m.status in ('reserved', 'submitted', 'unknown'))
     on conflict do nothing;
     get diagnostics v_added = row_count; v_count := v_count + v_added;
+    v_added := battle.monitor_invariants();
+    v_count := v_count + v_added;
   end if;
   if p_job_name = 'reconcile-mints' then
     update operations.job_runs set processed_count = v_count, details = jsonb_build_object('phase', 'chain_reconciliation') where id = v_run;

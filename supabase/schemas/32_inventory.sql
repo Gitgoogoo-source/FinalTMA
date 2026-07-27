@@ -13,7 +13,7 @@ create table inventory.reservations (
   user_id uuid not null references identity.users(id) on delete cascade,
   template_id text not null references catalog.templates(id),
   quantity bigint not null check (quantity > 0),
-  kind text not null check (kind in ('listing', 'expedition', 'mint')),
+  kind text not null check (kind in ('listing', 'expedition', 'mint', 'battle')),
   reference_id uuid not null,
   status text not null default 'active' check (status in ('active', 'released', 'consumed')),
   created_at timestamptz not null default now(),
@@ -122,7 +122,8 @@ as $$
     'listed', coalesce((select sum(r.quantity) from inventory.reservations r where r.user_id = p_user_id and r.template_id = t.id and r.kind = 'listing' and r.status = 'active'), 0),
     'trading', 0,
     'expedition', coalesce((select sum(r.quantity) from inventory.reservations r where r.user_id = p_user_id and r.template_id = t.id and r.kind = 'expedition' and r.status = 'active'), 0),
-    'minting', coalesce((select sum(r.quantity) from inventory.reservations r where r.user_id = p_user_id and r.template_id = t.id and r.kind = 'mint' and r.status = 'active'), 0)
+    'minting', coalesce((select sum(r.quantity) from inventory.reservations r where r.user_id = p_user_id and r.template_id = t.id and r.kind = 'mint' and r.status = 'active'), 0),
+    'battling', coalesce((select sum(r.quantity) from inventory.reservations r where r.user_id = p_user_id and r.template_id = t.id and r.kind = 'battle' and r.status = 'active'), 0)
   )
   from inventory.holdings h
   join catalog.templates t on t.id = h.template_id

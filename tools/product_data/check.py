@@ -14,6 +14,11 @@ from build import split_product_document
 
 ROOT = Path(__file__).resolve().parents[2]
 MANIFEST = ROOT / "generated/catalog/catalog-v1.json"
+BATTLE_ROOT = ROOT / "generated/battle"
+BATTLE_JSON = BATTLE_ROOT / "battle-v1.json"
+BATTLE_SHA256 = BATTLE_ROOT / "battle-v1.sha256"
+BATTLE_MANIFEST = BATTLE_ROOT / "manifest.json"
+BATTLE_SQL = BATTLE_ROOT / "battle-v1.sql"
 WEB_EVOLUTION_MANIFEST = (
     ROOT / "apps/web/src/domains/evolution/evolution-catalog-v1.json"
 )
@@ -38,12 +43,20 @@ def main() -> None:
         migration = directory / migration_source.name
         manifest = directory / "catalog-v1.json"
         web_evolution_manifest = directory / "evolution-catalog-v1.json"
+        battle_json = directory / "battle-v1.json"
+        battle_sha256 = directory / "battle-v1.sha256"
+        battle_manifest = directory / "battle-manifest.json"
+        battle_sql = directory / "battle-v1.sql"
         shutil.copy2(MANIFEST, manifest)
         subprocess.run([
             "python3", "tools/product_data/build.py",
             "--migration-path", str(migration),
             "--manifest-path", str(manifest),
             "--web-evolution-manifest-path", str(web_evolution_manifest),
+            "--battle-json-path", str(battle_json),
+            "--battle-sha256-path", str(battle_sha256),
+            "--battle-manifest-path", str(battle_manifest),
+            "--battle-sql-path", str(battle_sql),
         ], cwd=ROOT, check=True)
         drift = [name for name, expected, actual in [
             (migration_source.name, migration_source, migration),
@@ -53,11 +66,15 @@ def main() -> None:
                 WEB_EVOLUTION_MANIFEST,
                 web_evolution_manifest,
             ),
+            ("generated/battle/battle-v1.json", BATTLE_JSON, battle_json),
+            ("generated/battle/battle-v1.sha256", BATTLE_SHA256, battle_sha256),
+            ("generated/battle/manifest.json", BATTLE_MANIFEST, battle_manifest),
+            ("generated/battle/battle-v1.sql", BATTLE_SQL, battle_sql),
         ] if expected.read_bytes() != actual.read_bytes()]
         if drift:
             raise SystemExit("Product data drift detected: " + ", ".join(drift))
     print(
-        "product data SQL and generated catalog match the immutable catalog v1 release; "
+        "product data SQL, immutable catalog v1, and battle-v1 artifacts match; "
         f"pre-boundary source checksum: {source_checksum}"
     )
 

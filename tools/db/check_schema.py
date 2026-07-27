@@ -26,6 +26,7 @@ EXPECTED_SCHEMA_NAMES = {
     "41_expedition.sql",
     "42_wheel.sql",
     "43_evolution.sql",
+    "44_battle.sql",
     "50_market.sql",
     "60_payments.sql",
     "61_vip.sql",
@@ -82,6 +83,13 @@ def verify_database_error_codes() -> None:
     schema_sql = "\n".join(path.read_text(encoding="utf-8") for path in SCHEMAS.glob("*.sql"))
     database_codes = set(re.findall(r"raise_business_error\('([A-Z0-9_]+)'", schema_sql))
     database_codes.update(re.findall(r"error_code\s*=\s*'([A-Z0-9_]+)'", schema_sql))
+    database_codes.update(
+        re.findall(
+            r"operations\.fail_command\(\s*[^,]+,\s*'(BATTLE_[A-Z0-9_]+)'",
+            schema_sql,
+            re.DOTALL,
+        )
+    )
     registry_codes = set(re.findall(r"^  ([A-Z0-9_]+): error", ERROR_REGISTRY.read_text(encoding="utf-8"), re.MULTILINE))
     missing = sorted(database_codes - registry_codes)
     if missing:
@@ -245,6 +253,38 @@ def verify_stars_payment_contract() -> None:
         raise SystemExit(f"Stars payment contract is incomplete: {missing}")
 
 
+def verify_battle_contract() -> None:
+    battle_sql = (SCHEMAS / "44_battle.sql").read_text(encoding="utf-8").lower()
+    identity_sql = (SCHEMAS / "10_identity.sql").read_text(encoding="utf-8").lower()
+    security_sql = one_migration("_api_security.sql").read_text(encoding="utf-8").lower()
+    required = (
+        "create table battle.rulesets",
+        "create table battle.rooms",
+        "create table battle.audit_entries",
+        "create or replace function api.battle_prepare_room",
+        "create or replace function api.battle_accept_room",
+        "create or replace function api.battle_submit_action",
+        "create or replace function api.battle_submit_forced_switch",
+        "create or replace function battle.safe_finalize_room",
+        "create or replace function api.battle_claim_outbox",
+        "create or replace function battle.monitor_invariants",
+        "'battle-tick-v1'",
+        "'1 second'",
+        "for update skip locked",
+        "extensions.hmac(",
+        "gen_random_bytes(32)",
+    )
+    missing = [fragment for fragment in required if fragment not in battle_sql]
+    if missing:
+        raise SystemExit(f"Battle database contract is incomplete: {missing}")
+    if re.search(r"\bstart_param\s+text\b", identity_sql) or re.search(
+        r"\bbattle_invite_token\s+text\b", identity_sql
+    ):
+        raise SystemExit("Identity must persist only the Battle invite token hash")
+    if "'battle'" not in security_sql:
+        raise SystemExit("Battle schema is missing from the explicit security migration")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--write-baseline", action="store_true")
@@ -269,6 +309,7 @@ def main() -> None:
     verify_identity_login_contract()
     verify_entry_handoff_contract()
     verify_stars_payment_contract()
+    verify_battle_contract()
 
     with tempfile.TemporaryDirectory(prefix="pokepets-db-check-") as temporary:
         output = Path(temporary)

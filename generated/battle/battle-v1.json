@@ -1,0 +1,4612 @@
+{
+  "chain_configs": [
+    {
+      "chain_id": "CHAIN-N-001",
+      "element": "fire",
+      "profile_id": "P01"
+    },
+    {
+      "chain_id": "CHAIN-N-003",
+      "element": "grass",
+      "profile_id": "P01"
+    },
+    {
+      "chain_id": "CHAIN-N-004",
+      "element": "earth",
+      "profile_id": "P01"
+    },
+    {
+      "chain_id": "CHAIN-N-005",
+      "element": "lightning",
+      "profile_id": "P01"
+    },
+    {
+      "chain_id": "CHAIN-N-002",
+      "element": "water",
+      "profile_id": "P01"
+    },
+    {
+      "chain_id": "CHAIN-N-015",
+      "element": "fire",
+      "profile_id": "P02"
+    },
+    {
+      "chain_id": "CHAIN-N-010",
+      "element": "grass",
+      "profile_id": "P02"
+    },
+    {
+      "chain_id": "CHAIN-N-008",
+      "element": "earth",
+      "profile_id": "P02"
+    },
+    {
+      "chain_id": "CHAIN-N-006",
+      "element": "lightning",
+      "profile_id": "P02"
+    },
+    {
+      "chain_id": "CHAIN-N-009",
+      "element": "water",
+      "profile_id": "P02"
+    },
+    {
+      "chain_id": "CHAIN-N-017",
+      "element": "fire",
+      "profile_id": "P03"
+    },
+    {
+      "chain_id": "CHAIN-N-012",
+      "element": "grass",
+      "profile_id": "P03"
+    },
+    {
+      "chain_id": "CHAIN-N-020",
+      "element": "earth",
+      "profile_id": "P03"
+    },
+    {
+      "chain_id": "CHAIN-N-007",
+      "element": "lightning",
+      "profile_id": "P03"
+    },
+    {
+      "chain_id": "CHAIN-N-011",
+      "element": "water",
+      "profile_id": "P03"
+    },
+    {
+      "chain_id": "CHAIN-N-019",
+      "element": "fire",
+      "profile_id": "P04"
+    },
+    {
+      "chain_id": "CHAIN-N-016",
+      "element": "grass",
+      "profile_id": "P04"
+    },
+    {
+      "chain_id": "CHAIN-N-023",
+      "element": "earth",
+      "profile_id": "P04"
+    },
+    {
+      "chain_id": "CHAIN-N-013",
+      "element": "lightning",
+      "profile_id": "P04"
+    },
+    {
+      "chain_id": "CHAIN-N-014",
+      "element": "water",
+      "profile_id": "P04"
+    },
+    {
+      "chain_id": "CHAIN-N-022",
+      "element": "fire",
+      "profile_id": "P05"
+    },
+    {
+      "chain_id": "CHAIN-N-021",
+      "element": "grass",
+      "profile_id": "P05"
+    },
+    {
+      "chain_id": "CHAIN-N-027",
+      "element": "earth",
+      "profile_id": "P05"
+    },
+    {
+      "chain_id": "CHAIN-N-018",
+      "element": "lightning",
+      "profile_id": "P05"
+    },
+    {
+      "chain_id": "CHAIN-N-025",
+      "element": "water",
+      "profile_id": "P05"
+    },
+    {
+      "chain_id": "CHAIN-N-028",
+      "element": "fire",
+      "profile_id": "P06"
+    },
+    {
+      "chain_id": "CHAIN-N-024",
+      "element": "grass",
+      "profile_id": "P06"
+    },
+    {
+      "chain_id": "CHAIN-N-030",
+      "element": "earth",
+      "profile_id": "P06"
+    },
+    {
+      "chain_id": "CHAIN-N-026",
+      "element": "lightning",
+      "profile_id": "P06"
+    },
+    {
+      "chain_id": "CHAIN-N-029",
+      "element": "water",
+      "profile_id": "P06"
+    },
+    {
+      "chain_id": "CHAIN-N-037",
+      "element": "fire",
+      "profile_id": "P07"
+    },
+    {
+      "chain_id": "CHAIN-N-031",
+      "element": "grass",
+      "profile_id": "P07"
+    },
+    {
+      "chain_id": "CHAIN-N-035",
+      "element": "earth",
+      "profile_id": "P07"
+    },
+    {
+      "chain_id": "CHAIN-N-034",
+      "element": "lightning",
+      "profile_id": "P07"
+    },
+    {
+      "chain_id": "CHAIN-N-032",
+      "element": "water",
+      "profile_id": "P07"
+    },
+    {
+      "chain_id": "CHAIN-N-038",
+      "element": "fire",
+      "profile_id": "P08"
+    },
+    {
+      "chain_id": "CHAIN-N-033",
+      "element": "grass",
+      "profile_id": "P08"
+    },
+    {
+      "chain_id": "CHAIN-N-039",
+      "element": "earth",
+      "profile_id": "P08"
+    },
+    {
+      "chain_id": "CHAIN-N-040",
+      "element": "lightning",
+      "profile_id": "P08"
+    },
+    {
+      "chain_id": "CHAIN-N-036",
+      "element": "water",
+      "profile_id": "P08"
+    },
+    {
+      "chain_id": "CHAIN-A-005",
+      "element": "fire",
+      "profile_id": "P09"
+    },
+    {
+      "chain_id": "CHAIN-A-006",
+      "element": "grass",
+      "profile_id": "P09"
+    },
+    {
+      "chain_id": "CHAIN-A-004",
+      "element": "earth",
+      "profile_id": "P09"
+    },
+    {
+      "chain_id": "CHAIN-A-002",
+      "element": "lightning",
+      "profile_id": "P09"
+    },
+    {
+      "chain_id": "CHAIN-A-001",
+      "element": "water",
+      "profile_id": "P09"
+    },
+    {
+      "chain_id": "CHAIN-A-008",
+      "element": "fire",
+      "profile_id": "P10"
+    },
+    {
+      "chain_id": "CHAIN-A-013",
+      "element": "grass",
+      "profile_id": "P10"
+    },
+    {
+      "chain_id": "CHAIN-A-007",
+      "element": "earth",
+      "profile_id": "P10"
+    },
+    {
+      "chain_id": "CHAIN-A-009",
+      "element": "lightning",
+      "profile_id": "P10"
+    },
+    {
+      "chain_id": "CHAIN-A-003",
+      "element": "water",
+      "profile_id": "P10"
+    },
+    {
+      "chain_id": "CHAIN-A-014",
+      "element": "fire",
+      "profile_id": "P11"
+    },
+    {
+      "chain_id": "CHAIN-A-015",
+      "element": "grass",
+      "profile_id": "P11"
+    },
+    {
+      "chain_id": "CHAIN-A-010",
+      "element": "earth",
+      "profile_id": "P11"
+    },
+    {
+      "chain_id": "CHAIN-A-012",
+      "element": "lightning",
+      "profile_id": "P11"
+    },
+    {
+      "chain_id": "CHAIN-A-011",
+      "element": "water",
+      "profile_id": "P11"
+    },
+    {
+      "chain_id": "CHAIN-A-016",
+      "element": "fire",
+      "profile_id": "P12"
+    },
+    {
+      "chain_id": "CHAIN-A-017",
+      "element": "grass",
+      "profile_id": "P12"
+    },
+    {
+      "chain_id": "CHAIN-A-020",
+      "element": "earth",
+      "profile_id": "P12"
+    },
+    {
+      "chain_id": "CHAIN-A-018",
+      "element": "lightning",
+      "profile_id": "P12"
+    },
+    {
+      "chain_id": "CHAIN-A-019",
+      "element": "water",
+      "profile_id": "P12"
+    },
+    {
+      "chain_id": "CHAIN-T-003",
+      "element": "fire",
+      "profile_id": "P13"
+    },
+    {
+      "chain_id": "CHAIN-T-007",
+      "element": "grass",
+      "profile_id": "P13"
+    },
+    {
+      "chain_id": "CHAIN-T-005",
+      "element": "earth",
+      "profile_id": "P13"
+    },
+    {
+      "chain_id": "CHAIN-T-001",
+      "element": "lightning",
+      "profile_id": "P13"
+    },
+    {
+      "chain_id": "CHAIN-T-002",
+      "element": "water",
+      "profile_id": "P13"
+    },
+    {
+      "chain_id": "CHAIN-T-006",
+      "element": "fire",
+      "profile_id": "P14"
+    },
+    {
+      "chain_id": "CHAIN-T-010",
+      "element": "grass",
+      "profile_id": "P14"
+    },
+    {
+      "chain_id": "CHAIN-T-009",
+      "element": "earth",
+      "profile_id": "P14"
+    },
+    {
+      "chain_id": "CHAIN-T-008",
+      "element": "lightning",
+      "profile_id": "P14"
+    },
+    {
+      "chain_id": "CHAIN-T-004",
+      "element": "water",
+      "profile_id": "P14"
+    }
+  ],
+  "damage_formula": {
+    "damage": "min(single_hit_cap,max(1,raw_damage))",
+    "raw": "floor(2*P*A*A*T_bps/((A+D)*100*10000))",
+    "single_hit_cap": "max(1,floor(defender_max_hp*80/100))"
+  },
+  "elements": [
+    {
+      "id": "fire",
+      "name": "火焰",
+      "order": 1
+    },
+    {
+      "id": "grass",
+      "name": "草系",
+      "order": 2
+    },
+    {
+      "id": "earth",
+      "name": "土系",
+      "order": 3
+    },
+    {
+      "id": "lightning",
+      "name": "雷电",
+      "order": 4
+    },
+    {
+      "id": "water",
+      "name": "水系",
+      "order": 5
+    }
+  ],
+  "entry_tiers": [
+    {
+      "entry_fee": 20,
+      "fee": 4,
+      "id": "tier-20",
+      "pool": 40,
+      "winner_payout": 36
+    },
+    {
+      "entry_fee": 100,
+      "fee": 20,
+      "id": "tier-100",
+      "pool": 200,
+      "winner_payout": 180
+    },
+    {
+      "entry_fee": 500,
+      "fee": 100,
+      "id": "tier-500",
+      "pool": 1000,
+      "winner_payout": 900
+    }
+  ],
+  "outbox_retry_seconds": [1, 2, 5, 10, 30],
+  "profile_loadouts": [
+    {
+      "id": "L01",
+      "slot_ids": ["S01", "S04", "S06", "S09"]
+    },
+    {
+      "id": "L02",
+      "slot_ids": ["S01", "S05", "S07", "S08"]
+    },
+    {
+      "id": "L03",
+      "slot_ids": ["S01", "S05", "S06", "S10"]
+    },
+    {
+      "id": "L04",
+      "slot_ids": ["S02", "S04", "S06", "S08"]
+    },
+    {
+      "id": "L05",
+      "slot_ids": ["S02", "S04", "S07", "S09"]
+    },
+    {
+      "id": "L06",
+      "slot_ids": ["S02", "S05", "S07", "S08"]
+    },
+    {
+      "id": "L07",
+      "slot_ids": ["S03", "S04", "S06", "S09"]
+    },
+    {
+      "id": "L08",
+      "slot_ids": ["S03", "S05", "S07", "S08"]
+    },
+    {
+      "id": "L09",
+      "slot_ids": ["S03", "S04", "S07", "S10"]
+    },
+    {
+      "id": "L10",
+      "slot_ids": ["S01", "S04", "S07", "S10"]
+    },
+    {
+      "id": "L11",
+      "slot_ids": ["S01", "S06", "S08", "S10"]
+    },
+    {
+      "id": "L12",
+      "slot_ids": ["S02", "S04", "S06", "S10"]
+    },
+    {
+      "id": "L13",
+      "slot_ids": ["S02", "S05", "S08", "S09"]
+    },
+    {
+      "id": "L14",
+      "slot_ids": ["S03", "S04", "S08", "S10"]
+    }
+  ],
+  "random_formula": {
+    "algorithm": "HMAC-SHA256",
+    "message": "battle_id|turn_no|actor_side|action_ordinal|skill_id",
+    "roll": "unsigned_first_32_bits_mod_10000"
+  },
+  "rarity_factors": [
+    {
+      "factor_bps": 10000,
+      "rarity": "common",
+      "target_budget": 400
+    },
+    {
+      "factor_bps": 11500,
+      "rarity": "rare",
+      "target_budget": 460
+    },
+    {
+      "factor_bps": 13200,
+      "rarity": "epic",
+      "target_budget": 528
+    },
+    {
+      "factor_bps": 15200,
+      "rarity": "legendary",
+      "target_budget": 608
+    },
+    {
+      "factor_bps": 17500,
+      "rarity": "mythic",
+      "target_budget": 700
+    }
+  ],
+  "rate_limits": [
+    {
+      "action": "create",
+      "limit": 3
+    },
+    {
+      "action": "invite_preview",
+      "limit": 60
+    },
+    {
+      "action": "accept",
+      "limit": 10
+    },
+    {
+      "action": "combat_action",
+      "limit": 30
+    },
+    {
+      "action": "heartbeat",
+      "limit": 30
+    },
+    {
+      "action": "realtime_token",
+      "limit": 10
+    }
+  ],
+  "role_profiles": [
+    {
+      "base_attack": 100,
+      "base_defense": 100,
+      "base_hp": 300,
+      "base_speed": 100,
+      "id": "P01",
+      "loadout_id": "L01",
+      "name": "均衡",
+      "order": 1
+    },
+    {
+      "base_attack": 115,
+      "base_defense": 90,
+      "base_hp": 285,
+      "base_speed": 100,
+      "id": "P02",
+      "loadout_id": "L02",
+      "name": "强攻",
+      "order": 2
+    },
+    {
+      "base_attack": 110,
+      "base_defense": 85,
+      "base_hp": 270,
+      "base_speed": 115,
+      "id": "P03",
+      "loadout_id": "L03",
+      "name": "疾攻",
+      "order": 3
+    },
+    {
+      "base_attack": 85,
+      "base_defense": 115,
+      "base_hp": 330,
+      "base_speed": 90,
+      "id": "P04",
+      "loadout_id": "L04",
+      "name": "铁壁",
+      "order": 4
+    },
+    {
+      "base_attack": 95,
+      "base_defense": 110,
+      "base_hp": 315,
+      "base_speed": 90,
+      "id": "P05",
+      "loadout_id": "L05",
+      "name": "守势",
+      "order": 5
+    },
+    {
+      "base_attack": 110,
+      "base_defense": 100,
+      "base_hp": 300,
+      "base_speed": 90,
+      "id": "P06",
+      "loadout_id": "L06",
+      "name": "前锋",
+      "order": 6
+    },
+    {
+      "base_attack": 105,
+      "base_defense": 95,
+      "base_hp": 285,
+      "base_speed": 105,
+      "id": "P07",
+      "loadout_id": "L07",
+      "name": "决斗",
+      "order": 7
+    },
+    {
+      "base_attack": 95,
+      "base_defense": 90,
+      "base_hp": 270,
+      "base_speed": 125,
+      "id": "P08",
+      "loadout_id": "L08",
+      "name": "迅捷",
+      "order": 8
+    },
+    {
+      "base_attack": 120,
+      "base_defense": 85,
+      "base_hp": 300,
+      "base_speed": 95,
+      "id": "P09",
+      "loadout_id": "L09",
+      "name": "粉碎",
+      "order": 9
+    },
+    {
+      "base_attack": 85,
+      "base_defense": 105,
+      "base_hp": 345,
+      "base_speed": 95,
+      "id": "P10",
+      "loadout_id": "L10",
+      "name": "厚甲",
+      "order": 10
+    },
+    {
+      "base_attack": 110,
+      "base_defense": 85,
+      "base_hp": 285,
+      "base_speed": 110,
+      "id": "P11",
+      "loadout_id": "L11",
+      "name": "猎手",
+      "order": 11
+    },
+    {
+      "base_attack": 90,
+      "base_defense": 115,
+      "base_hp": 300,
+      "base_speed": 95,
+      "id": "P12",
+      "loadout_id": "L12",
+      "name": "哨卫",
+      "order": 12
+    },
+    {
+      "base_attack": 110,
+      "base_defense": 90,
+      "base_hp": 315,
+      "base_speed": 95,
+      "id": "P13",
+      "loadout_id": "L13",
+      "name": "斗士",
+      "order": 13
+    },
+    {
+      "base_attack": 95,
+      "base_defense": 95,
+      "base_hp": 300,
+      "base_speed": 110,
+      "id": "P14",
+      "loadout_id": "L14",
+      "name": "灵动",
+      "order": 14
+    }
+  ],
+  "room_states": [
+    "preparing_share",
+    "waiting",
+    "active_select",
+    "reveal",
+    "forced_switch",
+    "finished",
+    "draw",
+    "cancelled",
+    "expired",
+    "voided"
+  ],
+  "rule_parameters": {
+    "action_timeout_seconds": 15,
+    "creator_online_window_seconds": 10,
+    "fee_bps": 1000,
+    "forced_switch_timeout_seconds": 15,
+    "heartbeat_interval_seconds": 5,
+    "max_normal_turns": 20,
+    "offline_reconnect_seconds": 90,
+    "random_modulus": 10000,
+    "rate_limit_retention_seconds": 300,
+    "rate_limit_window_seconds": 60,
+    "reveal_seconds": 3,
+    "share_prepare_timeout_seconds": 60,
+    "single_hit_cap_bps": 8000,
+    "tick_batch_limit": 100,
+    "waiting_timeout_seconds": 1800
+  },
+  "skill_slots": [
+    {
+      "accuracy_bps": 10000,
+      "id": "S01",
+      "power": 45,
+      "priority": 1,
+      "trajectory": "单段突进"
+    },
+    {
+      "accuracy_bps": 9000,
+      "id": "S02",
+      "power": 60,
+      "priority": 1,
+      "trajectory": "双段疾行"
+    },
+    {
+      "accuracy_bps": 7000,
+      "id": "S03",
+      "power": 80,
+      "priority": 1,
+      "trajectory": "折线闪击"
+    },
+    {
+      "accuracy_bps": 10000,
+      "id": "S04",
+      "power": 55,
+      "priority": 0,
+      "trajectory": "球形投射"
+    },
+    {
+      "accuracy_bps": 9500,
+      "id": "S05",
+      "power": 70,
+      "priority": 0,
+      "trajectory": "环形冲击"
+    },
+    {
+      "accuracy_bps": 8500,
+      "id": "S06",
+      "power": 85,
+      "priority": 0,
+      "trajectory": "垂直重击"
+    },
+    {
+      "accuracy_bps": 7000,
+      "id": "S07",
+      "power": 105,
+      "priority": 0,
+      "trajectory": "径向爆发"
+    },
+    {
+      "accuracy_bps": 10000,
+      "id": "S08",
+      "power": 75,
+      "priority": -1,
+      "trajectory": "横向轰流"
+    },
+    {
+      "accuracy_bps": 9000,
+      "id": "S09",
+      "power": 95,
+      "priority": -1,
+      "trajectory": "全场风暴"
+    },
+    {
+      "accuracy_bps": 7000,
+      "id": "S10",
+      "power": 125,
+      "priority": -1,
+      "trajectory": "天降聚合"
+    }
+  ],
+  "skills": [
+    {
+      "effect_key": "fire-01",
+      "element": "fire",
+      "id": "fire-s01",
+      "name": "火花突袭",
+      "slot_id": "S01"
+    },
+    {
+      "effect_key": "grass-01",
+      "element": "grass",
+      "id": "grass-s01",
+      "name": "飞叶突袭",
+      "slot_id": "S01"
+    },
+    {
+      "effect_key": "earth-01",
+      "element": "earth",
+      "id": "earth-s01",
+      "name": "砂砾突袭",
+      "slot_id": "S01"
+    },
+    {
+      "effect_key": "lightning-01",
+      "element": "lightning",
+      "id": "lightning-s01",
+      "name": "电光突袭",
+      "slot_id": "S01"
+    },
+    {
+      "effect_key": "water-01",
+      "element": "water",
+      "id": "water-s01",
+      "name": "水流突袭",
+      "slot_id": "S01"
+    },
+    {
+      "effect_key": "fire-02",
+      "element": "fire",
+      "id": "fire-s02",
+      "name": "炽焰快攻",
+      "slot_id": "S02"
+    },
+    {
+      "effect_key": "grass-02",
+      "element": "grass",
+      "id": "grass-s02",
+      "name": "藤刺快攻",
+      "slot_id": "S02"
+    },
+    {
+      "effect_key": "earth-02",
+      "element": "earth",
+      "id": "earth-s02",
+      "name": "岩针快攻",
+      "slot_id": "S02"
+    },
+    {
+      "effect_key": "lightning-02",
+      "element": "lightning",
+      "id": "lightning-s02",
+      "name": "雷针快攻",
+      "slot_id": "S02"
+    },
+    {
+      "effect_key": "water-02",
+      "element": "water",
+      "id": "water-s02",
+      "name": "水刃快攻",
+      "slot_id": "S02"
+    },
+    {
+      "effect_key": "fire-03",
+      "element": "fire",
+      "id": "fire-s03",
+      "name": "爆炎闪击",
+      "slot_id": "S03"
+    },
+    {
+      "effect_key": "grass-03",
+      "element": "grass",
+      "id": "grass-s03",
+      "name": "荆棘闪击",
+      "slot_id": "S03"
+    },
+    {
+      "effect_key": "earth-03",
+      "element": "earth",
+      "id": "earth-s03",
+      "name": "地裂闪击",
+      "slot_id": "S03"
+    },
+    {
+      "effect_key": "lightning-03",
+      "element": "lightning",
+      "id": "lightning-s03",
+      "name": "霆光闪击",
+      "slot_id": "S03"
+    },
+    {
+      "effect_key": "water-03",
+      "element": "water",
+      "id": "water-s03",
+      "name": "潮汐闪击",
+      "slot_id": "S03"
+    },
+    {
+      "effect_key": "fire-04",
+      "element": "fire",
+      "id": "fire-s04",
+      "name": "灼热火球",
+      "slot_id": "S04"
+    },
+    {
+      "effect_key": "grass-04",
+      "element": "grass",
+      "id": "grass-s04",
+      "name": "种子弹",
+      "slot_id": "S04"
+    },
+    {
+      "effect_key": "earth-04",
+      "element": "earth",
+      "id": "earth-s04",
+      "name": "泥岩弹",
+      "slot_id": "S04"
+    },
+    {
+      "effect_key": "lightning-04",
+      "element": "lightning",
+      "id": "lightning-s04",
+      "name": "电弧弹",
+      "slot_id": "S04"
+    },
+    {
+      "effect_key": "water-04",
+      "element": "water",
+      "id": "water-s04",
+      "name": "泡沫弹",
+      "slot_id": "S04"
+    },
+    {
+      "effect_key": "fire-05",
+      "element": "fire",
+      "id": "fire-s05",
+      "name": "烈焰冲击",
+      "slot_id": "S05"
+    },
+    {
+      "effect_key": "grass-05",
+      "element": "grass",
+      "id": "grass-s05",
+      "name": "叶刃冲击",
+      "slot_id": "S05"
+    },
+    {
+      "effect_key": "earth-05",
+      "element": "earth",
+      "id": "earth-s05",
+      "name": "岩崩冲击",
+      "slot_id": "S05"
+    },
+    {
+      "effect_key": "lightning-05",
+      "element": "lightning",
+      "id": "lightning-s05",
+      "name": "雷鸣冲击",
+      "slot_id": "S05"
+    },
+    {
+      "effect_key": "water-05",
+      "element": "water",
+      "id": "water-s05",
+      "name": "激流冲击",
+      "slot_id": "S05"
+    },
+    {
+      "effect_key": "fire-06",
+      "element": "fire",
+      "id": "fire-s06",
+      "name": "熔岩重击",
+      "slot_id": "S06"
+    },
+    {
+      "effect_key": "grass-06",
+      "element": "grass",
+      "id": "grass-s06",
+      "name": "巨藤重击",
+      "slot_id": "S06"
+    },
+    {
+      "effect_key": "earth-06",
+      "element": "earth",
+      "id": "earth-s06",
+      "name": "山岳重击",
+      "slot_id": "S06"
+    },
+    {
+      "effect_key": "lightning-06",
+      "element": "lightning",
+      "id": "lightning-s06",
+      "name": "霹雳重击",
+      "slot_id": "S06"
+    },
+    {
+      "effect_key": "water-06",
+      "element": "water",
+      "id": "water-s06",
+      "name": "巨浪重击",
+      "slot_id": "S06"
+    },
+    {
+      "effect_key": "fire-07",
+      "element": "fire",
+      "id": "fire-s07",
+      "name": "日炎爆破",
+      "slot_id": "S07"
+    },
+    {
+      "effect_key": "grass-07",
+      "element": "grass",
+      "id": "grass-s07",
+      "name": "森罗爆破",
+      "slot_id": "S07"
+    },
+    {
+      "effect_key": "earth-07",
+      "element": "earth",
+      "id": "earth-s07",
+      "name": "地脉爆破",
+      "slot_id": "S07"
+    },
+    {
+      "effect_key": "lightning-07",
+      "element": "lightning",
+      "id": "lightning-s07",
+      "name": "雷暴爆破",
+      "slot_id": "S07"
+    },
+    {
+      "effect_key": "water-07",
+      "element": "water",
+      "id": "water-s07",
+      "name": "海啸爆破",
+      "slot_id": "S07"
+    },
+    {
+      "effect_key": "fire-08",
+      "element": "fire",
+      "id": "fire-s08",
+      "name": "焰流轰击",
+      "slot_id": "S08"
+    },
+    {
+      "effect_key": "grass-08",
+      "element": "grass",
+      "id": "grass-s08",
+      "name": "古木轰击",
+      "slot_id": "S08"
+    },
+    {
+      "effect_key": "earth-08",
+      "element": "earth",
+      "id": "earth-s08",
+      "name": "巨岩轰击",
+      "slot_id": "S08"
+    },
+    {
+      "effect_key": "lightning-08",
+      "element": "lightning",
+      "id": "lightning-s08",
+      "name": "磁极轰击",
+      "slot_id": "S08"
+    },
+    {
+      "effect_key": "water-08",
+      "element": "water",
+      "id": "water-s08",
+      "name": "深潮轰击",
+      "slot_id": "S08"
+    },
+    {
+      "effect_key": "fire-09",
+      "element": "fire",
+      "id": "fire-s09",
+      "name": "炼狱坠火",
+      "slot_id": "S09"
+    },
+    {
+      "effect_key": "grass-09",
+      "element": "grass",
+      "id": "grass-s09",
+      "name": "万叶风暴",
+      "slot_id": "S09"
+    },
+    {
+      "effect_key": "earth-09",
+      "element": "earth",
+      "id": "earth-s09",
+      "name": "大地震荡",
+      "slot_id": "S09"
+    },
+    {
+      "effect_key": "lightning-09",
+      "element": "lightning",
+      "id": "lightning-s09",
+      "name": "九霄天雷",
+      "slot_id": "S09"
+    },
+    {
+      "effect_key": "water-09",
+      "element": "water",
+      "id": "water-s09",
+      "name": "沧海怒涛",
+      "slot_id": "S09"
+    },
+    {
+      "effect_key": "fire-10",
+      "element": "fire",
+      "id": "fire-s10",
+      "name": "终焉天火",
+      "slot_id": "S10"
+    },
+    {
+      "effect_key": "grass-10",
+      "element": "grass",
+      "id": "grass-s10",
+      "name": "世界树坠击",
+      "slot_id": "S10"
+    },
+    {
+      "effect_key": "earth-10",
+      "element": "earth",
+      "id": "earth-s10",
+      "name": "天陨坠岩",
+      "slot_id": "S10"
+    },
+    {
+      "effect_key": "lightning-10",
+      "element": "lightning",
+      "id": "lightning-s10",
+      "name": "万雷天劫",
+      "slot_id": "S10"
+    },
+    {
+      "effect_key": "water-10",
+      "element": "water",
+      "id": "water-s10",
+      "name": "天河坠潮",
+      "slot_id": "S10"
+    }
+  ],
+  "source": "docs/product/功能说明文档.md#218-battle-v1-规则快照",
+  "template_configs": [
+    {
+      "chain_id": "CHAIN-N-001",
+      "element": "fire",
+      "profile_id": "P01",
+      "rarity": "common",
+      "skill_ids": ["fire-s01", "fire-s04", "fire-s06", "fire-s09"],
+      "stage": 1,
+      "stats": {
+        "attack": 100,
+        "defense": 100,
+        "hp": 300,
+        "speed": 100
+      },
+      "template_id": "PET-N-001-1"
+    },
+    {
+      "chain_id": "CHAIN-N-001",
+      "element": "fire",
+      "profile_id": "P01",
+      "rarity": "rare",
+      "skill_ids": ["fire-s01", "fire-s04", "fire-s06", "fire-s09"],
+      "stage": 2,
+      "stats": {
+        "attack": 115,
+        "defense": 115,
+        "hp": 345,
+        "speed": 115
+      },
+      "template_id": "PET-N-001-2"
+    },
+    {
+      "chain_id": "CHAIN-N-001",
+      "element": "fire",
+      "profile_id": "P01",
+      "rarity": "epic",
+      "skill_ids": ["fire-s01", "fire-s04", "fire-s06", "fire-s09"],
+      "stage": 3,
+      "stats": {
+        "attack": 132,
+        "defense": 132,
+        "hp": 396,
+        "speed": 132
+      },
+      "template_id": "PET-N-001-3"
+    },
+    {
+      "chain_id": "CHAIN-N-002",
+      "element": "water",
+      "profile_id": "P01",
+      "rarity": "common",
+      "skill_ids": ["water-s01", "water-s04", "water-s06", "water-s09"],
+      "stage": 1,
+      "stats": {
+        "attack": 100,
+        "defense": 100,
+        "hp": 300,
+        "speed": 100
+      },
+      "template_id": "PET-N-002-1"
+    },
+    {
+      "chain_id": "CHAIN-N-002",
+      "element": "water",
+      "profile_id": "P01",
+      "rarity": "rare",
+      "skill_ids": ["water-s01", "water-s04", "water-s06", "water-s09"],
+      "stage": 2,
+      "stats": {
+        "attack": 115,
+        "defense": 115,
+        "hp": 345,
+        "speed": 115
+      },
+      "template_id": "PET-N-002-2"
+    },
+    {
+      "chain_id": "CHAIN-N-002",
+      "element": "water",
+      "profile_id": "P01",
+      "rarity": "epic",
+      "skill_ids": ["water-s01", "water-s04", "water-s06", "water-s09"],
+      "stage": 3,
+      "stats": {
+        "attack": 132,
+        "defense": 132,
+        "hp": 396,
+        "speed": 132
+      },
+      "template_id": "PET-N-002-3"
+    },
+    {
+      "chain_id": "CHAIN-N-003",
+      "element": "grass",
+      "profile_id": "P01",
+      "rarity": "common",
+      "skill_ids": ["grass-s01", "grass-s04", "grass-s06", "grass-s09"],
+      "stage": 1,
+      "stats": {
+        "attack": 100,
+        "defense": 100,
+        "hp": 300,
+        "speed": 100
+      },
+      "template_id": "PET-N-003-1"
+    },
+    {
+      "chain_id": "CHAIN-N-003",
+      "element": "grass",
+      "profile_id": "P01",
+      "rarity": "rare",
+      "skill_ids": ["grass-s01", "grass-s04", "grass-s06", "grass-s09"],
+      "stage": 2,
+      "stats": {
+        "attack": 115,
+        "defense": 115,
+        "hp": 345,
+        "speed": 115
+      },
+      "template_id": "PET-N-003-2"
+    },
+    {
+      "chain_id": "CHAIN-N-003",
+      "element": "grass",
+      "profile_id": "P01",
+      "rarity": "epic",
+      "skill_ids": ["grass-s01", "grass-s04", "grass-s06", "grass-s09"],
+      "stage": 3,
+      "stats": {
+        "attack": 132,
+        "defense": 132,
+        "hp": 396,
+        "speed": 132
+      },
+      "template_id": "PET-N-003-3"
+    },
+    {
+      "chain_id": "CHAIN-N-004",
+      "element": "earth",
+      "profile_id": "P01",
+      "rarity": "common",
+      "skill_ids": ["earth-s01", "earth-s04", "earth-s06", "earth-s09"],
+      "stage": 1,
+      "stats": {
+        "attack": 100,
+        "defense": 100,
+        "hp": 300,
+        "speed": 100
+      },
+      "template_id": "PET-N-004-1"
+    },
+    {
+      "chain_id": "CHAIN-N-004",
+      "element": "earth",
+      "profile_id": "P01",
+      "rarity": "rare",
+      "skill_ids": ["earth-s01", "earth-s04", "earth-s06", "earth-s09"],
+      "stage": 2,
+      "stats": {
+        "attack": 115,
+        "defense": 115,
+        "hp": 345,
+        "speed": 115
+      },
+      "template_id": "PET-N-004-2"
+    },
+    {
+      "chain_id": "CHAIN-N-004",
+      "element": "earth",
+      "profile_id": "P01",
+      "rarity": "epic",
+      "skill_ids": ["earth-s01", "earth-s04", "earth-s06", "earth-s09"],
+      "stage": 3,
+      "stats": {
+        "attack": 132,
+        "defense": 132,
+        "hp": 396,
+        "speed": 132
+      },
+      "template_id": "PET-N-004-3"
+    },
+    {
+      "chain_id": "CHAIN-N-005",
+      "element": "lightning",
+      "profile_id": "P01",
+      "rarity": "common",
+      "skill_ids": [
+        "lightning-s01",
+        "lightning-s04",
+        "lightning-s06",
+        "lightning-s09"
+      ],
+      "stage": 1,
+      "stats": {
+        "attack": 100,
+        "defense": 100,
+        "hp": 300,
+        "speed": 100
+      },
+      "template_id": "PET-N-005-1"
+    },
+    {
+      "chain_id": "CHAIN-N-005",
+      "element": "lightning",
+      "profile_id": "P01",
+      "rarity": "rare",
+      "skill_ids": [
+        "lightning-s01",
+        "lightning-s04",
+        "lightning-s06",
+        "lightning-s09"
+      ],
+      "stage": 2,
+      "stats": {
+        "attack": 115,
+        "defense": 115,
+        "hp": 345,
+        "speed": 115
+      },
+      "template_id": "PET-N-005-2"
+    },
+    {
+      "chain_id": "CHAIN-N-005",
+      "element": "lightning",
+      "profile_id": "P01",
+      "rarity": "epic",
+      "skill_ids": [
+        "lightning-s01",
+        "lightning-s04",
+        "lightning-s06",
+        "lightning-s09"
+      ],
+      "stage": 3,
+      "stats": {
+        "attack": 132,
+        "defense": 132,
+        "hp": 396,
+        "speed": 132
+      },
+      "template_id": "PET-N-005-3"
+    },
+    {
+      "chain_id": "CHAIN-N-006",
+      "element": "lightning",
+      "profile_id": "P02",
+      "rarity": "common",
+      "skill_ids": [
+        "lightning-s01",
+        "lightning-s05",
+        "lightning-s07",
+        "lightning-s08"
+      ],
+      "stage": 1,
+      "stats": {
+        "attack": 115,
+        "defense": 90,
+        "hp": 285,
+        "speed": 100
+      },
+      "template_id": "PET-N-006-1"
+    },
+    {
+      "chain_id": "CHAIN-N-006",
+      "element": "lightning",
+      "profile_id": "P02",
+      "rarity": "rare",
+      "skill_ids": [
+        "lightning-s01",
+        "lightning-s05",
+        "lightning-s07",
+        "lightning-s08"
+      ],
+      "stage": 2,
+      "stats": {
+        "attack": 132,
+        "defense": 104,
+        "hp": 327,
+        "speed": 115
+      },
+      "template_id": "PET-N-006-2"
+    },
+    {
+      "chain_id": "CHAIN-N-006",
+      "element": "lightning",
+      "profile_id": "P02",
+      "rarity": "epic",
+      "skill_ids": [
+        "lightning-s01",
+        "lightning-s05",
+        "lightning-s07",
+        "lightning-s08"
+      ],
+      "stage": 3,
+      "stats": {
+        "attack": 152,
+        "defense": 119,
+        "hp": 375,
+        "speed": 132
+      },
+      "template_id": "PET-N-006-3"
+    },
+    {
+      "chain_id": "CHAIN-N-007",
+      "element": "lightning",
+      "profile_id": "P03",
+      "rarity": "common",
+      "skill_ids": [
+        "lightning-s01",
+        "lightning-s05",
+        "lightning-s06",
+        "lightning-s10"
+      ],
+      "stage": 1,
+      "stats": {
+        "attack": 110,
+        "defense": 85,
+        "hp": 270,
+        "speed": 115
+      },
+      "template_id": "PET-N-007-1"
+    },
+    {
+      "chain_id": "CHAIN-N-007",
+      "element": "lightning",
+      "profile_id": "P03",
+      "rarity": "rare",
+      "skill_ids": [
+        "lightning-s01",
+        "lightning-s05",
+        "lightning-s06",
+        "lightning-s10"
+      ],
+      "stage": 2,
+      "stats": {
+        "attack": 127,
+        "defense": 98,
+        "hp": 309,
+        "speed": 132
+      },
+      "template_id": "PET-N-007-2"
+    },
+    {
+      "chain_id": "CHAIN-N-007",
+      "element": "lightning",
+      "profile_id": "P03",
+      "rarity": "epic",
+      "skill_ids": [
+        "lightning-s01",
+        "lightning-s05",
+        "lightning-s06",
+        "lightning-s10"
+      ],
+      "stage": 3,
+      "stats": {
+        "attack": 145,
+        "defense": 112,
+        "hp": 357,
+        "speed": 152
+      },
+      "template_id": "PET-N-007-3"
+    },
+    {
+      "chain_id": "CHAIN-N-008",
+      "element": "earth",
+      "profile_id": "P02",
+      "rarity": "common",
+      "skill_ids": ["earth-s01", "earth-s05", "earth-s07", "earth-s08"],
+      "stage": 1,
+      "stats": {
+        "attack": 115,
+        "defense": 90,
+        "hp": 285,
+        "speed": 100
+      },
+      "template_id": "PET-N-008-1"
+    },
+    {
+      "chain_id": "CHAIN-N-008",
+      "element": "earth",
+      "profile_id": "P02",
+      "rarity": "rare",
+      "skill_ids": ["earth-s01", "earth-s05", "earth-s07", "earth-s08"],
+      "stage": 2,
+      "stats": {
+        "attack": 132,
+        "defense": 104,
+        "hp": 327,
+        "speed": 115
+      },
+      "template_id": "PET-N-008-2"
+    },
+    {
+      "chain_id": "CHAIN-N-008",
+      "element": "earth",
+      "profile_id": "P02",
+      "rarity": "epic",
+      "skill_ids": ["earth-s01", "earth-s05", "earth-s07", "earth-s08"],
+      "stage": 3,
+      "stats": {
+        "attack": 152,
+        "defense": 119,
+        "hp": 375,
+        "speed": 132
+      },
+      "template_id": "PET-N-008-3"
+    },
+    {
+      "chain_id": "CHAIN-N-009",
+      "element": "water",
+      "profile_id": "P02",
+      "rarity": "common",
+      "skill_ids": ["water-s01", "water-s05", "water-s07", "water-s08"],
+      "stage": 1,
+      "stats": {
+        "attack": 115,
+        "defense": 90,
+        "hp": 285,
+        "speed": 100
+      },
+      "template_id": "PET-N-009-1"
+    },
+    {
+      "chain_id": "CHAIN-N-009",
+      "element": "water",
+      "profile_id": "P02",
+      "rarity": "rare",
+      "skill_ids": ["water-s01", "water-s05", "water-s07", "water-s08"],
+      "stage": 2,
+      "stats": {
+        "attack": 132,
+        "defense": 104,
+        "hp": 327,
+        "speed": 115
+      },
+      "template_id": "PET-N-009-2"
+    },
+    {
+      "chain_id": "CHAIN-N-009",
+      "element": "water",
+      "profile_id": "P02",
+      "rarity": "epic",
+      "skill_ids": ["water-s01", "water-s05", "water-s07", "water-s08"],
+      "stage": 3,
+      "stats": {
+        "attack": 152,
+        "defense": 119,
+        "hp": 375,
+        "speed": 132
+      },
+      "template_id": "PET-N-009-3"
+    },
+    {
+      "chain_id": "CHAIN-N-010",
+      "element": "grass",
+      "profile_id": "P02",
+      "rarity": "common",
+      "skill_ids": ["grass-s01", "grass-s05", "grass-s07", "grass-s08"],
+      "stage": 1,
+      "stats": {
+        "attack": 115,
+        "defense": 90,
+        "hp": 285,
+        "speed": 100
+      },
+      "template_id": "PET-N-010-1"
+    },
+    {
+      "chain_id": "CHAIN-N-010",
+      "element": "grass",
+      "profile_id": "P02",
+      "rarity": "rare",
+      "skill_ids": ["grass-s01", "grass-s05", "grass-s07", "grass-s08"],
+      "stage": 2,
+      "stats": {
+        "attack": 132,
+        "defense": 104,
+        "hp": 327,
+        "speed": 115
+      },
+      "template_id": "PET-N-010-2"
+    },
+    {
+      "chain_id": "CHAIN-N-010",
+      "element": "grass",
+      "profile_id": "P02",
+      "rarity": "epic",
+      "skill_ids": ["grass-s01", "grass-s05", "grass-s07", "grass-s08"],
+      "stage": 3,
+      "stats": {
+        "attack": 152,
+        "defense": 119,
+        "hp": 375,
+        "speed": 132
+      },
+      "template_id": "PET-N-010-3"
+    },
+    {
+      "chain_id": "CHAIN-N-011",
+      "element": "water",
+      "profile_id": "P03",
+      "rarity": "common",
+      "skill_ids": ["water-s01", "water-s05", "water-s06", "water-s10"],
+      "stage": 1,
+      "stats": {
+        "attack": 110,
+        "defense": 85,
+        "hp": 270,
+        "speed": 115
+      },
+      "template_id": "PET-N-011-1"
+    },
+    {
+      "chain_id": "CHAIN-N-011",
+      "element": "water",
+      "profile_id": "P03",
+      "rarity": "rare",
+      "skill_ids": ["water-s01", "water-s05", "water-s06", "water-s10"],
+      "stage": 2,
+      "stats": {
+        "attack": 127,
+        "defense": 98,
+        "hp": 309,
+        "speed": 132
+      },
+      "template_id": "PET-N-011-2"
+    },
+    {
+      "chain_id": "CHAIN-N-011",
+      "element": "water",
+      "profile_id": "P03",
+      "rarity": "epic",
+      "skill_ids": ["water-s01", "water-s05", "water-s06", "water-s10"],
+      "stage": 3,
+      "stats": {
+        "attack": 145,
+        "defense": 112,
+        "hp": 357,
+        "speed": 152
+      },
+      "template_id": "PET-N-011-3"
+    },
+    {
+      "chain_id": "CHAIN-N-012",
+      "element": "grass",
+      "profile_id": "P03",
+      "rarity": "common",
+      "skill_ids": ["grass-s01", "grass-s05", "grass-s06", "grass-s10"],
+      "stage": 1,
+      "stats": {
+        "attack": 110,
+        "defense": 85,
+        "hp": 270,
+        "speed": 115
+      },
+      "template_id": "PET-N-012-1"
+    },
+    {
+      "chain_id": "CHAIN-N-012",
+      "element": "grass",
+      "profile_id": "P03",
+      "rarity": "rare",
+      "skill_ids": ["grass-s01", "grass-s05", "grass-s06", "grass-s10"],
+      "stage": 2,
+      "stats": {
+        "attack": 127,
+        "defense": 98,
+        "hp": 309,
+        "speed": 132
+      },
+      "template_id": "PET-N-012-2"
+    },
+    {
+      "chain_id": "CHAIN-N-012",
+      "element": "grass",
+      "profile_id": "P03",
+      "rarity": "epic",
+      "skill_ids": ["grass-s01", "grass-s05", "grass-s06", "grass-s10"],
+      "stage": 3,
+      "stats": {
+        "attack": 145,
+        "defense": 112,
+        "hp": 357,
+        "speed": 152
+      },
+      "template_id": "PET-N-012-3"
+    },
+    {
+      "chain_id": "CHAIN-N-013",
+      "element": "lightning",
+      "profile_id": "P04",
+      "rarity": "common",
+      "skill_ids": [
+        "lightning-s02",
+        "lightning-s04",
+        "lightning-s06",
+        "lightning-s08"
+      ],
+      "stage": 1,
+      "stats": {
+        "attack": 85,
+        "defense": 115,
+        "hp": 330,
+        "speed": 90
+      },
+      "template_id": "PET-N-013-1"
+    },
+    {
+      "chain_id": "CHAIN-N-013",
+      "element": "lightning",
+      "profile_id": "P04",
+      "rarity": "rare",
+      "skill_ids": [
+        "lightning-s02",
+        "lightning-s04",
+        "lightning-s06",
+        "lightning-s08"
+      ],
+      "stage": 2,
+      "stats": {
+        "attack": 98,
+        "defense": 132,
+        "hp": 378,
+        "speed": 104
+      },
+      "template_id": "PET-N-013-2"
+    },
+    {
+      "chain_id": "CHAIN-N-013",
+      "element": "lightning",
+      "profile_id": "P04",
+      "rarity": "epic",
+      "skill_ids": [
+        "lightning-s02",
+        "lightning-s04",
+        "lightning-s06",
+        "lightning-s08"
+      ],
+      "stage": 3,
+      "stats": {
+        "attack": 112,
+        "defense": 152,
+        "hp": 435,
+        "speed": 119
+      },
+      "template_id": "PET-N-013-3"
+    },
+    {
+      "chain_id": "CHAIN-N-014",
+      "element": "water",
+      "profile_id": "P04",
+      "rarity": "common",
+      "skill_ids": ["water-s02", "water-s04", "water-s06", "water-s08"],
+      "stage": 1,
+      "stats": {
+        "attack": 85,
+        "defense": 115,
+        "hp": 330,
+        "speed": 90
+      },
+      "template_id": "PET-N-014-1"
+    },
+    {
+      "chain_id": "CHAIN-N-014",
+      "element": "water",
+      "profile_id": "P04",
+      "rarity": "rare",
+      "skill_ids": ["water-s02", "water-s04", "water-s06", "water-s08"],
+      "stage": 2,
+      "stats": {
+        "attack": 98,
+        "defense": 132,
+        "hp": 378,
+        "speed": 104
+      },
+      "template_id": "PET-N-014-2"
+    },
+    {
+      "chain_id": "CHAIN-N-014",
+      "element": "water",
+      "profile_id": "P04",
+      "rarity": "epic",
+      "skill_ids": ["water-s02", "water-s04", "water-s06", "water-s08"],
+      "stage": 3,
+      "stats": {
+        "attack": 112,
+        "defense": 152,
+        "hp": 435,
+        "speed": 119
+      },
+      "template_id": "PET-N-014-3"
+    },
+    {
+      "chain_id": "CHAIN-N-015",
+      "element": "fire",
+      "profile_id": "P02",
+      "rarity": "common",
+      "skill_ids": ["fire-s01", "fire-s05", "fire-s07", "fire-s08"],
+      "stage": 1,
+      "stats": {
+        "attack": 115,
+        "defense": 90,
+        "hp": 285,
+        "speed": 100
+      },
+      "template_id": "PET-N-015-1"
+    },
+    {
+      "chain_id": "CHAIN-N-015",
+      "element": "fire",
+      "profile_id": "P02",
+      "rarity": "rare",
+      "skill_ids": ["fire-s01", "fire-s05", "fire-s07", "fire-s08"],
+      "stage": 2,
+      "stats": {
+        "attack": 132,
+        "defense": 104,
+        "hp": 327,
+        "speed": 115
+      },
+      "template_id": "PET-N-015-2"
+    },
+    {
+      "chain_id": "CHAIN-N-015",
+      "element": "fire",
+      "profile_id": "P02",
+      "rarity": "epic",
+      "skill_ids": ["fire-s01", "fire-s05", "fire-s07", "fire-s08"],
+      "stage": 3,
+      "stats": {
+        "attack": 152,
+        "defense": 119,
+        "hp": 375,
+        "speed": 132
+      },
+      "template_id": "PET-N-015-3"
+    },
+    {
+      "chain_id": "CHAIN-N-016",
+      "element": "grass",
+      "profile_id": "P04",
+      "rarity": "common",
+      "skill_ids": ["grass-s02", "grass-s04", "grass-s06", "grass-s08"],
+      "stage": 1,
+      "stats": {
+        "attack": 85,
+        "defense": 115,
+        "hp": 330,
+        "speed": 90
+      },
+      "template_id": "PET-N-016-1"
+    },
+    {
+      "chain_id": "CHAIN-N-016",
+      "element": "grass",
+      "profile_id": "P04",
+      "rarity": "rare",
+      "skill_ids": ["grass-s02", "grass-s04", "grass-s06", "grass-s08"],
+      "stage": 2,
+      "stats": {
+        "attack": 98,
+        "defense": 132,
+        "hp": 378,
+        "speed": 104
+      },
+      "template_id": "PET-N-016-2"
+    },
+    {
+      "chain_id": "CHAIN-N-016",
+      "element": "grass",
+      "profile_id": "P04",
+      "rarity": "epic",
+      "skill_ids": ["grass-s02", "grass-s04", "grass-s06", "grass-s08"],
+      "stage": 3,
+      "stats": {
+        "attack": 112,
+        "defense": 152,
+        "hp": 435,
+        "speed": 119
+      },
+      "template_id": "PET-N-016-3"
+    },
+    {
+      "chain_id": "CHAIN-N-017",
+      "element": "fire",
+      "profile_id": "P03",
+      "rarity": "common",
+      "skill_ids": ["fire-s01", "fire-s05", "fire-s06", "fire-s10"],
+      "stage": 1,
+      "stats": {
+        "attack": 110,
+        "defense": 85,
+        "hp": 270,
+        "speed": 115
+      },
+      "template_id": "PET-N-017-1"
+    },
+    {
+      "chain_id": "CHAIN-N-017",
+      "element": "fire",
+      "profile_id": "P03",
+      "rarity": "rare",
+      "skill_ids": ["fire-s01", "fire-s05", "fire-s06", "fire-s10"],
+      "stage": 2,
+      "stats": {
+        "attack": 127,
+        "defense": 98,
+        "hp": 309,
+        "speed": 132
+      },
+      "template_id": "PET-N-017-2"
+    },
+    {
+      "chain_id": "CHAIN-N-017",
+      "element": "fire",
+      "profile_id": "P03",
+      "rarity": "epic",
+      "skill_ids": ["fire-s01", "fire-s05", "fire-s06", "fire-s10"],
+      "stage": 3,
+      "stats": {
+        "attack": 145,
+        "defense": 112,
+        "hp": 357,
+        "speed": 152
+      },
+      "template_id": "PET-N-017-3"
+    },
+    {
+      "chain_id": "CHAIN-N-018",
+      "element": "lightning",
+      "profile_id": "P05",
+      "rarity": "common",
+      "skill_ids": [
+        "lightning-s02",
+        "lightning-s04",
+        "lightning-s07",
+        "lightning-s09"
+      ],
+      "stage": 1,
+      "stats": {
+        "attack": 95,
+        "defense": 110,
+        "hp": 315,
+        "speed": 90
+      },
+      "template_id": "PET-N-018-1"
+    },
+    {
+      "chain_id": "CHAIN-N-018",
+      "element": "lightning",
+      "profile_id": "P05",
+      "rarity": "rare",
+      "skill_ids": [
+        "lightning-s02",
+        "lightning-s04",
+        "lightning-s07",
+        "lightning-s09"
+      ],
+      "stage": 2,
+      "stats": {
+        "attack": 109,
+        "defense": 127,
+        "hp": 360,
+        "speed": 104
+      },
+      "template_id": "PET-N-018-2"
+    },
+    {
+      "chain_id": "CHAIN-N-018",
+      "element": "lightning",
+      "profile_id": "P05",
+      "rarity": "epic",
+      "skill_ids": [
+        "lightning-s02",
+        "lightning-s04",
+        "lightning-s07",
+        "lightning-s09"
+      ],
+      "stage": 3,
+      "stats": {
+        "attack": 125,
+        "defense": 145,
+        "hp": 417,
+        "speed": 119
+      },
+      "template_id": "PET-N-018-3"
+    },
+    {
+      "chain_id": "CHAIN-N-019",
+      "element": "fire",
+      "profile_id": "P04",
+      "rarity": "common",
+      "skill_ids": ["fire-s02", "fire-s04", "fire-s06", "fire-s08"],
+      "stage": 1,
+      "stats": {
+        "attack": 85,
+        "defense": 115,
+        "hp": 330,
+        "speed": 90
+      },
+      "template_id": "PET-N-019-1"
+    },
+    {
+      "chain_id": "CHAIN-N-019",
+      "element": "fire",
+      "profile_id": "P04",
+      "rarity": "rare",
+      "skill_ids": ["fire-s02", "fire-s04", "fire-s06", "fire-s08"],
+      "stage": 2,
+      "stats": {
+        "attack": 98,
+        "defense": 132,
+        "hp": 378,
+        "speed": 104
+      },
+      "template_id": "PET-N-019-2"
+    },
+    {
+      "chain_id": "CHAIN-N-019",
+      "element": "fire",
+      "profile_id": "P04",
+      "rarity": "epic",
+      "skill_ids": ["fire-s02", "fire-s04", "fire-s06", "fire-s08"],
+      "stage": 3,
+      "stats": {
+        "attack": 112,
+        "defense": 152,
+        "hp": 435,
+        "speed": 119
+      },
+      "template_id": "PET-N-019-3"
+    },
+    {
+      "chain_id": "CHAIN-N-020",
+      "element": "earth",
+      "profile_id": "P03",
+      "rarity": "common",
+      "skill_ids": ["earth-s01", "earth-s05", "earth-s06", "earth-s10"],
+      "stage": 1,
+      "stats": {
+        "attack": 110,
+        "defense": 85,
+        "hp": 270,
+        "speed": 115
+      },
+      "template_id": "PET-N-020-1"
+    },
+    {
+      "chain_id": "CHAIN-N-020",
+      "element": "earth",
+      "profile_id": "P03",
+      "rarity": "rare",
+      "skill_ids": ["earth-s01", "earth-s05", "earth-s06", "earth-s10"],
+      "stage": 2,
+      "stats": {
+        "attack": 127,
+        "defense": 98,
+        "hp": 309,
+        "speed": 132
+      },
+      "template_id": "PET-N-020-2"
+    },
+    {
+      "chain_id": "CHAIN-N-020",
+      "element": "earth",
+      "profile_id": "P03",
+      "rarity": "epic",
+      "skill_ids": ["earth-s01", "earth-s05", "earth-s06", "earth-s10"],
+      "stage": 3,
+      "stats": {
+        "attack": 145,
+        "defense": 112,
+        "hp": 357,
+        "speed": 152
+      },
+      "template_id": "PET-N-020-3"
+    },
+    {
+      "chain_id": "CHAIN-N-021",
+      "element": "grass",
+      "profile_id": "P05",
+      "rarity": "common",
+      "skill_ids": ["grass-s02", "grass-s04", "grass-s07", "grass-s09"],
+      "stage": 1,
+      "stats": {
+        "attack": 95,
+        "defense": 110,
+        "hp": 315,
+        "speed": 90
+      },
+      "template_id": "PET-N-021-1"
+    },
+    {
+      "chain_id": "CHAIN-N-021",
+      "element": "grass",
+      "profile_id": "P05",
+      "rarity": "rare",
+      "skill_ids": ["grass-s02", "grass-s04", "grass-s07", "grass-s09"],
+      "stage": 2,
+      "stats": {
+        "attack": 109,
+        "defense": 127,
+        "hp": 360,
+        "speed": 104
+      },
+      "template_id": "PET-N-021-2"
+    },
+    {
+      "chain_id": "CHAIN-N-021",
+      "element": "grass",
+      "profile_id": "P05",
+      "rarity": "epic",
+      "skill_ids": ["grass-s02", "grass-s04", "grass-s07", "grass-s09"],
+      "stage": 3,
+      "stats": {
+        "attack": 125,
+        "defense": 145,
+        "hp": 417,
+        "speed": 119
+      },
+      "template_id": "PET-N-021-3"
+    },
+    {
+      "chain_id": "CHAIN-N-022",
+      "element": "fire",
+      "profile_id": "P05",
+      "rarity": "common",
+      "skill_ids": ["fire-s02", "fire-s04", "fire-s07", "fire-s09"],
+      "stage": 1,
+      "stats": {
+        "attack": 95,
+        "defense": 110,
+        "hp": 315,
+        "speed": 90
+      },
+      "template_id": "PET-N-022-1"
+    },
+    {
+      "chain_id": "CHAIN-N-022",
+      "element": "fire",
+      "profile_id": "P05",
+      "rarity": "rare",
+      "skill_ids": ["fire-s02", "fire-s04", "fire-s07", "fire-s09"],
+      "stage": 2,
+      "stats": {
+        "attack": 109,
+        "defense": 127,
+        "hp": 360,
+        "speed": 104
+      },
+      "template_id": "PET-N-022-2"
+    },
+    {
+      "chain_id": "CHAIN-N-022",
+      "element": "fire",
+      "profile_id": "P05",
+      "rarity": "epic",
+      "skill_ids": ["fire-s02", "fire-s04", "fire-s07", "fire-s09"],
+      "stage": 3,
+      "stats": {
+        "attack": 125,
+        "defense": 145,
+        "hp": 417,
+        "speed": 119
+      },
+      "template_id": "PET-N-022-3"
+    },
+    {
+      "chain_id": "CHAIN-N-023",
+      "element": "earth",
+      "profile_id": "P04",
+      "rarity": "common",
+      "skill_ids": ["earth-s02", "earth-s04", "earth-s06", "earth-s08"],
+      "stage": 1,
+      "stats": {
+        "attack": 85,
+        "defense": 115,
+        "hp": 330,
+        "speed": 90
+      },
+      "template_id": "PET-N-023-1"
+    },
+    {
+      "chain_id": "CHAIN-N-023",
+      "element": "earth",
+      "profile_id": "P04",
+      "rarity": "rare",
+      "skill_ids": ["earth-s02", "earth-s04", "earth-s06", "earth-s08"],
+      "stage": 2,
+      "stats": {
+        "attack": 98,
+        "defense": 132,
+        "hp": 378,
+        "speed": 104
+      },
+      "template_id": "PET-N-023-2"
+    },
+    {
+      "chain_id": "CHAIN-N-023",
+      "element": "earth",
+      "profile_id": "P04",
+      "rarity": "epic",
+      "skill_ids": ["earth-s02", "earth-s04", "earth-s06", "earth-s08"],
+      "stage": 3,
+      "stats": {
+        "attack": 112,
+        "defense": 152,
+        "hp": 435,
+        "speed": 119
+      },
+      "template_id": "PET-N-023-3"
+    },
+    {
+      "chain_id": "CHAIN-N-024",
+      "element": "grass",
+      "profile_id": "P06",
+      "rarity": "common",
+      "skill_ids": ["grass-s02", "grass-s05", "grass-s07", "grass-s08"],
+      "stage": 1,
+      "stats": {
+        "attack": 110,
+        "defense": 100,
+        "hp": 300,
+        "speed": 90
+      },
+      "template_id": "PET-N-024-1"
+    },
+    {
+      "chain_id": "CHAIN-N-024",
+      "element": "grass",
+      "profile_id": "P06",
+      "rarity": "rare",
+      "skill_ids": ["grass-s02", "grass-s05", "grass-s07", "grass-s08"],
+      "stage": 2,
+      "stats": {
+        "attack": 127,
+        "defense": 115,
+        "hp": 342,
+        "speed": 104
+      },
+      "template_id": "PET-N-024-2"
+    },
+    {
+      "chain_id": "CHAIN-N-024",
+      "element": "grass",
+      "profile_id": "P06",
+      "rarity": "epic",
+      "skill_ids": ["grass-s02", "grass-s05", "grass-s07", "grass-s08"],
+      "stage": 3,
+      "stats": {
+        "attack": 145,
+        "defense": 132,
+        "hp": 396,
+        "speed": 119
+      },
+      "template_id": "PET-N-024-3"
+    },
+    {
+      "chain_id": "CHAIN-N-025",
+      "element": "water",
+      "profile_id": "P05",
+      "rarity": "common",
+      "skill_ids": ["water-s02", "water-s04", "water-s07", "water-s09"],
+      "stage": 1,
+      "stats": {
+        "attack": 95,
+        "defense": 110,
+        "hp": 315,
+        "speed": 90
+      },
+      "template_id": "PET-N-025-1"
+    },
+    {
+      "chain_id": "CHAIN-N-025",
+      "element": "water",
+      "profile_id": "P05",
+      "rarity": "rare",
+      "skill_ids": ["water-s02", "water-s04", "water-s07", "water-s09"],
+      "stage": 2,
+      "stats": {
+        "attack": 109,
+        "defense": 127,
+        "hp": 360,
+        "speed": 104
+      },
+      "template_id": "PET-N-025-2"
+    },
+    {
+      "chain_id": "CHAIN-N-025",
+      "element": "water",
+      "profile_id": "P05",
+      "rarity": "epic",
+      "skill_ids": ["water-s02", "water-s04", "water-s07", "water-s09"],
+      "stage": 3,
+      "stats": {
+        "attack": 125,
+        "defense": 145,
+        "hp": 417,
+        "speed": 119
+      },
+      "template_id": "PET-N-025-3"
+    },
+    {
+      "chain_id": "CHAIN-N-026",
+      "element": "lightning",
+      "profile_id": "P06",
+      "rarity": "common",
+      "skill_ids": [
+        "lightning-s02",
+        "lightning-s05",
+        "lightning-s07",
+        "lightning-s08"
+      ],
+      "stage": 1,
+      "stats": {
+        "attack": 110,
+        "defense": 100,
+        "hp": 300,
+        "speed": 90
+      },
+      "template_id": "PET-N-026-1"
+    },
+    {
+      "chain_id": "CHAIN-N-026",
+      "element": "lightning",
+      "profile_id": "P06",
+      "rarity": "rare",
+      "skill_ids": [
+        "lightning-s02",
+        "lightning-s05",
+        "lightning-s07",
+        "lightning-s08"
+      ],
+      "stage": 2,
+      "stats": {
+        "attack": 127,
+        "defense": 115,
+        "hp": 342,
+        "speed": 104
+      },
+      "template_id": "PET-N-026-2"
+    },
+    {
+      "chain_id": "CHAIN-N-026",
+      "element": "lightning",
+      "profile_id": "P06",
+      "rarity": "epic",
+      "skill_ids": [
+        "lightning-s02",
+        "lightning-s05",
+        "lightning-s07",
+        "lightning-s08"
+      ],
+      "stage": 3,
+      "stats": {
+        "attack": 145,
+        "defense": 132,
+        "hp": 396,
+        "speed": 119
+      },
+      "template_id": "PET-N-026-3"
+    },
+    {
+      "chain_id": "CHAIN-N-027",
+      "element": "earth",
+      "profile_id": "P05",
+      "rarity": "common",
+      "skill_ids": ["earth-s02", "earth-s04", "earth-s07", "earth-s09"],
+      "stage": 1,
+      "stats": {
+        "attack": 95,
+        "defense": 110,
+        "hp": 315,
+        "speed": 90
+      },
+      "template_id": "PET-N-027-1"
+    },
+    {
+      "chain_id": "CHAIN-N-027",
+      "element": "earth",
+      "profile_id": "P05",
+      "rarity": "rare",
+      "skill_ids": ["earth-s02", "earth-s04", "earth-s07", "earth-s09"],
+      "stage": 2,
+      "stats": {
+        "attack": 109,
+        "defense": 127,
+        "hp": 360,
+        "speed": 104
+      },
+      "template_id": "PET-N-027-2"
+    },
+    {
+      "chain_id": "CHAIN-N-027",
+      "element": "earth",
+      "profile_id": "P05",
+      "rarity": "epic",
+      "skill_ids": ["earth-s02", "earth-s04", "earth-s07", "earth-s09"],
+      "stage": 3,
+      "stats": {
+        "attack": 125,
+        "defense": 145,
+        "hp": 417,
+        "speed": 119
+      },
+      "template_id": "PET-N-027-3"
+    },
+    {
+      "chain_id": "CHAIN-N-028",
+      "element": "fire",
+      "profile_id": "P06",
+      "rarity": "common",
+      "skill_ids": ["fire-s02", "fire-s05", "fire-s07", "fire-s08"],
+      "stage": 1,
+      "stats": {
+        "attack": 110,
+        "defense": 100,
+        "hp": 300,
+        "speed": 90
+      },
+      "template_id": "PET-N-028-1"
+    },
+    {
+      "chain_id": "CHAIN-N-028",
+      "element": "fire",
+      "profile_id": "P06",
+      "rarity": "rare",
+      "skill_ids": ["fire-s02", "fire-s05", "fire-s07", "fire-s08"],
+      "stage": 2,
+      "stats": {
+        "attack": 127,
+        "defense": 115,
+        "hp": 342,
+        "speed": 104
+      },
+      "template_id": "PET-N-028-2"
+    },
+    {
+      "chain_id": "CHAIN-N-028",
+      "element": "fire",
+      "profile_id": "P06",
+      "rarity": "epic",
+      "skill_ids": ["fire-s02", "fire-s05", "fire-s07", "fire-s08"],
+      "stage": 3,
+      "stats": {
+        "attack": 145,
+        "defense": 132,
+        "hp": 396,
+        "speed": 119
+      },
+      "template_id": "PET-N-028-3"
+    },
+    {
+      "chain_id": "CHAIN-N-029",
+      "element": "water",
+      "profile_id": "P06",
+      "rarity": "common",
+      "skill_ids": ["water-s02", "water-s05", "water-s07", "water-s08"],
+      "stage": 1,
+      "stats": {
+        "attack": 110,
+        "defense": 100,
+        "hp": 300,
+        "speed": 90
+      },
+      "template_id": "PET-N-029-1"
+    },
+    {
+      "chain_id": "CHAIN-N-029",
+      "element": "water",
+      "profile_id": "P06",
+      "rarity": "rare",
+      "skill_ids": ["water-s02", "water-s05", "water-s07", "water-s08"],
+      "stage": 2,
+      "stats": {
+        "attack": 127,
+        "defense": 115,
+        "hp": 342,
+        "speed": 104
+      },
+      "template_id": "PET-N-029-2"
+    },
+    {
+      "chain_id": "CHAIN-N-029",
+      "element": "water",
+      "profile_id": "P06",
+      "rarity": "epic",
+      "skill_ids": ["water-s02", "water-s05", "water-s07", "water-s08"],
+      "stage": 3,
+      "stats": {
+        "attack": 145,
+        "defense": 132,
+        "hp": 396,
+        "speed": 119
+      },
+      "template_id": "PET-N-029-3"
+    },
+    {
+      "chain_id": "CHAIN-N-030",
+      "element": "earth",
+      "profile_id": "P06",
+      "rarity": "common",
+      "skill_ids": ["earth-s02", "earth-s05", "earth-s07", "earth-s08"],
+      "stage": 1,
+      "stats": {
+        "attack": 110,
+        "defense": 100,
+        "hp": 300,
+        "speed": 90
+      },
+      "template_id": "PET-N-030-1"
+    },
+    {
+      "chain_id": "CHAIN-N-030",
+      "element": "earth",
+      "profile_id": "P06",
+      "rarity": "rare",
+      "skill_ids": ["earth-s02", "earth-s05", "earth-s07", "earth-s08"],
+      "stage": 2,
+      "stats": {
+        "attack": 127,
+        "defense": 115,
+        "hp": 342,
+        "speed": 104
+      },
+      "template_id": "PET-N-030-2"
+    },
+    {
+      "chain_id": "CHAIN-N-030",
+      "element": "earth",
+      "profile_id": "P06",
+      "rarity": "epic",
+      "skill_ids": ["earth-s02", "earth-s05", "earth-s07", "earth-s08"],
+      "stage": 3,
+      "stats": {
+        "attack": 145,
+        "defense": 132,
+        "hp": 396,
+        "speed": 119
+      },
+      "template_id": "PET-N-030-3"
+    },
+    {
+      "chain_id": "CHAIN-N-031",
+      "element": "grass",
+      "profile_id": "P07",
+      "rarity": "common",
+      "skill_ids": ["grass-s03", "grass-s04", "grass-s06", "grass-s09"],
+      "stage": 1,
+      "stats": {
+        "attack": 105,
+        "defense": 95,
+        "hp": 285,
+        "speed": 105
+      },
+      "template_id": "PET-N-031-1"
+    },
+    {
+      "chain_id": "CHAIN-N-031",
+      "element": "grass",
+      "profile_id": "P07",
+      "rarity": "rare",
+      "skill_ids": ["grass-s03", "grass-s04", "grass-s06", "grass-s09"],
+      "stage": 2,
+      "stats": {
+        "attack": 121,
+        "defense": 109,
+        "hp": 327,
+        "speed": 121
+      },
+      "template_id": "PET-N-031-2"
+    },
+    {
+      "chain_id": "CHAIN-N-031",
+      "element": "grass",
+      "profile_id": "P07",
+      "rarity": "epic",
+      "skill_ids": ["grass-s03", "grass-s04", "grass-s06", "grass-s09"],
+      "stage": 3,
+      "stats": {
+        "attack": 139,
+        "defense": 125,
+        "hp": 375,
+        "speed": 139
+      },
+      "template_id": "PET-N-031-3"
+    },
+    {
+      "chain_id": "CHAIN-N-032",
+      "element": "water",
+      "profile_id": "P07",
+      "rarity": "common",
+      "skill_ids": ["water-s03", "water-s04", "water-s06", "water-s09"],
+      "stage": 1,
+      "stats": {
+        "attack": 105,
+        "defense": 95,
+        "hp": 285,
+        "speed": 105
+      },
+      "template_id": "PET-N-032-1"
+    },
+    {
+      "chain_id": "CHAIN-N-032",
+      "element": "water",
+      "profile_id": "P07",
+      "rarity": "rare",
+      "skill_ids": ["water-s03", "water-s04", "water-s06", "water-s09"],
+      "stage": 2,
+      "stats": {
+        "attack": 121,
+        "defense": 109,
+        "hp": 327,
+        "speed": 121
+      },
+      "template_id": "PET-N-032-2"
+    },
+    {
+      "chain_id": "CHAIN-N-032",
+      "element": "water",
+      "profile_id": "P07",
+      "rarity": "epic",
+      "skill_ids": ["water-s03", "water-s04", "water-s06", "water-s09"],
+      "stage": 3,
+      "stats": {
+        "attack": 139,
+        "defense": 125,
+        "hp": 375,
+        "speed": 139
+      },
+      "template_id": "PET-N-032-3"
+    },
+    {
+      "chain_id": "CHAIN-N-033",
+      "element": "grass",
+      "profile_id": "P08",
+      "rarity": "common",
+      "skill_ids": ["grass-s03", "grass-s05", "grass-s07", "grass-s08"],
+      "stage": 1,
+      "stats": {
+        "attack": 95,
+        "defense": 90,
+        "hp": 270,
+        "speed": 125
+      },
+      "template_id": "PET-N-033-1"
+    },
+    {
+      "chain_id": "CHAIN-N-033",
+      "element": "grass",
+      "profile_id": "P08",
+      "rarity": "rare",
+      "skill_ids": ["grass-s03", "grass-s05", "grass-s07", "grass-s08"],
+      "stage": 2,
+      "stats": {
+        "attack": 109,
+        "defense": 104,
+        "hp": 309,
+        "speed": 144
+      },
+      "template_id": "PET-N-033-2"
+    },
+    {
+      "chain_id": "CHAIN-N-033",
+      "element": "grass",
+      "profile_id": "P08",
+      "rarity": "epic",
+      "skill_ids": ["grass-s03", "grass-s05", "grass-s07", "grass-s08"],
+      "stage": 3,
+      "stats": {
+        "attack": 125,
+        "defense": 119,
+        "hp": 357,
+        "speed": 165
+      },
+      "template_id": "PET-N-033-3"
+    },
+    {
+      "chain_id": "CHAIN-N-034",
+      "element": "lightning",
+      "profile_id": "P07",
+      "rarity": "common",
+      "skill_ids": [
+        "lightning-s03",
+        "lightning-s04",
+        "lightning-s06",
+        "lightning-s09"
+      ],
+      "stage": 1,
+      "stats": {
+        "attack": 105,
+        "defense": 95,
+        "hp": 285,
+        "speed": 105
+      },
+      "template_id": "PET-N-034-1"
+    },
+    {
+      "chain_id": "CHAIN-N-034",
+      "element": "lightning",
+      "profile_id": "P07",
+      "rarity": "rare",
+      "skill_ids": [
+        "lightning-s03",
+        "lightning-s04",
+        "lightning-s06",
+        "lightning-s09"
+      ],
+      "stage": 2,
+      "stats": {
+        "attack": 121,
+        "defense": 109,
+        "hp": 327,
+        "speed": 121
+      },
+      "template_id": "PET-N-034-2"
+    },
+    {
+      "chain_id": "CHAIN-N-034",
+      "element": "lightning",
+      "profile_id": "P07",
+      "rarity": "epic",
+      "skill_ids": [
+        "lightning-s03",
+        "lightning-s04",
+        "lightning-s06",
+        "lightning-s09"
+      ],
+      "stage": 3,
+      "stats": {
+        "attack": 139,
+        "defense": 125,
+        "hp": 375,
+        "speed": 139
+      },
+      "template_id": "PET-N-034-3"
+    },
+    {
+      "chain_id": "CHAIN-N-035",
+      "element": "earth",
+      "profile_id": "P07",
+      "rarity": "common",
+      "skill_ids": ["earth-s03", "earth-s04", "earth-s06", "earth-s09"],
+      "stage": 1,
+      "stats": {
+        "attack": 105,
+        "defense": 95,
+        "hp": 285,
+        "speed": 105
+      },
+      "template_id": "PET-N-035-1"
+    },
+    {
+      "chain_id": "CHAIN-N-035",
+      "element": "earth",
+      "profile_id": "P07",
+      "rarity": "rare",
+      "skill_ids": ["earth-s03", "earth-s04", "earth-s06", "earth-s09"],
+      "stage": 2,
+      "stats": {
+        "attack": 121,
+        "defense": 109,
+        "hp": 327,
+        "speed": 121
+      },
+      "template_id": "PET-N-035-2"
+    },
+    {
+      "chain_id": "CHAIN-N-035",
+      "element": "earth",
+      "profile_id": "P07",
+      "rarity": "epic",
+      "skill_ids": ["earth-s03", "earth-s04", "earth-s06", "earth-s09"],
+      "stage": 3,
+      "stats": {
+        "attack": 139,
+        "defense": 125,
+        "hp": 375,
+        "speed": 139
+      },
+      "template_id": "PET-N-035-3"
+    },
+    {
+      "chain_id": "CHAIN-N-036",
+      "element": "water",
+      "profile_id": "P08",
+      "rarity": "common",
+      "skill_ids": ["water-s03", "water-s05", "water-s07", "water-s08"],
+      "stage": 1,
+      "stats": {
+        "attack": 95,
+        "defense": 90,
+        "hp": 270,
+        "speed": 125
+      },
+      "template_id": "PET-N-036-1"
+    },
+    {
+      "chain_id": "CHAIN-N-036",
+      "element": "water",
+      "profile_id": "P08",
+      "rarity": "rare",
+      "skill_ids": ["water-s03", "water-s05", "water-s07", "water-s08"],
+      "stage": 2,
+      "stats": {
+        "attack": 109,
+        "defense": 104,
+        "hp": 309,
+        "speed": 144
+      },
+      "template_id": "PET-N-036-2"
+    },
+    {
+      "chain_id": "CHAIN-N-036",
+      "element": "water",
+      "profile_id": "P08",
+      "rarity": "epic",
+      "skill_ids": ["water-s03", "water-s05", "water-s07", "water-s08"],
+      "stage": 3,
+      "stats": {
+        "attack": 125,
+        "defense": 119,
+        "hp": 357,
+        "speed": 165
+      },
+      "template_id": "PET-N-036-3"
+    },
+    {
+      "chain_id": "CHAIN-N-037",
+      "element": "fire",
+      "profile_id": "P07",
+      "rarity": "common",
+      "skill_ids": ["fire-s03", "fire-s04", "fire-s06", "fire-s09"],
+      "stage": 1,
+      "stats": {
+        "attack": 105,
+        "defense": 95,
+        "hp": 285,
+        "speed": 105
+      },
+      "template_id": "PET-N-037-1"
+    },
+    {
+      "chain_id": "CHAIN-N-037",
+      "element": "fire",
+      "profile_id": "P07",
+      "rarity": "rare",
+      "skill_ids": ["fire-s03", "fire-s04", "fire-s06", "fire-s09"],
+      "stage": 2,
+      "stats": {
+        "attack": 121,
+        "defense": 109,
+        "hp": 327,
+        "speed": 121
+      },
+      "template_id": "PET-N-037-2"
+    },
+    {
+      "chain_id": "CHAIN-N-037",
+      "element": "fire",
+      "profile_id": "P07",
+      "rarity": "epic",
+      "skill_ids": ["fire-s03", "fire-s04", "fire-s06", "fire-s09"],
+      "stage": 3,
+      "stats": {
+        "attack": 139,
+        "defense": 125,
+        "hp": 375,
+        "speed": 139
+      },
+      "template_id": "PET-N-037-3"
+    },
+    {
+      "chain_id": "CHAIN-N-038",
+      "element": "fire",
+      "profile_id": "P08",
+      "rarity": "common",
+      "skill_ids": ["fire-s03", "fire-s05", "fire-s07", "fire-s08"],
+      "stage": 1,
+      "stats": {
+        "attack": 95,
+        "defense": 90,
+        "hp": 270,
+        "speed": 125
+      },
+      "template_id": "PET-N-038-1"
+    },
+    {
+      "chain_id": "CHAIN-N-038",
+      "element": "fire",
+      "profile_id": "P08",
+      "rarity": "rare",
+      "skill_ids": ["fire-s03", "fire-s05", "fire-s07", "fire-s08"],
+      "stage": 2,
+      "stats": {
+        "attack": 109,
+        "defense": 104,
+        "hp": 309,
+        "speed": 144
+      },
+      "template_id": "PET-N-038-2"
+    },
+    {
+      "chain_id": "CHAIN-N-038",
+      "element": "fire",
+      "profile_id": "P08",
+      "rarity": "epic",
+      "skill_ids": ["fire-s03", "fire-s05", "fire-s07", "fire-s08"],
+      "stage": 3,
+      "stats": {
+        "attack": 125,
+        "defense": 119,
+        "hp": 357,
+        "speed": 165
+      },
+      "template_id": "PET-N-038-3"
+    },
+    {
+      "chain_id": "CHAIN-N-039",
+      "element": "earth",
+      "profile_id": "P08",
+      "rarity": "common",
+      "skill_ids": ["earth-s03", "earth-s05", "earth-s07", "earth-s08"],
+      "stage": 1,
+      "stats": {
+        "attack": 95,
+        "defense": 90,
+        "hp": 270,
+        "speed": 125
+      },
+      "template_id": "PET-N-039-1"
+    },
+    {
+      "chain_id": "CHAIN-N-039",
+      "element": "earth",
+      "profile_id": "P08",
+      "rarity": "rare",
+      "skill_ids": ["earth-s03", "earth-s05", "earth-s07", "earth-s08"],
+      "stage": 2,
+      "stats": {
+        "attack": 109,
+        "defense": 104,
+        "hp": 309,
+        "speed": 144
+      },
+      "template_id": "PET-N-039-2"
+    },
+    {
+      "chain_id": "CHAIN-N-039",
+      "element": "earth",
+      "profile_id": "P08",
+      "rarity": "epic",
+      "skill_ids": ["earth-s03", "earth-s05", "earth-s07", "earth-s08"],
+      "stage": 3,
+      "stats": {
+        "attack": 125,
+        "defense": 119,
+        "hp": 357,
+        "speed": 165
+      },
+      "template_id": "PET-N-039-3"
+    },
+    {
+      "chain_id": "CHAIN-N-040",
+      "element": "lightning",
+      "profile_id": "P08",
+      "rarity": "common",
+      "skill_ids": [
+        "lightning-s03",
+        "lightning-s05",
+        "lightning-s07",
+        "lightning-s08"
+      ],
+      "stage": 1,
+      "stats": {
+        "attack": 95,
+        "defense": 90,
+        "hp": 270,
+        "speed": 125
+      },
+      "template_id": "PET-N-040-1"
+    },
+    {
+      "chain_id": "CHAIN-N-040",
+      "element": "lightning",
+      "profile_id": "P08",
+      "rarity": "rare",
+      "skill_ids": [
+        "lightning-s03",
+        "lightning-s05",
+        "lightning-s07",
+        "lightning-s08"
+      ],
+      "stage": 2,
+      "stats": {
+        "attack": 109,
+        "defense": 104,
+        "hp": 309,
+        "speed": 144
+      },
+      "template_id": "PET-N-040-2"
+    },
+    {
+      "chain_id": "CHAIN-N-040",
+      "element": "lightning",
+      "profile_id": "P08",
+      "rarity": "epic",
+      "skill_ids": [
+        "lightning-s03",
+        "lightning-s05",
+        "lightning-s07",
+        "lightning-s08"
+      ],
+      "stage": 3,
+      "stats": {
+        "attack": 125,
+        "defense": 119,
+        "hp": 357,
+        "speed": 165
+      },
+      "template_id": "PET-N-040-3"
+    },
+    {
+      "chain_id": "CHAIN-A-001",
+      "element": "water",
+      "profile_id": "P09",
+      "rarity": "rare",
+      "skill_ids": ["water-s03", "water-s04", "water-s07", "water-s10"],
+      "stage": 1,
+      "stats": {
+        "attack": 138,
+        "defense": 98,
+        "hp": 345,
+        "speed": 109
+      },
+      "template_id": "PET-A-001-1"
+    },
+    {
+      "chain_id": "CHAIN-A-001",
+      "element": "water",
+      "profile_id": "P09",
+      "rarity": "epic",
+      "skill_ids": ["water-s03", "water-s04", "water-s07", "water-s10"],
+      "stage": 2,
+      "stats": {
+        "attack": 158,
+        "defense": 112,
+        "hp": 399,
+        "speed": 125
+      },
+      "template_id": "PET-A-001-2"
+    },
+    {
+      "chain_id": "CHAIN-A-001",
+      "element": "water",
+      "profile_id": "P09",
+      "rarity": "legendary",
+      "skill_ids": ["water-s03", "water-s04", "water-s07", "water-s10"],
+      "stage": 3,
+      "stats": {
+        "attack": 182,
+        "defense": 129,
+        "hp": 459,
+        "speed": 144
+      },
+      "template_id": "PET-A-001-3"
+    },
+    {
+      "chain_id": "CHAIN-A-002",
+      "element": "lightning",
+      "profile_id": "P09",
+      "rarity": "rare",
+      "skill_ids": [
+        "lightning-s03",
+        "lightning-s04",
+        "lightning-s07",
+        "lightning-s10"
+      ],
+      "stage": 1,
+      "stats": {
+        "attack": 138,
+        "defense": 98,
+        "hp": 345,
+        "speed": 109
+      },
+      "template_id": "PET-A-002-1"
+    },
+    {
+      "chain_id": "CHAIN-A-002",
+      "element": "lightning",
+      "profile_id": "P09",
+      "rarity": "epic",
+      "skill_ids": [
+        "lightning-s03",
+        "lightning-s04",
+        "lightning-s07",
+        "lightning-s10"
+      ],
+      "stage": 2,
+      "stats": {
+        "attack": 158,
+        "defense": 112,
+        "hp": 399,
+        "speed": 125
+      },
+      "template_id": "PET-A-002-2"
+    },
+    {
+      "chain_id": "CHAIN-A-002",
+      "element": "lightning",
+      "profile_id": "P09",
+      "rarity": "legendary",
+      "skill_ids": [
+        "lightning-s03",
+        "lightning-s04",
+        "lightning-s07",
+        "lightning-s10"
+      ],
+      "stage": 3,
+      "stats": {
+        "attack": 182,
+        "defense": 129,
+        "hp": 459,
+        "speed": 144
+      },
+      "template_id": "PET-A-002-3"
+    },
+    {
+      "chain_id": "CHAIN-A-003",
+      "element": "water",
+      "profile_id": "P10",
+      "rarity": "rare",
+      "skill_ids": ["water-s01", "water-s04", "water-s07", "water-s10"],
+      "stage": 1,
+      "stats": {
+        "attack": 98,
+        "defense": 121,
+        "hp": 396,
+        "speed": 109
+      },
+      "template_id": "PET-A-003-1"
+    },
+    {
+      "chain_id": "CHAIN-A-003",
+      "element": "water",
+      "profile_id": "P10",
+      "rarity": "epic",
+      "skill_ids": ["water-s01", "water-s04", "water-s07", "water-s10"],
+      "stage": 2,
+      "stats": {
+        "attack": 112,
+        "defense": 139,
+        "hp": 456,
+        "speed": 125
+      },
+      "template_id": "PET-A-003-2"
+    },
+    {
+      "chain_id": "CHAIN-A-003",
+      "element": "water",
+      "profile_id": "P10",
+      "rarity": "legendary",
+      "skill_ids": ["water-s01", "water-s04", "water-s07", "water-s10"],
+      "stage": 3,
+      "stats": {
+        "attack": 129,
+        "defense": 160,
+        "hp": 525,
+        "speed": 144
+      },
+      "template_id": "PET-A-003-3"
+    },
+    {
+      "chain_id": "CHAIN-A-004",
+      "element": "earth",
+      "profile_id": "P09",
+      "rarity": "rare",
+      "skill_ids": ["earth-s03", "earth-s04", "earth-s07", "earth-s10"],
+      "stage": 1,
+      "stats": {
+        "attack": 138,
+        "defense": 98,
+        "hp": 345,
+        "speed": 109
+      },
+      "template_id": "PET-A-004-1"
+    },
+    {
+      "chain_id": "CHAIN-A-004",
+      "element": "earth",
+      "profile_id": "P09",
+      "rarity": "epic",
+      "skill_ids": ["earth-s03", "earth-s04", "earth-s07", "earth-s10"],
+      "stage": 2,
+      "stats": {
+        "attack": 158,
+        "defense": 112,
+        "hp": 399,
+        "speed": 125
+      },
+      "template_id": "PET-A-004-2"
+    },
+    {
+      "chain_id": "CHAIN-A-004",
+      "element": "earth",
+      "profile_id": "P09",
+      "rarity": "legendary",
+      "skill_ids": ["earth-s03", "earth-s04", "earth-s07", "earth-s10"],
+      "stage": 3,
+      "stats": {
+        "attack": 182,
+        "defense": 129,
+        "hp": 459,
+        "speed": 144
+      },
+      "template_id": "PET-A-004-3"
+    },
+    {
+      "chain_id": "CHAIN-A-005",
+      "element": "fire",
+      "profile_id": "P09",
+      "rarity": "rare",
+      "skill_ids": ["fire-s03", "fire-s04", "fire-s07", "fire-s10"],
+      "stage": 1,
+      "stats": {
+        "attack": 138,
+        "defense": 98,
+        "hp": 345,
+        "speed": 109
+      },
+      "template_id": "PET-A-005-1"
+    },
+    {
+      "chain_id": "CHAIN-A-005",
+      "element": "fire",
+      "profile_id": "P09",
+      "rarity": "epic",
+      "skill_ids": ["fire-s03", "fire-s04", "fire-s07", "fire-s10"],
+      "stage": 2,
+      "stats": {
+        "attack": 158,
+        "defense": 112,
+        "hp": 399,
+        "speed": 125
+      },
+      "template_id": "PET-A-005-2"
+    },
+    {
+      "chain_id": "CHAIN-A-005",
+      "element": "fire",
+      "profile_id": "P09",
+      "rarity": "legendary",
+      "skill_ids": ["fire-s03", "fire-s04", "fire-s07", "fire-s10"],
+      "stage": 3,
+      "stats": {
+        "attack": 182,
+        "defense": 129,
+        "hp": 459,
+        "speed": 144
+      },
+      "template_id": "PET-A-005-3"
+    },
+    {
+      "chain_id": "CHAIN-A-006",
+      "element": "grass",
+      "profile_id": "P09",
+      "rarity": "rare",
+      "skill_ids": ["grass-s03", "grass-s04", "grass-s07", "grass-s10"],
+      "stage": 1,
+      "stats": {
+        "attack": 138,
+        "defense": 98,
+        "hp": 345,
+        "speed": 109
+      },
+      "template_id": "PET-A-006-1"
+    },
+    {
+      "chain_id": "CHAIN-A-006",
+      "element": "grass",
+      "profile_id": "P09",
+      "rarity": "epic",
+      "skill_ids": ["grass-s03", "grass-s04", "grass-s07", "grass-s10"],
+      "stage": 2,
+      "stats": {
+        "attack": 158,
+        "defense": 112,
+        "hp": 399,
+        "speed": 125
+      },
+      "template_id": "PET-A-006-2"
+    },
+    {
+      "chain_id": "CHAIN-A-006",
+      "element": "grass",
+      "profile_id": "P09",
+      "rarity": "legendary",
+      "skill_ids": ["grass-s03", "grass-s04", "grass-s07", "grass-s10"],
+      "stage": 3,
+      "stats": {
+        "attack": 182,
+        "defense": 129,
+        "hp": 459,
+        "speed": 144
+      },
+      "template_id": "PET-A-006-3"
+    },
+    {
+      "chain_id": "CHAIN-A-007",
+      "element": "earth",
+      "profile_id": "P10",
+      "rarity": "rare",
+      "skill_ids": ["earth-s01", "earth-s04", "earth-s07", "earth-s10"],
+      "stage": 1,
+      "stats": {
+        "attack": 98,
+        "defense": 121,
+        "hp": 396,
+        "speed": 109
+      },
+      "template_id": "PET-A-007-1"
+    },
+    {
+      "chain_id": "CHAIN-A-007",
+      "element": "earth",
+      "profile_id": "P10",
+      "rarity": "epic",
+      "skill_ids": ["earth-s01", "earth-s04", "earth-s07", "earth-s10"],
+      "stage": 2,
+      "stats": {
+        "attack": 112,
+        "defense": 139,
+        "hp": 456,
+        "speed": 125
+      },
+      "template_id": "PET-A-007-2"
+    },
+    {
+      "chain_id": "CHAIN-A-007",
+      "element": "earth",
+      "profile_id": "P10",
+      "rarity": "legendary",
+      "skill_ids": ["earth-s01", "earth-s04", "earth-s07", "earth-s10"],
+      "stage": 3,
+      "stats": {
+        "attack": 129,
+        "defense": 160,
+        "hp": 525,
+        "speed": 144
+      },
+      "template_id": "PET-A-007-3"
+    },
+    {
+      "chain_id": "CHAIN-A-008",
+      "element": "fire",
+      "profile_id": "P10",
+      "rarity": "rare",
+      "skill_ids": ["fire-s01", "fire-s04", "fire-s07", "fire-s10"],
+      "stage": 1,
+      "stats": {
+        "attack": 98,
+        "defense": 121,
+        "hp": 396,
+        "speed": 109
+      },
+      "template_id": "PET-A-008-1"
+    },
+    {
+      "chain_id": "CHAIN-A-008",
+      "element": "fire",
+      "profile_id": "P10",
+      "rarity": "epic",
+      "skill_ids": ["fire-s01", "fire-s04", "fire-s07", "fire-s10"],
+      "stage": 2,
+      "stats": {
+        "attack": 112,
+        "defense": 139,
+        "hp": 456,
+        "speed": 125
+      },
+      "template_id": "PET-A-008-2"
+    },
+    {
+      "chain_id": "CHAIN-A-008",
+      "element": "fire",
+      "profile_id": "P10",
+      "rarity": "legendary",
+      "skill_ids": ["fire-s01", "fire-s04", "fire-s07", "fire-s10"],
+      "stage": 3,
+      "stats": {
+        "attack": 129,
+        "defense": 160,
+        "hp": 525,
+        "speed": 144
+      },
+      "template_id": "PET-A-008-3"
+    },
+    {
+      "chain_id": "CHAIN-A-009",
+      "element": "lightning",
+      "profile_id": "P10",
+      "rarity": "rare",
+      "skill_ids": [
+        "lightning-s01",
+        "lightning-s04",
+        "lightning-s07",
+        "lightning-s10"
+      ],
+      "stage": 1,
+      "stats": {
+        "attack": 98,
+        "defense": 121,
+        "hp": 396,
+        "speed": 109
+      },
+      "template_id": "PET-A-009-1"
+    },
+    {
+      "chain_id": "CHAIN-A-009",
+      "element": "lightning",
+      "profile_id": "P10",
+      "rarity": "epic",
+      "skill_ids": [
+        "lightning-s01",
+        "lightning-s04",
+        "lightning-s07",
+        "lightning-s10"
+      ],
+      "stage": 2,
+      "stats": {
+        "attack": 112,
+        "defense": 139,
+        "hp": 456,
+        "speed": 125
+      },
+      "template_id": "PET-A-009-2"
+    },
+    {
+      "chain_id": "CHAIN-A-009",
+      "element": "lightning",
+      "profile_id": "P10",
+      "rarity": "legendary",
+      "skill_ids": [
+        "lightning-s01",
+        "lightning-s04",
+        "lightning-s07",
+        "lightning-s10"
+      ],
+      "stage": 3,
+      "stats": {
+        "attack": 129,
+        "defense": 160,
+        "hp": 525,
+        "speed": 144
+      },
+      "template_id": "PET-A-009-3"
+    },
+    {
+      "chain_id": "CHAIN-A-010",
+      "element": "earth",
+      "profile_id": "P11",
+      "rarity": "rare",
+      "skill_ids": ["earth-s01", "earth-s06", "earth-s08", "earth-s10"],
+      "stage": 1,
+      "stats": {
+        "attack": 127,
+        "defense": 98,
+        "hp": 324,
+        "speed": 127
+      },
+      "template_id": "PET-A-010-1"
+    },
+    {
+      "chain_id": "CHAIN-A-010",
+      "element": "earth",
+      "profile_id": "P11",
+      "rarity": "epic",
+      "skill_ids": ["earth-s01", "earth-s06", "earth-s08", "earth-s10"],
+      "stage": 2,
+      "stats": {
+        "attack": 145,
+        "defense": 112,
+        "hp": 378,
+        "speed": 145
+      },
+      "template_id": "PET-A-010-2"
+    },
+    {
+      "chain_id": "CHAIN-A-010",
+      "element": "earth",
+      "profile_id": "P11",
+      "rarity": "legendary",
+      "skill_ids": ["earth-s01", "earth-s06", "earth-s08", "earth-s10"],
+      "stage": 3,
+      "stats": {
+        "attack": 167,
+        "defense": 129,
+        "hp": 435,
+        "speed": 167
+      },
+      "template_id": "PET-A-010-3"
+    },
+    {
+      "chain_id": "CHAIN-A-011",
+      "element": "water",
+      "profile_id": "P11",
+      "rarity": "rare",
+      "skill_ids": ["water-s01", "water-s06", "water-s08", "water-s10"],
+      "stage": 1,
+      "stats": {
+        "attack": 127,
+        "defense": 98,
+        "hp": 324,
+        "speed": 127
+      },
+      "template_id": "PET-A-011-1"
+    },
+    {
+      "chain_id": "CHAIN-A-011",
+      "element": "water",
+      "profile_id": "P11",
+      "rarity": "epic",
+      "skill_ids": ["water-s01", "water-s06", "water-s08", "water-s10"],
+      "stage": 2,
+      "stats": {
+        "attack": 145,
+        "defense": 112,
+        "hp": 378,
+        "speed": 145
+      },
+      "template_id": "PET-A-011-2"
+    },
+    {
+      "chain_id": "CHAIN-A-011",
+      "element": "water",
+      "profile_id": "P11",
+      "rarity": "legendary",
+      "skill_ids": ["water-s01", "water-s06", "water-s08", "water-s10"],
+      "stage": 3,
+      "stats": {
+        "attack": 167,
+        "defense": 129,
+        "hp": 435,
+        "speed": 167
+      },
+      "template_id": "PET-A-011-3"
+    },
+    {
+      "chain_id": "CHAIN-A-012",
+      "element": "lightning",
+      "profile_id": "P11",
+      "rarity": "rare",
+      "skill_ids": [
+        "lightning-s01",
+        "lightning-s06",
+        "lightning-s08",
+        "lightning-s10"
+      ],
+      "stage": 1,
+      "stats": {
+        "attack": 127,
+        "defense": 98,
+        "hp": 324,
+        "speed": 127
+      },
+      "template_id": "PET-A-012-1"
+    },
+    {
+      "chain_id": "CHAIN-A-012",
+      "element": "lightning",
+      "profile_id": "P11",
+      "rarity": "epic",
+      "skill_ids": [
+        "lightning-s01",
+        "lightning-s06",
+        "lightning-s08",
+        "lightning-s10"
+      ],
+      "stage": 2,
+      "stats": {
+        "attack": 145,
+        "defense": 112,
+        "hp": 378,
+        "speed": 145
+      },
+      "template_id": "PET-A-012-2"
+    },
+    {
+      "chain_id": "CHAIN-A-012",
+      "element": "lightning",
+      "profile_id": "P11",
+      "rarity": "legendary",
+      "skill_ids": [
+        "lightning-s01",
+        "lightning-s06",
+        "lightning-s08",
+        "lightning-s10"
+      ],
+      "stage": 3,
+      "stats": {
+        "attack": 167,
+        "defense": 129,
+        "hp": 435,
+        "speed": 167
+      },
+      "template_id": "PET-A-012-3"
+    },
+    {
+      "chain_id": "CHAIN-A-013",
+      "element": "grass",
+      "profile_id": "P10",
+      "rarity": "rare",
+      "skill_ids": ["grass-s01", "grass-s04", "grass-s07", "grass-s10"],
+      "stage": 1,
+      "stats": {
+        "attack": 98,
+        "defense": 121,
+        "hp": 396,
+        "speed": 109
+      },
+      "template_id": "PET-A-013-1"
+    },
+    {
+      "chain_id": "CHAIN-A-013",
+      "element": "grass",
+      "profile_id": "P10",
+      "rarity": "epic",
+      "skill_ids": ["grass-s01", "grass-s04", "grass-s07", "grass-s10"],
+      "stage": 2,
+      "stats": {
+        "attack": 112,
+        "defense": 139,
+        "hp": 456,
+        "speed": 125
+      },
+      "template_id": "PET-A-013-2"
+    },
+    {
+      "chain_id": "CHAIN-A-013",
+      "element": "grass",
+      "profile_id": "P10",
+      "rarity": "legendary",
+      "skill_ids": ["grass-s01", "grass-s04", "grass-s07", "grass-s10"],
+      "stage": 3,
+      "stats": {
+        "attack": 129,
+        "defense": 160,
+        "hp": 525,
+        "speed": 144
+      },
+      "template_id": "PET-A-013-3"
+    },
+    {
+      "chain_id": "CHAIN-A-014",
+      "element": "fire",
+      "profile_id": "P11",
+      "rarity": "rare",
+      "skill_ids": ["fire-s01", "fire-s06", "fire-s08", "fire-s10"],
+      "stage": 1,
+      "stats": {
+        "attack": 127,
+        "defense": 98,
+        "hp": 324,
+        "speed": 127
+      },
+      "template_id": "PET-A-014-1"
+    },
+    {
+      "chain_id": "CHAIN-A-014",
+      "element": "fire",
+      "profile_id": "P11",
+      "rarity": "epic",
+      "skill_ids": ["fire-s01", "fire-s06", "fire-s08", "fire-s10"],
+      "stage": 2,
+      "stats": {
+        "attack": 145,
+        "defense": 112,
+        "hp": 378,
+        "speed": 145
+      },
+      "template_id": "PET-A-014-2"
+    },
+    {
+      "chain_id": "CHAIN-A-014",
+      "element": "fire",
+      "profile_id": "P11",
+      "rarity": "legendary",
+      "skill_ids": ["fire-s01", "fire-s06", "fire-s08", "fire-s10"],
+      "stage": 3,
+      "stats": {
+        "attack": 167,
+        "defense": 129,
+        "hp": 435,
+        "speed": 167
+      },
+      "template_id": "PET-A-014-3"
+    },
+    {
+      "chain_id": "CHAIN-A-015",
+      "element": "grass",
+      "profile_id": "P11",
+      "rarity": "rare",
+      "skill_ids": ["grass-s01", "grass-s06", "grass-s08", "grass-s10"],
+      "stage": 1,
+      "stats": {
+        "attack": 127,
+        "defense": 98,
+        "hp": 324,
+        "speed": 127
+      },
+      "template_id": "PET-A-015-1"
+    },
+    {
+      "chain_id": "CHAIN-A-015",
+      "element": "grass",
+      "profile_id": "P11",
+      "rarity": "epic",
+      "skill_ids": ["grass-s01", "grass-s06", "grass-s08", "grass-s10"],
+      "stage": 2,
+      "stats": {
+        "attack": 145,
+        "defense": 112,
+        "hp": 378,
+        "speed": 145
+      },
+      "template_id": "PET-A-015-2"
+    },
+    {
+      "chain_id": "CHAIN-A-015",
+      "element": "grass",
+      "profile_id": "P11",
+      "rarity": "legendary",
+      "skill_ids": ["grass-s01", "grass-s06", "grass-s08", "grass-s10"],
+      "stage": 3,
+      "stats": {
+        "attack": 167,
+        "defense": 129,
+        "hp": 435,
+        "speed": 167
+      },
+      "template_id": "PET-A-015-3"
+    },
+    {
+      "chain_id": "CHAIN-A-016",
+      "element": "fire",
+      "profile_id": "P12",
+      "rarity": "rare",
+      "skill_ids": ["fire-s02", "fire-s04", "fire-s06", "fire-s10"],
+      "stage": 1,
+      "stats": {
+        "attack": 104,
+        "defense": 132,
+        "hp": 345,
+        "speed": 109
+      },
+      "template_id": "PET-A-016-1"
+    },
+    {
+      "chain_id": "CHAIN-A-016",
+      "element": "fire",
+      "profile_id": "P12",
+      "rarity": "epic",
+      "skill_ids": ["fire-s02", "fire-s04", "fire-s06", "fire-s10"],
+      "stage": 2,
+      "stats": {
+        "attack": 119,
+        "defense": 152,
+        "hp": 396,
+        "speed": 125
+      },
+      "template_id": "PET-A-016-2"
+    },
+    {
+      "chain_id": "CHAIN-A-016",
+      "element": "fire",
+      "profile_id": "P12",
+      "rarity": "legendary",
+      "skill_ids": ["fire-s02", "fire-s04", "fire-s06", "fire-s10"],
+      "stage": 3,
+      "stats": {
+        "attack": 137,
+        "defense": 175,
+        "hp": 456,
+        "speed": 144
+      },
+      "template_id": "PET-A-016-3"
+    },
+    {
+      "chain_id": "CHAIN-A-017",
+      "element": "grass",
+      "profile_id": "P12",
+      "rarity": "rare",
+      "skill_ids": ["grass-s02", "grass-s04", "grass-s06", "grass-s10"],
+      "stage": 1,
+      "stats": {
+        "attack": 104,
+        "defense": 132,
+        "hp": 345,
+        "speed": 109
+      },
+      "template_id": "PET-A-017-1"
+    },
+    {
+      "chain_id": "CHAIN-A-017",
+      "element": "grass",
+      "profile_id": "P12",
+      "rarity": "epic",
+      "skill_ids": ["grass-s02", "grass-s04", "grass-s06", "grass-s10"],
+      "stage": 2,
+      "stats": {
+        "attack": 119,
+        "defense": 152,
+        "hp": 396,
+        "speed": 125
+      },
+      "template_id": "PET-A-017-2"
+    },
+    {
+      "chain_id": "CHAIN-A-017",
+      "element": "grass",
+      "profile_id": "P12",
+      "rarity": "legendary",
+      "skill_ids": ["grass-s02", "grass-s04", "grass-s06", "grass-s10"],
+      "stage": 3,
+      "stats": {
+        "attack": 137,
+        "defense": 175,
+        "hp": 456,
+        "speed": 144
+      },
+      "template_id": "PET-A-017-3"
+    },
+    {
+      "chain_id": "CHAIN-A-018",
+      "element": "lightning",
+      "profile_id": "P12",
+      "rarity": "rare",
+      "skill_ids": [
+        "lightning-s02",
+        "lightning-s04",
+        "lightning-s06",
+        "lightning-s10"
+      ],
+      "stage": 1,
+      "stats": {
+        "attack": 104,
+        "defense": 132,
+        "hp": 345,
+        "speed": 109
+      },
+      "template_id": "PET-A-018-1"
+    },
+    {
+      "chain_id": "CHAIN-A-018",
+      "element": "lightning",
+      "profile_id": "P12",
+      "rarity": "epic",
+      "skill_ids": [
+        "lightning-s02",
+        "lightning-s04",
+        "lightning-s06",
+        "lightning-s10"
+      ],
+      "stage": 2,
+      "stats": {
+        "attack": 119,
+        "defense": 152,
+        "hp": 396,
+        "speed": 125
+      },
+      "template_id": "PET-A-018-2"
+    },
+    {
+      "chain_id": "CHAIN-A-018",
+      "element": "lightning",
+      "profile_id": "P12",
+      "rarity": "legendary",
+      "skill_ids": [
+        "lightning-s02",
+        "lightning-s04",
+        "lightning-s06",
+        "lightning-s10"
+      ],
+      "stage": 3,
+      "stats": {
+        "attack": 137,
+        "defense": 175,
+        "hp": 456,
+        "speed": 144
+      },
+      "template_id": "PET-A-018-3"
+    },
+    {
+      "chain_id": "CHAIN-A-019",
+      "element": "water",
+      "profile_id": "P12",
+      "rarity": "rare",
+      "skill_ids": ["water-s02", "water-s04", "water-s06", "water-s10"],
+      "stage": 1,
+      "stats": {
+        "attack": 104,
+        "defense": 132,
+        "hp": 345,
+        "speed": 109
+      },
+      "template_id": "PET-A-019-1"
+    },
+    {
+      "chain_id": "CHAIN-A-019",
+      "element": "water",
+      "profile_id": "P12",
+      "rarity": "epic",
+      "skill_ids": ["water-s02", "water-s04", "water-s06", "water-s10"],
+      "stage": 2,
+      "stats": {
+        "attack": 119,
+        "defense": 152,
+        "hp": 396,
+        "speed": 125
+      },
+      "template_id": "PET-A-019-2"
+    },
+    {
+      "chain_id": "CHAIN-A-019",
+      "element": "water",
+      "profile_id": "P12",
+      "rarity": "legendary",
+      "skill_ids": ["water-s02", "water-s04", "water-s06", "water-s10"],
+      "stage": 3,
+      "stats": {
+        "attack": 137,
+        "defense": 175,
+        "hp": 456,
+        "speed": 144
+      },
+      "template_id": "PET-A-019-3"
+    },
+    {
+      "chain_id": "CHAIN-A-020",
+      "element": "earth",
+      "profile_id": "P12",
+      "rarity": "rare",
+      "skill_ids": ["earth-s02", "earth-s04", "earth-s06", "earth-s10"],
+      "stage": 1,
+      "stats": {
+        "attack": 104,
+        "defense": 132,
+        "hp": 345,
+        "speed": 109
+      },
+      "template_id": "PET-A-020-1"
+    },
+    {
+      "chain_id": "CHAIN-A-020",
+      "element": "earth",
+      "profile_id": "P12",
+      "rarity": "epic",
+      "skill_ids": ["earth-s02", "earth-s04", "earth-s06", "earth-s10"],
+      "stage": 2,
+      "stats": {
+        "attack": 119,
+        "defense": 152,
+        "hp": 396,
+        "speed": 125
+      },
+      "template_id": "PET-A-020-2"
+    },
+    {
+      "chain_id": "CHAIN-A-020",
+      "element": "earth",
+      "profile_id": "P12",
+      "rarity": "legendary",
+      "skill_ids": ["earth-s02", "earth-s04", "earth-s06", "earth-s10"],
+      "stage": 3,
+      "stats": {
+        "attack": 137,
+        "defense": 175,
+        "hp": 456,
+        "speed": 144
+      },
+      "template_id": "PET-A-020-3"
+    },
+    {
+      "chain_id": "CHAIN-T-001",
+      "element": "lightning",
+      "profile_id": "P13",
+      "rarity": "epic",
+      "skill_ids": [
+        "lightning-s02",
+        "lightning-s05",
+        "lightning-s08",
+        "lightning-s09"
+      ],
+      "stage": 1,
+      "stats": {
+        "attack": 145,
+        "defense": 119,
+        "hp": 417,
+        "speed": 125
+      },
+      "template_id": "PET-T-001-1"
+    },
+    {
+      "chain_id": "CHAIN-T-001",
+      "element": "lightning",
+      "profile_id": "P13",
+      "rarity": "legendary",
+      "skill_ids": [
+        "lightning-s02",
+        "lightning-s05",
+        "lightning-s08",
+        "lightning-s09"
+      ],
+      "stage": 2,
+      "stats": {
+        "attack": 167,
+        "defense": 137,
+        "hp": 480,
+        "speed": 144
+      },
+      "template_id": "PET-T-001-2"
+    },
+    {
+      "chain_id": "CHAIN-T-001",
+      "element": "lightning",
+      "profile_id": "P13",
+      "rarity": "mythic",
+      "skill_ids": [
+        "lightning-s02",
+        "lightning-s05",
+        "lightning-s08",
+        "lightning-s09"
+      ],
+      "stage": 3,
+      "stats": {
+        "attack": 193,
+        "defense": 158,
+        "hp": 549,
+        "speed": 166
+      },
+      "template_id": "PET-T-001-3"
+    },
+    {
+      "chain_id": "CHAIN-T-002",
+      "element": "water",
+      "profile_id": "P13",
+      "rarity": "epic",
+      "skill_ids": ["water-s02", "water-s05", "water-s08", "water-s09"],
+      "stage": 1,
+      "stats": {
+        "attack": 145,
+        "defense": 119,
+        "hp": 417,
+        "speed": 125
+      },
+      "template_id": "PET-T-002-1"
+    },
+    {
+      "chain_id": "CHAIN-T-002",
+      "element": "water",
+      "profile_id": "P13",
+      "rarity": "legendary",
+      "skill_ids": ["water-s02", "water-s05", "water-s08", "water-s09"],
+      "stage": 2,
+      "stats": {
+        "attack": 167,
+        "defense": 137,
+        "hp": 480,
+        "speed": 144
+      },
+      "template_id": "PET-T-002-2"
+    },
+    {
+      "chain_id": "CHAIN-T-002",
+      "element": "water",
+      "profile_id": "P13",
+      "rarity": "mythic",
+      "skill_ids": ["water-s02", "water-s05", "water-s08", "water-s09"],
+      "stage": 3,
+      "stats": {
+        "attack": 193,
+        "defense": 158,
+        "hp": 549,
+        "speed": 166
+      },
+      "template_id": "PET-T-002-3"
+    },
+    {
+      "chain_id": "CHAIN-T-003",
+      "element": "fire",
+      "profile_id": "P13",
+      "rarity": "epic",
+      "skill_ids": ["fire-s02", "fire-s05", "fire-s08", "fire-s09"],
+      "stage": 1,
+      "stats": {
+        "attack": 145,
+        "defense": 119,
+        "hp": 417,
+        "speed": 125
+      },
+      "template_id": "PET-T-003-1"
+    },
+    {
+      "chain_id": "CHAIN-T-003",
+      "element": "fire",
+      "profile_id": "P13",
+      "rarity": "legendary",
+      "skill_ids": ["fire-s02", "fire-s05", "fire-s08", "fire-s09"],
+      "stage": 2,
+      "stats": {
+        "attack": 167,
+        "defense": 137,
+        "hp": 480,
+        "speed": 144
+      },
+      "template_id": "PET-T-003-2"
+    },
+    {
+      "chain_id": "CHAIN-T-003",
+      "element": "fire",
+      "profile_id": "P13",
+      "rarity": "mythic",
+      "skill_ids": ["fire-s02", "fire-s05", "fire-s08", "fire-s09"],
+      "stage": 3,
+      "stats": {
+        "attack": 193,
+        "defense": 158,
+        "hp": 549,
+        "speed": 166
+      },
+      "template_id": "PET-T-003-3"
+    },
+    {
+      "chain_id": "CHAIN-T-004",
+      "element": "water",
+      "profile_id": "P14",
+      "rarity": "epic",
+      "skill_ids": ["water-s03", "water-s04", "water-s08", "water-s10"],
+      "stage": 1,
+      "stats": {
+        "attack": 125,
+        "defense": 125,
+        "hp": 399,
+        "speed": 145
+      },
+      "template_id": "PET-T-004-1"
+    },
+    {
+      "chain_id": "CHAIN-T-004",
+      "element": "water",
+      "profile_id": "P14",
+      "rarity": "legendary",
+      "skill_ids": ["water-s03", "water-s04", "water-s08", "water-s10"],
+      "stage": 2,
+      "stats": {
+        "attack": 144,
+        "defense": 144,
+        "hp": 459,
+        "speed": 167
+      },
+      "template_id": "PET-T-004-2"
+    },
+    {
+      "chain_id": "CHAIN-T-004",
+      "element": "water",
+      "profile_id": "P14",
+      "rarity": "mythic",
+      "skill_ids": ["water-s03", "water-s04", "water-s08", "water-s10"],
+      "stage": 3,
+      "stats": {
+        "attack": 166,
+        "defense": 166,
+        "hp": 525,
+        "speed": 193
+      },
+      "template_id": "PET-T-004-3"
+    },
+    {
+      "chain_id": "CHAIN-T-005",
+      "element": "earth",
+      "profile_id": "P13",
+      "rarity": "epic",
+      "skill_ids": ["earth-s02", "earth-s05", "earth-s08", "earth-s09"],
+      "stage": 1,
+      "stats": {
+        "attack": 145,
+        "defense": 119,
+        "hp": 417,
+        "speed": 125
+      },
+      "template_id": "PET-T-005-1"
+    },
+    {
+      "chain_id": "CHAIN-T-005",
+      "element": "earth",
+      "profile_id": "P13",
+      "rarity": "legendary",
+      "skill_ids": ["earth-s02", "earth-s05", "earth-s08", "earth-s09"],
+      "stage": 2,
+      "stats": {
+        "attack": 167,
+        "defense": 137,
+        "hp": 480,
+        "speed": 144
+      },
+      "template_id": "PET-T-005-2"
+    },
+    {
+      "chain_id": "CHAIN-T-005",
+      "element": "earth",
+      "profile_id": "P13",
+      "rarity": "mythic",
+      "skill_ids": ["earth-s02", "earth-s05", "earth-s08", "earth-s09"],
+      "stage": 3,
+      "stats": {
+        "attack": 193,
+        "defense": 158,
+        "hp": 549,
+        "speed": 166
+      },
+      "template_id": "PET-T-005-3"
+    },
+    {
+      "chain_id": "CHAIN-T-006",
+      "element": "fire",
+      "profile_id": "P14",
+      "rarity": "epic",
+      "skill_ids": ["fire-s03", "fire-s04", "fire-s08", "fire-s10"],
+      "stage": 1,
+      "stats": {
+        "attack": 125,
+        "defense": 125,
+        "hp": 399,
+        "speed": 145
+      },
+      "template_id": "PET-T-006-1"
+    },
+    {
+      "chain_id": "CHAIN-T-006",
+      "element": "fire",
+      "profile_id": "P14",
+      "rarity": "legendary",
+      "skill_ids": ["fire-s03", "fire-s04", "fire-s08", "fire-s10"],
+      "stage": 2,
+      "stats": {
+        "attack": 144,
+        "defense": 144,
+        "hp": 459,
+        "speed": 167
+      },
+      "template_id": "PET-T-006-2"
+    },
+    {
+      "chain_id": "CHAIN-T-006",
+      "element": "fire",
+      "profile_id": "P14",
+      "rarity": "mythic",
+      "skill_ids": ["fire-s03", "fire-s04", "fire-s08", "fire-s10"],
+      "stage": 3,
+      "stats": {
+        "attack": 166,
+        "defense": 166,
+        "hp": 525,
+        "speed": 193
+      },
+      "template_id": "PET-T-006-3"
+    },
+    {
+      "chain_id": "CHAIN-T-007",
+      "element": "grass",
+      "profile_id": "P13",
+      "rarity": "epic",
+      "skill_ids": ["grass-s02", "grass-s05", "grass-s08", "grass-s09"],
+      "stage": 1,
+      "stats": {
+        "attack": 145,
+        "defense": 119,
+        "hp": 417,
+        "speed": 125
+      },
+      "template_id": "PET-T-007-1"
+    },
+    {
+      "chain_id": "CHAIN-T-007",
+      "element": "grass",
+      "profile_id": "P13",
+      "rarity": "legendary",
+      "skill_ids": ["grass-s02", "grass-s05", "grass-s08", "grass-s09"],
+      "stage": 2,
+      "stats": {
+        "attack": 167,
+        "defense": 137,
+        "hp": 480,
+        "speed": 144
+      },
+      "template_id": "PET-T-007-2"
+    },
+    {
+      "chain_id": "CHAIN-T-007",
+      "element": "grass",
+      "profile_id": "P13",
+      "rarity": "mythic",
+      "skill_ids": ["grass-s02", "grass-s05", "grass-s08", "grass-s09"],
+      "stage": 3,
+      "stats": {
+        "attack": 193,
+        "defense": 158,
+        "hp": 549,
+        "speed": 166
+      },
+      "template_id": "PET-T-007-3"
+    },
+    {
+      "chain_id": "CHAIN-T-008",
+      "element": "lightning",
+      "profile_id": "P14",
+      "rarity": "epic",
+      "skill_ids": [
+        "lightning-s03",
+        "lightning-s04",
+        "lightning-s08",
+        "lightning-s10"
+      ],
+      "stage": 1,
+      "stats": {
+        "attack": 125,
+        "defense": 125,
+        "hp": 399,
+        "speed": 145
+      },
+      "template_id": "PET-T-008-1"
+    },
+    {
+      "chain_id": "CHAIN-T-008",
+      "element": "lightning",
+      "profile_id": "P14",
+      "rarity": "legendary",
+      "skill_ids": [
+        "lightning-s03",
+        "lightning-s04",
+        "lightning-s08",
+        "lightning-s10"
+      ],
+      "stage": 2,
+      "stats": {
+        "attack": 144,
+        "defense": 144,
+        "hp": 459,
+        "speed": 167
+      },
+      "template_id": "PET-T-008-2"
+    },
+    {
+      "chain_id": "CHAIN-T-008",
+      "element": "lightning",
+      "profile_id": "P14",
+      "rarity": "mythic",
+      "skill_ids": [
+        "lightning-s03",
+        "lightning-s04",
+        "lightning-s08",
+        "lightning-s10"
+      ],
+      "stage": 3,
+      "stats": {
+        "attack": 166,
+        "defense": 166,
+        "hp": 525,
+        "speed": 193
+      },
+      "template_id": "PET-T-008-3"
+    },
+    {
+      "chain_id": "CHAIN-T-009",
+      "element": "earth",
+      "profile_id": "P14",
+      "rarity": "epic",
+      "skill_ids": ["earth-s03", "earth-s04", "earth-s08", "earth-s10"],
+      "stage": 1,
+      "stats": {
+        "attack": 125,
+        "defense": 125,
+        "hp": 399,
+        "speed": 145
+      },
+      "template_id": "PET-T-009-1"
+    },
+    {
+      "chain_id": "CHAIN-T-009",
+      "element": "earth",
+      "profile_id": "P14",
+      "rarity": "legendary",
+      "skill_ids": ["earth-s03", "earth-s04", "earth-s08", "earth-s10"],
+      "stage": 2,
+      "stats": {
+        "attack": 144,
+        "defense": 144,
+        "hp": 459,
+        "speed": 167
+      },
+      "template_id": "PET-T-009-2"
+    },
+    {
+      "chain_id": "CHAIN-T-009",
+      "element": "earth",
+      "profile_id": "P14",
+      "rarity": "mythic",
+      "skill_ids": ["earth-s03", "earth-s04", "earth-s08", "earth-s10"],
+      "stage": 3,
+      "stats": {
+        "attack": 166,
+        "defense": 166,
+        "hp": 525,
+        "speed": 193
+      },
+      "template_id": "PET-T-009-3"
+    },
+    {
+      "chain_id": "CHAIN-T-010",
+      "element": "grass",
+      "profile_id": "P14",
+      "rarity": "epic",
+      "skill_ids": ["grass-s03", "grass-s04", "grass-s08", "grass-s10"],
+      "stage": 1,
+      "stats": {
+        "attack": 125,
+        "defense": 125,
+        "hp": 399,
+        "speed": 145
+      },
+      "template_id": "PET-T-010-1"
+    },
+    {
+      "chain_id": "CHAIN-T-010",
+      "element": "grass",
+      "profile_id": "P14",
+      "rarity": "legendary",
+      "skill_ids": ["grass-s03", "grass-s04", "grass-s08", "grass-s10"],
+      "stage": 2,
+      "stats": {
+        "attack": 144,
+        "defense": 144,
+        "hp": 459,
+        "speed": 167
+      },
+      "template_id": "PET-T-010-2"
+    },
+    {
+      "chain_id": "CHAIN-T-010",
+      "element": "grass",
+      "profile_id": "P14",
+      "rarity": "mythic",
+      "skill_ids": ["grass-s03", "grass-s04", "grass-s08", "grass-s10"],
+      "stage": 3,
+      "stats": {
+        "attack": 166,
+        "defense": 166,
+        "hp": 525,
+        "speed": 193
+      },
+      "template_id": "PET-T-010-3"
+    }
+  ],
+  "type_matchups": [
+    {
+      "attacker": "fire",
+      "defender": "fire",
+      "multiplier_bps": 10000
+    },
+    {
+      "attacker": "fire",
+      "defender": "grass",
+      "multiplier_bps": 15000
+    },
+    {
+      "attacker": "fire",
+      "defender": "earth",
+      "multiplier_bps": 10000
+    },
+    {
+      "attacker": "fire",
+      "defender": "lightning",
+      "multiplier_bps": 10000
+    },
+    {
+      "attacker": "fire",
+      "defender": "water",
+      "multiplier_bps": 7500
+    },
+    {
+      "attacker": "grass",
+      "defender": "fire",
+      "multiplier_bps": 7500
+    },
+    {
+      "attacker": "grass",
+      "defender": "grass",
+      "multiplier_bps": 10000
+    },
+    {
+      "attacker": "grass",
+      "defender": "earth",
+      "multiplier_bps": 15000
+    },
+    {
+      "attacker": "grass",
+      "defender": "lightning",
+      "multiplier_bps": 10000
+    },
+    {
+      "attacker": "grass",
+      "defender": "water",
+      "multiplier_bps": 10000
+    },
+    {
+      "attacker": "earth",
+      "defender": "fire",
+      "multiplier_bps": 10000
+    },
+    {
+      "attacker": "earth",
+      "defender": "grass",
+      "multiplier_bps": 7500
+    },
+    {
+      "attacker": "earth",
+      "defender": "earth",
+      "multiplier_bps": 10000
+    },
+    {
+      "attacker": "earth",
+      "defender": "lightning",
+      "multiplier_bps": 15000
+    },
+    {
+      "attacker": "earth",
+      "defender": "water",
+      "multiplier_bps": 10000
+    },
+    {
+      "attacker": "lightning",
+      "defender": "fire",
+      "multiplier_bps": 10000
+    },
+    {
+      "attacker": "lightning",
+      "defender": "grass",
+      "multiplier_bps": 10000
+    },
+    {
+      "attacker": "lightning",
+      "defender": "earth",
+      "multiplier_bps": 7500
+    },
+    {
+      "attacker": "lightning",
+      "defender": "lightning",
+      "multiplier_bps": 10000
+    },
+    {
+      "attacker": "lightning",
+      "defender": "water",
+      "multiplier_bps": 15000
+    },
+    {
+      "attacker": "water",
+      "defender": "fire",
+      "multiplier_bps": 15000
+    },
+    {
+      "attacker": "water",
+      "defender": "grass",
+      "multiplier_bps": 10000
+    },
+    {
+      "attacker": "water",
+      "defender": "earth",
+      "multiplier_bps": 10000
+    },
+    {
+      "attacker": "water",
+      "defender": "lightning",
+      "multiplier_bps": 7500
+    },
+    {
+      "attacker": "water",
+      "defender": "water",
+      "multiplier_bps": 10000
+    }
+  ],
+  "version": "battle-v1"
+}
