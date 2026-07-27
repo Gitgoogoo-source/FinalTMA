@@ -51,15 +51,35 @@ export const battleParticipantStatusSchema = z.enum([
   "voided",
 ]);
 
-export const battleEntryTierSchema = z
-  .object({
-    id: z.enum(["tier-20", "tier-100", "tier-500"]),
-    entry_fee: z.union([z.literal(20), z.literal(100), z.literal(500)]),
-    pool: z.union([z.literal(40), z.literal(200), z.literal(1000)]),
-    winner_payout: z.union([z.literal(36), z.literal(180), z.literal(900)]),
-    fee: z.union([z.literal(4), z.literal(20), z.literal(100)]),
-  })
-  .strict();
+export const battleEntryTierSchema = z.discriminatedUnion("id", [
+  z
+    .object({
+      id: z.literal("tier-20"),
+      entry_fee: z.literal(20),
+      pool: z.literal(40),
+      winner_payout: z.literal(36),
+      fee: z.literal(4),
+    })
+    .strict(),
+  z
+    .object({
+      id: z.literal("tier-100"),
+      entry_fee: z.literal(100),
+      pool: z.literal(200),
+      winner_payout: z.literal(180),
+      fee: z.literal(20),
+    })
+    .strict(),
+  z
+    .object({
+      id: z.literal("tier-500"),
+      entry_fee: z.literal(500),
+      pool: z.literal(1000),
+      winner_payout: z.literal(900),
+      fee: z.literal(100),
+    })
+    .strict(),
+]);
 
 export const battleRulesetSummarySchema = z
   .object({
@@ -152,7 +172,8 @@ export const battleTeamSelectionSchema = z
         code: "custom",
         message: "Battle team templates must be distinct",
       });
-  });
+  })
+  .meta({ minItems: 3, maxItems: 3, uniqueItems: true });
 
 export const battleSkillSchema = z
   .object({
@@ -239,20 +260,50 @@ const battlePublicSwitchTargetSchema = z
   })
   .strict();
 
-const battleResolutionActionSchema = z
-  .object({
-    actor: z.enum(["self", "opponent"]),
-    kind: z.enum(["attack", "switch", "forced_switch"]),
-    skill_name: z.string().trim().min(1).max(64).optional(),
-    hit: z.boolean().optional(),
-    damage: nonNegativeIntegerSchema.optional(),
-    effectiveness: z
-      .enum(["super_effective", "not_effective", "normal"])
-      .optional(),
-    switch_to: battlePublicSwitchTargetSchema.optional(),
-    knockout: z.boolean(),
-  })
-  .strict();
+const battleResolutionAttackActionSchema = z.discriminatedUnion("actor", [
+  z
+    .object({
+      actor: z.literal("self"),
+      kind: z.literal("attack"),
+      skill_name: z.string().trim().min(1).max(64),
+      hit: z.boolean(),
+      effectiveness: z.enum(["super_effective", "not_effective", "normal"]),
+      target_hp_percent_before: z.number().min(0).max(100),
+      target_hp_percent_after: z.number().min(0).max(100),
+      knockout: z.boolean(),
+    })
+    .strict(),
+  z
+    .object({
+      actor: z.literal("opponent"),
+      kind: z.literal("attack"),
+      skill_name: z.string().trim().min(1).max(64),
+      hit: z.boolean(),
+      effectiveness: z.enum(["super_effective", "not_effective", "normal"]),
+      target_current_hp_before: nonNegativeIntegerSchema,
+      target_current_hp_after: nonNegativeIntegerSchema,
+      knockout: z.boolean(),
+    })
+    .strict(),
+]);
+
+const battleResolutionActionSchema = z.discriminatedUnion("kind", [
+  battleResolutionAttackActionSchema,
+  z
+    .object({
+      actor: z.enum(["self", "opponent"]),
+      kind: z.literal("switch"),
+      switch_to: battlePublicSwitchTargetSchema,
+    })
+    .strict(),
+  z
+    .object({
+      actor: z.enum(["self", "opponent"]),
+      kind: z.literal("forced_switch"),
+      switch_to: battlePublicSwitchTargetSchema,
+    })
+    .strict(),
+]);
 
 const battleSelfHpSchema = z
   .object({

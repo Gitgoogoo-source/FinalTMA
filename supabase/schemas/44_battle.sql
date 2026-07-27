@@ -1167,25 +1167,63 @@ begin
   select side into v_self_side
   from battle.participants
   where id = p_participant_id and room_id = p_room_id;
-  select coalesce(jsonb_agg(jsonb_strip_nulls(jsonb_build_object(
-    'actor', case when action->>'actor_side' = v_self_side then 'self' else 'opponent' end,
-    'kind', action->>'kind',
-    'skill_name', action->>'skill_name',
-    'hit', case when action ? 'hit' then (action->>'hit')::boolean else null end,
-    'damage', case
-      when action ? 'applied_damage' then (action->>'applied_damage')::integer
-      else null
-    end,
-    'effectiveness', case (action->>'multiplier_bps')::integer
-      when 15000 then 'super_effective'
-      when 7500 then 'not_effective'
-      when 10000 then 'normal'
-      else null
-    end,
-    'switch_to', action->'switch_to',
-    'knockout', coalesce((action->>'knockout')::boolean, false)
-  ))), '[]'::jsonb) into v_actions
-  from jsonb_array_elements(v_room.resolution_event->'actions') action;
+  select coalesce(jsonb_agg(
+    case
+      when action->>'kind' = 'attack'
+           and action->>'actor_side' = v_self_side
+      then jsonb_build_object(
+        'actor', 'self',
+        'kind', 'attack',
+        'skill_name', action->>'skill_name',
+        'hit', (action->>'hit')::boolean,
+        'effectiveness', case (action->>'multiplier_bps')::integer
+          when 15000 then 'super_effective'
+          when 7500 then 'not_effective'
+          else 'normal'
+        end,
+        'target_hp_percent_before', round(
+          (
+            target.current_hp + (action->>'applied_damage')::integer
+          )::numeric * 100 / target.max_hp::numeric,
+          2
+        ),
+        'target_hp_percent_after', round(
+          target.current_hp::numeric * 100 / target.max_hp::numeric,
+          2
+        ),
+        'knockout', (action->>'knockout')::boolean
+      )
+      when action->>'kind' = 'attack'
+      then jsonb_build_object(
+        'actor', 'opponent',
+        'kind', 'attack',
+        'skill_name', action->>'skill_name',
+        'hit', (action->>'hit')::boolean,
+        'effectiveness', case (action->>'multiplier_bps')::integer
+          when 15000 then 'super_effective'
+          when 7500 then 'not_effective'
+          else 'normal'
+        end,
+        'target_current_hp_before',
+          target.current_hp + (action->>'applied_damage')::integer,
+        'target_current_hp_after', target.current_hp,
+        'knockout', (action->>'knockout')::boolean
+      )
+      else jsonb_build_object(
+        'actor', case
+          when action->>'actor_side' = v_self_side then 'self'
+          else 'opponent'
+        end,
+        'kind', action->>'kind',
+        'switch_to', action->'switch_to'
+      )
+    end
+    order by action_ordinal
+  ), '[]'::jsonb) into v_actions
+  from jsonb_array_elements(v_room.resolution_event->'actions')
+    with ordinality as resolution_actions(action, action_ordinal)
+  left join battle.team_members target
+    on target.id = (action->>'defender_member_id')::uuid;
   select coalesce(jsonb_agg(jsonb_build_object(
     'slot', tm.slot,
     'current_hp', tm.current_hp,
@@ -1494,18 +1532,26 @@ declare
   v_user_id uuid := api.session_user(p_session_id);
   v_session identity.sessions%rowtype;
   v_participation jsonb;
+  v_invite_hash text;
 begin
   perform battle.consume_rate_limit(v_user_id, 'realtime_token');
   select * into v_session from identity.sessions where id = p_session_id;
   v_participation := battle.participation_json(v_user_id);
+  select r.invite_token_hash into v_invite_hash
+  from battle.rooms r
+  where v_session.entry_kind = 'battle'
+    and v_session.battle_invite_token_hash is not null
+    and r.invite_token_hash = v_session.battle_invite_token_hash
+    and r.status = 'waiting'
+    and r.expires_at > now();
   return jsonb_build_object(
     'user_id', v_user_id,
     'user_channel', 'battle:user:' || v_user_id::text,
     'room_channel', case when v_participation is null then null else
       'battle:room:' || (v_participation->>'room_id') end,
     'invite_channel', case
-      when v_session.entry_kind = 'battle'
-      then 'battle:invite:' || v_session.battle_invite_token_hash
+      when v_invite_hash is not null
+      then 'battle:invite:' || v_invite_hash
       else null
     end
   );
@@ -2042,61 +2088,45 @@ as $$
 declare
   v_user_id uuid := api.session_user(p_session_id);
   v_room battle.rooms%rowtype;
-  v_result jsonb;
+  v_now timestamptz := now();
 begin
-  perform battle.consume_rate_limit(v_user_id, 'heartbeat');
   select * into v_room from battle.rooms where id = p_room_id for update;
   if v_room.id is null or v_room.creator_user_id <> v_user_id then
     perform api.raise_business_error('BATTLE_NOT_PARTICIPANT', '当前账号不是该 Battle 的参与者');
   end if;
-  if v_room.status in ('cancelled', 'expired', 'voided') then
+  if v_room.status in ('finished', 'draw', 'cancelled', 'expired', 'voided') then
     return jsonb_build_object(
       'room_id', p_room_id,
       'status', v_room.status,
       'creator_online', false,
-      'server_time', now(),
+      'server_time', v_now,
       'expires_at', v_room.expires_at
     );
   elsif v_room.status <> 'waiting' then
     perform api.raise_business_error('BATTLE_STATE_CONFLICT', 'Battle 状态已更新');
   end if;
-  if v_room.expires_at <= now() then
-    v_result := battle.close_unstarted_room(
-      p_room_id, 'expired', 'waiting_expired'
-    );
-    return v_result || jsonb_build_object(
-      'creator_online', false,
-      'server_time', now(),
-      'expires_at', v_room.expires_at
-    );
-  end if;
-  if coalesce(v_room.creator_offline_since, v_room.creator_last_heartbeat_at)
+  perform battle.consume_rate_limit(v_user_id, 'heartbeat');
+  if v_room.expires_at <= v_now
+     or coalesce(v_room.creator_offline_since, v_room.creator_last_heartbeat_at)
        + make_interval(
          secs => battle.rule_int(v_room.ruleset_id, 'offline_reconnect_seconds')
-       ) <= now()
+       ) <= v_now
   then
-    v_result := battle.close_unstarted_room(
-      p_room_id, 'cancelled', 'creator_offline_timeout'
-    );
-    return v_result || jsonb_build_object(
-      'creator_online', false,
-      'server_time', now(),
-      'expires_at', v_room.expires_at
-    );
+    perform api.raise_business_error('BATTLE_STATE_CONFLICT', 'Battle 状态已更新');
   end if;
   update battle.rooms
   set creator_last_heartbeat_at = greatest(
-        coalesce(creator_last_heartbeat_at, '-infinity'::timestamptz), now()
+        coalesce(creator_last_heartbeat_at, '-infinity'::timestamptz), v_now
       ),
       creator_offline_since = null,
-      updated_at = now()
+      updated_at = v_now
   where id = p_room_id
   returning * into v_room;
   return jsonb_build_object(
     'room_id', p_room_id,
     'status', v_room.status,
     'creator_online', true,
-    'server_time', now(),
+    'server_time', v_now,
     'expires_at', v_room.expires_at
   );
 end;

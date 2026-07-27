@@ -12,32 +12,44 @@ const baseSchema = z.object({
   TELEGRAM_WEBHOOK_SECRET: z.string().min(16),
   REFERRAL_CODE_SECRET: z.string().min(32),
   CRON_SECRET: z.string().min(32),
-  ABLY_API_KEY: z
-    .string()
-    .regex(/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+:[A-Za-z0-9_-]+$/),
-  BATTLE_OUTBOX_SECRET: z
-    .string()
-    .refine((value) => Buffer.byteLength(value, "utf8") >= 32),
-  BATTLE_INVITE_SECRET: z
-    .string()
-    .refine((value) => Buffer.byteLength(value, "utf8") >= 32),
   PAYMENT_SUPPORT_URL: z.string().url(),
 });
 
-const schema = baseSchema.superRefine((value, context) => {
-  const secrets = [
-    value.IDENTITY_SECURITY_SECRET,
-    value.REFERRAL_CODE_SECRET,
-    value.BATTLE_OUTBOX_SECRET,
-    value.BATTLE_INVITE_SECRET,
-  ];
-  if (new Set(secrets).size !== secrets.length)
+const serverSchema = baseSchema.superRefine((value, context) => {
+  if (value.IDENTITY_SECURITY_SECRET === value.REFERRAL_CODE_SECRET)
     context.addIssue({
       code: "custom",
-      path: ["BATTLE_INVITE_SECRET"],
-      message: "Identity, referral, and Battle secrets must be distinct",
+      path: ["REFERRAL_CODE_SECRET"],
+      message: "Identity and referral secrets must be distinct",
     });
 });
+
+const battleSchema = z
+  .object({
+    ABLY_API_KEY: z
+      .string()
+      .regex(/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+:[A-Za-z0-9_-]+$/),
+    BATTLE_OUTBOX_SECRET: z
+      .string()
+      .refine((value) => Buffer.byteLength(value, "utf8") >= 32),
+    BATTLE_INVITE_SECRET: z
+      .string()
+      .refine((value) => Buffer.byteLength(value, "utf8") >= 32),
+  })
+  .superRefine((value, context) => {
+    const secrets = [
+      process.env.IDENTITY_SECURITY_SECRET,
+      process.env.REFERRAL_CODE_SECRET,
+      value.BATTLE_OUTBOX_SECRET,
+      value.BATTLE_INVITE_SECRET,
+    ].filter((secret): secret is string => Boolean(secret));
+    if (new Set(secrets).size !== secrets.length)
+      context.addIssue({
+        code: "custom",
+        path: ["BATTLE_INVITE_SECRET"],
+        message: "Identity, referral, and Battle secrets must be distinct",
+      });
+  });
 
 const referralSchema = z.object({
   TELEGRAM_BOT_USERNAME: z.string().regex(/^[A-Za-z0-9_]{5,32}$/),
@@ -60,18 +72,25 @@ const databaseSchema = baseSchema.pick({
   SUPABASE_SERVICE_ROLE_KEY: true,
 });
 
-export type ServerEnv = z.infer<typeof schema>;
+export type ServerEnv = z.infer<typeof serverSchema>;
+export type BattleEnv = z.infer<typeof battleSchema>;
 export type DatabaseEnv = z.infer<typeof databaseSchema>;
 export type ReferralEnv = z.infer<typeof referralSchema>;
 export type TonEnv = z.infer<typeof tonSchema>;
 let cached: ServerEnv | undefined;
+let cachedBattle: BattleEnv | undefined;
 let cachedDatabase: DatabaseEnv | undefined;
 let cachedReferral: ReferralEnv | undefined;
 let cachedTon: TonEnv | undefined;
 
 export function getEnv(): ServerEnv {
-  cached ??= schema.parse(process.env);
+  cached ??= serverSchema.parse(process.env);
   return cached;
+}
+
+export function getBattleEnv(): BattleEnv {
+  cachedBattle ??= battleSchema.parse(process.env);
+  return cachedBattle;
 }
 
 export function getDatabaseEnv(): DatabaseEnv {

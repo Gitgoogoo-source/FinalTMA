@@ -6,12 +6,7 @@ import {
   timestampSchema,
   uuidSchema,
 } from "../../common/schemas.ts";
-
-const battleTeamSelectionSchema = z.tuple([
-  z.string().min(1),
-  z.string().min(1),
-  z.string().min(1),
-]);
+import { battleTeamSelectionSchema } from "../battle/models.ts";
 
 export const paymentIntentSchema = z.discriminatedUnion("kind", [
   z

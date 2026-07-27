@@ -1,9 +1,9 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
-import { getEnv } from "../../platform/env/index.ts";
+import { getBattleEnv } from "../../platform/env/index.ts";
 
 export function battleInviteToken(operationId: string): string {
-  const token = createHmac("sha256", getEnv().BATTLE_INVITE_SECRET)
+  const token = createHmac("sha256", getBattleEnv().BATTLE_INVITE_SECRET)
     .update(`battle-invite-v1|${operationId}`)
     .digest()
     .subarray(0, 24)

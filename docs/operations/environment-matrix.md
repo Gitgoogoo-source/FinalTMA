@@ -20,10 +20,10 @@ Supabase Data API 的 Exposed schemas 固定为 `public,graphql_public,api`。Ve
 
 Web 公开构建当前不需要 `VITE_*`。API 机密配置以根 `.env.example` 为唯一名称清单，真实值只进入对应 Vercel Project Secret。真实开发与生产必须分别配置至少 32 字节的 `IDENTITY_SECURITY_SECRET`、`BATTLE_INVITE_SECRET` 和 `BATTLE_OUTBOX_SECRET`，三者及 `REFERRAL_CODE_SECRET` 互不共用。Vercel 另配置环境隔离的 `ABLY_API_KEY`；Supabase Vault 配置 Battle share callback URL、Battle outbox callback URL 和与对应 Vercel 环境一致的 `BATTLE_OUTBOX_SECRET`。任何 `SUPABASE_SERVICE_ROLE_KEY`、`IDENTITY_SECURITY_SECRET`、`TELEGRAM_BOT_TOKEN`、`CRON_SECRET`、`TELEGRAM_WEBHOOK_SECRET`、`ABLY_API_KEY`、Battle secret、TON API Key 或签名私钥均不得进入浏览器环境。
 
-`BATTLE_INVITE_SECRET` 只用于按创建 operation 确定性生成 Battle bearer invite；`BATTLE_OUTBOX_SECRET` 只鉴权两个 Battle integration，不得用于玩家 API、Telegram webhook 或邀请签名；`ABLY_API_KEY` 只在服务端签发五分钟 subscribe-only token 和投递 outbox。API workspace 固定 `ably@2.26.0`，浏览器只接收短期 token，绝不接收这三个服务端变量。
+`BATTLE_INVITE_SECRET` 只用于按创建 operation 确定性生成 Battle bearer invite；`BATTLE_OUTBOX_SECRET` 只鉴权两个 Battle integration，不得用于玩家 API、Telegram webhook 或邀请签名；`ABLY_API_KEY` 只在服务端签发五分钟 subscribe-only token 和投递 outbox。三项 Battle 变量由 Battle share、outbox、realtime 与 integration 的独立配置边界校验，缺失时只阻断 Battle 路径，不得阻断 Telegram 登录、普通 webhook、钱包或其他非 Battle 路由。API workspace 固定 `ably@2.26.0`，浏览器只接收短期 token，绝不接收这三个服务端变量。
 
 真实开发与生产 Supabase 都安装 `pg_cron`、`pg_net`、Vault 和 `pgcrypto`。`battle-tick-v1` 每秒执行，Data API 仍只暴露 `public,graphql_public,api`，内部 `battle` schema 不暴露。两个环境使用同一 `battle-v1` checksum、OpenAPI、Git commit 和 migration 序列，只允许 Bot、Ably key、callback URL、项目 ID、域名和机密不同。
 
-真实开发 Vercel Production 固定配置 `TELEGRAM_BOT_USERNAME=FinalTMA_bot` 与 `TELEGRAM_MINI_APP_SHORT_NAME=pokepets_dev`。邀请链接必须为 `https://t.me/FinalTMA_bot/pokepets_dev?startapp=<当前用户邀请码>`；环境变量变更必须由新部署生效。
+真实开发 Vercel Production 固定配置 `TELEGRAM_BOT_USERNAME=FinalTMA_bot` 与 `TELEGRAM_MINI_APP_SHORT_NAME=pokepets_dev`。推荐链接固定为 `https://t.me/FinalTMA_bot/pokepets_dev?startapp=<当前用户邀请码>`，Battle prepared-share deep link 固定为同一 Bot 与 named Mini App 路径加 `startapp=BTL_<32位base64url>`；环境变量变更必须由新部署生效。
 
 真实开发 Telegram 入口固定为同一组配置：Bot 为 `@FinalTMA_bot`；BotFather Main Mini App 已启用并指向 `https://final-tma-pi.vercel.app/`；named Mini App 的 short name 为 `pokepets_dev`，公开链接为 `https://t.me/FinalTMA_bot/pokepets_dev`；默认菜单按钮文字为 `Open PokePets`，目标为该 named Mini App 链接。发布验收必须同时满足 Bot API `getMe.result.has_main_web_app=true`，以及 `getChatMenuButton.result.web_app.url=https://t.me/FinalTMA_bot/pokepets_dev`。

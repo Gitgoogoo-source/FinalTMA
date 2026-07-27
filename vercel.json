@@ -6,8 +6,11 @@
   "devCommand": "pnpm --filter @pokepets/web dev",
   "outputDirectory": "apps/web/dist",
   "functions": {
-    "api/app.ts": { "maxDuration": 30 },
-    "api/integrations.ts": { "maxDuration": 30 },
+    "api/app.ts": { "maxDuration": 30, "supportsCancellation": true },
+    "api/integrations.ts": {
+      "maxDuration": 30,
+      "supportsCancellation": true
+    },
     "api/jobs.ts": { "maxDuration": 300 }
   },
   "headers": [

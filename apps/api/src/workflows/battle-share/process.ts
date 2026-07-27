@@ -2,7 +2,11 @@ import { randomUUID } from "node:crypto";
 
 import type { OperationEnvelope } from "../../http/operation-result.ts";
 import { rpc } from "../../platform/db/index.ts";
-import { getEnv, getReferralEnv } from "../../platform/env/index.ts";
+import {
+  getBattleEnv,
+  getEnv,
+  getReferralEnv,
+} from "../../platform/env/index.ts";
 import {
   savePreparedBattleMessage,
   TelegramRequestError,
@@ -40,6 +44,7 @@ export async function deliverPreparedBattleShares(
   signal?: AbortSignal,
   options: { limit?: number; roomId?: string } = {},
 ): Promise<PreparedShareDelivery> {
+  getBattleEnv();
   getEnv();
   getReferralEnv();
   const limit = options.limit ?? 10;

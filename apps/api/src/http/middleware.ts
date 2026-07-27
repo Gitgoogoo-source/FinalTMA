@@ -5,7 +5,7 @@ import { z } from "zod";
 import type { Gateway, RouteDefinition } from "@pokepets/api-contracts/common";
 
 import { resolveSession, type Session } from "../platform/session.ts";
-import { getEnv } from "../platform/env/index.ts";
+import { getBattleEnv, getEnv } from "../platform/env/index.ts";
 import { ApiError } from "./errors.ts";
 
 export function authenticateGateway(
@@ -77,7 +77,7 @@ function hasBattleIntegrationAuthorization(request: Request): boolean {
   if (!authorization?.startsWith("Bearer ")) return false;
   const supplied = authorization.slice(7);
   if (!supplied || supplied !== supplied.trim()) return false;
-  const expected = getEnv().BATTLE_OUTBOX_SECRET;
+  const expected = getBattleEnv().BATTLE_OUTBOX_SECRET;
   return timingSafeEqual(
     createHash("sha256").update(supplied).digest(),
     createHash("sha256").update(expected).digest(),

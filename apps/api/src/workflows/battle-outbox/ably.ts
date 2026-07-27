@@ -1,11 +1,12 @@
 import { randomUUID } from "node:crypto";
 
 import * as Ably from "ably";
+import { z } from "zod";
 import type { BattleRealtimeInvalidation } from "@pokepets/api-contracts/app";
 
 import { ApiError } from "../../http/errors.ts";
 import { rpc } from "../../platform/db/index.ts";
-import { getEnv } from "../../platform/env/index.ts";
+import { getBattleEnv } from "../../platform/env/index.ts";
 
 type RealtimeContext = {
   user_id: string;
@@ -33,10 +34,12 @@ const uuidValuePattern = new RegExp(`^${uuidPattern}$`, "i");
 const userChannelPattern = new RegExp(`^battle:user:${uuidPattern}$`, "i");
 const roomChannelPattern = new RegExp(`^battle:room:${uuidPattern}$`, "i");
 const inviteChannelPattern = /^battle:invite:[0-9a-f]{64}$/;
+const ablyCapabilitySchema = z.record(z.string(), z.array(z.string()));
 
 function ably(): Ably.Rest {
+  const env = getBattleEnv();
   client ??= new Ably.Rest({
-    key: getEnv().ABLY_API_KEY,
+    key: env.ABLY_API_KEY,
     logLevel: 0,
     httpRequestTimeout: 5_000,
   });
@@ -54,6 +57,7 @@ export async function issueBattleRealtimeToken(
   capability: string;
   clientId: string;
 }> {
+  const env = getBattleEnv();
   const realtime = ably();
   const context = await rpc<RealtimeContext>(
     "battle_realtime_context",
@@ -80,23 +84,55 @@ export async function issueBattleRealtimeToken(
       true,
     );
   const clientId = `battle-user:${context.user_id}`;
+  const expectedChannels = [...new Set(channels)].sort();
   const details = await realtime.auth.requestToken({
     clientId,
     ttl: 300_000,
     capability: Object.fromEntries(
-      [...new Set(channels)].map((channel) => [channel, ["subscribe"]]),
+      expectedChannels.map((channel) => [channel, ["subscribe"]]),
     ),
   });
-  if (!details.clientId || details.clientId !== clientId)
-    throw new ApiError(502, "INTERNAL_ERROR", "Battle 实时令牌身份无效", true);
+  if (
+    !details.token ||
+    details.clientId !== clientId ||
+    !Number.isSafeInteger(details.issued) ||
+    !Number.isSafeInteger(details.expires) ||
+    details.issued <= 0 ||
+    details.expires - details.issued !== 300_000 ||
+    !capabilityMatches(details.capability, expectedChannels)
+  )
+    throw new ApiError(502, "INTERNAL_ERROR", "Battle 实时令牌无效", true);
+  const keyName = env.ABLY_API_KEY.split(":", 1)[0]!;
   return {
     token: details.token,
-    keyName: getEnv().ABLY_API_KEY.split(":", 1)[0]!,
+    keyName,
     issued: details.issued,
     expires: details.expires,
     capability: details.capability,
     clientId: details.clientId,
   };
+}
+
+function capabilityMatches(
+  capability: string,
+  expectedChannels: readonly string[],
+): boolean {
+  try {
+    const parsed = ablyCapabilitySchema.safeParse(JSON.parse(capability));
+    if (!parsed.success) return false;
+    const actualChannels = Object.keys(parsed.data).sort();
+    return (
+      actualChannels.length === expectedChannels.length &&
+      actualChannels.every(
+        (channel, index) =>
+          channel === expectedChannels[index] &&
+          parsed.data[channel]?.length === 1 &&
+          parsed.data[channel][0] === "subscribe",
+      )
+    );
+  } catch {
+    return false;
+  }
 }
 
 export async function deliverBattleOutbox(
