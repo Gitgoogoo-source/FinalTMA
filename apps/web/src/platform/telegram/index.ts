@@ -121,3 +121,17 @@ export function haptic(
 ): void {
   telegram()?.HapticFeedback?.notificationOccurred(type);
 }
+
+export function sharePreparedMessage(
+  messageId: string,
+  callback?: (shared: boolean) => void,
+): boolean {
+  const app = telegram();
+  if (!app?.shareMessage || !messageId) return false;
+  try {
+    app.shareMessage(messageId, callback);
+    return true;
+  } catch {
+    return false;
+  }
+}

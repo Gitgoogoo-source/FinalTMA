@@ -24,8 +24,12 @@ function db(): SupabaseClient {
 export async function rpc<T>(
   name: string,
   parameters: Record<string, unknown>,
+  options: { signal?: AbortSignal | undefined } = {},
 ): Promise<T> {
-  const { data, error } = await db().schema("api").rpc(name, parameters);
+  const request = db().schema("api").rpc(name, parameters);
+  const { data, error } = await (options.signal
+    ? request.abortSignal(options.signal)
+    : request);
   if (error) {
     if (error.code === "P0001") {
       const detail = parseDetail(error.details);
@@ -36,14 +40,12 @@ export async function rpc<T>(
           detail.code,
           definition.message,
           definition.retryable,
-          { database_message: detail.message },
         );
       }
     }
     throw new ApiError(500, "DATABASE_RPC_FAILED", "数据库操作失败", false, {
       name,
       code: error.code,
-      message: error.message,
     });
   }
   return data as T;

@@ -57,6 +57,7 @@ Battle stake / settlement / outbox event（脱敏）：
 
 以下证据必须来自真实 Telegram、真实 Vercel、真实 Supabase 与真实 Ably；静态门禁不能替代：
 
+- 本次本地实现仍待真实开发环境验证 Telegram prepared message 与 `shareMessage` 真机发送、60 秒未知结果恢复/退款、Ably 2.26.0 subscribe-only token 与 outbox 重投、两个 integration 的真实 Bearer 鉴权、Vercel 超时边界，以及从空 Supabase 数据库执行三条 migration 后的并发裁决。
 - 规则与页面：`battle-v1` checksum 与正式 JSON、数据库种子、API 摘要一致；Catalog v1 仍为 70 链/210 模板且 release checksum 不变；游戏页完整覆盖第 21 章八种页面状态，构建和运行资源不含 Phaser 或客户端战斗模拟器。
 - 隐私：分别保存挑战卡、接受页、己方、对手和 resolution event 五种 DTO；逐字段证明禁止信息不在 JSON、HTML、Ably、日志和分析事件中。接受前双方秘密、接受后对手百分比生命及当回合技能揭示严格符合第 21.7 节。
 - 分享与接受：用户私聊、普通群、超级群、跨群转发、Bot 不在群、Bot 会话禁止、频道禁止、创建者本人禁止；两个普通接受者与一个竞争账号同时接受时只有首个事务成功，失败者余额和 inventory 完全不变。

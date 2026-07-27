@@ -52,6 +52,7 @@ export const integrationRoutes = [
     gateway: "integrations",
     auth: false,
     idempotent: false,
+    integrationAuth: "telegram_webhook",
     rawResponse: true,
     input: telegramUpdateSchema,
     output: z.object({ ok: z.literal(true) }).strict(),
@@ -62,5 +63,52 @@ export const integrationRoutes = [
       "PAYMENT_NOT_DELIVERABLE",
       "INTERNAL_ERROR",
     ],
+  }),
+  defineRoute({
+    id: "battle.share_integration",
+    method: "POST",
+    path: "/api/integrations/battle-share",
+    gateway: "integrations",
+    auth: false,
+    idempotent: false,
+    integrationAuth: "battle_outbox",
+    input: z
+      .object({
+        wake: z.literal(true),
+        kind: z.literal("share"),
+      })
+      .strict(),
+    output: z
+      .object({
+        processed: z.number().int().min(0),
+        activated: z.number().int().min(0),
+        deferred: z.number().int().min(0),
+        failed: z.number().int().min(0),
+      })
+      .strict(),
+    errors: ["WEBHOOK_UNAUTHORIZED", "TELEGRAM_API_FAILED", "INTERNAL_ERROR"],
+  }),
+  defineRoute({
+    id: "battle.outbox_integration",
+    method: "POST",
+    path: "/api/integrations/battle-outbox",
+    gateway: "integrations",
+    auth: false,
+    idempotent: false,
+    integrationAuth: "battle_outbox",
+    input: z
+      .object({
+        wake: z.literal(true),
+        kind: z.literal("outbox"),
+      })
+      .strict(),
+    output: z
+      .object({
+        processed: z.number().int().min(0),
+        published: z.number().int().min(0),
+        deferred: z.number().int().min(0),
+      })
+      .strict(),
+    errors: ["WEBHOOK_UNAUTHORIZED", "INTERNAL_ERROR"],
   }),
 ] as const;

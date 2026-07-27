@@ -1,6 +1,7 @@
 import { rpc } from "../../platform/db/index.ts";
 import { getEnv } from "../../platform/env/index.ts";
 import {
+  hashToken,
   identityFingerprint,
   issueToken,
   referralCode,
@@ -49,18 +50,13 @@ export const identityHandlers = {
       p_scope: "init_data",
       p_key_hash: identityFingerprint("login-init-data", verified.initDataHash),
     });
-    const startParam = verified.startParam ?? null;
-    if (startParam !== null && !/^TMA[A-F0-9]{20}$/.test(startParam))
-      throw new ApiError(
-        400,
-        "TELEGRAM_START_PARAM_INVALID",
-        "入口参数无效，请重新从 Telegram 进入应用",
-      );
+    const entry = classifyEntry(verified.startParam ?? null);
     const issued = issueToken(operationId);
     const session = await rpc<{
       account_status: "normal" | "banned";
       user_id?: string;
       expires_at?: string;
+      entry_kind?: "direct" | "referral" | "battle";
       entry_handoff_state?: "pending" | "complete";
       entry_handoff_code?: string | null;
       entry_handoff_result?:
@@ -89,11 +85,18 @@ export const identityHandlers = {
       p_referral_code: referralCode(verified.user.id),
       p_token_hash: issued.hash,
       p_auth_date: verified.authDate.toISOString(),
-      p_start_param: startParam,
+      p_entry_kind: entry.kind,
+      p_entry_referral_code: entry.referralCode,
+      p_battle_invite_token_hash: entry.battleInviteTokenHash,
     });
     if (session.account_status === "banned")
       return { data: { account_status: "banned" as const } };
-    if (!session.user_id || !session.expires_at || !session.entry_handoff_state)
+    if (
+      !session.user_id ||
+      !session.expires_at ||
+      !session.entry_handoff_state ||
+      !session.entry_kind
+    )
       throw new ApiError(500, "INTERNAL_ERROR", "登录结果不完整", true);
     return {
       data: {
@@ -101,6 +104,7 @@ export const identityHandlers = {
         access_token: issued.token,
         user_id: session.user_id,
         expires_at: session.expires_at,
+        entry_kind: session.entry_kind,
         entry_handoff_state: session.entry_handoff_state,
         entry_handoff_code: session.entry_handoff_code ?? null,
         entry_handoff_result: session.entry_handoff_result ?? null,
@@ -113,6 +117,36 @@ export const identityHandlers = {
     }),
   }),
 } satisfies HandlerMap;
+
+function classifyEntry(startParam: string | null): {
+  kind: "direct" | "referral" | "battle";
+  referralCode: string | null;
+  battleInviteTokenHash: string | null;
+} {
+  if (startParam === null)
+    return {
+      kind: "direct",
+      referralCode: null,
+      battleInviteTokenHash: null,
+    };
+  if (/^TMA[A-F0-9]{20}$/.test(startParam))
+    return {
+      kind: "referral",
+      referralCode: startParam,
+      battleInviteTokenHash: null,
+    };
+  if (/^BTL_[A-Za-z0-9_-]{32}$/.test(startParam))
+    return {
+      kind: "battle",
+      referralCode: null,
+      battleInviteTokenHash: hashToken(startParam),
+    };
+  throw new ApiError(
+    400,
+    "TELEGRAM_START_PARAM_INVALID",
+    "入口参数无效，请重新从 Telegram 进入应用",
+  );
+}
 
 function requestSource(request: Request): string {
   const vercel = firstForwardedValue(

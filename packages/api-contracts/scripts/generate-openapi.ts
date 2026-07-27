@@ -29,7 +29,9 @@ for (const route of routes) {
       route.gateway === "jobs"
         ? [{ cronSecret: [] }]
         : route.gateway === "integrations"
-          ? [{ telegramWebhookSecret: [] }]
+          ? route.integrationAuth === "battle_outbox"
+            ? [{ battleIntegrationSecret: [] }]
+            : [{ telegramWebhookSecret: [] }]
           : route.auth
             ? [{ bearerAuth: [] }]
             : [],
@@ -53,6 +55,8 @@ for (const route of routes) {
       route.errors,
     ),
     "x-idempotency-required": route.idempotent,
+    "x-idempotency-forbidden":
+      "forbidIdempotencyKey" in route && route.forbidIdempotencyKey === true,
     "x-allow-pending-entry-handoff":
       "allowPendingEntryHandoff" in route &&
       route.allowPendingEntryHandoff === true,
@@ -90,6 +94,7 @@ const document = {
         in: "header",
         name: "X-Telegram-Bot-Api-Secret-Token",
       },
+      battleIntegrationSecret: { type: "http", scheme: "bearer" },
     },
     schemas: { StandardError: z.toJSONSchema(standardErrorSchema) },
   },
@@ -153,17 +158,32 @@ function buildParameters(
     name,
     in: pathNames.has(name) ? "path" : "query",
     required: pathNames.has(name) || json.required?.includes(name) === true,
-    schema: json.properties?.[name] ?? { type: "string" },
+    schema: propertySchema(json, name) ?? { type: "string" },
   }));
 }
 
 function bodySchema(path: string, schema: z.ZodType): JsonSchema {
   const json = structuredClone(z.toJSONSchema(schema)) as JsonSchema;
   const pathNames = pathParameterNames(path);
-  for (const name of pathNames) delete json.properties?.[name];
-  if (json.required)
-    json.required = json.required.filter((name) => !pathNames.has(name));
+  omitProperties(json, pathNames);
   return json;
+}
+
+function propertySchema(schema: JsonSchema, name: string): unknown | undefined {
+  if (schema.properties?.[name]) return schema.properties[name];
+  for (const child of schema.anyOf ?? schema.oneOf ?? []) {
+    const found = propertySchema(child, name);
+    if (found) return found;
+  }
+  return undefined;
+}
+
+function omitProperties(schema: JsonSchema, names: Set<string>): void {
+  for (const name of names) delete schema.properties?.[name];
+  if (schema.required)
+    schema.required = schema.required.filter((name) => !names.has(name));
+  for (const child of [...(schema.anyOf ?? []), ...(schema.oneOf ?? [])])
+    omitProperties(child, names);
 }
 
 function pathParameterNames(path: string): Set<string> {
@@ -175,6 +195,8 @@ function pathParameterNames(path: string): Set<string> {
 }
 
 type JsonSchema = {
+  anyOf?: JsonSchema[];
+  oneOf?: JsonSchema[];
   properties?: Record<string, unknown>;
   required?: string[];
   [key: string]: unknown;

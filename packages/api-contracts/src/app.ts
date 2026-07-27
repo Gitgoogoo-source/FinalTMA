@@ -5,4 +5,5 @@ export * from "./common/models.ts";
 export * from "./common/route.ts";
 export * from "./common/schemas.ts";
 export { evolutionRejectedResultSchema } from "./domains/inventory/models.ts";
+export * from "./domains/battle/models.ts";
 export * from "./registries/app.ts";

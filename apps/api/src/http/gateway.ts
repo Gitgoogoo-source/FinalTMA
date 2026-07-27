@@ -35,9 +35,9 @@ export function createGateway<Route extends RouteDefinition>(
     const startedAt = Date.now();
     let route: Route | null = null;
     try {
-      authenticateGateway(request, gateway);
       const match = matchRequest(request, registry);
       route = match.route;
+      authenticateGateway(request, gateway, route);
       const session = await authenticateRoute(request, route);
       const input = await parseInput(request, route, gateway, match.params);
       const handler = (handlers as Readonly<Record<string, RouteHandler>>)[

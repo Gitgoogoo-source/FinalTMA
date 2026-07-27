@@ -7,6 +7,7 @@ import {
 import type { RouteDefinition } from "../common/route.ts";
 import { operationSummarySchema } from "../common/models.ts";
 import { albumRoutes } from "../domains/album/routes.ts";
+import { battleRoutes } from "../domains/battle/routes.ts";
 import { catalogRoutes } from "../domains/catalog/routes.ts";
 import { expeditionRoutes } from "../domains/expedition/routes.ts";
 import { gachaRoutes } from "../domains/gacha/routes.ts";
@@ -36,6 +37,7 @@ export const routes = [
   ...taskRoutes,
   ...referralRoutes,
   ...albumRoutes,
+  ...battleRoutes,
   ...walletRoutes,
   ...mintRoutes,
   ...operationRoutes,
@@ -56,12 +58,15 @@ export type RecoverableOperationSummary = Omit<
   import("zod").output<typeof operationSummarySchema>,
   "use_case"
 > & { use_case: RecoverableRouteId };
+type JsonValue = NonNullable<
+  import("zod").output<typeof operationSummarySchema>["result"]
+>;
 export type TypedOperationSummary = {
   [Route in RecoverableRoute as Route["id"]]: {
     operation_id: string;
     use_case: Route["id"];
     status: "pending" | "succeeded" | "failed" | "unknown";
-    result: import("zod").output<Route["output"]> | null;
+    result: (import("zod").output<Route["output"]> & JsonValue) | null;
     error_code: ErrorCode | null;
     acknowledged_at: string | null;
     created_at: string;

@@ -1,5 +1,6 @@
 import { assertContractRegistry } from "../common/registry.ts";
 import { albumRoutes } from "../domains/album/routes.ts";
+import { battleRoutes } from "../domains/battle/routes.ts";
 import { catalogRoutes } from "../domains/catalog/routes.ts";
 import { expeditionRoutes } from "../domains/expedition/routes.ts";
 import { gachaRoutes } from "../domains/gacha/routes.ts";
@@ -31,6 +32,7 @@ export const routes = [
   ...taskRoutes,
   ...referralRoutes,
   ...albumRoutes,
+  ...battleRoutes,
   ...walletRoutes,
   ...mintRoutes,
   ...operationRoutes,

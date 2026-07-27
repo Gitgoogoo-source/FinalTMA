@@ -1,6 +1,7 @@
 import type { RouteId } from "@pokepets/api-contracts/app";
 
 import { albumHandlers } from "../../domains/album/routes.ts";
+import { battleHandlers } from "../../domains/battle/routes.ts";
 import { catalogHandlers } from "../../domains/catalog/routes.ts";
 import { decompositionHandlers } from "../../domains/decomposition/routes.ts";
 import { evolutionHandlers } from "../../domains/evolution/routes.ts";
@@ -24,6 +25,7 @@ import { paymentSupportHandlers } from "./payment-support.ts";
 export const appHandlers = {
   ...healthHandlers,
   ...identityHandlers,
+  ...battleHandlers,
   ...catalogHandlers,
   ...gachaHandlers,
   ...inventoryHandlers,

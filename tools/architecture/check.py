@@ -35,6 +35,10 @@ REQUIRED_PATHS = (
     "apps/api/src/http",
     "apps/api/src/domains",
     "apps/api/src/workflows",
+    "apps/api/src/workflows/battle-share",
+    "apps/api/src/workflows/battle-outbox",
+    "packages/api-contracts/src/domains/battle/models.ts",
+    "packages/api-contracts/src/domains/battle/routes.ts",
     "packages/api-contracts/src/registries/app.ts",
     "packages/api-contracts/src/registries/integrations.ts",
     "packages/api-contracts/src/registries/jobs.ts",
@@ -94,6 +98,7 @@ WEB_DOMAINS = {
 }
 API_DOMAINS = {
     "album",
+    "battle",
     "catalog",
     "decomposition",
     "evolution",
@@ -131,7 +136,7 @@ def main() -> None:
     verify_documentation()
     verify_package_exports()
     verify_typescript_configuration()
-    print("module ownership, gateway isolation, and twenty product domains are traceable")
+    print("module ownership, gateway isolation, and product domains are traceable")
 
 
 def verify_domain_matrix() -> None:

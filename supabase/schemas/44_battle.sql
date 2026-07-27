@@ -1315,7 +1315,17 @@ as $$
 declare
   v_user_id uuid := api.session_user(p_session_id);
   v_participation jsonb := battle.participation_json(v_user_id);
+  v_ruleset_id text;
 begin
+  select id into v_ruleset_id
+  from battle.rulesets
+  where status = 'active' and battle.rules_complete(id);
+  if v_ruleset_id is null then
+    perform api.raise_business_error(
+      'BATTLE_RULESET_UNAVAILABLE',
+      'Battle 规则暂不可用，请稍后重试'
+    );
+  end if;
   return jsonb_build_object(
     'ruleset', (
       select jsonb_build_object(
@@ -1326,7 +1336,7 @@ begin
         'reveal_seconds', (r.parameters->>'reveal_seconds')::integer,
         'max_normal_turns', (r.parameters->>'max_normal_turns')::integer
       )
-      from battle.rulesets r where r.status = 'active'
+      from battle.rulesets r where r.id = v_ruleset_id
     ),
     'entry_tiers', coalesce((
       select jsonb_agg(jsonb_build_object(
@@ -1337,7 +1347,7 @@ begin
         'fee', t.fee
       ) order by t.entry_fee)
       from battle.entry_tiers t
-      join battle.rulesets r on r.id = t.ruleset_id and r.status = 'active'
+      where t.ruleset_id = v_ruleset_id
     ), '[]'::jsonb),
     'participation', v_participation,
     'current_result', battle.current_result_json(v_user_id),
@@ -3733,7 +3743,8 @@ $$;
 
 create or replace function api.battle_claim_prepared_shares(
   p_lease_owner text,
-  p_limit integer default 25
+  p_limit integer default 25,
+  p_room_id uuid default null
 )
 returns table (
   room_id uuid,
@@ -3764,6 +3775,7 @@ begin
       and ps.next_attempt_at <= now()
       and r.status = 'preparing_share'
       and r.prepare_deadline > now()
+      and (p_room_id is null or ps.room_id = p_room_id)
       and (ps.lease_expires_at is null or ps.lease_expires_at <= now())
     order by ps.next_attempt_at, ps.room_id
     limit p_limit
@@ -3820,6 +3832,28 @@ begin
 end;
 $$;
 
+create or replace function battle.invalidation_channels(p_room_id uuid)
+returns text[]
+language sql
+stable
+set search_path = ''
+as $$
+  select coalesce(array_agg(channel order by channel), array[]::text[])
+  from (
+    select 'battle:room:' || r.id::text channel
+    from battle.rooms r
+    where r.id = p_room_id
+    union
+    select 'battle:invite:' || r.invite_token_hash
+    from battle.rooms r
+    where r.id = p_room_id
+    union
+    select 'battle:user:' || p.user_id::text
+    from battle.participants p
+    where p.room_id = p_room_id
+  ) permitted_channels
+$$;
+
 create or replace function api.battle_claim_outbox(
   p_lease_owner text,
   p_limit integer default 100
@@ -3830,7 +3864,8 @@ returns table (
   room_id uuid,
   state_version bigint,
   event_kind text,
-  attempt_count integer
+  attempt_count integer,
+  channels text[]
 )
 language plpgsql
 security definer
@@ -3860,7 +3895,14 @@ begin
       updated_at = now()
   from claimed c
   where o.id = c.id
-  returning o.id, o.event_id, o.room_id, o.state_version, o.event_kind, o.attempt_count;
+  returning
+    o.id,
+    o.event_id,
+    o.room_id,
+    o.state_version,
+    o.event_kind,
+    o.attempt_count,
+    battle.invalidation_channels(o.room_id);
 end;
 $$;
 

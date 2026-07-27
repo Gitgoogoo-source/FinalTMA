@@ -20,6 +20,17 @@ export function assertContractRegistry(
       throw new Error(
         `Idempotent route ${route.id} must declare refreshScopes`,
       );
+    if (route.idempotent && route.forbidIdempotencyKey)
+      throw new Error(
+        `Route ${route.id} cannot require and forbid Idempotency-Key`,
+      );
+    if (
+      (route.gateway === "integrations") !==
+      (route.integrationAuth !== undefined)
+    )
+      throw new Error(
+        `Integration auth must be declared exactly for integration route ${route.id}`,
+      );
     if (
       route.allowPendingEntryHandoff &&
       !["referral.bind", "operations.get"].includes(route.id)

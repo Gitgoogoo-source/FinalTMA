@@ -12,6 +12,7 @@
 - Vercel 套餐支持 `vercel.json` 中三项当前 Cron 的执行频率；启用 TON 时同一套餐还必须支持第四项 Mint 对账 Cron。
 - Vercel Production 环境变量名称核查同时包含 `TELEGRAM_BOT_USERNAME` 与 `TELEGRAM_MINI_APP_SHORT_NAME`，开发 short name 固定为 `pokepets_dev`。
 - Battle 发布环境已经配置互不共用且至少 32 字节的 `BATTLE_INVITE_SECRET`、`BATTLE_OUTBOX_SECRET`，并配置环境隔离的 `ABLY_API_KEY`；Supabase Vault 的两个 Battle callback URL 与 outbox secret 已和对应 Vercel 环境逐项核对。
+- Battle 发布检查必须分别验证：`BATTLE_INVITE_SECRET` 只产生确定性邀请 token、`BATTLE_OUTBOX_SECRET` 只通过两个 integration 的 Bearer 鉴权、`ABLY_API_KEY` 只签发五分钟 subscribe-only capability 并发布失效通知；部署产物固定使用 `ably@2.26.0`。
 - Supabase 已安装 `pg_cron`、`pg_net`、Vault 和 `pgcrypto`，套餐与项目配置支持 `battle-tick-v1` 每秒执行；Ably 套餐固定为 Standard。
 - 真实开发 Bot 固定为 `@FinalTMA_bot`；Main Mini App URL 固定为 `https://final-tma-pi.vercel.app/`；named Mini App 固定为 `https://t.me/FinalTMA_bot/pokepets_dev`；默认菜单按钮固定为 `Open PokePets` 并指向该 named Mini App 链接。
 

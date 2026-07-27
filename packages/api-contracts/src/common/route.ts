@@ -4,6 +4,7 @@ import type { ErrorCode, RefreshScope } from "./errors.ts";
 
 export type HttpMethod = "GET" | "POST";
 export type Gateway = "app" | "integrations" | "jobs";
+export type IntegrationAuth = "telegram_webhook" | "battle_outbox";
 
 export type RouteDefinition<
   Id extends string = string,
@@ -16,6 +17,8 @@ export type RouteDefinition<
   gateway: Gateway;
   auth: boolean;
   idempotent: boolean;
+  forbidIdempotencyKey?: true;
+  integrationAuth?: IntegrationAuth;
   allowPendingEntryHandoff?: true;
   refreshScopes?: readonly RefreshScope[];
   rawResponse?: boolean;
@@ -46,6 +49,7 @@ export function defineRoute<const Route extends RouteDefinition>(
     errors.push("ENTRY_HANDOFF_PENDING");
   if (route.idempotent)
     errors.push("IDEMPOTENCY_KEY_INVALID", "IDEMPOTENCY_KEY_REQUIRED");
+  if (route.forbidIdempotencyKey) errors.push("IDEMPOTENCY_KEY_NOT_ALLOWED");
   if (route.gateway === "jobs") errors.push("CRON_UNAUTHORIZED");
   if (route.gateway === "integrations") errors.push("WEBHOOK_UNAUTHORIZED");
   return { ...route, errors: [...new Set([...errors, ...route.errors])] };

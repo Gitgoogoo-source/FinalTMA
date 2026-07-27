@@ -8,6 +8,7 @@ export type Session = {
   session_id: string;
   user_id: string;
   account_status: "normal" | "banned";
+  entry_kind: "direct" | "referral" | "battle";
   expires_at: string;
   session_state: "active" | "expired" | "replaced";
   entry_handoff_state: "pending" | "complete";

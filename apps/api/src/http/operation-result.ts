@@ -1,4 +1,8 @@
-import { errorDefinition, isErrorCode } from "@pokepets/api-contracts/common";
+import {
+  errorDefinition,
+  isErrorCode,
+  operationSummarySchema,
+} from "@pokepets/api-contracts/common";
 
 import { ApiError } from "./errors.ts";
 import type { HandlerResult } from "./handlers.ts";
@@ -14,11 +18,24 @@ export type OperationEnvelope = {
   updated_at: string;
 };
 
-export function operationResult(operation: OperationEnvelope): HandlerResult {
-  if (operation.status === "failed") {
+export function operationResult(
+  operation: OperationEnvelope,
+  expected?: { operationId: string; useCase: string },
+): HandlerResult {
+  const parsed = operationSummarySchema.safeParse(operation);
+  if (!parsed.success)
+    throw new ApiError(500, "OPERATION_RESULT_INVALID", "操作结果无效", true);
+  const envelope = parsed.data;
+  if (
+    expected &&
+    (envelope.operation_id !== expected.operationId ||
+      envelope.use_case !== expected.useCase)
+  )
+    throw new ApiError(500, "OPERATION_RESULT_INVALID", "操作结果无效", true);
+  if (envelope.status === "failed") {
     const code =
-      operation.error_code && isErrorCode(operation.error_code)
-        ? operation.error_code
+      envelope.error_code && isErrorCode(envelope.error_code)
+        ? envelope.error_code
         : "OPERATION_FAILED";
     const definition = errorDefinition(code);
     throw new ApiError(
@@ -27,23 +44,23 @@ export function operationResult(operation: OperationEnvelope): HandlerResult {
       definition.message,
       definition.retryable,
       undefined,
-      operation.operation_id,
+      envelope.operation_id,
     );
   }
-  if (operation.result === null || operation.result === undefined)
+  if (envelope.result === null || envelope.result === undefined)
     throw new ApiError(
       500,
       "OPERATION_RESULT_INVALID",
       "操作结果无效",
       true,
       undefined,
-      operation.operation_id,
+      envelope.operation_id,
     );
   return {
-    data: operation.result,
-    operationId: operation.operation_id,
+    data: envelope.result,
+    operationId: envelope.operation_id,
     status:
-      operation.status === "pending" || operation.status === "unknown"
+      envelope.status === "pending" || envelope.status === "unknown"
         ? 202
         : 200,
   };

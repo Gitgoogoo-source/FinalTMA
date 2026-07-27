@@ -129,6 +129,7 @@ export function useBootstrap(): BootstrapState & { retry(): void } {
             accountStatus: "normal",
             expiresAt: login.data.expires_at,
             generation: crypto.randomUUID(),
+            entryKind: login.data.entry_kind,
             entryHandoffState: login.data.entry_handoff_state,
             entryHandoffCode: login.data.entry_handoff_code,
             entryHandoffResult: login.data.entry_handoff_result,

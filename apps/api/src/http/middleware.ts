@@ -1,3 +1,5 @@
+import { createHash, timingSafeEqual } from "node:crypto";
+
 import { z } from "zod";
 
 import type { Gateway, RouteDefinition } from "@pokepets/api-contracts/common";
@@ -6,7 +8,11 @@ import { resolveSession, type Session } from "../platform/session.ts";
 import { getEnv } from "../platform/env/index.ts";
 import { ApiError } from "./errors.ts";
 
-export function authenticateGateway(request: Request, gateway: Gateway): void {
+export function authenticateGateway(
+  request: Request,
+  gateway: Gateway,
+  route: RouteDefinition,
+): void {
   if (
     gateway === "jobs" &&
     request.headers.get("authorization") !== `Bearer ${getEnv().CRON_SECRET}`
@@ -15,11 +21,18 @@ export function authenticateGateway(request: Request, gateway: Gateway): void {
   }
   if (
     gateway === "integrations" &&
+    route.integrationAuth === "telegram_webhook" &&
     request.headers.get("x-telegram-bot-api-secret-token") !==
       getEnv().TELEGRAM_WEBHOOK_SECRET
   ) {
     throw new ApiError(401, "WEBHOOK_UNAUTHORIZED", "Webhook 认证失败");
   }
+  if (
+    gateway === "integrations" &&
+    route.integrationAuth === "battle_outbox" &&
+    !hasBattleIntegrationAuthorization(request)
+  )
+    throw new ApiError(401, "WEBHOOK_UNAUTHORIZED", "Webhook 认证失败");
 }
 
 export async function authenticateRoute(
@@ -45,12 +58,30 @@ export function idempotencyKey(
   request: Request,
   route: RouteDefinition,
 ): string | null {
+  if (route.forbidIdempotencyKey && request.headers.has("idempotency-key"))
+    throw new ApiError(
+      400,
+      "IDEMPOTENCY_KEY_NOT_ALLOWED",
+      "该接口不接受 Idempotency-Key",
+    );
   if (!route.idempotent) return null;
   const value = request.headers.get("idempotency-key");
   if (!value) throw new ApiError(400, "IDEMPOTENCY_KEY_REQUIRED", "缺少幂等键");
   if (!z.string().uuid().safeParse(value).success)
     throw new ApiError(400, "IDEMPOTENCY_KEY_INVALID", "幂等键必须是 UUID");
   return value;
+}
+
+function hasBattleIntegrationAuthorization(request: Request): boolean {
+  const authorization = request.headers.get("authorization");
+  if (!authorization?.startsWith("Bearer ")) return false;
+  const supplied = authorization.slice(7);
+  if (!supplied || supplied !== supplied.trim()) return false;
+  const expected = getEnv().BATTLE_OUTBOX_SECRET;
+  return timingSafeEqual(
+    createHash("sha256").update(supplied).digest(),
+    createHash("sha256").update(expected).digest(),
+  );
 }
 
 export async function parseInput(

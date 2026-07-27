@@ -300,6 +300,7 @@ async function recoverSession(): Promise<void> {
       accountStatus: result.data.account_status,
       expiresAt: result.data.expires_at,
       generation: crypto.randomUUID(),
+      entryKind: result.data.entry_kind,
       entryHandoffState: result.data.entry_handoff_state,
       entryHandoffCode: result.data.entry_handoff_code,
       entryHandoffResult: result.data.entry_handoff_result,

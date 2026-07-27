@@ -32,6 +32,14 @@
       "destination": "/api/integrations?__route=telegram/webhook"
     },
     {
+      "source": "/api/integrations/battle-share",
+      "destination": "/api/integrations?__route=integrations/battle-share"
+    },
+    {
+      "source": "/api/integrations/battle-outbox",
+      "destination": "/api/integrations?__route=integrations/battle-outbox"
+    },
+    {
       "source": "/api/jobs/:path*",
       "destination": "/api/jobs?__route=jobs/:path*"
     },

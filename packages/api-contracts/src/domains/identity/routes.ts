@@ -12,6 +12,10 @@ import {
   uuidSchema,
 } from "../../common/schemas.ts";
 import { mintSchema } from "../mint/models.ts";
+import {
+  battleCurrentResultSchema,
+  battleParticipationSchema,
+} from "../battle/models.ts";
 import { paymentSchema } from "../topup/models.ts";
 
 const healthOutput = z
@@ -28,6 +32,7 @@ const normalAuthOutput = z
     user_id: uuidSchema,
     expires_at: timestampSchema,
     entry_handoff_state: z.enum(["pending", "complete"]),
+    entry_kind: z.enum(["direct", "referral", "battle"]),
     entry_handoff_code: z
       .string()
       .regex(/^TMA[A-F0-9]{20}$/)
@@ -68,6 +73,8 @@ const bootstrapOutput = z
     blocking_operations: z.array(operationSummarySchema),
     pending_payments: z.array(paymentSchema),
     pending_mints: z.array(mintSchema),
+    battle_participation: battleParticipationSchema.nullable(),
+    battle_result: battleCurrentResultSchema.nullable(),
     server_time: timestampSchema,
   })
   .strict();

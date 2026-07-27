@@ -171,6 +171,7 @@ export const inventoryItemSchema = z
     trading: nonNegativeIntegerSchema,
     expedition: nonNegativeIntegerSchema,
     minting: nonNegativeIntegerSchema,
+    battling: nonNegativeIntegerSchema,
   })
   .strict()
   .refine(
@@ -180,6 +181,7 @@ export const inventoryItemSchema = z
         item.listed +
         item.trading +
         item.minting +
-        item.expedition,
+        item.expedition +
+        item.battling,
     { message: "Inventory quantities must add up to total", path: ["total"] },
   );

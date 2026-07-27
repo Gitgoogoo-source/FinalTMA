@@ -20,6 +20,7 @@
     "@ton/core": "catalog:",
     "@ton/crypto": "catalog:",
     "@ton/ton": "catalog:",
+    "ably": "2.26.0",
     "zod": "catalog:"
   },
   "devDependencies": {

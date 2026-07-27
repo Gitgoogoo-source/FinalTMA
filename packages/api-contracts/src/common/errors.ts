@@ -238,6 +238,13 @@ export const errorRegistry = {
     "refresh",
   ),
   IDEMPOTENCY_KEY_INVALID: error(400, "幂等键必须是 UUID"),
+  IDEMPOTENCY_KEY_NOT_ALLOWED: error(
+    400,
+    "该接口不接受 Idempotency-Key",
+    false,
+    "battle",
+    "refresh",
+  ),
   IDEMPOTENCY_KEY_REQUIRED: error(400, "缺少幂等键"),
   IDEMPOTENCY_KEY_REUSED: error(
     409,

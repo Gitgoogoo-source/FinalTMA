@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const schema = z.object({
+const baseSchema = z.object({
   APP_ENV: z.enum(["development", "test", "production"]),
   APP_BASE_URL: z.string().url(),
   SUPABASE_URL: z.string().url(),
@@ -12,12 +12,36 @@ const schema = z.object({
   TELEGRAM_WEBHOOK_SECRET: z.string().min(16),
   REFERRAL_CODE_SECRET: z.string().min(32),
   CRON_SECRET: z.string().min(32),
+  ABLY_API_KEY: z
+    .string()
+    .regex(/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+:[A-Za-z0-9_-]+$/),
+  BATTLE_OUTBOX_SECRET: z
+    .string()
+    .refine((value) => Buffer.byteLength(value, "utf8") >= 32),
+  BATTLE_INVITE_SECRET: z
+    .string()
+    .refine((value) => Buffer.byteLength(value, "utf8") >= 32),
   PAYMENT_SUPPORT_URL: z.string().url(),
 });
 
+const schema = baseSchema.superRefine((value, context) => {
+  const secrets = [
+    value.IDENTITY_SECURITY_SECRET,
+    value.REFERRAL_CODE_SECRET,
+    value.BATTLE_OUTBOX_SECRET,
+    value.BATTLE_INVITE_SECRET,
+  ];
+  if (new Set(secrets).size !== secrets.length)
+    context.addIssue({
+      code: "custom",
+      path: ["BATTLE_INVITE_SECRET"],
+      message: "Identity, referral, and Battle secrets must be distinct",
+    });
+});
+
 const referralSchema = z.object({
-  TELEGRAM_BOT_USERNAME: z.string().min(1),
-  TELEGRAM_MINI_APP_SHORT_NAME: z.string().min(1),
+  TELEGRAM_BOT_USERNAME: z.string().regex(/^[A-Za-z0-9_]{5,32}$/),
+  TELEGRAM_MINI_APP_SHORT_NAME: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/),
 });
 
 const tonSchema = z.object({
@@ -31,7 +55,7 @@ const tonSchema = z.object({
   NFT_METADATA_BASE_URL: z.string().url(),
 });
 
-const databaseSchema = schema.pick({
+const databaseSchema = baseSchema.pick({
   SUPABASE_URL: true,
   SUPABASE_SERVICE_ROLE_KEY: true,
 });

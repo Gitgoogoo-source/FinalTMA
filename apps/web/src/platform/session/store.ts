@@ -17,6 +17,7 @@ export type Session = {
   accountStatus: "normal" | "banned";
   expiresAt: string;
   generation: string;
+  entryKind: "direct" | "referral" | "battle";
   entryHandoffState: "pending" | "complete";
   entryHandoffCode: string | null;
   entryHandoffResult: EntryHandoffResult | null;

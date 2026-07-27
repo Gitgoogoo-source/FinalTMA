@@ -36,11 +36,36 @@ interface TelegramWebApp {
     callback?: (status: "paid" | "cancelled" | "failed" | "pending") => void,
   ): void;
   openTelegramLink(url: string): void;
+  shareMessage?(messageId: string, callback?: (shared: boolean) => void): void;
   enableClosingConfirmation(): void;
   disableClosingConfirmation(): void;
   setHeaderColor(color: string): void;
   setBackgroundColor(color: string): void;
+  onEvent(event: "shareMessageSent", callback: () => void): void;
+  onEvent(
+    event: "shareMessageFailed",
+    callback: (payload: {
+      error:
+        | "UNSUPPORTED"
+        | "MESSAGE_EXPIRED"
+        | "MESSAGE_SEND_FAILED"
+        | "USER_DECLINED"
+        | "UNKNOWN_ERROR";
+    }) => void,
+  ): void;
   onEvent(event: string, callback: () => void): void;
+  offEvent(event: "shareMessageSent", callback: () => void): void;
+  offEvent(
+    event: "shareMessageFailed",
+    callback: (payload: {
+      error:
+        | "UNSUPPORTED"
+        | "MESSAGE_EXPIRED"
+        | "MESSAGE_SEND_FAILED"
+        | "USER_DECLINED"
+        | "UNKNOWN_ERROR";
+    }) => void,
+  ): void;
   offEvent(event: string, callback: () => void): void;
 }
 
