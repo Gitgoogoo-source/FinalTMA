@@ -11,7 +11,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import type { ReactNode } from "react";
+import type { ReactNode, RefObject } from "react";
 import type {
   BattleCurrentResult,
   BattleEntryTier,
@@ -28,6 +28,7 @@ import {
   formatBattleTime,
   tierTitle,
 } from "../labels.ts";
+import { BattleModal } from "./BattleModal.tsx";
 import { TeamSelector, type BattleTeamSlots } from "./TeamSelector.tsx";
 
 type TeamOption = RouteOutput<"battle.team_options">["items"][number];
@@ -589,31 +590,36 @@ export function BattleResultPending({
 
 export function BattleCancelSheet({
   pending,
+  backgroundRef,
   onClose,
   onConfirm,
 }: {
   pending: boolean;
+  backgroundRef: RefObject<HTMLElement | null>;
   onClose(): void;
   onConfirm(): void;
 }): ReactNode {
   return (
-    <div className="battle-sheet-backdrop" role="dialog" aria-modal="true">
-      <div className="battle-cancel-sheet">
-        <span className="battle-sheet-kicker">CANCEL CHALLENGE</span>
-        <h2>取消等待中的挑战？</h2>
-        <p>
-          服务端将在同一终结事务中退款并释放三宠占用。前端不会提前宣称成功。
-        </p>
-        <div>
-          <Button className="secondary" disabled={pending} onClick={onClose}>
-            继续等待
-          </Button>
-          <Button className="danger" disabled={pending} onClick={onConfirm}>
-            {pending ? "正在等待服务器裁决" : "确认取消"}
-          </Button>
-        </div>
+    <BattleModal
+      labelledBy="battle-cancel-title"
+      panelClassName="battle-cancel-sheet"
+      backgroundRef={backgroundRef}
+      dismissible
+      closeLabel="关闭取消挑战确认"
+      onClose={onClose}
+    >
+      <span className="battle-sheet-kicker">CANCEL CHALLENGE</span>
+      <h2 id="battle-cancel-title">取消等待中的挑战？</h2>
+      <p>服务端将在同一终结事务中退款并释放三宠占用。前端不会提前宣称成功。</p>
+      <div>
+        <Button className="secondary" disabled={pending} onClick={onClose}>
+          继续等待
+        </Button>
+        <Button className="danger" disabled={pending} onClick={onConfirm}>
+          {pending ? "正在等待服务器裁决" : "确认取消"}
+        </Button>
       </div>
-    </div>
+    </BattleModal>
   );
 }
 

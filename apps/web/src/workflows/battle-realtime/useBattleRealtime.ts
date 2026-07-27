@@ -4,6 +4,14 @@ import { battleRealtimeInvalidationSchema } from "@pokepets/api-contracts/app";
 
 import { apiRequest } from "../../platform/api/client.ts";
 
+const uuidPattern =
+  "[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}";
+const battleChannelPatterns = [
+  new RegExp(`^battle:user:${uuidPattern}$`, "i"),
+  new RegExp(`^battle:room:${uuidPattern}$`, "i"),
+  /^battle:invite:[0-9a-f]{64}$/,
+] as const;
+
 export type BattleRealtimePhase =
   | "idle"
   | "preparing_share"
@@ -144,7 +152,16 @@ export function useBattleRealtime({
               { signal: controller.signal },
             )
               .then((result) => {
-                if (!disposed) callback(null, result.data);
+                if (disposed) return;
+                const refreshed = parseAuthorizedChannels(
+                  result.data.capability,
+                );
+                if (!refreshed || !sameChannels(refreshed, authorized)) {
+                  setStatus("offline");
+                  callback("BATTLE_REALTIME_CAPABILITY_INVALID", null);
+                  return;
+                }
+                callback(null, result.data);
               })
               .catch((cause: unknown) => {
                 if (!disposed)
@@ -243,7 +260,8 @@ function parseAuthorizedChannels(capability: string): string[] | null {
     const channels: string[] = [];
     for (const [channel, operations] of Object.entries(parsed)) {
       if (
-        !channel ||
+        hasWildcardSyntax(channel) ||
+        !battleChannelPatterns.some((pattern) => pattern.test(channel)) ||
         !Array.isArray(operations) ||
         operations.length !== 1 ||
         operations[0] !== "subscribe"
@@ -255,6 +273,22 @@ function parseAuthorizedChannels(capability: string): string[] | null {
   } catch {
     return null;
   }
+}
+
+function hasWildcardSyntax(channel: string): boolean {
+  return ["*", "?", "[", "]", "{", "}", "#", ">"].some((marker) =>
+    channel.includes(marker),
+  );
+}
+
+function sameChannels(
+  left: readonly string[],
+  right: readonly string[],
+): boolean {
+  return (
+    left.length === right.length &&
+    left.every((channel, index) => channel === right[index])
+  );
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

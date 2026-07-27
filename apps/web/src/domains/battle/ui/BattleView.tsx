@@ -5,6 +5,7 @@ import {
   useRef,
   useState,
   type ReactNode,
+  type RefObject,
 } from "react";
 import {
   battleTeamSelectionSchema,
@@ -108,6 +109,7 @@ export function BattleView(): ReactNode {
     () => telegram()?.isActive !== false,
   );
   const [lifecycleReady, setLifecycleReady] = useState(false);
+  const battleRootRef = useRef<HTMLDivElement>(null);
   const handledResume = useRef(new Set<string>());
   const waitingRoomRef = useRef<string | null>(null);
   const offlineSent = useRef(false);
@@ -139,6 +141,14 @@ export function BattleView(): ReactNode {
   const command = useBattleCommand(refetchAuthority);
   const commandPending =
     command.state.phase === "submitted" || command.state.phase === "recovering";
+
+  useEffect(() => {
+    if (pageActive) return;
+    queueMicrotask(() => {
+      setCancelOpen(false);
+      setSwitchOpen(false);
+    });
+  }, [pageActive]);
 
   useEffect(() => {
     let cancelled = false;
@@ -479,9 +489,7 @@ export function BattleView(): ReactNode {
       setFeedback(null);
       return;
     }
-    setFeedback("服务器已确认房间，正在读取权威快照");
     setFlow(null);
-    await refetchAuthority();
     setFeedback(null);
   };
 
@@ -519,7 +527,6 @@ export function BattleView(): ReactNode {
     applySnapshot(snapshot);
     setFlow(null);
     setResumeNotice(null);
-    await refetchAuthority();
     setFeedback(null);
   };
 
@@ -530,8 +537,6 @@ export function BattleView(): ReactNode {
     });
     if (!response) return;
     setCancelOpen(false);
-    setFeedback("服务器已确认取消，正在刷新退款与藏品占用");
-    await refetchAuthority();
     setFeedback(null);
   };
 
@@ -640,6 +645,8 @@ export function BattleView(): ReactNode {
       commandPending={commandPending}
       actionIntent={actionIntent}
       switchOpen={switchOpen}
+      modalActive={pageActive}
+      modalBackgroundRef={battleRootRef}
       acknowledging={acknowledging}
       clock={clock}
       realtimeOffline={realtime === "offline"}
@@ -676,7 +683,11 @@ export function BattleView(): ReactNode {
   );
 
   return (
-    <div className="battle-root" data-battle-page-state={pageState}>
+    <div
+      ref={battleRootRef}
+      className="battle-root"
+      data-battle-page-state={pageState}
+    >
       {content}
       {feedback || commandMessage || queryError ? (
         <div
@@ -700,9 +711,10 @@ export function BattleView(): ReactNode {
           ) : null}
         </div>
       ) : null}
-      {cancelOpen ? (
+      {cancelOpen && pageActive ? (
         <BattleCancelSheet
           pending={commandPending}
+          backgroundRef={battleRootRef}
           onClose={() => setCancelOpen(false)}
           onConfirm={() => void cancel()}
         />
@@ -726,6 +738,8 @@ function BattleState({
   commandPending,
   actionIntent,
   switchOpen,
+  modalActive,
+  modalBackgroundRef,
   acknowledging,
   clock,
   realtimeOffline,
@@ -761,6 +775,8 @@ function BattleState({
   commandPending: boolean;
   actionIntent: string | null;
   switchOpen: boolean;
+  modalActive: boolean;
+  modalBackgroundRef: RefObject<HTMLElement | null>;
   acknowledging: boolean;
   clock: ReturnType<typeof useBattleDeadline>;
   realtimeOffline: boolean;
@@ -825,6 +841,8 @@ function BattleState({
         actionIntent={actionIntent}
         commandPending={commandPending}
         switchOpen={switchOpen}
+        modalActive={modalActive}
+        modalBackgroundRef={modalBackgroundRef}
         setSwitchOpen={setSwitchOpen}
         onAttack={attack}
         onSwitch={voluntarySwitch}

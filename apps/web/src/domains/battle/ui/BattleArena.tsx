@@ -4,10 +4,9 @@ import {
   LockKeyhole,
   Shield,
   Swords,
-  X,
   Zap,
 } from "lucide-react";
-import { useRef, type ReactNode } from "react";
+import { useRef, type ReactNode, type RefObject } from "react";
 import type {
   BattleResolutionEventDto,
   BattleRoomSnapshotDto,
@@ -17,6 +16,7 @@ import type {
 import { Button, CatalogImage } from "../../../shared/ui/index.tsx";
 import { battleRarityLabels, formatBattleTime } from "../labels.ts";
 import { useBattleAnimation } from "../useBattleAnimation.ts";
+import { BattleModal } from "./BattleModal.tsx";
 
 type SelfMember = BattleSelfTeamDto[number];
 type SkillPosition = SelfMember["skills"][number]["position"];
@@ -28,6 +28,8 @@ export function BattleArena({
   actionIntent,
   commandPending,
   switchOpen,
+  modalActive,
+  modalBackgroundRef,
   setSwitchOpen,
   onAttack,
   onSwitch,
@@ -38,6 +40,8 @@ export function BattleArena({
   actionIntent: string | null;
   commandPending: boolean;
   switchOpen: boolean;
+  modalActive: boolean;
+  modalBackgroundRef: RefObject<HTMLElement | null>;
   setSwitchOpen(open: boolean): void;
   onAttack(position: SkillPosition, name: string): void;
   onSwitch(slot: TeamSlot, name: string): void;
@@ -53,6 +57,7 @@ export function BattleArena({
     snapshot.viewer_action_state === "available" && !commandPending;
   useBattleAnimation({
     arenaRef,
+    roomId: snapshot.room_id,
     resolution: snapshot.resolution_event,
     serverTime: snapshot.server_time,
   });
@@ -165,47 +170,48 @@ export function BattleArena({
         </section>
       ) : null}
 
-      {switchOpen && snapshot.status === "active_select" ? (
+      {modalActive && switchOpen && snapshot.status === "active_select" ? (
         <SwitchSheet
           title="主动换宠"
           description="选择后立即提交并消耗本回合，换入宠物承受对手本回合攻击。"
           candidates={candidates}
           disabled={!available}
+          backgroundRef={modalBackgroundRef}
           close={() => setSwitchOpen(false)}
           choose={onSwitch}
         />
       ) : null}
 
-      {snapshot.status === "forced_switch" ? (
-        <div className="battle-forced-overlay" role="dialog" aria-modal="true">
-          <div className="battle-forced-sheet">
-            <span className="battle-sheet-kicker">FORCED SWITCH</span>
-            <h2>选择存活宠物换入</h2>
-            {snapshot.viewer_action_state === "locked" ? (
-              <ActionStatus
-                icon={<LockKeyhole />}
-                text="已锁定，等待服务器推进"
-              />
-            ) : snapshot.viewer_action_state === "not_applicable" ? (
-              <ActionStatus
-                icon={<Clock3 />}
-                text="当前无需提交，等待服务器推进"
-              />
-            ) : actionIntent ? (
-              <ActionStatus
-                icon={<Clock3 />}
-                text={`已提交：${actionIntent}`}
-              />
-            ) : (
-              <SwitchCandidates
-                candidates={candidates}
-                disabled={commandPending}
-                choose={onForcedSwitch}
-              />
-            )}
-            <p>本地倒计时归零只会重新读取权威状态，前端不会代替你选择。</p>
-          </div>
-        </div>
+      {modalActive && snapshot.status === "forced_switch" ? (
+        <BattleModal
+          labelledBy="battle-forced-switch-title"
+          panelClassName="battle-forced-sheet"
+          backgroundRef={modalBackgroundRef}
+          dismissible={false}
+        >
+          <span className="battle-sheet-kicker">FORCED SWITCH</span>
+          <h2 id="battle-forced-switch-title">选择存活宠物换入</h2>
+          {snapshot.viewer_action_state === "locked" ? (
+            <ActionStatus
+              icon={<LockKeyhole />}
+              text="已锁定，等待服务器推进"
+            />
+          ) : snapshot.viewer_action_state === "not_applicable" ? (
+            <ActionStatus
+              icon={<Clock3 />}
+              text="当前无需提交，等待服务器推进"
+            />
+          ) : actionIntent ? (
+            <ActionStatus icon={<Clock3 />} text={`已提交：${actionIntent}`} />
+          ) : (
+            <SwitchCandidates
+              candidates={candidates}
+              disabled={commandPending}
+              choose={onForcedSwitch}
+            />
+          )}
+          <p>本地倒计时归零只会重新读取权威状态，前端不会代替你选择。</p>
+        </BattleModal>
       ) : null}
     </section>
   );
@@ -376,6 +382,7 @@ function SwitchSheet({
   description,
   candidates,
   disabled,
+  backgroundRef,
   close,
   choose,
 }: {
@@ -383,32 +390,30 @@ function SwitchSheet({
   description: string;
   candidates: readonly SelfMember[];
   disabled: boolean;
+  backgroundRef: RefObject<HTMLElement | null>;
   close(): void;
   choose(slot: TeamSlot, name: string): void;
 }): ReactNode {
   return (
-    <div className="battle-sheet-backdrop" role="dialog" aria-modal="true">
-      <div className="battle-switch-sheet">
-        <button
-          type="button"
-          className="battle-sheet-close"
-          aria-label="关闭换宠选择"
-          onClick={close}
-        >
-          <X />
-        </button>
-        <h2>{title}</h2>
-        <p>{description}</p>
-        <SwitchCandidates
-          candidates={candidates}
-          disabled={disabled}
-          choose={(slot, name) => {
-            close();
-            choose(slot, name);
-          }}
-        />
-      </div>
-    </div>
+    <BattleModal
+      labelledBy="battle-voluntary-switch-title"
+      panelClassName="battle-switch-sheet"
+      backgroundRef={backgroundRef}
+      dismissible
+      closeLabel="关闭换宠选择"
+      onClose={close}
+    >
+      <h2 id="battle-voluntary-switch-title">{title}</h2>
+      <p>{description}</p>
+      <SwitchCandidates
+        candidates={candidates}
+        disabled={disabled}
+        choose={(slot, name) => {
+          close();
+          choose(slot, name);
+        }}
+      />
+    </BattleModal>
   );
 }
 

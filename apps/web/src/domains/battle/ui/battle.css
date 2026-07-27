@@ -16,7 +16,8 @@
 }
 
 .battle-root button:focus-visible,
-.battle-root input:focus-visible {
+.battle-root input:focus-visible,
+.battle-sheet-backdrop button:focus-visible {
   outline: 3px solid color-mix(in srgb, var(--battle-orange) 55%, white);
   outline-offset: 2px;
 }
@@ -1296,8 +1297,7 @@
   color: var(--battle-orange);
 }
 
-.battle-sheet-backdrop,
-.battle-forced-overlay {
+.battle-sheet-backdrop {
   position: fixed;
   z-index: 100;
   inset: 0;
@@ -1389,12 +1389,6 @@
 .battle-switch-candidates span {
   color: var(--battle-muted);
   font-size: 9px;
-}
-
-.battle-forced-overlay {
-  position: absolute;
-  z-index: 15;
-  background: rgba(34, 43, 48, 0.36);
 }
 
 .battle-cancel-sheet > div {
@@ -1584,7 +1578,11 @@
 @media (prefers-reduced-motion: reduce) {
   .battle-root *,
   .battle-root *::before,
-  .battle-root *::after {
+  .battle-root *::after,
+  .battle-sheet-backdrop,
+  .battle-sheet-backdrop *,
+  .battle-sheet-backdrop *::before,
+  .battle-sheet-backdrop *::after {
     scroll-behavior: auto !important;
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;

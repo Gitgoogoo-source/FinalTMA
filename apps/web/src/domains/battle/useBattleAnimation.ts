@@ -87,76 +87,138 @@ const trajectories: Record<TrajectoryKey, (direction: 1 | -1) => Keyframe[]> = {
 
 export function useBattleAnimation({
   arenaRef,
+  roomId,
   resolution,
   serverTime,
 }: {
   arenaRef: RefObject<HTMLDivElement | null>;
+  roomId: string;
   resolution: BattleResolutionEventDto | null;
   serverTime: string | null;
 }): void {
   const played = useRef(new Set<string>());
-  const currentResolution = useRef(resolution);
+  const playedRoom = useRef<string | null>(null);
+  const latest = useRef({
+    resolution,
+    serverTime,
+    clockOffset: 0,
+  });
+  const currentIdentity = useRef<string | null>(null);
+  const animationRun = useRef(0);
+  const scheduledFrame = useRef<number | null>(null);
+
+  const identity =
+    resolution && serverTime ? `${roomId}:${eventKey(resolution)}` : null;
 
   useEffect(() => {
-    currentResolution.current = resolution;
-  }, [resolution]);
+    latest.current = {
+      resolution,
+      serverTime,
+      clockOffset: serverTime ? Date.parse(serverTime) - Date.now() : 0,
+    };
+  }, [resolution, serverTime]);
+
+  useEffect(() => {
+    if (playedRoom.current === roomId) return;
+    played.current.clear();
+    playedRoom.current = roomId;
+    currentIdentity.current = null;
+  }, [roomId]);
 
   useEffect(() => {
     const arena = arenaRef.current;
     if (!arena) return;
-    const cancel = () => {
-      arena.getAnimations({ subtree: true }).forEach((animation) => {
-        animation.cancel();
-      });
-      const event = currentResolution.current;
-      if (event) played.current.add(eventKey(event));
-    };
+    const playedEvents = played.current;
     const onVisibility = () => {
-      if (document.visibilityState === "hidden") cancel();
+      if (document.visibilityState !== "hidden") return;
+      if (currentIdentity.current) playedEvents.add(currentIdentity.current);
+      cancelAnimation(arena, animationRun, scheduledFrame);
     };
     document.addEventListener("visibilitychange", onVisibility);
     return () => {
       document.removeEventListener("visibilitychange", onVisibility);
-      cancel();
+      cancelAnimation(arena, animationRun, scheduledFrame);
+      playedEvents.clear();
+      playedRoom.current = null;
+      currentIdentity.current = null;
     };
   }, [arenaRef]);
 
   useEffect(() => {
     const arena = arenaRef.current;
-    if (!arena || !resolution || !serverTime) return;
-    const key = eventKey(resolution);
-    const offset = Date.parse(serverTime) - Date.now();
+    if (!arena) return;
+    const previousIdentity = currentIdentity.current;
+    if (previousIdentity && previousIdentity !== identity)
+      played.current.add(previousIdentity);
+    currentIdentity.current = identity;
+    cancelAnimation(arena, animationRun, scheduledFrame);
+    if (!identity) return;
+
     if (
-      played.current.has(key) ||
-      Date.parse(resolution.reveal_ends_at) <= Date.now() + offset ||
+      played.current.has(identity) ||
       document.visibilityState !== "visible"
     ) {
-      played.current.add(key);
+      played.current.add(identity);
       return;
     }
-    let cancelled = false;
-    const frame = window.requestAnimationFrame(() => {
-      if (cancelled || played.current.has(key)) return;
-      played.current.add(key);
-      void playResolution(arena, resolution);
+
+    const run = animationRun.current;
+    scheduledFrame.current = window.requestAnimationFrame(() => {
+      scheduledFrame.current = null;
+      const current = latest.current;
+      if (
+        run !== animationRun.current ||
+        currentIdentity.current !== identity ||
+        played.current.has(identity) ||
+        !current.resolution ||
+        !current.serverTime ||
+        `${roomId}:${eventKey(current.resolution)}` !== identity
+      )
+        return;
+      if (isPastReveal(current) || document.visibilityState !== "visible") {
+        played.current.add(identity);
+        return;
+      }
+      played.current.add(identity);
+      void playResolution(
+        arena,
+        identity,
+        () => latest.current,
+        () =>
+          run !== animationRun.current || currentIdentity.current !== identity,
+      );
     });
     return () => {
-      cancelled = true;
-      window.cancelAnimationFrame(frame);
-      arena.getAnimations({ subtree: true }).forEach((animation) => {
-        animation.cancel();
-      });
+      cancelAnimation(arena, animationRun, scheduledFrame);
     };
-  }, [arenaRef, resolution, serverTime]);
+  }, [arenaRef, identity, roomId]);
 }
 
 async function playResolution(
   arena: HTMLDivElement,
-  resolution: BattleResolutionEventDto,
+  identity: string,
+  latest: () => {
+    resolution: BattleResolutionEventDto | null;
+    serverTime: string | null;
+    clockOffset: number;
+  },
+  cancelled: () => boolean,
 ): Promise<void> {
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  for (const action of resolution.actions) {
-    if (document.visibilityState !== "visible") return;
+  let actionIndex = 0;
+  while (!cancelled()) {
+    const currentState = latest();
+    const current = currentState.resolution;
+    if (
+      !current ||
+      isPastReveal(currentState) ||
+      !identity.endsWith(`:${eventKey(current)}`) ||
+      actionIndex >= current.actions.length ||
+      document.visibilityState !== "visible"
+    )
+      return;
+    const action = current.actions[actionIndex];
+    if (!action) return;
     const actor = actorElement(arena, action.actor);
     const target = actorElement(
       arena,
@@ -167,13 +229,17 @@ async function playResolution(
       if (!effect) {
         console.error("Battle effect key is unavailable", {
           effect_key: action.effect_key,
-          event_id: resolution.event_id,
+          event_id: current.event_id,
         });
+        actionIndex += 1;
         continue;
       }
-      if (reduced) continue;
+      if (reduced) {
+        actionIndex += 1;
+        continue;
+      }
       await playAttack(arena, actor, target, effect, action.hit);
-      if (action.knockout && target) await playKnockout(target);
+      if (!cancelled() && action.knockout && target) await playKnockout(target);
     } else if (!reduced && actor) {
       await finished(
         actor.animate(
@@ -186,6 +252,7 @@ async function playResolution(
         ),
       );
     }
+    actionIndex += 1;
   }
 }
 
@@ -307,6 +374,43 @@ function isTrajectory(value: string): value is TrajectoryKey {
 
 function eventKey(event: BattleResolutionEventDto): string {
   return `${event.event_id}:${event.state_version}`;
+}
+
+function isPastReveal({
+  resolution,
+  serverTime,
+  clockOffset,
+}: {
+  resolution: BattleResolutionEventDto | null;
+  serverTime: string | null;
+  clockOffset: number;
+}): boolean {
+  return (
+    !resolution ||
+    !serverTime ||
+    Date.parse(resolution.reveal_ends_at) <= Date.now() + clockOffset
+  );
+}
+
+function cancelAnimation(
+  arena: HTMLDivElement,
+  animationRun: { current: number },
+  scheduledFrame: { current: number | null },
+): void {
+  animationRun.current += 1;
+  if (scheduledFrame.current !== null) {
+    window.cancelAnimationFrame(scheduledFrame.current);
+    scheduledFrame.current = null;
+  }
+  arena.getAnimations({ subtree: true }).forEach((animation) => {
+    animation.cancel();
+  });
+  const layer = arena.querySelector<HTMLElement>("[data-battle-effect-layer]");
+  if (!layer) return;
+  delete layer.dataset.element;
+  layer.style.removeProperty("--battle-effect-primary");
+  layer.style.removeProperty("--battle-effect-secondary");
+  layer.style.removeProperty("--battle-effect-glow");
 }
 
 function finished(animation: Animation): Promise<void> {

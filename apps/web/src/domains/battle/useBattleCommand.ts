@@ -107,11 +107,6 @@ export function useBattleCommand(refetchAuthority: () => Promise<void>): {
         const failure = toFailure(cause, operationId);
         if (!isUnknownResult(failure)) {
           await applyFailureScopes(failure.code);
-          if (
-            isErrorCode(failure.code) &&
-            errorDefinition(failure.code).recoveryAction === "refresh"
-          )
-            await refetchRef.current().catch(() => undefined);
           assertGeneration(generation);
           setState({
             routeId,
@@ -152,11 +147,6 @@ export function useBattleCommand(refetchAuthority: () => Promise<void>): {
           return recovered.data;
         }
         await applyFailureScopes(recovered.failure.code);
-        if (
-          isErrorCode(recovered.failure.code) &&
-          errorDefinition(recovered.failure.code).recoveryAction === "refresh"
-        )
-          await refetchRef.current().catch(() => undefined);
         assertGeneration(generation);
         setState({
           routeId,

@@ -38,7 +38,8 @@ export function InventoryView({
   const catalog = useApiQuery("catalog.get", {}, Boolean(targetId));
   const { templateIds: newTemplateIds, clearNew } = useNewMarkers();
   const navigate = useNavigate();
-  const items = (query.data?.items ?? []).filter((item) => item.total > 0);
+  const ownedItems = (query.data?.items ?? []).filter((item) => item.total > 0);
+  const selectableItems = ownedItems.filter((item) => item.available > 0);
   const [selection, setSelection] = useState({
     targetId,
     selectedId: targetId,
@@ -53,24 +54,34 @@ export function InventoryView({
   const actionsRef = useRef<HTMLDivElement>(null);
   const missingTargetRef = useRef<HTMLElement>(null);
   const focusedTarget = useRef("");
-  const targetOwned = items.some(
+  const targetOwned = ownedItems.some(
     (candidate) => candidate.template_id === targetId,
   );
-  const effectiveId = items.some((item) => item.template_id === selectedId)
-    ? selectedId
-    : targetId && !targetOwned
-      ? ""
-      : (items[0]?.template_id ?? "");
-  const item = items.find((candidate) => candidate.template_id === effectiveId);
+  const effectiveId =
+    targetId && targetOwned
+      ? targetId
+      : selectableItems.some((item) => item.template_id === selectedId)
+        ? selectedId
+        : targetId
+          ? ""
+          : (selectableItems[0]?.template_id ??
+            ownedItems[0]?.template_id ??
+            "");
+  const item = ownedItems.find(
+    (candidate) => candidate.template_id === effectiveId,
+  );
   const imageReady = imageState.templateId === effectiveId && imageState.ready;
   const targetTemplate = catalog.data?.templates.find(
     (candidate) => candidate.id === targetId,
   );
   const itemIsNew = Boolean(item && newTemplateIds.has(item.template_id));
   const thumbnailPages = Array.from(
-    { length: Math.ceil(items.length / thumbnailPageSize) },
+    { length: Math.ceil(selectableItems.length / thumbnailPageSize) },
     (_, index) =>
-      items.slice(index * thumbnailPageSize, (index + 1) * thumbnailPageSize),
+      selectableItems.slice(
+        index * thumbnailPageSize,
+        (index + 1) * thumbnailPageSize,
+      ),
   );
   useEffect(() => {
     if (!item || targetId !== item.template_id || targetAction === "evolve")
@@ -169,7 +180,7 @@ export function InventoryView({
                             key={candidate.template_id}
                             className={selected ? "selected" : ""}
                             aria-pressed={selected}
-                            aria-label={`选择${candidate.name}，${rarityLabels[candidate.rarity]}，第 ${candidate.stage} 阶，可用 ${candidate.available} 个${candidate.battling > 0 ? `，Battle 中 ${candidate.battling} 个` : ""}${isNew ? "，本次新获得" : ""}`}
+                            aria-label={`选择${candidate.name}，${rarityLabels[candidate.rarity]}，第 ${candidate.stage} 阶，可用 ${candidate.available} 个${isNew ? "，本次新获得" : ""}`}
                             onClick={() => {
                               if (!selected) {
                                 setSelection({
@@ -190,7 +201,7 @@ export function InventoryView({
                             />
                             <i className={`rarity-mark ${candidate.rarity}`} />
                             <span className="inventory-quantity-badge">
-                              ×{candidate.total}
+                              ×{candidate.available}
                             </span>
                             {isNew && <b className="new-marker">NEW</b>}
                           </button>
@@ -250,7 +261,7 @@ export function InventoryView({
           </div>
         )}
       </PageState>
-      {!query.isLoading && items.length === 0 && !targetId && (
+      {!query.isLoading && ownedItems.length === 0 && !targetId && (
         <Card>
           <h2>当前没有可用藏品。</h2>
           <p>当前账号尚未持有藏品。</p>
