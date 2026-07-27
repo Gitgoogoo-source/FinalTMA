@@ -20,7 +20,11 @@ import {
   apiKeepaliveRequest,
   apiRequest,
 } from "../../../platform/api/client.ts";
-import { seedApiQuery, useApiQuery } from "../../../platform/query/index.ts";
+import {
+  refreshTopAssetSummary,
+  seedApiQuery,
+  useApiQuery,
+} from "../../../platform/query/index.ts";
 import { useSession } from "../../../platform/session/store.ts";
 import {
   sharePreparedMessage,
@@ -203,6 +207,7 @@ export function BattleView(): ReactNode {
     (bootstrap.data ? null : (identity.data?.battle_result ?? null));
   const result =
     currentResult?.room_id === dismissedResult ? null : currentResult;
+  const resultRoomId = result?.room_id ?? null;
   const inviteRoom = isInviteRoom(invite.data) ? invite.data : null;
   const pageState = derivePageState({
     result: Boolean(result),
@@ -226,6 +231,11 @@ export function BattleView(): ReactNode {
         (pageState === "accept" && inviteRoom?.invite_status === "available")),
   );
   const balance = identity.data?.assets.kcoin.available ?? null;
+
+  useEffect(() => {
+    if (!resultRoomId) return;
+    void refreshTopAssetSummary();
+  }, [resultRoomId]);
 
   useEffect(() => {
     let cancelled = false;
