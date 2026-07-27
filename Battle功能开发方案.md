@@ -616,6 +616,8 @@ Telegram 明确返回失败时立即调用 `api.battle_abort_share`。响应未�
 
 原生分享弹窗被用户关闭或发送失败不会自动取消已经激活的等待房；创建者继续重试分享或主动取消房间。
 
+刷新、重认证或创建响应丢失后，Web 先从 identity participation 定位原 room，再调用既有 `GET /api/battle/rooms/:room_id`。`BattleRoomSnapshotDto.prepare_deadline` 只在当前 viewer 是创建者且 room 为 `preparing_share` 时返回时间，否则固定为 `null`；`prepared_message_id` 只在当前 viewer 是创建者、prepared share 已激活且 room 仍为 `waiting` 时返回，其他 viewer 或状态固定为 `null`。`prepared_message_id` 长度固定为 1—256 个字符。响应不返回原始 `BTL_` token、创建 operation 机密、Telegram user ID、Bot token 或 prepared payload。
+
 ### 9.2 Battle 入口参数
 
 身份入口只接受两种互斥格式：
@@ -703,6 +705,16 @@ Battle 入口：BTL_[A-Za-z0-9_-]{32}
 
 余额与库存继续使用现有 `INSUFFICIENT_BALANCE`、`INSUFFICIENT_INVENTORY`、`INVENTORY_RESERVED`。每个错误在 `errorRegistry` 固定 HTTP 状态、用户文案、刷新范围和恢复动作，并在各 route contract 显式声明。
 
+### 10.4 Viewer-specific 恢复字段
+
+既有 `BattleRoomSnapshotDto` 固定增加三个数据库权威字段，不增加公共类型或路由：
+
+- `prepare_deadline: timestamp | null` 与 `prepared_message_id: string | null` 使用第 9.1 节的 creator-only 裁剪和统一 `null` 语义。
+- `viewer_action_state: "not_applicable" | "available" | "locked"` 只描述当前 viewer 在当前 room、当前回合、当前 phase 的提交状态。`active_select` 中当前 viewer 未提交且数据库 deadline 未到时为 `available`，已有当前 normal action 时为 `locked`；`forced_switch` 中只有当前 viewer 确实需要换宠时才进入 `available/locked`，无需换宠的一方为 `not_applicable`；其他 room 状态或 deadline 已到且尚未由 tick 推进时为 `not_applicable`。
+- 数据库只查询当前 viewer 的 action，不返回或暗示对手是否锁定，也不返回当前 viewer 已锁定动作的种类、技能、目标或其他秘密输入。
+
+`BattleResolutionEventDto.actions` 保持按 `kind` 严格判别。`attack` 分支必须返回数据库随已裁决 skill 写入的 `effect_key`，格式固定为 `^(fire|grass|earth|lightning|water)-(0[1-9]|10)$`；`switch` 与 `forced_switch` 分支禁止该字段。Function 和 Web 不从 `skill_name`、属性或技能位置反推效果键。
+
 ## 11. Web 页面与交互
 
 ### 11.1 页面状态
@@ -726,6 +738,7 @@ Battle 入口：BTL_[A-Za-z0-9_-]{32}
 - 点击创建时立即禁用提交和编辑，显示不带成功结论的准备动画。
 - 点击接受时立即锁定本地表单并显示“正在确认对战资格”，不提前扣减页面余额。
 - 点击技能或换宠后立即显示“已提交”，禁用本回合全部动作；只有服务端成功响应才显示“已锁定”。
+- 动作响应丢失、刷新或重认证后，页面只按 `BattleRoomSnapshotDto.viewer_action_state` 恢复按钮状态；`locked` 禁止本回合重新选择，`available` 允许当前 viewer 提交，`not_applicable` 不提供动作入口。
 - 服务端拒绝、状态过期或快照冲突时撤销临时状态，重新读取 room、inventory 和 assets。
 - 命中、伤害和击倒动画只消费服务端 resolution event，不在浏览器重算。
 - `prefers-reduced-motion` 下使用静态状态切换，服务端 3 秒展示窗口和业务时序不变。
@@ -793,20 +806,20 @@ Battle 入口：BTL_[A-Za-z0-9_-]{32}
 
 ### 12.4 恢复
 
-| 故障                  | 固定处理                                                              |
-| --------------------- | --------------------------------------------------------------------- |
-| 创建 API 响应丢失     | 查询原 operation；share integration 继续同一 room，绝不创建第二个房间 |
-| Telegram 明确创建失败 | 原操作失败、立即退款并释放                                            |
-| Telegram 结果未知     | 60 秒内服务端恢复；超时作废并退款                                     |
-| 接受响应丢失          | 查询原 operation 与当前 Battle snapshot；不再次锁币                   |
-| 动作响应丢失          | 查询原 operation/room；已锁定动作不可重选                             |
-| Ably 断线             | 自动进入 1–2 秒短轮询                                                 |
-| WebView 关闭          | 等待房进入 90 秒重连；战斗中按超时技能继续                            |
-| pg_cron 短暂停止      | 恢复后按数据库 deadline 追赶                                          |
-| 永久状态不变量错误    | 原子 `voided`、双方退款、释放、写 invariant violation                 |
-| 等待期间创建者被封禁  | 房间取消并退款；账号继续遵循全局空白门禁                              |
-| 开战后任一账号被封禁  | 前端保持全局空白，战斗继续托管至正常终局                              |
-| 规则版本更新          | 旧房使用创建时快照，新房使用新激活版本                                |
+| 故障                  | 固定处理                                                                                                                                                                  |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 创建 API 响应丢失     | 查询原 operation、identity participation 与 room snapshot；share integration 继续同一 room，创建者按 `prepare_deadline` 或 `prepared_message_id` 恢复，绝不创建第二个房间 |
+| Telegram 明确创建失败 | 原操作失败、立即退款并释放                                                                                                                                                |
+| Telegram 结果未知     | 60 秒内服务端恢复；超时作废并退款                                                                                                                                         |
+| 接受响应丢失          | 查询原 operation 与当前 Battle snapshot；不再次锁币                                                                                                                       |
+| 动作响应丢失          | 查询原 operation/room；以数据库 `viewer_action_state` 恢复，`locked` 动作不可重选                                                                                         |
+| Ably 断线             | 自动进入 1–2 秒短轮询                                                                                                                                                     |
+| WebView 关闭          | 等待房进入 90 秒重连；战斗中按超时技能继续                                                                                                                                |
+| pg_cron 短暂停止      | 恢复后按数据库 deadline 追赶                                                                                                                                              |
+| 永久状态不变量错误    | 原子 `voided`、双方退款、释放、写 invariant violation                                                                                                                     |
+| 等待期间创建者被封禁  | 房间取消并退款；账号继续遵循全局空白门禁                                                                                                                                  |
+| 开战后任一账号被封禁  | 前端保持全局空白，战斗继续托管至正常终局                                                                                                                                  |
+| 规则版本更新          | 旧房使用创建时快照，新房使用新激活版本                                                                                                                                    |
 
 ### 12.5 当场结果恢复
 

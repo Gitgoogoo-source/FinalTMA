@@ -21206,6 +21206,34 @@
                                     { "type": "null" }
                                   ]
                                 },
+                                "prepare_deadline": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "format": "date-time",
+                                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                    },
+                                    { "type": "null" }
+                                  ]
+                                },
+                                "prepared_message_id": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 256
+                                    },
+                                    { "type": "null" }
+                                  ]
+                                },
+                                "viewer_action_state": {
+                                  "type": "string",
+                                  "enum": [
+                                    "not_applicable",
+                                    "available",
+                                    "locked"
+                                  ]
+                                },
                                 "server_time": {
                                   "type": "string",
                                   "format": "date-time",
@@ -21348,8 +21376,7 @@
                                             },
                                             "effect_key": {
                                               "type": "string",
-                                              "minLength": 1,
-                                              "maxLength": 128
+                                              "pattern": "^(fire|grass|earth|lightning|water)-(0[1-9]|10)$"
                                             }
                                           },
                                           "required": [
@@ -21501,6 +21528,10 @@
                                                         "minLength": 1,
                                                         "maxLength": 64
                                                       },
+                                                      "effect_key": {
+                                                        "type": "string",
+                                                        "pattern": "^(fire|grass|earth|lightning|water)-(0[1-9]|10)$"
+                                                      },
                                                       "hit": {
                                                         "type": "boolean"
                                                       },
@@ -21530,6 +21561,7 @@
                                                       "actor",
                                                       "kind",
                                                       "skill_name",
+                                                      "effect_key",
                                                       "hit",
                                                       "effectiveness",
                                                       "target_hp_percent_before",
@@ -21553,6 +21585,10 @@
                                                         "type": "string",
                                                         "minLength": 1,
                                                         "maxLength": 64
+                                                      },
+                                                      "effect_key": {
+                                                        "type": "string",
+                                                        "pattern": "^(fire|grass|earth|lightning|water)-(0[1-9]|10)$"
                                                       },
                                                       "hit": {
                                                         "type": "boolean"
@@ -21583,6 +21619,7 @@
                                                       "actor",
                                                       "kind",
                                                       "skill_name",
+                                                      "effect_key",
                                                       "hit",
                                                       "effectiveness",
                                                       "target_current_hp_before",
@@ -21883,6 +21920,9 @@
                                 "turn_no",
                                 "phase_deadline",
                                 "reveal_ends_at",
+                                "prepare_deadline",
+                                "prepared_message_id",
+                                "viewer_action_state",
                                 "server_time",
                                 "self_team",
                                 "opponent_team",
@@ -22222,8 +22262,7 @@
                                     },
                                     "effect_key": {
                                       "type": "string",
-                                      "minLength": 1,
-                                      "maxLength": 128
+                                      "pattern": "^(fire|grass|earth|lightning|water)-(0[1-9]|10)$"
                                     }
                                   },
                                   "required": [
@@ -22845,6 +22884,30 @@
                             { "type": "null" }
                           ]
                         },
+                        "prepare_deadline": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            },
+                            { "type": "null" }
+                          ]
+                        },
+                        "prepared_message_id": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 256
+                            },
+                            { "type": "null" }
+                          ]
+                        },
+                        "viewer_action_state": {
+                          "type": "string",
+                          "enum": ["not_applicable", "available", "locked"]
+                        },
                         "server_time": {
                           "type": "string",
                           "format": "date-time",
@@ -22978,8 +23041,7 @@
                                     },
                                     "effect_key": {
                                       "type": "string",
-                                      "minLength": 1,
-                                      "maxLength": 128
+                                      "pattern": "^(fire|grass|earth|lightning|water)-(0[1-9]|10)$"
                                     }
                                   },
                                   "required": [
@@ -23131,6 +23193,10 @@
                                                 "minLength": 1,
                                                 "maxLength": 64
                                               },
+                                              "effect_key": {
+                                                "type": "string",
+                                                "pattern": "^(fire|grass|earth|lightning|water)-(0[1-9]|10)$"
+                                              },
                                               "hit": { "type": "boolean" },
                                               "effectiveness": {
                                                 "type": "string",
@@ -23156,6 +23222,7 @@
                                               "actor",
                                               "kind",
                                               "skill_name",
+                                              "effect_key",
                                               "hit",
                                               "effectiveness",
                                               "target_hp_percent_before",
@@ -23179,6 +23246,10 @@
                                                 "type": "string",
                                                 "minLength": 1,
                                                 "maxLength": 64
+                                              },
+                                              "effect_key": {
+                                                "type": "string",
+                                                "pattern": "^(fire|grass|earth|lightning|water)-(0[1-9]|10)$"
                                               },
                                               "hit": { "type": "boolean" },
                                               "effectiveness": {
@@ -23205,6 +23276,7 @@
                                               "actor",
                                               "kind",
                                               "skill_name",
+                                              "effect_key",
                                               "hit",
                                               "effectiveness",
                                               "target_current_hp_before",
@@ -23483,6 +23555,9 @@
                         "turn_no",
                         "phase_deadline",
                         "reveal_ends_at",
+                        "prepare_deadline",
+                        "prepared_message_id",
+                        "viewer_action_state",
                         "server_time",
                         "self_team",
                         "opponent_team",
@@ -24658,6 +24733,30 @@
                             { "type": "null" }
                           ]
                         },
+                        "prepare_deadline": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            },
+                            { "type": "null" }
+                          ]
+                        },
+                        "prepared_message_id": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 256
+                            },
+                            { "type": "null" }
+                          ]
+                        },
+                        "viewer_action_state": {
+                          "type": "string",
+                          "enum": ["not_applicable", "available", "locked"]
+                        },
                         "server_time": {
                           "type": "string",
                           "format": "date-time",
@@ -24791,8 +24890,7 @@
                                     },
                                     "effect_key": {
                                       "type": "string",
-                                      "minLength": 1,
-                                      "maxLength": 128
+                                      "pattern": "^(fire|grass|earth|lightning|water)-(0[1-9]|10)$"
                                     }
                                   },
                                   "required": [
@@ -24944,6 +25042,10 @@
                                                 "minLength": 1,
                                                 "maxLength": 64
                                               },
+                                              "effect_key": {
+                                                "type": "string",
+                                                "pattern": "^(fire|grass|earth|lightning|water)-(0[1-9]|10)$"
+                                              },
                                               "hit": { "type": "boolean" },
                                               "effectiveness": {
                                                 "type": "string",
@@ -24969,6 +25071,7 @@
                                               "actor",
                                               "kind",
                                               "skill_name",
+                                              "effect_key",
                                               "hit",
                                               "effectiveness",
                                               "target_hp_percent_before",
@@ -24992,6 +25095,10 @@
                                                 "type": "string",
                                                 "minLength": 1,
                                                 "maxLength": 64
+                                              },
+                                              "effect_key": {
+                                                "type": "string",
+                                                "pattern": "^(fire|grass|earth|lightning|water)-(0[1-9]|10)$"
                                               },
                                               "hit": { "type": "boolean" },
                                               "effectiveness": {
@@ -25018,6 +25125,7 @@
                                               "actor",
                                               "kind",
                                               "skill_name",
+                                              "effect_key",
                                               "hit",
                                               "effectiveness",
                                               "target_current_hp_before",
@@ -25296,6 +25404,9 @@
                         "turn_no",
                         "phase_deadline",
                         "reveal_ends_at",
+                        "prepare_deadline",
+                        "prepared_message_id",
+                        "viewer_action_state",
                         "server_time",
                         "self_team",
                         "opponent_team",
@@ -25390,6 +25501,30 @@
                             { "type": "null" }
                           ]
                         },
+                        "prepare_deadline": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            },
+                            { "type": "null" }
+                          ]
+                        },
+                        "prepared_message_id": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 256
+                            },
+                            { "type": "null" }
+                          ]
+                        },
+                        "viewer_action_state": {
+                          "type": "string",
+                          "enum": ["not_applicable", "available", "locked"]
+                        },
                         "server_time": {
                           "type": "string",
                           "format": "date-time",
@@ -25523,8 +25658,7 @@
                                     },
                                     "effect_key": {
                                       "type": "string",
-                                      "minLength": 1,
-                                      "maxLength": 128
+                                      "pattern": "^(fire|grass|earth|lightning|water)-(0[1-9]|10)$"
                                     }
                                   },
                                   "required": [
@@ -25676,6 +25810,10 @@
                                                 "minLength": 1,
                                                 "maxLength": 64
                                               },
+                                              "effect_key": {
+                                                "type": "string",
+                                                "pattern": "^(fire|grass|earth|lightning|water)-(0[1-9]|10)$"
+                                              },
                                               "hit": { "type": "boolean" },
                                               "effectiveness": {
                                                 "type": "string",
@@ -25701,6 +25839,7 @@
                                               "actor",
                                               "kind",
                                               "skill_name",
+                                              "effect_key",
                                               "hit",
                                               "effectiveness",
                                               "target_hp_percent_before",
@@ -25724,6 +25863,10 @@
                                                 "type": "string",
                                                 "minLength": 1,
                                                 "maxLength": 64
+                                              },
+                                              "effect_key": {
+                                                "type": "string",
+                                                "pattern": "^(fire|grass|earth|lightning|water)-(0[1-9]|10)$"
                                               },
                                               "hit": { "type": "boolean" },
                                               "effectiveness": {
@@ -25750,6 +25893,7 @@
                                               "actor",
                                               "kind",
                                               "skill_name",
+                                              "effect_key",
                                               "hit",
                                               "effectiveness",
                                               "target_current_hp_before",
@@ -26028,6 +26172,9 @@
                         "turn_no",
                         "phase_deadline",
                         "reveal_ends_at",
+                        "prepare_deadline",
+                        "prepared_message_id",
+                        "viewer_action_state",
                         "server_time",
                         "self_team",
                         "opponent_team",
@@ -26495,6 +26642,30 @@
                             { "type": "null" }
                           ]
                         },
+                        "prepare_deadline": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            },
+                            { "type": "null" }
+                          ]
+                        },
+                        "prepared_message_id": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 256
+                            },
+                            { "type": "null" }
+                          ]
+                        },
+                        "viewer_action_state": {
+                          "type": "string",
+                          "enum": ["not_applicable", "available", "locked"]
+                        },
                         "server_time": {
                           "type": "string",
                           "format": "date-time",
@@ -26628,8 +26799,7 @@
                                     },
                                     "effect_key": {
                                       "type": "string",
-                                      "minLength": 1,
-                                      "maxLength": 128
+                                      "pattern": "^(fire|grass|earth|lightning|water)-(0[1-9]|10)$"
                                     }
                                   },
                                   "required": [
@@ -26781,6 +26951,10 @@
                                                 "minLength": 1,
                                                 "maxLength": 64
                                               },
+                                              "effect_key": {
+                                                "type": "string",
+                                                "pattern": "^(fire|grass|earth|lightning|water)-(0[1-9]|10)$"
+                                              },
                                               "hit": { "type": "boolean" },
                                               "effectiveness": {
                                                 "type": "string",
@@ -26806,6 +26980,7 @@
                                               "actor",
                                               "kind",
                                               "skill_name",
+                                              "effect_key",
                                               "hit",
                                               "effectiveness",
                                               "target_hp_percent_before",
@@ -26829,6 +27004,10 @@
                                                 "type": "string",
                                                 "minLength": 1,
                                                 "maxLength": 64
+                                              },
+                                              "effect_key": {
+                                                "type": "string",
+                                                "pattern": "^(fire|grass|earth|lightning|water)-(0[1-9]|10)$"
                                               },
                                               "hit": { "type": "boolean" },
                                               "effectiveness": {
@@ -26855,6 +27034,7 @@
                                               "actor",
                                               "kind",
                                               "skill_name",
+                                              "effect_key",
                                               "hit",
                                               "effectiveness",
                                               "target_current_hp_before",
@@ -27133,6 +27313,9 @@
                         "turn_no",
                         "phase_deadline",
                         "reveal_ends_at",
+                        "prepare_deadline",
+                        "prepared_message_id",
+                        "viewer_action_state",
                         "server_time",
                         "self_team",
                         "opponent_team",
@@ -27227,6 +27410,30 @@
                             { "type": "null" }
                           ]
                         },
+                        "prepare_deadline": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            },
+                            { "type": "null" }
+                          ]
+                        },
+                        "prepared_message_id": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 256
+                            },
+                            { "type": "null" }
+                          ]
+                        },
+                        "viewer_action_state": {
+                          "type": "string",
+                          "enum": ["not_applicable", "available", "locked"]
+                        },
                         "server_time": {
                           "type": "string",
                           "format": "date-time",
@@ -27360,8 +27567,7 @@
                                     },
                                     "effect_key": {
                                       "type": "string",
-                                      "minLength": 1,
-                                      "maxLength": 128
+                                      "pattern": "^(fire|grass|earth|lightning|water)-(0[1-9]|10)$"
                                     }
                                   },
                                   "required": [
@@ -27513,6 +27719,10 @@
                                                 "minLength": 1,
                                                 "maxLength": 64
                                               },
+                                              "effect_key": {
+                                                "type": "string",
+                                                "pattern": "^(fire|grass|earth|lightning|water)-(0[1-9]|10)$"
+                                              },
                                               "hit": { "type": "boolean" },
                                               "effectiveness": {
                                                 "type": "string",
@@ -27538,6 +27748,7 @@
                                               "actor",
                                               "kind",
                                               "skill_name",
+                                              "effect_key",
                                               "hit",
                                               "effectiveness",
                                               "target_hp_percent_before",
@@ -27561,6 +27772,10 @@
                                                 "type": "string",
                                                 "minLength": 1,
                                                 "maxLength": 64
+                                              },
+                                              "effect_key": {
+                                                "type": "string",
+                                                "pattern": "^(fire|grass|earth|lightning|water)-(0[1-9]|10)$"
                                               },
                                               "hit": { "type": "boolean" },
                                               "effectiveness": {
@@ -27587,6 +27802,7 @@
                                               "actor",
                                               "kind",
                                               "skill_name",
+                                              "effect_key",
                                               "hit",
                                               "effectiveness",
                                               "target_current_hp_before",
@@ -27865,6 +28081,9 @@
                         "turn_no",
                         "phase_deadline",
                         "reveal_ends_at",
+                        "prepare_deadline",
+                        "prepared_message_id",
+                        "viewer_action_state",
                         "server_time",
                         "self_team",
                         "opponent_team",
@@ -28311,6 +28530,30 @@
                             { "type": "null" }
                           ]
                         },
+                        "prepare_deadline": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            },
+                            { "type": "null" }
+                          ]
+                        },
+                        "prepared_message_id": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 256
+                            },
+                            { "type": "null" }
+                          ]
+                        },
+                        "viewer_action_state": {
+                          "type": "string",
+                          "enum": ["not_applicable", "available", "locked"]
+                        },
                         "server_time": {
                           "type": "string",
                           "format": "date-time",
@@ -28444,8 +28687,7 @@
                                     },
                                     "effect_key": {
                                       "type": "string",
-                                      "minLength": 1,
-                                      "maxLength": 128
+                                      "pattern": "^(fire|grass|earth|lightning|water)-(0[1-9]|10)$"
                                     }
                                   },
                                   "required": [
@@ -28597,6 +28839,10 @@
                                                 "minLength": 1,
                                                 "maxLength": 64
                                               },
+                                              "effect_key": {
+                                                "type": "string",
+                                                "pattern": "^(fire|grass|earth|lightning|water)-(0[1-9]|10)$"
+                                              },
                                               "hit": { "type": "boolean" },
                                               "effectiveness": {
                                                 "type": "string",
@@ -28622,6 +28868,7 @@
                                               "actor",
                                               "kind",
                                               "skill_name",
+                                              "effect_key",
                                               "hit",
                                               "effectiveness",
                                               "target_hp_percent_before",
@@ -28645,6 +28892,10 @@
                                                 "type": "string",
                                                 "minLength": 1,
                                                 "maxLength": 64
+                                              },
+                                              "effect_key": {
+                                                "type": "string",
+                                                "pattern": "^(fire|grass|earth|lightning|water)-(0[1-9]|10)$"
                                               },
                                               "hit": { "type": "boolean" },
                                               "effectiveness": {
@@ -28671,6 +28922,7 @@
                                               "actor",
                                               "kind",
                                               "skill_name",
+                                              "effect_key",
                                               "hit",
                                               "effectiveness",
                                               "target_current_hp_before",
@@ -28949,6 +29201,9 @@
                         "turn_no",
                         "phase_deadline",
                         "reveal_ends_at",
+                        "prepare_deadline",
+                        "prepared_message_id",
+                        "viewer_action_state",
                         "server_time",
                         "self_team",
                         "opponent_team",
@@ -29043,6 +29298,30 @@
                             { "type": "null" }
                           ]
                         },
+                        "prepare_deadline": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            },
+                            { "type": "null" }
+                          ]
+                        },
+                        "prepared_message_id": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 256
+                            },
+                            { "type": "null" }
+                          ]
+                        },
+                        "viewer_action_state": {
+                          "type": "string",
+                          "enum": ["not_applicable", "available", "locked"]
+                        },
                         "server_time": {
                           "type": "string",
                           "format": "date-time",
@@ -29176,8 +29455,7 @@
                                     },
                                     "effect_key": {
                                       "type": "string",
-                                      "minLength": 1,
-                                      "maxLength": 128
+                                      "pattern": "^(fire|grass|earth|lightning|water)-(0[1-9]|10)$"
                                     }
                                   },
                                   "required": [
@@ -29329,6 +29607,10 @@
                                                 "minLength": 1,
                                                 "maxLength": 64
                                               },
+                                              "effect_key": {
+                                                "type": "string",
+                                                "pattern": "^(fire|grass|earth|lightning|water)-(0[1-9]|10)$"
+                                              },
                                               "hit": { "type": "boolean" },
                                               "effectiveness": {
                                                 "type": "string",
@@ -29354,6 +29636,7 @@
                                               "actor",
                                               "kind",
                                               "skill_name",
+                                              "effect_key",
                                               "hit",
                                               "effectiveness",
                                               "target_hp_percent_before",
@@ -29377,6 +29660,10 @@
                                                 "type": "string",
                                                 "minLength": 1,
                                                 "maxLength": 64
+                                              },
+                                              "effect_key": {
+                                                "type": "string",
+                                                "pattern": "^(fire|grass|earth|lightning|water)-(0[1-9]|10)$"
                                               },
                                               "hit": { "type": "boolean" },
                                               "effectiveness": {
@@ -29403,6 +29690,7 @@
                                               "actor",
                                               "kind",
                                               "skill_name",
+                                              "effect_key",
                                               "hit",
                                               "effectiveness",
                                               "target_current_hp_before",
@@ -29681,6 +29969,9 @@
                         "turn_no",
                         "phase_deadline",
                         "reveal_ends_at",
+                        "prepare_deadline",
+                        "prepared_message_id",
+                        "viewer_action_state",
                         "server_time",
                         "self_team",
                         "opponent_team",

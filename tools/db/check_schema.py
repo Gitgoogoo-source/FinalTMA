@@ -292,6 +292,7 @@ def verify_battle_contract() -> None:
         "create or replace function api.battle_accept_room",
         "create or replace function api.battle_submit_action",
         "create or replace function api.battle_submit_forced_switch",
+        "create or replace function battle.viewer_action_state",
         "create or replace function battle.safe_resolve_normal_turn",
         "create or replace function battle.safe_resolve_forced_switch",
         "create or replace function battle.safe_finalize_room",
@@ -308,6 +309,13 @@ def verify_battle_contract() -> None:
         "perform battle.wake_integration('outbox')",
         "extensions.hmac(",
         "gen_random_bytes(32)",
+        "char_length(prepared_message_id) between 1 and 256",
+        "effect_key = element || '-' || substr(slot_id, 2)",
+        "'prepare_deadline', case",
+        "'prepared_message_id', case",
+        "'viewer_action_state',",
+        "'effect_key', v_skill.effect_key",
+        "'effect_key', p_result->'effect_key'",
     )
     missing = [fragment for fragment in required if fragment not in battle_sql]
     if missing:

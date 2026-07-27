@@ -70,7 +70,11 @@ create table battle.skills (
   primary key (ruleset_id, id),
   unique (ruleset_id, name),
   unique (ruleset_id, effect_key),
-  foreign key (ruleset_id, slot_id) references battle.skill_slots(ruleset_id, id)
+  foreign key (ruleset_id, slot_id) references battle.skill_slots(ruleset_id, id),
+  check (
+    effect_key ~ '^(fire|grass|earth|lightning|water)-(0[1-9]|10)$'
+    and effect_key = element || '-' || substr(slot_id, 2)
+  )
 );
 
 create table battle.role_profiles (
@@ -220,6 +224,13 @@ create table battle.prepared_shares (
   last_error text,
   activated_at timestamptz,
   updated_at timestamptz not null default now(),
+  check (
+    prepared_message_id is null
+    or (
+      prepared_message_id = btrim(prepared_message_id)
+      and char_length(prepared_message_id) between 1 and 256
+    )
+  ),
   check ((status = 'active') = (prepared_message_id is not null and activated_at is not null))
 );
 
@@ -997,6 +1008,7 @@ begin
     'defender_member_id', p_defender.id,
     'skill_id', v_skill.id,
     'skill_name', v_skill.name,
+    'effect_key', v_skill.effect_key,
     'priority', v_slot.priority,
     'accuracy_bps', v_slot.accuracy_bps,
     'roll', v_roll,
@@ -1175,6 +1187,7 @@ begin
         'actor', 'self',
         'kind', 'attack',
         'skill_name', action->>'skill_name',
+        'effect_key', action->>'effect_key',
         'hit', (action->>'hit')::boolean,
         'effectiveness', case (action->>'multiplier_bps')::integer
           when 15000 then 'super_effective'
@@ -1198,6 +1211,7 @@ begin
         'actor', 'opponent',
         'kind', 'attack',
         'skill_name', action->>'skill_name',
+        'effect_key', action->>'effect_key',
         'hit', (action->>'hit')::boolean,
         'effectiveness', case (action->>'multiplier_bps')::integer
           when 15000 then 'super_effective'
@@ -1303,6 +1317,72 @@ as $$
   limit 1
 $$;
 
+create or replace function battle.viewer_action_state(
+  p_room_id uuid,
+  p_participant_id uuid
+)
+returns text
+language sql
+stable
+set search_path = ''
+as $$
+  select case
+    when p.status = 'active'
+      and r.status = 'active_select'
+      and exists (
+        select 1
+        from battle.actions a
+        where a.room_id = r.id
+          and a.turn_no = r.current_turn_no
+          and a.phase = 'normal'
+          and a.participant_id = p.id
+      )
+    then 'locked'
+    when p.status = 'active'
+      and r.status = 'active_select'
+      and r.phase_deadline > now()
+      and exists (
+        select 1
+        from battle.team_members tm
+        where tm.participant_id = p.id and tm.active
+      )
+    then 'available'
+    when p.status = 'active'
+      and r.status = 'forced_switch'
+      and exists (
+        select 1
+        from battle.team_members tm
+        where tm.participant_id = p.id and tm.active
+      )
+    then 'not_applicable'
+    when p.status = 'active'
+      and r.status = 'forced_switch'
+      and exists (
+        select 1
+        from battle.actions a
+        where a.room_id = r.id
+          and a.turn_no = r.current_turn_no
+          and a.phase = 'forced_switch'
+          and a.participant_id = p.id
+      )
+    then 'locked'
+    when p.status = 'active'
+      and r.status = 'forced_switch'
+      and r.phase_deadline > now()
+      and exists (
+        select 1
+        from battle.team_members tm
+        where tm.participant_id = p.id and tm.alive and not tm.active
+      )
+    then 'available'
+    else 'not_applicable'
+  end
+  from battle.rooms r
+  join battle.participants p
+    on p.room_id = r.id and p.id = p_participant_id
+  where r.id = p_room_id
+$$;
+
 create or replace function battle.room_snapshot_json(
   p_room_id uuid,
   p_participant_id uuid
@@ -1333,6 +1413,22 @@ begin
     'turn_no', v_room.current_turn_no,
     'phase_deadline', v_room.phase_deadline,
     'reveal_ends_at', v_room.reveal_ends_at,
+    'prepare_deadline', case
+      when v_side = 'creator' and v_room.status = 'preparing_share'
+      then v_room.prepare_deadline
+      else null
+    end,
+    'prepared_message_id', case
+      when v_side = 'creator' and v_room.status = 'waiting'
+      then (
+        select ps.prepared_message_id
+        from battle.prepared_shares ps
+        where ps.room_id = v_room.id and ps.status = 'active'
+      )
+      else null
+    end,
+    'viewer_action_state',
+      battle.viewer_action_state(p_room_id, p_participant_id),
     'server_time', now(),
     'self_team', battle.self_team_json(p_room_id, p_participant_id),
     'opponent_team', case
@@ -1944,6 +2040,8 @@ begin
   if v_room.status <> 'preparing_share'
     or p_prepared_message_id is null
     or btrim(p_prepared_message_id) = ''
+    or p_prepared_message_id <> btrim(p_prepared_message_id)
+    or char_length(p_prepared_message_id) > 256
     or p_telegram_expires_at is null
     or p_telegram_expires_at < now() + make_interval(
       secs => battle.rule_int(v_room.ruleset_id, 'waiting_timeout_seconds')
@@ -2488,6 +2586,7 @@ as $$
     'defender_member_id', p_result->'defender_member_id',
     'skill_id', p_result->'skill_id',
     'skill_name', p_result->'skill_name',
+    'effect_key', p_result->'effect_key',
     'hit', p_result->'hit',
     'multiplier_bps', p_result->'multiplier_bps',
     'applied_damage', p_result->'applied_damage',

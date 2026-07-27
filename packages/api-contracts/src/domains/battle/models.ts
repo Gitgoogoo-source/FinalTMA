@@ -16,6 +16,10 @@ export const battleElementSchema = z.enum([
   "water",
 ]);
 
+export const battleEffectKeySchema = z
+  .string()
+  .regex(/^(fire|grass|earth|lightning|water)-(0[1-9]|10)$/);
+
 export const battlePageStateSchema = z.enum([
   "home",
   "team_select",
@@ -183,7 +187,7 @@ export const battleSkillSchema = z
     power: z.number().int().positive(),
     accuracy_bps: z.number().int().min(1).max(10_000),
     priority: z.number().int().min(-1).max(1),
-    effect_key: identifierSchema,
+    effect_key: battleEffectKeySchema,
   })
   .strict();
 
@@ -266,6 +270,7 @@ const battleResolutionAttackActionSchema = z.discriminatedUnion("actor", [
       actor: z.literal("self"),
       kind: z.literal("attack"),
       skill_name: z.string().trim().min(1).max(64),
+      effect_key: battleEffectKeySchema,
       hit: z.boolean(),
       effectiveness: z.enum(["super_effective", "not_effective", "normal"]),
       target_hp_percent_before: z.number().min(0).max(100),
@@ -278,6 +283,7 @@ const battleResolutionAttackActionSchema = z.discriminatedUnion("actor", [
       actor: z.literal("opponent"),
       kind: z.literal("attack"),
       skill_name: z.string().trim().min(1).max(64),
+      effect_key: battleEffectKeySchema,
       hit: z.boolean(),
       effectiveness: z.enum(["super_effective", "not_effective", "normal"]),
       target_current_hp_before: nonNegativeIntegerSchema,
@@ -371,6 +377,9 @@ export const battleRoomSnapshotSchema = z
     turn_no: z.number().int().min(0).max(20),
     phase_deadline: timestampSchema.nullable(),
     reveal_ends_at: timestampSchema.nullable(),
+    prepare_deadline: timestampSchema.nullable(),
+    prepared_message_id: z.string().trim().min(1).max(256).nullable(),
+    viewer_action_state: z.enum(["not_applicable", "available", "locked"]),
     server_time: timestampSchema,
     self_team: battleSelfTeamSchema,
     opponent_team: battleOpponentTeamSchema,
