@@ -4214,7 +4214,7 @@ begin
     'BATTLE_RESERVATION_MISMATCH', p.id::text,
     jsonb_build_object(
       'participant_status', p.status,
-      'active_reservations', count(r.id) filter (where r.status = 'active'),
+      'active_reservations', count(distinct r.id) filter (where r.status = 'active'),
       'team_members', count(distinct tm.id)
     )
   from battle.participants p
@@ -4225,12 +4225,12 @@ begin
   having (
     p.status in ('preparing_share', 'waiting', 'active')
     and (
-      count(r.id) filter (where r.status = 'active') <> 3
+      count(distinct r.id) filter (where r.status = 'active') <> 3
       or count(distinct tm.id) <> 3
     )
   ) or (
     p.status in ('finished', 'draw', 'cancelled', 'expired', 'voided')
-    and count(r.id) filter (where r.status = 'active') <> 0
+    and count(distinct r.id) filter (where r.status = 'active') <> 0
   )
   on conflict do nothing;
   get diagnostics v_added = row_count; v_count := v_count + v_added;
