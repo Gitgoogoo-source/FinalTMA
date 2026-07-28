@@ -31,6 +31,11 @@ export async function rpc<T>(
     ? request.abortSignal(options.signal)
     : request);
   if (error) {
+    if (options.signal?.aborted)
+      throw (
+        options.signal.reason ??
+        new DOMException("Request aborted", "AbortError")
+      );
     if (error.code === "P0001") {
       const detail = parseDetail(error.details);
       if (detail && isErrorCode(detail.code)) {

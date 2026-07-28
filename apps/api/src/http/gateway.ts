@@ -59,6 +59,16 @@ export function createGateway<Route extends RouteDefinition>(
       });
       return response;
     } catch (cause) {
+      if (request.signal.aborted) {
+        writeLog("info", {
+          request_id: requestId,
+          route_id: route?.id ?? null,
+          status: 499,
+          client_aborted: true,
+          elapsed_ms: Date.now() - startedAt,
+        });
+        return new Response(null, { status: 499 });
+      }
       const error = normalizeError(
         cause,
         route?.errors ?? preRouteErrors(gateway),

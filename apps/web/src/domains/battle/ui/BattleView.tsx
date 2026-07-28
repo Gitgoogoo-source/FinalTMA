@@ -17,6 +17,7 @@ import {
 } from "@pokepets/api-contracts/app";
 
 import {
+  ApiFailure,
   apiKeepaliveRequest,
   apiRequest,
 } from "../../../platform/api/client.ts";
@@ -431,6 +432,10 @@ export function BattleView(): ReactNode {
       return;
     let disposed = false;
     let inFlight = false;
+    const stop = () => {
+      disposed = true;
+      window.clearInterval(timer);
+    };
     const heartbeat = async () => {
       if (inFlight || disposed) return;
       inFlight = true;
@@ -444,9 +449,20 @@ export function BattleView(): ReactNode {
             ? "online"
             : "offline",
         );
-        if (response.data.status !== "waiting") void refetchRef.current();
-      } catch {
-        if (!disposed) setOnlineState("offline");
+        if (response.data.status !== "waiting") {
+          stop();
+          void refetchRef.current();
+        }
+      } catch (cause) {
+        if (disposed) return;
+        setOnlineState("offline");
+        if (
+          cause instanceof ApiFailure &&
+          cause.code === "BATTLE_STATE_CONFLICT"
+        ) {
+          stop();
+          void refetchRef.current();
+        }
       } finally {
         inFlight = false;
       }
@@ -454,11 +470,15 @@ export function BattleView(): ReactNode {
     setOnlineState("syncing");
     void heartbeat();
     const timer = window.setInterval(heartbeat, 5_000);
-    return () => {
-      disposed = true;
-      window.clearInterval(timer);
-    };
-  }, [lifecycleReady, pageActive, room?.room_id, telegramActive]);
+    return stop;
+  }, [
+    lifecycleReady,
+    pageActive,
+    room?.room_id,
+    room?.side,
+    room?.status,
+    telegramActive,
+  ]);
 
   useEffect(() => {
     if (room?.status !== "waiting" || room.side !== "creator") return;

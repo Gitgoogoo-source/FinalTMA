@@ -240,6 +240,11 @@ async function send<Id extends RouteId>(
       ...(options.signal ? { signal: options.signal } : {}),
     });
   } catch {
+    if (options.signal?.aborted)
+      throw (
+        options.signal.reason ??
+        new DOMException("Request aborted", "AbortError")
+      );
     return new ApiFailure(
       0,
       "NETWORK_ERROR",
