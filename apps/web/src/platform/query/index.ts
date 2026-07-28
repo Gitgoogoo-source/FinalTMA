@@ -160,6 +160,7 @@ export async function refreshRouteScopes(
 
 export async function refreshScopes(
   scopes: readonly RefreshScope[],
+  options: { throwOnError?: boolean } = {},
 ): Promise<void> {
   if (scopes.includes("all")) return refreshUserState();
   const prefixes = new Set(
@@ -167,13 +168,16 @@ export async function refreshScopes(
       scope === "none" || scope === "all" ? [] : scopePrefixes[scope],
     ),
   );
-  await queryClient.invalidateQueries({
-    predicate: (query) => {
-      if (query.queryKey[0] !== getSession()?.generation) return false;
-      const id = query.queryKey[2];
-      return typeof id === "string" && prefixes.has(id.split(".")[0] ?? "");
+  await queryClient.invalidateQueries(
+    {
+      predicate: (query) => {
+        if (query.queryKey[0] !== getSession()?.generation) return false;
+        const id = query.queryKey[2];
+        return typeof id === "string" && prefixes.has(id.split(".")[0] ?? "");
+      },
     },
-  });
+    options,
+  );
 }
 
 function foregroundPrefixes(pathname: string): readonly string[] {

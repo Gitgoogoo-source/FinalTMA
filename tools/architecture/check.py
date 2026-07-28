@@ -264,8 +264,12 @@ def verify_game_page_boundary() -> None:
         "heartbeatRequests.current",
         "request.abort()",
         '"pageshow"',
-        'refreshPresenceTerminal("battle.heartbeat"',
-        'await refreshPresenceTerminal(\n            "battle.offline"',
+        "refreshScopes(",
+        '["battle", "assets", "inventory"]',
+        "throwOnError: true",
+        "terminalRefreshes.current.has(key)",
+        "isBattleAssetTerminal(response.data.status)",
+        "isBattleAssetTerminal(invite.invite_status)",
     )
     missing_battle_terms = [
         value
