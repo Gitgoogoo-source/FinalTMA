@@ -4,11 +4,11 @@
 
 静态门禁、素材门禁、账号配置或部署预检失败时停止发布，不关闭当前可用入口，也不开始数据库重建。
 
-Battle 预检失败时不得开放 Battle 创建或接受。已存在 waiting/active room 时先关闭新建与新接受，保持当前兼容 API、`battle-tick-v1`、pg_net、两个 integrations 和 Ably 发布能力运行，直到全部 room 正常终结或按产品第 21 章安全作废；不得直接暂停 deadline 调度或丢弃 outbox。
+Battle 预检失败时不得开放 Battle 创建或接受。已存在 waiting/lobby/active room 时先关闭新建与新接受，保持当前兼容 API、`battle-tick-v1`、pg_net、两个 integrations 和 Ably 发布能力运行，直到全部 room 正常终结或按产品第 21 章安全作废；不得直接暂停 presence/deadline 调度或丢弃 outbox。
 
 ## 数据库迁移后、应用切换前
 
-不执行向后迁移，不恢复旧 schema。保持 Telegram 入口、Battle 新建/接受和调度关闭，直接修正声明式 Schema 与原始三条迁移，清空真实开发数据库和 migration history 后从第一条重新执行；禁止追加修补 migration。此阶段只有在已经证明目标环境不存在 waiting/active Battle room 后才能清库。
+不执行向后迁移，不恢复旧 schema。保持 Telegram 入口、Battle 新建/接受和调度关闭，直接修正声明式 Schema 与原始三条迁移，清空真实开发数据库和 migration history 后从第一条重新执行；禁止追加修补 migration。此阶段只有在已经证明目标环境不存在 waiting/lobby/active Battle room 后才能清库。
 
 ## 应用切换后
 

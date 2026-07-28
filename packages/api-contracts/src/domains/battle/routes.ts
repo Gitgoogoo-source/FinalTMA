@@ -12,7 +12,6 @@ import {
   battleInvitePreviewSchema,
   battleParticipationSchema,
   battleRoomSnapshotSchema,
-  battleRoomStatusSchema,
   battleRulesetSummarySchema,
   battleTeamOptionSchema,
   battleTeamSelectionSchema,
@@ -53,25 +52,6 @@ const battleTerminalRoomSchema = z
     room_id: uuidSchema,
     status: z.enum(["cancelled", "expired", "voided"]),
     reason: z.string().trim().min(1).max(128),
-  })
-  .strict();
-
-const battleHeartbeatSchema = z
-  .object({
-    room_id: uuidSchema,
-    status: battleRoomStatusSchema,
-    creator_online: z.boolean(),
-    server_time: timestampSchema,
-    expires_at: timestampSchema.nullable(),
-    reason: z.string().trim().min(1).max(128).optional(),
-  })
-  .strict();
-
-const battleOfflineSchema = z
-  .object({
-    room_id: uuidSchema,
-    creator_online: z.literal(false),
-    reconnect_deadline: timestampSchema.nullable(),
   })
   .strict();
 
@@ -241,7 +221,6 @@ export const battleRoutes = [
       "BATTLE_ROOM_EXPIRED",
       "BATTLE_ROOM_CANCELLED",
       "BATTLE_ROOM_ALREADY_ACCEPTED",
-      "BATTLE_CREATOR_OFFLINE",
       "BATTLE_SELF_ACCEPT_FORBIDDEN",
       "BATTLE_ALREADY_PARTICIPATING",
       "BATTLE_TEAM_INVALID",
@@ -307,9 +286,9 @@ export const battleRoutes = [
     auth: true,
     idempotent: false,
     forbidIdempotencyKey: true,
-    refreshScopes: ["battle"],
+    refreshScopes: ["battle", "assets", "inventory"],
     input: z.object({ room_id: uuidSchema }).strict(),
-    output: battleHeartbeatSchema,
+    output: battleRoomSnapshotSchema,
     errors: ["BATTLE_NOT_PARTICIPANT", "BATTLE_STATE_CONFLICT", "RATE_LIMITED"],
   }),
   defineRoute({
@@ -320,10 +299,10 @@ export const battleRoutes = [
     auth: true,
     idempotent: false,
     forbidIdempotencyKey: true,
-    refreshScopes: ["battle"],
+    refreshScopes: ["battle", "assets", "inventory"],
     input: z.object({ room_id: uuidSchema }).strict(),
-    output: battleOfflineSchema,
-    errors: ["BATTLE_NOT_PARTICIPANT"],
+    output: battleRoomSnapshotSchema,
+    errors: ["BATTLE_NOT_PARTICIPANT", "BATTLE_STATE_CONFLICT", "RATE_LIMITED"],
   }),
   defineRoute({
     id: "battle.acknowledge_result",

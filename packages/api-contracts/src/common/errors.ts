@@ -70,13 +70,6 @@ export const errorRegistry = {
     "battle",
     "refresh",
   ),
-  BATTLE_CREATOR_OFFLINE: error(
-    409,
-    "创建者当前不在线",
-    true,
-    "battle",
-    "refresh",
-  ),
   BATTLE_INVITE_INVALID: error(404, "挑战已失效", false, "battle", "refresh"),
   BATTLE_NOT_PARTICIPANT: error(
     403,

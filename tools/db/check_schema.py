@@ -287,6 +287,12 @@ def verify_battle_contract() -> None:
     required = (
         "create table battle.rulesets",
         "create table battle.rooms",
+        "accepted_at timestamptz",
+        "lobby_expires_at timestamptz",
+        "lobby_start_deadline timestamptz",
+        "last_heartbeat_at timestamptz",
+        "offline_since timestamptz",
+        "presence_deadline timestamptz",
         "create table battle.audit_entries",
         "create or replace function api.battle_prepare_room",
         "create or replace function api.battle_accept_room",
@@ -296,6 +302,10 @@ def verify_battle_contract() -> None:
         "create or replace function battle.safe_resolve_normal_turn",
         "create or replace function battle.safe_resolve_forced_switch",
         "create or replace function battle.safe_finalize_room",
+        "create or replace function battle.lobby_terminal_reason",
+        "create or replace function battle.reconcile_lobby_presence",
+        "create or replace function battle.advance_lobby",
+        "create or replace function battle.lobby_json",
         "create or replace function battle.invalidation_channels",
         "create or replace function api.battle_claim_prepared_shares",
         "p_room_id uuid default null",
@@ -322,6 +332,15 @@ def verify_battle_contract() -> None:
         raise SystemExit(f"Battle database contract is incomplete: {missing}")
     if "battle_internal_room_context" in battle_sql or "private_seed_hex" in battle_sql:
         raise SystemExit("Battle private seed cannot be exposed through an api RPC")
+    forbidden = (
+        "creator_last_heartbeat_at",
+        "creator_offline_since",
+        "creator_online_window_seconds",
+        "battle_creator_offline",
+    )
+    present = [fragment for fragment in forbidden if fragment in battle_sql]
+    if present:
+        raise SystemExit(f"Legacy Battle creator presence contract remains: {present}")
     if re.search(r"\bstart_param\s+text\b", identity_sql) or re.search(
         r"\bbattle_invite_token\s+text\b", identity_sql
     ):

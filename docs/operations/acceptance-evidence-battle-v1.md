@@ -1,5 +1,7 @@
 # Battle v1 真实开发环境交付与验收证据（2026-07-27）
 
+> 2026-07-28 本地语义收敛说明：本文以下证据只对应其原记录的历史提交与当时已部署的八状态 Battle，不证明双人 lobby 新规则已经在真实环境生效。当前本地实现新增 `lobby_waiting/lobby_countdown`、双方 participant presence、5 分钟总时限和数据库 3 秒开战倒计时；仍须在同一提交完成真实开发环境数据库从零重建、部署、Telegram 双端与并发验收后，另行追加真实证据。本文历史 PASS、部署记录和 SHA 保持原样，不据本地静态结果改写。
+
 ## 结论
 
 Battle v1 的产品数据、数据库裁决、API、Telegram 分享集成、Ably 集成、React Web、真实开发数据库重建和 Vercel Production 部署已经完成。当前总体验收结论仍为 `未完成`：数据库重建后没有真实用户、会话或 Battle room，四账号 Telegram 对战矩阵、真实 Ably 房间消息链路、完整战斗规则矩阵和性能指标尚未形成真实环境证据。

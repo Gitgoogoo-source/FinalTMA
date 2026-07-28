@@ -12,7 +12,7 @@ Telegram WebApp 在 `createRoot().render()` 前按 `ready → expand → disable
 
 正式藏品图片由仓库内 210 张非公开母版生成 420 张版本化 WebP。列表只读取 256×256 缩略图，主视觉和 NFT 元数据读取 768×768 详情图；浏览器不通过 Function 或 Supabase 读取图片二进制。
 
-Battle 页面在同一 session generation 内保持挂载，并只渲染产品第 21 章的八种页面状态。页面可见且 room 为 waiting 时每 5 秒发送 REST 心跳；页面隐藏立即尽力标记离线并停止心跳和 UI 轮询。Ably client 只能 subscribe，通知只携带 `event_id`、`room_id`、`state_version` 与 `event_kind`；收到通知、deadline 到达或连接失败时，battle-realtime workflow 通过 REST 读取 viewer-specific snapshot。等待/接受状态每 2 秒、选择/强制换宠状态每 1 秒短轮询，重新可见时立即完整回正。
+Battle 页面在同一 session generation 内保持挂载，并只渲染产品第 21 章的九种页面状态。页面可见且 room 为邀请 `waiting` 时只有创建者每 5 秒发送纯展示心跳；room 为 `lobby_waiting/lobby_countdown` 时双方每 5 秒发送 participant presence 心跳；进入 `active_select` 后立即停止。页面隐藏尽力标记当前适用的 participant 离线并停止心跳和 UI 轮询。Ably client 只能 subscribe，通知只携带 `event_id`、`room_id`、`state_version` 与 `event_kind`；收到通知、deadline 到达或连接失败时，battle-realtime workflow 通过 REST 读取 viewer-specific snapshot。邀请 waiting、接受和 lobby 每 2 秒、选择/强制换宠每 1 秒短轮询，重新可见时立即完整回正。
 
 ## Functions
 

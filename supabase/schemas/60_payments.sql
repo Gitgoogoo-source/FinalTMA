@@ -284,23 +284,12 @@ begin
             'BATTLE_SELF_ACCEPT_FORBIDDEN',
             '不能接受自己创建的挑战'
           );
-        elsif v_battle_room.creator_offline_since is not null
-           or v_battle_room.creator_last_heartbeat_at < now() - make_interval(
-             secs => battle.rule_int(
-               v_battle_room.ruleset_id,
-               'creator_online_window_seconds'
-             )
-           ) then
-          perform api.raise_business_error(
-            'BATTLE_CREATOR_OFFLINE',
-            '创建者当前不在线'
-          );
         end if;
         if exists (
           select 1
           from battle.participants
           where user_id = v_user_id
-            and status in ('preparing_share', 'waiting', 'active')
+            and status in ('preparing_share', 'waiting', 'lobby', 'active')
         ) then
           perform api.raise_business_error(
             'BATTLE_ALREADY_PARTICIPATING',

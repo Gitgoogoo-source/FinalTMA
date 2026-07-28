@@ -638,7 +638,6 @@
                                       "BATTLE_ACTION_INVALID",
                                       "BATTLE_ACTION_PHASE_INVALID",
                                       "BATTLE_ALREADY_PARTICIPATING",
-                                      "BATTLE_CREATOR_OFFLINE",
                                       "BATTLE_INVITE_INVALID",
                                       "BATTLE_NOT_PARTICIPANT",
                                       "BATTLE_RESULT_NOT_ACKNOWLEDGEABLE",
@@ -1169,6 +1168,8 @@
                                   "enum": [
                                     "preparing_share",
                                     "waiting",
+                                    "lobby_waiting",
+                                    "lobby_countdown",
                                     "active_select",
                                     "reveal",
                                     "forced_switch",
@@ -2280,7 +2281,6 @@
                                       "BATTLE_ACTION_INVALID",
                                       "BATTLE_ACTION_PHASE_INVALID",
                                       "BATTLE_ALREADY_PARTICIPATING",
-                                      "BATTLE_CREATOR_OFFLINE",
                                       "BATTLE_INVITE_INVALID",
                                       "BATTLE_NOT_PARTICIPANT",
                                       "BATTLE_RESULT_NOT_ACKNOWLEDGEABLE",
@@ -4982,7 +4982,6 @@
                                       "BATTLE_ACTION_INVALID",
                                       "BATTLE_ACTION_PHASE_INVALID",
                                       "BATTLE_ALREADY_PARTICIPATING",
-                                      "BATTLE_CREATOR_OFFLINE",
                                       "BATTLE_INVITE_INVALID",
                                       "BATTLE_NOT_PARTICIPANT",
                                       "BATTLE_RESULT_NOT_ACKNOWLEDGEABLE",
@@ -8599,7 +8598,6 @@
                                       "BATTLE_ACTION_INVALID",
                                       "BATTLE_ACTION_PHASE_INVALID",
                                       "BATTLE_ALREADY_PARTICIPATING",
-                                      "BATTLE_CREATOR_OFFLINE",
                                       "BATTLE_INVITE_INVALID",
                                       "BATTLE_NOT_PARTICIPANT",
                                       "BATTLE_RESULT_NOT_ACKNOWLEDGEABLE",
@@ -13366,7 +13364,7 @@
             }
           },
           "409": {
-            "description": "Errors: ENTRY_HANDOFF_PENDING, TOPUP_NOT_REQUIRED, PAYMENT_ALREADY_PROCESSING, PAYMENT_CANCELLED, PAYMENT_EXPIRED, BATTLE_SHARE_PREPARING, BATTLE_ALREADY_PARTICIPATING, BATTLE_ROOM_ALREADY_ACCEPTED, BATTLE_CREATOR_OFFLINE, BATTLE_VOIDED, INSUFFICIENT_INVENTORY, IDEMPOTENCY_KEY_REUSED",
+            "description": "Errors: ENTRY_HANDOFF_PENDING, TOPUP_NOT_REQUIRED, PAYMENT_ALREADY_PROCESSING, PAYMENT_CANCELLED, PAYMENT_EXPIRED, BATTLE_SHARE_PREPARING, BATTLE_ALREADY_PARTICIPATING, BATTLE_ROOM_ALREADY_ACCEPTED, BATTLE_VOIDED, INSUFFICIENT_INVENTORY, IDEMPOTENCY_KEY_REUSED",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/StandardError" }
@@ -13456,7 +13454,6 @@
           "BATTLE_ROOM_EXPIRED",
           "BATTLE_ROOM_CANCELLED",
           "BATTLE_ROOM_ALREADY_ACCEPTED",
-          "BATTLE_CREATOR_OFFLINE",
           "BATTLE_SELF_ACCEPT_FORBIDDEN",
           "BATTLE_VOIDED",
           "INSUFFICIENT_INVENTORY",
@@ -13670,13 +13667,6 @@
             "status": 409,
             "message": "挑战已被其他玩家接受",
             "retryable": false,
-            "refreshScope": "battle",
-            "recoveryAction": "refresh"
-          },
-          "BATTLE_CREATOR_OFFLINE": {
-            "status": 409,
-            "message": "创建者当前不在线",
-            "retryable": true,
             "refreshScope": "battle",
             "recoveryAction": "refresh"
           },
@@ -20872,6 +20862,26 @@
                               "type": "string",
                               "pattern": "^[0-9a-f]{64}$"
                             },
+                            "heartbeat_interval_seconds": {
+                              "type": "number",
+                              "const": 5
+                            },
+                            "presence_online_window_seconds": {
+                              "type": "number",
+                              "const": 10
+                            },
+                            "offline_reconnect_seconds": {
+                              "type": "number",
+                              "const": 90
+                            },
+                            "lobby_timeout_seconds": {
+                              "type": "number",
+                              "const": 300
+                            },
+                            "lobby_countdown_seconds": {
+                              "type": "number",
+                              "const": 3
+                            },
                             "action_timeout_seconds": {
                               "type": "number",
                               "const": 15
@@ -20889,6 +20899,11 @@
                           "required": [
                             "id",
                             "checksum",
+                            "heartbeat_interval_seconds",
+                            "presence_online_window_seconds",
+                            "offline_reconnect_seconds",
+                            "lobby_timeout_seconds",
+                            "lobby_countdown_seconds",
                             "action_timeout_seconds",
                             "forced_switch_timeout_seconds",
                             "reveal_seconds",
@@ -21010,6 +21025,8 @@
                                   "enum": [
                                     "preparing_share",
                                     "waiting",
+                                    "lobby_waiting",
+                                    "lobby_countdown",
                                     "active_select",
                                     "reveal",
                                     "forced_switch",
@@ -21162,6 +21179,8 @@
                                   "enum": [
                                     "preparing_share",
                                     "waiting",
+                                    "lobby_waiting",
+                                    "lobby_countdown",
                                     "active_select",
                                     "reveal",
                                     "forced_switch",
@@ -21238,6 +21257,94 @@
                                   "type": "string",
                                   "format": "date-time",
                                   "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                },
+                                "lobby": {
+                                  "anyOf": [
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "phase": {
+                                          "type": "string",
+                                          "enum": [
+                                            "lobby_waiting",
+                                            "lobby_countdown"
+                                          ]
+                                        },
+                                        "expires_at": {
+                                          "type": "string",
+                                          "format": "date-time",
+                                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                        },
+                                        "start_deadline": {
+                                          "anyOf": [
+                                            {
+                                              "type": "string",
+                                              "format": "date-time",
+                                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                            },
+                                            { "type": "null" }
+                                          ]
+                                        },
+                                        "presence": {
+                                          "type": "object",
+                                          "properties": {
+                                            "creator": {
+                                              "type": "object",
+                                              "properties": {
+                                                "online": { "type": "boolean" },
+                                                "reconnect_deadline": {
+                                                  "anyOf": [
+                                                    {
+                                                      "type": "string",
+                                                      "format": "date-time",
+                                                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                                    },
+                                                    { "type": "null" }
+                                                  ]
+                                                }
+                                              },
+                                              "required": [
+                                                "online",
+                                                "reconnect_deadline"
+                                              ],
+                                              "additionalProperties": false
+                                            },
+                                            "opponent": {
+                                              "type": "object",
+                                              "properties": {
+                                                "online": { "type": "boolean" },
+                                                "reconnect_deadline": {
+                                                  "anyOf": [
+                                                    {
+                                                      "type": "string",
+                                                      "format": "date-time",
+                                                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                                    },
+                                                    { "type": "null" }
+                                                  ]
+                                                }
+                                              },
+                                              "required": [
+                                                "online",
+                                                "reconnect_deadline"
+                                              ],
+                                              "additionalProperties": false
+                                            }
+                                          },
+                                          "required": ["creator", "opponent"],
+                                          "additionalProperties": false
+                                        }
+                                      },
+                                      "required": [
+                                        "phase",
+                                        "expires_at",
+                                        "start_deadline",
+                                        "presence"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    { "type": "null" }
+                                  ]
                                 },
                                 "self_team": {
                                   "minItems": 3,
@@ -21924,6 +22031,7 @@
                                 "prepared_message_id",
                                 "viewer_action_state",
                                 "server_time",
+                                "lobby",
                                 "self_team",
                                 "opponent_team",
                                 "resolution_event"
@@ -22594,6 +22702,7 @@
                               "type": "string",
                               "enum": [
                                 "available",
+                                "self",
                                 "accepted",
                                 "cancelled",
                                 "expired",
@@ -22604,8 +22713,7 @@
                               "type": "integer",
                               "minimum": 0,
                               "maximum": 9007199254740991
-                            },
-                            "can_select_team": { "type": "boolean" }
+                            }
                           },
                           "required": [
                             "creator_display_name",
@@ -22617,8 +22725,7 @@
                             "creator_online",
                             "room_id",
                             "invite_status",
-                            "remaining_seconds",
-                            "can_select_team"
+                            "remaining_seconds"
                           ],
                           "additionalProperties": false
                         }
@@ -22840,6 +22947,8 @@
                           "enum": [
                             "preparing_share",
                             "waiting",
+                            "lobby_waiting",
+                            "lobby_countdown",
                             "active_select",
                             "reveal",
                             "forced_switch",
@@ -22912,6 +23021,91 @@
                           "type": "string",
                           "format": "date-time",
                           "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                        },
+                        "lobby": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "phase": {
+                                  "type": "string",
+                                  "enum": ["lobby_waiting", "lobby_countdown"]
+                                },
+                                "expires_at": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                },
+                                "start_deadline": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "format": "date-time",
+                                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                    },
+                                    { "type": "null" }
+                                  ]
+                                },
+                                "presence": {
+                                  "type": "object",
+                                  "properties": {
+                                    "creator": {
+                                      "type": "object",
+                                      "properties": {
+                                        "online": { "type": "boolean" },
+                                        "reconnect_deadline": {
+                                          "anyOf": [
+                                            {
+                                              "type": "string",
+                                              "format": "date-time",
+                                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                            },
+                                            { "type": "null" }
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "online",
+                                        "reconnect_deadline"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "opponent": {
+                                      "type": "object",
+                                      "properties": {
+                                        "online": { "type": "boolean" },
+                                        "reconnect_deadline": {
+                                          "anyOf": [
+                                            {
+                                              "type": "string",
+                                              "format": "date-time",
+                                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                            },
+                                            { "type": "null" }
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "online",
+                                        "reconnect_deadline"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "required": ["creator", "opponent"],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "required": [
+                                "phase",
+                                "expires_at",
+                                "start_deadline",
+                                "presence"
+                              ],
+                              "additionalProperties": false
+                            },
+                            { "type": "null" }
+                          ]
                         },
                         "self_team": {
                           "minItems": 3,
@@ -23559,6 +23753,7 @@
                         "prepared_message_id",
                         "viewer_action_state",
                         "server_time",
+                        "lobby",
                         "self_team",
                         "opponent_team",
                         "resolution_event"
@@ -24689,6 +24884,8 @@
                           "enum": [
                             "preparing_share",
                             "waiting",
+                            "lobby_waiting",
+                            "lobby_countdown",
                             "active_select",
                             "reveal",
                             "forced_switch",
@@ -24761,6 +24958,91 @@
                           "type": "string",
                           "format": "date-time",
                           "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                        },
+                        "lobby": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "phase": {
+                                  "type": "string",
+                                  "enum": ["lobby_waiting", "lobby_countdown"]
+                                },
+                                "expires_at": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                },
+                                "start_deadline": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "format": "date-time",
+                                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                    },
+                                    { "type": "null" }
+                                  ]
+                                },
+                                "presence": {
+                                  "type": "object",
+                                  "properties": {
+                                    "creator": {
+                                      "type": "object",
+                                      "properties": {
+                                        "online": { "type": "boolean" },
+                                        "reconnect_deadline": {
+                                          "anyOf": [
+                                            {
+                                              "type": "string",
+                                              "format": "date-time",
+                                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                            },
+                                            { "type": "null" }
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "online",
+                                        "reconnect_deadline"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "opponent": {
+                                      "type": "object",
+                                      "properties": {
+                                        "online": { "type": "boolean" },
+                                        "reconnect_deadline": {
+                                          "anyOf": [
+                                            {
+                                              "type": "string",
+                                              "format": "date-time",
+                                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                            },
+                                            { "type": "null" }
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "online",
+                                        "reconnect_deadline"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "required": ["creator", "opponent"],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "required": [
+                                "phase",
+                                "expires_at",
+                                "start_deadline",
+                                "presence"
+                              ],
+                              "additionalProperties": false
+                            },
+                            { "type": "null" }
+                          ]
                         },
                         "self_team": {
                           "minItems": 3,
@@ -25408,6 +25690,7 @@
                         "prepared_message_id",
                         "viewer_action_state",
                         "server_time",
+                        "lobby",
                         "self_team",
                         "opponent_team",
                         "resolution_event"
@@ -25457,6 +25740,8 @@
                           "enum": [
                             "preparing_share",
                             "waiting",
+                            "lobby_waiting",
+                            "lobby_countdown",
                             "active_select",
                             "reveal",
                             "forced_switch",
@@ -25529,6 +25814,91 @@
                           "type": "string",
                           "format": "date-time",
                           "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                        },
+                        "lobby": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "phase": {
+                                  "type": "string",
+                                  "enum": ["lobby_waiting", "lobby_countdown"]
+                                },
+                                "expires_at": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                },
+                                "start_deadline": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "format": "date-time",
+                                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                    },
+                                    { "type": "null" }
+                                  ]
+                                },
+                                "presence": {
+                                  "type": "object",
+                                  "properties": {
+                                    "creator": {
+                                      "type": "object",
+                                      "properties": {
+                                        "online": { "type": "boolean" },
+                                        "reconnect_deadline": {
+                                          "anyOf": [
+                                            {
+                                              "type": "string",
+                                              "format": "date-time",
+                                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                            },
+                                            { "type": "null" }
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "online",
+                                        "reconnect_deadline"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "opponent": {
+                                      "type": "object",
+                                      "properties": {
+                                        "online": { "type": "boolean" },
+                                        "reconnect_deadline": {
+                                          "anyOf": [
+                                            {
+                                              "type": "string",
+                                              "format": "date-time",
+                                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                            },
+                                            { "type": "null" }
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "online",
+                                        "reconnect_deadline"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "required": ["creator", "opponent"],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "required": [
+                                "phase",
+                                "expires_at",
+                                "start_deadline",
+                                "presence"
+                              ],
+                              "additionalProperties": false
+                            },
+                            { "type": "null" }
+                          ]
                         },
                         "self_team": {
                           "minItems": 3,
@@ -26176,6 +26546,7 @@
                         "prepared_message_id",
                         "viewer_action_state",
                         "server_time",
+                        "lobby",
                         "self_team",
                         "opponent_team",
                         "resolution_event"
@@ -26237,7 +26608,7 @@
             }
           },
           "409": {
-            "description": "Errors: ENTRY_HANDOFF_PENDING, BATTLE_ROOM_ALREADY_ACCEPTED, BATTLE_CREATOR_OFFLINE, BATTLE_ALREADY_PARTICIPATING, INSUFFICIENT_BALANCE, INSUFFICIENT_INVENTORY, INVENTORY_RESERVED, BATTLE_VOIDED, IDEMPOTENCY_KEY_REUSED",
+            "description": "Errors: ENTRY_HANDOFF_PENDING, BATTLE_ROOM_ALREADY_ACCEPTED, BATTLE_ALREADY_PARTICIPATING, INSUFFICIENT_BALANCE, INSUFFICIENT_INVENTORY, INVENTORY_RESERVED, BATTLE_VOIDED, IDEMPOTENCY_KEY_REUSED",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/StandardError" }
@@ -26314,7 +26685,6 @@
           "BATTLE_ROOM_EXPIRED",
           "BATTLE_ROOM_CANCELLED",
           "BATTLE_ROOM_ALREADY_ACCEPTED",
-          "BATTLE_CREATOR_OFFLINE",
           "BATTLE_SELF_ACCEPT_FORBIDDEN",
           "BATTLE_ALREADY_PARTICIPATING",
           "BATTLE_TEAM_INVALID",
@@ -26443,13 +26813,6 @@
             "status": 409,
             "message": "挑战已被其他玩家接受",
             "retryable": false,
-            "refreshScope": "battle",
-            "recoveryAction": "refresh"
-          },
-          "BATTLE_CREATOR_OFFLINE": {
-            "status": 409,
-            "message": "创建者当前不在线",
-            "retryable": true,
             "refreshScope": "battle",
             "recoveryAction": "refresh"
           },
@@ -26598,6 +26961,8 @@
                           "enum": [
                             "preparing_share",
                             "waiting",
+                            "lobby_waiting",
+                            "lobby_countdown",
                             "active_select",
                             "reveal",
                             "forced_switch",
@@ -26670,6 +27035,91 @@
                           "type": "string",
                           "format": "date-time",
                           "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                        },
+                        "lobby": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "phase": {
+                                  "type": "string",
+                                  "enum": ["lobby_waiting", "lobby_countdown"]
+                                },
+                                "expires_at": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                },
+                                "start_deadline": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "format": "date-time",
+                                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                    },
+                                    { "type": "null" }
+                                  ]
+                                },
+                                "presence": {
+                                  "type": "object",
+                                  "properties": {
+                                    "creator": {
+                                      "type": "object",
+                                      "properties": {
+                                        "online": { "type": "boolean" },
+                                        "reconnect_deadline": {
+                                          "anyOf": [
+                                            {
+                                              "type": "string",
+                                              "format": "date-time",
+                                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                            },
+                                            { "type": "null" }
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "online",
+                                        "reconnect_deadline"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "opponent": {
+                                      "type": "object",
+                                      "properties": {
+                                        "online": { "type": "boolean" },
+                                        "reconnect_deadline": {
+                                          "anyOf": [
+                                            {
+                                              "type": "string",
+                                              "format": "date-time",
+                                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                            },
+                                            { "type": "null" }
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "online",
+                                        "reconnect_deadline"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "required": ["creator", "opponent"],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "required": [
+                                "phase",
+                                "expires_at",
+                                "start_deadline",
+                                "presence"
+                              ],
+                              "additionalProperties": false
+                            },
+                            { "type": "null" }
+                          ]
                         },
                         "self_team": {
                           "minItems": 3,
@@ -27317,6 +27767,7 @@
                         "prepared_message_id",
                         "viewer_action_state",
                         "server_time",
+                        "lobby",
                         "self_team",
                         "opponent_team",
                         "resolution_event"
@@ -27366,6 +27817,8 @@
                           "enum": [
                             "preparing_share",
                             "waiting",
+                            "lobby_waiting",
+                            "lobby_countdown",
                             "active_select",
                             "reveal",
                             "forced_switch",
@@ -27438,6 +27891,91 @@
                           "type": "string",
                           "format": "date-time",
                           "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                        },
+                        "lobby": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "phase": {
+                                  "type": "string",
+                                  "enum": ["lobby_waiting", "lobby_countdown"]
+                                },
+                                "expires_at": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                },
+                                "start_deadline": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "format": "date-time",
+                                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                    },
+                                    { "type": "null" }
+                                  ]
+                                },
+                                "presence": {
+                                  "type": "object",
+                                  "properties": {
+                                    "creator": {
+                                      "type": "object",
+                                      "properties": {
+                                        "online": { "type": "boolean" },
+                                        "reconnect_deadline": {
+                                          "anyOf": [
+                                            {
+                                              "type": "string",
+                                              "format": "date-time",
+                                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                            },
+                                            { "type": "null" }
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "online",
+                                        "reconnect_deadline"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "opponent": {
+                                      "type": "object",
+                                      "properties": {
+                                        "online": { "type": "boolean" },
+                                        "reconnect_deadline": {
+                                          "anyOf": [
+                                            {
+                                              "type": "string",
+                                              "format": "date-time",
+                                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                            },
+                                            { "type": "null" }
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "online",
+                                        "reconnect_deadline"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "required": ["creator", "opponent"],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "required": [
+                                "phase",
+                                "expires_at",
+                                "start_deadline",
+                                "presence"
+                              ],
+                              "additionalProperties": false
+                            },
+                            { "type": "null" }
+                          ]
                         },
                         "self_team": {
                           "minItems": 3,
@@ -28085,6 +28623,7 @@
                         "prepared_message_id",
                         "viewer_action_state",
                         "server_time",
+                        "lobby",
                         "self_team",
                         "opponent_team",
                         "resolution_event"
@@ -28486,6 +29025,8 @@
                           "enum": [
                             "preparing_share",
                             "waiting",
+                            "lobby_waiting",
+                            "lobby_countdown",
                             "active_select",
                             "reveal",
                             "forced_switch",
@@ -28558,6 +29099,91 @@
                           "type": "string",
                           "format": "date-time",
                           "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                        },
+                        "lobby": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "phase": {
+                                  "type": "string",
+                                  "enum": ["lobby_waiting", "lobby_countdown"]
+                                },
+                                "expires_at": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                },
+                                "start_deadline": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "format": "date-time",
+                                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                    },
+                                    { "type": "null" }
+                                  ]
+                                },
+                                "presence": {
+                                  "type": "object",
+                                  "properties": {
+                                    "creator": {
+                                      "type": "object",
+                                      "properties": {
+                                        "online": { "type": "boolean" },
+                                        "reconnect_deadline": {
+                                          "anyOf": [
+                                            {
+                                              "type": "string",
+                                              "format": "date-time",
+                                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                            },
+                                            { "type": "null" }
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "online",
+                                        "reconnect_deadline"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "opponent": {
+                                      "type": "object",
+                                      "properties": {
+                                        "online": { "type": "boolean" },
+                                        "reconnect_deadline": {
+                                          "anyOf": [
+                                            {
+                                              "type": "string",
+                                              "format": "date-time",
+                                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                            },
+                                            { "type": "null" }
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "online",
+                                        "reconnect_deadline"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "required": ["creator", "opponent"],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "required": [
+                                "phase",
+                                "expires_at",
+                                "start_deadline",
+                                "presence"
+                              ],
+                              "additionalProperties": false
+                            },
+                            { "type": "null" }
+                          ]
                         },
                         "self_team": {
                           "minItems": 3,
@@ -29205,6 +29831,7 @@
                         "prepared_message_id",
                         "viewer_action_state",
                         "server_time",
+                        "lobby",
                         "self_team",
                         "opponent_team",
                         "resolution_event"
@@ -29254,6 +29881,8 @@
                           "enum": [
                             "preparing_share",
                             "waiting",
+                            "lobby_waiting",
+                            "lobby_countdown",
                             "active_select",
                             "reveal",
                             "forced_switch",
@@ -29326,6 +29955,91 @@
                           "type": "string",
                           "format": "date-time",
                           "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                        },
+                        "lobby": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "phase": {
+                                  "type": "string",
+                                  "enum": ["lobby_waiting", "lobby_countdown"]
+                                },
+                                "expires_at": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                },
+                                "start_deadline": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "format": "date-time",
+                                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                    },
+                                    { "type": "null" }
+                                  ]
+                                },
+                                "presence": {
+                                  "type": "object",
+                                  "properties": {
+                                    "creator": {
+                                      "type": "object",
+                                      "properties": {
+                                        "online": { "type": "boolean" },
+                                        "reconnect_deadline": {
+                                          "anyOf": [
+                                            {
+                                              "type": "string",
+                                              "format": "date-time",
+                                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                            },
+                                            { "type": "null" }
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "online",
+                                        "reconnect_deadline"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "opponent": {
+                                      "type": "object",
+                                      "properties": {
+                                        "online": { "type": "boolean" },
+                                        "reconnect_deadline": {
+                                          "anyOf": [
+                                            {
+                                              "type": "string",
+                                              "format": "date-time",
+                                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                            },
+                                            { "type": "null" }
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "online",
+                                        "reconnect_deadline"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "required": ["creator", "opponent"],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "required": [
+                                "phase",
+                                "expires_at",
+                                "start_deadline",
+                                "presence"
+                              ],
+                              "additionalProperties": false
+                            },
+                            { "type": "null" }
+                          ]
                         },
                         "self_team": {
                           "minItems": 3,
@@ -29973,6 +30687,7 @@
                         "prepared_message_id",
                         "viewer_action_state",
                         "server_time",
+                        "lobby",
                         "self_team",
                         "opponent_team",
                         "resolution_event"
@@ -30330,6 +31045,8 @@
                           "enum": [
                             "preparing_share",
                             "waiting",
+                            "lobby_waiting",
+                            "lobby_countdown",
                             "active_select",
                             "reveal",
                             "forced_switch",
@@ -30340,13 +31057,21 @@
                             "voided"
                           ]
                         },
-                        "creator_online": { "type": "boolean" },
-                        "server_time": {
-                          "type": "string",
-                          "format": "date-time",
-                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                        "state_version": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991
                         },
-                        "expires_at": {
+                        "side": {
+                          "type": "string",
+                          "enum": ["creator", "opponent"]
+                        },
+                        "turn_no": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 20
+                        },
+                        "phase_deadline": {
                           "anyOf": [
                             {
                               "type": "string",
@@ -30356,18 +31081,780 @@
                             { "type": "null" }
                           ]
                         },
-                        "reason": {
+                        "reveal_ends_at": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            },
+                            { "type": "null" }
+                          ]
+                        },
+                        "prepare_deadline": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            },
+                            { "type": "null" }
+                          ]
+                        },
+                        "prepared_message_id": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 256
+                            },
+                            { "type": "null" }
+                          ]
+                        },
+                        "viewer_action_state": {
                           "type": "string",
-                          "minLength": 1,
-                          "maxLength": 128
+                          "enum": ["not_applicable", "available", "locked"]
+                        },
+                        "server_time": {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                        },
+                        "lobby": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "phase": {
+                                  "type": "string",
+                                  "enum": ["lobby_waiting", "lobby_countdown"]
+                                },
+                                "expires_at": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                },
+                                "start_deadline": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "format": "date-time",
+                                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                    },
+                                    { "type": "null" }
+                                  ]
+                                },
+                                "presence": {
+                                  "type": "object",
+                                  "properties": {
+                                    "creator": {
+                                      "type": "object",
+                                      "properties": {
+                                        "online": { "type": "boolean" },
+                                        "reconnect_deadline": {
+                                          "anyOf": [
+                                            {
+                                              "type": "string",
+                                              "format": "date-time",
+                                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                            },
+                                            { "type": "null" }
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "online",
+                                        "reconnect_deadline"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "opponent": {
+                                      "type": "object",
+                                      "properties": {
+                                        "online": { "type": "boolean" },
+                                        "reconnect_deadline": {
+                                          "anyOf": [
+                                            {
+                                              "type": "string",
+                                              "format": "date-time",
+                                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                            },
+                                            { "type": "null" }
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "online",
+                                        "reconnect_deadline"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "required": ["creator", "opponent"],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "required": [
+                                "phase",
+                                "expires_at",
+                                "start_deadline",
+                                "presence"
+                              ],
+                              "additionalProperties": false
+                            },
+                            { "type": "null" }
+                          ]
+                        },
+                        "self_team": {
+                          "minItems": 3,
+                          "maxItems": 3,
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "slot": {
+                                "anyOf": [
+                                  { "type": "number", "const": 1 },
+                                  { "type": "number", "const": 2 },
+                                  { "type": "number", "const": 3 }
+                                ]
+                              },
+                              "template_id": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 128
+                              },
+                              "name": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 128
+                              },
+                              "image_thumbnail_path": {
+                                "type": "string",
+                                "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                              },
+                              "image_detail_path": {
+                                "type": "string",
+                                "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                              },
+                              "rarity": {
+                                "type": "string",
+                                "enum": [
+                                  "common",
+                                  "rare",
+                                  "epic",
+                                  "legendary",
+                                  "mythic"
+                                ]
+                              },
+                              "stage": {
+                                "anyOf": [
+                                  { "type": "number", "const": 1 },
+                                  { "type": "number", "const": 2 },
+                                  { "type": "number", "const": 3 }
+                                ]
+                              },
+                              "element": {
+                                "type": "string",
+                                "enum": [
+                                  "fire",
+                                  "grass",
+                                  "earth",
+                                  "lightning",
+                                  "water"
+                                ]
+                              },
+                              "current_hp": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "max_hp": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "attack": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "defense": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "speed": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "alive": { "type": "boolean" },
+                              "active": { "type": "boolean" },
+                              "skills": {
+                                "minItems": 4,
+                                "maxItems": 4,
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "position": {
+                                      "anyOf": [
+                                        { "type": "number", "const": 1 },
+                                        { "type": "number", "const": 2 },
+                                        { "type": "number", "const": 3 },
+                                        { "type": "number", "const": 4 }
+                                      ]
+                                    },
+                                    "skill_id": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 128
+                                    },
+                                    "name": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 64
+                                    },
+                                    "power": {
+                                      "type": "integer",
+                                      "exclusiveMinimum": 0,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "accuracy_bps": {
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 10000
+                                    },
+                                    "priority": {
+                                      "type": "integer",
+                                      "minimum": -1,
+                                      "maximum": 1
+                                    },
+                                    "effect_key": {
+                                      "type": "string",
+                                      "pattern": "^(fire|grass|earth|lightning|water)-(0[1-9]|10)$"
+                                    }
+                                  },
+                                  "required": [
+                                    "position",
+                                    "skill_id",
+                                    "name",
+                                    "power",
+                                    "accuracy_bps",
+                                    "priority",
+                                    "effect_key"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              }
+                            },
+                            "required": [
+                              "slot",
+                              "template_id",
+                              "name",
+                              "image_thumbnail_path",
+                              "image_detail_path",
+                              "rarity",
+                              "stage",
+                              "element",
+                              "current_hp",
+                              "max_hp",
+                              "attack",
+                              "defense",
+                              "speed",
+                              "alive",
+                              "active",
+                              "skills"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "opponent_team": {
+                          "anyOf": [
+                            { "type": "array", "prefixItems": [] },
+                            {
+                              "minItems": 3,
+                              "maxItems": 3,
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "slot": {
+                                    "anyOf": [
+                                      { "type": "number", "const": 1 },
+                                      { "type": "number", "const": 2 },
+                                      { "type": "number", "const": 3 }
+                                    ]
+                                  },
+                                  "name": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 128
+                                  },
+                                  "image_thumbnail_path": {
+                                    "type": "string",
+                                    "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                                  },
+                                  "image_detail_path": {
+                                    "type": "string",
+                                    "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                                  },
+                                  "rarity": {
+                                    "type": "string",
+                                    "enum": [
+                                      "common",
+                                      "rare",
+                                      "epic",
+                                      "legendary",
+                                      "mythic"
+                                    ]
+                                  },
+                                  "stage": {
+                                    "anyOf": [
+                                      { "type": "number", "const": 1 },
+                                      { "type": "number", "const": 2 },
+                                      { "type": "number", "const": 3 }
+                                    ]
+                                  },
+                                  "hp_percent": {
+                                    "type": "number",
+                                    "minimum": 0,
+                                    "maximum": 100
+                                  },
+                                  "alive": { "type": "boolean" },
+                                  "active": { "type": "boolean" }
+                                },
+                                "required": [
+                                  "slot",
+                                  "name",
+                                  "image_thumbnail_path",
+                                  "image_detail_path",
+                                  "rarity",
+                                  "stage",
+                                  "hp_percent",
+                                  "alive",
+                                  "active"
+                                ],
+                                "additionalProperties": false
+                              }
+                            }
+                          ]
+                        },
+                        "resolution_event": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "event_id": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                },
+                                "state_version": {
+                                  "type": "integer",
+                                  "exclusiveMinimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "turn_no": {
+                                  "type": "integer",
+                                  "minimum": 1,
+                                  "maximum": 20
+                                },
+                                "actions": {
+                                  "minItems": 1,
+                                  "maxItems": 2,
+                                  "type": "array",
+                                  "items": {
+                                    "oneOf": [
+                                      {
+                                        "oneOf": [
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "actor": {
+                                                "type": "string",
+                                                "const": "self"
+                                              },
+                                              "kind": {
+                                                "type": "string",
+                                                "const": "attack"
+                                              },
+                                              "skill_name": {
+                                                "type": "string",
+                                                "minLength": 1,
+                                                "maxLength": 64
+                                              },
+                                              "effect_key": {
+                                                "type": "string",
+                                                "pattern": "^(fire|grass|earth|lightning|water)-(0[1-9]|10)$"
+                                              },
+                                              "hit": { "type": "boolean" },
+                                              "effectiveness": {
+                                                "type": "string",
+                                                "enum": [
+                                                  "super_effective",
+                                                  "not_effective",
+                                                  "normal"
+                                                ]
+                                              },
+                                              "target_hp_percent_before": {
+                                                "type": "number",
+                                                "minimum": 0,
+                                                "maximum": 100
+                                              },
+                                              "target_hp_percent_after": {
+                                                "type": "number",
+                                                "minimum": 0,
+                                                "maximum": 100
+                                              },
+                                              "knockout": { "type": "boolean" }
+                                            },
+                                            "required": [
+                                              "actor",
+                                              "kind",
+                                              "skill_name",
+                                              "effect_key",
+                                              "hit",
+                                              "effectiveness",
+                                              "target_hp_percent_before",
+                                              "target_hp_percent_after",
+                                              "knockout"
+                                            ],
+                                            "additionalProperties": false
+                                          },
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "actor": {
+                                                "type": "string",
+                                                "const": "opponent"
+                                              },
+                                              "kind": {
+                                                "type": "string",
+                                                "const": "attack"
+                                              },
+                                              "skill_name": {
+                                                "type": "string",
+                                                "minLength": 1,
+                                                "maxLength": 64
+                                              },
+                                              "effect_key": {
+                                                "type": "string",
+                                                "pattern": "^(fire|grass|earth|lightning|water)-(0[1-9]|10)$"
+                                              },
+                                              "hit": { "type": "boolean" },
+                                              "effectiveness": {
+                                                "type": "string",
+                                                "enum": [
+                                                  "super_effective",
+                                                  "not_effective",
+                                                  "normal"
+                                                ]
+                                              },
+                                              "target_current_hp_before": {
+                                                "type": "integer",
+                                                "minimum": 0,
+                                                "maximum": 9007199254740991
+                                              },
+                                              "target_current_hp_after": {
+                                                "type": "integer",
+                                                "minimum": 0,
+                                                "maximum": 9007199254740991
+                                              },
+                                              "knockout": { "type": "boolean" }
+                                            },
+                                            "required": [
+                                              "actor",
+                                              "kind",
+                                              "skill_name",
+                                              "effect_key",
+                                              "hit",
+                                              "effectiveness",
+                                              "target_current_hp_before",
+                                              "target_current_hp_after",
+                                              "knockout"
+                                            ],
+                                            "additionalProperties": false
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "actor": {
+                                            "type": "string",
+                                            "enum": ["self", "opponent"]
+                                          },
+                                          "kind": {
+                                            "type": "string",
+                                            "const": "switch"
+                                          },
+                                          "switch_to": {
+                                            "type": "object",
+                                            "properties": {
+                                              "slot": {
+                                                "anyOf": [
+                                                  {
+                                                    "type": "number",
+                                                    "const": 1
+                                                  },
+                                                  {
+                                                    "type": "number",
+                                                    "const": 2
+                                                  },
+                                                  {
+                                                    "type": "number",
+                                                    "const": 3
+                                                  }
+                                                ]
+                                              },
+                                              "name": {
+                                                "type": "string",
+                                                "minLength": 1,
+                                                "maxLength": 128
+                                              },
+                                              "image_thumbnail_path": {
+                                                "type": "string",
+                                                "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                                              },
+                                              "image_detail_path": {
+                                                "type": "string",
+                                                "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                                              },
+                                              "rarity": {
+                                                "type": "string",
+                                                "enum": [
+                                                  "common",
+                                                  "rare",
+                                                  "epic",
+                                                  "legendary",
+                                                  "mythic"
+                                                ]
+                                              },
+                                              "stage": {
+                                                "anyOf": [
+                                                  {
+                                                    "type": "number",
+                                                    "const": 1
+                                                  },
+                                                  {
+                                                    "type": "number",
+                                                    "const": 2
+                                                  },
+                                                  {
+                                                    "type": "number",
+                                                    "const": 3
+                                                  }
+                                                ]
+                                              }
+                                            },
+                                            "required": [
+                                              "slot",
+                                              "name",
+                                              "image_thumbnail_path",
+                                              "image_detail_path",
+                                              "rarity",
+                                              "stage"
+                                            ],
+                                            "additionalProperties": false
+                                          }
+                                        },
+                                        "required": [
+                                          "actor",
+                                          "kind",
+                                          "switch_to"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "actor": {
+                                            "type": "string",
+                                            "enum": ["self", "opponent"]
+                                          },
+                                          "kind": {
+                                            "type": "string",
+                                            "const": "forced_switch"
+                                          },
+                                          "switch_to": {
+                                            "type": "object",
+                                            "properties": {
+                                              "slot": {
+                                                "anyOf": [
+                                                  {
+                                                    "type": "number",
+                                                    "const": 1
+                                                  },
+                                                  {
+                                                    "type": "number",
+                                                    "const": 2
+                                                  },
+                                                  {
+                                                    "type": "number",
+                                                    "const": 3
+                                                  }
+                                                ]
+                                              },
+                                              "name": {
+                                                "type": "string",
+                                                "minLength": 1,
+                                                "maxLength": 128
+                                              },
+                                              "image_thumbnail_path": {
+                                                "type": "string",
+                                                "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                                              },
+                                              "image_detail_path": {
+                                                "type": "string",
+                                                "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                                              },
+                                              "rarity": {
+                                                "type": "string",
+                                                "enum": [
+                                                  "common",
+                                                  "rare",
+                                                  "epic",
+                                                  "legendary",
+                                                  "mythic"
+                                                ]
+                                              },
+                                              "stage": {
+                                                "anyOf": [
+                                                  {
+                                                    "type": "number",
+                                                    "const": 1
+                                                  },
+                                                  {
+                                                    "type": "number",
+                                                    "const": 2
+                                                  },
+                                                  {
+                                                    "type": "number",
+                                                    "const": 3
+                                                  }
+                                                ]
+                                              }
+                                            },
+                                            "required": [
+                                              "slot",
+                                              "name",
+                                              "image_thumbnail_path",
+                                              "image_detail_path",
+                                              "rarity",
+                                              "stage"
+                                            ],
+                                            "additionalProperties": false
+                                          }
+                                        },
+                                        "required": [
+                                          "actor",
+                                          "kind",
+                                          "switch_to"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    ]
+                                  }
+                                },
+                                "self_hp": {
+                                  "minItems": 3,
+                                  "maxItems": 3,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "slot": {
+                                        "anyOf": [
+                                          { "type": "number", "const": 1 },
+                                          { "type": "number", "const": 2 },
+                                          { "type": "number", "const": 3 }
+                                        ]
+                                      },
+                                      "current_hp": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "max_hp": {
+                                        "type": "integer",
+                                        "exclusiveMinimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "alive": { "type": "boolean" }
+                                    },
+                                    "required": [
+                                      "slot",
+                                      "current_hp",
+                                      "max_hp",
+                                      "alive"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "opponent_hp": {
+                                  "minItems": 3,
+                                  "maxItems": 3,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "slot": {
+                                        "anyOf": [
+                                          { "type": "number", "const": 1 },
+                                          { "type": "number", "const": 2 },
+                                          { "type": "number", "const": 3 }
+                                        ]
+                                      },
+                                      "hp_percent": {
+                                        "type": "number",
+                                        "minimum": 0,
+                                        "maximum": 100
+                                      },
+                                      "alive": { "type": "boolean" }
+                                    },
+                                    "required": ["slot", "hp_percent", "alive"],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "reveal_ends_at": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                }
+                              },
+                              "required": [
+                                "event_id",
+                                "state_version",
+                                "turn_no",
+                                "actions",
+                                "self_hp",
+                                "opponent_hp",
+                                "reveal_ends_at"
+                              ],
+                              "additionalProperties": false
+                            },
+                            { "type": "null" }
+                          ]
                         }
                       },
                       "required": [
                         "room_id",
                         "status",
-                        "creator_online",
+                        "state_version",
+                        "side",
+                        "turn_no",
+                        "phase_deadline",
+                        "reveal_ends_at",
+                        "prepare_deadline",
+                        "prepared_message_id",
+                        "viewer_action_state",
                         "server_time",
-                        "expires_at"
+                        "lobby",
+                        "self_team",
+                        "opponent_team",
+                        "resolution_event"
                       ],
                       "additionalProperties": false
                     },
@@ -30593,7 +32080,7 @@
             "recoveryAction": "none"
           }
         },
-        "x-refresh-scopes": ["battle"],
+        "x-refresh-scopes": ["battle", "assets", "inventory"],
         "requestBody": {
           "required": true,
           "content": {
@@ -30644,8 +32131,38 @@
                           "format": "uuid",
                           "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
                         },
-                        "creator_online": { "type": "boolean", "const": false },
-                        "reconnect_deadline": {
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "preparing_share",
+                            "waiting",
+                            "lobby_waiting",
+                            "lobby_countdown",
+                            "active_select",
+                            "reveal",
+                            "forced_switch",
+                            "finished",
+                            "draw",
+                            "cancelled",
+                            "expired",
+                            "voided"
+                          ]
+                        },
+                        "state_version": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "side": {
+                          "type": "string",
+                          "enum": ["creator", "opponent"]
+                        },
+                        "turn_no": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 20
+                        },
+                        "phase_deadline": {
                           "anyOf": [
                             {
                               "type": "string",
@@ -30654,12 +32171,781 @@
                             },
                             { "type": "null" }
                           ]
+                        },
+                        "reveal_ends_at": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            },
+                            { "type": "null" }
+                          ]
+                        },
+                        "prepare_deadline": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            },
+                            { "type": "null" }
+                          ]
+                        },
+                        "prepared_message_id": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 256
+                            },
+                            { "type": "null" }
+                          ]
+                        },
+                        "viewer_action_state": {
+                          "type": "string",
+                          "enum": ["not_applicable", "available", "locked"]
+                        },
+                        "server_time": {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                        },
+                        "lobby": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "phase": {
+                                  "type": "string",
+                                  "enum": ["lobby_waiting", "lobby_countdown"]
+                                },
+                                "expires_at": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                },
+                                "start_deadline": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "format": "date-time",
+                                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                    },
+                                    { "type": "null" }
+                                  ]
+                                },
+                                "presence": {
+                                  "type": "object",
+                                  "properties": {
+                                    "creator": {
+                                      "type": "object",
+                                      "properties": {
+                                        "online": { "type": "boolean" },
+                                        "reconnect_deadline": {
+                                          "anyOf": [
+                                            {
+                                              "type": "string",
+                                              "format": "date-time",
+                                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                            },
+                                            { "type": "null" }
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "online",
+                                        "reconnect_deadline"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "opponent": {
+                                      "type": "object",
+                                      "properties": {
+                                        "online": { "type": "boolean" },
+                                        "reconnect_deadline": {
+                                          "anyOf": [
+                                            {
+                                              "type": "string",
+                                              "format": "date-time",
+                                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                            },
+                                            { "type": "null" }
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "online",
+                                        "reconnect_deadline"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "required": ["creator", "opponent"],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "required": [
+                                "phase",
+                                "expires_at",
+                                "start_deadline",
+                                "presence"
+                              ],
+                              "additionalProperties": false
+                            },
+                            { "type": "null" }
+                          ]
+                        },
+                        "self_team": {
+                          "minItems": 3,
+                          "maxItems": 3,
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "slot": {
+                                "anyOf": [
+                                  { "type": "number", "const": 1 },
+                                  { "type": "number", "const": 2 },
+                                  { "type": "number", "const": 3 }
+                                ]
+                              },
+                              "template_id": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 128
+                              },
+                              "name": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 128
+                              },
+                              "image_thumbnail_path": {
+                                "type": "string",
+                                "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                              },
+                              "image_detail_path": {
+                                "type": "string",
+                                "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                              },
+                              "rarity": {
+                                "type": "string",
+                                "enum": [
+                                  "common",
+                                  "rare",
+                                  "epic",
+                                  "legendary",
+                                  "mythic"
+                                ]
+                              },
+                              "stage": {
+                                "anyOf": [
+                                  { "type": "number", "const": 1 },
+                                  { "type": "number", "const": 2 },
+                                  { "type": "number", "const": 3 }
+                                ]
+                              },
+                              "element": {
+                                "type": "string",
+                                "enum": [
+                                  "fire",
+                                  "grass",
+                                  "earth",
+                                  "lightning",
+                                  "water"
+                                ]
+                              },
+                              "current_hp": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "max_hp": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "attack": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "defense": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "speed": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "alive": { "type": "boolean" },
+                              "active": { "type": "boolean" },
+                              "skills": {
+                                "minItems": 4,
+                                "maxItems": 4,
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "position": {
+                                      "anyOf": [
+                                        { "type": "number", "const": 1 },
+                                        { "type": "number", "const": 2 },
+                                        { "type": "number", "const": 3 },
+                                        { "type": "number", "const": 4 }
+                                      ]
+                                    },
+                                    "skill_id": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 128
+                                    },
+                                    "name": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 64
+                                    },
+                                    "power": {
+                                      "type": "integer",
+                                      "exclusiveMinimum": 0,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "accuracy_bps": {
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 10000
+                                    },
+                                    "priority": {
+                                      "type": "integer",
+                                      "minimum": -1,
+                                      "maximum": 1
+                                    },
+                                    "effect_key": {
+                                      "type": "string",
+                                      "pattern": "^(fire|grass|earth|lightning|water)-(0[1-9]|10)$"
+                                    }
+                                  },
+                                  "required": [
+                                    "position",
+                                    "skill_id",
+                                    "name",
+                                    "power",
+                                    "accuracy_bps",
+                                    "priority",
+                                    "effect_key"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              }
+                            },
+                            "required": [
+                              "slot",
+                              "template_id",
+                              "name",
+                              "image_thumbnail_path",
+                              "image_detail_path",
+                              "rarity",
+                              "stage",
+                              "element",
+                              "current_hp",
+                              "max_hp",
+                              "attack",
+                              "defense",
+                              "speed",
+                              "alive",
+                              "active",
+                              "skills"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "opponent_team": {
+                          "anyOf": [
+                            { "type": "array", "prefixItems": [] },
+                            {
+                              "minItems": 3,
+                              "maxItems": 3,
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "slot": {
+                                    "anyOf": [
+                                      { "type": "number", "const": 1 },
+                                      { "type": "number", "const": 2 },
+                                      { "type": "number", "const": 3 }
+                                    ]
+                                  },
+                                  "name": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 128
+                                  },
+                                  "image_thumbnail_path": {
+                                    "type": "string",
+                                    "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                                  },
+                                  "image_detail_path": {
+                                    "type": "string",
+                                    "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                                  },
+                                  "rarity": {
+                                    "type": "string",
+                                    "enum": [
+                                      "common",
+                                      "rare",
+                                      "epic",
+                                      "legendary",
+                                      "mythic"
+                                    ]
+                                  },
+                                  "stage": {
+                                    "anyOf": [
+                                      { "type": "number", "const": 1 },
+                                      { "type": "number", "const": 2 },
+                                      { "type": "number", "const": 3 }
+                                    ]
+                                  },
+                                  "hp_percent": {
+                                    "type": "number",
+                                    "minimum": 0,
+                                    "maximum": 100
+                                  },
+                                  "alive": { "type": "boolean" },
+                                  "active": { "type": "boolean" }
+                                },
+                                "required": [
+                                  "slot",
+                                  "name",
+                                  "image_thumbnail_path",
+                                  "image_detail_path",
+                                  "rarity",
+                                  "stage",
+                                  "hp_percent",
+                                  "alive",
+                                  "active"
+                                ],
+                                "additionalProperties": false
+                              }
+                            }
+                          ]
+                        },
+                        "resolution_event": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "event_id": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                },
+                                "state_version": {
+                                  "type": "integer",
+                                  "exclusiveMinimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "turn_no": {
+                                  "type": "integer",
+                                  "minimum": 1,
+                                  "maximum": 20
+                                },
+                                "actions": {
+                                  "minItems": 1,
+                                  "maxItems": 2,
+                                  "type": "array",
+                                  "items": {
+                                    "oneOf": [
+                                      {
+                                        "oneOf": [
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "actor": {
+                                                "type": "string",
+                                                "const": "self"
+                                              },
+                                              "kind": {
+                                                "type": "string",
+                                                "const": "attack"
+                                              },
+                                              "skill_name": {
+                                                "type": "string",
+                                                "minLength": 1,
+                                                "maxLength": 64
+                                              },
+                                              "effect_key": {
+                                                "type": "string",
+                                                "pattern": "^(fire|grass|earth|lightning|water)-(0[1-9]|10)$"
+                                              },
+                                              "hit": { "type": "boolean" },
+                                              "effectiveness": {
+                                                "type": "string",
+                                                "enum": [
+                                                  "super_effective",
+                                                  "not_effective",
+                                                  "normal"
+                                                ]
+                                              },
+                                              "target_hp_percent_before": {
+                                                "type": "number",
+                                                "minimum": 0,
+                                                "maximum": 100
+                                              },
+                                              "target_hp_percent_after": {
+                                                "type": "number",
+                                                "minimum": 0,
+                                                "maximum": 100
+                                              },
+                                              "knockout": { "type": "boolean" }
+                                            },
+                                            "required": [
+                                              "actor",
+                                              "kind",
+                                              "skill_name",
+                                              "effect_key",
+                                              "hit",
+                                              "effectiveness",
+                                              "target_hp_percent_before",
+                                              "target_hp_percent_after",
+                                              "knockout"
+                                            ],
+                                            "additionalProperties": false
+                                          },
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "actor": {
+                                                "type": "string",
+                                                "const": "opponent"
+                                              },
+                                              "kind": {
+                                                "type": "string",
+                                                "const": "attack"
+                                              },
+                                              "skill_name": {
+                                                "type": "string",
+                                                "minLength": 1,
+                                                "maxLength": 64
+                                              },
+                                              "effect_key": {
+                                                "type": "string",
+                                                "pattern": "^(fire|grass|earth|lightning|water)-(0[1-9]|10)$"
+                                              },
+                                              "hit": { "type": "boolean" },
+                                              "effectiveness": {
+                                                "type": "string",
+                                                "enum": [
+                                                  "super_effective",
+                                                  "not_effective",
+                                                  "normal"
+                                                ]
+                                              },
+                                              "target_current_hp_before": {
+                                                "type": "integer",
+                                                "minimum": 0,
+                                                "maximum": 9007199254740991
+                                              },
+                                              "target_current_hp_after": {
+                                                "type": "integer",
+                                                "minimum": 0,
+                                                "maximum": 9007199254740991
+                                              },
+                                              "knockout": { "type": "boolean" }
+                                            },
+                                            "required": [
+                                              "actor",
+                                              "kind",
+                                              "skill_name",
+                                              "effect_key",
+                                              "hit",
+                                              "effectiveness",
+                                              "target_current_hp_before",
+                                              "target_current_hp_after",
+                                              "knockout"
+                                            ],
+                                            "additionalProperties": false
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "actor": {
+                                            "type": "string",
+                                            "enum": ["self", "opponent"]
+                                          },
+                                          "kind": {
+                                            "type": "string",
+                                            "const": "switch"
+                                          },
+                                          "switch_to": {
+                                            "type": "object",
+                                            "properties": {
+                                              "slot": {
+                                                "anyOf": [
+                                                  {
+                                                    "type": "number",
+                                                    "const": 1
+                                                  },
+                                                  {
+                                                    "type": "number",
+                                                    "const": 2
+                                                  },
+                                                  {
+                                                    "type": "number",
+                                                    "const": 3
+                                                  }
+                                                ]
+                                              },
+                                              "name": {
+                                                "type": "string",
+                                                "minLength": 1,
+                                                "maxLength": 128
+                                              },
+                                              "image_thumbnail_path": {
+                                                "type": "string",
+                                                "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                                              },
+                                              "image_detail_path": {
+                                                "type": "string",
+                                                "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                                              },
+                                              "rarity": {
+                                                "type": "string",
+                                                "enum": [
+                                                  "common",
+                                                  "rare",
+                                                  "epic",
+                                                  "legendary",
+                                                  "mythic"
+                                                ]
+                                              },
+                                              "stage": {
+                                                "anyOf": [
+                                                  {
+                                                    "type": "number",
+                                                    "const": 1
+                                                  },
+                                                  {
+                                                    "type": "number",
+                                                    "const": 2
+                                                  },
+                                                  {
+                                                    "type": "number",
+                                                    "const": 3
+                                                  }
+                                                ]
+                                              }
+                                            },
+                                            "required": [
+                                              "slot",
+                                              "name",
+                                              "image_thumbnail_path",
+                                              "image_detail_path",
+                                              "rarity",
+                                              "stage"
+                                            ],
+                                            "additionalProperties": false
+                                          }
+                                        },
+                                        "required": [
+                                          "actor",
+                                          "kind",
+                                          "switch_to"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "actor": {
+                                            "type": "string",
+                                            "enum": ["self", "opponent"]
+                                          },
+                                          "kind": {
+                                            "type": "string",
+                                            "const": "forced_switch"
+                                          },
+                                          "switch_to": {
+                                            "type": "object",
+                                            "properties": {
+                                              "slot": {
+                                                "anyOf": [
+                                                  {
+                                                    "type": "number",
+                                                    "const": 1
+                                                  },
+                                                  {
+                                                    "type": "number",
+                                                    "const": 2
+                                                  },
+                                                  {
+                                                    "type": "number",
+                                                    "const": 3
+                                                  }
+                                                ]
+                                              },
+                                              "name": {
+                                                "type": "string",
+                                                "minLength": 1,
+                                                "maxLength": 128
+                                              },
+                                              "image_thumbnail_path": {
+                                                "type": "string",
+                                                "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                                              },
+                                              "image_detail_path": {
+                                                "type": "string",
+                                                "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                                              },
+                                              "rarity": {
+                                                "type": "string",
+                                                "enum": [
+                                                  "common",
+                                                  "rare",
+                                                  "epic",
+                                                  "legendary",
+                                                  "mythic"
+                                                ]
+                                              },
+                                              "stage": {
+                                                "anyOf": [
+                                                  {
+                                                    "type": "number",
+                                                    "const": 1
+                                                  },
+                                                  {
+                                                    "type": "number",
+                                                    "const": 2
+                                                  },
+                                                  {
+                                                    "type": "number",
+                                                    "const": 3
+                                                  }
+                                                ]
+                                              }
+                                            },
+                                            "required": [
+                                              "slot",
+                                              "name",
+                                              "image_thumbnail_path",
+                                              "image_detail_path",
+                                              "rarity",
+                                              "stage"
+                                            ],
+                                            "additionalProperties": false
+                                          }
+                                        },
+                                        "required": [
+                                          "actor",
+                                          "kind",
+                                          "switch_to"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    ]
+                                  }
+                                },
+                                "self_hp": {
+                                  "minItems": 3,
+                                  "maxItems": 3,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "slot": {
+                                        "anyOf": [
+                                          { "type": "number", "const": 1 },
+                                          { "type": "number", "const": 2 },
+                                          { "type": "number", "const": 3 }
+                                        ]
+                                      },
+                                      "current_hp": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "max_hp": {
+                                        "type": "integer",
+                                        "exclusiveMinimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "alive": { "type": "boolean" }
+                                    },
+                                    "required": [
+                                      "slot",
+                                      "current_hp",
+                                      "max_hp",
+                                      "alive"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "opponent_hp": {
+                                  "minItems": 3,
+                                  "maxItems": 3,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "slot": {
+                                        "anyOf": [
+                                          { "type": "number", "const": 1 },
+                                          { "type": "number", "const": 2 },
+                                          { "type": "number", "const": 3 }
+                                        ]
+                                      },
+                                      "hp_percent": {
+                                        "type": "number",
+                                        "minimum": 0,
+                                        "maximum": 100
+                                      },
+                                      "alive": { "type": "boolean" }
+                                    },
+                                    "required": ["slot", "hp_percent", "alive"],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "reveal_ends_at": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                }
+                              },
+                              "required": [
+                                "event_id",
+                                "state_version",
+                                "turn_no",
+                                "actions",
+                                "self_hp",
+                                "opponent_hp",
+                                "reveal_ends_at"
+                              ],
+                              "additionalProperties": false
+                            },
+                            { "type": "null" }
+                          ]
                         }
                       },
                       "required": [
                         "room_id",
-                        "creator_online",
-                        "reconnect_deadline"
+                        "status",
+                        "state_version",
+                        "side",
+                        "turn_no",
+                        "phase_deadline",
+                        "reveal_ends_at",
+                        "prepare_deadline",
+                        "prepared_message_id",
+                        "viewer_action_state",
+                        "server_time",
+                        "lobby",
+                        "self_team",
+                        "opponent_team",
+                        "resolution_event"
                       ],
                       "additionalProperties": false
                     },
@@ -30710,7 +32996,7 @@
             }
           },
           "409": {
-            "description": "Errors: ENTRY_HANDOFF_PENDING",
+            "description": "Errors: ENTRY_HANDOFF_PENDING, BATTLE_STATE_CONFLICT",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/StandardError" }
@@ -30727,6 +33013,14 @@
           },
           "415": {
             "description": "Errors: CONTENT_TYPE_INVALID",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "429": {
+            "description": "Errors: RATE_LIMITED",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/StandardError" }
@@ -30766,7 +33060,9 @@
           "SESSION_REQUIRED",
           "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_NOT_ALLOWED",
-          "BATTLE_NOT_PARTICIPANT"
+          "BATTLE_NOT_PARTICIPANT",
+          "BATTLE_STATE_CONFLICT",
+          "RATE_LIMITED"
         ],
         "x-error-definitions": {
           "DATABASE_RPC_FAILED": {
@@ -30859,9 +33155,23 @@
             "retryable": false,
             "refreshScope": "battle",
             "recoveryAction": "refresh"
+          },
+          "BATTLE_STATE_CONFLICT": {
+            "status": 409,
+            "message": "Battle 状态已更新",
+            "retryable": false,
+            "refreshScope": "battle",
+            "recoveryAction": "refresh"
+          },
+          "RATE_LIMITED": {
+            "status": 429,
+            "message": "操作过于频繁，请稍后重试",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
           }
         },
-        "x-refresh-scopes": ["battle"],
+        "x-refresh-scopes": ["battle", "assets", "inventory"],
         "requestBody": {
           "required": true,
           "content": {
@@ -34660,7 +36970,6 @@
                                 "BATTLE_ACTION_INVALID",
                                 "BATTLE_ACTION_PHASE_INVALID",
                                 "BATTLE_ALREADY_PARTICIPATING",
-                                "BATTLE_CREATOR_OFFLINE",
                                 "BATTLE_INVITE_INVALID",
                                 "BATTLE_NOT_PARTICIPANT",
                                 "BATTLE_RESULT_NOT_ACKNOWLEDGEABLE",
@@ -36796,7 +39105,6 @@
                   "BATTLE_ACTION_INVALID",
                   "BATTLE_ACTION_PHASE_INVALID",
                   "BATTLE_ALREADY_PARTICIPATING",
-                  "BATTLE_CREATOR_OFFLINE",
                   "BATTLE_INVITE_INVALID",
                   "BATTLE_NOT_PARTICIPANT",
                   "BATTLE_RESULT_NOT_ACKNOWLEDGEABLE",

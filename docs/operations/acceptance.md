@@ -48,7 +48,7 @@ Battle stake / settlement / outbox event（脱敏）：
 - Cron：Vercel job 的同时触发、重复触发、运行租约、漏跑追赶、失败记录和手工重跑；Supabase `battle-tick-v1` 的每秒触发、advisory lock、`SKIP LOCKED` 分批、deadline 追赶和 pg_net 唤醒。
 - 一致性：余额账本、库存预留、风险限制、服务器结果覆盖前端临时状态。
 - 体验：所有资产操作在 API 返回前立即反馈；普通页面不等待 TON Provider；主导航不被无关操作锁定。
-- 主导航页面保活：交易、游戏、开盒、藏品和任务分别首次进入一次，等待超过 React Query 的 20 秒 `staleTime` 后连续切换并返回；除 Battle 可见性规则外，网络记录不得因切页新增对应页面 API、页面模块、图片或其他页面专属资源请求，页签、筛选、选择、滚动位置和未提交界面状态保持。离开游戏页必须停止 waiting 心跳和 Battle UI 轮询，返回时立即 REST 回正并按当前状态恢复；图鉴与 Mint 返回时恢复原主页面；顶部人工刷新只请求 `identity.bootstrap`、`vip.get`、`wallet.get`。后台不足五分钟恢复时不请求普通页面，Battle 仍执行自身可见性回正；达到五分钟时只静默刷新顶部摘要与当前路由查询。Session generation 改变或封禁后旧页面、缓存和迟到结果不得恢复。
+- 主导航页面保活：交易、游戏、开盒、藏品和任务分别首次进入一次，等待超过 React Query 的 20 秒 `staleTime` 后连续切换并返回；除 Battle 可见性规则外，网络记录不得因切页新增对应页面 API、页面模块、图片或其他页面专属资源请求，页签、筛选、选择、滚动位置和未提交界面状态保持。离开游戏页必须停止 waiting/lobby 心跳和 Battle UI 轮询，返回时立即 REST 回正并按当前状态恢复；进入 active 战斗后 presence 心跳必须停止。图鉴与 Mint 返回时恢复原主页面；顶部人工刷新只请求 `identity.bootstrap`、`vip.get`、`wallet.get`。后台不足五分钟恢复时不请求普通页面，Battle 仍执行自身可见性回正；达到五分钟时只静默刷新顶部摘要与当前路由查询。Session generation 改变或封禁后旧页面、缓存和迟到结果不得恢复。
 - Telegram 容器手势：在 Telegram iOS 与 Android 的“交易 / 游戏 / 开盒 / 藏品 / 任务”五个主导航页及可滚动弹窗中，从内容区域向下滑动不会最小化或关闭 Mini App，页面纵向滚动保持可用；从 Telegram 标题栏执行最小化或关闭仍然有效。
 - 全局顶部资产栏：五个主页只出现同一个资产栏；分别记录 Telegram iOS、Android、Desktop 与 Web 在原生全屏成功和不支持回退时的截图，确认设备安全区、内容安全区、视口与方向变化后，返回、关闭和更多控件始终位于资产栏上方且不重叠。
 - 藏品图片：210 张正式母版对应 420 个公开版本；全部 URL 为 WebP、尺寸与路径正确、返回一年 immutable 缓存，列表只请求缩略图，藏品主图、单抽结果和 Mint 页面请求详情图。
@@ -58,15 +58,16 @@ Battle stake / settlement / outbox event（脱敏）：
 以下证据必须来自真实 Telegram、真实 Vercel、真实 Supabase 与真实 Ably；静态门禁不能替代：
 
 - 本次本地实现仍待真实开发环境验证 Telegram prepared message 与 `shareMessage` 真机发送、60 秒未知结果恢复/退款、Ably 2.26.0 subscribe-only token 与 outbox 重投、两个 integration 的真实 Bearer 鉴权、Vercel 超时边界，以及从空 Supabase 数据库执行三条 migration 后的并发裁决。
-- 规则与页面：`battle-v1` checksum 与正式 JSON、数据库种子、API 摘要一致；Catalog v1 仍为 70 链/210 模板且 release checksum 不变；游戏页完整覆盖第 21 章八种页面状态，构建和运行资源不含 Phaser 或客户端战斗模拟器。
+- 规则与页面：`battle-v1` checksum 与正式 JSON、数据库种子、API 摘要一致；Catalog v1 仍为 70 链/210 模板且 release checksum 不变；游戏页完整覆盖第 21 章九种页面状态，构建和运行资源不含 Phaser 或客户端战斗模拟器。
 - 隐私：分别保存挑战卡、接受页、己方、对手和 resolution event 五种 DTO；逐字段证明禁止信息不在 JSON、HTML、Ably、日志和分析事件中。接受前双方秘密、接受后对手百分比生命及当回合技能揭示严格符合第 21.7 节。
-- 分享与接受：用户私聊、普通群、超级群、跨群转发、Bot 不在群、Bot 会话禁止、频道禁止、创建者本人禁止；两个普通接受者与一个竞争账号同时接受时只有首个事务成功，失败者余额和 inventory 完全不变。
-- 在线与到期：等待页心跳、显式离开、WebView 后台、突然断网、89 秒重连、90 秒到期、30 分钟到期和主动取消逐项取得规定结果；在线判定只读 REST 心跳，不读 Ably presence。
+- 分享与接受：用户私聊、普通群、超级群、跨群转发、Bot 不在群、Bot 会话禁止、频道禁止、创建者本人严格 `self` 且服务端禁止；有效邀请直接显示队伍选择，没有前置状态页。创建者在线与离线均可接受，离线固定展示“离线 · 仍可接受”。两个普通接受者与一个竞争账号同时接受时只有首个事务成功，失败者余额和 inventory 完全不变。
+- lobby：首位接受后 snapshot 为 `lobby_waiting/lobby_countdown`、双方 participant 为 `lobby` 且没有 turn 1；验证双方 5 秒心跳、10 秒在线判定、89 秒重连、90 秒终结、创建者接受前离线窗口重置、5 分钟总时限、3 秒倒计时开始/中止/完整重启、到期再次确认在线和相等 deadline 终结优先。正常终结双方原额退款、六个 reservation 释放、手续费为 0。
+- lobby UI：左红右蓝使用固定仓库正方形 WebP，不使用真实头像；在线同时显示彩色图片、状态点和“已进入房间”，离线显示中性用户图标、文字及权威重连剩余；5 分钟时限和 3 秒倒计时同时可见，颜色不是唯一状态信息，`aria-live` 与 reduced-motion 生效。
 - 资产与库存：三个入场档逐一核对双方 lock、胜者到账、平台手续费、败者、平局退款、`voided` 退款；重复创建、接受、取消、到期、结算和恢复不重复改变资产。Battle reservation 与出售、成交、分解、进化、远征、Mint 逐一竞争，同模板额外可用数量仍可操作。
 - 回合：五属性 1.50/0.75/1.00、十技能命中边界、超时最高命中率、优先级、速度、完全相同的同时攻击、先手击倒、单方换宠、双方换宠、单方/双方强制换宠、槽位超时、连续托管、双方同时全灭和第 20 回合裁决逐项保存 snapshot 与私有审计引用。
 - 实时与恢复：Ably capability 为 subscribe-only，消息只有四个失效字段；重复、乱序和迟到消息不覆盖高 `state_version`。主动断开 Ably 后按第 21 章 1—2 秒节奏 REST 回正；Vercel 重启、pg_net 单次失败、cron 短暂停止后继续同一 deadline、outbox 和 settlement。
 - 当场结果：终局瞬间断线后 identity bootstrap 与 Battle bootstrap 只恢复同一未确认结果，acknowledge 响应丢失可安全重试，成功后不再返回；玩家端不存在 history、replay、audit、spectator、matchmaking 或公开 room API。
-- 风控：waiting 创建者被封禁后取消、退款、释放；active 任一方被封禁后页面空白、数据库继续托管至正常终局且只结算一次。
+- 风控：邀请 waiting 创建者被封禁后取消、退款、释放；lobby 任一方被封禁后双方退款并释放；active 任一方被封禁后页面空白、数据库继续托管至正常终局且只结算一次。
 
 ## 用户与登录第 16.11 节验收
 

@@ -25,6 +25,7 @@ export const battlePageStateSchema = z.enum([
   "team_select",
   "preparing_share",
   "waiting",
+  "lobby",
   "accept",
   "battle",
   "forced_switch",
@@ -34,6 +35,8 @@ export const battlePageStateSchema = z.enum([
 export const battleRoomStatusSchema = z.enum([
   "preparing_share",
   "waiting",
+  "lobby_waiting",
+  "lobby_countdown",
   "active_select",
   "reveal",
   "forced_switch",
@@ -47,6 +50,7 @@ export const battleRoomStatusSchema = z.enum([
 export const battleParticipantStatusSchema = z.enum([
   "preparing_share",
   "waiting",
+  "lobby",
   "active",
   "finished",
   "draw",
@@ -89,6 +93,11 @@ export const battleRulesetSummarySchema = z
   .object({
     id: z.literal("battle-v1"),
     checksum: z.string().regex(/^[0-9a-f]{64}$/),
+    heartbeat_interval_seconds: z.literal(5),
+    presence_online_window_seconds: z.literal(10),
+    offline_reconnect_seconds: z.literal(90),
+    lobby_timeout_seconds: z.literal(300),
+    lobby_countdown_seconds: z.literal(3),
     action_timeout_seconds: z.literal(15),
     forced_switch_timeout_seconds: z.literal(15),
     reveal_seconds: z.literal(3),
@@ -153,13 +162,13 @@ const roomInviteSchema = battleChallengeCardSchema
     room_id: uuidSchema,
     invite_status: z.enum([
       "available",
+      "self",
       "accepted",
       "cancelled",
       "expired",
       "voided",
     ]),
     remaining_seconds: nonNegativeIntegerSchema,
-    can_select_team: z.boolean(),
   })
   .strict();
 
@@ -252,6 +261,27 @@ export const battleOpponentTeamSchema = z.union([
   z.tuple([]),
   z.array(battleOpponentTeamMemberSchema).length(3),
 ]);
+
+export const battleLobbyPresenceSchema = z
+  .object({
+    online: z.boolean(),
+    reconnect_deadline: timestampSchema.nullable(),
+  })
+  .strict();
+
+export const battleLobbySchema = z
+  .object({
+    phase: z.enum(["lobby_waiting", "lobby_countdown"]),
+    expires_at: timestampSchema,
+    start_deadline: timestampSchema.nullable(),
+    presence: z
+      .object({
+        creator: battleLobbyPresenceSchema,
+        opponent: battleLobbyPresenceSchema,
+      })
+      .strict(),
+  })
+  .strict();
 
 const battlePublicSwitchTargetSchema = z
   .object({
@@ -381,6 +411,7 @@ export const battleRoomSnapshotSchema = z
     prepared_message_id: z.string().trim().min(1).max(256).nullable(),
     viewer_action_state: z.enum(["not_applicable", "available", "locked"]),
     server_time: timestampSchema,
+    lobby: battleLobbySchema.nullable(),
     self_team: battleSelfTeamSchema,
     opponent_team: battleOpponentTeamSchema,
     resolution_event: battleResolutionEventSchema.nullable(),
@@ -438,6 +469,7 @@ export type BattleChallengeCardDto = z.output<typeof battleChallengeCardSchema>;
 export type BattleInvitePreviewDto = z.output<typeof battleInvitePreviewSchema>;
 export type BattleSelfTeamDto = z.output<typeof battleSelfTeamSchema>;
 export type BattleOpponentTeamDto = z.output<typeof battleOpponentTeamSchema>;
+export type BattleLobbyDto = z.output<typeof battleLobbySchema>;
 export type BattleResolutionEventDto = z.output<
   typeof battleResolutionEventSchema
 >;

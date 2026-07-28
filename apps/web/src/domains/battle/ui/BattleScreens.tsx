@@ -8,6 +8,7 @@ import {
   Send,
   ShieldCheck,
   Swords,
+  UserRound,
   Users,
   X,
 } from "lucide-react";
@@ -15,6 +16,7 @@ import type { ReactNode, RefObject } from "react";
 import type {
   BattleCurrentResult,
   BattleEntryTier,
+  BattleLobbyDto,
   BattleParticipation,
   BattleRoomSnapshotDto,
   RouteOutput,
@@ -267,7 +269,7 @@ export function BattleWaiting({
       <BattleScreenHeader
         kicker="WAITING ROOM"
         title="挑战卡已准备"
-        description="保持当前页面可见和 Telegram 激活，等待首位对手原子接受。"
+        description="挑战有效期内始终可被首位合格对手接受；在线状态只作展示。"
       />
       <section className="battle-waiting-stage">
         <div className="battle-waiting-ring">
@@ -280,10 +282,10 @@ export function BattleWaiting({
           <i className={onlineState} aria-hidden="true" />
           <span>
             {onlineState === "online"
-              ? "服务端已确认在线等待"
+              ? "已进入等待页 · 对手可接受"
               : onlineState === "offline"
-                ? "当前未确认在线，对手不能支付接受"
-                : "正在同步服务端在线状态"}
+                ? "离线展示 · 对手仍可接受"
+                : "正在同步展示状态 · 对手仍可接受"}
           </span>
         </div>
         {realtimeOffline ? (
@@ -327,6 +329,124 @@ export function BattleWaiting({
       </section>
       <SelfTeamSummary snapshot={snapshot} />
     </div>
+  );
+}
+
+export function BattleLobby({
+  lobby,
+  remainingSeconds,
+  countdownSeconds,
+  creatorReconnectSeconds,
+  opponentReconnectSeconds,
+  realtimeOffline,
+}: {
+  lobby: BattleLobbyDto;
+  remainingSeconds: number | null;
+  countdownSeconds: number | null;
+  creatorReconnectSeconds: number | null;
+  opponentReconnectSeconds: number | null;
+  realtimeOffline: boolean;
+}): ReactNode {
+  const creator = lobby.presence.creator;
+  const opponent = lobby.presence.opponent;
+  return (
+    <div className="battle-lobby">
+      <BattleScreenHeader
+        kicker="BATTLE LOBBY"
+        title="双方等待房间"
+        description="数据库确认双方在线并完成 3 秒倒计时后才会创建第 1 回合。"
+      />
+      <section
+        className="battle-lobby-stage"
+        aria-live="polite"
+        aria-label="双方在线和开战倒计时状态"
+      >
+        <LobbyPlayer
+          side="creator"
+          title="邀请者"
+          online={creator.online}
+          reconnectSeconds={creatorReconnectSeconds}
+          imagePath="/assets/catalog/v1/thumb/pet-n-001-1.webp"
+        />
+        <div className="battle-lobby-versus" aria-label="对战双方">
+          <strong>VS</strong>
+          <span>
+            {lobby.phase === "lobby_countdown"
+              ? `${countdownSeconds ?? 0} 秒后由服务器确认开战`
+              : "等待双方进入房间"}
+          </span>
+        </div>
+        <LobbyPlayer
+          side="opponent"
+          title="被邀请者"
+          online={opponent.online}
+          reconnectSeconds={opponentReconnectSeconds}
+          imagePath="/assets/catalog/v1/thumb/pet-n-002-1.webp"
+        />
+      </section>
+      <section className="battle-lobby-timers" aria-live="polite">
+        <div>
+          <span>房间剩余时限</span>
+          <strong>{formatBattleTime(remainingSeconds)}</strong>
+        </div>
+        <div>
+          <span>服务器开战倒计时</span>
+          <strong>
+            {lobby.phase === "lobby_countdown"
+              ? `${countdownSeconds ?? 0} 秒`
+              : "尚未开始"}
+          </strong>
+        </div>
+      </section>
+      {realtimeOffline ? (
+        <p className="battle-offline-note" role="status">
+          实时通知不可用，页面正按固定 2 秒间隔通过 REST 读取权威房间状态。
+        </p>
+      ) : null}
+      <p className="battle-lobby-authority">
+        开战、离线终结、退款和藏品释放只由数据库裁决；本页不会提供取消、分享或重新选队。
+      </p>
+    </div>
+  );
+}
+
+function LobbyPlayer({
+  side,
+  title,
+  online,
+  reconnectSeconds,
+  imagePath,
+}: {
+  side: "creator" | "opponent";
+  title: string;
+  online: boolean;
+  reconnectSeconds: number | null;
+  imagePath: string;
+}): ReactNode {
+  return (
+    <article
+      className={`battle-lobby-player ${side} ${online ? "online" : "offline"}`}
+    >
+      <div className="battle-lobby-avatar">
+        {online ? (
+          <img
+            src={imagePath}
+            alt={`${title}固定阵营头像`}
+            width={112}
+            height={112}
+          />
+        ) : (
+          <UserRound aria-hidden="true" />
+        )}
+        <i aria-hidden="true" />
+      </div>
+      <strong>{title}</strong>
+      <span>
+        {online
+          ? "已进入房间"
+          : `已离线 · 重连剩余 ${formatBattleTime(reconnectSeconds)}`}
+      </span>
+    </article>
   );
 }
 
@@ -400,8 +520,7 @@ export function BattleAccept({
   onHome(): void;
   onRefresh(): void;
 }): ReactNode {
-  const available =
-    invite.invite_status === "available" && invite.can_select_team;
+  const available = invite.invite_status === "available";
   const complete = slots.every(
     (value) =>
       value !== null &&
@@ -452,7 +571,7 @@ export function BattleAccept({
           </div>
           <div>
             <dt>创建者</dt>
-            <dd>{invite.creator_online ? "在线" : "离线"}</dd>
+            <dd>{invite.creator_online ? "在线" : "离线 · 仍可接受"}</dd>
           </div>
         </dl>
       </section>
@@ -685,7 +804,8 @@ function SelfTeamSummary({
 
 function inviteStatusText(status: InviteRoom["invite_status"]): string {
   const labels: Record<InviteRoom["invite_status"], string> = {
-    available: "挑战可以接受",
+    available: "请选择三宠接受挑战",
+    self: "不能接受自己创建的挑战",
     accepted: "挑战已被其他玩家接受",
     cancelled: "挑战已取消",
     expired: "挑战已过期",

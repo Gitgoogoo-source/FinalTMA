@@ -8,8 +8,10 @@ create table battle.rulesets (
   unique (id, checksum),
   check ((parameters->>'waiting_timeout_seconds')::integer = 1800),
   check ((parameters->>'heartbeat_interval_seconds')::integer = 5),
-  check ((parameters->>'creator_online_window_seconds')::integer = 10),
+  check ((parameters->>'presence_online_window_seconds')::integer = 10),
   check ((parameters->>'offline_reconnect_seconds')::integer = 90),
+  check ((parameters->>'lobby_timeout_seconds')::integer = 300),
+  check ((parameters->>'lobby_countdown_seconds')::integer = 3),
   check ((parameters->>'action_timeout_seconds')::integer = 15),
   check ((parameters->>'forced_switch_timeout_seconds')::integer = 15),
   check ((parameters->>'reveal_seconds')::integer = 3),
@@ -153,7 +155,8 @@ create table battle.rooms (
   entry_tier_id text not null,
   invite_token_hash text not null unique check (invite_token_hash ~ '^[0-9a-f]{64}$'),
   status text not null check (status in (
-    'preparing_share', 'waiting', 'active_select', 'reveal', 'forced_switch',
+    'preparing_share', 'waiting', 'lobby_waiting', 'lobby_countdown',
+    'active_select', 'reveal', 'forced_switch',
     'finished', 'draw', 'cancelled', 'expired', 'voided'
   )),
   state_version bigint not null default 1 check (state_version > 0),
@@ -164,8 +167,9 @@ create table battle.rooms (
   prepare_deadline timestamptz not null,
   waiting_started_at timestamptz,
   expires_at timestamptz,
-  creator_last_heartbeat_at timestamptz,
-  creator_offline_since timestamptz,
+  accepted_at timestamptz,
+  lobby_expires_at timestamptz,
+  lobby_start_deadline timestamptz,
   phase_deadline timestamptz,
   reveal_ends_at timestamptz,
   pending_result text check (pending_result in ('winner', 'draw')),
@@ -185,8 +189,21 @@ create table battle.rooms (
   ),
   check (
     status <> 'waiting'
-    or (waiting_started_at is not null and expires_at is not null
-      and creator_last_heartbeat_at is not null)
+    or (waiting_started_at is not null and expires_at is not null)
+  ),
+  check (
+    status not in ('lobby_waiting', 'lobby_countdown')
+    or (
+      accepted_at is not null
+      and lobby_expires_at is not null
+      and lobby_expires_at = accepted_at + interval '5 minutes'
+      and current_turn_no = 0
+      and private_seed is not null
+      and seed_commitment is not null
+    )
+  ),
+  check (
+    (status = 'lobby_countdown') = (lobby_start_deadline is not null)
   ),
   check (
     status not in ('active_select', 'reveal', 'forced_switch', 'finished', 'draw')
@@ -205,8 +222,11 @@ create table battle.rooms (
 
 create index battle_rooms_prepare_due_idx on battle.rooms (prepare_deadline)
 where status = 'preparing_share';
-create index battle_rooms_waiting_due_idx on battle.rooms (expires_at, creator_offline_since)
+create index battle_rooms_waiting_due_idx on battle.rooms (expires_at)
 where status = 'waiting';
+create index battle_rooms_lobby_due_idx
+on battle.rooms (lobby_expires_at, lobby_start_deadline)
+where status in ('lobby_waiting', 'lobby_countdown');
 create index battle_rooms_phase_due_idx on battle.rooms (phase_deadline)
 where status in ('active_select', 'forced_switch');
 create index battle_rooms_reveal_due_idx on battle.rooms (reveal_ends_at)
@@ -243,10 +263,13 @@ create table battle.participants (
   user_id uuid not null references identity.users(id),
   side text not null check (side in ('creator', 'opponent')),
   status text not null check (status in (
-    'preparing_share', 'waiting', 'active', 'finished', 'draw',
+    'preparing_share', 'waiting', 'lobby', 'active', 'finished', 'draw',
     'cancelled', 'expired', 'voided'
   )),
   join_operation_id uuid not null unique references operations.operations(id),
+  last_heartbeat_at timestamptz,
+  offline_since timestamptz,
+  presence_deadline timestamptz,
   result_acknowledged_at timestamptz,
   joined_at timestamptz not null default now(),
   finished_at timestamptz,
@@ -260,7 +283,12 @@ create table battle.participants (
   check (
     result_acknowledged_at is null
     or status in ('finished', 'draw', 'voided')
-  )
+  ),
+  check (
+    (offline_since is null and presence_deadline is null)
+    or (offline_since is not null and presence_deadline is not null)
+  ),
+  check (status <> 'lobby' or last_heartbeat_at is not null)
 );
 
 alter table battle.rooms
@@ -270,9 +298,12 @@ references battle.participants(room_id, id);
 
 create unique index battle_participants_one_active_per_user_idx
 on battle.participants (user_id)
-where status in ('preparing_share', 'waiting', 'active');
+where status in ('preparing_share', 'waiting', 'lobby', 'active');
 
 create index battle_participants_room_idx on battle.participants (room_id, side);
+create index battle_participants_presence_due_idx
+on battle.participants (presence_deadline, room_id)
+where status = 'lobby' and presence_deadline is not null;
 create index battle_participants_unconfirmed_result_idx on battle.participants (user_id, finished_at desc)
 where status in ('finished', 'draw', 'voided') and result_acknowledged_at is null;
 
@@ -840,10 +871,23 @@ as $$
           'current_turn_no', r.current_turn_no,
           'next_status', r.next_status,
           'seed_commitment', r.seed_commitment,
+          'accepted_at', r.accepted_at,
+          'lobby_expires_at', r.lobby_expires_at,
+          'lobby_start_deadline', r.lobby_start_deadline,
           'phase_deadline', r.phase_deadline,
           'reveal_ends_at', r.reveal_ends_at,
           'pending_result', r.pending_result,
           'pending_winner_participant_id', r.pending_winner_participant_id,
+          'presence', coalesce((
+            select jsonb_agg(jsonb_build_object(
+              'participant_id', p.id,
+              'side', p.side,
+              'offline_since', p.offline_since,
+              'presence_deadline', p.presence_deadline
+            ) order by p.side)
+            from battle.participants p
+            where p.room_id = r.id
+          ), '[]'::jsonb),
           'teams', coalesce((
             select jsonb_agg(jsonb_build_object(
               'participant_id', tm.participant_id,
@@ -1058,15 +1102,74 @@ as $$
     'expires_at', r.expires_at,
     'server_time', now(),
     'creator_online', r.status = 'waiting'
-      and r.creator_offline_since is null
-      and r.creator_last_heartbeat_at > now() - make_interval(
-        secs => battle.rule_int(r.ruleset_id, 'creator_online_window_seconds')
+      and p.offline_since is null
+      and p.last_heartbeat_at > now() - make_interval(
+        secs => battle.rule_int(r.ruleset_id, 'presence_online_window_seconds')
       )
   )
   from battle.rooms r
   join identity.users u on u.id = r.creator_user_id
+  join battle.participants p on p.room_id = r.id and p.side = 'creator'
   join battle.entry_tiers tier
     on tier.ruleset_id = r.ruleset_id and tier.id = r.entry_tier_id
+  where r.id = p_room_id
+$$;
+
+create or replace function battle.lobby_json(p_room_id uuid)
+returns jsonb
+language sql
+stable
+set search_path = ''
+as $$
+  select case
+    when r.status not in ('lobby_waiting', 'lobby_countdown') then null
+    else jsonb_build_object(
+      'phase', r.status,
+      'expires_at', r.lobby_expires_at,
+      'start_deadline', r.lobby_start_deadline,
+      'presence', jsonb_build_object(
+        'creator', jsonb_build_object(
+          'online',
+            creator.offline_since is null
+            and creator.last_heartbeat_at > now() - make_interval(
+              secs => battle.rule_int(r.ruleset_id, 'presence_online_window_seconds')
+            ),
+          'reconnect_deadline', case
+            when creator.offline_since is not null then creator.presence_deadline
+            when creator.last_heartbeat_at <= now() - make_interval(
+              secs => battle.rule_int(r.ruleset_id, 'presence_online_window_seconds')
+            ) then creator.last_heartbeat_at + make_interval(
+              secs => battle.rule_int(r.ruleset_id, 'presence_online_window_seconds')
+                    + battle.rule_int(r.ruleset_id, 'offline_reconnect_seconds')
+            )
+            else null
+          end
+        ),
+        'opponent', jsonb_build_object(
+          'online',
+            opponent.offline_since is null
+            and opponent.last_heartbeat_at > now() - make_interval(
+              secs => battle.rule_int(r.ruleset_id, 'presence_online_window_seconds')
+            ),
+          'reconnect_deadline', case
+            when opponent.offline_since is not null then opponent.presence_deadline
+            when opponent.last_heartbeat_at <= now() - make_interval(
+              secs => battle.rule_int(r.ruleset_id, 'presence_online_window_seconds')
+            ) then opponent.last_heartbeat_at + make_interval(
+              secs => battle.rule_int(r.ruleset_id, 'presence_online_window_seconds')
+                    + battle.rule_int(r.ruleset_id, 'offline_reconnect_seconds')
+            )
+            else null
+          end
+        )
+      )
+    )
+  end
+  from battle.rooms r
+  join battle.participants creator
+    on creator.room_id = r.id and creator.side = 'creator'
+  join battle.participants opponent
+    on opponent.room_id = r.id and opponent.side = 'opponent'
   where r.id = p_room_id
 $$;
 
@@ -1279,7 +1382,7 @@ as $$
     'status', r.status,
     'state_version', r.state_version,
     'entry_fee', tier.entry_fee,
-    'expires_at', r.expires_at,
+    'expires_at', coalesce(r.lobby_expires_at, r.expires_at),
     'phase_deadline', r.phase_deadline,
     'reveal_ends_at', r.reveal_ends_at
   )
@@ -1288,7 +1391,7 @@ as $$
   join battle.entry_tiers tier
     on tier.ruleset_id = r.ruleset_id and tier.id = r.entry_tier_id
   where p.user_id = p_user_id
-    and p.status in ('preparing_share', 'waiting', 'active')
+    and p.status in ('preparing_share', 'waiting', 'lobby', 'active')
   order by p.joined_at desc
   limit 1
 $$;
@@ -1430,9 +1533,12 @@ begin
     'viewer_action_state',
       battle.viewer_action_state(p_room_id, p_participant_id),
     'server_time', now(),
+    'lobby', battle.lobby_json(p_room_id),
     'self_team', battle.self_team_json(p_room_id, p_participant_id),
     'opponent_team', case
-      when v_opponent_id is null then '[]'::jsonb
+      when v_opponent_id is null
+        or v_room.status in ('lobby_waiting', 'lobby_countdown')
+      then '[]'::jsonb
       else battle.opponent_team_json(p_room_id, p_participant_id)
     end,
     'resolution_event', battle.resolution_event_json(p_room_id, p_participant_id)
@@ -1465,6 +1571,11 @@ begin
       select jsonb_build_object(
         'id', r.id,
         'checksum', r.checksum,
+        'heartbeat_interval_seconds', (r.parameters->>'heartbeat_interval_seconds')::integer,
+        'presence_online_window_seconds', (r.parameters->>'presence_online_window_seconds')::integer,
+        'offline_reconnect_seconds', (r.parameters->>'offline_reconnect_seconds')::integer,
+        'lobby_timeout_seconds', (r.parameters->>'lobby_timeout_seconds')::integer,
+        'lobby_countdown_seconds', (r.parameters->>'lobby_countdown_seconds')::integer,
         'action_timeout_seconds', (r.parameters->>'action_timeout_seconds')::integer,
         'forced_switch_timeout_seconds', (r.parameters->>'forced_switch_timeout_seconds')::integer,
         'reveal_seconds', (r.parameters->>'reveal_seconds')::integer,
@@ -1572,20 +1683,14 @@ begin
     'room_id', v_room.id,
     'invite_status', case
       when v_room.status = 'waiting' and v_room.expires_at <= now() then 'expired'
+      when v_room.status = 'waiting' and v_room.creator_user_id = v_user_id then 'self'
       when v_room.status = 'waiting' then 'available'
       when v_room.status in ('cancelled', 'expired', 'voided') then v_room.status
       else 'accepted'
     end,
     'remaining_seconds', greatest(
       0, floor(extract(epoch from (v_room.expires_at - now())))::integer
-    ),
-    'can_select_team', v_room.status = 'waiting'
-      and v_room.creator_user_id <> v_user_id
-      and v_room.expires_at > now()
-      and v_room.creator_offline_since is null
-      and v_room.creator_last_heartbeat_at > now() - make_interval(
-        secs => battle.rule_int(v_room.ruleset_id, 'creator_online_window_seconds')
-      )
+    )
   ) || v_card;
 end;
 $$;
@@ -1863,17 +1968,20 @@ begin
   if v_room.status in ('cancelled', 'expired', 'voided') then
     return jsonb_build_object('room_id', v_room.id, 'status', v_room.status);
   end if;
-  if v_room.status not in ('preparing_share', 'waiting') then
+  if v_room.status not in (
+    'preparing_share', 'waiting', 'lobby_waiting', 'lobby_countdown'
+  ) then
     perform api.raise_business_error('BATTLE_STATE_CONFLICT', 'Battle 状态已更新');
   end if;
   v_ledgers := battle.refund_locked_stakes(p_room_id, p_reason);
   perform battle.release_reservations(p_room_id);
   update battle.participants
   set status = p_status, finished_at = now()
-  where room_id = p_room_id and status in ('preparing_share', 'waiting');
+  where room_id = p_room_id
+    and status in ('preparing_share', 'waiting', 'lobby');
   update battle.rooms
   set status = p_status, finished_at = now(), phase_deadline = null,
-      reveal_ends_at = null, creator_offline_since = null, updated_at = now()
+      reveal_ends_at = null, lobby_start_deadline = null, updated_at = now()
   where id = p_room_id;
   perform battle.record_event(
     p_room_id,
@@ -1882,6 +1990,211 @@ begin
     jsonb_build_object('reason', p_reason, 'refund_ledger_ids', v_ledgers)
   );
   return jsonb_build_object('room_id', p_room_id, 'status', p_status, 'reason', p_reason);
+end;
+$$;
+
+create or replace function battle.lobby_terminal_reason(p_room_id uuid)
+returns text
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select case
+    when r.lobby_expires_at <= now() then 'lobby_expired'
+    when exists (
+      select 1
+      from battle.participants p
+      join identity.users u on u.id = p.user_id
+      where p.room_id = r.id and p.status = 'lobby' and u.status = 'banned'
+    ) then 'lobby_participant_banned'
+    when exists (
+      select 1
+      from battle.participants p
+      where p.room_id = r.id
+        and p.status = 'lobby'
+        and p.presence_deadline <= now()
+    ) then 'lobby_presence_timeout'
+    else null
+  end
+  from battle.rooms r
+  where r.id = p_room_id
+    and r.status in ('lobby_waiting', 'lobby_countdown')
+$$;
+
+create or replace function battle.reconcile_lobby_presence(p_room_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_room battle.rooms%rowtype;
+  v_participant battle.participants%rowtype;
+  v_offline_since timestamptz;
+  v_both_online boolean;
+begin
+  select * into v_room from battle.rooms where id = p_room_id for update;
+  if v_room.status not in ('lobby_waiting', 'lobby_countdown') then return; end if;
+
+  for v_participant in
+    select *
+    from battle.participants
+    where room_id = p_room_id
+      and status = 'lobby'
+      and offline_since is null
+      and last_heartbeat_at <= now() - make_interval(
+        secs => battle.rule_int(v_room.ruleset_id, 'presence_online_window_seconds')
+      )
+    order by side
+    for update
+  loop
+    v_offline_since := v_participant.last_heartbeat_at + make_interval(
+      secs => battle.rule_int(v_room.ruleset_id, 'presence_online_window_seconds')
+    );
+    update battle.participants
+    set offline_since = v_offline_since,
+        presence_deadline = v_offline_since + make_interval(
+          secs => battle.rule_int(v_room.ruleset_id, 'offline_reconnect_seconds')
+        )
+    where id = v_participant.id;
+    perform battle.record_event(
+      p_room_id,
+      'participant_offline',
+      jsonb_build_object(
+        'side', v_participant.side,
+        'reconnect_deadline', v_offline_since + make_interval(
+          secs => battle.rule_int(v_room.ruleset_id, 'offline_reconnect_seconds')
+        )
+      ),
+      jsonb_build_object(
+        'participant_id', v_participant.id,
+        'offline_since', v_offline_since
+      )
+    );
+  end loop;
+
+  select count(*) = 2
+    and bool_and(
+      p.offline_since is null
+      and p.last_heartbeat_at > now() - make_interval(
+        secs => battle.rule_int(v_room.ruleset_id, 'presence_online_window_seconds')
+      )
+    )
+  into v_both_online
+  from battle.participants p
+  where p.room_id = p_room_id and p.status = 'lobby';
+
+  select * into v_room from battle.rooms where id = p_room_id;
+  if v_room.status = 'lobby_countdown' and not v_both_online then
+    update battle.rooms
+    set status = 'lobby_waiting', lobby_start_deadline = null, updated_at = now()
+    where id = p_room_id;
+    perform battle.record_event(
+      p_room_id,
+      'lobby_countdown_stopped',
+      jsonb_build_object('reason', 'participant_offline'),
+      '{}'::jsonb
+    );
+  elsif v_room.status = 'lobby_waiting'
+    and v_both_online
+    and battle.lobby_terminal_reason(p_room_id) is null
+  then
+    update battle.rooms
+    set status = 'lobby_countdown',
+        lobby_start_deadline = now() + make_interval(
+          secs => battle.rule_int(v_room.ruleset_id, 'lobby_countdown_seconds')
+        ),
+        updated_at = now()
+    where id = p_room_id
+    returning * into v_room;
+    perform battle.record_event(
+      p_room_id,
+      'lobby_countdown_started',
+      jsonb_build_object('start_deadline', v_room.lobby_start_deadline),
+      '{}'::jsonb
+    );
+  end if;
+end;
+$$;
+
+create or replace function battle.advance_lobby(p_room_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_room battle.rooms%rowtype;
+  v_reason text;
+  v_online_count integer;
+begin
+  select * into v_room from battle.rooms where id = p_room_id for update;
+  if v_room.status not in ('lobby_waiting', 'lobby_countdown') then return; end if;
+
+  v_reason := battle.lobby_terminal_reason(p_room_id);
+  if v_reason is not null then
+    perform battle.close_unstarted_room(p_room_id, 'cancelled', v_reason);
+    return;
+  end if;
+
+  perform battle.reconcile_lobby_presence(p_room_id);
+  select * into v_room from battle.rooms where id = p_room_id;
+  if v_room.status not in ('lobby_waiting', 'lobby_countdown') then return; end if;
+
+  v_reason := battle.lobby_terminal_reason(p_room_id);
+  if v_reason is not null then
+    perform battle.close_unstarted_room(p_room_id, 'cancelled', v_reason);
+    return;
+  end if;
+  if v_room.status <> 'lobby_countdown'
+    or v_room.lobby_start_deadline > now()
+  then
+    return;
+  end if;
+
+  select count(*) into v_online_count
+  from battle.participants p
+  where p.room_id = p_room_id
+    and p.status = 'lobby'
+    and p.offline_since is null
+    and p.last_heartbeat_at > now() - make_interval(
+      secs => battle.rule_int(v_room.ruleset_id, 'presence_online_window_seconds')
+    );
+  if v_online_count <> 2 then
+    perform battle.reconcile_lobby_presence(p_room_id);
+    return;
+  end if;
+
+  update battle.participants
+  set status = 'active'
+  where room_id = p_room_id and status = 'lobby';
+  update battle.rooms
+  set status = 'active_select',
+      current_turn_no = 1,
+      lobby_start_deadline = null,
+      phase_deadline = now() + make_interval(
+        secs => battle.rule_int(v_room.ruleset_id, 'action_timeout_seconds')
+      ),
+      updated_at = now()
+  where id = p_room_id
+  returning * into v_room;
+  insert into battle.turns (
+    room_id, turn_no, phase, deadline, start_snapshot_hash
+  ) values (
+    p_room_id, 1, 'normal', v_room.phase_deadline,
+    battle.room_snapshot_hash(p_room_id)
+  );
+  perform battle.record_event(
+    p_room_id,
+    'battle_started',
+    jsonb_build_object(
+      'turn_no', 1,
+      'deadline', v_room.phase_deadline,
+      'seed_commitment', v_room.seed_commitment
+    ),
+    jsonb_build_object('ruleset_checksum', v_room.ruleset_checksum)
+  );
 end;
 $$;
 
@@ -2061,10 +2374,14 @@ begin
       expires_at = now() + make_interval(
         secs => battle.rule_int(v_room.ruleset_id, 'waiting_timeout_seconds')
       ),
-      creator_last_heartbeat_at = now(), creator_offline_since = null, updated_at = now()
+      updated_at = now()
   where id = p_room_id
   returning * into v_room;
-  update battle.participants set status = 'waiting'
+  update battle.participants
+  set status = 'waiting',
+      last_heartbeat_at = now(),
+      offline_since = null,
+      presence_deadline = null
   where room_id = p_room_id and side = 'creator';
   perform battle.record_event(
     p_room_id, 'share_activated',
@@ -2186,47 +2503,72 @@ as $$
 declare
   v_user_id uuid := api.session_user(p_session_id);
   v_room battle.rooms%rowtype;
+  v_participant battle.participants%rowtype;
   v_now timestamptz := now();
+  v_was_online boolean;
 begin
   select * into v_room from battle.rooms where id = p_room_id for update;
-  if v_room.id is null or v_room.creator_user_id <> v_user_id then
+  select * into v_participant
+  from battle.participants
+  where room_id = p_room_id and user_id = v_user_id
+  for update;
+  if v_room.id is null or v_participant.id is null then
     perform api.raise_business_error('BATTLE_NOT_PARTICIPANT', '当前账号不是该 Battle 的参与者');
   end if;
   if v_room.status in ('finished', 'draw', 'cancelled', 'expired', 'voided') then
-    return jsonb_build_object(
-      'room_id', p_room_id,
-      'status', v_room.status,
-      'creator_online', false,
-      'server_time', v_now,
-      'expires_at', v_room.expires_at
-    );
-  elsif v_room.status <> 'waiting' then
+    return battle.room_snapshot_json(p_room_id, v_participant.id);
+  elsif v_room.status = 'waiting' and v_participant.side <> 'creator' then
+    perform api.raise_business_error('BATTLE_NOT_PARTICIPANT', '当前账号不是该 Battle 的参与者');
+  elsif v_room.status not in ('waiting', 'lobby_waiting', 'lobby_countdown') then
     perform api.raise_business_error('BATTLE_STATE_CONFLICT', 'Battle 状态已更新');
   end if;
   perform battle.consume_rate_limit(v_user_id, 'heartbeat');
-  if v_room.expires_at <= v_now
-     or coalesce(v_room.creator_offline_since, v_room.creator_last_heartbeat_at)
-       + make_interval(
-         secs => battle.rule_int(v_room.ruleset_id, 'offline_reconnect_seconds')
-       ) <= v_now
-  then
-    perform api.raise_business_error('BATTLE_STATE_CONFLICT', 'Battle 状态已更新');
+  if v_room.status = 'waiting' then
+    if v_room.expires_at <= v_now then
+      perform battle.close_unstarted_room(p_room_id, 'expired', 'waiting_expired');
+      return battle.room_snapshot_json(p_room_id, v_participant.id);
+    end if;
+  else
+    perform battle.advance_lobby(p_room_id);
+    select * into v_room from battle.rooms where id = p_room_id;
+    if v_room.status not in ('lobby_waiting', 'lobby_countdown') then
+      return battle.room_snapshot_json(p_room_id, v_participant.id);
+    end if;
+    select * into v_participant
+    from battle.participants
+    where id = v_participant.id
+    for update;
   end if;
-  update battle.rooms
-  set creator_last_heartbeat_at = greatest(
-        coalesce(creator_last_heartbeat_at, '-infinity'::timestamptz), v_now
+
+  v_was_online := coalesce(
+    v_participant.offline_since is null
+      and v_participant.last_heartbeat_at > v_now - make_interval(
+        secs => battle.rule_int(
+          v_room.ruleset_id, 'presence_online_window_seconds'
+        )
       ),
-      creator_offline_since = null,
-      updated_at = v_now
-  where id = p_room_id
-  returning * into v_room;
-  return jsonb_build_object(
-    'room_id', p_room_id,
-    'status', v_room.status,
-    'creator_online', true,
-    'server_time', v_now,
-    'expires_at', v_room.expires_at
+    false
   );
+  update battle.participants
+  set last_heartbeat_at = greatest(
+        coalesce(last_heartbeat_at, '-infinity'::timestamptz), v_now
+      ),
+      offline_since = null,
+      presence_deadline = null
+  where id = v_participant.id
+  returning * into v_participant;
+  if not v_was_online then
+    perform battle.record_event(
+      p_room_id,
+      'participant_online',
+      jsonb_build_object('side', v_participant.side),
+      jsonb_build_object('participant_id', v_participant.id)
+    );
+  end if;
+  if v_room.status in ('lobby_waiting', 'lobby_countdown') then
+    perform battle.advance_lobby(p_room_id);
+  end if;
+  return battle.room_snapshot_json(p_room_id, v_participant.id);
 end;
 $$;
 
@@ -2242,35 +2584,66 @@ as $$
 declare
   v_user_id uuid := api.session_user(p_session_id);
   v_room battle.rooms%rowtype;
+  v_participant battle.participants%rowtype;
+  v_offline_since timestamptz;
 begin
   select * into v_room from battle.rooms where id = p_room_id for update;
-  if v_room.id is null or v_room.creator_user_id <> v_user_id then
+  select * into v_participant
+  from battle.participants
+  where room_id = p_room_id and user_id = v_user_id
+  for update;
+  if v_room.id is null or v_participant.id is null then
     perform api.raise_business_error('BATTLE_NOT_PARTICIPANT', '当前账号不是该 Battle 的参与者');
   end if;
-  if v_room.status = 'waiting' and v_room.creator_offline_since is null then
-    update battle.rooms
-    set creator_offline_since = now(), updated_at = now()
-    where id = p_room_id
-    returning * into v_room;
+  if v_room.status in ('finished', 'draw', 'cancelled', 'expired', 'voided') then
+    return battle.room_snapshot_json(p_room_id, v_participant.id);
+  elsif v_room.status = 'waiting' and v_participant.side <> 'creator' then
+    perform api.raise_business_error('BATTLE_NOT_PARTICIPANT', '当前账号不是该 Battle 的参与者');
+  elsif v_room.status not in ('waiting', 'lobby_waiting', 'lobby_countdown') then
+    perform api.raise_business_error('BATTLE_STATE_CONFLICT', 'Battle 状态已更新');
+  end if;
+  perform battle.consume_rate_limit(v_user_id, 'heartbeat');
+  if v_room.status = 'waiting' and v_room.expires_at <= now() then
+    perform battle.close_unstarted_room(p_room_id, 'expired', 'waiting_expired');
+    return battle.room_snapshot_json(p_room_id, v_participant.id);
+  elsif v_room.status in ('lobby_waiting', 'lobby_countdown') then
+    perform battle.advance_lobby(p_room_id);
+    select * into v_room from battle.rooms where id = p_room_id;
+    if v_room.status not in ('lobby_waiting', 'lobby_countdown') then
+      return battle.room_snapshot_json(p_room_id, v_participant.id);
+    end if;
+    select * into v_participant
+    from battle.participants
+    where id = v_participant.id
+    for update;
+  end if;
+  if v_participant.offline_since is null then
+    v_offline_since := now();
+    update battle.participants
+    set offline_since = v_offline_since,
+        presence_deadline = v_offline_since + make_interval(
+          secs => battle.rule_int(v_room.ruleset_id, 'offline_reconnect_seconds')
+        )
+    where id = v_participant.id;
     perform battle.record_event(
-      p_room_id, 'creator_offline',
+      p_room_id, 'participant_offline',
       jsonb_build_object(
+        'side', v_participant.side,
         'reconnect_deadline',
-        v_room.creator_offline_since + make_interval(
+        v_offline_since + make_interval(
           secs => battle.rule_int(v_room.ruleset_id, 'offline_reconnect_seconds')
         )
       ),
-      jsonb_build_object('offline_since', v_room.creator_offline_since)
+      jsonb_build_object(
+        'participant_id', v_participant.id,
+        'offline_since', v_offline_since
+      )
     );
   end if;
-  return jsonb_build_object(
-    'room_id', p_room_id,
-    'creator_online', false,
-    'reconnect_deadline', case when v_room.creator_offline_since is null then null
-      else v_room.creator_offline_since + make_interval(
-        secs => battle.rule_int(v_room.ruleset_id, 'offline_reconnect_seconds')
-      ) end
-  );
+  if v_room.status in ('lobby_waiting', 'lobby_countdown') then
+    perform battle.advance_lobby(p_room_id);
+  end if;
+  return battle.room_snapshot_json(p_room_id, v_participant.id);
 end;
 $$;
 
@@ -2290,12 +2663,15 @@ declare
   v_invite_hash text;
   v_room battle.rooms%rowtype;
   v_creator identity.users%rowtype;
+  v_creator_participant battle.participants%rowtype;
   v_tier battle.entry_tiers%rowtype;
   v_participant_id uuid := extensions.gen_random_uuid();
   v_seed bytea := extensions.gen_random_bytes(32);
   v_ledger_id bigint;
   v_result jsonb;
   v_terminal jsonb;
+  v_creator_online boolean;
+  v_now timestamptz := now();
 begin
   select s.battle_invite_token_hash into v_invite_hash
   from identity.sessions s
@@ -2332,6 +2708,10 @@ begin
     from identity.users
     where id = v_room.creator_user_id
     for update;
+    select * into v_creator_participant
+    from battle.participants
+    where room_id = v_room.id and side = 'creator'
+    for update;
     if v_room.status = 'expired' then
       perform api.raise_business_error('BATTLE_ROOM_EXPIRED', '挑战已过期');
     elsif v_room.status = 'cancelled' then
@@ -2362,36 +2742,17 @@ begin
         'BATTLE_ROOM_CANCELLED',
         v_terminal || jsonb_build_object('error_code', 'BATTLE_ROOM_CANCELLED')
       );
-    elsif coalesce(
-      v_room.creator_offline_since,
-      v_room.creator_last_heartbeat_at
-    ) + make_interval(
-      secs => battle.rule_int(v_room.ruleset_id, 'offline_reconnect_seconds')
-    ) <= now() then
-      v_terminal := battle.close_unstarted_room(
-        v_room.id, 'cancelled', 'creator_offline_timeout'
-      );
-      return operations.fail_command(
-        p_operation_id,
-        'BATTLE_ROOM_CANCELLED',
-        v_terminal || jsonb_build_object('error_code', 'BATTLE_ROOM_CANCELLED')
-      );
     elsif v_room.creator_user_id = v_operation.user_id then
       perform api.raise_business_error(
         'BATTLE_SELF_ACCEPT_FORBIDDEN',
         '不能接受自己创建的挑战'
       );
-    elsif v_room.creator_offline_since is not null
-       or v_room.creator_last_heartbeat_at < now() - make_interval(
-         secs => battle.rule_int(v_room.ruleset_id, 'creator_online_window_seconds')
-       ) then
-      perform api.raise_business_error('BATTLE_CREATOR_OFFLINE', '创建者当前不在线');
     end if;
     perform pg_advisory_xact_lock(hashtextextended('battle-user:' || v_operation.user_id::text, 0));
     if exists (
       select 1 from battle.participants p
       where p.user_id = v_operation.user_id
-        and p.status in ('preparing_share', 'waiting', 'active')
+        and p.status in ('preparing_share', 'waiting', 'lobby', 'active')
     ) then
       perform api.raise_business_error('BATTLE_ALREADY_PARTICIPATING', '当前已有进行中的 Battle');
     end if;
@@ -2399,9 +2760,11 @@ begin
     from battle.entry_tiers
     where ruleset_id = v_room.ruleset_id and id = v_room.entry_tier_id;
     insert into battle.participants (
-      id, room_id, user_id, side, status, join_operation_id
+      id, room_id, user_id, side, status, join_operation_id,
+      last_heartbeat_at
     ) values (
-      v_participant_id, v_room.id, v_operation.user_id, 'opponent', 'active', p_operation_id
+      v_participant_id, v_room.id, v_operation.user_id, 'opponent', 'lobby',
+      p_operation_id, v_now
     );
     perform battle.create_team(
       v_participant_id, v_operation.user_id, v_room.ruleset_id, p_template_ids
@@ -2417,42 +2780,66 @@ begin
     ) values (
       v_room.id, v_participant_id, v_operation.user_id, v_tier.entry_fee, v_ledger_id
     );
+    v_creator_online := v_creator_participant.offline_since is null
+      and v_creator_participant.last_heartbeat_at > v_now - make_interval(
+        secs => battle.rule_int(v_room.ruleset_id, 'presence_online_window_seconds')
+      );
     update battle.participants
-    set status = 'active'
-    where room_id = v_room.id and side = 'creator';
+    set status = 'lobby',
+        offline_since = case when v_creator_online then null else v_now end,
+        presence_deadline = case
+          when v_creator_online then null
+          else v_now + make_interval(
+            secs => battle.rule_int(v_room.ruleset_id, 'offline_reconnect_seconds')
+          )
+        end
+    where id = v_creator_participant.id;
     update battle.rooms
-    set status = 'active_select',
+    set status = case
+          when v_creator_online then 'lobby_countdown'
+          else 'lobby_waiting'
+        end,
         private_seed = v_seed,
         seed_commitment = encode(extensions.digest(v_seed, 'sha256'), 'hex'),
-        current_turn_no = 1,
-        phase_deadline = now() + make_interval(
-          secs => battle.rule_int(v_room.ruleset_id, 'action_timeout_seconds')
+        accepted_at = v_now,
+        lobby_expires_at = v_now + make_interval(
+          secs => battle.rule_int(v_room.ruleset_id, 'lobby_timeout_seconds')
         ),
-        creator_offline_since = null,
-        updated_at = now()
+        lobby_start_deadline = case
+          when v_creator_online then v_now + make_interval(
+            secs => battle.rule_int(v_room.ruleset_id, 'lobby_countdown_seconds')
+          )
+          else null
+        end,
+        current_turn_no = 0,
+        phase_deadline = null,
+        updated_at = v_now
     where id = v_room.id
     returning * into v_room;
-    insert into battle.turns (
-      room_id, turn_no, phase, deadline, start_snapshot_hash
-    ) values (
-      v_room.id, 1, 'normal', v_room.phase_deadline, battle.room_snapshot_hash(v_room.id)
-    );
     perform battle.append_audit(
       v_room.id, 'seed_commitment',
       jsonb_build_object('commitment', v_room.seed_commitment)
     );
     perform battle.record_event(
-      v_room.id, 'battle_started',
+      v_room.id, 'lobby_started',
       jsonb_build_object(
-        'turn_no', 1,
-        'deadline', v_room.phase_deadline,
-        'seed_commitment', v_room.seed_commitment
+        'phase', v_room.status,
+        'expires_at', v_room.lobby_expires_at,
+        'start_deadline', v_room.lobby_start_deadline
       ),
       jsonb_build_object(
         'opponent_participant_id', v_participant_id,
         'ruleset_checksum', v_room.ruleset_checksum
       )
     );
+    if v_creator_online then
+      perform battle.record_event(
+        v_room.id,
+        'lobby_countdown_started',
+        jsonb_build_object('start_deadline', v_room.lobby_start_deadline),
+        '{}'::jsonb
+      );
+    end if;
     v_result := battle.room_snapshot_json(v_room.id, v_participant_id);
     if v_result is null then
       raise exception using
@@ -3053,7 +3440,7 @@ begin
   );
   update battle.rooms
   set status = 'voided', finished_at = now(), phase_deadline = null,
-      reveal_ends_at = null, pending_result = null,
+      reveal_ends_at = null, lobby_start_deadline = null, pending_result = null,
       pending_winner_participant_id = null,
       pending_result_reason = 'system_invariant_void',
       updated_at = now()
@@ -3711,11 +4098,54 @@ begin
         r.status = 'waiting'
         and (
           r.expires_at <= now()
-          or coalesce(r.creator_offline_since, r.creator_last_heartbeat_at)
-             + interval '90 seconds' <= now()
+          or exists (
+            select 1
+            from battle.participants p
+            where p.room_id = r.id
+              and p.side = 'creator'
+              and p.status = 'waiting'
+              and p.offline_since is null
+              and p.last_heartbeat_at <= now() - make_interval(
+                secs => battle.rule_int(
+                  r.ruleset_id, 'presence_online_window_seconds'
+                )
+              )
+          )
           or exists (
             select 1 from identity.users u
             where u.id = r.creator_user_id and u.status = 'banned'
+          )
+        )
+      )
+      or (
+        r.status in ('lobby_waiting', 'lobby_countdown')
+        and (
+          r.lobby_expires_at <= now()
+          or r.lobby_start_deadline <= now()
+          or exists (
+            select 1
+            from battle.participants p
+            where p.room_id = r.id
+              and p.status = 'lobby'
+              and (
+                p.presence_deadline <= now()
+                or (
+                  p.offline_since is null
+                  and p.last_heartbeat_at <= now() - make_interval(
+                    secs => battle.rule_int(
+                      r.ruleset_id, 'presence_online_window_seconds'
+                    )
+                  )
+                )
+              )
+          )
+          or exists (
+            select 1
+            from battle.participants p
+            join identity.users u on u.id = p.user_id
+            where p.room_id = r.id
+              and p.status = 'lobby'
+              and u.status = 'banned'
           )
         )
       )
@@ -3725,11 +4155,32 @@ begin
     order by least(
       coalesce(r.prepare_deadline, 'infinity'::timestamptz),
       coalesce(r.expires_at, 'infinity'::timestamptz),
-      coalesce(
-        coalesce(r.creator_offline_since, r.creator_last_heartbeat_at)
-          + interval '90 seconds',
-        'infinity'::timestamptz
-      ),
+      coalesce(r.lobby_expires_at, 'infinity'::timestamptz),
+      coalesce(r.lobby_start_deadline, 'infinity'::timestamptz),
+      coalesce((
+        select p.last_heartbeat_at + make_interval(
+          secs => battle.rule_int(
+            r.ruleset_id, 'presence_online_window_seconds'
+          )
+        )
+        from battle.participants p
+        where p.room_id = r.id
+          and p.side = 'creator'
+          and p.status = 'waiting'
+          and p.offline_since is null
+      ), 'infinity'::timestamptz),
+      coalesce((
+        select min(coalesce(
+          p.presence_deadline,
+          p.last_heartbeat_at + make_interval(
+            secs => battle.rule_int(
+              r.ruleset_id, 'presence_online_window_seconds'
+            )
+          )
+        ))
+        from battle.participants p
+        where p.room_id = r.id and p.status = 'lobby'
+      ), 'infinity'::timestamptz),
       coalesce(r.phase_deadline, 'infinity'::timestamptz),
       coalesce(r.reveal_ends_at, 'infinity'::timestamptz)
     ), r.id
@@ -3741,21 +4192,59 @@ begin
         if v_room.status = 'preparing_share' then
           perform api.battle_abort_share(v_room.id, 'share_timeout');
         elsif v_room.status = 'waiting' then
-          perform battle.close_unstarted_room(
-            v_room.id,
-            case
-              when v_room.expires_at <= now() then 'expired'
-              else 'cancelled'
-            end,
-            case
-              when v_room.expires_at <= now() then 'waiting_expired'
-              when exists (
-                select 1 from identity.users
-                where id = v_room.creator_user_id and status = 'banned'
-              ) then 'creator_banned'
-              else 'creator_offline_timeout'
-            end
-          );
+          if v_room.expires_at <= now()
+            or exists (
+              select 1 from identity.users
+              where id = v_room.creator_user_id and status = 'banned'
+            )
+          then
+            perform battle.close_unstarted_room(
+              v_room.id,
+              case when v_room.expires_at <= now() then 'expired' else 'cancelled' end,
+              case
+                when v_room.expires_at <= now() then 'waiting_expired'
+                else 'creator_banned'
+              end
+            );
+          else
+            select * into v_participant
+            from battle.participants
+            where room_id = v_room.id and side = 'creator' and status = 'waiting'
+            for update;
+            if v_participant.offline_since is null then
+              update battle.participants
+              set offline_since = v_participant.last_heartbeat_at + make_interval(
+                    secs => battle.rule_int(
+                      v_room.ruleset_id, 'presence_online_window_seconds'
+                    )
+                  ),
+                  presence_deadline = v_participant.last_heartbeat_at
+                    + make_interval(
+                      secs => battle.rule_int(
+                        v_room.ruleset_id, 'presence_online_window_seconds'
+                      ) + battle.rule_int(
+                        v_room.ruleset_id, 'offline_reconnect_seconds'
+                      )
+                    )
+              where id = v_participant.id
+              returning * into v_participant;
+              perform battle.record_event(
+                v_room.id,
+                'participant_offline',
+                jsonb_build_object(
+                  'side', 'creator',
+                  'reconnect_deadline', v_participant.presence_deadline
+                ),
+                jsonb_build_object(
+                  'participant_id', v_participant.id,
+                  'offline_since', v_participant.offline_since,
+                  'display_only', true
+                )
+              );
+            end if;
+          end if;
+        elsif v_room.status in ('lobby_waiting', 'lobby_countdown') then
+          perform battle.advance_lobby(v_room.id);
         elsif v_room.status = 'active_select' then
           for v_participant in
             select * from battle.participants
@@ -4151,10 +4640,6 @@ begin
       and v_room.status = 'waiting'
       and v_room.expires_at > now()
       and v_room.creator_user_id <> v_user_id
-      and v_room.creator_offline_since is null
-      and v_room.creator_last_heartbeat_at >= now() - make_interval(
-        secs => battle.rule_int(v_room.ruleset_id, 'creator_online_window_seconds')
-      )
   );
 end;
 $$;
@@ -4203,7 +4688,10 @@ begin
       or count(distinct st.id) <> 1
     )
   ) or (
-    r.status in ('active_select', 'reveal', 'forced_switch')
+    r.status in (
+      'lobby_waiting', 'lobby_countdown',
+      'active_select', 'reveal', 'forced_switch'
+    )
     and count(*) filter (where s.status = 'locked') <> 2
   )
   on conflict do nothing;
@@ -4223,7 +4711,7 @@ begin
     on r.kind = 'battle' and r.reference_id = p.id
   group by p.id, p.status
   having (
-    p.status in ('preparing_share', 'waiting', 'active')
+    p.status in ('preparing_share', 'waiting', 'lobby', 'active')
     and (
       count(distinct r.id) filter (where r.status = 'active') <> 3
       or count(distinct tm.id) <> 3
@@ -4250,8 +4738,17 @@ begin
   left join battle.turns t on t.room_id = r.id
   group by r.id, r.status, r.current_turn_no
   having (
-    r.status in ('active_select', 'reveal', 'forced_switch')
+    r.status in (
+      'lobby_waiting', 'lobby_countdown',
+      'active_select', 'reveal', 'forced_switch'
+    )
     and count(distinct p.id) <> 2
+  ) or (
+    r.status in ('lobby_waiting', 'lobby_countdown')
+    and (
+      r.current_turn_no <> 0
+      or count(distinct (t.room_id, t.turn_no, t.phase)) <> 0
+    )
   ) or (
     r.status = 'active_select'
     and count(distinct (t.room_id, t.turn_no, t.phase)) filter (

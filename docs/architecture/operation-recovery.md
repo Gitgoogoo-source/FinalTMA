@@ -6,7 +6,7 @@
 
 重新进入应用时，`identity.bootstrap.blocking_operations` 交给操作恢复工作流，`pending_payments` 和 `pending_mints` 分别交给支付与 Mint 恢复工作流，当前 `battle_participation` 与最新未确认 `battle_current_result` 交给 Battle 恢复工作流。开盒、幸运转盘与进化的 `pending`、`unknown` 以及尚未确认展示的 `succeeded`、`failed` 都进入 `blocking_operations`；前端分别通过 `GET /api/gacha/recovery`、`GET /api/wheel/recovery` 与 `GET /api/inventory/evolution/recovery` 使用同一通用发现 Hook，按 1 秒、2 秒、3 秒、5 秒、此后每 30 秒发现事务提交晚于首屏读取的原操作，发现后停止对应发现轮询并只按原 `operation_id` 查询终态。K-coin 创建订单命令在 invoice URL 持久化后立即完成，不作为长期阻塞操作；未提交 Stars 的 `pending` K-coin 订单不恢复、不打开弹窗。只有 `processing`、`paid` K-coin 订单恢复锁定弹窗，并按 1 秒、2 秒、3 秒、此后每 5 秒查询唯一终态；VIP 继续使用自身既有恢复交互。充值订单交付后，只恢复开盒、市场购买、转盘、`battle_create` 或 `battle_accept` 的确认界面，不自动执行原业务。
 
-Battle 创建、取消、接受、正常动作或强制换宠响应丢失时查询原 operation 与 `GET /api/battle/rooms/:room_id`；`battle-share` integration 以原 `create_operation_id` 恢复同一 room 和同一 bearer token，不得再次锁币、再次创建 reservation 或重选已经锁定的动作。heartbeat 丢失时可再次发送并只推进单调服务端在线时间；offline 丢失时可再次发送同一 room 的离线转换；两者都不查询 operation。Ably 只触发 REST 回正；等待/接受状态每 2 秒、选择/强制换宠状态每 1 秒短轮询，并用 `state_version` 丢弃重复或乱序失效通知。
+Battle 创建、取消、接受、正常动作或强制换宠响应丢失时查询原 operation 与 `GET /api/battle/rooms/:room_id`；接受恢复读取同一个 lobby，不再次锁币、创建 reservation 或提前创建 turn 1。`battle-share` integration 以原 `create_operation_id` 恢复同一 room 和同一 bearer token。heartbeat 与 offline 丢失时可再次发送同一 room，服务端返回更新后的 viewer snapshot；普通续租只推进 participant 的单调服务端在线时间，转换由 room lock 幂等吸收，两者都不查询 operation。Ably 只触发 REST 回正；邀请 waiting、接受和 lobby 每 2 秒、选择/强制换宠每 1 秒短轮询，并用 `state_version` 丢弃重复或乱序失效通知。
 
 Battle 终局只通过 `BattleCurrentResult` 恢复本人的最新未确认当场结果。结果覆盖层调用 `POST /api/battle/results/:room_id/acknowledge`，该请求不携带幂等键、不创建 operation，数据库只记录本人首次确认时间；响应丢失时保持结果层并按同一 `room_id` 重试，确认完成后 identity bootstrap 与 Battle bootstrap 都不再返回。玩家端不恢复旧回合列表、审计或 replay。
 

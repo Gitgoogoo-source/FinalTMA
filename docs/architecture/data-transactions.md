@@ -12,7 +12,7 @@
 
 创建 operation 的玩家命令使用同一个操作 UUID 作为 `Idempotency-Key` 与 `operation_id`。数据库对规范化请求计算 SHA-256；同键同请求回放持久结果，同键不同请求返回 `IDEMPOTENCY_KEY_REUSED`。开盒、转盘与进化结果的确认时间同原操作保存；领域专用确认 RPC 锁定当前用户、匹配固定 `use_case` 和终态，并只写入首次确认时间，重复与并发确认不改变结果。当前 Web 打开进化确认页不调用预览 RPC；兼容保留的进化预览 RPC 仍只读取目录、真实可用数量、Fgems 和路线保底。无论前端静态预检查结果如何，最终结算都由 `api.inventory_evolve` 在单一事务内重新校验并裁决。市场购买响应不包含卖家身份；库存满足 `total = available + listed + trading + minting + expedition + battling`。
 
-Battle room 行是该房间全部写事务的首个业务锁。创建、接受、取消、过期、动作、deadline 托管、强制换宠、终局、退款和结算分别通过一个具名 RPC 完成；命中、伤害、行动顺序和终局只读取房间的 `battle-v1` checksum 与不可变模板快照。创建、取消、接受、正常动作和强制换宠创建 operation 并使用 UUID 幂等键；heartbeat 仅以数据库服务端时间单调更新最近在线时间，offline 幂等进入离线重连期，acknowledge 仅首次写入本人确认时间，后三者不接收幂等键且不创建 operation。涉及双方余额时按用户 UUID 排序锁定 balance；stake 状态、room 唯一 settlement 和 ledger reference 阻止重复锁定、退款与到账。每次状态变化递增 `rooms.state_version`，追加私有 event，并在同一事务写 outbox。
+Battle room 行是该房间全部写事务的首个业务锁。创建、接受、取消、邀请到期、lobby 心跳/离线/倒计时/到期/封禁、动作、deadline 托管、强制换宠、终局、退款和结算分别通过具名 RPC 完成；相等 deadline 下 lobby 取消或到期优先于开战。接受事务只创建双方 participant、reservation、stake、种子和 lobby deadline，不创建 turn 1；数据库确认双方在线满 3 秒后才原子创建 turn 1。命中、伤害、行动顺序和终局只读取房间的 `battle-v1` checksum 与不可变模板快照。创建、取消、接受、正常动作和强制换宠创建 operation 并使用 UUID 幂等键；heartbeat 以数据库服务端时间单调更新 participant presence，offline 幂等进入离线事实，acknowledge 仅首次写入本人确认时间，后三者不接收幂等键且不创建 operation。普通心跳续租不增加状态版本；只有 online/offline 转换、倒计时开始/中止、开战和取消递增 `rooms.state_version`、追加私有 event 并在同一事务写 outbox。涉及双方余额时按用户 UUID 排序锁定 balance；stake 状态、room 唯一 settlement 和 ledger reference 阻止重复锁定、退款与到账。
 
 Battle 在检测到规则、快照、生命、活动宠物、stake、ledger 或 settlement 永久不变量错误时停止普通结算，使用独立安全事务写入 `voided`、双方原额退款、释放 reservation 和 invariant violation。玩家接口不读取私有 seed、roll、审计事件或对手秘密字段；viewer-specific JSON 由数据库 RPC 直接裁剪。
 

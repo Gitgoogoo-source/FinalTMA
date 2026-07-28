@@ -82,7 +82,7 @@ python3 tools/web/build_manifest.py \
 6. 在 Supabase Data API 设置中把 Exposed schemas 固定为 `public,graphql_public,api`，不得暴露任何业务表 schema。
 7. 核对 Vercel Production 同时存在 `TELEGRAM_BOT_USERNAME=FinalTMA_bot`、`TELEGRAM_MINI_APP_SHORT_NAME=pokepets_dev`、`ABLY_API_KEY`、`BATTLE_INVITE_SECRET` 与 `BATTLE_OUTBOX_SECRET`；核对 Supabase Vault 的 Battle share/outbox callback URL 和相同 outbox secret；环境变量变更后部署包含全部修改的同一 Git commit。在 BotFather 的 `/mybots` → `@FinalTMA_bot` → `Bot Settings` → `Configure Mini App` 中启用 Main Mini App 并将 URL 固定为 `https://final-tma-pi.vercel.app/`，同时保持 named Mini App `pokepets_dev` 与默认菜单按钮 `Open PokePets` 指向 `https://t.me/FinalTMA_bot/pokepets_dev`。
 8. 调用 Bot API，确认 `getMe.result.has_main_web_app=true` 且 `getChatMenuButton.result.web_app.url=https://t.me/FinalTMA_bot/pokepets_dev`；验证 `battle-v1` checksum、`battle-tick-v1` 每秒 job、两个 pg_net callback、Ably subscribe-only token、`/api/health`、Telegram 真机登录、登录交接门禁、`/api/referrals` 与三个手工 Vercel job，最后恢复所有调度。
-9. 按 `docs/operations/acceptance.md` 完成 Telegram 真机、Battle、支付与并发验收，并确认 `/game` 只发起当前 viewer 所需的 Battle 请求、离开游戏页停止 waiting 心跳和 UI 轮询；`monitor-invariants` 必须返回 0 个新增 violation。
+9. 按 `docs/operations/acceptance.md` 完成 Telegram 真机、Battle、支付与并发验收，并确认 `/game` 只发起当前 viewer 所需的 Battle 请求、离开游戏页停止 waiting/lobby 心跳和 UI 轮询、进入 active 战斗停止 presence 心跳；`monitor-invariants` 必须返回 0 个新增 violation。
 
 任一步失败都保持入口与 Cron 关闭，修正原始 Schema 或迁移并从第 1 条重新执行。禁止为尚未生产发布的错误定义追加修补 migration。
 

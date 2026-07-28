@@ -23,6 +23,8 @@ export const battleElementLabels = {
 export const battleStatusLabels: Record<BattleRoomStatus, string> = {
   preparing_share: "正在准备挑战卡",
   waiting: "等待对手接受",
+  lobby_waiting: "等待双方进入房间",
+  lobby_countdown: "服务器开战倒计时",
   active_select: "选择本回合动作",
   reveal: "回合结算展示",
   forced_switch: "强制换宠",

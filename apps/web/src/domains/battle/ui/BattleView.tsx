@@ -50,6 +50,7 @@ import {
   BattleCancelSheet,
   BattleHome,
   BattleInviteMissing,
+  BattleLobby,
   BattlePreparingShare,
   BattleResult,
   BattleResultPending,
@@ -116,7 +117,7 @@ export function BattleView(): ReactNode {
   const [lifecycleReady, setLifecycleReady] = useState(false);
   const battleRootRef = useRef<HTMLDivElement>(null);
   const handledResume = useRef(new Set<string>());
-  const waitingRoomRef = useRef<string | null>(null);
+  const presenceRoomRef = useRef<string | null>(null);
   const offlineSent = useRef(false);
   const lifecycleRun = useRef(0);
   const lifecycleReadyRef = useRef(false);
@@ -332,6 +333,28 @@ export function BattleView(): ReactNode {
     ...deadline,
     onExpire: () => void refetchRef.current(),
   });
+  const lobbyStartClock = useBattleDeadline({
+    serverTime: room?.server_time ?? null,
+    deadline: room?.lobby?.start_deadline ?? null,
+    durationSeconds: room?.lobby?.start_deadline ? 3 : null,
+    onExpire: () => void refetchRef.current(),
+  });
+  const creatorReconnectClock = useBattleDeadline({
+    serverTime: room?.server_time ?? null,
+    deadline: room?.lobby?.presence.creator.reconnect_deadline ?? null,
+    durationSeconds: room?.lobby?.presence.creator.reconnect_deadline
+      ? 90
+      : null,
+    onExpire: () => void refetchRef.current(),
+  });
+  const opponentReconnectClock = useBattleDeadline({
+    serverTime: room?.server_time ?? null,
+    deadline: room?.lobby?.presence.opponent.reconnect_deadline ?? null,
+    durationSeconds: room?.lobby?.presence.opponent.reconnect_deadline
+      ? 90
+      : null,
+    onExpire: () => void refetchRef.current(),
+  });
   const realtimePhase = realtimePhaseFor(pageState, room);
   const realtime = useBattleRealtime({
     enabled:
@@ -347,18 +370,20 @@ export function BattleView(): ReactNode {
   });
 
   useEffect(() => {
-    waitingRoomRef.current =
-      room?.status === "waiting" && room.side === "creator"
+    presenceRoomRef.current =
+      (room?.status === "waiting" && room.side === "creator") ||
+      room?.status === "lobby_waiting" ||
+      room?.status === "lobby_countdown"
         ? room.room_id
         : null;
   }, [room]);
   const markOffline = useCallback(() => {
     lifecycleReadyRef.current = false;
-    const waitingRoomId = waitingRoomRef.current;
-    if (!waitingRoomId || offlineSent.current) return;
+    const presenceRoomId = presenceRoomRef.current;
+    if (!presenceRoomId || offlineSent.current) return;
     offlineSent.current = true;
     setOnlineState("offline");
-    apiKeepaliveRequest("battle.offline", { room_id: waitingRoomId });
+    apiKeepaliveRequest("battle.offline", { room_id: presenceRoomId });
   }, []);
 
   useEffect(() => {
@@ -420,9 +445,9 @@ export function BattleView(): ReactNode {
   }, [markOffline, pageActive]);
 
   useEffect(() => {
-    const waitingRoomId = waitingRoomRef.current;
+    const presenceRoomId = presenceRoomRef.current;
     if (
-      !waitingRoomId ||
+      !presenceRoomId ||
       !pageActive ||
       !telegramActive ||
       !lifecycleReady ||
@@ -441,15 +466,16 @@ export function BattleView(): ReactNode {
       inFlight = true;
       try {
         const response = await apiRequest("battle.heartbeat", {
-          room_id: waitingRoomId,
+          room_id: presenceRoomId,
         });
         if (disposed) return;
-        setOnlineState(
-          response.data.creator_online && response.data.status === "waiting"
-            ? "online"
-            : "offline",
-        );
-        if (response.data.status !== "waiting") {
+        applySnapshot(response.data);
+        if (response.data.status === "waiting") setOnlineState("online");
+        if (
+          response.data.status !== "waiting" &&
+          response.data.status !== "lobby_waiting" &&
+          response.data.status !== "lobby_countdown"
+        ) {
           stop();
           void refetchRef.current();
         }
@@ -474,6 +500,7 @@ export function BattleView(): ReactNode {
   }, [
     lifecycleReady,
     pageActive,
+    applySnapshot,
     room?.room_id,
     room?.side,
     room?.status,
@@ -679,6 +706,9 @@ export function BattleView(): ReactNode {
       modalBackgroundRef={battleRootRef}
       acknowledging={acknowledging}
       clock={clock}
+      lobbyStartClock={lobbyStartClock}
+      creatorReconnectClock={creatorReconnectClock}
+      opponentReconnectClock={opponentReconnectClock}
       realtimeOffline={realtime === "offline"}
       onlineState={onlineState}
       shareState={shareState}
@@ -772,6 +802,9 @@ function BattleState({
   modalBackgroundRef,
   acknowledging,
   clock,
+  lobbyStartClock,
+  creatorReconnectClock,
+  opponentReconnectClock,
   realtimeOffline,
   onlineState,
   shareState,
@@ -809,6 +842,9 @@ function BattleState({
   modalBackgroundRef: RefObject<HTMLElement | null>;
   acknowledging: boolean;
   clock: ReturnType<typeof useBattleDeadline>;
+  lobbyStartClock: ReturnType<typeof useBattleDeadline>;
+  creatorReconnectClock: ReturnType<typeof useBattleDeadline>;
+  opponentReconnectClock: ReturnType<typeof useBattleDeadline>;
   realtimeOffline: boolean;
   onlineState: OnlineState;
   shareState: string | null;
@@ -861,6 +897,17 @@ function BattleState({
         onShare={share}
         onCancel={cancel}
         onRefresh={refresh}
+      />
+    );
+  if (pageState === "lobby" && room?.lobby)
+    return (
+      <BattleLobby
+        lobby={room.lobby}
+        remainingSeconds={clock.remainingSeconds}
+        countdownSeconds={lobbyStartClock.remainingSeconds}
+        creatorReconnectSeconds={creatorReconnectClock.remainingSeconds}
+        opponentReconnectSeconds={opponentReconnectClock.remainingSeconds}
+        realtimeOffline={realtimeOffline}
       />
     );
   if ((pageState === "battle" || pageState === "forced_switch") && room)
@@ -951,6 +998,8 @@ function derivePageState({
   if (room) {
     if (room.status === "preparing_share") return "preparing_share";
     if (room.status === "waiting") return "waiting";
+    if (room.status === "lobby_waiting" || room.status === "lobby_countdown")
+      return "lobby";
     if (room.status === "forced_switch") return "forced_switch";
     if (room.status === "active_select" || room.status === "reveal")
       return "battle";
@@ -996,6 +1045,12 @@ function deadlineFor(
       deadline: participation?.expires_at ?? null,
       durationSeconds: 1_800,
     };
+  if (state === "lobby" && room.lobby)
+    return {
+      serverTime: room.server_time,
+      deadline: room.lobby.expires_at,
+      durationSeconds: 300,
+    };
   if (room.status === "reveal")
     return {
       serverTime: room.server_time,
@@ -1018,6 +1073,7 @@ function realtimePhaseFor(
   if (state === "accept") return "accept";
   if (state === "preparing_share") return "preparing_share";
   if (state === "waiting") return "waiting";
+  if (state === "lobby") return "lobby";
   if (state === "forced_switch") return "forced_switch";
   if (state === "battle")
     return room?.status === "reveal" ? "reveal" : "active_select";
