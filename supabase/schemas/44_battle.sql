@@ -270,6 +270,12 @@ create table battle.participants (
   last_heartbeat_at timestamptz,
   offline_since timestamptz,
   presence_deadline timestamptz,
+  presence_lifecycle_version bigint not null default 0
+    check (presence_lifecycle_version >= 0),
+  presence_lease_id uuid,
+  presence_command_seq bigint not null default 0
+    check (presence_command_seq >= 0),
+  presence_lease_active boolean not null default false,
   result_acknowledged_at timestamptz,
   joined_at timestamptz not null default now(),
   finished_at timestamptz,
@@ -287,6 +293,19 @@ create table battle.participants (
   check (
     (offline_since is null and presence_deadline is null)
     or (offline_since is not null and presence_deadline is not null)
+  ),
+  check (
+    (
+      presence_lifecycle_version = 0
+      and presence_lease_id is null
+      and presence_command_seq = 0
+      and not presence_lease_active
+    )
+    or (
+      presence_lifecycle_version > 0
+      and presence_lease_id is not null
+      and presence_command_seq > 0
+    )
   ),
   check (status <> 'lobby' or last_heartbeat_at is not null)
 );
@@ -1497,14 +1516,14 @@ set search_path = ''
 as $$
 declare
   v_room battle.rooms%rowtype;
-  v_side text;
+  v_participant battle.participants%rowtype;
   v_opponent_id uuid;
 begin
   select * into v_room from battle.rooms where id = p_room_id;
-  select side into v_side
+  select * into v_participant
   from battle.participants
   where id = p_participant_id and room_id = p_room_id;
-  if v_side is null then return null; end if;
+  if v_participant.id is null then return null; end if;
   select id into v_opponent_id
   from battle.participants
   where room_id = p_room_id and id <> p_participant_id;
@@ -1512,17 +1531,17 @@ begin
     'room_id', v_room.id,
     'status', v_room.status,
     'state_version', v_room.state_version,
-    'side', v_side,
+    'side', v_participant.side,
     'turn_no', v_room.current_turn_no,
     'phase_deadline', v_room.phase_deadline,
     'reveal_ends_at', v_room.reveal_ends_at,
     'prepare_deadline', case
-      when v_side = 'creator' and v_room.status = 'preparing_share'
+      when v_participant.side = 'creator' and v_room.status = 'preparing_share'
       then v_room.prepare_deadline
       else null
     end,
     'prepared_message_id', case
-      when v_side = 'creator' and v_room.status = 'waiting'
+      when v_participant.side = 'creator' and v_room.status = 'waiting'
       then (
         select ps.prepared_message_id
         from battle.prepared_shares ps
@@ -1530,6 +1549,12 @@ begin
       )
       else null
     end,
+    'presence_lifecycle', jsonb_build_object(
+      'version', v_participant.presence_lifecycle_version,
+      'lease_id', v_participant.presence_lease_id,
+      'last_command_seq', v_participant.presence_command_seq,
+      'active', v_participant.presence_lease_active
+    ),
     'viewer_action_state',
       battle.viewer_action_state(p_room_id, p_participant_id),
     'server_time', now(),
@@ -2013,13 +2038,232 @@ as $$
       from battle.participants p
       where p.room_id = r.id
         and p.status = 'lobby'
-        and p.presence_deadline <= now()
+        and (
+          p.presence_deadline <= now()
+          or (
+            p.offline_since is null
+            and p.last_heartbeat_at + make_interval(
+              secs => battle.rule_int(
+                r.ruleset_id, 'presence_online_window_seconds'
+              ) + battle.rule_int(
+                r.ruleset_id, 'offline_reconnect_seconds'
+              )
+            ) <= now()
+          )
+        )
     ) then 'lobby_presence_timeout'
     else null
   end
   from battle.rooms r
   where r.id = p_room_id
     and r.status in ('lobby_waiting', 'lobby_countdown')
+$$;
+
+create or replace function battle.lobby_invariant_error(p_room_id uuid)
+returns text
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  v_room battle.rooms%rowtype;
+  v_tier battle.entry_tiers%rowtype;
+begin
+  select * into v_room from battle.rooms where id = p_room_id;
+  if v_room.id is null
+    or v_room.status not in ('lobby_waiting', 'lobby_countdown')
+  then
+    return null;
+  end if;
+
+  if not exists (
+    select 1
+    from battle.rulesets r
+    where r.id = v_room.ruleset_id
+      and r.checksum = v_room.ruleset_checksum
+      and battle.rules_complete(r.id)
+  ) then
+    return 'lobby_ruleset_invalid';
+  end if;
+  select * into v_tier
+  from battle.entry_tiers
+  where ruleset_id = v_room.ruleset_id and id = v_room.entry_tier_id;
+  if v_tier.id is null then
+    return 'lobby_entry_tier_invalid';
+  end if;
+  if v_room.waiting_started_at is null
+    or v_room.expires_at is null
+    or v_room.expires_at is distinct from (
+      v_room.waiting_started_at + make_interval(
+        secs => battle.rule_int(v_room.ruleset_id, 'waiting_timeout_seconds')
+      )
+    )
+    or v_room.accepted_at is null
+    or v_room.accepted_at < v_room.waiting_started_at
+    or v_room.accepted_at >= v_room.expires_at
+    or v_room.lobby_expires_at is distinct from (
+      v_room.accepted_at + make_interval(
+        secs => battle.rule_int(v_room.ruleset_id, 'lobby_timeout_seconds')
+      )
+    )
+    or v_room.current_turn_no <> 0
+    or v_room.private_seed is null
+    or octet_length(v_room.private_seed) <> 32
+    or v_room.seed_commitment is distinct from encode(
+      extensions.digest(v_room.private_seed, 'sha256'), 'hex'
+    )
+    or v_room.phase_deadline is not null
+    or v_room.reveal_ends_at is not null
+    or v_room.next_status is not null
+    or v_room.pending_result is not null
+    or v_room.pending_winner_participant_id is not null
+    or v_room.pending_result_reason is not null
+    or v_room.resolution_event is not null
+    or v_room.finished_at is not null
+    or (
+      v_room.status = 'lobby_waiting'
+      and v_room.lobby_start_deadline is not null
+    )
+    or (
+      v_room.status = 'lobby_countdown'
+      and (
+        v_room.lobby_start_deadline is null
+        or v_room.lobby_start_deadline > v_room.lobby_expires_at
+      )
+    )
+    or not exists (
+      select 1
+      from battle.prepared_shares ps
+      where ps.room_id = p_room_id
+        and ps.status = 'active'
+        and ps.activated_at = v_room.waiting_started_at
+        and ps.telegram_expires_at >= v_room.expires_at
+    )
+    or exists (select 1 from battle.turns where room_id = p_room_id)
+    or exists (select 1 from battle.actions where room_id = p_room_id)
+    or exists (select 1 from battle.settlements where room_id = p_room_id)
+    or exists (select 1 from battle.summaries where room_id = p_room_id)
+  then
+    return 'lobby_room_startup_invalid';
+  end if;
+
+  if (
+    select not (
+      count(*) = 2
+      and count(*) filter (where p.side = 'creator') = 1
+      and count(*) filter (where p.side = 'opponent') = 1
+      and count(*) filter (
+        where p.side = 'creator' and p.user_id = v_room.creator_user_id
+      ) = 1
+      and count(*) filter (
+        where p.side = 'opponent' and p.user_id <> v_room.creator_user_id
+      ) = 1
+      and count(*) filter (where p.status = 'lobby') = 2
+    )
+    from battle.participants p
+    where p.room_id = p_room_id
+  ) then
+    return 'lobby_participants_invalid';
+  end if;
+
+  if (select count(*) from battle.stakes where room_id = p_room_id) <> 2
+    or exists (
+      select 1
+      from battle.participants p
+      left join battle.stakes s
+        on s.room_id = p.room_id and s.participant_id = p.id
+      left join economy.ledger l on l.id = s.lock_ledger_id
+      where p.room_id = p_room_id
+        and (
+          s.id is null
+          or s.user_id <> p.user_id
+          or s.amount <> v_tier.entry_fee
+          or s.status <> 'locked'
+          or l.id is null
+          or l.operation_id is distinct from p.join_operation_id
+          or l.user_id is distinct from p.user_id
+          or l.currency is distinct from 'KCOIN'
+          or l.amount is distinct from -v_tier.entry_fee
+          or l.reason is distinct from 'battle_stake_lock'
+          or l.reference is distinct from (
+            p_room_id::text || ':' || p.user_id::text || ':lock'
+          )
+        )
+    )
+  then
+    return 'lobby_stakes_invalid';
+  end if;
+
+  if exists (
+    select 1
+    from battle.participants p
+    left join battle.team_members tm on tm.participant_id = p.id
+    left join catalog.templates t on t.id = tm.template_id
+    left join battle.template_configs c
+      on c.ruleset_id = v_room.ruleset_id and c.template_id = tm.template_id
+    where p.room_id = p_room_id
+    group by p.id
+    having count(tm.id) <> 3
+      or count(tm.id) filter (where tm.active) <> 1
+      or count(tm.id) filter (where tm.slot = 1 and tm.active) <> 1
+      or count(tm.id) filter (
+        where t.id is null
+          or c.template_id is null
+          or tm.template_name is distinct from t.name
+          or tm.image_thumbnail_path is distinct from t.image_thumbnail_path
+          or tm.image_detail_path is distinct from t.image_detail_path
+          or tm.rarity is distinct from t.rarity
+          or tm.rarity is distinct from c.rarity
+          or tm.stage is distinct from t.stage
+          or tm.stage is distinct from c.stage
+          or c.chain_id is distinct from t.chain_id
+          or tm.element is distinct from c.element
+          or tm.max_hp is distinct from c.max_hp
+          or tm.current_hp is distinct from c.max_hp
+          or tm.attack is distinct from c.attack
+          or tm.defense is distinct from c.defense
+          or tm.speed is distinct from c.speed
+          or tm.skill_1_id is distinct from c.skill_1_id
+          or tm.skill_2_id is distinct from c.skill_2_id
+          or tm.skill_3_id is distinct from c.skill_3_id
+          or tm.skill_4_id is distinct from c.skill_4_id
+          or not tm.alive
+          or tm.active is distinct from (tm.slot = 1)
+      ) > 0
+  ) then
+    return 'lobby_team_snapshots_invalid';
+  end if;
+
+  if (
+    select count(*)
+    from inventory.reservations r
+    join battle.participants p on p.id = r.reference_id
+    where p.room_id = p_room_id
+      and r.kind = 'battle'
+      and r.status = 'active'
+  ) <> 6
+    or exists (
+      select 1
+      from battle.participants p
+      join battle.team_members tm on tm.participant_id = p.id
+      left join inventory.reservations r
+        on r.kind = 'battle'
+       and r.reference_id = p.id
+       and r.template_id = tm.template_id
+       and r.status = 'active'
+      where p.room_id = p_room_id
+        and (
+          r.id is null
+          or r.user_id <> p.user_id
+          or r.quantity <> 1
+        )
+    )
+  then
+    return 'lobby_reservations_invalid';
+  end if;
+  return null;
+end;
 $$;
 
 create or replace function battle.reconcile_lobby_presence(p_room_id uuid)
@@ -2127,10 +2371,19 @@ as $$
 declare
   v_room battle.rooms%rowtype;
   v_reason text;
+  v_invariant_error text;
   v_online_count integer;
 begin
   select * into v_room from battle.rooms where id = p_room_id for update;
   if v_room.status not in ('lobby_waiting', 'lobby_countdown') then return; end if;
+
+  v_invariant_error := battle.lobby_invariant_error(p_room_id);
+  if v_invariant_error is not null then
+    perform battle.void_room_after_invariant(
+      p_room_id, 'lobby_startup:' || v_invariant_error
+    );
+    return;
+  end if;
 
   v_reason := battle.lobby_terminal_reason(p_room_id);
   if v_reason is not null then
@@ -2163,6 +2416,14 @@ begin
     );
   if v_online_count <> 2 then
     perform battle.reconcile_lobby_presence(p_room_id);
+    return;
+  end if;
+
+  v_invariant_error := battle.lobby_invariant_error(p_room_id);
+  if v_invariant_error is not null then
+    perform battle.void_room_after_invariant(
+      p_room_id, 'lobby_startup:' || v_invariant_error
+    );
     return;
   end if;
 
@@ -2493,7 +2754,10 @@ $$;
 
 create or replace function api.battle_heartbeat(
   p_session_id uuid,
-  p_room_id uuid
+  p_room_id uuid,
+  p_presence_lease_id uuid,
+  p_presence_lifecycle_version bigint,
+  p_presence_command_seq bigint
 )
 returns jsonb
 language plpgsql
@@ -2506,7 +2770,16 @@ declare
   v_participant battle.participants%rowtype;
   v_now timestamptz := now();
   v_was_online boolean;
+  v_is_new_lifecycle boolean;
 begin
+  if p_presence_lease_id is null
+    or p_presence_lifecycle_version is null
+    or p_presence_lifecycle_version < 1
+    or p_presence_command_seq is null
+    or p_presence_command_seq < 1
+  then
+    perform api.raise_business_error('REQUEST_INVALID', 'Presence 命令无效');
+  end if;
   select * into v_room from battle.rooms where id = p_room_id for update;
   select * into v_participant
   from battle.participants
@@ -2522,6 +2795,21 @@ begin
   elsif v_room.status not in ('waiting', 'lobby_waiting', 'lobby_countdown') then
     perform api.raise_business_error('BATTLE_STATE_CONFLICT', 'Battle 状态已更新');
   end if;
+
+  v_is_new_lifecycle :=
+    p_presence_lifecycle_version = v_participant.presence_lifecycle_version + 1
+    and p_presence_command_seq = 1;
+  if not v_is_new_lifecycle
+    and not (
+      p_presence_lifecycle_version = v_participant.presence_lifecycle_version
+      and p_presence_lease_id = v_participant.presence_lease_id
+      and v_participant.presence_lease_active
+      and p_presence_command_seq > v_participant.presence_command_seq
+    )
+  then
+    return battle.room_snapshot_json(p_room_id, v_participant.id);
+  end if;
+
   perform battle.consume_rate_limit(v_user_id, 'heartbeat');
   if v_room.status = 'waiting' then
     if v_room.expires_at <= v_now then
@@ -2554,7 +2842,11 @@ begin
         coalesce(last_heartbeat_at, '-infinity'::timestamptz), v_now
       ),
       offline_since = null,
-      presence_deadline = null
+      presence_deadline = null,
+      presence_lifecycle_version = p_presence_lifecycle_version,
+      presence_lease_id = p_presence_lease_id,
+      presence_command_seq = p_presence_command_seq,
+      presence_lease_active = true
   where id = v_participant.id
   returning * into v_participant;
   if not v_was_online then
@@ -2574,7 +2866,10 @@ $$;
 
 create or replace function api.battle_mark_offline(
   p_session_id uuid,
-  p_room_id uuid
+  p_room_id uuid,
+  p_presence_lease_id uuid,
+  p_presence_lifecycle_version bigint,
+  p_presence_command_seq bigint
 )
 returns jsonb
 language plpgsql
@@ -2586,7 +2881,18 @@ declare
   v_room battle.rooms%rowtype;
   v_participant battle.participants%rowtype;
   v_offline_since timestamptz;
+  v_terminal_reason text;
+  v_invariant_error text;
+  v_is_new_lifecycle boolean;
 begin
+  if p_presence_lease_id is null
+    or p_presence_lifecycle_version is null
+    or p_presence_lifecycle_version < 1
+    or p_presence_command_seq is null
+    or p_presence_command_seq < 1
+  then
+    perform api.raise_business_error('REQUEST_INVALID', 'Presence 命令无效');
+  end if;
   select * into v_room from battle.rooms where id = p_room_id for update;
   select * into v_participant
   from battle.participants
@@ -2602,21 +2908,48 @@ begin
   elsif v_room.status not in ('waiting', 'lobby_waiting', 'lobby_countdown') then
     perform api.raise_business_error('BATTLE_STATE_CONFLICT', 'Battle 状态已更新');
   end if;
+
+  v_is_new_lifecycle :=
+    p_presence_lifecycle_version = v_participant.presence_lifecycle_version + 1;
+  if not v_is_new_lifecycle
+    and not (
+      p_presence_lifecycle_version = v_participant.presence_lifecycle_version
+      and p_presence_lease_id = v_participant.presence_lease_id
+      and v_participant.presence_lease_active
+      and p_presence_command_seq > v_participant.presence_command_seq
+    )
+  then
+    return battle.room_snapshot_json(p_room_id, v_participant.id);
+  end if;
+
   perform battle.consume_rate_limit(v_user_id, 'heartbeat');
   if v_room.status = 'waiting' and v_room.expires_at <= now() then
     perform battle.close_unstarted_room(p_room_id, 'expired', 'waiting_expired');
     return battle.room_snapshot_json(p_room_id, v_participant.id);
   elsif v_room.status in ('lobby_waiting', 'lobby_countdown') then
-    perform battle.advance_lobby(p_room_id);
-    select * into v_room from battle.rooms where id = p_room_id;
-    if v_room.status not in ('lobby_waiting', 'lobby_countdown') then
+    v_invariant_error := battle.lobby_invariant_error(p_room_id);
+    if v_invariant_error is not null then
+      perform battle.void_room_after_invariant(
+        p_room_id, 'lobby_presence:' || v_invariant_error
+      );
       return battle.room_snapshot_json(p_room_id, v_participant.id);
     end if;
-    select * into v_participant
-    from battle.participants
-    where id = v_participant.id
-    for update;
+    v_terminal_reason := battle.lobby_terminal_reason(p_room_id);
+    if v_terminal_reason is not null then
+      perform battle.close_unstarted_room(
+        p_room_id, 'cancelled', v_terminal_reason
+      );
+      return battle.room_snapshot_json(p_room_id, v_participant.id);
+    end if;
   end if;
+
+  update battle.participants
+  set presence_lifecycle_version = p_presence_lifecycle_version,
+      presence_lease_id = p_presence_lease_id,
+      presence_command_seq = p_presence_command_seq,
+      presence_lease_active = false
+  where id = v_participant.id
+  returning * into v_participant;
   if v_participant.offline_since is null then
     v_offline_since := now();
     update battle.participants
@@ -3373,10 +3706,11 @@ set search_path = ''
 as $$
 declare
   v_room battle.rooms%rowtype;
-  v_tier battle.entry_tiers%rowtype;
   v_participant battle.participants%rowtype;
   v_ledgers jsonb;
   v_audit_hash text;
+  v_entry_fee bigint;
+  v_pool bigint;
   v_error_hash text := encode(
     extensions.digest(
       convert_to(coalesce(p_error_detail, ''), 'UTF8'),
@@ -3386,10 +3720,12 @@ declare
   );
 begin
   select * into v_room from battle.rooms where id = p_room_id for update;
-  if v_room.status in ('finished', 'draw', 'voided') then return; end if;
-  select * into v_tier
-  from battle.entry_tiers
-  where ruleset_id = v_room.ruleset_id and id = v_room.entry_tier_id;
+  if v_room.status in ('finished', 'draw', 'cancelled', 'expired', 'voided') then
+    return;
+  end if;
+  select coalesce(sum(amount), 0) into v_pool
+  from battle.stakes
+  where room_id = p_room_id;
   v_ledgers := battle.refund_locked_stakes(p_room_id, 'battle_invariant_void');
   perform battle.release_reservations(p_room_id);
   update battle.participants
@@ -3398,22 +3734,42 @@ begin
   for v_participant in
     select * from battle.participants where room_id = p_room_id order by side
   loop
+    select coalesce((
+      select amount
+      from battle.stakes
+      where participant_id = v_participant.id
+    ), 0) into v_entry_fee;
     insert into battle.summaries (
       participant_id, room_id, user_id, opponent_display_name,
       result, entry_fee, payout, net_change, fee, reason, finished_at
     )
-    select
+    values (
       v_participant.id, p_room_id, v_participant.user_id,
       coalesce(
-        btrim(opponent.first_name || ' ' || coalesce(opponent.last_name, '')),
+        (
+          select nullif(
+            btrim(opponent.first_name || ' ' || coalesce(opponent.last_name, '')),
+            ''
+          )
+          from battle.participants other
+          join identity.users opponent on opponent.id = other.user_id
+          where other.room_id = p_room_id and other.id <> v_participant.id
+          order by other.side
+          limit 1
+        ),
         'Battle'
       ),
-      'void', v_tier.entry_fee, v_tier.entry_fee, 0, 0,
+      'void', v_entry_fee, v_entry_fee, 0, 0,
       'system_invariant_void', now()
-    from battle.participants other
-    join identity.users opponent on opponent.id = other.user_id
-    where other.room_id = p_room_id and other.id <> v_participant.id
-    limit 1;
+    )
+    on conflict (participant_id) do update
+    set result = 'void',
+        entry_fee = excluded.entry_fee,
+        payout = excluded.payout,
+        net_change = 0,
+        fee = 0,
+        reason = 'system_invariant_void',
+        finished_at = excluded.finished_at;
   end loop;
   insert into operations.invariant_violations (code, subject, details)
   values (
@@ -3435,9 +3791,19 @@ begin
   insert into battle.settlements (
     room_id, result, pool, winner_payout, fee, ledger_ids, reason, audit_hash
   ) values (
-    p_room_id, 'void', v_tier.pool, 0, 0, v_ledgers,
+    p_room_id, 'void', v_pool, 0, 0, v_ledgers,
     'system_invariant_void', v_audit_hash
-  );
+  )
+  on conflict (room_id) do update
+  set result = 'void',
+      winner_participant_id = null,
+      pool = excluded.pool,
+      winner_payout = 0,
+      fee = 0,
+      ledger_ids = excluded.ledger_ids,
+      reason = 'system_invariant_void',
+      audit_hash = excluded.audit_hash,
+      settled_at = excluded.settled_at;
   update battle.rooms
   set status = 'voided', finished_at = now(), phase_deadline = null,
       reveal_ends_at = null, lobby_start_deadline = null, pending_result = null,
@@ -4653,7 +5019,25 @@ as $$
 declare
   v_count integer := 0;
   v_added integer;
+  v_room battle.rooms%rowtype;
+  v_invariant_error text;
 begin
+  for v_room in
+    select r.*
+    from battle.rooms r
+    where r.status in ('lobby_waiting', 'lobby_countdown')
+    order by r.id
+    for update skip locked
+  loop
+    v_invariant_error := battle.lobby_invariant_error(v_room.id);
+    if v_invariant_error is not null then
+      perform battle.void_room_after_invariant(
+        v_room.id, 'lobby_monitor:' || v_invariant_error
+      );
+      v_count := v_count + 1;
+    end if;
+  end loop;
+
   insert into operations.invariant_violations (code, subject, details)
   select
     'BATTLE_BALANCE_LOCK_MISMATCH', b.user_id::text,
@@ -4674,26 +5058,185 @@ begin
     'BATTLE_STAKE_SETTLEMENT_MISMATCH', r.id::text,
     jsonb_build_object(
       'room_status', r.status,
-      'locked_stakes', count(*) filter (where s.status = 'locked'),
-      'settlement_count', count(distinct st.id)
+      'locked_stakes', count(distinct s.id) filter (where s.status = 'locked'),
+      'refunded_stakes',
+        count(distinct s.id) filter (where s.status = 'refunded'),
+      'settled_stakes',
+        count(distinct s.id) filter (where s.status = 'settled'),
+      'participant_count', count(distinct p.id),
+      'settlement_count', count(distinct st.id),
+      'settlement_result', min(st.result)
     )
   from battle.rooms r
+  left join battle.participants p on p.room_id = r.id
   left join battle.stakes s on s.room_id = r.id
   left join battle.settlements st on st.room_id = r.id
   group by r.id, r.status
   having (
-    r.status in ('finished', 'draw', 'voided')
+    r.status in ('finished', 'draw')
     and (
-      count(*) filter (where s.status = 'locked') > 0
+      count(distinct s.id) filter (where s.status = 'locked') > 0
       or count(distinct st.id) <> 1
+    )
+  ) or (
+    r.status = 'voided'
+    and not exists (
+      select 1
+      from battle.events e
+      where e.room_id = r.id
+        and e.kind = 'voided'
+        and e.public_payload->>'reason' = 'share_failed'
+    )
+    and (
+      count(distinct p.id) <> 2
+      or count(distinct s.id) <> count(distinct p.id)
+      or count(distinct s.id) <> count(distinct s.id) filter (
+        where s.status = 'refunded'
+      )
+      or count(distinct st.id) <> 1
+      or count(distinct st.id) filter (where st.result = 'void') <> 1
+      or count(distinct p.id) <> count(distinct p.id) filter (
+        where p.status = 'voided'
+      )
+      or exists (
+        select 1
+        from battle.stakes void_stake
+        join battle.participants void_participant
+          on void_participant.id = void_stake.participant_id
+        left join battle.entry_tiers void_tier
+          on void_tier.ruleset_id = r.ruleset_id
+         and void_tier.id = r.entry_tier_id
+        left join economy.ledger void_refund
+          on void_refund.id = void_stake.refund_ledger_id
+        where void_stake.room_id = r.id
+          and (
+            void_tier.id is null
+            or void_stake.user_id <> void_participant.user_id
+            or void_stake.amount <> void_tier.entry_fee
+            or void_refund.id is null
+            or void_refund.operation_id is distinct from
+              void_participant.join_operation_id
+            or void_refund.user_id is distinct from void_participant.user_id
+            or void_refund.currency is distinct from 'KCOIN'
+            or void_refund.amount is distinct from void_stake.amount
+            or void_refund.reason is distinct from 'battle_stake_refund'
+          )
+      )
+      or exists (
+        select 1
+        from inventory.reservations void_reservation
+        join battle.participants void_participant
+          on void_participant.id = void_reservation.reference_id
+        where void_participant.room_id = r.id
+          and void_reservation.kind = 'battle'
+          and void_reservation.status <> 'released'
+      )
     )
   ) or (
     r.status in (
       'lobby_waiting', 'lobby_countdown',
       'active_select', 'reveal', 'forced_switch'
     )
-    and count(*) filter (where s.status = 'locked') <> 2
+    and count(distinct s.id) filter (where s.status = 'locked') <> 2
+  ) or (
+    r.status in ('preparing_share', 'waiting')
+    and count(distinct s.id) filter (where s.status = 'locked') <> 1
   )
+  on conflict do nothing;
+  get diagnostics v_added = row_count; v_count := v_count + v_added;
+
+  insert into operations.invariant_violations (code, subject, details)
+  select
+    'BATTLE_UNSTARTED_TERMINAL_MISMATCH', r.id::text,
+    jsonb_build_object(
+      'room_status', r.status,
+      'share_failed', exists (
+        select 1
+        from battle.events e
+        where e.room_id = r.id
+          and e.kind = 'voided'
+          and e.public_payload->>'reason' = 'share_failed'
+      ),
+      'stake_count', count(distinct s.id),
+      'refunded_stakes',
+        count(distinct s.id) filter (where s.status = 'refunded'),
+      'active_reservations',
+        count(distinct ir.id) filter (where ir.status = 'active'),
+      'released_reservations',
+        count(distinct ir.id) filter (where ir.status = 'released'),
+      'reservation_count', count(distinct ir.id),
+      'settlement_count', count(distinct st.id),
+      'participant_count', count(distinct p.id),
+      'terminal_participants', count(distinct p.id) filter (
+        where p.status = r.status
+      )
+    )
+  from battle.rooms r
+  left join battle.prepared_shares ps on ps.room_id = r.id
+  left join battle.participants p on p.room_id = r.id
+  left join battle.stakes s on s.room_id = r.id
+  left join inventory.reservations ir
+    on ir.kind = 'battle' and ir.reference_id = p.id
+  left join battle.settlements st on st.room_id = r.id
+  where r.status in ('cancelled', 'expired')
+    or (
+      r.status = 'voided'
+      and exists (
+        select 1
+        from battle.events e
+        where e.room_id = r.id
+          and e.kind = 'voided'
+          and e.public_payload->>'reason' = 'share_failed'
+      )
+    )
+  group by r.id, r.status
+  having count(distinct s.id) = 0
+    or count(distinct p.id) not in (1, 2)
+    or count(distinct s.id) <> count(distinct p.id)
+    or count(distinct s.id) <> count(distinct s.id) filter (
+      where s.status = 'refunded'
+    )
+    or exists (
+      select 1
+      from battle.stakes terminal_stake
+      join battle.participants terminal_participant
+        on terminal_participant.id = terminal_stake.participant_id
+      left join battle.entry_tiers terminal_tier
+        on terminal_tier.ruleset_id = r.ruleset_id
+       and terminal_tier.id = r.entry_tier_id
+      left join economy.ledger terminal_refund
+        on terminal_refund.id = terminal_stake.refund_ledger_id
+      where terminal_stake.room_id = r.id
+        and (
+          terminal_tier.id is null
+          or terminal_stake.user_id <> terminal_participant.user_id
+          or terminal_stake.amount <> terminal_tier.entry_fee
+          or terminal_refund.id is null
+          or terminal_refund.operation_id is distinct from
+            terminal_participant.join_operation_id
+          or terminal_refund.user_id is distinct from terminal_participant.user_id
+          or terminal_refund.currency is distinct from 'KCOIN'
+          or terminal_refund.amount is distinct from terminal_stake.amount
+          or terminal_refund.reason is distinct from 'battle_stake_refund'
+        )
+    )
+    or count(distinct ir.id) <> 3 * count(distinct p.id)
+    or count(distinct ir.id) <> count(distinct ir.id) filter (
+      where ir.status = 'released'
+    )
+    or count(distinct st.id) <> 0
+    or count(distinct p.id) <> count(distinct p.id) filter (
+      where p.status = r.status
+    )
+    or (
+      r.status = 'voided'
+      and (
+        count(distinct ps.room_id) filter (where ps.status = 'failed') <> 1
+        or
+        count(distinct p.id) <> 1
+        or count(distinct s.id) <> 1
+      )
+    )
   on conflict do nothing;
   get diagnostics v_added = row_count; v_count := v_count + v_added;
 

@@ -257,7 +257,15 @@ def verify_game_page_boundary() -> None:
         "effect_key",
         "prefers-reduced-motion: reduce",
         'apiKeepaliveRequest("battle.offline"',
-        'apiRequest("battle.heartbeat"',
+        '"battle.heartbeat",',
+        "presence_lease_id",
+        "presence_lifecycle_version",
+        "presence_command_seq",
+        "heartbeatRequests.current",
+        "request.abort()",
+        '"pageshow"',
+        'refreshPresenceTerminal("battle.heartbeat"',
+        'await refreshPresenceTerminal(\n            "battle.offline"',
     )
     missing_battle_terms = [
         value
@@ -271,6 +279,23 @@ def verify_game_page_boundary() -> None:
     if missing_battle_terms:
         raise SystemExit(
             f"Battle Web authority and lifecycle are incomplete: {missing_battle_terms}"
+        )
+    battle_screens = (
+        WEB_ROOT / "domains/battle/ui/BattleScreens.tsx"
+    ).read_text(encoding="utf-8")
+    lobby_source = battle_screens.partition(
+        "export function BattleLobby"
+    )[2].partition("export function BattleInviteMissing")[0]
+    if (
+        "creator_avatar_url" in lobby_source
+        or "opponent_avatar_url" in lobby_source
+        or "/assets/catalog/v1/thumb/pet-n-001-1.webp" not in lobby_source
+        or "/assets/catalog/v1/thumb/pet-n-002-1.webp" not in lobby_source
+        or "<UserRound" not in lobby_source
+    ):
+        raise SystemExit(
+            "Battle lobby must use fixed red/blue repository WebP assets and "
+            "neutral offline icons only"
         )
     required_realtime_terms = (
         '"battle.realtime_token"',
@@ -364,6 +389,46 @@ def verify_contract_boundaries() -> None:
     generator = ROOT / "packages/api-contracts/scripts/generate-openapi.ts"
     if 'from "../src/server.ts"' not in generator.read_text(encoding="utf-8"):
         raise SystemExit("OpenAPI generation must use the server registry")
+    battle_routes = (
+        CONTRACT_ROOT / "domains/battle/routes.ts"
+    ).read_text(encoding="utf-8")
+    battle_models = (
+        CONTRACT_ROOT / "domains/battle/models.ts"
+    ).read_text(encoding="utf-8")
+    presence_contract = (
+        "presence_lease_id",
+        "presence_lifecycle_version",
+        "presence_command_seq",
+    )
+    missing_presence_contract = [
+        value for value in presence_contract if value not in battle_routes
+    ]
+    for value in ("presence_lifecycle", "lease_id", "last_command_seq", "active"):
+        if value not in battle_models:
+            missing_presence_contract.append(value)
+    if missing_presence_contract:
+        raise SystemExit(
+            "Battle presence contract is incomplete: "
+            f"{missing_presence_contract}"
+        )
+    lobby_schema = battle_models.partition(
+        "export const battleLobbySchema"
+    )[2].partition("const battlePublicSwitchTargetSchema")[0]
+    if "avatar" in lobby_schema or "image_" in lobby_schema:
+        raise SystemExit("BattleLobbyDto cannot expose real avatars or team images")
+    for route_id in ("battle.heartbeat", "battle.offline"):
+        route_block = battle_routes.partition(f'id: "{route_id}"')[2].partition(
+            "defineRoute({"
+        )[0]
+        if (
+            "input: battlePresenceCommandSchema" not in route_block
+            or 'refreshScopes: ["battle", "assets", "inventory"]'
+            not in route_block
+        ):
+            raise SystemExit(
+                f"{route_id} must keep strict monotonic presence input and "
+                "terminal refresh scopes"
+            )
 
 
 def verify_documentation() -> None:

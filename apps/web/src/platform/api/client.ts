@@ -41,6 +41,7 @@ type Options = {
   idempotencyKey?: string;
   signal?: AbortSignal;
   recoverSession?: boolean;
+  keepalive?: boolean;
 };
 let recoveryAttempted = false;
 let recovery: Promise<void> | null = null;
@@ -119,50 +120,19 @@ export function resetSessionRecovery(): void {
   recovery = null;
 }
 
-export function apiKeepaliveRequest<Id extends RouteId>(
+export async function apiKeepaliveRequest<Id extends RouteId>(
   routeId: Id,
   input: RouteInput<Id>,
-): boolean {
+): Promise<ApiResult<RouteOutput<Id>>> {
   const route = routeById(routeId);
   if (route.method === "GET" || route.idempotent)
     throw new Error(
       `Keepalive is only available for semantic commands: ${routeId}`,
     );
-  const parsedInput = parseRouteInput(routeId, input) as Record<
-    string,
-    unknown
-  >;
-  const pathParams = new Set<string>();
-  const path = route.path.replace(
-    /:([A-Za-z0-9_]+)/g,
-    (_match, name: string) => {
-      pathParams.add(name);
-      return encodeURIComponent(String(parsedInput[name]));
-    },
-  );
-  const token = getSession()?.token;
-  if (route.auth && !token) return false;
-  const headers = new Headers({
-    accept: "application/json",
-    "content-type": "application/json",
+  return apiRequest(routeId, input, {
+    keepalive: true,
+    recoverSession: false,
   });
-  if (token) headers.set("authorization", `Bearer ${token}`);
-  const body = JSON.stringify(
-    Object.fromEntries(
-      Object.entries(parsedInput).filter(([key]) => !pathParams.has(key)),
-    ),
-  );
-  try {
-    void fetch(new URL(path, getWebPublicConfig().apiBaseUrl), {
-      method: route.method,
-      headers,
-      body,
-      keepalive: true,
-    }).catch(() => undefined);
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 export async function retryRecoveredBootstrap(): Promise<void> {
@@ -238,6 +208,7 @@ async function send<Id extends RouteId>(
       headers,
       ...(body ? { body } : {}),
       ...(options.signal ? { signal: options.signal } : {}),
+      ...(options.keepalive ? { keepalive: true } : {}),
     });
   } catch {
     if (options.signal?.aborted)

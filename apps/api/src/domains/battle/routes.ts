@@ -118,15 +118,18 @@ export const battleHandlers = {
       p_target_slot: context.input.team_slot,
     }),
   "battle.heartbeat": async (context) =>
-    nonOperationCommand(
-      context,
-      "battle_heartbeat",
-      { p_room_id: context.input.room_id },
-      false,
-    ),
+    nonOperationCommand(context, "battle_heartbeat", {
+      p_room_id: context.input.room_id,
+      p_presence_lease_id: context.input.presence_lease_id,
+      p_presence_lifecycle_version: context.input.presence_lifecycle_version,
+      p_presence_command_seq: context.input.presence_command_seq,
+    }),
   "battle.offline": async (context) =>
     nonOperationCommand(context, "battle_mark_offline", {
       p_room_id: context.input.room_id,
+      p_presence_lease_id: context.input.presence_lease_id,
+      p_presence_lifecycle_version: context.input.presence_lifecycle_version,
+      p_presence_command_seq: context.input.presence_command_seq,
     }),
   "battle.acknowledge_result": async (context) =>
     nonOperationCommand(context, "battle_acknowledge_result", {
@@ -168,7 +171,6 @@ async function nonOperationCommand(
   context: Parameters<HandlerMap[string]>[0],
   rpcName: string,
   parameters: Record<string, unknown>,
-  publishOutbox = true,
 ) {
   const signal = requestSignal(context.request);
   const data = await rpc(
@@ -179,7 +181,7 @@ async function nonOperationCommand(
     },
     { signal },
   );
-  if (publishOutbox) await deliverBattleOutbox(signal, 10);
+  await deliverBattleOutbox(signal, 10);
   return { data };
 }
 

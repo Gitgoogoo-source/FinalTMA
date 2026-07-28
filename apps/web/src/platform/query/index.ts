@@ -153,7 +153,7 @@ const scopePrefixes: Record<
 };
 
 export async function refreshRouteScopes(
-  routeId: RecoverableRouteId,
+  routeId: RecoverableRouteId | "battle.heartbeat" | "battle.offline",
 ): Promise<void> {
   return refreshScopes(routeById(routeId).refreshScopes);
 }

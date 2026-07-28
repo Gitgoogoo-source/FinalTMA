@@ -106,6 +106,19 @@ const battleForcedSwitchRouteInputSchema = z
   })
   .strict();
 
+const battlePresenceCommandSchema = z
+  .object({
+    room_id: uuidSchema,
+    presence_lease_id: uuidSchema,
+    presence_lifecycle_version: z
+      .number()
+      .int()
+      .min(1)
+      .max(Number.MAX_SAFE_INTEGER),
+    presence_command_seq: z.number().int().min(1).max(Number.MAX_SAFE_INTEGER),
+  })
+  .strict();
+
 export const battleRoutes = [
   defineRoute({
     id: "battle.bootstrap",
@@ -287,7 +300,7 @@ export const battleRoutes = [
     idempotent: false,
     forbidIdempotencyKey: true,
     refreshScopes: ["battle", "assets", "inventory"],
-    input: z.object({ room_id: uuidSchema }).strict(),
+    input: battlePresenceCommandSchema,
     output: battleRoomSnapshotSchema,
     errors: ["BATTLE_NOT_PARTICIPANT", "BATTLE_STATE_CONFLICT", "RATE_LIMITED"],
   }),
@@ -300,7 +313,7 @@ export const battleRoutes = [
     idempotent: false,
     forbidIdempotencyKey: true,
     refreshScopes: ["battle", "assets", "inventory"],
-    input: z.object({ room_id: uuidSchema }).strict(),
+    input: battlePresenceCommandSchema,
     output: battleRoomSnapshotSchema,
     errors: ["BATTLE_NOT_PARTICIPANT", "BATTLE_STATE_CONFLICT", "RATE_LIMITED"],
   }),

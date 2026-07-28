@@ -409,6 +409,14 @@ export const battleRoomSnapshotSchema = z
     reveal_ends_at: timestampSchema.nullable(),
     prepare_deadline: timestampSchema.nullable(),
     prepared_message_id: z.string().trim().min(1).max(256).nullable(),
+    presence_lifecycle: z
+      .object({
+        version: nonNegativeIntegerSchema,
+        lease_id: uuidSchema.nullable(),
+        last_command_seq: nonNegativeIntegerSchema,
+        active: z.boolean(),
+      })
+      .strict(),
     viewer_action_state: z.enum(["not_applicable", "available", "locked"]),
     server_time: timestampSchema,
     lobby: battleLobbySchema.nullable(),

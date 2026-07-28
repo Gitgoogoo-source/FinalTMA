@@ -9,10 +9,13 @@ import {
 } from "react";
 import {
   battleTeamSelectionSchema,
+  errorDefinition,
+  isErrorCode,
   type BattleEntryTier,
   type BattlePageState,
   type BattleRoomSnapshotDto,
   type BattleTeamSelection,
+  type RefreshScope,
   type RouteOutput,
 } from "@pokepets/api-contracts/app";
 
@@ -22,6 +25,7 @@ import {
   apiRequest,
 } from "../../../platform/api/client.ts";
 import {
+  refreshRouteScopes,
   refreshScopes,
   seedApiQuery,
   useApiQuery,
@@ -67,6 +71,13 @@ type Flow =
   | { kind: "accept"; roomId: string }
   | null;
 type OnlineState = "syncing" | "online" | "offline";
+type PresenceLifecycle = {
+  roomId: string;
+  leaseId: string;
+  version: number;
+  nextCommandSeq: number;
+  ended: boolean;
+};
 
 const emptySlots: BattleTeamSlots = [null, null, null];
 const inactiveRoomId = "00000000-0000-0000-0000-000000000000";
@@ -118,7 +129,10 @@ export function BattleView(): ReactNode {
   const battleRootRef = useRef<HTMLDivElement>(null);
   const handledResume = useRef(new Set<string>());
   const presenceRoomRef = useRef<string | null>(null);
-  const offlineSent = useRef(false);
+  const roomRef = useRef<BattleRoomSnapshotDto | null>(null);
+  const presenceLifecycle = useRef<PresenceLifecycle | null>(null);
+  const heartbeatRequests = useRef(new Set<AbortController>());
+  const terminalRefreshes = useRef(new Set<string>());
   const lifecycleRun = useRef(0);
   const lifecycleReadyRef = useRef(false);
   const authorityHealthy = useRef(false);
@@ -172,6 +186,10 @@ export function BattleView(): ReactNode {
       setSwitchOpen(false);
       setActionIntent(null);
       handledResume.current.clear();
+      for (const request of heartbeatRequests.current) request.abort();
+      heartbeatRequests.current.clear();
+      presenceLifecycle.current = null;
+      terminalRefreshes.current.clear();
     });
     return () => {
       cancelled = true;
@@ -204,6 +222,10 @@ export function BattleView(): ReactNode {
     };
   }, [bootstrap.data, roomQuery.data]);
 
+  useEffect(() => {
+    roomRef.current = room;
+  }, [room]);
+
   const currentResult =
     bootstrap.data?.current_result ??
     (bootstrap.data ? null : (identity.data?.battle_result ?? null));
@@ -211,6 +233,18 @@ export function BattleView(): ReactNode {
     currentResult?.room_id === dismissedResult ? null : currentResult;
   const resultRoomId = result?.room_id ?? null;
   const inviteRoom = isInviteRoom(invite.data) ? invite.data : null;
+  const refreshPresenceTerminal = useCallback(
+    async (
+      routeId: "battle.heartbeat" | "battle.offline",
+      terminalRoomId: string,
+    ) => {
+      const key = `terminal:${terminalRoomId}`;
+      if (terminalRefreshes.current.has(key)) return;
+      terminalRefreshes.current.add(key);
+      await refreshRouteScopes(routeId).catch(() => undefined);
+    },
+    [],
+  );
   const pageState = derivePageState({
     result: Boolean(result),
     room,
@@ -236,8 +270,13 @@ export function BattleView(): ReactNode {
 
   useEffect(() => {
     if (!resultRoomId) return;
-    void refreshScopes(["battle", "assets", "inventory"]);
-  }, [resultRoomId]);
+    void refreshPresenceTerminal("battle.heartbeat", resultRoomId);
+  }, [refreshPresenceTerminal, resultRoomId]);
+
+  useEffect(() => {
+    if (!room || !isPresenceAssetTerminal(room.status)) return;
+    void refreshPresenceTerminal("battle.heartbeat", room.room_id);
+  }, [refreshPresenceTerminal, room]);
 
   useEffect(() => {
     let cancelled = false;
@@ -380,11 +419,41 @@ export function BattleView(): ReactNode {
   const markOffline = useCallback(() => {
     lifecycleReadyRef.current = false;
     const presenceRoomId = presenceRoomRef.current;
-    if (!presenceRoomId || offlineSent.current) return;
-    offlineSent.current = true;
+    const snapshot = roomRef.current;
+    if (!presenceRoomId || !snapshot || snapshot.room_id !== presenceRoomId)
+      return;
+    const current = presenceLifecycle.current;
+    if (current?.roomId === presenceRoomId && current.ended) return;
+    const lifecycle = presenceLifecycleFor(snapshot, current);
+    lifecycle.ended = true;
+    presenceLifecycle.current = lifecycle;
+    for (const request of heartbeatRequests.current) request.abort();
+    heartbeatRequests.current.clear();
     setOnlineState("offline");
-    apiKeepaliveRequest("battle.offline", { room_id: presenceRoomId });
-  }, []);
+    const commandSeq = ++lifecycle.nextCommandSeq;
+    void apiKeepaliveRequest("battle.offline", {
+      room_id: presenceRoomId,
+      presence_lease_id: lifecycle.leaseId,
+      presence_lifecycle_version: lifecycle.version,
+      presence_command_seq: commandSeq,
+    })
+      .then(async (response) => {
+        applySnapshot(response.data);
+        if (isPresenceAssetTerminal(response.data.status))
+          await refreshPresenceTerminal(
+            "battle.offline",
+            response.data.room_id,
+          );
+      })
+      .catch(async (cause: unknown) => {
+        await applyPresenceFailureScopes(cause);
+        if (
+          document.visibilityState === "visible" &&
+          telegram()?.isActive !== false
+        )
+          await refetchRef.current();
+      });
+  }, [applySnapshot, refreshPresenceTerminal]);
 
   useEffect(() => {
     const run = ++lifecycleRun.current;
@@ -405,7 +474,6 @@ export function BattleView(): ReactNode {
         setOnlineState("offline");
         return;
       }
-      offlineSent.current = false;
       lifecycleReadyRef.current = true;
       setLifecycleReady(true);
     };
@@ -426,11 +494,16 @@ export function BattleView(): ReactNode {
       }
     };
     const online = () => void restore();
-    const pagehide = () => markOffline();
+    const pagehide = () => {
+      setLifecycleReady(false);
+      markOffline();
+    };
+    const pageshow = () => void restore();
     const unsubscribe = subscribeTelegramActivity(activated, deactivated);
     document.addEventListener("visibilitychange", visibility);
     window.addEventListener("online", online);
     window.addEventListener("pagehide", pagehide);
+    window.addEventListener("pageshow", pageshow);
     if (activeNow()) void restore();
     else markOffline();
     return () => {
@@ -440,9 +513,10 @@ export function BattleView(): ReactNode {
       document.removeEventListener("visibilitychange", visibility);
       window.removeEventListener("online", online);
       window.removeEventListener("pagehide", pagehide);
+      window.removeEventListener("pageshow", pageshow);
       markOffline();
     };
-  }, [markOffline, pageActive]);
+  }, [markOffline, pageActive, sessionGeneration]);
 
   useEffect(() => {
     const presenceRoomId = presenceRoomRef.current;
@@ -457,45 +531,90 @@ export function BattleView(): ReactNode {
       return;
     let disposed = false;
     let inFlight = false;
+    const snapshot = roomRef.current;
+    if (!snapshot || snapshot.room_id !== presenceRoomId) return;
+    const lifecycle = presenceLifecycleFor(snapshot, presenceLifecycle.current);
+    presenceLifecycle.current = lifecycle;
+    let timer = 0;
     const stop = () => {
       disposed = true;
       window.clearInterval(timer);
     };
+    const resync = async () => {
+      stop();
+      setLifecycleReady(false);
+      await refetchRef.current();
+      if (
+        pageActive &&
+        document.visibilityState === "visible" &&
+        telegram()?.isActive !== false &&
+        authorityHealthy.current
+      ) {
+        lifecycleReadyRef.current = true;
+        setLifecycleReady(true);
+      }
+    };
     const heartbeat = async () => {
       if (inFlight || disposed) return;
       inFlight = true;
+      const controller = new AbortController();
+      heartbeatRequests.current.add(controller);
+      const commandSeq = ++lifecycle.nextCommandSeq;
       try {
-        const response = await apiRequest("battle.heartbeat", {
-          room_id: presenceRoomId,
-        });
+        const response = await apiRequest(
+          "battle.heartbeat",
+          {
+            room_id: presenceRoomId,
+            presence_lease_id: lifecycle.leaseId,
+            presence_lifecycle_version: lifecycle.version,
+            presence_command_seq: commandSeq,
+          },
+          { signal: controller.signal },
+        );
         if (disposed) return;
         applySnapshot(response.data);
-        if (response.data.status === "waiting") setOnlineState("online");
         if (
           response.data.status !== "waiting" &&
           response.data.status !== "lobby_waiting" &&
           response.data.status !== "lobby_countdown"
         ) {
           stop();
+          await refreshPresenceTerminal(
+            "battle.heartbeat",
+            response.data.room_id,
+          );
           void refetchRef.current();
+          return;
         }
-      } catch (cause) {
-        if (disposed) return;
-        setOnlineState("offline");
+        const acknowledged = response.data.presence_lifecycle;
         if (
-          cause instanceof ApiFailure &&
-          cause.code === "BATTLE_STATE_CONFLICT"
+          acknowledged.version !== lifecycle.version ||
+          acknowledged.lease_id !== lifecycle.leaseId ||
+          acknowledged.last_command_seq < commandSeq ||
+          !acknowledged.active
         ) {
-          stop();
-          void refetchRef.current();
+          lifecycle.ended = true;
+          setOnlineState("offline");
+          void resync();
+          return;
+        }
+        setOnlineState("online");
+      } catch (cause) {
+        if (disposed || controller.signal.aborted) return;
+        setOnlineState("offline");
+        await applyPresenceFailureScopes(cause);
+        if (cause instanceof ApiFailure && !cause.retryable) {
+          lifecycle.ended = true;
+          void resync();
         }
       } finally {
+        heartbeatRequests.current.delete(controller);
         inFlight = false;
       }
     };
     setOnlineState("syncing");
     void heartbeat();
-    const timer = window.setInterval(heartbeat, 5_000);
+    timer = window.setInterval(heartbeat, 5_000);
     return stop;
   }, [
     lifecycleReady,
@@ -504,7 +623,9 @@ export function BattleView(): ReactNode {
     room?.room_id,
     room?.side,
     room?.status,
+    sessionGeneration,
     telegramActive,
+    refreshPresenceTerminal,
   ]);
 
   useEffect(() => {
@@ -1107,6 +1228,46 @@ function compareSnapshots(
   if (left.state_version !== right.state_version)
     return left.state_version - right.state_version;
   return Date.parse(left.server_time) - Date.parse(right.server_time);
+}
+
+function presenceLifecycleFor(
+  snapshot: BattleRoomSnapshotDto,
+  current: PresenceLifecycle | null,
+): PresenceLifecycle {
+  const authority = snapshot.presence_lifecycle;
+  if (
+    current &&
+    current.roomId === snapshot.room_id &&
+    !current.ended &&
+    (current.version === authority.version + 1 ||
+      (current.version === authority.version &&
+        current.leaseId === authority.lease_id &&
+        authority.active))
+  )
+    return current;
+  return {
+    roomId: snapshot.room_id,
+    leaseId: crypto.randomUUID(),
+    version: authority.version + 1,
+    nextCommandSeq: 0,
+    ended: false,
+  };
+}
+
+async function applyPresenceFailureScopes(cause: unknown): Promise<void> {
+  if (!(cause instanceof ApiFailure) || !isErrorCode(cause.code)) return;
+  const declared = errorDefinition(cause.code).refreshScope;
+  const scopes: readonly RefreshScope[] =
+    typeof declared === "string" ? [declared] : declared;
+  await refreshScopes(scopes).catch(() => undefined);
+}
+
+function isPresenceAssetTerminal(
+  status: BattleRoomSnapshotDto["status"],
+): boolean {
+  return ["finished", "draw", "cancelled", "expired", "voided"].includes(
+    status,
+  );
 }
 
 function shareFailureText(failure: TelegramShareFailure): string {

@@ -278,6 +278,23 @@ def verify_stars_payment_contract() -> None:
     missing = {name: fragments for name, fragments in missing.items() if fragments}
     if missing:
         raise SystemExit(f"Stars payment contract is incomplete: {missing}")
+    battle_create = payments_sql.partition(
+        "elsif p_intent->>'kind' = 'battle_create' then"
+    )[2].partition("elsif p_intent->>'kind' = 'battle_accept' then")[0]
+    battle_create_required = (
+        "hashtextextended('battle-user:' || v_user_id::text, 0)",
+        "status in ('preparing_share', 'waiting', 'lobby', 'active')",
+        "raise_business_error(\n            'battle_already_participating'",
+    )
+    if any(fragment not in battle_create for fragment in battle_create_required):
+        raise SystemExit(
+            "Battle create top-up recovery must reject every active participation "
+            "state with BATTLE_ALREADY_PARTICIPATING"
+        )
+    if "battle_share_preparing" in battle_create:
+        raise SystemExit(
+            "Battle create top-up recovery cannot special-case preparing_share"
+        )
 
 
 def verify_battle_contract() -> None:
@@ -293,6 +310,10 @@ def verify_battle_contract() -> None:
         "last_heartbeat_at timestamptz",
         "offline_since timestamptz",
         "presence_deadline timestamptz",
+        "presence_lifecycle_version bigint",
+        "presence_lease_id uuid",
+        "presence_command_seq bigint",
+        "presence_lease_active boolean",
         "create table battle.audit_entries",
         "create or replace function api.battle_prepare_room",
         "create or replace function api.battle_accept_room",
@@ -303,6 +324,7 @@ def verify_battle_contract() -> None:
         "create or replace function battle.safe_resolve_forced_switch",
         "create or replace function battle.safe_finalize_room",
         "create or replace function battle.lobby_terminal_reason",
+        "create or replace function battle.lobby_invariant_error",
         "create or replace function battle.reconcile_lobby_presence",
         "create or replace function battle.advance_lobby",
         "create or replace function battle.lobby_json",
@@ -324,8 +346,27 @@ def verify_battle_contract() -> None:
         "'prepare_deadline', case",
         "'prepared_message_id', case",
         "'viewer_action_state',",
+        "'presence_lifecycle', jsonb_build_object(",
         "'effect_key', v_skill.effect_key",
         "'effect_key', p_result->'effect_key'",
+        "p_presence_lease_id uuid",
+        "p_presence_lifecycle_version bigint",
+        "p_presence_command_seq bigint",
+        "p_presence_lifecycle_version = v_participant.presence_lifecycle_version + 1",
+        "and p_presence_command_seq > v_participant.presence_command_seq",
+        "presence_lease_active = false",
+        "count(*) filter (where p.side = 'creator') = 1",
+        "count(*) filter (where p.side = 'opponent') = 1",
+        "s.amount <> v_tier.entry_fee",
+        "having count(tm.id) <> 3",
+        "count(tm.id) filter (where tm.slot = 1 and tm.active) <> 1",
+        "or exists (select 1 from battle.turns where room_id = p_room_id)",
+        "e.kind = 'voided'",
+        "e.public_payload->>'reason' = 'share_failed'",
+        "'battle_unstarted_terminal_mismatch'",
+        "where ir.status = 'released'",
+        "terminal_refund.reason is distinct from 'battle_stake_refund'",
+        "perform battle.void_room_after_invariant(\n        v_room.id, 'lobby_monitor:'",
     )
     missing = [fragment for fragment in required if fragment not in battle_sql]
     if missing:

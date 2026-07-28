@@ -8,9 +8,9 @@
 
 Ably Standard 只发送 Battle 状态失效通知，不承载业务状态或裁决。浏览器使用 5 分钟短期 token，capability 只允许 subscribe 当前用户、当前参与 room 或当前 invite 状态频道；浏览器不能 publish、presence-enter 或管理频道。消息固定只含 `event_id`、`room_id`、`state_version` 和 `event_kind`。
 
-数据库只为实际状态转换递增 room 的 `state_version` 并在同一事务写入 `battle.outbox`。普通心跳续租只单调更新 participant 的 `last_heartbeat_at`，不增加版本；online/offline 转换、lobby 倒计时开始/中止、开战和取消才产生事件。客户端收到 Ably 消息后通过 REST 读取 viewer-specific 权威快照，低于当前版本的重复、乱序和迟到消息直接丢弃。Ably 为 `disconnected`、`suspended` 或 `failed` 时，邀请 waiting、接受和 lobby 每 2 秒轮询，正常选择/强制换宠每 1 秒轮询；重新可见和 deadline 到达时立即执行一次 REST 回正。Ably presence 不参与在线裁决，participant REST 心跳与数据库时间字段是唯一 presence 事实；进入 active 战斗后停止 presence 心跳。
+数据库只为实际状态转换递增 room 的 `state_version` 并在同一事务写入 `battle.outbox`。普通心跳续租只更新 participant 服务端时间和 lease 命令序号，不增加 room 版本；online/offline 转换、lobby 倒计时开始/中止、开战和取消才产生事件。heartbeat/offline 在这些转换前先裁决 lifecycle version、lease UUID 与 command sequence，旧、重复和乱序命令不改变 presence、deadline、`state_version` 或资产。客户端收到 Ably 消息后通过 REST 读取 viewer-specific 权威快照，低于当前版本的重复、乱序和迟到消息直接丢弃。Ably 为 `disconnected`、`suspended` 或 `failed` 时，邀请 waiting、接受和 lobby 每 2 秒轮询，正常选择/强制换宠每 1 秒轮询；重新可见和 deadline 到达时立即执行一次 REST 回正并建立新 lease。Ably presence 不参与在线裁决，participant REST 命令与数据库时间字段是唯一 presence 事实；进入 active 战斗后停止 presence 心跳。heartbeat/offline 普通完成只应用 room，实际退款终态才刷新 `battle + assets + inventory`，不产生 5 秒资产轮询。
 
-Supabase `pg_cron` 使用唯一 job `battle-tick-v1`，每秒调用 `battle.process_due(limit => 100)`。advisory lock 阻止重叠执行，到期 room 通过索引与 `FOR UPDATE SKIP LOCKED` 分批推进；服务恢复后按数据库 deadline 追赶，不读取浏览器计时器。lobby 每次推进先锁 room 并依次裁决连续离线、5 分钟总时限和封禁，再裁决 3 秒开战；相等 deadline 下终结优先。
+Supabase `pg_cron` 使用唯一 job `battle-tick-v1`，每秒调用 `battle.process_due(limit => 100)`。advisory lock 阻止重叠执行，到期 room 通过索引与 `FOR UPDATE SKIP LOCKED` 分批推进；服务恢复后按数据库 deadline 追赶，不读取浏览器计时器。lobby 每次推进先锁 room 并依次裁决连续离线、5 分钟总时限和封禁，再复核两名 participant、两份 stake/ledger、六个合法快照、六个 reservation 和全部启动条件，最后裁决 3 秒开战；永久失败走同一安全作废，相等 deadline 下终结优先。
 
 玩家请求提交后立即尝试投递本次 outbox。cron 产生的状态通过 `pg_net` 唤醒 `/api/integrations/battle-outbox`；prepared share 恢复通过 `pg_net` 唤醒 `/api/integrations/battle-share`。两个接口使用 Supabase Vault 与 Vercel Secret 共同持有的 `BATTLE_OUTBOX_SECRET` 鉴权，请求 body 只作唤醒信号，真实任务由受保护 RPC 领取。失败投递按 1、2、5、10、30 秒重试，随后每 30 秒重试。
 

@@ -4,4 +4,4 @@
 
 前端不得直接访问数据库。读取使用具名查询 RPC，写入使用具名命令 RPC。玩家 RPC 接收 `session_id` 并在数据库内重新验证身份、账号、归属和前置条件。
 
-创建 operation 的玩家命令使用同一个客户端 UUID 作为幂等键与 `operation_id`。数据库从真实 RPC 参数构造规范化请求并计算 SHA-256。重复相同请求返回原结果；重复不同请求固定拒绝。Battle 仅创建、取消、接受、正常动作和强制换宠创建 operation；heartbeat 通过 participant 服务端时间单调更新，offline 通过 room 锁保护的幂等状态转换进入重连期，acknowledge 仅首次写入确认时间，三者不接收幂等键且不创建 operation。接受事务锁定双方资产后进入 lobby，只有数据库倒计时事务另行创建 turn 1。余额、账本、库存、预留、奖励和任务状态在单个事务内落定。
+创建 operation 的玩家命令使用同一个客户端 UUID 作为幂等键与 `operation_id`。数据库从真实 RPC 参数构造规范化请求并计算 SHA-256。重复相同请求返回原结果；重复不同请求固定拒绝。Battle 仅创建、取消、接受、正常动作和强制换宠创建 operation；heartbeat/offline 不接收幂等键且不创建 operation，数据库在 room-first 锁内先裁决 lifecycle version + lease UUID + command sequence，下一版本 lease 可以接管，当前 lease 只接受更高序号，低版本、旧 lease、重复和乱序命令不推进任何状态；acknowledge 仅首次写入确认时间。接受事务锁定双方资产后进入 lobby，只有数据库倒计时事务在复核两名 participant、两份 stake/ledger、六个合法快照、六个 reservation 和启动条件后另行创建 turn 1。永久失败由 RPC 与 monitor 在同一 room lock 内复用幂等安全作废事务。余额、账本、库存、预留、奖励和任务状态在单个事务内落定。

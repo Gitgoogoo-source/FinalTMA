@@ -43,12 +43,12 @@ Battle stake / settlement / outbox event（脱敏）：
 - 图鉴领取与恢复：普通链、高级链、顶级链分别验证 100/300/800 Fgems；点击礼物盒立即显示领取中且禁止重复点击。并发不同幂等键、同键回放、同键异请求、响应丢失、刷新全屏图鉴和查询原操作后，奖励最多到账一次，结果弹窗显示真实链名、奖励与操作号，`album.get`、顶部 Fgems 和礼物盒最终一致。
 - 图鉴无障碍：仅用键盘完成返回、六筛选、210 个节点、详情关闭、三个获取入口和礼物盒领取；弹窗打开后焦点进入，Escape 或关闭按钮退出后焦点回原节点，读屏可读出节点名称、阶段、稀有度、点亮状态、当前数量及礼物盒状态，状态不只依赖颜色。
 - 市场：购买页以 210 个正式模板为目录主表，零数量模板显示售罄，数量排除本人和 banned 卖家；已有 9 种时第 10 种成功，已有 10 种时第 11 种失败且同模板追加成功；管理页把同模板多条独立 FIFO 挂单聚合为一张卡片；按用户和模板全部下架与成交并发时只释放最终剩余 reservation，原键回放及新键重试无有效挂单均幂等成功且不重复释放；买家明细不含卖家身份。
-- Stars：K-coin 付款前关闭立即取消且可重新创建，创建请求迟到不得打开 invoice，`processing/paid` 禁止关闭并在重进后恢复，同 charge 的相同或不同 update 重投只到账一次，取消/失败/过期与成功回调乱序时真实扣款仍唯一到账，invoice 创建失败不遗留开放操作，终态后无冷却立即再充值；同时覆盖金额、订单归属、幂等键篡改、退款、VIP 既有购买流程，以及 `battle_create`、`battle_accept` 充值后只恢复最新确认界面且绝不自动创建或接受。
+- Stars：K-coin 付款前关闭立即取消且可重新创建，创建请求迟到不得打开 invoice，`processing/paid` 禁止关闭并在重进后恢复，同 charge 的相同或不同 update 重投只到账一次，取消/失败/过期与成功回调乱序时真实扣款仍唯一到账，invoice 创建失败不遗留开放操作，终态后无冷却立即再充值；同时覆盖金额、订单归属、幂等键篡改、退款、VIP 既有购买流程，以及 `battle_create`、`battle_accept` 充值后只恢复最新确认界面且绝不自动创建或接受。`battle_create` 补差在本人已有 `preparing_share/waiting/lobby/active` 任一参与事实时统一返回 `BATTLE_ALREADY_PARTICIPATING` 且不创建订单。
 - TON：Proof、地址唯一、Mint 预留、提交未知、链上对账、超时释放和活跃 Mint 阻止断开钱包。
 - Cron：Vercel job 的同时触发、重复触发、运行租约、漏跑追赶、失败记录和手工重跑；Supabase `battle-tick-v1` 的每秒触发、advisory lock、`SKIP LOCKED` 分批、deadline 追赶和 pg_net 唤醒。
 - 一致性：余额账本、库存预留、风险限制、服务器结果覆盖前端临时状态。
 - 体验：所有资产操作在 API 返回前立即反馈；普通页面不等待 TON Provider；主导航不被无关操作锁定。
-- 主导航页面保活：交易、游戏、开盒、藏品和任务分别首次进入一次，等待超过 React Query 的 20 秒 `staleTime` 后连续切换并返回；除 Battle 可见性规则外，网络记录不得因切页新增对应页面 API、页面模块、图片或其他页面专属资源请求，页签、筛选、选择、滚动位置和未提交界面状态保持。离开游戏页必须停止 waiting/lobby 心跳和 Battle UI 轮询，返回时立即 REST 回正并按当前状态恢复；进入 active 战斗后 presence 心跳必须停止。图鉴与 Mint 返回时恢复原主页面；顶部人工刷新只请求 `identity.bootstrap`、`vip.get`、`wallet.get`。后台不足五分钟恢复时不请求普通页面，Battle 仍执行自身可见性回正；达到五分钟时只静默刷新顶部摘要与当前路由查询。Session generation 改变或封禁后旧页面、缓存和迟到结果不得恢复。
+- 主导航页面保活：交易、游戏、开盒、藏品和任务分别首次进入一次，等待超过 React Query 的 20 秒 `staleTime` 后连续切换并返回；除 Battle 可见性规则外，网络记录不得因切页新增对应页面 API、页面模块、图片或其他页面专属资源请求，页签、筛选、选择、滚动位置和未提交界面状态保持。页面隐藏、Telegram deactivated、`pagehide` 或离开游戏页必须立即结束当前 lease、中止在途 heartbeat、停止 waiting/lobby 心跳和 Battle UI 轮询并尽力 offline；返回时立即 REST 回正并取得数据库认可的新 lease。进入 active 战斗后 presence 心跳必须停止。图鉴与 Mint 返回时恢复原主页面；顶部人工刷新只请求 `identity.bootstrap`、`vip.get`、`wallet.get`。后台不足五分钟恢复时不请求普通页面，Battle 仍执行自身可见性回正；达到五分钟时只静默刷新顶部摘要与当前路由查询。Session generation 改变或封禁后旧页面、缓存和迟到结果不得恢复。
 - Telegram 容器手势：在 Telegram iOS 与 Android 的“交易 / 游戏 / 开盒 / 藏品 / 任务”五个主导航页及可滚动弹窗中，从内容区域向下滑动不会最小化或关闭 Mini App，页面纵向滚动保持可用；从 Telegram 标题栏执行最小化或关闭仍然有效。
 - 全局顶部资产栏：五个主页只出现同一个资产栏；分别记录 Telegram iOS、Android、Desktop 与 Web 在原生全屏成功和不支持回退时的截图，确认设备安全区、内容安全区、视口与方向变化后，返回、关闭和更多控件始终位于资产栏上方且不重叠。
 - 藏品图片：210 张正式母版对应 420 个公开版本；全部 URL 为 WebP、尺寸与路径正确、返回一年 immutable 缓存，列表只请求缩略图，藏品主图、单抽结果和 Mint 页面请求详情图。
@@ -59,11 +59,14 @@ Battle stake / settlement / outbox event（脱敏）：
 
 - 本次本地实现仍待真实开发环境验证 Telegram prepared message 与 `shareMessage` 真机发送、60 秒未知结果恢复/退款、Ably 2.26.0 subscribe-only token 与 outbox 重投、两个 integration 的真实 Bearer 鉴权、Vercel 超时边界，以及从空 Supabase 数据库执行三条 migration 后的并发裁决。
 - 规则与页面：`battle-v1` checksum 与正式 JSON、数据库种子、API 摘要一致；Catalog v1 仍为 70 链/210 模板且 release checksum 不变；游戏页完整覆盖第 21 章九种页面状态，构建和运行资源不含 Phaser 或客户端战斗模拟器。
-- 隐私：分别保存挑战卡、接受页、己方、对手和 resolution event 五种 DTO；逐字段证明禁止信息不在 JSON、HTML、Ably、日志和分析事件中。接受前双方秘密、接受后对手百分比生命及当回合技能揭示严格符合第 21.7 节。
+- 隐私：按唯一清单分别保存七种严格 DTO：`BattleChallengeCardDto`、`BattleInvitePreviewDto`、`BattleLobbyDto`、`BattleSelfTeamDto`、`BattleOpponentTeamDto`、`BattleResolutionEventDto`、`BattleRoomSnapshotDto`；逐字段证明禁止信息不在 JSON、HTML、Ably、日志和分析事件中。挑战卡/接受预览允许创建者展示头像；lobby JSON 和 DOM 不返回或加载双方真实头像，只使用固定仓库 WebP/中性图标。接受前双方秘密、接受后对手百分比生命及当回合技能揭示严格符合第 21.7 节。
 - 分享与接受：用户私聊、普通群、超级群、跨群转发、Bot 不在群、Bot 会话禁止、频道禁止、创建者本人严格 `self` 且服务端禁止；有效邀请直接显示队伍选择，没有前置状态页。创建者在线与离线均可接受，离线固定展示“离线 · 仍可接受”。两个普通接受者与一个竞争账号同时接受时只有首个事务成功，失败者余额和 inventory 完全不变。
 - lobby：首位接受后 snapshot 为 `lobby_waiting/lobby_countdown`、双方 participant 为 `lobby` 且没有 turn 1；验证双方 5 秒心跳、10 秒在线判定、89 秒重连、90 秒终结、创建者接受前离线窗口重置、5 分钟总时限、3 秒倒计时开始/中止/完整重启、到期再次确认在线和相等 deadline 终结优先。正常终结双方原额退款、六个 reservation 释放、手续费为 0。
+- presence 乱序：分别交换同 lease heartbeat/offline 到达顺序，覆盖隐藏时在途 heartbeat、offline 未送达、重新可见、Telegram 重新激活、离开再返回 `/game`、页面重载、重新认证、重复命令和旧 lease 重放。新 lease 接管后，旧请求必须数据库语义 no-op，不改变 presence、90 秒窗口、3 秒倒计时、`state_version`、event/outbox 或资产。
+- lobby 永久不变量：在真实事务 room-first 锁边界逐项破坏 participant 数量/归属、stake 金额/归属/lock ledger、每方三份快照与唯一 active、六个 reservation、ruleset/checksum/deadline/seed 启动条件；advance 与 monitor 都必须复用同一幂等安全作废，不创建 turn 1。接受事务持锁的中间态不得被 monitor 作废。
 - lobby UI：左红右蓝使用固定仓库正方形 WebP，不使用真实头像；在线同时显示彩色图片、状态点和“已进入房间”，离线显示中性用户图标、文字及权威重连剩余；5 分钟时限和 3 秒倒计时同时可见，颜色不是唯一状态信息，`aria-live` 与 reduced-motion 生效。
-- 资产与库存：三个入场档逐一核对双方 lock、胜者到账、平台手续费、败者、平局退款、`voided` 退款；重复创建、接受、取消、到期、结算和恢复不重复改变资产。Battle reservation 与出售、成交、分解、进化、远征、Mint 逐一竞争，同模板额外可用数量仍可操作。
+- 资产与库存：三个入场档逐一核对双方 lock、胜者到账、平台手续费、败者、平局退款、`voided` 退款；重复创建、接受、取消、到期、结算和恢复不重复改变资产。prepared-share 明确失败的 `voided` 必须是一份 stake refunded、三份 reservation released、零 settlement；`cancelled/expired` 全量退款释放；lobby/战斗不变量 `voided` 保留安全 settlement、审计与 violation，monitor 不误报也不漏报。Battle reservation 与出售、成交、分解、进化、远征、Mint 逐一竞争，同模板额外可用数量仍可操作。
+- heartbeat/offline 刷新：普通续租和非终态 online/offline 只应用 room snapshot，网络记录不得出现每 5 秒 assets/inventory 请求；请求内跨过 waiting、90 秒或 5 分钟边界，终态响应、响应丢失后的重新可见回正及相关错误必须一次消费契约 `battle + assets + inventory`，顶部 K-coin 与 `inventory.battling` 及时回正。
 - 回合：五属性 1.50/0.75/1.00、十技能命中边界、超时最高命中率、优先级、速度、完全相同的同时攻击、先手击倒、单方换宠、双方换宠、单方/双方强制换宠、槽位超时、连续托管、双方同时全灭和第 20 回合裁决逐项保存 snapshot 与私有审计引用。
 - 实时与恢复：Ably capability 为 subscribe-only，消息只有四个失效字段；重复、乱序和迟到消息不覆盖高 `state_version`。主动断开 Ably 后按第 21 章 1—2 秒节奏 REST 回正；Vercel 重启、pg_net 单次失败、cron 短暂停止后继续同一 deadline、outbox 和 settlement。
 - 当场结果：终局瞬间断线后 identity bootstrap 与 Battle bootstrap 只恢复同一未确认结果，acknowledge 响应丢失可安全重试，成功后不再返回；玩家端不存在 history、replay、audit、spectator、matchmaking 或公开 room API。

@@ -199,21 +199,14 @@ begin
         if v_battle_tier.id is null then
           perform api.raise_business_error('BATTLE_TIER_INVALID', 'Battle 入场档位无效');
         end if;
+        perform pg_advisory_xact_lock(
+          hashtextextended('battle-user:' || v_user_id::text, 0)
+        );
         if exists (
           select 1
           from battle.participants
           where user_id = v_user_id
-            and status = 'preparing_share'
-        ) then
-          perform api.raise_business_error(
-            'BATTLE_SHARE_PREPARING',
-            '挑战卡正在准备，请勿重复创建'
-          );
-        elsif exists (
-          select 1
-          from battle.participants
-          where user_id = v_user_id
-            and status in ('waiting', 'active')
+            and status in ('preparing_share', 'waiting', 'lobby', 'active')
         ) then
           perform api.raise_business_error(
             'BATTLE_ALREADY_PARTICIPATING',

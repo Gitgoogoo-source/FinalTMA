@@ -12,7 +12,7 @@ Telegram WebApp 在 `createRoot().render()` 前按 `ready → expand → disable
 
 正式藏品图片由仓库内 210 张非公开母版生成 420 张版本化 WebP。列表只读取 256×256 缩略图，主视觉和 NFT 元数据读取 768×768 详情图；浏览器不通过 Function 或 Supabase 读取图片二进制。
 
-Battle 页面在同一 session generation 内保持挂载，并只渲染产品第 21 章的九种页面状态。页面可见且 room 为邀请 `waiting` 时只有创建者每 5 秒发送纯展示心跳；room 为 `lobby_waiting/lobby_countdown` 时双方每 5 秒发送 participant presence 心跳；进入 `active_select` 后立即停止。页面隐藏尽力标记当前适用的 participant 离线并停止心跳和 UI 轮询。Ably client 只能 subscribe，通知只携带 `event_id`、`room_id`、`state_version` 与 `event_kind`；收到通知、deadline 到达或连接失败时，battle-realtime workflow 通过 REST 读取 viewer-specific snapshot。邀请 waiting、接受和 lobby 每 2 秒、选择/强制换宠每 1 秒短轮询，重新可见时立即完整回正。
+Battle 页面在同一 session generation 内保持挂载，并只渲染产品第 21 章的九种页面状态。页面可见且 room 为邀请 `waiting` 时只有创建者每 5 秒发送纯展示心跳；room 为 `lobby_waiting/lobby_countdown` 时双方每 5 秒发送 participant presence 心跳；进入 `active_select` 后立即停止。每次可见/激活 `/game` 时段使用一个独立 UUID lease 和数据库快照的下一 lifecycle version，lease 内命令序号严格递增。页面隐藏、Telegram `deactivated`、`pagehide` 或离开 `/game` 时立即结束 lease、中止全部在途 heartbeat、停止 UI 轮询并尽力发送同 lease offline；重新可见、激活或返回时先 REST 回正，再申请并使用数据库认可的新 lease。新 lease 接管后旧 heartbeat/offline 永久无副作用，安全不依赖 abort 或 offline 必达。Ably client 只能 subscribe，通知只携带 `event_id`、`room_id`、`state_version` 与 `event_kind`；收到通知、deadline 到达或连接失败时，battle-realtime workflow 通过 REST 读取 viewer-specific snapshot。邀请 waiting、接受和 lobby 每 2 秒、选择/强制换宠每 1 秒短轮询，重新可见时立即完整回正。heartbeat/offline 普通响应只应用 room snapshot；同次请求或回正实际确认退款/释放终态时才一次刷新 `battle + assets + inventory`，不得由 5 秒心跳无条件刷新 assets/inventory。
 
 ## Functions
 

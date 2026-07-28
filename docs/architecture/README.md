@@ -36,15 +36,15 @@ contracts/ton -> TON blockchain
 
 禁止反向依赖、跨领域深层导入、浏览器访问 Supabase、Node 层组合多次资产写入。
 
-TMA 首次同步加载只覆盖应用壳、会话与账号门禁及默认开盒页；首屏完成后后台预加载其余普通主导航页面。`/game` 固定承载 React + TypeScript Battle，不引入 Phaser；Battle 只有在游戏页可见或当前 session 需要恢复 Battle participation/未确认结果时读取专属状态，邀请 waiting 的创建者展示心跳和 lobby 的双方 presence 心跳只在页面可见时发送，进入 active 战斗后停止。
+TMA 首次同步加载只覆盖应用壳、会话与账号门禁及默认开盒页；首屏完成后后台预加载其余普通主导航页面。`/game` 固定承载 React + TypeScript Battle，不引入 Phaser；Battle 只有在游戏页可见或当前 session 需要恢复 Battle participation/未确认结果时读取专属状态，邀请 waiting 的创建者展示心跳和 lobby 的双方 presence 心跳只在页面可见时发送。隐藏、Telegram deactivated、`pagehide` 或离开 `/game` 立即结束当前 lease、中止在途 heartbeat 并尽力 offline；恢复先读取权威快照并取得新 lease，进入 active 战斗后停止 presence。
 
 五个主导航页面在当前登录会话内首次访问后保持挂载。切换页面只恢复各自滚动、筛选和页内状态，不触发查询或资源重载；业务结果按契约范围精确刷新，后台连续五分钟后回到前台只静默回正顶部摘要与当前页面。
 
 ## 可信边界
 
-前端只提交动作、目标标识、数量和 operation-backed 命令所需的幂等键。价格、余额、库存、资格、奖励、Battle 属性与技能数值、命中、伤害、行动顺序、胜负、结算、随机结果、任务进度和链上状态均由服务端重新校验，并由单个数据库事务裁决。
+前端只提交动作、目标标识、数量、operation-backed 命令所需的幂等键，以及 Battle presence 意图所需的 lifecycle version、lease UUID 与 command sequence。价格、余额、库存、资格、奖励、Battle presence 终态、属性与技能数值、命中、伤害、行动顺序、胜负、结算、随机结果、任务进度和链上状态均由服务端重新校验，并由单个数据库事务裁决。
 
-创建 operation 的玩家写请求以 UUID `Idempotency-Key` 作为 `operation_id`。数据库对规范化请求计算哈希；相同键和相同请求返回原结果，相同键和不同请求返回 `IDEMPOTENCY_KEY_REUSED`。Battle 只有创建、取消、接受、正常动作和强制换宠属于这一范围；heartbeat、offline 和 acknowledge 不接收幂等键、不创建 operation，分别由单调服务端时间、幂等离线状态转换和首次确认时间写入实现数据库语义幂等。
+创建 operation 的玩家写请求以 UUID `Idempotency-Key` 作为 `operation_id`。数据库对规范化请求计算哈希；相同键和相同请求返回原结果，相同键和不同请求返回 `IDEMPOTENCY_KEY_REUSED`。Battle 只有创建、取消、接受、正常动作和强制换宠属于这一范围；heartbeat/offline 不接收幂等键、不创建 operation，由数据库在 room-first 锁内先裁决 lifecycle version + lease UUID + command sequence，旧 lease、低版本、重复和乱序命令完全无副作用；acknowledge 只写首次确认时间。
 
 会话令牌只在运行内存保存，绝对有效期 15 分钟。只有 `POST /api/auth/telegram` 接收 Telegram `initData`。账号为 `banned` 时前端立即清空全部业务内容，只渲染空白界面。
 
@@ -54,7 +54,7 @@ TMA 首次同步加载只覆盖应用壳、会话与账号门禁及默认开盒�
 
 ## 操作恢复
 
-前端内存操作阶段固定为 `confirming → submitting → pending/unknown → succeeded/failed`；数据库持久状态为 `pending`、`unknown`、`succeeded`、`failed`。随机结果和资产结果只生成一次，`unknown` 只查询原 `operation_id`。开盒与转盘从提交前反馈到结果确认完成持续锁定领域操作和底部导航；进化在未决阶段锁定新提交和底部导航，终态由专用覆盖弹窗处理；Battle 创建、取消、接受、正常动作和强制换宠恢复原 operation 后必须读取 viewer-specific room snapshot，终局只恢复最新未确认当场结果。Battle heartbeat、offline 和 acknowledge 直接重试原 room 语义，不进入 operation 恢复。其余命令只阻止同一 `use_case` 再次提交。开盒、转盘、进化及 Battle 当场结果在服务端确认展示前持续恢复，确认时间由当前用户的领域专用 RPC 原子记录。
+前端内存操作阶段固定为 `confirming → submitting → pending/unknown → succeeded/failed`；数据库持久状态为 `pending`、`unknown`、`succeeded`、`failed`。随机结果和资产结果只生成一次，`unknown` 只查询原 `operation_id`。开盒与转盘从提交前反馈到结果确认完成持续锁定领域操作和底部导航；进化在未决阶段锁定新提交和底部导航，终态由专用覆盖弹窗处理；Battle 创建、取消、接受、正常动作和强制换宠恢复原 operation 后必须读取 viewer-specific room snapshot，终局只恢复最新未确认当场结果。Battle heartbeat/offline 只在当前 lease 内重试；生命周期结束后必须以权威快照申请下一版本 lease，acknowledge 直接重试原 room，三者不进入 operation 恢复。heartbeat/offline 普通结果只应用 room，确认退款终态才按路由契约刷新 Battle、顶部资产和 inventory。其余命令只阻止同一 `use_case` 再次提交。开盒、转盘、进化及 Battle 当场结果在服务端确认展示前持续恢复，确认时间由当前用户的领域专用 RPC 原子记录。
 
 ## 生成物
 

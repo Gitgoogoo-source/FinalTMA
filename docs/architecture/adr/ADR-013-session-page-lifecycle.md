@@ -10,7 +10,7 @@
 
 页面切换不失效或重新读取任何 React Query 数据。服务端确认业务结果后继续按 API 契约的 `refreshScopes` 精确失效；顶部人工刷新只重新读取 `identity.bootstrap`、`vip.get` 和 `wallet.get`。Mini App 以 Telegram `deactivated`/`activated` 作为客户端内前后台边界，并以浏览器 `visibilitychange` 作为普通浏览器与旧客户端回退；重复事件只记录最早离开时间且只执行一次恢复。后台连续停留不足五分钟时回到前台不读取数据；达到五分钟时保留当前界面并静默刷新顶部摘要与当前路由所属查询。市场不轮询，外部变化只在人工刷新、业务结果、服务端拒绝回正或五分钟后台恢复时读取。
 
-Battle 页面仍按主页面规则保持挂载，但活跃通信严格绑定页面可见性。离开 `/game` 或 WebView 进入后台时立即停止邀请 waiting 的创建者展示心跳、lobby 的双方 presence 心跳和 Battle UI 轮询，并尽力发送当前 participant 离线标记；返回可见状态时立即通过 REST 读取 viewer-specific 当前快照，再恢复产品第 21 章规定的心跳、Ably subscribe 与降级轮询。进入 active 战斗后停止 presence 心跳。隐藏页面的内存状态不得替代数据库在线事实、deadline 或 `state_version`。
+Battle 页面仍按主页面规则保持挂载，但活跃通信严格绑定页面可见性。每次可见/激活 `/game` 时段使用一个独立 UUID presence lease。离开 `/game`、Telegram `deactivated`、`pagehide` 或 WebView 隐藏时立即结束当前 lease、中止全部在途 heartbeat、停止邀请 waiting 的创建者展示心跳、lobby 的双方 presence 心跳和 Battle UI 轮询，并尽力以同 lease 下一序号发送 offline；返回可见/激活状态时立即通过 REST 读取 viewer-specific 当前快照，申请数据库下一 lifecycle version 的新 lease，数据库确认后再恢复 heartbeat、Ably subscribe 与降级轮询。新 lease 接管后旧生命周期任何迟到 heartbeat/offline 永久无副作用，安全不依赖 abort 或 offline 必达。进入 active 战斗后停止 presence 心跳。隐藏页面的内存状态不得替代数据库在线事实、deadline 或 `state_version`；普通 heartbeat/offline 只应用 room，确认退款终态才刷新 Battle、顶部资产和 inventory。
 
 页面保活和查询缓存只存在于当前内存登录会话，不写入 `localStorage`、`sessionStorage`、IndexedDB 或服务端。Session generation 改变、身份恢复失败、会话清理或账号封禁时，全部持久页面、页内状态和查询缓存一并清除，旧 generation 的迟到结果不得恢复。
 
