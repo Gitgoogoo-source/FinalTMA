@@ -3,6 +3,7 @@ import {
   useQuery,
   type UseQueryResult,
 } from "@tanstack/react-query";
+import { useSyncExternalStore } from "react";
 import {
   routeById,
   type RecoverableRouteId,
@@ -19,9 +20,34 @@ import {
   registerSessionCacheClearer,
 } from "../session/store.ts";
 
+type ApiQuerySuppression = {
+  generation: string;
+  routeIds: ReadonlySet<RouteId>;
+};
+
+type ForegroundAuthorityRefresh = {
+  generation: string;
+  pathname: string;
+  handledPrefixes: readonly string[];
+  refresh(): Promise<boolean>;
+};
+
+const apiQuerySuppressions = new Map<symbol, ApiQuerySuppression>();
+const apiQuerySuppressionListeners = new Set<() => void>();
+const foregroundAuthorityRefreshes = new Map<
+  symbol,
+  ForegroundAuthorityRefresh
+>();
+let apiQuerySuppressionVersion = 0;
+
 export const queryClient = new QueryClient({
   defaultOptions: {
-    queries: { retry: false, staleTime: 20_000, refetchOnWindowFocus: false },
+    queries: {
+      retry: false,
+      staleTime: 20_000,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+    },
     mutations: { retry: false },
   },
 });
@@ -59,6 +85,7 @@ export function prefetchApiQuery<Id extends RouteId>(
   return queryClient.prefetchQuery({
     queryKey: [generation, "v1", routeId, input],
     queryFn: async ({ signal }) => {
+      assertApiQueryAllowed(generation, routeId);
       const result = await apiRequest(routeId, input, { signal });
       assertCurrentSession(generation, routeById(routeId).auth);
       return result.data;
@@ -69,11 +96,13 @@ export function prefetchApiQuery<Id extends RouteId>(
 export function fetchApiQuery<Id extends RouteId>(
   routeId: Id,
   input: RouteInput<Id> = {} as RouteInput<Id>,
+  suppressionOwner?: symbol,
 ): Promise<RouteOutput<Id>> {
   const generation = getSession()?.generation ?? "public";
   return queryClient.fetchQuery({
     queryKey: [generation, "v1", routeId, input],
     queryFn: async ({ signal }) => {
+      assertApiQueryAllowed(generation, routeId, suppressionOwner);
       const result = await apiRequest(routeId, input, { signal });
       assertCurrentSession(generation, routeById(routeId).auth);
       return result.data;
@@ -82,8 +111,11 @@ export function fetchApiQuery<Id extends RouteId>(
   });
 }
 
-export function cancelApiQueries(routeIds: readonly RouteId[]): Promise<void> {
-  const generation = getSession()?.generation;
+export function cancelApiQueries(
+  routeIds: readonly RouteId[],
+  requestedGeneration = getSession()?.generation,
+): Promise<void> {
+  const generation = requestedGeneration;
   if (!generation) return Promise.resolve();
   const selected = new Set<RouteId>(routeIds);
   return queryClient.cancelQueries({
@@ -98,21 +130,35 @@ export function useApiQuery<Id extends RouteId>(
   input: RouteInput<Id> = {} as RouteInput<Id>,
   enabled = true,
 ): UseQueryResult<RouteOutput<Id>> {
+  useSyncExternalStore(
+    subscribeApiQuerySuppressions,
+    getApiQuerySuppressionVersion,
+    getApiQuerySuppressionVersion,
+  );
   const session = getSession();
   const generation = session?.generation ?? "public";
+  const suppressed = isApiQuerySuppressed(generation, routeId);
   return useQuery({
     queryKey: [generation, "v1", routeId, input],
     queryFn: async ({ signal }) => {
+      assertApiQueryAllowed(generation, routeId);
       const result = await apiRequest(routeId, input, { signal });
       assertCurrentSession(generation, routeById(routeId).auth);
       return result.data;
     },
-    enabled,
+    enabled: enabled && !suppressed,
+    refetchOnReconnect: false,
   });
 }
 
 export async function refreshUserState(): Promise<void> {
-  await queryClient.invalidateQueries({ queryKey: [getSession()?.generation] });
+  const generation = getSession()?.generation;
+  if (!generation) return;
+  await queryClient.invalidateQueries({
+    predicate: (query) =>
+      query.queryKey[0] === generation &&
+      !isApiQuerySuppressed(generation, query.queryKey[2] as RouteId),
+  });
 }
 
 const topAssetRouteIds = [
@@ -128,6 +174,7 @@ export async function refreshTopAssetSummary(): Promise<boolean> {
     type: "active",
     predicate: (query) =>
       query.queryKey[0] === generation &&
+      !isApiQuerySuppressed(generation, query.queryKey[2] as RouteId) &&
       topAssetRouteIds.includes(
         query.queryKey[2] as (typeof topAssetRouteIds)[number],
       ),
@@ -142,20 +189,68 @@ export async function refreshTopAssetSummary(): Promise<boolean> {
 export async function refreshForegroundState(pathname: string): Promise<void> {
   const generation = getSession()?.generation;
   if (!generation) return;
+  const authority = [...foregroundAuthorityRefreshes.values()].find(
+    (candidate) =>
+      candidate.generation === generation && candidate.pathname === pathname,
+  );
+  let handledPrefixes: readonly string[] = [];
+  if (authority) {
+    const proceed = await authority.refresh().catch(() => false);
+    if (
+      !proceed ||
+      getSession()?.generation !== generation ||
+      hasApiQuerySuppression(generation)
+    )
+      return;
+    handledPrefixes = authority.handledPrefixes;
+  }
   const prefixes = new Set([
     "identity",
     "vip",
     "wallet",
     ...foregroundPrefixes(pathname),
   ]);
+  for (const prefix of handledPrefixes) prefixes.delete(prefix);
   await queryClient.invalidateQueries({
     refetchType: "active",
     predicate: (query) => {
       if (query.queryKey[0] !== generation) return false;
       const id = query.queryKey[2];
-      return typeof id === "string" && prefixes.has(id.split(".")[0] ?? "");
+      return (
+        typeof id === "string" &&
+        !isApiQuerySuppressed(generation, id as RouteId) &&
+        prefixes.has(id.split(".")[0] ?? "")
+      );
     },
   });
+}
+
+export function suppressApiQueries(
+  owner: symbol,
+  generation: string,
+  routeIds: readonly RouteId[],
+): void {
+  apiQuerySuppressions.set(owner, {
+    generation,
+    routeIds: new Set(routeIds),
+  });
+  publishApiQuerySuppressionChange();
+}
+
+export function releaseApiQuerySuppression(owner: symbol): void {
+  if (!apiQuerySuppressions.delete(owner)) return;
+  publishApiQuerySuppressionChange();
+}
+
+export function registerForegroundAuthorityRefresh(
+  owner: symbol,
+  authority: ForegroundAuthorityRefresh,
+): () => void {
+  foregroundAuthorityRefreshes.set(owner, authority);
+  return () => {
+    if (foregroundAuthorityRefreshes.get(owner) === authority)
+      foregroundAuthorityRefreshes.delete(owner);
+  };
 }
 
 const scopePrefixes: Record<
@@ -198,9 +293,14 @@ export async function refreshScopes(
   await queryClient.invalidateQueries(
     {
       predicate: (query) => {
-        if (query.queryKey[0] !== getSession()?.generation) return false;
+        const generation = getSession()?.generation;
+        if (!generation || query.queryKey[0] !== generation) return false;
         const id = query.queryKey[2];
-        return typeof id === "string" && prefixes.has(id.split(".")[0] ?? "");
+        return (
+          typeof id === "string" &&
+          !isApiQuerySuppressed(generation, id as RouteId) &&
+          prefixes.has(id.split(".")[0] ?? "")
+        );
       },
     },
     options,
@@ -227,4 +327,49 @@ function assertCurrentSession(expected: string, authenticated: boolean): void {
         session.entryHandoffState !== "complete"))
   )
     throw new DOMException("Stale session generation", "AbortError");
+}
+
+function assertApiQueryAllowed(
+  generation: string,
+  routeId: RouteId,
+  suppressionOwner?: symbol,
+): void {
+  if (isApiQuerySuppressed(generation, routeId, suppressionOwner))
+    throw new DOMException(
+      "Query suppressed by authority coordinator",
+      "AbortError",
+    );
+}
+
+function isApiQuerySuppressed(
+  generation: string,
+  routeId: RouteId,
+  suppressionOwner?: symbol,
+): boolean {
+  return [...apiQuerySuppressions].some(
+    ([owner, suppression]) =>
+      owner !== suppressionOwner &&
+      suppression.generation === generation &&
+      suppression.routeIds.has(routeId),
+  );
+}
+
+function hasApiQuerySuppression(generation: string): boolean {
+  return [...apiQuerySuppressions.values()].some(
+    (suppression) => suppression.generation === generation,
+  );
+}
+
+function subscribeApiQuerySuppressions(listener: () => void): () => void {
+  apiQuerySuppressionListeners.add(listener);
+  return () => apiQuerySuppressionListeners.delete(listener);
+}
+
+function getApiQuerySuppressionVersion(): number {
+  return apiQuerySuppressionVersion;
+}
+
+function publishApiQuerySuppressionChange(): void {
+  apiQuerySuppressionVersion += 1;
+  for (const listener of apiQuerySuppressionListeners) listener();
 }

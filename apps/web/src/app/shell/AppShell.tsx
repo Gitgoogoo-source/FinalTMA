@@ -89,11 +89,13 @@ function useForegroundRefresh(
     const markInactive = () => {
       hiddenAt.current ??= Date.now();
     };
+    const refresh = () => {
+      void refreshForegroundState(pathname).catch(() => undefined);
+    };
     const restore = () => {
       const started = hiddenAt.current;
       hiddenAt.current = null;
-      if (started !== null && Date.now() - started >= 300_000)
-        void refreshForegroundState(pathname);
+      if (started !== null && Date.now() - started >= 300_000) refresh();
     };
     const onVisibilityChange = () => {
       if (document.visibilityState === "hidden") {
@@ -102,12 +104,15 @@ function useForegroundRefresh(
       }
       restore();
     };
+    const reconnect = () => refresh();
     const app = telegram();
     document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("online", reconnect);
     app?.onEvent("deactivated", markInactive);
     app?.onEvent("activated", restore);
     return () => {
       document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("online", reconnect);
       app?.offEvent("deactivated", markInactive);
       app?.offEvent("activated", restore);
     };

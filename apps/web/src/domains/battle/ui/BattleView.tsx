@@ -26,6 +26,7 @@ import {
   apiRequest,
 } from "../../../platform/api/client.ts";
 import {
+  registerForegroundAuthorityRefresh,
   refreshScopes,
   seedApiQuery,
   useApiQuery,
@@ -94,13 +95,33 @@ export function BattleView(): ReactNode {
   const sessionGeneration = session?.generation ?? null;
   const {
     reportTerminal,
+    reportNonTerminalRoom,
+    prepareAuthorityRecovery,
+    readAuthorityRoom,
+    readAuthorityBootstrap,
+    finishAuthorityRecovery,
     failure: terminalRefreshFailure,
     active: activeTerminal,
     isLocked: isTerminalLocked,
   } = useBattleTerminalRefresh(sessionGeneration);
   const { requestTopup } = useNavigationIntent();
-  const identity = useApiQuery("identity.bootstrap", {}, pageActive);
-  const bootstrap = useApiQuery("battle.bootstrap", {}, pageActive);
+  const identity = useApiQuery(
+    "identity.bootstrap",
+    {},
+    pageActive && activeTerminal === null,
+  );
+  const identityTerminalParticipation =
+    identity.data?.battle_participation &&
+    isBattleAssetTerminal(identity.data.battle_participation.status)
+      ? identity.data.battle_participation
+      : null;
+  const bootstrap = useApiQuery(
+    "battle.bootstrap",
+    {},
+    pageActive &&
+      activeTerminal === null &&
+      identityTerminalParticipation === null,
+  );
   const participation =
     bootstrap.data?.participation ??
     (bootstrap.data ? null : (identity.data?.battle_participation ?? null));
@@ -115,6 +136,7 @@ export function BattleView(): ReactNode {
     {},
     pageActive && roomId === null && activeTerminal === null,
   );
+  const inviteRoom = isInviteRoom(invite.data) ? invite.data : null;
   const resumeOrderId = params.get("resume");
   const topups = useApiQuery(
     "topup.bootstrap",
@@ -147,8 +169,11 @@ export function BattleView(): ReactNode {
   const lifecycleRun = useRef(0);
   const lifecycleReadyRef = useRef(false);
   const authorityHealthy = useRef(false);
+  const authorityInFlight = useRef<Promise<boolean> | null>(null);
+  const foregroundAuthorityOwner = useRef(
+    Symbol("battle-foreground-authority"),
+  );
   const refetchBootstrap = bootstrap.refetch;
-  const refetchRoom = roomQuery.refetch;
   const refetchInvite = invite.refetch;
 
   const applySnapshot = useCallback((snapshot: BattleRoomSnapshotDto) => {
@@ -161,71 +186,117 @@ export function BattleView(): ReactNode {
     );
   }, []);
   const onAuthoritativeRoom = useCallback(
-    (snapshot: BattleRoomSnapshotDto) => {
-      if (getSession()?.generation !== sessionGeneration) return;
+    (snapshot: BattleRoomSnapshotDto): Promise<void> => {
+      if (getSession()?.generation !== sessionGeneration)
+        return Promise.resolve();
       applySnapshot(snapshot);
       if (isBattleAssetTerminal(snapshot.status)) {
         presenceRoomRef.current = null;
         lifecycleReadyRef.current = false;
         for (const request of heartbeatRequests.current) request.abort();
         heartbeatRequests.current.clear();
-        void reportTerminal({
+        return reportTerminal({
           roomId: snapshot.room_id,
           stateVersion: snapshot.state_version,
         });
       }
+      reportNonTerminalRoom(snapshot.room_id);
+      return Promise.resolve();
     },
-    [applySnapshot, reportTerminal, sessionGeneration],
+    [applySnapshot, reportNonTerminalRoom, reportTerminal, sessionGeneration],
   );
-  const refetchAuthority = useCallback(async () => {
-    if (isTerminalLocked(roomId)) {
+  const authorityRoomId =
+    room?.room_id ?? roomId ?? inviteRoom?.room_id ?? null;
+  const runAuthorityRefresh = useCallback(async (): Promise<boolean> => {
+    if (isTerminalLocked(null)) {
       authorityHealthy.current = true;
-      return;
+      return false;
     }
     authorityHealthy.current = false;
     try {
-      if (roomId) {
-        const roomResult = await refetchRoom();
-        if (roomResult.data && isBattleAssetTerminal(roomResult.data.status)) {
-          authorityHealthy.current = !roomResult.isError;
-          onAuthoritativeRoom(roomResult.data);
-          return;
+      if (authorityRoomId) {
+        const roomResult = await readAuthorityRoom(authorityRoomId);
+        if (isTerminalLocked(null)) return false;
+        if (!roomResult) return false;
+        await onAuthoritativeRoom(roomResult);
+        if (isTerminalLocked(null)) {
+          authorityHealthy.current = true;
+          return false;
         }
-        const battleResult = await refetchBootstrap();
-        authorityHealthy.current = !roomResult.isError || !battleResult.isError;
-        const candidates = [roomResult.data, battleResult.data?.room].filter(
+        const battleResult = await readAuthorityBootstrap(authorityRoomId);
+        if (isTerminalLocked(null)) return false;
+        if (!battleResult) return false;
+        const candidates = [roomResult, battleResult.room].filter(
           (candidate): candidate is BattleRoomSnapshotDto => Boolean(candidate),
         );
         if (candidates.length > 0)
-          onAuthoritativeRoom(
+          await onAuthoritativeRoom(
             candidates.reduce((newest, candidate) =>
               compareSnapshots(candidate, newest) > 0 ? candidate : newest,
             ),
           );
-        return;
+        if (isTerminalLocked(null)) {
+          authorityHealthy.current = true;
+          return false;
+        }
+        authorityHealthy.current = true;
+        return true;
       }
       const [battleResult, inviteResult] = await Promise.all([
         refetchBootstrap(),
         refetchInvite(),
       ]);
+      if (isTerminalLocked(null)) return false;
       authorityHealthy.current = !battleResult.isError || !inviteResult.isError;
-      if (battleResult.data?.room) onAuthoritativeRoom(battleResult.data.room);
+      if (battleResult.data?.room)
+        await onAuthoritativeRoom(battleResult.data.room);
+      return !isTerminalLocked(null);
     } catch {
       authorityHealthy.current = false;
+      return false;
+    } finally {
+      if (authorityRoomId && !isTerminalLocked(null))
+        finishAuthorityRecovery(authorityRoomId);
     }
   }, [
+    authorityRoomId,
+    finishAuthorityRecovery,
+    isTerminalLocked,
     onAuthoritativeRoom,
+    readAuthorityBootstrap,
+    readAuthorityRoom,
     refetchBootstrap,
     refetchInvite,
-    refetchRoom,
-    isTerminalLocked,
-    roomId,
   ]);
+  const refetchAuthority = useCallback((): Promise<boolean> => {
+    const existing = authorityInFlight.current;
+    if (existing) return existing;
+    const task = runAuthorityRefresh().finally(() => {
+      if (authorityInFlight.current === task) authorityInFlight.current = null;
+    });
+    authorityInFlight.current = task;
+    return task;
+  }, [runAuthorityRefresh]);
+  const refetchAuthorityVoid = useCallback(async (): Promise<void> => {
+    await refetchAuthority();
+  }, [refetchAuthority]);
   const refetchRef = useRef(refetchAuthority);
   useEffect(() => {
     refetchRef.current = refetchAuthority;
   }, [refetchAuthority]);
-  const command = useBattleCommand(refetchAuthority, onAuthoritativeRoom);
+  useEffect(() => {
+    if (!pageActive || !sessionGeneration) return;
+    return registerForegroundAuthorityRefresh(
+      foregroundAuthorityOwner.current,
+      {
+        generation: sessionGeneration,
+        pathname: "/game",
+        handledPrefixes: ["battle"],
+        refresh: refetchAuthority,
+      },
+    );
+  }, [pageActive, refetchAuthority, sessionGeneration]);
+  const command = useBattleCommand(refetchAuthorityVoid, onAuthoritativeRoom);
   const commandPending =
     command.state.phase === "submitted" || command.state.phase === "recovering";
 
@@ -277,7 +348,7 @@ export function BattleView(): ReactNode {
       const next = candidates.reduce((newest, candidate) =>
         compareSnapshots(candidate, newest) > 0 ? candidate : newest,
       );
-      onAuthoritativeRoom(next);
+      void onAuthoritativeRoom(next);
     });
     return () => {
       cancelled = true;
@@ -293,7 +364,6 @@ export function BattleView(): ReactNode {
     (bootstrap.data ? null : (identity.data?.battle_result ?? null));
   const result =
     currentResult?.room_id === dismissedResult ? null : currentResult;
-  const inviteRoom = isInviteRoom(invite.data) ? invite.data : null;
   const terminalObservations = useMemo(
     () =>
       terminalObservationsFor({
@@ -469,7 +539,7 @@ export function BattleView(): ReactNode {
     contextKey: room?.room_id ?? inviteRoom?.room_id ?? session?.userId ?? "",
     phase: realtimePhase,
     stateVersion: room?.state_version ?? participation?.state_version ?? 0,
-    refetch: refetchAuthority,
+    refetch: refetchAuthorityVoid,
   });
 
   useEffect(() => {
@@ -480,6 +550,10 @@ export function BattleView(): ReactNode {
         ? room.room_id
         : null;
   }, [room]);
+  const prepareRecovery = useCallback(() => {
+    const targetRoomId = roomRef.current?.room_id ?? authorityRoomId;
+    if (targetRoomId) prepareAuthorityRecovery(targetRoomId);
+  }, [authorityRoomId, prepareAuthorityRecovery]);
   const markOffline = useCallback(() => {
     lifecycleReadyRef.current = false;
     const presenceRoomId = presenceRoomRef.current;
@@ -503,7 +577,7 @@ export function BattleView(): ReactNode {
       presence_command_seq: commandSeq,
     })
       .then((response) => {
-        onAuthoritativeRoom(response.data);
+        return onAuthoritativeRoom(response.data);
       })
       .catch(async (cause: unknown) => {
         await applyPresenceFailureScopes(cause);
@@ -514,6 +588,11 @@ export function BattleView(): ReactNode {
           await refetchRef.current();
       });
   }, [isTerminalLocked, onAuthoritativeRoom]);
+
+  useEffect(() => {
+    if (!pageActive && authorityRoomId)
+      finishAuthorityRecovery(authorityRoomId);
+  }, [authorityRoomId, finishAuthorityRecovery, pageActive]);
 
   useEffect(() => {
     const run = ++lifecycleRun.current;
@@ -544,39 +623,48 @@ export function BattleView(): ReactNode {
     const deactivated = () => {
       setTelegramActive(false);
       setLifecycleReady(false);
+      prepareRecovery();
       markOffline();
     };
     const visibility = () => {
       if (document.visibilityState === "visible") void restore();
       else {
         setLifecycleReady(false);
+        prepareRecovery();
         markOffline();
       }
     };
     const online = () => void restore();
     const pagehide = () => {
       setLifecycleReady(false);
+      prepareRecovery();
       markOffline();
     };
+    const offline = () => prepareRecovery();
     const pageshow = () => void restore();
     const unsubscribe = subscribeTelegramActivity(activated, deactivated);
     document.addEventListener("visibilitychange", visibility);
     window.addEventListener("online", online);
+    window.addEventListener("offline", offline);
     window.addEventListener("pagehide", pagehide);
     window.addEventListener("pageshow", pageshow);
     if (activeNow()) void restore();
-    else markOffline();
+    else {
+      prepareRecovery();
+      markOffline();
+    }
     return () => {
       lifecycleRun.current += 1;
       lifecycleReadyRef.current = false;
       unsubscribe();
       document.removeEventListener("visibilitychange", visibility);
       window.removeEventListener("online", online);
+      window.removeEventListener("offline", offline);
       window.removeEventListener("pagehide", pagehide);
       window.removeEventListener("pageshow", pageshow);
       markOffline();
     };
-  }, [markOffline, pageActive, sessionGeneration]);
+  }, [markOffline, pageActive, prepareRecovery, sessionGeneration]);
 
   useEffect(() => {
     const presenceRoomId = presenceRoomRef.current;
@@ -632,7 +720,7 @@ export function BattleView(): ReactNode {
           { signal: controller.signal },
         );
         if (disposed) return;
-        onAuthoritativeRoom(response.data);
+        void onAuthoritativeRoom(response.data);
         if (
           response.data.status !== "waiting" &&
           response.data.status !== "lobby_waiting" &&
