@@ -172,14 +172,13 @@ export function fetchApiQueryBatchAsOwner(
       ...(options.cancelRouteIds ?? []),
     ]),
   ];
+  const cancellation = cancelApiQueries(cancelRouteIds, generation);
   void (async () => {
+    await cancellation;
     if (conflicts.length > 0)
       await Promise.all(
         conflicts.map((conflict) => conflict.task.catch(() => undefined)),
       );
-    throwIfAborted(controller.signal);
-    assertCurrentSession(generation, true);
-    await cancelApiQueries(cancelRouteIds, generation);
     throwIfAborted(controller.signal);
     assertCurrentSession(generation, true);
     const results = await Promise.all(

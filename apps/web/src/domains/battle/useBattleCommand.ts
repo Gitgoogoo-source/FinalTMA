@@ -135,6 +135,7 @@ export function useBattleCommand(
         const failure = toFailure(cause, operationId);
         if (!isUnknownResult(failure)) {
           await refreshBattleCommandFailure(
+            routeId,
             failure.code,
             options?.terminalRoomId ?? roomIdFromInput(input),
             generation,
@@ -224,6 +225,7 @@ export function useBattleCommand(
           return recovered.data;
         }
         await refreshBattleCommandFailure(
+          routeId,
           recovered.failure.code,
           options?.terminalRoomId ?? roomIdFromInput(input),
           generation,
@@ -425,6 +427,7 @@ async function applyBattleCommandResult<Id extends BattleCommandRouteId>(
 }
 
 async function refreshBattleCommandFailure(
+  routeId: BattleCommandRouteId,
   code: string,
   terminalRoomId: string | null,
   generation: string,
@@ -434,7 +437,7 @@ async function refreshBattleCommandFailure(
   refetchAuthority: () => Promise<void>,
 ): Promise<void> {
   if (isBattleTerminalFailure(code)) {
-    if (terminalRoomId) {
+    if (routeId !== "battle.accept" && terminalRoomId) {
       try {
         const snapshot = await readAuthoritativeRoom(terminalRoomId);
         if (!snapshot || signal.aborted || !isCurrentGeneration(generation))

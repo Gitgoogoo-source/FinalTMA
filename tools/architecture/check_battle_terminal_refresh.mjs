@@ -50,6 +50,10 @@ const terminalBatchRoutes = new Set([
   "identity.bootstrap",
   "inventory.list",
 ]);
+const postAcknowledgeBatchRoutes = new Set([
+  "battle.bootstrap",
+  "identity.bootstrap",
+]);
 const authorityCancellationRoutes = new Set([
   "battle.bootstrap",
   "battle.room",
@@ -139,6 +143,13 @@ function checkQueryBoundary(source) {
   const ownerRegistration = calls(ownerBatch, "ownedApiQueries.set");
   const ownerRequests = calls(ownerBatch, "executeApiQueryRequest");
   const ownerCancellation = calls(ownerBatch, "cancelApiQueries");
+  const cancellation = variable(ownerBatch, "cancellation");
+  const cancellationAwait = awaitExpressions(ownerBatch).find(
+    (node) => expressionValue(node.expression) === "cancellation",
+  );
+  const conflictWait = awaitExpressions(ownerBatch).find(
+    (node) => calls(node.expression, "conflict.task.catch").length === 1,
+  );
   const resultBatch = calls(ownerBatch, "Promise.all").find(
     (call) => calls(call, "executeApiQueryRequest").length === 1,
   );
@@ -146,19 +157,25 @@ function checkQueryBoundary(source) {
   must(
     ownerRegistration.length === 1 &&
       ownerRequests.length === 1 &&
+      ownerCancellation.length === 1 &&
+      cancellation?.initializer === ownerCancellation[0] &&
+      cancellationAwait &&
+      conflictWait &&
       ownerRegistration[0].pos < ownerCancellation[0]?.pos &&
-      ownerCancellation[0]?.pos < ownerRequests[0].pos &&
+      ownerCancellation[0].pos < cancellationAwait.pos &&
+      cancellationAwait.pos < conflictWait.pos &&
+      conflictWait.pos < ownerRequests[0].pos &&
       resultBatch &&
       cacheWrites.length === 1 &&
       resultBatch.pos < cacheWrites[0].pos,
-    "owned batches must reserve every key, cancel old observers, execute one formal Promise.all, then write formal caches",
+    "owned batches must reserve every key, synchronously start old-observer cancellation before handoff waits, then execute one formal Promise.all and write formal caches",
   );
   must(
     propertyPaths(ownerBatch).includes("conflict.task") &&
       calls(ownerBatch, "conflict.task.catch").length === 1 &&
       calls(ownerBatch, "throwIfAborted").length >= 2 &&
       calls(ownerBatch, "assertCurrentSession").length >= 2,
-    "owned batch handoff must wait prior owners and recheck abort plus generation around every asynchronous boundary",
+    "owned batch handoff must wait prior owners only after cancellation has started and recheck abort plus generation around asynchronous boundaries",
   );
 
   const ownerCancellationFunction = topLevelFunction(
@@ -287,6 +304,17 @@ function checkCoordinator(source) {
   must(
     sameSet(
       new Set(
+        requestArrayRoutes(
+          variable(source, "postAcknowledgeRequests")?.initializer,
+        ),
+      ),
+      postAcknowledgeBatchRoutes,
+    ),
+    "post-ack authority proof must read exactly Battle and identity bootstrap without repeating inventory",
+  );
+  must(
+    sameSet(
+      new Set(
         arrayStrings(
           variable(source, "authorityCancellationRoutes")?.initializer,
         ),
@@ -311,6 +339,8 @@ function checkCoordinator(source) {
   );
 
   const hook = topLevelFunction(source, "useBattleTerminalRefresh");
+  const externalStore = calls(hook, "useSyncExternalStore")[0];
+  const getSnapshot = externalStore?.arguments[1];
   must(
     sameArray(
       hook.parameters.map((parameter) => expressionValue(parameter.name)),
@@ -318,7 +348,11 @@ function checkCoordinator(source) {
     ) &&
       calls(hook, "useSyncExternalStore").length === 1 &&
       calls(hook, "useLayoutEffect").length === 2 &&
-      calls(hook, "setRouteActive").length >= 2,
+      calls(hook, "setRouteActive").length >= 2 &&
+      calls(getSnapshot, "coordinatorVersion").length === 1 &&
+      calls(getSnapshot, "coordinatorFor").length === 0 &&
+      calls(hook, "coordinatorFor").length === 0 &&
+      calls(hook, "coordinators.set").length === 0,
     "React must subscribe to one external coordinator and bind suppression to the real route-active lifecycle",
   );
   const routeCalls = calls(hook, "setRouteActive");
@@ -334,9 +368,18 @@ function checkCoordinator(source) {
   must(
     calls(routeSetter, "syncRouteSuppression").length === 1 &&
       calls(routeSetter, "cancelApiQueryOwner").length === 0 &&
+      calls(routeSetter, "coordinatorFor").length === 1 &&
+      calls(routeSetter, "coordinators.get").length === 1 &&
+      calls(routeSetter, "isCurrentGeneration").length === 1 &&
       calls(routeSetter, "state.completed.clear").length === 0 &&
       calls(routeSetter, "state.completed.delete").length === 0,
-    "route leave may release suppression but cannot cancel owners or erase terminal success memory",
+    "route activation may create a coordinator, but route cleanup cannot recreate stale generation state, cancel owners, or erase terminal success memory",
+  );
+  const subscription = topLevelFunction(source, "subscribeCoordinator");
+  must(
+    calls(subscription, "isCurrentGeneration").length === 1 &&
+      calls(subscription, "coordinatorFor").length === 1,
+    "subscription effects may create only the current session generation coordinator",
   );
   const suppression = topLevelFunction(source, "syncRouteSuppression");
   const suppressionIdentifiers = new Set(identifiers(suppression));
@@ -356,6 +399,12 @@ function checkCoordinator(source) {
     (node) => expressionValue(node.left) === "state.active",
   );
   const completed = calls(reporter, "state.completed.has");
+  const completedBeforeActive = completed.find(
+    (call) => activeWrite && call.pos < activeWrite.pos,
+  );
+  const completedAfterActive = completed.find(
+    (call) => activeWrite && call.pos > activeWrite.pos,
+  );
   const existing = calls(
     variable(reporter, "existing")?.initializer,
     "state.terminalInFlight.get",
@@ -371,12 +420,14 @@ function checkCoordinator(source) {
   );
   must(
     activeWrite &&
-      completed.length === 1 &&
+      completedBeforeActive &&
+      completedAfterActive &&
       existing.length === 1 &&
       batch.length === 1 &&
       inFlightWrite.length === 1 &&
-      activeWrite.pos < completed[0].pos &&
-      completed[0].pos < existing[0].pos &&
+      completedBeforeActive.pos < activeWrite.pos &&
+      activeWrite.pos < completedAfterActive.pos &&
+      completedAfterActive.pos < existing[0].pos &&
       existing[0].pos < batch[0].pos &&
       batch[0].pos < inFlightWrite[0].pos &&
       expressionValue(batch[0].arguments[0]) === "terminalOwner" &&
@@ -384,21 +435,92 @@ function checkCoordinator(source) {
       expressionValue(
         objectPropertyExpression(objectArgument(batch[0], 2), "cancelRouteIds"),
       ) === "terminalCancellationRoutes",
-    "terminal latch, success memory, singleflight, and protected batch must execute in that order",
+    "completed terminal memory must prevent stale relatching while an active terminal still latches before singleflight and its protected batch",
   );
   const thenCallback = callbackOfCall(calls(reporter, "batch.then")[0]);
   const catchCallback = callbackOfCall(calls(reporter, "catch")[0]);
   const finallyCallback = callbackOfCall(calls(reporter, "finally")[0]);
+  const terminalBattleProof = calls(thenCallback, "getApiQueryData").find(
+    (call) => stringArgument(call, 1) === "battle.bootstrap",
+  );
+  const terminalIdentityProof = calls(thenCallback, "getApiQueryData").find(
+    (call) => stringArgument(call, 1) === "identity.bootstrap",
+  );
+  const resultlessActiveClear = assignments(thenCallback).find(
+    (node) =>
+      expressionValue(node.left) === "state.active" &&
+      expressionValue(node.right) === "null",
+  );
   must(
     calls(thenCallback, "isCurrentObservation").length === 1 &&
       calls(thenCallback, "state.completed.add").length === 1 &&
+      terminalBattleProof &&
+      terminalIdentityProof &&
+      resultlessActiveClear &&
+      calls(thenCallback, "syncRouteSuppression").length === 1 &&
       calls(catchCallback, "isCurrentObservation").length === 1 &&
       calls(catchCallback, "state.completed.add").length === 0 &&
       assignments(catchCallback).some(
         (node) => expressionValue(node.left) === "state.failure",
       ) &&
       calls(finallyCallback, "state.terminalInFlight.delete").length === 1,
-    "only a current all-success batch may be remembered; failure must unlock for coordinator retry",
+    "only a current all-success batch may be remembered; authoritative resultless terminals must release active suppression while failure remains retryable",
+  );
+
+  const prepareAcknowledge = topLevelFunction(source, "prepareAcknowledgement");
+  const terminalRetry = calls(prepareAcknowledge, "reportTerminalObservation");
+  const prepareCompleted = calls(prepareAcknowledge, "state.completed.has");
+  must(
+    terminalRetry.length === 1 &&
+      awaitExpressions(prepareAcknowledge).some((node) =>
+        containsNode(node, terminalRetry[0]),
+      ) &&
+      prepareCompleted.length === 1 &&
+      terminalRetry[0].pos < prepareCompleted[0].pos &&
+      calls(prepareAcknowledge, "isCurrentObservation").length === 1,
+    "acknowledge cannot be submitted until the current generation/room/version terminal batch has completed successfully",
+  );
+
+  const acknowledge = topLevelFunction(source, "confirmAcknowledgedResult");
+  const acknowledgeCompleted = calls(acknowledge, "state.completed.has");
+  const acknowledgeBatch = calls(acknowledge, "fetchApiQueryBatchAsOwner");
+  const acknowledgeThen = callbackOfCall(calls(acknowledge, "batch.then")[0]);
+  const battleProof = calls(acknowledgeThen, "getApiQueryData").find(
+    (call) => stringArgument(call, 1) === "battle.bootstrap",
+  );
+  const identityProof = calls(acknowledgeThen, "getApiQueryData").find(
+    (call) => stringArgument(call, 1) === "identity.bootstrap",
+  );
+  const activeClear = assignments(acknowledgeThen).find(
+    (node) =>
+      expressionValue(node.left) === "state.active" &&
+      expressionValue(node.right) === "null",
+  );
+  must(
+    acknowledgeCompleted.length === 1 &&
+      acknowledgeBatch.length === 1 &&
+      acknowledgeCompleted[0].pos < acknowledgeBatch[0].pos &&
+      expressionValue(acknowledgeBatch[0].arguments[1]) ===
+        "postAcknowledgeRequests" &&
+      calls(
+        variable(acknowledge, "existing")?.initializer,
+        "state.acknowledgeInFlight.get",
+      ).length === 1 &&
+      calls(acknowledge, "state.acknowledgeInFlight.set").length === 1,
+    "post-ack recovery must retain successful terminal memory and singleflight a distinct authoritative bootstrap proof",
+  );
+  must(
+    battleProof &&
+      identityProof &&
+      activeClear &&
+      battleProof.pos < activeClear.pos &&
+      identityProof.pos < activeClear.pos &&
+      calls(acknowledgeThen, "isCurrentObservation").length === 1 &&
+      calls(acknowledgeThen, "syncRouteSuppression").length === 1 &&
+      calls(acknowledgeThen, "publishCoordinator").length === 1 &&
+      calls(acknowledge, "state.completed.clear").length === 0 &&
+      calls(acknowledge, "state.completed.delete").length === 0,
+    "only a generation/room/version-current post-ack bootstrap proof may clear active suppression, and completed terminal memory must remain intact",
   );
 
   const roomReader = topLevelFunction(source, "readCoordinatorRoom");
@@ -450,6 +572,7 @@ function checkCoordinator(source) {
     "setRouteActive",
     "syncRouteSuppression",
     "finishCoordinatorRecovery",
+    "confirmAcknowledgedResult",
   ]) {
     const fn = topLevelFunction(source, functionName);
     must(
@@ -484,6 +607,7 @@ function checkView(source) {
   );
 
   const authority = variableFunction(view, "runAuthorityRefresh");
+  const authorityRoomId = variable(view, "authorityRoomId")?.initializer;
   const roomRead = calls(authority, "readAuthorityRoom");
   const roomPublish = calls(authority, "onAuthoritativeRoom").find(
     (call) => expressionValue(call.arguments[0]) === "roomResult",
@@ -492,7 +616,11 @@ function checkView(source) {
     (call) => expressionValue(call.arguments[0]) === "activeTerminal",
   );
   must(
-    terminalRetry &&
+    authorityRoomId &&
+      identifiers(authorityRoomId).includes("room") &&
+      identifiers(authorityRoomId).includes("roomId") &&
+      !identifiers(authorityRoomId).includes("inviteRoom") &&
+      terminalRetry &&
       awaitExpressions(authority).some((node) =>
         containsNode(node, terminalRetry),
       ) &&
@@ -511,7 +639,7 @@ function checkView(source) {
             expressionValue(node.left) === "authorityHealthy.current",
         ),
       ),
-    "authority triggers must retry the current terminal owner, then use one room GET with a latch recheck after every await and no bootstrap tail",
+    "only participant-proven room state may select the room authority path; authority triggers must retry the current terminal owner, then use one room GET with latch rechecks and no bootstrap tail",
   );
   const discoveryBatch = calls(authority, "Promise.all");
   const discoveryAwait = discoveryBatch[0];
@@ -613,6 +741,29 @@ function checkView(source) {
     ),
     "seeded/bootstrap/room terminal observations must enter the same reporter",
   );
+
+  const acknowledge = variableFunction(view, "acknowledge");
+  const acknowledgeRequest = calls(acknowledge, "apiRequest").find(
+    (call) => stringArgument(call, 0) === "battle.acknowledge_result",
+  );
+  const acknowledgeProof = calls(acknowledge, "confirmTerminalAcknowledged");
+  const acknowledgePreparation = calls(
+    acknowledge,
+    "prepareTerminalAcknowledgement",
+  );
+  const dismiss = calls(acknowledge, "setDismissedResult");
+  must(
+    acknowledgeRequest &&
+      acknowledgePreparation.length === 1 &&
+      acknowledgeProof.length === 1 &&
+      dismiss.length === 1 &&
+      acknowledgePreparation[0].pos < acknowledgeRequest.pos &&
+      acknowledgeRequest.pos < acknowledgeProof[0].pos &&
+      acknowledgeProof[0].pos < dismiss[0].pos &&
+      calls(acknowledge, "refetchAuthority").length === 0 &&
+      calls(acknowledge, "setRoom").length === 1,
+    "acknowledge must complete the old terminal batch before submission, then perform post-ack authority proof before dismissing the result and matching local room",
+  );
 }
 
 function checkCommand(source) {
@@ -637,10 +788,21 @@ function checkCommand(source) {
     "create/cancel result recovery must await the injected room owner and recheck generation",
   );
   const failure = topLevelFunction(source, "refreshBattleCommandFailure");
+  const acceptGuard = ifStatements(failure).find(
+    (node) =>
+      findBinaryComparison(
+        node.expression,
+        "routeId",
+        ts.SyntaxKind.ExclamationEqualsEqualsToken,
+        "battle.accept",
+      ) && calls(node.thenStatement, "readAuthoritativeRoom").length === 1,
+  );
   must(
     calls(failure, "readAuthoritativeRoom").length === 1 &&
-      calls(failure, "onAuthoritativeRoom").length === 1,
-    "terminal command failures must use and publish the injected authority reader",
+      calls(failure, "onAuthoritativeRoom").length === 1 &&
+      acceptGuard &&
+      calls(failure, "refetchAuthority").length === 1,
+    "participant terminal failures may use the room reader, but accept failures must bypass it and return through current-invite discovery",
   );
   const apply = topLevelFunction(source, "applyBattleCommandResult");
   const publish = calls(apply, "onAuthoritativeRoom");
@@ -723,7 +885,7 @@ function checkExclusiveOwnership(sources) {
     calls(source, "fetchApiQueryBatchAsOwner").map(() => source.fileName),
   );
   must(
-    ownerCalls.length === 2 &&
+    ownerCalls.length === 3 &&
       ownerCalls.every((fileName) => fileName === paths.coordinator),
     "only the Battle coordinator may create protected authority batches",
   );
@@ -815,6 +977,20 @@ function runSelfTests() {
       },
     ),
     fixture(
+      paths.coordinator,
+      "resultless terminal keeps active latch",
+      (source, text) => {
+        const fn = topLevelFunction(source, "reportTerminalObservation");
+        const callback = callbackOfCall(calls(fn, "batch.then")[0]);
+        const clear = assignments(callback).find(
+          (node) =>
+            expressionValue(node.left) === "state.active" &&
+            expressionValue(node.right) === "null",
+        );
+        return replaceNode(text, clear, "void state.active");
+      },
+    ),
+    fixture(
       paths.query,
       "owner key protection registered too late",
       (source, text) => {
@@ -832,6 +1008,28 @@ function runSelfTests() {
       );
       return replaceNode(text, wait.expression, "Promise.resolve()");
     }),
+    fixture(
+      paths.query,
+      "handoff delays cancellation until after prior owner",
+      (source, text) => {
+        const fn = topLevelFunction(source, "fetchApiQueryBatchAsOwner");
+        const cancellation = variable(fn, "cancellation");
+        const conflictIf = ifStatements(fn).find(
+          (node) =>
+            calls(node.thenStatement, "conflict.task.catch").length === 1,
+        );
+        const withLateCancellation = insertAfterNode(
+          text,
+          conflictIf,
+          "\nawait cancelApiQueries(cancelRouteIds, generation);",
+        );
+        return replaceNode(
+          withLateCancellation,
+          cancellation.initializer,
+          "Promise.resolve()",
+        );
+      },
+    ),
     fixture(paths.view, "room await omits latch recheck", (source, text) => {
       const fn = variableFunction(
         topLevelFunction(source, "BattleView"),
@@ -862,6 +1060,19 @@ function runSelfTests() {
     ),
     fixture(
       paths.view,
+      "invite preview selects participant room authority",
+      (source, text) => {
+        const view = topLevelFunction(source, "BattleView");
+        const authorityRoomId = variable(view, "authorityRoomId");
+        return replaceNode(
+          text,
+          authorityRoomId.initializer,
+          `${authorityRoomId.initializer.getText()} ?? inviteRoom?.room_id`,
+        );
+      },
+    ),
+    fixture(
+      paths.view,
       "cached terminal enables identity observer",
       (source, text) => {
         const view = topLevelFunction(source, "BattleView");
@@ -873,6 +1084,41 @@ function runSelfTests() {
           identityObserver.arguments[2],
           "pageActive && activeTerminal === null",
         );
+      },
+    ),
+    fixture(
+      paths.view,
+      "acknowledge submits before terminal batch completion",
+      (source, text) => {
+        const view = topLevelFunction(source, "BattleView");
+        const acknowledge = variableFunction(view, "acknowledge");
+        const preparation = calls(
+          acknowledge,
+          "prepareTerminalAcknowledgement",
+        )[0];
+        return replaceNode(text, preparation, "Promise.resolve(true)");
+      },
+    ),
+    fixture(
+      paths.command,
+      "accept failure attempts participant room fallback",
+      (source, text) => {
+        const fn = topLevelFunction(source, "refreshBattleCommandFailure");
+        const guard = ifStatements(fn).find((node) =>
+          findBinaryComparison(
+            node.expression,
+            "routeId",
+            ts.SyntaxKind.ExclamationEqualsEqualsToken,
+            "battle.accept",
+          ),
+        );
+        const comparison = findBinaryComparison(
+          guard.expression,
+          "routeId",
+          ts.SyntaxKind.ExclamationEqualsEqualsToken,
+          "battle.accept",
+        );
+        return replaceNode(text, comparison.operatorToken, "===");
       },
     ),
     fixture(
@@ -914,6 +1160,48 @@ function runSelfTests() {
             expressionValue(call.arguments[0]) === "state.discoveryOwner",
         );
         return replaceNode(text, cancel, "void state.discoveryOwner");
+      },
+    ),
+    fixture(
+      paths.coordinator,
+      "post-ack bootstrap leaves active latch",
+      (source, text) => {
+        const fn = topLevelFunction(source, "confirmAcknowledgedResult");
+        const callback = callbackOfCall(calls(fn, "batch.then")[0]);
+        const clear = assignments(callback).find(
+          (node) =>
+            expressionValue(node.left) === "state.active" &&
+            expressionValue(node.right) === "null",
+        );
+        return replaceNode(text, clear, "void state.active");
+      },
+    ),
+    fixture(
+      paths.coordinator,
+      "post-ack bootstrap erases completed memory",
+      (source, text) => {
+        const fn = topLevelFunction(source, "confirmAcknowledgedResult");
+        const callback = callbackOfCall(calls(fn, "batch.then")[0]);
+        return insertIntoFunction(
+          text,
+          callback,
+          "state.completed.delete(key);",
+        );
+      },
+    ),
+    fixture(
+      paths.coordinator,
+      "render snapshot creates shared coordinator",
+      (source, text) => {
+        const hook = topLevelFunction(source, "useBattleTerminalRefresh");
+        const externalStore = calls(hook, "useSyncExternalStore")[0];
+        const snapshot = externalStore.arguments[1];
+        const read = calls(snapshot, "coordinatorVersion")[0];
+        return replaceNode(
+          text,
+          read,
+          "coordinatorFor(sessionGeneration).version",
+        );
       },
     ),
   ];
@@ -1305,6 +1593,21 @@ function isNegatedIdentifier(expression, name) {
   );
 }
 
+function findBinaryComparison(root, left, operator, right) {
+  let result;
+  walk(root, (node) => {
+    if (
+      !result &&
+      ts.isBinaryExpression(node) &&
+      expressionValue(node.left) === left &&
+      node.operatorToken.kind === operator &&
+      expressionValue(node.right) === right
+    )
+      result = node;
+  });
+  return result;
+}
+
 function latchCheckBetween(root, start, end) {
   if (!start || !end) return false;
   return ifStatements(root).some(
@@ -1327,6 +1630,11 @@ function insertIntoFunction(text, fn, statement) {
 function replaceNode(text, node, replacement) {
   must(node, "Fixture target node is missing");
   return `${text.slice(0, node.getStart())}${replacement}${text.slice(node.end)}`;
+}
+
+function insertAfterNode(text, node, addition) {
+  must(node, "Fixture target node is missing");
+  return `${text.slice(0, node.end)}${addition}${text.slice(node.end)}`;
 }
 
 function lineOf(node) {

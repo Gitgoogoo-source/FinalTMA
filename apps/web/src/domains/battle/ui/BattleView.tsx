@@ -113,6 +113,8 @@ export function BattleView(): ReactNode {
     prepareAuthorityRecovery,
     readAuthorityRoom,
     finishAuthorityRecovery,
+    prepareTerminalAcknowledgement,
+    confirmTerminalAcknowledged,
     failure: terminalRefreshFailure,
     active: activeTerminal,
     isLocked: isTerminalLocked,
@@ -221,8 +223,7 @@ export function BattleView(): ReactNode {
     },
     [applySnapshot, reportNonTerminalRoom, reportTerminal, sessionGeneration],
   );
-  const authorityRoomId =
-    room?.room_id ?? roomId ?? inviteRoom?.room_id ?? null;
+  const authorityRoomId = room?.room_id ?? roomId ?? null;
   const runAuthorityRefresh = useCallback(async (): Promise<boolean> => {
     if (activeTerminal) {
       await reportTerminal(activeTerminal);
@@ -910,23 +911,39 @@ export function BattleView(): ReactNode {
 
   const acknowledge = async () => {
     if (!result || acknowledging) return;
+    const acknowledgedRoomId = result.room_id;
     setAcknowledging(true);
     setFeedback("正在由服务器确认结果已读");
+    let acknowledgementFailure: unknown = null;
     try {
-      await apiRequest("battle.acknowledge_result", {
-        room_id: result.room_id,
-      });
-      setDismissedResult(result.room_id);
+      if (!(await prepareTerminalAcknowledgement(acknowledgedRoomId))) {
+        setFeedback("当场结果仍在完成权威资产回正，请重试确认");
+        return;
+      }
+      try {
+        await apiRequest("battle.acknowledge_result", {
+          room_id: acknowledgedRoomId,
+        });
+      } catch (cause) {
+        acknowledgementFailure = cause;
+      }
+      const confirmed = await confirmTerminalAcknowledged(acknowledgedRoomId);
+      if (!confirmed) {
+        setFeedback(
+          acknowledgementFailure instanceof Error
+            ? acknowledgementFailure.message
+            : "结果确认尚未完成权威回正，请重试",
+        );
+        return;
+      }
+      setDismissedResult(acknowledgedRoomId);
       setForceHome(true);
       setFlow(null);
       setSlots(emptySlots);
-      await refetchAuthority();
-      setFeedback(null);
-    } catch (cause) {
-      setFeedback(
-        cause instanceof Error ? cause.message : "结果确认失败，请重试",
+      setRoom((current) =>
+        current?.room_id === acknowledgedRoomId ? null : current,
       );
-      await refetchAuthority();
+      setFeedback(null);
     } finally {
       setAcknowledging(false);
     }
