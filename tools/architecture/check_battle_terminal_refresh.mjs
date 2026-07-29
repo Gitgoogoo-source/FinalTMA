@@ -372,20 +372,20 @@ function checkView(source) {
   const expectedSources = new Map([
     [
       "resultRoomIds",
-      new Set([
+      [
         "resultRoomId",
         "bootstrap.data?.current_result?.room_id ?? null",
         "identity.data?.battle_result?.room_id ?? null",
-      ]),
+      ],
     ],
-    ["rooms", new Set(["room", "bootstrap.data?.room", "roomQuery.data"])],
+    ["rooms", ["room", "bootstrap.data?.room", "roomQuery.data"]],
     [
       "participations",
-      new Set([
+      [
         "participation",
         "bootstrap.data?.participation",
         "identity.data?.battle_participation",
-      ]),
+      ],
     ],
   ]);
   const formalBindings = new Map(
@@ -410,51 +410,60 @@ function checkView(source) {
       collected[0] === collectionCall &&
       directVariableStatement(view, terminalIds) &&
       collectionInput &&
-      ts.isObjectLiteralExpression(collectionInput) &&
-      sameSet(
-        objectKeys(collectionInput),
-        new Set([...expectedSources.keys(), "invite"]),
-      ) &&
-      [...expectedSources].every(([name, expected]) => {
-        const value = objectValue(collectionInput, name);
-        return (
-          value &&
-          ts.isArrayLiteralExpression(value) &&
-          value.elements.length === expected.size &&
-          value.elements.every(isNonEmptyExpression) &&
-          sameSet(new Set(value.elements.map(text)), expected)
-        );
-      }) &&
-      text(objectValue(collectionInput, "invite")) === "invite.data" &&
-      isNonEmptyExpression(objectValue(collectionInput, "invite")) &&
-      [...formalBindings].every(
-        ([name, declaration]) =>
-          declaration &&
-          bindingNamesIn(view).has(name) &&
-          isNonEmptyExpression(declaration.initializer),
-      ) &&
-      [...queryRoutes].every(([name, routeId]) => {
-        const initializer = formalBindings.get(name)?.initializer;
-        return (
-          isCall(initializer, "useApiQuery") &&
-          initializer.arguments[0] &&
-          ts.isStringLiteralLike(initializer.arguments[0]) &&
-          initializer.arguments[0].text === routeId
-        );
-      }) &&
-      isCall(formalBindings.get("room")?.initializer, "useState") &&
+      ts.isObjectLiteralExpression(collectionInput),
+    "BattleView must call terminalRoomIdsFor exactly once in its reachable terminalRoomIds binding",
+  );
+  must(
+    sameSet(
+      objectKeys(collectionInput),
+      new Set([...expectedSources.keys(), "invite"]),
+    ),
+    "terminalRoomIdsFor input must contain only resultRoomIds, rooms, participations, and invite",
+  );
+  for (const [name, expected] of expectedSources) {
+    const value = objectValue(collectionInput, name);
+    must(
+      value &&
+        ts.isArrayLiteralExpression(value) &&
+        value.elements.length === expected.length &&
+        value.elements.every(isNonEmptyExpression) &&
+        sameSet(new Set(value.elements.map(text)), new Set(expected)),
+      `${name} must receive each exact non-undefined formal terminal entry: ${expected.join(", ")}`,
+    );
+  }
+  must(
+    text(objectValue(collectionInput, "invite")) === "invite.data" &&
+      isNonEmptyExpression(objectValue(collectionInput, "invite")),
+    "invite must receive the exact non-undefined invite.data terminal entry",
+  );
+  for (const [name, declaration] of formalBindings)
+    must(
+      declaration &&
+        bindingNamesIn(view).has(name) &&
+        isNonEmptyExpression(declaration.initializer),
+      `${name} must be a reachable non-undefined BattleView binding`,
+    );
+  for (const [name, routeId] of queryRoutes) {
+    const initializer = formalBindings.get(name)?.initializer;
+    must(
+      isCall(initializer, "useApiQuery") &&
+        initializer.arguments[0] &&
+        ts.isStringLiteralLike(initializer.arguments[0]) &&
+        initializer.arguments[0].text === routeId,
+      `${name} must remain bound to ${routeId}`,
+    );
+  }
+  must(
+    isCall(formalBindings.get("room")?.initializer, "useState") &&
       compactText(formalBindings.get("resultRoomId")?.initializer) ===
         "result?.room_id??null" &&
       compactText(formalBindings.get("participation")?.initializer) ===
         "bootstrap.data?.participation??(bootstrap.data?null:(identity.data?.battle_participation??null))",
-    "every formal result, room, participation, and invite expression must be non-empty, bound, and called directly from BattleView",
+    "local room, result, and participation entry bindings must retain their authoritative sources",
   );
   const collector = oneFunction(source, "terminalRoomIdsFor");
-  must(
-    collector.parent === source &&
-      calls(collector, "isBattleAssetTerminal").length === 3,
-    "terminalRoomIdsFor must be the reachable top-level collector",
-  );
+  checkTerminalCollector(source, collector);
+  checkTerminalCoordinatorFlow(view, observed, terminalIds);
 
   const offline = variableFunction(view, "markOffline");
   const offlineThen = methodCalls(offline, "then").find(
@@ -526,9 +535,221 @@ function checkView(source) {
   must(
     calls(view, "applySnapshot").length === 1 &&
       calls(source, "refreshRouteScopes").length === 0 &&
-      calls(source, "refreshScopes").filter(terminalRefresh).length === 0 &&
-      calls(collector, "isBattleAssetTerminal").length === 3,
+      calls(source, "refreshScopes").filter(terminalRefresh).length === 0,
     "BattleView can observe terminal state but cannot own its refresh",
+  );
+}
+
+function checkTerminalCollector(source, collector) {
+  must(
+    collector.parent === source,
+    "terminalRoomIdsFor must remain a reachable top-level function",
+  );
+  must(
+    collector.parameters.length === 1 &&
+      ts.isObjectBindingPattern(collector.parameters[0].name) &&
+      sameSet(
+        new Set(bindingIdentifiers(collector.parameters[0].name)),
+        new Set(["resultRoomIds", "rooms", "participations", "invite"]),
+      ),
+    "terminalRoomIdsFor must destructure all four collector inputs",
+  );
+  const statements = blockStatements(collector);
+  must(
+    statements.length === 1 &&
+      ts.isReturnStatement(statements[0]) &&
+      statements[0].expression,
+    "terminalRoomIdsFor must compute its result in one reachable top-level return",
+  );
+  const sorted = statements[0].expression;
+  must(
+    isMethodCall(sorted, "sort") && sorted.arguments.length === 0,
+    "terminalRoomIdsFor must return its deterministic sorted room ID array",
+  );
+  const unique = sorted.expression.expression;
+  must(
+    isMethodCall(unique, "filter") &&
+      isUniqueRoomIdPredicate(unique.arguments[0]),
+    "terminalRoomIdsFor room ID output must retain reachable duplicate removal",
+  );
+  const nonNull = unique.expression.expression;
+  must(
+    isMethodCall(nonNull, "filter") &&
+      isNonNullRoomIdPredicate(nonNull.arguments[0]),
+    "terminalRoomIdsFor room ID output must retain reachable null removal",
+  );
+  const entries = nonNull.expression.expression;
+  must(
+    ts.isArrayLiteralExpression(entries) && entries.elements.length === 4,
+    "terminalRoomIdsFor must build one reachable four-source room ID array",
+  );
+  must(
+    isSpreadIdentifier(entries.elements[0], "resultRoomIds"),
+    "resultRoomIds must flow directly into the collector output array",
+  );
+  must(
+    isTerminalRoomMap(entries.elements[1], "rooms", "room", "status"),
+    "rooms must reach isBattleAssetTerminal(room.status) and room.room_id",
+  );
+  must(
+    isTerminalRoomMap(
+      entries.elements[2],
+      "participations",
+      "participation",
+      "status",
+    ),
+    "participations must reach isBattleAssetTerminal(participation.status) and participation.room_id",
+  );
+  must(
+    isTerminalInviteEntry(entries.elements[3]),
+    "invite must reach isInviteRoom, terminal invite_status filtering, and invite.room_id",
+  );
+}
+
+function checkTerminalCoordinatorFlow(view, observed, terminalIds) {
+  must(
+    observed &&
+      text(observed.arguments[0]) === "terminalRoomId" &&
+      !hasStaticallyUnreachableAncestor(observed, view),
+    "collected terminal room IDs must reach reportTerminal as its room ID argument",
+  );
+  const loop = enclosing(observed, ts.isForOfStatement);
+  const declaration =
+    loop &&
+    ts.isVariableDeclarationList(loop.initializer) &&
+    loop.initializer.declarations.length === 1
+      ? loop.initializer.declarations[0]
+      : null;
+  must(
+    loop &&
+      declaration &&
+      text(declaration.name) === "terminalRoomId" &&
+      isMethodCall(loop.expression, "split") &&
+      text(loop.expression.expression.expression) === "terminalRoomIds" &&
+      loop.expression.arguments.length === 1 &&
+      ts.isStringLiteralLike(loop.expression.arguments[0]) &&
+      loop.expression.arguments[0].text === ",",
+    'terminalRoomIds output must feed the coordinator loop through split(",")',
+  );
+  const guard = enclosing(observed, ts.isIfStatement);
+  must(
+    guard === loop.statement &&
+      text(guard.expression) === "terminalRoomId" &&
+      containsNode(guard.thenStatement, observed),
+    "the coordinator loop must reject empty IDs and report each collected room ID",
+  );
+  const microtask = enclosingCall(loop, "queueMicrotask");
+  const task = microtask?.arguments[0];
+  must(
+    microtask &&
+      (ts.isArrowFunction(task) || ts.isFunctionExpression(task)) &&
+      enclosingExecutable(loop) === task &&
+      task.body === loop.parent,
+    "the terminal coordinator loop must execute directly in the queued task",
+  );
+  const effect = enclosingCall(microtask, "useEffect");
+  const effectCallback = effect?.arguments[0];
+  must(
+    effect &&
+      (ts.isArrowFunction(effectCallback) ||
+        ts.isFunctionExpression(effectCallback)) &&
+      enclosingExecutable(microtask) === effectCallback &&
+      ts.isExpressionStatement(effect.parent) &&
+      effect.parent.parent === view.body &&
+      directVariableStatement(view, terminalIds),
+    "the collector output must reach a directly mounted BattleView effect",
+  );
+}
+
+function isSpreadIdentifier(node, name) {
+  return (
+    ts.isSpreadElement(node) &&
+    ts.isIdentifier(node.expression) &&
+    node.expression.text === name
+  );
+}
+
+function isTerminalRoomMap(node, collectionName, itemName, statusName) {
+  if (
+    !ts.isSpreadElement(node) ||
+    !isMethodCall(node.expression, "map") ||
+    text(node.expression.expression.expression) !== collectionName ||
+    node.expression.arguments.length !== 1
+  )
+    return false;
+  const mapper = node.expression.arguments[0];
+  if (
+    !ts.isArrowFunction(mapper) ||
+    mapper.parameters.length !== 1 ||
+    text(mapper.parameters[0].name) !== itemName ||
+    !ts.isConditionalExpression(mapper.body)
+  )
+    return false;
+  const condition = mapper.body.condition;
+  return (
+    ts.isBinaryExpression(condition) &&
+    condition.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken &&
+    text(condition.left) === itemName &&
+    isCall(condition.right, "isBattleAssetTerminal") &&
+    condition.right.arguments.length === 1 &&
+    propertyChain(condition.right.arguments[0]).join(".") ===
+      `${itemName}.${statusName}` &&
+    propertyChain(mapper.body.whenTrue).join(".") === `${itemName}.room_id` &&
+    mapper.body.whenFalse.kind === ts.SyntaxKind.NullKeyword
+  );
+}
+
+function isTerminalInviteEntry(node) {
+  if (!ts.isConditionalExpression(node)) return false;
+  const condition = node.condition;
+  return (
+    ts.isBinaryExpression(condition) &&
+    condition.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken &&
+    isCall(condition.left, "isInviteRoom") &&
+    condition.left.arguments.length === 1 &&
+    text(condition.left.arguments[0]) === "invite" &&
+    isCall(condition.right, "isBattleAssetTerminal") &&
+    condition.right.arguments.length === 1 &&
+    propertyChain(condition.right.arguments[0]).join(".") ===
+      "invite.invite_status" &&
+    propertyChain(node.whenTrue).join(".") === "invite.room_id" &&
+    node.whenFalse.kind === ts.SyntaxKind.NullKeyword
+  );
+}
+
+function isNonNullRoomIdPredicate(node) {
+  if (
+    !ts.isArrowFunction(node) ||
+    node.parameters.length !== 1 ||
+    !ts.isBinaryExpression(node.body)
+  )
+    return false;
+  const roomId = text(node.parameters[0].name);
+  return (
+    node.body.operatorToken.kind ===
+      ts.SyntaxKind.ExclamationEqualsEqualsToken &&
+    text(node.body.left) === roomId &&
+    node.body.right.kind === ts.SyntaxKind.NullKeyword
+  );
+}
+
+function isUniqueRoomIdPredicate(node) {
+  if (
+    !ts.isArrowFunction(node) ||
+    node.parameters.length !== 3 ||
+    !ts.isBinaryExpression(node.body)
+  )
+    return false;
+  const [roomId, index, roomIds] = node.parameters.map((parameter) =>
+    text(parameter.name),
+  );
+  return (
+    node.body.operatorToken.kind === ts.SyntaxKind.EqualsEqualsEqualsToken &&
+    isMethodCall(node.body.left, "indexOf") &&
+    text(node.body.left.expression.expression) === roomIds &&
+    node.body.left.arguments.length === 1 &&
+    text(node.body.left.arguments[0]) === roomId &&
+    text(node.body.right) === index
   );
 }
 
@@ -597,6 +818,123 @@ function runSelfTests() {
         terminalStatement.getStart(viewSource),
         terminalStatement.end,
         `const collectTerminalRoomIdsDead = () => ${terminalInitializer};\n  const terminalRoomIds = "";`,
+      ],
+    ]),
+  );
+  expectRejected(
+    "formal entry cannot use a void reference",
+    paths.view,
+    replaceRanges(viewText, [
+      [entryNodes[0].getStart(viewSource), entryNodes[0].end, "void 0"],
+    ]),
+  );
+
+  const collector = oneFunction(viewSource, "terminalRoomIdsFor");
+  const collectorStatements = blockStatements(collector);
+  const collectorReturn = collectorStatements[0];
+  must(
+    ts.isReturnStatement(collectorReturn) && collectorReturn.expression,
+    "self-test cannot locate collector return",
+  );
+  const collectorResult = text(collectorReturn.expression);
+  const replaceCollectorBody = (replacement) =>
+    replaceRanges(viewText, [
+      [collector.body.getStart(viewSource), collector.body.end, replacement],
+    ]);
+  expectRejected(
+    "internal if(false) calls plus return [] cannot satisfy collection",
+    paths.view,
+    replaceCollectorBody(`{
+  if (false) {
+    isBattleAssetTerminal(undefined);
+    isBattleAssetTerminal(undefined);
+    isBattleAssetTerminal(undefined);
+  }
+  return [];
+}`),
+  );
+  expectRejected(
+    "static false collection cannot satisfy reachable flow",
+    paths.view,
+    replaceCollectorBody(`{
+  if (0) return ${collectorResult};
+  return [];
+}`),
+  );
+  expectRejected(
+    "direct return [] cannot satisfy collection",
+    paths.view,
+    replaceCollectorBody(`{
+  return [];
+}`),
+  );
+  expectRejected(
+    "collection after an unconditional return is unreachable",
+    paths.view,
+    replaceCollectorBody(`{
+  return [];
+  ${text(collectorReturn)}
+}`),
+  );
+  expectRejected(
+    "collection in an uncalled inner function is unreachable",
+    paths.view,
+    replaceCollectorBody(`{
+  const collectTerminalRoomIdsDead = () => ${collectorResult};
+  return [];
+}`),
+  );
+  const resultInput = all(
+    collectorReturn.expression,
+    (node) => ts.isIdentifier(node) && node.text === "resultRoomIds",
+  )[0];
+  must(resultInput, "self-test cannot locate resultRoomIds collector use");
+  expectRejected(
+    "one collector parameter cannot be ignored",
+    paths.view,
+    replaceRanges(viewText, [
+      [resultInput.getStart(viewSource), resultInput.end, "[]"],
+    ]),
+  );
+  const terminalFilter = calls(collector, "isBattleAssetTerminal")[0];
+  must(terminalFilter, "self-test cannot locate terminal filter");
+  expectRejected(
+    "terminal status filtering cannot be deleted",
+    paths.view,
+    replaceRanges(viewText, [
+      [terminalFilter.getStart(viewSource), terminalFilter.end, "true"],
+    ]),
+  );
+  const uniqueFilter = methodCalls(collector, "filter").find((call) =>
+    isUniqueRoomIdPredicate(call.arguments[0]),
+  );
+  must(uniqueFilter, "self-test cannot locate room ID output deduplication");
+  expectRejected(
+    "room ID array output deduplication cannot be deleted",
+    paths.view,
+    replaceRanges(viewText, [
+      [
+        uniqueFilter.getStart(viewSource),
+        uniqueFilter.end,
+        text(uniqueFilter.expression.expression),
+      ],
+    ]),
+  );
+  const observedReport = calls(view, "reportTerminal").find(
+    (call) => text(call.arguments[0]) === "terminalRoomId",
+  );
+  const observedLoop = observedReport
+    ? enclosing(observedReport, ts.isForOfStatement)
+    : null;
+  must(observedLoop, "self-test cannot locate terminal coordinator input");
+  expectRejected(
+    "collector output must be passed to the coordinator",
+    paths.view,
+    replaceRanges(viewText, [
+      [
+        observedLoop.expression.getStart(viewSource),
+        observedLoop.expression.end,
+        '["detached-room-id"]',
       ],
     ]),
   );
