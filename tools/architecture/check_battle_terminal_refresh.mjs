@@ -60,6 +60,10 @@ const authorityCancellationRoutes = new Set([
   "battle.current_invite",
   "battle.team_options",
 ]);
+const bootstrapAbsenceProofs = new Map([
+  ["battle.bootstrap", "current_result.room_id"],
+  ["identity.bootstrap", "battle_result.room_id"],
+]);
 
 try {
   runChecks();
@@ -341,6 +345,7 @@ function checkCoordinator(source) {
   const hook = topLevelFunction(source, "useBattleTerminalRefresh");
   const externalStore = calls(hook, "useSyncExternalStore")[0];
   const getSnapshot = externalStore?.arguments[1];
+  const snapshotPurity = analyzeReachableSnapshotPurity(source, getSnapshot);
   must(
     sameArray(
       hook.parameters.map((parameter) => expressionValue(parameter.name)),
@@ -354,6 +359,10 @@ function checkCoordinator(source) {
       calls(hook, "coordinatorFor").length === 0 &&
       calls(hook, "coordinators.set").length === 0,
     "React must subscribe to one external coordinator and bind suppression to the real route-active lifecycle",
+  );
+  must(
+    snapshotPurity.violations.length === 0,
+    `useSyncExternalStore getSnapshot and reachable local helpers must stay read-only: ${snapshotPurity.violations.join(", ")}`,
   );
   const routeCalls = calls(hook, "setRouteActive");
   must(
@@ -466,6 +475,14 @@ function checkCoordinator(source) {
       calls(finallyCallback, "state.terminalInFlight.delete").length === 1,
     "only a current all-success batch may be remembered; authoritative resultless terminals must release active suppression while failure remains retryable",
   );
+  must(
+    provesDualBootstrapAbsence(
+      thenCallback,
+      resultlessActiveClear,
+      parameterPathSignature(reporter, 1, "roomId"),
+    ),
+    "resultless terminal active release must be control-dependent on both Battle and identity bootstrap proving the same room result absent",
+  );
 
   const prepareAcknowledge = topLevelFunction(source, "prepareAcknowledgement");
   const terminalRetry = calls(prepareAcknowledge, "reportTerminalObservation");
@@ -521,6 +538,14 @@ function checkCoordinator(source) {
       calls(acknowledge, "state.completed.clear").length === 0 &&
       calls(acknowledge, "state.completed.delete").length === 0,
     "only a generation/room/version-current post-ack bootstrap proof may clear active suppression, and completed terminal memory must remain intact",
+  );
+  must(
+    provesDualBootstrapAbsence(
+      acknowledgeThen,
+      activeClear,
+      parameterPathSignature(acknowledge, 1),
+    ),
+    "post-ack active release must be control-dependent on both Battle and identity bootstrap proving the acknowledged room result absent",
   );
 
   const roomReader = topLevelFunction(source, "readCoordinatorRoom");
@@ -891,6 +916,442 @@ function checkExclusiveOwnership(sources) {
   );
 }
 
+function provesDualBootstrapAbsence(root, activeClear, targetSignature) {
+  if (!root || !activeClear || !targetSignature) return false;
+  const bindings = constBindingsBefore(root, activeClear.pos);
+  return exactBootstrapAbsenceControl(
+    root,
+    activeClear,
+    bindings,
+    targetSignature,
+  );
+}
+
+function exactBootstrapAbsenceControl(root, target, bindings, targetSignature) {
+  const conditions = controlFlowConditions(root, target).filter(({ node }) =>
+    containsBootstrapComparison(node, bindings, targetSignature),
+  );
+  if (conditions.length === 0) return false;
+  const routes = [...bootstrapAbsenceProofs.keys()];
+  for (const battleAbsent of [false, true])
+    for (const identityAbsent of [false, true]) {
+      const absence = new Map([
+        [routes[0], battleAbsent],
+        [routes[1], identityAbsent],
+      ]);
+      let reachesTarget = true;
+      for (const condition of conditions) {
+        const value = bootstrapPredicateValue(
+          condition.node,
+          bindings,
+          targetSignature,
+          absence,
+        );
+        if (value === null) return false;
+        if (value !== condition.whenTrue) reachesTarget = false;
+      }
+      if (reachesTarget !== (battleAbsent && identityAbsent)) return false;
+    }
+  return true;
+}
+
+function controlFlowConditions(root, target) {
+  const conditions = [];
+  let child = target;
+  while (child && child !== root) {
+    const parent = child.parent;
+    if (!parent) break;
+    if (ts.isIfStatement(parent)) {
+      if (child === parent.thenStatement)
+        conditions.push({ node: parent.expression, whenTrue: true });
+      else if (child === parent.elseStatement)
+        conditions.push({ node: parent.expression, whenTrue: false });
+    }
+    if (ts.isBlock(parent)) {
+      const index = parent.statements.indexOf(child);
+      if (index >= 0)
+        for (const statement of parent.statements.slice(0, index)) {
+          if (!ts.isIfStatement(statement)) continue;
+          const thenExits = statementAlwaysExits(statement.thenStatement);
+          const elseExits = statement.elseStatement
+            ? statementAlwaysExits(statement.elseStatement)
+            : false;
+          if (thenExits && !elseExits)
+            conditions.push({ node: statement.expression, whenTrue: false });
+          if (elseExits && !thenExits)
+            conditions.push({ node: statement.expression, whenTrue: true });
+        }
+    }
+    child = parent;
+  }
+  return conditions;
+}
+
+function containsBootstrapComparison(expression, bindings, targetSignature) {
+  let found = false;
+  walk(expression, (node) => {
+    if (
+      !found &&
+      ts.isBinaryExpression(node) &&
+      bootstrapComparison(node, bindings, targetSignature)
+    )
+      found = true;
+  });
+  return found;
+}
+
+function bootstrapPredicateValue(
+  expression,
+  bindings,
+  targetSignature,
+  absence,
+) {
+  const node = unwrap(expression);
+  if (!node) return null;
+  const comparison = ts.isBinaryExpression(node)
+    ? bootstrapComparison(node, bindings, targetSignature)
+    : null;
+  if (comparison) {
+    const isAbsent = absence.get(comparison.routeId);
+    return comparison.equality ? !isAbsent : isAbsent;
+  }
+  if (node.kind === ts.SyntaxKind.TrueKeyword) return true;
+  if (node.kind === ts.SyntaxKind.FalseKeyword) return false;
+  if (
+    ts.isPrefixUnaryExpression(node) &&
+    node.operator === ts.SyntaxKind.ExclamationToken
+  ) {
+    const value = bootstrapPredicateValue(
+      node.operand,
+      bindings,
+      targetSignature,
+      absence,
+    );
+    return value === null ? null : !value;
+  }
+  if (
+    ts.isBinaryExpression(node) &&
+    [ts.SyntaxKind.AmpersandAmpersandToken, ts.SyntaxKind.BarBarToken].includes(
+      node.operatorToken.kind,
+    )
+  ) {
+    const left = bootstrapPredicateValue(
+      node.left,
+      bindings,
+      targetSignature,
+      absence,
+    );
+    const right = bootstrapPredicateValue(
+      node.right,
+      bindings,
+      targetSignature,
+      absence,
+    );
+    if (left === null || right === null) return null;
+    return node.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken
+      ? left && right
+      : left || right;
+  }
+  return null;
+}
+
+function bootstrapComparison(node, bindings, targetSignature) {
+  if (!ts.isBinaryExpression(node)) return null;
+  const equality = new Map([
+    [ts.SyntaxKind.EqualsEqualsToken, true],
+    [ts.SyntaxKind.EqualsEqualsEqualsToken, true],
+    [ts.SyntaxKind.ExclamationEqualsToken, false],
+    [ts.SyntaxKind.ExclamationEqualsEqualsToken, false],
+  ]).get(node.operatorToken.kind);
+  if (equality === undefined) return null;
+  for (const [proofExpression, targetExpression] of [
+    [node.left, node.right],
+    [node.right, node.left],
+  ]) {
+    const proof = bootstrapProofReference(proofExpression, bindings);
+    if (
+      proof &&
+      bootstrapAbsenceProofs.get(proof.routeId) === proof.path &&
+      resolvedExpressionSignature(targetExpression, bindings) ===
+        targetSignature
+    )
+      return { routeId: proof.routeId, equality };
+  }
+  return null;
+}
+
+function bootstrapProofReference(expression, bindings, seen = new Set()) {
+  const node = unwrap(expression);
+  if (!node) return null;
+  if (ts.isIdentifier(node)) {
+    if (seen.has(node.text)) return null;
+    const initializer = bindings.get(node.text);
+    if (!initializer) return null;
+    return bootstrapProofReference(
+      initializer,
+      bindings,
+      new Set([...seen, node.text]),
+    );
+  }
+  if (
+    ts.isCallExpression(node) &&
+    callPath(node.expression) === "getApiQueryData"
+  ) {
+    const routeId = stringArgument(node, 1);
+    return bootstrapAbsenceProofs.has(routeId) ? { routeId, path: "" } : null;
+  }
+  if (ts.isPropertyAccessExpression(node)) {
+    const base = bootstrapProofReference(node.expression, bindings, seen);
+    return base
+      ? {
+          routeId: base.routeId,
+          path: base.path ? `${base.path}.${node.name.text}` : node.name.text,
+        }
+      : null;
+  }
+  if (ts.isElementAccessExpression(node)) {
+    const property = unwrap(node.argumentExpression);
+    const base = bootstrapProofReference(node.expression, bindings, seen);
+    return base && property && ts.isStringLiteralLike(property)
+      ? {
+          routeId: base.routeId,
+          path: base.path ? `${base.path}.${property.text}` : property.text,
+        }
+      : null;
+  }
+  return null;
+}
+
+function resolvedExpressionSignature(expression, bindings, seen = new Set()) {
+  const node = unwrap(expression);
+  if (!node) return "";
+  if (ts.isIdentifier(node)) {
+    if (seen.has(node.text)) return node.text;
+    const initializer = bindings.get(node.text);
+    return initializer
+      ? resolvedExpressionSignature(
+          initializer,
+          bindings,
+          new Set([...seen, node.text]),
+        )
+      : node.text;
+  }
+  if (ts.isPropertyAccessExpression(node)) {
+    const base = resolvedExpressionSignature(node.expression, bindings, seen);
+    return base ? `${base}.${node.name.text}` : node.name.text;
+  }
+  if (ts.isElementAccessExpression(node)) {
+    const base = resolvedExpressionSignature(node.expression, bindings, seen);
+    const property = unwrap(node.argumentExpression);
+    return property && ts.isStringLiteralLike(property)
+      ? `${base}.${property.text}`
+      : `${base}[${expressionValue(node.argumentExpression)}]`;
+  }
+  if (ts.isStringLiteralLike(node) || ts.isNumericLiteral(node))
+    return node.text;
+  return expressionValue(node);
+}
+
+function parameterPathSignature(fn, index, property = "") {
+  const name = fn?.parameters[index]?.name;
+  if (!name || !ts.isIdentifier(name)) return "";
+  return property ? `${name.text}.${property}` : name.text;
+}
+
+function constBindingsBefore(root, before) {
+  const bindings = new Map();
+  walkWithinFunction(root, (node) => {
+    if (
+      node.pos < before &&
+      ts.isVariableDeclaration(node) &&
+      ts.isIdentifier(node.name) &&
+      node.initializer &&
+      ts.isVariableDeclarationList(node.parent) &&
+      (node.parent.flags & ts.NodeFlags.Const) !== 0
+    )
+      bindings.set(node.name.text, node.initializer);
+  });
+  return bindings;
+}
+
+function statementAlwaysExits(statement) {
+  if (!statement) return false;
+  if (ts.isReturnStatement(statement) || ts.isThrowStatement(statement))
+    return true;
+  if (ts.isBlock(statement))
+    return (
+      statement.statements.length > 0 &&
+      statementAlwaysExits(statement.statements.at(-1))
+    );
+  return (
+    ts.isIfStatement(statement) &&
+    Boolean(statement.elseStatement) &&
+    statementAlwaysExits(statement.thenStatement) &&
+    statementAlwaysExits(statement.elseStatement)
+  );
+}
+
+function analyzeReachableSnapshotPurity(source, expression) {
+  const root = callbackExpression(expression);
+  if (!root) return { violations: ["missing getSnapshot callback"] };
+  const functions = topLevelFunctionMap(source);
+  const sharedCollections = topLevelSharedCollections(source);
+  const queue = [root];
+  const visited = new Set();
+  const violations = new Set();
+  while (queue.length > 0) {
+    const fn = queue.shift();
+    if (!fn || visited.has(fn)) continue;
+    visited.add(fn);
+    const bindings = constBindingsBefore(fn, Number.POSITIVE_INFINITY);
+    const collectionAliases = collectionAliasNames(bindings, sharedCollections);
+    walkWithinFunction(fn, (node) => {
+      if (!ts.isCallExpression(node)) return;
+      const mutation = sharedCollectionMutation(node, collectionAliases);
+      if (mutation) violations.add(mutation);
+      const functionName = localFunctionTarget(
+        node.expression,
+        bindings,
+        functions,
+      );
+      if (functionName) {
+        if (functionName === "coordinatorFor")
+          violations.add("reachable call to coordinatorFor");
+        queue.push(functions.get(functionName));
+      }
+      const callee = unwrap(node.expression);
+      if (callee && isFunction(callee)) queue.push(callee);
+      for (const argument of node.arguments) {
+        const callback = unwrap(argument);
+        if (callback && isFunction(callback)) queue.push(callback);
+      }
+    });
+  }
+  return { violations: [...violations] };
+}
+
+function callbackExpression(expression) {
+  const node = unwrap(expression);
+  if (!node) return null;
+  if (isFunction(node)) return node;
+  if (ts.isCallExpression(node)) {
+    const callback = unwrap(node.arguments[0]);
+    return callback && isFunction(callback) ? callback : null;
+  }
+  return null;
+}
+
+function topLevelFunctionMap(source) {
+  const functions = new Map();
+  for (const statement of source.statements) {
+    if (ts.isFunctionDeclaration(statement) && statement.name && statement.body)
+      functions.set(statement.name.text, statement);
+    if (!ts.isVariableStatement(statement)) continue;
+    for (const declaration of statement.declarationList.declarations) {
+      const initializer = declaration.initializer
+        ? unwrap(declaration.initializer)
+        : null;
+      if (
+        ts.isIdentifier(declaration.name) &&
+        initializer &&
+        isFunction(initializer)
+      )
+        functions.set(declaration.name.text, initializer);
+    }
+  }
+  return functions;
+}
+
+function topLevelSharedCollections(source) {
+  const names = new Set();
+  for (const statement of source.statements) {
+    if (!ts.isVariableStatement(statement)) continue;
+    for (const declaration of statement.declarationList.declarations) {
+      const initializer = declaration.initializer
+        ? unwrap(declaration.initializer)
+        : null;
+      if (
+        ts.isIdentifier(declaration.name) &&
+        initializer &&
+        ts.isNewExpression(initializer) &&
+        ["Map", "Set"].includes(expressionValue(initializer.expression))
+      )
+        names.add(declaration.name.text);
+    }
+  }
+  return names;
+}
+
+function collectionAliasNames(bindings, sharedCollections) {
+  const aliases = new Set(sharedCollections);
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const [name, initializer] of bindings) {
+      const target = unwrap(initializer);
+      if (
+        ts.isIdentifier(target) &&
+        aliases.has(target.text) &&
+        !aliases.has(name)
+      ) {
+        aliases.add(name);
+        changed = true;
+      }
+    }
+  }
+  return aliases;
+}
+
+function sharedCollectionMutation(call, aliases) {
+  const callee = unwrap(call.expression);
+  let receiver;
+  let method = "";
+  if (ts.isPropertyAccessExpression(callee)) {
+    receiver = unwrap(callee.expression);
+    method = callee.name.text;
+  } else if (ts.isElementAccessExpression(callee)) {
+    receiver = unwrap(callee.expression);
+    const property = unwrap(callee.argumentExpression);
+    method = property && ts.isStringLiteralLike(property) ? property.text : "";
+  }
+  return receiver &&
+    ts.isIdentifier(receiver) &&
+    aliases.has(receiver.text) &&
+    ["set", "add", "delete", "clear"].includes(method)
+    ? `${receiver.text}.${method}`
+    : "";
+}
+
+function localFunctionTarget(
+  expression,
+  bindings,
+  functions,
+  seen = new Set(),
+) {
+  const node = unwrap(expression);
+  if (!node || !ts.isIdentifier(node)) return "";
+  if (functions.has(node.text)) return node.text;
+  if (seen.has(node.text)) return "";
+  const initializer = bindings.get(node.text);
+  return initializer
+    ? localFunctionTarget(
+        initializer,
+        bindings,
+        functions,
+        new Set([...seen, node.text]),
+      )
+    : "";
+}
+
+function walkWithinFunction(root, visit) {
+  const traverse = (node) => {
+    visit(node);
+    if (node !== root && isFunction(node)) return;
+    ts.forEachChild(node, traverse);
+  };
+  traverse(root);
+}
+
 function runSelfTests() {
   const fixtures = [
     fixture(paths.command, "direct command room GET", (source, text) => {
@@ -989,6 +1450,28 @@ function runSelfTests() {
         );
         return replaceNode(text, clear, "void state.active");
       },
+    ),
+    fixture(
+      paths.coordinator,
+      "resultless-unconditional-clear",
+      (source, text) => {
+        const fn = topLevelFunction(source, "reportTerminalObservation");
+        const callback = callbackOfCall(calls(fn, "batch.then")[0]);
+        const clear = assignments(callback).find(
+          (node) =>
+            expressionValue(node.left) === "state.active" &&
+            expressionValue(node.right) === "null",
+        );
+        const bindings = constBindingsBefore(callback, clear.pos);
+        const target = parameterPathSignature(fn, 1, "roomId");
+        const guard = ifStatements(callback).find(
+          (node) =>
+            containsNode(node.thenStatement, clear) &&
+            containsBootstrapComparison(node.expression, bindings, target),
+        );
+        return replaceNode(text, guard, guard.thenStatement.getText());
+      },
+      "resultless terminal active release must be control-dependent",
     ),
     fixture(
       paths.query,
@@ -1178,6 +1661,29 @@ function runSelfTests() {
     ),
     fixture(
       paths.coordinator,
+      "post-ack-unconditional-clear",
+      (source, text) => {
+        const fn = topLevelFunction(source, "confirmAcknowledgedResult");
+        const callback = callbackOfCall(calls(fn, "batch.then")[0]);
+        const clear = assignments(callback).find(
+          (node) =>
+            expressionValue(node.left) === "state.active" &&
+            expressionValue(node.right) === "null",
+        );
+        const bindings = constBindingsBefore(callback, clear.pos);
+        const target = parameterPathSignature(fn, 1);
+        const guard = ifStatements(callback).find(
+          (node) =>
+            node.pos < clear.pos &&
+            statementAlwaysExits(node.thenStatement) &&
+            containsBootstrapComparison(node.expression, bindings, target),
+        );
+        return replaceNode(text, guard.expression, "false");
+      },
+      "post-ack active release must be control-dependent",
+    ),
+    fixture(
+      paths.coordinator,
       "post-ack bootstrap erases completed memory",
       (source, text) => {
         const fn = topLevelFunction(source, "confirmAcknowledgedResult");
@@ -1204,12 +1710,26 @@ function runSelfTests() {
         );
       },
     ),
+    fixture(
+      paths.coordinator,
+      "snapshot-helper-creates-coordinator",
+      (source, text) => {
+        const fn = topLevelFunction(source, "coordinatorVersion");
+        const version = returnExpressions(fn)[0];
+        return replaceNode(text, version, "coordinatorFor(generation).version");
+      },
+      "useSyncExternalStore getSnapshot and reachable local helpers must stay read-only",
+    ),
   ];
 
-  for (const { fileName, label, mutate } of fixtures) {
+  for (const { fileName, label, mutate, expectedMessage } of fixtures) {
     const original = fs.readFileSync(fileName, "utf8");
     const source = parseText(fileName, original);
     const mutated = mutate(source, original);
+    must(
+      mutated !== original,
+      `Architecture negative fixture did not mutate its target: ${label}`,
+    );
     const fixtureSource = parseText(fileName, mutated);
     must(
       fixtureSource.parseDiagnostics.length === 0,
@@ -1217,17 +1737,23 @@ function runSelfTests() {
     );
     const overrides = new Map([[fileName, mutated]]);
     let rejected = false;
+    let rejectionMessage = "";
     try {
       runChecks(overrides);
-    } catch {
+    } catch (cause) {
       rejected = true;
+      rejectionMessage = cause instanceof Error ? cause.message : String(cause);
     }
     must(rejected, `Architecture self-test accepted invalid fixture: ${label}`);
+    must(
+      !expectedMessage || rejectionMessage.includes(expectedMessage),
+      `Architecture negative fixture failed for an unrelated reason: ${label}: ${rejectionMessage}`,
+    );
   }
 }
 
-function fixture(fileName, label, mutate) {
-  return { fileName, label, mutate };
+function fixture(fileName, label, mutate, expectedMessage = "") {
+  return { fileName, label, mutate, expectedMessage };
 }
 
 function parse(fileName, overrides) {
