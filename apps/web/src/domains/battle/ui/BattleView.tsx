@@ -2,6 +2,7 @@ import { AlertTriangle, RefreshCw } from "lucide-react";
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -49,6 +50,7 @@ import { useBattleCommand } from "../useBattleCommand.ts";
 import { useBattleDeadline } from "../useBattleDeadline.ts";
 import {
   isBattleAssetTerminal,
+  type BattleTerminalObservation,
   useBattleTerminalRefresh,
 } from "../useBattleTerminalRefresh.ts";
 import { BattleArena } from "./BattleArena.tsx";
@@ -89,6 +91,13 @@ export function BattleView(): ReactNode {
   const pageActive = usePageActive();
   const [params, setParams] = usePageSearchParams();
   const session = useSession();
+  const sessionGeneration = session?.generation ?? null;
+  const {
+    reportTerminal,
+    failure: terminalRefreshFailure,
+    active: activeTerminal,
+    isLocked: isTerminalLocked,
+  } = useBattleTerminalRefresh(sessionGeneration);
   const { requestTopup } = useNavigationIntent();
   const identity = useApiQuery("identity.bootstrap", {}, pageActive);
   const bootstrap = useApiQuery("battle.bootstrap", {}, pageActive);
@@ -99,12 +108,12 @@ export function BattleView(): ReactNode {
   const roomQuery = useApiQuery(
     "battle.room",
     { room_id: roomId ?? inactiveRoomId },
-    pageActive && roomId !== null,
+    pageActive && roomId !== null && !isTerminalLocked(roomId),
   );
   const invite = useApiQuery(
     "battle.current_invite",
     {},
-    pageActive && roomId === null,
+    pageActive && roomId === null && activeTerminal === null,
   );
   const resumeOrderId = params.get("resume");
   const topups = useApiQuery(
@@ -138,9 +147,6 @@ export function BattleView(): ReactNode {
   const lifecycleRun = useRef(0);
   const lifecycleReadyRef = useRef(false);
   const authorityHealthy = useRef(false);
-  const sessionGeneration = session?.generation ?? null;
-  const { reportTerminal, failure: terminalRefreshFailure } =
-    useBattleTerminalRefresh(sessionGeneration);
   const refetchBootstrap = bootstrap.refetch;
   const refetchRoom = roomQuery.refetch;
   const refetchInvite = invite.refetch;
@@ -158,37 +164,52 @@ export function BattleView(): ReactNode {
     (snapshot: BattleRoomSnapshotDto) => {
       if (getSession()?.generation !== sessionGeneration) return;
       applySnapshot(snapshot);
-      if (isBattleAssetTerminal(snapshot.status))
-        void reportTerminal(snapshot.room_id);
+      if (isBattleAssetTerminal(snapshot.status)) {
+        presenceRoomRef.current = null;
+        lifecycleReadyRef.current = false;
+        for (const request of heartbeatRequests.current) request.abort();
+        heartbeatRequests.current.clear();
+        void reportTerminal({
+          roomId: snapshot.room_id,
+          stateVersion: snapshot.state_version,
+        });
+      }
     },
     [applySnapshot, reportTerminal, sessionGeneration],
   );
   const refetchAuthority = useCallback(async () => {
+    if (isTerminalLocked(roomId)) {
+      authorityHealthy.current = true;
+      return;
+    }
     authorityHealthy.current = false;
     try {
-      const [battleResult, contextResult] = await Promise.all([
-        refetchBootstrap(),
-        roomId
-          ? refetchRoom().then((result) => ({
-              isError: result.isError,
-              room: result.data ?? null,
-            }))
-          : refetchInvite().then((result) => ({
-              isError: result.isError,
-              room: null,
-            })),
-      ]);
-      authorityHealthy.current =
-        !battleResult.isError || !contextResult.isError;
-      const candidates = [battleResult.data?.room, contextResult.room].filter(
-        (candidate): candidate is BattleRoomSnapshotDto => Boolean(candidate),
-      );
-      if (candidates.length > 0)
-        onAuthoritativeRoom(
-          candidates.reduce((newest, candidate) =>
-            compareSnapshots(candidate, newest) > 0 ? candidate : newest,
-          ),
+      if (roomId) {
+        const roomResult = await refetchRoom();
+        if (roomResult.data && isBattleAssetTerminal(roomResult.data.status)) {
+          authorityHealthy.current = !roomResult.isError;
+          onAuthoritativeRoom(roomResult.data);
+          return;
+        }
+        const battleResult = await refetchBootstrap();
+        authorityHealthy.current = !roomResult.isError || !battleResult.isError;
+        const candidates = [roomResult.data, battleResult.data?.room].filter(
+          (candidate): candidate is BattleRoomSnapshotDto => Boolean(candidate),
         );
+        if (candidates.length > 0)
+          onAuthoritativeRoom(
+            candidates.reduce((newest, candidate) =>
+              compareSnapshots(candidate, newest) > 0 ? candidate : newest,
+            ),
+          );
+        return;
+      }
+      const [battleResult, inviteResult] = await Promise.all([
+        refetchBootstrap(),
+        refetchInvite(),
+      ]);
+      authorityHealthy.current = !battleResult.isError || !inviteResult.isError;
+      if (battleResult.data?.room) onAuthoritativeRoom(battleResult.data.room);
     } catch {
       authorityHealthy.current = false;
     }
@@ -197,6 +218,7 @@ export function BattleView(): ReactNode {
     refetchBootstrap,
     refetchInvite,
     refetchRoom,
+    isTerminalLocked,
     roomId,
   ]);
   const refetchRef = useRef(refetchAuthority);
@@ -271,29 +293,29 @@ export function BattleView(): ReactNode {
     (bootstrap.data ? null : (identity.data?.battle_result ?? null));
   const result =
     currentResult?.room_id === dismissedResult ? null : currentResult;
-  const resultRoomId = result?.room_id ?? null;
   const inviteRoom = isInviteRoom(invite.data) ? invite.data : null;
-  const terminalRoomIds = terminalRoomIdsFor({
-    resultRoomIds: [
-      resultRoomId,
-      bootstrap.data?.current_result?.room_id ?? null,
-      identity.data?.battle_result?.room_id ?? null,
-    ],
-    rooms: [room, bootstrap.data?.room, roomQuery.data],
-    participations: [
-      participation,
+  const terminalObservations = useMemo(
+    () =>
+      terminalObservationsFor({
+        rooms: [room, bootstrap.data?.room, roomQuery.data],
+        participations: [
+          participation,
+          bootstrap.data?.participation,
+          identity.data?.battle_participation,
+        ],
+      }),
+    [
       bootstrap.data?.participation,
+      bootstrap.data?.room,
       identity.data?.battle_participation,
+      participation,
+      room,
+      roomQuery.data,
     ],
-    invite: invite.data,
-  }).join(",");
-  const terminalObservationKey = [
-    terminalRoomIds,
-    identity.dataUpdatedAt,
-    bootstrap.dataUpdatedAt,
-    roomQuery.dataUpdatedAt,
-    invite.dataUpdatedAt,
-  ].join(":");
+  );
+  const terminalObservationKey = terminalObservations
+    .map((observation) => `${observation.roomId}:${observation.stateVersion}`)
+    .join(",");
   const pageState = derivePageState({
     result: Boolean(result),
     room,
@@ -321,13 +343,13 @@ export function BattleView(): ReactNode {
     let cancelled = false;
     queueMicrotask(() => {
       if (cancelled) return;
-      for (const terminalRoomId of terminalRoomIds.split(","))
-        if (terminalRoomId) void reportTerminal(terminalRoomId);
+      for (const observation of terminalObservations)
+        void reportTerminal(observation);
     });
     return () => {
       cancelled = true;
     };
-  }, [reportTerminal, terminalObservationKey, terminalRoomIds]);
+  }, [reportTerminal, terminalObservationKey, terminalObservations]);
 
   useEffect(() => {
     let cancelled = false;
@@ -441,7 +463,8 @@ export function BattleView(): ReactNode {
       pageActive &&
       Boolean(session) &&
       realtimePhase !== "idle" &&
-      pageState !== "result",
+      pageState !== "result" &&
+      !isTerminalLocked(room?.room_id ?? roomId),
     pageActive,
     contextKey: room?.room_id ?? inviteRoom?.room_id ?? session?.userId ?? "",
     phase: realtimePhase,
@@ -460,6 +483,7 @@ export function BattleView(): ReactNode {
   const markOffline = useCallback(() => {
     lifecycleReadyRef.current = false;
     const presenceRoomId = presenceRoomRef.current;
+    if (isTerminalLocked(presenceRoomId)) return;
     const snapshot = roomRef.current;
     if (!presenceRoomId || !snapshot || snapshot.room_id !== presenceRoomId)
       return;
@@ -489,7 +513,7 @@ export function BattleView(): ReactNode {
         )
           await refetchRef.current();
       });
-  }, [onAuthoritativeRoom]);
+  }, [isTerminalLocked, onAuthoritativeRoom]);
 
   useEffect(() => {
     const run = ++lifecycleRun.current;
@@ -922,7 +946,10 @@ export function BattleView(): ReactNode {
               className="secondary"
               onClick={() => {
                 if (terminalRefreshFailure) {
-                  void reportTerminal(terminalRefreshFailure.roomId);
+                  void reportTerminal({
+                    roomId: terminalRefreshFailure.roomId,
+                    stateVersion: terminalRefreshFailure.stateVersion,
+                  });
                 } else {
                   void refetchAuthority();
                 }
@@ -1303,37 +1330,48 @@ async function applyPresenceFailureScopes(cause: unknown): Promise<void> {
   await refreshScopes(scopes).catch(() => undefined);
 }
 
-function terminalRoomIdsFor({
-  resultRoomIds,
+function terminalObservationsFor({
   rooms,
   participations,
-  invite,
 }: {
-  resultRoomIds: readonly (string | null)[];
   rooms: readonly (BattleRoomSnapshotDto | null | undefined)[];
   participations: readonly (
     | RouteOutput<"battle.bootstrap">["participation"]
     | undefined
   )[];
-  invite: Invite | undefined;
-}): string[] {
+}): BattleTerminalObservation[] {
   return [
-    ...resultRoomIds,
     ...rooms.map((room) =>
-      room && isBattleAssetTerminal(room.status) ? room.room_id : null,
+      room && isBattleAssetTerminal(room.status)
+        ? { roomId: room.room_id, stateVersion: room.state_version }
+        : null,
     ),
     ...participations.map((participation) =>
       participation && isBattleAssetTerminal(participation.status)
-        ? participation.room_id
+        ? {
+            roomId: participation.room_id,
+            stateVersion: participation.state_version,
+          }
         : null,
     ),
-    isInviteRoom(invite) && isBattleAssetTerminal(invite.invite_status)
-      ? invite.room_id
-      : null,
   ]
-    .filter((roomId): roomId is string => roomId !== null)
-    .filter((roomId, index, roomIds) => roomIds.indexOf(roomId) === index)
-    .sort();
+    .filter(
+      (observation): observation is BattleTerminalObservation =>
+        observation !== null,
+    )
+    .filter(
+      (observation, index, observations) =>
+        observations.findIndex(
+          (candidate) =>
+            candidate.roomId === observation.roomId &&
+            candidate.stateVersion === observation.stateVersion,
+        ) === index,
+    )
+    .sort(
+      (left, right) =>
+        left.roomId.localeCompare(right.roomId) ||
+        left.stateVersion - right.stateVersion,
+    );
 }
 
 function shareFailureText(failure: TelegramShareFailure): string {

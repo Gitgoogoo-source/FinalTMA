@@ -66,6 +66,33 @@ export function prefetchApiQuery<Id extends RouteId>(
   });
 }
 
+export function fetchApiQuery<Id extends RouteId>(
+  routeId: Id,
+  input: RouteInput<Id> = {} as RouteInput<Id>,
+): Promise<RouteOutput<Id>> {
+  const generation = getSession()?.generation ?? "public";
+  return queryClient.fetchQuery({
+    queryKey: [generation, "v1", routeId, input],
+    queryFn: async ({ signal }) => {
+      const result = await apiRequest(routeId, input, { signal });
+      assertCurrentSession(generation, routeById(routeId).auth);
+      return result.data;
+    },
+    staleTime: 0,
+  });
+}
+
+export function cancelApiQueries(routeIds: readonly RouteId[]): Promise<void> {
+  const generation = getSession()?.generation;
+  if (!generation) return Promise.resolve();
+  const selected = new Set<RouteId>(routeIds);
+  return queryClient.cancelQueries({
+    predicate: (query) =>
+      query.queryKey[0] === generation &&
+      selected.has(query.queryKey[2] as RouteId),
+  });
+}
+
 export function useApiQuery<Id extends RouteId>(
   routeId: Id,
   input: RouteInput<Id> = {} as RouteInput<Id>,
