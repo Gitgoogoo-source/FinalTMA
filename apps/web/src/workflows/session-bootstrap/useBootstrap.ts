@@ -7,7 +7,7 @@ import {
   newIdempotencyKey,
   resetSessionRecovery,
 } from "../../platform/api/client.ts";
-import { prefetchApiQuery, seedApiQuery } from "../../platform/query/index.ts";
+import { fetchApiQuery, prefetchApiQuery } from "../../platform/query/index.ts";
 import {
   clearSensitiveState,
   getSession,
@@ -223,16 +223,11 @@ export function useBootstrap(): BootstrapState & { retry(): void } {
           session: getSession(),
           notice: context.notice,
         });
-        const bootstrap = await apiRequest(
-          "identity.bootstrap",
-          {},
-          { signal: controller.signal },
-        );
+        await fetchApiQuery("identity.bootstrap");
         if (!active()) return;
         const currentSession = getSession();
         if (!currentSession || currentSession.accountStatus !== "normal")
           return;
-        seedApiQuery("identity.bootstrap", {}, bootstrap.data);
         prefetchSummaries(currentSession.generation);
         setState({
           ...initialState,

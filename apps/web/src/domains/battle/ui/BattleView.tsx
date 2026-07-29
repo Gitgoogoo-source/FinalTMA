@@ -26,6 +26,7 @@ import {
   apiRequest,
 } from "../../../platform/api/client.ts";
 import {
+  getApiQueryData,
   registerForegroundAuthorityRefresh,
   refreshScopes,
   seedApiQuery,
@@ -86,29 +87,41 @@ type PresenceLifecycle = {
 };
 
 const emptySlots: BattleTeamSlots = [null, null, null];
-const inactiveRoomId = "00000000-0000-0000-0000-000000000000";
 
 export function BattleView(): ReactNode {
   const pageActive = usePageActive();
   const [params, setParams] = usePageSearchParams();
   const session = useSession();
   const sessionGeneration = session?.generation ?? null;
+  const cachedIdentity = sessionGeneration
+    ? getApiQueryData(sessionGeneration, "identity.bootstrap")
+    : undefined;
+  const cachedBattle = sessionGeneration
+    ? getApiQueryData(sessionGeneration, "battle.bootstrap")
+    : undefined;
+  const cachedTerminalPresent =
+    terminalObservationsFor({
+      rooms: [cachedBattle?.room],
+      participations: [
+        cachedBattle?.participation,
+        cachedIdentity?.battle_participation,
+      ],
+    }).length > 0;
   const {
     reportTerminal,
     reportNonTerminalRoom,
     prepareAuthorityRecovery,
     readAuthorityRoom,
-    readAuthorityBootstrap,
     finishAuthorityRecovery,
     failure: terminalRefreshFailure,
     active: activeTerminal,
     isLocked: isTerminalLocked,
-  } = useBattleTerminalRefresh(sessionGeneration);
+  } = useBattleTerminalRefresh(sessionGeneration, pageActive);
   const { requestTopup } = useNavigationIntent();
   const identity = useApiQuery(
     "identity.bootstrap",
     {},
-    pageActive && activeTerminal === null,
+    pageActive && activeTerminal === null && !cachedTerminalPresent,
   );
   const identityTerminalParticipation =
     identity.data?.battle_participation &&
@@ -120,21 +133,24 @@ export function BattleView(): ReactNode {
     {},
     pageActive &&
       activeTerminal === null &&
+      !cachedTerminalPresent &&
       identityTerminalParticipation === null,
   );
   const participation =
     bootstrap.data?.participation ??
     (bootstrap.data ? null : (identity.data?.battle_participation ?? null));
-  const roomId = participation?.room_id ?? null;
-  const roomQuery = useApiQuery(
-    "battle.room",
-    { room_id: roomId ?? inactiveRoomId },
-    pageActive && roomId !== null && !isTerminalLocked(roomId),
+  const bootstrapRoomTerminal = Boolean(
+    bootstrap.data?.room && isBattleAssetTerminal(bootstrap.data.room.status),
   );
+  const roomId = participation?.room_id ?? null;
   const invite = useApiQuery(
     "battle.current_invite",
     {},
-    pageActive && roomId === null && activeTerminal === null,
+    pageActive &&
+      roomId === null &&
+      activeTerminal === null &&
+      !cachedTerminalPresent &&
+      !bootstrapRoomTerminal,
   );
   const inviteRoom = isInviteRoom(invite.data) ? invite.data : null;
   const resumeOrderId = params.get("resume");
@@ -208,7 +224,9 @@ export function BattleView(): ReactNode {
   const authorityRoomId =
     room?.room_id ?? roomId ?? inviteRoom?.room_id ?? null;
   const runAuthorityRefresh = useCallback(async (): Promise<boolean> => {
-    if (isTerminalLocked(null)) {
+    if (activeTerminal) {
+      await reportTerminal(activeTerminal);
+      if (!isTerminalLocked(null)) return false;
       authorityHealthy.current = true;
       return false;
     }
@@ -223,22 +241,6 @@ export function BattleView(): ReactNode {
           authorityHealthy.current = true;
           return false;
         }
-        const battleResult = await readAuthorityBootstrap(authorityRoomId);
-        if (isTerminalLocked(null)) return false;
-        if (!battleResult) return false;
-        const candidates = [roomResult, battleResult.room].filter(
-          (candidate): candidate is BattleRoomSnapshotDto => Boolean(candidate),
-        );
-        if (candidates.length > 0)
-          await onAuthoritativeRoom(
-            candidates.reduce((newest, candidate) =>
-              compareSnapshots(candidate, newest) > 0 ? candidate : newest,
-            ),
-          );
-        if (isTerminalLocked(null)) {
-          authorityHealthy.current = true;
-          return false;
-        }
         authorityHealthy.current = true;
         return true;
       }
@@ -248,9 +250,14 @@ export function BattleView(): ReactNode {
       ]);
       if (isTerminalLocked(null)) return false;
       authorityHealthy.current = !battleResult.isError || !inviteResult.isError;
-      if (battleResult.data?.room)
+      if (battleResult.data?.room) {
         await onAuthoritativeRoom(battleResult.data.room);
-      return !isTerminalLocked(null);
+        if (isTerminalLocked(null)) {
+          authorityHealthy.current = true;
+          return false;
+        }
+      }
+      return authorityHealthy.current && !isTerminalLocked(null);
     } catch {
       authorityHealthy.current = false;
       return false;
@@ -259,14 +266,15 @@ export function BattleView(): ReactNode {
         finishAuthorityRecovery(authorityRoomId);
     }
   }, [
+    activeTerminal,
     authorityRoomId,
     finishAuthorityRecovery,
     isTerminalLocked,
     onAuthoritativeRoom,
-    readAuthorityBootstrap,
     readAuthorityRoom,
     refetchBootstrap,
     refetchInvite,
+    reportTerminal,
   ]);
   const refetchAuthority = useCallback((): Promise<boolean> => {
     const existing = authorityInFlight.current;
@@ -296,7 +304,11 @@ export function BattleView(): ReactNode {
       },
     );
   }, [pageActive, refetchAuthority, sessionGeneration]);
-  const command = useBattleCommand(refetchAuthorityVoid, onAuthoritativeRoom);
+  const command = useBattleCommand(
+    refetchAuthorityVoid,
+    onAuthoritativeRoom,
+    readAuthorityRoom,
+  );
   const commandPending =
     command.state.phase === "submitted" || command.state.phase === "recovering";
 
@@ -337,7 +349,7 @@ export function BattleView(): ReactNode {
     let cancelled = false;
     queueMicrotask(() => {
       if (cancelled) return;
-      const candidates = [bootstrap.data?.room, roomQuery.data].filter(
+      const candidates = [bootstrap.data?.room].filter(
         (candidate): candidate is BattleRoomSnapshotDto => Boolean(candidate),
       );
       if (candidates.length === 0) {
@@ -353,7 +365,7 @@ export function BattleView(): ReactNode {
     return () => {
       cancelled = true;
     };
-  }, [bootstrap.data, onAuthoritativeRoom, roomQuery.data]);
+  }, [bootstrap.data, onAuthoritativeRoom]);
 
   useEffect(() => {
     roomRef.current = room;
@@ -367,7 +379,7 @@ export function BattleView(): ReactNode {
   const terminalObservations = useMemo(
     () =>
       terminalObservationsFor({
-        rooms: [room, bootstrap.data?.room, roomQuery.data],
+        rooms: [room, bootstrap.data?.room],
         participations: [
           participation,
           bootstrap.data?.participation,
@@ -380,7 +392,6 @@ export function BattleView(): ReactNode {
       identity.data?.battle_participation,
       participation,
       room,
-      roomQuery.data,
     ],
   );
   const terminalObservationKey = terminalObservations
@@ -588,11 +599,6 @@ export function BattleView(): ReactNode {
           await refetchRef.current();
       });
   }, [isTerminalLocked, onAuthoritativeRoom]);
-
-  useEffect(() => {
-    if (!pageActive && authorityRoomId)
-      finishAuthorityRecovery(authorityRoomId);
-  }, [authorityRoomId, finishAuthorityRecovery, pageActive]);
 
   useEffect(() => {
     const run = ++lifecycleRun.current;
@@ -940,16 +946,12 @@ export function BattleView(): ReactNode {
   };
 
   const queryError =
-    bootstrap.error ??
-    identity.error ??
-    roomQuery.error ??
-    invite.error ??
-    teamOptions.error;
+    bootstrap.error ?? identity.error ?? invite.error ?? teamOptions.error;
   const visibleError = terminalRefreshFailure?.error ?? queryError;
   const loading =
     bootstrap.isLoading ||
     identity.isLoading ||
-    (roomId ? roomQuery.isLoading : invite.isLoading);
+    (roomId ? room === null : invite.isLoading);
   const commandMessage =
     commandPending || command.state.phase === "failed"
       ? command.state.message

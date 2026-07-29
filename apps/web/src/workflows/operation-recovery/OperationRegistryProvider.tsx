@@ -26,7 +26,10 @@ import {
   apiRequest,
   newIdempotencyKey,
 } from "../../platform/api/client.ts";
-import { refreshRouteScopes } from "../../platform/query/index.ts";
+import {
+  fetchApiQuery,
+  refreshRouteScopes,
+} from "../../platform/query/index.ts";
 import {
   getSession,
   registerSensitiveStateResetter,
@@ -623,7 +626,7 @@ export function OperationRegistryProvider({
           }
           const [bootstrap, identity] = await Promise.all([
             apiRequest("gacha.bootstrap", {}),
-            apiRequest("identity.bootstrap", {}),
+            fetchApiQuery("identity.bootstrap"),
           ]);
           if (!isCurrentNormalSession(generation)) return;
           const box = bootstrap.data.boxes.find(
@@ -644,7 +647,7 @@ export function OperationRegistryProvider({
               (tier === "rare" &&
                 bootstrap.data.entitlements.free_rare_box > 0));
           const price = draw_count === 10 ? box.ten_price : box.single_price;
-          const balance = identity.data.assets.kcoin.available;
+          const balance = identity.assets.kcoin.available;
           repeatDecision = {
             result: parsedResult.data,
             estimatedGap: free || balance >= price ? null : price - balance,

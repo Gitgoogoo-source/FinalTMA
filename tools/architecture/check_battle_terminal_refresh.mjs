@@ -22,12 +22,22 @@ const paths = {
     "apps/web/src/workflows/battle-realtime/useBattleRealtime.ts",
   ),
   appShell: path.join(ROOT, "apps/web/src/app/shell/AppShell.tsx"),
+  persistentPages: path.join(
+    ROOT,
+    "apps/web/src/app/router/PersistentPages.tsx",
+  ),
   topAsset: path.join(ROOT, "apps/web/src/app/shell/TopAssetBar.tsx"),
   inventory: path.join(
     ROOT,
     "apps/web/src/domains/inventory/ui/InventoryView.tsx",
   ),
 };
+const protectedRoutes = new Set([
+  "battle.room",
+  "battle.bootstrap",
+  "identity.bootstrap",
+  "inventory.list",
+]);
 const terminalStatuses = new Set([
   "finished",
   "draw",
@@ -35,27 +45,25 @@ const terminalStatuses = new Set([
   "expired",
   "voided",
 ]);
-const terminalReads = new Set([
+const terminalBatchRoutes = new Set([
   "battle.bootstrap",
   "identity.bootstrap",
   "inventory.list",
 ]);
-const terminalTailRoutes = new Set([
+const authorityCancellationRoutes = new Set([
   "battle.bootstrap",
   "battle.room",
   "battle.current_invite",
   "battle.team_options",
-  "identity.bootstrap",
-  "inventory.list",
 ]);
 
 try {
   runChecks();
   if (process.argv.includes("--self-test")) runSelfTests();
   process.stdout.write(
-    `Battle terminal refresh ownership is structurally valid${
+    `Battle terminal authority ownership is structurally valid${
       process.argv.includes("--self-test")
-        ? " and negative architecture fixtures are effective"
+        ? " and syntax-valid negative fixtures are effective"
         : ""
     }\n`,
   );
@@ -73,14 +81,40 @@ function runChecks(overrides = new Map()) {
       parse(fileName, overrides),
     ]),
   );
+  const webSources = sourceFiles(path.join(ROOT, "apps/web/src"), overrides);
+  checkNoDirectProtectedReads(webSources);
   checkQueryBoundary(sources.query);
   checkCoordinator(sources.coordinator);
   checkView(sources.view);
   checkCommand(sources.command);
   checkRealtime(sources.realtime);
+  checkRouteLifecycle(sources.persistentPages);
   checkAppShell(sources.appShell);
   checkObserverConsumers(sources.topAsset, sources.inventory);
-  checkExclusiveOwnership(sources);
+  checkExclusiveOwnership(webSources);
+}
+
+function checkNoDirectProtectedReads(sources) {
+  const bypasses = sources.flatMap((source) =>
+    calls(source, "apiRequest")
+      .filter((call) => protectedRoutes.has(stringArgument(call, 0)))
+      .map((call) => `${source.fileName}:${lineOf(call)}`),
+  );
+  must(
+    bypasses.length === 0,
+    `Protected Battle authority reads bypass the formal owner boundary: ${bypasses.join(", ")}`,
+  );
+  const roomObserverBypasses = sources.flatMap((source) =>
+    ["useApiQuery", "fetchApiQuery", "prefetchApiQuery"].flatMap((callee) =>
+      calls(source, callee)
+        .filter((call) => stringArgument(call, 0) === "battle.room")
+        .map((call) => `${source.fileName}:${lineOf(call)}`),
+    ),
+  );
+  must(
+    roomObserverBypasses.length === 0,
+    `battle.room may only be read by the authority owner batch: ${roomObserverBypasses.join(", ")}`,
+  );
 }
 
 function checkQueryBoundary(source) {
@@ -89,137 +123,137 @@ function checkQueryBoundary(source) {
     client?.initializer && ts.isNewExpression(client.initializer)
       ? client.initializer
       : null;
-  const clientOptions = objectArgument(constructor, 0);
-  const defaults = objectPropertyObject(clientOptions, "defaultOptions");
-  const queries = objectPropertyObject(defaults, "queries");
+  const defaults = objectPropertyObject(
+    objectArgument(constructor, 0),
+    "defaultOptions",
+  );
+  const queryDefaults = objectPropertyObject(defaults, "queries");
   must(
-    booleanProperty(queries, "retry") === false &&
-      booleanProperty(queries, "refetchOnWindowFocus") === false &&
-      booleanProperty(queries, "refetchOnReconnect") === false,
-    "TanStack queries must keep retry, focus refetch, and reconnect refetch disabled",
+    booleanProperty(queryDefaults, "retry") === false &&
+      booleanProperty(queryDefaults, "refetchOnWindowFocus") === false &&
+      booleanProperty(queryDefaults, "refetchOnReconnect") === false,
+    "TanStack retry, focus refetch, and reconnect refetch must stay disabled",
   );
 
-  const prefetcher = topLevelFunction(source, "prefetchApiQuery");
-  const prefetchQuery = calls(prefetcher, "queryClient.prefetchQuery");
-  const prefetchOptions =
-    prefetchQuery.length === 1 ? objectArgument(prefetchQuery[0], 0) : null;
-  const prefetchQueryFn = functionProperty(prefetchOptions, "queryFn");
-  const prefetchRequests = calls(prefetchQueryFn, "apiRequest");
-  const prefetchGuards = calls(prefetchQueryFn, "assertApiQueryAllowed");
+  const ownerBatch = topLevelFunction(source, "fetchApiQueryBatchAsOwner");
+  const ownerRegistration = calls(ownerBatch, "ownedApiQueries.set");
+  const ownerRequests = calls(ownerBatch, "executeApiQueryRequest");
+  const ownerCancellation = calls(ownerBatch, "cancelApiQueries");
+  const resultBatch = calls(ownerBatch, "Promise.all").find(
+    (call) => calls(call, "executeApiQueryRequest").length === 1,
+  );
+  const cacheWrites = calls(ownerBatch, "queryClient.setQueryData");
   must(
-    prefetchRequests.length === 1 &&
-      prefetchGuards.length === 1 &&
-      prefetchGuards[0].pos < prefetchRequests[0].pos,
-    "prefetch queryFn must recheck suppression before network I/O",
+    ownerRegistration.length === 1 &&
+      ownerRequests.length === 1 &&
+      ownerRegistration[0].pos < ownerCancellation[0]?.pos &&
+      ownerCancellation[0]?.pos < ownerRequests[0].pos &&
+      resultBatch &&
+      cacheWrites.length === 1 &&
+      resultBatch.pos < cacheWrites[0].pos,
+    "owned batches must reserve every key, cancel old observers, execute one formal Promise.all, then write formal caches",
+  );
+  must(
+    propertyPaths(ownerBatch).includes("conflict.task") &&
+      calls(ownerBatch, "conflict.task.catch").length === 1 &&
+      calls(ownerBatch, "throwIfAborted").length >= 2 &&
+      calls(ownerBatch, "assertCurrentSession").length >= 2,
+    "owned batch handoff must wait prior owners and recheck abort plus generation around every asynchronous boundary",
   );
 
-  const fetcher = topLevelFunction(source, "fetchApiQuery");
-  const fetchCalls = calls(fetcher, "queryClient.fetchQuery");
-  must(
-    fetchCalls.length === 1,
-    "fetchApiQuery must own exactly one queryClient.fetchQuery call",
-  );
-  const fetchOptions = objectArgument(fetchCalls[0], 0);
-  must(
-    numberProperty(fetchOptions, "staleTime") === 0,
-    "fetchApiQuery must force an authoritative network read with staleTime 0",
-  );
-  const queryKey = objectPropertyExpression(fetchOptions, "queryKey");
-  must(
-    queryKey &&
-      ts.isArrayLiteralExpression(unwrap(queryKey)) &&
-      sameArray(
-        unwrap(queryKey).elements.map((element) => expressionValue(element)),
-        ["generation", "v1", "routeId", "input"],
-      ),
-    "fetchApiQuery must populate the formal generation/v1/route/input cache key",
-  );
-  const queryFn = functionProperty(fetchOptions, "queryFn");
-  const requests = calls(queryFn, "apiRequest");
-  const fetchGuards = calls(queryFn, "assertApiQueryAllowed");
-  must(
-    requests.length === 1 &&
-      fetchGuards.length === 1 &&
-      fetchGuards[0].pos < requests[0].pos &&
-      sameArray(
-        fetchGuards[0].arguments.map((argument) => expressionValue(argument)),
-        ["generation", "routeId", "suppressionOwner"],
-      ) &&
-      expressionValue(requests[0].arguments[0]) === "routeId" &&
-      expressionValue(requests[0].arguments[1]) === "input" &&
-      objectHasShorthand(objectArgument(requests[0], 2), "signal") &&
-      calls(queryFn, "assertCurrentSession").length === 1,
-    "fetchApiQuery must use the formal API client, owner gate, Query signal, and generation guard",
+  const ownerCancellationFunction = topLevelFunction(
+    source,
+    "cancelApiQueryOwner",
   );
   must(
-    forbiddenQueryMethods(fetcher).length === 0,
-    "fetchApiQuery cannot fall back to invalidate/refetch/ensure semantics",
+    calls(ownerCancellationFunction, "batch.controller.abort").length === 1,
+    "only an explicit owner cancellation may abort an owned network batch",
   );
 
-  const canceller = topLevelFunction(source, "cancelApiQueries");
-  const cancelCalls = calls(canceller, "queryClient.cancelQueries");
-  must(
-    cancelCalls.length === 1,
-    "cancelApiQueries must own exactly one queryClient.cancelQueries call",
+  const formalQuery = topLevelFunction(source, "executeApiQuery");
+  const ownedWait = awaitExpressions(formalQuery).find(
+    (node) => expressionValue(node.expression) === "owned.task",
   );
-  const cancelOptions = objectArgument(cancelCalls[0], 0);
-  const predicate = functionProperty(cancelOptions, "predicate");
-  const predicatePaths = new Set(propertyPaths(predicate));
+  const successorRead = calls(formalQuery, "ownedApiQueries.get").at(-1);
+  const ownedCacheRead = calls(formalQuery, "getApiQueryData");
+  const ordinaryGate = calls(formalQuery, "assertApiQueryAllowed");
+  const ordinaryRequest = calls(formalQuery, "executeApiQueryRequest");
   must(
-    predicatePaths.has("query.queryKey") &&
-      calls(predicate, "selected.has").some(
-        (call) => expressionValue(call.arguments[0]) === "query.queryKey[2]",
-      ) &&
-      binaryExpressions(predicate).some(
-        (node) =>
-          node.operatorToken.kind === ts.SyntaxKind.EqualsEqualsEqualsToken &&
-          sameSet(
-            new Set([expressionValue(node.left), expressionValue(node.right)]),
-            new Set(["query.queryKey[0]", "generation"]),
-          ),
-      ),
-    "cancelApiQueries must isolate exact route IDs to the current generation",
+    ownedWait &&
+      successorRead &&
+      ordinaryGate.length === 1 &&
+      ordinaryRequest.length === 1 &&
+      ownedCacheRead.length === 1 &&
+      ownedWait.pos < successorRead.pos &&
+      successorRead.pos < ownedCacheRead[0].pos &&
+      successorRead.pos < ordinaryGate[0].pos &&
+      ordinaryGate[0].pos < ordinaryRequest[0].pos,
+    "ordinary queryFns must await the current owner and every handoff before they may perform network I/O",
   );
+  must(
+    propertyPaths(formalQuery).includes("signal.aborted") === false &&
+      calls(formalQuery, "throwIfAborted").length === 1,
+    "observer cancellation must only stop the waiter after owner completion, never control the owner signal",
+  );
+
+  const network = topLevelFunction(source, "executeApiQueryRequest");
+  const networkRequests = calls(network, "apiRequest");
+  must(
+    networkRequests.length === 1 &&
+      expressionValue(networkRequests[0].arguments[0]) === "routeId" &&
+      expressionValue(networkRequests[0].arguments[1]) === "input" &&
+      objectHasShorthand(objectArgument(networkRequests[0], 2), "signal") &&
+      calls(network, "assertCurrentSession").length === 1,
+    "all formal query network reads must share one API/session-guarded executor",
+  );
+
+  for (const functionName of [
+    "prefetchApiQuery",
+    "fetchApiQuery",
+    "useApiQuery",
+  ])
+    must(
+      calls(topLevelFunction(source, functionName), "executeApiQuery")
+        .length === 1,
+      `${functionName} must use the owner-aware formal query executor`,
+    );
 
   const observer = topLevelFunction(source, "useApiQuery");
-  const subscription = calls(observer, "useSyncExternalStore");
-  const suppressed = variable(observer, "suppressed")?.initializer;
   const observerQuery = calls(observer, "useQuery");
-  const observerOptions =
-    observerQuery.length === 1 ? objectArgument(observerQuery[0], 0) : null;
-  const observerEnabled = unwrap(
-    objectPropertyExpression(observerOptions, "enabled"),
-  );
-  const observerQueryFn = functionProperty(observerOptions, "queryFn");
-  const observerRequests = calls(observerQueryFn, "apiRequest");
-  const observerGuards = calls(observerQueryFn, "assertApiQueryAllowed");
+  const observerOptions = objectArgument(observerQuery[0], 0);
+  const enabled = unwrap(objectPropertyExpression(observerOptions, "enabled"));
+  const guardedRefetch = variableFunction(observer, "refetch");
+  const refetchCall = calls(guardedRefetch, "query.refetch");
   must(
-    subscription.length === 1 &&
-      calls(suppressed, "isApiQuerySuppressed").some((call) =>
-        sameArray(
-          call.arguments.map((argument) => expressionValue(argument)),
-          ["generation", "routeId"],
-        ),
-      ),
-    "all useApiQuery observers must subscribe to the synchronous suppression store",
-  );
-  must(
-    observerEnabled &&
-      ts.isBinaryExpression(observerEnabled) &&
-      observerEnabled.operatorToken.kind ===
-        ts.SyntaxKind.AmpersandAmpersandToken &&
-      expressionValue(observerEnabled.left) === "enabled" &&
-      isNegatedIdentifier(observerEnabled.right, "suppressed") &&
+    calls(observer, "useSyncExternalStore").length === 1 &&
+      enabled &&
+      ts.isBinaryExpression(enabled) &&
+      expressionValue(enabled.left) === "enabled" &&
+      isNegatedIdentifier(enabled.right, "suppressed") &&
       booleanProperty(observerOptions, "refetchOnReconnect") === false,
-    "observer enabled state and reconnect behavior must stay behind the suppression gate",
+    "ordinary observers must subscribe to route suppression and remain disabled behind it",
   );
   must(
-    observerRequests.length === 1 &&
-      observerGuards.length === 1 &&
-      observerGuards[0].pos < observerRequests[0].pos,
-    "ordinary observer queryFn must recheck suppression before network I/O",
+    refetchCall.length === 1 &&
+      booleanProperty(objectArgument(refetchCall[0], 0), "cancelRefetch") ===
+        false,
+    "manual observer refetch must never use cancelRefetch=true",
   );
 
+  for (const call of [
+    ...calls(source, "queryClient.invalidateQueries"),
+    ...calls(source, "queryClient.refetchQueries"),
+  ])
+    must(
+      booleanProperty(objectArgument(call, 1), "cancelRefetch") === false,
+      `ordinary invalidate/refetch must use cancelRefetch=false at ${source.fileName}:${lineOf(call)}`,
+    );
+
+  const invalidator = topLevelFunction(source, "invalidateApiQueries");
+  must(
+    calls(invalidator, "isApiQuerySuppressed").length === 1,
+    "exact-route invalidation must respect active route suppression",
+  );
   for (const functionName of [
     "refreshUserState",
     "refreshTopAssetSummary",
@@ -229,642 +263,426 @@ function checkQueryBoundary(source) {
     must(
       calls(topLevelFunction(source, functionName), "isApiQuerySuppressed")
         .length >= 1,
-      `${functionName} must filter suppressed observers`,
+      `${functionName} must exclude route-suppressed queries`,
     );
-
-  const foreground = topLevelFunction(source, "refreshForegroundState");
-  const authorityRefresh = calls(foreground, "authority.refresh");
-  const foregroundInvalidate = calls(
-    foreground,
-    "queryClient.invalidateQueries",
-  );
-  must(
-    authorityRefresh.length === 1 &&
-      foregroundInvalidate.length === 1 &&
-      authorityRefresh[0].pos < foregroundInvalidate[0].pos &&
-      calls(foreground, "hasApiQuerySuppression").length === 1 &&
-      calls(foreground, "prefixes.delete").length === 1,
-    "foreground refresh must await Battle authority, stop on suppression, and exclude handled prefixes",
-  );
-
-  const suppress = topLevelFunction(source, "suppressApiQueries");
-  const release = topLevelFunction(source, "releaseApiQuerySuppression");
-  must(
-    calls(suppress, "apiQuerySuppressions.set").length === 1 &&
-      calls(suppress, "publishApiQuerySuppressionChange").length === 1 &&
-      calls(release, "apiQuerySuppressions.delete").length === 1 &&
-      calls(release, "publishApiQuerySuppressionChange").length === 1,
-    "suppression ownership must synchronously publish activation and release",
-  );
-  const allowed = topLevelFunction(source, "assertApiQueryAllowed");
-  const allowedGuard = ifStatements(allowed).find(
-    (node) =>
-      calls(node.expression, "isApiQuerySuppressed").length === 1 &&
-      throwStatements(node.thenStatement).length === 1,
-  );
-  must(
-    allowedGuard &&
-      ts.isCallExpression(unwrap(allowedGuard.expression)) &&
-      sameArray(
-        unwrap(allowedGuard.expression).arguments.map((argument) =>
-          expressionValue(argument),
-        ),
-        ["generation", "routeId", "suppressionOwner"],
-      ),
-    "queryFn network guard must throw directly from the canonical suppression predicate",
-  );
-  const suppressionPredicate = topLevelFunction(source, "isApiQuerySuppressed");
-  const some = calls(suppressionPredicate, "some");
-  const suppressionCallback =
-    some.length === 1 && some[0].arguments[0]
-      ? unwrap(some[0].arguments[0])
-      : null;
-  must(
-    suppressionCallback &&
-      isFunction(suppressionCallback) &&
-      calls(suppressionCallback, "suppression.routeIds.has").some(
-        (call) => expressionValue(call.arguments[0]) === "routeId",
-      ) &&
-      binaryExpressions(suppressionCallback).some(
-        (node) =>
-          node.operatorToken.kind ===
-            ts.SyntaxKind.ExclamationEqualsEqualsToken &&
-          sameSet(
-            new Set([expressionValue(node.left), expressionValue(node.right)]),
-            new Set(["owner", "suppressionOwner"]),
-          ),
-      ) &&
-      binaryExpressions(suppressionCallback).some(
-        (node) =>
-          node.operatorToken.kind === ts.SyntaxKind.EqualsEqualsEqualsToken &&
-          sameSet(
-            new Set([expressionValue(node.left), expressionValue(node.right)]),
-            new Set(["suppression.generation", "generation"]),
-          ),
-      ),
-    "suppression predicate must require a different owner, exact generation, and exact route",
-  );
 }
 
 function checkCoordinator(source) {
-  const hook = topLevelFunction(source, "useBattleTerminalRefresh");
-  checkTerminalPredicate(source);
-  const reporter = variableFunction(hook, "reportTerminal");
   must(
-    expressionValue(reporter.parameters[0]?.name) === "observation",
-    "terminal reporter must receive a versioned observation object",
+    sameSet(
+      new Set(arrayStrings(variable(source, "terminalStatuses")?.initializer)),
+      terminalStatuses,
+    ),
+    "terminal predicate must keep the exact five authoritative terminal states",
+  );
+  must(
+    sameSet(
+      new Set(
+        requestArrayRoutes(variable(source, "terminalRequests")?.initializer),
+      ),
+      terminalBatchRoutes,
+    ),
+    "terminal batch must contain exactly Battle bootstrap, identity bootstrap, and inventory",
+  );
+  must(
+    sameSet(
+      new Set(
+        arrayStrings(
+          variable(source, "authorityCancellationRoutes")?.initializer,
+        ),
+      ),
+      authorityCancellationRoutes,
+    ),
+    "authority recovery must cancel every Battle observer tail",
+  );
+  const terminalCancellation = variable(
+    source,
+    "terminalCancellationRoutes",
+  )?.initializer;
+  must(
+    spreadIdentifiers(terminalCancellation).includes(
+      "authorityCancellationRoutes",
+    ) &&
+      sameSet(
+        new Set(arrayStrings(terminalCancellation)),
+        new Set(["identity.bootstrap", "inventory.list"]),
+      ),
+    "terminal latch cancellation must extend authority tails with identity and inventory",
   );
 
+  const hook = topLevelFunction(source, "useBattleTerminalRefresh");
   must(
-    isRefCollection(variable(hook, "inFlight")?.initializer, "Map") &&
-      isRefCollection(variable(hook, "completed")?.initializer, "Set") &&
-      calls(variable(hook, "active")?.initializer, "useRef").length === 1 &&
-      calls(variable(hook, "recovery")?.initializer, "useRef").length === 1 &&
-      calls(variable(hook, "suppressionOwner")?.initializer, "useRef")
-        .length === 1,
-    "coordinator must own in-flight, completed, active, recovery, and suppression owner state",
+    sameArray(
+      hook.parameters.map((parameter) => expressionValue(parameter.name)),
+      ["sessionGeneration", "routeActive"],
+    ) &&
+      calls(hook, "useSyncExternalStore").length === 1 &&
+      calls(hook, "useLayoutEffect").length === 2 &&
+      calls(hook, "setRouteActive").length >= 2,
+    "React must subscribe to one external coordinator and bind suppression to the real route-active lifecycle",
   );
-  const routeSet = variable(source, "terminalQueryRoutes")?.initializer;
+  const routeCalls = calls(hook, "setRouteActive");
   must(
-    sameSet(new Set(arrayStrings(routeSet)), terminalTailRoutes),
-    "coordinator suppression routes must cover every terminal observer and tail",
+    routeCalls.some(
+      (call) => expressionValue(call.arguments[2]) === "routeActive",
+    ) &&
+      routeCalls.some((call) => expressionValue(call.arguments[2]) === "false"),
+    "route activation must be published and cleanup must explicitly release it",
   );
+
+  const routeSetter = topLevelFunction(source, "setRouteActive");
+  must(
+    calls(routeSetter, "syncRouteSuppression").length === 1 &&
+      calls(routeSetter, "cancelApiQueryOwner").length === 0 &&
+      calls(routeSetter, "state.completed.clear").length === 0 &&
+      calls(routeSetter, "state.completed.delete").length === 0,
+    "route leave may release suppression but cannot cancel owners or erase terminal success memory",
+  );
+  const suppression = topLevelFunction(source, "syncRouteSuppression");
+  const suppressionIdentifiers = new Set(identifiers(suppression));
+  must(
+    calls(suppression, "suppressApiQueries").length === 1 &&
+      calls(suppression, "releaseApiQuerySuppression").length === 1 &&
+      ["routeOwners", "active", "recoveryRoomId"].every((name) =>
+        suppressionIdentifiers.has(name),
+      ) &&
+      calls(suppression, "cancelApiQueryOwner").length === 0,
+    "route-scoped suppression must depend on active route plus authority state and never own network cancellation",
+  );
+
+  const reporter = topLevelFunction(source, "reportTerminalObservation");
+  const key = variable(reporter, "key")?.initializer;
+  const activeWrite = assignments(reporter).find(
+    (node) => expressionValue(node.left) === "state.active",
+  );
+  const completed = calls(reporter, "state.completed.has");
+  const existing = calls(
+    variable(reporter, "existing")?.initializer,
+    "state.terminalInFlight.get",
+  );
+  const batch = calls(reporter, "fetchApiQueryBatchAsOwner");
+  const inFlightWrite = calls(reporter, "state.terminalInFlight.set");
+  must(
+    calls(reporter, "Number.isSafeInteger").length === 1 &&
+      calls(reporter, "isCurrentGeneration").length >= 1 &&
+      key &&
+      calls(key, "terminalRefreshKey").length === 1,
+    "terminal observations must validate generation/state_version and use the canonical versioned key",
+  );
+  must(
+    activeWrite &&
+      completed.length === 1 &&
+      existing.length === 1 &&
+      batch.length === 1 &&
+      inFlightWrite.length === 1 &&
+      activeWrite.pos < completed[0].pos &&
+      completed[0].pos < existing[0].pos &&
+      existing[0].pos < batch[0].pos &&
+      batch[0].pos < inFlightWrite[0].pos &&
+      expressionValue(batch[0].arguments[0]) === "terminalOwner" &&
+      expressionValue(batch[0].arguments[1]) === "terminalRequests" &&
+      expressionValue(
+        objectPropertyExpression(objectArgument(batch[0], 2), "cancelRouteIds"),
+      ) === "terminalCancellationRoutes",
+    "terminal latch, success memory, singleflight, and protected batch must execute in that order",
+  );
+  const thenCallback = callbackOfCall(calls(reporter, "batch.then")[0]);
+  const catchCallback = callbackOfCall(calls(reporter, "catch")[0]);
+  const finallyCallback = callbackOfCall(calls(reporter, "finally")[0]);
+  must(
+    calls(thenCallback, "isCurrentObservation").length === 1 &&
+      calls(thenCallback, "state.completed.add").length === 1 &&
+      calls(catchCallback, "isCurrentObservation").length === 1 &&
+      calls(catchCallback, "state.completed.add").length === 0 &&
+      assignments(catchCallback).some(
+        (node) => expressionValue(node.left) === "state.failure",
+      ) &&
+      calls(finallyCallback, "state.terminalInFlight.delete").length === 1,
+    "only a current all-success batch may be remembered; failure must unlock for coordinator retry",
+  );
+
+  const roomReader = topLevelFunction(source, "readCoordinatorRoom");
+  const roomBatch = calls(roomReader, "fetchApiQueryBatchAsOwner");
+  const roomRequest = arrayArgument(roomBatch[0], 1);
+  const roomThen = callbackOfCall(calls(roomReader, "then")[0]);
+  const roomCatch = callbackOfCall(calls(roomReader, "catch")[0]);
+  const roomExisting = calls(
+    variable(roomReader, "existing")?.initializer,
+    "state.roomInFlight.get",
+  );
+  must(
+    roomBatch.length === 1 &&
+      requestArrayRoutes(roomRequest).length === 1 &&
+      requestArrayRoutes(roomRequest)[0] === "battle.room" &&
+      expressionValue(roomBatch[0].arguments[0]) === "state.discoveryOwner" &&
+      roomExisting.length === 1 &&
+      calls(roomReader, "state.roomInFlight.set").length === 1 &&
+      calls(roomReader, "apiRequest").length === 0,
+    "every room recovery must use one coordinator-owned room singleflight without a direct network path",
+  );
+  must(
+    calls(roomThen, "isCurrentGeneration").length === 1 &&
+      propertyPaths(roomThen).includes("state.active") &&
+      propertyPaths(roomThen).includes("state.recoveryRoomId") &&
+      calls(roomThen, "getApiQueryData").length === 1,
+    "room owner completion must recheck generation, terminal latch, and room lifecycle before consuming cache",
+  );
+  must(
+    calls(roomCatch, "finishCoordinatorRecovery").length === 1 &&
+      throwStatements(roomCatch).length === 1,
+    "a genuine room owner failure must release recovery suppression and remain retryable",
+  );
+
+  const recovery = topLevelFunction(source, "beginCoordinatorRecovery");
+  const discoveryCancellation = calls(recovery, "cancelApiQueryOwner").find(
+    (call) => expressionValue(call.arguments[0]) === "state.discoveryOwner",
+  );
+  must(
+    propertyPaths(recovery).includes("state.active.roomId") &&
+      calls(recovery, "cancelTerminalOwners").length === 1 &&
+      Boolean(discoveryCancellation) &&
+      assignments(recovery).some(
+        (node) => expressionValue(node.left) === "state.recoveryRoomId",
+      ),
+    "a different room must supersede old discovery and terminal ownership while the same terminal room stays locked",
+  );
+  for (const functionName of [
+    "setRouteActive",
+    "syncRouteSuppression",
+    "finishCoordinatorRecovery",
+  ]) {
+    const fn = topLevelFunction(source, functionName);
+    must(
+      calls(fn, "state.completed.clear").length === 0 &&
+        calls(fn, "state.completed.delete").length === 0,
+      `${functionName} cannot erase same-terminal success memory`,
+    );
+  }
 
   const keyFunction = topLevelFunction(source, "terminalRefreshKey");
   const keyReturn = returnExpressions(keyFunction)[0];
   must(
     keyReturn &&
       ts.isTemplateExpression(unwrap(keyReturn)) &&
-      sameSet(
-        new Set(propertyPaths(keyReturn)),
-        new Set(["observation.roomId", "observation.stateVersion"]),
-      ) &&
-      identifiers(keyReturn).includes("generation"),
-    "terminal key must be exactly generation + room_id + terminal state_version",
-  );
-  const key = variable(reporter, "key")?.initializer;
-  must(
-    key &&
-      ts.isCallExpression(unwrap(key)) &&
-      callPath(unwrap(key).expression) === "terminalRefreshKey" &&
-      sameArray(
-        unwrap(key).arguments.map((argument) => expressionValue(argument)),
-        ["generation", "observation"],
-      ),
-    "terminal reporter must use the canonical versioned terminal key",
-  );
-
-  const safeInteger = calls(reporter, "Number.isSafeInteger");
-  must(
-    safeInteger.length === 1 &&
-      expressionValue(safeInteger[0].arguments[0]) ===
-        "observation.stateVersion" &&
-      calls(reporter, "getSession").length >= 1,
-    "terminal observations must validate state_version and current generation",
-  );
-
-  const activeAssignment = assignments(reporter).find(
-    (node) => expressionValue(node.left) === "active.current",
-  );
-  const suppress = calls(reporter, "suppressApiQueries");
-  const completedHas = calls(reporter, "completed.current.has")[0];
-  const inFlightGet = calls(reporter, "inFlight.current.get")[0];
-  const task = variable(reporter, "task");
-  const inFlightSet = calls(reporter, "inFlight.current.set")[0];
-  must(
-    activeAssignment &&
-      suppress.length === 1 &&
-      completedHas &&
-      inFlightGet &&
-      task &&
-      inFlightSet &&
-      activeAssignment.pos < suppress[0].pos &&
-      suppress[0].pos < completedHas.pos &&
-      completedHas.pos < inFlightGet.pos &&
-      inFlightGet.pos < task.pos &&
-      task.pos < inFlightSet.pos &&
-      sameArray(
-        suppress[0].arguments.map((argument) => expressionValue(argument)),
-        ["suppressionOwner.current", "generation", "terminalQueryRoutes"],
-      ) &&
-      sameArray(
-        inFlightSet.arguments.map((argument) => expressionValue(argument)),
-        ["key", "task"],
-      ),
-    "terminal latch must activate and publish suppression before completed/singleflight checks",
-  );
-
-  const cancel = calls(reporter, "cancelApiQueries");
-  must(
-    cancel.length === 1 &&
-      sameArray(
-        cancel[0].arguments.map((argument) => expressionValue(argument)),
-        ["terminalQueryRoutes", "generation"],
-      ),
-    "terminal latch must cancel every suppressed route in the exact generation",
-  );
-  const promiseAll = calls(reporter, "Promise.all");
-  must(
-    promiseAll.length === 1 &&
-      promiseAll[0].arguments.length === 1 &&
-      ts.isArrayLiteralExpression(unwrap(promiseAll[0].arguments[0])),
-    "terminal reads must be one awaited Promise.all batch",
-  );
-  const readCalls = calls(promiseAll[0], "fetchApiQuery");
-  must(
-    readCalls.length === terminalReads.size &&
-      sameSet(
-        new Set(readCalls.map((call) => stringArgument(call, 0))),
-        terminalReads,
-      ) &&
-      readCalls.filter((call) => stringArgument(call, 0).startsWith("battle."))
-        .length === 1 &&
-      readCalls.every(
-        (call) =>
-          expressionValue(call.arguments[2]) === "suppressionOwner.current",
-      ),
-    "terminal batch must read exactly battle.bootstrap, identity.bootstrap, and inventory.list through its owner",
-  );
-  must(
-    forbiddenQueryMethods(reporter).length === 0,
-    "terminal coordinator cannot invalidate, refetch, or ensure cached scopes",
-  );
-
-  const completedAdd = calls(reporter, "completed.current.add");
-  const failureWrites = calls(reporter, "setFailure");
-  const unlock = calls(reporter, "inFlight.current.delete");
-  must(
-    completedAdd.length === 1 &&
-      expressionValue(completedAdd[0].arguments[0]) === "key" &&
-      completedAdd[0].pos > promiseAll[0].pos,
-    "completion may be recorded only after every required terminal read",
-  );
-  const failureCatch = calls(reporter, "catch").find((call) =>
-    containsNode(call.arguments[0], failureWrites.at(-1)),
-  );
-  must(
-    failureWrites.length >= 2 &&
-      failureCatch &&
-      calls(failureCatch.arguments[0], "matchesObservation").some((call) =>
-        sameArray(
-          call.arguments.map((argument) => expressionValue(argument)),
-          ["active.current", "generation", "observation"],
-        ),
-      ) &&
-      unlock.length === 1 &&
-      expressionValue(unlock[0].arguments[0]) === "key" &&
-      calls(reporter, "finally").some((call) =>
-        containsNode(call.arguments[0], unlock[0]),
-      ),
-    "failed terminal refresh must publish failure and always unlock singleflight",
-  );
-
-  const isLocked = variableFunction(hook, "isLocked");
-  must(
-    propertyPaths(isLocked).includes("active.current") &&
-      identifiers(isLocked).includes("sessionGeneration") &&
-      identifiers(isLocked).includes("roomId"),
-    "tail-query lock must be generation-aware and room-aware",
-  );
-
-  const prepare = variableFunction(hook, "prepareAuthorityRecovery");
-  const finish = variableFunction(hook, "finishAuthorityRecovery");
-  must(
-    calls(prepare, "suppressApiQueries").length === 1 &&
-      assignments(prepare).some(
-        (node) => expressionValue(node.left) === "recovery.current",
-      ) &&
-      calls(finish, "releaseApiQuerySuppression").length === 1 &&
-      calls(finish, "matchesRoom").length === 1 &&
-      propertyPaths(finish).includes("active.current"),
-    "authority recovery must acquire suppression and release it only for the matching non-terminal room",
-  );
-
-  const roomRead = variableFunction(hook, "readAuthorityRoom");
-  const roomCancel = calls(roomRead, "cancelApiQueries");
-  const roomFetch = calls(roomRead, "fetchApiQuery");
-  must(
-    roomCancel.length === 1 &&
-      roomFetch.length === 1 &&
-      roomCancel[0].pos < roomFetch[0].pos &&
-      stringArgument(roomFetch[0], 0) === "battle.room" &&
-      expressionValue(roomFetch[0].arguments[2]) ===
-        "suppressionOwner.current" &&
-      calls(roomRead, "matchesRoom").length === 1 &&
-      propertyPaths(roomRead).includes("active.current"),
-    "authority room read must cancel tails, recheck active recovery, and use the formal owner queryFn",
-  );
-  const bootstrapRead = variableFunction(hook, "readAuthorityBootstrap");
-  const bootstrapFetch = calls(bootstrapRead, "fetchApiQuery");
-  must(
-    bootstrapFetch.length === 1 &&
-      stringArgument(bootstrapFetch[0], 0) === "battle.bootstrap" &&
-      expressionValue(bootstrapFetch[0].arguments[2]) ===
-        "suppressionOwner.current" &&
-      calls(bootstrapRead, "matchesRoom").length === 1 &&
-      propertyPaths(bootstrapRead).includes("active.current"),
-    "non-terminal Battle bootstrap must remain owner-authorized inside recovery suppression",
-  );
-
-  const nonTerminal = variableFunction(hook, "reportNonTerminalRoom");
-  const sameRoomGuard = ifStatements(nonTerminal).find(
-    (node) =>
-      binaryExpressions(node.expression).some(
-        (binary) =>
-          binary.operatorToken.kind === ts.SyntaxKind.EqualsEqualsEqualsToken &&
-          sameSet(
-            new Set([
-              expressionValue(binary.left),
-              expressionValue(binary.right),
-            ]),
-            new Set(["terminal.roomId", "roomId"]),
-          ),
-      ) && returnStatements(node.thenStatement).length === 1,
-  );
-  must(
-    sameRoomGuard &&
-      calls(nonTerminal, "releaseApiQuerySuppression").length === 1,
-    "cancelled query rollback cannot let an old non-terminal snapshot unlock the same terminal room",
-  );
-
-  must(
-    assignments(hook).some(
-      (node) =>
-        expressionValue(node.left) === "mounted.current" &&
-        expressionValue(node.right) === "false",
-    ) &&
-      propertyPaths(reporter).includes("mounted.current") &&
-      calls(hook, "releaseApiQuerySuppression").length >= 2 &&
-      calls(hook, "cancelApiQueries").some(
-        (call) => expressionValue(call.arguments[1]) === "generation",
-      ),
-    "session change or unmount must release suppression and cancel exact-generation work",
-  );
-}
-
-function checkTerminalPredicate(source) {
-  const statuses = variable(source, "terminalStatuses");
-  const initializer = unwrap(statuses?.initializer);
-  must(
-    statuses &&
-      initializer &&
-      ts.isArrayLiteralExpression(initializer) &&
-      sameSet(new Set(arrayStrings(initializer)), terminalStatuses),
-    "terminal status set must stay exact",
-  );
-  const predicate = topLevelFunction(source, "isBattleAssetTerminal");
-  must(
-    calls(predicate, "terminalStatuses.some").length === 1 &&
-      returnExpressions(predicate).length === 1,
-    "terminal predicate must directly use the authoritative terminal set",
+      identifiers(keyReturn).includes("generation") &&
+      propertyPaths(keyReturn).includes("observation.roomId") &&
+      propertyPaths(keyReturn).includes("observation.stateVersion"),
+    "terminal success key must be generation + room_id + terminal state_version",
   );
 }
 
 function checkView(source) {
   const view = topLevelFunction(source, "BattleView");
+  const coordinator = calls(view, "useBattleTerminalRefresh");
   must(
-    calls(view, "useBattleTerminalRefresh").length === 1 &&
-      expressionValue(
-        calls(view, "useBattleTerminalRefresh")[0].arguments[0],
-      ) === "sessionGeneration",
-    "BattleView must mount exactly one terminal coordinator",
-  );
-
-  const identityQuery = apiQueryCall(view, "identity.bootstrap");
-  const bootstrapQuery = apiQueryCall(view, "battle.bootstrap");
-  const roomQuery = apiQueryCall(view, "battle.room");
-  const inviteQuery = apiQueryCall(view, "battle.current_invite");
-  must(
-    identityQuery &&
-      binaryExpressions(identityQuery.arguments[2]).some(
-        (node) =>
-          node.operatorToken.kind === ts.SyntaxKind.EqualsEqualsEqualsToken &&
-          sameSet(
-            new Set([expressionValue(node.left), expressionValue(node.right)]),
-            new Set(["activeTerminal", "null"]),
-          ),
-      ) &&
-      bootstrapQuery &&
-      binaryExpressions(bootstrapQuery.arguments[2]).filter(
-        (node) =>
-          node.operatorToken.kind === ts.SyntaxKind.EqualsEqualsEqualsToken,
-      ).length >= 2,
-    "Battle identity/bootstrap observers must stay disabled for seeded or latched terminal state",
-  );
-  must(
-    roomQuery &&
-      roomQuery.arguments[2] &&
-      calls(roomQuery.arguments[2], "isTerminalLocked").length === 1,
-    "terminal latch must disable the participant room query",
-  );
-  must(
-    inviteQuery &&
-      inviteQuery.arguments[2] &&
-      binaryExpressions(inviteQuery.arguments[2]).some(
-        (node) =>
-          node.operatorToken.kind === ts.SyntaxKind.EqualsEqualsEqualsToken &&
-          sameSet(
-            new Set([expressionValue(node.left), expressionValue(node.right)]),
-            new Set(["activeTerminal", "null"]),
-          ),
+    coordinator.length === 1 &&
+      sameArray(
+        coordinator[0].arguments.map((argument) => expressionValue(argument)),
+        ["sessionGeneration", "pageActive"],
       ),
-    "terminal latch must prevent a newly enabled current-invite tail query",
+    "BattleView must bind the shared coordinator to the persistent page's real active state",
   );
 
-  const authoritativeRoom = variableFunction(view, "onAuthoritativeRoom");
-  const apply = calls(authoritativeRoom, "applySnapshot");
-  const report = calls(authoritativeRoom, "reportTerminal");
-  const nonTerminal = calls(authoritativeRoom, "reportNonTerminalRoom");
-  must(
-    apply.length === 1 &&
-      report.length === 1 &&
-      nonTerminal.length === 1 &&
-      apply[0].pos < report[0].pos &&
-      expressionValue(apply[0].arguments[0]) === "snapshot",
-    "authoritative room snapshot must land before terminal or room-change coordination",
-  );
-  const reportInput = objectArgument(report[0], 0);
-  must(
-    expressionValue(objectPropertyExpression(reportInput, "roomId")) ===
-      "snapshot.room_id" &&
-      expressionValue(objectPropertyExpression(reportInput, "stateVersion")) ===
-        "snapshot.state_version" &&
-      enclosingIf(authoritativeRoom, report[0], (node) =>
-        calls(node.expression, "isBattleAssetTerminal").some(
-          (call) => expressionValue(call.arguments[0]) === "snapshot.status",
-        ),
-      ),
-    "authoritative room signals must report room_id plus terminal state_version",
-  );
-  must(
-    calls(authoritativeRoom, "request.abort").length === 1 &&
-      calls(authoritativeRoom, "heartbeatRequests.current.clear").length ===
-        1 &&
-      calls(authoritativeRoom, "heartbeatRequests.current.clear")[0].pos <
-        report[0].pos,
-    "terminal snapshot must stop presence work before starting cache reads",
-  );
-
-  const runAuthority = variableFunction(view, "runAuthorityRefresh");
-  const terminalGuard = ifStatements(runAuthority).find(
-    (node) =>
-      calls(node.expression, "isTerminalLocked").some(
-        (call) => expressionValue(call.arguments[0]) === "null",
-      ) && returnStatements(node.thenStatement).length > 0,
-  );
-  const roomReads = calls(runAuthority, "readAuthorityRoom");
-  const bootstrapReads = calls(runAuthority, "readAuthorityBootstrap");
-  const roomPublish = calls(runAuthority, "onAuthoritativeRoom").find(
+  const authority = variableFunction(view, "runAuthorityRefresh");
+  const roomRead = calls(authority, "readAuthorityRoom");
+  const roomPublish = calls(authority, "onAuthoritativeRoom").find(
     (call) => expressionValue(call.arguments[0]) === "roomResult",
   );
-  must(
-    terminalGuard &&
-      terminalGuard.pos < roomReads[0]?.pos &&
-      roomReads.length === 1 &&
-      bootstrapReads.length === 1 &&
-      roomPublish &&
-      roomReads[0].pos < roomPublish.pos &&
-      roomPublish.pos < bootstrapReads[0].pos,
-    "poll/realtime/visibility must perform one owner room read and publish it before any Battle bootstrap tail",
+  const terminalRetry = calls(authority, "reportTerminal").find(
+    (call) => expressionValue(call.arguments[0]) === "activeTerminal",
   );
   must(
-    latchCheckBetween(runAuthority, roomReads[0], roomPublish) &&
-      latchCheckBetween(runAuthority, roomPublish, bootstrapReads[0]) &&
+    terminalRetry &&
+      awaitExpressions(authority).some((node) =>
+        containsNode(node, terminalRetry),
+      ) &&
+      latchCheckBetween(authority, terminalRetry, roomRead[0]) &&
+      roomRead.length === 1 &&
+      roomPublish &&
+      calls(authority, "readAuthorityBootstrap").length === 0 &&
+      roomRead[0].pos < roomPublish.pos &&
+      latchCheckBetween(authority, roomRead[0], roomPublish) &&
       latchCheckBetween(
-        runAuthority,
-        bootstrapReads[0],
-        variable(runAuthority, "candidates"),
+        authority,
+        roomPublish,
+        assignments(authority).find(
+          (node) =>
+            node.pos > roomPublish.end &&
+            expressionValue(node.left) === "authorityHealthy.current",
+        ),
       ),
-    "every awaited room/bootstrap boundary must recheck the terminal latch before consuming restored cache or starting a tail",
+    "authority triggers must retry the current terminal owner, then use one room GET with a latch recheck after every await and no bootstrap tail",
+  );
+  const discoveryBatch = calls(authority, "Promise.all");
+  const discoveryAwait = discoveryBatch[0];
+  must(
+    discoveryBatch.length === 1 &&
+      calls(discoveryAwait, "refetchBootstrap").length === 1 &&
+      calls(discoveryAwait, "refetchInvite").length === 1 &&
+      ifStatements(authority).some(
+        (node) =>
+          node.pos > discoveryAwait.pos &&
+          calls(node.expression, "isTerminalLocked").length === 1,
+      ),
+    "no-room discovery must retain bootstrap/invite and recheck the terminal latch after its await",
+  );
+
+  const command = calls(view, "useBattleCommand");
+  must(
+    command.length === 1 &&
+      sameArray(
+        command[0].arguments.map((argument) => expressionValue(argument)),
+        ["refetchAuthorityVoid", "onAuthoritativeRoom", "readAuthorityRoom"],
+      ),
+    "command create/cancel/failure recovery must receive the same room owner reader",
+  );
+  const bootstrapObserver = calls(view, "useApiQuery").find(
+    (call) => stringArgument(call, 0) === "battle.bootstrap",
+  );
+  const identityObserver = calls(view, "useApiQuery").find(
+    (call) => stringArgument(call, 0) === "identity.bootstrap",
+  );
+  const inviteObserver = calls(view, "useApiQuery").find(
+    (call) => stringArgument(call, 0) === "battle.current_invite",
+  );
+  const bootstrapEnabledIdentifiers = new Set(
+    identifiers(bootstrapObserver?.arguments[2]),
+  );
+  must(
+    calls(view, "getApiQueryData").length === 2 &&
+      calls(
+        variable(view, "cachedTerminalPresent")?.initializer,
+        "terminalObservationsFor",
+      ).length === 1 &&
+      ["activeTerminal", "cachedTerminalPresent"].every((name) =>
+        identifiers(identityObserver?.arguments[2]).includes(name),
+      ) &&
+      ["activeTerminal", "cachedTerminalPresent"].every((name) =>
+        identifiers(inviteObserver?.arguments[2]).includes(name),
+      ) &&
+      [
+        "activeTerminal",
+        "cachedTerminalPresent",
+        "identityTerminalParticipation",
+      ].every((name) => bootstrapEnabledIdentifiers.has(name)),
+    "formal cached terminal snapshots must disable ordinary identity, Battle bootstrap, and invite observers before effects run",
+  );
+  must(
+    calls(view, "registerForegroundAuthorityRefresh").length === 1 &&
+      calls(
+        variableFunction(view, "prepareRecovery"),
+        "prepareAuthorityRecovery",
+      ).length === 1,
+    "foreground, reconnect, visibility, and presence recovery must enter the shared authority boundary",
+  );
+  const pageInactiveEffects = calls(view, "finishAuthorityRecovery").filter(
+    (call) =>
+      enclosingIf(view, call, (node) =>
+        identifiers(node.expression).includes("pageActive"),
+      ),
+  );
+  must(
+    pageInactiveEffects.length === 0,
+    "leaving /game cannot finish or cancel an in-flight authority owner",
   );
 
   const realtime = calls(view, "useBattleRealtime");
-  const realtimeOptions =
-    realtime.length === 1 ? objectArgument(realtime[0], 0) : null;
+  const realtimeOptions = objectArgument(realtime[0], 0);
   must(
-    realtimeOptions &&
+    realtime.length === 1 &&
       calls(
         objectPropertyExpression(realtimeOptions, "enabled"),
         "isTerminalLocked",
-      ).length === 1,
-    "terminal latch must synchronously disable realtime polling",
-  );
-
-  const refetchAuthority = variableFunction(view, "refetchAuthority");
-  must(
-    propertyPaths(refetchAuthority).includes("authorityInFlight.current") &&
-      calls(refetchAuthority, "runAuthorityRefresh").length === 1 &&
-      calls(refetchAuthority, "finally").length === 1 &&
-      assignments(refetchAuthority).some(
-        (node) =>
-          expressionValue(node.left) === "authorityInFlight.current" &&
-          expressionValue(node.right) === "task",
-      ),
-    "visibility/reconnect/realtime authority reads must share one singleflight",
-  );
-  const foregroundRegistration = calls(
-    view,
-    "registerForegroundAuthorityRefresh",
-  );
-  const foregroundOptions =
-    foregroundRegistration.length === 1
-      ? objectArgument(foregroundRegistration[0], 1)
-      : null;
-  must(
-    foregroundOptions &&
-      expressionValue(
-        objectPropertyExpression(foregroundOptions, "generation"),
-      ) === "sessionGeneration" &&
-      expressionValue(
-        objectPropertyExpression(foregroundOptions, "pathname"),
-      ) === "/game" &&
-      sameArray(
-        arrayStrings(
-          objectPropertyExpression(foregroundOptions, "handledPrefixes"),
-        ),
-        ["battle"],
-      ) &&
-      expressionValue(
-        objectPropertyExpression(foregroundOptions, "refresh"),
-      ) === "refetchAuthority",
-    "AppShell foreground refresh must delegate /game authority to the Battle singleflight",
-  );
-
-  const markOffline = variableFunction(view, "markOffline");
-  must(
-    ifStatements(markOffline).some(
-      (node) =>
-        calls(node.expression, "isTerminalLocked").length === 1 &&
-        returnStatements(node.thenStatement).length === 1,
-    ),
-    "terminal latch must prevent trailing offline commands",
-  );
-  const prepareRecovery = variableFunction(view, "prepareRecovery");
-  must(
-    calls(prepareRecovery, "prepareAuthorityRecovery").length === 1 &&
-      ["deactivated", "visibility", "pagehide", "offline"].every(
-        (name) =>
-          calls(variableFunction(view, name), "prepareRecovery").length >= 1,
-      ),
-    "hidden, deactivated, pagehide, and offline paths must close ordinary observers before recovery",
-  );
-
-  const collector = topLevelFunction(source, "terminalObservationsFor");
-  const collectorParameters = bindingNames(collector.parameters[0]?.name);
-  must(
-    sameSet(new Set(collectorParameters), new Set(["rooms", "participations"])),
-    "terminal collector may consume only versioned room and participation sources",
-  );
-  const collectorIdentifiers = new Set(identifiers(collector));
-  must(
-    ![
-      "invite",
-      "resultRoomIds",
-      "currentResult",
-      "battle_result",
-      "current_result",
-    ].some((name) => collectorIdentifiers.has(name)) &&
-      calls(collector, "isBattleAssetTerminal").length === 2,
-    "unversioned invite/result signals cannot create terminal batches",
-  );
-  const observations = objectLiterals(collector).filter(
-    (object) =>
-      objectPropertyExpression(object, "roomId") &&
-      objectPropertyExpression(object, "stateVersion"),
-  );
-  must(
-    observations.length === 2 &&
-      observations.every((object) => {
-        const roomId = expressionValue(
-          objectPropertyExpression(object, "roomId"),
-        );
-        const stateVersion = expressionValue(
-          objectPropertyExpression(object, "stateVersion"),
-        );
-        const owner = roomId.split(".")[0];
-        return (
-          (owner === "room" || owner === "participation") &&
-          stateVersion === `${owner}.state_version`
-        );
-      }),
-    "every collected terminal observation must preserve its matching state_version",
-  );
-
-  const observationKey = variable(view, "terminalObservationKey");
-  const observationKeyPaths = new Set(propertyPaths(observationKey));
-  must(
-    observationKey &&
-      observationKeyPaths.has("terminalObservations.map") &&
-      observationKeyPaths.has("observation.roomId") &&
-      observationKeyPaths.has("observation.stateVersion"),
-    "terminal observation effect key must include room_id and state_version",
-  );
-  must(
-    calls(view, "reportTerminal").some(
-      (call) => expressionValue(call.arguments[0]) === "observation",
-    ),
-    "terminal observation effect must publish the versioned collector output",
+      ).length === 1 &&
+      expressionValue(objectPropertyExpression(realtimeOptions, "refetch")) ===
+        "refetchAuthorityVoid",
+    "realtime and poll must use the same latch-protected authority callback",
   );
 
   const heartbeat = variableFunction(view, "heartbeat");
-  const heartbeatPublish = calls(heartbeat, "onAuthoritativeRoom");
-  const nonTerminalRead = ifStatements(heartbeat).find(
-    (node) =>
-      ts.isPrefixUnaryExpression(unwrap(node.expression)) &&
-      unwrap(node.expression).operator === ts.SyntaxKind.ExclamationToken &&
-      calls(unwrap(node.expression).operand, "isBattleAssetTerminal").length ===
-        1 &&
-      calls(node.thenStatement, "refetchRef.current").length === 1,
-  );
   must(
-    heartbeatPublish.length === 1 &&
-      expressionValue(heartbeatPublish[0].arguments[0]) === "response.data" &&
-      nonTerminalRead,
-    "heartbeat must apply its room snapshot and only re-read authority for non-terminal phase changes",
+    calls(heartbeat, "onAuthoritativeRoom").some(
+      (call) => expressionValue(call.arguments[0]) === "response.data",
+    ),
+    "presence responses must publish their authoritative snapshot before any recovery",
+  );
+  const observationEffect = calls(view, "reportTerminal");
+  must(
+    observationEffect.some(
+      (call) => expressionValue(call.arguments[0]) === "observation",
+    ),
+    "seeded/bootstrap/room terminal observations must enter the same reporter",
   );
 }
 
 function checkCommand(source) {
+  const hook = topLevelFunction(source, "useBattleCommand");
   must(
-    calls(source, "reportTerminal").length === 0,
-    "Battle commands must publish snapshots through the single coordinator owner",
+    sameArray(
+      hook.parameters.map((parameter) => expressionValue(parameter.name)),
+      ["refetchAuthority", "onAuthoritativeRoom", "readAuthoritativeRoom"],
+    ) && calls(hook, "useRef").length >= 3,
+    "Battle commands must receive and retain the shared authority reader",
   );
-  const result = topLevelFunction(source, "applyBattleCommandResult");
-  const publish = calls(result, "onAuthoritativeRoom");
-  const refresh = calls(result, "refreshRouteScopes");
+  const resultReader = topLevelFunction(source, "authoritativeRoomFromResult");
+  const resultRead = calls(resultReader, "readAuthoritativeRoom");
   must(
-    publish.length === 1 &&
-      refresh.length === 1 &&
-      publish[0].pos < refresh[0].pos &&
-      expressionValue(publish[0].arguments[0]) === "snapshot" &&
-      enclosingIf(result, refresh[0], (node) =>
-        isNegatedCall(node.expression, "isBattleAssetTerminal"),
-      ),
-    "command success must publish the versioned snapshot before non-terminal scope refresh",
+    resultRead.length === 1 &&
+      stringArgument(resultRead[0], 0) === "" &&
+      expressionValue(resultRead[0].arguments[0]) === "commandResult.room_id" &&
+      awaitExpressions(resultReader).some((node) =>
+        containsNode(node, resultRead[0]),
+      ) &&
+      calls(resultReader, "assertGeneration").length === 1,
+    "create/cancel result recovery must await the injected room owner and recheck generation",
   );
   const failure = topLevelFunction(source, "refreshBattleCommandFailure");
   must(
     calls(failure, "readAuthoritativeRoom").length === 1 &&
       calls(failure, "onAuthoritativeRoom").length === 1,
-    "terminal command failures must recover and publish an authoritative room snapshot",
+    "terminal command failures must use and publish the injected authority reader",
+  );
+  const apply = topLevelFunction(source, "applyBattleCommandResult");
+  const publish = calls(apply, "onAuthoritativeRoom");
+  const refresh = calls(apply, "refreshRouteScopes");
+  must(
+    publish.length === 1 &&
+      refresh.length === 1 &&
+      publish[0].pos < refresh[0].pos &&
+      enclosingIf(apply, refresh[0], (node) =>
+        isNegatedCall(node.expression, "isBattleAssetTerminal"),
+      ),
+    "command snapshots must publish/latch before any non-terminal scope refresh",
   );
 }
 
 function checkRealtime(source) {
   const hook = topLevelFunction(source, "useBattleRealtime");
-  const requests = calls(hook, "apiRequest");
   must(
-    requests.length >= 1 &&
-      requests.every(
-        (request) => stringArgument(request, 0) === "battle.realtime_token",
-      ) &&
-      calls(hook, "fetchApiQuery").length === 0,
-    "realtime workflow may request only its token and must delegate authority reads",
+    calls(hook, "apiRequest").every(
+      (call) => stringArgument(call, 0) === "battle.realtime_token",
+    ) &&
+      calls(variableFunction(hook, "runRefetch"), "refetchRef.current")
+        .length === 1,
+    "realtime may fetch only its token and must delegate all authority reads",
   );
-  const runRefetch = variableFunction(hook, "runRefetch");
+}
+
+function checkRouteLifecycle(source) {
+  const component = topLevelFunction(source, "PersistentPages");
+  const pages = variable(source, "pages")?.initializer;
   must(
-    calls(runRefetch, "refetchRef.current").length === 1,
-    "realtime and fallback polling must share the guarded authority callback",
+    requestArrayPropertyValues(pages, "path").includes("/game") &&
+      propertyPaths(component).includes("visitState.visited.has") &&
+      calls(component, "PageActivityProvider").length === 0 &&
+      jsxElements(component, "PageActivityProvider").length === 1,
+    "the /game page must remain mounted and receive explicit PageActivityProvider state",
+  );
+  const provider = jsxElements(component, "PageActivityProvider")[0];
+  must(
+    jsxAttributeValue(provider, "active") === "active" &&
+      jsxAttributeValue(provider, "path") === "path",
+    "persistent pages must bind route activity explicitly instead of relying on unmount",
   );
 }
 
@@ -873,241 +691,243 @@ function checkAppShell(source) {
   const refresh = variableFunction(hook, "refresh");
   const restore = variableFunction(hook, "restore");
   const reconnect = variableFunction(hook, "reconnect");
-  const foreground = calls(refresh, "refreshForegroundState");
   must(
-    foreground.length === 1 &&
-      expressionValue(foreground[0].arguments[0]) === "pathname" &&
-      calls(refresh, "catch").length === 1,
-    "AppShell foreground refresh must use the guarded query coordinator without unhandled rejection",
-  );
-  must(
-    calls(restore, "refresh").length === 1 &&
-      binaryExpressions(restore).some(
-        (node) =>
-          node.operatorToken.kind === ts.SyntaxKind.GreaterThanEqualsToken &&
-          [numericValue(node.left), numericValue(node.right)].includes(300_000),
+    calls(refresh, "refreshForegroundState").length === 1 &&
+      calls(refresh, "catch").length === 1 &&
+      calls(restore, "refresh").length === 1 &&
+      numericLiterals(restore).includes(300_000) &&
+      calls(reconnect, "refresh").length === 1 &&
+      calls(hook, "window.addEventListener").some(
+        (call) =>
+          stringArgument(call, 0) === "online" &&
+          expressionValue(call.arguments[1]) === "reconnect",
       ),
-    "visibility recovery after 300 seconds must use the guarded foreground refresh",
-  );
-  const onlineListener = calls(hook, "window.addEventListener").find(
-    (call) => stringArgument(call, 0) === "online",
-  );
-  must(
-    calls(reconnect, "refresh").length === 1 &&
-      onlineListener &&
-      expressionValue(onlineListener.arguments[1]) === "reconnect",
-    "network reconnect must use the same guarded foreground refresh",
+    "AppShell 300-second visibility and reconnect refresh must remain intact",
   );
 }
 
 function checkObserverConsumers(topAsset, inventory) {
-  const topBar = topLevelFunction(topAsset, "TopAssetBar");
-  const inventoryView = topLevelFunction(inventory, "InventoryView");
   must(
-    apiQueryCall(topBar, "identity.bootstrap") &&
-      apiQueryCall(topBar, "vip.get") &&
-      apiQueryCall(topBar, "wallet.get"),
-    "TopAssetBar must keep its identity/assets observers on the guarded useApiQuery boundary",
-  );
-  must(
-    apiQueryCall(inventoryView, "inventory.list"),
-    "mounted or inactive inventory must keep its formal guarded inventory.list observer",
+    calls(topLevelFunction(topAsset, "TopAssetBar"), "useApiQuery").some(
+      (call) => stringArgument(call, 0) === "identity.bootstrap",
+    ) &&
+      calls(topLevelFunction(inventory, "InventoryView"), "useApiQuery").some(
+        (call) => stringArgument(call, 0) === "inventory.list",
+      ),
+    "top assets and inactive inventory must remain formal query consumers",
   );
 }
 
 function checkExclusiveOwnership(sources) {
-  const fetchOwners = Object.entries(sources).flatMap(([name, source]) =>
-    calls(source, "fetchApiQuery").map(() => name),
+  const ownerCalls = sources.flatMap((source) =>
+    calls(source, "fetchApiQueryBatchAsOwner").map(() => source.fileName),
   );
   must(
-    fetchOwners.length === 5 &&
-      fetchOwners.every((owner) => owner === "coordinator"),
-    "only the terminal coordinator may own room, Battle bootstrap, and terminal batch fetches",
-  );
-  const coordinatorDefinitions = Object.values(sources).flatMap((source) =>
-    namedFunctions(source, "useBattleTerminalRefresh"),
-  );
-  must(
-    coordinatorDefinitions.length === 1 &&
-      coordinatorDefinitions[0].getSourceFile().fileName === paths.coordinator,
-    "exactly one Battle terminal coordinator definition is allowed",
+    ownerCalls.length === 2 &&
+      ownerCalls.every((fileName) => fileName === paths.coordinator),
+    "only the Battle coordinator may create protected authority batches",
   );
 }
 
 function runSelfTests() {
   const fixtures = [
-    [
+    fixture(paths.command, "direct command room GET", (source, text) => {
+      const fn = topLevelFunction(source, "applyBattleCommandResult");
+      return insertIntoFunction(
+        text,
+        fn,
+        'void apiRequest("battle.room", { room_id: "fixture" });',
+      );
+    }),
+    fixture(paths.query, "observer cancelRefetch takeover", (source, text) => {
+      const fn = variableFunction(
+        topLevelFunction(source, "useApiQuery"),
+        "refetch",
+      );
+      const property = objectProperty(
+        objectArgument(calls(fn, "query.refetch")[0], 0),
+        "cancelRefetch",
+      );
+      return replaceNode(text, property.initializer, "true");
+    }),
+    fixture(
       paths.coordinator,
-      "`${generation}:${observation.roomId}:${observation.stateVersion}`",
-      "`${generation}:${observation.roomId}`",
-      "state_version omitted from singleflight key",
-    ],
-    [
+      "route cleanup fails to release",
+      (source, text) => {
+        const hook = topLevelFunction(source, "useBattleTerminalRefresh");
+        const call = calls(hook, "setRouteActive").find(
+          (candidate) => expressionValue(candidate.arguments[2]) === "false",
+        );
+        return replaceNode(text, call.arguments[2], "true");
+      },
+    ),
+    fixture(paths.coordinator, "route leave cancels owner", (source, text) => {
+      const fn = topLevelFunction(source, "setRouteActive");
+      return insertIntoFunction(
+        text,
+        fn,
+        "cancelApiQueryOwner(state.discoveryOwner);",
+      );
+    }),
+    fixture(
       paths.coordinator,
-      'fetchApiQuery("inventory.list", {}, suppressionOwner.current)',
-      'fetchApiQuery("identity.bootstrap", {}, suppressionOwner.current)',
-      "inactive inventory read omitted",
-    ],
-    [
+      "route return repeats terminal batch",
+      (source, text) => {
+        const fn = topLevelFunction(source, "setRouteActive");
+        return insertIntoFunction(text, fn, "state.completed.clear();");
+      },
+    ),
+    fixture(
       paths.coordinator,
-      'fetchApiQuery("battle.bootstrap", {}, suppressionOwner.current)',
-      'fetchApiQuery("battle.current_invite", {}, suppressionOwner.current)',
-      "non-authoritative Battle path substituted",
-    ],
-    [
+      "same terminal success memory removed",
+      (source, text) => {
+        const fn = topLevelFunction(source, "reportTerminalObservation");
+        const guard = ifStatements(fn).find(
+          (node) => calls(node.expression, "state.completed.has").length === 1,
+        );
+        return replaceNode(text, guard.expression, "false");
+      },
+    ),
+    fixture(
       paths.coordinator,
-      "inFlight.current.delete(key);",
-      "completed.current.delete(key);",
-      "failed refresh left locked",
-    ],
-    [
+      "inventory owner read duplicated",
+      (source, text) => {
+        const array = unwrap(variable(source, "terminalRequests").initializer);
+        const inventory = array.elements.find(
+          (element) =>
+            stringProperty(unwrap(element), "routeId") === "inventory.list",
+        );
+        const route = objectProperty(unwrap(inventory), "routeId");
+        return replaceNode(text, route.initializer, '"identity.bootstrap"');
+      },
+    ),
+    fixture(
       paths.coordinator,
-      `.catch(() => {
-          if (
-            !mounted.current ||
-            getSession()?.generation !== generation ||
-            !matchesObservation(active.current, generation, observation)
-          )
-            return;`,
-      `.catch(() => {
-          if (false) return;`,
-      "stale room or state_version failure leaked into the active UI",
-    ],
-    [
-      paths.coordinator,
-      '"battle.current_invite",',
-      "",
-      "current-invite observer suppression removed",
-    ],
-    [
-      paths.coordinator,
-      "terminal.roomId === roomId",
-      "terminal.roomId !== roomId",
-      "cancelled room rollback allowed to unlock the terminal latch",
-    ],
-    [
-      paths.coordinator,
-      "suppressApiQueries(\n          suppressionOwner.current,\n          generation,\n          terminalQueryRoutes,\n        );",
-      "releaseApiQuerySuppression(suppressionOwner.current);",
-      "terminal key stopped publishing synchronous observer suppression",
-    ],
-    [
+      "failed batch remembered as success",
+      (source, text) => {
+        const fn = topLevelFunction(source, "reportTerminalObservation");
+        const catchCallback = callbackOfCall(calls(fn, "catch")[0]);
+        return insertIntoFunction(
+          text,
+          catchCallback,
+          "state.completed.add(key);",
+        );
+      },
+    ),
+    fixture(
       paths.query,
-      "staleTime: 0,",
-      "staleTime: 20_000,",
-      "fetchQuery allowed fresh cache short-circuit",
-    ],
-    [
-      paths.query,
-      "refetchOnReconnect: false,",
-      "refetchOnReconnect: true,",
-      "TanStack reconnect refetch re-enabled",
-    ],
-    [
-      paths.query,
-      "enabled: enabled && !suppressed,",
-      "enabled,",
-      "terminal observer enabled state bypassed suppression",
-    ],
-    [
-      paths.query,
-      "assertApiQueryAllowed(generation, routeId);\n      const result = await apiRequest",
-      "const result = await apiRequest",
-      "ordinary queryFn network guard removed",
-    ],
-    [
-      paths.query,
-      "if (isApiQuerySuppressed(generation, routeId, suppressionOwner))",
-      "if (false)",
-      "canonical queryFn suppression predicate disconnected",
-    ],
-    [
-      paths.query,
-      "hasApiQuerySuppression(generation)",
-      "false",
-      "foreground refresh ignored an active terminal coordinator",
-    ],
-    [
+      "owner key protection registered too late",
+      (source, text) => {
+        const fn = topLevelFunction(source, "fetchApiQueryBatchAsOwner");
+        const loop = forOfStatements(fn).find(
+          (node) => calls(node.statement, "ownedApiQueries.set").length === 1,
+        );
+        return replaceNode(text, loop, "void queryHashes;");
+      },
+    ),
+    fixture(paths.query, "ordinary query skips owner wait", (source, text) => {
+      const fn = topLevelFunction(source, "executeApiQuery");
+      const wait = awaitExpressions(fn).find(
+        (node) => expressionValue(node.expression) === "owned.task",
+      );
+      return replaceNode(text, wait.expression, "Promise.resolve()");
+    }),
+    fixture(paths.view, "room await omits latch recheck", (source, text) => {
+      const fn = variableFunction(
+        topLevelFunction(source, "BattleView"),
+        "runAuthorityRefresh",
+      );
+      const read = calls(fn, "readAuthorityRoom")[0];
+      const guard = ifStatements(fn).find(
+        (node) =>
+          node.pos > read.end &&
+          calls(node.expression, "isTerminalLocked").length === 1,
+      );
+      return replaceNode(text, guard.expression, "false");
+    }),
+    fixture(
       paths.view,
-      "const roomResult = await readAuthorityRoom(authorityRoomId);\n        if (isTerminalLocked(null)) return false;",
-      "const roomResult = await readAuthorityRoom(authorityRoomId);",
-      "awaited room read omitted its latch recheck",
-    ],
-    [
+      "seeded terminal enables Battle bootstrap",
+      (source, text) => {
+        const view = topLevelFunction(source, "BattleView");
+        const bootstrapObserver = calls(view, "useApiQuery").find(
+          (call) => stringArgument(call, 0) === "battle.bootstrap",
+        );
+        return replaceNode(
+          text,
+          bootstrapObserver.arguments[2],
+          "pageActive && activeTerminal === null && identityTerminalParticipation === null",
+        );
+      },
+    ),
+    fixture(
       paths.view,
-      "await onAuthoritativeRoom(roomResult);\n        if (isTerminalLocked(null)) {",
-      "await onAuthoritativeRoom(roomResult);\n        if (false) {",
-      "published room omitted its pre-bootstrap latch recheck",
-    ],
-    [
-      paths.view,
-      "const battleResult = await readAuthorityBootstrap(authorityRoomId);\n        if (isTerminalLocked(null)) return false;",
-      "const battleResult = await readAuthorityBootstrap(authorityRoomId);",
-      "awaited Battle bootstrap omitted its latch recheck",
-    ],
-    [
-      paths.view,
-      "identityTerminalParticipation === null,",
-      "true,",
-      "re-auth seeded terminal state allowed ordinary Battle bootstrap",
-    ],
-    [
-      paths.view,
-      "stateVersion: snapshot.state_version,",
-      "stateVersion: 1,",
-      "snapshot state_version discarded",
-    ],
-    [
-      paths.view,
-      "pageActive && roomId === null && activeTerminal === null,",
-      "pageActive && roomId === null,",
-      "inactive invite query re-enabled after terminal",
-    ],
-    [
-      paths.appShell,
-      'window.addEventListener("online", reconnect);',
-      'window.addEventListener("offline", reconnect);',
-      "network reconnect bypassed guarded foreground recovery",
-    ],
-    [
-      paths.appShell,
-      "if (started !== null && Date.now() - started >= 300_000) refresh();",
-      "if (started !== null && Date.now() - started >= 300_000) return;",
-      "long visibility recovery bypassed guarded foreground recovery",
-    ],
-    [
-      paths.topAsset,
-      'useApiQuery("identity.bootstrap")',
-      'useApiQuery("vip.get")',
-      "TopAssetBar identity observer left the guarded boundary",
-    ],
-    [
-      paths.inventory,
-      'useApiQuery("inventory.list")',
-      'useApiQuery("catalog.get")',
-      "inactive inventory observer left the formal inventory route",
-    ],
+      "cached terminal enables identity observer",
+      (source, text) => {
+        const view = topLevelFunction(source, "BattleView");
+        const identityObserver = calls(view, "useApiQuery").find(
+          (call) => stringArgument(call, 0) === "identity.bootstrap",
+        );
+        return replaceNode(
+          text,
+          identityObserver.arguments[2],
+          "pageActive && activeTerminal === null",
+        );
+      },
+    ),
+    fixture(
+      paths.command,
+      "command disconnects shared room reader",
+      (source, text) => {
+        const fn = topLevelFunction(source, "authoritativeRoomFromResult");
+        const read = calls(fn, "readAuthoritativeRoom")[0];
+        return replaceNode(text, read, "Promise.resolve(null)");
+      },
+    ),
+    fixture(
+      paths.coordinator,
+      "room completion skips generation isolation",
+      (source, text) => {
+        const fn = topLevelFunction(source, "readCoordinatorRoom");
+        const callback = callbackOfCall(calls(fn, "then")[0]);
+        const check = calls(callback, "isCurrentGeneration")[0];
+        return replaceNode(text, check, "true");
+      },
+    ),
+    fixture(
+      paths.coordinator,
+      "room failure leaves recovery locked",
+      (source, text) => {
+        const fn = topLevelFunction(source, "readCoordinatorRoom");
+        const callback = callbackOfCall(calls(fn, "catch")[0]);
+        const finish = calls(callback, "finishCoordinatorRecovery")[0];
+        return replaceNode(text, finish.parent, "void cause;");
+      },
+    ),
+    fixture(
+      paths.coordinator,
+      "different room retains stale discovery owner",
+      (source, text) => {
+        const fn = topLevelFunction(source, "beginCoordinatorRecovery");
+        const cancel = calls(fn, "cancelApiQueryOwner").find(
+          (call) =>
+            expressionValue(call.arguments[0]) === "state.discoveryOwner",
+        );
+        return replaceNode(text, cancel, "void state.discoveryOwner");
+      },
+    ),
   ];
-  for (const [fileName, before, after, label] of fixtures) {
-    const overrides = new Map();
+
+  for (const { fileName, label, mutate } of fixtures) {
     const original = fs.readFileSync(fileName, "utf8");
+    const source = parseText(fileName, original);
+    const mutated = mutate(source, original);
+    const fixtureSource = parseText(fileName, mutated);
     must(
-      original.includes(before),
-      `Architecture self-test fixture is stale: ${label}`,
-    );
-    const mutated = original.replace(before, after);
-    const fixture = ts.createSourceFile(
-      fileName,
-      mutated,
-      ts.ScriptTarget.Latest,
-      true,
-      fileName.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
-    );
-    must(
-      fixture.parseDiagnostics.length === 0,
+      fixtureSource.parseDiagnostics.length === 0,
       `Architecture negative fixture is not valid TypeScript: ${label}`,
     );
-    overrides.set(fileName, mutated);
+    const overrides = new Map([[fileName, mutated]]);
     let rejected = false;
     try {
       runChecks(overrides);
@@ -1118,14 +938,33 @@ function runSelfTests() {
   }
 }
 
+function fixture(fileName, label, mutate) {
+  return { fileName, label, mutate };
+}
+
 function parse(fileName, overrides) {
-  return ts.createSourceFile(
+  return parseText(
     fileName,
     overrides.get(fileName) ?? fs.readFileSync(fileName, "utf8"),
+  );
+}
+
+function parseText(fileName, text) {
+  return ts.createSourceFile(
+    fileName,
+    text,
     ts.ScriptTarget.Latest,
     true,
     fileName.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
   );
+}
+
+function sourceFiles(directory, overrides) {
+  return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const target = path.join(directory, entry.name);
+    if (entry.isDirectory()) return sourceFiles(target, overrides);
+    return /\.(?:ts|tsx)$/.test(entry.name) ? [parse(target, overrides)] : [];
+  });
 }
 
 function topLevelFunction(source, name) {
@@ -1148,7 +987,7 @@ function namedFunctions(root, name) {
       ts.isIdentifier(node.name) &&
       node.name.text === name &&
       node.initializer &&
-      isFunction(node.initializer)
+      isFunction(unwrap(node.initializer))
     )
       matches.push(unwrap(node.initializer));
   });
@@ -1166,10 +1005,7 @@ function variableFunction(root, name) {
     initializer.arguments[0]
   )
     initializer = unwrap(initializer.arguments[0]);
-  must(
-    initializer && isFunction(initializer),
-    `Expected ${name} to be a function binding`,
-  );
+  must(initializer && isFunction(initializer), `Expected function ${name}`);
   return initializer;
 }
 
@@ -1187,36 +1023,10 @@ function variable(root, name) {
   return result;
 }
 
-function apiQueryCall(root, routeId) {
-  return calls(root, "useApiQuery").find(
-    (call) => stringArgument(call, 0) === routeId,
-  );
-}
-
 function calls(root, expectedPath) {
-  if (!root) return [];
   const matches = [];
   walk(root, (node) => {
     if (ts.isCallExpression(node) && callPath(node.expression) === expectedPath)
-      matches.push(node);
-  });
-  return matches;
-}
-
-function forbiddenQueryMethods(root) {
-  const forbidden = new Set([
-    "queryClient.invalidateQueries",
-    "queryClient.refetchQueries",
-    "queryClient.ensureQueryData",
-    "invalidateQueries",
-    "refetchQueries",
-    "ensureQueryData",
-    "refreshScopes",
-    "refreshRouteScopes",
-  ]);
-  const matches = [];
-  walk(root, (node) => {
-    if (ts.isCallExpression(node) && forbidden.has(callPath(node.expression)))
       matches.push(node);
   });
   return matches;
@@ -1229,49 +1039,47 @@ function callPath(expression) {
     const left = callPath(node.expression);
     return left ? `${left}.${node.name.text}` : node.name.text;
   }
-  if (ts.isElementAccessExpression(node)) {
-    const left = callPath(node.expression);
-    const argument = expressionValue(node.argumentExpression);
-    return left ? `${left}[${argument}]` : `[${argument}]`;
-  }
+  if (ts.isElementAccessExpression(node))
+    return `${callPath(node.expression)}[${expressionValue(node.argumentExpression)}]`;
   return "";
 }
 
 function objectArgument(call, index) {
-  if (!call?.arguments[index]) return null;
-  const argument = unwrap(call.arguments[index]);
-  return ts.isObjectLiteralExpression(argument) ? argument : null;
+  const argument = unwrap(call?.arguments[index]);
+  return argument && ts.isObjectLiteralExpression(argument) ? argument : null;
+}
+
+function arrayArgument(call, index) {
+  const argument = unwrap(call?.arguments[index]);
+  return argument && ts.isArrayLiteralExpression(argument) ? argument : null;
+}
+
+function objectProperty(object, name) {
+  return object?.properties.find(
+    (property) =>
+      (ts.isPropertyAssignment(property) ||
+        ts.isShorthandPropertyAssignment(property) ||
+        ts.isMethodDeclaration(property)) &&
+      propertyName(property.name) === name,
+  );
 }
 
 function objectPropertyExpression(object, name) {
-  const property = object?.properties.find(
-    (candidate) =>
-      (ts.isPropertyAssignment(candidate) ||
-        ts.isShorthandPropertyAssignment(candidate) ||
-        ts.isMethodDeclaration(candidate)) &&
-      propertyName(candidate.name) === name,
-  );
+  const property = objectProperty(object, name);
   if (!property) return null;
   if (ts.isShorthandPropertyAssignment(property)) return property.name;
   return property.initializer ?? property;
 }
 
 function objectPropertyObject(object, name) {
-  const expression = objectPropertyExpression(object, name);
-  const unwrapped = expression ? unwrap(expression) : null;
-  return unwrapped && ts.isObjectLiteralExpression(unwrapped)
-    ? unwrapped
+  const expression = unwrap(objectPropertyExpression(object, name));
+  return expression && ts.isObjectLiteralExpression(expression)
+    ? expression
     : null;
 }
 
-function functionProperty(object, name) {
-  const expression = objectPropertyExpression(object, name);
-  const unwrapped = expression ? unwrap(expression) : null;
-  return unwrapped && isFunction(unwrapped) ? unwrapped : null;
-}
-
 function booleanProperty(object, name) {
-  const expression = objectPropertyExpression(object, name);
+  const expression = unwrap(objectPropertyExpression(object, name));
   return expression?.kind === ts.SyntaxKind.TrueKeyword
     ? true
     : expression?.kind === ts.SyntaxKind.FalseKeyword
@@ -1279,11 +1087,11 @@ function booleanProperty(object, name) {
       : undefined;
 }
 
-function numberProperty(object, name) {
+function stringProperty(object, name) {
   const expression = unwrap(objectPropertyExpression(object, name));
-  return expression && ts.isNumericLiteral(expression)
-    ? Number(expression.text.replaceAll("_", ""))
-    : undefined;
+  return expression && ts.isStringLiteralLike(expression)
+    ? expression.text
+    : "";
 }
 
 function objectHasShorthand(object, name) {
@@ -1315,6 +1123,39 @@ function arrayStrings(expression) {
     : [];
 }
 
+function spreadIdentifiers(expression) {
+  const array = unwrap(expression);
+  return array && ts.isArrayLiteralExpression(array)
+    ? array.elements
+        .filter(ts.isSpreadElement)
+        .map((element) => expressionValue(element.expression))
+    : [];
+}
+
+function requestArrayRoutes(expression) {
+  const array = unwrap(expression);
+  return array && ts.isArrayLiteralExpression(array)
+    ? array.elements
+        .map((element) => stringProperty(unwrap(element), "routeId"))
+        .filter(Boolean)
+    : [];
+}
+
+function requestArrayPropertyValues(expression, property) {
+  const array = unwrap(expression);
+  return array && ts.isArrayLiteralExpression(array)
+    ? array.elements
+        .map((element) => stringProperty(unwrap(element), property))
+        .filter(Boolean)
+    : [];
+}
+
+function callbackOfCall(call) {
+  const callback = unwrap(call?.arguments[0]);
+  must(callback && isFunction(callback), "Expected call callback");
+  return callback;
+}
+
 function expressionValue(expression) {
   if (!expression) return "";
   const node = unwrap(expression);
@@ -1324,15 +1165,13 @@ function expressionValue(expression) {
   if (node.kind === ts.SyntaxKind.NullKeyword) return "null";
   if (node.kind === ts.SyntaxKind.TrueKeyword) return "true";
   if (node.kind === ts.SyntaxKind.FalseKeyword) return "false";
-  if (ts.isPropertyAccessExpression(node)) return callPath(node);
-  if (ts.isElementAccessExpression(node))
-    return `${expressionValue(node.expression)}[${expressionValue(node.argumentExpression)}]`;
+  if (ts.isPropertyAccessExpression(node) || ts.isElementAccessExpression(node))
+    return callPath(node);
   return node.getText(node.getSourceFile());
 }
 
 function propertyPaths(root) {
   const pathsFound = [];
-  if (!root) return pathsFound;
   walk(root, (node) => {
     if (ts.isPropertyAccessExpression(node)) pathsFound.push(callPath(node));
   });
@@ -1341,21 +1180,10 @@ function propertyPaths(root) {
 
 function identifiers(root) {
   const names = [];
-  if (!root) return names;
   walk(root, (node) => {
     if (ts.isIdentifier(node)) names.push(node.text);
   });
   return names;
-}
-
-function bindingNames(binding) {
-  if (!binding) return [];
-  if (ts.isIdentifier(binding)) return [binding.text];
-  if (ts.isObjectBindingPattern(binding) || ts.isArrayBindingPattern(binding))
-    return binding.elements.flatMap((element) =>
-      ts.isBindingElement(element) ? bindingNames(element.name) : [],
-    );
-  return [];
 }
 
 function returnExpressions(root) {
@@ -1365,22 +1193,6 @@ function returnExpressions(root) {
       expressions.push(node.expression);
   });
   return expressions;
-}
-
-function returnStatements(root) {
-  const statements = [];
-  walk(root, (node) => {
-    if (ts.isReturnStatement(node)) statements.push(node);
-  });
-  return statements;
-}
-
-function throwStatements(root) {
-  const statements = [];
-  walk(root, (node) => {
-    if (ts.isThrowStatement(node)) statements.push(node);
-  });
-  return statements;
 }
 
 function assignments(root) {
@@ -1395,10 +1207,10 @@ function assignments(root) {
   return matches;
 }
 
-function binaryExpressions(root) {
+function throwStatements(root) {
   const matches = [];
   walk(root, (node) => {
-    if (ts.isBinaryExpression(node)) matches.push(node);
+    if (ts.isThrowStatement(node)) matches.push(node);
   });
   return matches;
 }
@@ -1411,12 +1223,53 @@ function ifStatements(root) {
   return matches;
 }
 
-function objectLiterals(root) {
+function forOfStatements(root) {
   const matches = [];
   walk(root, (node) => {
-    if (ts.isObjectLiteralExpression(node)) matches.push(node);
+    if (ts.isForOfStatement(node)) matches.push(node);
   });
   return matches;
+}
+
+function awaitExpressions(root) {
+  const matches = [];
+  walk(root, (node) => {
+    if (ts.isAwaitExpression(node)) matches.push(node);
+  });
+  return matches;
+}
+
+function numericLiterals(root) {
+  const values = [];
+  walk(root, (node) => {
+    if (ts.isNumericLiteral(node))
+      values.push(Number(node.text.replaceAll("_", "")));
+  });
+  return values;
+}
+
+function jsxElements(root, tagName) {
+  const matches = [];
+  walk(root, (node) => {
+    if (
+      ts.isJsxElement(node) &&
+      expressionValue(node.openingElement.tagName) === tagName
+    )
+      matches.push(node);
+  });
+  return matches;
+}
+
+function jsxAttributeValue(element, name) {
+  const attribute = element.openingElement.attributes.properties.find(
+    (property) =>
+      ts.isJsxAttribute(property) && property.name.getText() === name,
+  );
+  const initializer =
+    attribute && ts.isJsxAttribute(attribute) ? attribute.initializer : null;
+  return initializer && ts.isJsxExpression(initializer)
+    ? expressionValue(initializer.expression)
+    : "";
 }
 
 function enclosingIf(root, target, predicate) {
@@ -1427,8 +1280,7 @@ function enclosingIf(root, target, predicate) {
 
 function containsNode(root, target) {
   if (!root || !target) return false;
-  if (root === target) return true;
-  let found = false;
+  let found = root === target;
   walk(root, (node) => {
     if (node === target) found = true;
   });
@@ -1462,25 +1314,24 @@ function latchCheckBetween(root, start, end) {
       calls(node.expression, "isTerminalLocked").some(
         (call) => expressionValue(call.arguments[0]) === "null",
       ) &&
-      returnStatements(node.thenStatement).length >= 1,
+      returnExpressions(node.thenStatement).length >= 1,
   );
 }
 
-function numericValue(expression) {
-  const node = unwrap(expression);
-  return node && ts.isNumericLiteral(node)
-    ? Number(node.text.replaceAll("_", ""))
-    : undefined;
+function insertIntoFunction(text, fn, statement) {
+  const body = fn.body;
+  must(body && ts.isBlock(body), "Fixture target must have a block body");
+  return `${text.slice(0, body.getStart() + 1)}\n${statement}\n${text.slice(body.getStart() + 1)}`;
 }
 
-function isRefCollection(initializer, collection) {
-  const callsFound = calls(initializer, "useRef");
-  if (callsFound.length !== 1) return false;
-  const argument = unwrap(callsFound[0].arguments[0]);
+function replaceNode(text, node, replacement) {
+  must(node, "Fixture target node is missing");
+  return `${text.slice(0, node.getStart())}${replacement}${text.slice(node.end)}`;
+}
+
+function lineOf(node) {
   return (
-    argument &&
-    ts.isNewExpression(argument) &&
-    callPath(argument.expression) === collection
+    node.getSourceFile().getLineAndCharacterOfPosition(node.getStart()).line + 1
   );
 }
 

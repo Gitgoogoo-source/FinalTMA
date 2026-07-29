@@ -46,6 +46,10 @@ export type BattleAuthoritativeRoomHandler = (
   snapshot: BattleRoomSnapshotDto,
 ) => void;
 
+export type BattleAuthoritativeRoomReader = (
+  roomId: string,
+) => Promise<BattleRoomSnapshotDto | null>;
+
 const initialState: BattleCommandState = {
   routeId: null,
   operationId: null,
@@ -56,6 +60,7 @@ const initialState: BattleCommandState = {
 export function useBattleCommand(
   refetchAuthority: () => Promise<void>,
   onAuthoritativeRoom: BattleAuthoritativeRoomHandler,
+  readAuthoritativeRoom: BattleAuthoritativeRoomReader,
 ): {
   state: BattleCommandState;
   clearMessage(): void;
@@ -69,11 +74,13 @@ export function useBattleCommand(
   const active = useRef<AbortController | null>(null);
   const refetchRef = useRef(refetchAuthority);
   const onAuthoritativeRoomRef = useRef(onAuthoritativeRoom);
+  const readAuthoritativeRoomRef = useRef(readAuthoritativeRoom);
 
   useEffect(() => {
     refetchRef.current = refetchAuthority;
     onAuthoritativeRoomRef.current = onAuthoritativeRoom;
-  }, [onAuthoritativeRoom, refetchAuthority]);
+    readAuthoritativeRoomRef.current = readAuthoritativeRoom;
+  }, [onAuthoritativeRoom, readAuthoritativeRoom, refetchAuthority]);
 
   useEffect(
     () => () => {
@@ -113,6 +120,7 @@ export function useBattleCommand(
           generation,
           controller.signal,
           onAuthoritativeRoomRef.current,
+          readAuthoritativeRoomRef.current,
         );
         if (!isCurrentGeneration(generation)) return null;
         setState({
@@ -132,6 +140,7 @@ export function useBattleCommand(
             generation,
             controller.signal,
             onAuthoritativeRoomRef.current,
+            readAuthoritativeRoomRef.current,
             refetchRef.current,
           );
           if (!isCurrentGeneration(generation)) return null;
@@ -185,6 +194,7 @@ export function useBattleCommand(
               generation,
               controller.signal,
               onAuthoritativeRoomRef.current,
+              readAuthoritativeRoomRef.current,
             );
           } catch (recoveryCause) {
             if (
@@ -219,6 +229,7 @@ export function useBattleCommand(
           generation,
           controller.signal,
           onAuthoritativeRoomRef.current,
+          readAuthoritativeRoomRef.current,
           refetchRef.current,
         );
         if (!isCurrentGeneration(generation)) return null;
@@ -398,13 +409,16 @@ async function applyBattleCommandResult<Id extends BattleCommandRouteId>(
   generation: string,
   signal: AbortSignal,
   onAuthoritativeRoom: BattleAuthoritativeRoomHandler,
+  readAuthoritativeRoom: BattleAuthoritativeRoomReader,
 ): Promise<void> {
   const snapshot = await authoritativeRoomFromResult(
     routeId,
     result,
     generation,
     signal,
+    readAuthoritativeRoom,
   );
+  if (!snapshot || signal.aborted || !isCurrentGeneration(generation)) return;
   onAuthoritativeRoom(snapshot);
   if (!isBattleAssetTerminal(snapshot.status))
     await refreshRouteScopes(routeId);
@@ -416,16 +430,15 @@ async function refreshBattleCommandFailure(
   generation: string,
   signal: AbortSignal,
   onAuthoritativeRoom: BattleAuthoritativeRoomHandler,
+  readAuthoritativeRoom: BattleAuthoritativeRoomReader,
   refetchAuthority: () => Promise<void>,
 ): Promise<void> {
   if (isBattleTerminalFailure(code)) {
     if (terminalRoomId) {
       try {
-        const snapshot = await readAuthoritativeRoom(
-          terminalRoomId,
-          generation,
-          signal,
-        );
+        const snapshot = await readAuthoritativeRoom(terminalRoomId);
+        if (!snapshot || signal.aborted || !isCurrentGeneration(generation))
+          return;
         onAuthoritativeRoom(snapshot);
         return;
       } catch (cause) {
@@ -443,7 +456,8 @@ async function authoritativeRoomFromResult<Id extends BattleCommandRouteId>(
   result: RouteOutput<Id>,
   generation: string,
   signal: AbortSignal,
-): Promise<BattleRoomSnapshotDto> {
+  readAuthoritativeRoom: BattleAuthoritativeRoomReader,
+): Promise<BattleRoomSnapshotDto | null> {
   if (
     routeId === "battle.accept" ||
     routeId === "battle.action" ||
@@ -451,21 +465,10 @@ async function authoritativeRoomFromResult<Id extends BattleCommandRouteId>(
   )
     return result as BattleRoomSnapshotDto;
   const commandResult = result as RouteOutput<BattleCommandRouteId>;
-  return readAuthoritativeRoom(commandResult.room_id, generation, signal);
-}
-
-async function readAuthoritativeRoom(
-  roomId: string,
-  generation: string,
-  signal: AbortSignal,
-): Promise<BattleRoomSnapshotDto> {
-  const response = await apiRequest(
-    "battle.room",
-    { room_id: roomId },
-    { signal },
-  );
+  const snapshot = await readAuthoritativeRoom(commandResult.room_id);
+  if (signal.aborted) return null;
   assertGeneration(generation);
-  return response.data;
+  return snapshot;
 }
 
 function isBattleTerminalFailure(code: string): boolean {

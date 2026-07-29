@@ -1,4 +1,6 @@
 import {
+  hashKey,
+  notifyManager,
   QueryClient,
   useQuery,
   type UseQueryResult,
@@ -32,12 +34,29 @@ type ForegroundAuthorityRefresh = {
   refresh(): Promise<boolean>;
 };
 
+export type ApiQueryRequest = {
+  [Id in RouteId]: {
+    routeId: Id;
+    input: RouteInput<Id>;
+  };
+}[RouteId];
+
+type OwnedApiQueryBatch = {
+  owner: symbol;
+  generation: string;
+  controller: AbortController;
+  queryHashes: ReadonlySet<string>;
+  task: Promise<void>;
+};
+
 const apiQuerySuppressions = new Map<symbol, ApiQuerySuppression>();
 const apiQuerySuppressionListeners = new Set<() => void>();
 const foregroundAuthorityRefreshes = new Map<
   symbol,
   ForegroundAuthorityRefresh
 >();
+const ownedApiQueries = new Map<string, OwnedApiQueryBatch>();
+const ownedApiQueryBatches = new Set<OwnedApiQueryBatch>();
 let apiQuerySuppressionVersion = 0;
 
 export const queryClient = new QueryClient({
@@ -52,6 +71,15 @@ export const queryClient = new QueryClient({
   },
 });
 registerSessionCacheClearer(() => {
+  for (const batch of ownedApiQueryBatches)
+    batch.controller.abort(
+      new DOMException("Session query ownership ended", "AbortError"),
+    );
+  ownedApiQueries.clear();
+  ownedApiQueryBatches.clear();
+  apiQuerySuppressions.clear();
+  foregroundAuthorityRefreshes.clear();
+  publishApiQuerySuppressionChange();
   void queryClient.cancelQueries();
   queryClient.clear();
 });
@@ -84,31 +112,121 @@ export function prefetchApiQuery<Id extends RouteId>(
   const generation = getSession()?.generation ?? "public";
   return queryClient.prefetchQuery({
     queryKey: [generation, "v1", routeId, input],
-    queryFn: async ({ signal }) => {
-      assertApiQueryAllowed(generation, routeId);
-      const result = await apiRequest(routeId, input, { signal });
-      assertCurrentSession(generation, routeById(routeId).auth);
-      return result.data;
-    },
+    queryFn: ({ signal }) =>
+      executeApiQuery(generation, routeId, input, signal),
   });
 }
 
 export function fetchApiQuery<Id extends RouteId>(
   routeId: Id,
   input: RouteInput<Id> = {} as RouteInput<Id>,
-  suppressionOwner?: symbol,
 ): Promise<RouteOutput<Id>> {
   const generation = getSession()?.generation ?? "public";
   return queryClient.fetchQuery({
     queryKey: [generation, "v1", routeId, input],
-    queryFn: async ({ signal }) => {
-      assertApiQueryAllowed(generation, routeId, suppressionOwner);
-      const result = await apiRequest(routeId, input, { signal });
-      assertCurrentSession(generation, routeById(routeId).auth);
-      return result.data;
-    },
+    queryFn: ({ signal }) =>
+      executeApiQuery(generation, routeId, input, signal),
     staleTime: 0,
   });
+}
+
+export function fetchApiQueryBatchAsOwner(
+  owner: symbol,
+  requests: readonly ApiQueryRequest[],
+  options: { cancelRouteIds?: readonly RouteId[] } = {},
+): Promise<void> {
+  if (requests.length === 0) return Promise.resolve();
+  const generation = getSession()?.generation;
+  if (!generation) return Promise.reject(staleSessionError());
+  const queryHashes = requests.map(({ routeId, input }) =>
+    apiQueryHash(generation, routeId, input),
+  );
+  const conflicts = [
+    ...new Set(
+      queryHashes
+        .map((queryHash) => ownedApiQueries.get(queryHash))
+        .filter((batch): batch is OwnedApiQueryBatch => Boolean(batch)),
+    ),
+  ];
+
+  const controller = new AbortController();
+  let resolveTask!: () => void;
+  let rejectTask!: (cause: unknown) => void;
+  const task = new Promise<void>((resolve, reject) => {
+    resolveTask = resolve;
+    rejectTask = reject;
+  });
+  const batch: OwnedApiQueryBatch = {
+    owner,
+    generation,
+    controller,
+    queryHashes: new Set(queryHashes),
+    task,
+  };
+  ownedApiQueryBatches.add(batch);
+  for (const queryHash of queryHashes) ownedApiQueries.set(queryHash, batch);
+
+  const cancelRouteIds = [
+    ...new Set([
+      ...requests.map(({ routeId }) => routeId),
+      ...(options.cancelRouteIds ?? []),
+    ]),
+  ];
+  void (async () => {
+    if (conflicts.length > 0)
+      await Promise.all(
+        conflicts.map((conflict) => conflict.task.catch(() => undefined)),
+      );
+    throwIfAborted(controller.signal);
+    assertCurrentSession(generation, true);
+    await cancelApiQueries(cancelRouteIds, generation);
+    throwIfAborted(controller.signal);
+    assertCurrentSession(generation, true);
+    const results = await Promise.all(
+      requests.map(({ routeId, input }) =>
+        executeApiQueryRequest(generation, routeId, input, controller.signal),
+      ),
+    );
+    throwIfAborted(controller.signal);
+    assertCurrentSession(generation, true);
+    notifyManager.batch(() => {
+      requests.forEach(({ routeId, input }, index) => {
+        queryClient.setQueryData(
+          [generation, "v1", routeId, input],
+          results[index],
+        );
+      });
+    });
+  })()
+    .then(resolveTask, rejectTask)
+    .finally(() => {
+      ownedApiQueryBatches.delete(batch);
+      for (const queryHash of batch.queryHashes)
+        if (ownedApiQueries.get(queryHash) === batch)
+          ownedApiQueries.delete(queryHash);
+    });
+  return task;
+}
+
+export function cancelApiQueryOwner(owner: symbol): void {
+  for (const batch of ownedApiQueryBatches)
+    if (batch.owner === owner)
+      batch.controller.abort(
+        new DOMException("Authority query superseded", "AbortError"),
+      );
+}
+
+export function getApiQueryData<Id extends RouteId>(
+  generation: string,
+  routeId: Id,
+  input: RouteInput<Id> = {} as RouteInput<Id>,
+): RouteOutput<Id> | undefined {
+  return queryClient.getQueryData<RouteOutput<Id>>([
+    generation,
+    "v1",
+    routeId,
+    input,
+  ]);
 }
 
 export function cancelApiQueries(
@@ -125,6 +243,24 @@ export function cancelApiQueries(
   });
 }
 
+export function invalidateApiQueries(
+  routeIds: readonly RouteId[],
+  requestedGeneration = getSession()?.generation,
+): Promise<void> {
+  const generation = requestedGeneration;
+  if (!generation) return Promise.resolve();
+  const selected = new Set<RouteId>(routeIds);
+  return queryClient.invalidateQueries(
+    {
+      predicate: (query) =>
+        query.queryKey[0] === generation &&
+        selected.has(query.queryKey[2] as RouteId) &&
+        !isApiQuerySuppressed(generation, query.queryKey[2] as RouteId),
+    },
+    { cancelRefetch: false },
+  );
+}
+
 export function useApiQuery<Id extends RouteId>(
   routeId: Id,
   input: RouteInput<Id> = {} as RouteInput<Id>,
@@ -138,27 +274,29 @@ export function useApiQuery<Id extends RouteId>(
   const session = getSession();
   const generation = session?.generation ?? "public";
   const suppressed = isApiQuerySuppressed(generation, routeId);
-  return useQuery({
+  const query = useQuery({
     queryKey: [generation, "v1", routeId, input],
-    queryFn: async ({ signal }) => {
-      assertApiQueryAllowed(generation, routeId);
-      const result = await apiRequest(routeId, input, { signal });
-      assertCurrentSession(generation, routeById(routeId).auth);
-      return result.data;
-    },
+    queryFn: ({ signal }) =>
+      executeApiQuery(generation, routeId, input, signal),
     enabled: enabled && !suppressed,
     refetchOnReconnect: false,
   });
+  const refetch: typeof query.refetch = (options) =>
+    query.refetch({ ...options, cancelRefetch: false });
+  return { ...query, refetch } as UseQueryResult<RouteOutput<Id>>;
 }
 
 export async function refreshUserState(): Promise<void> {
   const generation = getSession()?.generation;
   if (!generation) return;
-  await queryClient.invalidateQueries({
-    predicate: (query) =>
-      query.queryKey[0] === generation &&
-      !isApiQuerySuppressed(generation, query.queryKey[2] as RouteId),
-  });
+  await queryClient.invalidateQueries(
+    {
+      predicate: (query) =>
+        query.queryKey[0] === generation &&
+        !isApiQuerySuppressed(generation, query.queryKey[2] as RouteId),
+    },
+    { cancelRefetch: false },
+  );
 }
 
 const topAssetRouteIds = [
@@ -170,15 +308,18 @@ const topAssetRouteIds = [
 export async function refreshTopAssetSummary(): Promise<boolean> {
   const generation = getSession()?.generation;
   if (!generation) return false;
-  await queryClient.refetchQueries({
-    type: "active",
-    predicate: (query) =>
-      query.queryKey[0] === generation &&
-      !isApiQuerySuppressed(generation, query.queryKey[2] as RouteId) &&
-      topAssetRouteIds.includes(
-        query.queryKey[2] as (typeof topAssetRouteIds)[number],
-      ),
-  });
+  await queryClient.refetchQueries(
+    {
+      type: "active",
+      predicate: (query) =>
+        query.queryKey[0] === generation &&
+        !isApiQuerySuppressed(generation, query.queryKey[2] as RouteId) &&
+        topAssetRouteIds.includes(
+          query.queryKey[2] as (typeof topAssetRouteIds)[number],
+        ),
+    },
+    { cancelRefetch: false },
+  );
   return topAssetRouteIds.every(
     (routeId) =>
       queryClient.getQueryState([generation, "v1", routeId, {}])?.status ===
@@ -211,18 +352,21 @@ export async function refreshForegroundState(pathname: string): Promise<void> {
     ...foregroundPrefixes(pathname),
   ]);
   for (const prefix of handledPrefixes) prefixes.delete(prefix);
-  await queryClient.invalidateQueries({
-    refetchType: "active",
-    predicate: (query) => {
-      if (query.queryKey[0] !== generation) return false;
-      const id = query.queryKey[2];
-      return (
-        typeof id === "string" &&
-        !isApiQuerySuppressed(generation, id as RouteId) &&
-        prefixes.has(id.split(".")[0] ?? "")
-      );
+  await queryClient.invalidateQueries(
+    {
+      refetchType: "active",
+      predicate: (query) => {
+        if (query.queryKey[0] !== generation) return false;
+        const id = query.queryKey[2];
+        return (
+          typeof id === "string" &&
+          !isApiQuerySuppressed(generation, id as RouteId) &&
+          prefixes.has(id.split(".")[0] ?? "")
+        );
+      },
     },
-  });
+    { cancelRefetch: false },
+  );
 }
 
 export function suppressApiQueries(
@@ -303,7 +447,7 @@ export async function refreshScopes(
         );
       },
     },
-    options,
+    { ...options, cancelRefetch: false },
   );
 }
 
@@ -329,26 +473,17 @@ function assertCurrentSession(expected: string, authenticated: boolean): void {
     throw new DOMException("Stale session generation", "AbortError");
 }
 
-function assertApiQueryAllowed(
-  generation: string,
-  routeId: RouteId,
-  suppressionOwner?: symbol,
-): void {
-  if (isApiQuerySuppressed(generation, routeId, suppressionOwner))
+function assertApiQueryAllowed(generation: string, routeId: RouteId): void {
+  if (isApiQuerySuppressed(generation, routeId))
     throw new DOMException(
       "Query suppressed by authority coordinator",
       "AbortError",
     );
 }
 
-function isApiQuerySuppressed(
-  generation: string,
-  routeId: RouteId,
-  suppressionOwner?: symbol,
-): boolean {
-  return [...apiQuerySuppressions].some(
-    ([owner, suppression]) =>
-      owner !== suppressionOwner &&
+function isApiQuerySuppressed(generation: string, routeId: RouteId): boolean {
+  return [...apiQuerySuppressions.values()].some(
+    (suppression) =>
       suppression.generation === generation &&
       suppression.routeIds.has(routeId),
   );
@@ -372,4 +507,63 @@ function getApiQuerySuppressionVersion(): number {
 function publishApiQuerySuppressionChange(): void {
   apiQuerySuppressionVersion += 1;
   for (const listener of apiQuerySuppressionListeners) listener();
+}
+
+async function executeApiQuery<Id extends RouteId>(
+  generation: string,
+  routeId: Id,
+  input: RouteInput<Id>,
+  signal: AbortSignal,
+): Promise<RouteOutput<Id>> {
+  const queryHash = apiQueryHash(generation, routeId, input);
+  let owned = ownedApiQueries.get(queryHash);
+  while (owned) {
+    let succeeded = true;
+    try {
+      await owned.task;
+    } catch {
+      succeeded = false;
+    }
+    throwIfAborted(signal);
+    assertCurrentSession(generation, routeById(routeId).auth);
+    const successor = ownedApiQueries.get(queryHash);
+    if (successor && successor !== owned) {
+      owned = successor;
+      continue;
+    }
+    if (succeeded) {
+      const data = getApiQueryData(generation, routeId, input);
+      if (data !== undefined) return data;
+    }
+    break;
+  }
+  assertApiQueryAllowed(generation, routeId);
+  return executeApiQueryRequest(generation, routeId, input, signal);
+}
+
+async function executeApiQueryRequest<Id extends RouteId>(
+  generation: string,
+  routeId: Id,
+  input: RouteInput<Id>,
+  signal: AbortSignal,
+): Promise<RouteOutput<Id>> {
+  const result = await apiRequest(routeId, input, { signal });
+  assertCurrentSession(generation, routeById(routeId).auth);
+  return result.data;
+}
+
+function apiQueryHash<Id extends RouteId>(
+  generation: string,
+  routeId: Id,
+  input: RouteInput<Id>,
+): string {
+  return hashKey([generation, "v1", routeId, input]);
+}
+
+function throwIfAborted(signal: AbortSignal): void {
+  if (signal.aborted) throw signal.reason ?? staleSessionError();
+}
+
+function staleSessionError(): DOMException {
+  return new DOMException("Stale session generation", "AbortError");
 }

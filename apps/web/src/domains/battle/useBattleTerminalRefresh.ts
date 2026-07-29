@@ -1,17 +1,26 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useLayoutEffect,
+  useRef,
+  useSyncExternalStore,
+} from "react";
 import {
   type BattleRoomSnapshotDto,
   type RouteId,
-  type RouteOutput,
 } from "@pokepets/api-contracts/app";
 
 import {
-  cancelApiQueries,
-  fetchApiQuery,
+  cancelApiQueryOwner,
+  fetchApiQueryBatchAsOwner,
+  getApiQueryData,
   releaseApiQuerySuppression,
   suppressApiQueries,
+  type ApiQueryRequest,
 } from "../../platform/query/index.ts";
-import { getSession } from "../../platform/session/store.ts";
+import {
+  getSession,
+  registerSensitiveStateResetter,
+} from "../../platform/session/store.ts";
 
 export type BattleTerminalObservation = {
   roomId: string;
@@ -26,17 +35,21 @@ export type BattleTerminalRefreshFailure = BattleTerminalObservation & {
   error: Error;
 };
 
-type GenerationFailure = BattleTerminalRefreshFailure & {
+type CoordinatorState = {
   generation: string;
-};
-
-type GenerationObservation = BattleTerminalObservation & {
-  generation: string;
-};
-
-type GenerationRoom = {
-  generation: string;
-  roomId: string;
+  discoveryOwner: symbol;
+  suppressionOwner: symbol;
+  routeOwners: Set<symbol>;
+  active: BattleTerminalObservation | null;
+  recoveryRoomId: string | null;
+  roomInFlight: Map<string, Promise<BattleRoomSnapshotDto | null>>;
+  terminalInFlight: Map<string, Promise<void>>;
+  terminalOwners: Map<string, symbol>;
+  completed: Set<string>;
+  failure: BattleTerminalRefreshFailure | null;
+  listeners: Set<() => void>;
+  version: number;
+  disposed: boolean;
 };
 
 const terminalStatuses = [
@@ -47,279 +60,365 @@ const terminalStatuses = [
   "voided",
 ] as const;
 
-const terminalQueryRoutes = [
+const authorityCancellationRoutes = [
   "battle.bootstrap",
   "battle.room",
   "battle.current_invite",
   "battle.team_options",
+] as const satisfies readonly RouteId[];
+
+const terminalCancellationRoutes = [
+  ...authorityCancellationRoutes,
   "identity.bootstrap",
   "inventory.list",
 ] as const satisfies readonly RouteId[];
 
-export function useBattleTerminalRefresh(sessionGeneration: string | null): {
+const terminalRequests = [
+  { routeId: "battle.bootstrap", input: {} },
+  { routeId: "identity.bootstrap", input: {} },
+  { routeId: "inventory.list", input: {} },
+] as const satisfies readonly ApiQueryRequest[];
+
+const coordinators = new Map<string, CoordinatorState>();
+
+registerSensitiveStateResetter(() => {
+  for (const state of coordinators.values()) {
+    state.disposed = true;
+    cancelApiQueryOwner(state.discoveryOwner);
+    for (const owner of state.terminalOwners.values())
+      cancelApiQueryOwner(owner);
+    releaseApiQuerySuppression(state.suppressionOwner);
+  }
+  coordinators.clear();
+});
+
+export function useBattleTerminalRefresh(
+  sessionGeneration: string | null,
+  routeActive: boolean,
+): {
   reportTerminal: BattleTerminalReporter;
   reportNonTerminalRoom(roomId: string): void;
   prepareAuthorityRecovery(roomId: string): boolean;
   readAuthorityRoom(roomId: string): Promise<BattleRoomSnapshotDto | null>;
-  readAuthorityBootstrap(
-    roomId: string,
-  ): Promise<RouteOutput<"battle.bootstrap"> | null>;
   finishAuthorityRecovery(roomId: string): void;
   failure: BattleTerminalRefreshFailure | null;
   active: BattleTerminalObservation | null;
   isLocked(roomId: string | null): boolean;
 } {
-  const suppressionOwner = useRef(Symbol("battle-terminal-query-owner"));
-  const inFlight = useRef(new Map<string, Promise<void>>());
-  const completed = useRef(new Set<string>());
-  const active = useRef<GenerationObservation | null>(null);
-  const recovery = useRef<GenerationRoom | null>(null);
-  const mounted = useRef(false);
-  const [failure, setFailure] = useState<GenerationFailure | null>(null);
-  const [visibleActive, setVisibleActive] =
-    useState<GenerationObservation | null>(null);
-
-  useEffect(() => {
-    const generation = sessionGeneration;
-    const owner = suppressionOwner.current;
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-      releaseApiQuerySuppression(owner);
-      if (generation)
-        void cancelApiQueries(terminalQueryRoutes, generation).catch(
-          () => undefined,
-        );
-      if (active.current?.generation === generation) active.current = null;
-      if (recovery.current?.generation === generation) recovery.current = null;
-    };
-  }, [sessionGeneration]);
-
-  const isLocked = useCallback(
-    (roomId: string | null) => {
-      const observation = active.current;
-      return Boolean(
-        observation?.generation === sessionGeneration &&
-        (roomId === null || observation.roomId === roomId),
-      );
-    },
-    [sessionGeneration],
+  const routeOwner = useRef(Symbol("battle-route-authority"));
+  useSyncExternalStore(
+    useCallback(
+      (listener) =>
+        sessionGeneration
+          ? subscribeCoordinator(sessionGeneration, listener)
+          : () => undefined,
+      [sessionGeneration],
+    ),
+    useCallback(
+      () => (sessionGeneration ? coordinatorFor(sessionGeneration).version : 0),
+      [sessionGeneration],
+    ),
+    () => 0,
   );
 
-  const prepareAuthorityRecovery = useCallback(
-    (roomId: string) => {
-      const generation = sessionGeneration;
-      if (
-        !generation ||
-        getSession()?.generation !== generation ||
-        active.current?.generation === generation
-      )
-        return false;
-      recovery.current = { generation, roomId };
-      suppressApiQueries(
-        suppressionOwner.current,
-        generation,
-        terminalQueryRoutes,
-      );
-      return true;
-    },
-    [sessionGeneration],
-  );
+  useLayoutEffect(() => {
+    if (!sessionGeneration) return;
+    setRouteActive(sessionGeneration, routeOwner.current, routeActive);
+  }, [routeActive, sessionGeneration]);
 
-  const finishAuthorityRecovery = useCallback(
-    (roomId: string) => {
-      const generation = sessionGeneration;
-      if (
-        !generation ||
-        active.current?.generation === generation ||
-        !matchesRoom(recovery.current, generation, roomId)
-      )
-        return;
-      recovery.current = null;
-      releaseApiQuerySuppression(suppressionOwner.current);
-    },
-    [sessionGeneration],
-  );
-
-  const readAuthorityRoom = useCallback(
-    async (roomId: string): Promise<BattleRoomSnapshotDto | null> => {
-      const generation = sessionGeneration;
-      if (!generation || !prepareAuthorityRecovery(roomId)) return null;
-      await cancelApiQueries(terminalQueryRoutes, generation);
-      if (
-        !mounted.current ||
-        getSession()?.generation !== generation ||
-        active.current?.generation === generation ||
-        !matchesRoom(recovery.current, generation, roomId)
-      )
-        return null;
-      return fetchApiQuery(
-        "battle.room",
-        { room_id: roomId },
-        suppressionOwner.current,
-      );
-    },
-    [prepareAuthorityRecovery, sessionGeneration],
-  );
-
-  const readAuthorityBootstrap = useCallback(
-    (roomId: string): Promise<RouteOutput<"battle.bootstrap"> | null> => {
-      const generation = sessionGeneration;
-      if (
-        !generation ||
-        !mounted.current ||
-        getSession()?.generation !== generation ||
-        active.current?.generation === generation ||
-        !matchesRoom(recovery.current, generation, roomId)
-      )
-        return Promise.resolve(null);
-      return fetchApiQuery("battle.bootstrap", {}, suppressionOwner.current);
-    },
-    [sessionGeneration],
-  );
-
-  const reportNonTerminalRoom = useCallback(
-    (roomId: string) => {
-      const generation = sessionGeneration;
-      const terminal = active.current;
-      if (
-        !generation ||
-        terminal?.generation !== generation ||
-        terminal.roomId === roomId
-      )
-        return;
-      active.current = null;
-      recovery.current = null;
-      releaseApiQuerySuppression(suppressionOwner.current);
-      if (!mounted.current) return;
-      setVisibleActive(null);
-      setFailure((current) =>
-        current?.generation === generation ? null : current,
-      );
+  useLayoutEffect(
+    () => () => {
+      if (sessionGeneration)
+        setRouteActive(sessionGeneration, routeOwner.current, false);
     },
     [sessionGeneration],
   );
 
   const reportTerminal = useCallback<BattleTerminalReporter>(
-    (observation) => {
-      const generation = sessionGeneration;
-      if (
-        !generation ||
-        getSession()?.generation !== generation ||
-        !Number.isSafeInteger(observation.stateVersion) ||
-        observation.stateVersion < 1
-      )
-        return Promise.resolve();
-      const key = terminalRefreshKey(generation, observation);
-      const current = active.current;
-      if (
-        current?.generation === generation &&
-        current.roomId === observation.roomId &&
-        current.stateVersion > observation.stateVersion
-      )
-        return Promise.resolve();
-      if (
-        !current ||
-        current.generation !== generation ||
-        current.roomId !== observation.roomId ||
-        current.stateVersion !== observation.stateVersion
-      ) {
-        const next = { generation, ...observation };
-        active.current = next;
-        recovery.current = null;
-        suppressApiQueries(
-          suppressionOwner.current,
-          generation,
-          terminalQueryRoutes,
-        );
-        if (mounted.current) setVisibleActive(next);
-      }
-      if (completed.current.has(key)) return Promise.resolve();
-      const existing = inFlight.current.get(key);
-      if (existing) return existing;
-
-      const task = cancelApiQueries(terminalQueryRoutes, generation)
-        .then(() => {
-          if (
-            !mounted.current ||
-            getSession()?.generation !== generation ||
-            !matchesObservation(active.current, generation, observation)
-          )
-            throw new DOMException("Stale terminal observation", "AbortError");
-          return Promise.all([
-            fetchApiQuery("battle.bootstrap", {}, suppressionOwner.current),
-            fetchApiQuery("identity.bootstrap", {}, suppressionOwner.current),
-            fetchApiQuery("inventory.list", {}, suppressionOwner.current),
-          ]);
-        })
-        .then(() => {
-          if (
-            !mounted.current ||
-            getSession()?.generation !== generation ||
-            !matchesObservation(active.current, generation, observation)
-          )
-            return;
-          completed.current.add(key);
-          setFailure((current) =>
-            current?.generation === generation &&
-            current.roomId === observation.roomId &&
-            current.stateVersion === observation.stateVersion
-              ? null
-              : current,
-          );
-        })
-        .catch(() => {
-          if (
-            !mounted.current ||
-            getSession()?.generation !== generation ||
-            !matchesObservation(active.current, generation, observation)
-          )
-            return;
-          setFailure({
-            generation,
-            ...observation,
-            error: new Error(
-              "Battle 终态已确认，但资产与藏品刷新失败，请重新读取",
-            ),
-          });
-        })
-        .finally(() => {
-          inFlight.current.delete(key);
-        });
-      inFlight.current.set(key, task);
-      return task;
+    (observation) =>
+      sessionGeneration
+        ? reportTerminalObservation(sessionGeneration, observation)
+        : Promise.resolve(),
+    [sessionGeneration],
+  );
+  const reportNonTerminalRoom = useCallback(
+    (roomId: string) => {
+      if (sessionGeneration)
+        reportNonTerminalObservation(sessionGeneration, roomId);
     },
     [sessionGeneration],
   );
-
-  const currentActive =
-    visibleActive?.generation === sessionGeneration ? visibleActive : null;
+  const readAuthorityRoom = useCallback(
+    (roomId: string) =>
+      sessionGeneration
+        ? readCoordinatorRoom(sessionGeneration, roomId)
+        : Promise.resolve(null),
+    [sessionGeneration],
+  );
+  const prepareAuthorityRecovery = useCallback(
+    (roomId: string) =>
+      sessionGeneration
+        ? beginCoordinatorRecovery(sessionGeneration, roomId)
+        : false,
+    [sessionGeneration],
+  );
+  const finishAuthorityRecovery = useCallback(
+    (roomId: string) => {
+      if (sessionGeneration)
+        finishCoordinatorRecovery(sessionGeneration, roomId);
+    },
+    [sessionGeneration],
+  );
+  const isLocked = useCallback(
+    (roomId: string | null) => {
+      if (!sessionGeneration) return false;
+      const active = coordinators.get(sessionGeneration)?.active;
+      return Boolean(active && (roomId === null || active.roomId === roomId));
+    },
+    [sessionGeneration],
+  );
+  const state = sessionGeneration ? coordinatorFor(sessionGeneration) : null;
 
   return {
     reportTerminal,
     reportNonTerminalRoom,
     prepareAuthorityRecovery,
     readAuthorityRoom,
-    readAuthorityBootstrap,
     finishAuthorityRecovery,
-    failure:
-      failure?.generation === sessionGeneration &&
-      currentActive?.roomId === failure.roomId &&
-      currentActive.stateVersion === failure.stateVersion
-        ? {
-            roomId: failure.roomId,
-            stateVersion: failure.stateVersion,
-            error: failure.error,
-          }
-        : null,
-    active: currentActive
-      ? {
-          roomId: currentActive.roomId,
-          stateVersion: currentActive.stateVersion,
-        }
-      : null,
+    failure: state?.failure ?? null,
+    active: state?.active ?? null,
     isLocked,
   };
+}
+
+function reportTerminalObservation(
+  generation: string,
+  observation: BattleTerminalObservation,
+): Promise<void> {
+  if (
+    !isCurrentGeneration(generation) ||
+    !Number.isSafeInteger(observation.stateVersion) ||
+    observation.stateVersion < 1
+  )
+    return Promise.resolve();
+  const state = coordinatorFor(generation);
+  const key = terminalRefreshKey(generation, observation);
+  const current = state.active;
+  if (
+    current?.roomId === observation.roomId &&
+    current.stateVersion > observation.stateVersion
+  )
+    return Promise.resolve();
+
+  if (
+    !current ||
+    current.roomId !== observation.roomId ||
+    current.stateVersion !== observation.stateVersion
+  ) {
+    state.active = observation;
+    state.recoveryRoomId = null;
+    state.failure = null;
+    cancelApiQueryOwner(state.discoveryOwner);
+    for (const [terminalKey, owner] of state.terminalOwners)
+      if (terminalKey !== key) cancelApiQueryOwner(owner);
+    syncRouteSuppression(state);
+    publishCoordinator(state);
+  }
+  if (state.completed.has(key)) return Promise.resolve();
+  const existing = state.terminalInFlight.get(key);
+  if (existing) return existing;
+
+  const terminalOwner = Symbol(`battle-terminal:${key}`);
+  state.terminalOwners.set(key, terminalOwner);
+  const batch = fetchApiQueryBatchAsOwner(terminalOwner, terminalRequests, {
+    cancelRouteIds: terminalCancellationRoutes,
+  });
+  const task = batch
+    .then(() => {
+      if (!isCurrentObservation(state, observation)) return;
+      state.completed.add(key);
+      state.failure = null;
+      publishCoordinator(state);
+    })
+    .catch(() => {
+      if (!isCurrentObservation(state, observation)) return;
+      state.failure = {
+        ...observation,
+        error: new Error("Battle 终态已确认，但资产与藏品刷新失败，请重新读取"),
+      };
+      publishCoordinator(state);
+    })
+    .finally(() => {
+      if (state.terminalInFlight.get(key) === task)
+        state.terminalInFlight.delete(key);
+      if (state.terminalOwners.get(key) === terminalOwner)
+        state.terminalOwners.delete(key);
+    });
+  state.terminalInFlight.set(key, task);
+  return task;
+}
+
+function readCoordinatorRoom(
+  generation: string,
+  roomId: string,
+): Promise<BattleRoomSnapshotDto | null> {
+  if (!beginCoordinatorRecovery(generation, roomId))
+    return Promise.resolve(null);
+  const state = coordinatorFor(generation);
+  const key = `${generation}:${roomId}`;
+  const existing = state.roomInFlight.get(key);
+  if (existing) return existing;
+  const task = fetchApiQueryBatchAsOwner(
+    state.discoveryOwner,
+    [{ routeId: "battle.room", input: { room_id: roomId } }],
+    { cancelRouteIds: authorityCancellationRoutes },
+  )
+    .then(() => {
+      if (
+        state.disposed ||
+        !isCurrentGeneration(generation) ||
+        state.active ||
+        state.recoveryRoomId !== roomId
+      )
+        return null;
+      return (
+        getApiQueryData(generation, "battle.room", { room_id: roomId }) ?? null
+      );
+    })
+    .catch((cause: unknown) => {
+      if (
+        state.disposed ||
+        !isCurrentGeneration(generation) ||
+        state.active ||
+        state.recoveryRoomId !== roomId
+      )
+        return null;
+      finishCoordinatorRecovery(generation, roomId);
+      throw cause;
+    })
+    .finally(() => {
+      if (state.roomInFlight.get(key) === task) state.roomInFlight.delete(key);
+    });
+  state.roomInFlight.set(key, task);
+  return task;
+}
+
+function beginCoordinatorRecovery(generation: string, roomId: string): boolean {
+  if (!isCurrentGeneration(generation)) return false;
+  const state = coordinatorFor(generation);
+  if (state.active?.roomId === roomId) return false;
+  if (state.active) {
+    cancelTerminalOwners(state);
+    state.active = null;
+    state.failure = null;
+  }
+  if (state.recoveryRoomId && state.recoveryRoomId !== roomId)
+    cancelApiQueryOwner(state.discoveryOwner);
+  state.recoveryRoomId = roomId;
+  syncRouteSuppression(state);
+  publishCoordinator(state);
+  return true;
+}
+
+function finishCoordinatorRecovery(generation: string, roomId: string): void {
+  const state = coordinators.get(generation);
+  if (!state || state.active || state.recoveryRoomId !== roomId) return;
+  state.recoveryRoomId = null;
+  syncRouteSuppression(state);
+  publishCoordinator(state);
+}
+
+function reportNonTerminalObservation(
+  generation: string,
+  roomId: string,
+): void {
+  if (!isCurrentGeneration(generation)) return;
+  const state = coordinatorFor(generation);
+  if (state.active?.roomId === roomId) return;
+  let changed = false;
+  if (state.active) {
+    cancelTerminalOwners(state);
+    state.active = null;
+    state.failure = null;
+    changed = true;
+  }
+  if (state.recoveryRoomId === roomId) {
+    state.recoveryRoomId = null;
+    changed = true;
+  }
+  if (!changed) return;
+  syncRouteSuppression(state);
+  publishCoordinator(state);
+}
+
+function setRouteActive(
+  generation: string,
+  owner: symbol,
+  active: boolean,
+): void {
+  const state = coordinatorFor(generation);
+  const changed = active
+    ? !state.routeOwners.has(owner) && Boolean(state.routeOwners.add(owner))
+    : state.routeOwners.delete(owner);
+  if (!changed) return;
+  syncRouteSuppression(state);
+  publishCoordinator(state);
+}
+
+function syncRouteSuppression(state: CoordinatorState): void {
+  if (
+    state.routeOwners.size > 0 &&
+    (state.active !== null || state.recoveryRoomId !== null)
+  ) {
+    suppressApiQueries(
+      state.suppressionOwner,
+      state.generation,
+      terminalCancellationRoutes,
+    );
+    return;
+  }
+  releaseApiQuerySuppression(state.suppressionOwner);
+}
+
+function cancelTerminalOwners(state: CoordinatorState): void {
+  for (const owner of state.terminalOwners.values()) cancelApiQueryOwner(owner);
+}
+
+function coordinatorFor(generation: string): CoordinatorState {
+  const existing = coordinators.get(generation);
+  if (existing) return existing;
+  const state: CoordinatorState = {
+    generation,
+    discoveryOwner: Symbol(`battle-discovery:${generation}`),
+    suppressionOwner: Symbol(`battle-route:${generation}`),
+    routeOwners: new Set(),
+    active: null,
+    recoveryRoomId: null,
+    roomInFlight: new Map(),
+    terminalInFlight: new Map(),
+    terminalOwners: new Map(),
+    completed: new Set(),
+    failure: null,
+    listeners: new Set(),
+    version: 0,
+    disposed: false,
+  };
+  coordinators.set(generation, state);
+  return state;
+}
+
+function subscribeCoordinator(
+  generation: string,
+  listener: () => void,
+): () => void {
+  const state = coordinatorFor(generation);
+  state.listeners.add(listener);
+  return () => state.listeners.delete(listener);
+}
+
+function publishCoordinator(state: CoordinatorState): void {
+  state.version += 1;
+  for (const listener of state.listeners) listener();
 }
 
 function terminalRefreshKey(
@@ -329,24 +428,23 @@ function terminalRefreshKey(
   return `${generation}:${observation.roomId}:${observation.stateVersion}`;
 }
 
-function matchesObservation(
-  current: GenerationObservation | null,
-  generation: string,
+function isCurrentObservation(
+  state: CoordinatorState,
   observation: BattleTerminalObservation,
 ): boolean {
   return (
-    current?.generation === generation &&
-    current.roomId === observation.roomId &&
-    current.stateVersion === observation.stateVersion
+    !state.disposed &&
+    isCurrentGeneration(state.generation) &&
+    state.active?.roomId === observation.roomId &&
+    state.active.stateVersion === observation.stateVersion
   );
 }
 
-function matchesRoom(
-  current: GenerationRoom | null,
-  generation: string,
-  roomId: string,
-): boolean {
-  return current?.generation === generation && current.roomId === roomId;
+function isCurrentGeneration(generation: string): boolean {
+  const session = getSession();
+  return (
+    session?.generation === generation && session.accountStatus === "normal"
+  );
 }
 
 export function isBattleAssetTerminal(status: unknown): boolean {
