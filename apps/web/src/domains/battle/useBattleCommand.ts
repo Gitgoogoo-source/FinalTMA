@@ -18,6 +18,10 @@ import {
   refreshScopes,
 } from "../../platform/query/index.ts";
 import { getSession } from "../../platform/session/store.ts";
+import {
+  terminalRoomIdFromBattleResult,
+  type BattleTerminalReporter,
+} from "./useBattleTerminalRefresh.ts";
 
 type BattleCommandRouteId =
   | "battle.create"
@@ -47,21 +51,27 @@ const initialState: BattleCommandState = {
   message: null,
 };
 
-export function useBattleCommand(refetchAuthority: () => Promise<void>): {
+export function useBattleCommand(
+  refetchAuthority: () => Promise<void>,
+  reportTerminal: BattleTerminalReporter,
+): {
   state: BattleCommandState;
   clearMessage(): void;
   execute<Id extends BattleCommandRouteId>(
     routeId: Id,
     input: RouteInput<Id>,
+    options?: { terminalRoomId?: string },
   ): Promise<RouteOutput<Id> | null>;
 } {
   const [state, setState] = useState<BattleCommandState>(initialState);
   const active = useRef<AbortController | null>(null);
   const refetchRef = useRef(refetchAuthority);
+  const reportTerminalRef = useRef(reportTerminal);
 
   useEffect(() => {
     refetchRef.current = refetchAuthority;
-  }, [refetchAuthority]);
+    reportTerminalRef.current = reportTerminal;
+  }, [refetchAuthority, reportTerminal]);
 
   useEffect(
     () => () => {
@@ -75,6 +85,7 @@ export function useBattleCommand(refetchAuthority: () => Promise<void>): {
     async <Id extends BattleCommandRouteId>(
       routeId: Id,
       input: RouteInput<Id>,
+      options?: { terminalRoomId?: string },
     ): Promise<RouteOutput<Id> | null> => {
       if (active.current) return null;
       const generation = getSession()?.generation;
@@ -94,7 +105,12 @@ export function useBattleCommand(refetchAuthority: () => Promise<void>): {
           signal: controller.signal,
         });
         assertGeneration(generation);
-        await refreshRouteScopes(routeId);
+        await refreshBattleCommandResult(
+          routeId,
+          response.data,
+          reportTerminalRef.current,
+        );
+        assertGeneration(generation);
         setState({
           routeId,
           operationId,
@@ -106,7 +122,12 @@ export function useBattleCommand(refetchAuthority: () => Promise<void>): {
         if (controller.signal.aborted) return null;
         const failure = toFailure(cause, operationId);
         if (!isUnknownResult(failure)) {
-          await applyFailureScopes(failure.code);
+          await refreshBattleCommandFailure(
+            failure.code,
+            options?.terminalRoomId ?? roomIdFromInput(input),
+            reportTerminalRef.current,
+            refetchRef.current,
+          );
           assertGeneration(generation);
           setState({
             routeId,
@@ -137,7 +158,12 @@ export function useBattleCommand(refetchAuthority: () => Promise<void>): {
           throw recoveryCause;
         }
         if (recovered.kind === "succeeded") {
-          await refreshRouteScopes(routeId);
+          await refreshBattleCommandResult(
+            routeId,
+            recovered.data,
+            reportTerminalRef.current,
+          );
+          assertGeneration(generation);
           setState({
             routeId,
             operationId,
@@ -146,7 +172,12 @@ export function useBattleCommand(refetchAuthority: () => Promise<void>): {
           });
           return recovered.data;
         }
-        await applyFailureScopes(recovered.failure.code);
+        await refreshBattleCommandFailure(
+          recovered.failure.code,
+          options?.terminalRoomId ?? roomIdFromInput(input),
+          reportTerminalRef.current,
+          refetchRef.current,
+        );
         assertGeneration(generation);
         setState({
           routeId,
@@ -315,6 +346,49 @@ async function applyFailureScopes(code: string): Promise<void> {
   const scopes: readonly RefreshScope[] =
     typeof declared === "string" ? [declared] : declared;
   await refreshScopes(scopes).catch(() => undefined);
+}
+
+async function refreshBattleCommandResult<Id extends BattleCommandRouteId>(
+  routeId: Id,
+  result: RouteOutput<Id>,
+  reportTerminal: BattleTerminalReporter,
+): Promise<void> {
+  const terminalRoomId = terminalRoomIdFromBattleResult(result);
+  if (terminalRoomId) return reportTerminal(terminalRoomId);
+  return refreshRouteScopes(routeId);
+}
+
+async function refreshBattleCommandFailure(
+  code: string,
+  terminalRoomId: string | null,
+  reportTerminal: BattleTerminalReporter,
+  refetchAuthority: () => Promise<void>,
+): Promise<void> {
+  if (isBattleTerminalFailure(code)) {
+    if (terminalRoomId) await reportTerminal(terminalRoomId);
+    else await refetchAuthority();
+    return;
+  }
+  await applyFailureScopes(code);
+}
+
+function isBattleTerminalFailure(code: string): boolean {
+  return [
+    "BATTLE_SHARE_FAILED",
+    "BATTLE_ROOM_EXPIRED",
+    "BATTLE_ROOM_CANCELLED",
+    "BATTLE_VOIDED",
+  ].includes(code);
+}
+
+function roomIdFromInput(input: unknown): string | null {
+  return isRecord(input) && typeof input.room_id === "string"
+    ? input.room_id
+    : null;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function failureMessage(failure: ApiFailure): string {

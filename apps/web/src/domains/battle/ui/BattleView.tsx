@@ -29,7 +29,7 @@ import {
   seedApiQuery,
   useApiQuery,
 } from "../../../platform/query/index.ts";
-import { getSession, useSession } from "../../../platform/session/store.ts";
+import { useSession } from "../../../platform/session/store.ts";
 import {
   sharePreparedMessage,
   subscribePreparedMessageShareEvents,
@@ -47,6 +47,10 @@ import { useBattleRealtime } from "../../../workflows/battle-realtime/index.ts";
 import { useNavigationIntent } from "../../../workflows/payment-recovery/index.ts";
 import { useBattleCommand } from "../useBattleCommand.ts";
 import { useBattleDeadline } from "../useBattleDeadline.ts";
+import {
+  isBattleAssetTerminal,
+  useBattleTerminalRefresh,
+} from "../useBattleTerminalRefresh.ts";
 import { BattleArena } from "./BattleArena.tsx";
 import {
   BattleAccept,
@@ -121,10 +125,6 @@ export function BattleView(): ReactNode {
   const [actionIntent, setActionIntent] = useState<string | null>(null);
   const [acknowledging, setAcknowledging] = useState(false);
   const [onlineState, setOnlineState] = useState<OnlineState>("syncing");
-  const [terminalRefreshFailure, setTerminalRefreshFailure] = useState<{
-    roomId: string;
-    error: Error;
-  } | null>(null);
   const [telegramActive, setTelegramActive] = useState(
     () => telegram()?.isActive !== false,
   );
@@ -135,11 +135,12 @@ export function BattleView(): ReactNode {
   const roomRef = useRef<BattleRoomSnapshotDto | null>(null);
   const presenceLifecycle = useRef<PresenceLifecycle | null>(null);
   const heartbeatRequests = useRef(new Set<AbortController>());
-  const terminalRefreshes = useRef(new Set<string>());
   const lifecycleRun = useRef(0);
   const lifecycleReadyRef = useRef(false);
   const authorityHealthy = useRef(false);
   const sessionGeneration = session?.generation ?? null;
+  const { reportTerminal, failure: terminalRefreshFailure } =
+    useBattleTerminalRefresh(sessionGeneration);
   const refetchBootstrap = bootstrap.refetch;
   const refetchRoom = roomQuery.refetch;
   const refetchInvite = invite.refetch;
@@ -161,7 +162,7 @@ export function BattleView(): ReactNode {
   useEffect(() => {
     refetchRef.current = refetchAuthority;
   }, [refetchAuthority]);
-  const command = useBattleCommand(refetchAuthority);
+  const command = useBattleCommand(refetchAuthority, reportTerminal);
   const commandPending =
     command.state.phase === "submitted" || command.state.phase === "recovering";
 
@@ -188,12 +189,10 @@ export function BattleView(): ReactNode {
       setCancelOpen(false);
       setSwitchOpen(false);
       setActionIntent(null);
-      setTerminalRefreshFailure(null);
       handledResume.current.clear();
       for (const request of heartbeatRequests.current) request.abort();
       heartbeatRequests.current.clear();
       presenceLifecycle.current = null;
-      terminalRefreshes.current.clear();
     });
     return () => {
       cancelled = true;
@@ -237,31 +236,6 @@ export function BattleView(): ReactNode {
     currentResult?.room_id === dismissedResult ? null : currentResult;
   const resultRoomId = result?.room_id ?? null;
   const inviteRoom = isInviteRoom(invite.data) ? invite.data : null;
-  const refreshTerminalState = useCallback(
-    async (terminalRoomId: string) => {
-      const generation = sessionGeneration;
-      const key = `${generation ?? "public"}:${terminalRoomId}`;
-      if (terminalRefreshes.current.has(key)) return;
-      terminalRefreshes.current.add(key);
-      try {
-        await refreshScopes(["battle", "assets", "inventory"], {
-          throwOnError: true,
-        });
-        if ((getSession()?.generation ?? null) === generation)
-          setTerminalRefreshFailure(null);
-      } catch {
-        terminalRefreshes.current.delete(key);
-        if ((getSession()?.generation ?? null) === generation)
-          setTerminalRefreshFailure({
-            roomId: terminalRoomId,
-            error: new Error(
-              "Battle 终态已确认，但资产与藏品刷新失败，请重新读取",
-            ),
-          });
-      }
-    },
-    [sessionGeneration],
-  );
   const terminalRoomIds = terminalRoomIdsFor({
     resultRoomIds: [
       resultRoomId,
@@ -276,6 +250,13 @@ export function BattleView(): ReactNode {
     ],
     invite: invite.data,
   }).join(",");
+  const terminalObservationKey = [
+    terminalRoomIds,
+    identity.dataUpdatedAt,
+    bootstrap.dataUpdatedAt,
+    roomQuery.dataUpdatedAt,
+    invite.dataUpdatedAt,
+  ].join(":");
   const pageState = derivePageState({
     result: Boolean(result),
     room,
@@ -304,12 +285,12 @@ export function BattleView(): ReactNode {
     queueMicrotask(() => {
       if (cancelled) return;
       for (const terminalRoomId of terminalRoomIds.split(","))
-        if (terminalRoomId) void refreshTerminalState(terminalRoomId);
+        if (terminalRoomId) void reportTerminal(terminalRoomId);
     });
     return () => {
       cancelled = true;
     };
-  }, [refreshTerminalState, terminalRoomIds]);
+  }, [reportTerminal, terminalObservationKey, terminalRoomIds]);
 
   useEffect(() => {
     let cancelled = false;
@@ -473,7 +454,7 @@ export function BattleView(): ReactNode {
       .then(async (response) => {
         applySnapshot(response.data);
         if (isBattleAssetTerminal(response.data.status))
-          await refreshTerminalState(response.data.room_id);
+          await reportTerminal(response.data.room_id);
       })
       .catch(async (cause: unknown) => {
         await applyPresenceFailureScopes(cause);
@@ -483,7 +464,7 @@ export function BattleView(): ReactNode {
         )
           await refetchRef.current();
       });
-  }, [applySnapshot, refreshTerminalState]);
+  }, [applySnapshot, reportTerminal]);
 
   useEffect(() => {
     const run = ++lifecycleRun.current;
@@ -610,8 +591,8 @@ export function BattleView(): ReactNode {
         ) {
           stop();
           if (isBattleAssetTerminal(response.data.status))
-            await refreshTerminalState(response.data.room_id);
-          void refetchRef.current();
+            await reportTerminal(response.data.room_id);
+          else await refetchRef.current();
           return;
         }
         const acknowledged = response.data.presence_lifecycle;
@@ -653,7 +634,7 @@ export function BattleView(): ReactNode {
     room?.status,
     sessionGeneration,
     telegramActive,
-    refreshTerminalState,
+    reportTerminal,
   ]);
 
   useEffect(() => {
@@ -723,9 +704,15 @@ export function BattleView(): ReactNode {
       return;
     }
     setFeedback("接受请求已提交，尚未代表业务成功");
-    const snapshot = await command.execute("battle.accept", {
-      template_ids: selection,
-    });
+    const snapshot = await command.execute(
+      "battle.accept",
+      {
+        template_ids: selection,
+      },
+      {
+        terminalRoomId: inviteRoom.room_id,
+      },
+    );
     if (!snapshot) {
       setFeedback(null);
       return;
@@ -916,7 +903,7 @@ export function BattleView(): ReactNode {
               className="secondary"
               onClick={() => {
                 if (terminalRefreshFailure) {
-                  void refreshTerminalState(terminalRefreshFailure.roomId);
+                  void reportTerminal(terminalRefreshFailure.roomId);
                 } else {
                   void refetchAuthority();
                 }
@@ -1295,16 +1282,6 @@ async function applyPresenceFailureScopes(cause: unknown): Promise<void> {
   const scopes: readonly RefreshScope[] =
     typeof declared === "string" ? [declared] : declared;
   await refreshScopes(scopes).catch(() => undefined);
-}
-
-function isBattleAssetTerminal(
-  status:
-    | BattleRoomSnapshotDto["status"]
-    | Extract<Invite, { room_id: string }>["invite_status"],
-): boolean {
-  return ["finished", "draw", "cancelled", "expired", "voided"].includes(
-    status,
-  );
 }
 
 function terminalRoomIdsFor({

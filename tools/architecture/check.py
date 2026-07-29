@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import re
+import subprocess
 from pathlib import Path
 
 
@@ -134,6 +135,7 @@ def main() -> None:
     assert_nonempty_domains(API_ROOT / "domains")
     verify_web_boundaries()
     verify_game_page_boundary()
+    verify_battle_terminal_refresh_semantics()
     verify_api_boundaries()
     verify_contract_boundaries()
     verify_documentation()
@@ -264,12 +266,6 @@ def verify_game_page_boundary() -> None:
         "heartbeatRequests.current",
         "request.abort()",
         '"pageshow"',
-        "refreshScopes(",
-        '["battle", "assets", "inventory"]',
-        "throwOnError: true",
-        "terminalRefreshes.current.has(key)",
-        "isBattleAssetTerminal(response.data.status)",
-        "isBattleAssetTerminal(invite.invite_status)",
     )
     missing_battle_terms = [
         value
@@ -345,6 +341,20 @@ def verify_game_page_boundary() -> None:
         raise SystemExit(
             "Tasks page must own Wheel and hide Expedition filters, cards, and highlights"
         )
+
+
+def verify_battle_terminal_refresh_semantics() -> None:
+    checker = ROOT / "tools/architecture/check_battle_terminal_refresh.mjs"
+    result = subprocess.run(
+        ["node", str(checker)],
+        cwd=ROOT,
+        capture_output=True,
+        check=False,
+        text=True,
+    )
+    if result.returncode != 0:
+        detail = result.stderr.strip() or result.stdout.strip()
+        raise SystemExit(detail or "Battle terminal refresh structure check failed")
 
 
 def verify_api_boundaries() -> None:
