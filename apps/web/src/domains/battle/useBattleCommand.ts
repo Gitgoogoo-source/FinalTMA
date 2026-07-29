@@ -3,6 +3,7 @@ import {
   errorDefinition,
   isErrorCode,
   parseRouteOutput,
+  type BattleRoomSnapshotDto,
   type RefreshScope,
   type RouteInput,
   type RouteOutput,
@@ -18,10 +19,7 @@ import {
   refreshScopes,
 } from "../../platform/query/index.ts";
 import { getSession } from "../../platform/session/store.ts";
-import {
-  terminalRoomIdFromBattleResult,
-  type BattleTerminalReporter,
-} from "./useBattleTerminalRefresh.ts";
+import { isBattleAssetTerminal } from "./useBattleTerminalRefresh.ts";
 
 type BattleCommandRouteId =
   | "battle.create"
@@ -44,6 +42,10 @@ export type BattleCommandState = {
   message: string | null;
 };
 
+export type BattleAuthoritativeRoomHandler = (
+  snapshot: BattleRoomSnapshotDto,
+) => void;
+
 const initialState: BattleCommandState = {
   routeId: null,
   operationId: null,
@@ -53,7 +55,7 @@ const initialState: BattleCommandState = {
 
 export function useBattleCommand(
   refetchAuthority: () => Promise<void>,
-  reportTerminal: BattleTerminalReporter,
+  onAuthoritativeRoom: BattleAuthoritativeRoomHandler,
 ): {
   state: BattleCommandState;
   clearMessage(): void;
@@ -66,12 +68,12 @@ export function useBattleCommand(
   const [state, setState] = useState<BattleCommandState>(initialState);
   const active = useRef<AbortController | null>(null);
   const refetchRef = useRef(refetchAuthority);
-  const reportTerminalRef = useRef(reportTerminal);
+  const onAuthoritativeRoomRef = useRef(onAuthoritativeRoom);
 
   useEffect(() => {
     refetchRef.current = refetchAuthority;
-    reportTerminalRef.current = reportTerminal;
-  }, [refetchAuthority, reportTerminal]);
+    onAuthoritativeRoomRef.current = onAuthoritativeRoom;
+  }, [onAuthoritativeRoom, refetchAuthority]);
 
   useEffect(
     () => () => {
@@ -104,13 +106,15 @@ export function useBattleCommand(
           idempotencyKey: operationId,
           signal: controller.signal,
         });
-        assertGeneration(generation);
-        await refreshBattleCommandResult(
+        if (!isCurrentGeneration(generation)) return null;
+        await applyBattleCommandResult(
           routeId,
           response.data,
-          reportTerminalRef.current,
+          generation,
+          controller.signal,
+          onAuthoritativeRoomRef.current,
         );
-        assertGeneration(generation);
+        if (!isCurrentGeneration(generation)) return null;
         setState({
           routeId,
           operationId,
@@ -119,16 +123,18 @@ export function useBattleCommand(
         });
         return response.data;
       } catch (cause) {
-        if (controller.signal.aborted) return null;
+        if (controller.signal.aborted || isAbortFailure(cause)) return null;
         const failure = toFailure(cause, operationId);
         if (!isUnknownResult(failure)) {
           await refreshBattleCommandFailure(
             failure.code,
             options?.terminalRoomId ?? roomIdFromInput(input),
-            reportTerminalRef.current,
+            generation,
+            controller.signal,
+            onAuthoritativeRoomRef.current,
             refetchRef.current,
           );
-          assertGeneration(generation);
+          if (!isCurrentGeneration(generation)) return null;
           setState({
             routeId,
             operationId,
@@ -154,16 +160,51 @@ export function useBattleCommand(
             controller.signal,
           );
         } catch (recoveryCause) {
-          if (controller.signal.aborted) return null;
-          throw recoveryCause;
+          if (
+            controller.signal.aborted ||
+            isAbortFailure(recoveryCause) ||
+            !isCurrentGeneration(generation)
+          )
+            return null;
+          setState({
+            routeId,
+            operationId,
+            phase: "failed",
+            message:
+              recoveryCause instanceof Error
+                ? recoveryCause.message
+                : "原操作恢复失败，请重新读取",
+          });
+          return null;
         }
         if (recovered.kind === "succeeded") {
-          await refreshBattleCommandResult(
-            routeId,
-            recovered.data,
-            reportTerminalRef.current,
-          );
-          assertGeneration(generation);
+          try {
+            await applyBattleCommandResult(
+              routeId,
+              recovered.data,
+              generation,
+              controller.signal,
+              onAuthoritativeRoomRef.current,
+            );
+          } catch (recoveryCause) {
+            if (
+              controller.signal.aborted ||
+              isAbortFailure(recoveryCause) ||
+              !isCurrentGeneration(generation)
+            )
+              return null;
+            setState({
+              routeId,
+              operationId,
+              phase: "failed",
+              message:
+                recoveryCause instanceof Error
+                  ? recoveryCause.message
+                  : "权威房间状态读取失败，请重新读取",
+            });
+            return null;
+          }
+          if (!isCurrentGeneration(generation)) return null;
           setState({
             routeId,
             operationId,
@@ -175,10 +216,12 @@ export function useBattleCommand(
         await refreshBattleCommandFailure(
           recovered.failure.code,
           options?.terminalRoomId ?? roomIdFromInput(input),
-          reportTerminalRef.current,
+          generation,
+          controller.signal,
+          onAuthoritativeRoomRef.current,
           refetchRef.current,
         );
-        assertGeneration(generation);
+        if (!isCurrentGeneration(generation)) return null;
         setState({
           routeId,
           operationId,
@@ -249,6 +292,7 @@ async function recoverSameOperation<Id extends BattleCommandRouteId>(
         };
     } catch (cause) {
       if (signal.aborted) throw signal.reason;
+      if (isAbortFailure(cause)) throw cause;
       const failure = toFailure(cause, operationId);
       if (failure.code === "OPERATION_NOT_FOUND" && !resubmitted) {
         resubmitted = true;
@@ -348,28 +392,80 @@ async function applyFailureScopes(code: string): Promise<void> {
   await refreshScopes(scopes).catch(() => undefined);
 }
 
-async function refreshBattleCommandResult<Id extends BattleCommandRouteId>(
+async function applyBattleCommandResult<Id extends BattleCommandRouteId>(
   routeId: Id,
   result: RouteOutput<Id>,
-  reportTerminal: BattleTerminalReporter,
+  generation: string,
+  signal: AbortSignal,
+  onAuthoritativeRoom: BattleAuthoritativeRoomHandler,
 ): Promise<void> {
-  const terminalRoomId = terminalRoomIdFromBattleResult(result);
-  if (terminalRoomId) return reportTerminal(terminalRoomId);
-  return refreshRouteScopes(routeId);
+  const snapshot = await authoritativeRoomFromResult(
+    routeId,
+    result,
+    generation,
+    signal,
+  );
+  onAuthoritativeRoom(snapshot);
+  if (!isBattleAssetTerminal(snapshot.status))
+    await refreshRouteScopes(routeId);
 }
 
 async function refreshBattleCommandFailure(
   code: string,
   terminalRoomId: string | null,
-  reportTerminal: BattleTerminalReporter,
+  generation: string,
+  signal: AbortSignal,
+  onAuthoritativeRoom: BattleAuthoritativeRoomHandler,
   refetchAuthority: () => Promise<void>,
 ): Promise<void> {
   if (isBattleTerminalFailure(code)) {
-    if (terminalRoomId) await reportTerminal(terminalRoomId);
-    else await refetchAuthority();
+    if (terminalRoomId) {
+      try {
+        const snapshot = await readAuthoritativeRoom(
+          terminalRoomId,
+          generation,
+          signal,
+        );
+        onAuthoritativeRoom(snapshot);
+        return;
+      } catch (cause) {
+        if (signal.aborted || isAbortFailure(cause)) return;
+      }
+    }
+    await refetchAuthority();
     return;
   }
   await applyFailureScopes(code);
+}
+
+async function authoritativeRoomFromResult<Id extends BattleCommandRouteId>(
+  routeId: Id,
+  result: RouteOutput<Id>,
+  generation: string,
+  signal: AbortSignal,
+): Promise<BattleRoomSnapshotDto> {
+  if (
+    routeId === "battle.accept" ||
+    routeId === "battle.action" ||
+    routeId === "battle.forced_switch"
+  )
+    return result as BattleRoomSnapshotDto;
+  const commandResult = result as RouteOutput<BattleCommandRouteId>;
+  return readAuthoritativeRoom(commandResult.room_id, generation, signal);
+}
+
+async function readAuthoritativeRoom(
+  roomId: string,
+  generation: string,
+  signal: AbortSignal,
+): Promise<BattleRoomSnapshotDto> {
+  const response = await apiRequest(
+    "battle.room",
+    { room_id: roomId },
+    { signal },
+  );
+  assertGeneration(generation);
+  return response.data;
 }
 
 function isBattleTerminalFailure(code: string): boolean {
@@ -401,6 +497,15 @@ function assertGeneration(expected: string): void {
   const session = getSession();
   if (session?.generation !== expected || session.accountStatus !== "normal")
     throw new DOMException("Stale session generation", "AbortError");
+}
+
+function isCurrentGeneration(expected: string): boolean {
+  const session = getSession();
+  return session?.generation === expected && session.accountStatus === "normal";
+}
+
+function isAbortFailure(cause: unknown): boolean {
+  return cause instanceof DOMException && cause.name === "AbortError";
 }
 
 function wait(duration: number, signal: AbortSignal): Promise<void> {

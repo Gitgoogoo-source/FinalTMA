@@ -346,7 +346,7 @@ def verify_game_page_boundary() -> None:
 def verify_battle_terminal_refresh_semantics() -> None:
     checker = ROOT / "tools/architecture/check_battle_terminal_refresh.mjs"
     result = subprocess.run(
-        ["node", str(checker)],
+        ["node", str(checker), "--self-test"],
         cwd=ROOT,
         capture_output=True,
         check=False,

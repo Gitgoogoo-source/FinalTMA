@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { refreshScopes } from "../../platform/query/index.ts";
 import { getSession } from "../../platform/session/store.ts";
@@ -28,7 +28,15 @@ export function useBattleTerminalRefresh(sessionGeneration: string | null): {
 } {
   const inFlight = useRef(new Map<string, Promise<void>>());
   const completed = useRef(new Set<string>());
+  const mounted = useRef(false);
   const [failure, setFailure] = useState<GenerationFailure | null>(null);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
   const reportTerminal = useCallback<BattleTerminalReporter>(
     (terminalRoomId) => {
@@ -44,7 +52,8 @@ export function useBattleTerminalRefresh(sessionGeneration: string | null): {
         throwOnError: true,
       })
         .then(() => {
-          if (getSession()?.generation !== generation) return;
+          if (!mounted.current || getSession()?.generation !== generation)
+            return;
           completed.current.add(key);
           setFailure((current) =>
             current?.generation === generation &&
@@ -54,7 +63,8 @@ export function useBattleTerminalRefresh(sessionGeneration: string | null): {
           );
         })
         .catch(() => {
-          if (getSession()?.generation !== generation) return;
+          if (!mounted.current || getSession()?.generation !== generation)
+            return;
           setFailure({
             generation,
             roomId: terminalRoomId,

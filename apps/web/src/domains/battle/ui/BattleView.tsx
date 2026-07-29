@@ -29,7 +29,7 @@ import {
   seedApiQuery,
   useApiQuery,
 } from "../../../platform/query/index.ts";
-import { useSession } from "../../../platform/session/store.ts";
+import { getSession, useSession } from "../../../platform/session/store.ts";
 import {
   sharePreparedMessage,
   subscribePreparedMessageShareEvents,
@@ -145,24 +145,65 @@ export function BattleView(): ReactNode {
   const refetchRoom = roomQuery.refetch;
   const refetchInvite = invite.refetch;
 
+  const applySnapshot = useCallback((snapshot: BattleRoomSnapshotDto) => {
+    seedApiQuery("battle.room", { room_id: snapshot.room_id }, snapshot);
+    setRoom((current) =>
+      current?.room_id === snapshot.room_id &&
+      compareSnapshots(current, snapshot) > 0
+        ? current
+        : snapshot,
+    );
+  }, []);
+  const onAuthoritativeRoom = useCallback(
+    (snapshot: BattleRoomSnapshotDto) => {
+      if (getSession()?.generation !== sessionGeneration) return;
+      applySnapshot(snapshot);
+      if (isBattleAssetTerminal(snapshot.status))
+        void reportTerminal(snapshot.room_id);
+    },
+    [applySnapshot, reportTerminal, sessionGeneration],
+  );
   const refetchAuthority = useCallback(async () => {
     authorityHealthy.current = false;
     try {
       const [battleResult, contextResult] = await Promise.all([
         refetchBootstrap(),
-        roomId ? refetchRoom() : refetchInvite(),
+        roomId
+          ? refetchRoom().then((result) => ({
+              isError: result.isError,
+              room: result.data ?? null,
+            }))
+          : refetchInvite().then((result) => ({
+              isError: result.isError,
+              room: null,
+            })),
       ]);
       authorityHealthy.current =
         !battleResult.isError || !contextResult.isError;
+      const candidates = [battleResult.data?.room, contextResult.room].filter(
+        (candidate): candidate is BattleRoomSnapshotDto => Boolean(candidate),
+      );
+      if (candidates.length > 0)
+        onAuthoritativeRoom(
+          candidates.reduce((newest, candidate) =>
+            compareSnapshots(candidate, newest) > 0 ? candidate : newest,
+          ),
+        );
     } catch {
       authorityHealthy.current = false;
     }
-  }, [refetchBootstrap, refetchInvite, refetchRoom, roomId]);
+  }, [
+    onAuthoritativeRoom,
+    refetchBootstrap,
+    refetchInvite,
+    refetchRoom,
+    roomId,
+  ]);
   const refetchRef = useRef(refetchAuthority);
   useEffect(() => {
     refetchRef.current = refetchAuthority;
   }, [refetchAuthority]);
-  const command = useBattleCommand(refetchAuthority, reportTerminal);
+  const command = useBattleCommand(refetchAuthority, onAuthoritativeRoom);
   const commandPending =
     command.state.phase === "submitted" || command.state.phase === "recovering";
 
@@ -214,16 +255,12 @@ export function BattleView(): ReactNode {
       const next = candidates.reduce((newest, candidate) =>
         compareSnapshots(candidate, newest) > 0 ? candidate : newest,
       );
-      setRoom((current) =>
-        current?.room_id === next.room_id && compareSnapshots(current, next) > 0
-          ? current
-          : next,
-      );
+      onAuthoritativeRoom(next);
     });
     return () => {
       cancelled = true;
     };
-  }, [bootstrap.data, roomQuery.data]);
+  }, [bootstrap.data, onAuthoritativeRoom, roomQuery.data]);
 
   useEffect(() => {
     roomRef.current = room;
@@ -358,16 +395,6 @@ export function BattleView(): ReactNode {
     topups.isLoading,
   ]);
 
-  const applySnapshot = useCallback((snapshot: BattleRoomSnapshotDto) => {
-    seedApiQuery("battle.room", { room_id: snapshot.room_id }, snapshot);
-    setRoom((current) =>
-      current?.room_id === snapshot.room_id &&
-      compareSnapshots(current, snapshot) > 0
-        ? current
-        : snapshot,
-    );
-  }, []);
-
   useEffect(() => {
     if (!room) return;
     let cancelled = false;
@@ -451,10 +478,8 @@ export function BattleView(): ReactNode {
       presence_lifecycle_version: lifecycle.version,
       presence_command_seq: commandSeq,
     })
-      .then(async (response) => {
-        applySnapshot(response.data);
-        if (isBattleAssetTerminal(response.data.status))
-          await reportTerminal(response.data.room_id);
+      .then((response) => {
+        onAuthoritativeRoom(response.data);
       })
       .catch(async (cause: unknown) => {
         await applyPresenceFailureScopes(cause);
@@ -464,7 +489,7 @@ export function BattleView(): ReactNode {
         )
           await refetchRef.current();
       });
-  }, [applySnapshot, reportTerminal]);
+  }, [onAuthoritativeRoom]);
 
   useEffect(() => {
     const run = ++lifecycleRun.current;
@@ -583,16 +608,15 @@ export function BattleView(): ReactNode {
           { signal: controller.signal },
         );
         if (disposed) return;
-        applySnapshot(response.data);
+        onAuthoritativeRoom(response.data);
         if (
           response.data.status !== "waiting" &&
           response.data.status !== "lobby_waiting" &&
           response.data.status !== "lobby_countdown"
         ) {
           stop();
-          if (isBattleAssetTerminal(response.data.status))
-            await reportTerminal(response.data.room_id);
-          else await refetchRef.current();
+          if (!isBattleAssetTerminal(response.data.status))
+            await refetchRef.current();
           return;
         }
         const acknowledged = response.data.presence_lifecycle;
@@ -628,13 +652,12 @@ export function BattleView(): ReactNode {
   }, [
     lifecycleReady,
     pageActive,
-    applySnapshot,
+    onAuthoritativeRoom,
     room?.room_id,
     room?.side,
     room?.status,
     sessionGeneration,
     telegramActive,
-    reportTerminal,
   ]);
 
   useEffect(() => {
@@ -717,7 +740,6 @@ export function BattleView(): ReactNode {
       setFeedback(null);
       return;
     }
-    applySnapshot(snapshot);
     setFlow(null);
     setResumeNotice(null);
     setFeedback(null);
@@ -742,8 +764,7 @@ export function BattleView(): ReactNode {
       turn_no: room.turn_no,
       skill_position: skillPosition,
     });
-    if (snapshot) applySnapshot(snapshot);
-    else setActionIntent(null);
+    if (!snapshot) setActionIntent(null);
   };
 
   const voluntarySwitch = async (teamSlot: 1 | 2 | 3, name: string) => {
@@ -755,8 +776,7 @@ export function BattleView(): ReactNode {
       turn_no: room.turn_no,
       team_slot: teamSlot,
     });
-    if (snapshot) applySnapshot(snapshot);
-    else setActionIntent(null);
+    if (!snapshot) setActionIntent(null);
   };
 
   const forcedSwitch = async (teamSlot: 1 | 2 | 3, name: string) => {
@@ -767,8 +787,7 @@ export function BattleView(): ReactNode {
       turn_no: room.turn_no,
       team_slot: teamSlot,
     });
-    if (snapshot) applySnapshot(snapshot);
-    else setActionIntent(null);
+    if (!snapshot) setActionIntent(null);
   };
 
   const acknowledge = async () => {
