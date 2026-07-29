@@ -344,8 +344,22 @@ function checkCoordinator(source) {
 
   const hook = topLevelFunction(source, "useBattleTerminalRefresh");
   const externalStore = calls(hook, "useSyncExternalStore")[0];
+  const subscribeSnapshot = externalStore?.arguments[0];
   const getSnapshot = externalStore?.arguments[1];
+  const subscriptionSemantics = analyzeReachableCollectionSemantics(
+    source,
+    subscribeSnapshot,
+    false,
+  );
   const snapshotPurity = analyzeReachableSnapshotPurity(source, getSnapshot);
+  const sharedSnapshotCollections = setIntersection(
+    snapshotPurity.versionCollections,
+    subscriptionSemantics.collectionAccesses,
+  );
+  must(
+    snapshotPurity.violations.length === 0,
+    `useSyncExternalStore getSnapshot and reachable local helpers must stay read-only: ${snapshotPurity.violations.join(", ")}`,
+  );
   must(
     sameArray(
       hook.parameters.map((parameter) => expressionValue(parameter.name)),
@@ -354,15 +368,10 @@ function checkCoordinator(source) {
       calls(hook, "useSyncExternalStore").length === 1 &&
       calls(hook, "useLayoutEffect").length === 2 &&
       calls(hook, "setRouteActive").length >= 2 &&
-      calls(getSnapshot, "coordinatorVersion").length === 1 &&
-      calls(getSnapshot, "coordinatorFor").length === 0 &&
-      calls(hook, "coordinatorFor").length === 0 &&
-      calls(hook, "coordinators.set").length === 0,
+      subscriptionSemantics.root &&
+      snapshotPurity.root &&
+      sharedSnapshotCollections.size >= 1,
     "React must subscribe to one external coordinator and bind suppression to the real route-active lifecycle",
-  );
-  must(
-    snapshotPurity.violations.length === 0,
-    `useSyncExternalStore getSnapshot and reachable local helpers must stay read-only: ${snapshotPurity.violations.join(", ")}`,
   );
   const routeCalls = calls(hook, "setRouteActive");
   must(
@@ -1192,78 +1201,101 @@ function statementAlwaysExits(statement) {
 }
 
 function analyzeReachableSnapshotPurity(source, expression) {
+  return analyzeReachableCollectionSemantics(source, expression, true);
+}
+
+function analyzeReachableCollectionSemantics(
+  source,
+  expression,
+  enforceReadOnly,
+) {
   const root = callbackExpression(expression);
-  if (!root) return { violations: ["missing getSnapshot callback"] };
-  const functions = topLevelFunctionMap(source);
   const sharedCollections = topLevelSharedCollections(source);
-  const queue = [root];
-  const visited = new Set();
+  if (!root)
+    return {
+      root: null,
+      collectionAccesses: new Set(),
+      versionCollections: new Set(),
+      violations: ["missing callback"],
+    };
+  const queue = [{ fn: root, bindingOrigins: new Map() }];
+  const visited = new Map();
+  const collectionAccesses = new Set();
   const violations = new Set();
   while (queue.length > 0) {
-    const fn = queue.shift();
-    if (!fn || visited.has(fn)) continue;
-    visited.add(fn);
-    const bindings = constBindingsBefore(fn, Number.POSITIVE_INFINITY);
-    const collectionAliases = collectionAliasNames(bindings, sharedCollections);
+    const context = queue.shift();
+    const fn = context?.fn;
+    if (!fn) continue;
+    const signature = collectionContextSignature(
+      context.bindingOrigins,
+      sharedCollections,
+    );
+    const signatures = visited.get(fn) ?? new Set();
+    if (signatures.has(signature)) continue;
+    signatures.add(signature);
+    visited.set(fn, signatures);
+    const bindingOrigins = new Map(
+      [...sharedCollections.keys()].map((binding) => [
+        binding,
+        new Set([binding]),
+      ]),
+    );
+    for (const [binding, origins] of context.bindingOrigins)
+      bindingOrigins.set(binding, origins);
     walkWithinFunction(fn, (node) => {
       if (!ts.isCallExpression(node)) return;
-      const mutation = sharedCollectionMutation(node, collectionAliases);
-      if (mutation) violations.add(mutation);
-      const functionName = localFunctionTarget(
-        node.expression,
-        bindings,
-        functions,
+      const access = sharedCollectionAccess(
+        node,
+        bindingOrigins,
+        sharedCollections,
       );
-      if (functionName) {
-        if (functionName === "coordinatorFor")
-          violations.add("reachable call to coordinatorFor");
-        queue.push(functions.get(functionName));
-      }
-      const callee = unwrap(node.expression);
-      if (callee && isFunction(callee)) queue.push(callee);
-      for (const argument of node.arguments) {
-        const callback = unwrap(argument);
-        if (callback && isFunction(callback)) queue.push(callback);
-      }
+      for (const origin of access.origins) collectionAccesses.add(origin);
+      if (enforceReadOnly && access.mutation && access.origins.size > 0)
+        violations.add(
+          `reachable shared collection mutation ${[...access.origins]
+            .map((origin) => sharedCollections.get(origin))
+            .sort()
+            .join("/")}.${access.method}`,
+        );
+      const target = localFunctionTarget(node.expression);
+      if (!target) return;
+      const targetOrigins = calledFunctionOrigins(
+        target,
+        node,
+        bindingOrigins,
+        sharedCollections,
+      );
+      queue.push({ fn: target, bindingOrigins: targetOrigins });
     });
   }
-  return { violations: [...violations] };
+  const versionCollections = returnedSharedVersionCollections(
+    root,
+    new Map(),
+    sharedCollections,
+  );
+  return {
+    root,
+    collectionAccesses,
+    versionCollections,
+    violations: [...violations],
+  };
 }
 
 function callbackExpression(expression) {
   const node = unwrap(expression);
   if (!node) return null;
   if (isFunction(node)) return node;
-  if (ts.isCallExpression(node)) {
-    const callback = unwrap(node.arguments[0]);
-    return callback && isFunction(callback) ? callback : null;
+  if (
+    ts.isCallExpression(node) &&
+    callPath(node.expression) === "useCallback"
+  ) {
+    return localFunctionTarget(node.arguments[0]);
   }
-  return null;
-}
-
-function topLevelFunctionMap(source) {
-  const functions = new Map();
-  for (const statement of source.statements) {
-    if (ts.isFunctionDeclaration(statement) && statement.name && statement.body)
-      functions.set(statement.name.text, statement);
-    if (!ts.isVariableStatement(statement)) continue;
-    for (const declaration of statement.declarationList.declarations) {
-      const initializer = declaration.initializer
-        ? unwrap(declaration.initializer)
-        : null;
-      if (
-        ts.isIdentifier(declaration.name) &&
-        initializer &&
-        isFunction(initializer)
-      )
-        functions.set(declaration.name.text, initializer);
-    }
-  }
-  return functions;
+  return localFunctionTarget(node);
 }
 
 function topLevelSharedCollections(source) {
-  const names = new Set();
+  const collections = new Map();
   for (const statement of source.statements) {
     if (!ts.isVariableStatement(statement)) continue;
     for (const declaration of statement.declarationList.declarations) {
@@ -1276,33 +1308,27 @@ function topLevelSharedCollections(source) {
         ts.isNewExpression(initializer) &&
         ["Map", "Set"].includes(expressionValue(initializer.expression))
       )
-        names.add(declaration.name.text);
+        collections.set(declaration, declaration.name.text);
     }
   }
-  return names;
+  return collections;
 }
 
-function collectionAliasNames(bindings, sharedCollections) {
-  const aliases = new Set(sharedCollections);
-  let changed = true;
-  while (changed) {
-    changed = false;
-    for (const [name, initializer] of bindings) {
-      const target = unwrap(initializer);
-      if (
-        ts.isIdentifier(target) &&
-        aliases.has(target.text) &&
-        !aliases.has(name)
-      ) {
-        aliases.add(name);
-        changed = true;
-      }
-    }
-  }
-  return aliases;
+function collectionContextSignature(bindingOrigins, sharedCollections) {
+  return [...bindingOrigins]
+    .filter(([binding]) => !sharedCollections.has(binding))
+    .map(
+      ([binding, origins]) =>
+        `${binding.pos}:${[...origins]
+          .map((origin) => origin.pos)
+          .sort((left, right) => left - right)
+          .join(".")}`,
+    )
+    .sort()
+    .join("|");
 }
 
-function sharedCollectionMutation(call, aliases) {
+function sharedCollectionAccess(call, bindingOrigins, sharedCollections) {
   const callee = unwrap(call.expression);
   let receiver;
   let method = "";
@@ -1314,33 +1340,392 @@ function sharedCollectionMutation(call, aliases) {
     const property = unwrap(callee.argumentExpression);
     method = property && ts.isStringLiteralLike(property) ? property.text : "";
   }
-  return receiver &&
-    ts.isIdentifier(receiver) &&
-    aliases.has(receiver.text) &&
-    ["set", "add", "delete", "clear"].includes(method)
-    ? `${receiver.text}.${method}`
-    : "";
+  const origins = receiver
+    ? collectionOrigins(receiver, bindingOrigins)
+    : new Set();
+  return {
+    method,
+    origins: new Set(
+      [...origins].filter((origin) => sharedCollections.has(origin)),
+    ),
+    mutation: ["set", "add", "delete", "clear"].includes(method),
+  };
 }
 
-function localFunctionTarget(
+function collectionOrigins(expression, bindingOrigins, seen = new Set()) {
+  const node = unwrap(expression);
+  if (!node) return new Set();
+  if (ts.isIdentifier(node)) {
+    const binding = lexicalBinding(node);
+    if (!binding || seen.has(binding)) return new Set();
+    const known = bindingOrigins.get(binding);
+    if (known) return new Set(known);
+    if (
+      ts.isVariableDeclaration(binding) &&
+      isConstDeclaration(binding) &&
+      binding.initializer
+    )
+      return collectionOrigins(
+        binding.initializer,
+        bindingOrigins,
+        new Set([...seen, binding]),
+      );
+    return new Set();
+  }
+  if (ts.isConditionalExpression(node))
+    return setUnion(
+      collectionOrigins(node.whenTrue, bindingOrigins, seen),
+      collectionOrigins(node.whenFalse, bindingOrigins, seen),
+    );
+  if (
+    ts.isBinaryExpression(node) &&
+    node.operatorToken.kind === ts.SyntaxKind.QuestionQuestionToken
+  )
+    return setUnion(
+      collectionOrigins(node.left, bindingOrigins, seen),
+      collectionOrigins(node.right, bindingOrigins, seen),
+    );
+  return new Set();
+}
+
+function sharedVersionOrigins(node, bindingOrigins, sharedCollections) {
+  if (ts.isPropertyAccessExpression(node) && node.name.text === "version")
+    return sharedCollectionValueOrigins(
+      node.expression,
+      bindingOrigins,
+      sharedCollections,
+    );
+  if (ts.isElementAccessExpression(node)) {
+    const property = unwrap(node.argumentExpression);
+    if (
+      property &&
+      ts.isStringLiteralLike(property) &&
+      property.text === "version"
+    )
+      return sharedCollectionValueOrigins(
+        node.expression,
+        bindingOrigins,
+        sharedCollections,
+      );
+  }
+  return new Set();
+}
+
+function returnedSharedVersionCollections(
+  fn,
+  contextOrigins,
+  sharedCollections,
+  memo = new Map(),
+  active = new Map(),
+) {
+  const signature = collectionContextSignature(
+    contextOrigins,
+    sharedCollections,
+  );
+  const cached = memo.get(fn)?.get(signature);
+  if (cached) return new Set(cached);
+  const activeSignatures = active.get(fn) ?? new Set();
+  if (activeSignatures.has(signature)) return new Set();
+  activeSignatures.add(signature);
+  active.set(fn, activeSignatures);
+  const bindingOrigins = new Map(
+    [...sharedCollections.keys()].map((binding) => [
+      binding,
+      new Set([binding]),
+    ]),
+  );
+  for (const [binding, origins] of contextOrigins)
+    bindingOrigins.set(binding, origins);
+  let result = new Set();
+  if (ts.isArrowFunction(fn) && !ts.isBlock(fn.body))
+    result = returnedVersionExpressionOrigins(
+      fn.body,
+      bindingOrigins,
+      sharedCollections,
+      memo,
+      active,
+    );
+  else
+    walkWithinFunction(fn, (node) => {
+      if (!ts.isReturnStatement(node) || !node.expression) return;
+      result = setUnion(
+        result,
+        returnedVersionExpressionOrigins(
+          node.expression,
+          bindingOrigins,
+          sharedCollections,
+          memo,
+          active,
+        ),
+      );
+    });
+  activeSignatures.delete(signature);
+  const cachedBySignature = memo.get(fn) ?? new Map();
+  cachedBySignature.set(signature, result);
+  memo.set(fn, cachedBySignature);
+  return new Set(result);
+}
+
+function returnedVersionExpressionOrigins(
   expression,
-  bindings,
-  functions,
+  bindingOrigins,
+  sharedCollections,
+  memo,
+  active,
   seen = new Set(),
 ) {
   const node = unwrap(expression);
-  if (!node || !ts.isIdentifier(node)) return "";
-  if (functions.has(node.text)) return node.text;
-  if (seen.has(node.text)) return "";
-  const initializer = bindings.get(node.text);
-  return initializer
-    ? localFunctionTarget(
-        initializer,
-        bindings,
-        functions,
-        new Set([...seen, node.text]),
-      )
-    : "";
+  if (!node) return new Set();
+  const direct = sharedVersionOrigins(node, bindingOrigins, sharedCollections);
+  if (direct.size > 0) return direct;
+  if (ts.isIdentifier(node)) {
+    const binding = lexicalBinding(node);
+    if (
+      !binding ||
+      seen.has(binding) ||
+      !ts.isVariableDeclaration(binding) ||
+      !isConstDeclaration(binding) ||
+      !binding.initializer
+    )
+      return new Set();
+    return returnedVersionExpressionOrigins(
+      binding.initializer,
+      bindingOrigins,
+      sharedCollections,
+      memo,
+      active,
+      new Set([...seen, binding]),
+    );
+  }
+  if (ts.isCallExpression(node)) {
+    const target = localFunctionTarget(node.expression);
+    return target
+      ? returnedSharedVersionCollections(
+          target,
+          calledFunctionOrigins(
+            target,
+            node,
+            bindingOrigins,
+            sharedCollections,
+          ),
+          sharedCollections,
+          memo,
+          active,
+        )
+      : new Set();
+  }
+  if (ts.isConditionalExpression(node))
+    return setUnion(
+      returnedVersionExpressionOrigins(
+        node.whenTrue,
+        bindingOrigins,
+        sharedCollections,
+        memo,
+        active,
+        seen,
+      ),
+      returnedVersionExpressionOrigins(
+        node.whenFalse,
+        bindingOrigins,
+        sharedCollections,
+        memo,
+        active,
+        seen,
+      ),
+    );
+  if (
+    ts.isBinaryExpression(node) &&
+    [
+      ts.SyntaxKind.QuestionQuestionToken,
+      ts.SyntaxKind.AmpersandAmpersandToken,
+      ts.SyntaxKind.BarBarToken,
+    ].includes(node.operatorToken.kind)
+  )
+    return setUnion(
+      returnedVersionExpressionOrigins(
+        node.left,
+        bindingOrigins,
+        sharedCollections,
+        memo,
+        active,
+        seen,
+      ),
+      returnedVersionExpressionOrigins(
+        node.right,
+        bindingOrigins,
+        sharedCollections,
+        memo,
+        active,
+        seen,
+      ),
+    );
+  return new Set();
+}
+
+function calledFunctionOrigins(
+  target,
+  call,
+  bindingOrigins,
+  sharedCollections,
+) {
+  const targetOrigins = new Map(
+    [...bindingOrigins].filter(([binding]) => !sharedCollections.has(binding)),
+  );
+  for (const parameter of target.parameters) targetOrigins.delete(parameter);
+  for (
+    let index = 0;
+    index < target.parameters.length && index < call.arguments.length;
+    index += 1
+  ) {
+    const origins = collectionOrigins(call.arguments[index], bindingOrigins);
+    const parameter = target.parameters[index];
+    if (origins.size > 0 && ts.isIdentifier(parameter.name))
+      targetOrigins.set(parameter, origins);
+  }
+  return targetOrigins;
+}
+
+function sharedCollectionValueOrigins(
+  expression,
+  bindingOrigins,
+  sharedCollections,
+  seen = new Set(),
+) {
+  const node = unwrap(expression);
+  if (!node) return new Set();
+  if (ts.isCallExpression(node)) {
+    const access = sharedCollectionAccess(
+      node,
+      bindingOrigins,
+      sharedCollections,
+    );
+    return access.method === "get" ? access.origins : new Set();
+  }
+  if (ts.isIdentifier(node)) {
+    const binding = lexicalBinding(node);
+    if (
+      !binding ||
+      seen.has(binding) ||
+      !ts.isVariableDeclaration(binding) ||
+      !isConstDeclaration(binding) ||
+      !binding.initializer
+    )
+      return new Set();
+    return sharedCollectionValueOrigins(
+      binding.initializer,
+      bindingOrigins,
+      sharedCollections,
+      new Set([...seen, binding]),
+    );
+  }
+  if (ts.isConditionalExpression(node))
+    return setUnion(
+      sharedCollectionValueOrigins(
+        node.whenTrue,
+        bindingOrigins,
+        sharedCollections,
+        seen,
+      ),
+      sharedCollectionValueOrigins(
+        node.whenFalse,
+        bindingOrigins,
+        sharedCollections,
+        seen,
+      ),
+    );
+  if (
+    ts.isBinaryExpression(node) &&
+    node.operatorToken.kind === ts.SyntaxKind.QuestionQuestionToken
+  )
+    return setUnion(
+      sharedCollectionValueOrigins(
+        node.left,
+        bindingOrigins,
+        sharedCollections,
+        seen,
+      ),
+      sharedCollectionValueOrigins(
+        node.right,
+        bindingOrigins,
+        sharedCollections,
+        seen,
+      ),
+    );
+  return new Set();
+}
+
+function localFunctionTarget(expression, seen = new Set()) {
+  const node = unwrap(expression);
+  if (!node) return null;
+  if (isFunction(node)) return node;
+  if (!ts.isIdentifier(node)) return null;
+  const binding = lexicalBinding(node);
+  if (!binding || seen.has(binding)) return null;
+  if (ts.isFunctionDeclaration(binding) && binding.body) return binding;
+  if (
+    ts.isVariableDeclaration(binding) &&
+    isConstDeclaration(binding) &&
+    binding.initializer
+  )
+    return localFunctionTarget(
+      binding.initializer,
+      new Set([...seen, binding]),
+    );
+  return null;
+}
+
+function lexicalBinding(identifier) {
+  if (!identifier || !ts.isIdentifier(identifier)) return null;
+  let child = identifier;
+  for (let parent = identifier.parent; parent; parent = parent.parent) {
+    const binding = bindingInLexicalContainer(parent, child, identifier.text);
+    if (binding) return binding;
+    child = parent;
+  }
+  return null;
+}
+
+function bindingInLexicalContainer(container, child, name) {
+  if (isFunction(container)) {
+    if (
+      (ts.isFunctionExpression(container) ||
+        ts.isFunctionDeclaration(container)) &&
+      container.name?.text === name
+    )
+      return container;
+    const parameter = container.parameters.find(
+      (candidate) =>
+        ts.isIdentifier(candidate.name) && candidate.name.text === name,
+    );
+    if (parameter) return parameter;
+  }
+  const statements =
+    ts.isSourceFile(container) || ts.isBlock(container)
+      ? container.statements
+      : null;
+  if (!statements || child === container) return null;
+  for (const statement of statements) {
+    if (
+      ts.isFunctionDeclaration(statement) &&
+      statement.name?.text === name &&
+      statement.body
+    )
+      return statement;
+    if (!ts.isVariableStatement(statement)) continue;
+    const declaration = statement.declarationList.declarations.find(
+      (candidate) =>
+        ts.isIdentifier(candidate.name) && candidate.name.text === name,
+    );
+    if (declaration) return declaration;
+  }
+  return null;
+}
+
+function isConstDeclaration(declaration) {
+  return (
+    ts.isVariableDeclarationList(declaration.parent) &&
+    (declaration.parent.flags & ts.NodeFlags.Const) !== 0
+  );
 }
 
 function walkWithinFunction(root, visit) {
@@ -1720,6 +2105,47 @@ function runSelfTests() {
       },
       "useSyncExternalStore getSnapshot and reachable local helpers must stay read-only",
     ),
+    fixture(
+      paths.coordinator,
+      "shared-map-helper-parameter-mutation",
+      (source, text) => {
+        const fn = topLevelFunction(source, "coordinatorVersion");
+        const withReachableCall = insertIntoFunction(
+          text,
+          fn,
+          "preserveSharedCoordinatorEntry(coordinators, generation);",
+        );
+        return insertBeforeNode(
+          withReachableCall,
+          fn,
+          `function preserveSharedCoordinatorEntry(
+  registry: Map<string, CoordinatorState>,
+  generation: string,
+): void {
+  const existing = registry.get(generation);
+  if (existing) registry.set(generation, existing);
+}
+
+`,
+        );
+      },
+      "reachable shared collection mutation coordinators.set",
+    ),
+    fixture(
+      paths.coordinator,
+      "snapshot-local-closure-creates-coordinator",
+      (source, text) => {
+        const fn = topLevelFunction(source, "coordinatorVersion");
+        const version = returnExpressions(fn)[0];
+        return replaceNode(
+          text,
+          version.parent,
+          `const createVersion = () => coordinatorFor(generation).version;
+  return createVersion();`,
+        );
+      },
+      "reachable shared collection mutation coordinators.set",
+    ),
   ];
 
   for (const { fileName, label, mutate, expectedMessage } of fixtures) {
@@ -1749,6 +2175,156 @@ function runSelfTests() {
       !expectedMessage || rejectionMessage.includes(expectedMessage),
       `Architecture negative fixture failed for an unrelated reason: ${label}: ${rejectionMessage}`,
     );
+  }
+
+  const positiveFixtures = [
+    fixture(
+      paths.coordinator,
+      "snapshot-helper-equivalent-rename",
+      (source, text) => {
+        const fn = topLevelFunction(source, "coordinatorVersion");
+        const references = [fn.name];
+        walk(source, (node) => {
+          if (
+            ts.isCallExpression(node) &&
+            localFunctionTarget(node.expression) === fn &&
+            ts.isIdentifier(unwrap(node.expression))
+          )
+            references.push(unwrap(node.expression));
+        });
+        return replaceNodes(text, references, "readCoordinatorVersion");
+      },
+    ),
+    fixture(
+      paths.coordinator,
+      "snapshot-multilevel-readonly-local-helpers",
+      (source, text) => {
+        const fn = topLevelFunction(source, "coordinatorVersion");
+        const version = returnExpressions(fn)[0];
+        return replaceNode(
+          text,
+          version.parent,
+          `function readStoredVersion(): number {
+    return coordinators.get(generation)?.version ?? 0;
+  }
+  const readStoredVersionAlias = readStoredVersion;
+  const readVersion = () => readStoredVersionAlias();
+  return readVersion();`,
+        );
+      },
+    ),
+    fixture(
+      paths.coordinator,
+      "snapshot-uncalled-local-helper-is-unreachable",
+      (source, text) => {
+        const fn = topLevelFunction(source, "coordinatorVersion");
+        return insertIntoFunction(
+          text,
+          fn,
+          `function createUnusedCoordinator(): number {
+    return coordinatorFor(generation).version;
+  }
+  void createUnusedCoordinator;`,
+        );
+      },
+    ),
+    fixture(
+      paths.coordinator,
+      "snapshot-reachable-local-map-parameter-mutation",
+      (source, text) => {
+        const fn = topLevelFunction(source, "coordinatorVersion");
+        const withLocalWrite = insertIntoFunction(
+          text,
+          fn,
+          `const localRegistry = new Map<string, number>();
+  touchLocalRegistry(localRegistry);`,
+        );
+        return insertBeforeNode(
+          withLocalWrite,
+          fn,
+          `function touchLocalRegistry(registry: Map<string, number>): void {
+  registry.set("fixture", 1);
+}
+
+`,
+        );
+      },
+    ),
+    fixture(
+      paths.coordinator,
+      "snapshot-readonly-local-recursion",
+      (source, text) => {
+        const fn = topLevelFunction(source, "coordinatorVersion");
+        const version = returnExpressions(fn)[0];
+        return replaceNode(
+          text,
+          version.parent,
+          `const readVersion = (remaining: number): number =>
+    remaining > 0
+      ? readVersion(remaining - 1)
+      : (coordinators.get(generation)?.version ?? 0);
+  return readVersion(1);`,
+        );
+      },
+    ),
+    fixture(
+      paths.coordinator,
+      "post-ack-dual-bootstrap-const-de-morgan",
+      (source, text) => {
+        const fn = topLevelFunction(source, "confirmAcknowledgedResult");
+        const callback = callbackOfCall(calls(fn, "batch.then")[0]);
+        const clear = assignments(callback).find(
+          (node) =>
+            expressionValue(node.left) === "state.active" &&
+            expressionValue(node.right) === "null",
+        );
+        const bindings = constBindingsBefore(callback, clear.pos);
+        const target = parameterPathSignature(fn, 1);
+        const guard = ifStatements(callback).find(
+          (node) =>
+            node.pos < clear.pos &&
+            statementAlwaysExits(node.thenStatement) &&
+            containsBootstrapComparison(node.expression, bindings, target),
+        );
+        const withEquivalentGuard = replaceNode(
+          text,
+          guard.expression,
+          "!(battleRoom !== roomId && identityRoom !== roomId)",
+        );
+        return insertBeforeNode(
+          withEquivalentGuard,
+          guard,
+          `const battleRoom = battle?.current_result?.room_id;
+      const identityRoom = identity?.battle_result?.room_id;
+      `,
+        );
+      },
+    ),
+  ];
+
+  for (const { fileName, label, mutate } of positiveFixtures) {
+    const original = fs.readFileSync(fileName, "utf8");
+    const source = parseText(fileName, original);
+    const mutated = mutate(source, original);
+    must(
+      mutated !== original,
+      `Architecture positive fixture did not mutate its target: ${label}`,
+    );
+    const fixtureSource = parseText(fileName, mutated);
+    must(
+      fixtureSource.parseDiagnostics.length === 0,
+      `Architecture positive fixture is not valid TypeScript: ${label}`,
+    );
+    try {
+      runChecks(new Map([[fileName, mutated]]));
+    } catch (cause) {
+      must(
+        false,
+        `Architecture positive fixture was rejected: ${label}: ${
+          cause instanceof Error ? cause.message : String(cause)
+        }`,
+      );
+    }
   }
 }
 
@@ -2158,6 +2734,17 @@ function replaceNode(text, node, replacement) {
   return `${text.slice(0, node.getStart())}${replacement}${text.slice(node.end)}`;
 }
 
+function replaceNodes(text, nodes, replacement) {
+  return [...new Set(nodes)]
+    .sort((left, right) => right.getStart() - left.getStart())
+    .reduce((result, node) => replaceNode(result, node, replacement), text);
+}
+
+function insertBeforeNode(text, node, addition) {
+  must(node, "Fixture target node is missing");
+  return `${text.slice(0, node.getStart())}${addition}${text.slice(node.getStart())}`;
+}
+
 function insertAfterNode(text, node, addition) {
   must(node, "Fixture target node is missing");
   return `${text.slice(0, node.end)}${addition}${text.slice(node.end)}`;
@@ -2201,6 +2788,14 @@ function sameSet(left, right) {
   return (
     left.size === right.size && [...left].every((value) => right.has(value))
   );
+}
+
+function setUnion(left, right) {
+  return new Set([...left, ...right]);
+}
+
+function setIntersection(left, right) {
+  return new Set([...left].filter((value) => right.has(value)));
 }
 
 function sameArray(left, right) {
