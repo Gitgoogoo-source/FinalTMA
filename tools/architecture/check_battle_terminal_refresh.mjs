@@ -15,6 +15,14 @@ const paths = {
   command: path.join(BATTLE, "useBattleCommand.ts"),
   view: path.join(BATTLE, "ui/BattleView.tsx"),
 };
+const authoritativeTerminalStatuses = new Set([
+  "finished",
+  "draw",
+  "cancelled",
+  "expired",
+  "voided",
+]);
+const unknownConstant = Symbol("unknownConstant");
 
 try {
   runChecks();
@@ -55,6 +63,7 @@ function checkCoordinator(sources) {
     "exactly one coordinator definition is required",
   );
   const { source, node: coordinator } = definitions[0];
+  checkTerminalPredicate(source);
   const reporter = variableFunction(coordinator, "reportTerminal");
   must(
     coordinator.parameters[0]?.name.getText(source) === "sessionGeneration" &&
@@ -154,6 +163,93 @@ function checkCoordinator(sources) {
   must(
     owners.length === 1 && owners[0] === paths.coordinator,
     "only the coordinator may refresh Battle, assets, and inventory",
+  );
+}
+
+function checkTerminalPredicate(source) {
+  const declarations = variables(source).filter(
+    (node) =>
+      ts.isIdentifier(node.name) && node.name.text === "terminalStatuses",
+  );
+  const declaration = declarations[0];
+  const initializer = declaration?.initializer;
+  const statuses =
+    initializer &&
+    ts.isAsExpression(initializer) &&
+    text(initializer.type) === "const" &&
+    ts.isArrayLiteralExpression(initializer.expression)
+      ? initializer.expression
+      : null;
+  const values = statuses?.elements.filter(ts.isStringLiteralLike) ?? [];
+  must(
+    declarations.length === 1 &&
+      declaration &&
+      declaration.parent.parent.parent === source &&
+      (declaration.parent.flags & ts.NodeFlags.Const) !== 0 &&
+      statuses &&
+      statuses.elements.length === authoritativeTerminalStatuses.size &&
+      values.length === statuses.elements.length &&
+      sameSet(
+        new Set(values.map((node) => node.text)),
+        authoritativeTerminalStatuses,
+      ),
+    "terminalStatuses must be exactly finished, draw, cancelled, expired, voided with no additions, omissions, substitutions, or duplicates",
+  );
+
+  const predicate = oneFunction(source, "isBattleAssetTerminal");
+  const statements = blockStatements(predicate);
+  const returned =
+    statements.length === 1 &&
+    ts.isReturnStatement(statements[0]) &&
+    statements[0].expression
+      ? unwrapExpression(statements[0].expression)
+      : null;
+  const membership =
+    returned &&
+    isMethodCall(returned, "some") &&
+    text(returned.expression.expression) === "terminalStatuses" &&
+    returned.arguments.length === 1
+      ? returned.arguments[0]
+      : null;
+  const comparison =
+    membership &&
+    ts.isArrowFunction(membership) &&
+    membership.parameters.length === 1 &&
+    text(membership.parameters[0].name) === "terminalStatus"
+      ? unwrapExpression(membership.body)
+      : null;
+  must(
+    predicate.parent === source &&
+      predicate.parameters.length === 1 &&
+      text(predicate.parameters[0].name) === "status" &&
+      text(predicate.parameters[0].type) === "unknown" &&
+      !predicate.parameters[0].initializer &&
+      !predicate.parameters[0].dotDotDotToken &&
+      text(predicate.type) === "boolean" &&
+      predicate.modifiers?.some(
+        (modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword,
+      ) &&
+      !predicate.modifiers?.some(
+        (modifier) => modifier.kind === ts.SyntaxKind.AsyncKeyword,
+      ) &&
+      membership &&
+      ts.isArrowFunction(membership) &&
+      !membership.modifiers?.some(
+        (modifier) => modifier.kind === ts.SyntaxKind.AsyncKeyword,
+      ) &&
+      !membership.parameters[0].initializer &&
+      !membership.parameters[0].dotDotDotToken &&
+      identifiers(source).filter((name) => name === "terminalStatuses")
+        .length === 2 &&
+      comparison &&
+      ts.isBinaryExpression(comparison) &&
+      comparison.operatorToken.kind === ts.SyntaxKind.EqualsEqualsEqualsToken &&
+      ((text(comparison.left) === "terminalStatus" &&
+        text(comparison.right) === "status") ||
+        (text(comparison.left) === "status" &&
+          text(comparison.right) === "terminalStatus")) &&
+      !hasStaticallyUnreachableAncestor(returned, predicate),
+    "isBattleAssetTerminal must directly return reachable terminalStatuses membership for its status parameter",
   );
 }
 
@@ -999,6 +1095,109 @@ function runSelfTests() {
 
   const coordinatorSource = parse(paths.coordinator);
   const coordinatorText = fs.readFileSync(paths.coordinator, "utf8");
+  const statusDeclaration = variable(coordinatorSource, "terminalStatuses");
+  const statusInitializer = statusDeclaration?.initializer;
+  const statusArray =
+    statusInitializer &&
+    ts.isAsExpression(statusInitializer) &&
+    ts.isArrayLiteralExpression(statusInitializer.expression)
+      ? statusInitializer.expression
+      : null;
+  must(statusArray, "self-test cannot locate terminalStatuses");
+  const terminalPredicate = oneFunction(
+    coordinatorSource,
+    "isBattleAssetTerminal",
+  );
+  const predicateReturn = blockStatements(terminalPredicate)[0];
+  must(
+    ts.isReturnStatement(predicateReturn) && predicateReturn.expression,
+    "self-test cannot locate terminal predicate return",
+  );
+  const predicateExpression = text(predicateReturn.expression);
+  const replaceStatuses = (replacement) =>
+    replaceRanges(coordinatorText, [
+      [statusArray.getStart(coordinatorSource), statusArray.end, replacement],
+    ]);
+  const replacePredicate = (replacement) =>
+    replaceRanges(coordinatorText, [
+      [
+        predicateReturn.expression.getStart(coordinatorSource),
+        predicateReturn.expression.end,
+        replacement,
+      ],
+    ]);
+  const replacePredicateBody = (replacement) =>
+    replaceRanges(coordinatorText, [
+      [
+        terminalPredicate.body.getStart(coordinatorSource),
+        terminalPredicate.body.end,
+        replacement,
+      ],
+    ]);
+  for (const [label, replacement] of [
+    ["terminal predicate cannot return true", "true"],
+    ["terminal predicate cannot return false", "false"],
+    [
+      "terminal predicate cannot negate membership",
+      `!(${predicateExpression})`,
+    ],
+    [
+      "terminal predicate cannot append a constant branch",
+      `${predicateExpression} || true`,
+    ],
+    [
+      "terminal predicate membership callback cannot be async",
+      "terminalStatuses.some(async (terminalStatus) => terminalStatus === status)",
+    ],
+    [
+      "terminal predicate cannot bypass terminalStatuses",
+      '["finished", "draw", "cancelled", "expired", "voided"].includes(status as string)',
+    ],
+    [
+      "terminal predicate cannot read another field",
+      "terminalStatuses.some((terminalStatus) => terminalStatus === (status as { state?: string }).state)",
+    ],
+  ])
+    expectRejected(
+      label,
+      paths.coordinator,
+      replacePredicate(replacement),
+      "isBattleAssetTerminal must directly return reachable terminalStatuses membership",
+    );
+  expectRejected(
+    "terminal predicate membership cannot move into dead code",
+    paths.coordinator,
+    replacePredicateBody(`{
+  if (false) return ${predicateExpression};
+  return false;
+}`),
+    "isBattleAssetTerminal must directly return reachable terminalStatuses membership",
+  );
+  for (const [label, replacement] of [
+    [
+      "terminalStatuses cannot omit a status",
+      '["finished", "draw", "cancelled", "expired"]',
+    ],
+    [
+      "terminalStatuses cannot add a status",
+      '["finished", "draw", "cancelled", "expired", "voided", "active_select"]',
+    ],
+    [
+      "terminalStatuses cannot repeat a status",
+      '["finished", "draw", "cancelled", "expired", "voided", "voided"]',
+    ],
+    [
+      "terminalStatuses cannot compute a status through another expression",
+      '["finished", "draw", "cancelled", "expired", ...["voided"]]',
+    ],
+  ])
+    expectRejected(
+      label,
+      paths.coordinator,
+      replaceStatuses(replacement),
+      "terminalStatuses must be exactly finished, draw, cancelled, expired, voided",
+    );
+
   const reporter = variableFunction(
     oneFunction(coordinatorSource, "useBattleTerminalRefresh"),
     "reportTerminal",
@@ -1035,6 +1234,97 @@ function runSelfTests() {
       ],
     ]),
   );
+
+  const coordinatorMicrotask = enclosingCall(observedLoop, "queueMicrotask");
+  const coordinatorStatement = coordinatorMicrotask?.parent;
+  must(
+    coordinatorMicrotask &&
+      coordinatorStatement &&
+      ts.isExpressionStatement(coordinatorStatement),
+    "self-test cannot locate terminal coordinator microtask",
+  );
+  const coordinatorTask = text(coordinatorStatement);
+  for (const condition of [
+    "false",
+    "0",
+    "-0",
+    "0n",
+    "''",
+    "null",
+    "undefined",
+    "void 0",
+    "NaN",
+    "1 - 1",
+    "(((0)) as number)!",
+  ])
+    expectRejected(
+      `coordinator cannot move into if (${condition})`,
+      paths.view,
+      replaceRanges(viewText, [
+        [
+          coordinatorStatement.getStart(viewSource),
+          coordinatorStatement.end,
+          `if (${condition}) ${coordinatorTask}`,
+        ],
+      ]),
+      "collected terminal room IDs must reach reportTerminal",
+    );
+  for (const [label, replacement] of [
+    [
+      "coordinator cannot move into false logical RHS",
+      `false && ${text(coordinatorMicrotask)};`,
+    ],
+    [
+      "coordinator cannot move into true logical OR RHS",
+      `true || ${text(coordinatorMicrotask)};`,
+    ],
+    [
+      "coordinator cannot move into non-nullish logical RHS",
+      `null !== null ?? ${text(coordinatorMicrotask)};`,
+    ],
+    [
+      "coordinator cannot move into false conditional branch",
+      `false ? ${text(coordinatorMicrotask)} : undefined;`,
+    ],
+    [
+      "coordinator cannot move into unreachable alternate branch",
+      `true ? undefined : ${text(coordinatorMicrotask)};`,
+    ],
+  ])
+    expectRejected(
+      label,
+      paths.view,
+      replaceRanges(viewText, [
+        [
+          coordinatorStatement.getStart(viewSource),
+          coordinatorStatement.end,
+          replacement,
+        ],
+      ]),
+      "collected terminal room IDs must reach reportTerminal",
+    );
+  expectAccepted(
+    "truthy parentheses and type assertions keep coordination reachable",
+    paths.view,
+    replaceRanges(viewText, [
+      [
+        coordinatorStatement.getStart(viewSource),
+        coordinatorStatement.end,
+        `if ((((1)) as number)!) ${coordinatorTask}`,
+      ],
+    ]),
+  );
+  expectAccepted(
+    "unknown expressions with equivalent assertions stay reachable",
+    paths.view,
+    replaceRanges(viewText, [
+      [
+        coordinatorStatement.getStart(viewSource),
+        coordinatorStatement.end,
+        `if (((terminalRoomIds.length > -1) as boolean)!) ${coordinatorTask}`,
+      ],
+    ]),
+  );
 }
 
 function terminalCollectorInput(source) {
@@ -1055,12 +1345,19 @@ function terminalCollectorInput(source) {
   return joined.arguments[0];
 }
 
-function expectRejected(label, fileName, mutatedText) {
+function expectRejected(label, fileName, mutatedText, expectedMessage) {
   let rejected = false;
   try {
     runChecks(new Map([[fileName, mutatedText]]));
-  } catch {
+  } catch (cause) {
     rejected = true;
+    must(
+      !expectedMessage ||
+        (cause instanceof Error && cause.message.includes(expectedMessage)),
+      `negative fixture failed for the wrong reason: ${label}: ${
+        cause instanceof Error ? cause.message : String(cause)
+      }`,
+    );
   }
   must(rejected, `negative fixture was accepted: ${label}`);
 }
@@ -1332,20 +1629,246 @@ function enclosingExecutable(node) {
 function hasStaticallyUnreachableAncestor(node, boundary) {
   let current = node.parent;
   while (current && current !== boundary) {
+    if (ts.isIfStatement(current)) {
+      const truthiness = staticTruthiness(current.expression);
+      if (
+        (truthiness === false && containsNode(current.thenStatement, node)) ||
+        (truthiness === true &&
+          current.elseStatement &&
+          containsNode(current.elseStatement, node))
+      )
+        return true;
+    }
     if (
-      ts.isIfStatement(current) &&
-      current.expression.kind === ts.SyntaxKind.FalseKeyword &&
-      containsNode(current.thenStatement, node)
+      ts.isConditionalExpression(current) &&
+      ((staticTruthiness(current.condition) === false &&
+        containsNode(current.whenTrue, node)) ||
+        (staticTruthiness(current.condition) === true &&
+          containsNode(current.whenFalse, node)))
+    )
+      return true;
+    if (ts.isBinaryExpression(current) && containsNode(current.right, node)) {
+      const left = constantValue(current.left);
+      if (
+        (current.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken &&
+          left !== unknownConstant &&
+          !left) ||
+        (current.operatorToken.kind === ts.SyntaxKind.BarBarToken &&
+          left !== unknownConstant &&
+          left) ||
+        (current.operatorToken.kind === ts.SyntaxKind.QuestionQuestionToken &&
+          left !== unknownConstant &&
+          left !== null &&
+          left !== undefined)
+      )
+        return true;
+    }
+    if (
+      ts.isWhileStatement(current) &&
+      staticTruthiness(current.expression) === false &&
+      containsNode(current.statement, node)
     )
       return true;
     if (
-      (ts.isWhileStatement(current) || ts.isDoStatement(current)) &&
-      current.expression.kind === ts.SyntaxKind.FalseKeyword
+      ts.isForStatement(current) &&
+      current.condition &&
+      staticTruthiness(current.condition) === false &&
+      containsNode(current.statement, node)
     )
       return true;
     current = current.parent;
   }
   return false;
+}
+
+function staticTruthiness(node) {
+  const value = constantValue(node);
+  return value === unknownConstant ? unknownConstant : Boolean(value);
+}
+
+function constantValue(node) {
+  const current = unwrapExpression(node);
+  if (!current) return unknownConstant;
+  if (current.kind === ts.SyntaxKind.FalseKeyword) return false;
+  if (current.kind === ts.SyntaxKind.TrueKeyword) return true;
+  if (current.kind === ts.SyntaxKind.NullKeyword) return null;
+  if (ts.isStringLiteralLike(current)) return current.text;
+  if (ts.isNumericLiteral(current))
+    return Number(current.text.replaceAll("_", ""));
+  if (ts.isBigIntLiteral(current)) {
+    try {
+      return BigInt(current.text.slice(0, -1).replaceAll("_", ""));
+    } catch {
+      return unknownConstant;
+    }
+  }
+  if (ts.isIdentifier(current)) {
+    if (
+      current.text === "undefined" &&
+      !sourceBindsIdentifier(current.getSourceFile(), "undefined")
+    )
+      return undefined;
+    if (
+      current.text === "NaN" &&
+      !sourceBindsIdentifier(current.getSourceFile(), "NaN")
+    )
+      return Number.NaN;
+    return unknownConstant;
+  }
+  if (ts.isVoidExpression(current))
+    return constantValue(current.expression) === unknownConstant
+      ? unknownConstant
+      : undefined;
+  if (ts.isPrefixUnaryExpression(current)) {
+    const operand = constantValue(current.operand);
+    if (operand === unknownConstant) return unknownConstant;
+    try {
+      if (current.operator === ts.SyntaxKind.ExclamationToken) return !operand;
+      if (current.operator === ts.SyntaxKind.PlusToken) return +operand;
+      if (current.operator === ts.SyntaxKind.MinusToken) return -operand;
+      if (current.operator === ts.SyntaxKind.TildeToken) return ~operand;
+    } catch {
+      return unknownConstant;
+    }
+    return unknownConstant;
+  }
+  if (ts.isConditionalExpression(current)) {
+    const condition = staticTruthiness(current.condition);
+    return condition === unknownConstant
+      ? unknownConstant
+      : constantValue(condition ? current.whenTrue : current.whenFalse);
+  }
+  if (!ts.isBinaryExpression(current)) return unknownConstant;
+  const left = constantValue(current.left);
+  if (left === unknownConstant) return unknownConstant;
+  if (current.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken)
+    return left ? constantValue(current.right) : left;
+  if (current.operatorToken.kind === ts.SyntaxKind.BarBarToken)
+    return left ? left : constantValue(current.right);
+  if (current.operatorToken.kind === ts.SyntaxKind.QuestionQuestionToken)
+    return left === null || left === undefined
+      ? constantValue(current.right)
+      : left;
+  const right = constantValue(current.right);
+  if (right === unknownConstant) return unknownConstant;
+  try {
+    switch (current.operatorToken.kind) {
+      case ts.SyntaxKind.PlusToken:
+        return left + right;
+      case ts.SyntaxKind.MinusToken:
+        return left - right;
+      case ts.SyntaxKind.AsteriskToken:
+        return left * right;
+      case ts.SyntaxKind.SlashToken:
+        return left / right;
+      case ts.SyntaxKind.PercentToken:
+        return left % right;
+      case ts.SyntaxKind.AsteriskAsteriskToken:
+        return left ** right;
+      case ts.SyntaxKind.LessThanToken:
+        return left < right;
+      case ts.SyntaxKind.LessThanEqualsToken:
+        return left <= right;
+      case ts.SyntaxKind.GreaterThanToken:
+        return left > right;
+      case ts.SyntaxKind.GreaterThanEqualsToken:
+        return left >= right;
+      case ts.SyntaxKind.EqualsEqualsEqualsToken:
+        return left === right;
+      case ts.SyntaxKind.ExclamationEqualsEqualsToken:
+        return left !== right;
+      case ts.SyntaxKind.EqualsEqualsToken:
+        return abstractEqual(left, right);
+      case ts.SyntaxKind.ExclamationEqualsToken:
+        return !abstractEqual(left, right);
+      default:
+        return unknownConstant;
+    }
+  } catch {
+    return unknownConstant;
+  }
+}
+
+function abstractEqual(left, right) {
+  if (typeof left === typeof right) return left === right;
+  if (
+    (left === null && right === undefined) ||
+    (left === undefined && right === null)
+  )
+    return true;
+  if (typeof left === "boolean") return abstractEqual(Number(left), right);
+  if (typeof right === "boolean") return abstractEqual(left, Number(right));
+  if (typeof left === "number" && typeof right === "string")
+    return left === Number(right);
+  if (typeof left === "string" && typeof right === "number")
+    return Number(left) === right;
+  if (typeof left === "bigint" && typeof right === "string")
+    return bigintEqualsString(left, right);
+  if (typeof left === "string" && typeof right === "bigint")
+    return bigintEqualsString(right, left);
+  if (typeof left === "bigint" && typeof right === "number")
+    return bigintEqualsNumber(left, right);
+  if (typeof left === "number" && typeof right === "bigint")
+    return bigintEqualsNumber(right, left);
+  return false;
+}
+
+function bigintEqualsString(value, source) {
+  try {
+    return value === BigInt(source);
+  } catch {
+    return false;
+  }
+}
+
+function bigintEqualsNumber(value, number) {
+  return (
+    Number.isFinite(number) &&
+    Number.isInteger(number) &&
+    value === BigInt(number)
+  );
+}
+
+function unwrapExpression(node) {
+  let current = node;
+  while (
+    current &&
+    (ts.isParenthesizedExpression(current) ||
+      ts.isAsExpression(current) ||
+      ts.isTypeAssertionExpression(current) ||
+      ts.isNonNullExpression(current) ||
+      ts.isSatisfiesExpression(current) ||
+      ts.isPartiallyEmittedExpression(current))
+  )
+    current = current.expression;
+  return current;
+}
+
+function sourceBindsIdentifier(source, name) {
+  return all(source, (node) => {
+    if (
+      (ts.isVariableDeclaration(node) || ts.isParameter(node)) &&
+      bindingIdentifiers(node.name).includes(name)
+    )
+      return true;
+    if (
+      (ts.isFunctionDeclaration(node) ||
+        ts.isFunctionExpression(node) ||
+        ts.isClassDeclaration(node) ||
+        ts.isClassExpression(node)) &&
+      node.name?.text === name
+    )
+      return true;
+    if (
+      (ts.isImportClause(node) ||
+        ts.isImportSpecifier(node) ||
+        ts.isNamespaceImport(node) ||
+        ts.isImportEqualsDeclaration(node)) &&
+      node.name?.text === name
+    )
+      return true;
+    return false;
+  }).length;
 }
 
 function containsNode(container, target) {
