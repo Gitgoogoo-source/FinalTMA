@@ -410,8 +410,8 @@ function checkView(source) {
   );
 
   const reports = calls(view, "reportTerminal");
-  const observed = reports.find(
-    (call) => text(call.arguments[0]) === "terminalRoomId",
+  const observed = reports.find((call) =>
+    isWrappedIdentifier(call.arguments[0], "terminalRoomId"),
   );
   must(
     reports.length === 3 && observed,
@@ -703,12 +703,6 @@ function checkTerminalCollector(source, collector) {
 }
 
 function checkTerminalCoordinatorFlow(view, observed, terminalIds) {
-  must(
-    observed &&
-      text(observed.arguments[0]) === "terminalRoomId" &&
-      !hasStaticallyUnreachableAncestor(observed, view),
-    "collected terminal room IDs must reach reportTerminal as its room ID argument",
-  );
   const loop = enclosing(observed, ts.isForOfStatement);
   const declaration =
     loop &&
@@ -717,43 +711,169 @@ function checkTerminalCoordinatorFlow(view, observed, terminalIds) {
       ? loop.initializer.declarations[0]
       : null;
   must(
-    loop &&
+    observed &&
+      loop &&
       declaration &&
-      text(declaration.name) === "terminalRoomId" &&
-      isMethodCall(loop.expression, "split") &&
-      text(loop.expression.expression.expression) === "terminalRoomIds" &&
-      loop.expression.arguments.length === 1 &&
-      ts.isStringLiteralLike(loop.expression.arguments[0]) &&
-      loop.expression.arguments[0].text === ",",
+      ts.isIdentifier(declaration.name) &&
+      declaration.name.text === "terminalRoomId" &&
+      !declaration.initializer &&
+      (loop.initializer.flags & ts.NodeFlags.Const) !== 0 &&
+      !loop.awaitModifier &&
+      isDirectSplit(loop.expression, "terminalRoomIds"),
     'terminalRoomIds output must feed the coordinator loop through split(",")',
   );
-  const guard = enclosing(observed, ts.isIfStatement);
+  const guard = loop.statement;
+  const reportStatement =
+    guard && ts.isIfStatement(guard) ? guard.thenStatement : null;
   must(
-    guard === loop.statement &&
-      text(guard.expression) === "terminalRoomId" &&
-      containsNode(guard.thenStatement, observed),
-    "the coordinator loop must reject empty IDs and report each collected room ID",
+    ts.isIfStatement(guard) &&
+      isWrappedIdentifier(guard.expression, "terminalRoomId") &&
+      !guard.elseStatement &&
+      isDirectReportStatement(reportStatement, observed, "terminalRoomId") &&
+      calls(loop, "reportTerminal").length === 1 &&
+      identifiers(loop).filter((name) => name === "terminalRoomId").length ===
+        3 &&
+      identifiers(loop).filter((name) => name === "terminalRoomIds").length ===
+        1,
+    "the coordinator loop must only reject empty IDs and directly report each collected room ID",
   );
   const microtask = enclosingCall(loop, "queueMicrotask");
-  const task = microtask?.arguments[0];
+  const task = unwrapExpression(microtask?.arguments[0]);
+  const taskStatements = blockStatements(task);
+  const unmountGuard = taskStatements[0];
   must(
     microtask &&
+      ts.isIdentifier(microtask.expression) &&
+      microtask.expression.text === "queueMicrotask" &&
+      microtask.arguments.length === 1 &&
+      !sourceBindsIdentifier(view.getSourceFile(), "queueMicrotask") &&
       (ts.isArrowFunction(task) || ts.isFunctionExpression(task)) &&
+      !task.modifiers?.some(
+        (modifier) => modifier.kind === ts.SyntaxKind.AsyncKeyword,
+      ) &&
+      !task.asteriskToken &&
+      task.parameters.length === 0 &&
+      ts.isBlock(task.body) &&
+      taskStatements.length === 2 &&
+      ts.isIfStatement(unmountGuard) &&
+      isWrappedIdentifier(unmountGuard.expression, "cancelled") &&
+      ts.isReturnStatement(unmountGuard.thenStatement) &&
+      !unmountGuard.thenStatement.expression &&
+      !unmountGuard.elseStatement &&
+      taskStatements[1] === loop &&
       enclosingExecutable(loop) === task &&
-      task.body === loop.parent,
-    "the terminal coordinator loop must execute directly in the queued task",
+      loop.parent === task.body,
+    "the queued task must only guard cancellation and then directly iterate collected terminal room IDs",
   );
   const effect = enclosingCall(microtask, "useEffect");
-  const effectCallback = effect?.arguments[0];
+  const effectCallback = unwrapExpression(effect?.arguments[0]);
+  const effectStatements = blockStatements(effectCallback);
+  const cancelledStatement = effectStatements[0];
+  const cancelledDeclaration =
+    cancelledStatement &&
+    ts.isVariableStatement(cancelledStatement) &&
+    cancelledStatement.declarationList.declarations.length === 1
+      ? cancelledStatement.declarationList.declarations[0]
+      : null;
+  const microtaskStatement = effectStatements[1];
+  const cleanupReturn = effectStatements[2];
+  const cleanup = unwrapExpression(cleanupReturn?.expression);
+  const cleanupStatements = blockStatements(cleanup);
+  const cleanupAssignment =
+    cleanupStatements[0] && ts.isExpressionStatement(cleanupStatements[0])
+      ? unwrapExpression(cleanupStatements[0].expression)
+      : null;
+  const effectStatement = enclosing(effect, ts.isExpressionStatement);
   must(
     effect &&
+      ts.isIdentifier(effect.expression) &&
+      effect.expression.text === "useEffect" &&
+      effect.arguments.length === 2 &&
       (ts.isArrowFunction(effectCallback) ||
         ts.isFunctionExpression(effectCallback)) &&
+      !effectCallback.modifiers?.some(
+        (modifier) => modifier.kind === ts.SyntaxKind.AsyncKeyword,
+      ) &&
+      !effectCallback.asteriskToken &&
+      effectCallback.parameters.length === 0 &&
+      ts.isBlock(effectCallback.body) &&
+      effectStatements.length === 3 &&
+      cancelledDeclaration &&
+      ts.isIdentifier(cancelledDeclaration.name) &&
+      cancelledDeclaration.name.text === "cancelled" &&
+      !cancelledDeclaration.exclamationToken &&
+      (cancelledStatement.declarationList.flags & ts.NodeFlags.Let) !== 0 &&
+      isWrappedBoolean(cancelledDeclaration.initializer, false) &&
+      ts.isExpressionStatement(microtaskStatement) &&
+      unwrapExpression(microtaskStatement.expression) === microtask &&
+      ts.isReturnStatement(cleanupReturn) &&
+      (ts.isArrowFunction(cleanup) || ts.isFunctionExpression(cleanup)) &&
+      !cleanup.modifiers?.some(
+        (modifier) => modifier.kind === ts.SyntaxKind.AsyncKeyword,
+      ) &&
+      !cleanup.asteriskToken &&
+      cleanup.parameters.length === 0 &&
+      ts.isBlock(cleanup.body) &&
+      cleanupStatements.length === 1 &&
+      cleanupAssignment &&
+      ts.isBinaryExpression(cleanupAssignment) &&
+      cleanupAssignment.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
+      isWrappedIdentifier(cleanupAssignment.left, "cancelled") &&
+      isWrappedBoolean(cleanupAssignment.right, true) &&
+      identifiers(effectCallback).filter((name) => name === "cancelled")
+        .length === 3 &&
       enclosingExecutable(microtask) === effectCallback &&
-      ts.isExpressionStatement(effect.parent) &&
-      effect.parent.parent === view.body &&
+      effectStatement &&
+      unwrapExpression(effectStatement.expression) === effect &&
+      effectStatement.parent === view.body &&
       directVariableStatement(view, terminalIds),
-    "the collector output must reach a directly mounted BattleView effect",
+    "the directly mounted terminal observation effect must initialize cancellation, queue must-execute work, and return only its final cleanup",
+  );
+}
+
+function isDirectSplit(node, receiverName) {
+  const call = unwrapExpression(node);
+  if (
+    !call ||
+    !ts.isCallExpression(call) ||
+    !ts.isPropertyAccessExpression(call.expression) ||
+    call.expression.questionDotToken ||
+    call.expression.name.text !== "split" ||
+    call.arguments.length !== 1 ||
+    !ts.isStringLiteralLike(unwrapExpression(call.arguments[0])) ||
+    unwrapExpression(call.arguments[0]).text !== ","
+  )
+    return false;
+  return isWrappedIdentifier(call.expression.expression, receiverName);
+}
+
+function isDirectReportStatement(statement, report, roomIdName) {
+  if (!statement || !ts.isExpressionStatement(statement)) return false;
+  const expression = unwrapExpression(statement.expression);
+  if (!expression || !ts.isVoidExpression(expression)) return false;
+  const call = unwrapExpression(expression.expression);
+  return (
+    call === report &&
+    ts.isCallExpression(call) &&
+    ts.isIdentifier(call.expression) &&
+    call.expression.text === "reportTerminal" &&
+    call.arguments.length === 1 &&
+    isWrappedIdentifier(call.arguments[0], roomIdName)
+  );
+}
+
+function isWrappedIdentifier(node, name) {
+  const expression = unwrapExpression(node);
+  return Boolean(
+    expression && ts.isIdentifier(expression) && expression.text === name,
+  );
+}
+
+function isWrappedBoolean(node, value) {
+  const expression = unwrapExpression(node);
+  return (
+    expression?.kind ===
+    (value ? ts.SyntaxKind.TrueKeyword : ts.SyntaxKind.FalseKeyword)
   );
 }
 
@@ -1237,15 +1357,64 @@ function runSelfTests() {
 
   const coordinatorMicrotask = enclosingCall(observedLoop, "queueMicrotask");
   const coordinatorStatement = coordinatorMicrotask?.parent;
+  const coordinatorTask = unwrapExpression(coordinatorMicrotask?.arguments[0]);
+  const coordinatorTaskStatements = blockStatements(coordinatorTask);
+  const coordinatorUnmountGuard = coordinatorTaskStatements[0];
+  const coordinatorLoopGuard = observedLoop.statement;
+  const coordinatorEffect = enclosingCall(coordinatorMicrotask, "useEffect");
+  const coordinatorEffectCallback = unwrapExpression(
+    coordinatorEffect?.arguments[0],
+  );
+  const coordinatorEffectStatements = blockStatements(
+    coordinatorEffectCallback,
+  );
+  const coordinatorCancelledStatement = coordinatorEffectStatements[0];
+  const coordinatorCancelledDeclaration =
+    coordinatorCancelledStatement &&
+    ts.isVariableStatement(coordinatorCancelledStatement)
+      ? coordinatorCancelledStatement.declarationList.declarations[0]
+      : null;
+  const coordinatorCleanupReturn = coordinatorEffectStatements[2];
+  const coordinatorCleanup = unwrapExpression(
+    coordinatorCleanupReturn?.expression,
+  );
+  const coordinatorCleanupStatement = blockStatements(coordinatorCleanup)[0];
+  const coordinatorCleanupAssignment =
+    coordinatorCleanupStatement &&
+    ts.isExpressionStatement(coordinatorCleanupStatement)
+      ? unwrapExpression(coordinatorCleanupStatement.expression)
+      : null;
+  const coordinatorSplit = unwrapExpression(observedLoop.expression);
+  const coordinatorSplitReceiver =
+    coordinatorSplit &&
+    ts.isCallExpression(coordinatorSplit) &&
+    ts.isPropertyAccessExpression(coordinatorSplit.expression)
+      ? coordinatorSplit.expression.expression
+      : null;
   must(
     coordinatorMicrotask &&
       coordinatorStatement &&
-      ts.isExpressionStatement(coordinatorStatement),
-    "self-test cannot locate terminal coordinator microtask",
+      ts.isExpressionStatement(coordinatorStatement) &&
+      (ts.isArrowFunction(coordinatorTask) ||
+        ts.isFunctionExpression(coordinatorTask)) &&
+      ts.isIfStatement(coordinatorUnmountGuard) &&
+      ts.isIfStatement(coordinatorLoopGuard) &&
+      coordinatorEffect &&
+      (ts.isArrowFunction(coordinatorEffectCallback) ||
+        ts.isFunctionExpression(coordinatorEffectCallback)) &&
+      coordinatorCancelledDeclaration?.initializer &&
+      ts.isReturnStatement(coordinatorCleanupReturn) &&
+      (ts.isArrowFunction(coordinatorCleanup) ||
+        ts.isFunctionExpression(coordinatorCleanup)) &&
+      coordinatorCleanupAssignment &&
+      ts.isBinaryExpression(coordinatorCleanupAssignment) &&
+      coordinatorSplitReceiver,
+    "self-test cannot locate terminal coordinator lifecycle",
   );
-  const coordinatorTask = text(coordinatorStatement);
+  const coordinatorTaskStatement = text(coordinatorStatement);
   for (const condition of [
     "false",
+    "true",
     "0",
     "-0",
     "0n",
@@ -1256,6 +1425,8 @@ function runSelfTests() {
     "NaN",
     "1 - 1",
     "(((0)) as number)!",
+    "runtimeGate()",
+    "(((terminalRoomIds.length > -1) as boolean)!)",
   ])
     expectRejected(
       `coordinator cannot move into if (${condition})`,
@@ -1264,10 +1435,10 @@ function runSelfTests() {
         [
           coordinatorStatement.getStart(viewSource),
           coordinatorStatement.end,
-          `if (${condition}) ${coordinatorTask}`,
+          `if (${condition}) ${coordinatorTaskStatement}`,
         ],
       ]),
-      "collected terminal room IDs must reach reportTerminal",
+      "directly mounted terminal observation effect",
     );
   for (const [label, replacement] of [
     [
@@ -1301,30 +1472,371 @@ function runSelfTests() {
           replacement,
         ],
       ]),
-      "collected terminal room IDs must reach reportTerminal",
+      "directly mounted terminal observation effect",
     );
-  expectAccepted(
-    "truthy parentheses and type assertions keep coordination reachable",
+
+  for (const [label, insertion] of [
+    ["coordinator cannot follow an unconditional return", "return;\n    "],
+    [
+      "coordinator cannot follow an unconditional throw",
+      'throw new Error("skip terminal observation");\n    ',
+    ],
+    [
+      "coordinator cannot follow an unknown early return",
+      "if (runtimeGate()) return;\n    ",
+    ],
+  ])
+    expectRejected(
+      label,
+      paths.view,
+      replaceRanges(viewText, [
+        [
+          coordinatorStatement.getStart(viewSource),
+          coordinatorStatement.getStart(viewSource),
+          insertion,
+        ],
+      ]),
+      "directly mounted terminal observation effect",
+    );
+
+  expectRejected(
+    "coordinator cannot be delegated to an indirect helper",
     paths.view,
     replaceRanges(viewText, [
       [
         coordinatorStatement.getStart(viewSource),
         coordinatorStatement.end,
-        `if ((((1)) as number)!) ${coordinatorTask}`,
+        `const runTerminalObservation = () => ${text(coordinatorMicrotask)};
+    runTerminalObservation();`,
       ],
     ]),
   );
-  expectAccepted(
-    "unknown expressions with equivalent assertions stay reachable",
+  expectRejected(
+    "standard queueMicrotask cannot be shadowed",
+    paths.view,
+    replaceRanges(viewText, [
+      [
+        coordinatorEffect.parent.getStart(viewSource),
+        coordinatorEffect.parent.getStart(viewSource),
+        "const queueMicrotask = (_callback: () => void) => undefined;\n  ",
+      ],
+    ]),
+    "queued task must only guard cancellation",
+  );
+  expectRejected(
+    "terminal observation effect cannot be conditionally mounted",
+    paths.view,
+    replaceRanges(viewText, [
+      [
+        coordinatorEffect.parent.getStart(viewSource),
+        coordinatorEffect.parent.end,
+        `if (runtimeGate()) ${text(coordinatorEffect.parent)}`,
+      ],
+    ]),
+  );
+
+  for (const [label, replacement] of [
+    ["cancelled must initialize to false", "true"],
+    ["cancelled cannot initialize from an unknown gate", "runtimeGate()"],
+  ])
+    expectRejected(
+      label,
+      paths.view,
+      replaceRanges(viewText, [
+        [
+          coordinatorCancelledDeclaration.initializer.getStart(viewSource),
+          coordinatorCancelledDeclaration.initializer.end,
+          replacement,
+        ],
+      ]),
+      "directly mounted terminal observation effect",
+    );
+  expectRejected(
+    "cancelled must remain a mutable lifecycle binding",
+    paths.view,
+    replaceRanges(viewText, [
+      [
+        coordinatorCancelledStatement.getStart(viewSource),
+        coordinatorCancelledStatement.end,
+        "const cancelled = false;",
+      ],
+    ]),
+    "directly mounted terminal observation effect",
+  );
+  expectRejected(
+    "cancelled cannot change before queued work",
     paths.view,
     replaceRanges(viewText, [
       [
         coordinatorStatement.getStart(viewSource),
-        coordinatorStatement.end,
-        `if (((terminalRoomIds.length > -1) as boolean)!) ${coordinatorTask}`,
+        coordinatorStatement.getStart(viewSource),
+        "cancelled = runtimeGate();\n    ",
+      ],
+    ]),
+    "directly mounted terminal observation effect",
+  );
+
+  for (const [label, replacement] of [
+    ["cleanup must set cancelled to true", "false"],
+    ["cleanup cannot set another binding", "otherCancelled"],
+  ])
+    expectRejected(
+      label,
+      paths.view,
+      replaceRanges(viewText, [
+        [
+          replacement === "otherCancelled"
+            ? coordinatorCleanupAssignment.left.getStart(viewSource)
+            : coordinatorCleanupAssignment.right.getStart(viewSource),
+          replacement === "otherCancelled"
+            ? coordinatorCleanupAssignment.left.end
+            : coordinatorCleanupAssignment.right.end,
+          replacement,
+        ],
+      ]),
+      "directly mounted terminal observation effect",
+    );
+  expectRejected(
+    "cleanup cannot conditionally cancel",
+    paths.view,
+    replaceRanges(viewText, [
+      [
+        coordinatorCleanupStatement.getStart(viewSource),
+        coordinatorCleanupStatement.end,
+        "if (runtimeGate()) cancelled = true;",
+      ],
+    ]),
+    "directly mounted terminal observation effect",
+  );
+  expectRejected(
+    "cleanup cannot contain additional work",
+    paths.view,
+    replaceRanges(viewText, [
+      [
+        coordinatorCleanupStatement.end,
+        coordinatorCleanupStatement.end,
+        "\n      runtimeGate();",
+      ],
+    ]),
+    "directly mounted terminal observation effect",
+  );
+
+  for (const [label, replacement] of [
+    [
+      "queued cancellation guard cannot include another gate",
+      "cancelled || runtimeGate()",
+    ],
+    ["queued cancellation guard cannot be inverted", "!cancelled"],
+  ])
+    expectRejected(
+      label,
+      paths.view,
+      replaceRanges(viewText, [
+        [
+          coordinatorUnmountGuard.expression.getStart(viewSource),
+          coordinatorUnmountGuard.expression.end,
+          replacement,
+        ],
+      ]),
+      "queued task must only guard cancellation",
+    );
+  expectRejected(
+    "queued work cannot insert another early return",
+    paths.view,
+    replaceRanges(viewText, [
+      [
+        observedLoop.getStart(viewSource),
+        observedLoop.getStart(viewSource),
+        "if (runtimeGate()) return;\n      ",
+      ],
+    ]),
+    "queued task must only guard cancellation",
+  );
+  expectRejected(
+    "queued work cannot wrap iteration in an inverse cancellation branch",
+    paths.view,
+    replaceRanges(viewText, [
+      [
+        coordinatorTask.body.getStart(viewSource),
+        coordinatorTask.body.end,
+        `{
+      if (!cancelled) {
+        ${text(observedLoop)}
+      }
+    }`,
+      ],
+    ]),
+    "queued task must only guard cancellation",
+  );
+
+  for (const [label, replacement] of [
+    [
+      "coordinator input cannot switch to another binding",
+      'terminalObservationKey.split(",")',
+    ],
+    ["coordinator input cannot switch to a constant", '["detached-room-id"]'],
+  ])
+    expectRejected(
+      label,
+      paths.view,
+      replaceRanges(viewText, [
+        [
+          observedLoop.expression.getStart(viewSource),
+          observedLoop.expression.end,
+          replacement,
+        ],
+      ]),
+      "terminalRoomIds output must feed the coordinator loop",
+    );
+  for (const [label, replacement] of [
+    ["loop cannot add an unknown gate", "terminalRoomId && runtimeGate()"],
+    ["loop cannot invert the empty-ID filter", "!terminalRoomId"],
+  ])
+    expectRejected(
+      label,
+      paths.view,
+      replaceRanges(viewText, [
+        [
+          coordinatorLoopGuard.expression.getStart(viewSource),
+          coordinatorLoopGuard.expression.end,
+          replacement,
+        ],
+      ]),
+      "coordinator loop must only reject empty IDs",
+    );
+  for (const [label, replacement] of [
+    [
+      "loop cannot continue through another condition",
+      `{
+        if (!terminalRoomId) continue;
+        if (runtimeGate()) continue;
+        void reportTerminal(terminalRoomId);
+      }`,
+    ],
+    [
+      "loop cannot break before reporting",
+      `{
+        if (!terminalRoomId) continue;
+        if (runtimeGate()) break;
+        void reportTerminal(terminalRoomId);
+      }`,
+    ],
+    [
+      "loop cannot return before reporting",
+      `{
+        if (!terminalRoomId) continue;
+        if (runtimeGate()) return;
+        void reportTerminal(terminalRoomId);
+      }`,
+    ],
+  ])
+    expectRejected(
+      label,
+      paths.view,
+      replaceRanges(viewText, [
+        [
+          observedLoop.statement.getStart(viewSource),
+          observedLoop.statement.end,
+          replacement,
+        ],
+      ]),
+    );
+  expectRejected(
+    "loop cannot report a different binding",
+    paths.view,
+    replaceRanges(viewText, [
+      [
+        observedReport.arguments[0].getStart(viewSource),
+        observedReport.arguments[0].end,
+        "terminalRoomIds",
       ],
     ]),
   );
+  expectRejected(
+    "loop cannot delegate reporting to a helper",
+    paths.view,
+    replaceRanges(viewText, [
+      [
+        observedReport.expression.getStart(viewSource),
+        observedReport.expression.end,
+        "reportTerminalIndirectly",
+      ],
+    ]),
+  );
+
+  expectAccepted(
+    "lifecycle identifiers and booleans may use parentheses and assertions",
+    paths.view,
+    replaceRanges(viewText, [
+      [
+        coordinatorCancelledDeclaration.initializer.getStart(viewSource),
+        coordinatorCancelledDeclaration.initializer.end,
+        "(((false as boolean))!)",
+      ],
+      [
+        coordinatorUnmountGuard.expression.getStart(viewSource),
+        coordinatorUnmountGuard.expression.end,
+        "(((cancelled as boolean))!)",
+      ],
+      [
+        coordinatorSplitReceiver.getStart(viewSource),
+        coordinatorSplitReceiver.end,
+        "(((terminalRoomIds as string))!)",
+      ],
+      [
+        coordinatorLoopGuard.expression.getStart(viewSource),
+        coordinatorLoopGuard.expression.end,
+        "(((terminalRoomId as string))!)",
+      ],
+      [
+        observedReport.arguments[0].getStart(viewSource),
+        observedReport.arguments[0].end,
+        "(((terminalRoomId as string))!)",
+      ],
+      [
+        coordinatorCleanupAssignment.right.getStart(viewSource),
+        coordinatorCleanupAssignment.right.end,
+        "(((true as boolean))!)",
+      ],
+    ]),
+  );
+  for (const [label, start, end, replacement] of [
+    [
+      "queued call may use parentheses and assertions",
+      coordinatorStatement.getStart(viewSource),
+      coordinatorStatement.end,
+      `((${text(coordinatorMicrotask)} as void)!);`,
+    ],
+    [
+      "queued callback may use parentheses and assertions",
+      coordinatorMicrotask.arguments[0].getStart(viewSource),
+      coordinatorMicrotask.arguments[0].end,
+      `(${text(coordinatorTask)})!`,
+    ],
+    [
+      "cleanup callback may use parentheses and assertions",
+      coordinatorCleanupReturn.expression.getStart(viewSource),
+      coordinatorCleanupReturn.expression.end,
+      `(${text(coordinatorCleanup)})!`,
+    ],
+    [
+      "effect callback may use parentheses and assertions",
+      coordinatorEffect.arguments[0].getStart(viewSource),
+      coordinatorEffect.arguments[0].end,
+      `(${text(coordinatorEffectCallback)})!`,
+    ],
+    [
+      "mounted effect call may use parentheses and assertions",
+      coordinatorEffect.parent.getStart(viewSource),
+      coordinatorEffect.parent.end,
+      `((${text(coordinatorEffect)} as void)!);`,
+    ],
+  ])
+    expectAccepted(
+      label,
+      paths.view,
+      replaceRanges(viewText, [[start, end, replacement]]),
+    );
 }
 
 function terminalCollectorInput(source) {
@@ -1346,6 +1858,7 @@ function terminalCollectorInput(source) {
 }
 
 function expectRejected(label, fileName, mutatedText, expectedMessage) {
+  mustParseFixture(label, fileName, mutatedText);
   let rejected = false;
   try {
     runChecks(new Map([[fileName, mutatedText]]));
@@ -1363,6 +1876,7 @@ function expectRejected(label, fileName, mutatedText, expectedMessage) {
 }
 
 function expectAccepted(label, fileName, mutatedText) {
+  mustParseFixture(label, fileName, mutatedText);
   try {
     runChecks(new Map([[fileName, mutatedText]]));
   } catch (cause) {
@@ -1373,6 +1887,18 @@ function expectAccepted(label, fileName, mutatedText) {
       { cause },
     );
   }
+}
+
+function mustParseFixture(label, fileName, mutatedText) {
+  const source = parse(fileName, new Map([[fileName, mutatedText]]));
+  must(
+    source.parseDiagnostics.length === 0,
+    `self-test fixture does not parse: ${label}: ${source.parseDiagnostics
+      .map((diagnostic) =>
+        ts.flattenDiagnosticMessageText(diagnostic.messageText, " "),
+      )
+      .join("; ")}`,
+  );
 }
 
 function replaceRanges(source, replacements) {
