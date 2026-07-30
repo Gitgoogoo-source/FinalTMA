@@ -16,11 +16,17 @@ BUILD = ROOT / "apps/web/dist"
 SOURCE = ROOT / "assets/source/catalog/v1"
 CATALOG = ROOT / "generated/catalog/catalog-v1.json"
 PLACEHOLDERS = ROOT / "generated/assets/placeholders.json"
+BRAND_MANIFEST = ROOT / "generated/assets/brand-v1.json"
+DEVELOPMENT_PLACEHOLDER_PATH = "apps/web/public/assets/dev/placeholder.webp"
 PLACEHOLDER_PATHS = [
-    "apps/web/public/assets/dev/placeholder.webp",
+    DEVELOPMENT_PLACEHOLDER_PATH,
     "apps/web/public/assets/share/preview.webp",
     "apps/web/public/assets/ton/tonconnect-icon.png",
 ]
+BRAND_ASSETS = {
+    "apps/web/public/assets/share/preview.webp": ("webp", 1200, 630),
+    "apps/web/public/assets/ton/tonconnect-icon.png": ("png", 180, 180),
+}
 VARIANTS = {
     "image_thumbnail_path": ("thumb", 256, 50 * 1024),
     "image_detail_path": ("detail", 768, 180 * 1024),
@@ -53,6 +59,28 @@ def webp_dimensions(data: bytes) -> tuple[int, int]:
     raise SystemExit("WebP dimensions are missing or invalid")
 
 
+def png_dimensions(data: bytes) -> tuple[int, int]:
+    if len(data) < 33 or data[12:16] != b"IHDR" or int.from_bytes(data[8:12], "big") != 13:
+        raise SystemExit("PNG IHDR is missing or invalid")
+    return int.from_bytes(data[16:20], "big"), int.from_bytes(data[20:24], "big")
+
+
+def has_alpha(path: Path, data: bytes) -> bool:
+    if path.suffix == ".png":
+        return data[25] in {4, 6} or b"tRNS" in data
+    offset = 12
+    while offset + 8 <= len(data):
+        chunk = data[offset : offset + 4]
+        size = int.from_bytes(data[offset + 4 : offset + 8], "little")
+        payload = offset + 8
+        if payload + size > len(data):
+            break
+        if chunk == b"ALPH" or (chunk == b"VP8X" and size >= 1 and data[payload] & 0x10):
+            return True
+        offset = payload + size + (size % 2)
+    return False
+
+
 def assert_format(path: Path) -> tuple[int, int] | None:
     data = path.read_bytes()
     if path.suffix == ".webp":
@@ -62,12 +90,81 @@ def assert_format(path: Path) -> tuple[int, int] | None:
     if path.suffix == ".png":
         if not data.startswith(b"\x89PNG\r\n\x1a\n"):
             raise SystemExit(f"Asset is not a valid PNG: {path.relative_to(ROOT)}")
-        return None
+        return png_dimensions(data)
     raise SystemExit(f"Unsupported production asset format: {path.relative_to(ROOT)}")
 
 
-def placeholder_hashes() -> dict[str, str]:
-    return {name: digest(ROOT / name) for name in PLACEHOLDER_PATHS}
+def placeholder_fingerprints() -> dict[str, str]:
+    document = json.loads(PLACEHOLDERS.read_text(encoding="utf-8"))
+    files = document.get("files")
+    if (
+        not isinstance(files, dict)
+        or set(files) != set(PLACEHOLDER_PATHS)
+        or any(not isinstance(value, str) or re.fullmatch(r"[0-9a-f]{64}", value) is None for value in files.values())
+    ):
+        raise SystemExit("Placeholder fingerprints are incomplete or invalid")
+    return files
+
+
+def rejected_placeholder_paths(source_hashes: dict[str, str], fingerprints: dict[str, str]) -> list[str]:
+    rejected = set(fingerprints.values())
+    return sorted(name for name, actual in source_hashes.items() if actual in rejected)
+
+
+def assert_brand_manifest(source_hashes: dict[str, str]) -> None:
+    if not BRAND_MANIFEST.is_file():
+        raise SystemExit("Formal brand asset provenance is missing")
+    document = json.loads(BRAND_MANIFEST.read_text(encoding="utf-8"))
+    palette = document.get("palette")
+    generation = document.get("generation")
+    rights = document.get("rights")
+    assets = document.get("assets")
+    if document.get("schema_version") != 1 or document.get("brand") != "PokePets":
+        raise SystemExit("Formal brand asset provenance identity is invalid")
+    if palette != {
+        "source": "apps/web/src/shared/styles/global.css",
+        "primary": "#FF7A00",
+        "secondary": "#4DBB39",
+        "ink": "#36434B",
+        "paper": "#FFFDFA",
+    }:
+        raise SystemExit("Formal brand palette differs from the locked UI design tokens")
+    if (
+        not isinstance(generation, dict)
+        or generation.get("mode") != "built-in imagegen"
+        or generation.get("generated_on") != "2026-07-30"
+        or generation.get("third_party_inputs") != []
+        or not isinstance(generation.get("prompts"), dict)
+        or set(generation["prompts"]) != {"icon", "share"}
+        or any(not isinstance(prompt, str) or not prompt.strip() for prompt in generation["prompts"].values())
+    ):
+        raise SystemExit("Formal brand generation provenance is incomplete")
+    if rights != {
+        "usage": "PokePets project-owned",
+        "third_party_licenses": [],
+        "license_source": None,
+    }:
+        raise SystemExit("Formal brand rights record is incomplete or claims an external license")
+    if not isinstance(assets, dict) or set(assets) != set(BRAND_ASSETS):
+        raise SystemExit("Formal brand asset provenance paths are incomplete")
+    for name, (expected_format, width, height) in BRAND_ASSETS.items():
+        path = ROOT / name
+        item = assets[name]
+        if (
+            not isinstance(item, dict)
+            or item.get("format") != expected_format
+            or item.get("width") != width
+            or item.get("height") != height
+            or item.get("opaque") is not True
+            or item.get("sha256") != source_hashes[name]
+            or not isinstance(item.get("source_artifact_sha256"), str)
+            or re.fullmatch(r"[0-9a-f]{64}", item["source_artifact_sha256"]) is None
+            or not isinstance(item.get("postprocessing"), list)
+            or not item["postprocessing"]
+        ):
+            raise SystemExit(f"Formal brand asset provenance mismatch: {name}")
+        if assert_format(path) != (width, height) or has_alpha(path, path.read_bytes()):
+            raise SystemExit(f"Formal brand asset must be exact-size and opaque: {name}")
 
 
 def required_assets() -> tuple[list[dict[str, object]], list[str], list[str]]:
@@ -164,12 +261,15 @@ def main() -> None:
             raise SystemExit("APP_ENV must be development, test, or production for the delivery asset gate")
         args.mode = "development" if environment == "development" else "production"
     if args.pin_placeholders:
-        PLACEHOLDERS.parent.mkdir(parents=True, exist_ok=True)
-        PLACEHOLDERS.write_text(json.dumps({"files": placeholder_hashes()}, indent=2) + "\n", encoding="utf-8")
+        if not PLACEHOLDERS.is_file():
+            raise SystemExit("Placeholder fingerprints must already exist before updating the development placeholder")
+        pinned = placeholder_fingerprints()
+        pinned[DEVELOPMENT_PLACEHOLDER_PATH] = digest(ROOT / DEVELOPMENT_PLACEHOLDER_PATH)
+        PLACEHOLDERS.write_text(json.dumps({"files": pinned}, indent=2) + "\n", encoding="utf-8")
     if not PLACEHOLDERS.is_file():
         raise SystemExit("Placeholder hashes are not pinned")
-    expected_placeholders = json.loads(PLACEHOLDERS.read_text(encoding="utf-8")).get("files")
-    if not isinstance(expected_placeholders, dict) or expected_placeholders != placeholder_hashes():
+    expected_placeholders = placeholder_fingerprints()
+    if expected_placeholders[DEVELOPMENT_PLACEHOLDER_PATH] != digest(ROOT / DEVELOPMENT_PLACEHOLDER_PATH):
         raise SystemExit("Development placeholder hash drift detected")
 
     templates, catalog_paths, required = required_assets()
@@ -189,6 +289,7 @@ def main() -> None:
         source_hashes[name] = actual
     if any(source_hashes[name] != checksum for name, checksum in catalog_hashes.items()):
         raise SystemExit("Catalog runtime hash validation is inconsistent")
+    assert_brand_manifest(source_hashes)
     if args.mode == "catalog":
         print("all 210 formal masters and 420 runtime catalog assets are valid, unique, budgeted, and hash-locked")
         return
@@ -197,7 +298,7 @@ def main() -> None:
     if args.mode == "development":
         print("all 425 development release assets are path-valid, format-valid, hash-locked, and present in the build")
         return
-    placeholders = sorted(name for name, actual in source_hashes.items() if actual in set(expected_placeholders.values()))
+    placeholders = rejected_placeholder_paths(source_hashes, expected_placeholders)
     if placeholders:
         raise SystemExit("Formal production assets still contain development-only checksums:\n" + "\n".join(placeholders))
     print("all 425 formal production assets are valid, unique, hash-locked, and present in the build")
