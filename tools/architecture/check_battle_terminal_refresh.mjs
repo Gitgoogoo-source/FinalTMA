@@ -707,6 +707,87 @@ function checkView(source) {
   const inviteObserver = calls(view, "useApiQuery").find(
     (call) => stringArgument(call, 0) === "battle.current_invite",
   );
+  const inviteEnabled = inviteObserver?.arguments[2];
+  const inviteEntryChoice = binaryExpressions(inviteEnabled).find(
+    (node) =>
+      node.operatorToken.kind === ts.SyntaxKind.BarBarToken &&
+      ((identifiers(node.left).includes("battleEntry") &&
+        Boolean(
+          findBinaryComparison(
+            node.right,
+            "roomId",
+            ts.SyntaxKind.EqualsEqualsEqualsToken,
+            "null",
+          ),
+        )) ||
+        (identifiers(node.right).includes("battleEntry") &&
+          Boolean(
+            findBinaryComparison(
+              node.left,
+              "roomId",
+              ts.SyntaxKind.EqualsEqualsEqualsToken,
+              "null",
+            ),
+          ))),
+  );
+  const authoritativeInvite = variable(
+    view,
+    "authoritativeInvite",
+  )?.initializer;
+  const pageDerivation = calls(view, "derivePageState")[0];
+  const pageDerivationOptions = objectArgument(pageDerivation, 0);
+  const stateDeriver = topLevelFunction(source, "derivePageState");
+  const bearerInviteGuard = ifStatements(stateDeriver).find(
+    (node) =>
+      identifiers(node.expression).includes("battleEntry") &&
+      identifiers(node.expression).includes("forceHome"),
+  );
+  const participantRoomGuard = ifStatements(stateDeriver).find(
+    (node) => expressionValue(node.expression) === "room",
+  );
+  const bearerGuardReturns = returnExpressions(
+    bearerInviteGuard?.thenStatement,
+  ).map((expression) => expressionValue(expression));
+  must(
+    inviteEntryChoice &&
+      authoritativeInvite &&
+      sameSet(
+        new Set(propertyPaths(authoritativeInvite)),
+        new Set(["invite.isError", "invite.data"]),
+      ) &&
+      expressionValue(
+        objectPropertyExpression(pageDerivationOptions, "invite"),
+      ) === "authoritativeInvite" &&
+      bearerInviteGuard &&
+      participantRoomGuard &&
+      bearerInviteGuard.pos < participantRoomGuard.pos &&
+      !identifiers(bearerInviteGuard.expression).includes("room") &&
+      containsNegatedIdentifier(bearerInviteGuard.expression, "forceHome") &&
+      bearerGuardReturns.length === 1 &&
+      bearerGuardReturns[0] === "accept",
+    "Battle bearer entry must query current_invite despite participation, reject stale query data, and select the invite state before any participant room",
+  );
+  const participantInviteRefresh = calls(authority, "refetchInvite").find(
+    (call) =>
+      call.pos > roomRead[0].end &&
+      call.pos < roomPublish.pos &&
+      enclosingIf(
+        authority,
+        call,
+        (node) =>
+          identifiers(node.expression).includes("battleEntry") &&
+          identifiers(node.expression).includes("forceHome"),
+      ),
+  );
+  must(
+    participantInviteRefresh &&
+      awaitExpressions(authority).some((node) =>
+        containsNode(node, participantInviteRefresh),
+      ) &&
+      latchCheckBetween(authority, participantInviteRefresh, roomPublish) &&
+      propertyPaths(authority).includes("inviteResult.isError"),
+    "participant room authority refresh must also await current_invite for an active Battle bearer and recheck the terminal latch",
+  );
   const bootstrapEnabledIdentifiers = new Set(
     identifiers(bootstrapObserver?.arguments[2]),
   );
@@ -1904,12 +1985,20 @@ function runSelfTests() {
         "runAuthorityRefresh",
       );
       const read = calls(fn, "readAuthorityRoom")[0];
-      const guard = ifStatements(fn).find(
+      const publish = calls(fn, "onAuthoritativeRoom").find(
+        (call) => expressionValue(call.arguments[0]) === "roomResult",
+      );
+      const guards = ifStatements(fn).filter(
         (node) =>
           node.pos > read.end &&
+          node.pos < publish.pos &&
           calls(node.expression, "isTerminalLocked").length === 1,
       );
-      return replaceNode(text, guard.expression, "false");
+      return replaceNodes(
+        text,
+        guards.map((guard) => guard.expression),
+        "false",
+      );
     }),
     fixture(
       paths.view,
@@ -1936,6 +2025,70 @@ function runSelfTests() {
           text,
           authorityRoomId.initializer,
           `${authorityRoomId.initializer.getText()} ?? inviteRoom?.room_id`,
+        );
+      },
+    ),
+    fixture(
+      paths.view,
+      "participation blocks Battle bearer invite observer",
+      (source, text) => {
+        const view = topLevelFunction(source, "BattleView");
+        const inviteObserver = calls(view, "useApiQuery").find(
+          (call) => stringArgument(call, 0) === "battle.current_invite",
+        );
+        return replaceNode(
+          text,
+          inviteObserver.arguments[2],
+          "pageActive && roomId === null && activeTerminal === null && !cachedTerminalPresent && !bootstrapRoomTerminal",
+        );
+      },
+    ),
+    fixture(
+      paths.view,
+      "participant room retakes priority over Battle bearer",
+      (source, text) => {
+        const derive = topLevelFunction(source, "derivePageState");
+        const guard = ifStatements(derive).find(
+          (node) =>
+            identifiers(node.expression).includes("battleEntry") &&
+            identifiers(node.expression).includes("forceHome"),
+        );
+        return replaceNode(
+          text,
+          guard.expression,
+          `(${guard.expression.getText()}) && !room`,
+        );
+      },
+    ),
+    fixture(
+      paths.view,
+      "participant authority refresh skips Battle bearer invite",
+      (source, text) => {
+        const authority = variableFunction(
+          topLevelFunction(source, "BattleView"),
+          "runAuthorityRefresh",
+        );
+        const discovery = calls(authority, "Promise.all")[0];
+        const refresh = calls(authority, "refetchInvite").find(
+          (call) => !containsNode(discovery, call),
+        );
+        return replaceNode(
+          text,
+          refresh,
+          "Promise.resolve({ isError: false })",
+        );
+      },
+    ),
+    fixture(
+      paths.view,
+      "failed invite query reuses cached available preview",
+      (source, text) => {
+        const view = topLevelFunction(source, "BattleView");
+        const authoritativeInvite = variable(view, "authoritativeInvite");
+        return replaceNode(
+          text,
+          authoritativeInvite.initializer,
+          "invite.data",
         );
       },
     ),
@@ -2613,6 +2766,14 @@ function ifStatements(root) {
   return matches;
 }
 
+function binaryExpressions(root) {
+  const matches = [];
+  walk(root, (node) => {
+    if (ts.isBinaryExpression(node)) matches.push(node);
+  });
+  return matches;
+}
+
 function forOfStatements(root) {
   const matches = [];
   walk(root, (node) => {
@@ -2693,6 +2854,14 @@ function isNegatedIdentifier(expression, name) {
     node.operator === ts.SyntaxKind.ExclamationToken &&
     expressionValue(node.operand) === name
   );
+}
+
+function containsNegatedIdentifier(root, name) {
+  let found = false;
+  walk(root, (node) => {
+    if (isNegatedIdentifier(node, name)) found = true;
+  });
+  return found;
 }
 
 function findBinaryComparison(root, left, operator, right) {

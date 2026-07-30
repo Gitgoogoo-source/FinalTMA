@@ -93,6 +93,7 @@ export function BattleView(): ReactNode {
   const [params, setParams] = usePageSearchParams();
   const session = useSession();
   const sessionGeneration = session?.generation ?? null;
+  const battleEntry = session?.entryKind === "battle";
   const cachedIdentity = sessionGeneration
     ? getApiQueryData(sessionGeneration, "identity.bootstrap")
     : undefined;
@@ -149,12 +150,15 @@ export function BattleView(): ReactNode {
     "battle.current_invite",
     {},
     pageActive &&
-      roomId === null &&
+      (battleEntry || roomId === null) &&
       activeTerminal === null &&
       !cachedTerminalPresent &&
       !bootstrapRoomTerminal,
   );
-  const inviteRoom = isInviteRoom(invite.data) ? invite.data : null;
+  const authoritativeInvite = invite.isError ? undefined : invite.data;
+  const inviteRoom = isInviteRoom(authoritativeInvite)
+    ? authoritativeInvite
+    : null;
   const resumeOrderId = params.get("resume");
   const topups = useApiQuery(
     "topup.bootstrap",
@@ -237,13 +241,19 @@ export function BattleView(): ReactNode {
         const roomResult = await readAuthorityRoom(authorityRoomId);
         if (isTerminalLocked(null)) return false;
         if (!roomResult) return false;
+        let inviteHealthy = true;
+        if (battleEntry && !forceHome) {
+          const inviteResult = await refetchInvite();
+          inviteHealthy = !inviteResult.isError;
+          if (isTerminalLocked(null)) return false;
+        }
         await onAuthoritativeRoom(roomResult);
         if (isTerminalLocked(null)) {
           authorityHealthy.current = true;
           return false;
         }
         authorityHealthy.current = true;
-        return true;
+        return inviteHealthy;
       }
       const [battleResult, inviteResult] = await Promise.all([
         refetchBootstrap(),
@@ -269,7 +279,9 @@ export function BattleView(): ReactNode {
   }, [
     activeTerminal,
     authorityRoomId,
+    battleEntry,
     finishAuthorityRecovery,
+    forceHome,
     isTerminalLocked,
     onAuthoritativeRoom,
     readAuthorityRoom,
@@ -402,8 +414,8 @@ export function BattleView(): ReactNode {
     result: Boolean(result),
     room,
     flow,
-    invite: invite.data,
-    battleEntry: session?.entryKind === "battle",
+    invite: authoritativeInvite,
+    battleEntry,
     forceHome,
   });
   const tier =
@@ -968,7 +980,11 @@ export function BattleView(): ReactNode {
   const loading =
     bootstrap.isLoading ||
     identity.isLoading ||
-    (roomId ? room === null : invite.isLoading);
+    (battleEntry && !forceHome
+      ? invite.isFetching
+      : roomId
+        ? room === null
+        : invite.isLoading);
   const commandMessage =
     commandPending || command.state.phase === "failed"
       ? command.state.message
@@ -979,7 +995,7 @@ export function BattleView(): ReactNode {
       room={room}
       result={result}
       tier={tier}
-      invite={invite.data}
+      invite={authoritativeInvite}
       tiers={bootstrap.data?.entry_tiers ?? []}
       participation={participation}
       teamItems={teamOptions.data?.items ?? []}
@@ -1291,6 +1307,7 @@ function derivePageState({
   forceHome: boolean;
 }): BattlePageState {
   if (result) return "result";
+  if (!forceHome && battleEntry) return "accept";
   if (room) {
     if (room.status === "preparing_share") return "preparing_share";
     if (room.status === "waiting") return "waiting";
@@ -1308,7 +1325,7 @@ function derivePageState({
   }
   if (flow?.kind === "create") return "team_select";
   if (flow?.kind === "accept") return "accept";
-  if (!forceHome && (battleEntry || isInviteRoom(invite))) return "accept";
+  if (!forceHome && isInviteRoom(invite)) return "accept";
   return "home";
 }
 
