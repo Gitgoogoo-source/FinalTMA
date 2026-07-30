@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "tact --config tact.config.json",
-    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "typecheck": "pnpm run build && tsc --noEmit -p tsconfig.json",
     "deploy:testnet": "node --experimental-strip-types commands/deploy.ts testnet",
     "deploy:mainnet": "node --experimental-strip-types commands/deploy.ts mainnet",
     "verify": "node --experimental-strip-types commands/verify.ts"

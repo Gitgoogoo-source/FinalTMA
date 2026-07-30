@@ -13,12 +13,14 @@
 ## 命令
 
 ```sh
-pnpm --filter @pokepets/ton build
 pnpm --filter @pokepets/ton typecheck
+pnpm --filter @pokepets/ton build
 pnpm --filter @pokepets/ton deploy:testnet
 pnpm --filter @pokepets/ton verify
 pnpm --filter @pokepets/ton deploy:mainnet
 ```
+
+`typecheck` 会先使用锁定版本的 Tact 编译器和 `tact.config.json` 生成 `build/` 绑定，再检查部署与验收命令；全新副本不需要人工预生成。`build/` 是可重复生成的编译产物，保持 Git 忽略，不得手写或作为源码提交。
 
 mainnet 命令除完整环境变量外，必须显式设置 `TON_MAINNET_DEPLOY_APPROVED=I_UNDERSTAND_MAINNET`。真实部署仍要求用户当次授权和部署钱包；仓库不保存 mnemonic、私钥或 provider token。
 

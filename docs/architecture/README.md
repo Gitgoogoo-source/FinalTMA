@@ -69,6 +69,7 @@ TMA 首次同步加载只覆盖应用壳、会话与账号门禁及默认开盒�
 - `supabase/migrations/*_product_data_v1.sql`
 - `supabase/migrations/*_api_security.sql`
 - `apps/web/public/tonconnect-manifest.json`
+- `contracts/ton/build/*`（Tact 编译产物；Git 忽略并由 TON typecheck/chain build 生成）
 
 生成物禁止手工维护；漂移检查必须在临时目录生成后比较。
 
@@ -89,3 +90,4 @@ TMA 首次同步加载只覆盖应用壳、会话与账号门禁及默认开盒�
 - [Battle 数据库权威与规则快照](adr/ADR-014-battle-authority-and-ruleset.md)
 - [Battle 实时失效通知、调度与 outbox](adr/ADR-015-battle-realtime-and-scheduler.md)
 - [受控 Battle 验收夹具数据库边界](adr/ADR-016-controlled-battle-acceptance-fixture.md)
+- [TON 生成绑定与静态门禁](adr/ADR-017-ton-generated-bindings.md)

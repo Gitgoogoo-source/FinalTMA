@@ -42,6 +42,8 @@ pnpm manifest:check
 pnpm manifest:check:production
 ```
 
+`pnpm typecheck` 进入 `@pokepets/ton` 时会先使用锁定版本的 Tact 编译器从合约源码确定性生成被 Git 忽略的 `contracts/ton/build/` 绑定，再检查部署与验收命令。干净副本不得依赖预存生成物或人工先运行 `pnpm chain:build`；后续独立的 `pnpm chain:build` 仍是正式 TON 编译门禁，并验证重复生成保持稳定。
+
 `pnpm catalog:generate-assets` 要求 210 张母版均为 768×768 WebP，并生成 256×256 缩略图和 768×768 详情图。`pnpm assets:check:catalog` 强制核对 210 个 `template_id`、两个路径、420 个文件、WebP 格式、尺寸、单文件体积、50 MiB 总上限、内容唯一性和正式 checksum。`APP_ENV=development pnpm build` 在生成 `apps/web/dist` 后继续核对构建复制结果；`APP_ENV=test` 与 `APP_ENV=production` 额外拒绝 Telegram 分享图和 TON Connect 图标的已知开发 checksum。
 
 `pnpm architecture:check` 同时验证 `/game` 只承载 React + TypeScript Battle、没有 Phaser 或客户端战斗模拟器，任务页转盘位置、远征筛选/任务/横幅隐藏、已退役游戏目录持续不存在，以及其余模块边界、网关隔离和文档归属。
