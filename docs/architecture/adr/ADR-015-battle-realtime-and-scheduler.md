@@ -12,6 +12,8 @@ Ably Standard 只发送 Battle 状态失效通知，不承载业务状态或裁�
 
 Supabase `pg_cron` 使用唯一 job `battle-tick-v1`，每秒调用 `battle.process_due(limit => 100)`。advisory lock 阻止重叠执行，到期 room 通过索引与 `FOR UPDATE SKIP LOCKED` 分批推进；服务恢复后按数据库 deadline 追赶，不读取浏览器计时器。lobby 每次推进先锁 room 并依次裁决连续离线、5 分钟总时限和封禁，再复核两名 participant、两份 stake/ledger、六个合法快照、六个 reservation 和全部启动条件，最后裁决 3 秒开战；永久失败走同一安全作废，相等 deadline 下终结优先。
 
+停用或重建前先 `cron.unschedule('battle-tick-v1')`，再在独立语句执行 `pg_reload_conf()`；只有原 `jobid` 连续两个调度周期没有新增 run 才允许删除 Battle schema。三条 migration 的提交事务结束后，owner 再在独立语句执行一次 `pg_reload_conf()`，使既有 `pg_cron scheduler` 进程重新加载新 job；随后必须从 `cron.job_run_details` 取得同一 `jobid` 的至少两个连续自然周期，手工 SQL 或直接 RPC 不作为调度证据。`battle.tick_health()` 固定核对唯一 job、每秒 schedule、command、database、worker、scheduler 数量和最近 5 秒成功记录。既有五分钟 `monitor-invariants` 把配置错误或调度停滞写为 `BATTLE_TICK_UNHEALTHY`，把自然运行失败写为 `BATTLE_TICK_RUN_FAILED`，私有记录包含 jobid、runid、开始/结束时间、截断错误摘要和 SHA-256。既有每日 `cleanup-idempotency` 只删除该 command 超过 7 天的运行明细，每次最多 100000 条；开放失败 violation 不随明细清理，不增加第二个 Supabase cron job。
+
 玩家请求提交后立即尝试投递本次 outbox。cron 产生的状态通过 `pg_net` 唤醒 `/api/integrations/battle-outbox`；prepared share 恢复通过 `pg_net` 唤醒 `/api/integrations/battle-share`。两个接口使用 Supabase Vault 与 Vercel Secret 共同持有的 `BATTLE_OUTBOX_SECRET` 鉴权，请求 body 只作唤醒信号，真实任务由受保护 RPC 领取。失败投递按 1、2、5、10、30 秒重试，随后每 30 秒重试。
 
 ## 结果

@@ -73,14 +73,14 @@ pnpm manifest:build
 用户明确宣布正式生产上线前，真实开发环境不保留迁移历史。每次数据库定义调整都执行以下固定顺序：
 
 1. 记录当前 commit、三条 migration 文件名及校验和，核对目标 ref 为 `ebewtjerusxcioegpzjd`。
-2. 完成本地静态门禁；关闭开发 Bot webhook/Mini App 入口和 Battle 新建/接受入口，确认没有活动 room 后暂停三项 Vercel Cron 与 `battle-tick-v1`。
-3. 清空真实开发数据库与 migration history，从空库依次执行仓库内唯一的 `*_baseline.sql`、`*_product_data_v1.sql`、`*_api_security.sql`。
-4. 验证远端 migration history、RPC 定义、入口交接门禁、RLS、函数权限与仓库一致。
+2. 完成本地静态门禁；关闭开发 Bot webhook/Mini App 入口和 Battle 新建/接受入口，确认没有活动 room 后暂停三项 Vercel Cron；对 `battle-tick-v1` 先执行 `cron.unschedule`，再在独立语句执行 `pg_reload_conf()`，保存原 `jobid` 连续两个调度周期没有新增 run 的证据后才允许清库。
+3. 清空真实开发数据库与 migration history，从空库依次执行仓库内唯一的 `*_baseline.sql`、`*_product_data_v1.sql`、`*_api_security.sql`；三条 migration 的提交事务全部结束后，owner 必须在独立语句执行一次 `select pg_reload_conf()`，不得把该调用放入 migration 事务。
+4. 验证远端 migration history、RPC 定义、入口交接门禁、RLS、函数权限与仓库一致；确认 `battle.tick_health()` 的唯一 job、`1 second`、`select battle.process_due(100);`、当前 database、`postgres` worker、单一 scheduler 和最近 5 秒成功记录全部正确，并保存同一 jobid 至少两个连续自然周期的 runid、起止时间、状态和返回摘要。手工调用 tick 不得替代该证据。
 5. 对开发项目执行 `supabase db lint --linked --schema api,identity,catalog,operations,economy,inventory,gacha,expedition,wheel,battle,market,payments,vip,tasks,referral,album,onchain,risk,admin --level warning --fail-on error` 并运行 Supabase security/performance advisors。
 6. 在 Supabase Data API 设置中把 Exposed schemas 固定为 `public,graphql_public,api`，不得暴露任何业务表 schema。
 7. 核对 Vercel Production 同时存在 `TELEGRAM_BOT_USERNAME=FinalTMA_bot`、`TELEGRAM_MINI_APP_SHORT_NAME=pokepets_dev`、`ABLY_API_KEY`、`BATTLE_INVITE_SECRET` 与 `BATTLE_OUTBOX_SECRET`；核对 Supabase Vault 的 Battle share/outbox callback URL 和相同 outbox secret；环境变量变更后部署包含全部修改的同一 Git commit。在 BotFather 的 `/mybots` → `@FinalTMA_bot` → `Bot Settings` → `Configure Mini App` 中启用 Main Mini App 并将 URL 固定为 `https://final-tma-pi.vercel.app/`，同时保持 named Mini App `pokepets_dev` 与默认菜单按钮 `Open PokePets` 指向 `https://t.me/FinalTMA_bot/pokepets_dev`。
 8. 确认 `admin.database_identity` 与 `admin.environment_controls` 在迁移后均为空，所有应用角色均不能发现或执行 `admin`；由数据库 owner 把项目身份一次性绑定为 `real_development / ebewtjerusxcioegpzjd`，再写入同值、最长 24 小时的 Battle 验收夹具 enable。该记录是非秘密数据库元数据，不使用 Vercel/Supabase Sensitive 环境变量或 Vault。
-9. 调用 Bot API，确认 `getMe.result.has_main_web_app=true` 且 `getChatMenuButton.result.web_app.url=https://t.me/FinalTMA_bot/pokepets_dev`；验证 `battle-v1` checksum、`battle-tick-v1` 每秒 job、两个 pg_net callback、Ably subscribe-only token、`/api/health`、Telegram 真机登录、登录交接门禁、`/api/referrals` 与三个手工 Vercel job，最后恢复所有调度。
+9. 调用 Bot API，确认 `getMe.result.has_main_web_app=true` 且 `getChatMenuButton.result.web_app.url=https://t.me/FinalTMA_bot/pokepets_dev`；验证 `battle-v1` checksum、`battle-tick-v1` 每秒自然运行、`BATTLE_TICK_UNHEALTHY`/`BATTLE_TICK_RUN_FAILED` 监控链路、7 天运行明细保留、两个 pg_net callback、Ably subscribe-only token、`/api/health`、Telegram 真机登录、登录交接门禁、`/api/referrals` 与三个手工 Vercel job，最后恢复所有调度。
 10. 按 `docs/operations/acceptance.md` 完成 Telegram 真机、Battle、支付与并发验收，并确认 `/game` 只发起当前 viewer 所需的 Battle 请求、离开游戏页停止 waiting/lobby 心跳和 UI 轮询、进入 active 战斗停止 presence 心跳；`monitor-invariants` 必须返回 0 个新增 violation。
 
 任一步失败都保持入口与 Cron 关闭，修正原始 Schema 或迁移并从第 1 条重新执行。禁止为尚未生产发布的错误定义追加修补 migration。

@@ -7711,6 +7711,196 @@ begin
 end;
 $$;
 
+create or replace function battle.tick_health()
+returns jsonb
+language sql
+security definer
+set search_path = ''
+as $$
+  with configured_jobs as (
+    select *
+    from cron.job
+    where jobname = 'battle-tick-v1'
+  ),
+  current_job as (
+    select *
+    from configured_jobs
+    order by jobid desc
+    limit 1
+  ),
+  latest_run as (
+    select r.*
+    from cron.job_run_details r
+    join current_job j on j.jobid = r.jobid
+    order by r.runid desc
+    limit 1
+  ),
+  latest_success as (
+    select r.*
+    from cron.job_run_details r
+    join current_job j on j.jobid = r.jobid
+    where r.status = 'succeeded'
+    order by r.runid desc
+    limit 1
+  ),
+  latest_failure as (
+    select r.*
+    from cron.job_run_details r
+    join current_job j on j.jobid = r.jobid
+    where r.status = 'failed'
+    order by r.runid desc
+    limit 1
+  ),
+  scheduler as (
+    select count(*)::integer as worker_count
+    from pg_catalog.pg_stat_activity
+    where application_name = 'pg_cron scheduler'
+  )
+  select jsonb_build_object(
+    'job_name', 'battle-tick-v1',
+    'observed_at', clock_timestamp(),
+    'configured_job_count', (select count(*) from configured_jobs),
+    'configured_correctly', (
+      select count(*) = 1
+        and bool_and(
+          schedule = '1 second'
+          and command = 'select battle.process_due(100);'
+          and database = current_database()
+          and username = 'postgres'
+          and active
+        )
+      from configured_jobs
+    ),
+    'jobid', (select jobid from current_job),
+    'schedule', (select schedule from current_job),
+    'command', (select command from current_job),
+    'database', (select database from current_job),
+    'worker', (select username from current_job),
+    'scheduler_count', (select worker_count from scheduler),
+    'stale_after_seconds', 5,
+    'retention_days', 7,
+    'latest_run', (
+      select jsonb_build_object(
+        'runid', runid,
+        'status', status,
+        'return_summary', left(coalesce(return_message, ''), 240),
+        'start_time', start_time,
+        'end_time', end_time
+      )
+      from latest_run
+    ),
+    'latest_success', (
+      select jsonb_build_object(
+        'runid', runid,
+        'start_time', start_time,
+        'end_time', end_time
+      )
+      from latest_success
+    ),
+    'latest_failure', (
+      select jsonb_build_object(
+        'runid', runid,
+        'status', status,
+        'error_summary', left(coalesce(return_message, ''), 240),
+        'error_sha256', encode(
+          extensions.digest(
+            convert_to(coalesce(return_message, ''), 'UTF8'),
+            'sha256'
+          ),
+          'hex'
+        ),
+        'start_time', start_time,
+        'end_time', end_time
+      )
+      from latest_failure
+    ),
+    'healthy', (
+      select count(*) = 1
+        and bool_and(
+          schedule = '1 second'
+          and command = 'select battle.process_due(100);'
+          and database = current_database()
+          and username = 'postgres'
+          and active
+        )
+        and (select worker_count = 1 from scheduler)
+        and exists (
+          select 1
+          from latest_success
+          where end_time >= clock_timestamp() - interval '5 seconds'
+        )
+      from configured_jobs
+    )
+  )
+$$;
+
+create or replace function battle.monitor_tick_health(
+  p_scan_from timestamptz,
+  p_scan_to timestamptz
+)
+returns integer
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_health jsonb := battle.tick_health();
+  v_failure cron.job_run_details%rowtype;
+  v_count integer := 0;
+  v_added integer := 0;
+begin
+  if not coalesce((v_health->>'healthy')::boolean, false) then
+    insert into operations.invariant_violations (code, subject, details)
+    values ('BATTLE_TICK_UNHEALTHY', 'battle-tick-v1', v_health)
+    on conflict do nothing;
+    get diagnostics v_count = row_count;
+  else
+    update operations.invariant_violations
+    set resolved_at = now()
+    where code = 'BATTLE_TICK_UNHEALTHY'
+      and subject = 'battle-tick-v1'
+      and resolved_at is null;
+  end if;
+
+  select *
+  into v_failure
+  from cron.job_run_details
+  where command = 'select battle.process_due(100);'
+    and status = 'failed'
+    and start_time >= coalesce(p_scan_from, p_scan_to - interval '10 minutes')
+    and start_time < p_scan_to
+  order by runid desc
+  limit 1;
+
+  if v_failure.runid is not null then
+    insert into operations.invariant_violations (code, subject, details)
+    values (
+      'BATTLE_TICK_RUN_FAILED',
+      'battle-tick-v1',
+      jsonb_build_object(
+        'jobid', v_failure.jobid,
+        'runid', v_failure.runid,
+        'status', v_failure.status,
+        'error_summary', left(coalesce(v_failure.return_message, ''), 240),
+        'error_sha256', encode(
+          extensions.digest(
+            convert_to(coalesce(v_failure.return_message, ''), 'UTF8'),
+            'sha256'
+          ),
+          'hex'
+        ),
+        'start_time', v_failure.start_time,
+        'end_time', v_failure.end_time
+      )
+    )
+    on conflict do nothing;
+    get diagnostics v_added = row_count;
+    v_count := v_count + v_added;
+  end if;
+  return v_count;
+end;
+$$;
+
 create or replace function battle.cleanup_operational_data(p_limit integer default 1000)
 returns jsonb
 language plpgsql
@@ -7720,6 +7910,7 @@ as $$
 declare
   v_rate_limits integer;
   v_outbox integer;
+  v_tick_runs integer;
   v_ruleset_id text;
 begin
   select id into v_ruleset_id from battle.rulesets where status = 'active';
@@ -7741,9 +7932,20 @@ begin
     limit greatest(1, least(p_limit, 5000))
   );
   get diagnostics v_outbox = row_count;
+  delete from cron.job_run_details
+  where runid in (
+    select runid
+    from cron.job_run_details
+    where command = 'select battle.process_due(100);'
+      and end_time < now() - interval '7 days'
+    order by end_time
+    limit 100000
+  );
+  get diagnostics v_tick_runs = row_count;
   return jsonb_build_object(
     'rate_limit_attempts_deleted', v_rate_limits,
-    'published_outbox_deleted', v_outbox
+    'published_outbox_deleted', v_outbox,
+    'tick_runs_deleted', v_tick_runs
   );
 end;
 $$;
@@ -10020,7 +10222,8 @@ begin
     v_details := battle.cleanup_operational_data(greatest(1, least(p_limit, 5000)));
     v_count := v_count
       + coalesce((v_details->>'rate_limit_attempts_deleted')::integer, 0)
-      + coalesce((v_details->>'published_outbox_deleted')::integer, 0);
+      + coalesce((v_details->>'published_outbox_deleted')::integer, 0)
+      + coalesce((v_details->>'tick_runs_deleted')::integer, 0);
   else
     insert into operations.invariant_violations (code, subject, details)
     select 'BALANCE_LEDGER_MISMATCH', b.user_id::text || ':' || b.currency, jsonb_build_object('balance', b.available, 'ledger', coalesce(sum(l.amount), 0))
@@ -10052,6 +10255,8 @@ begin
       and not exists (select 1 from onchain.mints m where m.operation_id = o.id and m.status in ('reserved', 'submitted', 'unknown'))
     on conflict do nothing;
     get diagnostics v_added = row_count; v_count := v_count + v_added;
+    v_added := battle.monitor_tick_health(v_scan_from, v_scan_to);
+    v_count := v_count + v_added;
     v_added := battle.monitor_invariants();
     v_count := v_count + v_added;
   end if;

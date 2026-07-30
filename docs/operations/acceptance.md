@@ -45,7 +45,7 @@ Battle stake / settlement / outbox event（脱敏）：
 - 市场：购买页以 210 个正式模板为目录主表，零数量模板显示售罄，数量排除本人和 banned 卖家；已有 9 种时第 10 种成功，已有 10 种时第 11 种失败且同模板追加成功；管理页把同模板多条独立 FIFO 挂单聚合为一张卡片；按用户和模板全部下架与成交并发时只释放最终剩余 reservation，原键回放及新键重试无有效挂单均幂等成功且不重复释放；买家明细不含卖家身份。
 - Stars：K-coin 付款前关闭立即取消且可重新创建，创建请求迟到不得打开 invoice，`processing/paid` 禁止关闭并在重进后恢复，同 charge 的相同或不同 update 重投只到账一次，取消/失败/过期与成功回调乱序时真实扣款仍唯一到账，invoice 创建失败不遗留开放操作，终态后无冷却立即再充值；同时覆盖金额、订单归属、幂等键篡改、退款、VIP 既有购买流程，以及 `battle_create`、`battle_accept` 充值后只恢复最新确认界面且绝不自动创建或接受。`battle_create` 补差在本人已有 `preparing_share/waiting/lobby/active` 任一参与事实时统一返回 `BATTLE_ALREADY_PARTICIPATING` 且不创建订单。
 - TON：Proof、地址唯一、Mint 预留、提交未知、链上对账、超时释放和活跃 Mint 阻止断开钱包。
-- Cron：Vercel job 的同时触发、重复触发、运行租约、漏跑追赶、失败记录和手工重跑；Supabase `battle-tick-v1` 的每秒触发、advisory lock、`SKIP LOCKED` 分批、deadline 追赶和 pg_net 唤醒。
+- Cron：Vercel job 的同时触发、重复触发、运行租约、漏跑追赶、失败记录和手工重跑；Supabase `battle-tick-v1` 在 migration 提交后独立 `pg_reload_conf()`，并以同一 jobid 至少两个连续自然周期证明每秒触发，保存 runid、起止时间、状态和返回摘要；验证 `battle.tick_health()`、advisory lock、`SKIP LOCKED` 分批、deadline 追赶、pg_net 唤醒、`BATTLE_TICK_UNHEALTHY`/`BATTLE_TICK_RUN_FAILED` 私有 violation、7 天运行明细保留及每日最多 100000 条清理。禁止手工调用或故障注入代替自然调度证据。
 - 一致性：余额账本、库存预留、风险限制、服务器结果覆盖前端临时状态。
 - 体验：所有资产操作在 API 返回前立即反馈；普通页面不等待 TON Provider；主导航不被无关操作锁定。
 - 主导航页面保活：交易、游戏、开盒、藏品和任务分别首次进入一次，等待超过 React Query 的 20 秒 `staleTime` 后连续切换并返回；除 Battle 可见性规则外，网络记录不得因切页新增对应页面 API、页面模块、图片或其他页面专属资源请求，页签、筛选、选择、滚动位置和未提交界面状态保持。页面隐藏、Telegram deactivated、`pagehide` 或离开游戏页必须立即结束当前 lease、中止在途 heartbeat、停止 waiting/lobby 心跳和 Battle UI 轮询并尽力 offline；返回时立即 REST 回正并取得数据库认可的新 lease。进入 active 战斗后 presence 心跳必须停止。图鉴与 Mint 返回时恢复原主页面；顶部人工刷新只请求 `identity.bootstrap`、`vip.get`、`wallet.get`。后台不足五分钟恢复时不请求普通页面，Battle 仍执行自身可见性回正；达到五分钟时只静默刷新顶部摘要与当前路由查询。Session generation 改变或封禁后旧页面、缓存和迟到结果不得恢复。

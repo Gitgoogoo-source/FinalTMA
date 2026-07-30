@@ -301,6 +301,7 @@ def verify_stars_payment_contract() -> None:
 
 def verify_battle_contract() -> None:
     battle_sql = (SCHEMAS / "44_battle.sql").read_text(encoding="utf-8").lower()
+    jobs_sql = (SCHEMAS / "95_jobs.sql").read_text(encoding="utf-8").lower()
     identity_sql = (SCHEMAS / "10_identity.sql").read_text(encoding="utf-8").lower()
     security_sql = one_migration("_api_security.sql").read_text(encoding="utf-8").lower()
     required = (
@@ -336,6 +337,12 @@ def verify_battle_contract() -> None:
         "create or replace function api.battle_claim_outbox",
         "channels text[]",
         "create or replace function battle.monitor_invariants",
+        "create or replace function battle.tick_health",
+        "create or replace function battle.monitor_tick_health",
+        "'battle_tick_unhealthy'",
+        "'battle_tick_run_failed'",
+        "'tick_runs_deleted'",
+        "end_time < now() - interval '7 days'",
         "'battle-tick-v1'",
         "'1 second'",
         "for update skip locked",
@@ -373,6 +380,8 @@ def verify_battle_contract() -> None:
     missing = [fragment for fragment in required if fragment not in battle_sql]
     if missing:
         raise SystemExit(f"Battle database contract is incomplete: {missing}")
+    if "battle.monitor_tick_health(v_scan_from, v_scan_to)" not in jobs_sql:
+        raise SystemExit("Battle tick health is not connected to monitor-invariants")
     if "battle_internal_room_context" in battle_sql or "private_seed_hex" in battle_sql:
         raise SystemExit("Battle private seed cannot be exposed through an api RPC")
     forbidden = (

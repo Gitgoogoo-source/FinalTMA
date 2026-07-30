@@ -25,7 +25,7 @@ Web 公开构建当前不需要 `VITE_*`。API 机密配置以根 `.env.example`
 
 `BATTLE_INVITE_SECRET` 只用于按创建 operation 确定性生成 Battle bearer invite；`BATTLE_OUTBOX_SECRET` 只鉴权两个 Battle integration，不得用于玩家 API、Telegram webhook 或邀请签名；`ABLY_API_KEY` 只在服务端签发五分钟 subscribe-only token 和投递 outbox。三项 Battle 变量由 Battle share、outbox、realtime 与 integration 的独立配置边界校验，缺失时只阻断 Battle 路径，不得阻断 Telegram 登录、普通 webhook、钱包或其他非 Battle 路由。API workspace 固定 `ably@2.26.0`，浏览器只接收短期 token，绝不接收这三个服务端变量。
 
-真实开发与生产 Supabase 都安装 `pg_cron`、`pg_net`、Vault 和 `pgcrypto`。`battle-tick-v1` 每秒执行，Data API 仍只暴露 `public,graphql_public,api`，内部 `battle` schema 不暴露。两个环境使用同一 `battle-v1` checksum、OpenAPI、Git commit 和 migration 序列，只允许 Bot、Ably key、callback URL、项目 ID、域名和机密不同。
+真实开发与生产 Supabase 都安装 `pg_cron`、`pg_net`、Vault 和 `pgcrypto`。三条 migration 提交后由 owner 独立执行 `pg_reload_conf()`；`battle-tick-v1` 每秒执行，`battle.tick_health()` 与 `monitor-invariants` 监控配置、停滞和失败，运行明细保留 7 天并由既有每日 cleanup 清理，不增加第二个 Supabase cron job。Data API 仍只暴露 `public,graphql_public,api`，内部 `battle` schema 不暴露。两个环境使用同一 `battle-v1` checksum、OpenAPI、Git commit 和 migration 序列，只允许 Bot、Ably key、callback URL、项目 ID、域名和机密不同。
 
 真实开发 Vercel Production 固定配置 `TELEGRAM_BOT_USERNAME=FinalTMA_bot` 与 `TELEGRAM_MINI_APP_SHORT_NAME=pokepets_dev`。推荐链接固定为 `https://t.me/FinalTMA_bot/pokepets_dev?startapp=<当前用户邀请码>`，Battle prepared-share deep link 固定为同一 Bot 与 named Mini App 路径加 `startapp=BTL_<32位base64url>`；环境变量变更必须由新部署生效。
 

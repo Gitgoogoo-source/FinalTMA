@@ -86,7 +86,8 @@ begin
     v_details := battle.cleanup_operational_data(greatest(1, least(p_limit, 5000)));
     v_count := v_count
       + coalesce((v_details->>'rate_limit_attempts_deleted')::integer, 0)
-      + coalesce((v_details->>'published_outbox_deleted')::integer, 0);
+      + coalesce((v_details->>'published_outbox_deleted')::integer, 0)
+      + coalesce((v_details->>'tick_runs_deleted')::integer, 0);
   else
     insert into operations.invariant_violations (code, subject, details)
     select 'BALANCE_LEDGER_MISMATCH', b.user_id::text || ':' || b.currency, jsonb_build_object('balance', b.available, 'ledger', coalesce(sum(l.amount), 0))
@@ -118,6 +119,8 @@ begin
       and not exists (select 1 from onchain.mints m where m.operation_id = o.id and m.status in ('reserved', 'submitted', 'unknown'))
     on conflict do nothing;
     get diagnostics v_added = row_count; v_count := v_count + v_added;
+    v_added := battle.monitor_tick_health(v_scan_from, v_scan_to);
+    v_count := v_count + v_added;
     v_added := battle.monitor_invariants();
     v_count := v_count + v_added;
   end if;
