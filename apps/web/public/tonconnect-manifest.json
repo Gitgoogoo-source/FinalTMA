@@ -1,5 +1,5 @@
 {
-  "url": "http://localhost:3000",
-  "name": "PokePets Development",
-  "iconUrl": "http://localhost:3000/assets/ton/tonconnect-icon.png"
+  "url": "https://final-tma-pi.vercel.app",
+  "name": "PokePets",
+  "iconUrl": "https://final-tma-pi.vercel.app/assets/ton/tonconnect-icon.png"
 }

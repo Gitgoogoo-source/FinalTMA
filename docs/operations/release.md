@@ -61,12 +61,10 @@ pnpm manifest:check:production
 生成正式 TON Connect manifest：
 
 ```sh
-python3 tools/web/build_manifest.py \
-  --app-url https://APP_HOST \
-  --icon-url https://APP_HOST/assets/ton/tonconnect-icon.png \
-  --terms-url https://APP_HOST/terms \
-  --privacy-url https://APP_HOST/privacy
+pnpm manifest:build
 ```
+
+生成器只输出已冻结的单一公开身份：`PokePets`、`https://final-tma-pi.vercel.app` 和 `https://final-tma-pi.vercel.app/assets/ton/tonconnect-icon.png`。repository、development、production 与构建复制门禁均拒绝 localhost、非 HTTPS、preview deployment、其他域名、相对图标或任何环境名称。
 
 正式藏品资源固定按以下顺序更新：把 210 张新母版写入新的目录版本，运行 `pnpm catalog:generate-assets`，运行 `pnpm catalog:pin-assets`，复核并提交 checksum，再运行藏品、开发和 production 资产门禁。已经发布的 `v1` 不得覆盖；后续内容变化必须创建新版本并同步数据库路径。production 门禁会继续拒绝 `generated/assets/placeholders.json` 中 Telegram 分享图和 TON Connect 图标的已知开发 checksum，禁止通过重新 pin 绕过正式替换要求。
 

@@ -21,6 +21,8 @@ de521f2687086cb358fb557a4a7ada3bc3c5fc132d673f0256b4573028ddba46
 - Blockchain：TON Connect 验证钱包，Tact 合约完成 NFT Mint。
 - Deployment：Vercel Pro；真实开发环境与未来生产环境使用相同 Git commit 和 migration 序列。
 
+TON Connect 只发布一套公开应用身份：名称固定为 `PokePets`，应用 URL 固定为 `https://final-tma-pi.vercel.app`，图标 URL 固定为 `https://final-tma-pi.vercel.app/assets/ton/tonconnect-icon.png`。仓库、development build 与 production build 复制同一份根路径 manifest，不使用 localhost、preview deployment、环境分支、运行时插值或第二份静态 manifest。
+
 ## 依赖方向
 
 ```text
