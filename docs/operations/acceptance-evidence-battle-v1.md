@@ -8,6 +8,18 @@ Battle v1 的产品数据、数据库裁决、API、Telegram 分享集成、Ably
 
 本文件只记录已经取得的证据，不使用静态门禁、空库探针或伪造数据代替真实 Telegram、Supabase、Vercel、Ably 和多账号验收。
 
+## 2026-07-31 Battle R08 缺陷确认
+
+在提交 `a393c64c900e4d5dfe3c662c0375793aec311f79` 对应的指定 Production 部署上，使用同一真实 Telegram Web Mini App 会话完成以下独立复现：
+
+1. 创建 20 K-coin 房间 A，通过 Telegram 原生分享面板把挑战卡真实发送到私聊；Telegram 显示发送完成，等待页显示“挑战卡已发送，房间继续等待首位有效对手”。
+2. 通过等待页正常取消房间 A，服务端确认退款后页面回到 Battle 首页，可用 K-coin 回到夹具目标值。
+3. 不关闭 Mini App、不重新认证，在同一会话创建新的 20 K-coin 房间 B；房间 B 尚未点击“分享挑战卡”，等待页已经显示房间 A 的“挑战卡已发送”反馈。
+4. 房间 B 当时的脱敏数据库快照为：room `waiting`、`state_version = 3`、prepared share `active`、准备尝试 1 次；房间创建后当前创建者的 `share` 限流记录为 0，accept operation 为 0，本房间未发布 outbox 为 0，开放一致性违规为 0。
+5. 随后通过正常取消入口终结房间 B 并确认退款，没有使用 SQL 修改业务表回正。
+
+该序列结论为 `FAIL`，只证明跨房间分享反馈残留缺陷真实存在，不代表完整 Telegram 分享矩阵或修复后回归已经通过。静态审查确认当时 Web 把分享反馈保存为仅随 session generation 清空的组件级字符串；反馈没有 room ID，且 Telegram 全局 sent/failed 事件在当前 waiting room 未发起本房间分享时也可写入该字符串。
+
 ## 发布对象
 
 - 环境：真实开发 Supabase `final-tma-real-test / ebewtjerusxcioegpzjd`。

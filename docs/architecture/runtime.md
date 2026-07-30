@@ -14,6 +14,8 @@ Telegram WebApp 在 `createRoot().render()` 前按 `ready → expand → disable
 
 Battle 页面在同一 session generation 内保持挂载，并只渲染产品第 21 章的九种页面状态。页面可见且 room 为邀请 `waiting` 时只有创建者每 5 秒发送纯展示心跳；room 为 `lobby_waiting/lobby_countdown` 时双方每 5 秒发送 participant presence 心跳；进入 `active_select` 后立即停止。每次可见/激活 `/game` 时段使用一个独立 UUID lease 和数据库快照的下一 lifecycle version，lease 内命令序号严格递增。页面隐藏、Telegram `deactivated`、`pagehide` 或离开 `/game` 时立即结束 lease、中止全部在途 heartbeat、停止 UI 轮询并尽力发送同 lease offline；重新可见、激活或返回时先 REST 回正，再申请并使用数据库认可的新 lease。新 lease 接管后旧 heartbeat/offline 永久无副作用，安全不依赖 abort 或 offline 必达。Ably client 只能 subscribe，通知只携带 `event_id`、`room_id`、`state_version` 与 `event_kind`；收到通知、deadline 到达或连接失败时，battle-realtime workflow 通过 REST 读取 viewer-specific snapshot。邀请 waiting、接受和 lobby 每 2 秒、选择/强制换宠每 1 秒短轮询，重新可见时立即完整回正。heartbeat/offline 普通响应只应用 room snapshot；同次请求或回正实际确认退款/释放终态时才一次刷新 `battle + assets + inventory`，不得由 5 秒心跳无条件刷新 assets/inventory。
 
+Telegram prepared message 的 pending、sent、cancelled、failed 与 unknown 分享反馈只保存在内存，并以 session generation 与当前创建者 `waiting` room ID 共同寻址。Web 只在本房间实际调用 `shareMessage` 后消费不含 room ID 的 Telegram sent/failed 事件；调用 callback 与事件落状态前都复核当前 generation、room、side 和 status。切换房间、进入终态、离开再进入 `/game` 或重新认证时先使旧尝试失效并隐藏旧反馈；延迟回调不能覆盖新房间。该反馈不进入 API、数据库、资产刷新或 Battle 业务裁决。
+
 ## Functions
 
 根目录 `api/app.ts`、`api/integrations.ts`、`api/jobs.ts` 是三个薄适配器，只创建 `@pokepets/api/entrypoints` 网关。每个 entrypoint 显式注入本网关的 route registry 与完整 handler map；三个 registry 互不导入。请求按“网关认证、路由匹配、会话认证、入口交接门禁、契约输入解析、领域查询或工作流、契约输出解析、标准信封”执行。只有 `referral.bind` 和 `operations.get` 声明 `allowPendingEntryHandoff`。

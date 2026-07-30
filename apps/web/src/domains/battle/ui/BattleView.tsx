@@ -85,6 +85,15 @@ type PresenceLifecycle = {
   nextCommandSeq: number;
   ended: boolean;
 };
+type ShareFeedback = {
+  generation: string;
+  roomId: string;
+  message: string;
+};
+type ShareAttempt = {
+  generation: string;
+  roomId: string;
+};
 
 const emptySlots: BattleTeamSlots = [null, null, null];
 
@@ -172,7 +181,7 @@ export function BattleView(): ReactNode {
   const [dismissedResult, setDismissedResult] = useState<string | null>(null);
   const [resumeNotice, setResumeNotice] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
-  const [shareState, setShareState] = useState<string | null>(null);
+  const [shareState, setShareState] = useState<ShareFeedback | null>(null);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [switchOpen, setSwitchOpen] = useState(false);
   const [actionIntent, setActionIntent] = useState<string | null>(null);
@@ -186,6 +195,7 @@ export function BattleView(): ReactNode {
   const handledResume = useRef(new Set<string>());
   const presenceRoomRef = useRef<string | null>(null);
   const roomRef = useRef<BattleRoomSnapshotDto | null>(null);
+  const shareAttemptRef = useRef<ShareAttempt | null>(null);
   const presenceLifecycle = useRef<PresenceLifecycle | null>(null);
   const heartbeatRequests = useRef(new Set<AbortController>());
   const lifecycleRun = useRef(0);
@@ -325,6 +335,23 @@ export function BattleView(): ReactNode {
   const commandPending =
     command.state.phase === "submitted" || command.state.phase === "recovering";
 
+  const applyShareAttemptFeedback = useCallback(
+    (attempt: ShareAttempt, message: string): boolean => {
+      const currentRoom = roomRef.current;
+      if (
+        shareAttemptRef.current !== attempt ||
+        getSession()?.generation !== attempt.generation ||
+        currentRoom?.room_id !== attempt.roomId ||
+        currentRoom.status !== "waiting" ||
+        currentRoom.side !== "creator"
+      )
+        return false;
+      setShareState({ ...attempt, message });
+      return true;
+    },
+    [],
+  );
+
   useEffect(() => {
     if (pageActive) return;
     queueMicrotask(() => {
@@ -334,6 +361,7 @@ export function BattleView(): ReactNode {
   }, [pageActive]);
 
   useEffect(() => {
+    shareAttemptRef.current = null;
     let cancelled = false;
     queueMicrotask(() => {
       if (cancelled) return;
@@ -418,6 +446,41 @@ export function BattleView(): ReactNode {
     battleEntry,
     forceHome,
   });
+  const shareRoomId =
+    pageActive &&
+    pageState === "waiting" &&
+    room?.side === "creator" &&
+    room.status === "waiting"
+      ? room.room_id
+      : null;
+  const visibleShareState =
+    shareState?.generation === sessionGeneration &&
+    shareState.roomId === shareRoomId
+      ? shareState.message
+      : null;
+
+  useEffect(() => {
+    const attempt = shareAttemptRef.current;
+    if (
+      attempt &&
+      (attempt.generation !== sessionGeneration ||
+        attempt.roomId !== shareRoomId)
+    )
+      shareAttemptRef.current = null;
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled) return;
+      setShareState((current) =>
+        current?.generation === sessionGeneration &&
+        current.roomId === shareRoomId
+          ? current
+          : null,
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionGeneration, shareRoomId]);
   const tier =
     flow?.kind === "create"
       ? (bootstrap.data?.entry_tiers.find(
@@ -792,15 +855,46 @@ export function BattleView(): ReactNode {
   ]);
 
   useEffect(() => {
-    if (room?.status !== "waiting" || room.side !== "creator") return;
+    if (
+      !sessionGeneration ||
+      room?.status !== "waiting" ||
+      room.side !== "creator"
+    )
+      return;
+    const context = {
+      generation: sessionGeneration,
+      roomId: room.room_id,
+    };
     return subscribePreparedMessageShareEvents(
-      () => setShareState("挑战卡已发送，房间继续等待首位有效对手"),
+      () => {
+        const attempt = shareAttemptRef.current;
+        if (
+          attempt?.generation === context.generation &&
+          attempt.roomId === context.roomId
+        )
+          applyShareAttemptFeedback(
+            attempt,
+            "挑战卡已发送，房间继续等待首位有效对手",
+          );
+      },
       (failure) => {
-        setShareState(shareFailureText(failure));
-        if (failure === "MESSAGE_EXPIRED") void refetchRef.current();
+        const attempt = shareAttemptRef.current;
+        if (
+          attempt?.generation === context.generation &&
+          attempt.roomId === context.roomId &&
+          applyShareAttemptFeedback(attempt, shareFailureText(failure)) &&
+          failure === "MESSAGE_EXPIRED"
+        )
+          void refetchRef.current();
       },
     );
-  }, [room?.room_id, room?.side, room?.status]);
+  }, [
+    room?.room_id,
+    room?.side,
+    room?.status,
+    sessionGeneration,
+    applyShareAttemptFeedback,
+  ]);
 
   const create = async () => {
     if (!tier) return;
@@ -962,14 +1056,30 @@ export function BattleView(): ReactNode {
   };
 
   const share = () => {
-    if (!room?.prepared_message_id) return;
-    setShareState("已打开 Telegram 分享面板，房间仍保持等待");
+    if (
+      !sessionGeneration ||
+      room?.status !== "waiting" ||
+      room.side !== "creator" ||
+      !room.prepared_message_id
+    )
+      return;
+    const attempt = { generation: sessionGeneration, roomId: room.room_id };
+    shareAttemptRef.current = attempt;
+    setShareState({
+      ...attempt,
+      message: "已打开 Telegram 分享面板，房间仍保持等待",
+    });
     const opened = sharePreparedMessage(room.prepared_message_id, (shared) => {
-      if (!shared)
-        setShareState("分享面板已关闭或发送未完成，房间继续等待，可再次分享");
+      applyShareAttemptFeedback(
+        attempt,
+        shared
+          ? "挑战卡已发送，房间继续等待首位有效对手"
+          : "分享面板已关闭或发送未完成，房间继续等待，可再次分享",
+      );
     });
     if (!opened)
-      setShareState(
+      applyShareAttemptFeedback(
+        attempt,
         "当前 Telegram 版本不支持发送挑战卡，请更新 Telegram 后重试",
       );
   };
@@ -1014,7 +1124,7 @@ export function BattleView(): ReactNode {
       opponentReconnectClock={opponentReconnectClock}
       realtimeOffline={realtime === "offline"}
       onlineState={onlineState}
-      shareState={shareState}
+      shareState={visibleShareState}
       shareSupported={supportsPreparedMessageSharing()}
       resumeNotice={resumeNotice}
       setSlots={setSlots}

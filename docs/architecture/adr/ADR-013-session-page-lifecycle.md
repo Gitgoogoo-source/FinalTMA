@@ -12,6 +12,8 @@
 
 Battle 页面仍按主页面规则保持挂载，但活跃通信严格绑定页面可见性。每次可见/激活 `/game` 时段使用一个独立 UUID presence lease。离开 `/game`、Telegram `deactivated`、`pagehide` 或 WebView 隐藏时立即结束当前 lease、中止全部在途 heartbeat、停止邀请 waiting 的创建者展示心跳、lobby 的双方 presence 心跳和 Battle UI 轮询，并尽力以同 lease 下一序号发送 offline；返回可见/激活状态时立即通过 REST 读取 viewer-specific 当前快照，申请数据库下一 lifecycle version 的新 lease，数据库确认后再恢复 heartbeat、Ably subscribe 与降级轮询。新 lease 接管后旧生命周期任何迟到 heartbeat/offline 永久无副作用，安全不依赖 abort 或 offline 必达。进入 active 战斗后停止 presence 心跳。隐藏页面的内存状态不得替代数据库在线事实、deadline 或 `state_version`；普通 heartbeat/offline 只应用 room，确认退款终态才刷新 Battle、顶部资产和 inventory。
 
+Battle prepared message 的即时分享反馈以当前 session generation 与创建者 `waiting` room ID 为唯一上下文。只有本上下文已实际调用 `shareMessage` 时，Telegram 不携带 room ID 的 `shareMessageSent`/`shareMessageFailed` 事件才可更新页面；调用级 callback 同样必须复核 generation、room ID、创建者 side 与 `waiting` 状态。房间切换、终态退出、离开再进入 `/game`、重新认证或 session generation 改变时，旧分享尝试立即失效，旧的 pending、sent、cancelled、failed 或 unknown 反馈不渲染到新上下文，迟到回调不能恢复。分享反馈只描述 Telegram 面板和消息动作，不代表房间、资产或业务成功。
+
 页面保活和查询缓存只存在于当前内存登录会话，不写入 `localStorage`、`sessionStorage`、IndexedDB 或服务端。Session generation 改变、身份恢复失败、会话清理或账号封禁时，全部持久页面、页内状态和查询缓存一并清除，旧 generation 的迟到结果不得恢复。
 
 ## 结果
