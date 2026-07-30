@@ -15,8 +15,24 @@ WEB_ROOT = ROOT / "apps/web/src"
 API_ROOT = ROOT / "apps/api/src"
 CONTRACT_ROOT = ROOT / "packages/api-contracts/src"
 GAME_PAGE = WEB_ROOT / "pages/game/GamePage.tsx"
+BATTLE_SCHEMA = ROOT / "supabase/schemas/44_battle.sql"
+BATTLE_BASELINE_MIGRATION = (
+    ROOT / "supabase/migrations/20260719104533_baseline.sql"
+)
 IMPORT_PATTERN = re.compile(r"(?:from\s+|import\()\s*[\"']([^\"']+)[\"']")
 MODULE_IMPORT_PATTERN = re.compile(r"(?:from\s+|import\s*(?:\(\s*)?)[\"']([^\"']+)[\"']")
+BATTLE_ACCEPT_FUNCTION_PATTERN = re.compile(
+    r"create or replace function api\.battle_accept_room\(.*?\n\$\$;",
+    re.DOTALL,
+)
+BATTLE_ACCEPT_SELF_GUARD_PATTERN = re.compile(
+    r"if\s+v_room\.status\s*=\s*'waiting'\s+"
+    r"and\s+v_room\.expires_at\s*>\s*now\(\)\s+"
+    r"and\s+v_room\.creator_user_id\s*=\s*v_user_id\s+"
+    r"then\s+perform\s+api\.raise_business_error\(\s*"
+    r"'BATTLE_SELF_ACCEPT_FORBIDDEN'",
+    re.DOTALL,
+)
 
 REQUIRED_PATHS = (
     "apps/web/src/app/guards",
@@ -136,6 +152,7 @@ def main() -> None:
     verify_web_boundaries()
     verify_game_page_boundary()
     verify_battle_terminal_refresh_semantics()
+    verify_battle_accept_operation_ordering()
     verify_api_boundaries()
     verify_contract_boundaries()
     verify_documentation()
@@ -355,6 +372,108 @@ def verify_battle_terminal_refresh_semantics() -> None:
     if result.returncode != 0:
         detail = result.stderr.strip() or result.stdout.strip()
         raise SystemExit(detail or "Battle terminal refresh structure check failed")
+
+
+def verify_battle_accept_operation_ordering() -> None:
+    sources = {
+        relative(BATTLE_SCHEMA): BATTLE_SCHEMA.read_text(encoding="utf-8"),
+        relative(BATTLE_BASELINE_MIGRATION): BATTLE_BASELINE_MIGRATION.read_text(
+            encoding="utf-8"
+        ),
+    }
+    for label, source in sources.items():
+        verify_battle_accept_source(label, source)
+
+    label, source = next(iter(sources.items()))
+    function = extract_battle_accept_function(label, source)
+    begin_command = re.search(
+        r"\n  v_operation := operations\.begin_command\(.*?\n  \);\n",
+        function,
+        re.DOTALL,
+    )
+    if begin_command is None:
+        raise SystemExit("Battle accept ordering self-test cannot locate begin_command")
+    negative_function = function.replace(begin_command.group(), "", 1).replace(
+        "  select s.battle_invite_token_hash into v_invite_hash\n",
+        begin_command.group().lstrip("\n")
+        + "  select s.battle_invite_token_hash into v_invite_hash\n",
+        1,
+    )
+    negative_source = source.replace(function, negative_function, 1)
+    if negative_source == source:
+        raise SystemExit("Battle accept ordering negative variant did not mutate")
+    try:
+        verify_battle_accept_source("in-memory operation-before-self-guard", negative_source)
+    except ValueError as error:
+        if "before operation reserve" not in str(error):
+            raise SystemExit(
+                "Battle accept ordering negative variant failed for an unrelated reason: "
+                f"{error}"
+            ) from error
+    else:
+        raise SystemExit(
+            "Battle accept ordering checker accepted operation-before-self-guard"
+        )
+
+
+def extract_battle_accept_function(label: str, source: str) -> str:
+    functions = BATTLE_ACCEPT_FUNCTION_PATTERN.findall(source)
+    if len(functions) != 1:
+        raise ValueError(
+            f"{label}: expected exactly one api.battle_accept_room definition"
+        )
+    return functions[0]
+
+
+def verify_battle_accept_source(label: str, source: str) -> None:
+    function = extract_battle_accept_function(label, source)
+    normalized = re.sub(r"\s+", " ", function)
+    session_user = normalized.find(
+        "v_user_id uuid := api.session_user(p_session_id);"
+    )
+    session_lock = normalized.find(
+        "select s.battle_invite_token_hash into v_invite_hash "
+        "from identity.sessions s where s.id = p_session_id "
+        "and s.user_id = v_user_id and s.revoked_at is null "
+        "and s.expires_at > now() for update;"
+    )
+    room_lock = normalized.find(
+        "select * into v_room from battle.rooms r "
+        "where r.invite_token_hash = v_invite_hash for update;"
+    )
+    self_guard = BATTLE_ACCEPT_SELF_GUARD_PATTERN.search(function)
+    begin_command = normalized.find("v_operation := operations.begin_command(")
+    rate_limit = normalized.find(
+        "perform battle.consume_rate_limit(v_operation.user_id, 'accept', v_invite_hash);"
+    )
+    if (
+        session_user < 0
+        or session_lock < 0
+        or room_lock < 0
+        or self_guard is None
+        or begin_command < 0
+        or rate_limit < 0
+    ):
+        raise ValueError(
+            f"{label}: Battle accept trusted self guard structure is incomplete"
+        )
+    normalized_self_guard = len(re.sub(r"\s+", " ", function[: self_guard.start()]))
+    if not (
+        session_user
+        < session_lock
+        < room_lock
+        < normalized_self_guard
+        < begin_command
+        < rate_limit
+    ):
+        raise ValueError(
+            f"{label}: Battle valid-self guard must run before operation reserve "
+            "and accept rate-limit writes"
+        )
+    if function.count("BATTLE_SELF_ACCEPT_FORBIDDEN") != 1:
+        raise ValueError(
+            f"{label}: Battle accept must have exactly one pre-operation self guard"
+        )
 
 
 def verify_api_boundaries() -> None:

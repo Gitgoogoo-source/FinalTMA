@@ -2991,6 +2991,7 @@ security definer
 set search_path = ''
 as $$
 declare
+  v_user_id uuid := api.session_user(p_session_id);
   v_operation operations.operations%rowtype;
   v_replay jsonb;
   v_invite_hash text;
@@ -3008,7 +3009,22 @@ declare
 begin
   select s.battle_invite_token_hash into v_invite_hash
   from identity.sessions s
-  where s.id = p_session_id;
+  where s.id = p_session_id and s.user_id = v_user_id
+    and s.revoked_at is null and s.expires_at > now()
+  for update;
+  select * into v_room
+  from battle.rooms r
+  where r.invite_token_hash = v_invite_hash
+  for update;
+  if v_room.status = 'waiting'
+    and v_room.expires_at > now()
+    and v_room.creator_user_id = v_user_id
+  then
+    perform api.raise_business_error(
+      'BATTLE_SELF_ACCEPT_FORBIDDEN',
+      '不能接受自己创建的挑战'
+    );
+  end if;
   v_operation := operations.begin_command(
     p_session_id,
     'battle.accept',
@@ -3074,11 +3090,6 @@ begin
         p_operation_id,
         'BATTLE_ROOM_CANCELLED',
         v_terminal || jsonb_build_object('error_code', 'BATTLE_ROOM_CANCELLED')
-      );
-    elsif v_room.creator_user_id = v_operation.user_id then
-      perform api.raise_business_error(
-        'BATTLE_SELF_ACCEPT_FORBIDDEN',
-        '不能接受自己创建的挑战'
       );
     end if;
     perform pg_advisory_xact_lock(hashtextextended('battle-user:' || v_operation.user_id::text, 0));
