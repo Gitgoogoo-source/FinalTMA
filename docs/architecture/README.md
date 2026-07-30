@@ -54,6 +54,8 @@ TMA 首次同步加载只覆盖应用壳、会话与账号门禁及默认开盒�
 
 内部 schema 对 `public`、`anon`、`authenticated` 和 `service_role` 撤销 schema、表、序列和函数权限。`service_role` 只获得 `api` schema 的使用权和其中函数的执行权。玩家 RPC 使用 `session_id` 再次验证会话、账号和资源归属。
 
+`admin` 是数据库所有者专用的非 Data API 管理边界。受控 Battle 验收夹具只从该 schema 执行，默认没有项目身份或 enable 记录，不向 `service_role` 或任何应用角色授权；真实开发绑定、短期门禁、幂等 reconciliation、fixture-owned provenance 与只读状态遵循 [ADR-016](adr/ADR-016-controlled-battle-acceptance-fixture.md)。
+
 ## 操作恢复
 
 前端内存操作阶段固定为 `confirming → submitting → pending/unknown → succeeded/failed`；数据库持久状态为 `pending`、`unknown`、`succeeded`、`failed`。随机结果和资产结果只生成一次，`unknown` 只查询原 `operation_id`。开盒与转盘从提交前反馈到结果确认完成持续锁定领域操作和底部导航；进化在未决阶段锁定新提交和底部导航，终态由专用覆盖弹窗处理；Battle 创建、取消、接受、正常动作和强制换宠恢复原 operation 后必须读取 viewer-specific room snapshot，终局只恢复最新未确认当场结果。Battle heartbeat/offline 只在当前 lease 内重试；生命周期结束后必须以权威快照申请下一版本 lease，acknowledge 直接重试原 room，三者不进入 operation 恢复。heartbeat/offline 普通结果只应用 room，确认退款终态才按路由契约刷新 Battle、顶部资产和 inventory。其余命令只阻止同一 `use_case` 再次提交。开盒、转盘、进化及 Battle 当场结果在服务端确认展示前持续恢复，确认时间由当前用户的领域专用 RPC 原子记录。
@@ -86,3 +88,4 @@ TMA 首次同步加载只覆盖应用壳、会话与账号门禁及默认开盒�
 - [登录会话内页面保活与事件驱动刷新](adr/ADR-013-session-page-lifecycle.md)
 - [Battle 数据库权威与规则快照](adr/ADR-014-battle-authority-and-ruleset.md)
 - [Battle 实时失效通知、调度与 outbox](adr/ADR-015-battle-realtime-and-scheduler.md)
+- [受控 Battle 验收夹具数据库边界](adr/ADR-016-controlled-battle-acceptance-fixture.md)

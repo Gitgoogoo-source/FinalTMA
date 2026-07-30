@@ -24,6 +24,8 @@ create index ledger_operation_idx on economy.ledger (operation_id) where operati
 create unique index ledger_stars_topup_reference_unique_idx on economy.ledger (reference) where reason = 'stars_topup';
 create unique index ledger_battle_reference_unique_idx on economy.ledger (reason, reference)
 where reason in ('battle_stake_lock', 'battle_stake_refund', 'battle_win_payout');
+create unique index ledger_battle_fixture_reference_unique_idx on economy.ledger (reference)
+where reason = 'battle_acceptance_fixture';
 
 create table economy.entitlements (
   id uuid primary key default extensions.gen_random_uuid(),

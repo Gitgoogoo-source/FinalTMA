@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import subprocess
 import sys
 import tempfile
@@ -40,6 +41,7 @@ EXPECTED_SCHEMA_NAMES = {
     "90_payment_callbacks.sql",
     "91_mint_reconciliation.sql",
     "95_jobs.sql",
+    "96_admin.sql",
 }
 EXPECTED_SUFFIXES = ("_baseline.sql", "_product_data_v1.sql", "_api_security.sql")
 ERROR_REGISTRY = ROOT / "packages/api-contracts/src/common/errors.ts"
@@ -390,6 +392,154 @@ def verify_battle_contract() -> None:
         raise SystemExit("Battle schema is missing from the explicit security migration")
 
 
+def verify_admin_fixture_contract() -> None:
+    admin_sql = (SCHEMAS / "96_admin.sql").read_text(encoding="utf-8").lower()
+    security_sql = one_migration("_api_security.sql").read_text(encoding="utf-8").lower()
+    economy_sql = (SCHEMAS / "31_economy.sql").read_text(encoding="utf-8").lower()
+    required = (
+        "create table admin.database_identity",
+        "create table admin.environment_controls",
+        "capability = 'battle_acceptance_fixture'",
+        "create table admin.fixture_commands",
+        "create table admin.fixture_user_bindings",
+        "create table admin.fixture_run_audit",
+        "create table admin.fixture_asset_ownership",
+        "create table admin.fixture_asset_changes",
+        "create or replace function admin.assert_owner_call",
+        "create or replace function admin.bind_database_identity",
+        "create or replace function admin.configure_battle_fixture_gate",
+        "battle_fixture_database_identity_immutable",
+        "battle_fixture_database_identity_mismatch",
+        "p_environment <> 'real_development'",
+        "p_expires_at > now() + interval '24 hours'",
+        "create or replace function admin.battle_fixture_definition",
+        "('battle-v1', 'a', 500::bigint",
+        "('battle-v1', 'd', 100::bigint",
+        "pet-n-001-1",
+        "pet-a-016-1",
+        "de521f2687086cb358fb557a4a7ada3bc3c5fc132d673f0256b4573028ddba46",
+        "1d945b197fed091fca271aee551549675b9250ab0d53e3253ef9a88f824cf151",
+        "create or replace function admin.track_fixture_balance_ownership",
+        "create or replace function admin.track_fixture_holding_ownership",
+        "create or replace function admin.battle_fixture_status",
+        "create or replace function admin.reconcile_battle_fixture",
+        "'fixture_version', p_fixture_version",
+        "'role', 'a', 'user_id', p_ordered_user_ids[1]",
+        "'role', 'd', 'user_id', p_ordered_user_ids[4]",
+        "battle_fixture_idempotency_conflict",
+        "battle_fixture_business_state_active",
+        "battle_fixture_product_data_drift",
+        "v_binding_matches <> 4",
+        "v_run_key || ':unbind:' || v_role_user.role",
+        "delete from admin.fixture_asset_ownership",
+        "insert into admin.fixture_user_bindings",
+        "lock table",
+        "in share row exclusive mode",
+        "status in ('pending', 'unknown')",
+        "reason, reference, balance_after",
+        "'battle_acceptance_fixture'",
+        "fixture_owned_before",
+        "fixture_owned_after",
+        "fixture_asset_changes_user_idx",
+        "coalesce((v_after->>'aligned')::boolean, false) is not true",
+    )
+    missing = [fragment for fragment in required if fragment not in admin_sql]
+    if missing:
+        raise SystemExit(f"Controlled Battle fixture contract is incomplete: {missing}")
+    if "service_role" in admin_sql or "create or replace function api." in admin_sql:
+        raise SystemExit("Controlled Battle fixture cannot be exposed to application roles or api schema")
+    if "ebewtjerusxcioegpzjd" in admin_sql:
+        raise SystemExit("The real-development project ref cannot be hard-coded in migrations")
+    if "ledger_battle_fixture_reference_unique_idx" not in economy_sql:
+        raise SystemExit("Controlled Battle fixture KCoin ledger references must be unique")
+    security_required = (
+        "'admin'",
+        "risk, admin, api from public, anon, authenticated",
+        "risk, admin from service_role",
+        "risk, admin, api from public, anon, authenticated, service_role",
+    )
+    missing_security = [fragment for fragment in security_required if fragment not in security_sql]
+    if missing_security:
+        raise SystemExit(f"Admin schema security boundary is incomplete: {missing_security}")
+
+    fixture_rows = re.findall(
+        r"\('battle-v1', '([ABCD])', (\d+)::bigint, "
+        r"'(PET-[NAT]-\d{3}-[123])', (\d+)::bigint, '([a-z]+)', "
+        r"array\[([^\]]+)\]::text\[\]\)",
+        (SCHEMAS / "96_admin.sql").read_text(encoding="utf-8"),
+    )
+    parsed_fixture = {
+        (role, template_id): {
+            "target_kcoin": int(target_kcoin),
+            "target_quantity": int(target_quantity),
+            "element": element,
+            "skill_slots": re.findall(r"'(S\d{2})'", slots),
+        }
+        for role, target_kcoin, template_id, target_quantity, element, slots in fixture_rows
+    }
+    expected_fixture = {
+        ("A", "PET-N-001-1"): (500, 2),
+        ("A", "PET-N-033-1"): (500, 1),
+        ("A", "PET-A-020-1"): (500, 1),
+        ("B", "PET-N-003-1"): (500, 2),
+        ("B", "PET-N-039-1"): (500, 1),
+        ("B", "PET-A-018-1"): (500, 1),
+        ("C", "PET-N-004-1"): (500, 2),
+        ("C", "PET-N-040-1"): (500, 1),
+        ("C", "PET-A-019-1"): (500, 1),
+        ("D", "PET-N-005-1"): (100, 2),
+        ("D", "PET-N-036-1"): (100, 1),
+        ("D", "PET-A-016-1"): (100, 1),
+    }
+    actual_targets = {
+        key: (value["target_kcoin"], value["target_quantity"])
+        for key, value in parsed_fixture.items()
+    }
+    if actual_targets != expected_fixture:
+        raise SystemExit(
+            "Controlled Battle fixture matrix mismatch: "
+            f"expected={expected_fixture}, actual={actual_targets}"
+        )
+
+    battle_data = json.loads(
+        (ROOT / "generated/battle/battle-v1.json").read_text(encoding="utf-8")
+    )
+    template_configs = {
+        row["template_id"]: row for row in battle_data["template_configs"]
+    }
+    skill_slots = {
+        row["id"]: row["slot_id"] for row in battle_data["skills"]
+    }
+    for (_, template_id), expected in parsed_fixture.items():
+        config = template_configs.get(template_id)
+        if config is None:
+            raise SystemExit(
+                f"Controlled Battle fixture template is missing: {template_id}"
+            )
+        actual_slots = [skill_slots[skill_id] for skill_id in config["skill_ids"]]
+        if (
+            config["element"] != expected["element"]
+            or actual_slots != expected["skill_slots"]
+        ):
+            raise SystemExit(
+                "Controlled Battle fixture product-data mismatch: "
+                f"{template_id} element={config['element']} slots={actual_slots}"
+            )
+    if (
+        {value["element"] for value in parsed_fixture.values()}
+        != {"fire", "grass", "earth", "lightning", "water"}
+        or {
+            slot
+            for value in parsed_fixture.values()
+            for slot in value["skill_slots"]
+        }
+        != {f"S{index:02d}" for index in range(1, 11)}
+    ):
+        raise SystemExit(
+            "Controlled Battle fixture must cover five elements and all ten skill slots"
+        )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--write-baseline", action="store_true")
@@ -415,6 +565,7 @@ def main() -> None:
     verify_entry_handoff_contract()
     verify_stars_payment_contract()
     verify_battle_contract()
+    verify_admin_fixture_contract()
 
     with tempfile.TemporaryDirectory(prefix="pokepets-db-check-") as temporary:
         output = Path(temporary)

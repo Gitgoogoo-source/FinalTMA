@@ -1042,6 +1042,27 @@ git diff --check
 - 重复、乱序和迟到的 Ably 消息不覆盖更高 `state_version`。
 - Vercel Function 重启、Ably 中断和单次 pg_net 失败均不改变最终战斗或资产结果。
 
+### 15.7 受控四账号验收夹具
+
+四个已经通过真实 Telegram 认证且状态正常的内部用户固定按第 1—4 位绑定 A/B/C/D。角色位置、`battle-v1` 与四个内部 UUID 的有序序列共同进入规范化 payload hash；交换任意两个 UUID 都是不同 payload。同一 request UUID 不允许更换 payload，不同 request UUID 的重新绑定必须再次通过全部门禁和 fixture-owned reconciliation；绑定变化时只撤回旧绑定尚存的 fixture-owned 数量，再建立新绑定目标，旧用户的非 fixture-owned 资产不得改变。
+
+正式入口固定为 owner-only 的 `admin.reconcile_battle_fixture`，只接受 fixture version、request UUID 与四个有序内部 UUID。`admin` 不进入 Data API，不增加 HTTP/REST/GraphQL/Vercel 测试接口，也不授予 `PUBLIC`、`anon`、`authenticated` 或 `service_role`。迁移不写环境身份或启用记录；真实开发库从空重建后由数据库所有者一次性绑定 `environment = real_development` 与当前 project ref，再写入同一 project ref、明确启用且不超过 24 小时的门禁。未来生产库默认没有绑定和 enable 记录，`production` 身份不能启用该能力。
+
+函数在单一事务内锁定相关业务表，重新校验四用户存在、状态正常、两两不同，且 Battle、locked KCoin、reservation、outbox、violation、市场、远征、Mint、支付和 `pending/unknown` operation 全部空闲；同时核对 Catalog v1 与 `battle-v1` checksum、十二个模板、五属性和十个技能槽位。任何失败整笔回滚。资产以 fixture-owned provenance 管理，余额和 holding 的正常消耗同步减少该来源；重新对齐只修改仍属于夹具的数量，不删除或覆盖用户的其他资产。KCoin ledger、宠物变更审计、管理 command、不可逆 run key、payload hash、前后聚合与执行结果在同一事务落库。
+
+固定矩阵为：
+
+| 角色 | fixture-owned KCoin | 模板与数量                                           |
+| ---- | ------------------: | ---------------------------------------------------- |
+| A    |                 500 | `PET-N-001-1 ×2`、`PET-N-033-1 ×1`、`PET-A-020-1 ×1` |
+| B    |                 500 | `PET-N-003-1 ×2`、`PET-N-039-1 ×1`、`PET-A-018-1 ×1` |
+| C    |                 500 | `PET-N-004-1 ×2`、`PET-N-040-1 ×1`、`PET-A-019-1 ×1` |
+| D    |                 100 | `PET-N-005-1 ×2`、`PET-N-036-1 ×1`、`PET-A-016-1 ×1` |
+
+每个角色的三个模板固定覆盖 P01、P08、P12 档案及 S01—S10；全矩阵覆盖五属性、三种属性倍率、三档技能优先级、速度差和镜像同时攻击。首模板数量 2、其余数量 1 覆盖 reservation 竞争和同模板额外可用数量；A/B/C 可执行 500 档与接受竞争，四角色均可执行 20/100 档，D 对 500 档形成余额不足。换宠、全灭、20 回合、胜负、平局、作废以及市场/分解/进化/远征/Mint 竞争仍只通过正式玩家 RPC 在后续真实四账号验收中产生，不由夹具函数伪造 Battle 状态。
+
+`admin.battle_fixture_status` 只供 owner 通道读取内部 UUID、目标、fixture-owned 数量、真实聚合、payload hash、不可逆 run key 与对齐状态。它不返回 Telegram ID、用户名、`initData`、token 或凭据。没有四个真实用户时不得执行正向恢复，不得创建虚假 Telegram 用户。
+
 ## 16. 开源项目与官方资料裁决
 
 用户提供的 [共享对话](https://chatgpt.com/share/6a663e34-63fc-83e8-bb8e-90dcdcdfeada) 仅作为研究线索，项目结论以仓库事实、用户裁决和上游原始资料为准。

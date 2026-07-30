@@ -48,6 +48,7 @@ REQUIRED_PATHS = (
     "apps/web/src/workflows/payment-recovery",
     "apps/web/src/workflows/battle-realtime",
     "docs/architecture/adr/ADR-013-session-page-lifecycle.md",
+    "docs/architecture/adr/ADR-016-controlled-battle-acceptance-fixture.md",
     "apps/api/src/entrypoints/app",
     "apps/api/src/entrypoints/integrations",
     "apps/api/src/entrypoints/jobs",
@@ -595,6 +596,31 @@ def verify_documentation() -> None:
         raise SystemExit(
             "Session page lifecycle ADR is incomplete: "
             f"{missing_lifecycle_documentation}"
+        )
+    fixture_adr = (
+        ROOT / "docs/architecture/adr/ADR-016-controlled-battle-acceptance-fixture.md"
+    ).read_text(encoding="utf-8")
+    required_fixture_terms = (
+        "`admin.reconcile_battle_fixture`",
+        "`admin.battle_fixture_status`",
+        "`SECURITY INVOKER`",
+        "`PUBLIC`、`anon`、`authenticated` 与 `service_role`",
+        "`environment = real_development`",
+        "不超过 24 小时",
+        "fixture-owned provenance",
+        "同 request UUID 不同 payload",
+        "不同 request UUID",
+        "`PET-N-001-1 ×2`",
+        "`PET-A-016-1 ×1`",
+        "不改变 Battle 玩法",
+    )
+    missing_fixture_terms = [
+        value for value in required_fixture_terms if value not in fixture_adr
+    ]
+    if missing_fixture_terms:
+        raise SystemExit(
+            "Controlled Battle fixture ADR is incomplete: "
+            f"{missing_fixture_terms}"
         )
 
 

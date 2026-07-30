@@ -53,6 +53,14 @@ Battle stake / settlement / outbox event（脱敏）：
 - 全局顶部资产栏：五个主页只出现同一个资产栏；分别记录 Telegram iOS、Android、Desktop 与 Web 在原生全屏成功和不支持回退时的截图，确认设备安全区、内容安全区、视口与方向变化后，返回、关闭和更多控件始终位于资产栏上方且不重叠。
 - 藏品图片：210 张正式母版对应 420 个公开版本；全部 URL 为 WebP、尺寸与路径正确、返回一年 immutable 缓存，列表只请求缩略图，藏品主图、单抽结果和 Mint 页面请求详情图。
 
+## Battle 受控验收夹具
+
+数据库从空重建后先确认 `admin.database_identity` 与 `admin.environment_controls` 均为空，`PUBLIC`、`anon`、`authenticated`、`service_role` 无 schema usage、表权限和函数 execute，Data API/OpenAPI/GraphQL 不发现 `admin` 对象。owner 绑定 `environment = real_development` 与当前 project ref，再写入最长 24 小时 enable。环境缺失、`local`/`production`、project ref 不匹配、enable 关闭、过期、未知 fixture、非四用户、重复用户、用户缺失或 `banned`、任一活动 Battle/locked KCoin/reservation/outbox/violation/市场/远征/Mint/支付/未决 operation、Catalog 或 Battle checksum 漂移必须拒绝，且 KCoin、holding、ledger、ownership、binding 与 run audit 保持调用前状态。不同 request UUID 交换或替换角色用户时，验证旧绑定只减少其尚存 fixture-owned 数量、新绑定按目标重建，旧用户非 fixture-owned 余额与宠物总量保持不变。
+
+四个真实 Telegram 用户按 A/B/C/D 有序传入；不得创建虚假 Telegram 用户。首次执行后用 `admin.battle_fixture_status` 核对固定 KCoin、十二个模板、fixture-owned provenance、真实聚合、payload hash 和不可逆 run key。同一 request UUID 同 payload 回放必须返回同一结果且零新增 ledger/宠物变化/run audit；同 request UUID 交换任意用户必须返回幂等冲突；不同 request UUID 在已对齐状态必须产生一个 `noop` run audit且零资产变化。不同 request UUID 重新绑定角色时只调整 fixture-owned 数量，不得减少调用前已存在或后来获得的非夹具资产。
+
+完整正向、同 request 回放、不同 request no-op 与角色重绑定只在四个真实账号均已认证后执行；两账号基线只执行 ACL、静态、事务回滚和不涉及虚假身份的负向探针。
+
 ## Battle 第 21 章验收
 
 以下证据必须来自真实 Telegram、真实 Vercel、真实 Supabase 与真实 Ably；静态门禁不能替代：

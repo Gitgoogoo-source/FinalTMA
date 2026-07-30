@@ -2,7 +2,7 @@
 
 ## Schema 所有权
 
-`supabase/schemas` 按业务上下文编号。`catalog` 拥有链、模板、版本、共享固定属性以及 `image_thumbnail_path`、`image_detail_path` 两个版本化相对路径，不保存图片二进制；`33_decomposition.sql` 与 `43_evolution.sql` 分别拥有对应命令声明，进化保底表为 `evolution.pity`；`gacha` 拥有 `gacha.boxes`；`payments` 拥有 `payments.topup_products`；`44_battle.sql` 拥有内部 `battle` schema、`battle-v1` 配置、room 状态机、引擎、玩家 RPC、私有审计和 outbox；`70_wallet.sql` 与 `71_mint.sql` 分别声明钱包和 Mint，但继续使用内部 `onchain` schema；`90_payment_callbacks.sql` 与 `91_mint_reconciliation.sql` 分别声明支付回调和 Mint 对账；`95_jobs.sql` 拥有 Battle 不变量监控。查询读模型 `api.catalog_get` 在所有依赖对象之后声明。
+`supabase/schemas` 按业务上下文编号。`catalog` 拥有链、模板、版本、共享固定属性以及 `image_thumbnail_path`、`image_detail_path` 两个版本化相对路径，不保存图片二进制；`33_decomposition.sql` 与 `43_evolution.sql` 分别拥有对应命令声明，进化保底表为 `evolution.pity`；`gacha` 拥有 `gacha.boxes`；`payments` 拥有 `payments.topup_products`；`44_battle.sql` 拥有内部 `battle` schema、`battle-v1` 配置、room 状态机、引擎、玩家 RPC、私有审计和 outbox；`70_wallet.sql` 与 `71_mint.sql` 分别声明钱包和 Mint，但继续使用内部 `onchain` schema；`90_payment_callbacks.sql` 与 `91_mint_reconciliation.sql` 分别声明支付回调和 Mint 对账；`95_jobs.sql` 拥有 Battle 不变量监控；`96_admin.sql` 在全部业务对象之后声明 owner-only 环境门禁、验收 command、run/资产审计、fixture-owned provenance、余额/holding provenance 触发器与受控 reconciliation。查询读模型 `api.catalog_get` 在所有依赖对象之后声明。
 
 ## 写入规则
 
@@ -15,6 +15,8 @@
 Battle room 行是该房间全部写事务的首个业务锁。创建、接受、取消、邀请到期、lobby 心跳/离线/倒计时/到期/封禁、动作、deadline 托管、强制换宠、终局、退款和结算分别通过具名 RPC 完成；相等 deadline 下 lobby 取消或到期优先于开战。接受事务只创建双方 participant、reservation、stake、种子和 lobby deadline，不创建 turn 1；数据库确认双方在线满 3 秒，并在同一 room lock 内复核两名 participant、两份 stake/ledger、六个合法快照、六个 reservation 和全部启动条件后才原子创建 turn 1。命中、伤害、行动顺序和终局只读取房间的 `battle-v1` checksum 与不可变模板快照。创建、取消、接受、正常动作和强制换宠创建 operation 并使用 UUID 幂等键；heartbeat/offline 在任何状态推进前裁决 lifecycle version、lease UUID 与 command sequence，当前版本加一的新 lease 可接管，当前活动 lease 只接受更高序号，其他命令无副作用；acknowledge 仅首次写入本人确认时间，三者不接收幂等键且不创建 operation。普通心跳续租不增加状态版本；只有真实 online/offline 转换、倒计时开始/中止、开战和取消递增 `rooms.state_version`、追加私有 event 并在同一事务写 outbox。涉及双方余额时按用户 UUID 排序锁定 balance；stake 状态、room 唯一 settlement 和 ledger reference 阻止重复锁定、退款与到账。
 
 Battle 在 lobby 开战 RPC 或 monitor 检测到规则、参与者、stake/ledger、六个快照、六个 reservation、生命、活动宠物或 settlement 永久不变量错误时停止普通流程；二者只在 room-first 锁内复用同一幂等安全事务，写入 `voided`、退款已有原始 stake、释放 reservation、双方/room 终态、零手续费 settlement、审计、outbox 和 invariant violation。prepared-share 明确失败的 `voided` 则固定为已有一份 stake refunded、reservation released、零 settlement；监控以明确终态来源区分，并验证 cancelled/expired 等全部未开战终态。玩家接口不读取私有 seed、roll、审计事件或对手秘密字段；viewer-specific JSON 由数据库 RPC 直接裁剪。
+
+受控四账号验收恢复不是玩家 operation。`admin.reconcile_battle_fixture` 以 request UUID 和有序 A/B/C/D payload hash 建立 owner-only command，在同一事务取得相关表的 `SHARE ROW EXCLUSIVE` 锁，确认全库空闲、四用户正常、product-data checksum 未漂移后，再对 fixture-owned KCoin 与宠物数量执行目标状态 reconciliation。当前角色绑定由 `admin.fixture_user_bindings` 唯一记录；重新绑定时先只撤回旧绑定尚存的 fixture-owned 数量，再建立新目标。余额与 holding 减少触发器先消费 provenance，确保重新绑定和恢复只调整夹具来源；每次真实变化同时写 KCoin ledger 和宠物资产审计。相同 request 回放持久结果，不同 request 且绑定已对齐时只写 `noop` run 审计。
 
 `api.album_get` 是图鉴唯一读取模型：在同一次数据库读取中按 `catalog.chains.global_order` 聚合固定 70 条链和每链 3 个模板节点，并直接返回 `album.nodes` 的节点级永久点亮事实、`inventory.holdings.quantity` 的当前拥有总数、`album.rewards` 的领取事实以及完成链、可领取汇总。Web 不再联接公开目录补节点，也不得用链条点亮数量推断节点状态。`album.unlock_template` 只在节点主键首次插入成功时推进当日点亮任务，并以“用户 + 链”事务锁串行裁决第三个显式节点、仅推进一次完成链任务；所有合法获得方式共用这一事务边界。`api.album_claim` 通过操作幂等记录、`album.rewards (user_id, chain_id)` 主键、Fgems 账本唯一写入和同一数据库事务保证并发领取最多成功一次。
 

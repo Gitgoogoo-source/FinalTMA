@@ -31,6 +31,7 @@
 - pg_net 或 integration 故障：核对 Vault callback、`BATTLE_OUTBOX_SECRET`、领取租约和重试时间；请求 body 只作唤醒信号，不能携带或裁决 Battle 状态。
 - 永久不变量错误：使用既定安全 RPC 把 room 置为 `voided`、双方原额退款、释放 reservation 并写 violation；不得手工判胜、修改私有 seed 或删除审计。
 - 终局结果恢复：identity bootstrap 与 Battle bootstrap 只返回本人最新未确认结果；acknowledge 丢失时重试原 room，不创建 history/replay/audit 响应。
+- 验收夹具恢复：只允许 owner 查询 `admin.battle_fixture_status` 并以新 request UUID 调用 `admin.reconcile_battle_fixture`；不得裸 SQL 写余额、holding 或审计。project identity 不匹配、门禁关闭/过期、用户异常、任何活动业务状态或 product-data 漂移时保持拒绝。真实开发库重建后重新绑定当前 project ref 并按次写入最长 24 小时 enable；生产身份不得启用。
 
 ## 不变量
 

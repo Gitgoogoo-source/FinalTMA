@@ -22,4 +22,5 @@ create schema if not exists onchain;
 create schema if not exists operations;
 create schema if not exists risk;
 create schema if not exists battle;
+create schema if not exists admin;
 create schema if not exists api;

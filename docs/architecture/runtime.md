@@ -25,3 +25,5 @@ Battle 页面在同一 session generation 内保持挂载，并只渲染产品�
 ## 部署
 
 Web 与三个 Functions 位于同一 Vercel Pro Project，Functions 运行时为 Node.js 24。Battle 服务端发布使用 Ably Standard，数据库通过 `pg_cron` 每秒推进 deadline，并由 `pg_net` 唤醒两个受保护 integrations；Ably 不承担业务权威。版本化藏品静态资源使用一年 immutable 缓存，已发布目录不可覆盖；`contracts/ton` 使用独立 `pnpm chain:build` 门禁。真实开发环境与未来生产环境使用同一 Git commit、migration 序列、OpenAPI 和 Battle checksum，只使用环境隔离的 Bot、Ably key、callback URL 与机密。
+
+受控 Battle 验收夹具没有 Web、Function、Cron 或 Data API 运行时。它只通过数据库 owner 通道执行；迁移后的默认状态没有数据库身份绑定和 enable 记录。真实开发数据库重建后显式绑定 `real_development` 与当前 project ref，并使用不超过 24 小时的非秘密门禁；生产身份不能启用。

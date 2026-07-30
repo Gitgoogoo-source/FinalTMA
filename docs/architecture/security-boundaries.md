@@ -6,6 +6,8 @@ Data API 只暴露 `api` schema。安全迁移撤销 `PUBLIC`、`anon`、`authen
 
 所有 SECURITY DEFINER 函数使用空 `search_path` 和完全限定对象名。RLS 在内部表上启用且不创建玩家访问策略，只作为外围拒绝层；业务授权全部由 Functions 与 RPC 显式完成。
 
+`admin` schema 不属于 Exposed schemas，也不存在对应应用路由。受控 Battle 验收函数使用 `SECURITY INVOKER`、空 `search_path`、owner membership 复核和显式全角色撤权；管理表启用 RLS且无应用策略。迁移不写 project ref、环境身份或 enable 记录。数据库 owner 必须先绑定不可改写的环境/project ref，再写入同值、明确启用、最长 24 小时的门禁；生产身份不能启用。审计只保存内部 UUID、有序 payload hash、不可逆 run key、前后聚合和结果，不保存 Telegram ID、用户名、`initData`、session、token 或其他凭据。
+
 会话认证按令牌、撤销/过期状态、账号状态、入口交接状态顺序裁决。除 `referral.bind` 与受限的 `operations.get` 外，Functions 中间件和数据库 `api.session_user` 都拒绝 `pending` 交接，固定返回 `ENTRY_HANDOFF_PENDING`。浏览器构造请求、修改入口参数或跳过启动工作流均不能访问业务 RPC。
 
 登录入口只分类为 `direct`、`referral`、`battle`。Battle bearer token 原值只在 Function 内存中存在，数据库和 session 只保存 SHA-256；Battle token 不写日志、错误详情、分析事件或浏览器持久存储。invite preview 只能由当前 session 的 Battle token hash 解析；participant snapshot 只能由 room 参与者读取；创建者本人不能接受自己的 token。
