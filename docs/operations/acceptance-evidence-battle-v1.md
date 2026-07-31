@@ -28,6 +28,24 @@ B 的成功 operation 已返回 opponent 视角的 `lobby_waiting` 快照，后�
 
 创建者离线后，该房间通过正常 Lobby 重连超时取消并完成双方退款，四角色资产、locked stake 与 Battle reservation 全部回正。本轮同时确认既有 invariant SQL 对没有 turn 的 lobby 执行 `LEFT JOIN`时，把全空的 turn 复合行计为 1 个 unresolved turn，因而错误产生 1 条 `BATTLE_ROOM_STATE_MISMATCH`。该监控误报不改变接受或资产裁决，但会阻断验收终态；用户已明确授权本任务同步修正原始数据库定义并从空真实开发库重建。本节不把未执行的修复后并发回归记为 PASS。
 
+## 2026-07-31 Battle R09 修复后并发接受影响域回归
+
+提交 `de2a6bcbb532efd85ff641fd2af64d05c766502e` 由 Git Integration 发布为 Production deployment `dpl_631Q9jmXdTj8Xu1DYUUto4iKywV4`；deployment 为 `READY`，source SHA 与提交一致，稳定入口 `https://final-tma-pi.vercel.app` 指向该部署。A 在电脑端 Telegram 创建并向普通群真实分享 20 K-coin 挑战，B/C/D 分别在 Chrome、Safari 和 QQ 浏览器的真实 Telegram Web Mini App 选择三只固定藏品并停在最终确认按钮前。
+
+三个最终 UI 动作在同一调度点触发，客户端调用窗口为 1.799 ms；服务端 accept operation 落库窗口为 875.122 ms。结果如下：
+
+| 角色 | HTTP / operation                         | 数据库与资产                                                                 | 真实 UI                             |
+| ---- | ---------------------------------------- | ---------------------------------------------------------------------------- | ----------------------------------- |
+| B    | HTTP 200；`battle.accept` 为 `succeeded` | 唯一接受者；与 A 各锁定一次 20 K-coin stake 和三份 reservation；可用余额 480 | 进入权威 current-room，没有显示冲突 |
+| C    | HTTP 409；`BATTLE_ROOM_ALREADY_ACCEPTED` | 无 participant、stake、reservation 或资产变化；余额 500                      | 显示“挑战已被其他玩家接受”          |
+| D    | HTTP 409；`BATTLE_ROOM_ALREADY_ACCEPTED` | 无 participant、stake、reservation 或资产变化；余额 100                      | 显示“挑战已被其他玩家接受”          |
+
+数据库只有 A+B 两个 participant、两份 20 K-coin stake、双方各三份 active reservation 和一个成功 accept operation；没有重复 participant、stake、reservation、成功 operation、未发布 outbox、pending/unknown operation 或开放 violation。B 关闭 Mini App 后从同一挑战卡重新进入，页面再次恢复权威 current-room、余额仍为 480，冲突文案数量为 0，证明邀请刷新和页面生命周期没有把赢家覆盖为失败者结果。
+
+本轮创建者 Mini App 在接受时仍在线，因此权威状态从 lobby 正常进入战斗；本任务没有据此验收 Lobby 或战斗规则。双方随后关闭 Mini App，房间由 `battle-tick-v1` 沿正常权威路径在第 16 回合进入 `finished`；该终态只用于安全释放，不记作战斗规则 PASS。终态后 active reservation、locked stake、活动房间、未发布 outbox、开放 operation 和 violation 均为 0。真实结算使 A 获得 16 K-coin 净收益；用户明确授权后，通过带 ledger 审计的 `economy.change_balance` RPC 与正式 `admin.reconcile_battle_fixture` 单事务恢复验收基线，没有直接更新业务表。最终 A/B/C 为 500 K-coin、D 为 100 K-coin，每角色 3 个固定模板和 4 只宠物，fixture provenance 与聚合余额一致，夹具门禁关闭；最近 9 个自然 tick 全部成功。
+
+该影响域回归结论为 `PASS`，只覆盖同房间三接受者并发裁决、赢家 UI/current-room 恢复、两个失败者固定冲突、直接页面生命周期和终态回正；不覆盖普通群、超级群、跨群转发、自接受、完整分享矩阵、Lobby 规则、经济矩阵或战斗规则。
+
 ## 发布对象
 
 - 环境：真实开发 Supabase `final-tma-real-test / ebewtjerusxcioegpzjd`。
