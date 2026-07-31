@@ -1417,7 +1417,6 @@ function derivePageState({
   forceHome: boolean;
 }): BattlePageState {
   if (result) return "result";
-  if (!forceHome && battleEntry) return "accept";
   if (room) {
     if (room.status === "preparing_share") return "preparing_share";
     if (room.status === "waiting") return "waiting";
@@ -1433,6 +1432,7 @@ function derivePageState({
     )
       return "result";
   }
+  if (!forceHome && battleEntry) return "accept";
   if (flow?.kind === "create") return "team_select";
   if (flow?.kind === "accept") return "accept";
   if (!forceHome && isInviteRoom(invite)) return "accept";

@@ -20,6 +20,14 @@ Battle v1 的产品数据、数据库裁决、API、Telegram 分享集成、Ably
 
 该序列结论为 `FAIL`，只证明跨房间分享反馈残留缺陷真实存在，不代表完整 Telegram 分享矩阵或修复后回归已经通过。静态审查确认当时 Web 把分享反馈保存为仅随 session generation 清空的组件级字符串；反馈没有 room ID，且 Telegram 全局 sent/failed 事件在当前 waiting room 未发起本房间分享时也可写入该字符串。
 
+## 2026-07-31 Battle R09 并发接受缺陷确认
+
+在提交 `9c89072f6ba83e535adf0d18f47909b790e3a449` 对应的 Production 上，A 创建并向普通群真实分享 20 K-coin 挑战，B/C/D 三个真实 Telegram 账号选择各自三只固定藏品后并发执行最终接受。三个 operation 的调度窗口为 528.549 ms：B 的 HTTP 200 / operation `succeeded` 是唯一成功，数据库只有 A+B 两个 participant、两份 20 K-coin stake 和双方各三份 Battle reservation；C/D 各自为 HTTP 409 / `BATTLE_ROOM_ALREADY_ACCEPTED`，没有 participant、stake、reservation 或资产变化。
+
+B 的成功 operation 已返回 opponent 视角的 `lobby_waiting` 快照，后续 room 读取与 heartbeat 也成功，顶部可用余额为 480；但 B/C/D 三端当时都显示“挑战已被其他玩家接受”。该序列结论为 `FAIL`：真实赢家的权威 room 已存在，Web 却在 `derivePageState` 中先处理 `battleEntry`，使邀请刷新的 `accepted` 状态遮盖 lobby/current-room。
+
+创建者离线后，该房间通过正常 Lobby 重连超时取消并完成双方退款，四角色资产、locked stake 与 Battle reservation 全部回正。本轮同时确认既有 invariant SQL 对没有 turn 的 lobby 执行 `LEFT JOIN`时，把全空的 turn 复合行计为 1 个 unresolved turn，因而错误产生 1 条 `BATTLE_ROOM_STATE_MISMATCH`。该监控误报不改变接受或资产裁决，但会阻断验收终态；用户已明确授权本任务同步修正原始数据库定义并从空真实开发库重建。本节不把未执行的修复后并发回归记为 PASS。
+
 ## 发布对象
 
 - 环境：真实开发 Supabase `final-tma-real-test / ebewtjerusxcioegpzjd`。

@@ -5285,7 +5285,9 @@ begin
       'participants', count(distinct p.id),
       'current_turn_no', r.current_turn_no,
       'unresolved_turns',
-      count(distinct (t.room_id, t.turn_no, t.phase)) filter (where t.resolved_at is null)
+      count(distinct (t.room_id, t.turn_no, t.phase)) filter (
+        where t.room_id is not null and t.resolved_at is null
+      )
     )
   from battle.rooms r
   left join battle.participants p on p.room_id = r.id
@@ -5301,7 +5303,9 @@ begin
     r.status in ('lobby_waiting', 'lobby_countdown')
     and (
       r.current_turn_no <> 0
-      or count(distinct (t.room_id, t.turn_no, t.phase)) <> 0
+      or count(distinct (t.room_id, t.turn_no, t.phase)) filter (
+        where t.room_id is not null
+      ) <> 0
     )
   ) or (
     r.status = 'active_select'

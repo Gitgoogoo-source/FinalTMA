@@ -16,6 +16,8 @@ Battle 页面在同一 session generation 内保持挂载，并只渲染产品�
 
 Telegram prepared message 的 pending、sent、cancelled、failed 与 unknown 分享反馈只保存在内存，并以 session generation 与当前创建者 `waiting` room ID 共同寻址。Web 只在本房间实际调用 `shareMessage` 后消费不含 room ID 的 Telegram sent/failed 事件；调用 callback 与事件落状态前都复核当前 generation、room、side 和 status。切换房间、进入终态、离开再进入 `/game` 或重新认证时先使旧尝试失效并隐藏旧反馈；延迟回调不能覆盖新房间。该反馈不进入 API、数据库、资产刷新或 Battle 业务裁决。
 
+Battle 页面状态按“未确认当场结果、viewer-specific current-room、`BTL_` 入口/本地流程、首页”依次渲染。接受成功的 room snapshot 一经应用，即使邀请刷新后回答 `accepted`，当前账号仍必须保持 lobby/current-room；只有本账号的 accept operation 返回 `BATTLE_ROOM_ALREADY_ACCEPTED` 时才渲染固定冲突。幂等回放、响应乱序、页面重新可见、离开重进和重新认证均以 bootstrap/room 的高 `state_version` 快照回正，邀请入口不得覆盖数据库参与事实。
+
 ## Functions
 
 根目录 `api/app.ts`、`api/integrations.ts`、`api/jobs.ts` 是三个薄适配器，只创建 `@pokepets/api/entrypoints` 网关。每个 entrypoint 显式注入本网关的 route registry 与完整 handler map；三个 registry 互不导入。请求按“网关认证、路由匹配、会话认证、入口交接门禁、契约输入解析、领域查询或工作流、契约输出解析、标准信封”执行。只有 `referral.bind` 和 `operations.get` 声明 `allowPendingEntryHandoff`。

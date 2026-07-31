@@ -760,12 +760,12 @@ function checkView(source) {
       ) === "authoritativeInvite" &&
       bearerInviteGuard &&
       participantRoomGuard &&
-      bearerInviteGuard.pos < participantRoomGuard.pos &&
+      participantRoomGuard.pos < bearerInviteGuard.pos &&
       !identifiers(bearerInviteGuard.expression).includes("room") &&
       containsNegatedIdentifier(bearerInviteGuard.expression, "forceHome") &&
       bearerGuardReturns.length === 1 &&
       bearerGuardReturns[0] === "accept",
-    "Battle bearer entry must query current_invite despite participation, reject stale query data, and select the invite state before any participant room",
+    "Battle bearer entry must query current_invite despite participation and reject stale query data, while participant room authority must render before the invite state",
   );
   const participantInviteRefresh = calls(authority, "refetchInvite").find(
     (call) =>
@@ -2045,18 +2045,25 @@ function runSelfTests() {
     ),
     fixture(
       paths.view,
-      "participant room retakes priority over Battle bearer",
+      "Battle bearer retakes priority over participant room",
       (source, text) => {
         const derive = topLevelFunction(source, "derivePageState");
-        const guard = ifStatements(derive).find(
+        const bearerGuard = ifStatements(derive).find(
           (node) =>
             identifiers(node.expression).includes("battleEntry") &&
             identifiers(node.expression).includes("forceHome"),
         );
-        return replaceNode(
-          text,
-          guard.expression,
-          `(${guard.expression.getText()}) && !room`,
+        const roomGuard = ifStatements(derive).find((node) =>
+          identifiers(node.expression).includes("room"),
+        );
+        const roomStart = roomGuard.getStart(source);
+        const bearerStart = bearerGuard.getStart(source);
+        return (
+          text.slice(0, roomStart) +
+          bearerGuard.getText(source) +
+          text.slice(roomGuard.end, bearerStart) +
+          roomGuard.getText(source) +
+          text.slice(bearerGuard.end)
         );
       },
     ),
