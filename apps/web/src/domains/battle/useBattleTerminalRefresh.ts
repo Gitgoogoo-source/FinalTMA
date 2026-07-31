@@ -313,9 +313,24 @@ async function prepareAcknowledgement(
   roomId: string,
 ): Promise<boolean> {
   if (!isCurrentGeneration(generation)) return false;
-  const state = coordinators.get(generation);
-  const observation = state?.active;
-  if (!state || !observation || observation.roomId !== roomId) return false;
+  const state = coordinatorFor(generation);
+  let observation = state.active;
+  if (!observation) {
+    const battle = getApiQueryData(generation, "battle.bootstrap");
+    const identity = getApiQueryData(generation, "identity.bootstrap");
+    if (
+      battle?.current_result?.room_id !== roomId &&
+      identity?.battle_result?.room_id !== roomId
+    )
+      return false;
+    const room = await readCoordinatorRoom(generation, roomId);
+    if (!room || !isBattleAssetTerminal(room.status)) return false;
+    observation = {
+      roomId: room.room_id,
+      stateVersion: room.state_version,
+    };
+  }
+  if (observation.roomId !== roomId) return false;
   const key = terminalRefreshKey(generation, observation);
   await reportTerminalObservation(generation, observation);
   return isCurrentObservation(state, observation) && state.completed.has(key);

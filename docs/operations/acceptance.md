@@ -79,7 +79,7 @@ Battle stake / settlement / outbox event（脱敏）：
 - heartbeat/offline 刷新：普通续租和非终态 online/offline 只应用 room snapshot，网络记录不得出现每 5 秒 assets/inventory 请求；请求内跨过 waiting、90 秒或 5 分钟边界，终态响应、响应丢失后的重新可见回正及相关错误必须一次消费契约 `battle + assets + inventory`，顶部 K-coin 与 `inventory.battling` 及时回正。
 - 回合：五属性 1.50/0.75/1.00、十技能命中边界、超时最高命中率、优先级、速度、完全相同的同时攻击、先手击倒、单方换宠、双方换宠、单方/双方强制换宠、槽位超时、连续托管、双方同时全灭和第 20 回合裁决逐项保存 snapshot 与私有审计引用。
 - 实时与恢复：Ably capability 为 subscribe-only，消息只有四个失效字段；重复、乱序和迟到消息不覆盖高 `state_version`。主动断开 Ably 后按第 21 章 1—2 秒节奏 REST 回正；Vercel 重启、pg_net 单次失败、cron 短暂停止后继续同一 deadline、outbox 和 settlement。
-- 当场结果：终局瞬间断线后 identity bootstrap 与 Battle bootstrap 只恢复同一未确认结果，acknowledge 响应丢失可安全重试，成功后不再返回；玩家端不存在 history、replay、audit、spectator、matchmaking 或公开 room API。
+- 当场结果：终局瞬间断线后 identity bootstrap 与 Battle bootstrap 只恢复同一未确认结果；分别覆盖仍有 terminal room/participation 与只有 `current_result` 两种恢复。只有结果时必须先通过参与者专属 room 读取取得相同 room 的终态 `state_version`，再完成 Battle、identity、inventory 三域回正后才发 acknowledge；资产尚未回正、room 非终态、结果消失或版本变化均保持可重试覆盖层。保存 acknowledge 响应丢失、重复点击、同一请求重放、刷新、离开重进、重新认证和迟到 bootstrap/room 响应证据；数据库首次确认时间只能写一次，成功后 Battle 与 identity bootstrap 都不再返回旧结果，且 K-coin、宠物、stake、reservation、ledger 与 outbox 无额外变化。玩家端不存在 history、replay、audit、spectator、matchmaking 或公开 room API。
 - 风控：邀请 waiting 创建者被封禁后取消、退款、释放；lobby 任一方被封禁后双方退款并释放；active 任一方被封禁后页面空白、数据库继续托管至正常终局且只结算一次。
 
 ## 用户与登录第 16.11 节验收

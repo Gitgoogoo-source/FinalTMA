@@ -496,6 +496,14 @@ function checkCoordinator(source) {
   const prepareAcknowledge = topLevelFunction(source, "prepareAcknowledgement");
   const terminalRetry = calls(prepareAcknowledge, "reportTerminalObservation");
   const prepareCompleted = calls(prepareAcknowledge, "state.completed.has");
+  const currentResultRecovery = calls(
+    prepareAcknowledge,
+    "readCoordinatorRoom",
+  );
+  const recoveredTerminalCheck = calls(
+    prepareAcknowledge,
+    "isBattleAssetTerminal",
+  );
   must(
     terminalRetry.length === 1 &&
       awaitExpressions(prepareAcknowledge).some((node) =>
@@ -505,6 +513,26 @@ function checkCoordinator(source) {
       terminalRetry[0].pos < prepareCompleted[0].pos &&
       calls(prepareAcknowledge, "isCurrentObservation").length === 1,
     "acknowledge cannot be submitted until the current generation/room/version terminal batch has completed successfully",
+  );
+  must(
+    currentResultRecovery.length === 1 &&
+      awaitExpressions(prepareAcknowledge).some((node) =>
+        containsNode(node, currentResultRecovery[0]),
+      ) &&
+      recoveredTerminalCheck.length === 1 &&
+      currentResultRecovery[0].pos < recoveredTerminalCheck[0].pos &&
+      recoveredTerminalCheck[0].pos < terminalRetry[0].pos &&
+      propertyPaths(prepareAcknowledge).includes("room.room_id") &&
+      propertyPaths(prepareAcknowledge).includes("room.state_version"),
+    "current-result-only acknowledge must recover one participant-owned room snapshot and derive its terminal version before the terminal batch",
+  );
+  must(
+    provesDualBootstrapPresence(
+      prepareAcknowledge,
+      currentResultRecovery[0],
+      parameterPathSignature(prepareAcknowledge, 1),
+    ),
+    "current-result-only room recovery must be control-dependent on Battle or identity bootstrap proving the same unacknowledged room",
   );
 
   const acknowledge = topLevelFunction(source, "confirmAcknowledgedResult");
@@ -1015,6 +1043,36 @@ function provesDualBootstrapAbsence(root, activeClear, targetSignature) {
     bindings,
     targetSignature,
   );
+}
+
+function provesDualBootstrapPresence(root, recovery, targetSignature) {
+  if (!root || !recovery || !targetSignature) return false;
+  const bindings = constBindingsBefore(root, recovery.pos);
+  const conditions = controlFlowConditions(root, recovery).filter(({ node }) =>
+    containsBootstrapComparison(node, bindings, targetSignature),
+  );
+  if (conditions.length === 0) return false;
+  const routes = [...bootstrapAbsenceProofs.keys()];
+  for (const battleAbsent of [false, true])
+    for (const identityAbsent of [false, true]) {
+      const absence = new Map([
+        [routes[0], battleAbsent],
+        [routes[1], identityAbsent],
+      ]);
+      let reachesRecovery = true;
+      for (const condition of conditions) {
+        const value = bootstrapPredicateValue(
+          condition.node,
+          bindings,
+          targetSignature,
+          absence,
+        );
+        if (value === null) return false;
+        if (value !== condition.whenTrue) reachesRecovery = false;
+      }
+      if (reachesRecovery !== !(battleAbsent && identityAbsent)) return false;
+    }
+  return true;
 }
 
 function exactBootstrapAbsenceControl(root, target, bindings, targetSignature) {
@@ -2125,6 +2183,31 @@ function runSelfTests() {
           "prepareTerminalAcknowledgement",
         )[0];
         return replaceNode(text, preparation, "Promise.resolve(true)");
+      },
+    ),
+    fixture(
+      paths.coordinator,
+      "current-result acknowledge skips participant room recovery",
+      (source, text) => {
+        const fn = topLevelFunction(source, "prepareAcknowledgement");
+        const recovery = calls(fn, "readCoordinatorRoom")[0];
+        return replaceNode(text, recovery, "Promise.resolve(null)");
+      },
+    ),
+    fixture(
+      paths.coordinator,
+      "current-result acknowledge ignores bootstrap ownership",
+      (source, text) => {
+        const fn = topLevelFunction(source, "prepareAcknowledgement");
+        const recovery = calls(fn, "readCoordinatorRoom")[0];
+        const bindings = constBindingsBefore(fn, recovery.pos);
+        const target = parameterPathSignature(fn, 1);
+        const guard = ifStatements(fn).find(
+          (node) =>
+            node.pos < recovery.pos &&
+            containsBootstrapComparison(node.expression, bindings, target),
+        );
+        return replaceNode(text, guard.expression, "false");
       },
     ),
     fixture(

@@ -853,6 +853,10 @@ heartbeat/offline 路由契约固定声明最大可能刷新域 `battle + assets
 
 `identity.bootstrap` 增加当前 Battle participation 和最新未确认当场结果摘要。用户在终局瞬间断线时，重新进入只显示该场最终结果；确认后不再返回。
 
+最新未确认 `current_result` 本身就是服务端权威的结果恢复入口，不依赖当前 participation 或 bootstrap room 继续作为活动状态返回。Web 在只有 `current_result` 时，必须先以其 `room_id` 调用既有参与者专属 room 读取，重新验证当前用户确为参与者并取得终态 `status + state_version`；随后统一执行 Battle bootstrap、identity bootstrap 与 inventory 三域权威刷新。只有三域全部成功、同一 room 的未确认结果仍存在且终态版本没有被更高权威快照替代时，才允许提交 acknowledge。room 读取失败、房间尚未终态、资产/藏品刷新失败、结果已经消失或版本发生变化时继续保留覆盖层并显示可重试状态，不得无条件放行。
+
+acknowledge 仍由 `api.battle_acknowledge_result` 在数据库内验证当前 session、参与者归属与 `finished/draw/voided` 终态，并以首次确认时间幂等写入；Web 不提交 `Idempotency-Key`，不自行清除结果。响应成功或丢失后，Web 必须再次读取 Battle bootstrap 与 identity bootstrap，只有两者都不再返回同一 room 的未确认结果时才关闭覆盖层并返回 Battle 首页。重复点击、网络重放、重新加载、重新认证和迟到的旧 bootstrap/room 响应都不能重复改变资产、stake、reservation、ledger、outbox 或确认时间。
+
 用户界面不提供已确认结果列表。服务端 `battle.summaries` 和完整审计继续永久保留，但没有面向用户或管理端的 HTTP 回放接口。
 
 ## 13. 全项目文件改动清单
