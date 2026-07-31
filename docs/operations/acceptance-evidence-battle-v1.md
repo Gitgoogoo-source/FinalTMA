@@ -46,6 +46,20 @@ B 的成功 operation 已返回 opponent 视角的 `lobby_waiting` 快照，后�
 
 该影响域回归结论为 `PASS`，只覆盖同房间三接受者并发裁决、赢家 UI/current-room 恢复、两个失败者固定冲突、直接页面生命周期和终态回正；不覆盖普通群、超级群、跨群转发、自接受、完整分享矩阵、Lobby 规则、经济矩阵或战斗规则。
 
+## 2026-07-31 Battle R10 历史终态结果确认修复与影响域回归
+
+在提交 `7903bf5a5c6068d979cd1469613cb195cfa000e9` 对应的 Production deployment `dpl_68vFDJJfGxDdJeVAoRa1n5fCkVDe` 上，A、B 的同一场 Battle 均已完成权威结算与资产回正：数据库 room 与 participant 为 `finished`、`state_version = 44`，双方各保留一条未确认 `current_result`，但当前 active participation、locked stake、Battle reservation 和未发布 outbox 均为 0。两端真实 Mini App 都恢复出权威结果覆盖层；点击“确认并返回 Battle 首页”后只显示“当场结果仍在完成权威资产回正，请重试确认”，没有发出 acknowledge，请求前后数据库未确认结果均保持 1 条。
+
+独立链路审查确认，`current_result` DTO 是权威结果恢复入口，但当时终态协调器只从当前 room/participation 建立带 `state_version` 的 observation。只有 `current_result` 时，`prepareAcknowledgement` 因不存在 active observation 在任何权威刷新或 acknowledge 请求之前永久返回 `false`。服务端参与者专属 room 读取仍可验证结果归属并返回同一终态 room 与版本，`api.battle_acknowledge_result` 也已验证 session、participant、房间终态并以首次确认时间幂等写入，因此缺陷限定在 Web 终态恢复生命周期，不涉及 API、DTO、RPC、数据库结构或结算规则。
+
+提交 `317b976e657be5db5a3a2892a7932afb5b5cab95` 复用参与者专属 room 读取：只有 Battle bootstrap 或 identity bootstrap 仍证明同一未确认 room 时，才恢复终态 `status + state_version`，随后继续执行 Battle、identity、inventory 三域稳定刷新；任一权威门禁失败、room 非终态、结果消失或版本变化仍保持可重试覆盖层。Git Integration 将该提交发布为 Production deployment `dpl_AqpmtncPpNZe9o32hCENPmBdX9US`，状态 `READY`，source SHA 与提交一致，稳定入口指向该部署。
+
+新 Production 上，A 执行一次真实确认，B 对确认按钮执行快速双击；Vercel 共记录两次 acknowledge HTTP 200，A、B 各一次，B 的重复 UI 事件没有产生第二个请求。双方覆盖层均消失并返回 Battle 首页；关闭 Mini App、重新打开并重新进入 Battle 后，旧结果均未再次出现。数据库中双方最新 participant 各只有一个非空首次确认时间，Battle 与 identity 恢复入口均不再返回旧结果；确认窗口之后 A/B 没有新增 ledger，同一 room 没有新增 outbox。
+
+最终 A/B/C/D 的 K-coin 分别为 500/500/500/100，locked K-coin 均为 0；每角色仍为 3 个固定模板、合计 4 只宠物。活动 room、active participant、locked stake、active Battle reservation、未发布 outbox、pending/unknown operation 和开放 violation 均为 0；fixture gate 关闭，`battle-tick-v1` healthy。远端 migration history 仍精确为三份原始 migration，Supabase 项目为 `ACTIVE_HEALTHY`。本轮没有修改数据库定义，因此没有重建数据库。
+
+该影响域回归结论为 `PASS`，只覆盖只有 `current_result` 的历史终态恢复、终态版本与三域资产门禁、真实 acknowledge、重复点击、刷新/退出重进及确认后的系统终态；没有执行或重记三账号并发、Lobby、分享矩阵、经济矩阵或战斗规则验收。
+
 ## 发布对象
 
 - 环境：真实开发 Supabase `final-tma-real-test / ebewtjerusxcioegpzjd`。
