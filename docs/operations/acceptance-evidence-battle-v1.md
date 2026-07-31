@@ -60,6 +60,27 @@ B 的成功 operation 已返回 opponent 视角的 `lobby_waiting` 快照，后�
 
 该影响域回归结论为 `PASS`，只覆盖只有 `current_result` 的历史终态恢复、终态版本与三域资产门禁、真实 acknowledge、重复点击、刷新/退出重进及确认后的系统终态；没有执行或重记三账号并发、Lobby、分享矩阵、经济矩阵或战斗规则验收。
 
+## 2026-08-01 Battle 04D 调查保留与 04F 用户裁决
+
+04D 在当时“必须取得 I 失败分享与 J no-callback unknown 的确定性真实触发”口径下结论为 `BLOCKED`。该历史事实保持不变：I 没有自然发生，不得记为真实 PASS；J 没有真实 PASS，Telegram 官方也没有规定固定 deadline 后无回调即 unknown。04D 的 `BLOCKED` 只记录旧证据门槛未满足，不改写为分享行为已经通过或失败。
+
+04E 因根目录全文检索的排除规则失效，意外读取受保护文件一行后立即 `STOP`；没有文件、Git 或云端变更，也不作为 04F 的审查或验收证据。04F 改用根目录两份 Battle 文档加 `docs/architecture/`、`docs/operations/` 的显式白名单，且所有检索、格式化、差异检查和暂存只接收明确文件列表。
+
+用户随后作出最高优先级裁决：按 Telegram 平台能力收口。`waiting` 分享的 `USER_DECLINED` 或 callback 明确未发送属于可重试的本地取消；`MESSAGE_SEND_FAILED` 或 Telegram 官方等价明确失败事件保留既定失败/重试反馈，但依赖真实平台故障；`shareMessageSent` 或成功 callback 使用已有真实运行证据。Telegram 没有定义 waiting 分享 no-callback deadline，不新增或推断 unknown。Prepared inline message 创建阶段的 60 秒恢复、超时作废/退款、幂等和一致性继续作为独立服务端路径保留。
+
+原始 Battle 第 4 项证据归并如下：
+
+| 范围                                 | 证据                                         | 当前状态                              |
+| ------------------------------------ | -------------------------------------------- | ------------------------------------- |
+| A/H                                  | V09                                          | `PASS`                                |
+| B–G                                  | 04C                                          | `PASS`                                |
+| 跨房间分享反馈隔离                   | V09                                          | `PASS`                                |
+| B/C/D 同房间并发、唯一赢家 UI 与恢复 | V12                                          | `PASS`                                |
+| I：平台明确发送失败                  | 04D 未自然发生；官方协议、实现路径和恢复机制 | `PLATFORM_CONDITIONAL`                |
+| J：waiting 分享 no-callback unknown  | Telegram 官方未定义该结果                    | `NOT_APPLICABLE_BY_PLATFORM_CONTRACT` |
+
+原始 Battle 第 4 项最终状态为 `CLOSED_WITH_PLATFORM_CONDITIONAL_EVIDENCE`。I 不得改写为真实 PASS，J 不得记为 PASS、FAIL、TODO 或待实现功能。未来真实 `MESSAGE_SEND_FAILED` 或官方等价事件自然发生时按既有观测规范追加脱敏证据；除非实际行为与 [ADR-018](../architecture/adr/ADR-018-battle-share-platform-conditional-evidence.md) 不一致，否则不重新阻塞该已关闭事项。本节只关闭原始 Battle 第 4 项，不把本文其他尚未完成的 Battle v1 总体验收升级为完成。
+
 ## 发布对象
 
 - 环境：真实开发 Supabase `final-tma-real-test / ebewtjerusxcioegpzjd`。
@@ -224,6 +245,8 @@ Supabase publishable key 与 legacy anon key 访问项目 Data API 均返回 401
 ## 尚未形成的真实验收证据
 
 以下项目必须在数据库重新产生真实 Telegram 用户、会话和 Battle room 后执行，不能以直接插入 fixture、mock 用户、静态检查或空库探针替代：
+
+> 2026-08-01 口径收敛：本节保留 2026-07-27 的历史未验清单，不倒写当时证据。下列第 3 项中的 Prepared inline message 60 秒未知结果恢复/退款仍需作为独立服务端路径保留；`shareMessage` 成功已有后续真实证据，明确发送失败为 `PLATFORM_CONDITIONAL`，waiting no-callback unknown 为 `NOT_APPLICABLE_BY_PLATFORM_CONTRACT`。现行结论以本文件 04F 归并表与 ADR-018 为准。
 
 1. 四个真实 Telegram 账号完成私聊、普通群、超级群、跨群转发、创建者自我接受和多人并发接受。
 2. Bot API `getMe`、菜单入口、Main Mini App、named Mini App 和真实 Battle `startapp` 登录；Battle 入口不产生推荐候选。

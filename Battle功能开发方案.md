@@ -635,6 +635,8 @@ Telegram 明确返回失败时立即调用 `api.battle_abort_share`。响应未�
 
 原生分享弹窗被用户关闭或发送失败不会自动取消已经激活的等待房；创建者继续重试分享或主动取消房间。
 
+本段的 60 秒只裁决 Prepared inline message 创建阶段：在 `api.battle_activate_share` 之前，服务端外部结果未知继续按原 `create_operation_id` 恢复，超时后安全作废、退款并释放。房间进入 `waiting` 后调用 `shareMessage` 属于另一条客户端平台反馈路径，不使用这 60 秒推断发送结果。
+
 刷新、重认证或创建响应丢失后，Web 先从 identity participation 定位原 room，再调用既有 `GET /api/battle/rooms/:room_id`。`BattleRoomSnapshotDto.prepare_deadline` 只在当前 viewer 是创建者且 room 为 `preparing_share` 时返回时间，否则固定为 `null`；`prepared_message_id` 只在当前 viewer 是创建者、prepared share 已激活且 room 仍为 `waiting` 时返回，其他 viewer 或状态固定为 `null`。`prepared_message_id` 长度固定为 1—256 个字符。响应不返回原始 `BTL_` token、创建 operation 机密、Telegram user ID、Bot token 或 prepared payload。
 
 ### 9.2 Battle 入口参数
@@ -663,6 +665,15 @@ Battle 入口：BTL_[A-Za-z0-9_-]{32}
 - `shareMessageFailed`。
 
 客户端只做能力检测。缺少 `shareMessage` 时显示固定提示“当前 Telegram 版本不支持发送挑战卡，请更新 Telegram 后重试”，不降级为客户端拼接一张可能泄漏阵容的消息。
+
+`waiting` 房间分享结果固定分类如下：
+
+- `USER_DECLINED` 或 callback 明确返回未发送：用户关闭面板或取消分享，显示既定可重试反馈，不属于发送失败。
+- `MESSAGE_SEND_FAILED` 或 Telegram 官方等价的明确失败事件：显示既定失败/重试反馈。该事件依赖真实平台故障，运行证据状态为 `PLATFORM_CONDITIONAL`；发布时以 Telegram 官方协议、代码路径与既有恢复证据验收，未来自然发生后追加脱敏运行证据。
+- `shareMessageSent` 或成功 callback：发送成功，使用已有真实运行证据。
+- Telegram 官方没有规定“分享调用超过固定 deadline 未回调即 unknown”。不得新增或推断 waiting 分享 no-callback `unknown`，该验收项固定为 `NOT_APPLICABLE_BY_PLATFORM_CONTRACT`。官方 `UNKNOWN_ERROR` 是已经到达的明确失败事件，不是 no-callback `unknown`。
+
+上述分类只影响分享反馈证据口径，不改变房间状态、资产、错误码或 prepared-message 创建阶段的 60 秒恢复。
 
 ## 10. REST 与 OpenAPI
 
@@ -837,7 +848,7 @@ heartbeat/offline 路由契约固定声明最大可能刷新域 `battle + assets
 | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 创建 API 响应丢失             | 查询原 operation、identity participation 与 room snapshot；share integration 继续同一 room，创建者按 `prepare_deadline` 或 `prepared_message_id` 恢复，绝不创建第二个房间 |
 | Telegram 明确创建失败         | 原操作失败、立即退款并释放                                                                                                                                                |
-| Telegram 结果未知             | 60 秒内服务端恢复；超时作废并退款                                                                                                                                         |
+| Prepared message 创建结果未知 | 60 秒内服务端恢复；超时作废并退款；不得与 `waiting` 分享 callback 或 no-callback 混淆                                                                                     |
 | 接受响应丢失                  | 查询原 operation 与当前 Battle snapshot；不再次锁币                                                                                                                       |
 | 动作响应丢失                  | 查询原 operation/room；以数据库 `viewer_action_state` 恢复，`locked` 动作不可重选                                                                                         |
 | Ably 断线                     | 自动进入 1–2 秒短轮询                                                                                                                                                     |
@@ -1011,7 +1022,9 @@ git diff --check
 - 逐项交换同 lease heartbeat/offline 到达顺序，并覆盖隐藏时在途 heartbeat、offline 未送达、重新可见、离开再返回 `/game`、页面重载、重新认证、重复命令和旧 lease 重放；数据库认可新 lease 后，旧命令不得改变 presence、倒计时、`state_version` 或资产。
 - lobby 正常终结双方原额退款、六个 reservation 释放、手续费为 0；接受后不存在玩家取消、分享或重新选队入口。
 - 90 秒、5 分钟和 waiting 到期由 heartbeat/offline 触发时，顶部余额和 `inventory.battling` 随终态一次回正；普通 5 秒续租的网络记录不得出现 assets/inventory 请求。
-- 原生分享关闭、发送失败和旧 Telegram 缺少 `shareMessage` 时结果正确。
+- 原生分享关闭或 `USER_DECLINED` 显示可重试本地取消反馈；旧 Telegram 缺少 `shareMessage` 时显示既定能力提示。
+- 平台明确发送失败以 Telegram 官方协议、现有 `MESSAGE_SEND_FAILED` 等代码路径和恢复机制验收，状态为 `PLATFORM_CONDITIONAL`；不使用故障注入、断网、Bot/群权限篡改或测试 API 制造真实 PASS。
+- waiting 分享 no-callback `unknown` 为 `NOT_APPLICABLE_BY_PLATFORM_CONTRACT`，不新增固定超时或用户可见 unknown 行为；Prepared message 创建阶段的 60 秒恢复继续独立验收。
 
 ### 15.4 资产与并发
 

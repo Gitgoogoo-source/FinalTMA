@@ -91,3 +91,4 @@ TMA 首次同步加载只覆盖应用壳、会话与账号门禁及默认开盒�
 - [Battle 实时失效通知、调度与 outbox](adr/ADR-015-battle-realtime-and-scheduler.md)
 - [受控 Battle 验收夹具数据库边界](adr/ADR-016-controlled-battle-acceptance-fixture.md)
 - [TON 生成绑定与静态门禁](adr/ADR-017-ton-generated-bindings.md)
+- [Battle 平台条件型分享证据与发布门禁](adr/ADR-018-battle-share-platform-conditional-evidence.md)

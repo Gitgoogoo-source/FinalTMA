@@ -65,11 +65,13 @@ Battle stake / settlement / outbox event（脱敏）：
 
 以下证据必须来自真实 Telegram、真实 Vercel、真实 Supabase 与真实 Ably；静态门禁不能替代：
 
-- 本次本地实现仍待真实开发环境验证 Telegram prepared message 与 `shareMessage` 真机发送、60 秒未知结果恢复/退款、Ably 2.26.0 subscribe-only token 与 outbox 重投、两个 integration 的真实 Bearer 鉴权、Vercel 超时边界，以及从空 Supabase 数据库执行三条 migration 后的并发裁决。
+- Telegram prepared message 创建阶段继续验证同一 room 的 60 秒未知结果恢复、超时作废与退款；该服务端路径不得与已经进入 `waiting` 后的 `shareMessage` callback 混淆。`shareMessageSent`/成功 callback 使用已有真机发送证据；waiting 分享没有平台规定的 no-callback deadline。
 - 规则与页面：`battle-v1` checksum 与正式 JSON、数据库种子、API 摘要一致；Catalog v1 仍为 70 链/210 模板且 release checksum 不变；游戏页完整覆盖第 21 章九种页面状态，构建和运行资源不含 Phaser 或客户端战斗模拟器。
 - 隐私：按唯一清单分别保存七种严格 DTO：`BattleChallengeCardDto`、`BattleInvitePreviewDto`、`BattleLobbyDto`、`BattleSelfTeamDto`、`BattleOpponentTeamDto`、`BattleResolutionEventDto`、`BattleRoomSnapshotDto`；逐字段证明禁止信息不在 JSON、HTML、Ably、日志和分析事件中。挑战卡/接受预览允许创建者展示头像；lobby JSON 和 DOM 不返回或加载双方真实头像，只使用固定仓库 WebP/中性图标。接受前双方秘密、接受后对手百分比生命及当回合技能揭示严格符合第 21.7 节。
 - 分享与接受：用户私聊、普通群、超级群、跨群转发、Bot 不在群、Bot 会话禁止、频道禁止、创建者本人严格 `self` 且服务端禁止；有效邀请直接显示队伍选择，没有前置状态页。创建者在线与离线均可接受，离线固定展示“离线 · 仍可接受”。两个普通接受者与一个竞争账号同时接受时只有首个事务成功，失败者余额和 inventory 完全不变。
-- 分享反馈生命周期：同一 Telegram Mini App 会话中，房间 A 分别产生 pending、sent、cancelled、failed 或 unknown 反馈后通过正常入口终结，再创建房间 B；房间 B 未执行自己的分享动作前不得显示房间 A 的任何反馈。分别覆盖房间切换、终态退出、离开再进入 `/game`、页面重载、重新认证，以及旧 sent/failed 事件或调用 callback 延迟到达；旧反馈不得覆盖新房间，本地即时反馈不得触发资产刷新或被记录为业务成功。
+- 分享反馈生命周期：同一 Telegram Mini App 会话中，房间 A 打开分享面板后，通过正常入口终结并创建房间 B；房间 B 未执行自己的分享动作前不得显示房间 A 的任何反馈。房间切换、终态退出和离开再进入 `/game` 的隔离使用 V09 真实证据；页面重载、重新认证及自然迟到 callback 只在真实发生时补充，不倒推为已验证。旧反馈不得覆盖新房间，本地即时反馈不得触发资产刷新或被记录为业务成功。
+- 分享结果分类：`USER_DECLINED` 或 callback 明确返回未发送属于可重试的本地取消；`shareMessageSent` 或成功 callback 为发送成功；`MESSAGE_SEND_FAILED` 或 Telegram 官方等价明确失败事件显示既定失败/重试反馈，证据状态为 `PLATFORM_CONDITIONAL`，不得通过测试 API、mock、故障注入、断网或 Bot/群权限篡改制造 PASS。Telegram 官方 `UNKNOWN_ERROR` 是明确失败事件，不是 no-callback `unknown`。
+- waiting 分享 no-callback `unknown` 固定为 `NOT_APPLICABLE_BY_PLATFORM_CONTRACT`：Telegram 没有规定固定 deadline，项目不得新增超时推断或用户可见 unknown。Prepared message 创建阶段的 60 秒恢复、超时作废、退款、幂等和一致性继续按独立服务端路径验收。
 - Battle 并发接受页面归属：三个真实账号对同一等待房间同时执行最终接受，数据库只允许一个 `succeeded` operation、一个 opponent、两份 stake 和双方各三份 reservation；唯一赢家的 HTTP 200 与 current-room 必须进入 lobby，其他两端各自保持原资产并显示 HTTP 409 / `BATTLE_ROOM_ALREADY_ACCEPTED`。随后对赢家执行邀请刷新、room 刷新、同键回放、响应乱序、页面重新可见、离开重进和重新认证，均不得把赢家覆盖为冲突页。房间在 lobby 且尚无 turn 时执行 invariant scan，`BATTLE_ROOM_STATE_MISMATCH` 必须为 0；终态后资产、stake、reservation、outbox、开放 operation 和 violation 全部回正。
 - lobby：首位接受后 snapshot 为 `lobby_waiting/lobby_countdown`、双方 participant 为 `lobby` 且没有 turn 1；验证双方 5 秒心跳、10 秒在线判定、89 秒重连、90 秒终结、创建者接受前离线窗口重置、5 分钟总时限、3 秒倒计时开始/中止/完整重启、到期再次确认在线和相等 deadline 终结优先。正常终结双方原额退款、六个 reservation 释放、手续费为 0。
 - presence 乱序：分别交换同 lease heartbeat/offline 到达顺序，覆盖隐藏时在途 heartbeat、offline 未送达、重新可见、Telegram 重新激活、离开再返回 `/game`、页面重载、重新认证、重复命令和旧 lease 重放。新 lease 接管后，旧请求必须数据库语义 no-op，不改变 presence、90 秒窗口、3 秒倒计时、`state_version`、event/outbox 或资产。
