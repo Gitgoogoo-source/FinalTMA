@@ -143,6 +143,10 @@
   padding: 2px 4px 10px;
 }
 
+.battle-tier-stage {
+  padding-bottom: calc(var(--size-bottomnav, 64px) + var(--safe-bottom) + 24px);
+}
+
 .battle-tier-stage > header span {
   color: var(--battle-orange);
   font-size: 10px;
