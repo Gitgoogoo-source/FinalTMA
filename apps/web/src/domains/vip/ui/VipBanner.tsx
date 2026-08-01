@@ -1,4 +1,4 @@
-import { Crown, Egg, Gem, ReceiptText } from "lucide-react";
+import { ReceiptText } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { useApiQuery } from "../../../platform/query/index.ts";
@@ -41,7 +41,11 @@ export function VipBanner({ open }: { open(): void }): ReactNode {
         onClick={open}
       >
         <span className="vip-market-icon">
-          <Crown />
+          <img
+            src="/assets/vip/vip-crown-medallion.webp"
+            alt=""
+            aria-hidden="true"
+          />
         </span>
         <span>
           <small>POKEPETS MEMBERSHIP</small>
@@ -50,11 +54,15 @@ export function VipBanner({ open }: { open(): void }): ReactNode {
       </button>
       <div className="vip-market-benefits" aria-label="VIP 月卡权益">
         <div className="vip-market-benefit vip-market-benefit--egg">
-          <Egg aria-hidden="true" />
+          <img src="/assets/vip/vip-rare-egg.webp" alt="" aria-hidden="true" />
           <small>每日免费稀有盲盒</small>
         </div>
         <div className="vip-market-benefit vip-market-benefit--fgems">
-          <Gem aria-hidden="true" />
+          <img
+            src="/assets/vip/vip-fgems-crystal.webp"
+            alt=""
+            aria-hidden="true"
+          />
           <small>每日 100 Fgems</small>
         </div>
         <div className="vip-market-benefit vip-market-benefit--rebate">
