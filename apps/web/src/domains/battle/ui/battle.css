@@ -164,26 +164,52 @@
 
 .battle-tier-list {
   display: grid;
-  gap: 10px;
+  gap: 12px;
 }
 
 .battle-tier-list > button {
-  min-height: 154px;
+  position: relative;
+  isolation: isolate;
+  min-height: 176px;
+  overflow: hidden;
   display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 9px 14px;
-  padding: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.92);
-  border-radius: 22px;
-  color: inherit;
-  background: linear-gradient(
-    145deg,
-    rgba(255, 255, 255, 0.98),
-    rgba(255, 249, 239, 0.8)
-  );
-  box-shadow: 0 12px 28px rgba(54, 67, 75, 0.08);
+  align-content: end;
+  justify-items: start;
+  gap: 3px;
+  padding: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.92);
+  border-radius: 24px;
+  color: white;
+  background-color: #214f59;
+  background-position: center;
+  background-size: cover;
+  box-shadow: 0 12px 28px rgba(54, 67, 75, 0.14);
   text-align: left;
   cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
+}
+
+.battle-tier-list > button[data-entry-fee="20"] {
+  background-image: url("/assets/battle/rooms/battle-room-20.webp");
+}
+
+.battle-tier-list > button[data-entry-fee="100"] {
+  background-image: url("/assets/battle/rooms/battle-room-100.webp");
+}
+
+.battle-tier-list > button[data-entry-fee="500"] {
+  background-image: url("/assets/battle/rooms/battle-room-500.webp");
+}
+
+.battle-tier-list > button.selected {
+  border-color: var(--battle-orange);
+  box-shadow:
+    0 15px 34px rgba(255, 122, 0, 0.26),
+    0 0 0 2px rgba(255, 255, 255, 0.9);
+  transform: scale(1.012);
 }
 
 .battle-tier-list > button:disabled {
@@ -191,62 +217,89 @@
   cursor: not-allowed;
 }
 
-.battle-tier-list > button > span {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--battle-muted);
+.battle-tier-entry {
+  color: rgba(255, 255, 255, 0.84);
   font-size: 11px;
-  font-weight: 800;
-}
-
-.battle-tier-list > button > span svg {
-  width: 16px;
-  color: var(--battle-orange);
+  font-weight: 850;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.44);
 }
 
 .battle-tier-list > button > strong {
-  color: var(--battle-orange);
-  font-size: 25px;
+  color: white;
+  font-size: 28px;
   font-weight: 950;
-  text-align: right;
+  line-height: 1;
+  text-shadow: 0 3px 12px rgba(0, 0, 0, 0.55);
 }
 
 .battle-tier-list dl {
-  grid-column: 1 / -1;
+  width: min(62%, 280px);
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
-  margin: 0;
+  margin: 9px 0 0;
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 14px;
+  background: rgba(18, 25, 30, 0.62);
+  backdrop-filter: blur(8px);
 }
 
 .battle-tier-list dl div {
   display: grid;
   gap: 3px;
-  padding: 8px;
-  border-radius: 12px;
-  background: rgba(54, 67, 75, 0.045);
+  padding: 2px 6px;
 }
 
 .battle-tier-list dt {
-  color: var(--battle-muted);
+  color: rgba(255, 255, 255, 0.74);
   font-size: 9px;
 }
 
 .battle-tier-list dd {
   margin: 0;
+  color: white;
   font-size: 15px;
   font-weight: 900;
 }
 
-.battle-tier-list b {
-  grid-column: 1 / -1;
-  min-height: 40px;
+.battle-tier-selected {
+  position: absolute;
+  z-index: 2;
+  top: 12px;
+  right: 12px;
+  width: 34px;
+  height: 34px;
   display: grid;
   place-items: center;
-  border-radius: 13px;
+  border: 2px solid white;
+  border-radius: 50%;
   color: white;
-  background: linear-gradient(180deg, #ff9c00, #ff7200);
+  background: var(--battle-orange);
+  box-shadow: 0 7px 16px rgba(0, 0, 0, 0.24);
+  opacity: 0;
+  transform: scale(0.72);
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
+}
+
+.battle-tier-selected svg {
+  width: 19px;
+  height: 19px;
+}
+
+.battle-tier-list > button.selected .battle-tier-selected {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.battle-tier-submit.button {
+  width: 100%;
+  min-height: 50px;
+  display: flex;
+  margin-top: 12px;
+  font-size: 14px;
 }
 
 .battle-screen-header {
@@ -1905,7 +1958,13 @@
   }
 
   .battle-tier-list {
-    grid-template-columns: repeat(3, 1fr);
+    max-width: 720px;
+    margin-inline: auto;
+  }
+
+  .battle-tier-submit.button {
+    width: min(100%, 720px);
+    margin-inline: auto;
   }
 
   .battle-option-detail {

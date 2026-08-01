@@ -2,7 +2,6 @@ import {
   ArrowLeft,
   Check,
   Clock3,
-  Coins,
   Radio,
   RefreshCw,
   Send,
@@ -12,7 +11,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import type { ReactNode, RefObject } from "react";
+import { useState, type ReactNode, type RefObject } from "react";
 import type {
   BattleCurrentResult,
   BattleEntryTier,
@@ -52,6 +51,16 @@ export function BattleHome({
   onChooseTier(tier: BattleEntryTier["id"]): void;
   onRefresh(): void;
 }): ReactNode {
+  const [selectedTierId, setSelectedTierId] = useState<
+    BattleEntryTier["id"] | null
+  >(null);
+  const selectedTier =
+    tiers.find((tier) => tier.id === selectedTierId) ??
+    tiers.find((tier) => tier.entry_fee === 100) ??
+    tiers[0] ??
+    null;
+  const selectionDisabled = loading || Boolean(participation);
+
   return (
     <div className="battle-home">
       <section className="battle-home-hero">
@@ -109,13 +118,16 @@ export function BattleHome({
             <button
               key={tier.id}
               type="button"
-              disabled={loading || Boolean(participation)}
-              onClick={() => onChooseTier(tier.id)}
+              className={selectedTier?.id === tier.id ? "selected" : ""}
+              data-entry-fee={tier.entry_fee}
+              disabled={selectionDisabled}
+              aria-pressed={selectedTier?.id === tier.id}
+              onClick={() => setSelectedTierId(tier.id)}
             >
-              <span>
-                <Coins />
-                每人入场
+              <span className="battle-tier-selected" aria-hidden="true">
+                <Check />
               </span>
+              <span className="battle-tier-entry">每人入场</span>
               <strong>{tierTitle(tier)}</strong>
               <dl>
                 <div>
@@ -126,15 +138,18 @@ export function BattleHome({
                   <dt>胜者到账</dt>
                   <dd>{tier.winner_payout}</dd>
                 </div>
-                <div>
-                  <dt>平台费</dt>
-                  <dd>{tier.fee}</dd>
-                </div>
               </dl>
-              <b>选择队伍</b>
             </button>
           ))}
         </div>
+        <Button
+          className="battle-tier-submit"
+          disabled={selectionDisabled || selectedTier === null}
+          onClick={() => selectedTier && onChooseTier(selectedTier.id)}
+        >
+          <Swords />
+          {selectedTier ? `选择队伍 · ${tierTitle(selectedTier)}` : "选择队伍"}
+        </Button>
       </section>
     </div>
   );
