@@ -61,6 +61,52 @@ final result: passed
 
 ---
 
+# VIP 月卡皇冠与双权益真实素材验收
+
+## 验收对象
+
+- 版本：`24f8af6`
+- 页面：交易 → 购买 → VIP MONTHLY PASS 横幅
+- 页面状态：VIP 未开通、浅色主题、市场空状态
+- 用户目标：保留现有三宠主图和布局，将皇冠、每日免费稀有盲盒蛋、每日 `100 Fgems` 水晶从简易线框图标改为与选定设计一致的真实暖金日漫游戏素材
+
+## 视觉依据与证据
+
+- 用户奖励素材参考：`/var/folders/__/ffcc9r1113l4c8cd1z4m8tp80000gn/T/codex-clipboard-c7d76d11-a0df-467e-bc03-8a59e3aaa493.png`，`267 × 186px`
+- 修正前截图：`/var/folders/__/ffcc9r1113l4c8cd1z4m8tp80000gn/T/codex-clipboard-1d90587e-6e5e-4e84-b07f-e9c09df2ece5.png`，`159 × 68px`
+- 最终真机截图：`/Users/mac/.codex/visualizations/2026/08/01/019fbd03-e1ea-7160-b00e-965e7909d203/vip-reward-assets-final-runtime.jpg`，`344 × 764px`
+- 聚焦同屏对照：`/Users/mac/.codex/visualizations/2026/08/01/019fbd03-e1ea-7160-b00e-965e7909d203/vip-reward-assets-comparison.png`，`626 × 218px`；左侧为选定参考，右侧为最终真实页面卡片
+- 项目素材：`vip-crown-medallion.webp`、`vip-rare-egg.webp`、`vip-fgems-crystal.webp`，均为 `384 × 384px` 独立 WebP 位图
+
+## 视口与归一化
+
+- 最终实现来自 Apple iPhone 镜像，完整画面为 `344 × 764px`；横幅裁切约为 `312 × 191px`。
+- 参考图等比缩放至 `313px` 宽；实现横幅按真实卡片边界裁切后缩放至 `313 × 191px`，两侧补齐到同一 `313 × 218px` 画布再并排比较。
+- 参考图只提供标题和奖励素材的美术语言，不是本项目完整横幅成稿；验收不把其缺少购买按钮和右侧三宠构图误判为实现偏差。
+
+## 检查结果
+
+- 皇冠已经由 Lucide 线框图标替换为金色王冠、月桂与圆形徽章组合；真实小尺寸下轮廓清晰，没有裁切或白色方框。
+- 稀有盲盒蛋具有完整金色外框、琥珀核心和装饰底座；`100 Fgems` 使用独立切面水晶、金色光环与装饰底座，二者不再呈现为单线图标。
+- 三张素材均使用与现有主图一致的奶油白、香槟金、琥珀橙和少量蜜桃色，没有引入紫色主调。
+- 权益文字、手续费返还说明、真实价格、购买／续费／确认中状态及按钮交互保持原实现；未修改 API、后端、数据库或支付代码。
+- 线上三个新资源均返回 HTTP `200`；关闭并重新打开 Telegram Mini App 后，真实 iPhone 页面已加载当前部署素材。
+- `pnpm exec prettier --check`、`pnpm --filter @pokepets/web typecheck`、`pnpm --filter @pokepets/web build` 与 `pnpm assets:check:development` 均通过。
+
+## Findings
+
+没有发现可执行的 P0、P1 或 P2 视觉问题。
+
+## 比较历史
+
+1. 修正前只调整 CSS 并使用 Lucide 的蛋、宝石和皇冠线框图标，无法复现参考图中的立体金框、光晕和底座；用户指出该根因。
+2. `24f8af6` 新增三张独立 ImageGen 位图并接入原组件，删除对应线框图标和为线框图标准备的颜色滤镜。
+3. Telegram 首次进入交易页仍显示旧线框图标，确认是客户端旧包缓存；关闭并重新打开 Mini App 后加载新素材，真机对照通过。
+
+final result: passed
+
+---
+
 # VIP 月卡固定标题与星际三宠主视觉验收
 
 ## 验收对象
@@ -428,5 +474,15 @@ final result: blocked
 ## Follow-up Polish
 
 - 无；桌面或平板不属于本次 Telegram 移动端参考与改动范围。
+
+final result: passed
+
+---
+
+# 当前 VIP 最终验收结论
+
+- 当前有效版本：`24f8af6`
+- 当前有效验收：本文“VIP 月卡皇冠与双权益真实素材验收”章节。
+- 三张真实暖金位图已经在 Telegram iOS 真机加载，并完成参考与实现同屏比较；旧版 `7c55261` 的截图阻塞结论已被本次真实验收取代。
 
 final result: passed
