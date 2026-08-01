@@ -50,32 +50,82 @@
 }
 
 .app-shell .market-page-buy .vip-market-hero {
-  min-height: 0;
-  grid-template-rows: auto auto auto;
+  height: 184px;
+  min-height: 184px;
+  isolation: isolate;
+  grid-template-rows: 54px 40px 34px;
   gap: 8px;
   margin-bottom: 8px;
-  padding: 10px;
-  border-radius: 20px;
+  padding: 13px;
+  border: 1px solid rgba(255, 177, 64, 0.34);
+  border-radius: 24px;
+  background: #fff7e5;
+  box-shadow:
+    0 17px 36px rgba(205, 116, 18, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.98);
+}
+
+.app-shell .market-page-buy .vip-market-hero::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 250, 238, 0.98) 0%,
+    rgba(255, 249, 234, 0.92) 39%,
+    rgba(255, 246, 224, 0.64) 58%,
+    rgba(255, 244, 219, 0.08) 82%
+  );
+  pointer-events: none;
+}
+
+.app-shell .market-page-buy .vip-market-art {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  object-fit: cover;
+  object-position: center;
+  pointer-events: none;
+  user-select: none;
+}
+
+.app-shell .market-page-buy .vip-banner-summary,
+.app-shell .market-page-buy .vip-market-benefits,
+.app-shell .market-page-buy .vip-market-action {
+  position: relative;
+  z-index: 1;
 }
 
 .app-shell .market-page-buy .vip-market-hero .vip-banner-summary {
-  grid-template-columns: 38px minmax(0, 1fr);
-  gap: 9px;
+  width: 72%;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 10px;
 }
 
 .app-shell .market-page-buy .vip-market-icon {
-  width: 38px;
-  height: 38px;
-  border-radius: 13px;
+  width: 40px;
+  height: 40px;
+  border-color: rgba(255, 164, 35, 0.32);
+  border-radius: 14px;
+  color: #e97d00;
+  background: rgba(255, 255, 255, 0.84);
+  box-shadow:
+    0 9px 20px rgba(210, 115, 0, 0.13),
+    inset 0 1px 0 #fff;
 }
 
 .app-shell .market-page-buy .vip-market-icon svg {
-  width: 20px;
-  height: 20px;
+  width: 21px;
+  height: 21px;
 }
 
 .app-shell .market-page-buy .vip-market-hero .vip-banner-summary strong {
-  font-size: 15px;
+  color: #3b2c1e;
+  font-size: 17px;
+  line-height: 1.12;
 }
 
 .app-shell
@@ -83,7 +133,8 @@
   .vip-market-hero
   .vip-banner-summary
   small:first-child {
-  font-size: 6px;
+  color: #d96a00;
+  font-size: 6.5px;
 }
 
 .app-shell
@@ -91,24 +142,33 @@
   .vip-market-hero
   .vip-banner-summary
   small:last-child {
-  font-size: 8px;
+  color: #806e58;
+  font-size: 8.5px;
 }
 
 .app-shell .market-page-buy .vip-market-benefits {
-  gap: 6px;
+  gap: 7px;
 }
 
 .app-shell .market-page-buy .vip-market-benefits span {
-  min-height: 38px;
-  gap: 2px;
-  padding: 4px 2px;
-  border-radius: 13px;
-  font-size: 6px;
+  min-height: 40px;
+  gap: 1px;
+  padding: 4px 3px;
+  border-color: rgba(255, 255, 255, 0.92);
+  border-radius: 14px;
+  color: #735f49;
+  background: rgba(255, 255, 255, 0.73);
+  box-shadow:
+    0 7px 17px rgba(171, 96, 9, 0.08),
+    inset 0 1px 0 #fff;
+  font-size: 6.5px;
+  backdrop-filter: blur(12px) saturate(135%);
 }
 
 .app-shell .market-page-buy .vip-market-benefits svg {
-  width: 14px;
-  height: 14px;
+  width: 15px;
+  height: 15px;
+  color: #ed8500;
 }
 
 .app-shell .market-page-buy .vip-market-action {
@@ -116,15 +176,30 @@
 }
 
 .app-shell .market-page-buy .vip-market-action > span {
-  font-size: 9px;
+  color: #674d31;
+  font-size: 10px;
 }
 
 .app-shell .market-page-buy .vip-market-action .button {
-  min-width: 78px;
-  min-height: 31px;
-  padding: 5px 12px;
-  border-radius: 16px;
-  font-size: 10px;
+  min-width: 86px;
+  min-height: 34px;
+  height: 34px;
+  padding: 6px 14px;
+  border-radius: 18px;
+  font-size: 10.5px;
+  box-shadow:
+    0 9px 18px rgba(255, 111, 0, 0.26),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+@media (max-width: 370px) {
+  .app-shell .market-page-buy .vip-market-hero .vip-banner-summary {
+    width: 78%;
+  }
+
+  .app-shell .market-page-buy .vip-market-hero .vip-banner-summary strong {
+    font-size: 16px;
+  }
 }
 
 .app-shell .market-page-buy .market-buy-controls {

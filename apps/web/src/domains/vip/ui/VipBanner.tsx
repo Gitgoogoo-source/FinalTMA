@@ -12,6 +12,13 @@ export function VipBanner({ open }: { open(): void }): ReactNode {
   );
   return (
     <Card className="vip-banner vip-market-hero">
+      <img
+        className="vip-market-art"
+        src="/assets/vip/vip-membership-hero.webp"
+        alt=""
+        aria-hidden="true"
+        fetchPriority="high"
+      />
       <button className="vip-banner-summary" onClick={open}>
         <span className="vip-market-icon">
           <Crown />
