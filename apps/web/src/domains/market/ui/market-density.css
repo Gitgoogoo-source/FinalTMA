@@ -193,10 +193,10 @@
 
 .app-shell .market-page-buy .vip-market-benefit-label {
   width: 78px;
-  height: 20px;
+  height: 16px;
   display: grid;
   place-items: center;
-  margin-top: -7px;
+  margin-top: -8px;
   filter: drop-shadow(0 3px 4px rgba(166, 84, 15, 0.14));
 }
 
