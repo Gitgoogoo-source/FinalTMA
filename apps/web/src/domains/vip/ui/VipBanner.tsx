@@ -55,7 +55,14 @@ export function VipBanner({ open }: { open(): void }): ReactNode {
       <div className="vip-market-benefits" aria-label="VIP 月卡权益">
         <div className="vip-market-benefit vip-market-benefit--egg">
           <img src="/assets/vip/vip-rare-egg.webp" alt="" aria-hidden="true" />
-          <small>每日免费稀有盲盒</small>
+          <span className="vip-market-benefit-label">
+            <img
+              src="/assets/vip/vip-benefit-plaque.webp"
+              alt=""
+              aria-hidden="true"
+            />
+            <small>每日免费稀有盲盒</small>
+          </span>
         </div>
         <div className="vip-market-benefit vip-market-benefit--fgems">
           <img
@@ -63,7 +70,14 @@ export function VipBanner({ open }: { open(): void }): ReactNode {
             alt=""
             aria-hidden="true"
           />
-          <small>每日 100 Fgems</small>
+          <span className="vip-market-benefit-label">
+            <img
+              src="/assets/vip/vip-benefit-plaque.webp"
+              alt=""
+              aria-hidden="true"
+            />
+            <small>每日 100 Fgems</small>
+          </span>
         </div>
         <div className="vip-market-benefit vip-market-benefit--rebate">
           <ReceiptText aria-hidden="true" />
