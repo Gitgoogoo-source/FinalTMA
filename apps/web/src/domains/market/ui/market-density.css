@@ -63,13 +63,13 @@
   gap: 8px;
   margin-bottom: 8px;
   padding: 13px;
-  border: 1px solid rgba(255, 137, 43, 0.7);
+  border: 1px solid rgba(85, 171, 255, 0.64);
   border-radius: 24px;
-  background: #1d0909;
+  background: #070d2a;
   box-shadow:
-    0 18px 38px rgba(94, 28, 9, 0.28),
-    0 0 0 1px rgba(255, 182, 88, 0.08),
-    inset 0 1px 0 rgba(255, 224, 181, 0.42);
+    0 18px 38px rgba(26, 31, 105, 0.3),
+    0 0 0 1px rgba(132, 101, 255, 0.12),
+    inset 0 1px 0 rgba(188, 231, 255, 0.4);
 }
 
 .app-shell .market-page-buy .vip-market-hero::after {
@@ -80,16 +80,16 @@
   background:
     linear-gradient(
       90deg,
-      rgba(25, 8, 8, 0.96) 0%,
-      rgba(45, 14, 12, 0.84) 37%,
-      rgba(52, 16, 14, 0.42) 50%,
-      rgba(37, 11, 17, 0.04) 68%
+      rgba(5, 11, 42, 0.97) 0%,
+      rgba(8, 21, 67, 0.88) 37%,
+      rgba(15, 30, 91, 0.46) 50%,
+      rgba(25, 35, 112, 0.04) 68%
     ),
     linear-gradient(
       180deg,
-      rgba(20, 4, 7, 0.08),
+      rgba(5, 8, 33, 0.08),
       transparent 58%,
-      rgba(22, 5, 8, 0.28)
+      rgba(6, 8, 38, 0.3)
     );
   pointer-events: none;
 }
@@ -123,17 +123,17 @@
 .app-shell .market-page-buy .vip-market-icon {
   width: 38px;
   height: 38px;
-  border-color: rgba(255, 183, 86, 0.5);
+  border-color: rgba(105, 216, 255, 0.5);
   border-radius: 13px;
-  color: #ffbd5a;
+  color: #88e8ff;
   background: linear-gradient(
     145deg,
-    rgba(255, 139, 36, 0.3),
-    rgba(76, 17, 18, 0.88)
+    rgba(72, 155, 255, 0.34),
+    rgba(32, 17, 91, 0.88)
   );
   box-shadow:
-    0 9px 20px rgba(20, 4, 8, 0.3),
-    inset 0 1px 0 rgba(255, 221, 173, 0.3);
+    0 9px 20px rgba(4, 7, 31, 0.32),
+    inset 0 1px 0 rgba(195, 237, 255, 0.28);
 }
 
 .app-shell .market-page-buy .vip-market-icon svg {
@@ -142,10 +142,10 @@
 }
 
 .app-shell .market-page-buy .vip-market-hero .vip-banner-summary strong {
-  color: #fff7ec;
+  color: #f7fbff;
   font-size: 17px;
   line-height: 1.12;
-  text-shadow: 0 2px 10px rgba(15, 2, 5, 0.72);
+  text-shadow: 0 2px 10px rgba(2, 5, 28, 0.74);
 }
 
 .app-shell
@@ -153,7 +153,7 @@
   .vip-market-hero
   .vip-banner-summary
   small:first-child {
-  color: #ffad4d;
+  color: #7de8ff;
   font-size: 6.5px;
 }
 
@@ -162,7 +162,7 @@
   .vip-market-hero
   .vip-banner-summary
   small:last-child {
-  color: #e9bfa1;
+  color: #bfccff;
   font-size: 8.5px;
 }
 
@@ -182,13 +182,13 @@
   align-items: center;
   gap: 4px;
   padding: 3px 6px;
-  border-color: rgba(255, 168, 77, 0.34);
+  border-color: rgba(103, 188, 255, 0.3);
   border-radius: 10px;
-  color: #fff0df;
-  background: rgba(55, 16, 16, 0.62);
+  color: #eef7ff;
+  background: rgba(11, 21, 68, 0.64);
   box-shadow:
-    0 8px 18px rgba(13, 3, 6, 0.2),
-    inset 0 1px 0 rgba(255, 213, 163, 0.14);
+    0 8px 18px rgba(4, 7, 31, 0.22),
+    inset 0 1px 0 rgba(177, 226, 255, 0.13);
   font-size: 7.5px;
   backdrop-filter: blur(14px) saturate(125%);
   text-align: left;
@@ -197,7 +197,7 @@
 .app-shell .market-page-buy .vip-market-benefits svg {
   width: 15px;
   height: 15px;
-  color: #ff9d3b;
+  color: #69dcff;
 }
 
 .app-shell .market-page-buy .vip-market-action {
@@ -216,13 +216,13 @@
   display: grid;
   align-items: center;
   padding: 3px 7px;
-  border: 1px solid rgba(255, 167, 73, 0.3);
+  border: 1px solid rgba(105, 195, 255, 0.28);
   border-radius: 10px;
-  color: #ffe5c8;
-  background: rgba(29, 7, 11, 0.76);
+  color: #e9f5ff;
+  background: rgba(6, 13, 49, 0.78);
   box-shadow:
-    inset 0 1px 0 rgba(255, 210, 158, 0.12),
-    0 7px 14px rgba(12, 2, 5, 0.16);
+    inset 0 1px 0 rgba(174, 226, 255, 0.12),
+    0 7px 14px rgba(3, 6, 28, 0.18);
   font-size: 9px;
 }
 

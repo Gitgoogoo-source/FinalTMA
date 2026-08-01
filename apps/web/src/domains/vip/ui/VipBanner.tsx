@@ -14,7 +14,7 @@ export function VipBanner({ open }: { open(): void }): ReactNode {
     <Card className="vip-banner vip-market-hero">
       <img
         className="vip-market-art"
-        src="/assets/vip/vip-membership-hero-v2.webp"
+        src="/assets/vip/vip-membership-hero-v3.webp"
         alt=""
         aria-hidden="true"
         fetchPriority="high"
@@ -25,19 +25,15 @@ export function VipBanner({ open }: { open(): void }): ReactNode {
         </span>
         <span>
           <small>POKEPETS MEMBERSHIP</small>
-          <strong>
-            {pending
-              ? "VIP 月卡付款确认中"
-              : vip.data?.active
-                ? "VIP 月卡已生效"
-                : vip.data?.ends_on
-                  ? "VIP 月卡已过期"
-                  : "VIP 月卡"}
-          </strong>
+          <strong>VIP 月卡</strong>
           <small>
-            {vip.data?.active
-              ? `有效期至 ${vip.data.ends_on} · 已续费 ${vip.data.renewals_used}/2`
-              : "查看真实价格、有效期与每日权益"}
+            {pending
+              ? "付款确认中 · 请稍候查看真实结果"
+              : vip.data?.active
+                ? `已生效 · 有效期至 ${vip.data.ends_on} · 已续费 ${vip.data.renewals_used}/2`
+                : vip.data?.ends_on
+                  ? "已过期 · 可重新购买"
+                  : "查看真实价格、有效期与每日权益"}
           </small>
         </span>
       </button>
