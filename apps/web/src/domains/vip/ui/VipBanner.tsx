@@ -14,7 +14,7 @@ export function VipBanner({ open }: { open(): void }): ReactNode {
     <Card className="vip-banner vip-market-hero">
       <img
         className="vip-market-art"
-        src="/assets/vip/vip-membership-hero-v3.webp"
+        src="/assets/vip/vip-membership-hero-v4.webp"
         alt=""
         aria-hidden="true"
         fetchPriority="high"
