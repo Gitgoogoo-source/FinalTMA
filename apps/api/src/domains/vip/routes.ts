@@ -18,6 +18,14 @@ export const vipHandlers = {
   }),
   "vip.create_order": async (context) =>
     createStarsOrder(context, "vip_create_order"),
+  "vip.cancel_order": async (context) =>
+    operationResult(
+      await rpc<OperationEnvelope>("vip_cancel_order", {
+        p_session_id: requireSession(context).session_id,
+        p_operation_id: requireOperationId(context),
+        p_order_id: context.input.order_id,
+      }),
+    ),
   "vip.claim_fgems": async (context) =>
     operationResult(
       await rpc<OperationEnvelope>("vip_claim", {

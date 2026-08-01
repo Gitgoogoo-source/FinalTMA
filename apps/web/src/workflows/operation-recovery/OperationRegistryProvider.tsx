@@ -91,6 +91,7 @@ const externallyRenderedSuccessRouteIds = new Set<RecoverableRouteId>([
   "topup.cancel_order",
   "topup.create_order",
   "topup.fail_order",
+  "vip.cancel_order",
   "vip.claim_fgems",
   "vip.claim_free_box",
   "vip.create_order",

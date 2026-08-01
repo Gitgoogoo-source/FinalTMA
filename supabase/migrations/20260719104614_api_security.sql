@@ -122,6 +122,7 @@ declare
     'topup_fail_order',
     'topup_order',
     'vip_claim',
+    'vip_cancel_order',
     'vip_create_order',
     'vip_get',
     'wallet_create_challenge',

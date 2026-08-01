@@ -17569,6 +17569,857 @@
         }
       }
     },
+    "/api/vip/orders/{order_id}/cancel": {
+      "post": {
+        "operationId": "vip_cancel_order",
+        "tags": ["vip"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "order_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": ["kcoin_topup", "vip"]
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "pending",
+                            "processing",
+                            "paid",
+                            "delivered",
+                            "failed",
+                            "cancelled",
+                            "expired",
+                            "refunded",
+                            "rejected"
+                          ]
+                        },
+                        "stars_amount": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "kcoin_amount": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "invoice_url": {
+                          "anyOf": [
+                            { "type": "string", "format": "uri" },
+                            { "type": "null" }
+                          ]
+                        },
+                        "expires_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                        },
+                        "checkout_started_at": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            },
+                            { "type": "null" }
+                          ]
+                        },
+                        "paid_at": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            },
+                            { "type": "null" }
+                          ]
+                        },
+                        "delivered_at": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            },
+                            { "type": "null" }
+                          ]
+                        },
+                        "failed_at": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            },
+                            { "type": "null" }
+                          ]
+                        },
+                        "cancelled_at": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            },
+                            { "type": "null" }
+                          ]
+                        },
+                        "intent": {
+                          "anyOf": [
+                            {
+                              "oneOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "gacha"
+                                    },
+                                    "tier": {
+                                      "type": "string",
+                                      "enum": ["normal", "rare", "legendary"]
+                                    },
+                                    "draw_count": {
+                                      "anyOf": [
+                                        { "type": "number", "const": 1 },
+                                        { "type": "number", "const": 10 }
+                                      ]
+                                    }
+                                  },
+                                  "required": ["kind", "tier", "draw_count"],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "market"
+                                    },
+                                    "template_id": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    },
+                                    "quantity": {
+                                      "type": "integer",
+                                      "exclusiveMinimum": 0,
+                                      "maximum": 9007199254740991
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "template_id",
+                                    "quantity"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "wheel"
+                                    },
+                                    "count": {
+                                      "anyOf": [
+                                        { "type": "number", "const": 1 },
+                                        { "type": "number", "const": 10 }
+                                      ]
+                                    }
+                                  },
+                                  "required": ["kind", "count"],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "battle_create"
+                                    },
+                                    "tier": {
+                                      "type": "string",
+                                      "enum": [
+                                        "tier-20",
+                                        "tier-100",
+                                        "tier-500"
+                                      ]
+                                    },
+                                    "template_ids": {
+                                      "type": "array",
+                                      "prefixItems": [
+                                        {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 128
+                                        },
+                                        {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 128
+                                        },
+                                        {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 128
+                                        }
+                                      ],
+                                      "minItems": 3,
+                                      "maxItems": 3,
+                                      "uniqueItems": true
+                                    }
+                                  },
+                                  "required": ["kind", "tier", "template_ids"],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "battle_accept"
+                                    },
+                                    "room_id": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    "template_ids": {
+                                      "type": "array",
+                                      "prefixItems": [
+                                        {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 128
+                                        },
+                                        {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 128
+                                        },
+                                        {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 128
+                                        }
+                                      ],
+                                      "minItems": 3,
+                                      "maxItems": 3,
+                                      "uniqueItems": true
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "room_id",
+                                    "template_ids"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              ]
+                            },
+                            { "type": "null" }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "kind",
+                        "status",
+                        "stars_amount",
+                        "kcoin_amount",
+                        "invoice_url",
+                        "expires_at",
+                        "checkout_started_at",
+                        "paid_at",
+                        "delivered_at",
+                        "failed_at",
+                        "cancelled_at",
+                        "intent"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "request_id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "operation_id": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        { "type": "null" }
+                      ]
+                    }
+                  },
+                  "required": ["data", "request_id", "operation_id"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Operation accepted for durable recovery",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": ["kcoin_topup", "vip"]
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "pending",
+                            "processing",
+                            "paid",
+                            "delivered",
+                            "failed",
+                            "cancelled",
+                            "expired",
+                            "refunded",
+                            "rejected"
+                          ]
+                        },
+                        "stars_amount": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "kcoin_amount": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "invoice_url": {
+                          "anyOf": [
+                            { "type": "string", "format": "uri" },
+                            { "type": "null" }
+                          ]
+                        },
+                        "expires_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                        },
+                        "checkout_started_at": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            },
+                            { "type": "null" }
+                          ]
+                        },
+                        "paid_at": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            },
+                            { "type": "null" }
+                          ]
+                        },
+                        "delivered_at": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            },
+                            { "type": "null" }
+                          ]
+                        },
+                        "failed_at": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            },
+                            { "type": "null" }
+                          ]
+                        },
+                        "cancelled_at": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            },
+                            { "type": "null" }
+                          ]
+                        },
+                        "intent": {
+                          "anyOf": [
+                            {
+                              "oneOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "gacha"
+                                    },
+                                    "tier": {
+                                      "type": "string",
+                                      "enum": ["normal", "rare", "legendary"]
+                                    },
+                                    "draw_count": {
+                                      "anyOf": [
+                                        { "type": "number", "const": 1 },
+                                        { "type": "number", "const": 10 }
+                                      ]
+                                    }
+                                  },
+                                  "required": ["kind", "tier", "draw_count"],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "market"
+                                    },
+                                    "template_id": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    },
+                                    "quantity": {
+                                      "type": "integer",
+                                      "exclusiveMinimum": 0,
+                                      "maximum": 9007199254740991
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "template_id",
+                                    "quantity"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "wheel"
+                                    },
+                                    "count": {
+                                      "anyOf": [
+                                        { "type": "number", "const": 1 },
+                                        { "type": "number", "const": 10 }
+                                      ]
+                                    }
+                                  },
+                                  "required": ["kind", "count"],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "battle_create"
+                                    },
+                                    "tier": {
+                                      "type": "string",
+                                      "enum": [
+                                        "tier-20",
+                                        "tier-100",
+                                        "tier-500"
+                                      ]
+                                    },
+                                    "template_ids": {
+                                      "type": "array",
+                                      "prefixItems": [
+                                        {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 128
+                                        },
+                                        {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 128
+                                        },
+                                        {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 128
+                                        }
+                                      ],
+                                      "minItems": 3,
+                                      "maxItems": 3,
+                                      "uniqueItems": true
+                                    }
+                                  },
+                                  "required": ["kind", "tier", "template_ids"],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "battle_accept"
+                                    },
+                                    "room_id": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    "template_ids": {
+                                      "type": "array",
+                                      "prefixItems": [
+                                        {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 128
+                                        },
+                                        {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 128
+                                        },
+                                        {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 128
+                                        }
+                                      ],
+                                      "minItems": 3,
+                                      "maxItems": 3,
+                                      "uniqueItems": true
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "room_id",
+                                    "template_ids"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              ]
+                            },
+                            { "type": "null" }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "kind",
+                        "status",
+                        "stars_amount",
+                        "kcoin_amount",
+                        "invoice_url",
+                        "expires_at",
+                        "checkout_started_at",
+                        "paid_at",
+                        "delivered_at",
+                        "failed_at",
+                        "cancelled_at",
+                        "intent"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "request_id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "operation_id": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        { "type": "null" }
+                      ]
+                    }
+                  },
+                  "required": ["data", "request_id", "operation_id"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Errors: REQUEST_INVALID, IDEMPOTENCY_KEY_INVALID, IDEMPOTENCY_KEY_REQUIRED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "401": {
+            "description": "Errors: SESSION_EXPIRED, SESSION_REPLACED, SESSION_REQUIRED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "403": {
+            "description": "Errors: ACCOUNT_RESTRICTED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "404": {
+            "description": "Errors: PAYMENT_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "409": {
+            "description": "Errors: ENTRY_HANDOFF_PENDING, PAYMENT_ALREADY_PROCESSING, IDEMPOTENCY_KEY_REUSED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "413": {
+            "description": "Errors: REQUEST_TOO_LARGE",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "415": {
+            "description": "Errors: CONTENT_TYPE_INVALID",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "500": {
+            "description": "Errors: DATABASE_RPC_FAILED, INTERNAL_ERROR",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "502": {
+            "description": "Errors: RESPONSE_INVALID",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          }
+        },
+        "x-idempotency-required": true,
+        "x-idempotency-forbidden": false,
+        "x-allow-pending-entry-handoff": false,
+        "x-error-codes": [
+          "DATABASE_RPC_FAILED",
+          "INTERNAL_ERROR",
+          "REQUEST_INVALID",
+          "RESPONSE_INVALID",
+          "CONTENT_TYPE_INVALID",
+          "REQUEST_TOO_LARGE",
+          "ACCOUNT_RESTRICTED",
+          "SESSION_EXPIRED",
+          "SESSION_REPLACED",
+          "SESSION_REQUIRED",
+          "ENTRY_HANDOFF_PENDING",
+          "IDEMPOTENCY_KEY_INVALID",
+          "IDEMPOTENCY_KEY_REQUIRED",
+          "PAYMENT_NOT_FOUND",
+          "PAYMENT_ALREADY_PROCESSING",
+          "IDEMPOTENCY_KEY_REUSED"
+        ],
+        "x-error-definitions": {
+          "DATABASE_RPC_FAILED": {
+            "status": 500,
+            "message": "数据库操作失败",
+            "retryable": true,
+            "refreshScope": "all",
+            "recoveryAction": "query_operation"
+          },
+          "INTERNAL_ERROR": {
+            "status": 500,
+            "message": "服务暂时不可用",
+            "retryable": true,
+            "refreshScope": "all",
+            "recoveryAction": "query_operation"
+          },
+          "REQUEST_INVALID": {
+            "status": 400,
+            "message": "请求参数无效",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "RESPONSE_INVALID": {
+            "status": 502,
+            "message": "服务响应格式无效",
+            "retryable": true,
+            "refreshScope": "all",
+            "recoveryAction": "refresh"
+          },
+          "CONTENT_TYPE_INVALID": {
+            "status": 415,
+            "message": "请求体必须使用 application/json",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "REQUEST_TOO_LARGE": {
+            "status": 413,
+            "message": "请求体过大",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "ACCOUNT_RESTRICTED": {
+            "status": 403,
+            "message": "账户当前不可执行此操作",
+            "retryable": false,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
+          },
+          "SESSION_EXPIRED": {
+            "status": 401,
+            "message": "会话已过期",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "reauthenticate"
+          },
+          "SESSION_REPLACED": {
+            "status": 401,
+            "message": "会话已被替换",
+            "retryable": false,
+            "refreshScope": "session",
+            "recoveryAction": "reauthenticate"
+          },
+          "SESSION_REQUIRED": {
+            "status": 401,
+            "message": "请从 Telegram 重新进入应用",
+            "retryable": false,
+            "refreshScope": "session",
+            "recoveryAction": "reauthenticate"
+          },
+          "ENTRY_HANDOFF_PENDING": {
+            "status": 409,
+            "message": "邀请绑定结果确认中，请稍后刷新",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
+          },
+          "IDEMPOTENCY_KEY_INVALID": {
+            "status": 400,
+            "message": "幂等键必须是 UUID",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "IDEMPOTENCY_KEY_REQUIRED": {
+            "status": 400,
+            "message": "缺少幂等键",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "PAYMENT_NOT_FOUND": {
+            "status": 404,
+            "message": "支付订单不存在",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "PAYMENT_ALREADY_PROCESSING": {
+            "status": 409,
+            "message": "已有已提交的支付正在确认",
+            "retryable": false,
+            "refreshScope": "payments",
+            "recoveryAction": "refresh"
+          },
+          "IDEMPOTENCY_KEY_REUSED": {
+            "status": 409,
+            "message": "幂等键已用于不同请求",
+            "retryable": false,
+            "refreshScope": "all",
+            "recoveryAction": "query_operation"
+          }
+        },
+        "x-refresh-scopes": ["payments", "assets"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/vip/claims/fgems": {
       "post": {
         "operationId": "vip_claim_fgems",

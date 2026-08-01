@@ -1,7 +1,7 @@
 import { Crown } from "lucide-react";
 import type { ReactNode } from "react";
 
-import { useApiQuery } from "../../../platform/query/index.ts";
+import { seedApiQuery, useApiQuery } from "../../../platform/query/index.ts";
 import { telegram } from "../../../platform/telegram/index.ts";
 import { Badge, Button } from "../../../shared/ui/index.tsx";
 import { useOperationRegistry } from "../../../workflows/operation-recovery/index.ts";
@@ -14,7 +14,23 @@ export function VipDialog({ close }: { close(): void }): ReactNode {
   const order = () =>
     void run("正在创建 VIP 月卡订单", "vip.create_order", {}).then((result) => {
       if (result?.invoice_url)
-        telegram()?.openInvoice(result.invoice_url, () => {
+        telegram()?.openInvoice(result.invoice_url, (status) => {
+          if (status === "cancelled") {
+            if (query.data)
+              seedApiQuery(
+                "vip.get",
+                {},
+                { ...query.data, pending_order: null },
+              );
+            close();
+            void run(
+              "正在取消未付款月卡订单",
+              "vip.cancel_order",
+              { order_id: result.id },
+              { background: true },
+            );
+            return;
+          }
           void query.refetch();
         });
     });

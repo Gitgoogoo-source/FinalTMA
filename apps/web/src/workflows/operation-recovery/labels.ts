@@ -22,6 +22,7 @@ const labels: Partial<Record<RecoverableRouteId, string>> = {
   "topup.fail_order": "正在确认充值失败结果",
   "vip.claim_fgems": "正在领取 VIP F-gems",
   "vip.claim_free_box": "正在领取 VIP 盲盒",
+  "vip.cancel_order": "正在取消未付款月卡订单",
   "vip.create_order": "正在创建 VIP Stars 订单",
   "wallet.disconnect": "正在断开钱包",
   "wallet.verify": "正在验证 TON 钱包",

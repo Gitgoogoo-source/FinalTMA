@@ -461,6 +461,45 @@ begin
 end;
 $$;
 
+create or replace function api.vip_cancel_order(p_session_id uuid, p_operation_id uuid, p_order_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_operation operations.operations%rowtype;
+  v_replay jsonb;
+  v_user_id uuid;
+  v_order payments.orders%rowtype;
+  v_detail text;
+begin
+  v_operation := operations.begin_command(p_session_id, 'vip.cancel_order', p_operation_id, jsonb_build_object('order_id', p_order_id));
+  v_replay := operations.replay_if_finished(v_operation);
+  if v_replay is not null then return v_replay; end if;
+  v_user_id := v_operation.user_id;
+  begin
+    perform pg_advisory_xact_lock(hashtextextended('pokepets:payment:' || v_user_id::text || ':vip', 0));
+    select * into v_order from payments.orders
+    where id = p_order_id and user_id = v_user_id and kind = 'vip'
+    for update;
+    if v_order.id is null then perform api.raise_business_error('PAYMENT_NOT_FOUND', '支付订单不存在'); end if;
+    if v_order.status = 'pending' and v_order.checkout_started_at is null then
+      update payments.orders set status = 'cancelled', cancelled_at = now(), updated_at = now()
+      where id = v_order.id returning * into v_order;
+    elsif v_order.status in ('pending', 'processing', 'paid') then
+      perform api.raise_business_error('PAYMENT_ALREADY_PROCESSING', '支付已经提交，当前不能取消');
+    end if;
+    update operations.operations set result = payments.order_json(v_order), updated_at = now()
+    where id = v_order.operation_id;
+    return operations.complete_command(p_operation_id, payments.order_json(v_order));
+  exception when others then
+    get stacked diagnostics v_detail = pg_exception_detail;
+    return operations.fail_command(p_operation_id, case when sqlstate = 'P0001' then sqlerrm else 'INTERNAL_ERROR' end, jsonb_build_object('detail', coalesce(v_detail, '{}')));
+  end;
+end;
+$$;
+
 create or replace function api.topup_fail_order(p_session_id uuid, p_operation_id uuid, p_order_id uuid)
 returns jsonb
 language plpgsql

@@ -5,6 +5,7 @@ import {
   emptyObjectSchema,
   nonNegativeIntegerSchema,
   positiveIntegerSchema,
+  uuidSchema,
 } from "../../common/schemas.ts";
 import { paymentSchema } from "../topup/models.ts";
 import { vipStatusSchema } from "./models.ts";
@@ -42,6 +43,23 @@ export const vipRoutes = [
       "PAYMENT_ALREADY_PENDING",
       "PAYMENT_NOT_FOUND",
       "TELEGRAM_API_FAILED",
+      "IDEMPOTENCY_KEY_REUSED",
+      "INTERNAL_ERROR",
+    ],
+  }),
+  defineRoute({
+    id: "vip.cancel_order",
+    method: "POST",
+    path: "/api/vip/orders/:order_id/cancel",
+    gateway: "app",
+    auth: true,
+    idempotent: true,
+    refreshScopes: ["payments", "assets"],
+    input: z.object({ order_id: uuidSchema }).strict(),
+    output: paymentSchema,
+    errors: [
+      "PAYMENT_NOT_FOUND",
+      "PAYMENT_ALREADY_PROCESSING",
       "IDEMPOTENCY_KEY_REUSED",
       "INTERNAL_ERROR",
     ],

@@ -237,6 +237,7 @@ def verify_stars_payment_contract() -> None:
             "checkout_started_at timestamptz",
             "create or replace function api.topup_cancel_order",
             "create or replace function api.topup_fail_order",
+            "create or replace function api.vip_cancel_order",
             "create or replace function api.payment_fail_invoice_creation",
             "return operations.complete_command(v_order.operation_id, v_result)",
             "raise_business_error('payment_already_processing'",
