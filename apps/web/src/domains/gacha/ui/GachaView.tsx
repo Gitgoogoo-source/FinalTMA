@@ -4,6 +4,7 @@ import {
   Gift,
   RefreshCw,
   Sparkles,
+  Star,
 } from "lucide-react";
 import {
   useCallback,
@@ -50,8 +51,8 @@ const rarityLabels = {
 } as const;
 const boxArtPaths: Record<BoxTier, string> = {
   normal: "/assets/boxes/normal.webp",
-  rare: "/assets/boxes/legendary.webp",
-  legendary: "/assets/boxes/rare.webp",
+  rare: "/assets/boxes/rare.webp",
+  legendary: "/assets/boxes/legendary.webp",
 };
 
 const pityLoadError = new Error("保底进度加载失败，请重试");
@@ -366,13 +367,11 @@ export function GachaView({
             <Card className="gacha-details">
               <section className="gacha-reward-preview">
                 <header>
-                  <div>
-                    <strong>
-                      <Sparkles aria-hidden="true" />
-                      可能获得
-                    </strong>
-                    <small>{raritySummary}</small>
-                  </div>
+                  <strong>
+                    <Star aria-hidden="true" />
+                    可能获得
+                  </strong>
+                  <small>{raritySummary}</small>
                   <button
                     ref={poolTrigger}
                     type="button"

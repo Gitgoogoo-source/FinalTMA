@@ -2394,115 +2394,57 @@ input:focus {
 }
 .app-shell .vip-daily-benefits {
   min-width: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
   position: absolute;
   left: 2px;
   top: 6px;
   z-index: 3;
-  padding: 3px;
-  border: 1px solid rgba(255, 255, 255, 0.82);
-  border-radius: 24px;
-  background: rgba(255, 255, 255, 0.72);
-  box-shadow:
-    0 12px 28px rgba(72, 55, 40, 0.08),
-    inset 0 1px 0 #fff;
-  backdrop-filter: blur(20px) saturate(150%);
-}
-.app-shell .vip-benefit-heading {
-  width: 42px;
-  height: 42px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0;
-  border-radius: 50%;
-  color: #c86d18;
-  background: rgba(255, 150, 54, 0.09);
-}
-.app-shell .vip-benefit-heading > svg {
-  width: 12px;
-  height: 12px;
-  stroke-width: 2.5;
-}
-.app-shell .vip-benefit-heading > span {
-  font-size: 6px;
-  font-weight: 950;
-  letter-spacing: 0.08em;
-}
-.app-shell .vip-benefit-heading > strong {
-  max-width: 34px;
-  overflow: hidden;
-  padding: 2px 4px;
-  border-radius: 999px;
-  color: #a45e1a;
-  background: rgba(255, 150, 54, 0.11);
-  font-size: 5px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.app-shell .vip-benefit-retry {
-  width: 16px;
-  height: 16px;
-  display: grid;
-  place-items: center;
-  padding: 0;
-  border: 1px solid rgba(190, 84, 67, 0.16);
-  border-radius: 50%;
-  color: #b84b3d;
-  background: rgba(255, 255, 255, 0.78);
-}
-.app-shell .vip-benefit-retry svg {
-  width: 11px;
 }
 .app-shell .vip-benefit-grid {
-  width: auto;
+  width: 88px;
   display: grid;
   grid-template-columns: 1fr;
-  gap: 4px;
+  gap: 6px;
 }
 .app-shell .vip-benefit-grid article {
   min-width: 0;
   position: relative;
 }
 .app-shell .vip-benefit-grid .vip-benefit-tile {
-  width: 78px;
-  min-height: 42px;
+  width: 88px;
+  min-height: 49px;
   display: grid;
-  grid-template-columns: 21px minmax(0, 1fr);
+  grid-template-columns: 24px minmax(0, 1fr);
   grid-template-rows: auto auto auto;
-  column-gap: 4px;
-  padding: 4px 5px;
-  border: 1px solid rgba(231, 224, 214, 0.72);
-  border-radius: 19px;
+  column-gap: 5px;
+  padding: 5px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.76);
+  border-radius: 17px;
   color: #4b5550;
-  background: rgba(255, 255, 255, 0.84);
+  background: rgba(255, 255, 255, 0.4);
   box-shadow:
-    0 7px 16px rgba(72, 55, 40, 0.06),
-    inset 0 1px 0 #fff;
-  backdrop-filter: blur(18px) saturate(145%);
+    0 10px 22px rgba(72, 55, 40, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
 }
 .app-shell .vip-benefit-grid .vip-benefit-tile:disabled {
-  opacity: 0.72;
+  opacity: 0.66;
 }
 .app-shell .vip-benefit-grid .vip-benefit-tile:not(:disabled):active {
   transform: scale(0.96);
 }
 .app-shell .vip-benefit-tile .benefit-icon {
-  width: 21px;
-  height: 21px;
+  width: 24px;
+  height: 24px;
   grid-row: 1 / 4;
   align-self: center;
   display: grid;
   place-items: center;
   margin-bottom: 2px;
-  border-radius: 11px;
+  border-radius: 12px;
 }
 .app-shell .vip-benefit-tile .benefit-icon svg {
-  width: 12px;
+  width: 13px;
 }
 .app-shell .vip-benefit-tile.fgems .benefit-icon {
   color: #4f9edc;
@@ -2514,20 +2456,20 @@ input:focus {
 }
 .app-shell .vip-benefit-tile > strong {
   align-self: end;
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 950;
   line-height: 1.1;
 }
 .app-shell .vip-benefit-tile > small {
   color: #8c9691;
-  font-size: 5px;
+  font-size: 6px;
   font-weight: 800;
 }
 .app-shell .vip-benefit-tile > span:last-child {
   min-width: 0;
   overflow: hidden;
   color: #db6c16;
-  font-size: 5px;
+  font-size: 6px;
   font-weight: 900;
   line-height: 1.1;
   text-overflow: ellipsis;
@@ -2690,15 +2632,10 @@ input:focus {
   padding: 0 4px;
 }
 .app-shell .gacha-reward-preview > header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-.app-shell .gacha-reward-preview > header > div {
-  min-width: 0;
   display: grid;
-  gap: 1px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
 }
 .app-shell .gacha-reward-preview > header strong {
   display: flex;
@@ -2713,7 +2650,7 @@ input:focus {
   fill: rgba(255, 122, 0, 0.12);
 }
 .app-shell .gacha-reward-preview > header small {
-  max-width: 250px;
+  min-width: 0;
   overflow: hidden;
   color: #8b9590;
   font-size: 7px;
@@ -2722,6 +2659,7 @@ input:focus {
 }
 .app-shell .gacha-reward-preview .gacha-pool-trigger {
   min-height: 28px;
+  justify-self: end;
   gap: 2px;
   padding: 0;
   color: #6f7b75;
@@ -7285,8 +7223,8 @@ body,
 
 .app-shell .gacha-hero,
 .app-shell .gacha-stage {
-  min-height: 340px;
-  height: 340px;
+  min-height: 336px;
+  height: 336px;
 }
 
 .app-shell .gacha-hero {
@@ -7295,7 +7233,7 @@ body,
 
 .app-shell .gacha-stage {
   align-items: end;
-  padding-top: 8px;
+  padding-top: 0;
 }
 
 .app-shell .gacha-stage .stage-glow {
@@ -7305,9 +7243,9 @@ body,
 .app-shell .gacha-stage::after {
   left: 50%;
   right: auto;
-  bottom: 40px;
-  width: min(216px, 62vw);
-  height: 32px;
+  bottom: 34px;
+  width: min(222px, 64vw);
+  height: 29px;
   opacity: 1;
   filter: blur(7px);
   transform: translateX(-50%);
@@ -7316,11 +7254,11 @@ body,
 .app-shell .gacha-stage .catalog-image,
 .app-shell .gacha-stage.rare .catalog-image,
 .app-shell .gacha-stage .image-missing {
-  width: 270px;
-  max-width: calc(100% - 28px);
-  height: 302.4px;
+  width: min(74vw, 284px);
+  max-width: calc(100% - 20px);
+  height: 276px;
   align-self: end;
-  margin-bottom: 22px;
+  margin-bottom: 18px;
   border-radius: 0;
   object-position: center bottom;
   filter: drop-shadow(0 28px 28px rgba(54, 67, 75, 0.18));
@@ -7330,7 +7268,7 @@ body,
 
 .app-shell .vip-daily-benefits {
   left: 2px;
-  top: 76px;
+  top: 82px;
 }
 
 .app-shell .gacha-tier-selector {
@@ -7389,37 +7327,32 @@ body,
 }
 
 .app-shell .gacha-details {
-  height: 142px;
+  height: 136px;
   display: grid;
-  grid-template-rows: 96px 46px;
+  grid-template-rows: 90px 46px;
   gap: 0;
   padding: 0;
 }
 
 .app-shell .gacha-reward-preview {
-  height: 84px;
-  display: block;
-  margin-top: 12px;
-  padding: 0 34px;
+  height: 78px;
+  display: grid;
+  margin-top: 10px;
+  padding: 0 4px;
 }
 
 .app-shell .gacha-reward-preview > header {
-  height: 15px;
-  min-height: 15px;
-  margin-bottom: 8px;
-}
-
-.app-shell .gacha-reward-preview > header > div {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  height: 18px;
+  min-height: 18px;
+  margin-bottom: 6px;
+  gap: 5px;
 }
 
 .app-shell .gacha-reward-preview > header strong {
   flex: 0 0 auto;
-  gap: 6px;
-  font-size: 12px;
-  line-height: 15px;
+  gap: 5px;
+  font-size: 11px;
+  line-height: 14px;
 }
 
 .app-shell .gacha-reward-preview > header strong svg {
@@ -7428,18 +7361,20 @@ body,
 }
 
 .app-shell .gacha-reward-preview > header small {
-  max-width: clamp(108px, 33vw, 132px);
-  overflow: visible;
-  font-size: 5.5px;
-  line-height: 5px;
-  text-overflow: clip;
-  white-space: normal;
+  min-width: 0;
+  overflow: hidden;
+  padding-left: 5px;
+  border-left: 1px solid rgba(116, 126, 121, 0.16);
+  font-size: 6px;
+  line-height: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .app-shell .gacha-reward-preview .gacha-pool-trigger {
-  min-height: 15px;
-  font-size: 12px;
-  line-height: 15px;
+  min-height: 18px;
+  font-size: 10px;
+  line-height: 14px;
 }
 
 .app-shell .gacha-reward-preview .gacha-pool-trigger svg {
@@ -7448,26 +7383,27 @@ body,
 }
 
 .app-shell .gacha-preview-items {
-  grid-template-columns: repeat(5, 54px);
-  justify-content: center;
-  gap: 9px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  justify-content: stretch;
+  gap: 6px;
 }
 
 .app-shell .gacha-preview-items button {
-  width: 54px;
-  height: 61px;
-  gap: 5px;
+  width: auto;
+  height: 54px;
+  gap: 3px;
 }
 
 .app-shell .gacha-preview-items .preview-art {
-  width: 44px;
-  height: 44px;
-  flex: 0 0 44px;
+  width: min(100%, 44px);
+  height: auto;
+  aspect-ratio: 1;
+  flex: 0 0 auto;
 }
 
 .app-shell .gacha-preview-items > button > strong {
-  font-size: 10px;
-  line-height: 12px;
+  font-size: 8px;
+  line-height: 10px;
 }
 
 .app-shell .gacha-preview-state {
@@ -7526,8 +7462,8 @@ body,
 }
 
 .app-shell .gacha-details:has(.gacha-rule-failure) {
-  height: 164px;
-  grid-template-rows: 96px 68px;
+  height: 158px;
+  grid-template-rows: 90px 68px;
 }
 
 .app-shell .gacha-actions {

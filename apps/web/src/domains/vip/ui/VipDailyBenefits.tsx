@@ -1,4 +1,4 @@
-import { Crown, Gem, Gift, RefreshCw } from "lucide-react";
+import { Gem, Gift } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -93,12 +93,6 @@ export function VipDailyBenefits({
     freeBoxFeedback && freeBoxFeedback.benefitDate === data?.benefit_date
       ? freeBoxFeedback.status
       : undefined;
-  const statusBadge = vipStatusBadge(
-    data,
-    paymentPending,
-    vip.isLoading,
-    vip.error,
-  );
   const statusText = vipStatusText(data, paymentPending, vip.isLoading);
   const fgemsAction = benefitButtonText({
     active,
@@ -119,36 +113,34 @@ export function VipDailyBenefits({
     loadFailed,
     available: "领取免费稀有盲盒",
   });
+  const fgemsDisabled =
+    fgemsPending || (!loadFailed && (unavailable || (active && fgemsClaimed)));
+  const freeBoxDisabled =
+    freeBoxPending ||
+    (!loadFailed && (unavailable || (active && freeBoxClaimed)));
+  const activateBenefit = (benefit: Benefit) => {
+    if (loadFailed) {
+      void vip.refetch();
+      return;
+    }
+    if (active) void claim(benefit);
+    else openDetails();
+  };
 
   return (
     <aside
       className="vip-daily-benefits"
-      aria-label={`月卡每日权益，${statusBadge}，${statusText}`}
+      aria-label={`月卡每日权益，${statusText}`}
       aria-live="polite"
       title={statusText}
     >
-      <div className="vip-benefit-heading">
-        <Crown aria-hidden="true" />
-        <span>VIP</span>
-        <strong>{statusBadge}</strong>
-        {loadFailed && (
-          <button
-            type="button"
-            className="vip-benefit-retry"
-            aria-label="月卡状态加载失败，重新加载"
-            onClick={() => void vip.refetch()}
-          >
-            <RefreshCw aria-hidden="true" />
-          </button>
-        )}
-      </div>
       <div className="vip-benefit-grid">
         <article>
           <Button
             className="vip-benefit-tile fgems"
-            disabled={unavailable || fgemsPending || (active && fgemsClaimed)}
+            disabled={fgemsDisabled}
             aria-label={`100 Fgems，每个 UTC+0 日手动领取，${fgemsAction}`}
-            onClick={() => (active ? void claim("fgems") : openDetails())}
+            onClick={() => activateBenefit("fgems")}
           >
             <span className="benefit-icon">
               <Gem aria-hidden="true" />
@@ -167,11 +159,9 @@ export function VipDailyBenefits({
         <article>
           <Button
             className="vip-benefit-tile free-box"
-            disabled={
-              unavailable || freeBoxPending || (active && freeBoxClaimed)
-            }
+            disabled={freeBoxDisabled}
             aria-label={`免费稀有盲盒 1 次，全部来源当前可用 ${data?.free_rare_box_available ?? "—"} 次，${freeBoxAction}`}
-            onClick={() => (active ? void claim("freeBox") : openDetails())}
+            onClick={() => activateBenefit("freeBox")}
           >
             <span className="benefit-icon">
               <Gift aria-hidden="true" />
@@ -234,23 +224,10 @@ function benefitButtonText({
   available: string;
 }): string {
   if (pending) return "领取中";
-  if (loadFailed) return "加载失败";
+  if (loadFailed) return "加载失败，点击重试";
   if (loading) return "状态加载中";
   if (active) return claimed ? (used ? "今日已使用" : "今日已领取") : available;
   return expired ? "月卡已过期" : "购买月卡后可领取";
-}
-
-function vipStatusBadge(
-  data: ReturnType<typeof useApiQuery<"vip.get">>["data"],
-  paymentPending: boolean,
-  loading: boolean,
-  error: Error | null,
-): string {
-  if (loading) return "加载中";
-  if (error) return "加载失败";
-  if (paymentPending) return "付款确认中";
-  if (data?.active) return "有效";
-  return data?.ends_on ? "已过期" : "未开通";
 }
 
 function vipStatusText(
