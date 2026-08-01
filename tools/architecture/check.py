@@ -154,6 +154,7 @@ def main() -> None:
     verify_game_page_boundary()
     verify_battle_terminal_refresh_semantics()
     verify_battle_accept_operation_ordering()
+    verify_battle_countdown_lock_semantics()
     verify_api_boundaries()
     verify_contract_boundaries()
     verify_documentation()
@@ -301,6 +302,45 @@ def verify_game_page_boundary() -> None:
     battle_screens = (
         WEB_ROOT / "domains/battle/ui/BattleScreens.tsx"
     ).read_text(encoding="utf-8")
+    countdown_terms = (
+        'className="battle-countdown-lock"',
+        'aria-modal="true"',
+        "倒计时已锁定",
+        "离开不会取消战斗",
+        "服务器将在截止时自动进入对战",
+    )
+    missing_countdown_terms = [
+        value for value in countdown_terms if value not in battle_screens
+    ]
+    if missing_countdown_terms:
+        raise SystemExit(
+            "Battle locked countdown page is incomplete: "
+            f"{missing_countdown_terms}"
+        )
+    battle_css = (WEB_ROOT / "domains/battle/ui/battle.css").read_text(
+        encoding="utf-8"
+    )
+    countdown_rule = battle_css.partition(".battle-countdown-lock {")[2].partition(
+        "}"
+    )[0]
+    countdown_css_terms = (
+        "position: fixed",
+        "inset: 0",
+        "z-index: 200",
+        "min-height: 100dvh",
+        "touch-action: none",
+    )
+    missing_countdown_css = [
+        value for value in countdown_css_terms if value not in countdown_rule
+    ]
+    if missing_countdown_css or (
+        ".app-shell:has(.battle-countdown-lock) .topbar" not in battle_css
+        or ".app-shell:has(.battle-countdown-lock) .bottom-nav" not in battle_css
+    ):
+        raise SystemExit(
+            "Battle countdown must cover the viewport and both navigation bars: "
+            f"{missing_countdown_css}"
+        )
     lobby_source = battle_screens.partition(
         "export function BattleLobby"
     )[2].partition("export function BattleInviteMissing")[0]
@@ -477,6 +517,106 @@ def verify_battle_accept_source(label: str, source: str) -> None:
         )
 
 
+def extract_sql_function(label: str, source: str, name: str) -> str:
+    pattern = re.compile(
+        rf"create or replace function {re.escape(name)}\(.*?\n\$\$;",
+        re.DOTALL,
+    )
+    functions = pattern.findall(source)
+    if len(functions) != 1:
+        raise SystemExit(f"{label}: expected exactly one {name} definition")
+    return functions[0]
+
+
+def verify_battle_countdown_lock_semantics() -> None:
+    sources = {
+        relative(BATTLE_SCHEMA): BATTLE_SCHEMA.read_text(encoding="utf-8"),
+        relative(BATTLE_BASELINE_MIGRATION): BATTLE_BASELINE_MIGRATION.read_text(
+            encoding="utf-8"
+        ),
+    }
+    definitions: dict[str, dict[str, str]] = {}
+    for label, source in sources.items():
+        terminal = extract_sql_function(
+            label, source, "battle.lobby_terminal_reason"
+        )
+        reconcile = extract_sql_function(
+            label, source, "battle.reconcile_lobby_presence"
+        )
+        advance = extract_sql_function(label, source, "battle.advance_lobby")
+        cancel = extract_sql_function(label, source, "api.battle_cancel_room")
+        definitions[label] = {
+            "terminal": terminal,
+            "reconcile": reconcile,
+            "advance": advance,
+            "cancel": cancel,
+        }
+
+        if terminal.count("when r.status = 'lobby_waiting'") != 3:
+            raise SystemExit(
+                f"{label}: lobby timeouts and bans must apply only before countdown lock"
+            )
+        if "if v_room.status = 'lobby_countdown' then return; end if;" not in reconcile:
+            raise SystemExit(
+                f"{label}: countdown reconciliation must preserve the locked deadline"
+            )
+        if (
+            "lobby_countdown_stopped" in source
+            or "set status = 'lobby_waiting'," in reconcile
+            or "lobby_start_deadline = null" in reconcile
+        ):
+            raise SystemExit(
+                f"{label}: countdown presence handling can still stop or reset the lock"
+            )
+        countdown_start_terms = (
+            "v_room.status = 'lobby_waiting'",
+            "v_both_online",
+            ") <= v_room.lobby_expires_at",
+            "set status = 'lobby_countdown'",
+            "'lobby_countdown_started'",
+        )
+        missing_start_terms = [
+            value for value in countdown_start_terms if value not in reconcile
+        ]
+        if missing_start_terms:
+            raise SystemExit(
+                f"{label}: atomic countdown start is incomplete: {missing_start_terms}"
+            )
+        if (
+            "v_online_count" in advance
+            or "last_heartbeat_at >" in advance
+            or "offline_since is null" in advance
+        ):
+            raise SystemExit(
+                f"{label}: deadline advance must not recheck participant presence"
+            )
+        advance_terms = (
+            "v_room.status <> 'lobby_countdown'",
+            "v_room.lobby_start_deadline > now()",
+            "set status = 'active_select'",
+            "current_turn_no = 1",
+            "insert into battle.turns",
+        )
+        missing_advance_terms = [
+            value for value in advance_terms if value not in advance
+        ]
+        if missing_advance_terms or advance.count("'battle_started'") != 1:
+            raise SystemExit(
+                f"{label}: countdown deadline must start Battle exactly once: "
+                f"{missing_advance_terms}"
+            )
+        if "v_room.status not in ('preparing_share', 'waiting')" not in cancel:
+            raise SystemExit(
+                f"{label}: explicit cancel must reject an accepted or locked room"
+            )
+
+    schema_definitions, migration_definitions = definitions.values()
+    if schema_definitions != migration_definitions:
+        raise SystemExit(
+            "Battle countdown functions differ between declarative schema and baseline migration"
+        )
+
+
 def verify_api_boundaries() -> None:
     violations: list[str] = []
     for source in typescript_files(API_ROOT):
@@ -621,6 +761,81 @@ def verify_documentation() -> None:
         raise SystemExit(
             "Controlled Battle fixture ADR is incomplete: "
             f"{missing_fixture_terms}"
+        )
+    countdown_documents = {
+        "Battle功能方向说明.md": (ROOT / "Battle功能方向说明.md").read_text(
+            encoding="utf-8"
+        ),
+        "Battle功能开发方案.md": (ROOT / "Battle功能开发方案.md").read_text(
+            encoding="utf-8"
+        ),
+        "docs/product/功能说明文档.md": (
+            ROOT / "docs/product/功能说明文档.md"
+        ).read_text(encoding="utf-8"),
+        "docs/architecture/data-transactions.md": (
+            ROOT / "docs/architecture/data-transactions.md"
+        ).read_text(encoding="utf-8"),
+        "docs/architecture/runtime.md": (
+            ROOT / "docs/architecture/runtime.md"
+        ).read_text(encoding="utf-8"),
+        "docs/architecture/security-boundaries.md": (
+            ROOT / "docs/architecture/security-boundaries.md"
+        ).read_text(encoding="utf-8"),
+        "docs/operations/acceptance.md": (
+            ROOT / "docs/operations/acceptance.md"
+        ).read_text(encoding="utf-8"),
+    }
+    countdown_required = ("lobby_waiting", "lobby_countdown")
+    incomplete_countdown_documents = {
+        label: [value for value in countdown_required if value not in source]
+        for label, source in countdown_documents.items()
+        if any(value not in source for value in countdown_required)
+    }
+    if incomplete_countdown_documents:
+        raise SystemExit(
+            "Battle countdown lock documentation is incomplete: "
+            f"{incomplete_countdown_documents}"
+        )
+    countdown_ui_documents = {
+        label: countdown_documents[label]
+        for label in (
+            "Battle功能方向说明.md",
+            "Battle功能开发方案.md",
+            "docs/product/功能说明文档.md",
+            "docs/architecture/runtime.md",
+            "docs/operations/acceptance.md",
+        )
+    }
+    incomplete_countdown_ui = {
+        label: [
+            value
+            for value in ("倒计时已锁定", "离开不会取消战斗")
+            if value not in source
+        ]
+        for label, source in countdown_ui_documents.items()
+        if "倒计时已锁定" not in source or "离开不会取消战斗" not in source
+    }
+    if incomplete_countdown_ui:
+        raise SystemExit(
+            "Battle countdown UI documentation is incomplete: "
+            f"{incomplete_countdown_ui}"
+        )
+    obsolete_countdown_requirements = (
+        "到期再次确认在线",
+        "3 秒倒计时开始/中止/完整重启",
+        "任一方离线即中止倒计时",
+    )
+    conflicting_countdown_documents = {
+        label: [
+            value for value in obsolete_countdown_requirements if value in source
+        ]
+        for label, source in countdown_documents.items()
+        if any(value in source for value in obsolete_countdown_requirements)
+    }
+    if conflicting_countdown_documents:
+        raise SystemExit(
+            "Battle documentation still requires a cancellable countdown: "
+            f"{conflicting_countdown_documents}"
         )
 
 

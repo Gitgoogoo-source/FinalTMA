@@ -349,6 +349,13 @@ export function BattleLobby({
 }): ReactNode {
   const creator = lobby.presence.creator;
   const opponent = lobby.presence.opponent;
+  if (lobby.phase === "lobby_countdown")
+    return (
+      <BattleCountdownLock
+        countdownSeconds={countdownSeconds}
+        realtimeOffline={realtimeOffline}
+      />
+    );
   return (
     <div className="battle-lobby">
       <BattleScreenHeader
@@ -370,11 +377,7 @@ export function BattleLobby({
         />
         <div className="battle-lobby-versus" aria-label="对战双方">
           <strong>VS</strong>
-          <span>
-            {lobby.phase === "lobby_countdown"
-              ? `${countdownSeconds ?? 0} 秒后由服务器确认开战`
-              : "等待双方进入房间"}
-          </span>
+          <span>等待双方进入房间</span>
         </div>
         <LobbyPlayer
           side="opponent"
@@ -391,11 +394,7 @@ export function BattleLobby({
         </div>
         <div>
           <span>服务器开战倒计时</span>
-          <strong>
-            {lobby.phase === "lobby_countdown"
-              ? `${countdownSeconds ?? 0} 秒`
-              : "尚未开始"}
-          </strong>
+          <strong>尚未开始</strong>
         </div>
       </section>
       {realtimeOffline ? (
@@ -407,6 +406,50 @@ export function BattleLobby({
         开战、离线终结、退款和藏品释放只由数据库裁决；本页不会提供取消、分享或重新选队。
       </p>
     </div>
+  );
+}
+
+function BattleCountdownLock({
+  countdownSeconds,
+  realtimeOffline,
+}: {
+  countdownSeconds: number | null;
+  realtimeOffline: boolean;
+}): ReactNode {
+  const display =
+    countdownSeconds === null
+      ? 3
+      : countdownSeconds > 0
+        ? countdownSeconds
+        : "GO";
+  return (
+    <section
+      className="battle-countdown-lock"
+      role="dialog"
+      aria-modal="true"
+      aria-label="开战倒计时已锁定"
+    >
+      <div className="battle-countdown-energy red" aria-hidden="true" />
+      <div className="battle-countdown-energy blue" aria-hidden="true" />
+      <header>
+        <span>COMBAT COMMITMENT LOCKED</span>
+        <h1>倒计时已锁定</h1>
+      </header>
+      <div
+        className="battle-countdown-core"
+        aria-live="assertive"
+        aria-atomic="true"
+      >
+        <span key={display}>{display}</span>
+      </div>
+      <footer>
+        <strong>离开不会取消战斗</strong>
+        <span>服务器将在截止时自动进入对战</span>
+        {realtimeOffline ? (
+          <small>实时通知暂不可用，数据库倒计时仍会继续</small>
+        ) : null}
+      </footer>
+    </section>
   );
 }
 

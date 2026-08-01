@@ -2026,14 +2026,17 @@ security definer
 set search_path = ''
 as $$
   select case
-    when r.lobby_expires_at <= now() then 'lobby_expired'
-    when exists (
+    when r.status = 'lobby_waiting'
+      and r.lobby_expires_at <= now() then 'lobby_expired'
+    when r.status = 'lobby_waiting'
+      and exists (
       select 1
       from battle.participants p
       join identity.users u on u.id = p.user_id
       where p.room_id = r.id and p.status = 'lobby' and u.status = 'banned'
     ) then 'lobby_participant_banned'
-    when exists (
+    when r.status = 'lobby_waiting'
+      and exists (
       select 1
       from battle.participants p
       where p.room_id = r.id
@@ -2318,6 +2321,9 @@ begin
     );
   end loop;
 
+  select * into v_room from battle.rooms where id = p_room_id;
+  if v_room.status = 'lobby_countdown' then return; end if;
+
   select count(*) = 2
     and bool_and(
       p.offline_since is null
@@ -2329,20 +2335,12 @@ begin
   from battle.participants p
   where p.room_id = p_room_id and p.status = 'lobby';
 
-  select * into v_room from battle.rooms where id = p_room_id;
-  if v_room.status = 'lobby_countdown' and not v_both_online then
-    update battle.rooms
-    set status = 'lobby_waiting', lobby_start_deadline = null, updated_at = now()
-    where id = p_room_id;
-    perform battle.record_event(
-      p_room_id,
-      'lobby_countdown_stopped',
-      jsonb_build_object('reason', 'participant_offline'),
-      '{}'::jsonb
-    );
-  elsif v_room.status = 'lobby_waiting'
+  if v_room.status = 'lobby_waiting'
     and v_both_online
     and battle.lobby_terminal_reason(p_room_id) is null
+    and now() + make_interval(
+      secs => battle.rule_int(v_room.ruleset_id, 'lobby_countdown_seconds')
+    ) <= v_room.lobby_expires_at
   then
     update battle.rooms
     set status = 'lobby_countdown',
@@ -2372,7 +2370,6 @@ declare
   v_room battle.rooms%rowtype;
   v_reason text;
   v_invariant_error text;
-  v_online_count integer;
 begin
   select * into v_room from battle.rooms where id = p_room_id for update;
   if v_room.status not in ('lobby_waiting', 'lobby_countdown') then return; end if;
@@ -2403,19 +2400,6 @@ begin
   if v_room.status <> 'lobby_countdown'
     or v_room.lobby_start_deadline > now()
   then
-    return;
-  end if;
-
-  select count(*) into v_online_count
-  from battle.participants p
-  where p.room_id = p_room_id
-    and p.status = 'lobby'
-    and p.offline_since is null
-    and p.last_heartbeat_at > now() - make_interval(
-      secs => battle.rule_int(v_room.ruleset_id, 'presence_online_window_seconds')
-    );
-  if v_online_count <> 2 then
-    perform battle.reconcile_lobby_presence(p_room_id);
     return;
   end if;
 

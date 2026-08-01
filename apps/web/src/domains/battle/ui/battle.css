@@ -977,6 +977,198 @@
   text-align: center;
 }
 
+.battle-countdown-lock {
+  position: fixed;
+  z-index: 200;
+  inset: 0;
+  min-height: 100dvh;
+  display: grid;
+  grid-template-rows: 1fr auto 1fr;
+  place-items: center;
+  overflow: hidden;
+  padding: max(28px, var(--tg-safe-area-inset-top, 0px))
+    max(22px, var(--tg-safe-area-inset-right, 0px))
+    max(30px, var(--tg-safe-area-inset-bottom, 0px))
+    max(22px, var(--tg-safe-area-inset-left, 0px));
+  color: #fff;
+  background:
+    radial-gradient(circle at 0 48%, rgba(255, 15, 15, 0.34), transparent 44%),
+    radial-gradient(
+      circle at 100% 48%,
+      rgba(0, 112, 255, 0.38),
+      transparent 44%
+    ),
+    radial-gradient(circle at 50% 50%, #172135 0, #05070c 27%, #000 64%);
+  isolation: isolate;
+  touch-action: none;
+}
+
+.app-shell:has(.battle-countdown-lock) .topbar,
+.app-shell:has(.battle-countdown-lock) .bottom-nav {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.battle-countdown-lock::before,
+.battle-countdown-lock::after {
+  position: absolute;
+  z-index: -1;
+  inset: -24%;
+  content: "";
+  opacity: 0.72;
+  background: repeating-conic-gradient(
+    from 90deg at 50% 50%,
+    transparent 0deg 5deg,
+    rgba(255, 255, 255, 0.18) 5.4deg 5.7deg,
+    transparent 6.1deg 11deg
+  );
+  mask-image: radial-gradient(
+    circle,
+    transparent 0 18%,
+    #000 31%,
+    transparent 70%
+  );
+  animation: battle-countdown-rays 3s linear infinite;
+}
+
+.battle-countdown-lock::after {
+  opacity: 0.3;
+  transform: rotate(11deg);
+  animation-direction: reverse;
+}
+
+.battle-countdown-energy {
+  position: absolute;
+  z-index: -1;
+  top: 4%;
+  bottom: 4%;
+  width: 78%;
+  opacity: 0.9;
+  background:
+    repeating-linear-gradient(
+      101deg,
+      transparent 0 15px,
+      currentcolor 16px,
+      transparent 18px 34px
+    ),
+    radial-gradient(ellipse at center, currentcolor, transparent 65%);
+  filter: blur(0.6px) drop-shadow(0 0 12px currentcolor);
+  mask-image: radial-gradient(ellipse at center, #000 0 20%, transparent 70%);
+  animation: battle-countdown-energy 1.15s ease-in-out infinite alternate;
+}
+
+.battle-countdown-energy.red {
+  left: -39%;
+  color: #ff1b1b;
+  transform: rotate(-7deg);
+}
+
+.battle-countdown-energy.blue {
+  right: -39%;
+  color: #087cff;
+  transform: rotate(7deg) scaleX(-1);
+}
+
+.battle-countdown-lock header,
+.battle-countdown-lock footer {
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  align-self: end;
+  text-align: center;
+}
+
+.battle-countdown-lock header span {
+  color: #b8c8e8;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.24em;
+}
+
+.battle-countdown-lock h1 {
+  margin: 8px 0 0;
+  font-size: clamp(28px, 8vw, 42px);
+  font-weight: 950;
+  letter-spacing: -0.045em;
+  text-shadow: 0 0 22px rgba(255, 255, 255, 0.28);
+}
+
+.battle-countdown-core {
+  position: relative;
+  width: min(56vw, 236px);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border: 2px solid rgba(255, 255, 255, 0.92);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 50% 42%,
+    #23293a,
+    #07090e 58%,
+    #000 72%
+  );
+  box-shadow:
+    -18px 0 42px rgba(255, 22, 22, 0.65),
+    18px 0 42px rgba(18, 126, 255, 0.68),
+    inset 0 0 35px rgba(0, 0, 0, 0.9),
+    0 0 0 8px rgba(255, 255, 255, 0.05);
+}
+
+.battle-countdown-core::before {
+  position: absolute;
+  inset: -10px;
+  border-radius: inherit;
+  background: conic-gradient(
+    from 180deg,
+    #ff1616,
+    #ff7474 48%,
+    #fff 50%,
+    #7bc0ff 52%,
+    #087cff
+  );
+  box-shadow: 0 0 24px rgba(255, 255, 255, 0.55);
+  content: "";
+  mask: radial-gradient(
+    circle,
+    transparent 0 73%,
+    #000 74% 81%,
+    transparent 82%
+  );
+  animation: battle-countdown-ring 1.4s linear infinite;
+}
+
+.battle-countdown-core > span {
+  font-size: clamp(94px, 32vw, 148px);
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: -0.08em;
+  text-shadow:
+    0 5px 0 rgba(0, 0, 0, 0.65),
+    0 0 22px rgba(255, 255, 255, 0.48);
+  animation: battle-countdown-number 0.42s ease-out both;
+}
+
+.battle-countdown-lock footer {
+  align-self: start;
+  gap: 6px;
+  padding-top: 28px;
+}
+
+.battle-countdown-lock footer strong {
+  font-size: clamp(18px, 5.2vw, 25px);
+}
+
+.battle-countdown-lock footer span,
+.battle-countdown-lock footer small {
+  color: #b8c8e8;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.battle-countdown-lock footer small {
+  color: #ffd27a;
+}
+
 .battle-invite-summary {
   display: grid;
   grid-template-columns: 64px 1fr;
@@ -1672,6 +1864,38 @@
 @keyframes battle-spin {
   to {
     transform: rotate(1turn);
+  }
+}
+
+@keyframes battle-countdown-rays {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+@keyframes battle-countdown-energy {
+  from {
+    opacity: 0.62;
+  }
+  to {
+    opacity: 0.96;
+  }
+}
+
+@keyframes battle-countdown-ring {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+@keyframes battle-countdown-number {
+  from {
+    opacity: 0.28;
+    transform: scale(1.32);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
   }
 }
 
