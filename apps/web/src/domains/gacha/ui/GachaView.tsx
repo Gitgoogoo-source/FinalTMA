@@ -141,15 +141,6 @@ export function GachaView({
     }
     return [...picked.values()].slice(0, 5);
   }, [pool.data?.rarities]);
-  const raritySummary = selectedBox
-    ? Object.entries(selectedBox.rarity_weights)
-        .filter(([, weight]) => weight > 0)
-        .map(
-          ([rarity, weight]) =>
-            `${rarityLabels[rarity as keyof typeof rarityLabels]} ${weight / 100}%`,
-        )
-        .join(" · ")
-    : "";
   const pityPercent = validPity
     ? Math.min(100, Math.max(0, (validPity.progress / validPity.limit) * 100))
     : 0;
@@ -371,7 +362,6 @@ export function GachaView({
                     <Star aria-hidden="true" />
                     可能获得
                   </strong>
-                  <small>{raritySummary}</small>
                   <button
                     ref={poolTrigger}
                     type="button"

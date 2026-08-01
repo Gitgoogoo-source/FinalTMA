@@ -2633,7 +2633,7 @@ input:focus {
 }
 .app-shell .gacha-reward-preview > header {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 6px;
 }
@@ -2648,14 +2648,6 @@ input:focus {
   width: 13px;
   color: var(--sprout-orange);
   fill: rgba(255, 122, 0, 0.12);
-}
-.app-shell .gacha-reward-preview > header small {
-  min-width: 0;
-  overflow: hidden;
-  color: #8b9590;
-  font-size: 7px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 .app-shell .gacha-reward-preview .gacha-pool-trigger {
   min-height: 28px;
@@ -7358,17 +7350,6 @@ body,
 .app-shell .gacha-reward-preview > header strong svg {
   width: 13px;
   height: 13px;
-}
-
-.app-shell .gacha-reward-preview > header small {
-  min-width: 0;
-  overflow: hidden;
-  padding-left: 5px;
-  border-left: 1px solid rgba(116, 126, 121, 0.16);
-  font-size: 6px;
-  line-height: 10px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .app-shell .gacha-reward-preview .gacha-pool-trigger {
