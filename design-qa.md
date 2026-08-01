@@ -61,6 +61,50 @@ final result: passed
 
 ---
 
+# VIP 月卡固定标题与星际三宠主视觉验收
+
+## 验收对象
+
+- 版本：`e29a40ba89bd45cca17fe532637d0d6bd41a921c`
+- 环境：Vercel Production `dpl_7ND8bWJ7i33QdCKM7MFEDZrkt5Dq`
+- 页面状态：交易 → 购买、VIP 付款确认中
+- 目标：主标题永久固定为“VIP 月卡”；付款、有效与过期状态只显示在副标题和按钮；更换为全新的三宠主视觉
+
+## 视觉依据
+
+- 用户问题截图：`/var/folders/__/ffcc9r1113l4c8cd1z4m8tp80000gn/T/codex-clipboard-941fe086-7304-433e-9552-fd1315d153b8.png`，`200 × 50px`
+- 最终 ImageGen 源图：`/Users/mac/.codex/generated_images/019fbd03-e1ea-7160-b00e-965e7909d203/exec-5d922018-e04a-4609-ba6b-6e5add631557.png`，`1448 × 1086px`
+- 项目主视觉：`/Users/mac/Desktop/FinalTMA/apps/web/public/assets/vip/vip-membership-hero-v3.webp`，`1200 × 900px`
+- 线上资源：`https://final-tma-pi.vercel.app/assets/vip/vip-membership-hero-v3.webp`，HTTP `200`，`image/webp`，`182746` bytes
+- 实现截图：不可用；iPhone 镜像先显示“iPhone 使用中”，重连后显示“未找到 iPhone”。
+
+## 已完成检查
+
+- 源图已实际打开，确认包含金色狮兽、蓝色水龙和紫色电气兔三只原创宠物，左侧保留深蓝信息安全区。
+- 部署已确认对应 Git commit `e29a40ba89bd45cca17fe532637d0d6bd41a921c` 且状态为 `READY`。
+- 生产资源返回 HTTP `200`。
+- 已在部署提交中核对组件：主标题唯一实现为 `<strong>VIP 月卡</strong>`；“付款确认中”“已生效”“已过期”只存在于副标题分支。
+- `pnpm --filter @pokepets/web typecheck`、`pnpm --filter @pokepets/web build`、`pnpm assets:check:development` 与针对性 Prettier 检查通过。
+- 该提交只包含 Web 主视觉资源、购买页样式与 `VipBanner.tsx`，没有修改 API、后端、数据库或支付代码。
+
+## Findings
+
+- [P1] 缺少真实 Telegram 实现截图
+  - 位置：交易 → 购买 → VIP 月卡横幅。
+  - 证据：源图和线上资源可访问，但 iPhone 镜像当前无法连接目标设备，因此无法把最终实现与源图放在同一比较图中。
+  - 影响：无法完成字体、裁切、三宠可见度、状态副标题和按钮布局的真机视觉门禁。
+  - 修复：目标 iPhone 回到 Mac 附近、最近解锁并重新锁定，恢复 iPhone 镜像后刷新 Mini App，捕获付款确认中状态并完成全页与聚焦对照。
+
+## 比较历史
+
+1. 用户截图显示旧实现把动态状态拼进主标题，出现“VIP 月卡付款确认中”。
+2. `e29a40b` 把主标题改为固定“VIP 月卡”，把状态移入副标题，并替换为蓝紫星际三宠主视觉。
+3. 当前部署、资源、代码与前端构建均已验证；真实设备截图因 iPhone 镜像连接失败尚未完成。
+
+final result: blocked
+
+---
+
 # VIP 月卡战队主视觉与紧凑购买按钮验收
 
 ## 验收对象
@@ -192,8 +236,9 @@ final result: passed
 
 # 当前最终验收结论
 
-- 当前有效版本：`d4928f82d43cd3b69bf287705cd05c821c57033e`
-- 当前有效验收：本文“VIP 月卡战队主视觉与紧凑购买按钮验收”章节。
+- 当前有效版本：`e29a40ba89bd45cca17fe532637d0d6bd41a921c`
+- 当前有效验收：本文“VIP 月卡固定标题与星际三宠主视觉验收”章节。
+- 代码、资源和部署已经验证；真实 Telegram 截图因 iPhone 镜像无法连接而待补。
 - 历史皇冠版与旧多宠版仅保留为比较记录，不再作为当前视觉方案。
 
-final result: passed
+final result: blocked
