@@ -95,7 +95,6 @@ RETIRED_GAME_PATHS = (
     "docs/architecture/adr/ADR-011-monster-tamer-static-subapplication.md",
     "apps/web/src/app/router/backgroundPreload.ts",
     "monster玩法说明.md",
-    "design-qa.md",
     "apps/api/dist/domains/monster-tamer",
     "apps/web/dist/monster-tamer",
     "packages/api-contracts/dist/domains/monster-tamer",
