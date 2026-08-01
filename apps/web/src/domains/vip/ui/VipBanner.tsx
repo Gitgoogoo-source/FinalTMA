@@ -1,4 +1,4 @@
-import { Crown, Gift, Gem, ReceiptText } from "lucide-react";
+import { Crown, Egg, Gem, ReceiptText } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { useApiQuery } from "../../../platform/query/index.ts";
@@ -10,6 +10,22 @@ export function VipBanner({ open }: { open(): void }): ReactNode {
     vip.data?.pending_order &&
     ["pending", "processing", "paid"].includes(vip.data.pending_order.status),
   );
+  const actionLabel = vip.error
+    ? "重新加载"
+    : pending
+      ? "确认中"
+      : vip.data?.active
+        ? vip.data.can_renew
+          ? "续费"
+          : "已达续费上限"
+        : "购买";
+  const actionDetail = vip.isLoading
+    ? "正在读取真实权益"
+    : vip.error
+      ? "月卡状态加载失败"
+      : vip.data?.active
+        ? `剩余 ${vip.data.remaining_days} 天`
+        : `${vip.data?.stars_price ?? "—"} Stars · 30 天`;
   return (
     <Card className="vip-banner vip-market-hero">
       <img
@@ -19,49 +35,38 @@ export function VipBanner({ open }: { open(): void }): ReactNode {
         aria-hidden="true"
         fetchPriority="high"
       />
-      <button className="vip-banner-summary" onClick={open}>
+      <button
+        className="vip-banner-summary"
+        aria-label="查看 VIP MONTHLY PASS 详情"
+        onClick={open}
+      >
         <span className="vip-market-icon">
           <Crown />
         </span>
         <span>
           <small>POKEPETS MEMBERSHIP</small>
-          <strong>VIP 月卡</strong>
-          <small>
-            {pending
-              ? "付款确认中 · 请稍候查看真实结果"
-              : vip.data?.active
-                ? `已生效 · 有效期至 ${vip.data.ends_on} · 已续费 ${vip.data.renewals_used}/2`
-                : vip.data?.ends_on
-                  ? "已过期 · 可重新购买"
-                  : "查看真实价格、有效期与每日权益"}
-          </small>
+          <strong>VIP MONTHLY PASS</strong>
         </span>
       </button>
       <div className="vip-market-benefits" aria-label="VIP 月卡权益">
-        <span>
-          <Gem />
-          每日 100 Fgems
-        </span>
-        <span>
-          <Gift />
-          每日免费稀有盲盒
-        </span>
-        <span>
-          <ReceiptText />
-          交易手续费返还
-        </span>
+        <div className="vip-market-benefit vip-market-benefit--egg">
+          <Egg aria-hidden="true" />
+          <small>每日免费</small>
+          <strong>稀有盲盒</strong>
+        </div>
+        <div className="vip-market-benefit vip-market-benefit--fgems">
+          <Gem aria-hidden="true" />
+          <small>每日</small>
+          <strong>100 Fgems</strong>
+        </div>
+        <div className="vip-market-benefit vip-market-benefit--rebate">
+          <ReceiptText aria-hidden="true" />
+          <small>交易手续费返还</small>
+        </div>
       </div>
       <div className="vip-market-action">
-        <span>
-          {vip.isLoading
-            ? "正在读取真实权益"
-            : vip.error
-              ? "月卡状态加载失败"
-              : vip.data?.active
-                ? `剩余 ${vip.data.remaining_days} 天`
-                : `${vip.data?.stars_price ?? "—"} Stars · 30 天`}
-        </span>
         <Button
+          className="vip-market-buy-button"
           disabled={
             vip.isLoading ||
             pending ||
@@ -69,15 +74,10 @@ export function VipBanner({ open }: { open(): void }): ReactNode {
           }
           onClick={vip.error ? () => void vip.refetch() : open}
         >
-          {vip.error
-            ? "重新加载"
-            : pending
-              ? "确认中"
-              : vip.data?.active
-                ? vip.data.can_renew
-                  ? "续费"
-                  : "已达续费上限"
-                : "购买"}
+          <span>
+            <b>{actionLabel}</b>
+            <small>{actionDetail}</small>
+          </span>
         </Button>
       </div>
     </Card>
