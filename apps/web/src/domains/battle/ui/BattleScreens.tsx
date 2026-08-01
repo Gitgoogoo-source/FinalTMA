@@ -8,7 +8,6 @@ import {
   ShieldCheck,
   Swords,
   UserRound,
-  Users,
   X,
 } from "lucide-react";
 import { useState, type ReactNode, type RefObject } from "react";
@@ -64,28 +63,11 @@ export function BattleHome({
   return (
     <div className="battle-home">
       <section className="battle-home-hero">
-        <span className="battle-kicker">POKEPETS BATTLE</span>
-        <h1>三宠同步回合对战</h1>
-        <p>
-          使用本人真实可用藏品组队。双方秘密选择技能或换宠，命中、伤害、超时与结算全部由服务器和数据库裁决。
-        </p>
-        <div className="battle-rule-strip">
-          <span>
-            <Users />3 对 3
-          </span>
-          <span>
-            <Clock3 />
-            15 秒选择
-          </span>
-          <span>
-            <Swords />
-            最多 20 回合
-          </span>
-          <span>
-            <ShieldCheck />
-            无认输与重赛
-          </span>
+        <div className="battle-home-hero-copy">
+          <h1>1v1 BATTLE</h1>
+          <p>胜者拿走奖池</p>
         </div>
+        <BattleHomePixelDuel />
       </section>
 
       {participation ? (
@@ -151,6 +133,53 @@ export function BattleHome({
           {selectedTier ? `选择队伍 · ${tierTitle(selectedTier)}` : "选择队伍"}
         </Button>
       </section>
+    </div>
+  );
+}
+
+function BattleHomePixelDuel(): ReactNode {
+  return (
+    <div className="battle-pixel-duel" aria-hidden="true">
+      <span className="battle-pixel-ground" />
+      <svg
+        className="battle-pixel-monster battle-pixel-monster-left"
+        viewBox="0 0 64 64"
+        shapeRendering="crispEdges"
+      >
+        <path fill="#a53d32" d="M15 36H9v-5H4v-8h5v4h8z" />
+        <path
+          fill="#6e2d32"
+          d="M18 19h6v-8h7v7h12v5h7v8h5v15h-7v8H19v-7h-6V29h5z"
+        />
+        <path fill="#ec6a3b" d="M20 23h22v5h7v18h-7v5H22v-7h-5V30h3z" />
+        <path fill="#ffb24a" d="M23 34h11v13H23z" />
+        <path fill="#ffd071" d="M24 35h8v4h-8z" />
+        <path fill="#fff8dc" d="M39 27h7v7h-7z" />
+        <path fill="#26323a" d="M42 28h4v4h-4zM44 38h8v3h-8z" />
+        <path fill="#6e2d32" d="M23 52h8v7H20v-4h3zM39 51h9v8H36v-4h3z" />
+        <path fill="#ffb24a" d="M20 15h5V6h5v12H20zM39 17V8h5v4h5v8H39z" />
+      </svg>
+      <span className="battle-pixel-shot battle-pixel-shot-left" />
+      <span className="battle-pixel-impact" />
+      <span className="battle-pixel-shot battle-pixel-shot-right" />
+      <svg
+        className="battle-pixel-monster battle-pixel-monster-right"
+        viewBox="0 0 64 64"
+        shapeRendering="crispEdges"
+      >
+        <path fill="#266c66" d="M49 37h6v-6h5v-9h-5v5h-8z" />
+        <path
+          fill="#25544f"
+          d="M14 27h5v-8h8v-6h7v7h12v5h6v21h-6v8H17v-7h-7V34h4z"
+        />
+        <path fill="#55a968" d="M16 29h7v-5h22v5h5v17h-8v5H20v-6h-6V35h2z" />
+        <path fill="#94ce6f" d="M30 35h11v12H30z" />
+        <path fill="#d6ee9b" d="M32 36h8v4h-8z" />
+        <path fill="#f8ffe5" d="M18 28h7v7h-7z" />
+        <path fill="#20363a" d="M18 29h4v4h-4zM12 39h9v3h-9z" />
+        <path fill="#25544f" d="M17 51h9v8H14v-4h3zM35 51h9v8H32v-4h3z" />
+        <path fill="#86c56d" d="M18 22h-6v-9h5v4h5v7h-4zM39 21v-8h5V8h5v13z" />
+      </svg>
     </div>
   );
 }

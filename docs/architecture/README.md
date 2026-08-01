@@ -93,3 +93,4 @@ TMA 首次同步加载只覆盖应用壳、会话与账号门禁及默认开盒�
 - [TON 生成绑定与静态门禁](adr/ADR-017-ton-generated-bindings.md)
 - [Battle 平台条件型分享证据与发布门禁](adr/ADR-018-battle-share-platform-conditional-evidence.md)
 - [Telegram 原生顶部控件安全区回退](adr/ADR-019-telegram-fullscreen-content-safe-area-fallback.md)
+- [Battle 首页轻量像素对战装饰](adr/ADR-020-battle-home-pixel-duel.md)
