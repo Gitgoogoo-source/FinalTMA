@@ -51,13 +51,11 @@ export function VipBanner({ open }: { open(): void }): ReactNode {
       <div className="vip-market-benefits" aria-label="VIP 月卡权益">
         <div className="vip-market-benefit vip-market-benefit--egg">
           <Egg aria-hidden="true" />
-          <small>每日免费</small>
-          <strong>稀有盲盒</strong>
+          <small>每日免费稀有盲盒</small>
         </div>
         <div className="vip-market-benefit vip-market-benefit--fgems">
           <Gem aria-hidden="true" />
-          <small>每日</small>
-          <strong>100 Fgems</strong>
+          <small>每日 100 Fgems</small>
         </div>
         <div className="vip-market-benefit vip-market-benefit--rebate">
           <ReceiptText aria-hidden="true" />

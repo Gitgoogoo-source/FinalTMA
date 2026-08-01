@@ -53,14 +53,14 @@
   height: 245px;
   min-height: 245px;
   isolation: isolate;
-  grid-template-columns: minmax(0, 53%) 1fr;
-  grid-template-rows: 46px 90px 44px;
+  grid-template-columns: minmax(0, 50%) 1fr;
+  grid-template-rows: 48px 90px 43px;
   grid-template-areas:
     "summary art"
     "benefits art"
     "action art";
   align-content: center;
-  gap: 7px;
+  gap: 8px;
   margin-bottom: 8px;
   padding: 13px;
   border: 1px solid rgba(235, 145, 54, 0.6);
@@ -80,10 +80,10 @@
   background:
     linear-gradient(
       90deg,
-      rgba(255, 248, 235, 0.98) 0%,
-      rgba(255, 243, 220, 0.92) 37%,
-      rgba(255, 231, 188, 0.62) 50%,
-      rgba(255, 230, 185, 0.04) 68%
+      rgba(255, 249, 237, 0.78) 0%,
+      rgba(255, 245, 225, 0.62) 35%,
+      rgba(255, 236, 203, 0.22) 52%,
+      rgba(255, 230, 185, 0.02) 70%
     ),
     linear-gradient(
       180deg,
@@ -101,7 +101,7 @@
   z-index: 0;
   inset: 0;
   object-fit: cover;
-  object-position: 54% center;
+  object-position: 50% center;
   pointer-events: none;
   user-select: none;
 }
@@ -116,35 +116,31 @@
 .app-shell .market-page-buy .vip-market-hero .vip-banner-summary {
   width: 100%;
   grid-area: summary;
-  grid-template-columns: 36px minmax(0, 1fr);
+  grid-template-columns: 42px minmax(0, 1fr);
   gap: 8px;
 }
 
 .app-shell .market-page-buy .vip-market-icon {
-  width: 36px;
-  height: 36px;
-  border-color: rgba(228, 142, 41, 0.36);
+  width: 42px;
+  height: 42px;
+  border-color: rgba(228, 142, 41, 0.3);
   border-radius: 50%;
-  color: #bd5b12;
-  background: linear-gradient(
-    145deg,
-    rgba(255, 249, 236, 0.94),
-    rgba(255, 201, 111, 0.84)
-  );
+  color: #d67516;
+  background: rgba(255, 252, 243, 0.88);
   box-shadow:
-    0 9px 20px rgba(166, 84, 15, 0.16),
-    inset 0 1px 0 rgba(255, 255, 255, 0.62);
+    0 8px 18px rgba(166, 84, 15, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
 .app-shell .market-page-buy .vip-market-icon svg {
-  width: 19px;
-  height: 19px;
+  width: 23px;
+  height: 23px;
 }
 
 .app-shell .market-page-buy .vip-market-hero .vip-banner-summary strong {
   color: #4c1e05;
   font-family: Inter, ui-rounded, "SF Pro Rounded", system-ui, sans-serif;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 950;
   letter-spacing: -0.035em;
   line-height: 1.04;
@@ -157,7 +153,7 @@
   .vip-banner-summary
   small:first-child {
   color: #bf5a15;
-  font-size: 6px;
+  font-size: 6.5px;
   font-weight: 900;
   letter-spacing: 0.1em;
 }
@@ -166,7 +162,7 @@
   width: 100%;
   grid-area: benefits;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-template-rows: 67px 17px;
+  grid-template-rows: 71px 11px;
   gap: 6px;
 }
 
@@ -175,53 +171,42 @@
   display: grid;
   justify-items: center;
   align-content: center;
-  gap: 1px;
-  padding: 6px 4px 5px;
+  gap: 3px;
+  padding: 0 2px;
   overflow: hidden;
-  border-color: rgba(226, 143, 52, 0.28);
-  border-radius: 13px;
+  border: 0;
+  border-radius: 0;
   color: #65310f;
-  background: rgba(255, 252, 245, 0.78);
-  box-shadow:
-    0 7px 16px rgba(166, 84, 15, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.78);
-  backdrop-filter: blur(14px) saturate(125%);
+  background: transparent;
+  box-shadow: none;
   text-align: center;
 }
 
 .app-shell .market-page-buy .vip-market-benefit svg {
-  width: 22px;
-  height: 22px;
-  color: #cf6b18;
-  filter: drop-shadow(0 3px 4px rgba(199, 101, 16, 0.2));
+  width: 40px;
+  height: 40px;
+  color: #dc7a17;
+  filter: drop-shadow(0 4px 6px rgba(199, 101, 16, 0.28));
 }
 
 .app-shell .market-page-buy .vip-market-benefit small {
+  min-height: 15px;
+  display: grid;
+  place-items: center;
+  padding: 2px 5px;
+  border: 1px solid rgba(228, 151, 64, 0.18);
+  border-radius: 999px;
   color: #97521d;
-  font-size: 7px;
+  background: rgba(255, 253, 247, 0.88);
+  box-shadow: 0 4px 9px rgba(166, 84, 15, 0.06);
+  font-size: 6.5px;
   font-weight: 800;
   line-height: 1;
   white-space: nowrap;
 }
 
-.app-shell .market-page-buy .vip-market-benefit strong {
-  max-width: 100%;
-  overflow: hidden;
-  color: #5d2808;
-  font-size: 9px;
-  font-weight: 950;
-  line-height: 1.05;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.app-shell .market-page-buy .vip-market-benefit--egg {
-  border: 1px solid rgba(237, 157, 49, 0.34);
-  background: rgba(255, 250, 235, 0.9);
-}
-
 .app-shell .market-page-buy .vip-market-benefit--egg svg {
-  color: #e6861d;
+  color: #e58a1d;
 }
 
 .app-shell .market-page-buy .vip-market-benefit--fgems svg {
@@ -230,10 +215,10 @@
 
 .app-shell .market-page-buy .vip-market-benefit--rebate {
   grid-column: 1 / -1;
-  grid-template-columns: 12px max-content;
+  grid-template-columns: 14px max-content;
   justify-content: center;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   padding: 0;
   border: 0;
   border-radius: 0;
@@ -245,21 +230,28 @@
 .app-shell .market-page-buy .vip-market-benefit--rebate::before,
 .app-shell .market-page-buy .vip-market-benefit--rebate::after {
   content: "";
-  width: 15px;
+  width: 21px;
   height: 1px;
   background: rgba(202, 121, 41, 0.34);
 }
 
 .app-shell .market-page-buy .vip-market-benefit--rebate svg {
-  width: 11px;
-  height: 11px;
+  width: 12px;
+  height: 12px;
   color: #c46d20;
   filter: none;
 }
 
 .app-shell .market-page-buy .vip-market-benefit--rebate small {
+  min-height: 0;
+  display: initial;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
   color: #8c5229;
-  font-size: 7px;
+  background: transparent;
+  box-shadow: none;
+  font-size: 7.5px;
   font-weight: 750;
 }
 
@@ -271,16 +263,16 @@
 }
 
 .app-shell .market-page-buy .vip-market-action .vip-market-buy-button {
-  width: 100%;
+  width: 90%;
   min-width: 0;
-  min-height: 44px;
-  height: 44px;
+  min-height: 43px;
+  height: 43px;
   display: grid;
   place-items: center;
   padding: 5px 12px;
   overflow: hidden;
   border: 1px solid rgba(255, 198, 106, 0.8);
-  border-radius: 24px;
+  border-radius: 22px;
   color: #fff;
   background: #ff8121;
   box-shadow:
@@ -297,7 +289,7 @@
 }
 
 .app-shell .market-page-buy .vip-market-action .vip-market-buy-button b {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 900;
 }
 
@@ -305,7 +297,7 @@
   max-width: 100%;
   overflow: hidden;
   color: rgba(255, 255, 255, 0.86);
-  font-size: 7px;
+  font-size: 7.5px;
   font-weight: 750;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -317,7 +309,7 @@
   }
 
   .app-shell .market-page-buy .vip-market-hero .vip-banner-summary strong {
-    font-size: 16px;
+    font-size: 14px;
   }
 }
 
