@@ -339,6 +339,7 @@ export function BattleLobby({
   creatorReconnectSeconds,
   opponentReconnectSeconds,
   realtimeOffline,
+  onlineState,
 }: {
   lobby: BattleLobbyDto;
   remainingSeconds: number | null;
@@ -346,14 +347,22 @@ export function BattleLobby({
   creatorReconnectSeconds: number | null;
   opponentReconnectSeconds: number | null;
   realtimeOffline: boolean;
+  onlineState: "syncing" | "online" | "offline";
 }): ReactNode {
   const creator = lobby.presence.creator;
   const opponent = lobby.presence.opponent;
+  const recoveryMessage =
+    onlineState === "syncing"
+      ? "正在恢复连接，在线状态以后端 Presence 确认为准。"
+      : onlineState === "offline"
+        ? "连接尚未恢复，页面正在读取后端 Presence。"
+        : null;
   if (lobby.phase === "lobby_countdown")
     return (
       <BattleCountdownLock
         countdownSeconds={countdownSeconds}
         realtimeOffline={realtimeOffline}
+        recoveryMessage={recoveryMessage}
       />
     );
   return (
@@ -397,6 +406,11 @@ export function BattleLobby({
           <strong>尚未开始</strong>
         </div>
       </section>
+      {recoveryMessage ? (
+        <p className="battle-offline-note" role="status">
+          {recoveryMessage}
+        </p>
+      ) : null}
       {realtimeOffline ? (
         <p className="battle-offline-note" role="status">
           实时通知不可用，页面正按固定 2 秒间隔通过 REST 读取权威房间状态。
@@ -412,9 +426,11 @@ export function BattleLobby({
 function BattleCountdownLock({
   countdownSeconds,
   realtimeOffline,
+  recoveryMessage,
 }: {
   countdownSeconds: number | null;
   realtimeOffline: boolean;
+  recoveryMessage: string | null;
 }): ReactNode {
   const display =
     countdownSeconds === null
@@ -445,6 +461,9 @@ function BattleCountdownLock({
       <footer>
         <strong>离开不会取消战斗</strong>
         <span>服务器将在截止时自动进入对战</span>
+        {recoveryMessage ? (
+          <small role="status">{recoveryMessage}</small>
+        ) : null}
         {realtimeOffline ? (
           <small>实时通知暂不可用，数据库倒计时仍会继续</small>
         ) : null}
