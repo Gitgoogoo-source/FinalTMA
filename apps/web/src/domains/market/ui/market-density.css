@@ -50,10 +50,15 @@
 }
 
 .app-shell .market-page-buy .vip-market-hero {
-  height: 184px;
-  min-height: 184px;
+  height: 245px;
+  min-height: 245px;
   isolation: isolate;
-  grid-template-rows: 54px 40px 34px;
+  grid-template-columns: minmax(0, 47%) 1fr;
+  grid-template-rows: 54px 88px 58px;
+  grid-template-areas:
+    "summary art"
+    "benefits art"
+    "action art";
   gap: 8px;
   margin-bottom: 8px;
   padding: 13px;
@@ -72,11 +77,10 @@
   inset: 0;
   background: linear-gradient(
     90deg,
-    rgba(255, 247, 229, 0.97) 0%,
-    rgba(255, 242, 214, 0.9) 28%,
-    rgba(255, 235, 196, 0.66) 45%,
-    rgba(255, 221, 166, 0.12) 68%,
-    rgba(255, 218, 156, 0.02) 100%
+    rgba(255, 247, 229, 0.96) 0%,
+    rgba(255, 240, 209, 0.87) 36%,
+    rgba(255, 231, 188, 0.48) 50%,
+    rgba(255, 218, 156, 0.02) 64%
   );
   pointer-events: none;
 }
@@ -101,7 +105,8 @@
 }
 
 .app-shell .market-page-buy .vip-market-hero .vip-banner-summary {
-  width: 60%;
+  width: 100%;
+  grid-area: summary;
   grid-template-columns: 40px minmax(0, 1fr);
   gap: 10px;
 }
@@ -149,22 +154,31 @@
 }
 
 .app-shell .market-page-buy .vip-market-benefits {
-  gap: 7px;
+  width: 100%;
+  grid-area: benefits;
+  grid-template-columns: 1fr;
+  gap: 4px;
 }
 
 .app-shell .market-page-buy .vip-market-benefits span {
-  min-height: 40px;
-  gap: 1px;
-  padding: 4px 3px;
+  min-height: 26px;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  place-items: initial;
+  align-content: center;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px;
   border-color: rgba(255, 193, 90, 0.44);
-  border-radius: 14px;
+  border-radius: 10px;
   color: #65482e;
   background: rgba(255, 250, 238, 0.8);
   box-shadow:
     0 8px 18px rgba(173, 82, 0, 0.12),
     inset 0 1px 0 rgba(255, 255, 255, 0.96);
-  font-size: 6.5px;
+  font-size: 7.5px;
   backdrop-filter: blur(12px) saturate(135%);
+  text-align: left;
 }
 
 .app-shell .market-page-buy .vip-market-benefits svg {
@@ -174,13 +188,17 @@
 }
 
 .app-shell .market-page-buy .vip-market-action {
-  gap: 8px;
+  width: 100%;
+  grid-area: action;
+  grid-template-columns: 1fr;
+  grid-template-rows: 22px 34px;
+  gap: 4px;
 }
 
 .app-shell .market-page-buy .vip-market-action > span {
   width: max-content;
   max-width: 100%;
-  padding: 5px 8px;
+  padding: 3px 8px;
   border: 1px solid rgba(255, 190, 84, 0.34);
   border-radius: 999px;
   color: #5a381f;
@@ -190,7 +208,8 @@
 }
 
 .app-shell .market-page-buy .vip-market-action .button {
-  min-width: 86px;
+  width: 100%;
+  min-width: 0;
   min-height: 34px;
   height: 34px;
   padding: 6px 14px;
@@ -205,7 +224,7 @@
 
 @media (max-width: 370px) {
   .app-shell .market-page-buy .vip-market-hero .vip-banner-summary {
-    width: 65%;
+    width: 100%;
   }
 
   .app-shell .market-page-buy .vip-market-hero .vip-banner-summary strong {
