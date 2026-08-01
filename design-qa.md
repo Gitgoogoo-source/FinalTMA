@@ -268,11 +268,57 @@ final result: blocked
 
 ---
 
+# VIP MONTHLY PASS 奖励卡与双行购买按钮验收
+
+## 验收对象
+
+- 版本：`4b7b145`
+- 页面：交易 → 购买 → VIP 月卡横幅
+- 页面状态：用户选定的未开通月卡视觉；购买价格由真实 `vip.get` 响应提供
+- 用户结果：保留暖橙金三宠主图；固定英文标题 `VIP MONTHLY PASS`；突出每日免费稀有盲盒和每日 `100 Fgems`；将手续费返还作为辅助权益；购买入口采用开盒“开 10 次”同款暖橙双行大圆角按钮
+
+## 视觉依据
+
+- 用户选定视觉：`/var/folders/__/ffcc9r1113l4c8cd1z4m8tp80000gn/T/codex-clipboard-a3c9d9fc-4be9-4682-96d8-c5309ae2acb4.png`，`848 × 412px`
+- 保留主图：`/Users/mac/Desktop/FinalTMA/apps/web/public/assets/vip/vip-membership-hero-v4.webp`，`1200 × 900px`
+- 实现截图：不可用；当前没有可打开的同状态 Telegram 实现截图。
+
+## 实现核对
+
+- 标题唯一实现为硬编码 `<strong>VIP MONTHLY PASS</strong>`，不再读取付款、有效期或续费状态。
+- 两张奖励卡分别使用蛋图标的“每日免费 / 稀有盲盒”和宝石图标的“每日 / 100 Fgems”；交易手续费返还单独作为次级说明，不被表述为每日奖励。
+- 购买入口保留原来的禁用、重新加载与打开 VIP 详情交互；按钮主文案随真实状态显示购买、确认中、续费或重新加载，副文案显示真实价格、剩余天数或加载错误。
+- 未修改 API、后端、支付、数据库或主视觉资源。
+- `pnpm exec prettier --check apps/web/src/domains/vip/ui/VipBanner.tsx apps/web/src/domains/market/ui/market-density.css`、`pnpm --filter @pokepets/web typecheck`、`pnpm --filter @pokepets/web build` 与 `pnpm assets:check:development` 均通过。
+
+## 对照状态
+
+- 源截图包含聊天界面与设计卡片，源文件尺寸为 `848 × 412px`；卡片内的应用区域没有可可靠复用的独立实现视口规格。
+- 当前没有新实现截图，无法获得实现像素尺寸、CSS 视口或设备像素比，因此未进行密度归一化、全页同屏对照或聚焦区域对照。
+
+## Findings
+
+- [P1] 缺少同状态的 Telegram 实现截图
+  - 位置：交易 → 购买 → VIP 月卡横幅。
+  - 证据：已打开用户选定的源视觉并完成前端静态构建，但没有当前提交的 Telegram 页面截图。
+  - 影响：无法针对标题字重、双奖励卡密度、主图裁切与双行按钮宽度完成 1:1 视觉门禁。
+  - 修复：在 Telegram iOS 真实未开通状态打开购买页，捕获完整页面和 VIP 横幅聚焦截图，再与选定视觉同屏比较。
+
+## 比较历史
+
+1. 旧版使用固定中文标题、纵向权益列表与价格、按钮分列布局，不符合用户选定的双奖励卡与双行购买按钮方案。
+2. `4b7b145` 固定英文标题，将付款和续费状态移入操作按钮；保留三宠主图，仅调整前端布局与样式。
+3. 静态检查已通过；尚缺真实 Telegram 截图，因此视觉比较不能标记为通过。
+
+final result: blocked
+
+---
+
 # 当前最终验收结论
 
-- 当前有效版本：`1d067731a669ba587ca7deeab96509a23435a865`
-- 当前有效验收：本文“VIP 月卡暖橙金三宠主视觉验收”章节。
-- 代码与资源已经验证；真实 Telegram 截图因 iPhone 镜像无法连接而待补。
-- 历史皇冠版、旧多宠版与蓝紫星际版仅保留为比较记录，不再作为当前视觉方案。
+- 当前有效版本：`4b7b145`
+- 当前有效验收：本文“VIP MONTHLY PASS 奖励卡与双行购买按钮验收”章节。
+- 代码与静态构建已经验证；真实 Telegram 截图尚未取得，因此视觉验收待补。
+- 历史皇冠版、旧多宠版、蓝紫星际版与旧暖橙金布局仅保留为比较记录，不再作为当前视觉方案。
 
 final result: blocked
