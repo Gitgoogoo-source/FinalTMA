@@ -540,10 +540,10 @@ final result: passed
 
 ---
 
-# 当前 VIP 最终验收结论
+# VIP 月卡皇冠与双权益真实素材验收结论
 
-- 当前有效版本：`24f8af6`
-- 当前有效验收：本文“VIP 月卡皇冠与双权益真实素材验收”章节。
+- 该次验收版本：`24f8af6`
+- 该次验收记录：本文“VIP 月卡皇冠与双权益真实素材验收”章节。
 - 三张真实暖金位图已经在 Telegram iOS 真机加载，并完成参考与实现同屏比较；旧版 `7c55261` 的截图阻塞结论已被本次真实验收取代。
 
 final result: passed
@@ -583,11 +583,58 @@ final result: blocked
 
 ---
 
-# 当前 VIP 最终验收结论
+# VIP 月卡紧凑双权益图标验收结论
 
-- 当前有效版本：`bc583cc`
-- 当前有效验收：本文“VIP 月卡紧凑双权益图标验收”章节。
+- 该次验收版本：`bc583cc`
+- 该次验收记录：本文“VIP 月卡紧凑双权益图标验收”章节。
 - 两枚紧凑透明图标已经生成、接入、通过资产门禁并部署到真实环境；旧版带光环、花枝和底座的双权益素材已被替代。
 - 当前唯一待补证据是部署后真实 Telegram 购买页截图；在取得该截图前，不把页面级视觉验收标记为通过。
 
 final result: blocked
+
+---
+
+# VIP 月卡纵向双权益标签验收
+
+## 验收对象
+
+- 版本：`37d091c`
+- 页面：交易 → 购买 → VIP MONTHLY PASS 横幅
+- 用户裁决：两项权益整体纵向排列，每行为「左侧图标、右侧文字」；上方显示金色礼盒和「每日免费盲盒」，下方显示橙色切面宝石和「每日 100 Fgems」；每行保留独立浅金色描边圆角标签。
+- 改动范围：VIP 横幅组件、交易购买页样式、两张新增透明 PNG 和月卡展示文档；未修改 API、后端、支付、领取裁决或数据库。
+
+## 唯一实现结果
+
+- 原横向双图标与叠加牌匾已替换为纵向两行独立标签；两行均使用 `28px` 图标列、右侧单行文案、浅金背景和金色描边。
+- 交易手续费返还继续显示在两行每日权益下方，购买、续费、确认中、重新加载和实时价格逻辑保持不变。
+- 「每日免费盲盒」仅是横幅简化文案，真实权益仍为功能文档定义的每日 1 条免费稀有盲盒资格。
+
+## ImageGen 素材证据
+
+- 使用用户指定的内置 `$imagegen` 路径分别生成两枚素材，均以纯色绿幕输出，再使用共享图像运行环境和 `remove_chroma_key.py` 移除背景；未使用 CLI 模型回退。
+- 礼盒生成源图：`/Users/mac/.codex/generated_images/019fbe1c-3287-7441-9b33-f2b560bac911/exec-acd535fb-c026-4d48-a513-d0d3abafa659.png`。最终成品：`apps/web/public/assets/vip/vip-daily-gift.png`，`384 × 384px` RGBA，Alpha 包围盒 `(67, 59)–(312, 322)`，四角 Alpha 均为 `0`，SHA-256 为 `03e263e3cab0dcbfd8f5e6677ecef39de4ad122a40d2af33863e21a894fd5512`。
+- 宝石生成源图：`/Users/mac/.codex/generated_images/019fbe1c-3287-7441-9b33-f2b560bac911/exec-ea6806c0-bae8-476b-840c-d925d76eb49d.png`。最终成品：`apps/web/public/assets/vip/vip-daily-fgems.png`，`384 × 384px` RGBA，Alpha 包围盒 `(45, 32)–(339, 342)`，四角 Alpha 均为 `0`，SHA-256 为 `22ea1d7f109ba4baf4e5b052b351855485060599732635936ff60bc984c7b940`。
+- 礼盒提示词固定为单个奶油白与香槟金礼盒、琥珀橙色缎带、紧凑 3D 日漫游戏图标、纯 `#00ff00` 背景，禁止文字、投影、地面和多余装饰。
+- 宝石提示词固定为单枚对称橙色切面宝石、香槟金外框、紧凑 3D 日漫游戏图标、纯 `#00ff00` 背景，禁止文字、底座、投影和多余光效。
+
+## 验证证据
+
+- `pnpm exec prettier --check apps/web/src/domains/vip/ui/VipBanner.tsx apps/web/src/domains/market/ui/market-density.css` 通过。
+- `pnpm --filter @pokepets/web build` 通过。
+- `pnpm assets:check:development` 通过：425 个开发发布资产全部路径有效、格式有效、哈希锁定且已进入构建。
+- `APP_ENV=development pnpm build` 通过：API contracts、API、Web、API 类型、资产和构建 TON Connect manifest 能连续产出。
+- 提交 `37d091c` 已推送到 `origin/main` 并触发自动部署；线上两张 PNG 的 SHA-256 与本地成品完全一致。
+- 真实 iPhone 镜像在 Telegram Mini App 重新加载后完成 `344 × 764px` 交易购买页验收；两行标签顺序、图标、文案、边框和底部次级权益均正确，未见换行、遮挡或溢出。
+- 真机截图：`/Users/mac/.codex/visualizations/2026/08/01/019fbe1c-3287-7441-9b33-f2b560bac911/vip-market-vertical-benefits-live.jpg`，SHA-256 为 `ca4580e11305ac62d44dcde69c80423a677e3399c37ce99d5294db20c9a4abcf`。验收过程只导航和重新加载页面，未点击购买、领取或支付。
+
+final result: passed
+
+---
+
+# 当前 VIP 最终验收结论
+
+- 当前有效版本：`37d091c`
+- 当前有效验收：本文「VIP 月卡纵向双权益标签验收」章节。
+- 纵向两行权益、两枚透明 PNG、线上资源字节和真实 Telegram iPhone 布局均已验收通过；旧横向双图标与叠加牌匾方案只保留为历史记录。
+
+final result: passed
