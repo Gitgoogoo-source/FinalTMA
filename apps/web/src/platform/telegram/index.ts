@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 
 let listening = false;
-const MIN_TELEGRAM_CONTENT_TOP = 44;
+const TELEGRAM_MOBILE_CONTROLS_HEIGHT = 44;
 
 export function telegram(): TelegramWebApp | null {
   return window.Telegram?.WebApp ?? null;
@@ -44,9 +44,11 @@ function syncTelegramLayout(): void {
   const content = app.contentSafeAreaInset;
   const needsMobileControlsInset =
     app.platform === "ios" || app.platform === "android";
+  const safeTop = safe?.top ?? 0;
+  const reportedTop = Math.max(safeTop, content?.top ?? 0);
   document.documentElement.style.setProperty(
     "--tg-controls-inset-top",
-    `${needsMobileControlsInset && Math.max(safe?.top ?? 0, content?.top ?? 0) < MIN_TELEGRAM_CONTENT_TOP ? MIN_TELEGRAM_CONTENT_TOP : 0}px`,
+    `${needsMobileControlsInset ? Math.max(0, safeTop + TELEGRAM_MOBILE_CONTROLS_HEIGHT - reportedTop) : 0}px`,
   );
   if (safe) {
     document.documentElement.style.setProperty(
