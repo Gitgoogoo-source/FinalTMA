@@ -61,6 +61,72 @@ final result: passed
 
 ---
 
+# VIP 月卡战队主视觉与紧凑购买按钮验收
+
+## 验收对象
+
+- 版本：`d4928f82d43cd3b69bf287705cd05c821c57033e`
+- 环境：Vercel Production `dpl_DJRTP2mvrFTW7SPf8xsuPqhBSPVJ`，Telegram iOS 真机，iPhone 镜像
+- 页面状态：交易 → 购买、浅色主题、已登录、VIP 未开通、市场空状态
+- 用户结果：重做 VIP 主图、按钮与卡内布局；只改变前端，不改变 API、支付流程或后端裁决
+
+## 视觉依据
+
+- 用户最初布局参考：`/Users/mac/Desktop/图片/buy.png`，`941 × 1672px`
+- 被替代实现截图：`/private/tmp/finaltma-vip-squad-pass2.png`，`344 × 764px`
+- 最终 ImageGen 源图：`/Users/mac/.codex/generated_images/019fbd03-e1ea-7160-b00e-965e7909d203/exec-af51b28d-74c6-49f1-882d-e83084b95e11.png`，`1433 × 1098px`
+- 项目最终主视觉：`/Users/mac/Desktop/FinalTMA/apps/web/public/assets/vip/vip-membership-hero-v2.webp`，`1200 × 900px`
+- 真实环境实现截图：`/private/tmp/finaltma-vip-battle-pass3.jpeg`，`344 × 764px`
+- 线上主视觉资源：`https://final-tma-pi.vercel.app/assets/vip/vip-membership-hero-v2.webp`，HTTP `200`，`image/webp`，`192650` bytes
+
+## 视口与归一化
+
+- iPhone 镜像实现截图为 `344 × 764px`；VIP 卡片可见区域约 `312 × 187px`，对应应用 `245px` CSS 高度在镜像窗口内的缩放结果。
+- 全页对照将被替代实现与最终实现统一为 `344 × 764px`，左右并排生成 `708 × 764px` 比较图。
+- 聚焦对照将 `1200 × 900px` 源图以居中 `cover` 归一化到 `624 × 374px`，并将真实实现中的 VIP 卡片裁切后归一化到相同尺寸，只判断宠物构图、主体可见度、左侧信息安全区和按钮布局。
+
+## 对照证据
+
+- 全页同屏对照：`/private/tmp/vip-pass-full-comparison.jpg`
+- VIP 聚焦同屏对照：`/private/tmp/vip-pass-focused-comparison.jpg`
+- 对照图均已实际打开检查；全页图验证卡片与筛选栏、市场空状态及底部导航的关系，聚焦图验证源图到真实卡片的裁切和 UI 叠加效果。
+
+## 必查视觉面
+
+- 字体与层级：沿用项目 SF/PingFang 系统栈；金色会员眉题、白色主标题、浅金状态说明、三项权益和底部价格形成明确层级。真机未见换行、遮挡或异常截断。
+- 间距与布局：卡片继续保持 `245px` 高度；左侧信息列占 `48%`，三项权益使用稳定的纵向节奏；价格与购买按钮合并为单行操作区，按钮不再占满整列。
+- 颜色与令牌：深棕玻璃面板、熔岩橙、金色与电光紫构成游戏通行证色彩；左侧暗色遮罩保证动态文案对比度，右侧保留宠物能量光效。
+- 图片质量：使用独立 `WebP` 位图而非 CSS 绘图；三只原创宠物均可辨认，火焰主宠、雷电伙伴和水晶幼宠没有被边缘裁断；真机未见拉伸、透明边缘、压缩色块或模糊占位。
+- 文案与业务内容：继续显示真实 `199 Stars · 30 天`、每日 `100 Fgems`、每日免费稀有盲盒、交易手续费返还及动态购买/续费状态；主图不固化任何价格和状态文案。
+- 按钮与交互：购买按钮固定为短尺寸游戏按钮，与价格同排；未开通状态显示完整“购买”。点击卡片摘要立即打开原 VIP 详情弹窗，关闭后回到购买页；未点击弹窗中的真实 `199 Stars` 购买按钮。
+- 可访问性：装饰图继续使用空 `alt` 与 `aria-hidden`；摘要和购买入口继续使用语义按钮；原禁用、焦点和前端即时反馈逻辑未改变。
+
+## Findings
+
+没有发现可执行的 P0、P1 或 P2 视觉问题。
+
+当前真实账号只覆盖未开通状态；加载失败、确认中、续费与续费上限状态未通过伪造接口或修改真实数据进行截图。所有状态继续使用原组件逻辑，价格槽允许省略显示，按钮为长状态文案保留到 `92px` 的自适应宽度。
+
+## 比较历史
+
+1. 第一版多宠横幅高度为 `184px`，雷电伙伴被信息区遮挡，主体数量不清晰。
+2. 第二版把卡片提高到 `245px` 并完整展示三只宠物，但购买按钮横向铺满左栏，视觉重量过大，用户明确否决。
+3. 最终版重新生成战斗竞技场主图，使用右侧三宠冲锋构图和左侧深色游戏面板；价格与 `62px` 起的短按钮并排，真实 Telegram iOS 同屏对照中不存在宠物裁切、按钮过长、文字覆盖或横向溢出。
+
+## 实施检查清单
+
+- [x] 只修改 Web 前端主视觉资源、VIP 组件资源引用和购买页样式。
+- [x] 未修改 `apps/api`、API contract、数据库、支付或 VIP 后端逻辑。
+- [x] `pnpm --filter @pokepets/web typecheck` 通过。
+- [x] `pnpm --filter @pokepets/web build` 通过。
+- [x] `pnpm assets:check:development` 通过。
+- [x] Vercel Production 已确认部署 Git commit `d4928f82d43cd3b69bf287705cd05c821c57033e` 且别名已指向 READY 部署。
+- [x] Telegram iOS 真机验证购买页渲染、VIP 详情打开和关闭；没有执行真实付款。
+
+final result: passed
+
+---
+
 # VIP 月卡主视觉设计验收
 
 ## 验收对象
@@ -119,5 +185,15 @@ final result: passed
 - [x] 确认 Vercel Production 对应 Git commit `a9b4d5d` 且主视觉资源返回 HTTP 200。
 - [x] 在 Telegram iOS 真机验证购买页渲染、摘要入口和关闭详情弹窗。
 - [x] 完成用户参考、生成资产与真实实现的同屏视觉对照。
+
+final result: passed
+
+---
+
+# 当前最终验收结论
+
+- 当前有效版本：`d4928f82d43cd3b69bf287705cd05c821c57033e`
+- 当前有效验收：本文“VIP 月卡战队主视觉与紧凑购买按钮验收”章节。
+- 历史皇冠版与旧多宠版仅保留为比较记录，不再作为当前视觉方案。
 
 final result: passed
