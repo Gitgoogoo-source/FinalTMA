@@ -234,11 +234,45 @@ final result: passed
 
 ---
 
+# VIP 月卡暖橙金三宠主视觉验收
+
+## 验收对象
+
+- 版本：`1d067731a669ba587ca7deeab96509a23435a865`
+- 页面：交易 → 购买 → VIP 月卡横幅
+- 目标：将蓝紫星际主视觉替换为暖橙金日漫三宠主视觉，且保留固定“VIP 月卡”标题、紧凑购买按钮及全部原有业务交互。
+
+## 视觉依据
+
+- 最终 ImageGen 源图：`/Users/mac/.codex/generated_images/019fbd03-e1ea-7160-b00e-965e7909d203/exec-7dd2da4c-7ead-44f6-9c78-65f17d1568dd.png`，`1448 × 1086px`
+- 项目主视觉：`/Users/mac/Desktop/FinalTMA/apps/web/public/assets/vip/vip-membership-hero-v4.webp`，`1200 × 900px`
+- 实现截图：不可用；iPhone 镜像仍无法连接目标设备。
+
+## 已完成检查
+
+- 源图已实际打开：三只原创宠物分别为琥珀叶饰白狐、少量青绿点缀的小龙与花饰白兔；画面以奶油白、琥珀橙和金色为主，无紫色主调。
+- 组件仍将主标题硬编码为 `<strong>VIP 月卡</strong>`；付款、有效期及过期状态仍只出现在副标题和原有按钮逻辑中。
+- 卡片继续保持 `245px` 高度、左侧信息区与短购买按钮布局；仅将卡片遮罩、文字、权益块和图标颜色切换为暖色令牌。
+- `pnpm --filter @pokepets/web typecheck`、`pnpm --filter @pokepets/web build`、`pnpm assets:check:development` 和针对性 Prettier 检查通过。
+- 本次提交只修改 Web 主视觉资源、资源引用和购买页 CSS；没有修改 API、后端、数据库或支付代码。
+
+## Findings
+
+- [P1] 缺少真实 Telegram 实现截图
+  - 位置：交易 → 购买 → VIP 月卡横幅。
+  - 证据：主视觉源图、组件和静态构建均已检查，但 iPhone 镜像当前无法连接，无法取得与源图同视口、同状态的实现截图。
+  - 影响：无法完成真机上的裁切、文字对比度、左侧信息区与短按钮间距的同屏视觉对照。
+  - 修复：恢复 iPhone 镜像连接后，刷新 Mini App 的购买页，捕获未开通状态的全页与 VIP 卡聚焦截图，再进行同屏比较。
+
+final result: blocked
+
+---
+
 # 当前最终验收结论
 
-- 当前有效版本：`e29a40ba89bd45cca17fe532637d0d6bd41a921c`
-- 当前有效验收：本文“VIP 月卡固定标题与星际三宠主视觉验收”章节。
-- 代码、资源和部署已经验证；真实 Telegram 截图因 iPhone 镜像无法连接而待补。
-- 历史皇冠版与旧多宠版仅保留为比较记录，不再作为当前视觉方案。
+- 当前有效版本：`1d067731a669ba587ca7deeab96509a23435a865`
+- 当前有效验收：本文“VIP 月卡暖橙金三宠主视觉验收”章节。
+- 代码与资源已经验证；真实 Telegram 截图因 iPhone 镜像无法连接而待补。
+- 历史皇冠版、旧多宠版与蓝紫星际版仅保留为比较记录，不再作为当前视觉方案。
 
 final result: blocked
