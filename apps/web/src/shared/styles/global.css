@@ -20,7 +20,11 @@
   --content-safe-bottom: var(--tg-content-safe-area-inset-bottom, 0px);
   --content-safe-left: var(--tg-content-safe-area-inset-left, 0px);
   --content-safe-right: var(--tg-content-safe-area-inset-right, 0px);
-  --shell-top-inset: max(var(--safe-top), var(--content-safe-top));
+  --shell-top-inset: max(
+    var(--safe-top),
+    var(--content-safe-top),
+    var(--tg-fullscreen-controls-inset-top, 0px)
+  );
 }
 html[data-theme="light"] {
   --border: rgba(15, 23, 42, 0.12);

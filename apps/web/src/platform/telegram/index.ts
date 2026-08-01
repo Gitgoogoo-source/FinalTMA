@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 
 let listening = false;
+const MIN_FULLSCREEN_CONTENT_TOP = 44;
 
 export function telegram(): TelegramWebApp | null {
   return window.Telegram?.WebApp ?? null;
@@ -41,6 +42,10 @@ function syncTelegramLayout(): void {
     );
   const safe = app.safeAreaInset;
   const content = app.contentSafeAreaInset;
+  document.documentElement.style.setProperty(
+    "--tg-fullscreen-controls-inset-top",
+    `${app.isFullscreen && Math.max(safe?.top ?? 0, content?.top ?? 0) < MIN_FULLSCREEN_CONTENT_TOP ? MIN_FULLSCREEN_CONTENT_TOP : 0}px`,
+  );
   if (safe) {
     document.documentElement.style.setProperty(
       "--tg-safe-area-inset-top",
