@@ -1061,8 +1061,8 @@ function gachaReferencePath(input: unknown): string {
   if (input && typeof input === "object" && "tier" in input) {
     const tier = input.tier;
     if (tier === "normal") return "/assets/boxes/normal.webp";
-    if (tier === "rare") return "/assets/boxes/legendary.webp";
-    if (tier === "legendary") return "/assets/boxes/rare.webp";
+    if (tier === "rare") return "/assets/boxes/rare.webp";
+    if (tier === "legendary") return "/assets/boxes/legendary.webp";
   }
   return "/assets/boxes/legendary.webp";
 }
