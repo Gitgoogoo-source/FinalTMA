@@ -23,7 +23,7 @@
   --shell-top-inset: max(
     var(--safe-top),
     var(--content-safe-top),
-    var(--tg-fullscreen-controls-inset-top, 0px)
+    var(--tg-controls-inset-top, 0px)
   );
 }
 html[data-theme="light"] {
