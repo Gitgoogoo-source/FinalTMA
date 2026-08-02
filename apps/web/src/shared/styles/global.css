@@ -1447,50 +1447,23 @@ input:focus {
   display: grid;
   place-items: center;
   overflow: hidden;
-  padding: 0 4px;
+  padding: 0 12px;
 }
 .gacha-result-formation {
-  width: min(calc(100% - 20px), 400px);
+  width: min(100%, 360px);
   min-height: 0;
-  height: min(88%, 460px);
+  height: min(100%, 560px);
   display: grid;
-  grid-template-columns: repeat(30, minmax(0, 1fr));
-  grid-template-rows: minmax(0, 0.86fr) minmax(0, 0.94fr) minmax(0, 1.1fr);
-  align-items: end;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: minmax(0, 1.85fr) repeat(3, minmax(0, 1fr));
+  gap: 1px 8px;
   margin: 0;
-  padding: 2px 8px 0;
+  padding: 0 4px 2px;
   list-style: none;
   isolation: isolate;
 }
 .gacha-result-formation li:nth-child(1) {
-  grid-area: 3 / 6 / 4 / 16;
-}
-.gacha-result-formation li:nth-child(2) {
-  grid-area: 3 / 16 / 4 / 26;
-}
-.gacha-result-formation li:nth-child(3) {
-  grid-area: 2 / 4 / 3 / 12;
-}
-.gacha-result-formation li:nth-child(4) {
-  grid-area: 2 / 12 / 3 / 20;
-}
-.gacha-result-formation li:nth-child(5) {
-  grid-area: 2 / 20 / 3 / 28;
-}
-.gacha-result-formation li:nth-child(6) {
-  grid-area: 1 / 3 / 2 / 8;
-}
-.gacha-result-formation li:nth-child(7) {
-  grid-area: 1 / 8 / 2 / 13;
-}
-.gacha-result-formation li:nth-child(8) {
-  grid-area: 1 / 13 / 2 / 18;
-}
-.gacha-result-formation li:nth-child(9) {
-  grid-area: 1 / 18 / 2 / 23;
-}
-.gacha-result-formation li:nth-child(10) {
-  grid-area: 1 / 23 / 2 / 28;
+  grid-area: 1 / 1 / 2 / -1;
 }
 .gacha-result-formation li {
   position: relative;
@@ -1498,31 +1471,43 @@ input:focus {
   min-width: 0;
   height: 100%;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr);
   justify-items: center;
-  gap: 2px;
+  gap: 1px;
   animation: gacha-result-rise 0.38s steps(5, end) both;
   animation-delay: calc(var(--formation-index) * 35ms);
 }
-.gacha-result-formation li:nth-child(n + 3):nth-child(-n + 5) {
-  top: 14px;
+.gacha-result-formation li:first-child {
+  z-index: 11;
+  gap: 3px;
+  padding-inline: 18px;
+  background: radial-gradient(
+    ellipse at 50% 80%,
+    rgba(255, 205, 91, 0.2),
+    rgba(124, 92, 255, 0.12) 42%,
+    transparent 68%
+  );
 }
 .gacha-result-formation .gacha-result-art {
-  width: min(31vw, 124px);
+  width: 100%;
   height: 100%;
-  scale: var(--formation-scale);
-  transform-origin: bottom center;
+  min-height: 0;
 }
-.gacha-result-formation li:nth-child(-n + 2) .gacha-result-art {
-  --formation-scale: 1.2;
+.gacha-result-formation li:first-child .gacha-result-art {
+  width: min(68vw, 270px);
 }
-.gacha-result-formation
-  li:nth-child(n + 3):nth-child(-n + 5)
-  .gacha-result-art {
-  --formation-scale: 1;
+.gacha-result-formation > li > .new-indicator {
+  min-height: 14px;
+  padding: 1px 5px;
+  box-shadow:
+    1px 1px 0 #7c263a,
+    0 0 8px rgba(255, 139, 40, 0.38);
+  font-size: 7px;
 }
-.gacha-result-formation li:nth-child(n + 6) .gacha-result-art {
-  --formation-scale: 0.8;
+.gacha-result-formation li:first-child > .new-indicator {
+  min-height: 19px;
+  padding-inline: 7px;
+  font-size: 9px;
 }
 .gacha-result-formation .catalog-image,
 .gacha-single-result .catalog-image {
@@ -1550,6 +1535,10 @@ input:focus {
   filter: drop-shadow(0 0 18px rgba(255, 99, 142, 0.82))
     drop-shadow(0 13px 5px rgba(0, 0, 0, 0.42));
 }
+.gacha-result-formation li:first-child .catalog-image {
+  filter: drop-shadow(0 0 20px rgba(255, 207, 91, 0.72))
+    drop-shadow(0 14px 6px rgba(0, 0, 0, 0.46));
+}
 .gacha-result-rarity {
   position: relative;
   z-index: 4;
@@ -1565,17 +1554,13 @@ input:focus {
 }
 .gacha-result-formation .gacha-result-rarity {
   max-width: 100%;
-  font-size: 8px;
+  font-size: 9px;
   letter-spacing: 0.06em;
   white-space: nowrap;
 }
-.gacha-result-formation li:nth-child(-n + 2) .gacha-result-rarity {
-  font-size: 13px;
-}
-.gacha-result-formation
-  li:nth-child(n + 3):nth-child(-n + 5)
-  .gacha-result-rarity {
-  font-size: 10px;
+.gacha-result-formation li:first-child .gacha-result-rarity {
+  font-size: 18px;
+  letter-spacing: 0.12em;
 }
 .rarity-rare > .gacha-result-rarity {
   color: #70b0ff;
@@ -1651,7 +1636,15 @@ input:focus {
     font-size: 22px;
   }
   .gacha-result-formation {
-    padding-inline: 4px;
+    width: min(100%, 340px);
+    gap: 0 7px;
+    padding-inline: 2px;
+  }
+  .gacha-result-formation li:first-child {
+    padding-inline: 24px;
+  }
+  .gacha-result-formation li:first-child .gacha-result-art {
+    width: min(58vw, 220px);
   }
   .gacha-single-result .gacha-result-art {
     height: min(48dvh, 300px);

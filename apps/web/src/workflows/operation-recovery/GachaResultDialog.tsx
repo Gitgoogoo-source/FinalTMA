@@ -109,6 +109,7 @@ function TenDrawResults({ results }: { results: ResultItem[] }): ReactNode {
             <strong className="gacha-result-rarity">
               {rarityLabels[item.rarity]}
             </strong>
+            <span className="new-indicator">NEW</span>
             <div className="gacha-result-art">
               <CatalogImage
                 path={item.image_detail_path}
@@ -116,7 +117,6 @@ function TenDrawResults({ results }: { results: ResultItem[] }): ReactNode {
                 variant="detail"
                 loading="eager"
               />
-              <span className="new-indicator">NEW</span>
             </div>
           </li>
         ))}
