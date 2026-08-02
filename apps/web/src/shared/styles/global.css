@@ -8101,6 +8101,25 @@ html[data-app-shell-active] #root {
   display: none;
 }
 
+.app-shell .gacha-stage-art {
+  width: 100%;
+  height: 100%;
+  grid-area: 1 / 1;
+  display: grid;
+  place-items: end center;
+  z-index: 1;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.app-shell .gacha-stage-art.active {
+  opacity: 1;
+}
+
+.app-shell .gacha-stage-art:not(.active) .catalog-image {
+  animation: none !important;
+}
+
 .app-shell .gacha-stage::after {
   left: 50%;
   right: auto;

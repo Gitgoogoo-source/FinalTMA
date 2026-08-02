@@ -281,21 +281,31 @@ export function GachaView({
               {dailyBenefits(handleFreeRareClaimed)}
               <div className={`gacha-stage ${selectedBox.tier}`}>
                 <span className="stage-glow" aria-hidden="true" />
-                <CatalogImage
-                  key={selectedBox.tier}
-                  path={boxArtPaths[selectedBox.tier]}
-                  alt={selectedBox.display_name}
-                  variant="detail"
-                  loading="eager"
-                  fetchPriority="high"
-                  onAvailability={(available) =>
-                    setReady((state) =>
-                      state[selectedBox.tier] === available
-                        ? state
-                        : { ...state, [selectedBox.tier]: available },
-                    )
-                  }
-                />
+                {items.map((box) => {
+                  const active = box.tier === selectedBox.tier;
+                  return (
+                    <span
+                      key={box.tier}
+                      className={`gacha-stage-art${active ? " active" : ""}`}
+                      aria-hidden={!active}
+                    >
+                      <CatalogImage
+                        path={boxArtPaths[box.tier]}
+                        alt={active ? box.display_name : ""}
+                        variant="detail"
+                        loading="eager"
+                        fetchPriority="high"
+                        onAvailability={(available) =>
+                          setReady((state) =>
+                            state[box.tier] === available
+                              ? state
+                              : { ...state, [box.tier]: available },
+                          )
+                        }
+                      />
+                    </span>
+                  );
+                })}
               </div>
             </div>
 
