@@ -66,6 +66,7 @@ type RegisteredOperation = {
   errorCode: string | null;
   persistent: boolean;
   input: unknown;
+  animationTier: GachaHatchTier | null;
 };
 
 type GachaResultAction = "again" | "inventory" | "close";
@@ -188,7 +189,7 @@ export function OperationRegistryProvider({
       operation.phase === "confirming" || operation.phase === "submitting",
   );
   const animatedGachaOperationId =
-    active?.routeId === "gacha.open" && active.input !== null
+    active?.routeId === "gacha.open" && active.animationTier !== null
       ? active.id
       : null;
   const gachaPresentationReady =
@@ -341,6 +342,8 @@ export function OperationRegistryProvider({
           errorCode: null,
           persistent: false,
           input,
+          animationTier:
+            routeId === "gacha.open" ? gachaAnimationTier(input, null) : null,
         },
       } satisfies Record<string, RegisteredOperation>;
       operationsRef.current = next;
@@ -465,6 +468,7 @@ export function OperationRegistryProvider({
           errorCode: operation.error_code,
           persistent: true,
           input: null,
+          animationTier: next[operation.operation_id]?.animationTier ?? null,
         };
         if (operation.status === "succeeded")
           markOperationNewTemplates(
@@ -948,7 +952,10 @@ export function OperationRegistryProvider({
             />
           ) : showGachaAnimation ? (
             <GachaHatchAnimation
-              tier={gachaAnimationTier(active.input, gachaResult)}
+              tier={
+                active.animationTier ??
+                gachaAnimationTier(active.input, gachaResult)
+              }
             />
           ) : gachaResult ? (
             <GachaResultDialog
