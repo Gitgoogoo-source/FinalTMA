@@ -4919,86 +4919,106 @@ input:focus {
   grid-row: 2;
   width: 100%;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0;
+  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+  gap: clamp(5px, 0.8dvh, 7px);
   margin-top: 0;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.84);
-  border-radius: clamp(17px, 3.1dvh, 22px);
-  background: rgba(255, 255, 255, 0.42);
-  box-shadow:
-    0 9px 22px rgba(77, 72, 105, 0.075),
-    inset 0 1px 0 rgba(255, 255, 255, 0.94);
-  backdrop-filter: blur(16px) saturate(142%);
-  -webkit-backdrop-filter: blur(16px) saturate(142%);
 }
 .app-shell .inventory-metric {
+  position: relative;
   min-width: 0;
-  min-height: clamp(58px, 8.8dvh, 72px);
+  min-height: clamp(56px, 8.4dvh, 68px);
   display: grid;
-  justify-items: center;
-  align-content: center;
-  gap: clamp(2px, 0.5dvh, 4px);
-  padding: clamp(4px, 0.8dvh, 7px) 2px;
-  border: 0;
-  background: transparent;
-  box-shadow: none;
-  text-align: center;
-}
-.app-shell .inventory-metric + .inventory-metric {
-  border-left: 1px solid rgba(105, 111, 125, 0.09);
-}
-.app-shell .inventory-metric > span {
+  grid-template-columns: clamp(34px, 5.4dvh, 42px) minmax(0, 1fr);
+  align-items: center;
+  gap: 1px;
+  padding: 5px 7px 5px 2px;
   overflow: hidden;
-  color: #314957;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-radius: clamp(17px, 3dvh, 21px);
+  backdrop-filter: blur(18px) saturate(155%);
+  -webkit-backdrop-filter: blur(18px) saturate(155%);
+}
+.app-shell .inventory-metric::after {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.98);
+  content: "";
+  pointer-events: none;
+}
+.app-shell .inventory-metric.stage {
+  background:
+    radial-gradient(
+      circle at 10% 16%,
+      rgba(199, 236, 207, 0.6),
+      transparent 44%
+    ),
+    linear-gradient(
+      135deg,
+      rgba(250, 255, 251, 0.74),
+      rgba(230, 245, 235, 0.54)
+    );
+  box-shadow: 0 9px 21px rgba(53, 111, 76, 0.11);
+}
+.app-shell .inventory-metric.power {
+  background:
+    radial-gradient(
+      circle at 11% 16%,
+      rgba(126, 164, 241, 0.35),
+      transparent 46%
+    ),
+    linear-gradient(
+      135deg,
+      rgba(249, 252, 255, 0.77),
+      rgba(224, 233, 248, 0.57)
+    );
+  box-shadow: 0 9px 21px rgba(42, 78, 137, 0.13);
+}
+.app-shell .inventory-metric > img {
+  position: relative;
+  z-index: 1;
+  width: clamp(34px, 5.4dvh, 42px);
+  height: clamp(34px, 5.4dvh, 42px);
+  display: block;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+}
+.app-shell .inventory-metric.stage > img {
+  filter: drop-shadow(0 4px 4px rgba(97, 96, 55, 0.17));
+}
+.app-shell .inventory-metric.power > img {
+  filter: drop-shadow(0 4px 4px rgba(33, 51, 83, 0.2));
+}
+.app-shell .inventory-metric-copy {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  display: grid;
+  gap: clamp(3px, 0.55dvh, 5px);
+  align-content: center;
+}
+.app-shell .inventory-metric-copy > span {
+  overflow: hidden;
+  color: #586d70;
   font-size: 8px;
-  font-weight: 900;
+  font-weight: 950;
+  letter-spacing: 0.04em;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.app-shell .inventory-metric > i {
-  width: clamp(21px, 3.5dvh, 27px);
-  height: clamp(21px, 3.5dvh, 27px);
-  display: grid;
-  place-items: center;
-  border: 0;
-  color: #68747a;
-  background: transparent;
-  font-style: normal;
-}
-.app-shell .inventory-metric > i svg {
-  width: clamp(14px, 2.5dvh, 18px);
-  height: clamp(14px, 2.5dvh, 18px);
-}
-.app-shell .inventory-metric > strong {
+.app-shell .inventory-metric-copy > strong {
   max-width: 100%;
   overflow: hidden;
-  color: #17354a;
-  font-size: clamp(11px, 1.8dvh, 14px);
+  color: #173d38;
+  font-size: clamp(13px, 2.1dvh, 16px);
   font-weight: 950;
   line-height: 1;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.app-shell .inventory-metric.common > strong,
-.app-shell .inventory-metric.common > i {
-  color: #6d7873;
-}
-.app-shell .inventory-metric.rare > strong,
-.app-shell .inventory-metric.rare > i {
-  color: #397ed8;
-}
-.app-shell .inventory-metric.epic > strong,
-.app-shell .inventory-metric.epic > i {
-  color: #8753d3;
-}
-.app-shell .inventory-metric.legendary > strong,
-.app-shell .inventory-metric.legendary > i {
-  color: #e16e12;
-}
-.app-shell .inventory-metric.mythic > strong,
-.app-shell .inventory-metric.mythic > i {
-  color: #d84068;
+.app-shell .inventory-metric.power .inventory-metric-copy > strong {
+  color: #254c86;
 }
 .app-shell .inventory-quantity-summary {
   grid-column: 1;

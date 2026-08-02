@@ -1,4 +1,4 @@
-import { Crosshair, Sprout, Star } from "lucide-react";
+import { Star } from "lucide-react";
 import type { ReactNode, Ref } from "react";
 
 import { CatalogImage } from "./CatalogImage.tsx";
@@ -84,20 +84,16 @@ export function CollectionDetailShowcase({
 
       <div className="inventory-metric-grid">
         <InventoryMetric
-          label="稀有度"
-          value={rarityLabels[item.rarity]}
-          tone={item.rarity}
-          icon={<Star />}
-        />
-        <InventoryMetric
           label="进化阶段"
           value={`${item.stage} 阶`}
-          icon={<Sprout />}
+          tone="stage"
+          artPath="/assets/inventory/stats/evolution-stage.png"
         />
         <InventoryMetric
           label="战斗力"
           value={item.combat_power.toLocaleString("zh-CN")}
-          icon={<Crosshair />}
+          tone="power"
+          artPath="/assets/inventory/stats/combat-power.png"
         />
       </div>
 
@@ -136,19 +132,21 @@ function InventoryQuantitySummary({
 function InventoryMetric({
   label,
   value,
-  icon,
-  tone = "",
+  tone,
+  artPath,
 }: {
   label: string;
   value: string;
-  icon: ReactNode;
-  tone?: string;
+  tone: "stage" | "power";
+  artPath: string;
 }): ReactNode {
   return (
     <div className={`inventory-metric ${tone}`}>
-      <span>{label}</span>
-      <i>{icon}</i>
-      <strong>{value}</strong>
+      <img src={artPath} alt="" aria-hidden="true" draggable={false} />
+      <div className="inventory-metric-copy">
+        <span>{label}</span>
+        <strong>{value}</strong>
+      </div>
     </div>
   );
 }
