@@ -1469,28 +1469,28 @@ input:focus {
   grid-area: 3 / 16 / 4 / 26;
 }
 .gacha-result-formation li:nth-child(3) {
-  grid-area: 2 / 1 / 3 / 11;
+  grid-area: 2 / 4 / 3 / 12;
 }
 .gacha-result-formation li:nth-child(4) {
-  grid-area: 2 / 11 / 3 / 21;
+  grid-area: 2 / 12 / 3 / 20;
 }
 .gacha-result-formation li:nth-child(5) {
-  grid-area: 2 / 21 / 3 / 31;
+  grid-area: 2 / 20 / 3 / 28;
 }
 .gacha-result-formation li:nth-child(6) {
-  grid-area: 1 / 1 / 2 / 7;
+  grid-area: 1 / 3 / 2 / 8;
 }
 .gacha-result-formation li:nth-child(7) {
-  grid-area: 1 / 7 / 2 / 13;
+  grid-area: 1 / 8 / 2 / 13;
 }
 .gacha-result-formation li:nth-child(8) {
-  grid-area: 1 / 13 / 2 / 19;
+  grid-area: 1 / 13 / 2 / 18;
 }
 .gacha-result-formation li:nth-child(9) {
-  grid-area: 1 / 19 / 2 / 25;
+  grid-area: 1 / 18 / 2 / 23;
 }
 .gacha-result-formation li:nth-child(10) {
-  grid-area: 1 / 25 / 2 / 31;
+  grid-area: 1 / 23 / 2 / 28;
 }
 .gacha-result-formation li {
   position: relative;
@@ -1503,6 +1503,9 @@ input:focus {
   gap: 2px;
   animation: gacha-result-rise 0.38s steps(5, end) both;
   animation-delay: calc(var(--formation-index) * 35ms);
+}
+.gacha-result-formation li:nth-child(n + 3):nth-child(-n + 5) {
+  top: 14px;
 }
 .gacha-result-formation .gacha-result-art {
   width: min(31vw, 124px);
