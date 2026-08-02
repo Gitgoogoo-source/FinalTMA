@@ -1,11 +1,4 @@
-import {
-  ChevronLeft,
-  ChevronRight,
-  Gift,
-  RefreshCw,
-  Sparkles,
-  Star,
-} from "lucide-react";
+import { ChevronRight, Gift, RefreshCw, Sparkles, Star } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -16,7 +9,6 @@ import {
   type CSSProperties,
   type ReactNode,
 } from "react";
-import { useNavigate } from "react-router-dom";
 
 import { CatalogImage } from "../../../shared/ui/index.tsx";
 import { useApiQuery } from "../../../platform/query/index.ts";
@@ -69,7 +61,6 @@ export function GachaView({
 }): ReactNode {
   const boxes = useApiQuery("gacha.bootstrap");
   const identity = useApiQuery("identity.bootstrap");
-  const navigate = useNavigate();
   const session = useSession();
   const { isBlocked, run } = useOperationRegistry();
   const { requestTopup } = useNavigationIntent();
@@ -286,17 +277,6 @@ export function GachaView({
       >
         {selectedBox && (
           <section className="gacha-showcase">
-            <header className="gacha-screen-title">
-              <button
-                type="button"
-                aria-label="返回上一页"
-                onClick={() => navigate(-1)}
-              >
-                <ChevronLeft aria-hidden="true" />
-              </button>
-              <strong>{selectedBox.display_name}</strong>
-              <span aria-hidden="true" />
-            </header>
             <div className="gacha-hero">
               {dailyBenefits(handleFreeRareClaimed)}
               <div className={`gacha-stage ${selectedBox.tier}`}>
