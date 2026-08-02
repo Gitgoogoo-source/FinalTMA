@@ -46,6 +46,10 @@ import {
   type OperationRegistryValue,
 } from "./context.ts";
 import { EvolutionOperationDialog } from "./EvolutionOperationDialog.tsx";
+import {
+  GachaHatchAnimation,
+  type GachaHatchTier,
+} from "./GachaHatchAnimation.tsx";
 import { GachaResultDialog } from "./GachaResultDialog.tsx";
 import { operationLabel } from "./labels.ts";
 import { WheelResultDialog } from "./WheelResultDialog.tsx";
@@ -122,6 +126,9 @@ export function OperationRegistryProvider({
     operationId: string;
     message: string;
   } | null>(null);
+  const [revealedGachaAnimationId, setRevealedGachaAnimationId] = useState<
+    string | null
+  >(null);
   const recoveringIds = useRef(new Set<string>());
   const acknowledgedIds = useRef(new Set<string>());
   const active = activeId ? operations[activeId] : undefined;
@@ -180,6 +187,17 @@ export function OperationRegistryProvider({
     (operation) =>
       operation.phase === "confirming" || operation.phase === "submitting",
   );
+  const animatedGachaOperationId =
+    active?.routeId === "gacha.open" && active.input !== null
+      ? active.id
+      : null;
+  const gachaPresentationReady =
+    animatedGachaOperationId === null ||
+    revealedGachaAnimationId === animatedGachaOperationId;
+  const showGachaAnimation = Boolean(
+    active?.routeId === "gacha.open" &&
+    (!gachaPresentationReady || unresolvedPhases.has(active.phase)),
+  );
 
   useEffect(() => {
     operationsRef.current = operations;
@@ -195,6 +213,7 @@ export function OperationRegistryProvider({
         setActiveId(null);
         setAcknowledgingId(null);
         setAcknowledgementError(null);
+        setRevealedGachaAnimationId(null);
         telegram()?.disableClosingConfirmation();
       }),
     [],
@@ -205,6 +224,24 @@ export function OperationRegistryProvider({
     else telegram()?.disableClosingConfirmation();
     return () => telegram()?.disableClosingConfirmation();
   }, [closingBlocked]);
+
+  useEffect(() => {
+    if (!animatedGachaOperationId) return;
+    const operationId = animatedGachaOperationId;
+    let timer: number | undefined;
+    const finishCycle = () => {
+      const operation = operationsRef.current[operationId];
+      if (operation?.phase === "succeeded" || operation?.phase === "failed") {
+        setRevealedGachaAnimationId(operationId);
+        return;
+      }
+      timer = window.setTimeout(finishCycle, 3_000);
+    };
+    timer = window.setTimeout(finishCycle, 3_000);
+    return () => {
+      if (timer !== undefined) window.clearTimeout(timer);
+    };
+  }, [animatedGachaOperationId]);
 
   useLayoutEffect(() => {
     if (!activeId || !dialogRef.current) return;
@@ -866,21 +903,24 @@ export function OperationRegistryProvider({
           ref={dialogRef}
           className={`modal-backdrop ${
             active.routeId === "gacha.open"
-              ? `gacha-operation-backdrop phase-${active.phase}`
+              ? `gacha-operation-backdrop phase-${active.phase}${showGachaAnimation ? " gacha-hatching-backdrop" : ""}`
               : ""
           }`}
           role="dialog"
           aria-modal="true"
+          aria-label={showGachaAnimation ? "盲盒结算中" : undefined}
           aria-labelledby={
-            active.routeId === "inventory.evolve"
-              ? "evolution-result-title"
-              : gachaResult
-                ? "gacha-result-title"
-                : wheelResult
-                  ? "wheel-result-title"
-                  : albumClaimResult
-                    ? "album-claim-result-title"
-                    : "operation-dialog-title"
+            showGachaAnimation
+              ? undefined
+              : active.routeId === "inventory.evolve"
+                ? "evolution-result-title"
+                : gachaResult
+                  ? "gacha-result-title"
+                  : wheelResult
+                    ? "wheel-result-title"
+                    : albumClaimResult
+                      ? "album-claim-result-title"
+                      : "operation-dialog-title"
           }
           tabIndex={-1}
           onKeyDown={trapDialogFocus}
@@ -905,6 +945,10 @@ export function OperationRegistryProvider({
               onAcknowledge={() =>
                 void acknowledgeEvolutionResult(active, "acknowledge")
               }
+            />
+          ) : showGachaAnimation ? (
+            <GachaHatchAnimation
+              tier={gachaAnimationTier(active.input, gachaResult)}
             />
           ) : gachaResult ? (
             <GachaResultDialog
@@ -948,56 +992,29 @@ export function OperationRegistryProvider({
                   : ""
               }`}
             >
-              {active.routeId === "gacha.open" && active.phase !== "failed" ? (
-                <>
-                  <div className="gacha-opening-art" aria-hidden="true">
-                    <img
-                      src={gachaReferencePath(active.input)}
-                      alt=""
-                      width="180"
-                      height="180"
-                    />
-                  </div>
-                  <h2 id="operation-dialog-title">
-                    {active.phase === "confirming" ||
-                    active.phase === "submitting"
-                      ? "开盒中…"
-                      : "结果确认中…"}
-                  </h2>
-                  <p>
-                    {invalidGachaSuccess
-                      ? "开盒结果详情暂时无法确认，请查询原操作"
+              <div
+                className={`operation-mark ${invalidDedicatedSuccess ? "unknown" : active.phase}`}
+              >
+                {invalidDedicatedSuccess
+                  ? "…"
+                  : active.phase === "succeeded"
+                    ? "✓"
+                    : active.phase === "failed"
+                      ? "!"
+                      : "…"}
+              </div>
+              <h2 id="operation-dialog-title">
+                {operationDialogTitle(active)}
+              </h2>
+              <p>
+                {invalidGachaSuccess
+                  ? "开盒结果详情暂时无法确认，请查询原操作"
+                  : invalidWheelSuccess
+                    ? "转盘结果详情暂时无法确认，请查询原操作"
+                    : invalidAlbumClaimSuccess
+                      ? "图鉴奖励详情暂时无法确认，请查询原操作"
                       : active.message}
-                  </p>
-                  <span className="gacha-opening-track" aria-hidden="true">
-                    <i />
-                  </span>
-                </>
-              ) : (
-                <>
-                  <div
-                    className={`operation-mark ${invalidDedicatedSuccess ? "unknown" : active.phase}`}
-                  >
-                    {invalidDedicatedSuccess
-                      ? "…"
-                      : active.phase === "succeeded"
-                        ? "✓"
-                        : active.phase === "failed"
-                          ? "!"
-                          : "…"}
-                  </div>
-                  <h2 id="operation-dialog-title">
-                    {operationDialogTitle(active)}
-                  </h2>
-                  <p>
-                    {invalidWheelSuccess
-                      ? "转盘结果详情暂时无法确认，请查询原操作"
-                      : invalidAlbumClaimSuccess
-                        ? "图鉴奖励详情暂时无法确认，请查询原操作"
-                        : active.message}
-                  </p>
-                </>
-              )}
+              </p>
               <code>操作号 {active.id}</code>
               {acknowledgedResultRouteIds.has(active.routeId) &&
               acknowledgementError?.operationId === active.id ? (
@@ -1057,14 +1074,17 @@ function isCurrentNormalSession(generation: string): boolean {
   );
 }
 
-function gachaReferencePath(input: unknown): string {
+function gachaAnimationTier(
+  input: unknown,
+  result: GachaResult | null,
+): GachaHatchTier {
+  if (result) return result.tier;
   if (input && typeof input === "object" && "tier" in input) {
     const tier = input.tier;
-    if (tier === "normal") return "/assets/boxes/normal.webp";
-    if (tier === "rare") return "/assets/boxes/rare.webp";
-    if (tier === "legendary") return "/assets/boxes/legendary.webp";
+    if (tier === "normal" || tier === "rare" || tier === "legendary")
+      return tier;
   }
-  return "/assets/boxes/legendary.webp";
+  return "normal";
 }
 
 function recoveredMessage(operation: RecoverableOperationSummary): string {
