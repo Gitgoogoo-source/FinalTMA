@@ -7,6 +7,7 @@ import {
 } from "react";
 
 export { CatalogImage } from "./CatalogImage.tsx";
+export { AppModal } from "./AppModal.tsx";
 export {
   CollectionDetailShowcase,
   type CollectionDetailItem,

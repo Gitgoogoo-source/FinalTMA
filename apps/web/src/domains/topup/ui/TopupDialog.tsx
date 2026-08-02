@@ -18,7 +18,7 @@ import {
 } from "../../../platform/query/index.ts";
 import { getSession } from "../../../platform/session/store.ts";
 import { telegram } from "../../../platform/telegram/index.ts";
-import { Button } from "../../../shared/ui/index.tsx";
+import { AppModal, Button } from "../../../shared/ui/index.tsx";
 import { useOperationRegistry } from "../../../workflows/operation-recovery/index.ts";
 import type { TopupRequest } from "../../../workflows/payment-recovery/index.ts";
 import type { PaymentOrder } from "../index.ts";
@@ -274,12 +274,16 @@ export function TopupDialog({
 
   if (request && !showOptions && !order) {
     return (
-      <div className="modal-backdrop topup-shortage-backdrop">
+      <AppModal
+        className="topup-shortage-backdrop"
+        labelledBy="topup-shortage-title"
+        onClose={closeDialog}
+      >
         <div className="modal topup topup-shortage">
           <span className="topup-shortage-mark" aria-hidden="true">
             <Coins />
           </span>
-          <h2>K-coin 余额不足</h2>
+          <h2 id="topup-shortage-title">K-coin 余额不足</h2>
           <p>
             本次操作还差 {request.estimatedGap}{" "}
             K-coin，请返回重新选择或前往获取。
@@ -291,15 +295,18 @@ export function TopupDialog({
             <Button onClick={() => setShowOptions(true)}>去获取</Button>
           </div>
         </div>
-      </div>
+      </AppModal>
     );
   }
 
   return (
-    <div className="modal-backdrop">
+    <AppModal
+      labelledBy="topup-dialog-title"
+      onClose={locked ? undefined : closeDialog}
+    >
       <div className="modal topup">
         <Coins size={38} />
-        <h2>K-coin 充值</h2>
+        <h2 id="topup-dialog-title">K-coin 充值</h2>
         <p>
           {request
             ? `原操作预计还差 ${request.estimatedGap} K-coin；最新差额与可用档位由服务器重新确认。`
@@ -386,6 +393,6 @@ export function TopupDialog({
           )}
         </div>
       </div>
-    </div>
+    </AppModal>
   );
 }

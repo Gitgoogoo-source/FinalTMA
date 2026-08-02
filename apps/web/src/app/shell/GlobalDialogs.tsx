@@ -3,6 +3,7 @@ import { lazy, Suspense, type ReactNode } from "react";
 import { TopupDialog } from "../../domains/topup/index.ts";
 import { VipDialog } from "../../domains/vip/index.ts";
 import type { TopupRequest } from "../../workflows/payment-recovery/index.ts";
+import { AppModal } from "../../shared/ui/index.tsx";
 import type { GlobalDialog } from "./TopAssetBar.tsx";
 
 const WalletDialog = lazy(() =>
@@ -25,7 +26,13 @@ export function GlobalDialogs({
   if (active === "vip") return <VipDialog close={close} />;
   if (active === "wallet")
     return (
-      <Suspense fallback={<div className="modal-backdrop">正在加载钱包</div>}>
+      <Suspense
+        fallback={
+          <AppModal label="正在加载钱包">
+            <div className="modal">正在加载钱包</div>
+          </AppModal>
+        }
+      >
         <WalletDialog close={close} />
       </Suspense>
     );

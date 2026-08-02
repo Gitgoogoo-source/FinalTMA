@@ -4,7 +4,7 @@ import { useTonConnectUI, useTonWallet } from "@tonconnect/ui-react";
 
 import { apiRequest } from "../../../platform/api/client.ts";
 import { useApiQuery } from "../../../platform/query/index.ts";
-import { Badge, Button } from "../../../shared/ui/index.tsx";
+import { AppModal, Badge, Button } from "../../../shared/ui/index.tsx";
 import { useOperationRegistry } from "../../../workflows/operation-recovery/index.ts";
 
 type Challenge = { payload: string; expiresAt: string };
@@ -101,11 +101,11 @@ export function WalletDialog({ close }: { close(): void }): ReactNode {
       },
     );
   return (
-    <div className="modal-backdrop">
+    <AppModal labelledBy="wallet-dialog-title" onClose={close}>
       <div className="modal wallet">
         <WalletCards size={42} />
         <Badge>{status.data?.connected ? "已验证" : "未连接"}</Badge>
-        <h2>TON 主钱包</h2>
+        <h2 id="wallet-dialog-title">TON 主钱包</h2>
         {status.isLoading ? (
           <p>正在读取钱包状态</p>
         ) : status.error ? (
@@ -157,7 +157,7 @@ export function WalletDialog({ close }: { close(): void }): ReactNode {
           关闭
         </Button>
       </div>
-    </div>
+    </AppModal>
   );
 }
 

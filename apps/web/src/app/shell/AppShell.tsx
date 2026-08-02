@@ -60,6 +60,7 @@ export function AppShell(): ReactNode {
     <>
       <div
         className={`app-shell${activePath === "/inventory" ? " inventory-shell" : ""}`}
+        data-app-shell-background
         hidden={!activePath}
         inert={!activePath}
       >

@@ -6,10 +6,10 @@ import {
   PackageOpen,
   ShieldCheck,
 } from "lucide-react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import { createPortal } from "react-dom";
+import { useState, type ReactNode } from "react";
 
 import {
+  AppModal,
   Button,
   CatalogImage,
   QuantityControl,
@@ -54,19 +54,6 @@ export function EvolutionConfirmationDialog({
   const maxAttempts = Math.min(materialAttempts, affordableAttempts);
   const maxQuantity = maxAttempts * 3;
   const [requestedQuantity, setRequestedQuantity] = useState(3);
-  const dialog = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const rootOverflow = document.documentElement.style.overflow;
-    const bodyOverflow = document.body.style.overflow;
-    document.documentElement.style.overflow = "hidden";
-    document.body.style.overflow = "hidden";
-    dialog.current?.focus();
-    return () => {
-      document.documentElement.style.overflow = rootOverflow;
-      document.body.style.overflow = bodyOverflow;
-    };
-  }, []);
 
   const quantity =
     maxQuantity < 3
@@ -91,21 +78,13 @@ export function EvolutionConfirmationDialog({
     valid,
   });
 
-  return createPortal(
-    <div className="app-shell modal-backdrop evolution-confirmation-backdrop">
-      <div
-        ref={dialog}
-        className="modal evolution-confirmation-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="evolution-confirmation-title"
-        tabIndex={-1}
-        onKeyDown={(event) => {
-          if (event.key !== "Escape") return;
-          event.preventDefault();
-          onCancel();
-        }}
-      >
+  return (
+    <AppModal
+      className="evolution-confirmation-backdrop"
+      labelledBy="evolution-confirmation-title"
+      onClose={onCancel}
+    >
+      <div className="modal evolution-confirmation-modal">
         <header>
           <ShieldCheck aria-hidden="true" />
           <div>
@@ -183,8 +162,7 @@ export function EvolutionConfirmationDialog({
           </Button>
         </footer>
       </div>
-    </div>,
-    document.body,
+    </AppModal>
   );
 }
 

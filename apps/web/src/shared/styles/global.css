@@ -6020,9 +6020,34 @@ input:focus {
 }
 
 /* Shell dialogs opened from the scoped pages */
-.app-shell .modal-backdrop {
+.app-shell .modal-backdrop,
+.app-shell.app-modal-backdrop {
   background: rgba(35, 43, 47, 0.42);
   backdrop-filter: blur(9px);
+}
+.app-shell.app-modal-backdrop {
+  z-index: 120;
+  width: auto;
+  max-width: none;
+  height: auto;
+  min-height: 0;
+  padding: 18px calc(var(--safe-right) + 12px) calc(var(--safe-bottom) + 18px)
+    calc(var(--safe-left) + 12px);
+  overflow: hidden;
+}
+.app-shell.app-modal-backdrop .modal {
+  max-height: calc(
+    var(--tg-viewport-stable-height, 100dvh) - var(--safe-top) -
+      var(--safe-bottom) - 36px
+  );
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.app-shell[data-app-modal-open] .content {
+  overflow: hidden;
+}
+.operation-dialog-backdrop {
+  z-index: 160;
 }
 .app-shell .modal {
   border: 1px solid rgba(255, 255, 255, 0.88);
@@ -6709,7 +6734,8 @@ body,
   line-height: 22px;
 }
 .app-shell .gacha-operation-backdrop,
-.app-shell .topup-shortage-backdrop {
+.app-shell .topup-shortage-backdrop,
+.app-shell.topup-shortage-backdrop {
   place-items: center;
   padding: calc(var(--safe-top) + 18px) 24px calc(var(--safe-bottom) + 18px);
   background: rgba(255, 249, 243, 0.78);

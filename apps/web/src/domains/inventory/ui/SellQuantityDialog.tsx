@@ -3,6 +3,7 @@ import { useState, type ReactNode } from "react";
 
 import {
   Badge,
+  AppModal,
   Button,
   CatalogImage,
   QuantityControl,
@@ -22,12 +23,7 @@ export function SellQuantityDialog({
   const valid =
     Number.isInteger(quantity) && quantity >= 1 && quantity <= item.available;
   return (
-    <div
-      className="modal-backdrop"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="sell-quantity-title"
-    >
+    <AppModal labelledBy="sell-quantity-title" onClose={onCancel}>
       <div className="modal inventory-quantity-modal">
         <header>
           <ShoppingBag aria-hidden="true" />
@@ -70,6 +66,6 @@ export function SellQuantityDialog({
           </Button>
         </div>
       </div>
-    </div>
+    </AppModal>
   );
 }

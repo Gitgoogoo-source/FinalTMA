@@ -5,7 +5,7 @@ import { useSearchParams } from "react-router-dom";
 import { CatalogImage } from "../../../shared/ui/index.tsx";
 import { useApiQuery } from "../../../platform/query/index.ts";
 import { focusTaskTarget } from "../../../shared/navigation/focusTaskTarget.ts";
-import { Badge, Button, Card } from "../../../shared/ui/index.tsx";
+import { AppModal, Badge, Button, Card } from "../../../shared/ui/index.tsx";
 import { useOperationRegistry } from "../../../workflows/operation-recovery/index.ts";
 
 const tierNames = {
@@ -162,9 +162,14 @@ export function ExpeditionPanel(): ReactNode {
         </div>
       )}
       {selectionTier && (
-        <div className="modal-backdrop">
+        <AppModal
+          labelledBy="expedition-picker-title"
+          onClose={blocked ? undefined : () => setSelectionTier(null)}
+        >
           <div className="modal expedition-picker">
-            <h2>选择{tierNames[selectionTier]}远征藏品</h2>
+            <h2 id="expedition-picker-title">
+              选择{tierNames[selectionTier]}远征藏品
+            </h2>
             <p>请选择正好 3 个当前可用的藏品单位。</p>
             {eligible.isLoading ? (
               <p>正在读取可派遣藏品</p>
@@ -237,7 +242,7 @@ export function ExpeditionPanel(): ReactNode {
               </Button>
             </div>
           </div>
-        </div>
+        </AppModal>
       )}
     </Card>
   );

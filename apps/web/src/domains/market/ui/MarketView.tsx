@@ -20,7 +20,13 @@ import { useMemo, useState, type ReactNode } from "react";
 import { CatalogImage } from "../../../shared/ui/index.tsx";
 import { useApiQuery } from "../../../platform/query/index.ts";
 import { usePageSearchParams } from "../../../shared/navigation/pageActivity.tsx";
-import { Badge, Button, Card, PageState } from "../../../shared/ui/index.tsx";
+import {
+  AppModal,
+  Badge,
+  Button,
+  Card,
+  PageState,
+} from "../../../shared/ui/index.tsx";
 import { useOperationRegistry } from "../../../workflows/operation-recovery/index.ts";
 import { useNavigationIntent } from "../../../workflows/payment-recovery/index.ts";
 import { MarketTabs, type MarketTab } from "./MarketTabs.tsx";
@@ -530,11 +536,9 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
         </PageState>
       )}
       {pendingDelist && (
-        <div
-          className="modal-backdrop"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="market-delist-confirm-title"
+        <AppModal
+          labelledBy="market-delist-confirm-title"
+          onClose={blocked ? undefined : () => setPendingDelist(null)}
         >
           <div className="modal">
             <div className="operation-mark confirming">!</div>
@@ -555,7 +559,7 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
               取消
             </Button>
           </div>
-        </div>
+        </AppModal>
       )}
     </main>
   );
@@ -1082,11 +1086,9 @@ function MarketCard({
         )}
       </Button>
       {confirming && (
-        <div
-          className="modal-backdrop"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby={`market-purchase-${item.template_id}`}
+        <AppModal
+          labelledBy={`market-purchase-${item.template_id}`}
+          onClose={blocked ? undefined : () => setConfirming(false)}
         >
           <div className="modal market-purchase-dialog">
             <div className="market-purchase-preview">
@@ -1159,7 +1161,7 @@ function MarketCard({
               取消
             </Button>
           </div>
-        </div>
+        </AppModal>
       )}
     </Card>
   );

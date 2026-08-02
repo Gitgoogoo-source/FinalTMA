@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 
 import { seedApiQuery, useApiQuery } from "../../../platform/query/index.ts";
 import { telegram } from "../../../platform/telegram/index.ts";
-import { Badge, Button } from "../../../shared/ui/index.tsx";
+import { AppModal, Badge, Button } from "../../../shared/ui/index.tsx";
 import { useOperationRegistry } from "../../../workflows/operation-recovery/index.ts";
 
 export function VipDialog({ close }: { close(): void }): ReactNode {
@@ -40,11 +40,11 @@ export function VipDialog({ close }: { close(): void }): ReactNode {
       ? pending
       : null;
   return (
-    <div className="modal-backdrop">
+    <AppModal labelledBy="vip-dialog-title" onClose={close}>
       <div className="modal vip">
         <Crown size={42} />
         <Badge>{vipDetailStatus(data, Boolean(activeOrder))}</Badge>
-        <h2>PokePets VIP 月卡</h2>
+        <h2 id="vip-dialog-title">PokePets VIP 月卡</h2>
         {query.isLoading ? (
           <p>正在读取真实权益</p>
         ) : query.error ? (
@@ -126,7 +126,7 @@ export function VipDialog({ close }: { close(): void }): ReactNode {
           关闭
         </Button>
       </div>
-    </div>
+    </AppModal>
   );
 }
 

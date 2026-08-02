@@ -905,7 +905,7 @@ export function OperationRegistryProvider({
       {session?.accountStatus === "normal" && active && (
         <div
           ref={dialogRef}
-          className={`modal-backdrop ${
+          className={`modal-backdrop operation-dialog-backdrop ${
             active.routeId === "gacha.open"
               ? `gacha-operation-backdrop phase-${active.phase}${showGachaAnimation ? " gacha-hatching-backdrop" : gachaResult ? " gacha-result-backdrop" : ""}`
               : ""

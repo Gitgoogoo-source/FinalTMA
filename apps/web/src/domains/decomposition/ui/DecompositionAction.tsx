@@ -2,7 +2,7 @@ import { useState, type ReactNode } from "react";
 import type { RouteOutput } from "@pokepets/api-contracts/app";
 
 import { useApiQuery } from "../../../platform/query/index.ts";
-import { Button } from "../../../shared/ui/index.tsx";
+import { AppModal, Button } from "../../../shared/ui/index.tsx";
 import { useOperationRegistry } from "../../../workflows/operation-recovery/index.ts";
 import { DecompositionConfirmationDialog } from "./DecompositionConfirmationDialog.tsx";
 
@@ -57,11 +57,9 @@ export function DecompositionAction({
         />
       ) : null}
       {confirming && (!detail.data || detail.isFetching || detail.isError) ? (
-        <div
-          className="modal-backdrop"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="decomposition-loading-title"
+        <AppModal
+          labelledBy="decomposition-loading-title"
+          onClose={() => setConfirming(false)}
         >
           <div className="modal inventory-quantity-modal">
             <h2 id="decomposition-loading-title">
@@ -79,7 +77,7 @@ export function DecompositionAction({
               取消
             </Button>
           </div>
-        </div>
+        </AppModal>
       ) : null}
     </>
   );

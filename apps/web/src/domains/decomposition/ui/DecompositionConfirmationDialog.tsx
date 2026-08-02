@@ -4,6 +4,7 @@ import type { RouteOutput } from "@pokepets/api-contracts/app";
 
 import {
   Badge,
+  AppModal,
   Button,
   CatalogImage,
   QuantityControl,
@@ -24,12 +25,7 @@ export function DecompositionConfirmationDialog({
   const valid =
     Number.isInteger(quantity) && quantity >= 1 && quantity <= item.available;
   return (
-    <div
-      className="modal-backdrop"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="decomposition-confirmation-title"
-    >
+    <AppModal labelledBy="decomposition-confirmation-title" onClose={onCancel}>
       <div className="modal inventory-quantity-modal">
         <header>
           <Flame aria-hidden="true" />
@@ -85,6 +81,6 @@ export function DecompositionConfirmationDialog({
           </Button>
         </div>
       </div>
-    </div>
+    </AppModal>
   );
 }
