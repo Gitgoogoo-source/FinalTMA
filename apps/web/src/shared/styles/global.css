@@ -4783,11 +4783,9 @@ input:focus {
   flex-direction: column;
   justify-content: center;
   padding: clamp(8px, 1.5dvh, 12px);
-  border: 1px solid rgba(54, 67, 75, 0.18);
-  border-radius: 19px;
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 13px 28px rgba(54, 67, 75, 0.08);
-  backdrop-filter: blur(16px);
+  border: 0;
+  background: transparent;
+  box-shadow: none;
 }
 .app-shell .inventory-title-board > span {
   color: var(--sprout-orange);
@@ -4811,10 +4809,8 @@ input:focus {
 .app-shell .inventory-title-board .detail-new-acquisition {
   width: max-content;
   margin-top: 5px;
-  padding: 3px 7px;
-  border-radius: 999px;
   color: #b44911;
-  background: rgba(240, 100, 32, 0.12);
+  background: transparent;
   font-size: 8px;
   font-weight: 950;
 }
@@ -4861,10 +4857,9 @@ input:focus {
   align-content: center;
   gap: clamp(2px, 0.5dvh, 4px);
   padding: clamp(4px, 0.8dvh, 7px) 2px;
-  border: 1px solid rgba(54, 67, 75, 0.18);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 12px 24px rgba(54, 67, 75, 0.07);
+  border: 0;
+  background: transparent;
+  box-shadow: none;
   text-align: center;
 }
 .app-shell .inventory-metric > span {
@@ -4880,10 +4875,9 @@ input:focus {
   height: clamp(24px, 4.2dvh, 32px);
   display: grid;
   place-items: center;
-  border: 2px solid #7e878b;
-  border-radius: 10px;
+  border: 0;
   color: #68747a;
-  background: #f5f6f5;
+  background: transparent;
   font-style: normal;
 }
 .app-shell .inventory-metric > i svg {
@@ -4913,22 +4907,18 @@ input:focus {
 .app-shell .inventory-metric.rare > strong,
 .app-shell .inventory-metric.rare > i {
   color: #397ed8;
-  border-color: #5c99e5;
 }
 .app-shell .inventory-metric.epic > strong,
 .app-shell .inventory-metric.epic > i {
   color: #8753d3;
-  border-color: #a57be1;
 }
 .app-shell .inventory-metric.legendary > strong,
 .app-shell .inventory-metric.legendary > i {
   color: #e16e12;
-  border-color: #ef913d;
 }
 .app-shell .inventory-metric.mythic > strong,
 .app-shell .inventory-metric.mythic > i {
   color: #d84068;
-  border-color: #e66c8c;
 }
 .app-shell .inventory-quantity-summary {
   grid-column: 1;
@@ -4961,12 +4951,12 @@ input:focus {
 }
 .app-shell .inventory-action-grid .button {
   min-height: clamp(28px, 4.2dvh, 36px);
-  border: 1px solid rgba(255, 122, 0, 0.34);
-  border-radius: 13px;
+  border: 0;
+  border-radius: 0;
   padding: 5px 7px;
   color: #17354a;
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 10px 20px rgba(54, 67, 75, 0.07);
+  background: transparent;
+  box-shadow: none;
   font-size: clamp(9px, 1.5dvh, 11px);
 }
 .app-shell .inventory-action-grid .button svg {
@@ -4976,9 +4966,11 @@ input:focus {
 }
 .app-shell .inventory-action-grid .button:disabled {
   opacity: 1;
-  border-color: rgba(54, 67, 75, 0.12);
   color: #9ba29f;
-  background: rgba(247, 247, 245, 0.9);
+  background: transparent;
+}
+.app-shell .inventory-action-grid .button:not(:disabled):active {
+  box-shadow: none;
 }
 .app-shell .inventory-action-grid .button:disabled svg {
   color: #a9afac;
