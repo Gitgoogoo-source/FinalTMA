@@ -8193,9 +8193,9 @@ html[data-app-shell-active] #root {
 }
 
 .app-shell .gacha-details {
-  height: 142px;
+  height: 153px;
   display: grid;
-  grid-template-rows: 96px 46px;
+  grid-template-rows: 96px 57px;
   gap: 0;
   padding: 0;
 }
@@ -8267,49 +8267,50 @@ html[data-app-shell-active] #root {
 }
 
 .app-shell .pity-capsule {
-  width: 306px;
+  width: 274px;
   max-width: 100%;
   min-height: 0;
-  height: 41px;
-  grid-template-columns: 37px minmax(0, 1fr) 33px;
-  gap: 4px;
+  height: 52px;
+  grid-template-columns: 44px minmax(0, 1fr) 38px;
+  gap: 5px;
   justify-self: center;
   margin: 5px auto 0;
-  padding: 0;
-  border-radius: 22px;
+  padding: 3px 4px;
+  border-radius: 27px;
 }
 
 .app-shell .pity-ring {
-  width: 37px;
-  height: 37px;
+  width: 44px;
+  height: 44px;
+  box-shadow: 0 3px 9px rgba(255, 122, 0, 0.14);
 }
 
 .app-shell .pity-ring i {
-  width: 28px;
-  height: 28px;
-  font-size: 7px;
+  width: 32px;
+  height: 32px;
+  font-size: 8px;
 }
 
 .app-shell .pity-copy {
   min-width: 0;
-  gap: 0;
+  gap: 2px;
 }
 
 .app-shell .pity-capsule .pity-target {
-  font-size: 9px;
-  line-height: 11px;
-  white-space: nowrap;
+  font-size: 11px;
+  line-height: 13px;
+  white-space: normal;
 }
 
 .app-shell .pity-reset-note {
-  font-size: 7px;
-  line-height: 9px;
-  white-space: nowrap;
+  font-size: 8px;
+  line-height: 10px;
+  white-space: normal;
 }
 
 .app-shell .pity-gift {
-  width: 33px;
-  height: 33px;
+  width: 38px;
+  height: 38px;
 }
 
 .app-shell .pity-capsule:has(.pity-error) {
