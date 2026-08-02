@@ -248,18 +248,18 @@ set search_path = ''
 as $$
   select *
   from (values
-    ('battle-v1', 'A', 500::bigint, 'PET-N-001-1', 2::bigint, 'fire', array['S01','S04','S06','S09']::text[]),
-    ('battle-v1', 'A', 500::bigint, 'PET-N-033-1', 1::bigint, 'grass', array['S03','S05','S07','S08']::text[]),
-    ('battle-v1', 'A', 500::bigint, 'PET-A-020-1', 1::bigint, 'earth', array['S02','S04','S06','S10']::text[]),
-    ('battle-v1', 'B', 500::bigint, 'PET-N-003-1', 2::bigint, 'grass', array['S01','S04','S06','S09']::text[]),
-    ('battle-v1', 'B', 500::bigint, 'PET-N-039-1', 1::bigint, 'earth', array['S03','S05','S07','S08']::text[]),
-    ('battle-v1', 'B', 500::bigint, 'PET-A-018-1', 1::bigint, 'lightning', array['S02','S04','S06','S10']::text[]),
-    ('battle-v1', 'C', 500::bigint, 'PET-N-004-1', 2::bigint, 'earth', array['S01','S04','S06','S09']::text[]),
-    ('battle-v1', 'C', 500::bigint, 'PET-N-040-1', 1::bigint, 'lightning', array['S03','S05','S07','S08']::text[]),
-    ('battle-v1', 'C', 500::bigint, 'PET-A-019-1', 1::bigint, 'water', array['S02','S04','S06','S10']::text[]),
-    ('battle-v1', 'D', 100::bigint, 'PET-N-005-1', 2::bigint, 'lightning', array['S01','S04','S06','S09']::text[]),
-    ('battle-v1', 'D', 100::bigint, 'PET-N-036-1', 1::bigint, 'water', array['S03','S05','S07','S08']::text[]),
-    ('battle-v1', 'D', 100::bigint, 'PET-A-016-1', 1::bigint, 'fire', array['S02','S04','S06','S10']::text[])
+    ('battle-v1', 'A', 500::bigint, 'PET-N-001-1', 2::bigint, 'fire', array['S01','S04']::text[]),
+    ('battle-v1', 'A', 500::bigint, 'PET-N-033-2', 1::bigint, 'grass', array['S05','S08','S03']::text[]),
+    ('battle-v1', 'A', 500::bigint, 'PET-A-020-3', 1::bigint, 'earth', array['S04','S02','S06','S10']::text[]),
+    ('battle-v1', 'B', 500::bigint, 'PET-N-003-2', 2::bigint, 'grass', array['S01','S04','S06']::text[]),
+    ('battle-v1', 'B', 500::bigint, 'PET-N-039-3', 1::bigint, 'earth', array['S05','S08','S03','S07']::text[]),
+    ('battle-v1', 'B', 500::bigint, 'PET-A-018-1', 1::bigint, 'lightning', array['S04','S02']::text[]),
+    ('battle-v1', 'C', 500::bigint, 'PET-N-004-3', 2::bigint, 'earth', array['S01','S04','S06','S09']::text[]),
+    ('battle-v1', 'C', 500::bigint, 'PET-N-040-1', 1::bigint, 'lightning', array['S05','S08']::text[]),
+    ('battle-v1', 'C', 500::bigint, 'PET-A-019-2', 1::bigint, 'water', array['S04','S02','S06']::text[]),
+    ('battle-v1', 'D', 100::bigint, 'PET-N-005-1', 2::bigint, 'lightning', array['S01','S04']::text[]),
+    ('battle-v1', 'D', 100::bigint, 'PET-N-036-2', 1::bigint, 'water', array['S05','S08','S03']::text[]),
+    ('battle-v1', 'D', 100::bigint, 'PET-A-016-3', 1::bigint, 'fire', array['S04','S02','S06','S10']::text[])
   ) definition(
     fixture_version, role, target_kcoin, template_id, target_quantity, element, skill_slots
   )
@@ -279,7 +279,7 @@ as $$
           'fixture_version', 'battle-v1',
           'catalog_version', 'v1',
           'catalog_checksum', 'de521f2687086cb358fb557a4a7ada3bc3c5fc132d673f0256b4573028ddba46',
-          'battle_checksum', '1d945b197fed091fca271aee551549675b9250ab0d53e3253ef9a88f824cf151',
+          'battle_checksum', '1cfe7a9c629c814baea5d8ddc3abf29e16fb8af69f583b4bd3ce00d14e8a9cad',
           'matrix', jsonb_agg(
             jsonb_build_object(
               'role', d.role,
@@ -790,9 +790,9 @@ begin
   cross join lateral unnest(d.skill_slots) skill_slot
   where d.fixture_version = p_fixture_version;
   if v_catalog_checksum <> 'de521f2687086cb358fb557a4a7ada3bc3c5fc132d673f0256b4573028ddba46'
-    or v_battle_checksum <> '1d945b197fed091fca271aee551549675b9250ab0d53e3253ef9a88f824cf151'
+    or v_battle_checksum <> '1cfe7a9c629c814baea5d8ddc3abf29e16fb8af69f583b4bd3ce00d14e8a9cad'
     or not battle.rules_complete('battle-v1')
-    or v_matrix_count <> 48
+    or v_matrix_count <> 36
     or v_matrix_element_count <> 5
     or v_matrix_skill_slot_count <> 10
     or exists (
@@ -806,7 +806,10 @@ begin
           t.id is null
           or c.template_id is null
           or c.element <> d.element
-          or array[c.skill_1_id, c.skill_2_id, c.skill_3_id, c.skill_4_id] <> (
+          or array_remove(
+            array[c.skill_1_id, c.skill_2_id, c.skill_3_id, c.skill_4_id],
+            null
+          ) <> (
             select array_agg(s.id order by x.ordinality)
             from unnest(d.skill_slots) with ordinality x(slot_id, ordinality)
             join battle.skills s

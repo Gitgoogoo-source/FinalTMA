@@ -49,6 +49,7 @@ REQUIRED_PATHS = (
     "apps/web/src/workflows/battle-realtime",
     "docs/architecture/adr/ADR-013-session-page-lifecycle.md",
     "docs/architecture/adr/ADR-016-controlled-battle-acceptance-fixture.md",
+    "docs/architecture/adr/ADR-022-battle-stage-skill-progression.md",
     "apps/api/src/entrypoints/app",
     "apps/api/src/entrypoints/integrations",
     "apps/api/src/entrypoints/jobs",
@@ -750,7 +751,7 @@ def verify_documentation() -> None:
         "同 request UUID 不同 payload",
         "不同 request UUID",
         "`PET-N-001-1 ×2`",
-        "`PET-A-016-1 ×1`",
+        "`PET-A-016-3 ×1`",
         "不改变 Battle 玩法",
     )
     missing_fixture_terms = [

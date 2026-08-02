@@ -200,6 +200,22 @@ export const battleSkillSchema = z
   })
   .strict();
 
+const battleSkillsSchema = z.array(battleSkillSchema).min(2).max(4).meta({
+  description:
+    "Only skills owned by this template; length equals stage + 1 and positions are contiguous in nondecreasing power order",
+});
+
+const hasValidStageSkills = (
+  stage: number,
+  skills: ReadonlyArray<{ position: number; power: number }>,
+) =>
+  skills.length === stage + 1 &&
+  skills.every(
+    (skill, index) =>
+      skill.position === index + 1 &&
+      (index === 0 || skill.power >= skills[index - 1]!.power),
+  );
+
 export const battleTeamOptionSchema = z
   .object({
     template_id: identifierSchema,
@@ -214,9 +230,17 @@ export const battleTeamOptionSchema = z
     attack: z.number().int().positive(),
     defense: z.number().int().positive(),
     speed: z.number().int().positive(),
-    skills: z.array(battleSkillSchema).length(4),
+    skills: battleSkillsSchema,
   })
-  .strict();
+  .strict()
+  .superRefine((item, context) => {
+    if (!hasValidStageSkills(item.stage, item.skills))
+      context.addIssue({
+        code: "custom",
+        message:
+          "Battle template skills must match stage with contiguous power-ordered positions",
+      });
+  });
 
 export const battleSelfTeamMemberSchema = z
   .object({
@@ -235,9 +259,17 @@ export const battleSelfTeamMemberSchema = z
     speed: z.number().int().positive(),
     alive: z.boolean(),
     active: z.boolean(),
-    skills: z.array(battleSkillSchema).length(4),
+    skills: battleSkillsSchema,
   })
-  .strict();
+  .strict()
+  .superRefine((item, context) => {
+    if (!hasValidStageSkills(item.stage, item.skills))
+      context.addIssue({
+        code: "custom",
+        message:
+          "Battle member skills must match stage with contiguous power-ordered positions",
+      });
+  });
 
 export const battleSelfTeamSchema = z
   .array(battleSelfTeamMemberSchema)

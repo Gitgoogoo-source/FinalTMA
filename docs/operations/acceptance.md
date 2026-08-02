@@ -66,7 +66,7 @@ Battle stake / settlement / outbox event（脱敏）：
 以下证据必须来自真实 Telegram、真实 Vercel、真实 Supabase 与真实 Ably；静态门禁不能替代：
 
 - Telegram prepared message 创建阶段继续验证同一 room 的 60 秒未知结果恢复、超时作废与退款；该服务端路径不得与已经进入 `waiting` 后的 `shareMessage` callback 混淆。`shareMessageSent`/成功 callback 使用已有真机发送证据；waiting 分享没有平台规定的 no-callback deadline。
-- 规则与页面：`battle-v1` checksum 与正式 JSON、数据库种子、API 摘要一致；Catalog v1 仍为 70 链/210 模板且 release checksum 不变；游戏页完整覆盖第 21 章九种页面状态，构建和运行资源不含 Phaser 或客户端战斗模拟器。
+- 规则与页面：`battle-v1` checksum 与正式 JSON、数据库种子、API 摘要一致；Catalog v1 仍为 70 链/210 模板且 release checksum 不变；数据库中 1/2/3 阶各 70 个模板、有效技能分别为 140/210/280 且总数为 630；游戏页完整覆盖第 21 章九种页面状态，构建和运行资源不含 Phaser 或客户端战斗模拟器。
 - 隐私：按唯一清单分别保存七种严格 DTO：`BattleChallengeCardDto`、`BattleInvitePreviewDto`、`BattleLobbyDto`、`BattleSelfTeamDto`、`BattleOpponentTeamDto`、`BattleResolutionEventDto`、`BattleRoomSnapshotDto`；逐字段证明禁止信息不在 JSON、HTML、Ably、日志和分析事件中。挑战卡/接受预览允许创建者展示头像；lobby JSON 和 DOM 不返回或加载双方真实头像，只使用固定仓库 WebP/中性图标。接受前双方秘密、接受后对手百分比生命及当回合技能揭示严格符合第 21.7 节。
 - 分享与接受：用户私聊、普通群、超级群、跨群转发、Bot 不在群、Bot 会话禁止、频道禁止、创建者本人严格 `self` 且服务端禁止；有效邀请直接显示队伍选择，没有前置状态页。创建者在线与离线均可接受，离线固定展示“离线 · 仍可接受”。两个普通接受者与一个竞争账号同时接受时只有首个事务成功，失败者余额和 inventory 完全不变。
 - 分享反馈生命周期：同一 Telegram Mini App 会话中，房间 A 打开分享面板后，通过正常入口终结并创建房间 B；房间 B 未执行自己的分享动作前不得显示房间 A 的任何反馈。房间切换、终态退出和离开再进入 `/game` 的隔离使用 V09 真实证据；页面重载、重新认证及自然迟到 callback 只在真实发生时补充，不倒推为已验证。旧反馈不得覆盖新房间，本地即时反馈不得触发资产刷新或被记录为业务成功。
@@ -79,7 +79,8 @@ Battle stake / settlement / outbox event（脱敏）：
 - lobby UI：`lobby_waiting` 左红右蓝使用固定仓库正方形 WebP，不使用真实头像；在线同时显示彩色图片、状态点和“已进入房间”，离线显示中性用户图标、文字及权威重连剩余。进入 `lobby_countdown` 后立即切换为覆盖顶部、底部导航和所有按钮的全屏 3 秒红蓝倒计时专页，明确显示“倒计时已锁定，离开不会取消战斗”，产品内不存在可产生取消效果的动作；颜色不是唯一状态信息，`aria-live` 与 reduced-motion 生效。
 - 资产与库存：三个入场档逐一核对双方 lock、胜者到账、平台手续费、败者、平局退款、`voided` 退款；重复创建、接受、取消、到期、结算和恢复不重复改变资产。prepared-share 明确失败的 `voided` 必须是一份 stake refunded、三份 reservation released、零 settlement；`cancelled/expired` 全量退款释放；lobby/战斗不变量 `voided` 保留安全 settlement、审计与 violation，monitor 不误报也不漏报。Battle reservation 与出售、成交、分解、进化、远征、Mint 逐一竞争，同模板额外可用数量仍可操作。
 - heartbeat/offline 刷新：普通续租和非终态 online/offline 只应用 room snapshot，网络记录不得出现每 5 秒 assets/inventory 请求；请求内跨过 `lobby_waiting` 的 90 秒或 5 分钟边界时，终态响应、响应丢失后的重新可见回正及相关错误必须一次消费契约 `battle + assets + inventory`，顶部 K-coin 与 `inventory.battling` 及时回正。请求跨过已锁定的 3 秒截止时间时只能恢复权威 active room，不得产生取消、退款或重新倒计时。
-- 回合：五属性 1.50/0.75/1.00、十技能命中边界、超时最高命中率、优先级、速度、完全相同的同时攻击、先手击倒、单方换宠、双方换宠、单方/双方强制换宠、槽位超时、连续托管、双方同时全灭和第 20 回合裁决逐项保存 snapshot 与私有审计引用。
+- 阶段技能：全量证明四技能候选池按 `(power, 原始位置)` 排序，同链技能满足 2/3/4 前缀继承、位置连续、元素一致且无重复；L06、L13 的十个 1 阶模板允许没有 100% 命中技能。`team-options`、房间快照、API 和 DOM 只出现实际拥有的 2/3/4 个技能，不含 `null`、锁定槽位、占位按钮或隐藏字段；三技能操作区最后一个按钮横跨两列。
+- 回合：五属性 1.50/0.75/1.00、十技能命中边界、超时只在实际拥有技能中按最高命中率选择、优先级、速度、完全相同的同时攻击、先手击倒、单方换宠、双方换宠、单方/双方强制换宠、槽位超时、连续托管、双方同时全灭和第 20 回合裁决逐项保存 snapshot 与私有审计引用。对 1/2 阶宠物提交未拥有位置必须返回 `BATTLE_ACTION_INVALID`、零 action 写入，原幂等键重放结果不变。
 - 实时与恢复：Ably capability 为 subscribe-only，消息只有四个失效字段；重复、乱序和迟到消息不覆盖高 `state_version`。主动断开 Ably 后按第 21 章 1—2 秒节奏 REST 回正；Vercel 重启、pg_net 单次失败、cron 短暂停止后继续同一 deadline、outbox 和 settlement。
 - 当场结果：终局瞬间断线后 identity bootstrap 与 Battle bootstrap 只恢复同一未确认结果；分别覆盖仍有 terminal room/participation 与只有 `current_result` 两种恢复。只有结果时必须先通过参与者专属 room 读取取得相同 room 的终态 `state_version`，再完成 Battle、identity、inventory 三域回正后才发 acknowledge；资产尚未回正、room 非终态、结果消失或版本变化均保持可重试覆盖层。保存 acknowledge 响应丢失、重复点击、同一请求重放、刷新、离开重进、重新认证和迟到 bootstrap/room 响应证据；数据库首次确认时间只能写一次，成功后 Battle 与 identity bootstrap 都不再返回旧结果，且 K-coin、宠物、stake、reservation、ledger 与 outbox 无额外变化。玩家端不存在 history、replay、audit、spectator、matchmaking 或公开 room API。
 - 风控：邀请 waiting 创建者被封禁后取消、退款、释放；lobby 任一方被封禁后双方退款并释放；active 任一方被封禁后页面空白、数据库继续托管至正常终局且只结算一次。

@@ -323,6 +323,7 @@ def verify_battle_contract() -> None:
         "create or replace function api.battle_accept_room",
         "create or replace function api.battle_submit_action",
         "create or replace function api.battle_submit_forced_switch",
+        "create or replace function battle.skills_json",
         "create or replace function battle.viewer_action_state",
         "create or replace function battle.safe_resolve_normal_turn",
         "create or replace function battle.safe_resolve_forced_switch",
@@ -353,6 +354,12 @@ def verify_battle_contract() -> None:
         "gen_random_bytes(32)",
         "char_length(prepared_message_id) between 1 and 256",
         "effect_key = element || '-' || substr(slot_id, 2)",
+        "skill_3_id text,",
+        "stage = 1 and skill_3_id is null and skill_4_id is null",
+        "current_slot.power > next_slot.power",
+        "pl.position <= bc.stage + 1",
+        "skill.skill_id is not null",
+        "= 630",
         "'prepare_deadline', case",
         "'prepared_message_id', case",
         "'viewer_action_state',",
@@ -426,9 +433,10 @@ def verify_admin_fixture_contract() -> None:
         "('battle-v1', 'a', 500::bigint",
         "('battle-v1', 'd', 100::bigint",
         "pet-n-001-1",
-        "pet-a-016-1",
+        "pet-a-016-3",
         "de521f2687086cb358fb557a4a7ada3bc3c5fc132d673f0256b4573028ddba46",
-        "1d945b197fed091fca271aee551549675b9250ab0d53e3253ef9a88f824cf151",
+        "1cfe7a9c629c814baea5d8ddc3abf29e16fb8af69f583b4bd3ce00d14e8a9cad",
+        "array_remove(",
         "create or replace function admin.track_fixture_balance_ownership",
         "create or replace function admin.track_fixture_holding_ownership",
         "create or replace function admin.battle_fixture_status",
@@ -489,17 +497,17 @@ def verify_admin_fixture_contract() -> None:
     }
     expected_fixture = {
         ("A", "PET-N-001-1"): (500, 2),
-        ("A", "PET-N-033-1"): (500, 1),
-        ("A", "PET-A-020-1"): (500, 1),
-        ("B", "PET-N-003-1"): (500, 2),
-        ("B", "PET-N-039-1"): (500, 1),
+        ("A", "PET-N-033-2"): (500, 1),
+        ("A", "PET-A-020-3"): (500, 1),
+        ("B", "PET-N-003-2"): (500, 2),
+        ("B", "PET-N-039-3"): (500, 1),
         ("B", "PET-A-018-1"): (500, 1),
-        ("C", "PET-N-004-1"): (500, 2),
+        ("C", "PET-N-004-3"): (500, 2),
         ("C", "PET-N-040-1"): (500, 1),
-        ("C", "PET-A-019-1"): (500, 1),
+        ("C", "PET-A-019-2"): (500, 1),
         ("D", "PET-N-005-1"): (100, 2),
-        ("D", "PET-N-036-1"): (100, 1),
-        ("D", "PET-A-016-1"): (100, 1),
+        ("D", "PET-N-036-2"): (100, 1),
+        ("D", "PET-A-016-3"): (100, 1),
     }
     actual_targets = {
         key: (value["target_kcoin"], value["target_quantity"])
@@ -517,16 +525,39 @@ def verify_admin_fixture_contract() -> None:
     template_configs = {
         row["template_id"]: row for row in battle_data["template_configs"]
     }
+    stage_counts = {
+        stage: sum(row["stage"] == stage for row in template_configs.values())
+        for stage in (1, 2, 3)
+    }
+    stage_skill_counts = {
+        stage: sum(
+            len(row["skill_ids"])
+            for row in template_configs.values()
+            if row["stage"] == stage
+        )
+        for stage in (1, 2, 3)
+    }
+    if stage_counts != {1: 70, 2: 70, 3: 70} or stage_skill_counts != {
+        1: 140,
+        2: 210,
+        3: 280,
+    }:
+        raise SystemExit(
+            "Battle stage skill distribution mismatch: "
+            f"templates={stage_counts}, skills={stage_skill_counts}"
+        )
     skill_slots = {
         row["id"]: row["slot_id"] for row in battle_data["skills"]
     }
-    for (_, template_id), expected in parsed_fixture.items():
+    role_stages = {role: set() for role in ("A", "B", "C", "D")}
+    for (role, template_id), expected in parsed_fixture.items():
         config = template_configs.get(template_id)
         if config is None:
             raise SystemExit(
                 f"Controlled Battle fixture template is missing: {template_id}"
             )
         actual_slots = [skill_slots[skill_id] for skill_id in config["skill_ids"]]
+        role_stages[role].add(config["stage"])
         if (
             config["element"] != expected["element"]
             or actual_slots != expected["skill_slots"]
@@ -535,6 +566,10 @@ def verify_admin_fixture_contract() -> None:
                 "Controlled Battle fixture product-data mismatch: "
                 f"{template_id} element={config['element']} slots={actual_slots}"
             )
+    if any(stages != {1, 2, 3} for stages in role_stages.values()):
+        raise SystemExit(
+            f"Controlled Battle fixture roles must each cover stages 1/2/3: {role_stages}"
+        )
     if (
         {value["element"] for value in parsed_fixture.values()}
         != {"fire", "grass", "earth", "lightning", "water"}

@@ -34,6 +34,7 @@ REQUIRED_SOURCE_FACTS = (
     "20/100/500 三档结算",
     "5 分钟双人等待房、3 秒开战倒计时、3 秒回合展示窗口、15 秒选择时限和 20 回合上限",
     "Battle 产品数据生成器只读取本节确定数据",
+    "skill_count = stage + 1",
     "接受成功时数据库使用 `gen_random_bytes(32)`",
     "HMAC-SHA256(room_private_seed, battle_id | turn_no | actor_side | action_ordinal | skill_id)",
 )
@@ -237,7 +238,7 @@ def parse_skills(section: str) -> list[dict[str, Any]]:
     source = subsection(
         section,
         "#### 21.8.5 五属性技能名称",
-        "#### 21.8.6 14 组固定四技能组合",
+        "#### 21.8.6 14 组固定四技能候选池",
     )
     skills = []
     for row in table_rows(source):
@@ -265,20 +266,29 @@ def parse_skills(section: str) -> list[dict[str, Any]]:
 def parse_loadouts(section: str, slots: list[dict[str, Any]]) -> list[dict[str, Any]]:
     source = subsection(
         section,
-        "#### 21.8.6 14 组固定四技能组合",
+        "#### 21.8.6 14 组固定四技能候选池",
         "#### 21.8.7 确定伤害公式",
     )
-    accuracy = {item["id"]: item["accuracy_bps"] for item in slots}
+    power = {item["id"]: item["power"] for item in slots}
     loadouts = []
     for row in table_rows(source):
-        slot_ids = [value.strip() for value in row[1].replace("、", ",").split(",")]
+        source_slot_ids = [
+            value.strip() for value in row[1].replace("、", ",").split(",")
+        ]
+        if len(source_slot_ids) != 4 or len(set(source_slot_ids)) != 4:
+            raise ValueError(f"Battle loadout must contain four unique slots: {row[0]}")
+        if any(slot_id not in power for slot_id in source_slot_ids):
+            raise ValueError(f"Battle loadout contains an unknown slot: {row[0]}")
+        slot_ids = [
+            slot_id
+            for _, slot_id in sorted(
+                enumerate(source_slot_ids),
+                key=lambda item: (power[item[1]], item[0]),
+            )
+        ]
         loadouts.append({"id": row[0], "slot_ids": slot_ids})
     if [item["id"] for item in loadouts] != [f"L{i:02d}" for i in range(1, 15)]:
         raise ValueError("Battle loadouts must be L01 through L14")
-    if any(len(item["slot_ids"]) != 4 for item in loadouts):
-        raise ValueError("Every Battle loadout must contain four slots")
-    if any(max(accuracy[slot] for slot in item["slot_ids"]) != 10000 for item in loadouts):
-        raise ValueError("Every Battle loadout must contain a 100% accuracy skill")
     return loadouts
 
 
@@ -294,10 +304,30 @@ def validate_template_configs(
     configs: list[dict[str, Any]],
     profiles: list[dict[str, Any]],
     factors: list[dict[str, Any]],
+    loadouts: list[dict[str, Any]],
+    skills: list[dict[str, Any]],
+    slots: list[dict[str, Any]],
 ) -> None:
     if len(configs) != 210 or len({item["template_id"] for item in configs}) != 210:
         raise ValueError("Battle template configuration must cover 210 unique templates")
+    stage_counts = {
+        stage: sum(item["stage"] == stage for item in configs) for stage in (1, 2, 3)
+    }
+    if stage_counts != {1: 70, 2: 70, 3: 70}:
+        raise ValueError(f"Battle template stage counts must be 70/70/70: {stage_counts}")
+    stage_skill_counts = {
+        stage: sum(len(item["skill_ids"]) for item in configs if item["stage"] == stage)
+        for stage in (1, 2, 3)
+    }
+    if stage_skill_counts != {1: 140, 2: 210, 3: 280}:
+        raise ValueError(
+            f"Battle template skill assignments must be 140/210/280: {stage_skill_counts}"
+        )
     factor_by_rarity = {item["rarity"]: item for item in factors}
+    profile_by_id = {item["id"]: item for item in profiles}
+    loadout_by_id = {item["id"]: item["slot_ids"] for item in loadouts}
+    skill_by_id = {item["id"]: item for item in skills}
+    power_by_slot = {item["id"]: item["power"] for item in slots}
     for item in configs:
         stats = item["stats"]
         if any(value <= 0 for value in stats.values()):
@@ -305,9 +335,26 @@ def validate_template_configs(
         budget = stats["hp"] // 3 + stats["attack"] + stats["defense"] + stats["speed"]
         if budget != factor_by_rarity[item["rarity"]]["target_budget"]:
             raise ValueError(f"Battle template budget mismatch: {item['template_id']}")
-        if len(item["skill_ids"]) != 4:
-            raise ValueError(f"Battle template must have four skills: {item['template_id']}")
-    profile_by_id = {item["id"]: item for item in profiles}
+        expected_count = item["stage"] + 1
+        if len(item["skill_ids"]) != expected_count:
+            raise ValueError(
+                f"Battle template skill count must equal stage + 1: {item['template_id']}"
+            )
+        if len(set(item["skill_ids"])) != expected_count:
+            raise ValueError(f"Battle template skills must be unique: {item['template_id']}")
+        profile = profile_by_id[item["profile_id"]]
+        expected_skill_ids = [
+            f"{item['element']}-{slot_id.lower()}"
+            for slot_id in loadout_by_id[profile["loadout_id"]][:expected_count]
+        ]
+        if item["skill_ids"] != expected_skill_ids:
+            raise ValueError(f"Battle template skill prefix drift: {item['template_id']}")
+        template_skills = [skill_by_id[skill_id] for skill_id in item["skill_ids"]]
+        if any(skill["element"] != item["element"] for skill in template_skills):
+            raise ValueError(f"Battle template skill element drift: {item['template_id']}")
+        powers = [power_by_slot[skill["slot_id"]] for skill in template_skills]
+        if powers != sorted(powers):
+            raise ValueError(f"Battle template skills must be power ordered: {item['template_id']}")
     for profile_id, profile in profile_by_id.items():
         prior: dict[str, int] | None = None
         for rarity in RARITY_IDS.values():
@@ -321,10 +368,14 @@ def validate_template_configs(
     if len(by_chain) != 70 or any(len(items) != 3 for items in by_chain.values()):
         raise ValueError("Every Battle chain must contain exactly three templates")
     for chain_id, items in by_chain.items():
-        if len({item["element"] for item in items}) != 1 or len(
-            {tuple(item["skill_ids"]) for item in items}
-        ) != 1:
-            raise ValueError(f"Battle chain element/loadout drift: {chain_id}")
+        ordered = sorted(items, key=lambda item: item["stage"])
+        if (
+            [item["stage"] for item in ordered] != [1, 2, 3]
+            or len({item["element"] for item in ordered}) != 1
+            or ordered[0]["skill_ids"] != ordered[1]["skill_ids"][:2]
+            or ordered[1]["skill_ids"] != ordered[2]["skill_ids"][:3]
+        ):
+            raise ValueError(f"Battle chain stage skill progression drift: {chain_id}")
     element_chains = {
         element: len({item["chain_id"] for item in configs if item["element"] == element})
         for element in ELEMENT_IDS.values()
@@ -362,6 +413,7 @@ def parse(
         profile = profiles_by_id[chain["profile_id"]]
         slot_ids = loadouts_by_id[profile["loadout_id"]]
         element = chain["element"]
+        skill_count = int(template["stage"]) + 1
         template_configs.append(
             {
                 "template_id": template["id"],
@@ -371,10 +423,14 @@ def parse(
                 "element": element,
                 "profile_id": profile["id"],
                 "stats": stats_for(profile, factors_by_rarity[template["rarity"]]),
-                "skill_ids": [f"{element}-{slot.lower()}" for slot in slot_ids],
+                "skill_ids": [
+                    f"{element}-{slot.lower()}" for slot in slot_ids[:skill_count]
+                ],
             }
         )
-    validate_template_configs(template_configs, profiles, factors)
+    validate_template_configs(
+        template_configs, profiles, factors, loadouts, skills, slots
+    )
     type_matchups = []
     for attacker_index, attacker_cn in enumerate(ELEMENT_ORDER):
         for defender_index, defender_cn in enumerate(ELEMENT_ORDER):
@@ -482,12 +538,19 @@ def manifest(payload: dict[str, Any]) -> dict[str, Any]:
             "profile_loadouts": len(payload["profile_loadouts"]),
             "chains": len(payload["chain_configs"]),
             "templates": len(payload["template_configs"]),
+            "template_skill_assignments": sum(
+                len(item["skill_ids"]) for item in payload["template_configs"]
+            ),
         },
     }
 
 
 def json_literal(value: Any) -> str:
     return sql_string(json.dumps(value, ensure_ascii=False, separators=(",", ":"), sort_keys=True)) + "::jsonb"
+
+
+def sql_nullable_string(value: str | None) -> str:
+    return "null" if value is None else sql_string(value)
 
 
 def render(payload: dict[str, Any]) -> str:
@@ -686,10 +749,11 @@ def render(payload: dict[str, Any]) -> str:
                 str(item["stats"]["attack"]),
                 str(item["stats"]["defense"]),
                 str(item["stats"]["speed"]),
-                sql_string(item["skill_ids"][0]),
-                sql_string(item["skill_ids"][1]),
-                sql_string(item["skill_ids"][2]),
-                sql_string(item["skill_ids"][3]),
+            ]
+            + [
+                sql_nullable_string(skill_id)
+                for skill_id in item["skill_ids"]
+                + [None] * (4 - len(item["skill_ids"]))
             ]
         )
         + ")"

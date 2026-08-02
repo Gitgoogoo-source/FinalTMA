@@ -128,8 +128,8 @@ create table battle.template_configs (
   speed integer not null check (speed > 0),
   skill_1_id text not null,
   skill_2_id text not null,
-  skill_3_id text not null,
-  skill_4_id text not null,
+  skill_3_id text,
+  skill_4_id text,
   primary key (ruleset_id, template_id),
   foreign key (ruleset_id, chain_id) references battle.chain_configs(ruleset_id, chain_id),
   foreign key (ruleset_id, profile_id) references battle.role_profiles(ruleset_id, id),
@@ -137,10 +137,25 @@ create table battle.template_configs (
   foreign key (ruleset_id, skill_2_id) references battle.skills(ruleset_id, id),
   foreign key (ruleset_id, skill_3_id) references battle.skills(ruleset_id, id),
   foreign key (ruleset_id, skill_4_id) references battle.skills(ruleset_id, id),
-  check (cardinality(array[skill_1_id, skill_2_id, skill_3_id, skill_4_id]) = 4),
   check (
-    skill_1_id <> skill_2_id and skill_1_id <> skill_3_id and skill_1_id <> skill_4_id
-    and skill_2_id <> skill_3_id and skill_2_id <> skill_4_id and skill_3_id <> skill_4_id
+    (stage = 1 and skill_3_id is null and skill_4_id is null)
+    or (stage = 2 and skill_3_id is not null and skill_4_id is null)
+    or (stage = 3 and skill_3_id is not null and skill_4_id is not null)
+  ),
+  check (
+    skill_1_id <> skill_2_id
+    and (
+      skill_3_id is null
+      or (skill_3_id <> skill_1_id and skill_3_id <> skill_2_id)
+    )
+    and (
+      skill_4_id is null
+      or (
+        skill_4_id <> skill_1_id
+        and skill_4_id <> skill_2_id
+        and skill_4_id <> skill_3_id
+      )
+    )
   )
 );
 
@@ -344,14 +359,34 @@ create table battle.team_members (
   speed integer not null check (speed > 0),
   skill_1_id text not null,
   skill_2_id text not null,
-  skill_3_id text not null,
-  skill_4_id text not null,
+  skill_3_id text,
+  skill_4_id text,
   alive boolean not null default true,
   active boolean not null default false,
   unique (participant_id, slot),
   unique (participant_id, template_id),
   check (alive = (current_hp > 0)),
-  check (not active or alive)
+  check (not active or alive),
+  check (
+    (stage = 1 and skill_3_id is null and skill_4_id is null)
+    or (stage = 2 and skill_3_id is not null and skill_4_id is null)
+    or (stage = 3 and skill_3_id is not null and skill_4_id is not null)
+  ),
+  check (
+    skill_1_id <> skill_2_id
+    and (
+      skill_3_id is null
+      or (skill_3_id <> skill_1_id and skill_3_id <> skill_2_id)
+    )
+    and (
+      skill_4_id is null
+      or (
+        skill_4_id <> skill_1_id
+        and skill_4_id <> skill_2_id
+        and skill_4_id <> skill_3_id
+      )
+    )
+  )
 );
 
 create unique index battle_team_members_one_active_idx on battle.team_members (participant_id)
@@ -611,15 +646,39 @@ as $$
     and (select count(*) = 56 from battle.profile_loadouts where ruleset_id = p_ruleset_id)
     and (select count(*) = 70 from battle.chain_configs where ruleset_id = p_ruleset_id)
     and (select count(*) = 210 from battle.template_configs where ruleset_id = p_ruleset_id)
+    and (select count(*) = 70 from battle.template_configs where ruleset_id = p_ruleset_id and stage = 1)
+    and (select count(*) = 70 from battle.template_configs where ruleset_id = p_ruleset_id and stage = 2)
+    and (select count(*) = 70 from battle.template_configs where ruleset_id = p_ruleset_id and stage = 3)
+    and (
+      select coalesce(sum(num_nonnulls(skill_1_id, skill_2_id, skill_3_id, skill_4_id)), 0) = 630
+      from battle.template_configs
+      where ruleset_id = p_ruleset_id
+    )
     and not exists (
       select 1
       from battle.template_configs bc
       join catalog.templates ct on ct.id = bc.template_id
+      left join battle.chain_configs cc
+        on cc.ruleset_id = bc.ruleset_id and cc.chain_id = bc.chain_id
       where bc.ruleset_id = p_ruleset_id
         and (
           bc.chain_id <> ct.chain_id
           or bc.stage <> ct.stage
           or bc.rarity <> ct.rarity
+          or cc.chain_id is null
+          or bc.element <> cc.element
+          or bc.profile_id <> cc.profile_id
+          or num_nonnulls(
+            bc.skill_1_id, bc.skill_2_id, bc.skill_3_id, bc.skill_4_id
+          ) <> bc.stage + 1
+          or (bc.skill_3_id is null and bc.skill_4_id is not null)
+          or (
+            select count(*) <> count(distinct skill.skill_id)
+            from unnest(array[
+              bc.skill_1_id, bc.skill_2_id, bc.skill_3_id, bc.skill_4_id
+            ]) skill(skill_id)
+            where skill.skill_id is not null
+          )
         )
     )
     and not exists (
@@ -630,6 +689,46 @@ as $$
           select count(*) <> 4
           from battle.profile_loadouts pl
           where pl.ruleset_id = rp.ruleset_id and pl.loadout_id = rp.loadout_id
+        )
+    )
+    and not exists (
+      select 1
+      from battle.profile_loadouts current_loadout
+      join battle.profile_loadouts next_loadout
+        on next_loadout.ruleset_id = current_loadout.ruleset_id
+       and next_loadout.loadout_id = current_loadout.loadout_id
+       and next_loadout.position = current_loadout.position + 1
+      join battle.skill_slots current_slot
+        on current_slot.ruleset_id = current_loadout.ruleset_id
+       and current_slot.id = current_loadout.slot_id
+      join battle.skill_slots next_slot
+        on next_slot.ruleset_id = next_loadout.ruleset_id
+       and next_slot.id = next_loadout.slot_id
+      where current_loadout.ruleset_id = p_ruleset_id
+        and current_slot.power > next_slot.power
+    )
+    and not exists (
+      select 1
+      from battle.template_configs bc
+      join battle.role_profiles rp
+        on rp.ruleset_id = bc.ruleset_id and rp.id = bc.profile_id
+      join battle.profile_loadouts pl
+        on pl.ruleset_id = rp.ruleset_id
+       and pl.loadout_id = rp.loadout_id
+       and pl.position <= bc.stage + 1
+      left join battle.skills expected_skill
+        on expected_skill.ruleset_id = bc.ruleset_id
+       and expected_skill.element = bc.element
+       and expected_skill.slot_id = pl.slot_id
+      where bc.ruleset_id = p_ruleset_id
+        and (
+          expected_skill.id is null
+          or case pl.position
+            when 1 then bc.skill_1_id
+            when 2 then bc.skill_2_id
+            when 3 then bc.skill_3_id
+            when 4 then bc.skill_4_id
+          end is distinct from expected_skill.id
         )
     )
 $$;
@@ -1217,6 +1316,30 @@ as $$
   where s.ruleset_id = p_ruleset_id and s.id = p_skill_id
 $$;
 
+create or replace function battle.skills_json(
+  p_ruleset_id text,
+  p_skill_ids text[]
+)
+returns jsonb
+language sql
+stable
+set search_path = ''
+as $$
+  select coalesce(
+    jsonb_agg(
+      battle.skill_json(p_ruleset_id, skill.skill_id, skill.position::integer)
+      order by skill.position
+    ),
+    '[]'::jsonb
+  )
+  from unnest(p_skill_ids) with ordinality skill(skill_id, position)
+  join battle.skills s
+    on s.ruleset_id = p_ruleset_id and s.id = skill.skill_id
+  join battle.skill_slots ss
+    on ss.ruleset_id = s.ruleset_id and ss.id = s.slot_id
+  where skill.skill_id is not null
+$$;
+
 create or replace function battle.self_team_json(
   p_room_id uuid,
   p_participant_id uuid
@@ -1242,11 +1365,9 @@ as $$
     'speed', tm.speed,
     'alive', tm.alive,
     'active', tm.active,
-    'skills', jsonb_build_array(
-      battle.skill_json(r.ruleset_id, tm.skill_1_id, 1),
-      battle.skill_json(r.ruleset_id, tm.skill_2_id, 2),
-      battle.skill_json(r.ruleset_id, tm.skill_3_id, 3),
-      battle.skill_json(r.ruleset_id, tm.skill_4_id, 4)
+    'skills', battle.skills_json(
+      r.ruleset_id,
+      array[tm.skill_1_id, tm.skill_2_id, tm.skill_3_id, tm.skill_4_id]
     )
   ) order by tm.slot), '[]'::jsonb)
   from battle.team_members tm
@@ -1662,11 +1783,9 @@ begin
         'attack', bc.attack,
         'defense', bc.defense,
         'speed', bc.speed,
-        'skills', jsonb_build_array(
-          battle.skill_json(v_ruleset_id, bc.skill_1_id, 1),
-          battle.skill_json(v_ruleset_id, bc.skill_2_id, 2),
-          battle.skill_json(v_ruleset_id, bc.skill_3_id, 3),
-          battle.skill_json(v_ruleset_id, bc.skill_4_id, 4)
+        'skills', battle.skills_json(
+          v_ruleset_id,
+          array[bc.skill_1_id, bc.skill_2_id, bc.skill_3_id, bc.skill_4_id]
         )
       ) order by t.sort_order)
       from inventory.holdings h
@@ -3223,6 +3342,7 @@ as $$
     on s.ruleset_id = p_ruleset_id and s.id = skill.skill_id
   join battle.skill_slots ss
     on ss.ruleset_id = s.ruleset_id and ss.id = s.slot_id
+  where skill.skill_id is not null
   order by ss.accuracy_bps desc, skill.position
   limit 1
 $$;

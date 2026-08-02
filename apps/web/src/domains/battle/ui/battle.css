@@ -1813,6 +1813,10 @@
   cursor: pointer;
 }
 
+.battle-skill-grid > button:nth-child(3):last-child {
+  grid-column: 1 / -1;
+}
+
 .battle-skill-grid > button:disabled {
   opacity: 0.46;
   cursor: not-allowed;

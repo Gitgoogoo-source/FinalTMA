@@ -22317,7 +22317,7 @@
                                       "alive": { "type": "boolean" },
                                       "active": { "type": "boolean" },
                                       "skills": {
-                                        "minItems": 4,
+                                        "minItems": 2,
                                         "maxItems": 4,
                                         "type": "array",
                                         "items": {
@@ -22380,7 +22380,8 @@
                                             "effect_key"
                                           ],
                                           "additionalProperties": false
-                                        }
+                                        },
+                                        "description": "Only skills owned by this template; length equals stage + 1 and positions are contiguous in nondecreasing power order"
                                       }
                                     },
                                     "required": [
@@ -23214,7 +23215,7 @@
                                 "maximum": 9007199254740991
                               },
                               "skills": {
-                                "minItems": 4,
+                                "minItems": 2,
                                 "maxItems": 4,
                                 "type": "array",
                                 "items": {
@@ -23268,7 +23269,8 @@
                                     "effect_key"
                                   ],
                                   "additionalProperties": false
-                                }
+                                },
+                                "description": "Only skills owned by this template; length equals stage + 1 and positions are contiguous in nondecreasing power order"
                               }
                             },
                             "required": [
@@ -24112,7 +24114,7 @@
                               "alive": { "type": "boolean" },
                               "active": { "type": "boolean" },
                               "skills": {
-                                "minItems": 4,
+                                "minItems": 2,
                                 "maxItems": 4,
                                 "type": "array",
                                 "items": {
@@ -24166,7 +24168,8 @@
                                     "effect_key"
                                   ],
                                   "additionalProperties": false
-                                }
+                                },
+                                "description": "Only skills owned by this template; length equals stage + 1 and positions are contiguous in nondecreasing power order"
                               }
                             },
                             "required": [
@@ -26083,7 +26086,7 @@
                               "alive": { "type": "boolean" },
                               "active": { "type": "boolean" },
                               "skills": {
-                                "minItems": 4,
+                                "minItems": 2,
                                 "maxItems": 4,
                                 "type": "array",
                                 "items": {
@@ -26137,7 +26140,8 @@
                                     "effect_key"
                                   ],
                                   "additionalProperties": false
-                                }
+                                },
+                                "description": "Only skills owned by this template; length equals stage + 1 and positions are contiguous in nondecreasing power order"
                               }
                             },
                             "required": [
@@ -26973,7 +26977,7 @@
                               "alive": { "type": "boolean" },
                               "active": { "type": "boolean" },
                               "skills": {
-                                "minItems": 4,
+                                "minItems": 2,
                                 "maxItems": 4,
                                 "type": "array",
                                 "items": {
@@ -27027,7 +27031,8 @@
                                     "effect_key"
                                   ],
                                   "additionalProperties": false
-                                }
+                                },
+                                "description": "Only skills owned by this template; length equals stage + 1 and positions are contiguous in nondecreasing power order"
                               }
                             },
                             "required": [
@@ -28228,7 +28233,7 @@
                               "alive": { "type": "boolean" },
                               "active": { "type": "boolean" },
                               "skills": {
-                                "minItems": 4,
+                                "minItems": 2,
                                 "maxItems": 4,
                                 "type": "array",
                                 "items": {
@@ -28282,7 +28287,8 @@
                                     "effect_key"
                                   ],
                                   "additionalProperties": false
-                                }
+                                },
+                                "description": "Only skills owned by this template; length equals stage + 1 and positions are contiguous in nondecreasing power order"
                               }
                             },
                             "required": [
@@ -29118,7 +29124,7 @@
                               "alive": { "type": "boolean" },
                               "active": { "type": "boolean" },
                               "skills": {
-                                "minItems": 4,
+                                "minItems": 2,
                                 "maxItems": 4,
                                 "type": "array",
                                 "items": {
@@ -29172,7 +29178,8 @@
                                     "effect_key"
                                   ],
                                   "additionalProperties": false
-                                }
+                                },
+                                "description": "Only skills owned by this template; length equals stage + 1 and positions are contiguous in nondecreasing power order"
                               }
                             },
                             "required": [
@@ -30360,7 +30367,7 @@
                               "alive": { "type": "boolean" },
                               "active": { "type": "boolean" },
                               "skills": {
-                                "minItems": 4,
+                                "minItems": 2,
                                 "maxItems": 4,
                                 "type": "array",
                                 "items": {
@@ -30414,7 +30421,8 @@
                                     "effect_key"
                                   ],
                                   "additionalProperties": false
-                                }
+                                },
+                                "description": "Only skills owned by this template; length equals stage + 1 and positions are contiguous in nondecreasing power order"
                               }
                             },
                             "required": [
@@ -31250,7 +31258,7 @@
                               "alive": { "type": "boolean" },
                               "active": { "type": "boolean" },
                               "skills": {
-                                "minItems": 4,
+                                "minItems": 2,
                                 "maxItems": 4,
                                 "type": "array",
                                 "items": {
@@ -31304,7 +31312,8 @@
                                     "effect_key"
                                   ],
                                   "additionalProperties": false
-                                }
+                                },
+                                "description": "Only skills owned by this template; length equals stage + 1 and positions are contiguous in nondecreasing power order"
                               }
                             },
                             "required": [
@@ -32448,7 +32457,7 @@
                               "alive": { "type": "boolean" },
                               "active": { "type": "boolean" },
                               "skills": {
-                                "minItems": 4,
+                                "minItems": 2,
                                 "maxItems": 4,
                                 "type": "array",
                                 "items": {
@@ -32502,7 +32511,8 @@
                                     "effect_key"
                                   ],
                                   "additionalProperties": false
-                                }
+                                },
+                                "description": "Only skills owned by this template; length equals stage + 1 and positions are contiguous in nondecreasing power order"
                               }
                             },
                             "required": [
@@ -33593,7 +33603,7 @@
                               "alive": { "type": "boolean" },
                               "active": { "type": "boolean" },
                               "skills": {
-                                "minItems": 4,
+                                "minItems": 2,
                                 "maxItems": 4,
                                 "type": "array",
                                 "items": {
@@ -33647,7 +33657,8 @@
                                     "effect_key"
                                   ],
                                   "additionalProperties": false
-                                }
+                                },
+                                "description": "Only skills owned by this template; length equals stage + 1 and positions are contiguous in nondecreasing power order"
                               }
                             },
                             "required": [

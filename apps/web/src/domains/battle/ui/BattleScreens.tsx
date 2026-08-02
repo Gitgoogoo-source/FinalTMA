@@ -103,7 +103,7 @@ export function BattleHome({
               </span>
               <span className="battle-tier-summary">
                 奖池金额：{tier.pool}
-                <span aria-hidden="true">　</span>
+                <span aria-hidden="true">{"\u3000"}</span>
                 门票：{tierTitle(tier)}
               </span>
             </button>
