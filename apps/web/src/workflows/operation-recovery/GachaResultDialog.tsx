@@ -98,12 +98,12 @@ function SingleResult({ item }: { item: ResultItem }): ReactNode {
 function TenDrawResults({ results }: { results: ResultItem[] }): ReactNode {
   return (
     <section className="gacha-ten-result" aria-label="十连召唤结果">
-      <ol className="gacha-result-parade">
+      <ol className="gacha-result-formation">
         {results.map((item, index) => (
           <li
             key={`${item.order}-${item.template_id}`}
             className={`rarity-${item.rarity}`}
-            style={{ "--parade-index": index } as CSSProperties}
+            style={{ "--formation-index": index } as CSSProperties}
             aria-label={`${rarityLabels[item.rarity]}藏品：${item.name}，NEW`}
           >
             <strong className="gacha-result-rarity">
