@@ -2,7 +2,8 @@
   color-scheme: light dark;
   font-family: Inter, ui-rounded, "SF Pro Rounded", system-ui, sans-serif;
   color: var(--tg-text-color, #f8fafc);
-  background: var(--tg-bg-color, #0b1020);
+  background: #fffdfa;
+  --app-canvas: #fffdfa;
   --surface: color-mix(
     in srgb,
     var(--tg-secondary-bg-color, #182038) 92%,
@@ -37,7 +38,7 @@ body,
 #root {
   margin: 0;
   min-height: 100%;
-  background: var(--tg-bg-color, #0b1020);
+  background: var(--app-canvas);
 }
 html,
 body {
@@ -1947,13 +1948,7 @@ input:focus {
   padding-top: calc(var(--shell-top-inset) + 72px);
   padding-bottom: calc(var(--safe-bottom) + 84px);
   color: var(--sprout-ink);
-  background:
-    radial-gradient(
-      circle at 50% 0,
-      rgba(255, 238, 218, 0.82),
-      transparent 32%
-    ),
-    linear-gradient(180deg, #fffdfa 0%, #fff 58%, #f9fbf9 100%);
+  background: var(--app-canvas);
   font-family:
     -apple-system, BlinkMacSystemFont, "SF Pro Rounded", Inter, system-ui,
     sans-serif;
@@ -2265,6 +2260,13 @@ input:focus {
     0 18px 40px rgba(20, 74, 55, 0.17),
     inset 0 1px 0 rgba(255, 255, 255, 0.88);
   backdrop-filter: blur(26px) saturate(185%);
+}
+.app-shell .bottom-nav::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 50% -20px calc(0px - var(--safe-bottom) - 20px);
+  background: var(--app-canvas);
 }
 .app-shell .bottom-nav button {
   gap: 1px;

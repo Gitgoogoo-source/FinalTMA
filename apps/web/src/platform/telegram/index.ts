@@ -2,6 +2,7 @@ import { useEffect } from "react";
 
 let listening = false;
 const TELEGRAM_MOBILE_CONTROLS_HEIGHT = 44;
+const APP_CANVAS_COLOR = "#fffdfa";
 
 export function telegram(): TelegramWebApp | null {
   return window.Telegram?.WebApp ?? null;
@@ -91,14 +92,11 @@ function syncTelegramLayout(): void {
       "--tg-viewport-stable-height",
       `${app.viewportStableHeight}px`,
     );
-  const background =
-    app.themeParams.bg_color ??
-    (app.colorScheme === "light" ? "#ffffff" : "#0b1020");
-  attemptTelegramMethod(() => app.setHeaderColor(background));
-  attemptTelegramMethod(() => app.setBackgroundColor(background));
+  attemptTelegramMethod(() => app.setHeaderColor(APP_CANVAS_COLOR));
+  attemptTelegramMethod(() => app.setBackgroundColor(APP_CANVAS_COLOR));
   document
     .querySelector('meta[name="theme-color"]')
-    ?.setAttribute("content", background);
+    ?.setAttribute("content", APP_CANVAS_COLOR);
 }
 
 function attemptTelegramMethod(action: () => void): void {
