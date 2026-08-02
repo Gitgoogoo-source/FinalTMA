@@ -4764,10 +4764,7 @@ input:focus {
   padding: clamp(7px, 1.2dvh, 11px);
   isolation: isolate;
   overflow: hidden;
-  border: 1px solid rgba(54, 67, 75, 0.12);
   border-radius: 30px;
-  background: #fffdfa;
-  box-shadow: 0 22px 54px rgba(54, 67, 75, 0.1);
 }
 .app-shell .inventory-title-board,
 .app-shell .inventory-metric-grid,
