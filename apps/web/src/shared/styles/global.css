@@ -8193,9 +8193,9 @@ html[data-app-shell-active] #root {
 }
 
 .app-shell .gacha-details {
-  height: 136px;
+  height: 142px;
   display: grid;
-  grid-template-rows: 90px 46px;
+  grid-template-rows: 96px 46px;
   gap: 0;
   padding: 0;
 }
@@ -8325,7 +8325,7 @@ html[data-app-shell-active] #root {
   height: 54px;
   grid-template-columns: 1fr 1.05fr;
   gap: 14px;
-  margin-top: 6px;
+  margin-top: 16px;
 }
 
 .app-shell .gacha-actions .button {
