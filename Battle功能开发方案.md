@@ -959,7 +959,7 @@ Supabase Vault 新增环境独立的：
 
 ## 14. 一次性交付依赖顺序
 
-以下顺序只表示依赖关系，不构成分批上线：
+第 1—6 步表示实现依赖，第 7—9 步是不可调整的维护窗口切换顺序；全程不构成分批上线：
 
 1. 把本方案的产品规则同步进主功能文档、架构文档与 ADR。
 2. 固化 Battle v1 生成器、210 模板配置、checksum 和契约模型。
@@ -967,10 +967,11 @@ Supabase Vault 新增环境独立的：
 4. 完成 REST handlers、Telegram prepared share、Ably token/outbox 与错误映射。
 5. 完成 Game 页、队伍选择、等待、接受、战斗、强制换宠、结果和充值恢复。
 6. 运行全部静态门禁。
-7. 清空并从零重建真实开发数据库，配置 Vault、Ably 和 Vercel Secret，部署同一 Git commit。
-8. 在真实 Telegram、真实 Vercel、真实 Supabase 和真实 Ably 上完成全部验收。
+7. 冻结 Git commit、三份 migration、OpenAPI、Catalog manifest 与 `battle-v1` checksum；关闭入口并清零活动 Battle，暂停 Vercel Production、Telegram webhook、Vercel Cron 与 `battle-tick-v1`，确认稳定域名返回 `503 DEPLOYMENT_PAUSED`。
+8. 保持流量暂停，通过 `main` 推送让 Git Integration 自动部署完整提交并核对 `READY` 与 source SHA，再从该提交的三份原始 migration 清空重建真实开发数据库；新应用与旧数据库、旧应用与新数据库都不得承载流量。
+9. 核对应用、数据库、OpenAPI、checksum、Vault、Ably 和调度属于同一发布单元，完成受控健康检查后依次恢复服务、调度与 Telegram 入口，并在真实 Telegram、真实 Vercel、真实 Supabase 和真实 Ably 上完成全部验收。
 
-第 8 步全部通过前，Battle 不能被视为完成或允许进入正式生产。
+第 9 步全部通过前，Battle 不能被视为完成或允许进入正式生产。
 
 ## 15. 验收方案
 

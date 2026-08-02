@@ -6,7 +6,9 @@
 场景：
 环境：development / production-smoke
 Git commit：
+Vercel deployment id / status / source SHA：
 Migration：填写 `supabase/migrations` 中按文件名排序的三条实际迁移及校验和
+OpenAPI / Catalog manifest / Battle checksum：
 设备、Telegram 版本、浅色/深色：
 开始时间（UTC）：
 request_id：
@@ -28,6 +30,8 @@ Battle stake / settlement / outbox event（脱敏）：
 ```
 
 ## 必须覆盖的场景
+
+应用契约与数据库双向不兼容的发布必须先保存维护窗口证据：Vercel Production 在新提交自动部署前已经暂停且稳定域名返回 `503 DEPLOYMENT_PAUSED`；活动 Battle、未发布 outbox 与未决 operation 为 0；Production deployment 为 `READY` 且 source SHA 等于发布单元 Git commit；远端三条 migration、OpenAPI、Catalog manifest 与 `battle-v1` checksum 均来自同一提交。恢复服务时 Telegram 入口、webhook 与 Vercel Cron 仍保持关闭，所有受控账号均已关闭旧 Mini App 并从 Telegram 重新加载当前 deployment；`/api/health`、受控 API 与运行日志没有 `RESPONSE_INVALID` 后才恢复调度和入口。任一证据缺失都不得把切换记为 PASS。
 
 执行 Telegram 登录场景前，先保存入口配置证据：Bot API `getMe.result.username` 必须等于当前环境 Bot，`getMe.result.has_main_web_app` 必须为 `true`，默认菜单按钮必须为 `web_app` 类型并指向当前环境 named Mini App 链接；随后只能从该 Bot 的 Main Mini App、菜单按钮或 named Mini App 链接启动，不得用浏览器直接访问部署 URL 代替 Telegram 真机验收。
 
@@ -79,7 +83,7 @@ Battle stake / settlement / outbox event（脱敏）：
 - lobby UI：`lobby_waiting` 左红右蓝使用固定仓库正方形 WebP，不使用真实头像；在线同时显示彩色图片、状态点和“已进入房间”，离线显示中性用户图标、文字及权威重连剩余。进入 `lobby_countdown` 后立即切换为覆盖顶部、底部导航和所有按钮的全屏 3 秒红蓝倒计时专页，明确显示“倒计时已锁定，离开不会取消战斗”，产品内不存在可产生取消效果的动作；颜色不是唯一状态信息，`aria-live` 与 reduced-motion 生效。
 - 资产与库存：三个入场档逐一核对双方 lock、胜者到账、平台手续费、败者、平局退款、`voided` 退款；重复创建、接受、取消、到期、结算和恢复不重复改变资产。prepared-share 明确失败的 `voided` 必须是一份 stake refunded、三份 reservation released、零 settlement；`cancelled/expired` 全量退款释放；lobby/战斗不变量 `voided` 保留安全 settlement、审计与 violation，monitor 不误报也不漏报。Battle reservation 与出售、成交、分解、进化、远征、Mint 逐一竞争，同模板额外可用数量仍可操作。
 - heartbeat/offline 刷新：普通续租和非终态 online/offline 只应用 room snapshot，网络记录不得出现每 5 秒 assets/inventory 请求；请求内跨过 `lobby_waiting` 的 90 秒或 5 分钟边界时，终态响应、响应丢失后的重新可见回正及相关错误必须一次消费契约 `battle + assets + inventory`，顶部 K-coin 与 `inventory.battling` 及时回正。请求跨过已锁定的 3 秒截止时间时只能恢复权威 active room，不得产生取消、退款或重新倒计时。
-- 阶段技能：全量证明四技能候选池按 `(power, 原始位置)` 排序，同链技能满足 2/3/4 前缀继承、位置连续、元素一致且无重复；L06、L13 的十个 1 阶模板允许没有 100% 命中技能。`team-options`、房间快照、API 和 DOM 只出现实际拥有的 2/3/4 个技能，不含 `null`、锁定槽位、占位按钮或隐藏字段；三技能操作区最后一个按钮横跨两列。
+- 阶段技能：全量证明四技能候选池按 `(power, 原始位置)` 排序，同链技能满足 2/3/4 前缀继承、位置连续、元素一致且无重复；L06、L13 的十个 1 阶模板允许没有 100% 命中技能。`team-options`、房间快照、API 和 DOM 只出现实际拥有的 2/3/4 个技能，不含 `null`、锁定槽位、占位按钮或隐藏字段；三技能操作区最后一个按钮横跨两列。受控 API 与 Vercel 运行日志中的 `RESPONSE_INVALID` 必须为 0，禁止用新应用读取旧四技能数据库或用旧应用读取新 2/3/4 技能数据库完成验收。
 - 回合：五属性 1.50/0.75/1.00、十技能命中边界、超时只在实际拥有技能中按最高命中率选择、优先级、速度、完全相同的同时攻击、先手击倒、单方换宠、双方换宠、单方/双方强制换宠、槽位超时、连续托管、双方同时全灭和第 20 回合裁决逐项保存 snapshot 与私有审计引用。对 1/2 阶宠物提交未拥有位置必须返回 `BATTLE_ACTION_INVALID`、零 action 写入，原幂等键重放结果不变。
 - 实时与恢复：Ably capability 为 subscribe-only，消息只有四个失效字段；重复、乱序和迟到消息不覆盖高 `state_version`。主动断开 Ably 后按第 21 章 1—2 秒节奏 REST 回正；Vercel 重启、pg_net 单次失败、cron 短暂停止后继续同一 deadline、outbox 和 settlement。
 - 当场结果：终局瞬间断线后 identity bootstrap 与 Battle bootstrap 只恢复同一未确认结果；分别覆盖仍有 terminal room/participation 与只有 `current_result` 两种恢复。只有结果时必须先通过参与者专属 room 读取取得相同 room 的终态 `state_version`，再完成 Battle、identity、inventory 三域回正后才发 acknowledge；资产尚未回正、room 非终态、结果消失或版本变化均保持可重试覆盖层。保存 acknowledge 响应丢失、重复点击、同一请求重放、刷新、离开重进、重新认证和迟到 bootstrap/room 响应证据；数据库首次确认时间只能写一次，成功后 Battle 与 identity bootstrap 都不再返回旧结果，且 K-coin、宠物、stake、reservation、ledger 与 outbox 无额外变化。玩家端不存在 history、replay、audit、spectator、matchmaking 或公开 room API。

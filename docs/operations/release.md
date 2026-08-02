@@ -9,6 +9,7 @@
 - 正式生产环境 `APP_ENV=production` 部署前，还必须提供正式 Telegram 分享图和 TON Connect 图标；任一已知开发占位 checksum 仍存在时禁止生产发布。
 - 本次真实开发部署的 Supabase、Vercel、Telegram、Stars 与观测平台配置齐全；TON RPC 和链上配置在启用 TON 前补齐。
 - 生产将部署已在真实开发环境完成验收的同一 Git commit、同一 migration 序列和同一目录 manifest。
+- Git commit、按文件名排序的三份 migration 及 SHA-256、OpenAPI、Catalog manifest 与 `battle-v1` checksum 已冻结为同一个不可拆分的发布单元；任一值变化都必须重新冻结整个单元。
 - Vercel 套餐支持 `vercel.json` 中三项当前 Cron 的执行频率；启用 TON 时同一套餐还必须支持第四项 Mint 对账 Cron。
 - Vercel Production 环境变量名称核查同时包含 `TELEGRAM_BOT_USERNAME` 与 `TELEGRAM_MINI_APP_SHORT_NAME`，开发 short name 固定为 `pokepets_dev`。
 - Battle 发布环境已经配置互不共用且至少 32 字节的 `BATTLE_INVITE_SECRET`、`BATTLE_OUTBOX_SECRET`，并配置环境隔离的 `ABLY_API_KEY`；Supabase Vault 的两个 Battle callback URL 与 outbox secret 已和对应 Vercel 环境逐项核对。
@@ -72,20 +73,21 @@ pnpm manifest:build
 
 ## 3. 真实开发环境
 
-用户明确宣布正式生产上线前，真实开发环境不保留迁移历史。每次数据库定义调整都执行以下固定顺序：
+用户明确宣布正式生产上线前，真实开发环境不保留迁移历史。每次数据库定义调整都执行以下固定顺序；应用与数据库双向不兼容时不采用滚动发布：
 
-1. 记录当前 commit、三条 migration 文件名及校验和，核对目标 ref 为 `ebewtjerusxcioegpzjd`。
-2. 完成本地静态门禁；关闭开发 Bot webhook/Mini App 入口和 Battle 新建/接受入口，确认没有活动 room 后暂停三项 Vercel Cron；对 `battle-tick-v1` 先执行 `cron.unschedule`，再在独立语句执行 `pg_reload_conf()`，保存原 `jobid` 连续两个调度周期没有新增 run 的证据后才允许清库。
-3. 清空真实开发数据库与 migration history，从空库依次执行仓库内唯一的 `*_baseline.sql`、`*_product_data_v1.sql`、`*_api_security.sql`；三条 migration 的提交事务全部结束后，owner 必须在独立语句执行一次 `select pg_reload_conf()`，不得把该调用放入 migration 事务。
-4. 验证远端 migration history、RPC 定义、入口交接门禁、RLS、函数权限与仓库一致；确认 `battle.tick_health()` 的唯一 job、`1 second`、`select battle.process_due(100);`、当前 database、`postgres` worker、单一 scheduler 和最近 5 秒成功记录全部正确，并保存同一 jobid 至少两个连续自然周期的 runid、起止时间、状态和返回摘要。手工调用 tick 不得替代该证据。
-5. 对开发项目执行 `supabase db lint --linked --schema api,identity,catalog,operations,economy,inventory,gacha,expedition,wheel,battle,market,payments,vip,tasks,referral,album,onchain,risk,admin --level warning --fail-on error` 并运行 Supabase security/performance advisors。
-6. 在 Supabase Data API 设置中把 Exposed schemas 固定为 `public,graphql_public,api`，不得暴露任何业务表 schema。
-7. 核对 Vercel Production 同时存在 `TELEGRAM_BOT_USERNAME=FinalTMA_bot`、`TELEGRAM_MINI_APP_SHORT_NAME=pokepets_dev`、`ABLY_API_KEY`、`BATTLE_INVITE_SECRET` 与 `BATTLE_OUTBOX_SECRET`；核对 Supabase Vault 的 Battle share/outbox callback URL 和相同 outbox secret；环境变量变更后部署包含全部修改的同一 Git commit。在 BotFather 的 `/mybots` → `@FinalTMA_bot` → `Bot Settings` → `Configure Mini App` 中启用 Main Mini App 并将 URL 固定为 `https://final-tma-pi.vercel.app/`，同时保持 named Mini App `pokepets_dev` 与默认菜单按钮 `Open PokePets` 指向 `https://t.me/FinalTMA_bot/pokepets_dev`。
+1. 记录发布单元的 Git commit、OpenAPI、Catalog manifest、`battle-v1` checksum、三条 migration 文件名及 SHA-256，核对目标 Supabase 为 `final-tma-real-test / ebewtjerusxcioegpzjd`、目标 Vercel Project 为 `final-tma`，并确认工作目录位于 `main`。
+2. 完成本地静态门禁；关闭开发 Bot 的 Main/named Mini App 入口和 Battle 新建/接受入口，但保持当前应用、`battle-tick-v1`、pg_net、两个 integrations 与 Ably 运行，直到 waiting、lobby、active room、active participant、locked stake、active reservation、未发布 outbox、`pending/unknown` Battle operation 和开放 Battle violation 全部为 0。
+3. 暂停 Vercel Production 并确认稳定域名返回 `503 DEPLOYMENT_PAUSED`，随后再次执行第 2 步的零状态查询；该复核失败时不得继续。关闭 Telegram webhook，暂停三项 Vercel Cron；对 `battle-tick-v1` 执行 `cron.unschedule`，再在独立语句执行 `pg_reload_conf()`，保存原 `jobid` 连续两个调度周期没有新增 run 的证据。Bot/Mini App 入口关闭、Cron 暂停或零活动房都不能替代 Vercel Production 暂停。
+4. 保持 Vercel Production 暂停，把包含完整发布单元的单一提交推送到 `main`，只等待 Git Integration 自动创建的 Production deployment 达到 `READY`；核对 deployment source SHA 与第 1 步完全一致，不执行手动 Vercel 部署。此时新应用与旧数据库不得接收任何生产请求。
+5. 清空真实开发数据库与 migration history，从第 4 步 deployment 对应提交依次执行仓库内唯一的 `*_baseline.sql`、`*_product_data_v1.sql`、`*_api_security.sql`；三条 migration 的提交事务全部结束后，owner 必须在独立语句执行一次 `select pg_reload_conf()`，不得把该调用放入 migration 事务。
+6. 验证远端 migration history 只包含第 1 步冻结的三条文件及 SHA-256，RPC、入口交接门禁、RLS、函数权限、Catalog manifest、OpenAPI 与 `battle-v1` checksum 均来自同一 Git commit；对开发项目执行 linked database lint 与 Supabase security/performance advisors。
+7. 在 Supabase Data API 设置中把 Exposed schemas 固定为 `public,graphql_public,api`，不得暴露任何业务表 schema；核对 Vercel Production 的 Telegram、Ably 与 Battle 环境变量以及 Supabase Vault 的 Battle share/outbox callback URL 和 outbox secret。环境变量不得设置为 Sensitive，环境值变化后仍只通过包含全部修改的 `main` 提交触发自动部署，并重新核对 source SHA。
 8. 确认 `admin.database_identity` 与 `admin.environment_controls` 在迁移后均为空，所有应用角色均不能发现或执行 `admin`；由数据库 owner 把项目身份一次性绑定为 `real_development / ebewtjerusxcioegpzjd`，再写入同值、最长 24 小时的 Battle 验收夹具 enable。该记录是非秘密数据库元数据，不使用 Vercel/Supabase Sensitive 环境变量或 Vault。
-9. 调用 Bot API，确认 `getMe.result.has_main_web_app=true` 且 `getChatMenuButton.result.web_app.url=https://t.me/FinalTMA_bot/pokepets_dev`；验证 `battle-v1` checksum、`battle-tick-v1` 每秒自然运行、`BATTLE_TICK_UNHEALTHY`/`BATTLE_TICK_RUN_FAILED` 监控链路、7 天运行明细保留、两个 pg_net callback、Ably subscribe-only token、`/api/health`、Telegram 真机登录、登录交接门禁、`/api/referrals` 与三个手工 Vercel job，最后恢复所有调度。
-10. 按 `docs/operations/acceptance.md` 完成 Telegram 真机、Battle、支付与并发验收，并确认 `/game` 只发起当前 viewer 所需的 Battle 请求、离开游戏页停止 waiting/lobby 心跳和 UI 轮询、进入 active 战斗停止 presence 心跳；`monitor-invariants` 必须返回 0 个新增 violation。
+9. 保持 Vercel Production、Telegram 入口、webhook 与 Vercel Cron 关闭，确认 `battle.tick_health()` 的唯一 job、`1 second`、`select battle.process_due(100);`、当前 database、`postgres` worker、单一 scheduler 和最近 5 秒成功记录全部正确，并保存同一 jobid 至少两个连续自然周期的 runid、起止时间、状态和返回摘要；手工调用 tick 不得替代该证据。
+10. 所有受控验收账号关闭维护前加载的旧 Mini App。恢复 Vercel Production，但继续关闭 Telegram 入口、webhook 和三项 Vercel Cron；确认稳定域名指向第 4 步 deployment，执行 `/api/health`、真实登录、Battle 2/3/4 技能响应、两个 pg_net callback、Ably subscribe-only token 和 `RESPONSE_INVALID = 0` 的受控验证。旧 WebView 不得重新认证或继续调用新数据库，账号必须从 Telegram 重新打开并加载当前 deployment 后才进入验收。
+11. 调用 Bot API 核对开发 Bot 身份后，依次恢复 Telegram webhook、三项 Vercel Cron、Main/named Mini App 与默认菜单入口；验证 `battle-v1` checksum、`battle-tick-v1` 自然运行、监控链路、7 天运行明细、`/api/referrals` 与三个手工 Vercel job。最后按 `docs/operations/acceptance.md` 完成 Telegram 真机、Battle、支付与并发验收，`monitor-invariants` 必须返回 0 个新增 violation。
 
-任一步失败都保持入口与 Cron 关闭，修正原始 Schema 或迁移并从第 1 条重新执行。禁止为尚未生产发布的错误定义追加修补 migration。
+任一步失败都保持 Vercel Production、Telegram 入口、webhook 与 Vercel Cron 关闭。数据库清空前不得恢复“新应用 + 旧数据库”；数据库清空后直接修正声明式 Schema、原始三条 migration 与完整发布单元，从空库重新执行第 5—11 步。禁止单独回滚应用、恢复旧 schema 或为尚未生产发布的错误定义追加修补 migration。
 
 本次真实开发部署不发布 TON testnet Collection，不配置 TON runtime secrets，不调度 `reconcile-mints`，也不执行钱包与 Mint 验收。后续启用 TON 时必须先完成 testnet Collection 部署、链上 owner/permit 公钥/1% 版税验证和全部真实 TON 配置，再把 `reconcile-mints` 恢复到 Vercel Cron 并完成 `docs/operations/acceptance.md` 中的 TON 场景。
 
