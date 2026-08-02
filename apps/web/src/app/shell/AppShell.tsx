@@ -58,7 +58,11 @@ export function AppShell(): ReactNode {
   useForegroundRefresh(session?.generation, location.pathname);
   return (
     <>
-      <div className="app-shell" hidden={!activePath} inert={!activePath}>
+      <div
+        className={`app-shell${activePath === "/inventory" ? " inventory-shell" : ""}`}
+        hidden={!activePath}
+        inert={!activePath}
+      >
         <AppRecoveryCoordinator
           openDialog={setDialog}
           closeDialogs={closeDialogs}
