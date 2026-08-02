@@ -2995,11 +2995,6 @@ input:focus {
   color: var(--sprout-green);
   font-size: 9px;
 }
-.app-shell .pity-reset-note {
-  color: #8a6b45;
-  font-size: 7px;
-  font-weight: 750;
-}
 .app-shell .pity-placeholder,
 .app-shell .pity-status {
   color: #8a948f;
@@ -6579,10 +6574,6 @@ body,
   color: #36434b;
   font-size: 11px;
 }
-.app-shell .pity-reset-note {
-  color: #7f8883;
-  font-size: 7px;
-}
 .app-shell .pity-gift {
   width: 38px;
   height: 38px;
@@ -7645,9 +7636,6 @@ body,
   .app-shell .pity-capsule .pity-target {
     font-size: clamp(9px, 1.25dvh, 11px);
   }
-  .app-shell .pity-reset-note {
-    font-size: clamp(6px, 0.8dvh, 7px);
-  }
   .app-shell .pity-gift {
     width: clamp(30px, calc(4.72dvh), 38px);
     height: clamp(30px, calc(4.72dvh), 38px);
@@ -8312,19 +8300,15 @@ html[data-app-shell-active] #root {
 
 .app-shell .pity-copy {
   min-width: 0;
-  gap: 2px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .app-shell .pity-capsule .pity-target {
-  font-size: 11px;
-  line-height: 13px;
-  white-space: normal;
-}
-
-.app-shell .pity-reset-note {
-  font-size: 8px;
-  line-height: 10px;
-  white-space: normal;
+  font-size: 10px;
+  line-height: 12px;
+  white-space: nowrap;
 }
 
 .app-shell .pity-gift {
