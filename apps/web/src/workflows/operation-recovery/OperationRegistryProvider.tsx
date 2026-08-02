@@ -907,7 +907,7 @@ export function OperationRegistryProvider({
           ref={dialogRef}
           className={`modal-backdrop ${
             active.routeId === "gacha.open"
-              ? `gacha-operation-backdrop phase-${active.phase}${showGachaAnimation ? " gacha-hatching-backdrop" : ""}`
+              ? `gacha-operation-backdrop phase-${active.phase}${showGachaAnimation ? " gacha-hatching-backdrop" : gachaResult ? " gacha-result-backdrop" : ""}`
               : ""
           }`}
           role="dialog"
@@ -959,7 +959,6 @@ export function OperationRegistryProvider({
             />
           ) : gachaResult ? (
             <GachaResultDialog
-              operationId={active.id}
               result={gachaResult}
               busy={acknowledgingId === active.id}
               error={
