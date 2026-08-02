@@ -1450,12 +1450,12 @@ input:focus {
   padding: 0 4px;
 }
 .gacha-result-formation {
-  width: min(100%, 430px);
+  width: min(calc(100% - 20px), 400px);
   min-height: 0;
-  height: min(100%, 530px);
+  height: min(88%, 460px);
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
-  grid-template-rows: minmax(0, 0.82fr) minmax(0, 1fr) minmax(0, 1.18fr);
+  grid-template-rows: minmax(0, 0.86fr) minmax(0, 0.94fr) minmax(0, 1.1fr);
   align-items: end;
   margin: 0;
   padding: 2px 8px 0;
@@ -1506,34 +1506,21 @@ input:focus {
   animation-delay: calc(var(--formation-index) * 35ms);
 }
 .gacha-result-formation .gacha-result-art {
+  width: min(31vw, 124px);
   height: 100%;
+  scale: var(--formation-scale);
   transform-origin: bottom center;
 }
 .gacha-result-formation li:nth-child(1) .gacha-result-art {
-  width: min(40vw, 160px);
+  --formation-scale: 1.2;
 }
 .gacha-result-formation
   li:nth-child(n + 2):nth-child(-n + 4)
   .gacha-result-art {
-  width: min(32vw, 128px);
+  --formation-scale: 1;
 }
 .gacha-result-formation li:nth-child(n + 5) .gacha-result-art {
-  width: min(21vw, 84px);
-}
-.gacha-result-formation li.rarity-common .gacha-result-art {
-  scale: 0.94;
-}
-.gacha-result-formation li.rarity-rare .gacha-result-art {
-  scale: 0.97;
-}
-.gacha-result-formation li.rarity-epic .gacha-result-art {
-  scale: 1;
-}
-.gacha-result-formation li.rarity-legendary .gacha-result-art {
-  scale: 1.03;
-}
-.gacha-result-formation li.rarity-mythic .gacha-result-art {
-  scale: 1.06;
+  --formation-scale: 0.8;
 }
 .gacha-result-formation .catalog-image,
 .gacha-single-result .catalog-image {
