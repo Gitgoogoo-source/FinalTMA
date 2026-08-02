@@ -2,7 +2,7 @@
 
 ## 决定
 
-开盒进行态由 `OperationRegistryProvider` 统一渲染独立的 DOM/SVG 像素场景，不使用服务端返回数据生成动画帧，也不修改 `gacha.open` 请求、响应或恢复契约。场景使用一个固定轮廓和底部中心锚点，通过 `normal`、`rare`、`legendary` 三组 CSS 主题变量切换蛋、怪兽与光效；所有破壳阶段在同一个 3 秒 CSS 时间轴内完成，避免多张独立帧素材产生轮廓、比例或锚点漂移。
+开盒进行态由 `OperationRegistryProvider` 统一渲染独立的 DOM/SVG 像素场景，不使用服务端返回数据生成动画帧，也不修改 `gacha.open` 请求、响应或恢复契约。该 Provider 位于 `AppShell` 外层，操作弹层与 `.app-shell` 是兄弟节点，因此动画使用唯一的 `gacha-hatch-*` 全局组件类，不依赖 `.app-shell` 后代选择器。场景使用一个固定轮廓和底部中心锚点，通过 `normal`、`rare`、`legendary` 三组 CSS 主题变量切换蛋、怪兽与光效；所有破壳阶段在同一个 3 秒 CSS 时间轴内完成，避免多张独立帧素材产生轮廓、比例或锚点漂移。
 
 新提交的开盒操作在前端以 `operation_id` 独立记录动画档次和周期边界，不使用会被恢复摘要替换的临时 request input 作为展示门控。请求与首轮动画同时开始；成功或失败终态只在首轮结束后的第一个周期边界开放展示。周期边界到达但 operation 仍为 `confirming`、`submitting`、`pending` 或 `unknown` 时，继续下一轮；终态在后续轮次中到达时，于该轮结束后切换到既有真实结果或失败弹窗。同一 operation 被恢复查询回正时不得清除本地周期门控。页面恢复到已经存在的终态 operation 时直接展示真实结果，不伪造一次新的开盒过程；恢复到未决 operation 时继续显示无结论动画和既有轮询恢复。
 

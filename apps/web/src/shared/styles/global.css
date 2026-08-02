@@ -6497,7 +6497,7 @@ body,
   background: rgba(255, 249, 243, 0.78);
   backdrop-filter: none;
 }
-.app-shell .gacha-operation-backdrop.gacha-hatching-backdrop {
+.gacha-operation-backdrop.gacha-hatching-backdrop {
   overflow: hidden;
   padding: 0;
   background: rgba(5, 8, 13, 0.72);
@@ -6623,7 +6623,7 @@ body,
   grid-column: auto;
 }
 
-.app-shell .gacha-hatch-animation {
+.gacha-hatch-animation {
   --egg-main: #f4f5eb;
   --egg-shadow: #aebeb3;
   --egg-highlight: #fff;
@@ -6639,7 +6639,7 @@ body,
   pointer-events: none;
   image-rendering: pixelated;
 }
-.app-shell .gacha-hatch-animation.tier-rare {
+.gacha-hatch-animation.tier-rare {
   --egg-main: #d8a934;
   --egg-shadow: #181b20;
   --egg-highlight: #fff0a2;
@@ -6649,7 +6649,7 @@ body,
   --monster-eye: #fff3ba;
   --aura: #ffcb4d;
 }
-.app-shell .gacha-hatch-animation.tier-legendary {
+.gacha-hatch-animation.tier-legendary {
   --egg-main: #ffc52f;
   --egg-shadow: #c46109;
   --egg-highlight: #fff8ae;
@@ -6659,19 +6659,19 @@ body,
   --monster-eye: #5c2100;
   --aura: #ffd83d;
 }
-.app-shell .gacha-hatch-halo,
-.app-shell .gacha-hatch-rays,
-.app-shell .gacha-hatch-sparks {
+.gacha-hatch-halo,
+.gacha-hatch-rays,
+.gacha-hatch-sparks {
   position: absolute;
   inset: 8%;
 }
-.app-shell .gacha-hatch-halo {
+.gacha-hatch-halo {
   border-radius: 50%;
   background: radial-gradient(circle, var(--aura) 0 8%, transparent 63%);
   opacity: 0;
   animation: gacha-pixel-halo var(--hatch-duration) steps(5, end) infinite;
 }
-.app-shell .gacha-hatch-rays {
+.gacha-hatch-rays {
   border-radius: 50%;
   background: repeating-conic-gradient(
     from 0deg,
@@ -6682,17 +6682,17 @@ body,
   opacity: 0;
   animation: gacha-pixel-rays var(--hatch-duration) steps(8, end) infinite;
 }
-.app-shell .gacha-hatch-animation.tier-normal .gacha-hatch-rays {
+.gacha-hatch-animation.tier-normal .gacha-hatch-rays {
   display: none;
 }
-.app-shell .gacha-hatch-animation.tier-rare .gacha-hatch-rays {
+.gacha-hatch-animation.tier-rare .gacha-hatch-rays {
   filter: saturate(0.8);
 }
-.app-shell .gacha-hatch-animation.tier-legendary .gacha-hatch-rays {
+.gacha-hatch-animation.tier-legendary .gacha-hatch-rays {
   animation-name: gacha-pixel-rays-legendary;
   filter: drop-shadow(0 0 10px var(--aura));
 }
-.app-shell .gacha-hatch-sparks i {
+.gacha-hatch-sparks i {
   position: absolute;
   left: var(--spark-left);
   top: var(--spark-top);
@@ -6704,7 +6704,7 @@ body,
   animation: gacha-pixel-spark var(--hatch-duration) steps(4, end) infinite;
   animation-delay: var(--spark-delay);
 }
-.app-shell .gacha-hatch-sprite {
+.gacha-hatch-sprite {
   position: absolute;
   z-index: 2;
   inset: 11%;
@@ -6713,31 +6713,31 @@ body,
   overflow: visible;
   filter: drop-shadow(0 18px 0 rgba(0, 0, 0, 0.18));
 }
-.app-shell .gacha-hatch-sprite g {
+.gacha-hatch-sprite g {
   transform-box: fill-box;
   transform-origin: center;
 }
-.app-shell .gacha-hatch-sprite .pixel-shadow {
+.gacha-hatch-sprite .pixel-shadow {
   fill: rgba(0, 0, 0, 0.24);
   animation: gacha-pixel-shadow var(--hatch-duration) steps(4, end) infinite;
 }
-.app-shell .gacha-hatch-sprite .egg-outline,
-.app-shell .gacha-hatch-sprite .shell-outline,
-.app-shell .gacha-hatch-sprite .monster-outline {
+.gacha-hatch-sprite .egg-outline,
+.gacha-hatch-sprite .shell-outline,
+.gacha-hatch-sprite .monster-outline {
   fill: #26302e;
 }
-.app-shell .gacha-hatch-sprite .egg-body,
-.app-shell .gacha-hatch-sprite .shell-body {
+.gacha-hatch-sprite .egg-body,
+.gacha-hatch-sprite .shell-body {
   fill: var(--egg-main);
 }
-.app-shell .gacha-hatch-sprite .egg-shadow,
-.app-shell .gacha-hatch-sprite .shell-shadow {
+.gacha-hatch-sprite .egg-shadow,
+.gacha-hatch-sprite .shell-shadow {
   fill: var(--egg-shadow);
 }
-.app-shell .gacha-hatch-sprite .egg-highlight {
+.gacha-hatch-sprite .egg-highlight {
   fill: var(--egg-highlight);
 }
-.app-shell .gacha-hatch-sprite .egg-crack {
+.gacha-hatch-sprite .egg-crack {
   fill: none;
   stroke: #29302d;
   stroke-width: 5px;
@@ -6746,53 +6746,53 @@ body,
   opacity: 0;
   animation: gacha-pixel-crack var(--hatch-duration) steps(3, end) infinite;
 }
-.app-shell .gacha-hatch-sprite .pixel-egg {
+.gacha-hatch-sprite .pixel-egg {
   animation: gacha-pixel-egg var(--hatch-duration) steps(2, end) infinite;
 }
-.app-shell .gacha-hatch-sprite .pixel-monster {
+.gacha-hatch-sprite .pixel-monster {
   opacity: 0;
   animation: gacha-pixel-monster var(--hatch-duration) steps(5, end) infinite;
 }
-.app-shell .gacha-hatch-sprite .monster-body,
-.app-shell .gacha-hatch-sprite .monster-ear,
-.app-shell .gacha-hatch-sprite .monster-foot {
+.gacha-hatch-sprite .monster-body,
+.gacha-hatch-sprite .monster-ear,
+.gacha-hatch-sprite .monster-foot {
   fill: var(--monster-main);
 }
-.app-shell .gacha-hatch-sprite .monster-dark {
+.gacha-hatch-sprite .monster-dark {
   fill: var(--monster-dark);
 }
-.app-shell .gacha-hatch-sprite .monster-light {
+.gacha-hatch-sprite .monster-light {
   fill: var(--monster-light);
 }
-.app-shell .gacha-hatch-sprite .monster-eye,
-.app-shell .gacha-hatch-sprite .monster-mouth {
+.gacha-hatch-sprite .monster-eye,
+.gacha-hatch-sprite .monster-mouth {
   fill: var(--monster-eye);
 }
-.app-shell .gacha-hatch-sprite .monster-eye-glint,
-.app-shell .gacha-hatch-sprite .monster-tooth {
+.gacha-hatch-sprite .monster-eye-glint,
+.gacha-hatch-sprite .monster-tooth {
   fill: #fff;
 }
-.app-shell .gacha-hatch-sprite .pixel-shell-left,
-.app-shell .gacha-hatch-sprite .pixel-shell-right,
-.app-shell .gacha-hatch-sprite .pixel-fragments {
+.gacha-hatch-sprite .pixel-shell-left,
+.gacha-hatch-sprite .pixel-shell-right,
+.gacha-hatch-sprite .pixel-fragments {
   opacity: 0;
 }
-.app-shell .gacha-hatch-sprite .pixel-shell-left {
+.gacha-hatch-sprite .pixel-shell-left {
   animation: gacha-pixel-shell-left var(--hatch-duration) steps(4, end) infinite;
 }
-.app-shell .gacha-hatch-sprite .pixel-shell-right {
+.gacha-hatch-sprite .pixel-shell-right {
   animation: gacha-pixel-shell-right var(--hatch-duration) steps(4, end)
     infinite;
 }
-.app-shell .gacha-hatch-sprite .pixel-fragments {
+.gacha-hatch-sprite .pixel-fragments {
   animation: gacha-pixel-fragments var(--hatch-duration) steps(5, end) infinite;
 }
-.app-shell .gacha-hatch-sprite .fragment {
+.gacha-hatch-sprite .fragment {
   fill: var(--egg-main);
   stroke: #26302e;
   stroke-width: 3px;
 }
-.app-shell .gacha-hatch-animation.tier-legendary .gacha-hatch-sprite {
+.gacha-hatch-animation.tier-legendary .gacha-hatch-sprite {
   filter: drop-shadow(0 18px 0 rgba(70, 30, 0, 0.2))
     drop-shadow(0 0 16px var(--aura));
 }
@@ -7297,22 +7297,22 @@ body,
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
-  .app-shell .gacha-hatch-sprite .pixel-egg,
-  .app-shell .gacha-hatch-sprite .pixel-fragments {
+  .gacha-hatch-sprite .pixel-egg,
+  .gacha-hatch-sprite .pixel-fragments {
     display: none;
   }
-  .app-shell .gacha-hatch-sprite .pixel-monster,
-  .app-shell .gacha-hatch-sprite .pixel-shell-left,
-  .app-shell .gacha-hatch-sprite .pixel-shell-right,
-  .app-shell .gacha-hatch-halo,
-  .app-shell .gacha-hatch-rays {
+  .gacha-hatch-sprite .pixel-monster,
+  .gacha-hatch-sprite .pixel-shell-left,
+  .gacha-hatch-sprite .pixel-shell-right,
+  .gacha-hatch-halo,
+  .gacha-hatch-rays {
     animation: none !important;
     opacity: 1;
   }
-  .app-shell .gacha-hatch-sprite .pixel-shell-left {
+  .gacha-hatch-sprite .pixel-shell-left {
     transform: translate(-13px, 8px) rotate(-12deg);
   }
-  .app-shell .gacha-hatch-sprite .pixel-shell-right {
+  .gacha-hatch-sprite .pixel-shell-right {
     transform: translate(13px, 8px) rotate(12deg);
   }
 }
