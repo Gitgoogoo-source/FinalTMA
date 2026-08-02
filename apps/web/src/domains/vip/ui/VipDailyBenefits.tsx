@@ -1,4 +1,4 @@
-import { Gem, Gift } from "lucide-react";
+import { Check, LoaderCircle, LockKeyhole, RefreshCw } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -113,6 +113,20 @@ export function VipDailyBenefits({
     loadFailed,
     available: "领取免费稀有盲盒",
   });
+  const fgemsVisualState = benefitVisualState({
+    active,
+    claimed: fgemsClaimed,
+    pending: fgemsPending,
+    loading: vip.isLoading || (!data && !loadFailed),
+    loadFailed,
+  });
+  const freeBoxVisualState = benefitVisualState({
+    active,
+    claimed: freeBoxClaimed,
+    pending: freeBoxPending,
+    loading: vip.isLoading || (!data && !loadFailed),
+    loadFailed,
+  });
   const fgemsDisabled =
     fgemsPending || (!loadFailed && (unavailable || (active && fgemsClaimed)));
   const freeBoxDisabled =
@@ -132,22 +146,22 @@ export function VipDailyBenefits({
       className="vip-daily-benefits"
       aria-label={`月卡每日权益，${statusText}`}
       aria-live="polite"
-      title={statusText}
     >
       <div className="vip-benefit-grid">
         <article>
           <Button
-            className="vip-benefit-tile fgems"
+            className={`vip-benefit-tile fgems ${fgemsVisualState}`}
             disabled={fgemsDisabled}
             aria-label={`100 Fgems，每个 UTC+0 日手动领取，${fgemsAction}`}
             onClick={() => activateBenefit("fgems")}
           >
-            <span className="benefit-icon">
-              <Gem aria-hidden="true" />
-            </span>
-            <strong>100</strong>
-            <small>Fgems</small>
-            <span>{fgemsAction}</span>
+            <img
+              src="/assets/vip/daily-fgems.png"
+              alt=""
+              aria-hidden="true"
+              draggable={false}
+            />
+            <BenefitStateIcon state={fgemsVisualState} />
           </Button>
           <BenefitFeedback
             feedback={fgemsFeedbackStatus}
@@ -158,17 +172,18 @@ export function VipDailyBenefits({
 
         <article>
           <Button
-            className="vip-benefit-tile free-box"
+            className={`vip-benefit-tile free-box ${freeBoxVisualState}`}
             disabled={freeBoxDisabled}
             aria-label={`免费稀有盲盒 1 次，全部来源当前可用 ${data?.free_rare_box_available ?? "—"} 次，${freeBoxAction}`}
             onClick={() => activateBenefit("freeBox")}
           >
-            <span className="benefit-icon">
-              <Gift aria-hidden="true" />
-            </span>
-            <strong>稀有盒</strong>
-            <small>{data?.free_rare_box_available ?? "—"} 次可用</small>
-            <span>{freeBoxAction}</span>
+            <img
+              src="/assets/vip/daily-rare-egg.png"
+              alt=""
+              aria-hidden="true"
+              draggable={false}
+            />
+            <BenefitStateIcon state={freeBoxVisualState} />
           </Button>
           <BenefitFeedback
             feedback={freeBoxFeedbackStatus}
@@ -178,6 +193,30 @@ export function VipDailyBenefits({
         </article>
       </div>
     </aside>
+  );
+}
+
+type BenefitVisualState =
+  | "claimable"
+  | "claimed"
+  | "loading"
+  | "locked"
+  | "retry";
+
+function BenefitStateIcon({ state }: { state: BenefitVisualState }): ReactNode {
+  if (state === "claimable") return null;
+  return (
+    <span className="benefit-state" aria-hidden="true">
+      {state === "claimed" ? (
+        <Check />
+      ) : state === "locked" ? (
+        <LockKeyhole />
+      ) : state === "retry" ? (
+        <RefreshCw />
+      ) : (
+        <LoaderCircle className="spin" />
+      )}
+    </span>
   );
 }
 
@@ -192,9 +231,7 @@ function BenefitFeedback({
 }): ReactNode {
   if (!feedback) return null;
   return (
-    <span
-      className={`vip-benefit-feedback ${feedback === "failed" && !claimed ? "error-text" : ""}`}
-    >
+    <span className="vip-benefit-status-text" role="status">
       {feedback === "success"
         ? success
         : claimed
@@ -202,6 +239,25 @@ function BenefitFeedback({
           : "领取未成功，已刷新真实状态"}
     </span>
   );
+}
+
+function benefitVisualState({
+  active,
+  claimed,
+  pending,
+  loading,
+  loadFailed,
+}: {
+  active: boolean;
+  claimed: boolean;
+  pending: boolean;
+  loading: boolean;
+  loadFailed: boolean;
+}): BenefitVisualState {
+  if (pending || loading) return "loading";
+  if (loadFailed) return "retry";
+  if (!active) return "locked";
+  return claimed ? "claimed" : "claimable";
 }
 
 function benefitButtonText({
