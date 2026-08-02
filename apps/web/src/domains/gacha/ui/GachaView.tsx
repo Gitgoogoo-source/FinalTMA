@@ -330,7 +330,6 @@ export function GachaView({
                       />
                     </span>
                     <strong>{box.display_name}</strong>
-                    <small>{box.single_price} K-coin</small>
                     <i aria-hidden="true" />
                   </button>
                 );

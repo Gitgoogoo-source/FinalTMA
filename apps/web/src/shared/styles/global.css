@@ -8123,21 +8123,21 @@ html[data-app-shell-active] #root {
   border-radius: 0;
   object-position: center bottom;
   filter: drop-shadow(0 28px 28px rgba(54, 67, 75, 0.18));
-  animation: none;
-  transform: none;
+  transform-origin: center bottom;
+  animation: gacha-showcase-float 2.4s ease-in-out infinite !important;
 }
 
 .app-shell .vip-daily-benefits {
   left: 2px;
-  top: 82px;
+  top: 8px;
 }
 
 .app-shell .gacha-tier-selector {
-  width: 272px;
+  width: 232px;
   max-width: 100%;
-  grid-template-columns: repeat(3, 82px);
+  grid-template-columns: repeat(3, 70px);
   justify-content: center;
-  gap: 13px;
+  gap: 11px;
   margin: 0 auto;
 }
 
@@ -8146,45 +8146,50 @@ html[data-app-shell-active] #root {
 }
 
 .app-shell .gacha-tier-selector:has(button:nth-child(2):last-child) {
-  grid-template-columns: repeat(2, 82px);
+  grid-template-columns: repeat(2, 70px);
 }
 
 .app-shell .gacha-tier-selector button {
-  width: 82px;
-  height: 116px;
+  width: 70px;
+  height: 99px;
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
   gap: 3px;
-  padding: 8px 6px 22px;
-  border-radius: 16px;
+  padding: 7px 5px 19px;
+  border-radius: 14px;
 }
 
 .app-shell .gacha-tier-selector .tier-art {
-  width: 45px;
-  height: 45px;
-  flex: 0 0 45px;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
 }
 
 .app-shell .gacha-tier-selector strong {
-  font-size: 14px;
-  line-height: 18px;
-}
-
-.app-shell .gacha-tier-selector small {
-  font-size: 10px;
-  line-height: 12px;
+  font-size: 12px;
+  line-height: 15px;
 }
 
 .app-shell .gacha-tier-selector i {
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   position: absolute;
-  bottom: 7px;
+  bottom: 6px;
   left: 50%;
   transform: translateX(-50%);
+}
+
+@keyframes gacha-showcase-float {
+  0%,
+  100% {
+    transform: translateY(-5px) scale(1.2);
+  }
+  50% {
+    transform: translateY(5px) scale(1.2);
+  }
 }
 
 .app-shell .gacha-details {
