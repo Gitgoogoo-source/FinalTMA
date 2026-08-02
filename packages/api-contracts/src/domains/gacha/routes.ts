@@ -9,7 +9,7 @@ import {
   timestampSchema,
   uuidSchema,
 } from "../../common/schemas.ts";
-import { boxSchema, gachaPoolSchema } from "./models.ts";
+import { boxSchema } from "./models.ts";
 
 const pitySchema = z
   .object({
@@ -115,23 +115,6 @@ export const gachaRoutes = [
     errors: [
       "OPERATION_NOT_FOUND",
       "OPERATION_NOT_ACKNOWLEDGEABLE",
-      "ACCOUNT_RESTRICTED",
-      "INTERNAL_ERROR",
-    ],
-  }),
-  defineRoute({
-    id: "gacha.pool",
-    method: "GET",
-    path: "/api/gacha/pool",
-    gateway: "app",
-    auth: true,
-    idempotent: false,
-    input: z.object({ tier: boxTierSchema }).strict(),
-    output: gachaPoolSchema,
-    errors: [
-      "BOX_TIER_INVALID",
-      "CATALOG_INVALID",
-      "SESSION_REQUIRED",
       "ACCOUNT_RESTRICTED",
       "INTERNAL_ERROR",
     ],

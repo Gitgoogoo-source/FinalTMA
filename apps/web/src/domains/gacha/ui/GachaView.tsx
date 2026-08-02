@@ -1,4 +1,4 @@
-import { ChevronRight, Gift, RefreshCw, Sparkles, Star } from "lucide-react";
+import { Gift, Sparkles, Star } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -26,8 +26,6 @@ import { focusTaskTarget } from "../../../shared/navigation/focusTaskTarget.ts";
 import { usePageSearchParams } from "../../../shared/navigation/pageActivity.tsx";
 import { useOperationRegistry } from "../../../workflows/operation-recovery/index.ts";
 import { useNavigationIntent } from "../../../workflows/payment-recovery/index.ts";
-import { GachaPoolDialog } from "./GachaPoolDialog.tsx";
-
 type BoxTier = "normal" | "rare" | "legendary";
 type Rarity = "common" | "rare" | "epic" | "legendary" | "mythic";
 type GachaViewState = { selectedTier: BoxTier; scrollY: number };
@@ -51,6 +49,32 @@ const boxArtPaths: Record<BoxTier, string> = {
   rare: "/assets/boxes/rare.webp",
   legendary: "/assets/boxes/legendary.webp",
 };
+const representativeCollectibles: Record<
+  Rarity,
+  { name: string; path: string }
+> = {
+  common: {
+    name: "炭尾狐",
+    path: "/assets/gacha/representatives/v1/common.webp",
+  },
+  rare: {
+    name: "焰鬃狐",
+    path: "/assets/gacha/representatives/v1/rare.webp",
+  },
+  epic: {
+    name: "赤曜火狐",
+    path: "/assets/gacha/representatives/v1/epic.webp",
+  },
+  legendary: {
+    name: "九霄冰狐",
+    path: "/assets/gacha/representatives/v1/legendary.webp",
+  },
+  mythic: {
+    name: "创界星神龙",
+    path: "/assets/gacha/representatives/v1/mythic.webp",
+  },
+};
+const rarityOrder = ["common", "rare", "epic", "legendary", "mythic"] as const;
 
 const pityLoadError = new Error("保底进度加载失败，请重试");
 
@@ -87,18 +111,11 @@ export function GachaView({
     : !selection.touched && autoSelectRare
       ? "rare"
       : selection.tier;
-  const pool = useApiQuery(
-    "gacha.pool",
-    { tier: selectedTier },
-    boxes.data?.rules_complete === true,
-  );
   const selectedTierRef = useRef(selectedTier);
   const rememberedScrollY = remembered?.scrollY ?? 0;
   const restoreScrollY = useRef(rememberedScrollY);
   const scrollRestored = useRef(rememberedScrollY === 0);
   const [ready, setReady] = useState<Record<string, boolean>>({});
-  const [poolOpen, setPoolOpen] = useState(false);
-  const poolTrigger = useRef<HTMLButtonElement>(null);
   const singleAction = useRef<HTMLButtonElement>(null);
   const tenAction = useRef<HTMLButtonElement>(null);
   const items = useMemo(() => boxes.data?.boxes ?? [], [boxes.data?.boxes]);
@@ -122,21 +139,9 @@ export function GachaView({
     selectedPity && selectedPity.progress < selectedPity.limit
       ? selectedPity
       : null;
-  const previewItems = useMemo(() => {
-    const rarities = pool.data?.rarities ?? [];
-    const items = rarities.flatMap((rarity) => rarity.items);
-    const representative = rarities.flatMap((rarity) =>
-      rarity.items.slice(0, 1),
-    );
-    const picked = new Map(
-      representative.map((item) => [item.template_id, item]),
-    );
-    for (const item of items) {
-      if (picked.size >= 5) break;
-      picked.set(item.template_id, item);
-    }
-    return [...picked.values()].slice(0, 5);
-  }, [pool.data?.rarities]);
+  const previewRarities = selectedBox
+    ? rarityOrder.filter((rarity) => selectedBox.rarity_weights[rarity] > 0)
+    : [];
   const pityPercent = validPity
     ? Math.min(100, Math.max(0, (validPity.progress / validPity.limit) * 100))
     : 0;
@@ -225,10 +230,6 @@ export function GachaView({
       tier,
       draw_count: count,
     });
-  };
-  const closePool = () => {
-    setPoolOpen(false);
-    requestAnimationFrame(() => poolTrigger.current?.focus());
   };
   return (
     <main className="page gacha-page">
@@ -322,7 +323,6 @@ export function GachaView({
                     className={active ? "active" : ""}
                     aria-pressed={active}
                     onClick={() => {
-                      setPoolOpen(false);
                       if (!active) selectTier(box.tier);
                       if (requestedTier)
                         setParams(
@@ -353,62 +353,39 @@ export function GachaView({
                     <Star aria-hidden="true" />
                     可能获得
                   </strong>
-                  <button
-                    ref={poolTrigger}
-                    type="button"
-                    className="gacha-pool-trigger"
-                    aria-haspopup="dialog"
-                    aria-expanded={poolOpen}
-                    onClick={() => setPoolOpen(true)}
-                  >
-                    查看全部
-                    <ChevronRight aria-hidden="true" />
-                  </button>
                 </header>
-                {pool.isPending || (pool.isFetching && !pool.data) ? (
-                  <div className="gacha-preview-state" role="status">
-                    <RefreshCw className="spin" aria-hidden="true" />
-                    正在加载真实奖池
-                  </div>
-                ) : pool.error || previewItems.length === 0 ? (
-                  <button
-                    type="button"
-                    className="gacha-preview-state error"
-                    disabled={pool.isFetching}
-                    onClick={() => void pool.refetch()}
-                  >
-                    <RefreshCw
-                      className={pool.isFetching ? "spin" : ""}
-                      aria-hidden="true"
-                    />
-                    {pool.isFetching
-                      ? "正在重新加载"
-                      : "奖池加载失败，点击重试"}
-                  </button>
-                ) : (
-                  <div className="gacha-preview-items">
-                    {previewItems.map((item) => (
-                      <button
-                        key={item.template_id}
-                        type="button"
-                        aria-label={`${item.name}，${rarityLabels[item.rarity]}，查看全部可能获得`}
-                        onClick={() => setPoolOpen(true)}
+                <div
+                  className="gacha-rarity-previews"
+                  role="list"
+                  style={{
+                    gridTemplateColumns: `repeat(${previewRarities.length}, minmax(0, 1fr))`,
+                  }}
+                >
+                  {previewRarities.map((rarity) => {
+                    const representative = representativeCollectibles[rarity];
+                    const probability =
+                      selectedBox.rarity_weights[rarity] / 100;
+                    return (
+                      <article
+                        key={rarity}
+                        role="listitem"
+                        aria-label={`${representative.name}，${rarityLabels[rarity]}代表藏品，稀有度出货概率 ${probability}%`}
                       >
-                        <span className={`preview-art rarity-${item.rarity}`}>
+                        <span className={`preview-art rarity-${rarity}`}>
                           <CatalogImage
-                            path={item.image_thumbnail_path}
-                            alt={item.name}
+                            path={representative.path}
+                            alt={representative.name}
                             variant="thumbnail"
                             loading="lazy"
                           />
                         </span>
-                        <strong className={`rarity-${item.rarity}`}>
-                          {rarityLabels[item.rarity]}
+                        <strong className={`rarity-${rarity}`}>
+                          {rarityLabels[rarity]} {probability}%
                         </strong>
-                      </button>
-                    ))}
-                  </div>
-                )}
+                      </article>
+                    );
+                  })}
+                </div>
               </section>
               {rulesComplete ? (
                 <>
@@ -530,9 +507,6 @@ export function GachaView({
           </section>
         )}
       </PageState>
-      {poolOpen && selectedBox && (
-        <GachaPoolDialog tier={selectedBox.tier} close={closePool} />
-      )}
     </main>
   );
 }

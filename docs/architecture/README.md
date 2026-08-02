@@ -96,3 +96,4 @@ TMA 首次同步加载只覆盖应用壳、会话与账号门禁及默认开盒�
 - [Battle 首页轻量像素对战装饰](adr/ADR-020-battle-home-pixel-duel.md)
 - [开盒像素街机动画、结果舞台与展示门控](adr/ADR-021-gacha-pixel-hatch-presentation.md)
 - [全局顶层业务弹窗](adr/ADR-023-global-modal-layer.md)
+- [开盒稀有度代表静态资源](adr/ADR-024-gacha-rarity-representatives.md)

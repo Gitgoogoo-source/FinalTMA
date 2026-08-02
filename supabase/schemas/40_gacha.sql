@@ -113,66 +113,6 @@ begin
 end;
 $$;
 
-create or replace function api.gacha_pool(p_session_id uuid, p_tier text)
-returns jsonb
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-  v_box gacha.boxes%rowtype;
-  v_rarities jsonb;
-begin
-  perform api.session_user(p_session_id);
-  select * into v_box from gacha.boxes where tier = p_tier;
-  if v_box.tier is null then perform api.raise_business_error('BOX_TIER_INVALID', '盲盒档次无效'); end if;
-  if not gacha.rules_complete() then perform api.raise_business_error('CATALOG_INVALID', '奖池加载失败，请重试'); end if;
-
-  with candidates as (
-    select
-      t.*,
-      (v_box.rarity_weights->>t.rarity)::integer as rarity_probability_basis_points,
-      sum(t.draw_weight) over (partition by t.rarity) as catalog_total_weight
-    from catalog.templates t
-    where t.catalog_version = 'v1'
-      and (v_box.rarity_weights->>t.rarity)::integer > 0
-  ), rarity_groups as (
-    select
-      c.rarity,
-      max(c.rarity_probability_basis_points) as rarity_probability_basis_points,
-      max(c.catalog_total_weight) as catalog_total_weight,
-      jsonb_agg(jsonb_build_object(
-        'template_id', c.id,
-        'name', c.name,
-        'rarity', c.rarity,
-        'stage', c.stage,
-        'image_thumbnail_path', c.image_thumbnail_path,
-        'catalog_weight', c.draw_weight,
-        'single_probability_percent', round(c.rarity_probability_basis_points::numeric * c.draw_weight / (c.catalog_total_weight * 100), 6)
-      ) order by c.sort_order) as items
-    from candidates c
-    group by c.rarity
-  )
-  select coalesce(jsonb_agg(jsonb_build_object(
-    'rarity', rarity,
-    'rarity_probability_basis_points', rarity_probability_basis_points,
-    'rarity_probability_percent', round(rarity_probability_basis_points::numeric / 100, 2),
-    'catalog_total_weight', catalog_total_weight,
-    'items', items
-  ) order by catalog.rarity_rank(rarity)), '[]'::jsonb)
-  into v_rarities
-  from rarity_groups;
-
-  return jsonb_build_object(
-    'tier', v_box.tier,
-    'display_name', v_box.display_name,
-    'catalog_version', 'v1',
-    'pity', jsonb_build_object('limit', v_box.pity_limit, 'target_rarity', v_box.pity_rarity),
-    'rarities', v_rarities
-  );
-end;
-$$;
-
 create or replace function api.gacha_recoverable_results(p_session_id uuid)
 returns jsonb
 language plpgsql

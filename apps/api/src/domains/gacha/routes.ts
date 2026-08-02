@@ -26,12 +26,6 @@ export const gachaHandlers = {
       p_operation_id: context.input.operation_id,
     }),
   }),
-  "gacha.pool": async (context) => ({
-    data: await rpc("gacha_pool", {
-      p_session_id: requireSession(context).session_id,
-      p_tier: context.input.tier,
-    }),
-  }),
   "gacha.open": async (context) =>
     operationResult(
       await rpc<OperationEnvelope>("gacha_open", {

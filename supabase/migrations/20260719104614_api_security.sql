@@ -73,7 +73,6 @@ declare
     'gacha_acknowledge_result',
     'gacha_bootstrap',
     'gacha_open',
-    'gacha_pool',
     'gacha_recoverable_results',
     'identity_authenticate',
     'identity_bootstrap',
