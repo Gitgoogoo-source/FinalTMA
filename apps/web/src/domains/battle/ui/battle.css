@@ -455,11 +455,23 @@
 }
 
 .battle-tier-submit.button {
-  width: 100%;
+  position: fixed;
+  z-index: 39;
+  left: 50%;
+  bottom: calc(var(--safe-bottom) + 80px);
+  width: calc(
+    100% - max(14px, var(--safe-left)) - max(14px, var(--safe-right))
+  );
+  max-width: calc(var(--app-width) - 28px);
   min-height: 50px;
   display: flex;
-  margin-top: 12px;
+  margin: 0;
   font-size: 14px;
+  transform: translateX(-50%);
+}
+
+.app-shell .battle-tier-submit.button:not(:disabled):active {
+  transform: translateX(-50%) translateY(1px);
 }
 
 .battle-screen-header {
@@ -2123,8 +2135,7 @@
   }
 
   .battle-tier-submit.button {
-    width: min(100%, 720px);
-    margin-inline: auto;
+    max-width: 720px;
   }
 
   .battle-option-detail {
