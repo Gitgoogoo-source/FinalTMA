@@ -86,15 +86,7 @@ export function BattleHome({
         </section>
       ) : null}
 
-      <section
-        className="battle-tier-stage"
-        aria-labelledby="battle-tier-title"
-      >
-        <header>
-          <span>固定档位</span>
-          <h2 id="battle-tier-title">选择本场入场费</h2>
-          <p>胜者获得双方奖池的 90%；平局原额退回。</p>
-        </header>
+      <section className="battle-tier-stage" aria-label="Battle 入场费档位">
         <div className="battle-tier-list">
           {tiers.map((tier) => (
             <button
@@ -109,18 +101,11 @@ export function BattleHome({
               <span className="battle-tier-selected" aria-hidden="true">
                 <Check />
               </span>
-              <span className="battle-tier-entry">每人入场</span>
-              <strong>{tierTitle(tier)}</strong>
-              <dl>
-                <div>
-                  <dt>双方奖池</dt>
-                  <dd>{tier.pool}</dd>
-                </div>
-                <div>
-                  <dt>胜者到账</dt>
-                  <dd>{tier.winner_payout}</dd>
-                </div>
-              </dl>
+              <span className="battle-tier-summary">
+                奖池金额：{tier.pool}
+                <span aria-hidden="true">　</span>
+                门票：{tierTitle(tier)}
+              </span>
             </button>
           ))}
         </div>
