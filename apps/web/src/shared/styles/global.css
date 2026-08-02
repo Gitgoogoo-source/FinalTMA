@@ -6046,11 +6046,14 @@ input:focus {
   backdrop-filter: blur(9px);
 }
 .app-shell.app-modal-backdrop {
+  position: fixed;
   z-index: 120;
+  inset: 0;
   width: auto;
   max-width: none;
   height: auto;
   min-height: 0;
+  margin: 0;
   padding: 18px calc(var(--safe-right) + 12px) calc(var(--safe-bottom) + 18px)
     calc(var(--safe-left) + 12px);
   overflow: hidden;
