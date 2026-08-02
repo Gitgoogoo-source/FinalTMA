@@ -28,6 +28,10 @@ import {
   registerSensitiveStateResetter,
   useSession,
 } from "../../../platform/session/store.ts";
+import {
+  getAppScrollTop,
+  scrollAppTo,
+} from "../../../shared/navigation/appScroll.ts";
 import { focusTaskTarget } from "../../../shared/navigation/focusTaskTarget.ts";
 import { Badge, Button, Card, PageState } from "../../../shared/ui/index.tsx";
 import { useOperationRegistry } from "../../../workflows/operation-recovery/index.ts";
@@ -151,11 +155,7 @@ export function TasksView({
   useLayoutEffect(() => {
     if (scrollRestored.current || tasks.isLoading) return;
     const frame = window.requestAnimationFrame(() => {
-      window.scrollTo({
-        top: restoreScrollY.current,
-        left: 0,
-        behavior: "auto",
-      });
+      scrollAppTo(restoreScrollY.current);
       scrollRestored.current = true;
     });
     return () => window.cancelAnimationFrame(frame);
@@ -168,7 +168,7 @@ export function TasksView({
       if (epoch !== viewStateEpoch) return;
       viewStates.set(userId, {
         category: categoryRef.current,
-        scrollY: Math.max(0, window.scrollY),
+        scrollY: getAppScrollTop(),
       });
     };
   }, [session]);

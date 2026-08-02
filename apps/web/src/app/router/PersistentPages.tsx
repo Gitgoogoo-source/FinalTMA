@@ -14,6 +14,10 @@ import {
   type MainPagePath,
 } from "../../shared/navigation/pageActivity.tsx";
 import {
+  getAppScrollTop,
+  scrollAppTo,
+} from "../../shared/navigation/appScroll.ts";
+import {
   loadGachaPage,
   loadGamePage,
   loadInventoryPage,
@@ -71,15 +75,11 @@ export function PersistentPages({
       activePath === null
         ? undefined
         : window.requestAnimationFrame(() =>
-            window.scrollTo({
-              top: positions.get(activePath) ?? 0,
-              left: 0,
-              behavior: "auto",
-            }),
+            scrollAppTo(positions.get(activePath) ?? 0),
           );
     return () => {
       if (frame !== undefined) window.cancelAnimationFrame(frame);
-      if (activePath) positions.set(activePath, Math.max(0, window.scrollY));
+      if (activePath) positions.set(activePath, getAppScrollTop());
     };
   }, [activePath]);
 

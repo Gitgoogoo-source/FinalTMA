@@ -25,6 +25,11 @@ import {
   useSession,
 } from "../../../platform/session/store.ts";
 import { Button, Card, PageState } from "../../../shared/ui/index.tsx";
+import {
+  getAppMaxScrollTop,
+  getAppScrollTop,
+  scrollAppTo,
+} from "../../../shared/navigation/appScroll.ts";
 import { focusTaskTarget } from "../../../shared/navigation/focusTaskTarget.ts";
 import { usePageSearchParams } from "../../../shared/navigation/pageActivity.tsx";
 import { useOperationRegistry } from "../../../workflows/operation-recovery/index.ts";
@@ -187,12 +192,9 @@ export function GachaView({
 
   useLayoutEffect(() => {
     if (scrollRestored.current) return;
-    window.scrollTo({ top: restoreScrollY.current, left: 0, behavior: "auto" });
-    const maxScroll = Math.max(
-      0,
-      document.documentElement.scrollHeight - window.innerHeight,
-    );
-    if (restoreScrollY.current <= maxScroll + 1) scrollRestored.current = true;
+    scrollAppTo(restoreScrollY.current);
+    if (restoreScrollY.current <= getAppMaxScrollTop() + 1)
+      scrollRestored.current = true;
   }, [boxes.isLoading, selectedBox]);
 
   useLayoutEffect(() => {
@@ -203,7 +205,7 @@ export function GachaView({
       if (epoch !== viewStateEpoch) return;
       viewStates.set(userId, {
         selectedTier: selectedTierRef.current,
-        scrollY: Math.max(0, window.scrollY),
+        scrollY: getAppScrollTop(),
       });
     };
   }, [session]);

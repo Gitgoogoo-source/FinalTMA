@@ -2261,13 +2261,6 @@ input:focus {
     inset 0 1px 0 rgba(255, 255, 255, 0.88);
   backdrop-filter: blur(26px) saturate(185%);
 }
-.app-shell .bottom-nav::before {
-  content: "";
-  position: absolute;
-  z-index: -1;
-  inset: 50% -20px calc(0px - var(--safe-bottom) - 20px);
-  background: var(--app-canvas);
-}
 .app-shell .bottom-nav button {
   gap: 1px;
   border-radius: 24px;
@@ -7368,8 +7361,30 @@ body,
   --size-topbar: 54px;
   --size-bottomnav: 60px;
   --size-avatar: 48px;
+  height: var(--tg-viewport-stable-height, 100dvh);
+  min-height: 0;
   padding-top: calc(var(--shell-top-inset) + var(--size-topbar));
   padding-bottom: calc(var(--safe-bottom) + 80px);
+  overflow: hidden;
+}
+
+html[data-app-shell-active],
+html[data-app-shell-active] body,
+html[data-app-shell-active] #root {
+  height: 100%;
+  overflow: hidden;
+}
+
+.app-shell .content {
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.app-shell .content::-webkit-scrollbar {
+  display: none;
 }
 
 .app-shell .topbar {

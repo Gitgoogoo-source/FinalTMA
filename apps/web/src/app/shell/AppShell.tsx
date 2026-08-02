@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type ReactNode,
@@ -46,6 +47,14 @@ export function AppShell(): ReactNode {
     setDialog(null);
     clearDialogRequest();
   }, [clearDialogRequest, clearTopupRequest]);
+  useLayoutEffect(() => {
+    document.documentElement.toggleAttribute(
+      "data-app-shell-active",
+      Boolean(activePath),
+    );
+    return () =>
+      document.documentElement.removeAttribute("data-app-shell-active");
+  }, [activePath]);
   useForegroundRefresh(session?.generation, location.pathname);
   return (
     <>
@@ -55,7 +64,7 @@ export function AppShell(): ReactNode {
           closeDialogs={closeDialogs}
         />
         <TopAssetBar openDialog={openShellDialog} />
-        <div className="content">
+        <div className="content" data-app-scroll>
           <PersistentPages
             key={session?.generation}
             activePath={activePath}
