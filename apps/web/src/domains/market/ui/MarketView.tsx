@@ -89,8 +89,7 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
             available: item.listed_quantity,
           }));
   const state = tab === "buy" ? listings : tab === "sell" ? sellable : mine;
-  const preset =
-    tab === "buy" ? purchaseTarget : tab === "sell" ? params.get("sell") : null;
+  const preset = tab === "buy" ? purchaseTarget : null;
   const resumedTemplate = params.get("resume")
     ? params.get("template_id")
     : null;
