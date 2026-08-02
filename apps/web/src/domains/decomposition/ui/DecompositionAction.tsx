@@ -1,4 +1,3 @@
-import { Flame } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import type { RouteOutput } from "@pokepets/api-contracts/app";
 
@@ -35,14 +34,20 @@ export function DecompositionAction({
   return (
     <>
       <Button
+        className="inventory-action-button inventory-action-button--decompose"
         disabled={disabled || !imageReady || item.available < 1}
         onClick={() => {
           setConfirming(true);
           void detail.refetch();
         }}
       >
-        <Flame />
-        分解
+        <img
+          src="/assets/inventory/actions/decompose.png"
+          alt=""
+          aria-hidden="true"
+          draggable={false}
+        />
+        <span>分解</span>
       </Button>
       {confirming && detail.data && !detail.isFetching && !detail.isError ? (
         <DecompositionConfirmationDialog

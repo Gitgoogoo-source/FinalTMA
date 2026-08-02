@@ -1,4 +1,4 @@
-import { ChevronsUp, Crosshair, Star } from "lucide-react";
+import { Crosshair, Sprout, Star } from "lucide-react";
 import type { ReactNode, Ref } from "react";
 
 import { CatalogImage } from "./CatalogImage.tsx";
@@ -55,11 +55,17 @@ export function CollectionDetailShowcase({
         className="inventory-title-board"
         tabIndex={titleTabIndex}
       >
-        <span>当前藏品</span>
-        <h2 id={headingId}>{item.name}</h2>
-        {newAcquisition ? (
-          <strong className="detail-new-acquisition">本次新获得</strong>
-        ) : null}
+        <div className="inventory-title-copy">
+          <span className="inventory-title-eyebrow">当前藏品</span>
+          <h2 id={headingId}>{item.name}</h2>
+          {newAcquisition ? (
+            <strong className="detail-new-acquisition">本次新获得</strong>
+          ) : null}
+        </div>
+        <strong className={`inventory-title-rarity ${item.rarity}`}>
+          <Star aria-hidden="true" />
+          <span>{rarityLabels[item.rarity]}</span>
+        </strong>
       </div>
 
       <div className="inventory-hero-art">
@@ -86,7 +92,7 @@ export function CollectionDetailShowcase({
         <InventoryMetric
           label="进化阶段"
           value={`${item.stage} 阶`}
-          icon={<ChevronsUp />}
+          icon={<Sprout />}
         />
         <InventoryMetric
           label="战斗力"
@@ -143,7 +149,6 @@ function InventoryMetric({
       <span>{label}</span>
       <i>{icon}</i>
       <strong>{value}</strong>
-      <small aria-hidden="true">••••</small>
     </div>
   );
 }

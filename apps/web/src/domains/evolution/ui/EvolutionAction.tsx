@@ -1,4 +1,3 @@
-import { Dna } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
 import { useApiQuery } from "../../../platform/query/index.ts";
@@ -48,13 +47,19 @@ export function EvolutionAction({
   return (
     <div className="evolution-action">
       <Button
+        className="inventory-action-button inventory-action-button--evolve"
         aria-label={reason ? `进化：${reason}` : "进化"}
         disabled={reason !== null}
         title={reason ?? undefined}
         onClick={() => setConfirming(true)}
       >
-        <Dna />
-        进化
+        <img
+          src="/assets/inventory/actions/evolve.png"
+          alt=""
+          aria-hidden="true"
+          draggable={false}
+        />
+        <span>进化</span>
       </Button>
       {confirming && route ? (
         <EvolutionConfirmationDialog

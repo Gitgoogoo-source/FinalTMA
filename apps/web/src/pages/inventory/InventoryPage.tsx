@@ -1,4 +1,3 @@
-import { Link2, ShoppingBag } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -40,22 +39,34 @@ export function InventoryPage(): ReactNode {
       </TaskActionTarget>
       <TaskActionTarget active={false}>
         <Button
+          className="inventory-action-button inventory-action-button--sell"
           disabled={blocked || !imageReady || item.available < 1}
           onClick={() => setSellItem(item)}
         >
-          <ShoppingBag />
-          出售
+          <img
+            src="/assets/inventory/actions/sell.png"
+            alt=""
+            aria-hidden="true"
+            draggable={false}
+          />
+          <span>出售</span>
         </Button>
       </TaskActionTarget>
       <TaskActionTarget active={requestedFocus === "mint"}>
         <Button
+          className="inventory-action-button inventory-action-button--mint"
           disabled={blocked || !imageReady || item.available < 1}
           onClick={() =>
             navigate(`/mint/${encodeURIComponent(item.template_id)}`)
           }
         >
-          <Link2 />
-          Mint
+          <img
+            src="/assets/inventory/actions/mint.png"
+            alt=""
+            aria-hidden="true"
+            draggable={false}
+          />
+          <span>Mint</span>
         </Button>
       </TaskActionTarget>
     </>
