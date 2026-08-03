@@ -8004,6 +8004,11 @@ html[data-app-shell-active] #root {
   gap: 6px;
 }
 
+.app-shell .gacha-rarity-previews.normal-tier {
+  width: 84%;
+  justify-self: center;
+}
+
 .app-shell .gacha-rarity-previews article {
   width: auto;
   height: 54px;

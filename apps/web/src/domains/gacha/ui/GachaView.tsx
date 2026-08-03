@@ -355,7 +355,7 @@ export function GachaView({
                   </strong>
                 </header>
                 <div
-                  className="gacha-rarity-previews"
+                  className={`gacha-rarity-previews${selectedBox.tier === "normal" ? " normal-tier" : ""}`}
                   role="list"
                   style={{
                     gridTemplateColumns: `repeat(${previewRarities.length}, minmax(0, 1fr))`,
