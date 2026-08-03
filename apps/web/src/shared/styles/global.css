@@ -2471,34 +2471,43 @@ input:focus {
 .app-shell .vip-daily-benefits {
   min-width: 0;
   position: absolute;
-  left: 2px;
-  top: 6px;
+  inset: 0;
   z-index: 3;
+  pointer-events: none;
 }
 .app-shell .vip-benefit-grid {
-  width: 72px;
+  width: 100%;
+  height: 100%;
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 8px;
+  grid-template-columns: 54px 54px;
+  justify-content: space-between;
+  gap: 0;
 }
 .app-shell .vip-benefit-grid article {
   min-width: 0;
+  height: 72px;
+  display: grid;
+  grid-template-rows: 10px 44px 10px;
+  justify-items: center;
+  align-content: start;
   position: relative;
+  pointer-events: none;
 }
 .app-shell .vip-benefit-grid .vip-benefit-tile {
   --benefit-glow: rgba(75, 177, 237, 0.28);
-  width: 72px;
-  height: 72px;
-  min-height: 72px;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
   position: relative;
   display: block;
   padding: 0;
   border: 0;
-  border-radius: 23px;
+  border-radius: 15px;
   color: #fff;
   background: transparent;
   box-shadow: none;
   isolation: isolate;
+  pointer-events: auto;
 }
 .app-shell .vip-benefit-grid .vip-benefit-tile.free-box {
   --benefit-glow: rgba(255, 147, 64, 0.3);
@@ -2543,10 +2552,10 @@ input:focus {
     drop-shadow(0 5px 8px rgba(63, 67, 66, 0.12));
 }
 .app-shell .vip-benefit-tile .benefit-state {
-  width: 31px;
-  height: 31px;
+  width: 19px;
+  height: 19px;
   position: absolute;
-  inset: 50% auto auto 50%;
+  inset: -1px -1px auto auto;
   display: grid;
   place-items: center;
   border: 1px solid rgba(255, 255, 255, 0.78);
@@ -2558,11 +2567,11 @@ input:focus {
     inset 0 1px 0 rgba(255, 255, 255, 0.68);
   backdrop-filter: blur(9px) saturate(130%);
   -webkit-backdrop-filter: blur(9px) saturate(130%);
-  transform: translate(-50%, -50%);
+  transform: none;
 }
 .app-shell .vip-benefit-tile .benefit-state svg {
-  width: 17px;
-  height: 17px;
+  width: 11px;
+  height: 11px;
   stroke-width: 2.7;
 }
 .app-shell .vip-benefit-tile.claimed .benefit-state {
@@ -2584,6 +2593,24 @@ input:focus {
   clip: rect(0 0 0 0);
   clip-path: inset(50%);
   white-space: nowrap;
+}
+.app-shell .vip-benefit-kicker,
+.app-shell .vip-benefit-caption {
+  max-width: 54px;
+  overflow: hidden;
+  line-height: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-shell .vip-benefit-kicker {
+  color: #d89535;
+  font-size: 7px;
+  font-weight: 900;
+}
+.app-shell .vip-benefit-caption {
+  color: #465057;
+  font-size: 7px;
+  font-weight: 900;
 }
 @keyframes vip-benefit-ready {
   0%,
@@ -2729,7 +2756,8 @@ input:focus {
 }
 .app-shell .gacha-reward-preview {
   display: grid;
-  padding: 0 4px;
+  position: relative;
+  padding: 0 54px;
 }
 .app-shell .gacha-rarity-previews {
   display: grid;
@@ -7862,11 +7890,6 @@ html[data-app-shell-active] #root {
   animation: gacha-showcase-float 2.4s ease-in-out infinite !important;
 }
 
-.app-shell .vip-daily-benefits {
-  left: 2px;
-  top: 8px;
-}
-
 .app-shell .gacha-tier-selector {
   width: 232px;
   max-width: 100%;
@@ -7937,13 +7960,15 @@ html[data-app-shell-active] #root {
 }
 
 .app-shell .gacha-reward-preview {
-  height: 54px;
+  height: 72px;
   display: grid;
-  margin-top: 18px;
-  padding: 0 4px;
+  margin-top: 0;
+  padding: 0 54px;
 }
 
 .app-shell .gacha-rarity-previews {
+  height: 54px;
+  align-self: end;
   justify-content: stretch;
   gap: 6px;
 }
@@ -8100,17 +8125,13 @@ html[data-app-shell-active] #root {
   }
 
   .app-shell .gacha-reward-preview {
-    padding-inline: 18px;
+    padding-inline: 46px;
   }
 
   .app-shell .gacha-actions {
     gap: 10px;
   }
 
-  .app-shell .vip-daily-benefits {
-    transform: scale(0.88);
-    transform-origin: top left;
-  }
 }
 
 .app-shell:has(.tasks-page) .identity {

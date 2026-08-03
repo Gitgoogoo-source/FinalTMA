@@ -279,7 +279,6 @@ export function GachaView({
         {selectedBox && (
           <section className="gacha-showcase">
             <div className="gacha-hero">
-              {dailyBenefits(handleFreeRareClaimed)}
               <div className={`gacha-stage ${selectedBox.tier}`}>
                 <span className="stage-glow" aria-hidden="true" />
                 {items.map((box) => {
@@ -348,6 +347,7 @@ export function GachaView({
 
             <Card className="gacha-details">
               <div className="gacha-reward-preview">
+                {dailyBenefits(handleFreeRareClaimed)}
                 <div
                   className={`gacha-rarity-previews${selectedBox.tier === "normal" ? " normal-tier" : ""}`}
                   role="list"
