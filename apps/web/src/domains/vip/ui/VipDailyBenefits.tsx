@@ -149,9 +149,6 @@ export function VipDailyBenefits({
     >
       <div className="vip-benefit-grid">
         <article className="vip-benefit-item vip-benefit-fgems">
-          <span className="vip-benefit-kicker" aria-hidden="true">
-            月卡福利
-          </span>
           <Button
             className={`vip-benefit-tile fgems ${fgemsVisualState}`}
             disabled={fgemsDisabled}
@@ -166,9 +163,6 @@ export function VipDailyBenefits({
             />
             <BenefitStateIcon state={fgemsVisualState} />
           </Button>
-          <span className="vip-benefit-caption" aria-hidden="true">
-            100 Fgems
-          </span>
           <BenefitFeedback
             feedback={fgemsFeedbackStatus}
             claimed={fgemsClaimed}
@@ -177,9 +171,6 @@ export function VipDailyBenefits({
         </article>
 
         <article className="vip-benefit-item vip-benefit-free-box">
-          <span className="vip-benefit-kicker" aria-hidden="true">
-            月卡福利
-          </span>
           <Button
             className={`vip-benefit-tile free-box ${freeBoxVisualState}`}
             disabled={freeBoxDisabled}
@@ -194,9 +185,6 @@ export function VipDailyBenefits({
             />
             <BenefitStateIcon state={freeBoxVisualState} />
           </Button>
-          <span className="vip-benefit-caption" aria-hidden="true">
-            免费盲盒
-          </span>
           <BenefitFeedback
             feedback={freeBoxFeedbackStatus}
             claimed={freeBoxClaimed}

@@ -2480,16 +2480,16 @@ input:focus {
   height: 100%;
   display: grid;
   grid-template-columns: 54px 54px;
+  align-items: end;
   justify-content: space-between;
   gap: 0;
 }
 .app-shell .vip-benefit-grid article {
   min-width: 0;
-  height: 72px;
-  display: grid;
-  grid-template-rows: 10px 44px 10px;
-  justify-items: center;
-  align-content: start;
+  height: 54px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
   position: relative;
   pointer-events: none;
 }
@@ -2593,24 +2593,6 @@ input:focus {
   clip: rect(0 0 0 0);
   clip-path: inset(50%);
   white-space: nowrap;
-}
-.app-shell .vip-benefit-kicker,
-.app-shell .vip-benefit-caption {
-  max-width: 54px;
-  overflow: hidden;
-  line-height: 10px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.app-shell .vip-benefit-kicker {
-  color: #d89535;
-  font-size: 7px;
-  font-weight: 900;
-}
-.app-shell .vip-benefit-caption {
-  color: #465057;
-  font-size: 7px;
-  font-weight: 900;
 }
 @keyframes vip-benefit-ready {
   0%,
