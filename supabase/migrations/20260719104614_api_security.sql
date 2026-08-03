@@ -44,7 +44,6 @@ declare
     'battle_abort_share',
     'battle_accept_room',
     'battle_ack_outbox',
-    'battle_acknowledge_result',
     'battle_activate_share',
     'battle_bootstrap',
     'battle_cancel_room',

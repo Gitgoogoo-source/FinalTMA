@@ -14,7 +14,7 @@ Battle 页面仍按主页面规则保持挂载，但活跃通信严格绑定页�
 
 Battle prepared message 的即时分享反馈以当前 session generation 与创建者 `waiting` room ID 为唯一上下文。只有本上下文已实际调用 `shareMessage` 时，Telegram 不携带 room ID 的 `shareMessageSent`/`shareMessageFailed` 事件才可更新页面；调用级 callback 同样必须复核 generation、room ID、创建者 side 与 `waiting` 状态。房间切换、终态退出、离开再进入 `/game`、重新认证或 session generation 改变时，旧分享尝试立即失效，旧的 pending、sent、cancelled、failed 或 unknown 反馈不渲染到新上下文，迟到回调不能恢复。分享反馈只描述 Telegram 面板和消息动作，不代表房间、资产或业务成功。
 
-Battle 页面的权威优先级固定为“未确认当场结果 → viewer-specific current-room 快照 → 当前邀请入口/本地流程 → Battle 首页”。`BTL_` 入口只在当前账号没有权威 room 时决定邀请页；接受命令成功返回或 bootstrap/room 刷新已给出本账号的 room 时，必须立即渲染该 room 的 lobby、battle 或 result 状态。迟到的邀请 `accepted` 刷新不得把本账号的成功 room 降级为“挑战已被其他玩家接受”；固定冲突只属于本账号自身的失败 accept operation。同键回放、响应乱序、重新可见、离开重进与重新认证都重新服从当前数据库快照，不由前端猜测赢家。
+Battle 页面的权威优先级固定为“当前会话未离开的 viewer-specific current-room 快照 → 当前邀请入口/本地流程 → Battle 首页”。终局 room snapshot 只有在包含 `terminal_result` 时渲染 result；点击返回后，本次 session generation 内任何迟到结果都不能重新打开同一 room。`BTL_` 入口只在当前账号没有权威 room 时决定邀请页；接受命令成功返回或 bootstrap/room 刷新已给出本账号的进行中 room 时，必须立即渲染该 room 的 lobby 或 battle 状态。迟到的邀请 `accepted` 刷新不得把本账号的成功 room 降级为“挑战已被其他玩家接受”；固定冲突只属于本账号自身的失败 accept operation。同键回放与响应乱序服从高 `state_version` 快照；重新加载和重新认证不恢复终局结果，不由前端猜测赢家。
 
 页面保活和查询缓存只存在于当前内存登录会话，不写入 `localStorage`、`sessionStorage`、IndexedDB 或服务端。Session generation 改变、身份恢复失败、会话清理或账号封禁时，全部持久页面、页内状态和查询缓存一并清除，旧 generation 的迟到结果不得恢复。
 

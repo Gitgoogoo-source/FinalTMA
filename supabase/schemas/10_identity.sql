@@ -441,7 +441,6 @@ begin
       where m.user_id = v_user_id and m.status in ('reserved', 'submitted', 'unknown')
     ), '[]'::jsonb),
     'battle_participation', battle.participation_json(v_user_id),
-    'battle_result', battle.current_result_json(v_user_id),
     'server_time', now()
   ) into v_result
   from identity.users u where u.id = v_user_id;

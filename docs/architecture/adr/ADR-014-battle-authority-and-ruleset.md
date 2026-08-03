@@ -6,7 +6,7 @@
 
 ## 决定
 
-Battle 使用 React + TypeScript 呈现界面，不引入 Phaser，也不在浏览器运行战斗模拟器。客户端只提交产品主文档第 21 章允许的房间档位、三个有序模板 ID、技能位置、换宠槽位、operation-backed 命令 UUID 幂等键，以及 heartbeat/offline 的 presence 意图、lease UUID、lifecycle version 与 command sequence；heartbeat、offline 和 acknowledge 不提交幂等键。Vercel Function 只完成 Telegram 身份、REST 契约、viewer 上下文和外部服务编排。
+Battle 使用 React + TypeScript 呈现界面，不引入 Phaser，也不在浏览器运行战斗模拟器。客户端只提交产品主文档第 21 章允许的房间档位、三个有序模板 ID、技能位置、换宠槽位、operation-backed 命令 UUID 幂等键，以及 heartbeat/offline 的 presence 意图、lease UUID、lifecycle version 与 command sequence；heartbeat 和 offline 不提交幂等键。Vercel Function 只完成 Telegram 身份、REST 契约、viewer 上下文和外部服务编排。
 
 Supabase PostgreSQL 是 Battle 的唯一裁判。房间、参与资格、三宠 reservation、K-coin stake、participant presence、双人 lobby、开战倒计时、秘密行动、deadline 托管、确定随机命中、伤害、行动顺序、强制换宠、终局、退款、结算、私有审计和 outbox 都由具名 RPC 在事务内完成。room 行是同房间写入的首个业务锁，涉及双方余额时再按用户 UUID 排序锁定；唯一约束、stake 状态和 ledger reference 保证重复恢复不重复改变资产。
 
@@ -18,7 +18,7 @@ Supabase PostgreSQL 是 Battle 的唯一裁判。房间、参与资格、三宠 
 
 规则、participant、stake/ledger、快照、reservation、生命、活动宠物或 settlement 出现永久不变量错误时，普通流程停止；advance 与 monitor 只在 room-first 锁内复用同一幂等安全事务，把 room/participants 写为 `voided`，退款已有原始 stake，释放 Battle reservation，并记录零手续费 settlement、invariant violation、outbox 与永久私有审计。prepared-share 明确失败的合法 `voided` 则固定为一份 stake refunded、reservation released、零 settlement；监控按明确终态来源区分。玩家端不建立 history、replay、audit、spectator、matchmaking 或公开 room 接口。
 
-最新未确认 `current_result` 不以活动 participation 或 bootstrap room 的存在为前提。结果 DTO 保持精简且不复制 room 版本；Web 只在 Battle bootstrap 或 identity bootstrap 仍证明同一 `room_id` 为当前未确认结果时，复用参与者专属 `battle.room` 读取取得数据库终态与 `state_version`，再进入唯一终态协调器的 Battle、identity、inventory 三域稳定刷新。三域全部成功后才允许调用 acknowledge；提交后只有 Battle 与 identity 双 bootstrap 都证明该 room 的未确认结果已经消失，页面才关闭覆盖层。room 权限、终态状态、首次确认幂等和结果归属仍由既有数据库 RPC 裁决，前端不能用本地结果对象跳过资产回正或自行宣告确认成功。
+Battle 当场结果的现行展示与会话规则由 ADR-026 取代旧的未确认结果与 acknowledge 方案。结果只随参与者专属终局 room snapshot 返回，终局三域回正自动执行，按钮只作当前会话本地导航。
 
 ## 结果
 

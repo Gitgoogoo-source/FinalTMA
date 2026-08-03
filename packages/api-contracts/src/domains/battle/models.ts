@@ -416,7 +416,7 @@ export const battleParticipationSchema = z
   })
   .strict();
 
-export const battleCurrentResultSchema = z
+export const battleTerminalResultSchema = z
   .object({
     room_id: uuidSchema,
     result: z.enum(["win", "loss", "draw", "void"]),
@@ -455,8 +455,31 @@ export const battleRoomSnapshotSchema = z
     self_team: battleSelfTeamSchema,
     opponent_team: battleOpponentTeamSchema,
     resolution_event: battleResolutionEventSchema.nullable(),
+    terminal_result: battleTerminalResultSchema.nullable(),
   })
-  .strict();
+  .strict()
+  .superRefine((snapshot, context) => {
+    if (
+      (snapshot.status === "finished" || snapshot.status === "draw") &&
+      snapshot.terminal_result === null
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["terminal_result"],
+        message: "finished and draw rooms require a terminal result",
+      });
+    }
+    if (
+      !["finished", "draw", "voided"].includes(snapshot.status) &&
+      snapshot.terminal_result !== null
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["terminal_result"],
+        message: "non-result rooms cannot expose a terminal result",
+      });
+    }
+  });
 
 export const battleActionInputSchema = z.discriminatedUnion("kind", [
   z
@@ -504,7 +527,9 @@ export type BattleParticipantStatus = z.output<
   typeof battleParticipantStatusSchema
 >;
 export type BattleParticipation = z.output<typeof battleParticipationSchema>;
-export type BattleCurrentResult = z.output<typeof battleCurrentResultSchema>;
+export type BattleTerminalResultDto = z.output<
+  typeof battleTerminalResultSchema
+>;
 export type BattleChallengeCardDto = z.output<typeof battleChallengeCardSchema>;
 export type BattleInvitePreviewDto = z.output<typeof battleInvitePreviewSchema>;
 export type BattleSelfTeamDto = z.output<typeof battleSelfTeamSchema>;

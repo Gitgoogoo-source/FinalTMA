@@ -1,7 +1,7 @@
 import type {
-  BattleCurrentResult,
   BattleEntryTier,
   BattleRoomStatus,
+  BattleTerminalResultDto,
 } from "@pokepets/api-contracts/app";
 
 export const battleRarityLabels = {
@@ -35,13 +35,15 @@ export const battleStatusLabels: Record<BattleRoomStatus, string> = {
   voided: "战斗已安全作废",
 };
 
-export const battleResultLabels: Record<BattleCurrentResult["result"], string> =
-  {
-    win: "胜利",
-    loss: "失败",
-    draw: "平局",
-    void: "安全作废",
-  };
+export const battleResultLabels: Record<
+  BattleTerminalResultDto["result"],
+  string
+> = {
+  win: "胜利",
+  loss: "失败",
+  draw: "平局",
+  void: "安全作废",
+};
 
 export function tierTitle(tier: BattleEntryTier): string {
   return `${tier.entry_fee} K-coin`;

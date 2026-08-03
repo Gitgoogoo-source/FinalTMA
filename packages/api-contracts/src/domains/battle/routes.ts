@@ -7,7 +7,6 @@ import {
   uuidSchema,
 } from "../../common/schemas.ts";
 import {
-  battleCurrentResultSchema,
   battleEntryTierSchema,
   battleInvitePreviewSchema,
   battleParticipationSchema,
@@ -22,7 +21,6 @@ const battleBootstrapSchema = z
     ruleset: battleRulesetSummarySchema,
     entry_tiers: z.array(battleEntryTierSchema).length(3),
     participation: battleParticipationSchema.nullable(),
-    current_result: battleCurrentResultSchema.nullable(),
     room: battleRoomSnapshotSchema.nullable(),
     server_time: timestampSchema,
   })
@@ -52,14 +50,6 @@ const battleTerminalRoomSchema = z
     room_id: uuidSchema,
     status: z.enum(["cancelled", "expired", "voided"]),
     reason: z.string().trim().min(1).max(128),
-  })
-  .strict();
-
-const battleAcknowledgeSchema = z
-  .object({
-    room_id: uuidSchema,
-    acknowledged: z.literal(true),
-    acknowledged_at: timestampSchema,
   })
   .strict();
 
@@ -316,19 +306,6 @@ export const battleRoutes = [
     input: battlePresenceCommandSchema,
     output: battleRoomSnapshotSchema,
     errors: ["BATTLE_NOT_PARTICIPANT", "BATTLE_STATE_CONFLICT", "RATE_LIMITED"],
-  }),
-  defineRoute({
-    id: "battle.acknowledge_result",
-    method: "POST",
-    path: "/api/battle/results/:room_id/acknowledge",
-    gateway: "app",
-    auth: true,
-    idempotent: false,
-    forbidIdempotencyKey: true,
-    refreshScopes: ["battle"],
-    input: z.object({ room_id: uuidSchema }).strict(),
-    output: battleAcknowledgeSchema,
-    errors: ["BATTLE_NOT_PARTICIPANT", "BATTLE_RESULT_NOT_ACKNOWLEDGEABLE"],
   }),
   defineRoute({
     id: "battle.realtime_token",

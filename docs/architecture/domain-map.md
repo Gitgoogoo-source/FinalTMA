@@ -28,12 +28,12 @@
 
 ## 横切约束
 
-- 所有创建 operation 的玩家业务写入均需要 UUID 幂等键；Battle heartbeat、offline 和 acknowledge 不创建 operation，前两者由数据库 lifecycle version + lease UUID + command sequence、后者由首次确认时间保证语义幂等。
+- 所有创建 operation 的玩家业务写入均需要 UUID 幂等键；Battle heartbeat 和 offline 不创建 operation，由数据库 lifecycle version + lease UUID + command sequence 保证语义幂等；结果按钮不提交业务请求。
 - 所有资产写入均由一个具名 RPC 在单个事务内完成。
 - 所有错误均使用契约声明的稳定错误码。
 - 所有 operation-backed 命令的结果未知状态均恢复原 `operation_id`，不得生成新键；不创建 operation 的语义幂等命令只按原目标资源重试并读取数据库权威状态。
 - 所有认证业务接口默认拒绝未完成入口交接，唯一例外是邀请绑定与受限的原邀请操作查询。
 - 所有前端异步结果写入前同时验证 session generation 与 `normal` 账号状态。
-- Battle 前端只为创建、取消、接受、正常动作和强制换宠提交对应意图与幂等键；heartbeat/offline 提交目标房间、lease UUID、lifecycle version 与 command sequence，acknowledge 只提交目标房间，三者不提交幂等键。participant presence、lobby 完整性、倒计时、开战、命中、伤害、顺序、终局、退款与结算全部由数据库裁决。
+- Battle 前端只为创建、取消、接受、正常动作和强制换宠提交对应意图与幂等键；heartbeat/offline 提交目标房间、lease UUID、lifecycle version 与 command sequence 且不提交幂等键。结果页只消费房间快照并执行本地导航。participant presence、lobby 完整性、倒计时、开战、命中、伤害、顺序、终局、退款与结算全部由数据库裁决。
 - Battle 的 Ably 消息只使 `state_version` 失效，viewer-specific 权威内容只通过 REST 读取。
 - 真实开发环境与未来生产环境使用相同 commit、相同 migration、不同环境密钥。

@@ -452,20 +452,20 @@ stateDiagram-v2
 
 ### 7.2 运行表
 
-| 表                           | 核心内容与约束                                                                                                                                 |
-| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `battle.rooms`               | 创建者、规则快照、档位、状态、接受时间、lobby 总时限与开战 deadline、当前回合、版本号、私有随机种子、终局                                      |
-| `battle.prepared_shares`     | Telegram prepared message ID、Telegram 到期时间、准备状态和尝试次数                                                                            |
-| `battle.participants`        | 创建者/接受者、用户、参与状态、加入操作、在线时间、离线 deadline、lifecycle version、lease UUID、command sequence、lease active 和结果确认时间 |
-| `battle.team_members`        | 槽位 1–3、模板及战斗配置快照、当前/最大生命、存活和出战状态                                                                                    |
-| `battle.stakes`              | 每名参与者锁定额、状态、锁定/退款/到账 ledger ID                                                                                               |
-| `battle.turns`               | 回合开始快照 hash、deadline、结算结果 hash                                                                                                     |
-| `battle.actions`             | 唯一玩家行动、技能/换宠目标、player/timeout 来源、锁定时间                                                                                     |
-| `battle.events`              | 永久私有事件序列、命中 roll、伤害、换宠、终局和状态 hash                                                                                       |
-| `battle.settlements`         | 唯一终局、胜者、奖池、手续费、双方到账与 ledger ID                                                                                             |
-| `battle.summaries`           | 双方各一条私有摘要：对手、胜负、入场费、到账、净变化、结束时间                                                                                 |
-| `battle.outbox`              | Ably 失效通知、投递租约、重试次数和投递状态                                                                                                    |
-| `battle.rate_limit_attempts` | 用户、动作、invite hash 和一分钟持久限流记录                                                                                                   |
+| 表                           | 核心内容与约束                                                                                                                    |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `battle.rooms`               | 创建者、规则快照、档位、状态、接受时间、lobby 总时限与开战 deadline、当前回合、版本号、私有随机种子、终局                         |
+| `battle.prepared_shares`     | Telegram prepared message ID、Telegram 到期时间、准备状态和尝试次数                                                               |
+| `battle.participants`        | 创建者/接受者、用户、参与状态、加入操作、在线时间、离线 deadline、lifecycle version、lease UUID、command sequence 和 lease active |
+| `battle.team_members`        | 槽位 1–3、模板及战斗配置快照、当前/最大生命、存活和出战状态                                                                       |
+| `battle.stakes`              | 每名参与者锁定额、状态、锁定/退款/到账 ledger ID                                                                                  |
+| `battle.turns`               | 回合开始快照 hash、deadline、结算结果 hash                                                                                        |
+| `battle.actions`             | 唯一玩家行动、技能/换宠目标、player/timeout 来源、锁定时间                                                                        |
+| `battle.events`              | 永久私有事件序列、命中 roll、伤害、换宠、终局和状态 hash                                                                          |
+| `battle.settlements`         | 唯一终局、胜者、奖池、手续费、双方到账与 ledger ID                                                                                |
+| `battle.summaries`           | 双方各一条私有摘要：对手、胜负、入场费、到账、净变化、结束时间                                                                    |
+| `battle.outbox`              | Ably 失效通知、投递租约、重试次数和投递状态                                                                                       |
+| `battle.rate_limit_attempts` | 用户、动作、invite hash 和一分钟持久限流记录                                                                                      |
 
 关键约束：
 
@@ -521,7 +521,6 @@ total = available + listed + trading + minting + expedition + battling
 | `api.battle_heartbeat`            | 裁决 waiting 创建者或 lobby 当前 participant 的 version + lease + sequence 在线意图；旧命令无副作用，普通续租不增加 room 版本，返回 viewer snapshot                                              |
 | `api.battle_mark_offline`         | 裁决同一组单调标识的离线意图并永久关闭该 lease；旧 heartbeat/offline 无副作用；`lobby_waiting` 可推进 90 秒窗口，`lobby_countdown` 只更新 presence 且不得改变锁定 deadline，返回 viewer snapshot |
 | `api.battle_process_due`          | 推进邀请到期、lobby 离线/总时限/封禁取消、lobby 开战、超时技能/强制换宠和 3 秒展示窗口                                                                                                           |
-| `api.battle_acknowledge_result`   | 只允许本人确认本人终局展示，首次确认时间幂等落库                                                                                                                                                 |
 | `api.battle_claim_outbox`         | 只供受保护的 integration 领取待投递通知                                                                                                                                                          |
 | `api.battle_complete_outbox`      | 确认投递或记录重试，不改变 Battle 业务状态                                                                                                                                                       |
 
@@ -544,7 +543,7 @@ total = available + listed + trading + minting + expedition + battling
 - reservation ID、stake 状态、settlement 与全部 ledger ID。
 - 最终 canonical audit SHA-256。
 
-这些数据不进入任何 Web/API 用户历史或回放响应。终局结果确认后，旧房间的参与者读取接口也不再返回审计内容。
+这些数据不进入任何 Web/API 用户历史或回放响应。终局后，旧房间的参与者读取接口也不返回审计内容。
 
 ## 8. 服务端与实时架构
 
@@ -682,21 +681,20 @@ Battle 入口：BTL_[A-Za-z0-9_-]{32}
 
 ### 10.1 玩家接口
 
-| 路由                                            | 用途                                           | 客户端允许提交                                                                       |
-| ----------------------------------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------ |
-| `GET /api/battle/bootstrap`                     | 档位、规则摘要、当前活动房、最新未确认当场结果 | 无                                                                                   |
-| `GET /api/battle/team-options`                  | 本人当前可用模板与本人可见战斗配置             | 无                                                                                   |
-| `GET /api/battle/invites/current`               | 当前 Battle 入口的脱敏挑战预览                 | 无                                                                                   |
-| `GET /api/battle/rooms/:room_id`                | 参与者专属当前快照                             | `room_id`                                                                            |
-| `POST /api/battle/rooms`                        | 创建房和 prepared share saga                   | `tier`、有序三个 `template_id`、幂等键                                               |
-| `POST /api/battle/rooms/:room_id/cancel`        | 创建者取消未接受房间                           | `room_id`、幂等键                                                                    |
-| `POST /api/battle/invites/current/accept`       | 接受当前 bearer invite                         | 有序三个 `template_id`、幂等键                                                       |
-| `POST /api/battle/rooms/:room_id/actions`       | 当前正常回合直接锁定动作                       | `turn_no`、`attack + skill_position` 或 `switch + team_slot`、幂等键                 |
-| `POST /api/battle/rooms/:room_id/forced-switch` | 强制换宠直接锁定目标                           | `turn_no`、`team_slot`、幂等键                                                       |
-| `POST /api/battle/rooms/:room_id/heartbeat`     | waiting 创建者或 lobby 参与者在线意图          | `room_id`、`presence_lease_id`、`presence_lifecycle_version`、`presence_command_seq` |
-| `POST /api/battle/rooms/:room_id/offline`       | 当前 presence 生命周期离线意图                 | `room_id`、`presence_lease_id`、`presence_lifecycle_version`、`presence_command_seq` |
-| `POST /api/battle/results/:room_id/acknowledge` | 确认当场结果已展示                             | `room_id`                                                                            |
-| `POST /api/battle/realtime-token`               | 获取最小权限 Ably token                        | 当前上下文，不接受频道名                                                             |
+| 路由                                            | 用途                                  | 客户端允许提交                                                                       |
+| ----------------------------------------------- | ------------------------------------- | ------------------------------------------------------------------------------------ |
+| `GET /api/battle/bootstrap`                     | 档位、规则摘要、当前活动房            | 无                                                                                   |
+| `GET /api/battle/team-options`                  | 本人当前可用模板与本人可见战斗配置    | 无                                                                                   |
+| `GET /api/battle/invites/current`               | 当前 Battle 入口的脱敏挑战预览        | 无                                                                                   |
+| `GET /api/battle/rooms/:room_id`                | 参与者专属当前快照                    | `room_id`                                                                            |
+| `POST /api/battle/rooms`                        | 创建房和 prepared share saga          | `tier`、有序三个 `template_id`、幂等键                                               |
+| `POST /api/battle/rooms/:room_id/cancel`        | 创建者取消未接受房间                  | `room_id`、幂等键                                                                    |
+| `POST /api/battle/invites/current/accept`       | 接受当前 bearer invite                | 有序三个 `template_id`、幂等键                                                       |
+| `POST /api/battle/rooms/:room_id/actions`       | 当前正常回合直接锁定动作              | `turn_no`、`attack + skill_position` 或 `switch + team_slot`、幂等键                 |
+| `POST /api/battle/rooms/:room_id/forced-switch` | 强制换宠直接锁定目标                  | `turn_no`、`team_slot`、幂等键                                                       |
+| `POST /api/battle/rooms/:room_id/heartbeat`     | waiting 创建者或 lobby 参与者在线意图 | `room_id`、`presence_lease_id`、`presence_lifecycle_version`、`presence_command_seq` |
+| `POST /api/battle/rooms/:room_id/offline`       | 当前 presence 生命周期离线意图        | `room_id`、`presence_lease_id`、`presence_lifecycle_version`、`presence_command_seq` |
+| `POST /api/battle/realtime-token`               | 获取最小权限 Ably token               | 当前上下文，不接受频道名                                                             |
 
 服务器自行读取档位金额、稀有度、战斗配置、技能数值、属性、持有数量、余额、deadline 和当前状态。
 
@@ -733,7 +731,6 @@ Battle 入口：BTL_[A-Za-z0-9_-]{32}
 - `BATTLE_ACTION_ALREADY_LOCKED`
 - `BATTLE_ACTION_INVALID`
 - `BATTLE_SWITCH_TARGET_INVALID`
-- `BATTLE_RESULT_NOT_ACKNOWLEDGEABLE`
 - `BATTLE_STATE_CONFLICT`
 - `BATTLE_VOIDED`
 
@@ -771,7 +768,7 @@ heartbeat/offline 路由契约固定声明最大可能刷新域 `battle + assets
 
 视觉作用域固定为战斗页中部实际战场及强制换宠覆盖层：使用深青硬边框、奶油色信息面板、薄荷绿战场、青绿色指令条、橙红色选择反馈和项目正式高清宠物美术。应用全局顶部资产栏、共享底部导航，以及 Battle 首页、三槽队伍选择、准备、等待、接受、lobby 与结果页面全部继续使用项目原有样式，Battle 首页继续使用原双怪兽像素循环动画。布局与交互节奏只参考早期 GBA 宠物对战游戏，不复制或引入 Pokémon 图片、精灵、图标、音频、文字商标、PokeAPI 或第三方战斗代码。所有触控目标至少 44px，并按 Telegram 顶部、底部和左右安全区布局。
 
-结果覆盖层确认成功后返回 Battle 首页。页面没有“历史”“回放”“再次挑战”按钮。
+结果覆盖层只在用户点击“返回 Battle 首页”后关闭；该点击仅执行本地导航，不发送 API。页面没有“历史”“回放”“再次挑战”按钮。
 
 ### 11.2 前端先行反馈
 
@@ -869,15 +866,13 @@ heartbeat/offline 路由契约固定声明最大可能刷新域 `battle + assets
 | 开战后任一账号被封禁          | 前端保持全局空白，战斗继续托管至正常终局                                                                                                                                                                         |
 | 规则版本更新                  | 旧房使用创建时快照，新房使用新激活版本                                                                                                                                                                           |
 
-### 12.5 当场结果恢复
+### 12.5 当场结果展示
 
-`identity.bootstrap` 增加当前 Battle participation 和最新未确认当场结果摘要。用户在终局瞬间断线时，重新进入只显示该场最终结果；确认后不再返回。
+数据库在终局事务内一次性完成胜负、退款或结算、reservation 释放、summary、settlement、ledger 与 outbox；用户点击不是结算条件。参与者专属 `BattleRoomSnapshotDto.terminal_result` 是当前前台会话的唯一结果来源，只有数据库已生成本人 summary 时才返回完整结果。正常 `finished`、`draw` 与已开战安全作废 `voided` 必须包含结果；取消、过期和 prepared-share 作废不展示对战结果。
 
-最新未确认 `current_result` 本身就是服务端权威的结果恢复入口，不依赖当前 participation 或 bootstrap room 继续作为活动状态返回。Web 在只有 `current_result` 时，必须先以其 `room_id` 调用既有参与者专属 room 读取，重新验证当前用户确为参与者并取得终态 `status + state_version`；随后统一执行 Battle bootstrap、identity bootstrap 与 inventory 三域权威刷新。只有三域全部成功、同一 room 的未确认结果仍存在且终态版本没有被更高权威快照替代时，才允许提交 acknowledge。room 读取失败、房间尚未终态、资产/藏品刷新失败、结果已经消失或版本发生变化时继续保留结果覆盖层且不显示错误浮层，不得无条件放行；其中终态三域权威刷新失败时，仅在 `/game` 前台按 1 秒、2 秒、5 秒、此后每 5 秒静默重试，离开页面暂停，返回页面立即恢复。
+Web 收到终局 room snapshot 时先应用权威快照，再自动执行 Battle bootstrap、identity bootstrap 与 inventory 三域刷新，使顶部资产和 `inventory.battling` 回正。该协调器与结果按钮无关；失败时只在活动 `/game` 按 1 秒、2 秒、5 秒、此后每 5 秒静默重试，离页暂停、返回立即恢复。结果按钮固定为“返回 Battle 首页”，只把当前 room ID 写入本次登录会话的内存忽略集合并本地返回首页，不发送 API。迟到的 room、Ably 或命令响应不能让同一结果重新弹出。
 
-acknowledge 仍由 `api.battle_acknowledge_result` 在数据库内验证当前 session、参与者归属与 `finished/draw/voided` 终态，并以首次确认时间幂等写入；Web 不提交 `Idempotency-Key`，不自行清除结果。响应成功或丢失后，Web 必须再次读取 Battle bootstrap 与 identity bootstrap，只有两者都不再返回同一 room 的未确认结果时才关闭覆盖层并返回 Battle 首页。重复点击、网络重放、重新加载、重新认证和迟到的旧 bootstrap/room 响应都不能重复改变资产、stake、reservation、ledger、outbox 或确认时间。
-
-用户界面不提供已确认结果列表。服务端 `battle.summaries` 和完整审计继续永久保留，但没有面向用户或管理端的 HTTP 回放接口。
+`identity.bootstrap` 与 Battle bootstrap 都不返回已经终结的结果。关闭、刷新、重新认证或重新打开 Mini App 后不恢复结果页；Battle 入口或 `/game` 进入 Battle 首页，普通入口仍进入项目默认首页。服务端 `battle.summaries` 和完整审计永久保留，但没有面向用户或管理端的结果历史、确认或回放接口。
 
 ## 13. 全项目文件改动清单
 
@@ -897,6 +892,7 @@ acknowledge 仍由 `api.battle_acknowledge_result` 在数据库内验证当前 s
 - 新增 `docs/architecture/adr/ADR-014-battle-authority-and-ruleset.md`
 - 新增 `docs/architecture/adr/ADR-015-battle-realtime-and-scheduler.md`
 - 新增 `docs/architecture/adr/ADR-022-battle-stage-skill-progression.md`
+- 新增 `docs/architecture/adr/ADR-026-battle-server-finalized-result-presentation.md`
 - `docs/operations/acceptance.md`
 - `docs/operations/environment-matrix.md`
 - `docs/operations/release.md`

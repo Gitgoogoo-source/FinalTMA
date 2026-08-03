@@ -12,11 +12,11 @@ import {
 } from "lucide-react";
 import { useState, type ReactNode, type RefObject } from "react";
 import type {
-  BattleCurrentResult,
   BattleEntryTier,
   BattleLobbyDto,
   BattleParticipation,
   BattleRoomSnapshotDto,
+  BattleTerminalResultDto,
   RouteOutput,
 } from "@pokepets/api-contracts/app";
 
@@ -722,12 +722,10 @@ export function BattleAccept({
 
 export function BattleResult({
   result,
-  acknowledging,
-  onAcknowledge,
+  onReturnHome,
 }: {
-  result: BattleCurrentResult;
-  acknowledging: boolean;
-  onAcknowledge(): void;
+  result: BattleTerminalResultDto;
+  onReturnHome(): void;
 }): ReactNode {
   const refund = result.result === "draw" || result.result === "void";
   return (
@@ -769,30 +767,9 @@ export function BattleResult({
           timeStyle: "short",
         }).format(new Date(result.finished_at))}
       </time>
-      <Button disabled={acknowledging} onClick={onAcknowledge}>
+      <Button onClick={onReturnHome}>
         <Check />
-        {acknowledging ? "正在确认结果" : "确认并返回 Battle 首页"}
-      </Button>
-    </section>
-  );
-}
-
-export function BattleResultPending({
-  onRefresh,
-}: {
-  onRefresh(): void;
-}): ReactNode {
-  return (
-    <section className="battle-result" aria-live="polite">
-      <span className="battle-kicker">AUTHORITATIVE RESULT</span>
-      <div className="battle-result-mark" aria-hidden="true">
-        <Clock3 />
-      </div>
-      <h1>正在读取权威结算</h1>
-      <p>房间已经终局。页面不会根据最后一帧生命值推测胜负、退款或到账结果。</p>
-      <Button onClick={onRefresh}>
-        <RefreshCw />
-        重新读取结算
+        返回 Battle 首页
       </Button>
     </section>
   );

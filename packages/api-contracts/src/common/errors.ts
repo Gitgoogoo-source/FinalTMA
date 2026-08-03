@@ -78,13 +78,6 @@ export const errorRegistry = {
     "battle",
     "refresh",
   ),
-  BATTLE_RESULT_NOT_ACKNOWLEDGEABLE: error(
-    409,
-    "当前没有可确认的 Battle 结果",
-    false,
-    "battle",
-    "refresh",
-  ),
   BATTLE_ROOM_ALREADY_ACCEPTED: error(
     409,
     "挑战已被其他玩家接受",

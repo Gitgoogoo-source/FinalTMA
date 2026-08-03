@@ -291,7 +291,6 @@ create table battle.participants (
   presence_command_seq bigint not null default 0
     check (presence_command_seq >= 0),
   presence_lease_active boolean not null default false,
-  result_acknowledged_at timestamptz,
   joined_at timestamptz not null default now(),
   finished_at timestamptz,
   unique (room_id, side),
@@ -300,10 +299,6 @@ create table battle.participants (
   check (
     (status in ('finished', 'draw', 'cancelled', 'expired', 'voided'))
     = (finished_at is not null)
-  ),
-  check (
-    result_acknowledged_at is null
-    or status in ('finished', 'draw', 'voided')
   ),
   check (
     (offline_since is null and presence_deadline is null)
@@ -338,9 +333,6 @@ create index battle_participants_room_idx on battle.participants (room_id, side)
 create index battle_participants_presence_due_idx
 on battle.participants (presence_deadline, room_id)
 where status = 'lobby' and presence_deadline is not null;
-create index battle_participants_unconfirmed_result_idx on battle.participants (user_id, finished_at desc)
-where status in ('finished', 'draw', 'voided') and result_acknowledged_at is null;
-
 create table battle.team_members (
   id uuid primary key default extensions.gen_random_uuid(),
   participant_id uuid not null references battle.participants(id),
@@ -1536,7 +1528,10 @@ as $$
   limit 1
 $$;
 
-create or replace function battle.current_result_json(p_user_id uuid)
+create or replace function battle.terminal_result_json(
+  p_room_id uuid,
+  p_participant_id uuid
+)
 returns jsonb
 language sql
 stable
@@ -1554,10 +1549,8 @@ as $$
     'finished_at', s.finished_at
   )
   from battle.summaries s
-  join battle.participants p on p.id = s.participant_id
-  where s.user_id = p_user_id and p.result_acknowledged_at is null
-  order by s.finished_at desc
-  limit 1
+  where s.room_id = p_room_id
+    and s.participant_id = p_participant_id
 $$;
 
 create or replace function battle.viewer_action_state(
@@ -1687,7 +1680,8 @@ begin
       then '[]'::jsonb
       else battle.opponent_team_json(p_room_id, p_participant_id)
     end,
-    'resolution_event', battle.resolution_event_json(p_room_id, p_participant_id)
+    'resolution_event', battle.resolution_event_json(p_room_id, p_participant_id),
+    'terminal_result', battle.terminal_result_json(p_room_id, p_participant_id)
   );
 end;
 $$;
@@ -1741,7 +1735,6 @@ begin
       where t.ruleset_id = v_ruleset_id
     ), '[]'::jsonb),
     'participation', v_participation,
-    'current_result', battle.current_result_json(v_user_id),
     'room', case
       when v_participation is null then null
       else battle.room_snapshot_json(
@@ -1821,6 +1814,14 @@ begin
   where invite_token_hash = v_session.battle_invite_token_hash;
   if v_room.id is null then
     return jsonb_build_object('invite_status', 'invalid', 'server_time', now());
+  end if;
+  if v_room.status in ('finished', 'draw', 'cancelled', 'expired', 'voided')
+    and exists (
+      select 1 from battle.participants
+      where room_id = v_room.id and user_id = v_user_id
+    )
+  then
+    return jsonb_build_object('invite_status', 'none', 'server_time', now());
   end if;
   v_card := battle.challenge_card_json(v_room.id);
   return jsonb_build_object(
@@ -4829,45 +4830,6 @@ begin
     end;
   end loop;
   return v_processed;
-end;
-$$;
-
-create or replace function api.battle_acknowledge_result(
-  p_session_id uuid,
-  p_room_id uuid
-)
-returns jsonb
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-  v_user_id uuid := api.session_user(p_session_id);
-  v_participant battle.participants%rowtype;
-begin
-  select * into v_participant
-  from battle.participants
-  where room_id = p_room_id and user_id = v_user_id
-  for update;
-  if v_participant.id is null then
-    perform api.raise_business_error('BATTLE_NOT_PARTICIPANT', '当前账号不是该 Battle 的参与者');
-  end if;
-  if v_participant.status not in ('finished', 'draw', 'voided') then
-    perform api.raise_business_error(
-      'BATTLE_RESULT_NOT_ACKNOWLEDGEABLE',
-      '当前没有可确认的 Battle 结果'
-    );
-  end if;
-  update battle.participants
-  set result_acknowledged_at = coalesce(result_acknowledged_at, now())
-  where id = v_participant.id;
-  return jsonb_build_object(
-    'room_id', p_room_id,
-    'acknowledged', true,
-    'acknowledged_at', (
-      select result_acknowledged_at from battle.participants where id = v_participant.id
-    )
-  );
 end;
 $$;
 

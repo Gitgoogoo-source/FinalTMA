@@ -18,7 +18,7 @@ Telegram `waiting` 房间的分享调用反馈只保存在内存，并以 sessio
 
 Prepared inline message 创建阶段的外部结果未知属于独立服务端路径：原 `create_operation_id`、同一 room 与同一 bearer invite 在 60 秒内恢复，超时后由数据库作废、退款并释放 reservation。该恢复不能与已经进入 `waiting` 后的原生分享 callback 混为一类，也不因 waiting 分享没有 no-callback `unknown` 而删除。
 
-Battle 页面状态按“未确认当场结果、viewer-specific current-room、`BTL_` 入口/本地流程、首页”依次渲染。接受成功的 room snapshot 一经应用，即使邀请刷新后回答 `accepted`，当前账号仍必须保持 lobby/current-room；只有本账号的 accept operation 返回 `BATTLE_ROOM_ALREADY_ACCEPTED` 时才渲染固定冲突。幂等回放、响应乱序、页面重新可见、离开重进和重新认证均以 bootstrap/room 的高 `state_version` 快照回正，邀请入口不得覆盖数据库参与事实。
+Battle 页面状态按“当前会话未离开的 viewer-specific current-room、`BTL_` 入口/本地流程、首页”依次渲染。终局 room snapshot 含数据库生成的 `terminal_result` 时显示当场结果；用户返回首页后，同一 session generation 的迟到 room、Ably、bootstrap 或命令响应不得重新打开该结果。接受成功的 room snapshot 一经应用，即使邀请刷新后回答 `accepted`，当前账号仍必须保持 lobby/current-room；只有本账号的 accept operation 返回 `BATTLE_ROOM_ALREADY_ACCEPTED` 时才渲染固定冲突。幂等回放与响应乱序以高 `state_version` 快照回正；重新加载和重新认证只恢复仍在进行的 participation，不恢复终局结果，邀请入口不得覆盖数据库参与事实。
 
 ## Functions
 

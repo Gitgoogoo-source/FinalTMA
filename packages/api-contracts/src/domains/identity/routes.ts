@@ -12,10 +12,7 @@ import {
   uuidSchema,
 } from "../../common/schemas.ts";
 import { mintSchema } from "../mint/models.ts";
-import {
-  battleCurrentResultSchema,
-  battleParticipationSchema,
-} from "../battle/models.ts";
+import { battleParticipationSchema } from "../battle/models.ts";
 import { paymentSchema } from "../topup/models.ts";
 
 const healthOutput = z
@@ -74,7 +71,6 @@ const bootstrapOutput = z
     pending_payments: z.array(paymentSchema),
     pending_mints: z.array(mintSchema),
     battle_participation: battleParticipationSchema.nullable(),
-    battle_result: battleCurrentResultSchema.nullable(),
     server_time: timestampSchema,
   })
   .strict();

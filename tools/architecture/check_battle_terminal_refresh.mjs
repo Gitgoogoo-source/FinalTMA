@@ -31,6 +31,23 @@ const paths = {
     ROOT,
     "apps/web/src/domains/inventory/ui/InventoryView.tsx",
   ),
+  battleModels: path.join(
+    ROOT,
+    "packages/api-contracts/src/domains/battle/models.ts",
+  ),
+  battleRoutes: path.join(
+    ROOT,
+    "packages/api-contracts/src/domains/battle/routes.ts",
+  ),
+  identityRoutes: path.join(
+    ROOT,
+    "packages/api-contracts/src/domains/identity/routes.ts",
+  ),
+  battleHandlers: path.join(ROOT, "apps/api/src/domains/battle/routes.ts"),
+  battleScreens: path.join(
+    ROOT,
+    "apps/web/src/domains/battle/ui/BattleScreens.tsx",
+  ),
 };
 const protectedRoutes = new Set([
   "battle.room",
@@ -50,19 +67,11 @@ const terminalBatchRoutes = new Set([
   "identity.bootstrap",
   "inventory.list",
 ]);
-const postAcknowledgeBatchRoutes = new Set([
-  "battle.bootstrap",
-  "identity.bootstrap",
-]);
 const authorityCancellationRoutes = new Set([
   "battle.bootstrap",
   "battle.room",
   "battle.current_invite",
   "battle.team_options",
-]);
-const bootstrapAbsenceProofs = new Map([
-  ["battle.bootstrap", "current_result.room_id"],
-  ["identity.bootstrap", "battle_result.room_id"],
 ]);
 
 try {
@@ -99,6 +108,13 @@ function runChecks(overrides = new Map()) {
   checkRouteLifecycle(sources.persistentPages);
   checkAppShell(sources.appShell);
   checkObserverConsumers(sources.topAsset, sources.inventory);
+  checkResultContract(
+    sources.battleModels,
+    sources.battleRoutes,
+    sources.identityRoutes,
+    sources.battleHandlers,
+    sources.battleScreens,
+  );
   checkExclusiveOwnership(webSources);
 }
 
@@ -325,17 +341,6 @@ function checkCoordinator(source) {
   must(
     sameSet(
       new Set(
-        requestArrayRoutes(
-          variable(source, "postAcknowledgeRequests")?.initializer,
-        ),
-      ),
-      postAcknowledgeBatchRoutes,
-    ),
-    "post-ack authority proof must read exactly Battle and identity bootstrap without repeating inventory",
-  );
-  must(
-    sameSet(
-      new Set(
         arrayStrings(
           variable(source, "authorityCancellationRoutes")?.initializer,
         ),
@@ -396,8 +401,16 @@ function checkCoordinator(source) {
       snapshotPurity.root &&
       sharedSnapshotCollections.size >= 1 &&
       publicState &&
-      !objectProperty(publicState, "failure"),
+      !objectProperty(publicState, "failure") &&
+      !objectProperty(publicState, "prepareTerminalAcknowledgement") &&
+      !objectProperty(publicState, "confirmTerminalAcknowledged"),
     "React must subscribe to one external coordinator and bind suppression to the real route-active lifecycle",
+  );
+  must(
+    !source.getFullText().includes("acknowledge") &&
+      !source.getFullText().includes("current_result") &&
+      !source.getFullText().includes("battle_result"),
+    "Battle terminal coordinator must not retain user acknowledgement or bootstrap result recovery state",
   );
   const routeCalls = calls(hook, "setRouteActive");
   must(
@@ -484,13 +497,7 @@ function checkCoordinator(source) {
   const thenCallback = callbackOfCall(calls(reporter, "batch.then")[0]);
   const catchCallback = callbackOfCall(calls(reporter, "catch")[0]);
   const finallyCallback = callbackOfCall(calls(reporter, "finally")[0]);
-  const terminalBattleProof = calls(thenCallback, "getApiQueryData").find(
-    (call) => stringArgument(call, 1) === "battle.bootstrap",
-  );
-  const terminalIdentityProof = calls(thenCallback, "getApiQueryData").find(
-    (call) => stringArgument(call, 1) === "identity.bootstrap",
-  );
-  const resultlessActiveClear = assignments(thenCallback).find(
+  const activeClear = assignments(thenCallback).find(
     (node) =>
       expressionValue(node.left) === "state.active" &&
       expressionValue(node.right) === "null",
@@ -498,10 +505,11 @@ function checkCoordinator(source) {
   must(
     calls(thenCallback, "isCurrentObservation").length === 1 &&
       calls(thenCallback, "state.completed.add").length === 1 &&
-      terminalBattleProof &&
-      terminalIdentityProof &&
-      resultlessActiveClear &&
+      calls(thenCallback, "getApiQueryData").length === 0 &&
+      activeClear &&
+      calls(thenCallback, "state.completed.add")[0].pos < activeClear.pos &&
       calls(thenCallback, "syncRouteSuppression").length === 1 &&
+      activeClear.pos < calls(thenCallback, "syncRouteSuppression")[0].pos &&
       calls(catchCallback, "isCurrentObservation").length === 1 &&
       calls(catchCallback, "state.completed.add").length === 0 &&
       assignments(catchCallback).some(
@@ -509,7 +517,7 @@ function checkCoordinator(source) {
       ) &&
       calls(catchCallback, "scheduleTerminalRetry").length === 1 &&
       calls(finallyCallback, "state.terminalInFlight.delete").length === 1,
-    "only a current all-success batch may be remembered; authoritative resultless terminals must release active suppression while failure remains retryable",
+    "only a current all-success terminal batch may release active suppression; failure must remain retryable without user input",
   );
   const retryScheduler = topLevelFunction(source, "scheduleTerminalRetry");
   const retryCallback = callbackOfCall(
@@ -526,107 +534,6 @@ function checkCoordinator(source) {
       calls(routeSetter, "scheduleTerminalRetry").length === 1,
     "terminal retry must remain route-active, generation/current-observation guarded, pause on leave, and resume without exposing failure state",
   );
-  must(
-    provesDualBootstrapAbsence(
-      thenCallback,
-      resultlessActiveClear,
-      parameterPathSignature(reporter, 1, "roomId"),
-    ),
-    "resultless terminal active release must be control-dependent on both Battle and identity bootstrap proving the same room result absent",
-  );
-
-  const prepareAcknowledge = topLevelFunction(source, "prepareAcknowledgement");
-  const terminalRetry = calls(prepareAcknowledge, "reportTerminalObservation");
-  const prepareCompleted = calls(prepareAcknowledge, "state.completed.has");
-  const currentResultRecovery = calls(
-    prepareAcknowledge,
-    "readCoordinatorRoom",
-  );
-  const recoveredTerminalCheck = calls(
-    prepareAcknowledge,
-    "isBattleAssetTerminal",
-  );
-  must(
-    terminalRetry.length === 1 &&
-      awaitExpressions(prepareAcknowledge).some((node) =>
-        containsNode(node, terminalRetry[0]),
-      ) &&
-      prepareCompleted.length === 1 &&
-      terminalRetry[0].pos < prepareCompleted[0].pos &&
-      calls(prepareAcknowledge, "isCurrentObservation").length === 1,
-    "acknowledge cannot be submitted until the current generation/room/version terminal batch has completed successfully",
-  );
-  must(
-    currentResultRecovery.length === 1 &&
-      awaitExpressions(prepareAcknowledge).some((node) =>
-        containsNode(node, currentResultRecovery[0]),
-      ) &&
-      recoveredTerminalCheck.length === 1 &&
-      currentResultRecovery[0].pos < recoveredTerminalCheck[0].pos &&
-      recoveredTerminalCheck[0].pos < terminalRetry[0].pos &&
-      propertyPaths(prepareAcknowledge).includes("room.room_id") &&
-      propertyPaths(prepareAcknowledge).includes("room.state_version"),
-    "current-result-only acknowledge must recover one participant-owned room snapshot and derive its terminal version before the terminal batch",
-  );
-  must(
-    provesDualBootstrapPresence(
-      prepareAcknowledge,
-      currentResultRecovery[0],
-      parameterPathSignature(prepareAcknowledge, 1),
-    ),
-    "current-result-only room recovery must be control-dependent on Battle or identity bootstrap proving the same unacknowledged room",
-  );
-
-  const acknowledge = topLevelFunction(source, "confirmAcknowledgedResult");
-  const acknowledgeCompleted = calls(acknowledge, "state.completed.has");
-  const acknowledgeBatch = calls(acknowledge, "fetchApiQueryBatchAsOwner");
-  const acknowledgeThen = callbackOfCall(calls(acknowledge, "batch.then")[0]);
-  const battleProof = calls(acknowledgeThen, "getApiQueryData").find(
-    (call) => stringArgument(call, 1) === "battle.bootstrap",
-  );
-  const identityProof = calls(acknowledgeThen, "getApiQueryData").find(
-    (call) => stringArgument(call, 1) === "identity.bootstrap",
-  );
-  const activeClear = assignments(acknowledgeThen).find(
-    (node) =>
-      expressionValue(node.left) === "state.active" &&
-      expressionValue(node.right) === "null",
-  );
-  must(
-    acknowledgeCompleted.length === 1 &&
-      acknowledgeBatch.length === 1 &&
-      acknowledgeCompleted[0].pos < acknowledgeBatch[0].pos &&
-      expressionValue(acknowledgeBatch[0].arguments[1]) ===
-        "postAcknowledgeRequests" &&
-      calls(
-        variable(acknowledge, "existing")?.initializer,
-        "state.acknowledgeInFlight.get",
-      ).length === 1 &&
-      calls(acknowledge, "state.acknowledgeInFlight.set").length === 1,
-    "post-ack recovery must retain successful terminal memory and singleflight a distinct authoritative bootstrap proof",
-  );
-  must(
-    battleProof &&
-      identityProof &&
-      activeClear &&
-      battleProof.pos < activeClear.pos &&
-      identityProof.pos < activeClear.pos &&
-      calls(acknowledgeThen, "isCurrentObservation").length === 1 &&
-      calls(acknowledgeThen, "syncRouteSuppression").length === 1 &&
-      calls(acknowledgeThen, "publishCoordinator").length === 1 &&
-      calls(acknowledge, "state.completed.clear").length === 0 &&
-      calls(acknowledge, "state.completed.delete").length === 0,
-    "only a generation/room/version-current post-ack bootstrap proof may clear active suppression, and completed terminal memory must remain intact",
-  );
-  must(
-    provesDualBootstrapAbsence(
-      acknowledgeThen,
-      activeClear,
-      parameterPathSignature(acknowledge, 1),
-    ),
-    "post-ack active release must be control-dependent on both Battle and identity bootstrap proving the acknowledged room result absent",
-  );
-
   const roomReader = topLevelFunction(source, "readCoordinatorRoom");
   const roomBatch = calls(roomReader, "fetchApiQueryBatchAsOwner");
   const roomRequest = arrayArgument(roomBatch[0], 1);
@@ -676,7 +583,6 @@ function checkCoordinator(source) {
     "setRouteActive",
     "syncRouteSuppression",
     "finishCoordinatorRecovery",
-    "confirmAcknowledgedResult",
   ]) {
     const fn = topLevelFunction(source, functionName);
     must(
@@ -833,9 +739,20 @@ function checkView(source) {
       participantRoomGuard.pos < bearerInviteGuard.pos &&
       !identifiers(bearerInviteGuard.expression).includes("room") &&
       containsNegatedIdentifier(bearerInviteGuard.expression, "forceHome") &&
+      propertyPaths(bearerInviteGuard.expression).includes(
+        "invite.invite_status",
+      ) &&
+      Boolean(
+        findBinaryComparison(
+          bearerInviteGuard.expression,
+          "invite.invite_status",
+          ts.SyntaxKind.ExclamationEqualsEqualsToken,
+          "none",
+        ),
+      ) &&
       bearerGuardReturns.length === 1 &&
       bearerGuardReturns[0] === "accept",
-    "Battle bearer entry must query current_invite despite participation and reject stale query data, while participant room authority must render before the invite state",
+    "Battle bearer entry must query current_invite despite participation and reject stale query data, while participant room authority renders first and a terminal participant's none state reopens at Battle Home",
   );
   const participantInviteRefresh = calls(authority, "refetchInvite").find(
     (call) =>
@@ -881,23 +798,17 @@ function checkView(source) {
     identifiers(bootstrapObserver?.arguments[2]),
   );
   must(
-    calls(view, "getApiQueryData").length === 2 &&
-      calls(
-        variable(view, "cachedTerminalPresent")?.initializer,
-        "terminalObservationsFor",
-      ).length === 1 &&
-      ["activeTerminal", "cachedTerminalPresent"].every((name) =>
+    calls(view, "getApiQueryData").length === 0 &&
+      ["pageActive", "activeTerminal"].every((name) =>
         identifiers(identityObserver?.arguments[2]).includes(name),
       ) &&
-      ["activeTerminal", "cachedTerminalPresent"].every((name) =>
+      ["pageActive", "activeTerminal"].every((name) =>
         identifiers(inviteObserver?.arguments[2]).includes(name),
       ) &&
-      [
-        "activeTerminal",
-        "cachedTerminalPresent",
-        "identityTerminalParticipation",
-      ].every((name) => bootstrapEnabledIdentifiers.has(name)),
-    "formal cached terminal snapshots must disable ordinary identity, Battle bootstrap, and invite observers before effects run",
+      ["pageActive", "activeTerminal"].every((name) =>
+        bootstrapEnabledIdentifiers.has(name),
+      ),
+    "the active terminal batch must suppress ordinary identity, Battle bootstrap, and invite observers without bootstrap result recovery fields",
   );
   must(
     calls(view, "registerForegroundAuthorityRefresh").length === 1 &&
@@ -945,28 +856,72 @@ function checkView(source) {
     ),
     "seeded/bootstrap/room terminal observations must enter the same reporter",
   );
-
-  const acknowledge = variableFunction(view, "acknowledge");
-  const acknowledgeRequest = calls(acknowledge, "apiRequest").find(
-    (call) => stringArgument(call, 0) === "battle.acknowledge_result",
+  const authoritativeRoom = variableFunction(view, "onAuthoritativeRoom");
+  const applySnapshot = calls(authoritativeRoom, "applySnapshot")[0];
+  const reportSnapshot = calls(authoritativeRoom, "reportTerminal")[0];
+  const snapshotWriter = variableFunction(view, "applySnapshot");
+  const cacheWrite = calls(snapshotWriter, "seedApiQuery")[0];
+  const dismissedGuard = ifStatements(snapshotWriter).find(
+    (node) =>
+      calls(node.expression, "dismissedTerminalRooms.current.has").length === 1,
   );
-  const acknowledgeProof = calls(acknowledge, "confirmTerminalAcknowledged");
-  const acknowledgePreparation = calls(
-    acknowledge,
-    "prepareTerminalAcknowledgement",
-  );
-  const dismiss = calls(acknowledge, "setDismissedResult");
+  const roomWrite = calls(snapshotWriter, "setRoom")[0];
   must(
-    acknowledgeRequest &&
-      acknowledgePreparation.length === 1 &&
-      acknowledgeProof.length === 1 &&
-      dismiss.length === 1 &&
-      acknowledgePreparation[0].pos < acknowledgeRequest.pos &&
-      acknowledgeRequest.pos < acknowledgeProof[0].pos &&
-      acknowledgeProof[0].pos < dismiss[0].pos &&
-      calls(acknowledge, "refetchAuthority").length === 0 &&
-      calls(acknowledge, "setRoom").length === 1,
-    "acknowledge must complete the old terminal batch before submission, then perform post-ack authority proof before dismissing the result and matching local room",
+    applySnapshot &&
+      reportSnapshot &&
+      applySnapshot.pos < reportSnapshot.pos &&
+      cacheWrite &&
+      dismissedGuard &&
+      roomWrite &&
+      cacheWrite.pos < dismissedGuard.pos &&
+      dismissedGuard.pos < roomWrite.pos &&
+      statementAlwaysExits(dismissedGuard.thenStatement),
+    "authoritative snapshots must be cached before automatic terminal refresh, while the in-memory dismissed-room fence blocks every late UI write",
+  );
+  const result = variable(view, "result")?.initializer;
+  const returnFromResult = variableFunction(view, "returnFromResult");
+  const bootstrapRoomRetention = calls(view, "setRoom").find((call) => {
+    const updater = call.arguments[0];
+    return (
+      propertyPaths(updater).includes("current.terminal_result") &&
+      calls(updater, "dismissedTerminalRooms.current.has").length === 1
+    );
+  });
+  const bootstrapAbsenceGuard = bootstrapRoomRetention
+    ? enclosingIf(view, bootstrapRoomRetention, (node) => {
+        const paths = propertyPaths(node.expression);
+        return (
+          paths.includes("bootstrap.data") &&
+          paths.includes("bootstrap.data.participation")
+        );
+      })
+    : null;
+  const dismiss = calls(
+    returnFromResult,
+    "dismissedTerminalRooms.current.add",
+  )[0];
+  const localRoomClear = calls(returnFromResult, "setRoom")[0];
+  must(
+    result &&
+      propertyPaths(result).includes("room.terminal_result") &&
+      !identifiers(result).includes("bootstrap") &&
+      !identifiers(result).includes("identity") &&
+      dismiss &&
+      localRoomClear &&
+      dismiss.pos < localRoomClear.pos &&
+      calls(returnFromResult, "apiRequest").length === 0 &&
+      calls(returnFromResult, "refetchAuthority").length === 0 &&
+      calls(returnFromResult, "setForceHome").length === 1 &&
+      calls(returnFromResult, "setFlow").length === 1 &&
+      calls(returnFromResult, "setSlots").length === 1 &&
+      calls(returnFromResult, "setParams").length === 1 &&
+      bootstrapRoomRetention &&
+      bootstrapAbsenceGuard &&
+      calls(view, "dismissedTerminalRooms.current.clear").length === 1 &&
+      !source.getFullText().includes("battle.acknowledge_result") &&
+      !source.getFullText().includes("current_result") &&
+      !source.getFullText().includes("battle_result"),
+    "Battle result must come only from the room snapshot; returning home is local-only and the dismissed-room fence resets only with the session generation",
   );
 }
 
@@ -1084,303 +1039,69 @@ function checkObserverConsumers(topAsset, inventory) {
   );
 }
 
+function checkResultContract(
+  models,
+  battleRoutes,
+  identityRoutes,
+  handlers,
+  screens,
+) {
+  const snapshot = variable(models, "battleRoomSnapshotSchema");
+  let terminalProperty = null;
+  walk(snapshot?.initializer, (node) => {
+    if (
+      !terminalProperty &&
+      ts.isPropertyAssignment(node) &&
+      propertyName(node.name) === "terminal_result"
+    )
+      terminalProperty = node;
+  });
+  const snapshotRefinement = calls(snapshot?.initializer, "superRefine")[0];
+  must(
+    variable(models, "battleTerminalResultSchema") &&
+      terminalProperty &&
+      calls(terminalProperty.initializer, "battleTerminalResultSchema.nullable")
+        .length === 1 &&
+      snapshotRefinement &&
+      propertyPaths(snapshotRefinement).includes("snapshot.terminal_result") &&
+      identifiers(snapshotRefinement).includes("status") &&
+      models.getFullText().includes("BattleTerminalResultDto") &&
+      !models.getFullText().includes("BattleCurrentResult") &&
+      !models.getFullText().includes("battleCurrentResultSchema"),
+    "the participant room snapshot must own the only terminal result schema and enforce terminal-status consistency",
+  );
+  for (const source of [battleRoutes, identityRoutes, handlers])
+    must(
+      !source.getFullText().includes("battle.acknowledge_result") &&
+        !source.getFullText().includes("current_result") &&
+        !source.getFullText().includes("battle_result") &&
+        !source.getFullText().includes("BATTLE_RESULT_NOT_ACKNOWLEDGEABLE"),
+      `Battle bootstrap, identity bootstrap, and handlers must not expose result recovery or acknowledgement: ${source.fileName}`,
+    );
+  const resultScreen = topLevelFunction(screens, "BattleResult");
+  let hasExactReturnLabel = false;
+  walk(resultScreen, (node) => {
+    if (ts.isJsxText(node) && node.getText().trim() === "返回 Battle 首页")
+      hasExactReturnLabel = true;
+  });
+  must(
+    identifiers(resultScreen).includes("onReturnHome") &&
+      hasExactReturnLabel &&
+      !resultScreen.getText().includes("正在确认") &&
+      calls(resultScreen, "apiRequest").length === 0,
+    "the result button must be an immediate local Return to Battle Home action",
+  );
+}
+
 function checkExclusiveOwnership(sources) {
   const ownerCalls = sources.flatMap((source) =>
     calls(source, "fetchApiQueryBatchAsOwner").map(() => source.fileName),
   );
   must(
-    ownerCalls.length === 3 &&
+    ownerCalls.length === 2 &&
       ownerCalls.every((fileName) => fileName === paths.coordinator),
     "only the Battle coordinator may create protected authority batches",
   );
-}
-
-function provesDualBootstrapAbsence(root, activeClear, targetSignature) {
-  if (!root || !activeClear || !targetSignature) return false;
-  const bindings = constBindingsBefore(root, activeClear.pos);
-  return exactBootstrapAbsenceControl(
-    root,
-    activeClear,
-    bindings,
-    targetSignature,
-  );
-}
-
-function provesDualBootstrapPresence(root, recovery, targetSignature) {
-  if (!root || !recovery || !targetSignature) return false;
-  const bindings = constBindingsBefore(root, recovery.pos);
-  const conditions = controlFlowConditions(root, recovery).filter(({ node }) =>
-    containsBootstrapComparison(node, bindings, targetSignature),
-  );
-  if (conditions.length === 0) return false;
-  const routes = [...bootstrapAbsenceProofs.keys()];
-  for (const battleAbsent of [false, true])
-    for (const identityAbsent of [false, true]) {
-      const absence = new Map([
-        [routes[0], battleAbsent],
-        [routes[1], identityAbsent],
-      ]);
-      let reachesRecovery = true;
-      for (const condition of conditions) {
-        const value = bootstrapPredicateValue(
-          condition.node,
-          bindings,
-          targetSignature,
-          absence,
-        );
-        if (value === null) return false;
-        if (value !== condition.whenTrue) reachesRecovery = false;
-      }
-      if (reachesRecovery !== !(battleAbsent && identityAbsent)) return false;
-    }
-  return true;
-}
-
-function exactBootstrapAbsenceControl(root, target, bindings, targetSignature) {
-  const conditions = controlFlowConditions(root, target).filter(({ node }) =>
-    containsBootstrapComparison(node, bindings, targetSignature),
-  );
-  if (conditions.length === 0) return false;
-  const routes = [...bootstrapAbsenceProofs.keys()];
-  for (const battleAbsent of [false, true])
-    for (const identityAbsent of [false, true]) {
-      const absence = new Map([
-        [routes[0], battleAbsent],
-        [routes[1], identityAbsent],
-      ]);
-      let reachesTarget = true;
-      for (const condition of conditions) {
-        const value = bootstrapPredicateValue(
-          condition.node,
-          bindings,
-          targetSignature,
-          absence,
-        );
-        if (value === null) return false;
-        if (value !== condition.whenTrue) reachesTarget = false;
-      }
-      if (reachesTarget !== (battleAbsent && identityAbsent)) return false;
-    }
-  return true;
-}
-
-function controlFlowConditions(root, target) {
-  const conditions = [];
-  let child = target;
-  while (child && child !== root) {
-    const parent = child.parent;
-    if (!parent) break;
-    if (ts.isIfStatement(parent)) {
-      if (child === parent.thenStatement)
-        conditions.push({ node: parent.expression, whenTrue: true });
-      else if (child === parent.elseStatement)
-        conditions.push({ node: parent.expression, whenTrue: false });
-    }
-    if (ts.isBlock(parent)) {
-      const index = parent.statements.indexOf(child);
-      if (index >= 0)
-        for (const statement of parent.statements.slice(0, index)) {
-          if (!ts.isIfStatement(statement)) continue;
-          const thenExits = statementAlwaysExits(statement.thenStatement);
-          const elseExits = statement.elseStatement
-            ? statementAlwaysExits(statement.elseStatement)
-            : false;
-          if (thenExits && !elseExits)
-            conditions.push({ node: statement.expression, whenTrue: false });
-          if (elseExits && !thenExits)
-            conditions.push({ node: statement.expression, whenTrue: true });
-        }
-    }
-    child = parent;
-  }
-  return conditions;
-}
-
-function containsBootstrapComparison(expression, bindings, targetSignature) {
-  let found = false;
-  walk(expression, (node) => {
-    if (
-      !found &&
-      ts.isBinaryExpression(node) &&
-      bootstrapComparison(node, bindings, targetSignature)
-    )
-      found = true;
-  });
-  return found;
-}
-
-function bootstrapPredicateValue(
-  expression,
-  bindings,
-  targetSignature,
-  absence,
-) {
-  const node = unwrap(expression);
-  if (!node) return null;
-  const comparison = ts.isBinaryExpression(node)
-    ? bootstrapComparison(node, bindings, targetSignature)
-    : null;
-  if (comparison) {
-    const isAbsent = absence.get(comparison.routeId);
-    return comparison.equality ? !isAbsent : isAbsent;
-  }
-  if (node.kind === ts.SyntaxKind.TrueKeyword) return true;
-  if (node.kind === ts.SyntaxKind.FalseKeyword) return false;
-  if (
-    ts.isPrefixUnaryExpression(node) &&
-    node.operator === ts.SyntaxKind.ExclamationToken
-  ) {
-    const value = bootstrapPredicateValue(
-      node.operand,
-      bindings,
-      targetSignature,
-      absence,
-    );
-    return value === null ? null : !value;
-  }
-  if (
-    ts.isBinaryExpression(node) &&
-    [ts.SyntaxKind.AmpersandAmpersandToken, ts.SyntaxKind.BarBarToken].includes(
-      node.operatorToken.kind,
-    )
-  ) {
-    const left = bootstrapPredicateValue(
-      node.left,
-      bindings,
-      targetSignature,
-      absence,
-    );
-    const right = bootstrapPredicateValue(
-      node.right,
-      bindings,
-      targetSignature,
-      absence,
-    );
-    if (left === null || right === null) return null;
-    return node.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken
-      ? left && right
-      : left || right;
-  }
-  return null;
-}
-
-function bootstrapComparison(node, bindings, targetSignature) {
-  if (!ts.isBinaryExpression(node)) return null;
-  const equality = new Map([
-    [ts.SyntaxKind.EqualsEqualsToken, true],
-    [ts.SyntaxKind.EqualsEqualsEqualsToken, true],
-    [ts.SyntaxKind.ExclamationEqualsToken, false],
-    [ts.SyntaxKind.ExclamationEqualsEqualsToken, false],
-  ]).get(node.operatorToken.kind);
-  if (equality === undefined) return null;
-  for (const [proofExpression, targetExpression] of [
-    [node.left, node.right],
-    [node.right, node.left],
-  ]) {
-    const proof = bootstrapProofReference(proofExpression, bindings);
-    if (
-      proof &&
-      bootstrapAbsenceProofs.get(proof.routeId) === proof.path &&
-      resolvedExpressionSignature(targetExpression, bindings) ===
-        targetSignature
-    )
-      return { routeId: proof.routeId, equality };
-  }
-  return null;
-}
-
-function bootstrapProofReference(expression, bindings, seen = new Set()) {
-  const node = unwrap(expression);
-  if (!node) return null;
-  if (ts.isIdentifier(node)) {
-    if (seen.has(node.text)) return null;
-    const initializer = bindings.get(node.text);
-    if (!initializer) return null;
-    return bootstrapProofReference(
-      initializer,
-      bindings,
-      new Set([...seen, node.text]),
-    );
-  }
-  if (
-    ts.isCallExpression(node) &&
-    callPath(node.expression) === "getApiQueryData"
-  ) {
-    const routeId = stringArgument(node, 1);
-    return bootstrapAbsenceProofs.has(routeId) ? { routeId, path: "" } : null;
-  }
-  if (ts.isPropertyAccessExpression(node)) {
-    const base = bootstrapProofReference(node.expression, bindings, seen);
-    return base
-      ? {
-          routeId: base.routeId,
-          path: base.path ? `${base.path}.${node.name.text}` : node.name.text,
-        }
-      : null;
-  }
-  if (ts.isElementAccessExpression(node)) {
-    const property = unwrap(node.argumentExpression);
-    const base = bootstrapProofReference(node.expression, bindings, seen);
-    return base && property && ts.isStringLiteralLike(property)
-      ? {
-          routeId: base.routeId,
-          path: base.path ? `${base.path}.${property.text}` : property.text,
-        }
-      : null;
-  }
-  return null;
-}
-
-function resolvedExpressionSignature(expression, bindings, seen = new Set()) {
-  const node = unwrap(expression);
-  if (!node) return "";
-  if (ts.isIdentifier(node)) {
-    if (seen.has(node.text)) return node.text;
-    const initializer = bindings.get(node.text);
-    return initializer
-      ? resolvedExpressionSignature(
-          initializer,
-          bindings,
-          new Set([...seen, node.text]),
-        )
-      : node.text;
-  }
-  if (ts.isPropertyAccessExpression(node)) {
-    const base = resolvedExpressionSignature(node.expression, bindings, seen);
-    return base ? `${base}.${node.name.text}` : node.name.text;
-  }
-  if (ts.isElementAccessExpression(node)) {
-    const base = resolvedExpressionSignature(node.expression, bindings, seen);
-    const property = unwrap(node.argumentExpression);
-    return property && ts.isStringLiteralLike(property)
-      ? `${base}.${property.text}`
-      : `${base}[${expressionValue(node.argumentExpression)}]`;
-  }
-  if (ts.isStringLiteralLike(node) || ts.isNumericLiteral(node))
-    return node.text;
-  return expressionValue(node);
-}
-
-function parameterPathSignature(fn, index, property = "") {
-  const name = fn?.parameters[index]?.name;
-  if (!name || !ts.isIdentifier(name)) return "";
-  return property ? `${name.text}.${property}` : name.text;
-}
-
-function constBindingsBefore(root, before) {
-  const bindings = new Map();
-  walkWithinFunction(root, (node) => {
-    if (
-      node.pos < before &&
-      ts.isVariableDeclaration(node) &&
-      ts.isIdentifier(node.name) &&
-      node.initializer &&
-      ts.isVariableDeclarationList(node.parent) &&
-      (node.parent.flags & ts.NodeFlags.Const) !== 0
-    )
-      bindings.set(node.name.text, node.initializer);
-  });
-  return bindings;
 }
 
 function statementAlwaysExits(statement) {
@@ -2047,7 +1768,7 @@ function runSelfTests() {
     ),
     fixture(
       paths.coordinator,
-      "resultless terminal keeps active latch",
+      "successful terminal batch keeps active latch",
       (source, text) => {
         const fn = topLevelFunction(source, "reportTerminalObservation");
         const callback = callbackOfCall(calls(fn, "batch.then")[0]);
@@ -2058,28 +1779,6 @@ function runSelfTests() {
         );
         return replaceNode(text, clear, "void state.active");
       },
-    ),
-    fixture(
-      paths.coordinator,
-      "resultless-unconditional-clear",
-      (source, text) => {
-        const fn = topLevelFunction(source, "reportTerminalObservation");
-        const callback = callbackOfCall(calls(fn, "batch.then")[0]);
-        const clear = assignments(callback).find(
-          (node) =>
-            expressionValue(node.left) === "state.active" &&
-            expressionValue(node.right) === "null",
-        );
-        const bindings = constBindingsBefore(callback, clear.pos);
-        const target = parameterPathSignature(fn, 1, "roomId");
-        const guard = ifStatements(callback).find(
-          (node) =>
-            containsNode(node.thenStatement, clear) &&
-            containsBootstrapComparison(node.expression, bindings, target),
-        );
-        return replaceNode(text, guard, guard.thenStatement.getText());
-      },
-      "resultless terminal active release must be control-dependent",
     ),
     fixture(
       paths.query,
@@ -2148,17 +1847,13 @@ function runSelfTests() {
     }),
     fixture(
       paths.view,
-      "seeded terminal enables Battle bootstrap",
+      "terminal owner enables Battle bootstrap",
       (source, text) => {
         const view = topLevelFunction(source, "BattleView");
         const bootstrapObserver = calls(view, "useApiQuery").find(
           (call) => stringArgument(call, 0) === "battle.bootstrap",
         );
-        return replaceNode(
-          text,
-          bootstrapObserver.arguments[2],
-          "pageActive && activeTerminal === null && identityTerminalParticipation === null",
-        );
+        return replaceNode(text, bootstrapObserver.arguments[2], "pageActive");
       },
     ),
     fixture(
@@ -2185,7 +1880,7 @@ function runSelfTests() {
         return replaceNode(
           text,
           inviteObserver.arguments[2],
-          "pageActive && roomId === null && activeTerminal === null && !cachedTerminalPresent && !bootstrapRoomTerminal",
+          "pageActive && roomId === null && activeTerminal === null && !bootstrapRoomTerminal",
         );
       },
     ),
@@ -2211,6 +1906,25 @@ function runSelfTests() {
           roomGuard.getText(source) +
           text.slice(bearerGuard.end)
         );
+      },
+    ),
+    fixture(
+      paths.view,
+      "terminal participant Battle entry ignores home reset",
+      (source, text) => {
+        const derive = topLevelFunction(source, "derivePageState");
+        const bearerGuard = ifStatements(derive).find(
+          (node) =>
+            identifiers(node.expression).includes("battleEntry") &&
+            identifiers(node.expression).includes("forceHome"),
+        );
+        const noneGuard = findBinaryComparison(
+          bearerGuard.expression,
+          "invite.invite_status",
+          ts.SyntaxKind.ExclamationEqualsEqualsToken,
+          "none",
+        );
+        return replaceNode(text, noneGuard, "true");
       },
     ),
     fixture(
@@ -2247,55 +1961,101 @@ function runSelfTests() {
     ),
     fixture(
       paths.view,
-      "cached terminal enables identity observer",
+      "terminal owner enables identity observer",
       (source, text) => {
         const view = topLevelFunction(source, "BattleView");
         const identityObserver = calls(view, "useApiQuery").find(
           (call) => stringArgument(call, 0) === "identity.bootstrap",
         );
-        return replaceNode(
+        return replaceNode(text, identityObserver.arguments[2], "pageActive");
+      },
+    ),
+    fixture(
+      paths.view,
+      "result return reintroduces acknowledge request",
+      (source, text) => {
+        const view = topLevelFunction(source, "BattleView");
+        const resultReturn = variableFunction(view, "returnFromResult");
+        return insertIntoFunction(
           text,
-          identityObserver.arguments[2],
-          "pageActive && activeTerminal === null",
+          resultReturn,
+          'void apiRequest("battle.acknowledge_result" as never, {} as never);',
         );
       },
     ),
     fixture(
       paths.view,
-      "acknowledge submits before terminal batch completion",
+      "late room bypasses dismissed-result fence",
       (source, text) => {
         const view = topLevelFunction(source, "BattleView");
-        const acknowledge = variableFunction(view, "acknowledge");
-        const preparation = calls(
-          acknowledge,
-          "prepareTerminalAcknowledgement",
-        )[0];
-        return replaceNode(text, preparation, "Promise.resolve(true)");
-      },
-    ),
-    fixture(
-      paths.coordinator,
-      "current-result acknowledge skips participant room recovery",
-      (source, text) => {
-        const fn = topLevelFunction(source, "prepareAcknowledgement");
-        const recovery = calls(fn, "readCoordinatorRoom")[0];
-        return replaceNode(text, recovery, "Promise.resolve(null)");
-      },
-    ),
-    fixture(
-      paths.coordinator,
-      "current-result acknowledge ignores bootstrap ownership",
-      (source, text) => {
-        const fn = topLevelFunction(source, "prepareAcknowledgement");
-        const recovery = calls(fn, "readCoordinatorRoom")[0];
-        const bindings = constBindingsBefore(fn, recovery.pos);
-        const target = parameterPathSignature(fn, 1);
-        const guard = ifStatements(fn).find(
+        const writer = variableFunction(view, "applySnapshot");
+        const guard = ifStatements(writer).find(
           (node) =>
-            node.pos < recovery.pos &&
-            containsBootstrapComparison(node.expression, bindings, target),
+            calls(node.expression, "dismissedTerminalRooms.current.has")
+              .length === 1,
         );
         return replaceNode(text, guard.expression, "false");
+      },
+    ),
+    fixture(
+      paths.view,
+      "result reads bootstrap recovery field",
+      (source, text) => {
+        const view = topLevelFunction(source, "BattleView");
+        const result = variable(view, "result");
+        return replaceNode(
+          text,
+          result.initializer,
+          "bootstrap.data?.room?.terminal_result ?? null",
+        );
+      },
+    ),
+    fixture(
+      paths.view,
+      "automatic bootstrap refresh clears presented terminal result",
+      (source, text) => {
+        const view = topLevelFunction(source, "BattleView");
+        const retention = calls(view, "setRoom").find((call) => {
+          const updater = call.arguments[0];
+          return propertyPaths(updater).includes("current.terminal_result");
+        });
+        return replaceNode(text, retention.arguments[0], "null");
+      },
+    ),
+    fixture(
+      paths.view,
+      "session keeps dismissed room memory",
+      (source, text) => {
+        const view = topLevelFunction(source, "BattleView");
+        const clear = calls(view, "dismissedTerminalRooms.current.clear")[0];
+        return replaceNode(text, clear, "void dismissedTerminalRooms.current");
+      },
+    ),
+    fixture(
+      paths.view,
+      "terminal report skips snapshot application",
+      (source, text) => {
+        const view = topLevelFunction(source, "BattleView");
+        const authority = variableFunction(view, "onAuthoritativeRoom");
+        const apply = calls(authority, "applySnapshot")[0];
+        return replaceNode(text, apply, "void snapshot");
+      },
+    ),
+    fixture(
+      paths.battleScreens,
+      "result button restores confirmation wording",
+      (source, text) => {
+        const resultScreen = topLevelFunction(source, "BattleResult");
+        let label = null;
+        walk(resultScreen, (node) => {
+          if (
+            !label &&
+            ts.isJsxText(node) &&
+            node.getText().trim() === "返回 Battle 首页"
+          )
+            label = node;
+        });
+        return replaceNode(text, label, "确认并返回 Battle 首页");
       },
     ),
     fixture(
@@ -2359,56 +2119,6 @@ function runSelfTests() {
             expressionValue(call.arguments[0]) === "state.discoveryOwner",
         );
         return replaceNode(text, cancel, "void state.discoveryOwner");
-      },
-    ),
-    fixture(
-      paths.coordinator,
-      "post-ack bootstrap leaves active latch",
-      (source, text) => {
-        const fn = topLevelFunction(source, "confirmAcknowledgedResult");
-        const callback = callbackOfCall(calls(fn, "batch.then")[0]);
-        const clear = assignments(callback).find(
-          (node) =>
-            expressionValue(node.left) === "state.active" &&
-            expressionValue(node.right) === "null",
-        );
-        return replaceNode(text, clear, "void state.active");
-      },
-    ),
-    fixture(
-      paths.coordinator,
-      "post-ack-unconditional-clear",
-      (source, text) => {
-        const fn = topLevelFunction(source, "confirmAcknowledgedResult");
-        const callback = callbackOfCall(calls(fn, "batch.then")[0]);
-        const clear = assignments(callback).find(
-          (node) =>
-            expressionValue(node.left) === "state.active" &&
-            expressionValue(node.right) === "null",
-        );
-        const bindings = constBindingsBefore(callback, clear.pos);
-        const target = parameterPathSignature(fn, 1);
-        const guard = ifStatements(callback).find(
-          (node) =>
-            node.pos < clear.pos &&
-            statementAlwaysExits(node.thenStatement) &&
-            containsBootstrapComparison(node.expression, bindings, target),
-        );
-        return replaceNode(text, guard.expression, "false");
-      },
-      "post-ack active release must be control-dependent",
-    ),
-    fixture(
-      paths.coordinator,
-      "post-ack bootstrap erases completed memory",
-      (source, text) => {
-        const fn = topLevelFunction(source, "confirmAcknowledgedResult");
-        const callback = callbackOfCall(calls(fn, "batch.then")[0]);
-        return insertIntoFunction(
-          text,
-          callback,
-          "state.completed.delete(key);",
-        );
       },
     ),
     fixture(
@@ -2595,39 +2305,6 @@ function runSelfTests() {
       ? readVersion(remaining - 1)
       : (coordinators.get(generation)?.version ?? 0);
   return readVersion(1);`,
-        );
-      },
-    ),
-    fixture(
-      paths.coordinator,
-      "post-ack-dual-bootstrap-const-de-morgan",
-      (source, text) => {
-        const fn = topLevelFunction(source, "confirmAcknowledgedResult");
-        const callback = callbackOfCall(calls(fn, "batch.then")[0]);
-        const clear = assignments(callback).find(
-          (node) =>
-            expressionValue(node.left) === "state.active" &&
-            expressionValue(node.right) === "null",
-        );
-        const bindings = constBindingsBefore(callback, clear.pos);
-        const target = parameterPathSignature(fn, 1);
-        const guard = ifStatements(callback).find(
-          (node) =>
-            node.pos < clear.pos &&
-            statementAlwaysExits(node.thenStatement) &&
-            containsBootstrapComparison(node.expression, bindings, target),
-        );
-        const withEquivalentGuard = replaceNode(
-          text,
-          guard.expression,
-          "!(battleRoom !== roomId && identityRoom !== roomId)",
-        );
-        return insertBeforeNode(
-          withEquivalentGuard,
-          guard,
-          `const battleRoom = battle?.current_result?.room_id;
-      const identityRoom = identity?.battle_result?.room_id;
-      `,
         );
       },
     ),

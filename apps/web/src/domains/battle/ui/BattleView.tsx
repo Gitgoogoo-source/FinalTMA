@@ -25,7 +25,6 @@ import {
   apiRequest,
 } from "../../../platform/api/client.ts";
 import {
-  getApiQueryData,
   registerForegroundAuthorityRefresh,
   refreshScopes,
   seedApiQuery,
@@ -62,7 +61,6 @@ import {
   BattleLobby,
   BattlePreparingShare,
   BattleResult,
-  BattleResultPending,
   BattleTeamSelect,
   BattleWaiting,
 } from "./BattleScreens.tsx";
@@ -102,28 +100,12 @@ export function BattleView(): ReactNode {
   const session = useSession();
   const sessionGeneration = session?.generation ?? null;
   const battleEntry = session?.entryKind === "battle";
-  const cachedIdentity = sessionGeneration
-    ? getApiQueryData(sessionGeneration, "identity.bootstrap")
-    : undefined;
-  const cachedBattle = sessionGeneration
-    ? getApiQueryData(sessionGeneration, "battle.bootstrap")
-    : undefined;
-  const cachedTerminalPresent =
-    terminalObservationsFor({
-      rooms: [cachedBattle?.room],
-      participations: [
-        cachedBattle?.participation,
-        cachedIdentity?.battle_participation,
-      ],
-    }).length > 0;
   const {
     reportTerminal,
     reportNonTerminalRoom,
     prepareAuthorityRecovery,
     readAuthorityRoom,
     finishAuthorityRecovery,
-    prepareTerminalAcknowledgement,
-    confirmTerminalAcknowledged,
     active: activeTerminal,
     isLocked: isTerminalLocked,
   } = useBattleTerminalRefresh(sessionGeneration, pageActive);
@@ -131,20 +113,12 @@ export function BattleView(): ReactNode {
   const identity = useApiQuery(
     "identity.bootstrap",
     {},
-    pageActive && activeTerminal === null && !cachedTerminalPresent,
+    pageActive && activeTerminal === null,
   );
-  const identityTerminalParticipation =
-    identity.data?.battle_participation &&
-    isBattleAssetTerminal(identity.data.battle_participation.status)
-      ? identity.data.battle_participation
-      : null;
   const bootstrap = useApiQuery(
     "battle.bootstrap",
     {},
-    pageActive &&
-      activeTerminal === null &&
-      !cachedTerminalPresent &&
-      identityTerminalParticipation === null,
+    pageActive && activeTerminal === null,
   );
   const participation =
     bootstrap.data?.participation ??
@@ -159,7 +133,6 @@ export function BattleView(): ReactNode {
     pageActive &&
       (battleEntry || roomId === null) &&
       activeTerminal === null &&
-      !cachedTerminalPresent &&
       !bootstrapRoomTerminal,
   );
   const authoritativeInvite = invite.isError ? undefined : invite.data;
@@ -176,17 +149,16 @@ export function BattleView(): ReactNode {
   const [slots, setSlots] = useState<BattleTeamSlots>(emptySlots);
   const [room, setRoom] = useState<BattleRoomSnapshotDto | null>(null);
   const [forceHome, setForceHome] = useState(false);
-  const [dismissedResult, setDismissedResult] = useState<string | null>(null);
   const [resumeNotice, setResumeNotice] = useState<string | null>(null);
   const [shareState, setShareState] = useState<ShareFeedback | null>(null);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [switchOpen, setSwitchOpen] = useState(false);
   const [actionIntent, setActionIntent] = useState<string | null>(null);
-  const [acknowledging, setAcknowledging] = useState(false);
   const [onlineState, setOnlineState] = useState<OnlineState>("syncing");
   const [lifecycleReady, setLifecycleReady] = useState(false);
   const battleRootRef = useRef<HTMLDivElement>(null);
   const handledResume = useRef(new Set<string>());
+  const dismissedTerminalRooms = useRef(new Set<string>());
   const presenceRoomRef = useRef<string | null>(null);
   const roomRef = useRef<BattleRoomSnapshotDto | null>(null);
   const shareAttemptRef = useRef<ShareAttempt | null>(null);
@@ -207,6 +179,7 @@ export function BattleView(): ReactNode {
 
   const applySnapshot = useCallback((snapshot: BattleRoomSnapshotDto) => {
     seedApiQuery("battle.room", { room_id: snapshot.room_id }, snapshot);
+    if (dismissedTerminalRooms.current.has(snapshot.room_id)) return;
     setRoom((current) =>
       current?.room_id === snapshot.room_id &&
       compareSnapshots(current, snapshot) > 0
@@ -370,7 +343,7 @@ export function BattleView(): ReactNode {
       setSlots(emptySlots);
       setRoom(null);
       setForceHome(false);
-      setDismissedResult(null);
+      dismissedTerminalRooms.current.clear();
       setResumeNotice(null);
       setShareState(null);
       setCancelOpen(false);
@@ -395,7 +368,12 @@ export function BattleView(): ReactNode {
       );
       if (candidates.length === 0) {
         if (bootstrap.data && bootstrap.data.participation === null)
-          setRoom(null);
+          setRoom((current) =>
+            current?.terminal_result &&
+            !dismissedTerminalRooms.current.has(current.room_id)
+              ? current
+              : null,
+          );
         return;
       }
       const next = candidates.reduce((newest, candidate) =>
@@ -412,28 +390,10 @@ export function BattleView(): ReactNode {
     roomRef.current = room;
   }, [room]);
 
-  const currentResult =
-    bootstrap.data?.current_result ??
-    (bootstrap.data ? null : (identity.data?.battle_result ?? null));
-  const result =
-    currentResult?.room_id === dismissedResult ? null : currentResult;
+  const result = room?.terminal_result ?? null;
   const terminalObservations = useMemo(
-    () =>
-      terminalObservationsFor({
-        rooms: [room, bootstrap.data?.room],
-        participations: [
-          participation,
-          bootstrap.data?.participation,
-          identity.data?.battle_participation,
-        ],
-      }),
-    [
-      bootstrap.data?.participation,
-      bootstrap.data?.room,
-      identity.data?.battle_participation,
-      participation,
-      room,
-    ],
+    () => terminalObservationsFor([room, bootstrap.data?.room]),
+    [bootstrap.data?.room, room],
   );
   const terminalObservationKey = terminalObservations
     .map((observation) => `${observation.roomId}:${observation.stateVersion}`)
@@ -1023,27 +983,16 @@ export function BattleView(): ReactNode {
     if (!snapshot) setActionIntent(null);
   };
 
-  const acknowledge = async () => {
-    if (!result || acknowledging) return;
-    const acknowledgedRoomId = result.room_id;
-    setAcknowledging(true);
-    try {
-      if (!(await prepareTerminalAcknowledgement(acknowledgedRoomId))) return;
-      await apiRequest("battle.acknowledge_result", {
-        room_id: acknowledgedRoomId,
-      }).catch(() => undefined);
-      const confirmed = await confirmTerminalAcknowledged(acknowledgedRoomId);
-      if (!confirmed) return;
-      setDismissedResult(acknowledgedRoomId);
-      setForceHome(true);
-      setFlow(null);
-      setSlots(emptySlots);
-      setRoom((current) =>
-        current?.room_id === acknowledgedRoomId ? null : current,
-      );
-    } finally {
-      setAcknowledging(false);
-    }
+  const returnFromResult = () => {
+    if (!result) return;
+    dismissedTerminalRooms.current.add(result.room_id);
+    setForceHome(true);
+    setFlow(null);
+    setSlots(emptySlots);
+    setRoom((current) =>
+      current?.room_id === result.room_id ? null : current,
+    );
+    setParams({}, { replace: true });
   };
 
   const share = () => {
@@ -1101,7 +1050,6 @@ export function BattleView(): ReactNode {
       switchOpen={switchOpen}
       modalActive={pageActive}
       modalBackgroundRef={battleRootRef}
-      acknowledging={acknowledging}
       clock={clock}
       lobbyStartClock={lobbyStartClock}
       creatorReconnectClock={creatorReconnectClock}
@@ -1133,7 +1081,7 @@ export function BattleView(): ReactNode {
       attack={(position, name) => void attack(position, name)}
       voluntarySwitch={(slot, name) => void voluntarySwitch(slot, name)}
       forcedSwitch={(slot, name) => void forcedSwitch(slot, name)}
-      acknowledge={() => void acknowledge()}
+      returnFromResult={returnFromResult}
     />
   );
 
@@ -1173,7 +1121,6 @@ function BattleState({
   switchOpen,
   modalActive,
   modalBackgroundRef,
-  acknowledging,
   clock,
   lobbyStartClock,
   creatorReconnectClock,
@@ -1195,11 +1142,11 @@ function BattleState({
   attack,
   voluntarySwitch,
   forcedSwitch,
-  acknowledge,
+  returnFromResult,
 }: {
   pageState: BattlePageState;
   room: BattleRoomSnapshotDto | null;
-  result: RouteOutput<"battle.bootstrap">["current_result"];
+  result: BattleRoomSnapshotDto["terminal_result"];
   tier: BattleEntryTier | null;
   invite: Invite | undefined;
   tiers: readonly BattleEntryTier[];
@@ -1213,7 +1160,6 @@ function BattleState({
   switchOpen: boolean;
   modalActive: boolean;
   modalBackgroundRef: RefObject<HTMLElement | null>;
-  acknowledging: boolean;
   clock: ReturnType<typeof useBattleDeadline>;
   lobbyStartClock: ReturnType<typeof useBattleDeadline>;
   creatorReconnectClock: ReturnType<typeof useBattleDeadline>;
@@ -1235,18 +1181,10 @@ function BattleState({
   attack(position: 1 | 2 | 3 | 4, name: string): void;
   voluntarySwitch(slot: 1 | 2 | 3, name: string): void;
   forcedSwitch(slot: 1 | 2 | 3, name: string): void;
-  acknowledge(): void;
+  returnFromResult(): void;
 }): ReactNode {
   if (pageState === "result" && result)
-    return (
-      <BattleResult
-        result={result}
-        acknowledging={acknowledging}
-        onAcknowledge={acknowledge}
-      />
-    );
-  if (pageState === "result")
-    return <BattleResultPending onRefresh={refresh} />;
+    return <BattleResult result={result} onReturnHome={returnFromResult} />;
   if (pageState === "preparing_share" && room)
     return (
       <BattlePreparingShare
@@ -1380,11 +1318,14 @@ function derivePageState({
     if (
       room.status === "finished" ||
       room.status === "draw" ||
+      room.status === "cancelled" ||
+      room.status === "expired" ||
       room.status === "voided"
     )
-      return "result";
+      return "home";
   }
-  if (!forceHome && battleEntry) return "accept";
+  if (!forceHome && battleEntry && invite?.invite_status !== "none")
+    return "accept";
   if (flow?.kind === "create") return "team_select";
   if (flow?.kind === "accept") return "accept";
   if (!forceHome && isInviteRoom(invite)) return "accept";
@@ -1519,31 +1460,15 @@ async function applyPresenceFailureScopes(cause: unknown): Promise<void> {
   await refreshScopes(scopes).catch(() => undefined);
 }
 
-function terminalObservationsFor({
-  rooms,
-  participations,
-}: {
-  rooms: readonly (BattleRoomSnapshotDto | null | undefined)[];
-  participations: readonly (
-    | RouteOutput<"battle.bootstrap">["participation"]
-    | undefined
-  )[];
-}): BattleTerminalObservation[] {
-  return [
-    ...rooms.map((room) =>
+function terminalObservationsFor(
+  rooms: readonly (BattleRoomSnapshotDto | null | undefined)[],
+): BattleTerminalObservation[] {
+  return rooms
+    .map((room) =>
       room && isBattleAssetTerminal(room.status)
         ? { roomId: room.room_id, stateVersion: room.state_version }
         : null,
-    ),
-    ...participations.map((participation) =>
-      participation && isBattleAssetTerminal(participation.status)
-        ? {
-            roomId: participation.room_id,
-            stateVersion: participation.state_version,
-          }
-        : null,
-    ),
-  ]
+    )
     .filter(
       (observation): observation is BattleTerminalObservation =>
         observation !== null,

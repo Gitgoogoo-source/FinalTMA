@@ -366,6 +366,11 @@ def verify_battle_contract() -> None:
         "'prepared_message_id', case",
         "'viewer_action_state',",
         "'presence_lifecycle', jsonb_build_object(",
+        "create or replace function battle.terminal_result_json(",
+        "'terminal_result', battle.terminal_result_json(p_room_id, p_participant_id)",
+        "s.room_id = p_room_id",
+        "s.participant_id = p_participant_id",
+        "v_room.status in ('finished', 'draw', 'cancelled', 'expired', 'voided')\n    and exists (\n      select 1 from battle.participants\n      where room_id = v_room.id and user_id = v_user_id\n    )\n  then\n    return jsonb_build_object('invite_status', 'none', 'server_time', now());",
         "'effect_key', v_skill.effect_key",
         "'effect_key', p_result->'effect_key'",
         "p_presence_lease_id uuid",
@@ -403,6 +408,26 @@ def verify_battle_contract() -> None:
         raise SystemExit("Product-data migration must start Battle tick after product rules")
     if "battle_internal_room_context" in battle_sql or "private_seed_hex" in battle_sql:
         raise SystemExit("Battle private seed cannot be exposed through an api RPC")
+    removed_result_acknowledgement = (
+        "battle.current_result_json",
+        "'current_result'",
+        "battle_acknowledge_result",
+        "result_acknowledged_at",
+        "battle_participants_unconfirmed_result_idx",
+        "battle_result_not_acknowledgeable",
+    )
+    present_result_acknowledgement = [
+        fragment for fragment in removed_result_acknowledgement if fragment in battle_sql
+    ]
+    if present_result_acknowledgement:
+        raise SystemExit(
+            "Legacy Battle result acknowledgement remains: "
+            f"{present_result_acknowledgement}"
+        )
+    if "'battle_result'" in identity_sql:
+        raise SystemExit("Identity bootstrap cannot recover a terminal Battle result")
+    if "'battle_acknowledge_result'" in security_sql:
+        raise SystemExit("Removed Battle acknowledgement RPC cannot remain allowlisted")
     forbidden = (
         "creator_last_heartbeat_at",
         "creator_offline_since",

@@ -131,10 +131,6 @@ export const battleHandlers = {
       p_presence_lifecycle_version: context.input.presence_lifecycle_version,
       p_presence_command_seq: context.input.presence_command_seq,
     }),
-  "battle.acknowledge_result": async (context) =>
-    nonOperationCommand(context, "battle_acknowledge_result", {
-      p_room_id: context.input.room_id,
-    }),
   "battle.realtime_token": async (context) => ({
     data: await issueBattleRealtimeToken(
       requireSession(context).session_id,

@@ -41,8 +41,6 @@ type CoordinatorState = {
   roomInFlight: Map<string, Promise<BattleRoomSnapshotDto | null>>;
   terminalInFlight: Map<string, Promise<void>>;
   terminalOwners: Map<string, symbol>;
-  acknowledgeInFlight: Map<string, Promise<boolean>>;
-  acknowledgeOwners: Map<string, symbol>;
   completed: Set<string>;
   failure: BattleTerminalObservation | null;
   retryAttempt: number;
@@ -81,16 +79,6 @@ const terminalRequests = [
   { routeId: "inventory.list", input: {} },
 ] as const satisfies readonly ApiQueryRequest[];
 
-const postAcknowledgeRequests = [
-  { routeId: "battle.bootstrap", input: {} },
-  { routeId: "identity.bootstrap", input: {} },
-] as const satisfies readonly ApiQueryRequest[];
-
-const postAcknowledgeCancellationRoutes = [
-  ...authorityCancellationRoutes,
-  "identity.bootstrap",
-] as const satisfies readonly RouteId[];
-
 const coordinators = new Map<string, CoordinatorState>();
 
 registerSensitiveStateResetter(() => {
@@ -99,8 +87,6 @@ registerSensitiveStateResetter(() => {
     clearTerminalRetry(state);
     cancelApiQueryOwner(state.discoveryOwner);
     for (const owner of state.terminalOwners.values())
-      cancelApiQueryOwner(owner);
-    for (const owner of state.acknowledgeOwners.values())
       cancelApiQueryOwner(owner);
     releaseApiQuerySuppression(state.suppressionOwner);
   }
@@ -116,8 +102,6 @@ export function useBattleTerminalRefresh(
   prepareAuthorityRecovery(roomId: string): boolean;
   readAuthorityRoom(roomId: string): Promise<BattleRoomSnapshotDto | null>;
   finishAuthorityRecovery(roomId: string): void;
-  prepareTerminalAcknowledgement(roomId: string): Promise<boolean>;
-  confirmTerminalAcknowledged(roomId: string): Promise<boolean>;
   active: BattleTerminalObservation | null;
   isLocked(roomId: string | null): boolean;
 } {
@@ -185,20 +169,6 @@ export function useBattleTerminalRefresh(
     },
     [sessionGeneration],
   );
-  const confirmTerminalAcknowledged = useCallback(
-    (roomId: string) =>
-      sessionGeneration
-        ? confirmAcknowledgedResult(sessionGeneration, roomId)
-        : Promise.resolve(false),
-    [sessionGeneration],
-  );
-  const prepareTerminalAcknowledgement = useCallback(
-    (roomId: string) =>
-      sessionGeneration
-        ? prepareAcknowledgement(sessionGeneration, roomId)
-        : Promise.resolve(false),
-    [sessionGeneration],
-  );
   const isLocked = useCallback(
     (roomId: string | null) => {
       if (!sessionGeneration) return false;
@@ -217,8 +187,6 @@ export function useBattleTerminalRefresh(
     prepareAuthorityRecovery,
     readAuthorityRoom,
     finishAuthorityRecovery,
-    prepareTerminalAcknowledgement,
-    confirmTerminalAcknowledged,
     active: state?.active ?? null,
     isLocked,
   };
@@ -280,15 +248,8 @@ function reportTerminalObservation(
       resetTerminalRetry(state);
       state.completed.add(key);
       state.failure = null;
-      const battle = getApiQueryData(generation, "battle.bootstrap");
-      const identity = getApiQueryData(generation, "identity.bootstrap");
-      if (
-        battle?.current_result?.room_id !== observation.roomId &&
-        identity?.battle_result?.room_id !== observation.roomId
-      ) {
-        state.active = null;
-        syncRouteSuppression(state);
-      }
+      state.active = null;
+      syncRouteSuppression(state);
       publishCoordinator(state);
     })
     .catch(() => {
@@ -304,83 +265,6 @@ function reportTerminalObservation(
         state.terminalOwners.delete(key);
     });
   state.terminalInFlight.set(key, task);
-  return task;
-}
-
-async function prepareAcknowledgement(
-  generation: string,
-  roomId: string,
-): Promise<boolean> {
-  if (!isCurrentGeneration(generation)) return false;
-  const state = coordinatorFor(generation);
-  let observation = state.active;
-  if (!observation) {
-    const battle = getApiQueryData(generation, "battle.bootstrap");
-    const identity = getApiQueryData(generation, "identity.bootstrap");
-    if (
-      battle?.current_result?.room_id !== roomId &&
-      identity?.battle_result?.room_id !== roomId
-    )
-      return false;
-    const room = await readCoordinatorRoom(generation, roomId);
-    if (!room || !isBattleAssetTerminal(room.status)) return false;
-    observation = {
-      roomId: room.room_id,
-      stateVersion: room.state_version,
-    };
-  }
-  if (observation.roomId !== roomId) return false;
-  const key = terminalRefreshKey(generation, observation);
-  await reportTerminalObservation(generation, observation);
-  return isCurrentObservation(state, observation) && state.completed.has(key);
-}
-
-async function confirmAcknowledgedResult(
-  generation: string,
-  roomId: string,
-): Promise<boolean> {
-  if (!isCurrentGeneration(generation)) return false;
-  const state = coordinators.get(generation);
-  const observation = state?.active;
-  if (!state || !observation || observation.roomId !== roomId) return false;
-  const key = terminalRefreshKey(generation, observation);
-  if (!isCurrentObservation(state, observation) || !state.completed.has(key))
-    return false;
-  const existing = state.acknowledgeInFlight.get(key);
-  if (existing) return existing;
-
-  const acknowledgeOwner = Symbol(`battle-acknowledge:${key}`);
-  state.acknowledgeOwners.set(key, acknowledgeOwner);
-  const batch = fetchApiQueryBatchAsOwner(
-    acknowledgeOwner,
-    postAcknowledgeRequests,
-    { cancelRouteIds: postAcknowledgeCancellationRoutes },
-  );
-  const task = batch
-    .then(() => {
-      if (!isCurrentObservation(state, observation)) return false;
-      const battle = getApiQueryData(generation, "battle.bootstrap");
-      const identity = getApiQueryData(generation, "identity.bootstrap");
-      if (
-        battle?.current_result?.room_id === roomId ||
-        identity?.battle_result?.room_id === roomId
-      )
-        return false;
-      state.active = null;
-      state.failure = null;
-      resetTerminalRetry(state);
-      syncRouteSuppression(state);
-      publishCoordinator(state);
-      return true;
-    })
-    .catch(() => false)
-    .finally(() => {
-      if (state.acknowledgeInFlight.get(key) === task)
-        state.acknowledgeInFlight.delete(key);
-      if (state.acknowledgeOwners.get(key) === acknowledgeOwner)
-        state.acknowledgeOwners.delete(key);
-    });
-  state.acknowledgeInFlight.set(key, task);
   return task;
 }
 
@@ -584,8 +468,6 @@ function coordinatorFor(generation: string): CoordinatorState {
     roomInFlight: new Map(),
     terminalInFlight: new Map(),
     terminalOwners: new Map(),
-    acknowledgeInFlight: new Map(),
-    acknowledgeOwners: new Map(),
     completed: new Set(),
     failure: null,
     retryAttempt: 0,
