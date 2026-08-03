@@ -2479,16 +2479,16 @@ input:focus {
   width: 100%;
   height: 100%;
   display: grid;
-  grid-template-columns: 54px 54px;
+  grid-template-columns: 48px 48px;
   align-items: end;
   justify-content: space-between;
   gap: 0;
 }
 .app-shell .vip-benefit-grid article {
   min-width: 0;
-  height: 54px;
+  height: 52px;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
   position: relative;
   pointer-events: none;
@@ -2740,6 +2740,9 @@ input:focus {
   display: grid;
   position: relative;
   padding: 0 54px;
+}
+.app-shell .gacha-pity-row {
+  position: relative;
 }
 .app-shell .gacha-rarity-previews {
   display: grid;
@@ -7934,7 +7937,7 @@ html[data-app-shell-active] #root {
 .app-shell .gacha-details {
   height: 153px;
   display: grid;
-  grid-template-rows: 72px 57px;
+  grid-template-rows: 72px 65px;
   align-content: start;
   gap: 0;
   padding: 0;
@@ -7977,15 +7980,23 @@ html[data-app-shell-active] #root {
   line-height: 10px;
 }
 
+.app-shell .gacha-pity-row {
+  width: 100%;
+  height: 65px;
+  display: grid;
+  align-items: end;
+  justify-items: center;
+}
+
 .app-shell .pity-capsule {
-  width: 274px;
+  width: clamp(218px, 64vw, 246px);
   max-width: 100%;
   min-height: 0;
   height: 52px;
   grid-template-columns: 44px minmax(0, 1fr) 38px;
   gap: 5px;
   justify-self: center;
-  margin: 5px auto 0;
+  margin: 0 auto;
   padding: 3px 4px;
   border-radius: 27px;
 }
@@ -8021,12 +8032,26 @@ html[data-app-shell-active] #root {
 }
 
 .app-shell .pity-capsule:has(.pity-error) {
-  width: 306px;
+  width: clamp(218px, 64vw, 246px);
 }
 
 .app-shell .gacha-details:has(.gacha-rule-failure) {
-  height: 158px;
-  grid-template-rows: 90px 68px;
+  height: 153px;
+  grid-template-rows: 72px 65px;
+}
+
+.app-shell .gacha-pity-row .gacha-rule-failure {
+  width: clamp(218px, 64vw, 246px);
+  min-height: 52px;
+  height: 52px;
+  gap: 4px;
+  padding: 5px 6px;
+  font-size: 8px;
+}
+
+.app-shell .gacha-pity-row .gacha-rule-failure .button {
+  min-height: 32px;
+  padding-inline: 7px;
 }
 
 .app-shell .gacha-actions {

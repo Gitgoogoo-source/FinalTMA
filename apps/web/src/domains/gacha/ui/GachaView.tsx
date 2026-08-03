@@ -347,7 +347,6 @@ export function GachaView({
 
             <Card className="gacha-details">
               <div className="gacha-reward-preview">
-                {dailyBenefits(handleFreeRareClaimed)}
                 <div
                   className={`gacha-rarity-previews${selectedBox.tier === "normal" ? " normal-tier" : ""}`}
                   role="list"
@@ -381,8 +380,9 @@ export function GachaView({
                   })}
                 </div>
               </div>
-              {rulesComplete ? (
-                <>
+              <div className="gacha-pity-row">
+                {dailyBenefits(handleFreeRareClaimed)}
+                {rulesComplete ? (
                   <div className="pity-capsule" aria-live="polite">
                     <span
                       className="pity-ring"
@@ -429,18 +429,18 @@ export function GachaView({
                       <Gift />
                     </span>
                   </div>
-                </>
-              ) : (
-                <div className="gacha-rule-failure" role="alert">
-                  <strong>开盒规则加载失败，请重新加载</strong>
-                  <Button
-                    disabled={boxes.isFetching}
-                    onClick={() => void boxes.refetch()}
-                  >
-                    {boxes.isFetching ? "正在重新加载" : "重新加载"}
-                  </Button>
-                </div>
-              )}
+                ) : (
+                  <div className="gacha-rule-failure" role="alert">
+                    <strong>开盒规则加载失败，请重新加载</strong>
+                    <Button
+                      disabled={boxes.isFetching}
+                      onClick={() => void boxes.refetch()}
+                    >
+                      {boxes.isFetching ? "正在重新加载" : "重新加载"}
+                    </Button>
+                  </div>
+                )}
+              </div>
             </Card>
 
             <div className="gacha-actions">
