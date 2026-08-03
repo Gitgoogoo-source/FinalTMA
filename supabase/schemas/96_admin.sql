@@ -279,7 +279,7 @@ as $$
           'fixture_version', 'battle-v1',
           'catalog_version', 'v1',
           'catalog_checksum', 'de521f2687086cb358fb557a4a7ada3bc3c5fc132d673f0256b4573028ddba46',
-          'battle_checksum', '1cfe7a9c629c814baea5d8ddc3abf29e16fb8af69f583b4bd3ce00d14e8a9cad',
+          'battle_checksum', 'f8501fddf4804985e1e6708f9cbc2b283d7609c2a60f9e464078bf24b1131d99',
           'matrix', jsonb_agg(
             jsonb_build_object(
               'role', d.role,
@@ -729,7 +729,7 @@ begin
       select 1 from battle.rooms
       where status in (
         'preparing_share', 'waiting', 'lobby_waiting', 'lobby_countdown',
-        'active_select', 'reveal', 'forced_switch'
+        'active_turn'
       )
     )
     or exists (
@@ -790,7 +790,7 @@ begin
   cross join lateral unnest(d.skill_slots) skill_slot
   where d.fixture_version = p_fixture_version;
   if v_catalog_checksum <> 'de521f2687086cb358fb557a4a7ada3bc3c5fc132d673f0256b4573028ddba46'
-    or v_battle_checksum <> '1cfe7a9c629c814baea5d8ddc3abf29e16fb8af69f583b4bd3ce00d14e8a9cad'
+    or v_battle_checksum <> 'f8501fddf4804985e1e6708f9cbc2b283d7609c2a60f9e464078bf24b1131d99'
     or not battle.rules_complete('battle-v1')
     or v_matrix_count <> 36
     or v_matrix_element_count <> 5

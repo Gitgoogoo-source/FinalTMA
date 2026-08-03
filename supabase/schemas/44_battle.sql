@@ -13,8 +13,9 @@ create table battle.rulesets (
   check ((parameters->>'lobby_timeout_seconds')::integer = 300),
   check ((parameters->>'lobby_countdown_seconds')::integer = 3),
   check ((parameters->>'action_timeout_seconds')::integer = 15),
-  check ((parameters->>'forced_switch_timeout_seconds')::integer = 15),
-  check ((parameters->>'reveal_seconds')::integer = 3),
+  check ((parameters->>'actions_per_round')::integer = 2),
+  check ((parameters->>'timeout_skill_position')::integer = 1),
+  check (parameters->>'initiative_rule' = 'opening_speed_creator_tie'),
   check ((parameters->>'max_normal_turns')::integer = 20),
   check (parameters->'outbox_retry_seconds' = '[1, 2, 5, 10, 30]'::jsonb)
 );
@@ -57,7 +58,6 @@ create table battle.skill_slots (
   id text not null check (id ~ '^S(0[1-9]|10)$'),
   power integer not null check (power > 0),
   accuracy_bps integer not null check (accuracy_bps between 1 and 10000),
-  priority smallint not null check (priority between -1 and 1),
   trajectory text not null check (btrim(trajectory) <> ''),
   primary key (ruleset_id, id)
 );
@@ -171,12 +171,15 @@ create table battle.rooms (
   invite_token_hash text not null unique check (invite_token_hash ~ '^[0-9a-f]{64}$'),
   status text not null check (status in (
     'preparing_share', 'waiting', 'lobby_waiting', 'lobby_countdown',
-    'active_select', 'reveal', 'forced_switch',
+    'active_turn',
     'finished', 'draw', 'cancelled', 'expired', 'voided'
   )),
   state_version bigint not null default 1 check (state_version > 0),
-  current_turn_no smallint not null default 0 check (current_turn_no between 0 and 20),
-  next_status text check (next_status in ('active_select', 'forced_switch')),
+  first_actor_side text check (first_actor_side in ('creator', 'opponent')),
+  active_actor_side text check (active_actor_side in ('creator', 'opponent')),
+  current_round_no smallint not null default 0 check (current_round_no between 0 and 20),
+  current_action_ordinal smallint not null default 0 check (current_action_ordinal between 0 and 2),
+  latest_action_sequence bigint not null default 0 check (latest_action_sequence >= 0),
   private_seed bytea,
   seed_commitment text check (seed_commitment is null or seed_commitment ~ '^[0-9a-f]{64}$'),
   prepare_deadline timestamptz not null,
@@ -186,11 +189,6 @@ create table battle.rooms (
   lobby_expires_at timestamptz,
   lobby_start_deadline timestamptz,
   phase_deadline timestamptz,
-  reveal_ends_at timestamptz,
-  pending_result text check (pending_result in ('winner', 'draw')),
-  pending_winner_participant_id uuid,
-  pending_result_reason text,
-  resolution_event jsonb,
   finished_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -212,7 +210,8 @@ create table battle.rooms (
       accepted_at is not null
       and lobby_expires_at is not null
       and lobby_expires_at = accepted_at + interval '5 minutes'
-      and current_turn_no = 0
+      and current_round_no = 0
+      and current_action_ordinal = 0
       and private_seed is not null
       and seed_commitment is not null
     )
@@ -221,18 +220,24 @@ create table battle.rooms (
     (status = 'lobby_countdown') = (lobby_start_deadline is not null)
   ),
   check (
-    status not in ('active_select', 'reveal', 'forced_switch', 'finished', 'draw')
-    or (private_seed is not null and seed_commitment is not null and current_turn_no >= 1)
+    status not in ('active_turn', 'finished', 'draw')
+    or (private_seed is not null and seed_commitment is not null and current_round_no >= 1)
+  ),
+  check (
+    status <> 'active_turn'
+    or (
+      first_actor_side is not null
+      and active_actor_side is not null
+      and current_round_no between 1 and 20
+      and current_action_ordinal between 1 and 2
+      and phase_deadline is not null
+    )
   ),
   check (
     (status in ('finished', 'draw', 'cancelled', 'expired', 'voided'))
     = (finished_at is not null)
   ),
-  check (
-    (pending_result is null and pending_winner_participant_id is null)
-    or (pending_result = 'draw' and pending_winner_participant_id is null)
-    or (pending_result = 'winner' and pending_winner_participant_id is not null)
-  )
+  check ((first_actor_side is null) = (current_round_no = 0))
 );
 
 create index battle_rooms_prepare_due_idx on battle.rooms (prepare_deadline)
@@ -243,9 +248,7 @@ create index battle_rooms_lobby_due_idx
 on battle.rooms (lobby_expires_at, lobby_start_deadline)
 where status in ('lobby_waiting', 'lobby_countdown');
 create index battle_rooms_phase_due_idx on battle.rooms (phase_deadline)
-where status in ('active_select', 'forced_switch');
-create index battle_rooms_reveal_due_idx on battle.rooms (reveal_ends_at)
-where status = 'reveal';
+where status = 'active_turn';
 
 create table battle.prepared_shares (
   room_id uuid primary key references battle.rooms(id),
@@ -319,11 +322,6 @@ create table battle.participants (
   ),
   check (status <> 'lobby' or last_heartbeat_at is not null)
 );
-
-alter table battle.rooms
-add constraint battle_rooms_pending_winner_participant_fkey
-foreign key (id, pending_winner_participant_id)
-references battle.participants(room_id, id);
 
 create unique index battle_participants_one_active_per_user_idx
 on battle.participants (user_id)
@@ -407,39 +405,36 @@ create table battle.stakes (
 
 create table battle.turns (
   room_id uuid not null references battle.rooms(id),
-  turn_no smallint not null check (turn_no between 1 and 20),
-  phase text not null check (phase in ('normal', 'forced_switch')),
-  deadline timestamptz not null,
+  round_no smallint not null check (round_no between 1 and 20),
   start_snapshot_hash text not null check (start_snapshot_hash ~ '^[0-9a-f]{64}$'),
   resolution_hash text check (resolution_hash is null or resolution_hash ~ '^[0-9a-f]{64}$'),
   resolved_at timestamptz,
   created_at timestamptz not null default now(),
-  primary key (room_id, turn_no, phase),
+  primary key (room_id, round_no),
   check ((resolution_hash is null) = (resolved_at is null))
 );
 
 create table battle.actions (
   id uuid primary key default extensions.gen_random_uuid(),
   room_id uuid not null references battle.rooms(id),
-  turn_no smallint not null check (turn_no between 1 and 20),
-  phase text not null check (phase in ('normal', 'forced_switch')),
+  round_no smallint not null check (round_no between 1 and 20),
+  action_ordinal smallint not null check (action_ordinal between 1 and 2),
   participant_id uuid not null,
-  kind text not null check (kind in ('attack', 'switch', 'forced_switch')),
+  kind text not null check (kind in ('attack', 'switch', 'replace_attack')),
   source text not null check (source in ('player', 'timeout')),
   skill_position smallint check (skill_position between 1 and 4),
   skill_id text,
   target_slot smallint check (target_slot between 1 and 3),
-  action_ordinal smallint not null default 1 check (action_ordinal = 1),
   operation_id uuid references operations.operations(id),
   locked_at timestamptz not null default now(),
-  unique (room_id, turn_no, phase, participant_id),
+  unique (room_id, round_no, action_ordinal),
   unique (operation_id),
-  foreign key (room_id, turn_no, phase) references battle.turns(room_id, turn_no, phase),
+  foreign key (room_id, round_no) references battle.turns(room_id, round_no),
   foreign key (room_id, participant_id) references battle.participants(room_id, id),
   check (
-    (phase = 'normal' and kind = 'attack' and skill_position is not null and skill_id is not null and target_slot is null)
-    or (phase = 'normal' and kind = 'switch' and skill_position is null and skill_id is null and target_slot is not null)
-    or (phase = 'forced_switch' and kind = 'forced_switch' and skill_position is null and skill_id is null and target_slot is not null)
+    (kind = 'attack' and skill_position is not null and skill_id is not null and target_slot is null)
+    or (kind = 'switch' and skill_position is null and skill_id is null and target_slot is not null)
+    or (kind = 'replace_attack' and skill_position is not null and skill_id is not null and target_slot is not null)
   )
 );
 
@@ -941,10 +936,15 @@ begin
     raise exception using errcode = 'P0001', message = 'BATTLE_INVARIANT',
       detail = jsonb_build_object('kind', 'room_missing', 'room_id', p_room_id)::text;
   end if;
-  v_state_hash := battle.room_snapshot_hash(p_room_id);
   select coalesce(max(sequence), 0) + 1 into v_sequence
   from battle.events
   where room_id = p_room_id;
+  if p_kind = 'action_resolved' then
+    update battle.rooms
+    set latest_action_sequence = v_sequence
+    where id = p_room_id;
+  end if;
+  v_state_hash := battle.room_snapshot_hash(p_room_id);
   insert into battle.events (
     room_id, sequence, state_version, state_hash, kind, public_payload, private_payload
   ) values (
@@ -978,16 +978,16 @@ as $$
           'room_id', r.id,
           'status', r.status,
           'state_version', r.state_version,
-          'current_turn_no', r.current_turn_no,
-          'next_status', r.next_status,
+          'first_actor_side', r.first_actor_side,
+          'active_actor_side', r.active_actor_side,
+          'current_round_no', r.current_round_no,
+          'current_action_ordinal', r.current_action_ordinal,
+          'latest_action_sequence', r.latest_action_sequence,
           'seed_commitment', r.seed_commitment,
           'accepted_at', r.accepted_at,
           'lobby_expires_at', r.lobby_expires_at,
           'lobby_start_deadline', r.lobby_start_deadline,
           'phase_deadline', r.phase_deadline,
-          'reveal_ends_at', r.reveal_ends_at,
-          'pending_result', r.pending_result,
-          'pending_winner_participant_id', r.pending_winner_participant_id,
           'presence', coalesce((
             select jsonb_agg(jsonb_build_object(
               'participant_id', p.id,
@@ -1012,14 +1012,14 @@ as $$
           ), '[]'::jsonb),
           'actions', coalesce((
             select jsonb_agg(jsonb_build_object(
-              'turn_no', a.turn_no,
-              'phase', a.phase,
+              'round_no', a.round_no,
+              'action_ordinal', a.action_ordinal,
               'participant_id', a.participant_id,
               'kind', a.kind,
               'source', a.source,
               'skill_id', a.skill_id,
               'target_slot', a.target_slot
-            ) order by a.turn_no, a.phase, a.participant_id)
+            ) order by a.round_no, a.action_ordinal)
             from battle.actions a
             where a.room_id = r.id
           ), '[]'::jsonb)
@@ -1054,7 +1054,7 @@ $$;
 create or replace function battle.hit_roll(
   p_private_seed bytea,
   p_room_id uuid,
-  p_turn_no integer,
+  p_round_no integer,
   p_actor_side text,
   p_action_ordinal integer,
   p_skill_id text,
@@ -1068,7 +1068,7 @@ as $$
   with digest_value as (
     select extensions.hmac(
       convert_to(
-        p_room_id::text || '|' || p_turn_no::text || '|' || p_actor_side || '|'
+        p_room_id::text || '|' || p_round_no::text || '|' || p_actor_side || '|'
         || p_action_ordinal::text || '|' || p_skill_id,
         'UTF8'
       ),
@@ -1089,7 +1089,7 @@ $$;
 
 create or replace function battle.attack_result(
   p_room battle.rooms,
-  p_turn_no integer,
+  p_round_no integer,
   p_side text,
   p_action battle.actions,
   p_attacker battle.team_members,
@@ -1126,7 +1126,7 @@ begin
       detail = jsonb_build_object('kind', 'attack_config_missing', 'action_id', p_action.id)::text;
   end if;
   v_roll := battle.hit_roll(
-    p_room.private_seed, p_room.id, p_turn_no, p_side,
+    p_room.private_seed, p_room.id, p_round_no, p_side,
     p_action.action_ordinal, p_action.skill_id,
     battle.rule_int(p_room.ruleset_id, 'random_modulus')
   );
@@ -1163,7 +1163,6 @@ begin
     'skill_id', v_skill.id,
     'skill_name', v_skill.name,
     'effect_key', v_skill.effect_key,
-    'priority', v_slot.priority,
     'accuracy_bps', v_slot.accuracy_bps,
     'roll', v_roll,
     'hit', v_roll < v_slot.accuracy_bps,
@@ -1171,7 +1170,8 @@ begin
     'raw_damage', v_raw,
     'damage', v_damage,
     'applied_damage', v_applied,
-    'defender_current_hp', p_defender.current_hp
+    'defender_current_hp', p_defender.current_hp,
+    'defender_max_hp', p_defender.max_hp
   );
 end;
 $$;
@@ -1299,7 +1299,6 @@ as $$
     'name', s.name,
     'power', ss.power,
     'accuracy_bps', ss.accuracy_bps,
-    'priority', ss.priority,
     'effect_key', s.effect_key
   )
   from battle.skills s
@@ -1393,8 +1392,8 @@ as $$
   where p.room_id = p_room_id and p.id <> p_participant_id
 $$;
 
-create or replace function battle.resolution_event_json(
-  p_room_id uuid,
+create or replace function battle.action_event_json(
+  p_event_id uuid,
   p_participant_id uuid
 )
 returns jsonb
@@ -1403,21 +1402,24 @@ stable
 set search_path = ''
 as $$
 declare
-  v_room battle.rooms%rowtype;
+  v_event battle.events%rowtype;
   v_self_side text;
   v_actions jsonb;
   v_self_hp jsonb;
   v_opponent_hp jsonb;
 begin
-  select * into v_room from battle.rooms where id = p_room_id;
-  if v_room.status <> 'reveal' or v_room.resolution_event is null then return null; end if;
+  select * into v_event
+  from battle.events
+  where id = p_event_id and kind = 'action_resolved';
   select side into v_self_side
   from battle.participants
-  where id = p_participant_id and room_id = p_room_id;
+  where id = p_participant_id and room_id = v_event.room_id;
+  if v_event.id is null or v_self_side is null then return null; end if;
+
   select coalesce(jsonb_agg(
     case
       when action->>'kind' = 'attack'
-           and action->>'actor_side' = v_self_side
+        and action->>'actor_side' = v_self_side
       then jsonb_build_object(
         'actor', 'self',
         'kind', 'attack',
@@ -1430,13 +1432,13 @@ begin
           else 'normal'
         end,
         'target_hp_percent_before', round(
-          (
-            target.current_hp + (action->>'applied_damage')::integer
-          )::numeric * 100 / target.max_hp::numeric,
+          (action->>'target_hp_before')::numeric * 100
+            / (action->>'target_max_hp')::numeric,
           2
         ),
         'target_hp_percent_after', round(
-          target.current_hp::numeric * 100 / target.max_hp::numeric,
+          (action->>'target_hp_after')::numeric * 100
+            / (action->>'target_max_hp')::numeric,
           2
         ),
         'knockout', (action->>'knockout')::boolean
@@ -1453,9 +1455,8 @@ begin
           when 7500 then 'not_effective'
           else 'normal'
         end,
-        'target_current_hp_before',
-          target.current_hp + (action->>'applied_damage')::integer,
-        'target_current_hp_after', target.current_hp,
+        'target_current_hp_before', (action->>'target_hp_before')::integer,
+        'target_current_hp_after', (action->>'target_hp_after')::integer,
         'knockout', (action->>'knockout')::boolean
       )
       else jsonb_build_object(
@@ -1463,42 +1464,98 @@ begin
           when action->>'actor_side' = v_self_side then 'self'
           else 'opponent'
         end,
-        'kind', action->>'kind',
+        'kind', 'switch',
         'switch_to', action->'switch_to'
       )
     end
-    order by action_ordinal
+    order by display_ordinal
   ), '[]'::jsonb) into v_actions
-  from jsonb_array_elements(v_room.resolution_event->'actions')
-    with ordinality as resolution_actions(action, action_ordinal)
-  left join battle.team_members target
-    on target.id = (action->>'defender_member_id')::uuid;
+  from jsonb_array_elements(v_event.private_payload->'actions')
+    with ordinality as displayed_actions(action, display_ordinal);
+
   select coalesce(jsonb_agg(jsonb_build_object(
-    'slot', tm.slot,
-    'current_hp', tm.current_hp,
-    'max_hp', tm.max_hp,
-    'alive', tm.alive
-  ) order by tm.slot), '[]'::jsonb) into v_self_hp
-  from battle.team_members tm
-  where tm.participant_id = p_participant_id;
+    'slot', (team_member->>'slot')::smallint,
+    'current_hp', (team_member->>'current_hp')::integer,
+    'max_hp', (team_member->>'max_hp')::integer,
+    'alive', (team_member->>'alive')::boolean
+  ) order by (team_member->>'slot')::smallint), '[]'::jsonb)
+  into v_self_hp
+  from jsonb_array_elements(v_event.private_payload->'teams') team(team_member)
+  where team_member->>'side' = v_self_side;
+
   select coalesce(jsonb_agg(jsonb_build_object(
-    'slot', tm.slot,
-    'hp_percent', round(tm.current_hp::numeric * 100 / tm.max_hp::numeric, 2),
-    'alive', tm.alive
-  ) order by tm.slot), '[]'::jsonb) into v_opponent_hp
-  from battle.team_members tm
-  join battle.participants p on p.id = tm.participant_id
-  where p.room_id = p_room_id and p.id <> p_participant_id;
+    'slot', (team_member->>'slot')::smallint,
+    'hp_percent', round(
+      (team_member->>'current_hp')::numeric * 100
+        / (team_member->>'max_hp')::numeric,
+      2
+    ),
+    'alive', (team_member->>'alive')::boolean
+  ) order by (team_member->>'slot')::smallint), '[]'::jsonb)
+  into v_opponent_hp
+  from jsonb_array_elements(v_event.private_payload->'teams') team(team_member)
+  where team_member->>'side' <> v_self_side;
+
   return jsonb_build_object(
-    'event_id', v_room.resolution_event->'event_id',
-    'state_version', v_room.state_version,
-    'turn_no', v_room.current_turn_no,
+    'sequence', v_event.sequence,
+    'event_id', v_event.id,
+    'state_version', v_event.state_version,
+    'round_no', (v_event.private_payload->>'round_no')::smallint,
+    'action_ordinal', (v_event.private_payload->>'action_ordinal')::smallint,
+    'actor', case
+      when v_event.private_payload->>'actor_side' = v_self_side then 'self'
+      else 'opponent'
+    end,
     'actions', v_actions,
     'self_hp', v_self_hp,
-    'opponent_hp', v_opponent_hp,
-    'reveal_ends_at', v_room.reveal_ends_at
+    'opponent_hp', v_opponent_hp
   );
 end;
+$$;
+
+create or replace function battle.action_events_json(
+  p_room_id uuid,
+  p_participant_id uuid,
+  p_after_action_sequence bigint
+)
+returns jsonb
+language sql
+stable
+set search_path = ''
+as $$
+  select case
+    when p_after_action_sequence is null then '[]'::jsonb
+    else coalesce(jsonb_agg(
+      battle.action_event_json(action_event.id, p_participant_id)
+      order by action_event.sequence
+    ), '[]'::jsonb)
+  end
+  from (
+    select e.id, e.sequence
+    from battle.events e
+    where p_after_action_sequence is not null
+      and e.room_id = p_room_id
+      and e.kind = 'action_resolved'
+      and e.sequence > p_after_action_sequence
+    order by e.sequence
+    limit 16
+  ) action_event
+$$;
+
+create or replace function battle.has_more_action_events(
+  p_room_id uuid,
+  p_after_action_sequence bigint
+)
+returns boolean
+language sql
+stable
+set search_path = ''
+as $$
+  select p_after_action_sequence is not null and count(*) > 16
+  from battle.events e
+  where e.room_id = p_room_id
+    and e.kind = 'action_resolved'
+    and e.sequence > coalesce(p_after_action_sequence, 9223372036854775807)
 $$;
 
 create or replace function battle.participation_json(p_user_id uuid)
@@ -1515,8 +1572,7 @@ as $$
     'state_version', r.state_version,
     'entry_fee', tier.entry_fee,
     'expires_at', coalesce(r.lobby_expires_at, r.expires_at),
-    'phase_deadline', r.phase_deadline,
-    'reveal_ends_at', r.reveal_ends_at
+    'phase_deadline', r.phase_deadline
   )
   from battle.participants p
   join battle.rooms r on r.id = p.room_id
@@ -1564,51 +1620,13 @@ set search_path = ''
 as $$
   select case
     when p.status = 'active'
-      and r.status = 'active_select'
-      and exists (
-        select 1
-        from battle.actions a
-        where a.room_id = r.id
-          and a.turn_no = r.current_turn_no
-          and a.phase = 'normal'
-          and a.participant_id = p.id
-      )
-    then 'locked'
-    when p.status = 'active'
-      and r.status = 'active_select'
+      and r.status = 'active_turn'
+      and r.active_actor_side = p.side
       and r.phase_deadline > now()
       and exists (
         select 1
         from battle.team_members tm
-        where tm.participant_id = p.id and tm.active
-      )
-    then 'available'
-    when p.status = 'active'
-      and r.status = 'forced_switch'
-      and exists (
-        select 1
-        from battle.team_members tm
-        where tm.participant_id = p.id and tm.active
-      )
-    then 'not_applicable'
-    when p.status = 'active'
-      and r.status = 'forced_switch'
-      and exists (
-        select 1
-        from battle.actions a
-        where a.room_id = r.id
-          and a.turn_no = r.current_turn_no
-          and a.phase = 'forced_switch'
-          and a.participant_id = p.id
-      )
-    then 'locked'
-    when p.status = 'active'
-      and r.status = 'forced_switch'
-      and r.phase_deadline > now()
-      and exists (
-        select 1
-        from battle.team_members tm
-        where tm.participant_id = p.id and tm.alive and not tm.active
+        where tm.participant_id = p.id and tm.alive
       )
     then 'available'
     else 'not_applicable'
@@ -1621,7 +1639,8 @@ $$;
 
 create or replace function battle.room_snapshot_json(
   p_room_id uuid,
-  p_participant_id uuid
+  p_participant_id uuid,
+  p_after_action_sequence bigint default null
 )
 returns jsonb
 language plpgsql
@@ -1646,9 +1665,33 @@ begin
     'status', v_room.status,
     'state_version', v_room.state_version,
     'side', v_participant.side,
-    'turn_no', v_room.current_turn_no,
+    'round_no', v_room.current_round_no,
+    'action_ordinal', v_room.current_action_ordinal,
+    'first_actor', case
+      when v_room.first_actor_side is null then null
+      when v_room.first_actor_side = v_participant.side then 'self'
+      else 'opponent'
+    end,
+    'active_actor', case
+      when v_room.active_actor_side is null then null
+      when v_room.active_actor_side = v_participant.side then 'self'
+      else 'opponent'
+    end,
+    'active_action_mode', case
+      when v_room.status = 'active_turn'
+        and not exists (
+          select 1
+          from battle.participants active_participant
+          join battle.team_members active_member
+            on active_member.participant_id = active_participant.id
+          where active_participant.room_id = v_room.id
+            and active_participant.side = v_room.active_actor_side
+            and active_member.active
+        )
+      then 'replace_attack'
+      else 'normal'
+    end,
     'phase_deadline', v_room.phase_deadline,
-    'reveal_ends_at', v_room.reveal_ends_at,
     'prepare_deadline', case
       when v_participant.side = 'creator' and v_room.status = 'preparing_share'
       then v_room.prepare_deadline
@@ -1680,7 +1723,13 @@ begin
       then '[]'::jsonb
       else battle.opponent_team_json(p_room_id, p_participant_id)
     end,
-    'resolution_event', battle.resolution_event_json(p_room_id, p_participant_id),
+    'latest_action_sequence', v_room.latest_action_sequence,
+    'action_events', battle.action_events_json(
+      p_room_id, p_participant_id, p_after_action_sequence
+    ),
+    'has_more_action_events', battle.has_more_action_events(
+      p_room_id, p_after_action_sequence
+    ),
     'terminal_result', battle.terminal_result_json(p_room_id, p_participant_id)
   );
 end;
@@ -1717,8 +1766,9 @@ begin
         'lobby_timeout_seconds', (r.parameters->>'lobby_timeout_seconds')::integer,
         'lobby_countdown_seconds', (r.parameters->>'lobby_countdown_seconds')::integer,
         'action_timeout_seconds', (r.parameters->>'action_timeout_seconds')::integer,
-        'forced_switch_timeout_seconds', (r.parameters->>'forced_switch_timeout_seconds')::integer,
-        'reveal_seconds', (r.parameters->>'reveal_seconds')::integer,
+        'actions_per_round', (r.parameters->>'actions_per_round')::integer,
+        'timeout_skill_position', (r.parameters->>'timeout_skill_position')::integer,
+        'initiative_rule', r.parameters->>'initiative_rule',
         'max_normal_turns', (r.parameters->>'max_normal_turns')::integer
       )
       from battle.rulesets r where r.id = v_ruleset_id
@@ -1842,7 +1892,8 @@ $$;
 
 create or replace function api.battle_room(
   p_session_id uuid,
-  p_room_id uuid
+  p_room_id uuid,
+  p_after_action_sequence bigint default null
 )
 returns jsonb
 language plpgsql
@@ -1860,7 +1911,12 @@ begin
   if v_participant_id is null then
     perform api.raise_business_error('BATTLE_NOT_PARTICIPANT', '当前账号不是该 Battle 的参与者');
   end if;
-  v_result := battle.room_snapshot_json(p_room_id, v_participant_id);
+  if p_after_action_sequence is not null and p_after_action_sequence < 0 then
+    perform api.raise_business_error('REQUEST_INVALID', '动作事件游标无效');
+  end if;
+  v_result := battle.room_snapshot_json(
+    p_room_id, v_participant_id, p_after_action_sequence
+  );
   if v_result is null then
     perform api.raise_business_error('BATTLE_ROOM_NOT_FOUND', 'Battle 房间不存在');
   end if;
@@ -2126,7 +2182,7 @@ begin
     and status in ('preparing_share', 'waiting', 'lobby');
   update battle.rooms
   set status = p_status, finished_at = now(), phase_deadline = null,
-      reveal_ends_at = null, lobby_start_deadline = null, updated_at = now()
+      lobby_start_deadline = null, updated_at = now()
   where id = p_room_id;
   perform battle.record_event(
     p_room_id,
@@ -2230,19 +2286,17 @@ begin
         secs => battle.rule_int(v_room.ruleset_id, 'lobby_timeout_seconds')
       )
     )
-    or v_room.current_turn_no <> 0
+    or v_room.current_round_no <> 0
+    or v_room.current_action_ordinal <> 0
+    or v_room.first_actor_side is not null
+    or v_room.active_actor_side is not null
+    or v_room.latest_action_sequence <> 0
     or v_room.private_seed is null
     or octet_length(v_room.private_seed) <> 32
     or v_room.seed_commitment is distinct from encode(
       extensions.digest(v_room.private_seed, 'sha256'), 'hex'
     )
     or v_room.phase_deadline is not null
-    or v_room.reveal_ends_at is not null
-    or v_room.next_status is not null
-    or v_room.pending_result is not null
-    or v_room.pending_winner_participant_id is not null
-    or v_room.pending_result_reason is not null
-    or v_room.resolution_event is not null
     or v_room.finished_at is not null
     or (
       v_room.status = 'lobby_waiting'
@@ -2490,6 +2544,11 @@ declare
   v_room battle.rooms%rowtype;
   v_reason text;
   v_invariant_error text;
+  v_creator battle.participants%rowtype;
+  v_opponent battle.participants%rowtype;
+  v_creator_lead battle.team_members%rowtype;
+  v_opponent_lead battle.team_members%rowtype;
+  v_first_actor_side text;
 begin
   select * into v_room from battle.rooms where id = p_room_id for update;
   if v_room.status not in ('lobby_waiting', 'lobby_countdown') then return; end if;
@@ -2534,31 +2593,68 @@ begin
   update battle.participants
   set status = 'active'
   where room_id = p_room_id and status = 'lobby';
+
+  select * into v_creator
+  from battle.participants
+  where room_id = p_room_id and side = 'creator';
+  select * into v_opponent
+  from battle.participants
+  where room_id = p_room_id and side = 'opponent';
+  select * into v_creator_lead
+  from battle.team_members
+  where participant_id = v_creator.id and slot = 1 and active and alive;
+  select * into v_opponent_lead
+  from battle.team_members
+  where participant_id = v_opponent.id and slot = 1 and active and alive;
+  if v_creator_lead.id is null or v_opponent_lead.id is null then
+    raise exception using
+      errcode = 'P0001',
+      message = 'BATTLE_INVARIANT',
+      detail = jsonb_build_object(
+        'kind', 'opening_lead_missing',
+        'room_id', p_room_id
+      )::text;
+  end if;
+  v_first_actor_side := case
+    when v_opponent_lead.speed > v_creator_lead.speed then 'opponent'
+    else 'creator'
+  end;
+
   update battle.rooms
-  set status = 'active_select',
-      current_turn_no = 1,
+  set status = 'active_turn',
+      first_actor_side = v_first_actor_side,
+      active_actor_side = v_first_actor_side,
+      current_round_no = 1,
+      current_action_ordinal = 1,
       lobby_start_deadline = null,
-      phase_deadline = now() + make_interval(
+      phase_deadline = clock_timestamp() + make_interval(
         secs => battle.rule_int(v_room.ruleset_id, 'action_timeout_seconds')
       ),
-      updated_at = now()
+      updated_at = clock_timestamp()
   where id = p_room_id
   returning * into v_room;
   insert into battle.turns (
-    room_id, turn_no, phase, deadline, start_snapshot_hash
+    room_id, round_no, start_snapshot_hash
   ) values (
-    p_room_id, 1, 'normal', v_room.phase_deadline,
-    battle.room_snapshot_hash(p_room_id)
+    p_room_id, 1, battle.room_snapshot_hash(p_room_id)
   );
   perform battle.record_event(
     p_room_id,
     'battle_started',
     jsonb_build_object(
-      'turn_no', 1,
+      'round_no', 1,
+      'action_ordinal', 1,
+      'first_actor_side', v_first_actor_side,
+      'active_actor_side', v_first_actor_side,
       'deadline', v_room.phase_deadline,
       'seed_commitment', v_room.seed_commitment
     ),
-    jsonb_build_object('ruleset_checksum', v_room.ruleset_checksum)
+    jsonb_build_object(
+      'ruleset_checksum', v_room.ruleset_checksum,
+      'creator_lead_speed', v_creator_lead.speed,
+      'opponent_lead_speed', v_opponent_lead.speed,
+      'initiative_rule', 'opening_speed_creator_tie'
+    )
   );
 end;
 $$;
@@ -3259,7 +3355,8 @@ begin
           )
           else null
         end,
-        current_turn_no = 0,
+        current_round_no = 0,
+        current_action_ordinal = 0,
         phase_deadline = null,
         updated_at = v_now
     where id = v_room.id
@@ -3331,28 +3428,17 @@ stable
 security definer
 set search_path = ''
 as $$
-  select skill.position, skill.skill_id
-  from (
-    values
-      (1::smallint, p_member.skill_1_id),
-      (2::smallint, p_member.skill_2_id),
-      (3::smallint, p_member.skill_3_id),
-      (4::smallint, p_member.skill_4_id)
-  ) skill(position, skill_id)
-  join battle.skills s
-    on s.ruleset_id = p_ruleset_id and s.id = skill.skill_id
-  join battle.skill_slots ss
-    on ss.ruleset_id = s.ruleset_id and ss.id = s.slot_id
-  where skill.skill_id is not null
-  order by ss.accuracy_bps desc, skill.position
-  limit 1
+  select 1::smallint, p_member.skill_1_id
+  where p_member.skill_1_id is not null
+    and exists (
+      select 1
+      from battle.skills s
+      where s.ruleset_id = p_ruleset_id and s.id = p_member.skill_1_id
+    )
 $$;
 
 create or replace function battle.lock_timeout_action(
-  p_room_id uuid,
-  p_turn_no smallint,
-  p_phase text,
-  p_participant_id uuid
+  p_room_id uuid
 )
 returns battle.actions
 language plpgsql
@@ -3363,46 +3449,70 @@ declare
   v_room battle.rooms%rowtype;
   v_member battle.team_members%rowtype;
   v_choice record;
-  v_target_slot smallint;
+  v_participant battle.participants%rowtype;
   v_action battle.actions%rowtype;
 begin
+  select * into v_room
+  from battle.rooms
+  where id = p_room_id and status = 'active_turn'
+  for update;
+  if v_room.id is null or v_room.phase_deadline > clock_timestamp() then
+    return null;
+  end if;
+  select * into v_participant
+  from battle.participants
+  where room_id = p_room_id
+    and side = v_room.active_actor_side
+    and status = 'active';
+  if v_participant.id is null then
+    raise exception 'BATTLE_INVARIANT' using errcode = 'P0001';
+  end if;
   select * into v_action
   from battle.actions
-  where room_id = p_room_id and turn_no = p_turn_no
-    and phase = p_phase and participant_id = p_participant_id;
+  where room_id = p_room_id
+    and round_no = v_room.current_round_no
+    and action_ordinal = v_room.current_action_ordinal;
   if v_action.id is not null then return v_action; end if;
-  select * into v_room from battle.rooms where id = p_room_id;
-  if p_phase = 'normal' then
-    v_member := battle.active_member(p_participant_id);
+  v_member := battle.active_member(v_participant.id);
+  if v_member.id is not null then
     select * into v_choice from battle.choose_timeout_skill(v_room.ruleset_id, v_member);
     insert into battle.actions (
-      room_id, turn_no, phase, participant_id, kind, source,
+      room_id, round_no, action_ordinal, participant_id, kind, source,
       skill_position, skill_id
     ) values (
-      p_room_id, p_turn_no, p_phase, p_participant_id, 'attack', 'timeout',
+      p_room_id, v_room.current_round_no, v_room.current_action_ordinal,
+      v_participant.id, 'attack', 'timeout',
       v_choice.skill_position, v_choice.skill_id
     ) returning * into v_action;
   else
-    select slot into v_target_slot
+    select * into v_member
     from battle.team_members
-    where participant_id = p_participant_id and alive and not active
+    where participant_id = v_participant.id and alive
     order by slot
     limit 1;
-    if v_target_slot is null then
+    if v_member.id is null then
       raise exception 'BATTLE_INVARIANT' using errcode = 'P0001';
     end if;
+    select * into v_choice from battle.choose_timeout_skill(v_room.ruleset_id, v_member);
     insert into battle.actions (
-      room_id, turn_no, phase, participant_id, kind, source, target_slot
+      room_id, round_no, action_ordinal, participant_id, kind, source,
+      skill_position, skill_id, target_slot
     ) values (
-      p_room_id, p_turn_no, p_phase, p_participant_id,
-      'forced_switch', 'timeout', v_target_slot
+      p_room_id, v_room.current_round_no, v_room.current_action_ordinal,
+      v_participant.id, 'replace_attack', 'timeout',
+      v_choice.skill_position, v_choice.skill_id, v_member.slot
     ) returning * into v_action;
   end if;
   perform battle.append_audit(
     p_room_id, 'automatic_action',
     jsonb_build_object(
-      'turn_no', p_turn_no, 'phase', p_phase,
-      'participant_id', p_participant_id, 'action_id', v_action.id
+      'round_no', v_room.current_round_no,
+      'action_ordinal', v_room.current_action_ordinal,
+      'participant_id', v_participant.id,
+      'action_id', v_action.id,
+      'kind', v_action.kind,
+      'target_slot', v_action.target_slot,
+      'skill_position', v_action.skill_position
     )
   );
   return v_action;
@@ -3425,7 +3535,13 @@ as $$
     'effect_key', p_result->'effect_key',
     'hit', p_result->'hit',
     'multiplier_bps', p_result->'multiplier_bps',
-    'applied_damage', p_result->'applied_damage',
+    'target_hp_before', p_result->'defender_current_hp',
+    'target_hp_after', greatest(
+      0,
+      (p_result->>'defender_current_hp')::integer
+        - (p_result->>'applied_damage')::integer
+    ),
+    'target_max_hp', p_result->'defender_max_hp',
     'knockout',
     (p_result->>'applied_damage')::integer > 0
       and (p_result->>'applied_damage')::integer
@@ -3485,7 +3601,25 @@ begin
 end;
 $$;
 
-create or replace function battle.resolve_normal_turn(p_room_id uuid)
+create or replace function battle.action_teams_payload(p_room_id uuid)
+returns jsonb
+language sql
+stable
+set search_path = ''
+as $$
+  select coalesce(jsonb_agg(jsonb_build_object(
+    'side', p.side,
+    'slot', tm.slot,
+    'current_hp', tm.current_hp,
+    'max_hp', tm.max_hp,
+    'alive', tm.alive
+  ) order by p.side, tm.slot), '[]'::jsonb)
+  from battle.participants p
+  join battle.team_members tm on tm.participant_id = p.id
+  where p.room_id = p_room_id
+$$;
+
+create or replace function battle.resolve_active_action(p_room_id uuid)
 returns void
 language plpgsql
 security definer
@@ -3493,352 +3627,229 @@ set search_path = ''
 as $$
 declare
   v_room battle.rooms%rowtype;
+  v_action battle.actions%rowtype;
+  v_actor battle.participants%rowtype;
+  v_target battle.participants%rowtype;
+  v_actor_member battle.team_members%rowtype;
+  v_target_member battle.team_members%rowtype;
+  v_attack_result jsonb;
+  v_display_actions jsonb := '[]'::jsonb;
+  v_audit_payload jsonb;
+  v_round_no smallint;
+  v_action_ordinal smallint;
+  v_target_alive integer;
   v_creator battle.participants%rowtype;
   v_opponent battle.participants%rowtype;
-  v_creator_action battle.actions%rowtype;
-  v_opponent_action battle.actions%rowtype;
-  v_creator_member battle.team_members%rowtype;
-  v_opponent_member battle.team_members%rowtype;
-  v_creator_result jsonb;
-  v_opponent_result jsonb;
-  v_creator_priority integer;
-  v_opponent_priority integer;
-  v_creator_first boolean;
-  v_simultaneous boolean;
   v_creator_alive integer;
   v_opponent_alive integer;
   v_creator_hp numeric;
   v_opponent_hp numeric;
-  v_pending_result text;
+  v_terminal_result text;
   v_winner uuid;
-  v_next_status text;
   v_reason text;
-  v_event_id uuid := extensions.gen_random_uuid();
-  v_public_actions jsonb := '[]'::jsonb;
-  v_audit_actions jsonb := '[]'::jsonb;
 begin
-  select * into v_room from battle.rooms where id = p_room_id for update;
-  if v_room.status <> 'active_select' then
+  select * into v_room
+  from battle.rooms
+  where id = p_room_id
+  for update;
+  if v_room.status <> 'active_turn' then
     raise exception 'BATTLE_INVARIANT' using errcode = 'P0001';
   end if;
-  select * into v_creator
-  from battle.participants
-  where room_id = p_room_id and side = 'creator' for update;
-  select * into v_opponent
-  from battle.participants
-  where room_id = p_room_id and side = 'opponent' for update;
-  select * into v_creator_action
+  v_round_no := v_room.current_round_no;
+  v_action_ordinal := v_room.current_action_ordinal;
+  select * into v_action
   from battle.actions
-  where room_id = p_room_id and turn_no = v_room.current_turn_no
-    and phase = 'normal' and participant_id = v_creator.id;
-  select * into v_opponent_action
-  from battle.actions
-  where room_id = p_room_id and turn_no = v_room.current_turn_no
-    and phase = 'normal' and participant_id = v_opponent.id;
-  if v_creator_action.id is null or v_opponent_action.id is null then
+  where room_id = p_room_id
+    and round_no = v_round_no
+    and action_ordinal = v_action_ordinal;
+  select * into v_actor
+  from battle.participants
+  where room_id = p_room_id
+    and side = v_room.active_actor_side
+    and status = 'active'
+  for update;
+  select * into v_target
+  from battle.participants
+  where room_id = p_room_id
+    and side <> v_room.active_actor_side
+    and status = 'active'
+  for update;
+  if v_action.id is null
+    or v_actor.id is null
+    or v_target.id is null
+    or v_action.participant_id <> v_actor.id
+  then
     raise exception 'BATTLE_INVARIANT' using errcode = 'P0001';
   end if;
 
-  if v_creator_action.kind = 'switch' then
-    perform battle.switch_active_member(
-      v_creator.id, v_creator_action.target_slot
-    );
-    v_public_actions := v_public_actions || jsonb_build_array(jsonb_build_object(
-      'kind', 'switch', 'actor_side', 'creator',
-      'switch_to',
-      battle.public_switch_target(v_creator.id, v_creator_action.target_slot)
-    ));
-    v_audit_actions := v_audit_actions || jsonb_build_array(to_jsonb(v_creator_action));
-  end if;
-  if v_opponent_action.kind = 'switch' then
-    perform battle.switch_active_member(
-      v_opponent.id, v_opponent_action.target_slot
-    );
-    v_public_actions := v_public_actions || jsonb_build_array(jsonb_build_object(
-      'kind', 'switch', 'actor_side', 'opponent',
-      'switch_to',
-      battle.public_switch_target(v_opponent.id, v_opponent_action.target_slot)
-    ));
-    v_audit_actions := v_audit_actions || jsonb_build_array(to_jsonb(v_opponent_action));
-  end if;
-  v_creator_member := battle.active_member(v_creator.id);
-  v_opponent_member := battle.active_member(v_opponent.id);
-  if v_creator_member.id is null or v_opponent_member.id is null then
-    raise exception 'BATTLE_INVARIANT' using errcode = 'P0001';
-  end if;
-
-  if v_creator_action.kind = 'attack' and v_opponent_action.kind = 'attack' then
-    v_creator_result := battle.attack_result(
-      v_room, v_room.current_turn_no, 'creator',
-      v_creator_action, v_creator_member, v_opponent_member
-    );
-    v_opponent_result := battle.attack_result(
-      v_room, v_room.current_turn_no, 'opponent',
-      v_opponent_action, v_opponent_member, v_creator_member
-    );
-    v_creator_priority := (v_creator_result->>'priority')::integer;
-    v_opponent_priority := (v_opponent_result->>'priority')::integer;
-    v_simultaneous := v_creator_priority = v_opponent_priority
-      and v_creator_member.speed = v_opponent_member.speed;
-    v_creator_first := v_creator_priority > v_opponent_priority
-      or (v_creator_priority = v_opponent_priority
-          and v_creator_member.speed > v_opponent_member.speed);
-    if v_simultaneous then
-      update battle.team_members
-      set current_hp = current_hp - (v_creator_result->>'applied_damage')::integer,
-          alive = current_hp - (v_creator_result->>'applied_damage')::integer > 0,
-          active = active and current_hp - (v_creator_result->>'applied_damage')::integer > 0
-      where id = v_opponent_member.id;
-      update battle.team_members
-      set current_hp = current_hp - (v_opponent_result->>'applied_damage')::integer,
-          alive = current_hp - (v_opponent_result->>'applied_damage')::integer > 0,
-          active = active and current_hp - (v_opponent_result->>'applied_damage')::integer > 0
-      where id = v_creator_member.id;
-      v_public_actions := v_public_actions
-        || jsonb_build_array(battle.public_attack_result(v_creator_result))
-        || jsonb_build_array(battle.public_attack_result(v_opponent_result));
-      v_audit_actions := v_audit_actions
-        || jsonb_build_array(v_creator_result)
-        || jsonb_build_array(v_opponent_result);
-    elsif v_creator_first then
-      update battle.team_members
-      set current_hp = current_hp - (v_creator_result->>'applied_damage')::integer,
-          alive = current_hp - (v_creator_result->>'applied_damage')::integer > 0,
-          active = active and current_hp - (v_creator_result->>'applied_damage')::integer > 0
-      where id = v_opponent_member.id;
-      v_public_actions := v_public_actions
-        || jsonb_build_array(battle.public_attack_result(v_creator_result));
-      v_audit_actions := v_audit_actions || jsonb_build_array(v_creator_result);
-      if (select current_hp > 0 from battle.team_members where id = v_opponent_member.id) then
-        update battle.team_members
-        set current_hp = current_hp - (v_opponent_result->>'applied_damage')::integer,
-            alive = current_hp - (v_opponent_result->>'applied_damage')::integer > 0,
-            active = active and current_hp - (v_opponent_result->>'applied_damage')::integer > 0
-        where id = v_creator_member.id;
-        v_public_actions := v_public_actions
-          || jsonb_build_array(battle.public_attack_result(v_opponent_result));
-        v_audit_actions := v_audit_actions || jsonb_build_array(v_opponent_result);
-      end if;
-    else
-      update battle.team_members
-      set current_hp = current_hp - (v_opponent_result->>'applied_damage')::integer,
-          alive = current_hp - (v_opponent_result->>'applied_damage')::integer > 0,
-          active = active and current_hp - (v_opponent_result->>'applied_damage')::integer > 0
-      where id = v_creator_member.id;
-      v_public_actions := v_public_actions
-        || jsonb_build_array(battle.public_attack_result(v_opponent_result));
-      v_audit_actions := v_audit_actions || jsonb_build_array(v_opponent_result);
-      if (select current_hp > 0 from battle.team_members where id = v_creator_member.id) then
-        update battle.team_members
-        set current_hp = current_hp - (v_creator_result->>'applied_damage')::integer,
-            alive = current_hp - (v_creator_result->>'applied_damage')::integer > 0,
-            active = active and current_hp - (v_creator_result->>'applied_damage')::integer > 0
-        where id = v_opponent_member.id;
-        v_public_actions := v_public_actions
-          || jsonb_build_array(battle.public_attack_result(v_creator_result));
-        v_audit_actions := v_audit_actions || jsonb_build_array(v_creator_result);
-      end if;
+  v_actor_member := battle.active_member(v_actor.id);
+  if v_action.kind = 'switch' then
+    if v_actor_member.id is null then
+      raise exception 'BATTLE_INVARIANT' using errcode = 'P0001';
     end if;
-  elsif v_creator_action.kind = 'attack' then
-    v_creator_result := battle.attack_result(
-      v_room, v_room.current_turn_no, 'creator',
-      v_creator_action, v_creator_member, v_opponent_member
+    perform battle.switch_active_member(v_actor.id, v_action.target_slot);
+    v_display_actions := jsonb_build_array(jsonb_build_object(
+      'kind', 'switch',
+      'actor_side', v_actor.side,
+      'switch_to', battle.public_switch_target(v_actor.id, v_action.target_slot)
+    ));
+  else
+    if v_action.kind = 'replace_attack' then
+      if v_actor_member.id is not null then
+        raise exception 'BATTLE_INVARIANT' using errcode = 'P0001';
+      end if;
+      perform battle.switch_active_member(v_actor.id, v_action.target_slot);
+      v_display_actions := v_display_actions || jsonb_build_array(jsonb_build_object(
+        'kind', 'switch',
+        'actor_side', v_actor.side,
+        'switch_to', battle.public_switch_target(v_actor.id, v_action.target_slot)
+      ));
+    end if;
+    v_actor_member := battle.active_member(v_actor.id);
+    v_target_member := battle.active_member(v_target.id);
+    if v_actor_member.id is null
+      or v_target_member.id is null
+      or battle.skill_for_position(v_actor_member, v_action.skill_position)
+        is distinct from v_action.skill_id
+    then
+      raise exception 'BATTLE_INVARIANT' using errcode = 'P0001';
+    end if;
+    v_attack_result := battle.attack_result(
+      v_room,
+      v_round_no,
+      v_actor.side,
+      v_action,
+      v_actor_member,
+      v_target_member
     );
     update battle.team_members
-    set current_hp = current_hp - (v_creator_result->>'applied_damage')::integer,
-        alive = current_hp - (v_creator_result->>'applied_damage')::integer > 0,
-        active = active and current_hp - (v_creator_result->>'applied_damage')::integer > 0
-    where id = v_opponent_member.id;
-    v_public_actions := v_public_actions
-      || jsonb_build_array(battle.public_attack_result(v_creator_result));
-    v_audit_actions := v_audit_actions || jsonb_build_array(v_creator_result);
-  elsif v_opponent_action.kind = 'attack' then
-    v_opponent_result := battle.attack_result(
-      v_room, v_room.current_turn_no, 'opponent',
-      v_opponent_action, v_opponent_member, v_creator_member
-    );
-    update battle.team_members
-    set current_hp = current_hp - (v_opponent_result->>'applied_damage')::integer,
-        alive = current_hp - (v_opponent_result->>'applied_damage')::integer > 0,
-        active = active and current_hp - (v_opponent_result->>'applied_damage')::integer > 0
-    where id = v_creator_member.id;
-    v_public_actions := v_public_actions
-      || jsonb_build_array(battle.public_attack_result(v_opponent_result));
-    v_audit_actions := v_audit_actions || jsonb_build_array(v_opponent_result);
+    set current_hp = greatest(
+          0,
+          current_hp - (v_attack_result->>'applied_damage')::integer
+        ),
+        alive = current_hp - (v_attack_result->>'applied_damage')::integer > 0,
+        active = active
+          and current_hp - (v_attack_result->>'applied_damage')::integer > 0
+    where id = v_target_member.id;
+    v_display_actions := v_display_actions
+      || jsonb_build_array(battle.public_attack_result(v_attack_result));
   end if;
 
   update battle.team_members
   set alive = current_hp > 0,
       active = active and current_hp > 0
-  where participant_id in (v_creator.id, v_opponent.id);
-  select count(*) filter (where alive),
-         sum(current_hp::numeric / max_hp::numeric)
-  into v_creator_alive, v_creator_hp
-  from battle.team_members where participant_id = v_creator.id;
-  select count(*) filter (where alive),
-         sum(current_hp::numeric / max_hp::numeric)
-  into v_opponent_alive, v_opponent_hp
-  from battle.team_members where participant_id = v_opponent.id;
-  if v_creator_alive = 0 and v_opponent_alive = 0 then
-    v_pending_result := 'draw'; v_reason := 'simultaneous_knockout';
-  elsif v_creator_alive = 0 then
-    v_pending_result := 'winner'; v_winner := v_opponent.id; v_reason := 'team_knockout';
-  elsif v_opponent_alive = 0 then
-    v_pending_result := 'winner'; v_winner := v_creator.id; v_reason := 'team_knockout';
-  elsif v_room.current_turn_no = battle.rule_int(
+  where participant_id in (v_actor.id, v_target.id);
+  select count(*) filter (where alive) into v_target_alive
+  from battle.team_members
+  where participant_id = v_target.id;
+
+  if v_target_alive = 0 then
+    v_terminal_result := 'winner';
+    v_winner := v_actor.id;
+    v_reason := 'team_knockout';
+  elsif v_action_ordinal = 1 then
+    update battle.rooms
+    set active_actor_side = case active_actor_side
+          when 'creator' then 'opponent'
+          else 'creator'
+        end,
+        current_action_ordinal = 2,
+        phase_deadline = clock_timestamp() + make_interval(
+          secs => battle.rule_int(v_room.ruleset_id, 'action_timeout_seconds')
+        ),
+        updated_at = clock_timestamp()
+    where id = p_room_id;
+  elsif v_round_no < battle.rule_int(
     v_room.ruleset_id, 'max_normal_turns'
   ) then
-    if v_creator_alive > v_opponent_alive
-       or (v_creator_alive = v_opponent_alive and v_creator_hp > v_opponent_hp) then
-      v_pending_result := 'winner'; v_winner := v_creator.id; v_reason := 'turn_limit';
-    elsif v_opponent_alive > v_creator_alive
-       or (v_opponent_alive = v_creator_alive and v_opponent_hp > v_creator_hp) then
-      v_pending_result := 'winner'; v_winner := v_opponent.id; v_reason := 'turn_limit';
-    else
-      v_pending_result := 'draw'; v_reason := 'turn_limit';
-    end if;
-  elsif not exists (
-    select 1 from battle.team_members where participant_id = v_creator.id and active
-  ) or not exists (
-    select 1 from battle.team_members where participant_id = v_opponent.id and active
-  ) then
-    v_next_status := 'forced_switch';
+    update battle.turns
+    set resolution_hash = battle.room_snapshot_hash(p_room_id),
+        resolved_at = clock_timestamp()
+    where room_id = p_room_id and round_no = v_round_no;
+    update battle.rooms
+    set active_actor_side = first_actor_side,
+        current_round_no = current_round_no + 1,
+        current_action_ordinal = 1,
+        phase_deadline = clock_timestamp() + make_interval(
+          secs => battle.rule_int(v_room.ruleset_id, 'action_timeout_seconds')
+        ),
+        updated_at = clock_timestamp()
+    where id = p_room_id
+    returning * into v_room;
+    insert into battle.turns (room_id, round_no, start_snapshot_hash)
+    values (
+      p_room_id,
+      v_room.current_round_no,
+      battle.room_snapshot_hash(p_room_id)
+    );
   else
-    v_next_status := 'active_select';
-  end if;
-
-  update battle.turns
-  set resolution_hash = encode(
-        extensions.digest(convert_to(v_audit_actions::text, 'UTF8'), 'sha256'), 'hex'
-      ),
-      resolved_at = now()
-  where room_id = p_room_id and turn_no = v_room.current_turn_no and phase = 'normal';
-  update battle.rooms
-  set status = 'reveal',
-      next_status = v_next_status,
-      pending_result = v_pending_result,
-      pending_winner_participant_id = v_winner,
-      pending_result_reason = v_reason,
-      phase_deadline = null,
-      reveal_ends_at = now() + make_interval(
-        secs => battle.rule_int(v_room.ruleset_id, 'reveal_seconds')
-      ),
-      resolution_event = jsonb_build_object(
-        'event_id', v_event_id,
-        'actions', v_public_actions
-      ),
-      updated_at = now()
-  where id = p_room_id;
-  perform battle.record_event(
-    p_room_id, 'turn_resolved',
-    jsonb_build_object(
-      'event_id', v_event_id,
-      'turn_no', v_room.current_turn_no,
-      'reveal_ends_at', now() + make_interval(
-        secs => battle.rule_int(v_room.ruleset_id, 'reveal_seconds')
-      ),
-      'actions', v_public_actions
-    ),
-    jsonb_build_object(
-      'turn_no', v_room.current_turn_no,
-      'actions', v_audit_actions,
-      'pending_result', v_pending_result,
-      'winner_participant_id', v_winner
-    )
-  );
-end;
-$$;
-
-create or replace function battle.resolve_forced_switch(p_room_id uuid)
-returns void
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-  v_room battle.rooms%rowtype;
-  v_participant record;
-  v_action battle.actions%rowtype;
-  v_actions jsonb := '[]'::jsonb;
-begin
-  select * into v_room from battle.rooms where id = p_room_id for update;
-  if v_room.status <> 'forced_switch' then
-    raise exception 'BATTLE_INVARIANT' using errcode = 'P0001';
-  end if;
-  for v_participant in
-    select p.*
-    from battle.participants p
-    where p.room_id = p_room_id and p.status = 'active'
-    order by p.side
-    for update
-  loop
-    if not exists (
-      select 1 from battle.team_members
-      where participant_id = v_participant.id and active
-    ) then
-      select * into v_action
-      from battle.actions
-      where room_id = p_room_id and turn_no = v_room.current_turn_no
-        and phase = 'forced_switch' and participant_id = v_participant.id;
-      if v_action.id is null then
-        raise exception 'BATTLE_INVARIANT' using errcode = 'P0001';
-      end if;
-      perform battle.switch_active_member(
-        v_participant.id, v_action.target_slot
-      );
-      v_actions := v_actions || jsonb_build_array(jsonb_build_object(
-        'kind', 'forced_switch',
-        'actor_side', v_participant.side,
-        'switch_to',
-        battle.public_switch_target(v_participant.id, v_action.target_slot),
-        'source', v_action.source
-      ));
+    select * into v_creator
+    from battle.participants
+    where room_id = p_room_id and side = 'creator';
+    select * into v_opponent
+    from battle.participants
+    where room_id = p_room_id and side = 'opponent';
+    select count(*) filter (where alive),
+           sum(current_hp::numeric / max_hp::numeric)
+    into v_creator_alive, v_creator_hp
+    from battle.team_members
+    where participant_id = v_creator.id;
+    select count(*) filter (where alive),
+           sum(current_hp::numeric / max_hp::numeric)
+    into v_opponent_alive, v_opponent_hp
+    from battle.team_members
+    where participant_id = v_opponent.id;
+    if v_creator_alive > v_opponent_alive
+      or (v_creator_alive = v_opponent_alive and v_creator_hp > v_opponent_hp)
+    then
+      v_terminal_result := 'winner';
+      v_winner := v_creator.id;
+    elsif v_opponent_alive > v_creator_alive
+      or (v_opponent_alive = v_creator_alive and v_opponent_hp > v_creator_hp)
+    then
+      v_terminal_result := 'winner';
+      v_winner := v_opponent.id;
+    else
+      v_terminal_result := 'draw';
     end if;
-  end loop;
-  if exists (
-    select 1
-    from battle.participants p
-    where p.room_id = p_room_id and p.status = 'active'
-      and not exists (
-        select 1 from battle.team_members tm
-        where tm.participant_id = p.id and tm.active
-      )
-  ) then
-    raise exception 'BATTLE_INVARIANT' using errcode = 'P0001';
+    v_reason := 'turn_limit';
   end if;
-  update battle.turns
-  set resolution_hash = encode(
-        extensions.digest(convert_to(v_actions::text, 'UTF8'), 'sha256'), 'hex'
-      ),
-      resolved_at = now()
-  where room_id = p_room_id and turn_no = v_room.current_turn_no
-    and phase = 'forced_switch';
-  update battle.rooms
-  set status = 'active_select',
-      current_turn_no = current_turn_no + 1,
-      phase_deadline = now() + make_interval(
-        secs => battle.rule_int(v_room.ruleset_id, 'action_timeout_seconds')
-      ),
-      next_status = null,
-      resolution_event = null,
-      updated_at = now()
-  where id = p_room_id
-  returning * into v_room;
-  insert into battle.turns (
-    room_id, turn_no, phase, deadline, start_snapshot_hash
-  ) values (
-    p_room_id, v_room.current_turn_no, 'normal',
-    v_room.phase_deadline, battle.room_snapshot_hash(p_room_id)
+
+  if v_terminal_result is not null then
+    update battle.turns
+    set resolution_hash = battle.room_snapshot_hash(p_room_id),
+        resolved_at = clock_timestamp()
+    where room_id = p_room_id and round_no = v_round_no;
+  end if;
+
+  v_audit_payload := jsonb_build_object(
+    'round_no', v_round_no,
+    'action_ordinal', v_action_ordinal,
+    'actor_side', v_actor.side,
+    'actions', v_display_actions,
+    'teams', battle.action_teams_payload(p_room_id),
+    'action', to_jsonb(v_action),
+    'attack_result', v_attack_result,
+    'terminal_result', v_terminal_result,
+    'winner_participant_id', v_winner,
+    'reason', v_reason
   );
   perform battle.record_event(
-    p_room_id, 'forced_switch_resolved',
+    p_room_id,
+    'action_resolved',
     jsonb_build_object(
-      'actions', v_actions,
-      'turn_no', v_room.current_turn_no,
-      'deadline', v_room.phase_deadline
+      'round_no', v_round_no,
+      'action_ordinal', v_action_ordinal,
+      'actor_side', v_actor.side
     ),
-    jsonb_build_object('actions', v_actions)
+    v_audit_payload
   );
+
+  if v_terminal_result is not null then
+    perform battle.finalize_room(
+      p_room_id, v_terminal_result, v_winner, v_reason
+    );
+  end if;
 end;
 $$;
 
@@ -3953,9 +3964,7 @@ begin
       settled_at = excluded.settled_at;
   update battle.rooms
   set status = 'voided', finished_at = now(), phase_deadline = null,
-      reveal_ends_at = null, lobby_start_deadline = null, pending_result = null,
-      pending_winner_participant_id = null,
-      pending_result_reason = 'system_invariant_void',
+      lobby_start_deadline = null,
       updated_at = now()
   where id = p_room_id;
   perform battle.record_event(
@@ -3966,39 +3975,235 @@ begin
 end;
 $$;
 
-create or replace function battle.safe_resolve_normal_turn(p_room_id uuid)
-returns boolean
+create or replace function battle.finalize_room(
+  p_room_id uuid,
+  p_result text,
+  p_winner_participant_id uuid,
+  p_reason text
+)
+returns void
 language plpgsql
 security definer
 set search_path = ''
 as $$
 declare
-  v_detail text;
-  v_message text;
-  v_state text;
+  v_room battle.rooms%rowtype;
+  v_tier battle.entry_tiers%rowtype;
+  v_stake battle.stakes%rowtype;
+  v_participant battle.participants%rowtype;
+  v_winner battle.participants%rowtype;
+  v_loser battle.participants%rowtype;
+  v_balance jsonb;
+  v_ledger_ids jsonb := '[]'::jsonb;
+  v_audit_hash text;
+  v_payout bigint;
+  v_reason text := coalesce(nullif(btrim(p_reason), ''), 'battle_finished');
 begin
-  begin
-    perform battle.resolve_normal_turn(p_room_id);
-    return true;
-  exception
-    when others then
-      v_state := sqlstate;
-      v_message := sqlerrm;
-      get stacked diagnostics v_detail = pg_exception_detail;
-  end;
-  perform battle.void_room_after_invariant(
-    p_room_id,
-    coalesce(v_state, '')
-      || ':'
-      || coalesce(v_message, '')
-      || ':'
-      || coalesce(v_detail, '')
+  select * into v_room
+  from battle.rooms
+  where id = p_room_id
+  for update;
+  if v_room.status in ('finished', 'draw', 'voided') then return; end if;
+  if v_room.status <> 'active_turn'
+    or p_result not in ('winner', 'draw')
+    or (p_result = 'winner') <> (p_winner_participant_id is not null)
+  then
+    raise exception 'BATTLE_INVARIANT' using errcode = 'P0001';
+  end if;
+  select * into v_tier
+  from battle.entry_tiers
+  where ruleset_id = v_room.ruleset_id and id = v_room.entry_tier_id;
+  if v_tier.id is null
+     or (
+       select count(*)
+       from battle.stakes
+       where room_id = p_room_id and status = 'locked'
+     ) <> 2
+  then
+    raise exception 'BATTLE_INVARIANT' using errcode = 'P0001';
+  end if;
+  perform 1
+  from economy.balances b
+  join battle.stakes s
+    on s.user_id = b.user_id
+   and s.room_id = p_room_id
+   and s.status = 'locked'
+  where b.currency = 'KCOIN'
+  order by b.user_id
+  for update of b;
+
+  if p_result = 'draw' then
+    v_ledger_ids := battle.refund_locked_stakes(p_room_id, 'battle_draw');
+    update battle.participants
+    set status = 'draw', finished_at = now()
+    where room_id = p_room_id;
+    for v_participant in
+      select *
+      from battle.participants
+      where room_id = p_room_id
+      order by side
+    loop
+      insert into battle.summaries (
+        participant_id, room_id, user_id, opponent_display_name,
+        result, entry_fee, payout, net_change, fee, reason, finished_at
+      )
+      select
+        v_participant.id, p_room_id, v_participant.user_id,
+        coalesce(
+          nullif(
+            btrim(opponent.first_name || ' ' || coalesce(opponent.last_name, '')),
+            ''
+          ),
+          'Battle'
+        ),
+        'draw', v_tier.entry_fee, v_tier.entry_fee, 0, 0,
+        v_reason, now()
+      from battle.participants other
+      join identity.users opponent on opponent.id = other.user_id
+      where other.room_id = p_room_id and other.id <> v_participant.id;
+    end loop;
+    v_audit_hash := battle.append_audit(
+      p_room_id, 'settlement_draw',
+      jsonb_build_object(
+        'pool', v_tier.pool,
+        'refund_ledger_ids', v_ledger_ids,
+        'seed_reveal', encode(v_room.private_seed, 'hex'),
+        'seed_commitment', v_room.seed_commitment,
+        'reason', v_reason
+      )
+    );
+    insert into battle.settlements (
+      room_id, result, pool, winner_payout, fee, ledger_ids, reason, audit_hash
+    ) values (
+      p_room_id, 'draw', v_tier.pool, 0, 0, v_ledger_ids,
+      v_reason, v_audit_hash
+    );
+    update battle.rooms
+    set status = 'draw', finished_at = now(), phase_deadline = null,
+        updated_at = now()
+    where id = p_room_id;
+  else
+    select * into v_winner
+    from battle.participants
+    where id = p_winner_participant_id and room_id = p_room_id;
+    select * into v_loser
+    from battle.participants
+    where room_id = p_room_id and id <> v_winner.id;
+    if v_winner.id is null or v_loser.id is null then
+      raise exception 'BATTLE_INVARIANT' using errcode = 'P0001';
+    end if;
+    for v_stake in
+      select *
+      from battle.stakes
+      where room_id = p_room_id and status = 'locked'
+      order by user_id
+      for update
+    loop
+      v_payout := case
+        when v_stake.participant_id = v_winner.id then v_tier.winner_payout
+        else 0
+      end;
+      v_balance := economy.settle_battle_kcoin(
+        v_stake.user_id,
+        v_stake.amount,
+        v_payout,
+        (
+          select join_operation_id
+          from battle.participants
+          where id = v_stake.participant_id
+        ),
+        p_room_id::text || ':' || v_stake.user_id::text || ':settlement'
+      );
+      update battle.stakes
+      set status = 'settled',
+          payout_ledger_id = (v_balance->>'ledger_id')::bigint,
+          settled_at = now()
+      where id = v_stake.id;
+      if v_balance->>'ledger_id' is not null then
+        v_ledger_ids := v_ledger_ids
+          || jsonb_build_array((v_balance->>'ledger_id')::bigint);
+      end if;
+    end loop;
+    update battle.participants
+    set status = 'finished', finished_at = now()
+    where room_id = p_room_id;
+    insert into battle.summaries (
+      participant_id, room_id, user_id, opponent_display_name,
+      result, entry_fee, payout, net_change, fee, reason, finished_at
+    )
+    select
+      v_winner.id, p_room_id, v_winner.user_id,
+      coalesce(
+        nullif(
+          btrim(loser_user.first_name || ' ' || coalesce(loser_user.last_name, '')),
+          ''
+        ),
+        'Battle'
+      ),
+      'win', v_tier.entry_fee, v_tier.winner_payout,
+      v_tier.winner_payout - v_tier.entry_fee, v_tier.fee,
+      v_reason, now()
+    from identity.users loser_user
+    where loser_user.id = v_loser.user_id;
+    insert into battle.summaries (
+      participant_id, room_id, user_id, opponent_display_name,
+      result, entry_fee, payout, net_change, fee, reason, finished_at
+    )
+    select
+      v_loser.id, p_room_id, v_loser.user_id,
+      coalesce(
+        nullif(
+          btrim(winner_user.first_name || ' ' || coalesce(winner_user.last_name, '')),
+          ''
+        ),
+        'Battle'
+      ),
+      'loss', v_tier.entry_fee, 0, -v_tier.entry_fee, 0,
+      v_reason, now()
+    from identity.users winner_user
+    where winner_user.id = v_winner.user_id;
+    v_audit_hash := battle.append_audit(
+      p_room_id, 'settlement_winner',
+      jsonb_build_object(
+        'winner_participant_id', v_winner.id,
+        'pool', v_tier.pool,
+        'winner_payout', v_tier.winner_payout,
+        'fee', v_tier.fee,
+        'ledger_ids', v_ledger_ids,
+        'seed_reveal', encode(v_room.private_seed, 'hex'),
+        'seed_commitment', v_room.seed_commitment,
+        'reason', v_reason
+      )
+    );
+    insert into battle.settlements (
+      room_id, result, winner_participant_id, pool, winner_payout,
+      fee, ledger_ids, reason, audit_hash
+    ) values (
+      p_room_id, 'winner', v_winner.id, v_tier.pool, v_tier.winner_payout,
+      v_tier.fee, v_ledger_ids, v_reason, v_audit_hash
+    );
+    update battle.rooms
+    set status = 'finished', finished_at = now(), phase_deadline = null,
+        updated_at = now()
+    where id = p_room_id;
+  end if;
+
+  perform battle.release_reservations(p_room_id);
+  perform battle.record_event(
+    p_room_id, 'battle_finished',
+    jsonb_build_object('result', p_result, 'reason', v_reason),
+    jsonb_build_object(
+      'result', p_result,
+      'winner_participant_id', p_winner_participant_id,
+      'reason', v_reason,
+      'settlement_audit_hash', v_audit_hash,
+      'ledger_ids', v_ledger_ids
+    )
   );
-  return false;
 end;
 $$;
 
-create or replace function battle.safe_resolve_forced_switch(p_room_id uuid)
+create or replace function battle.safe_resolve_active_action(p_room_id uuid)
 returns boolean
 language plpgsql
 security definer
@@ -4010,7 +4215,7 @@ declare
   v_state text;
 begin
   begin
-    perform battle.resolve_forced_switch(p_room_id);
+    perform battle.resolve_active_action(p_room_id);
     return true;
   exception
     when others then
@@ -4034,7 +4239,8 @@ create or replace function api.battle_submit_action(
   p_session_id uuid,
   p_operation_id uuid,
   p_room_id uuid,
-  p_turn_no smallint,
+  p_round_no smallint,
+  p_action_ordinal smallint,
   p_kind text,
   p_skill_position smallint default null,
   p_target_slot smallint default null
@@ -4050,20 +4256,29 @@ declare
   v_room battle.rooms%rowtype;
   v_participant battle.participants%rowtype;
   v_member battle.team_members%rowtype;
+  v_selected_member battle.team_members%rowtype;
   v_skill_id text;
   v_result jsonb;
+  v_after_sequence bigint;
 begin
   v_operation := operations.begin_command(
     p_session_id, 'battle.action', p_operation_id,
     jsonb_build_object(
-      'room_id', p_room_id, 'turn_no', p_turn_no, 'kind', p_kind,
-      'skill_position', p_skill_position, 'target_slot', p_target_slot
+      'room_id', p_room_id,
+      'round_no', p_round_no,
+      'action_ordinal', p_action_ordinal,
+      'kind', p_kind,
+      'skill_position', p_skill_position,
+      'target_slot', p_target_slot
     )
   );
   v_replay := operations.replay_if_finished(v_operation);
   if v_replay is not null then return v_replay; end if;
   begin
-    select * into v_room from battle.rooms where id = p_room_id for update;
+    select * into v_room
+    from battle.rooms
+    where id = p_room_id
+    for update;
     if v_room.id is null then
       perform api.raise_business_error('BATTLE_ROOM_NOT_FOUND', 'Battle 房间不存在');
     elsif v_room.status = 'voided' then
@@ -4074,487 +4289,182 @@ begin
     end if;
     select * into v_participant
     from battle.participants
-    where room_id = p_room_id and user_id = v_operation.user_id and status = 'active';
+    where room_id = p_room_id and user_id = v_operation.user_id;
     if v_participant.id is null then
-      perform api.raise_business_error('BATTLE_NOT_PARTICIPANT', '当前账号不是该 Battle 的参与者');
+      perform api.raise_business_error(
+        'BATTLE_NOT_PARTICIPANT',
+        '当前账号不是该 Battle 的参与者'
+      );
     end if;
-    perform battle.consume_rate_limit(v_operation.user_id, 'combat_action');
-    if v_room.status <> 'active_select' then
+    if v_room.status <> 'active_turn' or v_participant.status <> 'active' then
       perform api.raise_business_error(
         'BATTLE_ACTION_PHASE_INVALID',
         '当前阶段不能提交该动作'
       );
-    elsif v_room.current_turn_no <> p_turn_no
-       or now() >= v_room.phase_deadline then
-      perform api.raise_business_error('BATTLE_STATE_CONFLICT', 'Battle 状态已更新');
     end if;
+    perform battle.consume_rate_limit(v_operation.user_id, 'combat_action');
+    v_after_sequence := v_room.latest_action_sequence;
+
+    if clock_timestamp() >= v_room.phase_deadline then
+      perform battle.lock_timeout_action(p_room_id);
+      if not battle.safe_resolve_active_action(p_room_id) then
+        v_result := battle.room_snapshot_json(
+          p_room_id, v_participant.id, v_after_sequence
+        );
+        return operations.fail_command(
+          p_operation_id,
+          'BATTLE_VOIDED',
+          coalesce(v_result, '{}'::jsonb)
+            || jsonb_build_object('error_code', 'BATTLE_VOIDED')
+        );
+      end if;
+      v_result := battle.room_snapshot_json(
+        p_room_id, v_participant.id, v_after_sequence
+      );
+      return operations.fail_command(
+        p_operation_id,
+        'BATTLE_STATE_CONFLICT',
+        coalesce(v_result, '{}'::jsonb)
+          || jsonb_build_object('error_code', 'BATTLE_STATE_CONFLICT')
+      );
+    end if;
+    if v_room.current_round_no <> p_round_no
+      or v_room.current_action_ordinal <> p_action_ordinal
+    then
+      perform api.raise_business_error(
+        'BATTLE_STATE_CONFLICT',
+        'Battle 状态已更新'
+      );
+    end if;
+    if v_participant.side <> v_room.active_actor_side then
+      perform api.raise_business_error(
+        'BATTLE_NOT_YOUR_TURN',
+        '当前不是你的行动时间'
+      );
+    end if;
+
     v_member := battle.active_member(v_participant.id);
-    if p_kind = 'attack' and p_skill_position between 1 and 4
-       and p_target_slot is null then
+    if p_kind = 'attack'
+      and v_member.id is not null
+      and p_skill_position between 1 and 4
+      and p_target_slot is null
+    then
       v_skill_id := battle.skill_for_position(v_member, p_skill_position);
       if v_skill_id is null then
-        perform api.raise_business_error('BATTLE_ACTION_INVALID', 'Battle 动作无效');
+        perform api.raise_business_error(
+          'BATTLE_ACTION_INVALID',
+          'Battle 动作无效'
+        );
       end if;
       insert into battle.actions (
-        room_id, turn_no, phase, participant_id, kind, source,
+        room_id, round_no, action_ordinal, participant_id, kind, source,
         skill_position, skill_id, operation_id
       ) values (
-        p_room_id, p_turn_no, 'normal', v_participant.id, 'attack', 'player',
-        p_skill_position, v_skill_id, p_operation_id
+        p_room_id, p_round_no, p_action_ordinal, v_participant.id,
+        'attack', 'player', p_skill_position, v_skill_id, p_operation_id
       );
-    elsif p_kind = 'switch' and p_skill_position is null
-       and p_target_slot between 1 and 3 then
-      if not exists (
-        select 1 from battle.team_members
-        where participant_id = v_participant.id
-          and slot = p_target_slot and alive and not active
-      ) then
-        perform api.raise_business_error('BATTLE_SWITCH_TARGET_INVALID', '换宠目标无效');
+    elsif p_kind = 'switch'
+      and v_member.id is not null
+      and p_skill_position is null
+      and p_target_slot between 1 and 3
+    then
+      select * into v_selected_member
+      from battle.team_members
+      where participant_id = v_participant.id
+        and slot = p_target_slot
+        and alive
+        and not active;
+      if v_selected_member.id is null then
+        perform api.raise_business_error(
+          'BATTLE_SWITCH_TARGET_INVALID',
+          '换宠目标无效'
+        );
       end if;
       insert into battle.actions (
-        room_id, turn_no, phase, participant_id, kind, source,
+        room_id, round_no, action_ordinal, participant_id, kind, source,
         target_slot, operation_id
       ) values (
-        p_room_id, p_turn_no, 'normal', v_participant.id, 'switch', 'player',
+        p_room_id, p_round_no, p_action_ordinal, v_participant.id,
+        'switch', 'player', p_target_slot, p_operation_id
+      );
+    elsif p_kind = 'replace_attack'
+      and v_member.id is null
+      and p_skill_position between 1 and 4
+      and p_target_slot between 1 and 3
+    then
+      select * into v_selected_member
+      from battle.team_members
+      where participant_id = v_participant.id
+        and slot = p_target_slot
+        and alive
+        and not active;
+      v_skill_id := battle.skill_for_position(
+        v_selected_member,
+        p_skill_position
+      );
+      if v_selected_member.id is null or v_skill_id is null then
+        perform api.raise_business_error(
+          'BATTLE_ACTION_INVALID',
+          'Battle 动作无效'
+        );
+      end if;
+      insert into battle.actions (
+        room_id, round_no, action_ordinal, participant_id, kind, source,
+        skill_position, skill_id, target_slot, operation_id
+      ) values (
+        p_room_id, p_round_no, p_action_ordinal, v_participant.id,
+        'replace_attack', 'player', p_skill_position, v_skill_id,
         p_target_slot, p_operation_id
       );
     else
-      perform api.raise_business_error('BATTLE_ACTION_INVALID', 'Battle 动作无效');
+      perform api.raise_business_error(
+        'BATTLE_ACTION_INVALID',
+        'Battle 动作无效'
+      );
     end if;
+
     perform battle.append_audit(
       p_room_id, 'player_action_locked',
       jsonb_build_object(
-        'turn_no', p_turn_no, 'participant_id', v_participant.id,
-        'kind', p_kind, 'skill_id', v_skill_id, 'target_slot', p_target_slot,
+        'round_no', p_round_no,
+        'action_ordinal', p_action_ordinal,
+        'participant_id', v_participant.id,
+        'kind', p_kind,
+        'skill_id', v_skill_id,
+        'target_slot', p_target_slot,
         'operation_id', p_operation_id
       )
     );
-    if (
-      select count(*) = 2
-      from battle.actions
-      where room_id = p_room_id and turn_no = p_turn_no and phase = 'normal'
-    ) then
-      if not battle.safe_resolve_normal_turn(p_room_id) then
-        v_result := battle.room_snapshot_json(p_room_id, v_participant.id);
-        return operations.fail_command(
-          p_operation_id,
-          'BATTLE_VOIDED',
-          coalesce(v_result, '{}'::jsonb)
-            || jsonb_build_object('error_code', 'BATTLE_VOIDED')
-        );
-      end if;
-    end if;
-    v_result := battle.room_snapshot_json(p_room_id, v_participant.id);
-    return operations.complete_command(p_operation_id, v_result);
-  exception
-    when unique_violation then
-      return operations.fail_command(
-        p_operation_id, 'BATTLE_ACTION_ALREADY_LOCKED',
-        jsonb_build_object('error_code', 'BATTLE_ACTION_ALREADY_LOCKED')
+    if not battle.safe_resolve_active_action(p_room_id) then
+      v_result := battle.room_snapshot_json(
+        p_room_id, v_participant.id, v_after_sequence
       );
-    when sqlstate 'P0001' then
-      if sqlerrm = 'BATTLE_INVARIANT' then raise; end if;
       return operations.fail_command(
-        p_operation_id, sqlerrm, jsonb_build_object('error_code', sqlerrm)
-      );
-  end;
-end;
-$$;
-
-create or replace function api.battle_submit_forced_switch(
-  p_session_id uuid,
-  p_operation_id uuid,
-  p_room_id uuid,
-  p_turn_no smallint,
-  p_target_slot smallint
-)
-returns jsonb
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-  v_operation operations.operations%rowtype;
-  v_replay jsonb;
-  v_room battle.rooms%rowtype;
-  v_participant battle.participants%rowtype;
-  v_result jsonb;
-begin
-  v_operation := operations.begin_command(
-    p_session_id, 'battle.forced_switch', p_operation_id,
-    jsonb_build_object(
-      'room_id', p_room_id, 'turn_no', p_turn_no, 'target_slot', p_target_slot
-    )
-  );
-  v_replay := operations.replay_if_finished(v_operation);
-  if v_replay is not null then return v_replay; end if;
-  begin
-    select * into v_room from battle.rooms where id = p_room_id for update;
-    if v_room.id is null then
-      perform api.raise_business_error('BATTLE_ROOM_NOT_FOUND', 'Battle 房间不存在');
-    elsif v_room.status = 'voided' then
-      perform api.raise_business_error(
+        p_operation_id,
         'BATTLE_VOIDED',
-        'Battle 已安全作废，入场费和藏品已恢复'
+        coalesce(v_result, '{}'::jsonb)
+          || jsonb_build_object('error_code', 'BATTLE_VOIDED')
       );
     end if;
-    select * into v_participant
-    from battle.participants
-    where room_id = p_room_id and user_id = v_operation.user_id and status = 'active';
-    if v_participant.id is null then
-      perform api.raise_business_error('BATTLE_NOT_PARTICIPANT', '当前账号不是该 Battle 的参与者');
-    end if;
-    perform battle.consume_rate_limit(v_operation.user_id, 'combat_action');
-    if v_room.status <> 'forced_switch' then
-      perform api.raise_business_error(
-        'BATTLE_ACTION_PHASE_INVALID',
-        '当前阶段不能提交该动作'
-      );
-    elsif v_room.current_turn_no <> p_turn_no
-       or now() >= v_room.phase_deadline then
-      perform api.raise_business_error('BATTLE_STATE_CONFLICT', 'Battle 状态已更新');
-    elsif exists (
-         select 1 from battle.team_members
-         where participant_id = v_participant.id and active
-       )
-       or not exists (
-         select 1 from battle.team_members
-         where participant_id = v_participant.id
-           and slot = p_target_slot and alive and not active
-       )
-    then
-      perform api.raise_business_error('BATTLE_SWITCH_TARGET_INVALID', '换宠目标无效');
-    end if;
-    insert into battle.actions (
-      room_id, turn_no, phase, participant_id, kind, source,
-      target_slot, operation_id
-    ) values (
-      p_room_id, p_turn_no, 'forced_switch', v_participant.id,
-      'forced_switch', 'player', p_target_slot, p_operation_id
+    v_result := battle.room_snapshot_json(
+      p_room_id, v_participant.id, v_after_sequence
     );
-    perform battle.append_audit(
-      p_room_id, 'player_forced_switch_locked',
-      jsonb_build_object(
-        'turn_no', p_turn_no, 'participant_id', v_participant.id,
-        'target_slot', p_target_slot, 'operation_id', p_operation_id
-      )
-    );
-    if not exists (
-      select 1
-      from battle.participants p
-      where p.room_id = p_room_id and p.status = 'active'
-        and not exists (
-          select 1 from battle.team_members tm
-          where tm.participant_id = p.id and tm.active
-        )
-        and not exists (
-          select 1 from battle.actions a
-          where a.room_id = p_room_id and a.turn_no = p_turn_no
-            and a.phase = 'forced_switch' and a.participant_id = p.id
-        )
-    ) then
-      if not battle.safe_resolve_forced_switch(p_room_id) then
-        v_result := battle.room_snapshot_json(p_room_id, v_participant.id);
-        return operations.fail_command(
-          p_operation_id,
-          'BATTLE_VOIDED',
-          coalesce(v_result, '{}'::jsonb)
-            || jsonb_build_object('error_code', 'BATTLE_VOIDED')
-        );
-      end if;
-    end if;
-    v_result := battle.room_snapshot_json(p_room_id, v_participant.id);
     return operations.complete_command(p_operation_id, v_result);
   exception
     when unique_violation then
       return operations.fail_command(
-        p_operation_id, 'BATTLE_ACTION_ALREADY_LOCKED',
-        jsonb_build_object('error_code', 'BATTLE_ACTION_ALREADY_LOCKED')
+        p_operation_id,
+        'BATTLE_STATE_CONFLICT',
+        jsonb_build_object('error_code', 'BATTLE_STATE_CONFLICT')
       );
     when sqlstate 'P0001' then
       if sqlerrm = 'BATTLE_INVARIANT' then raise; end if;
       return operations.fail_command(
-        p_operation_id, sqlerrm, jsonb_build_object('error_code', sqlerrm)
+        p_operation_id,
+        sqlerrm,
+        jsonb_build_object('error_code', sqlerrm)
       );
   end;
-end;
-$$;
-
-create or replace function battle.finalize_room(p_room_id uuid)
-returns void
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-  v_room battle.rooms%rowtype;
-  v_tier battle.entry_tiers%rowtype;
-  v_stake battle.stakes%rowtype;
-  v_participant battle.participants%rowtype;
-  v_winner battle.participants%rowtype;
-  v_loser battle.participants%rowtype;
-  v_balance jsonb;
-  v_ledger_ids jsonb := '[]'::jsonb;
-  v_audit_hash text;
-  v_payout bigint;
-begin
-  select * into v_room from battle.rooms where id = p_room_id for update;
-  if v_room.status in ('finished', 'draw', 'voided') then return; end if;
-  if v_room.status <> 'reveal' or v_room.pending_result is null then
-    raise exception 'BATTLE_INVARIANT' using errcode = 'P0001';
-  end if;
-  select * into v_tier
-  from battle.entry_tiers
-  where ruleset_id = v_room.ruleset_id and id = v_room.entry_tier_id;
-  if v_tier.id is null
-     or (select count(*) from battle.stakes where room_id = p_room_id and status = 'locked') <> 2
-  then
-    raise exception 'BATTLE_INVARIANT' using errcode = 'P0001';
-  end if;
-  perform 1
-  from economy.balances b
-  join battle.stakes s
-    on s.user_id = b.user_id and s.room_id = p_room_id and s.status = 'locked'
-  where b.currency = 'KCOIN'
-  order by b.user_id
-  for update of b;
-
-  if v_room.pending_result = 'draw' then
-    v_ledger_ids := battle.refund_locked_stakes(p_room_id, 'battle_draw');
-    update battle.participants
-    set status = 'draw', finished_at = now()
-    where room_id = p_room_id;
-    for v_participant in
-      select * from battle.participants where room_id = p_room_id order by side
-    loop
-      insert into battle.summaries (
-        participant_id, room_id, user_id, opponent_display_name,
-        result, entry_fee, payout, net_change, fee, reason, finished_at
-      )
-      select
-        v_participant.id, p_room_id, v_participant.user_id,
-        btrim(opponent.first_name || ' ' || coalesce(opponent.last_name, '')),
-        'draw', v_tier.entry_fee, v_tier.entry_fee, 0, 0,
-        coalesce(v_room.pending_result_reason, 'draw'), now()
-      from battle.participants other
-      join identity.users opponent on opponent.id = other.user_id
-      where other.room_id = p_room_id and other.id <> v_participant.id;
-    end loop;
-    v_audit_hash := battle.append_audit(
-      p_room_id, 'settlement_draw',
-      jsonb_build_object(
-        'pool', v_tier.pool, 'refund_ledger_ids', v_ledger_ids,
-        'seed_reveal', encode(v_room.private_seed, 'hex'),
-        'seed_commitment', v_room.seed_commitment
-      )
-    );
-    insert into battle.settlements (
-      room_id, result, pool, winner_payout, fee, ledger_ids, reason, audit_hash
-    ) values (
-      p_room_id, 'draw', v_tier.pool, 0, 0, v_ledger_ids,
-      coalesce(v_room.pending_result_reason, 'draw'), v_audit_hash
-    );
-    update battle.rooms
-    set status = 'draw', finished_at = now(), reveal_ends_at = null,
-        phase_deadline = null, updated_at = now()
-    where id = p_room_id;
-  else
-    select * into v_winner
-    from battle.participants
-    where id = v_room.pending_winner_participant_id and room_id = p_room_id;
-    select * into v_loser
-    from battle.participants
-    where room_id = p_room_id and id <> v_winner.id;
-    if v_winner.id is null or v_loser.id is null then
-      raise exception 'BATTLE_INVARIANT' using errcode = 'P0001';
-    end if;
-    for v_stake in
-      select * from battle.stakes
-      where room_id = p_room_id and status = 'locked'
-      order by user_id
-      for update
-    loop
-      v_payout := case
-        when v_stake.participant_id = v_winner.id then v_tier.winner_payout
-        else 0
-      end;
-      v_balance := economy.settle_battle_kcoin(
-        v_stake.user_id, v_stake.amount, v_payout,
-        (select join_operation_id from battle.participants where id = v_stake.participant_id),
-        p_room_id::text || ':' || v_stake.user_id::text || ':settlement'
-      );
-      update battle.stakes
-      set status = 'settled',
-          payout_ledger_id = (v_balance->>'ledger_id')::bigint,
-          settled_at = now()
-      where id = v_stake.id;
-      if v_balance->>'ledger_id' is not null then
-        v_ledger_ids := v_ledger_ids
-          || jsonb_build_array((v_balance->>'ledger_id')::bigint);
-      end if;
-    end loop;
-    update battle.participants
-    set status = 'finished', finished_at = now()
-    where room_id = p_room_id;
-    insert into battle.summaries (
-      participant_id, room_id, user_id, opponent_display_name,
-      result, entry_fee, payout, net_change, fee, reason, finished_at
-    )
-    select
-      v_winner.id, p_room_id, v_winner.user_id,
-      btrim(loser_user.first_name || ' ' || coalesce(loser_user.last_name, '')),
-      'win', v_tier.entry_fee, v_tier.winner_payout,
-      v_tier.winner_payout - v_tier.entry_fee, v_tier.fee,
-      coalesce(v_room.pending_result_reason, 'winner'), now()
-    from identity.users loser_user where loser_user.id = v_loser.user_id;
-    insert into battle.summaries (
-      participant_id, room_id, user_id, opponent_display_name,
-      result, entry_fee, payout, net_change, fee, reason, finished_at
-    )
-    select
-      v_loser.id, p_room_id, v_loser.user_id,
-      btrim(winner_user.first_name || ' ' || coalesce(winner_user.last_name, '')),
-      'loss', v_tier.entry_fee, 0, -v_tier.entry_fee, 0,
-      coalesce(v_room.pending_result_reason, 'winner'), now()
-    from identity.users winner_user where winner_user.id = v_winner.user_id;
-    v_audit_hash := battle.append_audit(
-      p_room_id, 'settlement_winner',
-      jsonb_build_object(
-        'winner_participant_id', v_winner.id,
-        'pool', v_tier.pool,
-        'winner_payout', v_tier.winner_payout,
-        'fee', v_tier.fee,
-        'ledger_ids', v_ledger_ids,
-        'seed_reveal', encode(v_room.private_seed, 'hex'),
-        'seed_commitment', v_room.seed_commitment
-      )
-    );
-    insert into battle.settlements (
-      room_id, result, winner_participant_id, pool, winner_payout,
-      fee, ledger_ids, reason, audit_hash
-    ) values (
-      p_room_id, 'winner', v_winner.id, v_tier.pool, v_tier.winner_payout,
-      v_tier.fee, v_ledger_ids,
-      coalesce(v_room.pending_result_reason, 'winner'), v_audit_hash
-    );
-    update battle.rooms
-    set status = 'finished', finished_at = now(), reveal_ends_at = null,
-        phase_deadline = null, updated_at = now()
-    where id = p_room_id;
-  end if;
-  perform battle.release_reservations(p_room_id);
-  perform battle.record_event(
-    p_room_id, 'battle_finished',
-    jsonb_build_object(
-      'result', v_room.pending_result,
-      'reason', v_room.pending_result_reason
-    ),
-    jsonb_build_object(
-      'settlement_audit_hash', v_audit_hash,
-      'ledger_ids', v_ledger_ids
-    )
-  );
-end;
-$$;
-
-create or replace function battle.safe_finalize_room(p_room_id uuid)
-returns void
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-  v_detail text;
-  v_message text;
-  v_state text;
-begin
-  begin
-    perform battle.finalize_room(p_room_id);
-  exception
-    when others then
-      v_state := sqlstate;
-      v_message := sqlerrm;
-      get stacked diagnostics v_detail = pg_exception_detail;
-  end;
-  if v_state is not null then
-    perform battle.void_room_after_invariant(
-      p_room_id,
-      coalesce(v_state, '')
-        || ':'
-        || coalesce(v_message, '')
-        || ':'
-        || coalesce(v_detail, '')
-    );
-  end if;
-end;
-$$;
-
-create or replace function battle.advance_reveal(p_room_id uuid)
-returns void
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-  v_room battle.rooms%rowtype;
-begin
-  select * into v_room from battle.rooms where id = p_room_id for update;
-  if v_room.status <> 'reveal' or v_room.reveal_ends_at > now() then return; end if;
-  if v_room.pending_result is not null then
-    perform battle.safe_finalize_room(p_room_id);
-  elsif v_room.next_status = 'forced_switch' then
-    update battle.rooms
-    set status = 'forced_switch',
-        phase_deadline = now() + make_interval(
-          secs => battle.rule_int(v_room.ruleset_id, 'forced_switch_timeout_seconds')
-        ),
-        reveal_ends_at = null,
-        resolution_event = null,
-        updated_at = now()
-    where id = p_room_id
-    returning * into v_room;
-    insert into battle.turns (
-      room_id, turn_no, phase, deadline, start_snapshot_hash
-    ) values (
-      p_room_id, v_room.current_turn_no, 'forced_switch',
-      v_room.phase_deadline, battle.room_snapshot_hash(p_room_id)
-    );
-    perform battle.record_event(
-      p_room_id, 'forced_switch_started',
-      jsonb_build_object(
-        'turn_no', v_room.current_turn_no,
-        'deadline', v_room.phase_deadline
-      ),
-      '{}'::jsonb
-    );
-  else
-    update battle.rooms
-    set status = 'active_select',
-        current_turn_no = current_turn_no + 1,
-        phase_deadline = now() + make_interval(
-          secs => battle.rule_int(v_room.ruleset_id, 'action_timeout_seconds')
-        ),
-        reveal_ends_at = null,
-        next_status = null,
-        resolution_event = null,
-        updated_at = now()
-    where id = p_room_id
-    returning * into v_room;
-    insert into battle.turns (
-      room_id, turn_no, phase, deadline, start_snapshot_hash
-    ) values (
-      p_room_id, v_room.current_turn_no, 'normal',
-      v_room.phase_deadline, battle.room_snapshot_hash(p_room_id)
-    );
-    perform battle.record_event(
-      p_room_id, 'turn_started',
-      jsonb_build_object(
-        'turn_no', v_room.current_turn_no,
-        'deadline', v_room.phase_deadline
-      ),
-      '{}'::jsonb
-    );
-  end if;
 end;
 $$;
 
@@ -4662,8 +4572,7 @@ begin
           )
         )
       )
-      or (r.status in ('active_select', 'forced_switch') and r.phase_deadline <= now())
-      or (r.status = 'reveal' and r.reveal_ends_at <= now())
+      or (r.status = 'active_turn' and r.phase_deadline <= now())
     )
     order by least(
       coalesce(r.prepare_deadline, 'infinity'::timestamptz),
@@ -4694,8 +4603,7 @@ begin
         from battle.participants p
         where p.room_id = r.id and p.status = 'lobby'
       ), 'infinity'::timestamptz),
-      coalesce(r.phase_deadline, 'infinity'::timestamptz),
-      coalesce(r.reveal_ends_at, 'infinity'::timestamptz)
+      coalesce(r.phase_deadline, 'infinity'::timestamptz)
     ), r.id
     limit p_limit
     for update skip locked
@@ -4758,35 +4666,9 @@ begin
           end if;
         elsif v_room.status in ('lobby_waiting', 'lobby_countdown') then
           perform battle.advance_lobby(v_room.id);
-        elsif v_room.status = 'active_select' then
-          for v_participant in
-            select * from battle.participants
-            where room_id = v_room.id and status = 'active'
-            order by side
-          loop
-            perform battle.lock_timeout_action(
-              v_room.id, v_room.current_turn_no, 'normal', v_participant.id
-            );
-          end loop;
-          perform battle.safe_resolve_normal_turn(v_room.id);
-        elsif v_room.status = 'forced_switch' then
-          for v_participant in
-            select p.*
-            from battle.participants p
-            where p.room_id = v_room.id and p.status = 'active'
-              and not exists (
-                select 1 from battle.team_members tm
-                where tm.participant_id = p.id and tm.active
-              )
-            order by p.side
-          loop
-            perform battle.lock_timeout_action(
-              v_room.id, v_room.current_turn_no, 'forced_switch', v_participant.id
-            );
-          end loop;
-          perform battle.safe_resolve_forced_switch(v_room.id);
-        else
-          perform battle.advance_reveal(v_room.id);
+        elsif v_room.status = 'active_turn' then
+          perform battle.lock_timeout_action(v_room.id);
+          perform battle.safe_resolve_active_action(v_room.id);
         end if;
         v_processed := v_processed + 1;
       exception
@@ -5243,7 +5125,7 @@ begin
   ) or (
     r.status in (
       'lobby_waiting', 'lobby_countdown',
-      'active_select', 'reveal', 'forced_switch'
+      'active_turn'
     )
     and count(distinct s.id) filter (where s.status = 'locked') <> 2
   ) or (
@@ -5380,35 +5262,44 @@ begin
     jsonb_build_object(
       'status', r.status,
       'participants', count(distinct p.id),
-      'current_turn_no', r.current_turn_no,
-      'unresolved_turns',
-      count(distinct (t.room_id, t.turn_no, t.phase)) filter (
+      'current_round_no', r.current_round_no,
+      'current_action_ordinal', r.current_action_ordinal,
+      'unresolved_rounds',
+      count(distinct (t.room_id, t.round_no)) filter (
         where t.room_id is not null and t.resolved_at is null
       )
     )
   from battle.rooms r
   left join battle.participants p on p.room_id = r.id
   left join battle.turns t on t.room_id = r.id
-  group by r.id, r.status, r.current_turn_no
+  group by r.id, r.status, r.current_round_no, r.current_action_ordinal
   having (
     r.status in (
       'lobby_waiting', 'lobby_countdown',
-      'active_select', 'reveal', 'forced_switch'
+      'active_turn'
     )
     and count(distinct p.id) <> 2
   ) or (
     r.status in ('lobby_waiting', 'lobby_countdown')
     and (
-      r.current_turn_no <> 0
-      or count(distinct (t.room_id, t.turn_no, t.phase)) filter (
+      r.current_round_no <> 0
+      or r.current_action_ordinal <> 0
+      or count(distinct (t.room_id, t.round_no)) filter (
         where t.room_id is not null
       ) <> 0
     )
   ) or (
-    r.status = 'active_select'
-    and count(distinct (t.room_id, t.turn_no, t.phase)) filter (
-      where t.turn_no = r.current_turn_no and t.phase = 'normal' and t.resolved_at is null
-    ) <> 1
+    r.status = 'active_turn'
+    and (
+      r.first_actor_side is null
+      or r.active_actor_side is null
+      or r.current_round_no not between 1 and 20
+      or r.current_action_ordinal not between 1 and 2
+      or r.phase_deadline is null
+      or count(distinct (t.room_id, t.round_no)) filter (
+        where t.round_no = r.current_round_no and t.resolved_at is null
+      ) <> 1
+    )
   )
   on conflict do nothing;
   get diagnostics v_added = row_count; v_count := v_count + v_added;

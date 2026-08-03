@@ -60,7 +60,6 @@ declare
     'battle_realtime_context',
     'battle_room',
     'battle_submit_action',
-    'battle_submit_forced_switch',
     'battle_team_options',
     'battle_validate_recovery_context',
     'catalog_get',

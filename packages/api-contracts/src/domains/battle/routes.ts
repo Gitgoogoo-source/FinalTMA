@@ -3,6 +3,7 @@ import { z } from "zod";
 import { defineRoute } from "../../common/route.ts";
 import {
   emptyObjectSchema,
+  nonNegativeIntegerSchema,
   timestampSchema,
   uuidSchema,
 } from "../../common/schemas.ts";
@@ -69,7 +70,8 @@ const battleActionRouteInputSchema = z.discriminatedUnion("kind", [
     .object({
       room_id: uuidSchema,
       kind: z.literal("attack"),
-      turn_no: z.number().int().min(1).max(20),
+      round_no: z.number().int().min(1).max(20),
+      action_ordinal: z.union([z.literal(1), z.literal(2)]),
       skill_position: z.union([
         z.literal(1),
         z.literal(2),
@@ -82,19 +84,27 @@ const battleActionRouteInputSchema = z.discriminatedUnion("kind", [
     .object({
       room_id: uuidSchema,
       kind: z.literal("switch"),
-      turn_no: z.number().int().min(1).max(20),
+      round_no: z.number().int().min(1).max(20),
+      action_ordinal: z.union([z.literal(1), z.literal(2)]),
       team_slot: z.union([z.literal(1), z.literal(2), z.literal(3)]),
     })
     .strict(),
+  z
+    .object({
+      room_id: uuidSchema,
+      kind: z.literal("replace_attack"),
+      round_no: z.number().int().min(1).max(20),
+      action_ordinal: z.union([z.literal(1), z.literal(2)]),
+      team_slot: z.union([z.literal(1), z.literal(2), z.literal(3)]),
+      skill_position: z.union([
+        z.literal(1),
+        z.literal(2),
+        z.literal(3),
+        z.literal(4),
+      ]),
+    })
+    .strict(),
 ]);
-
-const battleForcedSwitchRouteInputSchema = z
-  .object({
-    room_id: uuidSchema,
-    turn_no: z.number().int().min(1).max(20),
-    team_slot: z.union([z.literal(1), z.literal(2), z.literal(3)]),
-  })
-  .strict();
 
 const battlePresenceCommandSchema = z
   .object({
@@ -156,7 +166,12 @@ export const battleRoutes = [
     auth: true,
     idempotent: false,
     refreshScopes: ["battle"],
-    input: z.object({ room_id: uuidSchema }).strict(),
+    input: z
+      .object({
+        room_id: uuidSchema,
+        after_action_sequence: nonNegativeIntegerSchema.optional(),
+      })
+      .strict(),
     output: battleRoomSnapshotSchema,
     errors: ["BATTLE_ROOM_NOT_FOUND", "BATTLE_NOT_PARTICIPANT"],
   }),
@@ -250,30 +265,8 @@ export const battleRoutes = [
       "BATTLE_ROOM_NOT_FOUND",
       "BATTLE_NOT_PARTICIPANT",
       "BATTLE_ACTION_PHASE_INVALID",
-      "BATTLE_ACTION_ALREADY_LOCKED",
+      "BATTLE_NOT_YOUR_TURN",
       "BATTLE_ACTION_INVALID",
-      "BATTLE_SWITCH_TARGET_INVALID",
-      "BATTLE_STATE_CONFLICT",
-      "BATTLE_VOIDED",
-      "RATE_LIMITED",
-      "IDEMPOTENCY_KEY_REUSED",
-    ],
-  }),
-  defineRoute({
-    id: "battle.forced_switch",
-    method: "POST",
-    path: "/api/battle/rooms/:room_id/forced-switch",
-    gateway: "app",
-    auth: true,
-    idempotent: true,
-    refreshScopes: ["battle"],
-    input: battleForcedSwitchRouteInputSchema,
-    output: battleRoomSnapshotSchema,
-    errors: [
-      "BATTLE_ROOM_NOT_FOUND",
-      "BATTLE_NOT_PARTICIPANT",
-      "BATTLE_ACTION_PHASE_INVALID",
-      "BATTLE_ACTION_ALREADY_LOCKED",
       "BATTLE_SWITCH_TARGET_INVALID",
       "BATTLE_STATE_CONFLICT",
       "BATTLE_VOIDED",

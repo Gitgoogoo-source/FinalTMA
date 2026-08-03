@@ -28,7 +28,6 @@ export const battlePageStateSchema = z.enum([
   "lobby",
   "accept",
   "battle",
-  "forced_switch",
   "result",
 ]);
 
@@ -37,9 +36,7 @@ export const battleRoomStatusSchema = z.enum([
   "waiting",
   "lobby_waiting",
   "lobby_countdown",
-  "active_select",
-  "reveal",
-  "forced_switch",
+  "active_turn",
   "finished",
   "draw",
   "cancelled",
@@ -99,8 +96,9 @@ export const battleRulesetSummarySchema = z
     lobby_timeout_seconds: z.literal(300),
     lobby_countdown_seconds: z.literal(3),
     action_timeout_seconds: z.literal(15),
-    forced_switch_timeout_seconds: z.literal(15),
-    reveal_seconds: z.literal(3),
+    actions_per_round: z.literal(2),
+    timeout_skill_position: z.literal(1),
+    initiative_rule: z.literal("opening_speed_creator_tie"),
     max_normal_turns: z.literal(20),
   })
   .strict();
@@ -195,7 +193,6 @@ export const battleSkillSchema = z
     name: z.string().trim().min(1).max(64),
     power: z.number().int().positive(),
     accuracy_bps: z.number().int().min(1).max(10_000),
-    priority: z.number().int().min(-1).max(1),
     effect_key: battleEffectKeySchema,
   })
   .strict();
@@ -326,7 +323,7 @@ const battlePublicSwitchTargetSchema = z
   })
   .strict();
 
-const battleResolutionAttackActionSchema = z.discriminatedUnion("actor", [
+const battleActionAttackDisplaySchema = z.discriminatedUnion("actor", [
   z
     .object({
       actor: z.literal("self"),
@@ -355,19 +352,12 @@ const battleResolutionAttackActionSchema = z.discriminatedUnion("actor", [
     .strict(),
 ]);
 
-const battleResolutionActionSchema = z.discriminatedUnion("kind", [
-  battleResolutionAttackActionSchema,
+const battleActionDisplaySchema = z.discriminatedUnion("kind", [
+  battleActionAttackDisplaySchema,
   z
     .object({
       actor: z.enum(["self", "opponent"]),
       kind: z.literal("switch"),
-      switch_to: battlePublicSwitchTargetSchema,
-    })
-    .strict(),
-  z
-    .object({
-      actor: z.enum(["self", "opponent"]),
-      kind: z.literal("forced_switch"),
       switch_to: battlePublicSwitchTargetSchema,
     })
     .strict(),
@@ -390,15 +380,17 @@ const battleOpponentHpSchema = z
   })
   .strict();
 
-export const battleResolutionEventSchema = z
+export const battleActionEventSchema = z
   .object({
+    sequence: z.number().int().positive(),
     event_id: uuidSchema,
     state_version: z.number().int().positive(),
-    turn_no: z.number().int().min(1).max(20),
-    actions: z.array(battleResolutionActionSchema).min(1).max(2),
+    round_no: z.number().int().min(1).max(20),
+    action_ordinal: z.union([z.literal(1), z.literal(2)]),
+    actor: z.enum(["self", "opponent"]),
+    actions: z.array(battleActionDisplaySchema).min(1).max(2),
     self_hp: z.array(battleSelfHpSchema).length(3),
     opponent_hp: z.array(battleOpponentHpSchema).length(3),
-    reveal_ends_at: timestampSchema,
   })
   .strict();
 
@@ -412,7 +404,6 @@ export const battleParticipationSchema = z
     entry_fee: z.union([z.literal(20), z.literal(100), z.literal(500)]),
     expires_at: timestampSchema.nullable(),
     phase_deadline: timestampSchema.nullable(),
-    reveal_ends_at: timestampSchema.nullable(),
   })
   .strict();
 
@@ -436,9 +427,12 @@ export const battleRoomSnapshotSchema = z
     status: battleRoomStatusSchema,
     state_version: z.number().int().positive(),
     side: z.enum(["creator", "opponent"]),
-    turn_no: z.number().int().min(0).max(20),
+    round_no: z.number().int().min(0).max(20),
+    action_ordinal: z.number().int().min(0).max(2),
+    first_actor: z.enum(["self", "opponent"]).nullable(),
+    active_actor: z.enum(["self", "opponent"]).nullable(),
+    active_action_mode: z.enum(["normal", "replace_attack"]),
     phase_deadline: timestampSchema.nullable(),
-    reveal_ends_at: timestampSchema.nullable(),
     prepare_deadline: timestampSchema.nullable(),
     prepared_message_id: z.string().trim().min(1).max(256).nullable(),
     presence_lifecycle: z
@@ -449,12 +443,14 @@ export const battleRoomSnapshotSchema = z
         active: z.boolean(),
       })
       .strict(),
-    viewer_action_state: z.enum(["not_applicable", "available", "locked"]),
+    viewer_action_state: z.enum(["not_applicable", "available"]),
     server_time: timestampSchema,
     lobby: battleLobbySchema.nullable(),
     self_team: battleSelfTeamSchema,
     opponent_team: battleOpponentTeamSchema,
-    resolution_event: battleResolutionEventSchema.nullable(),
+    latest_action_sequence: nonNegativeIntegerSchema,
+    action_events: z.array(battleActionEventSchema).max(16),
+    has_more_action_events: z.boolean(),
     terminal_result: battleTerminalResultSchema.nullable(),
   })
   .strict()
@@ -485,7 +481,8 @@ export const battleActionInputSchema = z.discriminatedUnion("kind", [
   z
     .object({
       kind: z.literal("attack"),
-      turn_no: z.number().int().min(1).max(20),
+      round_no: z.number().int().min(1).max(20),
+      action_ordinal: z.union([z.literal(1), z.literal(2)]),
       skill_position: z.union([
         z.literal(1),
         z.literal(2),
@@ -497,18 +494,26 @@ export const battleActionInputSchema = z.discriminatedUnion("kind", [
   z
     .object({
       kind: z.literal("switch"),
-      turn_no: z.number().int().min(1).max(20),
+      round_no: z.number().int().min(1).max(20),
+      action_ordinal: z.union([z.literal(1), z.literal(2)]),
       team_slot: z.union([z.literal(1), z.literal(2), z.literal(3)]),
     })
     .strict(),
+  z
+    .object({
+      kind: z.literal("replace_attack"),
+      round_no: z.number().int().min(1).max(20),
+      action_ordinal: z.union([z.literal(1), z.literal(2)]),
+      team_slot: z.union([z.literal(1), z.literal(2), z.literal(3)]),
+      skill_position: z.union([
+        z.literal(1),
+        z.literal(2),
+        z.literal(3),
+        z.literal(4),
+      ]),
+    })
+    .strict(),
 ]);
-
-export const battleForcedSwitchInputSchema = z
-  .object({
-    turn_no: z.number().int().min(1).max(20),
-    team_slot: z.union([z.literal(1), z.literal(2), z.literal(3)]),
-  })
-  .strict();
 
 export const battleRealtimeInvalidationSchema = z
   .object({
@@ -535,15 +540,10 @@ export type BattleInvitePreviewDto = z.output<typeof battleInvitePreviewSchema>;
 export type BattleSelfTeamDto = z.output<typeof battleSelfTeamSchema>;
 export type BattleOpponentTeamDto = z.output<typeof battleOpponentTeamSchema>;
 export type BattleLobbyDto = z.output<typeof battleLobbySchema>;
-export type BattleResolutionEventDto = z.output<
-  typeof battleResolutionEventSchema
->;
+export type BattleActionEventDto = z.output<typeof battleActionEventSchema>;
 export type BattleRoomSnapshotDto = z.output<typeof battleRoomSnapshotSchema>;
 export type BattleTeamSelection = z.output<typeof battleTeamSelectionSchema>;
 export type BattleActionInput = z.output<typeof battleActionInputSchema>;
-export type BattleForcedSwitchInput = z.output<
-  typeof battleForcedSwitchInputSchema
->;
 export type BattleRealtimeInvalidation = z.output<
   typeof battleRealtimeInvalidationSchema
 >;

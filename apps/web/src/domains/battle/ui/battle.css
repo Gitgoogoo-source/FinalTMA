@@ -1883,8 +1883,7 @@
 }
 
 .battle-switch-sheet,
-.battle-cancel-sheet,
-.battle-forced-sheet {
+.battle-cancel-sheet {
   position: relative;
   width: min(100%, 520px);
   display: grid;
@@ -1899,15 +1898,13 @@
 }
 
 .battle-switch-sheet h2,
-.battle-cancel-sheet h2,
-.battle-forced-sheet h2 {
+.battle-cancel-sheet h2 {
   margin: 0;
   font-size: 22px;
 }
 
 .battle-switch-sheet p,
-.battle-cancel-sheet p,
-.battle-forced-sheet p {
+.battle-cancel-sheet p {
   margin: 0;
   color: var(--battle-muted);
   font-size: 11px;
@@ -2183,15 +2180,6 @@
     "Microsoft YaHei", monospace;
 }
 
-.battle-arena[data-battle-phase="active_select"][data-battle-has-resolution="false"] {
-  grid-template-rows: 48px 209px 0 215px auto;
-}
-
-.battle-arena[data-battle-phase="active_select"][data-battle-has-resolution="false"]
-  .battle-stage-feedback {
-  display: none;
-}
-
 .battle-arena::before {
   display: none;
 }
@@ -2370,7 +2358,8 @@
 }
 
 .battle-effect-layer {
-  display: none;
+  display: block;
+  pointer-events: none;
 }
 
 .battle-action-hud {
@@ -2456,14 +2445,34 @@
   box-shadow: 2px 2px 0 #273b42;
 }
 
-.battle-sheet-backdrop:has(> .battle-switch-sheet),
-.battle-sheet-backdrop:has(> .battle-forced-sheet) {
+.battle-replace-action {
+  display: grid;
+  gap: 8px;
+}
+
+.battle-replace-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.battle-replace-heading > button {
+  min-height: 44px;
+  padding: 6px 10px;
+  border: 3px solid #273b42;
+  border-radius: 3px;
+  color: #273b42;
+  background: #e7e1b7;
+  font: inherit;
+}
+
+.battle-sheet-backdrop:has(> .battle-switch-sheet) {
   background: rgba(22, 43, 45, 0.72);
   backdrop-filter: none;
 }
 
-.battle-switch-sheet,
-.battle-forced-sheet {
+.battle-switch-sheet {
   gap: 10px;
   padding: 18px;
   border: 4px solid #273b42;
@@ -2485,8 +2494,7 @@
   background: #e7e1b7;
 }
 
-.battle-switch-sheet .battle-switch-candidates > button,
-.battle-forced-sheet .battle-switch-candidates > button {
+.battle-switch-sheet .battle-switch-candidates > button {
   min-height: 128px;
   border: 3px solid #273b42;
   border-radius: 4px;
@@ -2496,8 +2504,7 @@
   font-family: inherit;
 }
 
-.battle-switch-sheet .battle-switch-candidates > button:not(:disabled):active,
-.battle-forced-sheet .battle-switch-candidates > button:not(:disabled):active {
+.battle-switch-sheet .battle-switch-candidates > button:not(:disabled):active {
   border-color: #d64b43;
   transform: translate(1px, 1px);
 }

@@ -309,8 +309,7 @@ function TeamOptionDetail({ item }: { item: TeamOption }): ReactNode {
             <div key={skill.skill_id}>
               <strong>{skill.name}</strong>
               <span>
-                威力 {skill.power} · 命中 {skill.accuracy_bps / 100}% · 优先级{" "}
-                {skill.priority > 0 ? `+${skill.priority}` : skill.priority}
+                威力 {skill.power} · 命中 {skill.accuracy_bps / 100}%
               </span>
             </div>
           ))}

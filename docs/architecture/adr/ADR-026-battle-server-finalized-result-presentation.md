@@ -10,7 +10,7 @@ Battle 的胜负、退款或结算、K-coin 账本、stake、reservation、parti
 
 参与者专属 `BattleRoomSnapshotDto` 固定包含 `terminal_result: BattleTerminalResultDto | null`。数据库只从当前 viewer 的终局 summary 生成该字段；正常 `finished`、`draw` 和已开战安全作废 `voided` 必须返回完整结果，`cancelled`、`expired` 与 prepared-share 作废固定返回 `null`。Battle bootstrap 与 identity bootstrap 只恢复未终结 participation，不返回终局结果；项目删除 Battle acknowledge REST 路由、RPC、错误码、参与者确认时间和所有 Web 确认状态。
 
-Web 收到终局 room snapshot 时先应用权威快照，再由终态协调器自动执行 Battle、identity、inventory 三域权威刷新。资产回正不等待用户点击；失败只在活动 `/game` 静默重试。结果按钮固定为“返回 Battle 首页”，只在当前 session generation 的内存中记录已离开的 room ID 并本地返回首页，不写浏览器存储或服务器。任何迟到的 room、Ably、bootstrap 或命令响应都必须经过同一内存边界，不能重新打开该 room 的结果页；新的 session generation 清空此集合。
+Web 收到终局 room snapshot 时立即应用权威快照，再由终态协调器自动执行 Battle、identity、inventory 三域权威刷新。资产回正不等待动作动画或用户点击；失败只在活动 `/game` 静默重试。终局结果先保持在权威状态中，只有当前客户端按 sequence 排队的全部动作事件播放或无动画应用完成后才能显示覆盖层。结果按钮固定为“返回 Battle 首页”，只在当前 session generation 的内存中记录已离开的 room ID 并本地返回首页，不写浏览器存储或服务器。任何迟到的 room、Ably、bootstrap 或命令响应都必须经过同一内存边界，不能重新打开该 room 的结果页；新的 session generation 清空此集合。
 
 重新认证后，`/game` 直接进入 Battle 首页。终局参与者从原 `BTL_` 入口重新打开时，`battle.current_invite` 复用既有 `none` 状态且 Web 直接进入 Battle 首页，不增加导航提示或结果恢复字段；未参与该房间的账号仍按邀请的真实状态显示接受或冲突页面。普通 TMA 入口继续进入项目默认首页。
 
@@ -18,4 +18,4 @@ Web 收到终局 room snapshot 时先应用权威快照，再由终态协调器�
 
 ## 结果
 
-数据库结算不再依赖客户端生命周期，用户可以立即关闭页面且不会阻塞双方资产释放。当前前台会话仍展示数据库权威结果，按钮不再承担业务副作用，重开应用也不会被旧结果拦截。
+数据库结算不依赖客户端生命周期，用户可以立即关闭页面且不会阻塞双方资产释放。当前前台会话在动作表现队列清空后展示数据库权威结果，按钮不承担业务副作用，重开应用也不会被旧结果拦截。

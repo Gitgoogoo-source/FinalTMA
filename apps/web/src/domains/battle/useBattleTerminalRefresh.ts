@@ -100,7 +100,10 @@ export function useBattleTerminalRefresh(
   reportTerminal: BattleTerminalReporter;
   reportNonTerminalRoom(roomId: string): void;
   prepareAuthorityRecovery(roomId: string): boolean;
-  readAuthorityRoom(roomId: string): Promise<BattleRoomSnapshotDto | null>;
+  readAuthorityRoom(
+    roomId: string,
+    afterActionSequence?: number,
+  ): Promise<BattleRoomSnapshotDto | null>;
   finishAuthorityRecovery(roomId: string): void;
   active: BattleTerminalObservation | null;
   isLocked(roomId: string | null): boolean;
@@ -149,9 +152,9 @@ export function useBattleTerminalRefresh(
     [sessionGeneration],
   );
   const readAuthorityRoom = useCallback(
-    (roomId: string) =>
+    (roomId: string, afterActionSequence?: number) =>
       sessionGeneration
-        ? readCoordinatorRoom(sessionGeneration, roomId)
+        ? readCoordinatorRoom(sessionGeneration, roomId, afterActionSequence)
         : Promise.resolve(null),
     [sessionGeneration],
   );
@@ -271,16 +274,23 @@ function reportTerminalObservation(
 function readCoordinatorRoom(
   generation: string,
   roomId: string,
+  afterActionSequence?: number,
 ): Promise<BattleRoomSnapshotDto | null> {
   if (!beginCoordinatorRecovery(generation, roomId))
     return Promise.resolve(null);
   const state = coordinatorFor(generation);
-  const key = `${generation}:${roomId}`;
+  const input = {
+    room_id: roomId,
+    ...(afterActionSequence === undefined
+      ? {}
+      : { after_action_sequence: afterActionSequence }),
+  };
+  const key = `${generation}:${roomId}:${afterActionSequence ?? "latest"}`;
   const existing = state.roomInFlight.get(key);
   if (existing) return existing;
   const task = fetchApiQueryBatchAsOwner(
     state.discoveryOwner,
-    [{ routeId: "battle.room", input: { room_id: roomId } }],
+    [{ routeId: "battle.room", input }],
     { cancelRouteIds: authorityCancellationRoutes },
   )
     .then(() => {
@@ -291,9 +301,7 @@ function readCoordinatorRoom(
         state.recoveryRoomId !== roomId
       )
         return null;
-      return (
-        getApiQueryData(generation, "battle.room", { room_id: roomId }) ?? null
-      );
+      return getApiQueryData(generation, "battle.room", input) ?? null;
     })
     .catch((cause: unknown) => {
       if (

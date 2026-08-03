@@ -48,6 +48,7 @@ export const battleHandlers = {
       {
         p_session_id: requireSession(context).session_id,
         p_room_id: context.input.room_id,
+        p_after_action_sequence: context.input.after_action_sequence ?? null,
       },
       { signal: requestSignal(context.request) },
     ),
@@ -104,18 +105,19 @@ export const battleHandlers = {
   "battle.action": async (context) =>
     command(context, "battle.action", "battle_submit_action", {
       p_room_id: context.input.room_id,
-      p_turn_no: context.input.turn_no,
+      p_round_no: context.input.round_no,
+      p_action_ordinal: context.input.action_ordinal,
       p_kind: context.input.kind,
       p_skill_position:
-        context.input.kind === "attack" ? context.input.skill_position : null,
+        context.input.kind === "attack" ||
+        context.input.kind === "replace_attack"
+          ? context.input.skill_position
+          : null,
       p_target_slot:
-        context.input.kind === "switch" ? context.input.team_slot : null,
-    }),
-  "battle.forced_switch": async (context) =>
-    command(context, "battle.forced_switch", "battle_submit_forced_switch", {
-      p_room_id: context.input.room_id,
-      p_turn_no: context.input.turn_no,
-      p_target_slot: context.input.team_slot,
+        context.input.kind === "switch" ||
+        context.input.kind === "replace_attack"
+          ? context.input.team_slot
+          : null,
     }),
   "battle.heartbeat": async (context) =>
     nonOperationCommand(context, "battle_heartbeat", {

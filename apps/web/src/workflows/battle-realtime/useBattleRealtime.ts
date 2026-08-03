@@ -18,9 +18,7 @@ export type BattleRealtimePhase =
   | "waiting"
   | "lobby"
   | "accept"
-  | "active_select"
-  | "reveal"
-  | "forced_switch";
+  | "active_turn";
 
 export type BattleRealtimeStatus =
   | "idle"
@@ -248,7 +246,7 @@ export function useBattleRealtime({
 }
 
 function pollingInterval(phase: BattleRealtimePhase): 1_000 | 2_000 | null {
-  if (phase === "active_select" || phase === "forced_switch") return 1_000;
+  if (phase === "active_turn") return 1_000;
   if (
     phase === "waiting" ||
     phase === "lobby" ||

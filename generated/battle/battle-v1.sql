@@ -1,11 +1,11 @@
--- Battle rules checksum: 1cfe7a9c629c814baea5d8ddc3abf29e16fb8af69f583b4bd3ce00d14e8a9cad
+-- Battle rules checksum: f8501fddf4804985e1e6708f9cbc2b283d7609c2a60f9e464078bf24b1131d99
 insert into battle.rulesets (
   id, checksum, status, parameters, source_version
 ) values (
   'battle-v1',
-  '1cfe7a9c629c814baea5d8ddc3abf29e16fb8af69f583b4bd3ce00d14e8a9cad',
+  'f8501fddf4804985e1e6708f9cbc2b283d7609c2a60f9e464078bf24b1131d99',
   'active',
-  '{"action_timeout_seconds":15,"fee_bps":1000,"forced_switch_timeout_seconds":15,"heartbeat_interval_seconds":5,"lobby_countdown_seconds":3,"lobby_timeout_seconds":300,"max_normal_turns":20,"offline_reconnect_seconds":90,"outbox_retry_seconds":[1,2,5,10,30],"presence_online_window_seconds":10,"random_modulus":10000,"rate_limit_retention_seconds":300,"rate_limit_window_seconds":60,"reveal_seconds":3,"share_prepare_timeout_seconds":60,"single_hit_cap_bps":8000,"tick_batch_limit":100,"waiting_timeout_seconds":1800}'::jsonb,
+  '{"action_timeout_seconds":15,"actions_per_round":2,"fee_bps":1000,"heartbeat_interval_seconds":5,"initiative_rule":"opening_speed_creator_tie","lobby_countdown_seconds":3,"lobby_timeout_seconds":300,"max_normal_turns":20,"offline_reconnect_seconds":90,"outbox_retry_seconds":[1,2,5,10,30],"presence_online_window_seconds":10,"random_modulus":10000,"rate_limit_retention_seconds":300,"rate_limit_window_seconds":60,"share_prepare_timeout_seconds":60,"single_hit_cap_bps":8000,"tick_batch_limit":100,"timeout_skill_position":1,"waiting_timeout_seconds":1800}'::jsonb,
   'v1'
 );
 
@@ -48,17 +48,17 @@ insert into battle.type_matchups (ruleset_id, attacker, defender, multiplier_bps
   ('battle-v1', 'water', 'lightning', 7500),
   ('battle-v1', 'water', 'water', 10000);
 
-insert into battle.skill_slots (ruleset_id, id, power, accuracy_bps, priority, trajectory) values
-  ('battle-v1', 'S01', 45, 10000, 1, '单段突进'),
-  ('battle-v1', 'S02', 60, 9000, 1, '双段疾行'),
-  ('battle-v1', 'S03', 80, 7000, 1, '折线闪击'),
-  ('battle-v1', 'S04', 55, 10000, 0, '球形投射'),
-  ('battle-v1', 'S05', 70, 9500, 0, '环形冲击'),
-  ('battle-v1', 'S06', 85, 8500, 0, '垂直重击'),
-  ('battle-v1', 'S07', 105, 7000, 0, '径向爆发'),
-  ('battle-v1', 'S08', 75, 10000, -1, '横向轰流'),
-  ('battle-v1', 'S09', 95, 9000, -1, '全场风暴'),
-  ('battle-v1', 'S10', 125, 7000, -1, '天降聚合');
+insert into battle.skill_slots (ruleset_id, id, power, accuracy_bps, trajectory) values
+  ('battle-v1', 'S01', 45, 10000, '单段突进'),
+  ('battle-v1', 'S02', 60, 9000, '双段疾行'),
+  ('battle-v1', 'S03', 80, 7000, '折线闪击'),
+  ('battle-v1', 'S04', 55, 10000, '球形投射'),
+  ('battle-v1', 'S05', 70, 9500, '环形冲击'),
+  ('battle-v1', 'S06', 85, 8500, '垂直重击'),
+  ('battle-v1', 'S07', 105, 7000, '径向爆发'),
+  ('battle-v1', 'S08', 75, 10000, '横向轰流'),
+  ('battle-v1', 'S09', 95, 9000, '全场风暴'),
+  ('battle-v1', 'S10', 125, 7000, '天降聚合');
 
 insert into battle.skills (ruleset_id, id, element, slot_id, name, effect_key) values
   ('battle-v1', 'fire-s01', 'fire', 'S01', '火花突袭', 'fire-01'),

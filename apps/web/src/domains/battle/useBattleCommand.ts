@@ -25,8 +25,7 @@ type BattleCommandRouteId =
   | "battle.create"
   | "battle.cancel"
   | "battle.accept"
-  | "battle.action"
-  | "battle.forced_switch";
+  | "battle.action";
 
 type BattleCommandPhase =
   | "idle"
@@ -105,6 +104,9 @@ export function useBattleCommand(
         phase: "submitted",
       });
       try {
+        await nextAnimationFrame();
+        if (controller.signal.aborted || !isCurrentGeneration(generation))
+          return null;
         const response = await apiRequest(routeId, input, {
           idempotencyKey: operationId,
           signal: controller.signal,
@@ -236,6 +238,10 @@ export function useBattleCommand(
     state,
     execute,
   };
+}
+
+function nextAnimationFrame(): Promise<void> {
+  return new Promise((resolve) => requestAnimationFrame(() => resolve()));
 }
 
 async function recoverSameOperation<Id extends BattleCommandRouteId>(
@@ -440,11 +446,7 @@ async function authoritativeRoomFromResult<Id extends BattleCommandRouteId>(
   signal: AbortSignal,
   readAuthoritativeRoom: BattleAuthoritativeRoomReader,
 ): Promise<BattleRoomSnapshotDto | null> {
-  if (
-    routeId === "battle.accept" ||
-    routeId === "battle.action" ||
-    routeId === "battle.forced_switch"
-  )
+  if (routeId === "battle.accept" || routeId === "battle.action")
     return result as BattleRoomSnapshotDto;
   const commandResult = result as RouteOutput<BattleCommandRouteId>;
   const snapshot = await readAuthoritativeRoom(commandResult.room_id);

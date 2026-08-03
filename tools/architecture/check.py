@@ -153,6 +153,7 @@ def main() -> None:
     assert_nonempty_domains(API_ROOT / "domains")
     verify_web_boundaries()
     verify_game_page_boundary()
+    verify_battle_legacy_removal()
     verify_battle_terminal_refresh_semantics()
     verify_battle_accept_operation_ordering()
     verify_battle_countdown_lock_semantics()
@@ -278,6 +279,12 @@ def verify_game_page_boundary() -> None:
         "prepared_message_id",
         "prepare_deadline",
         "effect_key",
+        "active_action_mode",
+        "latest_action_sequence",
+        "action_events",
+        "after_action_sequence",
+        "battlePresentationActionKey",
+        "onPresentationBusyChange",
         "prefers-reduced-motion: reduce",
         'apiKeepaliveRequest("battle.offline"',
         '"battle.heartbeat",',
@@ -300,6 +307,21 @@ def verify_game_page_boundary() -> None:
     if missing_battle_terms:
         raise SystemExit(
             f"Battle Web authority and lifecycle are incomplete: {missing_battle_terms}"
+        )
+    removed_battle_terms = (
+        "active_select",
+        "forced_switch",
+        "resolution_event",
+        "reveal_ends_at",
+        "turn_no",
+        ".priority",
+    )
+    legacy_battle_terms = [
+        value for value in removed_battle_terms if value in battle_source
+    ]
+    if legacy_battle_terms:
+        raise SystemExit(
+            f"Legacy Battle Web state remains: {legacy_battle_terms}"
         )
     battle_screens = (
         WEB_ROOT / "domains/battle/ui/BattleScreens.tsx"
@@ -400,6 +422,54 @@ def verify_game_page_boundary() -> None:
     ):
         raise SystemExit(
             "Tasks page must own Wheel and hide Expedition filters, cards, and highlights"
+        )
+
+
+def verify_battle_legacy_removal() -> None:
+    files = {
+        BATTLE_SCHEMA,
+        BATTLE_BASELINE_MIGRATION,
+        ROOT / "supabase/migrations/20260719104602_product_data_v1.sql",
+        ROOT / "supabase/migrations/20260719104614_api_security.sql",
+        ROOT / "tools/product_data/battle.py",
+        ROOT / "packages/api-contracts/src/common/errors.ts",
+        ROOT / "packages/api-contracts/src/domains/battle/models.ts",
+        ROOT / "packages/api-contracts/src/domains/battle/routes.ts",
+        ROOT / "packages/api-contracts/openapi/openapi.json",
+    }
+    for parent, suffixes in (
+        (ROOT / "generated/battle", {".json", ".sql"}),
+        (API_ROOT / "domains/battle", {".ts"}),
+        (WEB_ROOT / "domains/battle", {".ts", ".tsx"}),
+        (WEB_ROOT / "workflows/battle-realtime", {".ts", ".tsx"}),
+    ):
+        files.update(
+            path for path in parent.rglob("*") if path.suffix in suffixes
+        )
+
+    patterns = {
+        "old selection state": re.compile(r"\bactive_select\b"),
+        "old reveal phase": re.compile(r"(?<![A-Za-z0-9_])reveal(?![A-Za-z0-9_])"),
+        "old reveal deadline": re.compile(r"\breveal_ends_at\b"),
+        "old switch phase or route": re.compile(r"\bforced_switch\b|forced-switch"),
+        "old single resolution event": re.compile(r"\bresolution_event\b"),
+        "old action lock error": re.compile(r"\bBATTLE_ACTION_ALREADY_LOCKED\b"),
+        "old turn number": re.compile(r"\b(?:current_)?turn_no\b"),
+        "old deferred transition": re.compile(r"\bnext_status\b|\bpending_result\b"),
+        "old dual-action resolver": re.compile(
+            r"\b(?:safe_)?resolve_normal_turn\b|\badvance_reveal\b"
+        ),
+        "skill priority": re.compile(r"\bpriority\b"),
+    }
+    violations: dict[str, list[str]] = {}
+    for path in sorted(files):
+        source = path.read_text(encoding="utf-8")
+        found = [label for label, pattern in patterns.items() if pattern.search(source)]
+        if found:
+            violations[relative(path)] = found
+    if violations:
+        raise SystemExit(
+            f"Legacy Battle contract or generated artifact remains: {violations}"
         )
 
 
@@ -595,8 +665,13 @@ def verify_battle_countdown_lock_semantics() -> None:
         advance_terms = (
             "v_room.status <> 'lobby_countdown'",
             "v_room.lobby_start_deadline > now()",
-            "set status = 'active_select'",
-            "current_turn_no = 1",
+            "v_opponent_lead.speed > v_creator_lead.speed",
+            "else 'creator'",
+            "set status = 'active_turn'",
+            "first_actor_side = v_first_actor_side",
+            "active_actor_side = v_first_actor_side",
+            "current_round_no = 1",
+            "current_action_ordinal = 1",
             "insert into battle.turns",
         )
         missing_advance_terms = [
@@ -631,12 +706,12 @@ def verify_battle_switch_atomicity() -> None:
         switch_member = extract_sql_function(
             label, source, "battle.switch_active_member"
         )
-        normal = extract_sql_function(label, source, "battle.resolve_normal_turn")
-        forced = extract_sql_function(label, source, "battle.resolve_forced_switch")
+        active_action = extract_sql_function(
+            label, source, "battle.resolve_active_action"
+        )
         definitions[label] = {
             "switch_member": switch_member,
-            "normal": normal,
-            "forced": forced,
+            "active_action": active_action,
         }
 
         normalized = re.sub(r"\s+", " ", switch_member.lower())
@@ -654,13 +729,9 @@ def verify_battle_switch_atomicity() -> None:
             raise SystemExit(
                 f"{label}: Battle switch cannot depend on multi-row UPDATE order"
             )
-        if normal.count("perform battle.switch_active_member(") != 2:
+        if active_action.count("perform battle.switch_active_member(") != 2:
             raise SystemExit(
-                f"{label}: both normal-turn sides must use the atomic switch helper"
-            )
-        if forced.count("perform battle.switch_active_member(") != 1:
-            raise SystemExit(
-                f"{label}: forced switch must use the atomic switch helper"
+                f"{label}: switch and replace_attack must use the atomic switch helper"
             )
 
     schema_definitions, migration_definitions = definitions.values()

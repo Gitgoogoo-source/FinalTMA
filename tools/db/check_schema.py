@@ -323,13 +323,14 @@ def verify_battle_contract() -> None:
         "create or replace function api.battle_prepare_room",
         "create or replace function api.battle_accept_room",
         "create or replace function api.battle_submit_action",
-        "create or replace function api.battle_submit_forced_switch",
         "create or replace function battle.skills_json",
+        "create or replace function battle.action_event_json",
+        "create or replace function battle.action_events_json",
         "create or replace function battle.viewer_action_state",
         "create or replace function battle.switch_active_member",
-        "create or replace function battle.safe_resolve_normal_turn",
-        "create or replace function battle.safe_resolve_forced_switch",
-        "create or replace function battle.safe_finalize_room",
+        "create or replace function battle.resolve_active_action",
+        "create or replace function battle.safe_resolve_active_action",
+        "create or replace function battle.finalize_room",
         "create or replace function battle.lobby_terminal_reason",
         "create or replace function battle.lobby_invariant_error",
         "create or replace function battle.reconcile_lobby_presence",
@@ -354,6 +355,13 @@ def verify_battle_contract() -> None:
         "perform battle.wake_integration('outbox')",
         "extensions.hmac(",
         "gen_random_bytes(32)",
+        "first_actor_side text",
+        "active_actor_side text",
+        "current_round_no smallint",
+        "current_action_ordinal smallint",
+        "latest_action_sequence bigint",
+        "kind text not null check (kind in ('attack', 'switch', 'replace_attack'))",
+        "unique (room_id, round_no, action_ordinal)",
         "char_length(prepared_message_id) between 1 and 256",
         "effect_key = element || '-' || substr(slot_id, 2)",
         "skill_3_id text,",
@@ -395,6 +403,35 @@ def verify_battle_contract() -> None:
     missing = [fragment for fragment in required if fragment not in battle_sql]
     if missing:
         raise SystemExit(f"Battle database contract is incomplete: {missing}")
+    removed_legacy = (
+        "'active_select'",
+        "'forced_switch'",
+        "reveal_ends_at",
+        "resolution_event",
+        "current_turn_no",
+        "api.battle_submit_forced_switch",
+        "battle.resolve_normal_turn",
+        "battle.resolve_forced_switch",
+        "battle.advance_reveal",
+        "priority smallint",
+    )
+    legacy_sources = {
+        "schema": battle_sql,
+        "baseline": one_migration("_baseline.sql")
+        .read_text(encoding="utf-8")
+        .lower(),
+        "product_data": product_data_sql,
+        "security": security_sql,
+    }
+    legacy = {
+        name: [fragment for fragment in removed_legacy if fragment in source]
+        for name, source in legacy_sources.items()
+    }
+    legacy = {
+        name: fragments for name, fragments in legacy.items() if fragments
+    }
+    if legacy:
+        raise SystemExit(f"Legacy Battle turn-state contract remains: {legacy}")
     if "battle.monitor_tick_health(v_scan_from, v_scan_to)" not in jobs_sql:
         raise SystemExit("Battle tick health is not connected to monitor-invariants")
     schedule_sql = """select cron.schedule(
@@ -447,6 +484,9 @@ def verify_battle_contract() -> None:
 
 def verify_admin_fixture_contract() -> None:
     admin_sql = (SCHEMAS / "96_admin.sql").read_text(encoding="utf-8").lower()
+    battle_checksum = (
+        ROOT / "generated/battle/battle-v1.sha256"
+    ).read_text(encoding="utf-8").split()[0].lower()
     security_sql = one_migration("_api_security.sql").read_text(encoding="utf-8").lower()
     economy_sql = (SCHEMAS / "31_economy.sql").read_text(encoding="utf-8").lower()
     required = (
@@ -471,7 +511,6 @@ def verify_admin_fixture_contract() -> None:
         "pet-n-001-1",
         "pet-a-016-3",
         "de521f2687086cb358fb557a4a7ada3bc3c5fc132d673f0256b4573028ddba46",
-        "1cfe7a9c629c814baea5d8ddc3abf29e16fb8af69f583b4bd3ce00d14e8a9cad",
         "array_remove(",
         "create or replace function admin.track_fixture_balance_ownership",
         "create or replace function admin.track_fixture_holding_ownership",
@@ -500,6 +539,10 @@ def verify_admin_fixture_contract() -> None:
     missing = [fragment for fragment in required if fragment not in admin_sql]
     if missing:
         raise SystemExit(f"Controlled Battle fixture contract is incomplete: {missing}")
+    if admin_sql.count(battle_checksum) != 2:
+        raise SystemExit(
+            "Controlled Battle fixture must use the generated Battle checksum exactly twice"
+        )
     if "service_role" in admin_sql or "create or replace function api." in admin_sql:
         raise SystemExit("Controlled Battle fixture cannot be exposed to application roles or api schema")
     if "ebewtjerusxcioegpzjd" in admin_sql:

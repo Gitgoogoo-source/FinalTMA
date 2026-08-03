@@ -32,11 +32,11 @@ REQUIRED_SOURCE_FACTS = (
     "火焰 → 草系 → 土系 → 雷电 → 水系 → 火焰",
     "克制倍率固定为 1.50，被克制倍率固定为 0.75，同属性或不相邻属性固定为 1.00",
     "20/100/500 三档结算",
-    "5 分钟双人等待房、3 秒开战倒计时、3 秒回合展示窗口、15 秒选择时限和 20 回合上限",
+    "5 分钟双人等待房、3 秒开战倒计时、每次独立 15 秒行动时限和 20 个完整回合上限",
     "Battle 产品数据生成器只读取本节确定数据",
     "skill_count = stage + 1",
     "接受成功时数据库使用 `gen_random_bytes(32)`",
-    "HMAC-SHA256(room_private_seed, battle_id | turn_no | actor_side | action_ordinal | skill_id)",
+    "HMAC-SHA256(room_private_seed, battle_id | round_no | actor_side | action_ordinal | skill_id)",
 )
 RULE_PARAMETERS = {
     "share_prepare_timeout_seconds": 60,
@@ -47,8 +47,9 @@ RULE_PARAMETERS = {
     "lobby_timeout_seconds": 300,
     "lobby_countdown_seconds": 3,
     "action_timeout_seconds": 15,
-    "forced_switch_timeout_seconds": 15,
-    "reveal_seconds": 3,
+    "actions_per_round": 2,
+    "timeout_skill_position": 1,
+    "initiative_rule": "opening_speed_creator_tie",
     "max_normal_turns": 20,
     "tick_batch_limit": 100,
     "fee_bps": 1000,
@@ -75,9 +76,7 @@ ROOM_STATES = (
     "waiting",
     "lobby_waiting",
     "lobby_countdown",
-    "active_select",
-    "reveal",
-    "forced_switch",
+    "active_turn",
     "finished",
     "draw",
     "cancelled",
@@ -224,8 +223,7 @@ def parse_skill_slots(section: str) -> list[dict[str, Any]]:
             "id": row[0],
             "power": parse_int(row[1]),
             "accuracy_bps": parse_int(row[2]),
-            "priority": parse_int(row[4]),
-            "trajectory": row[5],
+            "trajectory": row[4],
         }
         for row in rows
     ]
@@ -474,7 +472,7 @@ def parse(
         },
         "random_formula": {
             "algorithm": "HMAC-SHA256",
-            "message": "battle_id|turn_no|actor_side|action_ordinal|skill_id",
+            "message": "battle_id|round_no|actor_side|action_ordinal|skill_id",
             "roll": "unsigned_first_32_bits_mod_10000",
         },
     }
@@ -637,7 +635,6 @@ def render(payload: dict[str, Any]) -> str:
                 sql_string(item["id"]),
                 str(item["power"]),
                 str(item["accuracy_bps"]),
-                str(item["priority"]),
                 sql_string(item["trajectory"]),
             ]
         )
@@ -646,7 +643,7 @@ def render(payload: dict[str, Any]) -> str:
     )
     sections.append(
         "insert into battle.skill_slots "
-        "(ruleset_id, id, power, accuracy_bps, priority, trajectory) values\n"
+        "(ruleset_id, id, power, accuracy_bps, trajectory) values\n"
         + slot_values
         + ";\n\n"
     )

@@ -467,7 +467,7 @@
   ],
   "random_formula": {
     "algorithm": "HMAC-SHA256",
-    "message": "battle_id|turn_no|actor_side|action_ordinal|skill_id",
+    "message": "battle_id|round_no|actor_side|action_ordinal|skill_id",
     "roll": "unsigned_first_32_bits_mod_10000"
   },
   "rarity_factors": [
@@ -670,9 +670,7 @@
     "waiting",
     "lobby_waiting",
     "lobby_countdown",
-    "active_select",
-    "reveal",
-    "forced_switch",
+    "active_turn",
     "finished",
     "draw",
     "cancelled",
@@ -681,9 +679,10 @@
   ],
   "rule_parameters": {
     "action_timeout_seconds": 15,
+    "actions_per_round": 2,
     "fee_bps": 1000,
-    "forced_switch_timeout_seconds": 15,
     "heartbeat_interval_seconds": 5,
+    "initiative_rule": "opening_speed_creator_tie",
     "lobby_countdown_seconds": 3,
     "lobby_timeout_seconds": 300,
     "max_normal_turns": 20,
@@ -692,10 +691,10 @@
     "random_modulus": 10000,
     "rate_limit_retention_seconds": 300,
     "rate_limit_window_seconds": 60,
-    "reveal_seconds": 3,
     "share_prepare_timeout_seconds": 60,
     "single_hit_cap_bps": 8000,
     "tick_batch_limit": 100,
+    "timeout_skill_position": 1,
     "waiting_timeout_seconds": 1800
   },
   "skill_slots": [
@@ -703,70 +702,60 @@
       "accuracy_bps": 10000,
       "id": "S01",
       "power": 45,
-      "priority": 1,
       "trajectory": "单段突进"
     },
     {
       "accuracy_bps": 9000,
       "id": "S02",
       "power": 60,
-      "priority": 1,
       "trajectory": "双段疾行"
     },
     {
       "accuracy_bps": 7000,
       "id": "S03",
       "power": 80,
-      "priority": 1,
       "trajectory": "折线闪击"
     },
     {
       "accuracy_bps": 10000,
       "id": "S04",
       "power": 55,
-      "priority": 0,
       "trajectory": "球形投射"
     },
     {
       "accuracy_bps": 9500,
       "id": "S05",
       "power": 70,
-      "priority": 0,
       "trajectory": "环形冲击"
     },
     {
       "accuracy_bps": 8500,
       "id": "S06",
       "power": 85,
-      "priority": 0,
       "trajectory": "垂直重击"
     },
     {
       "accuracy_bps": 7000,
       "id": "S07",
       "power": 105,
-      "priority": 0,
       "trajectory": "径向爆发"
     },
     {
       "accuracy_bps": 10000,
       "id": "S08",
       "power": 75,
-      "priority": -1,
       "trajectory": "横向轰流"
     },
     {
       "accuracy_bps": 9000,
       "id": "S09",
       "power": 95,
-      "priority": -1,
       "trajectory": "全场风暴"
     },
     {
       "accuracy_bps": 7000,
       "id": "S10",
       "power": 125,
-      "priority": -1,
       "trajectory": "天降聚合"
     }
   ],

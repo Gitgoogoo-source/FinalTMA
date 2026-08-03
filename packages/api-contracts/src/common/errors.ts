@@ -42,9 +42,9 @@ export const errorRegistry = {
   ALBUM_CHAIN_INCOMPLETE: error(409, "尚未集齐该进化链"),
   ALBUM_REWARD_ALREADY_CLAIMED: error(409, "该图鉴奖励已经领取"),
   API_ROUTE_NOT_FOUND: error(404, "接口不存在"),
-  BATTLE_ACTION_ALREADY_LOCKED: error(
+  BATTLE_NOT_YOUR_TURN: error(
     409,
-    "本回合动作已经锁定",
+    "当前不是你的行动时段",
     false,
     "battle",
     "refresh",

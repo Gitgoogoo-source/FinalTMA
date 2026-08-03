@@ -11,6 +11,7 @@ import {
   battleTeamSelectionSchema,
   errorDefinition,
   isErrorCode,
+  type BattleActionEventDto,
   type BattleEntryTier,
   type BattlePageState,
   type BattleRoomSnapshotDto,
@@ -46,6 +47,10 @@ import {
 import { useBattleRealtime } from "../../../workflows/battle-realtime/index.ts";
 import { useNavigationIntent } from "../../../workflows/payment-recovery/index.ts";
 import { useBattleCommand } from "../useBattleCommand.ts";
+import {
+  battlePresentationActionKey,
+  type BattleLocalActionIntent,
+} from "../useBattleAnimation.ts";
 import { useBattleDeadline } from "../useBattleDeadline.ts";
 import {
   isBattleAssetTerminal,
@@ -104,7 +109,7 @@ export function BattleView(): ReactNode {
     reportTerminal,
     reportNonTerminalRoom,
     prepareAuthorityRecovery,
-    readAuthorityRoom,
+    readAuthorityRoom: readCoordinatorAuthorityRoom,
     finishAuthorityRecovery,
     active: activeTerminal,
     isLocked: isTerminalLocked,
@@ -154,6 +159,17 @@ export function BattleView(): ReactNode {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [switchOpen, setSwitchOpen] = useState(false);
   const [actionIntent, setActionIntent] = useState<string | null>(null);
+  const [presentationEvents, setPresentationEvents] = useState<
+    BattleActionEventDto[]
+  >([]);
+  const [localPresentationAction, setLocalPresentationAction] =
+    useState<BattleLocalActionIntent | null>(null);
+  const [cancelledLocalActionKey, setCancelledLocalActionKey] = useState<
+    string | null
+  >(null);
+  const [presentationResetVersion, setPresentationResetVersion] = useState(0);
+  const [presentationBusy, setPresentationBusy] = useState(false);
+  const [actionBackfillVersion, setActionBackfillVersion] = useState(0);
   const [onlineState, setOnlineState] = useState<OnlineState>("syncing");
   const [lifecycleReady, setLifecycleReady] = useState(false);
   const battleRootRef = useRef<HTMLDivElement>(null);
@@ -161,6 +177,9 @@ export function BattleView(): ReactNode {
   const dismissedTerminalRooms = useRef(new Set<string>());
   const presenceRoomRef = useRef<string | null>(null);
   const roomRef = useRef<BattleRoomSnapshotDto | null>(null);
+  const actionCursorRoom = useRef<string | null>(null);
+  const actionCursor = useRef<number | null>(null);
+  const presentationEventIds = useRef(new Set<string>());
   const shareAttemptRef = useRef<ShareAttempt | null>(null);
   const presenceLifecycle = useRef<PresenceLifecycle | null>(null);
   const heartbeatRequests = useRef(new Set<AbortController>());
@@ -180,6 +199,41 @@ export function BattleView(): ReactNode {
   const applySnapshot = useCallback((snapshot: BattleRoomSnapshotDto) => {
     seedApiQuery("battle.room", { room_id: snapshot.room_id }, snapshot);
     if (dismissedTerminalRooms.current.has(snapshot.room_id)) return;
+    if (actionCursorRoom.current !== snapshot.room_id) {
+      actionCursorRoom.current = snapshot.room_id;
+      actionCursor.current = snapshot.latest_action_sequence;
+      presentationEventIds.current.clear();
+      setPresentationEvents([]);
+      setLocalPresentationAction(null);
+      setCancelledLocalActionKey(null);
+      setPresentationBusy(false);
+      setPresentationResetVersion((version) => version + 1);
+    } else if (actionCursor.current === null) {
+      actionCursor.current = snapshot.latest_action_sequence;
+      presentationEventIds.current.clear();
+      setPresentationEvents([]);
+    } else {
+      const cursor = actionCursor.current;
+      const fresh = snapshot.action_events
+        .filter(
+          (event) =>
+            event.sequence > cursor &&
+            !presentationEventIds.current.has(event.event_id),
+        )
+        .sort((left, right) => left.sequence - right.sequence);
+      if (fresh.length > 0) {
+        for (const event of fresh)
+          presentationEventIds.current.add(event.event_id);
+        actionCursor.current = fresh.at(-1)!.sequence;
+        setPresentationBusy(true);
+        setPresentationEvents((current) => [...current, ...fresh]);
+      }
+      if (
+        snapshot.has_more_action_events ||
+        snapshot.latest_action_sequence > (actionCursor.current ?? cursor)
+      )
+        setActionBackfillVersion((version) => version + 1);
+    }
     setRoom((current) =>
       current?.room_id === snapshot.room_id &&
       compareSnapshots(current, snapshot) > 0
@@ -212,6 +266,17 @@ export function BattleView(): ReactNode {
   useEffect(() => {
     authorityRoomIdRef.current = authorityRoomId;
   }, [authorityRoomId]);
+  const readAuthorityRoom = useCallback(
+    (targetRoomId: string) =>
+      readCoordinatorAuthorityRoom(
+        targetRoomId,
+        actionCursorRoom.current === targetRoomId &&
+          actionCursor.current !== null
+          ? actionCursor.current
+          : undefined,
+      ),
+    [readCoordinatorAuthorityRoom],
+  );
   const runAuthorityRefresh = useCallback(async (): Promise<boolean> => {
     if (activeTerminal) {
       await reportTerminal(activeTerminal);
@@ -290,6 +355,10 @@ export function BattleView(): ReactNode {
     refetchRef.current = refetchAuthority;
   }, [refetchAuthority]);
   useEffect(() => {
+    if (actionBackfillVersion === 0 || !pageActive) return;
+    void refetchRef.current();
+  }, [actionBackfillVersion, pageActive]);
+  useEffect(() => {
     if (!pageActive || !sessionGeneration) return;
     return registerForegroundAuthorityRefresh(
       foregroundAuthorityOwner.current,
@@ -308,6 +377,18 @@ export function BattleView(): ReactNode {
   );
   const commandPending =
     command.state.phase === "submitted" || command.state.phase === "recovering";
+  const resetPresentationTracking = useCallback((forgetRoom = false) => {
+    actionCursorRoom.current = forgetRoom
+      ? null
+      : (roomRef.current?.room_id ?? null);
+    actionCursor.current = null;
+    presentationEventIds.current.clear();
+    setPresentationEvents([]);
+    setLocalPresentationAction(null);
+    setCancelledLocalActionKey(null);
+    setPresentationBusy(false);
+    setPresentationResetVersion((version) => version + 1);
+  }, []);
 
   const applyShareAttemptFeedback = useCallback(
     (attempt: ShareAttempt, message: string): boolean => {
@@ -349,6 +430,14 @@ export function BattleView(): ReactNode {
       setCancelOpen(false);
       setSwitchOpen(false);
       setActionIntent(null);
+      actionCursorRoom.current = null;
+      actionCursor.current = null;
+      presentationEventIds.current.clear();
+      setPresentationEvents([]);
+      setLocalPresentationAction(null);
+      setCancelledLocalActionKey(null);
+      setPresentationBusy(false);
+      setPresentationResetVersion((version) => version + 1);
       handledResume.current.clear();
       for (const request of heartbeatRequests.current) request.abort();
       heartbeatRequests.current.clear();
@@ -399,7 +488,7 @@ export function BattleView(): ReactNode {
     .map((observation) => `${observation.roomId}:${observation.stateVersion}`)
     .join(",");
   const pageState = derivePageState({
-    result: Boolean(result),
+    result: Boolean(result) && !presentationBusy,
     room,
     flow,
     invite: authoritativeInvite,
@@ -539,13 +628,29 @@ export function BattleView(): ReactNode {
     let cancelled = false;
     queueMicrotask(() => {
       if (cancelled) return;
-      if (room.viewer_action_state === "locked") setActionIntent(null);
-      if (room.status !== "active_select") setSwitchOpen(false);
+      const currentActionKey = battlePresentationActionKey(
+        room.room_id,
+        room.round_no,
+        room.action_ordinal,
+      );
+      if (
+        room.status !== "active_turn" ||
+        room.active_actor !== "self" ||
+        (localPresentationAction &&
+          localPresentationAction.key !== currentActionKey)
+      )
+        setActionIntent(null);
+      if (
+        room.status !== "active_turn" ||
+        room.active_actor !== "self" ||
+        room.active_action_mode !== "normal"
+      )
+        setSwitchOpen(false);
     });
     return () => {
       cancelled = true;
     };
-  }, [room]);
+  }, [localPresentationAction, room]);
 
   const deadline = deadlineFor(pageState, room, participation, inviteRoom);
   const clock = useBattleDeadline({
@@ -598,9 +703,10 @@ export function BattleView(): ReactNode {
         : null;
   }, [room]);
   const prepareRecovery = useCallback(() => {
+    resetPresentationTracking();
     const targetRoomId = roomRef.current?.room_id ?? authorityRoomIdRef.current;
     if (targetRoomId) prepareAuthorityRecovery(targetRoomId);
-  }, [prepareAuthorityRecovery]);
+  }, [prepareAuthorityRecovery, resetPresentationTracking]);
   const markOffline = useCallback(() => {
     lifecycleReadyRef.current = false;
     for (const request of heartbeatRequests.current) request.abort();
@@ -948,44 +1054,120 @@ export function BattleView(): ReactNode {
     setCancelOpen(false);
   };
 
-  const attack = async (skillPosition: 1 | 2 | 3 | 4, name: string) => {
-    if (!room || room.viewer_action_state !== "available") return;
+  const attack = async (
+    skillPosition: 1 | 2 | 3 | 4,
+    name: string,
+    effectKey: string,
+  ) => {
+    if (
+      !room ||
+      room.status !== "active_turn" ||
+      room.active_actor !== "self" ||
+      room.active_action_mode !== "normal" ||
+      room.viewer_action_state !== "available" ||
+      (room.action_ordinal !== 1 && room.action_ordinal !== 2)
+    )
+      return;
+    const key = battlePresentationActionKey(
+      room.room_id,
+      room.round_no,
+      room.action_ordinal,
+    );
+    setCancelledLocalActionKey(null);
+    setPresentationBusy(true);
+    setLocalPresentationAction({
+      key,
+      roomId: room.room_id,
+      roundNo: room.round_no,
+      actionOrdinal: room.action_ordinal,
+      kind: "attack",
+      effectKey,
+      teamSlot: null,
+    });
     setActionIntent(name);
     const snapshot = await command.execute("battle.action", {
       room_id: room.room_id,
       kind: "attack",
-      turn_no: room.turn_no,
+      round_no: room.round_no,
+      action_ordinal: room.action_ordinal,
       skill_position: skillPosition,
     });
-    if (!snapshot) setActionIntent(null);
+    setLocalPresentationAction(null);
+    setActionIntent(null);
+    if (!snapshot) setCancelledLocalActionKey(key);
   };
 
   const voluntarySwitch = async (teamSlot: 1 | 2 | 3, name: string) => {
-    if (!room || room.viewer_action_state !== "available") return;
+    if (
+      !room ||
+      room.status !== "active_turn" ||
+      room.active_actor !== "self" ||
+      room.active_action_mode !== "normal" ||
+      room.viewer_action_state !== "available" ||
+      (room.action_ordinal !== 1 && room.action_ordinal !== 2)
+    )
+      return;
     setActionIntent(`换入${name}`);
     const snapshot = await command.execute("battle.action", {
       room_id: room.room_id,
       kind: "switch",
-      turn_no: room.turn_no,
+      round_no: room.round_no,
+      action_ordinal: room.action_ordinal,
       team_slot: teamSlot,
     });
-    if (!snapshot) setActionIntent(null);
+    setActionIntent(null);
+    if (!snapshot) setSwitchOpen(false);
   };
 
-  const forcedSwitch = async (teamSlot: 1 | 2 | 3, name: string) => {
-    if (!room || room.viewer_action_state !== "available") return;
-    setActionIntent(`换入${name}`);
-    const snapshot = await command.execute("battle.forced_switch", {
-      room_id: room.room_id,
-      turn_no: room.turn_no,
-      team_slot: teamSlot,
+  const replaceAttack = async (
+    teamSlot: 1 | 2 | 3,
+    skillPosition: 1 | 2 | 3 | 4,
+    name: string,
+    effectKey: string,
+  ) => {
+    if (
+      !room ||
+      room.status !== "active_turn" ||
+      room.active_actor !== "self" ||
+      room.active_action_mode !== "replace_attack" ||
+      room.viewer_action_state !== "available" ||
+      (room.action_ordinal !== 1 && room.action_ordinal !== 2)
+    )
+      return;
+    const key = battlePresentationActionKey(
+      room.room_id,
+      room.round_no,
+      room.action_ordinal,
+    );
+    setCancelledLocalActionKey(null);
+    setPresentationBusy(true);
+    setLocalPresentationAction({
+      key,
+      roomId: room.room_id,
+      roundNo: room.round_no,
+      actionOrdinal: room.action_ordinal,
+      kind: "replace_attack",
+      effectKey,
+      teamSlot,
     });
-    if (!snapshot) setActionIntent(null);
+    setActionIntent(`换入并使用${name}`);
+    const snapshot = await command.execute("battle.action", {
+      room_id: room.room_id,
+      kind: "replace_attack",
+      round_no: room.round_no,
+      action_ordinal: room.action_ordinal,
+      team_slot: teamSlot,
+      skill_position: skillPosition,
+    });
+    setLocalPresentationAction(null);
+    setActionIntent(null);
+    if (!snapshot) setCancelledLocalActionKey(key);
   };
 
   const returnFromResult = () => {
     if (!result) return;
     dismissedTerminalRooms.current.add(result.room_id);
+    resetPresentationTracking(true);
     setForceHome(true);
     setFlow(null);
     setSlots(emptySlots);
@@ -1047,6 +1229,10 @@ export function BattleView(): ReactNode {
       loading={loading}
       commandPending={commandPending}
       actionIntent={actionIntent}
+      presentationEvents={presentationEvents}
+      localPresentationAction={localPresentationAction}
+      cancelledLocalActionKey={cancelledLocalActionKey}
+      presentationResetVersion={presentationResetVersion}
       switchOpen={switchOpen}
       modalActive={pageActive}
       modalBackgroundRef={battleRootRef}
@@ -1078,9 +1264,14 @@ export function BattleView(): ReactNode {
       accept={() => void accept()}
       share={share}
       cancel={() => setCancelOpen(true)}
-      attack={(position, name) => void attack(position, name)}
+      attack={(position, name, effectKey) =>
+        void attack(position, name, effectKey)
+      }
       voluntarySwitch={(slot, name) => void voluntarySwitch(slot, name)}
-      forcedSwitch={(slot, name) => void forcedSwitch(slot, name)}
+      replaceAttack={(slot, position, name, effectKey) =>
+        void replaceAttack(slot, position, name, effectKey)
+      }
+      onPresentationBusyChange={setPresentationBusy}
       returnFromResult={returnFromResult}
     />
   );
@@ -1118,6 +1309,10 @@ function BattleState({
   loading,
   commandPending,
   actionIntent,
+  presentationEvents,
+  localPresentationAction,
+  cancelledLocalActionKey,
+  presentationResetVersion,
   switchOpen,
   modalActive,
   modalBackgroundRef,
@@ -1141,7 +1336,8 @@ function BattleState({
   cancel,
   attack,
   voluntarySwitch,
-  forcedSwitch,
+  replaceAttack,
+  onPresentationBusyChange,
   returnFromResult,
 }: {
   pageState: BattlePageState;
@@ -1157,6 +1353,10 @@ function BattleState({
   loading: boolean;
   commandPending: boolean;
   actionIntent: string | null;
+  presentationEvents: readonly BattleActionEventDto[];
+  localPresentationAction: BattleLocalActionIntent | null;
+  cancelledLocalActionKey: string | null;
+  presentationResetVersion: number;
   switchOpen: boolean;
   modalActive: boolean;
   modalBackgroundRef: RefObject<HTMLElement | null>;
@@ -1178,9 +1378,15 @@ function BattleState({
   accept(): void;
   share(): void;
   cancel(): void;
-  attack(position: 1 | 2 | 3 | 4, name: string): void;
+  attack(position: 1 | 2 | 3 | 4, name: string, effectKey: string): void;
   voluntarySwitch(slot: 1 | 2 | 3, name: string): void;
-  forcedSwitch(slot: 1 | 2 | 3, name: string): void;
+  replaceAttack(
+    slot: 1 | 2 | 3,
+    position: 1 | 2 | 3 | 4,
+    name: string,
+    effectKey: string,
+  ): void;
+  onPresentationBusyChange(busy: boolean): void;
   returnFromResult(): void;
 }): ReactNode {
   if (pageState === "result" && result)
@@ -1222,10 +1428,14 @@ function BattleState({
         onlineState={onlineState}
       />
     );
-  if ((pageState === "battle" || pageState === "forced_switch") && room)
+  if (pageState === "battle" && room)
     return (
       <BattleArena
         snapshot={room}
+        events={presentationEvents}
+        localAction={localPresentationAction}
+        cancelledLocalActionKey={cancelledLocalActionKey}
+        presentationResetVersion={presentationResetVersion}
         remainingSeconds={clock.remainingSeconds}
         actionIntent={actionIntent}
         commandPending={commandPending}
@@ -1233,9 +1443,10 @@ function BattleState({
         modalActive={modalActive}
         modalBackgroundRef={modalBackgroundRef}
         setSwitchOpen={setSwitchOpen}
+        onPresentationBusyChange={onPresentationBusyChange}
         onAttack={attack}
         onSwitch={voluntarySwitch}
-        onForcedSwitch={forcedSwitch}
+        onReplaceAttack={replaceAttack}
       />
     );
   if (pageState === "team_select" && tier)
@@ -1312,9 +1523,8 @@ function derivePageState({
     if (room.status === "waiting") return "waiting";
     if (room.status === "lobby_waiting" || room.status === "lobby_countdown")
       return "lobby";
-    if (room.status === "forced_switch") return "forced_switch";
-    if (room.status === "active_select" || room.status === "reveal")
-      return "battle";
+    if (room.status === "active_turn") return "battle";
+    if (room.terminal_result) return "battle";
     if (
       room.status === "finished" ||
       room.status === "draw" ||
@@ -1367,13 +1577,7 @@ function deadlineFor(
       deadline: room.lobby.expires_at,
       durationSeconds: 300,
     };
-  if (room.status === "reveal")
-    return {
-      serverTime: room.server_time,
-      deadline: room.reveal_ends_at,
-      durationSeconds: 3,
-    };
-  if (state === "battle" || state === "forced_switch")
+  if (state === "battle" && room.status === "active_turn")
     return {
       serverTime: room.server_time,
       deadline: room.phase_deadline,
@@ -1390,9 +1594,8 @@ function realtimePhaseFor(
   if (state === "preparing_share") return "preparing_share";
   if (state === "waiting") return "waiting";
   if (state === "lobby") return "lobby";
-  if (state === "forced_switch") return "forced_switch";
-  if (state === "battle")
-    return room?.status === "reveal" ? "reveal" : "active_select";
+  if (state === "battle" && room?.status === "active_turn")
+    return "active_turn";
   return "idle";
 }
 

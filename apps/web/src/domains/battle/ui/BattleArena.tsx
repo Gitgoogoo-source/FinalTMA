@@ -1,22 +1,30 @@
-import { ArrowDownUp, Clock3, LockKeyhole, Shield, Swords } from "lucide-react";
-import { useRef, type ReactNode, type RefObject } from "react";
+import { ArrowDownUp, Clock3, Shield, Swords } from "lucide-react";
+import { useRef, useState, type ReactNode, type RefObject } from "react";
 import type {
-  BattleResolutionEventDto,
+  BattleActionEventDto,
   BattleRoomSnapshotDto,
   BattleSelfTeamDto,
 } from "@pokepets/api-contracts/app";
 
 import { Button, CatalogImage } from "../../../shared/ui/index.tsx";
 import { battleRarityLabels, formatBattleTime } from "../labels.ts";
-import { useBattleAnimation } from "../useBattleAnimation.ts";
+import {
+  useBattleAnimation,
+  type BattleLocalActionIntent,
+} from "../useBattleAnimation.ts";
 import { BattleModal } from "./BattleModal.tsx";
 
 type SelfMember = BattleSelfTeamDto[number];
-type SkillPosition = SelfMember["skills"][number]["position"];
+type Skill = SelfMember["skills"][number];
+type SkillPosition = Skill["position"];
 type TeamSlot = SelfMember["slot"];
 
 export function BattleArena({
   snapshot,
+  events,
+  localAction,
+  cancelledLocalActionKey,
+  presentationResetVersion,
   remainingSeconds,
   actionIntent,
   commandPending,
@@ -24,11 +32,16 @@ export function BattleArena({
   modalActive,
   modalBackgroundRef,
   setSwitchOpen,
+  onPresentationBusyChange,
   onAttack,
   onSwitch,
-  onForcedSwitch,
+  onReplaceAttack,
 }: {
   snapshot: BattleRoomSnapshotDto;
+  events: readonly BattleActionEventDto[];
+  localAction: BattleLocalActionIntent | null;
+  cancelledLocalActionKey: string | null;
+  presentationResetVersion: number;
   remainingSeconds: number | null;
   actionIntent: string | null;
   commandPending: boolean;
@@ -36,50 +49,85 @@ export function BattleArena({
   modalActive: boolean;
   modalBackgroundRef: RefObject<HTMLElement | null>;
   setSwitchOpen(open: boolean): void;
-  onAttack(position: SkillPosition, name: string): void;
+  onPresentationBusyChange(busy: boolean): void;
+  onAttack(position: SkillPosition, name: string, effectKey: string): void;
   onSwitch(slot: TeamSlot, name: string): void;
-  onForcedSwitch(slot: TeamSlot, name: string): void;
+  onReplaceAttack(
+    slot: TeamSlot,
+    position: SkillPosition,
+    name: string,
+    effectKey: string,
+  ): void;
 }): ReactNode {
   const arenaRef = useRef<HTMLDivElement>(null);
-  const selfActive = snapshot.self_team.find((member) => member.active);
-  const opponentActive = snapshot.opponent_team.find((member) => member.active);
+  const actionIdentity = `${snapshot.room_id}:${snapshot.round_no}:${snapshot.action_ordinal}:${snapshot.active_action_mode}`;
+  const [replacementSelection, setReplacementSelection] = useState<{
+    actionIdentity: string;
+    slot: TeamSlot | null;
+  }>({ actionIdentity, slot: null });
+  const replacementSlot =
+    replacementSelection.actionIdentity === actionIdentity
+      ? replacementSelection.slot
+      : null;
+  const authoritySelfActive = snapshot.self_team.find(
+    (member) => member.active,
+  );
   const candidates = snapshot.self_team.filter(
     (member) => member.alive && !member.active,
   );
+  const selectedReplacement = snapshot.self_team.find(
+    (member) => member.slot === replacementSlot && member.alive,
+  );
   const available =
-    snapshot.viewer_action_state === "available" && !commandPending;
-  useBattleAnimation({
+    snapshot.status === "active_turn" &&
+    snapshot.active_actor === "self" &&
+    snapshot.viewer_action_state === "available" &&
+    !commandPending;
+  const presentation = useBattleAnimation({
     arenaRef,
-    roomId: snapshot.room_id,
-    resolution: snapshot.resolution_event,
-    serverTime: snapshot.server_time,
+    snapshot,
+    events,
+    localAction,
+    cancelledLocalActionKey,
+    resetVersion: presentationResetVersion,
+    onBusyChange: onPresentationBusyChange,
   });
-
+  const selfActive = presentation.selfTeam.find((member) => member.active);
+  const opponentActive = presentation.opponentTeam.find(
+    (member) => member.active,
+  );
   return (
     <section
       ref={arenaRef}
       className="battle-arena"
       data-battle-phase={snapshot.status}
-      data-battle-has-resolution={snapshot.resolution_event ? "true" : "false"}
+      data-battle-has-resolution={presentation.feedback ? "true" : "false"}
       aria-label="Battle 单战场"
     >
       <header className="battle-turn-hud">
         <span>
-          <Swords />第 {snapshot.turn_no || 1} / 20 回合
+          <Swords />第 {Math.max(1, snapshot.round_no)} / 20 回合 · 行动
+          {Math.max(1, snapshot.action_ordinal)}
         </span>
         <strong>
           <Clock3 />
           {formatBattleTime(remainingSeconds)}
         </strong>
         <span className="battle-side-chip">
-          {snapshot.side === "creator" ? "创建方" : "接受方"}
+          {snapshot.active_actor === "self"
+            ? "轮到我方"
+            : snapshot.active_actor === "opponent"
+              ? "轮到对手"
+              : snapshot.side === "creator"
+                ? "创建方"
+                : "接受方"}
         </span>
       </header>
 
       <ArenaSide
         actor="opponent"
         label="对手"
-        team={snapshot.opponent_team}
+        team={presentation.opponentTeam}
         active={opponentActive}
       />
 
@@ -93,86 +141,89 @@ export function BattleArena({
             <i key={index} />
           ))}
         </div>
-        <ResolutionFeedback event={snapshot.resolution_event} />
-        {snapshot.status === "active_select" ? (
-          <small>双方行动保持秘密，服务器确认后统一结算</small>
-        ) : snapshot.status === "reveal" ? (
-          <small>当前为 3 秒权威结算展示窗口</small>
-        ) : (
-          <small>强制换宠不计入正常回合</small>
-        )}
+        <ActionFeedback event={presentation.feedback} />
+        <small>
+          {presentation.busy
+            ? "动作正在按服务端顺序播放；操作区保持可用"
+            : snapshot.status !== "active_turn"
+              ? "服务端已完成战斗结算"
+              : snapshot.active_actor === "self"
+                ? "你的 15 秒行动窗口已经开放"
+                : "等待对手在其 15 秒行动窗口内操作"}
+        </small>
       </div>
 
       <ArenaSide
         actor="self"
         label="我方"
-        team={snapshot.self_team}
+        team={presentation.selfTeam}
         active={selfActive}
       />
 
-      {snapshot.status === "active_select" ? (
-        <section className="battle-action-hud" aria-label="本回合动作">
-          <div className="battle-command-strip" aria-live="polite">
-            <strong>
-              {snapshot.viewer_action_state === "locked"
-                ? "动作已锁定"
-                : actionIntent
-                  ? `已提交：${actionIntent}`
-                  : snapshot.viewer_action_state === "not_applicable"
-                    ? "正在同步下一状态"
-                    : "选择一个技能"}
-            </strong>
-            <span>
-              回合 {snapshot.turn_no || 1} ·{" "}
-              {formatBattleTime(remainingSeconds)}
-            </span>
-          </div>
-          {snapshot.viewer_action_state === "available" &&
-          !actionIntent &&
-          selfActive ? (
-            <>
-              <div className="battle-skill-grid">
-                {selfActive.skills.map((skill) => (
-                  <button
-                    key={skill.skill_id}
-                    type="button"
-                    disabled={!available}
-                    onClick={() => onAttack(skill.position, skill.name)}
-                  >
-                    <span>{skill.name}</span>
-                    <small>
-                      威力 {skill.power} · 命中 {skill.accuracy_bps / 100}% ·
-                      优先级{" "}
-                      {skill.priority > 0
-                        ? `+${skill.priority}`
-                        : skill.priority}
-                    </small>
-                  </button>
-                ))}
-              </div>
-              <Button
-                className="secondary battle-switch-trigger"
-                disabled={!available || candidates.length === 0}
-                onClick={() => setSwitchOpen(true)}
-              >
-                <ArrowDownUp />
-                主动换宠
-              </Button>
-            </>
-          ) : !selfActive ? (
-            <ActionStatus icon={<Shield />} text="正在读取当前出战宠物" />
-          ) : null}
-        </section>
-      ) : snapshot.status === "reveal" ? (
-        <section className="battle-action-hud">
-          <ActionStatus icon={<Shield />} text="结算展示中，动作入口已锁定" />
-        </section>
-      ) : null}
+      <section className="battle-action-hud" aria-label="当前行动">
+        <div className="battle-command-strip" aria-live="polite">
+          <strong>{actionPrompt(snapshot, actionIntent)}</strong>
+          <span>
+            回合 {Math.max(1, snapshot.round_no)} · 行动
+            {Math.max(1, snapshot.action_ordinal)} ·{" "}
+            {formatBattleTime(remainingSeconds)}
+          </span>
+        </div>
 
-      {modalActive && switchOpen && snapshot.status === "active_select" ? (
+        {available &&
+        !actionIntent &&
+        snapshot.active_action_mode === "normal" &&
+        authoritySelfActive ? (
+          <>
+            <SkillGrid
+              skills={authoritySelfActive.skills}
+              disabled={!available}
+              choose={onAttack}
+            />
+            <Button
+              className="secondary battle-switch-trigger"
+              disabled={!available || candidates.length === 0}
+              onClick={() => setSwitchOpen(true)}
+            >
+              <ArrowDownUp />
+              主动换宠（消耗本次行动）
+            </Button>
+          </>
+        ) : available &&
+          !actionIntent &&
+          snapshot.active_action_mode === "replace_attack" ? (
+          <ReplacementAction
+            candidates={candidates}
+            selected={selectedReplacement}
+            disabled={!available}
+            chooseMember={(slot) =>
+              setReplacementSelection({ actionIdentity, slot })
+            }
+            chooseSkill={onReplaceAttack}
+          />
+        ) : (
+          <ActionStatus
+            icon={<Shield />}
+            text={
+              actionIntent
+                ? `已提交：${actionIntent}`
+                : snapshot.status !== "active_turn"
+                  ? "服务端已结算，等待表现队列完成"
+                  : snapshot.active_actor === "opponent"
+                    ? "对手行动中；其动作会按顺序播放"
+                    : "正在同步当前可用动作"
+            }
+          />
+        )}
+      </section>
+
+      {modalActive &&
+      switchOpen &&
+      snapshot.status === "active_turn" &&
+      snapshot.active_action_mode === "normal" ? (
         <SwitchSheet
           title="主动换宠"
-          description="选择后立即提交并消耗本回合，换入宠物承受对手本回合攻击。"
+          description="选择后立即提交，换宠消耗本次行动且不会同时攻击。"
           candidates={candidates}
           disabled={!available}
           backgroundRef={modalBackgroundRef}
@@ -180,39 +231,99 @@ export function BattleArena({
           choose={onSwitch}
         />
       ) : null}
-
-      {modalActive && snapshot.status === "forced_switch" ? (
-        <BattleModal
-          labelledBy="battle-forced-switch-title"
-          panelClassName="battle-forced-sheet"
-          backgroundRef={modalBackgroundRef}
-          dismissible={false}
-        >
-          <span className="battle-sheet-kicker">FORCED SWITCH</span>
-          <h2 id="battle-forced-switch-title">选择存活宠物换入</h2>
-          {snapshot.viewer_action_state === "locked" ? (
-            <ActionStatus
-              icon={<LockKeyhole />}
-              text="已锁定，等待服务器推进"
-            />
-          ) : snapshot.viewer_action_state === "not_applicable" ? (
-            <ActionStatus
-              icon={<Clock3 />}
-              text="当前无需提交，等待服务器推进"
-            />
-          ) : actionIntent ? (
-            <ActionStatus icon={<Clock3 />} text={`已提交：${actionIntent}`} />
-          ) : (
-            <SwitchCandidates
-              candidates={candidates}
-              disabled={commandPending}
-              choose={onForcedSwitch}
-            />
-          )}
-          <p>本地倒计时归零只会重新读取权威状态，前端不会代替你选择。</p>
-        </BattleModal>
-      ) : null}
     </section>
+  );
+}
+
+function actionPrompt(
+  snapshot: BattleRoomSnapshotDto,
+  actionIntent: string | null,
+): string {
+  if (actionIntent) return `已提交：${actionIntent}`;
+  if (snapshot.status !== "active_turn") return "战斗已由服务器结算";
+  if (snapshot.active_actor !== "self") return "等待对手行动";
+  return snapshot.active_action_mode === "replace_attack"
+    ? "选择存活宠物，再直接选择其反击技能"
+    : "选择技能或主动换宠";
+}
+
+function SkillGrid({
+  skills,
+  disabled,
+  choose,
+}: {
+  skills: readonly Skill[];
+  disabled: boolean;
+  choose(position: SkillPosition, name: string, effectKey: string): void;
+}): ReactNode {
+  return (
+    <div className="battle-skill-grid">
+      {skills.map((skill) => (
+        <button
+          key={skill.skill_id}
+          type="button"
+          disabled={disabled}
+          onClick={() => choose(skill.position, skill.name, skill.effect_key)}
+        >
+          <span>{skill.name}</span>
+          <small>
+            威力 {skill.power} · 命中 {skill.accuracy_bps / 100}%
+          </small>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function ReplacementAction({
+  candidates,
+  selected,
+  disabled,
+  chooseMember,
+  chooseSkill,
+}: {
+  candidates: readonly SelfMember[];
+  selected: SelfMember | undefined;
+  disabled: boolean;
+  chooseMember(slot: TeamSlot | null): void;
+  chooseSkill(
+    slot: TeamSlot,
+    position: SkillPosition,
+    name: string,
+    effectKey: string,
+  ): void;
+}): ReactNode {
+  if (!selected)
+    return (
+      <div className="battle-replace-action">
+        <strong>第一步：选择存活宠物</strong>
+        <SwitchCandidates
+          candidates={candidates}
+          disabled={disabled}
+          choose={(slot) => chooseMember(slot)}
+        />
+      </div>
+    );
+  return (
+    <div className="battle-replace-action">
+      <div className="battle-replace-heading">
+        <strong>第二步：选择 {selected.name} 的反击技能</strong>
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => chooseMember(null)}
+        >
+          重新选宠
+        </button>
+      </div>
+      <SkillGrid
+        skills={selected.skills}
+        disabled={disabled}
+        choose={(position, name, effectKey) =>
+          chooseSkill(selected.slot, position, name, effectKey)
+        }
+      />
+    </div>
   );
 }
 
@@ -319,22 +430,27 @@ function HpBar({
   );
 }
 
-function ResolutionFeedback({
+function ActionFeedback({
   event,
 }: {
-  event: BattleResolutionEventDto | null;
+  event: BattleActionEventDto | null;
 }): ReactNode {
   if (!event)
     return (
       <div className="battle-resolution" aria-live="polite">
-        等待权威动作
+        等待权威动作结果
       </div>
     );
   return (
     <div className="battle-resolution" aria-live="assertive">
       {event.actions.map((action, index) => {
         const actor = action.actor === "self" ? "我方" : "对手";
-        if (action.kind === "attack")
+        if (action.kind === "attack") {
+          const damage = action.hit
+            ? action.actor === "self"
+              ? `${Math.max(0, action.target_hp_percent_before - action.target_hp_percent_after).toFixed(2)}% 生命`
+              : `${Math.max(0, action.target_current_hp_before - action.target_current_hp_after)} 点伤害`
+            : null;
           return (
             <span key={`${actor}-${index}`}>
               <strong>
@@ -342,14 +458,15 @@ function ResolutionFeedback({
               </strong>
               {action.hit
                 ? action.effectiveness === "super_effective"
-                  ? "，命中且效果拔群"
+                  ? `，命中并造成 ${damage}，效果拔群`
                   : action.effectiveness === "not_effective"
-                    ? "，命中但效果有限"
-                    : "，命中"
+                    ? `，命中并造成 ${damage}，效果有限`
+                    : `，命中并造成 ${damage}`
                 : "，未命中"}
               {action.knockout ? "，目标被击倒" : ""}
             </span>
           );
+        }
         return (
           <span key={`${actor}-${index}`}>
             <strong>{actor}换入</strong>
@@ -429,8 +546,8 @@ function SwitchCandidates({
     <div className="battle-switch-candidates">
       {candidates.map((member) => (
         <button
-          key={member.slot}
           type="button"
+          key={member.slot}
           disabled={disabled}
           onClick={() => choose(member.slot, member.name)}
         >
@@ -440,9 +557,12 @@ function SwitchCandidates({
             variant="thumbnail"
             loading="lazy"
           />
-          <strong>{member.name}</strong>
           <span>
-            HP {member.current_hp} / {member.max_hp}
+            <strong>{member.name}</strong>
+            <small>
+              {battleRarityLabels[member.rarity]} · {member.stage} 阶 · HP{" "}
+              {member.current_hp}/{member.max_hp}
+            </small>
           </span>
         </button>
       ))}

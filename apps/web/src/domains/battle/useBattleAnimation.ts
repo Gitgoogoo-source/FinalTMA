@@ -1,5 +1,18 @@
-import { useEffect, useRef, type RefObject } from "react";
-import type { BattleResolutionEventDto } from "@pokepets/api-contracts/app";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type Dispatch,
+  type RefObject,
+  type SetStateAction,
+} from "react";
+import type {
+  BattleActionEventDto,
+  BattleOpponentTeamDto,
+  BattleRoomSnapshotDto,
+  BattleSelfTeamDto,
+} from "@pokepets/api-contracts/app";
 
 type EffectElement = "fire" | "grass" | "earth" | "lightning" | "water";
 type TrajectoryKey =
@@ -18,6 +31,38 @@ type ElementStyle = {
   secondary: string;
   glow: string;
 };
+type TeamSlot = 1 | 2 | 3;
+
+type PresentationState = {
+  selfTeam: BattleSelfTeamDto;
+  opponentTeam: BattleOpponentTeamDto;
+  feedback: BattleActionEventDto | null;
+};
+
+type QueueItem = {
+  key: string;
+  local: BattleLocalActionIntent | null;
+  event: BattleActionEventDto | null;
+  castPlayed: boolean;
+};
+
+export type BattleLocalActionIntent = {
+  key: string;
+  roomId: string;
+  roundNo: number;
+  actionOrdinal: 1 | 2;
+  kind: "attack" | "replace_attack";
+  effectKey: string;
+  teamSlot: TeamSlot | null;
+};
+
+export function battlePresentationActionKey(
+  roomId: string,
+  roundNo: number,
+  actionOrdinal: number,
+): string {
+  return `${roomId}:${roundNo}:${actionOrdinal}`;
+}
 
 const elementEffects: Record<EffectElement, ElementStyle> = {
   fire: { primary: "#ff6a2b", secondary: "#ffd166", glow: "#ff3d00" },
@@ -87,181 +132,382 @@ const trajectories: Record<TrajectoryKey, (direction: 1 | -1) => Keyframe[]> = {
 
 export function useBattleAnimation({
   arenaRef,
-  roomId,
-  resolution,
-  serverTime,
+  snapshot,
+  events,
+  localAction,
+  cancelledLocalActionKey,
+  resetVersion,
+  onBusyChange,
 }: {
   arenaRef: RefObject<HTMLDivElement | null>;
-  roomId: string;
-  resolution: BattleResolutionEventDto | null;
-  serverTime: string | null;
-}): void {
-  const played = useRef(new Set<string>());
-  const playedRoom = useRef<string | null>(null);
-  const latest = useRef({
-    resolution,
-    serverTime,
-    clockOffset: 0,
-  });
-  const currentIdentity = useRef<string | null>(null);
-  const animationRun = useRef(0);
-  const scheduledFrame = useRef<number | null>(null);
-
-  const identity =
-    resolution && serverTime ? `${roomId}:${eventKey(resolution)}` : null;
-
-  useEffect(() => {
-    latest.current = {
-      resolution,
-      serverTime,
-      clockOffset: serverTime ? Date.parse(serverTime) - Date.now() : 0,
-    };
-  }, [resolution, serverTime]);
+  snapshot: BattleRoomSnapshotDto;
+  events: readonly BattleActionEventDto[];
+  localAction: BattleLocalActionIntent | null;
+  cancelledLocalActionKey: string | null;
+  resetVersion: number;
+  onBusyChange(busy: boolean): void;
+}): PresentationState & { busy: boolean } {
+  const [presentation, setPresentation] = useState<PresentationState>(() =>
+    presentationFrom(snapshot),
+  );
+  const [busy, setBusy] = useState(false);
+  const snapshotRef = useRef(snapshot);
+  const queue = useRef<QueueItem[]>([]);
+  const seenEvents = useRef(new Set<string>());
+  const seenLocalActions = useRef(new Set<string>());
+  const running = useRef(false);
+  const run = useRef(0);
+  const room = useRef(snapshot.room_id);
+  const reset = useRef(resetVersion);
+  const busyRef = useRef(false);
+  const onBusyChangeRef = useRef(onBusyChange);
 
   useEffect(() => {
-    if (playedRoom.current === roomId) return;
-    played.current.clear();
-    playedRoom.current = roomId;
-    currentIdentity.current = null;
-  }, [roomId]);
+    snapshotRef.current = snapshot;
+  }, [snapshot]);
 
   useEffect(() => {
-    const arena = arenaRef.current;
-    if (!arena) return;
-    const playedEvents = played.current;
+    onBusyChangeRef.current = onBusyChange;
+  }, [onBusyChange]);
+
+  const publishBusy = useCallback((next: boolean) => {
+    if (busyRef.current === next) return;
+    busyRef.current = next;
+    setBusy(next);
+    onBusyChangeRef.current(next);
+  }, []);
+
+  const reconcile = useCallback(() => {
+    setPresentation((current) => ({
+      ...presentationFrom(snapshotRef.current),
+      feedback: current.feedback,
+    }));
+  }, []);
+
+  const drain = useCallback(async () => {
+    if (running.current) return;
+    running.current = true;
+    const startedRun = run.current;
+    try {
+      while (run.current === startedRun) {
+        const item = queue.current[0];
+        const arena = arenaRef.current;
+        if (!item || !arena || document.visibilityState !== "visible") break;
+        const reduced = window.matchMedia(
+          "(prefers-reduced-motion: reduce)",
+        ).matches;
+        const local = item.local;
+        if (local && !item.castPlayed) {
+          if (local.kind === "replace_attack" && local.teamSlot !== null) {
+            applySwitch(setPresentation, "self", local.teamSlot);
+            await nextPaint();
+            if (!reduced) {
+              const actor = actorElement(arena, "self");
+              if (actor) await playSwitchIn(actor);
+            }
+          }
+          const effect = parseEffectKey(local.effectKey);
+          if (effect && !reduced)
+            await playAttackCast(arena, actorElement(arena, "self"), effect);
+          item.castPlayed = true;
+          if (run.current !== startedRun) break;
+        }
+        if (!item.event) break;
+        await playAuthoritativeEvent(
+          arena,
+          item,
+          reduced,
+          setPresentation,
+          () => run.current !== startedRun,
+        );
+        if (run.current !== startedRun) break;
+        if (queue.current[0] === item) queue.current.shift();
+      }
+    } finally {
+      if (run.current === startedRun) {
+        running.current = false;
+        if (queue.current.length === 0) {
+          reconcile();
+          publishBusy(false);
+        }
+      }
+    }
+  }, [arenaRef, publishBusy, reconcile]);
+  useEffect(() => {
+    if (room.current === snapshot.room_id && reset.current === resetVersion)
+      return;
+    room.current = snapshot.room_id;
+    reset.current = resetVersion;
+    run.current += 1;
+    running.current = false;
+    queue.current = [];
+    seenEvents.current.clear();
+    seenLocalActions.current.clear();
+    cancelAnimation(arenaRef.current);
+    setPresentation(presentationFrom(snapshot));
+    publishBusy(false);
+  }, [arenaRef, publishBusy, resetVersion, snapshot]);
+
+  useEffect(() => {
+    if (
+      !localAction ||
+      localAction.roomId !== snapshot.room_id ||
+      seenLocalActions.current.has(localAction.key)
+    )
+      return;
+    seenLocalActions.current.add(localAction.key);
+    const existing = queue.current.find((item) => item.key === localAction.key);
+    if (existing) existing.local = localAction;
+    else
+      queue.current.push({
+        key: localAction.key,
+        local: localAction,
+        event: null,
+        castPlayed: false,
+      });
+    publishBusy(true);
+    void drain();
+  }, [drain, localAction, publishBusy, snapshot.room_id]);
+
+  useEffect(() => {
+    let changed = false;
+    for (const event of [...events].sort((a, b) => a.sequence - b.sequence)) {
+      if (seenEvents.current.has(event.event_id)) continue;
+      seenEvents.current.add(event.event_id);
+      const key = battlePresentationActionKey(
+        snapshot.room_id,
+        event.round_no,
+        event.action_ordinal,
+      );
+      const existing = queue.current.find((item) => item.key === key);
+      if (existing) {
+        existing.event = event;
+        if (existing.local && !localActionMatchesEvent(existing.local, event))
+          existing.local = null;
+      } else
+        queue.current.push({
+          key,
+          local: null,
+          event,
+          castPlayed: false,
+        });
+      changed = true;
+    }
+    if (!changed) return;
+    publishBusy(true);
+    void drain();
+  }, [drain, events, publishBusy, snapshot.room_id]);
+
+  useEffect(() => {
+    if (!cancelledLocalActionKey) return;
+    const index = queue.current.findIndex(
+      (item) => item.key === cancelledLocalActionKey && item.local,
+    );
+    if (index < 0) return;
+    const item = queue.current[index]!;
+    seenLocalActions.current.delete(cancelledLocalActionKey);
+    const cancellingHead = index === 0;
+    if (cancellingHead) {
+      run.current += 1;
+      running.current = false;
+    }
+    if (item.event) {
+      item.local = null;
+      item.castPlayed = false;
+    } else queue.current.splice(index, 1);
+    if (cancellingHead) {
+      cancelAnimation(arenaRef.current);
+      reconcile();
+    }
+    if (queue.current.length === 0) publishBusy(false);
+    else void drain();
+  }, [arenaRef, cancelledLocalActionKey, drain, publishBusy, reconcile]);
+
+  useEffect(() => {
+    if (
+      queue.current.length > 0 ||
+      running.current ||
+      events.some((event) => !seenEvents.current.has(event.event_id))
+    )
+      return;
+    reconcile();
+  }, [events, reconcile, snapshot.state_version]);
+
+  useEffect(() => {
+    const mountedArena = arenaRef.current;
     const onVisibility = () => {
       if (document.visibilityState !== "hidden") return;
-      if (currentIdentity.current) playedEvents.add(currentIdentity.current);
-      cancelAnimation(arena, animationRun, scheduledFrame);
+      run.current += 1;
+      running.current = false;
+      queue.current = [];
+      cancelAnimation(arenaRef.current);
+      reconcile();
+      publishBusy(false);
     };
     document.addEventListener("visibilitychange", onVisibility);
     return () => {
       document.removeEventListener("visibilitychange", onVisibility);
-      cancelAnimation(arena, animationRun, scheduledFrame);
-      playedEvents.clear();
-      playedRoom.current = null;
-      currentIdentity.current = null;
+      run.current += 1;
+      running.current = false;
+      queue.current = [];
+      cancelAnimation(mountedArena);
+      publishBusy(false);
     };
-  }, [arenaRef]);
+  }, [arenaRef, publishBusy, reconcile]);
 
-  useEffect(() => {
-    const arena = arenaRef.current;
-    if (!arena) return;
-    const previousIdentity = currentIdentity.current;
-    if (previousIdentity && previousIdentity !== identity)
-      played.current.add(previousIdentity);
-    currentIdentity.current = identity;
-    cancelAnimation(arena, animationRun, scheduledFrame);
-    if (!identity) return;
-
-    if (
-      played.current.has(identity) ||
-      document.visibilityState !== "visible"
-    ) {
-      played.current.add(identity);
-      return;
-    }
-
-    const run = animationRun.current;
-    scheduledFrame.current = window.requestAnimationFrame(() => {
-      scheduledFrame.current = null;
-      const current = latest.current;
-      if (
-        run !== animationRun.current ||
-        currentIdentity.current !== identity ||
-        played.current.has(identity) ||
-        !current.resolution ||
-        !current.serverTime ||
-        `${roomId}:${eventKey(current.resolution)}` !== identity
-      )
-        return;
-      if (isPastReveal(current) || document.visibilityState !== "visible") {
-        played.current.add(identity);
-        return;
-      }
-      played.current.add(identity);
-      void playResolution(
-        arena,
-        identity,
-        () => latest.current,
-        () =>
-          run !== animationRun.current || currentIdentity.current !== identity,
-      );
-    });
-    return () => {
-      cancelAnimation(arena, animationRun, scheduledFrame);
-    };
-  }, [arenaRef, identity, roomId]);
+  return { ...presentation, busy };
 }
 
-async function playResolution(
+async function playAuthoritativeEvent(
   arena: HTMLDivElement,
-  identity: string,
-  latest: () => {
-    resolution: BattleResolutionEventDto | null;
-    serverTime: string | null;
-    clockOffset: number;
-  },
+  item: QueueItem,
+  reduced: boolean,
+  setPresentation: Dispatch<SetStateAction<PresentationState>>,
   cancelled: () => boolean,
 ): Promise<void> {
-  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  let actionIndex = 0;
-  while (!cancelled()) {
-    const currentState = latest();
-    const current = currentState.resolution;
-    if (
-      !current ||
-      isPastReveal(currentState) ||
-      !identity.endsWith(`:${eventKey(current)}`) ||
-      actionIndex >= current.actions.length ||
-      document.visibilityState !== "visible"
-    )
-      return;
-    const action = current.actions[actionIndex];
-    if (!action) return;
-    const actor = actorElement(arena, action.actor);
-    const target = actorElement(
-      arena,
-      action.actor === "self" ? "opponent" : "self",
-    );
-    if (action.kind === "attack") {
-      const effect = parseEffectKey(action.effect_key);
-      if (!effect) {
-        console.error("Battle effect key is unavailable", {
-          effect_key: action.effect_key,
-          event_id: current.event_id,
-        });
-        actionIndex += 1;
-        continue;
+  const event = item.event;
+  if (!event) return;
+  const localCovered = Boolean(item.local && item.castPlayed);
+  for (const action of event.actions) {
+    if (cancelled()) return;
+    if (action.kind === "switch") {
+      const covered =
+        localCovered &&
+        action.actor === "self" &&
+        item.local?.kind === "replace_attack";
+      if (!covered && !reduced) {
+        const leaving = actorElement(arena, action.actor);
+        if (leaving) await playSwitchOut(leaving);
       }
-      if (reduced) {
-        actionIndex += 1;
-        continue;
+      if (!covered) {
+        applySwitch(setPresentation, action.actor, action.switch_to.slot);
+        await nextPaint();
+        if (!reduced) {
+          const entering = actorElement(arena, action.actor);
+          if (entering) await playSwitchIn(entering);
+        }
       }
-      await playAttack(arena, actor, target, effect, action.hit);
-      if (!cancelled() && action.knockout && target) await playKnockout(target);
-    } else if (!reduced && actor) {
-      await finished(
-        actor.animate(
-          [
-            { opacity: 1, transform: "translateX(0) scale(1)" },
-            { opacity: 0.35, transform: "translateX(18px) scale(.92)" },
-            { opacity: 1, transform: "translateX(0) scale(1)" },
-          ],
-          { duration: 360, easing: "ease-out" },
-        ),
-      );
+      setPresentation((current) => ({ ...current, feedback: event }));
+      continue;
     }
-    actionIndex += 1;
+    const covered = localCovered && action.actor === "self";
+    const effect = parseEffectKey(action.effect_key);
+    if (!covered && effect && !reduced)
+      await playAttackCast(arena, actorElement(arena, action.actor), effect);
+    setPresentation((current) => ({ ...current, feedback: event }));
+    if (!reduced && action.hit) {
+      const target = actorElement(
+        arena,
+        action.actor === "self" ? "opponent" : "self",
+      );
+      if (target) await playAttackImpact(target, action.knockout);
+    }
   }
+  if (cancelled()) return;
+  applyHpResult(setPresentation, event);
+  await nextPaint();
 }
 
-async function playAttack(
+function presentationFrom(snapshot: BattleRoomSnapshotDto): PresentationState {
+  return {
+    selfTeam: snapshot.self_team.map((member) => ({ ...member })),
+    opponentTeam: snapshot.opponent_team.map((member) => ({
+      ...member,
+    })) as BattleOpponentTeamDto,
+    feedback: null,
+  };
+}
+
+function localActionMatchesEvent(
+  local: BattleLocalActionIntent,
+  event: BattleActionEventDto,
+): boolean {
+  if (event.actor !== "self") return false;
+  if (local.kind === "attack") {
+    const [attack] = event.actions;
+    return (
+      event.actions.length === 1 &&
+      attack?.actor === "self" &&
+      attack.kind === "attack" &&
+      attack.effect_key === local.effectKey
+    );
+  }
+  const [replacement, attack] = event.actions;
+  return (
+    event.actions.length === 2 &&
+    replacement?.actor === "self" &&
+    replacement.kind === "switch" &&
+    replacement.switch_to.slot === local.teamSlot &&
+    attack?.actor === "self" &&
+    attack.kind === "attack" &&
+    attack.effect_key === local.effectKey
+  );
+}
+
+function applySwitch(
+  setPresentation: Dispatch<SetStateAction<PresentationState>>,
+  actor: "self" | "opponent",
+  slot: TeamSlot,
+): void {
+  setPresentation((current) =>
+    actor === "self"
+      ? {
+          ...current,
+          selfTeam: current.selfTeam.map((member) => ({
+            ...member,
+            active: member.slot === slot && member.alive,
+          })) as BattleSelfTeamDto,
+        }
+      : {
+          ...current,
+          opponentTeam: current.opponentTeam.map((member) => ({
+            ...member,
+            active: member.slot === slot && member.alive,
+          })) as BattleOpponentTeamDto,
+        },
+  );
+}
+
+function applyHpResult(
+  setPresentation: Dispatch<SetStateAction<PresentationState>>,
+  event: BattleActionEventDto,
+): void {
+  const selfHp = new Map(event.self_hp.map((member) => [member.slot, member]));
+  const opponentHp = new Map(
+    event.opponent_hp.map((member) => [member.slot, member]),
+  );
+  setPresentation((current) => ({
+    feedback: event,
+    selfTeam: current.selfTeam.map((member) => {
+      const hp = selfHp.get(member.slot);
+      return hp
+        ? {
+            ...member,
+            current_hp: hp.current_hp,
+            max_hp: hp.max_hp,
+            alive: hp.alive,
+            active: member.active && hp.alive,
+          }
+        : member;
+    }) as BattleSelfTeamDto,
+    opponentTeam: current.opponentTeam.map((member) => {
+      const hp = opponentHp.get(member.slot);
+      return hp
+        ? {
+            ...member,
+            hp_percent: hp.hp_percent,
+            alive: hp.alive,
+            active: member.active && hp.alive,
+          }
+        : member;
+    }) as BattleOpponentTeamDto,
+  }));
+}
+
+async function playAttackCast(
   arena: HTMLDivElement,
   actor: HTMLElement | null,
-  target: HTMLElement | null,
   effect: { element: EffectElement; trajectory: TrajectoryKey },
-  hit: boolean,
 ): Promise<void> {
   const layer = arena.querySelector<HTMLElement>("[data-battle-effect-layer]");
   if (!layer) return;
@@ -280,26 +526,22 @@ async function playAttack(
     easing: "cubic-bezier(.2,.75,.2,1)",
     fill: "both",
   });
-  const particles = [...layer.querySelectorAll<HTMLElement>("i")];
-  const particleAnimations = particles.map((particle, index) =>
-    particle.animate(
-      [
-        { opacity: 0, transform: "translate3d(0, 0, 0) scale(.3)" },
-        {
-          opacity: 0.95,
-          transform: `translate3d(${(index - 3.5) * 9}px, ${(index % 2 ? -1 : 1) * 22}px, 0) scale(1)`,
-        },
-        {
-          opacity: 0,
-          transform: `translate3d(${(index - 3.5) * 17}px, ${(index % 2 ? -1 : 1) * 48}px, 0) scale(.5)`,
-        },
-      ],
-      {
-        duration: 440,
-        delay: 90 + index * 18,
-        easing: "ease-out",
-      },
-    ),
+  const particleAnimations = [...layer.querySelectorAll<HTMLElement>("i")].map(
+    (particle, index) =>
+      particle.animate(
+        [
+          { opacity: 0, transform: "translate3d(0, 0, 0) scale(.3)" },
+          {
+            opacity: 0.95,
+            transform: `translate3d(${(index - 3.5) * 9}px, ${(index % 2 ? -1 : 1) * 22}px, 0) scale(1)`,
+          },
+          {
+            opacity: 0,
+            transform: `translate3d(${(index - 3.5) * 17}px, ${(index % 2 ? -1 : 1) * 48}px, 0) scale(.5)`,
+          },
+        ],
+        { duration: 440, delay: 90 + index * 18, easing: "ease-out" },
+      ),
   );
   if (actor)
     actor.animate(
@@ -311,29 +553,56 @@ async function playAttack(
       { duration: 300, easing: "ease-out" },
     );
   await finished(travel);
-  if (hit && target)
-    await finished(
-      target.animate(
-        [
-          { transform: "translateX(0)", filter: "brightness(1)" },
-          { transform: "translateX(-7px)", filter: "brightness(1.5)" },
-          { transform: "translateX(6px)", filter: "brightness(.8)" },
-          { transform: "translateX(0)", filter: "brightness(1)" },
-        ],
-        { duration: 300, easing: "ease-out" },
-      ),
-    );
   await Promise.all(particleAnimations.map(finished));
 }
 
-async function playKnockout(target: HTMLElement): Promise<void> {
+async function playAttackImpact(
+  target: HTMLElement,
+  knockout: boolean,
+): Promise<void> {
   await finished(
     target.animate(
       [
-        { opacity: 1, transform: "translateY(0) scale(1)" },
-        { opacity: 0.45, transform: "translateY(12px) scale(.92)" },
+        { transform: "translateX(0)", filter: "brightness(1)" },
+        { transform: "translateX(-7px)", filter: "brightness(1.5)" },
+        { transform: "translateX(6px)", filter: "brightness(.8)" },
+        { transform: "translateX(0)", filter: "brightness(1)" },
       ],
-      { duration: 260, easing: "ease-in", fill: "both" },
+      { duration: 300, easing: "ease-out" },
+    ),
+  );
+  if (knockout)
+    await finished(
+      target.animate(
+        [
+          { opacity: 1, transform: "translateY(0) scale(1)" },
+          { opacity: 0.45, transform: "translateY(12px) scale(.92)" },
+        ],
+        { duration: 260, easing: "ease-in", fill: "both" },
+      ),
+    );
+}
+
+function playSwitchOut(actor: HTMLElement): Promise<void> {
+  return finished(
+    actor.animate(
+      [
+        { opacity: 1, transform: "translateX(0) scale(1)" },
+        { opacity: 0.2, transform: "translateX(20px) scale(.9)" },
+      ],
+      { duration: 220, easing: "ease-in" },
+    ),
+  );
+}
+
+function playSwitchIn(actor: HTMLElement): Promise<void> {
+  return finished(
+    actor.animate(
+      [
+        { opacity: 0.2, transform: "translateX(-20px) scale(.9)" },
+        { opacity: 1, transform: "translateX(0) scale(1)" },
+      ],
+      { duration: 260, easing: "ease-out" },
     ),
   );
 }
@@ -372,36 +641,8 @@ function isTrajectory(value: string): value is TrajectoryKey {
   return Object.hasOwn(trajectories, value);
 }
 
-function eventKey(event: BattleResolutionEventDto): string {
-  return `${event.event_id}:${event.state_version}`;
-}
-
-function isPastReveal({
-  resolution,
-  serverTime,
-  clockOffset,
-}: {
-  resolution: BattleResolutionEventDto | null;
-  serverTime: string | null;
-  clockOffset: number;
-}): boolean {
-  return (
-    !resolution ||
-    !serverTime ||
-    Date.parse(resolution.reveal_ends_at) <= Date.now() + clockOffset
-  );
-}
-
-function cancelAnimation(
-  arena: HTMLDivElement,
-  animationRun: { current: number },
-  scheduledFrame: { current: number | null },
-): void {
-  animationRun.current += 1;
-  if (scheduledFrame.current !== null) {
-    window.cancelAnimationFrame(scheduledFrame.current);
-    scheduledFrame.current = null;
-  }
+function cancelAnimation(arena: HTMLDivElement | null): void {
+  if (!arena) return;
   arena.getAnimations({ subtree: true }).forEach((animation) => {
     animation.cancel();
   });
@@ -411,6 +652,10 @@ function cancelAnimation(
   layer.style.removeProperty("--battle-effect-primary");
   layer.style.removeProperty("--battle-effect-secondary");
   layer.style.removeProperty("--battle-effect-glow");
+}
+
+function nextPaint(): Promise<void> {
+  return new Promise((resolve) => requestAnimationFrame(() => resolve()));
 }
 
 function finished(animation: Animation): Promise<void> {
