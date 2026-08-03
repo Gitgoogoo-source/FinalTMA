@@ -93,7 +93,7 @@ TMA 首次同步加载只覆盖应用壳、会话与账号门禁及默认开盒�
 - [TON 生成绑定与静态门禁](adr/ADR-017-ton-generated-bindings.md)
 - [Battle 平台条件型分享证据与发布门禁](adr/ADR-018-battle-share-platform-conditional-evidence.md)
 - [Telegram 原生顶部控件安全区回退](adr/ADR-019-telegram-fullscreen-content-safe-area-fallback.md)
-- [Battle 全流程红宝石式 GBA 对战视觉](adr/ADR-020-battle-ruby-ui.md)
+- [Battle 对战视觉作用域与首页像素动画](adr/ADR-020-battle-presentation-scope.md)
 - [开盒像素街机动画、结果舞台与展示门控](adr/ADR-021-gacha-pixel-hatch-presentation.md)
 - [全局顶层业务弹窗](adr/ADR-023-global-modal-layer.md)
 - [开盒稀有度代表静态资源](adr/ADR-024-gacha-rarity-representatives.md)
