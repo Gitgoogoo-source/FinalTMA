@@ -1,4 +1,4 @@
-import { Gift, Sparkles, Star } from "lucide-react";
+import { Gift, Sparkles } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -347,13 +347,7 @@ export function GachaView({
             </div>
 
             <Card className="gacha-details">
-              <section className="gacha-reward-preview">
-                <header>
-                  <strong>
-                    <Star aria-hidden="true" />
-                    可能获得
-                  </strong>
-                </header>
+              <div className="gacha-reward-preview">
                 <div
                   className={`gacha-rarity-previews${selectedBox.tier === "normal" ? " normal-tier" : ""}`}
                   role="list"
@@ -386,7 +380,7 @@ export function GachaView({
                     );
                   })}
                 </div>
-              </section>
+              </div>
               {rulesComplete ? (
                 <>
                   <div className="pity-capsule" aria-live="polite">

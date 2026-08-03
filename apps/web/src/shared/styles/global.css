@@ -2729,25 +2729,7 @@ input:focus {
 }
 .app-shell .gacha-reward-preview {
   display: grid;
-  gap: 6px;
   padding: 0 4px;
-}
-.app-shell .gacha-reward-preview > header {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.app-shell .gacha-reward-preview > header strong {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  color: #59645f;
-  font-size: 10px;
-}
-.app-shell .gacha-reward-preview > header strong svg {
-  width: 13px;
-  color: var(--sprout-orange);
-  fill: rgba(255, 122, 0, 0.12);
 }
 .app-shell .gacha-rarity-previews {
   display: grid;
@@ -6305,15 +6287,7 @@ body,
   gap: clamp(14px, 3.95vw, 17px);
 }
 .app-shell .gacha-reward-preview {
-  gap: 8px;
   padding-inline: 3px;
-}
-.app-shell .gacha-reward-preview > header strong {
-  font-size: 11px;
-}
-.app-shell .gacha-reward-preview > header small {
-  max-width: 235px;
-  font-size: 6px;
 }
 .app-shell .gacha-rarity-previews {
   gap: 8px;
@@ -7355,18 +7329,6 @@ body,
   .app-shell .gacha-details {
     gap: clamp(6px, 1.2dvh, 11px);
   }
-  .app-shell .gacha-reward-preview {
-    gap: clamp(3px, 0.8dvh, 7px);
-  }
-  .app-shell .gacha-reward-preview > header {
-    min-height: clamp(20px, 3dvh, 27px);
-  }
-  .app-shell .gacha-reward-preview > header strong {
-    font-size: clamp(9px, 1.25dvh, 11px);
-  }
-  .app-shell .gacha-reward-preview > header small {
-    font-size: clamp(6px, 0.8dvh, 7px);
-  }
   .app-shell .gacha-rarity-previews {
     gap: clamp(6px, 0.9dvh, 8px);
   }
@@ -7968,35 +7930,17 @@ html[data-app-shell-active] #root {
 .app-shell .gacha-details {
   height: 153px;
   display: grid;
-  grid-template-rows: 96px 57px;
+  grid-template-rows: 72px 57px;
+  align-content: start;
   gap: 0;
   padding: 0;
 }
 
 .app-shell .gacha-reward-preview {
-  height: 78px;
+  height: 54px;
   display: grid;
-  margin-top: 10px;
+  margin-top: 18px;
   padding: 0 4px;
-}
-
-.app-shell .gacha-reward-preview > header {
-  height: 18px;
-  min-height: 18px;
-  margin-bottom: 6px;
-  gap: 5px;
-}
-
-.app-shell .gacha-reward-preview > header strong {
-  flex: 0 0 auto;
-  gap: 5px;
-  font-size: 11px;
-  line-height: 14px;
-}
-
-.app-shell .gacha-reward-preview > header strong svg {
-  width: 13px;
-  height: 13px;
 }
 
 .app-shell .gacha-rarity-previews {
@@ -8157,10 +8101,6 @@ html[data-app-shell-active] #root {
 
   .app-shell .gacha-reward-preview {
     padding-inline: 18px;
-  }
-
-  .app-shell .gacha-reward-preview > header small {
-    max-width: clamp(108px, 33vw, 132px);
   }
 
   .app-shell .gacha-actions {
