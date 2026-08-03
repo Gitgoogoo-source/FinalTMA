@@ -1,11 +1,4 @@
-import {
-  ArrowDownUp,
-  Clock3,
-  LockKeyhole,
-  Shield,
-  Swords,
-  Zap,
-} from "lucide-react";
+import { ArrowDownUp, Clock3, LockKeyhole, Shield, Swords } from "lucide-react";
 import { useRef, type ReactNode, type RefObject } from "react";
 import type {
   BattleResolutionEventDto,
@@ -67,6 +60,7 @@ export function BattleArena({
       ref={arenaRef}
       className="battle-arena"
       data-battle-phase={snapshot.status}
+      data-battle-has-resolution={snapshot.resolution_event ? "true" : "false"}
       aria-label="Battle 单战场"
     >
       <header className="battle-turn-hud">
@@ -118,16 +112,24 @@ export function BattleArena({
 
       {snapshot.status === "active_select" ? (
         <section className="battle-action-hud" aria-label="本回合动作">
-          {snapshot.viewer_action_state === "locked" ? (
-            <ActionStatus icon={<LockKeyhole />} text="已锁定" />
-          ) : actionIntent ? (
-            <ActionStatus icon={<Clock3 />} text={`已提交：${actionIntent}`} />
-          ) : snapshot.viewer_action_state === "not_applicable" ? (
-            <ActionStatus
-              icon={<Clock3 />}
-              text="当前不可提交，正在读取服务器下一状态"
-            />
-          ) : selfActive ? (
+          <div className="battle-command-strip" aria-live="polite">
+            <strong>
+              {snapshot.viewer_action_state === "locked"
+                ? "动作已锁定"
+                : actionIntent
+                  ? `已提交：${actionIntent}`
+                  : snapshot.viewer_action_state === "not_applicable"
+                    ? "正在同步下一状态"
+                    : "选择一个技能"}
+            </strong>
+            <span>
+              回合 {snapshot.turn_no || 1} ·{" "}
+              {formatBattleTime(remainingSeconds)}
+            </span>
+          </div>
+          {snapshot.viewer_action_state === "available" &&
+          !actionIntent &&
+          selfActive ? (
             <>
               <div className="battle-skill-grid">
                 {selfActive.skills.map((skill) => (
@@ -137,10 +139,7 @@ export function BattleArena({
                     disabled={!available}
                     onClick={() => onAttack(skill.position, skill.name)}
                   >
-                    <span>
-                      <Zap />
-                      {skill.name}
-                    </span>
+                    <span>{skill.name}</span>
                     <small>
                       威力 {skill.power} · 命中 {skill.accuracy_bps / 100}% ·
                       优先级{" "}
@@ -160,9 +159,9 @@ export function BattleArena({
                 主动换宠
               </Button>
             </>
-          ) : (
+          ) : !selfActive ? (
             <ActionStatus icon={<Shield />} text="正在读取当前出战宠物" />
-          )}
+          ) : null}
         </section>
       ) : snapshot.status === "reveal" ? (
         <section className="battle-action-hud">
@@ -256,8 +255,8 @@ function ArenaSide({
         ))}
       </div>
       {active ? (
-        <div className="battle-active-pet" data-battle-active-sprite>
-          <div className="battle-active-art">
+        <div className="battle-active-pet">
+          <div className="battle-active-art" data-battle-active-sprite>
             <CatalogImage
               path={active.image_detail_path}
               alt={active.name}
