@@ -69,6 +69,24 @@ export function CollectionDetailShowcase({
       </div>
 
       <div className="inventory-hero-art">
+        <img
+          className="inventory-showcase-layer inventory-collection-halo"
+          src="/assets/inventory/showcase/orange-collection-halo.png"
+          alt=""
+          width={1024}
+          height={1024}
+          aria-hidden="true"
+          draggable={false}
+        />
+        <img
+          className="inventory-showcase-layer inventory-collection-platform"
+          src="/assets/inventory/showcase/grass-stone-platform.png"
+          alt=""
+          width={1024}
+          height={1024}
+          aria-hidden="true"
+          draggable={false}
+        />
         <CatalogImage
           key={item.template_id}
           path={item.image_detail_path}
