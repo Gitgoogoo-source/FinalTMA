@@ -1028,7 +1028,7 @@ export function BattleView(): ReactNode {
     bootstrap.isLoading ||
     identity.isLoading ||
     (battleEntry && !forceHome
-      ? invite.isFetching
+      ? invite.isLoading
       : roomId
         ? room === null
         : invite.isLoading);

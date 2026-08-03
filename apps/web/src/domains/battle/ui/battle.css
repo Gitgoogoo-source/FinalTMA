@@ -454,20 +454,24 @@
   transform: scale(1);
 }
 
-.battle-tier-submit.button {
+.battle-tier-submit.button,
+.battle-confirm-bar {
   position: fixed;
   z-index: 39;
   left: 50%;
-  bottom: calc(var(--safe-bottom) + 80px);
+  bottom: calc(var(--safe-bottom) + 78px);
   width: calc(
     100% - max(14px, var(--safe-left)) - max(14px, var(--safe-right))
   );
   max-width: calc(var(--app-width) - 28px);
+  margin: 0;
+  transform: translateX(-50%);
+}
+
+.battle-tier-submit.button {
   min-height: 50px;
   display: flex;
-  margin: 0;
   font-size: 14px;
-  transform: translateX(-50%);
 }
 
 .app-shell .battle-tier-submit.button:not(:disabled):active {
@@ -514,6 +518,11 @@
 .battle-lobby {
   display: grid;
   gap: 12px;
+}
+
+.battle-team-page:has(> .battle-confirm-bar),
+.battle-accept:has(> .battle-confirm-bar) {
+  padding-bottom: 88px;
 }
 
 .battle-team-selector {
@@ -832,9 +841,6 @@
 }
 
 .battle-confirm-bar {
-  position: sticky;
-  z-index: 12;
-  bottom: calc(var(--safe-bottom) + 76px);
   display: grid;
   gap: 8px;
   padding: 10px;
