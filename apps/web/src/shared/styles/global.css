@@ -6136,9 +6136,6 @@ body,
   background: var(--app-canvas);
   box-shadow: 0 0 44px rgba(48, 43, 37, 0.14);
 }
-.app-shell.inventory-shell {
-  background: color-mix(in srgb, var(--tg-bg-color, #fff) 92%, #7c5cff);
-}
 .app-shell .topbar {
   height: calc(var(--shell-top-inset) + var(--size-topbar));
   gap: 6px;
