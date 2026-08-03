@@ -1443,6 +1443,7 @@ input:focus {
 }
 .gacha-ten-result {
   --gacha-carousel-item-size: min(58vw, 240px);
+  --gacha-carousel-item-step: calc(var(--gacha-carousel-item-size) * 0.75);
   min-height: 0;
   position: relative;
   overflow: hidden;
@@ -1456,9 +1457,9 @@ input:focus {
   overflow-x: auto;
   overflow-y: hidden;
   margin: 0;
-  padding: 0 calc((100% - var(--gacha-carousel-item-size)) / 2);
+  padding: 0 calc((100% - var(--gacha-carousel-item-step)) / 2);
   list-style: none;
-  scroll-padding-inline: calc((100% - var(--gacha-carousel-item-size)) / 2);
+  scroll-padding-inline: calc((100% - var(--gacha-carousel-item-step)) / 2);
   scroll-snap-type: x mandatory;
   scrollbar-width: none;
   touch-action: pan-x;
@@ -1472,7 +1473,7 @@ input:focus {
 .gacha-result-carousel li {
   --carousel-scale: 0.56;
   position: relative;
-  flex: 0 0 var(--gacha-carousel-item-size);
+  flex: 0 0 var(--gacha-carousel-item-step);
   height: min(100%, 440px);
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr);
@@ -1490,7 +1491,7 @@ input:focus {
   outline-offset: -4px;
 }
 .gacha-result-carousel .gacha-result-art {
-  width: 100%;
+  width: var(--gacha-carousel-item-size);
   height: 100%;
   min-height: 0;
 }
