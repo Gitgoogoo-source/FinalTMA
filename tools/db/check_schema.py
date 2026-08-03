@@ -304,6 +304,7 @@ def verify_battle_contract() -> None:
     battle_sql = (SCHEMAS / "44_battle.sql").read_text(encoding="utf-8").lower()
     jobs_sql = (SCHEMAS / "95_jobs.sql").read_text(encoding="utf-8").lower()
     identity_sql = (SCHEMAS / "10_identity.sql").read_text(encoding="utf-8").lower()
+    product_data_sql = one_migration("_product_data_v1.sql").read_text(encoding="utf-8").lower()
     security_sql = one_migration("_api_security.sql").read_text(encoding="utf-8").lower()
     required = (
         "create table battle.rulesets",
@@ -391,6 +392,15 @@ def verify_battle_contract() -> None:
         raise SystemExit(f"Battle database contract is incomplete: {missing}")
     if "battle.monitor_tick_health(v_scan_from, v_scan_to)" not in jobs_sql:
         raise SystemExit("Battle tick health is not connected to monitor-invariants")
+    schedule_sql = """select cron.schedule(
+  'battle-tick-v1',
+  '1 second',
+  $battle_tick$select battle.process_due(100);$battle_tick$
+);"""
+    if "select cron.schedule(" in battle_sql:
+        raise SystemExit("Battle tick cannot start before product rules are committed")
+    if not product_data_sql.rstrip().endswith(schedule_sql):
+        raise SystemExit("Product-data migration must start Battle tick after product rules")
     if "battle_internal_room_context" in battle_sql or "private_seed_hex" in battle_sql:
         raise SystemExit("Battle private seed cannot be exposed through an api RPC")
     forbidden = (

@@ -786,3 +786,9 @@ insert into battle.template_configs (ruleset_id, template_id, chain_id, stage, r
   ('battle-v1', 'PET-T-010-1', 'CHAIN-T-010', 1, 'epic', 'grass', 'P14', 399, 125, 125, 145, 'grass-s04', 'grass-s08', null, null),
   ('battle-v1', 'PET-T-010-2', 'CHAIN-T-010', 2, 'legendary', 'grass', 'P14', 459, 144, 144, 167, 'grass-s04', 'grass-s08', 'grass-s03', null),
   ('battle-v1', 'PET-T-010-3', 'CHAIN-T-010', 3, 'mythic', 'grass', 'P14', 525, 166, 166, 193, 'grass-s04', 'grass-s08', 'grass-s03', 'grass-s10');
+
+select cron.schedule(
+  'battle-tick-v1',
+  '1 second',
+  $battle_tick$select battle.process_due(100);$battle_tick$
+);

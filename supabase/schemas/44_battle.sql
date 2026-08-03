@@ -5771,9 +5771,3 @@ begin
   );
 end;
 $$;
-
-select cron.schedule(
-  'battle-tick-v1',
-  '1 second',
-  $battle_tick$select battle.process_due(100);$battle_tick$
-);
