@@ -1,4 +1,3 @@
-import { AlertTriangle, RefreshCw } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -45,7 +44,6 @@ import {
   usePageActive,
   usePageSearchParams,
 } from "../../../shared/navigation/pageActivity.tsx";
-import { Button } from "../../../shared/ui/index.tsx";
 import { useBattleRealtime } from "../../../workflows/battle-realtime/index.ts";
 import { useNavigationIntent } from "../../../workflows/payment-recovery/index.ts";
 import { useBattleCommand } from "../useBattleCommand.ts";
@@ -126,7 +124,6 @@ export function BattleView(): ReactNode {
     finishAuthorityRecovery,
     prepareTerminalAcknowledgement,
     confirmTerminalAcknowledged,
-    failure: terminalRefreshFailure,
     active: activeTerminal,
     isLocked: isTerminalLocked,
   } = useBattleTerminalRefresh(sessionGeneration, pageActive);
@@ -181,7 +178,6 @@ export function BattleView(): ReactNode {
   const [forceHome, setForceHome] = useState(false);
   const [dismissedResult, setDismissedResult] = useState<string | null>(null);
   const [resumeNotice, setResumeNotice] = useState<string | null>(null);
-  const [feedback, setFeedback] = useState<string | null>(null);
   const [shareState, setShareState] = useState<ShareFeedback | null>(null);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [switchOpen, setSwitchOpen] = useState(false);
@@ -256,16 +252,16 @@ export function BattleView(): ReactNode {
         const roomResult = await readAuthorityRoom(authorityRoomId);
         if (isTerminalLocked(null)) return false;
         if (!roomResult) return false;
+        await onAuthoritativeRoom(roomResult);
+        if (isTerminalLocked(null)) {
+          authorityHealthy.current = true;
+          return false;
+        }
         let inviteHealthy = true;
         if (battleEntry && !forceHome) {
           const inviteResult = await refetchInvite();
           inviteHealthy = !inviteResult.isError;
           if (isTerminalLocked(null)) return false;
-        }
-        await onAuthoritativeRoom(roomResult);
-        if (isTerminalLocked(null)) {
-          authorityHealthy.current = true;
-          return false;
         }
         authorityHealthy.current = true;
         return inviteHealthy;
@@ -376,7 +372,6 @@ export function BattleView(): ReactNode {
       setForceHome(false);
       setDismissedResult(null);
       setResumeNotice(null);
-      setFeedback(null);
       setShareState(null);
       setCancelOpen(false);
       setSwitchOpen(false);
@@ -928,11 +923,9 @@ export function BattleView(): ReactNode {
     if (!tier) return;
     const selection = parseSelection(slots, teamOptions.data?.items ?? []);
     if (!selection) {
-      setFeedback("请选择恰好三个不同的可用模板，并确认首发顺序");
       return;
     }
     if (balance === null) {
-      setFeedback("K-coin 余额尚未读取完成");
       return;
     }
     if (balance < tier.entry_fee) {
@@ -943,28 +936,21 @@ export function BattleView(): ReactNode {
       setResumeNotice("请完成充值；返回后仍需重新确认创建");
       return;
     }
-    setFeedback("创建请求已提交，尚未代表业务成功");
     const response = await command.execute("battle.create", {
       tier: tier.id,
       template_ids: selection,
     });
-    if (!response) {
-      setFeedback(null);
-      return;
-    }
+    if (!response) return;
     setFlow(null);
-    setFeedback(null);
   };
 
   const accept = async () => {
     if (!inviteRoom || inviteRoom.invite_status !== "available") return;
     const selection = parseSelection(slots, teamOptions.data?.items ?? []);
     if (!selection) {
-      setFeedback("请选择恰好三个不同的可用模板，并确认首发顺序");
       return;
     }
     if (balance === null) {
-      setFeedback("K-coin 余额尚未读取完成");
       return;
     }
     if (balance < inviteRoom.entry_fee) {
@@ -979,7 +965,6 @@ export function BattleView(): ReactNode {
       setResumeNotice("请完成充值；返回后仍需重新确认接受");
       return;
     }
-    setFeedback("接受请求已提交，尚未代表业务成功");
     const snapshot = await command.execute(
       "battle.accept",
       {
@@ -989,13 +974,9 @@ export function BattleView(): ReactNode {
         terminalRoomId: inviteRoom.room_id,
       },
     );
-    if (!snapshot) {
-      setFeedback(null);
-      return;
-    }
+    if (!snapshot) return;
     setFlow(null);
     setResumeNotice(null);
-    setFeedback(null);
   };
 
   const cancel = async () => {
@@ -1005,7 +986,6 @@ export function BattleView(): ReactNode {
     });
     if (!response) return;
     setCancelOpen(false);
-    setFeedback(null);
   };
 
   const attack = async (skillPosition: 1 | 2 | 3 | 4, name: string) => {
@@ -1047,29 +1027,13 @@ export function BattleView(): ReactNode {
     if (!result || acknowledging) return;
     const acknowledgedRoomId = result.room_id;
     setAcknowledging(true);
-    setFeedback("正在由服务器确认结果已读");
-    let acknowledgementFailure: unknown = null;
     try {
-      if (!(await prepareTerminalAcknowledgement(acknowledgedRoomId))) {
-        setFeedback("当场结果仍在完成权威资产回正，请重试确认");
-        return;
-      }
-      try {
-        await apiRequest("battle.acknowledge_result", {
-          room_id: acknowledgedRoomId,
-        });
-      } catch (cause) {
-        acknowledgementFailure = cause;
-      }
+      if (!(await prepareTerminalAcknowledgement(acknowledgedRoomId))) return;
+      await apiRequest("battle.acknowledge_result", {
+        room_id: acknowledgedRoomId,
+      }).catch(() => undefined);
       const confirmed = await confirmTerminalAcknowledged(acknowledgedRoomId);
-      if (!confirmed) {
-        setFeedback(
-          acknowledgementFailure instanceof Error
-            ? acknowledgementFailure.message
-            : "结果确认尚未完成权威回正，请重试",
-        );
-        return;
-      }
+      if (!confirmed) return;
       setDismissedResult(acknowledgedRoomId);
       setForceHome(true);
       setFlow(null);
@@ -1077,7 +1041,6 @@ export function BattleView(): ReactNode {
       setRoom((current) =>
         current?.room_id === acknowledgedRoomId ? null : current,
       );
-      setFeedback(null);
     } finally {
       setAcknowledging(false);
     }
@@ -1112,9 +1075,6 @@ export function BattleView(): ReactNode {
       );
   };
 
-  const queryError =
-    bootstrap.error ?? identity.error ?? invite.error ?? teamOptions.error;
-  const visibleError = terminalRefreshFailure?.error ?? queryError;
   const loading =
     bootstrap.isLoading ||
     identity.isLoading ||
@@ -1123,10 +1083,6 @@ export function BattleView(): ReactNode {
       : roomId
         ? room === null
         : invite.isLoading);
-  const commandMessage =
-    commandPending || command.state.phase === "failed"
-      ? command.state.message
-      : null;
   const content = (
     <BattleState
       pageState={pageState}
@@ -1161,14 +1117,12 @@ export function BattleView(): ReactNode {
         setFlow({ kind: "create", tier: chosenTier });
         setSlots(emptySlots);
         setForceHome(false);
-        setFeedback(null);
       }}
       home={() => {
         setFlow(null);
         setSlots(emptySlots);
         setForceHome(true);
         setResumeNotice(null);
-        setFeedback(null);
         setParams({}, { replace: true });
       }}
       refresh={() => void refetchAuthority()}
@@ -1190,37 +1144,6 @@ export function BattleView(): ReactNode {
       data-battle-page-state={pageState}
     >
       {content}
-      {feedback || commandMessage || visibleError ? (
-        <div
-          className={`battle-feedback ${visibleError ? "error" : ""}`}
-          role={visibleError ? "alert" : "status"}
-          aria-live="polite"
-        >
-          {visibleError ? <AlertTriangle /> : <RefreshCw />}
-          <span>
-            {visibleError instanceof Error
-              ? visibleError.message
-              : (feedback ?? commandMessage)}
-          </span>
-          {visibleError ? (
-            <Button
-              className="secondary"
-              onClick={() => {
-                if (terminalRefreshFailure) {
-                  void reportTerminal({
-                    roomId: terminalRefreshFailure.roomId,
-                    stateVersion: terminalRefreshFailure.stateVersion,
-                  });
-                } else {
-                  void refetchAuthority();
-                }
-              }}
-            >
-              重新读取
-            </Button>
-          ) : null}
-        </div>
-      ) : null}
       {cancelOpen && pageActive ? (
         <BattleCancelSheet
           pending={commandPending}
@@ -1385,7 +1308,7 @@ function BattleState({
         slots={slots}
         balance={balance}
         loading={loading}
-        disabled={commandPending}
+        disabled={commandPending || balance === null}
         onChange={setSlots}
         onBack={home}
         onConfirm={create}
@@ -1409,7 +1332,7 @@ function BattleState({
         balance={balance}
         remainingSeconds={clock.remainingSeconds}
         loading={loading}
-        disabled={commandPending}
+        disabled={commandPending || balance === null}
         realtimeOffline={realtimeOffline}
         resumeNotice={resumeNotice}
         onChange={setSlots}

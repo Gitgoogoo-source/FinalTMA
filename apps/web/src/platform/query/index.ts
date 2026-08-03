@@ -1,4 +1,5 @@
 import {
+  CancelledError,
   hashKey,
   notifyManager,
   QueryClient,
@@ -474,10 +475,7 @@ function assertCurrentSession(expected: string, authenticated: boolean): void {
 
 function assertApiQueryAllowed(generation: string, routeId: RouteId): void {
   if (isApiQuerySuppressed(generation, routeId))
-    throw new DOMException(
-      "Query suppressed by authority coordinator",
-      "AbortError",
-    );
+    throw new CancelledError({ revert: true });
 }
 
 function isApiQuerySuppressed(generation: string, routeId: RouteId): boolean {

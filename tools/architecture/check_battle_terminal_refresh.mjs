@@ -143,6 +143,16 @@ function checkQueryBoundary(source) {
     "TanStack retry, focus refetch, and reconnect refetch must stay disabled",
   );
 
+  const suppressionGate = topLevelFunction(source, "assertApiQueryAllowed");
+  const suppressionIdentifiers = new Set(identifiers(suppressionGate));
+  must(
+    calls(suppressionGate, "isApiQuerySuppressed").length === 1 &&
+      suppressionIdentifiers.has("CancelledError") &&
+      suppressionIdentifiers.has("revert") &&
+      !suppressionIdentifiers.has("DOMException"),
+    "authority suppression must be a reverted TanStack cancellation, never an observer-visible query error",
+  );
+
   const ownerBatch = topLevelFunction(source, "fetchApiQueryBatchAsOwner");
   const ownerRegistration = calls(ownerBatch, "ownedApiQueries.set");
   const ownerRequests = calls(ownerBatch, "executeApiQueryRequest");
@@ -306,6 +316,13 @@ function checkCoordinator(source) {
     "terminal batch must contain exactly Battle bootstrap, identity bootstrap, and inventory",
   );
   must(
+    sameArray(
+      numericLiterals(variable(source, "terminalRetryDelays")?.initializer),
+      [1_000, 2_000, 5_000],
+    ),
+    "terminal authority recovery must use the fixed 1s, 2s, 5s silent backoff",
+  );
+  must(
     sameSet(
       new Set(
         requestArrayRoutes(
@@ -343,6 +360,13 @@ function checkCoordinator(source) {
   );
 
   const hook = topLevelFunction(source, "useBattleTerminalRefresh");
+  const publicState = returnExpressions(hook)
+    .map((expression) => unwrap(expression))
+    .find(
+      (expression) =>
+        ts.isObjectLiteralExpression(expression) &&
+        objectProperty(expression, "reportTerminal"),
+    );
   const externalStore = calls(hook, "useSyncExternalStore")[0];
   const subscribeSnapshot = externalStore?.arguments[0];
   const getSnapshot = externalStore?.arguments[1];
@@ -370,7 +394,9 @@ function checkCoordinator(source) {
       calls(hook, "setRouteActive").length >= 2 &&
       subscriptionSemantics.root &&
       snapshotPurity.root &&
-      sharedSnapshotCollections.size >= 1,
+      sharedSnapshotCollections.size >= 1 &&
+      publicState &&
+      !objectProperty(publicState, "failure"),
     "React must subscribe to one external coordinator and bind suppression to the real route-active lifecycle",
   );
   const routeCalls = calls(hook, "setRouteActive");
@@ -481,8 +507,24 @@ function checkCoordinator(source) {
       assignments(catchCallback).some(
         (node) => expressionValue(node.left) === "state.failure",
       ) &&
+      calls(catchCallback, "scheduleTerminalRetry").length === 1 &&
       calls(finallyCallback, "state.terminalInFlight.delete").length === 1,
     "only a current all-success batch may be remembered; authoritative resultless terminals must release active suppression while failure remains retryable",
+  );
+  const retryScheduler = topLevelFunction(source, "scheduleTerminalRetry");
+  const retryCallback = callbackOfCall(
+    calls(retryScheduler, "window.setTimeout")[0],
+  );
+  must(
+    calls(retryScheduler, "window.setTimeout").length === 1 &&
+      propertyPaths(retryScheduler).includes("state.routeOwners.size") &&
+      propertyPaths(retryScheduler).includes("state.failure") &&
+      calls(retryScheduler, "isCurrentGeneration").length === 1 &&
+      calls(retryCallback, "isCurrentObservation").length === 1 &&
+      calls(retryCallback, "reportTerminalObservation").length === 1 &&
+      calls(routeSetter, "clearTerminalRetry").length === 1 &&
+      calls(routeSetter, "scheduleTerminalRetry").length === 1,
+    "terminal retry must remain route-active, generation/current-observation guarded, pause on leave, and resume without exposing failure state",
   );
   must(
     provesDualBootstrapAbsence(
@@ -797,8 +839,7 @@ function checkView(source) {
   );
   const participantInviteRefresh = calls(authority, "refetchInvite").find(
     (call) =>
-      call.pos > roomRead[0].end &&
-      call.pos < roomPublish.pos &&
+      call.pos > roomPublish.end &&
       enclosingIf(
         authority,
         call,
@@ -807,14 +848,34 @@ function checkView(source) {
           identifiers(node.expression).includes("forceHome"),
       ),
   );
+  const authorityHealthyAfterInvite = assignments(authority).find(
+    (node) =>
+      participantInviteRefresh &&
+      node.pos > participantInviteRefresh.end &&
+      expressionValue(node.left) === "authorityHealthy.current",
+  );
   must(
     participantInviteRefresh &&
       awaitExpressions(authority).some((node) =>
         containsNode(node, participantInviteRefresh),
       ) &&
-      latchCheckBetween(authority, participantInviteRefresh, roomPublish) &&
+      latchCheckBetween(authority, roomPublish, participantInviteRefresh) &&
+      latchCheckBetween(
+        authority,
+        participantInviteRefresh,
+        authorityHealthyAfterInvite,
+      ) &&
       propertyPaths(authority).includes("inviteResult.isError"),
-    "participant room authority refresh must also await current_invite for an active Battle bearer and recheck the terminal latch",
+    "participant room authority refresh must publish the room and release suppression before awaiting current_invite, with terminal latch rechecks on both sides",
+  );
+  must(
+    !source.getFullText().includes("battle-feedback") &&
+      !identifiers(view).includes("terminalRefreshFailure") &&
+      !variable(view, "queryError") &&
+      !variable(view, "visibleError") &&
+      !propertyPaths(view).some((path) => path.endsWith(".error")) &&
+      !propertyPaths(view).includes("command.state.message"),
+    "Battle must not render query, coordinator, or server command errors as a floating user popup",
   );
   const bootstrapEnabledIdentifiers = new Set(
     identifiers(bootstrapObserver?.arguments[2]),
@@ -1898,6 +1959,19 @@ function runSelfTests() {
       return replaceNode(text, property.initializer, "true");
     }),
     fixture(
+      paths.query,
+      "authority suppression becomes observer error",
+      (source, text) => {
+        const fn = topLevelFunction(source, "assertApiQueryAllowed");
+        const failure = throwStatements(fn)[0];
+        return replaceNode(
+          text,
+          failure.expression,
+          'new DOMException("fixture", "AbortError")',
+        );
+      },
+    ),
+    fixture(
       paths.coordinator,
       "route cleanup fails to release",
       (source, text) => {
@@ -1959,6 +2033,16 @@ function runSelfTests() {
           catchCallback,
           "state.completed.add(key);",
         );
+      },
+    ),
+    fixture(
+      paths.coordinator,
+      "failed terminal batch stops silent retry",
+      (source, text) => {
+        const fn = topLevelFunction(source, "reportTerminalObservation");
+        const catchCallback = callbackOfCall(calls(fn, "catch")[0]);
+        const retry = calls(catchCallback, "scheduleTerminalRetry")[0];
+        return replaceNode(text, retry, "void state.failure");
       },
     ),
     fixture(
@@ -2057,6 +2141,10 @@ function runSelfTests() {
         guards.map((guard) => guard.expression),
         "false",
       );
+    }),
+    fixture(paths.view, "Battle server popup returns", (source, text) => {
+      const view = topLevelFunction(source, "BattleView");
+      return insertIntoFunction(text, view, 'void "battle-feedback";');
     }),
     fixture(
       paths.view,

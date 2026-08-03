@@ -39,7 +39,6 @@ export type BattleCommandState = {
   routeId: BattleCommandRouteId | null;
   operationId: string | null;
   phase: BattleCommandPhase;
-  message: string | null;
 };
 
 export type BattleAuthoritativeRoomHandler = (
@@ -54,7 +53,6 @@ const initialState: BattleCommandState = {
   routeId: null,
   operationId: null,
   phase: "idle",
-  message: null,
 };
 
 export function useBattleCommand(
@@ -63,7 +61,6 @@ export function useBattleCommand(
   readAuthoritativeRoom: BattleAuthoritativeRoomReader,
 ): {
   state: BattleCommandState;
-  clearMessage(): void;
   execute<Id extends BattleCommandRouteId>(
     routeId: Id,
     input: RouteInput<Id>,
@@ -106,7 +103,6 @@ export function useBattleCommand(
         routeId,
         operationId,
         phase: "submitted",
-        message: "已提交，正在等待服务器裁决",
       });
       try {
         const response = await apiRequest(routeId, input, {
@@ -127,7 +123,6 @@ export function useBattleCommand(
           routeId,
           operationId,
           phase: "succeeded",
-          message: "服务器已确认",
         });
         return response.data;
       } catch (cause) {
@@ -149,7 +144,6 @@ export function useBattleCommand(
             routeId,
             operationId,
             phase: "failed",
-            message: failureMessage(failure),
           });
           return null;
         }
@@ -157,7 +151,6 @@ export function useBattleCommand(
           routeId,
           operationId,
           phase: "recovering",
-          message: "响应未确认，正在查询原操作",
         });
         await refetchRef.current().catch(() => undefined);
         let recovered: Awaited<ReturnType<typeof recoverSameOperation<Id>>>;
@@ -180,10 +173,6 @@ export function useBattleCommand(
             routeId,
             operationId,
             phase: "failed",
-            message:
-              recoveryCause instanceof Error
-                ? recoveryCause.message
-                : "原操作恢复失败，请重新读取",
           });
           return null;
         }
@@ -208,10 +197,6 @@ export function useBattleCommand(
               routeId,
               operationId,
               phase: "failed",
-              message:
-                recoveryCause instanceof Error
-                  ? recoveryCause.message
-                  : "权威房间状态读取失败，请重新读取",
             });
             return null;
           }
@@ -220,7 +205,6 @@ export function useBattleCommand(
             routeId,
             operationId,
             phase: "succeeded",
-            message: "原操作已由服务器确认",
           });
           return recovered.data;
         }
@@ -239,7 +223,6 @@ export function useBattleCommand(
           routeId,
           operationId,
           phase: "failed",
-          message: failureMessage(recovered.failure),
         });
         return null;
       } finally {
@@ -251,10 +234,6 @@ export function useBattleCommand(
 
   return {
     state,
-    clearMessage: () =>
-      setState((current) =>
-        current.phase === "failed" ? initialState : current,
-      ),
     execute,
   };
 }
@@ -491,12 +470,6 @@ function roomIdFromInput(input: unknown): string | null {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function failureMessage(failure: ApiFailure): string {
-  return isErrorCode(failure.code)
-    ? errorDefinition(failure.code).message
-    : failure.message;
 }
 
 function assertGeneration(expected: string): void {

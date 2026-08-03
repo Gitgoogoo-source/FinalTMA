@@ -735,7 +735,7 @@ Battle 入口：BTL_[A-Za-z0-9_-]{32}
 - `BATTLE_STATE_CONFLICT`
 - `BATTLE_VOIDED`
 
-余额与库存继续使用现有 `INSUFFICIENT_BALANCE`、`INSUFFICIENT_INVENTORY`、`INVENTORY_RESERVED`。每个错误在 `errorRegistry` 固定 HTTP 状态、用户文案、刷新范围和恢复动作，并在各 route contract 显式声明。
+余额与库存继续使用现有 `INSUFFICIENT_BALANCE`、`INSUFFICIENT_INVENTORY`、`INVENTORY_RESERVED`。每个错误在 `errorRegistry` 固定 HTTP 状态、内部说明、刷新范围和恢复动作，并在各 route contract 显式声明；内部说明只用于契约、日志与开发诊断，Battle Web 不得直接渲染。
 
 ### 10.4 Viewer-specific 恢复字段
 
@@ -778,8 +778,9 @@ heartbeat/offline 路由契约固定声明最大可能刷新域 `battle + assets
 - 点击接受时立即锁定本地表单并显示“正在确认对战资格”，不提前扣减页面余额。
 - 点击技能或换宠后立即显示“已提交”，禁用本回合全部动作；只有服务端成功响应才显示“已锁定”。
 - 动作响应丢失、刷新或重认证后，页面只按 `BattleRoomSnapshotDto.viewer_action_state` 恢复按钮状态；`locked` 禁止本回合重新选择，`available` 允许当前 viewer 提交，`not_applicable` 不提供动作入口。
-- 服务端拒绝、状态过期或快照冲突时撤销临时状态，并只重新读取错误注册表声明的领域。
+- 服务端拒绝、状态过期或快照冲突时撤销临时状态，并只静默重新读取错误注册表声明的领域。
 - 普通 heartbeat/offline 拒绝只刷新其错误声明的领域；只有已确认退款/释放终态才刷新 room、顶部资产和 inventory。
+- Battle 只展示九种游戏页面及其行内交互状态；API、查询、网络、会话或权威协调器错误不得形成浮层、Toast、Alert、“重新读取”按钮，也不得把 `Error.message`、错误码或 `errorRegistry` 内部说明直接交给用户。权威查询协调器内部抑制必须使用 TanStack cancellation 语义，不得进入 observer error 状态。
 - 命中、伤害和击倒动画只消费服务端 resolution event，不在浏览器重算。
 - `prefers-reduced-motion` 下使用静态状态切换，服务端 3 秒展示窗口和业务时序不变。
 
@@ -870,7 +871,7 @@ heartbeat/offline 路由契约固定声明最大可能刷新域 `battle + assets
 
 `identity.bootstrap` 增加当前 Battle participation 和最新未确认当场结果摘要。用户在终局瞬间断线时，重新进入只显示该场最终结果；确认后不再返回。
 
-最新未确认 `current_result` 本身就是服务端权威的结果恢复入口，不依赖当前 participation 或 bootstrap room 继续作为活动状态返回。Web 在只有 `current_result` 时，必须先以其 `room_id` 调用既有参与者专属 room 读取，重新验证当前用户确为参与者并取得终态 `status + state_version`；随后统一执行 Battle bootstrap、identity bootstrap 与 inventory 三域权威刷新。只有三域全部成功、同一 room 的未确认结果仍存在且终态版本没有被更高权威快照替代时，才允许提交 acknowledge。room 读取失败、房间尚未终态、资产/藏品刷新失败、结果已经消失或版本发生变化时继续保留覆盖层并显示可重试状态，不得无条件放行。
+最新未确认 `current_result` 本身就是服务端权威的结果恢复入口，不依赖当前 participation 或 bootstrap room 继续作为活动状态返回。Web 在只有 `current_result` 时，必须先以其 `room_id` 调用既有参与者专属 room 读取，重新验证当前用户确为参与者并取得终态 `status + state_version`；随后统一执行 Battle bootstrap、identity bootstrap 与 inventory 三域权威刷新。只有三域全部成功、同一 room 的未确认结果仍存在且终态版本没有被更高权威快照替代时，才允许提交 acknowledge。room 读取失败、房间尚未终态、资产/藏品刷新失败、结果已经消失或版本发生变化时继续保留结果覆盖层且不显示错误浮层，不得无条件放行；其中终态三域权威刷新失败时，仅在 `/game` 前台按 1 秒、2 秒、5 秒、此后每 5 秒静默重试，离开页面暂停，返回页面立即恢复。
 
 acknowledge 仍由 `api.battle_acknowledge_result` 在数据库内验证当前 session、参与者归属与 `finished/draw/voided` 终态，并以首次确认时间幂等写入；Web 不提交 `Idempotency-Key`，不自行清除结果。响应成功或丢失后，Web 必须再次读取 Battle bootstrap 与 identity bootstrap，只有两者都不再返回同一 room 的未确认结果时才关闭覆盖层并返回 Battle 首页。重复点击、网络重放、重新加载、重新认证和迟到的旧 bootstrap/room 响应都不能重复改变资产、stake、reservation、ledger、outbox 或确认时间。
 

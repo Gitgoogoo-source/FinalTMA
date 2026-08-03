@@ -2047,49 +2047,6 @@
   margin-top: 8px;
 }
 
-.battle-feedback {
-  position: fixed;
-  z-index: 80;
-  right: max(12px, var(--safe-right));
-  bottom: calc(88px + var(--safe-bottom));
-  left: max(12px, var(--safe-left));
-  min-height: 48px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: min(calc(100% - 24px), 500px);
-  margin: 0 auto;
-  padding: 10px 12px;
-  border: 1px solid rgba(255, 164, 54, 0.24);
-  border-radius: 16px;
-  color: #71501d;
-  background: rgba(255, 246, 220, 0.96);
-  box-shadow: 0 12px 32px rgba(54, 67, 75, 0.15);
-  backdrop-filter: blur(14px);
-}
-
-.battle-feedback.error {
-  color: #7c3340;
-  background: rgba(255, 237, 241, 0.97);
-}
-
-.battle-feedback > svg {
-  width: 18px;
-}
-
-.battle-feedback > span {
-  min-width: 0;
-  flex: 1;
-  font-size: 10px;
-  line-height: 1.4;
-}
-
-.battle-feedback .button {
-  min-height: 38px;
-  padding: 7px 10px;
-  font-size: 10px;
-}
-
 @keyframes battle-spin {
   to {
     transform: rotate(1turn);
@@ -2170,12 +2127,6 @@
   .battle-active-art {
     width: min(100%, 290px);
     height: 170px;
-  }
-
-  .battle-feedback {
-    left: 50%;
-    right: auto;
-    transform: translateX(-50%);
   }
 }
 

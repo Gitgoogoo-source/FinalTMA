@@ -31,10 +31,6 @@ export type BattleTerminalReporter = (
   observation: BattleTerminalObservation,
 ) => Promise<void>;
 
-export type BattleTerminalRefreshFailure = BattleTerminalObservation & {
-  error: Error;
-};
-
 type CoordinatorState = {
   generation: string;
   discoveryOwner: symbol;
@@ -48,7 +44,9 @@ type CoordinatorState = {
   acknowledgeInFlight: Map<string, Promise<boolean>>;
   acknowledgeOwners: Map<string, symbol>;
   completed: Set<string>;
-  failure: BattleTerminalRefreshFailure | null;
+  failure: BattleTerminalObservation | null;
+  retryAttempt: number;
+  retryTimer: number | null;
   listeners: Set<() => void>;
   version: number;
   disposed: boolean;
@@ -61,6 +59,8 @@ const terminalStatuses = [
   "expired",
   "voided",
 ] as const;
+
+const terminalRetryDelays = [1_000, 2_000, 5_000] as const;
 
 const authorityCancellationRoutes = [
   "battle.bootstrap",
@@ -96,6 +96,7 @@ const coordinators = new Map<string, CoordinatorState>();
 registerSensitiveStateResetter(() => {
   for (const state of coordinators.values()) {
     state.disposed = true;
+    clearTerminalRetry(state);
     cancelApiQueryOwner(state.discoveryOwner);
     for (const owner of state.terminalOwners.values())
       cancelApiQueryOwner(owner);
@@ -117,7 +118,6 @@ export function useBattleTerminalRefresh(
   finishAuthorityRecovery(roomId: string): void;
   prepareTerminalAcknowledgement(roomId: string): Promise<boolean>;
   confirmTerminalAcknowledged(roomId: string): Promise<boolean>;
-  failure: BattleTerminalRefreshFailure | null;
   active: BattleTerminalObservation | null;
   isLocked(roomId: string | null): boolean;
 } {
@@ -219,7 +219,6 @@ export function useBattleTerminalRefresh(
     finishAuthorityRecovery,
     prepareTerminalAcknowledgement,
     confirmTerminalAcknowledged,
-    failure: state?.failure ?? null,
     active: state?.active ?? null,
     isLocked,
   };
@@ -256,6 +255,7 @@ function reportTerminalObservation(
     current.roomId !== observation.roomId ||
     current.stateVersion !== observation.stateVersion
   ) {
+    resetTerminalRetry(state);
     state.active = observation;
     state.recoveryRoomId = null;
     state.failure = null;
@@ -277,6 +277,7 @@ function reportTerminalObservation(
   const task = batch
     .then(() => {
       if (!isCurrentObservation(state, observation)) return;
+      resetTerminalRetry(state);
       state.completed.add(key);
       state.failure = null;
       const battle = getApiQueryData(generation, "battle.bootstrap");
@@ -292,11 +293,9 @@ function reportTerminalObservation(
     })
     .catch(() => {
       if (!isCurrentObservation(state, observation)) return;
-      state.failure = {
-        ...observation,
-        error: new Error("Battle 终态已确认，但资产与藏品刷新失败，请重新读取"),
-      };
+      state.failure = observation;
       publishCoordinator(state);
+      scheduleTerminalRetry(state);
     })
     .finally(() => {
       if (state.terminalInFlight.get(key) === task)
@@ -369,6 +368,7 @@ async function confirmAcknowledgedResult(
         return false;
       state.active = null;
       state.failure = null;
+      resetTerminalRetry(state);
       syncRouteSuppression(state);
       publishCoordinator(state);
       return true;
@@ -435,6 +435,7 @@ function beginCoordinatorRecovery(generation: string, roomId: string): boolean {
   if (state.active?.roomId === roomId) return false;
   if (state.active) {
     cancelTerminalOwners(state);
+    resetTerminalRetry(state);
     state.active = null;
     state.failure = null;
   }
@@ -464,6 +465,7 @@ function reportNonTerminalObservation(
   let changed = false;
   if (state.active) {
     cancelTerminalOwners(state);
+    resetTerminalRetry(state);
     state.active = null;
     state.failure = null;
     changed = true;
@@ -491,8 +493,10 @@ function setRouteActive(
     ? !state.routeOwners.has(owner) && Boolean(state.routeOwners.add(owner))
     : state.routeOwners.delete(owner);
   if (!changed) return;
+  if (state.routeOwners.size === 0) clearTerminalRetry(state);
   syncRouteSuppression(state);
   publishCoordinator(state);
+  if (active && state.failure) scheduleTerminalRetry(state, 0);
 }
 
 function syncRouteSuppression(state: CoordinatorState): void {
@@ -514,6 +518,59 @@ function cancelTerminalOwners(state: CoordinatorState): void {
   for (const owner of state.terminalOwners.values()) cancelApiQueryOwner(owner);
 }
 
+function clearTerminalRetry(state: CoordinatorState): void {
+  if (state.retryTimer === null) return;
+  window.clearTimeout(state.retryTimer);
+  state.retryTimer = null;
+}
+
+function resetTerminalRetry(state: CoordinatorState): void {
+  clearTerminalRetry(state);
+  state.retryAttempt = 0;
+}
+
+function scheduleTerminalRetry(
+  state: CoordinatorState,
+  delayOverride?: number,
+): void {
+  if (
+    state.retryTimer !== null ||
+    state.routeOwners.size === 0 ||
+    !state.active ||
+    !state.failure ||
+    state.disposed ||
+    !isCurrentGeneration(state.generation)
+  )
+    return;
+  const observation = state.active;
+  if (
+    state.failure.roomId !== observation.roomId ||
+    state.failure.stateVersion !== observation.stateVersion
+  )
+    return;
+  const retryIndex = Math.min(
+    state.retryAttempt,
+    terminalRetryDelays.length - 1,
+  );
+  const delay = delayOverride ?? terminalRetryDelays[retryIndex] ?? 5_000;
+  if (delayOverride === undefined)
+    state.retryAttempt = Math.min(
+      state.retryAttempt + 1,
+      terminalRetryDelays.length,
+    );
+  state.retryTimer = window.setTimeout(() => {
+    state.retryTimer = null;
+    if (
+      state.routeOwners.size === 0 ||
+      !isCurrentObservation(state, observation) ||
+      state.failure?.roomId !== observation.roomId ||
+      state.failure.stateVersion !== observation.stateVersion
+    )
+      return;
+    void reportTerminalObservation(state.generation, observation);
+  }, delay);
+}
+
 function coordinatorFor(generation: string): CoordinatorState {
   const existing = coordinators.get(generation);
   if (existing) return existing;
@@ -531,6 +588,8 @@ function coordinatorFor(generation: string): CoordinatorState {
     acknowledgeOwners: new Map(),
     completed: new Set(),
     failure: null,
+    retryAttempt: 0,
+    retryTimer: null,
     listeners: new Set(),
     version: 0,
     disposed: false,
