@@ -129,6 +129,12 @@ export function haptic(
   telegram()?.HapticFeedback?.notificationOccurred(type);
 }
 
+export function selectionHaptic(): void {
+  const feedback = telegram()?.HapticFeedback;
+  if (feedback?.selectionChanged)
+    attemptTelegramMethod(() => feedback.selectionChanged?.());
+}
+
 export function sharePreparedMessage(
   messageId: string,
   callback?: (shared: boolean) => void,
