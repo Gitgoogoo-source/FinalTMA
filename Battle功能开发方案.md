@@ -569,6 +569,7 @@ flowchart LR
 
 - 输入只使用数据库快照和已经锁定的动作。
 - 命中、伤害、先后手、换宠、击倒、终局和经济结算都在同一事务内。
+- 普通换宠双方分支与强制换宠统一调用内部原子切换函数：先将当前 active 宠物设为 inactive，再激活已验证的存活目标；禁止使用同一条多行 `UPDATE` 同时翻转 active 状态并依赖数据库行处理顺序。
 - 每次状态变化递增 `rooms.state_version` 和 `events.sequence`。
 - RPC 返回按当前用户裁剪的读模型，不把私有审计 JSON 交给 Functions 再过滤。
 - 检测到规则缺失、快照不完整、负生命、重复活动宠物或账本不变量错误时，不继续猜测结算；系统在独立安全事务把房间标为 `voided`、退款全部已有原始 stake、释放藏品，并原子记录双方/room 终态、零手续费 settlement、审计、outbox 与 `operations.invariant_violations`。

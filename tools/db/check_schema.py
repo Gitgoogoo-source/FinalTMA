@@ -325,6 +325,7 @@ def verify_battle_contract() -> None:
         "create or replace function api.battle_submit_forced_switch",
         "create or replace function battle.skills_json",
         "create or replace function battle.viewer_action_state",
+        "create or replace function battle.switch_active_member",
         "create or replace function battle.safe_resolve_normal_turn",
         "create or replace function battle.safe_resolve_forced_switch",
         "create or replace function battle.safe_finalize_room",

@@ -5710,6 +5710,37 @@ as $$
   where tm.participant_id = p_participant_id and tm.slot = p_slot
 $$;
 
+create or replace function battle.switch_active_member(
+  p_participant_id uuid,
+  p_target_slot smallint
+)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  update battle.team_members
+  set active = false
+  where participant_id = p_participant_id and active;
+  update battle.team_members
+  set active = true
+  where participant_id = p_participant_id
+    and slot = p_target_slot
+    and alive;
+  if not found then
+    raise exception using
+      errcode = 'P0001',
+      message = 'BATTLE_INVARIANT',
+      detail = jsonb_build_object(
+        'kind', 'switch_target_unavailable',
+        'participant_id', p_participant_id,
+        'target_slot', p_target_slot
+      )::text;
+  end if;
+end;
+$$;
+
 create or replace function battle.resolve_normal_turn(p_room_id uuid)
 returns void
 language plpgsql
@@ -5765,9 +5796,9 @@ begin
   end if;
 
   if v_creator_action.kind = 'switch' then
-    update battle.team_members
-    set active = slot = v_creator_action.target_slot
-    where participant_id = v_creator.id and alive;
+    perform battle.switch_active_member(
+      v_creator.id, v_creator_action.target_slot
+    );
     v_public_actions := v_public_actions || jsonb_build_array(jsonb_build_object(
       'kind', 'switch', 'actor_side', 'creator',
       'switch_to',
@@ -5776,9 +5807,9 @@ begin
     v_audit_actions := v_audit_actions || jsonb_build_array(to_jsonb(v_creator_action));
   end if;
   if v_opponent_action.kind = 'switch' then
-    update battle.team_members
-    set active = slot = v_opponent_action.target_slot
-    where participant_id = v_opponent.id and alive;
+    perform battle.switch_active_member(
+      v_opponent.id, v_opponent_action.target_slot
+    );
     v_public_actions := v_public_actions || jsonb_build_array(jsonb_build_object(
       'kind', 'switch', 'actor_side', 'opponent',
       'switch_to',
@@ -6008,9 +6039,9 @@ begin
       if v_action.id is null then
         raise exception 'BATTLE_INVARIANT' using errcode = 'P0001';
       end if;
-      update battle.team_members
-      set active = slot = v_action.target_slot
-      where participant_id = v_participant.id and alive;
+      perform battle.switch_active_member(
+        v_participant.id, v_action.target_slot
+      );
       v_actions := v_actions || jsonb_build_array(jsonb_build_object(
         'kind', 'forced_switch',
         'actor_side', v_participant.side,

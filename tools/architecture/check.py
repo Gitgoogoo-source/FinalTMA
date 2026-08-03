@@ -50,6 +50,7 @@ REQUIRED_PATHS = (
     "docs/architecture/adr/ADR-013-session-page-lifecycle.md",
     "docs/architecture/adr/ADR-016-controlled-battle-acceptance-fixture.md",
     "docs/architecture/adr/ADR-022-battle-stage-skill-progression.md",
+    "docs/architecture/adr/ADR-025-battle-active-switch-atomicity.md",
     "apps/api/src/entrypoints/app",
     "apps/api/src/entrypoints/integrations",
     "apps/api/src/entrypoints/jobs",
@@ -155,6 +156,7 @@ def main() -> None:
     verify_battle_terminal_refresh_semantics()
     verify_battle_accept_operation_ordering()
     verify_battle_countdown_lock_semantics()
+    verify_battle_switch_atomicity()
     verify_api_boundaries()
     verify_contract_boundaries()
     verify_documentation()
@@ -614,6 +616,57 @@ def verify_battle_countdown_lock_semantics() -> None:
     if schema_definitions != migration_definitions:
         raise SystemExit(
             "Battle countdown functions differ between declarative schema and baseline migration"
+        )
+
+
+def verify_battle_switch_atomicity() -> None:
+    sources = {
+        relative(BATTLE_SCHEMA): BATTLE_SCHEMA.read_text(encoding="utf-8"),
+        relative(BATTLE_BASELINE_MIGRATION): BATTLE_BASELINE_MIGRATION.read_text(
+            encoding="utf-8"
+        ),
+    }
+    definitions: dict[str, dict[str, str]] = {}
+    for label, source in sources.items():
+        switch_member = extract_sql_function(
+            label, source, "battle.switch_active_member"
+        )
+        normal = extract_sql_function(label, source, "battle.resolve_normal_turn")
+        forced = extract_sql_function(label, source, "battle.resolve_forced_switch")
+        definitions[label] = {
+            "switch_member": switch_member,
+            "normal": normal,
+            "forced": forced,
+        }
+
+        normalized = re.sub(r"\s+", " ", switch_member.lower())
+        required = (
+            "update battle.team_members set active = false where participant_id = p_participant_id and active;",
+            "update battle.team_members set active = true where participant_id = p_participant_id and slot = p_target_slot and alive;",
+            "if not found then raise exception using errcode = 'p0001', message = 'battle_invariant'",
+        )
+        missing = [fragment for fragment in required if fragment not in normalized]
+        if missing:
+            raise SystemExit(
+                f"{label}: Battle switch must deactivate before activating: {missing}"
+            )
+        if "set active = slot =" in source.lower():
+            raise SystemExit(
+                f"{label}: Battle switch cannot depend on multi-row UPDATE order"
+            )
+        if normal.count("perform battle.switch_active_member(") != 2:
+            raise SystemExit(
+                f"{label}: both normal-turn sides must use the atomic switch helper"
+            )
+        if forced.count("perform battle.switch_active_member(") != 1:
+            raise SystemExit(
+                f"{label}: forced switch must use the atomic switch helper"
+            )
+
+    schema_definitions, migration_definitions = definitions.values()
+    if schema_definitions != migration_definitions:
+        raise SystemExit(
+            "Battle switch functions differ between declarative schema and baseline migration"
         )
 
 
