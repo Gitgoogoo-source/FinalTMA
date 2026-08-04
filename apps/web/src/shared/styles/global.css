@@ -5764,17 +5764,21 @@ input:focus {
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr);
   place-items: end stretch;
-  padding: 0 15px calc(var(--safe-bottom) + 15px);
+  padding: calc(max(var(--safe-top), var(--content-safe-top)) + 8px)
+    calc(var(--safe-right) + 12px) calc(var(--safe-bottom) + 8px)
+    calc(var(--safe-left) + 12px);
   overflow: hidden;
   background: rgba(35, 43, 47, 0.42);
   backdrop-filter: blur(9px);
 }
 .app-shell.evolution-confirmation-backdrop .evolution-confirmation-modal {
   width: 100%;
-  height: 60vh;
-  height: 60dvh;
+  height: calc(
+    var(--tg-viewport-stable-height, 100dvh) -
+      max(var(--safe-top), var(--content-safe-top)) - var(--safe-bottom) - 16px
+  );
   max-width: none;
-  max-height: none;
+  max-height: 720px;
   grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 0;
   padding: 0;
@@ -5787,7 +5791,7 @@ input:focus {
 .app-shell.evolution-confirmation-backdrop
   .evolution-confirmation-modal
   > header {
-  padding: 16px 16px 12px;
+  padding: 10px 12px 8px;
   border-bottom: 1px solid rgba(54, 67, 75, 0.08);
   background: rgba(255, 254, 250, 0.96);
 }
@@ -5795,27 +5799,22 @@ input:focus {
   min-height: 0;
   display: grid;
   align-content: start;
-  gap: 12px;
-  padding: 14px 16px 18px;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  scrollbar-width: none;
-}
-.evolution-confirmation-content::-webkit-scrollbar {
-  display: none;
+  gap: 8px;
+  padding: 8px 12px 10px;
+  overflow: hidden;
 }
 .evolution-confirmation-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
-  padding: 12px 16px;
+  padding: 8px 12px 10px;
   border-top: 1px solid rgba(54, 67, 75, 0.08);
   background: rgba(255, 254, 250, 0.97);
-  box-shadow: 0 -12px 28px rgba(36, 51, 59, 0.08);
+  box-shadow: 0 -10px 24px rgba(36, 51, 59, 0.07);
 }
 .evolution-confirmation-actions .button {
   min-width: 0;
-  min-height: 48px;
+  min-height: 44px;
 }
 .evolution-confirmation-modal > header,
 .evolution-result-heading {
@@ -5826,8 +5825,8 @@ input:focus {
 .evolution-confirmation-modal > header > svg,
 .evolution-result-heading > span,
 .evolution-process-mark {
-  width: 46px;
-  height: 46px;
+  width: 36px;
+  height: 36px;
   flex: 0 0 auto;
   display: grid;
   place-items: center;
@@ -5838,35 +5837,40 @@ input:focus {
 .evolution-confirmation-modal header small,
 .evolution-result-heading small {
   color: var(--muted);
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 800;
 }
+.evolution-confirmation-modal header h2 {
+  margin: 1px 0 0;
+  font-size: 21px;
+  line-height: 1.05;
+}
 .evolution-fusion-preview {
+  height: clamp(174px, 29dvh, 198px);
   display: grid;
-  grid-template-columns:
-    minmax(64px, 0.85fr) 18px minmax(100px, 1.25fr) 18px
-    minmax(64px, 0.85fr);
+  grid-template-columns: repeat(3, minmax(0, 68px));
   grid-template-areas:
-    ". . material-one . ."
-    ". . connector-top . ."
-    "material-two connector-left target connector-right material-three";
-  grid-template-rows: auto 20px auto;
+    "target target target"
+    "connector-left connector-center connector-right"
+    "material-one material-two material-three";
+  grid-template-rows: minmax(0, 1fr) 14px 62px;
   align-items: center;
-  gap: 4px;
-  padding: 13px 8px;
+  justify-content: space-around;
+  gap: 2px 12px;
+  padding: 6px 12px 8px;
   border: 1px solid rgba(255, 122, 0, 0.12);
   border-radius: 22px;
   background:
     radial-gradient(
-      circle at 50% 68%,
-      rgba(255, 156, 0, 0.14),
-      transparent 36%
+      circle at 50% 32%,
+      rgba(255, 156, 0, 0.16),
+      transparent 37%
     ),
     rgba(255, 255, 255, 0.68);
 }
 .evolution-material-slot {
   width: 100%;
-  max-width: 96px;
+  max-width: 58px;
   min-width: 0;
   margin: 0;
   display: grid;
@@ -5910,21 +5914,21 @@ input:focus {
 }
 .evolution-material-slot figcaption {
   color: var(--muted);
-  font-size: 8px;
+  font-size: 7px;
   font-weight: 850;
   line-height: 1.2;
 }
 .evolution-connector {
-  width: 18px;
-  height: 18px;
-  color: #f07816;
-}
-.evolution-connector.connector-top {
-  grid-area: connector-top;
+  width: 16px;
+  height: 16px;
   justify-self: center;
+  color: #f07816;
 }
 .evolution-connector.connector-left {
   grid-area: connector-left;
+}
+.evolution-connector.connector-center {
+  grid-area: connector-center;
 }
 .evolution-connector.connector-right {
   grid-area: connector-right;
@@ -5932,12 +5936,13 @@ input:focus {
 .evolution-target-card {
   grid-area: target;
   width: 100%;
-  max-width: 142px;
+  max-width: 132px;
   min-width: 0;
   display: grid;
-  gap: 4px;
+  gap: 1px;
   justify-self: center;
-  padding: 8px;
+  align-self: stretch;
+  padding: 3px 7px 5px;
   border: 1px solid rgba(255, 122, 0, 0.24);
   border-radius: 19px;
   background: rgba(255, 252, 246, 0.96);
@@ -5948,9 +5953,10 @@ input:focus {
 }
 .evolution-target-card .catalog-image,
 .evolution-target-card .image-missing {
-  width: 100%;
+  width: clamp(56px, 10dvh, 72px);
   aspect-ratio: 1;
   height: auto;
+  justify-self: center;
   border-radius: 14px;
   background: rgba(255, 248, 239, 0.86);
 }
@@ -5963,13 +5969,13 @@ input:focus {
 }
 .evolution-target-card strong {
   color: #17354a;
-  font-size: 12px;
+  font-size: 10px;
 }
 .evolution-target-card span,
 .evolution-target-card small,
 .evolution-risk-copy {
   color: var(--muted);
-  font-size: 9px;
+  font-size: 8px;
 }
 .evolution-target-card small {
   color: var(--sprout-orange);
@@ -5977,6 +5983,7 @@ input:focus {
 }
 .evolution-rule-summary {
   display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1px;
   overflow: hidden;
   border: 1px solid rgba(54, 67, 75, 0.08);
@@ -5984,39 +5991,46 @@ input:focus {
   background: rgba(54, 67, 75, 0.07);
 }
 .evolution-rule-summary > div {
-  min-height: 42px;
+  min-width: 0;
+  min-height: 54px;
   display: grid;
-  grid-template-columns: 22px 1fr auto;
+  grid-template-columns: 18px minmax(0, 1fr);
+  grid-template-rows: auto auto;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
+  gap: 1px 4px;
+  padding: 5px 6px;
   background: rgba(255, 255, 255, 0.9);
+  text-align: left;
 }
 .evolution-rule-summary svg {
-  width: 18px;
-  height: 18px;
+  grid-row: 1 / -1;
+  width: 15px;
+  height: 15px;
   color: var(--sprout-orange);
 }
 .evolution-rule-summary span {
   color: var(--muted);
-  font-size: 10px;
+  font-size: 8px;
   font-weight: 800;
 }
 .evolution-rule-summary strong {
   color: #17354a;
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 950;
 }
 .evolution-rule-summary .evolution-rarity-change {
-  grid-template-columns: 1fr 24px 1fr;
+  display: flex;
+  justify-content: center;
+  gap: 3px;
   text-align: center;
 }
 .evolution-rarity-change span,
 .evolution-rarity-change strong {
-  font-size: 15px;
+  font-size: 11px;
 }
 .evolution-rarity-change svg {
-  justify-self: center;
+  width: 13px;
+  height: 13px;
 }
 .evolution-quantity-heading {
   display: flex;
@@ -6031,7 +6045,7 @@ input:focus {
 }
 .evolution-quantity-heading strong {
   color: #17354a;
-  font-size: 12px;
+  font-size: 11px;
 }
 .evolution-quantity-heading > strong {
   flex: 0 0 auto;
@@ -6039,39 +6053,114 @@ input:focus {
 }
 .evolution-quantity-heading span {
   color: var(--muted);
-  font-size: 9px;
+  font-size: 8px;
+}
+.evolution-confirmation-modal .inventory-quantity-control {
+  grid-template-columns: minmax(0, 1fr) 52px;
+  gap: 3px 6px;
+}
+.evolution-confirmation-modal .inventory-quantity-control > span {
+  font-size: 8px;
+}
+.evolution-confirmation-modal .inventory-quantity-control > div {
+  grid-template-columns: 44px minmax(64px, 1fr) 44px;
+  gap: 5px;
+}
+.evolution-confirmation-modal .inventory-quantity-control input,
+.evolution-confirmation-modal .inventory-quantity-control .button {
+  min-height: 44px;
+}
+.evolution-confirmation-modal
+  .inventory-quantity-control
+  .inventory-quantity-all {
+  padding-inline: 8px;
 }
 .evolution-risk-copy {
   margin: 0;
-  line-height: 1.65;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: start;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 1px solid rgba(255, 122, 0, 0.16);
+  border-radius: 12px;
+  color: #7c593f;
+  background: rgba(255, 156, 0, 0.055);
+  font-size: 9px;
+  line-height: 1.35;
+}
+.evolution-risk-copy > svg {
+  width: 17px;
+  height: 17px;
+  color: var(--sprout-orange);
+}
+.evolution-risk-copy p {
+  min-width: 0;
+  margin: 0;
+  display: grid;
+  gap: 2px;
+}
+.evolution-risk-copy span {
+  display: block;
 }
 .evolution-start-unavailable {
   margin: 0;
-  padding: 9px 11px;
+  padding: 5px 7px;
   border: 1px solid rgba(54, 67, 75, 0.08);
   border-radius: 12px;
   color: #7b8580;
   background: rgba(54, 67, 75, 0.045);
-  font-size: 10px;
+  font-size: 8px;
   font-weight: 800;
   text-align: center;
 }
 @media (max-width: 350px) {
   .evolution-confirmation-content {
-    padding-inline: 12px;
+    padding-inline: 9px;
   }
   .evolution-fusion-preview {
-    grid-template-columns:
-      minmax(58px, 0.85fr) 16px minmax(92px, 1.2fr) 16px
-      minmax(58px, 0.85fr);
-    padding-inline: 5px;
+    grid-template-columns: repeat(3, minmax(0, 62px));
+    gap-inline: 7px;
+    padding-inline: 8px;
   }
-  .evolution-connector {
-    width: 16px;
-    height: 16px;
+}
+@media (max-height: 650px) {
+  .app-shell.evolution-confirmation-backdrop
+    .evolution-confirmation-modal
+    > header {
+    padding-block: 8px 6px;
   }
-  .evolution-material-slot figcaption {
-    font-size: 7px;
+  .evolution-confirmation-modal > header > svg {
+    width: 32px;
+    height: 32px;
+  }
+  .evolution-confirmation-modal header h2 {
+    font-size: 19px;
+  }
+  .evolution-confirmation-content {
+    gap: 6px;
+    padding-block: 6px 8px;
+  }
+  .evolution-fusion-preview {
+    height: 168px;
+    grid-template-rows: minmax(0, 1fr) 12px 56px;
+  }
+  .evolution-material-slot {
+    max-width: 52px;
+  }
+  .evolution-target-card .catalog-image,
+  .evolution-target-card .image-missing {
+    width: 54px;
+  }
+  .evolution-rule-summary > div {
+    min-height: 48px;
+  }
+  .evolution-risk-copy {
+    padding-block: 5px;
+    font-size: 8px;
+  }
+  .evolution-confirmation-actions {
+    padding-block: 6px 8px;
   }
 }
 .evolution-success-target {

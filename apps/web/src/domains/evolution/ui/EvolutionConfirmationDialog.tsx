@@ -1,10 +1,12 @@
 import {
-  ArrowDown,
-  ArrowLeft,
   ArrowRight,
+  ArrowUp,
+  ArrowUpLeft,
+  ArrowUpRight,
   Gem,
   PackageOpen,
   ShieldCheck,
+  TriangleAlert,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
@@ -131,11 +133,18 @@ export function EvolutionConfirmationDialog({
             onChange={setRequestedQuantity}
           />
 
-          <p className="evolution-risk-copy">
-            基础成功率不包含当前路线保底；提交后由系统按真实保底、材料和 Fgems
-            状态裁决。每次失败扣除 2 个材料并保留 1
-            个，整批变化全部写入或全部不写入。
-          </p>
+          <div className="evolution-risk-copy">
+            <TriangleAlert aria-hidden="true" />
+            <p>
+              <span>
+                基础成功率不包含当前路线保底；提交后由系统按真实保底、材料和
+                Fgems 状态裁决。
+              </span>
+              <span>
+                每次失败扣除 2 个材料并保留 1 个，整批变化全部写入或全部不写入。
+              </span>
+            </p>
+          </div>
           {unavailableReason ? (
             <p
               id="evolution-start-unavailable"
@@ -178,16 +187,6 @@ function EvolutionFusionPreview({
       className="evolution-fusion-preview"
       aria-label={`使用 3 个${source.name}进化为${route.target.name}`}
     >
-      <MaterialSlot source={source} index={0} className="material-one" />
-      <ArrowDown
-        className="evolution-connector connector-top"
-        aria-hidden="true"
-      />
-      <MaterialSlot source={source} index={1} className="material-two" />
-      <ArrowRight
-        className="evolution-connector connector-left"
-        aria-hidden="true"
-      />
       <article className="evolution-target-card">
         <CatalogImage
           path={route.target.image_thumbnail_path}
@@ -201,10 +200,20 @@ function EvolutionFusionPreview({
           {rarityLabels[route.target.rarity]} · 第 {route.target.stage} 阶
         </span>
       </article>
-      <ArrowLeft
+      <ArrowUpRight
+        className="evolution-connector connector-left"
+        aria-hidden="true"
+      />
+      <ArrowUp
+        className="evolution-connector connector-center"
+        aria-hidden="true"
+      />
+      <ArrowUpLeft
         className="evolution-connector connector-right"
         aria-hidden="true"
       />
+      <MaterialSlot source={source} index={0} className="material-one" />
+      <MaterialSlot source={source} index={1} className="material-two" />
       <MaterialSlot source={source} index={2} className="material-three" />
     </section>
   );
