@@ -3,6 +3,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { useApiQuery } from "../../../platform/query/index.ts";
+import { usePageActive } from "../../../shared/navigation/pageActivity.tsx";
 import { Button } from "../../../shared/ui/index.tsx";
 import { useOperationRegistry } from "../../../workflows/operation-recovery/index.ts";
 
@@ -18,6 +19,7 @@ export function VipDailyBenefits({
   onFreeRareClaimed(): void;
 }): ReactNode {
   const vip = useApiQuery("vip.get");
+  const pageActive = usePageActive();
   const navigate = useNavigate();
   const { isBlocked, run } = useOperationRegistry();
   const [pending, setPending] = useState<Partial<Record<Benefit, boolean>>>({});
@@ -28,6 +30,7 @@ export function VipDailyBenefits({
   const freeBoxPending =
     Boolean(pending.freeBox) || isBlocked("vip.claim_free_box");
   const data = vip.data;
+  const benefitDate = data?.benefit_date ?? null;
   const refetchVip = vip.refetch;
   const loadFailed = Boolean(vip.error);
   const unavailable = vip.isLoading || loadFailed || !data;
@@ -37,24 +40,52 @@ export function VipDailyBenefits({
   );
 
   useEffect(() => {
-    void refetchVip();
-  }, [refetchVip]);
-
-  useEffect(() => {
+    if (!pageActive) return;
+    let utcRefreshTimer: number | undefined;
     const refreshAfterUtcChange = () => {
       if (
+        benefitDate !== null &&
         document.visibilityState === "visible" &&
-        data?.benefit_date !== new Date().toISOString().slice(0, 10)
+        benefitDate !== new Date().toISOString().slice(0, 10)
       )
         void refetchVip();
     };
-    const interval = window.setInterval(refreshAfterUtcChange, 30_000);
-    document.addEventListener("visibilitychange", refreshAfterUtcChange);
-    return () => {
-      window.clearInterval(interval);
-      document.removeEventListener("visibilitychange", refreshAfterUtcChange);
+    const scheduleUtcRefresh = () => {
+      if (utcRefreshTimer !== undefined) window.clearTimeout(utcRefreshTimer);
+      const now = new Date();
+      const currentUtcDay = now.toISOString().slice(0, 10);
+      const nextUtcDay = Date.UTC(
+        now.getUTCFullYear(),
+        now.getUTCMonth(),
+        now.getUTCDate() + 1,
+      );
+      const retryStaleBenefitDate =
+        benefitDate !== null &&
+        benefitDate !== currentUtcDay &&
+        document.visibilityState === "visible";
+      utcRefreshTimer = window.setTimeout(
+        () => {
+          utcRefreshTimer = undefined;
+          refreshAfterUtcChange();
+          scheduleUtcRefresh();
+        },
+        retryStaleBenefitDate
+          ? 30_000
+          : Math.max(0, nextUtcDay - now.getTime()) + 1_000,
+      );
     };
-  }, [data?.benefit_date, refetchVip]);
+    const onVisibilityChange = () => {
+      refreshAfterUtcChange();
+      scheduleUtcRefresh();
+    };
+    refreshAfterUtcChange();
+    scheduleUtcRefresh();
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      if (utcRefreshTimer !== undefined) window.clearTimeout(utcRefreshTimer);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [benefitDate, pageActive, refetchVip]);
 
   const openDetails = () => navigate("/market?vip=details");
   const claim = async (benefit: Benefit) => {

@@ -6,7 +6,7 @@ import {
   useQuery,
   type UseQueryResult,
 } from "@tanstack/react-query";
-import { useSyncExternalStore } from "react";
+import { useCallback, useSyncExternalStore } from "react";
 import {
   routeById,
   type RecoverableRouteId,
@@ -281,8 +281,11 @@ export function useApiQuery<Id extends RouteId>(
     enabled: enabled && !suppressed,
     refetchOnReconnect: false,
   });
-  const refetch: typeof query.refetch = (options) =>
-    query.refetch({ ...options, cancelRefetch: false });
+  const queryRefetch = query.refetch;
+  const refetch = useCallback<typeof query.refetch>(
+    (options) => queryRefetch({ ...options, cancelRefetch: false }),
+    [queryRefetch],
+  );
   return { ...query, refetch } as UseQueryResult<RouteOutput<Id>>;
 }
 
