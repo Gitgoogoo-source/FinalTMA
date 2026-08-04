@@ -60,7 +60,7 @@ export function BattleArena({
   ): void;
 }): ReactNode {
   const arenaRef = useRef<HTMLDivElement>(null);
-  const actionIdentity = `${snapshot.room_id}:${snapshot.round_no}:${snapshot.action_ordinal}:${snapshot.active_action_mode}`;
+  const actionIdentity = `${snapshot.room_id}:${snapshot.round_no}:${snapshot.action_ordinal}:${snapshot.active_action_mode}:${presentationResetVersion}`;
   const [replacementSelection, setReplacementSelection] = useState<{
     actionIdentity: string;
     slot: TeamSlot | null;
@@ -92,7 +92,9 @@ export function BattleArena({
     resetVersion: presentationResetVersion,
     onBusyChange: onPresentationBusyChange,
   });
-  const selfActive = presentation.selfTeam.find((member) => member.active);
+  const selfActive =
+    selectedReplacement ??
+    presentation.selfTeam.find((member) => member.active);
   const opponentActive = presentation.opponentTeam.find(
     (member) => member.active,
   );
@@ -353,7 +355,7 @@ function ArenaSide({
         {team.map((member) => (
           <div
             key={member.slot}
-            className={`${member.active ? "active" : ""} ${member.alive ? "" : "knocked-out"}`}
+            className={`${member.slot === active?.slot ? "active" : ""} ${member.alive ? "" : "knocked-out"}`}
           >
             <CatalogImage
               path={member.image_thumbnail_path}
@@ -366,7 +368,7 @@ function ArenaSide({
         ))}
       </div>
       {active ? (
-        <div className="battle-active-pet">
+        <div key={active.slot} className="battle-active-pet">
           <div className="battle-active-art" data-battle-active-sprite>
             <CatalogImage
               path={active.image_detail_path}
