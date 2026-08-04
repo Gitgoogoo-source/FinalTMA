@@ -896,6 +896,40 @@ function checkView(source) {
         );
       })
     : null;
+  const bootstrapRoomRecovery = calls(view, "refetchRef.current").find(
+    (call) => {
+      const currentRoomGuard = enclosingIf(view, call, (node) => {
+        const names = identifiers(node.expression);
+        return (
+          names.includes("currentRoom") &&
+          calls(node.expression, "isBattleAssetTerminal").length === 1
+        );
+      });
+      const absenceGuard = currentRoomGuard
+        ? enclosingIf(view, currentRoomGuard, (node) => {
+            const paths = propertyPaths(node.expression);
+            return (
+              paths.includes("bootstrap.data") &&
+              paths.includes("bootstrap.data.participation")
+            );
+          })
+        : null;
+      return Boolean(
+        currentRoomGuard &&
+        absenceGuard &&
+        statementAlwaysExits(currentRoomGuard.thenStatement),
+      );
+    },
+  );
+  const deadlineRetryInterval = calls(view, "window.setInterval").find(
+    (call) => calls(call.arguments[0], "refetchRef.current").length === 1,
+  );
+  const deadlineRetryEffect = calls(view, "useEffect").find((call) =>
+    containsNode(call, deadlineRetryInterval),
+  );
+  const deadlineRetryDelays = numericLiterals(
+    deadlineRetryInterval?.arguments[1],
+  );
   const dismiss = calls(
     returnFromResult,
     "dismissedTerminalRooms.current.add",
@@ -917,11 +951,20 @@ function checkView(source) {
       calls(returnFromResult, "setParams").length === 1 &&
       bootstrapRoomRetention &&
       bootstrapAbsenceGuard &&
+      bootstrapRoomRecovery &&
+      deadlineRetryInterval &&
+      deadlineRetryEffect &&
+      propertyPaths(deadlineRetryEffect).includes("clock.remainingSeconds") &&
+      identifiers(deadlineRetryEffect).includes("pageActive") &&
+      identifiers(deadlineRetryEffect).includes("realtimePhase") &&
+      deadlineRetryDelays.includes(1_000) &&
+      deadlineRetryDelays.includes(2_000) &&
+      calls(deadlineRetryEffect, "window.clearInterval").length === 1 &&
       calls(view, "dismissedTerminalRooms.current.clear").length === 1 &&
       !source.getFullText().includes("battle.acknowledge_result") &&
       !source.getFullText().includes("current_result") &&
       !source.getFullText().includes("battle_result"),
-    "Battle result must come only from the room snapshot; returning home is local-only and the dismissed-room fence resets only with the session generation",
+    "Battle result must come only from the room snapshot; an empty bootstrap must recover a retained room, expired authority reads must retry, and returning home remains local-only",
   );
 }
 
@@ -1841,6 +1884,35 @@ function runSelfTests() {
         "false",
       );
     }),
+    fixture(
+      paths.view,
+      "empty bootstrap clears retained room without authority read",
+      (source, text) => {
+        const view = topLevelFunction(source, "BattleView");
+        const refresh = calls(view, "refetchRef.current").find((call) =>
+          Boolean(
+            enclosingIf(view, call, (node) =>
+              identifiers(node.expression).includes("currentRoom"),
+            ),
+          ),
+        );
+        return replaceNode(text, refresh, "Promise.resolve()");
+      },
+      "empty bootstrap must recover a retained room",
+    ),
+    fixture(
+      paths.view,
+      "expired deadline omits connected authority retry",
+      (source, text) => {
+        const view = topLevelFunction(source, "BattleView");
+        const interval = calls(view, "window.setInterval").find(
+          (call) => calls(call.arguments[0], "refetchRef.current").length === 1,
+        );
+        const refresh = calls(interval.arguments[0], "refetchRef.current")[0];
+        return replaceNode(text, refresh, "Promise.resolve()");
+      },
+      "expired authority reads must retry",
+    ),
     fixture(paths.view, "Battle server popup returns", (source, text) => {
       const view = topLevelFunction(source, "BattleView");
       return insertIntoFunction(text, view, 'void "battle-feedback";');

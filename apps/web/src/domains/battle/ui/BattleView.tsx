@@ -456,13 +456,19 @@ export function BattleView(): ReactNode {
         (candidate): candidate is BattleRoomSnapshotDto => Boolean(candidate),
       );
       if (candidates.length === 0) {
-        if (bootstrap.data && bootstrap.data.participation === null)
+        if (bootstrap.data && bootstrap.data.participation === null) {
+          const currentRoom = roomRef.current;
+          if (currentRoom && !isBattleAssetTerminal(currentRoom.status)) {
+            void refetchRef.current();
+            return;
+          }
           setRoom((current) =>
             current?.terminal_result &&
             !dismissedTerminalRooms.current.has(current.room_id)
               ? current
               : null,
           );
+        }
         return;
       }
       const next = candidates.reduce((newest, candidate) =>
@@ -693,6 +699,16 @@ export function BattleView(): ReactNode {
     stateVersion: room?.state_version ?? participation?.state_version ?? 0,
     refetch: refetchAuthorityVoid,
   });
+
+  useEffect(() => {
+    if (!pageActive || clock.remainingSeconds !== 0 || realtimePhase === "idle")
+      return;
+    const timer = window.setInterval(
+      () => void refetchRef.current(),
+      realtimePhase === "active_turn" ? 1_000 : 2_000,
+    );
+    return () => window.clearInterval(timer);
+  }, [clock.remainingSeconds, pageActive, realtimePhase]);
 
   useEffect(() => {
     presenceRoomRef.current =

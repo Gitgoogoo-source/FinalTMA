@@ -36,7 +36,7 @@ export function useBattleDeadline({
     const deadlineAt = Date.parse(deadline);
     const clientAtRead = Date.now();
     const offset = serverAtRead - clientAtRead;
-    const key = `${deadline}:${serverTime}`;
+    const key = deadline;
     const update = () => {
       const remainingMs = Math.max(0, deadlineAt - (Date.now() + offset));
       const remainingSeconds = Math.ceil(remainingMs / 1_000);

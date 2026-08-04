@@ -580,7 +580,7 @@ flowchart LR
 - `GET /api/battle/rooms/:room_id?after_action_sequence=N` 每次最多返回 16 个 viewer-specific 动作事件，并以 `has_more_action_events` 驱动继续补齐。
 - 页面持续可见时始终使用最后已接收 cursor，因此 Ably 或网络中断期间的动作不会丢失；事件按 sequence 排队，不能覆盖或并行播放。
 - 初次进入、刷新、重新认证或从隐藏恢复时，把 cursor 直接初始化为快照的 `latest_action_sequence`，不补播历史动作，并立即用最新权威快照回正表现状态。
-- Ably 离线时 waiting/accept/lobby 每 2 秒、`active_turn` 每 1 秒轮询；本地 deadline 归零也立即触发一次权威读取。
+- Ably 离线时 waiting/accept/lobby 每 2 秒、`active_turn` 每 1 秒轮询；本地 deadline 归零立即触发权威读取，在权威 deadline 尚未前进或该次读取失败时按同一 2 秒/1 秒节奏继续静默读取，直到权威状态前进或终结。当前会话已经持有未终局 room 时，bootstrap 的空 participation 只能触发该 room 权威读取，不能单独清空 room 或返回首页。
 - 发布失败保留 outbox，按 1、2、5、10、30 秒后每 30 秒重试；重复通知由 event ID、state version 与动作 cursor 消除影响。
 
 ## 9. Telegram 挑战卡与入口
