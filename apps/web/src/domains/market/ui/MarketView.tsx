@@ -41,7 +41,7 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
   const [selectedTab, setSelectedTab] = useState<MarketTab>(
     requestedTab ?? (params.has("sell") ? "sell" : "buy"),
   );
-  const tab = requestedTab ?? selectedTab;
+  const tab = requestedTab ?? (params.has("sell") ? "sell" : selectedTab);
   const purchaseTarget = params.get("buy");
   const identity = useApiQuery("identity.bootstrap");
   const listings = useApiQuery("market.bootstrap", {}, tab === "buy");
