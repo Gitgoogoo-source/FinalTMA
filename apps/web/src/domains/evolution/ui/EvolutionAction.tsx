@@ -38,7 +38,7 @@ export function EvolutionAction({
   const confirm = async (quantity: number) => {
     if (!route) return;
     setConfirming(false);
-    await run("正在确认进化结果", "inventory.evolve", {
+    await run("进化仪式进行中", "inventory.evolve", {
       template_id: item.template_id,
       quantity,
     });
@@ -87,10 +87,10 @@ function evolutionDisabledReason({
   evolving: boolean;
   routeAvailable: boolean;
 }): string | null {
-  if (evolving) return "正在确认进化结果";
-  if (disabled) return "正在处理，请勿重复点击";
+  if (evolving) return "进化仪式进行中";
+  if (disabled) return "进化仪式尚未结束";
   if (item.stage >= 3) return "该藏品已经是最终形态，无法继续进化";
   if (!routeAvailable) return "当前藏品暂不支持进化";
-  if (!imageReady) return "正在加载藏品图片";
+  if (!imageReady) return "藏品形象尚未就绪";
   return null;
 }

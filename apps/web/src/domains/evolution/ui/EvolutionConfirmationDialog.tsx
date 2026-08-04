@@ -263,7 +263,7 @@ function startUnavailableReason({
 }): string | null {
   if (available < 3)
     return `还缺 ${3 - available} 个相同藏品，集齐 3 个后即可开始`;
-  if (availableFgems === undefined) return "正在读取当前 Fgems 余额";
+  if (availableFgems === undefined) return "暂时无法开始进化";
   if (availableFgems < cost) return `Fgems 不足，本次至少需要 ${cost} Fgems`;
   if (!valid) return "材料数量必须是 3 的正整数倍";
   return null;

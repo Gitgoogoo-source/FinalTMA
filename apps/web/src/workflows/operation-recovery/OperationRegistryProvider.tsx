@@ -380,7 +380,8 @@ export function OperationRegistryProvider({
           });
         if (!pending)
           markOperationNewTemplates(routeId, response.data, markNew);
-        haptic(pending ? "warning" : "success");
+        if (routeId !== "inventory.evolve")
+          haptic(pending ? "warning" : "success");
         await refreshRouteScopes(routeId).catch(() => undefined);
         return response.data;
       } catch (cause) {
@@ -419,7 +420,7 @@ export function OperationRegistryProvider({
             errorCode: failure.code,
             persistent: Boolean(failure.operationId),
           });
-        haptic("error");
+        if (routeId !== "inventory.evolve") haptic("error");
         if (!unknown) await refreshRouteScopes(routeId).catch(() => undefined);
         return null;
       }
@@ -528,7 +529,7 @@ export function OperationRegistryProvider({
             acknowledgedResultRouteIds.has(operation.routeId)
           )
             setActiveId((current) => current ?? operation.id);
-          haptic("success");
+          if (operation.routeId !== "inventory.evolve") haptic("success");
           await refreshRouteScopes(operation.routeId);
         } else if (recovered.status === "failed") {
           const definition =
@@ -908,7 +909,9 @@ export function OperationRegistryProvider({
           className={`modal-backdrop operation-dialog-backdrop ${
             active.routeId === "gacha.open"
               ? `gacha-operation-backdrop phase-${active.phase}${showGachaAnimation ? " gacha-hatching-backdrop" : gachaResult ? " gacha-result-backdrop" : ""}`
-              : ""
+              : active.routeId === "inventory.evolve"
+                ? `evolution-operation-backdrop phase-${active.phase}`
+                : ""
           }`}
           role="dialog"
           aria-modal="true"
@@ -931,9 +934,10 @@ export function OperationRegistryProvider({
         >
           {active.routeId === "inventory.evolve" ? (
             <EvolutionOperationDialog
+              key={active.id}
               operationId={active.id}
               phase={active.phase}
-              message={active.message}
+              input={active.input}
               result={active.result}
               errorCode={active.errorCode}
               busy={acknowledgingId === active.id}
