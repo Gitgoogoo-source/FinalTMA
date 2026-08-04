@@ -728,6 +728,7 @@ lobby countdown 继续使用全稳定视口 3 秒锁定页，明确显示“倒�
 - 页面维护 `authorityRoom` 与 `presentationState` 两层状态。authority 一到立即更新按钮、合法选项、倒计时、资产恢复和终局事实；presentation 只按动作事件队列更新宠物、HP 和反馈。
 - `replace_attack` 的选宠只在本人 `presentationState` 上覆盖当前显示宠物，不改变 `authorityRoom`；重新选宠、行动身份推进或页面恢复会撤销该预览并按权威快照回正。
 - 点击本人攻击时先把 `(room_id, round_no, action_ordinal)` 本地施法加入队列，再调用 API；服务端返回前只允许施法、移动和弹道。
+- 成功的行动响应已经是完整 viewer-specific 权威 room snapshot；Web 立即写入 `battle.room` 查询缓存并更新 authority，不再失效整个 `battle` scope。动作错误、响应丢失、Ably 通知、deadline 到达、重新可见和终局仍按各自恢复链读取数据库事实。
 - 命中、未命中、受击、伤害、HP、击倒和终局反馈只能由 `BattleActionEventDto` 触发。请求拒绝时取消未完成的本地结果并按权威快照静默回正，不显示服务器错误浮层。
 - 本人本地动作与同 tuple 的服务端事件合并，禁止重复播放；对手动作从服务端事件开始完整播放。
 - 新动作始终排到旧动作之后。服务端已推进时，下一玩家可立即操作；动画层固定 `pointer-events: none`，不得阻止按钮。

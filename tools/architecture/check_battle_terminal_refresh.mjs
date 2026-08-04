@@ -1013,10 +1013,23 @@ function checkCommand(source) {
     publish.length === 1 &&
       refresh.length === 1 &&
       publish[0].pos < refresh[0].pos &&
-      enclosingIf(apply, refresh[0], (node) =>
-        isNegatedCall(node.expression, "isBattleAssetTerminal"),
+      enclosingIf(
+        apply,
+        refresh[0],
+        (node) =>
+          Boolean(
+            findBinaryComparison(
+              node.expression,
+              "routeId",
+              ts.SyntaxKind.ExclamationEqualsEqualsToken,
+              "battle.action",
+            ),
+          ) &&
+          calls(node.expression, "isBattleAssetTerminal").some((call) =>
+            isNegatedCall(call.parent, "isBattleAssetTerminal"),
+          ),
       ),
-    "command snapshots must publish/latch before any non-terminal scope refresh",
+    "command snapshots must publish first, skip successful action scope refreshes, and refresh other non-terminal commands",
   );
 }
 

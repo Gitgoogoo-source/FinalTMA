@@ -408,7 +408,7 @@ async function applyBattleCommandResult<Id extends BattleCommandRouteId>(
   );
   if (!snapshot || signal.aborted || !isCurrentGeneration(generation)) return;
   onAuthoritativeRoom(snapshot);
-  if (!isBattleAssetTerminal(snapshot.status))
+  if (routeId !== "battle.action" && !isBattleAssetTerminal(snapshot.status))
     await refreshRouteScopes(routeId);
 }
 

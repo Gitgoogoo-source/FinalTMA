@@ -2,7 +2,7 @@
 
 用户确认会创建 operation 的写操作时，操作注册中心先生成 UUID 并写入内存记录，再在下一动画帧提交请求。同一 operation 的会话恢复重试和结果查询始终复用该 UUID。Battle heartbeat 和 offline 不进入操作注册中心、不生成 UUID，也不通过 operations 查询恢复；Battle 结果按钮不发送请求。
 
-网络失败不会展示业务成功。`unknown`、`pending` 通过 `GET /api/operations/:operation_id` 查询；只有明确返回 `OPERATION_NOT_FOUND` 时才用原 UUID 单次重提。恢复成功时，`use_case` 对应的原命令输出 Schema 会重新校验 `result`，随后按该路由声明的 refresh scope 刷新真实状态。入口交接未完成时，该查询只能读取当前用户的原 `referral.bind` 操作。
+网络失败不会展示业务成功。`unknown`、`pending` 通过 `GET /api/operations/:operation_id` 查询；只有明确返回 `OPERATION_NOT_FOUND` 时才用原 UUID 单次重提。恢复成功时，`use_case` 对应的原命令输出 Schema 会重新校验 `result`，随后按该路由声明的 refresh scope 刷新真实状态；`battle.action` 的完整权威 room snapshot 直接写入对应查询缓存并应用页面 authority，不再失效整个 `battle` scope。入口交接未完成时，该查询只能读取当前用户的原 `referral.bind` 操作。
 
 重新进入应用时，`identity.bootstrap.blocking_operations` 交给操作恢复工作流，`pending_payments` 和 `pending_mints` 分别交给支付与 Mint 恢复工作流，当前 `battle_participation` 交给 Battle 恢复工作流；已经终结的 Battle 结果不进入 bootstrap。开盒、幸运转盘与进化的 `pending`、`unknown` 以及尚未确认展示的 `succeeded`、`failed` 都进入 `blocking_operations`；前端分别通过 `GET /api/gacha/recovery`、`GET /api/wheel/recovery` 与 `GET /api/inventory/evolution/recovery` 使用同一通用发现 Hook，按 1 秒、2 秒、3 秒、5 秒、此后每 30 秒发现事务提交晚于首屏读取的原操作，发现后停止对应发现轮询并只按原 `operation_id` 查询终态。K-coin 创建订单命令在 invoice URL 持久化后立即完成，不作为长期阻塞操作；未提交 Stars 的 `pending` K-coin 订单不恢复、不打开弹窗。只有 `processing`、`paid` K-coin 订单恢复锁定弹窗，并按 1 秒、2 秒、3 秒、此后每 5 秒查询唯一终态；VIP 继续使用自身既有恢复交互。充值订单交付后，只恢复开盒、市场购买、转盘、`battle_create`、`battle_matchmaking` 或 `battle_accept` 的确认界面，不自动执行原业务。
 
