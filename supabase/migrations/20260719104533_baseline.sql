@@ -4556,9 +4556,20 @@ begin
   end if;
   if v_room.waiting_started_at is null
     or v_room.expires_at is null
-    or v_room.expires_at is distinct from (
-      v_room.waiting_started_at + make_interval(
-        secs => battle.rule_int(v_room.ruleset_id, 'waiting_timeout_seconds')
+    or (
+      v_room.room_mode = 'friend_invite'
+      and v_room.expires_at is distinct from (
+        v_room.waiting_started_at + make_interval(
+          secs => battle.rule_int(v_room.ruleset_id, 'waiting_timeout_seconds')
+        )
+      )
+    )
+    or (
+      v_room.room_mode = 'public_match'
+      and v_room.expires_at is distinct from (
+        v_room.waiting_started_at + make_interval(
+          secs => battle.rule_int(v_room.ruleset_id, 'matchmaking_wait_seconds')
+        )
       )
     )
     or v_room.accepted_at is null
@@ -4592,13 +4603,24 @@ begin
         or v_room.lobby_start_deadline > v_room.lobby_expires_at
       )
     )
-    or not exists (
-      select 1
-      from battle.prepared_shares ps
-      where ps.room_id = p_room_id
-        and ps.status = 'active'
-        and ps.activated_at = v_room.waiting_started_at
-        and ps.telegram_expires_at >= v_room.expires_at
+    or (
+      v_room.room_mode = 'friend_invite'
+      and not exists (
+        select 1
+        from battle.prepared_shares ps
+        where ps.room_id = p_room_id
+          and ps.status = 'active'
+          and ps.activated_at = v_room.waiting_started_at
+          and ps.telegram_expires_at >= v_room.expires_at
+      )
+    )
+    or (
+      v_room.room_mode = 'public_match'
+      and exists (
+        select 1
+        from battle.prepared_shares ps
+        where ps.room_id = p_room_id
+      )
     )
     or exists (select 1 from battle.turns where room_id = p_room_id)
     or exists (select 1 from battle.actions where room_id = p_room_id)

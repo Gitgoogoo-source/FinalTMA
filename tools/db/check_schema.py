@@ -411,6 +411,30 @@ def verify_battle_contract() -> None:
     missing = [fragment for fragment in required if fragment not in battle_sql]
     if missing:
         raise SystemExit(f"Battle database contract is incomplete: {missing}")
+    lobby_invariant = battle_sql.partition(
+        "create or replace function battle.lobby_invariant_error"
+    )[2].partition(
+        "create or replace function battle.reconcile_lobby_presence"
+    )[0]
+    lobby_mode_required = (
+        "v_room.room_mode = 'friend_invite'\n"
+        "      and v_room.expires_at is distinct from (",
+        "secs => battle.rule_int(v_room.ruleset_id, 'waiting_timeout_seconds')",
+        "v_room.room_mode = 'public_match'\n"
+        "      and v_room.expires_at is distinct from (",
+        "secs => battle.rule_int(v_room.ruleset_id, 'matchmaking_wait_seconds')",
+        "v_room.room_mode = 'friend_invite'\n      and not exists (",
+        "v_room.room_mode = 'public_match'\n      and exists (",
+    )
+    if any(fragment not in lobby_invariant for fragment in lobby_mode_required):
+        raise SystemExit(
+            "Battle lobby invariants must validate waiting expiry and prepared "
+            "shares by room mode"
+        )
+    if "or not exists (\n      select 1\n      from battle.prepared_shares" in lobby_invariant:
+        raise SystemExit(
+            "Battle lobby invariants cannot require prepared shares for every room mode"
+        )
     removed_legacy = (
         "'active_select'",
         "'forced_switch'",
