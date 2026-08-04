@@ -207,6 +207,16 @@ export function InventoryView({
                           </button>
                         );
                       })}
+                      {Array.from(
+                        { length: thumbnailPageSize - page.length },
+                        (_, emptyIndex) => (
+                          <span
+                            key={`empty-${emptyIndex}`}
+                            className="inventory-thumbnail-spacer"
+                            aria-hidden="true"
+                          />
+                        ),
+                      )}
                     </div>
                   ))}
                 </div>
