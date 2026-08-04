@@ -269,8 +269,11 @@ function checkQueryBoundary(source) {
   const observerQuery = calls(observer, "useQuery");
   const observerOptions = objectArgument(observerQuery[0], 0);
   const enabled = unwrap(objectPropertyExpression(observerOptions, "enabled"));
+  const queryRefetch = variable(observer, "queryRefetch");
+  const refetchDeclaration = variable(observer, "refetch");
+  const refetchInitializer = unwrap(refetchDeclaration?.initializer);
   const guardedRefetch = variableFunction(observer, "refetch");
-  const refetchCall = calls(guardedRefetch, "query.refetch");
+  const refetchCall = calls(guardedRefetch, "queryRefetch");
   must(
     calls(observer, "useSyncExternalStore").length === 1 &&
       enabled &&
@@ -279,6 +282,18 @@ function checkQueryBoundary(source) {
       isNegatedIdentifier(enabled.right, "suppressed") &&
       booleanProperty(observerOptions, "refetchOnReconnect") === false,
     "ordinary observers must subscribe to route suppression and remain disabled behind it",
+  );
+  must(
+    expressionValue(queryRefetch?.initializer) === "query.refetch" &&
+      refetchInitializer &&
+      ts.isCallExpression(refetchInitializer) &&
+      callPath(refetchInitializer.expression) === "useCallback" &&
+      sameArray(
+        arrayArgument(refetchInitializer, 1)?.elements.map(expressionValue) ??
+          [],
+        ["queryRefetch"],
+      ),
+    "manual observer refetch must preserve stable query refetch ownership",
   );
   must(
     refetchCall.length === 1 &&
@@ -1730,11 +1745,25 @@ function runSelfTests() {
         "refetch",
       );
       const property = objectProperty(
-        objectArgument(calls(fn, "query.refetch")[0], 0),
+        objectArgument(calls(fn, "queryRefetch")[0], 0),
         "cancelRefetch",
       );
       return replaceNode(text, property.initializer, "true");
     }),
+    fixture(
+      paths.query,
+      "observer refetch loses stable callback",
+      (source, text) => {
+        const observer = topLevelFunction(source, "useApiQuery");
+        const declaration = variable(observer, "refetch");
+        const initializer = unwrap(declaration.initializer);
+        return replaceNode(
+          text,
+          initializer,
+          initializer.arguments[0].getText(source),
+        );
+      },
+    ),
     fixture(
       paths.query,
       "authority suppression becomes observer error",
