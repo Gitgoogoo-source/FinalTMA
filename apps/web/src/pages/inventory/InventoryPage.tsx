@@ -19,8 +19,7 @@ export function InventoryPage(): ReactNode {
   const [sellItem, setSellItem] = useState<InventoryItem | null>(null);
   const requestedFocus = params.get("focus");
   const { isBlocked } = useOperationRegistry();
-  const blocked =
-    isBlocked("inventory.evolve") || isBlocked("inventory.decompose");
+  const blocked = isBlocked("inventory.evolve");
   const actions = (item: InventoryItem, imageReady: boolean) => (
     <>
       <TaskActionTarget active={requestedFocus === "evolution"}>

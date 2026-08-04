@@ -106,6 +106,9 @@ const externallyRenderedSuccessRouteIds = new Set<RecoverableRouteId>([
 const inlineOperationRouteIds = new Set<RecoverableRouteId>([
   "referral.share_event",
 ]);
+const nonPresentedOperationRouteIds = new Set<RecoverableRouteId>([
+  "inventory.decompose",
+]);
 
 export function OperationRegistryProvider({
   children,
@@ -442,6 +445,11 @@ export function OperationRegistryProvider({
           acknowledgedIds.current.has(operation.operation_id)
         )
           continue;
+        if (nonPresentedOperationRouteIds.has(operation.use_case)) {
+          delete next[operation.operation_id];
+          completedOutsideRegistry.add(operation.operation_id);
+          continue;
+        }
         if (
           operation.status === "succeeded" &&
           externallyRenderedSuccessRouteIds.has(operation.use_case)
