@@ -6268,7 +6268,7 @@ input:focus {
 .evolution-confetti {
   z-index: 3;
   object-fit: fill;
-  animation: evolution-confetti-fall 2.8s cubic-bezier(0.2, 0.72, 0.28, 1) both;
+  animation: evolution-confetti-fall 2.1s cubic-bezier(0.2, 0.72, 0.28, 1) both;
 }
 .evolution-confetti--back {
   z-index: 1;
@@ -6319,6 +6319,9 @@ input:focus {
     0 22px 62px rgba(0, 0, 0, 0.44),
     0 0 26px rgba(255, 159, 57, 0.18);
   animation: evolution-panel-rise 0.58s 0.24s ease-out both;
+}
+.evolution-stage--success .evolution-result-panel {
+  animation-delay: 1.85s;
 }
 .evolution-result-panel > header {
   min-width: 0;
