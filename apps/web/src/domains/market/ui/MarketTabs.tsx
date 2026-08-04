@@ -19,11 +19,13 @@ export function MarketTabs({
   activeTab,
   focusActive,
   focusReady,
+  manageAttention,
   onSelect,
 }: {
   activeTab: MarketTab;
   focusActive: boolean;
   focusReady: boolean;
+  manageAttention: boolean;
   onSelect: (tab: MarketTab) => void;
 }): ReactNode {
   const buttons = useRef<Record<MarketTab, HTMLButtonElement | null>>({
@@ -47,11 +49,17 @@ export function MarketTabs({
           }}
           type="button"
           className={activeTab === id ? "active" : ""}
+          aria-label={
+            id === "manage" && manageAttention ? "管理，有藏品已售出" : label
+          }
           aria-current={activeTab === id ? "page" : undefined}
           onClick={() => onSelect(id)}
         >
           <Icon aria-hidden="true" />
           {label}
+          {id === "manage" && manageAttention && (
+            <span className="market-tab-attention" aria-hidden="true" />
+          )}
         </button>
       ))}
     </nav>

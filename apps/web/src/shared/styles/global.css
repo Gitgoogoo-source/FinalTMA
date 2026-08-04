@@ -3114,6 +3114,7 @@ input:focus {
   border-radius: 27px;
 }
 .app-shell .market-tabs button {
+  position: relative;
   min-height: 42px;
   gap: 7px;
   border-radius: 22px;
@@ -3122,6 +3123,17 @@ input:focus {
 .app-shell .market-tabs button svg {
   width: 17px;
   height: 17px;
+}
+.app-shell .market-tab-attention {
+  position: absolute;
+  top: 7px;
+  left: calc(50% + 29px);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f04444;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.96);
+  pointer-events: none;
 }
 .app-shell .market-listing-summary {
   min-height: 88px;

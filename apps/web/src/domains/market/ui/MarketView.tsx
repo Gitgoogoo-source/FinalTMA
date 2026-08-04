@@ -61,10 +61,7 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
     listings: managedListings,
     soldEvents,
     dismiss: dismissSoldEvent,
-  } = useMarketSoldInbox(
-    pageActive && tab !== "buy",
-    pageActive && tab === "manage",
-  );
+  } = useMarketSoldInbox(pageActive, pageActive);
   const { isBlocked, run } = useOperationRegistry();
   const { requestTopup } = useNavigationIntent();
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -243,6 +240,7 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
         activeTab={tab}
         focusActive={params.get("focus") === `market-${tab}`}
         focusReady={!state.isLoading}
+        manageAttention={soldEvents.length > 0}
         onSelect={selectTab}
       />
       {tab === "buy" && purchaseTarget && targetListing.data && (
