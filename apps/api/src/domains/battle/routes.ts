@@ -10,10 +10,7 @@ import {
   type HandlerMap,
 } from "../../http/handlers.ts";
 import { rpc } from "../../platform/db/index.ts";
-import {
-  deliverBattleOutbox,
-  issueBattleRealtimeToken,
-} from "../../workflows/battle-outbox/ably.ts";
+import { issueBattleRealtimeToken } from "../../workflows/battle-outbox/ably.ts";
 import {
   battleInviteToken,
   battleInviteTokenHash,
@@ -81,7 +78,6 @@ export const battleHandlers = {
       limit: 1,
       roomId: pendingRoomId(operation),
     });
-    await deliverBattleOutbox(signal, 10);
     return operationResult(
       await rpc<OperationEnvelope>(
         "operations_get",
@@ -155,7 +151,7 @@ async function command(
 ) {
   const signal = requestSignal(context.request);
   const operationId = requireOperationId(context);
-  const result = operationResult(
+  return operationResult(
     await rpc<OperationEnvelope>(
       rpcName,
       {
@@ -167,8 +163,6 @@ async function command(
     ),
     { operationId, useCase },
   );
-  await deliverBattleOutbox(signal, 10);
-  return result;
 }
 
 async function nonOperationCommand(
@@ -177,16 +171,16 @@ async function nonOperationCommand(
   parameters: Record<string, unknown>,
 ) {
   const signal = requestSignal(context.request);
-  const data = await rpc(
-    rpcName,
-    {
-      p_session_id: requireSession(context).session_id,
-      ...parameters,
-    },
-    { signal },
-  );
-  await deliverBattleOutbox(signal, 10);
-  return { data };
+  return {
+    data: await rpc(
+      rpcName,
+      {
+        p_session_id: requireSession(context).session_id,
+        ...parameters,
+      },
+      { signal },
+    ),
+  };
 }
 
 function requestSignal(request: Request): AbortSignal {

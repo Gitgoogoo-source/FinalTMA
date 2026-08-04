@@ -14,7 +14,7 @@ Supabase `pg_cron` 使用唯一 job `battle-tick-v1`，每秒调用 `battle.proc
 
 停用或重建前先 `cron.unschedule('battle-tick-v1')`，再在独立语句执行 `pg_reload_conf()`；只有原 `jobid` 连续两个调度周期没有新增 run 才允许删除 Battle schema。从空库重放时，baseline 不创建 job；`product_data_v1` 只在 active ruleset 和全部规则参数写入后创建唯一 `battle-tick-v1`，禁止调度器在规则数据未提交的迁移间隙运行。三条 migration 的提交事务结束后，owner 再在独立语句执行一次 `pg_reload_conf()`，使既有 `pg_cron scheduler` 进程重新加载新 job；随后必须从 `cron.job_run_details` 取得同一 `jobid` 的至少两个连续自然周期，手工 SQL 或直接 RPC 不作为调度证据。`battle.tick_health()` 固定核对唯一 job、每秒 schedule、command、database、worker、scheduler 数量和最近 5 秒成功记录。既有五分钟 `monitor-invariants` 把配置错误或调度停滞写为 `BATTLE_TICK_UNHEALTHY`，把自然运行失败写为 `BATTLE_TICK_RUN_FAILED`，私有记录包含 jobid、runid、开始/结束时间、截断错误摘要和 SHA-256。既有每日 `cleanup-idempotency` 只删除该 command 超过 7 天的运行明细，每次最多 100000 条；开放失败 violation 不随明细清理，不增加第二个 Supabase cron job。
 
-玩家请求提交后立即尝试投递本次 outbox。cron 产生的状态通过 `pg_net` 唤醒 `/api/integrations/battle-outbox`；prepared share 恢复通过 `pg_net` 唤醒 `/api/integrations/battle-share`。两个接口使用 Supabase Vault 与 Vercel Secret 共同持有的 `BATTLE_OUTBOX_SECRET` 鉴权，请求 body 只作唤醒信号，真实任务由受保护 RPC 领取。失败投递按 1、2、5、10、30 秒重试，随后每 30 秒重试。
+所有状态变化都由数据库在同一事务写入 outbox 并调用 `pg_net`；HTTP 请求只在事务提交后异步唤醒 `/api/integrations/battle-outbox`。玩家 Vercel Function 在数据库 RPC 完成后立即返回权威结果，不直接领取或发布 outbox，避免动作响应等待 Ably 以及与 integration 重复竞争租约；`battle.process_due` 每秒重新唤醒到期或租约过期的记录，保持失败恢复。prepared share 恢复通过 `pg_net` 唤醒 `/api/integrations/battle-share`。两个接口使用 Supabase Vault 与 Vercel Secret 共同持有的 `BATTLE_OUTBOX_SECRET` 鉴权，请求 body 只作唤醒信号，真实任务由受保护 RPC 领取。失败投递按 1、2、5、10、30 秒重试，随后每 30 秒重试。
 
 ## 结果
 

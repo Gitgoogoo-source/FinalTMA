@@ -591,7 +591,7 @@ flowchart LR
 
 ### 8.4 outbox、游标与短轮询
 
-- 玩家动作提交后，当前 Function 立即尝试投递 outbox；tick 产生的托管动作由受保护 integration 被唤醒后投递。
+- 每次状态变化都由数据库在同一事务写入 outbox 并调用 `pg_net`；HTTP 请求只在事务提交后异步唤醒受保护 integration。玩家 Function 在数据库 RPC 完成后立即返回权威结果，不领取或发布 outbox；`battle.process_due` 每秒重新唤醒到期或租约过期的待投递记录。
 - Ably 只携带 `event_id/room_id/state_version/event_kind`，客户端收到后通过 REST 读取权威状态。
 - `GET /api/battle/rooms/:room_id?after_action_sequence=N` 每次最多返回 16 个 viewer-specific 动作事件，并以 `has_more_action_events` 驱动继续补齐。
 - 页面持续可见时始终使用最后已接收 cursor，因此 Ably 或网络中断期间的动作不会丢失；事件按 sequence 排队，不能覆盖或并行播放。
