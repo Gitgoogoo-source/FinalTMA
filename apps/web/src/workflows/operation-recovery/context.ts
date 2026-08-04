@@ -14,12 +14,21 @@ export type OperationPhase =
   | "succeeded"
   | "failed";
 
+export type OperationPresentation = {
+  name: string;
+  imagePath: string;
+};
+
 export type OperationRegistryValue = {
   run<Id extends RecoverableRouteId>(
     label: string,
     routeId: Id,
     input: RouteInput<Id>,
-    options?: { background?: boolean; dialog?: boolean },
+    options?: {
+      background?: boolean;
+      dialog?: boolean;
+      presentation?: OperationPresentation;
+    },
   ): Promise<RouteOutput<Id> | null>;
   isBlocked(routeId: RecoverableRouteId): boolean;
   navigationLocked: boolean;

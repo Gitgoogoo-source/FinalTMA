@@ -43,8 +43,10 @@ import { AlbumClaimResultDialog } from "./AlbumClaimResultDialog.tsx";
 import {
   OperationRegistryContext,
   type OperationPhase,
+  type OperationPresentation,
   type OperationRegistryValue,
 } from "./context.ts";
+import { DecompositionOperationDialog } from "./DecompositionOperationDialog.tsx";
 import { EvolutionOperationDialog } from "./EvolutionOperationDialog.tsx";
 import {
   GachaHatchAnimation,
@@ -66,6 +68,7 @@ type RegisteredOperation = {
   errorCode: string | null;
   persistent: boolean;
   input: unknown;
+  presentation: OperationPresentation | null;
   animationTier: GachaHatchTier | null;
 };
 
@@ -85,7 +88,12 @@ const acknowledgedResultRouteIds = new Set<RecoverableRouteId>([
 ]);
 const navigationLockedThroughResultRouteIds = new Set<RecoverableRouteId>([
   "gacha.open",
+  "inventory.decompose",
   "wheel.spin",
+]);
+const autoPollingRouteIds = new Set<RecoverableRouteId>([
+  ...acknowledgedResultRouteIds,
+  "inventory.decompose",
 ]);
 const refreshBeforeSuccessRouteIds = new Set<RecoverableRouteId>([
   "market.create_listing",
@@ -296,7 +304,11 @@ export function OperationRegistryProvider({
       label: string,
       routeId: Id,
       input: RouteInput<Id>,
-      options?: { background?: boolean; dialog?: boolean },
+      options?: {
+        background?: boolean;
+        dialog?: boolean;
+        presentation?: OperationPresentation;
+      },
     ): Promise<RouteOutput<Id> | null> => {
       const sessionGeneration = getSession()?.generation;
       if (!sessionGeneration || getSession()?.accountStatus !== "normal")
@@ -345,6 +357,7 @@ export function OperationRegistryProvider({
           errorCode: null,
           persistent: false,
           input,
+          presentation: options?.presentation ?? null,
           animationTier:
             routeId === "gacha.open" ? gachaAnimationTier(input, null) : null,
         },
@@ -390,7 +403,7 @@ export function OperationRegistryProvider({
           });
         if (!pending)
           markOperationNewTemplates(routeId, response.data, markNew);
-        if (routeId !== "inventory.evolve")
+        if (routeId !== "inventory.evolve" && routeId !== "inventory.decompose")
           haptic(pending ? "warning" : "success");
         if (!refreshBeforeSuccess)
           await refreshRouteScopes(routeId).catch(() => undefined);
@@ -431,7 +444,8 @@ export function OperationRegistryProvider({
             errorCode: failure.code,
             persistent: Boolean(failure.operationId),
           });
-        if (routeId !== "inventory.evolve") haptic("error");
+        if (routeId !== "inventory.evolve" && routeId !== "inventory.decompose")
+          haptic("error");
         if (!unknown) await refreshRouteScopes(routeId).catch(() => undefined);
         return null;
       }
@@ -480,6 +494,7 @@ export function OperationRegistryProvider({
           errorCode: operation.error_code,
           persistent: true,
           input: null,
+          presentation: next[operation.operation_id]?.presentation ?? null,
           animationTier: next[operation.operation_id]?.animationTier ?? null,
         };
         if (operation.status === "succeeded")
@@ -555,7 +570,11 @@ export function OperationRegistryProvider({
             acknowledgedResultRouteIds.has(operation.routeId)
           )
             setActiveId((current) => current ?? operation.id);
-          if (operation.routeId !== "inventory.evolve") haptic("success");
+          if (
+            operation.routeId !== "inventory.evolve" &&
+            operation.routeId !== "inventory.decompose"
+          )
+            haptic("success");
           if (!refreshBeforeSuccess)
             await refreshRouteScopes(operation.routeId);
         } else if (recovered.status === "failed") {
@@ -597,12 +616,12 @@ export function OperationRegistryProvider({
 
   const pollingOperationId =
     active &&
-    acknowledgedResultRouteIds.has(active.routeId) &&
+    autoPollingRouteIds.has(active.routeId) &&
     ["pending", "unknown"].includes(active.phase)
       ? active.id
       : (Object.values(operations).find(
           (operation) =>
-            acknowledgedResultRouteIds.has(operation.routeId) &&
+            autoPollingRouteIds.has(operation.routeId) &&
             ["pending", "unknown"].includes(operation.phase),
         )?.id ?? null);
 
@@ -936,9 +955,11 @@ export function OperationRegistryProvider({
           className={`modal-backdrop operation-dialog-backdrop ${
             active.routeId === "gacha.open"
               ? `gacha-operation-backdrop phase-${active.phase}${showGachaAnimation ? " gacha-hatching-backdrop" : gachaResult ? " gacha-result-backdrop" : ""}`
-              : active.routeId === "inventory.evolve"
-                ? `evolution-operation-backdrop phase-${active.phase}`
-                : ""
+              : active.routeId === "inventory.decompose"
+                ? `decomposition-operation-backdrop phase-${active.phase}`
+                : active.routeId === "inventory.evolve"
+                  ? `evolution-operation-backdrop phase-${active.phase}`
+                  : ""
           }`}
           role="dialog"
           aria-modal="true"
@@ -946,20 +967,33 @@ export function OperationRegistryProvider({
           aria-labelledby={
             showGachaAnimation
               ? undefined
-              : active.routeId === "inventory.evolve"
-                ? "evolution-result-title"
-                : gachaResult
-                  ? "gacha-result-title"
-                  : wheelResult
-                    ? "wheel-result-title"
-                    : albumClaimResult
-                      ? "album-claim-result-title"
-                      : "operation-dialog-title"
+              : active.routeId === "inventory.decompose"
+                ? "decomposition-result-title"
+                : active.routeId === "inventory.evolve"
+                  ? "evolution-result-title"
+                  : gachaResult
+                    ? "gacha-result-title"
+                    : wheelResult
+                      ? "wheel-result-title"
+                      : albumClaimResult
+                        ? "album-claim-result-title"
+                        : "operation-dialog-title"
           }
           tabIndex={-1}
           onKeyDown={trapDialogFocus}
         >
-          {active.routeId === "inventory.evolve" ? (
+          {active.routeId === "inventory.decompose" ? (
+            <DecompositionOperationDialog
+              key={active.id}
+              operationId={active.id}
+              phase={active.phase}
+              result={active.result}
+              errorCode={active.errorCode}
+              presentation={active.presentation}
+              onRecover={() => void recover(active)}
+              onCollect={dismiss}
+            />
+          ) : active.routeId === "inventory.evolve" ? (
             <EvolutionOperationDialog
               key={active.id}
               operationId={active.id}

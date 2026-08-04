@@ -26,10 +26,20 @@ export function DecompositionAction({
   );
   const confirm = async (quantity: number) => {
     setConfirming(false);
-    await run("正在确认分解结果", "inventory.decompose", {
-      template_id: item.template_id,
-      quantity,
-    });
+    await run(
+      "分解仪式",
+      "inventory.decompose",
+      {
+        template_id: item.template_id,
+        quantity,
+      },
+      {
+        presentation: {
+          name: item.name,
+          imagePath: item.image_detail_path,
+        },
+      },
+    );
   };
   return (
     <>
@@ -63,18 +73,18 @@ export function DecompositionAction({
         >
           <div className="modal inventory-quantity-modal">
             <h2 id="decomposition-loading-title">
-              {detail.isError ? "分解信息加载失败" : "正在加载最新分解信息"}
+              {detail.isError ? "分解仪式暂时无法开始" : "整理分解材料"}
             </h2>
             <p>
               {detail.isError
-                ? "未确认最新可用数量与分解产出，本次不会提交。"
-                : "正在确认真实可用数量与单个分解产出。"}
+                ? "请稍后再试，本次不会消耗宠物。"
+                : "晶辉即将显现。"}
             </p>
             {detail.isError ? (
-              <Button onClick={() => void detail.refetch()}>重新加载</Button>
+              <Button onClick={() => void detail.refetch()}>再试一次</Button>
             ) : null}
             <Button className="secondary" onClick={() => setConfirming(false)}>
-              取消
+              返回
             </Button>
           </div>
         </AppModal>

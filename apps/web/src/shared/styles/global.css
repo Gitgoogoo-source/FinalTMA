@@ -6173,6 +6173,284 @@ input:focus {
   backdrop-filter: none;
   animation: none;
 }
+.operation-dialog-backdrop.decomposition-operation-backdrop {
+  z-index: 180;
+  place-items: stretch center;
+  padding: 0;
+  overflow: hidden;
+  background: #36434b;
+  backdrop-filter: none;
+  animation: none;
+}
+.decomposition-stage {
+  position: relative;
+  isolation: isolate;
+  width: min(100%, 430px);
+  height: var(--tg-viewport-stable-height, 100dvh);
+  min-height: 100%;
+  overflow: hidden;
+  color: #fffdfa;
+  background: #36434b;
+}
+.decomposition-stage-background {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  object-fit: cover;
+  object-position: center;
+}
+.decomposition-ceremony-stage .decomposition-stage-background {
+  animation: decomposition-stage-awaken 2s ease-out both;
+}
+.decomposition-stage-sr-title {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.decomposition-pet,
+.decomposition-restored-pet {
+  position: absolute;
+  z-index: 2;
+  top: max(calc(var(--safe-top) + 72px), 10dvh);
+  left: 50%;
+  width: min(76vw, 330px);
+  aspect-ratio: 1;
+  transform: translateX(-50%);
+}
+.decomposition-pet-piece {
+  position: absolute;
+  inset: 0;
+  transform-origin: center;
+}
+.decomposition-pet-piece .catalog-image,
+.decomposition-restored-pet .catalog-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.decomposition-pet-piece .catalog-image {
+  filter: brightness(0.16) saturate(0) drop-shadow(0 0 2px #ff9c00)
+    drop-shadow(0 0 18px rgba(255, 156, 0, 0.86));
+  animation: decomposition-pet-ignite 2s ease-in both;
+}
+.decomposition-pet-piece--top {
+  clip-path: polygon(0 0, 100% 0, 88% 36%, 55% 47%, 0 34%);
+  animation: decomposition-shatter-top 2s cubic-bezier(0.22, 0.7, 0.2, 1) both;
+}
+.decomposition-pet-piece--middle {
+  clip-path: polygon(0 32%, 55% 45%, 88% 35%, 100% 68%, 55% 75%, 7% 65%);
+  animation: decomposition-shatter-middle 2s cubic-bezier(0.22, 0.7, 0.2, 1)
+    both;
+}
+.decomposition-pet-piece--bottom {
+  clip-path: polygon(0 63%, 55% 73%, 100% 66%, 100% 100%, 0 100%);
+  animation: decomposition-shatter-bottom 2s cubic-bezier(0.22, 0.7, 0.2, 1)
+    both;
+}
+.decomposition-restored-pet {
+  top: max(calc(var(--safe-top) + 84px), 12dvh);
+  animation: decomposition-pet-return 520ms ease-out both;
+}
+.decomposition-result {
+  position: absolute;
+  z-index: 4;
+  right: 22px;
+  bottom: calc(var(--safe-bottom) + 22px);
+  left: 22px;
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  text-align: center;
+  text-shadow: 0 2px 12px rgba(54, 67, 75, 0.72);
+  animation: decomposition-result-rise 560ms cubic-bezier(0.2, 0.78, 0.24, 1)
+    both;
+}
+.decomposition-result-kicker,
+.decomposition-result h2,
+.decomposition-result p {
+  margin: 0;
+}
+.decomposition-result-kicker {
+  color: #fffdfa;
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+}
+.decomposition-result h2 {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+  color: #fffdfa;
+  font-size: clamp(30px, 9vw, 42px);
+  font-weight: 950;
+  line-height: 1;
+}
+.decomposition-result h2 strong {
+  color: #ff9c00;
+  font-size: clamp(64px, 21vw, 88px);
+  font-weight: 950;
+  letter-spacing: -0.05em;
+  text-shadow:
+    0 0 2px #fffdfa,
+    0 0 18px rgba(255, 156, 0, 0.9);
+}
+.decomposition-result h2 span {
+  color: #fffdfa;
+  font-size: clamp(24px, 7vw, 32px);
+  letter-spacing: -0.02em;
+}
+.decomposition-result > p:not(.decomposition-result-kicker) {
+  color: #fffdfa;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.45;
+}
+.decomposition-result .button {
+  width: min(100%, 322px);
+  min-height: 58px;
+  margin-top: 8px;
+  border: 2px solid #fffdfa;
+  border-radius: 999px;
+  color: #36434b;
+  background: #ff9c00;
+  box-shadow:
+    0 0 0 3px rgba(255, 156, 0, 0.42),
+    0 12px 28px rgba(54, 67, 75, 0.36);
+  font-size: 21px;
+  font-weight: 950;
+}
+.decomposition-result .button:focus-visible {
+  outline: 3px solid #1ce204;
+  outline-offset: 3px;
+}
+.decomposition-stage--waiting .decomposition-stage-background,
+.decomposition-stage--failed .decomposition-stage-background {
+  opacity: 0.64;
+}
+.decomposition-stage--waiting .decomposition-result,
+.decomposition-stage--failed .decomposition-result {
+  bottom: calc(var(--safe-bottom) + 44px);
+}
+.decomposition-stage--waiting .decomposition-result h2,
+.decomposition-stage--failed .decomposition-result h2 {
+  font-size: clamp(32px, 9vw, 42px);
+}
+@keyframes decomposition-stage-awaken {
+  0% {
+    opacity: 0.34;
+    transform: scale(1.08);
+  }
+  46% {
+    opacity: 0.62;
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes decomposition-pet-ignite {
+  0%,
+  42% {
+    filter: brightness(0.12) saturate(0) drop-shadow(0 0 1px #ff9c00)
+      drop-shadow(0 0 8px rgba(255, 156, 0, 0.46));
+  }
+  68% {
+    filter: brightness(0.22) saturate(0) drop-shadow(0 0 4px #fffdfa)
+      drop-shadow(0 0 28px rgba(255, 156, 0, 0.98));
+  }
+  100% {
+    filter: brightness(0.56) saturate(0) drop-shadow(0 0 12px #fffdfa)
+      drop-shadow(0 0 36px rgba(255, 156, 0, 0.98));
+  }
+}
+@keyframes decomposition-shatter-top {
+  0%,
+  48% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) rotate(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(-54px, -72px, 0) rotate(-10deg) scale(0.62);
+  }
+}
+@keyframes decomposition-shatter-middle {
+  0%,
+  48% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) rotate(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(64px, -12px, 0) rotate(13deg) scale(0.58);
+  }
+}
+@keyframes decomposition-shatter-bottom {
+  0%,
+  48% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) rotate(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(-18px, 84px, 0) rotate(-8deg) scale(0.52);
+  }
+}
+@keyframes decomposition-result-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 32px, 0) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+@keyframes decomposition-pet-return {
+  from {
+    opacity: 0;
+    transform: translate3d(-50%, 28px, 0) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(-50%, 0, 0) scale(1);
+  }
+}
+@media (max-height: 700px) {
+  .decomposition-pet,
+  .decomposition-restored-pet {
+    top: max(calc(var(--safe-top) + 44px), 7dvh);
+    width: min(65vw, 270px);
+  }
+  .decomposition-result {
+    gap: 6px;
+  }
+  .decomposition-result h2 strong {
+    font-size: clamp(54px, 18vw, 72px);
+  }
+  .decomposition-result .button {
+    min-height: 52px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .decomposition-stage-background,
+  .decomposition-pet-piece,
+  .decomposition-pet-piece .catalog-image,
+  .decomposition-result,
+  .decomposition-restored-pet {
+    animation-timing-function: linear !important;
+  }
+}
 .evolution-stage {
   position: relative;
   isolation: isolate;

@@ -5,7 +5,7 @@ const labels: Partial<Record<RecoverableRouteId, string>> = {
   "expedition.claim": "正在领取远征奖励",
   "expedition.create": "正在创建远征",
   "gacha.open": "正在开启盲盒",
-  "inventory.decompose": "正在分解藏品",
+  "inventory.decompose": "分解仪式",
   "inventory.evolve": "正在进化藏品",
   "market.cancel_template_listings": "正在全部下架",
   "market.create_listing": "正在创建挂单",
