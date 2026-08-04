@@ -56,7 +56,7 @@ export function CollectionDetailShowcase({
         tabIndex={titleTabIndex}
       >
         <div className="inventory-title-copy">
-          <span className="inventory-title-eyebrow">当前藏品</span>
+          <span className="inventory-title-eyebrow">稀有度</span>
           <h2 id={headingId}>{item.name}</h2>
           {newAcquisition ? (
             <strong className="detail-new-acquisition">本次新获得</strong>
