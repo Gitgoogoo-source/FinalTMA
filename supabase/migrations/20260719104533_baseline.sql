@@ -2813,7 +2813,7 @@ create table battle.rate_limit_attempts (
   id bigint generated always as identity primary key,
   user_id uuid not null references identity.users(id),
   action text not null check (action in (
-    'create', 'invite_preview', 'accept', 'combat_action', 'heartbeat', 'realtime_token', 'share'
+    'create', 'matchmake', 'invite_preview', 'accept', 'combat_action', 'heartbeat', 'realtime_token', 'share'
   )),
   invite_hash text,
   attempted_at timestamptz not null default now(),
