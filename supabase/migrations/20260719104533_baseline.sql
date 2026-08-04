@@ -8255,6 +8255,27 @@ create table market.trade_details (
 create index trade_details_trade_idx on market.trade_details (trade_id);
 create index trade_details_seller_idx on market.trade_details (seller_id, id desc);
 
+create table market.seller_sale_sequences (
+  seller_id uuid primary key references identity.users(id) on delete cascade,
+  last_sequence bigint not null default 0 check (last_sequence >= 0),
+  updated_at timestamptz not null default now()
+);
+
+create table market.seller_sale_events (
+  seller_id uuid not null references identity.users(id) on delete cascade,
+  sequence bigint not null check (sequence > 0),
+  trade_id uuid not null references market.trades(id) on delete cascade,
+  template_id text not null references catalog.templates(id),
+  quantity bigint not null check (quantity > 0),
+  unit_price bigint not null check (unit_price > 0),
+  sold_at timestamptz not null default now(),
+  primary key (seller_id, sequence),
+  unique (seller_id, trade_id)
+);
+
+create index seller_sale_events_trade_idx on market.seller_sale_events (trade_id);
+create index seller_sale_events_template_idx on market.seller_sale_events (template_id);
+
 create or replace function api.market_bootstrap(p_session_id uuid)
 returns jsonb
 language plpgsql
@@ -8341,7 +8362,10 @@ begin
 end;
 $$;
 
-create or replace function api.market_my_listings(p_session_id uuid)
+create or replace function api.market_my_listings(
+  p_session_id uuid,
+  p_after_sale_sequence bigint default null
+)
 returns jsonb
 language plpgsql
 security definer
@@ -8349,45 +8373,95 @@ set search_path = ''
 as $$
 declare
   v_user_id uuid := api.session_user(p_session_id);
+  v_latest_sequence bigint;
+  v_after_sequence bigint;
+  v_sale_cursor bigint;
+  v_sold_events jsonb := '[]'::jsonb;
+  v_has_more boolean := false;
 begin
-  return jsonb_build_object('listings', coalesce((
-    select jsonb_agg(jsonb_build_object(
-      'template_id', a.template_id,
-      'name', t.name,
-      'rarity', t.rarity,
-      'stage', t.stage,
-      'image_thumbnail_path', t.image_thumbnail_path,
-      'listed_quantity', a.listed_quantity,
-      'sold_quantity', coalesce(s.sold_quantity, 0),
-      'unit_price', t.market_price,
-      'estimated_gross', a.listed_quantity * t.market_price,
-      'estimated_fee', floor(a.listed_quantity * t.market_price * 500.0 / 10000.0),
-      'estimated_net', a.listed_quantity * t.market_price - floor(a.listed_quantity * t.market_price * 500.0 / 10000.0),
-      'estimated_vip_rebate', case
-        when exists (
-          select 1 from vip.subscriptions v
-          where v.user_id = v_user_id and identity.utc_day() between v.starts_on and v.ends_on
-        )
-        then floor(floor(a.listed_quantity * t.market_price * 500.0 / 10000.0) * 2000.0 / 10000.0)
-        else 0
-      end,
-      'status', case when coalesce(s.sold_quantity, 0) > 0 then 'partially_sold' else 'active' end,
-      'first_listed_at', a.first_listed_at
-    ) order by t.sort_order)
+  select coalesce(last_sequence, 0)
+  into v_latest_sequence
+  from market.seller_sale_sequences
+  where seller_id = v_user_id
+  for share;
+  v_latest_sequence := coalesce(v_latest_sequence, 0);
+
+  if p_after_sale_sequence is null then
+    v_sale_cursor := v_latest_sequence;
+  else
+    v_after_sequence := least(greatest(p_after_sale_sequence, 0), v_latest_sequence);
+    select
+      coalesce(jsonb_agg(jsonb_build_object(
+        'sale_sequence', e.sequence::text,
+        'template_id', e.template_id,
+        'name', t.name,
+        'rarity', t.rarity,
+        'stage', t.stage,
+        'image_thumbnail_path', t.image_thumbnail_path,
+        'quantity', e.quantity,
+        'unit_price', e.unit_price,
+        'sold_at', e.sold_at
+      ) order by e.sequence), '[]'::jsonb),
+      coalesce(max(e.sequence), v_after_sequence)
+    into v_sold_events, v_sale_cursor
     from (
-      select l.template_id, sum(l.remaining) listed_quantity, min(l.created_at) first_listed_at
-      from market.listings l
-      where l.seller_id = v_user_id and l.status = 'active' and l.remaining > 0
-      group by l.template_id
-    ) a
-    join catalog.templates t on t.id = a.template_id
-    left join (
-      select l.template_id, sum(l.quantity - l.remaining) sold_quantity
-      from market.listings l
-      where l.seller_id = v_user_id and l.quantity > l.remaining
-      group by l.template_id
-    ) s on s.template_id = a.template_id
-  ), '[]'::jsonb));
+      select *
+      from market.seller_sale_events
+      where seller_id = v_user_id and sequence > v_after_sequence
+      order by sequence
+      limit 100
+    ) e
+    join catalog.templates t on t.id = e.template_id;
+    select exists (
+      select 1
+      from market.seller_sale_events
+      where seller_id = v_user_id and sequence > v_sale_cursor
+    ) into v_has_more;
+  end if;
+
+  return jsonb_build_object(
+    'listings', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'template_id', a.template_id,
+        'name', t.name,
+        'rarity', t.rarity,
+        'stage', t.stage,
+        'image_thumbnail_path', t.image_thumbnail_path,
+        'listed_quantity', a.listed_quantity,
+        'sold_quantity', coalesce(s.sold_quantity, 0),
+        'unit_price', t.market_price,
+        'estimated_gross', a.listed_quantity * t.market_price,
+        'estimated_fee', floor(a.listed_quantity * t.market_price * 500.0 / 10000.0),
+        'estimated_net', a.listed_quantity * t.market_price - floor(a.listed_quantity * t.market_price * 500.0 / 10000.0),
+        'estimated_vip_rebate', case
+          when exists (
+            select 1 from vip.subscriptions v
+            where v.user_id = v_user_id and identity.utc_day() between v.starts_on and v.ends_on
+          )
+          then floor(floor(a.listed_quantity * t.market_price * 500.0 / 10000.0) * 2000.0 / 10000.0)
+          else 0
+        end,
+        'status', case when coalesce(s.sold_quantity, 0) > 0 then 'partially_sold' else 'active' end,
+        'first_listed_at', a.first_listed_at
+      ) order by t.sort_order)
+      from (
+        select l.template_id, sum(l.remaining) listed_quantity, min(l.created_at) first_listed_at
+        from market.listings l
+        where l.seller_id = v_user_id and l.status = 'active' and l.remaining > 0
+        group by l.template_id
+      ) a
+      join catalog.templates t on t.id = a.template_id
+      left join (
+        select l.template_id, sum(l.quantity - l.remaining) sold_quantity
+        from market.listings l
+        where l.seller_id = v_user_id and l.quantity > l.remaining
+        group by l.template_id
+      ) s on s.template_id = a.template_id
+    ), '[]'::jsonb),
+    'sold_events', v_sold_events,
+    'sale_cursor', v_sale_cursor::text,
+    'has_more', v_has_more
+  );
 end;
 $$;
 
@@ -8430,6 +8504,9 @@ begin
     ) then
       perform api.raise_business_error('MARKET_ACTIVE_TEMPLATE_LIMIT', '最多同时出售 10 种藏品，请先售罄或下架一种藏品');
     end if;
+    insert into market.seller_sale_sequences (seller_id)
+    values (v_user_id)
+    on conflict (seller_id) do nothing;
     insert into market.listings (seller_id, template_id, unit_price, quantity, remaining, operation_id)
     values (v_user_id, p_template_id, v_template.market_price, p_quantity, p_quantity, p_operation_id) returning * into v_listing;
     perform inventory.reserve(v_user_id, p_template_id, p_quantity, 'listing', v_listing.id);
@@ -8524,6 +8601,8 @@ declare
   v_rebate bigint;
   v_total bigint;
   v_details jsonb := '[]'::jsonb;
+  v_sale record;
+  v_sale_sequence bigint;
   v_result jsonb;
   v_detail text;
 begin
@@ -8569,6 +8648,36 @@ begin
       v_details := v_details || jsonb_build_array(jsonb_build_object('quantity', v_take, 'unit_price', v_listing.unit_price, 'gross', v_gross, 'fee', v_fee));
       perform tasks.progress(v_listing.seller_id, 'market_sold');
       v_remaining := v_remaining - v_take;
+    end loop;
+    for v_sale in
+      select seller_id, sum(quantity)::bigint quantity
+      from market.trade_details
+      where trade_id = v_trade_id
+      group by seller_id
+      order by seller_id
+    loop
+      insert into market.seller_sale_sequences (seller_id)
+      values (v_sale.seller_id)
+      on conflict (seller_id) do nothing;
+      update market.seller_sale_sequences
+      set last_sequence = last_sequence + 1, updated_at = now()
+      where seller_id = v_sale.seller_id
+      returning last_sequence into v_sale_sequence;
+      insert into market.seller_sale_events (
+        seller_id,
+        sequence,
+        trade_id,
+        template_id,
+        quantity,
+        unit_price
+      ) values (
+        v_sale.seller_id,
+        v_sale_sequence,
+        v_trade_id,
+        p_template_id,
+        v_sale.quantity,
+        v_template.market_price
+      );
     end loop;
     perform inventory.change_holding(v_user_id, p_template_id, p_quantity);
     perform album.unlock_template(v_user_id, p_template_id, p_operation_id);

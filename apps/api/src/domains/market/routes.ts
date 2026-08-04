@@ -24,6 +24,7 @@ export const marketHandlers = {
   "market.my_listings": async (context) => ({
     data: await rpc("market_my_listings", {
       p_session_id: requireSession(context).session_id,
+      p_after_sale_sequence: context.input.after_sale_sequence ?? null,
     }),
   }),
   "market.create_listing": async (context) =>

@@ -10269,7 +10269,14 @@
         "operationId": "market_my_listings",
         "tags": ["market"],
         "security": [{ "bearerAuth": [] }],
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "after_sale_sequence",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "pattern": "^(0|[1-9]\\d{0,18})$" }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful response",
@@ -10372,9 +10379,80 @@
                             ],
                             "additionalProperties": false
                           }
-                        }
+                        },
+                        "sold_events": {
+                          "maxItems": 100,
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "sale_sequence": {
+                                "type": "string",
+                                "pattern": "^(0|[1-9]\\d{0,18})$"
+                              },
+                              "template_id": { "type": "string" },
+                              "name": { "type": "string" },
+                              "rarity": {
+                                "type": "string",
+                                "enum": [
+                                  "common",
+                                  "rare",
+                                  "epic",
+                                  "legendary",
+                                  "mythic"
+                                ]
+                              },
+                              "stage": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 3
+                              },
+                              "image_thumbnail_path": {
+                                "type": "string",
+                                "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                              },
+                              "quantity": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "unit_price": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "sold_at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                              }
+                            },
+                            "required": [
+                              "sale_sequence",
+                              "template_id",
+                              "name",
+                              "rarity",
+                              "stage",
+                              "image_thumbnail_path",
+                              "quantity",
+                              "unit_price",
+                              "sold_at"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "sale_cursor": {
+                          "type": "string",
+                          "pattern": "^(0|[1-9]\\d{0,18})$"
+                        },
+                        "has_more": { "type": "boolean" }
                       },
-                      "required": ["listings"],
+                      "required": [
+                        "listings",
+                        "sold_events",
+                        "sale_cursor",
+                        "has_more"
+                      ],
                       "additionalProperties": false
                     },
                     "request_id": {

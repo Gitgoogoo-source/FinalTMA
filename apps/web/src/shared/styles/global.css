@@ -3418,6 +3418,61 @@ input:focus {
   width: 16px;
   height: 16px;
 }
+.app-shell .market-listing-sold {
+  width: 100%;
+  border-color: rgba(213, 48, 55, 0.2);
+  color: var(--sprout-ink);
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+  transition:
+    transform 120ms ease,
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+}
+.app-shell .market-listing-sold::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    108deg,
+    transparent 52%,
+    rgba(213, 48, 55, 0.035)
+  );
+}
+.app-shell .market-listing-sold:active {
+  transform: scale(0.985);
+}
+.app-shell .market-listing-sold:focus-visible {
+  outline: 3px solid rgba(213, 48, 55, 0.28);
+  outline-offset: 2px;
+}
+.app-shell .market-listing-sold .market-listing-status {
+  color: #cc2f37;
+  background: rgba(213, 48, 55, 0.1);
+}
+.app-shell .market-sold-stamp {
+  position: relative;
+  z-index: 1;
+  width: 68px;
+  min-height: 44px;
+  display: grid;
+  place-items: center;
+  align-self: center;
+  border: 3px solid #d53037;
+  border-radius: 4px;
+  color: #d53037;
+  background: rgba(255, 250, 248, 0.72);
+  box-shadow:
+    inset 0 0 0 2px rgba(213, 48, 55, 0.14),
+    0 5px 12px rgba(159, 37, 43, 0.1);
+  font-family: Impact, "Arial Black", sans-serif;
+  font-size: 18px;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  transform: rotate(-8deg);
+}
 .app-shell .market-card {
   min-width: 0;
   display: flex;

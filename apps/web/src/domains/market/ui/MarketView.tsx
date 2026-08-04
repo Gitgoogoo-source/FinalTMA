@@ -17,18 +17,22 @@ import {
 } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 
-import { CatalogImage } from "../../../shared/ui/index.tsx";
 import { useApiQuery } from "../../../platform/query/index.ts";
-import { usePageSearchParams } from "../../../shared/navigation/pageActivity.tsx";
+import {
+  usePageActive,
+  usePageSearchParams,
+} from "../../../shared/navigation/pageActivity.tsx";
 import {
   AppModal,
   Badge,
   Button,
   Card,
+  CatalogImage,
   PageState,
 } from "../../../shared/ui/index.tsx";
 import { useOperationRegistry } from "../../../workflows/operation-recovery/index.ts";
 import { useNavigationIntent } from "../../../workflows/payment-recovery/index.ts";
+import { type MarketSoldEvent, useMarketSoldInbox } from "../soldInbox.ts";
 import { MarketTabs, type MarketTab } from "./MarketTabs.tsx";
 import "./market-density.css";
 
@@ -42,6 +46,7 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
     requestedTab ?? (params.has("sell") ? "sell" : "buy"),
   );
   const tab = requestedTab ?? (params.has("sell") ? "sell" : selectedTab);
+  const pageActive = usePageActive();
   const purchaseTarget = params.get("buy");
   const identity = useApiQuery("identity.bootstrap");
   const listings = useApiQuery("market.bootstrap", {}, tab === "buy");
@@ -51,7 +56,15 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
     tab === "buy" && Boolean(purchaseTarget),
   );
   const sellable = useApiQuery("market.bootstrap", {}, tab === "sell");
-  const mine = useApiQuery("market.my_listings", {}, tab !== "buy");
+  const {
+    query: mine,
+    listings: managedListings,
+    soldEvents,
+    dismiss: dismissSoldEvent,
+  } = useMarketSoldInbox(
+    pageActive && tab !== "buy",
+    pageActive && tab === "manage",
+  );
   const { isBlocked, run } = useOperationRegistry();
   const { requestTopup } = useNavigationIntent();
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -84,7 +97,7 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
             ...item,
             available: item.available,
           }))
-        : (mine.data?.listings ?? []).map((item) => ({
+        : managedListings.map((item) => ({
             ...item,
             available: item.listed_quantity,
           }));
@@ -164,13 +177,15 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
       ),
     [data],
   );
+  const hasManageContent =
+    tab === "manage" && (visible.length > 0 || soldEvents.length > 0);
   const selectedSellItem =
     tab === "sell"
       ? (visible.find((item) => item.template_id === params.get("sell")) ??
         visible[0])
       : undefined;
   const activeTemplateIds = new Set(
-    (mine.data?.listings ?? []).map((item) => item.template_id),
+    managedListings.map((item) => item.template_id),
   );
   const selectTab = (nextTab: MarketTab) => {
     setSelectedTab(nextTab);
@@ -468,6 +483,13 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
           <Button onClick={() => void mine.refetch()}>刷新在售状态</Button>
         </Card>
       )}
+      {tab === "manage" && mine.error && hasManageContent && (
+        <Card className="resume-intent" role="alert">
+          <strong>出售状态暂未更新</strong>
+          <p>已保留当前设备上的成交提醒，可以稍后再试。</p>
+          <Button onClick={() => void mine.refetch()}>重新加载</Button>
+        </Card>
+      )}
       {tab === "sell" ? (
         <PageState
           loading={state.isLoading}
@@ -494,32 +516,49 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
         </PageState>
       ) : (
         <PageState
-          loading={state.isLoading}
-          error={state.error as Error | null}
+          loading={state.isLoading && !hasManageContent}
+          error={
+            tab === "manage" && hasManageContent
+              ? null
+              : tab === "manage" && state.error
+                ? new Error("出售状态暂未更新，请重新加载")
+                : (state.error as Error | null)
+          }
           onRetry={() => void state.refetch()}
-          empty={tab === "manage" && sorted.length === 0}
+          empty={
+            tab === "manage" && sorted.length === 0 && soldEvents.length === 0
+          }
         >
-          {visible.length ? (
+          {hasManageContent ? (
+            <div className="market-grid market-grid-manage" aria-live="polite">
+              {soldEvents.map((event) => (
+                <MarketSoldCard
+                  key={`sold:${event.sale_sequence}`}
+                  event={event}
+                  onDismiss={() => dismissSoldEvent(event.sale_sequence)}
+                />
+              ))}
+              {visible.map((item) => (
+                <MarketListingCard
+                  key={item.template_id}
+                  item={item}
+                  blocked={blocked}
+                  onDelist={() => submit(item, 1)}
+                />
+              ))}
+            </div>
+          ) : visible.length ? (
             <div className={`market-grid market-grid-${tab}`}>
-              {visible.map((item) =>
-                tab === "manage" ? (
-                  <MarketListingCard
-                    key={item.template_id}
-                    item={item}
-                    blocked={blocked}
-                    onDelist={() => submit(item, 1)}
-                  />
-                ) : (
-                  <MarketCard
-                    key={item.template_id}
-                    item={item}
-                    tab={tab}
-                    blocked={blocked}
-                    balance={identity.data?.assets.kcoin.available}
-                    onSubmit={submit}
-                  />
-                ),
-              )}
+              {visible.map((item) => (
+                <MarketCard
+                  key={item.template_id}
+                  item={item}
+                  tab={tab}
+                  blocked={blocked}
+                  balance={identity.data?.assets.kcoin.available}
+                  onSubmit={submit}
+                />
+              ))}
             </div>
           ) : (
             <div className="market-filter-empty">
@@ -726,7 +765,7 @@ function MarketListingCard({
             {item.stage ? ` · 第 ${item.stage} 阶` : ""}
           </Badge>
           <span className="market-listing-status">
-            {item.status === "partially_sold" ? "部分成交" : "出售中"}
+            出售中 ×{item.available}
           </span>
         </div>
         <p>
@@ -745,6 +784,52 @@ function MarketListingCard({
         下架
       </Button>
     </Card>
+  );
+}
+
+function MarketSoldCard({
+  event,
+  onDismiss,
+}: {
+  event: MarketSoldEvent;
+  onDismiss(): void;
+}): ReactNode {
+  return (
+    <button
+      type="button"
+      className="card market-listing-card market-listing-sold"
+      aria-label={`${event.name} 已售出 ${event.quantity} 个，点击隐藏这条成交提醒`}
+      onClick={onDismiss}
+    >
+      <div className="market-listing-art">
+        <CatalogImage
+          path={event.image_thumbnail_path}
+          alt={event.name}
+          variant="thumbnail"
+          loading="lazy"
+        />
+      </div>
+      <div className="market-listing-copy">
+        <h2>{event.name}</h2>
+        <div className="market-listing-tags">
+          <Badge>
+            {rarityLabel(event.rarity)} · 第 {event.stage} 阶
+          </Badge>
+          <span className="market-listing-status">
+            已售出 ×{event.quantity}
+          </span>
+        </div>
+        <p>
+          成交单价
+          <strong>
+            {formatKCoin(event.unit_price)} <small>K-coin</small>
+          </strong>
+        </p>
+      </div>
+      <span className="market-sold-stamp" aria-hidden="true">
+        SOLD
+      </span>
+    </button>
   );
 }
 

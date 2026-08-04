@@ -54,6 +54,23 @@ const managedTemplateSchema = z
     first_listed_at: timestampSchema,
   })
   .strict();
+const saleSequenceSchema = z
+  .string()
+  .regex(/^(0|[1-9]\d{0,18})$/)
+  .refine((value) => BigInt(value) <= 9_223_372_036_854_775_807n);
+const soldEventSchema = z
+  .object({
+    sale_sequence: saleSequenceSchema,
+    template_id: z.string(),
+    name: z.string(),
+    rarity: raritySchema,
+    stage: z.number().int().min(1).max(3),
+    image_thumbnail_path: z.string().startsWith("/assets/catalog/v1/thumb/"),
+    quantity: z.number().int().positive(),
+    unit_price: z.number().int().positive(),
+    sold_at: timestampSchema,
+  })
+  .strict();
 const tradeDetailSchema = z
   .object({
     quantity: z.number().int().positive(),
@@ -106,9 +123,16 @@ export const marketRoutes = [
     gateway: "app",
     auth: true,
     idempotent: false,
-    input: emptyObjectSchema,
+    input: z
+      .object({ after_sale_sequence: saleSequenceSchema.optional() })
+      .strict(),
     output: z
-      .object({ listings: z.array(managedTemplateSchema).max(10) })
+      .object({
+        listings: z.array(managedTemplateSchema).max(10),
+        sold_events: z.array(soldEventSchema).max(100),
+        sale_cursor: saleSequenceSchema,
+        has_more: z.boolean(),
+      })
       .strict(),
     errors: ["ACCOUNT_RESTRICTED", "INTERNAL_ERROR"],
   }),
