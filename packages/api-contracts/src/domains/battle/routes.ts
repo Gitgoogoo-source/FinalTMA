@@ -3,7 +3,6 @@ import { z } from "zod";
 import { defineRoute } from "../../common/route.ts";
 import {
   emptyObjectSchema,
-  nonNegativeIntegerSchema,
   timestampSchema,
   uuidSchema,
 } from "../../common/schemas.ts";
@@ -169,7 +168,7 @@ export const battleRoutes = [
     input: z
       .object({
         room_id: uuidSchema,
-        after_action_sequence: nonNegativeIntegerSchema.optional(),
+        after_action_sequence: z.coerce.number().int().min(0).optional(),
       })
       .strict(),
     output: battleRoomSnapshotSchema,
