@@ -6323,6 +6323,40 @@ input:focus {
 .evolution-stage--success .evolution-result-panel {
   animation-delay: 1.85s;
 }
+.evolution-result-panel--dismissible > header,
+.evolution-result-panel--dismissible > .evolution-result-kicker,
+.evolution-result-panel--dismissible > h2 {
+  padding-right: 52px;
+}
+.evolution-result-close {
+  position: absolute;
+  z-index: 2;
+  top: 12px;
+  right: 12px;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(92, 70, 51, 0.12);
+  border-radius: 14px;
+  color: #5f5148;
+  background: rgba(89, 69, 54, 0.07);
+  cursor: pointer;
+}
+.evolution-result-close svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 2.6;
+}
+.evolution-result-close:focus-visible {
+  outline: 3px solid rgba(102, 83, 246, 0.34);
+  outline-offset: 2px;
+}
+.evolution-result-close:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
 .evolution-result-panel > header {
   min-width: 0;
   display: grid;

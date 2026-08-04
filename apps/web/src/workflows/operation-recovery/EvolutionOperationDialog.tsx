@@ -4,6 +4,7 @@ import {
   routeById,
   type RouteOutput,
 } from "@pokepets/api-contracts/app";
+import { X } from "lucide-react";
 
 import { evolutionRoute } from "../../domains/evolution/config.ts";
 import { haptic, selectionHaptic } from "../../platform/telegram/index.ts";
@@ -136,7 +137,8 @@ export function EvolutionOperationDialog({
           alt={presentation.sourceName}
           className="evolution-stage-pet--restored"
         />
-        <section className="evolution-result-panel">
+        <section className="evolution-result-panel evolution-result-panel--dismissible">
+          <EvolutionResultClose disabled={busy} onClick={onAcknowledge} />
           <p className="evolution-result-kicker">本次没有产生结算</p>
           <h2 id="evolution-result-title">进化未执行</h2>
           <p>
@@ -219,7 +221,11 @@ function EvolutionSuccess({
       <h2 id="evolution-result-title" className="evolution-stage-callout">
         进化成功
       </h2>
-      <section className="evolution-result-panel evolution-success-panel">
+      <section className="evolution-result-panel evolution-result-panel--dismissible evolution-success-panel">
+        <EvolutionResultClose
+          disabled={busy}
+          onClick={() => onSuccess("inventory")}
+        />
         <header>
           <p className="evolution-result-kicker">进化成功</p>
           <h3>{result.target.name}</h3>
@@ -271,7 +277,8 @@ function EvolutionFailure({
         alt={result.source.name}
         className="evolution-stage-pet--restored"
       />
-      <section className="evolution-result-panel evolution-failure-panel">
+      <section className="evolution-result-panel evolution-result-panel--dismissible evolution-failure-panel">
+        <EvolutionResultClose disabled={busy} onClick={onAcknowledge} />
         <p className="evolution-result-kicker">藏品保持原形态</p>
         <h2 id="evolution-result-title">进化失败</h2>
         <p>
@@ -287,6 +294,26 @@ function EvolutionFailure({
         </Button>
       </section>
     </EvolutionStage>
+  );
+}
+
+function EvolutionResultClose({
+  disabled,
+  onClick,
+}: {
+  disabled: boolean;
+  onClick(): void;
+}): ReactNode {
+  return (
+    <button
+      type="button"
+      className="evolution-result-close"
+      aria-label="关闭进化结果并返回藏品页"
+      disabled={disabled}
+      onClick={onClick}
+    >
+      <X aria-hidden="true" />
+    </button>
   );
 }
 
