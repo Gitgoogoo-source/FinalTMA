@@ -15,6 +15,9 @@ WEB_ROOT = ROOT / "apps/web/src"
 API_ROOT = ROOT / "apps/api/src"
 CONTRACT_ROOT = ROOT / "packages/api-contracts/src"
 GAME_PAGE = WEB_ROOT / "pages/game/GamePage.tsx"
+OPERATION_REGISTRY_PROVIDER = (
+    WEB_ROOT / "workflows/operation-recovery/OperationRegistryProvider.tsx"
+)
 BATTLE_SCHEMA = ROOT / "supabase/schemas/44_battle.sql"
 BATTLE_BASELINE_MIGRATION = (
     ROOT / "supabase/migrations/20260719104533_baseline.sql"
@@ -152,6 +155,7 @@ def main() -> None:
     assert_nonempty_domains(WEB_ROOT / "domains")
     assert_nonempty_domains(API_ROOT / "domains")
     verify_web_boundaries()
+    verify_evolution_refresh_semantics()
     verify_game_page_boundary()
     verify_battle_legacy_removal()
     verify_battle_terminal_refresh_semantics()
@@ -251,6 +255,77 @@ def verify_web_boundaries() -> None:
         raise SystemExit(
             "Foreground correction boundary is incomplete: "
             f"{missing_foreground_terms}"
+        )
+
+
+def verify_evolution_refresh_semantics() -> None:
+    source = OPERATION_REGISTRY_PROVIDER.read_text(encoding="utf-8")
+    required_terms = (
+        "const locallyRefreshedEvolutionIds = useRef(new Set<string>());",
+        "locallyRefreshedEvolutionIds.current.clear();",
+        "locallyRefreshedEvolutionIds.current.delete(id);",
+        "const refreshAfterLocalSettlement = useCallback(",
+        "refreshRouteScopes(routeId, { throwOnError: true });",
+        'routeId === "inventory.evolve"',
+        "locallyRefreshedEvolutionIds.current.add(id);",
+        "const localSettlementRefreshSucceeded =",
+        "locallyRefreshedEvolutionIds.current.has(operation.id);",
+    )
+    missing = [term for term in required_terms if term not in source]
+    if missing:
+        raise SystemExit(
+            "Evolution authority refresh deduplication is incomplete: "
+            f"{missing}"
+        )
+
+    run_start = source.index('const run: OperationRegistryValue["run"]')
+    run_end = source.index("const hydrate = useCallback(")
+    run_source = source[run_start:run_end]
+    if run_source.count("refreshAfterLocalSettlement(id, routeId)") != 2:
+        raise SystemExit(
+            "Local evolution terminal paths must record exactly one successful "
+            "authority refresh"
+        )
+
+    recover_start = source.index("const recover = useCallback(")
+    recover_end = source.index("const pollingOperationId")
+    recover_source = source[recover_start:recover_end]
+    if "refreshAfterLocalSettlement" in recover_source:
+        raise SystemExit(
+            "Recovered evolution operations must not inherit the local refresh marker"
+        )
+
+    acknowledge_start = source.index(
+        "const acknowledgeEvolutionResult = useCallback("
+    )
+    acknowledge_end = source.index("const defer = useCallback(")
+    acknowledge_source = source[acknowledge_start:acknowledge_end]
+    if acknowledge_source.count("if (!localSettlementRefreshSucceeded)") != 2:
+        raise SystemExit(
+            "Evolution acknowledgement must refresh only recovered operations or "
+            "local operations whose first authority refresh failed"
+        )
+    nonpersistent_order = re.search(
+        r"if \(!operation\.persistent\) \{.*?"
+        r"if \(!localSettlementRefreshSucceeded\).*?"
+        r"refreshRouteScopes\(\"inventory\.evolve\", \{.*?"
+        r"throwOnError: true,.*?\}\);.*?remove\(operation\.id\);",
+        acknowledge_source,
+        re.DOTALL,
+    )
+    persistent_order = re.search(
+        r"apiRequest\(\"inventory\.acknowledge_evolution_result\".*?"
+        r"if \(!localSettlementRefreshSucceeded\).*?"
+        r"refreshRouteScopes\(\"inventory\.evolve\", \{.*?"
+        r"throwOnError: true,.*?\}\);.*?"
+        r"acknowledgedIds\.current\.add\(operation\.id\);.*?"
+        r"remove\(operation\.id\);",
+        acknowledge_source,
+        re.DOTALL,
+    )
+    if not nonpersistent_order or not persistent_order:
+        raise SystemExit(
+            "Evolution fallback refresh must succeed before the result layer is removed"
         )
 
 

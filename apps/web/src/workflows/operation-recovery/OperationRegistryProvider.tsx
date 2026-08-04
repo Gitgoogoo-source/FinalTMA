@@ -143,6 +143,7 @@ export function OperationRegistryProvider({
   >(null);
   const recoveringIds = useRef(new Set<string>());
   const acknowledgedIds = useRef(new Set<string>());
+  const locallyRefreshedEvolutionIds = useRef(new Set<string>());
   const active = activeId ? operations[activeId] : undefined;
   const gachaResult = useMemo(() => {
     if (active?.routeId !== "gacha.open" || active.phase !== "succeeded")
@@ -221,6 +222,7 @@ export function OperationRegistryProvider({
         operationsRef.current = {};
         recoveringIds.current.clear();
         acknowledgedIds.current.clear();
+        locallyRefreshedEvolutionIds.current.clear();
         setOperations({});
         setActiveId(null);
         setAcknowledgingId(null);
@@ -287,6 +289,7 @@ export function OperationRegistryProvider({
   );
 
   const remove = useCallback((id: string) => {
+    locallyRefreshedEvolutionIds.current.delete(id);
     const next = Object.fromEntries(
       Object.entries(operationsRef.current).filter(
         ([operationId]) => operationId !== id,
@@ -298,6 +301,23 @@ export function OperationRegistryProvider({
       current === id ? (Object.keys(next)[0] ?? null) : current,
     );
   }, []);
+
+  const refreshAfterLocalSettlement = useCallback(
+    async (id: string, routeId: RecoverableRouteId) => {
+      try {
+        await refreshRouteScopes(routeId, { throwOnError: true });
+        if (
+          routeId === "inventory.evolve" &&
+          operationsRef.current[id]?.sessionGeneration ===
+            getSession()?.generation
+        )
+          locallyRefreshedEvolutionIds.current.add(id);
+      } catch {
+        return;
+      }
+    },
+    [],
+  );
 
   const run: OperationRegistryValue["run"] = useCallback(
     async <Id extends RecoverableRouteId>(
@@ -405,8 +425,10 @@ export function OperationRegistryProvider({
           markOperationNewTemplates(routeId, response.data, markNew);
         if (routeId !== "inventory.evolve" && routeId !== "inventory.decompose")
           haptic(pending ? "warning" : "success");
-        if (!refreshBeforeSuccess)
-          await refreshRouteScopes(routeId).catch(() => undefined);
+        if (!refreshBeforeSuccess) {
+          if (pending) await refreshRouteScopes(routeId).catch(() => undefined);
+          else await refreshAfterLocalSettlement(id, routeId);
+        }
         return response.data;
       } catch (cause) {
         if (!isCurrentNormalSession(sessionGeneration)) {
@@ -446,11 +468,11 @@ export function OperationRegistryProvider({
           });
         if (routeId !== "inventory.evolve" && routeId !== "inventory.decompose")
           haptic("error");
-        if (!unknown) await refreshRouteScopes(routeId).catch(() => undefined);
+        if (!unknown) await refreshAfterLocalSettlement(id, routeId);
         return null;
       }
     },
-    [markNew, remove, update],
+    [markNew, refreshAfterLocalSettlement, remove, update],
   );
 
   const hydrate = useCallback(
@@ -845,19 +867,30 @@ export function OperationRegistryProvider({
       }
       setAcknowledgingId(operation.id);
       setAcknowledgementError(null);
+      const localSettlementRefreshSucceeded =
+        locallyRefreshedEvolutionIds.current.has(operation.id);
+      let confirmationComplete = !operation.persistent;
       try {
         if (!operation.persistent) {
+          if (!localSettlementRefreshSucceeded)
+            await refreshRouteScopes("inventory.evolve", {
+              throwOnError: true,
+            });
           remove(operation.id);
-          await refreshRouteScopes("inventory.evolve").catch(() => undefined);
           return;
         }
         await apiRequest("inventory.acknowledge_evolution_result", {
           operation_id: operation.id,
         });
         if (!isCurrentNormalSession(generation)) return;
+        confirmationComplete = true;
+        if (!localSettlementRefreshSucceeded)
+          await refreshRouteScopes("inventory.evolve", {
+            throwOnError: true,
+          });
+        if (!isCurrentNormalSession(generation)) return;
         acknowledgedIds.current.add(operation.id);
         remove(operation.id);
-        await refreshRouteScopes("inventory.evolve");
         if (
           action === "inventory" &&
           parsed.success &&
@@ -871,7 +904,9 @@ export function OperationRegistryProvider({
         if (!isCurrentNormalSession(generation)) return;
         setAcknowledgementError({
           operationId: operation.id,
-          message: "结果确认状态保存失败，请重试",
+          message: confirmationComplete
+            ? "藏品状态更新失败，请重试"
+            : "结果确认状态保存失败，请重试",
         });
       } finally {
         setAcknowledgingId((current) =>

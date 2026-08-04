@@ -423,8 +423,9 @@ const scopePrefixes: Record<
 
 export async function refreshRouteScopes(
   routeId: RecoverableRouteId | "battle.heartbeat" | "battle.offline",
+  options: { throwOnError?: boolean } = {},
 ): Promise<void> {
-  return refreshScopes(routeById(routeId).refreshScopes);
+  return refreshScopes(routeById(routeId).refreshScopes, options);
 }
 
 export async function refreshScopes(
