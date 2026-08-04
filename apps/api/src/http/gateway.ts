@@ -7,6 +7,13 @@ import type {
 } from "@pokepets/api-contracts/common";
 
 import { writeLog } from "../platform/logging/index.ts";
+import {
+  createBattleRequestTelemetry,
+  observeRequestStage,
+  observeRequestStageSync,
+  observesBattleRoute,
+  type RequestTelemetry,
+} from "../platform/observability/index.ts";
 import { normalizeError } from "./errors.ts";
 import type { RouteHandler } from "./handlers.ts";
 import {
@@ -34,44 +41,68 @@ export function createGateway<Route extends RouteDefinition>(
     const requestId = randomUUID();
     const startedAt = Date.now();
     let route: Route | null = null;
+    let telemetry: RequestTelemetry | null = null;
     try {
       const match = matchRequest(request, registry);
-      route = match.route;
-      authenticateGateway(request, gateway, route);
-      const session = await authenticateRoute(request, route);
-      const input = await parseInput(request, route, gateway, match.params);
-      const handler = (handlers as Readonly<Record<string, RouteHandler>>)[
-        route.id
-      ];
-      if (!handler) throw new Error(`Missing handler: ${route.id}`);
-      const result = await handler({
-        request,
-        input,
-        session,
-        operationId: idempotencyKey(request, route),
+      const matchedRoute = match.route;
+      route = matchedRoute;
+      telemetry = observesBattleRoute(matchedRoute.id)
+        ? createBattleRequestTelemetry()
+        : null;
+      const session = await observeRequestStage(telemetry, "auth", async () => {
+        authenticateGateway(request, gateway, matchedRoute);
+        return authenticateRoute(request, matchedRoute);
       });
-      const response = successResponse(route, result, requestId);
+      const input = await observeRequestStage(telemetry, "input_parse", () =>
+        parseInput(request, matchedRoute, gateway, match.params),
+      );
+      const handler = (handlers as Readonly<Record<string, RouteHandler>>)[
+        matchedRoute.id
+      ];
+      if (!handler) throw new Error(`Missing handler: ${matchedRoute.id}`);
+      const result = await observeRequestStage(telemetry, "handler", () =>
+        handler({
+          request,
+          input,
+          session,
+          operationId: idempotencyKey(request, matchedRoute),
+          telemetry,
+        }),
+      );
+      const response = observeRequestStageSync(telemetry, "response", () =>
+        successResponse(matchedRoute, result, requestId),
+      );
       writeLog("info", {
         request_id: requestId,
-        route_id: route.id,
+        route_id: matchedRoute.id,
         status: response.status,
         elapsed_ms: Date.now() - startedAt,
+        ...(telemetry?.snapshot() ?? {}),
       });
       return response;
     } catch (cause) {
       if (request.signal.aborted) {
+        const response = observeRequestStageSync(
+          telemetry,
+          "response",
+          () => new Response(null, { status: 499 }),
+        );
         writeLog("info", {
           request_id: requestId,
           route_id: route?.id ?? null,
           status: 499,
           client_aborted: true,
           elapsed_ms: Date.now() - startedAt,
+          ...(telemetry?.snapshot() ?? {}),
         });
-        return new Response(null, { status: 499 });
+        return response;
       }
       const error = normalizeError(
         cause,
         route?.errors ?? preRouteErrors(gateway),
+      );
+      const response = observeRequestStageSync(telemetry, "response", () =>
+        failureResponse(error, requestId),
       );
       writeLog("error", {
         request_id: requestId,
@@ -79,8 +110,9 @@ export function createGateway<Route extends RouteDefinition>(
         code: error.code,
         status: error.status,
         elapsed_ms: Date.now() - startedAt,
+        ...(telemetry?.snapshot() ?? {}),
       });
-      return failureResponse(error, requestId);
+      return response;
     }
   };
 }

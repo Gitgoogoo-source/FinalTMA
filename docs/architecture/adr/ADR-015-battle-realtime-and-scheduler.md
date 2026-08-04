@@ -16,6 +16,8 @@ Supabase `pg_cron` 使用唯一 job `battle-tick-v1`，每秒调用 `battle.proc
 
 所有状态变化都由数据库在同一事务写入 outbox 并调用 `pg_net`；HTTP 请求只在事务提交后异步唤醒 `/api/integrations/battle-outbox`。玩家 Vercel Function 在数据库 RPC 完成后立即返回权威结果，不直接领取或发布 outbox，避免动作响应等待 Ably 以及与 integration 重复竞争租约；`battle.process_due` 每秒重新唤醒到期或租约过期的记录，保持失败恢复。prepared share 恢复通过 `pg_net` 唤醒 `/api/integrations/battle-share`。两个接口使用 Supabase Vault 与 Vercel Secret 共同持有的 `BATTLE_OUTBOX_SECRET` 鉴权，请求 body 只作唤醒信号，真实任务由受保护 RPC 领取。失败投递按 1、2、5、10、30 秒重试，随后每 30 秒重试。
 
+玩家 Battle 请求与 `battle-outbox` integration 的阶段耗时、调用次数、outbox 发布/延后计数及日志隐私边界固定遵循 [ADR-028](ADR-028-battle-request-observability.md)，观测不得改变上述事务提交、异步唤醒、租约或重试路径。
+
 ## 结果
 
 Ably、pg_net、integration 或 WebView 中断只影响通知延迟，不改变数据库中的动作、deadline、胜负和资产结果。`state_version`、REST 回正、每秒数据库调度和事务 outbox 共同保证 Battle 在没有实时连接时仍能完成托管、退款与结算。

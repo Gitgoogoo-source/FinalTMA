@@ -22,7 +22,7 @@
 
 ## Battle
 
-先按 `room_id`、`state_version`、`operation_id` 和当前 viewer 定位 room、participant、stake、reservation、turn、action、settlement 与 outbox。不得从 Ably 消息或浏览器画面重建战斗；不得手工写 action、生命、胜负、stake、ledger 或 settlement。
+先按 `request_id` 与 `route_id` 读取 Battle 结构日志：用 `auth_ms`、`input_parse_ms`、`db_rpc_ms/db_rpc_count`、`ably_ms/ably_operation_count`、`handler_ms`、`response_ms` 区分慢阶段；`battle.outbox_integration` 返回 200 时仍必须核对 `outbox_processed/outbox_published/outbox_deferred`。日志不含用户、room、operation 或事件标识，随后再从受控业务证据取得 `room_id`、`state_version`、`operation_id` 和当前 viewer，定位 room、participant、stake、reservation、turn、action、settlement 与 outbox。不得从 Ably 消息或浏览器画面重建战斗；不得手工写 action、生命、胜负、stake、ledger 或 settlement。
 
 - 创建响应丢失：查询原 operation；`battle-share` 只领取原 `create_operation_id`，恢复同一 room 和同一 bearer token。Telegram 明确失败时执行原 abort RPC；结果未知保持 60 秒恢复窗口。
 - 接受或动作响应丢失：查询原 operation 和 viewer-specific room snapshot；已经锁定的 stake、reservation 或 action 不重做。

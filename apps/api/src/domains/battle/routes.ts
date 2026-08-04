@@ -22,21 +22,21 @@ export const battleHandlers = {
     data: await rpc(
       "battle_bootstrap",
       { p_session_id: requireSession(context).session_id },
-      { signal: requestSignal(context.request) },
+      { signal: requestSignal(context.request), telemetry: context.telemetry },
     ),
   }),
   "battle.team_options": async (context) => ({
     data: await rpc(
       "battle_team_options",
       { p_session_id: requireSession(context).session_id },
-      { signal: requestSignal(context.request) },
+      { signal: requestSignal(context.request), telemetry: context.telemetry },
     ),
   }),
   "battle.current_invite": async (context) => ({
     data: await rpc(
       "battle_current_invite",
       { p_session_id: requireSession(context).session_id },
-      { signal: requestSignal(context.request) },
+      { signal: requestSignal(context.request), telemetry: context.telemetry },
     ),
   }),
   "battle.room": async (context) => ({
@@ -47,7 +47,7 @@ export const battleHandlers = {
         p_room_id: context.input.room_id,
         p_after_action_sequence: context.input.after_action_sequence ?? null,
       },
-      { signal: requestSignal(context.request) },
+      { signal: requestSignal(context.request), telemetry: context.telemetry },
     ),
   }),
   "battle.create": async (context) => {
@@ -65,7 +65,7 @@ export const battleHandlers = {
         p_entry_tier_id: context.input.tier,
         p_template_ids: context.input.template_ids,
       },
-      { signal },
+      { signal, telemetry: context.telemetry },
     );
     const initial = operationResult(operation, {
       operationId,
@@ -77,6 +77,7 @@ export const battleHandlers = {
     await deliverPreparedBattleShares(signal, {
       limit: 1,
       roomId: pendingRoomId(operation),
+      telemetry: context.telemetry,
     });
     return operationResult(
       await rpc<OperationEnvelope>(
@@ -85,7 +86,7 @@ export const battleHandlers = {
           p_session_id: session.session_id,
           p_operation_id: operationId,
         },
-        { signal },
+        { signal, telemetry: context.telemetry },
       ),
       { operationId, useCase: "battle.create" },
     );
@@ -139,6 +140,7 @@ export const battleHandlers = {
     data: await issueBattleRealtimeToken(
       requireSession(context).session_id,
       requestSignal(context.request),
+      context.telemetry,
     ),
   }),
 } satisfies HandlerMap;
@@ -159,7 +161,7 @@ async function command(
         p_operation_id: operationId,
         ...parameters,
       },
-      { signal },
+      { signal, telemetry: context.telemetry },
     ),
     { operationId, useCase },
   );
@@ -178,7 +180,7 @@ async function nonOperationCommand(
         p_session_id: requireSession(context).session_id,
         ...parameters,
       },
-      { signal },
+      { signal, telemetry: context.telemetry },
     ),
   };
 }

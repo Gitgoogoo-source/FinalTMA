@@ -3,6 +3,10 @@ import { errorDefinition, isErrorCode } from "@pokepets/api-contracts/common";
 
 import { ApiError } from "../../http/errors.ts";
 import { getDatabaseEnv } from "../env/index.ts";
+import {
+  observeRequestStage,
+  type RequestTelemetry,
+} from "../observability/index.ts";
 
 let client: SupabaseClient | undefined;
 
@@ -24,36 +28,41 @@ function db(): SupabaseClient {
 export async function rpc<T>(
   name: string,
   parameters: Record<string, unknown>,
-  options: { signal?: AbortSignal | undefined } = {},
+  options: {
+    signal?: AbortSignal | undefined;
+    telemetry?: RequestTelemetry | null | undefined;
+  } = {},
 ): Promise<T> {
   const request = db().schema("api").rpc(name, parameters);
-  const { data, error } = await (options.signal
-    ? request.abortSignal(options.signal)
-    : request);
-  if (error) {
-    if (options.signal?.aborted)
-      throw (
-        options.signal.reason ??
-        new DOMException("Request aborted", "AbortError")
-      );
-    if (error.code === "P0001") {
-      const detail = parseDetail(error.details);
-      if (detail && isErrorCode(detail.code)) {
-        const definition = errorDefinition(detail.code);
-        throw new ApiError(
-          definition.status,
-          detail.code,
-          definition.message,
-          definition.retryable,
+  return observeRequestStage(options.telemetry, "db_rpc", async () => {
+    const { data, error } = await (options.signal
+      ? request.abortSignal(options.signal)
+      : request);
+    if (error) {
+      if (options.signal?.aborted)
+        throw (
+          options.signal.reason ??
+          new DOMException("Request aborted", "AbortError")
         );
+      if (error.code === "P0001") {
+        const detail = parseDetail(error.details);
+        if (detail && isErrorCode(detail.code)) {
+          const definition = errorDefinition(detail.code);
+          throw new ApiError(
+            definition.status,
+            detail.code,
+            definition.message,
+            definition.retryable,
+          );
+        }
       }
+      throw new ApiError(500, "DATABASE_RPC_FAILED", "数据库操作失败", false, {
+        name,
+        code: error.code,
+      });
     }
-    throw new ApiError(500, "DATABASE_RPC_FAILED", "数据库操作失败", false, {
-      name,
-      code: error.code,
-    });
-  }
-  return data as T;
+    return data as T;
+  });
 }
 
 function parseDetail(

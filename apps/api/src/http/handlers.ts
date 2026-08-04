@@ -1,10 +1,12 @@
 import type { Session } from "../platform/session.ts";
+import type { RequestTelemetry } from "../platform/observability/index.ts";
 
 export type HandlerContext = {
   request: Request;
   input: Record<string, unknown>;
   session: Session | null;
   operationId: string | null;
+  telemetry: RequestTelemetry | null;
 };
 
 export type HandlerResult = {

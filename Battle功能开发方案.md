@@ -964,6 +964,7 @@ git diff --check
 - 终局资产立即回正，结果层等待表现队列；reduced-motion 也按事件顺序清空队列。
 - 可见期间 Ably 中断按 cursor 补齐；刷新、隐藏返回和重新认证不补播历史。
 - 动作数据库提交 p95 不超过 800ms，deadline 后 2 秒内托管，Ably 通知 p95 不超过 1 秒，断线 REST 2 秒内回正。
+- 玩家 `battle.*` 与 `battle-outbox` integration 的单条请求终态结构日志固定输出鉴权、输入解析、handler、响应、数据库 RPC 与 Ably 累计耗时；outbox HTTP 200 同时输出 processed/published/deferred。日志只含 `request_id`、路由、状态、稳定错误码与固定数值指标，不记录用户、session、operation、room、event、channel、token、请求/响应内容、RPC 名称或原始外部错误。
 
 ### 15.7 受控四账号验收夹具
 

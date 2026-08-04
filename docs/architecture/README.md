@@ -100,3 +100,4 @@ TMA 首次同步加载只覆盖应用壳、会话与账号门禁及默认开盒�
 - [Battle active 宠物原子切换](adr/ADR-025-battle-active-switch-atomicity.md)
 - [Battle 服务端终局与当场结果展示](adr/ADR-026-battle-server-finalized-result-presentation.md)
 - [Battle 公开匹配数据库事务](adr/ADR-027-battle-public-matchmaking-transaction.md)
+- [Battle 请求阶段化结构日志](adr/ADR-028-battle-request-observability.md)

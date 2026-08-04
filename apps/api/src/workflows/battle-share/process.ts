@@ -7,6 +7,7 @@ import {
   getEnv,
   getReferralEnv,
 } from "../../platform/env/index.ts";
+import type { RequestTelemetry } from "../../platform/observability/index.ts";
 import {
   savePreparedBattleMessage,
   TelegramRequestError,
@@ -42,7 +43,11 @@ const rarityLabels: Readonly<Record<string, string>> = {
 
 export async function deliverPreparedBattleShares(
   signal?: AbortSignal,
-  options: { limit?: number; roomId?: string } = {},
+  options: {
+    limit?: number;
+    roomId?: string;
+    telemetry?: RequestTelemetry | null;
+  } = {},
 ): Promise<PreparedShareDelivery> {
   getBattleEnv();
   getEnv();
@@ -56,7 +61,7 @@ export async function deliverPreparedBattleShares(
       p_limit: limit,
       p_room_id: options.roomId ?? null,
     },
-    { signal },
+    { signal, telemetry: options.telemetry },
   );
   const result: PreparedShareDelivery = {
     processed: leases.length,
@@ -65,7 +70,9 @@ export async function deliverPreparedBattleShares(
     failed: 0,
   };
   const outcomes = await Promise.all(
-    leases.map((lease) => deliverOne(lease, leaseOwner, signal)),
+    leases.map((lease) =>
+      deliverOne(lease, leaseOwner, signal, options.telemetry),
+    ),
   );
   for (const outcome of outcomes) {
     result[outcome] += 1;
@@ -77,10 +84,17 @@ async function deliverOne(
   lease: PreparedShareLease,
   leaseOwner: string,
   signal?: AbortSignal,
+  telemetry?: RequestTelemetry | null,
 ): Promise<"activated" | "deferred" | "failed"> {
   const token = battleInviteToken(lease.create_operation_id);
   if (!inviteHashMatches(token, lease.invite_token_hash)) {
-    await nack(lease.room_id, leaseOwner, "INVITE_TOKEN_HASH_MISMATCH", signal);
+    await nack(
+      lease.room_id,
+      leaseOwner,
+      "INVITE_TOKEN_HASH_MISMATCH",
+      signal,
+      telemetry,
+    );
     return "deferred";
   }
   const userId = telegramUserId(lease.creator_telegram_id);
@@ -106,11 +120,17 @@ async function deliverOne(
           p_room_id: lease.room_id,
           p_error: "TELEGRAM_PREPARED_MESSAGE_REJECTED",
         },
-        { signal },
+        { signal, telemetry },
       );
       return "failed";
     }
-    await nack(lease.room_id, leaseOwner, "TELEGRAM_RESULT_UNKNOWN", signal);
+    await nack(
+      lease.room_id,
+      leaseOwner,
+      "TELEGRAM_RESULT_UNKNOWN",
+      signal,
+      telemetry,
+    );
     return "deferred";
   }
   try {
@@ -123,11 +143,17 @@ async function deliverOne(
           prepared.expiration_date * 1000,
         ).toISOString(),
       },
-      { signal },
+      { signal, telemetry },
     );
     return "activated";
   } catch {
-    await nack(lease.room_id, leaseOwner, "LOCAL_ACTIVATION_UNKNOWN", signal);
+    await nack(
+      lease.room_id,
+      leaseOwner,
+      "LOCAL_ACTIVATION_UNKNOWN",
+      signal,
+      telemetry,
+    );
     return "deferred";
   }
 }
@@ -137,6 +163,7 @@ async function nack(
   leaseOwner: string,
   code: string,
   signal?: AbortSignal,
+  telemetry?: RequestTelemetry | null,
 ): Promise<void> {
   await rpc(
     "battle_nack_prepared_share",
@@ -145,7 +172,7 @@ async function nack(
       p_lease_owner: leaseOwner,
       p_error_code: code,
     },
-    { signal },
+    { signal, telemetry },
   );
 }
 

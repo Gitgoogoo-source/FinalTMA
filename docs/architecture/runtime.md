@@ -28,6 +28,8 @@ Battle 页面状态按“当前会话未离开的 viewer-specific current-room�
 
 `apps/api/domains` 不跨领域组合业务，每个 handler 只完成输入映射并调用一个 RPC；支付、退款、Mint 对账、定时任务和操作恢复进入 `apps/api/workflows`。Battle app handlers 只调用 viewer-specific 读取或单个 Battle RPC；`battle-share` 与 `battle-outbox` 分别属于 integrations workflow，并通过受保护 RPC 领取任务。Functions 不计算价格、奖励、库存、资产归属、Battle 命中/伤害/终局或最终交易结果。
 
+玩家 `battle.*` 与 `battle.outbox_integration` 的请求终态日志按 [ADR-028](adr/ADR-028-battle-request-observability.md) 输出鉴权、输入解析、handler、响应、数据库 RPC 和 Ably 累计耗时；outbox 正常响应同时输出 processed/published/deferred。采集只贯穿既有调用，不改变玩家请求与 outbox integration 的异步解耦。
+
 契约包 `/app`、`/integrations`、`/jobs` 分别服务三个网关；`/server` 只用于 OpenAPI 与服务端静态校验；`/common` 提供不加载路由注册表的信封、错误和基础路由类型。
 
 ## 部署

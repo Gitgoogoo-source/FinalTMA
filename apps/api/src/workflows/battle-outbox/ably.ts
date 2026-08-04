@@ -7,6 +7,10 @@ import type { BattleRealtimeInvalidation } from "@pokepets/api-contracts/app";
 import { ApiError } from "../../http/errors.ts";
 import { rpc } from "../../platform/db/index.ts";
 import { getBattleEnv } from "../../platform/env/index.ts";
+import {
+  observeRequestStage,
+  type RequestTelemetry,
+} from "../../platform/observability/index.ts";
 
 type RealtimeContext = {
   user_id: string;
@@ -49,6 +53,7 @@ function ably(): Ably.Rest {
 export async function issueBattleRealtimeToken(
   sessionId: string,
   signal?: AbortSignal,
+  telemetry?: RequestTelemetry | null,
 ): Promise<{
   token: string;
   keyName: string;
@@ -62,7 +67,7 @@ export async function issueBattleRealtimeToken(
   const context = await rpc<RealtimeContext>(
     "battle_realtime_context",
     { p_session_id: sessionId },
-    { signal },
+    { signal, telemetry },
   );
   const channels = [
     context.user_channel,
@@ -85,13 +90,15 @@ export async function issueBattleRealtimeToken(
     );
   const clientId = `battle-user:${context.user_id}`;
   const expectedChannels = [...new Set(channels)].sort();
-  const details = await realtime.auth.requestToken({
-    clientId,
-    ttl: 300_000,
-    capability: Object.fromEntries(
-      expectedChannels.map((channel) => [channel, ["subscribe"]]),
-    ),
-  });
+  const details = await observeRequestStage(telemetry, "ably", () =>
+    realtime.auth.requestToken({
+      clientId,
+      ttl: 300_000,
+      capability: Object.fromEntries(
+        expectedChannels.map((channel) => [channel, ["subscribe"]]),
+      ),
+    }),
+  );
   if (
     !details.token ||
     details.clientId !== clientId ||
@@ -138,6 +145,7 @@ function capabilityMatches(
 export async function deliverBattleOutbox(
   signal?: AbortSignal,
   limit = 10,
+  telemetry?: RequestTelemetry | null,
 ): Promise<OutboxDelivery> {
   if (signal?.aborted) throw signal.reason;
   ably();
@@ -145,7 +153,7 @@ export async function deliverBattleOutbox(
   const events = await rpc<OutboxLease[]>(
     "battle_claim_outbox",
     { p_lease_owner: leaseOwner, p_limit: limit },
-    { signal },
+    { signal, telemetry },
   );
   const result: OutboxDelivery = {
     processed: events.length,
@@ -153,7 +161,7 @@ export async function deliverBattleOutbox(
     deferred: 0,
   };
   const outcomes = await Promise.all(
-    events.map((event) => deliverOne(event, leaseOwner, signal)),
+    events.map((event) => deliverOne(event, leaseOwner, signal, telemetry)),
   );
   for (const outcome of outcomes) {
     result[outcome] += 1;
@@ -165,10 +173,17 @@ async function deliverOne(
   event: OutboxLease,
   leaseOwner: string,
   signal?: AbortSignal,
+  telemetry?: RequestTelemetry | null,
 ): Promise<"published" | "deferred"> {
   if (signal?.aborted) throw signal.reason;
   if (!validOutboxLease(event)) {
-    await complete(event.outbox_id, leaseOwner, false, "OUTBOX_INVALID");
+    await complete(
+      event.outbox_id,
+      leaseOwner,
+      false,
+      "OUTBOX_INVALID",
+      telemetry,
+    );
     return "deferred";
   }
   const payload: BattleRealtimeInvalidation = {
@@ -178,9 +193,11 @@ async function deliverOne(
     event_kind: event.event_kind,
   };
   try {
-    await Promise.all(
-      event.channels.map((channel) =>
-        ably().channels.get(channel).publish("battle.invalidate", payload),
+    await observeRequestStage(telemetry, "ably", () =>
+      Promise.all(
+        event.channels.map((channel) =>
+          ably().channels.get(channel).publish("battle.invalidate", payload),
+        ),
       ),
     );
     const acknowledged = await complete(
@@ -188,11 +205,18 @@ async function deliverOne(
       leaseOwner,
       true,
       null,
+      telemetry,
     );
     if (!acknowledged) throw new Error("Outbox lease acknowledgement failed");
     return "published";
   } catch {
-    await complete(event.outbox_id, leaseOwner, false, "ABLY_PUBLISH_FAILED");
+    await complete(
+      event.outbox_id,
+      leaseOwner,
+      false,
+      "ABLY_PUBLISH_FAILED",
+      telemetry,
+    );
     return "deferred";
   }
 }
@@ -202,13 +226,18 @@ async function complete(
   leaseOwner: string,
   success: boolean,
   errorCode: string | null,
+  telemetry?: RequestTelemetry | null,
 ): Promise<boolean> {
-  return rpc<boolean>("battle_complete_outbox", {
-    p_outbox_id: outboxId,
-    p_lease_owner: leaseOwner,
-    p_success: success,
-    p_error_code: errorCode,
-  });
+  return rpc<boolean>(
+    "battle_complete_outbox",
+    {
+      p_outbox_id: outboxId,
+      p_lease_owner: leaseOwner,
+      p_success: success,
+      p_error_code: errorCode,
+    },
+    { telemetry },
+  );
 }
 
 function validOutboxLease(event: OutboxLease): boolean {
