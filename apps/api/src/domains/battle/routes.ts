@@ -98,6 +98,12 @@ export const battleHandlers = {
     command(context, "battle.cancel", "battle_cancel_room", {
       p_room_id: context.input.room_id,
     }),
+  "battle.matchmake": async (context) =>
+    command(context, "battle.matchmake", "battle_matchmake", {
+      p_new_room_id: randomUUID(),
+      p_entry_tier_id: context.input.tier,
+      p_template_ids: context.input.template_ids,
+    }),
   "battle.accept": async (context) =>
     command(context, "battle.accept", "battle_accept_room", {
       p_template_ids: context.input.template_ids,

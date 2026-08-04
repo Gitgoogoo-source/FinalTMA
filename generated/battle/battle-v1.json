@@ -503,6 +503,10 @@
       "limit": 3
     },
     {
+      "action": "matchmake",
+      "limit": 6
+    },
+    {
       "action": "invite_preview",
       "limit": 60
     },
@@ -685,6 +689,7 @@
     "initiative_rule": "opening_speed_creator_tie",
     "lobby_countdown_seconds": 3,
     "lobby_timeout_seconds": 300,
+    "matchmaking_wait_seconds": 120,
     "max_normal_turns": 20,
     "offline_reconnect_seconds": 90,
     "presence_online_window_seconds": 10,

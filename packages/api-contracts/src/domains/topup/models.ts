@@ -43,6 +43,13 @@ export const paymentIntentSchema = z.discriminatedUnion("kind", [
       template_ids: battleTeamSelectionSchema,
     })
     .strict(),
+  z
+    .object({
+      kind: z.literal("battle_matchmaking"),
+      tier: z.enum(["tier-20", "tier-100", "tier-500"]),
+      template_ids: battleTeamSelectionSchema,
+    })
+    .strict(),
 ]);
 
 export const paymentSchema = z

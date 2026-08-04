@@ -178,7 +178,8 @@ export function BattleTeamSelect({
   disabled,
   onChange,
   onBack,
-  onConfirm,
+  onMatch,
+  onInvite,
 }: {
   tier: BattleEntryTier;
   items: readonly TeamOption[];
@@ -188,7 +189,8 @@ export function BattleTeamSelect({
   disabled: boolean;
   onChange(slots: BattleTeamSlots): void;
   onBack(): void;
-  onConfirm(): void;
+  onMatch(): void;
+  onInvite(): void;
 }): ReactNode {
   const complete = slots.every(
     (value) =>
@@ -217,10 +219,20 @@ export function BattleTeamSelect({
         <span>
           当前可用 K-coin <strong>{balance ?? "—"}</strong>
         </span>
-        <Button disabled={disabled || !complete || loading} onClick={onConfirm}>
-          <Swords />
-          {disabled ? "正在确认原操作" : `确认创建 · ${tier.entry_fee}`}
-        </Button>
+        <div className="battle-confirm-actions">
+          <Button
+            className="secondary"
+            disabled={disabled || !complete || loading}
+            onClick={onInvite}
+          >
+            <Send />
+            {disabled ? "正在确认原操作" : "邀请好友"}
+          </Button>
+          <Button disabled={disabled || !complete || loading} onClick={onMatch}>
+            <Swords />
+            {disabled ? "正在确认原操作" : `随机匹配 · ${tier.entry_fee}`}
+          </Button>
+        </div>
       </div>
     </div>
   );
@@ -293,28 +305,39 @@ export function BattleWaiting({
   onCancel(): void;
   onRefresh(): void;
 }): ReactNode {
+  const publicMatch = snapshot.room_mode === "public_match";
   return (
     <div className="battle-waiting">
       <BattleScreenHeader
         kicker="WAITING ROOM"
-        title="挑战卡已准备"
-        description="挑战有效期内始终可被首位合格对手接受；在线状态只作展示。"
+        title={publicMatch ? "正在匹配同档对手" : "挑战卡已准备"}
+        description={
+          publicMatch
+            ? `仅匹配 ${entryFee} K-coin 档位；找到对手后自动进入开战倒计时。`
+            : "挑战有效期内始终可被首位合格对手接受；在线状态只作展示。"
+        }
       />
       <section className="battle-waiting-stage">
         <div className="battle-waiting-ring">
           <Clock3 />
           <strong>{formatBattleTime(remainingSeconds)}</strong>
-          <span>30 分钟等待期</span>
+          <span>{publicMatch ? "120 秒匹配期" : "30 分钟等待期"}</span>
           <small>已锁定入场费 {entryFee} K-coin</small>
         </div>
         <div className="battle-online-line">
           <i className={onlineState} aria-hidden="true" />
           <span>
-            {onlineState === "online"
-              ? "已进入等待页 · 对手可接受"
-              : onlineState === "offline"
-                ? "离线展示 · 对手仍可接受"
-                : "正在同步展示状态 · 对手仍可接受"}
+            {publicMatch
+              ? onlineState === "online"
+                ? "公开房间等待中 · 同档玩家可自动加入"
+                : onlineState === "offline"
+                  ? "离线展示 · 房间仍在 120 秒内等待"
+                  : "正在同步匹配状态"
+              : onlineState === "online"
+                ? "已进入等待页 · 对手可接受"
+                : onlineState === "offline"
+                  ? "离线展示 · 对手仍可接受"
+                  : "正在同步展示状态 · 对手仍可接受"}
           </span>
         </div>
         {realtimeOffline ? (
@@ -322,26 +345,30 @@ export function BattleWaiting({
             实时通知不可用，页面正按固定 2 秒间隔通过 REST 回正。
           </p>
         ) : null}
-        {shareState ? (
+        {!publicMatch && shareState ? (
           <p className="battle-share-note" role="status" aria-live="polite">
             {shareState}
           </p>
         ) : null}
-        {!shareSupported ? (
+        {!publicMatch && !shareSupported ? (
           <p className="battle-share-note" role="alert">
             当前 Telegram 版本不支持发送挑战卡，请更新 Telegram 后重试
           </p>
         ) : null}
         <div className="battle-waiting-actions">
-          <Button
-            disabled={
-              !shareSupported || !snapshot.prepared_message_id || commandPending
-            }
-            onClick={onShare}
-          >
-            <Send />
-            分享挑战卡
-          </Button>
+          {!publicMatch ? (
+            <Button
+              disabled={
+                !shareSupported ||
+                !snapshot.prepared_message_id ||
+                commandPending
+              }
+              onClick={onShare}
+            >
+              <Send />
+              分享挑战卡
+            </Button>
+          ) : null}
           <Button className="secondary" onClick={onRefresh}>
             <RefreshCw />
             刷新状态
@@ -352,7 +379,7 @@ export function BattleWaiting({
             onClick={onCancel}
           >
             <X />
-            取消挑战
+            {publicMatch ? "取消匹配" : "取消挑战"}
           </Button>
         </div>
       </section>
@@ -776,11 +803,13 @@ export function BattleResult({
 }
 
 export function BattleCancelSheet({
+  publicMatch,
   pending,
   backgroundRef,
   onClose,
   onConfirm,
 }: {
+  publicMatch: boolean;
   pending: boolean;
   backgroundRef: RefObject<HTMLElement | null>;
   onClose(): void;
@@ -792,11 +821,15 @@ export function BattleCancelSheet({
       panelClassName="battle-cancel-sheet"
       backgroundRef={backgroundRef}
       dismissible
-      closeLabel="关闭取消挑战确认"
+      closeLabel={publicMatch ? "关闭取消匹配确认" : "关闭取消挑战确认"}
       onClose={onClose}
     >
-      <span className="battle-sheet-kicker">CANCEL CHALLENGE</span>
-      <h2 id="battle-cancel-title">取消等待中的挑战？</h2>
+      <span className="battle-sheet-kicker">
+        {publicMatch ? "CANCEL MATCHING" : "CANCEL CHALLENGE"}
+      </span>
+      <h2 id="battle-cancel-title">
+        {publicMatch ? "取消正在进行的匹配？" : "取消等待中的挑战？"}
+      </h2>
       <p>服务端将在同一终结事务中退款并释放三宠占用。前端不会提前宣称成功。</p>
       <div>
         <Button className="secondary" disabled={pending} onClick={onClose}>

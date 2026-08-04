@@ -23,6 +23,7 @@ import { isBattleAssetTerminal } from "./useBattleTerminalRefresh.ts";
 
 type BattleCommandRouteId =
   | "battle.create"
+  | "battle.matchmake"
   | "battle.cancel"
   | "battle.accept"
   | "battle.action";
@@ -446,7 +447,11 @@ async function authoritativeRoomFromResult<Id extends BattleCommandRouteId>(
   signal: AbortSignal,
   readAuthoritativeRoom: BattleAuthoritativeRoomReader,
 ): Promise<BattleRoomSnapshotDto | null> {
-  if (routeId === "battle.accept" || routeId === "battle.action")
+  if (
+    routeId === "battle.matchmake" ||
+    routeId === "battle.accept" ||
+    routeId === "battle.action"
+  )
     return result as BattleRoomSnapshotDto;
   const commandResult = result as RouteOutput<BattleCommandRouteId>;
   const snapshot = await readAuthoritativeRoom(commandResult.room_id);

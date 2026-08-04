@@ -44,6 +44,8 @@ export const battleRoomStatusSchema = z.enum([
   "voided",
 ]);
 
+export const battleRoomModeSchema = z.enum(["friend_invite", "public_match"]);
+
 export const battleParticipantStatusSchema = z.enum([
   "preparing_share",
   "waiting",
@@ -90,6 +92,7 @@ export const battleRulesetSummarySchema = z
   .object({
     id: z.literal("battle-v1"),
     checksum: z.string().regex(/^[0-9a-f]{64}$/),
+    matchmaking_wait_seconds: z.literal(120),
     heartbeat_interval_seconds: z.literal(5),
     presence_online_window_seconds: z.literal(10),
     offline_reconnect_seconds: z.literal(90),
@@ -399,6 +402,7 @@ export const battleParticipationSchema = z
     room_id: uuidSchema,
     participant_id: uuidSchema,
     side: z.enum(["creator", "opponent"]),
+    room_mode: battleRoomModeSchema,
     status: battleRoomStatusSchema,
     state_version: z.number().int().positive(),
     entry_fee: z.union([z.literal(20), z.literal(100), z.literal(500)]),
@@ -424,6 +428,7 @@ export const battleTerminalResultSchema = z
 export const battleRoomSnapshotSchema = z
   .object({
     room_id: uuidSchema,
+    room_mode: battleRoomModeSchema,
     status: battleRoomStatusSchema,
     state_version: z.number().int().positive(),
     side: z.enum(["creator", "opponent"]),
@@ -528,6 +533,7 @@ export type BattleRulesetSummary = z.output<typeof battleRulesetSummarySchema>;
 export type BattleEntryTier = z.output<typeof battleEntryTierSchema>;
 export type BattlePageState = z.output<typeof battlePageStateSchema>;
 export type BattleRoomStatus = z.output<typeof battleRoomStatusSchema>;
+export type BattleRoomMode = z.output<typeof battleRoomModeSchema>;
 export type BattleParticipantStatus = z.output<
   typeof battleParticipantStatusSchema
 >;

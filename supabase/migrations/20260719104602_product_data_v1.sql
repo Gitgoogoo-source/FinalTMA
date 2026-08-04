@@ -315,14 +315,14 @@ insert into tasks.definitions (code, sort_order, category, title, description, c
   ('wallet_verified', 18, 'wallet', '钱包验证成功', '当日新完成一次钱包验证', 'wallet', 1, 50),
   ('mint_success', 19, 'mint', '上链成功', '当日 Mint 链上成功结果获得确认', 'inventory_mint', 1, 100);
 
--- Battle rules checksum: f8501fddf4804985e1e6708f9cbc2b283d7609c2a60f9e464078bf24b1131d99
+-- Battle rules checksum: 8e9a250af9df2f44d45846b0fe5c6fbb4e2f26d74e07146e87ce84a86b8141c6
 insert into battle.rulesets (
   id, checksum, status, parameters, source_version
 ) values (
   'battle-v1',
-  'f8501fddf4804985e1e6708f9cbc2b283d7609c2a60f9e464078bf24b1131d99',
+  '8e9a250af9df2f44d45846b0fe5c6fbb4e2f26d74e07146e87ce84a86b8141c6',
   'active',
-  '{"action_timeout_seconds":15,"actions_per_round":2,"fee_bps":1000,"heartbeat_interval_seconds":5,"initiative_rule":"opening_speed_creator_tie","lobby_countdown_seconds":3,"lobby_timeout_seconds":300,"max_normal_turns":20,"offline_reconnect_seconds":90,"outbox_retry_seconds":[1,2,5,10,30],"presence_online_window_seconds":10,"random_modulus":10000,"rate_limit_retention_seconds":300,"rate_limit_window_seconds":60,"share_prepare_timeout_seconds":60,"single_hit_cap_bps":8000,"tick_batch_limit":100,"timeout_skill_position":1,"waiting_timeout_seconds":1800}'::jsonb,
+  '{"action_timeout_seconds":15,"actions_per_round":2,"fee_bps":1000,"heartbeat_interval_seconds":5,"initiative_rule":"opening_speed_creator_tie","lobby_countdown_seconds":3,"lobby_timeout_seconds":300,"matchmaking_wait_seconds":120,"max_normal_turns":20,"offline_reconnect_seconds":90,"outbox_retry_seconds":[1,2,5,10,30],"presence_online_window_seconds":10,"random_modulus":10000,"rate_limit_retention_seconds":300,"rate_limit_window_seconds":60,"share_prepare_timeout_seconds":60,"single_hit_cap_bps":8000,"tick_batch_limit":100,"timeout_skill_position":1,"waiting_timeout_seconds":1800}'::jsonb,
   'v1'
 );
 

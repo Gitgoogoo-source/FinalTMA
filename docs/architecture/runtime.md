@@ -2,6 +2,8 @@
 
 ## Web
 
+Battle 队伍选择页同时提交好友创建和公开随机匹配意图。公开匹配不新增浏览器队列运行时：Web 点击后立即锁定表单，`battle.matchmake` 的权威响应直接落到 `public_match/waiting` 或不可撤销的 `lobby_countdown`；公开 waiting 与邀请 waiting 共用 room snapshot、presence 和 2 秒 REST 回正，但按 `room_mode` 分别展示 120 秒匹配或 30 分钟分享界面。匹配成功后页面 presence 只用于回正显示，不得阻止、取消或重置 3 秒倒计时。
+
 `apps/web` 使用 React、Vite 与 TypeScript。`app` 拥有启动、账号门禁、Provider、恢复协调、Router、顶部资产栏、全局弹窗和五个主导航壳层；五个主页面首次访问后在当前 session generation 内保持挂载，路由只切换 `hidden`/`inert`、本页查询参数和独立滚动位置，图鉴与 Mint 作为临时详情路由覆盖其上。`pages` 是跨领域 UI 的唯一组合层；`domains` 只拥有本领域 UI 与实际使用的类型；`workflows` 管理会话、操作、支付与 Mint 恢复；`platform` 封装 Telegram、TON、HTTP 与 React Query；`shared` 保存跨领域纯 UI。
 
 Web 只导入 `@pokepets/api-contracts/app`。领域 UI 不导入其他领域，库存页组合库存、进化和分解，任务页组合任务和邀请，市场页组合市场和 VIP，游戏页组合 Battle UI 与 battle-realtime workflow。首次进入 TMA 时同步下载并执行应用壳、会话与账号门禁及默认开盒页；`window.load` 后在浏览器空闲时段预加载交易、游戏、藏品、任务和图鉴页面模块。Battle 使用 React + TypeScript、CSS 与 Web Animations API，不引入 Phaser；Mint 页面、TON Provider 与钱包弹窗不进入后台预加载。

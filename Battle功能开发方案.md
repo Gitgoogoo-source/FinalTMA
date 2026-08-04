@@ -10,7 +10,7 @@
 
 ## 1. 最终结论
 
-Battle 进入现有底部导航的“游戏”页，采用 React + TypeScript 渲染战斗界面，沿用 210 张正式藏品图片；Vercel REST API 负责身份、契约和 Telegram/Ably 外部服务编排；Supabase PostgreSQL RPC 是房间、资产、库存、出招、随机命中、回合结算和最终结算的唯一裁判；Ably Standard 只发送状态失效通知；Supabase `pg_cron` 每秒推进到期房间和超时动作；Ably 不可用时由短轮询恢复权威状态。
+Battle 进入现有底部导航的“游戏”页，采用 React + TypeScript 渲染战斗界面，沿用 210 张正式藏品图片；Vercel REST API 负责身份、契约和 Telegram/Ably 外部服务编排；Supabase PostgreSQL RPC 是好友邀请、同档公开随机匹配、房间、资产、库存、出招、随机命中、回合结算和最终结算的唯一裁判；Ably Standard 只发送状态失效通知；Supabase `pg_cron` 每秒推进到期房间和超时动作；Ably 不可用时由短轮询恢复权威状态。
 
 浏览器不运行战斗模拟器，不计算伤害，不生成命中结果，不决定行动顺序，不提交金额、属性、技能数值或结算结果。客户端只提交房间档位、按顺序排列的三个模板 ID、动作种类、回合号、行动序号、技能位置、换宠目标和幂等键。
 
@@ -32,7 +32,7 @@ Battle 一次性完整上线，不发布只有界面、只有房间、只有人�
 ### 2.2 明确不包含
 
 - 捕捉、地图掉落、免费战斗宠物、宠物升级、培养、装备或天赋。
-- PVE、人机对战、全局匹配、群组匹配池、公开房间列表。
+- PVE、人机对战、群组匹配池、公开房间列表或公开 room 读取 API。
 - 观战、认输、重赛、排行榜、赛季、段位、战斗任务和额外奖励。
 - 被动技能、异常状态、能力变化、治疗、护盾、能量、次数、冷却、暴击和随机伤害浮动。
 - 用户历史页、逐回合回放、审计查询接口。
@@ -62,7 +62,7 @@ Battle 的唯一经济结果是双方等额入场费形成的奖池、胜者结�
 1. 每队固定三个不同 `template_id`。
 2. 同一进化链的不同阶段属于不同模板，允许同时上阵。
 3. 组队时固定三个槽位顺序，第 1 位自动首发。
-4. 创建者创建房间时立即占用所选三个模板各 1 份；接受者接受时在同一事务内完成相同占用。
+4. 好友房创建者创建房间、接受者接受，以及公开匹配玩家点击匹配时，都在各自单一事务内立即占用所选三个模板各 1 份并锁定入场费。
 5. 等待与战斗期间，被占用的具体数量不能出售、分解、进化、远征或 Mint；同模板仍有额外可用数量时，额外数量不受影响。
 6. 取消、过期、平局、正常结算或系统异常作废时释放全部 Battle reservation。
 7. 每个账号最多存在一条 `preparing_share`、`waiting`、`lobby` 或 `active` 参与记录。
@@ -82,7 +82,7 @@ Battle 的唯一经济结果是双方等额入场费形成的奖池、胜者结�
 - 系统永久性不变量错误导致房间作废时双方原额退款，平台手续费为 0。
 - K-coin 不能提现，Battle 不提供玩家间自由转账。
 
-### 4.3 房间、在线与分享
+### 4.3 房间、在线、分享与公开匹配
 
 1. 分享卡准备完成后的等待有效期固定为 30 分钟。
 2. 创建者在对手成功接受前允许取消。
@@ -100,6 +100,13 @@ Battle 的唯一经济结果是双方等额入场费形成的奖池、胜者结�
 14. `lobby_countdown` 是不可撤销的参战锁定。合法 offline、新 lease、页面隐藏、离开 `/game`、刷新、重认证、旧请求、重复请求和乱序请求仍可更新或回正 presence，但均不得把状态改回等待，不得清空、延后或重置 `lobby_start_deadline`，也不得触发取消、退款或 reservation 释放。
 15. 锁定 deadline 到期后不再复核双方在线；数据库在同一 room lock 内 exactly-once 创建 round 1、按首发速度固定先手、写唯一 `battle_started` event/outbox 并进入 `active_turn`。重复 tick、请求重放和服务恢复只能读取同一状态；永久不变量失败仍进入既有幂等安全作废事务。
 16. 接受后不提供玩家取消、分享或重新选队。接受失败或竞争失败的玩家不扣款、不占用藏品。
+
+17. 公开匹配只使用 `public_match` 房间，好友分享只使用 `friend_invite` 房间；两类房间在等待阶段双向隔离。
+18. 公开匹配池按 `ruleset_id + entry_tier_id` 完全隔离，20、100、500 三档禁止跨档。每档使用独立事务 advisory lock 串行“查找或创建”。
+19. `api.battle_matchmake` 先以同一 operation 原子校验并冻结当前玩家的 K-coin 与三宠；同档匹配请求由档位事务锁串行，同档存在公开 waiting 候选时通过 `ORDER BY random() LIMIT 1 FOR UPDATE` 等待并锁定一个后调用统一对手加入函数，不存在候选时创建公开 waiting 房。
+20. 公开 waiting 从创建事务提交起固定 120 秒；创建者可主动取消。取消或超时调用统一未开战终结函数，原额退款、释放三宠、零 settlement。
+21. 点击“随机匹配”即代表同意对战。匹配成功事务固定直接写入不可撤销的 `lobby_countdown` 与 3 秒 deadline，不以创建者当前 presence 作为前置条件；双方不再确认、取消、分享或重新选队，页面离开或离线也不能退出本场。
+22. 公开房的 `invite_token_hash`、`prepare_deadline` 与 prepared share 固定为空；好友房不进入匹配候选索引，公开房不进入 invite preview/accept 路径。
 
 ### 4.4 挑战卡与接受页隐私
 
@@ -381,6 +388,8 @@ hit = roll < accuracy_bps
 ```mermaid
 stateDiagram-v2
     [*] --> PreparingShare: "创建事务锁币并占用三宠"
+    [*] --> PublicWaiting: "点击匹配，原子锁币占宠且无同档候选"
+    [*] --> LobbyCountdown: "点击匹配，随机加入同档公开候选并锁定倒计时"
     PreparingShare --> Waiting: "挑战卡准备完成"
     PreparingShare --> Cancelled: "创建者取消"
     PreparingShare --> Voided: "60 秒准备失败"
@@ -388,6 +397,10 @@ stateDiagram-v2
     Waiting --> LobbyWaiting: "首位接受者原子锁币与占用三宠"
     Waiting --> Cancelled: "创建者主动取消"
     Waiting --> Expired: "等待满 30 分钟"
+
+    PublicWaiting --> LobbyCountdown: "同档陌生玩家原子加入并锁定倒计时"
+    PublicWaiting --> Cancelled: "创建者取消匹配"
+    PublicWaiting --> Expired: "等待满 120 秒"
 
     LobbyWaiting --> LobbyCountdown: "双方在线，锁定 3 秒开战 deadline"
     LobbyWaiting --> Cancelled: "离线 90 秒、lobby 满 5 分钟或封禁"
@@ -493,6 +506,8 @@ total = available + listed + trading + minting + expedition + battling
 | `api.battle_activate_share`                        | 保存 prepared message ID，开始 30 分钟等待并完成创建操作                                                                                          |
 | `api.battle_abort_share`                           | 分享准备明确失败或 60 秒超时；退款、释放并终结创建操作                                                                                            |
 | `api.battle_cancel_room`                           | 只允许创建者在接受成功前取消；退款、释放并终结                                                                                                    |
+| `api.battle_matchmake`                             | 按规则版本与档位串行随机查找公开 waiting 房；原子加入，或创建 120 秒公开房并冻结当前玩家 K-coin 与三宠                                            |
+| `battle.attach_opponent_and_start_lobby`           | 好友接受与公开匹配共用；原子锁定加入者资源、创建对手快照与私有种子并进入既有双人 lobby                                                            |
 | `api.battle_accept_room`                           | 首位成功者锁币占宠，创建对手快照、私有种子及双人 lobby，不提前创建回合                                                                            |
 | `api.battle_submit_action`                         | 重新验证当前行动方、round、ordinal、deadline、active 宠物、替补和技能归属；写入唯一动作，调用 `battle.resolve_active_action` 并立即返回新权威快照 |
 | `api.battle_heartbeat` / `api.battle_mark_offline` | 裁决 waiting/lobby 的单调 lifecycle + lease + sequence；开战后不参与行动权                                                                        |
@@ -649,19 +664,20 @@ Battle 入口：BTL_[A-Za-z0-9_-]{32}
 
 ### 10.1 玩家接口
 
-| 路由                                        | 用途                                  | 客户端允许提交                                                                                 |
-| ------------------------------------------- | ------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `GET /api/battle/bootstrap`                 | 档位、规则摘要、当前活动房            | 无                                                                                             |
-| `GET /api/battle/team-options`              | 本人可用模板与本人战斗配置            | 无                                                                                             |
-| `GET /api/battle/invites/current`           | 当前 Battle 入口的脱敏预览            | 无                                                                                             |
-| `GET /api/battle/rooms/:room_id`            | 参与者专属权威快照和动作事件补齐      | `room_id`、可选 `after_action_sequence`                                                        |
-| `POST /api/battle/rooms`                    | 创建房和 prepared share saga          | `tier`、有序三个 `template_id`、幂等键                                                         |
-| `POST /api/battle/rooms/:room_id/cancel`    | 创建者取消未接受房间                  | `room_id`、幂等键                                                                              |
-| `POST /api/battle/invites/current/accept`   | 接受当前 bearer invite                | 有序三个 `template_id`、幂等键                                                                 |
-| `POST /api/battle/rooms/:room_id/actions`   | 提交唯一当前行动                      | `round_no`、`action_ordinal`，以及严格 `attack`、`switch` 或 `replace_attack` 联合输入和幂等键 |
-| `POST /api/battle/rooms/:room_id/heartbeat` | waiting 创建者或 lobby 参与者在线意图 | room 与单调 presence lifecycle 字段                                                            |
-| `POST /api/battle/rooms/:room_id/offline`   | 当前 presence 生命周期离线意图        | room 与单调 presence lifecycle 字段                                                            |
-| `POST /api/battle/realtime-token`           | 获取最小权限 Ably token               | 不接受频道名                                                                                   |
+| 路由                                        | 用途                                        | 客户端允许提交                                                                                 |
+| ------------------------------------------- | ------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `GET /api/battle/bootstrap`                 | 档位、规则摘要、当前活动房                  | 无                                                                                             |
+| `GET /api/battle/team-options`              | 本人可用模板与本人战斗配置                  | 无                                                                                             |
+| `GET /api/battle/invites/current`           | 当前 Battle 入口的脱敏预览                  | 无                                                                                             |
+| `GET /api/battle/rooms/:room_id`            | 参与者专属权威快照和动作事件补齐            | `room_id`、可选 `after_action_sequence`                                                        |
+| `POST /api/battle/rooms`                    | 创建房和 prepared share saga                | `tier`、有序三个 `template_id`、幂等键                                                         |
+| `POST /api/battle/matchmaking`              | 随机加入同档公开房；无候选时建 120 秒公开房 | `tier`、有序三个 `template_id`、幂等键                                                         |
+| `POST /api/battle/rooms/:room_id/cancel`    | 创建者取消未接受房间                        | `room_id`、幂等键                                                                              |
+| `POST /api/battle/invites/current/accept`   | 接受当前 bearer invite                      | 有序三个 `template_id`、幂等键                                                                 |
+| `POST /api/battle/rooms/:room_id/actions`   | 提交唯一当前行动                            | `round_no`、`action_ordinal`，以及严格 `attack`、`switch` 或 `replace_attack` 联合输入和幂等键 |
+| `POST /api/battle/rooms/:room_id/heartbeat` | waiting 创建者或 lobby 参与者在线意图       | room 与单调 presence lifecycle 字段                                                            |
+| `POST /api/battle/rooms/:room_id/offline`   | 当前 presence 生命周期离线意图              | room 与单调 presence lifecycle 字段                                                            |
+| `POST /api/battle/realtime-token`           | 获取最小权限 Ably token                     | 不接受频道名                                                                                   |
 
 动作严格联合固定为：
 
@@ -678,7 +694,7 @@ Battle 入口：BTL_[A-Za-z0-9_-]{32}
 | `POST /api/integrations/battle-share`  | integrations | `BATTLE_OUTBOX_SECRET` + 待处理任务 RPC  |
 | `POST /api/integrations/battle-outbox` | integrations | `BATTLE_OUTBOX_SECRET` + outbox 领取租约 |
 
-不存在 history、replay、audit、spectator 或公开 room API。
+不存在 history、replay、audit、spectator、公开 room 读取 API 或公开房间列表；匹配只通过 `POST /api/battle/matchmaking` 完成。
 
 ### 10.3 稳定错误码
 
@@ -703,7 +719,7 @@ Battle 入口：BTL_[A-Za-z0-9_-]{32}
 
 ### 11.1 页面状态
 
-“游戏”页只渲染八种权威页面状态：Battle 首页、三槽队伍选择、挑战卡准备、等待、接受、双人 lobby、战斗、当场结果。战斗页同时承载普通行动和倒下后的换宠反击，不存在独立换宠页面。
+“游戏”页只渲染八种权威页面状态：Battle 首页、三槽队伍选择、挑战卡准备、等待、接受、双人 lobby、战斗、当场结果。三槽队伍选择固定提供“邀请好友”和“随机匹配”；同一 `waiting` 页面按 `room_mode` 分别渲染 30 分钟好友分享等待或 120 秒同档公开匹配等待。战斗页同时承载普通行动和倒下后的换宠反击，不存在独立换宠页面。
 
 lobby countdown 继续使用全稳定视口 3 秒锁定页，明确显示“倒计时已锁定”“离开不会取消战斗”。进入战斗后，中部战场显示双方宠物、表现 HP、动作反馈和队列；底部操作区只由最新 authority snapshot 决定。当前行动者看到技能与主动换宠；非行动者只看到等待。`replace_attack` 模式先显示存活替补；本人选中后战场立即以本地预览显示该宠物及槽位高亮，再显示该宠物真实技能，点击技能即提交。对手只在服务端成功结算后消费权威换入结果。
 
@@ -729,14 +745,15 @@ lobby countdown 继续使用全稳定视口 3 秒锁定页，明确显示“倒�
 
 ### 11.4 K-coin 不足
 
-创建或接受前端预检查到 K-coin 不足时立即打开现有充值弹窗：
+创建、随机匹配或接受前端预检查到 K-coin 不足时立即打开现有充值弹窗：
 
 - 创建场景保存档位与本人三个槽位。
+- 随机匹配场景以 `battle_matchmaking` 保存档位与本人三个槽位。
 - 接受场景保存当前 invite 上下文与本人三个槽位。
 - 充值到账后返回原确认界面，重新读取房间仍为 waiting、未过期、未接受、本人资格、余额、库存和唯一参与状态；创建者在线只作展示。
-- 充值成功绝不自动创建或自动接受。
+- 充值成功绝不自动创建、自动进入匹配队列或自动接受。
 - 返回时房间已取消、过期或被接受，则停止原动作，已充值 K-coin 保留。
-- `battle_create` 补差意图由数据库再次拒绝已有 `preparing_share/waiting/lobby/active` 参与记录，统一返回 `BATTLE_ALREADY_PARTICIPATING`。
+- `battle_create` 与 `battle_matchmaking` 补差意图都由数据库再次拒绝已有 `preparing_share/waiting/lobby/active` 参与记录，统一返回 `BATTLE_ALREADY_PARTICIPATING`。
 
 ## 12. 安全、并发与恢复
 
@@ -916,7 +933,7 @@ git diff --check
 - Battle reservation 阻止出售、分解、进化、远征和 Mint。
 - 同模板有两份、Battle 只占一份时，剩余一份仍可使用。
 - 一个账号不能同时创建、等待或接受第二场。
-- `battle_create` 充值补差对 `preparing_share/waiting/lobby/active` 四种参与状态统一返回 `BATTLE_ALREADY_PARTICIPATING`，不创建订单。
+- `battle_create` 与 `battle_matchmaking` 充值补差对 `preparing_share/waiting/lobby/active` 四种参与状态统一返回 `BATTLE_ALREADY_PARTICIPATING`，不创建订单。
 - 接受/取消、接受/过期、玩家动作/deadline 以及双方并发请求都只有一个终态。
 - 每个终局后 `available + locked`、reservation、stake、settlement、ledger 与审计一致。
 - 在持有/释放 room lock 的真实事务边界验证 lobby 完整性：永久损坏 participant、stake/ledger、六个快照、六个 reservation 或启动条件时，advance 与 monitor 都进入同一安全作废且不创建 turn 1；接受事务中间态不被误判。
@@ -1003,7 +1020,7 @@ git diff --check
 - 挑战卡和接受页只公开创建者稀有度组合。
 - 固定首发速度先手、双方独立 15 秒、每回合两个行动、换宠反击、技能 1 托管、20 个完整回合和所有终局规则完全生效。
 - Ably 只负责通知，短轮询和数据库 deadline 在其故障时仍能完成战斗。
-- 用户没有历史、回放、认输、观战或匹配入口。
+- 用户没有历史、回放、认输、观战或公开房间列表；随机匹配入口固定在三槽队伍选择页。
 - 永久私有审计包能从规则、动作、命中、终局和 ledger 解释每一场结果。
 - 主文档、架构、OpenAPI、Schema、迁移、环境矩阵、恢复手册与验收文档不存在互相冲突。
 - 同一 commit 已在真实开发 Telegram/Vercel/Supabase/Ably 环境通过全部验收。

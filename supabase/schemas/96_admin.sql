@@ -279,7 +279,7 @@ as $$
           'fixture_version', 'battle-v1',
           'catalog_version', 'v1',
           'catalog_checksum', 'de521f2687086cb358fb557a4a7ada3bc3c5fc132d673f0256b4573028ddba46',
-          'battle_checksum', 'f8501fddf4804985e1e6708f9cbc2b283d7609c2a60f9e464078bf24b1131d99',
+          'battle_checksum', '8e9a250af9df2f44d45846b0fe5c6fbb4e2f26d74e07146e87ce84a86b8141c6',
           'matrix', jsonb_agg(
             jsonb_build_object(
               'role', d.role,
@@ -790,7 +790,7 @@ begin
   cross join lateral unnest(d.skill_slots) skill_slot
   where d.fixture_version = p_fixture_version;
   if v_catalog_checksum <> 'de521f2687086cb358fb557a4a7ada3bc3c5fc132d673f0256b4573028ddba46'
-    or v_battle_checksum <> 'f8501fddf4804985e1e6708f9cbc2b283d7609c2a60f9e464078bf24b1131d99'
+    or v_battle_checksum <> '8e9a250af9df2f44d45846b0fe5c6fbb4e2f26d74e07146e87ce84a86b8141c6'
     or not battle.rules_complete('battle-v1')
     or v_matrix_count <> 36
     or v_matrix_element_count <> 5

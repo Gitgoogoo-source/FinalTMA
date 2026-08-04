@@ -181,7 +181,7 @@ begin
         v_count := (p_intent->>'count')::integer;
         if v_count not in (1, 10) then perform api.raise_business_error('TOPUP_AMOUNT_INVALID', '转盘补差意图无效'); end if;
         v_required := case when v_count = 10 then 180 else 20 end;
-      elsif p_intent->>'kind' = 'battle_create' then
+      elsif p_intent->>'kind' in ('battle_create', 'battle_matchmaking') then
         select * into v_battle_ruleset
         from battle.rulesets
         where status = 'active';
@@ -220,7 +220,7 @@ begin
         );
         v_required := v_battle_tier.entry_fee;
         v_normalized_intent := jsonb_build_object(
-          'kind', 'battle_create',
+          'kind', p_intent->>'kind',
           'tier', v_battle_tier.id,
           'template_ids', p_intent->'template_ids'
         );

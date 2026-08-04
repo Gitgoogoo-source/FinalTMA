@@ -242,6 +242,7 @@ def verify_stars_payment_contract() -> None:
             "return operations.complete_command(v_order.operation_id, v_result)",
             "raise_business_error('payment_already_processing'",
             "'battle_create'",
+            "'battle_matchmaking'",
             "'battle_accept'",
             "'battle_invite_token_hash'",
             "battle.validate_team_selection",
@@ -282,7 +283,7 @@ def verify_stars_payment_contract() -> None:
     if missing:
         raise SystemExit(f"Stars payment contract is incomplete: {missing}")
     battle_create = payments_sql.partition(
-        "elsif p_intent->>'kind' = 'battle_create' then"
+        "elsif p_intent->>'kind' in ('battle_create', 'battle_matchmaking') then"
     )[2].partition("elsif p_intent->>'kind' = 'battle_accept' then")[0]
     battle_create_required = (
         "hashtextextended('battle-user:' || v_user_id::text, 0)",
@@ -322,6 +323,13 @@ def verify_battle_contract() -> None:
         "create table battle.audit_entries",
         "create or replace function api.battle_prepare_room",
         "create or replace function api.battle_accept_room",
+        "create or replace function api.battle_matchmake",
+        "create or replace function battle.attach_opponent_and_start_lobby",
+        "v_start_countdown := v_room.room_mode = 'public_match' or v_creator_online",
+        "room_mode text not null check (room_mode in ('friend_invite', 'public_match'))",
+        "'matchmaking_wait_seconds')::integer = 120",
+        "where room_mode = 'public_match' and status = 'waiting'",
+        "order by random()",
         "create or replace function api.battle_submit_action",
         "create or replace function battle.skills_json",
         "create or replace function battle.action_event_json",

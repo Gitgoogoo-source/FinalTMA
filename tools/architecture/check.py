@@ -552,7 +552,8 @@ def verify_battle_accept_source(label: str, source: str) -> None:
     )
     room_lock = normalized.find(
         "select * into v_room from battle.rooms r "
-        "where r.invite_token_hash = v_invite_hash for update;"
+        "where r.room_mode = 'friend_invite' "
+        "and r.invite_token_hash = v_invite_hash for update;"
     )
     self_guard = BATTLE_ACCEPT_SELF_GUARD_PATTERN.search(function)
     begin_command = normalized.find("v_operation := operations.begin_command(")

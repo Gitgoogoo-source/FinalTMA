@@ -2263,6 +2263,7 @@ create table battle.rulesets (
   activated_at timestamptz not null default now(),
   unique (id, checksum),
   check ((parameters->>'waiting_timeout_seconds')::integer = 1800),
+  check ((parameters->>'matchmaking_wait_seconds')::integer = 120),
   check ((parameters->>'heartbeat_interval_seconds')::integer = 5),
   check ((parameters->>'presence_online_window_seconds')::integer = 10),
   check ((parameters->>'offline_reconnect_seconds')::integer = 90),
@@ -2424,7 +2425,8 @@ create table battle.rooms (
   ruleset_id text not null,
   ruleset_checksum text not null,
   entry_tier_id text not null,
-  invite_token_hash text not null unique check (invite_token_hash ~ '^[0-9a-f]{64}$'),
+  room_mode text not null check (room_mode in ('friend_invite', 'public_match')),
+  invite_token_hash text unique check (invite_token_hash ~ '^[0-9a-f]{64}$'),
   status text not null check (status in (
     'preparing_share', 'waiting', 'lobby_waiting', 'lobby_countdown',
     'active_turn',
@@ -2438,7 +2440,7 @@ create table battle.rooms (
   latest_action_sequence bigint not null default 0 check (latest_action_sequence >= 0),
   private_seed bytea,
   seed_commitment text check (seed_commitment is null or seed_commitment ~ '^[0-9a-f]{64}$'),
-  prepare_deadline timestamptz not null,
+  prepare_deadline timestamptz,
   waiting_started_at timestamptz,
   expires_at timestamptz,
   accepted_at timestamptz,
@@ -2450,7 +2452,21 @@ create table battle.rooms (
   updated_at timestamptz not null default now(),
   foreign key (ruleset_id, ruleset_checksum) references battle.rulesets(id, checksum),
   foreign key (ruleset_id, entry_tier_id) references battle.entry_tiers(ruleset_id, id),
-  check (prepare_deadline = created_at + interval '60 seconds'),
+  check (
+    (
+      room_mode = 'friend_invite'
+      and invite_token_hash is not null
+      and prepare_deadline = created_at + interval '60 seconds'
+    )
+    or (
+      room_mode = 'public_match'
+      and invite_token_hash is null
+      and prepare_deadline is null
+      and status <> 'preparing_share'
+      and waiting_started_at is not null
+      and expires_at = waiting_started_at + interval '120 seconds'
+    )
+  ),
   check (private_seed is null or octet_length(private_seed) = 32),
   check (
     (status = 'preparing_share' and waiting_started_at is null and expires_at is null)
@@ -2500,6 +2516,9 @@ create index battle_rooms_prepare_due_idx on battle.rooms (prepare_deadline)
 where status = 'preparing_share';
 create index battle_rooms_waiting_due_idx on battle.rooms (expires_at)
 where status = 'waiting';
+create index battle_rooms_public_match_candidate_idx
+on battle.rooms (ruleset_id, entry_tier_id, expires_at, id)
+where room_mode = 'public_match' and status = 'waiting';
 create index battle_rooms_lobby_due_idx
 on battle.rooms (lobby_expires_at, lobby_start_deadline)
 where status in ('lobby_waiting', 'lobby_countdown');
@@ -3048,6 +3067,7 @@ begin
   v_retention := battle.rule_int(v_ruleset_id, 'rate_limit_retention_seconds');
   v_limit := case p_action
     when 'create' then 3
+    when 'matchmake' then 6
     when 'invite_preview' then 60
     when 'accept' then 10
     when 'combat_action' then 30
@@ -3824,6 +3844,7 @@ as $$
     'room_id', p.room_id,
     'participant_id', p.id,
     'side', p.side,
+    'room_mode', r.room_mode,
     'status', r.status,
     'state_version', r.state_version,
     'entry_fee', tier.entry_fee,
@@ -3918,6 +3939,7 @@ begin
   where room_id = p_room_id and id <> p_participant_id;
   return jsonb_build_object(
     'room_id', v_room.id,
+    'room_mode', v_room.room_mode,
     'status', v_room.status,
     'state_version', v_room.state_version,
     'side', v_participant.side,
@@ -3954,7 +3976,9 @@ begin
       else null
     end,
     'prepared_message_id', case
-      when v_participant.side = 'creator' and v_room.status = 'waiting'
+      when v_participant.side = 'creator'
+        and v_room.room_mode = 'friend_invite'
+        and v_room.status = 'waiting'
       then (
         select ps.prepared_message_id
         from battle.prepared_shares ps
@@ -4016,6 +4040,7 @@ begin
       select jsonb_build_object(
         'id', r.id,
         'checksum', r.checksum,
+        'matchmaking_wait_seconds', (r.parameters->>'matchmaking_wait_seconds')::integer,
         'heartbeat_interval_seconds', (r.parameters->>'heartbeat_interval_seconds')::integer,
         'presence_online_window_seconds', (r.parameters->>'presence_online_window_seconds')::integer,
         'offline_reconnect_seconds', (r.parameters->>'offline_reconnect_seconds')::integer,
@@ -4117,7 +4142,8 @@ begin
   perform battle.consume_rate_limit(v_user_id, 'invite_preview', v_session.battle_invite_token_hash);
   select * into v_room
   from battle.rooms
-  where invite_token_hash = v_session.battle_invite_token_hash;
+  where room_mode = 'friend_invite'
+    and invite_token_hash = v_session.battle_invite_token_hash;
   if v_room.id is null then
     return jsonb_build_object('invite_status', 'invalid', 'server_time', now());
   end if;
@@ -4199,6 +4225,7 @@ begin
   from battle.rooms r
   where v_session.entry_kind = 'battle'
     and v_session.battle_invite_token_hash is not null
+    and r.room_mode = 'friend_invite'
     and r.invite_token_hash = v_session.battle_invite_token_hash
     and r.status = 'waiting'
     and r.expires_at > now();
@@ -4979,10 +5006,10 @@ begin
     end if;
     insert into battle.rooms (
       id, creator_user_id, create_operation_id, ruleset_id, ruleset_checksum,
-      entry_tier_id, invite_token_hash, status, prepare_deadline
+      entry_tier_id, room_mode, invite_token_hash, status, prepare_deadline
     ) values (
       p_room_id, v_user_id, p_operation_id, v_ruleset.id, v_ruleset.checksum,
-      v_tier.id, p_invite_token_hash, 'preparing_share',
+      v_tier.id, 'friend_invite', p_invite_token_hash, 'preparing_share',
       now() + make_interval(
         secs => battle.rule_int(v_ruleset.id, 'share_prepare_timeout_seconds')
       )
@@ -5197,7 +5224,14 @@ begin
     elsif v_room.status not in ('preparing_share', 'waiting') then
       perform api.raise_business_error('BATTLE_ROOM_ALREADY_ACCEPTED', '挑战已被其他玩家接受');
     end if;
-    v_result := battle.close_unstarted_room(p_room_id, 'cancelled', 'creator_cancelled');
+    v_result := battle.close_unstarted_room(
+      p_room_id,
+      'cancelled',
+      case
+        when v_room.room_mode = 'public_match' then 'match_cancelled'
+        else 'creator_cancelled'
+      end
+    );
     return operations.complete_command(p_operation_id, v_result);
   exception when sqlstate 'P0001' then
     if sqlerrm = 'BATTLE_INVARIANT' then raise; end if;
@@ -5269,7 +5303,14 @@ begin
   perform battle.consume_rate_limit(v_user_id, 'heartbeat');
   if v_room.status = 'waiting' then
     if v_room.expires_at <= v_now then
-      perform battle.close_unstarted_room(p_room_id, 'expired', 'waiting_expired');
+      perform battle.close_unstarted_room(
+        p_room_id,
+        'expired',
+        case
+          when v_room.room_mode = 'public_match' then 'match_timeout'
+          else 'waiting_expired'
+        end
+      );
       return battle.room_snapshot_json(p_room_id, v_participant.id);
     end if;
   else
@@ -5380,7 +5421,14 @@ begin
 
   perform battle.consume_rate_limit(v_user_id, 'heartbeat');
   if v_room.status = 'waiting' and v_room.expires_at <= now() then
-    perform battle.close_unstarted_room(p_room_id, 'expired', 'waiting_expired');
+    perform battle.close_unstarted_room(
+      p_room_id,
+      'expired',
+      case
+        when v_room.room_mode = 'public_match' then 'match_timeout'
+        else 'waiting_expired'
+      end
+    );
     return battle.room_snapshot_json(p_room_id, v_participant.id);
   elsif v_room.status in ('lobby_waiting', 'lobby_countdown') then
     v_invariant_error := battle.lobby_invariant_error(p_room_id);
@@ -5436,6 +5484,193 @@ begin
 end;
 $$;
 
+create or replace function battle.attach_opponent_and_start_lobby(
+  p_room_id uuid,
+  p_user_id uuid,
+  p_operation_id uuid,
+  p_template_ids jsonb
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_room battle.rooms%rowtype;
+  v_creator identity.users%rowtype;
+  v_creator_participant battle.participants%rowtype;
+  v_tier battle.entry_tiers%rowtype;
+  v_participant_id uuid := extensions.gen_random_uuid();
+  v_seed bytea := extensions.gen_random_bytes(32);
+  v_ledger_id bigint;
+  v_result jsonb;
+  v_creator_online boolean;
+  v_start_countdown boolean;
+  v_now timestamptz := now();
+begin
+  select * into v_room from battle.rooms where id = p_room_id for update;
+  if v_room.id is null then
+    perform api.raise_business_error('BATTLE_ROOM_NOT_FOUND', 'Battle 房间不存在');
+  elsif v_room.creator_user_id = p_user_id then
+    perform api.raise_business_error(
+      'BATTLE_SELF_ACCEPT_FORBIDDEN', '不能接受自己创建的挑战'
+    );
+  elsif v_room.status = 'expired' or v_room.expires_at <= v_now then
+    perform api.raise_business_error('BATTLE_ROOM_EXPIRED', '挑战已过期');
+  elsif v_room.status = 'cancelled' then
+    perform api.raise_business_error('BATTLE_ROOM_CANCELLED', '挑战已取消');
+  elsif v_room.status = 'voided' then
+    perform api.raise_business_error(
+      'BATTLE_VOIDED', 'Battle 已安全作废，入场费和藏品已恢复'
+    );
+  elsif v_room.status <> 'waiting' then
+    perform api.raise_business_error(
+      'BATTLE_ROOM_ALREADY_ACCEPTED', '挑战已被其他玩家接受'
+    );
+  end if;
+  select * into v_creator
+  from identity.users
+  where id = v_room.creator_user_id
+  for update;
+  if v_creator.status = 'banned' then
+    perform api.raise_business_error('BATTLE_ROOM_CANCELLED', '挑战已取消');
+  end if;
+  select * into v_creator_participant
+  from battle.participants
+  where room_id = v_room.id and side = 'creator'
+  for update;
+  if v_creator_participant.id is null or v_creator_participant.status <> 'waiting' then
+    raise exception using
+      errcode = 'P0001',
+      message = 'BATTLE_INVARIANT',
+      detail = jsonb_build_object(
+        'kind', 'waiting_creator_missing', 'room_id', v_room.id
+      )::text;
+  end if;
+  perform pg_advisory_xact_lock(
+    hashtextextended('battle-user:' || p_user_id::text, 0)
+  );
+  if exists (
+    select 1 from battle.participants p
+    where p.user_id = p_user_id
+      and p.status in ('preparing_share', 'waiting', 'lobby', 'active')
+  ) then
+    perform api.raise_business_error(
+      'BATTLE_ALREADY_PARTICIPATING', '当前已有进行中的 Battle'
+    );
+  end if;
+  select * into v_tier
+  from battle.entry_tiers
+  where ruleset_id = v_room.ruleset_id and id = v_room.entry_tier_id;
+  if v_tier.id is null then
+    perform api.raise_business_error(
+      'BATTLE_RULESET_UNAVAILABLE', 'Battle 规则暂不可用，请稍后重试'
+    );
+  end if;
+  insert into battle.participants (
+    id, room_id, user_id, side, status, join_operation_id, last_heartbeat_at
+  ) values (
+    v_participant_id, v_room.id, p_user_id, 'opponent', 'lobby',
+    p_operation_id, v_now
+  );
+  perform battle.create_team(
+    v_participant_id, p_user_id, v_room.ruleset_id, p_template_ids
+  );
+  v_ledger_id := (
+    economy.lock_kcoin(
+      p_user_id, v_tier.entry_fee, p_operation_id,
+      v_room.id::text || ':' || p_user_id::text || ':lock'
+    )->>'ledger_id'
+  )::bigint;
+  insert into battle.stakes (
+    room_id, participant_id, user_id, amount, lock_ledger_id
+  ) values (
+    v_room.id, v_participant_id, p_user_id, v_tier.entry_fee, v_ledger_id
+  );
+  v_creator_online := v_creator_participant.offline_since is null
+    and v_creator_participant.last_heartbeat_at > v_now - make_interval(
+      secs => battle.rule_int(
+        v_room.ruleset_id, 'presence_online_window_seconds'
+      )
+    );
+  v_start_countdown := v_room.room_mode = 'public_match' or v_creator_online;
+  update battle.participants
+  set status = 'lobby',
+      offline_since = case when v_creator_online then null else v_now end,
+      presence_deadline = case
+        when v_creator_online then null
+        else v_now + make_interval(
+          secs => battle.rule_int(
+            v_room.ruleset_id, 'offline_reconnect_seconds'
+          )
+        )
+      end
+  where id = v_creator_participant.id;
+  update battle.rooms
+  set status = case
+        when v_start_countdown then 'lobby_countdown'
+        else 'lobby_waiting'
+      end,
+      private_seed = v_seed,
+      seed_commitment = encode(extensions.digest(v_seed, 'sha256'), 'hex'),
+      accepted_at = v_now,
+      lobby_expires_at = v_now + make_interval(
+        secs => battle.rule_int(v_room.ruleset_id, 'lobby_timeout_seconds')
+      ),
+      lobby_start_deadline = case
+        when v_start_countdown then v_now + make_interval(
+          secs => battle.rule_int(
+            v_room.ruleset_id, 'lobby_countdown_seconds'
+          )
+        )
+        else null
+      end,
+      current_round_no = 0,
+      current_action_ordinal = 0,
+      phase_deadline = null,
+      updated_at = v_now
+  where id = v_room.id
+  returning * into v_room;
+  perform battle.append_audit(
+    v_room.id, 'seed_commitment',
+    jsonb_build_object('commitment', v_room.seed_commitment)
+  );
+  perform battle.record_event(
+    v_room.id, 'lobby_started',
+    jsonb_build_object(
+      'phase', v_room.status,
+      'expires_at', v_room.lobby_expires_at,
+      'start_deadline', v_room.lobby_start_deadline
+    ),
+    jsonb_build_object(
+      'opponent_participant_id', v_participant_id,
+      'ruleset_checksum', v_room.ruleset_checksum,
+      'room_mode', v_room.room_mode
+    )
+  );
+  if v_start_countdown then
+    perform battle.record_event(
+      v_room.id,
+      'lobby_countdown_started',
+      jsonb_build_object('start_deadline', v_room.lobby_start_deadline),
+      '{}'::jsonb
+    );
+  end if;
+  v_result := battle.room_snapshot_json(v_room.id, v_participant_id);
+  if v_result is null then
+    raise exception using
+      errcode = 'P0001',
+      message = 'BATTLE_INVARIANT',
+      detail = jsonb_build_object(
+        'kind', 'join_snapshot_missing',
+        'room_id', v_room.id,
+        'participant_id', v_participant_id
+      )::text;
+  end if;
+  return v_result;
+end;
+$$;
+
 create or replace function api.battle_accept_room(
   p_session_id uuid,
   p_operation_id uuid,
@@ -5453,15 +5688,8 @@ declare
   v_invite_hash text;
   v_room battle.rooms%rowtype;
   v_creator identity.users%rowtype;
-  v_creator_participant battle.participants%rowtype;
-  v_tier battle.entry_tiers%rowtype;
-  v_participant_id uuid := extensions.gen_random_uuid();
-  v_seed bytea := extensions.gen_random_bytes(32);
-  v_ledger_id bigint;
   v_result jsonb;
   v_terminal jsonb;
-  v_creator_online boolean;
-  v_now timestamptz := now();
 begin
   select s.battle_invite_token_hash into v_invite_hash
   from identity.sessions s
@@ -5470,15 +5698,15 @@ begin
   for update;
   select * into v_room
   from battle.rooms r
-  where r.invite_token_hash = v_invite_hash
+  where r.room_mode = 'friend_invite'
+    and r.invite_token_hash = v_invite_hash
   for update;
   if v_room.status = 'waiting'
     and v_room.expires_at > now()
     and v_room.creator_user_id = v_user_id
   then
     perform api.raise_business_error(
-      'BATTLE_SELF_ACCEPT_FORBIDDEN',
-      '不能接受自己创建的挑战'
+      'BATTLE_SELF_ACCEPT_FORBIDDEN', '不能接受自己创建的挑战'
     );
   end if;
   v_operation := operations.begin_command(
@@ -5503,7 +5731,8 @@ begin
     end if;
     select * into v_room
     from battle.rooms r
-    where r.invite_token_hash = v_invite_hash
+    where r.room_mode = 'friend_invite'
+      and r.invite_token_hash = v_invite_hash
     for update;
     if v_room.id is null then
       perform api.raise_business_error('BATTLE_INVITE_INVALID', 'Battle 邀请无效');
@@ -5513,21 +5742,18 @@ begin
     from identity.users
     where id = v_room.creator_user_id
     for update;
-    select * into v_creator_participant
-    from battle.participants
-    where room_id = v_room.id and side = 'creator'
-    for update;
     if v_room.status = 'expired' then
       perform api.raise_business_error('BATTLE_ROOM_EXPIRED', '挑战已过期');
     elsif v_room.status = 'cancelled' then
       perform api.raise_business_error('BATTLE_ROOM_CANCELLED', '挑战已取消');
     elsif v_room.status = 'voided' then
       perform api.raise_business_error(
-        'BATTLE_VOIDED',
-        'Battle 已安全作废，入场费和藏品已恢复'
+        'BATTLE_VOIDED', 'Battle 已安全作废，入场费和藏品已恢复'
       );
     elsif v_room.status <> 'waiting' then
-      perform api.raise_business_error('BATTLE_ROOM_ALREADY_ACCEPTED', '挑战已被其他玩家接受');
+      perform api.raise_business_error(
+        'BATTLE_ROOM_ALREADY_ACCEPTED', '挑战已被其他玩家接受'
+      );
     end if;
     if v_room.expires_at <= now() then
       v_terminal := battle.close_unstarted_room(
@@ -5548,112 +5774,190 @@ begin
         v_terminal || jsonb_build_object('error_code', 'BATTLE_ROOM_CANCELLED')
       );
     end if;
-    perform pg_advisory_xact_lock(hashtextextended('battle-user:' || v_operation.user_id::text, 0));
+    v_result := battle.attach_opponent_and_start_lobby(
+      v_room.id, v_operation.user_id, p_operation_id, p_template_ids
+    );
+    return operations.complete_command(p_operation_id, v_result);
+  exception
+    when unique_violation then
+      return operations.fail_command(
+        p_operation_id,
+        'BATTLE_STATE_CONFLICT',
+        jsonb_build_object('error_code', 'BATTLE_STATE_CONFLICT')
+      );
+    when sqlstate 'P0001' then
+      if sqlerrm = 'BATTLE_INVARIANT' then raise; end if;
+      return operations.fail_command(
+        p_operation_id, sqlerrm, jsonb_build_object('error_code', sqlerrm)
+      );
+  end;
+end;
+$$;
+
+create or replace function api.battle_matchmake(
+  p_session_id uuid,
+  p_operation_id uuid,
+  p_new_room_id uuid,
+  p_entry_tier_id text,
+  p_template_ids jsonb
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_operation operations.operations%rowtype;
+  v_replay jsonb;
+  v_ruleset battle.rulesets%rowtype;
+  v_tier battle.entry_tiers%rowtype;
+  v_room battle.rooms%rowtype;
+  v_participant_id uuid;
+  v_balance jsonb;
+  v_result jsonb;
+  v_now timestamptz := now();
+begin
+  v_operation := operations.begin_command(
+    p_session_id,
+    'battle.matchmake',
+    p_operation_id,
+    jsonb_build_object(
+      'entry_tier_id', p_entry_tier_id,
+      'template_ids', p_template_ids
+    )
+  );
+  v_replay := operations.replay_if_finished(v_operation);
+  if v_replay is not null then return v_replay; end if;
+  begin
+    if p_new_room_id is null then
+      perform api.raise_business_error('REQUEST_INVALID', 'Battle 匹配参数无效');
+    end if;
+    perform battle.consume_rate_limit(v_operation.user_id, 'matchmake');
+    perform pg_advisory_xact_lock(
+      hashtextextended('battle-user:' || v_operation.user_id::text, 0)
+    );
     if exists (
-      select 1 from battle.participants p
-      where p.user_id = v_operation.user_id
-        and p.status in ('preparing_share', 'waiting', 'lobby', 'active')
+      select 1 from battle.participants
+      where user_id = v_operation.user_id
+        and status in ('preparing_share', 'waiting', 'lobby', 'active')
     ) then
-      perform api.raise_business_error('BATTLE_ALREADY_PARTICIPATING', '当前已有进行中的 Battle');
+      perform api.raise_business_error(
+        'BATTLE_ALREADY_PARTICIPATING', '当前已有未结束的 Battle'
+      );
+    end if;
+    select * into v_ruleset from battle.rulesets where status = 'active';
+    if v_ruleset.id is null or not battle.rules_complete(v_ruleset.id) then
+      perform api.raise_business_error(
+        'BATTLE_RULESET_UNAVAILABLE', 'Battle 规则暂不可用，请稍后重试'
+      );
     end if;
     select * into v_tier
     from battle.entry_tiers
-    where ruleset_id = v_room.ruleset_id and id = v_room.entry_tier_id;
-    insert into battle.participants (
-      id, room_id, user_id, side, status, join_operation_id,
-      last_heartbeat_at
+    where ruleset_id = v_ruleset.id and id = p_entry_tier_id;
+    if v_tier.id is null then
+      perform api.raise_business_error('BATTLE_TIER_INVALID', 'Battle 入场档位无效');
+    end if;
+    perform battle.validate_team_selection(
+      v_operation.user_id, v_ruleset.id, p_template_ids
+    );
+    perform pg_advisory_xact_lock(
+      hashtextextended(
+        'battle-match:' || v_ruleset.id || ':' || v_tier.id,
+        0
+      )
+    );
+    select r.* into v_room
+    from battle.rooms r
+    join identity.users creator on creator.id = r.creator_user_id
+    where r.room_mode = 'public_match'
+      and r.ruleset_id = v_ruleset.id
+      and r.entry_tier_id = v_tier.id
+      and r.status = 'waiting'
+      and r.expires_at > v_now
+      and r.creator_user_id <> v_operation.user_id
+      and creator.status = 'normal'
+    order by random()
+    limit 1
+    for update of r;
+    if v_room.id is not null then
+      v_result := battle.attach_opponent_and_start_lobby(
+        v_room.id,
+        v_operation.user_id,
+        p_operation_id,
+        p_template_ids
+      );
+      return operations.complete_command(p_operation_id, v_result);
+    end if;
+    insert into battle.rooms (
+      id, creator_user_id, create_operation_id, ruleset_id, ruleset_checksum,
+      entry_tier_id, room_mode, invite_token_hash, status,
+      prepare_deadline, waiting_started_at, expires_at
     ) values (
-      v_participant_id, v_room.id, v_operation.user_id, 'opponent', 'lobby',
+      p_new_room_id, v_operation.user_id, p_operation_id,
+      v_ruleset.id, v_ruleset.checksum, v_tier.id, 'public_match', null,
+      'waiting', null, v_now,
+      v_now + make_interval(
+        secs => battle.rule_int(v_ruleset.id, 'matchmaking_wait_seconds')
+      )
+    ) returning * into v_room;
+    insert into battle.participants (
+      room_id, user_id, side, status, join_operation_id, last_heartbeat_at
+    ) values (
+      v_room.id, v_operation.user_id, 'creator', 'waiting',
       p_operation_id, v_now
-    );
+    ) returning id into v_participant_id;
     perform battle.create_team(
-      v_participant_id, v_operation.user_id, v_room.ruleset_id, p_template_ids
+      v_participant_id, v_operation.user_id, v_ruleset.id, p_template_ids
     );
-    v_ledger_id := (
-      economy.lock_kcoin(
-        v_operation.user_id, v_tier.entry_fee, p_operation_id,
-        v_room.id::text || ':' || v_operation.user_id::text || ':lock'
-      )->>'ledger_id'
-    )::bigint;
+    v_balance := economy.lock_kcoin(
+      v_operation.user_id,
+      v_tier.entry_fee,
+      p_operation_id,
+      v_room.id::text || ':' || v_operation.user_id::text || ':lock'
+    );
     insert into battle.stakes (
       room_id, participant_id, user_id, amount, lock_ledger_id
     ) values (
-      v_room.id, v_participant_id, v_operation.user_id, v_tier.entry_fee, v_ledger_id
-    );
-    v_creator_online := v_creator_participant.offline_since is null
-      and v_creator_participant.last_heartbeat_at > v_now - make_interval(
-        secs => battle.rule_int(v_room.ruleset_id, 'presence_online_window_seconds')
-      );
-    update battle.participants
-    set status = 'lobby',
-        offline_since = case when v_creator_online then null else v_now end,
-        presence_deadline = case
-          when v_creator_online then null
-          else v_now + make_interval(
-            secs => battle.rule_int(v_room.ruleset_id, 'offline_reconnect_seconds')
-          )
-        end
-    where id = v_creator_participant.id;
-    update battle.rooms
-    set status = case
-          when v_creator_online then 'lobby_countdown'
-          else 'lobby_waiting'
-        end,
-        private_seed = v_seed,
-        seed_commitment = encode(extensions.digest(v_seed, 'sha256'), 'hex'),
-        accepted_at = v_now,
-        lobby_expires_at = v_now + make_interval(
-          secs => battle.rule_int(v_room.ruleset_id, 'lobby_timeout_seconds')
-        ),
-        lobby_start_deadline = case
-          when v_creator_online then v_now + make_interval(
-            secs => battle.rule_int(v_room.ruleset_id, 'lobby_countdown_seconds')
-          )
-          else null
-        end,
-        current_round_no = 0,
-        current_action_ordinal = 0,
-        phase_deadline = null,
-        updated_at = v_now
-    where id = v_room.id
-    returning * into v_room;
-    perform battle.append_audit(
-      v_room.id, 'seed_commitment',
-      jsonb_build_object('commitment', v_room.seed_commitment)
+      v_room.id,
+      v_participant_id,
+      v_operation.user_id,
+      v_tier.entry_fee,
+      (v_balance->>'ledger_id')::bigint
     );
     perform battle.record_event(
-      v_room.id, 'lobby_started',
+      v_room.id,
+      'match_waiting',
       jsonb_build_object(
-        'phase', v_room.status,
-        'expires_at', v_room.lobby_expires_at,
-        'start_deadline', v_room.lobby_start_deadline
+        'entry_tier_id', v_tier.id,
+        'expires_at', v_room.expires_at
       ),
       jsonb_build_object(
-        'opponent_participant_id', v_participant_id,
-        'ruleset_checksum', v_room.ruleset_checksum
+        'creator_user_id', v_operation.user_id,
+        'participant_id', v_participant_id,
+        'ruleset_checksum', v_ruleset.checksum,
+        'template_ids', p_template_ids,
+        'stake_lock_ledger_id', (v_balance->>'ledger_id')::bigint
       )
     );
-    if v_creator_online then
-      perform battle.record_event(
-        v_room.id,
-        'lobby_countdown_started',
-        jsonb_build_object('start_deadline', v_room.lobby_start_deadline),
-        '{}'::jsonb
-      );
-    end if;
     v_result := battle.room_snapshot_json(v_room.id, v_participant_id);
     if v_result is null then
       raise exception using
         errcode = 'P0001',
         message = 'BATTLE_INVARIANT',
         detail = jsonb_build_object(
-          'kind', 'accept_snapshot_missing',
+          'kind', 'match_waiting_snapshot_missing',
           'room_id', v_room.id,
           'participant_id', v_participant_id
         )::text;
     end if;
     return operations.complete_command(p_operation_id, v_result);
   exception
+    when unique_violation then
+      return operations.fail_command(
+        p_operation_id,
+        'BATTLE_ALREADY_PARTICIPATING',
+        jsonb_build_object('error_code', 'BATTLE_ALREADY_PARTICIPATING')
+      );
     when sqlstate 'P0001' then
       if sqlerrm = 'BATTLE_INVARIANT' then raise; end if;
       return operations.fail_command(
@@ -6879,6 +7183,9 @@ begin
               v_room.id,
               case when v_room.expires_at <= now() then 'expired' else 'cancelled' end,
               case
+                when v_room.expires_at <= now()
+                  and v_room.room_mode = 'public_match'
+                then 'match_timeout'
                 when v_room.expires_at <= now() then 'waiting_expired'
                 else 'creator_banned'
               end
@@ -7076,7 +7383,7 @@ as $$
     union
     select 'battle:invite:' || r.invite_token_hash
     from battle.rooms r
-    where r.id = p_room_id
+    where r.id = p_room_id and r.room_mode = 'friend_invite'
     union
     select 'battle:user:' || p.user_id::text
     from battle.participants p
@@ -7224,9 +7531,9 @@ declare
   v_invite_hash text;
   v_room battle.rooms%rowtype;
 begin
-  if p_kind = 'create' then
+  if p_kind in ('create', 'matchmake') then
     return jsonb_build_object(
-      'kind', 'create',
+      'kind', p_kind,
       'assets', economy.assets(v_user_id),
       'participation', battle.participation_json(v_user_id)
     );
@@ -7239,7 +7546,7 @@ begin
     and entry_kind = 'battle' and revoked_at is null and expires_at > now();
   select * into v_room
   from battle.rooms
-  where invite_token_hash = v_invite_hash;
+  where room_mode = 'friend_invite' and invite_token_hash = v_invite_hash;
   return jsonb_build_object(
     'kind', 'accept',
     'assets', economy.assets(v_user_id),
@@ -8437,7 +8744,7 @@ begin
         v_count := (p_intent->>'count')::integer;
         if v_count not in (1, 10) then perform api.raise_business_error('TOPUP_AMOUNT_INVALID', '转盘补差意图无效'); end if;
         v_required := case when v_count = 10 then 180 else 20 end;
-      elsif p_intent->>'kind' = 'battle_create' then
+      elsif p_intent->>'kind' in ('battle_create', 'battle_matchmaking') then
         select * into v_battle_ruleset
         from battle.rulesets
         where status = 'active';
@@ -8476,7 +8783,7 @@ begin
         );
         v_required := v_battle_tier.entry_fee;
         v_normalized_intent := jsonb_build_object(
-          'kind', 'battle_create',
+          'kind', p_intent->>'kind',
           'tier', v_battle_tier.id,
           'template_ids', p_intent->'template_ids'
         );
@@ -10555,7 +10862,7 @@ as $$
           'fixture_version', 'battle-v1',
           'catalog_version', 'v1',
           'catalog_checksum', 'de521f2687086cb358fb557a4a7ada3bc3c5fc132d673f0256b4573028ddba46',
-          'battle_checksum', 'f8501fddf4804985e1e6708f9cbc2b283d7609c2a60f9e464078bf24b1131d99',
+          'battle_checksum', '8e9a250af9df2f44d45846b0fe5c6fbb4e2f26d74e07146e87ce84a86b8141c6',
           'matrix', jsonb_agg(
             jsonb_build_object(
               'role', d.role,
@@ -11066,7 +11373,7 @@ begin
   cross join lateral unnest(d.skill_slots) skill_slot
   where d.fixture_version = p_fixture_version;
   if v_catalog_checksum <> 'de521f2687086cb358fb557a4a7ada3bc3c5fc132d673f0256b4573028ddba46'
-    or v_battle_checksum <> 'f8501fddf4804985e1e6708f9cbc2b283d7609c2a60f9e464078bf24b1131d99'
+    or v_battle_checksum <> '8e9a250af9df2f44d45846b0fe5c6fbb4e2f26d74e07146e87ce84a86b8141c6'
     or not battle.rules_complete('battle-v1')
     or v_matrix_count <> 36
     or v_matrix_element_count <> 5

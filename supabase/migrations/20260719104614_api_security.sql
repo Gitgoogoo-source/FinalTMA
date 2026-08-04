@@ -53,6 +53,7 @@ declare
     'battle_current_invite',
     'battle_heartbeat',
     'battle_mark_offline',
+    'battle_matchmake',
     'battle_nack_outbox',
     'battle_nack_prepared_share',
     'battle_prepare_room',

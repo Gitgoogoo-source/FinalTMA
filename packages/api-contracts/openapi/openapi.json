@@ -1046,6 +1046,52 @@
                                           "template_ids"
                                         ],
                                         "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "kind": {
+                                            "type": "string",
+                                            "const": "battle_matchmaking"
+                                          },
+                                          "tier": {
+                                            "type": "string",
+                                            "enum": [
+                                              "tier-20",
+                                              "tier-100",
+                                              "tier-500"
+                                            ]
+                                          },
+                                          "template_ids": {
+                                            "type": "array",
+                                            "prefixItems": [
+                                              {
+                                                "type": "string",
+                                                "minLength": 1,
+                                                "maxLength": 128
+                                              },
+                                              {
+                                                "type": "string",
+                                                "minLength": 1,
+                                                "maxLength": 128
+                                              },
+                                              {
+                                                "type": "string",
+                                                "minLength": 1,
+                                                "maxLength": 128
+                                              }
+                                            ],
+                                            "minItems": 3,
+                                            "maxItems": 3,
+                                            "uniqueItems": true
+                                          }
+                                        },
+                                        "required": [
+                                          "kind",
+                                          "tier",
+                                          "template_ids"
+                                        ],
+                                        "additionalProperties": false
                                       }
                                     ]
                                   },
@@ -1162,6 +1208,10 @@
                                   "type": "string",
                                   "enum": ["creator", "opponent"]
                                 },
+                                "room_mode": {
+                                  "type": "string",
+                                  "enum": ["friend_invite", "public_match"]
+                                },
                                 "status": {
                                   "type": "string",
                                   "enum": [
@@ -1214,6 +1264,7 @@
                                 "room_id",
                                 "participant_id",
                                 "side",
+                                "room_mode",
                                 "status",
                                 "state_version",
                                 "entry_fee",
@@ -12103,6 +12154,52 @@
                                           "template_ids"
                                         ],
                                         "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "kind": {
+                                            "type": "string",
+                                            "const": "battle_matchmaking"
+                                          },
+                                          "tier": {
+                                            "type": "string",
+                                            "enum": [
+                                              "tier-20",
+                                              "tier-100",
+                                              "tier-500"
+                                            ]
+                                          },
+                                          "template_ids": {
+                                            "type": "array",
+                                            "prefixItems": [
+                                              {
+                                                "type": "string",
+                                                "minLength": 1,
+                                                "maxLength": 128
+                                              },
+                                              {
+                                                "type": "string",
+                                                "minLength": 1,
+                                                "maxLength": 128
+                                              },
+                                              {
+                                                "type": "string",
+                                                "minLength": 1,
+                                                "maxLength": 128
+                                              }
+                                            ],
+                                            "minItems": 3,
+                                            "maxItems": 3,
+                                            "uniqueItems": true
+                                          }
+                                        },
+                                        "required": [
+                                          "kind",
+                                          "tier",
+                                          "template_ids"
+                                        ],
+                                        "additionalProperties": false
                                       }
                                     ]
                                   },
@@ -12562,6 +12659,48 @@
                                     "template_ids"
                                   ],
                                   "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "battle_matchmaking"
+                                    },
+                                    "tier": {
+                                      "type": "string",
+                                      "enum": [
+                                        "tier-20",
+                                        "tier-100",
+                                        "tier-500"
+                                      ]
+                                    },
+                                    "template_ids": {
+                                      "type": "array",
+                                      "prefixItems": [
+                                        {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 128
+                                        },
+                                        {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 128
+                                        },
+                                        {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 128
+                                        }
+                                      ],
+                                      "minItems": 3,
+                                      "maxItems": 3,
+                                      "uniqueItems": true
+                                    }
+                                  },
+                                  "required": ["kind", "tier", "template_ids"],
+                                  "additionalProperties": false
                                 }
                               ]
                             },
@@ -12862,6 +13001,48 @@
                                     "room_id",
                                     "template_ids"
                                   ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "battle_matchmaking"
+                                    },
+                                    "tier": {
+                                      "type": "string",
+                                      "enum": [
+                                        "tier-20",
+                                        "tier-100",
+                                        "tier-500"
+                                      ]
+                                    },
+                                    "template_ids": {
+                                      "type": "array",
+                                      "prefixItems": [
+                                        {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 128
+                                        },
+                                        {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 128
+                                        },
+                                        {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 128
+                                        }
+                                      ],
+                                      "minItems": 3,
+                                      "maxItems": 3,
+                                      "uniqueItems": true
+                                    }
+                                  },
+                                  "required": ["kind", "tier", "template_ids"],
                                   "additionalProperties": false
                                 }
                               ]
@@ -13425,6 +13606,44 @@
                             },
                             "required": ["kind", "room_id", "template_ids"],
                             "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "battle_matchmaking"
+                              },
+                              "tier": {
+                                "type": "string",
+                                "enum": ["tier-20", "tier-100", "tier-500"]
+                              },
+                              "template_ids": {
+                                "type": "array",
+                                "prefixItems": [
+                                  {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 128
+                                  },
+                                  {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 128
+                                  },
+                                  {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 128
+                                  }
+                                ],
+                                "minItems": 3,
+                                "maxItems": 3,
+                                "uniqueItems": true
+                              }
+                            },
+                            "required": ["kind", "tier", "template_ids"],
+                            "additionalProperties": false
                           }
                         ]
                       }
@@ -13562,6 +13781,44 @@
                               }
                             },
                             "required": ["kind", "room_id", "template_ids"],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "battle_matchmaking"
+                              },
+                              "tier": {
+                                "type": "string",
+                                "enum": ["tier-20", "tier-100", "tier-500"]
+                              },
+                              "template_ids": {
+                                "type": "array",
+                                "prefixItems": [
+                                  {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 128
+                                  },
+                                  {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 128
+                                  },
+                                  {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 128
+                                  }
+                                ],
+                                "minItems": 3,
+                                "maxItems": 3,
+                                "uniqueItems": true
+                              }
+                            },
+                            "required": ["kind", "tier", "template_ids"],
                             "additionalProperties": false
                           }
                         ]
@@ -13855,6 +14112,48 @@
                                     "room_id",
                                     "template_ids"
                                   ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "battle_matchmaking"
+                                    },
+                                    "tier": {
+                                      "type": "string",
+                                      "enum": [
+                                        "tier-20",
+                                        "tier-100",
+                                        "tier-500"
+                                      ]
+                                    },
+                                    "template_ids": {
+                                      "type": "array",
+                                      "prefixItems": [
+                                        {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 128
+                                        },
+                                        {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 128
+                                        },
+                                        {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 128
+                                        }
+                                      ],
+                                      "minItems": 3,
+                                      "maxItems": 3,
+                                      "uniqueItems": true
+                                    }
+                                  },
+                                  "required": ["kind", "tier", "template_ids"],
                                   "additionalProperties": false
                                 }
                               ]
@@ -14156,6 +14455,48 @@
                                     "room_id",
                                     "template_ids"
                                   ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "battle_matchmaking"
+                                    },
+                                    "tier": {
+                                      "type": "string",
+                                      "enum": [
+                                        "tier-20",
+                                        "tier-100",
+                                        "tier-500"
+                                      ]
+                                    },
+                                    "template_ids": {
+                                      "type": "array",
+                                      "prefixItems": [
+                                        {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 128
+                                        },
+                                        {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 128
+                                        },
+                                        {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 128
+                                        }
+                                      ],
+                                      "minItems": 3,
+                                      "maxItems": 3,
+                                      "uniqueItems": true
+                                    }
+                                  },
+                                  "required": ["kind", "tier", "template_ids"],
                                   "additionalProperties": false
                                 }
                               ]
@@ -14707,6 +15048,48 @@
                                     "template_ids"
                                   ],
                                   "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "battle_matchmaking"
+                                    },
+                                    "tier": {
+                                      "type": "string",
+                                      "enum": [
+                                        "tier-20",
+                                        "tier-100",
+                                        "tier-500"
+                                      ]
+                                    },
+                                    "template_ids": {
+                                      "type": "array",
+                                      "prefixItems": [
+                                        {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 128
+                                        },
+                                        {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 128
+                                        },
+                                        {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 128
+                                        }
+                                      ],
+                                      "minItems": 3,
+                                      "maxItems": 3,
+                                      "uniqueItems": true
+                                    }
+                                  },
+                                  "required": ["kind", "tier", "template_ids"],
+                                  "additionalProperties": false
                                 }
                               ]
                             },
@@ -15007,6 +15390,48 @@
                                     "room_id",
                                     "template_ids"
                                   ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "battle_matchmaking"
+                                    },
+                                    "tier": {
+                                      "type": "string",
+                                      "enum": [
+                                        "tier-20",
+                                        "tier-100",
+                                        "tier-500"
+                                      ]
+                                    },
+                                    "template_ids": {
+                                      "type": "array",
+                                      "prefixItems": [
+                                        {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 128
+                                        },
+                                        {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 128
+                                        },
+                                        {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 128
+                                        }
+                                      ],
+                                      "minItems": 3,
+                                      "maxItems": 3,
+                                      "uniqueItems": true
+                                    }
+                                  },
+                                  "required": ["kind", "tier", "template_ids"],
                                   "additionalProperties": false
                                 }
                               ]
@@ -15543,6 +15968,48 @@
                                     "room_id",
                                     "template_ids"
                                   ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "battle_matchmaking"
+                                    },
+                                    "tier": {
+                                      "type": "string",
+                                      "enum": [
+                                        "tier-20",
+                                        "tier-100",
+                                        "tier-500"
+                                      ]
+                                    },
+                                    "template_ids": {
+                                      "type": "array",
+                                      "prefixItems": [
+                                        {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 128
+                                        },
+                                        {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 128
+                                        },
+                                        {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 128
+                                        }
+                                      ],
+                                      "minItems": 3,
+                                      "maxItems": 3,
+                                      "uniqueItems": true
+                                    }
+                                  },
+                                  "required": ["kind", "tier", "template_ids"],
                                   "additionalProperties": false
                                 }
                               ]
@@ -16084,6 +16551,52 @@
                                             "template_ids"
                                           ],
                                           "additionalProperties": false
+                                        },
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "kind": {
+                                              "type": "string",
+                                              "const": "battle_matchmaking"
+                                            },
+                                            "tier": {
+                                              "type": "string",
+                                              "enum": [
+                                                "tier-20",
+                                                "tier-100",
+                                                "tier-500"
+                                              ]
+                                            },
+                                            "template_ids": {
+                                              "type": "array",
+                                              "prefixItems": [
+                                                {
+                                                  "type": "string",
+                                                  "minLength": 1,
+                                                  "maxLength": 128
+                                                },
+                                                {
+                                                  "type": "string",
+                                                  "minLength": 1,
+                                                  "maxLength": 128
+                                                },
+                                                {
+                                                  "type": "string",
+                                                  "minLength": 1,
+                                                  "maxLength": 128
+                                                }
+                                              ],
+                                              "minItems": 3,
+                                              "maxItems": 3,
+                                              "uniqueItems": true
+                                            }
+                                          },
+                                          "required": [
+                                            "kind",
+                                            "tier",
+                                            "template_ids"
+                                          ],
+                                          "additionalProperties": false
                                         }
                                       ]
                                     },
@@ -16560,6 +17073,48 @@
                                     "template_ids"
                                   ],
                                   "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "battle_matchmaking"
+                                    },
+                                    "tier": {
+                                      "type": "string",
+                                      "enum": [
+                                        "tier-20",
+                                        "tier-100",
+                                        "tier-500"
+                                      ]
+                                    },
+                                    "template_ids": {
+                                      "type": "array",
+                                      "prefixItems": [
+                                        {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 128
+                                        },
+                                        {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 128
+                                        },
+                                        {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 128
+                                        }
+                                      ],
+                                      "minItems": 3,
+                                      "maxItems": 3,
+                                      "uniqueItems": true
+                                    }
+                                  },
+                                  "required": ["kind", "tier", "template_ids"],
+                                  "additionalProperties": false
                                 }
                               ]
                             },
@@ -16860,6 +17415,48 @@
                                     "room_id",
                                     "template_ids"
                                   ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "battle_matchmaking"
+                                    },
+                                    "tier": {
+                                      "type": "string",
+                                      "enum": [
+                                        "tier-20",
+                                        "tier-100",
+                                        "tier-500"
+                                      ]
+                                    },
+                                    "template_ids": {
+                                      "type": "array",
+                                      "prefixItems": [
+                                        {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 128
+                                        },
+                                        {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 128
+                                        },
+                                        {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 128
+                                        }
+                                      ],
+                                      "minItems": 3,
+                                      "maxItems": 3,
+                                      "uniqueItems": true
+                                    }
+                                  },
+                                  "required": ["kind", "tier", "template_ids"],
                                   "additionalProperties": false
                                 }
                               ]
@@ -17426,6 +18023,48 @@
                                     "template_ids"
                                   ],
                                   "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "battle_matchmaking"
+                                    },
+                                    "tier": {
+                                      "type": "string",
+                                      "enum": [
+                                        "tier-20",
+                                        "tier-100",
+                                        "tier-500"
+                                      ]
+                                    },
+                                    "template_ids": {
+                                      "type": "array",
+                                      "prefixItems": [
+                                        {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 128
+                                        },
+                                        {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 128
+                                        },
+                                        {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 128
+                                        }
+                                      ],
+                                      "minItems": 3,
+                                      "maxItems": 3,
+                                      "uniqueItems": true
+                                    }
+                                  },
+                                  "required": ["kind", "tier", "template_ids"],
+                                  "additionalProperties": false
                                 }
                               ]
                             },
@@ -17726,6 +18365,48 @@
                                     "room_id",
                                     "template_ids"
                                   ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "battle_matchmaking"
+                                    },
+                                    "tier": {
+                                      "type": "string",
+                                      "enum": [
+                                        "tier-20",
+                                        "tier-100",
+                                        "tier-500"
+                                      ]
+                                    },
+                                    "template_ids": {
+                                      "type": "array",
+                                      "prefixItems": [
+                                        {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 128
+                                        },
+                                        {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 128
+                                        },
+                                        {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 128
+                                        }
+                                      ],
+                                      "minItems": 3,
+                                      "maxItems": 3,
+                                      "uniqueItems": true
+                                    }
+                                  },
+                                  "required": ["kind", "tier", "template_ids"],
                                   "additionalProperties": false
                                 }
                               ]
@@ -21291,6 +21972,10 @@
                               "type": "string",
                               "pattern": "^[0-9a-f]{64}$"
                             },
+                            "matchmaking_wait_seconds": {
+                              "type": "number",
+                              "const": 120
+                            },
                             "heartbeat_interval_seconds": {
                               "type": "number",
                               "const": 5
@@ -21335,6 +22020,7 @@
                           "required": [
                             "id",
                             "checksum",
+                            "matchmaking_wait_seconds",
                             "heartbeat_interval_seconds",
                             "presence_online_window_seconds",
                             "offline_reconnect_seconds",
@@ -21457,6 +22143,10 @@
                                   "type": "string",
                                   "enum": ["creator", "opponent"]
                                 },
+                                "room_mode": {
+                                  "type": "string",
+                                  "enum": ["friend_invite", "public_match"]
+                                },
                                 "status": {
                                   "type": "string",
                                   "enum": [
@@ -21509,6 +22199,7 @@
                                 "room_id",
                                 "participant_id",
                                 "side",
+                                "room_mode",
                                 "status",
                                 "state_version",
                                 "entry_fee",
@@ -21529,6 +22220,10 @@
                                   "type": "string",
                                   "format": "uuid",
                                   "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                },
+                                "room_mode": {
+                                  "type": "string",
+                                  "enum": ["friend_invite", "public_match"]
                                 },
                                 "status": {
                                   "type": "string",
@@ -22412,6 +23107,7 @@
                               },
                               "required": [
                                 "room_id",
+                                "room_mode",
                                 "status",
                                 "state_version",
                                 "side",
@@ -23344,6 +24040,10 @@
                           "format": "uuid",
                           "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
                         },
+                        "room_mode": {
+                          "type": "string",
+                          "enum": ["friend_invite", "public_match"]
+                        },
                         "status": {
                           "type": "string",
                           "enum": [
@@ -24173,6 +24873,7 @@
                       },
                       "required": [
                         "room_id",
+                        "room_mode",
                         "status",
                         "state_version",
                         "side",
@@ -25286,9 +25987,9 @@
         }
       }
     },
-    "/api/battle/invites/current/accept": {
+    "/api/battle/matchmaking": {
       "post": {
-        "operationId": "battle_accept",
+        "operationId": "battle_matchmake",
         "tags": ["battle"],
         "security": [{ "bearerAuth": [] }],
         "parameters": [
@@ -25315,6 +26016,10 @@
                           "type": "string",
                           "format": "uuid",
                           "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "room_mode": {
+                          "type": "string",
+                          "enum": ["friend_invite", "public_match"]
                         },
                         "status": {
                           "type": "string",
@@ -26145,6 +26850,7 @@
                       },
                       "required": [
                         "room_id",
+                        "room_mode",
                         "status",
                         "state_version",
                         "side",
@@ -26207,6 +26913,10 @@
                           "format": "uuid",
                           "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
                         },
+                        "room_mode": {
+                          "type": "string",
+                          "enum": ["friend_invite", "public_match"]
+                        },
                         "status": {
                           "type": "string",
                           "enum": [
@@ -27036,6 +27746,2134 @@
                       },
                       "required": [
                         "room_id",
+                        "room_mode",
+                        "status",
+                        "state_version",
+                        "side",
+                        "round_no",
+                        "action_ordinal",
+                        "first_actor",
+                        "active_actor",
+                        "active_action_mode",
+                        "phase_deadline",
+                        "prepare_deadline",
+                        "prepared_message_id",
+                        "presence_lifecycle",
+                        "viewer_action_state",
+                        "server_time",
+                        "lobby",
+                        "self_team",
+                        "opponent_team",
+                        "latest_action_sequence",
+                        "action_events",
+                        "has_more_action_events",
+                        "terminal_result"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "request_id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "operation_id": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        { "type": "null" }
+                      ]
+                    }
+                  },
+                  "required": ["data", "request_id", "operation_id"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Errors: REQUEST_INVALID, IDEMPOTENCY_KEY_INVALID, IDEMPOTENCY_KEY_REQUIRED, BATTLE_TIER_INVALID, BATTLE_TEAM_INVALID, BATTLE_TEAM_TEMPLATE_DUPLICATE",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "401": {
+            "description": "Errors: SESSION_EXPIRED, SESSION_REPLACED, SESSION_REQUIRED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "403": {
+            "description": "Errors: ACCOUNT_RESTRICTED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "409": {
+            "description": "Errors: ENTRY_HANDOFF_PENDING, BATTLE_ALREADY_PARTICIPATING, INSUFFICIENT_BALANCE, INSUFFICIENT_INVENTORY, INVENTORY_RESERVED, IDEMPOTENCY_KEY_REUSED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "410": {
+            "description": "Errors: BATTLE_ROOM_CANCELLED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "413": {
+            "description": "Errors: REQUEST_TOO_LARGE",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "415": {
+            "description": "Errors: CONTENT_TYPE_INVALID",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "429": {
+            "description": "Errors: RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "500": {
+            "description": "Errors: DATABASE_RPC_FAILED, INTERNAL_ERROR",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "502": {
+            "description": "Errors: RESPONSE_INVALID",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "503": {
+            "description": "Errors: BATTLE_RULESET_UNAVAILABLE",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          }
+        },
+        "x-idempotency-required": true,
+        "x-idempotency-forbidden": false,
+        "x-allow-pending-entry-handoff": false,
+        "x-error-codes": [
+          "DATABASE_RPC_FAILED",
+          "INTERNAL_ERROR",
+          "REQUEST_INVALID",
+          "RESPONSE_INVALID",
+          "CONTENT_TYPE_INVALID",
+          "REQUEST_TOO_LARGE",
+          "ACCOUNT_RESTRICTED",
+          "SESSION_EXPIRED",
+          "SESSION_REPLACED",
+          "SESSION_REQUIRED",
+          "ENTRY_HANDOFF_PENDING",
+          "IDEMPOTENCY_KEY_INVALID",
+          "IDEMPOTENCY_KEY_REQUIRED",
+          "BATTLE_RULESET_UNAVAILABLE",
+          "BATTLE_TIER_INVALID",
+          "BATTLE_TEAM_INVALID",
+          "BATTLE_TEAM_TEMPLATE_DUPLICATE",
+          "BATTLE_ALREADY_PARTICIPATING",
+          "BATTLE_ROOM_CANCELLED",
+          "INSUFFICIENT_BALANCE",
+          "INSUFFICIENT_INVENTORY",
+          "INVENTORY_RESERVED",
+          "RATE_LIMITED",
+          "IDEMPOTENCY_KEY_REUSED"
+        ],
+        "x-error-definitions": {
+          "DATABASE_RPC_FAILED": {
+            "status": 500,
+            "message": "数据库操作失败",
+            "retryable": true,
+            "refreshScope": "all",
+            "recoveryAction": "query_operation"
+          },
+          "INTERNAL_ERROR": {
+            "status": 500,
+            "message": "服务暂时不可用",
+            "retryable": true,
+            "refreshScope": "all",
+            "recoveryAction": "query_operation"
+          },
+          "REQUEST_INVALID": {
+            "status": 400,
+            "message": "请求参数无效",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "RESPONSE_INVALID": {
+            "status": 502,
+            "message": "服务响应格式无效",
+            "retryable": true,
+            "refreshScope": "all",
+            "recoveryAction": "refresh"
+          },
+          "CONTENT_TYPE_INVALID": {
+            "status": 415,
+            "message": "请求体必须使用 application/json",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "REQUEST_TOO_LARGE": {
+            "status": 413,
+            "message": "请求体过大",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "ACCOUNT_RESTRICTED": {
+            "status": 403,
+            "message": "账户当前不可执行此操作",
+            "retryable": false,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
+          },
+          "SESSION_EXPIRED": {
+            "status": 401,
+            "message": "会话已过期",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "reauthenticate"
+          },
+          "SESSION_REPLACED": {
+            "status": 401,
+            "message": "会话已被替换",
+            "retryable": false,
+            "refreshScope": "session",
+            "recoveryAction": "reauthenticate"
+          },
+          "SESSION_REQUIRED": {
+            "status": 401,
+            "message": "请从 Telegram 重新进入应用",
+            "retryable": false,
+            "refreshScope": "session",
+            "recoveryAction": "reauthenticate"
+          },
+          "ENTRY_HANDOFF_PENDING": {
+            "status": 409,
+            "message": "邀请绑定结果确认中，请稍后刷新",
+            "retryable": true,
+            "refreshScope": "session",
+            "recoveryAction": "refresh"
+          },
+          "IDEMPOTENCY_KEY_INVALID": {
+            "status": 400,
+            "message": "幂等键必须是 UUID",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "IDEMPOTENCY_KEY_REQUIRED": {
+            "status": 400,
+            "message": "缺少幂等键",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "BATTLE_RULESET_UNAVAILABLE": {
+            "status": 503,
+            "message": "Battle 规则暂不可用，请稍后重试",
+            "retryable": true,
+            "refreshScope": "battle",
+            "recoveryAction": "refresh"
+          },
+          "BATTLE_TIER_INVALID": {
+            "status": 400,
+            "message": "Battle 入场档位无效",
+            "retryable": false,
+            "refreshScope": "battle",
+            "recoveryAction": "refresh"
+          },
+          "BATTLE_TEAM_INVALID": {
+            "status": 400,
+            "message": "请选择三个可用且不同的藏品",
+            "retryable": false,
+            "refreshScope": "inventory",
+            "recoveryAction": "refresh"
+          },
+          "BATTLE_TEAM_TEMPLATE_DUPLICATE": {
+            "status": 400,
+            "message": "Battle 队伍中的藏品模板不能重复",
+            "retryable": false,
+            "refreshScope": "inventory",
+            "recoveryAction": "refresh"
+          },
+          "BATTLE_ALREADY_PARTICIPATING": {
+            "status": 409,
+            "message": "当前已有未结束的 Battle",
+            "retryable": false,
+            "refreshScope": "battle",
+            "recoveryAction": "refresh"
+          },
+          "BATTLE_ROOM_CANCELLED": {
+            "status": 410,
+            "message": "挑战已取消",
+            "retryable": false,
+            "refreshScope": ["battle", "assets", "inventory"],
+            "recoveryAction": "refresh"
+          },
+          "INSUFFICIENT_BALANCE": {
+            "status": 409,
+            "message": "余额不足",
+            "retryable": false,
+            "refreshScope": "assets",
+            "recoveryAction": "refresh"
+          },
+          "INSUFFICIENT_INVENTORY": {
+            "status": 409,
+            "message": "可用藏品数量不足",
+            "retryable": false,
+            "refreshScope": "inventory",
+            "recoveryAction": "refresh"
+          },
+          "INVENTORY_RESERVED": {
+            "status": 409,
+            "message": "藏品已被其他业务占用",
+            "retryable": false,
+            "refreshScope": "inventory",
+            "recoveryAction": "refresh"
+          },
+          "RATE_LIMITED": {
+            "status": 429,
+            "message": "操作过于频繁，请稍后重试",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "IDEMPOTENCY_KEY_REUSED": {
+            "status": 409,
+            "message": "幂等键已用于不同请求",
+            "retryable": false,
+            "refreshScope": "all",
+            "recoveryAction": "query_operation"
+          }
+        },
+        "x-refresh-scopes": ["battle", "assets", "inventory"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "tier": {
+                    "type": "string",
+                    "enum": ["tier-20", "tier-100", "tier-500"]
+                  },
+                  "template_ids": {
+                    "type": "array",
+                    "prefixItems": [
+                      { "type": "string", "minLength": 1, "maxLength": 128 },
+                      { "type": "string", "minLength": 1, "maxLength": 128 },
+                      { "type": "string", "minLength": 1, "maxLength": 128 }
+                    ],
+                    "minItems": 3,
+                    "maxItems": 3,
+                    "uniqueItems": true
+                  }
+                },
+                "required": ["tier", "template_ids"],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/battle/invites/current/accept": {
+      "post": {
+        "operationId": "battle_accept",
+        "tags": ["battle"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "room_id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "room_mode": {
+                          "type": "string",
+                          "enum": ["friend_invite", "public_match"]
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "preparing_share",
+                            "waiting",
+                            "lobby_waiting",
+                            "lobby_countdown",
+                            "active_turn",
+                            "finished",
+                            "draw",
+                            "cancelled",
+                            "expired",
+                            "voided"
+                          ]
+                        },
+                        "state_version": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "side": {
+                          "type": "string",
+                          "enum": ["creator", "opponent"]
+                        },
+                        "round_no": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 20
+                        },
+                        "action_ordinal": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 2
+                        },
+                        "first_actor": {
+                          "anyOf": [
+                            { "type": "string", "enum": ["self", "opponent"] },
+                            { "type": "null" }
+                          ]
+                        },
+                        "active_actor": {
+                          "anyOf": [
+                            { "type": "string", "enum": ["self", "opponent"] },
+                            { "type": "null" }
+                          ]
+                        },
+                        "active_action_mode": {
+                          "type": "string",
+                          "enum": ["normal", "replace_attack"]
+                        },
+                        "phase_deadline": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            },
+                            { "type": "null" }
+                          ]
+                        },
+                        "prepare_deadline": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            },
+                            { "type": "null" }
+                          ]
+                        },
+                        "prepared_message_id": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 256
+                            },
+                            { "type": "null" }
+                          ]
+                        },
+                        "presence_lifecycle": {
+                          "type": "object",
+                          "properties": {
+                            "version": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "lease_id": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                },
+                                { "type": "null" }
+                              ]
+                            },
+                            "last_command_seq": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "active": { "type": "boolean" }
+                          },
+                          "required": [
+                            "version",
+                            "lease_id",
+                            "last_command_seq",
+                            "active"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "viewer_action_state": {
+                          "type": "string",
+                          "enum": ["not_applicable", "available"]
+                        },
+                        "server_time": {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                        },
+                        "lobby": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "phase": {
+                                  "type": "string",
+                                  "enum": ["lobby_waiting", "lobby_countdown"]
+                                },
+                                "expires_at": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                },
+                                "start_deadline": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "format": "date-time",
+                                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                    },
+                                    { "type": "null" }
+                                  ]
+                                },
+                                "presence": {
+                                  "type": "object",
+                                  "properties": {
+                                    "creator": {
+                                      "type": "object",
+                                      "properties": {
+                                        "online": { "type": "boolean" },
+                                        "reconnect_deadline": {
+                                          "anyOf": [
+                                            {
+                                              "type": "string",
+                                              "format": "date-time",
+                                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                            },
+                                            { "type": "null" }
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "online",
+                                        "reconnect_deadline"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "opponent": {
+                                      "type": "object",
+                                      "properties": {
+                                        "online": { "type": "boolean" },
+                                        "reconnect_deadline": {
+                                          "anyOf": [
+                                            {
+                                              "type": "string",
+                                              "format": "date-time",
+                                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                            },
+                                            { "type": "null" }
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "online",
+                                        "reconnect_deadline"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "required": ["creator", "opponent"],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "required": [
+                                "phase",
+                                "expires_at",
+                                "start_deadline",
+                                "presence"
+                              ],
+                              "additionalProperties": false
+                            },
+                            { "type": "null" }
+                          ]
+                        },
+                        "self_team": {
+                          "minItems": 3,
+                          "maxItems": 3,
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "slot": {
+                                "anyOf": [
+                                  { "type": "number", "const": 1 },
+                                  { "type": "number", "const": 2 },
+                                  { "type": "number", "const": 3 }
+                                ]
+                              },
+                              "template_id": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 128
+                              },
+                              "name": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 128
+                              },
+                              "image_thumbnail_path": {
+                                "type": "string",
+                                "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                              },
+                              "image_detail_path": {
+                                "type": "string",
+                                "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                              },
+                              "rarity": {
+                                "type": "string",
+                                "enum": [
+                                  "common",
+                                  "rare",
+                                  "epic",
+                                  "legendary",
+                                  "mythic"
+                                ]
+                              },
+                              "stage": {
+                                "anyOf": [
+                                  { "type": "number", "const": 1 },
+                                  { "type": "number", "const": 2 },
+                                  { "type": "number", "const": 3 }
+                                ]
+                              },
+                              "element": {
+                                "type": "string",
+                                "enum": [
+                                  "fire",
+                                  "grass",
+                                  "earth",
+                                  "lightning",
+                                  "water"
+                                ]
+                              },
+                              "current_hp": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "max_hp": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "attack": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "defense": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "speed": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "alive": { "type": "boolean" },
+                              "active": { "type": "boolean" },
+                              "skills": {
+                                "minItems": 2,
+                                "maxItems": 4,
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "position": {
+                                      "anyOf": [
+                                        { "type": "number", "const": 1 },
+                                        { "type": "number", "const": 2 },
+                                        { "type": "number", "const": 3 },
+                                        { "type": "number", "const": 4 }
+                                      ]
+                                    },
+                                    "skill_id": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 128
+                                    },
+                                    "name": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 64
+                                    },
+                                    "power": {
+                                      "type": "integer",
+                                      "exclusiveMinimum": 0,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "accuracy_bps": {
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 10000
+                                    },
+                                    "effect_key": {
+                                      "type": "string",
+                                      "pattern": "^(fire|grass|earth|lightning|water)-(0[1-9]|10)$"
+                                    }
+                                  },
+                                  "required": [
+                                    "position",
+                                    "skill_id",
+                                    "name",
+                                    "power",
+                                    "accuracy_bps",
+                                    "effect_key"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "description": "Only skills owned by this template; length equals stage + 1 and positions are contiguous in nondecreasing power order"
+                              }
+                            },
+                            "required": [
+                              "slot",
+                              "template_id",
+                              "name",
+                              "image_thumbnail_path",
+                              "image_detail_path",
+                              "rarity",
+                              "stage",
+                              "element",
+                              "current_hp",
+                              "max_hp",
+                              "attack",
+                              "defense",
+                              "speed",
+                              "alive",
+                              "active",
+                              "skills"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "opponent_team": {
+                          "anyOf": [
+                            { "type": "array", "prefixItems": [] },
+                            {
+                              "minItems": 3,
+                              "maxItems": 3,
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "slot": {
+                                    "anyOf": [
+                                      { "type": "number", "const": 1 },
+                                      { "type": "number", "const": 2 },
+                                      { "type": "number", "const": 3 }
+                                    ]
+                                  },
+                                  "name": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 128
+                                  },
+                                  "image_thumbnail_path": {
+                                    "type": "string",
+                                    "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                                  },
+                                  "image_detail_path": {
+                                    "type": "string",
+                                    "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                                  },
+                                  "rarity": {
+                                    "type": "string",
+                                    "enum": [
+                                      "common",
+                                      "rare",
+                                      "epic",
+                                      "legendary",
+                                      "mythic"
+                                    ]
+                                  },
+                                  "stage": {
+                                    "anyOf": [
+                                      { "type": "number", "const": 1 },
+                                      { "type": "number", "const": 2 },
+                                      { "type": "number", "const": 3 }
+                                    ]
+                                  },
+                                  "hp_percent": {
+                                    "type": "number",
+                                    "minimum": 0,
+                                    "maximum": 100
+                                  },
+                                  "alive": { "type": "boolean" },
+                                  "active": { "type": "boolean" }
+                                },
+                                "required": [
+                                  "slot",
+                                  "name",
+                                  "image_thumbnail_path",
+                                  "image_detail_path",
+                                  "rarity",
+                                  "stage",
+                                  "hp_percent",
+                                  "alive",
+                                  "active"
+                                ],
+                                "additionalProperties": false
+                              }
+                            }
+                          ]
+                        },
+                        "latest_action_sequence": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "action_events": {
+                          "maxItems": 16,
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "sequence": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "event_id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              "state_version": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "round_no": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 20
+                              },
+                              "action_ordinal": {
+                                "anyOf": [
+                                  { "type": "number", "const": 1 },
+                                  { "type": "number", "const": 2 }
+                                ]
+                              },
+                              "actor": {
+                                "type": "string",
+                                "enum": ["self", "opponent"]
+                              },
+                              "actions": {
+                                "minItems": 1,
+                                "maxItems": 2,
+                                "type": "array",
+                                "items": {
+                                  "oneOf": [
+                                    {
+                                      "oneOf": [
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "actor": {
+                                              "type": "string",
+                                              "const": "self"
+                                            },
+                                            "kind": {
+                                              "type": "string",
+                                              "const": "attack"
+                                            },
+                                            "skill_name": {
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 64
+                                            },
+                                            "effect_key": {
+                                              "type": "string",
+                                              "pattern": "^(fire|grass|earth|lightning|water)-(0[1-9]|10)$"
+                                            },
+                                            "hit": { "type": "boolean" },
+                                            "effectiveness": {
+                                              "type": "string",
+                                              "enum": [
+                                                "super_effective",
+                                                "not_effective",
+                                                "normal"
+                                              ]
+                                            },
+                                            "target_hp_percent_before": {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 100
+                                            },
+                                            "target_hp_percent_after": {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 100
+                                            },
+                                            "knockout": { "type": "boolean" }
+                                          },
+                                          "required": [
+                                            "actor",
+                                            "kind",
+                                            "skill_name",
+                                            "effect_key",
+                                            "hit",
+                                            "effectiveness",
+                                            "target_hp_percent_before",
+                                            "target_hp_percent_after",
+                                            "knockout"
+                                          ],
+                                          "additionalProperties": false
+                                        },
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "actor": {
+                                              "type": "string",
+                                              "const": "opponent"
+                                            },
+                                            "kind": {
+                                              "type": "string",
+                                              "const": "attack"
+                                            },
+                                            "skill_name": {
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 64
+                                            },
+                                            "effect_key": {
+                                              "type": "string",
+                                              "pattern": "^(fire|grass|earth|lightning|water)-(0[1-9]|10)$"
+                                            },
+                                            "hit": { "type": "boolean" },
+                                            "effectiveness": {
+                                              "type": "string",
+                                              "enum": [
+                                                "super_effective",
+                                                "not_effective",
+                                                "normal"
+                                              ]
+                                            },
+                                            "target_current_hp_before": {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 9007199254740991
+                                            },
+                                            "target_current_hp_after": {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 9007199254740991
+                                            },
+                                            "knockout": { "type": "boolean" }
+                                          },
+                                          "required": [
+                                            "actor",
+                                            "kind",
+                                            "skill_name",
+                                            "effect_key",
+                                            "hit",
+                                            "effectiveness",
+                                            "target_current_hp_before",
+                                            "target_current_hp_after",
+                                            "knockout"
+                                          ],
+                                          "additionalProperties": false
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "actor": {
+                                          "type": "string",
+                                          "enum": ["self", "opponent"]
+                                        },
+                                        "kind": {
+                                          "type": "string",
+                                          "const": "switch"
+                                        },
+                                        "switch_to": {
+                                          "type": "object",
+                                          "properties": {
+                                            "slot": {
+                                              "anyOf": [
+                                                {
+                                                  "type": "number",
+                                                  "const": 1
+                                                },
+                                                {
+                                                  "type": "number",
+                                                  "const": 2
+                                                },
+                                                { "type": "number", "const": 3 }
+                                              ]
+                                            },
+                                            "name": {
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 128
+                                            },
+                                            "image_thumbnail_path": {
+                                              "type": "string",
+                                              "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                                            },
+                                            "image_detail_path": {
+                                              "type": "string",
+                                              "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                                            },
+                                            "rarity": {
+                                              "type": "string",
+                                              "enum": [
+                                                "common",
+                                                "rare",
+                                                "epic",
+                                                "legendary",
+                                                "mythic"
+                                              ]
+                                            },
+                                            "stage": {
+                                              "anyOf": [
+                                                {
+                                                  "type": "number",
+                                                  "const": 1
+                                                },
+                                                {
+                                                  "type": "number",
+                                                  "const": 2
+                                                },
+                                                { "type": "number", "const": 3 }
+                                              ]
+                                            }
+                                          },
+                                          "required": [
+                                            "slot",
+                                            "name",
+                                            "image_thumbnail_path",
+                                            "image_detail_path",
+                                            "rarity",
+                                            "stage"
+                                          ],
+                                          "additionalProperties": false
+                                        }
+                                      },
+                                      "required": [
+                                        "actor",
+                                        "kind",
+                                        "switch_to"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  ]
+                                }
+                              },
+                              "self_hp": {
+                                "minItems": 3,
+                                "maxItems": 3,
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "slot": {
+                                      "anyOf": [
+                                        { "type": "number", "const": 1 },
+                                        { "type": "number", "const": 2 },
+                                        { "type": "number", "const": 3 }
+                                      ]
+                                    },
+                                    "current_hp": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "max_hp": {
+                                      "type": "integer",
+                                      "exclusiveMinimum": 0,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "alive": { "type": "boolean" }
+                                  },
+                                  "required": [
+                                    "slot",
+                                    "current_hp",
+                                    "max_hp",
+                                    "alive"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "opponent_hp": {
+                                "minItems": 3,
+                                "maxItems": 3,
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "slot": {
+                                      "anyOf": [
+                                        { "type": "number", "const": 1 },
+                                        { "type": "number", "const": 2 },
+                                        { "type": "number", "const": 3 }
+                                      ]
+                                    },
+                                    "hp_percent": {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "maximum": 100
+                                    },
+                                    "alive": { "type": "boolean" }
+                                  },
+                                  "required": ["slot", "hp_percent", "alive"],
+                                  "additionalProperties": false
+                                }
+                              }
+                            },
+                            "required": [
+                              "sequence",
+                              "event_id",
+                              "state_version",
+                              "round_no",
+                              "action_ordinal",
+                              "actor",
+                              "actions",
+                              "self_hp",
+                              "opponent_hp"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "has_more_action_events": { "type": "boolean" },
+                        "terminal_result": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "room_id": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                },
+                                "result": {
+                                  "type": "string",
+                                  "enum": ["win", "loss", "draw", "void"]
+                                },
+                                "opponent_display_name": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 128
+                                },
+                                "entry_fee": {
+                                  "anyOf": [
+                                    { "type": "number", "const": 20 },
+                                    { "type": "number", "const": 100 },
+                                    { "type": "number", "const": 500 }
+                                  ]
+                                },
+                                "payout": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "net_change": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                "fee": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "reason": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 128
+                                },
+                                "finished_at": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                }
+                              },
+                              "required": [
+                                "room_id",
+                                "result",
+                                "opponent_display_name",
+                                "entry_fee",
+                                "payout",
+                                "net_change",
+                                "fee",
+                                "reason",
+                                "finished_at"
+                              ],
+                              "additionalProperties": false
+                            },
+                            { "type": "null" }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "room_id",
+                        "room_mode",
+                        "status",
+                        "state_version",
+                        "side",
+                        "round_no",
+                        "action_ordinal",
+                        "first_actor",
+                        "active_actor",
+                        "active_action_mode",
+                        "phase_deadline",
+                        "prepare_deadline",
+                        "prepared_message_id",
+                        "presence_lifecycle",
+                        "viewer_action_state",
+                        "server_time",
+                        "lobby",
+                        "self_team",
+                        "opponent_team",
+                        "latest_action_sequence",
+                        "action_events",
+                        "has_more_action_events",
+                        "terminal_result"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "request_id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "operation_id": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        { "type": "null" }
+                      ]
+                    }
+                  },
+                  "required": ["data", "request_id", "operation_id"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Operation accepted for durable recovery",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "room_id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "room_mode": {
+                          "type": "string",
+                          "enum": ["friend_invite", "public_match"]
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "preparing_share",
+                            "waiting",
+                            "lobby_waiting",
+                            "lobby_countdown",
+                            "active_turn",
+                            "finished",
+                            "draw",
+                            "cancelled",
+                            "expired",
+                            "voided"
+                          ]
+                        },
+                        "state_version": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "side": {
+                          "type": "string",
+                          "enum": ["creator", "opponent"]
+                        },
+                        "round_no": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 20
+                        },
+                        "action_ordinal": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 2
+                        },
+                        "first_actor": {
+                          "anyOf": [
+                            { "type": "string", "enum": ["self", "opponent"] },
+                            { "type": "null" }
+                          ]
+                        },
+                        "active_actor": {
+                          "anyOf": [
+                            { "type": "string", "enum": ["self", "opponent"] },
+                            { "type": "null" }
+                          ]
+                        },
+                        "active_action_mode": {
+                          "type": "string",
+                          "enum": ["normal", "replace_attack"]
+                        },
+                        "phase_deadline": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            },
+                            { "type": "null" }
+                          ]
+                        },
+                        "prepare_deadline": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            },
+                            { "type": "null" }
+                          ]
+                        },
+                        "prepared_message_id": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 256
+                            },
+                            { "type": "null" }
+                          ]
+                        },
+                        "presence_lifecycle": {
+                          "type": "object",
+                          "properties": {
+                            "version": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "lease_id": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                },
+                                { "type": "null" }
+                              ]
+                            },
+                            "last_command_seq": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "active": { "type": "boolean" }
+                          },
+                          "required": [
+                            "version",
+                            "lease_id",
+                            "last_command_seq",
+                            "active"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "viewer_action_state": {
+                          "type": "string",
+                          "enum": ["not_applicable", "available"]
+                        },
+                        "server_time": {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                        },
+                        "lobby": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "phase": {
+                                  "type": "string",
+                                  "enum": ["lobby_waiting", "lobby_countdown"]
+                                },
+                                "expires_at": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                },
+                                "start_deadline": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "format": "date-time",
+                                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                    },
+                                    { "type": "null" }
+                                  ]
+                                },
+                                "presence": {
+                                  "type": "object",
+                                  "properties": {
+                                    "creator": {
+                                      "type": "object",
+                                      "properties": {
+                                        "online": { "type": "boolean" },
+                                        "reconnect_deadline": {
+                                          "anyOf": [
+                                            {
+                                              "type": "string",
+                                              "format": "date-time",
+                                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                            },
+                                            { "type": "null" }
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "online",
+                                        "reconnect_deadline"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "opponent": {
+                                      "type": "object",
+                                      "properties": {
+                                        "online": { "type": "boolean" },
+                                        "reconnect_deadline": {
+                                          "anyOf": [
+                                            {
+                                              "type": "string",
+                                              "format": "date-time",
+                                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                            },
+                                            { "type": "null" }
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "online",
+                                        "reconnect_deadline"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "required": ["creator", "opponent"],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "required": [
+                                "phase",
+                                "expires_at",
+                                "start_deadline",
+                                "presence"
+                              ],
+                              "additionalProperties": false
+                            },
+                            { "type": "null" }
+                          ]
+                        },
+                        "self_team": {
+                          "minItems": 3,
+                          "maxItems": 3,
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "slot": {
+                                "anyOf": [
+                                  { "type": "number", "const": 1 },
+                                  { "type": "number", "const": 2 },
+                                  { "type": "number", "const": 3 }
+                                ]
+                              },
+                              "template_id": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 128
+                              },
+                              "name": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 128
+                              },
+                              "image_thumbnail_path": {
+                                "type": "string",
+                                "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                              },
+                              "image_detail_path": {
+                                "type": "string",
+                                "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                              },
+                              "rarity": {
+                                "type": "string",
+                                "enum": [
+                                  "common",
+                                  "rare",
+                                  "epic",
+                                  "legendary",
+                                  "mythic"
+                                ]
+                              },
+                              "stage": {
+                                "anyOf": [
+                                  { "type": "number", "const": 1 },
+                                  { "type": "number", "const": 2 },
+                                  { "type": "number", "const": 3 }
+                                ]
+                              },
+                              "element": {
+                                "type": "string",
+                                "enum": [
+                                  "fire",
+                                  "grass",
+                                  "earth",
+                                  "lightning",
+                                  "water"
+                                ]
+                              },
+                              "current_hp": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "max_hp": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "attack": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "defense": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "speed": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "alive": { "type": "boolean" },
+                              "active": { "type": "boolean" },
+                              "skills": {
+                                "minItems": 2,
+                                "maxItems": 4,
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "position": {
+                                      "anyOf": [
+                                        { "type": "number", "const": 1 },
+                                        { "type": "number", "const": 2 },
+                                        { "type": "number", "const": 3 },
+                                        { "type": "number", "const": 4 }
+                                      ]
+                                    },
+                                    "skill_id": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 128
+                                    },
+                                    "name": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 64
+                                    },
+                                    "power": {
+                                      "type": "integer",
+                                      "exclusiveMinimum": 0,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "accuracy_bps": {
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 10000
+                                    },
+                                    "effect_key": {
+                                      "type": "string",
+                                      "pattern": "^(fire|grass|earth|lightning|water)-(0[1-9]|10)$"
+                                    }
+                                  },
+                                  "required": [
+                                    "position",
+                                    "skill_id",
+                                    "name",
+                                    "power",
+                                    "accuracy_bps",
+                                    "effect_key"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "description": "Only skills owned by this template; length equals stage + 1 and positions are contiguous in nondecreasing power order"
+                              }
+                            },
+                            "required": [
+                              "slot",
+                              "template_id",
+                              "name",
+                              "image_thumbnail_path",
+                              "image_detail_path",
+                              "rarity",
+                              "stage",
+                              "element",
+                              "current_hp",
+                              "max_hp",
+                              "attack",
+                              "defense",
+                              "speed",
+                              "alive",
+                              "active",
+                              "skills"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "opponent_team": {
+                          "anyOf": [
+                            { "type": "array", "prefixItems": [] },
+                            {
+                              "minItems": 3,
+                              "maxItems": 3,
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "slot": {
+                                    "anyOf": [
+                                      { "type": "number", "const": 1 },
+                                      { "type": "number", "const": 2 },
+                                      { "type": "number", "const": 3 }
+                                    ]
+                                  },
+                                  "name": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 128
+                                  },
+                                  "image_thumbnail_path": {
+                                    "type": "string",
+                                    "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                                  },
+                                  "image_detail_path": {
+                                    "type": "string",
+                                    "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                                  },
+                                  "rarity": {
+                                    "type": "string",
+                                    "enum": [
+                                      "common",
+                                      "rare",
+                                      "epic",
+                                      "legendary",
+                                      "mythic"
+                                    ]
+                                  },
+                                  "stage": {
+                                    "anyOf": [
+                                      { "type": "number", "const": 1 },
+                                      { "type": "number", "const": 2 },
+                                      { "type": "number", "const": 3 }
+                                    ]
+                                  },
+                                  "hp_percent": {
+                                    "type": "number",
+                                    "minimum": 0,
+                                    "maximum": 100
+                                  },
+                                  "alive": { "type": "boolean" },
+                                  "active": { "type": "boolean" }
+                                },
+                                "required": [
+                                  "slot",
+                                  "name",
+                                  "image_thumbnail_path",
+                                  "image_detail_path",
+                                  "rarity",
+                                  "stage",
+                                  "hp_percent",
+                                  "alive",
+                                  "active"
+                                ],
+                                "additionalProperties": false
+                              }
+                            }
+                          ]
+                        },
+                        "latest_action_sequence": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "action_events": {
+                          "maxItems": 16,
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "sequence": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "event_id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              "state_version": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "round_no": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 20
+                              },
+                              "action_ordinal": {
+                                "anyOf": [
+                                  { "type": "number", "const": 1 },
+                                  { "type": "number", "const": 2 }
+                                ]
+                              },
+                              "actor": {
+                                "type": "string",
+                                "enum": ["self", "opponent"]
+                              },
+                              "actions": {
+                                "minItems": 1,
+                                "maxItems": 2,
+                                "type": "array",
+                                "items": {
+                                  "oneOf": [
+                                    {
+                                      "oneOf": [
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "actor": {
+                                              "type": "string",
+                                              "const": "self"
+                                            },
+                                            "kind": {
+                                              "type": "string",
+                                              "const": "attack"
+                                            },
+                                            "skill_name": {
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 64
+                                            },
+                                            "effect_key": {
+                                              "type": "string",
+                                              "pattern": "^(fire|grass|earth|lightning|water)-(0[1-9]|10)$"
+                                            },
+                                            "hit": { "type": "boolean" },
+                                            "effectiveness": {
+                                              "type": "string",
+                                              "enum": [
+                                                "super_effective",
+                                                "not_effective",
+                                                "normal"
+                                              ]
+                                            },
+                                            "target_hp_percent_before": {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 100
+                                            },
+                                            "target_hp_percent_after": {
+                                              "type": "number",
+                                              "minimum": 0,
+                                              "maximum": 100
+                                            },
+                                            "knockout": { "type": "boolean" }
+                                          },
+                                          "required": [
+                                            "actor",
+                                            "kind",
+                                            "skill_name",
+                                            "effect_key",
+                                            "hit",
+                                            "effectiveness",
+                                            "target_hp_percent_before",
+                                            "target_hp_percent_after",
+                                            "knockout"
+                                          ],
+                                          "additionalProperties": false
+                                        },
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "actor": {
+                                              "type": "string",
+                                              "const": "opponent"
+                                            },
+                                            "kind": {
+                                              "type": "string",
+                                              "const": "attack"
+                                            },
+                                            "skill_name": {
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 64
+                                            },
+                                            "effect_key": {
+                                              "type": "string",
+                                              "pattern": "^(fire|grass|earth|lightning|water)-(0[1-9]|10)$"
+                                            },
+                                            "hit": { "type": "boolean" },
+                                            "effectiveness": {
+                                              "type": "string",
+                                              "enum": [
+                                                "super_effective",
+                                                "not_effective",
+                                                "normal"
+                                              ]
+                                            },
+                                            "target_current_hp_before": {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 9007199254740991
+                                            },
+                                            "target_current_hp_after": {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 9007199254740991
+                                            },
+                                            "knockout": { "type": "boolean" }
+                                          },
+                                          "required": [
+                                            "actor",
+                                            "kind",
+                                            "skill_name",
+                                            "effect_key",
+                                            "hit",
+                                            "effectiveness",
+                                            "target_current_hp_before",
+                                            "target_current_hp_after",
+                                            "knockout"
+                                          ],
+                                          "additionalProperties": false
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "actor": {
+                                          "type": "string",
+                                          "enum": ["self", "opponent"]
+                                        },
+                                        "kind": {
+                                          "type": "string",
+                                          "const": "switch"
+                                        },
+                                        "switch_to": {
+                                          "type": "object",
+                                          "properties": {
+                                            "slot": {
+                                              "anyOf": [
+                                                {
+                                                  "type": "number",
+                                                  "const": 1
+                                                },
+                                                {
+                                                  "type": "number",
+                                                  "const": 2
+                                                },
+                                                { "type": "number", "const": 3 }
+                                              ]
+                                            },
+                                            "name": {
+                                              "type": "string",
+                                              "minLength": 1,
+                                              "maxLength": 128
+                                            },
+                                            "image_thumbnail_path": {
+                                              "type": "string",
+                                              "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                                            },
+                                            "image_detail_path": {
+                                              "type": "string",
+                                              "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                                            },
+                                            "rarity": {
+                                              "type": "string",
+                                              "enum": [
+                                                "common",
+                                                "rare",
+                                                "epic",
+                                                "legendary",
+                                                "mythic"
+                                              ]
+                                            },
+                                            "stage": {
+                                              "anyOf": [
+                                                {
+                                                  "type": "number",
+                                                  "const": 1
+                                                },
+                                                {
+                                                  "type": "number",
+                                                  "const": 2
+                                                },
+                                                { "type": "number", "const": 3 }
+                                              ]
+                                            }
+                                          },
+                                          "required": [
+                                            "slot",
+                                            "name",
+                                            "image_thumbnail_path",
+                                            "image_detail_path",
+                                            "rarity",
+                                            "stage"
+                                          ],
+                                          "additionalProperties": false
+                                        }
+                                      },
+                                      "required": [
+                                        "actor",
+                                        "kind",
+                                        "switch_to"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  ]
+                                }
+                              },
+                              "self_hp": {
+                                "minItems": 3,
+                                "maxItems": 3,
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "slot": {
+                                      "anyOf": [
+                                        { "type": "number", "const": 1 },
+                                        { "type": "number", "const": 2 },
+                                        { "type": "number", "const": 3 }
+                                      ]
+                                    },
+                                    "current_hp": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "max_hp": {
+                                      "type": "integer",
+                                      "exclusiveMinimum": 0,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "alive": { "type": "boolean" }
+                                  },
+                                  "required": [
+                                    "slot",
+                                    "current_hp",
+                                    "max_hp",
+                                    "alive"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "opponent_hp": {
+                                "minItems": 3,
+                                "maxItems": 3,
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "slot": {
+                                      "anyOf": [
+                                        { "type": "number", "const": 1 },
+                                        { "type": "number", "const": 2 },
+                                        { "type": "number", "const": 3 }
+                                      ]
+                                    },
+                                    "hp_percent": {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "maximum": 100
+                                    },
+                                    "alive": { "type": "boolean" }
+                                  },
+                                  "required": ["slot", "hp_percent", "alive"],
+                                  "additionalProperties": false
+                                }
+                              }
+                            },
+                            "required": [
+                              "sequence",
+                              "event_id",
+                              "state_version",
+                              "round_no",
+                              "action_ordinal",
+                              "actor",
+                              "actions",
+                              "self_hp",
+                              "opponent_hp"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "has_more_action_events": { "type": "boolean" },
+                        "terminal_result": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "room_id": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                },
+                                "result": {
+                                  "type": "string",
+                                  "enum": ["win", "loss", "draw", "void"]
+                                },
+                                "opponent_display_name": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 128
+                                },
+                                "entry_fee": {
+                                  "anyOf": [
+                                    { "type": "number", "const": 20 },
+                                    { "type": "number", "const": 100 },
+                                    { "type": "number", "const": 500 }
+                                  ]
+                                },
+                                "payout": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "net_change": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                "fee": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "reason": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 128
+                                },
+                                "finished_at": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                }
+                              },
+                              "required": [
+                                "room_id",
+                                "result",
+                                "opponent_display_name",
+                                "entry_fee",
+                                "payout",
+                                "net_change",
+                                "fee",
+                                "reason",
+                                "finished_at"
+                              ],
+                              "additionalProperties": false
+                            },
+                            { "type": "null" }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "room_id",
+                        "room_mode",
                         "status",
                         "state_version",
                         "side",
@@ -27463,6 +30301,10 @@
                           "format": "uuid",
                           "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
                         },
+                        "room_mode": {
+                          "type": "string",
+                          "enum": ["friend_invite", "public_match"]
+                        },
                         "status": {
                           "type": "string",
                           "enum": [
@@ -28292,6 +31134,7 @@
                       },
                       "required": [
                         "room_id",
+                        "room_mode",
                         "status",
                         "state_version",
                         "side",
@@ -28354,6 +31197,10 @@
                           "format": "uuid",
                           "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
                         },
+                        "room_mode": {
+                          "type": "string",
+                          "enum": ["friend_invite", "public_match"]
+                        },
                         "status": {
                           "type": "string",
                           "enum": [
@@ -29183,6 +32030,7 @@
                       },
                       "required": [
                         "room_id",
+                        "room_mode",
                         "status",
                         "state_version",
                         "side",
@@ -29653,6 +32501,10 @@
                           "format": "uuid",
                           "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
                         },
+                        "room_mode": {
+                          "type": "string",
+                          "enum": ["friend_invite", "public_match"]
+                        },
                         "status": {
                           "type": "string",
                           "enum": [
@@ -30482,6 +33334,7 @@
                       },
                       "required": [
                         "room_id",
+                        "room_mode",
                         "status",
                         "state_version",
                         "side",
@@ -30799,6 +33652,10 @@
                           "format": "uuid",
                           "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
                         },
+                        "room_mode": {
+                          "type": "string",
+                          "enum": ["friend_invite", "public_match"]
+                        },
                         "status": {
                           "type": "string",
                           "enum": [
@@ -31628,6 +34485,7 @@
                       },
                       "required": [
                         "room_id",
+                        "room_mode",
                         "status",
                         "state_version",
                         "side",

@@ -861,6 +861,16 @@
   color: var(--battle-ink);
 }
 
+.battle-confirm-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 0.88fr) minmax(0, 1.12fr);
+  gap: 8px;
+}
+
+.battle-confirm-actions .button {
+  min-width: 0;
+}
+
 .battle-preparing,
 .battle-result {
   min-height: 560px;
@@ -2110,6 +2120,10 @@
   .battle-confirm-bar {
     grid-template-columns: 1fr auto;
     align-items: center;
+  }
+
+  .battle-confirm-actions {
+    min-width: 390px;
   }
 
   .battle-confirm-bar > span {

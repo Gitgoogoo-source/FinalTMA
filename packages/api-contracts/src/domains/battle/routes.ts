@@ -224,6 +224,35 @@ export const battleRoutes = [
     ],
   }),
   defineRoute({
+    id: "battle.matchmake",
+    method: "POST",
+    path: "/api/battle/matchmaking",
+    gateway: "app",
+    auth: true,
+    idempotent: true,
+    refreshScopes: ["battle", "assets", "inventory"],
+    input: z
+      .object({
+        tier: z.enum(["tier-20", "tier-100", "tier-500"]),
+        template_ids: battleTeamSelectionSchema,
+      })
+      .strict(),
+    output: battleRoomSnapshotSchema,
+    errors: [
+      "BATTLE_RULESET_UNAVAILABLE",
+      "BATTLE_TIER_INVALID",
+      "BATTLE_TEAM_INVALID",
+      "BATTLE_TEAM_TEMPLATE_DUPLICATE",
+      "BATTLE_ALREADY_PARTICIPATING",
+      "BATTLE_ROOM_CANCELLED",
+      "INSUFFICIENT_BALANCE",
+      "INSUFFICIENT_INVENTORY",
+      "INVENTORY_RESERVED",
+      "RATE_LIMITED",
+      "IDEMPOTENCY_KEY_REUSED",
+    ],
+  }),
+  defineRoute({
     id: "battle.accept",
     method: "POST",
     path: "/api/battle/invites/current/accept",

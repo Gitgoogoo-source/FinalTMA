@@ -35,6 +35,7 @@ export function useNavigationIntentResume(
     }
     if (
       order.intent.kind === "battle_create" ||
+      order.intent.kind === "battle_matchmaking" ||
       order.intent.kind === "battle_accept"
     ) {
       navigate(`/game?${params.toString()}`);

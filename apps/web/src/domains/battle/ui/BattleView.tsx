@@ -505,6 +505,7 @@ export function BattleView(): ReactNode {
     pageActive &&
     pageState === "waiting" &&
     room?.side === "creator" &&
+    room.room_mode === "friend_invite" &&
     room.status === "waiting"
       ? room.room_id
       : null;
@@ -586,17 +587,23 @@ export function BattleView(): ReactNode {
       if (!order.intent) return;
       if (
         order.intent.kind !== "battle_create" &&
+        order.intent.kind !== "battle_matchmaking" &&
         order.intent.kind !== "battle_accept"
       )
         return;
       handledResume.current.add(resumeOrderId);
       const restored: BattleTeamSlots = [...order.intent.template_ids];
       setSlots(restored);
-      if (order.intent.kind === "battle_create") {
+      if (
+        order.intent.kind === "battle_create" ||
+        order.intent.kind === "battle_matchmaking"
+      ) {
         setFlow({ kind: "create", tier: order.intent.tier });
         setForceHome(false);
         setResumeNotice(
-          "充值返回后已恢复原档位和队伍，请重新确认；页面不会自动创建。",
+          order.intent.kind === "battle_matchmaking"
+            ? "充值返回后已恢复原档位和队伍，请重新点击随机匹配；页面不会自动入队。"
+            : "充值返回后已恢复原档位和队伍，请重新确认；页面不会自动创建。",
         );
       } else if (
         inviteRoom &&
@@ -953,6 +960,7 @@ export function BattleView(): ReactNode {
     pageActive,
     onAuthoritativeRoom,
     room?.room_id,
+    room?.room_mode,
     room?.side,
     room?.status,
     sessionGeneration,
@@ -963,6 +971,7 @@ export function BattleView(): ReactNode {
     if (
       !sessionGeneration ||
       room?.status !== "waiting" ||
+      room.room_mode !== "friend_invite" ||
       room.side !== "creator"
     )
       return;
@@ -995,6 +1004,7 @@ export function BattleView(): ReactNode {
     );
   }, [
     room?.room_id,
+    room?.room_mode,
     room?.side,
     room?.status,
     sessionGeneration,
@@ -1056,6 +1066,31 @@ export function BattleView(): ReactNode {
         terminalRoomId: inviteRoom.room_id,
       },
     );
+    if (!snapshot) return;
+    setFlow(null);
+    setResumeNotice(null);
+  };
+
+  const matchmake = async () => {
+    if (!tier) return;
+    const selection = parseSelection(slots, teamOptions.data?.items ?? []);
+    if (!selection || balance === null) return;
+    if (balance < tier.entry_fee) {
+      requestTopup(
+        {
+          kind: "battle_matchmaking",
+          tier: tier.id,
+          template_ids: selection,
+        },
+        tier.entry_fee - balance,
+      );
+      setResumeNotice("请完成充值；返回后仍需重新点击随机匹配");
+      return;
+    }
+    const snapshot = await command.execute("battle.matchmake", {
+      tier: tier.id,
+      template_ids: selection,
+    });
     if (!snapshot) return;
     setFlow(null);
     setResumeNotice(null);
@@ -1197,6 +1232,7 @@ export function BattleView(): ReactNode {
     if (
       !sessionGeneration ||
       room?.status !== "waiting" ||
+      room.room_mode !== "friend_invite" ||
       room.side !== "creator" ||
       !room.prepared_message_id
     )
@@ -1277,6 +1313,7 @@ export function BattleView(): ReactNode {
       }}
       refresh={() => void refetchAuthority()}
       create={() => void create()}
+      matchmake={() => void matchmake()}
       accept={() => void accept()}
       share={share}
       cancel={() => setCancelOpen(true)}
@@ -1301,6 +1338,7 @@ export function BattleView(): ReactNode {
       {content}
       {cancelOpen && pageActive ? (
         <BattleCancelSheet
+          publicMatch={room?.room_mode === "public_match"}
           pending={commandPending}
           backgroundRef={battleRootRef}
           onClose={() => setCancelOpen(false)}
@@ -1347,6 +1385,7 @@ function BattleState({
   home,
   refresh,
   create,
+  matchmake,
   accept,
   share,
   cancel,
@@ -1391,6 +1430,7 @@ function BattleState({
   home(): void;
   refresh(): void;
   create(): void;
+  matchmake(): void;
   accept(): void;
   share(): void;
   cancel(): void;
@@ -1476,7 +1516,8 @@ function BattleState({
         disabled={commandPending || balance === null}
         onChange={setSlots}
         onBack={home}
-        onConfirm={create}
+        onInvite={create}
+        onMatch={matchmake}
       />
     );
   if (pageState === "accept") {
@@ -1585,7 +1626,7 @@ function deadlineFor(
     return {
       serverTime: room.server_time,
       deadline: participation?.expires_at ?? null,
-      durationSeconds: 1_800,
+      durationSeconds: room.room_mode === "public_match" ? 120 : 1_800,
     };
   if (state === "lobby" && room.lobby)
     return {

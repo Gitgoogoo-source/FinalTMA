@@ -32,6 +32,7 @@ REQUIRED_SOURCE_FACTS = (
     "火焰 → 草系 → 土系 → 雷电 → 水系 → 火焰",
     "克制倍率固定为 1.50，被克制倍率固定为 0.75，同属性或不相邻属性固定为 1.00",
     "20/100/500 三档结算",
+    "20/100/500 三档公开匹配池严格隔离，公开房间等待固定 120 秒",
     "5 分钟双人等待房、3 秒开战倒计时、每次独立 15 秒行动时限和 20 个完整回合上限",
     "Battle 产品数据生成器只读取本节确定数据",
     "skill_count = stage + 1",
@@ -41,6 +42,7 @@ REQUIRED_SOURCE_FACTS = (
 RULE_PARAMETERS = {
     "share_prepare_timeout_seconds": 60,
     "waiting_timeout_seconds": 1800,
+    "matchmaking_wait_seconds": 120,
     "heartbeat_interval_seconds": 5,
     "presence_online_window_seconds": 10,
     "offline_reconnect_seconds": 90,
@@ -65,6 +67,7 @@ ENTRY_TIERS = (
 )
 RATE_LIMITS = (
     {"action": "create", "limit": 3},
+    {"action": "matchmake", "limit": 6},
     {"action": "invite_preview", "limit": 60},
     {"action": "accept", "limit": 10},
     {"action": "combat_action", "limit": 30},
