@@ -1,8 +1,7 @@
 import {
+  ArrowDown,
+  ArrowLeft,
   ArrowRight,
-  ArrowUp,
-  ArrowUpLeft,
-  ArrowUpRight,
   Gem,
   PackageOpen,
   ShieldCheck,
@@ -187,6 +186,16 @@ function EvolutionFusionPreview({
       className="evolution-fusion-preview"
       aria-label={`使用 3 个${source.name}进化为${route.target.name}`}
     >
+      <MaterialSlot source={source} index={0} className="material-one" />
+      <ArrowDown
+        className="evolution-connector connector-top"
+        aria-hidden="true"
+      />
+      <MaterialSlot source={source} index={1} className="material-two" />
+      <ArrowRight
+        className="evolution-connector connector-left"
+        aria-hidden="true"
+      />
       <article className="evolution-target-card">
         <CatalogImage
           path={route.target.image_thumbnail_path}
@@ -200,20 +209,10 @@ function EvolutionFusionPreview({
           {rarityLabels[route.target.rarity]} · 第 {route.target.stage} 阶
         </span>
       </article>
-      <ArrowUpRight
-        className="evolution-connector connector-left"
-        aria-hidden="true"
-      />
-      <ArrowUp
-        className="evolution-connector connector-center"
-        aria-hidden="true"
-      />
-      <ArrowUpLeft
+      <ArrowLeft
         className="evolution-connector connector-right"
         aria-hidden="true"
       />
-      <MaterialSlot source={source} index={0} className="material-one" />
-      <MaterialSlot source={source} index={1} className="material-two" />
       <MaterialSlot source={source} index={2} className="material-three" />
     </section>
   );

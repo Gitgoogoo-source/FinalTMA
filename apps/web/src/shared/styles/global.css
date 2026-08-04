@@ -5798,7 +5798,9 @@ input:focus {
 .evolution-confirmation-content {
   min-height: 0;
   display: grid;
-  align-content: start;
+  grid-template-rows: minmax(174px, 1fr);
+  grid-auto-rows: auto;
+  align-content: stretch;
   gap: 8px;
   padding: 8px 12px 10px;
   overflow: hidden;
@@ -5846,23 +5848,24 @@ input:focus {
   line-height: 1.05;
 }
 .evolution-fusion-preview {
-  height: clamp(174px, 29dvh, 198px);
+  min-height: 174px;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 68px));
+  grid-template-columns:
+    minmax(54px, 0.85fr) 16px minmax(92px, 1.25fr) 16px
+    minmax(54px, 0.85fr);
   grid-template-areas:
-    "target target target"
-    "connector-left connector-center connector-right"
-    "material-one material-two material-three";
-  grid-template-rows: minmax(0, 1fr) 14px 62px;
+    ". . material-one . ."
+    ". . connector-top . ."
+    "material-two connector-left target connector-right material-three";
+  grid-template-rows: 54px 14px minmax(0, 1fr);
   align-items: center;
-  justify-content: space-around;
-  gap: 2px 12px;
-  padding: 6px 12px 8px;
+  gap: 2px 3px;
+  padding: 6px 8px 8px;
   border: 1px solid rgba(255, 122, 0, 0.12);
   border-radius: 22px;
   background:
     radial-gradient(
-      circle at 50% 32%,
+      circle at 50% 70%,
       rgba(255, 156, 0, 0.16),
       transparent 37%
     ),
@@ -5880,6 +5883,7 @@ input:focus {
 }
 .evolution-material-slot.material-one {
   grid-area: material-one;
+  max-width: 50px;
 }
 .evolution-material-slot.material-two {
   grid-area: material-two;
@@ -5914,7 +5918,7 @@ input:focus {
 }
 .evolution-material-slot figcaption {
   color: var(--muted);
-  font-size: 7px;
+  font-size: 8px;
   font-weight: 850;
   line-height: 1.2;
 }
@@ -5924,11 +5928,11 @@ input:focus {
   justify-self: center;
   color: #f07816;
 }
+.evolution-connector.connector-top {
+  grid-area: connector-top;
+}
 .evolution-connector.connector-left {
   grid-area: connector-left;
-}
-.evolution-connector.connector-center {
-  grid-area: connector-center;
 }
 .evolution-connector.connector-right {
   grid-area: connector-right;
@@ -5941,7 +5945,9 @@ input:focus {
   display: grid;
   gap: 1px;
   justify-self: center;
-  align-self: stretch;
+  align-self: center;
+  align-content: center;
+  max-height: 148px;
   padding: 3px 7px 5px;
   border: 1px solid rgba(255, 122, 0, 0.24);
   border-radius: 19px;
@@ -5969,13 +5975,13 @@ input:focus {
 }
 .evolution-target-card strong {
   color: #17354a;
-  font-size: 10px;
+  font-size: 11px;
 }
 .evolution-target-card span,
 .evolution-target-card small,
 .evolution-risk-copy {
   color: var(--muted);
-  font-size: 8px;
+  font-size: 9px;
 }
 .evolution-target-card small {
   color: var(--sprout-orange);
@@ -5992,7 +5998,7 @@ input:focus {
 }
 .evolution-rule-summary > div {
   min-width: 0;
-  min-height: 54px;
+  min-height: 58px;
   display: grid;
   grid-template-columns: 18px minmax(0, 1fr);
   grid-template-rows: auto auto;
@@ -6010,12 +6016,12 @@ input:focus {
 }
 .evolution-rule-summary span {
   color: var(--muted);
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 800;
 }
 .evolution-rule-summary strong {
   color: #17354a;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 950;
 }
 .evolution-rule-summary .evolution-rarity-change {
@@ -6026,7 +6032,7 @@ input:focus {
 }
 .evolution-rarity-change span,
 .evolution-rarity-change strong {
-  font-size: 11px;
+  font-size: 12px;
 }
 .evolution-rarity-change svg {
   width: 13px;
@@ -6045,7 +6051,7 @@ input:focus {
 }
 .evolution-quantity-heading strong {
   color: #17354a;
-  font-size: 11px;
+  font-size: 12px;
 }
 .evolution-quantity-heading > strong {
   flex: 0 0 auto;
@@ -6053,14 +6059,14 @@ input:focus {
 }
 .evolution-quantity-heading span {
   color: var(--muted);
-  font-size: 8px;
+  font-size: 9px;
 }
 .evolution-confirmation-modal .inventory-quantity-control {
   grid-template-columns: minmax(0, 1fr) 52px;
   gap: 3px 6px;
 }
 .evolution-confirmation-modal .inventory-quantity-control > span {
-  font-size: 8px;
+  font-size: 9px;
 }
 .evolution-confirmation-modal .inventory-quantity-control > div {
   grid-template-columns: 44px minmax(64px, 1fr) 44px;
@@ -6086,7 +6092,7 @@ input:focus {
   border-radius: 12px;
   color: #7c593f;
   background: rgba(255, 156, 0, 0.055);
-  font-size: 9px;
+  font-size: 10px;
   line-height: 1.35;
 }
 .evolution-risk-copy > svg {
@@ -6110,7 +6116,7 @@ input:focus {
   border-radius: 12px;
   color: #7b8580;
   background: rgba(54, 67, 75, 0.045);
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 800;
   text-align: center;
 }
@@ -6119,9 +6125,11 @@ input:focus {
     padding-inline: 9px;
   }
   .evolution-fusion-preview {
-    grid-template-columns: repeat(3, minmax(0, 62px));
-    gap-inline: 7px;
-    padding-inline: 8px;
+    grid-template-columns:
+      minmax(50px, 0.85fr) 14px minmax(86px, 1.2fr) 14px
+      minmax(50px, 0.85fr);
+    gap-inline: 2px;
+    padding-inline: 6px;
   }
 }
 @media (max-height: 650px) {
@@ -6142,22 +6150,22 @@ input:focus {
     padding-block: 6px 8px;
   }
   .evolution-fusion-preview {
-    height: 168px;
-    grid-template-rows: minmax(0, 1fr) 12px 56px;
+    min-height: 168px;
+    grid-template-rows: 48px 12px minmax(0, 1fr);
   }
   .evolution-material-slot {
-    max-width: 52px;
+    max-width: 56px;
   }
   .evolution-target-card .catalog-image,
   .evolution-target-card .image-missing {
-    width: 54px;
+    width: clamp(58px, 11dvh, 76px);
   }
   .evolution-rule-summary > div {
-    min-height: 48px;
+    min-height: 52px;
   }
   .evolution-risk-copy {
     padding-block: 5px;
-    font-size: 8px;
+    font-size: 9.5px;
   }
   .evolution-confirmation-actions {
     padding-block: 6px 8px;
