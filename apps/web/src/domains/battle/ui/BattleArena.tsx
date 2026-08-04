@@ -83,6 +83,10 @@ export function BattleArena({
     snapshot.active_actor === "self" &&
     snapshot.viewer_action_state === "available" &&
     !commandPending;
+  const waitingForOpponent =
+    !actionIntent &&
+    snapshot.status === "active_turn" &&
+    snapshot.active_actor === "opponent";
   const presentation = useBattleAnimation({
     arenaRef,
     snapshot,
@@ -162,7 +166,11 @@ export function BattleArena({
         active={selfActive}
       />
 
-      <section className="battle-action-hud" aria-label="当前行动">
+      <section
+        className="battle-action-hud"
+        aria-label="当前行动"
+        data-waiting-for-opponent={waitingForOpponent ? "true" : "false"}
+      >
         <div className="battle-command-strip" aria-live="polite">
           <strong>{actionPrompt(snapshot, actionIntent)}</strong>
           <span>
@@ -188,7 +196,7 @@ export function BattleArena({
               onClick={() => setSwitchOpen(true)}
             >
               <ArrowDownUp />
-              主动换宠（消耗本次行动）
+              更换宠物
             </Button>
           </>
         ) : available &&
@@ -203,7 +211,7 @@ export function BattleArena({
             }
             chooseSkill={onReplaceAttack}
           />
-        ) : (
+        ) : waitingForOpponent ? null : (
           <ActionStatus
             icon={<Shield />}
             text={
@@ -211,9 +219,7 @@ export function BattleArena({
                 ? `已提交：${actionIntent}`
                 : snapshot.status !== "active_turn"
                   ? "服务端已结算，等待表现队列完成"
-                  : snapshot.active_actor === "opponent"
-                    ? "对手行动中；其动作会按顺序播放"
-                    : "正在同步当前可用动作"
+                  : "正在同步当前可用动作"
             }
           />
         )}

@@ -2399,6 +2399,10 @@
   box-shadow: 2px 2px 0 #273b42;
 }
 
+.battle-action-hud[data-waiting-for-opponent="true"] .battle-command-strip {
+  min-height: 110px;
+}
+
 .battle-command-strip strong {
   font-size: 14px;
 }
