@@ -87,6 +87,9 @@ const navigationLockedThroughResultRouteIds = new Set<RecoverableRouteId>([
   "gacha.open",
   "wheel.spin",
 ]);
+const refreshBeforeSuccessRouteIds = new Set<RecoverableRouteId>([
+  "market.create_listing",
+]);
 const externallyRenderedSuccessRouteIds = new Set<RecoverableRouteId>([
   "expedition.create",
   "mint.cancel",
@@ -367,6 +370,13 @@ export function OperationRegistryProvider({
           return null;
         }
         const pending = response.status === 202;
+        const refreshBeforeSuccess =
+          !pending && refreshBeforeSuccessRouteIds.has(routeId);
+        if (refreshBeforeSuccess) {
+          update(id, { message: "上架已确认，正在更新出售状态" });
+          await refreshRouteScopes(routeId).catch(() => undefined);
+          if (!isCurrentNormalSession(sessionGeneration)) return null;
+        }
         if (!pending && externallyRenderedSuccessRouteIds.has(routeId))
           remove(id);
         else
@@ -382,7 +392,8 @@ export function OperationRegistryProvider({
           markOperationNewTemplates(routeId, response.data, markNew);
         if (routeId !== "inventory.evolve")
           haptic(pending ? "warning" : "success");
-        await refreshRouteScopes(routeId).catch(() => undefined);
+        if (!refreshBeforeSuccess)
+          await refreshRouteScopes(routeId).catch(() => undefined);
         return response.data;
       } catch (cause) {
         if (!isCurrentNormalSession(sessionGeneration)) {
@@ -509,6 +520,21 @@ export function OperationRegistryProvider({
           return;
         }
         if (recovered.status === "succeeded") {
+          const refreshBeforeSuccess = refreshBeforeSuccessRouteIds.has(
+            operation.routeId,
+          );
+          if (refreshBeforeSuccess) {
+            update(operation.id, {
+              phase: "pending",
+              message: "上架已确认，正在更新出售状态",
+            });
+            await refreshRouteScopes(operation.routeId).catch(() => undefined);
+            if (
+              operation.sessionGeneration !== getSession()?.generation ||
+              getSession()?.accountStatus !== "normal"
+            )
+              return;
+          }
           if (externallyRenderedSuccessRouteIds.has(operation.routeId))
             remove(operation.id);
           else
@@ -530,7 +556,8 @@ export function OperationRegistryProvider({
           )
             setActiveId((current) => current ?? operation.id);
           if (operation.routeId !== "inventory.evolve") haptic("success");
-          await refreshRouteScopes(operation.routeId);
+          if (!refreshBeforeSuccess)
+            await refreshRouteScopes(operation.routeId);
         } else if (recovered.status === "failed") {
           const definition =
             recovered.error_code && isErrorCode(recovered.error_code)
