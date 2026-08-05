@@ -6520,7 +6520,7 @@ input:focus {
   color: var(--sprout-orange);
   background: rgba(255, 156, 0, 0.12);
 }
-.app-shell .operation-dialog-backdrop.wheel-result-backdrop {
+.app-shell.operation-dialog-backdrop.wheel-result-backdrop {
   place-items: end center;
   padding: max(var(--safe-top), 10px) 0 0;
   overflow: hidden;

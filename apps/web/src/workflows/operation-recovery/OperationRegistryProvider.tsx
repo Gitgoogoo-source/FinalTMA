@@ -1012,7 +1012,7 @@ export function OperationRegistryProvider({
                 : active.routeId === "inventory.evolve"
                   ? `evolution-operation-backdrop phase-${active.phase}`
                   : wheelResult
-                    ? "wheel-result-backdrop"
+                    ? "app-shell wheel-result-backdrop"
                     : ""
           }`}
           role="dialog"
