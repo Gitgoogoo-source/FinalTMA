@@ -1,10 +1,7 @@
-import { Coins, Crown, Gem, RefreshCw } from "lucide-react";
+import { Coins, Crown, Gem } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
-import {
-  refreshTopAssetSummary,
-  useApiQuery,
-} from "../../platform/query/index.ts";
+import { useApiQuery } from "../../platform/query/index.ts";
 
 export type GlobalDialog = "topup" | "vip";
 
@@ -13,9 +10,6 @@ export function TopAssetBar({
 }: {
   openDialog(dialog: GlobalDialog): void;
 }): ReactNode {
-  const [refreshState, setRefreshState] = useState<
-    "idle" | "refreshing" | "failed"
-  >("idle");
   const bootstrap = useApiQuery("identity.bootstrap");
   const vip = useApiQuery("vip.get");
   const kcoin = bootstrap.data?.assets.kcoin;
@@ -82,31 +76,6 @@ export function TopAssetBar({
             <Crown />
           </button>
         ) : null}
-        <button
-          type="button"
-          className="icon-action asset-refresh"
-          disabled={refreshState === "refreshing"}
-          aria-busy={refreshState === "refreshing"}
-          aria-label={
-            refreshState === "refreshing"
-              ? "顶部资产栏刷新中"
-              : refreshState === "failed"
-                ? "顶部资产栏刷新失败，重新刷新"
-                : "刷新顶部资产栏"
-          }
-          onClick={() => {
-            if (refreshState === "refreshing") return;
-            setRefreshState("refreshing");
-            void refreshTopAssetSummary()
-              .then((success) => setRefreshState(success ? "idle" : "failed"))
-              .catch(() => setRefreshState("failed"));
-          }}
-        >
-          <RefreshCw
-            className={refreshState === "refreshing" ? "spin" : undefined}
-            aria-hidden="true"
-          />
-        </button>
       </div>
     </header>
   );
