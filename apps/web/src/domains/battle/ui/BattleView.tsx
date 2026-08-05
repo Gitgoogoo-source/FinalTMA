@@ -197,51 +197,67 @@ export function BattleView(): ReactNode {
   const refetchBootstrap = bootstrap.refetch;
   const refetchInvite = invite.refetch;
 
-  const applySnapshot = useCallback((snapshot: BattleRoomSnapshotDto) => {
-    seedApiQuery("battle.room", { room_id: snapshot.room_id }, snapshot);
-    if (dismissedTerminalRooms.current.has(snapshot.room_id)) return;
-    if (actionCursorRoom.current !== snapshot.room_id) {
-      actionCursorRoom.current = snapshot.room_id;
-      actionCursor.current = snapshot.latest_action_sequence;
-      presentationEventIds.current.clear();
-      setPresentationEvents([]);
-      setLocalPresentationAction(null);
-      setCancelledLocalActionKey(null);
-      setPresentationBusy(false);
-      setPresentationResetVersion((version) => version + 1);
-    } else if (actionCursor.current === null) {
-      actionCursor.current = snapshot.latest_action_sequence;
-      presentationEventIds.current.clear();
-      setPresentationEvents([]);
-    } else {
-      const cursor = actionCursor.current;
-      const fresh = snapshot.action_events
-        .filter(
-          (event) =>
-            event.sequence > cursor &&
-            !presentationEventIds.current.has(event.event_id),
+  const publishRoom = useCallback(
+    (
+      update: (
+        current: BattleRoomSnapshotDto | null,
+      ) => BattleRoomSnapshotDto | null,
+    ) => {
+      const next = update(roomRef.current);
+      roomRef.current = next;
+      setRoom(next);
+    },
+    [],
+  );
+
+  const applySnapshot = useCallback(
+    (snapshot: BattleRoomSnapshotDto) => {
+      seedApiQuery("battle.room", { room_id: snapshot.room_id }, snapshot);
+      if (dismissedTerminalRooms.current.has(snapshot.room_id)) return;
+      if (actionCursorRoom.current !== snapshot.room_id) {
+        actionCursorRoom.current = snapshot.room_id;
+        actionCursor.current = snapshot.latest_action_sequence;
+        presentationEventIds.current.clear();
+        setPresentationEvents([]);
+        setLocalPresentationAction(null);
+        setCancelledLocalActionKey(null);
+        setPresentationBusy(false);
+        setPresentationResetVersion((version) => version + 1);
+      } else if (actionCursor.current === null) {
+        actionCursor.current = snapshot.latest_action_sequence;
+        presentationEventIds.current.clear();
+        setPresentationEvents([]);
+      } else {
+        const cursor = actionCursor.current;
+        const fresh = snapshot.action_events
+          .filter(
+            (event) =>
+              event.sequence > cursor &&
+              !presentationEventIds.current.has(event.event_id),
+          )
+          .sort((left, right) => left.sequence - right.sequence);
+        if (fresh.length > 0) {
+          for (const event of fresh)
+            presentationEventIds.current.add(event.event_id);
+          actionCursor.current = fresh.at(-1)!.sequence;
+          setPresentationBusy(true);
+          setPresentationEvents((current) => [...current, ...fresh]);
+        }
+        if (
+          snapshot.has_more_action_events ||
+          snapshot.latest_action_sequence > (actionCursor.current ?? cursor)
         )
-        .sort((left, right) => left.sequence - right.sequence);
-      if (fresh.length > 0) {
-        for (const event of fresh)
-          presentationEventIds.current.add(event.event_id);
-        actionCursor.current = fresh.at(-1)!.sequence;
-        setPresentationBusy(true);
-        setPresentationEvents((current) => [...current, ...fresh]);
+          setActionBackfillVersion((version) => version + 1);
       }
-      if (
-        snapshot.has_more_action_events ||
-        snapshot.latest_action_sequence > (actionCursor.current ?? cursor)
-      )
-        setActionBackfillVersion((version) => version + 1);
-    }
-    setRoom((current) =>
-      current?.room_id === snapshot.room_id &&
-      compareSnapshots(current, snapshot) > 0
-        ? current
-        : snapshot,
-    );
-  }, []);
+      publishRoom((current) =>
+        current?.room_id === snapshot.room_id &&
+        compareSnapshots(current, snapshot) > 0
+          ? current
+          : snapshot,
+      );
+    },
+    [publishRoom],
+  );
   const onAuthoritativeRoom = useCallback(
     (snapshot: BattleRoomSnapshotDto): Promise<void> => {
       if (getSession()?.generation !== sessionGeneration)
@@ -424,7 +440,7 @@ export function BattleView(): ReactNode {
       setFlow(null);
       setCreateHandoffActive(false);
       setSlots(emptySlots);
-      setRoom(null);
+      publishRoom(() => null);
       setForceHome(false);
       dismissedTerminalRooms.current.clear();
       setResumeNotice(null);
@@ -448,7 +464,7 @@ export function BattleView(): ReactNode {
     return () => {
       cancelled = true;
     };
-  }, [sessionGeneration]);
+  }, [publishRoom, sessionGeneration]);
 
   useEffect(() => {
     let cancelled = false;
@@ -464,7 +480,7 @@ export function BattleView(): ReactNode {
             void refetchRef.current();
             return;
           }
-          setRoom((current) =>
+          publishRoom((current) =>
             current?.terminal_result &&
             !dismissedTerminalRooms.current.has(current.room_id)
               ? current
@@ -481,11 +497,7 @@ export function BattleView(): ReactNode {
     return () => {
       cancelled = true;
     };
-  }, [bootstrap.data, onAuthoritativeRoom]);
-
-  useEffect(() => {
-    roomRef.current = room;
-  }, [room]);
+  }, [bootstrap.data, onAuthoritativeRoom, publishRoom]);
 
   const committedRoomId = room?.room_id ?? null;
   useEffect(() => {
@@ -1240,7 +1252,7 @@ export function BattleView(): ReactNode {
     setForceHome(true);
     setFlow(null);
     setSlots(emptySlots);
-    setRoom((current) =>
+    publishRoom((current) =>
       current?.room_id === result.room_id ? null : current,
     );
     setParams({}, { replace: true });

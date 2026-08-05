@@ -939,27 +939,43 @@ function checkView(source) {
   const applySnapshot = calls(authoritativeRoom, "applySnapshot")[0];
   const reportSnapshot = calls(authoritativeRoom, "reportTerminal")[0];
   const snapshotWriter = variableFunction(view, "applySnapshot");
+  const roomPublisher = variableFunction(view, "publishRoom");
   const cacheWrite = calls(snapshotWriter, "seedApiQuery")[0];
   const dismissedGuard = ifStatements(snapshotWriter).find(
     (node) =>
       calls(node.expression, "dismissedTerminalRooms.current.has").length === 1,
   );
-  const roomWrite = calls(snapshotWriter, "setRoom")[0];
+  const snapshotRoomPublish = calls(snapshotWriter, "publishRoom")[0];
+  const roomRefWrite = assignments(roomPublisher).find(
+    (node) => expressionValue(node.left) === "roomRef.current",
+  );
+  const roomStateWrite = calls(roomPublisher, "setRoom")[0];
+  const nextRoom = variable(roomPublisher, "next")?.initializer;
+  const retainedRoomRead = calls(nextRoom, "update")[0];
   must(
     applySnapshot &&
       reportSnapshot &&
       applySnapshot.pos < reportSnapshot.pos &&
       cacheWrite &&
       dismissedGuard &&
-      roomWrite &&
+      snapshotRoomPublish &&
+      roomPublisher &&
+      roomRefWrite &&
+      roomStateWrite &&
+      retainedRoomRead &&
       cacheWrite.pos < dismissedGuard.pos &&
-      dismissedGuard.pos < roomWrite.pos &&
+      dismissedGuard.pos < snapshotRoomPublish.pos &&
+      expressionValue(retainedRoomRead.arguments[0]) === "roomRef.current" &&
+      roomRefWrite.pos < roomStateWrite.pos &&
+      expressionValue(roomRefWrite.right) === "next" &&
+      expressionValue(roomStateWrite.arguments[0]) === "next" &&
+      calls(view, "setRoom").length === 1 &&
       statementAlwaysExits(dismissedGuard.thenStatement),
-    "authoritative snapshots must be cached before automatic terminal refresh, while the in-memory dismissed-room fence blocks every late UI write",
+    "authoritative snapshots must synchronously publish the retained room before React state, while the in-memory dismissed-room fence blocks every late UI write",
   );
   const result = variable(view, "result")?.initializer;
   const returnFromResult = variableFunction(view, "returnFromResult");
-  const bootstrapRoomRetention = calls(view, "setRoom").find((call) => {
+  const bootstrapRoomRetention = calls(view, "publishRoom").find((call) => {
     const updater = call.arguments[0];
     return (
       propertyPaths(updater).includes("current.terminal_result") &&
@@ -1013,7 +1029,7 @@ function checkView(source) {
     returnFromResult,
     "dismissedTerminalRooms.current.add",
   )[0];
-  const localRoomClear = calls(returnFromResult, "setRoom")[0];
+  const localRoomClear = calls(returnFromResult, "publishRoom")[0];
   must(
     result &&
       propertyPaths(result).includes("room.terminal_result") &&
@@ -2033,6 +2049,29 @@ function runSelfTests() {
     ),
     fixture(
       paths.view,
+      "authority room ref publication becomes stale",
+      (source, text) => {
+        const view = topLevelFunction(source, "BattleView");
+        const publisher = variableFunction(view, "publishRoom");
+        const refWrite = assignments(publisher).find(
+          (node) => expressionValue(node.left) === "roomRef.current",
+        );
+        return replaceNode(text, refWrite.right, "roomRef.current");
+      },
+      "authoritative snapshots must synchronously publish the retained room before React state",
+    ),
+    fixture(
+      paths.view,
+      "room state bypasses the synchronous publisher",
+      (source, text) => {
+        const view = topLevelFunction(source, "BattleView");
+        const writer = variableFunction(view, "applySnapshot");
+        return insertIntoFunction(text, writer, "setRoom(snapshot);");
+      },
+      "authoritative snapshots must synchronously publish the retained room before React state",
+    ),
+    fixture(
+      paths.view,
       "expired deadline omits connected authority retry",
       (source, text) => {
         const view = topLevelFunction(source, "BattleView");
@@ -2277,7 +2316,7 @@ function runSelfTests() {
       "automatic bootstrap refresh clears presented terminal result",
       (source, text) => {
         const view = topLevelFunction(source, "BattleView");
-        const retention = calls(view, "setRoom").find((call) => {
+        const retention = calls(view, "publishRoom").find((call) => {
           const updater = call.arguments[0];
           return propertyPaths(updater).includes("current.terminal_result");
         });
