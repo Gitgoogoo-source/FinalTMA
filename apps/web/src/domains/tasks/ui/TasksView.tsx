@@ -218,7 +218,7 @@ export function TasksView({
                     ) : (
                       <img
                         className="checkin-fgems-image"
-                        src="/assets/tasks/checkin-fgems.png"
+                        src="/assets/tasks/checkin-fgems-v2.png"
                         alt=""
                       />
                     )}
