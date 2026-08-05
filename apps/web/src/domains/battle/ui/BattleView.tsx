@@ -501,7 +501,12 @@ export function BattleView(): ReactNode {
 
   const committedRoomId = room?.room_id ?? null;
   useEffect(() => {
-    if (!committedRoomId || flow?.kind !== "create") return;
+    if (
+      !committedRoomId ||
+      participation?.room_id !== committedRoomId ||
+      flow?.kind !== "create"
+    )
+      return;
     let cancelled = false;
     queueMicrotask(() => {
       if (cancelled) return;
@@ -511,7 +516,7 @@ export function BattleView(): ReactNode {
     return () => {
       cancelled = true;
     };
-  }, [committedRoomId, flow?.kind]);
+  }, [committedRoomId, flow?.kind, participation?.room_id]);
 
   const result = room?.terminal_result ?? null;
   const terminalObservations = useMemo(
@@ -1606,6 +1611,7 @@ function derivePageState({
   forceHome: boolean;
 }): BattlePageState {
   if (result) return "result";
+  if (createHandoff) return "preparing_share";
   if (room) {
     if (room.status === "preparing_share") return "preparing_share";
     if (room.status === "waiting") return "waiting";
@@ -1622,7 +1628,6 @@ function derivePageState({
     )
       return "home";
   }
-  if (createHandoff) return "preparing_share";
   if (!forceHome && battleEntry && invite?.invite_status !== "none")
     return "accept";
   if (flow?.kind === "create") return "team_select";

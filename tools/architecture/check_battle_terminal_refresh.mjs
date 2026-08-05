@@ -721,6 +721,13 @@ function checkView(source) {
       identifiers(call).includes("committedRoomId") &&
       propertyPaths(call).includes("flow.kind"),
   );
+  const handoffReleaseGuard = handoffCommit
+    ? ifStatements(handoffCommit).find(
+        (node) =>
+          identifiers(node.expression).includes("committedRoomId") &&
+          propertyPaths(node.expression).includes("flow.kind"),
+      )
+    : null;
   const handoffActivation = calls(create, "setCreateHandoffActive");
   const battleState = topLevelFunction(source, "BattleState");
   const preparingRenderGuard = ifStatements(battleState).find((node) =>
@@ -749,20 +756,24 @@ function checkView(source) {
         objectPropertyExpression(pageDerivationOptions, "createHandoff"),
       ) === "createHandoff" &&
       handoffGuard &&
-      participantRoomGuard.pos < handoffGuard.pos &&
+      handoffGuard.pos < participantRoomGuard.pos &&
       handoffGuard.pos < bearerInviteGuard.pos &&
       handoffReturns.length === 1 &&
       handoffReturns[0] === "preparing_share" &&
       committedRoomId &&
       propertyPaths(committedRoomId).includes("room.room_id") &&
       handoffCommit &&
+      handoffReleaseGuard &&
+      propertyPaths(handoffReleaseGuard.expression).includes(
+        "participation.room_id",
+      ) &&
       calls(handoffCommit, "queueMicrotask").length === 1 &&
       preparingRenderGuard &&
       !identifiers(preparingRenderGuard.expression).includes("room") &&
       identifiers(preparingRenderGuard.thenStatement).includes(
         "BattlePreparingShare",
       ),
-    "friend challenge creation must retain a local preparing-share handoff until an authoritative room commits, without a renderable Battle Home gap",
+    "friend challenge creation must retain a local preparing-share handoff until the same authoritative room participation commits, without a renderable Battle Home gap",
   );
   const bootstrapObserver = calls(view, "useApiQuery").find(
     (call) => stringArgument(call, 0) === "battle.bootstrap",
@@ -2122,6 +2133,24 @@ function runSelfTests() {
         );
         const result = returnExpressions(guard.thenStatement)[0];
         return replaceNode(text, result, '"home"');
+      },
+    ),
+    fixture(
+      paths.view,
+      "create handoff releases before matching participation",
+      (source, text) => {
+        const view = topLevelFunction(source, "BattleView");
+        const guard = ifStatements(view).find(
+          (node) =>
+            identifiers(node.expression).includes("committedRoomId") &&
+            propertyPaths(node.expression).includes("participation.room_id") &&
+            propertyPaths(node.expression).includes("flow.kind"),
+        );
+        return replaceNode(
+          text,
+          guard.expression,
+          '!committedRoomId || flow?.kind !== "create"',
+        );
       },
     ),
     fixture(
