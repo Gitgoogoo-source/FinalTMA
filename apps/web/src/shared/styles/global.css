@@ -5712,24 +5712,34 @@ input:focus {
   white-space: nowrap;
 }
 .app-shell .checkin-card {
-  min-height: 304px;
+  min-height: 312px;
+  isolation: isolate;
   position: relative;
   display: grid;
   align-content: start;
-  gap: 13px;
+  gap: 12px;
   margin: 0;
-  padding: 17px 13px 15px;
+  padding: 17px 12px 15px;
   overflow: hidden;
-  border-color: rgba(7, 29, 59, 0.07);
-  border-radius: 22px;
+  border-color: rgba(255, 255, 255, 0.92);
+  border-radius: 24px;
   background:
     radial-gradient(
-      circle at 86% 2%,
-      rgba(232, 238, 246, 0.8),
-      transparent 25%
+      circle at 92% 6%,
+      rgba(224, 232, 241, 0.68),
+      transparent 30%
     ),
-    #fff;
-  box-shadow: 0 15px 36px rgba(7, 29, 59, 0.06);
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.98),
+      rgba(250, 252, 254, 0.78) 54%,
+      rgba(242, 246, 250, 0.68)
+    );
+  box-shadow:
+    0 18px 42px rgba(43, 57, 76, 0.1),
+    inset 0 1px 0 #fff,
+    inset 0 -1px 0 rgba(255, 255, 255, 0.52);
+  backdrop-filter: blur(24px) saturate(165%);
 }
 .app-shell .checkin-heading {
   display: grid;
@@ -5751,34 +5761,21 @@ input:focus {
   font-size: 9px;
 }
 .app-shell .checkin-heading .button {
-  min-height: 36px;
+  min-height: 38px;
   position: relative;
   z-index: 2;
-  padding: 7px 12px;
-  border-radius: 18px;
+  padding: 7px 14px;
+  border-radius: 20px;
   font-size: 9px;
-}
-.app-shell .checkin-orbit {
-  width: 62px;
-  height: 40px;
-  position: absolute;
-  top: 13px;
-  right: 83px;
-  display: grid;
-  place-items: center;
-  border: 1px solid rgba(130, 145, 168, 0.15);
-  border-radius: 50%;
-  color: #cad2dd;
-  transform: rotate(-13deg);
-}
-.app-shell .checkin-orbit svg {
-  width: 18px;
+  box-shadow:
+    0 10px 22px rgba(255, 122, 0, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.64);
 }
 .app-shell .checkin-progress {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   align-items: center;
-  padding: 0 6px;
+  padding: 1px 8px 0;
 }
 .app-shell .checkin-progress > span {
   min-width: 0;
@@ -5788,93 +5785,154 @@ input:focus {
   color: #8490a1;
 }
 .app-shell .checkin-progress > span::before {
-  width: calc(100% - 18px);
+  width: calc(100% - 19px);
   height: 2px;
   position: absolute;
-  right: calc(50% + 9px);
+  right: calc(50% + 9.5px);
   content: "";
-  background: #e4e8ed;
-  box-shadow: 0 1px 4px rgba(7, 29, 59, 0.08);
+  background: linear-gradient(90deg, #e0e5eb, #f0f3f6);
+  box-shadow:
+    0 1px 4px rgba(7, 29, 59, 0.08),
+    0 -1px 0 rgba(255, 255, 255, 0.92);
 }
 .app-shell .checkin-progress > span:first-child::before {
   display: none;
 }
 .app-shell .checkin-progress > span.claimed::before,
 .app-shell .checkin-progress > span.active::before {
-  background: #ff8a22;
+  background: linear-gradient(90deg, #ff9d31, #ff7608);
 }
 .app-shell .checkin-progress i {
-  width: 20px;
-  height: 20px;
+  width: 21px;
+  height: 21px;
   position: relative;
   z-index: 1;
   display: grid;
   place-items: center;
-  border: 1px solid #e2e6eb;
+  border: 1px solid rgba(255, 255, 255, 0.94);
   border-radius: 50%;
   color: inherit;
-  background: #f7f8fa;
+  background: rgba(241, 244, 247, 0.78);
   box-shadow:
-    0 3px 8px rgba(7, 29, 59, 0.1),
-    inset 0 1px 0 #fff;
+    0 4px 10px rgba(45, 60, 80, 0.12),
+    inset 0 1px 0 #fff,
+    inset 0 -1px 0 rgba(121, 139, 161, 0.08);
+  backdrop-filter: blur(10px) saturate(150%);
   font-size: 8px;
   font-style: normal;
   font-weight: 800;
 }
 .app-shell .checkin-progress > span.claimed i {
-  border-color: #bde7c8;
+  border-color: rgba(104, 211, 136, 0.42);
   color: #0ca838;
-  background: #f0faf3;
+  background: rgba(237, 251, 241, 0.84);
 }
 .app-shell .checkin-progress > span.active i {
   border: 2px solid #ff7a00;
   color: #ff6500;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.96);
   box-shadow:
-    0 0 0 3px rgba(255, 122, 0, 0.1),
-    0 4px 9px rgba(255, 122, 0, 0.14);
+    0 0 0 4px rgba(255, 122, 0, 0.09),
+    0 5px 12px rgba(255, 122, 0, 0.2),
+    inset 0 1px 0 #fff;
 }
 .app-shell .checkin-days {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 3px;
+  gap: 4px;
 }
 .app-shell .checkin-days > span {
   min-width: 0;
-  min-height: 168px;
+  min-height: 176px;
   position: relative;
   display: grid;
   justify-items: center;
-  grid-template-rows: 22px 54px minmax(34px, auto) 20px;
+  grid-template-rows: 24px 60px minmax(38px, auto) 22px;
   align-items: center;
   align-content: stretch;
   gap: 1px;
-  padding: 8px 2px 7px;
-  border: 1px solid rgba(7, 29, 59, 0.07);
-  border-radius: 19px;
+  padding: 8px 2px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-radius: 21px;
   color: #738198;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.9), transparent 42%), #f7f8fa;
+    linear-gradient(
+      115deg,
+      rgba(255, 255, 255, 0.96) 2%,
+      rgba(255, 255, 255, 0.5) 28%,
+      rgba(255, 255, 255, 0.12) 52%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(249, 251, 253, 0.82),
+      rgba(229, 235, 241, 0.52)
+    );
   box-shadow:
-    0 8px 18px rgba(7, 29, 59, 0.07),
-    inset 0 1px 0 #fff;
+    0 10px 22px rgba(39, 54, 75, 0.11),
+    inset 1px 1px 0 rgba(255, 255, 255, 0.95),
+    inset -1px -1px 0 rgba(255, 255, 255, 0.42),
+    inset 0 -14px 24px rgba(176, 188, 201, 0.08);
+  backdrop-filter: blur(18px) saturate(150%);
+}
+.app-shell .checkin-days > span::after {
+  width: 58%;
+  height: 34%;
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  border-radius: 18px 9px 18px 10px;
+  content: "";
+  background: linear-gradient(
+    140deg,
+    rgba(255, 255, 255, 0.76),
+    rgba(255, 255, 255, 0) 72%
+  );
+  pointer-events: none;
 }
 .app-shell .checkin-days > span.active {
-  border-color: #ffb26f;
+  border-color: rgba(255, 139, 38, 0.62);
   color: #ff6500;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), transparent 44%), #fff8f1;
+    linear-gradient(
+      115deg,
+      rgba(255, 255, 255, 0.98) 2%,
+      rgba(255, 255, 255, 0.64) 30%,
+      rgba(255, 246, 235, 0.28) 55%
+    ),
+    linear-gradient(180deg, rgba(255, 252, 248, 0.9), rgba(255, 235, 216, 0.56));
   box-shadow:
-    0 10px 22px rgba(255, 122, 0, 0.15),
-    inset 0 1px 0 #fff;
+    0 13px 28px rgba(255, 122, 0, 0.18),
+    0 0 0 1px rgba(255, 170, 94, 0.12),
+    inset 1px 1px 0 #fff,
+    inset 0 -16px 25px rgba(255, 160, 72, 0.08);
 }
 .app-shell .checkin-days > span.claimed {
   color: #0ca838;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.92), transparent 44%), #f1faf3;
+    linear-gradient(
+      115deg,
+      rgba(255, 255, 255, 0.97) 2%,
+      rgba(255, 255, 255, 0.58) 30%,
+      rgba(237, 252, 241, 0.2) 56%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(248, 253, 249, 0.88),
+      rgba(221, 245, 228, 0.56)
+    );
   box-shadow:
-    0 8px 18px rgba(12, 168, 56, 0.08),
-    inset 0 1px 0 #fff;
+    0 10px 22px rgba(12, 168, 56, 0.1),
+    inset 1px 1px 0 #fff,
+    inset 0 -14px 24px rgba(56, 181, 92, 0.06);
+}
+.app-shell .checkin-days > span > small,
+.app-shell .checkin-days > span > .checkin-reward-art,
+.app-shell .checkin-days > span > .checkin-reward-copy,
+.app-shell .checkin-days > span > .checkin-state-icon,
+.app-shell .checkin-days > span > .checkin-lock {
+  position: relative;
+  z-index: 1;
 }
 .app-shell .checkin-days small {
   align-self: start;
@@ -5885,39 +5943,73 @@ input:focus {
   white-space: nowrap;
 }
 .app-shell .checkin-reward-art {
-  width: 42px;
-  height: 42px;
+  width: 46px;
+  height: 46px;
   display: grid;
   place-items: center;
-  position: relative;
-  z-index: 1;
+  align-self: center;
   border-radius: 50%;
   color: #36c85b;
-  background: #effcf2;
+  border: 1px solid rgba(255, 255, 255, 0.86);
+  background:
+    radial-gradient(circle at 34% 26%, #fff 0 6%, transparent 28%),
+    rgba(237, 246, 240, 0.68);
   box-shadow:
-    0 7px 13px rgba(54, 200, 91, 0.16),
-    inset 0 1px 0 #fff;
+    0 8px 16px rgba(40, 73, 55, 0.13),
+    inset 0 1px 0 #fff,
+    inset 0 -5px 12px rgba(66, 130, 89, 0.06);
+  backdrop-filter: blur(12px) saturate(170%);
 }
-.app-shell .checkin-reward-art svg {
-  width: 24px;
-  height: 24px;
-  fill: rgba(54, 200, 91, 0.12);
+.app-shell .checkin-reward-art::before {
+  width: calc(100% + 18px);
+  height: 2px;
+  position: absolute;
+  z-index: -1;
+  left: 50%;
+  top: 50%;
+  content: "";
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 1px 3px rgba(80, 96, 116, 0.11);
+  transform: translate(-50%, -50%);
 }
 .app-shell .checkin-reward-art img {
-  width: 48px;
-  height: 48px;
+  position: relative;
+  z-index: 1;
   object-fit: contain;
+}
+.app-shell .checkin-fgems-image {
+  width: 54px;
+  height: 54px;
+  filter: drop-shadow(0 8px 8px rgba(7, 96, 40, 0.24));
+}
+.app-shell .checkin-box-image {
+  width: 50px;
+  height: 50px;
   filter: drop-shadow(0 7px 7px rgba(7, 29, 59, 0.17));
 }
 .app-shell .checkin-days > span.active .checkin-reward-art {
   color: #36c85b;
-  background: #fff0df;
+  border-color: rgba(255, 226, 199, 0.96);
+  background:
+    radial-gradient(circle at 34% 26%, #fff 0 6%, transparent 28%),
+    rgba(255, 238, 220, 0.76);
   box-shadow:
-    0 8px 15px rgba(255, 122, 0, 0.2),
-    inset 0 1px 0 #fff;
+    0 9px 18px rgba(255, 122, 0, 0.2),
+    inset 0 1px 0 #fff,
+    inset 0 -6px 13px rgba(255, 142, 42, 0.08);
+}
+.app-shell .checkin-days > span.active .checkin-reward-art::before {
+  background: rgba(255, 187, 126, 0.72);
 }
 .app-shell .checkin-days > span.claimed .checkin-reward-art {
   color: #0ca838;
+  border-color: rgba(214, 244, 222, 0.96);
+  background:
+    radial-gradient(circle at 34% 26%, #fff 0 6%, transparent 28%),
+    rgba(228, 248, 234, 0.74);
+}
+.app-shell .checkin-days > span.claimed .checkin-reward-art::before {
+  background: rgba(147, 220, 166, 0.68);
 }
 .app-shell .checkin-reward-copy {
   min-width: 0;
@@ -5931,22 +6023,23 @@ input:focus {
   max-width: 100%;
   grid-column: auto;
   color: #071d3b;
-  font-size: 11px;
+  font-size: 12px;
+  font-weight: 850;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 .app-shell .checkin-reward-copy em {
   max-width: 100%;
   color: #738198;
-  font-size: 6px;
+  font-size: 6.5px;
   font-style: normal;
   line-height: 1.15;
   text-align: center;
 }
 .app-shell .checkin-state-icon,
 .app-shell .checkin-lock {
-  width: 13px;
-  height: 13px;
+  width: 14px;
+  height: 14px;
   color: #a6afbd;
 }
 .app-shell .checkin-days > span.claimed .checkin-state-icon {
@@ -8727,22 +8820,27 @@ body,
     gap: 2px;
   }
   .app-shell .checkin-days > span {
+    min-height: 166px;
+    grid-template-rows: 22px 54px minmax(36px, auto) 20px;
     border-radius: 15px;
   }
   .app-shell .checkin-days small {
     font-size: 6px;
   }
   .app-shell .checkin-reward-art {
-    width: 30px;
-    height: 30px;
+    width: 36px;
+    height: 36px;
   }
-  .app-shell .checkin-reward-art svg {
-    width: 20px;
-    height: 20px;
+  .app-shell .checkin-reward-art::before {
+    width: calc(100% + 12px);
   }
-  .app-shell .checkin-reward-art img {
-    width: 34px;
-    height: 34px;
+  .app-shell .checkin-fgems-image {
+    width: 44px;
+    height: 44px;
+  }
+  .app-shell .checkin-box-image {
+    width: 40px;
+    height: 40px;
   }
   .app-shell .checkin-reward-copy strong {
     font-size: 10px;

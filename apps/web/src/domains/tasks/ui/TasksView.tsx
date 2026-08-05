@@ -5,7 +5,6 @@ import {
   CalendarCheck,
   Check,
   Circle,
-  Gem,
   Link2,
   LockKeyhole,
   ShoppingBasket,
@@ -196,9 +195,6 @@ export function TasksView({
               {claimedToday ? "今日已签到" : checkingIn ? "领取中" : "立即签到"}
             </Button>
           </div>
-          <div className="checkin-orbit" aria-hidden="true">
-            <Sparkles />
-          </div>
           <div className="checkin-progress" aria-hidden="true">
             {checkInRewards.map((_, index) => {
               const day = index + 1;
@@ -227,9 +223,17 @@ export function TasksView({
                   <small>第 {day} 天</small>
                   <span className="checkin-reward-art">
                     {reward.kind === "box" ? (
-                      <img src="/assets/boxes/rare.webp" alt="" />
+                      <img
+                        className="checkin-box-image"
+                        src="/assets/boxes/rare.webp"
+                        alt=""
+                      />
                     ) : (
-                      <Gem aria-hidden="true" />
+                      <img
+                        className="checkin-fgems-image"
+                        src="/assets/tasks/checkin-fgems.png"
+                        alt=""
+                      />
                     )}
                   </span>
                   <span className="checkin-reward-copy">
