@@ -478,92 +478,260 @@ p {
   display: grid;
   gap: 12px;
 }
+.album-list {
+  gap: 16px;
+}
 .album-page {
-  width: min(100%, 720px);
+  --album-paper: #fffdfa;
+  --album-ink: #36434b;
+  --album-orange: #ff9c00;
+  --album-green: #1ce204;
+  --album-line: rgba(54, 67, 75, 0.17);
+  width: min(100%, 430px);
   margin: 0 auto;
-  background:
-    radial-gradient(circle at 50% 0, rgba(124, 92, 255, 0.18), transparent 26%),
-    var(--tg-bg-color, #0b1020);
+  color-scheme: light;
+  color: var(--album-ink);
+  background-color: var(--album-paper);
+  font-family:
+    "PingFang SC", "Hiragino Sans GB", "SF Pro Rounded", Inter, system-ui,
+    sans-serif;
+}
+.album-heading {
+  position: relative;
+  min-height: 166px;
+  display: block;
+  margin: 0 -2px 8px;
+  overflow: hidden;
+  isolation: isolate;
+}
+.album-heading-art {
+  position: absolute;
+  z-index: 0;
+  top: calc(-1 * (var(--safe-top) + 14px));
+  left: 50%;
+  width: min(112%, 470px);
+  height: 208px;
+  max-width: none;
+  object-fit: cover;
+  object-position: center top;
+  opacity: 0.98;
+  filter: contrast(1.08) saturate(1.12);
+  mix-blend-mode: multiply;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.album-heading::after {
+  content: "";
+  position: absolute;
+  right: 18px;
+  bottom: 8px;
+  left: 18px;
+  height: 1px;
+  background: rgba(255, 156, 0, 0.34);
+}
+.album-heading .icon-only {
+  position: absolute;
+  top: 4px;
+  left: 0;
+  width: 48px;
+  height: 48px;
+  border: 1.5px solid var(--album-ink);
+  border-radius: 50%;
+  color: var(--album-ink);
+  background: rgba(255, 253, 250, 0.8);
+  box-shadow: 0 5px 14px rgba(54, 67, 75, 0.08);
+  backdrop-filter: blur(4px);
+  z-index: 1;
+}
+.album-heading .icon-only svg {
+  width: 27px;
+  height: 27px;
+}
+.album-heading > div {
+  position: absolute;
+  z-index: 1;
+  top: 64px;
+  left: 18px;
+  width: min(72%, 270px);
+}
+.album-heading > div > span {
+  color: var(--album-orange);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 12px;
+  letter-spacing: 0.28em;
+}
+.album-heading h1 {
+  margin: 7px 0 0;
+  color: var(--album-ink);
+  font-family: "Songti SC", "STSong", "Noto Serif SC", serif;
+  font-size: clamp(42px, 12vw, 52px);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.02em;
 }
 .album-heading .badge {
-  flex: 0 0 auto;
+  position: absolute;
+  z-index: 1;
+  top: 10px;
+  right: 0;
+}
+.album-page .badge {
+  border-color: rgba(255, 156, 0, 0.28);
+  color: var(--album-ink);
+  background: rgba(255, 253, 250, 0.78);
+  box-shadow: 0 3px 10px rgba(54, 67, 75, 0.06);
+  text-transform: none;
 }
 .album-overview {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: 0;
+  margin: 0 16px 10px;
+  padding: 8px 0 10px;
+  border-bottom: 1px solid rgba(255, 156, 0, 0.24);
 }
 .album-overview div {
   min-width: 0;
   display: grid;
-  gap: 4px;
-  padding: 12px;
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  background: var(--surface);
+  gap: 6px;
+  padding: 0 8px;
+  border-right: 1px solid rgba(54, 67, 75, 0.15);
   text-align: center;
 }
+.album-overview div:last-child {
+  border-right: 0;
+}
 .album-overview span {
-  color: var(--muted);
-  font-size: 11px;
+  color: var(--album-ink);
+  font-family: "Songti SC", "STSong", "Noto Serif SC", serif;
+  font-size: 13px;
+  letter-spacing: 0.08em;
 }
 .album-overview strong {
-  font-size: clamp(16px, 4.5vw, 22px);
+  min-height: 34px;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 500;
+}
+.album-overview strong b {
+  color: var(--album-orange);
+  font-size: clamp(27px, 8vw, 34px);
+  font-weight: 700;
+  line-height: 1;
+}
+.album-overview strong small {
+  color: var(--album-ink);
+  font-size: 16px;
+  font-weight: 500;
 }
 .album-filters {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
-  margin-bottom: 14px;
-  padding: 5px;
-  border: 1px solid var(--border);
-  border-radius: 17px;
-  background: rgba(255, 255, 255, 0.035);
+  gap: 0;
+  margin: 0 12px 8px;
+  padding: 4px 0;
+  border-top: 1px solid rgba(255, 156, 0, 0.2);
+  border-bottom: 1px solid rgba(255, 156, 0, 0.2);
+  background: rgba(255, 253, 250, 0.56);
 }
 .album-filters button {
-  min-height: 40px;
+  position: relative;
+  min-height: 44px;
   border: 0;
-  border-radius: 12px;
-  color: var(--muted);
+  border-radius: 0;
+  color: rgba(54, 67, 75, 0.76);
   background: transparent;
-  font-size: 12px;
+  font-family: "Songti SC", "STSong", "Noto Serif SC", serif;
+  font-size: 13px;
   font-weight: 800;
+  letter-spacing: 0.04em;
+}
+.album-filters button:not(:nth-child(3n))::after {
+  content: "";
+  position: absolute;
+  top: 12px;
+  right: 0;
+  bottom: 12px;
+  width: 1px;
+  background: rgba(54, 67, 75, 0.12);
 }
 .album-filters button.active {
-  color: var(--accent-text);
-  background: var(--accent);
+  border-radius: 2px 15px 2px 11px;
+  color: #fffdfa;
+  background: var(--album-orange);
+  box-shadow: 0 5px 12px rgba(255, 156, 0, 0.18);
+  transform: rotate(-0.5deg) scale(0.94);
 }
 .album-filter-empty {
   min-height: 160px;
   display: grid;
   place-items: center;
-  border: 1px dashed var(--border);
-  border-radius: 18px;
-  color: var(--muted);
+  margin: 12px;
+  border: 1px dashed rgba(54, 67, 75, 0.24);
+  border-radius: 12px;
+  color: rgba(54, 67, 75, 0.7);
+  background: rgba(255, 156, 0, 0.035);
 }
 .album-filter-summary {
-  margin: -6px 2px 10px;
-  color: var(--muted);
-  font-size: 11px;
+  margin: -2px 14px 6px;
+  color: rgba(54, 67, 75, 0.66);
+  font-family: "Songti SC", "STSong", "Noto Serif SC", serif;
+  font-size: 12px;
   text-align: right;
 }
 .album-chain-card {
   display: grid;
-  gap: 12px;
+  gap: 10px;
+  min-height: 332px;
+  padding: 22px 20px 14px 29px;
+  border: 0;
+  border-radius: 8px;
+  color: var(--album-ink);
+  background-color: var(--album-paper);
+  background-image: url("/assets/album/washi-scroll-surface.webp");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 100% 100%;
+  box-shadow: 0 10px 24px rgba(54, 67, 75, 0.12);
+  overflow: hidden;
+}
+.chain-head {
+  align-items: flex-start;
+  margin: 0 1px;
+}
+.chain-head .badge {
+  padding: 5px 12px;
+  border: 1px solid rgba(255, 156, 0, 0.22);
+  border-radius: 4px 13px 4px 13px;
+  background: rgba(255, 156, 0, 0.06);
+  box-shadow: none;
 }
 .album-chain-card h2 {
   margin: 7px 0 0;
-  font-size: 20px;
+  font-family: "Songti SC", "STSong", "Noto Serif SC", serif;
+  font-size: 23px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
 }
 .chain-progress {
   display: grid;
   justify-items: end;
-  gap: 2px;
+  gap: 4px;
+  padding-top: 4px;
+  font-family: Georgia, "Times New Roman", serif;
+}
+.chain-progress strong {
+  font-size: 24px;
+  font-weight: 500;
+  line-height: 1;
 }
 .chain-progress span {
-  color: var(--muted);
-  font-size: 11px;
+  color: rgba(54, 67, 75, 0.72);
+  font-family: "PingFang SC", "Hiragino Sans GB", system-ui, sans-serif;
+  font-size: 12px;
 }
 .chain-nodes {
   display: grid;
@@ -573,81 +741,153 @@ p {
   padding: 0;
   list-style: none;
 }
+.chain-nodes li {
+  position: relative;
+  min-width: 0;
+}
+.chain-nodes li:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  top: 42px;
+  right: -12px;
+  width: 16px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--album-orange);
+  box-shadow: 0 0 0 2px rgba(255, 253, 250, 0.78);
+  pointer-events: none;
+}
 .album-node {
   width: 100%;
   min-width: 0;
-  min-height: 188px;
+  min-height: 160px;
   display: grid;
-  grid-template-rows: 76px auto auto auto auto;
+  grid-template-rows: 84px auto auto auto auto;
   place-items: center;
   gap: 4px;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 8px 5px;
-  color: inherit;
+  border: 0;
+  border-radius: 0;
+  padding: 0 2px;
+  color: var(--album-ink);
   text-align: center;
-  background: rgba(255, 255, 255, 0.05);
+  background: transparent;
 }
 .album-node.locked {
-  color: var(--muted);
-  background: rgba(255, 255, 255, 0.025);
+  color: rgba(54, 67, 75, 0.78);
+  background: transparent;
 }
 .album-node-art,
 .album-node-art .catalog-image,
 .album-node-art .image-missing {
   width: 70px;
-  height: 70px;
+  height: 82px;
   display: grid;
   place-items: center;
-  border-radius: 12px;
+  border-radius: 50%;
 }
 .album-node-art {
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(54, 67, 75, 0.34);
+  background: rgba(255, 253, 250, 0.66);
+  box-shadow:
+    inset 0 0 0 3px rgba(255, 253, 250, 0.82),
+    inset 0 0 0 4px rgba(54, 67, 75, 0.11),
+    0 4px 10px rgba(54, 67, 75, 0.08);
+}
+.album-node.unlocked .album-node-art {
+  border-color: rgba(255, 156, 0, 0.52);
+  background: rgba(255, 156, 0, 0.06);
 }
 .album-node-art > svg {
   width: 34px;
   height: 34px;
+  color: rgba(54, 67, 75, 0.72);
+  stroke-width: 1.7;
 }
 .album-node-stage,
 .album-node small,
 .album-node-owned {
-  color: var(--muted);
-  font-size: 10px;
+  color: rgba(54, 67, 75, 0.7);
+  font-size: 10.5px;
 }
 .album-node strong {
   max-width: 100%;
   overflow: hidden;
-  font-size: 12px;
+  font-family: "Songti SC", "STSong", "Noto Serif SC", serif;
+  font-size: 13px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .album-node-owned {
-  min-height: 24px;
+  min-height: 21px;
   display: flex;
   align-items: center;
-  color: inherit;
+  color: var(--album-ink);
   font-weight: 800;
 }
 .album-gift {
   width: 100%;
+  min-height: 48px;
+  margin-top: 1px;
+  border: 0;
+  border-top: 1px solid rgba(255, 156, 0, 0.28);
+  border-radius: 0;
+  color: rgba(54, 67, 75, 0.78);
+  background: transparent;
+  box-shadow: none;
+}
+.album-gift:disabled {
+  opacity: 1;
+}
+.album-gift svg {
+  width: 24px;
+  height: 24px;
+  stroke-width: 1.7;
 }
 .album-gift > span {
   display: grid;
+  gap: 1px;
+  font-family: "Songti SC", "STSong", "Noto Serif SC", serif;
+  font-size: 16px;
+  letter-spacing: 0.05em;
 }
 .album-gift small {
-  font-size: 10px;
-  opacity: 0.75;
+  color: rgba(54, 67, 75, 0.64);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 11px;
+  letter-spacing: 0;
 }
 .album-gift.claimable {
-  box-shadow: 0 0 24px color-mix(in srgb, var(--accent) 35%, transparent);
+  position: relative;
+  border-top-color: transparent;
+  border-radius: 11px;
+  color: #fffdfa;
+  background: var(--album-orange);
+  box-shadow: 0 7px 16px rgba(255, 156, 0, 0.2);
+}
+.album-gift.claimable::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--album-green);
+  box-shadow: 0 0 0 2px rgba(255, 253, 250, 0.88);
+}
+.album-gift.claimable small {
+  color: #fffdfa;
+  opacity: 0.82;
 }
 .album-page button:focus-visible,
 .album-node-dialog button:focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--accent) 55%, #fff);
+  outline: 3px solid var(--album-green, #1ce204);
   outline-offset: 2px;
 }
 .album-node-dialog {
+  --album-paper: #fffdfa;
+  --album-ink: #36434b;
+  --album-orange: #ff9c00;
+  --album-green: #1ce204;
   position: fixed;
   inset: auto 0 0;
   width: min(100%, 560px);
@@ -659,18 +899,27 @@ p {
   padding: 20px calc(var(--safe-right) + 16px) calc(var(--safe-bottom) + 18px)
     calc(var(--safe-left) + 16px);
   overflow-y: auto;
-  border: 1px solid var(--border);
+  border: 1px solid rgba(54, 67, 75, 0.14);
   border-radius: 26px 26px 0 0;
-  color: var(--tg-text-color, #f8fafc);
-  background: var(--tg-secondary-bg-color, #182038);
+  color: var(--album-ink);
+  background-color: var(--album-paper);
+  background-image: url("/assets/album/washi-scroll-surface.webp");
+  background-repeat: no-repeat;
+  background-position: center bottom;
+  background-size: 100% 100%;
+  box-shadow: 0 -16px 42px rgba(54, 67, 75, 0.2);
+  color-scheme: light;
+  font-family:
+    "PingFang SC", "Hiragino Sans GB", "SF Pro Rounded", Inter, system-ui,
+    sans-serif;
 }
 .album-node-dialog[open] {
   display: grid;
   animation: sheet 0.24s ease-out;
 }
 .album-node-dialog::backdrop {
-  background: rgba(2, 5, 14, 0.72);
-  backdrop-filter: blur(8px);
+  background: rgba(54, 67, 75, 0.52);
+  backdrop-filter: blur(7px);
 }
 .album-node-dialog > header {
   display: flex;
@@ -679,10 +928,17 @@ p {
   gap: 12px;
 }
 .album-node-dialog > header span {
-  color: #a89aff;
+  color: var(--album-orange);
   font-size: 10px;
   font-weight: 900;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.18em;
+}
+.album-node-dialog .badge {
+  border-color: rgba(255, 156, 0, 0.24);
+  color: var(--album-ink);
+  background: rgba(255, 156, 0, 0.065);
+  box-shadow: none;
+  text-transform: none;
 }
 .album-node-dialog h2,
 .album-node-dialog p {
@@ -690,9 +946,12 @@ p {
 }
 .album-node-dialog h2 {
   margin-top: 3px;
+  font-family: "Songti SC", "STSong", "Noto Serif SC", serif;
+  font-size: 28px;
+  letter-spacing: 0.03em;
 }
 .album-node-dialog p {
-  color: var(--muted);
+  color: rgba(54, 67, 75, 0.72);
   line-height: 1.5;
 }
 .album-dialog-close {
@@ -701,22 +960,19 @@ p {
   display: grid;
   place-items: center;
   flex: 0 0 auto;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  color: inherit;
-  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(54, 67, 75, 0.28);
+  border-radius: 50%;
+  color: var(--album-ink);
+  background: rgba(255, 253, 250, 0.72);
 }
 .album-dialog-art {
   min-height: min(52vw, 280px);
   display: grid;
   place-items: center;
   overflow: hidden;
-  border-radius: 20px;
-  background: radial-gradient(
-    circle,
-    rgba(124, 92, 255, 0.24),
-    transparent 68%
-  );
+  border: 1px solid rgba(255, 156, 0, 0.18);
+  border-radius: 50% 50% 18px 18px;
+  background: rgba(255, 156, 0, 0.055);
 }
 .album-dialog-art .catalog-image,
 .album-dialog-art .image-missing {
@@ -726,7 +982,8 @@ p {
 .album-dialog-art.locked > svg {
   width: 80px;
   height: 80px;
-  color: var(--muted);
+  color: rgba(54, 67, 75, 0.62);
+  stroke-width: 1.3;
 }
 .album-dialog-meta {
   display: flex;
@@ -742,38 +999,113 @@ p {
   display: grid;
   gap: 4px;
   padding: 12px;
+  border: 1px solid rgba(54, 67, 75, 0.11);
   border-radius: 14px;
-  color: var(--muted);
-  background: rgba(255, 255, 255, 0.05);
+  color: rgba(54, 67, 75, 0.68);
+  background: rgba(255, 253, 250, 0.62);
   font-size: 11px;
 }
 .album-owned-summary strong {
-  color: inherit;
+  color: var(--album-ink);
   font-size: 18px;
 }
 .album-acquisition-actions {
   display: grid;
   gap: 8px;
 }
+.album-node-dialog .button {
+  border: 1px solid rgba(255, 156, 0, 0.42);
+  color: #fffdfa;
+  background: var(--album-orange);
+  box-shadow: 0 7px 16px rgba(255, 156, 0, 0.18);
+}
+.album-acquisition-actions .button:not(:first-child) {
+  border-color: rgba(54, 67, 75, 0.16);
+  color: var(--album-ink);
+  background: rgba(255, 253, 250, 0.76);
+  box-shadow: 0 5px 12px rgba(54, 67, 75, 0.07);
+}
+.modal.album-claim-result,
+.app-shell .modal.album-claim-result {
+  --album-paper: #fffdfa;
+  --album-ink: #36434b;
+  --album-orange: #ff9c00;
+  --album-green: #1ce204;
+  border: 1px solid rgba(54, 67, 75, 0.14);
+  color: var(--album-ink);
+  background-color: var(--album-paper);
+  background-image: url("/assets/album/washi-scroll-surface.webp");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 100% 100%;
+  box-shadow: 0 28px 70px rgba(54, 67, 75, 0.26);
+}
 .album-claim-result > div > span {
-  color: var(--muted);
+  color: rgba(54, 67, 75, 0.66);
   font-size: 11px;
+  letter-spacing: 0.08em;
 }
 .album-claim-result h2 {
   margin-top: 3px;
+  color: var(--album-ink);
+  font-family: "Songti SC", "STSong", "Noto Serif SC", serif;
+  font-size: 28px;
 }
 .album-claim-success {
   width: 52px;
   height: 52px;
-  color: #5ee389;
+  color: var(--album-orange);
 }
 .album-claim-result > p {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #78e9ff;
+  color: var(--album-orange);
+  font-family: Georgia, "Times New Roman", serif;
   font-size: 20px;
   font-weight: 900;
+}
+.album-claim-result code {
+  color: rgba(54, 67, 75, 0.58);
+}
+.album-claim-result .button {
+  color: #fffdfa;
+  background: var(--album-orange);
+}
+@media (max-width: 360px) {
+  .album-page {
+    padding-right: 10px;
+    padding-left: 10px;
+  }
+  .album-heading {
+    min-height: 160px;
+  }
+  .album-heading > div {
+    top: 62px;
+    left: 14px;
+  }
+  .album-heading h1 {
+    font-size: 40px;
+  }
+  .album-overview {
+    margin-inline: 8px;
+  }
+  .album-filters {
+    margin-inline: 4px;
+  }
+  .album-chain-card {
+    padding-right: 16px;
+    padding-left: 27px;
+  }
+  .album-node-art,
+  .album-node-art .catalog-image,
+  .album-node-art .image-missing {
+    width: 66px;
+    height: 80px;
+  }
+  .album-node strong {
+    font-size: 11.5px;
+  }
 }
 .segmented {
   display: grid;

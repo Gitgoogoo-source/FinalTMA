@@ -78,6 +78,12 @@ export function AlbumView(): ReactNode {
   return (
     <main className="page fullscreen album-page">
       <header className="page-heading album-heading">
+        <img
+          className="album-heading-art"
+          src="/assets/album/washi-fox-header.webp"
+          alt=""
+          aria-hidden="true"
+        />
         <Button className="icon-only" aria-label="返回" onClick={back}>
           <ChevronLeft aria-hidden="true" />
         </Button>
@@ -85,7 +91,7 @@ export function AlbumView(): ReactNode {
           <span>ALBUM</span>
           <h1>进化图鉴</h1>
         </div>
-        <Badge>{query.isFetching ? "正在刷新" : "真实进度"}</Badge>
+        {query.isFetching ? <Badge>正在刷新</Badge> : null}
       </header>
       <PageState
         loading={query.isLoading}
@@ -99,19 +105,22 @@ export function AlbumView(): ReactNode {
               <div>
                 <span>已点亮</span>
                 <strong>
-                  {query.data.unlocked_count} / {query.data.total_count}
+                  <b>{query.data.unlocked_count}</b>
+                  <small>/ {query.data.total_count}</small>
                 </strong>
               </div>
               <div>
                 <span>完成链</span>
                 <strong>
-                  {query.data.completed_chain_count} /{" "}
-                  {query.data.total_chain_count}
+                  <b>{query.data.completed_chain_count}</b>
+                  <small>/ {query.data.total_chain_count}</small>
                 </strong>
               </div>
               <div>
                 <span>可领取</span>
-                <strong>{query.data.claimable_count}</strong>
+                <strong>
+                  <b>{query.data.claimable_count}</b>
+                </strong>
               </div>
             </section>
             <div className="album-filters" role="group" aria-label="图鉴筛选">
