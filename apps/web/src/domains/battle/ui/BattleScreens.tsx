@@ -245,40 +245,43 @@ export function BattlePreparingShare({
   snapshot,
   remainingSeconds,
   progressPercent,
-  onRefresh,
 }: {
-  snapshot: BattleRoomSnapshotDto;
+  snapshot: BattleRoomSnapshotDto | null;
   remainingSeconds: number | null;
   progressPercent: number | null;
-  onRefresh(): void;
 }): ReactNode {
   return (
-    <section className="battle-preparing" aria-live="polite">
+    <section className="battle-preparing" aria-busy="true" aria-live="polite">
       <span className="battle-kicker">PREPARING SHARE</span>
       <div className="battle-preparing-orbit">
         <Send />
         <i />
       </div>
       <h1>正在准备挑战卡</h1>
-      <p>入场费和三宠占用只以后端事务为准。页面只读取原房间，不会重复创建。</p>
-      <div
-        className="battle-prepare-progress"
-        role="progressbar"
-        aria-label="挑战卡准备时限"
-        aria-valuemin={0}
-        aria-valuemax={60}
-        aria-valuenow={
-          remainingSeconds === null ? undefined : 60 - remainingSeconds
-        }
-      >
-        <i style={{ width: `${100 - (progressPercent ?? 100)}%` }} />
-      </div>
-      <strong>{formatBattleTime(remainingSeconds)}</strong>
-      <small>房间 {snapshot.room_id.slice(0, 8)}</small>
-      <Button className="secondary" onClick={onRefresh}>
-        <RefreshCw />
-        重新读取服务器状态
-      </Button>
+      <p>挑战卡生成后会自动进入等待页面，请稍候。</p>
+      {snapshot ? (
+        <>
+          <div
+            className="battle-prepare-progress"
+            role="progressbar"
+            aria-label="挑战卡准备时限"
+            aria-valuemin={0}
+            aria-valuemax={60}
+            aria-valuenow={
+              remainingSeconds === null ? undefined : 60 - remainingSeconds
+            }
+          >
+            <i style={{ width: `${100 - (progressPercent ?? 100)}%` }} />
+          </div>
+          <strong>{formatBattleTime(remainingSeconds)}</strong>
+          <small>请保持当前页面开启</small>
+        </>
+      ) : (
+        <>
+          <strong>准备中</strong>
+          <small>正在确认本次队伍，请勿重复操作</small>
+        </>
+      )}
     </section>
   );
 }

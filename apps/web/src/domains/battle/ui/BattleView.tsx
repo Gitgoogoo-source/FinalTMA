@@ -151,6 +151,7 @@ export function BattleView(): ReactNode {
     pageActive && resumeOrderId !== null,
   );
   const [flow, setFlow] = useState<Flow>(null);
+  const [createHandoffActive, setCreateHandoffActive] = useState(false);
   const [slots, setSlots] = useState<BattleTeamSlots>(emptySlots);
   const [room, setRoom] = useState<BattleRoomSnapshotDto | null>(null);
   const [forceHome, setForceHome] = useState(false);
@@ -421,6 +422,7 @@ export function BattleView(): ReactNode {
     queueMicrotask(() => {
       if (cancelled) return;
       setFlow(null);
+      setCreateHandoffActive(false);
       setSlots(emptySlots);
       setRoom(null);
       setForceHome(false);
@@ -485,6 +487,20 @@ export function BattleView(): ReactNode {
     roomRef.current = room;
   }, [room]);
 
+  const committedRoomId = room?.room_id ?? null;
+  useEffect(() => {
+    if (!committedRoomId || flow?.kind !== "create") return;
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled) return;
+      setCreateHandoffActive(false);
+      setFlow((current) => (current?.kind === "create" ? null : current));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [committedRoomId, flow?.kind]);
+
   const result = room?.terminal_result ?? null;
   const terminalObservations = useMemo(
     () => terminalObservationsFor([room, bootstrap.data?.room]),
@@ -493,10 +509,12 @@ export function BattleView(): ReactNode {
   const terminalObservationKey = terminalObservations
     .map((observation) => `${observation.roomId}:${observation.stateVersion}`)
     .join(",");
+  const createHandoff = flow?.kind === "create" && createHandoffActive;
   const pageState = derivePageState({
     result: Boolean(result) && !presentationBusy,
     room,
     flow,
+    createHandoff,
     invite: authoritativeInvite,
     battleEntry,
     forceHome,
@@ -1028,12 +1046,12 @@ export function BattleView(): ReactNode {
       setResumeNotice("请完成充值；返回后仍需重新确认创建");
       return;
     }
+    setCreateHandoffActive(true);
     const response = await command.execute("battle.create", {
       tier: tier.id,
       template_ids: selection,
     });
-    if (!response) return;
-    setFlow(null);
+    if (!response) setCreateHandoffActive(false);
   };
 
   const accept = async () => {
@@ -1447,13 +1465,12 @@ function BattleState({
 }): ReactNode {
   if (pageState === "result" && result)
     return <BattleResult result={result} onReturnHome={returnFromResult} />;
-  if (pageState === "preparing_share" && room)
+  if (pageState === "preparing_share")
     return (
       <BattlePreparingShare
         snapshot={room}
         remainingSeconds={clock.remainingSeconds}
         progressPercent={clock.progressPercent}
-        onRefresh={refresh}
       />
     );
   if (pageState === "waiting" && room && participation)
@@ -1563,6 +1580,7 @@ function derivePageState({
   result,
   room,
   flow,
+  createHandoff,
   invite,
   battleEntry,
   forceHome,
@@ -1570,6 +1588,7 @@ function derivePageState({
   result: boolean;
   room: BattleRoomSnapshotDto | null;
   flow: Flow;
+  createHandoff: boolean;
   invite: Invite | undefined;
   battleEntry: boolean;
   forceHome: boolean;
@@ -1591,6 +1610,7 @@ function derivePageState({
     )
       return "home";
   }
+  if (createHandoff) return "preparing_share";
   if (!forceHome && battleEntry && invite?.invite_status !== "none")
     return "accept";
   if (flow?.kind === "create") return "team_select";

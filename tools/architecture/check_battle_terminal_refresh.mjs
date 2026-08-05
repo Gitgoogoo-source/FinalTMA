@@ -689,6 +689,81 @@ function checkView(source) {
       ),
     "command create/cancel/failure recovery must receive the same room owner reader",
   );
+  const pageDerivation = calls(view, "derivePageState")[0];
+  const pageDerivationOptions = objectArgument(pageDerivation, 0);
+  const stateDeriver = topLevelFunction(source, "derivePageState");
+  const bearerInviteGuard = ifStatements(stateDeriver).find(
+    (node) =>
+      identifiers(node.expression).includes("battleEntry") &&
+      identifiers(node.expression).includes("forceHome"),
+  );
+  const participantRoomGuard = ifStatements(stateDeriver).find(
+    (node) => expressionValue(node.expression) === "room",
+  );
+  const create = variableFunction(view, "create");
+  const createCommand = calls(create, "command.execute").find(
+    (call) => stringArgument(call, 0) === "battle.create",
+  );
+  const createHandoff = variable(view, "createHandoff")?.initializer;
+  const handoffGuard = ifStatements(stateDeriver).find(
+    (node) => expressionValue(node.expression) === "createHandoff",
+  );
+  const handoffReturns = returnExpressions(handoffGuard?.thenStatement).map(
+    (expression) => expressionValue(expression),
+  );
+  const committedRoomId = variable(view, "committedRoomId")?.initializer;
+  const handoffCommit = calls(view, "useEffect").find(
+    (call) =>
+      calls(call, "setFlow").length === 1 &&
+      calls(call, "setCreateHandoffActive").some(
+        (setter) => expressionValue(setter.arguments[0]) === "false",
+      ) &&
+      identifiers(call).includes("committedRoomId") &&
+      propertyPaths(call).includes("flow.kind"),
+  );
+  const handoffActivation = calls(create, "setCreateHandoffActive");
+  const battleState = topLevelFunction(source, "BattleState");
+  const preparingRenderGuard = ifStatements(battleState).find((node) =>
+    Boolean(
+      findBinaryComparison(
+        node.expression,
+        "pageState",
+        ts.SyntaxKind.EqualsEqualsEqualsToken,
+        "preparing_share",
+      ),
+    ),
+  );
+  must(
+    createCommand &&
+      calls(create, "setFlow").length === 0 &&
+      handoffActivation.some(
+        (setter) => expressionValue(setter.arguments[0]) === "true",
+      ) &&
+      handoffActivation.some(
+        (setter) => expressionValue(setter.arguments[0]) === "false",
+      ) &&
+      createHandoff &&
+      propertyPaths(createHandoff).includes("flow.kind") &&
+      identifiers(createHandoff).includes("createHandoffActive") &&
+      expressionValue(
+        objectPropertyExpression(pageDerivationOptions, "createHandoff"),
+      ) === "createHandoff" &&
+      handoffGuard &&
+      participantRoomGuard.pos < handoffGuard.pos &&
+      handoffGuard.pos < bearerInviteGuard.pos &&
+      handoffReturns.length === 1 &&
+      handoffReturns[0] === "preparing_share" &&
+      committedRoomId &&
+      propertyPaths(committedRoomId).includes("room.room_id") &&
+      handoffCommit &&
+      calls(handoffCommit, "queueMicrotask").length === 1 &&
+      preparingRenderGuard &&
+      !identifiers(preparingRenderGuard.expression).includes("room") &&
+      identifiers(preparingRenderGuard.thenStatement).includes(
+        "BattlePreparingShare",
+      ),
+    "friend challenge creation must retain a local preparing-share handoff until an authoritative room commits, without a renderable Battle Home gap",
+  );
   const bootstrapObserver = calls(view, "useApiQuery").find(
     (call) => stringArgument(call, 0) === "battle.bootstrap",
   );
@@ -725,17 +800,6 @@ function checkView(source) {
     view,
     "authoritativeInvite",
   )?.initializer;
-  const pageDerivation = calls(view, "derivePageState")[0];
-  const pageDerivationOptions = objectArgument(pageDerivation, 0);
-  const stateDeriver = topLevelFunction(source, "derivePageState");
-  const bearerInviteGuard = ifStatements(stateDeriver).find(
-    (node) =>
-      identifiers(node.expression).includes("battleEntry") &&
-      identifiers(node.expression).includes("forceHome"),
-  );
-  const participantRoomGuard = ifStatements(stateDeriver).find(
-    (node) => expressionValue(node.expression) === "room",
-  );
   const bearerGuardReturns = returnExpressions(
     bearerInviteGuard?.thenStatement,
   ).map((expression) => expressionValue(expression));
@@ -1017,6 +1081,9 @@ function checkCommand(source) {
   must(
     calls(failure, "readAuthoritativeRoom").length === 1 &&
       calls(failure, "onAuthoritativeRoom").length === 1 &&
+      awaitExpressions(failure).some((node) =>
+        containsNode(node, calls(failure, "onAuthoritativeRoom")[0]),
+      ) &&
       acceptGuard &&
       calls(failure, "refetchAuthority").length === 1,
     "participant terminal failures may use the room reader, but accept failures must bypass it and return through current-invite discovery",
@@ -1026,6 +1093,7 @@ function checkCommand(source) {
   const refresh = calls(apply, "refreshRouteScopes");
   must(
     publish.length === 1 &&
+      awaitExpressions(apply).some((node) => containsNode(node, publish[0])) &&
       refresh.length === 1 &&
       publish[0].pos < refresh[0].pos &&
       enclosingIf(
@@ -1150,6 +1218,7 @@ function checkResultContract(
       `Battle bootstrap, identity bootstrap, and handlers must not expose result recovery or acknowledgement: ${source.fileName}`,
     );
   const resultScreen = topLevelFunction(screens, "BattleResult");
+  const preparingScreen = topLevelFunction(screens, "BattlePreparingShare");
   let hasExactReturnLabel = false;
   walk(resultScreen, (node) => {
     if (ts.isJsxText(node) && node.getText().trim() === "返回 Battle 首页")
@@ -1161,6 +1230,14 @@ function checkResultContract(
       !resultScreen.getText().includes("正在确认") &&
       calls(resultScreen, "apiRequest").length === 0,
     "the result button must be an immediate local Return to Battle Home action",
+  );
+  must(
+    identifiers(preparingScreen).includes("snapshot") &&
+      jsxElements(preparingScreen, "Button").length === 0 &&
+      !["服务器", "后端", "重新读取"].some((text) =>
+        preparingScreen.getText().includes(text),
+      ),
+    "the preparing-share handoff must support its snapshot-free player state and recover silently without server-facing copy or controls",
   );
 }
 
@@ -1739,6 +1816,18 @@ function runSelfTests() {
         'void apiRequest("battle.room", { room_id: "fixture" });',
       );
     }),
+    fixture(
+      paths.command,
+      "command room publication loses await",
+      (source, text) => {
+        const fn = topLevelFunction(source, "applyBattleCommandResult");
+        const publish = calls(fn, "onAuthoritativeRoom")[0];
+        const awaited = awaitExpressions(fn).find((node) =>
+          containsNode(node, publish),
+        );
+        return replaceNode(text, awaited, publish.getText(source));
+      },
+    ),
     fixture(paths.query, "observer cancelRefetch takeover", (source, text) => {
       const fn = variableFunction(
         topLevelFunction(source, "useApiQuery"),
@@ -1961,6 +2050,65 @@ function runSelfTests() {
     }),
     fixture(
       paths.view,
+      "create success clears flow before room commit",
+      (source, text) => {
+        const create = variableFunction(
+          topLevelFunction(source, "BattleView"),
+          "create",
+        );
+        return insertIntoFunction(text, create, "setFlow(null);");
+      },
+    ),
+    fixture(
+      paths.view,
+      "create omits the current-attempt handoff latch",
+      (source, text) => {
+        const create = variableFunction(
+          topLevelFunction(source, "BattleView"),
+          "create",
+        );
+        const activation = calls(create, "setCreateHandoffActive").find(
+          (call) => expressionValue(call.arguments[0]) === "true",
+        );
+        return replaceNode(text, activation.arguments[0], "false");
+      },
+    ),
+    fixture(
+      paths.view,
+      "create handoff falls through to Battle Home",
+      (source, text) => {
+        const derive = topLevelFunction(source, "derivePageState");
+        const guard = ifStatements(derive).find(
+          (node) => expressionValue(node.expression) === "createHandoff",
+        );
+        const result = returnExpressions(guard.thenStatement)[0];
+        return replaceNode(text, result, '"home"');
+      },
+    ),
+    fixture(
+      paths.view,
+      "snapshot-free preparing page requires a room",
+      (source, text) => {
+        const state = topLevelFunction(source, "BattleState");
+        const guard = ifStatements(state).find((node) =>
+          Boolean(
+            findBinaryComparison(
+              node.expression,
+              "pageState",
+              ts.SyntaxKind.EqualsEqualsEqualsToken,
+              "preparing_share",
+            ),
+          ),
+        );
+        return replaceNode(
+          text,
+          guard.expression,
+          `(${guard.expression.getText(source)} && room)`,
+        );
+      },
+    ),
+    fixture(
+      paths.view,
       "terminal owner enables Battle bootstrap",
       (source, text) => {
         const view = topLevelFunction(source, "BattleView");
@@ -2153,6 +2301,23 @@ function runSelfTests() {
         const authority = variableFunction(view, "onAuthoritativeRoom");
         const apply = calls(authority, "applySnapshot")[0];
         return replaceNode(text, apply, "void snapshot");
+      },
+    ),
+    fixture(
+      paths.battleScreens,
+      "preparing page restores server-facing wording",
+      (source, text) => {
+        const preparing = topLevelFunction(source, "BattlePreparingShare");
+        let copy = null;
+        walk(preparing, (node) => {
+          if (
+            !copy &&
+            ts.isJsxText(node) &&
+            node.getText().includes("挑战卡生成后会自动进入等待页面")
+          )
+            copy = node;
+        });
+        return replaceNode(text, copy, "正在读取服务器状态");
       },
     ),
     fixture(

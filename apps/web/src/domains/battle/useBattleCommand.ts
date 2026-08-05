@@ -43,7 +43,7 @@ export type BattleCommandState = {
 
 export type BattleAuthoritativeRoomHandler = (
   snapshot: BattleRoomSnapshotDto,
-) => void;
+) => Promise<void>;
 
 export type BattleAuthoritativeRoomReader = (
   roomId: string,
@@ -407,7 +407,7 @@ async function applyBattleCommandResult<Id extends BattleCommandRouteId>(
     readAuthoritativeRoom,
   );
   if (!snapshot || signal.aborted || !isCurrentGeneration(generation)) return;
-  onAuthoritativeRoom(snapshot);
+  await onAuthoritativeRoom(snapshot);
   if (routeId !== "battle.action" && !isBattleAssetTerminal(snapshot.status))
     await refreshRouteScopes(routeId);
 }
@@ -428,7 +428,7 @@ async function refreshBattleCommandFailure(
         const snapshot = await readAuthoritativeRoom(terminalRoomId);
         if (!snapshot || signal.aborted || !isCurrentGeneration(generation))
           return;
-        onAuthoritativeRoom(snapshot);
+        await onAuthoritativeRoom(snapshot);
         return;
       } catch (cause) {
         if (signal.aborted || isAbortFailure(cause)) return;
