@@ -1011,7 +1011,9 @@ export function OperationRegistryProvider({
                 ? `decomposition-operation-backdrop phase-${active.phase}`
                 : active.routeId === "inventory.evolve"
                   ? `evolution-operation-backdrop phase-${active.phase}`
-                  : ""
+                  : wheelResult
+                    ? "wheel-result-backdrop"
+                    : ""
           }`}
           role="dialog"
           aria-modal="true"
