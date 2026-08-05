@@ -183,9 +183,6 @@ export function TasksView({
           <div className="checkin-heading">
             <div>
               <span>7 日签到</span>
-              <strong>
-                本轮签到：第 {tasks.data?.checkin.next_day ?? 1} 天 / 7 天
-              </strong>
             </div>
             <Button
               id="task-checkin-action"
