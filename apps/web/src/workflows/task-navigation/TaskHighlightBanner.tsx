@@ -10,6 +10,7 @@ import {
 import type { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { isVisibleMvpTask } from "../../domains/tasks/visibility.ts";
 import { useApiQuery } from "../../platform/query/index.ts";
 import { focusTaskTarget } from "../../shared/navigation/focusTaskTarget.ts";
 import { Button, Card } from "../../shared/ui/index.tsx";
@@ -29,9 +30,7 @@ export function TaskHighlightBanner(): ReactNode {
   const tasks = useApiQuery("tasks.get");
   const referral = useApiQuery("referral.get");
   const { isBlocked } = useOperationRegistry();
-  const orderedTasks = (tasks.data?.tasks ?? []).filter(
-    (task) => task.category !== "expedition",
-  );
+  const orderedTasks = (tasks.data?.tasks ?? []).filter(isVisibleMvpTask);
   const claimable = orderedTasks.find((task) => task.status === "claimable");
   const unfinished = orderedTasks.find(
     (task) => task.status === "not_started" || task.status === "in_progress",

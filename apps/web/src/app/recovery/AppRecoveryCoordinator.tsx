@@ -1,7 +1,6 @@
 import { useCallback, type ReactNode } from "react";
 
 import { useApiQuery } from "../../platform/query/index.ts";
-import { useMintRecovery } from "../../workflows/mint-recovery/index.ts";
 import {
   useNavigationIntent,
   useNavigationIntentResume,
@@ -41,7 +40,6 @@ export function AppRecoveryCoordinator({
   useEvolutionResultRecovery();
   useGachaResultRecovery();
   useWheelResultRecovery();
-  useMintRecovery(bootstrap.data?.pending_mints);
   useStarsPaymentRecovery(recoveryPayments, openPaymentRecovery);
   useNavigationIntentResume(pendingPayments.data?.orders, resumeNavigation);
   return null;

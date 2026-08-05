@@ -24,7 +24,7 @@ import { vipRoutes } from "../domains/vip/routes.ts";
 import { walletRoutes } from "../domains/wallet/routes.ts";
 import { wheelRoutes } from "../domains/wheel/routes.ts";
 
-export const routes = [
+export const activeRoutes = [
   ...identityRoutes,
   ...catalogRoutes,
   ...gachaRoutes,
@@ -38,13 +38,15 @@ export const routes = [
   ...referralRoutes,
   ...albumRoutes,
   ...battleRoutes,
-  ...walletRoutes,
-  ...mintRoutes,
   ...operationRoutes,
   ...paymentSupportRoutes,
 ] as const;
 
+export const dormantRoutes = [...walletRoutes, ...mintRoutes] as const;
+export const routes = [...activeRoutes, ...dormantRoutes] as const;
+
 assertContractRegistry(routes);
+assertContractRegistry(activeRoutes);
 
 export type AppRoute = (typeof routes)[number];
 export type RouteId = AppRoute["id"];
@@ -111,9 +113,9 @@ export function parseRecoveredOperation(value: unknown): TypedOperationSummary {
 }
 
 export function findRoute(method: string, pathname: string) {
-  return findRouteIn(routes, method, pathname, "app");
+  return findRouteIn(activeRoutes, method, pathname, "app");
 }
 
 export function findRouteByPath(pathname: string): RouteDefinition | null {
-  return findRouteByPathIn(routes, pathname, "app");
+  return findRouteByPathIn(activeRoutes, pathname, "app");
 }

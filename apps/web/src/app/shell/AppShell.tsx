@@ -6,7 +6,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { Outlet, useLocation, useSearchParams } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 
 import { refreshForegroundState } from "../../platform/query/index.ts";
 import { useSession } from "../../platform/session/store.ts";
@@ -24,29 +24,18 @@ export function AppShell(): ReactNode {
   const session = useSession();
   const activePath = getMainPagePath(location.pathname);
   const [dialog, setDialog] = useState<GlobalDialog | null>(null);
-  const [searchParams, setSearchParams] = useSearchParams();
   const { topupRequest, clearTopupRequest } = useNavigationIntent();
-  const requestedDialog =
-    searchParams.get("dialog") === "wallet" ? "wallet" : null;
-  const clearDialogRequest = useCallback(() => {
-    if (!searchParams.has("dialog")) return;
-    const next = new URLSearchParams(searchParams);
-    next.delete("dialog");
-    setSearchParams(next, { replace: true });
-  }, [searchParams, setSearchParams]);
   const openShellDialog = useCallback(
     (value: GlobalDialog) => {
-      clearDialogRequest();
       if (value === "topup") clearTopupRequest();
       setDialog(value);
     },
-    [clearDialogRequest, clearTopupRequest],
+    [clearTopupRequest],
   );
   const closeDialogs = useCallback(() => {
     clearTopupRequest();
     setDialog(null);
-    clearDialogRequest();
-  }, [clearDialogRequest, clearTopupRequest]);
+  }, [clearTopupRequest]);
   useLayoutEffect(() => {
     document.documentElement.toggleAttribute(
       "data-app-shell-active",
@@ -78,7 +67,7 @@ export function AppShell(): ReactNode {
         </div>
         <BottomNavigation />
         <GlobalDialogs
-          active={topupRequest ? "topup" : (requestedDialog ?? dialog)}
+          active={topupRequest ? "topup" : dialog}
           topupRequest={topupRequest}
           close={closeDialogs}
         />

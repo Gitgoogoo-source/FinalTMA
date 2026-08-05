@@ -550,7 +550,6 @@ function prefetchSummaries(sessionGeneration: string): void {
   )
     return;
   void prefetchApiQuery("vip.get");
-  void prefetchApiQuery("wallet.get");
   void prefetchApiQuery("gacha.bootstrap");
 }
 

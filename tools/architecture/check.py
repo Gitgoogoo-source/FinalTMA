@@ -473,6 +473,9 @@ def verify_game_page_boundary() -> None:
     tasks_view = (
         WEB_ROOT / "domains/tasks/ui/TasksView.tsx"
     ).read_text(encoding="utf-8")
+    task_visibility = (
+        WEB_ROOT / "domains/tasks/visibility.ts"
+    ).read_text(encoding="utf-8")
     tasks_page = (
         WEB_ROOT / "pages/tasks/TasksPage.tsx"
     ).read_text(encoding="utf-8")
@@ -489,14 +492,52 @@ def verify_game_page_boundary() -> None:
         > tasks_view.index('id="task-filters"')
         or "<TasksView afterCheckIn={<WheelPanel />} />" not in tasks_page
         or 'key: "expedition"' in tasks_view
-        or 'task.category !== "expedition"' not in tasks_view
+        or 'key: "wallet"' in tasks_view
+        or 'key: "mint"' in tasks_view
+        or "filter(isVisibleMvpTask)" not in tasks_view
         or "/tasks?focus=wheel" not in tasks_view
-        or 'task.category !== "expedition"' not in task_highlight
+        or "filter(isVisibleMvpTask)" not in task_highlight
+        or 'task.category !== "expedition"' not in task_visibility
+        or 'task.category !== "wallet"' not in task_visibility
+        or 'task.category !== "mint"' not in task_visibility
         or "/tasks?focus=wheel" not in task_highlight
         or "navigate(`/tasks?${params.toString()}`)" not in payment_resume
     ):
         raise SystemExit(
-            "Tasks page must own Wheel and hide Expedition filters, cards, and highlights"
+            "Tasks page must own Wheel and hide Expedition, wallet, and Mint tasks"
+        )
+
+    app_router = (WEB_ROOT / "app/router/AppRouter.tsx").read_text(
+        encoding="utf-8"
+    )
+    inventory_page = (WEB_ROOT / "pages/inventory/InventoryPage.tsx").read_text(
+        encoding="utf-8"
+    )
+    top_asset_bar = (WEB_ROOT / "app/shell/TopAssetBar.tsx").read_text(
+        encoding="utf-8"
+    )
+    global_dialogs = (WEB_ROOT / "app/shell/GlobalDialogs.tsx").read_text(
+        encoding="utf-8"
+    )
+    recovery = (WEB_ROOT / "app/recovery/AppRecoveryCoordinator.tsx").read_text(
+        encoding="utf-8"
+    )
+    bootstrap = (
+        WEB_ROOT / "workflows/session-bootstrap/useBootstrap.ts"
+    ).read_text(encoding="utf-8")
+    vercel = (ROOT / "vercel.json").read_text(encoding="utf-8")
+    if (
+        "MintPage" in app_router
+        or "mint/:templateId" in app_router
+        or "inventory-action-button--mint" in inventory_page
+        or 'useApiQuery("wallet.get")' in top_asset_bar
+        or "WalletDialog" in global_dialogs
+        or "useMintRecovery" in recovery
+        or 'prefetchApiQuery("wallet.get")' in bootstrap
+        or '"/api/jobs/reconcile-mints"' in vercel
+    ):
+        raise SystemExit(
+            "Current MVP must not expose wallet/Mint UI, routing, recovery, prefetch, or Cron"
         )
 
 
@@ -863,6 +904,28 @@ def verify_contract_boundaries() -> None:
     generator = ROOT / "packages/api-contracts/scripts/generate-openapi.ts"
     if 'from "../src/server.ts"' not in generator.read_text(encoding="utf-8"):
         raise SystemExit("OpenAPI generation must use the server registry")
+    app_registry = (
+        CONTRACT_ROOT / "registries/app.ts"
+    ).read_text(encoding="utf-8")
+    jobs_registry = (
+        CONTRACT_ROOT / "registries/jobs.ts"
+    ).read_text(encoding="utf-8")
+    server_registry = (
+        CONTRACT_ROOT / "registries/server.ts"
+    ).read_text(encoding="utf-8")
+    if (
+        "export const dormantRoutes = [...walletRoutes, ...mintRoutes]" not in app_registry
+        or "return findRouteIn(activeRoutes" not in app_registry
+        or "return findRouteByPathIn(activeRoutes" not in app_registry
+        or 'route.id !== "jobs.reconcile_mints"' not in jobs_registry
+        or "return findRouteIn(activeRoutes" not in jobs_registry
+        or "return findRouteByPathIn(activeRoutes" not in jobs_registry
+        or "...activeAppRoutes" not in server_registry
+        or "...activeJobRoutes" not in server_registry
+    ):
+        raise SystemExit(
+            "Wallet, Mint, and Mint reconciliation must remain outside current runtime registries"
+        )
     battle_routes = (
         CONTRACT_ROOT / "domains/battle/routes.ts"
     ).read_text(encoding="utf-8")

@@ -1,16 +1,13 @@
-import type { RouteOutput } from "@pokepets/api-contracts/app";
 import {
   BookOpen,
   Boxes,
   CalendarCheck,
   Check,
   Circle,
-  Link2,
   LockKeyhole,
   ShoppingBasket,
   Sparkles,
   UsersRound,
-  WalletCards,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -34,11 +31,12 @@ import {
 import { focusTaskTarget } from "../../../shared/navigation/focusTaskTarget.ts";
 import { Badge, Button, Card, PageState } from "../../../shared/ui/index.tsx";
 import { useOperationRegistry } from "../../../workflows/operation-recovery/index.ts";
+import {
+  isVisibleMvpTask,
+  type Task,
+  type VisibleTaskCategory,
+} from "../visibility.ts";
 
-type Task = RouteOutput<"tasks.get">["tasks"][number];
-type TaskCategory = Task["category"];
-type VisibleTaskCategory = Exclude<TaskCategory, "expedition">;
-type VisibleTask = Task & { category: VisibleTaskCategory };
 type TaskFilter = "all" | VisibleTaskCategory;
 type TaskViewState = { category: TaskFilter; scrollY: number };
 
@@ -56,8 +54,6 @@ const taskCategoryLabels: Record<VisibleTaskCategory, string> = {
   market: "交易",
   inventory: "藏品",
   album: "图鉴",
-  wallet: "钱包",
-  mint: "链上",
 };
 const taskFilters: ReadonlyArray<{ key: TaskFilter; label: string }> = [
   { key: "all", label: "全部" },
@@ -67,8 +63,6 @@ const taskFilters: ReadonlyArray<{ key: TaskFilter; label: string }> = [
   { key: "market", label: "交易" },
   { key: "inventory", label: "藏品" },
   { key: "album", label: "图鉴" },
-  { key: "wallet", label: "钱包" },
-  { key: "mint", label: "链上" },
 ] as const;
 const taskStatusLabels: Record<Task["status"], string> = {
   not_started: "未开始",
@@ -84,8 +78,6 @@ const taskCategoryIcons: Record<VisibleTaskCategory, LucideIcon> = {
   market: ShoppingBasket,
   inventory: Sparkles,
   album: BookOpen,
-  wallet: WalletCards,
-  mint: Link2,
 };
 const checkInRewards = [
   { amount: "20", unit: "Fgems", kind: "fgems" },
@@ -135,9 +127,7 @@ export function TasksView({
       setClaimingCode(null);
     }
   };
-  const items = (tasks.data?.tasks ?? []).filter(
-    (task): task is VisibleTask => task.category !== "expedition",
-  );
+  const items = (tasks.data?.tasks ?? []).filter(isVisibleMvpTask);
   const visibleItems =
     category === "all" || category === "daily"
       ? items
@@ -341,8 +331,6 @@ function goComplete(
     inventory_evolution: "/inventory?focus=evolution",
     inventory_decomposition: "/inventory?focus=decomposition",
     album: "/album",
-    wallet: "/tasks?dialog=wallet",
-    inventory_mint: "/inventory?focus=mint",
   };
   if (action === "referral_copy") {
     focusTaskTarget(document.getElementById("task-referral-copy"));

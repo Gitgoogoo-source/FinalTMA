@@ -18,10 +18,10 @@ de521f2687086cb358fb557a4a7ada3bc3c5fc132d673f0256b4573028ddba46
 - API：同一 Vercel Project 内的 `app`、`integrations`、`jobs` 三个 Node.js 24 Function 网关。
 - Database：Supabase Postgres 17，仅暴露 `api` schema；浏览器不加载 Supabase SDK。
 - Realtime：Ably Standard 只发送 Battle 状态失效通知；REST 与数据库 `state_version` 回正权威状态。
-- Blockchain：TON Connect 验证钱包，Tact 合约完成 NFT Mint。
+- Blockchain：TON Connect、钱包验证与 Tact NFT Mint 实现保留休眠；当前 App/Jobs 运行时注册表与 OpenAPI 均不发布相关端点，MVP 不提供入口、恢复或定时对账。
 - Deployment：Vercel Pro；真实开发环境与未来生产环境使用相同 Git commit 和 migration 序列。
 
-TON Connect 只发布一套公开应用身份：名称固定为 `PokePets`，应用 URL 固定为 `https://final-tma-pi.vercel.app`，图标 URL 固定为 `https://final-tma-pi.vercel.app/assets/ton/tonconnect-icon.png`。仓库、development build 与 production build 复制同一份根路径 manifest，不使用 localhost、preview deployment、环境分支、运行时插值或第二份静态 manifest。
+仓库继续保留唯一的 TON Connect 静态身份与 manifest，供休眠实现保持确定性；当前 Web 不引用该 manifest、不初始化 TON Connect，也不把其图标是否正式替换作为 MVP 发布阻塞。
 
 ## 依赖方向
 

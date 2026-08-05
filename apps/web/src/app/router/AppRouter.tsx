@@ -11,12 +11,7 @@ const loadAlbumPage = () =>
   import("../../pages/album/AlbumPage.tsx").then((module) => ({
     default: module.AlbumPage,
   }));
-const loadMintPage = () =>
-  import("../../pages/mint/MintPage.tsx").then((module) => ({
-    default: module.MintPage,
-  }));
 const AlbumPage = lazy(loadAlbumPage);
-const MintPage = lazy(loadMintPage);
 
 let backgroundPreloadStarted = false;
 
@@ -31,10 +26,6 @@ export function AppRouter(): ReactNode {
         <Route path="inventory" />
         <Route path="tasks" />
         <Route path="album" element={withPageLoading(<AlbumPage />)} />
-        <Route
-          path="mint/:templateId"
-          element={withPageLoading(<MintPage />)}
-        />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

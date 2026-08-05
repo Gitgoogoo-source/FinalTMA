@@ -9,10 +9,10 @@
 | 3 远征             | expedition（当前隐藏）          | expedition                               | expedition、inventory、economy           | 前端无入口，保留事务与存量数据边界                         |
 | 4 幸运转盘         | wheel、operation-recovery       | wheel                                    | wheel、economy、operations               | 1/10 次原子结算、结果明细与确认前持续恢复                  |
 | 5 K-coin 充值      | topup、payment-recovery         | topup、stars-payment workflow            | payments、economy                        | 付款前可取消、提交后锁定、成功唯一交付、无充值冷却         |
-| 6 TON 钱包         | wallet                          | wallet                                   | onchain、identity                        | challenge、proof、防重放、地址唯一                         |
-| 7 Mint             | mint                            | mint、jobs                               | onchain、inventory、operations           | reserve、submit、reconcile、metadata 快照                  |
+| 6 TON 钱包         | wallet（休眠）                  | wallet（休眠）                           | onchain、identity                        | 当前 Web 无入口、摘要请求或 Provider 初始化                |
+| 7 Mint             | mint（休眠）                    | mint、jobs（休眠）                       | onchain、inventory、operations           | 当前 Web 无路由、恢复、任务或 Cron                         |
 | 8 市场             | market                          | market                                   | market、inventory、economy、vip          | FIFO、整笔购买、逐卖家结算、成交事件游标与设备 SOLD 收件箱 |
-| 9 任务与签到       | tasks、wheel                    | tasks                                    | tasks、economy                           | 16 项可见任务、转盘固定位置、奖励唯一发放                  |
+| 9 任务与签到       | tasks、wheel                    | tasks                                    | tasks、economy                           | 14 项可见任务、转盘固定位置、奖励唯一发放                  |
 | 10 分享邀请        | referral、session-bootstrap     | referral                                 | referral、identity、operations、payments | 服务端交接门禁、唯一绑定、有效充值、日/生命周期上限        |
 | 11 分解            | inventory、decomposition        | decomposition                            | 33_decomposition、inventory、economy     | 数量与 Fgems 在同一事务变化                                |
 | 12 官方价格        | market、inventory、gacha        | catalog                                  | catalog、market                          | 前端不提交价格，服务端读取目录                             |
@@ -22,7 +22,7 @@
 | 16 登录            | session-bootstrap、platform     | identity                                 | identity、operations                     | initData、交接状态、限流、短会话、封禁迟到响应隔离         |
 | 17 藏品            | inventory                       | inventory                                | inventory                                | 模板加数量、预留不可重复使用                               |
 | 18 进化            | inventory、evolution            | evolution                                | 43_evolution、inventory、economy         | 只读预览、二次确认、原子结算、结果恢复与会话 NEW           |
-| 19 顶部资产栏      | app/shell                       | identity                                 | economy、vip、onchain                    | 真实资产回正、钱包和 VIP 状态同步                          |
+| 19 顶部资产栏      | app/shell                       | identity                                 | economy、vip                             | 真实资产回正，不读取或展示钱包状态                         |
 | 20 风控退款        | app/guards                      | refund-risk workflow、integrations、jobs | risk、payments、operations               | 重复退款无副作用、封禁空白门禁                             |
 | Battle（第 21 章） | battle、battle-realtime         | battle、battle-share/outbox workflows    | battle、inventory、economy、operations   | 好友邀请、同档随机匹配、三宠占用、固定轮流行动、原子结算   |
 

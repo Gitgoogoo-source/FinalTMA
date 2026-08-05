@@ -6,11 +6,11 @@
 
 - 外部写入目标已核对为真实开发 Supabase `final-tma-real-test`（`ebewtjerusxcioegpzjd`）与 Vercel `final-tma`，未来生产 Supabase 在上线前保持空库且无须保留业务数据。
 - 当前真实开发环境与未来生产环境使用同一组 210 张正式藏品母版生成的 420 张运行时图片；母版、缩略图、详情图、模板路径与 checksum 必须一一对应。
-- 正式生产环境 `APP_ENV=production` 部署前，还必须提供正式 Telegram 分享图和 TON Connect 图标；任一已知开发占位 checksum 仍存在时禁止生产发布。
-- 本次真实开发部署的 Supabase、Vercel、Telegram、Stars 与观测平台配置齐全；TON RPC 和链上配置在启用 TON 前补齐。
+- 正式生产环境 `APP_ENV=production` 部署前必须提供正式 Telegram 分享图；该图片仍为已知开发占位 checksum 时禁止生产发布。休眠的 TON Connect 图标不阻塞当前 MVP。
+- 本次真实开发部署的 Supabase、Vercel、Telegram、Stars 与观测平台配置齐全；当前 MVP 不配置 TON RPC 或链上资源。
 - 生产将部署已在真实开发环境完成验收的同一 Git commit、同一 migration 序列和同一目录 manifest。
 - Git commit、按文件名排序的三份 migration 及 SHA-256、OpenAPI、Catalog manifest 与 `battle-v1` checksum 已冻结为同一个不可拆分的发布单元；任一值变化都必须重新冻结整个单元。
-- Vercel 套餐支持 `vercel.json` 中三项当前 Cron 的执行频率；启用 TON 时同一套餐还必须支持第四项 Mint 对账 Cron。
+- Vercel 套餐支持 `vercel.json` 中支付对账、幂等清理和不变量监控三项当前 Cron；当前 MVP 不存在第四项 Mint 对账 Cron。
 - Vercel Production 环境变量名称核查同时包含 `TELEGRAM_BOT_USERNAME` 与 `TELEGRAM_MINI_APP_SHORT_NAME`，开发 short name 固定为 `pokepets_dev`。
 - Battle 发布环境已经配置互不共用且至少 32 字节的 `BATTLE_INVITE_SECRET`、`BATTLE_OUTBOX_SECRET`，并配置环境隔离的 `ABLY_API_KEY`；Supabase Vault 的两个 Battle callback URL 与 outbox secret 已和对应 Vercel 环境逐项核对。
 - Battle 发布检查必须分别验证：`BATTLE_INVITE_SECRET` 只产生确定性邀请 token、`BATTLE_OUTBOX_SECRET` 只通过两个 integration 的 Bearer 鉴权、`ABLY_API_KEY` 只签发五分钟 subscribe-only capability 并发布失效通知；部署产物固定使用 `ably@2.26.0`。
@@ -37,17 +37,15 @@ pnpm db:migrations:check
 pnpm db:lint
 pnpm db:diff:check
 pnpm architecture:check
-pnpm chain:build
 pnpm assets:check:development
 pnpm manifest:check
-pnpm manifest:check:production
 ```
 
-`pnpm typecheck` 进入 `@pokepets/ton` 时会先使用锁定版本的 Tact 编译器从合约源码确定性生成被 Git 忽略的 `contracts/ton/build/` 绑定，再检查部署与验收命令。干净副本不得依赖预存生成物或人工先运行 `pnpm chain:build`；后续独立的 `pnpm chain:build` 仍是正式 TON 编译门禁，并验证重复生成保持稳定。
+`pnpm typecheck` 继续检查休眠的 `@pokepets/ton` 源码，防止保留代码腐化；当前 MVP 不执行独立 `pnpm chain:build`，也不把链上部署或 TON 资源作为发布门禁。
 
-`pnpm catalog:generate-assets` 要求 210 张母版均为 768×768 WebP，并生成 256×256 缩略图和 768×768 详情图。`pnpm assets:check:catalog` 强制核对 210 个 `template_id`、两个路径、420 个文件、WebP 格式、尺寸、单文件体积、50 MiB 总上限、内容唯一性和正式 checksum。`APP_ENV=development pnpm build` 在生成 `apps/web/dist` 后继续核对构建复制结果；`APP_ENV=test` 与 `APP_ENV=production` 额外拒绝 Telegram 分享图和 TON Connect 图标的已知开发 checksum。
+`pnpm catalog:generate-assets` 要求 210 张母版均为 768×768 WebP，并生成 256×256 缩略图和 768×768 详情图。`pnpm assets:check:catalog` 强制核对 210 个 `template_id`、两个路径、420 个文件、WebP 格式、尺寸、单文件体积、50 MiB 总上限、内容唯一性和正式 checksum。`APP_ENV=development pnpm build` 在生成 `apps/web/dist` 后继续核对构建复制结果；`APP_ENV=test` 与 `APP_ENV=production` 额外拒绝 Telegram 分享图的已知开发 checksum，休眠的 TON Connect 图标不属于当前 MVP 正式素材门禁。
 
-`pnpm architecture:check` 同时验证 `/game` 只承载 React + TypeScript Battle、没有 Phaser 或客户端战斗模拟器，任务页转盘位置、远征筛选/任务/横幅隐藏、已退役游戏目录持续不存在，以及其余模块边界、网关隔离和文档归属。
+`pnpm architecture:check` 同时验证 `/game` 只承载 React + TypeScript Battle、没有 Phaser 或客户端战斗模拟器，任务页转盘位置、远征/钱包/Mint 任务与横幅隐藏、钱包/Mint/Mint 对账不进入当前运行时注册表，以及其余模块边界、网关隔离和文档归属。`pnpm contracts:check` 额外验证 OpenAPI 不发布这些休眠端点。
 
 ### 2.1 基线既有 product-data 漂移
 
@@ -61,15 +59,15 @@ pnpm manifest:check:production
 
 这是 Battle 任务前已经存在的基线漂移，不是 Battle 业务变更。本产品与架构文档任务不得修改 migration 或生成物；数据库任务必须通过当前产品数据生成器重生成原 `*_product_data_v1.sql`，把这三条确定文案与 Battle 配置一次写入同一条干净的原始 product-data migration，禁止追加修补 migration。
 
-生成正式 TON Connect manifest：
+休眠实现的 TON Connect manifest 仅通过以下命令保持格式确定：
 
 ```sh
 pnpm manifest:build
 ```
 
-生成器只输出已冻结的单一公开身份：`PokePets`、`https://final-tma-pi.vercel.app` 和 `https://final-tma-pi.vercel.app/assets/ton/tonconnect-icon.png`。repository、development、production 与构建复制门禁均拒绝 localhost、非 HTTPS、preview deployment、其他域名、相对图标或任何环境名称。
+该静态文件不被当前 Web 引用，不需要钱包或链上配置，也不构成 MVP 入口与生产验收项。
 
-正式藏品资源固定按以下顺序更新：把 210 张新母版写入新的目录版本，运行 `pnpm catalog:generate-assets`，运行 `pnpm catalog:pin-assets`，复核并提交 checksum，再运行藏品、开发和 production 资产门禁。已经发布的 `v1` 不得覆盖；后续内容变化必须创建新版本并同步数据库路径。production 门禁会继续拒绝 `generated/assets/placeholders.json` 中 Telegram 分享图和 TON Connect 图标的已知开发 checksum，禁止通过重新 pin 绕过正式替换要求。
+正式藏品资源固定按以下顺序更新：把 210 张新母版写入新的目录版本，运行 `pnpm catalog:generate-assets`，运行 `pnpm catalog:pin-assets`，复核并提交 checksum，再运行藏品、开发和 production 资产门禁。已经发布的 `v1` 不得覆盖；后续内容变化必须创建新版本并同步数据库路径。production 门禁继续拒绝 `generated/assets/placeholders.json` 中 Telegram 分享图的已知开发 checksum，禁止通过重新 pin 绕过正式替换要求。
 
 ## 3. 真实开发环境
 
@@ -89,7 +87,7 @@ pnpm manifest:build
 
 任一步失败都保持 Vercel Production、Telegram 入口、webhook 与 Vercel Cron 关闭。数据库清空前不得恢复“新应用 + 旧数据库”；数据库清空后直接修正声明式 Schema、原始三条 migration 与完整发布单元，从空库重新执行第 5—11 步。禁止单独回滚应用、恢复旧 schema 或为尚未生产发布的错误定义追加修补 migration。
 
-本次真实开发部署不发布 TON testnet Collection，不配置 TON runtime secrets，不调度 `reconcile-mints`，也不执行钱包与 Mint 验收。后续启用 TON 时必须先完成 testnet Collection 部署、链上 owner/permit 公钥/1% 版税验证和全部真实 TON 配置，再把 `reconcile-mints` 恢复到 Vercel Cron 并完成 `docs/operations/acceptance.md` 中的 TON 场景。
+当前 MVP 在真实开发和生产均不发布 TON Collection、不配置 TON runtime secrets、不调度 `reconcile-mints`，也不执行钱包与 Mint 验收。钱包、Mint、合约、API 契约和数据库定义仅保留休眠。
 
 ## 4. 生产切换
 
@@ -99,13 +97,10 @@ pnpm manifest:build
 2. 再次证明生产 migration history 为空且无须迁移数据。
 3. 按 `find supabase/migrations -maxdepth 1 -name '*.sql' | sort` 输出的唯一三条迁移应用，后缀依次必须是 `_baseline.sql`、`_product_data_v1.sql`、`_api_security.sql`。
 4. 确认生产库 `admin.database_identity` 与 `admin.environment_controls` 保持空；即使随后绑定 `production` 身份，也禁止启用 Battle 验收夹具。
-5. 用户明确授权并提供部署钱包后，设置 `TON_MAINNET_DEPLOY_APPROVED=I_UNDERSTAND_MAINNET` 发布 mainnet collection。
-6. 验证链上 owner、permit 公钥、不可变 collection content 与 1% royalty。
-7. 将真实 collection 地址和所有密钥写入平台 secrets。
-8. 部署与真实开发环境验收通过的完全相同 Git commit。
-9. 设置 Telegram webhook；启用生产 Bot 的 Main Mini App，将 Main Mini App 与 named Mini App 固定到该次部署的唯一生产域名，默认菜单按钮固定指向 named Mini App 链接，并用 Bot API 验证 `has_main_web_app=true` 与菜单 URL 完全一致。
-10. 对生产域名确认 `/game` 完整提供 Battle、远征界面仍隐藏、Ably capability 为 subscribe-only、REST fallback 与 `battle-tick-v1` 正常，同时确认任务页转盘位置。
-11. 执行生产 smoke check、四个 Vercel job、Battle tick 和两个 Battle integrations；保存 request/operation/room/state_version/stake/settlement/outbox/ledger/inventory 证据。
+5. 部署与真实开发环境验收通过的完全相同 Git commit；不配置 TON runtime secrets，不发布 Collection。
+6. 设置 Telegram webhook；启用生产 Bot 的 Main Mini App，将 Main Mini App 与 named Mini App 固定到该次部署的唯一生产域名，默认菜单按钮固定指向 named Mini App 链接，并用 Bot API 验证 `has_main_web_app=true` 与菜单 URL 完全一致。
+7. 对生产域名确认 `/game` 完整提供 Battle、远征界面仍隐藏、钱包与 Mint 入口均不存在、Ably capability 为 subscribe-only、REST fallback 与 `battle-tick-v1` 正常，同时确认任务页转盘位置。
+8. 执行生产 smoke check、三个 Vercel job、Battle tick 和两个 Battle integrations；保存 request/operation/room/state_version/stake/settlement/outbox/ledger/inventory 证据。
 
 ## 5. 回滚边界
 

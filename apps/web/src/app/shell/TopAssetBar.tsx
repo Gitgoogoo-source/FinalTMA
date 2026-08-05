@@ -1,4 +1,4 @@
-import { Coins, Crown, Gem, RefreshCw, WalletCards } from "lucide-react";
+import { Coins, Crown, Gem, RefreshCw } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
 import {
@@ -6,7 +6,7 @@ import {
   useApiQuery,
 } from "../../platform/query/index.ts";
 
-export type GlobalDialog = "topup" | "vip" | "wallet";
+export type GlobalDialog = "topup" | "vip";
 
 export function TopAssetBar({
   openDialog,
@@ -18,7 +18,6 @@ export function TopAssetBar({
   >("idle");
   const bootstrap = useApiQuery("identity.bootstrap");
   const vip = useApiQuery("vip.get");
-  const wallet = useApiQuery("wallet.get");
   const kcoin = bootstrap.data?.assets.kcoin;
   const fgems = bootstrap.data?.assets.fgems;
   const user = bootstrap.data?.user;
@@ -26,11 +25,6 @@ export function TopAssetBar({
     .filter(Boolean)
     .join(" ");
   const userLabel = displayName || user?.username || "PokePets";
-  const walletLabel = wallet.data?.verified_at
-    ? shortWalletAddress(wallet.data.address ?? "")
-    : wallet.data?.connected
-      ? "验证中"
-      : "TON";
   return (
     <header className="topbar">
       <div className="identity">
@@ -41,16 +35,6 @@ export function TopAssetBar({
         </div>
       </div>
       <div className="asset-actions">
-        <button
-          type="button"
-          className={`wallet-action ${wallet.data?.verified_at ? "verified" : ""}`}
-          disabled={Boolean(wallet.error)}
-          aria-label={`TON 钱包：${walletLabel}`}
-          onClick={() => openDialog("wallet")}
-        >
-          <WalletCards />
-          <small>{walletLabel}</small>
-        </button>
         <button
           type="button"
           className="asset-pill kcoin"
@@ -98,16 +82,6 @@ export function TopAssetBar({
             <Crown />
           </button>
         ) : null}
-        {wallet.error ? (
-          <button
-            type="button"
-            className="summary-retry"
-            aria-label="钱包状态加载失败，重新加载"
-            onClick={() => void wallet.refetch()}
-          >
-            TON
-          </button>
-        ) : null}
         <button
           type="button"
           className="icon-action asset-refresh"
@@ -141,12 +115,6 @@ export function TopAssetBar({
 function formatAsset(value: number | undefined, loading: boolean): string {
   if (value === undefined) return loading ? "…" : "—";
   return new Intl.NumberFormat("zh-CN").format(value);
-}
-
-function shortWalletAddress(value: string): string {
-  return value.length > 7
-    ? `${value.slice(0, 3)}…${value.slice(-3)}`
-    : value || "TON";
 }
 
 function Avatar({

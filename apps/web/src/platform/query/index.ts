@@ -302,11 +302,7 @@ export async function refreshUserState(): Promise<void> {
   );
 }
 
-const topAssetRouteIds = [
-  "identity.bootstrap",
-  "vip.get",
-  "wallet.get",
-] as const;
+const topAssetRouteIds = ["identity.bootstrap", "vip.get"] as const;
 
 export async function refreshTopAssetSummary(): Promise<boolean> {
   const generation = getSession()?.generation;
@@ -462,7 +458,6 @@ function foregroundPrefixes(pathname: string): readonly string[] {
   if (pathname === "/tasks") return ["tasks", "referral", "wheel"];
   if (pathname === "/game") return ["battle"];
   if (pathname === "/album") return ["album"];
-  if (pathname.startsWith("/mint/")) return ["inventory", "mint"];
   return [];
 }
 

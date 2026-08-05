@@ -130,7 +130,6 @@ function InventoryQuantitySummary({
     ["可用", item.available],
     ["出售中", item.listed],
     ["交易中", item.trading],
-    ["Mint 中", item.minting],
     ["远征中", item.expedition],
     ["Battle 中", item.battling],
   ] as const;
