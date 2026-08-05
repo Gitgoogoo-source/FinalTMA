@@ -328,6 +328,7 @@ export function OperationRegistryProvider({
         background?: boolean;
         dialog?: boolean;
         presentation?: OperationPresentation;
+        retainOnFailure?: boolean;
       },
     ): Promise<RouteOutput<Id> | null> => {
       const sessionGeneration = getSession()?.generation;
@@ -454,7 +455,8 @@ export function OperationRegistryProvider({
             "RESPONSE_INVALID",
           ].includes(failure.code) ||
             !(cause instanceof ApiFailure));
-        if (options?.dialog === false && !unknown) remove(id);
+        if (options?.dialog === false && !options.retainOnFailure && !unknown)
+          remove(id);
         else
           update(id, {
             phase: unknown ? "unknown" : "failed",
@@ -474,6 +476,20 @@ export function OperationRegistryProvider({
     },
     [markNew, refreshAfterLocalSettlement, remove, update],
   );
+
+  const present = useCallback((routeId: RecoverableRouteId): boolean => {
+    const sessionGeneration = getSession()?.generation;
+    if (!sessionGeneration || getSession()?.accountStatus !== "normal")
+      return false;
+    const operation = Object.values(operationsRef.current).find(
+      (candidate) =>
+        candidate.sessionGeneration === sessionGeneration &&
+        candidate.routeId === routeId,
+    );
+    if (!operation) return false;
+    setActiveId(operation.id);
+    return true;
+  }, []);
 
   const hydrate = useCallback(
     (incoming: readonly RecoverableOperationSummary[]) => {
@@ -694,10 +710,11 @@ export function OperationRegistryProvider({
             (unresolvedPhases.has(operation.phase) ||
               navigationLockedThroughResultRouteIds.has(routeId)),
         ),
+      present,
       navigationLocked,
       hydrate,
     }),
-    [hydrate, navigationLocked, operations, run],
+    [hydrate, navigationLocked, operations, present, run],
   );
 
   const dismiss = useCallback(() => {

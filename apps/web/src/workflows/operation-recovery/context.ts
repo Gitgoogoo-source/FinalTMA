@@ -28,9 +28,11 @@ export type OperationRegistryValue = {
       background?: boolean;
       dialog?: boolean;
       presentation?: OperationPresentation;
+      retainOnFailure?: boolean;
     },
   ): Promise<RouteOutput<Id> | null>;
   isBlocked(routeId: RecoverableRouteId): boolean;
+  present(routeId: RecoverableRouteId): boolean;
   navigationLocked: boolean;
   hydrate(operations: readonly RecoverableOperationSummary[]): void;
 };
