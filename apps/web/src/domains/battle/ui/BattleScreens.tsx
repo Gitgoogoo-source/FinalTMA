@@ -223,14 +223,17 @@ export function BattleTeamSelect({
           <Button
             className="secondary"
             disabled={disabled || !complete || loading}
+            onClick={onMatch}
+          >
+            <Swords />
+            {disabled ? "正在确认原操作" : `随机匹配 · ${tier.entry_fee}`}
+          </Button>
+          <Button
+            disabled={disabled || !complete || loading}
             onClick={onInvite}
           >
             <Send />
             {disabled ? "正在确认原操作" : "邀请好友"}
-          </Button>
-          <Button disabled={disabled || !complete || loading} onClick={onMatch}>
-            <Swords />
-            {disabled ? "正在确认原操作" : `随机匹配 · ${tier.entry_fee}`}
           </Button>
         </div>
       </div>
