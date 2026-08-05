@@ -226,7 +226,7 @@ export function BattleTeamSelect({
             onClick={onMatch}
           >
             <Swords />
-            {disabled ? "正在确认原操作" : `随机匹配 · ${tier.entry_fee}`}
+            {disabled ? "正在确认原操作" : "随机匹配"}
           </Button>
           <Button
             disabled={disabled || !complete || loading}
