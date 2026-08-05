@@ -2727,9 +2727,11 @@ input:focus {
   white-space: nowrap;
 }
 .app-shell .vip-daily-benefits {
-  min-width: 0;
-  position: absolute;
-  inset: 0;
+  width: 92px;
+  height: 52px;
+  min-width: 92px;
+  flex: 0 0 92px;
+  position: relative;
   z-index: 3;
   pointer-events: none;
 }
@@ -2737,8 +2739,8 @@ input:focus {
   width: 100%;
   height: 100%;
   display: grid;
-  grid-template-columns: 48px 48px;
-  align-items: end;
+  grid-template-columns: 44px 44px;
+  align-items: center;
   justify-content: space-between;
   gap: 0;
 }
@@ -10078,6 +10080,46 @@ html[data-app-shell-active] #root {
   line-height: 25px;
 }
 
+@media (max-width: 389px) {
+  .app-shell .topbar {
+    gap: 4px;
+    padding-inline: 8px;
+  }
+
+  .app-shell .vip-daily-benefits {
+    width: 80px;
+    min-width: 80px;
+    flex-basis: 80px;
+  }
+
+  .app-shell .vip-benefit-grid {
+    grid-template-columns: 38px 38px;
+  }
+
+  .app-shell .vip-benefit-grid .vip-benefit-tile {
+    width: 38px;
+    height: 38px;
+    min-height: 38px;
+    border-radius: 13px;
+  }
+
+  .app-shell .asset-actions {
+    gap: 4px;
+  }
+
+  .app-shell .asset-actions .asset-pill {
+    width: 76px;
+    flex-basis: 76px;
+  }
+
+  .app-shell .asset-actions .icon-action,
+  .app-shell .asset-actions .summary-retry {
+    width: 36px;
+    height: 36px;
+    flex-basis: 36px;
+  }
+}
+
 @media (max-width: 359px) {
   .app-shell {
     --size-avatar: 44px;
@@ -10097,6 +10139,38 @@ html[data-app-shell-active] #root {
 
   .app-shell .asset-actions {
     gap: 4px;
+  }
+
+  .app-shell .vip-daily-benefits {
+    width: 64px;
+    height: 44px;
+    min-width: 64px;
+    flex-basis: 64px;
+  }
+
+  .app-shell .vip-benefit-grid {
+    grid-template-columns: 32px 32px;
+  }
+
+  .app-shell .vip-benefit-grid article {
+    height: 44px;
+  }
+
+  .app-shell .vip-benefit-grid .vip-benefit-tile {
+    width: 32px;
+    height: 32px;
+    min-height: 32px;
+    border-radius: 11px;
+  }
+
+  .app-shell .vip-benefit-tile .benefit-state {
+    width: 15px;
+    height: 15px;
+  }
+
+  .app-shell .vip-benefit-tile .benefit-state svg {
+    width: 9px;
+    height: 9px;
   }
 
   .app-shell .asset-actions .wallet-action {

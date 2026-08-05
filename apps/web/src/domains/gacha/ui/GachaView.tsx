@@ -16,6 +16,7 @@ import {
   registerSensitiveStateResetter,
   useSession,
 } from "../../../platform/session/store.ts";
+import { subscribeFreeRareClaimed } from "../../../shared/events/vipDailyBenefits.ts";
 import { Button, Card, PageState } from "../../../shared/ui/index.tsx";
 import {
   getAppMaxScrollTop,
@@ -23,7 +24,10 @@ import {
   scrollAppTo,
 } from "../../../shared/navigation/appScroll.ts";
 import { focusTaskTarget } from "../../../shared/navigation/focusTaskTarget.ts";
-import { usePageSearchParams } from "../../../shared/navigation/pageActivity.tsx";
+import {
+  usePageActive,
+  usePageSearchParams,
+} from "../../../shared/navigation/pageActivity.tsx";
 import { useOperationRegistry } from "../../../workflows/operation-recovery/index.ts";
 import { useNavigationIntent } from "../../../workflows/payment-recovery/index.ts";
 type BoxTier = "normal" | "rare" | "legendary";
@@ -78,17 +82,14 @@ const rarityOrder = ["common", "rare", "epic", "legendary", "mythic"] as const;
 
 const pityLoadError = new Error("保底进度加载失败，请重试");
 
-export function GachaView({
-  dailyBenefits,
-}: {
-  dailyBenefits(onFreeRareClaimed: () => void): ReactNode;
-}): ReactNode {
+export function GachaView(): ReactNode {
   const boxes = useApiQuery("gacha.bootstrap");
   const identity = useApiQuery("identity.bootstrap");
   const session = useSession();
   const { isBlocked, run } = useOperationRegistry();
   const { requestTopup } = useNavigationIntent();
   const blocked = isBlocked("gacha.open");
+  const pageActive = usePageActive();
   const [params, setParams] = usePageSearchParams();
   const requestedTier = params.get("tier");
   const requestedRarity = params.get("rarity");
@@ -171,6 +172,11 @@ export function GachaView({
       selectTier("rare");
     if (requestedTier) setParams({}, { replace: true });
   }, [items, requestedTier, selectTier, setParams, targetRarity]);
+
+  useEffect(() => {
+    if (!pageActive) return;
+    return subscribeFreeRareClaimed(handleFreeRareClaimed);
+  }, [handleFreeRareClaimed, pageActive]);
 
   useEffect(() => {
     if (selectedBox) selectedTierRef.current = selectedBox.tier;
@@ -381,7 +387,6 @@ export function GachaView({
                 </div>
               </div>
               <div className="gacha-pity-row">
-                {dailyBenefits(handleFreeRareClaimed)}
                 {rulesComplete ? (
                   <div className="pity-capsule" aria-live="polite">
                     <span

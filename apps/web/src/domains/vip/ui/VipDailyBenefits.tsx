@@ -3,7 +3,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { useApiQuery } from "../../../platform/query/index.ts";
-import { usePageActive } from "../../../shared/navigation/pageActivity.tsx";
+import { notifyFreeRareClaimed } from "../../../shared/events/vipDailyBenefits.ts";
 import { Button } from "../../../shared/ui/index.tsx";
 import { useOperationRegistry } from "../../../workflows/operation-recovery/index.ts";
 
@@ -13,13 +13,8 @@ type Feedback = {
   benefitDate: string;
 };
 
-export function VipDailyBenefits({
-  onFreeRareClaimed,
-}: {
-  onFreeRareClaimed(): void;
-}): ReactNode {
+export function VipDailyBenefits(): ReactNode {
   const vip = useApiQuery("vip.get");
-  const pageActive = usePageActive();
   const navigate = useNavigate();
   const { isBlocked, run } = useOperationRegistry();
   const [pending, setPending] = useState<Partial<Record<Benefit, boolean>>>({});
@@ -40,7 +35,6 @@ export function VipDailyBenefits({
   );
 
   useEffect(() => {
-    if (!pageActive) return;
     let utcRefreshTimer: number | undefined;
     const refreshAfterUtcChange = () => {
       if (
@@ -85,7 +79,7 @@ export function VipDailyBenefits({
       if (utcRefreshTimer !== undefined) window.clearTimeout(utcRefreshTimer);
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
-  }, [benefitDate, pageActive, refetchVip]);
+  }, [benefitDate, refetchVip]);
 
   const openDetails = () => navigate("/market?vip=details");
   const claim = async (benefit: Benefit) => {
@@ -107,7 +101,7 @@ export function VipDailyBenefits({
         benefitDate: data?.benefit_date ?? "",
       },
     }));
-    if (result && benefit === "freeBox") onFreeRareClaimed();
+    if (result && benefit === "freeBox") notifyFreeRareClaimed();
   };
 
   const active = Boolean(data?.active);

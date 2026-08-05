@@ -1,6 +1,7 @@
 import { Coins, Crown, Gem } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
+import { VipDailyBenefits } from "../../domains/vip/index.ts";
 import { useApiQuery } from "../../platform/query/index.ts";
 
 export type GlobalDialog = "topup" | "vip";
@@ -28,6 +29,7 @@ export function TopAssetBar({
           <small>{user?.username ? `@${user.username}` : "PokePets"}</small>
         </div>
       </div>
+      <VipDailyBenefits />
       <div className="asset-actions">
         <button
           type="button"
