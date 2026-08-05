@@ -4977,6 +4977,7 @@ input:focus {
 /* Inventory */
 .app-shell .inventory-page {
   position: relative;
+  top: clamp(16px, 2.2dvh, 19px);
   width: min(100%, 430px);
   height: calc(
     var(--tg-viewport-stable-height, 100dvh) - var(--shell-top-inset) -
