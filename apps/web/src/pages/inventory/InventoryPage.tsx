@@ -43,12 +43,6 @@ export function InventoryPage(): ReactNode {
           disabled={blocked || !imageReady || item.available < 1}
           onClick={() => setSellItem(item)}
         >
-          <img
-            src="/assets/inventory/actions/sell.png"
-            alt=""
-            aria-hidden="true"
-            draggable={false}
-          />
           <span>出售</span>
         </Button>
       </TaskActionTarget>

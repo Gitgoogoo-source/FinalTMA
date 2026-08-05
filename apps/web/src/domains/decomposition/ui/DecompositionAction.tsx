@@ -53,12 +53,6 @@ export function DecompositionAction({
           void detail.refetch();
         }}
       >
-        <img
-          src="/assets/inventory/actions/decompose.png"
-          alt=""
-          aria-hidden="true"
-          draggable={false}
-        />
         <span>
           {isPreparing ? "准备分解" : detail.isError ? "重试分解" : "分解"}
         </span>

@@ -5061,7 +5061,7 @@ input:focus {
   min-height: 0;
   display: grid;
   grid-template-columns: minmax(0, 29%) minmax(0, 71%);
-  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  grid-template-rows: auto minmax(0, 1fr) auto auto auto;
   gap: var(--inventory-gap) 0;
   padding: clamp(4px, 0.7dvh, 7px) clamp(6px, 1.8vw, 9px) 0;
   isolation: isolate;
@@ -5072,6 +5072,7 @@ input:focus {
 .app-shell .inventory-metric-grid,
 .app-shell .inventory-quantity-summary,
 .app-shell .inventory-action-grid,
+.app-shell .inventory-filter-controls,
 .app-shell .inventory-thumbnail-viewport {
   position: relative;
   z-index: 2;
@@ -5349,94 +5350,94 @@ input:focus {
   grid-column: 1 / -1;
   grid-row: 3;
   width: 100%;
-  grid-template-columns: minmax(0, 1.9fr) repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   grid-template-rows: minmax(0, 1fr);
   gap: clamp(5px, 1.5vw, 7px);
   align-self: stretch;
   margin: 0;
 }
 .app-shell .inventory-action-grid .button {
-  --inventory-action-glow: rgba(124, 92, 255, 0.14);
   position: relative;
   isolation: isolate;
-  min-height: clamp(62px, 9dvh, 72px);
+  min-height: clamp(50px, 7dvh, 56px);
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
-  gap: 1px;
+  gap: 0;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.82);
-  border-radius: clamp(16px, 2.5dvh, 19px);
-  padding: 4px;
-  color: #17354a;
-  background: rgba(255, 253, 250, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.92);
+  border-radius: 999px;
+  padding: 0 10px;
+  color: #566167;
+  background:
+    radial-gradient(
+      circle at 50% -30%,
+      rgba(255, 255, 255, 0.98),
+      rgba(255, 255, 255, 0) 68%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.84),
+      rgba(255, 250, 246, 0.66)
+    );
   box-shadow:
-    0 10px 24px var(--inventory-action-glow),
-    inset 0 1px 0 rgba(255, 255, 255, 0.96),
-    inset 0 -1px 0 rgba(124, 92, 255, 0.08),
-    inset 1px 0 0 rgba(255, 255, 255, 0.48);
-  backdrop-filter: blur(18px) saturate(140%);
-  -webkit-backdrop-filter: blur(18px) saturate(140%);
-  font-size: clamp(10px, 1.45dvh, 12px);
+    0 11px 25px rgba(103, 86, 74, 0.08),
+    0 0 18px rgba(255, 255, 255, 0.72),
+    inset 0 1px 0 rgba(255, 255, 255, 0.98),
+    inset 0 -1px 0 rgba(178, 144, 117, 0.08);
+  backdrop-filter: blur(22px) saturate(155%);
+  -webkit-backdrop-filter: blur(22px) saturate(155%);
+  font-size: clamp(13px, 1.9dvh, 15px);
   font-weight: 950;
   letter-spacing: 0.02em;
 }
-.app-shell .inventory-action-grid .button img {
-  position: relative;
-  z-index: 1;
-  width: clamp(30px, 4.7dvh, 36px);
-  height: clamp(30px, 4.7dvh, 36px);
-  flex: 0 0 auto;
-  object-fit: contain;
+.app-shell .inventory-action-grid .button::before {
+  position: absolute;
+  z-index: 0;
+  top: 1px;
+  left: 12%;
+  width: 76%;
+  height: 42%;
+  border-radius: 999px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.62),
+    rgba(255, 255, 255, 0)
+  );
+  content: "";
   pointer-events: none;
-  user-select: none;
-  filter: drop-shadow(0 5px 8px rgba(66, 52, 111, 0.15));
 }
 .app-shell .inventory-action-grid .button > span {
   position: relative;
   z-index: 1;
   min-width: 0;
-  flex: 1;
   overflow: hidden;
   text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.app-shell .inventory-action-grid .inventory-action-target:first-child .button {
-  flex-direction: row;
-  gap: clamp(5px, 1.4vw, 8px);
-  border-color: rgba(255, 255, 255, 0.9);
+.app-shell .inventory-action-grid .inventory-action-button--evolve {
+  border-color: rgba(255, 180, 91, 0.78);
   color: #fff;
-  background: var(--sprout-orange-soft);
+  background: linear-gradient(180deg, #ff9b3d 0%, #ff8121 58%, #ff750f 100%);
   box-shadow:
-    0 12px 24px rgba(255, 156, 0, 0.26),
-    inset 0 1px 0 rgba(255, 255, 255, 0.68),
-    inset 0 -2px 0 rgba(214, 95, 0, 0.18);
-  font-size: clamp(17px, 2.7dvh, 21px);
-}
-.app-shell
-  .inventory-action-grid
-  .inventory-action-target:first-child
-  .button
-  img {
-  width: clamp(42px, 6.6dvh, 50px);
-  height: clamp(42px, 6.6dvh, 50px);
+    0 13px 25px rgba(255, 122, 0, 0.2),
+    0 0 18px rgba(255, 159, 55, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.62),
+    inset 0 -2px 0 rgba(205, 82, 0, 0.16);
 }
 .app-shell .inventory-action-grid .button:disabled {
   opacity: 1;
   color: #9ba29f;
-  border-color: rgba(255, 255, 255, 0.68);
-  background: rgba(241, 242, 246, 0.34);
+  border-color: rgba(255, 255, 255, 0.72);
+  background: rgba(239, 239, 237, 0.62);
   box-shadow:
     0 5px 12px rgba(63, 67, 82, 0.06),
     inset 0 1px 0 rgba(255, 255, 255, 0.76),
     inset 0 -1px 0 rgba(124, 92, 255, 0.04);
 }
-.app-shell
-  .inventory-action-grid
-  .inventory-action-target:first-child
-  .button:disabled {
+.app-shell .inventory-action-grid .inventory-action-button--evolve:disabled {
   color: #8e9893;
   border-color: rgba(54, 67, 75, 0.1);
   background: rgba(236, 238, 235, 0.92);
@@ -5446,17 +5447,18 @@ input:focus {
 }
 .app-shell .inventory-action-grid .button:not(:disabled):active {
   color: var(--sprout-orange);
-  background: rgba(255, 255, 255, 0.42);
+  background: rgba(255, 249, 242, 0.76);
   transform: translateY(1px) scale(0.985);
   box-shadow:
     0 5px 12px rgba(255, 122, 0, 0.13),
     inset 0 1px 0 rgba(255, 255, 255, 0.92),
     inset 0 -1px 0 rgba(255, 122, 0, 0.1);
 }
-.app-shell .inventory-action-grid .button:disabled img {
-  opacity: 0.46;
-  filter: grayscale(0.72) saturate(0.35)
-    drop-shadow(0 3px 5px rgba(63, 67, 66, 0.08));
+.app-shell
+  .inventory-action-grid
+  .inventory-action-button--evolve:not(:disabled):active {
+  color: #fff;
+  background: linear-gradient(180deg, #ff8f2b, #ef6800);
 }
 .app-shell .evolution-action {
   display: grid;
@@ -5465,9 +5467,113 @@ input:focus {
 .app-shell .evolution-action > .button {
   width: 100%;
 }
-.app-shell .inventory-thumbnail-viewport {
+.app-shell .inventory-filter-controls {
   grid-column: 1 / -1;
   grid-row: 4;
+  width: 100%;
+  min-width: 0;
+}
+.app-shell .inventory-filter-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(5px, 1.5vw, 7px);
+}
+.app-shell .inventory-filter-strip > button {
+  min-width: 0;
+  height: 42px;
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) 10px;
+  align-items: center;
+  gap: 5px;
+  padding: 0 9px;
+  border: 1px solid rgba(54, 67, 75, 0.08);
+  border-radius: 21px;
+  color: #596469;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow:
+    0 10px 22px rgba(54, 67, 75, 0.06),
+    inset 0 1px 0 #fff;
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  font-size: clamp(8px, 2.25vw, 10px);
+  font-weight: 850;
+}
+.app-shell .inventory-filter-strip > button.active {
+  color: var(--sprout-orange);
+  border-color: rgba(255, 122, 0, 0.23);
+  background: rgba(255, 249, 241, 0.94);
+}
+.app-shell .inventory-filter-strip > button svg {
+  width: 15px;
+  height: 15px;
+  stroke-width: 2.2;
+}
+.app-shell .inventory-filter-strip > button svg:last-child {
+  width: 10px;
+  transition: transform 0.16s ease;
+}
+.app-shell
+  .inventory-filter-strip
+  > button[aria-expanded="true"]
+  svg:last-child {
+  transform: rotate(180deg);
+}
+.app-shell .inventory-filter-strip > button span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-shell .inventory-filter-panel {
+  position: fixed;
+  z-index: 80;
+  left: 50%;
+  bottom: calc(var(--safe-bottom) + 82px);
+  width: min(calc(100% - 28px), 402px);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  padding: 10px;
+  transform: translateX(-50%);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-radius: 22px;
+  background: rgba(255, 253, 250, 0.94);
+  box-shadow:
+    0 22px 46px rgba(54, 67, 75, 0.14),
+    0 0 26px rgba(255, 255, 255, 0.66),
+    inset 0 1px 0 #fff;
+  backdrop-filter: blur(24px) saturate(165%);
+  -webkit-backdrop-filter: blur(24px) saturate(165%);
+  animation: market-filter-enter 0.18s ease-out;
+}
+.app-shell .inventory-filter-panel > button {
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid rgba(54, 67, 75, 0.08);
+  border-radius: 15px;
+  color: #5c676c;
+  background: rgba(255, 255, 255, 0.72);
+  font-size: 10px;
+  font-weight: 850;
+}
+.app-shell .inventory-filter-panel > button.active {
+  color: #fff;
+  border-color: rgba(255, 122, 0, 0.4);
+  background: var(--sprout-orange);
+  box-shadow: 0 8px 16px rgba(255, 106, 0, 0.2);
+}
+.app-shell .inventory-filter-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.app-shell .inventory-thumbnail-viewport {
+  grid-column: 1 / -1;
+  grid-row: 5;
   align-self: end;
   width: 100%;
   margin-top: 0;
@@ -5485,6 +5591,22 @@ input:focus {
 .app-shell .inventory-thumbnail-pages {
   display: flex;
   gap: 10px;
+}
+.app-shell .inventory-filter-empty {
+  min-height: clamp(132px, 25dvh, 184px);
+  display: grid;
+  place-content: center;
+  gap: 5px;
+  text-align: center;
+  color: #8e9893;
+}
+.app-shell .inventory-filter-empty strong {
+  color: #596469;
+  font-size: 12px;
+}
+.app-shell .inventory-filter-empty span {
+  font-size: 9px;
+  font-weight: 750;
 }
 .app-shell .inventory-thumbnail-page {
   flex: 0 0 100%;

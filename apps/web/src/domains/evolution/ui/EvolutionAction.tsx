@@ -53,12 +53,6 @@ export function EvolutionAction({
         title={reason ?? undefined}
         onClick={() => setConfirming(true)}
       >
-        <img
-          src="/assets/inventory/actions/evolve.png"
-          alt=""
-          aria-hidden="true"
-          draggable={false}
-        />
         <span>进化</span>
       </Button>
       {confirming && route ? (
