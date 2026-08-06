@@ -1,25 +1,80 @@
+create table operations.user_authority_sequences (
+  user_id uuid primary key references identity.users(id) on delete cascade,
+  last_sequence bigint not null default 0 check (last_sequence >= 0),
+  updated_at timestamptz not null default now()
+);
+
 create table operations.operations (
   id uuid primary key,
   user_id uuid not null references identity.users(id) on delete cascade,
   use_case text not null,
   request_hash text not null check (request_hash ~ '^[0-9a-f]{64}$'),
-  request jsonb not null,
+  request jsonb,
   status text not null default 'pending' check (status in ('pending', 'succeeded', 'failed', 'unknown')),
   result jsonb,
   error_code text,
+  authority_sequence bigint,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   completed_at timestamptz,
   result_acknowledged_at timestamptz,
+  payload_purged_at timestamptz,
   check (result_acknowledged_at is null or status in ('succeeded', 'failed')),
+  check (
+    (status in ('pending', 'unknown') and authority_sequence is null)
+    or (
+      status in ('succeeded', 'failed')
+      and authority_sequence is not null
+      and authority_sequence > 0
+    )
+  ),
+  check (
+    (payload_purged_at is null and request is not null)
+    or (
+      payload_purged_at is not null
+      and status in ('succeeded', 'failed')
+      and request is null
+      and result is null
+      and completed_at is not null
+      and payload_purged_at >= completed_at
+    )
+  ),
   unique (user_id, use_case, id)
 );
 
 create index operations_user_created_idx on operations.operations (user_id, created_at desc);
 create index operations_pending_idx on operations.operations (created_at) where status in ('pending', 'unknown');
+create unique index operations_user_authority_sequence_idx
+on operations.operations (user_id, authority_sequence)
+where authority_sequence is not null;
+create index operations_payload_cleanup_idx
+on operations.operations (completed_at, id)
+where status in ('succeeded', 'failed') and payload_purged_at is null;
 create index operations_result_recovery_idx on operations.operations (user_id, created_at, id)
 where (use_case = 'wheel.spin' and status in ('pending', 'unknown'))
    or (use_case = 'inventory.evolve' and result_acknowledged_at is null);
+
+create or replace function operations.assign_authority_sequence()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  if new.status in ('succeeded', 'failed') and new.authority_sequence is null then
+    insert into operations.user_authority_sequences (user_id, last_sequence)
+    values (new.user_id, 1)
+    on conflict (user_id) do update
+    set last_sequence = operations.user_authority_sequences.last_sequence + 1,
+        updated_at = now()
+    returning last_sequence into new.authority_sequence;
+  end if;
+  return new;
+end;
+$$;
+
+create trigger operations_assign_authority_sequence
+before insert or update of status on operations.operations
+for each row execute function operations.assign_authority_sequence();
 
 create table operations.webhook_events (
   provider text not null,
@@ -103,6 +158,9 @@ begin
     if v_operation.user_id <> v_user_id or v_operation.use_case <> p_use_case or v_operation.request_hash <> v_hash then
       perform api.raise_business_error('IDEMPOTENCY_KEY_REUSED', '幂等键已用于不同请求');
     end if;
+    if v_operation.payload_purged_at is not null then
+      perform api.raise_business_error('OPERATION_RESULT_EXPIRED', '操作结果已超过可恢复期限');
+    end if;
   end if;
   return v_operation;
 end;
@@ -154,14 +212,19 @@ $$;
 
 create or replace function operations.replay_if_finished(p_operation operations.operations)
 returns jsonb
-language sql
+language plpgsql
 stable
 set search_path = ''
 as $$
-  select case when p_operation.status <> 'pending' or p_operation.result is not null
-    then operations.operation_json(p_operation)
-    else null
-  end
+begin
+  if p_operation.payload_purged_at is not null then
+    perform api.raise_business_error('OPERATION_RESULT_EXPIRED', '操作结果已超过可恢复期限');
+  end if;
+  if p_operation.status <> 'pending' or p_operation.result is not null then
+    return operations.operation_json(p_operation);
+  end if;
+  return null;
+end;
 $$;
 
 create or replace function api.operations_get(p_session_id uuid, p_operation_id uuid)
@@ -188,12 +251,18 @@ begin
   if v_entry_handoff_pending and v_operation.use_case <> 'referral.bind' then
     perform api.raise_business_error('ENTRY_HANDOFF_PENDING', '邀请绑定结果确认中，请稍后刷新');
   end if;
+  if v_operation.payload_purged_at is not null then
+    perform api.raise_business_error('OPERATION_RESULT_EXPIRED', '操作结果已超过可恢复期限');
+  end if;
   v_result := operations.operation_json(v_operation);
   return v_result;
 end;
 $$;
 
-create or replace function api.operations_recoverable(p_session_id uuid)
+create or replace function api.operations_recoverable(
+  p_session_id uuid,
+  p_after_authority_cursor bigint
+)
 returns jsonb
 language plpgsql
 security definer
@@ -201,8 +270,12 @@ set search_path = ''
 as $$
 declare
   v_user_id uuid := api.session_user(p_session_id);
+  v_result jsonb;
 begin
-  return jsonb_build_object(
+  if p_after_authority_cursor is null or p_after_authority_cursor < 0 then
+    perform api.raise_business_error('REQUEST_INVALID', '权威状态游标无效');
+  end if;
+  select jsonb_build_object(
     'operations', coalesce((
       select jsonb_agg(operations.operation_json(o) order by o.created_at, o.id)
       from operations.operations o
@@ -211,7 +284,23 @@ begin
           (o.use_case = 'wheel.spin' and o.status in ('pending', 'unknown'))
           or (o.use_case = 'inventory.evolve' and o.result_acknowledged_at is null)
         )
-    ), '[]'::jsonb)
-  );
+    ), '[]'::jsonb),
+    'authority_refresh_routes', coalesce((
+      select jsonb_agg(marker.use_case order by marker.first_sequence)
+      from (
+        select o.use_case, min(o.authority_sequence) as first_sequence
+        from operations.operations o
+        where o.user_id = v_user_id
+          and o.authority_sequence > p_after_authority_cursor
+        group by o.use_case
+      ) marker
+    ), '[]'::jsonb),
+    'next_authority_cursor', coalesce((
+      select sequence.last_sequence::text
+      from operations.user_authority_sequences sequence
+      where sequence.user_id = v_user_id
+    ), '0')
+  ) into v_result;
+  return v_result;
 end;
 $$;

@@ -29,6 +29,7 @@ import {
 import {
   fetchApiQuery,
   refreshRouteScopes,
+  refreshScopes,
 } from "../../platform/query/index.ts";
 import {
   getSession,
@@ -156,8 +157,7 @@ export function OperationRegistryProvider({
   const recoveringIds = useRef(new Set<string>());
   const acknowledgedIds = useRef(new Set<string>());
   const locallyRefreshedEvolutionIds = useRef(new Set<string>());
-  const needsGachaRefreshAfterLeave = useRef(false);
-  const needsWheelRefreshAfterLeave = useRef(false);
+  const needsAuthorityRefreshAfterLeave = useRef(new Set<RecoverableRouteId>());
   const active = activeId ? operations[activeId] : undefined;
   const recoveryQueueActive = Object.values(operations).some(
     (operation) =>
@@ -252,8 +252,7 @@ export function OperationRegistryProvider({
         setGachaActionError(null);
         setRevealedGachaAnimationId(null);
         setWheelPresentationEpoch((current) => current + 1);
-        needsGachaRefreshAfterLeave.current = false;
-        needsWheelRefreshAfterLeave.current = false;
+        needsAuthorityRefreshAfterLeave.current.clear();
         telegram()?.disableClosingConfirmation();
       }),
     [],
@@ -328,38 +327,52 @@ export function OperationRegistryProvider({
     );
   }, []);
 
+  const refreshAuthorityAfterLeave = useCallback(() => {
+    const routeIds = [...needsAuthorityRefreshAfterLeave.current];
+    if (routeIds.length === 0) return;
+    needsAuthorityRefreshAfterLeave.current.clear();
+    const scopes = [
+      ...new Set(
+        routeIds.flatMap((routeId) => routeById(routeId).refreshScopes),
+      ),
+    ];
+    void refreshScopes(scopes, { throwOnError: true }).catch(() => {
+      if (getSession()?.accountStatus !== "normal") return;
+      for (const routeId of routeIds)
+        needsAuthorityRefreshAfterLeave.current.add(routeId);
+    });
+  }, []);
+
   const discardTransientPresentations = useCallback(() => {
     const current = operationsRef.current;
     const discardedGachaIds = new Set<string>();
-    const affectedWheelIds = new Set<string>();
+    const hiddenPresentationIds = new Set<string>();
+    let wheelPresentationDiscarded = false;
     const next: Record<string, RegisteredOperation> = {};
     for (const [operationId, operation] of Object.entries(current)) {
+      if (serverAcknowledgementRouteIds.has(operation.routeId)) {
+        next[operationId] = operation;
+        continue;
+      }
+      hiddenPresentationIds.add(operationId);
+      needsAuthorityRefreshAfterLeave.current.add(operation.routeId);
       if (operation.routeId === "gacha.open") {
         discardedGachaIds.add(operationId);
         continue;
       }
-      if (operation.routeId === "wheel.spin") {
-        affectedWheelIds.add(operationId);
-        if (unresolvedPhases.has(operation.phase))
-          next[operationId] = {
-            ...operation,
-            terminalPresentationAllowed: false,
-          };
-        continue;
-      }
-      next[operationId] = operation;
+      if (operation.routeId === "wheel.spin") wheelPresentationDiscarded = true;
+      if (unresolvedPhases.has(operation.phase))
+        next[operationId] = {
+          ...operation,
+          terminalPresentationAllowed: false,
+        };
     }
-    if (discardedGachaIds.size === 0 && affectedWheelIds.size === 0) return;
-    if (discardedGachaIds.size > 0) needsGachaRefreshAfterLeave.current = true;
-    if (affectedWheelIds.size > 0) {
-      needsWheelRefreshAfterLeave.current = true;
+    if (hiddenPresentationIds.size === 0) return;
+    if (wheelPresentationDiscarded)
       setWheelPresentationEpoch((currentEpoch) => currentEpoch + 1);
-    }
     operationsRef.current = next;
     setOperations(next);
-    setActiveId((id) =>
-      id && (discardedGachaIds.has(id) || affectedWheelIds.has(id)) ? null : id,
-    );
+    setActiveId((id) => (id && hiddenPresentationIds.has(id) ? null : id));
     setGachaActionId((id) => (id && discardedGachaIds.has(id) ? null : id));
     setGachaActionError((error) =>
       error && discardedGachaIds.has(error.operationId) ? null : error,
@@ -372,24 +385,7 @@ export function OperationRegistryProvider({
   useEffect(() => {
     const restore = () => {
       if (getSession()?.accountStatus !== "normal") return;
-      if (needsGachaRefreshAfterLeave.current) {
-        needsGachaRefreshAfterLeave.current = false;
-        void refreshRouteScopes("gacha.open", { throwOnError: true }).catch(
-          () => {
-            if (getSession()?.accountStatus === "normal")
-              needsGachaRefreshAfterLeave.current = true;
-          },
-        );
-      }
-      if (needsWheelRefreshAfterLeave.current) {
-        needsWheelRefreshAfterLeave.current = false;
-        void refreshRouteScopes("wheel.spin", { throwOnError: true }).catch(
-          () => {
-            if (getSession()?.accountStatus === "normal")
-              needsWheelRefreshAfterLeave.current = true;
-          },
-        );
-      }
+      refreshAuthorityAfterLeave();
     };
     const visibility = () => {
       if (document.visibilityState === "visible") restore();
@@ -410,7 +406,7 @@ export function OperationRegistryProvider({
       window.removeEventListener("pageshow", restore);
       window.removeEventListener("online", restore);
     };
-  }, [discardTransientPresentations]);
+  }, [discardTransientPresentations, refreshAuthorityAfterLeave]);
 
   const refreshAfterLocalSettlement = useCallback(
     async (id: string, routeId: RecoverableRouteId) => {
@@ -535,12 +531,12 @@ export function OperationRegistryProvider({
           });
         if (!pending)
           markOperationNewTemplates(routeId, response.data, markNew);
-        const suppressWheelTerminalPresentation =
+        const suppressTerminalPresentation =
           !pending &&
-          routeId === "wheel.spin" &&
+          !serverAcknowledgementRouteIds.has(routeId) &&
           operationsRef.current[id]?.terminalPresentationAllowed !== true;
         if (
-          !suppressWheelTerminalPresentation &&
+          !suppressTerminalPresentation &&
           routeId !== "inventory.evolve" &&
           routeId !== "inventory.decompose"
         )
@@ -549,7 +545,7 @@ export function OperationRegistryProvider({
           if (pending) await refreshRouteScopes(routeId).catch(() => undefined);
           else await refreshAfterLocalSettlement(id, routeId);
         }
-        if (suppressWheelTerminalPresentation) {
+        if (suppressTerminalPresentation) {
           remove(id);
           return null;
         }
@@ -591,18 +587,18 @@ export function OperationRegistryProvider({
             errorCode: failure.code,
             persistent: Boolean(failure.operationId),
           });
-        const suppressWheelTerminalPresentation =
+        const suppressTerminalPresentation =
           !unknown &&
-          routeId === "wheel.spin" &&
+          !serverAcknowledgementRouteIds.has(routeId) &&
           operationsRef.current[id]?.terminalPresentationAllowed !== true;
         if (
-          !suppressWheelTerminalPresentation &&
+          !suppressTerminalPresentation &&
           routeId !== "inventory.evolve" &&
           routeId !== "inventory.decompose"
         )
           haptic("error");
         if (!unknown) await refreshAfterLocalSettlement(id, routeId);
-        if (suppressWheelTerminalPresentation) remove(id);
+        if (suppressTerminalPresentation) remove(id);
         return null;
       }
     },
@@ -617,7 +613,7 @@ export function OperationRegistryProvider({
       (candidate) =>
         candidate.sessionGeneration === sessionGeneration &&
         candidate.routeId === routeId &&
-        (candidate.routeId !== "wheel.spin" ||
+        (unresolvedPhases.has(candidate.phase) ||
           candidate.terminalPresentationAllowed),
     );
     if (!operation) return false;
@@ -637,17 +633,17 @@ export function OperationRegistryProvider({
         if (operation.use_case === "gacha.open") {
           delete next[operation.operation_id];
           completedOutsideRegistry.add(operation.operation_id);
-          needsGachaRefreshAfterLeave.current = true;
+          needsAuthorityRefreshAfterLeave.current.add(operation.use_case);
           continue;
         }
         if (!isRecoverableRouteId(operation.use_case)) continue;
         if (
-          operation.use_case === "wheel.spin" &&
+          !serverAcknowledgementRouteIds.has(operation.use_case) &&
           (operation.status === "succeeded" || operation.status === "failed")
         ) {
           delete next[operation.operation_id];
           completedOutsideRegistry.add(operation.operation_id);
-          needsWheelRefreshAfterLeave.current = true;
+          needsAuthorityRefreshAfterLeave.current.add(operation.use_case);
           continue;
         }
         if (
@@ -688,7 +684,7 @@ export function OperationRegistryProvider({
           animationTier: next[operation.operation_id]?.animationTier ?? null,
           terminalPresentationAllowed:
             next[operation.operation_id]?.terminalPresentationAllowed ??
-            operation.use_case !== "wheel.spin",
+            serverAcknowledgementRouteIds.has(operation.use_case),
         };
         if (operation.status === "succeeded")
           markOperationNewTemplates(
@@ -704,26 +700,9 @@ export function OperationRegistryProvider({
           ? firstId
           : (current ?? firstId),
       );
-      if (needsGachaRefreshAfterLeave.current) {
-        needsGachaRefreshAfterLeave.current = false;
-        void refreshRouteScopes("gacha.open", { throwOnError: true }).catch(
-          () => {
-            if (getSession()?.accountStatus === "normal")
-              needsGachaRefreshAfterLeave.current = true;
-          },
-        );
-      }
-      if (needsWheelRefreshAfterLeave.current) {
-        needsWheelRefreshAfterLeave.current = false;
-        void refreshRouteScopes("wheel.spin", { throwOnError: true }).catch(
-          () => {
-            if (getSession()?.accountStatus === "normal")
-              needsWheelRefreshAfterLeave.current = true;
-          },
-        );
-      }
+      refreshAuthorityAfterLeave();
     },
-    [markNew],
+    [markNew, refreshAuthorityAfterLeave],
   );
 
   const recover = useCallback(
@@ -746,11 +725,11 @@ export function OperationRegistryProvider({
           return;
         }
         if (recovered.status === "succeeded") {
-          const suppressWheelTerminalPresentation =
-            operation.routeId === "wheel.spin" &&
+          const suppressTerminalPresentation =
+            !serverAcknowledgementRouteIds.has(operation.routeId) &&
             operationsRef.current[operation.id]?.terminalPresentationAllowed !==
               true;
-          if (suppressWheelTerminalPresentation) {
+          if (suppressTerminalPresentation) {
             markOperationNewTemplates(
               operation.routeId,
               recovered.result,
@@ -804,7 +783,7 @@ export function OperationRegistryProvider({
             await refreshRouteScopes(operation.routeId);
         } else if (recovered.status === "failed") {
           if (
-            operation.routeId === "wheel.spin" &&
+            !serverAcknowledgementRouteIds.has(operation.routeId) &&
             operationsRef.current[operation.id]?.terminalPresentationAllowed !==
               true
           ) {

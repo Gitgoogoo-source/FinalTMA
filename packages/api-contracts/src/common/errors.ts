@@ -312,6 +312,13 @@ export const errorRegistry = {
   OPERATION_FAILED: error(409, "原操作已确认失败", false, "all", "refresh"),
   OPERATION_NOT_ACKNOWLEDGEABLE: error(409, "操作结果尚未确定"),
   OPERATION_NOT_FOUND: error(404, "操作记录不存在"),
+  OPERATION_RESULT_EXPIRED: error(
+    410,
+    "操作结果已超过可恢复期限",
+    false,
+    "all",
+    "refresh",
+  ),
   OPERATION_RESULT_INVALID: error(
     500,
     "操作结果格式无效",

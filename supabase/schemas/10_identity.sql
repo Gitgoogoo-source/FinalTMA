@@ -415,6 +415,11 @@ begin
       'free_rare_box', (select count(*) from economy.entitlements where user_id = v_user_id and kind = 'free_rare_box' and status = 'unused')
     ),
     'catalog_version', 'v1',
+    'authority_cursor', coalesce((
+      select sequence.last_sequence::text
+      from operations.user_authority_sequences sequence
+      where sequence.user_id = v_user_id
+    ), '0'),
     'blocking_operations', coalesce((
       select jsonb_agg(operations.operation_json(o) order by o.created_at)
       from operations.operations o

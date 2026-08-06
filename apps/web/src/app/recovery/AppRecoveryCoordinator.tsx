@@ -35,7 +35,7 @@ export function AppRecoveryCoordinator({
     closeDialogs();
   }, [clearTopupRequest, closeDialogs]);
   useBlockingOperationRecovery(bootstrap.data?.blocking_operations);
-  useRecoverableOperationDiscovery();
+  useRecoverableOperationDiscovery(bootstrap.data?.authority_cursor);
   useStarsPaymentRecovery(recoveryPayments, openPaymentRecovery);
   useNavigationIntentResume(pendingPayments.data?.orders, resumeNavigation);
   return null;

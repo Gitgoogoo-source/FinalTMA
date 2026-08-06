@@ -599,6 +599,10 @@
                           "additionalProperties": false
                         },
                         "catalog_version": { "type": "string", "const": "v1" },
+                        "authority_cursor": {
+                          "type": "string",
+                          "pattern": "^(0|[1-9]\\d*)$"
+                        },
                         "blocking_operations": {
                           "type": "array",
                           "items": {
@@ -694,6 +698,7 @@
                                       "OPERATION_FAILED",
                                       "OPERATION_NOT_ACKNOWLEDGEABLE",
                                       "OPERATION_NOT_FOUND",
+                                      "OPERATION_RESULT_EXPIRED",
                                       "OPERATION_RESULT_INVALID",
                                       "PAYMENT_ALREADY_PENDING",
                                       "PAYMENT_ALREADY_PROCESSING",
@@ -1287,6 +1292,7 @@
                         "assets",
                         "entitlements",
                         "catalog_version",
+                        "authority_cursor",
                         "blocking_operations",
                         "pending_payments",
                         "pending_mints",
@@ -2662,6 +2668,14 @@
               }
             }
           },
+          "410": {
+            "description": "Errors: OPERATION_RESULT_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "413": {
             "description": "Errors: REQUEST_TOO_LARGE",
             "content": {
@@ -2712,6 +2726,7 @@
           "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
+          "OPERATION_RESULT_EXPIRED",
           "BOX_TIER_INVALID",
           "DRAW_COUNT_INVALID",
           "CATALOG_INVALID",
@@ -2810,6 +2825,13 @@
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
+          },
+          "OPERATION_RESULT_EXPIRED": {
+            "status": 410,
+            "message": "操作结果已超过可恢复期限",
+            "retryable": false,
+            "refreshScope": "all",
+            "recoveryAction": "refresh"
           },
           "BOX_TIER_INVALID": {
             "status": 400,
@@ -4770,6 +4792,14 @@
               }
             }
           },
+          "410": {
+            "description": "Errors: OPERATION_RESULT_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "413": {
             "description": "Errors: REQUEST_TOO_LARGE",
             "content": {
@@ -4820,6 +4850,7 @@
           "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
+          "OPERATION_RESULT_EXPIRED",
           "EVOLUTION_NOT_AVAILABLE",
           "INSUFFICIENT_INVENTORY",
           "INSUFFICIENT_BALANCE",
@@ -4916,6 +4947,13 @@
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
+          },
+          "OPERATION_RESULT_EXPIRED": {
+            "status": 410,
+            "message": "操作结果已超过可恢复期限",
+            "retryable": false,
+            "refreshScope": "all",
+            "recoveryAction": "refresh"
           },
           "EVOLUTION_NOT_AVAILABLE": {
             "status": 409,
@@ -5237,6 +5275,14 @@
               }
             }
           },
+          "410": {
+            "description": "Errors: OPERATION_RESULT_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "413": {
             "description": "Errors: REQUEST_TOO_LARGE",
             "content": {
@@ -5287,6 +5333,7 @@
           "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
+          "OPERATION_RESULT_EXPIRED",
           "INSUFFICIENT_INVENTORY",
           "INVENTORY_RESERVED",
           "IDEMPOTENCY_KEY_REUSED"
@@ -5382,6 +5429,13 @@
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
+          },
+          "OPERATION_RESULT_EXPIRED": {
+            "status": 410,
+            "message": "操作结果已超过可恢复期限",
+            "retryable": false,
+            "refreshScope": "all",
+            "recoveryAction": "refresh"
           },
           "INSUFFICIENT_INVENTORY": {
             "status": 409,
@@ -6012,6 +6066,14 @@
               }
             }
           },
+          "410": {
+            "description": "Errors: OPERATION_RESULT_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "413": {
             "description": "Errors: REQUEST_TOO_LARGE",
             "content": {
@@ -6062,6 +6124,7 @@
           "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
+          "OPERATION_RESULT_EXPIRED",
           "EXPEDITION_LIMIT_REACHED",
           "EXPEDITION_ALREADY_ACTIVE",
           "EXPEDITION_ITEMS_INVALID",
@@ -6159,6 +6222,13 @@
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
+          },
+          "OPERATION_RESULT_EXPIRED": {
+            "status": 410,
+            "message": "操作结果已超过可恢复期限",
+            "retryable": false,
+            "refreshScope": "all",
+            "recoveryAction": "refresh"
           },
           "EXPEDITION_LIMIT_REACHED": {
             "status": 409,
@@ -6734,6 +6804,14 @@
               }
             }
           },
+          "410": {
+            "description": "Errors: OPERATION_RESULT_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "413": {
             "description": "Errors: REQUEST_TOO_LARGE",
             "content": {
@@ -6784,6 +6862,7 @@
           "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
+          "OPERATION_RESULT_EXPIRED",
           "EXPEDITION_NOT_FOUND",
           "EXPEDITION_NOT_READY",
           "IDEMPOTENCY_KEY_REUSED"
@@ -6879,6 +6958,13 @@
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
+          },
+          "OPERATION_RESULT_EXPIRED": {
+            "status": 410,
+            "message": "操作结果已超过可恢复期限",
+            "retryable": false,
+            "refreshScope": "all",
+            "recoveryAction": "refresh"
           },
           "EXPEDITION_NOT_FOUND": {
             "status": 404,
@@ -7687,6 +7773,14 @@
               }
             }
           },
+          "410": {
+            "description": "Errors: OPERATION_RESULT_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "413": {
             "description": "Errors: REQUEST_TOO_LARGE",
             "content": {
@@ -7737,6 +7831,7 @@
           "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
+          "OPERATION_RESULT_EXPIRED",
           "WHEEL_COUNT_INVALID",
           "WHEEL_DAILY_LIMIT",
           "INSUFFICIENT_BALANCE",
@@ -7833,6 +7928,13 @@
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
+          },
+          "OPERATION_RESULT_EXPIRED": {
+            "status": 410,
+            "message": "操作结果已超过可恢复期限",
+            "retryable": false,
+            "refreshScope": "all",
+            "recoveryAction": "refresh"
           },
           "WHEEL_COUNT_INVALID": {
             "status": 400,
@@ -9132,6 +9234,14 @@
               }
             }
           },
+          "410": {
+            "description": "Errors: OPERATION_RESULT_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "413": {
             "description": "Errors: REQUEST_TOO_LARGE",
             "content": {
@@ -9182,6 +9292,7 @@
           "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
+          "OPERATION_RESULT_EXPIRED",
           "MARKET_ACTIVE_TEMPLATE_LIMIT",
           "INSUFFICIENT_INVENTORY",
           "TEMPLATE_NOT_FOUND",
@@ -9278,6 +9389,13 @@
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
+          },
+          "OPERATION_RESULT_EXPIRED": {
+            "status": 410,
+            "message": "操作结果已超过可恢复期限",
+            "retryable": false,
+            "refreshScope": "all",
+            "recoveryAction": "refresh"
           },
           "MARKET_ACTIVE_TEMPLATE_LIMIT": {
             "status": 409,
@@ -9500,6 +9618,14 @@
               }
             }
           },
+          "410": {
+            "description": "Errors: OPERATION_RESULT_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "413": {
             "description": "Errors: REQUEST_TOO_LARGE",
             "content": {
@@ -9550,6 +9676,7 @@
           "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
+          "OPERATION_RESULT_EXPIRED",
           "TEMPLATE_NOT_FOUND",
           "IDEMPOTENCY_KEY_REUSED"
         ],
@@ -9644,6 +9771,13 @@
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
+          },
+          "OPERATION_RESULT_EXPIRED": {
+            "status": 410,
+            "message": "操作结果已超过可恢复期限",
+            "retryable": false,
+            "refreshScope": "all",
+            "recoveryAction": "refresh"
           },
           "TEMPLATE_NOT_FOUND": {
             "status": 404,
@@ -10033,6 +10167,14 @@
               }
             }
           },
+          "410": {
+            "description": "Errors: OPERATION_RESULT_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "413": {
             "description": "Errors: REQUEST_TOO_LARGE",
             "content": {
@@ -10083,6 +10225,7 @@
           "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
+          "OPERATION_RESULT_EXPIRED",
           "MARKET_STOCK_INSUFFICIENT",
           "INSUFFICIENT_BALANCE",
           "TEMPLATE_NOT_FOUND",
@@ -10179,6 +10322,13 @@
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
+          },
+          "OPERATION_RESULT_EXPIRED": {
+            "status": 410,
+            "message": "操作结果已超过可恢复期限",
+            "retryable": false,
+            "refreshScope": "all",
+            "recoveryAction": "refresh"
           },
           "MARKET_STOCK_INSUFFICIENT": {
             "status": 409,
@@ -11507,7 +11657,7 @@
             }
           },
           "410": {
-            "description": "Errors: BATTLE_ROOM_EXPIRED, BATTLE_ROOM_CANCELLED",
+            "description": "Errors: OPERATION_RESULT_EXPIRED, BATTLE_ROOM_EXPIRED, BATTLE_ROOM_CANCELLED",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/StandardError" }
@@ -11572,6 +11722,7 @@
           "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
+          "OPERATION_RESULT_EXPIRED",
           "TOPUP_AMOUNT_INVALID",
           "TOPUP_NOT_REQUIRED",
           "PAYMENT_ALREADY_PROCESSING",
@@ -11685,6 +11836,13 @@
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
+          },
+          "OPERATION_RESULT_EXPIRED": {
+            "status": 410,
+            "message": "操作结果已超过可恢复期限",
+            "retryable": false,
+            "refreshScope": "all",
+            "recoveryAction": "refresh"
           },
           "TOPUP_AMOUNT_INVALID": {
             "status": 400,
@@ -12960,6 +13118,14 @@
               }
             }
           },
+          "410": {
+            "description": "Errors: OPERATION_RESULT_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "413": {
             "description": "Errors: REQUEST_TOO_LARGE",
             "content": {
@@ -13010,6 +13176,7 @@
           "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
+          "OPERATION_RESULT_EXPIRED",
           "PAYMENT_NOT_FOUND",
           "PAYMENT_ALREADY_PROCESSING",
           "IDEMPOTENCY_KEY_REUSED"
@@ -13105,6 +13272,13 @@
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
+          },
+          "OPERATION_RESULT_EXPIRED": {
+            "status": 410,
+            "message": "操作结果已超过可恢复期限",
+            "retryable": false,
+            "refreshScope": "all",
+            "recoveryAction": "refresh"
           },
           "PAYMENT_NOT_FOUND": {
             "status": 404,
@@ -13895,6 +14069,14 @@
               }
             }
           },
+          "410": {
+            "description": "Errors: OPERATION_RESULT_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "413": {
             "description": "Errors: REQUEST_TOO_LARGE",
             "content": {
@@ -13945,6 +14127,7 @@
           "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
+          "OPERATION_RESULT_EXPIRED",
           "PAYMENT_NOT_FOUND",
           "IDEMPOTENCY_KEY_REUSED"
         ],
@@ -14039,6 +14222,13 @@
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
+          },
+          "OPERATION_RESULT_EXPIRED": {
+            "status": 410,
+            "message": "操作结果已超过可恢复期限",
+            "retryable": false,
+            "refreshScope": "all",
+            "recoveryAction": "refresh"
           },
           "PAYMENT_NOT_FOUND": {
             "status": 404,
@@ -15920,6 +16110,14 @@
               }
             }
           },
+          "410": {
+            "description": "Errors: OPERATION_RESULT_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "413": {
             "description": "Errors: REQUEST_TOO_LARGE",
             "content": {
@@ -15970,6 +16168,7 @@
           "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
+          "OPERATION_RESULT_EXPIRED",
           "VIP_RENEWAL_LIMIT",
           "PAYMENT_ALREADY_PENDING",
           "PAYMENT_NOT_FOUND",
@@ -16067,6 +16266,13 @@
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
+          },
+          "OPERATION_RESULT_EXPIRED": {
+            "status": 410,
+            "message": "操作结果已超过可恢复期限",
+            "retryable": false,
+            "refreshScope": "all",
+            "recoveryAction": "refresh"
           },
           "VIP_RENEWAL_LIMIT": {
             "status": 409,
@@ -16870,6 +17076,14 @@
               }
             }
           },
+          "410": {
+            "description": "Errors: OPERATION_RESULT_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "413": {
             "description": "Errors: REQUEST_TOO_LARGE",
             "content": {
@@ -16920,6 +17134,7 @@
           "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
+          "OPERATION_RESULT_EXPIRED",
           "PAYMENT_NOT_FOUND",
           "PAYMENT_ALREADY_PROCESSING",
           "IDEMPOTENCY_KEY_REUSED"
@@ -17015,6 +17230,13 @@
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
+          },
+          "OPERATION_RESULT_EXPIRED": {
+            "status": 410,
+            "message": "操作结果已超过可恢复期限",
+            "retryable": false,
+            "refreshScope": "all",
+            "recoveryAction": "refresh"
           },
           "PAYMENT_NOT_FOUND": {
             "status": 404,
@@ -17181,6 +17403,14 @@
               }
             }
           },
+          "410": {
+            "description": "Errors: OPERATION_RESULT_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "413": {
             "description": "Errors: REQUEST_TOO_LARGE",
             "content": {
@@ -17231,6 +17461,7 @@
           "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
+          "OPERATION_RESULT_EXPIRED",
           "VIP_BENEFIT_INVALID",
           "VIP_INACTIVE",
           "VIP_ALREADY_CLAIMED",
@@ -17327,6 +17558,13 @@
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
+          },
+          "OPERATION_RESULT_EXPIRED": {
+            "status": 410,
+            "message": "操作结果已超过可恢复期限",
+            "retryable": false,
+            "refreshScope": "all",
+            "recoveryAction": "refresh"
           },
           "VIP_BENEFIT_INVALID": {
             "status": 400,
@@ -17499,6 +17737,14 @@
               }
             }
           },
+          "410": {
+            "description": "Errors: OPERATION_RESULT_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "413": {
             "description": "Errors: REQUEST_TOO_LARGE",
             "content": {
@@ -17549,6 +17795,7 @@
           "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
+          "OPERATION_RESULT_EXPIRED",
           "VIP_BENEFIT_INVALID",
           "VIP_INACTIVE",
           "VIP_ALREADY_CLAIMED",
@@ -17645,6 +17892,13 @@
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
+          },
+          "OPERATION_RESULT_EXPIRED": {
+            "status": 410,
+            "message": "操作结果已超过可恢复期限",
+            "retryable": false,
+            "refreshScope": "all",
+            "recoveryAction": "refresh"
           },
           "VIP_BENEFIT_INVALID": {
             "status": 400,
@@ -18172,6 +18426,14 @@
               }
             }
           },
+          "410": {
+            "description": "Errors: OPERATION_RESULT_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "413": {
             "description": "Errors: REQUEST_TOO_LARGE",
             "content": {
@@ -18222,6 +18484,7 @@
           "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
+          "OPERATION_RESULT_EXPIRED",
           "CHECKIN_ALREADY_CLAIMED",
           "IDEMPOTENCY_KEY_REUSED"
         ],
@@ -18316,6 +18579,13 @@
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
+          },
+          "OPERATION_RESULT_EXPIRED": {
+            "status": 410,
+            "message": "操作结果已超过可恢复期限",
+            "retryable": false,
+            "refreshScope": "all",
+            "recoveryAction": "refresh"
           },
           "CHECKIN_ALREADY_CLAIMED": {
             "status": 409,
@@ -18565,6 +18835,14 @@
               }
             }
           },
+          "410": {
+            "description": "Errors: OPERATION_RESULT_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "413": {
             "description": "Errors: REQUEST_TOO_LARGE",
             "content": {
@@ -18615,6 +18893,7 @@
           "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
+          "OPERATION_RESULT_EXPIRED",
           "TASK_NOT_FOUND",
           "TASK_NOT_COMPLETE",
           "TASK_ALREADY_CLAIMED",
@@ -18711,6 +18990,13 @@
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
+          },
+          "OPERATION_RESULT_EXPIRED": {
+            "status": 410,
+            "message": "操作结果已超过可恢复期限",
+            "retryable": false,
+            "refreshScope": "all",
+            "recoveryAction": "refresh"
           },
           "TASK_NOT_FOUND": {
             "status": 404,
@@ -19113,7 +19399,7 @@
             }
           },
           "410": {
-            "description": "Errors: REFERRAL_CANDIDATE_EXPIRED",
+            "description": "Errors: OPERATION_RESULT_EXPIRED, REFERRAL_CANDIDATE_EXPIRED",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/StandardError" }
@@ -19169,6 +19455,7 @@
           "SESSION_REQUIRED",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
+          "OPERATION_RESULT_EXPIRED",
           "REFERRAL_ALREADY_RECHARGED",
           "REFERRAL_CANDIDATE_EXPIRED",
           "REFERRAL_CODE_INVALID",
@@ -19263,6 +19550,13 @@
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
+          },
+          "OPERATION_RESULT_EXPIRED": {
+            "status": 410,
+            "message": "操作结果已超过可恢复期限",
+            "retryable": false,
+            "refreshScope": "all",
+            "recoveryAction": "refresh"
           },
           "REFERRAL_ALREADY_RECHARGED": {
             "status": 409,
@@ -19477,6 +19771,14 @@
               }
             }
           },
+          "410": {
+            "description": "Errors: OPERATION_RESULT_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "413": {
             "description": "Errors: REQUEST_TOO_LARGE",
             "content": {
@@ -19527,6 +19829,7 @@
           "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
+          "OPERATION_RESULT_EXPIRED",
           "SHARE_EVENT_INVALID",
           "IDEMPOTENCY_KEY_REUSED"
         ],
@@ -19621,6 +19924,13 @@
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
+          },
+          "OPERATION_RESULT_EXPIRED": {
+            "status": 410,
+            "message": "操作结果已超过可恢复期限",
+            "retryable": false,
+            "refreshScope": "all",
+            "recoveryAction": "refresh"
           },
           "SHARE_EVENT_INVALID": {
             "status": 400,
@@ -20137,6 +20447,14 @@
               }
             }
           },
+          "410": {
+            "description": "Errors: OPERATION_RESULT_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "413": {
             "description": "Errors: REQUEST_TOO_LARGE",
             "content": {
@@ -20187,6 +20505,7 @@
           "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
+          "OPERATION_RESULT_EXPIRED",
           "ALBUM_CHAIN_INCOMPLETE",
           "ALBUM_REWARD_ALREADY_CLAIMED",
           "IDEMPOTENCY_KEY_REUSED"
@@ -20282,6 +20601,13 @@
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
+          },
+          "OPERATION_RESULT_EXPIRED": {
+            "status": 410,
+            "message": "操作结果已超过可恢复期限",
+            "retryable": false,
+            "refreshScope": "all",
+            "recoveryAction": "refresh"
           },
           "ALBUM_CHAIN_INCOMPLETE": {
             "status": 409,
@@ -23691,6 +24017,14 @@
               }
             }
           },
+          "410": {
+            "description": "Errors: OPERATION_RESULT_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "413": {
             "description": "Errors: REQUEST_TOO_LARGE",
             "content": {
@@ -23757,6 +24091,7 @@
           "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
+          "OPERATION_RESULT_EXPIRED",
           "BATTLE_RULESET_UNAVAILABLE",
           "BATTLE_TIER_INVALID",
           "BATTLE_TEAM_INVALID",
@@ -23861,6 +24196,13 @@
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
+          },
+          "OPERATION_RESULT_EXPIRED": {
+            "status": 410,
+            "message": "操作结果已超过可恢复期限",
+            "retryable": false,
+            "refreshScope": "all",
+            "recoveryAction": "refresh"
           },
           "BATTLE_RULESET_UNAVAILABLE": {
             "status": 503,
@@ -24147,7 +24489,7 @@
             }
           },
           "410": {
-            "description": "Errors: BATTLE_ROOM_EXPIRED, BATTLE_ROOM_CANCELLED",
+            "description": "Errors: OPERATION_RESULT_EXPIRED, BATTLE_ROOM_EXPIRED, BATTLE_ROOM_CANCELLED",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/StandardError" }
@@ -24204,6 +24546,7 @@
           "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
+          "OPERATION_RESULT_EXPIRED",
           "BATTLE_ROOM_NOT_FOUND",
           "BATTLE_ROOM_EXPIRED",
           "BATTLE_ROOM_CANCELLED",
@@ -24302,6 +24645,13 @@
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
+          },
+          "OPERATION_RESULT_EXPIRED": {
+            "status": 410,
+            "message": "操作结果已超过可恢复期限",
+            "retryable": false,
+            "refreshScope": "all",
+            "recoveryAction": "refresh"
           },
           "BATTLE_ROOM_NOT_FOUND": {
             "status": 404,
@@ -26202,7 +26552,7 @@
             }
           },
           "410": {
-            "description": "Errors: BATTLE_ROOM_CANCELLED",
+            "description": "Errors: OPERATION_RESULT_EXPIRED, BATTLE_ROOM_CANCELLED",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/StandardError" }
@@ -26275,6 +26625,7 @@
           "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
+          "OPERATION_RESULT_EXPIRED",
           "BATTLE_RULESET_UNAVAILABLE",
           "BATTLE_TIER_INVALID",
           "BATTLE_TEAM_INVALID",
@@ -26378,6 +26729,13 @@
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
+          },
+          "OPERATION_RESULT_EXPIRED": {
+            "status": 410,
+            "message": "操作结果已超过可恢复期限",
+            "retryable": false,
+            "refreshScope": "all",
+            "recoveryAction": "refresh"
           },
           "BATTLE_RULESET_UNAVAILABLE": {
             "status": 503,
@@ -28337,7 +28695,7 @@
             }
           },
           "410": {
-            "description": "Errors: BATTLE_ROOM_EXPIRED, BATTLE_ROOM_CANCELLED",
+            "description": "Errors: OPERATION_RESULT_EXPIRED, BATTLE_ROOM_EXPIRED, BATTLE_ROOM_CANCELLED",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/StandardError" }
@@ -28402,6 +28760,7 @@
           "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
+          "OPERATION_RESULT_EXPIRED",
           "BATTLE_INVITE_INVALID",
           "BATTLE_ROOM_EXPIRED",
           "BATTLE_ROOM_CANCELLED",
@@ -28508,6 +28867,13 @@
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
+          },
+          "OPERATION_RESULT_EXPIRED": {
+            "status": 410,
+            "message": "操作结果已超过可恢复期限",
+            "retryable": false,
+            "refreshScope": "all",
+            "recoveryAction": "refresh"
           },
           "BATTLE_INVITE_INVALID": {
             "status": 404,
@@ -30493,6 +30859,14 @@
               }
             }
           },
+          "410": {
+            "description": "Errors: OPERATION_RESULT_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "413": {
             "description": "Errors: REQUEST_TOO_LARGE",
             "content": {
@@ -30551,6 +30925,7 @@
           "ENTRY_HANDOFF_PENDING",
           "IDEMPOTENCY_KEY_INVALID",
           "IDEMPOTENCY_KEY_REQUIRED",
+          "OPERATION_RESULT_EXPIRED",
           "BATTLE_ROOM_NOT_FOUND",
           "BATTLE_NOT_PARTICIPANT",
           "BATTLE_ACTION_PHASE_INVALID",
@@ -30653,6 +31028,13 @@
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
+          },
+          "OPERATION_RESULT_EXPIRED": {
+            "status": 410,
+            "message": "操作结果已超过可恢复期限",
+            "retryable": false,
+            "refreshScope": "all",
+            "recoveryAction": "refresh"
           },
           "BATTLE_ROOM_NOT_FOUND": {
             "status": 404,
@@ -33407,7 +33789,14 @@
         "operationId": "operations_recoverable",
         "tags": ["operations"],
         "security": [{ "bearerAuth": [] }],
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "after_authority_cursor",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string", "pattern": "^(0|[1-9]\\d*)$" }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful response",
@@ -33515,6 +33904,7 @@
                                       "OPERATION_FAILED",
                                       "OPERATION_NOT_ACKNOWLEDGEABLE",
                                       "OPERATION_NOT_FOUND",
+                                      "OPERATION_RESULT_EXPIRED",
                                       "OPERATION_RESULT_INVALID",
                                       "PAYMENT_ALREADY_PENDING",
                                       "PAYMENT_ALREADY_PROCESSING",
@@ -33605,9 +33995,25 @@
                             ],
                             "additionalProperties": false
                           }
+                        },
+                        "authority_refresh_routes": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 128
+                          }
+                        },
+                        "next_authority_cursor": {
+                          "type": "string",
+                          "pattern": "^(0|[1-9]\\d*)$"
                         }
                       },
-                      "required": ["operations"],
+                      "required": [
+                        "operations",
+                        "authority_refresh_routes",
+                        "next_authority_cursor"
+                      ],
                       "additionalProperties": false
                     },
                     "request_id": {
@@ -33906,6 +34312,7 @@
                                 "OPERATION_FAILED",
                                 "OPERATION_NOT_ACKNOWLEDGEABLE",
                                 "OPERATION_NOT_FOUND",
+                                "OPERATION_RESULT_EXPIRED",
                                 "OPERATION_RESULT_INVALID",
                                 "PAYMENT_ALREADY_PENDING",
                                 "PAYMENT_ALREADY_PROCESSING",
@@ -34079,6 +34486,14 @@
               }
             }
           },
+          "410": {
+            "description": "Errors: OPERATION_RESULT_EXPIRED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
           "500": {
             "description": "Errors: DATABASE_RPC_FAILED, INTERNAL_ERROR",
             "content": {
@@ -34110,6 +34525,7 @@
           "SESSION_REPLACED",
           "SESSION_REQUIRED",
           "OPERATION_NOT_FOUND",
+          "OPERATION_RESULT_EXPIRED",
           "ENTRY_HANDOFF_PENDING"
         ],
         "x-error-definitions": {
@@ -34182,6 +34598,13 @@
             "retryable": false,
             "refreshScope": "none",
             "recoveryAction": "none"
+          },
+          "OPERATION_RESULT_EXPIRED": {
+            "status": 410,
+            "message": "操作结果已超过可恢复期限",
+            "retryable": false,
+            "refreshScope": "all",
+            "recoveryAction": "refresh"
           },
           "ENTRY_HANDOFF_PENDING": {
             "status": 409,
@@ -35804,6 +36227,7 @@
                   "OPERATION_FAILED",
                   "OPERATION_NOT_ACKNOWLEDGEABLE",
                   "OPERATION_NOT_FOUND",
+                  "OPERATION_RESULT_EXPIRED",
                   "OPERATION_RESULT_INVALID",
                   "PAYMENT_ALREADY_PENDING",
                   "PAYMENT_ALREADY_PROCESSING",

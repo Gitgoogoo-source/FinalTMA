@@ -8,6 +8,7 @@ import {
 import { defineRoute } from "../../common/route.ts";
 import {
   emptyObjectSchema,
+  nonNegativeBigintStringSchema,
   timestampSchema,
   uuidSchema,
 } from "../../common/schemas.ts";
@@ -67,6 +68,7 @@ const bootstrapOutput = z
       })
       .strict(),
     catalog_version: z.literal("v1"),
+    authority_cursor: nonNegativeBigintStringSchema,
     blocking_operations: z.array(operationSummarySchema),
     pending_payments: z.array(paymentSchema),
     pending_mints: z.array(mintSchema),

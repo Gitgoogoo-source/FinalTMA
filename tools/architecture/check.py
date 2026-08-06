@@ -366,6 +366,11 @@ def verify_operation_recovery_discovery() -> None:
         "inFlight?.abort()",
         "recoveryQueueActive",
         "if (recovered.length > 0) return;",
+        "initialAuthorityCursor",
+        "after_authority_cursor: currentAuthority.value",
+        "response.data.authority_refresh_routes",
+        "response.data.next_authority_cursor",
+        "await refreshScopes(scopes, { throwOnError: true })",
     )
     missing_discovery_terms = [
         term for term in discovery_terms if term not in discovery
@@ -384,7 +389,8 @@ def verify_operation_recovery_discovery() -> None:
     ).read_text(encoding="utf-8")
     provider = OPERATION_REGISTRY_PROVIDER.read_text(encoding="utf-8")
     if (
-        "useRecoverableOperationDiscovery();" not in coordinator
+        "useRecoverableOperationDiscovery(bootstrap.data?.authority_cursor);"
+        not in coordinator
         or "recoveryQueueActive: boolean;" not in context
         or "wheelPresentationEpoch: number;" not in context
         or "serverAcknowledgementRouteIds.has(operation.routeId)" not in provider
@@ -416,7 +422,10 @@ def verify_operation_recovery_discovery() -> None:
     backend_terms = (
         '"operations.recoverable": async (context)',
         'rpc("operations_recoverable"',
-        "create or replace function api.operations_recoverable(p_session_id uuid)",
+        "p_after_authority_cursor bigint",
+        "'authority_refresh_routes'",
+        "'next_authority_cursor'",
+        "operations.user_authority_sequences",
         "o.use_case = 'wheel.spin' and o.status in ('pending', 'unknown')",
         "o.use_case = 'inventory.evolve' and o.result_acknowledged_at is null",
         "order by o.created_at, o.id",
@@ -490,15 +499,16 @@ def verify_operation_recovery_discovery() -> None:
         )
     if (
         'operation.use_case === "gacha.open"' not in provider
-        or 'operation.use_case === "wheel.spin"' not in provider
+        or "!serverAcknowledgementRouteIds.has(operation.use_case)" not in provider
         or "discardTransientPresentations" not in provider
         or "terminalPresentationAllowed: false" not in provider
-        or "needsWheelRefreshAfterLeave" not in provider
+        or "needsAuthorityRefreshAfterLeave" not in provider
         or "wheelPresentationEpoch" not in provider
+        or "suppressTerminalPresentation" not in provider
         or "onConfirm={() => remove(active.id)}" not in provider
     ):
         raise SystemExit(
-            "Gacha and wheel terminal results must be current-foreground presentation only"
+            "Non-evolution terminal results must be current-foreground presentation only"
         )
 
     identity_schema = (ROOT / "supabase/schemas/10_identity.sql").read_text(
@@ -507,15 +517,53 @@ def verify_operation_recovery_discovery() -> None:
     jobs_schema = (ROOT / "supabase/schemas/95_jobs.sql").read_text(
         encoding="utf-8"
     )
+    operations_schema = (ROOT / "supabase/schemas/30_operations.sql").read_text(
+        encoding="utf-8"
+    )
     if (
         "o.use_case = 'inventory.evolve'" not in identity_schema
         or "o.use_case in ('wheel.spin', 'inventory.evolve')" in identity_schema
-        or "use_case = 'inventory.evolve' and result_acknowledged_at is null"
+        or "o.use_case = 'inventory.evolve' and o.result_acknowledged_at is null"
         not in jobs_schema
         or "use_case in ('wheel.spin', 'inventory.evolve')" in jobs_schema
     ):
         raise SystemExit(
             "Wheel terminal results must not enter bootstrap blocking or acknowledgement retention"
+        )
+    authority_terms = (
+        "'authority_cursor'",
+        "operations.user_authority_sequences",
+        "authority_sequence",
+        "payload_purged_at",
+        "operations_assign_authority_sequence",
+        "OPERATION_RESULT_EXPIRED",
+    )
+    authority_source = identity_schema + operations_schema + jobs_schema
+    missing_authority_terms = [
+        term for term in authority_terms if term not in authority_source
+    ]
+    if missing_authority_terms:
+        raise SystemExit(
+            "Operation authority convergence and payload retention are incomplete: "
+            f"{missing_authority_terms}"
+        )
+    if "delete from operations.operations" in jobs_schema.lower():
+        raise SystemExit(
+            "Idempotency cleanup must compact payloads without deleting operation anchors"
+        )
+    cleanup_terms = (
+        "o.completed_at < now() - interval '30 days'",
+        "for update of o skip locked",
+        "delete from wheel.results",
+        "set request = null",
+        "result = null",
+        "payload_purged_at = now()",
+    )
+    missing_cleanup_terms = [term for term in cleanup_terms if term not in jobs_schema]
+    if missing_cleanup_terms:
+        raise SystemExit(
+            "Operation payload compaction is incomplete: "
+            f"{missing_cleanup_terms}"
         )
 
     recovery_document = (

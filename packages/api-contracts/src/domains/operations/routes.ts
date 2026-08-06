@@ -2,7 +2,11 @@ import { z } from "zod";
 
 import { operationSummarySchema } from "../../common/models.ts";
 import { defineRoute } from "../../common/route.ts";
-import { emptyObjectSchema, uuidSchema } from "../../common/schemas.ts";
+import {
+  identifierSchema,
+  nonNegativeBigintStringSchema,
+  uuidSchema,
+} from "../../common/schemas.ts";
 
 export const operationRoutes = [
   defineRoute({
@@ -12,8 +16,16 @@ export const operationRoutes = [
     gateway: "app",
     auth: true,
     idempotent: false,
-    input: emptyObjectSchema,
-    output: z.object({ operations: z.array(operationSummarySchema) }).strict(),
+    input: z
+      .object({ after_authority_cursor: nonNegativeBigintStringSchema })
+      .strict(),
+    output: z
+      .object({
+        operations: z.array(operationSummarySchema),
+        authority_refresh_routes: z.array(identifierSchema),
+        next_authority_cursor: nonNegativeBigintStringSchema,
+      })
+      .strict(),
     errors: ["SESSION_REQUIRED", "ACCOUNT_RESTRICTED", "INTERNAL_ERROR"],
   }),
   defineRoute({
@@ -28,6 +40,7 @@ export const operationRoutes = [
     output: operationSummarySchema,
     errors: [
       "OPERATION_NOT_FOUND",
+      "OPERATION_RESULT_EXPIRED",
       "ENTRY_HANDOFF_PENDING",
       "ACCOUNT_RESTRICTED",
       "INTERNAL_ERROR",

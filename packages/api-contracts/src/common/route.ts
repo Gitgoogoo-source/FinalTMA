@@ -47,8 +47,11 @@ export function defineRoute<const Route extends RouteDefinition>(
     );
   if (route.auth && !route.allowPendingEntryHandoff)
     errors.push("ENTRY_HANDOFF_PENDING");
-  if (route.idempotent)
+  if (route.idempotent) {
     errors.push("IDEMPOTENCY_KEY_INVALID", "IDEMPOTENCY_KEY_REQUIRED");
+    if (route.id !== "identity.authenticate")
+      errors.push("OPERATION_RESULT_EXPIRED");
+  }
   if (route.forbidIdempotencyKey) errors.push("IDEMPOTENCY_KEY_NOT_ALLOWED");
   if (route.gateway === "jobs") errors.push("CRON_UNAUTHORIZED");
   if (route.gateway === "integrations") errors.push("WEBHOOK_UNAUTHORIZED");

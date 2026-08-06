@@ -8,6 +8,7 @@ declare
   v_run uuid;
   v_count integer := 0;
   v_added integer := 0;
+  v_compacted integer := 0;
   v_row record;
   v_details jsonb;
   v_scan_from timestamptz;
@@ -73,15 +74,42 @@ begin
       v_count := v_count + 1;
     end loop;
   elsif p_job_name = 'cleanup-idempotency' then
-    delete from operations.operations where id in (
-      select id from operations.operations where created_at < now() - interval '30 days' and status in ('succeeded', 'failed')
-        and not (use_case = 'inventory.evolve' and result_acknowledged_at is null)
-        and use_case not like 'battle.%'
-        and not exists (select 1 from payments.orders p where p.operation_id = operations.operations.id and p.status in ('pending', 'processing', 'paid'))
-        and not exists (select 1 from onchain.mints m where m.operation_id = operations.operations.id and m.status in ('reserved', 'submitted', 'unknown'))
-      order by created_at limit greatest(1, least(p_limit, 500))
-    );
-    get diagnostics v_count = row_count;
+    with candidates as materialized (
+      select o.id
+      from operations.operations o
+      where o.completed_at < now() - interval '30 days'
+        and o.status in ('succeeded', 'failed')
+        and o.payload_purged_at is null
+        and not (o.use_case = 'inventory.evolve' and o.result_acknowledged_at is null)
+        and o.use_case not like 'battle.%'
+        and not exists (
+          select 1 from payments.orders p
+          where p.operation_id = o.id and p.status in ('pending', 'processing', 'paid')
+        )
+        and not exists (
+          select 1 from onchain.mints m
+          where m.operation_id = o.id and m.status in ('reserved', 'submitted', 'unknown')
+        )
+      order by o.completed_at, o.id
+      limit greatest(1, least(p_limit, 500))
+      for update of o skip locked
+    ), purged_wheel_results as (
+      delete from wheel.results result
+      using candidates candidate
+      where result.operation_id = candidate.id
+      returning result.operation_id
+    ), compacted as (
+      update operations.operations operation
+      set request = null,
+          result = null,
+          payload_purged_at = now(),
+          updated_at = now()
+      from candidates candidate
+      where operation.id = candidate.id
+      returning operation.id
+    )
+    select count(*)::integer into v_compacted from compacted;
+    v_count := v_compacted;
     delete from identity.auth_attempts where attempted_at < now() - interval '1 day';
     v_details := battle.cleanup_operational_data(greatest(1, least(p_limit, 5000)));
     v_count := v_count

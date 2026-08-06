@@ -6,6 +6,7 @@ export const operationRecoveryHandlers = {
   "operations.recoverable": async (context) => ({
     data: await rpc("operations_recoverable", {
       p_session_id: requireSession(context).session_id,
+      p_after_authority_cursor: context.input.after_authority_cursor,
     }),
   }),
   "operations.get": async (context) => ({

@@ -1,10 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
+  isRecoverableRouteId,
   parseRecoveredOperation,
+  routeById,
+  type RecoverableRouteId,
   type TypedOperationSummary,
 } from "@pokepets/api-contracts/app";
 
 import { apiRequest } from "../../platform/api/client.ts";
+import { refreshScopes } from "../../platform/query/index.ts";
 import { getSession, useSession } from "../../platform/session/store.ts";
 import {
   subscribeTelegramActivity,
@@ -14,13 +18,20 @@ import { useOperationRegistry } from "./context.ts";
 
 const discoveryDelays = [1_000, 2_000, 3_000, 5_000, 30_000] as const;
 
-export function useRecoverableOperationDiscovery(): void {
+export function useRecoverableOperationDiscovery(
+  initialAuthorityCursor: string | undefined,
+): void {
   const session = useSession();
   const surfaceActive = useRecoverySurfaceActive();
   const { hydrate, recoveryQueueActive } = useOperationRegistry();
   const generation = session?.generation;
+  const authorityCursor = useRef<{
+    generation: string;
+    value: string;
+  } | null>(null);
   const enabled = Boolean(
     generation &&
+    initialAuthorityCursor !== undefined &&
     session.accountStatus === "normal" &&
     session.entryHandoffState === "complete" &&
     surfaceActive &&
@@ -28,7 +39,12 @@ export function useRecoverableOperationDiscovery(): void {
   );
 
   useEffect(() => {
-    if (!enabled || !generation) return;
+    if (!enabled || !generation || initialAuthorityCursor === undefined) return;
+    if (authorityCursor.current?.generation !== generation)
+      authorityCursor.current = {
+        generation,
+        value: initialAuthorityCursor,
+      };
     let cancelled = false;
     let timer: number | undefined;
     let inFlight: AbortController | undefined;
@@ -36,12 +52,15 @@ export function useRecoverableOperationDiscovery(): void {
 
     const discover = async () => {
       if (cancelled || getSession()?.generation !== generation) return;
+      const currentAuthority = authorityCursor.current;
+      if (!currentAuthority || currentAuthority.generation !== generation)
+        return;
       const controller = new AbortController();
       inFlight = controller;
       try {
         const response = await apiRequest(
           "operations.recoverable",
-          {},
+          { after_authority_cursor: currentAuthority.value },
           { signal: controller.signal },
         );
         if (cancelled || getSession()?.generation !== generation) return;
@@ -54,6 +73,28 @@ export function useRecoverableOperationDiscovery(): void {
           }
         }
         hydrate(recovered);
+        const authorityRoutes: RecoverableRouteId[] = [];
+        for (const routeId of response.data.authority_refresh_routes) {
+          if (!isRecoverableRouteId(routeId))
+            throw new Error("Unsupported authority refresh route");
+          if (!authorityRoutes.includes(routeId)) authorityRoutes.push(routeId);
+        }
+        if (authorityRoutes.length > 0) {
+          attempt = 0;
+          const scopes = [
+            ...new Set(
+              authorityRoutes.flatMap(
+                (routeId) => routeById(routeId).refreshScopes,
+              ),
+            ),
+          ];
+          await refreshScopes(scopes, { throwOnError: true });
+        }
+        if (cancelled || getSession()?.generation !== generation) return;
+        const latestAuthority = authorityCursor.current;
+        if (!latestAuthority || latestAuthority.generation !== generation)
+          return;
+        latestAuthority.value = response.data.next_authority_cursor;
         if (recovered.length > 0) return;
       } catch {
         if (
@@ -78,7 +119,7 @@ export function useRecoverableOperationDiscovery(): void {
       if (timer !== undefined) window.clearTimeout(timer);
       inFlight?.abort();
     };
-  }, [enabled, generation, hydrate]);
+  }, [enabled, generation, hydrate, initialAuthorityCursor]);
 }
 
 function useRecoverySurfaceActive(): boolean {
