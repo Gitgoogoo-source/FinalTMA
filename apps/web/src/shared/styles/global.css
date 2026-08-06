@@ -5133,48 +5133,59 @@ input:focus {
 /* Inventory */
 .app-shell .inventory-page {
   position: relative;
-  top: clamp(16px, 2.2dvh, 19px);
+  top: clamp(7px, 1dvh, 10px);
   width: min(100%, 430px);
   height: calc(
     var(--tg-viewport-stable-height, 100dvh) - var(--shell-top-inset) -
-      var(--safe-bottom) - 156px
+      var(--safe-bottom) - 148px
   );
   min-height: 0;
   display: flex;
   flex-direction: column;
   margin: 0 auto;
-  padding-top: 8px;
-  padding-bottom: 10px;
+  padding: 0 clamp(10px, 3vw, 14px) 8px;
   overflow: hidden;
   overscroll-behavior: none;
-  color: #24333b;
+  color: #292b2e;
 }
 .app-shell .inventory-atlas-button {
   position: absolute;
   z-index: 5;
-  top: 18px;
-  right: 24px;
-  width: 42px;
-  min-width: 42px;
-  height: 42px;
-  min-height: 42px;
+  top: 2px;
+  right: 14px;
+  width: clamp(38px, 5.5dvh, 44px);
+  min-width: clamp(38px, 5.5dvh, 44px);
+  height: clamp(38px, 5.5dvh, 44px);
+  min-height: clamp(38px, 5.5dvh, 44px);
+  display: grid;
+  place-content: center;
+  gap: 1px;
   padding: 0;
-  border: 1px solid rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(41, 43, 46, 0.08);
   border-radius: 50%;
-  color: #fff;
-  background: var(--sprout-orange);
-  box-shadow: 0 12px 24px rgba(255, 122, 0, 0.22);
+  color: #34373a;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow:
+    0 8px 20px rgba(36, 39, 42, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
 }
 .app-shell .inventory-atlas-button svg {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
+  margin: 0 auto;
 }
 .app-shell .inventory-atlas-button span {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
+  position: static;
+  width: auto;
+  height: auto;
+  overflow: visible;
+  clip: auto;
+  color: #4f5357;
+  font-size: 7px;
+  font-weight: 700;
+  line-height: 1;
   white-space: nowrap;
 }
 .app-shell .inventory-location {
@@ -5214,15 +5225,15 @@ input:focus {
   outline-offset: 3px;
 }
 .app-shell .inventory-showcase {
-  --inventory-gap: clamp(5px, 0.8dvh, 8px);
+  --inventory-gap: clamp(4px, 0.65dvh, 7px);
   position: relative;
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(0, 29%) minmax(0, 71%);
-  grid-template-rows: auto minmax(0, 1fr) auto auto auto;
-  gap: var(--inventory-gap) 0;
-  padding: clamp(4px, 0.7dvh, 7px) clamp(6px, 1.8vw, 9px) 0;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto auto auto auto auto;
+  gap: var(--inventory-gap);
+  padding: 0;
   isolation: isolate;
   overflow: hidden;
   border-radius: 0;
@@ -5238,91 +5249,66 @@ input:focus {
 }
 .app-shell .inventory-title-board {
   z-index: 4;
-  grid-column: 1 / -1;
+  grid-column: 1;
   grid-row: 1;
-  width: 49%;
-  min-height: clamp(82px, 12dvh, 98px);
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: flex-start;
-  gap: clamp(4px, 0.7dvh, 7px);
-  padding: clamp(4px, 0.7dvh, 7px) 0 0 2px;
+  width: 100%;
+  min-height: clamp(45px, 6.6dvh, 56px);
+  display: grid;
+  place-items: center;
+  padding: 0 clamp(52px, 15vw, 64px);
   overflow: visible;
+  text-align: center;
 }
 .app-shell .inventory-title-copy {
   min-width: 0;
-  max-width: none;
+  max-width: 100%;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
   overflow: visible;
 }
 .app-shell .inventory-title-eyebrow {
-  display: block;
-  color: var(--sprout-orange-soft);
-  font-size: clamp(8px, 1.2dvh, 10px);
-  font-weight: 950;
-  letter-spacing: 0.08em;
+  display: none;
 }
 .app-shell .inventory-title-board h2 {
   position: relative;
   z-index: 1;
-  max-width: none;
+  max-width: 100%;
   margin: 0;
-  overflow: visible;
-  color: var(--sprout-ink);
-  font-size: clamp(25px, 7.8vw, 32px);
-  font-style: italic;
-  font-weight: 950;
-  letter-spacing: -0.05em;
-  line-height: 1.02;
-  text-overflow: clip;
+  overflow: hidden;
+  color: #272a2d;
+  font-size: clamp(22px, 6.8vw, 29px);
+  font-style: normal;
+  font-weight: 900;
+  letter-spacing: -0.045em;
+  line-height: 1.06;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 .app-shell .inventory-title-rarity {
-  min-width: 34px;
-  display: grid;
-  justify-items: center;
-  gap: 1px;
-  padding: 0 4px;
-  font-size: clamp(9px, 1.25dvh, 11px);
-  font-weight: 950;
-  line-height: 1;
-}
-.app-shell .inventory-title-rarity svg {
-  width: clamp(24px, 3.8dvh, 30px);
-  height: clamp(24px, 3.8dvh, 30px);
-  stroke-width: 2.8;
-}
-.app-shell .inventory-title-rarity.common {
-  color: #6d7873;
-}
-.app-shell .inventory-title-rarity.rare {
-  color: #397ed8;
-}
-.app-shell .inventory-title-rarity.epic {
-  color: #8753d3;
-}
-.app-shell .inventory-title-rarity.legendary {
-  color: #e16e12;
-}
-.app-shell .inventory-title-rarity.mythic {
-  color: #d84068;
+  min-width: 0;
+  padding: 0;
+  color: #666a6e;
+  font-size: clamp(9px, 1.3dvh, 11px);
+  font-weight: 650;
+  line-height: 1.2;
 }
 .app-shell .inventory-title-board .detail-new-acquisition {
   position: absolute;
-  top: 2px;
-  left: 54px;
+  top: 0;
+  left: calc(50% + clamp(42px, 12vw, 54px));
   width: max-content;
   margin: 0;
-  color: #b44911;
+  color: var(--sprout-orange);
   background: transparent;
-  font-size: 8px;
-  font-weight: 950;
+  font-size: 7px;
+  font-weight: 850;
 }
 .app-shell .inventory-hero-art {
   position: relative;
   z-index: 1;
-  grid-column: 1 / -1;
-  grid-row: 1 / 3;
+  grid-column: 1;
+  grid-row: 2;
   align-self: stretch;
   width: 100%;
   height: auto;
@@ -5338,234 +5324,153 @@ input:focus {
 .app-shell .inventory-hero-art .image-missing {
   position: absolute;
   z-index: 2;
-  left: 60%;
-  bottom: 7%;
-  width: 90%;
-  height: 94%;
+  left: 50%;
+  bottom: 0;
+  width: min(92%, 320px);
+  height: 100%;
   min-height: 0;
   border: 0;
-  border-radius: inherit;
+  border-radius: 0;
   object-fit: contain;
   object-position: center bottom;
   transform: translateX(-50%);
+  filter: drop-shadow(0 12px 13px rgba(37, 40, 43, 0.08));
 }
 .app-shell .inventory-showcase-layer {
-  position: absolute;
-  left: 50%;
-  width: auto;
-  max-width: none;
-  height: auto;
-  aspect-ratio: 1;
-  object-fit: contain;
-  pointer-events: none;
-  user-select: none;
-  transform: translateX(-50%);
-}
-.app-shell .inventory-collection-halo {
-  z-index: 0;
-  left: 62%;
-  bottom: clamp(-50px, -5.4dvh, -44px);
-  width: 110%;
-}
-.app-shell .inventory-collection-platform {
-  z-index: 1;
-  left: 54%;
-  bottom: -55%;
-  width: 128%;
+  display: none;
 }
 .app-shell .inventory-hero-art .image-missing {
-  width: 76%;
+  width: min(76%, 260px);
 }
 .app-shell .inventory-metric-grid {
   grid-column: 1;
-  grid-row: 2;
-  width: 100%;
+  grid-row: 3;
+  width: min(58%, 220px);
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: clamp(5px, 0.8dvh, 7px);
-  align-self: center;
-  margin: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+  place-self: center;
+  margin: 0 auto;
 }
 .app-shell .inventory-metric {
   position: relative;
   min-width: 0;
-  min-height: clamp(50px, 7.6dvh, 58px);
-  display: grid;
-  grid-template-columns: clamp(34px, 5.2dvh, 40px) minmax(0, 1fr);
+  min-height: clamp(28px, 4dvh, 34px);
+  display: flex;
   align-items: center;
-  gap: 1px;
-  padding: 5px 6px 5px 2px;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.9);
-  border-radius: clamp(17px, 3dvh, 21px);
-  backdrop-filter: blur(18px) saturate(155%);
-  -webkit-backdrop-filter: blur(18px) saturate(155%);
+  justify-content: center;
+  padding: 0 clamp(8px, 3vw, 14px);
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
-.app-shell .inventory-metric::after {
+.app-shell .inventory-metric + .inventory-metric::before {
   position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.98);
+  top: 4px;
+  bottom: 4px;
+  left: 0;
+  width: 1px;
+  background: rgba(41, 43, 46, 0.15);
   content: "";
-  pointer-events: none;
-}
-.app-shell .inventory-metric.stage {
-  background:
-    radial-gradient(
-      circle at 10% 16%,
-      rgba(199, 236, 207, 0.6),
-      transparent 44%
-    ),
-    linear-gradient(
-      135deg,
-      rgba(250, 255, 251, 0.74),
-      rgba(230, 245, 235, 0.54)
-    );
-  box-shadow: 0 9px 21px rgba(53, 111, 76, 0.11);
-}
-.app-shell .inventory-metric.power {
-  background:
-    radial-gradient(
-      circle at 11% 16%,
-      rgba(126, 164, 241, 0.35),
-      transparent 46%
-    ),
-    linear-gradient(
-      135deg,
-      rgba(249, 252, 255, 0.77),
-      rgba(224, 233, 248, 0.57)
-    );
-  box-shadow: 0 9px 21px rgba(42, 78, 137, 0.13);
-}
-.app-shell .inventory-metric > img {
-  position: relative;
-  z-index: 1;
-  width: clamp(34px, 5.2dvh, 40px);
-  height: clamp(34px, 5.2dvh, 40px);
-  display: block;
-  object-fit: contain;
-  pointer-events: none;
-  user-select: none;
-}
-.app-shell .inventory-metric.stage > img {
-  filter: drop-shadow(0 4px 4px rgba(97, 96, 55, 0.17));
-}
-.app-shell .inventory-metric.power > img {
-  filter: drop-shadow(0 4px 4px rgba(33, 51, 83, 0.2));
 }
 .app-shell .inventory-metric-copy {
   position: relative;
   z-index: 1;
   min-width: 0;
-  display: grid;
-  gap: clamp(3px, 0.55dvh, 5px);
-  align-content: center;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 5px;
 }
 .app-shell .inventory-metric-copy > span {
+  color: #5f6367;
+  font-size: clamp(9px, 1.3dvh, 11px);
+  font-weight: 600;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+.app-shell .inventory-metric.stage .inventory-metric-copy > span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
   overflow: hidden;
-  color: #586d70;
-  font-size: clamp(7px, 1.05dvh, 9px);
-  font-weight: 950;
-  letter-spacing: 0.04em;
-  text-overflow: ellipsis;
+  clip: rect(0 0 0 0);
   white-space: nowrap;
 }
 .app-shell .inventory-metric-copy > strong {
   max-width: 100%;
   overflow: hidden;
-  color: #173d38;
-  font-size: clamp(14px, 2.2dvh, 17px);
-  font-weight: 950;
+  color: #303336;
+  font-size: clamp(16px, 2.6dvh, 21px);
+  font-weight: 850;
   line-height: 1;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .app-shell .inventory-metric.power .inventory-metric-copy > strong {
-  color: #254c86;
+  color: #303336;
 }
 .app-shell .inventory-quantity-summary {
   grid-column: 1;
-  grid-row: 2;
+  grid-row: 4;
   width: max-content;
   display: flex;
   flex-wrap: wrap;
-  gap: 3px;
-  align-self: end;
-  margin: 0 0 2px;
+  justify-content: center;
+  gap: 5px;
+  place-self: center;
+  margin: 0;
 }
 .app-shell .inventory-quantity-summary > span {
-  padding: 2px 5px;
-  border: 1px solid rgba(54, 67, 75, 0.1);
-  border-radius: 999px;
-  color: #68747a;
-  background: rgba(255, 255, 255, 0.92);
-  font-size: 8px;
-  font-weight: 800;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  color: #777b7f;
+  background: transparent;
+  font-size: clamp(7px, 1dvh, 8px);
+  font-weight: 650;
 }
 .app-shell .inventory-quantity-summary strong {
-  color: #17354a;
+  color: #55595d;
 }
 .app-shell .inventory-action-grid {
-  grid-column: 1 / -1;
-  grid-row: 3;
+  grid-column: 1;
+  grid-row: 5;
   width: 100%;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   grid-template-rows: minmax(0, 1fr);
-  gap: clamp(5px, 1.5vw, 7px);
+  gap: clamp(7px, 2vw, 10px);
   align-self: stretch;
   margin: 0;
 }
 .app-shell .inventory-action-grid .button {
   position: relative;
   isolation: isolate;
-  min-height: clamp(50px, 7dvh, 56px);
+  min-height: clamp(38px, 5.5dvh, 46px);
   display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: center;
   gap: 0;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(47, 50, 53, 0.17);
   border-radius: 999px;
-  padding: 0 10px;
-  color: #566167;
-  background:
-    radial-gradient(
-      circle at 50% -30%,
-      rgba(255, 255, 255, 0.98),
-      rgba(255, 255, 255, 0) 68%
-    ),
-    linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.84),
-      rgba(255, 250, 246, 0.66)
-    );
+  padding: 0 8px;
+  color: #44484c;
+  background: rgba(255, 255, 255, 0.58);
   box-shadow:
-    0 11px 25px rgba(103, 86, 74, 0.08),
-    0 0 18px rgba(255, 255, 255, 0.72),
-    inset 0 1px 0 rgba(255, 255, 255, 0.98),
-    inset 0 -1px 0 rgba(178, 144, 117, 0.08);
-  backdrop-filter: blur(22px) saturate(155%);
-  -webkit-backdrop-filter: blur(22px) saturate(155%);
-  font-size: clamp(13px, 1.9dvh, 15px);
-  font-weight: 950;
-  letter-spacing: 0.02em;
+    0 5px 14px rgba(36, 39, 42, 0.035),
+    inset 0 1px 0 rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  font-size: clamp(12px, 1.8dvh, 14px);
+  font-weight: 700;
+  letter-spacing: 0;
 }
 .app-shell .inventory-action-grid .button::before {
-  position: absolute;
-  z-index: 0;
-  top: 1px;
-  left: 12%;
-  width: 76%;
-  height: 42%;
-  border-radius: 999px;
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.62),
-    rgba(255, 255, 255, 0)
-  );
-  content: "";
-  pointer-events: none;
+  display: none;
 }
 .app-shell .inventory-action-grid .button > span {
   position: relative;
@@ -5577,47 +5482,35 @@ input:focus {
   white-space: nowrap;
 }
 .app-shell .inventory-action-grid .inventory-action-button--evolve {
-  border-color: rgba(255, 180, 91, 0.78);
+  border-color: var(--sprout-orange);
   color: #fff;
-  background: linear-gradient(180deg, #ff9b3d 0%, #ff8121 58%, #ff750f 100%);
-  box-shadow:
-    0 13px 25px rgba(255, 122, 0, 0.2),
-    0 0 18px rgba(255, 159, 55, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.62),
-    inset 0 -2px 0 rgba(205, 82, 0, 0.16);
+  background: var(--sprout-orange);
+  box-shadow: 0 8px 18px rgba(255, 122, 0, 0.16);
 }
 .app-shell .inventory-action-grid .button:disabled {
   opacity: 1;
   color: #9ba29f;
-  border-color: rgba(255, 255, 255, 0.72);
-  background: rgba(239, 239, 237, 0.62);
-  box-shadow:
-    0 5px 12px rgba(63, 67, 82, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.76),
-    inset 0 -1px 0 rgba(124, 92, 255, 0.04);
+  border-color: rgba(47, 50, 53, 0.1);
+  background: rgba(242, 242, 240, 0.72);
+  box-shadow: none;
 }
 .app-shell .inventory-action-grid .inventory-action-button--evolve:disabled {
   color: #8e9893;
-  border-color: rgba(54, 67, 75, 0.1);
-  background: rgba(236, 238, 235, 0.92);
-  box-shadow:
-    0 7px 16px rgba(54, 67, 75, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.86);
+  border-color: rgba(47, 50, 53, 0.1);
+  background: rgba(236, 236, 234, 0.9);
+  box-shadow: none;
 }
 .app-shell .inventory-action-grid .button:not(:disabled):active {
-  color: var(--sprout-orange);
-  background: rgba(255, 249, 242, 0.76);
+  color: #34373a;
+  background: rgba(244, 244, 242, 0.9);
   transform: translateY(1px) scale(0.985);
-  box-shadow:
-    0 5px 12px rgba(255, 122, 0, 0.13),
-    inset 0 1px 0 rgba(255, 255, 255, 0.92),
-    inset 0 -1px 0 rgba(255, 122, 0, 0.1);
+  box-shadow: inset 0 1px 2px rgba(36, 39, 42, 0.05);
 }
 .app-shell
   .inventory-action-grid
   .inventory-action-button--evolve:not(:disabled):active {
   color: #fff;
-  background: linear-gradient(180deg, #ff8f2b, #ef6800);
+  background: #ed6e08;
 }
 .app-shell .evolution-action {
   display: grid;
@@ -5627,33 +5520,33 @@ input:focus {
   width: 100%;
 }
 .app-shell .inventory-filter-controls {
-  grid-column: 1 / -1;
-  grid-row: 4;
+  grid-column: 1;
+  grid-row: 6;
   width: 100%;
   min-width: 0;
 }
 .app-shell .inventory-filter-strip {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: clamp(5px, 1.5vw, 7px);
+  gap: clamp(7px, 2vw, 10px);
 }
 .app-shell .inventory-filter-strip > button {
   min-width: 0;
-  height: 42px;
+  height: clamp(34px, 4.8dvh, 40px);
   display: grid;
   grid-template-columns: 16px minmax(0, 1fr) 10px;
   align-items: center;
-  gap: 5px;
-  padding: 0 9px;
-  border: 1px solid rgba(54, 67, 75, 0.08);
+  gap: 4px;
+  padding: 0 8px;
+  border: 1px solid rgba(47, 50, 53, 0.1);
   border-radius: 21px;
-  color: #596469;
-  background: rgba(255, 255, 255, 0.78);
+  color: #4f5357;
+  background: rgba(255, 255, 255, 0.62);
   box-shadow:
-    0 10px 22px rgba(54, 67, 75, 0.06),
-    inset 0 1px 0 #fff;
-  backdrop-filter: blur(18px) saturate(150%);
-  -webkit-backdrop-filter: blur(18px) saturate(150%);
+    0 4px 12px rgba(36, 39, 42, 0.03),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   font-size: clamp(8px, 2.25vw, 10px);
   font-weight: 850;
 }
@@ -5731,12 +5624,12 @@ input:focus {
   white-space: nowrap;
 }
 .app-shell .inventory-thumbnail-viewport {
-  grid-column: 1 / -1;
-  grid-row: 5;
+  grid-column: 1;
+  grid-row: 7;
   align-self: end;
   width: 100%;
   margin-top: 0;
-  padding-top: clamp(4px, 0.7dvh, 6px);
+  padding-top: 1px;
   border-top: 0;
   overflow-x: auto;
   overflow-y: hidden;
@@ -5778,12 +5671,12 @@ input:focus {
   height: auto;
   aspect-ratio: 1;
   min-width: 0;
-  padding: 5px;
-  border: 2px solid rgba(54, 67, 75, 0.12);
-  border-radius: clamp(15px, 4.2vw, 18px);
+  padding: 4px;
+  border: 1px solid rgba(47, 50, 53, 0.08);
+  border-radius: clamp(11px, 3.3vw, 14px);
   color: #fff;
-  background: var(--sprout-paper);
-  box-shadow: 0 10px 20px rgba(54, 67, 75, 0.07);
+  background: rgba(255, 255, 255, 0.64);
+  box-shadow: 0 4px 12px rgba(36, 39, 42, 0.025);
   overflow: hidden;
 }
 .app-shell .inventory-thumbnail-spacer {
@@ -5798,23 +5691,40 @@ input:focus {
   height: 100%;
   min-height: 0;
   border: 0;
-  border-radius: 14px;
+  border-radius: 10px;
   object-fit: contain;
 }
 .app-shell .inventory-thumbnail-page button.selected {
   outline: 0;
-  border-color: var(--sprout-orange);
+  border: 2px solid var(--sprout-orange);
   transform: none;
-  box-shadow: 0 13px 24px rgba(255, 122, 0, 0.17);
+  box-shadow: 0 5px 14px rgba(255, 122, 0, 0.08);
 }
 .app-shell .inventory-thumbnail-page button .inventory-quantity-badge {
   position: absolute;
   right: 4px;
   bottom: 4px;
   padding: 2px 5px;
-  background: rgba(36, 51, 59, 0.76);
-  font-size: 9px;
-  font-weight: 900;
+  color: #42464a;
+  background: rgba(255, 255, 255, 0.9);
+  font-size: 8px;
+  font-weight: 750;
+}
+.app-shell .inventory-thumbnail-page button .new-marker {
+  top: 5px;
+  right: 5px;
+  min-height: 0;
+  padding: 0;
+  border-radius: 0;
+  color: var(--sprout-orange);
+  background: transparent;
+  box-shadow: none;
+  font-size: 7px;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+}
+.app-shell .inventory-thumbnail-page button .rarity-mark {
+  display: none;
 }
 .app-shell .inventory-quantity-modal {
   max-height: calc(100dvh - var(--safe-top) - var(--safe-bottom) - 24px);

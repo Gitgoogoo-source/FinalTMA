@@ -1,4 +1,3 @@
-import { Star } from "lucide-react";
 import type { ReactNode, Ref } from "react";
 
 import { CatalogImage } from "./CatalogImage.tsx";
@@ -56,37 +55,17 @@ export function CollectionDetailShowcase({
         tabIndex={titleTabIndex}
       >
         <div className="inventory-title-copy">
-          <span className="inventory-title-eyebrow">稀有度</span>
           <h2 id={headingId}>{item.name}</h2>
+          <strong className={`inventory-title-rarity ${item.rarity}`}>
+            {rarityLabels[item.rarity]}
+          </strong>
           {newAcquisition ? (
             <strong className="detail-new-acquisition">本次新获得</strong>
           ) : null}
         </div>
-        <strong className={`inventory-title-rarity ${item.rarity}`}>
-          <Star aria-hidden="true" />
-          <span>{rarityLabels[item.rarity]}</span>
-        </strong>
       </div>
 
       <div className="inventory-hero-art">
-        <img
-          className="inventory-showcase-layer inventory-collection-halo"
-          src="/assets/inventory/showcase/orange-collection-halo.png"
-          alt=""
-          width={1024}
-          height={1024}
-          aria-hidden="true"
-          draggable={false}
-        />
-        <img
-          className="inventory-showcase-layer inventory-collection-platform"
-          src="/assets/inventory/showcase/grass-stone-platform.png"
-          alt=""
-          width={1024}
-          height={1024}
-          aria-hidden="true"
-          draggable={false}
-        />
         <CatalogImage
           key={item.template_id}
           path={item.image_detail_path}
@@ -105,13 +84,11 @@ export function CollectionDetailShowcase({
           label="进化阶段"
           value={`${item.stage} 阶`}
           tone="stage"
-          artPath="/assets/inventory/stats/evolution-stage.png"
         />
         <InventoryMetric
           label="战斗力"
           value={item.combat_power.toLocaleString("zh-CN")}
           tone="power"
-          artPath="/assets/inventory/stats/combat-power.png"
         />
       </div>
 
@@ -150,16 +127,16 @@ function InventoryMetric({
   label,
   value,
   tone,
-  artPath,
 }: {
   label: string;
   value: string;
   tone: "stage" | "power";
-  artPath: string;
 }): ReactNode {
   return (
-    <div className={`inventory-metric ${tone}`}>
-      <img src={artPath} alt="" aria-hidden="true" draggable={false} />
+    <div
+      className={`inventory-metric ${tone}`}
+      aria-label={`${label} ${value}`}
+    >
       <div className="inventory-metric-copy">
         <span>{label}</span>
         <strong>{value}</strong>
