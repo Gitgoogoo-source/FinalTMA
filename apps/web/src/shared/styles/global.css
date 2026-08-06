@@ -6844,6 +6844,16 @@ input:focus {
   background: rgba(255, 253, 250, 0.9);
   stroke-width: 2.2;
 }
+.app-shell .task-icon--calendar-sparkle .task-icon-calendar-star {
+  width: 12px;
+  height: 12px;
+  position: absolute;
+  z-index: 3;
+  top: 24px;
+  left: 20px;
+  fill: rgba(255, 253, 250, 0.96);
+  stroke-width: 2.2;
+}
 .app-shell .task-icon--grid-ten .task-icon-main {
   width: 32px;
   height: 32px;
@@ -6885,8 +6895,9 @@ input:focus {
   stroke-width: 2.1;
 }
 .app-shell .task-icon--wheel .task-icon-main {
-  width: 33px;
-  height: 33px;
+  width: 36px;
+  height: 36px;
+  clip-path: circle(42% at 50% 50%);
 }
 .app-shell .task-icon--wheel .task-icon-pointer {
   width: 11px;

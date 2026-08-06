@@ -17,6 +17,7 @@ import {
   Send,
   ShipWheel,
   ShoppingBasket,
+  Sparkle,
   Sparkles,
   Tag,
   TicketCheck,
@@ -123,6 +124,7 @@ function TaskIconArtwork({ taskCode }: { taskCode: Task["code"] }): ReactNode {
     return (
       <div className="task-icon task-icon--calendar-sparkle" aria-hidden="true">
         <CalendarDays className="task-icon-main" />
+        <Sparkle className="task-icon-calendar-star" />
         <Sparkles className="task-icon-detail" />
       </div>
     );
