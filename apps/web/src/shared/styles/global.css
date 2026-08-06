@@ -5327,13 +5327,14 @@ input:focus {
   left: 50%;
   bottom: 0;
   width: min(92%, 320px);
-  height: 114%;
+  height: 100%;
   min-height: 0;
   border: 0;
   border-radius: 0;
   object-fit: contain;
   object-position: center bottom;
-  transform: translateX(-50%);
+  transform: translateX(-50%) scale(1.16);
+  transform-origin: center bottom;
   filter: drop-shadow(0 12px 13px rgba(37, 40, 43, 0.08));
 }
 .app-shell .inventory-showcase-layer {
