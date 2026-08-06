@@ -127,6 +127,7 @@
 }
 
 .gacha-moon-result {
+  --gacha-moon-focus-item-size: min(54vw, 230px);
   max-width: 430px;
   max-height: none;
   display: grid;
@@ -173,8 +174,8 @@
 }
 
 .gacha-moon-single .gacha-moon-art {
-  width: min(76vw, 328px);
-  height: min(47dvh, 400px);
+  width: var(--gacha-moon-focus-item-size);
+  height: var(--gacha-moon-focus-item-size);
 }
 
 .gacha-moon-art .catalog-image,
@@ -231,7 +232,7 @@
 }
 
 .gacha-moon-ten {
-  --gacha-moon-item-size: min(54vw, 230px);
+  --gacha-moon-item-size: var(--gacha-moon-focus-item-size);
   --gacha-moon-item-step: calc(var(--gacha-moon-item-size) * 0.22);
   position: relative;
   z-index: 2;
@@ -431,6 +432,10 @@
 }
 
 @media (max-height: 700px) {
+  .gacha-moon-result {
+    --gacha-moon-focus-item-size: min(52vw, 212px);
+  }
+
   .gacha-moon-ritual-heading {
     top: calc(var(--safe-top) + 18px);
   }
@@ -451,14 +456,6 @@
 
   .gacha-moon-single {
     padding-top: 8px;
-  }
-
-  .gacha-moon-single .gacha-moon-art {
-    height: min(42dvh, 310px);
-  }
-
-  .gacha-moon-ten {
-    --gacha-moon-item-size: min(52vw, 212px);
   }
 
   .gacha-moon-actions .button {
