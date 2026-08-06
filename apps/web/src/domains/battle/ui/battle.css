@@ -395,7 +395,7 @@
   min-height: 122px;
   overflow: hidden;
   display: grid;
-  grid-template-columns: minmax(100px, 38%) minmax(0, 1fr) 38px;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
   align-items: stretch;
   padding: 0;
   border: 2px solid rgba(255, 255, 255, 0.92);
@@ -430,9 +430,9 @@
 }
 
 .battle-tier-list > button.selected {
-  border-color: var(--battle-tier-accent);
+  border-color: var(--battle-orange);
   box-shadow:
-    0 15px 34px color-mix(in srgb, var(--battle-tier-accent) 26%, transparent),
+    0 15px 34px color-mix(in srgb, var(--battle-orange) 26%, transparent),
     0 0 0 2px rgba(255, 255, 255, 0.9);
   transform: translateY(-1px);
 }
@@ -456,23 +456,29 @@
   min-width: 0;
   display: grid;
   align-content: center;
-  gap: 7px;
-  padding: 11px 8px 11px 12px;
+  gap: 4px;
+  padding: 8px 7px;
 }
 
-.battle-tier-title-row,
+.battle-tier-title-row {
+  min-width: 0;
+  display: grid;
+  justify-items: start;
+  gap: 3px;
+  padding-right: 26px;
+}
+
 .battle-tier-rarity-row {
   min-width: 0;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 7px;
+  gap: 4px;
 }
 
 .battle-tier-title-row > strong {
   min-width: 0;
   overflow: hidden;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 950;
   line-height: 1.1;
   text-overflow: ellipsis;
@@ -491,13 +497,16 @@
 }
 
 .battle-tier-level {
-  padding: 4px 7px;
-  font-size: 10px;
+  padding: 2px 5px;
+  font-size: 9px;
   font-weight: 950;
 }
 
 .battle-tier-level small,
-.battle-tier-rarity-name small,
+.battle-tier-rarity-name small {
+  display: none;
+}
+
 .battle-tier-economy small {
   color: var(--battle-muted);
   font-size: 8px;
@@ -505,11 +514,11 @@
 }
 
 .battle-tier-rarity-name {
-  padding: 3px 7px;
+  padding: 2px 5px;
 }
 
 .battle-tier-rarity-name strong {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 950;
 }
 
@@ -521,8 +530,8 @@
 }
 
 .battle-tier-rarity-gems svg {
-  width: 13px;
-  height: 13px;
+  width: 11px;
+  height: 11px;
   fill: currentColor;
   stroke-width: 2.2;
 }
@@ -533,8 +542,8 @@
 
 .battle-tier-economy {
   display: grid;
-  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
-  gap: 5px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 3px;
 }
 
 .battle-tier-economy > span {
@@ -543,7 +552,7 @@
   grid-template-columns: auto minmax(0, 1fr);
   align-items: baseline;
   gap: 4px;
-  padding: 5px 6px;
+  padding: 2px 5px;
   border: 1px solid rgba(54, 67, 75, 0.08);
   border-radius: 9px;
   background: rgba(255, 255, 255, 0.76);
@@ -552,34 +561,35 @@
 .battle-tier-economy strong {
   min-width: 0;
   overflow: hidden;
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 950;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .battle-tier-action {
-  align-self: center;
-  justify-self: center;
-  width: 28px;
-  height: 28px;
+  position: absolute;
+  top: 8px;
+  right: 7px;
+  width: 24px;
+  height: 24px;
   display: grid;
   place-items: center;
-  border: 1px solid rgba(54, 67, 75, 0.12);
+  border: 1px solid color-mix(in srgb, var(--battle-orange) 42%, white);
   border-radius: 50%;
-  color: var(--battle-muted);
+  color: var(--battle-orange);
   background: rgba(255, 255, 255, 0.84);
 }
 
 .battle-tier-action svg {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
 }
 
 .battle-tier-list > button.selected .battle-tier-action {
-  border-color: var(--battle-tier-accent);
+  border-color: var(--battle-orange);
   color: white;
-  background: var(--battle-tier-accent);
+  background: var(--battle-orange);
 }
 
 .battle-tier-submit.button,
