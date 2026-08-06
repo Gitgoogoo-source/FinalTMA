@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { assetsSchema, operationSummarySchema } from "../../common/models.ts";
+import { assetsSchema } from "../../common/models.ts";
 import { defineRoute } from "../../common/route.ts";
 import {
   emptyObjectSchema,
@@ -166,17 +166,6 @@ export const wheelRoutes = [
         milestone_20_claimed: z.boolean(),
       })
       .strict(),
-    errors: ["SESSION_REQUIRED", "ACCOUNT_RESTRICTED", "INTERNAL_ERROR"],
-  }),
-  defineRoute({
-    id: "wheel.recovery",
-    method: "GET",
-    path: "/api/wheel/recovery",
-    gateway: "app",
-    auth: true,
-    idempotent: false,
-    input: emptyObjectSchema,
-    output: z.object({ operations: z.array(operationSummarySchema) }).strict(),
     errors: ["SESSION_REQUIRED", "ACCOUNT_RESTRICTED", "INTERNAL_ERROR"],
   }),
   defineRoute({

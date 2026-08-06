@@ -8,9 +8,7 @@ import {
 } from "../../workflows/payment-recovery/index.ts";
 import {
   useBlockingOperationRecovery,
-  useEvolutionResultRecovery,
-  useGachaResultRecovery,
-  useWheelResultRecovery,
+  useRecoverableOperationDiscovery,
 } from "../../workflows/operation-recovery/index.ts";
 import type { GlobalDialog } from "../shell/TopAssetBar.tsx";
 
@@ -37,9 +35,7 @@ export function AppRecoveryCoordinator({
     closeDialogs();
   }, [clearTopupRequest, closeDialogs]);
   useBlockingOperationRecovery(bootstrap.data?.blocking_operations);
-  useEvolutionResultRecovery();
-  useGachaResultRecovery();
-  useWheelResultRecovery();
+  useRecoverableOperationDiscovery();
   useStarsPaymentRecovery(recoveryPayments, openPaymentRecovery);
   useNavigationIntentResume(pendingPayments.data?.orders, resumeNavigation);
   return null;

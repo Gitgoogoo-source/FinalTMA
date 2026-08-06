@@ -145,6 +145,11 @@ export function OperationRegistryProvider({
   const acknowledgedIds = useRef(new Set<string>());
   const locallyRefreshedEvolutionIds = useRef(new Set<string>());
   const active = activeId ? operations[activeId] : undefined;
+  const resultRecoveryActive = Object.values(operations).some(
+    (operation) =>
+      operation.sessionGeneration === session?.generation &&
+      acknowledgedResultRouteIds.has(operation.routeId),
+  );
   const gachaResult = useMemo(() => {
     if (active?.routeId !== "gacha.open" || active.phase !== "succeeded")
       return null;
@@ -712,9 +717,10 @@ export function OperationRegistryProvider({
         ),
       present,
       navigationLocked,
+      resultRecoveryActive,
       hydrate,
     }),
-    [hydrate, navigationLocked, operations, present, run],
+    [hydrate, navigationLocked, operations, present, resultRecoveryActive, run],
   );
 
   const dismiss = useCallback(() => {

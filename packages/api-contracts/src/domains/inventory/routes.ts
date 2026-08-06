@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { assetsSchema, operationSummarySchema } from "../../common/models.ts";
+import { assetsSchema } from "../../common/models.ts";
 import { defineRoute } from "../../common/route.ts";
 import { emptyObjectSchema, identifierSchema } from "../../common/schemas.ts";
 import {
@@ -56,17 +56,6 @@ export const inventoryRoutes = [
       "ACCOUNT_RESTRICTED",
       "INTERNAL_ERROR",
     ],
-  }),
-  defineRoute({
-    id: "inventory.evolution_recovery",
-    method: "GET",
-    path: "/api/inventory/evolution/recovery",
-    gateway: "app",
-    auth: true,
-    idempotent: false,
-    input: emptyObjectSchema,
-    output: z.object({ operations: z.array(operationSummarySchema) }).strict(),
-    errors: ["SESSION_REQUIRED", "ACCOUNT_RESTRICTED", "INTERNAL_ERROR"],
   }),
   defineRoute({
     id: "inventory.acknowledge_evolution_result",

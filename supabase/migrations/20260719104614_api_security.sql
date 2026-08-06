@@ -72,7 +72,6 @@ declare
     'gacha_acknowledge_result',
     'gacha_bootstrap',
     'gacha_open',
-    'gacha_recoverable_results',
     'identity_authenticate',
     'identity_bootstrap',
     'identity_consume_login_rate_limit',
@@ -81,7 +80,6 @@ declare
     'inventory_detail',
     'inventory_evolution_acknowledge_result',
     'inventory_evolution_preview',
-    'inventory_evolution_recoverable_results',
     'inventory_evolve',
     'inventory_list',
     'market_bootstrap',
@@ -101,6 +99,7 @@ declare
     'mint_reserve',
     'mint_submit',
     'operations_get',
+    'operations_recoverable',
     'payment_apply_refund',
     'payment_apply_success',
     'payment_begin_checkout',
@@ -129,7 +128,6 @@ declare
     'wallet_save_verified',
     'wheel_acknowledge_result',
     'wheel_get',
-    'wheel_recoverable_results',
     'wheel_spin'
   ];
 begin

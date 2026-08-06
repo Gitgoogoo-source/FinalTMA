@@ -15,11 +15,6 @@ export const gachaHandlers = {
       p_session_id: requireSession(context).session_id,
     }),
   }),
-  "gacha.recovery": async (context) => ({
-    data: await rpc("gacha_recoverable_results", {
-      p_session_id: requireSession(context).session_id,
-    }),
-  }),
   "gacha.acknowledge_result": async (context) => ({
     data: await rpc("gacha_acknowledge_result", {
       p_session_id: requireSession(context).session_id,

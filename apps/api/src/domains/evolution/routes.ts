@@ -16,11 +16,6 @@ export const evolutionHandlers = {
       p_template_id: context.input.template_id,
     }),
   }),
-  "inventory.evolution_recovery": async (context) => ({
-    data: await rpc("inventory_evolution_recoverable_results", {
-      p_session_id: requireSession(context).session_id,
-    }),
-  }),
   "inventory.acknowledge_evolution_result": async (context) => ({
     data: await rpc("inventory_evolution_acknowledge_result", {
       p_session_id: requireSession(context).session_id,

@@ -545,7 +545,7 @@ create table operations.operations (
 
 create index operations_user_created_idx on operations.operations (user_id, created_at desc);
 create index operations_pending_idx on operations.operations (created_at) where status in ('pending', 'unknown');
-create index operations_result_recovery_idx on operations.operations (user_id, use_case, created_at)
+create index operations_result_recovery_idx on operations.operations (user_id, created_at, id)
 where use_case in ('gacha.open', 'wheel.spin', 'inventory.evolve') and result_acknowledged_at is null;
 
 create table operations.webhook_events (
@@ -717,6 +717,27 @@ begin
   end if;
   v_result := operations.operation_json(v_operation);
   return v_result;
+end;
+$$;
+
+create or replace function api.operations_recoverable(p_session_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_user_id uuid := api.session_user(p_session_id);
+begin
+  return jsonb_build_object(
+    'operations', coalesce((
+      select jsonb_agg(operations.operation_json(o) order by o.created_at, o.id)
+      from operations.operations o
+      where o.user_id = v_user_id
+        and o.use_case in ('gacha.open', 'wheel.spin', 'inventory.evolve')
+        and o.result_acknowledged_at is null
+    ), '[]'::jsonb)
+  );
 end;
 $$;
 
@@ -1309,27 +1330,6 @@ begin
 end;
 $$;
 
-create or replace function api.gacha_recoverable_results(p_session_id uuid)
-returns jsonb
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-  v_user_id uuid := api.session_user(p_session_id);
-begin
-  return jsonb_build_object(
-    'operations', coalesce((
-      select jsonb_agg(operations.operation_json(o) order by o.created_at)
-      from operations.operations o
-      where o.user_id = v_user_id
-        and o.use_case = 'gacha.open'
-        and o.result_acknowledged_at is null
-    ), '[]'::jsonb)
-  );
-end;
-$$;
-
 create or replace function api.gacha_acknowledge_result(
   p_session_id uuid,
   p_operation_id uuid
@@ -1752,27 +1752,6 @@ begin
 end;
 $$;
 
-create or replace function api.wheel_recoverable_results(p_session_id uuid)
-returns jsonb
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-  v_user_id uuid := api.session_user(p_session_id);
-begin
-  return jsonb_build_object(
-    'operations', coalesce((
-      select jsonb_agg(operations.operation_json(o) order by o.created_at)
-      from operations.operations o
-      where o.user_id = v_user_id
-        and o.use_case = 'wheel.spin'
-        and o.result_acknowledged_at is null
-    ), '[]'::jsonb)
-  );
-end;
-$$;
-
 create or replace function api.wheel_acknowledge_result(
   p_session_id uuid,
   p_operation_id uuid
@@ -2059,27 +2038,6 @@ begin
       'guaranteed_this_attempt', v_failures + 1 >= v_guarantee
     ) end,
     'eligibility', jsonb_build_object('eligible', v_reason is null, 'reason', v_reason)
-  );
-end;
-$$;
-
-create or replace function api.inventory_evolution_recoverable_results(p_session_id uuid)
-returns jsonb
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-  v_user_id uuid := api.session_user(p_session_id);
-begin
-  return jsonb_build_object(
-    'operations', coalesce((
-      select jsonb_agg(operations.operation_json(o) order by o.created_at)
-      from operations.operations o
-      where o.user_id = v_user_id
-        and o.use_case = 'inventory.evolve'
-        and o.result_acknowledged_at is null
-    ), '[]'::jsonb)
   );
 end;
 $$;

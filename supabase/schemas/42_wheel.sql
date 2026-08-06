@@ -43,27 +43,6 @@ begin
 end;
 $$;
 
-create or replace function api.wheel_recoverable_results(p_session_id uuid)
-returns jsonb
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-  v_user_id uuid := api.session_user(p_session_id);
-begin
-  return jsonb_build_object(
-    'operations', coalesce((
-      select jsonb_agg(operations.operation_json(o) order by o.created_at)
-      from operations.operations o
-      where o.user_id = v_user_id
-        and o.use_case = 'wheel.spin'
-        and o.result_acknowledged_at is null
-    ), '[]'::jsonb)
-  );
-end;
-$$;
-
 create or replace function api.wheel_acknowledge_result(
   p_session_id uuid,
   p_operation_id uuid

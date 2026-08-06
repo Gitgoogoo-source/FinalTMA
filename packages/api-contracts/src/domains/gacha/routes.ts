@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { assetsSchema, operationSummarySchema } from "../../common/models.ts";
+import { assetsSchema } from "../../common/models.ts";
 import { defineRoute } from "../../common/route.ts";
 import {
   boxTierSchema,
@@ -85,17 +85,6 @@ export const gachaRoutes = [
         rules_complete: z.boolean(),
       })
       .strict(),
-    errors: ["SESSION_REQUIRED", "ACCOUNT_RESTRICTED", "INTERNAL_ERROR"],
-  }),
-  defineRoute({
-    id: "gacha.recovery",
-    method: "GET",
-    path: "/api/gacha/recovery",
-    gateway: "app",
-    auth: true,
-    idempotent: false,
-    input: emptyObjectSchema,
-    output: z.object({ operations: z.array(operationSummarySchema) }).strict(),
     errors: ["SESSION_REQUIRED", "ACCOUNT_RESTRICTED", "INTERNAL_ERROR"],
   }),
   defineRoute({

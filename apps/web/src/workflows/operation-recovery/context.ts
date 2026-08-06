@@ -34,6 +34,7 @@ export type OperationRegistryValue = {
   isBlocked(routeId: RecoverableRouteId): boolean;
   present(routeId: RecoverableRouteId): boolean;
   navigationLocked: boolean;
+  resultRecoveryActive: boolean;
   hydrate(operations: readonly RecoverableOperationSummary[]): void;
 };
 

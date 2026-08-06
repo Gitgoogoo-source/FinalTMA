@@ -156,6 +156,7 @@ def main() -> None:
     assert_nonempty_domains(API_ROOT / "domains")
     verify_web_boundaries()
     verify_evolution_refresh_semantics()
+    verify_operation_recovery_discovery()
     verify_game_page_boundary()
     verify_battle_legacy_removal()
     verify_battle_terminal_refresh_semantics()
@@ -326,6 +327,156 @@ def verify_evolution_refresh_semantics() -> None:
     if not nonpersistent_order or not persistent_order:
         raise SystemExit(
             "Evolution fallback refresh must succeed before the result layer is removed"
+        )
+
+
+def verify_operation_recovery_discovery() -> None:
+    discovery_path = (
+        WEB_ROOT
+        / "workflows/operation-recovery/useRecoverableOperationDiscovery.ts"
+    )
+    retired_paths = (
+        WEB_ROOT
+        / "workflows/operation-recovery/usePersistentOperationDiscovery.ts",
+        WEB_ROOT
+        / "workflows/operation-recovery/useEvolutionResultRecovery.ts",
+        WEB_ROOT
+        / "workflows/operation-recovery/useGachaResultRecovery.ts",
+    )
+    remaining_retired_paths = [
+        relative(path) for path in retired_paths if path.exists()
+    ]
+    if remaining_retired_paths:
+        raise SystemExit(
+            "Per-domain operation discovery hooks must remain deleted: "
+            f"{remaining_retired_paths}"
+        )
+    if not discovery_path.is_file():
+        raise SystemExit("Unified operation discovery hook is missing")
+
+    discovery = discovery_path.read_text(encoding="utf-8")
+    discovery_terms = (
+        'apiRequest(\n          "operations.recoverable"',
+        "const discoveryDelays = [1_000, 2_000, 3_000, 5_000, 30_000]",
+        "document.visibilityState === \"visible\"",
+        "subscribeTelegramActivity(activated, deactivated)",
+        'window.addEventListener("online", connected)',
+        'window.addEventListener("offline", disconnected)',
+        "{ signal: controller.signal }",
+        "inFlight?.abort()",
+        "resultRecoveryActive",
+        "if (recovered.length > 0) return;",
+    )
+    missing_discovery_terms = [
+        term for term in discovery_terms if term not in discovery
+    ]
+    if missing_discovery_terms:
+        raise SystemExit(
+            "Unified operation discovery lifecycle is incomplete: "
+            f"{missing_discovery_terms}"
+        )
+
+    coordinator = (
+        WEB_ROOT / "app/recovery/AppRecoveryCoordinator.tsx"
+    ).read_text(encoding="utf-8")
+    context = (
+        WEB_ROOT / "workflows/operation-recovery/context.ts"
+    ).read_text(encoding="utf-8")
+    provider = OPERATION_REGISTRY_PROVIDER.read_text(encoding="utf-8")
+    if (
+        "useRecoverableOperationDiscovery();" not in coordinator
+        or "resultRecoveryActive: boolean;" not in context
+        or "acknowledgedResultRouteIds.has(operation.routeId)" not in provider
+        or "resultRecoveryActive," not in provider
+    ):
+        raise SystemExit(
+            "Operation discovery must pause while the current result queue is active"
+        )
+
+    contract = (
+        CONTRACT_ROOT / "domains/operations/routes.ts"
+    ).read_text(encoding="utf-8")
+    if (
+        'id: "operations.recoverable"' not in contract
+        or 'path: "/api/operations/recoverable"' not in contract
+        or contract.index('path: "/api/operations/recoverable"')
+        > contract.index('path: "/api/operations/:operation_id"')
+    ):
+        raise SystemExit(
+            "Static recoverable operation route must precede the operation-id route"
+        )
+    handlers = (
+        API_ROOT / "workflows/operation-recovery/routes.ts"
+    ).read_text(encoding="utf-8")
+    schema = (ROOT / "supabase/schemas/30_operations.sql").read_text(
+        encoding="utf-8"
+    )
+    backend_terms = (
+        '"operations.recoverable": async (context)',
+        'rpc("operations_recoverable"',
+        "create or replace function api.operations_recoverable(p_session_id uuid)",
+        "o.use_case in ('gacha.open', 'wheel.spin', 'inventory.evolve')",
+        "order by o.created_at, o.id",
+    )
+    backend_source = handlers + schema
+    missing_backend_terms = [
+        term for term in backend_terms if term not in backend_source
+    ]
+    if missing_backend_terms:
+        raise SystemExit(
+            "Unified operation discovery backend is incomplete: "
+            f"{missing_backend_terms}"
+        )
+
+    legacy_source = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in (
+            API_ROOT / "domains/gacha/routes.ts",
+            API_ROOT / "domains/wheel/routes.ts",
+            API_ROOT / "domains/evolution/routes.ts",
+            CONTRACT_ROOT / "domains/gacha/routes.ts",
+            CONTRACT_ROOT / "domains/wheel/routes.ts",
+            CONTRACT_ROOT / "domains/inventory/routes.ts",
+            ROOT / "supabase/schemas/40_gacha.sql",
+            ROOT / "supabase/schemas/42_wheel.sql",
+            ROOT / "supabase/schemas/43_evolution.sql",
+        )
+    )
+    legacy_terms = (
+        '"gacha.recovery"',
+        '"wheel.recovery"',
+        '"inventory.evolution_recovery"',
+        "gacha_recoverable_results",
+        "wheel_recoverable_results",
+        "inventory_evolution_recoverable_results",
+    )
+    remaining_legacy_terms = [
+        term for term in legacy_terms if term in legacy_source
+    ]
+    if remaining_legacy_terms:
+        raise SystemExit(
+            "Legacy per-domain recovery entry points remain: "
+            f"{remaining_legacy_terms}"
+        )
+
+    recovery_document = (
+        ROOT / "docs/architecture/operation-recovery.md"
+    ).read_text(encoding="utf-8")
+    recovery_adr = (
+        ROOT / "docs/architecture/adr/ADR-005-operation-recovery.md"
+    ).read_text(encoding="utf-8")
+    lifecycle_adr = (
+        ROOT / "docs/architecture/adr/ADR-013-session-page-lifecycle.md"
+    ).read_text(encoding="utf-8")
+    if any(
+        "/api/operations/recoverable" not in document
+        for document in (recovery_document, recovery_adr, lifecycle_adr)
+    ) or any(
+        term not in recovery_document + lifecycle_adr
+        for term in ("deactivated", "offline", "中止", "队列清空", "立即追赶")
+    ):
+        raise SystemExit(
+            "Operation discovery lifecycle documentation is incomplete"
         )
 
 
