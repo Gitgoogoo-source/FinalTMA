@@ -31,8 +31,23 @@ const rarityLabels: Record<Rarity, string> = {
 };
 const tenDrawRankPositions = [4, 5, 3, 6, 2, 7, 1, 8, 0, 9] as const;
 const initialCarouselIndex = tenDrawRankPositions[0];
+const carouselLayerScales = [1, 0.68, 0.52, 0.42, 0.34, 0.28] as const;
+const carouselLayerOpacities = [1, 0.86, 0.64, 0.44, 0.28, 0.16] as const;
 const RITUAL_BACKGROUND =
   "/assets/gacha/ritual/v1/moonlit-prism-garden-b1291c69.webp";
+
+function interpolateCarouselLayer(
+  distance: number,
+  values: readonly number[],
+): number {
+  const boundedDistance = Math.min(distance, values.length - 1);
+  const lowerIndex = Math.floor(boundedDistance);
+  const upperIndex = Math.min(lowerIndex + 1, values.length - 1);
+  const progress = boundedDistance - lowerIndex;
+  return (
+    values[lowerIndex]! + (values[upperIndex]! - values[lowerIndex]!) * progress
+  );
+}
 
 export function GachaResultDialog({
   result,
@@ -141,7 +156,17 @@ function TenDrawResults({ results }: { results: ResultItem[] }): ReactNode {
       const normalizedDistance = distance / Math.max(item.offsetWidth, 1);
       item.style.setProperty(
         "--carousel-scale",
-        Math.max(0.56, 1 - normalizedDistance * 0.28).toFixed(3),
+        interpolateCarouselLayer(
+          normalizedDistance,
+          carouselLayerScales,
+        ).toFixed(3),
+      );
+      item.style.setProperty(
+        "--carousel-opacity",
+        interpolateCarouselLayer(
+          normalizedDistance,
+          carouselLayerOpacities,
+        ).toFixed(3),
       );
       item.style.zIndex = String(100 - Math.round(normalizedDistance * 10));
       if (distance < nearestDistance) {
@@ -231,13 +256,15 @@ function TenDrawResults({ results }: { results: ResultItem[] }): ReactNode {
             className={`rarity-${item.rarity}`}
             style={
               {
-                "--carousel-scale":
-                  index === initialCarouselIndex
-                    ? 1
-                    : Math.max(
-                        0.56,
-                        1 - Math.abs(index - initialCarouselIndex) * 0.28,
-                      ),
+                "--carousel-scale": interpolateCarouselLayer(
+                  Math.abs(index - initialCarouselIndex),
+                  carouselLayerScales,
+                ),
+                "--carousel-opacity": interpolateCarouselLayer(
+                  Math.abs(index - initialCarouselIndex),
+                  carouselLayerOpacities,
+                ),
+                zIndex: 100 - Math.abs(index - initialCarouselIndex) * 10,
               } as CSSProperties
             }
             aria-label={`${rarityLabels[item.rarity]}藏品：${item.name}，NEW`}
