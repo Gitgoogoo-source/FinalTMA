@@ -1,7 +1,6 @@
 import { useEffect, type ReactNode } from "react";
 
 import { selectionHaptic } from "../../platform/telegram/index.ts";
-import { CatalogImage } from "../../shared/ui/index.tsx";
 
 export type GachaHatchTier = "normal" | "rare" | "legendary";
 
@@ -9,11 +8,6 @@ const RITUAL_CLOSED_BACKGROUND =
   "/assets/gacha/ritual/v1/moonlit-prism-cocoon-96bc44bb.webp";
 const RITUAL_OPEN_BACKGROUND =
   "/assets/gacha/ritual/v1/moonlit-prism-garden-b1291c69.webp";
-const boxArtPaths: Record<GachaHatchTier, string> = {
-  normal: "/assets/boxes/normal.webp",
-  rare: "/assets/boxes/rare.webp",
-  legendary: "/assets/boxes/legendary.webp",
-};
 
 export function GachaHatchAnimation({
   tier,
@@ -49,16 +43,6 @@ export function GachaHatchAnimation({
         <small>月下灵契</small>
         <h2>灵光正在回应</h2>
       </header>
-
-      <div className="gacha-moon-ritual-box" aria-hidden="true">
-        <CatalogImage
-          path={boxArtPaths[tier]}
-          alt=""
-          variant="detail"
-          loading="eager"
-          fetchPriority="high"
-        />
-      </div>
 
       <p className="gacha-moon-ritual-copy" aria-hidden="true">
         静候灵契显现
