@@ -15,6 +15,14 @@
   color: var(--battle-ink);
 }
 
+.game-page:has(> .battle-root[data-battle-page-state="home"]) {
+  background-color: #fffdfa;
+  background-image: url("/assets/battle/ui/battle-home-background-36676f30a367.webp");
+  background-repeat: no-repeat;
+  background-position: center top;
+  background-size: 100% auto;
+}
+
 .battle-root button:focus-visible,
 .battle-root input:focus-visible,
 .battle-sheet-backdrop button:focus-visible {
