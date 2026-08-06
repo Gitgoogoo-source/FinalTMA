@@ -1,12 +1,11 @@
-import { LoaderCircle, RotateCw } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
-import { Button } from "../shared/ui/index.tsx";
 import { retryRecoveredBootstrap } from "../platform/api/client.ts";
 import { useSession } from "../platform/session/store.ts";
 import { useBootstrap } from "../workflows/session-bootstrap/index.ts";
 import { AccountGate } from "./guards/AccountGate.tsx";
 import { AppRouter } from "./router/AppRouter.tsx";
+import { StartupScreen } from "./StartupScreen.tsx";
 
 export function App(): ReactNode {
   const bootstrap = useBootstrap();
@@ -15,72 +14,55 @@ export function App(): ReactNode {
     return null;
   if (session?.recovering)
     return (
-      <main className="startup">
-        <div className="brand-orbit">
-          <i />
-          <strong>PP</strong>
-        </div>
-        <h1>PokePets</h1>
-        <p>正在恢复会话并读取真实状态</p>
-        <LoaderCircle className="spin" />
-      </main>
+      <StartupScreen
+        title="正在找回冒险"
+        message="请稍候，伙伴们正在重新集合"
+      />
     );
   if (session?.entryHandoffState === "pending" && bootstrap.phase === "ready")
     return (
-      <main className="startup">
-        <div className="brand-orbit">
-          <i />
-          <strong>PP</strong>
-        </div>
-        <h1>邀请关系确认中</h1>
-        <p>正在恢复原邀请绑定结果</p>
-        <LoaderCircle className="spin" />
-      </main>
+      <StartupScreen
+        title="正在确认同行关系"
+        message="请稍候，冒险伙伴即将会合"
+      />
     );
   if (session?.bootstrapFailed) return <RecoveredBootstrapFailure />;
   if (!bootstrap.failed && bootstrap.phase !== "ready")
     return (
-      <main className="startup">
-        <div className="brand-orbit">
-          <i />
-          <strong>PP</strong>
-        </div>
-        <h1>PokePets</h1>
-        <p>{bootstrap.message}</p>
-        <LoaderCircle className="spin" />
-      </main>
+      <StartupScreen
+        title={
+          bootstrap.phase === "settling_referral"
+            ? "正在确认同行关系"
+            : bootstrap.phase === "loading_bootstrap"
+              ? "正在准备冒险"
+              : "正在进入游戏"
+        }
+        message="请稍候，冒险正在苏醒"
+      />
     );
   if (bootstrap.failed)
     return (
-      <main className="startup failed">
-        <div className="brand-orbit">
-          <strong>!</strong>
-        </div>
-        <h1>
-          {bootstrap.phase === "bootstrap_failed"
-            ? "数据加载失败"
+      <StartupScreen
+        failed
+        title={
+          bootstrap.phase === "bootstrap_failed"
+            ? "冒险准备失败"
             : bootstrap.phase === "settling_referral"
-              ? "邀请关系确认中"
-              : "无法进入游戏"}
-        </h1>
-        <p>{bootstrap.message}</p>
-        {bootstrap.canRetry ? (
-          <Button onClick={bootstrap.retry} disabled={!bootstrap.canRetry}>
-            <RotateCw />
-            {bootstrap.retryLabel}
-          </Button>
-        ) : null}
-      </main>
+              ? "同行关系尚未确认"
+              : "暂时无法进入游戏"
+        }
+        message={bootstrap.message}
+        retryLabel={bootstrap.canRetry ? bootstrap.retryLabel : undefined}
+        onRetry={bootstrap.canRetry ? bootstrap.retry : undefined}
+      />
     );
   if (!session)
     return (
-      <main className="startup failed">
-        <div className="brand-orbit">
-          <strong>!</strong>
-        </div>
-        <h1>会话已失效</h1>
-        <p>请重新从 Telegram 打开 Mini App</p>
-      </main>
+      <StartupScreen
+        failed
+        title="登录状态已失效"
+        message="请重新从 Telegram 打开游戏"
+      />
     );
   return (
     <AccountGate restricted={false}>
@@ -104,24 +86,18 @@ function EntryNotice({ message }: { message: string }): ReactNode {
 function RecoveredBootstrapFailure(): ReactNode {
   const [submitting, setSubmitting] = useState(false);
   return (
-    <main className="startup failed">
-      <div className="brand-orbit">
-        <strong>!</strong>
-      </div>
-      <h1>数据加载失败</h1>
-      <p>数据加载失败，请重试。</p>
-      <Button
-        disabled={submitting}
-        onClick={() => {
-          setSubmitting(true);
-          void retryRecoveredBootstrap()
-            .catch(() => undefined)
-            .finally(() => setSubmitting(false));
-        }}
-      >
-        <RotateCw />
-        重新尝试
-      </Button>
-    </main>
+    <StartupScreen
+      failed
+      title="冒险准备失败"
+      message="暂时没能准备好，请重新尝试。"
+      retryLabel="重新尝试"
+      retryDisabled={submitting}
+      onRetry={() => {
+        setSubmitting(true);
+        void retryRecoveredBootstrap()
+          .catch(() => undefined)
+          .finally(() => setSubmitting(false));
+      }}
+    />
   );
 }
