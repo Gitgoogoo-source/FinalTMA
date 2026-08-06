@@ -364,7 +364,7 @@ def verify_operation_recovery_discovery() -> None:
         'window.addEventListener("offline", disconnected)',
         "{ signal: controller.signal }",
         "inFlight?.abort()",
-        "resultRecoveryActive",
+        "recoveryQueueActive",
         "if (recovered.length > 0) return;",
     )
     missing_discovery_terms = [
@@ -385,9 +385,11 @@ def verify_operation_recovery_discovery() -> None:
     provider = OPERATION_REGISTRY_PROVIDER.read_text(encoding="utf-8")
     if (
         "useRecoverableOperationDiscovery();" not in coordinator
-        or "resultRecoveryActive: boolean;" not in context
-        or "acknowledgedResultRouteIds.has(operation.routeId)" not in provider
-        or "resultRecoveryActive," not in provider
+        or "recoveryQueueActive: boolean;" not in context
+        or "wheelPresentationEpoch: number;" not in context
+        or "serverAcknowledgementRouteIds.has(operation.routeId)" not in provider
+        or 'operation.routeId === "wheel.spin"' not in provider
+        or "recoveryQueueActive," not in provider
     ):
         raise SystemExit(
             "Operation discovery must pause while the current result queue is active"
@@ -415,7 +417,8 @@ def verify_operation_recovery_discovery() -> None:
         '"operations.recoverable": async (context)',
         'rpc("operations_recoverable"',
         "create or replace function api.operations_recoverable(p_session_id uuid)",
-        "o.use_case in ('wheel.spin', 'inventory.evolve')",
+        "o.use_case = 'wheel.spin' and o.status in ('pending', 'unknown')",
+        "o.use_case = 'inventory.evolve' and o.result_acknowledged_at is null",
         "order by o.created_at, o.id",
     )
     backend_source = handlers + schema
@@ -459,25 +462,60 @@ def verify_operation_recovery_discovery() -> None:
             f"{remaining_legacy_terms}"
         )
 
-    removed_gacha_acknowledgement = (
+    removed_presentation_acknowledgement = (
         '"gacha.acknowledge_result"',
         "gacha_acknowledge_result",
         "/api/gacha/results/:operation_id/acknowledge",
+        '"wheel.acknowledge_result"',
+        "wheel_acknowledge_result",
+        "/api/wheel/results/:operation_id/acknowledge",
     )
-    remaining_gacha_acknowledgement = [
-        term for term in removed_gacha_acknowledgement if term in legacy_source
+    acknowledgement_source = legacy_source + provider + "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in (
+            ROOT / "packages/api-contracts/openapi/openapi.json",
+            ROOT / "supabase/migrations/20260719104533_baseline.sql",
+            ROOT / "supabase/migrations/20260719104614_api_security.sql",
+        )
+    )
+    remaining_presentation_acknowledgement = [
+        term
+        for term in removed_presentation_acknowledgement
+        if term in acknowledgement_source
     ]
-    if remaining_gacha_acknowledgement:
+    if remaining_presentation_acknowledgement:
         raise SystemExit(
-            "Gacha result presentation cannot retain server acknowledgement: "
-            f"{remaining_gacha_acknowledgement}"
+            "Gacha and wheel result presentation cannot retain server acknowledgement: "
+            f"{remaining_presentation_acknowledgement}"
         )
     if (
         'operation.use_case === "gacha.open"' not in provider
-        or "discardGachaPresentation" not in provider
+        or 'operation.use_case === "wheel.spin"' not in provider
+        or "discardTransientPresentations" not in provider
+        or "terminalPresentationAllowed: false" not in provider
+        or "needsWheelRefreshAfterLeave" not in provider
+        or "wheelPresentationEpoch" not in provider
+        or "onConfirm={() => remove(active.id)}" not in provider
     ):
         raise SystemExit(
-            "Gacha terminal results must be discarded instead of restored"
+            "Gacha and wheel terminal results must be current-foreground presentation only"
+        )
+
+    identity_schema = (ROOT / "supabase/schemas/10_identity.sql").read_text(
+        encoding="utf-8"
+    )
+    jobs_schema = (ROOT / "supabase/schemas/95_jobs.sql").read_text(
+        encoding="utf-8"
+    )
+    if (
+        "o.use_case = 'inventory.evolve'" not in identity_schema
+        or "o.use_case in ('wheel.spin', 'inventory.evolve')" in identity_schema
+        or "use_case = 'inventory.evolve' and result_acknowledged_at is null"
+        not in jobs_schema
+        or "use_case in ('wheel.spin', 'inventory.evolve')" in jobs_schema
+    ):
+        raise SystemExit(
+            "Wheel terminal results must not enter bootstrap blocking or acknowledgement retention"
         )
 
     recovery_document = (

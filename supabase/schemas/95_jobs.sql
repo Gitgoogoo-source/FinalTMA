@@ -75,7 +75,7 @@ begin
   elsif p_job_name = 'cleanup-idempotency' then
     delete from operations.operations where id in (
       select id from operations.operations where created_at < now() - interval '30 days' and status in ('succeeded', 'failed')
-        and not (use_case in ('wheel.spin', 'inventory.evolve') and result_acknowledged_at is null)
+        and not (use_case = 'inventory.evolve' and result_acknowledged_at is null)
         and use_case not like 'battle.%'
         and not exists (select 1 from payments.orders p where p.operation_id = operations.operations.id and p.status in ('pending', 'processing', 'paid'))
         and not exists (select 1 from onchain.mints m where m.operation_id = operations.operations.id and m.status in ('reserved', 'submitted', 'unknown'))

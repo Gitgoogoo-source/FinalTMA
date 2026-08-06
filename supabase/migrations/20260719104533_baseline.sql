@@ -454,7 +454,7 @@ begin
         and (
         o.status in ('pending', 'unknown')
         or (
-          o.use_case in ('wheel.spin', 'inventory.evolve')
+          o.use_case = 'inventory.evolve'
           and o.status in ('succeeded', 'failed')
           and o.result_acknowledged_at is null
         )
@@ -548,7 +548,8 @@ create table operations.operations (
 create index operations_user_created_idx on operations.operations (user_id, created_at desc);
 create index operations_pending_idx on operations.operations (created_at) where status in ('pending', 'unknown');
 create index operations_result_recovery_idx on operations.operations (user_id, created_at, id)
-where use_case in ('wheel.spin', 'inventory.evolve') and result_acknowledged_at is null;
+where (use_case = 'wheel.spin' and status in ('pending', 'unknown'))
+   or (use_case = 'inventory.evolve' and result_acknowledged_at is null);
 
 create table operations.webhook_events (
   provider text not null,
@@ -736,8 +737,10 @@ begin
       select jsonb_agg(operations.operation_json(o) order by o.created_at, o.id)
       from operations.operations o
       where o.user_id = v_user_id
-        and o.use_case in ('wheel.spin', 'inventory.evolve')
-        and o.result_acknowledged_at is null
+        and (
+          (o.use_case = 'wheel.spin' and o.status in ('pending', 'unknown'))
+          or (o.use_case = 'inventory.evolve' and o.result_acknowledged_at is null)
+        )
     ), '[]'::jsonb)
   );
 end;
@@ -1712,44 +1715,6 @@ begin
     'ten_cost', 180,
     'milestone_10_claimed', v_count >= 10,
     'milestone_20_claimed', v_count >= 20
-  );
-end;
-$$;
-
-create or replace function api.wheel_acknowledge_result(
-  p_session_id uuid,
-  p_operation_id uuid
-)
-returns jsonb
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-  v_user_id uuid := api.session_user(p_session_id);
-  v_operation operations.operations%rowtype;
-begin
-  select * into v_operation
-  from operations.operations o
-  where o.id = p_operation_id
-    and o.user_id = v_user_id
-    and o.use_case = 'wheel.spin'
-  for update;
-  if v_operation.id is null then
-    perform api.raise_business_error('OPERATION_NOT_FOUND', '转盘操作记录不存在');
-  end if;
-  if v_operation.status not in ('succeeded', 'failed') then
-    perform api.raise_business_error('OPERATION_NOT_ACKNOWLEDGEABLE', '转盘结果尚未确定');
-  end if;
-  if v_operation.result_acknowledged_at is null then
-    update operations.operations
-    set result_acknowledged_at = now(), updated_at = now()
-    where id = p_operation_id
-    returning * into v_operation;
-  end if;
-  return jsonb_build_object(
-    'operation_id', v_operation.id,
-    'acknowledged_at', v_operation.result_acknowledged_at
   );
 end;
 $$;
@@ -10535,7 +10500,7 @@ begin
   elsif p_job_name = 'cleanup-idempotency' then
     delete from operations.operations where id in (
       select id from operations.operations where created_at < now() - interval '30 days' and status in ('succeeded', 'failed')
-        and not (use_case in ('wheel.spin', 'inventory.evolve') and result_acknowledged_at is null)
+        and not (use_case = 'inventory.evolve' and result_acknowledged_at is null)
         and use_case not like 'battle.%'
         and not exists (select 1 from payments.orders p where p.operation_id = operations.operations.id and p.status in ('pending', 'processing', 'paid'))
         and not exists (select 1 from onchain.mints m where m.operation_id = operations.operations.id and m.status in ('reserved', 'submitted', 'unknown'))

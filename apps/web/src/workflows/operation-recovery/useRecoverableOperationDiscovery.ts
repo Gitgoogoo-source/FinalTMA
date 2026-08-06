@@ -17,14 +17,14 @@ const discoveryDelays = [1_000, 2_000, 3_000, 5_000, 30_000] as const;
 export function useRecoverableOperationDiscovery(): void {
   const session = useSession();
   const surfaceActive = useRecoverySurfaceActive();
-  const { hydrate, resultRecoveryActive } = useOperationRegistry();
+  const { hydrate, recoveryQueueActive } = useOperationRegistry();
   const generation = session?.generation;
   const enabled = Boolean(
     generation &&
     session.accountStatus === "normal" &&
     session.entryHandoffState === "complete" &&
     surfaceActive &&
-    !resultRecoveryActive,
+    !recoveryQueueActive,
   );
 
   useEffect(() => {

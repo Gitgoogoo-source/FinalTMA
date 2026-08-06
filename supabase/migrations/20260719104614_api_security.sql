@@ -125,7 +125,6 @@ declare
     'wallet_disconnect',
     'wallet_get',
     'wallet_save_verified',
-    'wheel_acknowledge_result',
     'wheel_get',
     'wheel_spin'
   ];

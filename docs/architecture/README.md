@@ -58,7 +58,7 @@ TMA 首次同步加载只覆盖应用壳、会话与账号门禁及默认开盒�
 
 ## 操作恢复
 
-前端内存操作阶段固定为 `confirming → submitting → pending/unknown → succeeded/failed`；数据库持久状态为 `pending`、`unknown`、`succeeded`、`failed`。随机结果和资产结果只生成一次，`unknown` 只查询原 `operation_id`。转盘和进化晚于首屏提交的记录只由 `GET /api/operations/recoverable` 一次发现；发现绑定可见、Telegram 激活和在线状态，结果队列存在时暂停，清空后立即追赶。开盒结果只在当前前台运行期展示，确认与导航按钮不发送结果 API；隐藏、刷新或重新进入后不恢复旧结果，只刷新权威页面状态。开盒在当前运行期从提交前反馈到结果弹窗关闭持续锁定领域操作和底部导航；转盘持续锁定至结果回执完成；进化在未决阶段锁定新提交和底部导航，终态由专用覆盖弹窗处理。Battle 创建、随机匹配、取消、接受和行动恢复原 operation 后必须读取 viewer-specific room snapshot；heartbeat/offline 只在当前 lease 内重试，生命周期结束后以权威快照申请下一版本 lease。普通 heartbeat/offline 结果只应用 room，确认退款终态才按路由契约刷新 Battle、顶部资产和 inventory。Battle 终局快照到达后立即执行三域回正，结果覆盖层等待动作表现队列清空，按钮只在内存返回首页；其他领域既有确认回执保持各自规则。
+前端内存操作阶段固定为 `confirming → submitting → pending/unknown → succeeded/failed`；数据库持久状态为 `pending`、`unknown`、`succeeded`、`failed`。随机结果和资产结果只生成一次，`unknown` 只查询原 `operation_id`。转盘未决和进化规定状态只由 `GET /api/operations/recoverable` 一次发现；发现绑定可见、Telegram 激活和在线状态，恢复队列存在时暂停，清空后立即追赶。开盒和转盘结果只在取得它们的当前前台运行期展示，“确定”只处理 Web 内存展示，不发送结果 API、RPC、原操作查询或刷新；隐藏、刷新或重新进入后不恢复旧结果，只刷新权威页面状态。转盘恢复注入的 `pending`、`unknown` 锁定新转动并只查询原操作，取得终态后静默回正并移除。进化在未决阶段锁定新提交和底部导航，终态由专用覆盖弹窗和服务端回执处理。Battle 创建、随机匹配、取消、接受和行动恢复原 operation 后必须读取 viewer-specific room snapshot；heartbeat/offline 只在当前 lease 内重试，生命周期结束后以权威快照申请下一版本 lease。普通 heartbeat/offline 结果只应用 room，确认退款终态才按路由契约刷新 Battle、顶部资产和 inventory。Battle 终局快照到达后立即执行三域回正，结果覆盖层等待动作表现队列清空，按钮只在内存返回首页；其他领域既有确认回执保持各自规则。
 
 ## 生成物
 

@@ -76,6 +76,7 @@ type RegisteredOperation = {
   input: unknown;
   presentation: OperationPresentation | null;
   animationTier: GachaHatchTier | null;
+  terminalPresentationAllowed: boolean;
 };
 
 type EvolutionResultAction = "inventory" | "album" | "acknowledge";
@@ -86,8 +87,7 @@ const unresolvedPhases = new Set<OperationPhase>([
   "pending",
   "unknown",
 ]);
-const acknowledgedResultRouteIds = new Set<RecoverableRouteId>([
-  "wheel.spin",
+const serverAcknowledgementRouteIds = new Set<RecoverableRouteId>([
   "inventory.evolve",
 ]);
 const navigationLockedThroughResultRouteIds = new Set<RecoverableRouteId>([
@@ -96,7 +96,8 @@ const navigationLockedThroughResultRouteIds = new Set<RecoverableRouteId>([
   "wheel.spin",
 ]);
 const autoPollingRouteIds = new Set<RecoverableRouteId>([
-  ...acknowledgedResultRouteIds,
+  "wheel.spin",
+  ...serverAcknowledgementRouteIds,
   "gacha.open",
   "inventory.decompose",
 ]);
@@ -151,15 +152,19 @@ export function OperationRegistryProvider({
   const [revealedGachaAnimationId, setRevealedGachaAnimationId] = useState<
     string | null
   >(null);
+  const [wheelPresentationEpoch, setWheelPresentationEpoch] = useState(0);
   const recoveringIds = useRef(new Set<string>());
   const acknowledgedIds = useRef(new Set<string>());
   const locallyRefreshedEvolutionIds = useRef(new Set<string>());
   const needsGachaRefreshAfterLeave = useRef(false);
+  const needsWheelRefreshAfterLeave = useRef(false);
   const active = activeId ? operations[activeId] : undefined;
-  const resultRecoveryActive = Object.values(operations).some(
+  const recoveryQueueActive = Object.values(operations).some(
     (operation) =>
       operation.sessionGeneration === session?.generation &&
-      acknowledgedResultRouteIds.has(operation.routeId),
+      (serverAcknowledgementRouteIds.has(operation.routeId) ||
+        (operation.routeId === "wheel.spin" &&
+          unresolvedPhases.has(operation.phase))),
   );
   const gachaResult = useMemo(() => {
     if (active?.routeId !== "gacha.open" || active.phase !== "succeeded")
@@ -246,7 +251,9 @@ export function OperationRegistryProvider({
         setGachaActionId(null);
         setGachaActionError(null);
         setRevealedGachaAnimationId(null);
+        setWheelPresentationEpoch((current) => current + 1);
         needsGachaRefreshAfterLeave.current = false;
+        needsWheelRefreshAfterLeave.current = false;
         telegram()?.disableClosingConfirmation();
       }),
     [],
@@ -321,69 +328,89 @@ export function OperationRegistryProvider({
     );
   }, []);
 
-  const discardGachaPresentation = useCallback(() => {
+  const discardTransientPresentations = useCallback(() => {
     const current = operationsRef.current;
-    const discardedIds = new Set(
-      Object.values(current)
-        .filter((operation) => operation.routeId === "gacha.open")
-        .map((operation) => operation.id),
-    );
-    if (discardedIds.size === 0) return;
-    const next = Object.fromEntries(
-      Object.entries(current).filter(
-        ([operationId]) => !discardedIds.has(operationId),
-      ),
-    );
-    needsGachaRefreshAfterLeave.current = true;
+    const discardedGachaIds = new Set<string>();
+    const affectedWheelIds = new Set<string>();
+    const next: Record<string, RegisteredOperation> = {};
+    for (const [operationId, operation] of Object.entries(current)) {
+      if (operation.routeId === "gacha.open") {
+        discardedGachaIds.add(operationId);
+        continue;
+      }
+      if (operation.routeId === "wheel.spin") {
+        affectedWheelIds.add(operationId);
+        if (unresolvedPhases.has(operation.phase))
+          next[operationId] = {
+            ...operation,
+            terminalPresentationAllowed: false,
+          };
+        continue;
+      }
+      next[operationId] = operation;
+    }
+    if (discardedGachaIds.size === 0 && affectedWheelIds.size === 0) return;
+    if (discardedGachaIds.size > 0) needsGachaRefreshAfterLeave.current = true;
+    if (affectedWheelIds.size > 0) {
+      needsWheelRefreshAfterLeave.current = true;
+      setWheelPresentationEpoch((currentEpoch) => currentEpoch + 1);
+    }
     operationsRef.current = next;
     setOperations(next);
     setActiveId((id) =>
-      id && discardedIds.has(id) ? (Object.keys(next)[0] ?? null) : id,
+      id && (discardedGachaIds.has(id) || affectedWheelIds.has(id)) ? null : id,
     );
-    setGachaActionId((id) => (id && discardedIds.has(id) ? null : id));
+    setGachaActionId((id) => (id && discardedGachaIds.has(id) ? null : id));
     setGachaActionError((error) =>
-      error && discardedIds.has(error.operationId) ? null : error,
+      error && discardedGachaIds.has(error.operationId) ? null : error,
     );
     setRevealedGachaAnimationId((id) =>
-      id && discardedIds.has(id) ? null : id,
+      id && discardedGachaIds.has(id) ? null : id,
     );
   }, []);
 
   useEffect(() => {
     const restore = () => {
-      if (
-        !needsGachaRefreshAfterLeave.current ||
-        getSession()?.accountStatus !== "normal"
-      )
-        return;
-      needsGachaRefreshAfterLeave.current = false;
-      void refreshRouteScopes("gacha.open", { throwOnError: true }).catch(
-        () => {
-          if (getSession()?.accountStatus === "normal")
-            needsGachaRefreshAfterLeave.current = true;
-        },
-      );
+      if (getSession()?.accountStatus !== "normal") return;
+      if (needsGachaRefreshAfterLeave.current) {
+        needsGachaRefreshAfterLeave.current = false;
+        void refreshRouteScopes("gacha.open", { throwOnError: true }).catch(
+          () => {
+            if (getSession()?.accountStatus === "normal")
+              needsGachaRefreshAfterLeave.current = true;
+          },
+        );
+      }
+      if (needsWheelRefreshAfterLeave.current) {
+        needsWheelRefreshAfterLeave.current = false;
+        void refreshRouteScopes("wheel.spin", { throwOnError: true }).catch(
+          () => {
+            if (getSession()?.accountStatus === "normal")
+              needsWheelRefreshAfterLeave.current = true;
+          },
+        );
+      }
     };
     const visibility = () => {
       if (document.visibilityState === "visible") restore();
-      else discardGachaPresentation();
+      else discardTransientPresentations();
     };
     const unsubscribe = subscribeTelegramActivity(
       restore,
-      discardGachaPresentation,
+      discardTransientPresentations,
     );
     document.addEventListener("visibilitychange", visibility);
-    window.addEventListener("pagehide", discardGachaPresentation);
+    window.addEventListener("pagehide", discardTransientPresentations);
     window.addEventListener("pageshow", restore);
     window.addEventListener("online", restore);
     return () => {
       unsubscribe();
       document.removeEventListener("visibilitychange", visibility);
-      window.removeEventListener("pagehide", discardGachaPresentation);
+      window.removeEventListener("pagehide", discardTransientPresentations);
       window.removeEventListener("pageshow", restore);
       window.removeEventListener("online", restore);
     };
-  }, [discardGachaPresentation]);
+  }, [discardTransientPresentations]);
 
   const refreshAfterLocalSettlement = useCallback(
     async (id: string, routeId: RecoverableRouteId) => {
@@ -464,6 +491,7 @@ export function OperationRegistryProvider({
           presentation: options?.presentation ?? null,
           animationTier:
             routeId === "gacha.open" ? gachaAnimationTier(input, null) : null,
+          terminalPresentationAllowed: true,
         },
       } satisfies Record<string, RegisteredOperation>;
       operationsRef.current = next;
@@ -507,11 +535,23 @@ export function OperationRegistryProvider({
           });
         if (!pending)
           markOperationNewTemplates(routeId, response.data, markNew);
-        if (routeId !== "inventory.evolve" && routeId !== "inventory.decompose")
+        const suppressWheelTerminalPresentation =
+          !pending &&
+          routeId === "wheel.spin" &&
+          operationsRef.current[id]?.terminalPresentationAllowed !== true;
+        if (
+          !suppressWheelTerminalPresentation &&
+          routeId !== "inventory.evolve" &&
+          routeId !== "inventory.decompose"
+        )
           haptic(pending ? "warning" : "success");
         if (!refreshBeforeSuccess) {
           if (pending) await refreshRouteScopes(routeId).catch(() => undefined);
           else await refreshAfterLocalSettlement(id, routeId);
+        }
+        if (suppressWheelTerminalPresentation) {
+          remove(id);
+          return null;
         }
         return response.data;
       } catch (cause) {
@@ -551,9 +591,18 @@ export function OperationRegistryProvider({
             errorCode: failure.code,
             persistent: Boolean(failure.operationId),
           });
-        if (routeId !== "inventory.evolve" && routeId !== "inventory.decompose")
+        const suppressWheelTerminalPresentation =
+          !unknown &&
+          routeId === "wheel.spin" &&
+          operationsRef.current[id]?.terminalPresentationAllowed !== true;
+        if (
+          !suppressWheelTerminalPresentation &&
+          routeId !== "inventory.evolve" &&
+          routeId !== "inventory.decompose"
+        )
           haptic("error");
         if (!unknown) await refreshAfterLocalSettlement(id, routeId);
+        if (suppressWheelTerminalPresentation) remove(id);
         return null;
       }
     },
@@ -567,7 +616,9 @@ export function OperationRegistryProvider({
     const operation = Object.values(operationsRef.current).find(
       (candidate) =>
         candidate.sessionGeneration === sessionGeneration &&
-        candidate.routeId === routeId,
+        candidate.routeId === routeId &&
+        (candidate.routeId !== "wheel.spin" ||
+          candidate.terminalPresentationAllowed),
     );
     if (!operation) return false;
     setActiveId(operation.id);
@@ -589,8 +640,17 @@ export function OperationRegistryProvider({
           needsGachaRefreshAfterLeave.current = true;
           continue;
         }
+        if (!isRecoverableRouteId(operation.use_case)) continue;
         if (
-          !isRecoverableRouteId(operation.use_case) ||
+          operation.use_case === "wheel.spin" &&
+          (operation.status === "succeeded" || operation.status === "failed")
+        ) {
+          delete next[operation.operation_id];
+          completedOutsideRegistry.add(operation.operation_id);
+          needsWheelRefreshAfterLeave.current = true;
+          continue;
+        }
+        if (
           operation.acknowledged_at !== null ||
           acknowledgedIds.current.has(operation.operation_id)
         )
@@ -608,7 +668,10 @@ export function OperationRegistryProvider({
           );
           continue;
         }
-        if (!inlineOperationRouteIds.has(operation.use_case))
+        if (
+          !inlineOperationRouteIds.has(operation.use_case) &&
+          operation.use_case !== "wheel.spin"
+        )
           firstId ??= operation.operation_id;
         next[operation.operation_id] = {
           id: operation.operation_id,
@@ -623,6 +686,9 @@ export function OperationRegistryProvider({
           input: null,
           presentation: next[operation.operation_id]?.presentation ?? null,
           animationTier: next[operation.operation_id]?.animationTier ?? null,
+          terminalPresentationAllowed:
+            next[operation.operation_id]?.terminalPresentationAllowed ??
+            operation.use_case !== "wheel.spin",
         };
         if (operation.status === "succeeded")
           markOperationNewTemplates(
@@ -644,6 +710,15 @@ export function OperationRegistryProvider({
           () => {
             if (getSession()?.accountStatus === "normal")
               needsGachaRefreshAfterLeave.current = true;
+          },
+        );
+      }
+      if (needsWheelRefreshAfterLeave.current) {
+        needsWheelRefreshAfterLeave.current = false;
+        void refreshRouteScopes("wheel.spin", { throwOnError: true }).catch(
+          () => {
+            if (getSession()?.accountStatus === "normal")
+              needsWheelRefreshAfterLeave.current = true;
           },
         );
       }
@@ -671,6 +746,20 @@ export function OperationRegistryProvider({
           return;
         }
         if (recovered.status === "succeeded") {
+          const suppressWheelTerminalPresentation =
+            operation.routeId === "wheel.spin" &&
+            operationsRef.current[operation.id]?.terminalPresentationAllowed !==
+              true;
+          if (suppressWheelTerminalPresentation) {
+            markOperationNewTemplates(
+              operation.routeId,
+              recovered.result,
+              markNew,
+            );
+            await refreshRouteScopes(operation.routeId);
+            remove(operation.id);
+            return;
+          }
           const refreshBeforeSuccess = refreshBeforeSuccessRouteIds.has(
             operation.routeId,
           );
@@ -703,7 +792,7 @@ export function OperationRegistryProvider({
           );
           if (
             !externallyRenderedSuccessRouteIds.has(operation.routeId) &&
-            acknowledgedResultRouteIds.has(operation.routeId)
+            serverAcknowledgementRouteIds.has(operation.routeId)
           )
             setActiveId((current) => current ?? operation.id);
           if (
@@ -714,6 +803,15 @@ export function OperationRegistryProvider({
           if (!refreshBeforeSuccess)
             await refreshRouteScopes(operation.routeId);
         } else if (recovered.status === "failed") {
+          if (
+            operation.routeId === "wheel.spin" &&
+            operationsRef.current[operation.id]?.terminalPresentationAllowed !==
+              true
+          ) {
+            await refreshRouteScopes(operation.routeId);
+            remove(operation.id);
+            return;
+          }
           const definition =
             recovered.error_code && isErrorCode(recovered.error_code)
               ? errorDefinition(recovered.error_code)
@@ -725,7 +823,7 @@ export function OperationRegistryProvider({
             errorCode: recovered.error_code,
             persistent: true,
           });
-          if (acknowledgedResultRouteIds.has(operation.routeId))
+          if (serverAcknowledgementRouteIds.has(operation.routeId))
             setActiveId((current) => current ?? operation.id);
           await refreshRouteScopes(operation.routeId);
         } else {
@@ -810,10 +908,19 @@ export function OperationRegistryProvider({
         ),
       present,
       navigationLocked,
-      resultRecoveryActive,
+      recoveryQueueActive,
+      wheelPresentationEpoch,
       hydrate,
     }),
-    [hydrate, navigationLocked, operations, present, resultRecoveryActive, run],
+    [
+      hydrate,
+      navigationLocked,
+      operations,
+      present,
+      recoveryQueueActive,
+      run,
+      wheelPresentationEpoch,
+    ],
   );
 
   const dismiss = useCallback(() => {
@@ -896,42 +1003,6 @@ export function OperationRegistryProvider({
       }
     },
     [gachaActionId, navigate, remove, requestTopup, run],
-  );
-
-  const acknowledgeWheelResult = useCallback(
-    async (operation: RegisteredOperation) => {
-      if (
-        operation.routeId !== "wheel.spin" ||
-        !["succeeded", "failed"].includes(operation.phase) ||
-        acknowledgingId
-      )
-        return;
-      const generation = operation.sessionGeneration;
-      setAcknowledgingId(operation.id);
-      setAcknowledgementError(null);
-      try {
-        await apiRequest("wheel.acknowledge_result", {
-          operation_id: operation.id,
-        });
-        if (!isCurrentNormalSession(generation)) return;
-        acknowledgedIds.current.add(operation.id);
-        remove(operation.id);
-      } catch (cause) {
-        if (!isCurrentNormalSession(generation)) return;
-        setAcknowledgementError({
-          operationId: operation.id,
-          message:
-            cause instanceof ApiFailure && cause.code !== "NETWORK_ERROR"
-              ? cause.message
-              : "结果确认状态保存失败，请重试",
-        });
-      } finally {
-        setAcknowledgingId((current) =>
-          current === operation.id ? null : current,
-        );
-      }
-    },
-    [acknowledgingId, remove],
   );
 
   const acknowledgeEvolutionResult = useCallback(
@@ -1168,15 +1239,8 @@ export function OperationRegistryProvider({
             />
           ) : wheelResult ? (
             <WheelResultDialog
-              operationId={active.id}
               result={wheelResult}
-              busy={acknowledgingId === active.id}
-              error={
-                acknowledgementError?.operationId === active.id
-                  ? acknowledgementError.message
-                  : null
-              }
-              onConfirm={() => void acknowledgeWheelResult(active)}
+              onConfirm={() => remove(active.id)}
             />
           ) : albumClaimResult ? (
             <AlbumClaimResultDialog
@@ -1216,7 +1280,7 @@ export function OperationRegistryProvider({
                       : active.message}
               </p>
               <code>操作号 {active.id}</code>
-              {acknowledgedResultRouteIds.has(active.routeId) &&
+              {serverAcknowledgementRouteIds.has(active.routeId) &&
               acknowledgementError?.operationId === active.id ? (
                 <p className="operation-ack-error">
                   {acknowledgementError.message}
@@ -1235,8 +1299,9 @@ export function OperationRegistryProvider({
                 </Button>
               )}
               {!invalidDedicatedSuccess &&
-                !acknowledgedResultRouteIds.has(active.routeId) &&
+                !serverAcknowledgementRouteIds.has(active.routeId) &&
                 active.routeId !== "gacha.open" &&
+                active.routeId !== "wheel.spin" &&
                 (active.phase === "succeeded" || active.phase === "failed") && (
                   <Button className="secondary" onClick={dismiss}>
                     完成
@@ -1248,12 +1313,8 @@ export function OperationRegistryProvider({
                 </Button>
               ) : null}
               {active.routeId === "wheel.spin" && active.phase === "failed" ? (
-                <Button
-                  className="secondary"
-                  disabled={acknowledgingId === active.id}
-                  onClick={() => void acknowledgeWheelResult(active)}
-                >
-                  {acknowledgingId === active.id ? "正在确认结果" : "确定"}
+                <Button className="secondary" onClick={() => remove(active.id)}>
+                  确定
                 </Button>
               ) : null}
             </div>

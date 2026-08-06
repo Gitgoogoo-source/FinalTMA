@@ -7,7 +7,7 @@
 | 1 正式目录         | album、gacha、inventory         | catalog                                  | catalog                                  | 70 条链、210 个模板、420 张运行时图及双路径一致                   |
 | 2 盲盒保底         | gacha                           | gacha                                    | gacha                                    | 三档独立、仅付费推进、逐抽重置                                    |
 | 3 远征             | expedition（当前隐藏）          | expedition                               | expedition、inventory、economy           | 前端无入口，保留事务与存量数据边界                                |
-| 4 幸运转盘         | wheel、operation-recovery       | wheel                                    | wheel、economy、operations               | 1/10 次原子结算、结果明细与确认前持续恢复                         |
+| 4 幸运转盘         | wheel、operation-recovery       | wheel                                    | wheel、economy、operations               | 1/10 次原子结算、当前运行期结果展示、未决原操作恢复               |
 | 5 K-coin 充值      | topup、payment-recovery         | topup、stars-payment workflow            | payments、economy                        | 付款前可取消、提交后锁定、成功唯一交付、无充值冷却                |
 | 6 TON 钱包         | wallet（休眠）                  | wallet（休眠）                           | onchain、identity                        | 当前 Web 无入口、摘要请求或 Provider 初始化                       |
 | 7 Mint             | mint（休眠）                    | mint、jobs（休眠）                       | onchain、inventory、operations           | 当前 Web 无路由、恢复、任务或 Cron                                |

@@ -2,11 +2,7 @@ import { z } from "zod";
 
 import { assetsSchema } from "../../common/models.ts";
 import { defineRoute } from "../../common/route.ts";
-import {
-  emptyObjectSchema,
-  timestampSchema,
-  uuidSchema,
-} from "../../common/schemas.ts";
+import { emptyObjectSchema } from "../../common/schemas.ts";
 
 const WHEEL_DAILY_LIMIT = 50;
 
@@ -173,27 +169,6 @@ export const wheelRoutes = [
       })
       .strict(),
     errors: ["SESSION_REQUIRED", "ACCOUNT_RESTRICTED", "INTERNAL_ERROR"],
-  }),
-  defineRoute({
-    id: "wheel.acknowledge_result",
-    method: "POST",
-    path: "/api/wheel/results/:operation_id/acknowledge",
-    gateway: "app",
-    auth: true,
-    idempotent: false,
-    input: z.object({ operation_id: uuidSchema }).strict(),
-    output: z
-      .object({
-        operation_id: uuidSchema,
-        acknowledged_at: timestampSchema,
-      })
-      .strict(),
-    errors: [
-      "OPERATION_NOT_FOUND",
-      "OPERATION_NOT_ACKNOWLEDGEABLE",
-      "ACCOUNT_RESTRICTED",
-      "INTERNAL_ERROR",
-    ],
   }),
   defineRoute({
     id: "wheel.spin",

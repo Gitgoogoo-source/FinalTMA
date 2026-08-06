@@ -423,7 +423,7 @@ begin
         and (
         o.status in ('pending', 'unknown')
         or (
-          o.use_case in ('wheel.spin', 'inventory.evolve')
+          o.use_case = 'inventory.evolve'
           and o.status in ('succeeded', 'failed')
           and o.result_acknowledged_at is null
         )

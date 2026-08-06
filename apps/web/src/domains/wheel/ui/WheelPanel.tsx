@@ -135,6 +135,21 @@ const SECTOR_ANGLE = 360 / WHEEL_SLOTS.length;
 const MINIMUM_SPIN_MS = 720;
 
 export function WheelPanel(): ReactNode {
+  const { wheelPresentationEpoch } = useOperationRegistry();
+
+  return (
+    <WheelPanelRuntime
+      key={wheelPresentationEpoch}
+      wheelPresentationEpoch={wheelPresentationEpoch}
+    />
+  );
+}
+
+function WheelPanelRuntime({
+  wheelPresentationEpoch,
+}: {
+  wheelPresentationEpoch: number;
+}): ReactNode {
   const query = useApiQuery("wheel.get");
   const identity = useApiQuery("identity.bootstrap");
   const { isBlocked, present, run } = useOperationRegistry();
@@ -146,6 +161,7 @@ export function WheelPanel(): ReactNode {
   const activeAnimation = useRef<Animation | null>(null);
   const rotation = useRef(0);
   const mounted = useRef(true);
+  const presentationEpoch = useRef(wheelPresentationEpoch);
   const [motion, setMotion] = useState<WheelMotion>("idle");
   const [confirmedState, setConfirmedState] = useState<{
     spin_count: number;
@@ -184,6 +200,7 @@ export function WheelPanel(): ReactNode {
 
   const spin = async (count: 1 | 10) => {
     if (interactionLocked) return;
+    const startedPresentationEpoch = presentationEpoch.current;
     const cost = count === 10 ? query.data?.ten_cost : query.data?.single_cost;
     const balance = identity.data?.assets.kcoin.available;
     if (cost !== undefined && balance !== undefined && balance < cost) {
@@ -206,12 +223,15 @@ export function WheelPanel(): ReactNode {
     await waitFor(
       Math.max(0, MINIMUM_SPIN_MS - (performance.now() - startedAt)),
     );
-    if (!mounted.current) return;
+    if (
+      !mounted.current ||
+      startedPresentationEpoch !== presentationEpoch.current
+    )
+      return;
 
     if (!result) {
       stopAtCurrentRotation(rotor.current, activeAnimation, rotation);
       setMotion("idle");
-      void query.refetch();
       present("wheel.spin");
       return;
     }
@@ -229,11 +249,13 @@ export function WheelPanel(): ReactNode {
     });
     setMotion("settling");
     await settleOnSlot(rotor.current, activeAnimation, rotation, slotIndex);
-    if (!mounted.current) return;
+    if (
+      !mounted.current ||
+      startedPresentationEpoch !== presentationEpoch.current
+    )
+      return;
     setMotion("idle");
-    void query.refetch().then(() => {
-      if (mounted.current) setConfirmedState(null);
-    });
+    setConfirmedState(null);
     present("wheel.spin");
   };
 

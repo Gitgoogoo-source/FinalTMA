@@ -25,14 +25,9 @@ const rewardVisuals: Record<
 
 export function WheelResultDialog({
   result,
-  busy,
-  error,
   onConfirm,
 }: {
-  operationId: string;
   result: WheelResult;
-  busy: boolean;
-  error: string | null;
   onConfirm(): void;
 }): ReactNode {
   const rewards = [...result.rewards].sort(
@@ -84,13 +79,8 @@ export function WheelResultDialog({
         </div>
       ) : null}
 
-      {error ? <p className="operation-ack-error">{error}</p> : null}
-      <Button
-        className="wheel-result-confirm"
-        disabled={busy}
-        onClick={onConfirm}
-      >
-        {busy ? "确认中..." : "确认结果"}
+      <Button className="wheel-result-confirm" onClick={onConfirm}>
+        确定
       </Button>
     </div>
   );
