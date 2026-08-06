@@ -3872,6 +3872,10 @@ input:focus {
 .app-shell .market-listing-sold:active {
   transform: scale(0.985);
 }
+.app-shell .market-listing-sold:disabled {
+  opacity: 1;
+  cursor: default;
+}
 .app-shell .market-listing-sold:focus-visible {
   outline: 3px solid rgba(213, 48, 55, 0.28);
   outline-offset: 2px;

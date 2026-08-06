@@ -1,0 +1,102 @@
+.market-sold-coin-layer {
+  position: fixed;
+  z-index: 70;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  contain: strict;
+}
+
+.market-sold-coin {
+  --market-sold-coin-size: clamp(40px, 11vw, 48px);
+  width: var(--market-sold-coin-size);
+  height: var(--market-sold-coin-size);
+  position: fixed;
+  margin-top: calc(var(--market-sold-coin-size) / -2);
+  margin-left: calc(var(--market-sold-coin-size) / -2);
+  overflow: hidden;
+  border-radius: 50%;
+  opacity: 0;
+  filter: drop-shadow(0 5px 7px rgba(164, 92, 0, 0.24));
+  will-change: transform, opacity;
+  animation: market-sold-coin-gather 900ms cubic-bezier(0.2, 0.72, 0.22, 1)
+    forwards;
+}
+
+.market-sold-coin img {
+  width: 145%;
+  height: 145%;
+  position: absolute;
+  top: -22.5%;
+  left: -22.5%;
+  display: block;
+  max-width: none;
+  user-select: none;
+}
+
+.market-sold-kcoin-glow {
+  width: 54px;
+  height: 54px;
+  position: fixed;
+  margin-top: -27px;
+  margin-left: -27px;
+  border-radius: 50%;
+  opacity: 0;
+  background: rgba(255, 166, 36, 0.24);
+  filter: blur(10px);
+  animation: market-sold-kcoin-glow 900ms ease-out forwards;
+}
+
+@keyframes market-sold-coin-gather {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) scale(0.38) rotate(0deg);
+  }
+  8% {
+    opacity: 1;
+  }
+  36%,
+  52% {
+    opacity: 1;
+    transform: translate3d(
+        var(--market-coin-scatter-x),
+        var(--market-coin-scatter-y),
+        0
+      )
+      scale(var(--market-coin-scale)) rotate(var(--market-coin-rotation));
+  }
+  84% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(
+        var(--market-coin-target-x),
+        var(--market-coin-target-y),
+        0
+      )
+      scale(0.42) rotate(var(--market-coin-rotation));
+  }
+}
+
+@keyframes market-sold-kcoin-glow {
+  0%,
+  58% {
+    opacity: 0;
+    transform: scale(0.58);
+  }
+  78% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.22);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .market-sold-coin-layer {
+    display: none;
+  }
+}

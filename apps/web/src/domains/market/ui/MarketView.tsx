@@ -15,7 +15,14 @@ import {
   ShoppingCart,
   Tags,
 } from "lucide-react";
-import { useMemo, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 
 import { useApiQuery } from "../../../platform/query/index.ts";
 import {
@@ -34,6 +41,13 @@ import { useOperationRegistry } from "../../../workflows/operation-recovery/inde
 import { useNavigationIntent } from "../../../workflows/payment-recovery/index.ts";
 import { type MarketSoldEvent, useMarketSoldInbox } from "../soldInbox.ts";
 import { MarketTabs, type MarketTab } from "./MarketTabs.tsx";
+import { MarketSoldCoinEffect } from "./MarketSoldCoinEffect.tsx";
+import {
+  createMarketSoldCoinBurst,
+  SOLD_CARD_DISMISS_DELAY_MS,
+  SOLD_COIN_EFFECT_DURATION_MS,
+  type MarketSoldCoinBurst,
+} from "./marketSoldCoinEffect.ts";
 import "./market-density.css";
 
 type BuyFilter = "price" | "rarity" | "stage" | "sort";
@@ -73,6 +87,13 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
   const [pendingDelist, setPendingDelist] = useState<MarketViewItem | null>(
     null,
   );
+  const [soldCoinBursts, setSoldCoinBursts] = useState<MarketSoldCoinBurst[]>(
+    [],
+  );
+  const [dismissingSoldEvents, setDismissingSoldEvents] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const soldEffectTimers = useRef<Set<number>>(new Set());
   const blocked =
     isBlocked("market.purchase") ||
     isBlocked("market.create_listing") ||
@@ -234,6 +255,47 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
       { template_id: templateId },
     );
   };
+  const dismissSoldWithEffect = useCallback(
+    (event: MarketSoldEvent, trigger: HTMLButtonElement) => {
+      if (dismissingSoldEvents.has(event.sale_sequence)) return;
+      const burst = createMarketSoldCoinBurst(event.sale_sequence, trigger);
+      if (!burst) {
+        dismissSoldEvent(event.sale_sequence);
+        return;
+      }
+
+      setDismissingSoldEvents((current) => {
+        const next = new Set(current);
+        next.add(event.sale_sequence);
+        return next;
+      });
+      setSoldCoinBursts((current) => [...current, burst]);
+
+      const dismissTimer = window.setTimeout(() => {
+        soldEffectTimers.current.delete(dismissTimer);
+        dismissSoldEvent(event.sale_sequence);
+        setDismissingSoldEvents((current) => {
+          const next = new Set(current);
+          next.delete(event.sale_sequence);
+          return next;
+        });
+      }, SOLD_CARD_DISMISS_DELAY_MS);
+      soldEffectTimers.current.add(dismissTimer);
+
+      const cleanupTimer = window.setTimeout(() => {
+        soldEffectTimers.current.delete(cleanupTimer);
+        setSoldCoinBursts((current) =>
+          current.filter((item) => item.id !== burst.id),
+        );
+      }, SOLD_COIN_EFFECT_DURATION_MS + 40);
+      soldEffectTimers.current.add(cleanupTimer);
+    },
+    [dismissSoldEvent, dismissingSoldEvents],
+  );
+  useEffect(() => () => {
+    soldEffectTimers.current.forEach((timer) => window.clearTimeout(timer));
+    soldEffectTimers.current.clear();
+  });
   return (
     <main className={`page market-page market-page-${tab}`}>
       <MarketTabs
@@ -533,7 +595,8 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
                 <MarketSoldCard
                   key={`sold:${event.sale_sequence}`}
                   event={event}
-                  onDismiss={() => dismissSoldEvent(event.sale_sequence)}
+                  dismissing={dismissingSoldEvents.has(event.sale_sequence)}
+                  onDismiss={(trigger) => dismissSoldWithEffect(event, trigger)}
                 />
               ))}
               {visible.map((item) => (
@@ -597,6 +660,7 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
           </div>
         </AppModal>
       )}
+      <MarketSoldCoinEffect bursts={soldCoinBursts} />
     </main>
   );
 }
@@ -787,17 +851,20 @@ function MarketListingCard({
 
 function MarketSoldCard({
   event,
+  dismissing,
   onDismiss,
 }: {
   event: MarketSoldEvent;
-  onDismiss(): void;
+  dismissing: boolean;
+  onDismiss(trigger: HTMLButtonElement): void;
 }): ReactNode {
   return (
     <button
       type="button"
       className="card market-listing-card market-listing-sold"
-      aria-label={`${event.name} 已售出 ${event.quantity} 个，点击隐藏这条成交提醒`}
-      onClick={onDismiss}
+      aria-label={`${event.name} 已售出 ${event.quantity} 个，点击播放金币特效并隐藏这条成交提醒`}
+      disabled={dismissing}
+      onClick={(clickEvent) => onDismiss(clickEvent.currentTarget)}
     >
       <div className="market-listing-art">
         <CatalogImage

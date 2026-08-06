@@ -34,6 +34,7 @@ export function TopAssetBar({
         <button
           type="button"
           className="asset-pill kcoin"
+          data-kcoin-target
           aria-label={`K-coin：${kcoin?.available ?? "加载中"}，打开充值`}
           onClick={() => openDialog("topup")}
         >
