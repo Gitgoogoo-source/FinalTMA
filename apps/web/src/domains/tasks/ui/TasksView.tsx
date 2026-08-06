@@ -1,13 +1,26 @@
 import {
+  BadgeCheck,
   BookOpen,
   Boxes,
-  CalendarCheck,
   Check,
   Circle,
+  CircleDollarSign,
+  Copy,
+  FerrisWheel,
+  Grid3X3,
+  Link2,
   LockKeyhole,
+  Map as MapIcon,
+  PackageOpen,
+  PackageX,
+  RotateCw,
+  Send,
   ShoppingBasket,
   Sparkles,
-  UsersRound,
+  Tag,
+  TicketCheck,
+  Trophy,
+  Waypoints,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -71,13 +84,26 @@ const taskStatusLabels: Record<Task["status"], string> = {
   claimed: "已领取",
 };
 
-const taskCategoryIcons: Record<VisibleTaskCategory, LucideIcon> = {
-  gacha: Boxes,
-  daily: CalendarCheck,
-  social: UsersRound,
-  market: ShoppingBasket,
-  inventory: Sparkles,
-  album: BookOpen,
+const taskCodeIcons: Record<Task["code"], LucideIcon> = {
+  gacha_1: PackageOpen,
+  gacha_10: Boxes,
+  gacha_ten: Grid3X3,
+  wheel_spin: FerrisWheel,
+  copy_referral: Copy,
+  telegram_invite: Send,
+  market_buy: ShoppingBasket,
+  market_list: Tag,
+  market_sold: CircleDollarSign,
+  evolution_success: Sparkles,
+  evolution_attempt: RotateCw,
+  decompose: PackageX,
+  expedition_normal: MapIcon,
+  expedition_intermediate: Waypoints,
+  expedition_advanced: Trophy,
+  album_unlock: BookOpen,
+  album_chain: Link2,
+  wallet_verified: BadgeCheck,
+  mint_success: TicketCheck,
 };
 const checkInRewards = [
   { amount: "20", unit: "Fgems", kind: "fgems" },
@@ -259,13 +285,13 @@ export function TasksView({
       </nav>
       <div className="task-list">
         {visibleItems.map((task) => {
-          const TaskIcon = taskCategoryIcons[task.category];
+          const TaskIcon = taskCodeIcons[task.code];
           const claiming = claimingCode === task.code;
           const canClaim = task.status === "claimable";
           const canComplete =
             task.status === "not_started" || task.status === "in_progress";
           return (
-            <Card key={task.code} className="task-row">
+            <Card key={task.code} className={`task-row ${task.status}`}>
               <div className="task-icon">
                 <TaskIcon aria-hidden="true" />
               </div>
