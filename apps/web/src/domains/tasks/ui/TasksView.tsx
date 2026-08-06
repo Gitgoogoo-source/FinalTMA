@@ -2,11 +2,11 @@ import {
   BadgeCheck,
   BookOpen,
   Boxes,
+  CalendarDays,
   Check,
   Circle,
   CircleDollarSign,
   Copy,
-  FerrisWheel,
   Grid3X3,
   Link2,
   LockKeyhole,
@@ -15,11 +15,14 @@ import {
   PackageX,
   RotateCw,
   Send,
+  ShipWheel,
   ShoppingBasket,
   Sparkles,
   Tag,
   TicketCheck,
+  Triangle,
   Trophy,
+  UsersRound,
   Waypoints,
   type LucideIcon,
 } from "lucide-react";
@@ -88,7 +91,7 @@ const taskCodeIcons: Record<Task["code"], LucideIcon> = {
   gacha_1: PackageOpen,
   gacha_10: Boxes,
   gacha_ten: Grid3X3,
-  wheel_spin: FerrisWheel,
+  wheel_spin: ShipWheel,
   copy_referral: Copy,
   telegram_invite: Send,
   market_buy: ShoppingBasket,
@@ -114,6 +117,56 @@ const checkInRewards = [
   { amount: "150", unit: "Fgems", kind: "fgems" },
   { amount: "1", unit: "稀有盒资格", kind: "box" },
 ] as const;
+
+function TaskIconArtwork({ taskCode }: { taskCode: Task["code"] }): ReactNode {
+  if (taskCode === "gacha_1") {
+    return (
+      <div className="task-icon task-icon--calendar-sparkle" aria-hidden="true">
+        <CalendarDays className="task-icon-main" />
+        <Sparkles className="task-icon-detail" />
+      </div>
+    );
+  }
+  if (taskCode === "gacha_10") {
+    return (
+      <div className="task-icon task-icon--grid-ten" aria-hidden="true">
+        <Grid3X3 className="task-icon-main" />
+        <span className="task-icon-ten-label">10</span>
+      </div>
+    );
+  }
+  if (taskCode === "gacha_ten") {
+    return (
+      <div className="task-icon task-icon--calendar-link" aria-hidden="true">
+        <CalendarDays className="task-icon-calendar task-icon-calendar--left" />
+        <Link2 className="task-icon-link" />
+        <CalendarDays className="task-icon-calendar task-icon-calendar--right" />
+      </div>
+    );
+  }
+  if (taskCode === "wheel_spin") {
+    return (
+      <div className="task-icon task-icon--wheel" aria-hidden="true">
+        <ShipWheel className="task-icon-main" />
+        <Triangle className="task-icon-pointer" />
+      </div>
+    );
+  }
+  if (taskCode === "copy_referral") {
+    return (
+      <div className="task-icon task-icon--user-link" aria-hidden="true">
+        <UsersRound className="task-icon-main" />
+        <Link2 className="task-icon-detail" />
+      </div>
+    );
+  }
+  const TaskIcon = taskCodeIcons[taskCode];
+  return (
+    <div className="task-icon task-icon--single" aria-hidden="true">
+      <TaskIcon className="task-icon-main" />
+    </div>
+  );
+}
 
 export function TasksView({
   afterCheckIn,
@@ -285,16 +338,13 @@ export function TasksView({
       </nav>
       <div className="task-list">
         {visibleItems.map((task) => {
-          const TaskIcon = taskCodeIcons[task.code];
           const claiming = claimingCode === task.code;
           const canClaim = task.status === "claimable";
           const canComplete =
             task.status === "not_started" || task.status === "in_progress";
           return (
             <Card key={task.code} className={`task-row ${task.status}`}>
-              <div className="task-icon">
-                <TaskIcon aria-hidden="true" />
-              </div>
+              <TaskIconArtwork taskCode={task.code} />
               <div id={`task-card-${task.code}`} tabIndex={-1}>
                 <div className="task-card-meta">
                   <Badge>{taskCategoryLabels[task.category]}</Badge>
