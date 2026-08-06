@@ -340,12 +340,9 @@ export function useBootstrap(): BootstrapState & { retry(): void } {
       if (getSession()?.generation !== session.generation) return;
       if (session.entryHandoffState === "complete") {
         const notice = referralNotice(session.entryHandoffResult);
-        if (notice)
-          setState((current) =>
-            current.phase === "ready"
-              ? { ...current, session, notice }
-              : current,
-          );
+        setState((current) =>
+          current.phase === "ready" ? { ...current, session, notice } : current,
+        );
         return;
       }
       if (!session.entryHandoffCode) {
@@ -407,7 +404,7 @@ async function settleReferralCandidate(
   queryOnly: { current: boolean },
   signal: AbortSignal,
 ): Promise<
-  | { kind: "settled"; notice: string; result: EntryHandoffResult }
+  | { kind: "settled"; notice: string | null; result: EntryHandoffResult }
   | { kind: "pending"; message: string }
 > {
   if (!queryOnly.current) {
@@ -419,7 +416,7 @@ async function settleReferralCandidate(
       );
       return {
         kind: "settled",
-        notice: "邀请关系已绑定，完成首次有效充值后可为邀请人解锁奖励",
+        notice: referralNotice("REFERRAL_BOUND"),
         result: "REFERRAL_BOUND",
       };
     } catch (cause) {
@@ -427,7 +424,7 @@ async function settleReferralCandidate(
       if (isSettledReferralError(failure.code))
         return {
           kind: "settled",
-          notice: failure.message,
+          notice: referralNotice(failure.code),
           result: failure.code,
         };
       if (!isUnknownReferralResult(failure.code)) throw failure;
@@ -444,19 +441,20 @@ async function settleReferralCandidate(
     if (recovered.data.status === "succeeded")
       return {
         kind: "settled",
-        notice: "邀请关系已绑定，完成首次有效充值后可为邀请人解锁奖励",
+        notice: referralNotice("REFERRAL_BOUND"),
         result: "REFERRAL_BOUND",
       };
     if (recovered.data.status === "failed") {
       const code = recovered.data.error_code;
+      const result =
+        code && isSettledReferralError(code) ? code : "REFERRAL_INELIGIBLE";
       return {
         kind: "settled",
         notice:
-          code && isErrorCode(code)
+          code && isErrorCode(code) && !isSettledReferralError(code)
             ? errorDefinition(code).message
-            : "当前账号暂不符合邀请绑定条件",
-        result:
-          code && isSettledReferralError(code) ? code : "REFERRAL_INELIGIBLE",
+            : referralNotice(result),
+        result,
       };
     }
     return { kind: "pending", message: "邀请绑定结果确认中，请稍后刷新" };
@@ -495,7 +493,7 @@ function isSettledReferralError(code: string): code is EntryHandoffResult {
 }
 
 function referralNotice(result: EntryHandoffResult | null): string | null {
-  if (!result) return null;
+  if (!result || result === "REFERRAL_OLD_USER") return null;
   return result === "REFERRAL_BOUND"
     ? "邀请关系已绑定，完成首次有效充值后可为邀请人解锁奖励"
     : errorDefinition(result).message;
