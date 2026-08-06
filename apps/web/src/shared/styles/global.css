@@ -5161,15 +5161,38 @@ input:focus {
   place-content: center;
   gap: 1px;
   padding: 0;
-  border: 1px solid rgba(41, 43, 46, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.58);
   border-radius: 50%;
-  color: #34373a;
-  background: rgba(255, 255, 255, 0.72);
+  color: #fff;
+  background: rgba(255, 104, 35, 0.88);
   box-shadow:
-    0 8px 20px rgba(36, 39, 42, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.96);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+    0 10px 24px rgba(255, 104, 35, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72),
+    inset 0 -1px 0 rgba(186, 67, 13, 0.18);
+  backdrop-filter: blur(18px) saturate(1.18);
+  -webkit-backdrop-filter: blur(18px) saturate(1.18);
+  transition:
+    transform 160ms ease,
+    background-color 160ms ease,
+    box-shadow 160ms ease;
+}
+.app-shell .inventory-atlas-button:hover {
+  background: rgba(255, 112, 43, 0.94);
+  box-shadow:
+    0 12px 26px rgba(255, 104, 35, 0.29),
+    inset 0 1px 0 rgba(255, 255, 255, 0.78),
+    inset 0 -1px 0 rgba(186, 67, 13, 0.2);
+}
+.app-shell .inventory-atlas-button:active {
+  transform: scale(0.96);
+  background: rgba(239, 87, 19, 0.94);
+  box-shadow:
+    0 6px 16px rgba(255, 104, 35, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.56);
+}
+.app-shell .inventory-atlas-button:focus-visible {
+  outline: 2px solid rgba(255, 104, 35, 0.36);
+  outline-offset: 3px;
 }
 .app-shell .inventory-atlas-button svg {
   width: 18px;
@@ -5182,7 +5205,7 @@ input:focus {
   height: auto;
   overflow: visible;
   clip: auto;
-  color: #4f5357;
+  color: rgba(255, 255, 255, 0.96);
   font-size: 7px;
   font-weight: 700;
   line-height: 1;
