@@ -90,7 +90,6 @@ export function ReferralPanel(): ReactNode {
             邀请好友
             <em>一起开盲盒</em>
           </h2>
-          <p>好友通过你的链接加入并完成首次有效充值后，你可获得 500 Fgems。</p>
           <div className="invite-benefits">
             <span>
               <Gift aria-hidden="true" />

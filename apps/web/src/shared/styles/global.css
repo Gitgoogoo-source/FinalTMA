@@ -6046,7 +6046,7 @@ input:focus {
     inset 0 1px 0 #fff;
 }
 .app-shell .invite-copy {
-  width: 65%;
+  width: 68%;
   position: relative;
   z-index: 2;
 }
@@ -6070,12 +6070,6 @@ input:focus {
   color: #ff6800;
   font-style: normal;
 }
-.app-shell .invite-copy > p {
-  margin: 0;
-  color: #5e6f86;
-  font-size: 9px;
-  line-height: 1.45;
-}
 .app-shell .invite-art {
   width: 49%;
   height: 160px;
@@ -6091,24 +6085,25 @@ input:focus {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
-  margin-top: 6px;
+  margin-top: 10px;
 }
 .app-shell .invite-benefits > span {
   min-width: 0;
-  min-height: 48px;
+  min-height: 56px;
   display: grid;
-  grid-template-columns: 22px minmax(0, 1fr);
+  grid-template-columns: 20px minmax(0, 1fr);
   grid-template-rows: auto auto;
-  gap: 1px 5px;
+  gap: 1px 4px;
   align-content: center;
-  padding: 6px;
-  border: 1px solid rgba(255, 122, 0, 0.11);
+  padding: 7px 6px;
+  border: 1px solid rgba(255, 122, 0, 0.16);
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.82);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 6px 16px rgba(255, 113, 0, 0.035);
 }
 .app-shell .invite-benefits svg {
-  width: 20px;
-  height: 20px;
+  width: 21px;
+  height: 21px;
   grid-row: 1 / -1;
   align-self: center;
   color: #ff7100;
@@ -6126,7 +6121,7 @@ input:focus {
 }
 .app-shell .invite-benefits strong {
   color: #071d3b;
-  font-size: 8px;
+  font-size: 9px;
 }
 .app-shell .invite-actions {
   display: grid;
