@@ -704,18 +704,32 @@ function checkView(source) {
   const createCommand = calls(create, "command.execute").find(
     (call) => stringArgument(call, 0) === "battle.create",
   );
+  const matchmake = variableFunction(view, "matchmake");
+  const matchmakeCommand = calls(matchmake, "command.execute").find(
+    (call) => stringArgument(call, 0) === "battle.matchmake",
+  );
   const createHandoff = variable(view, "createHandoff")?.initializer;
+  const matchmakeHandoff = variable(view, "matchmakeHandoff")?.initializer;
   const handoffGuard = ifStatements(stateDeriver).find(
     (node) => expressionValue(node.expression) === "createHandoff",
   );
   const handoffReturns = returnExpressions(handoffGuard?.thenStatement).map(
     (expression) => expressionValue(expression),
   );
+  const matchmakeHandoffGuard = ifStatements(stateDeriver).find(
+    (node) => expressionValue(node.expression) === "matchmakeHandoff",
+  );
+  const matchmakeHandoffReturns = returnExpressions(
+    matchmakeHandoffGuard?.thenStatement,
+  ).map((expression) => expressionValue(expression));
   const committedRoomId = variable(view, "committedRoomId")?.initializer;
   const handoffCommit = calls(view, "useEffect").find(
     (call) =>
       calls(call, "setFlow").length === 1 &&
       calls(call, "setCreateHandoffActive").some(
+        (setter) => expressionValue(setter.arguments[0]) === "false",
+      ) &&
+      calls(call, "setMatchmakeHandoffActive").some(
         (setter) => expressionValue(setter.arguments[0]) === "false",
       ) &&
       identifiers(call).includes("committedRoomId") &&
@@ -729,6 +743,10 @@ function checkView(source) {
       )
     : null;
   const handoffActivation = calls(create, "setCreateHandoffActive");
+  const matchmakeHandoffActivation = calls(
+    matchmake,
+    "setMatchmakeHandoffActive",
+  );
   const battleState = topLevelFunction(source, "BattleState");
   const preparingRenderGuard = ifStatements(battleState).find((node) =>
     Boolean(
@@ -774,6 +792,34 @@ function checkView(source) {
         "BattlePreparingShare",
       ),
     "friend challenge creation must retain a local preparing-share handoff until the same authoritative room participation commits, without a renderable Battle Home gap",
+  );
+  must(
+    matchmakeCommand &&
+      calls(matchmake, "setFlow").length === 0 &&
+      matchmakeHandoffActivation.some(
+        (setter) => expressionValue(setter.arguments[0]) === "true",
+      ) &&
+      matchmakeHandoffActivation.some(
+        (setter) => expressionValue(setter.arguments[0]) === "false",
+      ) &&
+      matchmakeHandoff &&
+      propertyPaths(matchmakeHandoff).includes("flow.kind") &&
+      identifiers(matchmakeHandoff).includes("matchmakeHandoffActive") &&
+      expressionValue(
+        objectPropertyExpression(pageDerivationOptions, "matchmakeHandoff"),
+      ) === "matchmakeHandoff" &&
+      matchmakeHandoffGuard &&
+      matchmakeHandoffGuard.pos < participantRoomGuard.pos &&
+      matchmakeHandoffGuard.pos < bearerInviteGuard.pos &&
+      matchmakeHandoffReturns.length === 1 &&
+      matchmakeHandoffReturns[0] === "team_select" &&
+      handoffCommit &&
+      handoffReleaseGuard &&
+      propertyPaths(handoffReleaseGuard.expression).includes(
+        "participation.room_id",
+      ) &&
+      calls(handoffCommit, "queueMicrotask").length === 1,
+    "random matchmaking must retain the locked team-selection handoff until the same authoritative room participation commits, without a renderable Battle Home gap",
   );
   const bootstrapObserver = calls(view, "useApiQuery").find(
     (call) => stringArgument(call, 0) === "battle.bootstrap",
@@ -1246,6 +1292,7 @@ function checkResultContract(
     );
   const resultScreen = topLevelFunction(screens, "BattleResult");
   const preparingScreen = topLevelFunction(screens, "BattlePreparingShare");
+  const teamSelectScreen = topLevelFunction(screens, "BattleTeamSelect");
   let hasExactReturnLabel = false;
   walk(resultScreen, (node) => {
     if (ts.isJsxText(node) && node.getText().trim() === "返回 Battle 首页")
@@ -1265,6 +1312,11 @@ function checkResultContract(
         preparingScreen.getText().includes(text),
       ),
     "the preparing-share handoff must support its snapshot-free player state and recover silently without server-facing copy or controls",
+  );
+  must(
+    identifiers(teamSelectScreen).includes("matching") &&
+      teamSelectScreen.getText().includes('"正在确认匹配"'),
+    "random matchmaking must keep the locked team selection visible with exact player-facing confirmation copy",
   );
 }
 
@@ -2151,6 +2203,60 @@ function runSelfTests() {
           guard.expression,
           '!committedRoomId || flow?.kind !== "create"',
         );
+      },
+    ),
+    fixture(
+      paths.view,
+      "matchmake success clears flow before room commit",
+      (source, text) => {
+        const matchmake = variableFunction(
+          topLevelFunction(source, "BattleView"),
+          "matchmake",
+        );
+        return insertIntoFunction(text, matchmake, "setFlow(null);");
+      },
+    ),
+    fixture(
+      paths.view,
+      "matchmake omits the current-attempt handoff latch",
+      (source, text) => {
+        const matchmake = variableFunction(
+          topLevelFunction(source, "BattleView"),
+          "matchmake",
+        );
+        const activation = calls(matchmake, "setMatchmakeHandoffActive").find(
+          (call) => expressionValue(call.arguments[0]) === "true",
+        );
+        return replaceNode(text, activation.arguments[0], "false");
+      },
+    ),
+    fixture(
+      paths.view,
+      "matchmake handoff falls through to Battle Home",
+      (source, text) => {
+        const derive = topLevelFunction(source, "derivePageState");
+        const guard = ifStatements(derive).find(
+          (node) => expressionValue(node.expression) === "matchmakeHandoff",
+        );
+        const result = returnExpressions(guard.thenStatement)[0];
+        return replaceNode(text, result, '"home"');
+      },
+    ),
+    fixture(
+      paths.battleScreens,
+      "matchmake loses its specific confirmation copy",
+      (source, text) => {
+        const teamSelect = topLevelFunction(source, "BattleTeamSelect");
+        let label = null;
+        walk(teamSelect, (node) => {
+          if (
+            !label &&
+            ts.isStringLiteralLike(node) &&
+            node.text === "正在确认匹配"
+          )
+            label = node;
+        });
+        return replaceNode(text, label, '"正在确认原操作"');
       },
     ),
     fixture(

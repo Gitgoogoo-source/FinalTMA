@@ -176,6 +176,7 @@ export function BattleTeamSelect({
   balance,
   loading,
   disabled,
+  matching,
   onChange,
   onBack,
   onMatch,
@@ -187,6 +188,7 @@ export function BattleTeamSelect({
   balance: number | null;
   loading: boolean;
   disabled: boolean;
+  matching: boolean;
   onChange(slots: BattleTeamSlots): void;
   onBack(): void;
   onMatch(): void;
@@ -226,7 +228,11 @@ export function BattleTeamSelect({
             onClick={onMatch}
           >
             <Swords />
-            {disabled ? "正在确认原操作" : "随机匹配"}
+            {matching
+              ? "正在确认匹配"
+              : disabled
+                ? "正在确认原操作"
+                : "随机匹配"}
           </Button>
           <Button
             disabled={disabled || !complete || loading}

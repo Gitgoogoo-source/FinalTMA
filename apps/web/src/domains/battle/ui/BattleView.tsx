@@ -152,6 +152,7 @@ export function BattleView(): ReactNode {
   );
   const [flow, setFlow] = useState<Flow>(null);
   const [createHandoffActive, setCreateHandoffActive] = useState(false);
+  const [matchmakeHandoffActive, setMatchmakeHandoffActive] = useState(false);
   const [slots, setSlots] = useState<BattleTeamSlots>(emptySlots);
   const [room, setRoom] = useState<BattleRoomSnapshotDto | null>(null);
   const [forceHome, setForceHome] = useState(false);
@@ -439,6 +440,7 @@ export function BattleView(): ReactNode {
       if (cancelled) return;
       setFlow(null);
       setCreateHandoffActive(false);
+      setMatchmakeHandoffActive(false);
       setSlots(emptySlots);
       publishRoom(() => null);
       setForceHome(false);
@@ -511,6 +513,7 @@ export function BattleView(): ReactNode {
     queueMicrotask(() => {
       if (cancelled) return;
       setCreateHandoffActive(false);
+      setMatchmakeHandoffActive(false);
       setFlow((current) => (current?.kind === "create" ? null : current));
     });
     return () => {
@@ -527,11 +530,13 @@ export function BattleView(): ReactNode {
     .map((observation) => `${observation.roomId}:${observation.stateVersion}`)
     .join(",");
   const createHandoff = flow?.kind === "create" && createHandoffActive;
+  const matchmakeHandoff = flow?.kind === "create" && matchmakeHandoffActive;
   const pageState = derivePageState({
     result: Boolean(result) && !presentationBusy,
     room,
     flow,
     createHandoff,
+    matchmakeHandoff,
     invite: authoritativeInvite,
     battleEntry,
     forceHome,
@@ -1064,6 +1069,7 @@ export function BattleView(): ReactNode {
       return;
     }
     setCreateHandoffActive(true);
+    setMatchmakeHandoffActive(false);
     const response = await command.execute("battle.create", {
       tier: tier.id,
       template_ids: selection,
@@ -1122,12 +1128,16 @@ export function BattleView(): ReactNode {
       setResumeNotice("请完成充值；返回后仍需重新点击随机匹配");
       return;
     }
+    setCreateHandoffActive(false);
+    setMatchmakeHandoffActive(true);
     const snapshot = await command.execute("battle.matchmake", {
       tier: tier.id,
       template_ids: selection,
     });
-    if (!snapshot) return;
-    setFlow(null);
+    if (!snapshot) {
+      setMatchmakeHandoffActive(false);
+      return;
+    }
     setResumeNotice(null);
   };
 
@@ -1256,6 +1266,8 @@ export function BattleView(): ReactNode {
     resetPresentationTracking(true);
     setForceHome(true);
     setFlow(null);
+    setCreateHandoffActive(false);
+    setMatchmakeHandoffActive(false);
     setSlots(emptySlots);
     publishRoom((current) =>
       current?.room_id === result.room_id ? null : current,
@@ -1315,6 +1327,7 @@ export function BattleView(): ReactNode {
       balance={balance}
       loading={loading}
       commandPending={commandPending}
+      matchmakePending={matchmakeHandoff}
       actionIntent={actionIntent}
       presentationEvents={presentationEvents}
       localPresentationAction={localPresentationAction}
@@ -1336,11 +1349,15 @@ export function BattleView(): ReactNode {
       setSwitchOpen={setSwitchOpen}
       chooseTier={(chosenTier) => {
         setFlow({ kind: "create", tier: chosenTier });
+        setCreateHandoffActive(false);
+        setMatchmakeHandoffActive(false);
         setSlots(emptySlots);
         setForceHome(false);
       }}
       home={() => {
         setFlow(null);
+        setCreateHandoffActive(false);
+        setMatchmakeHandoffActive(false);
         setSlots(emptySlots);
         setForceHome(true);
         setResumeNotice(null);
@@ -1397,6 +1414,7 @@ function BattleState({
   balance,
   loading,
   commandPending,
+  matchmakePending,
   actionIntent,
   presentationEvents,
   localPresentationAction,
@@ -1442,6 +1460,7 @@ function BattleState({
   balance: number | null;
   loading: boolean;
   commandPending: boolean;
+  matchmakePending: boolean;
   actionIntent: string | null;
   presentationEvents: readonly BattleActionEventDto[];
   localPresentationAction: BattleLocalActionIntent | null;
@@ -1547,7 +1566,8 @@ function BattleState({
         slots={slots}
         balance={balance}
         loading={loading}
-        disabled={commandPending || balance === null}
+        disabled={commandPending || matchmakePending || balance === null}
+        matching={matchmakePending}
         onChange={setSlots}
         onBack={home}
         onInvite={create}
@@ -1598,6 +1618,7 @@ function derivePageState({
   room,
   flow,
   createHandoff,
+  matchmakeHandoff,
   invite,
   battleEntry,
   forceHome,
@@ -1606,12 +1627,14 @@ function derivePageState({
   room: BattleRoomSnapshotDto | null;
   flow: Flow;
   createHandoff: boolean;
+  matchmakeHandoff: boolean;
   invite: Invite | undefined;
   battleEntry: boolean;
   forceHome: boolean;
 }): BattlePageState {
   if (result) return "result";
   if (createHandoff) return "preparing_share";
+  if (matchmakeHandoff) return "team_select";
   if (room) {
     if (room.status === "preparing_share") return "preparing_share";
     if (room.status === "waiting") return "waiting";
