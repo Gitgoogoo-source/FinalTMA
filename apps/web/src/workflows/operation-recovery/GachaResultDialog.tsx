@@ -1,5 +1,6 @@
 import {
   useCallback,
+  useEffect,
   useLayoutEffect,
   useRef,
   type CSSProperties,
@@ -8,20 +9,14 @@ import {
 } from "react";
 import type { RouteOutput } from "@pokepets/api-contracts/app";
 
-import { selectionHaptic } from "../../platform/telegram/index.ts";
+import { haptic, selectionHaptic } from "../../platform/telegram/index.ts";
 import { Button, CatalogImage } from "../../shared/ui/index.tsx";
+import { playGachaSummarySound } from "./gacha-audio.ts";
 
 type GachaResult = RouteOutput<"gacha.open">;
 type ResultItem = GachaResult["results"][number];
 type Rarity = ResultItem["rarity"];
 
-const rarityRanks: Record<Rarity, number> = {
-  common: 0,
-  rare: 1,
-  epic: 2,
-  legendary: 3,
-  mythic: 4,
-};
 const rarityLabels: Record<Rarity, string> = {
   common: "普通",
   rare: "稀有",
@@ -29,8 +24,7 @@ const rarityLabels: Record<Rarity, string> = {
   legendary: "传说",
   mythic: "神话",
 };
-const tenDrawRankPositions = [4, 5, 3, 6, 2, 7, 1, 8, 0, 9] as const;
-const initialCarouselIndex = tenDrawRankPositions[0];
+const initialCarouselIndex = 4;
 const carouselLayerOffsets = [0, 0.24, 0.34, 0.42, 0.48, 0.53] as const;
 const carouselLayerScales = [1, 0.52, 0.43, 0.36, 0.3, 0.26] as const;
 const carouselLayerOpacities = [1, 0.82, 0.62, 0.44, 0.3, 0.2] as const;
@@ -65,16 +59,22 @@ export function GachaResultDialog({
   onInventory(): void;
   onConfirm(): void;
 }): ReactNode {
-  const rankedResults = [...result.results].sort(
-    (left, right) =>
-      rarityRanks[right.rarity] - rarityRanks[left.rarity] ||
-      left.order - right.order,
+  const orderedResults = [...result.results].sort(
+    (left, right) => left.order - right.order,
   );
   const single = result.draw_count === 1;
+  const resultKey = orderedResults
+    .map((item) => `${item.order}-${item.template_id}`)
+    .join("|");
+
+  useEffect(() => {
+    playGachaSummarySound();
+    haptic("success");
+  }, [resultKey]);
 
   return (
     <div
-      className={`modal gacha-moon-result ${single ? "is-single" : "is-ten"}`}
+      className={`modal gacha-moon-result is-entering ${single ? "is-single" : "is-ten"}`}
     >
       <img
         className="gacha-moon-result-background"
@@ -88,9 +88,9 @@ export function GachaResultDialog({
       </header>
 
       {single ? (
-        <SingleResult item={rankedResults[0]!} />
+        <SingleResult item={orderedResults[0]!} />
       ) : (
-        <TenDrawResults results={rankedResults} />
+        <TenDrawResults results={orderedResults} />
       )}
 
       {error ? <p className="operation-ack-error">{error}</p> : null}
@@ -128,10 +128,7 @@ function SingleResult({ item }: { item: ResultItem }): ReactNode {
 }
 
 function TenDrawResults({ results }: { results: ResultItem[] }): ReactNode {
-  const carouselResults: ResultItem[] = [];
-  results.forEach((item, rank) => {
-    carouselResults[tenDrawRankPositions[rank] ?? rank] = item;
-  });
+  const carouselResults = results;
 
   const carouselRef = useRef<HTMLDivElement>(null);
   const layerListRef = useRef<HTMLOListElement>(null);
@@ -272,6 +269,7 @@ function TenDrawResults({ results }: { results: ResultItem[] }): ReactNode {
                   Math.abs(index - initialCarouselIndex),
                   carouselLayerOpacities,
                 ),
+                "--summary-delay": `${45 + index * 34}ms`,
                 zIndex: 100 - Math.abs(index - initialCarouselIndex) * 10,
               } as CSSProperties
             }
