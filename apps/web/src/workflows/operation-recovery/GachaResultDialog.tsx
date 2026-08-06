@@ -31,8 +31,9 @@ const rarityLabels: Record<Rarity, string> = {
 };
 const tenDrawRankPositions = [4, 5, 3, 6, 2, 7, 1, 8, 0, 9] as const;
 const initialCarouselIndex = tenDrawRankPositions[0];
-const carouselLayerScales = [1, 0.68, 0.52, 0.42, 0.34, 0.28] as const;
-const carouselLayerOpacities = [1, 0.86, 0.64, 0.44, 0.28, 0.16] as const;
+const carouselLayerOffsets = [0, 0.24, 0.34, 0.42, 0.48, 0.53] as const;
+const carouselLayerScales = [1, 0.52, 0.43, 0.36, 0.3, 0.26] as const;
+const carouselLayerOpacities = [1, 0.82, 0.62, 0.44, 0.3, 0.2] as const;
 const RITUAL_BACKGROUND =
   "/assets/gacha/ritual/v1/moonlit-prism-garden-b1291c69.webp";
 
@@ -132,7 +133,8 @@ function TenDrawResults({ results }: { results: ResultItem[] }): ReactNode {
     carouselResults[tenDrawRankPositions[rank] ?? rank] = item;
   });
 
-  const carouselRef = useRef<HTMLOListElement>(null);
+  const carouselRef = useRef<HTMLDivElement>(null);
+  const layerListRef = useRef<HTMLOListElement>(null);
   const animationFrameRef = useRef<number | null>(null);
   const activeIndexRef = useRef<number>(initialCarouselIndex);
   const resultKey = carouselResults
@@ -141,43 +143,47 @@ function TenDrawResults({ results }: { results: ResultItem[] }): ReactNode {
 
   const updateCarousel = useCallback((withHaptic: boolean) => {
     const carousel = carouselRef.current;
-    if (!carousel) return;
-    const items = Array.from(carousel.children) as HTMLElement[];
+    const layerList = layerListRef.current;
+    if (!carousel || !layerList) return;
+    const anchors = Array.from(carousel.children) as HTMLElement[];
+    const layers = Array.from(layerList.children) as HTMLElement[];
     const carouselCenter =
       carousel.getBoundingClientRect().left + carousel.clientWidth / 2;
     let nearestIndex = 0;
     let nearestDistance = Number.POSITIVE_INFINITY;
 
-    items.forEach((item, index) => {
-      const bounds = item.getBoundingClientRect();
-      const distance = Math.abs(
-        bounds.left + bounds.width / 2 - carouselCenter,
+    anchors.forEach((anchor, index) => {
+      const layer = layers[index];
+      if (!layer) return;
+      const bounds = anchor.getBoundingClientRect();
+      const signedDistance =
+        (bounds.left + bounds.width / 2 - carouselCenter) /
+        Math.max(anchor.offsetWidth, 1);
+      const distance = Math.abs(signedDistance);
+      const direction = Math.sign(signedDistance);
+      const offset = interpolateCarouselLayer(distance, carouselLayerOffsets);
+      layer.style.setProperty(
+        "--carousel-left",
+        `${50 + direction * offset * 100}%`,
       );
-      const normalizedDistance = distance / Math.max(item.offsetWidth, 1);
-      item.style.setProperty(
+      layer.style.setProperty(
         "--carousel-scale",
-        interpolateCarouselLayer(
-          normalizedDistance,
-          carouselLayerScales,
-        ).toFixed(3),
+        interpolateCarouselLayer(distance, carouselLayerScales).toFixed(3),
       );
-      item.style.setProperty(
+      layer.style.setProperty(
         "--carousel-opacity",
-        interpolateCarouselLayer(
-          normalizedDistance,
-          carouselLayerOpacities,
-        ).toFixed(3),
+        interpolateCarouselLayer(distance, carouselLayerOpacities).toFixed(3),
       );
-      item.style.zIndex = String(100 - Math.round(normalizedDistance * 10));
+      layer.style.zIndex = String(100 - Math.round(distance * 10));
       if (distance < nearestDistance) {
         nearestDistance = distance;
         nearestIndex = index;
       }
     });
 
-    items.forEach((item, index) => {
-      if (index === nearestIndex) item.setAttribute("aria-current", "true");
-      else item.removeAttribute("aria-current");
+    layers.forEach((layer, index) => {
+      if (index === nearestIndex) layer.setAttribute("aria-current", "true");
+      else layer.removeAttribute("aria-current");
     });
     if (nearestIndex === activeIndexRef.current) return;
     activeIndexRef.current = nearestIndex;
@@ -223,7 +229,7 @@ function TenDrawResults({ results }: { results: ResultItem[] }): ReactNode {
     };
   }, [centerItem, resultKey, updateCarousel]);
 
-  const handleKeyDown = (event: KeyboardEvent<HTMLOListElement>) => {
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
     event.preventDefault();
     centerItem(
@@ -242,20 +248,22 @@ function TenDrawResults({ results }: { results: ResultItem[] }): ReactNode {
 
   return (
     <section className="gacha-moon-ten" aria-label="十连召唤结果">
-      <ol
-        ref={carouselRef}
-        className="gacha-moon-carousel"
-        aria-label="十连召唤结果，左右滑动查看"
-        tabIndex={0}
-        onKeyDown={handleKeyDown}
-        onScroll={scheduleCarouselUpdate}
-      >
+      <ol ref={layerListRef} className="gacha-moon-layer-list">
         {carouselResults.map((item, index) => (
           <li
             key={`${item.order}-${item.template_id}`}
             className={`rarity-${item.rarity}`}
             style={
               {
+                "--carousel-left": `${
+                  50 +
+                  Math.sign(index - initialCarouselIndex) *
+                    interpolateCarouselLayer(
+                      Math.abs(index - initialCarouselIndex),
+                      carouselLayerOffsets,
+                    ) *
+                    100
+                }%`,
                 "--carousel-scale": interpolateCarouselLayer(
                   Math.abs(index - initialCarouselIndex),
                   carouselLayerScales,
@@ -290,6 +298,23 @@ function TenDrawResults({ results }: { results: ResultItem[] }): ReactNode {
           </li>
         ))}
       </ol>
+      <div
+        ref={carouselRef}
+        className="gacha-moon-carousel"
+        role="group"
+        aria-label="十连召唤结果，左右滑动查看"
+        tabIndex={0}
+        onKeyDown={handleKeyDown}
+        onScroll={scheduleCarouselUpdate}
+      >
+        {carouselResults.map((item) => (
+          <span
+            key={`${item.order}-${item.template_id}`}
+            className="gacha-moon-snap-point"
+            aria-hidden="true"
+          />
+        ))}
+      </div>
     </section>
   );
 }

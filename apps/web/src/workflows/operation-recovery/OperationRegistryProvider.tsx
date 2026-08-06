@@ -56,6 +56,7 @@ import { GachaResultDialog } from "./GachaResultDialog.tsx";
 import { operationLabel } from "./labels.ts";
 import { WheelResultDialog } from "./WheelResultDialog.tsx";
 import "./gacha-ritual.css";
+import "./gacha-ten-stage.css";
 import { markOperationNewTemplates } from "./operation-new-markers.ts";
 
 type RegisteredOperation = {

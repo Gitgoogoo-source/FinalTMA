@@ -1,0 +1,117 @@
+.gacha-moon-ten {
+  --gacha-moon-stage-item-size: var(
+    --gacha-moon-focus-item-size,
+    min(54vw, 230px)
+  );
+  --gacha-moon-snap-step: min(24vw, 96px);
+  container-type: inline-size;
+  position: relative;
+}
+
+.gacha-moon-layer-list {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  overflow: visible;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  pointer-events: none;
+  isolation: isolate;
+}
+
+.gacha-moon-layer-list > li {
+  --carousel-left: 50%;
+  --carousel-scale: 0.26;
+  --carousel-opacity: 0.2;
+  position: absolute;
+  left: var(--carousel-left);
+  bottom: clamp(92px, 18dvh, 150px);
+  width: var(--gacha-moon-stage-item-size);
+  height: calc(var(--gacha-moon-stage-item-size) + 58px);
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  justify-items: center;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  opacity: var(--carousel-opacity);
+  transform: translate3d(-50%, 0, 0) scale(var(--carousel-scale));
+  transform-origin: center bottom;
+  transition:
+    left 80ms linear,
+    transform 80ms linear,
+    opacity 80ms linear;
+  will-change: left, transform, opacity;
+  animation: gacha-moon-pet-rise 460ms ease-out both;
+}
+
+.gacha-moon-layer-list .gacha-moon-art {
+  width: var(--gacha-moon-stage-item-size);
+  height: var(--gacha-moon-stage-item-size);
+  overflow: visible;
+}
+
+.gacha-moon-layer-list .catalog-image {
+  transform: scale(1.14);
+  transform-origin: center bottom;
+}
+
+.gacha-moon-layer-list > li:not([aria-current="true"]) .gacha-moon-rarity {
+  opacity: 0;
+}
+
+.gacha-moon-layer-list > li[aria-current="true"] .gacha-moon-rarity {
+  color: #ff9c00;
+  font-size: 22px;
+}
+
+.gacha-moon-layer-list > li[aria-current="true"] .catalog-image {
+  filter: drop-shadow(0 18px 13px rgba(54, 67, 75, 0.72))
+    drop-shadow(0 0 18px rgba(255, 156, 0, 0.52));
+}
+
+.gacha-moon-carousel {
+  position: absolute;
+  z-index: 12;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: stretch;
+  overflow-x: auto;
+  overflow-y: hidden;
+  margin: 0;
+  padding: 0 calc((100% - var(--gacha-moon-snap-step)) / 2);
+  scroll-padding-inline: calc((100% - var(--gacha-moon-snap-step)) / 2);
+  scroll-snap-type: x mandatory;
+  touch-action: pan-x;
+  cursor: grab;
+}
+
+.gacha-moon-carousel:active {
+  cursor: grabbing;
+}
+
+.gacha-moon-snap-point {
+  flex: 0 0 var(--gacha-moon-snap-step);
+  height: 100%;
+  scroll-snap-align: center;
+  scroll-snap-stop: always;
+}
+
+@media (max-height: 700px) {
+  .gacha-moon-ten {
+    --gacha-moon-stage-item-size: var(
+      --gacha-moon-focus-item-size,
+      min(52vw, 212px)
+    );
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gacha-moon-layer-list > li {
+    transition: none !important;
+    animation: none !important;
+  }
+}
