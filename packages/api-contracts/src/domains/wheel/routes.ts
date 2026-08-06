@@ -8,6 +8,8 @@ import {
   uuidSchema,
 } from "../../common/schemas.ts";
 
+const WHEEL_DAILY_LIMIT = 50;
+
 const wheelRewardSchema = z
   .object({
     order: z.number().int().positive(),
@@ -47,9 +49,13 @@ const wheelSpinOutputSchema = z
         free_rare_box: z.number().int().min(0),
       })
       .strict(),
-    spin_count: z.number().int().min(1).max(20),
-    remaining: z.number().int().min(0).max(19),
-    daily_limit: z.literal(20),
+    spin_count: z.number().int().min(1).max(WHEEL_DAILY_LIMIT),
+    remaining: z
+      .number()
+      .int()
+      .min(0)
+      .max(WHEEL_DAILY_LIMIT - 1),
+    daily_limit: z.literal(WHEEL_DAILY_LIMIT),
     assets: assetsSchema,
   })
   .strict()
@@ -96,7 +102,7 @@ const wheelSpinOutputSchema = z
           message: "K-coin cost must match spin count",
           path: ["cost_kcoin"],
         });
-      if (remaining !== 20 - spin_count)
+      if (remaining !== WHEEL_DAILY_LIMIT - spin_count)
         context.addIssue({
           code: "custom",
           message: "Remaining spins must match final spin count",
@@ -157,9 +163,9 @@ export const wheelRoutes = [
     input: emptyObjectSchema,
     output: z
       .object({
-        spin_count: z.number().int().min(0).max(20),
-        remaining: z.number().int().min(0).max(20),
-        daily_limit: z.literal(20),
+        spin_count: z.number().int().min(0).max(WHEEL_DAILY_LIMIT),
+        remaining: z.number().int().min(0).max(WHEEL_DAILY_LIMIT),
+        daily_limit: z.literal(WHEEL_DAILY_LIMIT),
         single_cost: z.literal(20),
         ten_cost: z.literal(180),
         milestone_10_claimed: z.boolean(),

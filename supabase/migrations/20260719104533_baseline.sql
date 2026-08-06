@@ -1710,7 +1710,7 @@ $$;
 create table wheel.daily (
   user_id uuid not null references identity.users(id) on delete cascade,
   business_date date not null,
-  spin_count smallint not null default 0 check (spin_count between 0 and 20),
+  spin_count smallint not null default 0 check (spin_count between 0 and 50),
   normal_entitlements smallint not null default 0 check (normal_entitlements between 0 and 3),
   rare_entitlements smallint not null default 0 check (rare_entitlements between 0 and 1),
   updated_at timestamptz not null default now(),
@@ -1742,8 +1742,8 @@ begin
   v_count := coalesce(v_count, 0);
   return jsonb_build_object(
     'spin_count', v_count,
-    'remaining', 20 - v_count,
-    'daily_limit', 20,
+    'remaining', 50 - v_count,
+    'daily_limit', 50,
     'single_cost', 20,
     'ten_cost', 180,
     'milestone_10_claimed', v_count >= 10,
@@ -1833,7 +1833,7 @@ begin
     insert into wheel.daily (user_id, business_date) values (v_user_id, identity.utc_day()) on conflict do nothing;
     select spin_count, normal_entitlements, rare_entitlements into v_spin_count, v_normal, v_rare
     from wheel.daily where user_id = v_user_id and business_date = identity.utc_day() for update;
-    if v_spin_count + p_count > 20 then perform api.raise_business_error('WHEEL_DAILY_LIMIT', '今日转盘次数不足'); end if;
+    if v_spin_count + p_count > 50 then perform api.raise_business_error('WHEEL_DAILY_LIMIT', '今日转盘次数不足'); end if;
     v_cost := case when p_count = 10 then 180 else 20 end;
     perform economy.change_balance(v_user_id, 'KCOIN', -v_cost, 'wheel', p_operation_id, p_count::text);
     for v_i in 1..p_count loop
@@ -1910,8 +1910,8 @@ begin
         )
       ),
       'spin_count', v_spin_count + p_count,
-      'remaining', 20 - v_spin_count - p_count,
-      'daily_limit', 20,
+      'remaining', 50 - v_spin_count - p_count,
+      'daily_limit', 50,
       'assets', economy.assets(v_user_id)
     );
     return operations.complete_command(p_operation_id, v_result);

@@ -4670,10 +4670,10 @@ input:focus {
   background: #58b84d;
 }
 .app-shell .wheel-progress-checkpoint.checkpoint-10 {
-  left: 50%;
+  left: 20%;
 }
 .app-shell .wheel-progress-checkpoint.checkpoint-20 {
-  left: 100%;
+  left: 40%;
 }
 .app-shell .wheel-stage {
   width: 100%;

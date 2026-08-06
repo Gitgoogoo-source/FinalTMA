@@ -164,7 +164,7 @@ export function WheelPanel(): ReactNode {
   const status = confirmedState ?? query.data;
   const spinCount = status?.spin_count ?? 0;
   const remaining = status?.remaining ?? 0;
-  const dailyLimit = status?.daily_limit ?? 20;
+  const dailyLimit = status?.daily_limit ?? 50;
   const progress = Math.min(100, (spinCount / Math.max(1, dailyLimit)) * 100);
   const interactionLocked = blocked || motion !== "idle";
 
@@ -277,6 +277,7 @@ export function WheelPanel(): ReactNode {
         <>
           <MilestoneProgress
             spinCount={spinCount}
+            dailyLimit={dailyLimit}
             progress={progress}
             milestone10Claimed={status?.milestone_10_claimed ?? false}
             milestone20Claimed={status?.milestone_20_claimed ?? false}
@@ -417,11 +418,13 @@ export function WheelPanel(): ReactNode {
 
 function MilestoneProgress({
   spinCount,
+  dailyLimit,
   progress,
   milestone10Claimed,
   milestone20Claimed,
 }: {
   spinCount: number;
+  dailyLimit: number;
   progress: number;
   milestone10Claimed: boolean;
   milestone20Claimed: boolean;
@@ -429,8 +432,13 @@ function MilestoneProgress({
   return (
     <section className="wheel-progress" aria-label="今日转盘里程碑">
       <p>
-        {spinCount >= 20 ? (
-          <>今日累计奖励已全部获得</>
+        {spinCount >= dailyLimit ? (
+          <>今日转盘次数已用完 · 累计奖励已全部获得</>
+        ) : spinCount >= 20 ? (
+          <>
+            累计奖励已全部获得 · 今日还可转
+            <strong> {dailyLimit - spinCount}</strong> 次
+          </>
         ) : spinCount >= 10 ? (
           <>
             已获得 25 Fgems · 再转 <strong>{20 - spinCount}</strong> 次可获得
@@ -449,7 +457,7 @@ function MilestoneProgress({
           className="wheel-progress-current"
           style={{ left: `${progress}%` }}
         >
-          {spinCount}/20
+          {spinCount}/{dailyLimit}
         </span>
         <span
           className={`wheel-progress-checkpoint checkpoint-10${milestone10Claimed ? " claimed" : ""}`}
