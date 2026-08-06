@@ -57,7 +57,6 @@ import {
   type GachaHatchTier,
 } from "./GachaHatchAnimation.tsx";
 import { GachaResultDialog } from "./GachaResultDialog.tsx";
-import { primeGachaAudio } from "./gacha-audio.ts";
 import { operationLabel } from "./labels.ts";
 import { WheelResultDialog } from "./WheelResultDialog.tsx";
 import "./gacha-ritual.css";
@@ -258,6 +257,24 @@ export function OperationRegistryProvider({
     else telegram()?.disableClosingConfirmation();
     return () => telegram()?.disableClosingConfirmation();
   }, [closingBlocked]);
+
+  useEffect(() => {
+    if (!animatedGachaOperationId) return;
+    const operationId = animatedGachaOperationId;
+    let timer: number | undefined;
+    const finishCycle = () => {
+      const operation = operationsRef.current[operationId];
+      if (operation?.phase === "succeeded" || operation?.phase === "failed") {
+        setRevealedGachaAnimationId(operationId);
+        return;
+      }
+      timer = window.setTimeout(finishCycle, 3_000);
+    };
+    timer = window.setTimeout(finishCycle, 3_000);
+    return () => {
+      if (timer !== undefined) window.clearTimeout(timer);
+    };
+  }, [animatedGachaOperationId]);
 
   useLayoutEffect(() => {
     if (!activeId || !dialogRef.current) return;
@@ -490,11 +507,7 @@ export function OperationRegistryProvider({
           });
         if (!pending)
           markOperationNewTemplates(routeId, response.data, markNew);
-        if (
-          routeId !== "gacha.open" &&
-          routeId !== "inventory.evolve" &&
-          routeId !== "inventory.decompose"
-        )
+        if (routeId !== "inventory.evolve" && routeId !== "inventory.decompose")
           haptic(pending ? "warning" : "success");
         if (!refreshBeforeSuccess) {
           if (pending) await refreshRouteScopes(routeId).catch(() => undefined);
@@ -538,11 +551,7 @@ export function OperationRegistryProvider({
             errorCode: failure.code,
             persistent: Boolean(failure.operationId),
           });
-        if (
-          routeId !== "gacha.open" &&
-          routeId !== "inventory.evolve" &&
-          routeId !== "inventory.decompose"
-        )
+        if (routeId !== "inventory.evolve" && routeId !== "inventory.decompose")
           haptic("error");
         if (!unknown) await refreshAfterLocalSettlement(id, routeId);
         return null;
@@ -698,7 +707,6 @@ export function OperationRegistryProvider({
           )
             setActiveId((current) => current ?? operation.id);
           if (
-            operation.routeId !== "gacha.open" &&
             operation.routeId !== "inventory.evolve" &&
             operation.routeId !== "inventory.decompose"
           )
@@ -836,7 +844,6 @@ export function OperationRegistryProvider({
       }
       setGachaActionId(operation.id);
       setGachaActionError(null);
-      primeGachaAudio();
       try {
         const [bootstrap, identity] = await Promise.all([
           apiRequest("gacha.bootstrap", {}),
@@ -1142,9 +1149,6 @@ export function OperationRegistryProvider({
                 active.animationTier ??
                 gachaAnimationTier(active.input, gachaResult)
               }
-              phase={active.phase}
-              result={gachaResult}
-              onComplete={() => setRevealedGachaAnimationId(active.id)}
             />
           ) : gachaResult ? (
             <GachaResultDialog

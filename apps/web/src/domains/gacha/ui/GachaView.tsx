@@ -28,10 +28,7 @@ import {
   usePageActive,
   usePageSearchParams,
 } from "../../../shared/navigation/pageActivity.tsx";
-import {
-  primeGachaAudio,
-  useOperationRegistry,
-} from "../../../workflows/operation-recovery/index.ts";
+import { useOperationRegistry } from "../../../workflows/operation-recovery/index.ts";
 import { useNavigationIntent } from "../../../workflows/payment-recovery/index.ts";
 type BoxTier = "normal" | "rare" | "legendary";
 type Rarity = "common" | "rare" | "epic" | "legendary" | "mythic";
@@ -235,7 +232,6 @@ export function GachaView(): ReactNode {
       requestTopup({ kind: "gacha", tier, draw_count: count }, cost - balance);
       return;
     }
-    primeGachaAudio();
     void run(count === 10 ? "正在准备十连开盒" : "正在开启盲盒", "gacha.open", {
       tier,
       draw_count: count,
