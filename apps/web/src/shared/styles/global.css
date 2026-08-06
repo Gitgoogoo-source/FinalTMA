@@ -5810,44 +5810,6 @@ input:focus {
 .app-shell:has(.tasks-page) .bottom-nav {
   bottom: calc(var(--safe-bottom) + 7px);
 }
-.app-shell .tasks-screen-heading {
-  min-height: 70px;
-  display: grid;
-  grid-template-columns: 46px minmax(0, 1fr) 46px;
-  align-items: center;
-  gap: 10px;
-  padding: 5px 2px 7px;
-}
-.app-shell .tasks-screen-heading h1 {
-  margin: 0;
-  color: #071d3b;
-  font-size: 24px;
-  font-weight: 900;
-  letter-spacing: 0.02em;
-  text-align: center;
-}
-.app-shell .tasks-screen-heading button {
-  width: 46px;
-  height: 46px;
-  display: grid;
-  place-items: center;
-  padding: 0;
-  border: 1px solid rgba(7, 29, 59, 0.08);
-  border-radius: 50%;
-  color: #071d3b;
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow:
-    0 12px 28px rgba(7, 29, 59, 0.08),
-    inset 0 1px 0 #fff;
-}
-.app-shell .tasks-screen-heading button:active {
-  transform: scale(0.94);
-}
-.app-shell .tasks-screen-heading svg {
-  width: 23px;
-  height: 23px;
-  stroke-width: 2.2;
-}
 .app-shell .task-highlight {
   display: grid;
   grid-template-columns: 40px minmax(0, 1fr) auto;
