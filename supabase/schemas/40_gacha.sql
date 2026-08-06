@@ -113,44 +113,6 @@ begin
 end;
 $$;
 
-create or replace function api.gacha_acknowledge_result(
-  p_session_id uuid,
-  p_operation_id uuid
-)
-returns jsonb
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-  v_user_id uuid := api.session_user(p_session_id);
-  v_operation operations.operations%rowtype;
-begin
-  select * into v_operation
-  from operations.operations o
-  where o.id = p_operation_id
-    and o.user_id = v_user_id
-    and o.use_case = 'gacha.open'
-  for update;
-  if v_operation.id is null then
-    perform api.raise_business_error('OPERATION_NOT_FOUND', '开盒操作记录不存在');
-  end if;
-  if v_operation.status not in ('succeeded', 'failed') then
-    perform api.raise_business_error('OPERATION_NOT_ACKNOWLEDGEABLE', '开盒结果尚未确定');
-  end if;
-  if v_operation.result_acknowledged_at is null then
-    update operations.operations
-    set result_acknowledged_at = now(), updated_at = now()
-    where id = p_operation_id
-    returning * into v_operation;
-  end if;
-  return jsonb_build_object(
-    'operation_id', v_operation.id,
-    'acknowledged_at', v_operation.result_acknowledged_at
-  );
-end;
-$$;
-
 create or replace function api.gacha_open(
   p_session_id uuid,
   p_operation_id uuid,

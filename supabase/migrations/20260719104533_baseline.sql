@@ -449,10 +449,12 @@ begin
     'blocking_operations', coalesce((
       select jsonb_agg(operations.operation_json(o) order by o.created_at)
       from operations.operations o
-      where o.user_id = v_user_id and (
+      where o.user_id = v_user_id
+        and o.use_case <> 'gacha.open'
+        and (
         o.status in ('pending', 'unknown')
         or (
-          o.use_case in ('gacha.open', 'wheel.spin', 'inventory.evolve')
+          o.use_case in ('wheel.spin', 'inventory.evolve')
           and o.status in ('succeeded', 'failed')
           and o.result_acknowledged_at is null
         )
@@ -546,7 +548,7 @@ create table operations.operations (
 create index operations_user_created_idx on operations.operations (user_id, created_at desc);
 create index operations_pending_idx on operations.operations (created_at) where status in ('pending', 'unknown');
 create index operations_result_recovery_idx on operations.operations (user_id, created_at, id)
-where use_case in ('gacha.open', 'wheel.spin', 'inventory.evolve') and result_acknowledged_at is null;
+where use_case in ('wheel.spin', 'inventory.evolve') and result_acknowledged_at is null;
 
 create table operations.webhook_events (
   provider text not null,
@@ -734,7 +736,7 @@ begin
       select jsonb_agg(operations.operation_json(o) order by o.created_at, o.id)
       from operations.operations o
       where o.user_id = v_user_id
-        and o.use_case in ('gacha.open', 'wheel.spin', 'inventory.evolve')
+        and o.use_case in ('wheel.spin', 'inventory.evolve')
         and o.result_acknowledged_at is null
     ), '[]'::jsonb)
   );
@@ -1326,44 +1328,6 @@ begin
       'free_rare_box', (select count(*) from economy.entitlements where user_id = v_user_id and kind = 'free_rare_box' and status = 'unused')
     ),
     'rules_complete', gacha.rules_complete()
-  );
-end;
-$$;
-
-create or replace function api.gacha_acknowledge_result(
-  p_session_id uuid,
-  p_operation_id uuid
-)
-returns jsonb
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-  v_user_id uuid := api.session_user(p_session_id);
-  v_operation operations.operations%rowtype;
-begin
-  select * into v_operation
-  from operations.operations o
-  where o.id = p_operation_id
-    and o.user_id = v_user_id
-    and o.use_case = 'gacha.open'
-  for update;
-  if v_operation.id is null then
-    perform api.raise_business_error('OPERATION_NOT_FOUND', '开盒操作记录不存在');
-  end if;
-  if v_operation.status not in ('succeeded', 'failed') then
-    perform api.raise_business_error('OPERATION_NOT_ACKNOWLEDGEABLE', '开盒结果尚未确定');
-  end if;
-  if v_operation.result_acknowledged_at is null then
-    update operations.operations
-    set result_acknowledged_at = now(), updated_at = now()
-    where id = p_operation_id
-    returning * into v_operation;
-  end if;
-  return jsonb_build_object(
-    'operation_id', v_operation.id,
-    'acknowledged_at', v_operation.result_acknowledged_at
   );
 end;
 $$;
@@ -10571,7 +10535,7 @@ begin
   elsif p_job_name = 'cleanup-idempotency' then
     delete from operations.operations where id in (
       select id from operations.operations where created_at < now() - interval '30 days' and status in ('succeeded', 'failed')
-        and not (use_case in ('gacha.open', 'wheel.spin', 'inventory.evolve') and result_acknowledged_at is null)
+        and not (use_case in ('wheel.spin', 'inventory.evolve') and result_acknowledged_at is null)
         and use_case not like 'battle.%'
         and not exists (select 1 from payments.orders p where p.operation_id = operations.operations.id and p.status in ('pending', 'processing', 'paid'))
         and not exists (select 1 from onchain.mints m where m.operation_id = operations.operations.id and m.status in ('reserved', 'submitted', 'unknown'))

@@ -6,8 +6,6 @@ import {
   boxTierSchema,
   emptyObjectSchema,
   raritySchema,
-  timestampSchema,
-  uuidSchema,
 } from "../../common/schemas.ts";
 import { boxSchema } from "./models.ts";
 
@@ -86,27 +84,6 @@ export const gachaRoutes = [
       })
       .strict(),
     errors: ["SESSION_REQUIRED", "ACCOUNT_RESTRICTED", "INTERNAL_ERROR"],
-  }),
-  defineRoute({
-    id: "gacha.acknowledge_result",
-    method: "POST",
-    path: "/api/gacha/results/:operation_id/acknowledge",
-    gateway: "app",
-    auth: true,
-    idempotent: false,
-    input: z.object({ operation_id: uuidSchema }).strict(),
-    output: z
-      .object({
-        operation_id: uuidSchema,
-        acknowledged_at: timestampSchema,
-      })
-      .strict(),
-    errors: [
-      "OPERATION_NOT_FOUND",
-      "OPERATION_NOT_ACKNOWLEDGEABLE",
-      "ACCOUNT_RESTRICTED",
-      "INTERNAL_ERROR",
-    ],
   }),
   defineRoute({
     id: "gacha.open",

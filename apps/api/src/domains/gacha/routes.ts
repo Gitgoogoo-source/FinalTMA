@@ -15,12 +15,6 @@ export const gachaHandlers = {
       p_session_id: requireSession(context).session_id,
     }),
   }),
-  "gacha.acknowledge_result": async (context) => ({
-    data: await rpc("gacha_acknowledge_result", {
-      p_session_id: requireSession(context).session_id,
-      p_operation_id: context.input.operation_id,
-    }),
-  }),
   "gacha.open": async (context) =>
     operationResult(
       await rpc<OperationEnvelope>("gacha_open", {

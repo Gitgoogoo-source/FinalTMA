@@ -69,7 +69,6 @@ declare
     'expedition_eligible_items',
     'expedition_list',
     'finish_job',
-    'gacha_acknowledge_result',
     'gacha_bootstrap',
     'gacha_open',
     'identity_authenticate',

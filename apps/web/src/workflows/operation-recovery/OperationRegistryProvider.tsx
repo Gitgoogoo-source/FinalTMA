@@ -35,7 +35,11 @@ import {
   registerSensitiveStateResetter,
   useSession,
 } from "../../platform/session/store.ts";
-import { haptic, telegram } from "../../platform/telegram/index.ts";
+import {
+  haptic,
+  subscribeTelegramActivity,
+  telegram,
+} from "../../platform/telegram/index.ts";
 import { Button } from "../../shared/ui/index.tsx";
 import { useNewMarkers } from "../new-markers/index.ts";
 import { useNavigationIntent } from "../payment-recovery/index.ts";
@@ -74,7 +78,6 @@ type RegisteredOperation = {
   animationTier: GachaHatchTier | null;
 };
 
-type GachaResultAction = "again" | "inventory" | "close";
 type EvolutionResultAction = "inventory" | "album" | "acknowledge";
 type GachaResult = RouteOutput<"gacha.open">;
 const unresolvedPhases = new Set<OperationPhase>([
@@ -84,7 +87,6 @@ const unresolvedPhases = new Set<OperationPhase>([
   "unknown",
 ]);
 const acknowledgedResultRouteIds = new Set<RecoverableRouteId>([
-  "gacha.open",
   "wheel.spin",
   "inventory.evolve",
 ]);
@@ -95,6 +97,7 @@ const navigationLockedThroughResultRouteIds = new Set<RecoverableRouteId>([
 ]);
 const autoPollingRouteIds = new Set<RecoverableRouteId>([
   ...acknowledgedResultRouteIds,
+  "gacha.open",
   "inventory.decompose",
 ]);
 const refreshBeforeSuccessRouteIds = new Set<RecoverableRouteId>([
@@ -140,12 +143,18 @@ export function OperationRegistryProvider({
     operationId: string;
     message: string;
   } | null>(null);
+  const [gachaActionId, setGachaActionId] = useState<string | null>(null);
+  const [gachaActionError, setGachaActionError] = useState<{
+    operationId: string;
+    message: string;
+  } | null>(null);
   const [revealedGachaAnimationId, setRevealedGachaAnimationId] = useState<
     string | null
   >(null);
   const recoveringIds = useRef(new Set<string>());
   const acknowledgedIds = useRef(new Set<string>());
   const locallyRefreshedEvolutionIds = useRef(new Set<string>());
+  const needsGachaRefreshAfterLeave = useRef(false);
   const active = activeId ? operations[activeId] : undefined;
   const resultRecoveryActive = Object.values(operations).some(
     (operation) =>
@@ -234,7 +243,10 @@ export function OperationRegistryProvider({
         setActiveId(null);
         setAcknowledgingId(null);
         setAcknowledgementError(null);
+        setGachaActionId(null);
+        setGachaActionError(null);
         setRevealedGachaAnimationId(null);
+        needsGachaRefreshAfterLeave.current = false;
         telegram()?.disableClosingConfirmation();
       }),
     [],
@@ -308,6 +320,70 @@ export function OperationRegistryProvider({
       current === id ? (Object.keys(next)[0] ?? null) : current,
     );
   }, []);
+
+  const discardGachaPresentation = useCallback(() => {
+    const current = operationsRef.current;
+    const discardedIds = new Set(
+      Object.values(current)
+        .filter((operation) => operation.routeId === "gacha.open")
+        .map((operation) => operation.id),
+    );
+    if (discardedIds.size === 0) return;
+    const next = Object.fromEntries(
+      Object.entries(current).filter(
+        ([operationId]) => !discardedIds.has(operationId),
+      ),
+    );
+    needsGachaRefreshAfterLeave.current = true;
+    operationsRef.current = next;
+    setOperations(next);
+    setActiveId((id) =>
+      id && discardedIds.has(id) ? (Object.keys(next)[0] ?? null) : id,
+    );
+    setGachaActionId((id) => (id && discardedIds.has(id) ? null : id));
+    setGachaActionError((error) =>
+      error && discardedIds.has(error.operationId) ? null : error,
+    );
+    setRevealedGachaAnimationId((id) =>
+      id && discardedIds.has(id) ? null : id,
+    );
+  }, []);
+
+  useEffect(() => {
+    const restore = () => {
+      if (
+        !needsGachaRefreshAfterLeave.current ||
+        getSession()?.accountStatus !== "normal"
+      )
+        return;
+      needsGachaRefreshAfterLeave.current = false;
+      void refreshRouteScopes("gacha.open", { throwOnError: true }).catch(
+        () => {
+          if (getSession()?.accountStatus === "normal")
+            needsGachaRefreshAfterLeave.current = true;
+        },
+      );
+    };
+    const visibility = () => {
+      if (document.visibilityState === "visible") restore();
+      else discardGachaPresentation();
+    };
+    const unsubscribe = subscribeTelegramActivity(
+      restore,
+      discardGachaPresentation,
+    );
+    document.addEventListener("visibilitychange", visibility);
+    window.addEventListener("pagehide", discardGachaPresentation);
+    window.addEventListener("pageshow", restore);
+    window.addEventListener("online", restore);
+    return () => {
+      unsubscribe();
+      document.removeEventListener("visibilitychange", visibility);
+      window.removeEventListener("pagehide", discardGachaPresentation);
+      window.removeEventListener("pageshow", restore);
+      window.removeEventListener("online", restore);
+    };
+  }, [discardGachaPresentation]);
 
   const refreshAfterLocalSettlement = useCallback(
     async (id: string, routeId: RecoverableRouteId) => {
@@ -507,6 +583,12 @@ export function OperationRegistryProvider({
       const completedOutsideRegistry = new Set<string>();
       let firstId: string | null = null;
       for (const operation of incoming) {
+        if (operation.use_case === "gacha.open") {
+          delete next[operation.operation_id];
+          completedOutsideRegistry.add(operation.operation_id);
+          needsGachaRefreshAfterLeave.current = true;
+          continue;
+        }
         if (
           !isRecoverableRouteId(operation.use_case) ||
           operation.acknowledged_at !== null ||
@@ -556,6 +638,15 @@ export function OperationRegistryProvider({
           ? firstId
           : (current ?? firstId),
       );
+      if (needsGachaRefreshAfterLeave.current) {
+        needsGachaRefreshAfterLeave.current = false;
+        void refreshRouteScopes("gacha.open", { throwOnError: true }).catch(
+          () => {
+            if (getSession()?.accountStatus === "normal")
+              needsGachaRefreshAfterLeave.current = true;
+          },
+        );
+      }
     },
     [markNew],
   );
@@ -732,104 +823,79 @@ export function OperationRegistryProvider({
     else setActiveId(null);
   }, [active, remove]);
 
-  const acknowledgeGachaResult = useCallback(
-    async (operation: RegisteredOperation, action: GachaResultAction) => {
+  const repeatGacha = useCallback(
+    async (operation: RegisteredOperation) => {
       if (
         operation.routeId !== "gacha.open" ||
-        !["succeeded", "failed"].includes(operation.phase) ||
-        acknowledgingId
+        operation.phase !== "succeeded" ||
+        gachaActionId
       )
         return;
       const generation = operation.sessionGeneration;
-      setAcknowledgingId(operation.id);
-      setAcknowledgementError(null);
-      let savingResult = false;
-      try {
-        let repeatDecision: {
-          result: GachaResult;
-          estimatedGap: number | null;
-        } | null = null;
-        if (action === "again") {
-          const parsedResult = routeById("gacha.open").output.safeParse(
-            operation.result,
-          );
-          if (!parsedResult.success) {
-            setAcknowledgementError({
-              operationId: operation.id,
-              message: "开盒结果详情暂时无法确认，请查询原操作",
-            });
-            return;
-          }
-          const [bootstrap, identity] = await Promise.all([
-            apiRequest("gacha.bootstrap", {}),
-            fetchApiQuery("identity.bootstrap"),
-          ]);
-          if (!isCurrentNormalSession(generation)) return;
-          const box = bootstrap.data.boxes.find(
-            (candidate) => candidate.tier === parsedResult.data.tier,
-          );
-          if (!bootstrap.data.rules_complete || !box) {
-            setAcknowledgementError({
-              operationId: operation.id,
-              message: "开盒规则加载失败，请重试",
-            });
-            return;
-          }
-          const { draw_count, tier } = parsedResult.data;
-          const free =
-            draw_count === 1 &&
-            ((tier === "normal" &&
-              bootstrap.data.entitlements.free_normal_box > 0) ||
-              (tier === "rare" &&
-                bootstrap.data.entitlements.free_rare_box > 0));
-          const price = draw_count === 10 ? box.ten_price : box.single_price;
-          const balance = identity.assets.kcoin.available;
-          repeatDecision = {
-            result: parsedResult.data,
-            estimatedGap: free || balance >= price ? null : price - balance,
-          };
-        }
-        savingResult = true;
-        await apiRequest("gacha.acknowledge_result", {
-          operation_id: operation.id,
-        });
-        if (!isCurrentNormalSession(generation)) return;
-        acknowledgedIds.current.add(operation.id);
-        remove(operation.id);
-        if (action === "inventory") navigate("/inventory");
-        else if (action === "again" && repeatDecision) {
-          const { draw_count, tier } = repeatDecision.result;
-          navigate(`/?tier=${tier}`);
-          if (repeatDecision.estimatedGap !== null)
-            requestTopup(
-              { kind: "gacha", tier, draw_count },
-              repeatDecision.estimatedGap,
-            );
-          else
-            await run(
-              draw_count === 10 ? "正在准备十连开盒" : "正在开启盲盒",
-              "gacha.open",
-              { tier, draw_count },
-            );
-        }
-      } catch (cause) {
-        if (!isCurrentNormalSession(generation)) return;
-        setAcknowledgementError({
+      const parsedResult = routeById("gacha.open").output.safeParse(
+        operation.result,
+      );
+      if (!parsedResult.success) {
+        setGachaActionError({
           operationId: operation.id,
-          message:
-            cause instanceof ApiFailure && cause.code !== "NETWORK_ERROR"
-              ? cause.message
-              : savingResult
-                ? "结果确认状态保存失败，请重试"
-                : "最新开盒状态加载失败，请重试",
+          message: "开盒结果详情暂时无法读取",
+        });
+        return;
+      }
+      setGachaActionId(operation.id);
+      setGachaActionError(null);
+      try {
+        const [bootstrap, identity] = await Promise.all([
+          apiRequest("gacha.bootstrap", {}),
+          fetchApiQuery("identity.bootstrap"),
+        ]);
+        if (
+          !isCurrentNormalSession(generation) ||
+          !operationsRef.current[operation.id]
+        )
+          return;
+        const box = bootstrap.data.boxes.find(
+          (candidate) => candidate.tier === parsedResult.data.tier,
+        );
+        if (!bootstrap.data.rules_complete || !box) {
+          setGachaActionError({
+            operationId: operation.id,
+            message: "开盒规则加载失败，请重试",
+          });
+          return;
+        }
+        const { draw_count, tier } = parsedResult.data;
+        const free =
+          draw_count === 1 &&
+          ((tier === "normal" &&
+            bootstrap.data.entitlements.free_normal_box > 0) ||
+            (tier === "rare" && bootstrap.data.entitlements.free_rare_box > 0));
+        const price = draw_count === 10 ? box.ten_price : box.single_price;
+        const balance = identity.assets.kcoin.available;
+        const estimatedGap = free || balance >= price ? null : price - balance;
+        remove(operation.id);
+        navigate(`/?tier=${tier}`);
+        if (estimatedGap !== null)
+          requestTopup({ kind: "gacha", tier, draw_count }, estimatedGap);
+        else
+          await run(
+            draw_count === 10 ? "正在准备十连开盒" : "正在开启盲盒",
+            "gacha.open",
+            { tier, draw_count },
+          );
+      } catch {
+        if (!isCurrentNormalSession(generation)) return;
+        setGachaActionError({
+          operationId: operation.id,
+          message: "最新开盒状态加载失败，请重试",
         });
       } finally {
-        setAcknowledgingId((current) =>
+        setGachaActionId((current) =>
           current === operation.id ? null : current,
         );
       }
     },
-    [acknowledgingId, navigate, remove, requestTopup, run],
+    [gachaActionId, navigate, remove, requestTopup, run],
   );
 
   const acknowledgeWheelResult = useCallback(
@@ -1087,17 +1153,18 @@ export function OperationRegistryProvider({
           ) : gachaResult ? (
             <GachaResultDialog
               result={gachaResult}
-              busy={acknowledgingId === active.id}
+              busy={gachaActionId === active.id}
               error={
-                acknowledgementError?.operationId === active.id
-                  ? acknowledgementError.message
+                gachaActionError?.operationId === active.id
+                  ? gachaActionError.message
                   : null
               }
-              onRepeat={() => void acknowledgeGachaResult(active, "again")}
-              onInventory={() =>
-                void acknowledgeGachaResult(active, "inventory")
-              }
-              onConfirm={() => void acknowledgeGachaResult(active, "close")}
+              onRepeat={() => void repeatGacha(active)}
+              onInventory={() => {
+                remove(active.id);
+                navigate("/inventory");
+              }}
+              onConfirm={() => remove(active.id)}
             />
           ) : wheelResult ? (
             <WheelResultDialog
@@ -1169,18 +1236,15 @@ export function OperationRegistryProvider({
               )}
               {!invalidDedicatedSuccess &&
                 !acknowledgedResultRouteIds.has(active.routeId) &&
+                active.routeId !== "gacha.open" &&
                 (active.phase === "succeeded" || active.phase === "failed") && (
                   <Button className="secondary" onClick={dismiss}>
                     完成
                   </Button>
                 )}
               {active.routeId === "gacha.open" && active.phase === "failed" ? (
-                <Button
-                  className="secondary"
-                  disabled={acknowledgingId === active.id}
-                  onClick={() => void acknowledgeGachaResult(active, "close")}
-                >
-                  {acknowledgingId === active.id ? "正在确认结果" : "确定"}
+                <Button className="secondary" onClick={dismiss}>
+                  确定
                 </Button>
               ) : null}
               {active.routeId === "wheel.spin" && active.phase === "failed" ? (

@@ -415,7 +415,7 @@ def verify_operation_recovery_discovery() -> None:
         '"operations.recoverable": async (context)',
         'rpc("operations_recoverable"',
         "create or replace function api.operations_recoverable(p_session_id uuid)",
-        "o.use_case in ('gacha.open', 'wheel.spin', 'inventory.evolve')",
+        "o.use_case in ('wheel.spin', 'inventory.evolve')",
         "order by o.created_at, o.id",
     )
     backend_source = handlers + schema
@@ -457,6 +457,27 @@ def verify_operation_recovery_discovery() -> None:
         raise SystemExit(
             "Legacy per-domain recovery entry points remain: "
             f"{remaining_legacy_terms}"
+        )
+
+    removed_gacha_acknowledgement = (
+        '"gacha.acknowledge_result"',
+        "gacha_acknowledge_result",
+        "/api/gacha/results/:operation_id/acknowledge",
+    )
+    remaining_gacha_acknowledgement = [
+        term for term in removed_gacha_acknowledgement if term in legacy_source
+    ]
+    if remaining_gacha_acknowledgement:
+        raise SystemExit(
+            "Gacha result presentation cannot retain server acknowledgement: "
+            f"{remaining_gacha_acknowledgement}"
+        )
+    if (
+        'operation.use_case === "gacha.open"' not in provider
+        or "discardGachaPresentation" not in provider
+    ):
+        raise SystemExit(
+            "Gacha terminal results must be discarded instead of restored"
         )
 
     recovery_document = (
