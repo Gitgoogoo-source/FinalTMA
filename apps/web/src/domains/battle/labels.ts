@@ -15,19 +15,16 @@ export const battleRarityLabels = {
 export const battleArenaTierLabels = {
   "tier-20": {
     name: "新手峡谷",
-    level: 1,
     rarity: "普通",
     rarityGems: 1,
   },
   "tier-100": {
     name: "熔岩遗迹",
-    level: 2,
     rarity: "稀有",
     rarityGems: 2,
   },
   "tier-500": {
     name: "冠军火山",
-    level: 3,
     rarity: "史诗",
     rarityGems: 3,
   },
@@ -35,7 +32,6 @@ export const battleArenaTierLabels = {
   BattleEntryTier["id"],
   {
     name: string;
-    level: number;
     rarity: string;
     rarityGems: number;
   }

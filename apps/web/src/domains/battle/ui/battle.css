@@ -485,7 +485,6 @@
   white-space: nowrap;
 }
 
-.battle-tier-level,
 .battle-tier-rarity-name {
   display: inline-flex;
   align-items: baseline;
@@ -496,21 +495,14 @@
   white-space: nowrap;
 }
 
-.battle-tier-level {
-  padding: 2px 5px;
-  font-size: 9px;
-  font-weight: 950;
-}
-
-.battle-tier-level small,
 .battle-tier-rarity-name small {
   display: none;
 }
 
 .battle-tier-economy small {
-  color: var(--battle-muted);
-  font-size: 8px;
-  font-weight: 850;
+  color: var(--battle-orange);
+  font-size: 11px;
+  font-weight: 950;
 }
 
 .battle-tier-rarity-name {
@@ -526,7 +518,7 @@
   display: flex;
   align-items: center;
   gap: 2px;
-  color: rgba(116, 128, 121, 0.22);
+  color: var(--battle-orange);
 }
 
 .battle-tier-rarity-gems svg {
@@ -534,10 +526,6 @@
   height: 11px;
   fill: currentColor;
   stroke-width: 2.2;
-}
-
-.battle-tier-rarity-gems svg.active {
-  color: var(--battle-tier-accent);
 }
 
 .battle-tier-economy {
@@ -561,7 +549,8 @@
 .battle-tier-economy strong {
   min-width: 0;
   overflow: hidden;
-  font-size: 9px;
+  color: var(--battle-orange);
+  font-size: 11px;
   font-weight: 950;
   text-overflow: ellipsis;
   white-space: nowrap;

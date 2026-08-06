@@ -106,7 +106,7 @@ export function BattleHome({
                 className={selected ? "selected" : ""}
                 data-entry-fee={tier.entry_fee}
                 disabled={selectionDisabled}
-                aria-label={`${arena.name}，战场等级 ${arena.level}，稀有度${arena.rarity}，奖池 ${tier.pool} K-coin，门票 ${tier.entry_fee} K-coin`}
+                aria-label={`${arena.name}，稀有度${arena.rarity}，奖池 ${tier.pool} K-coin，门票 ${tier.entry_fee} K-coin`}
                 aria-pressed={selected}
                 onClick={() => setSelectedTierId(tier.id)}
               >
@@ -114,10 +114,6 @@ export function BattleHome({
                 <span className="battle-tier-details">
                   <span className="battle-tier-title-row">
                     <strong>{arena.name}</strong>
-                    <span className="battle-tier-level">
-                      <small>战场等级</small>
-                      LV.{arena.level}
-                    </span>
                   </span>
                   <span className="battle-tier-rarity-row">
                     <span className="battle-tier-rarity-name">
@@ -128,11 +124,8 @@ export function BattleHome({
                       className="battle-tier-rarity-gems"
                       aria-hidden="true"
                     >
-                      {[1, 2, 3].map((gem) => (
-                        <Gem
-                          key={gem}
-                          className={gem <= arena.rarityGems ? "active" : ""}
-                        />
+                      {Array.from({ length: arena.rarityGems }, (_, index) => (
+                        <Gem key={index} />
                       ))}
                     </span>
                   </span>
