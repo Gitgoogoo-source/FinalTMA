@@ -31,6 +31,8 @@ const rarityLabels: Record<Rarity, string> = {
 };
 const tenDrawRankPositions = [4, 5, 3, 6, 2, 7, 1, 8, 0, 9] as const;
 const initialCarouselIndex = tenDrawRankPositions[0];
+const RITUAL_BACKGROUND =
+  "/assets/gacha/ritual/v1/moonlit-prism-garden-b1291c69.webp";
 
 export function GachaResultDialog({
   result,
@@ -56,11 +58,17 @@ export function GachaResultDialog({
 
   return (
     <div
-      className={`modal gacha-result-modal ${single ? "is-single" : "is-ten"}`}
+      className={`modal gacha-moon-result ${single ? "is-single" : "is-ten"}`}
     >
-      <header className="gacha-result-heading">
-        <small>PIXEL PARTY</small>
-        <h2 id="gacha-result-title">{single ? "召唤结果" : "十连召唤"}</h2>
+      <img
+        className="gacha-moon-result-background"
+        src={RITUAL_BACKGROUND}
+        alt=""
+        aria-hidden="true"
+      />
+      <header className="gacha-moon-heading">
+        <small>{single ? "灵契已成" : "十连灵契"}</small>
+        <h2 id="gacha-result-title">召唤结果</h2>
       </header>
 
       {single ? (
@@ -70,9 +78,9 @@ export function GachaResultDialog({
       )}
 
       {error ? <p className="operation-ack-error">{error}</p> : null}
-      <div className="gacha-result-actions">
+      <div className="gacha-moon-actions">
         <Button disabled={busy} onClick={onRepeat}>
-          {busy ? "正在确认结果" : "再开一次"}
+          {busy ? "请稍候" : "再开一次"}
         </Button>
         <Button className="secondary" disabled={busy} onClick={onInventory}>
           去藏品查看
@@ -87,11 +95,9 @@ export function GachaResultDialog({
 
 function SingleResult({ item }: { item: ResultItem }): ReactNode {
   return (
-    <article className={`gacha-single-result rarity-${item.rarity}`}>
-      <strong className="gacha-result-rarity">
-        {rarityLabels[item.rarity]}
-      </strong>
-      <div className="gacha-result-art">
+    <article className={`gacha-moon-single rarity-${item.rarity}`}>
+      <strong className="gacha-moon-rarity">{rarityLabels[item.rarity]}</strong>
+      <div className="gacha-moon-art">
         <CatalogImage
           path={item.image_detail_path}
           alt={item.name}
@@ -99,7 +105,7 @@ function SingleResult({ item }: { item: ResultItem }): ReactNode {
           loading="eager"
           fetchPriority="high"
         />
-        <span className="new-indicator">NEW</span>
+        <span className="gacha-moon-new">NEW</span>
       </div>
     </article>
   );
@@ -210,10 +216,10 @@ function TenDrawResults({ results }: { results: ResultItem[] }): ReactNode {
   };
 
   return (
-    <section className="gacha-ten-result" aria-label="十连召唤结果">
+    <section className="gacha-moon-ten" aria-label="十连召唤结果">
       <ol
         ref={carouselRef}
-        className="gacha-result-carousel"
+        className="gacha-moon-carousel"
         aria-label="十连召唤结果，左右滑动查看"
         tabIndex={0}
         onKeyDown={handleKeyDown}
@@ -239,11 +245,11 @@ function TenDrawResults({ results }: { results: ResultItem[] }): ReactNode {
             aria-posinset={index + 1}
             aria-setsize={carouselResults.length}
           >
-            <strong className="gacha-result-rarity">
+            <strong className="gacha-moon-rarity">
               {rarityLabels[item.rarity]}
             </strong>
-            <span className="new-indicator">NEW</span>
-            <div className="gacha-result-art">
+            <span className="gacha-moon-new">NEW</span>
+            <div className="gacha-moon-art">
               <CatalogImage
                 path={item.image_detail_path}
                 alt={item.name}

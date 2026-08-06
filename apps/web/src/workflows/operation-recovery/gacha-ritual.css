@@ -1,0 +1,490 @@
+.gacha-operation-backdrop:is(.gacha-hatching-backdrop, .gacha-result-backdrop) {
+  place-items: stretch center;
+  padding: 0;
+  overflow: hidden;
+  background: #36434b;
+  backdrop-filter: none;
+}
+
+.gacha-operation-backdrop:is(
+    .gacha-hatching-backdrop,
+    .gacha-result-backdrop
+  )::before,
+.gacha-operation-backdrop:is(
+    .gacha-hatching-backdrop,
+    .gacha-result-backdrop
+  )::after {
+  display: none;
+}
+
+.gacha-moon-ritual,
+.gacha-moon-result {
+  position: relative;
+  isolation: isolate;
+  width: min(100%, 430px);
+  height: var(--tg-viewport-stable-height, 100dvh);
+  min-height: 100%;
+  overflow: hidden;
+  color: #fffdfa;
+  background: #36434b;
+}
+
+.gacha-moon-ritual-background,
+.gacha-moon-result-background {
+  position: absolute;
+  z-index: -2;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  object-fit: cover;
+  object-position: center;
+}
+
+.gacha-moon-ritual-background--closed {
+  animation: gacha-moon-cocoon-close 3s ease-in-out infinite;
+}
+
+.gacha-moon-ritual-background--open {
+  opacity: 0;
+  animation: gacha-moon-cocoon-open 3s ease-in-out infinite;
+}
+
+.gacha-moon-ritual-heading {
+  position: absolute;
+  z-index: 3;
+  top: calc(var(--safe-top) + 32px);
+  right: 24px;
+  left: 24px;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  text-align: center;
+  text-shadow: 0 4px 20px rgba(54, 67, 75, 0.88);
+}
+
+.gacha-moon-ritual-heading small,
+.gacha-moon-heading small {
+  color: #ff9c00;
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: 0.28em;
+}
+
+.gacha-moon-ritual-heading h2,
+.gacha-moon-heading h2 {
+  margin: 0;
+  color: #fffdfa;
+  font-family: "Songti SC", STSong, "Noto Serif CJK SC", serif;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+}
+
+.gacha-moon-ritual-heading h2 {
+  font-size: clamp(29px, 8.2vw, 36px);
+}
+
+.gacha-moon-ritual-box {
+  position: absolute;
+  z-index: 2;
+  top: 31%;
+  left: 50%;
+  width: min(52vw, 224px);
+  height: min(31dvh, 262px);
+  opacity: 0;
+  transform: translate3d(-50%, 34px, 0) scale(0.76);
+  transform-origin: 50% 72%;
+  animation: gacha-moon-box-awaken 3s ease-in-out infinite;
+}
+
+.gacha-moon-ritual-box .catalog-image,
+.gacha-moon-ritual-box .image-missing {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  object-fit: contain;
+  filter: drop-shadow(0 18px 24px rgba(54, 67, 75, 0.52))
+    drop-shadow(0 0 18px rgba(255, 156, 0, 0.68));
+}
+
+.gacha-moon-ritual-copy {
+  position: absolute;
+  z-index: 3;
+  right: 24px;
+  bottom: calc(var(--safe-bottom) + 48px);
+  left: 24px;
+  margin: 0;
+  color: #fffdfa;
+  font-family: "Songti SC", STSong, "Noto Serif CJK SC", serif;
+  font-size: 15px;
+  font-weight: 750;
+  letter-spacing: 0.2em;
+  text-align: center;
+  text-shadow: 0 4px 18px rgba(54, 67, 75, 0.9);
+  animation: gacha-moon-copy-breathe 1.5s ease-in-out infinite alternate;
+}
+
+.gacha-moon-result {
+  max-width: 430px;
+  max-height: none;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 0;
+  padding: calc(var(--safe-top) + 22px) 0 calc(var(--safe-bottom) + 16px);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  overscroll-behavior: none;
+}
+
+.gacha-moon-heading {
+  position: relative;
+  z-index: 4;
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding-inline: 24px;
+  text-align: center;
+  text-shadow: 0 4px 22px rgba(54, 67, 75, 0.92);
+}
+
+.gacha-moon-heading h2 {
+  font-size: clamp(34px, 10.8vw, 46px);
+  line-height: 1.06;
+}
+
+.gacha-moon-single {
+  position: relative;
+  z-index: 2;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  justify-items: center;
+  align-items: center;
+  gap: 6px;
+  padding: 18px 22px 4px;
+}
+
+.gacha-moon-art {
+  position: relative;
+  min-width: 0;
+}
+
+.gacha-moon-single .gacha-moon-art {
+  width: min(76vw, 328px);
+  height: min(47dvh, 400px);
+}
+
+.gacha-moon-art .catalog-image,
+.gacha-moon-art .image-missing {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  object-fit: contain;
+  filter: drop-shadow(0 18px 13px rgba(54, 67, 75, 0.68))
+    drop-shadow(0 0 14px rgba(255, 253, 250, 0.28));
+}
+
+.gacha-moon-single .gacha-moon-art .gacha-moon-new {
+  position: absolute;
+  z-index: 4;
+  top: 8%;
+  right: 2%;
+}
+
+.gacha-moon-rarity {
+  position: relative;
+  z-index: 4;
+  color: #fffdfa;
+  font-family: "Songti SC", STSong, "Noto Serif CJK SC", serif;
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: 0.22em;
+  line-height: 1;
+  text-shadow: 0 3px 16px rgba(54, 67, 75, 0.92);
+}
+
+.gacha-moon-single .gacha-moon-rarity {
+  color: #ff9c00;
+  font-size: clamp(22px, 6.4vw, 28px);
+}
+
+.gacha-moon-new {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 23px;
+  padding: 3px 8px;
+  border: 1px solid rgba(255, 253, 250, 0.82);
+  border-radius: 999px;
+  color: #fffdfa;
+  background: #ff9c00;
+  box-shadow: 0 5px 16px rgba(54, 67, 75, 0.36);
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+}
+
+.gacha-moon-ten {
+  --gacha-moon-item-size: min(58vw, 246px);
+  --gacha-moon-item-step: calc(var(--gacha-moon-item-size) * 0.58);
+  position: relative;
+  z-index: 2;
+  min-height: 0;
+  overflow: hidden;
+  padding: 4px 0;
+}
+
+.gacha-moon-carousel {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  overflow-x: auto;
+  overflow-y: hidden;
+  margin: 0;
+  padding: 0 calc((100% - var(--gacha-moon-item-step)) / 2);
+  list-style: none;
+  scroll-padding-inline: calc((100% - var(--gacha-moon-item-step)) / 2);
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  touch-action: pan-x;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  isolation: isolate;
+}
+
+.gacha-moon-carousel::-webkit-scrollbar {
+  display: none;
+}
+
+.gacha-moon-carousel li {
+  --carousel-scale: 0.56;
+  position: relative;
+  flex: 0 0 var(--gacha-moon-item-step);
+  height: min(100%, 448px);
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  justify-items: center;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 0;
+  scroll-snap-align: center;
+  transform: scale(var(--carousel-scale));
+  transform-origin: center;
+  will-change: transform;
+  animation: gacha-moon-pet-rise 460ms ease-out both;
+}
+
+.gacha-moon-carousel:focus-visible {
+  outline: 2px solid #ff9c00;
+  outline-offset: -5px;
+}
+
+.gacha-moon-carousel .gacha-moon-art {
+  width: var(--gacha-moon-item-size);
+  height: 100%;
+  min-height: 0;
+}
+
+.gacha-moon-carousel li[aria-current="true"] .gacha-moon-rarity {
+  color: #ff9c00;
+  font-size: 22px;
+}
+
+.gacha-moon-carousel li[aria-current="true"] .catalog-image {
+  filter: drop-shadow(0 18px 13px rgba(54, 67, 75, 0.72))
+    drop-shadow(0 0 18px rgba(255, 156, 0, 0.52));
+}
+
+.gacha-moon-actions {
+  position: relative;
+  z-index: 5;
+  width: min(calc(100% - 40px), 390px);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+  margin: 0 auto;
+}
+
+.gacha-moon-actions .button {
+  min-height: 50px;
+  border: 1px solid rgba(255, 156, 0, 0.78);
+  border-radius: 999px;
+  color: #36434b;
+  background: rgba(255, 253, 250, 0.94);
+  box-shadow: 0 9px 24px rgba(54, 67, 75, 0.4);
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.gacha-moon-actions .button:first-child {
+  grid-column: 1 / -1;
+  min-height: 56px;
+  color: #fffdfa;
+  background: #ff9c00;
+  box-shadow: 0 10px 28px rgba(255, 156, 0, 0.32);
+}
+
+.gacha-moon-actions .button.secondary {
+  color: #36434b;
+  background: rgba(255, 253, 250, 0.94);
+  backdrop-filter: none;
+}
+
+.gacha-moon-actions .button:focus-visible {
+  outline: 3px solid #1ce204;
+  outline-offset: 2px;
+}
+
+.gacha-moon-actions .button:disabled {
+  opacity: 0.66;
+}
+
+.gacha-moon-result .operation-ack-error {
+  position: absolute;
+  z-index: 7;
+  right: 24px;
+  bottom: calc(var(--safe-bottom) + 132px);
+  left: 24px;
+  margin: 0;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 156, 0, 0.5);
+  border-radius: 14px;
+  color: #fffdfa !important;
+  background: rgba(54, 67, 75, 0.94);
+  text-align: center;
+}
+
+@keyframes gacha-moon-cocoon-close {
+  0%,
+  56% {
+    opacity: 1;
+  }
+  72%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes gacha-moon-cocoon-open {
+  0%,
+  54% {
+    opacity: 0;
+  }
+  72%,
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes gacha-moon-box-awaken {
+  0% {
+    opacity: 0;
+    transform: translate3d(-50%, 34px, 0) scale(0.76);
+  }
+  16%,
+  52% {
+    opacity: 1;
+    transform: translate3d(-50%, 0, 0) scale(1);
+  }
+  62% {
+    opacity: 1;
+    transform: translate3d(-50%, -5px, 0) scale(1.08);
+    filter: brightness(1.28);
+  }
+  74%,
+  100% {
+    opacity: 0;
+    transform: translate3d(-50%, -10px, 0) scale(0.9);
+    filter: brightness(1.8);
+  }
+}
+
+@keyframes gacha-moon-copy-breathe {
+  from {
+    opacity: 0.62;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes gacha-moon-pet-rise {
+  from {
+    opacity: 0;
+    translate: 0 28px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@media (max-height: 700px) {
+  .gacha-moon-ritual-heading {
+    top: calc(var(--safe-top) + 18px);
+  }
+
+  .gacha-moon-ritual-heading h2 {
+    font-size: 27px;
+  }
+
+  .gacha-moon-ritual-box {
+    top: 29%;
+    width: min(45vw, 190px);
+    height: min(28dvh, 220px);
+  }
+
+  .gacha-moon-heading h2 {
+    font-size: 32px;
+  }
+
+  .gacha-moon-single {
+    padding-top: 8px;
+  }
+
+  .gacha-moon-single .gacha-moon-art {
+    height: min(42dvh, 310px);
+  }
+
+  .gacha-moon-ten {
+    --gacha-moon-item-size: min(52vw, 212px);
+  }
+
+  .gacha-moon-actions .button {
+    min-height: 44px;
+  }
+
+  .gacha-moon-actions .button:first-child {
+    min-height: 49px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gacha-moon-ritual-background--closed {
+    opacity: 0;
+  }
+
+  .gacha-moon-ritual-background--open {
+    opacity: 1;
+  }
+
+  .gacha-moon-ritual-box {
+    opacity: 1;
+    transform: translate3d(-50%, 0, 0) scale(1);
+  }
+
+  .gacha-moon-ritual-background,
+  .gacha-moon-ritual-box,
+  .gacha-moon-ritual-copy,
+  .gacha-moon-carousel li {
+    animation: none !important;
+    transition: none !important;
+  }
+}

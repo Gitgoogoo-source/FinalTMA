@@ -55,6 +55,7 @@ import {
 import { GachaResultDialog } from "./GachaResultDialog.tsx";
 import { operationLabel } from "./labels.ts";
 import { WheelResultDialog } from "./WheelResultDialog.tsx";
+import "./gacha-ritual.css";
 import { markOperationNewTemplates } from "./operation-new-markers.ts";
 
 type RegisteredOperation = {
@@ -1023,7 +1024,7 @@ export function OperationRegistryProvider({
           }`}
           role="dialog"
           aria-modal="true"
-          aria-label={showGachaAnimation ? "盲盒结算中" : undefined}
+          aria-label={showGachaAnimation ? "月下灵契仪式" : undefined}
           aria-labelledby={
             showGachaAnimation
               ? undefined
