@@ -13,24 +13,13 @@ import type {
   BattleRoomSnapshotDto,
   BattleSelfTeamDto,
 } from "@pokepets/api-contracts/app";
+import {
+  clearBattleEffectLayer,
+  parseBattleEffectKey,
+  playBattleEffectCast,
+  playBattleEffectOutcome,
+} from "./battleEffectPlayer.ts";
 
-type EffectElement = "fire" | "grass" | "earth" | "lightning" | "water";
-type TrajectoryKey =
-  | "01"
-  | "02"
-  | "03"
-  | "04"
-  | "05"
-  | "06"
-  | "07"
-  | "08"
-  | "09"
-  | "10";
-type ElementStyle = {
-  primary: string;
-  secondary: string;
-  glow: string;
-};
 type TeamSlot = 1 | 2 | 3;
 
 type PresentationState = {
@@ -63,72 +52,6 @@ export function battlePresentationActionKey(
 ): string {
   return `${roomId}:${roundNo}:${actionOrdinal}`;
 }
-
-const elementEffects: Record<EffectElement, ElementStyle> = {
-  fire: { primary: "#ff6a2b", secondary: "#ffd166", glow: "#ff3d00" },
-  grass: { primary: "#38d27a", secondary: "#c7f36b", glow: "#0ca85d" },
-  earth: { primary: "#c98a49", secondary: "#f2d28f", glow: "#80542d" },
-  lightning: { primary: "#ffe14f", secondary: "#c9f4ff", glow: "#48a9ff" },
-  water: { primary: "#42c7ff", secondary: "#b7f2ff", glow: "#1976d2" },
-};
-
-const trajectories: Record<TrajectoryKey, (direction: 1 | -1) => Keyframe[]> = {
-  "01": (direction) => [
-    { transform: `translate3d(0, ${direction * -118}px, 0) scale(.45)` },
-    { transform: `translate3d(0, ${direction * 18}px, 0) scale(1.1)` },
-  ],
-  "02": (direction) => [
-    { transform: `translate3d(-72px, ${direction * -126}px, 0) scale(.5)` },
-    { transform: `translate3d(46px, ${direction * -54}px, 0) scale(.85)` },
-    { transform: `translate3d(0, ${direction * 20}px, 0) scale(1.15)` },
-  ],
-  "03": (direction) => [
-    {
-      transform: `translate3d(-92px, ${direction * -130}px, 0) rotate(-18deg)`,
-    },
-    { transform: `translate3d(76px, ${direction * -72}px, 0) rotate(14deg)` },
-    { transform: `translate3d(-24px, ${direction * -20}px, 0) rotate(-7deg)` },
-    { transform: `translate3d(0, ${direction * 20}px, 0) rotate(0deg)` },
-  ],
-  "04": (direction) => [
-    { transform: `translate3d(0, ${direction * -142}px, 0) scale(.2)` },
-    { transform: `translate3d(0, ${direction * 18}px, 0) scale(1.25)` },
-  ],
-  "05": (direction) => [
-    {
-      transform: `translate3d(0, ${direction * -54}px, 0) scale(.25) rotate(0deg)`,
-    },
-    {
-      transform: `translate3d(0, ${direction * 18}px, 0) scale(1.45) rotate(220deg)`,
-    },
-  ],
-  "06": (direction) => [
-    { transform: `translate3d(0, ${direction * 164}px, 0) scale(.55)` },
-    { transform: `translate3d(0, ${direction * 18}px, 0) scale(1.35)` },
-  ],
-  "07": (direction) => [
-    { transform: `translate3d(0, ${direction * 12}px, 0) scale(.1)` },
-    { transform: `translate3d(0, ${direction * 18}px, 0) scale(1.8)` },
-  ],
-  "08": (direction) => [
-    { transform: `translate3d(-170px, ${direction * 12}px, 0) scaleX(.15)` },
-    { transform: `translate3d(0, ${direction * 18}px, 0) scaleX(1.55)` },
-    { transform: `translate3d(170px, ${direction * 22}px, 0) scaleX(.35)` },
-  ],
-  "09": (direction) => [
-    {
-      transform: `translate3d(0, ${direction * -8}px, 0) rotate(0deg) scale(.4)`,
-    },
-    {
-      transform: `translate3d(0, ${direction * 18}px, 0) rotate(300deg) scale(1.75)`,
-    },
-  ],
-  "10": (direction) => [
-    { transform: `translate3d(0, ${direction * 190}px, 0) scale(1.7)` },
-    { transform: `translate3d(0, ${direction * 84}px, 0) scale(.55)` },
-    { transform: `translate3d(0, ${direction * 18}px, 0) scale(1.5)` },
-  ],
-};
 
 export function useBattleAnimation({
   arenaRef,
@@ -206,9 +129,13 @@ export function useBattleAnimation({
               if (actor) await playSwitchIn(actor);
             }
           }
-          const effect = parseEffectKey(local.effectKey);
+          const effect = parseBattleEffectKey(local.effectKey);
           if (effect && !reduced)
-            await playAttackCast(arena, actorElement(arena, "self"), effect);
+            await playBattleEffectCast(
+              arena,
+              actorElement(arena, "self"),
+              effect,
+            );
           item.castPlayed = true;
           if (run.current !== startedRun) break;
         }
@@ -391,16 +318,26 @@ async function playAuthoritativeEvent(
       continue;
     }
     const covered = localCovered && action.actor === "self";
-    const effect = parseEffectKey(action.effect_key);
+    const effect = parseBattleEffectKey(action.effect_key);
     if (!covered && effect && !reduced)
-      await playAttackCast(arena, actorElement(arena, action.actor), effect);
+      await playBattleEffectCast(
+        arena,
+        actorElement(arena, action.actor),
+        effect,
+      );
     setPresentation((current) => ({ ...current, feedback: event }));
-    if (!reduced && action.hit) {
+    if (!reduced && effect) {
       const target = actorElement(
         arena,
         action.actor === "self" ? "opponent" : "self",
       );
-      if (target) await playAttackImpact(target, action.knockout);
+      await playBattleEffectOutcome(
+        arena,
+        target,
+        effect,
+        action.hit,
+        action.knockout,
+      );
     }
   }
   if (cancelled()) return;
@@ -504,85 +441,6 @@ function applyHpResult(
   }));
 }
 
-async function playAttackCast(
-  arena: HTMLDivElement,
-  actor: HTMLElement | null,
-  effect: { element: EffectElement; trajectory: TrajectoryKey },
-): Promise<void> {
-  const layer = arena.querySelector<HTMLElement>("[data-battle-effect-layer]");
-  if (!layer) return;
-  const colors = elementEffects[effect.element];
-  layer.dataset.element = effect.element;
-  layer.style.setProperty("--battle-effect-primary", colors.primary);
-  layer.style.setProperty("--battle-effect-secondary", colors.secondary);
-  layer.style.setProperty("--battle-effect-glow", colors.glow);
-  const direction: 1 | -1 =
-    actor?.closest("[data-battle-actor]")?.getAttribute("data-battle-actor") ===
-    "self"
-      ? -1
-      : 1;
-  const travel = layer.animate(trajectories[effect.trajectory](direction), {
-    duration: 620,
-    easing: "cubic-bezier(.2,.75,.2,1)",
-    fill: "both",
-  });
-  const particleAnimations = [...layer.querySelectorAll<HTMLElement>("i")].map(
-    (particle, index) =>
-      particle.animate(
-        [
-          { opacity: 0, transform: "translate3d(0, 0, 0) scale(.3)" },
-          {
-            opacity: 0.95,
-            transform: `translate3d(${(index - 3.5) * 9}px, ${(index % 2 ? -1 : 1) * 22}px, 0) scale(1)`,
-          },
-          {
-            opacity: 0,
-            transform: `translate3d(${(index - 3.5) * 17}px, ${(index % 2 ? -1 : 1) * 48}px, 0) scale(.5)`,
-          },
-        ],
-        { duration: 440, delay: 90 + index * 18, easing: "ease-out" },
-      ),
-  );
-  if (actor)
-    actor.animate(
-      [
-        { transform: "scale(1)" },
-        { transform: "scale(1.06)" },
-        { transform: "scale(1)" },
-      ],
-      { duration: 300, easing: "ease-out" },
-    );
-  await finished(travel);
-  await Promise.all(particleAnimations.map(finished));
-}
-
-async function playAttackImpact(
-  target: HTMLElement,
-  knockout: boolean,
-): Promise<void> {
-  await finished(
-    target.animate(
-      [
-        { transform: "translateX(0)", filter: "brightness(1)" },
-        { transform: "translateX(-7px)", filter: "brightness(1.5)" },
-        { transform: "translateX(6px)", filter: "brightness(.8)" },
-        { transform: "translateX(0)", filter: "brightness(1)" },
-      ],
-      { duration: 300, easing: "ease-out" },
-    ),
-  );
-  if (knockout)
-    await finished(
-      target.animate(
-        [
-          { opacity: 1, transform: "translateY(0) scale(1)" },
-          { opacity: 0.45, transform: "translateY(12px) scale(.92)" },
-        ],
-        { duration: 260, easing: "ease-in", fill: "both" },
-      ),
-    );
-}
-
 function playSwitchOut(actor: HTMLElement): Promise<void> {
   return finished(
     actor.animate(
@@ -616,42 +474,12 @@ function actorElement(
   );
 }
 
-function parseEffectKey(
-  key: string,
-): { element: EffectElement; trajectory: TrajectoryKey } | null {
-  const match = /^(fire|grass|earth|lightning|water)-(0[1-9]|10)$/.exec(key);
-  if (!match) return null;
-  const element = match[1];
-  const trajectory = match[2];
-  if (
-    !element ||
-    !trajectory ||
-    !isEffectElement(element) ||
-    !isTrajectory(trajectory)
-  )
-    return null;
-  return { element, trajectory };
-}
-
-function isEffectElement(value: string): value is EffectElement {
-  return Object.hasOwn(elementEffects, value);
-}
-
-function isTrajectory(value: string): value is TrajectoryKey {
-  return Object.hasOwn(trajectories, value);
-}
-
 function cancelAnimation(arena: HTMLDivElement | null): void {
   if (!arena) return;
   arena.getAnimations({ subtree: true }).forEach((animation) => {
     animation.cancel();
   });
-  const layer = arena.querySelector<HTMLElement>("[data-battle-effect-layer]");
-  if (!layer) return;
-  delete layer.dataset.element;
-  layer.style.removeProperty("--battle-effect-primary");
-  layer.style.removeProperty("--battle-effect-secondary");
-  layer.style.removeProperty("--battle-effect-glow");
+  clearBattleEffectLayer(arena);
 }
 
 function nextPaint(): Promise<void> {

@@ -143,8 +143,8 @@ export function BattleArena({
           data-battle-effect-layer
           aria-hidden="true"
         >
-          {Array.from({ length: 8 }, (_, index) => (
-            <i key={index} />
+          {Array.from({ length: 12 }, (_, index) => (
+            <i key={index} data-effect-piece={index + 1} />
           ))}
         </div>
         <ActionFeedback event={presentation.feedback} />
