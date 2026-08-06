@@ -1,7 +1,9 @@
 import {
   ArrowLeft,
   Check,
+  ChevronRight,
   Clock3,
+  Gem,
   Radio,
   RefreshCw,
   Send,
@@ -22,6 +24,7 @@ import type {
 
 import { Button, CatalogImage } from "../../../shared/ui/index.tsx";
 import {
+  battleArenaTierLabels,
   battleRarityLabels,
   battleResultLabels,
   battleStatusLabels,
@@ -86,28 +89,70 @@ export function BattleHome({
         </section>
       ) : null}
 
-      <section className="battle-tier-stage" aria-label="Battle 入场费档位">
+      <section className="battle-tier-stage" aria-label="选择战场">
+        <div className="battle-tier-heading">
+          <Swords aria-hidden="true" />
+          <h2>选择战场</h2>
+        </div>
         <div className="battle-tier-list">
-          {tiers.map((tier) => (
-            <button
-              key={tier.id}
-              type="button"
-              className={selectedTier?.id === tier.id ? "selected" : ""}
-              data-entry-fee={tier.entry_fee}
-              disabled={selectionDisabled}
-              aria-pressed={selectedTier?.id === tier.id}
-              onClick={() => setSelectedTierId(tier.id)}
-            >
-              <span className="battle-tier-selected" aria-hidden="true">
-                <Check />
-              </span>
-              <span className="battle-tier-summary">
-                奖池金额：{tier.pool}
-                <span aria-hidden="true">{"\u3000"}</span>
-                门票：{tierTitle(tier)}
-              </span>
-            </button>
-          ))}
+          {tiers.map((tier) => {
+            const arena = battleArenaTierLabels[tier.id];
+            const selected = selectedTier?.id === tier.id;
+
+            return (
+              <button
+                key={tier.id}
+                type="button"
+                className={selected ? "selected" : ""}
+                data-entry-fee={tier.entry_fee}
+                disabled={selectionDisabled}
+                aria-label={`${arena.name}，战场等级 ${arena.level}，稀有度${arena.rarity}，奖池 ${tier.pool} K-coin，门票 ${tier.entry_fee} K-coin`}
+                aria-pressed={selected}
+                onClick={() => setSelectedTierId(tier.id)}
+              >
+                <span className="battle-tier-art" aria-hidden="true" />
+                <span className="battle-tier-details">
+                  <span className="battle-tier-title-row">
+                    <strong>{arena.name}</strong>
+                    <span className="battle-tier-level">
+                      <small>战场等级</small>
+                      LV.{arena.level}
+                    </span>
+                  </span>
+                  <span className="battle-tier-rarity-row">
+                    <span className="battle-tier-rarity-name">
+                      <small>稀有度</small>
+                      <strong>{arena.rarity}</strong>
+                    </span>
+                    <span
+                      className="battle-tier-rarity-gems"
+                      aria-hidden="true"
+                    >
+                      {[1, 2, 3].map((gem) => (
+                        <Gem
+                          key={gem}
+                          className={gem <= arena.rarityGems ? "active" : ""}
+                        />
+                      ))}
+                    </span>
+                  </span>
+                  <span className="battle-tier-economy">
+                    <span>
+                      <small>奖池</small>
+                      <strong>{tier.pool}</strong>
+                    </span>
+                    <span>
+                      <small>门票</small>
+                      <strong>{tierTitle(tier)}</strong>
+                    </span>
+                  </span>
+                </span>
+                <span className="battle-tier-action" aria-hidden="true">
+                  {selected ? <Check /> : <ChevronRight />}
+                </span>
+              </button>
+            );
+          })}
         </div>
         <Button
           className="battle-tier-submit"

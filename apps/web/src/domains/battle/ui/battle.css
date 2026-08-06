@@ -355,31 +355,55 @@
 }
 
 .battle-tier-stage {
+  display: grid;
+  gap: 10px;
   padding-bottom: calc(var(--size-bottomnav, 64px) + var(--safe-bottom) + 24px);
+}
+
+.battle-tier-heading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 36px;
+  color: var(--battle-ink);
+}
+
+.battle-tier-heading svg {
+  width: 18px;
+  height: 18px;
+  color: var(--battle-orange);
+}
+
+.battle-tier-heading h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 950;
+  letter-spacing: 0.04em;
 }
 
 .battle-tier-list {
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
 .battle-tier-list > button {
+  --battle-tier-accent: #55a968;
+  --battle-tier-soft: #edf8eb;
   position: relative;
   isolation: isolate;
-  min-height: 176px;
+  min-height: 122px;
   overflow: hidden;
   display: grid;
-  align-content: start;
-  justify-items: center;
-  padding: 18px;
+  grid-template-columns: minmax(100px, 38%) minmax(0, 1fr) 38px;
+  align-items: stretch;
+  padding: 0;
   border: 2px solid rgba(255, 255, 255, 0.92);
-  border-radius: 24px;
-  color: white;
-  background-color: #214f59;
-  background-position: center;
-  background-size: cover;
+  border-radius: 22px;
+  color: var(--battle-ink);
+  background: rgba(255, 252, 245, 0.94);
   box-shadow: 0 12px 28px rgba(54, 67, 75, 0.14);
-  text-align: center;
+  text-align: left;
   cursor: pointer;
   transition:
     border-color 0.18s ease,
@@ -388,23 +412,29 @@
 }
 
 .battle-tier-list > button[data-entry-fee="20"] {
-  background-image: url("/assets/battle/rooms/battle-room-20.webp");
+  --battle-tier-image: url("/assets/battle/rooms/battle-room-20.webp");
+  --battle-tier-accent: #55a968;
+  --battle-tier-soft: #edf8eb;
 }
 
 .battle-tier-list > button[data-entry-fee="100"] {
-  background-image: url("/assets/battle/rooms/battle-room-100.webp");
+  --battle-tier-image: url("/assets/battle/rooms/battle-room-100.webp");
+  --battle-tier-accent: #f47a34;
+  --battle-tier-soft: #fff0e5;
 }
 
 .battle-tier-list > button[data-entry-fee="500"] {
-  background-image: url("/assets/battle/rooms/battle-room-500.webp");
+  --battle-tier-image: url("/assets/battle/rooms/battle-room-500.webp");
+  --battle-tier-accent: #8b67c7;
+  --battle-tier-soft: #f2ecfb;
 }
 
 .battle-tier-list > button.selected {
-  border-color: var(--battle-orange);
+  border-color: var(--battle-tier-accent);
   box-shadow:
-    0 15px 34px rgba(255, 122, 0, 0.26),
+    0 15px 34px color-mix(in srgb, var(--battle-tier-accent) 26%, transparent),
     0 0 0 2px rgba(255, 255, 255, 0.9);
-  transform: scale(1.012);
+  transform: translateY(-1px);
 }
 
 .battle-tier-list > button:disabled {
@@ -412,46 +442,144 @@
   cursor: not-allowed;
 }
 
-.battle-tier-summary {
-  color: white;
-  font-size: 14px;
-  font-weight: 900;
-  line-height: 1.3;
-  white-space: nowrap;
-  text-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.78),
-    0 1px 2px rgba(0, 0, 0, 0.9);
+.battle-tier-art {
+  align-self: stretch;
+  min-width: 0;
+  border-right: 1px solid rgba(54, 67, 75, 0.1);
+  background-color: #e9dfcc;
+  background-image: var(--battle-tier-image);
+  background-position: center;
+  background-size: cover;
 }
 
-.battle-tier-selected {
-  position: absolute;
-  z-index: 2;
-  bottom: 12px;
-  right: 12px;
-  width: 34px;
-  height: 34px;
+.battle-tier-details {
+  min-width: 0;
+  display: grid;
+  align-content: center;
+  gap: 7px;
+  padding: 11px 8px 11px 12px;
+}
+
+.battle-tier-title-row,
+.battle-tier-rarity-row {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 7px;
+}
+
+.battle-tier-title-row > strong {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 16px;
+  font-weight: 950;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.battle-tier-level,
+.battle-tier-rarity-name {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  border-radius: 999px;
+  color: var(--battle-tier-accent);
+  background: var(--battle-tier-soft);
+  white-space: nowrap;
+}
+
+.battle-tier-level {
+  padding: 4px 7px;
+  font-size: 10px;
+  font-weight: 950;
+}
+
+.battle-tier-level small,
+.battle-tier-rarity-name small,
+.battle-tier-economy small {
+  color: var(--battle-muted);
+  font-size: 8px;
+  font-weight: 850;
+}
+
+.battle-tier-rarity-name {
+  padding: 3px 7px;
+}
+
+.battle-tier-rarity-name strong {
+  font-size: 10px;
+  font-weight: 950;
+}
+
+.battle-tier-rarity-gems {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  color: rgba(116, 128, 121, 0.22);
+}
+
+.battle-tier-rarity-gems svg {
+  width: 13px;
+  height: 13px;
+  fill: currentColor;
+  stroke-width: 2.2;
+}
+
+.battle-tier-rarity-gems svg.active {
+  color: var(--battle-tier-accent);
+}
+
+.battle-tier-economy {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 5px;
+}
+
+.battle-tier-economy > span {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: baseline;
+  gap: 4px;
+  padding: 5px 6px;
+  border: 1px solid rgba(54, 67, 75, 0.08);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.76);
+}
+
+.battle-tier-economy strong {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 10px;
+  font-weight: 950;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.battle-tier-action {
+  align-self: center;
+  justify-self: center;
+  width: 28px;
+  height: 28px;
   display: grid;
   place-items: center;
-  border: 2px solid white;
+  border: 1px solid rgba(54, 67, 75, 0.12);
   border-radius: 50%;
+  color: var(--battle-muted);
+  background: rgba(255, 255, 255, 0.84);
+}
+
+.battle-tier-action svg {
+  width: 16px;
+  height: 16px;
+}
+
+.battle-tier-list > button.selected .battle-tier-action {
+  border-color: var(--battle-tier-accent);
   color: white;
-  background: var(--battle-orange);
-  box-shadow: 0 7px 16px rgba(0, 0, 0, 0.24);
-  opacity: 0;
-  transform: scale(0.72);
-  transition:
-    opacity 0.18s ease,
-    transform 0.18s ease;
-}
-
-.battle-tier-selected svg {
-  width: 19px;
-  height: 19px;
-}
-
-.battle-tier-list > button.selected .battle-tier-selected {
-  opacity: 1;
-  transform: scale(1);
+  background: var(--battle-tier-accent);
 }
 
 .battle-tier-submit.button,
