@@ -63,6 +63,10 @@ import { WheelResultDialog } from "./WheelResultDialog.tsx";
 import "./gacha-ritual.css";
 import "./gacha-ten-stage.css";
 import { markOperationNewTemplates } from "./operation-new-markers.ts";
+import {
+  MarketListingFailureDialog,
+  MarketListingSuccessDialog,
+} from "./MarketListingResultDialog.tsx";
 
 type RegisteredOperation = {
   id: string;
@@ -98,6 +102,7 @@ const navigationLockedThroughResultRouteIds = new Set<RecoverableRouteId>([
 ]);
 const autoPollingRouteIds = new Set<RecoverableRouteId>([
   "wheel.spin",
+  "market.create_listing",
   ...serverAcknowledgementRouteIds,
   "gacha.open",
   "inventory.decompose",
@@ -123,6 +128,12 @@ const externallyRenderedSuccessRouteIds = new Set<RecoverableRouteId>([
 ]);
 const inlineOperationRouteIds = new Set<RecoverableRouteId>([
   "referral.share_event",
+]);
+const playerFacingMarketListingErrorCodes = new Set([
+  "ACCOUNT_RESTRICTED",
+  "INSUFFICIENT_INVENTORY",
+  "MARKET_ACTIVE_TEMPLATE_LIMIT",
+  "TEMPLATE_NOT_FOUND",
 ]);
 
 export function OperationRegistryProvider({
@@ -206,9 +217,10 @@ export function OperationRegistryProvider({
   );
   const resumableUnresolved = unresolved.filter(
     (operation) =>
-      !inlineOperationRouteIds.has(operation.routeId) ||
-      operation.phase === "pending" ||
-      operation.phase === "unknown",
+      operation.routeId !== "market.create_listing" &&
+      (!inlineOperationRouteIds.has(operation.routeId) ||
+        operation.phase === "pending" ||
+        operation.phase === "unknown"),
   );
   const navigationLocked = Object.values(operations).some(
     (operation) =>
@@ -232,6 +244,12 @@ export function OperationRegistryProvider({
     active?.routeId === "gacha.open" &&
     (!gachaPresentationReady || unresolvedPhases.has(active.phase)),
   );
+  const hideMarketListingProgress = Boolean(
+    active?.routeId === "market.create_listing" &&
+    unresolvedPhases.has(active.phase),
+  );
+  const showOperationDialog =
+    session?.accountStatus === "normal" && !hideMarketListingProgress;
 
   useEffect(() => {
     operationsRef.current = operations;
@@ -295,7 +313,7 @@ export function OperationRegistryProvider({
           previousFocus.focus();
       });
     };
-  }, [activeId]);
+  }, [activeId, hideMarketListingProgress]);
 
   const update = useCallback(
     (id: string, change: Partial<RegisteredOperation>) => {
@@ -515,7 +533,15 @@ export function OperationRegistryProvider({
           !pending && refreshBeforeSuccessRouteIds.has(routeId);
         if (refreshBeforeSuccess) {
           update(id, { message: "上架已确认，正在更新出售状态" });
-          await refreshRouteScopes(routeId).catch(() => undefined);
+          try {
+            await refreshRouteScopes(routeId, { throwOnError: true });
+          } catch {
+            update(id, {
+              phase: "unknown",
+              message: "上架状态正在同步",
+            });
+            return null;
+          }
           if (!isCurrentNormalSession(sessionGeneration)) return null;
         }
         if (!pending && externallyRenderedSuccessRouteIds.has(routeId))
@@ -747,7 +773,17 @@ export function OperationRegistryProvider({
               phase: "pending",
               message: "上架已确认，正在更新出售状态",
             });
-            await refreshRouteScopes(operation.routeId).catch(() => undefined);
+            try {
+              await refreshRouteScopes(operation.routeId, {
+                throwOnError: true,
+              });
+            } catch {
+              update(operation.id, {
+                phase: "unknown",
+                message: "上架状态正在同步",
+              });
+              return;
+            }
             if (
               operation.sessionGeneration !== getSession()?.generation ||
               getSession()?.accountStatus !== "normal"
@@ -1125,7 +1161,7 @@ export function OperationRegistryProvider({
             {resumableUnresolved.length} 个操作待确认
           </button>
         )}
-      {session?.accountStatus === "normal" && active && (
+      {active && showOperationDialog && (
         <div
           ref={dialogRef}
           className={`modal-backdrop operation-dialog-backdrop ${
@@ -1135,9 +1171,15 @@ export function OperationRegistryProvider({
                 ? `decomposition-operation-backdrop phase-${active.phase}`
                 : active.routeId === "inventory.evolve"
                   ? `evolution-operation-backdrop phase-${active.phase}`
-                  : wheelResult
-                    ? "app-shell wheel-result-backdrop"
-                    : ""
+                  : active.routeId === "market.create_listing" &&
+                      active.phase === "succeeded"
+                    ? "app-shell result-sheet-backdrop market-listing-success-backdrop"
+                    : active.routeId === "market.create_listing" &&
+                        active.phase === "failed"
+                      ? "app-shell market-listing-failure-backdrop"
+                      : wheelResult
+                        ? "app-shell result-sheet-backdrop wheel-result-backdrop"
+                        : ""
           }`}
           role="dialog"
           aria-modal="true"
@@ -1145,22 +1187,35 @@ export function OperationRegistryProvider({
           aria-labelledby={
             showGachaAnimation
               ? undefined
-              : active.routeId === "inventory.decompose"
-                ? "decomposition-result-title"
-                : active.routeId === "inventory.evolve"
-                  ? "evolution-result-title"
-                  : gachaResult
-                    ? "gacha-result-title"
-                    : wheelResult
-                      ? "wheel-result-title"
-                      : albumClaimResult
-                        ? "album-claim-result-title"
-                        : "operation-dialog-title"
+              : active.routeId === "market.create_listing"
+                ? active.phase === "succeeded"
+                  ? "market-listing-success-title"
+                  : "market-listing-failure-title"
+                : active.routeId === "inventory.decompose"
+                  ? "decomposition-result-title"
+                  : active.routeId === "inventory.evolve"
+                    ? "evolution-result-title"
+                    : gachaResult
+                      ? "gacha-result-title"
+                      : wheelResult
+                        ? "wheel-result-title"
+                        : albumClaimResult
+                          ? "album-claim-result-title"
+                          : "operation-dialog-title"
           }
           tabIndex={-1}
           onKeyDown={trapDialogFocus}
         >
-          {active.routeId === "inventory.decompose" ? (
+          {active.routeId === "market.create_listing" &&
+          active.phase === "succeeded" ? (
+            <MarketListingSuccessDialog onConfirm={dismiss} />
+          ) : active.routeId === "market.create_listing" &&
+            active.phase === "failed" ? (
+            <MarketListingFailureDialog
+              message={marketListingFailureMessage(active.errorCode)}
+              onConfirm={dismiss}
+            />
+          ) : active.routeId === "inventory.decompose" ? (
             <DecompositionOperationDialog
               key={active.id}
               operationId={active.id}
@@ -1338,7 +1393,6 @@ function recoveredMessage(operation: RecoverableOperationSummary): string {
 
 function operationDialogTitle(operation: RegisteredOperation): string {
   if (operation.phase === "succeeded") {
-    if (operation.routeId === "market.create_listing") return "上架成功";
     if (operation.routeId === "market.cancel_template_listings")
       return "已下架";
   }
@@ -1351,6 +1405,7 @@ function confirmedMessage(
   routeId: RecoverableRouteId,
   result: unknown,
 ): string {
+  if (routeId === "market.create_listing") return "藏品已成功上架";
   if (routeId !== "market.cancel_template_listings")
     return "结果已由服务器确认";
   const parsed = routeById(routeId).output.safeParse(result);
@@ -1358,4 +1413,14 @@ function confirmedMessage(
   return parsed.data.released_quantity > 0
     ? `已下架，已释放 ${parsed.data.released_quantity} 个未成交藏品`
     : "已下架，当前没有有效挂单";
+}
+
+function marketListingFailureMessage(errorCode: string | null): string {
+  if (
+    errorCode &&
+    playerFacingMarketListingErrorCodes.has(errorCode) &&
+    isErrorCode(errorCode)
+  )
+    return errorDefinition(errorCode).message;
+  return "藏品没有上架，请根据最新的可出售状态重试。";
 }

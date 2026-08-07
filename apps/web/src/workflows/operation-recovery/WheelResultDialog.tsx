@@ -36,7 +36,7 @@ export function WheelResultDialog({
   const single = result.count === 1;
   return (
     <div
-      className={`modal wheel-result-modal ${single ? "is-single" : "is-ten"}`}
+      className={`modal result-sheet-modal wheel-result-modal ${single ? "is-single" : "is-ten"}`}
     >
       <img
         className="wheel-result-gift"
@@ -79,7 +79,10 @@ export function WheelResultDialog({
         </div>
       ) : null}
 
-      <Button className="wheel-result-confirm" onClick={onConfirm}>
+      <Button
+        className="result-sheet-confirm wheel-result-confirm"
+        onClick={onConfirm}
+      >
         确定
       </Button>
     </div>

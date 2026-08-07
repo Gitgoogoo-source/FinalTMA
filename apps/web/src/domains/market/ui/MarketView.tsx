@@ -94,9 +94,10 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
     () => new Set(),
   );
   const soldEffectTimers = useRef<Set<number>>(new Set());
+  const listingInProgress = isBlocked("market.create_listing");
   const blocked =
     isBlocked("market.purchase") ||
-    isBlocked("market.create_listing") ||
+    listingInProgress ||
     isBlocked("market.cancel_template_listings");
   const purchaseTemplates = (listings.data?.templates ?? [])
     .map((item) => {
@@ -567,6 +568,7 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
               selected={selectedSellItem}
               initialQuantity={requestedQuantity}
               blocked={blocked}
+              listingInProgress={listingInProgress}
               feeBps={sellable.data?.fee_bps ?? 500}
               vipActive={sellable.data?.vip.active ?? false}
               vipRebateBps={sellable.data?.vip_rebate_bps ?? 2000}
@@ -906,6 +908,7 @@ function MarketSellWorkbench({
   selected,
   initialQuantity,
   blocked,
+  listingInProgress,
   feeBps,
   vipActive,
   vipRebateBps,
@@ -916,6 +919,7 @@ function MarketSellWorkbench({
   selected: MarketViewItem;
   initialQuantity: number;
   blocked: boolean;
+  listingInProgress: boolean;
   feeBps: number;
   vipActive: boolean;
   vipRebateBps: number;
@@ -1056,18 +1060,26 @@ function MarketSellWorkbench({
           <small>实际手续费和返还按后续每次真实成交明细计算</small>
         </div>
         <Button
-          className="market-sell-confirm"
+          className={`market-sell-confirm${listingInProgress ? " is-pending" : ""}`}
           disabled={blocked || !imageReady || available < 1}
+          aria-busy={listingInProgress}
+          aria-live="polite"
           onClick={() => onSubmit(selected, quantity)}
         >
-          <span>
-            <Tags aria-hidden="true" />
-            确认出售
-          </span>
-          <i aria-hidden="true" />
-          <span>
-            预计到手 <strong>{finalNet}</strong> K
-          </span>
+          {listingInProgress ? (
+            <span>出售中</span>
+          ) : (
+            <>
+              <span>
+                <Tags aria-hidden="true" />
+                确认出售
+              </span>
+              <i aria-hidden="true" />
+              <span>
+                预计到手 <strong>{finalNet}</strong> K
+              </span>
+            </>
+          )}
         </Button>
       </Card>
     </div>

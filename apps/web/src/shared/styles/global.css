@@ -4561,6 +4561,9 @@ input:focus {
   border-radius: 22px;
   font-size: 10px;
 }
+.app-shell .market-sell-confirm.button.is-pending {
+  grid-template-columns: minmax(0, 1fr);
+}
 .app-shell .market-sell-confirm > span {
   min-width: 0;
   display: inline-flex;
@@ -7032,24 +7035,30 @@ input:focus {
   color: var(--sprout-orange);
   background: rgba(255, 156, 0, 0.12);
 }
-.app-shell.operation-dialog-backdrop.wheel-result-backdrop {
+.app-shell.operation-dialog-backdrop.result-sheet-backdrop {
   place-items: end center;
   padding: max(var(--safe-top), 10px) 0 0;
   overflow: hidden;
   background: rgba(29, 35, 39, 0.58);
   backdrop-filter: blur(11px) saturate(90%);
 }
-.app-shell .wheel-result-modal {
+.app-shell .result-sheet-modal {
   position: relative;
   width: min(100%, var(--app-width));
   max-height: none;
-  gap: clamp(8px, 1.7dvh, 14px);
-  padding: clamp(70px, 10.5dvh, 94px) 16px calc(var(--safe-bottom) + 14px);
-  overflow: visible;
   border: 1px solid rgba(255, 255, 255, 0.95);
   border-bottom: 0;
   border-radius: 34px 34px 0 0;
   color: #43311f;
+  background: linear-gradient(180deg, #fff6e5 0%, #fffdf7 42%, #fffefa 100%);
+  box-shadow:
+    0 -24px 70px rgba(31, 29, 22, 0.24),
+    inset 0 1px 0 #fff;
+}
+.app-shell .wheel-result-modal {
+  gap: clamp(8px, 1.7dvh, 14px);
+  padding: clamp(70px, 10.5dvh, 94px) 16px calc(var(--safe-bottom) + 14px);
+  overflow: visible;
   background:
     radial-gradient(
       circle at 50% 0%,
@@ -7057,9 +7066,6 @@ input:focus {
       transparent 34%
     ),
     linear-gradient(180deg, #fff6e5 0%, #fffdf7 42%, #fffefa 100%);
-  box-shadow:
-    0 -24px 70px rgba(31, 29, 22, 0.24),
-    inset 0 1px 0 #fff;
   animation: wheel-result-rise 0.34s cubic-bezier(0.22, 0.78, 0.24, 1);
 }
 .app-shell .wheel-result-gift {
@@ -7229,7 +7235,7 @@ input:focus {
   font-weight: 750;
   text-align: center;
 }
-.app-shell .wheel-result-confirm.button {
+.app-shell .result-sheet-confirm.button {
   position: relative;
   z-index: 1;
   min-height: 52px;
@@ -7239,6 +7245,73 @@ input:focus {
   box-shadow:
     0 13px 25px rgba(255, 112, 0, 0.23),
     inset 0 1px 0 rgba(255, 255, 255, 0.52);
+}
+.app-shell.operation-dialog-backdrop.market-listing-success-backdrop {
+  animation: none;
+}
+.app-shell.operation-dialog-backdrop.market-listing-failure-backdrop {
+  background: rgba(35, 43, 47, 0.42);
+  backdrop-filter: blur(9px);
+}
+.app-shell .market-listing-success-modal {
+  align-content: end;
+  justify-items: center;
+  gap: 16px;
+  padding: 28px 20px calc(var(--safe-bottom) + 18px);
+  overflow: hidden;
+  text-align: center;
+  animation: none;
+}
+.app-shell .market-listing-result-mark {
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+}
+.app-shell .market-listing-result-mark svg {
+  width: 32px;
+  height: 32px;
+}
+.app-shell .market-listing-result-mark.is-success {
+  color: #138f58;
+  background: #ddf7e9;
+}
+.app-shell .market-listing-result-mark.is-failure {
+  color: #b3533d;
+  background: #ffe9e1;
+}
+.app-shell .market-listing-result-copy {
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+}
+.app-shell .market-listing-result-copy > span {
+  color: #ad6b18;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+.app-shell .market-listing-result-copy h2 {
+  color: #51361f;
+  font-size: 28px;
+  font-weight: 950;
+  letter-spacing: -0.04em;
+}
+.app-shell .market-listing-result-copy p {
+  color: #7d6a57;
+  font-size: 13px;
+  font-weight: 700;
+}
+.app-shell .market-listing-result-confirm.button {
+  width: 100%;
+}
+.app-shell .market-listing-failure-modal {
+  justify-items: center;
+  text-align: center;
+}
+.app-shell .market-listing-failure-modal > .button {
+  width: 100%;
 }
 @keyframes wheel-result-rise {
   from {
