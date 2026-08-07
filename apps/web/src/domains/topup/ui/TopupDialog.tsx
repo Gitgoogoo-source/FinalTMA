@@ -30,6 +30,7 @@ const FINAL_STATUSES = new Set<PaymentOrder["status"]>([
   "expired",
   "rejected",
   "refunded",
+  "payment_identity_conflict",
 ]);
 
 export function TopupDialog({
@@ -52,7 +53,9 @@ export function TopupDialog({
   const recoveryOrder = status.data?.orders.find(
     (order) =>
       order.kind === "kcoin_topup" &&
-      (order.status === "processing" || order.status === "paid"),
+      (order.status === "processing" ||
+        order.status === "paid" ||
+        order.status === "payment_identity_conflict"),
   );
   const order = activeOrder ?? recoveryOrder ?? null;
   const locked =
@@ -90,7 +93,10 @@ export function TopupDialog({
       if (result?.status === "processing" || result?.status === "paid") {
         setActiveOrder(result);
         setSubmitted(true);
-      } else if (result?.status === "delivered") {
+      } else if (
+        result?.status === "delivered" ||
+        result?.status === "payment_identity_conflict"
+      ) {
         setActiveOrder(result);
         setSubmitted(false);
       } else if (!result) {
@@ -98,7 +104,9 @@ export function TopupDialog({
         const processing = refreshed.data?.orders.find(
           (candidate) =>
             candidate.id === orderId &&
-            (candidate.status === "processing" || candidate.status === "paid"),
+            (candidate.status === "processing" ||
+              candidate.status === "paid" ||
+              candidate.status === "payment_identity_conflict"),
         );
         if (processing) {
           setActiveOrder(processing);
@@ -129,7 +137,9 @@ export function TopupDialog({
         const processing = refreshed.data?.orders.find(
           (candidate) =>
             candidate.id === orderId &&
-            (candidate.status === "processing" || candidate.status === "paid"),
+            (candidate.status === "processing" ||
+              candidate.status === "paid" ||
+              candidate.status === "payment_identity_conflict"),
         );
         if (processing) {
           setActiveOrder(processing);
@@ -219,7 +229,9 @@ export function TopupDialog({
       const processing = refreshed.data?.orders.find(
         (candidate) =>
           candidate.kind === "kcoin_topup" &&
-          (candidate.status === "processing" || candidate.status === "paid"),
+          (candidate.status === "processing" ||
+            candidate.status === "paid" ||
+            candidate.status === "payment_identity_conflict"),
       );
       if (processing) {
         setActiveOrder(processing);
@@ -266,11 +278,13 @@ export function TopupDialog({
   const succeeded =
     order?.status === "delivered" ||
     (order?.status === "refunded" && Boolean(order.delivered_at));
+  const identityConflict = order?.status === "payment_identity_conflict";
   const failed =
     order?.status === "failed" ||
     order?.status === "cancelled" ||
     order?.status === "expired" ||
-    order?.status === "rejected";
+    order?.status === "rejected" ||
+    (order?.status === "refunded" && !order.delivered_at);
 
   if (request && !showOptions && !order) {
     return (
@@ -309,8 +323,8 @@ export function TopupDialog({
         <h2 id="topup-dialog-title">K-coin 充值</h2>
         <p>
           {request
-            ? `原操作预计还差 ${request.estimatedGap} K-coin；最新差额与可用档位由服务器重新确认。`
-            : "选择服务器返回的充值档位。Stars 金额和 K-coin 到账值均由订单确认。"}
+            ? `原操作预计还差 ${request.estimatedGap} K-coin；最新差额与可用档位将重新确认。`
+            : "选择充值档位。Stars 金额和 K-coin 到账值以支付结果为准。"}
         </p>
         {locked ? (
           <div className="payment-recovery">
@@ -323,6 +337,11 @@ export function TopupDialog({
           <div className="payment-recovery">
             <strong>K-coin 已到账</strong>
             <small>{order?.kcoin_amount} K-coin</small>
+          </div>
+        ) : identityConflict ? (
+          <div className="payment-recovery">
+            <strong>支付身份校验异常</strong>
+            <small>本次未到账，请前往支付助手发送 /paysupport</small>
           </div>
         ) : failed ? (
           <div className="payment-recovery">
@@ -372,6 +391,8 @@ export function TopupDialog({
             </Button>
           ) : succeeded ? (
             <Button onClick={closeDialog}>完成</Button>
+          ) : identityConflict ? (
+            <Button onClick={closeDialog}>知道了</Button>
           ) : failed ? (
             <Button onClick={resetOrder}>重新充值</Button>
           ) : order?.status === "pending" && order.invoice_url ? (

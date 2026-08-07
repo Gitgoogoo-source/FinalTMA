@@ -117,7 +117,6 @@ declare
     'payment_set_invoice_url',
     'referral_bind',
     'referral_get',
-    'referral_share_event',
     'run_job',
     'tasks_check_in',
     'tasks_claim',

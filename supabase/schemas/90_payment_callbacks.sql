@@ -47,6 +47,7 @@ begin
   select * into v_order from payments.orders where id = p_order_id for update;
   if v_order.id is null then perform api.raise_business_error('PAYMENT_NOT_FOUND', '支付订单不存在'); end if;
   if v_order.status = 'delivered' then return payments.order_json(v_order); end if;
+  if v_order.status = 'payment_identity_conflict' then perform api.raise_business_error('PAYMENT_NOT_DELIVERABLE', '支付身份校验异常，订单不可交付'); end if;
   if v_order.status <> 'paid' then perform api.raise_business_error('PAYMENT_NOT_DELIVERABLE', '支付订单尚不可交付'); end if;
   select * into v_user from identity.users where id = v_order.user_id for update;
   if v_order.kind = 'vip' and v_user.status <> 'normal' then
@@ -88,7 +89,12 @@ as $$
   from payments.orders where id = p_order_id and status = 'pending'
 $$;
 
-create or replace function api.payment_begin_checkout(p_pre_checkout_query_id text, p_invoice_payload text, p_stars bigint)
+create or replace function api.payment_begin_checkout(
+  p_pre_checkout_query_id text,
+  p_invoice_payload text,
+  p_stars bigint,
+  p_payer_telegram_id bigint
+)
 returns jsonb
 language plpgsql
 security definer
@@ -98,19 +104,38 @@ declare
   v_order payments.orders%rowtype;
   v_user identity.users%rowtype;
 begin
+  if p_pre_checkout_query_id is null
+     or btrim(p_pre_checkout_query_id) = ''
+     or p_invoice_payload is null
+     or btrim(p_invoice_payload) = ''
+     or p_stars is null
+     or p_stars <= 0
+  then
+    return jsonb_build_object('valid', false, 'payment_id', null);
+  end if;
   select * into v_order from payments.orders where invoice_payload = p_invoice_payload for update;
   if v_order.id is null or v_order.stars_amount <> p_stars then
     return jsonb_build_object('valid', false, 'payment_id', null);
   end if;
-  if v_order.status = 'processing' and v_order.pre_checkout_query_id = p_pre_checkout_query_id then
+  select * into v_user from identity.users where id = v_order.user_id for update;
+  if p_payer_telegram_id is null
+     or p_payer_telegram_id <= 0
+     or v_user.telegram_id <> p_payer_telegram_id
+  then
+    return jsonb_build_object('valid', false, 'payment_id', v_order.id);
+  end if;
+  if v_order.status = 'processing'
+     and v_order.pre_checkout_query_id = p_pre_checkout_query_id
+     and v_order.verified_payer_telegram_id = p_payer_telegram_id
+  then
     return jsonb_build_object('valid', true, 'payment_id', v_order.id);
   end if;
-  select * into v_user from identity.users where id = v_order.user_id for update;
   if v_order.status <> 'pending' or v_order.pre_checkout_query_id is not null or v_order.expires_at <= now() or v_user.status <> 'normal' then
     return jsonb_build_object('valid', false, 'payment_id', v_order.id);
   end if;
   update payments.orders
   set status = 'processing', pre_checkout_query_id = p_pre_checkout_query_id,
+      verified_payer_telegram_id = p_payer_telegram_id,
       checkout_started_at = now(), updated_at = now()
   where id = v_order.id;
   return jsonb_build_object('valid', true, 'payment_id', v_order.id);
@@ -123,6 +148,7 @@ create or replace function api.payment_apply_success(
   p_telegram_charge_id text,
   p_provider_charge_id text,
   p_stars bigint,
+  p_payer_telegram_id bigint,
   p_payload jsonb
 )
 returns jsonb
@@ -130,17 +156,86 @@ language plpgsql
 security definer
 set search_path = ''
 as $$
-declare v_order payments.orders%rowtype;
+declare
+  v_order payments.orders%rowtype;
+  v_event_payload jsonb;
 begin
+  if p_update_id is null
+     or btrim(p_update_id) = ''
+     or p_invoice_payload is null
+     or btrim(p_invoice_payload) = ''
+     or p_telegram_charge_id is null
+     or btrim(p_telegram_charge_id) = ''
+     or p_stars is null
+     or p_stars <= 0
+     or p_payload is null
+  then
+    perform api.raise_business_error('PAYMENT_MISMATCH', '支付通知参数不完整');
+  end if;
   insert into operations.webhook_events (provider, event_id, payload) values ('telegram_update', p_update_id, p_payload) on conflict do nothing;
-  if not found then return jsonb_build_object('duplicate', true); end if;
+  if not found then
+    select payload into v_event_payload
+    from operations.webhook_events
+    where provider = 'telegram_update' and event_id = p_update_id;
+    if v_event_payload is distinct from p_payload then
+      perform api.raise_business_error('PAYMENT_MISMATCH', '支付通知内容不一致');
+    end if;
+    select * into v_order
+    from payments.orders
+    where invoice_payload = p_invoice_payload
+    for update;
+    if v_order.id is null
+       or v_order.stars_amount <> p_stars
+       or v_order.telegram_payment_charge_id is distinct from p_telegram_charge_id
+    then
+      perform api.raise_business_error('PAYMENT_MISMATCH', '支付订单不匹配');
+    end if;
+    return jsonb_build_object(
+      'duplicate', true,
+      'order', case
+        when v_order.status = 'paid' then payments.deliver(v_order.id)
+        else payments.order_json(v_order)
+      end
+    );
+  end if;
   select * into v_order from payments.orders where invoice_payload = p_invoice_payload for update;
-  if v_order.id is null or v_order.stars_amount <> p_stars then perform api.raise_business_error('PAYMENT_MISMATCH', '支付订单不匹配'); end if;
+  if v_order.id is null
+     or v_order.stars_amount <> p_stars
+     or v_order.pre_checkout_query_id is null
+     or v_order.verified_payer_telegram_id is null
+     or v_order.checkout_started_at is null
+  then
+    perform api.raise_business_error('PAYMENT_MISMATCH', '支付订单不匹配');
+  end if;
   if v_order.telegram_payment_charge_id = p_telegram_charge_id then
     update operations.webhook_events set processed_at = now() where provider = 'telegram_update' and event_id = p_update_id;
     return jsonb_build_object('duplicate', true, 'order', case when v_order.status = 'paid' then payments.deliver(v_order.id) else payments.order_json(v_order) end);
   end if;
   if v_order.telegram_payment_charge_id is not null then perform api.raise_business_error('PAYMENT_MISMATCH', '支付订单已绑定其他付款凭据'); end if;
+  if p_payer_telegram_id is null
+     or p_payer_telegram_id <> v_order.verified_payer_telegram_id
+  then
+    update payments.orders
+    set status = 'payment_identity_conflict',
+        telegram_payment_charge_id = p_telegram_charge_id,
+        provider_payment_charge_id = p_provider_charge_id,
+        paid_at = now(),
+        payment_identity_conflict_at = now(),
+        payment_identity_conflict_reason = case
+          when p_payer_telegram_id is null then 'successful_payment_payer_missing'
+          else 'successful_payment_payer_mismatch'
+        end,
+        updated_at = now()
+    where id = v_order.id
+    returning * into v_order;
+    update operations.operations
+    set result = payments.order_json(v_order), updated_at = now()
+    where id = v_order.operation_id;
+    update operations.webhook_events
+    set processed_at = now()
+    where provider = 'telegram_update' and event_id = p_update_id;
+    return jsonb_build_object('duplicate', false, 'order', payments.order_json(v_order));
+  end if;
   update payments.orders
   set status = 'paid', telegram_payment_charge_id = p_telegram_charge_id,
       provider_payment_charge_id = p_provider_charge_id, paid_at = now(), updated_at = now()

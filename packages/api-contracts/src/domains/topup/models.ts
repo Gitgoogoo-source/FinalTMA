@@ -66,6 +66,7 @@ export const paymentSchema = z
       "expired",
       "refunded",
       "rejected",
+      "payment_identity_conflict",
     ]),
     stars_amount: z.number().int().positive(),
     kcoin_amount: nonNegativeIntegerSchema,

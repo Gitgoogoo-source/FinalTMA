@@ -149,35 +149,3 @@ begin
   return operations.complete_command(p_operation_id, v_result);
 end;
 $$;
-
-create or replace function api.referral_share_event(
-  p_session_id uuid,
-  p_operation_id uuid,
-  p_event text
-)
-returns jsonb
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-  v_operation operations.operations%rowtype;
-  v_replay jsonb;
-  v_result jsonb;
-  v_detail text;
-begin
-  v_operation := operations.begin_command(p_session_id, 'referral.share_event', p_operation_id, jsonb_build_object('event', p_event));
-  v_replay := operations.replay_if_finished(v_operation);
-  if v_replay is not null then return v_replay; end if;
-  begin
-    if p_event = 'copy_link' then perform tasks.progress(v_operation.user_id, 'copy_referral');
-    elsif p_event = 'telegram_invite' then perform tasks.progress(v_operation.user_id, 'telegram_invite');
-    else perform api.raise_business_error('SHARE_EVENT_INVALID', '分享事件无效'); end if;
-    v_result := jsonb_build_object('recorded', true, 'event', p_event);
-    return operations.complete_command(p_operation_id, v_result);
-  exception when others then
-    get stacked diagnostics v_detail = pg_exception_detail;
-    return operations.fail_command(p_operation_id, case when sqlstate = 'P0001' then sqlerrm else 'INTERNAL_ERROR' end, jsonb_build_object('detail', coalesce(v_detail, '{}')));
-  end;
-end;
-$$;

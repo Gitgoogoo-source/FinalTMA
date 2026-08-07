@@ -10,7 +10,7 @@ export function VipDialog({ close }: { close(): void }): ReactNode {
   const query = useApiQuery("vip.get");
   const { isBlocked, run } = useOperationRegistry();
   const blocked = isBlocked("vip.create_order");
-  const pending = query.data?.pending_order;
+  const attentionOrder = query.data?.payment_attention_order;
   const order = () =>
     void run("正在创建 VIP 月卡订单", "vip.create_order", {}).then((result) => {
       if (result?.invoice_url)
@@ -20,7 +20,7 @@ export function VipDialog({ close }: { close(): void }): ReactNode {
               seedApiQuery(
                 "vip.get",
                 {},
-                { ...query.data, pending_order: null },
+                { ...query.data, payment_attention_order: null },
               );
             close();
             void run(
@@ -36,14 +36,19 @@ export function VipDialog({ close }: { close(): void }): ReactNode {
     });
   const data = query.data;
   const activeOrder =
-    pending && ["pending", "processing", "paid"].includes(pending.status)
-      ? pending
+    attentionOrder &&
+    ["pending", "processing", "paid"].includes(attentionOrder.status)
+      ? attentionOrder
       : null;
+  const identityConflict =
+    attentionOrder?.status === "payment_identity_conflict";
   return (
     <AppModal labelledBy="vip-dialog-title" onClose={close}>
       <div className="modal vip">
         <Crown size={42} />
-        <Badge>{vipDetailStatus(data, Boolean(activeOrder))}</Badge>
+        <Badge>
+          {vipDetailStatus(data, Boolean(activeOrder), identityConflict)}
+        </Badge>
         <h2 id="vip-dialog-title">PokePets VIP 月卡</h2>
         {query.isLoading ? (
           <p>正在读取真实权益</p>
@@ -92,7 +97,12 @@ export function VipDialog({ close }: { close(): void }): ReactNode {
               两项每日权益仅在开盒页按 UTC+0
               分别手动领取，未领取不补领；有效月卡卖家的真实成交手续费返还按系统结果结算。
             </p>
-            {activeOrder ? (
+            {identityConflict ? (
+              <div className="payment-recovery">
+                <strong>支付身份校验异常</strong>
+                <small>本次未到账，请前往支付助手发送 /paysupport</small>
+              </div>
+            ) : activeOrder ? (
               <div className="payment-recovery">
                 <strong>
                   {activeOrder.status === "processing" ||
@@ -132,7 +142,12 @@ export function VipDialog({ close }: { close(): void }): ReactNode {
 
 type VipData = ReturnType<typeof useApiQuery<"vip.get">>["data"];
 
-function vipDetailStatus(data: VipData, paymentPending: boolean): string {
+function vipDetailStatus(
+  data: VipData,
+  paymentPending: boolean,
+  identityConflict: boolean,
+): string {
+  if (identityConflict) return "支付支持";
   if (paymentPending) return "确认中";
   if (data?.active) return "VIP 已生效";
   return data?.ends_on ? "VIP 已过期" : "VIP 未开通";

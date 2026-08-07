@@ -14,7 +14,6 @@ import { isVisibleMvpTask } from "../../domains/tasks/visibility.ts";
 import { useApiQuery } from "../../platform/query/index.ts";
 import { focusTaskTarget } from "../../shared/navigation/focusTaskTarget.ts";
 import { Button, Card } from "../../shared/ui/index.tsx";
-import { useOperationRegistry } from "../operation-recovery/index.ts";
 
 type Task = RouteOutput<"tasks.get">["tasks"][number];
 type Highlight = {
@@ -29,7 +28,6 @@ export function TaskHighlightBanner(): ReactNode {
   const navigate = useNavigate();
   const tasks = useApiQuery("tasks.get");
   const referral = useApiQuery("referral.get");
-  const { isBlocked } = useOperationRegistry();
   const orderedTasks = (tasks.data?.tasks ?? []).filter(isVisibleMvpTask);
   const claimable = orderedTasks.find((task) => task.status === "claimable");
   const unfinished = orderedTasks.find(
@@ -38,8 +36,7 @@ export function TaskHighlightBanner(): ReactNode {
   const needsFallback = Boolean(
     tasks.data?.checkin.claimed_today && !claimable && !unfinished,
   );
-  const referralAvailable =
-    Boolean(referral.data) && !isBlocked("referral.share_event");
+  const referralAvailable = Boolean(referral.data);
   const needsWheel =
     needsFallback &&
     !referralAvailable &&

@@ -11,26 +11,26 @@ const telegramUserSchema = z.object({
 const successfulPaymentSchema = z.object({
   currency: z.literal("XTR"),
   total_amount: z.number().int().positive(),
-  invoice_payload: z.string(),
-  telegram_payment_charge_id: z.string(),
+  invoice_payload: z.string().min(1),
+  telegram_payment_charge_id: z.string().min(1),
   provider_payment_charge_id: z.string().optional(),
 });
 const refundedPaymentSchema = z.object({
   currency: z.literal("XTR"),
   total_amount: z.number().int().positive(),
-  invoice_payload: z.string(),
-  telegram_payment_charge_id: z.string(),
+  invoice_payload: z.string().min(1),
+  telegram_payment_charge_id: z.string().min(1),
   provider_payment_charge_id: z.string().optional(),
 });
 const telegramUpdateSchema = z.object({
   update_id: z.number().int().nonnegative(),
   pre_checkout_query: z
     .object({
-      id: z.string(),
+      id: z.string().min(1),
       from: telegramUserSchema,
       currency: z.literal("XTR"),
       total_amount: z.number().int().positive(),
-      invoice_payload: z.string(),
+      invoice_payload: z.string().min(1),
     })
     .optional(),
   message: z

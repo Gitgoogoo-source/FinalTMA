@@ -724,7 +724,6 @@
                                       "SESSION_EXPIRED",
                                       "SESSION_REPLACED",
                                       "SESSION_REQUIRED",
-                                      "SHARE_EVENT_INVALID",
                                       "TASK_ALREADY_CLAIMED",
                                       "TASK_NOT_COMPLETE",
                                       "TASK_NOT_FOUND",
@@ -790,7 +789,7 @@
                             "additionalProperties": false
                           }
                         },
-                        "pending_payments": {
+                        "payment_recovery_orders": {
                           "type": "array",
                           "items": {
                             "type": "object",
@@ -815,7 +814,8 @@
                                   "cancelled",
                                   "expired",
                                   "refunded",
-                                  "rejected"
+                                  "rejected",
+                                  "payment_identity_conflict"
                                 ]
                               },
                               "stars_amount": {
@@ -1294,7 +1294,7 @@
                         "catalog_version",
                         "authority_cursor",
                         "blocking_operations",
-                        "pending_payments",
+                        "payment_recovery_orders",
                         "pending_mints",
                         "battle_participation",
                         "server_time"
@@ -10450,7 +10450,8 @@
                                   "cancelled",
                                   "expired",
                                   "refunded",
-                                  "rejected"
+                                  "rejected",
+                                  "payment_identity_conflict"
                                 ]
                               },
                               "stars_amount": {
@@ -10967,7 +10968,8 @@
                             "cancelled",
                             "expired",
                             "refunded",
-                            "rejected"
+                            "rejected",
+                            "payment_identity_conflict"
                           ]
                         },
                         "stars_amount": {
@@ -11310,7 +11312,8 @@
                             "cancelled",
                             "expired",
                             "refunded",
-                            "rejected"
+                            "rejected",
+                            "payment_identity_conflict"
                           ]
                         },
                         "stars_amount": {
@@ -12429,7 +12432,8 @@
                             "cancelled",
                             "expired",
                             "refunded",
-                            "rejected"
+                            "rejected",
+                            "payment_identity_conflict"
                           ]
                         },
                         "stars_amount": {
@@ -12772,7 +12776,8 @@
                             "cancelled",
                             "expired",
                             "refunded",
-                            "rejected"
+                            "rejected",
+                            "payment_identity_conflict"
                           ]
                         },
                         "stars_amount": {
@@ -13380,7 +13385,8 @@
                             "cancelled",
                             "expired",
                             "refunded",
-                            "rejected"
+                            "rejected",
+                            "payment_identity_conflict"
                           ]
                         },
                         "stars_amount": {
@@ -13723,7 +13729,8 @@
                             "cancelled",
                             "expired",
                             "refunded",
-                            "rejected"
+                            "rejected",
+                            "payment_identity_conflict"
                           ]
                         },
                         "stars_amount": {
@@ -14317,7 +14324,8 @@
                             "cancelled",
                             "expired",
                             "refunded",
-                            "rejected"
+                            "rejected",
+                            "payment_identity_conflict"
                           ]
                         },
                         "stars_amount": {
@@ -14850,7 +14858,7 @@
                           "minimum": 0,
                           "maximum": 9007199254740991
                         },
-                        "pending_order": {
+                        "payment_attention_order": {
                           "anyOf": [
                             {
                               "type": "object",
@@ -14875,7 +14883,8 @@
                                     "cancelled",
                                     "expired",
                                     "refunded",
-                                    "rejected"
+                                    "rejected",
+                                    "payment_identity_conflict"
                                   ]
                                 },
                                 "stars_amount": {
@@ -15211,7 +15220,7 @@
                         "free_box_used_today",
                         "stars_price",
                         "free_rare_box_available",
-                        "pending_order"
+                        "payment_attention_order"
                       ],
                       "additionalProperties": false
                     },
@@ -15421,7 +15430,8 @@
                             "cancelled",
                             "expired",
                             "refunded",
-                            "rejected"
+                            "rejected",
+                            "payment_identity_conflict"
                           ]
                         },
                         "stars_amount": {
@@ -15764,7 +15774,8 @@
                             "cancelled",
                             "expired",
                             "refunded",
-                            "rejected"
+                            "rejected",
+                            "payment_identity_conflict"
                           ]
                         },
                         "stars_amount": {
@@ -16387,7 +16398,8 @@
                             "cancelled",
                             "expired",
                             "refunded",
-                            "rejected"
+                            "rejected",
+                            "payment_identity_conflict"
                           ]
                         },
                         "stars_amount": {
@@ -16730,7 +16742,8 @@
                             "cancelled",
                             "expired",
                             "refunded",
-                            "rejected"
+                            "rejected",
+                            "payment_identity_conflict"
                           ]
                         },
                         "stars_amount": {
@@ -17970,8 +17983,8 @@
                       "type": "object",
                       "properties": {
                         "tasks": {
-                          "minItems": 19,
-                          "maxItems": 19,
+                          "minItems": 17,
+                          "maxItems": 17,
                           "type": "array",
                           "items": {
                             "type": "object",
@@ -17983,8 +17996,6 @@
                                   "gacha_10",
                                   "gacha_ten",
                                   "wheel_spin",
-                                  "copy_referral",
-                                  "telegram_invite",
                                   "market_buy",
                                   "market_list",
                                   "market_sold",
@@ -18003,14 +18014,13 @@
                               "order": {
                                 "type": "integer",
                                 "minimum": 1,
-                                "maximum": 19
+                                "maximum": 17
                               },
                               "category": {
                                 "type": "string",
                                 "enum": [
                                   "gacha",
                                   "daily",
-                                  "social",
                                   "market",
                                   "inventory",
                                   "expedition",
@@ -18030,8 +18040,6 @@
                                   "gacha_single",
                                   "gacha_ten",
                                   "wheel",
-                                  "referral_copy",
-                                  "referral_telegram",
                                   "market_buy",
                                   "market_sell",
                                   "market_manage",
@@ -18641,8 +18649,6 @@
                 "gacha_10",
                 "gacha_ten",
                 "wheel_spin",
-                "copy_referral",
-                "telegram_invite",
                 "market_buy",
                 "market_list",
                 "market_sold",
@@ -18685,8 +18691,6 @@
                             "gacha_10",
                             "gacha_ten",
                             "wheel_spin",
-                            "copy_referral",
-                            "telegram_invite",
                             "market_buy",
                             "market_list",
                             "market_sold",
@@ -18752,8 +18756,6 @@
                             "gacha_10",
                             "gacha_ten",
                             "wheel_spin",
-                            "copy_referral",
-                            "telegram_invite",
                             "market_buy",
                             "market_list",
                             "market_sold",
@@ -19640,334 +19642,6 @@
                   "code": { "type": "string", "pattern": "^TMA[A-F0-9]{20}$" }
                 },
                 "required": ["code"],
-                "additionalProperties": false
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/referrals/share-events": {
-      "post": {
-        "operationId": "referral_share_event",
-        "tags": ["referral"],
-        "security": [{ "bearerAuth": [] }],
-        "parameters": [
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "schema": { "type": "string", "format": "uuid" }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$schema": "https://json-schema.org/draft/2020-12/schema",
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "type": "object",
-                      "properties": {
-                        "recorded": { "type": "boolean", "const": true },
-                        "event": {
-                          "type": "string",
-                          "enum": ["copy_link", "telegram_invite"]
-                        }
-                      },
-                      "required": ["recorded", "event"],
-                      "additionalProperties": false
-                    },
-                    "request_id": {
-                      "type": "string",
-                      "format": "uuid",
-                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                    },
-                    "operation_id": {
-                      "anyOf": [
-                        {
-                          "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                        },
-                        { "type": "null" }
-                      ]
-                    }
-                  },
-                  "required": ["data", "request_id", "operation_id"],
-                  "additionalProperties": false
-                }
-              }
-            }
-          },
-          "202": {
-            "description": "Operation accepted for durable recovery",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$schema": "https://json-schema.org/draft/2020-12/schema",
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "type": "object",
-                      "properties": {
-                        "recorded": { "type": "boolean", "const": true },
-                        "event": {
-                          "type": "string",
-                          "enum": ["copy_link", "telegram_invite"]
-                        }
-                      },
-                      "required": ["recorded", "event"],
-                      "additionalProperties": false
-                    },
-                    "request_id": {
-                      "type": "string",
-                      "format": "uuid",
-                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                    },
-                    "operation_id": {
-                      "anyOf": [
-                        {
-                          "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                        },
-                        { "type": "null" }
-                      ]
-                    }
-                  },
-                  "required": ["data", "request_id", "operation_id"],
-                  "additionalProperties": false
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Errors: REQUEST_INVALID, IDEMPOTENCY_KEY_INVALID, IDEMPOTENCY_KEY_REQUIRED, SHARE_EVENT_INVALID",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/StandardError" }
-              }
-            }
-          },
-          "401": {
-            "description": "Errors: SESSION_EXPIRED, SESSION_REPLACED, SESSION_REQUIRED",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/StandardError" }
-              }
-            }
-          },
-          "403": {
-            "description": "Errors: ACCOUNT_RESTRICTED",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/StandardError" }
-              }
-            }
-          },
-          "409": {
-            "description": "Errors: ENTRY_HANDOFF_PENDING, IDEMPOTENCY_KEY_REUSED",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/StandardError" }
-              }
-            }
-          },
-          "410": {
-            "description": "Errors: OPERATION_RESULT_EXPIRED",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/StandardError" }
-              }
-            }
-          },
-          "413": {
-            "description": "Errors: REQUEST_TOO_LARGE",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/StandardError" }
-              }
-            }
-          },
-          "415": {
-            "description": "Errors: CONTENT_TYPE_INVALID",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/StandardError" }
-              }
-            }
-          },
-          "500": {
-            "description": "Errors: DATABASE_RPC_FAILED, INTERNAL_ERROR",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/StandardError" }
-              }
-            }
-          },
-          "502": {
-            "description": "Errors: RESPONSE_INVALID",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/StandardError" }
-              }
-            }
-          }
-        },
-        "x-idempotency-required": true,
-        "x-idempotency-forbidden": false,
-        "x-allow-pending-entry-handoff": false,
-        "x-error-codes": [
-          "DATABASE_RPC_FAILED",
-          "INTERNAL_ERROR",
-          "REQUEST_INVALID",
-          "RESPONSE_INVALID",
-          "CONTENT_TYPE_INVALID",
-          "REQUEST_TOO_LARGE",
-          "ACCOUNT_RESTRICTED",
-          "SESSION_EXPIRED",
-          "SESSION_REPLACED",
-          "SESSION_REQUIRED",
-          "ENTRY_HANDOFF_PENDING",
-          "IDEMPOTENCY_KEY_INVALID",
-          "IDEMPOTENCY_KEY_REQUIRED",
-          "OPERATION_RESULT_EXPIRED",
-          "SHARE_EVENT_INVALID",
-          "IDEMPOTENCY_KEY_REUSED"
-        ],
-        "x-error-definitions": {
-          "DATABASE_RPC_FAILED": {
-            "status": 500,
-            "message": "数据库操作失败",
-            "retryable": true,
-            "refreshScope": "all",
-            "recoveryAction": "query_operation"
-          },
-          "INTERNAL_ERROR": {
-            "status": 500,
-            "message": "服务暂时不可用",
-            "retryable": true,
-            "refreshScope": "all",
-            "recoveryAction": "query_operation"
-          },
-          "REQUEST_INVALID": {
-            "status": 400,
-            "message": "请求参数无效",
-            "retryable": false,
-            "refreshScope": "none",
-            "recoveryAction": "none"
-          },
-          "RESPONSE_INVALID": {
-            "status": 502,
-            "message": "服务响应格式无效",
-            "retryable": true,
-            "refreshScope": "all",
-            "recoveryAction": "refresh"
-          },
-          "CONTENT_TYPE_INVALID": {
-            "status": 415,
-            "message": "请求体必须使用 application/json",
-            "retryable": false,
-            "refreshScope": "none",
-            "recoveryAction": "none"
-          },
-          "REQUEST_TOO_LARGE": {
-            "status": 413,
-            "message": "请求体过大",
-            "retryable": false,
-            "refreshScope": "none",
-            "recoveryAction": "none"
-          },
-          "ACCOUNT_RESTRICTED": {
-            "status": 403,
-            "message": "账户当前不可执行此操作",
-            "retryable": false,
-            "refreshScope": "session",
-            "recoveryAction": "refresh"
-          },
-          "SESSION_EXPIRED": {
-            "status": 401,
-            "message": "会话已过期",
-            "retryable": true,
-            "refreshScope": "session",
-            "recoveryAction": "reauthenticate"
-          },
-          "SESSION_REPLACED": {
-            "status": 401,
-            "message": "会话已被替换",
-            "retryable": false,
-            "refreshScope": "session",
-            "recoveryAction": "reauthenticate"
-          },
-          "SESSION_REQUIRED": {
-            "status": 401,
-            "message": "请从 Telegram 重新进入应用",
-            "retryable": false,
-            "refreshScope": "session",
-            "recoveryAction": "reauthenticate"
-          },
-          "ENTRY_HANDOFF_PENDING": {
-            "status": 409,
-            "message": "邀请绑定结果确认中，请稍后刷新",
-            "retryable": true,
-            "refreshScope": "session",
-            "recoveryAction": "refresh"
-          },
-          "IDEMPOTENCY_KEY_INVALID": {
-            "status": 400,
-            "message": "幂等键必须是 UUID",
-            "retryable": false,
-            "refreshScope": "none",
-            "recoveryAction": "none"
-          },
-          "IDEMPOTENCY_KEY_REQUIRED": {
-            "status": 400,
-            "message": "缺少幂等键",
-            "retryable": false,
-            "refreshScope": "none",
-            "recoveryAction": "none"
-          },
-          "OPERATION_RESULT_EXPIRED": {
-            "status": 410,
-            "message": "操作结果已超过可恢复期限",
-            "retryable": false,
-            "refreshScope": "all",
-            "recoveryAction": "refresh"
-          },
-          "SHARE_EVENT_INVALID": {
-            "status": 400,
-            "message": "分享事件无效",
-            "retryable": false,
-            "refreshScope": "none",
-            "recoveryAction": "none"
-          },
-          "IDEMPOTENCY_KEY_REUSED": {
-            "status": 409,
-            "message": "幂等键已用于不同请求",
-            "retryable": false,
-            "refreshScope": "all",
-            "recoveryAction": "query_operation"
-          }
-        },
-        "x-refresh-scopes": ["all"],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$schema": "https://json-schema.org/draft/2020-12/schema",
-                "type": "object",
-                "properties": {
-                  "event": {
-                    "type": "string",
-                    "enum": ["copy_link", "telegram_invite"]
-                  }
-                },
-                "required": ["event"],
                 "additionalProperties": false
               }
             }
@@ -33936,7 +33610,6 @@
                                       "SESSION_EXPIRED",
                                       "SESSION_REPLACED",
                                       "SESSION_REQUIRED",
-                                      "SHARE_EVENT_INVALID",
                                       "TASK_ALREADY_CLAIMED",
                                       "TASK_NOT_COMPLETE",
                                       "TASK_NOT_FOUND",
@@ -34344,7 +34017,6 @@
                                 "SESSION_EXPIRED",
                                 "SESSION_REPLACED",
                                 "SESSION_REQUIRED",
-                                "SHARE_EVENT_INVALID",
                                 "TASK_ALREADY_CLAIMED",
                                 "TASK_NOT_COMPLETE",
                                 "TASK_NOT_FOUND",
@@ -34926,7 +34598,7 @@
                   "pre_checkout_query": {
                     "type": "object",
                     "properties": {
-                      "id": { "type": "string" },
+                      "id": { "type": "string", "minLength": 1 },
                       "from": {
                         "type": "object",
                         "properties": {
@@ -34948,7 +34620,7 @@
                         "exclusiveMinimum": 0,
                         "maximum": 9007199254740991
                       },
-                      "invoice_payload": { "type": "string" }
+                      "invoice_payload": { "type": "string", "minLength": 1 }
                     },
                     "required": [
                       "id",
@@ -34992,8 +34664,14 @@
                             "exclusiveMinimum": 0,
                             "maximum": 9007199254740991
                           },
-                          "invoice_payload": { "type": "string" },
-                          "telegram_payment_charge_id": { "type": "string" },
+                          "invoice_payload": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "telegram_payment_charge_id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
                           "provider_payment_charge_id": { "type": "string" }
                         },
                         "required": [
@@ -35013,8 +34691,14 @@
                             "exclusiveMinimum": 0,
                             "maximum": 9007199254740991
                           },
-                          "invoice_payload": { "type": "string" },
-                          "telegram_payment_charge_id": { "type": "string" },
+                          "invoice_payload": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "telegram_payment_charge_id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
                           "provider_payment_charge_id": { "type": "string" }
                         },
                         "required": [
@@ -36499,7 +36183,6 @@
                   "SESSION_EXPIRED",
                   "SESSION_REPLACED",
                   "SESSION_REQUIRED",
-                  "SHARE_EVENT_INVALID",
                   "TASK_ALREADY_CLAIMED",
                   "TASK_NOT_COMPLETE",
                   "TASK_NOT_FOUND",

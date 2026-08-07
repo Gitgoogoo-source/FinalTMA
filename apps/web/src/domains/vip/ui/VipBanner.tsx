@@ -7,25 +7,33 @@ import { Button, Card } from "../../../shared/ui/index.tsx";
 export function VipBanner({ open }: { open(): void }): ReactNode {
   const vip = useApiQuery("vip.get");
   const pending = Boolean(
-    vip.data?.pending_order &&
-    ["pending", "processing", "paid"].includes(vip.data.pending_order.status),
+    vip.data?.payment_attention_order &&
+    ["pending", "processing", "paid"].includes(
+      vip.data.payment_attention_order.status,
+    ),
   );
+  const identityConflict =
+    vip.data?.payment_attention_order?.status === "payment_identity_conflict";
   const actionLabel = vip.error
     ? "重新加载"
-    : pending
-      ? "确认中"
-      : vip.data?.active
-        ? vip.data.can_renew
-          ? "续费"
-          : "已达续费上限"
-        : "购买";
+    : identityConflict
+      ? "支付支持"
+      : pending
+        ? "确认中"
+        : vip.data?.active
+          ? vip.data.can_renew
+            ? "续费"
+            : "已达续费上限"
+          : "购买";
   const actionDetail = vip.isLoading
     ? "正在读取真实权益"
     : vip.error
       ? "月卡状态加载失败"
-      : vip.data?.active
-        ? `剩余 ${vip.data.remaining_days} 天`
-        : `${vip.data?.stars_price ?? "—"} Stars · 30 天`;
+      : identityConflict
+        ? "本次未到账 · /paysupport"
+        : vip.data?.active
+          ? `剩余 ${vip.data.remaining_days} 天`
+          : `${vip.data?.stars_price ?? "—"} Stars · 30 天`;
   return (
     <Card className="vip-banner vip-market-hero">
       <img
@@ -76,7 +84,9 @@ export function VipBanner({ open }: { open(): void }): ReactNode {
           disabled={
             vip.isLoading ||
             pending ||
-            Boolean(vip.data?.active && !vip.data.can_renew)
+            Boolean(
+              !identityConflict && vip.data?.active && !vip.data.can_renew,
+            )
           }
           onClick={vip.error ? () => void vip.refetch() : open}
         >

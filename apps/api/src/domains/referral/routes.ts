@@ -29,12 +29,4 @@ export const referralHandlers = {
         p_code: context.input.code,
       }),
     ),
-  "referral.share_event": async (context) =>
-    operationResult(
-      await rpc<OperationEnvelope>("referral_share_event", {
-        p_session_id: requireSession(context).session_id,
-        p_operation_id: requireOperationId(context),
-        p_event: context.input.event,
-      }),
-    ),
 } satisfies HandlerMap;

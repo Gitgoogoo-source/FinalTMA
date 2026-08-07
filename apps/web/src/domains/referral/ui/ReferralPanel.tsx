@@ -12,20 +12,15 @@ import { useState, type ReactNode } from "react";
 import { useApiQuery } from "../../../platform/query/index.ts";
 import { telegram } from "../../../platform/telegram/index.ts";
 import { Badge, Button, Card } from "../../../shared/ui/index.tsx";
-import { useOperationRegistry } from "../../../workflows/operation-recovery/index.ts";
 
 export function ReferralPanel(): ReactNode {
   const query = useApiQuery("referral.get");
-  const { isBlocked, run } = useOperationRegistry();
-  const [recording, setRecording] = useState(false);
   const [feedback, setFeedback] = useState<{
-    kind: "success" | "pending" | "error";
+    kind: "success" | "error";
     message: string;
   } | null>(null);
-  const blocked = recording || isBlocked("referral.share_event");
   const event = async (name: "copy_link" | "telegram_invite") => {
     const link = query.data?.link ?? "";
-    setRecording(true);
     setFeedback(null);
     try {
       if (name === "copy_link") {
@@ -42,20 +37,6 @@ export function ReferralPanel(): ReactNode {
         );
         setFeedback({ kind: "success", message: "已打开 Telegram 分享" });
       }
-      const result = await run(
-        name === "copy_link" ? "正在记录复制邀请" : "正在记录 Telegram 邀请",
-        "referral.share_event",
-        { event: name },
-        { dialog: false },
-      );
-      if (!result)
-        setFeedback({
-          kind: "pending",
-          message:
-            name === "copy_link"
-              ? "链接已复制，任务进度待刷新"
-              : "已打开 Telegram 分享，任务进度待刷新",
-        });
     } catch {
       setFeedback({
         kind: "error",
@@ -64,8 +45,6 @@ export function ReferralPanel(): ReactNode {
             ? "复制失败，请稍后重试"
             : "分享失败，请复制邀请链接",
       });
-    } finally {
-      setRecording(false);
     }
   };
   if (query.isLoading)
@@ -115,7 +94,6 @@ export function ReferralPanel(): ReactNode {
           <Button
             id="task-referral-telegram"
             className="invite-primary"
-            disabled={blocked}
             onClick={() => void event("telegram_invite")}
           >
             <Send aria-hidden="true" />
@@ -125,7 +103,6 @@ export function ReferralPanel(): ReactNode {
           <Button
             id="task-referral-copy"
             className="secondary invite-copy-button"
-            disabled={blocked}
             onClick={() => void event("copy_link")}
           >
             <Copy aria-hidden="true" />

@@ -84,7 +84,7 @@ begin
         and o.use_case not like 'battle.%'
         and not exists (
           select 1 from payments.orders p
-          where p.operation_id = o.id and p.status in ('pending', 'processing', 'paid')
+          where p.operation_id = o.id and p.status in ('pending', 'processing', 'paid', 'payment_identity_conflict')
         )
         and not exists (
           select 1 from onchain.mints m
@@ -128,6 +128,27 @@ begin
     from economy.ledger l where l.reason = 'stars_topup' group by l.reference having count(*) > 1 on conflict do nothing;
     get diagnostics v_added = row_count; v_count := v_count + v_added;
     insert into operations.invariant_violations (code, subject, details)
+    select 'PAYMENT_IDENTITY_CONFLICT_DELIVERY', p.id::text, jsonb_build_object('kind', p.kind, 'status', p.status)
+    from payments.orders p
+    where p.payment_identity_conflict_at is not null
+      and (
+        p.delivered_at is not null
+        or exists (
+          select 1 from economy.ledger l
+          where l.reason = 'stars_topup' and l.reference = p.id::text
+        )
+        or exists (
+          select 1 from referral.relationships relationship
+          where relationship.reward_operation_id = p.operation_id
+        )
+        or exists (
+          select 1 from referral.milestones milestone
+          where milestone.operation_id = p.operation_id
+        )
+      )
+    on conflict do nothing;
+    get diagnostics v_added = row_count; v_count := v_count + v_added;
+    insert into operations.invariant_violations (code, subject, details)
     select 'RESERVATION_OVERFLOW', h.user_id::text || ':' || h.template_id, jsonb_build_object('holding', h.quantity, 'reserved', sum(r.quantity))
     from inventory.holdings h join inventory.reservations r on r.user_id = h.user_id and r.template_id = h.template_id and r.status = 'active'
     group by h.user_id, h.template_id, h.quantity having sum(r.quantity) > h.quantity on conflict do nothing;
@@ -143,7 +164,7 @@ begin
     insert into operations.invariant_violations (code, subject, details)
     select 'OPEN_OPERATION_WITHOUT_SUBJECT', o.id::text, jsonb_build_object('use_case', o.use_case, 'status', o.status)
     from operations.operations o where o.status in ('pending', 'unknown') and o.created_at < now() - interval '1 day'
-      and not exists (select 1 from payments.orders p where p.operation_id = o.id and p.status in ('pending', 'processing', 'paid'))
+      and not exists (select 1 from payments.orders p where p.operation_id = o.id and p.status in ('pending', 'processing', 'paid', 'payment_identity_conflict'))
       and not exists (select 1 from onchain.mints m where m.operation_id = o.id and m.status in ('reserved', 'submitted', 'unknown'))
     on conflict do nothing;
     get diagnostics v_added = row_count; v_count := v_count + v_added;

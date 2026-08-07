@@ -22,8 +22,8 @@ export function AppRecoveryCoordinator({
   const bootstrap = useApiQuery("identity.bootstrap");
   const pendingPayments = useApiQuery("topup.bootstrap");
   const { clearTopupRequest } = useNavigationIntent();
-  const recoveryPayments = bootstrap.data?.pending_payments.length
-    ? bootstrap.data.pending_payments
+  const recoveryPayments = bootstrap.data?.payment_recovery_orders.length
+    ? bootstrap.data.payment_recovery_orders
     : pendingPayments.data?.orders;
   const openPaymentRecovery = useCallback(
     (kind: "kcoin_topup" | "vip") =>

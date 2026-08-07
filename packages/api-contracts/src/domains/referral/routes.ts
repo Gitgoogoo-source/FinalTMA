@@ -56,23 +56,4 @@ export const referralRoutes = [
       "INTERNAL_ERROR",
     ],
   }),
-  defineRoute({
-    id: "referral.share_event",
-    method: "POST",
-    path: "/api/referrals/share-events",
-    gateway: "app",
-    auth: true,
-    idempotent: true,
-    refreshScopes: ["all"],
-    input: z
-      .object({ event: z.enum(["copy_link", "telegram_invite"]) })
-      .strict(),
-    output: z
-      .object({
-        recorded: z.literal(true),
-        event: z.enum(["copy_link", "telegram_invite"]),
-      })
-      .strict(),
-    errors: ["SHARE_EVENT_INVALID", "IDEMPOTENCY_KEY_REUSED", "INTERNAL_ERROR"],
-  }),
 ] as const;

@@ -759,7 +759,7 @@ begin
     )
     or exists (
       select 1 from payments.orders
-      where status in ('pending', 'processing', 'paid')
+      where status in ('pending', 'processing', 'paid', 'payment_identity_conflict')
     )
     or exists (
       select 1 from onchain.mints

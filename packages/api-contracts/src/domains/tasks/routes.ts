@@ -8,8 +8,6 @@ export const taskCodeSchema = z.enum([
   "gacha_10",
   "gacha_ten",
   "wheel_spin",
-  "copy_referral",
-  "telegram_invite",
   "market_buy",
   "market_list",
   "market_sold",
@@ -27,7 +25,6 @@ export const taskCodeSchema = z.enum([
 export const taskCategorySchema = z.enum([
   "gacha",
   "daily",
-  "social",
   "market",
   "inventory",
   "expedition",
@@ -45,8 +42,6 @@ export const taskCompletionActionSchema = z.enum([
   "gacha_single",
   "gacha_ten",
   "wheel",
-  "referral_copy",
-  "referral_telegram",
   "market_buy",
   "market_sell",
   "market_manage",
@@ -63,7 +58,7 @@ export const taskCompletionActionSchema = z.enum([
 const taskSchema = z
   .object({
     code: taskCodeSchema,
-    order: z.number().int().min(1).max(19),
+    order: z.number().int().min(1).max(17),
     category: taskCategorySchema,
     title: z.string().min(1),
     description: z.string().min(1),
@@ -95,10 +90,10 @@ export const taskRoutes = [
       .object({
         tasks: z
           .array(taskSchema)
-          .length(19)
+          .length(17)
           .superRefine((tasks, context) => {
             const codes = new Set(tasks.map((task) => task.code));
-            if (codes.size !== 19)
+            if (codes.size !== 17)
               context.addIssue({
                 code: "custom",
                 message: "Task response must contain every fixed code once",

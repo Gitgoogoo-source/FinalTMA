@@ -465,11 +465,11 @@ begin
         )
       )
     ), '[]'::jsonb),
-    'pending_payments', coalesce((
+    'payment_recovery_orders', coalesce((
       select jsonb_agg(payments.order_json(p) order by p.created_at desc)
       from payments.orders p
       where p.user_id = v_user_id and (
-        p.status in ('processing', 'paid')
+        p.status in ('processing', 'paid', 'payment_identity_conflict')
         or (p.kind = 'vip' and p.status = 'pending')
       )
     ), '[]'::jsonb),
@@ -9424,22 +9424,60 @@ create table payments.orders (
   kind text not null check (kind in ('kcoin_topup', 'vip')),
   stars_amount bigint not null check (stars_amount > 0),
   kcoin_amount bigint not null default 0 check (kcoin_amount >= 0),
-  status text not null default 'pending' check (status in ('pending', 'processing', 'paid', 'delivered', 'failed', 'cancelled', 'expired', 'refunded', 'rejected')),
-  invoice_payload text not null unique,
+  status text not null default 'pending' check (status in ('pending', 'processing', 'paid', 'delivered', 'failed', 'cancelled', 'expired', 'refunded', 'rejected', 'payment_identity_conflict')),
+  invoice_payload text not null unique check (btrim(invoice_payload) <> ''),
   invoice_url text,
-  pre_checkout_query_id text unique,
-  telegram_payment_charge_id text unique,
+  pre_checkout_query_id text unique check (pre_checkout_query_id is null or btrim(pre_checkout_query_id) <> ''),
+  verified_payer_telegram_id bigint check (verified_payer_telegram_id > 0),
+  telegram_payment_charge_id text unique check (telegram_payment_charge_id is null or btrim(telegram_payment_charge_id) <> ''),
   provider_payment_charge_id text,
   intent jsonb not null default '{}'::jsonb,
   expires_at timestamptz not null,
   checkout_started_at timestamptz,
   paid_at timestamptz,
   delivered_at timestamptz,
+  payment_identity_conflict_at timestamptz,
+  payment_identity_conflict_reason text check (
+    payment_identity_conflict_reason in (
+      'successful_payment_payer_missing',
+      'successful_payment_payer_mismatch'
+    )
+  ),
   failed_at timestamptz,
   cancelled_at timestamptz,
   refunded_stars bigint not null default 0 check (refunded_stars >= 0),
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  check (
+    status not in ('processing', 'paid', 'delivered', 'payment_identity_conflict', 'refunded')
+    or (
+      pre_checkout_query_id is not null
+      and verified_payer_telegram_id is not null
+      and checkout_started_at is not null
+    )
+  ),
+  check (
+    status not in ('paid', 'delivered', 'payment_identity_conflict', 'refunded')
+    or (telegram_payment_charge_id is not null and paid_at is not null)
+  ),
+  check (status <> 'delivered' or delivered_at is not null),
+  check (
+    (payment_identity_conflict_at is null and payment_identity_conflict_reason is null)
+    or (
+      payment_identity_conflict_at is not null
+      and payment_identity_conflict_reason is not null
+      and status in ('payment_identity_conflict', 'refunded')
+      and delivered_at is null
+    )
+  ),
+  check (
+    status <> 'payment_identity_conflict'
+    or (
+      payment_identity_conflict_at is not null
+      and payment_identity_conflict_reason is not null
+      and delivered_at is null
+    )
+  )
 );
 
 create index payment_orders_pending_idx on payments.orders (expires_at, created_at) where status in ('pending', 'processing', 'paid');
@@ -10016,7 +10054,7 @@ declare
 begin
   select payments.order_json(p) into v_pending
   from payments.orders p
-  where p.user_id = v_user_id and p.kind = 'vip' and p.status in ('pending', 'processing', 'paid')
+  where p.user_id = v_user_id and p.kind = 'vip' and p.status in ('pending', 'processing', 'paid', 'payment_identity_conflict')
   order by p.created_at desc limit 1;
   return vip.status_json(v_user_id) || jsonb_build_object(
     'stars_price', payments.vip_stars_price(),
@@ -10024,7 +10062,7 @@ begin
       select count(*) from economy.entitlements
       where user_id = v_user_id and kind = 'free_rare_box' and status = 'unused'
     ),
-    'pending_order', v_pending
+    'payment_attention_order', v_pending
   );
 end;
 $$;
@@ -10080,11 +10118,11 @@ $$;
 -- source: 62_tasks.sql
 create table tasks.definitions (
   code text primary key,
-  sort_order smallint not null unique check (sort_order between 1 and 19),
-  category text not null check (category in ('gacha', 'daily', 'social', 'market', 'inventory', 'expedition', 'album', 'wallet', 'mint')),
+  sort_order smallint not null unique check (sort_order between 1 and 17),
+  category text not null check (category in ('gacha', 'daily', 'market', 'inventory', 'expedition', 'album', 'wallet', 'mint')),
   title text not null check (btrim(title) <> ''),
   description text not null check (btrim(description) <> ''),
-  completion_action text not null check (completion_action in ('gacha_single', 'gacha_ten', 'wheel', 'referral_copy', 'referral_telegram', 'market_buy', 'market_sell', 'market_manage', 'inventory_evolution', 'inventory_decomposition', 'expedition_normal', 'expedition_intermediate', 'expedition_advanced', 'album', 'wallet', 'inventory_mint')),
+  completion_action text not null check (completion_action in ('gacha_single', 'gacha_ten', 'wheel', 'market_buy', 'market_sell', 'market_manage', 'inventory_evolution', 'inventory_decomposition', 'expedition_normal', 'expedition_intermediate', 'expedition_advanced', 'album', 'wallet', 'inventory_mint')),
   target bigint not null check (target > 0),
   reward_fgems bigint not null check (reward_fgems > 0)
 );
@@ -10406,38 +10444,6 @@ begin
   where id = p_session_id and user_id = v_user_id;
   v_result := jsonb_build_object('bound', true, 'referral_code', p_code);
   return operations.complete_command(p_operation_id, v_result);
-end;
-$$;
-
-create or replace function api.referral_share_event(
-  p_session_id uuid,
-  p_operation_id uuid,
-  p_event text
-)
-returns jsonb
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-  v_operation operations.operations%rowtype;
-  v_replay jsonb;
-  v_result jsonb;
-  v_detail text;
-begin
-  v_operation := operations.begin_command(p_session_id, 'referral.share_event', p_operation_id, jsonb_build_object('event', p_event));
-  v_replay := operations.replay_if_finished(v_operation);
-  if v_replay is not null then return v_replay; end if;
-  begin
-    if p_event = 'copy_link' then perform tasks.progress(v_operation.user_id, 'copy_referral');
-    elsif p_event = 'telegram_invite' then perform tasks.progress(v_operation.user_id, 'telegram_invite');
-    else perform api.raise_business_error('SHARE_EVENT_INVALID', '分享事件无效'); end if;
-    v_result := jsonb_build_object('recorded', true, 'event', p_event);
-    return operations.complete_command(p_operation_id, v_result);
-  exception when others then
-    get stacked diagnostics v_detail = pg_exception_detail;
-    return operations.fail_command(p_operation_id, case when sqlstate = 'P0001' then sqlerrm else 'INTERNAL_ERROR' end, jsonb_build_object('detail', coalesce(v_detail, '{}')));
-  end;
 end;
 $$;
 
@@ -11062,6 +11068,7 @@ begin
   select * into v_order from payments.orders where id = p_order_id for update;
   if v_order.id is null then perform api.raise_business_error('PAYMENT_NOT_FOUND', '支付订单不存在'); end if;
   if v_order.status = 'delivered' then return payments.order_json(v_order); end if;
+  if v_order.status = 'payment_identity_conflict' then perform api.raise_business_error('PAYMENT_NOT_DELIVERABLE', '支付身份校验异常，订单不可交付'); end if;
   if v_order.status <> 'paid' then perform api.raise_business_error('PAYMENT_NOT_DELIVERABLE', '支付订单尚不可交付'); end if;
   select * into v_user from identity.users where id = v_order.user_id for update;
   if v_order.kind = 'vip' and v_user.status <> 'normal' then
@@ -11103,7 +11110,12 @@ as $$
   from payments.orders where id = p_order_id and status = 'pending'
 $$;
 
-create or replace function api.payment_begin_checkout(p_pre_checkout_query_id text, p_invoice_payload text, p_stars bigint)
+create or replace function api.payment_begin_checkout(
+  p_pre_checkout_query_id text,
+  p_invoice_payload text,
+  p_stars bigint,
+  p_payer_telegram_id bigint
+)
 returns jsonb
 language plpgsql
 security definer
@@ -11113,19 +11125,38 @@ declare
   v_order payments.orders%rowtype;
   v_user identity.users%rowtype;
 begin
+  if p_pre_checkout_query_id is null
+     or btrim(p_pre_checkout_query_id) = ''
+     or p_invoice_payload is null
+     or btrim(p_invoice_payload) = ''
+     or p_stars is null
+     or p_stars <= 0
+  then
+    return jsonb_build_object('valid', false, 'payment_id', null);
+  end if;
   select * into v_order from payments.orders where invoice_payload = p_invoice_payload for update;
   if v_order.id is null or v_order.stars_amount <> p_stars then
     return jsonb_build_object('valid', false, 'payment_id', null);
   end if;
-  if v_order.status = 'processing' and v_order.pre_checkout_query_id = p_pre_checkout_query_id then
+  select * into v_user from identity.users where id = v_order.user_id for update;
+  if p_payer_telegram_id is null
+     or p_payer_telegram_id <= 0
+     or v_user.telegram_id <> p_payer_telegram_id
+  then
+    return jsonb_build_object('valid', false, 'payment_id', v_order.id);
+  end if;
+  if v_order.status = 'processing'
+     and v_order.pre_checkout_query_id = p_pre_checkout_query_id
+     and v_order.verified_payer_telegram_id = p_payer_telegram_id
+  then
     return jsonb_build_object('valid', true, 'payment_id', v_order.id);
   end if;
-  select * into v_user from identity.users where id = v_order.user_id for update;
   if v_order.status <> 'pending' or v_order.pre_checkout_query_id is not null or v_order.expires_at <= now() or v_user.status <> 'normal' then
     return jsonb_build_object('valid', false, 'payment_id', v_order.id);
   end if;
   update payments.orders
   set status = 'processing', pre_checkout_query_id = p_pre_checkout_query_id,
+      verified_payer_telegram_id = p_payer_telegram_id,
       checkout_started_at = now(), updated_at = now()
   where id = v_order.id;
   return jsonb_build_object('valid', true, 'payment_id', v_order.id);
@@ -11138,6 +11169,7 @@ create or replace function api.payment_apply_success(
   p_telegram_charge_id text,
   p_provider_charge_id text,
   p_stars bigint,
+  p_payer_telegram_id bigint,
   p_payload jsonb
 )
 returns jsonb
@@ -11145,17 +11177,86 @@ language plpgsql
 security definer
 set search_path = ''
 as $$
-declare v_order payments.orders%rowtype;
+declare
+  v_order payments.orders%rowtype;
+  v_event_payload jsonb;
 begin
+  if p_update_id is null
+     or btrim(p_update_id) = ''
+     or p_invoice_payload is null
+     or btrim(p_invoice_payload) = ''
+     or p_telegram_charge_id is null
+     or btrim(p_telegram_charge_id) = ''
+     or p_stars is null
+     or p_stars <= 0
+     or p_payload is null
+  then
+    perform api.raise_business_error('PAYMENT_MISMATCH', '支付通知参数不完整');
+  end if;
   insert into operations.webhook_events (provider, event_id, payload) values ('telegram_update', p_update_id, p_payload) on conflict do nothing;
-  if not found then return jsonb_build_object('duplicate', true); end if;
+  if not found then
+    select payload into v_event_payload
+    from operations.webhook_events
+    where provider = 'telegram_update' and event_id = p_update_id;
+    if v_event_payload is distinct from p_payload then
+      perform api.raise_business_error('PAYMENT_MISMATCH', '支付通知内容不一致');
+    end if;
+    select * into v_order
+    from payments.orders
+    where invoice_payload = p_invoice_payload
+    for update;
+    if v_order.id is null
+       or v_order.stars_amount <> p_stars
+       or v_order.telegram_payment_charge_id is distinct from p_telegram_charge_id
+    then
+      perform api.raise_business_error('PAYMENT_MISMATCH', '支付订单不匹配');
+    end if;
+    return jsonb_build_object(
+      'duplicate', true,
+      'order', case
+        when v_order.status = 'paid' then payments.deliver(v_order.id)
+        else payments.order_json(v_order)
+      end
+    );
+  end if;
   select * into v_order from payments.orders where invoice_payload = p_invoice_payload for update;
-  if v_order.id is null or v_order.stars_amount <> p_stars then perform api.raise_business_error('PAYMENT_MISMATCH', '支付订单不匹配'); end if;
+  if v_order.id is null
+     or v_order.stars_amount <> p_stars
+     or v_order.pre_checkout_query_id is null
+     or v_order.verified_payer_telegram_id is null
+     or v_order.checkout_started_at is null
+  then
+    perform api.raise_business_error('PAYMENT_MISMATCH', '支付订单不匹配');
+  end if;
   if v_order.telegram_payment_charge_id = p_telegram_charge_id then
     update operations.webhook_events set processed_at = now() where provider = 'telegram_update' and event_id = p_update_id;
     return jsonb_build_object('duplicate', true, 'order', case when v_order.status = 'paid' then payments.deliver(v_order.id) else payments.order_json(v_order) end);
   end if;
   if v_order.telegram_payment_charge_id is not null then perform api.raise_business_error('PAYMENT_MISMATCH', '支付订单已绑定其他付款凭据'); end if;
+  if p_payer_telegram_id is null
+     or p_payer_telegram_id <> v_order.verified_payer_telegram_id
+  then
+    update payments.orders
+    set status = 'payment_identity_conflict',
+        telegram_payment_charge_id = p_telegram_charge_id,
+        provider_payment_charge_id = p_provider_charge_id,
+        paid_at = now(),
+        payment_identity_conflict_at = now(),
+        payment_identity_conflict_reason = case
+          when p_payer_telegram_id is null then 'successful_payment_payer_missing'
+          else 'successful_payment_payer_mismatch'
+        end,
+        updated_at = now()
+    where id = v_order.id
+    returning * into v_order;
+    update operations.operations
+    set result = payments.order_json(v_order), updated_at = now()
+    where id = v_order.operation_id;
+    update operations.webhook_events
+    set processed_at = now()
+    where provider = 'telegram_update' and event_id = p_update_id;
+    return jsonb_build_object('duplicate', false, 'order', payments.order_json(v_order));
+  end if;
   update payments.orders
   set status = 'paid', telegram_payment_charge_id = p_telegram_charge_id,
       provider_payment_charge_id = p_provider_charge_id, paid_at = now(), updated_at = now()
@@ -11359,7 +11460,7 @@ begin
         and o.use_case not like 'battle.%'
         and not exists (
           select 1 from payments.orders p
-          where p.operation_id = o.id and p.status in ('pending', 'processing', 'paid')
+          where p.operation_id = o.id and p.status in ('pending', 'processing', 'paid', 'payment_identity_conflict')
         )
         and not exists (
           select 1 from onchain.mints m
@@ -11403,6 +11504,27 @@ begin
     from economy.ledger l where l.reason = 'stars_topup' group by l.reference having count(*) > 1 on conflict do nothing;
     get diagnostics v_added = row_count; v_count := v_count + v_added;
     insert into operations.invariant_violations (code, subject, details)
+    select 'PAYMENT_IDENTITY_CONFLICT_DELIVERY', p.id::text, jsonb_build_object('kind', p.kind, 'status', p.status)
+    from payments.orders p
+    where p.payment_identity_conflict_at is not null
+      and (
+        p.delivered_at is not null
+        or exists (
+          select 1 from economy.ledger l
+          where l.reason = 'stars_topup' and l.reference = p.id::text
+        )
+        or exists (
+          select 1 from referral.relationships relationship
+          where relationship.reward_operation_id = p.operation_id
+        )
+        or exists (
+          select 1 from referral.milestones milestone
+          where milestone.operation_id = p.operation_id
+        )
+      )
+    on conflict do nothing;
+    get diagnostics v_added = row_count; v_count := v_count + v_added;
+    insert into operations.invariant_violations (code, subject, details)
     select 'RESERVATION_OVERFLOW', h.user_id::text || ':' || h.template_id, jsonb_build_object('holding', h.quantity, 'reserved', sum(r.quantity))
     from inventory.holdings h join inventory.reservations r on r.user_id = h.user_id and r.template_id = h.template_id and r.status = 'active'
     group by h.user_id, h.template_id, h.quantity having sum(r.quantity) > h.quantity on conflict do nothing;
@@ -11418,7 +11540,7 @@ begin
     insert into operations.invariant_violations (code, subject, details)
     select 'OPEN_OPERATION_WITHOUT_SUBJECT', o.id::text, jsonb_build_object('use_case', o.use_case, 'status', o.status)
     from operations.operations o where o.status in ('pending', 'unknown') and o.created_at < now() - interval '1 day'
-      and not exists (select 1 from payments.orders p where p.operation_id = o.id and p.status in ('pending', 'processing', 'paid'))
+      and not exists (select 1 from payments.orders p where p.operation_id = o.id and p.status in ('pending', 'processing', 'paid', 'payment_identity_conflict'))
       and not exists (select 1 from onchain.mints m where m.operation_id = o.id and m.status in ('reserved', 'submitted', 'unknown'))
     on conflict do nothing;
     get diagnostics v_added = row_count; v_count := v_count + v_added;
@@ -12464,7 +12586,7 @@ begin
     )
     or exists (
       select 1 from payments.orders
-      where status in ('pending', 'processing', 'paid')
+      where status in ('pending', 'processing', 'paid', 'payment_identity_conflict')
     )
     or exists (
       select 1 from onchain.mints

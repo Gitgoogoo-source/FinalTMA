@@ -9,16 +9,23 @@ export function useStarsPaymentRecovery(
 ): void {
   const shown = useRef<string | null>(null);
   const loaded = useRef(false);
-  const pendingOrder = orders?.find(
+  const attentionOrder = orders?.find(
     (order) =>
       order.status === "processing" ||
       order.status === "paid" ||
+      order.status === "payment_identity_conflict" ||
       (order.kind === "vip" && order.status === "pending"),
   );
+  const attentionKey = attentionOrder
+    ? `${attentionOrder.id}:${attentionOrder.status}`
+    : null;
   const settlementKey =
     orders
       ?.filter(
-        (order) => order.status === "delivered" || order.status === "refunded",
+        (order) =>
+          order.status === "delivered" ||
+          order.status === "refunded" ||
+          order.status === "payment_identity_conflict",
       )
       .map((order) => `${order.id}:${order.status}`)
       .join("|") ?? "";
@@ -26,20 +33,20 @@ export function useStarsPaymentRecovery(
     if (orders === undefined) return;
     const restoring = !loaded.current;
     loaded.current = true;
-    if (!pendingOrder) {
+    if (!attentionOrder) {
       shown.current = null;
       return;
     }
     if (
       !restoring &&
-      pendingOrder.kind === "vip" &&
-      pendingOrder.status === "pending"
+      attentionOrder.kind === "vip" &&
+      attentionOrder.status === "pending"
     )
       return;
-    if (shown.current === pendingOrder.id) return;
-    shown.current = pendingOrder.id;
-    openPaymentRecovery(pendingOrder.kind);
-  }, [openPaymentRecovery, orders, pendingOrder]);
+    if (shown.current === attentionKey) return;
+    shown.current = attentionKey;
+    openPaymentRecovery(attentionOrder.kind);
+  }, [attentionKey, attentionOrder, openPaymentRecovery, orders]);
   useEffect(() => {
     if (settlementKey) void refreshRouteScopes("topup.create_order");
   }, [settlementKey]);

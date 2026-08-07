@@ -10,22 +10,60 @@ create table payments.orders (
   kind text not null check (kind in ('kcoin_topup', 'vip')),
   stars_amount bigint not null check (stars_amount > 0),
   kcoin_amount bigint not null default 0 check (kcoin_amount >= 0),
-  status text not null default 'pending' check (status in ('pending', 'processing', 'paid', 'delivered', 'failed', 'cancelled', 'expired', 'refunded', 'rejected')),
-  invoice_payload text not null unique,
+  status text not null default 'pending' check (status in ('pending', 'processing', 'paid', 'delivered', 'failed', 'cancelled', 'expired', 'refunded', 'rejected', 'payment_identity_conflict')),
+  invoice_payload text not null unique check (btrim(invoice_payload) <> ''),
   invoice_url text,
-  pre_checkout_query_id text unique,
-  telegram_payment_charge_id text unique,
+  pre_checkout_query_id text unique check (pre_checkout_query_id is null or btrim(pre_checkout_query_id) <> ''),
+  verified_payer_telegram_id bigint check (verified_payer_telegram_id > 0),
+  telegram_payment_charge_id text unique check (telegram_payment_charge_id is null or btrim(telegram_payment_charge_id) <> ''),
   provider_payment_charge_id text,
   intent jsonb not null default '{}'::jsonb,
   expires_at timestamptz not null,
   checkout_started_at timestamptz,
   paid_at timestamptz,
   delivered_at timestamptz,
+  payment_identity_conflict_at timestamptz,
+  payment_identity_conflict_reason text check (
+    payment_identity_conflict_reason in (
+      'successful_payment_payer_missing',
+      'successful_payment_payer_mismatch'
+    )
+  ),
   failed_at timestamptz,
   cancelled_at timestamptz,
   refunded_stars bigint not null default 0 check (refunded_stars >= 0),
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  check (
+    status not in ('processing', 'paid', 'delivered', 'payment_identity_conflict', 'refunded')
+    or (
+      pre_checkout_query_id is not null
+      and verified_payer_telegram_id is not null
+      and checkout_started_at is not null
+    )
+  ),
+  check (
+    status not in ('paid', 'delivered', 'payment_identity_conflict', 'refunded')
+    or (telegram_payment_charge_id is not null and paid_at is not null)
+  ),
+  check (status <> 'delivered' or delivered_at is not null),
+  check (
+    (payment_identity_conflict_at is null and payment_identity_conflict_reason is null)
+    or (
+      payment_identity_conflict_at is not null
+      and payment_identity_conflict_reason is not null
+      and status in ('payment_identity_conflict', 'refunded')
+      and delivered_at is null
+    )
+  ),
+  check (
+    status <> 'payment_identity_conflict'
+    or (
+      payment_identity_conflict_at is not null
+      and payment_identity_conflict_reason is not null
+      and delivered_at is null
+    )
+  )
 );
 
 create index payment_orders_pending_idx on payments.orders (expires_at, created_at) where status in ('pending', 'processing', 'paid');

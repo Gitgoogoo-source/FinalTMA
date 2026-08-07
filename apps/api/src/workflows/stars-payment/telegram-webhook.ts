@@ -17,6 +17,7 @@ export const telegramWebhookHandlers = {
           p_pre_checkout_query_id: checkout.id,
           p_invoice_payload: checkout.invoice_payload,
           p_stars: checkout.total_amount,
+          p_payer_telegram_id: (checkout.from as Record<string, unknown>).id,
         },
       );
       await answerPreCheckout(
@@ -30,6 +31,7 @@ export const telegramWebhookHandlers = {
     const payment = message?.successful_payment as
       | Record<string, unknown>
       | undefined;
+    const payer = message?.from as Record<string, unknown> | undefined;
     if (payment)
       await rpc("payment_apply_success", {
         p_update_id: updateId,
@@ -37,6 +39,7 @@ export const telegramWebhookHandlers = {
         p_telegram_charge_id: payment.telegram_payment_charge_id,
         p_provider_charge_id: payment.provider_payment_charge_id ?? null,
         p_stars: payment.total_amount,
+        p_payer_telegram_id: payer?.id ?? null,
         p_payload: update,
       });
     const refund = message?.refunded_payment as

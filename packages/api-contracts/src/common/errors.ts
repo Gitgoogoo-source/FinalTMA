@@ -395,7 +395,6 @@ export const errorRegistry = {
     "session",
     "reauthenticate",
   ),
-  SHARE_EVENT_INVALID: error(400, "分享事件无效"),
   TASK_ALREADY_CLAIMED: error(409, "任务奖励已经领取"),
   TASK_NOT_COMPLETE: error(409, "任务尚未完成"),
   TASK_NOT_FOUND: error(404, "任务不存在"),

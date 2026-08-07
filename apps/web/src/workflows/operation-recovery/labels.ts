@@ -14,7 +14,6 @@ const labels: Partial<Record<RecoverableRouteId, string>> = {
   "mint.reserve": "正在锁定藏品并签发 Mint 凭证",
   "mint.submit": "正在等待链上确认",
   "referral.bind": "正在确认邀请关系",
-  "referral.share_event": "正在记录邀请动作",
   "tasks.check_in": "正在领取签到奖励",
   "tasks.claim": "正在领取任务奖励",
   "topup.create_order": "正在创建 Telegram Stars 订单",

@@ -8,11 +8,11 @@
 | 2 盲盒保底         | gacha                           | gacha                                    | gacha                                    | 三档独立、仅付费推进、逐抽重置                                    |
 | 3 远征             | expedition（当前隐藏）          | expedition                               | expedition、inventory、economy           | 前端无入口，保留事务与存量数据边界                                |
 | 4 幸运转盘         | wheel、operation-recovery       | wheel                                    | wheel、economy、operations               | 1/10 次原子结算、当前运行期结果展示、未决原操作恢复               |
-| 5 K-coin 充值      | topup、payment-recovery         | topup、stars-payment workflow            | payments、economy                        | 付款前可取消、提交后锁定、成功唯一交付、无充值冷却                |
+| 5 K-coin 充值      | topup、payment-recovery         | topup、stars-payment workflow            | payments、economy                        | 订单本人付款、提交后锁定、身份冲突冻结交付、幂等到账              |
 | 6 TON 钱包         | wallet（休眠）                  | wallet（休眠）                           | onchain、identity                        | 当前 Web 无入口、摘要请求或 Provider 初始化                       |
 | 7 Mint             | mint（休眠）                    | mint、jobs（休眠）                       | onchain、inventory、operations           | 当前 Web 无路由、恢复、任务或 Cron                                |
 | 8 市场             | market                          | market                                   | market、inventory、economy、vip          | FIFO、整笔购买、逐卖家结算、成交事件游标与设备 SOLD 收件箱        |
-| 9 任务与签到       | tasks、wheel                    | tasks                                    | tasks、economy                           | 14 项可见任务、转盘固定位置、奖励唯一发放                         |
+| 9 任务与签到       | tasks、wheel                    | tasks                                    | tasks、economy                           | 12 项可见任务、转盘固定位置、奖励唯一发放                         |
 | 10 分享邀请        | referral、session-bootstrap     | referral                                 | referral、identity、operations、payments | 服务端交接门禁、唯一绑定、有效充值、日/生命周期上限               |
 | 11 分解            | inventory、decomposition        | decomposition                            | 33_decomposition、inventory、economy     | 数量与 Fgems 在同一事务变化                                       |
 | 12 官方价格        | market、inventory、gacha        | catalog                                  | catalog、market                          | 前端不提交价格，服务端读取目录                                    |

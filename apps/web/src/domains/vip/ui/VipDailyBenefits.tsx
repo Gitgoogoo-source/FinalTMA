@@ -30,8 +30,10 @@ export function VipDailyBenefits(): ReactNode {
   const loadFailed = Boolean(vip.error);
   const unavailable = vip.isLoading || loadFailed || !data;
   const paymentPending = Boolean(
-    data?.pending_order &&
-    ["pending", "processing", "paid"].includes(data.pending_order.status),
+    data?.payment_attention_order &&
+    ["pending", "processing", "paid"].includes(
+      data.payment_attention_order.status,
+    ),
   );
 
   useEffect(() => {

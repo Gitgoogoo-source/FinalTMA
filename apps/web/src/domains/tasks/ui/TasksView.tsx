@@ -6,7 +6,6 @@ import {
   Check,
   Circle,
   CircleDollarSign,
-  Copy,
   Grid3X3,
   Link2,
   LockKeyhole,
@@ -14,7 +13,6 @@ import {
   PackageOpen,
   PackageX,
   RotateCw,
-  Send,
   ShipWheel,
   ShoppingBasket,
   Sparkle,
@@ -23,7 +21,6 @@ import {
   TicketCheck,
   Triangle,
   Trophy,
-  UsersRound,
   Waypoints,
   type LucideIcon,
 } from "lucide-react";
@@ -45,7 +42,6 @@ import {
   getAppScrollTop,
   scrollAppTo,
 } from "../../../shared/navigation/appScroll.ts";
-import { focusTaskTarget } from "../../../shared/navigation/focusTaskTarget.ts";
 import { Badge, Button, Card, PageState } from "../../../shared/ui/index.tsx";
 import { useOperationRegistry } from "../../../workflows/operation-recovery/index.ts";
 import {
@@ -67,7 +63,6 @@ registerSensitiveStateResetter(() => {
 const taskCategoryLabels: Record<VisibleTaskCategory, string> = {
   gacha: "开盒",
   daily: "每日",
-  social: "社交",
   market: "交易",
   inventory: "藏品",
   album: "图鉴",
@@ -76,7 +71,6 @@ const taskFilters: ReadonlyArray<{ key: TaskFilter; label: string }> = [
   { key: "all", label: "全部" },
   { key: "daily", label: "每日" },
   { key: "gacha", label: "开盒" },
-  { key: "social", label: "社交" },
   { key: "market", label: "交易" },
   { key: "inventory", label: "藏品" },
   { key: "album", label: "图鉴" },
@@ -93,8 +87,6 @@ const taskCodeIcons: Record<Task["code"], LucideIcon> = {
   gacha_10: Boxes,
   gacha_ten: Grid3X3,
   wheel_spin: ShipWheel,
-  copy_referral: Copy,
-  telegram_invite: Send,
   market_buy: ShoppingBasket,
   market_list: Tag,
   market_sold: CircleDollarSign,
@@ -151,14 +143,6 @@ function TaskIconArtwork({ taskCode }: { taskCode: Task["code"] }): ReactNode {
       <div className="task-icon task-icon--wheel" aria-hidden="true">
         <ShipWheel className="task-icon-main" />
         <Triangle className="task-icon-pointer" />
-      </div>
-    );
-  }
-  if (taskCode === "copy_referral") {
-    return (
-      <div className="task-icon task-icon--user-link" aria-hidden="true">
-        <UsersRound className="task-icon-main" />
-        <Link2 className="task-icon-detail" />
       </div>
     );
   }
@@ -410,14 +394,6 @@ function goComplete(
     inventory_decomposition: "/inventory?focus=decomposition",
     album: "/album",
   };
-  if (action === "referral_copy") {
-    focusTaskTarget(document.getElementById("task-referral-copy"));
-    return;
-  }
-  if (action === "referral_telegram") {
-    focusTaskTarget(document.getElementById("task-referral-telegram"));
-    return;
-  }
   const route = routes[action];
   if (route) navigate(route);
 }

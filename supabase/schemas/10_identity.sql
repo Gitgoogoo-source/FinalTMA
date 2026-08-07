@@ -434,11 +434,11 @@ begin
         )
       )
     ), '[]'::jsonb),
-    'pending_payments', coalesce((
+    'payment_recovery_orders', coalesce((
       select jsonb_agg(payments.order_json(p) order by p.created_at desc)
       from payments.orders p
       where p.user_id = v_user_id and (
-        p.status in ('processing', 'paid')
+        p.status in ('processing', 'paid', 'payment_identity_conflict')
         or (p.kind = 'vip' and p.status = 'pending')
       )
     ), '[]'::jsonb),

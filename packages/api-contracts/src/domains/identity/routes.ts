@@ -70,7 +70,7 @@ const bootstrapOutput = z
     catalog_version: z.literal("v1"),
     authority_cursor: nonNegativeBigintStringSchema,
     blocking_operations: z.array(operationSummarySchema),
-    pending_payments: z.array(paymentSchema),
+    payment_recovery_orders: z.array(paymentSchema),
     pending_mints: z.array(mintSchema),
     battle_participation: battleParticipationSchema.nullable(),
     server_time: timestampSchema,

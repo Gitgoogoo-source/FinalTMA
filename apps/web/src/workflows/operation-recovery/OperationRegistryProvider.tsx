@@ -125,7 +125,6 @@ const externallyRenderedSuccessRouteIds = new Set<RecoverableRouteId>([
   "mint.cancel",
   "mint.reserve",
   "referral.bind",
-  "referral.share_event",
   "topup.cancel_order",
   "topup.create_order",
   "topup.fail_order",
@@ -135,9 +134,6 @@ const externallyRenderedSuccessRouteIds = new Set<RecoverableRouteId>([
   "vip.create_order",
   "wallet.disconnect",
   "wallet.verify",
-]);
-const inlineOperationRouteIds = new Set<RecoverableRouteId>([
-  "referral.share_event",
 ]);
 const playerFacingMarketListingErrorCodes = new Set([
   "ACCOUNT_RESTRICTED",
@@ -250,10 +246,7 @@ export function OperationRegistryProvider({
   const resumableUnresolved = unresolved.filter(
     (operation) =>
       operation.routeId !== "market.create_listing" &&
-      operation.routeId !== "market.purchase" &&
-      (!inlineOperationRouteIds.has(operation.routeId) ||
-        operation.phase === "pending" ||
-        operation.phase === "unknown"),
+      operation.routeId !== "market.purchase",
   );
   const navigationLocked = Object.values(operations).some(
     (operation) =>
@@ -724,10 +717,7 @@ export function OperationRegistryProvider({
           );
           continue;
         }
-        if (
-          !inlineOperationRouteIds.has(operation.use_case) &&
-          operation.use_case !== "wheel.spin"
-        )
+        if (operation.use_case !== "wheel.spin")
           firstId ??= operation.operation_id;
         next[operation.operation_id] = {
           id: operation.operation_id,

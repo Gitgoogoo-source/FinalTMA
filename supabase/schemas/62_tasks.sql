@@ -1,10 +1,10 @@
 create table tasks.definitions (
   code text primary key,
-  sort_order smallint not null unique check (sort_order between 1 and 19),
-  category text not null check (category in ('gacha', 'daily', 'social', 'market', 'inventory', 'expedition', 'album', 'wallet', 'mint')),
+  sort_order smallint not null unique check (sort_order between 1 and 17),
+  category text not null check (category in ('gacha', 'daily', 'market', 'inventory', 'expedition', 'album', 'wallet', 'mint')),
   title text not null check (btrim(title) <> ''),
   description text not null check (btrim(description) <> ''),
-  completion_action text not null check (completion_action in ('gacha_single', 'gacha_ten', 'wheel', 'referral_copy', 'referral_telegram', 'market_buy', 'market_sell', 'market_manage', 'inventory_evolution', 'inventory_decomposition', 'expedition_normal', 'expedition_intermediate', 'expedition_advanced', 'album', 'wallet', 'inventory_mint')),
+  completion_action text not null check (completion_action in ('gacha_single', 'gacha_ten', 'wheel', 'market_buy', 'market_sell', 'market_manage', 'inventory_evolution', 'inventory_decomposition', 'expedition_normal', 'expedition_intermediate', 'expedition_advanced', 'album', 'wallet', 'inventory_mint')),
   target bigint not null check (target > 0),
   reward_fgems bigint not null check (reward_fgems > 0)
 );

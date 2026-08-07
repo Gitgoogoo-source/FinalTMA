@@ -23,7 +23,7 @@ export const vipRoutes = [
       .extend({
         stars_price: positiveIntegerSchema,
         free_rare_box_available: nonNegativeIntegerSchema,
-        pending_order: paymentSchema.nullable(),
+        payment_attention_order: paymentSchema.nullable(),
       })
       .strict(),
     errors: ["ACCOUNT_RESTRICTED", "INTERNAL_ERROR"],
