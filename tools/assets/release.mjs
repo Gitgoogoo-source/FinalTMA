@@ -13,7 +13,7 @@ const CATALOG_PATH = resolve(ROOT, "generated/catalog/catalog-v1.json");
 const DEFAULT_MANIFEST = resolve(ROOT, "generated/assets/art-assets-v2.json");
 const PRIVATE_BUCKET = "art-masters";
 const PUBLIC_BUCKET = "pet-runtime";
-const PUBLIC_CACHE_CONTROL = "max-age=31536000, immutable";
+const PUBLIC_CACHE_CONTROL = "public, max-age=31536000, immutable";
 const VARIANTS = {
   thumbnail: {
     directory: "thumb",
@@ -751,31 +751,38 @@ async function migrateRuntimeV2(upload) {
       "--release-key must be a stable lowercase release identifier",
     );
   if (upload) await ensureBuckets();
-  const templates = [];
-  for (const item of source.templates) {
-    const migrated = { template_id: item.template_id, master: item.master };
-    for (const name of ["thumbnail", "detail"]) {
-      const previous = item[name];
-      const next = {
-        ...previous,
-        key: previous.key.replace("catalog/v1/", "catalog/v2/"),
-      };
-      if (upload) {
-        const stored = await fetchStoredObject(
-          PUBLIC_BUCKET,
-          previous.key,
-          [200],
-          true,
-        );
-        assertRemote({ bucket: PUBLIC_BUCKET, object: previous }, stored.data);
-        await uploadImmutableObject(
-          { bucket: PUBLIC_BUCKET, object: next },
-          stored.data,
-        );
-      }
-      migrated[name] = next;
-    }
-    templates.push(migrated);
+  const templates = new Array(source.templates.length);
+  for (let index = 0; index < source.templates.length; index += 8) {
+    await Promise.all(
+      source.templates.slice(index, index + 8).map(async (item, offset) => {
+        const migrated = { template_id: item.template_id, master: item.master };
+        for (const name of ["thumbnail", "detail"]) {
+          const previous = item[name];
+          const next = {
+            ...previous,
+            key: previous.key.replace("catalog/v1/", "catalog/v2/"),
+          };
+          if (upload) {
+            const stored = await fetchStoredObject(
+              PUBLIC_BUCKET,
+              previous.key,
+              [200],
+              true,
+            );
+            assertRemote(
+              { bucket: PUBLIC_BUCKET, object: previous },
+              stored.data,
+            );
+            await uploadImmutableObject(
+              { bucket: PUBLIC_BUCKET, object: next },
+              stored.data,
+            );
+          }
+          migrated[name] = next;
+        }
+        templates[index + offset] = migrated;
+      }),
+    );
   }
   const sourcePayload = structuredClone(source);
   delete sourcePayload.manifest_sha256;
