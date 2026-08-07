@@ -95,8 +95,9 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
   );
   const soldEffectTimers = useRef<Set<number>>(new Set());
   const listingInProgress = isBlocked("market.create_listing");
+  const purchaseInProgress = isBlocked("market.purchase");
   const blocked =
-    isBlocked("market.purchase") ||
+    purchaseInProgress ||
     listingInProgress ||
     isBlocked("market.cancel_template_listings");
   const purchaseTemplates = (listings.data?.templates ?? [])
@@ -222,10 +223,20 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
         );
         return;
       }
-      void run("正在确认市场购买", "market.purchase", {
-        template_id: item.template_id,
-        quantity,
-      });
+      void run(
+        "购买中",
+        "market.purchase",
+        {
+          template_id: item.template_id,
+          quantity,
+        },
+        {
+          presentation: {
+            name: item.name,
+            imagePath: item.image_thumbnail_path,
+          },
+        },
+      );
       return;
     }
     if (tab === "sell") {
@@ -621,6 +632,7 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
                   item={item}
                   tab={tab}
                   blocked={blocked}
+                  purchaseInProgress={purchaseInProgress}
                   balance={identity.data?.assets.kcoin.available}
                   onSubmit={submit}
                 />
@@ -1121,20 +1133,25 @@ function MarketCard({
   item,
   tab,
   blocked,
+  purchaseInProgress,
   balance,
   onSubmit,
 }: {
   item: MarketViewItem;
   tab: MarketTab;
   blocked: boolean;
+  purchaseInProgress: boolean;
   balance: number | undefined;
   onSubmit(item: MarketViewItem, quantity: number): void;
 }): ReactNode {
   const [quantity, setQuantity] = useState(1);
   const [imageReady, setImageReady] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [purchaseSubmitted, setPurchaseSubmitted] = useState(false);
   const available = item.available;
   const price = item.unit_price;
+  const purchaseDialogOpen =
+    confirming && (!purchaseSubmitted || purchaseInProgress);
   return (
     <Card className={`market-card market-card-${tab}`}>
       <div className="market-art">
@@ -1226,9 +1243,12 @@ function MarketCard({
           available < 1 ||
           quantity > available
         }
-        onClick={() =>
-          tab === "buy" ? setConfirming(true) : onSubmit(item, quantity)
-        }
+        onClick={() => {
+          if (tab === "buy") {
+            setPurchaseSubmitted(false);
+            setConfirming(true);
+          } else onSubmit(item, quantity);
+        }}
       >
         {tab === "buy" && available < 1 ? (
           <>{item.own_listed_quantity ? "自己的挂单" : "暂无挂单"}</>
@@ -1249,10 +1269,10 @@ function MarketCard({
           </>
         )}
       </Button>
-      {confirming && (
+      {purchaseDialogOpen ? (
         <AppModal
           labelledBy={`market-purchase-${item.template_id}`}
-          onClose={blocked ? undefined : () => setConfirming(false)}
+          onClose={purchaseInProgress ? undefined : () => setConfirming(false)}
         >
           <div className="modal market-purchase-dialog">
             <div className="market-purchase-preview">
@@ -1280,6 +1300,7 @@ function MarketCard({
               <div className="quantity">
                 <Button
                   aria-label="减少购买数量"
+                  disabled={purchaseInProgress}
                   onClick={() => setQuantity((value) => Math.max(1, value - 1))}
                 >
                   −
@@ -1287,6 +1308,7 @@ function MarketCard({
                 <strong>{quantity}</strong>
                 <Button
                   aria-label="增加购买数量"
+                  disabled={purchaseInProgress}
                   onClick={() =>
                     setQuantity((value) => Math.min(available, value + 1))
                   }
@@ -1312,21 +1334,36 @@ function MarketCard({
               </p>
             )}
             <Button
+              className={`market-purchase-submit${purchaseInProgress ? " is-pending" : ""}`}
               disabled={blocked || quantity > available}
+              aria-busy={purchaseInProgress}
+              aria-live="polite"
               onClick={() => {
-                setConfirming(false);
+                setPurchaseSubmitted(true);
+                if (balance !== undefined && balance < price * quantity)
+                  setConfirming(false);
                 onSubmit(item, quantity);
               }}
             >
-              <ShoppingCart />
-              确认购买
+              {purchaseInProgress ? (
+                "购买中"
+              ) : (
+                <>
+                  <ShoppingCart />
+                  确认购买
+                </>
+              )}
             </Button>
-            <Button className="secondary" onClick={() => setConfirming(false)}>
+            <Button
+              className="secondary"
+              disabled={purchaseInProgress}
+              onClick={() => setConfirming(false)}
+            >
               取消
             </Button>
           </div>
         </AppModal>
-      )}
+      ) : null}
     </Card>
   );
 }

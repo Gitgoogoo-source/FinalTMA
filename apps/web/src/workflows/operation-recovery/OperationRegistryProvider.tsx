@@ -67,6 +67,10 @@ import {
   MarketListingFailureDialog,
   MarketListingSuccessDialog,
 } from "./MarketListingResultDialog.tsx";
+import {
+  MarketPurchaseFailureDialog,
+  MarketPurchaseSuccessDialog,
+} from "./MarketPurchaseResultDialog.tsx";
 
 type RegisteredOperation = {
   id: string;
@@ -86,6 +90,10 @@ type RegisteredOperation = {
 
 type EvolutionResultAction = "inventory" | "album" | "acknowledge";
 type GachaResult = RouteOutput<"gacha.open">;
+type MarketPurchasePresentationResult = {
+  name: string;
+  result: RouteOutput<"market.purchase">;
+};
 const unresolvedPhases = new Set<OperationPhase>([
   "confirming",
   "submitting",
@@ -103,12 +111,14 @@ const navigationLockedThroughResultRouteIds = new Set<RecoverableRouteId>([
 const autoPollingRouteIds = new Set<RecoverableRouteId>([
   "wheel.spin",
   "market.create_listing",
+  "market.purchase",
   ...serverAcknowledgementRouteIds,
   "gacha.open",
   "inventory.decompose",
 ]);
 const refreshBeforeSuccessRouteIds = new Set<RecoverableRouteId>([
   "market.create_listing",
+  "market.purchase",
 ]);
 const externallyRenderedSuccessRouteIds = new Set<RecoverableRouteId>([
   "expedition.create",
@@ -133,6 +143,11 @@ const playerFacingMarketListingErrorCodes = new Set([
   "ACCOUNT_RESTRICTED",
   "INSUFFICIENT_INVENTORY",
   "MARKET_ACTIVE_TEMPLATE_LIMIT",
+  "TEMPLATE_NOT_FOUND",
+]);
+const playerFacingMarketPurchaseErrorCodes = new Set([
+  "INSUFFICIENT_BALANCE",
+  "MARKET_STOCK_INSUFFICIENT",
   "TEMPLATE_NOT_FOUND",
 ]);
 
@@ -195,6 +210,23 @@ export function OperationRegistryProvider({
     const parsed = routeById("album.claim").output.safeParse(active.result);
     return parsed.success ? parsed.data : null;
   }, [active]);
+  const marketPurchaseResult =
+    useMemo<MarketPurchasePresentationResult | null>(() => {
+      if (active?.routeId !== "market.purchase" || active.phase !== "succeeded")
+        return null;
+      const input = routeById("market.purchase").input.safeParse(active.input);
+      const result = routeById("market.purchase").output.safeParse(
+        active.result,
+      );
+      if (
+        !input.success ||
+        !result.success ||
+        result.data.template_id !== input.data.template_id ||
+        !active.presentation?.name
+      )
+        return null;
+      return { name: active.presentation.name, result: result.data };
+    }, [active]);
   const invalidGachaSuccess = Boolean(
     active?.routeId === "gacha.open" &&
     active.phase === "succeeded" &&
@@ -218,6 +250,7 @@ export function OperationRegistryProvider({
   const resumableUnresolved = unresolved.filter(
     (operation) =>
       operation.routeId !== "market.create_listing" &&
+      operation.routeId !== "market.purchase" &&
       (!inlineOperationRouteIds.has(operation.routeId) ||
         operation.phase === "pending" ||
         operation.phase === "unknown"),
@@ -244,12 +277,13 @@ export function OperationRegistryProvider({
     active?.routeId === "gacha.open" &&
     (!gachaPresentationReady || unresolvedPhases.has(active.phase)),
   );
-  const hideMarketListingProgress = Boolean(
-    active?.routeId === "market.create_listing" &&
+  const hideMarketProgress = Boolean(
+    (active?.routeId === "market.create_listing" ||
+      active?.routeId === "market.purchase") &&
     unresolvedPhases.has(active.phase),
   );
   const showOperationDialog =
-    session?.accountStatus === "normal" && !hideMarketListingProgress;
+    session?.accountStatus === "normal" && !hideMarketProgress;
 
   useEffect(() => {
     operationsRef.current = operations;
@@ -313,7 +347,7 @@ export function OperationRegistryProvider({
           previousFocus.focus();
       });
     };
-  }, [activeId, hideMarketListingProgress]);
+  }, [activeId, hideMarketProgress]);
 
   const update = useCallback(
     (id: string, change: Partial<RegisteredOperation>) => {
@@ -532,13 +566,13 @@ export function OperationRegistryProvider({
         const refreshBeforeSuccess =
           !pending && refreshBeforeSuccessRouteIds.has(routeId);
         if (refreshBeforeSuccess) {
-          update(id, { message: "上架已确认，正在更新出售状态" });
+          update(id, { message: refreshingAuthorityMessage(routeId) });
           try {
             await refreshRouteScopes(routeId, { throwOnError: true });
           } catch {
             update(id, {
               phase: "unknown",
-              message: "上架状态正在同步",
+              message: syncingAuthorityMessage(routeId),
             });
             return null;
           }
@@ -771,7 +805,7 @@ export function OperationRegistryProvider({
           if (refreshBeforeSuccess) {
             update(operation.id, {
               phase: "pending",
-              message: "上架已确认，正在更新出售状态",
+              message: refreshingAuthorityMessage(operation.routeId),
             });
             try {
               await refreshRouteScopes(operation.routeId, {
@@ -780,7 +814,7 @@ export function OperationRegistryProvider({
             } catch {
               update(operation.id, {
                 phase: "unknown",
-                message: "上架状态正在同步",
+                message: syncingAuthorityMessage(operation.routeId),
               });
               return;
             }
@@ -1177,9 +1211,15 @@ export function OperationRegistryProvider({
                     : active.routeId === "market.create_listing" &&
                         active.phase === "failed"
                       ? "app-shell market-listing-failure-backdrop"
-                      : wheelResult
-                        ? "app-shell result-sheet-backdrop wheel-result-backdrop"
-                        : ""
+                      : active.routeId === "market.purchase" &&
+                          active.phase === "succeeded" &&
+                          marketPurchaseResult
+                        ? "app-shell result-sheet-backdrop market-listing-success-backdrop market-purchase-success-backdrop"
+                        : active.routeId === "market.purchase"
+                          ? "app-shell market-listing-failure-backdrop market-purchase-failure-backdrop"
+                          : wheelResult
+                            ? "app-shell result-sheet-backdrop wheel-result-backdrop"
+                            : ""
           }`}
           role="dialog"
           aria-modal="true"
@@ -1191,17 +1231,21 @@ export function OperationRegistryProvider({
                 ? active.phase === "succeeded"
                   ? "market-listing-success-title"
                   : "market-listing-failure-title"
-                : active.routeId === "inventory.decompose"
-                  ? "decomposition-result-title"
-                  : active.routeId === "inventory.evolve"
-                    ? "evolution-result-title"
-                    : gachaResult
-                      ? "gacha-result-title"
-                      : wheelResult
-                        ? "wheel-result-title"
-                        : albumClaimResult
-                          ? "album-claim-result-title"
-                          : "operation-dialog-title"
+                : active.routeId === "market.purchase"
+                  ? active.phase === "succeeded" && marketPurchaseResult
+                    ? "market-purchase-success-title"
+                    : "market-purchase-failure-title"
+                  : active.routeId === "inventory.decompose"
+                    ? "decomposition-result-title"
+                    : active.routeId === "inventory.evolve"
+                      ? "evolution-result-title"
+                      : gachaResult
+                        ? "gacha-result-title"
+                        : wheelResult
+                          ? "wheel-result-title"
+                          : albumClaimResult
+                            ? "album-claim-result-title"
+                            : "operation-dialog-title"
           }
           tabIndex={-1}
           onKeyDown={trapDialogFocus}
@@ -1213,6 +1257,26 @@ export function OperationRegistryProvider({
             active.phase === "failed" ? (
             <MarketListingFailureDialog
               message={marketListingFailureMessage(active.errorCode)}
+              onConfirm={dismiss}
+            />
+          ) : active.routeId === "market.purchase" &&
+            active.phase === "succeeded" ? (
+            marketPurchaseResult ? (
+              <MarketPurchaseSuccessDialog
+                name={marketPurchaseResult.name}
+                quantity={marketPurchaseResult.result.quantity}
+                onConfirm={dismiss}
+              />
+            ) : (
+              <MarketPurchaseFailureDialog
+                message="购买状态已更新，请查看最新藏品和余额。"
+                onConfirm={dismiss}
+              />
+            )
+          ) : active.routeId === "market.purchase" &&
+            active.phase === "failed" ? (
+            <MarketPurchaseFailureDialog
+              message={marketPurchaseFailureMessage(active.errorCode)}
               onConfirm={dismiss}
             />
           ) : active.routeId === "inventory.decompose" ? (
@@ -1406,6 +1470,7 @@ function confirmedMessage(
   result: unknown,
 ): string {
   if (routeId === "market.create_listing") return "藏品已成功上架";
+  if (routeId === "market.purchase") return "购买成功";
   if (routeId !== "market.cancel_template_listings")
     return "结果已由服务器确认";
   const parsed = routeById(routeId).output.safeParse(result);
@@ -1423,4 +1488,26 @@ function marketListingFailureMessage(errorCode: string | null): string {
   )
     return errorDefinition(errorCode).message;
   return "藏品没有上架，请根据最新的可出售状态重试。";
+}
+
+function marketPurchaseFailureMessage(errorCode: string | null): string {
+  if (
+    errorCode &&
+    playerFacingMarketPurchaseErrorCodes.has(errorCode) &&
+    isErrorCode(errorCode)
+  )
+    return errorDefinition(errorCode).message;
+  return "本次购买没有完成，请根据最新库存和余额重试。";
+}
+
+function refreshingAuthorityMessage(routeId: RecoverableRouteId): string {
+  return routeId === "market.purchase"
+    ? "购买已完成，正在更新藏品和余额"
+    : "上架已确认，正在更新出售状态";
+}
+
+function syncingAuthorityMessage(routeId: RecoverableRouteId): string {
+  return routeId === "market.purchase"
+    ? "购买状态正在同步"
+    : "上架状态正在同步";
 }

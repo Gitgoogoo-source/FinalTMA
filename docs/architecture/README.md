@@ -60,6 +60,8 @@ TMA 首次同步加载只覆盖应用壳、会话与账号门禁及默认开盒�
 
 前端内存操作阶段固定为 `confirming → submitting → pending/unknown → succeeded/failed`；数据库持久状态为 `pending`、`unknown`、`succeeded`、`failed`。随机结果和资产结果只生成一次，`unknown` 只查询原 `operation_id`。`identity.bootstrap` 同快照返回用户权威游标；`GET /api/operations/recoverable` 既发现转盘未决和进化规定状态，也只用不含结果内容的路由标记发现晚于首屏提交的任意 operation 终态。发现绑定可见、Telegram 激活和在线状态，恢复队列存在时暂停，清空后立即追赶；路由权威刷新全部成功后才推进内存游标。除进化专用回执外，开盒、转盘、分解和通用结果只在取得它们的当前前台运行期展示，“确定”“收下”或返回只处理 Web 内存展示，不发送结果 API、RPC、原操作查询或刷新；隐藏、刷新或重新进入后不恢复旧结果，只刷新权威页面状态。恢复注入的非进化 `pending`、`unknown` 只查询原操作，取得终态后静默回正并移除。进化在未决阶段锁定新提交和底部导航，终态由专用覆盖弹窗和服务端回执处理。Battle 创建、随机匹配、取消、接受和行动恢复原 operation 后必须读取 viewer-specific room snapshot；heartbeat/offline 只在当前 lease 内重试，生命周期结束后以权威快照申请下一版本 lease。普通 heartbeat/offline 结果只应用 room，确认退款终态才按路由契约刷新 Battle、顶部资产和 inventory。Battle 终局快照到达后立即执行三域回正，结果覆盖层等待动作表现队列清空，按钮只在内存返回首页；其他领域既有确认回执保持各自规则。
 
+市场购买按 [ADR-030](adr/ADR-030-market-purchase-inline-progress.md) 在未决阶段只保留确认弹窗内的“购买中”按钮状态，不显示全局操作状态；当前前台运行期的权威刷新完成后才显示不含服务器、请求和 operation ID 的专用购买结果。离开前台后只恢复原 operation 与权威状态，不恢复旧购买结果弹窗。
+
 ## 生成物
 
 - `generated/catalog/catalog-v1.json`
@@ -102,3 +104,4 @@ TMA 首次同步加载只覆盖应用壳、会话与账号门禁及默认开盒�
 - [Battle 公开匹配数据库事务](adr/ADR-027-battle-public-matchmaking-transaction.md)
 - [Battle 请求阶段化结构日志](adr/ADR-028-battle-request-observability.md)
 - [市场成交事件游标与当前设备 SOLD 收件箱](adr/ADR-029-market-sold-device-inbox.md)
+- [市场购买按钮内进度与专用结果弹窗](adr/ADR-030-market-purchase-inline-progress.md)

@@ -709,3 +709,7 @@
     height: clamp(18px, 2.8dvh, 22px);
   }
 }
+.app-shell .market-purchase-submit.button.is-pending:disabled {
+  opacity: 1;
+  cursor: wait;
+}
