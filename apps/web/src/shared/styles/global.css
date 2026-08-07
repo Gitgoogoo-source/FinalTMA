@@ -5375,9 +5375,7 @@ input:focus {
     0 3px 8px color-mix(in srgb, var(--inventory-skill-color) 18%, transparent);
   content: "";
   transform: translateY(-50%);
-  transition:
-    width 220ms cubic-bezier(0.22, 1, 0.36, 1),
-    filter 160ms ease;
+  transition: filter 160ms ease;
 }
 .app-shell .inventory-skill-tab.skill-1 {
   --inventory-skill-color: #f6c84a;
