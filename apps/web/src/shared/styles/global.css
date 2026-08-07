@@ -7037,7 +7037,7 @@ input:focus {
   z-index: 1;
   isolation: isolate;
   width: min(100%, var(--app-width));
-  height: min(68dvh, 720px);
+  height: min(78dvh, 720px);
   max-width: none;
   max-height: calc(
     var(--tg-viewport-stable-height, 100dvh) -
