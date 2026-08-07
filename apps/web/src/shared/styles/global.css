@@ -7017,7 +7017,9 @@ input:focus {
   place-items: end center;
   padding: calc(max(var(--safe-top), var(--content-safe-top)) + 96px) 0 0;
   overflow: hidden;
-  background: rgba(29, 35, 39, 0.58);
+  background-color: rgba(29, 35, 39, 0.58) !important;
+  background-image: none !important;
+  -webkit-backdrop-filter: blur(11px) saturate(90%);
   backdrop-filter: blur(11px) saturate(90%);
 }
 .app-shell.inventory-action-dialog-backdrop .inventory-action-dialog {
@@ -7066,7 +7068,7 @@ input:focus {
 }
 .app-shell .inventory-action-dialog-clouds {
   position: absolute;
-  z-index: 0;
+  z-index: 3;
   top: -94px;
   left: 50%;
   width: min(92vw, 356px);
@@ -7081,7 +7083,7 @@ input:focus {
   .inventory-action-dialog-heading
   > :not(.inventory-action-dialog-clouds) {
   position: relative;
-  z-index: 1;
+  z-index: 4;
 }
 .app-shell .inventory-action-dialog-handle {
   width: 46px;
