@@ -36,6 +36,6 @@ Battle 页面状态按“当前会话未离开的 viewer-specific current-room�
 
 ## 部署
 
-Web 与三个 Functions 位于同一 Vercel Pro Project，Functions 运行时为 Node.js 24。Battle 服务端发布使用 Ably Standard，数据库通过 `pg_cron` 每秒推进 deadline，并由 `pg_net` 唤醒两个受保护 integrations；Ably 不承担业务权威。非宠物美术和统一剪影随 Vercel 发布；宠物运行时对象以内容哈希键和一年 immutable 缓存独立发布到 Supabase Storage，当前批次由数据库原子指针决定。每日 Vercel Cron 调用受保护的公开对象清理工作流，数据库领取最多 500 个到期对象后由 Function 使用 Storage API 删除并回写逐批结果。`contracts/ton` 的 typecheck 先从 Tact 源码生成被 Git 忽略的绑定，正式发布再运行独立 `pnpm chain:build` 门禁。真实开发环境与未来生产环境使用同一 Git commit、migration 序列、OpenAPI 和 Battle checksum，只使用环境隔离的 Storage 桶、项目域名、Bot、Ably key、callback URL 与机密。
+Web 与三个 Functions 位于同一 Vercel Pro Project，Functions 运行时为 Node.js 24。Battle 服务端发布使用 Ably Standard，数据库通过 `pg_cron` 每秒推进 deadline，并由 `pg_net` 唤醒两个受保护 integrations；Ably 不承担业务权威。非宠物美术和统一剪影随 Vercel 发布；宠物运行时对象以内容哈希键、禁止覆盖和 31536000 秒 Storage 缓存独立发布到 Supabase Storage，当前批次由数据库原子指针决定。每日 Vercel Cron 调用受保护的公开对象清理工作流，数据库领取最多 500 个到期对象后由 Function 使用 Storage API 删除并回写逐批结果。`contracts/ton` 的 typecheck 先从 Tact 源码生成被 Git 忽略的绑定，正式发布再运行独立 `pnpm chain:build` 门禁。真实开发环境与未来生产环境使用同一 Git commit、migration 序列、OpenAPI 和 Battle checksum，只使用环境隔离的 Storage 桶、项目域名、Bot、Ably key、callback URL 与机密。
 
 受控 Battle 验收夹具没有 Web、Function、Cron 或 Data API 运行时。它只通过数据库 owner 通道执行；迁移后的默认状态没有数据库身份绑定和 enable 记录。真实开发数据库重建后显式绑定 `real_development` 与当前 project ref，并使用不超过 24 小时的非秘密门禁；生产身份不能启用。

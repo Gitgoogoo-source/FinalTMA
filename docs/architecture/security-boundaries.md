@@ -12,7 +12,7 @@ Data API 只暴露 `api` schema。安全迁移撤销 `PUBLIC`、`anon`、`authen
 
 会话认证按令牌、撤销/过期状态、账号状态、入口交接状态顺序裁决。除 `referral.bind` 与受限的 `operations.get` 外，Functions 中间件和数据库 `api.session_user` 都拒绝 `pending` 交接，固定返回 `ENTRY_HANDOFF_PENDING`。浏览器构造请求、修改入口参数或跳过启动工作流均不能访问业务 RPC。
 
-浏览器唯一允许的 Supabase 直连是匿名 GET `pet-runtime` 公开桶中的宠物 WebP 完整 URL；Web 构建不包含 Supabase SDK、anon key 或 service-role key，`connect-src` 不允许 Supabase，图片域仅进入 `img-src`。私有 `art-masters`、Storage 上传/覆盖/删除/列举以及全部 Postgres、RPC、Auth 和其他 Data API 只允许受控服务端或发布工具使用 service role。资源 RPC 不进入玩家路由，公开对象清理端点只接受 Vercel 注入的 `CRON_SECRET`。
+浏览器唯一允许的 Supabase 直连是匿名 GET `pet-runtime` 公开桶中的宠物 WebP 完整 URL；Web 构建不包含 Supabase SDK、anon key 或 service-role key。根路径与全部前端深链统一下发 CSP：`script-src` 只放行同源脚本和 Telegram 官方 Mini App SDK，`img-src` 只额外放行 `https://*.supabase.co` 图片，`connect-src` 只额外放行 Ably，不允许 Supabase Data API 连接。私有 `art-masters`、Storage 上传/覆盖/删除/列举以及全部 Postgres、RPC、Auth 和其他 Data API 只允许受控服务端或发布工具使用 service role。资源 RPC 不进入玩家路由，公开对象清理端点只接受 Vercel 注入的 `CRON_SECRET`。
 
 登录入口只分类为 `direct`、`referral`、`battle`。Battle bearer token 原值只在 Function 内存中存在，数据库和 session 只保存 SHA-256；Battle token 不写日志、错误详情、分析事件或浏览器持久存储。invite preview 只能由当前 session 的 Battle token hash 解析；participant snapshot 只能由 room 参与者读取；创建者本人不能接受自己的 token。
 
