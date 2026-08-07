@@ -104,7 +104,7 @@ export function GachaView(): ReactNode {
     Number(boxes.data?.entitlements.free_rare_box) > 0 &&
     (!targetRarity || (rareBox?.rarity_weights[targetRarity] ?? 0) > 0);
   const [selection, setSelection] = useState(() => ({
-    tier: remembered?.selectedTier ?? "normal",
+    tier: remembered?.selectedTier ?? "rare",
     touched: false,
   }));
   const selectedTier = isBoxTier(requestedTier)
