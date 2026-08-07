@@ -209,6 +209,7 @@ set search_path = ''
 as $$
 declare
   v_run uuid;
+  v_mutation catalog.asset_mutation_runs%rowtype;
   v_scan_from timestamptz;
   v_scan_to timestamptz := now();
   v_active_run operations.job_runs%rowtype;
@@ -217,7 +218,19 @@ begin
   if p_limit < 1 or p_limit > 500 then
     raise exception using errcode = '22023', message = 'catalog cleanup limit must be between 1 and 500';
   end if;
-  perform pg_advisory_xact_lock(hashtextextended('pokepets:job:cleanup-catalog-assets', 0));
+  v_mutation := catalog.acquire_asset_mutation('cleanup', null, null);
+  if v_mutation.id is null then
+    insert into operations.job_runs (job_name, status, details, scan_from, scan_to, finished_at)
+    values (
+      'cleanup-catalog-assets', 'skipped',
+      jsonb_build_object('reason', 'asset_mutation_busy'),
+      null, v_scan_to, now()
+    ) returning id into v_run;
+    return jsonb_build_object(
+      'job_run_id', v_run, 'job_name', 'cleanup-catalog-assets', 'status', 'skipped',
+      'processed_count', 0, 'scan_from', null, 'scan_to', v_scan_to, 'objects', '[]'::jsonb
+    );
+  end if;
   select max(finished_at) into v_scan_from
   from operations.job_runs
   where job_name = 'cleanup-catalog-assets' and status = 'succeeded';
@@ -234,6 +247,10 @@ begin
       jsonb_build_object('reason', 'active_lease', 'active_job_run_id', v_active_run.id),
       v_scan_from, v_scan_to, now()
     ) returning id into v_run;
+    update catalog.asset_mutation_runs
+    set status = 'aborted', finished_at = now(),
+        details = jsonb_build_object('reason', 'active_cleanup_job', 'active_job_run_id', v_active_run.id)
+    where id = v_mutation.id;
     return jsonb_build_object(
       'job_run_id', v_run, 'job_name', 'cleanup-catalog-assets', 'status', 'skipped',
       'processed_count', 0, 'scan_from', v_scan_from, 'scan_to', v_scan_to, 'objects', '[]'::jsonb
@@ -248,8 +265,12 @@ begin
     where id = v_active_run.id;
   end if;
 
-  insert into operations.job_runs (job_name, status, scan_from, scan_to)
-  values ('cleanup-catalog-assets', 'running', v_scan_from, v_scan_to)
+  insert into operations.job_runs (job_name, status, details, scan_from, scan_to)
+  values (
+    'cleanup-catalog-assets', 'running',
+    jsonb_build_object('mutation_run_id', v_mutation.id, 'mutation_fence', v_mutation.fence),
+    v_scan_from, v_scan_to
+  )
   returning id into v_run;
 
   with candidates as materialized (
@@ -292,13 +313,17 @@ begin
 
   return jsonb_build_object(
     'job_run_id', v_run, 'job_name', 'cleanup-catalog-assets', 'status', 'running',
-    'processed_count', 0, 'scan_from', v_scan_from, 'scan_to', v_scan_to, 'objects', v_objects
+    'processed_count', 0, 'scan_from', v_scan_from, 'scan_to', v_scan_to,
+    'mutation_run_id', v_mutation.id, 'mutation_fence', v_mutation.fence,
+    'objects', v_objects
   );
 end
 $$;
 
 create or replace function api.catalog_asset_cleanup_finish(
   p_job_run_id uuid,
+  p_mutation_run_id uuid,
+  p_mutation_fence bigint,
   p_deleted_keys jsonb,
   p_failed jsonb
 )
@@ -312,6 +337,7 @@ declare
   v_claimed integer;
   v_deleted integer;
   v_failed integer;
+  v_mutation catalog.asset_mutation_runs%rowtype;
 begin
   select * into v_run
   from operations.job_runs
@@ -319,6 +345,14 @@ begin
   for update;
   if v_run.id is null or v_run.job_name <> 'cleanup-catalog-assets' or v_run.status <> 'running' then
     perform api.raise_business_error('JOB_NOT_FOUND', '后台任务运行不存在或已经结束');
+  end if;
+  v_mutation := catalog.require_asset_mutation(
+    p_mutation_run_id, p_mutation_fence, 'cleanup', null, null
+  );
+  if v_run.details->>'mutation_run_id' is distinct from p_mutation_run_id::text
+    or (v_run.details->>'mutation_fence')::bigint is distinct from p_mutation_fence
+  then
+    raise exception using errcode = '55000', message = 'catalog cleanup mutation lease does not match its job';
   end if;
   if jsonb_typeof(p_deleted_keys) <> 'array' or jsonb_typeof(p_failed) <> 'object' then
     raise exception using errcode = '22023', message = 'catalog cleanup result shape is invalid';
@@ -375,6 +409,16 @@ begin
       finished_at = now()
   where id = p_job_run_id
   returning * into v_run;
+
+  update catalog.asset_mutation_runs
+  set status = 'committed', finished_at = now(),
+      details = jsonb_build_object(
+        'job_run_id', p_job_run_id,
+        'attempted', v_claimed,
+        'deleted', v_deleted,
+        'failed', v_failed
+      )
+  where id = v_mutation.id;
 
   return jsonb_build_object(
     'job_run_id', v_run.id, 'job_name', v_run.job_name, 'status', v_run.status,

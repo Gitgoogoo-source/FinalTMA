@@ -5,7 +5,7 @@
 在执行任何外部写入前，由负责人逐项记录证据：
 
 - 外部写入目标已核对为真实开发 Supabase `final-tma-real-test`（`ebewtjerusxcioegpzjd`）与 Vercel `final-tma`，未来生产 Supabase 在上线前保持空库且无须保留业务数据。
-- 当前真实开发环境与未来生产环境使用同一组 210 张正式藏品母版生成的 420 张运行时图片；私有母版对象、公开缩略图/详情图、模板、对象键与 SHA-256 必须和 `generated/assets/art-assets-v1.json` 一一对应。
+- 当前真实开发环境与未来生产环境使用同一组 210 张正式藏品母版生成的 420 张运行时图片；私有母版对象、公开缩略图/详情图、模板、对象键与 SHA-256 必须和当前 `generated/assets/art-assets-v2.json` 一一对应，历史 v1 对应 `generated/assets/releases/catalog-v1-initial.json`。
 - 正式生产环境 `APP_ENV=production` 部署前必须提供正式 Telegram 分享图；该图片仍为已知开发占位 checksum 时禁止生产发布。休眠的 TON Connect 图标不阻塞当前 MVP。
 - 本次真实开发部署的 Supabase、Vercel、Telegram、Stars 与观测平台配置齐全；当前 MVP 不配置 TON RPC 或链上资源。
 - 生产将部署已在真实开发环境完成验收的同一 Git commit、同一 migration 序列和同一目录 manifest。
@@ -54,7 +54,9 @@ pnpm manifest:build
 
 该静态文件不被当前 Web 引用，不需要钱包或链上配置，也不构成 MVP 入口与生产验收项。
 
-宠物美术固定按以下顺序独立发布：准备恰好 210 张以模板 ID 命名的 768×768 WebP 候选母版；执行 `pnpm assets:release prepare --source-dir <候选目录> --runtime-dir <受控输出目录> --release-key <唯一发布键>`；复核生成的 `generated/assets/art-assets-v1.json`；在持有目标环境 service role 的受控终端执行 `pnpm assets:release bootstrap --source-dir <候选目录> --runtime-dir <受控输出目录>`。命令只进行无覆盖上传，逐对象远端下载复核全部 630 个对象后才原子切换数据库当前批次。`pnpm assets:release status` 必须返回相同 release key、manifest SHA-256、210 个模板和递增 revision。该流程不修改前端代码、不等待 Vercel 部署；任一步失败都保持原批次。production 门禁继续拒绝 `generated/assets/placeholders.json` 中 Telegram 分享图的已知开发 checksum，禁止通过重新 pin 绕过正式替换要求。
+宠物美术固定按以下顺序独立发布：准备恰好 210 张以模板 ID 命名的 768×768 WebP 候选母版；执行 `pnpm assets:release prepare --source-dir <候选目录> --runtime-dir <受控输出目录> --release-key <唯一发布键>`；复核生成的 `generated/assets/art-assets-v2.json`；在持有目标环境 service role 的受控终端执行 `pnpm assets:release bootstrap --source-dir <候选目录> --runtime-dir <受控输出目录>`。命令只进行无覆盖上传，再取得发布、回滚和清理共用的耐久租约，逐对象远端下载复核 210 个私有母版、420 个公开对象、SHA-256、尺寸、体积、MIME 与 `public, max-age=31536000, immutable` 响应后，才以同一 run ID 和 fence 原子切换数据库当前批次并读取复核。`publish`、`bootstrap` 和 `rollback` 均执行同一受控链路，不存在直接 RPC 绕过。`pnpm assets:release status` 必须返回相同 release key、manifest SHA-256、210 个模板和递增 revision。该流程不修改前端代码、不等待 Vercel 部署；已打开页面不主动刷新，任一步失败都保持原批次。production 门禁继续拒绝 `generated/assets/placeholders.json` 中 Telegram 分享图的已知开发 checksum，禁止通过重新 pin 绕过正式替换要求。
+
+既有 v1 对象只执行一次命名空间迁移：先用 `manifest-runtime-v2 --from-manifest generated/assets/releases/catalog-v1-initial.json --release-key <唯一发布键>` 生成确定的 v2 清单，再在目标环境执行同参数的 `migrate-runtime-v2`，从公开 v1 对象读取并校验内容后无覆盖上传 v2 对象，不读取或导出私有母版。数据库从空库重建时先用历史清单执行受控 v1 发布，再用当前清单执行受控 v2 发布；v1 随即成为退役批次并从该时刻计算 90 天保留期。
 
 ## 3. 真实开发环境
 

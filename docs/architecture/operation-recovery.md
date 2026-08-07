@@ -4,6 +4,8 @@
 
 网络失败不会展示业务成功。`unknown`、`pending` 通过 `GET /api/operations/:operation_id` 查询；只有明确返回 `OPERATION_NOT_FOUND` 时才用原 UUID 单次重提。恢复成功时，`use_case` 对应的原命令输出 Schema 会重新校验 `result`，随后按该路由声明的 refresh scope 刷新真实状态；`battle.action` 的完整权威 room snapshot 直接写入对应查询缓存并应用页面 authority，不再失效整个 `battle` scope。入口交接未完成时，该查询只能读取当前用户的原 `referral.bind` 操作。
 
+`operations.operations.result` 只保存业务字段和模板 ID，不保存宠物图片 URL。`operations.operation_json` 是原命令响应、幂等回放和恢复读取的统一展示入口：对开盒、进化和市场上架成功结果按模板 ID 注入当前资源批次 URL。资源切换不主动通知已运行前端；已经显示的内存结果不重写，新请求或恢复读取按当时当前批次返回。
+
 `market.create_listing` 在 `confirming`、`submitting`、`pending`、`unknown` 阶段不激活全局操作状态弹窗，只由出售按钮显示“出售中”并锁定重复提交；`pending`、`unknown` 在当前前台运行期自动查询原 operation。服务端返回成功后继续保持按钮状态，先完成该命令声明的权威 refresh scope；只有出售、管理、购买和藏品状态已回正后，才进入 `succeeded` 并打开专用“上架成功”弹窗。该弹窗只复用转盘结果弹窗的外框、遮罩和确认按钮共享样式，不复用动画、背景光效、粒子或奖品布局，也不展示服务器、请求和 operation ID。当前运行期明确失败时恢复按钮并使用专用玩家反馈；离开前台后恢复到终态时仍按统一规则刷新权威状态并静默清除，不恢复旧结果弹窗。
 
 `market.purchase` 在 `confirming`、`submitting`、`pending`、`unknown` 阶段同样不激活全局操作状态弹窗。购买确认弹窗保持打开，数量调整、取消和确认按钮锁定，确认按钮原位置只显示“购买中”；同一 `use_case` 的重复提交继续由操作注册中心和原幂等键阻止。同步响应、`pending` 或网络中断后的 `unknown` 都必须先完成原 operation 裁决与路由 refresh scope，才从未决阶段进入终态。当前前台运行期明确成功且输出通过 `market.purchase` Schema 校验时，关闭确认弹窗并显示专用“购买成功”弹窗，内容仅为“购买成功”“已成功购买 N 个藏品名称”和“完成”；明确失败使用不含技术信息的专用失败反馈。两种结果都不展示服务器、请求或 operation ID。页面隐藏、刷新、关闭或重新进入后不恢复旧购买结果弹窗，只查询原 operation、回正权威状态并静默清除操作锁。

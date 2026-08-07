@@ -6,13 +6,13 @@
 
 ## 决定
 
-宠物美术采用“私有母版 + 公开运行时 + Vercel 剪影”的唯一交付结构。Supabase Storage 私有桶 `art-masters` 永久保存全部历史母版并成为母版事实来源；公开桶 `pet-runtime` 只保存宠物运行时 WebP。Git 删除母版和宠物运行时二进制，只保留 `generated/assets/art-assets-v1.json`、SHA-256 与 `tools/assets/release.mjs`。非宠物美术继续随 Vercel 版本发布。
+宠物美术采用“私有母版 + 公开运行时 + Vercel 剪影”的唯一交付结构。Supabase Storage 私有桶 `art-masters` 永久保存全部历史母版并成为母版事实来源；公开桶 `pet-runtime` 只保存宠物运行时 WebP。Git 删除母版和宠物运行时二进制，只保留当前 `generated/assets/art-assets-v2.json`、历史发布清单、SHA-256 与 `tools/assets/release.mjs`。非宠物美术继续随 Vercel 版本发布。
 
-母版对象键固定为 `catalog/<template-id>/<source-sha256>.webp`。运行时对象键固定为 `catalog/v1/thumb/<template-id>.<runtime-sha256>.webp` 与 `catalog/v1/detail/<template-id>.<runtime-sha256>.webp`。Node.js 24 使用锁定的 `sharp` 版本，把每张 768×768 WebP 母版生成 256×256、quality 82 的缩略图和 768×768、quality 74 的详情图；两者均使用 WebP、effort 6、alphaQuality 100、Lanczos3 并移除元数据。上传固定 `upsert = false`，同键对象只能校验和复用，不能覆盖；公开对象的 Storage `cacheControl` 固定为 31536000 秒，内容哈希对象键与禁止覆盖共同保证地址不可变。
+母版对象键固定为 `catalog/<template-id>/<source-sha256>.webp`。当前运行时对象键固定为 `catalog/v2/thumb/<template-id>.<runtime-sha256>.webp` 与 `catalog/v2/detail/<template-id>.<runtime-sha256>.webp`；既有 v1 对象仅用于 90 天退役保留。Node.js 24 使用锁定的 `sharp` 版本，把每张 768×768 WebP 母版生成 256×256、quality 82 的缩略图和 768×768、quality 74 的详情图；两者均使用 WebP、effort 6、alphaQuality 100、Lanczos3 并移除元数据。上传固定 `upsert = false`，同键对象只能校验和复用，不能覆盖；公开对象响应固定为 `public, max-age=31536000, immutable`，内容哈希对象键与禁止覆盖共同保证地址不可变。
 
-数据库以资源发布批次为原子切换单位。一个批次必须恰好覆盖 210 个模板及其母版、缩略图和详情图对象；当前批次指针和资源 revision 在单个 PostgreSQL RPC 事务内切换。API 字段固定为 `image_thumbnail_url` 与 `image_detail_url`，所有读模型在读取时从当前批次解析完整公开 URL。Battle 不保存图片 URL 快照，进化静态清单和市场设备收件箱也不持久保存 URL。资源发布独立于前端代码和 Vercel 部署；成功切换后全部模板实例统一显示最新美术。
+数据库以资源发布批次为原子切换单位。一个批次必须恰好覆盖 210 个模板及其母版、缩略图和详情图对象；当前批次指针和资源 revision 在单个 PostgreSQL RPC 事务内切换。API 字段固定为 `image_thumbnail_url` 与 `image_detail_url`，所有读模型在读取时从当前批次解析完整公开 URL。Battle、operation 结果、进化静态清单和市场设备收件箱都不持久保存 URL；原命令响应、幂等回放和恢复查询通过统一展示入口按模板 ID 注入当前 URL。资源发布独立于前端代码和 Vercel 部署；已打开页面不主动刷新，之后的新开、刷新和正常 API 读取使用当前批次。
 
-受控发布命令按“本地校验与生成 → 私有母版无覆盖上传 → 公开 WebP 无覆盖上传 → 下载复核 SHA-256/尺寸/体积 → 原子发布 RPC → 读取当前批次复核”执行。发布键和 manifest SHA-256 提供幂等性；同键不同载荷拒绝，任一上传或校验失败不切换当前批次。环境只通过服务端 `SUPABASE_URL` 和 `SUPABASE_SERVICE_ROLE_KEY` 派生公开基址；清单不保存环境域名或密钥。
+受控发布命令按“取得全局耐久资源变更租约 → 私有母版与公开 WebP 逐对象复核 SHA-256/尺寸/体积/MIME/缓存头 → 带 fence 的原子发布 RPC → 读取当前批次复核 → 结束租约”执行；需要上传时先完成本地校验、生成和无覆盖同步，再进入同一受控切换链路。发布、回滚和清理共用同一租约域，具体一致性与缓存规则以 [ADR-031](ADR-031-art-release-consistency-and-cache-policy.md) 为准。发布键和 manifest SHA-256 提供幂等性；同键不同载荷拒绝，任一上传或校验失败不切换当前批次。环境只通过服务端 `SUPABASE_URL` 和 `SUPABASE_SERVICE_ROLE_KEY` 派生公开基址；清单不保存环境域名或密钥。
 
 私有母版永久保留。旧公开对象从其最后引用批次退役起至少保留 90 天；仅在不被当前批次引用、所有引用批次均到期、没有有效回滚锁且对象不处于其他清理租约时，`/api/jobs/cleanup-catalog-assets` 才可领取最多 500 个对象并通过 Storage API 删除。Cron 使用 `CRON_SECRET`，数据库领取状态、过期租约和完成记录保证重复与并发触发幂等。删除失败回到可重试状态；禁止通过 SQL 删除 `storage.objects`。Supabase Storage 不提供对象版本或生命周期规则，因此保留、锁定和删除状态由应用数据库负责。
 

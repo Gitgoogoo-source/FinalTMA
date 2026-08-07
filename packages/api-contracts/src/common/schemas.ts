@@ -15,13 +15,13 @@ export const petThumbnailUrlSchema = z
   .string()
   .url()
   .regex(
-    /^https:\/\/[a-z0-9]+\.supabase\.co\/storage\/v1\/object\/public\/pet-runtime\/catalog\/v1\/thumb\/pet-[nat]-\d{3}-[123]\.[0-9a-f]{64}\.webp$/,
+    /^https:\/\/[a-z0-9]+\.supabase\.co\/storage\/v1\/object\/public\/pet-runtime\/catalog\/v[12]\/thumb\/pet-[nat]-\d{3}-[123]\.[0-9a-f]{64}\.webp$/,
   );
 export const petDetailUrlSchema = z
   .string()
   .url()
   .regex(
-    /^https:\/\/[a-z0-9]+\.supabase\.co\/storage\/v1\/object\/public\/pet-runtime\/catalog\/v1\/detail\/pet-[nat]-\d{3}-[123]\.[0-9a-f]{64}\.webp$/,
+    /^https:\/\/[a-z0-9]+\.supabase\.co\/storage\/v1\/object\/public\/pet-runtime\/catalog\/v[12]\/detail\/pet-[nat]-\d{3}-[123]\.[0-9a-f]{64}\.webp$/,
   );
 
 export const raritySchema = z.enum([

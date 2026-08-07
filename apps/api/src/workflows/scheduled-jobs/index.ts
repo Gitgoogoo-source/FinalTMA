@@ -58,6 +58,8 @@ type CatalogCleanupClaim = {
   processed_count: number;
   scan_from: string | null;
   scan_to: string;
+  mutation_run_id?: string;
+  mutation_fence?: number;
   objects: Array<{ key: string; sha256: string; bytes: number }>;
 };
 
@@ -77,6 +79,15 @@ async function cleanupCatalogAssets(): Promise<Record<string, unknown>> {
   }
   const deleted: string[] = [];
   const failed: Record<string, string> = {};
+  if (
+    typeof claim.mutation_run_id !== "string" ||
+    typeof claim.mutation_fence !== "number" ||
+    !Number.isSafeInteger(claim.mutation_fence) ||
+    Number(claim.mutation_fence) <= 0
+  )
+    throw new Error("INTERNAL_ERROR:宠物资源清理租约无效");
+  const mutationRunId = String(claim.mutation_run_id);
+  const mutationFence = Number(claim.mutation_fence);
   for (let index = 0; index < claim.objects.length; index += 100) {
     const keys = claim.objects
       .slice(index, index + 100)
@@ -87,11 +98,17 @@ async function cleanupCatalogAssets(): Promise<Record<string, unknown>> {
     } catch {
       for (const key of keys) failed[key] = "storage_delete_failed";
     }
+    await rpc("catalog_asset_mutation_renew", {
+      p_run_id: mutationRunId,
+      p_fence: mutationFence,
+    });
   }
   const result = await rpc<Record<string, unknown> & { status?: unknown }>(
     "catalog_asset_cleanup_finish",
     {
       p_job_run_id: claim.job_run_id,
+      p_mutation_run_id: mutationRunId,
+      p_mutation_fence: mutationFence,
       p_deleted_keys: deleted,
       p_failed: failed,
     },

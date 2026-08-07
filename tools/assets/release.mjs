@@ -10,10 +10,10 @@ import sharp from "sharp";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const CATALOG_PATH = resolve(ROOT, "generated/catalog/catalog-v1.json");
-const DEFAULT_MANIFEST = resolve(ROOT, "generated/assets/art-assets-v1.json");
+const DEFAULT_MANIFEST = resolve(ROOT, "generated/assets/art-assets-v2.json");
 const PRIVATE_BUCKET = "art-masters";
 const PUBLIC_BUCKET = "pet-runtime";
-const CACHE_SECONDS = "31536000";
+const PUBLIC_CACHE_CONTROL = "max-age=31536000, immutable";
 const VARIANTS = {
   thumbnail: {
     directory: "thumb",
@@ -58,7 +58,7 @@ if (command === "prepare") {
 } else if (command === "verify") {
   await verifyRemote(await readManifest());
 } else if (command === "publish") {
-  await publish(await readManifest());
+  await controlledPublish(await readManifest());
 } else if (command === "bootstrap") {
   const manifest = await readManifest();
   await ensureBuckets();
@@ -67,8 +67,11 @@ if (command === "prepare") {
     requiredPath("source-dir"),
     requiredPath("runtime-dir"),
   );
-  await verifyRemote(manifest);
-  await publish(manifest);
+  await controlledPublish(manifest);
+} else if (command === "migrate-runtime-v2") {
+  await migrateRuntimeV2(true);
+} else if (command === "manifest-runtime-v2") {
+  await migrateRuntimeV2(false);
 } else if (command === "status") {
   console.log(JSON.stringify(await rpc("catalog_asset_current", {}), null, 2));
 } else if (command === "lock") {
@@ -91,21 +94,21 @@ if (command === "prepare") {
   const target = await rpc("catalog_asset_release_get", {
     p_release_key: releaseKey,
   });
-  await verifyRemote(target);
-  await rpc("catalog_asset_lock", {
-    p_release_key: releaseKey,
-    p_locked_until: new Date(Date.now() + 90 * 86_400_000).toISOString(),
+  await withMutationLease("rollback", target, async (lease) => {
+    await verifyRemote(target, lease);
+    await rpc("catalog_asset_lock", {
+      p_release_key: releaseKey,
+      p_locked_until: new Date(Date.now() + 90 * 86_400_000).toISOString(),
+    });
+    const result = await rpc("catalog_asset_rollback", {
+      p_release_key: releaseKey,
+      p_idempotency_key: requiredOption("idempotency-key"),
+      p_mutation_run_id: lease.run_id,
+      p_mutation_fence: lease.fence,
+    });
+    await assertCurrentRelease(target);
+    console.log(JSON.stringify(result, null, 2));
   });
-  console.log(
-    JSON.stringify(
-      await rpc("catalog_asset_rollback", {
-        p_release_key: releaseKey,
-        p_idempotency_key: requiredOption("idempotency-key"),
-      }),
-      null,
-      2,
-    ),
-  );
 } else {
   throw new Error(`Unknown command: ${command}`);
 }
@@ -138,6 +141,8 @@ function usage() {
   node tools/assets/release.mjs verify
   node tools/assets/release.mjs publish
   node tools/assets/release.mjs bootstrap --source-dir <masters> --runtime-dir <variants>
+  node tools/assets/release.mjs migrate-runtime-v2 --from-manifest <legacy-manifest> --release-key <key> [--manifest <v2-manifest>]
+  node tools/assets/release.mjs manifest-runtime-v2 --from-manifest <legacy-manifest> --release-key <key> [--manifest <v2-manifest>]
   node tools/assets/release.mjs status
   node tools/assets/release.mjs lock --release-key <key> [--lock-days 90]
   node tools/assets/release.mjs rollback --release-key <key> --idempotency-key <uuid>
@@ -267,11 +272,11 @@ async function writeManifest(sourceDirectory, runtimeDirectory) {
         master,
       ),
       thumbnail: objectRecord(
-        `catalog/v1/thumb/${templateId.toLowerCase()}.${thumbnail.sha256}.webp`,
+        `catalog/v2/thumb/${templateId.toLowerCase()}.${thumbnail.sha256}.webp`,
         thumbnail,
       ),
       detail: objectRecord(
-        `catalog/v1/detail/${templateId.toLowerCase()}.${detail.sha256}.webp`,
+        `catalog/v2/detail/${templateId.toLowerCase()}.${detail.sha256}.webp`,
         detail,
       ),
     });
@@ -309,12 +314,7 @@ async function writeManifest(sourceDirectory, runtimeDirectory) {
     manifest_sha256: sha256(canonical(payload)),
   };
   const manifestPath = resolve(ROOT, options.manifest ?? DEFAULT_MANIFEST);
-  await mkdir(dirname(manifestPath), { recursive: true });
-  await writeFile(
-    manifestPath,
-    `${JSON.stringify(manifest, null, 2)}\n`,
-    "utf8",
-  );
+  await writeManifestDocument(manifestPath, manifest);
   console.log(
     `Wrote ${templates.length}-template manifest ${manifest.manifest_sha256} to ${manifestPath}`,
   );
@@ -333,6 +333,10 @@ function objectRecord(key, item) {
 
 async function readManifest() {
   const path = resolve(ROOT, options.manifest ?? DEFAULT_MANIFEST);
+  return readManifestAt(path);
+}
+
+async function readManifestAt(path) {
   const manifest = JSON.parse(await readFile(path, "utf8"));
   const { manifest_sha256: expected, ...payload } = manifest;
   if (manifest.schema_version !== 1 || sha256(canonical(payload)) !== expected)
@@ -345,7 +349,21 @@ async function readManifest() {
     new Set(manifest.templates.map((item) => item.template_id)).size !== 210
   )
     throw new Error("Asset manifest bucket or template coverage is invalid");
+  const runtimeKeys = manifest.templates.flatMap((item) => [
+    item.thumbnail?.key,
+    item.detail?.key,
+  ]);
+  const namespaces = new Set(
+    runtimeKeys.map((key) => /^catalog\/(v[12])\//.exec(String(key))?.[1]),
+  );
+  if (namespaces.size !== 1 || namespaces.has(undefined))
+    throw new Error("Asset manifest runtime namespace is invalid or mixed");
   return manifest;
+}
+
+async function writeManifestDocument(path, manifest) {
+  await mkdir(dirname(path), { recursive: true });
+  await writeFile(path, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
 }
 
 function remoteEnv() {
@@ -511,7 +529,7 @@ async function uploadImmutableObject(task, data) {
           method: "POST",
           headers: {
             "cache-control":
-              task.bucket === PUBLIC_BUCKET ? CACHE_SECONDS : "0",
+              task.bucket === PUBLIC_BUCKET ? PUBLIC_CACHE_CONTROL : "no-store",
             "content-type": "image/webp",
             "x-upsert": "false",
           },
@@ -541,9 +559,23 @@ async function uploadImmutableObject(task, data) {
 }
 
 async function downloadObject(bucket, key, statuses = [200]) {
-  const response = await request(encodedObjectPath(bucket, key), {}, [
-    ...new Set([...statuses, 400]),
-  ]);
+  const stored = await fetchStoredObject(bucket, key, statuses, false);
+  return stored?.data ?? null;
+}
+
+function encodedPublicObjectPath(bucket, key) {
+  const encoded = key.split("/").map(encodeURIComponent).join("/");
+  return `/storage/v1/object/public/${bucket}/${encoded}`;
+}
+
+async function fetchStoredObject(bucket, key, statuses = [200], isPublic) {
+  const response = await request(
+    isPublic
+      ? encodedPublicObjectPath(bucket, key)
+      : encodedObjectPath(bucket, key),
+    {},
+    [...new Set([...statuses, 400])],
+  );
   if (response.status === 400) {
     const problem = await response
       .clone()
@@ -556,7 +588,11 @@ async function downloadObject(bucket, key, statuses = [200]) {
     return null;
   }
   if (response.status === 404) return null;
-  return Buffer.from(await response.arrayBuffer());
+  return {
+    data: Buffer.from(await response.arrayBuffer()),
+    cacheControl: response.headers.get("cache-control") ?? "",
+    contentType: response.headers.get("content-type") ?? "",
+  };
 }
 
 function assertRemote(task, data) {
@@ -569,40 +605,203 @@ function assertRemote(task, data) {
     );
 }
 
-async function verifyRemote(manifest) {
+async function verifyRemote(manifest, lease = null) {
   const tasks = manifest.templates.flatMap((item) => [
     { bucket: PRIVATE_BUCKET, object: item.master },
     { bucket: PUBLIC_BUCKET, object: item.thumbnail },
     { bucket: PUBLIC_BUCKET, object: item.detail },
   ]);
-  await inBatches(tasks, 8, async (task) => {
-    const data = await downloadObject(task.bucket, task.object.key);
-    assertRemote(task, data);
-    const metadata = await sharp(data).metadata();
-    if (
-      metadata.format !== "webp" ||
-      metadata.width !== task.object.width ||
-      metadata.height !== task.object.height
-    )
-      throw new Error(
-        `Remote object dimensions are invalid: ${task.object.key}`,
-      );
-  });
+  for (let index = 0; index < tasks.length; index += 8) {
+    await Promise.all(
+      tasks.slice(index, index + 8).map(async (task) => {
+        const stored = await fetchStoredObject(
+          task.bucket,
+          task.object.key,
+          [200],
+          task.bucket === PUBLIC_BUCKET,
+        );
+        assertRemote(task, stored.data);
+        const metadata = await sharp(stored.data).metadata();
+        if (
+          metadata.format !== "webp" ||
+          metadata.width !== task.object.width ||
+          metadata.height !== task.object.height ||
+          !stored.contentType.toLowerCase().startsWith("image/webp")
+        )
+          throw new Error(
+            `Remote object format, MIME, or dimensions are invalid: ${task.object.key}`,
+          );
+        if (task.bucket === PUBLIC_BUCKET)
+          assertPublicCacheControl(task.object.key, stored.cacheControl);
+      }),
+    );
+    if (lease && (index + 8) % 64 === 0) await renewMutationLease(lease);
+  }
   console.log(
-    `Verified ${tasks.length} remote objects by SHA-256 and dimensions`,
+    `Verified ${tasks.length} remote objects by SHA-256, MIME, dimensions, and cache policy`,
   );
 }
 
-async function publish(manifest) {
+function assertPublicCacheControl(key, value) {
+  const directives = new Set(
+    value
+      .toLowerCase()
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean),
+  );
+  const legacy = key.startsWith("catalog/v1/");
+  const hasOneYear =
+    directives.has("max-age=31536000") || directives.has("31536000");
+  if (
+    !directives.has("public") ||
+    !hasOneYear ||
+    (!legacy && !directives.has("immutable"))
+  )
+    throw new Error(`Public cache policy is invalid for ${key}: ${value}`);
+}
+
+async function publishManifest(manifest, lease) {
   const { url } = remoteEnv();
-  const result = await rpc("catalog_asset_publish", {
+  return rpc("catalog_asset_publish", {
     p_release_key: manifest.release.key,
     p_manifest_sha256: manifest.manifest_sha256,
     p_git_commit: manifest.release.git_commit,
     p_public_origin: `${url}/storage/v1/object/public`,
     p_assets: manifest.templates,
+    p_mutation_run_id: lease.run_id,
+    p_mutation_fence: lease.fence,
   });
-  console.log(JSON.stringify(result, null, 2));
+}
+
+async function controlledPublish(manifest) {
+  await withMutationLease("publish", manifest, async (lease) => {
+    await verifyRemote(manifest, lease);
+    const result = await publishManifest(manifest, lease);
+    await assertCurrentRelease(manifest);
+    console.log(JSON.stringify(result, null, 2));
+  });
+}
+
+async function assertCurrentRelease(manifest) {
+  const current = await rpc("catalog_asset_current", {});
+  if (
+    current?.release_key !== manifest.release.key ||
+    current?.manifest_sha256 !== manifest.manifest_sha256 ||
+    current?.template_count !== 210
+  )
+    throw new Error(
+      "Current asset release does not match the requested manifest",
+    );
+  return current;
+}
+
+async function acquireMutationLease(kind, manifest) {
+  for (let attempt = 1; attempt <= 10; attempt += 1) {
+    const result = await rpc("catalog_asset_mutation_acquire", {
+      p_kind: kind,
+      p_release_key: manifest.release.key,
+      p_manifest_sha256: manifest.manifest_sha256,
+    });
+    if (result?.status === "running") return result;
+    if (attempt < 10)
+      await new Promise((resolveDelay) => setTimeout(resolveDelay, 3_000));
+  }
+  throw new Error("Asset mutation lease remained busy for 30 seconds");
+}
+
+async function renewMutationLease(lease) {
+  const result = await rpc("catalog_asset_mutation_renew", {
+    p_run_id: lease.run_id,
+    p_fence: lease.fence,
+  });
+  if (result?.status !== "running")
+    throw new Error("Asset mutation lease renewal was rejected");
+  lease.expires_at = result.expires_at;
+}
+
+async function withMutationLease(kind, manifest, handler) {
+  const lease = await acquireMutationLease(kind, manifest);
+  try {
+    return await handler(lease);
+  } catch (error) {
+    await rpc("catalog_asset_mutation_abort", {
+      p_run_id: lease.run_id,
+      p_fence: lease.fence,
+      p_reason: error instanceof Error ? error.message : "unknown_error",
+    }).catch(() => null);
+    throw error;
+  }
+}
+
+async function migrateRuntimeV2(upload) {
+  const sourcePath = requiredPath("from-manifest");
+  const source = await readManifestAt(sourcePath);
+  if (
+    source.templates.some(
+      (item) =>
+        !item.thumbnail.key.startsWith("catalog/v1/thumb/") ||
+        !item.detail.key.startsWith("catalog/v1/detail/"),
+    )
+  )
+    throw new Error("Runtime v2 migration requires a v1 source manifest");
+  const releaseKey = requiredOption("release-key");
+  if (!/^[a-z0-9][a-z0-9._-]{2,127}$/.test(releaseKey))
+    throw new Error(
+      "--release-key must be a stable lowercase release identifier",
+    );
+  if (upload) await ensureBuckets();
+  const templates = [];
+  for (const item of source.templates) {
+    const migrated = { template_id: item.template_id, master: item.master };
+    for (const name of ["thumbnail", "detail"]) {
+      const previous = item[name];
+      const next = {
+        ...previous,
+        key: previous.key.replace("catalog/v1/", "catalog/v2/"),
+      };
+      if (upload) {
+        const stored = await fetchStoredObject(
+          PUBLIC_BUCKET,
+          previous.key,
+          [200],
+          true,
+        );
+        assertRemote({ bucket: PUBLIC_BUCKET, object: previous }, stored.data);
+        await uploadImmutableObject(
+          { bucket: PUBLIC_BUCKET, object: next },
+          stored.data,
+        );
+      }
+      migrated[name] = next;
+    }
+    templates.push(migrated);
+  }
+  const sourcePayload = structuredClone(source);
+  delete sourcePayload.manifest_sha256;
+  const payload = {
+    ...sourcePayload,
+    release: {
+      key: releaseKey,
+      git_commit:
+        options["git-commit"] ??
+        execFileSync("git", ["rev-parse", "HEAD"], {
+          cwd: ROOT,
+          encoding: "utf8",
+        }).trim(),
+    },
+    templates,
+  };
+  const manifest = {
+    ...payload,
+    manifest_sha256: sha256(canonical(payload)),
+  };
+  const manifestPath = resolve(ROOT, options.manifest ?? DEFAULT_MANIFEST);
+  await writeManifestDocument(manifestPath, manifest);
+  if (upload) await verifyRemote(manifest);
+  console.log(
+    `${upload ? "Migrated" : "Prepared"} ${templates.length * 2} public runtime objects for v2 and wrote ${manifestPath}`,
+  );
 }
 
 async function rpc(name, parameters) {

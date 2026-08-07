@@ -111,6 +111,119 @@ create table operations.invariant_violations (
 create index invariant_violations_open_idx on operations.invariant_violations (code, detected_at) where resolved_at is null;
 create unique index invariant_violations_open_subject_idx on operations.invariant_violations (code, subject) where resolved_at is null;
 
+create or replace function operations.strip_pet_urls(p_value jsonb)
+returns jsonb
+language plpgsql
+immutable
+set search_path = ''
+as $$
+declare
+  v_result jsonb;
+  v_key text;
+  v_item jsonb;
+  v_template_id text;
+  v_url text;
+  v_variants jsonb := '[]'::jsonb;
+begin
+  if p_value is null or p_value = 'null'::jsonb then return p_value; end if;
+  if jsonb_typeof(p_value) = 'array' then
+    select coalesce(jsonb_agg(operations.strip_pet_urls(item.value) order by item.ordinality), '[]'::jsonb)
+    into v_result
+    from jsonb_array_elements(p_value) with ordinality item(value, ordinality);
+    return v_result;
+  end if;
+  if jsonb_typeof(p_value) <> 'object' then return p_value; end if;
+
+  v_result := '{}'::jsonb;
+  for v_key, v_item in select key, value from jsonb_each(p_value)
+  loop
+    if v_key not in ('image_thumbnail_url', 'image_detail_url') then
+      v_result := v_result || jsonb_build_object(v_key, operations.strip_pet_urls(v_item));
+    end if;
+  end loop;
+  if p_value ? 'image_thumbnail_url' then
+    v_variants := v_variants || jsonb_build_array('thumbnail');
+  end if;
+  if p_value ? 'image_detail_url' then
+    v_variants := v_variants || jsonb_build_array('detail');
+  end if;
+  if jsonb_array_length(v_variants) > 0 then
+    v_template_id := p_value->>'template_id';
+    if v_template_id is null then
+      v_url := coalesce(p_value->>'image_detail_url', p_value->>'image_thumbnail_url');
+      v_template_id := upper((regexp_match(
+        v_url,
+        '/(pet-[nat]-[0-9]{3}-[123])\.[0-9a-f]{64}\.webp$'
+      ))[1]);
+    end if;
+    if v_template_id is null or v_template_id !~ '^PET-[NAT]-[0-9]{3}-[123]$' then
+      raise exception using errcode = '22023', message = 'pet image URL cannot be reduced to a template reference';
+    end if;
+    v_result := v_result || jsonb_build_object('_pet_image_variants', v_variants);
+    if not (v_result ? 'template_id') then
+      v_result := v_result || jsonb_build_object('_pet_image_template_id', v_template_id);
+    end if;
+  end if;
+  return v_result;
+end
+$$;
+
+create or replace function operations.present_pet_urls(p_value jsonb)
+returns jsonb
+language plpgsql
+stable
+set search_path = ''
+as $$
+declare
+  v_result jsonb;
+  v_key text;
+  v_item jsonb;
+  v_template_id text;
+  v_variants jsonb;
+begin
+  if p_value is null or p_value = 'null'::jsonb then return p_value; end if;
+  if jsonb_typeof(p_value) = 'array' then
+    select coalesce(jsonb_agg(operations.present_pet_urls(item.value) order by item.ordinality), '[]'::jsonb)
+    into v_result
+    from jsonb_array_elements(p_value) with ordinality item(value, ordinality);
+    return v_result;
+  end if;
+  if jsonb_typeof(p_value) <> 'object' then return p_value; end if;
+
+  v_result := '{}'::jsonb;
+  for v_key, v_item in select key, value from jsonb_each(p_value)
+  loop
+    if v_key not in ('_pet_image_template_id', '_pet_image_variants') then
+      v_result := v_result || jsonb_build_object(v_key, operations.present_pet_urls(v_item));
+    end if;
+  end loop;
+  v_variants := p_value->'_pet_image_variants';
+  if jsonb_typeof(v_variants) = 'array' then
+    v_template_id := coalesce(p_value->>'template_id', p_value->>'_pet_image_template_id');
+    if v_variants ? 'thumbnail' then
+      v_result := v_result || jsonb_build_object(
+        'image_thumbnail_url', catalog.template_thumbnail_url(v_template_id)
+      );
+    end if;
+    if v_variants ? 'detail' then
+      v_result := v_result || jsonb_build_object(
+        'image_detail_url', catalog.template_detail_url(v_template_id)
+      );
+    end if;
+  end if;
+  return v_result;
+end
+$$;
+
+create or replace function operations.present_result(p_use_case text, p_result jsonb)
+returns jsonb
+language sql
+stable
+set search_path = ''
+as $$
+  select operations.present_pet_urls(operations.strip_pet_urls(p_result))
+$$;
+
 create or replace function operations.operation_json(p_operation operations.operations)
 returns jsonb
 language sql
@@ -121,7 +234,7 @@ as $$
     'operation_id', p_operation.id,
     'use_case', p_operation.use_case,
     'status', p_operation.status,
-    'result', p_operation.result,
+    'result', operations.present_result(p_operation.use_case, p_operation.result),
     'error_code', p_operation.error_code,
     'acknowledged_at', p_operation.result_acknowledged_at,
     'created_at', p_operation.created_at,
@@ -174,7 +287,7 @@ set search_path = ''
 as $$
 begin
   update operations.operations
-  set status = 'succeeded', result = p_result, error_code = null,
+  set status = 'succeeded', result = operations.strip_pet_urls(p_result), error_code = null,
       updated_at = now(), completed_at = now()
   where id = p_operation_id;
   return (select operations.operation_json(o) from operations.operations o where o.id = p_operation_id);
@@ -189,7 +302,7 @@ set search_path = ''
 as $$
 begin
   update operations.operations
-  set status = 'pending', result = p_result, error_code = null, updated_at = now()
+  set status = 'pending', result = operations.strip_pet_urls(p_result), error_code = null, updated_at = now()
   where id = p_operation_id;
   return (select operations.operation_json(o) from operations.operations o where o.id = p_operation_id);
 end;
@@ -203,7 +316,7 @@ set search_path = ''
 as $$
 begin
   update operations.operations
-  set status = 'failed', result = p_detail, error_code = p_code,
+  set status = 'failed', result = operations.strip_pet_urls(p_detail), error_code = p_code,
       updated_at = now(), completed_at = now()
   where id = p_operation_id;
   return (select operations.operation_json(o) from operations.operations o where o.id = p_operation_id);

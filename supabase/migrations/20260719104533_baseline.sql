@@ -550,7 +550,7 @@ create table catalog.asset_objects (
   unique (bucket, object_key),
   check (
     (object_class = 'master' and object_key ~ '^catalog/pet-[nat]-[0-9]{3}-[123]/[0-9a-f]{64}\.webp$' and width = 768)
-    or (object_class = 'runtime' and object_key ~ '^catalog/v1/(thumb|detail)/pet-[nat]-[0-9]{3}-[123]\.[0-9a-f]{64}\.webp$')
+    or (object_class = 'runtime' and object_key ~ '^catalog/v[12]/(thumb|detail)/pet-[nat]-[0-9]{3}-[123]\.[0-9a-f]{64}\.webp$')
   ),
   check (
     (status = 'deleting' and cleanup_claim_id is not null and cleanup_claimed_at is not null and deleted_at is null)
@@ -613,6 +613,188 @@ create table catalog.asset_rollback_commands (
   result jsonb not null,
   created_at timestamptz not null default now()
 );
+
+create table catalog.asset_mutation_runs (
+  id uuid primary key default extensions.gen_random_uuid(),
+  fence bigint generated always as identity unique,
+  kind text not null check (kind in ('publish', 'rollback', 'cleanup')),
+  release_key text check (release_key is null or release_key ~ '^[a-z0-9][a-z0-9._-]{2,127}$'),
+  manifest_sha256 text check (manifest_sha256 is null or manifest_sha256 ~ '^[0-9a-f]{64}$'),
+  status text not null default 'running' check (status in ('running', 'committed', 'aborted', 'expired')),
+  acquired_at timestamptz not null default now(),
+  heartbeat_at timestamptz not null default now(),
+  expires_at timestamptz not null default now() + interval '5 minutes',
+  finished_at timestamptz,
+  details jsonb not null default '{}'::jsonb,
+  check (
+    (kind = 'cleanup' and release_key is null and manifest_sha256 is null)
+    or (kind in ('publish', 'rollback') and release_key is not null and manifest_sha256 is not null)
+  ),
+  check (
+    (status = 'running' and finished_at is null)
+    or (status <> 'running' and finished_at is not null)
+  )
+);
+
+create unique index asset_mutation_runs_one_running_idx
+on catalog.asset_mutation_runs (status)
+where status = 'running';
+
+create index asset_mutation_runs_acquired_idx
+on catalog.asset_mutation_runs (acquired_at desc);
+
+create or replace function catalog.acquire_asset_mutation(
+  p_kind text,
+  p_release_key text,
+  p_manifest_sha256 text
+)
+returns catalog.asset_mutation_runs
+language plpgsql
+set search_path = ''
+as $$
+declare
+  v_run catalog.asset_mutation_runs%rowtype;
+begin
+  if p_kind not in ('publish', 'rollback', 'cleanup')
+    or (p_kind = 'cleanup' and (p_release_key is not null or p_manifest_sha256 is not null))
+    or (p_kind in ('publish', 'rollback') and (
+      p_release_key is null
+      or p_manifest_sha256 is null
+      or p_release_key !~ '^[a-z0-9][a-z0-9._-]{2,127}$'
+      or p_manifest_sha256 !~ '^[0-9a-f]{64}$'
+    ))
+  then
+    raise exception using errcode = '22023', message = 'asset mutation metadata is invalid';
+  end if;
+  perform pg_advisory_xact_lock(hashtextextended('pokepets:catalog-asset-mutation', 0));
+  update catalog.asset_mutation_runs
+  set status = 'expired', finished_at = now(),
+      details = details || jsonb_build_object('reason', 'lease_expired')
+  where status = 'running' and expires_at <= now();
+  if exists (select 1 from catalog.asset_mutation_runs where status = 'running') then
+    return null;
+  end if;
+  insert into catalog.asset_mutation_runs (kind, release_key, manifest_sha256)
+  values (p_kind, p_release_key, p_manifest_sha256)
+  returning * into v_run;
+  return v_run;
+end
+$$;
+
+create or replace function catalog.require_asset_mutation(
+  p_run_id uuid,
+  p_fence bigint,
+  p_kind text,
+  p_release_key text,
+  p_manifest_sha256 text
+)
+returns catalog.asset_mutation_runs
+language plpgsql
+set search_path = ''
+as $$
+declare
+  v_run catalog.asset_mutation_runs%rowtype;
+begin
+  select * into v_run
+  from catalog.asset_mutation_runs
+  where id = p_run_id
+  for update;
+  if v_run.id is null
+    or v_run.fence <> p_fence
+    or v_run.kind <> p_kind
+    or v_run.release_key is distinct from p_release_key
+    or v_run.manifest_sha256 is distinct from p_manifest_sha256
+    or v_run.status <> 'running'
+    or v_run.expires_at <= now()
+  then
+    raise exception using errcode = '55000', message = 'asset mutation lease is missing, expired, or fenced';
+  end if;
+  return v_run;
+end
+$$;
+
+create or replace function api.catalog_asset_mutation_acquire(
+  p_kind text,
+  p_release_key text default null,
+  p_manifest_sha256 text default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_run catalog.asset_mutation_runs%rowtype;
+  v_active catalog.asset_mutation_runs%rowtype;
+begin
+  v_run := catalog.acquire_asset_mutation(p_kind, p_release_key, p_manifest_sha256);
+  if v_run.id is null then
+    select * into v_active
+    from catalog.asset_mutation_runs
+    where status = 'running';
+    return jsonb_build_object(
+      'status', 'busy',
+      'active_kind', v_active.kind,
+      'retry_after', v_active.expires_at
+    );
+  end if;
+  return jsonb_build_object(
+    'status', 'running',
+    'run_id', v_run.id,
+    'fence', v_run.fence,
+    'expires_at', v_run.expires_at
+  );
+end
+$$;
+
+create or replace function api.catalog_asset_mutation_renew(
+  p_run_id uuid,
+  p_fence bigint
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_run catalog.asset_mutation_runs%rowtype;
+begin
+  update catalog.asset_mutation_runs
+  set heartbeat_at = now(), expires_at = now() + interval '5 minutes'
+  where id = p_run_id and fence = p_fence and status = 'running' and expires_at > now()
+  returning * into v_run;
+  if v_run.id is null then
+    raise exception using errcode = '55000', message = 'asset mutation lease cannot be renewed';
+  end if;
+  return jsonb_build_object('status', 'running', 'run_id', v_run.id, 'fence', v_run.fence, 'expires_at', v_run.expires_at);
+end
+$$;
+
+create or replace function api.catalog_asset_mutation_abort(
+  p_run_id uuid,
+  p_fence bigint,
+  p_reason text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_run catalog.asset_mutation_runs%rowtype;
+begin
+  update catalog.asset_mutation_runs
+  set status = 'aborted', finished_at = now(),
+      details = details || jsonb_build_object('reason', left(coalesce(p_reason, 'operator_aborted'), 500))
+  where id = p_run_id and fence = p_fence and status = 'running'
+  returning * into v_run;
+  return jsonb_build_object(
+    'status', coalesce(v_run.status, 'unchanged'),
+    'run_id', p_run_id,
+    'fence', p_fence
+  );
+end
+$$;
 
 create or replace function catalog.rarity_rank(p_rarity text)
 returns smallint
@@ -690,10 +872,9 @@ begin
     then
       raise exception using errcode = '22023', message = 'immutable asset object metadata mismatch';
     end if;
-    update catalog.asset_objects
-    set status = 'active', cleanup_claim_id = null, cleanup_claimed_at = null,
-        last_error = null, deleted_at = null
-    where id = v_existing.id;
+    if v_existing.status <> 'active' then
+      raise exception using errcode = '55000', message = 'asset object is not publishable while deletion is pending or complete';
+    end if;
     return v_existing.id;
   end if;
   insert into catalog.asset_objects (
@@ -712,7 +893,9 @@ create or replace function api.catalog_asset_publish(
   p_manifest_sha256 text,
   p_git_commit text,
   p_public_origin text,
-  p_assets jsonb
+  p_assets jsonb,
+  p_mutation_run_id uuid,
+  p_mutation_fence bigint
 )
 returns jsonb
 language plpgsql
@@ -727,8 +910,12 @@ declare
   v_thumbnail uuid;
   v_detail uuid;
   v_revision bigint;
+  v_mutation catalog.asset_mutation_runs%rowtype;
+  v_result jsonb;
 begin
-  perform pg_advisory_xact_lock(hashtextextended('pokepets:catalog-asset-publish', 0));
+  v_mutation := catalog.require_asset_mutation(
+    p_mutation_run_id, p_mutation_fence, 'publish', p_release_key, p_manifest_sha256
+  );
   if p_release_key !~ '^[a-z0-9][a-z0-9._-]{2,127}$'
     or p_manifest_sha256 !~ '^[0-9a-f]{64}$'
     or p_git_commit !~ '^[0-9a-f]{40}$'
@@ -768,13 +955,17 @@ begin
     end if;
     select * into v_current from catalog.current_asset_release where singleton for update;
     if v_current.release_id = v_release.id then
-      return jsonb_build_object(
+      v_result := jsonb_build_object(
         'release_key', v_release.release_key,
         'manifest_sha256', v_release.manifest_sha256,
         'revision', v_current.revision,
         'status', 'active',
         'idempotent_replay', true
       );
+      update catalog.asset_mutation_runs
+      set status = 'committed', finished_at = now(), details = v_result
+      where id = v_mutation.id;
+      return v_result;
     end if;
     raise exception using errcode = '22023', message = 'retired release keys can only be selected by rollback';
   end if;
@@ -812,13 +1003,17 @@ begin
 
   update catalog.asset_releases set status = 'active' where id = v_release.id;
 
-  return jsonb_build_object(
+  v_result := jsonb_build_object(
     'release_key', v_release.release_key,
     'manifest_sha256', v_release.manifest_sha256,
     'revision', v_revision,
     'status', 'active',
     'idempotent_replay', false
   );
+  update catalog.asset_mutation_runs
+  set status = 'committed', finished_at = now(), details = v_result
+  where id = v_mutation.id;
+  return v_result;
 end
 $$;
 
@@ -896,7 +1091,12 @@ begin
 end
 $$;
 
-create or replace function api.catalog_asset_rollback(p_release_key text, p_idempotency_key uuid)
+create or replace function api.catalog_asset_rollback(
+  p_release_key text,
+  p_idempotency_key uuid,
+  p_mutation_run_id uuid,
+  p_mutation_fence bigint
+)
 returns jsonb
 language plpgsql
 security definer
@@ -906,19 +1106,25 @@ declare
   v_target catalog.asset_releases%rowtype;
   v_current catalog.current_asset_release%rowtype;
   v_existing catalog.asset_rollback_commands%rowtype;
+  v_mutation catalog.asset_mutation_runs%rowtype;
   v_result jsonb;
 begin
-  perform pg_advisory_xact_lock(hashtextextended('pokepets:catalog-asset-publish', 0));
+  select * into v_target from catalog.asset_releases where release_key = p_release_key;
+  if v_target.id is null then raise exception using errcode = '22023', message = 'asset release was not found'; end if;
+  v_mutation := catalog.require_asset_mutation(
+    p_mutation_run_id, p_mutation_fence, 'rollback', p_release_key, v_target.manifest_sha256
+  );
   select * into v_existing from catalog.asset_rollback_commands where idempotency_key = p_idempotency_key for update;
   if v_existing.idempotency_key is not null then
-    select * into v_target from catalog.asset_releases where release_key = p_release_key;
     if v_target.id is distinct from v_existing.release_id then
       raise exception using errcode = '22023', message = 'rollback idempotency key was reused';
     end if;
+    update catalog.asset_mutation_runs
+    set status = 'committed', finished_at = now(), details = v_existing.result
+    where id = v_mutation.id;
     return v_existing.result;
   end if;
   select * into v_target from catalog.asset_releases where release_key = p_release_key for update;
-  if v_target.id is null then raise exception using errcode = '22023', message = 'asset release was not found'; end if;
   if (select count(*) from catalog.asset_release_templates where release_id = v_target.id) <> 210
     or exists (
       select 1 from catalog.asset_release_templates item
@@ -950,6 +1156,9 @@ begin
   );
   insert into catalog.asset_rollback_commands (idempotency_key, release_id, result)
   values (p_idempotency_key, v_target.id, v_result);
+  update catalog.asset_mutation_runs
+  set status = 'committed', finished_at = now(), details = v_result
+  where id = v_mutation.id;
   return v_result;
 end
 $$;
@@ -1068,6 +1277,119 @@ create table operations.invariant_violations (
 create index invariant_violations_open_idx on operations.invariant_violations (code, detected_at) where resolved_at is null;
 create unique index invariant_violations_open_subject_idx on operations.invariant_violations (code, subject) where resolved_at is null;
 
+create or replace function operations.strip_pet_urls(p_value jsonb)
+returns jsonb
+language plpgsql
+immutable
+set search_path = ''
+as $$
+declare
+  v_result jsonb;
+  v_key text;
+  v_item jsonb;
+  v_template_id text;
+  v_url text;
+  v_variants jsonb := '[]'::jsonb;
+begin
+  if p_value is null or p_value = 'null'::jsonb then return p_value; end if;
+  if jsonb_typeof(p_value) = 'array' then
+    select coalesce(jsonb_agg(operations.strip_pet_urls(item.value) order by item.ordinality), '[]'::jsonb)
+    into v_result
+    from jsonb_array_elements(p_value) with ordinality item(value, ordinality);
+    return v_result;
+  end if;
+  if jsonb_typeof(p_value) <> 'object' then return p_value; end if;
+
+  v_result := '{}'::jsonb;
+  for v_key, v_item in select key, value from jsonb_each(p_value)
+  loop
+    if v_key not in ('image_thumbnail_url', 'image_detail_url') then
+      v_result := v_result || jsonb_build_object(v_key, operations.strip_pet_urls(v_item));
+    end if;
+  end loop;
+  if p_value ? 'image_thumbnail_url' then
+    v_variants := v_variants || jsonb_build_array('thumbnail');
+  end if;
+  if p_value ? 'image_detail_url' then
+    v_variants := v_variants || jsonb_build_array('detail');
+  end if;
+  if jsonb_array_length(v_variants) > 0 then
+    v_template_id := p_value->>'template_id';
+    if v_template_id is null then
+      v_url := coalesce(p_value->>'image_detail_url', p_value->>'image_thumbnail_url');
+      v_template_id := upper((regexp_match(
+        v_url,
+        '/(pet-[nat]-[0-9]{3}-[123])\.[0-9a-f]{64}\.webp$'
+      ))[1]);
+    end if;
+    if v_template_id is null or v_template_id !~ '^PET-[NAT]-[0-9]{3}-[123]$' then
+      raise exception using errcode = '22023', message = 'pet image URL cannot be reduced to a template reference';
+    end if;
+    v_result := v_result || jsonb_build_object('_pet_image_variants', v_variants);
+    if not (v_result ? 'template_id') then
+      v_result := v_result || jsonb_build_object('_pet_image_template_id', v_template_id);
+    end if;
+  end if;
+  return v_result;
+end
+$$;
+
+create or replace function operations.present_pet_urls(p_value jsonb)
+returns jsonb
+language plpgsql
+stable
+set search_path = ''
+as $$
+declare
+  v_result jsonb;
+  v_key text;
+  v_item jsonb;
+  v_template_id text;
+  v_variants jsonb;
+begin
+  if p_value is null or p_value = 'null'::jsonb then return p_value; end if;
+  if jsonb_typeof(p_value) = 'array' then
+    select coalesce(jsonb_agg(operations.present_pet_urls(item.value) order by item.ordinality), '[]'::jsonb)
+    into v_result
+    from jsonb_array_elements(p_value) with ordinality item(value, ordinality);
+    return v_result;
+  end if;
+  if jsonb_typeof(p_value) <> 'object' then return p_value; end if;
+
+  v_result := '{}'::jsonb;
+  for v_key, v_item in select key, value from jsonb_each(p_value)
+  loop
+    if v_key not in ('_pet_image_template_id', '_pet_image_variants') then
+      v_result := v_result || jsonb_build_object(v_key, operations.present_pet_urls(v_item));
+    end if;
+  end loop;
+  v_variants := p_value->'_pet_image_variants';
+  if jsonb_typeof(v_variants) = 'array' then
+    v_template_id := coalesce(p_value->>'template_id', p_value->>'_pet_image_template_id');
+    if v_variants ? 'thumbnail' then
+      v_result := v_result || jsonb_build_object(
+        'image_thumbnail_url', catalog.template_thumbnail_url(v_template_id)
+      );
+    end if;
+    if v_variants ? 'detail' then
+      v_result := v_result || jsonb_build_object(
+        'image_detail_url', catalog.template_detail_url(v_template_id)
+      );
+    end if;
+  end if;
+  return v_result;
+end
+$$;
+
+create or replace function operations.present_result(p_use_case text, p_result jsonb)
+returns jsonb
+language sql
+stable
+set search_path = ''
+as $$
+  select operations.present_pet_urls(operations.strip_pet_urls(p_result))
+$$;
+
 create or replace function operations.operation_json(p_operation operations.operations)
 returns jsonb
 language sql
@@ -1078,7 +1400,7 @@ as $$
     'operation_id', p_operation.id,
     'use_case', p_operation.use_case,
     'status', p_operation.status,
-    'result', p_operation.result,
+    'result', operations.present_result(p_operation.use_case, p_operation.result),
     'error_code', p_operation.error_code,
     'acknowledged_at', p_operation.result_acknowledged_at,
     'created_at', p_operation.created_at,
@@ -1131,7 +1453,7 @@ set search_path = ''
 as $$
 begin
   update operations.operations
-  set status = 'succeeded', result = p_result, error_code = null,
+  set status = 'succeeded', result = operations.strip_pet_urls(p_result), error_code = null,
       updated_at = now(), completed_at = now()
   where id = p_operation_id;
   return (select operations.operation_json(o) from operations.operations o where o.id = p_operation_id);
@@ -1146,7 +1468,7 @@ set search_path = ''
 as $$
 begin
   update operations.operations
-  set status = 'pending', result = p_result, error_code = null, updated_at = now()
+  set status = 'pending', result = operations.strip_pet_urls(p_result), error_code = null, updated_at = now()
   where id = p_operation_id;
   return (select operations.operation_json(o) from operations.operations o where o.id = p_operation_id);
 end;
@@ -1160,7 +1482,7 @@ set search_path = ''
 as $$
 begin
   update operations.operations
-  set status = 'failed', result = p_detail, error_code = p_code,
+  set status = 'failed', result = operations.strip_pet_urls(p_detail), error_code = p_code,
       updated_at = now(), completed_at = now()
   where id = p_operation_id;
   return (select operations.operation_json(o) from operations.operations o where o.id = p_operation_id);
@@ -11162,6 +11484,7 @@ set search_path = ''
 as $$
 declare
   v_run uuid;
+  v_mutation catalog.asset_mutation_runs%rowtype;
   v_scan_from timestamptz;
   v_scan_to timestamptz := now();
   v_active_run operations.job_runs%rowtype;
@@ -11170,7 +11493,19 @@ begin
   if p_limit < 1 or p_limit > 500 then
     raise exception using errcode = '22023', message = 'catalog cleanup limit must be between 1 and 500';
   end if;
-  perform pg_advisory_xact_lock(hashtextextended('pokepets:job:cleanup-catalog-assets', 0));
+  v_mutation := catalog.acquire_asset_mutation('cleanup', null, null);
+  if v_mutation.id is null then
+    insert into operations.job_runs (job_name, status, details, scan_from, scan_to, finished_at)
+    values (
+      'cleanup-catalog-assets', 'skipped',
+      jsonb_build_object('reason', 'asset_mutation_busy'),
+      null, v_scan_to, now()
+    ) returning id into v_run;
+    return jsonb_build_object(
+      'job_run_id', v_run, 'job_name', 'cleanup-catalog-assets', 'status', 'skipped',
+      'processed_count', 0, 'scan_from', null, 'scan_to', v_scan_to, 'objects', '[]'::jsonb
+    );
+  end if;
   select max(finished_at) into v_scan_from
   from operations.job_runs
   where job_name = 'cleanup-catalog-assets' and status = 'succeeded';
@@ -11187,6 +11522,10 @@ begin
       jsonb_build_object('reason', 'active_lease', 'active_job_run_id', v_active_run.id),
       v_scan_from, v_scan_to, now()
     ) returning id into v_run;
+    update catalog.asset_mutation_runs
+    set status = 'aborted', finished_at = now(),
+        details = jsonb_build_object('reason', 'active_cleanup_job', 'active_job_run_id', v_active_run.id)
+    where id = v_mutation.id;
     return jsonb_build_object(
       'job_run_id', v_run, 'job_name', 'cleanup-catalog-assets', 'status', 'skipped',
       'processed_count', 0, 'scan_from', v_scan_from, 'scan_to', v_scan_to, 'objects', '[]'::jsonb
@@ -11201,8 +11540,12 @@ begin
     where id = v_active_run.id;
   end if;
 
-  insert into operations.job_runs (job_name, status, scan_from, scan_to)
-  values ('cleanup-catalog-assets', 'running', v_scan_from, v_scan_to)
+  insert into operations.job_runs (job_name, status, details, scan_from, scan_to)
+  values (
+    'cleanup-catalog-assets', 'running',
+    jsonb_build_object('mutation_run_id', v_mutation.id, 'mutation_fence', v_mutation.fence),
+    v_scan_from, v_scan_to
+  )
   returning id into v_run;
 
   with candidates as materialized (
@@ -11245,13 +11588,17 @@ begin
 
   return jsonb_build_object(
     'job_run_id', v_run, 'job_name', 'cleanup-catalog-assets', 'status', 'running',
-    'processed_count', 0, 'scan_from', v_scan_from, 'scan_to', v_scan_to, 'objects', v_objects
+    'processed_count', 0, 'scan_from', v_scan_from, 'scan_to', v_scan_to,
+    'mutation_run_id', v_mutation.id, 'mutation_fence', v_mutation.fence,
+    'objects', v_objects
   );
 end
 $$;
 
 create or replace function api.catalog_asset_cleanup_finish(
   p_job_run_id uuid,
+  p_mutation_run_id uuid,
+  p_mutation_fence bigint,
   p_deleted_keys jsonb,
   p_failed jsonb
 )
@@ -11265,6 +11612,7 @@ declare
   v_claimed integer;
   v_deleted integer;
   v_failed integer;
+  v_mutation catalog.asset_mutation_runs%rowtype;
 begin
   select * into v_run
   from operations.job_runs
@@ -11272,6 +11620,14 @@ begin
   for update;
   if v_run.id is null or v_run.job_name <> 'cleanup-catalog-assets' or v_run.status <> 'running' then
     perform api.raise_business_error('JOB_NOT_FOUND', '后台任务运行不存在或已经结束');
+  end if;
+  v_mutation := catalog.require_asset_mutation(
+    p_mutation_run_id, p_mutation_fence, 'cleanup', null, null
+  );
+  if v_run.details->>'mutation_run_id' is distinct from p_mutation_run_id::text
+    or (v_run.details->>'mutation_fence')::bigint is distinct from p_mutation_fence
+  then
+    raise exception using errcode = '55000', message = 'catalog cleanup mutation lease does not match its job';
   end if;
   if jsonb_typeof(p_deleted_keys) <> 'array' or jsonb_typeof(p_failed) <> 'object' then
     raise exception using errcode = '22023', message = 'catalog cleanup result shape is invalid';
@@ -11328,6 +11684,16 @@ begin
       finished_at = now()
   where id = p_job_run_id
   returning * into v_run;
+
+  update catalog.asset_mutation_runs
+  set status = 'committed', finished_at = now(),
+      details = jsonb_build_object(
+        'job_run_id', p_job_run_id,
+        'attempted', v_claimed,
+        'deleted', v_deleted,
+        'failed', v_failed
+      )
+  where id = v_mutation.id;
 
   return jsonb_build_object(
     'job_run_id', v_run.id, 'job_name', v_run.job_name, 'status', v_run.status,

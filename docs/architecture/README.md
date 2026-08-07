@@ -66,7 +66,8 @@ TMA 首次同步加载只覆盖应用壳、会话与账号门禁及默认开盒�
 ## 生成物
 
 - `generated/catalog/catalog-v1.json`
-- `generated/assets/art-assets-v1.json`
+- `generated/assets/art-assets-v2.json`
+- `generated/assets/releases/catalog-v1-initial.json`
 - `generated/battle/battle-v1.json`
 - `packages/api-contracts/openapi/openapi.json`
 - `supabase/migrations/*_baseline.sql`
@@ -107,3 +108,4 @@ TMA 首次同步加载只覆盖应用壳、会话与账号门禁及默认开盒�
 - [Battle 请求阶段化结构日志](adr/ADR-028-battle-request-observability.md)
 - [市场成交事件游标与当前设备 SOLD 收件箱](adr/ADR-029-market-sold-device-inbox.md)
 - [市场购买按钮内进度与专用结果弹窗](adr/ADR-030-market-purchase-inline-progress.md)
+- [宠物美术发布一致性与不可变缓存](adr/ADR-031-art-release-consistency-and-cache-policy.md)

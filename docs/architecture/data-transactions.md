@@ -2,7 +2,7 @@
 
 ## Schema 所有权
 
-`supabase/schemas` 按业务上下文编号。`catalog` 拥有链、模板、产品版本、资源对象、完整资源发布批次、当前批次指针、公开交付配置和资源 revision，不保存图片二进制；所有目录读模型在读取时解析当前发布的 `image_thumbnail_url` 与 `image_detail_url`。`33_decomposition.sql` 与 `43_evolution.sql` 分别拥有对应命令声明，进化保底表为 `evolution.pity`；`gacha` 拥有 `gacha.boxes`；`payments` 拥有 `payments.topup_products`；`44_battle.sql` 拥有内部 `battle` schema、`battle-v1` 配置、room 状态机、引擎、玩家 RPC、私有审计和 outbox，但队伍成员只保存 `template_id` 与战斗属性，不保存图片 URL 快照；`70_wallet.sql` 与 `71_mint.sql` 分别声明钱包和 Mint，但继续使用内部 `onchain` schema；`90_payment_callbacks.sql` 与 `91_mint_reconciliation.sql` 分别声明支付回调和 Mint 对账；`95_jobs.sql` 拥有 Battle 不变量监控和公开宠物对象清理租约；`96_admin.sql` 在全部业务对象之后声明 owner-only 环境门禁、验收 command、run/资产审计、fixture-owned provenance、余额/holding provenance 触发器与受控 reconciliation。查询读模型 `api.catalog_get` 在所有依赖对象之后声明。
+`supabase/schemas` 按业务上下文编号。`catalog` 拥有链、模板、产品版本、资源对象、完整资源发布批次、当前批次指针、公开交付配置、资源 revision 和发布/回滚/清理共用的耐久资源变更租约，不保存图片二进制；所有目录读模型在读取时解析当前发布的 `image_thumbnail_url` 与 `image_detail_url`。`operations` 只持久保存模板 ID 和业务结果，统一返回函数在读取时注入当前宠物 URL。`33_decomposition.sql` 与 `43_evolution.sql` 分别拥有对应命令声明，进化保底表为 `evolution.pity`；`gacha` 拥有 `gacha.boxes`；`payments` 拥有 `payments.topup_products`；`44_battle.sql` 拥有内部 `battle` schema、`battle-v1` 配置、room 状态机、引擎、玩家 RPC、私有审计和 outbox，但队伍成员只保存 `template_id` 与战斗属性，不保存图片 URL 快照；`70_wallet.sql` 与 `71_mint.sql` 分别声明钱包和 Mint，但继续使用内部 `onchain` schema；`90_payment_callbacks.sql` 与 `91_mint_reconciliation.sql` 分别声明支付回调和 Mint 对账；`95_jobs.sql` 使用同一资源变更租约领取公开宠物对象清理；`96_admin.sql` 在全部业务对象之后声明 owner-only 环境门禁、验收 command、run/资产审计、fixture-owned provenance、余额/holding provenance 触发器与受控 reconciliation。查询读模型 `api.catalog_get` 在所有依赖对象之后声明。
 
 ## 写入规则
 
@@ -10,7 +10,7 @@
 
 所有玩家写操作只调用一个 `api` 命令 RPC。创建 operation 的 RPC 依次验证会话、账号状态、资源归属、请求前置条件和幂等键；不创建 operation 的语义幂等 RPC 依次验证同一安全边界与目标状态。资产、账本、库存、预留、奖励和业务状态写入均在一个 PostgreSQL 事务中完成。Functions 只能传递用户意图和目标标识。
 
-美术发布不是玩家业务写入。受控工具先无覆盖上传并校验 210 份私有母版和 420 份公开运行时对象，再调用一个 service-role 专用 RPC；RPC 锁定资源发布边界，验证发布键、manifest SHA-256、210 模板完备性和对象字段后，在同一事务创建批次、退役旧批次、切换当前指针并递增 revision。同键同载荷回放返回同一当前结果，同键不同载荷拒绝。清理任务按数据库租约领取满足 90 天、无当前引用且无回滚锁的公开对象，Storage API 删除成功后才把对象标记为已删除；失败和过期租约可安全重试，私有对象永不进入领取集合。
+美术发布不是玩家业务写入。受控工具先取得带 fence 的全局耐久资源变更租约，再校验 210 份私有母版、420 份公开运行时对象和公开缓存头，最后调用一个 service-role 专用 RPC；RPC 校验同一未过期租约、发布键、manifest SHA-256、210 模板完备性和对象字段后，在同一事务创建批次、退役旧批次、切换当前指针并递增 revision。同键同载荷回放返回同一当前结果，同键不同载荷拒绝。回滚和清理共用这一租约域；清理领取满足 90 天、无当前引用且无回滚锁的公开对象，Storage API 删除成功后才把对象标记为已删除。失败和过期租约可安全接管，旧 fence 不能提交，私有对象永不进入领取集合。
 
 库存占用统一调用 `inventory.reserve`：先锁定用户持有行，再重算全部活跃 reservation，最后写入出售、远征、Battle 或 Mint 占用。库存扣减不得低于仍活跃的 reservation；市场成交和 Mint 成功先消费对应 reservation，再扣减总量。Battle 创建者与接受者分别按 `template_id` 排序锁定 holding，并对三个不同模板各创建数量 1、`kind = battle`、reference 指向 participant 的 reservation。统一库存等式为 `total = available + listed + trading + minting + expedition + battling`。市场上架和按模板全部下架使用同一用户级事务 advisory lock；锁内按仍有剩余数量的不同模板计数，已有 10 种时只允许向现有模板追加。全部下架再按 FIFO 稳定顺序锁定本人该模板的全部有效挂单，原子取消并释放其剩余 reservation；没有有效挂单也以释放 0 的结果幂等成功。支付创建按用户和商品类型加事务锁，Mint 按用户和模板加事务锁并受活跃唯一约束，邀请奖励按邀请人加事务锁。
 

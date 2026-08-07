@@ -149,6 +149,44 @@ def verify_database_boundaries() -> None:
     if 'schemas = ["api"]' not in config or 'enabled = false\n\n[edge_runtime]' not in config:
         raise SystemExit("The Data API must expose only api and Supabase Auth must remain disabled")
 
+    catalog_sql = (SCHEMAS / "20_catalog.sql").read_text(encoding="utf-8").lower()
+    catalog_required = (
+        "create table catalog.asset_mutation_runs",
+        "create unique index asset_mutation_runs_one_running_idx",
+        "catalog.require_asset_mutation",
+        "p_mutation_run_id uuid",
+        "p_mutation_fence bigint",
+        "status = 'committed'",
+        "v_existing.status <> 'active'",
+    )
+    missing = [fragment for fragment in catalog_required if fragment not in catalog_sql]
+    if missing:
+        raise SystemExit(f"Catalog asset mutation boundary is incomplete: {missing}")
+
+    operations_sql = (SCHEMAS / "30_operations.sql").read_text(encoding="utf-8").lower()
+    operations_required = (
+        "create or replace function operations.strip_pet_urls",
+        "create or replace function operations.present_pet_urls",
+        "create or replace function operations.present_result",
+        "result = operations.strip_pet_urls(p_result)",
+        "result = operations.strip_pet_urls(p_detail)",
+        "operations.present_result(p_operation.use_case, p_operation.result)",
+    )
+    missing = [fragment for fragment in operations_required if fragment not in operations_sql]
+    if missing:
+        raise SystemExit(f"Operation pet URL presentation boundary is incomplete: {missing}")
+
+    jobs_sql = (SCHEMAS / "95_jobs.sql").read_text(encoding="utf-8").lower()
+    jobs_required = (
+        "catalog.acquire_asset_mutation('cleanup', null, null)",
+        "catalog.require_asset_mutation(",
+        "p_mutation_run_id uuid",
+        "p_mutation_fence bigint",
+    )
+    missing = [fragment for fragment in jobs_required if fragment not in jobs_sql]
+    if missing:
+        raise SystemExit(f"Catalog cleanup mutation boundary is incomplete: {missing}")
+
 
 def verify_identity_login_contract() -> None:
     sql = (SCHEMAS / "10_identity.sql").read_text(encoding="utf-8").lower()

@@ -1,19 +1,19 @@
 # 环境矩阵
 
-| 项目            | 本地                       | 真实开发                                                                        | 真实生产                                      |
-| --------------- | -------------------------- | ------------------------------------------------------------------------------- | --------------------------------------------- |
-| Git commit      | 当前工作提交               | 持续开发提交                                                                    | 与开发验收通过的提交相同                      |
-| Node / pnpm     | Node 24 / pnpm 11.1.3      | Node 24 / pnpm 11.1.3                                                           | Node 24 / pnpm 11.1.3                         |
-| Vercel          | `vercel dev`               | `final-tma` Project，`APP_ENV=development`                                      | 未来独立 Pro Project                          |
-| Supabase        | 本地 Postgres 17           | `final-tma-real-test`（ref `ebewtjerusxcioegpzjd`）Postgres 17 Project          | 未来独立 Postgres 17                          |
-| Telegram        | 开发 Bot                   | 开发 Bot 与开发 webhook                                                         | 生产 Bot 与生产 webhook                       |
-| Ably            | 独立开发 app/key           | 独立真实开发 Ably Standard app/key                                              | 独立生产 Ably Standard app/key                |
-| TON             | 不启用                     | 不发布 Collection、不启用 Mint 对账 Cron                                        | 不发布 Collection、不启用 Mint 对账 Cron      |
-| 藏品图片        | 从私有桶导出或候选目录生成 | `art-masters` 私有桶 + `pet-runtime` 公开桶                                     | 环境隔离的同名私有桶与公开桶                  |
-| 数据            | 非业务本地数据             | 独立真实开发与验收数据                                                          | 真实生产数据                                  |
-| Battle 验收夹具 | 默认未绑定、未启用         | owner 绑定 `real_development` 与 `ebewtjerusxcioegpzjd`，按次启用且最长 24 小时 | 默认未绑定、未启用，`production` 身份禁止启用 |
+| 项目            | 本地                  | 真实开发                                                                        | 真实生产                                      |
+| --------------- | --------------------- | ------------------------------------------------------------------------------- | --------------------------------------------- |
+| Git commit      | 当前工作提交          | 持续开发提交                                                                    | 与开发验收通过的提交相同                      |
+| Node / pnpm     | Node 24 / pnpm 11.1.3 | Node 24 / pnpm 11.1.3                                                           | Node 24 / pnpm 11.1.3                         |
+| Vercel          | `vercel dev`          | `final-tma` Project，`APP_ENV=development`                                      | 未来独立 Pro Project                          |
+| Supabase        | 本地 Postgres 17      | `final-tma-real-test`（ref `ebewtjerusxcioegpzjd`）Postgres 17 Project          | 未来独立 Postgres 17                          |
+| Telegram        | 开发 Bot              | 开发 Bot 与开发 webhook                                                         | 生产 Bot 与生产 webhook                       |
+| Ably            | 独立开发 app/key      | 独立真实开发 Ably Standard app/key                                              | 独立生产 Ably Standard app/key                |
+| TON             | 不启用                | 不发布 Collection、不启用 Mint 对账 Cron                                        | 不发布 Collection、不启用 Mint 对账 Cron      |
+| 藏品图片        | 从受控候选目录生成    | `art-masters` 私有桶 + `pet-runtime` 公开桶                                     | 环境隔离的同名私有桶与公开桶                  |
+| 数据            | 非业务本地数据        | 独立真实开发与验收数据                                                          | 真实生产数据                                  |
+| Battle 验收夹具 | 默认未绑定、未启用    | owner 绑定 `real_development` 与 `ebewtjerusxcioegpzjd`，按次启用且最长 24 小时 | 默认未绑定、未启用，`production` 身份禁止启用 |
 
-210 张正式母版永久保存在各环境的 `art-masters` 私有桶，每张固定生成 256×256 缩略图和 768×768 详情图写入 `pet-runtime` 公开桶。Git 不保存这些二进制。真实开发与生产只允许公开桶基址、项目 ID、Bot 和项目密钥不同，必须使用同一 Git commit、同一 OpenAPI、同一资源清单结构、同一生成参数和同一 migration 序列；生产发布前必须把已在真实开发验收的同一母版 SHA-256 和运行时 SHA-256 上传并原子发布到生产自己的桶。Telegram 分享图完成正式替换前，全局 production 资产门禁保持失败；休眠的 TON Connect 图标不阻塞当前 MVP。
+210 张正式母版永久保存在各环境的 `art-masters` 私有桶，每张固定生成 256×256 缩略图和 768×768 详情图写入 `pet-runtime` 公开桶。Git 不保存这些二进制，只保存当前 v2 清单和历史发布清单。真实开发与生产只允许公开桶基址、项目 ID、Bot 和项目密钥不同，必须使用同一 Git commit、同一 OpenAPI、同一资源清单结构、同一生成参数和同一 migration 序列；生产发布前必须把已在真实开发验收的同一母版 SHA-256 和运行时 SHA-256 上传并原子发布到生产自己的桶。公开 v2 对象响应固定为 `public, max-age=31536000, immutable`。Telegram 分享图完成正式替换前，全局 production 资产门禁保持失败；休眠的 TON Connect 图标不阻塞当前 MVP。
 
 Battle 发布后，真实开发与生产固定启用 Web、API、Supabase、Telegram webhook、Ably subscribe-only、`battle-tick-v1`、两个 Battle integrations、支付对账、幂等清理和不变量监控。TON 配置为空，`reconcile-mints` 不进入 Vercel Cron；Web 不展示钱包或 Mint，不加载 TON Provider，也不执行 Mint 恢复。非 TON API 只解析自身所需配置，不接受任何 TON 占位值。
 

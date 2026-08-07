@@ -15,13 +15,16 @@ ROOT = Path(__file__).resolve().parents[2]
 PUBLIC = ROOT / "apps/web/public"
 BUILD = ROOT / "apps/web/dist"
 CATALOG = ROOT / "generated/catalog/catalog-v1.json"
-ART_MANIFEST = ROOT / "generated/assets/art-assets-v1.json"
+ART_MANIFEST = ROOT / "generated/assets/art-assets-v2.json"
+LEGACY_ART_MANIFEST = ROOT / "generated/assets/releases/catalog-v1-initial.json"
 PLACEHOLDERS = ROOT / "generated/assets/placeholders.json"
 BRAND_MANIFEST = ROOT / "generated/assets/brand-v1.json"
 SILHOUETTE = "apps/web/public/assets/pets/pet-silhouette.svg"
 REMOVED_BINARY_ROOTS = (
     ROOT / "assets/source/catalog/v1",
+    ROOT / "assets/source/catalog/v2",
     ROOT / "apps/web/public/assets/catalog/v1",
+    ROOT / "apps/web/public/assets/catalog/v2",
     ROOT / "apps/web/public/assets/gacha/representatives",
 )
 DEVELOPMENT_PLACEHOLDER_PATH = "apps/web/public/assets/dev/placeholder.webp"
@@ -165,8 +168,8 @@ def assert_brand_manifest(source_hashes: dict[str, str]) -> None:
             raise SystemExit(f"Formal brand asset provenance mismatch: {name}")
 
 
-def assert_art_manifest() -> None:
-    manifest = json.loads(ART_MANIFEST.read_text(encoding="utf-8"))
+def assert_art_manifest(path: Path, runtime_version: str) -> None:
+    manifest = json.loads(path.read_text(encoding="utf-8"))
     expected = manifest.pop("manifest_sha256", None)
     actual = digest_bytes(
         json.dumps(manifest, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
@@ -199,8 +202,8 @@ def assert_art_manifest() -> None:
         lower = template_id.lower()
         records = {
             "master": (768, 2 * 1024 * 1024, rf"^catalog/{lower}/[0-9a-f]{{64}}\.webp$"),
-            "thumbnail": (256, 50 * 1024, rf"^catalog/v1/thumb/{lower}\.[0-9a-f]{{64}}\.webp$"),
-            "detail": (768, 180 * 1024, rf"^catalog/v1/detail/{lower}\.[0-9a-f]{{64}}\.webp$"),
+            "thumbnail": (256, 50 * 1024, rf"^catalog/{runtime_version}/thumb/{lower}\.[0-9a-f]{{64}}\.webp$"),
+            "detail": (768, 180 * 1024, rf"^catalog/{runtime_version}/detail/{lower}\.[0-9a-f]{{64}}\.webp$"),
         }
         for name, (dimension, maximum, key_pattern) in records.items():
             record = item.get(name)
@@ -285,7 +288,8 @@ def main() -> None:
     expected_placeholders = placeholder_fingerprints()
     if expected_placeholders[DEVELOPMENT_PLACEHOLDER_PATH] != digest(ROOT / DEVELOPMENT_PLACEHOLDER_PATH):
         raise SystemExit("Development placeholder hash drift detected")
-    assert_art_manifest()
+    assert_art_manifest(ART_MANIFEST, "v2")
+    assert_art_manifest(LEGACY_ART_MANIFEST, "v1")
     assert_removed_binaries(ROOT)
     source_hashes = assert_repository_assets()
     if args.mode == "catalog":

@@ -3,7 +3,7 @@ import { useEffect, useState, type ReactNode } from "react";
 const FALLBACK = "/assets/pets/pet-silhouette.svg";
 const RETRY_DELAYS = [1_000, 3_000] as const;
 const PUBLIC_PET_PATH =
-  /^\/storage\/v1\/object\/public\/pet-runtime\/catalog\/v1\/(thumb|detail)\/pet-[nat]-\d{3}-[123]\.[0-9a-f]{64}\.webp$/;
+  /^\/storage\/v1\/object\/public\/pet-runtime\/catalog\/v[12]\/(thumb|detail)\/pet-[nat]-\d{3}-[123]\.[0-9a-f]{64}\.webp$/;
 
 type LoadState = {
   attempt: number;
