@@ -194,7 +194,7 @@ function PetPiece({
       className={`decomposition-pet-piece decomposition-pet-piece--${className}`}
     >
       <CatalogImage
-        path={presentation.imagePath}
+        url={presentation.imagePath}
         alt=""
         variant="detail"
         loading="eager"
@@ -213,7 +213,7 @@ function RestoredPet({
   return (
     <div className="decomposition-restored-pet">
       <CatalogImage
-        path={presentation.imagePath}
+        url={presentation.imagePath}
         alt={presentation.name ?? "宠物"}
         variant="detail"
         loading="eager"

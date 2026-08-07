@@ -118,7 +118,6 @@ def build_web_evolution_manifest(
                     "name": target["name"],
                     "rarity": target["rarity"],
                     "stage": target["stage"],
-                    "image_thumbnail_path": target["image_thumbnail_path"],
                 },
                 **rule,
             }
@@ -129,12 +128,9 @@ def build_web_evolution_manifest(
 
 
 def asset_files(templates: list[dict[str, object]]) -> list[Path]:
+    if len(templates) != 210:
+        raise RuntimeError("Catalog must contain exactly 210 templates")
     required = [
-        ROOT / "apps/web/public" / str(item[key]).lstrip("/")
-        for item in templates
-        for key in ("image_thumbnail_path", "image_detail_path")
-    ]
-    required += [
         ASSET_ROOT / "boxes/normal.webp",
         ASSET_ROOT / "boxes/rare.webp",
         ASSET_ROOT / "boxes/legendary.webp",

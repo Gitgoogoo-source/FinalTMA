@@ -542,7 +542,7 @@ def verify_admin_fixture_contract() -> None:
         "('battle-v1', 'd', 100::bigint",
         "pet-n-001-1",
         "pet-a-016-3",
-        "de521f2687086cb358fb557a4a7ada3bc3c5fc132d673f0256b4573028ddba46",
+        "82ae510b2ae38d22db94197d667040c25813080dc73c6219eca30d42aa76404f",
         "array_remove(",
         "create or replace function admin.track_fixture_balance_ownership",
         "create or replace function admin.track_fixture_holding_ownership",

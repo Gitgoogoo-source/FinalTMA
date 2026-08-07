@@ -1507,6 +1507,11 @@
                           "minLength": 64,
                           "maxLength": 64
                         },
+                        "asset_revision": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991
+                        },
                         "chains": {
                           "minItems": 70,
                           "maxItems": 70,
@@ -1594,13 +1599,13 @@
                                 "exclusiveMinimum": 0,
                                 "maximum": 9007199254740991
                               },
-                              "image_thumbnail_path": {
+                              "image_thumbnail_url": {
                                 "type": "string",
-                                "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                                "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/thumb\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                               },
-                              "image_detail_path": {
+                              "image_detail_url": {
                                 "type": "string",
-                                "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                                "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/detail\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                               },
                               "draw_weight": {
                                 "type": "integer",
@@ -1623,8 +1628,8 @@
                               "market_price",
                               "decompose_fgems",
                               "expedition_fgems",
-                              "image_thumbnail_path",
-                              "image_detail_path",
+                              "image_thumbnail_url",
+                              "image_detail_url",
                               "draw_weight",
                               "catalog_version"
                             ],
@@ -1738,6 +1743,7 @@
                       "required": [
                         "version",
                         "product_checksum",
+                        "asset_revision",
                         "chains",
                         "templates",
                         "boxes",
@@ -2279,13 +2285,13 @@
                                 ]
                               },
                               "quantity": { "type": "number", "const": 1 },
-                              "image_thumbnail_path": {
+                              "image_thumbnail_url": {
                                 "type": "string",
-                                "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                                "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/thumb\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                               },
-                              "image_detail_path": {
+                              "image_detail_url": {
                                 "type": "string",
-                                "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                                "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/detail\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                               },
                               "new_album": { "type": "boolean" },
                               "pity_triggered": { "type": "boolean" }
@@ -2297,8 +2303,8 @@
                               "rarity",
                               "stage",
                               "quantity",
-                              "image_thumbnail_path",
-                              "image_detail_path",
+                              "image_thumbnail_url",
+                              "image_detail_url",
                               "new_album",
                               "pity_triggered"
                             ],
@@ -2491,13 +2497,13 @@
                                 ]
                               },
                               "quantity": { "type": "number", "const": 1 },
-                              "image_thumbnail_path": {
+                              "image_thumbnail_url": {
                                 "type": "string",
-                                "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                                "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/thumb\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                               },
-                              "image_detail_path": {
+                              "image_detail_url": {
                                 "type": "string",
-                                "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                                "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/detail\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                               },
                               "new_album": { "type": "boolean" },
                               "pity_triggered": { "type": "boolean" }
@@ -2509,8 +2515,8 @@
                               "rarity",
                               "stage",
                               "quantity",
-                              "image_thumbnail_path",
-                              "image_detail_path",
+                              "image_thumbnail_url",
+                              "image_detail_url",
                               "new_album",
                               "pity_triggered"
                             ],
@@ -2951,13 +2957,13 @@
                                 "type": "string",
                                 "enum": ["normal", "advanced", "top"]
                               },
-                              "image_thumbnail_path": {
+                              "image_thumbnail_url": {
                                 "type": "string",
-                                "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                                "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/thumb\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                               },
-                              "image_detail_path": {
+                              "image_detail_url": {
                                 "type": "string",
-                                "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                                "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/detail\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                               },
                               "combat_power": {
                                 "type": "integer",
@@ -3017,8 +3023,8 @@
                               "stage",
                               "chain_id",
                               "chain_type",
-                              "image_thumbnail_path",
-                              "image_detail_path",
+                              "image_thumbnail_url",
+                              "image_detail_url",
                               "combat_power",
                               "expedition_fgems",
                               "decompose_fgems",
@@ -3257,13 +3263,13 @@
                           "type": "string",
                           "enum": ["normal", "advanced", "top"]
                         },
-                        "image_thumbnail_path": {
+                        "image_thumbnail_url": {
                           "type": "string",
-                          "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                          "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/thumb\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                         },
-                        "image_detail_path": {
+                        "image_detail_url": {
                           "type": "string",
-                          "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                          "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/detail\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                         },
                         "combat_power": {
                           "type": "integer",
@@ -3323,8 +3329,8 @@
                         "stage",
                         "chain_id",
                         "chain_type",
-                        "image_thumbnail_path",
-                        "image_detail_path",
+                        "image_thumbnail_url",
+                        "image_detail_url",
                         "combat_power",
                         "expedition_fgems",
                         "decompose_fgems",
@@ -3562,13 +3568,13 @@
                                 { "type": "number", "const": 3 }
                               ]
                             },
-                            "image_thumbnail_path": {
+                            "image_thumbnail_url": {
                               "type": "string",
-                              "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                              "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/thumb\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                             },
-                            "image_detail_path": {
+                            "image_detail_url": {
                               "type": "string",
-                              "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                              "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/detail\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                             }
                           },
                           "required": [
@@ -3576,8 +3582,8 @@
                             "name",
                             "rarity",
                             "stage",
-                            "image_thumbnail_path",
-                            "image_detail_path"
+                            "image_thumbnail_url",
+                            "image_detail_url"
                           ],
                           "additionalProperties": false
                         },
@@ -3605,13 +3611,13 @@
                                     { "type": "number", "const": 3 }
                                   ]
                                 },
-                                "image_thumbnail_path": {
+                                "image_thumbnail_url": {
                                   "type": "string",
-                                  "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                                  "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/thumb\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                                 },
-                                "image_detail_path": {
+                                "image_detail_url": {
                                   "type": "string",
-                                  "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                                  "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/detail\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                                 }
                               },
                               "required": [
@@ -3619,8 +3625,8 @@
                                 "name",
                                 "rarity",
                                 "stage",
-                                "image_thumbnail_path",
-                                "image_detail_path"
+                                "image_thumbnail_url",
+                                "image_detail_url"
                               ],
                               "additionalProperties": false
                             },
@@ -4250,13 +4256,13 @@
                                 { "type": "number", "const": 3 }
                               ]
                             },
-                            "image_thumbnail_path": {
+                            "image_thumbnail_url": {
                               "type": "string",
-                              "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                              "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/thumb\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                             },
-                            "image_detail_path": {
+                            "image_detail_url": {
                               "type": "string",
-                              "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                              "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/detail\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                             }
                           },
                           "required": [
@@ -4264,8 +4270,8 @@
                             "name",
                             "rarity",
                             "stage",
-                            "image_thumbnail_path",
-                            "image_detail_path"
+                            "image_thumbnail_url",
+                            "image_detail_url"
                           ],
                           "additionalProperties": false
                         },
@@ -4291,13 +4297,13 @@
                                 { "type": "number", "const": 3 }
                               ]
                             },
-                            "image_thumbnail_path": {
+                            "image_thumbnail_url": {
                               "type": "string",
-                              "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                              "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/thumb\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                             },
-                            "image_detail_path": {
+                            "image_detail_url": {
                               "type": "string",
-                              "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                              "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/detail\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                             }
                           },
                           "required": [
@@ -4305,8 +4311,8 @@
                             "name",
                             "rarity",
                             "stage",
-                            "image_thumbnail_path",
-                            "image_detail_path"
+                            "image_thumbnail_url",
+                            "image_detail_url"
                           ],
                           "additionalProperties": false
                         },
@@ -4529,13 +4535,13 @@
                                 { "type": "number", "const": 3 }
                               ]
                             },
-                            "image_thumbnail_path": {
+                            "image_thumbnail_url": {
                               "type": "string",
-                              "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                              "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/thumb\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                             },
-                            "image_detail_path": {
+                            "image_detail_url": {
                               "type": "string",
-                              "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                              "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/detail\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                             }
                           },
                           "required": [
@@ -4543,8 +4549,8 @@
                             "name",
                             "rarity",
                             "stage",
-                            "image_thumbnail_path",
-                            "image_detail_path"
+                            "image_thumbnail_url",
+                            "image_detail_url"
                           ],
                           "additionalProperties": false
                         },
@@ -4570,13 +4576,13 @@
                                 { "type": "number", "const": 3 }
                               ]
                             },
-                            "image_thumbnail_path": {
+                            "image_thumbnail_url": {
                               "type": "string",
-                              "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                              "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/thumb\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                             },
-                            "image_detail_path": {
+                            "image_detail_url": {
                               "type": "string",
-                              "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                              "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/detail\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                             }
                           },
                           "required": [
@@ -4584,8 +4590,8 @@
                             "name",
                             "rarity",
                             "stage",
-                            "image_thumbnail_path",
-                            "image_detail_path"
+                            "image_thumbnail_url",
+                            "image_detail_url"
                           ],
                           "additionalProperties": false
                         },
@@ -6363,13 +6369,13 @@
                                 "type": "string",
                                 "enum": ["normal", "advanced", "top"]
                               },
-                              "image_thumbnail_path": {
+                              "image_thumbnail_url": {
                                 "type": "string",
-                                "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                                "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/thumb\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                               },
-                              "image_detail_path": {
+                              "image_detail_url": {
                                 "type": "string",
-                                "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                                "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/detail\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                               },
                               "combat_power": {
                                 "type": "integer",
@@ -6434,8 +6440,8 @@
                               "stage",
                               "chain_id",
                               "chain_type",
-                              "image_thumbnail_path",
-                              "image_detail_path",
+                              "image_thumbnail_url",
+                              "image_detail_url",
                               "combat_power",
                               "expedition_fgems",
                               "decompose_fgems",
@@ -8030,9 +8036,9 @@
                                 "minimum": 1,
                                 "maximum": 3
                               },
-                              "image_thumbnail_path": {
+                              "image_thumbnail_url": {
                                 "type": "string",
-                                "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                                "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/thumb\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                               },
                               "unit_price": {
                                 "type": "integer",
@@ -8054,7 +8060,7 @@
                               "template_id",
                               "name",
                               "rarity",
-                              "image_thumbnail_path",
+                              "image_thumbnail_url",
                               "unit_price",
                               "available_quantity",
                               "own_listed_quantity"
@@ -8091,13 +8097,13 @@
                                 "type": "string",
                                 "enum": ["normal", "advanced", "top"]
                               },
-                              "image_thumbnail_path": {
+                              "image_thumbnail_url": {
                                 "type": "string",
-                                "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                                "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/thumb\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                               },
-                              "image_detail_path": {
+                              "image_detail_url": {
                                 "type": "string",
-                                "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                                "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/detail\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                               },
                               "combat_power": {
                                 "type": "integer",
@@ -8162,8 +8168,8 @@
                               "stage",
                               "chain_id",
                               "chain_type",
-                              "image_thumbnail_path",
-                              "image_detail_path",
+                              "image_thumbnail_url",
+                              "image_detail_url",
                               "combat_power",
                               "expedition_fgems",
                               "decompose_fgems",
@@ -8456,9 +8462,9 @@
                           "minimum": 1,
                           "maximum": 3
                         },
-                        "image_thumbnail_path": {
+                        "image_thumbnail_url": {
                           "type": "string",
-                          "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                          "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/thumb\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                         },
                         "unit_price": {
                           "type": "integer",
@@ -8480,7 +8486,7 @@
                         "template_id",
                         "name",
                         "rarity",
-                        "image_thumbnail_path",
+                        "image_thumbnail_url",
                         "unit_price",
                         "available_quantity",
                         "own_listed_quantity"
@@ -8712,9 +8718,9 @@
                                 "minimum": 1,
                                 "maximum": 3
                               },
-                              "image_thumbnail_path": {
+                              "image_thumbnail_url": {
                                 "type": "string",
-                                "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                                "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/thumb\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                               },
                               "listed_quantity": {
                                 "type": "integer",
@@ -8766,7 +8772,7 @@
                               "name",
                               "rarity",
                               "stage",
-                              "image_thumbnail_path",
+                              "image_thumbnail_url",
                               "listed_quantity",
                               "sold_quantity",
                               "unit_price",
@@ -8807,9 +8813,9 @@
                                 "minimum": 1,
                                 "maximum": 3
                               },
-                              "image_thumbnail_path": {
+                              "image_thumbnail_url": {
                                 "type": "string",
-                                "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                                "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/thumb\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                               },
                               "quantity": {
                                 "type": "integer",
@@ -8833,7 +8839,7 @@
                               "name",
                               "rarity",
                               "stage",
-                              "image_thumbnail_path",
+                              "image_thumbnail_url",
                               "quantity",
                               "unit_price",
                               "sold_at"
@@ -9058,9 +9064,9 @@
                             "mythic"
                           ]
                         },
-                        "image_thumbnail_path": {
+                        "image_thumbnail_url": {
                           "type": "string",
-                          "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                          "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/thumb\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                         },
                         "quantity": {
                           "type": "integer",
@@ -9083,7 +9089,7 @@
                         "template_id",
                         "name",
                         "rarity",
-                        "image_thumbnail_path",
+                        "image_thumbnail_url",
                         "quantity",
                         "unit_price",
                         "created_at"
@@ -9140,9 +9146,9 @@
                             "mythic"
                           ]
                         },
-                        "image_thumbnail_path": {
+                        "image_thumbnail_url": {
                           "type": "string",
-                          "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                          "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/thumb\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                         },
                         "quantity": {
                           "type": "integer",
@@ -9165,7 +9171,7 @@
                         "template_id",
                         "name",
                         "rarity",
-                        "image_thumbnail_path",
+                        "image_thumbnail_url",
                         "quantity",
                         "unit_price",
                         "created_at"
@@ -20041,13 +20047,13 @@
                                   "properties": {
                                     "template_id": { "type": "string" },
                                     "name": { "type": "string" },
-                                    "image_thumbnail_path": {
+                                    "image_thumbnail_url": {
                                       "type": "string",
-                                      "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                                      "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/thumb\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                                     },
-                                    "image_detail_path": {
+                                    "image_detail_url": {
                                       "type": "string",
-                                      "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                                      "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/detail\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                                     },
                                     "rarity": {
                                       "type": "string",
@@ -20076,8 +20082,8 @@
                                   "required": [
                                     "template_id",
                                     "name",
-                                    "image_thumbnail_path",
-                                    "image_detail_path",
+                                    "image_thumbnail_url",
+                                    "image_detail_url",
                                     "rarity",
                                     "stage",
                                     "unlocked",
@@ -21167,13 +21173,13 @@
                                         "minLength": 1,
                                         "maxLength": 128
                                       },
-                                      "image_thumbnail_path": {
+                                      "image_thumbnail_url": {
                                         "type": "string",
-                                        "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                                        "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/thumb\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                                       },
-                                      "image_detail_path": {
+                                      "image_detail_url": {
                                         "type": "string",
-                                        "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                                        "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/detail\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                                       },
                                       "rarity": {
                                         "type": "string",
@@ -21295,8 +21301,8 @@
                                       "slot",
                                       "template_id",
                                       "name",
-                                      "image_thumbnail_path",
-                                      "image_detail_path",
+                                      "image_thumbnail_url",
+                                      "image_detail_url",
                                       "rarity",
                                       "stage",
                                       "element",
@@ -21334,13 +21340,13 @@
                                             "minLength": 1,
                                             "maxLength": 128
                                           },
-                                          "image_thumbnail_path": {
+                                          "image_thumbnail_url": {
                                             "type": "string",
-                                            "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                                            "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/thumb\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                                           },
-                                          "image_detail_path": {
+                                          "image_detail_url": {
                                             "type": "string",
-                                            "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                                            "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/detail\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                                           },
                                           "rarity": {
                                             "type": "string",
@@ -21370,8 +21376,8 @@
                                         "required": [
                                           "slot",
                                           "name",
-                                          "image_thumbnail_path",
-                                          "image_detail_path",
+                                          "image_thumbnail_url",
+                                          "image_detail_url",
                                           "rarity",
                                           "stage",
                                           "hp_percent",
@@ -21585,13 +21591,13 @@
                                                       "minLength": 1,
                                                       "maxLength": 128
                                                     },
-                                                    "image_thumbnail_path": {
+                                                    "image_thumbnail_url": {
                                                       "type": "string",
-                                                      "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                                                      "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/thumb\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                                                     },
-                                                    "image_detail_path": {
+                                                    "image_detail_url": {
                                                       "type": "string",
-                                                      "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                                                      "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/detail\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                                                     },
                                                     "rarity": {
                                                       "type": "string",
@@ -21623,8 +21629,8 @@
                                                   "required": [
                                                     "slot",
                                                     "name",
-                                                    "image_thumbnail_path",
-                                                    "image_detail_path",
+                                                    "image_thumbnail_url",
+                                                    "image_detail_url",
                                                     "rarity",
                                                     "stage"
                                                   ],
@@ -22063,13 +22069,13 @@
                                 "minLength": 1,
                                 "maxLength": 128
                               },
-                              "image_thumbnail_path": {
+                              "image_thumbnail_url": {
                                 "type": "string",
-                                "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                                "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/thumb\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                               },
-                              "image_detail_path": {
+                              "image_detail_url": {
                                 "type": "string",
-                                "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                                "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/detail\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                               },
                               "rarity": {
                                 "type": "string",
@@ -22179,8 +22185,8 @@
                             "required": [
                               "template_id",
                               "name",
-                              "image_thumbnail_path",
-                              "image_detail_path",
+                              "image_thumbnail_url",
+                              "image_detail_url",
                               "rarity",
                               "stage",
                               "available_quantity",
@@ -22977,13 +22983,13 @@
                                 "minLength": 1,
                                 "maxLength": 128
                               },
-                              "image_thumbnail_path": {
+                              "image_thumbnail_url": {
                                 "type": "string",
-                                "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                                "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/thumb\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                               },
-                              "image_detail_path": {
+                              "image_detail_url": {
                                 "type": "string",
-                                "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                                "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/detail\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                               },
                               "rarity": {
                                 "type": "string",
@@ -23096,8 +23102,8 @@
                               "slot",
                               "template_id",
                               "name",
-                              "image_thumbnail_path",
-                              "image_detail_path",
+                              "image_thumbnail_url",
+                              "image_detail_url",
                               "rarity",
                               "stage",
                               "element",
@@ -23135,13 +23141,13 @@
                                     "minLength": 1,
                                     "maxLength": 128
                                   },
-                                  "image_thumbnail_path": {
+                                  "image_thumbnail_url": {
                                     "type": "string",
-                                    "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                                    "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/thumb\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                                   },
-                                  "image_detail_path": {
+                                  "image_detail_url": {
                                     "type": "string",
-                                    "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                                    "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/detail\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                                   },
                                   "rarity": {
                                     "type": "string",
@@ -23171,8 +23177,8 @@
                                 "required": [
                                   "slot",
                                   "name",
-                                  "image_thumbnail_path",
-                                  "image_detail_path",
+                                  "image_thumbnail_url",
+                                  "image_detail_url",
                                   "rarity",
                                   "stage",
                                   "hp_percent",
@@ -23375,13 +23381,13 @@
                                               "minLength": 1,
                                               "maxLength": 128
                                             },
-                                            "image_thumbnail_path": {
+                                            "image_thumbnail_url": {
                                               "type": "string",
-                                              "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                                              "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/thumb\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                                             },
-                                            "image_detail_path": {
+                                            "image_detail_url": {
                                               "type": "string",
-                                              "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                                              "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/detail\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                                             },
                                             "rarity": {
                                               "type": "string",
@@ -23410,8 +23416,8 @@
                                           "required": [
                                             "slot",
                                             "name",
-                                            "image_thumbnail_path",
-                                            "image_detail_path",
+                                            "image_thumbnail_url",
+                                            "image_detail_url",
                                             "rarity",
                                             "stage"
                                           ],
@@ -24978,13 +24984,13 @@
                                 "minLength": 1,
                                 "maxLength": 128
                               },
-                              "image_thumbnail_path": {
+                              "image_thumbnail_url": {
                                 "type": "string",
-                                "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                                "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/thumb\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                               },
-                              "image_detail_path": {
+                              "image_detail_url": {
                                 "type": "string",
-                                "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                                "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/detail\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                               },
                               "rarity": {
                                 "type": "string",
@@ -25097,8 +25103,8 @@
                               "slot",
                               "template_id",
                               "name",
-                              "image_thumbnail_path",
-                              "image_detail_path",
+                              "image_thumbnail_url",
+                              "image_detail_url",
                               "rarity",
                               "stage",
                               "element",
@@ -25136,13 +25142,13 @@
                                     "minLength": 1,
                                     "maxLength": 128
                                   },
-                                  "image_thumbnail_path": {
+                                  "image_thumbnail_url": {
                                     "type": "string",
-                                    "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                                    "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/thumb\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                                   },
-                                  "image_detail_path": {
+                                  "image_detail_url": {
                                     "type": "string",
-                                    "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                                    "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/detail\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                                   },
                                   "rarity": {
                                     "type": "string",
@@ -25172,8 +25178,8 @@
                                 "required": [
                                   "slot",
                                   "name",
-                                  "image_thumbnail_path",
-                                  "image_detail_path",
+                                  "image_thumbnail_url",
+                                  "image_detail_url",
                                   "rarity",
                                   "stage",
                                   "hp_percent",
@@ -25376,13 +25382,13 @@
                                               "minLength": 1,
                                               "maxLength": 128
                                             },
-                                            "image_thumbnail_path": {
+                                            "image_thumbnail_url": {
                                               "type": "string",
-                                              "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                                              "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/thumb\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                                             },
-                                            "image_detail_path": {
+                                            "image_detail_url": {
                                               "type": "string",
-                                              "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                                              "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/detail\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                                             },
                                             "rarity": {
                                               "type": "string",
@@ -25411,8 +25417,8 @@
                                           "required": [
                                             "slot",
                                             "name",
-                                            "image_thumbnail_path",
-                                            "image_detail_path",
+                                            "image_thumbnail_url",
+                                            "image_detail_url",
                                             "rarity",
                                             "stage"
                                           ],
@@ -25874,13 +25880,13 @@
                                 "minLength": 1,
                                 "maxLength": 128
                               },
-                              "image_thumbnail_path": {
+                              "image_thumbnail_url": {
                                 "type": "string",
-                                "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                                "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/thumb\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                               },
-                              "image_detail_path": {
+                              "image_detail_url": {
                                 "type": "string",
-                                "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                                "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/detail\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                               },
                               "rarity": {
                                 "type": "string",
@@ -25993,8 +25999,8 @@
                               "slot",
                               "template_id",
                               "name",
-                              "image_thumbnail_path",
-                              "image_detail_path",
+                              "image_thumbnail_url",
+                              "image_detail_url",
                               "rarity",
                               "stage",
                               "element",
@@ -26032,13 +26038,13 @@
                                     "minLength": 1,
                                     "maxLength": 128
                                   },
-                                  "image_thumbnail_path": {
+                                  "image_thumbnail_url": {
                                     "type": "string",
-                                    "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                                    "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/thumb\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                                   },
-                                  "image_detail_path": {
+                                  "image_detail_url": {
                                     "type": "string",
-                                    "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                                    "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/detail\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                                   },
                                   "rarity": {
                                     "type": "string",
@@ -26068,8 +26074,8 @@
                                 "required": [
                                   "slot",
                                   "name",
-                                  "image_thumbnail_path",
-                                  "image_detail_path",
+                                  "image_thumbnail_url",
+                                  "image_detail_url",
                                   "rarity",
                                   "stage",
                                   "hp_percent",
@@ -26272,13 +26278,13 @@
                                               "minLength": 1,
                                               "maxLength": 128
                                             },
-                                            "image_thumbnail_path": {
+                                            "image_thumbnail_url": {
                                               "type": "string",
-                                              "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                                              "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/thumb\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                                             },
-                                            "image_detail_path": {
+                                            "image_detail_url": {
                                               "type": "string",
-                                              "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                                              "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/detail\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                                             },
                                             "rarity": {
                                               "type": "string",
@@ -26307,8 +26313,8 @@
                                           "required": [
                                             "slot",
                                             "name",
-                                            "image_thumbnail_path",
-                                            "image_detail_path",
+                                            "image_thumbnail_url",
+                                            "image_detail_url",
                                             "rarity",
                                             "stage"
                                           ],
@@ -27113,13 +27119,13 @@
                                 "minLength": 1,
                                 "maxLength": 128
                               },
-                              "image_thumbnail_path": {
+                              "image_thumbnail_url": {
                                 "type": "string",
-                                "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                                "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/thumb\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                               },
-                              "image_detail_path": {
+                              "image_detail_url": {
                                 "type": "string",
-                                "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                                "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/detail\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                               },
                               "rarity": {
                                 "type": "string",
@@ -27232,8 +27238,8 @@
                               "slot",
                               "template_id",
                               "name",
-                              "image_thumbnail_path",
-                              "image_detail_path",
+                              "image_thumbnail_url",
+                              "image_detail_url",
                               "rarity",
                               "stage",
                               "element",
@@ -27271,13 +27277,13 @@
                                     "minLength": 1,
                                     "maxLength": 128
                                   },
-                                  "image_thumbnail_path": {
+                                  "image_thumbnail_url": {
                                     "type": "string",
-                                    "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                                    "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/thumb\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                                   },
-                                  "image_detail_path": {
+                                  "image_detail_url": {
                                     "type": "string",
-                                    "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                                    "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/detail\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                                   },
                                   "rarity": {
                                     "type": "string",
@@ -27307,8 +27313,8 @@
                                 "required": [
                                   "slot",
                                   "name",
-                                  "image_thumbnail_path",
-                                  "image_detail_path",
+                                  "image_thumbnail_url",
+                                  "image_detail_url",
                                   "rarity",
                                   "stage",
                                   "hp_percent",
@@ -27511,13 +27517,13 @@
                                               "minLength": 1,
                                               "maxLength": 128
                                             },
-                                            "image_thumbnail_path": {
+                                            "image_thumbnail_url": {
                                               "type": "string",
-                                              "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                                              "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/thumb\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                                             },
-                                            "image_detail_path": {
+                                            "image_detail_url": {
                                               "type": "string",
-                                              "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                                              "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/detail\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                                             },
                                             "rarity": {
                                               "type": "string",
@@ -27546,8 +27552,8 @@
                                           "required": [
                                             "slot",
                                             "name",
-                                            "image_thumbnail_path",
-                                            "image_detail_path",
+                                            "image_thumbnail_url",
+                                            "image_detail_url",
                                             "rarity",
                                             "stage"
                                           ],
@@ -28009,13 +28015,13 @@
                                 "minLength": 1,
                                 "maxLength": 128
                               },
-                              "image_thumbnail_path": {
+                              "image_thumbnail_url": {
                                 "type": "string",
-                                "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                                "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/thumb\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                               },
-                              "image_detail_path": {
+                              "image_detail_url": {
                                 "type": "string",
-                                "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                                "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/detail\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                               },
                               "rarity": {
                                 "type": "string",
@@ -28128,8 +28134,8 @@
                               "slot",
                               "template_id",
                               "name",
-                              "image_thumbnail_path",
-                              "image_detail_path",
+                              "image_thumbnail_url",
+                              "image_detail_url",
                               "rarity",
                               "stage",
                               "element",
@@ -28167,13 +28173,13 @@
                                     "minLength": 1,
                                     "maxLength": 128
                                   },
-                                  "image_thumbnail_path": {
+                                  "image_thumbnail_url": {
                                     "type": "string",
-                                    "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                                    "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/thumb\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                                   },
-                                  "image_detail_path": {
+                                  "image_detail_url": {
                                     "type": "string",
-                                    "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                                    "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/detail\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                                   },
                                   "rarity": {
                                     "type": "string",
@@ -28203,8 +28209,8 @@
                                 "required": [
                                   "slot",
                                   "name",
-                                  "image_thumbnail_path",
-                                  "image_detail_path",
+                                  "image_thumbnail_url",
+                                  "image_detail_url",
                                   "rarity",
                                   "stage",
                                   "hp_percent",
@@ -28407,13 +28413,13 @@
                                               "minLength": 1,
                                               "maxLength": 128
                                             },
-                                            "image_thumbnail_path": {
+                                            "image_thumbnail_url": {
                                               "type": "string",
-                                              "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                                              "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/thumb\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                                             },
-                                            "image_detail_path": {
+                                            "image_detail_url": {
                                               "type": "string",
-                                              "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                                              "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/detail\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                                             },
                                             "rarity": {
                                               "type": "string",
@@ -28442,8 +28448,8 @@
                                           "required": [
                                             "slot",
                                             "name",
-                                            "image_thumbnail_path",
-                                            "image_detail_path",
+                                            "image_thumbnail_url",
+                                            "image_detail_url",
                                             "rarity",
                                             "stage"
                                           ],
@@ -29278,13 +29284,13 @@
                                 "minLength": 1,
                                 "maxLength": 128
                               },
-                              "image_thumbnail_path": {
+                              "image_thumbnail_url": {
                                 "type": "string",
-                                "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                                "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/thumb\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                               },
-                              "image_detail_path": {
+                              "image_detail_url": {
                                 "type": "string",
-                                "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                                "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/detail\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                               },
                               "rarity": {
                                 "type": "string",
@@ -29397,8 +29403,8 @@
                               "slot",
                               "template_id",
                               "name",
-                              "image_thumbnail_path",
-                              "image_detail_path",
+                              "image_thumbnail_url",
+                              "image_detail_url",
                               "rarity",
                               "stage",
                               "element",
@@ -29436,13 +29442,13 @@
                                     "minLength": 1,
                                     "maxLength": 128
                                   },
-                                  "image_thumbnail_path": {
+                                  "image_thumbnail_url": {
                                     "type": "string",
-                                    "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                                    "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/thumb\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                                   },
-                                  "image_detail_path": {
+                                  "image_detail_url": {
                                     "type": "string",
-                                    "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                                    "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/detail\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                                   },
                                   "rarity": {
                                     "type": "string",
@@ -29472,8 +29478,8 @@
                                 "required": [
                                   "slot",
                                   "name",
-                                  "image_thumbnail_path",
-                                  "image_detail_path",
+                                  "image_thumbnail_url",
+                                  "image_detail_url",
                                   "rarity",
                                   "stage",
                                   "hp_percent",
@@ -29676,13 +29682,13 @@
                                               "minLength": 1,
                                               "maxLength": 128
                                             },
-                                            "image_thumbnail_path": {
+                                            "image_thumbnail_url": {
                                               "type": "string",
-                                              "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                                              "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/thumb\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                                             },
-                                            "image_detail_path": {
+                                            "image_detail_url": {
                                               "type": "string",
-                                              "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                                              "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/detail\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                                             },
                                             "rarity": {
                                               "type": "string",
@@ -29711,8 +29717,8 @@
                                           "required": [
                                             "slot",
                                             "name",
-                                            "image_thumbnail_path",
-                                            "image_detail_path",
+                                            "image_thumbnail_url",
+                                            "image_detail_url",
                                             "rarity",
                                             "stage"
                                           ],
@@ -30174,13 +30180,13 @@
                                 "minLength": 1,
                                 "maxLength": 128
                               },
-                              "image_thumbnail_path": {
+                              "image_thumbnail_url": {
                                 "type": "string",
-                                "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                                "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/thumb\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                               },
-                              "image_detail_path": {
+                              "image_detail_url": {
                                 "type": "string",
-                                "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                                "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/detail\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                               },
                               "rarity": {
                                 "type": "string",
@@ -30293,8 +30299,8 @@
                               "slot",
                               "template_id",
                               "name",
-                              "image_thumbnail_path",
-                              "image_detail_path",
+                              "image_thumbnail_url",
+                              "image_detail_url",
                               "rarity",
                               "stage",
                               "element",
@@ -30332,13 +30338,13 @@
                                     "minLength": 1,
                                     "maxLength": 128
                                   },
-                                  "image_thumbnail_path": {
+                                  "image_thumbnail_url": {
                                     "type": "string",
-                                    "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                                    "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/thumb\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                                   },
-                                  "image_detail_path": {
+                                  "image_detail_url": {
                                     "type": "string",
-                                    "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                                    "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/detail\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                                   },
                                   "rarity": {
                                     "type": "string",
@@ -30368,8 +30374,8 @@
                                 "required": [
                                   "slot",
                                   "name",
-                                  "image_thumbnail_path",
-                                  "image_detail_path",
+                                  "image_thumbnail_url",
+                                  "image_detail_url",
                                   "rarity",
                                   "stage",
                                   "hp_percent",
@@ -30572,13 +30578,13 @@
                                               "minLength": 1,
                                               "maxLength": 128
                                             },
-                                            "image_thumbnail_path": {
+                                            "image_thumbnail_url": {
                                               "type": "string",
-                                              "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                                              "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/thumb\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                                             },
-                                            "image_detail_path": {
+                                            "image_detail_url": {
                                               "type": "string",
-                                              "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                                              "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/detail\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                                             },
                                             "rarity": {
                                               "type": "string",
@@ -30607,8 +30613,8 @@
                                           "required": [
                                             "slot",
                                             "name",
-                                            "image_thumbnail_path",
-                                            "image_detail_path",
+                                            "image_thumbnail_url",
+                                            "image_detail_url",
                                             "rarity",
                                             "stage"
                                           ],
@@ -31494,13 +31500,13 @@
                                 "minLength": 1,
                                 "maxLength": 128
                               },
-                              "image_thumbnail_path": {
+                              "image_thumbnail_url": {
                                 "type": "string",
-                                "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                                "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/thumb\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                               },
-                              "image_detail_path": {
+                              "image_detail_url": {
                                 "type": "string",
-                                "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                                "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/detail\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                               },
                               "rarity": {
                                 "type": "string",
@@ -31613,8 +31619,8 @@
                               "slot",
                               "template_id",
                               "name",
-                              "image_thumbnail_path",
-                              "image_detail_path",
+                              "image_thumbnail_url",
+                              "image_detail_url",
                               "rarity",
                               "stage",
                               "element",
@@ -31652,13 +31658,13 @@
                                     "minLength": 1,
                                     "maxLength": 128
                                   },
-                                  "image_thumbnail_path": {
+                                  "image_thumbnail_url": {
                                     "type": "string",
-                                    "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                                    "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/thumb\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                                   },
-                                  "image_detail_path": {
+                                  "image_detail_url": {
                                     "type": "string",
-                                    "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                                    "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/detail\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                                   },
                                   "rarity": {
                                     "type": "string",
@@ -31688,8 +31694,8 @@
                                 "required": [
                                   "slot",
                                   "name",
-                                  "image_thumbnail_path",
-                                  "image_detail_path",
+                                  "image_thumbnail_url",
+                                  "image_detail_url",
                                   "rarity",
                                   "stage",
                                   "hp_percent",
@@ -31892,13 +31898,13 @@
                                               "minLength": 1,
                                               "maxLength": 128
                                             },
-                                            "image_thumbnail_path": {
+                                            "image_thumbnail_url": {
                                               "type": "string",
-                                              "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                                              "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/thumb\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                                             },
-                                            "image_detail_path": {
+                                            "image_detail_url": {
                                               "type": "string",
-                                              "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                                              "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/detail\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                                             },
                                             "rarity": {
                                               "type": "string",
@@ -31927,8 +31933,8 @@
                                           "required": [
                                             "slot",
                                             "name",
-                                            "image_thumbnail_path",
-                                            "image_detail_path",
+                                            "image_thumbnail_url",
+                                            "image_detail_url",
                                             "rarity",
                                             "stage"
                                           ],
@@ -32645,13 +32651,13 @@
                                 "minLength": 1,
                                 "maxLength": 128
                               },
-                              "image_thumbnail_path": {
+                              "image_thumbnail_url": {
                                 "type": "string",
-                                "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                                "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/thumb\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                               },
-                              "image_detail_path": {
+                              "image_detail_url": {
                                 "type": "string",
-                                "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                                "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/detail\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                               },
                               "rarity": {
                                 "type": "string",
@@ -32764,8 +32770,8 @@
                               "slot",
                               "template_id",
                               "name",
-                              "image_thumbnail_path",
-                              "image_detail_path",
+                              "image_thumbnail_url",
+                              "image_detail_url",
                               "rarity",
                               "stage",
                               "element",
@@ -32803,13 +32809,13 @@
                                     "minLength": 1,
                                     "maxLength": 128
                                   },
-                                  "image_thumbnail_path": {
+                                  "image_thumbnail_url": {
                                     "type": "string",
-                                    "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                                    "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/thumb\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                                   },
-                                  "image_detail_path": {
+                                  "image_detail_url": {
                                     "type": "string",
-                                    "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                                    "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/detail\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                                   },
                                   "rarity": {
                                     "type": "string",
@@ -32839,8 +32845,8 @@
                                 "required": [
                                   "slot",
                                   "name",
-                                  "image_thumbnail_path",
-                                  "image_detail_path",
+                                  "image_thumbnail_url",
+                                  "image_detail_url",
                                   "rarity",
                                   "stage",
                                   "hp_percent",
@@ -33043,13 +33049,13 @@
                                               "minLength": 1,
                                               "maxLength": 128
                                             },
-                                            "image_thumbnail_path": {
+                                            "image_thumbnail_url": {
                                               "type": "string",
-                                              "pattern": "^\\/assets\\/catalog\\/v1\\/thumb\\/.*"
+                                              "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/thumb\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                                             },
-                                            "image_detail_path": {
+                                            "image_detail_url": {
                                               "type": "string",
-                                              "pattern": "^\\/assets\\/catalog\\/v1\\/detail\\/.*"
+                                              "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v1\\/detail\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
                                             },
                                             "rarity": {
                                               "type": "string",
@@ -33078,8 +33084,8 @@
                                           "required": [
                                             "slot",
                                             "name",
-                                            "image_thumbnail_path",
-                                            "image_detail_path",
+                                            "image_thumbnail_url",
+                                            "image_detail_url",
                                             "rarity",
                                             "stage"
                                           ],
@@ -35461,7 +35467,8 @@
                             "reconcile-payments",
                             "reconcile-mints",
                             "cleanup-idempotency",
-                            "monitor-invariants"
+                            "monitor-invariants",
+                            "cleanup-catalog-assets"
                           ]
                         },
                         "status": {
@@ -35697,7 +35704,8 @@
                             "reconcile-payments",
                             "reconcile-mints",
                             "cleanup-idempotency",
-                            "monitor-invariants"
+                            "monitor-invariants",
+                            "cleanup-catalog-assets"
                           ]
                         },
                         "status": {
@@ -35933,7 +35941,245 @@
                             "reconcile-payments",
                             "reconcile-mints",
                             "cleanup-idempotency",
-                            "monitor-invariants"
+                            "monitor-invariants",
+                            "cleanup-catalog-assets"
+                          ]
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": ["succeeded", "skipped"]
+                        },
+                        "processed_count": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "scan_from": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            },
+                            { "type": "null" }
+                          ]
+                        },
+                        "scan_to": {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                        },
+                        "chain": {
+                          "type": "object",
+                          "properties": {
+                            "candidates": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "succeeded": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "failed": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "unknown": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            }
+                          },
+                          "required": [
+                            "candidates",
+                            "succeeded",
+                            "failed",
+                            "unknown"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "job_run_id",
+                        "job_name",
+                        "status",
+                        "processed_count",
+                        "scan_from",
+                        "scan_to"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "request_id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "operation_id": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        { "type": "null" }
+                      ]
+                    }
+                  },
+                  "required": ["data", "request_id", "operation_id"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Errors: REQUEST_INVALID, REQUEST_BODY_NOT_ALLOWED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "401": {
+            "description": "Errors: CRON_UNAUTHORIZED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "404": {
+            "description": "Errors: JOB_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "500": {
+            "description": "Errors: DATABASE_RPC_FAILED, INTERNAL_ERROR, MINT_RESULT_INCOMPLETE",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "502": {
+            "description": "Errors: RESPONSE_INVALID",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          }
+        },
+        "x-idempotency-required": false,
+        "x-idempotency-forbidden": false,
+        "x-allow-pending-entry-handoff": false,
+        "x-error-codes": [
+          "DATABASE_RPC_FAILED",
+          "INTERNAL_ERROR",
+          "REQUEST_INVALID",
+          "RESPONSE_INVALID",
+          "REQUEST_BODY_NOT_ALLOWED",
+          "CRON_UNAUTHORIZED",
+          "JOB_NOT_FOUND",
+          "MINT_RESULT_INCOMPLETE"
+        ],
+        "x-error-definitions": {
+          "DATABASE_RPC_FAILED": {
+            "status": 500,
+            "message": "数据库操作失败",
+            "retryable": true,
+            "refreshScope": "all",
+            "recoveryAction": "query_operation"
+          },
+          "INTERNAL_ERROR": {
+            "status": 500,
+            "message": "服务暂时不可用",
+            "retryable": true,
+            "refreshScope": "all",
+            "recoveryAction": "query_operation"
+          },
+          "REQUEST_INVALID": {
+            "status": 400,
+            "message": "请求参数无效",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "RESPONSE_INVALID": {
+            "status": 502,
+            "message": "服务响应格式无效",
+            "retryable": true,
+            "refreshScope": "all",
+            "recoveryAction": "refresh"
+          },
+          "REQUEST_BODY_NOT_ALLOWED": {
+            "status": 400,
+            "message": "GET 请求不能携带请求体",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "CRON_UNAUTHORIZED": {
+            "status": 401,
+            "message": "后台任务认证失败",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "JOB_NOT_FOUND": {
+            "status": 404,
+            "message": "后台任务不存在",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "MINT_RESULT_INCOMPLETE": {
+            "status": 500,
+            "message": "Mint 成功资料不完整",
+            "retryable": true,
+            "refreshScope": "mint",
+            "recoveryAction": "refresh"
+          }
+        },
+        "x-refresh-scopes": []
+      }
+    },
+    "/api/jobs/cleanup-catalog-assets": {
+      "get": {
+        "operationId": "jobs_cleanup_catalog_assets",
+        "tags": ["jobs"],
+        "security": [{ "cronSecret": [] }],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "job_run_id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "job_name": {
+                          "type": "string",
+                          "enum": [
+                            "reconcile-payments",
+                            "reconcile-mints",
+                            "cleanup-idempotency",
+                            "monitor-invariants",
+                            "cleanup-catalog-assets"
                           ]
                         },
                         "status": {

@@ -53,30 +53,12 @@ const boxArtPaths: Record<BoxTier, string> = {
   rare: "/assets/boxes/rare.webp",
   legendary: "/assets/boxes/legendary.webp",
 };
-const representativeCollectibles: Record<
-  Rarity,
-  { name: string; path: string }
-> = {
-  common: {
-    name: "炭尾狐",
-    path: "/assets/gacha/representatives/v1/common.webp",
-  },
-  rare: {
-    name: "焰鬃狐",
-    path: "/assets/gacha/representatives/v1/rare.webp",
-  },
-  epic: {
-    name: "赤曜火狐",
-    path: "/assets/gacha/representatives/v1/epic.webp",
-  },
-  legendary: {
-    name: "九霄冰狐",
-    path: "/assets/gacha/representatives/v1/legendary.webp",
-  },
-  mythic: {
-    name: "创界星神龙",
-    path: "/assets/gacha/representatives/v1/mythic.webp",
-  },
+const representativeTemplateIds: Record<Rarity, string> = {
+  common: "PET-N-001-1",
+  rare: "PET-N-001-2",
+  epic: "PET-N-001-3",
+  legendary: "PET-A-001-3",
+  mythic: "PET-T-001-3",
 };
 const rarityOrder = ["common", "rare", "epic", "legendary", "mythic"] as const;
 
@@ -84,6 +66,7 @@ const pityLoadError = new Error("保底进度加载失败，请重试");
 
 export function GachaView(): ReactNode {
   const boxes = useApiQuery("gacha.bootstrap");
+  const catalog = useApiQuery("catalog.get");
   const identity = useApiQuery("identity.bootstrap");
   const session = useSession();
   const { isBlocked, run } = useOperationRegistry();
@@ -295,17 +278,24 @@ export function GachaView(): ReactNode {
                       className={`gacha-stage-art${active ? " active" : ""}`}
                       aria-hidden={!active}
                     >
-                      <CatalogImage
-                        path={boxArtPaths[box.tier]}
+                      <img
+                        className="catalog-image"
+                        src={boxArtPaths[box.tier]}
                         alt={active ? box.display_name : ""}
-                        variant="detail"
                         loading="eager"
                         fetchPriority="high"
-                        onAvailability={(available) =>
+                        onLoad={() =>
                           setReady((state) =>
-                            state[box.tier] === available
+                            state[box.tier] === true
                               ? state
-                              : { ...state, [box.tier]: available },
+                              : { ...state, [box.tier]: true },
+                          )
+                        }
+                        onError={() =>
+                          setReady((state) =>
+                            state[box.tier] === false
+                              ? state
+                              : { ...state, [box.tier]: false },
                           )
                         }
                       />
@@ -337,10 +327,10 @@ export function GachaView(): ReactNode {
                     }}
                   >
                     <span className="tier-art">
-                      <CatalogImage
-                        path={boxArtPaths[box.tier]}
+                      <img
+                        className="catalog-image"
+                        src={boxArtPaths[box.tier]}
                         alt=""
-                        variant="thumbnail"
                         loading="lazy"
                       />
                     </span>
@@ -361,19 +351,22 @@ export function GachaView(): ReactNode {
                   }}
                 >
                   {previewRarities.map((rarity) => {
-                    const representative = representativeCollectibles[rarity];
+                    const representative = catalog.data?.templates.find(
+                      (template) =>
+                        template.id === representativeTemplateIds[rarity],
+                    );
                     const probability =
                       selectedBox.rarity_weights[rarity] / 100;
                     return (
                       <article
                         key={rarity}
                         role="listitem"
-                        aria-label={`${representative.name}，${rarityLabels[rarity]}代表藏品，稀有度出货概率 ${probability}%`}
+                        aria-label={`${representative?.name ?? rarityLabels[rarity]}，${rarityLabels[rarity]}代表藏品，稀有度出货概率 ${probability}%`}
                       >
                         <span className={`preview-art rarity-${rarity}`}>
                           <CatalogImage
-                            path={representative.path}
-                            alt={representative.name}
+                            url={representative?.image_thumbnail_url}
+                            alt={representative?.name ?? rarityLabels[rarity]}
                             variant="thumbnail"
                             loading="lazy"
                           />

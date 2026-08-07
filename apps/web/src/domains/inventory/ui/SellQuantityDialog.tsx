@@ -38,7 +38,7 @@ export function SellQuantityDialog({
         <div className="inventory-action-dialog-content">
           <div className="inventory-quantity-item">
             <CatalogImage
-              path={item.image_thumbnail_path}
+              url={item.image_thumbnail_url}
               alt={item.name}
               variant="thumbnail"
               loading="eager"

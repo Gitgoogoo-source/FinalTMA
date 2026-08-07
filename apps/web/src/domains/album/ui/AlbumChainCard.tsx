@@ -56,7 +56,7 @@ export function AlbumChainCard({
               <span className="album-node-art" aria-hidden="true">
                 {node.unlocked ? (
                   <CatalogImage
-                    path={node.image_thumbnail_path}
+                    url={node.image_thumbnail_url}
                     alt=""
                     variant="thumbnail"
                     loading="lazy"

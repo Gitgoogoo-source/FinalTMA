@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate formal catalog masters, runtime variants, and release asset locks."""
+"""Validate Storage pet-art manifests and Vercel-owned release assets."""
 
 from __future__ import annotations
 
@@ -10,13 +10,20 @@ import os
 import re
 from pathlib import Path
 
+
 ROOT = Path(__file__).resolve().parents[2]
 PUBLIC = ROOT / "apps/web/public"
 BUILD = ROOT / "apps/web/dist"
-SOURCE = ROOT / "assets/source/catalog/v1"
 CATALOG = ROOT / "generated/catalog/catalog-v1.json"
+ART_MANIFEST = ROOT / "generated/assets/art-assets-v1.json"
 PLACEHOLDERS = ROOT / "generated/assets/placeholders.json"
 BRAND_MANIFEST = ROOT / "generated/assets/brand-v1.json"
+SILHOUETTE = "apps/web/public/assets/pets/pet-silhouette.svg"
+REMOVED_BINARY_ROOTS = (
+    ROOT / "assets/source/catalog/v1",
+    ROOT / "apps/web/public/assets/catalog/v1",
+    ROOT / "apps/web/public/assets/gacha/representatives",
+)
 DEVELOPMENT_PLACEHOLDER_PATH = "apps/web/public/assets/dev/placeholder.webp"
 PLACEHOLDER_PATHS = [
     DEVELOPMENT_PLACEHOLDER_PATH,
@@ -27,21 +34,27 @@ MVP_PRODUCTION_PLACEHOLDER_PATHS = [
     DEVELOPMENT_PLACEHOLDER_PATH,
     "apps/web/public/assets/share/preview.webp",
 ]
+VERCEL_ASSETS = [
+    "apps/web/public/assets/boxes/normal.webp",
+    "apps/web/public/assets/boxes/rare.webp",
+    "apps/web/public/assets/boxes/legendary.webp",
+    "apps/web/public/assets/share/preview.webp",
+    "apps/web/public/assets/ton/tonconnect-icon.png",
+]
 BRAND_ASSETS = {
     "apps/web/public/assets/share/preview.webp": ("webp", 1200, 630),
     "apps/web/public/assets/ton/tonconnect-icon.png": ("png", 180, 180),
 }
-VARIANTS = {
-    "image_thumbnail_path": ("thumb", 256, 50 * 1024),
-    "image_detail_path": ("detail", 768, 180 * 1024),
-}
-CATALOG_TOTAL_LIMIT = 50 * 1024 * 1024
+
+
+def digest_bytes(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
 
 
 def digest(path: Path) -> str:
     if not path.is_file() or path.stat().st_size == 0:
         raise SystemExit(f"Missing or empty asset: {path.relative_to(ROOT)}")
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+    return digest_bytes(path.read_bytes())
 
 
 def webp_dimensions(data: bytes) -> tuple[int, int]:
@@ -85,7 +98,7 @@ def has_alpha(path: Path, data: bytes) -> bool:
     return False
 
 
-def assert_format(path: Path) -> tuple[int, int] | None:
+def assert_format(path: Path) -> tuple[int, int]:
     data = path.read_bytes()
     if path.suffix == ".webp":
         if not (len(data) >= 20 and data[:4] == b"RIFF" and int.from_bytes(data[4:8], "little") + 8 == len(data) and data[8:12] == b"WEBP"):
@@ -99,8 +112,7 @@ def assert_format(path: Path) -> tuple[int, int] | None:
 
 
 def placeholder_fingerprints() -> dict[str, str]:
-    document = json.loads(PLACEHOLDERS.read_text(encoding="utf-8"))
-    files = document.get("files")
+    files = json.loads(PLACEHOLDERS.read_text(encoding="utf-8")).get("files")
     if (
         not isinstance(files, dict)
         or set(files) != set(PLACEHOLDER_PATHS)
@@ -110,22 +122,11 @@ def placeholder_fingerprints() -> dict[str, str]:
     return files
 
 
-def rejected_placeholder_paths(source_hashes: dict[str, str], fingerprints: dict[str, str]) -> list[str]:
-    rejected = set(fingerprints.values())
-    return sorted(name for name, actual in source_hashes.items() if actual in rejected)
-
-
 def assert_brand_manifest(source_hashes: dict[str, str]) -> None:
-    if not BRAND_MANIFEST.is_file():
-        raise SystemExit("Formal brand asset provenance is missing")
     document = json.loads(BRAND_MANIFEST.read_text(encoding="utf-8"))
-    palette = document.get("palette")
-    generation = document.get("generation")
-    rights = document.get("rights")
-    assets = document.get("assets")
     if document.get("schema_version") != 1 or document.get("brand") != "PokePets":
         raise SystemExit("Formal brand asset provenance identity is invalid")
-    if palette != {
+    if document.get("palette") != {
         "source": "apps/web/src/shared/styles/global.css",
         "primary": "#FF7A00",
         "secondary": "#4DBB39",
@@ -133,6 +134,9 @@ def assert_brand_manifest(source_hashes: dict[str, str]) -> None:
         "paper": "#FFFDFA",
     }:
         raise SystemExit("Formal brand palette differs from the locked UI design tokens")
+    generation = document.get("generation")
+    rights = document.get("rights")
+    assets = document.get("assets")
     if (
         not isinstance(generation, dict)
         or generation.get("mode") != "built-in imagegen"
@@ -140,20 +144,14 @@ def assert_brand_manifest(source_hashes: dict[str, str]) -> None:
         or generation.get("third_party_inputs") != []
         or not isinstance(generation.get("prompts"), dict)
         or set(generation["prompts"]) != {"icon", "share"}
-        or any(not isinstance(prompt, str) or not prompt.strip() for prompt in generation["prompts"].values())
+        or rights != {"usage": "PokePets project-owned", "third_party_licenses": [], "license_source": None}
+        or not isinstance(assets, dict)
+        or set(assets) != set(BRAND_ASSETS)
     ):
-        raise SystemExit("Formal brand generation provenance is incomplete")
-    if rights != {
-        "usage": "PokePets project-owned",
-        "third_party_licenses": [],
-        "license_source": None,
-    }:
-        raise SystemExit("Formal brand rights record is incomplete or claims an external license")
-    if not isinstance(assets, dict) or set(assets) != set(BRAND_ASSETS):
-        raise SystemExit("Formal brand asset provenance paths are incomplete")
+        raise SystemExit("Formal brand provenance is incomplete")
     for name, (expected_format, width, height) in BRAND_ASSETS.items():
-        path = ROOT / name
         item = assets[name]
+        path = ROOT / name
         if (
             not isinstance(item, dict)
             or item.get("format") != expected_format
@@ -161,97 +159,113 @@ def assert_brand_manifest(source_hashes: dict[str, str]) -> None:
             or item.get("height") != height
             or item.get("opaque") is not True
             or item.get("sha256") != source_hashes[name]
-            or not isinstance(item.get("source_artifact_sha256"), str)
-            or re.fullmatch(r"[0-9a-f]{64}", item["source_artifact_sha256"]) is None
-            or not isinstance(item.get("postprocessing"), list)
-            or not item["postprocessing"]
+            or assert_format(path) != (width, height)
+            or has_alpha(path, path.read_bytes())
         ):
             raise SystemExit(f"Formal brand asset provenance mismatch: {name}")
-        if assert_format(path) != (width, height) or has_alpha(path, path.read_bytes()):
-            raise SystemExit(f"Formal brand asset must be exact-size and opaque: {name}")
 
 
-def required_assets() -> tuple[list[dict[str, object]], list[str], list[str]]:
+def assert_art_manifest() -> None:
+    manifest = json.loads(ART_MANIFEST.read_text(encoding="utf-8"))
+    expected = manifest.pop("manifest_sha256", None)
+    actual = digest_bytes(
+        json.dumps(manifest, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
+    )
+    if expected != actual:
+        raise SystemExit("Art manifest checksum is invalid")
+    if (
+        manifest.get("schema_version") != 1
+        or manifest.get("catalog_version") != "v1"
+        or manifest.get("private_bucket") != "art-masters"
+        or manifest.get("public_bucket") != "pet-runtime"
+    ):
+        raise SystemExit("Art manifest identity or buckets are invalid")
     catalog = json.loads(CATALOG.read_text(encoding="utf-8"))
     templates = catalog.get("templates")
-    if not isinstance(templates, list) or len(templates) != 210:
-        raise SystemExit("Expected exactly 210 catalog templates")
-    catalog_paths: list[str] = []
-    for item in templates:
-        template_id = str(item.get("id"))
-        if not re.fullmatch(r"PET-[NAT]-\d{3}-[123]", template_id):
-            raise SystemExit(f"Invalid catalog template_id: {template_id}")
-        for key, (variant, _, _) in VARIANTS.items():
-            expected = f"/assets/catalog/v1/{variant}/{template_id.lower()}.webp"
-            if item.get(key) != expected:
-                raise SystemExit(f"Catalog {key} does not match template_id: {template_id}")
-            catalog_paths.append(f"apps/web/public{expected}")
-    if len(catalog_paths) != 420 or len(set(catalog_paths)) != 420:
-        raise SystemExit("Expected exactly 420 unique catalog runtime paths")
-    required = catalog_paths + [
-        "apps/web/public/assets/boxes/normal.webp",
-        "apps/web/public/assets/boxes/rare.webp",
-        "apps/web/public/assets/boxes/legendary.webp",
-        "apps/web/public/assets/share/preview.webp",
-        "apps/web/public/assets/ton/tonconnect-icon.png",
-    ]
-    if len(required) != 425 or len(set(required)) != 425:
-        raise SystemExit("Expected exactly 425 unique release assets")
-    return templates, catalog_paths, required
+    assets = manifest.get("templates")
+    if not isinstance(templates, list) or not isinstance(assets, list) or len(templates) != 210 or len(assets) != 210:
+        raise SystemExit("Catalog and art manifest must contain exactly 210 templates")
+    template_ids = [str(item.get("id")) for item in templates]
+    if any("image_thumbnail_path" in item or "image_detail_path" in item for item in templates):
+        raise SystemExit("Catalog product manifest must not pin delivery URLs or paths")
+    if [item.get("template_id") for item in assets] != template_ids:
+        raise SystemExit("Art manifest template order differs from the catalog")
+    master_hashes: set[str] = set()
+    runtime_hashes: set[str] = set()
+    object_keys: set[str] = set()
+    runtime_bytes = 0
+    for item in assets:
+        template_id = str(item["template_id"])
+        lower = template_id.lower()
+        records = {
+            "master": (768, 2 * 1024 * 1024, rf"^catalog/{lower}/[0-9a-f]{{64}}\.webp$"),
+            "thumbnail": (256, 50 * 1024, rf"^catalog/v1/thumb/{lower}\.[0-9a-f]{{64}}\.webp$"),
+            "detail": (768, 180 * 1024, rf"^catalog/v1/detail/{lower}\.[0-9a-f]{{64}}\.webp$"),
+        }
+        for name, (dimension, maximum, key_pattern) in records.items():
+            record = item.get(name)
+            if (
+                not isinstance(record, dict)
+                or re.fullmatch(key_pattern, str(record.get("key"))) is None
+                or re.fullmatch(r"[0-9a-f]{64}", str(record.get("sha256"))) is None
+                or record.get("mime_type") != "image/webp"
+                or record.get("width") != dimension
+                or record.get("height") != dimension
+                or not isinstance(record.get("bytes"), int)
+                or record["bytes"] < 1
+                or record["bytes"] > maximum
+            ):
+                raise SystemExit(f"Invalid {name} manifest record for {template_id}")
+            if record["key"] in object_keys:
+                raise SystemExit("Art object keys must be unique")
+            object_keys.add(record["key"])
+            if name == "master":
+                master_hashes.add(record["sha256"])
+            else:
+                runtime_hashes.add(record["sha256"])
+                runtime_bytes += record["bytes"]
+    if len(master_hashes) != 210 or len(runtime_hashes) != 420 or runtime_bytes > 50 * 1024 * 1024:
+        raise SystemExit("Art hashes are not unique or the runtime byte budget is exceeded")
 
 
-def assert_source_tree(templates: list[dict[str, object]]) -> None:
-    expected = {f"{str(item['id']).lower()}.webp" for item in templates}
-    actual = {path.name for path in SOURCE.iterdir() if path.is_file()} if SOURCE.is_dir() else set()
-    if actual != expected:
-        raise SystemExit(f"Catalog source mismatch; missing={sorted(expected - actual)}, extra={sorted(actual - expected)}")
-    hashes = set()
-    for name in expected:
-        path = SOURCE / name
-        if assert_format(path) != (768, 768):
-            raise SystemExit(f"Catalog master must be 768x768: {path.relative_to(ROOT)}")
-        hashes.add(digest(path))
-    if len(hashes) != 210:
-        raise SystemExit("Catalog masters must contain 210 unique files")
+def assert_removed_binaries(root: Path) -> None:
+    for path in REMOVED_BINARY_ROOTS:
+        relative = path.relative_to(ROOT)
+        target = root / relative if root == ROOT else root / relative.relative_to("apps/web/public")
+        if target.exists() and any(target.rglob("*")):
+            raise SystemExit(f"Pet binary tree must not be shipped: {target}")
 
 
-def assert_catalog_tree(root: Path, catalog_paths: list[str]) -> None:
-    expected = {Path(name).relative_to("apps/web/public").as_posix() for name in catalog_paths}
-    catalog_root = root / "assets/catalog/v1"
-    actual = {path.relative_to(root).as_posix() for path in catalog_root.rglob("*") if path.is_file()} if catalog_root.is_dir() else set()
-    if actual != expected:
-        raise SystemExit(f"Catalog asset tree mismatch; missing={sorted(expected - actual)}, extra={sorted(actual - expected)}")
-
-
-def assert_catalog_files(root: Path, catalog_paths: list[str]) -> dict[str, str]:
-    assert_catalog_tree(root, catalog_paths)
+def assert_repository_assets() -> dict[str, str]:
+    catalog_assets = json.loads(CATALOG.read_text(encoding="utf-8")).get("assets")
+    if not isinstance(catalog_assets, dict) or set(catalog_assets) != set(VERCEL_ASSETS):
+        raise SystemExit("Catalog release lock must contain only the five Vercel-owned required assets")
     hashes: dict[str, str] = {}
-    total = 0
-    for name in catalog_paths:
-        path = root / Path(name).relative_to("apps/web/public")
-        variant = "thumb" if "/thumb/" in name else "detail"
-        _, dimension, limit = next(config for config in VARIANTS.values() if config[0] == variant)
-        if assert_format(path) != (dimension, dimension):
-            raise SystemExit(f"Catalog {variant} dimensions must be {dimension}x{dimension}: {path.relative_to(ROOT)}")
-        size = path.stat().st_size
-        if size > limit:
-            raise SystemExit(f"Catalog {variant} exceeds {limit} bytes: {path.relative_to(ROOT)}")
-        total += size
+    for name in VERCEL_ASSETS:
+        path = ROOT / name
         hashes[name] = digest(path)
-    if total > CATALOG_TOTAL_LIMIT:
-        raise SystemExit(f"Catalog runtime assets exceed {CATALOG_TOTAL_LIMIT} bytes")
-    if len(set(hashes.values())) != 420:
-        raise SystemExit("Catalog runtime assets must contain 420 unique files")
+        assert_format(path)
+        if catalog_assets[name] != hashes[name]:
+            raise SystemExit(f"Vercel asset checksum mismatch: {name}")
+    assert_brand_manifest(hashes)
+    silhouette = ROOT / SILHOUETTE
+    if not silhouette.is_file() or "<svg" not in silhouette.read_text(encoding="utf-8"):
+        raise SystemExit("The Vercel pet silhouette is missing or invalid")
     return hashes
 
 
-def assert_build(required: list[str], source_hashes: dict[str, str], catalog_paths: list[str]) -> None:
-    assert_catalog_files(BUILD, catalog_paths)
-    for name in required:
+def assert_build(source_hashes: dict[str, str]) -> None:
+    for name in VERCEL_ASSETS:
         built = BUILD / Path(name).relative_to("apps/web/public")
         if digest(built) != source_hashes[name]:
-            raise SystemExit(f"Built asset is missing or differs from public source: {built.relative_to(ROOT)}")
-        assert_format(built)
+            raise SystemExit(f"Built Vercel asset differs from its source: {built.relative_to(ROOT)}")
+    built_silhouette = BUILD / Path(SILHOUETTE).relative_to("apps/web/public")
+    if digest(built_silhouette) != digest(ROOT / SILHOUETTE):
+        raise SystemExit("Built pet silhouette differs from its source")
+    for relative in ("assets/catalog", "assets/gacha/representatives"):
+        path = BUILD / relative
+        if path.exists() and any(path.rglob("*")):
+            raise SystemExit(f"Vercel build contains forbidden pet binaries: {path}")
 
 
 def main() -> None:
@@ -265,50 +279,29 @@ def main() -> None:
             raise SystemExit("APP_ENV must be development, test, or production for the delivery asset gate")
         args.mode = "development" if environment == "development" else "production"
     if args.pin_placeholders:
-        if not PLACEHOLDERS.is_file():
-            raise SystemExit("Placeholder fingerprints must already exist before updating the development placeholder")
         pinned = placeholder_fingerprints()
         pinned[DEVELOPMENT_PLACEHOLDER_PATH] = digest(ROOT / DEVELOPMENT_PLACEHOLDER_PATH)
         PLACEHOLDERS.write_text(json.dumps({"files": pinned}, indent=2) + "\n", encoding="utf-8")
-    if not PLACEHOLDERS.is_file():
-        raise SystemExit("Placeholder hashes are not pinned")
     expected_placeholders = placeholder_fingerprints()
     if expected_placeholders[DEVELOPMENT_PLACEHOLDER_PATH] != digest(ROOT / DEVELOPMENT_PLACEHOLDER_PATH):
         raise SystemExit("Development placeholder hash drift detected")
-
-    templates, catalog_paths, required = required_assets()
-    expected_assets = json.loads(CATALOG.read_text(encoding="utf-8")).get("assets")
-    if not isinstance(expected_assets, dict) or set(expected_assets) != set(required) or any(not re.fullmatch(r"[0-9a-f]{64}", str(value)) for value in expected_assets.values()):
-        raise SystemExit("Release asset hashes are not pinned for all 425 files")
-
-    assert_source_tree(templates)
-    catalog_hashes = assert_catalog_files(PUBLIC, catalog_paths)
-    source_hashes: dict[str, str] = {}
-    for name in required:
-        path = ROOT / name
-        actual = digest(path)
-        assert_format(path)
-        if expected_assets[name] != actual:
-            raise SystemExit(f"Release asset hash mismatch: {name}")
-        source_hashes[name] = actual
-    if any(source_hashes[name] != checksum for name, checksum in catalog_hashes.items()):
-        raise SystemExit("Catalog runtime hash validation is inconsistent")
-    assert_brand_manifest(source_hashes)
+    assert_art_manifest()
+    assert_removed_binaries(ROOT)
+    source_hashes = assert_repository_assets()
     if args.mode == "catalog":
-        print("all 210 formal masters and 420 runtime catalog assets are valid, unique, budgeted, and hash-locked")
+        print("art manifest covers 210 masters and 420 immutable runtime objects; Git pet binaries are absent")
         return
-
-    assert_build(required, source_hashes, catalog_paths)
+    assert_build(source_hashes)
     if args.mode == "development":
-        print("all 425 development release assets are path-valid, format-valid, hash-locked, and present in the build")
+        print("Vercel build contains only Vercel-owned art plus the pet silhouette")
         return
-    mvp_placeholder_fingerprints = {
-        path: expected_placeholders[path] for path in MVP_PRODUCTION_PLACEHOLDER_PATHS
+    rejected = {
+        expected_placeholders[path] for path in MVP_PRODUCTION_PLACEHOLDER_PATHS
     }
-    placeholders = rejected_placeholder_paths(source_hashes, mvp_placeholder_fingerprints)
+    placeholders = sorted(name for name, value in source_hashes.items() if value in rejected)
     if placeholders:
         raise SystemExit("Formal production assets still contain development-only checksums:\n" + "\n".join(placeholders))
-    print("all 425 formal production assets are valid, unique, hash-locked, and present in the build")
+    print("formal production Vercel assets are valid and pet runtime binaries are excluded")
 
 
 if __name__ == "__main__":

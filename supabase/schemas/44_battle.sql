@@ -356,8 +356,6 @@ create table battle.team_members (
   slot smallint not null check (slot between 1 and 3),
   template_id text not null references catalog.templates(id),
   template_name text not null,
-  image_thumbnail_path text not null,
-  image_detail_path text not null,
   rarity text not null check (rarity in ('common', 'rare', 'epic', 'legendary', 'mythic')),
   stage smallint not null check (stage between 1 and 3),
   element text not null check (element in ('fire', 'grass', 'earth', 'lightning', 'water')),
@@ -1364,8 +1362,8 @@ as $$
     'slot', tm.slot,
     'template_id', tm.template_id,
     'name', tm.template_name,
-    'image_thumbnail_path', tm.image_thumbnail_path,
-    'image_detail_path', tm.image_detail_path,
+    'image_thumbnail_url', catalog.template_thumbnail_url(tm.template_id),
+    'image_detail_url', catalog.template_detail_url(tm.template_id),
     'rarity', tm.rarity,
     'stage', tm.stage,
     'element', tm.element,
@@ -1399,8 +1397,8 @@ as $$
   select coalesce(jsonb_agg(jsonb_build_object(
     'slot', tm.slot,
     'name', tm.template_name,
-    'image_thumbnail_path', tm.image_thumbnail_path,
-    'image_detail_path', tm.image_detail_path,
+    'image_thumbnail_url', catalog.template_thumbnail_url(tm.template_id),
+    'image_detail_url', catalog.template_detail_url(tm.template_id),
     'rarity', tm.rarity,
     'stage', tm.stage,
     'hp_percent', round(tm.current_hp::numeric * 100 / tm.max_hp::numeric, 2),
@@ -1841,8 +1839,8 @@ begin
       select jsonb_agg(jsonb_build_object(
         'template_id', t.id,
         'name', t.name,
-        'image_thumbnail_path', t.image_thumbnail_path,
-        'image_detail_path', t.image_detail_path,
+        'image_thumbnail_url', catalog.template_thumbnail_url(t.id),
+        'image_detail_url', catalog.template_detail_url(t.id),
         'rarity', t.rarity,
         'stage', t.stage,
         'available_quantity', inventory.available_quantity(v_user_id, t.id),
@@ -2089,12 +2087,11 @@ begin
     end if;
     insert into battle.team_members (
       participant_id, slot, template_id, template_name,
-      image_thumbnail_path, image_detail_path, rarity, stage, element,
+      rarity, stage, element,
       max_hp, current_hp, attack, defense, speed,
       skill_1_id, skill_2_id, skill_3_id, skill_4_id, alive, active
     ) values (
       p_participant_id, v_item.slot, v_template.id, v_template.name,
-      v_template.image_thumbnail_path, v_template.image_detail_path,
       v_template.rarity, v_template.stage, v_config.element,
       v_config.max_hp, v_config.max_hp, v_config.attack, v_config.defense, v_config.speed,
       v_config.skill_1_id, v_config.skill_2_id, v_config.skill_3_id, v_config.skill_4_id,
@@ -2437,8 +2434,6 @@ begin
         where t.id is null
           or c.template_id is null
           or tm.template_name is distinct from t.name
-          or tm.image_thumbnail_path is distinct from t.image_thumbnail_path
-          or tm.image_detail_path is distinct from t.image_detail_path
           or tm.rarity is distinct from t.rarity
           or tm.rarity is distinct from c.rarity
           or tm.stage is distinct from t.stage
@@ -3887,8 +3882,8 @@ as $$
   select jsonb_build_object(
     'slot', tm.slot,
     'name', tm.template_name,
-    'image_thumbnail_path', tm.image_thumbnail_path,
-    'image_detail_path', tm.image_detail_path,
+    'image_thumbnail_url', catalog.template_thumbnail_url(tm.template_id),
+    'image_detail_url', catalog.template_detail_url(tm.template_id),
     'rarity', tm.rarity,
     'stage', tm.stage
   )

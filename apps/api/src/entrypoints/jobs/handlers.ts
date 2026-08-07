@@ -16,4 +16,7 @@ export const jobHandlers = {
   "jobs.monitor_invariants": async () => ({
     data: await runScheduledJob("monitor-invariants"),
   }),
+  "jobs.cleanup_catalog_assets": async () => ({
+    data: await runScheduledJob("cleanup-catalog-assets"),
+  }),
 } satisfies Record<RouteId, RouteHandler>;

@@ -14,7 +14,6 @@ export type EvolutionRoute = {
     name: string;
     rarity: Exclude<EvolutionRarity, "common">;
     stage: number;
-    image_thumbnail_path: string;
   };
   success_rate_percent: number;
   fgems_cost: number;

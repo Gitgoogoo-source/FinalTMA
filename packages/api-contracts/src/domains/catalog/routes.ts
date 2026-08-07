@@ -9,6 +9,7 @@ export const catalogOutputSchema = z
   .object({
     version: z.literal("v1"),
     product_checksum: z.string().length(64),
+    asset_revision: z.number().int().positive(),
     chains: z.array(catalogChainSchema).length(70),
     templates: z.array(catalogTemplateSchema).length(210),
     boxes: z.array(boxSchema).length(3),

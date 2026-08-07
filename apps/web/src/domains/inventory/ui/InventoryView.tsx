@@ -254,7 +254,7 @@ export function InventoryView({
                               }}
                             >
                               <CatalogImage
-                                path={candidate.image_thumbnail_path}
+                                url={candidate.image_thumbnail_url}
                                 alt={candidate.name}
                                 variant="thumbnail"
                                 loading="lazy"
@@ -300,7 +300,7 @@ export function InventoryView({
             aria-labelledby="inventory-target-empty-title"
           >
             <CatalogImage
-              path={targetTemplate.image_thumbnail_path}
+              url={targetTemplate.image_thumbnail_url}
               alt={targetTemplate.name}
               variant="thumbnail"
               loading="eager"

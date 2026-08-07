@@ -23,7 +23,7 @@ type EvolutionSource = {
   rarity: EvolutionRarity;
   stage: number;
   available: number;
-  image_thumbnail_path: string;
+  image_thumbnail_url: string;
 };
 
 const rarityLabels: Record<EvolutionRarity, string> = {
@@ -37,12 +37,14 @@ const rarityLabels: Record<EvolutionRarity, string> = {
 export function EvolutionConfirmationDialog({
   source,
   route,
+  targetImageUrl,
   availableFgems,
   onCancel,
   onConfirm,
 }: {
   source: EvolutionSource;
   route: EvolutionRoute;
+  targetImageUrl: string | undefined;
   availableFgems: number | undefined;
   onCancel(): void;
   onConfirm(quantity: number): void;
@@ -93,7 +95,11 @@ export function EvolutionConfirmationDialog({
         />
 
         <div className="evolution-confirmation-content">
-          <EvolutionFusionPreview source={source} route={route} />
+          <EvolutionFusionPreview
+            source={source}
+            route={route}
+            targetImageUrl={targetImageUrl}
+          />
 
           <section className="evolution-rule-summary" aria-label="进化规则">
             <div className="evolution-rarity-change">
@@ -175,9 +181,11 @@ export function EvolutionConfirmationDialog({
 function EvolutionFusionPreview({
   source,
   route,
+  targetImageUrl,
 }: {
   source: EvolutionSource;
   route: EvolutionRoute;
+  targetImageUrl: string | undefined;
 }): ReactNode {
   return (
     <section
@@ -195,7 +203,7 @@ function EvolutionFusionPreview({
       />
       <article className="evolution-target-card">
         <CatalogImage
-          path={route.target.image_thumbnail_path}
+          url={targetImageUrl}
           alt={route.target.name}
           variant="thumbnail"
           loading="eager"
@@ -227,7 +235,7 @@ function MaterialSlot({
     >
       {filled ? (
         <CatalogImage
-          path={source.image_thumbnail_path}
+          url={source.image_thumbnail_url}
           alt=""
           variant="thumbnail"
           loading="eager"

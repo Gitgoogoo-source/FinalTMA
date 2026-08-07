@@ -7,6 +7,7 @@ import {
 import { X } from "lucide-react";
 
 import { evolutionRoute } from "../../domains/evolution/config.ts";
+import { useApiQuery } from "../../platform/query/index.ts";
 import { haptic, selectionHaptic } from "../../platform/telegram/index.ts";
 import { Badge, Button, CatalogImage } from "../../shared/ui/index.tsx";
 import type { OperationPhase } from "./context.ts";
@@ -17,8 +18,8 @@ type SuccessAction = "inventory" | "album";
 
 type EvolutionPresentation = {
   sourceName: string;
-  sourceImagePath: string | null;
-  targetImagePath: string | null;
+  sourceImageUrl: string | null;
+  targetImageUrl: string | null;
 };
 
 const CEREMONY_DURATION_MS = 5_000;
@@ -65,9 +66,11 @@ export function EvolutionOperationDialog({
 }): ReactNode {
   const parsed = routeById("inventory.evolve").output.safeParse(result);
   const confirmedResult = parsed.success ? parsed.data : null;
+  const catalog = useApiQuery("catalog.get");
   const presentation = useMemo(
-    () => evolutionPresentation(input, confirmedResult),
-    [confirmedResult, input],
+    () =>
+      evolutionPresentation(input, confirmedResult, catalog.data?.templates),
+    [catalog.data?.templates, confirmedResult, input],
   );
   const [ceremonyComplete, setCeremonyComplete] = useState(false);
   const announcedOutcome = useRef<string | null>(null);
@@ -133,7 +136,7 @@ export function EvolutionOperationDialog({
     return (
       <EvolutionStage className="evolution-stage--rejected">
         <EvolutionPet
-          path={presentation.sourceImagePath}
+          url={presentation.sourceImageUrl}
           alt={presentation.sourceName}
           className="evolution-stage-pet--restored"
         />
@@ -158,7 +161,7 @@ export function EvolutionOperationDialog({
   return (
     <EvolutionStage className="evolution-stage--interrupted">
       <EvolutionPet
-        path={presentation.sourceImagePath}
+        url={presentation.sourceImageUrl}
         alt={presentation.sourceName}
         className="evolution-stage-pet--restored"
       />
@@ -186,7 +189,7 @@ function EvolutionCeremony({
         进化
       </p>
       <EvolutionPet
-        path={presentation.targetImagePath}
+        url={presentation.targetImageUrl}
         alt=""
         className="evolution-ceremony-shadow"
       />
@@ -214,7 +217,7 @@ function EvolutionSuccess({
   return (
     <EvolutionStage className="evolution-stage--success" celebration>
       <EvolutionPet
-        path={result.target.image_detail_path}
+        url={result.target.image_detail_url}
         alt={result.target.name}
         className="evolution-stage-pet--revealed"
       />
@@ -273,7 +276,7 @@ function EvolutionFailure({
   return (
     <EvolutionStage className="evolution-stage--failure" failure>
       <EvolutionPet
-        path={result.source.image_detail_path}
+        url={result.source.image_detail_url}
         alt={result.source.name}
         className="evolution-stage-pet--restored"
       />
@@ -366,19 +369,19 @@ function EvolutionStage({
 }
 
 function EvolutionPet({
-  path,
+  url,
   alt,
   className,
 }: {
-  path: string | null;
+  url: string | null;
   alt: string;
   className: string;
 }): ReactNode {
   return (
     <div className={`evolution-stage-pet ${className}`}>
-      {path ? (
+      {url ? (
         <CatalogImage
-          path={path}
+          url={url}
           alt={alt}
           variant="detail"
           loading="eager"
@@ -439,29 +442,32 @@ function SettlementDetails({
 function evolutionPresentation(
   input: unknown,
   result: EvolutionResult | null,
+  templates:
+    | ReadonlyArray<{
+        id: string;
+        name: string;
+        image_detail_url: string;
+      }>
+    | undefined,
 ): EvolutionPresentation {
   const parsedInput = routeById("inventory.evolve").input.safeParse(input);
   const sourceTemplateId =
     result?.source.template_id ??
     (parsedInput.success ? parsedInput.data.template_id : null);
   const route = sourceTemplateId ? evolutionRoute(sourceTemplateId) : undefined;
+  const source = templates?.find(
+    (template) => template.id === sourceTemplateId,
+  );
+  const target = templates?.find(
+    (template) => template.id === route?.target.template_id,
+  );
   return {
-    sourceName: result?.source.name ?? "原藏品",
-    sourceImagePath:
-      result?.source.image_detail_path ??
-      (sourceTemplateId ? catalogDetailPath(sourceTemplateId) : null),
-    targetImagePath:
-      result?.target.image_detail_path ??
-      (route ? thumbnailToDetail(route.target.image_thumbnail_path) : null),
+    sourceName: result?.source.name ?? source?.name ?? "原藏品",
+    sourceImageUrl:
+      result?.source.image_detail_url ?? source?.image_detail_url ?? null,
+    targetImageUrl:
+      result?.target.image_detail_url ?? target?.image_detail_url ?? null,
   };
-}
-
-function catalogDetailPath(templateId: string): string {
-  return `/assets/catalog/v1/detail/${templateId.toLowerCase()}.webp`;
-}
-
-function thumbnailToDetail(path: string): string {
-  return path.replace("/thumb/", "/detail/");
 }
 
 function resultPityDistance(result: EvolutionResult): string {

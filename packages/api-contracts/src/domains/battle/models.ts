@@ -3,6 +3,8 @@ import { z } from "zod";
 import {
   identifierSchema,
   nonNegativeIntegerSchema,
+  petDetailUrlSchema,
+  petThumbnailUrlSchema,
   raritySchema,
   timestampSchema,
   uuidSchema,
@@ -220,8 +222,8 @@ export const battleTeamOptionSchema = z
   .object({
     template_id: identifierSchema,
     name: z.string().trim().min(1).max(128),
-    image_thumbnail_path: z.string().startsWith("/assets/catalog/v1/thumb/"),
-    image_detail_path: z.string().startsWith("/assets/catalog/v1/detail/"),
+    image_thumbnail_url: petThumbnailUrlSchema,
+    image_detail_url: petDetailUrlSchema,
     rarity: raritySchema,
     stage: z.union([z.literal(1), z.literal(2), z.literal(3)]),
     available_quantity: z.number().int().positive(),
@@ -247,8 +249,8 @@ export const battleSelfTeamMemberSchema = z
     slot: z.union([z.literal(1), z.literal(2), z.literal(3)]),
     template_id: identifierSchema,
     name: z.string().trim().min(1).max(128),
-    image_thumbnail_path: z.string().startsWith("/assets/catalog/v1/thumb/"),
-    image_detail_path: z.string().startsWith("/assets/catalog/v1/detail/"),
+    image_thumbnail_url: petThumbnailUrlSchema,
+    image_detail_url: petDetailUrlSchema,
     rarity: raritySchema,
     stage: z.union([z.literal(1), z.literal(2), z.literal(3)]),
     element: battleElementSchema,
@@ -279,8 +281,8 @@ export const battleOpponentTeamMemberSchema = z
   .object({
     slot: z.union([z.literal(1), z.literal(2), z.literal(3)]),
     name: z.string().trim().min(1).max(128),
-    image_thumbnail_path: z.string().startsWith("/assets/catalog/v1/thumb/"),
-    image_detail_path: z.string().startsWith("/assets/catalog/v1/detail/"),
+    image_thumbnail_url: petThumbnailUrlSchema,
+    image_detail_url: petDetailUrlSchema,
     rarity: raritySchema,
     stage: z.union([z.literal(1), z.literal(2), z.literal(3)]),
     hp_percent: z.number().min(0).max(100),
@@ -319,8 +321,8 @@ const battlePublicSwitchTargetSchema = z
   .object({
     slot: z.union([z.literal(1), z.literal(2), z.literal(3)]),
     name: z.string().trim().min(1).max(128),
-    image_thumbnail_path: z.string().startsWith("/assets/catalog/v1/thumb/"),
-    image_detail_path: z.string().startsWith("/assets/catalog/v1/detail/"),
+    image_thumbnail_url: petThumbnailUrlSchema,
+    image_detail_url: petDetailUrlSchema,
     rarity: raritySchema,
     stage: z.union([z.literal(1), z.literal(2), z.literal(3)]),
   })

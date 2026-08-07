@@ -17,7 +17,7 @@ export function EvolutionAction({
     rarity: EvolutionRarity;
     available: number;
     stage: number;
-    image_thumbnail_path: string;
+    image_thumbnail_url: string;
   };
   imageReady: boolean;
   disabled: boolean;
@@ -25,7 +25,13 @@ export function EvolutionAction({
   const { isBlocked, run } = useOperationRegistry();
   const [confirming, setConfirming] = useState(false);
   const bootstrap = useApiQuery("identity.bootstrap");
+  const catalog = useApiQuery("catalog.get", {}, confirming);
   const route = evolutionRoute(item.template_id);
+  const target = route
+    ? catalog.data?.templates.find(
+        (template) => template.id === route.target.template_id,
+      )
+    : undefined;
   const evolving = isBlocked("inventory.evolve");
   const reason = evolutionDisabledReason({
     item,
@@ -59,6 +65,7 @@ export function EvolutionAction({
         <EvolutionConfirmationDialog
           source={item}
           route={route}
+          targetImageUrl={target?.image_thumbnail_url}
           availableFgems={bootstrap.data?.assets.fgems.available}
           onCancel={() => setConfirming(false)}
           onConfirm={(quantity) => void confirm(quantity)}

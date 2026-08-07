@@ -115,7 +115,7 @@ function SingleResult({ item }: { item: ResultItem }): ReactNode {
       <strong className="gacha-moon-rarity">{rarityLabels[item.rarity]}</strong>
       <div className="gacha-moon-art">
         <CatalogImage
-          path={item.image_detail_path}
+          url={item.image_detail_url}
           alt={item.name}
           variant="detail"
           loading="eager"
@@ -286,7 +286,7 @@ function TenDrawResults({ results }: { results: ResultItem[] }): ReactNode {
             <span className="gacha-moon-new">NEW</span>
             <div className="gacha-moon-art">
               <CatalogImage
-                path={item.image_detail_path}
+                url={item.image_detail_url}
                 alt={item.name}
                 variant="detail"
                 loading={

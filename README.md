@@ -10,7 +10,7 @@ apps/web/               React + Vite Mini App
 apps/api/               Functions 领域、工作流与平台适配
 packages/api-contracts/ REST 契约、错误注册表与 OpenAPI
 contracts/ton/          Tact 合约、部署与验证命令
-assets/source/          不进入 Web 构建的正式藏品母版
+assets/source/          不含二进制，仅保留资源发布说明
 supabase/schemas/       声明式业务 Schema
 supabase/migrations/    baseline、product_data_v1、api_security
 generated/              Catalog、Battle 与资产校验清单
@@ -24,7 +24,6 @@ docs/                   产品、架构、ADR 与运维资料
 ```sh
 pnpm install --frozen-lockfile
 pnpm product-data:build
-pnpm catalog:generate-assets
 pnpm catalog:pin-assets
 pnpm contracts:openapi
 pnpm validate:static

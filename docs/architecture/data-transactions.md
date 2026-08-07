@@ -2,13 +2,15 @@
 
 ## Schema 所有权
 
-`supabase/schemas` 按业务上下文编号。`catalog` 拥有链、模板、版本、共享固定属性以及 `image_thumbnail_path`、`image_detail_path` 两个版本化相对路径，不保存图片二进制；`33_decomposition.sql` 与 `43_evolution.sql` 分别拥有对应命令声明，进化保底表为 `evolution.pity`；`gacha` 拥有 `gacha.boxes`；`payments` 拥有 `payments.topup_products`；`44_battle.sql` 拥有内部 `battle` schema、`battle-v1` 配置、room 状态机、引擎、玩家 RPC、私有审计和 outbox；`70_wallet.sql` 与 `71_mint.sql` 分别声明钱包和 Mint，但继续使用内部 `onchain` schema；`90_payment_callbacks.sql` 与 `91_mint_reconciliation.sql` 分别声明支付回调和 Mint 对账；`95_jobs.sql` 拥有 Battle 不变量监控；`96_admin.sql` 在全部业务对象之后声明 owner-only 环境门禁、验收 command、run/资产审计、fixture-owned provenance、余额/holding provenance 触发器与受控 reconciliation。查询读模型 `api.catalog_get` 在所有依赖对象之后声明。
+`supabase/schemas` 按业务上下文编号。`catalog` 拥有链、模板、产品版本、资源对象、完整资源发布批次、当前批次指针、公开交付配置和资源 revision，不保存图片二进制；所有目录读模型在读取时解析当前发布的 `image_thumbnail_url` 与 `image_detail_url`。`33_decomposition.sql` 与 `43_evolution.sql` 分别拥有对应命令声明，进化保底表为 `evolution.pity`；`gacha` 拥有 `gacha.boxes`；`payments` 拥有 `payments.topup_products`；`44_battle.sql` 拥有内部 `battle` schema、`battle-v1` 配置、room 状态机、引擎、玩家 RPC、私有审计和 outbox，但队伍成员只保存 `template_id` 与战斗属性，不保存图片 URL 快照；`70_wallet.sql` 与 `71_mint.sql` 分别声明钱包和 Mint，但继续使用内部 `onchain` schema；`90_payment_callbacks.sql` 与 `91_mint_reconciliation.sql` 分别声明支付回调和 Mint 对账；`95_jobs.sql` 拥有 Battle 不变量监控和公开宠物对象清理租约；`96_admin.sql` 在全部业务对象之后声明 owner-only 环境门禁、验收 command、run/资产审计、fixture-owned provenance、余额/holding provenance 触发器与受控 reconciliation。查询读模型 `api.catalog_get` 在所有依赖对象之后声明。
 
 ## 写入规则
 
 公开匹配由 `api.battle_matchmake` 单事务完成。它先取得当前用户锁，再取得 `ruleset_id + entry_tier_id` 独立匹配锁；只在同规则、同档、`public_match/waiting` 候选中随机执行 `FOR UPDATE`。档位锁保证匹配请求串行；候选被心跳、取消或到期事务短暂占用时等待其完成并重新裁决，因此有有效候选就加入，只有确实没有候选才建房。存在候选时与好友接受共用 `battle.attach_opponent_and_start_lobby`，但内部函数按 `room_mode` 裁决：好友房保留 presence 等待，公开匹配固定直接锁定 3 秒 `lobby_countdown`。不存在候选时原子创建 120 秒房间、三份 reservation 和一份 locked stake。取消或超时共用 `battle.close_unstarted_room`，原额退款并释放三宠。好友房与公开房通过 `room_mode`、条件字段和部分候选索引双向隔离。
 
 所有玩家写操作只调用一个 `api` 命令 RPC。创建 operation 的 RPC 依次验证会话、账号状态、资源归属、请求前置条件和幂等键；不创建 operation 的语义幂等 RPC 依次验证同一安全边界与目标状态。资产、账本、库存、预留、奖励和业务状态写入均在一个 PostgreSQL 事务中完成。Functions 只能传递用户意图和目标标识。
+
+美术发布不是玩家业务写入。受控工具先无覆盖上传并校验 210 份私有母版和 420 份公开运行时对象，再调用一个 service-role 专用 RPC；RPC 锁定资源发布边界，验证发布键、manifest SHA-256、210 模板完备性和对象字段后，在同一事务创建批次、退役旧批次、切换当前指针并递增 revision。同键同载荷回放返回同一当前结果，同键不同载荷拒绝。清理任务按数据库租约领取满足 90 天、无当前引用且无回滚锁的公开对象，Storage API 删除成功后才把对象标记为已删除；失败和过期租约可安全重试，私有对象永不进入领取集合。
 
 库存占用统一调用 `inventory.reserve`：先锁定用户持有行，再重算全部活跃 reservation，最后写入出售、远征、Battle 或 Mint 占用。库存扣减不得低于仍活跃的 reservation；市场成交和 Mint 成功先消费对应 reservation，再扣减总量。Battle 创建者与接受者分别按 `template_id` 排序锁定 holding，并对三个不同模板各创建数量 1、`kind = battle`、reference 指向 participant 的 reservation。统一库存等式为 `total = available + listed + trading + minting + expedition + battling`。市场上架和按模板全部下架使用同一用户级事务 advisory lock；锁内按仍有剩余数量的不同模板计数，已有 10 种时只允许向现有模板追加。全部下架再按 FIFO 稳定顺序锁定本人该模板的全部有效挂单，原子取消并释放其剩余 reservation；没有有效挂单也以释放 0 的结果幂等成功。支付创建按用户和商品类型加事务锁，Mint 按用户和模板加事务锁并受活跃唯一约束，邀请奖励按邀请人加事务锁。
 

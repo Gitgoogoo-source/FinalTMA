@@ -183,7 +183,7 @@ export function ExpeditionPanel(): ReactNode {
                   return (
                     <Card key={id} className={count ? "selected" : ""}>
                       <CatalogImage
-                        path={item.image_thumbnail_path}
+                        url={item.image_thumbnail_url}
                         alt={item.name}
                         variant="thumbnail"
                         loading="lazy"

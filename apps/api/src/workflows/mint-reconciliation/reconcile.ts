@@ -15,7 +15,7 @@ type Candidate = {
   rarity: string;
   stage: number;
   combat_power: number;
-  image_detail_path: string;
+  image_detail_url: string;
 };
 
 export async function reconcileSubmittedMints(): Promise<{
@@ -65,10 +65,7 @@ export async function reconcileSubmittedMints(): Promise<{
       const metadata = {
         name: candidate.name,
         description: `PokePets ${candidate.name}`,
-        image: new URL(
-          candidate.image_detail_path,
-          env.APP_BASE_URL,
-        ).toString(),
+        image: candidate.image_detail_url,
         attributes: [
           { trait_type: "Template", value: candidate.template_id },
           { trait_type: "Rarity", value: candidate.rarity },

@@ -37,7 +37,7 @@ export function DecompositionAction({
       {
         presentation: {
           name: item.name,
-          imagePath: item.image_detail_path,
+          imagePath: item.image_detail_url,
         },
       },
     );

@@ -100,7 +100,7 @@ export function TeamSelector({
                 {item ? (
                   <>
                     <CatalogImage
-                      path={item.image_thumbnail_path}
+                      url={item.image_thumbnail_url}
                       alt=""
                       variant="thumbnail"
                       loading="lazy"
@@ -220,7 +220,7 @@ export function TeamSelector({
                 onClick={() => choose(item.template_id)}
               >
                 <CatalogImage
-                  path={item.image_thumbnail_path}
+                  url={item.image_thumbnail_url}
                   alt={item.name}
                   variant="thumbnail"
                   loading="lazy"
@@ -274,7 +274,7 @@ function TeamOptionDetail({ item }: { item: TeamOption }): ReactNode {
     >
       <div className="battle-option-detail-art">
         <CatalogImage
-          path={item.image_detail_path}
+          url={item.image_detail_url}
           alt={item.name}
           variant="detail"
           loading="lazy"

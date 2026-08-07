@@ -12,6 +12,7 @@ const names = [
   "reconcile-mints",
   "cleanup-idempotency",
   "monitor-invariants",
+  "cleanup-catalog-assets",
 ] as const;
 const jobOutputSchema = z
   .object({

@@ -4,6 +4,8 @@ import { assetsSchema } from "../../common/models.ts";
 import {
   chainTypeSchema,
   nonNegativeIntegerSchema,
+  petDetailUrlSchema,
+  petThumbnailUrlSchema,
   raritySchema,
 } from "../../common/schemas.ts";
 
@@ -13,8 +15,8 @@ export const evolutionTemplateSchema = z
     name: z.string(),
     rarity: raritySchema,
     stage: z.union([z.literal(1), z.literal(2), z.literal(3)]),
-    image_thumbnail_path: z.string().startsWith("/assets/catalog/v1/thumb/"),
-    image_detail_path: z.string().startsWith("/assets/catalog/v1/detail/"),
+    image_thumbnail_url: petThumbnailUrlSchema,
+    image_detail_url: petDetailUrlSchema,
   })
   .strict();
 
@@ -160,8 +162,8 @@ export const inventoryItemSchema = z
     stage: z.union([z.literal(1), z.literal(2), z.literal(3)]),
     chain_id: z.string(),
     chain_type: chainTypeSchema,
-    image_thumbnail_path: z.string().startsWith("/assets/catalog/v1/thumb/"),
-    image_detail_path: z.string().startsWith("/assets/catalog/v1/detail/"),
+    image_thumbnail_url: petThumbnailUrlSchema,
+    image_detail_url: petDetailUrlSchema,
     combat_power: z.number().int().positive(),
     expedition_fgems: z.number().int().positive(),
     decompose_fgems: z.number().int().positive(),

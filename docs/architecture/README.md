@@ -7,7 +7,7 @@
 已发布 Catalog v1 的 immutable `product_checksum` / release identity 固定为：
 
 ```text
-de521f2687086cb358fb557a4a7ada3bc3c5fc132d673f0256b4573028ddba46
+82ae510b2ae38d22db94197d667040c25813080dc73c6219eca30d42aa76404f
 ```
 
 该值不是当前产品文档全文 SHA。生成器另计算并打印 boundary 上方源文档 SHA-256，仅用于诊断；Catalog v1 release identity 必须同时与 tracked manifest 和 product-data migration 一致。架构文档只记录技术边界，不复制价格、概率、奖励或产品状态规则。
@@ -16,7 +16,8 @@ de521f2687086cb358fb557a4a7ada3bc3c5fc132d673f0256b4573028ddba46
 
 - Web：React、Vite、TypeScript，运行在 Telegram Mini App。
 - API：同一 Vercel Project 内的 `app`、`integrations`、`jobs` 三个 Node.js 24 Function 网关。
-- Database：Supabase Postgres 17，仅暴露 `api` schema；浏览器不加载 Supabase SDK。
+- Database：Supabase Postgres 17，仅暴露 `api` schema；浏览器不加载 Supabase SDK，也不直连 Postgres、RPC、Auth 或其他 Data API。
+- Art Storage：私有 `art-masters` 永久保存历史母版，公开 `pet-runtime` 只发布宠物运行时 WebP；浏览器只能直接 GET API 返回的公开桶宠物图片 URL。
 - Realtime：Ably Standard 只发送 Battle 状态失效通知；REST 与数据库 `state_version` 回正权威状态。
 - Blockchain：TON Connect、钱包验证与 Tact NFT Mint 实现保留休眠；当前 App/Jobs 运行时注册表与 OpenAPI 均不发布相关端点，MVP 不提供入口、恢复或定时对账。
 - Deployment：Vercel Pro；真实开发环境与未来生产环境使用相同 Git commit 和 migration 序列。
@@ -36,7 +37,7 @@ api schema RPC -> private database schemas
 contracts/ton -> TON blockchain
 ```
 
-禁止反向依赖、跨领域深层导入、浏览器访问 Supabase、Node 层组合多次资产写入。
+禁止反向依赖、跨领域深层导入、浏览器访问 Supabase Data API、Node 层组合多次资产写入。浏览器对 `pet-runtime` 公开对象的图片 GET 是唯一 Supabase 直连例外。
 
 TMA 首次同步加载只覆盖应用壳、会话与账号门禁及默认开盒页；首屏完成后后台预加载其余普通主导航页面。`/game` 固定承载 React + TypeScript Battle，不引入 Phaser；Battle 只有在游戏页可见或当前 session 需要恢复 Battle participation/当场终局结果时读取专属状态，邀请 waiting 的创建者展示心跳和 lobby 的双方 presence 心跳只在页面可见时发送。隐藏、Telegram deactivated、`pagehide` 或离开 `/game` 立即结束当前 lease、中止在途 heartbeat 并尽力 offline；恢复先读取权威快照并取得新 lease，进入 `active_turn` 后停止 presence。
 
@@ -65,6 +66,7 @@ TMA 首次同步加载只覆盖应用壳、会话与账号门禁及默认开盒�
 ## 生成物
 
 - `generated/catalog/catalog-v1.json`
+- `generated/assets/art-assets-v1.json`
 - `generated/battle/battle-v1.json`
 - `packages/api-contracts/openapi/openapi.json`
 - `supabase/migrations/*_baseline.sql`

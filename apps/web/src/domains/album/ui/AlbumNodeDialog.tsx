@@ -62,7 +62,7 @@ export function AlbumNodeDialog({
       <div className={`album-dialog-art ${node.unlocked ? "" : "locked"}`}>
         {node.unlocked ? (
           <CatalogImage
-            path={node.image_detail_path}
+            url={node.image_detail_url}
             alt={node.name}
             variant="detail"
             loading="eager"

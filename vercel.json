@@ -15,20 +15,11 @@
   },
   "headers": [
     {
-      "source": "/assets/catalog/:path*",
+      "source": "/:path*",
       "headers": [
         {
-          "key": "Cache-Control",
-          "value": "public, max-age=31536000, immutable"
-        }
-      ]
-    },
-    {
-      "source": "/assets/gacha/representatives/:path*",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=31536000, immutable"
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co; font-src 'self' data:; connect-src 'self' https://*.ably.io wss://*.ably.io; worker-src 'self' blob:"
         }
       ]
     }
@@ -36,7 +27,8 @@
   "crons": [
     { "path": "/api/jobs/reconcile-payments", "schedule": "*/5 * * * *" },
     { "path": "/api/jobs/cleanup-idempotency", "schedule": "35 2 * * *" },
-    { "path": "/api/jobs/monitor-invariants", "schedule": "*/5 * * * *" }
+    { "path": "/api/jobs/monitor-invariants", "schedule": "*/5 * * * *" },
+    { "path": "/api/jobs/cleanup-catalog-assets", "schedule": "15 3 * * *" }
   ],
   "rewrites": [
     {

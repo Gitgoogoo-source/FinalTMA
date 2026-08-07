@@ -103,7 +103,7 @@
 - **Repository**：pnpm monorepo。
 - **Database**：Supabase Postgres；所有服务端数据库访问使用 `service_role`。
 - **API**：同源 REST JSON + OpenAPI 3.1。
-- **Data access**：前端不得直接访问 Supabase。读取操作可由 Functions 查询表或只读视图；任何新增、修改、删除、状态转换或关键计数写入都必须调用 PostgreSQL RPC。
+- **Data access**：前端不得直接访问 Supabase Postgres、RPC、Auth 或其他 Data API。唯一例外是浏览器可以直接读取 Supabase Storage 公开桶 `pet-runtime` 中由 API 返回完整 URL 的宠物 WebP；上传、覆盖、删除、列举、私有桶访问和资源发布只允许受控服务端或发布工具执行。其他读取操作由 Functions 调用只读 RPC；任何新增、修改、删除、状态转换或关键计数写入都必须调用 PostgreSQL RPC。
 - **Identity**：Telegram 是唯一身份来源。默认不使用 Supabase Auth，不创建或依赖 `auth.users`、Supabase Session 或 Supabase JWT。
 - **Session**：只有认证交换端点可以接收 Telegram `initData`。服务端验证后签发短期访问令牌；前端只在运行时内存中保存令牌，不使用长期 Refresh Token。
 - **Authorization**：Functions、API、RPC 和事务必须显式验证身份、资源归属、权限、前置条件、幂等性和并发条件。RLS 只作为外围封锁层，拒绝 `anon`、`authenticated` 等非服务端访问；业务安全不得依赖 RLS。

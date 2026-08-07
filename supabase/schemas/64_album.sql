@@ -64,8 +64,8 @@ begin
         jsonb_agg(jsonb_build_object(
           'template_id', t.id,
           'name', t.name,
-          'image_thumbnail_path', t.image_thumbnail_path,
-          'image_detail_path', t.image_detail_path,
+          'image_thumbnail_url', catalog.template_thumbnail_url(t.id),
+          'image_detail_url', catalog.template_detail_url(t.id),
           'rarity', t.rarity,
           'stage', t.stage,
           'unlocked', n.template_id is not null,

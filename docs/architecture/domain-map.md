@@ -4,7 +4,7 @@
 
 | 功能章节           | Web 所有者                      | API 领域                                 | 数据库所有者                             | 核心验收                                                          |
 | ------------------ | ------------------------------- | ---------------------------------------- | ---------------------------------------- | ----------------------------------------------------------------- |
-| 1 正式目录         | album、gacha、inventory         | catalog                                  | catalog                                  | 70 条链、210 个模板、420 张运行时图及双路径一致                   |
+| 1 正式目录         | album、gacha、inventory         | catalog、scheduled-jobs                  | catalog                                  | 70 条链、210 个模板、私有母版与公开运行时批次原子切换             |
 | 2 盲盒保底         | gacha                           | gacha                                    | gacha                                    | 三档独立、仅付费推进、逐抽重置                                    |
 | 3 远征             | expedition（当前隐藏）          | expedition                               | expedition、inventory、economy           | 前端无入口，保留事务与存量数据边界                                |
 | 4 幸运转盘         | wheel、operation-recovery       | wheel                                    | wheel、economy、operations               | 1/10 次原子结算、当前运行期结果展示、未决原操作恢复               |

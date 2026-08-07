@@ -76,6 +76,7 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
     soldEvents,
     dismiss: dismissSoldEvent,
   } = useMarketSoldInbox(pageActive, pageActive);
+  const catalog = useApiQuery("catalog.get", {}, soldEvents.length > 0);
   const { isBlocked, run } = useOperationRegistry();
   const { requestTopup } = useNavigationIntent();
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -233,7 +234,7 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
         {
           presentation: {
             name: item.name,
-            imagePath: item.image_thumbnail_path,
+            imagePath: item.image_thumbnail_url,
           },
         },
       );
@@ -611,6 +612,11 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
                 <MarketSoldCard
                   key={`sold:${event.sale_sequence}`}
                   event={event}
+                  imageUrl={
+                    catalog.data?.templates.find(
+                      (template) => template.id === event.template_id,
+                    )?.image_thumbnail_url
+                  }
                   dismissing={dismissingSoldEvents.has(event.sale_sequence)}
                   onDismiss={(trigger) => dismissSoldWithEffect(event, trigger)}
                 />
@@ -780,8 +786,8 @@ type MarketViewItem = {
   rarity?: string;
   stage?: number | undefined;
   chain_type?: "normal" | "advanced" | "top";
-  image_thumbnail_path: string;
-  image_detail_path?: string;
+  image_thumbnail_url: string;
+  image_detail_url?: string;
   unit_price: number;
   available: number;
   own_listed_quantity?: number;
@@ -830,7 +836,7 @@ function MarketListingCard({
     <Card className="market-listing-card">
       <div className="market-listing-art">
         <CatalogImage
-          path={item.image_thumbnail_path}
+          url={item.image_thumbnail_url}
           alt={item.name}
           variant="thumbnail"
           loading="lazy"
@@ -868,10 +874,12 @@ function MarketListingCard({
 
 function MarketSoldCard({
   event,
+  imageUrl,
   dismissing,
   onDismiss,
 }: {
   event: MarketSoldEvent;
+  imageUrl: string | undefined;
   dismissing: boolean;
   onDismiss(trigger: HTMLButtonElement): void;
 }): ReactNode {
@@ -885,7 +893,7 @@ function MarketSoldCard({
     >
       <div className="market-listing-art">
         <CatalogImage
-          path={event.image_thumbnail_path}
+          url={imageUrl}
           alt={event.name}
           variant="thumbnail"
           loading="lazy"
@@ -953,9 +961,9 @@ function MarketSellWorkbench({
       <Card className="market-sell-hero" aria-label="当前选中的出售藏品">
         <div className="market-sell-hero-art">
           <CatalogImage
-            path={selected.image_detail_path ?? selected.image_thumbnail_path}
+            url={selected.image_detail_url ?? selected.image_thumbnail_url}
             alt={selected.name}
-            variant={selected.image_detail_path ? "detail" : "thumbnail"}
+            variant={selected.image_detail_url ? "detail" : "thumbnail"}
             loading="eager"
             fetchPriority="high"
             onAvailability={setImageReady}
@@ -999,7 +1007,7 @@ function MarketSellWorkbench({
               onClick={() => onSelect(item.template_id)}
             >
               <CatalogImage
-                path={item.image_thumbnail_path}
+                url={item.image_thumbnail_url}
                 alt={item.name}
                 variant="thumbnail"
                 loading="lazy"
@@ -1156,7 +1164,7 @@ function MarketCard({
     <Card className={`market-card market-card-${tab}`}>
       <div className="market-art">
         <CatalogImage
-          path={item.image_thumbnail_path}
+          url={item.image_thumbnail_url}
           alt={item.name}
           variant="thumbnail"
           loading="lazy"
@@ -1277,7 +1285,7 @@ function MarketCard({
           <div className="modal market-purchase-dialog">
             <div className="market-purchase-preview">
               <CatalogImage
-                path={item.image_thumbnail_path}
+                url={item.image_thumbnail_url}
                 alt={item.name}
                 variant="thumbnail"
                 loading="eager"

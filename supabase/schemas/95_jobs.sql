@@ -200,3 +200,185 @@ begin
   );
 end;
 $$;
+
+create or replace function api.catalog_asset_cleanup_claim(p_limit integer default 500)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_run uuid;
+  v_scan_from timestamptz;
+  v_scan_to timestamptz := now();
+  v_active_run operations.job_runs%rowtype;
+  v_objects jsonb;
+begin
+  if p_limit < 1 or p_limit > 500 then
+    raise exception using errcode = '22023', message = 'catalog cleanup limit must be between 1 and 500';
+  end if;
+  perform pg_advisory_xact_lock(hashtextextended('pokepets:job:cleanup-catalog-assets', 0));
+  select max(finished_at) into v_scan_from
+  from operations.job_runs
+  where job_name = 'cleanup-catalog-assets' and status = 'succeeded';
+  select * into v_active_run
+  from operations.job_runs
+  where job_name = 'cleanup-catalog-assets' and status = 'running'
+  order by started_at desc
+  limit 1
+  for update;
+  if v_active_run.id is not null and v_active_run.started_at > now() - interval '15 minutes' then
+    insert into operations.job_runs (job_name, status, details, scan_from, scan_to, finished_at)
+    values (
+      'cleanup-catalog-assets', 'skipped',
+      jsonb_build_object('reason', 'active_lease', 'active_job_run_id', v_active_run.id),
+      v_scan_from, v_scan_to, now()
+    ) returning id into v_run;
+    return jsonb_build_object(
+      'job_run_id', v_run, 'job_name', 'cleanup-catalog-assets', 'status', 'skipped',
+      'processed_count', 0, 'scan_from', v_scan_from, 'scan_to', v_scan_to, 'objects', '[]'::jsonb
+    );
+  elsif v_active_run.id is not null then
+    update catalog.asset_objects
+    set status = 'delete_failed', cleanup_claim_id = null, cleanup_claimed_at = null,
+        last_error = 'cleanup lease expired'
+    where cleanup_claim_id = v_active_run.id and status = 'deleting';
+    update operations.job_runs
+    set status = 'failed', details = jsonb_build_object('error', 'lease_expired'), finished_at = now()
+    where id = v_active_run.id;
+  end if;
+
+  insert into operations.job_runs (job_name, status, scan_from, scan_to)
+  values ('cleanup-catalog-assets', 'running', v_scan_from, v_scan_to)
+  returning id into v_run;
+
+  with candidates as materialized (
+    select object.id
+    from catalog.asset_objects object
+    where object.object_class = 'runtime'
+      and object.status in ('active', 'delete_failed')
+      and exists (
+        select 1
+        from catalog.asset_release_templates item
+        where item.thumbnail_object_id = object.id or item.detail_object_id = object.id
+      )
+      and not exists (
+        select 1
+        from catalog.asset_release_templates item
+        join catalog.asset_releases release on release.id = item.release_id
+        where (item.thumbnail_object_id = object.id or item.detail_object_id = object.id)
+          and (
+            release.status <> 'retired'
+            or release.delete_after is null
+            or release.delete_after > now()
+            or release.rollback_locked_until > now()
+          )
+      )
+    order by object.created_at, object.id
+    limit p_limit
+    for update of object skip locked
+  ), claimed as (
+    update catalog.asset_objects object
+    set status = 'deleting', cleanup_claim_id = v_run, cleanup_claimed_at = now(), last_error = null
+    from candidates candidate
+    where object.id = candidate.id
+    returning object.object_key, object.sha256, object.byte_size
+  )
+  select coalesce(
+    jsonb_agg(jsonb_build_object('key', object_key, 'sha256', sha256, 'bytes', byte_size) order by object_key),
+    '[]'::jsonb
+  ) into v_objects
+  from claimed;
+
+  return jsonb_build_object(
+    'job_run_id', v_run, 'job_name', 'cleanup-catalog-assets', 'status', 'running',
+    'processed_count', 0, 'scan_from', v_scan_from, 'scan_to', v_scan_to, 'objects', v_objects
+  );
+end
+$$;
+
+create or replace function api.catalog_asset_cleanup_finish(
+  p_job_run_id uuid,
+  p_deleted_keys jsonb,
+  p_failed jsonb
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_run operations.job_runs%rowtype;
+  v_claimed integer;
+  v_deleted integer;
+  v_failed integer;
+begin
+  select * into v_run
+  from operations.job_runs
+  where id = p_job_run_id
+  for update;
+  if v_run.id is null or v_run.job_name <> 'cleanup-catalog-assets' or v_run.status <> 'running' then
+    perform api.raise_business_error('JOB_NOT_FOUND', '后台任务运行不存在或已经结束');
+  end if;
+  if jsonb_typeof(p_deleted_keys) <> 'array' or jsonb_typeof(p_failed) <> 'object' then
+    raise exception using errcode = '22023', message = 'catalog cleanup result shape is invalid';
+  end if;
+  select count(*) into v_claimed
+  from catalog.asset_objects
+  where cleanup_claim_id = p_job_run_id and status = 'deleting';
+  select count(distinct value) into v_deleted from jsonb_array_elements_text(p_deleted_keys);
+  select count(*) into v_failed from jsonb_object_keys(p_failed);
+  if v_deleted + v_failed <> v_claimed
+    or exists (
+      select 1
+      from catalog.asset_objects object
+      where object.cleanup_claim_id = p_job_run_id and object.status = 'deleting'
+        and not (p_deleted_keys ? object.object_key)
+        and not (p_failed ? object.object_key)
+    )
+    or exists (
+      select 1 from jsonb_array_elements_text(p_deleted_keys) as deleted(key)
+      where not exists (
+        select 1 from catalog.asset_objects object
+        where object.cleanup_claim_id = p_job_run_id and object.status = 'deleting' and object.object_key = deleted.key
+      )
+    )
+    or exists (
+      select 1 from jsonb_object_keys(p_failed) as failed(key)
+      where not exists (
+        select 1 from catalog.asset_objects object
+        where object.cleanup_claim_id = p_job_run_id and object.status = 'deleting' and object.object_key = failed.key
+      )
+    )
+  then
+    raise exception using errcode = '22023', message = 'catalog cleanup result does not match its claim';
+  end if;
+
+  update catalog.asset_objects object
+  set status = 'deleted', cleanup_claim_id = null, cleanup_claimed_at = null,
+      last_error = null, deleted_at = now()
+  where object.cleanup_claim_id = p_job_run_id
+    and object.status = 'deleting'
+    and p_deleted_keys ? object.object_key;
+
+  update catalog.asset_objects object
+  set status = 'delete_failed', cleanup_claim_id = null, cleanup_claimed_at = null,
+      last_error = left(p_failed->>object.object_key, 500), deleted_at = null
+  where object.cleanup_claim_id = p_job_run_id
+    and object.status = 'deleting'
+    and p_failed ? object.object_key;
+
+  update operations.job_runs
+  set status = case when v_failed = 0 then 'succeeded' else 'failed' end,
+      processed_count = v_deleted,
+      details = jsonb_build_object('attempted', v_claimed, 'deleted', v_deleted, 'failed', v_failed),
+      finished_at = now()
+  where id = p_job_run_id
+  returning * into v_run;
+
+  return jsonb_build_object(
+    'job_run_id', v_run.id, 'job_name', v_run.job_name, 'status', v_run.status,
+    'processed_count', v_run.processed_count, 'scan_from', v_run.scan_from, 'scan_to', v_run.scan_to
+  );
+end
+$$;

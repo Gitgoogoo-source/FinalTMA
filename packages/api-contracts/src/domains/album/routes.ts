@@ -6,6 +6,8 @@ import {
   emptyObjectSchema,
   identifierSchema,
   nonNegativeIntegerSchema,
+  petDetailUrlSchema,
+  petThumbnailUrlSchema,
   raritySchema,
 } from "../../common/schemas.ts";
 
@@ -13,8 +15,8 @@ const albumNodeSchema = z
   .object({
     template_id: z.string(),
     name: z.string(),
-    image_thumbnail_path: z.string().startsWith("/assets/catalog/v1/thumb/"),
-    image_detail_path: z.string().startsWith("/assets/catalog/v1/detail/"),
+    image_thumbnail_url: petThumbnailUrlSchema,
+    image_detail_url: petDetailUrlSchema,
     rarity: raritySchema,
     stage: z.union([z.literal(1), z.literal(2), z.literal(3)]),
     unlocked: z.boolean(),

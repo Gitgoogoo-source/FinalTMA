@@ -5,12 +5,12 @@
 在执行任何外部写入前，由负责人逐项记录证据：
 
 - 外部写入目标已核对为真实开发 Supabase `final-tma-real-test`（`ebewtjerusxcioegpzjd`）与 Vercel `final-tma`，未来生产 Supabase 在上线前保持空库且无须保留业务数据。
-- 当前真实开发环境与未来生产环境使用同一组 210 张正式藏品母版生成的 420 张运行时图片；母版、缩略图、详情图、模板路径与 checksum 必须一一对应。
+- 当前真实开发环境与未来生产环境使用同一组 210 张正式藏品母版生成的 420 张运行时图片；私有母版对象、公开缩略图/详情图、模板、对象键与 SHA-256 必须和 `generated/assets/art-assets-v1.json` 一一对应。
 - 正式生产环境 `APP_ENV=production` 部署前必须提供正式 Telegram 分享图；该图片仍为已知开发占位 checksum 时禁止生产发布。休眠的 TON Connect 图标不阻塞当前 MVP。
 - 本次真实开发部署的 Supabase、Vercel、Telegram、Stars 与观测平台配置齐全；当前 MVP 不配置 TON RPC 或链上资源。
 - 生产将部署已在真实开发环境完成验收的同一 Git commit、同一 migration 序列和同一目录 manifest。
-- Git commit、按文件名排序的三份 migration 及 SHA-256、OpenAPI、Catalog manifest 与 `battle-v1` checksum 已冻结为同一个不可拆分的发布单元；任一值变化都必须重新冻结整个单元。
-- Vercel 套餐支持 `vercel.json` 中支付对账、幂等清理和不变量监控三项当前 Cron；当前 MVP 不存在第四项 Mint 对账 Cron。
+- Git commit、按文件名排序的三份 migration 及 SHA-256、OpenAPI、Catalog 产品 manifest、宠物资源 manifest 与 `battle-v1` checksum 已冻结；代码发布单元与可独立切换的完整宠物资源批次分别保持内部原子性。
+- Vercel 套餐支持 `vercel.json` 中支付对账、幂等清理、不变量监控和宠物公开对象清理四项当前 Cron；当前 MVP 不调度 Mint 对账 Cron。
 - Vercel Production 环境变量名称核查同时包含 `TELEGRAM_BOT_USERNAME` 与 `TELEGRAM_MINI_APP_SHORT_NAME`，开发 short name 固定为 `pokepets_dev`。
 - Battle 发布环境已经配置互不共用且至少 32 字节的 `BATTLE_INVITE_SECRET`、`BATTLE_OUTBOX_SECRET`，并配置环境隔离的 `ABLY_API_KEY`；Supabase Vault 的两个 Battle callback URL 与 outbox secret 已和对应 Vercel 环境逐项核对。
 - Battle 发布检查必须分别验证：`BATTLE_INVITE_SECRET` 只产生确定性邀请 token、`BATTLE_OUTBOX_SECRET` 只通过两个 integration 的 Bearer 鉴权、`ABLY_API_KEY` 只签发五分钟 subscribe-only capability 并发布失效通知；部署产物固定使用 `ably@2.26.0`。
@@ -29,7 +29,6 @@ pnpm typecheck
 pnpm contracts:openapi
 pnpm contracts:check
 pnpm product-data:check
-pnpm catalog:generate-assets
 pnpm catalog:pin-assets
 pnpm assets:check:catalog
 APP_ENV=development pnpm build
@@ -43,21 +42,9 @@ pnpm manifest:check
 
 `pnpm typecheck` 继续检查休眠的 `@pokepets/ton` 源码，防止保留代码腐化；当前 MVP 不执行独立 `pnpm chain:build`，也不把链上部署或 TON 资源作为发布门禁。
 
-`pnpm catalog:generate-assets` 要求 210 张母版均为 768×768 WebP，并生成 256×256 缩略图和 768×768 详情图。`pnpm assets:check:catalog` 强制核对 210 个 `template_id`、两个路径、420 个文件、WebP 格式、尺寸、单文件体积、50 MiB 总上限、内容唯一性和正式 checksum。`APP_ENV=development pnpm build` 在生成 `apps/web/dist` 后继续核对构建复制结果；`APP_ENV=test` 与 `APP_ENV=production` 额外拒绝 Telegram 分享图的已知开发 checksum，休眠的 TON Connect 图标不属于当前 MVP 正式素材门禁。
+`pnpm assets:check:catalog` 强制核对资源 manifest 的 210 个 `template_id`、210 个私有母版对象、420 个公开运行时对象、对象键、WebP 格式、尺寸、单文件体积、50 MiB 当前批次总上限、内容唯一性和 SHA-256，并确认 Git/Vercel 不含这些二进制。`APP_ENV=development pnpm build` 在生成 `apps/web/dist` 后继续确认只复制非宠物美术和统一宠物剪影；`APP_ENV=test` 与 `APP_ENV=production` 额外拒绝 Telegram 分享图的已知开发 checksum，休眠的 TON Connect 图标不属于当前 MVP 正式素材门禁。
 
 `pnpm architecture:check` 同时验证 `/game` 只承载 React + TypeScript Battle、没有 Phaser 或客户端战斗模拟器，任务页转盘位置、远征/钱包/Mint 任务与横幅隐藏、钱包/Mint/Mint 对账不进入当前运行时注册表，以及其余模块边界、网关隔离和文档归属。`pnpm contracts:check` 额外验证 OpenAPI 不发布这些休眠端点。
-
-### 2.1 基线既有 product-data 漂移
-
-在 Battle 文档任务起点 `main@f8bf62df5c7e6290de2d8f449b7bf487bfbd2830`，`pnpm product-data:check` 已因 `supabase/migrations/20260719104602_product_data_v1.sql` 中三条任务文案与当前生成器输出不一致而失败：
-
-| 任务        | migration 既有文案                                           | 当前生成器确定文案                                                           |
-| ----------- | ------------------------------------------------------------ | ---------------------------------------------------------------------------- |
-| `gacha_1`   | `今日开盒 1 次`；`当日完成 1 次付费单抽或免费资格单抽`       | `今日单抽 1 次`；`当日完成 1 次付费单抽或使用免费资格单抽；十连不计入`       |
-| `gacha_10`  | `今日开盒 10 次`；`当日累计完成 10 次付费单抽或免费资格单抽` | `今日单抽 10 次`；`当日累计完成 10 次付费单抽或使用免费资格单抽；十连不计入` |
-| `gacha_ten` | `完成 1 次十连`；`当日一次十连整批成功`                      | `完成 1 次十连`；`当日一次十连整批成功；不计入单抽任务`                      |
-
-这是 Battle 任务前已经存在的基线漂移，不是 Battle 业务变更。本产品与架构文档任务不得修改 migration 或生成物；数据库任务必须通过当前产品数据生成器重生成原 `*_product_data_v1.sql`，把这三条确定文案与 Battle 配置一次写入同一条干净的原始 product-data migration，禁止追加修补 migration。
 
 休眠实现的 TON Connect manifest 仅通过以下命令保持格式确定：
 
@@ -67,7 +54,7 @@ pnpm manifest:build
 
 该静态文件不被当前 Web 引用，不需要钱包或链上配置，也不构成 MVP 入口与生产验收项。
 
-正式藏品资源固定按以下顺序更新：把 210 张新母版写入新的目录版本，运行 `pnpm catalog:generate-assets`，运行 `pnpm catalog:pin-assets`，复核并提交 checksum，再运行藏品、开发和 production 资产门禁。已经发布的 `v1` 不得覆盖；后续内容变化必须创建新版本并同步数据库路径。production 门禁继续拒绝 `generated/assets/placeholders.json` 中 Telegram 分享图的已知开发 checksum，禁止通过重新 pin 绕过正式替换要求。
+宠物美术固定按以下顺序独立发布：准备恰好 210 张以模板 ID 命名的 768×768 WebP 候选母版；执行 `pnpm assets:release prepare --source-dir <候选目录> --runtime-dir <受控输出目录> --release-key <唯一发布键>`；复核生成的 `generated/assets/art-assets-v1.json`；在持有目标环境 service role 的受控终端执行 `pnpm assets:release bootstrap --source-dir <候选目录> --runtime-dir <受控输出目录>`。命令只进行无覆盖上传，逐对象远端下载复核全部 630 个对象后才原子切换数据库当前批次。`pnpm assets:release status` 必须返回相同 release key、manifest SHA-256、210 个模板和递增 revision。该流程不修改前端代码、不等待 Vercel 部署；任一步失败都保持原批次。production 门禁继续拒绝 `generated/assets/placeholders.json` 中 Telegram 分享图的已知开发 checksum，禁止通过重新 pin 绕过正式替换要求。
 
 ## 3. 真实开发环境
 
@@ -75,15 +62,15 @@ pnpm manifest:build
 
 1. 记录发布单元的 Git commit、OpenAPI、Catalog manifest、`battle-v1` checksum、三条 migration 文件名及 SHA-256，核对目标 Supabase 为 `final-tma-real-test / ebewtjerusxcioegpzjd`、目标 Vercel Project 为 `final-tma`，并确认工作目录位于 `main`。
 2. 完成本地静态门禁；关闭开发 Bot 的 Main/named Mini App 入口和 Battle 新建/接受入口，但保持当前应用、`battle-tick-v1`、pg_net、两个 integrations 与 Ably 运行，直到 waiting、lobby、active room、active participant、locked stake、active reservation、未发布 outbox、`pending/unknown` Battle operation 和开放 Battle violation 全部为 0。
-3. 暂停 Vercel Production 并确认稳定域名返回 `503 DEPLOYMENT_PAUSED`，随后再次执行第 2 步的零状态查询；该复核失败时不得继续。关闭 Telegram webhook，暂停三项 Vercel Cron；对 `battle-tick-v1` 执行 `cron.unschedule`，再在独立语句执行 `pg_reload_conf()`，保存原 `jobid` 连续两个调度周期没有新增 run 的证据。Bot/Mini App 入口关闭、Cron 暂停或零活动房都不能替代 Vercel Production 暂停。
-4. 保持 Vercel Production 暂停，把包含完整发布单元的实现提交推送到 `main`，并核对 Git Integration 创建的 Production deployment 因项目暂停而进入 `BLOCKED`、source SHA 与该实现提交完全一致；该 `BLOCKED` deployment 不会在项目恢复后继续。数据库仍保持旧 schema，Telegram 入口、webhook、三项 Vercel Cron 与 `battle-tick-v1` 必须继续关闭。随后在该实现提交上创建唯一一条无文件变更的 `chore: trigger production deployment` 发布触发提交，恢复 Vercel Production 后立即把该触发提交推送到 `main`，只等待 Git Integration 自动创建的新 Production deployment 达到 `READY`，核对其 source SHA 与触发提交完全一致后立即再次暂停 Vercel Production。恢复到再次暂停期间只能运行“旧应用 + 旧数据库”，不得清库或恢复任何入口、webhook、Cron、tick；不执行手动 Vercel 部署。第 1 步冻结的 OpenAPI、Catalog manifest、`battle-v1` checksum 与 migration SHA-256 必须与触发提交父级实现提交完全一致。
+3. 暂停 Vercel Production 并确认稳定域名返回 `503 DEPLOYMENT_PAUSED`，随后再次执行第 2 步的零状态查询；该复核失败时不得继续。关闭 Telegram webhook，暂停四项 Vercel Cron；对 `battle-tick-v1` 执行 `cron.unschedule`，再在独立语句执行 `pg_reload_conf()`，保存原 `jobid` 连续两个调度周期没有新增 run 的证据。Bot/Mini App 入口关闭、Cron 暂停或零活动房都不能替代 Vercel Production 暂停。
+4. 保持 Vercel Production 暂停，把包含完整发布单元的实现提交推送到 `main`，并核对 Git Integration 创建的 Production deployment 因项目暂停而进入 `BLOCKED`、source SHA 与该实现提交完全一致；该 `BLOCKED` deployment 不会在项目恢复后继续。数据库仍保持旧 schema，Telegram 入口、webhook、四项 Vercel Cron 与 `battle-tick-v1` 必须继续关闭。随后在该实现提交上创建唯一一条无文件变更的 `chore: trigger production deployment` 发布触发提交，恢复 Vercel Production 后立即把该触发提交推送到 `main`，只等待 Git Integration 自动创建的新 Production deployment 达到 `READY`，核对其 source SHA 与触发提交完全一致后立即再次暂停 Vercel Production。恢复到再次暂停期间只能运行“旧应用 + 旧数据库”，不得清库或恢复任何入口、webhook、Cron、tick；不执行手动 Vercel 部署。第 1 步冻结的 OpenAPI、Catalog manifest、`battle-v1` checksum 与 migration SHA-256 必须与触发提交父级实现提交完全一致。
 5. 清空真实开发数据库与 migration history，从第 4 步 deployment 对应提交依次执行仓库内唯一的 `*_baseline.sql`、`*_product_data_v1.sql`、`*_api_security.sql`；三条 migration 的提交事务全部结束后，owner 必须在独立语句执行一次 `select pg_reload_conf()`，不得把该调用放入 migration 事务。
 6. 验证远端 migration history 只包含第 1 步冻结的三条文件及 SHA-256，RPC、入口交接门禁、RLS、函数权限、Catalog manifest、OpenAPI 与 `battle-v1` checksum 均来自同一 Git commit；对开发项目执行 linked database lint 与 Supabase security/performance advisors。
 7. 在 Supabase Data API 设置中把 Exposed schemas 固定为 `public,graphql_public,api`，不得暴露任何业务表 schema；核对 Vercel Production 的 Telegram、Ably 与 Battle 环境变量以及 Supabase Vault 的 Battle share/outbox callback URL 和 outbox secret。环境变量不得设置为 Sensitive，环境值变化后仍只通过包含全部修改的 `main` 提交触发自动部署，并重新核对 source SHA。
 8. 确认 `admin.database_identity` 与 `admin.environment_controls` 在迁移后均为空，所有应用角色均不能发现或执行 `admin`；由数据库 owner 把项目身份一次性绑定为 `real_development / ebewtjerusxcioegpzjd`，再写入同值、最长 24 小时的 Battle 验收夹具 enable。该记录是非秘密数据库元数据，不使用 Vercel/Supabase Sensitive 环境变量或 Vault。
 9. 保持 Vercel Production、Telegram 入口、webhook 与 Vercel Cron 关闭，确认 `battle.tick_health()` 的唯一 job、`1 second`、`select battle.process_due(100);`、当前 database、`postgres` worker、单一 scheduler 和最近 5 秒成功记录全部正确，并保存同一 jobid 至少两个连续自然周期的 runid、起止时间、状态和返回摘要；手工调用 tick 不得替代该证据。
-10. 所有受控验收账号关闭维护前加载的旧 Mini App。恢复 Vercel Production，但继续关闭 Telegram 入口、webhook 和三项 Vercel Cron；确认稳定域名指向第 4 步 deployment，执行 `/api/health`、真实登录、Battle 2/3/4 技能响应、两个 pg_net callback、Ably subscribe-only token 和 `RESPONSE_INVALID = 0` 的受控验证。旧 WebView 不得重新认证或继续调用新数据库，账号必须从 Telegram 重新打开并加载当前 deployment 后才进入验收。
-11. 调用 Bot API 核对开发 Bot 身份后，依次恢复 Telegram webhook、三项 Vercel Cron、Main/named Mini App 与默认菜单入口；验证 `battle-v1` checksum、`battle-tick-v1` 自然运行、监控链路、7 天运行明细、`/api/referrals` 与三个手工 Vercel job。最后按 `docs/operations/acceptance.md` 完成 Telegram 真机、Battle、支付与并发验收，`monitor-invariants` 必须返回 0 个新增 violation。
+10. 所有受控验收账号关闭维护前加载的旧 Mini App。恢复 Vercel Production，但继续关闭 Telegram 入口、webhook 和四项 Vercel Cron；确认稳定域名指向第 4 步 deployment，执行 `/api/health`、真实登录、Battle 2/3/4 技能响应、两个 pg_net callback、Ably subscribe-only token 和 `RESPONSE_INVALID = 0` 的受控验证。旧 WebView 不得重新认证或继续调用新数据库，账号必须从 Telegram 重新打开并加载当前 deployment 后才进入验收。
+11. 调用 Bot API 核对开发 Bot 身份后，依次恢复 Telegram webhook、四项 Vercel Cron、Main/named Mini App 与默认菜单入口；验证 `battle-v1` checksum、`battle-tick-v1` 自然运行、监控链路、7 天运行明细、`/api/referrals` 与四个手工 Vercel job。最后按 `docs/operations/acceptance.md` 完成 Telegram 真机、Battle、支付与并发验收，`monitor-invariants` 必须返回 0 个新增 violation。
 
 任一步失败都保持 Vercel Production、Telegram 入口、webhook 与 Vercel Cron 关闭。数据库清空前不得恢复“新应用 + 旧数据库”；数据库清空后直接修正声明式 Schema、原始三条 migration 与完整发布单元，从空库重新执行第 5—11 步。禁止单独回滚应用、恢复旧 schema 或为尚未生产发布的错误定义追加修补 migration。
 
@@ -100,7 +87,7 @@ pnpm manifest:build
 5. 部署与真实开发环境验收通过的完全相同 Git commit；不配置 TON runtime secrets，不发布 Collection。
 6. 设置 Telegram webhook；启用生产 Bot 的 Main Mini App，将 Main Mini App 与 named Mini App 固定到该次部署的唯一生产域名，默认菜单按钮固定指向 named Mini App 链接，并用 Bot API 验证 `has_main_web_app=true` 与菜单 URL 完全一致。
 7. 对生产域名确认 `/game` 完整提供 Battle、远征界面仍隐藏、钱包与 Mint 入口均不存在、Ably capability 为 subscribe-only、REST fallback 与 `battle-tick-v1` 正常，同时确认任务页转盘位置。
-8. 执行生产 smoke check、三个 Vercel job、Battle tick 和两个 Battle integrations；保存 request/operation/room/state_version/stake/settlement/outbox/ledger/inventory 证据。
+8. 执行生产 smoke check、四个 Vercel job、Battle tick 和两个 Battle integrations；保存 request/operation/room/state_version/stake/settlement/outbox/ledger/inventory 证据。
 
 ## 5. 回滚边界
 

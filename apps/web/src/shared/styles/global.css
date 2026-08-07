@@ -342,6 +342,10 @@ p {
   height: 100%;
   object-fit: contain;
 }
+
+.catalog-image--fallback {
+  object-fit: contain;
+}
 .image-missing {
   min-height: 130px;
   display: grid;

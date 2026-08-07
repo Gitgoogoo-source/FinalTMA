@@ -15,7 +15,8 @@ import {
 } from "../../platform/telegram/index.ts";
 
 type MarketMineOutput = RouteOutput<"market.my_listings">;
-export type MarketSoldEvent = MarketMineOutput["sold_events"][number];
+type ApiMarketSoldEvent = MarketMineOutput["sold_events"][number];
+export type MarketSoldEvent = Omit<ApiMarketSoldEvent, "image_thumbnail_url">;
 
 type SoldInboxState = {
   userId: string | null;
@@ -37,8 +38,8 @@ type SoldInboxStore = {
   dismiss(saleSequence: string): void;
 };
 
-const STORAGE_VERSION = 1;
-const STORAGE_PREFIX = "pokepets.market.sold-inbox.v1";
+const STORAGE_VERSION = 2;
+const STORAGE_PREFIX = "pokepets.market.sold-inbox.v2";
 const MAX_SEQUENCE = 9_223_372_036_854_775_807n;
 
 export function useMarketSoldInbox(
@@ -160,7 +161,7 @@ function createInboxStore(userId: string | null): SoldInboxStore {
         cursor: response.sale_cursor,
         pendingEvents: mergeEvents(
           snapshot.pendingEvents,
-          response.sold_events,
+          response.sold_events.map(withoutImageUrl),
         ),
         items: response.listings,
       };
@@ -237,6 +238,19 @@ function mergeEvents(
   );
 }
 
+function withoutImageUrl(event: ApiMarketSoldEvent): MarketSoldEvent {
+  return {
+    sale_sequence: event.sale_sequence,
+    template_id: event.template_id,
+    name: event.name,
+    rarity: event.rarity,
+    stage: event.stage,
+    quantity: event.quantity,
+    unit_price: event.unit_price,
+    sold_at: event.sold_at,
+  };
+}
+
 function storageKey(userId: string): string {
   return `${STORAGE_PREFIX}:${userId}`;
 }
@@ -255,8 +269,6 @@ function isSoldEvent(value: unknown): value is MarketSoldEvent {
     Number.isInteger(value.stage) &&
     Number(value.stage) >= 1 &&
     Number(value.stage) <= 3 &&
-    typeof value.image_thumbnail_path === "string" &&
-    value.image_thumbnail_path.startsWith("/assets/catalog/v1/thumb/") &&
     isPositiveSafeInteger(value.quantity) &&
     isPositiveSafeInteger(value.unit_price) &&
     typeof value.sold_at === "string" &&

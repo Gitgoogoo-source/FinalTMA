@@ -207,8 +207,8 @@ begin
       v_results := v_results || jsonb_build_array(jsonb_build_object(
         'order', v_i, 'template_id', v_template.id, 'name', v_template.name,
         'rarity', v_template.rarity, 'stage', v_template.stage, 'quantity', 1,
-        'image_thumbnail_path', v_template.image_thumbnail_path,
-        'image_detail_path', v_template.image_detail_path,
+        'image_thumbnail_url', catalog.template_thumbnail_url(v_template.id),
+        'image_detail_url', catalog.template_detail_url(v_template.id),
         'new_album', v_new_album, 'pity_triggered', v_triggered
       ));
     end loop;

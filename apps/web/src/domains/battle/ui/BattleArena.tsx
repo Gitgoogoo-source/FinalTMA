@@ -364,7 +364,7 @@ function ArenaSide({
             className={`${member.slot === active?.slot ? "active" : ""} ${member.alive ? "" : "knocked-out"}`}
           >
             <CatalogImage
-              path={member.image_thumbnail_path}
+              url={member.image_thumbnail_url}
               alt={`${member.name}${member.alive ? "" : "，已击倒"}`}
               variant="thumbnail"
               loading="lazy"
@@ -377,7 +377,7 @@ function ArenaSide({
         <div key={active.slot} className="battle-active-pet">
           <div className="battle-active-art" data-battle-active-sprite>
             <CatalogImage
-              path={active.image_detail_path}
+              url={active.image_detail_url}
               alt={active.name}
               variant="detail"
               loading="eager"
@@ -560,7 +560,7 @@ function SwitchCandidates({
           onClick={() => choose(member.slot, member.name)}
         >
           <CatalogImage
-            path={member.image_thumbnail_path}
+            url={member.image_thumbnail_url}
             alt={member.name}
             variant="thumbnail"
             loading="lazy"

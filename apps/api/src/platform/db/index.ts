@@ -25,6 +25,22 @@ function db(): SupabaseClient {
   return client;
 }
 
+export async function removeStorageObjects(
+  bucket: string,
+  objectKeys: readonly string[],
+): Promise<void> {
+  if (objectKeys.length === 0) return;
+  const { error } = await db()
+    .storage.from(bucket)
+    .remove([...objectKeys]);
+  if (error)
+    throw new ApiError(500, "DATABASE_RPC_FAILED", "资源清理失败", false, {
+      bucket,
+      count: objectKeys.length,
+      code: error.name,
+    });
+}
+
 export async function rpc<T>(
   name: string,
   parameters: Record<string, unknown>,

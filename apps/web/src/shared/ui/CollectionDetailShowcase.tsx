@@ -7,7 +7,7 @@ export type CollectionDetailItem = {
   name: string;
   rarity: "common" | "rare" | "epic" | "legendary" | "mythic";
   stage: number;
-  image_detail_path: string;
+  image_detail_url: string;
   combat_power: number;
   available: number;
   listed: number;
@@ -78,7 +78,7 @@ export function CollectionDetailShowcase({
         ) : null}
         <CatalogImage
           key={item.template_id}
-          path={item.image_detail_path}
+          url={item.image_detail_url}
           alt={item.name}
           variant="detail"
           loading="eager"

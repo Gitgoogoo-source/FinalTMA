@@ -79,7 +79,7 @@ begin
         'name', t.name,
         'rarity', t.rarity,
         'stage', t.stage,
-        'image_thumbnail_path', t.image_thumbnail_path,
+        'image_thumbnail_url', catalog.template_thumbnail_url(t.id),
         'unit_price', t.market_price,
         'available_quantity', x.available_quantity,
         'own_listed_quantity', x.own_listed_quantity
@@ -125,7 +125,7 @@ begin
     'name', t.name,
     'rarity', t.rarity,
     'stage', t.stage,
-    'image_thumbnail_path', t.image_thumbnail_path,
+    'image_thumbnail_url', catalog.template_thumbnail_url(t.id),
     'unit_price', t.market_price,
     'available_quantity', coalesce(x.available_quantity, 0),
     'own_listed_quantity', coalesce(x.own_listed_quantity, 0)
@@ -184,7 +184,7 @@ begin
         'name', t.name,
         'rarity', t.rarity,
         'stage', t.stage,
-        'image_thumbnail_path', t.image_thumbnail_path,
+        'image_thumbnail_url', catalog.template_thumbnail_url(t.id),
         'quantity', e.quantity,
         'unit_price', e.unit_price,
         'sold_at', e.sold_at
@@ -213,7 +213,7 @@ begin
         'name', t.name,
         'rarity', t.rarity,
         'stage', t.stage,
-        'image_thumbnail_path', t.image_thumbnail_path,
+        'image_thumbnail_url', catalog.template_thumbnail_url(t.id),
         'listed_quantity', a.listed_quantity,
         'sold_quantity', coalesce(s.sold_quantity, 0),
         'unit_price', t.market_price,
@@ -298,7 +298,7 @@ begin
     values (v_user_id, p_template_id, v_template.market_price, p_quantity, p_quantity, p_operation_id) returning * into v_listing;
     perform inventory.reserve(v_user_id, p_template_id, p_quantity, 'listing', v_listing.id);
     perform tasks.progress(v_user_id, 'market_list');
-    v_result := jsonb_build_object('listing_id', v_listing.id, 'template_id', p_template_id, 'name', v_template.name, 'rarity', v_template.rarity, 'image_thumbnail_path', v_template.image_thumbnail_path, 'quantity', p_quantity, 'unit_price', v_template.market_price, 'created_at', v_listing.created_at);
+    v_result := jsonb_build_object('listing_id', v_listing.id, 'template_id', p_template_id, 'name', v_template.name, 'rarity', v_template.rarity, 'image_thumbnail_url', catalog.template_thumbnail_url(v_template.id), 'quantity', p_quantity, 'unit_price', v_template.market_price, 'created_at', v_listing.created_at);
     return operations.complete_command(p_operation_id, v_result);
   exception when others then
     get stacked diagnostics v_detail = pg_exception_detail;

@@ -704,12 +704,11 @@ def verify_game_page_boundary() -> None:
     if (
         "creator_avatar_url" in lobby_source
         or "opponent_avatar_url" in lobby_source
-        or "/assets/catalog/v1/thumb/pet-n-001-1.webp" not in lobby_source
-        or "/assets/catalog/v1/thumb/pet-n-002-1.webp" not in lobby_source
+        or lobby_source.count("/assets/pets/pet-silhouette.svg") != 2
         or "<UserRound" not in lobby_source
     ):
         raise SystemExit(
-            "Battle lobby must use fixed red/blue repository WebP assets and "
+            "Battle lobby must use the fixed repository silhouette asset and "
             "neutral offline icons only"
         )
     required_realtime_terms = (

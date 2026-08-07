@@ -488,7 +488,7 @@ export function BattleLobby({
           title="邀请者"
           online={creator.online}
           reconnectSeconds={creatorReconnectSeconds}
-          imagePath="/assets/catalog/v1/thumb/pet-n-001-1.webp"
+          imageUrl="/assets/pets/pet-silhouette.svg"
         />
         <div className="battle-lobby-versus" aria-label="对战双方">
           <strong>VS</strong>
@@ -499,7 +499,7 @@ export function BattleLobby({
           title="被邀请者"
           online={opponent.online}
           reconnectSeconds={opponentReconnectSeconds}
-          imagePath="/assets/catalog/v1/thumb/pet-n-002-1.webp"
+          imageUrl="/assets/pets/pet-silhouette.svg"
         />
       </section>
       <section className="battle-lobby-timers" aria-live="polite">
@@ -583,13 +583,13 @@ function LobbyPlayer({
   title,
   online,
   reconnectSeconds,
-  imagePath,
+  imageUrl,
 }: {
   side: "creator" | "opponent";
   title: string;
   online: boolean;
   reconnectSeconds: number | null;
-  imagePath: string;
+  imageUrl: string;
 }): ReactNode {
   return (
     <article
@@ -598,7 +598,7 @@ function LobbyPlayer({
       <div className="battle-lobby-avatar">
         {online ? (
           <img
-            src={imagePath}
+            src={imageUrl}
             alt={`${title}固定阵营头像`}
             width={112}
             height={112}
@@ -937,7 +937,7 @@ function SelfTeamSummary({
       {snapshot.self_team.map((member) => (
         <div key={member.slot}>
           <CatalogImage
-            path={member.image_thumbnail_path}
+            url={member.image_thumbnail_url}
             alt={member.name}
             variant="thumbnail"
             loading="lazy"

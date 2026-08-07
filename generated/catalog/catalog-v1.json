@@ -1,6 +1,6 @@
 {
   "version": "v1",
-  "product_checksum": "de521f2687086cb358fb557a4a7ada3bc3c5fc132d673f0256b4573028ddba46",
+  "product_checksum": "82ae510b2ae38d22db94197d667040c25813080dc73c6219eca30d42aa76404f",
   "chains": [
     {
       "id": "CHAIN-N-001",
@@ -504,9 +504,7 @@
       "combat_power": 101,
       "market_price": 4,
       "decompose_fgems": 2,
-      "expedition_fgems": 1,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-001-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-001-1.webp"
+      "expedition_fgems": 1
     },
     {
       "id": "PET-N-001-2",
@@ -518,9 +516,7 @@
       "combat_power": 242,
       "market_price": 12,
       "decompose_fgems": 12,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-001-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-001-2.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-N-001-3",
@@ -532,9 +528,7 @@
       "combat_power": 543,
       "market_price": 60,
       "decompose_fgems": 60,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-001-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-001-3.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-N-002-1",
@@ -546,9 +540,7 @@
       "combat_power": 102,
       "market_price": 4,
       "decompose_fgems": 2,
-      "expedition_fgems": 1,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-002-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-002-1.webp"
+      "expedition_fgems": 1
     },
     {
       "id": "PET-N-002-2",
@@ -560,9 +552,7 @@
       "combat_power": 244,
       "market_price": 12,
       "decompose_fgems": 12,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-002-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-002-2.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-N-002-3",
@@ -574,9 +564,7 @@
       "combat_power": 546,
       "market_price": 60,
       "decompose_fgems": 60,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-002-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-002-3.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-N-003-1",
@@ -588,9 +576,7 @@
       "combat_power": 103,
       "market_price": 4,
       "decompose_fgems": 2,
-      "expedition_fgems": 1,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-003-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-003-1.webp"
+      "expedition_fgems": 1
     },
     {
       "id": "PET-N-003-2",
@@ -602,9 +588,7 @@
       "combat_power": 246,
       "market_price": 12,
       "decompose_fgems": 12,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-003-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-003-2.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-N-003-3",
@@ -616,9 +600,7 @@
       "combat_power": 549,
       "market_price": 60,
       "decompose_fgems": 60,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-003-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-003-3.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-N-004-1",
@@ -630,9 +612,7 @@
       "combat_power": 104,
       "market_price": 4,
       "decompose_fgems": 2,
-      "expedition_fgems": 1,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-004-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-004-1.webp"
+      "expedition_fgems": 1
     },
     {
       "id": "PET-N-004-2",
@@ -644,9 +624,7 @@
       "combat_power": 248,
       "market_price": 12,
       "decompose_fgems": 12,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-004-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-004-2.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-N-004-3",
@@ -658,9 +636,7 @@
       "combat_power": 552,
       "market_price": 60,
       "decompose_fgems": 60,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-004-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-004-3.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-N-005-1",
@@ -672,9 +648,7 @@
       "combat_power": 105,
       "market_price": 4,
       "decompose_fgems": 2,
-      "expedition_fgems": 1,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-005-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-005-1.webp"
+      "expedition_fgems": 1
     },
     {
       "id": "PET-N-005-2",
@@ -686,9 +660,7 @@
       "combat_power": 250,
       "market_price": 12,
       "decompose_fgems": 12,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-005-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-005-2.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-N-005-3",
@@ -700,9 +672,7 @@
       "combat_power": 555,
       "market_price": 60,
       "decompose_fgems": 60,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-005-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-005-3.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-N-006-1",
@@ -714,9 +684,7 @@
       "combat_power": 106,
       "market_price": 4,
       "decompose_fgems": 2,
-      "expedition_fgems": 1,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-006-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-006-1.webp"
+      "expedition_fgems": 1
     },
     {
       "id": "PET-N-006-2",
@@ -728,9 +696,7 @@
       "combat_power": 252,
       "market_price": 12,
       "decompose_fgems": 12,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-006-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-006-2.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-N-006-3",
@@ -742,9 +708,7 @@
       "combat_power": 558,
       "market_price": 60,
       "decompose_fgems": 60,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-006-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-006-3.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-N-007-1",
@@ -756,9 +720,7 @@
       "combat_power": 107,
       "market_price": 4,
       "decompose_fgems": 2,
-      "expedition_fgems": 1,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-007-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-007-1.webp"
+      "expedition_fgems": 1
     },
     {
       "id": "PET-N-007-2",
@@ -770,9 +732,7 @@
       "combat_power": 254,
       "market_price": 12,
       "decompose_fgems": 12,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-007-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-007-2.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-N-007-3",
@@ -784,9 +744,7 @@
       "combat_power": 561,
       "market_price": 60,
       "decompose_fgems": 60,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-007-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-007-3.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-N-008-1",
@@ -798,9 +756,7 @@
       "combat_power": 108,
       "market_price": 4,
       "decompose_fgems": 2,
-      "expedition_fgems": 1,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-008-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-008-1.webp"
+      "expedition_fgems": 1
     },
     {
       "id": "PET-N-008-2",
@@ -812,9 +768,7 @@
       "combat_power": 256,
       "market_price": 12,
       "decompose_fgems": 12,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-008-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-008-2.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-N-008-3",
@@ -826,9 +780,7 @@
       "combat_power": 564,
       "market_price": 60,
       "decompose_fgems": 60,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-008-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-008-3.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-N-009-1",
@@ -840,9 +792,7 @@
       "combat_power": 109,
       "market_price": 4,
       "decompose_fgems": 2,
-      "expedition_fgems": 1,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-009-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-009-1.webp"
+      "expedition_fgems": 1
     },
     {
       "id": "PET-N-009-2",
@@ -854,9 +804,7 @@
       "combat_power": 258,
       "market_price": 12,
       "decompose_fgems": 12,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-009-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-009-2.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-N-009-3",
@@ -868,9 +816,7 @@
       "combat_power": 567,
       "market_price": 60,
       "decompose_fgems": 60,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-009-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-009-3.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-N-010-1",
@@ -882,9 +828,7 @@
       "combat_power": 110,
       "market_price": 4,
       "decompose_fgems": 2,
-      "expedition_fgems": 1,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-010-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-010-1.webp"
+      "expedition_fgems": 1
     },
     {
       "id": "PET-N-010-2",
@@ -896,9 +840,7 @@
       "combat_power": 260,
       "market_price": 12,
       "decompose_fgems": 12,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-010-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-010-2.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-N-010-3",
@@ -910,9 +852,7 @@
       "combat_power": 570,
       "market_price": 60,
       "decompose_fgems": 60,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-010-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-010-3.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-N-011-1",
@@ -924,9 +864,7 @@
       "combat_power": 111,
       "market_price": 4,
       "decompose_fgems": 2,
-      "expedition_fgems": 1,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-011-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-011-1.webp"
+      "expedition_fgems": 1
     },
     {
       "id": "PET-N-011-2",
@@ -938,9 +876,7 @@
       "combat_power": 262,
       "market_price": 12,
       "decompose_fgems": 12,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-011-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-011-2.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-N-011-3",
@@ -952,9 +888,7 @@
       "combat_power": 573,
       "market_price": 60,
       "decompose_fgems": 60,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-011-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-011-3.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-N-012-1",
@@ -966,9 +900,7 @@
       "combat_power": 112,
       "market_price": 4,
       "decompose_fgems": 2,
-      "expedition_fgems": 1,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-012-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-012-1.webp"
+      "expedition_fgems": 1
     },
     {
       "id": "PET-N-012-2",
@@ -980,9 +912,7 @@
       "combat_power": 264,
       "market_price": 12,
       "decompose_fgems": 12,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-012-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-012-2.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-N-012-3",
@@ -994,9 +924,7 @@
       "combat_power": 576,
       "market_price": 60,
       "decompose_fgems": 60,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-012-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-012-3.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-N-013-1",
@@ -1008,9 +936,7 @@
       "combat_power": 113,
       "market_price": 4,
       "decompose_fgems": 2,
-      "expedition_fgems": 1,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-013-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-013-1.webp"
+      "expedition_fgems": 1
     },
     {
       "id": "PET-N-013-2",
@@ -1022,9 +948,7 @@
       "combat_power": 266,
       "market_price": 12,
       "decompose_fgems": 12,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-013-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-013-2.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-N-013-3",
@@ -1036,9 +960,7 @@
       "combat_power": 579,
       "market_price": 60,
       "decompose_fgems": 60,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-013-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-013-3.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-N-014-1",
@@ -1050,9 +972,7 @@
       "combat_power": 114,
       "market_price": 4,
       "decompose_fgems": 2,
-      "expedition_fgems": 1,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-014-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-014-1.webp"
+      "expedition_fgems": 1
     },
     {
       "id": "PET-N-014-2",
@@ -1064,9 +984,7 @@
       "combat_power": 268,
       "market_price": 12,
       "decompose_fgems": 12,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-014-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-014-2.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-N-014-3",
@@ -1078,9 +996,7 @@
       "combat_power": 582,
       "market_price": 60,
       "decompose_fgems": 60,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-014-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-014-3.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-N-015-1",
@@ -1092,9 +1008,7 @@
       "combat_power": 115,
       "market_price": 4,
       "decompose_fgems": 2,
-      "expedition_fgems": 1,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-015-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-015-1.webp"
+      "expedition_fgems": 1
     },
     {
       "id": "PET-N-015-2",
@@ -1106,9 +1020,7 @@
       "combat_power": 270,
       "market_price": 12,
       "decompose_fgems": 12,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-015-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-015-2.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-N-015-3",
@@ -1120,9 +1032,7 @@
       "combat_power": 585,
       "market_price": 60,
       "decompose_fgems": 60,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-015-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-015-3.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-N-016-1",
@@ -1134,9 +1044,7 @@
       "combat_power": 116,
       "market_price": 4,
       "decompose_fgems": 2,
-      "expedition_fgems": 1,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-016-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-016-1.webp"
+      "expedition_fgems": 1
     },
     {
       "id": "PET-N-016-2",
@@ -1148,9 +1056,7 @@
       "combat_power": 272,
       "market_price": 12,
       "decompose_fgems": 12,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-016-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-016-2.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-N-016-3",
@@ -1162,9 +1068,7 @@
       "combat_power": 588,
       "market_price": 60,
       "decompose_fgems": 60,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-016-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-016-3.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-N-017-1",
@@ -1176,9 +1080,7 @@
       "combat_power": 117,
       "market_price": 4,
       "decompose_fgems": 2,
-      "expedition_fgems": 1,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-017-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-017-1.webp"
+      "expedition_fgems": 1
     },
     {
       "id": "PET-N-017-2",
@@ -1190,9 +1092,7 @@
       "combat_power": 274,
       "market_price": 12,
       "decompose_fgems": 12,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-017-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-017-2.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-N-017-3",
@@ -1204,9 +1104,7 @@
       "combat_power": 591,
       "market_price": 60,
       "decompose_fgems": 60,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-017-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-017-3.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-N-018-1",
@@ -1218,9 +1116,7 @@
       "combat_power": 118,
       "market_price": 4,
       "decompose_fgems": 2,
-      "expedition_fgems": 1,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-018-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-018-1.webp"
+      "expedition_fgems": 1
     },
     {
       "id": "PET-N-018-2",
@@ -1232,9 +1128,7 @@
       "combat_power": 276,
       "market_price": 12,
       "decompose_fgems": 12,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-018-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-018-2.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-N-018-3",
@@ -1246,9 +1140,7 @@
       "combat_power": 594,
       "market_price": 60,
       "decompose_fgems": 60,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-018-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-018-3.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-N-019-1",
@@ -1260,9 +1152,7 @@
       "combat_power": 119,
       "market_price": 4,
       "decompose_fgems": 2,
-      "expedition_fgems": 1,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-019-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-019-1.webp"
+      "expedition_fgems": 1
     },
     {
       "id": "PET-N-019-2",
@@ -1274,9 +1164,7 @@
       "combat_power": 278,
       "market_price": 12,
       "decompose_fgems": 12,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-019-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-019-2.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-N-019-3",
@@ -1288,9 +1176,7 @@
       "combat_power": 597,
       "market_price": 60,
       "decompose_fgems": 60,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-019-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-019-3.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-N-020-1",
@@ -1302,9 +1188,7 @@
       "combat_power": 120,
       "market_price": 4,
       "decompose_fgems": 2,
-      "expedition_fgems": 1,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-020-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-020-1.webp"
+      "expedition_fgems": 1
     },
     {
       "id": "PET-N-020-2",
@@ -1316,9 +1200,7 @@
       "combat_power": 280,
       "market_price": 12,
       "decompose_fgems": 12,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-020-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-020-2.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-N-020-3",
@@ -1330,9 +1212,7 @@
       "combat_power": 600,
       "market_price": 60,
       "decompose_fgems": 60,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-020-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-020-3.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-N-021-1",
@@ -1344,9 +1224,7 @@
       "combat_power": 121,
       "market_price": 4,
       "decompose_fgems": 2,
-      "expedition_fgems": 1,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-021-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-021-1.webp"
+      "expedition_fgems": 1
     },
     {
       "id": "PET-N-021-2",
@@ -1358,9 +1236,7 @@
       "combat_power": 282,
       "market_price": 12,
       "decompose_fgems": 12,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-021-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-021-2.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-N-021-3",
@@ -1372,9 +1248,7 @@
       "combat_power": 603,
       "market_price": 60,
       "decompose_fgems": 60,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-021-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-021-3.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-N-022-1",
@@ -1386,9 +1260,7 @@
       "combat_power": 122,
       "market_price": 4,
       "decompose_fgems": 2,
-      "expedition_fgems": 1,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-022-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-022-1.webp"
+      "expedition_fgems": 1
     },
     {
       "id": "PET-N-022-2",
@@ -1400,9 +1272,7 @@
       "combat_power": 284,
       "market_price": 12,
       "decompose_fgems": 12,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-022-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-022-2.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-N-022-3",
@@ -1414,9 +1284,7 @@
       "combat_power": 606,
       "market_price": 60,
       "decompose_fgems": 60,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-022-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-022-3.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-N-023-1",
@@ -1428,9 +1296,7 @@
       "combat_power": 123,
       "market_price": 4,
       "decompose_fgems": 2,
-      "expedition_fgems": 1,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-023-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-023-1.webp"
+      "expedition_fgems": 1
     },
     {
       "id": "PET-N-023-2",
@@ -1442,9 +1308,7 @@
       "combat_power": 286,
       "market_price": 12,
       "decompose_fgems": 12,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-023-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-023-2.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-N-023-3",
@@ -1456,9 +1320,7 @@
       "combat_power": 609,
       "market_price": 60,
       "decompose_fgems": 60,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-023-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-023-3.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-N-024-1",
@@ -1470,9 +1332,7 @@
       "combat_power": 124,
       "market_price": 4,
       "decompose_fgems": 2,
-      "expedition_fgems": 1,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-024-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-024-1.webp"
+      "expedition_fgems": 1
     },
     {
       "id": "PET-N-024-2",
@@ -1484,9 +1344,7 @@
       "combat_power": 288,
       "market_price": 12,
       "decompose_fgems": 12,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-024-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-024-2.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-N-024-3",
@@ -1498,9 +1356,7 @@
       "combat_power": 612,
       "market_price": 60,
       "decompose_fgems": 60,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-024-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-024-3.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-N-025-1",
@@ -1512,9 +1368,7 @@
       "combat_power": 125,
       "market_price": 4,
       "decompose_fgems": 2,
-      "expedition_fgems": 1,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-025-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-025-1.webp"
+      "expedition_fgems": 1
     },
     {
       "id": "PET-N-025-2",
@@ -1526,9 +1380,7 @@
       "combat_power": 290,
       "market_price": 12,
       "decompose_fgems": 12,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-025-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-025-2.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-N-025-3",
@@ -1540,9 +1392,7 @@
       "combat_power": 615,
       "market_price": 60,
       "decompose_fgems": 60,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-025-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-025-3.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-N-026-1",
@@ -1554,9 +1404,7 @@
       "combat_power": 126,
       "market_price": 4,
       "decompose_fgems": 2,
-      "expedition_fgems": 1,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-026-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-026-1.webp"
+      "expedition_fgems": 1
     },
     {
       "id": "PET-N-026-2",
@@ -1568,9 +1416,7 @@
       "combat_power": 292,
       "market_price": 12,
       "decompose_fgems": 12,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-026-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-026-2.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-N-026-3",
@@ -1582,9 +1428,7 @@
       "combat_power": 618,
       "market_price": 60,
       "decompose_fgems": 60,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-026-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-026-3.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-N-027-1",
@@ -1596,9 +1440,7 @@
       "combat_power": 127,
       "market_price": 4,
       "decompose_fgems": 2,
-      "expedition_fgems": 1,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-027-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-027-1.webp"
+      "expedition_fgems": 1
     },
     {
       "id": "PET-N-027-2",
@@ -1610,9 +1452,7 @@
       "combat_power": 294,
       "market_price": 12,
       "decompose_fgems": 12,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-027-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-027-2.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-N-027-3",
@@ -1624,9 +1464,7 @@
       "combat_power": 621,
       "market_price": 60,
       "decompose_fgems": 60,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-027-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-027-3.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-N-028-1",
@@ -1638,9 +1476,7 @@
       "combat_power": 128,
       "market_price": 4,
       "decompose_fgems": 2,
-      "expedition_fgems": 1,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-028-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-028-1.webp"
+      "expedition_fgems": 1
     },
     {
       "id": "PET-N-028-2",
@@ -1652,9 +1488,7 @@
       "combat_power": 296,
       "market_price": 12,
       "decompose_fgems": 12,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-028-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-028-2.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-N-028-3",
@@ -1666,9 +1500,7 @@
       "combat_power": 624,
       "market_price": 60,
       "decompose_fgems": 60,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-028-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-028-3.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-N-029-1",
@@ -1680,9 +1512,7 @@
       "combat_power": 129,
       "market_price": 4,
       "decompose_fgems": 2,
-      "expedition_fgems": 1,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-029-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-029-1.webp"
+      "expedition_fgems": 1
     },
     {
       "id": "PET-N-029-2",
@@ -1694,9 +1524,7 @@
       "combat_power": 298,
       "market_price": 12,
       "decompose_fgems": 12,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-029-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-029-2.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-N-029-3",
@@ -1708,9 +1536,7 @@
       "combat_power": 627,
       "market_price": 60,
       "decompose_fgems": 60,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-029-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-029-3.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-N-030-1",
@@ -1722,9 +1548,7 @@
       "combat_power": 130,
       "market_price": 4,
       "decompose_fgems": 2,
-      "expedition_fgems": 1,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-030-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-030-1.webp"
+      "expedition_fgems": 1
     },
     {
       "id": "PET-N-030-2",
@@ -1736,9 +1560,7 @@
       "combat_power": 300,
       "market_price": 12,
       "decompose_fgems": 12,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-030-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-030-2.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-N-030-3",
@@ -1750,9 +1572,7 @@
       "combat_power": 630,
       "market_price": 60,
       "decompose_fgems": 60,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-030-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-030-3.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-N-031-1",
@@ -1764,9 +1584,7 @@
       "combat_power": 131,
       "market_price": 4,
       "decompose_fgems": 2,
-      "expedition_fgems": 1,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-031-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-031-1.webp"
+      "expedition_fgems": 1
     },
     {
       "id": "PET-N-031-2",
@@ -1778,9 +1596,7 @@
       "combat_power": 302,
       "market_price": 12,
       "decompose_fgems": 12,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-031-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-031-2.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-N-031-3",
@@ -1792,9 +1608,7 @@
       "combat_power": 633,
       "market_price": 60,
       "decompose_fgems": 60,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-031-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-031-3.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-N-032-1",
@@ -1806,9 +1620,7 @@
       "combat_power": 132,
       "market_price": 4,
       "decompose_fgems": 2,
-      "expedition_fgems": 1,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-032-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-032-1.webp"
+      "expedition_fgems": 1
     },
     {
       "id": "PET-N-032-2",
@@ -1820,9 +1632,7 @@
       "combat_power": 304,
       "market_price": 12,
       "decompose_fgems": 12,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-032-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-032-2.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-N-032-3",
@@ -1834,9 +1644,7 @@
       "combat_power": 636,
       "market_price": 60,
       "decompose_fgems": 60,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-032-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-032-3.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-N-033-1",
@@ -1848,9 +1656,7 @@
       "combat_power": 133,
       "market_price": 4,
       "decompose_fgems": 2,
-      "expedition_fgems": 1,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-033-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-033-1.webp"
+      "expedition_fgems": 1
     },
     {
       "id": "PET-N-033-2",
@@ -1862,9 +1668,7 @@
       "combat_power": 306,
       "market_price": 12,
       "decompose_fgems": 12,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-033-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-033-2.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-N-033-3",
@@ -1876,9 +1680,7 @@
       "combat_power": 639,
       "market_price": 60,
       "decompose_fgems": 60,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-033-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-033-3.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-N-034-1",
@@ -1890,9 +1692,7 @@
       "combat_power": 134,
       "market_price": 4,
       "decompose_fgems": 2,
-      "expedition_fgems": 1,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-034-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-034-1.webp"
+      "expedition_fgems": 1
     },
     {
       "id": "PET-N-034-2",
@@ -1904,9 +1704,7 @@
       "combat_power": 308,
       "market_price": 12,
       "decompose_fgems": 12,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-034-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-034-2.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-N-034-3",
@@ -1918,9 +1716,7 @@
       "combat_power": 642,
       "market_price": 60,
       "decompose_fgems": 60,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-034-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-034-3.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-N-035-1",
@@ -1932,9 +1728,7 @@
       "combat_power": 135,
       "market_price": 4,
       "decompose_fgems": 2,
-      "expedition_fgems": 1,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-035-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-035-1.webp"
+      "expedition_fgems": 1
     },
     {
       "id": "PET-N-035-2",
@@ -1946,9 +1740,7 @@
       "combat_power": 310,
       "market_price": 12,
       "decompose_fgems": 12,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-035-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-035-2.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-N-035-3",
@@ -1960,9 +1752,7 @@
       "combat_power": 645,
       "market_price": 60,
       "decompose_fgems": 60,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-035-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-035-3.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-N-036-1",
@@ -1974,9 +1764,7 @@
       "combat_power": 136,
       "market_price": 4,
       "decompose_fgems": 2,
-      "expedition_fgems": 1,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-036-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-036-1.webp"
+      "expedition_fgems": 1
     },
     {
       "id": "PET-N-036-2",
@@ -1988,9 +1776,7 @@
       "combat_power": 312,
       "market_price": 12,
       "decompose_fgems": 12,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-036-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-036-2.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-N-036-3",
@@ -2002,9 +1788,7 @@
       "combat_power": 648,
       "market_price": 60,
       "decompose_fgems": 60,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-036-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-036-3.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-N-037-1",
@@ -2016,9 +1800,7 @@
       "combat_power": 137,
       "market_price": 4,
       "decompose_fgems": 2,
-      "expedition_fgems": 1,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-037-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-037-1.webp"
+      "expedition_fgems": 1
     },
     {
       "id": "PET-N-037-2",
@@ -2030,9 +1812,7 @@
       "combat_power": 314,
       "market_price": 12,
       "decompose_fgems": 12,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-037-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-037-2.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-N-037-3",
@@ -2044,9 +1824,7 @@
       "combat_power": 651,
       "market_price": 60,
       "decompose_fgems": 60,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-037-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-037-3.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-N-038-1",
@@ -2058,9 +1836,7 @@
       "combat_power": 138,
       "market_price": 4,
       "decompose_fgems": 2,
-      "expedition_fgems": 1,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-038-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-038-1.webp"
+      "expedition_fgems": 1
     },
     {
       "id": "PET-N-038-2",
@@ -2072,9 +1848,7 @@
       "combat_power": 316,
       "market_price": 12,
       "decompose_fgems": 12,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-038-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-038-2.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-N-038-3",
@@ -2086,9 +1860,7 @@
       "combat_power": 654,
       "market_price": 60,
       "decompose_fgems": 60,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-038-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-038-3.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-N-039-1",
@@ -2100,9 +1872,7 @@
       "combat_power": 139,
       "market_price": 4,
       "decompose_fgems": 2,
-      "expedition_fgems": 1,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-039-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-039-1.webp"
+      "expedition_fgems": 1
     },
     {
       "id": "PET-N-039-2",
@@ -2114,9 +1884,7 @@
       "combat_power": 318,
       "market_price": 12,
       "decompose_fgems": 12,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-039-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-039-2.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-N-039-3",
@@ -2128,9 +1896,7 @@
       "combat_power": 657,
       "market_price": 60,
       "decompose_fgems": 60,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-039-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-039-3.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-N-040-1",
@@ -2142,9 +1908,7 @@
       "combat_power": 140,
       "market_price": 4,
       "decompose_fgems": 2,
-      "expedition_fgems": 1,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-040-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-040-1.webp"
+      "expedition_fgems": 1
     },
     {
       "id": "PET-N-040-2",
@@ -2156,9 +1920,7 @@
       "combat_power": 320,
       "market_price": 12,
       "decompose_fgems": 12,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-040-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-040-2.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-N-040-3",
@@ -2170,9 +1932,7 @@
       "combat_power": 660,
       "market_price": 60,
       "decompose_fgems": 60,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-n-040-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-n-040-3.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-A-001-1",
@@ -2184,9 +1944,7 @@
       "combat_power": 303,
       "market_price": 14,
       "decompose_fgems": 10,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-001-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-001-1.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-A-001-2",
@@ -2198,9 +1956,7 @@
       "combat_power": 725,
       "market_price": 70,
       "decompose_fgems": 45,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-001-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-001-2.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-A-001-3",
@@ -2212,9 +1968,7 @@
       "combat_power": 1610,
       "market_price": 160,
       "decompose_fgems": 240,
-      "expedition_fgems": 18,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-001-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-001-3.webp"
+      "expedition_fgems": 18
     },
     {
       "id": "PET-A-002-1",
@@ -2226,9 +1980,7 @@
       "combat_power": 306,
       "market_price": 14,
       "decompose_fgems": 10,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-002-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-002-1.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-A-002-2",
@@ -2240,9 +1992,7 @@
       "combat_power": 730,
       "market_price": 70,
       "decompose_fgems": 45,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-002-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-002-2.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-A-002-3",
@@ -2254,9 +2004,7 @@
       "combat_power": 1620,
       "market_price": 160,
       "decompose_fgems": 240,
-      "expedition_fgems": 18,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-002-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-002-3.webp"
+      "expedition_fgems": 18
     },
     {
       "id": "PET-A-003-1",
@@ -2268,9 +2016,7 @@
       "combat_power": 309,
       "market_price": 14,
       "decompose_fgems": 10,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-003-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-003-1.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-A-003-2",
@@ -2282,9 +2028,7 @@
       "combat_power": 735,
       "market_price": 70,
       "decompose_fgems": 45,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-003-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-003-2.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-A-003-3",
@@ -2296,9 +2040,7 @@
       "combat_power": 1630,
       "market_price": 160,
       "decompose_fgems": 240,
-      "expedition_fgems": 18,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-003-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-003-3.webp"
+      "expedition_fgems": 18
     },
     {
       "id": "PET-A-004-1",
@@ -2310,9 +2052,7 @@
       "combat_power": 312,
       "market_price": 14,
       "decompose_fgems": 10,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-004-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-004-1.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-A-004-2",
@@ -2324,9 +2064,7 @@
       "combat_power": 740,
       "market_price": 70,
       "decompose_fgems": 45,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-004-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-004-2.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-A-004-3",
@@ -2338,9 +2076,7 @@
       "combat_power": 1640,
       "market_price": 160,
       "decompose_fgems": 240,
-      "expedition_fgems": 18,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-004-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-004-3.webp"
+      "expedition_fgems": 18
     },
     {
       "id": "PET-A-005-1",
@@ -2352,9 +2088,7 @@
       "combat_power": 315,
       "market_price": 14,
       "decompose_fgems": 10,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-005-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-005-1.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-A-005-2",
@@ -2366,9 +2100,7 @@
       "combat_power": 745,
       "market_price": 70,
       "decompose_fgems": 45,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-005-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-005-2.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-A-005-3",
@@ -2380,9 +2112,7 @@
       "combat_power": 1650,
       "market_price": 160,
       "decompose_fgems": 240,
-      "expedition_fgems": 18,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-005-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-005-3.webp"
+      "expedition_fgems": 18
     },
     {
       "id": "PET-A-006-1",
@@ -2394,9 +2124,7 @@
       "combat_power": 318,
       "market_price": 14,
       "decompose_fgems": 10,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-006-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-006-1.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-A-006-2",
@@ -2408,9 +2136,7 @@
       "combat_power": 750,
       "market_price": 70,
       "decompose_fgems": 45,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-006-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-006-2.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-A-006-3",
@@ -2422,9 +2148,7 @@
       "combat_power": 1660,
       "market_price": 160,
       "decompose_fgems": 240,
-      "expedition_fgems": 18,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-006-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-006-3.webp"
+      "expedition_fgems": 18
     },
     {
       "id": "PET-A-007-1",
@@ -2436,9 +2160,7 @@
       "combat_power": 321,
       "market_price": 14,
       "decompose_fgems": 10,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-007-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-007-1.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-A-007-2",
@@ -2450,9 +2172,7 @@
       "combat_power": 755,
       "market_price": 70,
       "decompose_fgems": 45,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-007-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-007-2.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-A-007-3",
@@ -2464,9 +2184,7 @@
       "combat_power": 1670,
       "market_price": 160,
       "decompose_fgems": 240,
-      "expedition_fgems": 18,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-007-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-007-3.webp"
+      "expedition_fgems": 18
     },
     {
       "id": "PET-A-008-1",
@@ -2478,9 +2196,7 @@
       "combat_power": 324,
       "market_price": 14,
       "decompose_fgems": 10,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-008-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-008-1.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-A-008-2",
@@ -2492,9 +2208,7 @@
       "combat_power": 760,
       "market_price": 70,
       "decompose_fgems": 45,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-008-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-008-2.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-A-008-3",
@@ -2506,9 +2220,7 @@
       "combat_power": 1680,
       "market_price": 160,
       "decompose_fgems": 240,
-      "expedition_fgems": 18,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-008-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-008-3.webp"
+      "expedition_fgems": 18
     },
     {
       "id": "PET-A-009-1",
@@ -2520,9 +2232,7 @@
       "combat_power": 327,
       "market_price": 14,
       "decompose_fgems": 10,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-009-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-009-1.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-A-009-2",
@@ -2534,9 +2244,7 @@
       "combat_power": 765,
       "market_price": 70,
       "decompose_fgems": 45,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-009-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-009-2.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-A-009-3",
@@ -2548,9 +2256,7 @@
       "combat_power": 1690,
       "market_price": 160,
       "decompose_fgems": 240,
-      "expedition_fgems": 18,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-009-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-009-3.webp"
+      "expedition_fgems": 18
     },
     {
       "id": "PET-A-010-1",
@@ -2562,9 +2268,7 @@
       "combat_power": 330,
       "market_price": 14,
       "decompose_fgems": 10,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-010-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-010-1.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-A-010-2",
@@ -2576,9 +2280,7 @@
       "combat_power": 770,
       "market_price": 70,
       "decompose_fgems": 45,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-010-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-010-2.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-A-010-3",
@@ -2590,9 +2292,7 @@
       "combat_power": 1700,
       "market_price": 160,
       "decompose_fgems": 240,
-      "expedition_fgems": 18,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-010-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-010-3.webp"
+      "expedition_fgems": 18
     },
     {
       "id": "PET-A-011-1",
@@ -2604,9 +2304,7 @@
       "combat_power": 333,
       "market_price": 14,
       "decompose_fgems": 10,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-011-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-011-1.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-A-011-2",
@@ -2618,9 +2316,7 @@
       "combat_power": 775,
       "market_price": 70,
       "decompose_fgems": 45,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-011-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-011-2.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-A-011-3",
@@ -2632,9 +2328,7 @@
       "combat_power": 1710,
       "market_price": 160,
       "decompose_fgems": 240,
-      "expedition_fgems": 18,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-011-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-011-3.webp"
+      "expedition_fgems": 18
     },
     {
       "id": "PET-A-012-1",
@@ -2646,9 +2340,7 @@
       "combat_power": 336,
       "market_price": 14,
       "decompose_fgems": 10,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-012-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-012-1.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-A-012-2",
@@ -2660,9 +2352,7 @@
       "combat_power": 780,
       "market_price": 70,
       "decompose_fgems": 45,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-012-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-012-2.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-A-012-3",
@@ -2674,9 +2364,7 @@
       "combat_power": 1720,
       "market_price": 160,
       "decompose_fgems": 240,
-      "expedition_fgems": 18,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-012-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-012-3.webp"
+      "expedition_fgems": 18
     },
     {
       "id": "PET-A-013-1",
@@ -2688,9 +2376,7 @@
       "combat_power": 339,
       "market_price": 14,
       "decompose_fgems": 10,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-013-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-013-1.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-A-013-2",
@@ -2702,9 +2388,7 @@
       "combat_power": 785,
       "market_price": 70,
       "decompose_fgems": 45,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-013-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-013-2.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-A-013-3",
@@ -2716,9 +2400,7 @@
       "combat_power": 1730,
       "market_price": 160,
       "decompose_fgems": 240,
-      "expedition_fgems": 18,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-013-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-013-3.webp"
+      "expedition_fgems": 18
     },
     {
       "id": "PET-A-014-1",
@@ -2730,9 +2412,7 @@
       "combat_power": 342,
       "market_price": 14,
       "decompose_fgems": 10,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-014-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-014-1.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-A-014-2",
@@ -2744,9 +2424,7 @@
       "combat_power": 790,
       "market_price": 70,
       "decompose_fgems": 45,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-014-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-014-2.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-A-014-3",
@@ -2758,9 +2436,7 @@
       "combat_power": 1740,
       "market_price": 160,
       "decompose_fgems": 240,
-      "expedition_fgems": 18,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-014-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-014-3.webp"
+      "expedition_fgems": 18
     },
     {
       "id": "PET-A-015-1",
@@ -2772,9 +2448,7 @@
       "combat_power": 345,
       "market_price": 14,
       "decompose_fgems": 10,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-015-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-015-1.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-A-015-2",
@@ -2786,9 +2460,7 @@
       "combat_power": 795,
       "market_price": 70,
       "decompose_fgems": 45,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-015-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-015-2.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-A-015-3",
@@ -2800,9 +2472,7 @@
       "combat_power": 1750,
       "market_price": 160,
       "decompose_fgems": 240,
-      "expedition_fgems": 18,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-015-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-015-3.webp"
+      "expedition_fgems": 18
     },
     {
       "id": "PET-A-016-1",
@@ -2814,9 +2484,7 @@
       "combat_power": 348,
       "market_price": 14,
       "decompose_fgems": 10,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-016-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-016-1.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-A-016-2",
@@ -2828,9 +2496,7 @@
       "combat_power": 800,
       "market_price": 70,
       "decompose_fgems": 45,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-016-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-016-2.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-A-016-3",
@@ -2842,9 +2508,7 @@
       "combat_power": 1760,
       "market_price": 160,
       "decompose_fgems": 240,
-      "expedition_fgems": 18,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-016-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-016-3.webp"
+      "expedition_fgems": 18
     },
     {
       "id": "PET-A-017-1",
@@ -2856,9 +2520,7 @@
       "combat_power": 351,
       "market_price": 14,
       "decompose_fgems": 10,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-017-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-017-1.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-A-017-2",
@@ -2870,9 +2532,7 @@
       "combat_power": 805,
       "market_price": 70,
       "decompose_fgems": 45,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-017-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-017-2.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-A-017-3",
@@ -2884,9 +2544,7 @@
       "combat_power": 1770,
       "market_price": 160,
       "decompose_fgems": 240,
-      "expedition_fgems": 18,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-017-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-017-3.webp"
+      "expedition_fgems": 18
     },
     {
       "id": "PET-A-018-1",
@@ -2898,9 +2556,7 @@
       "combat_power": 354,
       "market_price": 14,
       "decompose_fgems": 10,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-018-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-018-1.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-A-018-2",
@@ -2912,9 +2568,7 @@
       "combat_power": 810,
       "market_price": 70,
       "decompose_fgems": 45,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-018-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-018-2.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-A-018-3",
@@ -2926,9 +2580,7 @@
       "combat_power": 1780,
       "market_price": 160,
       "decompose_fgems": 240,
-      "expedition_fgems": 18,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-018-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-018-3.webp"
+      "expedition_fgems": 18
     },
     {
       "id": "PET-A-019-1",
@@ -2940,9 +2592,7 @@
       "combat_power": 357,
       "market_price": 14,
       "decompose_fgems": 10,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-019-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-019-1.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-A-019-2",
@@ -2954,9 +2604,7 @@
       "combat_power": 815,
       "market_price": 70,
       "decompose_fgems": 45,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-019-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-019-2.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-A-019-3",
@@ -2968,9 +2616,7 @@
       "combat_power": 1790,
       "market_price": 160,
       "decompose_fgems": 240,
-      "expedition_fgems": 18,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-019-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-019-3.webp"
+      "expedition_fgems": 18
     },
     {
       "id": "PET-A-020-1",
@@ -2982,9 +2628,7 @@
       "combat_power": 360,
       "market_price": 14,
       "decompose_fgems": 10,
-      "expedition_fgems": 2,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-020-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-020-1.webp"
+      "expedition_fgems": 2
     },
     {
       "id": "PET-A-020-2",
@@ -2996,9 +2640,7 @@
       "combat_power": 820,
       "market_price": 70,
       "decompose_fgems": 45,
-      "expedition_fgems": 6,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-020-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-020-2.webp"
+      "expedition_fgems": 6
     },
     {
       "id": "PET-A-020-3",
@@ -3010,9 +2652,7 @@
       "combat_power": 1800,
       "market_price": 160,
       "decompose_fgems": 240,
-      "expedition_fgems": 18,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-a-020-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-a-020-3.webp"
+      "expedition_fgems": 18
     },
     {
       "id": "PET-T-001-1",
@@ -3024,9 +2664,7 @@
       "combat_power": 910,
       "market_price": 80,
       "decompose_fgems": 40,
-      "expedition_fgems": 7,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-t-001-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-t-001-1.webp"
+      "expedition_fgems": 7
     },
     {
       "id": "PET-T-001-2",
@@ -3038,9 +2676,7 @@
       "combat_power": 2220,
       "market_price": 180,
       "decompose_fgems": 200,
-      "expedition_fgems": 20,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-t-001-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-t-001-2.webp"
+      "expedition_fgems": 20
     },
     {
       "id": "PET-T-001-3",
@@ -3052,9 +2688,7 @@
       "combat_power": 6050,
       "market_price": 900,
       "decompose_fgems": 900,
-      "expedition_fgems": 60,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-t-001-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-t-001-3.webp"
+      "expedition_fgems": 60
     },
     {
       "id": "PET-T-002-1",
@@ -3066,9 +2700,7 @@
       "combat_power": 920,
       "market_price": 80,
       "decompose_fgems": 40,
-      "expedition_fgems": 7,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-t-002-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-t-002-1.webp"
+      "expedition_fgems": 7
     },
     {
       "id": "PET-T-002-2",
@@ -3080,9 +2712,7 @@
       "combat_power": 2240,
       "market_price": 180,
       "decompose_fgems": 200,
-      "expedition_fgems": 20,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-t-002-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-t-002-2.webp"
+      "expedition_fgems": 20
     },
     {
       "id": "PET-T-002-3",
@@ -3094,9 +2724,7 @@
       "combat_power": 6100,
       "market_price": 900,
       "decompose_fgems": 900,
-      "expedition_fgems": 60,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-t-002-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-t-002-3.webp"
+      "expedition_fgems": 60
     },
     {
       "id": "PET-T-003-1",
@@ -3108,9 +2736,7 @@
       "combat_power": 930,
       "market_price": 80,
       "decompose_fgems": 40,
-      "expedition_fgems": 7,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-t-003-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-t-003-1.webp"
+      "expedition_fgems": 7
     },
     {
       "id": "PET-T-003-2",
@@ -3122,9 +2748,7 @@
       "combat_power": 2260,
       "market_price": 180,
       "decompose_fgems": 200,
-      "expedition_fgems": 20,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-t-003-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-t-003-2.webp"
+      "expedition_fgems": 20
     },
     {
       "id": "PET-T-003-3",
@@ -3136,9 +2760,7 @@
       "combat_power": 6150,
       "market_price": 900,
       "decompose_fgems": 900,
-      "expedition_fgems": 60,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-t-003-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-t-003-3.webp"
+      "expedition_fgems": 60
     },
     {
       "id": "PET-T-004-1",
@@ -3150,9 +2772,7 @@
       "combat_power": 940,
       "market_price": 80,
       "decompose_fgems": 40,
-      "expedition_fgems": 7,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-t-004-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-t-004-1.webp"
+      "expedition_fgems": 7
     },
     {
       "id": "PET-T-004-2",
@@ -3164,9 +2784,7 @@
       "combat_power": 2280,
       "market_price": 180,
       "decompose_fgems": 200,
-      "expedition_fgems": 20,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-t-004-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-t-004-2.webp"
+      "expedition_fgems": 20
     },
     {
       "id": "PET-T-004-3",
@@ -3178,9 +2796,7 @@
       "combat_power": 6200,
       "market_price": 900,
       "decompose_fgems": 900,
-      "expedition_fgems": 60,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-t-004-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-t-004-3.webp"
+      "expedition_fgems": 60
     },
     {
       "id": "PET-T-005-1",
@@ -3192,9 +2808,7 @@
       "combat_power": 950,
       "market_price": 80,
       "decompose_fgems": 40,
-      "expedition_fgems": 7,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-t-005-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-t-005-1.webp"
+      "expedition_fgems": 7
     },
     {
       "id": "PET-T-005-2",
@@ -3206,9 +2820,7 @@
       "combat_power": 2300,
       "market_price": 180,
       "decompose_fgems": 200,
-      "expedition_fgems": 20,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-t-005-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-t-005-2.webp"
+      "expedition_fgems": 20
     },
     {
       "id": "PET-T-005-3",
@@ -3220,9 +2832,7 @@
       "combat_power": 6250,
       "market_price": 900,
       "decompose_fgems": 900,
-      "expedition_fgems": 60,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-t-005-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-t-005-3.webp"
+      "expedition_fgems": 60
     },
     {
       "id": "PET-T-006-1",
@@ -3234,9 +2844,7 @@
       "combat_power": 960,
       "market_price": 80,
       "decompose_fgems": 40,
-      "expedition_fgems": 7,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-t-006-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-t-006-1.webp"
+      "expedition_fgems": 7
     },
     {
       "id": "PET-T-006-2",
@@ -3248,9 +2856,7 @@
       "combat_power": 2320,
       "market_price": 180,
       "decompose_fgems": 200,
-      "expedition_fgems": 20,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-t-006-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-t-006-2.webp"
+      "expedition_fgems": 20
     },
     {
       "id": "PET-T-006-3",
@@ -3262,9 +2868,7 @@
       "combat_power": 6300,
       "market_price": 900,
       "decompose_fgems": 900,
-      "expedition_fgems": 60,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-t-006-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-t-006-3.webp"
+      "expedition_fgems": 60
     },
     {
       "id": "PET-T-007-1",
@@ -3276,9 +2880,7 @@
       "combat_power": 970,
       "market_price": 80,
       "decompose_fgems": 40,
-      "expedition_fgems": 7,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-t-007-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-t-007-1.webp"
+      "expedition_fgems": 7
     },
     {
       "id": "PET-T-007-2",
@@ -3290,9 +2892,7 @@
       "combat_power": 2340,
       "market_price": 180,
       "decompose_fgems": 200,
-      "expedition_fgems": 20,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-t-007-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-t-007-2.webp"
+      "expedition_fgems": 20
     },
     {
       "id": "PET-T-007-3",
@@ -3304,9 +2904,7 @@
       "combat_power": 6350,
       "market_price": 900,
       "decompose_fgems": 900,
-      "expedition_fgems": 60,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-t-007-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-t-007-3.webp"
+      "expedition_fgems": 60
     },
     {
       "id": "PET-T-008-1",
@@ -3318,9 +2916,7 @@
       "combat_power": 980,
       "market_price": 80,
       "decompose_fgems": 40,
-      "expedition_fgems": 7,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-t-008-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-t-008-1.webp"
+      "expedition_fgems": 7
     },
     {
       "id": "PET-T-008-2",
@@ -3332,9 +2928,7 @@
       "combat_power": 2360,
       "market_price": 180,
       "decompose_fgems": 200,
-      "expedition_fgems": 20,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-t-008-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-t-008-2.webp"
+      "expedition_fgems": 20
     },
     {
       "id": "PET-T-008-3",
@@ -3346,9 +2940,7 @@
       "combat_power": 6400,
       "market_price": 900,
       "decompose_fgems": 900,
-      "expedition_fgems": 60,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-t-008-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-t-008-3.webp"
+      "expedition_fgems": 60
     },
     {
       "id": "PET-T-009-1",
@@ -3360,9 +2952,7 @@
       "combat_power": 990,
       "market_price": 80,
       "decompose_fgems": 40,
-      "expedition_fgems": 7,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-t-009-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-t-009-1.webp"
+      "expedition_fgems": 7
     },
     {
       "id": "PET-T-009-2",
@@ -3374,9 +2964,7 @@
       "combat_power": 2380,
       "market_price": 180,
       "decompose_fgems": 200,
-      "expedition_fgems": 20,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-t-009-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-t-009-2.webp"
+      "expedition_fgems": 20
     },
     {
       "id": "PET-T-009-3",
@@ -3388,9 +2976,7 @@
       "combat_power": 6450,
       "market_price": 900,
       "decompose_fgems": 900,
-      "expedition_fgems": 60,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-t-009-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-t-009-3.webp"
+      "expedition_fgems": 60
     },
     {
       "id": "PET-T-010-1",
@@ -3402,9 +2988,7 @@
       "combat_power": 1000,
       "market_price": 80,
       "decompose_fgems": 40,
-      "expedition_fgems": 7,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-t-010-1.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-t-010-1.webp"
+      "expedition_fgems": 7
     },
     {
       "id": "PET-T-010-2",
@@ -3416,9 +3000,7 @@
       "combat_power": 2400,
       "market_price": 180,
       "decompose_fgems": 200,
-      "expedition_fgems": 20,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-t-010-2.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-t-010-2.webp"
+      "expedition_fgems": 20
     },
     {
       "id": "PET-T-010-3",
@@ -3430,432 +3012,10 @@
       "combat_power": 6500,
       "market_price": 900,
       "decompose_fgems": 900,
-      "expedition_fgems": 60,
-      "image_thumbnail_path": "/assets/catalog/v1/thumb/pet-t-010-3.webp",
-      "image_detail_path": "/assets/catalog/v1/detail/pet-t-010-3.webp"
+      "expedition_fgems": 60
     }
   ],
   "assets": {
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-001-1.webp": "71582aec24fbc43f4bbc588d448f908f519cd9cbae722ce38310c9dbf45cef75",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-001-1.webp": "dcb7224003a954c272daabe22c9d026734120aae1112bf94502c8c210230b013",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-001-2.webp": "c3146cb033b041507349ebaac5dd95d3ec808c5e902a8f684cef59c142a3bc92",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-001-2.webp": "6035814c0190a85c8d73ca117b5b37544528052571d9d22a4e8b4b48980ac0aa",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-001-3.webp": "605a36b0435a51df905d271a67153be5d71a569876e9caee97d10f5658f0d25a",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-001-3.webp": "2bfe2aa444edb2e13f564d90ac9cf08f6a82259f01f44234e05b515351472822",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-002-1.webp": "08a120c1a47bd482ef1eba5d6d9031c998d87d26de2d35987271481880d67f97",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-002-1.webp": "f40592462dba1c7519e26be568e5ebce6ed177d3e3b5a590f08c5e27f445fa0a",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-002-2.webp": "7046d1247b23cdd6e86f5d48401053ad3f502d4597ecfa2e033a555d0d4d6a67",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-002-2.webp": "fe58aec00899eb7cd1442af2924e1b44de9ca604bccaf9ebe8619784e23564e3",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-002-3.webp": "7804ccdd04437cda94b9afcf9d71fa1c6bfb97913cb250e34630af143a6cd19f",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-002-3.webp": "a2c6125ec8f22030d810bd8919a0edde979f624977aaab53c13fbcc711f7cbb0",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-003-1.webp": "42185c528cc6a2dc2f79b05bf4f8ba839da79f5bbb88f468ea132562c03f3565",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-003-1.webp": "b96d3951d55613d3aa72ee78ff1c88e479554fbe9a45ce9449d25939e32fa512",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-003-2.webp": "93790fb1f5ef505971cec7128dbf1221380a38677a743173259ebc5c4108dadb",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-003-2.webp": "6e9e4234eb15836dae31dc498d8792c271cbe96223d1bff524b9d24429cedc99",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-003-3.webp": "69edd967d5f627d46c3dd43793f90dd71f80b7bdee6154b435f389483d619022",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-003-3.webp": "4ddf990a97f5fc3daf060145150b697f3e5786807c592f565c49727d1111436d",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-004-1.webp": "11f845683b9fddea711dc6e0d9e6897a443c73e5752ad5ff9f50be96afd6d8ec",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-004-1.webp": "8042b38425c029dbb8c45c0afc25446e400adda991da560cf158acd0d01dc816",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-004-2.webp": "176616f0baa2bcbe632ea8fd91214c2bdf2a8002aa65e1680a08c490b9649247",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-004-2.webp": "3b6163032fefbd06cc5b2db65b969430dfec424907a23a8853fff873fdf209d6",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-004-3.webp": "95928e26dacb9968d1240a76f07543559c74ac471ea53f2bb0575311fd21d0a5",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-004-3.webp": "3bd898f8a79bcd65853c4c602d228f899ef8e08dc176e762852aeb332d0616be",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-005-1.webp": "7e077221d8bde0034c1d680ca53506977a598395958df2edf505871d024a188c",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-005-1.webp": "8284e671dbce7eab8358ca22cdb8ed924c618fe379e989a1e8ba7b3f627773ff",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-005-2.webp": "fb3af85d0a1356be22c09de5f77fbf5057b5b8e9acbebc366acb35623dfd3b9a",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-005-2.webp": "db09b5a8bc8bbc1478a69ba885f02ab4e99c6040806110c6226751636d580a54",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-005-3.webp": "e22d1309cc51b3e5931afe694baf426f398cfd6d22c392cf61bd0d7345836ecf",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-005-3.webp": "2c4cedf5d031efb6d8073313270abc6201bebe067b98ab40888d745f36ba4551",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-006-1.webp": "1661b413987e5ba19cd60fb7b63773d4759702c63ed184fb686d57b2171c4d87",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-006-1.webp": "46fff053155171fb1e22908cae89f27ba0075ce456228c6db5091390484e2c87",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-006-2.webp": "8a3c95858cc1a13c39d95a0b3ba9ad49515fd00d64758c5f2a0733434c4ef879",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-006-2.webp": "21407abcf7bb0916c66ef8e44c7543a5d692a8d21152c3bc3f6405b425ca6765",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-006-3.webp": "a8f4ed4ed60e540d4fa7c9f02fe62dc38fc6fb95f3a99af29a51bf5429214dd9",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-006-3.webp": "453162dd6d14082069bcdcd174cc707f4c77d26172e25e90d0e155ff1900aaa5",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-007-1.webp": "9626a679d8d7702805e5c2905f4bdf078ff8973c6cc9c2e5a18ef55d62f77f50",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-007-1.webp": "211b7c5e7ca53864e4d7f14d1fb0250c036f15a7c699cc412d467db0edccbed0",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-007-2.webp": "2cc83ca428283918ce84f92a55e96f832d8c6cbc64b8f676892d61e1fa947c23",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-007-2.webp": "f9bbd1e0b4299b56f13996dfffeaad2796278b1fb52b131d9aad0df698374a6d",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-007-3.webp": "c684e59118931f67fc1d3e0a7a7b47a6346a9150838a9aa779bee0956f7ffae7",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-007-3.webp": "abd7ab0281b3ad1da2509fbe473821ba4433fbe52009ee424483ee5f9a1c47f1",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-008-1.webp": "7a5d1d1fc531d560e39db0d66835d81192d44ccd330d2d6c372045cd5398520f",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-008-1.webp": "cf08fc2e18b083edb8dfff7815b1561c83c7b4773ea89f97ba7a20c9e1085eb8",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-008-2.webp": "6bfda6efd5e4f476ec2c3d33aa4627da226aeb50e14fd3a46690d76616819020",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-008-2.webp": "708a570d6facd185fe5104dd94c331ccb1f4f077e779f7adc1c61d26fc72fefe",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-008-3.webp": "377b2951fb9fd13358ba2576c1bfd39bc72cbc119731cc3edcb40e894ce8ddf0",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-008-3.webp": "21955150e13138d9ad4135f7a9548e4456d768365d7c8b7232f53e14b5a411b4",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-009-1.webp": "ec862d2c3cecb44fd2995159d76f8bb43f46ff2296ad8a08eec30e6ba602824e",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-009-1.webp": "f5931ba4153995da9d4434c984195ad172a5f5115a562bcd66f623332cca9df3",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-009-2.webp": "a9eccc5681a047112d5bbfffec05709845d69f936e5db39d089436ba6ea1f60e",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-009-2.webp": "df9c966c432f1c3f3939049cbf0b85e6d1585e2a339a45688b69f1e43d689b63",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-009-3.webp": "4abadc1615dcd9d48e844c3fe8a046d4ab67eaeba72d9176cbc63cf071d89596",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-009-3.webp": "cac4ba3e4c27bdaac14320362e8cec0e5a3c6678c7e8a210f96c5d533e7a4166",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-010-1.webp": "d282e599f8a4cfc0ecbd399155e03a570b828fc06ca3f5a6435d8305b519302f",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-010-1.webp": "558c7c50e2fe52891cbcc3161e2843f0b84843378a88359d44f7056256b8ee9d",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-010-2.webp": "330f5a8fc8ee02b4fb4939e13ff86e42c8f531633608f11f4b2c111a6bd30895",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-010-2.webp": "4a829a9b340a35b3291efb2b65231cb81db79c6909c0316bb94e2be97217946a",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-010-3.webp": "0a64032ccf8677d8c805d5456f096543ecd7fb25a3f227602eb44ffbacababae",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-010-3.webp": "76f563df37bc7f4776ac8e48834284233b9b1bea808709c6419507cee2945f26",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-011-1.webp": "59676023fa5e4a22eed976c07dffc5b354db707e1b83cc23fe305005abe34f41",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-011-1.webp": "130efd111289200380ff4a0b164491467adf912b2367c6bdb195b5f093aca0b3",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-011-2.webp": "ff04cc3692346f38192bbe4dbfadf721127bd7e5be11f379268d18ab7c68a416",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-011-2.webp": "0ba829fe5be2c562aba4172fd23f13f27efdb62bd87d28b912a271c0ce0d900a",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-011-3.webp": "438c2a4e4764c0389f570247d3cfdcfec73b7d7d623206034b4edab6a6f4b7eb",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-011-3.webp": "dd812201ee38aafdf3864ad0524154623b181e65b6033e61208b428b49ffaf9d",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-012-1.webp": "306cb789c5a119b2d5bde7f9e3a0d1110be049b529dad04295d60355888e3192",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-012-1.webp": "57595ee062b9714da339c5e9c5f39525d4b371a2a30ec1c45d2b1a775fbb456c",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-012-2.webp": "fbc62327b16043ac136b71a8279e1acc827092e28d3de596a7af8bc93e12df50",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-012-2.webp": "ffad9c4ff49a03978178f58ca64d2162539b520f5609b28f11ca47633f258445",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-012-3.webp": "51a51e0ece7255758bfb2406982268b53a67cb68578075d9ed9d718344a621fe",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-012-3.webp": "4da19681760d1b0face9394c70a9d9819a2d6565d6ffa429c114c3306cae51e2",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-013-1.webp": "6d4a7e84825ba6a144bc4506c482a93e8a7e3148abb6c45c3f9e6d9f867a925d",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-013-1.webp": "4a97946421e188bcfb5d76b17fa7d9052fdd3ca0c063bc10ff6662136ccfdf9a",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-013-2.webp": "6c178941889cabf64866336c9d70f17368ecb85ab86171a89073f481a51a187c",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-013-2.webp": "b8f4ca4290c70f2797c68b82c4b0d77b790b26d76aecd30235ca1ba40f021baf",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-013-3.webp": "85ab9a2aaca6d453c591e8b298b3f7e473810a31038f1cc7058b690f170aed8f",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-013-3.webp": "b87a115415e321dd4716dbf0e0002471d1720e54e66556af49727d925345db2a",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-014-1.webp": "0b1161a45480010b0438ce599d0a6e78928e106a1d20181765f5f9821a596117",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-014-1.webp": "2a6f9ddb3966095e56ddc9a09a31c7cbc175241314c142ba631ddfd21cb21bcd",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-014-2.webp": "653e6f0995b579ad379c3d2e261ac1029d90b5dd45b0482f8bb315081ff8e075",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-014-2.webp": "bf273c99bd4c94734427cf4cc2268cca3b513675c5cfcba57e43dd563a7d860f",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-014-3.webp": "9373bb5c09f36914efeb836f0bf2b16ca64e0c0d21b147decb0a7b7abd5f3505",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-014-3.webp": "a56ee802fcfc3db3ad61167bcd9b61b3900cfbc6bb31075e31efe224907bd0bc",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-015-1.webp": "b49239bb4502566b8dd67b9649726bb7e6b2b2c9ebf7900f3c10bd715edfebf5",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-015-1.webp": "61365ddc81b3f876f32740f452a301fdb586c204b003b7ef91fc4a8f5a7cacde",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-015-2.webp": "8b9d53dbf78c6372f63403fd3745a965353b844f00d2806c8f41026049fabf8f",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-015-2.webp": "b8778b52a2185e6ea8bd658af8d6a580847bdcc1b369ae4306d5d8988b2a65af",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-015-3.webp": "338d854c7db402e03342df42990a73f61f98e8102277fb2eb0ac280e9bb1a122",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-015-3.webp": "a787bd666ee29336c17bf8858c73d242a400730d2c1cda4079a36eb0ff1b6bff",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-016-1.webp": "a49ad1921eaf78c9416610decc06ab0df6e2199cc2db7d4110e876a819420d67",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-016-1.webp": "c1a83aa79585741c59925ee28b10ea40e2e76d8d9c6ec1e8792763b8cd457fa2",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-016-2.webp": "28d45b8e6bf2719a30d902bd9a90ba03f87f4970fe6a46d7d883aa688132ebc4",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-016-2.webp": "33a0a97982a07cfcca7470ad4b6b12f02b2c4a5e647ab08b67a40a22ddc5029c",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-016-3.webp": "de465cd9148ccd8cdd7950dbbc8efc4691f915fba1beafdfd69c8844e06c7a1b",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-016-3.webp": "6c8d592c61c2c874d1581f19671287596714ea5d0621a3bfcbc8f2ba84e3d536",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-017-1.webp": "a56f0a9c02e84b96dfdb457ff517875581b1bd2cbc596ca3322c448e4abc18b7",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-017-1.webp": "262e9624c48038e75366608ea3633aa4a20c519bb8ef26f69e373eff93c08c48",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-017-2.webp": "f2f3aa049abe18f11bcc18674230df3ccfdd64b2a0fe89515060f4cc38c1340a",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-017-2.webp": "72af62adc22908e807aad4913db759764d218f7b54db9d8d264ae0377f58a97d",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-017-3.webp": "d2fb2f09bc9c3d7fbad4eada8083f02cc4f03a7a676626feef3abab530ea0480",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-017-3.webp": "135edc7c3820001ab53a765e69e3ec2562eab5c5800e464bdabce557e0002f3e",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-018-1.webp": "38e9a94c940e6b1350e745cbdf1bff32a4ae6d1bee450e45b96eaad582ed2cf0",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-018-1.webp": "0803fb59d1297dd3a99ac9d46ea4b0e8c3d89fa58e3f76d37d42b322f652f721",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-018-2.webp": "bd0597dd1c7d5bdb98178da2a2e0d45b306c29ce8143ffe828ae8f36baf4bed3",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-018-2.webp": "fc3316b0f7bd29dc2ce696940ea20da16399aadb3c34b280792146bd9a17f5de",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-018-3.webp": "3d282a8695995a274325ace9a66ec55dd443c8b055feb84ac1ed9d3c47480bed",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-018-3.webp": "8f42a2cf7c623ce54f1c4d03de8df2bf51c9a3422b7f180e94d142e4fc482e41",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-019-1.webp": "7c608d18d0b5c56dad359ae0ef5e67dfa2714e063c1cb4289042bd747147e86b",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-019-1.webp": "287e6dd25b51d5774bbc91b399b8a6b3ea948c4f8e809879700d59009a1664c1",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-019-2.webp": "058a85318582d4c0f46979d69c4fd143e4313f047f0bcc8085a29753c9dc325e",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-019-2.webp": "ee2cbab5869e37144cf77b44fc4f129500adecc5a04590907de4f14e5cd1276b",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-019-3.webp": "5a8a9034730e5e9cef7f111eb429f8f833c1b73a52019f24ba1a3505f79f4b2e",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-019-3.webp": "7b567a7c50c8b3c2dc8622f9c2bbf8c3e397f7fcdcd40c3311f05051a7e3dfb6",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-020-1.webp": "6728a48d86f609050ca32c9de0dc8dc71ee0759b1a5282fbac5d939accf78c90",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-020-1.webp": "adf398e9d13cc32fb7d2abfd6148196c3fc24f9a8e396c76bf3ef8a3aadd5613",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-020-2.webp": "978bfdb9814b6f9226dd60aa4903ab99cef0b24923bb09abd29475cd500fcc4d",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-020-2.webp": "8c8d9238806b7d7ba76db6e219d26b9c20881515f804c968cd50ff556bf945e9",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-020-3.webp": "1e72271e45c87b00fe7591f9605aaa3fe9176e68c72c65eda1cd02675d7e0ef6",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-020-3.webp": "a0ef1f65e3c9be75dd20c9a58490c5f0de189ccb5ebcabebbc756f89e8fd9b51",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-021-1.webp": "4c708e379a0f52e513e8ab306395de0259ab42935e4bcdf2bd1e56b0e8ecce4e",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-021-1.webp": "9170cf506845c711103416c1a4b88538122f5320718d0bf436e04680d3a98fab",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-021-2.webp": "7728472d2800bf67a9db31511c3c5bf730ed86264ba2f1495140b167af762133",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-021-2.webp": "ebd8326abab62b9c07126250550f8041297a197eeff604642d28722328a827af",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-021-3.webp": "18b5e4f8252a502424fc05359f285dc49c68f7b9eb1d82f5830ba2b3250531e9",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-021-3.webp": "a9813244ddce5deea17ef4ee8ce801050aae0f003308f90bf7d0ce77dce822ec",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-022-1.webp": "d4c038f33c040ca7a11094ff3ff2a25fa28738020a9e6e31d31302f466e90d50",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-022-1.webp": "6d0fc4340b59e8fb8f999ca69242ce161158a7db37b4b223f46245c77cb305b7",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-022-2.webp": "8aad269c7d99da8532144d7703598915acfaa141301448ae5d6d02b65f4b1c68",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-022-2.webp": "245b3fc65521743c9a7b66c4e70843ec19dac0088e51e560b108a0ecaace243f",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-022-3.webp": "95a3767b0810f9a35e3537ec698275f7528b239463ccee019a8d4e85304eaab8",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-022-3.webp": "5430bd4b57e6ef64b7c91c838fc3cf43205ed648ee4b40c7b850c7651c156d05",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-023-1.webp": "015aaf55697da14409a1a452733dd1356a720ea8c9d39b9de01d6cd6d9f841e9",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-023-1.webp": "3dad740369dca31c26a604eb3c2e28b527f511b9021b259257bcee300bfff28c",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-023-2.webp": "e3bf8b7102a37d35e4958b617290b65aa6713214a92eda138d6f8ce97004ed1b",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-023-2.webp": "af46dbca2a4137c5e2ad96b5c7d454a1e4aa385c59b3cb0eb8f796e54951db27",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-023-3.webp": "8ed3b847e880c775b9004321ddef18675e13b92832fe42f430e9505318e7fd2e",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-023-3.webp": "37d531a42986d6a02200918334a21b8926fc1d358f1b0a5891b2ec9135e718bd",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-024-1.webp": "214306528b4a9e4fa3eab42ccd75b26cb1eb6cdbabd8b18d2bf67b6d7447c497",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-024-1.webp": "9ecb8215faa0afb53ca0b23ed3fecf6b24bfc2d03354e35dbc185e39bb45331e",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-024-2.webp": "8fbeb817fb0894c1db661471b3660345fdcfbe9ec7f482b183eccff0f098617d",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-024-2.webp": "422699061e05ecb9bc75aec3d40a41e7353dc766fa9860e56d6ad1390f8148af",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-024-3.webp": "839637914be83406e3511fa2318cf0bc4102a0060d6483d3fce7606b3ca31a9a",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-024-3.webp": "cc9c42ff3494c7ed3287d0a69d50d207811bbfb05373fffef450effb8c15cd07",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-025-1.webp": "d86c839df47c98f421950452f451249bab37e37732389c50798f2f92a8286e5e",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-025-1.webp": "408cdb2ad50d8ad3de4d6b4056ed1737564743aec3634971c3266e1c927a1181",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-025-2.webp": "c2684c1c686a56d7f318ed1495e1c24340e641507207ef7162cda3a1462e47cf",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-025-2.webp": "a84ecf66a226cf9f18f890ea3756dc5a6fcc94f477ca45bf3219f70e9fde4393",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-025-3.webp": "a9b75aa82c5f1f1ce64d1b68c1d52b3ce8f732ee57618c950ca4dfc5ca3124c4",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-025-3.webp": "f62ff328892bf321d36877947075e3fcb7fcea1422e2bddeb6353e3eb11785d1",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-026-1.webp": "010c833ac39aaf46fdc19f55f00daa0251f38234243893b1843297ca1d88b0f0",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-026-1.webp": "3e831d72e59d70d5b02db8409857e20e960a3b16fc21d4325997376df08b4c2e",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-026-2.webp": "53e99888198937e430a2b19286dcd2d7e45aa8296bc1f863f5de0ef6cef2ba90",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-026-2.webp": "56c34864237bc794d52696a4ce32f24d7fa3a6c63ae794605556a4ccda34ad2a",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-026-3.webp": "25ad20ba7b48c5e55b5f659f5df4ae7217bdacd27aef3b09929a690e25e79b23",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-026-3.webp": "0eaf15240f374e0590622d19ae94d4c82517a88ca0c9509da2e5328282382513",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-027-1.webp": "050eec683b2f0bb8d0cc5cc7213be72370bc2b2405431f81e48c9a01bedf2f4f",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-027-1.webp": "c5ea0710243bfb1f8606d01c5c7dfa7246277c1ef5ffdcf566659b4693ed97a3",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-027-2.webp": "42b1f4cb8813a339c2ef0f1e6950a93f8af65b272b608c1dde706a66ab90d7c0",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-027-2.webp": "fc1c03693f37bed3551d7a0142e22b8e8546002a091e9117443ae938c2e4b3ab",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-027-3.webp": "ed591aab0dc932c4fb29415b61f3037dcb057a2112a608aafec7e97ce23bc53a",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-027-3.webp": "c383bcc0b3c2facc6234f87922475306e00959fdd2c55a8e7809e5ff74785399",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-028-1.webp": "c1319920c5270d8a8a14efaabc0661e7f1d54ef389794e863f391a3b276c4b54",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-028-1.webp": "1986b1a172ac3750e441da80b15f47729d4cee9efcb29106336cd4fcf4a7f8ea",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-028-2.webp": "739c5720bfdc004ac91821079cbf243784584c3ee016883a644246543dfd945d",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-028-2.webp": "8766acdb3a134085c042794b0949847f1461c4a7d316876eae153b9d1d84342e",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-028-3.webp": "61e0429b7dc16d3ee93742e5ab485cb02c6e091e49d10b163967af856822c5bd",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-028-3.webp": "afea0e79ffa39de29d33f059ba318ead55385123e6b187de5b0d37b1f515b2b8",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-029-1.webp": "2d70af1f878e59569513ecf4a7e33f1679920b778bcaf0a4cea07f4740738c6c",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-029-1.webp": "274e024376d18206694fbe28ff28bbe104250163702e5387269de2a4d873fa1e",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-029-2.webp": "f3469428f141c914375af3cc82f87745dd44a7ecdf98f6aabd50bfa8df7e57e4",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-029-2.webp": "009da23a8544e42dadd84b8881a107ecdeb0547186bbab280786d9c8d828dc60",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-029-3.webp": "268ac5fa2a6b4aea811537d369248ec2903a321c6ad3439afa6b45c85c477d8f",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-029-3.webp": "c781bb16df0ab1637b51419f13a6bac55755b82fdce31c23d98fa46c96a2749f",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-030-1.webp": "59ae388ebbbaec519940d9f0c9ab3171b7a20439985bd7f8c40a33dc96db7709",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-030-1.webp": "a9a5458ccfd76521e3e468e53efe4291009e19a990bbb48140cef24537d285ae",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-030-2.webp": "436b8fa1c1ba177e8ba66fcc2207cf9a6e44728abf8aa94fada4b35a05d593c2",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-030-2.webp": "3262038bb5b59d519975e95fc8c6241deca654742dcc8f03fba8214b79a6112e",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-030-3.webp": "ecb0f7ac98258d742e2685e8b2d079733780d2ab89b0e7c8f0c3c91d044b9df0",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-030-3.webp": "54f37629cbfc7fae55cdb0bb5957324a58d3fee929e6e9b66d672e1e3769e8d9",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-031-1.webp": "69ed5950567c2b5749bf82894c9e1570f1c94a1d269d7ed65dbe194216e18772",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-031-1.webp": "d9aa562f2eca06348dcc3ab40aa8ca402b255f9f7ad0c4cb816c2c7b8a7e4817",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-031-2.webp": "1750d3a28ac8753c82c7e2b74e61d0e81016602fd6f1bd5c2b6ee49c6b361a28",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-031-2.webp": "b5c086d64aae351522e0e5b4666f06a13d91a28d9c016d2f59ff6cd15c886a66",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-031-3.webp": "b544ca3ca4e264e58a7059a3e1724502f9941a9f60b0e7eb65db624419fd8bb8",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-031-3.webp": "275cf512787f70132d5527820f40ef2680934b3d630da00a9a6f9143736dd3ea",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-032-1.webp": "85d14cf45907bda71005ab166b362f3e9e21405cfa40c4d6877fe81735d799ec",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-032-1.webp": "ba140a86299e7c1f989b411ea350eb7158c8e06a3f07c01b22a4d8fff031a1dc",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-032-2.webp": "b77191bfe4861ffe22ba9251fae9955e2ef08c25b25c7a94ab6b7f4789d5bd78",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-032-2.webp": "a4666350fd728fdd84d0e4e3163fac7f09fdbe518c28983096b0160a019c4c4e",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-032-3.webp": "4fc22c406ebf19571d33f5623758443dc34c5d1ac40213161f5f9e2653157a32",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-032-3.webp": "b4aa765ab50d7020ba794ea343d7557df361229f7ff7d3a64d4fef264b21336e",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-033-1.webp": "b53f02b275fac48d474ae6355eb1a407d53d082883f1e2b056637701d1b49b99",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-033-1.webp": "8d643897c8da862d086217a16162d8e7cbc9b3198a97fa067f09002d52397ecb",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-033-2.webp": "f89228551c5b93303818e1d6adbb76ac5c63205335ee88adf132441d552482a7",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-033-2.webp": "91bbb207c14fbf3deee5bc66f04ba3a9ca0b0e5e21c919f462dddeb7f3eb2b27",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-033-3.webp": "c28e287407482acd8182f123188d5959b326785d8266d69cb87edc23f218edcb",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-033-3.webp": "c2c6f67a465c5110f2f6e63fe6eb7fbc74459f226266bc39cc8f611bb5f67e57",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-034-1.webp": "c267318b8a8352ce417093fd6ccb920eb7bc94c4acd14bdd558cb596d88ec667",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-034-1.webp": "fb3f1f726f193ce5524e48d929db905aa6e0336f2647453985c73dfa17014ad1",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-034-2.webp": "a0e447723e5800e802f0aa0087b23a74f365b45c08d8ab8753bf73b99ae0897d",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-034-2.webp": "754c56f1a9da348ce5d5109a623b0a97b37f993c30e1e2963eab0d6e9e5d30ac",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-034-3.webp": "25ff56283b80d3bbcb29ab6dee754c5419c2961810e248629520d538abd72c7b",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-034-3.webp": "230bdb26193cbf08ccb773ffd8c8bcf78f3108898d8383c7ad07be6c9c6d39cc",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-035-1.webp": "feba6301405a53ccfc6dc1cd0edf3795081f940f19fedb3e12ff4334244fa105",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-035-1.webp": "b395d0b41fb628136a8766795864c76e356d774656c27aec5140cb92b55dd058",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-035-2.webp": "2bbd2ae4b161dee7fcd8eba6c97c57d4455bbf37d45e3b0cc7ac6ec68eb80c9f",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-035-2.webp": "de685ef196a2b499d2e8f5131d6f3eee3687ad1cace18ecb3c44c5f894cabdfb",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-035-3.webp": "8290cb3bd777c9044c181d69065ebacafb01bd3eb6429da50c6610735e359ead",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-035-3.webp": "138785cd2fad0dbaae3108d32b96673a7acdf8799b1030572ba6bdea9b2d8339",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-036-1.webp": "80deb0a773d881cadfbdf7ac31eb675eb6ea49aada182a0769c69b4e4c2fd268",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-036-1.webp": "69211e5b1ac05ee3c2b23d18fc5faaaecb8cb2b4c43bf4ddb15c4356b038b7eb",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-036-2.webp": "88a0f3e4be5061ff1bf514806d9c5ac01b029f79883bba4200a500a40f8f4a0b",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-036-2.webp": "c6946a125101400ebc654a29c65bcf9fa206c07589a0f4530f982aa0baf718fb",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-036-3.webp": "de909c35c3ce4f6488501c1988bd6682b19f471ab2891f2ac50bb26b96b3244e",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-036-3.webp": "21b43077090d0c9f21ccfa88515c2cbdd6405ed09fc71f7613c2ecebbb649b76",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-037-1.webp": "a1157718a0488237f29fda31f86aa45020abb77cf39aa5d3cc93ecd5d5c0716f",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-037-1.webp": "f94570c38683b0faf0cfb66e2469ec8744edd9a43529607354df2653dab365ad",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-037-2.webp": "af61e19f9ea0491e8780e1891bbf4b7c72308d96ea3e5c3a2f9e3160b28b6ae0",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-037-2.webp": "9fc1e2a058a3ec029140357e467e900c2d7a8ee5b3efaf30e50e9b8aacf2bb69",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-037-3.webp": "06b7a6537157cd46eaf2decc64560a1e472c3958ca09032483f07933c94b1fc4",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-037-3.webp": "28d23cd5a40e5f15fa219873a8e756c5f2b4c8a26ce06786faaf03a2cd7a024e",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-038-1.webp": "94ba0e699bf317adbcdd574a9605338ab3b076b379f7cf4a059038bcacbb4088",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-038-1.webp": "b34ef45ce97a7ff729da5d3cdac5ef3aa9de149b7fe516bd2e2925082f024560",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-038-2.webp": "e206790226e7c363006b410024b0059fbe37677892ef623dcbe7f4a8a7cd9713",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-038-2.webp": "5bae09b51e1f5725d2052e6e3e03e45b10411da248800ce11e5932523def2a58",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-038-3.webp": "be1daebcb34a8dfb6044b4333283e5f0f6ef001d42ef430b365e0cf8a4d6f224",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-038-3.webp": "3d93a5f56e2d75a85d2e846c6faea4cb3378afe93cf5597bea7038c62b06d989",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-039-1.webp": "99c33cee8db704ced5200b17cc676b10c5cabfb622e278b8ebbfbdf276a744ad",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-039-1.webp": "aad96f26cd5192ff89a57a103439ce05cad2f67d9d8670c15c81b86cdf2d9ca7",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-039-2.webp": "304290ae8c697a09fbcb314bbe31f8d8f257e76b3d02fbaab597e7a5eec054e4",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-039-2.webp": "d6ae43bd2f144e963fb636578fe758f0cbc42dbe9a41967c7733f098e695837b",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-039-3.webp": "f3c7bbdf23c9e26f7d4836651c3d2f2b516ad3bd732d1ac2767024fd94cb1614",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-039-3.webp": "932bd956850630a489e19276f9b3d359d140823094683fae20b9902ad8fcd4ba",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-040-1.webp": "5e19ccb6cf011759375f042d006cef383a7bfef86972fa0c8f9d6da799c6a9a7",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-040-1.webp": "f74a5cce066acef64db5a5d2b8f7e609e465f9f02a0589618c8b733e4c7dcea5",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-040-2.webp": "389e29632de1cc75a7b22ff0e2abc4179671bce18957ddcbf7199b97360c6e69",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-040-2.webp": "9eb575ce972ee12a0c12876b27fb4cfd0fc7003e9c2b8617f0034faa6e59c756",
-    "apps/web/public/assets/catalog/v1/thumb/pet-n-040-3.webp": "904d5da656c12bf85ba4e8a9397609e19aa156ac39791dd17285b3baa00d311a",
-    "apps/web/public/assets/catalog/v1/detail/pet-n-040-3.webp": "8c598be202ebdc6ebfe9c74fa4087b37618fca7596fe9aae9f76ac4ba89a1d96",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-001-1.webp": "4bc22734e395b62593b43bf3a70fbda38d1f13213d4545525865fbdcdbc9f7ec",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-001-1.webp": "fed3d057b9429c27cfe2286dd4bab0983a6d1771a1aac040a994398f7266de14",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-001-2.webp": "50a647fc0f15d5e8f79c233016c257c69a33f386494be3ddef3fc2387ae3e21c",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-001-2.webp": "b0f9de201b613ad39f7a3e1fc635d5d3a19b61417220af8b8cc509d24eeca0b9",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-001-3.webp": "e45168999dff8dae96b8db53ebc9881347d026061db2220d7327ecb55b030688",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-001-3.webp": "9343939fe8c279752a9173e6cbdf5f211af45460c5fb9211940c63337ab29138",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-002-1.webp": "f0bb518ab4c19570cdb3a54ddb4cba5ad64f40e326cd2af126ff909e16519ab6",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-002-1.webp": "e486327fedaf374cba95eeabfdc5ac491ed39fed59ffbdc8b69ac3adc43f870b",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-002-2.webp": "8f4ae6cbfc44588c04c48a661341493337a573b322d24827d11e5a6e3d4a57b8",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-002-2.webp": "716567d8a77873cbcdbb2c46826d062395361d8023ff0b53185380d7841eff33",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-002-3.webp": "63b8e971a74a943ab620252086969804ccff9b76069f522f97239b19b53ff0d6",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-002-3.webp": "825d055e1a5f73e3f19b7624b8e3db387a7d21c68b3ba81f7a6d203e490d36f1",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-003-1.webp": "ae98eb144339dea1b996f746f18a4614cfcdded26420a337f4877627f1f42732",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-003-1.webp": "49147107974ea3b46099be42fe79236ab531b8059137aae03d1baf86645c7d9b",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-003-2.webp": "869d27b8e996e60a1c4eba2ae7a32005e2feb139edeeeac6378ecdd888c7cb9a",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-003-2.webp": "10c15e3710ef6adb7194d4de1aa89b152a22c8b3bb835276f1cf8ece8d870878",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-003-3.webp": "4cc1e95e07aee3b81d493ab3d5d8bfbdee760ace02874dc683fba5563e914c9f",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-003-3.webp": "e5cac03e0b98bd8f8eec3e364412dabf220f6a2ec52294335d5cf94a182aa23d",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-004-1.webp": "54bc6efcc413a333cefca29ab5b0fe4bcd9519962472fec830cc39bf36753a28",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-004-1.webp": "4216f53d2d0b7815ec425a1d9d64f52c310d37d12a3a2c0edbcf586fb35527ae",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-004-2.webp": "0c4df0c2b9bf7e2dc9153e168324ac5f370eda70cba7da969d600a0ad43d2520",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-004-2.webp": "2387f2d4a9d61cb1d982dd3f2ba0e8f7d047853507ba466e4c8e26404826083a",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-004-3.webp": "2c2da484c8893ac713c466349f5592cecff60de4cd9a0699f6156136d8c59b8b",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-004-3.webp": "bb06eb6ddcd329985e83152ba6187ecbea6394924f3bb0f95651802965f7dcb7",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-005-1.webp": "251f18bb8d654a7941d7acb5ce101eb3268f2d5c9c042e115bf41dbd9a4b0a1a",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-005-1.webp": "28b59e744339507d0e2b9ba896a7ab41a6a7ea7573f8b92879a57f4c385699d0",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-005-2.webp": "b10ee66a89a8e8eddd477688f645b966b6cbd47a79537dd2a14a502c6200717f",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-005-2.webp": "ba653a9d8cafae6a09e60d99ff2a1bb307aa69450a6298e60ef1733a553be025",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-005-3.webp": "7399ab2f7607997bb9519bdade9a2d5f607510f00c8587d6edb3f58ffa6b6fd2",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-005-3.webp": "9691450b9a071ba5a555c536708f9ea146661e24bb2fa3231508282aec471ecd",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-006-1.webp": "74db9446f6adf381737a17874558739d09e55f56ccb389e253dd3e63be388c1e",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-006-1.webp": "334b2abfcd3d1107759509dd440b80812d13b3b2651f768d60d8b6ed92513213",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-006-2.webp": "9cee88e9448769221270099cb1f76070c9f2ab164551453b76eb58fd5fedf8fd",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-006-2.webp": "67581c52b1cf9dbbaebd9ee936b2de57d6408e1169bdc6216f8b935830a0304e",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-006-3.webp": "4b452b4f852832f98e918f3d23c834c2a69c05aee1c64e336ddf6e6f468fc30e",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-006-3.webp": "0d6eac11ef56535d15bb8dbdaac888d3cdb19b9a36478aa504e3a4e1dcc1cdb1",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-007-1.webp": "9e29038e1468ec41ce07628803777a6ad1ffd1fc0759b34df39dd06742366c3e",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-007-1.webp": "f05b8cc73f949d2b421b25fac17ae6616ca5c28803efcef659416e550eed33e9",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-007-2.webp": "c0fd9e7a5c90e5bd812ae00b37c125b20fccace6550a6bbf7890a57413057529",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-007-2.webp": "43d34b0823f272ae761b9308538c2329b7c7750432b090d160d3ea6aa713a968",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-007-3.webp": "7588b0c7c1f330c03f0856e6de7ddd2a267b12cf00133813095b5902afeb3118",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-007-3.webp": "fb6b012c52c90529fbc2ad5a1caa9883ec4f0ef52d28b09b6982f1349067e51d",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-008-1.webp": "2b5cbd4e222a31f4c17378e28b2aa3ff3e3ae9d49c2f0788ec5d32963bb99b24",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-008-1.webp": "f1faae5e3208866f9ec1f11227c968099bdfeb906f8f7cc5cdf28d2c805776ff",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-008-2.webp": "4d7e7f6364f303a3de25a2acca7264eb2d5b0a0d51898bd319a24521bbbedb51",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-008-2.webp": "5d3550929705a89b30ce75cb453c2967952751d6db14bd4592fd5fdba298b1f2",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-008-3.webp": "d3feed27bc1b9f4fcefab0f981fea8cc88dc96906a975626dc3f587e95b6382b",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-008-3.webp": "b818a856ae3841c3c5021c94014e09e3dc76be55574bc6a62cb2e6cb29ebb36b",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-009-1.webp": "7295a2f5f780044d57517465961902e77caef0ca848d620c4079c054f411fd38",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-009-1.webp": "1a90b2105946a943c82348e324dedd30fe3809dcc97182f0e564ffb5cf7cec06",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-009-2.webp": "c056da9287f29426e81e83e4fd8fcd9d80837cbb3786c7c1e762ed88a6989a55",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-009-2.webp": "62c19f9cc1be7e6602d505a627ab23387aae033898513b9c1158c57c98aaa4de",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-009-3.webp": "1c1b0a45b0ca720fde95db2fdf9558027e88a316aeaa54f06b865ab1fcc47c45",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-009-3.webp": "60d80f3b50cdc404da6ba3841d8d2b352baea3ddd2ed8f062cd0826702ebac79",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-010-1.webp": "7361ad0bdc0d1d0fe96ff471bf5492f1e4bfa2814c96f53ed2687da119863212",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-010-1.webp": "dab5891cc8936a25546ba3f50b45db4cad3ed60c57710c1e3db9cc59eeb13793",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-010-2.webp": "79e2c7db8375c601a214b89e7acbe4ef78e1be989f9543c8d39e5a9d1b1267bc",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-010-2.webp": "c131f71257c6817794f84aace68506c274ebd30deaa56dce736fed4b178f2d83",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-010-3.webp": "d78c6a2ebe081a6d9c816dadf7446ec6e9d88d57b3895b0850b4c3430e88a804",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-010-3.webp": "f3940cbfe1609f15f6c25ade3cb5d7d2d5af0bd67f2bb95091ad4631f563b003",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-011-1.webp": "73abb32fe24b4f9f0ee9831f2da84d894540e582ffdd8911ccf3192312142c92",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-011-1.webp": "a6d52d6ee2cf12a19e4280bcae4fbc4a0ae496a6159196365b613a0cbc8d894f",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-011-2.webp": "3110d90ed58e68e5ff3a326c387ecaeb8ae7cd0441281a61fe1921eba83abaf7",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-011-2.webp": "d64e9537344e61231fba171432358323881a6b9b3727139284e9e14bf871e6a9",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-011-3.webp": "dcd238e1e7a24dad087acb75a0a598686387c6dbc0d7ae88a9d3d8effabe7435",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-011-3.webp": "67c5478e8065b728e8f34be5875c4074dd93c7f30aece9844ab266f5bf372e82",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-012-1.webp": "9cc7262e620f253e9458082c6d9e94e0cecf88928b0add0e190cc7a0d38822b5",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-012-1.webp": "ef50128db98330fd991a6076bb5a7f09dd66ec9f490b95a3a4fcb5360494c151",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-012-2.webp": "4c8f1717ab8843448ef64a1fad325af163bfdd2fb3d80db63de8cd8b36ba29c0",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-012-2.webp": "84cfdc8f47dbbbf8789b2db1388a7ba7b452b4a9ad5a0f69c8af8f76c78cf409",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-012-3.webp": "c62f0834c4ced4f23ad5b1f621212bac4f2817dd593ac95e9b9d5d03c200dd73",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-012-3.webp": "72bc0a0d8e09fcd7dd50d7b150057b95e2c81ad2f7e10b4dcc05f243bf11e8c6",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-013-1.webp": "0366f1b1a7f48b3e00595c51f2726e71cfbbd240c1e8a76814f4df52d4857a9c",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-013-1.webp": "42943514fe78829eacc12524787f88b96d3b34751570e5e6c17996a3779e4f38",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-013-2.webp": "c6ff761946760b6885e68d263145ee2260d424a23dec3a065ecc355fe0046ab2",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-013-2.webp": "b1aa50a331050a5e22786ec58f4c332014eebd4117f50992df3e569b02d5f57e",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-013-3.webp": "c443ca2361fd7e134db2fccd6836e8a88a6c5d2cda1bfb1e8c8ac8e3140b05b5",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-013-3.webp": "84cabffd475addf7215b5ac3a895b44de746d8651c3dfb2bd3b9439302c3645e",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-014-1.webp": "3a3bcd2411b6db75906169c4965aca386858cd4d2b61a01d70266a24a93b7271",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-014-1.webp": "c6fdec9505d5f763343b1f81136dc98670b5d7b50e873433e03cca07280a0fa2",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-014-2.webp": "b9b6715f1fe3d16a24ae77e20088a4f6460c7b2bbea79631c99ca696fbca600e",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-014-2.webp": "ea6709df30da8eb44cbce3cfbd798635d51862fa158f91979113a5e675b082b5",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-014-3.webp": "06871b6f927c3b5d694db41812bbd656a33fb3aae548357c67943cbbce9e9461",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-014-3.webp": "170b703a14a64a17f7e6009df57ea9696a09d8ac307096f050256da9f7503c1e",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-015-1.webp": "635802d1b81d774041172b1b70c636e5f847923c511f087d014b4fea639afd05",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-015-1.webp": "7ea14f4a3568173418ff66c1aa8187cc2b7d5c996bd825e297f9ee4d9366d9da",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-015-2.webp": "6bbbce01b012425745d4f5ecc4487478eb6d43ba587c372c43203be40036a63e",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-015-2.webp": "a409ec4eb8ec457dd952637fefdfc31c781064939f238d5000190ae22c602819",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-015-3.webp": "1b0bd6ebf54a77b7290065fb15455679b68c2cd2908cbd86681e0ebdd51b0df0",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-015-3.webp": "593c90c119bc3f6f04e06c45243dabfe2b0c2d0f649b732dc22fc78b9839e02e",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-016-1.webp": "78f306b6dfd9a4e7b510fbad52043194d696ff591504d92cf00f88496b54767e",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-016-1.webp": "1aecd131500bab0ee0490d0914ead3f2b8a48fd742832ddb984b3a62c031f3bd",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-016-2.webp": "6d2619686685e6e2e179c2da344e852becfb488a8a104fa1e8cdf4f0c8c33dc3",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-016-2.webp": "6fc5fe9b1c8fd0b4d868e055ef234b2b3856303343667f1cd1d631033ddfc1d0",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-016-3.webp": "80a4fdafb326281c94535bb4010bf0fcb2951fe0fb1acc4350b9c77101b9ceee",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-016-3.webp": "cc44e84ae9b2cd83f24ed1e24913fac7cd40f16cc3ac275d8dd9036b93d85948",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-017-1.webp": "830ff6457b49443746b9e6fbb6b00a3f1061fde31173418cb06a0200b5f18b7d",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-017-1.webp": "5c825d1cc2838e3effb93226228fcafffd0af37ffaa9f18afd91a9807ae6dd9f",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-017-2.webp": "74db9812db5083f6ac837eaaafdde698254313a6cab318ca52ede30ed9c1c0ff",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-017-2.webp": "9f1add21338eef1e296940cf85dc2d2cda101a7226a822c61513356bd3d553e9",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-017-3.webp": "2ef6bbb3cb9e963f99be6d67560d510783a5e1efa9f0922670ccf52dcb110008",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-017-3.webp": "5760ef1744f0b7b68148de52cd142d663fa4044fd36f1715d454d469e87f8dea",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-018-1.webp": "edf876962d057217227c6028e46b16fab4bbc09b045d25718f57afeba5bbce75",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-018-1.webp": "15c2d2f22d3a5cad32af8c3417b7ee0560d4e37634b554d1b8c9275fd9bd23b7",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-018-2.webp": "54d8f013a20868f107d9f3e274908d48fd818a618f8544cfd1d83eeeaea0738a",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-018-2.webp": "255f4835106584a000d21ada8ad795dd3065cbcb2951868f7d6d300cdd438527",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-018-3.webp": "bffe9bd87f73692a91c3a03ec5803a5cec26720830c4a7d304d3af4ba0f8764b",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-018-3.webp": "16db0fef6d5117e6076693b9cb05b5a050cc0c44da41198c2d00012685917abb",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-019-1.webp": "2283a5d4346c8ab169483feb60c0c14587c2ade3cefe7a11d978fb45f144b6e7",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-019-1.webp": "bc96c4c12f1afcc65b79fe252ced2778571fe1a5c90628ef75ffbabf9967d230",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-019-2.webp": "4fa3c8751b8f1adf121d30aed05dcf76cd626c7f78adf80c6bdb4a5d6577f7d2",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-019-2.webp": "f2787b7e48ba721801a708291c61654a25c43fe61fed8332da2e5a3c00d91454",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-019-3.webp": "379a71b2cd46d6b3d87041fa0478572637408e1360fa5684aae74294a7c97f6d",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-019-3.webp": "9bbe0dfaca4b63c9975c918ddbb93bf09438e6b2c5b820a81a85e718f548bb0c",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-020-1.webp": "7e16ef48fedabb00fcb76510f4c98842438f13d3ff1e397cae69b9e10151e81a",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-020-1.webp": "18b7fb95b26c4a8a6a602377a79fff58b36794f723a2026533a619a7fcbbd933",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-020-2.webp": "3080631f6a7bcaf689d9dd8b40db454f1ab7d8b2253bf447ddf41c809cc72cfc",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-020-2.webp": "4d2823941138e5031a75b3e5f5515111cb617b8ca4a9b5c96b1d6eebea5b6031",
-    "apps/web/public/assets/catalog/v1/thumb/pet-a-020-3.webp": "35366936a20aa2770fd5c0d26baffe88f8e6855d10d9ce195b7454e5839a21aa",
-    "apps/web/public/assets/catalog/v1/detail/pet-a-020-3.webp": "7e57b85c5a238454f875a0896b382f9b2f86b000449c750901a7a6a45adcb2ef",
-    "apps/web/public/assets/catalog/v1/thumb/pet-t-001-1.webp": "61e32f0e2590bec0250992acc63b35634645344c5003c742e23eacf2d9a3a8be",
-    "apps/web/public/assets/catalog/v1/detail/pet-t-001-1.webp": "52bc7c5c95932baa09760385211f8fa7ed8dcc8af0c99901ad7b05d7f8ebc968",
-    "apps/web/public/assets/catalog/v1/thumb/pet-t-001-2.webp": "a8df1281046ff5cc7778d681a1cf5190134ba2de25c7ed58bd1e4673f9688a1f",
-    "apps/web/public/assets/catalog/v1/detail/pet-t-001-2.webp": "7861f8c49704031a80780b520e252be86a3990381fa53643e278063fac54d3f3",
-    "apps/web/public/assets/catalog/v1/thumb/pet-t-001-3.webp": "07ef22acbce00957232b383f69a6168795600a3e0682ffedf3d1796fd62e3dc2",
-    "apps/web/public/assets/catalog/v1/detail/pet-t-001-3.webp": "fb352afff6299694b8e57a03dd119d1d8384434f4805b8190646492cb738fc9d",
-    "apps/web/public/assets/catalog/v1/thumb/pet-t-002-1.webp": "b37abee54d8926502a2122fd0b825f5cc50d5d1088680c757ba26ad99077fa72",
-    "apps/web/public/assets/catalog/v1/detail/pet-t-002-1.webp": "6038db30d774e69ec9e3a0f11d4105249507db4a3cfaa7545da322ad9dc7f7fa",
-    "apps/web/public/assets/catalog/v1/thumb/pet-t-002-2.webp": "a2992f3d360f48e7652051b797e5eef7d905c85a1cfb6fcf1561bf32afaac35c",
-    "apps/web/public/assets/catalog/v1/detail/pet-t-002-2.webp": "2f1470cb498cc69474a61de42fb5cb8c3252bd42a715a49c8c30238386e13e96",
-    "apps/web/public/assets/catalog/v1/thumb/pet-t-002-3.webp": "d46d1aa18ece1d1d9a7c2ae5d82faa1a4d32137f5307cee8f59a043c4fcfd906",
-    "apps/web/public/assets/catalog/v1/detail/pet-t-002-3.webp": "6c1cf720ea2bd24365f3f76beb686680efbd7201b2a3de9ca591f63877152e19",
-    "apps/web/public/assets/catalog/v1/thumb/pet-t-003-1.webp": "5168a2364e7eae6830058e65c914a644f9d8033fbd970b0d14d7c51a2150ff3f",
-    "apps/web/public/assets/catalog/v1/detail/pet-t-003-1.webp": "d74683098c8f4e7c97fe5aa0c12c7e41010ec38411e1995c4ce9aa951daac9bb",
-    "apps/web/public/assets/catalog/v1/thumb/pet-t-003-2.webp": "7a5afe1e846fcea54fc8334e8c89a8bfb1cab2d93631a629942ff22bd8459427",
-    "apps/web/public/assets/catalog/v1/detail/pet-t-003-2.webp": "365778c9ddb12f7f0241b0e2b102afbdb91c513de94f2c69f2df8fb79db199af",
-    "apps/web/public/assets/catalog/v1/thumb/pet-t-003-3.webp": "e1d7ac8966f27f89478ccaaa857e14dc6269d766d17c5688686b8dc1e9eadd0e",
-    "apps/web/public/assets/catalog/v1/detail/pet-t-003-3.webp": "a2083d018d21c2f819da58af367c691e6160682f3cbb9e0e565d3d37b45888f3",
-    "apps/web/public/assets/catalog/v1/thumb/pet-t-004-1.webp": "449d48414b85743ae3830fbd6aedd9bb7cc33156773c06d8fcf34a33d62a6c12",
-    "apps/web/public/assets/catalog/v1/detail/pet-t-004-1.webp": "5e858ed5fac510cdb1f7ae14d6e56281973291ad9c5c0f09399272c4ca3f6872",
-    "apps/web/public/assets/catalog/v1/thumb/pet-t-004-2.webp": "f46d792f497f33f17110a44eca47c6fa6e85ff76d71e5ae3bd3b9d2776be4827",
-    "apps/web/public/assets/catalog/v1/detail/pet-t-004-2.webp": "292d49ffdbda56ef3cf9a69b4a4a1e3473dcd0e07aa6f61925754ad2a1090e92",
-    "apps/web/public/assets/catalog/v1/thumb/pet-t-004-3.webp": "f2fd2c30ca0633904205b671c8d3efcec08334dea61bd42a591953510efc98be",
-    "apps/web/public/assets/catalog/v1/detail/pet-t-004-3.webp": "c8a49fd7eb612267bf89f139dea0bc0eec67ddf6cb008cec211ff5fac3390b79",
-    "apps/web/public/assets/catalog/v1/thumb/pet-t-005-1.webp": "dfae33e15b3d99a3aa6f7b818e58cad34757c9bf54a86f116a8b1d3dc0ee8d65",
-    "apps/web/public/assets/catalog/v1/detail/pet-t-005-1.webp": "785c92ca2c826d956a387f23e44138b4ea3a74ece1717405ed74e2eb4959415c",
-    "apps/web/public/assets/catalog/v1/thumb/pet-t-005-2.webp": "fce6a2f8e950ddf5560bb9243e0488736aa2202c51aea69b338083236bb56909",
-    "apps/web/public/assets/catalog/v1/detail/pet-t-005-2.webp": "d39a394e6744efbaebc431532d5e9dbc8d59e9da585d562f4ff63b7acc1fcb94",
-    "apps/web/public/assets/catalog/v1/thumb/pet-t-005-3.webp": "6a103bea5a90f45562bf1e642aa22b6a51ce8840defa79d6ad09ef6d50be4dd4",
-    "apps/web/public/assets/catalog/v1/detail/pet-t-005-3.webp": "721b465c7bf3849e93738e9818d02ecfb1c007a7f7d050ac8546beaaaeb930d8",
-    "apps/web/public/assets/catalog/v1/thumb/pet-t-006-1.webp": "4bd97a0d7e15941fde038df424af80e455ee7d27ab93a8d7d0da131ba01e5a2f",
-    "apps/web/public/assets/catalog/v1/detail/pet-t-006-1.webp": "d0773a99a97944e44288c96376871e99e4697fd53728d356461b82c0311901b5",
-    "apps/web/public/assets/catalog/v1/thumb/pet-t-006-2.webp": "50e43d86bd436e9cb3f29e9d01477e2e9b57ae4ae1bee328ecd4a71b567f0f8b",
-    "apps/web/public/assets/catalog/v1/detail/pet-t-006-2.webp": "ad7ebe21d78e70e9fb7b1cf15d6be64ebf8e128698a210435cfa7dcd5af9b901",
-    "apps/web/public/assets/catalog/v1/thumb/pet-t-006-3.webp": "461ef0674f15222e02a2053f2fb3a3213f23fe28dcd4a7558158a99283d97497",
-    "apps/web/public/assets/catalog/v1/detail/pet-t-006-3.webp": "91b71ec25d8ed1819e0e314b06208687c6b3d8da4379d5ea8e6ad8c444092690",
-    "apps/web/public/assets/catalog/v1/thumb/pet-t-007-1.webp": "01d47fe2cf98102662da650c18fdd8336f08912ebeddfb02390d5d15e64c90e3",
-    "apps/web/public/assets/catalog/v1/detail/pet-t-007-1.webp": "1313f78795e865a68ae1a971fb1b78607321b73998ba3e531866b57dd93a723d",
-    "apps/web/public/assets/catalog/v1/thumb/pet-t-007-2.webp": "15bafcb949f733d55353357ccfe5d080bf55a29eaa07f7ada270dae4125b8bc4",
-    "apps/web/public/assets/catalog/v1/detail/pet-t-007-2.webp": "b0e13dfe4f0ac71ae34e6dfa67ad01e9c90923b97e3bfa6600c4593e98b22d0a",
-    "apps/web/public/assets/catalog/v1/thumb/pet-t-007-3.webp": "c63922108c25c3429a9d2c4f80c41d13c17b5d73bea00beb9e27ceb1e89c1e1f",
-    "apps/web/public/assets/catalog/v1/detail/pet-t-007-3.webp": "6dcd0584c1182d67ef5ad4f6c098fc00062a118f9396fa01dd29ec1a714f138d",
-    "apps/web/public/assets/catalog/v1/thumb/pet-t-008-1.webp": "64d5e29bd99215c31d1897c7eac25f6ba54c041cd6b6d5a659e8759886e1d57b",
-    "apps/web/public/assets/catalog/v1/detail/pet-t-008-1.webp": "ac20100140d9de2bd43379087951cf0df02dbad5d599f1bd532c6b98b66cf375",
-    "apps/web/public/assets/catalog/v1/thumb/pet-t-008-2.webp": "2ebd290443dc4e5061925920c1ba88fe2e9d090685a090d105f8eac75578fc61",
-    "apps/web/public/assets/catalog/v1/detail/pet-t-008-2.webp": "511d6a77fbf6a0c6356f81dafcc6d0989813b3c89c92ecc337614c6ef808f706",
-    "apps/web/public/assets/catalog/v1/thumb/pet-t-008-3.webp": "34ac58afb37caed5af40609c349ff8f09de205aa5a8b82e77fd1ea061277cea4",
-    "apps/web/public/assets/catalog/v1/detail/pet-t-008-3.webp": "3288db8c8249bd5b902f9540e26cc32e02eeac6ac29c9cd4040cba62a07ab819",
-    "apps/web/public/assets/catalog/v1/thumb/pet-t-009-1.webp": "fcd15a05deecd2d0ef99ed30596c476dfe598fe29d749f3338f3a033e0f06ce6",
-    "apps/web/public/assets/catalog/v1/detail/pet-t-009-1.webp": "5739b1e404d48f8fe28aac85675c60dab7a5fd9b1cd2cace1b9783454748a5ae",
-    "apps/web/public/assets/catalog/v1/thumb/pet-t-009-2.webp": "4c26c04b01e573a98f64bddfedaed476bf634598d6c9f3f1232462ee9b929b20",
-    "apps/web/public/assets/catalog/v1/detail/pet-t-009-2.webp": "1cc82e05641e84c8b7e53f93bc3bb0b03429374615aa7be96c737aa38054535f",
-    "apps/web/public/assets/catalog/v1/thumb/pet-t-009-3.webp": "ef85f19fd5aeda12d5fc39069455847bf01436646fe9d445a7f45323e22bed55",
-    "apps/web/public/assets/catalog/v1/detail/pet-t-009-3.webp": "0a08a333ec40419c4046b2b5f7c8b1992299422b0b3bdae56918e806ffcc1c2b",
-    "apps/web/public/assets/catalog/v1/thumb/pet-t-010-1.webp": "fbcbcba5528cc6614425f0a13d690b7b9c89195771574689f3f87b4f64793f41",
-    "apps/web/public/assets/catalog/v1/detail/pet-t-010-1.webp": "97f5eed96f618a961e07fe116654b6221b21848ec0d509beee01655d92a5daa1",
-    "apps/web/public/assets/catalog/v1/thumb/pet-t-010-2.webp": "e8f618fc319b17d07d5f8e8724def45711daf46e7cfd586af2603166725c3018",
-    "apps/web/public/assets/catalog/v1/detail/pet-t-010-2.webp": "fe7b39dbd7767bc85e42ad02372a766acb361e76ba230a9a0670a1b9b6a657c4",
-    "apps/web/public/assets/catalog/v1/thumb/pet-t-010-3.webp": "fed3e373472d4b9cd9f8ca5f0d62e2e6bb291725e253c19fe0f431c191a571f1",
-    "apps/web/public/assets/catalog/v1/detail/pet-t-010-3.webp": "7bd9ec6d61aa4845df89ad77844811e2abeb47e8c50277f2c411638f07a472b6",
     "apps/web/public/assets/boxes/normal.webp": "183f83bd5e0c51f6be6ef9045f66481aec848b484720d4f3c683518ba6e051ae",
     "apps/web/public/assets/boxes/rare.webp": "fb2d1ddab64625f624f774b44a39f62db1b1be4dadc04d7e590ef0b3c8954ad5",
     "apps/web/public/assets/boxes/legendary.webp": "5bc0cc7ad004d9e30f4112340c2e116f0f94f98ec71ea32779bd01ce7e8576ab",

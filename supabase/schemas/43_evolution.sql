@@ -17,8 +17,8 @@ as $$
     'name', (p_template).name,
     'rarity', (p_template).rarity,
     'stage', (p_template).stage,
-    'image_thumbnail_path', (p_template).image_thumbnail_path,
-    'image_detail_path', (p_template).image_detail_path
+    'image_thumbnail_url', catalog.template_thumbnail_url((p_template).id),
+    'image_detail_url', catalog.template_detail_url((p_template).id)
   )
 $$;
 
