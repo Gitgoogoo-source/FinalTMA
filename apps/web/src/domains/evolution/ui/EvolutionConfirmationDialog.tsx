@@ -1,9 +1,8 @@
 import {
-  ArrowDown,
-  ArrowLeft,
   ArrowRight,
   Gem,
   PackageOpen,
+  Plus,
   ShieldCheck,
   TriangleAlert,
 } from "lucide-react";
@@ -13,6 +12,7 @@ import {
   AppModal,
   Button,
   CatalogImage,
+  InventoryActionDialogHeader,
   QuantityControl,
 } from "../../../shared/ui/index.tsx";
 import type { EvolutionRarity, EvolutionRoute } from "../config.ts";
@@ -81,18 +81,16 @@ export function EvolutionConfirmationDialog({
 
   return (
     <AppModal
-      className="evolution-confirmation-backdrop"
+      className="inventory-action-dialog-backdrop evolution-confirmation-backdrop"
       labelledBy="evolution-confirmation-title"
       onClose={onCancel}
     >
-      <div className="modal evolution-confirmation-modal">
-        <header>
-          <ShieldCheck aria-hidden="true" />
-          <div>
-            <small>每 3 个相同藏品进化 1 次</small>
-            <h2 id="evolution-confirmation-title">藏品进化</h2>
-          </div>
-        </header>
+      <div className="modal inventory-action-dialog evolution-confirmation-modal">
+        <InventoryActionDialogHeader
+          titleId="evolution-confirmation-title"
+          title="藏品进化"
+          subtitle="每 3 个相同藏品进化 1 次"
+        />
 
         <div className="evolution-confirmation-content">
           <EvolutionFusionPreview source={source} route={route} />
@@ -155,7 +153,7 @@ export function EvolutionConfirmationDialog({
           ) : null}
         </div>
 
-        <footer className="evolution-confirmation-actions">
+        <footer className="evolution-confirmation-actions inventory-action-dialog-actions">
           <Button className="secondary" onClick={onCancel}>
             取消
           </Button>
@@ -187,13 +185,12 @@ function EvolutionFusionPreview({
       aria-label={`使用 3 个${source.name}进化为${route.target.name}`}
     >
       <MaterialSlot source={source} index={0} className="material-one" />
-      <ArrowDown
-        className="evolution-connector connector-top"
-        aria-hidden="true"
-      />
+      <Plus className="evolution-connector connector-one" aria-hidden="true" />
       <MaterialSlot source={source} index={1} className="material-two" />
+      <Plus className="evolution-connector connector-two" aria-hidden="true" />
+      <MaterialSlot source={source} index={2} className="material-three" />
       <ArrowRight
-        className="evolution-connector connector-left"
+        className="evolution-connector connector-result"
         aria-hidden="true"
       />
       <article className="evolution-target-card">
@@ -209,11 +206,6 @@ function EvolutionFusionPreview({
           {rarityLabels[route.target.rarity]} · 第 {route.target.stage} 阶
         </span>
       </article>
-      <ArrowLeft
-        className="evolution-connector connector-right"
-        aria-hidden="true"
-      />
-      <MaterialSlot source={source} index={2} className="material-three" />
     </section>
   );
 }

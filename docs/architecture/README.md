@@ -87,7 +87,7 @@ TMA 首次同步加载只覆盖应用壳、会话与账号门禁及默认开盒�
 - [Vercel 函数打包与配置隔离](adr/ADR-008-vercel-packaging-and-config-isolation.md)
 - [开盒页运行期视图状态](adr/ADR-009-gacha-runtime-view-state.md)
 - [正式藏品图片资源](adr/ADR-010-catalog-image-assets.md)
-- [进化顶层底部确认弹窗](adr/ADR-012-evolution-bottom-sheet-confirmation.md)
+- [进化共享藏品操作底部确认弹窗](adr/ADR-012-evolution-bottom-sheet-confirmation.md)
 - [登录会话内页面保活与事件驱动刷新](adr/ADR-013-session-page-lifecycle.md)
 - [Battle 数据库权威与规则快照](adr/ADR-014-battle-authority-and-ruleset.md)
 - [Battle 实时失效通知、调度与 outbox](adr/ADR-015-battle-realtime-and-scheduler.md)

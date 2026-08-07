@@ -8,6 +8,7 @@ import {
 
 export { CatalogImage } from "./CatalogImage.tsx";
 export { AppModal } from "./AppModal.tsx";
+export { InventoryActionDialogHeader } from "./InventoryActionDialogHeader.tsx";
 export {
   CollectionDetailShowcase,
   type CollectionDetailItem,
