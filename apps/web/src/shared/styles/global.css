@@ -5362,7 +5362,7 @@ input:focus {
   font: inherit;
   -webkit-tap-highlight-color: transparent;
 }
-.app-shell .inventory-skill-tab::before {
+.app-shell .inventory-skill-bar {
   position: absolute;
   top: 50%;
   left: 0;
@@ -5373,7 +5373,6 @@ input:focus {
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.52),
     0 3px 8px color-mix(in srgb, var(--inventory-skill-color) 18%, transparent);
-  content: "";
   transform: translateY(-50%);
   transition: filter 160ms ease;
 }
@@ -5389,10 +5388,7 @@ input:focus {
 .app-shell .inventory-skill-tab.skill-4 {
   --inventory-skill-color: #74be45;
 }
-.app-shell .inventory-skill-tab.selected::before {
-  width: 52px;
-}
-.app-shell .inventory-skill-tab:not(.selected):active::before {
+.app-shell .inventory-skill-tab:not(.selected):active .inventory-skill-bar {
   filter: saturate(1.08) brightness(0.97);
 }
 .app-shell .inventory-skill-tab:focus-visible {

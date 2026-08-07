@@ -141,7 +141,13 @@ function CollectionSkillRail({
               aria-label={`${skill.name}，伤害 ${skill.damage}`}
               aria-pressed={selected}
               onClick={() => setSelectedIndex(index)}
-            />
+            >
+              <span
+                className="inventory-skill-bar"
+                style={{ width: selected ? 52 : 28 }}
+                aria-hidden="true"
+              />
+            </button>
           );
         })}
       </div>
