@@ -1,0 +1,3572 @@
+[
+  {
+    "template_id": "PET-N-001-1",
+    "skills": [
+      {
+        "name": "火花突袭",
+        "damage": 45
+      },
+      {
+        "name": "灼热火球",
+        "damage": 55
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-001-2",
+    "skills": [
+      {
+        "name": "火花突袭",
+        "damage": 45
+      },
+      {
+        "name": "灼热火球",
+        "damage": 55
+      },
+      {
+        "name": "熔岩重击",
+        "damage": 85
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-001-3",
+    "skills": [
+      {
+        "name": "火花突袭",
+        "damage": 45
+      },
+      {
+        "name": "灼热火球",
+        "damage": 55
+      },
+      {
+        "name": "熔岩重击",
+        "damage": 85
+      },
+      {
+        "name": "炼狱坠火",
+        "damage": 95
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-002-1",
+    "skills": [
+      {
+        "name": "水流突袭",
+        "damage": 45
+      },
+      {
+        "name": "泡沫弹",
+        "damage": 55
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-002-2",
+    "skills": [
+      {
+        "name": "水流突袭",
+        "damage": 45
+      },
+      {
+        "name": "泡沫弹",
+        "damage": 55
+      },
+      {
+        "name": "巨浪重击",
+        "damage": 85
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-002-3",
+    "skills": [
+      {
+        "name": "水流突袭",
+        "damage": 45
+      },
+      {
+        "name": "泡沫弹",
+        "damage": 55
+      },
+      {
+        "name": "巨浪重击",
+        "damage": 85
+      },
+      {
+        "name": "沧海怒涛",
+        "damage": 95
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-003-1",
+    "skills": [
+      {
+        "name": "飞叶突袭",
+        "damage": 45
+      },
+      {
+        "name": "种子弹",
+        "damage": 55
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-003-2",
+    "skills": [
+      {
+        "name": "飞叶突袭",
+        "damage": 45
+      },
+      {
+        "name": "种子弹",
+        "damage": 55
+      },
+      {
+        "name": "巨藤重击",
+        "damage": 85
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-003-3",
+    "skills": [
+      {
+        "name": "飞叶突袭",
+        "damage": 45
+      },
+      {
+        "name": "种子弹",
+        "damage": 55
+      },
+      {
+        "name": "巨藤重击",
+        "damage": 85
+      },
+      {
+        "name": "万叶风暴",
+        "damage": 95
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-004-1",
+    "skills": [
+      {
+        "name": "砂砾突袭",
+        "damage": 45
+      },
+      {
+        "name": "泥岩弹",
+        "damage": 55
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-004-2",
+    "skills": [
+      {
+        "name": "砂砾突袭",
+        "damage": 45
+      },
+      {
+        "name": "泥岩弹",
+        "damage": 55
+      },
+      {
+        "name": "山岳重击",
+        "damage": 85
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-004-3",
+    "skills": [
+      {
+        "name": "砂砾突袭",
+        "damage": 45
+      },
+      {
+        "name": "泥岩弹",
+        "damage": 55
+      },
+      {
+        "name": "山岳重击",
+        "damage": 85
+      },
+      {
+        "name": "大地震荡",
+        "damage": 95
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-005-1",
+    "skills": [
+      {
+        "name": "电光突袭",
+        "damage": 45
+      },
+      {
+        "name": "电弧弹",
+        "damage": 55
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-005-2",
+    "skills": [
+      {
+        "name": "电光突袭",
+        "damage": 45
+      },
+      {
+        "name": "电弧弹",
+        "damage": 55
+      },
+      {
+        "name": "霹雳重击",
+        "damage": 85
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-005-3",
+    "skills": [
+      {
+        "name": "电光突袭",
+        "damage": 45
+      },
+      {
+        "name": "电弧弹",
+        "damage": 55
+      },
+      {
+        "name": "霹雳重击",
+        "damage": 85
+      },
+      {
+        "name": "九霄天雷",
+        "damage": 95
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-006-1",
+    "skills": [
+      {
+        "name": "电光突袭",
+        "damage": 45
+      },
+      {
+        "name": "雷鸣冲击",
+        "damage": 70
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-006-2",
+    "skills": [
+      {
+        "name": "电光突袭",
+        "damage": 45
+      },
+      {
+        "name": "雷鸣冲击",
+        "damage": 70
+      },
+      {
+        "name": "磁极轰击",
+        "damage": 75
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-006-3",
+    "skills": [
+      {
+        "name": "电光突袭",
+        "damage": 45
+      },
+      {
+        "name": "雷鸣冲击",
+        "damage": 70
+      },
+      {
+        "name": "磁极轰击",
+        "damage": 75
+      },
+      {
+        "name": "雷暴爆破",
+        "damage": 105
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-007-1",
+    "skills": [
+      {
+        "name": "电光突袭",
+        "damage": 45
+      },
+      {
+        "name": "雷鸣冲击",
+        "damage": 70
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-007-2",
+    "skills": [
+      {
+        "name": "电光突袭",
+        "damage": 45
+      },
+      {
+        "name": "雷鸣冲击",
+        "damage": 70
+      },
+      {
+        "name": "霹雳重击",
+        "damage": 85
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-007-3",
+    "skills": [
+      {
+        "name": "电光突袭",
+        "damage": 45
+      },
+      {
+        "name": "雷鸣冲击",
+        "damage": 70
+      },
+      {
+        "name": "霹雳重击",
+        "damage": 85
+      },
+      {
+        "name": "万雷天劫",
+        "damage": 125
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-008-1",
+    "skills": [
+      {
+        "name": "砂砾突袭",
+        "damage": 45
+      },
+      {
+        "name": "岩崩冲击",
+        "damage": 70
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-008-2",
+    "skills": [
+      {
+        "name": "砂砾突袭",
+        "damage": 45
+      },
+      {
+        "name": "岩崩冲击",
+        "damage": 70
+      },
+      {
+        "name": "巨岩轰击",
+        "damage": 75
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-008-3",
+    "skills": [
+      {
+        "name": "砂砾突袭",
+        "damage": 45
+      },
+      {
+        "name": "岩崩冲击",
+        "damage": 70
+      },
+      {
+        "name": "巨岩轰击",
+        "damage": 75
+      },
+      {
+        "name": "地脉爆破",
+        "damage": 105
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-009-1",
+    "skills": [
+      {
+        "name": "水流突袭",
+        "damage": 45
+      },
+      {
+        "name": "激流冲击",
+        "damage": 70
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-009-2",
+    "skills": [
+      {
+        "name": "水流突袭",
+        "damage": 45
+      },
+      {
+        "name": "激流冲击",
+        "damage": 70
+      },
+      {
+        "name": "深潮轰击",
+        "damage": 75
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-009-3",
+    "skills": [
+      {
+        "name": "水流突袭",
+        "damage": 45
+      },
+      {
+        "name": "激流冲击",
+        "damage": 70
+      },
+      {
+        "name": "深潮轰击",
+        "damage": 75
+      },
+      {
+        "name": "海啸爆破",
+        "damage": 105
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-010-1",
+    "skills": [
+      {
+        "name": "飞叶突袭",
+        "damage": 45
+      },
+      {
+        "name": "叶刃冲击",
+        "damage": 70
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-010-2",
+    "skills": [
+      {
+        "name": "飞叶突袭",
+        "damage": 45
+      },
+      {
+        "name": "叶刃冲击",
+        "damage": 70
+      },
+      {
+        "name": "古木轰击",
+        "damage": 75
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-010-3",
+    "skills": [
+      {
+        "name": "飞叶突袭",
+        "damage": 45
+      },
+      {
+        "name": "叶刃冲击",
+        "damage": 70
+      },
+      {
+        "name": "古木轰击",
+        "damage": 75
+      },
+      {
+        "name": "森罗爆破",
+        "damage": 105
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-011-1",
+    "skills": [
+      {
+        "name": "水流突袭",
+        "damage": 45
+      },
+      {
+        "name": "激流冲击",
+        "damage": 70
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-011-2",
+    "skills": [
+      {
+        "name": "水流突袭",
+        "damage": 45
+      },
+      {
+        "name": "激流冲击",
+        "damage": 70
+      },
+      {
+        "name": "巨浪重击",
+        "damage": 85
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-011-3",
+    "skills": [
+      {
+        "name": "水流突袭",
+        "damage": 45
+      },
+      {
+        "name": "激流冲击",
+        "damage": 70
+      },
+      {
+        "name": "巨浪重击",
+        "damage": 85
+      },
+      {
+        "name": "天河坠潮",
+        "damage": 125
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-012-1",
+    "skills": [
+      {
+        "name": "飞叶突袭",
+        "damage": 45
+      },
+      {
+        "name": "叶刃冲击",
+        "damage": 70
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-012-2",
+    "skills": [
+      {
+        "name": "飞叶突袭",
+        "damage": 45
+      },
+      {
+        "name": "叶刃冲击",
+        "damage": 70
+      },
+      {
+        "name": "巨藤重击",
+        "damage": 85
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-012-3",
+    "skills": [
+      {
+        "name": "飞叶突袭",
+        "damage": 45
+      },
+      {
+        "name": "叶刃冲击",
+        "damage": 70
+      },
+      {
+        "name": "巨藤重击",
+        "damage": 85
+      },
+      {
+        "name": "世界树坠击",
+        "damage": 125
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-013-1",
+    "skills": [
+      {
+        "name": "电弧弹",
+        "damage": 55
+      },
+      {
+        "name": "雷针快攻",
+        "damage": 60
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-013-2",
+    "skills": [
+      {
+        "name": "电弧弹",
+        "damage": 55
+      },
+      {
+        "name": "雷针快攻",
+        "damage": 60
+      },
+      {
+        "name": "磁极轰击",
+        "damage": 75
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-013-3",
+    "skills": [
+      {
+        "name": "电弧弹",
+        "damage": 55
+      },
+      {
+        "name": "雷针快攻",
+        "damage": 60
+      },
+      {
+        "name": "磁极轰击",
+        "damage": 75
+      },
+      {
+        "name": "霹雳重击",
+        "damage": 85
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-014-1",
+    "skills": [
+      {
+        "name": "泡沫弹",
+        "damage": 55
+      },
+      {
+        "name": "水刃快攻",
+        "damage": 60
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-014-2",
+    "skills": [
+      {
+        "name": "泡沫弹",
+        "damage": 55
+      },
+      {
+        "name": "水刃快攻",
+        "damage": 60
+      },
+      {
+        "name": "深潮轰击",
+        "damage": 75
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-014-3",
+    "skills": [
+      {
+        "name": "泡沫弹",
+        "damage": 55
+      },
+      {
+        "name": "水刃快攻",
+        "damage": 60
+      },
+      {
+        "name": "深潮轰击",
+        "damage": 75
+      },
+      {
+        "name": "巨浪重击",
+        "damage": 85
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-015-1",
+    "skills": [
+      {
+        "name": "火花突袭",
+        "damage": 45
+      },
+      {
+        "name": "烈焰冲击",
+        "damage": 70
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-015-2",
+    "skills": [
+      {
+        "name": "火花突袭",
+        "damage": 45
+      },
+      {
+        "name": "烈焰冲击",
+        "damage": 70
+      },
+      {
+        "name": "焰流轰击",
+        "damage": 75
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-015-3",
+    "skills": [
+      {
+        "name": "火花突袭",
+        "damage": 45
+      },
+      {
+        "name": "烈焰冲击",
+        "damage": 70
+      },
+      {
+        "name": "焰流轰击",
+        "damage": 75
+      },
+      {
+        "name": "日炎爆破",
+        "damage": 105
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-016-1",
+    "skills": [
+      {
+        "name": "种子弹",
+        "damage": 55
+      },
+      {
+        "name": "藤刺快攻",
+        "damage": 60
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-016-2",
+    "skills": [
+      {
+        "name": "种子弹",
+        "damage": 55
+      },
+      {
+        "name": "藤刺快攻",
+        "damage": 60
+      },
+      {
+        "name": "古木轰击",
+        "damage": 75
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-016-3",
+    "skills": [
+      {
+        "name": "种子弹",
+        "damage": 55
+      },
+      {
+        "name": "藤刺快攻",
+        "damage": 60
+      },
+      {
+        "name": "古木轰击",
+        "damage": 75
+      },
+      {
+        "name": "巨藤重击",
+        "damage": 85
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-017-1",
+    "skills": [
+      {
+        "name": "火花突袭",
+        "damage": 45
+      },
+      {
+        "name": "烈焰冲击",
+        "damage": 70
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-017-2",
+    "skills": [
+      {
+        "name": "火花突袭",
+        "damage": 45
+      },
+      {
+        "name": "烈焰冲击",
+        "damage": 70
+      },
+      {
+        "name": "熔岩重击",
+        "damage": 85
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-017-3",
+    "skills": [
+      {
+        "name": "火花突袭",
+        "damage": 45
+      },
+      {
+        "name": "烈焰冲击",
+        "damage": 70
+      },
+      {
+        "name": "熔岩重击",
+        "damage": 85
+      },
+      {
+        "name": "终焉天火",
+        "damage": 125
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-018-1",
+    "skills": [
+      {
+        "name": "电弧弹",
+        "damage": 55
+      },
+      {
+        "name": "雷针快攻",
+        "damage": 60
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-018-2",
+    "skills": [
+      {
+        "name": "电弧弹",
+        "damage": 55
+      },
+      {
+        "name": "雷针快攻",
+        "damage": 60
+      },
+      {
+        "name": "九霄天雷",
+        "damage": 95
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-018-3",
+    "skills": [
+      {
+        "name": "电弧弹",
+        "damage": 55
+      },
+      {
+        "name": "雷针快攻",
+        "damage": 60
+      },
+      {
+        "name": "九霄天雷",
+        "damage": 95
+      },
+      {
+        "name": "雷暴爆破",
+        "damage": 105
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-019-1",
+    "skills": [
+      {
+        "name": "灼热火球",
+        "damage": 55
+      },
+      {
+        "name": "炽焰快攻",
+        "damage": 60
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-019-2",
+    "skills": [
+      {
+        "name": "灼热火球",
+        "damage": 55
+      },
+      {
+        "name": "炽焰快攻",
+        "damage": 60
+      },
+      {
+        "name": "焰流轰击",
+        "damage": 75
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-019-3",
+    "skills": [
+      {
+        "name": "灼热火球",
+        "damage": 55
+      },
+      {
+        "name": "炽焰快攻",
+        "damage": 60
+      },
+      {
+        "name": "焰流轰击",
+        "damage": 75
+      },
+      {
+        "name": "熔岩重击",
+        "damage": 85
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-020-1",
+    "skills": [
+      {
+        "name": "砂砾突袭",
+        "damage": 45
+      },
+      {
+        "name": "岩崩冲击",
+        "damage": 70
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-020-2",
+    "skills": [
+      {
+        "name": "砂砾突袭",
+        "damage": 45
+      },
+      {
+        "name": "岩崩冲击",
+        "damage": 70
+      },
+      {
+        "name": "山岳重击",
+        "damage": 85
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-020-3",
+    "skills": [
+      {
+        "name": "砂砾突袭",
+        "damage": 45
+      },
+      {
+        "name": "岩崩冲击",
+        "damage": 70
+      },
+      {
+        "name": "山岳重击",
+        "damage": 85
+      },
+      {
+        "name": "天陨坠岩",
+        "damage": 125
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-021-1",
+    "skills": [
+      {
+        "name": "种子弹",
+        "damage": 55
+      },
+      {
+        "name": "藤刺快攻",
+        "damage": 60
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-021-2",
+    "skills": [
+      {
+        "name": "种子弹",
+        "damage": 55
+      },
+      {
+        "name": "藤刺快攻",
+        "damage": 60
+      },
+      {
+        "name": "万叶风暴",
+        "damage": 95
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-021-3",
+    "skills": [
+      {
+        "name": "种子弹",
+        "damage": 55
+      },
+      {
+        "name": "藤刺快攻",
+        "damage": 60
+      },
+      {
+        "name": "万叶风暴",
+        "damage": 95
+      },
+      {
+        "name": "森罗爆破",
+        "damage": 105
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-022-1",
+    "skills": [
+      {
+        "name": "灼热火球",
+        "damage": 55
+      },
+      {
+        "name": "炽焰快攻",
+        "damage": 60
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-022-2",
+    "skills": [
+      {
+        "name": "灼热火球",
+        "damage": 55
+      },
+      {
+        "name": "炽焰快攻",
+        "damage": 60
+      },
+      {
+        "name": "炼狱坠火",
+        "damage": 95
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-022-3",
+    "skills": [
+      {
+        "name": "灼热火球",
+        "damage": 55
+      },
+      {
+        "name": "炽焰快攻",
+        "damage": 60
+      },
+      {
+        "name": "炼狱坠火",
+        "damage": 95
+      },
+      {
+        "name": "日炎爆破",
+        "damage": 105
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-023-1",
+    "skills": [
+      {
+        "name": "泥岩弹",
+        "damage": 55
+      },
+      {
+        "name": "岩针快攻",
+        "damage": 60
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-023-2",
+    "skills": [
+      {
+        "name": "泥岩弹",
+        "damage": 55
+      },
+      {
+        "name": "岩针快攻",
+        "damage": 60
+      },
+      {
+        "name": "巨岩轰击",
+        "damage": 75
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-023-3",
+    "skills": [
+      {
+        "name": "泥岩弹",
+        "damage": 55
+      },
+      {
+        "name": "岩针快攻",
+        "damage": 60
+      },
+      {
+        "name": "巨岩轰击",
+        "damage": 75
+      },
+      {
+        "name": "山岳重击",
+        "damage": 85
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-024-1",
+    "skills": [
+      {
+        "name": "藤刺快攻",
+        "damage": 60
+      },
+      {
+        "name": "叶刃冲击",
+        "damage": 70
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-024-2",
+    "skills": [
+      {
+        "name": "藤刺快攻",
+        "damage": 60
+      },
+      {
+        "name": "叶刃冲击",
+        "damage": 70
+      },
+      {
+        "name": "古木轰击",
+        "damage": 75
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-024-3",
+    "skills": [
+      {
+        "name": "藤刺快攻",
+        "damage": 60
+      },
+      {
+        "name": "叶刃冲击",
+        "damage": 70
+      },
+      {
+        "name": "古木轰击",
+        "damage": 75
+      },
+      {
+        "name": "森罗爆破",
+        "damage": 105
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-025-1",
+    "skills": [
+      {
+        "name": "泡沫弹",
+        "damage": 55
+      },
+      {
+        "name": "水刃快攻",
+        "damage": 60
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-025-2",
+    "skills": [
+      {
+        "name": "泡沫弹",
+        "damage": 55
+      },
+      {
+        "name": "水刃快攻",
+        "damage": 60
+      },
+      {
+        "name": "沧海怒涛",
+        "damage": 95
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-025-3",
+    "skills": [
+      {
+        "name": "泡沫弹",
+        "damage": 55
+      },
+      {
+        "name": "水刃快攻",
+        "damage": 60
+      },
+      {
+        "name": "沧海怒涛",
+        "damage": 95
+      },
+      {
+        "name": "海啸爆破",
+        "damage": 105
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-026-1",
+    "skills": [
+      {
+        "name": "雷针快攻",
+        "damage": 60
+      },
+      {
+        "name": "雷鸣冲击",
+        "damage": 70
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-026-2",
+    "skills": [
+      {
+        "name": "雷针快攻",
+        "damage": 60
+      },
+      {
+        "name": "雷鸣冲击",
+        "damage": 70
+      },
+      {
+        "name": "磁极轰击",
+        "damage": 75
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-026-3",
+    "skills": [
+      {
+        "name": "雷针快攻",
+        "damage": 60
+      },
+      {
+        "name": "雷鸣冲击",
+        "damage": 70
+      },
+      {
+        "name": "磁极轰击",
+        "damage": 75
+      },
+      {
+        "name": "雷暴爆破",
+        "damage": 105
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-027-1",
+    "skills": [
+      {
+        "name": "泥岩弹",
+        "damage": 55
+      },
+      {
+        "name": "岩针快攻",
+        "damage": 60
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-027-2",
+    "skills": [
+      {
+        "name": "泥岩弹",
+        "damage": 55
+      },
+      {
+        "name": "岩针快攻",
+        "damage": 60
+      },
+      {
+        "name": "大地震荡",
+        "damage": 95
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-027-3",
+    "skills": [
+      {
+        "name": "泥岩弹",
+        "damage": 55
+      },
+      {
+        "name": "岩针快攻",
+        "damage": 60
+      },
+      {
+        "name": "大地震荡",
+        "damage": 95
+      },
+      {
+        "name": "地脉爆破",
+        "damage": 105
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-028-1",
+    "skills": [
+      {
+        "name": "炽焰快攻",
+        "damage": 60
+      },
+      {
+        "name": "烈焰冲击",
+        "damage": 70
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-028-2",
+    "skills": [
+      {
+        "name": "炽焰快攻",
+        "damage": 60
+      },
+      {
+        "name": "烈焰冲击",
+        "damage": 70
+      },
+      {
+        "name": "焰流轰击",
+        "damage": 75
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-028-3",
+    "skills": [
+      {
+        "name": "炽焰快攻",
+        "damage": 60
+      },
+      {
+        "name": "烈焰冲击",
+        "damage": 70
+      },
+      {
+        "name": "焰流轰击",
+        "damage": 75
+      },
+      {
+        "name": "日炎爆破",
+        "damage": 105
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-029-1",
+    "skills": [
+      {
+        "name": "水刃快攻",
+        "damage": 60
+      },
+      {
+        "name": "激流冲击",
+        "damage": 70
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-029-2",
+    "skills": [
+      {
+        "name": "水刃快攻",
+        "damage": 60
+      },
+      {
+        "name": "激流冲击",
+        "damage": 70
+      },
+      {
+        "name": "深潮轰击",
+        "damage": 75
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-029-3",
+    "skills": [
+      {
+        "name": "水刃快攻",
+        "damage": 60
+      },
+      {
+        "name": "激流冲击",
+        "damage": 70
+      },
+      {
+        "name": "深潮轰击",
+        "damage": 75
+      },
+      {
+        "name": "海啸爆破",
+        "damage": 105
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-030-1",
+    "skills": [
+      {
+        "name": "岩针快攻",
+        "damage": 60
+      },
+      {
+        "name": "岩崩冲击",
+        "damage": 70
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-030-2",
+    "skills": [
+      {
+        "name": "岩针快攻",
+        "damage": 60
+      },
+      {
+        "name": "岩崩冲击",
+        "damage": 70
+      },
+      {
+        "name": "巨岩轰击",
+        "damage": 75
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-030-3",
+    "skills": [
+      {
+        "name": "岩针快攻",
+        "damage": 60
+      },
+      {
+        "name": "岩崩冲击",
+        "damage": 70
+      },
+      {
+        "name": "巨岩轰击",
+        "damage": 75
+      },
+      {
+        "name": "地脉爆破",
+        "damage": 105
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-031-1",
+    "skills": [
+      {
+        "name": "种子弹",
+        "damage": 55
+      },
+      {
+        "name": "荆棘闪击",
+        "damage": 80
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-031-2",
+    "skills": [
+      {
+        "name": "种子弹",
+        "damage": 55
+      },
+      {
+        "name": "荆棘闪击",
+        "damage": 80
+      },
+      {
+        "name": "巨藤重击",
+        "damage": 85
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-031-3",
+    "skills": [
+      {
+        "name": "种子弹",
+        "damage": 55
+      },
+      {
+        "name": "荆棘闪击",
+        "damage": 80
+      },
+      {
+        "name": "巨藤重击",
+        "damage": 85
+      },
+      {
+        "name": "万叶风暴",
+        "damage": 95
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-032-1",
+    "skills": [
+      {
+        "name": "泡沫弹",
+        "damage": 55
+      },
+      {
+        "name": "潮汐闪击",
+        "damage": 80
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-032-2",
+    "skills": [
+      {
+        "name": "泡沫弹",
+        "damage": 55
+      },
+      {
+        "name": "潮汐闪击",
+        "damage": 80
+      },
+      {
+        "name": "巨浪重击",
+        "damage": 85
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-032-3",
+    "skills": [
+      {
+        "name": "泡沫弹",
+        "damage": 55
+      },
+      {
+        "name": "潮汐闪击",
+        "damage": 80
+      },
+      {
+        "name": "巨浪重击",
+        "damage": 85
+      },
+      {
+        "name": "沧海怒涛",
+        "damage": 95
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-033-1",
+    "skills": [
+      {
+        "name": "叶刃冲击",
+        "damage": 70
+      },
+      {
+        "name": "古木轰击",
+        "damage": 75
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-033-2",
+    "skills": [
+      {
+        "name": "叶刃冲击",
+        "damage": 70
+      },
+      {
+        "name": "古木轰击",
+        "damage": 75
+      },
+      {
+        "name": "荆棘闪击",
+        "damage": 80
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-033-3",
+    "skills": [
+      {
+        "name": "叶刃冲击",
+        "damage": 70
+      },
+      {
+        "name": "古木轰击",
+        "damage": 75
+      },
+      {
+        "name": "荆棘闪击",
+        "damage": 80
+      },
+      {
+        "name": "森罗爆破",
+        "damage": 105
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-034-1",
+    "skills": [
+      {
+        "name": "电弧弹",
+        "damage": 55
+      },
+      {
+        "name": "霆光闪击",
+        "damage": 80
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-034-2",
+    "skills": [
+      {
+        "name": "电弧弹",
+        "damage": 55
+      },
+      {
+        "name": "霆光闪击",
+        "damage": 80
+      },
+      {
+        "name": "霹雳重击",
+        "damage": 85
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-034-3",
+    "skills": [
+      {
+        "name": "电弧弹",
+        "damage": 55
+      },
+      {
+        "name": "霆光闪击",
+        "damage": 80
+      },
+      {
+        "name": "霹雳重击",
+        "damage": 85
+      },
+      {
+        "name": "九霄天雷",
+        "damage": 95
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-035-1",
+    "skills": [
+      {
+        "name": "泥岩弹",
+        "damage": 55
+      },
+      {
+        "name": "地裂闪击",
+        "damage": 80
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-035-2",
+    "skills": [
+      {
+        "name": "泥岩弹",
+        "damage": 55
+      },
+      {
+        "name": "地裂闪击",
+        "damage": 80
+      },
+      {
+        "name": "山岳重击",
+        "damage": 85
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-035-3",
+    "skills": [
+      {
+        "name": "泥岩弹",
+        "damage": 55
+      },
+      {
+        "name": "地裂闪击",
+        "damage": 80
+      },
+      {
+        "name": "山岳重击",
+        "damage": 85
+      },
+      {
+        "name": "大地震荡",
+        "damage": 95
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-036-1",
+    "skills": [
+      {
+        "name": "激流冲击",
+        "damage": 70
+      },
+      {
+        "name": "深潮轰击",
+        "damage": 75
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-036-2",
+    "skills": [
+      {
+        "name": "激流冲击",
+        "damage": 70
+      },
+      {
+        "name": "深潮轰击",
+        "damage": 75
+      },
+      {
+        "name": "潮汐闪击",
+        "damage": 80
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-036-3",
+    "skills": [
+      {
+        "name": "激流冲击",
+        "damage": 70
+      },
+      {
+        "name": "深潮轰击",
+        "damage": 75
+      },
+      {
+        "name": "潮汐闪击",
+        "damage": 80
+      },
+      {
+        "name": "海啸爆破",
+        "damage": 105
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-037-1",
+    "skills": [
+      {
+        "name": "灼热火球",
+        "damage": 55
+      },
+      {
+        "name": "爆炎闪击",
+        "damage": 80
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-037-2",
+    "skills": [
+      {
+        "name": "灼热火球",
+        "damage": 55
+      },
+      {
+        "name": "爆炎闪击",
+        "damage": 80
+      },
+      {
+        "name": "熔岩重击",
+        "damage": 85
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-037-3",
+    "skills": [
+      {
+        "name": "灼热火球",
+        "damage": 55
+      },
+      {
+        "name": "爆炎闪击",
+        "damage": 80
+      },
+      {
+        "name": "熔岩重击",
+        "damage": 85
+      },
+      {
+        "name": "炼狱坠火",
+        "damage": 95
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-038-1",
+    "skills": [
+      {
+        "name": "烈焰冲击",
+        "damage": 70
+      },
+      {
+        "name": "焰流轰击",
+        "damage": 75
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-038-2",
+    "skills": [
+      {
+        "name": "烈焰冲击",
+        "damage": 70
+      },
+      {
+        "name": "焰流轰击",
+        "damage": 75
+      },
+      {
+        "name": "爆炎闪击",
+        "damage": 80
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-038-3",
+    "skills": [
+      {
+        "name": "烈焰冲击",
+        "damage": 70
+      },
+      {
+        "name": "焰流轰击",
+        "damage": 75
+      },
+      {
+        "name": "爆炎闪击",
+        "damage": 80
+      },
+      {
+        "name": "日炎爆破",
+        "damage": 105
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-039-1",
+    "skills": [
+      {
+        "name": "岩崩冲击",
+        "damage": 70
+      },
+      {
+        "name": "巨岩轰击",
+        "damage": 75
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-039-2",
+    "skills": [
+      {
+        "name": "岩崩冲击",
+        "damage": 70
+      },
+      {
+        "name": "巨岩轰击",
+        "damage": 75
+      },
+      {
+        "name": "地裂闪击",
+        "damage": 80
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-039-3",
+    "skills": [
+      {
+        "name": "岩崩冲击",
+        "damage": 70
+      },
+      {
+        "name": "巨岩轰击",
+        "damage": 75
+      },
+      {
+        "name": "地裂闪击",
+        "damage": 80
+      },
+      {
+        "name": "地脉爆破",
+        "damage": 105
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-040-1",
+    "skills": [
+      {
+        "name": "雷鸣冲击",
+        "damage": 70
+      },
+      {
+        "name": "磁极轰击",
+        "damage": 75
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-040-2",
+    "skills": [
+      {
+        "name": "雷鸣冲击",
+        "damage": 70
+      },
+      {
+        "name": "磁极轰击",
+        "damage": 75
+      },
+      {
+        "name": "霆光闪击",
+        "damage": 80
+      }
+    ]
+  },
+  {
+    "template_id": "PET-N-040-3",
+    "skills": [
+      {
+        "name": "雷鸣冲击",
+        "damage": 70
+      },
+      {
+        "name": "磁极轰击",
+        "damage": 75
+      },
+      {
+        "name": "霆光闪击",
+        "damage": 80
+      },
+      {
+        "name": "雷暴爆破",
+        "damage": 105
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-001-1",
+    "skills": [
+      {
+        "name": "泡沫弹",
+        "damage": 55
+      },
+      {
+        "name": "潮汐闪击",
+        "damage": 80
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-001-2",
+    "skills": [
+      {
+        "name": "泡沫弹",
+        "damage": 55
+      },
+      {
+        "name": "潮汐闪击",
+        "damage": 80
+      },
+      {
+        "name": "海啸爆破",
+        "damage": 105
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-001-3",
+    "skills": [
+      {
+        "name": "泡沫弹",
+        "damage": 55
+      },
+      {
+        "name": "潮汐闪击",
+        "damage": 80
+      },
+      {
+        "name": "海啸爆破",
+        "damage": 105
+      },
+      {
+        "name": "天河坠潮",
+        "damage": 125
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-002-1",
+    "skills": [
+      {
+        "name": "电弧弹",
+        "damage": 55
+      },
+      {
+        "name": "霆光闪击",
+        "damage": 80
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-002-2",
+    "skills": [
+      {
+        "name": "电弧弹",
+        "damage": 55
+      },
+      {
+        "name": "霆光闪击",
+        "damage": 80
+      },
+      {
+        "name": "雷暴爆破",
+        "damage": 105
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-002-3",
+    "skills": [
+      {
+        "name": "电弧弹",
+        "damage": 55
+      },
+      {
+        "name": "霆光闪击",
+        "damage": 80
+      },
+      {
+        "name": "雷暴爆破",
+        "damage": 105
+      },
+      {
+        "name": "万雷天劫",
+        "damage": 125
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-003-1",
+    "skills": [
+      {
+        "name": "水流突袭",
+        "damage": 45
+      },
+      {
+        "name": "泡沫弹",
+        "damage": 55
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-003-2",
+    "skills": [
+      {
+        "name": "水流突袭",
+        "damage": 45
+      },
+      {
+        "name": "泡沫弹",
+        "damage": 55
+      },
+      {
+        "name": "海啸爆破",
+        "damage": 105
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-003-3",
+    "skills": [
+      {
+        "name": "水流突袭",
+        "damage": 45
+      },
+      {
+        "name": "泡沫弹",
+        "damage": 55
+      },
+      {
+        "name": "海啸爆破",
+        "damage": 105
+      },
+      {
+        "name": "天河坠潮",
+        "damage": 125
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-004-1",
+    "skills": [
+      {
+        "name": "泥岩弹",
+        "damage": 55
+      },
+      {
+        "name": "地裂闪击",
+        "damage": 80
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-004-2",
+    "skills": [
+      {
+        "name": "泥岩弹",
+        "damage": 55
+      },
+      {
+        "name": "地裂闪击",
+        "damage": 80
+      },
+      {
+        "name": "地脉爆破",
+        "damage": 105
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-004-3",
+    "skills": [
+      {
+        "name": "泥岩弹",
+        "damage": 55
+      },
+      {
+        "name": "地裂闪击",
+        "damage": 80
+      },
+      {
+        "name": "地脉爆破",
+        "damage": 105
+      },
+      {
+        "name": "天陨坠岩",
+        "damage": 125
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-005-1",
+    "skills": [
+      {
+        "name": "灼热火球",
+        "damage": 55
+      },
+      {
+        "name": "爆炎闪击",
+        "damage": 80
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-005-2",
+    "skills": [
+      {
+        "name": "灼热火球",
+        "damage": 55
+      },
+      {
+        "name": "爆炎闪击",
+        "damage": 80
+      },
+      {
+        "name": "日炎爆破",
+        "damage": 105
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-005-3",
+    "skills": [
+      {
+        "name": "灼热火球",
+        "damage": 55
+      },
+      {
+        "name": "爆炎闪击",
+        "damage": 80
+      },
+      {
+        "name": "日炎爆破",
+        "damage": 105
+      },
+      {
+        "name": "终焉天火",
+        "damage": 125
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-006-1",
+    "skills": [
+      {
+        "name": "种子弹",
+        "damage": 55
+      },
+      {
+        "name": "荆棘闪击",
+        "damage": 80
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-006-2",
+    "skills": [
+      {
+        "name": "种子弹",
+        "damage": 55
+      },
+      {
+        "name": "荆棘闪击",
+        "damage": 80
+      },
+      {
+        "name": "森罗爆破",
+        "damage": 105
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-006-3",
+    "skills": [
+      {
+        "name": "种子弹",
+        "damage": 55
+      },
+      {
+        "name": "荆棘闪击",
+        "damage": 80
+      },
+      {
+        "name": "森罗爆破",
+        "damage": 105
+      },
+      {
+        "name": "世界树坠击",
+        "damage": 125
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-007-1",
+    "skills": [
+      {
+        "name": "砂砾突袭",
+        "damage": 45
+      },
+      {
+        "name": "泥岩弹",
+        "damage": 55
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-007-2",
+    "skills": [
+      {
+        "name": "砂砾突袭",
+        "damage": 45
+      },
+      {
+        "name": "泥岩弹",
+        "damage": 55
+      },
+      {
+        "name": "地脉爆破",
+        "damage": 105
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-007-3",
+    "skills": [
+      {
+        "name": "砂砾突袭",
+        "damage": 45
+      },
+      {
+        "name": "泥岩弹",
+        "damage": 55
+      },
+      {
+        "name": "地脉爆破",
+        "damage": 105
+      },
+      {
+        "name": "天陨坠岩",
+        "damage": 125
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-008-1",
+    "skills": [
+      {
+        "name": "火花突袭",
+        "damage": 45
+      },
+      {
+        "name": "灼热火球",
+        "damage": 55
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-008-2",
+    "skills": [
+      {
+        "name": "火花突袭",
+        "damage": 45
+      },
+      {
+        "name": "灼热火球",
+        "damage": 55
+      },
+      {
+        "name": "日炎爆破",
+        "damage": 105
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-008-3",
+    "skills": [
+      {
+        "name": "火花突袭",
+        "damage": 45
+      },
+      {
+        "name": "灼热火球",
+        "damage": 55
+      },
+      {
+        "name": "日炎爆破",
+        "damage": 105
+      },
+      {
+        "name": "终焉天火",
+        "damage": 125
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-009-1",
+    "skills": [
+      {
+        "name": "电光突袭",
+        "damage": 45
+      },
+      {
+        "name": "电弧弹",
+        "damage": 55
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-009-2",
+    "skills": [
+      {
+        "name": "电光突袭",
+        "damage": 45
+      },
+      {
+        "name": "电弧弹",
+        "damage": 55
+      },
+      {
+        "name": "雷暴爆破",
+        "damage": 105
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-009-3",
+    "skills": [
+      {
+        "name": "电光突袭",
+        "damage": 45
+      },
+      {
+        "name": "电弧弹",
+        "damage": 55
+      },
+      {
+        "name": "雷暴爆破",
+        "damage": 105
+      },
+      {
+        "name": "万雷天劫",
+        "damage": 125
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-010-1",
+    "skills": [
+      {
+        "name": "砂砾突袭",
+        "damage": 45
+      },
+      {
+        "name": "巨岩轰击",
+        "damage": 75
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-010-2",
+    "skills": [
+      {
+        "name": "砂砾突袭",
+        "damage": 45
+      },
+      {
+        "name": "巨岩轰击",
+        "damage": 75
+      },
+      {
+        "name": "山岳重击",
+        "damage": 85
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-010-3",
+    "skills": [
+      {
+        "name": "砂砾突袭",
+        "damage": 45
+      },
+      {
+        "name": "巨岩轰击",
+        "damage": 75
+      },
+      {
+        "name": "山岳重击",
+        "damage": 85
+      },
+      {
+        "name": "天陨坠岩",
+        "damage": 125
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-011-1",
+    "skills": [
+      {
+        "name": "水流突袭",
+        "damage": 45
+      },
+      {
+        "name": "深潮轰击",
+        "damage": 75
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-011-2",
+    "skills": [
+      {
+        "name": "水流突袭",
+        "damage": 45
+      },
+      {
+        "name": "深潮轰击",
+        "damage": 75
+      },
+      {
+        "name": "巨浪重击",
+        "damage": 85
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-011-3",
+    "skills": [
+      {
+        "name": "水流突袭",
+        "damage": 45
+      },
+      {
+        "name": "深潮轰击",
+        "damage": 75
+      },
+      {
+        "name": "巨浪重击",
+        "damage": 85
+      },
+      {
+        "name": "天河坠潮",
+        "damage": 125
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-012-1",
+    "skills": [
+      {
+        "name": "电光突袭",
+        "damage": 45
+      },
+      {
+        "name": "磁极轰击",
+        "damage": 75
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-012-2",
+    "skills": [
+      {
+        "name": "电光突袭",
+        "damage": 45
+      },
+      {
+        "name": "磁极轰击",
+        "damage": 75
+      },
+      {
+        "name": "霹雳重击",
+        "damage": 85
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-012-3",
+    "skills": [
+      {
+        "name": "电光突袭",
+        "damage": 45
+      },
+      {
+        "name": "磁极轰击",
+        "damage": 75
+      },
+      {
+        "name": "霹雳重击",
+        "damage": 85
+      },
+      {
+        "name": "万雷天劫",
+        "damage": 125
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-013-1",
+    "skills": [
+      {
+        "name": "飞叶突袭",
+        "damage": 45
+      },
+      {
+        "name": "种子弹",
+        "damage": 55
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-013-2",
+    "skills": [
+      {
+        "name": "飞叶突袭",
+        "damage": 45
+      },
+      {
+        "name": "种子弹",
+        "damage": 55
+      },
+      {
+        "name": "森罗爆破",
+        "damage": 105
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-013-3",
+    "skills": [
+      {
+        "name": "飞叶突袭",
+        "damage": 45
+      },
+      {
+        "name": "种子弹",
+        "damage": 55
+      },
+      {
+        "name": "森罗爆破",
+        "damage": 105
+      },
+      {
+        "name": "世界树坠击",
+        "damage": 125
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-014-1",
+    "skills": [
+      {
+        "name": "火花突袭",
+        "damage": 45
+      },
+      {
+        "name": "焰流轰击",
+        "damage": 75
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-014-2",
+    "skills": [
+      {
+        "name": "火花突袭",
+        "damage": 45
+      },
+      {
+        "name": "焰流轰击",
+        "damage": 75
+      },
+      {
+        "name": "熔岩重击",
+        "damage": 85
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-014-3",
+    "skills": [
+      {
+        "name": "火花突袭",
+        "damage": 45
+      },
+      {
+        "name": "焰流轰击",
+        "damage": 75
+      },
+      {
+        "name": "熔岩重击",
+        "damage": 85
+      },
+      {
+        "name": "终焉天火",
+        "damage": 125
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-015-1",
+    "skills": [
+      {
+        "name": "飞叶突袭",
+        "damage": 45
+      },
+      {
+        "name": "古木轰击",
+        "damage": 75
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-015-2",
+    "skills": [
+      {
+        "name": "飞叶突袭",
+        "damage": 45
+      },
+      {
+        "name": "古木轰击",
+        "damage": 75
+      },
+      {
+        "name": "巨藤重击",
+        "damage": 85
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-015-3",
+    "skills": [
+      {
+        "name": "飞叶突袭",
+        "damage": 45
+      },
+      {
+        "name": "古木轰击",
+        "damage": 75
+      },
+      {
+        "name": "巨藤重击",
+        "damage": 85
+      },
+      {
+        "name": "世界树坠击",
+        "damage": 125
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-016-1",
+    "skills": [
+      {
+        "name": "灼热火球",
+        "damage": 55
+      },
+      {
+        "name": "炽焰快攻",
+        "damage": 60
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-016-2",
+    "skills": [
+      {
+        "name": "灼热火球",
+        "damage": 55
+      },
+      {
+        "name": "炽焰快攻",
+        "damage": 60
+      },
+      {
+        "name": "熔岩重击",
+        "damage": 85
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-016-3",
+    "skills": [
+      {
+        "name": "灼热火球",
+        "damage": 55
+      },
+      {
+        "name": "炽焰快攻",
+        "damage": 60
+      },
+      {
+        "name": "熔岩重击",
+        "damage": 85
+      },
+      {
+        "name": "终焉天火",
+        "damage": 125
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-017-1",
+    "skills": [
+      {
+        "name": "种子弹",
+        "damage": 55
+      },
+      {
+        "name": "藤刺快攻",
+        "damage": 60
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-017-2",
+    "skills": [
+      {
+        "name": "种子弹",
+        "damage": 55
+      },
+      {
+        "name": "藤刺快攻",
+        "damage": 60
+      },
+      {
+        "name": "巨藤重击",
+        "damage": 85
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-017-3",
+    "skills": [
+      {
+        "name": "种子弹",
+        "damage": 55
+      },
+      {
+        "name": "藤刺快攻",
+        "damage": 60
+      },
+      {
+        "name": "巨藤重击",
+        "damage": 85
+      },
+      {
+        "name": "世界树坠击",
+        "damage": 125
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-018-1",
+    "skills": [
+      {
+        "name": "电弧弹",
+        "damage": 55
+      },
+      {
+        "name": "雷针快攻",
+        "damage": 60
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-018-2",
+    "skills": [
+      {
+        "name": "电弧弹",
+        "damage": 55
+      },
+      {
+        "name": "雷针快攻",
+        "damage": 60
+      },
+      {
+        "name": "霹雳重击",
+        "damage": 85
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-018-3",
+    "skills": [
+      {
+        "name": "电弧弹",
+        "damage": 55
+      },
+      {
+        "name": "雷针快攻",
+        "damage": 60
+      },
+      {
+        "name": "霹雳重击",
+        "damage": 85
+      },
+      {
+        "name": "万雷天劫",
+        "damage": 125
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-019-1",
+    "skills": [
+      {
+        "name": "泡沫弹",
+        "damage": 55
+      },
+      {
+        "name": "水刃快攻",
+        "damage": 60
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-019-2",
+    "skills": [
+      {
+        "name": "泡沫弹",
+        "damage": 55
+      },
+      {
+        "name": "水刃快攻",
+        "damage": 60
+      },
+      {
+        "name": "巨浪重击",
+        "damage": 85
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-019-3",
+    "skills": [
+      {
+        "name": "泡沫弹",
+        "damage": 55
+      },
+      {
+        "name": "水刃快攻",
+        "damage": 60
+      },
+      {
+        "name": "巨浪重击",
+        "damage": 85
+      },
+      {
+        "name": "天河坠潮",
+        "damage": 125
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-020-1",
+    "skills": [
+      {
+        "name": "泥岩弹",
+        "damage": 55
+      },
+      {
+        "name": "岩针快攻",
+        "damage": 60
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-020-2",
+    "skills": [
+      {
+        "name": "泥岩弹",
+        "damage": 55
+      },
+      {
+        "name": "岩针快攻",
+        "damage": 60
+      },
+      {
+        "name": "山岳重击",
+        "damage": 85
+      }
+    ]
+  },
+  {
+    "template_id": "PET-A-020-3",
+    "skills": [
+      {
+        "name": "泥岩弹",
+        "damage": 55
+      },
+      {
+        "name": "岩针快攻",
+        "damage": 60
+      },
+      {
+        "name": "山岳重击",
+        "damage": 85
+      },
+      {
+        "name": "天陨坠岩",
+        "damage": 125
+      }
+    ]
+  },
+  {
+    "template_id": "PET-T-001-1",
+    "skills": [
+      {
+        "name": "雷针快攻",
+        "damage": 60
+      },
+      {
+        "name": "雷鸣冲击",
+        "damage": 70
+      }
+    ]
+  },
+  {
+    "template_id": "PET-T-001-2",
+    "skills": [
+      {
+        "name": "雷针快攻",
+        "damage": 60
+      },
+      {
+        "name": "雷鸣冲击",
+        "damage": 70
+      },
+      {
+        "name": "磁极轰击",
+        "damage": 75
+      }
+    ]
+  },
+  {
+    "template_id": "PET-T-001-3",
+    "skills": [
+      {
+        "name": "雷针快攻",
+        "damage": 60
+      },
+      {
+        "name": "雷鸣冲击",
+        "damage": 70
+      },
+      {
+        "name": "磁极轰击",
+        "damage": 75
+      },
+      {
+        "name": "九霄天雷",
+        "damage": 95
+      }
+    ]
+  },
+  {
+    "template_id": "PET-T-002-1",
+    "skills": [
+      {
+        "name": "水刃快攻",
+        "damage": 60
+      },
+      {
+        "name": "激流冲击",
+        "damage": 70
+      }
+    ]
+  },
+  {
+    "template_id": "PET-T-002-2",
+    "skills": [
+      {
+        "name": "水刃快攻",
+        "damage": 60
+      },
+      {
+        "name": "激流冲击",
+        "damage": 70
+      },
+      {
+        "name": "深潮轰击",
+        "damage": 75
+      }
+    ]
+  },
+  {
+    "template_id": "PET-T-002-3",
+    "skills": [
+      {
+        "name": "水刃快攻",
+        "damage": 60
+      },
+      {
+        "name": "激流冲击",
+        "damage": 70
+      },
+      {
+        "name": "深潮轰击",
+        "damage": 75
+      },
+      {
+        "name": "沧海怒涛",
+        "damage": 95
+      }
+    ]
+  },
+  {
+    "template_id": "PET-T-003-1",
+    "skills": [
+      {
+        "name": "炽焰快攻",
+        "damage": 60
+      },
+      {
+        "name": "烈焰冲击",
+        "damage": 70
+      }
+    ]
+  },
+  {
+    "template_id": "PET-T-003-2",
+    "skills": [
+      {
+        "name": "炽焰快攻",
+        "damage": 60
+      },
+      {
+        "name": "烈焰冲击",
+        "damage": 70
+      },
+      {
+        "name": "焰流轰击",
+        "damage": 75
+      }
+    ]
+  },
+  {
+    "template_id": "PET-T-003-3",
+    "skills": [
+      {
+        "name": "炽焰快攻",
+        "damage": 60
+      },
+      {
+        "name": "烈焰冲击",
+        "damage": 70
+      },
+      {
+        "name": "焰流轰击",
+        "damage": 75
+      },
+      {
+        "name": "炼狱坠火",
+        "damage": 95
+      }
+    ]
+  },
+  {
+    "template_id": "PET-T-004-1",
+    "skills": [
+      {
+        "name": "泡沫弹",
+        "damage": 55
+      },
+      {
+        "name": "深潮轰击",
+        "damage": 75
+      }
+    ]
+  },
+  {
+    "template_id": "PET-T-004-2",
+    "skills": [
+      {
+        "name": "泡沫弹",
+        "damage": 55
+      },
+      {
+        "name": "深潮轰击",
+        "damage": 75
+      },
+      {
+        "name": "潮汐闪击",
+        "damage": 80
+      }
+    ]
+  },
+  {
+    "template_id": "PET-T-004-3",
+    "skills": [
+      {
+        "name": "泡沫弹",
+        "damage": 55
+      },
+      {
+        "name": "深潮轰击",
+        "damage": 75
+      },
+      {
+        "name": "潮汐闪击",
+        "damage": 80
+      },
+      {
+        "name": "天河坠潮",
+        "damage": 125
+      }
+    ]
+  },
+  {
+    "template_id": "PET-T-005-1",
+    "skills": [
+      {
+        "name": "岩针快攻",
+        "damage": 60
+      },
+      {
+        "name": "岩崩冲击",
+        "damage": 70
+      }
+    ]
+  },
+  {
+    "template_id": "PET-T-005-2",
+    "skills": [
+      {
+        "name": "岩针快攻",
+        "damage": 60
+      },
+      {
+        "name": "岩崩冲击",
+        "damage": 70
+      },
+      {
+        "name": "巨岩轰击",
+        "damage": 75
+      }
+    ]
+  },
+  {
+    "template_id": "PET-T-005-3",
+    "skills": [
+      {
+        "name": "岩针快攻",
+        "damage": 60
+      },
+      {
+        "name": "岩崩冲击",
+        "damage": 70
+      },
+      {
+        "name": "巨岩轰击",
+        "damage": 75
+      },
+      {
+        "name": "大地震荡",
+        "damage": 95
+      }
+    ]
+  },
+  {
+    "template_id": "PET-T-006-1",
+    "skills": [
+      {
+        "name": "灼热火球",
+        "damage": 55
+      },
+      {
+        "name": "焰流轰击",
+        "damage": 75
+      }
+    ]
+  },
+  {
+    "template_id": "PET-T-006-2",
+    "skills": [
+      {
+        "name": "灼热火球",
+        "damage": 55
+      },
+      {
+        "name": "焰流轰击",
+        "damage": 75
+      },
+      {
+        "name": "爆炎闪击",
+        "damage": 80
+      }
+    ]
+  },
+  {
+    "template_id": "PET-T-006-3",
+    "skills": [
+      {
+        "name": "灼热火球",
+        "damage": 55
+      },
+      {
+        "name": "焰流轰击",
+        "damage": 75
+      },
+      {
+        "name": "爆炎闪击",
+        "damage": 80
+      },
+      {
+        "name": "终焉天火",
+        "damage": 125
+      }
+    ]
+  },
+  {
+    "template_id": "PET-T-007-1",
+    "skills": [
+      {
+        "name": "藤刺快攻",
+        "damage": 60
+      },
+      {
+        "name": "叶刃冲击",
+        "damage": 70
+      }
+    ]
+  },
+  {
+    "template_id": "PET-T-007-2",
+    "skills": [
+      {
+        "name": "藤刺快攻",
+        "damage": 60
+      },
+      {
+        "name": "叶刃冲击",
+        "damage": 70
+      },
+      {
+        "name": "古木轰击",
+        "damage": 75
+      }
+    ]
+  },
+  {
+    "template_id": "PET-T-007-3",
+    "skills": [
+      {
+        "name": "藤刺快攻",
+        "damage": 60
+      },
+      {
+        "name": "叶刃冲击",
+        "damage": 70
+      },
+      {
+        "name": "古木轰击",
+        "damage": 75
+      },
+      {
+        "name": "万叶风暴",
+        "damage": 95
+      }
+    ]
+  },
+  {
+    "template_id": "PET-T-008-1",
+    "skills": [
+      {
+        "name": "电弧弹",
+        "damage": 55
+      },
+      {
+        "name": "磁极轰击",
+        "damage": 75
+      }
+    ]
+  },
+  {
+    "template_id": "PET-T-008-2",
+    "skills": [
+      {
+        "name": "电弧弹",
+        "damage": 55
+      },
+      {
+        "name": "磁极轰击",
+        "damage": 75
+      },
+      {
+        "name": "霆光闪击",
+        "damage": 80
+      }
+    ]
+  },
+  {
+    "template_id": "PET-T-008-3",
+    "skills": [
+      {
+        "name": "电弧弹",
+        "damage": 55
+      },
+      {
+        "name": "磁极轰击",
+        "damage": 75
+      },
+      {
+        "name": "霆光闪击",
+        "damage": 80
+      },
+      {
+        "name": "万雷天劫",
+        "damage": 125
+      }
+    ]
+  },
+  {
+    "template_id": "PET-T-009-1",
+    "skills": [
+      {
+        "name": "泥岩弹",
+        "damage": 55
+      },
+      {
+        "name": "巨岩轰击",
+        "damage": 75
+      }
+    ]
+  },
+  {
+    "template_id": "PET-T-009-2",
+    "skills": [
+      {
+        "name": "泥岩弹",
+        "damage": 55
+      },
+      {
+        "name": "巨岩轰击",
+        "damage": 75
+      },
+      {
+        "name": "地裂闪击",
+        "damage": 80
+      }
+    ]
+  },
+  {
+    "template_id": "PET-T-009-3",
+    "skills": [
+      {
+        "name": "泥岩弹",
+        "damage": 55
+      },
+      {
+        "name": "巨岩轰击",
+        "damage": 75
+      },
+      {
+        "name": "地裂闪击",
+        "damage": 80
+      },
+      {
+        "name": "天陨坠岩",
+        "damage": 125
+      }
+    ]
+  },
+  {
+    "template_id": "PET-T-010-1",
+    "skills": [
+      {
+        "name": "种子弹",
+        "damage": 55
+      },
+      {
+        "name": "古木轰击",
+        "damage": 75
+      }
+    ]
+  },
+  {
+    "template_id": "PET-T-010-2",
+    "skills": [
+      {
+        "name": "种子弹",
+        "damage": 55
+      },
+      {
+        "name": "古木轰击",
+        "damage": 75
+      },
+      {
+        "name": "荆棘闪击",
+        "damage": 80
+      }
+    ]
+  },
+  {
+    "template_id": "PET-T-010-3",
+    "skills": [
+      {
+        "name": "种子弹",
+        "damage": 55
+      },
+      {
+        "name": "古木轰击",
+        "damage": 75
+      },
+      {
+        "name": "荆棘闪击",
+        "damage": 80
+      },
+      {
+        "name": "世界树坠击",
+        "damage": 125
+      }
+    ]
+  }
+]

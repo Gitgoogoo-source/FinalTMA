@@ -1,4 +1,4 @@
-import type { ReactNode, Ref } from "react";
+import { useState, type ReactNode, type Ref } from "react";
 
 import { CatalogImage } from "./CatalogImage.tsx";
 
@@ -17,6 +17,11 @@ export type CollectionDetailItem = {
   battling: number;
 };
 
+type CollectionDetailSkill = {
+  name: string;
+  damage: number;
+};
+
 const rarityLabels: Record<CollectionDetailItem["rarity"], string> = {
   common: "普通",
   rare: "稀有",
@@ -27,6 +32,7 @@ const rarityLabels: Record<CollectionDetailItem["rarity"], string> = {
 
 export function CollectionDetailShowcase({
   item,
+  skills = [],
   headingId,
   titleRef,
   titleTabIndex,
@@ -36,6 +42,7 @@ export function CollectionDetailShowcase({
   className = "",
 }: {
   item: CollectionDetailItem;
+  skills?: readonly CollectionDetailSkill[];
   headingId: string;
   titleRef?: Ref<HTMLDivElement> | undefined;
   titleTabIndex?: number | undefined;
@@ -66,6 +73,9 @@ export function CollectionDetailShowcase({
       </div>
 
       <div className="inventory-hero-art">
+        {skills.length > 0 ? (
+          <CollectionSkillRail key={item.template_id} skills={skills} />
+        ) : null}
         <CatalogImage
           key={item.template_id}
           path={item.image_detail_path}
@@ -95,6 +105,42 @@ export function CollectionDetailShowcase({
       <InventoryQuantitySummary item={item} />
       {children}
     </section>
+  );
+}
+
+function CollectionSkillRail({
+  skills,
+}: {
+  skills: readonly CollectionDetailSkill[];
+}): ReactNode {
+  const [selectedIndex, setSelectedIndex] = useState(0);
+
+  return (
+    <div className="inventory-skill-rail" aria-label="宠物技能">
+      {skills.map((skill, index) => {
+        const selected = index === selectedIndex;
+        return (
+          <button
+            key={`${skill.name}-${index}`}
+            type="button"
+            className={`inventory-skill-tab skill-${index + 1}${selected ? " selected" : ""}`}
+            aria-label={`${skill.name}，伤害 ${skill.damage}`}
+            aria-pressed={selected}
+            onClick={() => setSelectedIndex(index)}
+          >
+            {selected ? (
+              <span className="inventory-skill-content" aria-hidden="true">
+                <span className="inventory-skill-name">{skill.name}</span>
+                <span className="inventory-skill-divider" />
+                <span className="inventory-skill-damage">
+                  伤害 <strong>{skill.damage}</strong>
+                </span>
+              </span>
+            ) : null}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 

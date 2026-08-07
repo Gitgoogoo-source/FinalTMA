@@ -19,6 +19,7 @@ import {
   PageState,
 } from "../../../shared/ui/index.tsx";
 import { useNewMarkers } from "../../../workflows/new-markers/index.ts";
+import { getCollectionSkills } from "../collectionSkills.ts";
 import type { InventoryItem } from "../types.ts";
 
 const rarityLabels: Record<InventoryItem["rarity"], string> = {
@@ -180,6 +181,7 @@ export function InventoryView({
           <>
             <CollectionDetailShowcase
               item={item}
+              skills={getCollectionSkills(item.template_id)}
               headingId="inventory-selected-name"
               titleRef={item.template_id === targetId ? detailRef : undefined}
               titleTabIndex={item.template_id === targetId ? -1 : undefined}
