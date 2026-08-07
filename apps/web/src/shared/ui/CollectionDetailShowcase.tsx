@@ -72,7 +72,7 @@ export function CollectionDetailShowcase({
         </div>
       </div>
 
-      <div className="inventory-hero-art">
+      <div key={item.template_id} className="inventory-hero-art">
         {skills.length > 0 ? (
           <CollectionSkillRail key={item.template_id} skills={skills} />
         ) : null}

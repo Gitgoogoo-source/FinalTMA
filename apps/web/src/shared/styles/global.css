@@ -5330,12 +5330,14 @@ input:focus {
 .app-shell .inventory-skill-rail {
   position: absolute;
   z-index: 3;
-  top: 50%;
+  top: calc(50% - 66px);
   left: 0;
+  height: 132px;
   display: grid;
+  align-content: center;
   justify-items: start;
   gap: 4px;
-  transform: translateY(-50%);
+  contain: paint;
 }
 .app-shell .inventory-skill-summary {
   min-height: 16px;
