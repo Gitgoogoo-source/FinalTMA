@@ -292,10 +292,13 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
     },
     [dismissSoldEvent, dismissingSoldEvents],
   );
-  useEffect(() => () => {
-    soldEffectTimers.current.forEach((timer) => window.clearTimeout(timer));
-    soldEffectTimers.current.clear();
-  });
+  useEffect(
+    () => () => {
+      soldEffectTimers.current.forEach((timer) => window.clearTimeout(timer));
+      soldEffectTimers.current.clear();
+    },
+    [],
+  );
   return (
     <main className={`page market-page market-page-${tab}`}>
       <MarketTabs
