@@ -114,32 +114,37 @@ function CollectionSkillRail({
   skills: readonly CollectionDetailSkill[];
 }): ReactNode {
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const selectedSkill = skills[selectedIndex] ?? skills[0];
+
+  if (!selectedSkill) {
+    return null;
+  }
 
   return (
     <div className="inventory-skill-rail" aria-label="宠物技能">
-      {skills.map((skill, index) => {
-        const selected = index === selectedIndex;
-        return (
-          <button
-            key={`${skill.name}-${index}`}
-            type="button"
-            className={`inventory-skill-tab skill-${index + 1}${selected ? " selected" : ""}`}
-            aria-label={`${skill.name}，伤害 ${skill.damage}`}
-            aria-pressed={selected}
-            onClick={() => setSelectedIndex(index)}
-          >
-            {selected ? (
-              <span className="inventory-skill-content" aria-hidden="true">
-                <span className="inventory-skill-name">{skill.name}</span>
-                <span className="inventory-skill-divider" />
-                <span className="inventory-skill-damage">
-                  伤害 <strong>{skill.damage}</strong>
-                </span>
-              </span>
-            ) : null}
-          </button>
-        );
-      })}
+      <div className="inventory-skill-summary" aria-live="polite">
+        <span className="inventory-skill-name">{selectedSkill.name}</span>
+        <span className="inventory-skill-divider" aria-hidden="true" />
+        <span className="inventory-skill-damage">
+          伤害 <strong>{selectedSkill.damage}</strong>
+        </span>
+      </div>
+
+      <div className="inventory-skill-tabs">
+        {skills.map((skill, index) => {
+          const selected = index === selectedIndex;
+          return (
+            <button
+              key={`${skill.name}-${index}`}
+              type="button"
+              className={`inventory-skill-tab skill-${index + 1}${selected ? " selected" : ""}`}
+              aria-label={`${skill.name}，伤害 ${skill.damage}`}
+              aria-pressed={selected}
+              onClick={() => setSelectedIndex(index)}
+            />
+          );
+        })}
+      </div>
     </div>
   );
 }
