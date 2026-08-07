@@ -25,7 +25,7 @@
   },
   "release": {
     "key": "catalog-v2-cache-policy",
-    "git_commit": "51313d76ba83042662a9729237ac9a2c7b390c9e"
+    "git_commit": "2765e293658f138bb58a358dced724b6ba271588"
   },
   "templates": [
     {
@@ -5699,5 +5699,5 @@
       }
     }
   ],
-  "manifest_sha256": "cd0509cd1817134fd0adc937df1052d01bbf3c47fd3ba1e71ac5ec19e2686c7d"
+  "manifest_sha256": "f457ff1ea29fc910ef8e003953db4eb49cb0c78253916b30d059ac24be49d33c"
 }
