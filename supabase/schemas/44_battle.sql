@@ -1836,14 +1836,19 @@ begin
   end if;
   return jsonb_build_object(
     'items', coalesce((
+      with user_items as materialized (
+        select item.*
+        from inventory.item_read_model item
+        where item.user_id = v_user_id and item.available > 0
+      )
       select jsonb_agg(jsonb_build_object(
-        'template_id', t.id,
-        'name', t.name,
-        'image_thumbnail_url', catalog.template_thumbnail_url(t.id),
-        'image_detail_url', catalog.template_detail_url(t.id),
-        'rarity', t.rarity,
-        'stage', t.stage,
-        'available_quantity', inventory.available_quantity(v_user_id, t.id),
+        'template_id', item.template_id,
+        'name', item.name,
+        'image_thumbnail_url', item.image_thumbnail_url,
+        'image_detail_url', item.image_detail_url,
+        'rarity', item.rarity,
+        'stage', item.stage,
+        'available_quantity', item.available,
         'element', bc.element,
         'max_hp', bc.max_hp,
         'attack', bc.attack,
@@ -1853,13 +1858,10 @@ begin
           v_ruleset_id,
           array[bc.skill_1_id, bc.skill_2_id, bc.skill_3_id, bc.skill_4_id]
         )
-      ) order by t.sort_order)
-      from inventory.holdings h
-      join catalog.templates t on t.id = h.template_id
+      ) order by item.sort_order)
+      from user_items item
       join battle.template_configs bc
-        on bc.ruleset_id = v_ruleset_id and bc.template_id = t.id
-      where h.user_id = v_user_id
-        and inventory.available_quantity(v_user_id, t.id) > 0
+        on bc.ruleset_id = v_ruleset_id and bc.template_id = item.template_id
     ), '[]'::jsonb)
   );
 end;

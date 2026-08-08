@@ -410,6 +410,11 @@ as $$
       ('C', p_ordered_user_ids[3]),
       ('D', p_ordered_user_ids[4])
   ),
+  fixture_quantities as materialized (
+    select quantity.*
+    from inventory.quantity_read_model quantity
+    where quantity.user_id = any(p_ordered_user_ids)
+  ),
   role_targets as (
     select d.role, max(d.target_kcoin) as target_kcoin
     from admin.battle_fixture_definition() d
@@ -424,22 +429,19 @@ as $$
           'template_id', d.template_id,
           'target_quantity', d.target_quantity,
           'fixture_owned_quantity', coalesce(o.available_quantity, 0),
-          'aggregate_quantity', coalesce(h.quantity, 0),
-          'active_reserved', coalesce((
-            select sum(r.quantity)
-            from inventory.reservations r
-            where r.user_id = ru.user_id
-              and r.template_id = d.template_id
-              and r.status = 'active'
-          ), 0),
-          'available_quantity', inventory.available_quantity(ru.user_id, d.template_id)
+          'aggregate_quantity', coalesce(quantity.total, 0),
+          'active_reserved', coalesce(
+            quantity.listed + quantity.expedition + quantity.minting + quantity.battling,
+            0
+          ),
+          'available_quantity', coalesce(quantity.available, 0)
         )
         order by d.template_id
       ) as pets,
       bool_and(
         coalesce(o.available_quantity, 0) = d.target_quantity
         and coalesce(o.locked_quantity, 0) = 0
-        and coalesce(h.quantity, 0) >= coalesce(o.available_quantity, 0)
+        and coalesce(quantity.total, 0) >= coalesce(o.available_quantity, 0)
       ) as pets_aligned
     from role_users ru
     join admin.battle_fixture_definition() d
@@ -449,8 +451,8 @@ as $$
       and o.asset_kind = 'PET'
       and o.asset_key = d.template_id
       and o.fixture_version = p_fixture_version
-    left join inventory.holdings h
-      on h.user_id = ru.user_id and h.template_id = d.template_id
+    left join fixture_quantities quantity
+      on quantity.user_id = ru.user_id and quantity.template_id = d.template_id
     group by ru.role
   ),
   role_state as (

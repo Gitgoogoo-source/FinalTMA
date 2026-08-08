@@ -1892,7 +1892,91 @@ create table inventory.reservations (
   unique (kind, reference_id, template_id)
 );
 
-create index reservations_user_template_active_idx on inventory.reservations (user_id, template_id, kind) where status = 'active';
+create index reservations_user_template_active_idx
+on inventory.reservations (user_id, template_id, kind)
+include (quantity)
+where status = 'active';
+
+create view inventory.quantity_read_model
+with (security_invoker = true)
+as
+select
+  h.user_id,
+  h.template_id,
+  h.quantity::bigint as total,
+  greatest(h.quantity - coalesce(sum(r.quantity), 0), 0)::bigint as available,
+  coalesce(sum(r.quantity) filter (where r.kind = 'listing'), 0)::bigint as listed,
+  0::bigint as trading,
+  coalesce(sum(r.quantity) filter (where r.kind = 'expedition'), 0)::bigint as expedition,
+  coalesce(sum(r.quantity) filter (where r.kind = 'mint'), 0)::bigint as minting,
+  coalesce(sum(r.quantity) filter (where r.kind = 'battle'), 0)::bigint as battling
+from inventory.holdings h
+left join inventory.reservations r
+  on r.user_id = h.user_id
+  and r.template_id = h.template_id
+  and r.status = 'active'
+group by h.user_id, h.template_id, h.quantity;
+
+create view inventory.item_read_model
+with (security_invoker = true)
+as
+select
+  quantity.user_id,
+  template.id as template_id,
+  template.name,
+  template.rarity,
+  template.stage,
+  template.chain_id,
+  chain.chain_type,
+  case
+    when thumbnail.id is null
+      or thumbnail.object_class <> 'runtime'
+      or thumbnail.bucket is distinct from delivery.public_bucket
+      or thumbnail.status <> 'active'
+    then null
+    else delivery.public_origin || '/' || delivery.public_bucket || '/' || thumbnail.object_key
+  end as image_thumbnail_url,
+  case
+    when detail.id is null
+      or detail.object_class <> 'runtime'
+      or detail.bucket is distinct from delivery.public_bucket
+      or detail.status <> 'active'
+    then null
+    else delivery.public_origin || '/' || delivery.public_bucket || '/' || detail.object_key
+  end as image_detail_url,
+  template.combat_power,
+  template.expedition_fgems,
+  template.decompose_fgems,
+  quantity.total,
+  quantity.available,
+  quantity.listed,
+  quantity.trading,
+  quantity.minting,
+  quantity.expedition,
+  quantity.battling,
+  template.sort_order,
+  template.market_price
+from inventory.quantity_read_model quantity
+join catalog.templates template on template.id = quantity.template_id
+join catalog.chains chain on chain.id = template.chain_id
+left join catalog.current_asset_release current_release on current_release.singleton
+left join catalog.asset_release_templates release_item
+  on release_item.release_id = current_release.release_id
+  and release_item.template_id = template.id
+left join catalog.asset_delivery_config delivery on delivery.singleton
+left join catalog.asset_objects thumbnail on thumbnail.id = release_item.thumbnail_object_id
+left join catalog.asset_objects detail on detail.id = release_item.detail_object_id
+where quantity.total > 0;
+
+create or replace function inventory.present_item(p_item inventory.item_read_model)
+returns jsonb
+language sql
+stable
+security invoker
+set search_path = ''
+as $$
+  select to_jsonb(p_item) - array['user_id', 'sort_order', 'market_price']::text[]
+$$;
 
 create or replace function inventory.available_quantity(p_user_id uuid, p_template_id text)
 returns bigint
@@ -1900,11 +1984,11 @@ language sql
 stable
 set search_path = ''
 as $$
-  select greatest(
-    coalesce((select h.quantity from inventory.holdings h where h.user_id = p_user_id and h.template_id = p_template_id), 0)
-    - coalesce((select sum(r.quantity) from inventory.reservations r where r.user_id = p_user_id and r.template_id = p_template_id and r.status = 'active'), 0),
-    0
-  )
+  select coalesce((
+    select quantity.available
+    from inventory.quantity_read_model quantity
+    where quantity.user_id = p_user_id and quantity.template_id = p_template_id
+  ), 0)
 $$;
 
 create or replace function inventory.change_holding(p_user_id uuid, p_template_id text, p_amount bigint)
@@ -1976,30 +2060,9 @@ language sql
 stable
 set search_path = ''
 as $$
-  select jsonb_build_object(
-    'template_id', t.id,
-    'name', t.name,
-    'rarity', t.rarity,
-    'stage', t.stage,
-    'chain_id', t.chain_id,
-    'chain_type', c.chain_type,
-    'image_thumbnail_url', catalog.template_thumbnail_url(t.id),
-    'image_detail_url', catalog.template_detail_url(t.id),
-    'combat_power', t.combat_power,
-    'expedition_fgems', t.expedition_fgems,
-    'decompose_fgems', t.decompose_fgems,
-    'total', h.quantity,
-    'available', inventory.available_quantity(p_user_id, t.id),
-    'listed', coalesce((select sum(r.quantity) from inventory.reservations r where r.user_id = p_user_id and r.template_id = t.id and r.kind = 'listing' and r.status = 'active'), 0),
-    'trading', 0,
-    'expedition', coalesce((select sum(r.quantity) from inventory.reservations r where r.user_id = p_user_id and r.template_id = t.id and r.kind = 'expedition' and r.status = 'active'), 0),
-    'minting', coalesce((select sum(r.quantity) from inventory.reservations r where r.user_id = p_user_id and r.template_id = t.id and r.kind = 'mint' and r.status = 'active'), 0),
-    'battling', coalesce((select sum(r.quantity) from inventory.reservations r where r.user_id = p_user_id and r.template_id = t.id and r.kind = 'battle' and r.status = 'active'), 0)
-  )
-  from inventory.holdings h
-  join catalog.templates t on t.id = h.template_id
-  join catalog.chains c on c.id = t.chain_id
-  where h.user_id = p_user_id and h.template_id = p_template_id and h.quantity > 0
+  select inventory.present_item(item)
+  from inventory.item_read_model item
+  where item.user_id = p_user_id and item.template_id = p_template_id
 $$;
 
 create or replace function api.inventory_list(p_session_id uuid)
@@ -2011,29 +2074,22 @@ as $$
 declare
   v_user_id uuid := api.session_user(p_session_id);
 begin
-  return jsonb_build_object(
-    'items', coalesce((
-      select jsonb_agg(inventory.item_json(v_user_id, h.template_id) order by t.sort_order)
-      from inventory.holdings h
-      join catalog.templates t on t.id = h.template_id
-      where h.user_id = v_user_id
-        and h.quantity > 0
-        and inventory.available_quantity(v_user_id, h.template_id) > 0
-    ), '[]'::jsonb),
-    'template_count', (
-      select count(*)
-      from inventory.holdings h
-      where h.user_id = v_user_id
-        and h.quantity > 0
-        and inventory.available_quantity(v_user_id, h.template_id) > 0
-    ),
-    'total_quantity', (
-      select coalesce(sum(inventory.available_quantity(v_user_id, h.template_id)), 0)
-      from inventory.holdings h
-      where h.user_id = v_user_id
-        and h.quantity > 0
-        and inventory.available_quantity(v_user_id, h.template_id) > 0
+  return (
+    with user_items as materialized (
+      select item.*
+      from inventory.item_read_model item
+      where item.user_id = v_user_id
     )
+    select jsonb_build_object(
+      'items', coalesce(
+        jsonb_agg(inventory.present_item(item) order by item.sort_order)
+          filter (where item.available > 0),
+        '[]'::jsonb
+      ),
+      'template_count', count(*) filter (where item.available > 0),
+      'total_quantity', coalesce(sum(item.available) filter (where item.available > 0), 0)
+    )
+    from user_items item
   );
 end;
 $$;
@@ -2427,13 +2483,20 @@ begin
     perform api.raise_business_error('EXPEDITION_TIER_INVALID', '远征档次无效');
   end if;
   return jsonb_build_object('items', coalesce((
-    select jsonb_agg(inventory.item_json(v_user_id, t.id) || jsonb_build_object('unit_reward_fgems', t.expedition_fgems) order by t.sort_order)
-    from inventory.holdings h
-    join catalog.templates t on t.id = h.template_id
-    where h.user_id = v_user_id and inventory.available_quantity(v_user_id, t.id) > 0
-      and ((p_tier = 'normal' and catalog.rarity_rank(t.rarity) between 1 and 3)
-        or (p_tier = 'intermediate' and catalog.rarity_rank(t.rarity) between 2 and 4)
-        or (p_tier = 'advanced' and catalog.rarity_rank(t.rarity) between 3 and 5))
+    with user_items as materialized (
+      select item.*
+      from inventory.item_read_model item
+      where item.user_id = v_user_id and item.available > 0
+    )
+    select jsonb_agg(
+      inventory.present_item(item)
+        || jsonb_build_object('unit_reward_fgems', item.expedition_fgems)
+      order by item.sort_order
+    )
+    from user_items item
+    where ((p_tier = 'normal' and catalog.rarity_rank(item.rarity) between 1 and 3)
+        or (p_tier = 'intermediate' and catalog.rarity_rank(item.rarity) between 2 and 4)
+        or (p_tier = 'advanced' and catalog.rarity_rank(item.rarity) between 3 and 5))
   ), '[]'::jsonb));
 end;
 $$;
@@ -4862,14 +4925,19 @@ begin
   end if;
   return jsonb_build_object(
     'items', coalesce((
+      with user_items as materialized (
+        select item.*
+        from inventory.item_read_model item
+        where item.user_id = v_user_id and item.available > 0
+      )
       select jsonb_agg(jsonb_build_object(
-        'template_id', t.id,
-        'name', t.name,
-        'image_thumbnail_url', catalog.template_thumbnail_url(t.id),
-        'image_detail_url', catalog.template_detail_url(t.id),
-        'rarity', t.rarity,
-        'stage', t.stage,
-        'available_quantity', inventory.available_quantity(v_user_id, t.id),
+        'template_id', item.template_id,
+        'name', item.name,
+        'image_thumbnail_url', item.image_thumbnail_url,
+        'image_detail_url', item.image_detail_url,
+        'rarity', item.rarity,
+        'stage', item.stage,
+        'available_quantity', item.available,
         'element', bc.element,
         'max_hp', bc.max_hp,
         'attack', bc.attack,
@@ -4879,13 +4947,10 @@ begin
           v_ruleset_id,
           array[bc.skill_1_id, bc.skill_2_id, bc.skill_3_id, bc.skill_4_id]
         )
-      ) order by t.sort_order)
-      from inventory.holdings h
-      join catalog.templates t on t.id = h.template_id
+      ) order by item.sort_order)
+      from user_items item
       join battle.template_configs bc
-        on bc.ruleset_id = v_ruleset_id and bc.template_id = t.id
-      where h.user_id = v_user_id
-        and inventory.available_quantity(v_user_id, t.id) > 0
+        on bc.ruleset_id = v_ruleset_id and bc.template_id = item.template_id
     ), '[]'::jsonb)
   );
 end;
@@ -9075,10 +9140,17 @@ begin
       ) x on x.template_id = t.id
     ), '[]'::jsonb),
     'sellable_items', coalesce((
-      select jsonb_agg(inventory.item_json(v_user_id, h.template_id) || jsonb_build_object('unit_price', t.market_price) order by t.sort_order)
-      from inventory.holdings h
-      join catalog.templates t on t.id = h.template_id
-      where h.user_id = v_user_id and inventory.available_quantity(v_user_id, h.template_id) > 0
+      with user_items as materialized (
+        select item.*
+        from inventory.item_read_model item
+        where item.user_id = v_user_id and item.available > 0
+      )
+      select jsonb_agg(
+        inventory.present_item(item)
+          || jsonb_build_object('unit_price', item.market_price)
+        order by item.sort_order
+      )
+      from user_items item
     ), '[]'::jsonb),
     'vip', vip.status_json(v_user_id),
     'max_active_templates', 10,
@@ -12282,6 +12354,11 @@ as $$
       ('C', p_ordered_user_ids[3]),
       ('D', p_ordered_user_ids[4])
   ),
+  fixture_quantities as materialized (
+    select quantity.*
+    from inventory.quantity_read_model quantity
+    where quantity.user_id = any(p_ordered_user_ids)
+  ),
   role_targets as (
     select d.role, max(d.target_kcoin) as target_kcoin
     from admin.battle_fixture_definition() d
@@ -12296,22 +12373,19 @@ as $$
           'template_id', d.template_id,
           'target_quantity', d.target_quantity,
           'fixture_owned_quantity', coalesce(o.available_quantity, 0),
-          'aggregate_quantity', coalesce(h.quantity, 0),
-          'active_reserved', coalesce((
-            select sum(r.quantity)
-            from inventory.reservations r
-            where r.user_id = ru.user_id
-              and r.template_id = d.template_id
-              and r.status = 'active'
-          ), 0),
-          'available_quantity', inventory.available_quantity(ru.user_id, d.template_id)
+          'aggregate_quantity', coalesce(quantity.total, 0),
+          'active_reserved', coalesce(
+            quantity.listed + quantity.expedition + quantity.minting + quantity.battling,
+            0
+          ),
+          'available_quantity', coalesce(quantity.available, 0)
         )
         order by d.template_id
       ) as pets,
       bool_and(
         coalesce(o.available_quantity, 0) = d.target_quantity
         and coalesce(o.locked_quantity, 0) = 0
-        and coalesce(h.quantity, 0) >= coalesce(o.available_quantity, 0)
+        and coalesce(quantity.total, 0) >= coalesce(o.available_quantity, 0)
       ) as pets_aligned
     from role_users ru
     join admin.battle_fixture_definition() d
@@ -12321,8 +12395,8 @@ as $$
       and o.asset_kind = 'PET'
       and o.asset_key = d.template_id
       and o.fixture_version = p_fixture_version
-    left join inventory.holdings h
-      on h.user_id = ru.user_id and h.template_id = d.template_id
+    left join fixture_quantities quantity
+      on quantity.user_id = ru.user_id and quantity.template_id = d.template_id
     group by ru.role
   ),
   role_state as (

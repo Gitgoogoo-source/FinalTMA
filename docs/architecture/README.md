@@ -53,7 +53,7 @@ TMA 首次同步加载只覆盖应用壳、会话与账号门禁及默认开盒�
 
 ## 数据库权限
 
-内部 schema 对 `public`、`anon`、`authenticated` 和 `service_role` 撤销 schema、表、序列和函数权限。`service_role` 只获得 `api` schema 的使用权和显式 allowlist 函数的执行权，不能执行内部登录限流 helper。玩家 RPC 使用 `session_id` 最终验证会话存在、撤销、绝对过期、账号、入口交接和资源归属；常规认证没有独立会话解析 RPC。
+内部 schema 对 `public`、`anon`、`authenticated` 和 `service_role` 撤销 schema、表、视图、序列和函数权限。内部库存读模型使用 `security_invoker` 且不进入 Exposed schemas。`service_role` 只获得 `api` schema 的使用权和显式 allowlist 函数的执行权，不能执行内部登录限流 helper。玩家 RPC 使用 `session_id` 最终验证会话存在、撤销、绝对过期、账号、入口交接和资源归属；常规认证没有独立会话解析 RPC。
 
 `admin` 是数据库所有者专用的非 Data API 管理边界。受控 Battle 验收夹具只从该 schema 执行，默认没有项目身份或 enable 记录，不向 `service_role` 或任何应用角色授权；真实开发绑定、短期门禁、幂等 reconciliation、fixture-owned provenance 与只读状态遵循 [ADR-016](adr/ADR-016-controlled-battle-acceptance-fixture.md)。
 
@@ -115,3 +115,5 @@ TMA 首次同步加载只覆盖应用壳、会话与账号门禁及默认开盒�
 - [抽卡与邀请插画响应式 WebP](adr/ADR-035-responsive-gacha-and-referral-art.md)
 - [宠物资源受控发布的服务端密钥兼容与重建门禁](adr/ADR-036-catalog-release-key-compatibility.md)
 - [持久页面查询活动边界与缓存回正](adr/ADR-037-persistent-page-query-activity.md)
+- [本地会话凭证证明与登录 RPC 合并](adr/ADR-038-local-session-proof-and-login-rpc-consolidation.md)
+- [库存数量集合式读模型](adr/ADR-039-inventory-set-based-read-model.md)

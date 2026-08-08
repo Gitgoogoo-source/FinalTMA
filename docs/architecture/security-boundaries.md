@@ -4,7 +4,7 @@
 
 Battle 阶段化结构日志只接受 [ADR-028](adr/ADR-028-battle-request-observability.md) 的固定耗时、调用次数和 outbox 聚合计数。日志不记录用户、session、operation、room、event、channel、token、capability、请求/响应内容、RPC 名称或原始外部错误；`request_id` 与 `route_id` 只用于同一请求的运行诊断。
 
-Data API 只暴露 `api` schema。安全迁移撤销 `PUBLIC`、`anon`、`authenticated` 对内部 schema、表、序列和函数的权限，也撤销 `service_role` 对内部对象的直接权限；Functions 的 `service_role` 只执行 `api` schema 中的 SECURITY DEFINER RPC。
+Data API 只暴露 `api` schema。安全迁移撤销 `PUBLIC`、`anon`、`authenticated` 对内部 schema、表、视图、序列和函数的权限，也撤销 `service_role` 对内部对象的直接权限；`inventory.quantity_read_model` 与 `inventory.item_read_model` 额外使用 `security_invoker = true`，仍不能被非 owner 角色直接读取。Functions 的 `service_role` 只执行 `api` schema 中的 SECURITY DEFINER RPC。
 
 所有 SECURITY DEFINER 函数使用空 `search_path` 和完全限定对象名。RLS 在内部表上启用且不创建玩家访问策略，只作为外围拒绝层；业务授权全部由 Functions 与 RPC 显式完成。
 

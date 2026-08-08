@@ -76,6 +76,8 @@ def verify_security(path: Path) -> None:
         "alter default privileges",
         "revoke all on tables from public, anon, authenticated, service_role",
         "revoke all on sequences from public, anon, authenticated, service_role",
+        "from pg_views",
+        "v_view.viewname",
     )
     missing = [statement for statement in required if statement not in sql]
     if missing:
@@ -186,6 +188,97 @@ def verify_database_boundaries() -> None:
     missing = [fragment for fragment in jobs_required if fragment not in jobs_sql]
     if missing:
         raise SystemExit(f"Catalog cleanup mutation boundary is incomplete: {missing}")
+
+
+def verify_inventory_read_model() -> None:
+    inventory_sql = (SCHEMAS / "32_inventory.sql").read_text(encoding="utf-8").lower()
+    security_sql = one_migration("_api_security.sql").read_text(encoding="utf-8").lower()
+
+    required = (
+        "create view inventory.quantity_read_model\nwith (security_invoker = true)",
+        "create view inventory.item_read_model\nwith (security_invoker = true)",
+        "create or replace function inventory.present_item(p_item inventory.item_read_model)",
+        "select to_jsonb(p_item) - array['user_id', 'sort_order', 'market_price']::text[]",
+        "sum(r.quantity) filter (where r.kind = 'listing')",
+        "sum(r.quantity) filter (where r.kind = 'expedition')",
+        "sum(r.quantity) filter (where r.kind = 'mint')",
+        "sum(r.quantity) filter (where r.kind = 'battle')",
+        "greatest(h.quantity - coalesce(sum(r.quantity), 0), 0)::bigint as available",
+        "0::bigint as trading",
+        "include (quantity)\nwhere status = 'active'",
+        "from pg_views",
+        "v_view.viewname",
+    )
+    missing = [fragment for fragment in required if fragment not in inventory_sql and fragment not in security_sql]
+    if missing:
+        raise SystemExit(f"Inventory set-based read model is incomplete: {missing}")
+
+    if not re.search(
+        r"create\s+index\s+reservations_user_template_active_idx\s+"
+        r"on\s+inventory\.reservations\s*\(\s*user_id\s*,\s*template_id\s*,\s*kind\s*\)\s*"
+        r"include\s*\(\s*quantity\s*\)\s*where\s+status\s*=\s*'active'",
+        inventory_sql,
+        re.DOTALL,
+    ):
+        raise SystemExit("Active reservation index must remain one partial covering index")
+
+    def function_block(path: Path, qualified_name: str) -> str:
+        sql = path.read_text(encoding="utf-8").lower()
+        match = re.search(
+            rf"create\s+or\s+replace\s+function\s+{re.escape(qualified_name)}\s*\(.*?\n\$\$;",
+            sql,
+            re.DOTALL,
+        )
+        if match is None:
+            raise SystemExit(f"Inventory read-model consumer is missing: {qualified_name}")
+        return match.group(0)
+
+    batch_consumers = {
+        "api.inventory_list": (SCHEMAS / "32_inventory.sql", "inventory.item_read_model"),
+        "api.expedition_eligible_items": (SCHEMAS / "41_expedition.sql", "inventory.item_read_model"),
+        "api.market_bootstrap": (SCHEMAS / "50_market.sql", "inventory.item_read_model"),
+        "api.battle_team_options": (SCHEMAS / "44_battle.sql", "inventory.item_read_model"),
+        "admin.battle_fixture_state": (SCHEMAS / "96_admin.sql", "inventory.quantity_read_model"),
+    }
+    for name, (path, model) in batch_consumers.items():
+        block = function_block(path, name)
+        if block.count(f"from {model}") + block.count(f"join {model}") != 1:
+            raise SystemExit(f"{name} must scan {model} exactly once")
+        if "as materialized" not in block:
+            raise SystemExit(f"{name} must materialize its user-scoped read model before domain joins")
+        forbidden = [
+            helper
+            for helper in ("inventory.item_json(", "inventory.available_quantity(")
+            if helper in block
+        ]
+        if forbidden:
+            raise SystemExit(f"{name} reintroduced row-by-row inventory helpers: {forbidden}")
+
+    inventory_list = function_block(SCHEMAS / "32_inventory.sql", "api.inventory_list")
+    inventory_list_required = (
+        "jsonb_agg(inventory.present_item(item) order by item.sort_order)",
+        "count(*) filter (where item.available > 0)",
+        "sum(item.available) filter (where item.available > 0)",
+    )
+    missing = [fragment for fragment in inventory_list_required if fragment not in inventory_list]
+    if missing:
+        raise SystemExit(f"Inventory list must derive all aggregates in one scan: {missing}")
+
+    for name in ("inventory.change_holding", "inventory.reserve"):
+        block = function_block(SCHEMAS / "32_inventory.sql", name)
+        write_required = (
+            "from inventory.holdings",
+            "for update",
+            "from inventory.reservations",
+            "status = 'active'",
+        )
+        missing = [fragment for fragment in write_required if fragment not in block]
+        if missing:
+            raise SystemExit(f"{name} must retain locked authoritative reservation checks: {missing}")
+    if "insert into inventory.reservations" not in function_block(
+        SCHEMAS / "32_inventory.sql", "inventory.reserve"
+    ):
+        raise SystemExit("inventory.reserve must remain the only reservation writer")
 
 
 def verify_identity_login_contract() -> None:
@@ -807,6 +900,7 @@ def main() -> None:
     verify_security(security)
     verify_database_error_codes()
     verify_database_boundaries()
+    verify_inventory_read_model()
     verify_identity_login_contract()
     verify_entry_handoff_contract()
     verify_player_rpc_session_authority()

@@ -74,13 +74,20 @@ begin
     perform api.raise_business_error('EXPEDITION_TIER_INVALID', '远征档次无效');
   end if;
   return jsonb_build_object('items', coalesce((
-    select jsonb_agg(inventory.item_json(v_user_id, t.id) || jsonb_build_object('unit_reward_fgems', t.expedition_fgems) order by t.sort_order)
-    from inventory.holdings h
-    join catalog.templates t on t.id = h.template_id
-    where h.user_id = v_user_id and inventory.available_quantity(v_user_id, t.id) > 0
-      and ((p_tier = 'normal' and catalog.rarity_rank(t.rarity) between 1 and 3)
-        or (p_tier = 'intermediate' and catalog.rarity_rank(t.rarity) between 2 and 4)
-        or (p_tier = 'advanced' and catalog.rarity_rank(t.rarity) between 3 and 5))
+    with user_items as materialized (
+      select item.*
+      from inventory.item_read_model item
+      where item.user_id = v_user_id and item.available > 0
+    )
+    select jsonb_agg(
+      inventory.present_item(item)
+        || jsonb_build_object('unit_reward_fgems', item.expedition_fgems)
+      order by item.sort_order
+    )
+    from user_items item
+    where ((p_tier = 'normal' and catalog.rarity_rank(item.rarity) between 1 and 3)
+        or (p_tier = 'intermediate' and catalog.rarity_rank(item.rarity) between 2 and 4)
+        or (p_tier = 'advanced' and catalog.rarity_rank(item.rarity) between 3 and 5))
   ), '[]'::jsonb));
 end;
 $$;

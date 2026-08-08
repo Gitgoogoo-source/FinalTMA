@@ -2,6 +2,7 @@
 do $$
 declare
   v_table record;
+  v_view record;
   v_sequence record;
   v_schema text;
 begin
@@ -12,6 +13,13 @@ begin
   loop
     execute format('alter table %I.%I enable row level security', v_table.schemaname, v_table.tablename);
     execute format('revoke all on table %I.%I from public, anon, authenticated, service_role', v_table.schemaname, v_table.tablename);
+  end loop;
+  for v_view in
+    select schemaname, viewname
+    from pg_views
+    where schemaname in ('identity', 'catalog', 'economy', 'inventory', 'gacha', 'evolution', 'expedition', 'wheel', 'battle', 'market', 'payments', 'vip', 'tasks', 'referral', 'album', 'onchain', 'operations', 'risk', 'admin')
+  loop
+    execute format('revoke all on table %I.%I from public, anon, authenticated, service_role', v_view.schemaname, v_view.viewname);
   end loop;
   for v_sequence in
     select schemaname, sequencename

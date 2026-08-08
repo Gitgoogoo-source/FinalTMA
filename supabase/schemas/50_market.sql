@@ -97,10 +97,17 @@ begin
       ) x on x.template_id = t.id
     ), '[]'::jsonb),
     'sellable_items', coalesce((
-      select jsonb_agg(inventory.item_json(v_user_id, h.template_id) || jsonb_build_object('unit_price', t.market_price) order by t.sort_order)
-      from inventory.holdings h
-      join catalog.templates t on t.id = h.template_id
-      where h.user_id = v_user_id and inventory.available_quantity(v_user_id, h.template_id) > 0
+      with user_items as materialized (
+        select item.*
+        from inventory.item_read_model item
+        where item.user_id = v_user_id and item.available > 0
+      )
+      select jsonb_agg(
+        inventory.present_item(item)
+          || jsonb_build_object('unit_price', item.market_price)
+        order by item.sort_order
+      )
+      from user_items item
     ), '[]'::jsonb),
     'vip', vip.status_json(v_user_id),
     'max_active_templates', 10,

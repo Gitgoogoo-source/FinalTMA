@@ -20,7 +20,7 @@
 | 14 开盒            | gacha、operation-recovery       | gacha                                    | gacha、inventory、economy、operations    | 单抽/十连全成全败、结果只生成一次、展示按钮不写后端且不跨启动恢复 |
 | 15 VIP             | vip                             | vip、integrations                        | vip、payments、economy                   | 30 UTC 日、续费上限、每日手动领取                                 |
 | 16 登录            | session-bootstrap、platform     | identity                                 | identity、operations                     | 两次登录 RPC、本地凭证证明、数据库会话终裁决、限流与交接状态      |
-| 17 藏品            | inventory                       | inventory                                | inventory                                | 模板加数量、预留不可重复使用                                      |
+| 17 藏品            | inventory                       | inventory                                | inventory                                | 集合式数量读模型、模板加数量、预留不可重复使用                    |
 | 18 进化            | inventory、evolution            | evolution                                | 43_evolution、inventory、economy         | 只读预览、二次确认、原子结算、结果恢复与会话 NEW                  |
 | 19 顶部资产栏      | app/shell                       | identity                                 | economy、vip                             | 真实资产回正，不读取或展示钱包状态                                |
 | 20 风控退款        | app/guards                      | refund-risk workflow、integrations、jobs | risk、payments、operations               | 重复退款无副作用、封禁空白门禁                                    |
