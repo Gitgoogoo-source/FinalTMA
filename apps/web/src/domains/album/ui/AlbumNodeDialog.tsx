@@ -17,17 +17,25 @@ export function AlbumNodeDialog({
   chain,
   node,
   onClose,
+  onPrepareNavigate,
   onNavigate,
 }: {
   chain: AlbumChain;
   node: AlbumNode;
   onClose(): void;
+  onPrepareNavigate(path: string): void;
   onNavigate(path: string): void;
 }): ReactNode {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const previousNode = chain.nodes.find(
     (candidate) => candidate.stage === node.stage - 1,
   );
+  const inventoryPath = `/inventory?template_id=${encodeURIComponent(node.template_id)}`;
+  const marketPath = `/market?buy=${encodeURIComponent(node.template_id)}`;
+  const gachaPath = `/?rarity=${node.rarity}`;
+  const evolutionPath = previousNode
+    ? `/inventory?template_id=${encodeURIComponent(previousNode.template_id)}&action=evolve`
+    : null;
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
@@ -92,11 +100,10 @@ export function AlbumNodeDialog({
             <p>你曾经获得过该藏品，但当前库存为 0。</p>
           )}
           <Button
-            onClick={() =>
-              onNavigate(
-                `/inventory?template_id=${encodeURIComponent(node.template_id)}`,
-              )
-            }
+            onPointerEnter={() => onPrepareNavigate(inventoryPath)}
+            onPointerDown={() => onPrepareNavigate(inventoryPath)}
+            onFocus={() => onPrepareNavigate(inventoryPath)}
+            onClick={() => onNavigate(inventoryPath)}
           >
             <PackageSearch aria-hidden="true" />
             去藏品查看
@@ -105,24 +112,29 @@ export function AlbumNodeDialog({
       ) : (
         <div className="album-acquisition-actions">
           <Button
-            onClick={() =>
-              onNavigate(`/market?buy=${encodeURIComponent(node.template_id)}`)
-            }
+            onPointerEnter={() => onPrepareNavigate(marketPath)}
+            onPointerDown={() => onPrepareNavigate(marketPath)}
+            onFocus={() => onPrepareNavigate(marketPath)}
+            onClick={() => onNavigate(marketPath)}
           >
             <ShoppingBag aria-hidden="true" />
             去交易市场购买
           </Button>
-          <Button onClick={() => onNavigate(`/?rarity=${node.rarity}`)}>
+          <Button
+            onPointerEnter={() => onPrepareNavigate(gachaPath)}
+            onPointerDown={() => onPrepareNavigate(gachaPath)}
+            onFocus={() => onPrepareNavigate(gachaPath)}
+            onClick={() => onNavigate(gachaPath)}
+          >
             <Sparkles aria-hidden="true" />
             去开盲盒
           </Button>
-          {node.stage > 1 && previousNode && (
+          {node.stage > 1 && evolutionPath && (
             <Button
-              onClick={() =>
-                onNavigate(
-                  `/inventory?template_id=${encodeURIComponent(previousNode.template_id)}&action=evolve`,
-                )
-              }
+              onPointerEnter={() => onPrepareNavigate(evolutionPath)}
+              onPointerDown={() => onPrepareNavigate(evolutionPath)}
+              onFocus={() => onPrepareNavigate(evolutionPath)}
+              onClick={() => onNavigate(evolutionPath)}
             >
               <Dna aria-hidden="true" />
               去进化

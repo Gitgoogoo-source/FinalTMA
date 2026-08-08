@@ -42,6 +42,7 @@ import {
   getAppScrollTop,
   scrollAppTo,
 } from "../../../shared/navigation/appScroll.ts";
+import { usePageModulePreparation } from "../../../shared/navigation/pageModulePreparation.ts";
 import {
   boxArtUrl,
   boxThumbnailSizes,
@@ -168,6 +169,7 @@ export function TasksView({
   const tasks = useApiQuery("tasks.get");
   const { isBlocked, run } = useOperationRegistry();
   const navigate = useNavigate();
+  const preparePage = usePageModulePreparation();
   const session = useSession();
   const remembered = session ? viewStates.get(session.userId) : undefined;
   const [category, setCategory] = useState<TaskFilter>(
@@ -346,6 +348,12 @@ export function TasksView({
           const canClaim = task.status === "claimable";
           const canComplete =
             task.status === "not_started" || task.status === "in_progress";
+          const completionRoute = canComplete
+            ? getCompletionRoute(task.completion_action)
+            : null;
+          const prepareCompletion = () => {
+            if (completionRoute) preparePage(completionRoute);
+          };
           return (
             <Card key={task.code} className={`task-row ${task.status}`}>
               <TaskIconArtwork taskCode={task.code} />
@@ -375,10 +383,13 @@ export function TasksView({
               <Button
                 id={`task-card-${task.code}-action`}
                 disabled={blocked || claiming || task.status === "claimed"}
+                onPointerEnter={prepareCompletion}
+                onPointerDown={prepareCompletion}
+                onFocus={prepareCompletion}
                 onClick={() => {
                   if (canClaim) void claim(task.code);
                   else if (canComplete)
-                    goComplete(task.completion_action, navigate);
+                    goComplete(task.completion_action, navigate, preparePage);
                 }}
               >
                 {claiming
@@ -400,7 +411,18 @@ export function TasksView({
 function goComplete(
   action: Task["completion_action"],
   navigate: ReturnType<typeof useNavigate>,
+  preparePage: (target: string) => void,
 ): void {
+  const route = getCompletionRoute(action);
+  if (route) {
+    preparePage(route);
+    navigate(route);
+  }
+}
+
+function getCompletionRoute(
+  action: Task["completion_action"],
+): string | undefined {
   const routes: Partial<Record<Task["completion_action"], string>> = {
     gacha_single: "/?focus=gacha-single",
     gacha_ten: "/?focus=gacha-ten",
@@ -412,6 +434,5 @@ function goComplete(
     inventory_decomposition: "/inventory?focus=decomposition",
     album: "/album",
   };
-  const route = routes[action];
-  if (route) navigate(route);
+  return routes[action];
 }

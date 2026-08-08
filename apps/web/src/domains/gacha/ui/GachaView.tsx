@@ -35,6 +35,7 @@ import {
   scrollAppTo,
 } from "../../../shared/navigation/appScroll.ts";
 import { focusTaskTarget } from "../../../shared/navigation/focusTaskTarget.ts";
+import { markFirstScreenReady } from "../../../shared/navigation/firstScreenReadiness.ts";
 import {
   usePageActive,
   usePageSearchParams,
@@ -122,6 +123,17 @@ export function GachaView(): ReactNode {
     visibleItems.find((box) => box.tier === selectedTier) ??
     visibleItems[0] ??
     items[0];
+  const firstScreenReady =
+    pageActive &&
+    Boolean(session?.generation) &&
+    boxes.data !== undefined &&
+    catalog.data !== undefined &&
+    identity.data !== undefined &&
+    !boxes.isFetching &&
+    !catalog.isFetching &&
+    !identity.isFetching &&
+    rulesComplete &&
+    Boolean(selectedBox && ready[selectedBox.tier]);
   const selectedPity = pityItems.find(
     (item) => item.tier === selectedBox?.tier,
   );
@@ -172,6 +184,10 @@ export function GachaView(): ReactNode {
     if (!pageActive) return;
     return subscribeFreeRareClaimed(handleFreeRareClaimed);
   }, [handleFreeRareClaimed, pageActive]);
+
+  useEffect(() => {
+    if (firstScreenReady && session) markFirstScreenReady(session.generation);
+  }, [firstScreenReady, session]);
 
   useEffect(() => {
     if (selectedBox) selectedTierRef.current = selectedBox.tier;
@@ -292,13 +308,26 @@ export function GachaView(): ReactNode {
                     loading="eager"
                     fetchPriority="high"
                     decoding="async"
-                    onLoad={() =>
-                      setReady((state) =>
-                        state[selectedBox.tier] === true
-                          ? state
-                          : { ...state, [selectedBox.tier]: true },
-                      )
-                    }
+                    onLoad={(event) => {
+                      const image = event.currentTarget;
+                      const tier = selectedBox.tier;
+                      void image
+                        .decode()
+                        .then(() =>
+                          setReady((state) =>
+                            state[tier] === true
+                              ? state
+                              : { ...state, [tier]: true },
+                          ),
+                        )
+                        .catch(() =>
+                          setReady((state) =>
+                            state[tier] === false
+                              ? state
+                              : { ...state, [tier]: false },
+                          ),
+                        );
+                    }}
                     onError={(event) => {
                       if (
                         fallbackToOriginalBoxArt(

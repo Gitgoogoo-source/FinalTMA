@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 import type { PaymentOrder } from "../../domains/topup/index.ts";
+import { usePageModulePreparation } from "../../shared/navigation/pageModulePreparation.ts";
 
 const resumedPayments = new Set<string>();
 
@@ -10,6 +11,7 @@ export function useNavigationIntentResume(
   onResume: () => void,
 ): void {
   const navigate = useNavigate();
+  const preparePage = usePageModulePreparation();
   useEffect(() => {
     const order = orders?.find(
       (candidate) =>
@@ -24,13 +26,17 @@ export function useNavigationIntentResume(
     if (order.intent.kind === "gacha") {
       params.set("tier", order.intent.tier);
       params.set("count", String(order.intent.draw_count));
-      navigate(`/?${params.toString()}`);
+      const path = `/?${params.toString()}`;
+      preparePage(path);
+      navigate(path);
       return;
     }
     if (order.intent.kind === "market") {
       params.set("template_id", order.intent.template_id);
       params.set("quantity", String(order.intent.quantity));
-      navigate(`/market?${params.toString()}`);
+      const path = `/market?${params.toString()}`;
+      preparePage(path);
+      navigate(path);
       return;
     }
     if (
@@ -38,10 +44,14 @@ export function useNavigationIntentResume(
       order.intent.kind === "battle_matchmaking" ||
       order.intent.kind === "battle_accept"
     ) {
-      navigate(`/game?${params.toString()}`);
+      const path = `/game?${params.toString()}`;
+      preparePage(path);
+      navigate(path);
       return;
     }
     params.set("count", String(order.intent.count));
-    navigate(`/tasks?${params.toString()}`);
-  }, [navigate, onResume, orders]);
+    const path = `/tasks?${params.toString()}`;
+    preparePage(path);
+    navigate(path);
+  }, [navigate, onResume, orders, preparePage]);
 }

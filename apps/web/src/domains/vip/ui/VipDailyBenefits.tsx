@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 
 import { useApiQuery } from "../../../platform/query/index.ts";
 import { notifyFreeRareClaimed } from "../../../shared/events/vipDailyBenefits.ts";
+import { usePageModulePreparation } from "../../../shared/navigation/pageModulePreparation.ts";
 import { Button } from "../../../shared/ui/index.tsx";
 import { useOperationRegistry } from "../../../workflows/operation-recovery/context.ts";
 
@@ -16,6 +17,7 @@ type Feedback = {
 export function VipDailyBenefits(): ReactNode {
   const vip = useApiQuery("vip.get");
   const navigate = useNavigate();
+  const preparePage = usePageModulePreparation();
   const { isBlocked, run } = useOperationRegistry();
   const [pending, setPending] = useState<Partial<Record<Benefit, boolean>>>({});
   const [feedback, setFeedback] = useState<Partial<Record<Benefit, Feedback>>>(
@@ -83,7 +85,10 @@ export function VipDailyBenefits(): ReactNode {
     };
   }, [benefitDate, refetchVip]);
 
-  const openDetails = () => navigate("/market?vip=details");
+  const openDetails = () => {
+    preparePage("/market?vip=details");
+    navigate("/market?vip=details");
+  };
   const claim = async (benefit: Benefit) => {
     if (pending[benefit]) return;
     setPending((current) => ({ ...current, [benefit]: true }));
@@ -159,6 +164,9 @@ export function VipDailyBenefits(): ReactNode {
   const freeBoxDisabled =
     freeBoxPending ||
     (!loadFailed && (unavailable || (active && freeBoxClaimed)));
+  const prepareDetails = () => {
+    if (!active && !loadFailed) preparePage("/market?vip=details");
+  };
   const activateBenefit = (benefit: Benefit) => {
     if (loadFailed) {
       void vip.refetch();
@@ -180,6 +188,9 @@ export function VipDailyBenefits(): ReactNode {
             className={`vip-benefit-tile fgems ${fgemsVisualState}`}
             disabled={fgemsDisabled}
             aria-label={`100 Fgems，每个 UTC+0 日手动领取，${fgemsAction}`}
+            onPointerEnter={prepareDetails}
+            onPointerDown={prepareDetails}
+            onFocus={prepareDetails}
             onClick={() => activateBenefit("fgems")}
           >
             <img
@@ -202,6 +213,9 @@ export function VipDailyBenefits(): ReactNode {
             className={`vip-benefit-tile free-box ${freeBoxVisualState}`}
             disabled={freeBoxDisabled}
             aria-label={`免费稀有盲盒 1 次，全部来源当前可用 ${data?.free_rare_box_available ?? "—"} 次，${freeBoxAction}`}
+            onPointerEnter={prepareDetails}
+            onPointerDown={prepareDetails}
+            onFocus={prepareDetails}
             onClick={() => activateBenefit("freeBox")}
           >
             <img

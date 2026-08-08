@@ -11,6 +11,7 @@ import { useNavigate } from "react-router-dom";
 
 import { useApiQuery } from "../../../platform/query/index.ts";
 import { useTelegramBackButton } from "../../../platform/telegram/index.ts";
+import { usePageModulePreparation } from "../../../shared/navigation/pageModulePreparation.ts";
 import { Badge, Button, PageState } from "../../../shared/ui/index.tsx";
 import { useOperationRegistry } from "../../../workflows/operation-recovery/context.ts";
 import { useBlockingOperationRecovery } from "../../../workflows/operation-recovery/useBlockingOperationRecovery.ts";
@@ -32,6 +33,7 @@ export function AlbumView(): ReactNode {
   const bootstrap = useApiQuery("identity.bootstrap");
   useBlockingOperationRecovery(bootstrap.data?.blocking_operations);
   const navigate = useNavigate();
+  const preparePage = usePageModulePreparation();
   const back = useCallback(() => navigate(-1), [navigate]);
   useTelegramBackButton(true, back);
   const { isBlocked, preload, run } = useOperationRegistry();
@@ -167,8 +169,10 @@ export function AlbumView(): ReactNode {
           chain={dialog.chain}
           node={dialog.node}
           onClose={closeDialog}
+          onPrepareNavigate={preparePage}
           onNavigate={(path) => {
             setDialog(null);
+            preparePage(path);
             navigate(path);
           }}
         />

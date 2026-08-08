@@ -13,6 +13,7 @@ import { useNavigate } from "react-router-dom";
 import { isVisibleMvpTask } from "../../domains/tasks/visibility.ts";
 import { useApiQuery } from "../../platform/query/index.ts";
 import { focusTaskTarget } from "../../shared/navigation/focusTaskTarget.ts";
+import { usePageModulePreparation } from "../../shared/navigation/pageModulePreparation.ts";
 import { Button, Card } from "../../shared/ui/index.tsx";
 
 type Task = RouteOutput<"tasks.get">["tasks"][number];
@@ -26,6 +27,7 @@ type Highlight = {
 
 export function TaskHighlightBanner(): ReactNode {
   const navigate = useNavigate();
+  const preparePage = usePageModulePreparation();
   const tasks = useApiQuery("tasks.get");
   const referral = useApiQuery("referral.get");
   const orderedTasks = (tasks.data?.tasks ?? []).filter(isVisibleMvpTask);
@@ -85,7 +87,13 @@ export function TaskHighlightBanner(): ReactNode {
       focusTaskTarget(document.getElementById("task-referral"));
       return;
     }
-    navigate(highlight.kind === "wheel" ? "/tasks?focus=wheel" : "/album");
+    const path = highlight.kind === "wheel" ? "/tasks?focus=wheel" : "/album";
+    preparePage(path);
+    navigate(path);
+  };
+  const prepareNavigation = () => {
+    if (highlight.kind === "wheel") preparePage("/tasks?focus=wheel");
+    else if (highlight.kind === "album") preparePage("/album");
   };
   return (
     <Card className={`task-highlight ${highlight.kind}`}>
@@ -97,7 +105,14 @@ export function TaskHighlightBanner(): ReactNode {
         <strong>{highlight.title}</strong>
         <p>{highlight.description}</p>
       </div>
-      <Button onClick={activate}>{highlight.action}</Button>
+      <Button
+        onPointerEnter={prepareNavigation}
+        onPointerDown={prepareNavigation}
+        onFocus={prepareNavigation}
+        onClick={activate}
+      >
+        {highlight.action}
+      </Button>
     </Card>
   );
 }

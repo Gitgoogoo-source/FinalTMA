@@ -8,6 +8,7 @@ import {
 import type { ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
+import { usePageModulePreparation } from "../../shared/navigation/pageModulePreparation.ts";
 import { useOperationRegistry } from "../../workflows/operation-recovery/context.ts";
 
 const navigation = [
@@ -21,6 +22,7 @@ const navigation = [
 export function BottomNavigation(): ReactNode {
   const location = useLocation();
   const navigate = useNavigate();
+  const preparePage = usePageModulePreparation();
   const { navigationLocked } = useOperationRegistry();
   return (
     <nav
@@ -33,6 +35,9 @@ export function BottomNavigation(): ReactNode {
           path === "/"
             ? location.pathname === "/"
             : location.pathname.startsWith(path);
+        const prepare = () => {
+          if (!active && !navigationLocked) preparePage(path);
+        };
         return (
           <button
             key={path}
@@ -41,8 +46,14 @@ export function BottomNavigation(): ReactNode {
             aria-label={`前往${label}`}
             aria-disabled={navigationLocked}
             disabled={navigationLocked}
+            onPointerEnter={prepare}
+            onPointerDown={prepare}
+            onFocus={prepare}
             onClick={() => {
-              if (!navigationLocked) navigate(path);
+              if (!navigationLocked) {
+                prepare();
+                navigate(path);
+              }
             }}
           >
             <span className="nav-icon">

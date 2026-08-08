@@ -11,11 +11,13 @@ import {
 import { Button } from "../../shared/ui/index.tsx";
 import { focusTaskTarget } from "../../shared/navigation/focusTaskTarget.ts";
 import { usePageSearchParams } from "../../shared/navigation/pageActivity.tsx";
+import { usePageModulePreparation } from "../../shared/navigation/pageModulePreparation.ts";
 import { useOperationRegistry } from "../../workflows/operation-recovery/context.ts";
 import "../../shared/styles/inventory-page.css";
 
 export function InventoryPage(): ReactNode {
   const navigate = useNavigate();
+  const preparePage = usePageModulePreparation();
   const [params] = usePageSearchParams();
   const [sellItem, setSellItem] = useState<InventoryItem | null>(null);
   const requestedFocus = params.get("focus");
@@ -59,9 +61,9 @@ export function InventoryPage(): ReactNode {
           onConfirm={(quantity) => {
             const templateId = sellItem.template_id;
             setSellItem(null);
-            navigate(
-              `/market?sell=${encodeURIComponent(templateId)}&quantity=${quantity}`,
-            );
+            const path = `/market?sell=${encodeURIComponent(templateId)}&quantity=${quantity}`;
+            preparePage(path);
+            navigate(path);
           }}
         />
       ) : null}

@@ -10,6 +10,7 @@ export type CatalogSnapshot = RouteOutput<"catalog.release"> & {
 type CatalogQueryResult = {
   data: CatalogSnapshot | undefined;
   isLoading: boolean;
+  isFetching: boolean;
   error: Error | null;
   refetch(): Promise<void>;
 };
@@ -69,6 +70,7 @@ export function useCatalogQuery(requestedEnabled = true): CatalogQueryResult {
     isLoading:
       data === undefined &&
       (pointer.isLoading || (pointer.data !== undefined && release.isLoading)),
+    isFetching: pointer.isFetching || release.isFetching,
     error: data === undefined ? (pointer.error ?? release.error) : null,
     refetch,
   };

@@ -61,6 +61,7 @@ REQUIRED_PATHS = (
     "docs/architecture/adr/ADR-040-first-screen-runtime-boundary.md",
     "docs/architecture/adr/ADR-041-market-transactional-supply-read-model.md",
     "docs/architecture/adr/ADR-042-catalog-pointer-immutable-release.md",
+    "docs/architecture/adr/ADR-043-adaptive-page-module-warmup.md",
     "docs/architecture/adr/ADR-016-controlled-battle-acceptance-fixture.md",
     "docs/architecture/adr/ADR-022-battle-stage-skill-progression.md",
     "docs/architecture/adr/ADR-025-battle-active-switch-atomicity.md",
@@ -169,6 +170,7 @@ def main() -> None:
     assert_nonempty_domains(API_ROOT / "domains")
     verify_web_boundaries()
     verify_first_screen_runtime_boundaries()
+    verify_adaptive_page_warmup()
     verify_evolution_refresh_semantics()
     verify_operation_recovery_discovery()
     verify_game_page_boundary()
@@ -458,6 +460,152 @@ def verify_first_screen_runtime_boundaries() -> None:
             "Foreground correction boundary is incomplete: "
             f"{missing_foreground_terms}"
         )
+
+
+def verify_adaptive_page_warmup() -> None:
+    scheduler = (WEB_ROOT / "app/router/deferredPageWarmup.ts").read_text(
+        encoding="utf-8"
+    )
+    page_routes = (WEB_ROOT / "app/router/pageRoutes.ts").read_text(
+        encoding="utf-8"
+    )
+    app_router = (WEB_ROOT / "app/router/AppRouter.tsx").read_text(
+        encoding="utf-8"
+    )
+    gacha_view = (WEB_ROOT / "domains/gacha/ui/GachaView.tsx").read_text(
+        encoding="utf-8"
+    )
+    bottom_navigation = (WEB_ROOT / "app/shell/BottomNavigation.tsx").read_text(
+        encoding="utf-8"
+    )
+    runtime_providers = (
+        WEB_ROOT / "app/providers/AuthenticatedRuntimeProviders.tsx"
+    ).read_text(encoding="utf-8")
+
+    automatic_order = re.search(
+        r"AUTOMATIC_PAGE_ORDER:[^=]+\=\s*\[(.*?)\];", scheduler, re.DOTALL
+    )
+    if not automatic_order:
+        raise SystemExit("Adaptive page warmup order is missing")
+    automatic_paths = re.findall(r'"(/[^"]*)"', automatic_order.group(1))
+    if automatic_paths != ["/inventory", "/tasks", "/market", "/album"]:
+        raise SystemExit(
+            "Adaptive page warmup order must be inventory, tasks, market, album: "
+            f"{automatic_paths}"
+        )
+    if '"/game"' in automatic_order.group(1):
+        raise SystemExit("Battle cannot enter automatic page warmup")
+
+    required_scheduler_terms = (
+        "document.visibilityState === \"visible\"",
+        "navigator.onLine !== false",
+        "connection?.saveData === false",
+        'connection.effectiveType === "4g"',
+        'window.addEventListener("online"',
+        'window.addEventListener("offline"',
+        'document.addEventListener("visibilitychange"',
+        'connection?.addEventListener("change"',
+        "subscribeTelegramActivity(activate, deactivate)",
+        "cancelScheduled()",
+        "automaticWarmupStopped = true",
+        "preparePageModule(path)",
+    )
+    missing_scheduler_terms = [
+        term for term in required_scheduler_terms if term not in scheduler
+    ]
+    if missing_scheduler_terms:
+        raise SystemExit(
+            "Adaptive page warmup conditions are incomplete: "
+            f"{missing_scheduler_terms}"
+        )
+    forbidden_scheduler_terms = (
+        "Promise.all(",
+        "Promise.allSettled(",
+        "prefetchApiQuery",
+        "fetchApiQuery",
+        "useApiQuery",
+        "apiRequest(",
+    )
+    present_forbidden_scheduler_terms = [
+        term for term in forbidden_scheduler_terms if term in scheduler
+    ]
+    if present_forbidden_scheduler_terms:
+        raise SystemExit(
+            "Adaptive page warmup cannot batch modules or prefetch business data: "
+            f"{present_forbidden_scheduler_terms}"
+        )
+
+    required_loader_terms = (
+        'export type PreloadablePagePath = MainPagePath | "/album"',
+        "const pageModulePromises = new Map",
+        "export function loadPageModule",
+        "pageModulePromises.delete(path)",
+        "export function preparePageModule",
+        'loadPageModule("/album")',
+    )
+    missing_loader_terms = [
+        term for term in required_loader_terms if term not in page_routes
+    ]
+    if missing_loader_terms:
+        raise SystemExit(
+            f"Unified page module loader is incomplete: {missing_loader_terms}"
+        )
+
+    readiness_source = app_router + gacha_view
+    required_readiness_terms = (
+        "subscribeFirstScreenReady",
+        "isFirstScreenReady(generation)",
+        'location.pathname !== "/"',
+        "startAdaptivePageWarmup()",
+        "markFirstScreenReady(session.generation)",
+        "rulesComplete",
+        "ready[selectedBox.tier]",
+    )
+    missing_readiness_terms = [
+        term for term in required_readiness_terms if term not in readiness_source
+    ]
+    if missing_readiness_terms:
+        raise SystemExit(
+            f"First-screen warmup handshake is incomplete: {missing_readiness_terms}"
+        )
+
+    required_intent_terms = (
+        "usePageModulePreparation",
+        "onPointerEnter={prepare}",
+        "onPointerDown={prepare}",
+        "onFocus={prepare}",
+        "if (!active && !navigationLocked)",
+    )
+    missing_intent_terms = [
+        term for term in required_intent_terms if term not in bottom_navigation
+    ]
+    if missing_intent_terms:
+        raise SystemExit(
+            f"Bottom navigation module intent is incomplete: {missing_intent_terms}"
+        )
+    if (
+        "PageModulePreparationProvider prepare={preparePageModule}"
+        not in runtime_providers
+    ):
+        raise SystemExit("Player navigation intent must use the unified page loader")
+
+    warmup_adr = (
+        ROOT / "docs/architecture/adr/ADR-043-adaptive-page-module-warmup.md"
+    ).read_text(encoding="utf-8")
+    runtime_document = (ROOT / "docs/architecture/runtime.md").read_text(
+        encoding="utf-8"
+    )
+    for required_document_term in (
+        "未知网络",
+        "Battle 永不进入自动列表",
+        "不调用 `prefetchApiQuery`",
+        "ADR-043",
+    ):
+        if required_document_term not in warmup_adr + runtime_document:
+            raise SystemExit(
+                "Adaptive page warmup documentation is incomplete: "
+                f"{required_document_term}"
+            )
 
 
 def verify_evolution_refresh_semantics() -> None:
@@ -959,7 +1107,9 @@ def verify_game_page_boundary() -> None:
         or 'task.category !== "wallet"' not in task_visibility
         or 'task.category !== "mint"' not in task_visibility
         or "/tasks?focus=wheel" not in task_highlight
-        or "navigate(`/tasks?${params.toString()}`)" not in payment_resume
+        or "const path = `/tasks?${params.toString()}`;" not in payment_resume
+        or "preparePage(path);" not in payment_resume
+        or "navigate(path);" not in payment_resume
     ):
         raise SystemExit(
             "Tasks page must own Wheel and hide Expedition, wallet, and Mint tasks"

@@ -44,6 +44,7 @@ import {
   subscribeTelegramActivity,
   telegram,
 } from "../../platform/telegram/index.ts";
+import { usePageModulePreparation } from "../../shared/navigation/pageModulePreparation.ts";
 import { Button } from "../../shared/ui/index.tsx";
 import { useNewMarkers } from "../new-markers/context.ts";
 import { useNavigationIntent } from "../payment-recovery/context.ts";
@@ -167,6 +168,7 @@ export function OperationRegistryProvider({
   children: ReactNode;
 }): ReactNode {
   const navigate = useNavigate();
+  const preparePage = usePageModulePreparation();
   const session = useSession();
   const { markNew } = useNewMarkers();
   const { requestTopup } = useNavigationIntent();
@@ -1130,7 +1132,9 @@ export function OperationRegistryProvider({
         const balance = identity.assets.kcoin.available;
         const estimatedGap = free || balance >= price ? null : price - balance;
         remove(operation.id);
-        navigate(`/?tier=${tier}`);
+        const path = `/?tier=${tier}`;
+        preparePage(path);
+        navigate(path);
         if (estimatedGap !== null)
           requestTopup({ kind: "gacha", tier, draw_count }, estimatedGap);
         else
@@ -1151,7 +1155,7 @@ export function OperationRegistryProvider({
         );
       }
     },
-    [gachaActionId, navigate, remove, requestTopup, run],
+    [gachaActionId, navigate, preparePage, remove, requestTopup, run],
   );
 
   const acknowledgeEvolutionResult = useCallback(
@@ -1205,11 +1209,14 @@ export function OperationRegistryProvider({
           action === "inventory" &&
           parsed.success &&
           parsed.data.success_count > 0
-        )
-          navigate(
-            `/inventory?template=${encodeURIComponent(parsed.data.target.template_id)}&view=details`,
-          );
-        else if (action === "album") navigate("/album");
+        ) {
+          const path = `/inventory?template=${encodeURIComponent(parsed.data.target.template_id)}&view=details`;
+          preparePage(path);
+          navigate(path);
+        } else if (action === "album") {
+          preparePage("/album");
+          navigate("/album");
+        }
       } catch {
         if (!isCurrentNormalSession(generation)) return;
         setAcknowledgementError({
@@ -1224,7 +1231,7 @@ export function OperationRegistryProvider({
         );
       }
     },
-    [acknowledgingId, navigate, remove],
+    [acknowledgingId, navigate, preparePage, remove],
   );
 
   const defer = useCallback(() => {
@@ -1493,6 +1500,7 @@ export function OperationRegistryProvider({
               onRepeat={() => void repeatGacha(active)}
               onInventory={() => {
                 remove(active.id);
+                preparePage("/inventory");
                 navigate("/inventory");
               }}
               onConfirm={() => remove(active.id)}

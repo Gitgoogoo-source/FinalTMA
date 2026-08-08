@@ -11,6 +11,7 @@ import { useNavigate } from "react-router-dom";
 import { useApiQuery } from "../../../platform/query/index.ts";
 import { useCatalogQuery } from "../../../platform/query/useCatalogQuery.ts";
 import { usePageSearchParams } from "../../../shared/navigation/pageActivity.tsx";
+import { usePageModulePreparation } from "../../../shared/navigation/pageModulePreparation.ts";
 import {
   Badge,
   Button,
@@ -68,6 +69,7 @@ export function InventoryView({
   const catalog = useCatalogQuery(Boolean(targetId));
   const { templateIds: newTemplateIds, clearNew } = useNewMarkers();
   const navigate = useNavigate();
+  const preparePage = usePageModulePreparation();
   const ownedItems = (query.data?.items ?? []).filter((item) => item.total > 0);
   const selectableItems = ownedItems.filter((item) => item.available > 0);
   const [selection, setSelection] = useState({
@@ -161,7 +163,13 @@ export function InventoryView({
       <Button
         className="inventory-atlas-button"
         aria-label="打开图鉴"
-        onClick={() => navigate("/album")}
+        onPointerEnter={() => preparePage("/album")}
+        onPointerDown={() => preparePage("/album")}
+        onFocus={() => preparePage("/album")}
+        onClick={() => {
+          preparePage("/album");
+          navigate("/album");
+        }}
       >
         <BookOpen />
         <span>图鉴</span>
@@ -346,7 +354,17 @@ export function InventoryView({
         <Card>
           <h2>当前没有可用藏品。</h2>
           <p>当前账号尚未持有藏品。</p>
-          <Button onClick={() => navigate("/")}>去开盲盒</Button>
+          <Button
+            onPointerEnter={() => preparePage("/")}
+            onPointerDown={() => preparePage("/")}
+            onFocus={() => preparePage("/")}
+            onClick={() => {
+              preparePage("/");
+              navigate("/");
+            }}
+          >
+            去开盲盒
+          </Button>
         </Card>
       )}
     </main>

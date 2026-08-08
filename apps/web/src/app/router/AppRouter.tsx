@@ -1,11 +1,13 @@
 import { lazy, Suspense, useEffect, type ReactNode } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { useSession } from "../../platform/session/store.ts";
+import {
+  isFirstScreenReady,
+  subscribeFirstScreenReady,
+} from "../../shared/navigation/firstScreenReadiness.ts";
 import { AppShell } from "../shell/AppShell.tsx";
+import { loadAlbumPage } from "./pageRoutes.ts";
 
-const loadAlbumPage = () =>
-  import("../../pages/album/AlbumPage.tsx").then((module) => ({
-    default: module.AlbumPage,
-  }));
 const AlbumPage = lazy(loadAlbumPage);
 
 export function AppRouter(): ReactNode {
@@ -27,20 +29,31 @@ export function AppRouter(): ReactNode {
 
 function useBackgroundPreload(): void {
   const location = useLocation();
+  const generation = useSession()?.generation;
   useEffect(() => {
-    if (location.pathname !== "/") return;
+    if (location.pathname !== "/" || !generation) return;
     let dispose: (() => void) | undefined;
     let cancelled = false;
-    void import("./deferredPageWarmup.ts")
-      .then((module) => {
-        if (!cancelled) dispose = module.startDeferredPageWarmup();
-      })
-      .catch(() => undefined);
+    let loading = false;
+    const start = () => {
+      if (cancelled || loading) return;
+      loading = true;
+      void import("./deferredPageWarmup.ts")
+        .then((module) => {
+          if (!cancelled) dispose = module.startAdaptivePageWarmup();
+        })
+        .catch(() => undefined);
+    };
+    const unsubscribe = subscribeFirstScreenReady((readyGeneration) => {
+      if (readyGeneration === generation) start();
+    });
+    if (isFirstScreenReady(generation)) start();
     return () => {
       cancelled = true;
+      unsubscribe();
       dispose?.();
     };
-  }, [location.pathname]);
+  }, [generation, location.pathname]);
 }
 
 function withPageLoading(page: ReactNode): ReactNode {

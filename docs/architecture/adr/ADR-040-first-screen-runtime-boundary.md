@@ -9,7 +9,7 @@
 
 ## 决策
 
-Web 首屏固定为入口、默认 `GachaPage` 和 `client-routes/first-screen` 三个根及其全部同步 import 闭包。Telegram 初始化完成后、React 渲染前并行预取首屏契约与认证后运行时 Provider；预取不等待网络完成，实际 API 调用和认证后边界复用相同 Promise。交易、Battle、藏品、任务、转盘、图鉴等页面继续在既有后台预热或用户导航时加载，不进入三个首屏根的同步闭包。
+Web 首屏固定为入口、默认 `GachaPage` 和 `client-routes/first-screen` 三个根及其全部同步 import 闭包。Telegram 初始化完成后、React 渲染前并行预取首屏契约与认证后运行时 Provider；预取不等待网络完成，实际 API 调用和认证后边界复用相同 Promise。交易、Battle、藏品、任务、转盘、图鉴等页面继续在用户导航或受控后台策略下加载，不进入三个首屏根的同步闭包。后台页面模块预热的启动握手、网络条件、顺序、失败与玩家意图规则全部由 [ADR-043](ADR-043-adaptive-page-module-warmup.md) 接管；Battle 不再自动预热。
 
 `OperationRegistryProvider` 只持有操作阶段、幂等键、原 operation 恢复、刷新范围、导航锁、前后台清理和通用处理层。开盒、进化、分解、市场、转盘和图鉴的结果组件、图片数据及 CSS 分别由 `presentation-loader` 按 `use_case` 动态加载。按钮 `pointerdown`、键盘 `focus` 和提交入口复用同一缓存加载任务；表现模块与业务请求并行。表现模块失败只重载表现，不重提业务操作；契约模块在业务请求发出前加载失败时明确失败，不创建 `unknown`。开盒三秒仪式从专用表现组件实际挂载后开始，仪式与权威结果缺一不可。
 
@@ -26,7 +26,7 @@ Web 首屏固定为入口、默认 `GachaPage` 和 `client-routes/first-screen` 
 - REST、OpenAPI、错误码、金额、概率、库存、数据库 RPC、幂等键和恢复语义不变。
 - 表现组件只接收已经通过对应 route Schema 校验的判别结果；数据库仍是业务最终事实来源。
 - 表现加载失败不得造成第二次业务提交，重复点击继续由同一 operation 记录锁定。
-- 后台页面预热策略保留；首屏静态门禁不等同于 Telegram 真机性能通过。
+- 后台页面模块预热必须遵守 ADR-043；首屏静态门禁不等同于 Telegram 真机性能通过。
 - 本裁决不修改数据库、migration、产品功能文档或玩家最终结果。
 
 ## 验收

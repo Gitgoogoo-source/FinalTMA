@@ -1,42 +1,133 @@
+import { preparePageModule, type PreloadablePagePath } from "./pageRoutes.ts";
 import {
-  loadInventoryPage,
-  loadMarketPage,
-  loadTasksPage,
-} from "./pageRoutes.ts";
+  subscribeTelegramActivity,
+  telegram,
+} from "../../platform/telegram/index.ts";
 
-let started = false;
+type NetworkInformationSignal = EventTarget & {
+  effectiveType?: string;
+  saveData?: boolean;
+};
 
-export function startDeferredPageWarmup(): () => void {
-  if (started) return () => undefined;
-  const idleWindow = window as Window & {
-    requestIdleCallback?: (
-      callback: () => void,
-      options?: { timeout: number },
-    ) => number;
-    cancelIdleCallback?: (handle: number) => void;
-  };
+type IdleWindow = Window & {
+  requestIdleCallback?: (
+    callback: () => void,
+    options?: { timeout: number },
+  ) => number;
+  cancelIdleCallback?: (handle: number) => void;
+};
+
+const AUTOMATIC_PAGE_ORDER: readonly PreloadablePagePath[] = [
+  "/inventory",
+  "/tasks",
+  "/market",
+  "/album",
+];
+
+let automaticPageIndex = 0;
+let automaticWarmupStopped = false;
+
+export function startAdaptivePageWarmup(): () => void {
+  if (
+    automaticWarmupStopped ||
+    automaticPageIndex >= AUTOMATIC_PAGE_ORDER.length
+  )
+    return () => undefined;
+
+  const idleWindow = window as IdleWindow;
+  const connection = (
+    navigator as Navigator & { connection?: NetworkInformationSignal }
+  ).connection;
+  let telegramActive = telegram()?.isActive !== false;
+  let disposed = false;
+  let moduleLoading = false;
   let idleHandle: number | undefined;
   let timerHandle: number | undefined;
-  const preload = () => {
-    if (started) return;
-    started = true;
-    void Promise.allSettled([
-      loadMarketPage(),
-      loadInventoryPage(),
-      loadTasksPage(),
-      import("../../pages/album/AlbumPage.tsx"),
-    ]);
+
+  const cancelScheduled = () => {
+    if (idleHandle !== undefined) {
+      idleWindow.cancelIdleCallback?.(idleHandle);
+      idleHandle = undefined;
+    }
+    if (timerHandle !== undefined) {
+      window.clearTimeout(timerHandle);
+      timerHandle = undefined;
+    }
   };
-  const schedule = () => {
+
+  const networkAllowsAutomaticWarmup = () =>
+    connection?.saveData === false && connection.effectiveType === "4g";
+
+  const canWarmUp = () =>
+    !disposed &&
+    !automaticWarmupStopped &&
+    automaticPageIndex < AUTOMATIC_PAGE_ORDER.length &&
+    document.readyState === "complete" &&
+    document.visibilityState === "visible" &&
+    navigator.onLine !== false &&
+    telegramActive &&
+    networkAllowsAutomaticWarmup();
+
+  const scheduleNext = () => {
+    if (!canWarmUp()) {
+      cancelScheduled();
+      return;
+    }
+    if (moduleLoading || idleHandle !== undefined || timerHandle !== undefined)
+      return;
+    const loadNext = () => {
+      idleHandle = undefined;
+      timerHandle = undefined;
+      if (!canWarmUp()) return;
+      const path = AUTOMATIC_PAGE_ORDER[automaticPageIndex];
+      if (!path) return;
+      moduleLoading = true;
+      void preparePageModule(path)
+        .then(() => {
+          moduleLoading = false;
+          automaticPageIndex += 1;
+          scheduleNext();
+        })
+        .catch(() => {
+          moduleLoading = false;
+          automaticWarmupStopped = true;
+          cancelScheduled();
+        });
+    };
     if (idleWindow.requestIdleCallback)
-      idleHandle = idleWindow.requestIdleCallback(preload, { timeout: 1_500 });
-    else timerHandle = window.setTimeout(preload, 250);
+      idleHandle = idleWindow.requestIdleCallback(loadNext, { timeout: 5_000 });
+    else timerHandle = window.setTimeout(loadNext, 1_000);
   };
-  if (document.readyState === "complete") schedule();
-  else window.addEventListener("load", schedule, { once: true });
+
+  const synchronize = () => {
+    if (canWarmUp()) scheduleNext();
+    else cancelScheduled();
+  };
+  const activate = () => {
+    telegramActive = true;
+    synchronize();
+  };
+  const deactivate = () => {
+    telegramActive = false;
+    synchronize();
+  };
+
+  window.addEventListener("load", synchronize);
+  window.addEventListener("online", synchronize);
+  window.addEventListener("offline", synchronize);
+  document.addEventListener("visibilitychange", synchronize);
+  connection?.addEventListener("change", synchronize);
+  const unsubscribeTelegram = subscribeTelegramActivity(activate, deactivate);
+  synchronize();
+
   return () => {
-    window.removeEventListener("load", schedule);
-    if (idleHandle !== undefined) idleWindow.cancelIdleCallback?.(idleHandle);
-    if (timerHandle !== undefined) window.clearTimeout(timerHandle);
+    disposed = true;
+    cancelScheduled();
+    window.removeEventListener("load", synchronize);
+    window.removeEventListener("online", synchronize);
+    window.removeEventListener("offline", synchronize);
+    document.removeEventListener("visibilitychange", synchronize);
+    connection?.removeEventListener("change", synchronize);
+    unsubscribeTelegram();
   };
 }
