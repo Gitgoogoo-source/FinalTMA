@@ -32,7 +32,7 @@ Battle stake / settlement / outbox event（脱敏）：
 
 ## 必须覆盖的场景
 
-应用契约与数据库双向不兼容的发布必须先保存维护窗口证据：Vercel Production 在新提交自动部署前已经暂停且稳定域名返回 `503 DEPLOYMENT_PAUSED`；活动 Battle、未发布 outbox 与未决 operation 为 0；Production deployment 为 `READY` 且 source SHA 等于发布单元 Git commit；远端三条 migration、OpenAPI、Catalog manifest 与 `battle-v1` checksum 均来自同一提交。恢复服务时 Telegram 入口、webhook 与 Vercel Cron 仍保持关闭，所有受控账号均已关闭旧 Mini App 并从 Telegram 重新加载当前 deployment；`/api/health`、受控 API 与运行日志没有 `RESPONSE_INVALID` 后才恢复调度和入口。任一证据缺失都不得把切换记为 PASS。
+应用契约与数据库双向不兼容的开发切换必须保存版本对齐证据：活动 Battle、未发布 outbox 与未决 operation 为 0；`main` 的单一完整提交经 Git Integration 自动创建的 Production deployment 为 `READY`，source SHA 等于发布单元 Git commit；远端三条 migration、OpenAPI、Catalog manifest 与 `battle-v1` checksum 均来自同一提交。Vercel Production 在开发阶段保持启用，不需要项目暂停、`503 DEPLOYMENT_PAUSED`、`BLOCKED` deployment、空触发提交或部署后重新暂停的证据。开始验收时 Telegram 入口、webhook 与 Vercel Cron 仍保持关闭，所有受控账号均已关闭旧 Mini App 并从 Telegram 重新加载当前 deployment；应用与数据库已经对齐，且 `/api/health`、受控 API 与运行日志没有 `RESPONSE_INVALID` 后才恢复调度和入口。任一必要证据缺失都不得把切换记为 PASS。
 
 执行 Telegram 登录场景前，先保存入口配置证据：Bot API `getMe.result.username` 必须等于当前环境 Bot，`getMe.result.has_main_web_app` 必须为 `true`，默认菜单按钮必须为 `web_app` 类型并指向当前环境 named Mini App 链接；随后只能从该 Bot 的 Main Mini App、菜单按钮或 named Mini App 链接启动，不得用浏览器直接访问部署 URL 代替 Telegram 真机验收。
 

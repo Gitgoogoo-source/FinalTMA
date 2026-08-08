@@ -21,7 +21,7 @@
 - Catalog Delivery：`catalog.current` 以 `no-store` 返回当前 checksum、release key 与 revision；`catalog.release` 按 checksum + release key 返回一年不可变缓存的完整目录，Web 只通过 `useCatalogQuery()` 合并为目录快照。
 - Realtime：Ably Standard 只发送 Battle 状态失效通知；REST 与数据库 `state_version` 回正权威状态。
 - Blockchain：TON Connect、钱包验证与 Tact NFT Mint 实现保留休眠；当前 App/Jobs 运行时注册表与 OpenAPI 均不发布相关端点，MVP 不提供入口、恢复或定时对账。
-- Deployment：Vercel Pro；真实开发环境与未来生产环境使用相同 Git commit 和 migration 序列。
+- Deployment：Vercel Pro；开发阶段的 Production Project 保持启用，`main` 只通过 Git Integration 自动部署，不使用项目暂停、空触发提交或手动部署；真实开发环境与未来生产环境使用相同 Git commit 和 migration 序列。
 
 仓库继续保留唯一的 TON Connect 静态身份与 manifest，供休眠实现保持确定性；当前 Web 不引用该 manifest、不初始化 TON Connect，也不把其图标是否正式替换作为 MVP 发布阻塞。
 

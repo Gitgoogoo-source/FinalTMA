@@ -8,4 +8,4 @@
 
 真实开发环境和未来生产环境必须部署同一 Git commit 与同一 migration 序列。环境差异只允许域名、项目 ID、合约地址和密钥。生产部署需要用户明确授权。
 
-正式生产上线前的真实开发环境发生应用契约与数据库定义双向不兼容变更时，Git commit、按文件名排序的三份 migration、OpenAPI、Catalog manifest 与领域规则 checksum 构成不可拆分的发布单元。Vercel Production 必须在部署任一新组件前暂停并确认稳定域名返回 `503 DEPLOYMENT_PAUSED`；Bot/Mini App 入口关闭、Cron 暂停或零活动业务状态都不能替代该流量硬门禁。项目保持暂停时，只允许通过 Git Integration 把完整提交自动部署至 `READY`，随后从同一提交重建数据库；应用、数据库、契约与 checksum 全部核对一致后才能恢复服务。任何阶段都不得让新应用配旧数据库或旧应用配新数据库承载流量，也不得单独回滚发布单元中的应用或数据库。正式生产上线后禁止执行这种双向不兼容切换，只允许兼容现有数据库和已加载客户端的前向应用与只追加 migration。
+正式生产上线前的真实开发环境发生应用契约与数据库定义双向不兼容变更时，Git commit、按文件名排序的三份 migration、OpenAPI、Catalog manifest 与领域规则 checksum 构成不可拆分的发布单元。开发阶段的 Vercel Production 固定保持启用与可访问；完整提交推送到 `main` 后只通过 Git Integration 自动部署至 `READY`，不得暂停 Vercel Project、等待 `503 DEPLOYMENT_PAUSED`、创建空触发提交、部署后重新暂停或执行手动 Vercel 部署。随后从同一提交重建数据库，应用、数据库、契约与 checksum 全部核对一致后才能开始验收和恢复 Telegram 业务入口与调度；短暂不匹配只属于尚未验收的开发切换状态，不能作为功能可用或发布通过证据。不得单独回滚发布单元中的应用或数据库。正式生产上线后禁止执行这种双向不兼容切换，只允许兼容现有数据库和已加载客户端的前向应用与只追加 migration。本段裁决取代此前要求开发阶段暂停 Vercel Production 的流程。
