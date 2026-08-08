@@ -1,0 +1,109 @@
+.app-shell.operation-dialog-backdrop.market-listing-success-backdrop {
+  animation: none;
+}
+.app-shell.operation-dialog-backdrop.market-listing-failure-backdrop {
+  background: rgba(35, 43, 47, 0.42);
+  backdrop-filter: blur(9px);
+}
+.app-shell .market-listing-success-modal {
+  align-content: end;
+  justify-items: center;
+  gap: 16px;
+  padding: 28px 20px calc(var(--safe-bottom) + 18px);
+  overflow: hidden;
+  text-align: center;
+  animation: none;
+}
+.app-shell .market-listing-result-mark {
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+}
+.app-shell .market-listing-result-mark svg {
+  width: 32px;
+  height: 32px;
+}
+.app-shell .market-listing-result-mark.is-success {
+  color: #138f58;
+  background: #ddf7e9;
+}
+.app-shell .market-listing-result-mark.is-failure {
+  color: #b3533d;
+  background: #ffe9e1;
+}
+.app-shell .market-listing-result-copy {
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+}
+.app-shell .market-listing-result-copy > span {
+  color: #ad6b18;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+.app-shell .market-listing-result-copy h2 {
+  color: #51361f;
+  font-size: 28px;
+  font-weight: 950;
+  letter-spacing: -0.04em;
+}
+.app-shell .market-listing-result-copy p {
+  color: #7d6a57;
+  font-size: 13px;
+  font-weight: 700;
+}
+.app-shell .market-listing-result-confirm.button {
+  width: 100%;
+}
+.app-shell .market-listing-failure-modal {
+  justify-items: center;
+  text-align: center;
+}
+.app-shell .market-listing-failure-modal > .button {
+  width: 100%;
+}
+@keyframes inventory-action-dialog-rise {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+}
+@keyframes wheel-result-rise {
+  from {
+    opacity: 0;
+    transform: translateY(34px);
+  }
+}
+@media (max-width: 360px) {
+  .app-shell .wheel-result-modal {
+    padding-right: 10px;
+    padding-left: 10px;
+  }
+  .app-shell .wheel-result-grid {
+    gap: 4px;
+  }
+  .app-shell .wheel-reward-card {
+    padding-right: 2px;
+    padding-left: 2px;
+  }
+}
+@media (max-height: 700px) {
+  .app-shell .wheel-result-modal {
+    gap: 7px;
+    padding-top: 62px;
+    padding-bottom: calc(var(--safe-bottom) + 8px);
+  }
+  .app-shell .wheel-result-gift {
+    top: -132px;
+    width: 232px;
+  }
+  .app-shell .wheel-result-heading h2 {
+    font-size: 23px;
+  }
+  .app-shell .wheel-result-confirm.button {
+    min-height: 46px;
+  }
+}

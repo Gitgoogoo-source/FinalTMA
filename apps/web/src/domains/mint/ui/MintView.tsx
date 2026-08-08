@@ -4,10 +4,13 @@ import { useCallback, useState, type ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { CatalogImage } from "../../../shared/ui/index.tsx";
+import {
+  useDormantApiQuery,
+  useDormantOperationRegistry,
+} from "../../../dormant/api.ts";
 import { useApiQuery } from "../../../platform/query/index.ts";
 import { useTelegramBackButton } from "../../../platform/telegram/index.ts";
 import { Badge, Button, Card, PageState } from "../../../shared/ui/index.tsx";
-import { useOperationRegistry } from "../../../workflows/operation-recovery/index.ts";
 
 type Transaction = {
   valid_until: number;
@@ -19,14 +22,14 @@ export function MintView(): ReactNode {
   const inventory = useApiQuery("inventory.detail", {
     template_id: templateId,
   });
-  const walletStatus = useApiQuery("wallet.get");
+  const walletStatus = useDormantApiQuery("wallet.get");
   const navigate = useNavigate();
   const back = useCallback(() => navigate(-1), [navigate]);
   useTelegramBackButton(true, back);
   const item = inventory.data;
   const [tonConnect] = useTonConnectUI();
   const tonWallet = useTonWallet();
-  const { isBlocked, run } = useOperationRegistry();
+  const { isBlocked, run } = useDormantOperationRegistry();
   const blocked =
     isBlocked("mint.reserve") ||
     isBlocked("mint.cancel") ||

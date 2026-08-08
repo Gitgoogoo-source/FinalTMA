@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { errorDefinition, isErrorCode } from "@pokepets/api-contracts/app";
 
 import {
   apiRequest,
@@ -451,8 +450,8 @@ async function settleReferralCandidate(
       return {
         kind: "settled",
         notice:
-          code && isErrorCode(code) && !isSettledReferralError(code)
-            ? errorDefinition(code).message
+          code && !isSettledReferralError(code)
+            ? "邀请绑定暂未完成，请稍后重试"
             : referralNotice(result),
         result,
       };
@@ -496,8 +495,21 @@ function referralNotice(result: EntryHandoffResult | null): string | null {
   if (!result || result === "REFERRAL_OLD_USER") return null;
   return result === "REFERRAL_BOUND"
     ? "邀请关系已绑定，完成首次有效充值后可为邀请人解锁奖励"
-    : errorDefinition(result).message;
+    : referralErrorMessages[result];
 }
+
+const referralErrorMessages: Record<
+  Exclude<EntryHandoffResult, "REFERRAL_BOUND" | "REFERRAL_OLD_USER">,
+  string
+> = {
+  REFERRAL_ALREADY_BOUND: "邀请关系已经绑定",
+  REFERRAL_ALREADY_RECHARGED: "已有充值记录的账号不能绑定邀请码",
+  REFERRAL_CANDIDATE_EXPIRED: "邀请链接已失效，请重新通过原邀请链接进入",
+  REFERRAL_CODE_INVALID: "邀请链接无效或已失效",
+  REFERRAL_INELIGIBLE: "当前账号暂不符合邀请绑定条件",
+  REFERRAL_INVITER_UNAVAILABLE: "当前邀请链接暂不可用",
+  REFERRAL_SELF_BIND: "不能使用自己的邀请码",
+};
 
 function isUnknownReferralResult(code: string): boolean {
   return [

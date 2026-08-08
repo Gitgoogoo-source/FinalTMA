@@ -1,6 +1,7 @@
 import { z } from "zod";
 
-import type { ErrorCode, RefreshScope } from "./errors.ts";
+import type { ErrorCode } from "./error-codes.ts";
+import type { RefreshScope } from "./errors.ts";
 
 export type HttpMethod = "GET" | "POST";
 export type Gateway = "app" | "integrations" | "jobs";

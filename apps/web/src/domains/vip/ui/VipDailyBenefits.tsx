@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { useApiQuery } from "../../../platform/query/index.ts";
 import { notifyFreeRareClaimed } from "../../../shared/events/vipDailyBenefits.ts";
 import { Button } from "../../../shared/ui/index.tsx";
-import { useOperationRegistry } from "../../../workflows/operation-recovery/index.ts";
+import { useOperationRegistry } from "../../../workflows/operation-recovery/context.ts";
 
 type Benefit = "fgems" | "freeBox";
 type Feedback = {

@@ -8,7 +8,7 @@ import {
 import type { ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
-import { useOperationRegistry } from "../../workflows/operation-recovery/index.ts";
+import { useOperationRegistry } from "../../workflows/operation-recovery/context.ts";
 
 const navigation = [
   { path: "/market", label: "交易", icon: ShoppingBasket },

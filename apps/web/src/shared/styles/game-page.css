@@ -1,0 +1,628 @@
+.game-panel {
+  min-height: 300px;
+}
+.expedition-grid {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+.expedition-card {
+  display: grid;
+  gap: 8px;
+}
+.expedition-card > small,
+.expedition-card > span {
+  color: var(--muted);
+}
+.panel-title {
+  justify-content: flex-start;
+}
+.panel-title > svg {
+  width: 42px;
+  height: 42px;
+  padding: 9px;
+  border-radius: 13px;
+  background: rgba(124, 92, 255, 0.17);
+  color: #a89aff;
+}
+.panel-title h2 {
+  margin: 3px 0 0;
+}
+.selection-list {
+  display: grid;
+  gap: 6px;
+  max-height: 230px;
+  margin: 10px 0;
+  overflow: auto;
+}
+.selection-list button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  color: inherit;
+  background: rgba(255, 255, 255, 0.035);
+}
+.selection-list button.selected {
+  border-color: var(--accent);
+}
+.expedition-picker {
+  max-height: min(84dvh, 760px);
+}
+.expedition-picker .selection-list {
+  max-height: 48dvh;
+}
+.expedition-picker .selection-list > .card {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) 34px auto 34px;
+  align-items: center;
+  gap: 7px;
+  padding: 7px;
+}
+.expedition-picker .selection-list > .card.selected {
+  border-color: var(--accent);
+}
+.expedition-picker .catalog-image,
+.expedition-picker .image-missing {
+  width: 42px;
+  height: 42px;
+}
+.expedition-picker .selection-list > .card > div {
+  display: grid;
+  min-width: 0;
+}
+.expedition-picker .selection-list > .card small {
+  color: var(--muted);
+  font-size: 10px;
+}
+.expedition-picker .selection-list > .card .button {
+  min-width: 34px;
+  min-height: 34px;
+  padding: 0;
+}
+.active-expedition,
+.verified-wallet {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.05);
+}
+.active-expedition div,
+.verified-wallet div {
+  display: grid;
+  flex: 1;
+}
+.active-expedition small,
+.verified-wallet small {
+  color: var(--muted);
+}
+/* Game */
+.app-shell .game-stack {
+  gap: 10px;
+}
+.app-shell .game-panel {
+  min-height: 0;
+  padding: 14px;
+}
+.app-shell .panel-title {
+  justify-content: flex-start;
+}
+.app-shell .panel-title > svg {
+  width: 42px;
+  height: 42px;
+  padding: 9px;
+  border: 1px solid rgba(255, 156, 0, 0.13);
+  border-radius: 15px;
+  color: var(--sprout-orange);
+  background: rgba(255, 156, 0, 0.09);
+}
+.app-shell .panel-title h2 {
+  color: #28383f;
+  font-size: 19px;
+}
+.app-shell .expedition-grid {
+  gap: 7px;
+}
+.app-shell .expedition-card {
+  gap: 9px;
+  padding: 11px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.58);
+}
+.app-shell .expedition-route {
+  display: grid;
+  grid-template-columns: 38px 1fr auto;
+  align-items: center;
+  gap: 9px;
+}
+.app-shell .expedition-route .route-icon {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  color: #5ab449;
+  background: rgba(77, 187, 57, 0.1);
+}
+.app-shell .expedition-card.intermediate .route-icon {
+  color: #4389df;
+  background: rgba(67, 137, 223, 0.1);
+}
+.app-shell .expedition-card.advanced .route-icon {
+  color: #a467dd;
+  background: rgba(164, 103, 221, 0.1);
+}
+.app-shell .expedition-route svg {
+  width: 19px;
+}
+.app-shell .expedition-route > div {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+.app-shell .expedition-route strong {
+  font-size: 13px;
+}
+.app-shell .expedition-route small,
+.app-shell .expedition-card > span {
+  color: #84908b;
+  font-size: 9px;
+}
+.app-shell .route-count {
+  padding: 5px 8px;
+  border-radius: 999px;
+  color: #6e7974;
+  background: rgba(54, 67, 75, 0.05);
+  font-size: 9px;
+  font-weight: 850;
+}
+.app-shell .active-expedition {
+  padding: 9px;
+  background: rgba(77, 187, 57, 0.06);
+}
+.app-shell .wheel-card {
+  padding: 16px;
+  background:
+    radial-gradient(
+      circle at 50% 36%,
+      rgba(255, 185, 75, 0.09),
+      transparent 42%
+    ),
+    linear-gradient(
+      150deg,
+      rgba(255, 255, 255, 0.96),
+      rgba(255, 252, 246, 0.82)
+    );
+}
+.app-shell .wheel-title {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+}
+.app-shell .wheel-title > div {
+  min-width: 0;
+}
+.app-shell .wheel-remaining-badge {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  align-self: center;
+  padding: 0 11px;
+  border: 1px solid rgba(255, 156, 0, 0.2);
+  border-radius: 999px;
+  color: #5f564e;
+  background: rgba(255, 250, 242, 0.86);
+  box-shadow: inset 0 1px 0 #fff;
+  font-size: 10px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+.app-shell .wheel-remaining-badge::first-letter {
+  color: var(--sprout-orange);
+}
+.app-shell .wheel-preparing {
+  min-height: 310px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 10px;
+  margin: 0;
+  color: #7c8882;
+  font-size: 12px;
+  font-weight: 800;
+  text-align: center;
+}
+.app-shell .wheel-preparing p {
+  margin: 0;
+}
+.app-shell .wheel-progress {
+  margin: 15px 2px 12px;
+}
+.app-shell .wheel-progress > p {
+  min-height: 20px;
+  margin: 0 0 15px;
+  color: #505d61;
+  font-size: 12px;
+  font-weight: 750;
+}
+.app-shell .wheel-progress > p strong {
+  color: var(--sprout-orange);
+  font-size: 16px;
+  font-weight: 950;
+}
+.app-shell .wheel-progress > p em {
+  color: #40a63d;
+  font-style: normal;
+  font-weight: 950;
+}
+.app-shell .wheel-progress-rail {
+  height: 5px;
+  position: relative;
+  margin: 0 14px 28px;
+  border-radius: 999px;
+  background: #ebe7df;
+}
+.app-shell .wheel-progress-rail > i {
+  height: 100%;
+  display: block;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #62bd52, #ff9500);
+  transition: width 0.35s ease;
+}
+.app-shell .wheel-progress-current,
+.app-shell .wheel-progress-checkpoint > strong {
+  display: grid;
+  place-items: center;
+  border: 3px solid #fff;
+  border-radius: 999px;
+  color: #fff;
+  box-shadow: 0 4px 10px rgba(54, 67, 75, 0.13);
+  font-weight: 950;
+  font-variant-numeric: tabular-nums;
+}
+.app-shell .wheel-progress-current {
+  min-width: 43px;
+  height: 25px;
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  padding: 0 7px;
+  background: #58b84d;
+  font-size: 10px;
+  transform: translate(-50%, -50%);
+  transition: left 0.35s ease;
+}
+.app-shell .wheel-progress-checkpoint {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  color: #87918d;
+  transform: translate(-50%, -50%);
+}
+.app-shell .wheel-progress-checkpoint > strong {
+  width: 30px;
+  height: 30px;
+  background: #aeb7b3;
+  font-size: 10px;
+}
+.app-shell .wheel-progress-checkpoint > small {
+  font-size: 8px;
+  font-weight: 850;
+  white-space: nowrap;
+}
+.app-shell .wheel-progress-checkpoint.claimed {
+  color: #3f923c;
+}
+.app-shell .wheel-progress-checkpoint.claimed > strong {
+  background: #58b84d;
+}
+.app-shell .wheel-progress-checkpoint.checkpoint-10 {
+  left: 33.333333%;
+}
+.app-shell .wheel-progress-checkpoint.checkpoint-20 {
+  left: 66.666667%;
+}
+.app-shell .wheel-stage {
+  width: 100%;
+  position: relative;
+  display: grid;
+  place-items: center;
+  margin: 7px auto 10px;
+  padding-top: 16px;
+}
+.app-shell .wheel-pointer {
+  width: 39px;
+  height: 39px;
+  position: absolute;
+  z-index: 8;
+  top: 0;
+  color: #ff7100;
+  fill: #ff7100;
+  filter: drop-shadow(0 5px 4px rgba(95, 72, 50, 0.2));
+  stroke: #fff7ec;
+  stroke-width: 3px;
+  transform: rotate(180deg);
+}
+.app-shell .wheel-frame {
+  width: min(100%, 306px);
+  aspect-ratio: 1;
+  position: relative;
+  display: grid;
+  place-items: center;
+  border: 9px solid rgba(255, 253, 249, 0.97);
+  border-radius: 50%;
+  background: #f9f2e7;
+  box-shadow:
+    0 19px 34px rgba(54, 67, 75, 0.14),
+    0 0 0 1px rgba(192, 155, 99, 0.18),
+    inset 0 0 0 2px rgba(228, 194, 137, 0.3);
+}
+.app-shell .wheel-rotor {
+  position: absolute;
+  inset: 8px;
+  overflow: hidden;
+  border: 2px solid rgba(255, 255, 255, 0.92);
+  border-radius: 50%;
+  background:
+    repeating-conic-gradient(
+      from -16.3636deg,
+      transparent 0 31.7deg,
+      rgba(255, 255, 255, 0.94) 31.7deg 32.7273deg
+    ),
+    conic-gradient(
+      from -16.3636deg,
+      #ff9718 0deg 32.7273deg,
+      #f7d36b 32.7273deg 65.4546deg,
+      #79c968 65.4546deg 98.1819deg,
+      #79b5e8 98.1819deg 130.9092deg,
+      #b78dde 130.9092deg 163.6365deg,
+      #ff9c27 163.6365deg 196.3638deg,
+      #f7d36b 196.3638deg 229.0911deg,
+      #78c966 229.0911deg 261.8184deg,
+      #78b5e6 261.8184deg 294.5457deg,
+      #b68cdd 294.5457deg 327.273deg,
+      #f08057 327.273deg 360deg
+    );
+  box-shadow:
+    inset 0 0 28px rgba(255, 255, 255, 0.28),
+    inset 0 0 0 4px rgba(255, 255, 255, 0.35);
+  transform: rotate(0deg);
+  will-change: transform;
+}
+.app-shell .wheel-reward {
+  --wheel-slot-radius: 102px;
+  width: 54px;
+  min-height: 49px;
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  color: #24333b;
+  line-height: 1;
+  text-align: center;
+  transform: translate(-50%, -50%) rotate(var(--wheel-slot-angle))
+    translateY(calc(-1 * var(--wheel-slot-radius)))
+    rotate(calc(-1 * var(--wheel-slot-angle)));
+}
+.app-shell .wheel-reward svg {
+  width: 16px;
+  height: 16px;
+  margin-bottom: 2px;
+  stroke-width: 2.5;
+}
+.app-shell .wheel-reward strong {
+  font-size: 13px;
+  font-weight: 950;
+  font-variant-numeric: tabular-nums;
+}
+.app-shell .wheel-reward small {
+  margin-top: 2px;
+  font-size: 8px;
+  font-weight: 850;
+  white-space: nowrap;
+}
+.app-shell .wheel-reward-fgems svg {
+  color: #168fd5;
+  fill: rgba(92, 203, 255, 0.35);
+}
+.app-shell .wheel-reward-kcoin svg {
+  color: #c87100;
+  fill: rgba(255, 203, 68, 0.5);
+}
+.app-shell .wheel-reward-free_normal_box svg {
+  color: #218e47;
+  fill: rgba(115, 210, 128, 0.32);
+}
+.app-shell .wheel-reward-free_rare_box svg {
+  color: #7650b8;
+  fill: rgba(183, 141, 222, 0.34);
+}
+.app-shell .wheel-hub {
+  width: 103px;
+  height: 103px;
+  position: absolute;
+  z-index: 6;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  border: 8px solid rgba(255, 253, 248, 0.96);
+  border-radius: 50%;
+  color: #324147;
+  background: linear-gradient(150deg, #fffdfa, #f5ede2);
+  box-shadow:
+    0 8px 17px rgba(54, 67, 75, 0.18),
+    0 0 0 1px rgba(164, 128, 75, 0.18),
+    inset 0 1px 0 #fff;
+}
+.app-shell .wheel-hub small {
+  color: #5e6868;
+  font-size: 10px;
+  font-weight: 850;
+}
+.app-shell .wheel-hub strong {
+  margin: 1px 0;
+  color: #24333b;
+  font-size: 24px;
+  font-weight: 950;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.04em;
+}
+.app-shell .wheel-hub svg {
+  width: 17px;
+  height: 17px;
+  color: #9ca6a2;
+}
+.app-shell .motion-spinning .wheel-hub svg,
+.app-shell .motion-settling .wheel-hub svg {
+  color: var(--sprout-orange);
+  animation: spin 0.85s linear infinite;
+}
+.app-shell .wheel-pin {
+  width: 10px;
+  height: 10px;
+  position: absolute;
+  z-index: 5;
+  top: 50%;
+  left: 50%;
+  color: #dca74f;
+  fill: #fff9ed;
+  filter: drop-shadow(0 2px 2px rgba(96, 69, 35, 0.17));
+  stroke-width: 2px;
+  transform: translate(-50%, -50%) rotate(var(--wheel-pin-angle))
+    translateY(-143px);
+}
+.app-shell .wheel-price-line {
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin: 0 5px 9px;
+  border: 1px solid rgba(217, 168, 92, 0.24);
+  border-radius: 999px;
+  color: #5c5d59;
+  background: rgba(255, 251, 244, 0.78);
+  font-size: 9px;
+  font-weight: 800;
+}
+.app-shell .wheel-price-line > svg {
+  width: 16px;
+  color: #cc7a05;
+}
+.app-shell .wheel-price-line strong {
+  color: #e36c00;
+  font-weight: 950;
+}
+.app-shell .wheel-price-line i {
+  width: 1px;
+  height: 13px;
+  background: rgba(84, 90, 88, 0.22);
+}
+.app-shell .wheel-actions {
+  gap: 8px;
+}
+.app-shell .wheel-actions .button {
+  min-width: 0;
+  min-height: 48px;
+  padding: 8px 5px;
+  border-radius: 16px;
+  font-size: clamp(9px, 2.75vw, 11px);
+  white-space: nowrap;
+}
+.app-shell .wheel-actions .button.secondary {
+  background: rgba(255, 255, 255, 0.93);
+}
+.app-shell .wheel-rules {
+  margin-top: 10px;
+  border-top: 1px solid rgba(54, 67, 75, 0.08);
+}
+.app-shell .wheel-rules summary {
+  min-height: 43px;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) 16px;
+  align-items: center;
+  gap: 8px;
+  color: #7d725f;
+  font-size: 10px;
+  font-weight: 850;
+  cursor: pointer;
+  list-style: none;
+}
+.app-shell .wheel-rules summary::-webkit-details-marker {
+  display: none;
+}
+.app-shell .wheel-rules summary svg {
+  width: 16px;
+  color: #c7893b;
+}
+.app-shell .wheel-rules summary svg:last-child {
+  transition: transform 0.2s ease;
+}
+.app-shell .wheel-rules[open] summary svg:last-child {
+  transform: rotate(90deg);
+}
+.app-shell .wheel-rule-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px 12px;
+  padding: 2px 0 4px;
+}
+.app-shell .wheel-rule-grid > span {
+  min-height: 27px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(54, 67, 75, 0.06);
+  color: #69736f;
+  font-size: 9px;
+  font-weight: 750;
+}
+.app-shell .wheel-rule-grid > span strong {
+  color: #37464a;
+  font-weight: 900;
+}
+.app-shell .wheel-rule-grid > p {
+  grid-column: 1 / -1;
+  margin: 8px 0 2px;
+  color: #7b8580;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.55;
+}
+
+@media (max-width: 360px) {
+  .app-shell .wheel-card {
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+  .app-shell .wheel-frame {
+    width: min(100%, 282px);
+  }
+  .app-shell .wheel-reward {
+    --wheel-slot-radius: 93px;
+    width: 50px;
+  }
+  .app-shell .wheel-reward strong {
+    font-size: 12px;
+  }
+  .app-shell .wheel-pin {
+    transform: translate(-50%, -50%) rotate(var(--wheel-pin-angle))
+      translateY(-131px);
+  }
+  .app-shell .wheel-hub {
+    width: 94px;
+    height: 94px;
+  }
+  .app-shell .wheel-actions .button {
+    font-size: 8.5px;
+  }
+}

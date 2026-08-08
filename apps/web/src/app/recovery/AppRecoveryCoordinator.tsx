@@ -1,15 +1,11 @@
 import { useCallback, type ReactNode } from "react";
 
 import { useApiQuery } from "../../platform/query/index.ts";
-import {
-  useNavigationIntent,
-  useNavigationIntentResume,
-  useStarsPaymentRecovery,
-} from "../../workflows/payment-recovery/index.ts";
-import {
-  useBlockingOperationRecovery,
-  useRecoverableOperationDiscovery,
-} from "../../workflows/operation-recovery/index.ts";
+import { useNavigationIntent } from "../../workflows/payment-recovery/context.ts";
+import { useNavigationIntentResume } from "../../workflows/payment-recovery/useNavigationIntentResume.ts";
+import { useStarsPaymentRecovery } from "../../workflows/payment-recovery/useStarsPaymentRecovery.ts";
+import { useBlockingOperationRecovery } from "../../workflows/operation-recovery/useBlockingOperationRecovery.ts";
+import { useRecoverableOperationDiscovery } from "../../workflows/operation-recovery/useRecoverableOperationDiscovery.ts";
 import type { GlobalDialog } from "../shell/TopAssetBar.tsx";
 
 export function AppRecoveryCoordinator({

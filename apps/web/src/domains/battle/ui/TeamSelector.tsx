@@ -6,7 +6,7 @@ import {
   X,
 } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
-import type { RouteOutput } from "@pokepets/api-contracts/app";
+import type { RouteOutput } from "@pokepets/api-contracts/app-client";
 
 import { Button, CatalogImage } from "../../../shared/ui/index.tsx";
 import { battleElementLabels, battleRarityLabels } from "../labels.ts";

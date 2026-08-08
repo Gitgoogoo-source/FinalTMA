@@ -8,13 +8,13 @@ import {
 } from "@tanstack/react-query";
 import { useCallback, useSyncExternalStore } from "react";
 import {
-  routeById,
+  loadClientRoute,
   type RecoverableRouteId,
   type RefreshScope,
   type RouteId,
   type RouteInput,
   type RouteOutput,
-} from "@pokepets/api-contracts/app";
+} from "@pokepets/api-contracts/app-client";
 
 import { apiRequest } from "../api/client.ts";
 import {
@@ -103,7 +103,7 @@ export function seedApiQuery<Id extends RouteId>(
   data: RouteOutput<Id>,
 ): void {
   const generation = getSession()?.generation ?? "public";
-  assertCurrentSession(generation, routeById(routeId).auth);
+  assertCurrentSession(generation, true);
   queryClient.setQueryData([generation, "v1", routeId, input], data);
 }
 
@@ -425,7 +425,8 @@ export async function refreshRouteScopes(
   routeId: RecoverableRouteId | "battle.heartbeat" | "battle.offline",
   options: { throwOnError?: boolean } = {},
 ): Promise<void> {
-  return refreshScopes(routeById(routeId).refreshScopes, options);
+  const route = await loadClientRoute(routeId);
+  return refreshScopes(route.refreshScopes ?? [], options);
 }
 
 export async function refreshScopes(
@@ -526,7 +527,8 @@ async function executeApiQuery<Id extends RouteId>(
       succeeded = false;
     }
     throwIfAborted(signal);
-    assertCurrentSession(generation, routeById(routeId).auth);
+    const route = await loadClientRoute(routeId);
+    assertCurrentSession(generation, route.auth);
     const successor = ownedApiQueries.get(queryHash);
     if (successor && successor !== owned) {
       owned = successor;
@@ -549,7 +551,8 @@ async function executeApiQueryRequest<Id extends RouteId>(
   signal: AbortSignal,
 ): Promise<RouteOutput<Id>> {
   const result = await apiRequest(routeId, input, { signal });
-  assertCurrentSession(generation, routeById(routeId).auth);
+  const route = await loadClientRoute(routeId);
+  assertCurrentSession(generation, route.auth);
   return result.data;
 }
 

@@ -9,6 +9,19 @@ import {
   timestampSchema,
   uuidSchema,
 } from "../../common/schemas.ts";
+import {
+  battleParticipationSchema,
+  battleRoomModeSchema,
+  battleRoomStatusSchema,
+  battleTeamSelectionSchema,
+} from "./bootstrap-models.ts";
+
+export {
+  battleParticipationSchema,
+  battleRoomModeSchema,
+  battleRoomStatusSchema,
+  battleTeamSelectionSchema,
+} from "./bootstrap-models.ts";
 
 export const battleElementSchema = z.enum([
   "fire",
@@ -32,21 +45,6 @@ export const battlePageStateSchema = z.enum([
   "battle",
   "result",
 ]);
-
-export const battleRoomStatusSchema = z.enum([
-  "preparing_share",
-  "waiting",
-  "lobby_waiting",
-  "lobby_countdown",
-  "active_turn",
-  "finished",
-  "draw",
-  "cancelled",
-  "expired",
-  "voided",
-]);
-
-export const battleRoomModeSchema = z.enum(["friend_invite", "public_match"]);
 
 export const battleParticipantStatusSchema = z.enum([
   "preparing_share",
@@ -179,17 +177,6 @@ export const battleInvitePreviewSchema = z.union([
   noInviteSchema,
   roomInviteSchema,
 ]);
-
-export const battleTeamSelectionSchema = z
-  .tuple([identifierSchema, identifierSchema, identifierSchema])
-  .superRefine((templates, context) => {
-    if (new Set(templates).size !== templates.length)
-      context.addIssue({
-        code: "custom",
-        message: "Battle team templates must be distinct",
-      });
-  })
-  .meta({ minItems: 3, maxItems: 3, uniqueItems: true });
 
 export const battleSkillSchema = z
   .object({
@@ -396,20 +383,6 @@ export const battleActionEventSchema = z
     actions: z.array(battleActionDisplaySchema).min(1).max(2),
     self_hp: z.array(battleSelfHpSchema).length(3),
     opponent_hp: z.array(battleOpponentHpSchema).length(3),
-  })
-  .strict();
-
-export const battleParticipationSchema = z
-  .object({
-    room_id: uuidSchema,
-    participant_id: uuidSchema,
-    side: z.enum(["creator", "opponent"]),
-    room_mode: battleRoomModeSchema,
-    status: battleRoomStatusSchema,
-    state_version: z.number().int().positive(),
-    entry_fee: z.union([z.literal(20), z.literal(100), z.literal(500)]),
-    expires_at: timestampSchema.nullable(),
-    phase_deadline: timestampSchema.nullable(),
   })
   .strict();
 

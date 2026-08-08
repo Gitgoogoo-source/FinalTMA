@@ -1,10 +1,11 @@
 import { Crown } from "lucide-react";
 import type { ReactNode } from "react";
+import "../../../shared/styles/shell-dialogs.css";
 
 import { seedApiQuery, useApiQuery } from "../../../platform/query/index.ts";
 import { telegram } from "../../../platform/telegram/index.ts";
 import { AppModal, Badge, Button } from "../../../shared/ui/index.tsx";
-import { useOperationRegistry } from "../../../workflows/operation-recovery/index.ts";
+import { useOperationRegistry } from "../../../workflows/operation-recovery/context.ts";
 
 export function VipDialog({ close }: { close(): void }): ReactNode {
   const query = useApiQuery("vip.get");

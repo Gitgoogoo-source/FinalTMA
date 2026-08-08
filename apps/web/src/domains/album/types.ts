@@ -1,4 +1,4 @@
-import type { RouteOutput } from "@pokepets/api-contracts/app";
+import type { RouteOutput } from "@pokepets/api-contracts/app-client";
 
 export type AlbumChain = RouteOutput<"album.get">["chains"][number];
 export type AlbumNode = AlbumChain["nodes"][number];

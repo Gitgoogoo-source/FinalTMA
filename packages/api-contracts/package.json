@@ -9,6 +9,14 @@
       "types": "./src/app.ts",
       "default": "./dist/app.js"
     },
+    "./app-client": {
+      "types": "./src/app-client.ts",
+      "default": "./dist/app-client.js"
+    },
+    "./app-client/errors": {
+      "types": "./src/app-client-errors.ts",
+      "default": "./dist/app-client-errors.js"
+    },
     "./common": {
       "types": "./src/common.ts",
       "default": "./dist/common.js"
@@ -20,6 +28,10 @@
     "./jobs": {
       "types": "./src/jobs.ts",
       "default": "./dist/jobs.js"
+    },
+    "./dormant-app": {
+      "types": "./src/dormant-app.ts",
+      "default": "./dist/dormant-app.js"
     },
     "./server": {
       "types": "./src/server.ts",

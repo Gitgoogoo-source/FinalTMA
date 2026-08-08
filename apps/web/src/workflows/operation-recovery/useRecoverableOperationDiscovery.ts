@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import {
   isRecoverableRouteId,
+  loadClientRoute,
   parseRecoveredOperation,
-  routeById,
   type RecoverableRouteId,
   type TypedOperationSummary,
-} from "@pokepets/api-contracts/app";
+} from "@pokepets/api-contracts/app-client";
 
 import { apiRequest } from "../../platform/api/client.ts";
 import { refreshScopes } from "../../platform/query/index.ts";
@@ -67,7 +67,7 @@ export function useRecoverableOperationDiscovery(
         const recovered: TypedOperationSummary[] = [];
         for (const operation of response.data.operations) {
           try {
-            recovered.push(parseRecoveredOperation(operation));
+            recovered.push(await parseRecoveredOperation(operation));
           } catch {
             continue;
           }
@@ -81,12 +81,11 @@ export function useRecoverableOperationDiscovery(
         }
         if (authorityRoutes.length > 0) {
           attempt = 0;
+          const routes = await Promise.all(
+            authorityRoutes.map((routeId) => loadClientRoute(routeId)),
+          );
           const scopes = [
-            ...new Set(
-              authorityRoutes.flatMap(
-                (routeId) => routeById(routeId).refreshScopes,
-              ),
-            ),
+            ...new Set(routes.flatMap((route) => route.refreshScopes ?? [])),
           ];
           await refreshScopes(scopes, { throwOnError: true });
         }

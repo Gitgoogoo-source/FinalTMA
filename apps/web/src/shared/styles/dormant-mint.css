@@ -1,0 +1,31 @@
+.mint-card {
+  width: min(100%, 520px);
+  margin: 0 auto;
+  display: grid;
+  gap: 13px;
+}
+.mint-card > .catalog-image,
+.mint-card > .image-missing {
+  height: 300px;
+}
+.mint-card h2 {
+  margin: 0;
+  font-size: 28px;
+}
+.mint-checks {
+  display: grid;
+  gap: 5px;
+}
+.mint-checks p {
+  display: flex;
+  justify-content: space-between;
+  margin: 0;
+  padding: 9px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+}
+.mint-checks strong {
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

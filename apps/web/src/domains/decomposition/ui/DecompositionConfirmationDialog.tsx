@@ -1,6 +1,6 @@
 import { ShieldAlert } from "lucide-react";
 import { useState, type ReactNode } from "react";
-import type { RouteOutput } from "@pokepets/api-contracts/app";
+import type { RouteOutput } from "@pokepets/api-contracts/app-client";
 
 import {
   Badge,

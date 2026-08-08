@@ -49,7 +49,7 @@ import {
   fallbackToOriginalBoxArt,
 } from "../../../shared/assets/responsiveArt.ts";
 import { Badge, Button, Card, PageState } from "../../../shared/ui/index.tsx";
-import { useOperationRegistry } from "../../../workflows/operation-recovery/index.ts";
+import { useOperationRegistry } from "../../../workflows/operation-recovery/context.ts";
 import {
   isVisibleMvpTask,
   type Task,

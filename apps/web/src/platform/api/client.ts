@@ -1,12 +1,11 @@
 import {
-  parseRouteInput,
   parseRouteResult,
-  routeById,
+  loadClientRoute,
   standardErrorSchema,
   type RouteId,
   type RouteInput,
   type RouteOutput,
-} from "@pokepets/api-contracts/app";
+} from "@pokepets/api-contracts/app-client";
 
 import {
   clearSensitiveState,
@@ -58,10 +57,17 @@ export async function apiRequest<Id extends RouteId>(
   options: Options = {},
 ): Promise<ApiResult<RouteOutput<Id>>> {
   const requestGeneration = getSession()?.generation;
-  const parsedInput = parseRouteInput(routeId, input) as Record<
-    string,
-    unknown
-  >;
+  const route = await loadClientRoute(routeId).catch(() => {
+    throw new ApiFailure(
+      0,
+      "CLIENT_CONTRACT_LOAD_FAILED",
+      "功能资源暂时无法加载，请重试",
+      true,
+      null,
+    );
+  });
+  const authenticated = route.auth;
+  const parsedInput = route.input.parse(input) as Record<string, unknown>;
   const result = await send(routeId, parsedInput, options);
   if (result instanceof ApiFailure && result.code === "ACCOUNT_RESTRICTED") {
     transitionToBanned();
@@ -107,7 +113,7 @@ export async function apiRequest<Id extends RouteId>(
   )
     clearSession();
   if (result instanceof ApiFailure) throw result;
-  if (routeById(routeId).auth) assertCurrentNormalSession(requestGeneration);
+  if (authenticated) assertCurrentNormalSession(requestGeneration);
   return result;
 }
 
@@ -124,7 +130,7 @@ export async function apiKeepaliveRequest<Id extends RouteId>(
   routeId: Id,
   input: RouteInput<Id>,
 ): Promise<ApiResult<RouteOutput<Id>>> {
-  const route = routeById(routeId);
+  const route = await loadClientRoute(routeId);
   if (route.method === "GET" || route.idempotent)
     throw new Error(
       `Keepalive is only available for semantic commands: ${routeId}`,
@@ -169,7 +175,7 @@ async function send<Id extends RouteId>(
   input: Record<string, unknown>,
   options: Options,
 ): Promise<ApiResult<RouteOutput<Id>> | ApiFailure> {
-  const route = routeById(routeId);
+  const route = await loadClientRoute(routeId);
   const pathParams = new Set<string>();
   const path = route.path.replace(
     /:([A-Za-z0-9_]+)/g,
@@ -220,8 +226,8 @@ async function send<Id extends RouteId>(
       0,
       "NETWORK_ERROR",
       route.idempotent
-        ? "网络中断，操作结果未知；请查询原操作"
-        : "网络请求失败，请检查网络后重试",
+        ? "网络中断，结果仍在确认，请勿重复操作"
+        : "网络异常，请稍后重试",
       true,
       operationId,
     );
@@ -233,7 +239,7 @@ async function send<Id extends RouteId>(
       return new ApiFailure(
         response.status,
         "RESPONSE_INVALID",
-        "服务响应格式无效",
+        "收到的结果暂时无法确认",
         true,
         operationId,
       );
@@ -246,7 +252,7 @@ async function send<Id extends RouteId>(
     );
   }
   try {
-    const parsed = parseRouteResult(routeId, payload);
+    const parsed = await parseRouteResult(routeId, payload);
     if ("rawResponse" in route && route.rawResponse)
       return {
         data: parsed as RouteOutput<Id>,
@@ -269,7 +275,7 @@ async function send<Id extends RouteId>(
     return new ApiFailure(
       response.status,
       "RESPONSE_INVALID",
-      "服务响应未通过契约校验",
+      "收到的结果暂时无法确认",
       true,
       operationId,
     );

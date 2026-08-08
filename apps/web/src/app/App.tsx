@@ -6,6 +6,7 @@ import { useBootstrap } from "../workflows/session-bootstrap/index.ts";
 import { AccountGate } from "./guards/AccountGate.tsx";
 import { AppRouter } from "./router/AppRouter.tsx";
 import { StartupScreen } from "./StartupScreen.tsx";
+import { OperationRegistryBoundary } from "./providers/OperationRegistryBoundary.tsx";
 
 export function App(): ReactNode {
   const bootstrap = useBootstrap();
@@ -66,10 +67,12 @@ export function App(): ReactNode {
     );
   return (
     <AccountGate restricted={false}>
-      <AppRouter />
-      {bootstrap.notice ? (
-        <EntryNotice key={bootstrap.notice} message={bootstrap.notice} />
-      ) : null}
+      <OperationRegistryBoundary>
+        <AppRouter />
+        {bootstrap.notice ? (
+          <EntryNotice key={bootstrap.notice} message={bootstrap.notice} />
+        ) : null}
+      </OperationRegistryBoundary>
     </AccountGate>
   );
 }

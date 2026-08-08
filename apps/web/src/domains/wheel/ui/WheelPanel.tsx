@@ -17,14 +17,14 @@ import {
   type CSSProperties,
   type ReactNode,
 } from "react";
-import type { RouteOutput } from "@pokepets/api-contracts/app";
+import type { RouteOutput } from "@pokepets/api-contracts/app-client";
 
 import { useApiQuery } from "../../../platform/query/index.ts";
 import { focusTaskTarget } from "../../../shared/navigation/focusTaskTarget.ts";
 import { usePageSearchParams } from "../../../shared/navigation/pageActivity.tsx";
 import { Button, Card, StaleContentNotice } from "../../../shared/ui/index.tsx";
-import { useOperationRegistry } from "../../../workflows/operation-recovery/index.ts";
-import { useNavigationIntent } from "../../../workflows/payment-recovery/index.ts";
+import { useOperationRegistry } from "../../../workflows/operation-recovery/context.ts";
+import { useNavigationIntent } from "../../../workflows/payment-recovery/context.ts";
 
 type WheelSpinResult = RouteOutput<"wheel.spin">;
 type WheelReward = WheelSpinResult["rewards"][number];
@@ -152,7 +152,7 @@ function WheelPanelRuntime({
 }): ReactNode {
   const query = useApiQuery("wheel.get");
   const identity = useApiQuery("identity.bootstrap");
-  const { isBlocked, present, run } = useOperationRegistry();
+  const { isBlocked, preload, present, run } = useOperationRegistry();
   const { requestTopup } = useNavigationIntent();
   const blocked = isBlocked("wheel.spin");
   const [params, setParams] = usePageSearchParams();
@@ -278,6 +278,8 @@ function WheelPanelRuntime({
           </p>
           <Button
             disabled={interactionLocked}
+            onPointerDown={() => preload("wheel.spin")}
+            onFocus={() => preload("wheel.spin")}
             onClick={() => {
               setParams({});
               void spin(resumedCount);
@@ -371,6 +373,8 @@ function WheelPanelRuntime({
           <div className="button-row wheel-actions">
             <Button
               disabled={interactionLocked || remaining < 1}
+              onPointerDown={() => preload("wheel.spin")}
+              onFocus={() => preload("wheel.spin")}
               onClick={() => void spin(1)}
             >
               {interactionLocked
@@ -382,6 +386,8 @@ function WheelPanelRuntime({
             <Button
               className="secondary"
               disabled={interactionLocked || remaining < 10}
+              onPointerDown={() => preload("wheel.spin")}
+              onFocus={() => preload("wheel.spin")}
               onClick={() => void spin(10)}
             >
               {interactionLocked

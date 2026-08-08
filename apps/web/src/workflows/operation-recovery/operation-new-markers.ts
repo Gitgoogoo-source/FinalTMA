@@ -1,7 +1,7 @@
-import {
-  routeById,
-  type RecoverableRouteId,
-} from "@pokepets/api-contracts/app";
+import type {
+  RecoverableRouteId,
+  RouteOutput,
+} from "@pokepets/api-contracts/app-client";
 
 export function markOperationNewTemplates(
   routeId: RecoverableRouteId,
@@ -9,12 +9,10 @@ export function markOperationNewTemplates(
   markNew: (templateIds: readonly string[]) => void,
 ): void {
   if (routeId === "gacha.open") {
-    const parsed = routeById(routeId).output.safeParse(result);
-    if (parsed.success)
-      markNew(parsed.data.results.map((item) => item.template_id));
+    const validated = result as RouteOutput<"gacha.open">;
+    markNew(validated.results.map((item) => item.template_id));
   } else if (routeId === "inventory.evolve") {
-    const parsed = routeById(routeId).output.safeParse(result);
-    if (parsed.success && parsed.data.success_count > 0)
-      markNew([parsed.data.target.template_id]);
+    const validated = result as RouteOutput<"inventory.evolve">;
+    if (validated.success_count > 0) markNew([validated.target.template_id]);
   }
 }

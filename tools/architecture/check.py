@@ -54,6 +54,7 @@ REQUIRED_PATHS = (
     "docs/architecture/adr/ADR-013-session-page-lifecycle.md",
     "docs/architecture/adr/ADR-037-persistent-page-query-activity.md",
     "docs/architecture/adr/ADR-038-local-session-proof-and-login-rpc-consolidation.md",
+    "docs/architecture/adr/ADR-040-first-screen-runtime-boundary.md",
     "docs/architecture/adr/ADR-016-controlled-battle-acceptance-fixture.md",
     "docs/architecture/adr/ADR-022-battle-stage-skill-progression.md",
     "docs/architecture/adr/ADR-025-battle-active-switch-atomicity.md",
@@ -68,6 +69,9 @@ REQUIRED_PATHS = (
     "packages/api-contracts/src/domains/battle/models.ts",
     "packages/api-contracts/src/domains/battle/routes.ts",
     "packages/api-contracts/src/registries/app.ts",
+    "packages/api-contracts/src/registries/dormant-app.ts",
+    "packages/api-contracts/src/app-client.ts",
+    "packages/api-contracts/src/dormant-app.ts",
     "packages/api-contracts/src/registries/integrations.ts",
     "packages/api-contracts/src/registries/jobs.ts",
     "packages/api-contracts/src/registries/server.ts",
@@ -158,6 +162,7 @@ def main() -> None:
     assert_nonempty_domains(WEB_ROOT / "domains")
     assert_nonempty_domains(API_ROOT / "domains")
     verify_web_boundaries()
+    verify_first_screen_runtime_boundaries()
     verify_evolution_refresh_semantics()
     verify_operation_recovery_discovery()
     verify_game_page_boundary()
@@ -193,8 +198,17 @@ def verify_web_boundaries() -> None:
     violations: list[str] = []
     for source in typescript_files(WEB_ROOT):
         for specifier in imports(source):
-            if specifier.startswith("@pokepets/api-contracts") and specifier != "@pokepets/api-contracts/app":
-                violations.append(f"{relative(source)} imports forbidden contract {specifier}")
+            if specifier.startswith("@pokepets/api-contracts"):
+                allowed = specifier == "@pokepets/api-contracts/app-client" or specifier.startswith(
+                    "@pokepets/api-contracts/app-client/"
+                )
+                if not allowed and not (
+                    source.is_relative_to(WEB_ROOT / "dormant")
+                    and specifier == "@pokepets/api-contracts/dormant-app"
+                ):
+                    violations.append(
+                        f"{relative(source)} imports forbidden contract {specifier}"
+                    )
             target = resolve_relative(source, specifier)
             source_domain = child_after(source, WEB_ROOT / "domains")
             target_domain = child_after(target, WEB_ROOT / "domains") if target else None
@@ -218,6 +232,79 @@ def verify_web_boundaries() -> None:
     missing_boundaries = [path.parent.name for path in (WEB_ROOT / "domains").glob("*/ui") if not (path.parent / "index.ts").is_file()]
     if missing_boundaries:
         raise SystemExit(f"Web domains must expose one public index.ts: {missing_boundaries}")
+
+
+def verify_first_screen_runtime_boundaries() -> None:
+    global_css = WEB_ROOT / "shared/styles/global.css"
+    if global_css.exists():
+        raise SystemExit("global.css must remain deleted")
+
+    active_dormant_imports: list[str] = []
+    for source in typescript_files(WEB_ROOT):
+        if source.is_relative_to(WEB_ROOT / "dormant"):
+            continue
+        for specifier in imports(source):
+            if specifier == "@pokepets/api-contracts/dormant-app":
+                active_dormant_imports.append(relative(source))
+    if active_dormant_imports:
+        raise SystemExit(
+            "Active Web source imports the dormant contract boundary: "
+            f"{sorted(active_dormant_imports)}"
+        )
+
+    provider_imports = imports(OPERATION_REGISTRY_PROVIDER)
+    forbidden_presenters = [
+        specifier
+        for specifier in provider_imports
+        if "presentations/" in specifier
+        or specifier.endswith("ResultDialog.tsx")
+        or specifier.endswith("GachaHatchAnimation.tsx")
+    ]
+    if forbidden_presenters:
+        raise SystemExit(
+            "OperationRegistryProvider statically imports presentation code: "
+            f"{forbidden_presenters}"
+        )
+    presentation_loader = (
+        WEB_ROOT / "workflows/operation-recovery/presentation-loader.ts"
+    ).read_text(encoding="utf-8")
+    for domain in (
+        "GachaPresentation",
+        "EvolutionPresentation",
+        "DecompositionPresentation",
+        "MarketPresentation",
+        "WheelPresentation",
+        "AlbumPresentation",
+    ):
+        if f'import("./presentations/{domain}.ts")' not in presentation_loader:
+            raise SystemExit(f"Operation presentation loader is missing {domain}")
+
+    vite_gate = (WEB_ROOT.parent / "vite/firstScreenBudget.ts").read_text(
+        encoding="utf-8"
+    )
+    gate_terms = (
+        "jsRaw: 470_000",
+        "jsGzip: 135_000",
+        "cssRaw: 110_000",
+        "cssGzip: 23_000",
+        "collectStaticClosure",
+        "evolution-catalog-v1.json",
+        "global.css must not exist",
+    )
+    missing_gate_terms = [term for term in gate_terms if term not in vite_gate]
+    if missing_gate_terms:
+        raise SystemExit(
+            f"First-screen production build gate is incomplete: {missing_gate_terms}"
+        )
+
+    app_handlers = (
+        API_ROOT / "entrypoints/app/handlers.ts"
+    ).read_text(encoding="utf-8")
+    if any(
+        term in app_handlers
+        for term in ("walletHandlers", "mintHandlers", "domains/wallet", "domains/mint")
+    ):
+        raise SystemExit("Wallet and Mint handlers cannot enter the active App gateway")
     persistent_pages = (WEB_ROOT / "app/router/PersistentPages.tsx").read_text(
         encoding="utf-8"
     )
@@ -794,7 +881,7 @@ def verify_game_page_boundary() -> None:
         )
     required_realtime_terms = (
         '"battle.realtime_token"',
-        "battleRealtimeInvalidationSchema.safeParse",
+        "parseBattleRealtimeInvalidation(message.data)",
         "return 1_000",
         "return 2_000",
         "channel.unsubscribe",
@@ -1297,6 +1384,10 @@ def verify_contract_boundaries() -> None:
     app_registry = (
         CONTRACT_ROOT / "registries/app.ts"
     ).read_text(encoding="utf-8")
+    dormant_registry = (
+        CONTRACT_ROOT / "registries/dormant-app.ts"
+    ).read_text(encoding="utf-8")
+    app_client = (CONTRACT_ROOT / "app-client.ts").read_text(encoding="utf-8")
     jobs_registry = (
         CONTRACT_ROOT / "registries/jobs.ts"
     ).read_text(encoding="utf-8")
@@ -1304,9 +1395,16 @@ def verify_contract_boundaries() -> None:
         CONTRACT_ROOT / "registries/server.ts"
     ).read_text(encoding="utf-8")
     if (
-        "export const dormantRoutes = [...walletRoutes, ...mintRoutes]" not in app_registry
+        "walletRoutes" in app_registry
+        or "mintRoutes" in app_registry
+        or "export const routes = activeRoutes" not in app_registry
         or "return findRouteIn(activeRoutes" not in app_registry
         or "return findRouteByPathIn(activeRoutes" not in app_registry
+        or "export const dormantRoutes = [...walletRoutes, ...mintRoutes]"
+        not in dormant_registry
+        or 'import("./client-routes/first-screen.ts")' not in app_client
+        or "export async function loadClientRoute" not in app_client
+        or "export async function parseRecoveredOperation" not in app_client
         or 'route.id !== "jobs.reconcile_mints"' not in jobs_registry
         or "return findRouteIn(activeRoutes" not in jobs_registry
         or "return findRouteByPathIn(activeRoutes" not in jobs_registry
@@ -1543,7 +1641,16 @@ def verify_documentation() -> None:
 def verify_package_exports() -> None:
     package = json.loads((ROOT / "packages/api-contracts/package.json").read_text(encoding="utf-8"))
     exports = set(package.get("exports", {}))
-    expected = {"./app", "./common", "./integrations", "./jobs", "./server"}
+    expected = {
+        "./app",
+        "./app-client",
+        "./app-client/errors",
+        "./common",
+        "./dormant-app",
+        "./integrations",
+        "./jobs",
+        "./server",
+    }
     if exports != expected:
         raise SystemExit(f"Contract exports mismatch: expected {sorted(expected)}, found {sorted(exports)}")
 

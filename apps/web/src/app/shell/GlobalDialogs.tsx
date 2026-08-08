@@ -1,9 +1,12 @@
-import type { ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 
-import { TopupDialog } from "../../domains/topup/index.ts";
-import { VipDialog } from "../../domains/vip/index.ts";
-import type { TopupRequest } from "../../workflows/payment-recovery/index.ts";
+import { Button } from "../../shared/ui/index.tsx";
+import type { TopupRequest } from "../../workflows/payment-recovery/context.ts";
 import type { GlobalDialog } from "./TopAssetBar.tsx";
+import {
+  preloadGlobalDialog,
+  type LoadedGlobalDialog,
+} from "./global-dialog-loader.ts";
 
 export function GlobalDialogs({
   active,
@@ -14,8 +17,57 @@ export function GlobalDialogs({
   topupRequest: TopupRequest | null;
   close(): void;
 }): ReactNode {
-  if (active === "topup")
+  const [loaded, setLoaded] = useState<LoadedGlobalDialog | null>(null);
+  const [failed, setFailed] = useState<GlobalDialog | null>(null);
+  const load = useCallback((dialog: GlobalDialog) => {
+    void preloadGlobalDialog(dialog)
+      .then((module) => {
+        setLoaded(module);
+        setFailed(null);
+      })
+      .catch(() => {
+        setFailed(dialog);
+      });
+  }, []);
+  useEffect(() => {
+    if (active) load(active);
+  }, [active, load]);
+  if (!active) return null;
+  if (failed === active)
+    return (
+      <div
+        className="modal-backdrop app-shell app-modal-backdrop"
+        role="dialog"
+        aria-modal="true"
+      >
+        <div className="modal" role="alert">
+          <h2>画面暂时无法显示</h2>
+          <p>状态已保留，重新加载画面不会重复执行操作。</p>
+          <Button onClick={() => load(active)}>重新加载画面</Button>
+          <Button className="secondary" onClick={close}>
+            稍后再看
+          </Button>
+        </div>
+      </div>
+    );
+  if (loaded?.kind === "topup" && active === "topup") {
+    const TopupDialog = loaded.module.TopupDialog;
     return <TopupDialog request={topupRequest} close={close} />;
-  if (active === "vip") return <VipDialog close={close} />;
-  return null;
+  }
+  if (loaded?.kind === "vip" && active === "vip") {
+    const VipDialog = loaded.module.VipDialog;
+    return <VipDialog close={close} />;
+  }
+  return (
+    <div
+      className="modal-backdrop app-shell app-modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div className="modal" role="status">
+        <h2>正在打开</h2>
+        <p>精彩内容马上呈现。</p>
+      </div>
+    </div>
+  );
 }

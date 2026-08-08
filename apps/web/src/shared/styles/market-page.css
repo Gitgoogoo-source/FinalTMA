@@ -1,0 +1,1345 @@
+.segmented {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  margin: 14px 0;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.035);
+}
+.segmented button {
+  min-height: 39px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  border-radius: 11px;
+  color: var(--muted);
+  background: transparent;
+}
+.segmented button.active {
+  color: #fff;
+  background: var(--accent);
+}
+.segmented.compact {
+  margin: 10px 0;
+}
+.market-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+.market-card {
+  display: grid;
+  gap: 10px;
+}
+.vip-banner {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 0 0;
+}
+.vip-banner-summary {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 12px;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  text-align: left;
+  background: transparent;
+}
+.vip-banner-summary > svg {
+  color: #ffd868;
+}
+.vip-banner-summary > span {
+  min-width: 0;
+  display: grid;
+}
+.vip-banner-summary small {
+  color: var(--muted);
+}
+.market-card .catalog-image,
+.market-card .image-missing {
+  height: 160px;
+}
+.market-copy h2 {
+  margin: 7px 0;
+}
+.market-copy p {
+  margin: 4px 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.quantity {
+  display: grid;
+  grid-template-columns: 42px 1fr 42px;
+  align-items: center;
+  text-align: center;
+}
+.quantity .button {
+  min-width: 0;
+  padding: 0;
+}
+/* Market */
+.app-shell .market-heading {
+  margin-bottom: 6px;
+}
+.app-shell .market-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.app-shell .market-heading-actions > svg {
+  width: 43px;
+  height: 43px;
+  display: grid;
+  place-items: center;
+  padding: 10px;
+  border: 1px solid rgba(54, 67, 75, 0.08);
+  border-radius: 16px;
+  color: #31414a;
+  background: rgba(255, 255, 255, 0.76);
+  box-shadow:
+    0 12px 25px rgba(54, 67, 75, 0.08),
+    inset 0 1px 0 #fff;
+}
+.app-shell .market-heading-actions svg {
+  width: 20px;
+  height: 20px;
+}
+.app-shell .vip-banner {
+  margin: 0 0 12px;
+  border-color: rgba(255, 178, 74, 0.27);
+  background:
+    radial-gradient(
+      circle at 88% 10%,
+      rgba(255, 187, 84, 0.22),
+      transparent 34%
+    ),
+    radial-gradient(circle at 8% 0, rgba(255, 223, 141, 0.5), transparent 45%),
+    rgba(255, 252, 241, 0.94);
+}
+.app-shell .vip-market-hero {
+  min-height: 198px;
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: auto 1fr auto;
+  gap: 13px;
+  padding: 17px;
+  overflow: hidden;
+  box-shadow:
+    0 18px 38px rgba(191, 113, 22, 0.13),
+    inset 0 1px 0 rgba(255, 255, 255, 0.98),
+    inset 0 0 0 1px rgba(255, 171, 52, 0.05);
+}
+.app-shell .vip-market-hero .vip-banner-summary {
+  width: 100%;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 12px;
+  cursor: pointer;
+}
+.app-shell .vip-market-icon {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 171, 52, 0.21);
+  border-radius: 18px;
+  color: #f19c10;
+  background: rgba(255, 255, 255, 0.7);
+  box-shadow:
+    0 11px 24px rgba(215, 129, 16, 0.1),
+    inset 0 1px 0 #fff;
+}
+.app-shell .vip-market-icon svg {
+  width: 27px;
+  height: 27px;
+}
+.app-shell .vip-market-hero .vip-banner-summary > span:last-child {
+  min-width: 0;
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  gap: 2px;
+}
+.app-shell .vip-market-hero .vip-banner-summary strong {
+  overflow: hidden;
+  color: #24333b;
+  font-size: 19px;
+  font-weight: 950;
+  letter-spacing: -0.02em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-shell .vip-market-hero .vip-banner-summary small:first-child {
+  color: #e77c0c;
+  font-size: 7px;
+  font-weight: 950;
+  letter-spacing: 0.12em;
+}
+.app-shell .vip-market-hero .vip-banner-summary small:last-child {
+  max-width: 100%;
+  overflow: hidden;
+  color: #778188;
+  font-size: 9px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-shell .vip-market-benefits {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+.app-shell .vip-market-benefits span {
+  min-width: 0;
+  min-height: 54px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 4px;
+  padding: 7px 4px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.86);
+  border-radius: 17px;
+  color: #6e777a;
+  background: rgba(255, 255, 255, 0.58);
+  box-shadow:
+    0 9px 20px rgba(157, 103, 38, 0.065),
+    inset 0 1px 0 #fff;
+  font-size: 7px;
+  font-weight: 850;
+  text-align: center;
+  white-space: nowrap;
+}
+.app-shell .vip-market-benefits svg {
+  width: 18px;
+  height: 18px;
+  color: #ec9413;
+}
+.app-shell .vip-market-action {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+.app-shell .vip-market-action > span {
+  overflow: hidden;
+  color: #8b7759;
+  font-size: 10px;
+  font-weight: 850;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-shell .vip-market-action .button {
+  min-width: 108px;
+  min-height: 44px;
+  border-radius: 22px;
+  font-size: 12px;
+}
+.app-shell .vip-banner-summary > svg {
+  color: #efa91e;
+}
+.app-shell .vip-banner small {
+  font-size: 9px;
+}
+.app-shell .market-tabs {
+  min-height: 50px;
+  margin: 0 0 12px;
+  padding: 4px;
+  border-radius: 27px;
+}
+.app-shell .market-tabs button {
+  position: relative;
+  min-height: 42px;
+  gap: 7px;
+  border-radius: 22px;
+  font-size: 12px;
+}
+.app-shell .market-tabs button svg {
+  width: 17px;
+  height: 17px;
+}
+.app-shell .market-tab-attention {
+  position: absolute;
+  top: 7px;
+  left: calc(50% + 29px);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f04444;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.96);
+  pointer-events: none;
+}
+.app-shell .market-listing-summary {
+  min-height: 88px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0 0 12px;
+  padding: 0;
+  overflow: hidden;
+  border-radius: 24px;
+}
+.app-shell .market-listing-summary > span {
+  min-width: 0;
+  position: relative;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 8px;
+  padding: 12px 4px 10px;
+}
+.app-shell .market-listing-summary > span + span::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 20px;
+  bottom: 20px;
+  width: 1px;
+  background: rgba(54, 67, 75, 0.1);
+}
+.app-shell .market-listing-summary small {
+  color: #777f83;
+  font-size: 9px;
+  font-weight: 750;
+}
+.app-shell .market-listing-summary strong {
+  min-width: 0;
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 3px;
+  color: #101315;
+  font-size: clamp(20px, 6vw, 26px);
+  line-height: 1;
+  font-weight: 950;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.04em;
+  white-space: nowrap;
+}
+.app-shell .market-listing-summary .accent strong,
+.app-shell .market-listing-summary strong i {
+  color: #ff5a00;
+}
+.app-shell .market-listing-summary strong i {
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+.app-shell .market-buy-controls {
+  position: relative;
+  z-index: 5;
+  margin-bottom: 9px;
+}
+.app-shell .market-filter-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+.app-shell .market-filter-strip > button {
+  min-width: 0;
+  height: 42px;
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) 10px;
+  align-items: center;
+  gap: 5px;
+  padding: 0 8px;
+  border: 1px solid rgba(54, 67, 75, 0.08);
+  border-radius: 21px;
+  color: #4d5a61;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow:
+    0 10px 22px rgba(54, 67, 75, 0.06),
+    inset 0 1px 0 #fff;
+  font-size: 9px;
+  font-weight: 850;
+}
+.app-shell .market-filter-strip > button.active {
+  color: var(--sprout-orange);
+  border-color: rgba(255, 122, 0, 0.23);
+  background: rgba(255, 249, 241, 0.94);
+}
+.app-shell .market-filter-strip > button svg {
+  width: 15px;
+  height: 15px;
+}
+.app-shell .market-filter-strip > button svg:last-child {
+  width: 10px;
+}
+.app-shell .market-filter-strip > button span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-shell .market-filter-panel {
+  position: fixed;
+  z-index: 80;
+  left: 50%;
+  bottom: calc(var(--safe-bottom) + 82px);
+  width: min(calc(100% - 28px), 402px);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  padding: 10px;
+  transform: translateX(-50%);
+  border: 1px solid rgba(255, 255, 255, 0.86);
+  border-radius: 22px;
+  background: rgba(255, 253, 250, 0.94);
+  box-shadow:
+    0 22px 46px rgba(54, 67, 75, 0.14),
+    inset 0 1px 0 #fff;
+  backdrop-filter: blur(22px) saturate(160%);
+  animation: market-filter-enter 0.18s ease-out;
+}
+.app-shell .market-filter-panel > button {
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid rgba(54, 67, 75, 0.08);
+  border-radius: 15px;
+  color: #5c676c;
+  background: rgba(255, 255, 255, 0.72);
+  font-size: 9px;
+  font-weight: 850;
+}
+.app-shell .market-filter-panel > button.active {
+  color: #fff;
+  border-color: rgba(255, 122, 0, 0.4);
+  background: var(--sprout-orange);
+  box-shadow: 0 8px 16px rgba(255, 106, 0, 0.2);
+}
+.app-shell .market-result-summary {
+  min-height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 4px 0;
+  color: #909a95;
+  font-size: 8px;
+  font-weight: 800;
+}
+.app-shell .market-result-summary button {
+  padding: 0;
+  border: 0;
+  color: var(--sprout-orange);
+  background: transparent;
+  font-size: 8px;
+  font-weight: 900;
+}
+.app-shell .market-filter-empty {
+  min-height: 190px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 7px;
+  border: 1px dashed rgba(54, 67, 75, 0.13);
+  border-radius: 22px;
+  color: #98a19d;
+  background: rgba(255, 255, 255, 0.44);
+  text-align: center;
+}
+.app-shell .market-filter-empty svg {
+  width: 30px;
+  height: 30px;
+  color: var(--sprout-orange);
+}
+.app-shell .market-filter-empty strong {
+  color: #516067;
+  font-size: 12px;
+}
+.app-shell .market-filter-empty span {
+  font-size: 9px;
+}
+.app-shell .market-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+.app-shell .market-grid-manage {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.app-shell .market-listing-card {
+  min-height: 98px;
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr) 72px;
+  grid-template-rows: 82px;
+  column-gap: 10px;
+  align-items: center;
+  padding: 8px;
+  border-radius: 23px;
+}
+.app-shell .market-listing-art {
+  width: 82px;
+  height: 82px;
+  overflow: hidden;
+  border-radius: 17px;
+  background: rgba(246, 247, 243, 0.92);
+  box-shadow: 0 8px 18px rgba(54, 67, 75, 0.08);
+}
+.app-shell .market-listing-art .catalog-image,
+.app-shell .market-listing-art .image-missing {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.app-shell .market-listing-copy {
+  min-width: 0;
+  align-self: stretch;
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  gap: 6px;
+}
+.app-shell .market-listing-copy h2 {
+  width: 100%;
+  margin: 0;
+  overflow: hidden;
+  color: #111315;
+  font-size: 14px;
+  line-height: 17px;
+  font-weight: 920;
+  letter-spacing: -0.025em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-shell .market-listing-tags {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  overflow: hidden;
+}
+.app-shell .market-listing-tags .badge,
+.app-shell .market-listing-status {
+  max-width: 100%;
+  padding: 3px 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  font-size: 7px;
+  line-height: 1;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-shell .market-listing-status {
+  flex: 0 0 auto;
+  color: #169255;
+  background: rgba(44, 189, 105, 0.1);
+}
+.app-shell .market-listing-copy p {
+  width: 100%;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 5px;
+  margin: 0;
+  color: #8b9294;
+  font-size: 7px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+.app-shell .market-listing-copy p strong {
+  overflow: hidden;
+  color: #111315;
+  font-size: 13px;
+  font-weight: 950;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+}
+.app-shell .market-listing-copy p strong small {
+  color: #4d565b;
+  font-size: 7px;
+}
+.app-shell .market-listing-card .market-listing-delist {
+  width: 72px;
+  min-height: 58px;
+  align-self: center;
+  flex-direction: column;
+  gap: 3px;
+  padding: 7px 6px;
+  border-radius: 17px;
+  font-size: 10px;
+}
+.app-shell .market-listing-card .market-listing-delist svg {
+  width: 16px;
+  height: 16px;
+}
+.app-shell .market-listing-sold {
+  width: 100%;
+  border-color: rgba(213, 48, 55, 0.2);
+  color: var(--sprout-ink);
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+  transition:
+    transform 120ms ease,
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+}
+.app-shell .market-listing-sold::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    108deg,
+    transparent 52%,
+    rgba(213, 48, 55, 0.035)
+  );
+}
+.app-shell .market-listing-sold:active {
+  transform: scale(0.985);
+}
+.app-shell .market-listing-sold:disabled {
+  opacity: 1;
+  cursor: default;
+}
+.app-shell .market-listing-sold:focus-visible {
+  outline: 3px solid rgba(213, 48, 55, 0.28);
+  outline-offset: 2px;
+}
+.app-shell .market-listing-sold .market-listing-status {
+  color: #cc2f37;
+  background: rgba(213, 48, 55, 0.1);
+}
+.app-shell .market-sold-stamp {
+  position: relative;
+  z-index: 1;
+  width: 68px;
+  min-height: 44px;
+  display: grid;
+  place-items: center;
+  align-self: center;
+  border: 3px solid #d53037;
+  border-radius: 4px;
+  color: #d53037;
+  background: rgba(255, 250, 248, 0.72);
+  box-shadow:
+    inset 0 0 0 2px rgba(213, 48, 55, 0.14),
+    0 5px 12px rgba(159, 37, 43, 0.1);
+  font-family: Impact, "Arial Black", sans-serif;
+  font-size: 18px;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  transform: rotate(-8deg);
+}
+.app-shell .market-card {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 9px;
+  border-radius: 20px;
+}
+.app-shell .market-art {
+  height: clamp(118px, 34vw, 160px);
+  position: relative;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 16px;
+  background:
+    radial-gradient(
+      circle at 50% 38%,
+      rgba(255, 184, 99, 0.2),
+      transparent 58%
+    ),
+    linear-gradient(145deg, #f7faf5, #edf4ec);
+}
+.app-shell .market-art::after {
+  content: "";
+  position: absolute;
+  left: 20%;
+  right: 20%;
+  bottom: 9px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(54, 67, 75, 0.12);
+  filter: blur(7px);
+}
+.app-shell .market-card .catalog-image,
+.app-shell .market-card .image-missing {
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  filter: drop-shadow(0 10px 13px rgba(54, 67, 75, 0.15));
+}
+.app-shell .market-art .badge {
+  position: absolute;
+  left: 7px;
+  top: 7px;
+  z-index: 2;
+  max-width: calc(100% - 14px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-shell .market-copy h2 {
+  min-height: 34px;
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  color: #24333b;
+  font-size: 13px;
+  line-height: 17px;
+  font-weight: 900;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.app-shell .market-meta {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 5px;
+  margin-top: 5px;
+}
+.app-shell .market-copy p {
+  display: grid;
+  gap: 1px;
+  margin: 0;
+  color: #909a95;
+  font-size: 8px;
+}
+.app-shell .market-copy p:last-child {
+  text-align: right;
+}
+.app-shell .market-copy p strong {
+  color: #586660;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.app-shell .quantity {
+  grid-template-columns: 34px 1fr 34px;
+}
+.app-shell .quantity .button {
+  min-height: 33px;
+  border-radius: 12px;
+  font-size: 16px;
+}
+.app-shell .market-card > .button {
+  width: 100%;
+  min-height: 39px;
+  margin-top: auto;
+  padding: 8px 7px;
+  font-size: 10px;
+}
+.app-shell .market-grid-buy {
+  gap: 7px;
+}
+.app-shell .market-card-buy {
+  min-height: 132px;
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) 31px;
+  grid-template-areas:
+    "art copy"
+    "art action";
+  gap: 6px 8px;
+  padding: 6px;
+  border-radius: 18px;
+}
+.app-shell .market-card-buy .market-art {
+  grid-area: art;
+  width: 76px;
+  height: 100%;
+  min-height: 118px;
+  border-radius: 14px;
+}
+.app-shell .market-card-buy .market-art::after {
+  left: 18%;
+  right: 18%;
+  bottom: 6px;
+}
+.app-shell .market-card-buy .market-copy {
+  min-width: 0;
+  grid-area: copy;
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  padding-top: 2px;
+}
+.app-shell .market-card-buy .market-copy h2 {
+  min-height: 0;
+  display: block;
+  overflow: hidden;
+  font-size: 11px;
+  line-height: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-shell .market-card-buy .market-copy > .badge {
+  width: max-content;
+  max-width: 100%;
+  overflow: hidden;
+  padding: 3px 6px;
+  font-size: 7px;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-shell .market-card-buy .market-meta {
+  grid-template-columns: 1fr;
+  gap: 3px;
+  margin-top: 1px;
+}
+.app-shell .market-card-buy .market-copy p {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 3px;
+  color: #9aa29f;
+  font-size: 6px;
+  text-align: left;
+  white-space: nowrap;
+}
+.app-shell .market-card-buy .market-copy p:last-child {
+  text-align: left;
+}
+.app-shell .market-card-buy .market-copy p strong {
+  overflow: hidden;
+  color: #3c4b53;
+  font-size: 9px;
+  text-overflow: ellipsis;
+}
+.app-shell .market-card-buy > .button {
+  min-width: 0;
+  min-height: 31px;
+  grid-area: action;
+  align-self: end;
+  margin: 0;
+  border-radius: 16px;
+  padding: 5px;
+  font-size: 8px;
+}
+.app-shell .market-card-buy > .button svg {
+  width: 12px;
+}
+.app-shell .market-card-buy > .button:disabled {
+  color: #9b877a;
+  border-color: rgba(214, 175, 142, 0.28);
+  background: rgba(255, 224, 200, 0.76);
+  box-shadow: none;
+  opacity: 1;
+}
+.app-shell .market-purchase-dialog {
+  width: min(calc(100% - 28px), 390px);
+  gap: 12px;
+  padding: 18px;
+  border-radius: 28px;
+  color: var(--sprout-ink);
+  background: #fffdfa;
+}
+.app-shell .market-purchase-preview {
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  text-align: left;
+}
+.app-shell .market-purchase-preview > .catalog-image,
+.app-shell .market-purchase-preview > .image-missing {
+  width: 82px;
+  height: 82px;
+  border-radius: 18px;
+  object-fit: cover;
+}
+.app-shell .market-purchase-preview > div {
+  min-width: 0;
+  display: grid;
+  justify-items: start;
+  gap: 6px;
+}
+.app-shell .market-purchase-preview h2 {
+  max-width: 100%;
+  margin: 0;
+  overflow: hidden;
+  font-size: 19px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-shell .market-purchase-preview span:last-child {
+  color: var(--muted);
+  font-size: 10px;
+}
+.app-shell .market-purchase-price,
+.app-shell .market-purchase-quantity,
+.app-shell .market-purchase-totals span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.app-shell .market-purchase-price,
+.app-shell .market-purchase-quantity,
+.app-shell .market-purchase-totals {
+  padding: 12px 13px;
+  border: 1px solid rgba(54, 67, 75, 0.08);
+  border-radius: 18px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.68);
+  font-size: 10px;
+}
+.app-shell .market-purchase-price strong,
+.app-shell .market-purchase-totals strong {
+  color: var(--sprout-ink);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.app-shell .market-purchase-quantity .quantity {
+  width: 128px;
+  grid-template-columns: 34px 1fr 34px;
+}
+.app-shell .market-purchase-quantity .button {
+  min-height: 34px;
+  padding: 0;
+  border-radius: 12px;
+}
+.app-shell .market-purchase-totals {
+  display: grid;
+  gap: 8px;
+}
+.app-shell .market-purchase-warning {
+  margin: -2px 2px 0;
+  color: #c65332;
+  font-size: 9px;
+  text-align: left;
+}
+.app-shell .market-sell-heading {
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  color: #22333e;
+}
+.app-shell .market-sell-heading > svg {
+  width: 28px;
+  height: 28px;
+  padding: 6px;
+  border: 1px solid rgba(255, 122, 0, 0.18);
+  border-radius: 11px;
+  color: var(--sprout-orange);
+  background: rgba(255, 248, 240, 0.92);
+}
+.app-shell .market-sell-heading > div {
+  display: grid;
+  justify-items: center;
+  gap: 1px;
+}
+.app-shell .market-sell-heading h1 {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: 0.015em;
+}
+.app-shell .market-sell-heading span {
+  color: #98a09d;
+  font-size: 8px;
+  font-weight: 800;
+}
+.app-shell .market-sell-workbench {
+  display: grid;
+  gap: 8px;
+}
+.app-shell .market-sell-hero {
+  min-height: 194px;
+  display: grid;
+  grid-template-columns: minmax(0, 51%) minmax(0, 49%);
+  padding: 0;
+  overflow: hidden;
+  border-radius: 25px;
+  background: rgba(255, 253, 250, 0.9);
+  box-shadow:
+    0 18px 42px rgba(54, 67, 75, 0.075),
+    inset 0 1px 0 rgba(255, 255, 255, 0.96);
+}
+.app-shell .market-sell-hero-art {
+  min-width: 0;
+  position: relative;
+  overflow: hidden;
+  background: rgba(248, 246, 241, 0.88);
+}
+.app-shell .market-sell-hero-art::after {
+  content: "";
+  position: absolute;
+  left: 20%;
+  right: 16%;
+  bottom: 12px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(54, 67, 75, 0.12);
+  filter: blur(8px);
+}
+.app-shell .market-sell-hero-art .catalog-image,
+.app-shell .market-sell-hero-art .image-missing {
+  width: 112%;
+  height: 100%;
+  position: relative;
+  z-index: 1;
+  transform: translateX(-6%);
+  object-fit: cover;
+  object-position: center;
+  filter: drop-shadow(0 15px 22px rgba(54, 67, 75, 0.17));
+}
+.app-shell .market-sell-hero-copy {
+  min-width: 0;
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  gap: 6px;
+  padding: 15px 13px 13px;
+}
+.app-shell .market-sell-hero-copy > .badge {
+  padding: 4px 8px;
+  color: var(--sprout-orange);
+  background: rgba(255, 122, 0, 0.08);
+}
+.app-shell .market-sell-hero-copy h2 {
+  width: 100%;
+  margin: 0;
+  overflow: hidden;
+  color: #21333f;
+  font-size: 18px;
+  line-height: 22px;
+  font-weight: 950;
+  letter-spacing: -0.02em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-shell .market-sell-hero-copy > p {
+  width: 100%;
+  margin: -2px 0 0;
+  overflow: hidden;
+  color: #657078;
+  font-size: 9px;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-shell .market-sell-owned {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 5px 9px;
+  border: 1px solid rgba(54, 67, 75, 0.07);
+  border-radius: 13px;
+  color: #536068;
+  background: rgba(255, 255, 255, 0.74);
+  font-size: 8px;
+  font-weight: 800;
+}
+.app-shell .market-sell-owned strong {
+  color: #19a85b;
+  font-size: 11px;
+}
+.app-shell .market-sell-hero-facts {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
+  margin-top: 3px;
+}
+.app-shell .market-sell-hero-facts > span {
+  min-width: 0;
+  min-height: 47px;
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  column-gap: 5px;
+  align-content: center;
+  padding: 6px;
+  border: 1px solid rgba(54, 67, 75, 0.07);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.65);
+}
+.app-shell .market-sell-hero-facts svg {
+  width: 18px;
+  height: 18px;
+  grid-row: 1 / -1;
+  align-self: center;
+  color: #283b48;
+}
+.app-shell .market-sell-hero-facts small,
+.app-shell .market-sell-hero-facts strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-shell .market-sell-hero-facts small {
+  color: #939b98;
+  font-size: 6px;
+}
+.app-shell .market-sell-hero-facts strong {
+  color: #384952;
+  font-size: 8px;
+}
+.app-shell .market-sell-gallery {
+  height: 144px;
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(2, 68px);
+  grid-auto-columns: 68px;
+  gap: 8px 10px;
+  padding: 1px 2px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.app-shell .market-sell-gallery::-webkit-scrollbar {
+  display: none;
+}
+.app-shell .market-sell-gallery > button {
+  width: 68px;
+  height: 68px;
+  position: relative;
+  padding: 0;
+  overflow: hidden;
+  scroll-snap-align: start;
+  border: 1px solid rgba(54, 67, 75, 0.08);
+  border-radius: 17px;
+  background: rgba(255, 255, 255, 0.74);
+  box-shadow:
+    0 9px 18px rgba(54, 67, 75, 0.065),
+    inset 0 1px 0 #fff;
+}
+.app-shell .market-sell-gallery > button.active {
+  border: 2px solid var(--sprout-orange);
+  box-shadow:
+    0 11px 22px rgba(255, 106, 0, 0.2),
+    inset 0 1px 0 #fff;
+}
+.app-shell .market-sell-gallery .catalog-image,
+.app-shell .market-sell-gallery .image-missing {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.app-shell .market-sell-gallery > button > span {
+  min-width: 24px;
+  height: 18px;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  display: grid;
+  place-items: center;
+  padding: 0 5px;
+  border-radius: 9px;
+  color: #40505a;
+  background: rgba(255, 255, 255, 0.9);
+  font-size: 7px;
+  font-weight: 900;
+}
+.app-shell .market-sell-gallery > button > i {
+  width: 22px;
+  height: 22px;
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  display: grid;
+  place-items: center;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  color: #fff;
+  background: var(--sprout-orange);
+  box-shadow: 0 6px 13px rgba(255, 106, 0, 0.3);
+}
+.app-shell .market-sell-gallery > button > i svg {
+  width: 12px;
+  height: 12px;
+}
+.app-shell .market-sell-metrics {
+  min-height: 78px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+  border-radius: 22px;
+  background: rgba(255, 253, 250, 0.84);
+}
+.app-shell .market-sell-metrics > span {
+  min-width: 0;
+  position: relative;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 4px;
+  padding: 10px 4px;
+  text-align: center;
+}
+.app-shell .market-sell-metrics > span + span::before {
+  content: "";
+  width: 1px;
+  position: absolute;
+  top: 14px;
+  bottom: 14px;
+  left: 0;
+  background: rgba(54, 67, 75, 0.09);
+}
+.app-shell .market-sell-metrics small {
+  max-width: 100%;
+  overflow: hidden;
+  color: #929a97;
+  font-size: 7px;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-shell .market-sell-metrics strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #263843;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.app-shell .market-sell-metrics strong svg {
+  width: 15px;
+  height: 15px;
+  color: var(--sprout-orange);
+}
+.app-shell .market-sell-form {
+  display: grid;
+  gap: 9px;
+  padding: 12px;
+  border-radius: 22px;
+  background: rgba(255, 253, 250, 0.9);
+}
+.app-shell .market-sell-quantity-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 132px;
+  align-items: center;
+  gap: 10px;
+}
+.app-shell .market-sell-quantity-row > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #263843;
+  font-size: 11px;
+  font-weight: 900;
+}
+.app-shell .market-sell-quantity-row > span svg {
+  width: 14px;
+  height: 14px;
+  color: #778188;
+}
+.app-shell .market-sell-quantity-row .quantity {
+  grid-template-columns: 34px 1fr 34px;
+}
+.app-shell .market-sell-quantity-row .button {
+  min-height: 34px;
+  padding: 0;
+  border-radius: 12px;
+}
+.app-shell .market-sell-settlement {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px 12px;
+  padding-top: 9px;
+  border-top: 1px solid rgba(54, 67, 75, 0.07);
+}
+.app-shell .market-sell-settlement > span {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+  color: #939b98;
+  font-size: 7px;
+}
+.app-shell .market-sell-settlement > span:last-of-type {
+  text-align: right;
+}
+.app-shell .market-sell-settlement strong {
+  overflow: hidden;
+  color: #40515a;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-shell .market-sell-settlement > small {
+  grid-column: 1 / -1;
+  color: #9a8a7d;
+  font-size: 7px;
+  line-height: 1.35;
+}
+.app-shell .market-sell-confirm.button {
+  width: 100%;
+  min-height: 44px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr);
+  align-items: center;
+  gap: 7px;
+  padding: 7px 12px;
+  border-radius: 22px;
+  font-size: 10px;
+}
+.app-shell .market-sell-confirm.button.is-pending {
+  grid-template-columns: minmax(0, 1fr);
+}
+.app-shell .market-sell-confirm > span {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-shell .market-sell-confirm > span svg {
+  width: 15px;
+  height: 15px;
+}
+.app-shell .market-sell-confirm > span strong {
+  color: #d8fff0;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.app-shell .market-sell-confirm > i {
+  width: 1px;
+  height: 22px;
+  background: rgba(255, 255, 255, 0.56);
+}
+
+@media (max-width: 360px) {
+  .app-shell .market-sell-hero {
+    grid-template-columns: minmax(0, 48%) minmax(0, 52%);
+  }
+  .app-shell .market-sell-hero-copy {
+    padding-right: 9px;
+    padding-left: 9px;
+  }
+  .app-shell .market-sell-hero-copy h2 {
+    font-size: 15px;
+  }
+  .app-shell .market-sell-hero-facts > span {
+    grid-template-columns: 16px minmax(0, 1fr);
+    padding: 5px;
+  }
+  .app-shell .market-sell-hero-facts svg {
+    width: 15px;
+    height: 15px;
+  }
+}
+
+@keyframes market-filter-enter {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 6px);
+  }
+}

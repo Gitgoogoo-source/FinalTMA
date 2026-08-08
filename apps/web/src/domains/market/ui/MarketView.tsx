@@ -37,8 +37,8 @@ import {
   CatalogImage,
   PageState,
 } from "../../../shared/ui/index.tsx";
-import { useOperationRegistry } from "../../../workflows/operation-recovery/index.ts";
-import { useNavigationIntent } from "../../../workflows/payment-recovery/index.ts";
+import { useOperationRegistry } from "../../../workflows/operation-recovery/context.ts";
+import { useNavigationIntent } from "../../../workflows/payment-recovery/context.ts";
 import { type MarketSoldEvent, useMarketSoldInbox } from "../soldInbox.ts";
 import { MarketTabs, type MarketTab } from "./MarketTabs.tsx";
 import { MarketSoldCoinEffect } from "./MarketSoldCoinEffect.tsx";
@@ -77,7 +77,7 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
     dismiss: dismissSoldEvent,
   } = useMarketSoldInbox(pageActive, pageActive);
   const catalog = useApiQuery("catalog.get", {}, soldEvents.length > 0);
-  const { isBlocked, run } = useOperationRegistry();
+  const { isBlocked, preload, run } = useOperationRegistry();
   const { requestTopup } = useNavigationIntent();
   const [feedback, setFeedback] = useState<string | null>(null);
   const [priceFilter, setPriceFilter] = useState<number | null>(null);
@@ -590,6 +590,7 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
                 setParams({ sell: templateId }, { replace: true })
               }
               onSubmit={submit}
+              onPrepare={() => preload("market.create_listing")}
             />
           )}
         </PageState>
@@ -630,6 +631,7 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
                   key={item.template_id}
                   item={item}
                   blocked={blocked}
+                  onPrepare={() => preload("market.cancel_template_listings")}
                   onDelist={() => submit(item, 1)}
                 />
               ))}
@@ -644,6 +646,7 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
                   blocked={blocked}
                   purchaseInProgress={purchaseInProgress}
                   balance={identity.data?.assets.kcoin.available}
+                  onPrepare={(routeId) => preload(routeId)}
                   onSubmit={submit}
                 />
               ))}
@@ -674,7 +677,12 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
               ”结算时仍未成交的全部数量。当前显示出售中
               {pendingDelist.available} 个，最终释放数量以后端原子裁决为准。
             </p>
-            <Button disabled={blocked} onClick={confirmDelist}>
+            <Button
+              disabled={blocked}
+              onPointerDown={() => preload("market.cancel_template_listings")}
+              onFocus={() => preload("market.cancel_template_listings")}
+              onClick={confirmDelist}
+            >
               确认全部下架
             </Button>
             <Button
@@ -830,10 +838,12 @@ function MarketListingSummaryMetric({
 function MarketListingCard({
   item,
   blocked,
+  onPrepare,
   onDelist,
 }: {
   item: MarketViewItem;
   blocked: boolean;
+  onPrepare(): void;
   onDelist(): void;
 }): ReactNode {
   return (
@@ -867,6 +877,8 @@ function MarketListingCard({
       <Button
         className="market-listing-delist"
         disabled={blocked || item.available < 1}
+        onPointerDown={onPrepare}
+        onFocus={onPrepare}
         onClick={onDelist}
       >
         <PackageMinus />
@@ -937,6 +949,7 @@ function MarketSellWorkbench({
   vipActive,
   vipRebateBps,
   onSelect,
+  onPrepare,
   onSubmit,
 }: {
   items: MarketViewItem[];
@@ -948,6 +961,7 @@ function MarketSellWorkbench({
   vipActive: boolean;
   vipRebateBps: number;
   onSelect(templateId: string): void;
+  onPrepare(): void;
   onSubmit(item: MarketViewItem, quantity: number): void;
 }): ReactNode {
   const available = selected.available;
@@ -1088,6 +1102,8 @@ function MarketSellWorkbench({
           disabled={blocked || !imageReady || available < 1}
           aria-busy={listingInProgress}
           aria-live="polite"
+          onPointerDown={onPrepare}
+          onFocus={onPrepare}
           onClick={() => onSubmit(selected, quantity)}
         >
           {listingInProgress ? (
@@ -1147,6 +1163,7 @@ function MarketCard({
   blocked,
   purchaseInProgress,
   balance,
+  onPrepare,
   onSubmit,
 }: {
   item: MarketViewItem;
@@ -1154,6 +1171,7 @@ function MarketCard({
   blocked: boolean;
   purchaseInProgress: boolean;
   balance: number | undefined;
+  onPrepare(routeId: "market.purchase" | "market.create_listing"): void;
   onSubmit(item: MarketViewItem, quantity: number): void;
 }): ReactNode {
   const [quantity, setQuantity] = useState(1);
@@ -1255,6 +1273,12 @@ function MarketCard({
           available < 1 ||
           quantity > available
         }
+        onPointerDown={() =>
+          onPrepare(tab === "buy" ? "market.purchase" : "market.create_listing")
+        }
+        onFocus={() =>
+          onPrepare(tab === "buy" ? "market.purchase" : "market.create_listing")
+        }
         onClick={() => {
           if (tab === "buy") {
             setPurchaseSubmitted(false);
@@ -1350,6 +1374,8 @@ function MarketCard({
               disabled={blocked || quantity > available}
               aria-busy={purchaseInProgress}
               aria-live="polite"
+              onPointerDown={() => onPrepare("market.purchase")}
+              onFocus={() => onPrepare("market.purchase")}
               onClick={() => {
                 setPurchaseSubmitted(true);
                 if (balance !== undefined && balance < price * quantity)

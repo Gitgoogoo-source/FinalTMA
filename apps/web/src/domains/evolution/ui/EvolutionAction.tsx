@@ -2,7 +2,7 @@ import { useState, type ReactNode } from "react";
 
 import { useApiQuery } from "../../../platform/query/index.ts";
 import { Button } from "../../../shared/ui/index.tsx";
-import { useOperationRegistry } from "../../../workflows/operation-recovery/index.ts";
+import { useOperationRegistry } from "../../../workflows/operation-recovery/context.ts";
 import { evolutionRoute, type EvolutionRarity } from "../config.ts";
 import { EvolutionConfirmationDialog } from "./EvolutionConfirmationDialog.tsx";
 
@@ -22,7 +22,7 @@ export function EvolutionAction({
   imageReady: boolean;
   disabled: boolean;
 }): ReactNode {
-  const { isBlocked, run } = useOperationRegistry();
+  const { isBlocked, preload, run } = useOperationRegistry();
   const [confirming, setConfirming] = useState(false);
   const bootstrap = useApiQuery("identity.bootstrap");
   const catalog = useApiQuery("catalog.get", {}, confirming);
@@ -57,6 +57,8 @@ export function EvolutionAction({
         aria-label={reason ? `进化：${reason}` : "进化"}
         disabled={reason !== null}
         title={reason ?? undefined}
+        onPointerDown={() => preload("inventory.evolve")}
+        onFocus={() => preload("inventory.evolve")}
         onClick={() => setConfirming(true)}
       >
         <span>进化</span>

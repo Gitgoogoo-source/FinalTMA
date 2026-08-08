@@ -1,8 +1,9 @@
 import { useEffect, type ReactNode } from "react";
 
 import { selectionHaptic } from "../../platform/telegram/index.ts";
+import type { GachaHatchTier } from "./context.ts";
 
-export type GachaHatchTier = "normal" | "rare" | "legendary";
+export type { GachaHatchTier } from "./context.ts";
 
 const RITUAL_CLOSED_BACKGROUND =
   "/assets/gacha/ritual/v1/moonlit-prism-cocoon-96bc44bb.webp";
@@ -11,15 +12,18 @@ const RITUAL_OPEN_BACKGROUND =
 
 export function GachaHatchAnimation({
   tier,
+  onMounted,
 }: {
   tier: GachaHatchTier;
+  onMounted(): void;
 }): ReactNode {
   useEffect(() => {
+    onMounted();
     const timers = [520, 1_680, 2_520].map((delay) =>
       window.setTimeout(selectionHaptic, delay),
     );
     return () => timers.forEach((timer) => window.clearTimeout(timer));
-  }, [tier]);
+  }, [onMounted, tier]);
 
   return (
     <section

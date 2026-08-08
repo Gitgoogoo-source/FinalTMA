@@ -1,6 +1,6 @@
 import { Sparkles } from "lucide-react";
 import type { ReactNode } from "react";
-import type { RouteOutput } from "@pokepets/api-contracts/app";
+import type { RouteOutput } from "@pokepets/api-contracts/app-client";
 
 import { Button } from "../../shared/ui/index.tsx";
 

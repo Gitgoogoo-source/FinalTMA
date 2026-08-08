@@ -1,4 +1,4 @@
-import type { RouteOutput } from "@pokepets/api-contracts/app";
+import type { RouteOutput } from "@pokepets/api-contracts/app-client";
 
 export type Task = RouteOutput<"tasks.get">["tasks"][number];
 export type VisibleTaskCategory = Exclude<

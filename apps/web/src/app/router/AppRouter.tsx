@@ -1,19 +1,12 @@
 import { lazy, Suspense, useEffect, type ReactNode } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AppShell } from "../shell/AppShell.tsx";
-import {
-  loadInventoryPage,
-  loadMarketPage,
-  loadTasksPage,
-} from "./pageRoutes.ts";
 
 const loadAlbumPage = () =>
   import("../../pages/album/AlbumPage.tsx").then((module) => ({
     default: module.AlbumPage,
   }));
 const AlbumPage = lazy(loadAlbumPage);
-
-let backgroundPreloadStarted = false;
 
 export function AppRouter(): ReactNode {
   useBackgroundPreload();
@@ -35,39 +28,17 @@ export function AppRouter(): ReactNode {
 function useBackgroundPreload(): void {
   const location = useLocation();
   useEffect(() => {
-    if (location.pathname !== "/" || backgroundPreloadStarted) return;
-    const idleWindow = window as Window & {
-      requestIdleCallback?: (
-        callback: () => void,
-        options?: { timeout: number },
-      ) => number;
-      cancelIdleCallback?: (handle: number) => void;
-    };
-    let idleHandle: number | undefined;
-    let timerHandle: number | undefined;
-    const preload = () => {
-      if (backgroundPreloadStarted) return;
-      backgroundPreloadStarted = true;
-      void Promise.allSettled([
-        loadMarketPage(),
-        loadInventoryPage(),
-        loadTasksPage(),
-        loadAlbumPage(),
-      ]);
-    };
-    const schedule = () => {
-      if (idleWindow.requestIdleCallback)
-        idleHandle = idleWindow.requestIdleCallback(preload, {
-          timeout: 1_500,
-        });
-      else timerHandle = window.setTimeout(preload, 250);
-    };
-    if (document.readyState === "complete") schedule();
-    else window.addEventListener("load", schedule, { once: true });
+    if (location.pathname !== "/") return;
+    let dispose: (() => void) | undefined;
+    let cancelled = false;
+    void import("./deferredPageWarmup.ts")
+      .then((module) => {
+        if (!cancelled) dispose = module.startDeferredPageWarmup();
+      })
+      .catch(() => undefined);
     return () => {
-      window.removeEventListener("load", schedule);
-      if (idleHandle !== undefined) idleWindow.cancelIdleCallback?.(idleHandle);
-      if (timerHandle !== undefined) window.clearTimeout(timerHandle);
+      cancelled = true;
+      dispose?.();
     };
   }, [location.pathname]);
 }

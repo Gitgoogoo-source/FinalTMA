@@ -1,20 +1,16 @@
 import { useEffect } from "react";
-import type { RouteOutput } from "@pokepets/api-contracts/app";
-
+import { invalidateDormantApiQueries } from "../../dormant/api.ts";
 import { invalidateApiQueries } from "../../platform/query/index.ts";
 
-type PendingMint = RouteOutput<"identity.bootstrap">["pending_mints"][number];
-
 export function useMintRecovery(
-  pendingMints: readonly PendingMint[] | undefined,
+  pendingMints: readonly unknown[] | undefined,
 ): void {
   useEffect(() => {
     if (!pendingMints?.length) return;
     const refresh = () =>
-      invalidateApiQueries([
-        "identity.bootstrap",
-        "mint.list",
-        "inventory.list",
+      Promise.all([
+        invalidateApiQueries(["identity.bootstrap", "inventory.list"]),
+        invalidateDormantApiQueries(["mint.list"]),
       ]);
     void refresh();
     const timer = window.setInterval(() => void refresh(), 10_000);

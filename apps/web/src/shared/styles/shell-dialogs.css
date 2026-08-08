@@ -1,0 +1,147 @@
+.amount-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+.amount-grid button {
+  min-height: 42px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  color: inherit;
+  background: rgba(255, 255, 255, 0.04);
+}
+.amount-grid button.selected {
+  border-color: var(--accent);
+  background: rgba(124, 92, 255, 0.18);
+}
+.payment-recovery {
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid rgba(250, 204, 21, 0.22);
+  border-radius: 12px;
+  background: rgba(250, 204, 21, 0.06);
+}
+.payment-recovery button {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  border: 0;
+  padding: 7px;
+  color: inherit;
+  background: transparent;
+}
+.payment-recovery small {
+  color: var(--muted);
+}
+.benefit-actions {
+  display: grid;
+  gap: 8px;
+}
+.vip-detail-list {
+  display: grid;
+  gap: 7px;
+}
+.vip-detail-list > span {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 12px;
+}
+.vip-detail-list strong {
+  max-width: 58%;
+  color: inherit;
+  text-align: right;
+}
+.vip-detail-note {
+  font-size: 12px;
+}
+.error-text {
+  color: #ff91a5 !important;
+}
+.app-shell .topup-shortage {
+  width: min(100%, 286px);
+  justify-items: center;
+  gap: 9px;
+  padding: 20px;
+  border-radius: 26px;
+  text-align: center;
+}
+.app-shell .gacha-operation-modal h2,
+.app-shell .topup-shortage h2 {
+  color: #35434b;
+  font-size: 19px;
+}
+.app-shell .gacha-operation-modal p,
+.app-shell .topup-shortage p {
+  max-width: 230px;
+  color: #7d8782;
+  font-size: 10px;
+}
+.app-shell .gacha-operation-modal code {
+  max-width: 100%;
+  color: #9ba29e;
+  font-size: 7px;
+  opacity: 0.72;
+}
+.app-shell .gacha-operation-modal.phase-failed .operation-mark,
+.app-shell .topup-shortage-mark {
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #ef8b35;
+  background: #fff2e2;
+  font-size: 25px;
+}
+.app-shell .topup-shortage-mark svg {
+  width: 26px;
+  height: 26px;
+}
+.app-shell .topup-shortage .button-row {
+  width: 100%;
+  grid-template-columns: 1fr 1fr;
+  margin-top: 3px;
+}
+.app-shell .topup-shortage .button {
+  min-height: 44px;
+}
+
+.gacha-operation-backdrop:is(
+    .gacha-hatching-backdrop,
+    .gacha-result-backdrop
+  )::before,
+.gacha-operation-backdrop:is(
+    .gacha-hatching-backdrop,
+    .gacha-result-backdrop
+  )::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.gacha-operation-backdrop:is(
+    .gacha-hatching-backdrop,
+    .gacha-result-backdrop
+  )::before {
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.035) 50%, transparent 50%) 0 0 / 100%
+      8px,
+    linear-gradient(90deg, rgba(80, 255, 213, 0.05) 50%, transparent 50%) 0 0 /
+      8px 100%,
+    radial-gradient(circle at 50% 46%, #43318a 0, #191439 46%, #090719 78%);
+}
+.gacha-operation-backdrop:is(
+    .gacha-hatching-backdrop,
+    .gacha-result-backdrop
+  )::after {
+  background: radial-gradient(
+    circle at center,
+    transparent 42%,
+    rgba(3, 2, 12, 0.72)
+  );
+}

@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import {
-  evolutionRejectedResultSchema,
-  routeById,
-  type RouteOutput,
-} from "@pokepets/api-contracts/app";
+import type {
+  EvolutionRejectedResult,
+  RouteInput,
+  RouteOutput,
+} from "@pokepets/api-contracts/app-client";
 import { X } from "lucide-react";
 
 import { evolutionRoute } from "../../domains/evolution/config.ts";
@@ -46,6 +46,7 @@ export function EvolutionOperationDialog({
   phase,
   input,
   result,
+  rejectedResult,
   errorCode,
   busy,
   actionError,
@@ -55,8 +56,9 @@ export function EvolutionOperationDialog({
 }: {
   operationId: string;
   phase: OperationPhase;
-  input: unknown;
-  result: unknown;
+  input: RouteInput<"inventory.evolve"> | null;
+  result: EvolutionResult | null;
+  rejectedResult: EvolutionRejectedResult | null;
   errorCode: string | null;
   busy: boolean;
   actionError: string | null;
@@ -64,8 +66,7 @@ export function EvolutionOperationDialog({
   onSuccess(action: SuccessAction): void;
   onAcknowledge(): void;
 }): ReactNode {
-  const parsed = routeById("inventory.evolve").output.safeParse(result);
-  const confirmedResult = parsed.success ? parsed.data : null;
+  const confirmedResult = result;
   const catalog = useApiQuery("catalog.get");
   const presentation = useMemo(
     () =>
@@ -131,8 +132,7 @@ export function EvolutionOperationDialog({
     );
 
   if (phase === "failed") {
-    const rejected = evolutionRejectedResultSchema.safeParse(result);
-    const code = rejected.success ? rejected.data.error_code : errorCode;
+    const code = rejectedResult?.error_code ?? errorCode;
     return (
       <EvolutionStage className="evolution-stage--rejected">
         <EvolutionPet
@@ -440,7 +440,7 @@ function SettlementDetails({
 }
 
 function evolutionPresentation(
-  input: unknown,
+  input: RouteInput<"inventory.evolve"> | null,
   result: EvolutionResult | null,
   templates:
     | ReadonlyArray<{
@@ -450,10 +450,8 @@ function evolutionPresentation(
       }>
     | undefined,
 ): EvolutionPresentation {
-  const parsedInput = routeById("inventory.evolve").input.safeParse(input);
   const sourceTemplateId =
-    result?.source.template_id ??
-    (parsedInput.success ? parsedInput.data.template_id : null);
+    result?.source.template_id ?? input?.template_id ?? null;
   const route = sourceTemplateId ? evolutionRoute(sourceTemplateId) : undefined;
   const source = templates?.find(
     (template) => template.id === sourceTemplateId,

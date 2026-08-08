@@ -9,16 +9,19 @@ import {
   type ReactNode,
 } from "react";
 import {
-  errorDefinition,
-  isErrorCode,
   isRecoverableRouteId,
+  loadClientRoute,
+  parseEvolutionRejectedResult,
   parseRecoveredOperation,
-  routeById,
   type RecoverableOperationSummary,
   type RecoverableRouteId,
   type RouteInput,
   type RouteOutput,
-} from "@pokepets/api-contracts/app";
+} from "@pokepets/api-contracts/app-client";
+import {
+  errorDefinition,
+  isErrorCode,
+} from "@pokepets/api-contracts/app-client/errors";
 import { useNavigate } from "react-router-dom";
 
 import {
@@ -42,35 +45,21 @@ import {
   telegram,
 } from "../../platform/telegram/index.ts";
 import { Button } from "../../shared/ui/index.tsx";
-import { useNewMarkers } from "../new-markers/index.ts";
-import { useNavigationIntent } from "../payment-recovery/index.ts";
-import { AlbumClaimResultDialog } from "./AlbumClaimResultDialog.tsx";
+import { useNewMarkers } from "../new-markers/context.ts";
+import { useNavigationIntent } from "../payment-recovery/context.ts";
 import {
   OperationRegistryContext,
+  type GachaHatchTier,
   type OperationPhase,
   type OperationPresentation,
   type OperationRegistryValue,
 } from "./context.ts";
-import { DecompositionOperationDialog } from "./DecompositionOperationDialog.tsx";
-import { EvolutionOperationDialog } from "./EvolutionOperationDialog.tsx";
-import {
-  GachaHatchAnimation,
-  type GachaHatchTier,
-} from "./GachaHatchAnimation.tsx";
-import { GachaResultDialog } from "./GachaResultDialog.tsx";
 import { operationLabel } from "./labels.ts";
-import { WheelResultDialog } from "./WheelResultDialog.tsx";
-import "./gacha-ritual.css";
-import "./gacha-ten-stage.css";
 import { markOperationNewTemplates } from "./operation-new-markers.ts";
 import {
-  MarketListingFailureDialog,
-  MarketListingSuccessDialog,
-} from "./MarketListingResultDialog.tsx";
-import {
-  MarketPurchaseFailureDialog,
-  MarketPurchaseSuccessDialog,
-} from "./MarketPurchaseResultDialog.tsx";
+  preloadOperationPresentation,
+  type LoadedOperationPresentation,
+} from "./presentation-loader.ts";
 
 type RegisteredOperation = {
   id: string;
@@ -90,10 +79,39 @@ type RegisteredOperation = {
 
 type EvolutionResultAction = "inventory" | "album" | "acknowledge";
 type GachaResult = RouteOutput<"gacha.open">;
+type WheelResult = RouteOutput<"wheel.spin">;
+type AlbumClaimResult = RouteOutput<"album.claim">;
+type DecompositionResult = RouteOutput<"inventory.decompose">;
+type EvolutionResult = RouteOutput<"inventory.evolve">;
+type EvolutionInput = RouteInput<"inventory.evolve">;
 type MarketPurchasePresentationResult = {
   name: string;
   result: RouteOutput<"market.purchase">;
 };
+type ValidatedDedicatedOperation =
+  | { id: string; routeId: "gacha.open"; result: GachaResult | null }
+  | { id: string; routeId: "wheel.spin"; result: WheelResult | null }
+  | { id: string; routeId: "album.claim"; result: AlbumClaimResult | null }
+  | {
+      id: string;
+      routeId: "market.purchase";
+      input: RouteInput<"market.purchase"> | null;
+      result: RouteOutput<"market.purchase"> | null;
+    }
+  | {
+      id: string;
+      routeId: "inventory.decompose";
+      result: DecompositionResult | null;
+    }
+  | {
+      id: string;
+      routeId: "inventory.evolve";
+      input: EvolutionInput | null;
+      result: EvolutionResult | null;
+      rejectedResult: Awaited<
+        ReturnType<typeof parseEvolutionRejectedResult>
+      > | null;
+    };
 const unresolvedPhases = new Set<OperationPhase>([
   "confirming",
   "submitting",
@@ -122,8 +140,6 @@ const refreshBeforeSuccessRouteIds = new Set<RecoverableRouteId>([
 ]);
 const externallyRenderedSuccessRouteIds = new Set<RecoverableRouteId>([
   "expedition.create",
-  "mint.cancel",
-  "mint.reserve",
   "referral.bind",
   "topup.cancel_order",
   "topup.create_order",
@@ -132,8 +148,6 @@ const externallyRenderedSuccessRouteIds = new Set<RecoverableRouteId>([
   "vip.claim_fgems",
   "vip.claim_free_box",
   "vip.create_order",
-  "wallet.disconnect",
-  "wallet.verify",
 ]);
 const playerFacingMarketListingErrorCodes = new Set([
   "ACCOUNT_RESTRICTED",
@@ -176,11 +190,38 @@ export function OperationRegistryProvider({
     string | null
   >(null);
   const [wheelPresentationEpoch, setWheelPresentationEpoch] = useState(0);
+  const [presentationState, setPresentationState] = useState<{
+    operationId: string;
+    loaded: LoadedOperationPresentation | null;
+    failed: boolean;
+  } | null>(null);
+  const [validationState, setValidationState] = useState<{
+    source: RegisteredOperation;
+    validated: ValidatedDedicatedOperation | null;
+  } | null>(null);
+  const [mountedGachaAnimationId, setMountedGachaAnimationId] = useState<
+    string | null
+  >(null);
   const recoveringIds = useRef(new Set<string>());
   const acknowledgedIds = useRef(new Set<string>());
   const locallyRefreshedEvolutionIds = useRef(new Set<string>());
   const needsAuthorityRefreshAfterLeave = useRef(new Set<RecoverableRouteId>());
   const active = activeId ? operations[activeId] : undefined;
+  const activePresentationId = active?.id;
+  const activePresentationRouteId = active?.routeId;
+  const activePresentationState =
+    presentationState?.operationId === active?.id ? presentationState : null;
+  const loadedPresentation = activePresentationState?.loaded ?? null;
+  const presentationLoadFailed = activePresentationState?.failed ?? false;
+  const validatedOperation =
+    validationState && validationState.source === active
+      ? validationState.validated
+      : null;
+  const validationPending = Boolean(
+    active &&
+    requiresDedicatedValidation(active.routeId) &&
+    validationState?.source !== active,
+  );
   const recoveryQueueActive = Object.values(operations).some(
     (operation) =>
       operation.sessionGeneration === session?.generation &&
@@ -188,54 +229,60 @@ export function OperationRegistryProvider({
         (operation.routeId === "wheel.spin" &&
           unresolvedPhases.has(operation.phase))),
   );
-  const gachaResult = useMemo(() => {
-    if (active?.routeId !== "gacha.open" || active.phase !== "succeeded")
-      return null;
-    const parsed = routeById("gacha.open").output.safeParse(active.result);
-    return parsed.success ? parsed.data : null;
-  }, [active]);
-  const wheelResult = useMemo(() => {
-    if (active?.routeId !== "wheel.spin" || active.phase !== "succeeded")
-      return null;
-    const parsed = routeById("wheel.spin").output.safeParse(active.result);
-    return parsed.success ? parsed.data : null;
-  }, [active]);
-  const albumClaimResult = useMemo(() => {
-    if (active?.routeId !== "album.claim" || active.phase !== "succeeded")
-      return null;
-    const parsed = routeById("album.claim").output.safeParse(active.result);
-    return parsed.success ? parsed.data : null;
-  }, [active]);
+  const validatedActive = validatedOperation;
+  const gachaResult =
+    validatedActive?.routeId === "gacha.open" ? validatedActive.result : null;
+  const wheelResult =
+    validatedActive?.routeId === "wheel.spin" ? validatedActive.result : null;
+  const albumClaimResult =
+    validatedActive?.routeId === "album.claim" ? validatedActive.result : null;
+  const decompositionResult =
+    validatedActive?.routeId === "inventory.decompose"
+      ? validatedActive.result
+      : null;
+  const evolutionInput =
+    validatedActive?.routeId === "inventory.evolve"
+      ? validatedActive.input
+      : null;
+  const evolutionResult =
+    validatedActive?.routeId === "inventory.evolve"
+      ? validatedActive.result
+      : null;
+  const evolutionRejectedResult =
+    validatedActive?.routeId === "inventory.evolve"
+      ? validatedActive.rejectedResult
+      : null;
   const marketPurchaseResult =
     useMemo<MarketPurchasePresentationResult | null>(() => {
       if (active?.routeId !== "market.purchase" || active.phase !== "succeeded")
         return null;
-      const input = routeById("market.purchase").input.safeParse(active.input);
-      const result = routeById("market.purchase").output.safeParse(
-        active.result,
-      );
+      const validated =
+        validatedActive?.routeId === "market.purchase" ? validatedActive : null;
       if (
-        !input.success ||
-        !result.success ||
-        result.data.template_id !== input.data.template_id ||
+        !validated?.input ||
+        !validated.result ||
+        validated.result.template_id !== validated.input.template_id ||
         !active.presentation?.name
       )
         return null;
-      return { name: active.presentation.name, result: result.data };
-    }, [active]);
+      return { name: active.presentation.name, result: validated.result };
+    }, [active, validatedActive]);
   const invalidGachaSuccess = Boolean(
     active?.routeId === "gacha.open" &&
     active.phase === "succeeded" &&
+    !validationPending &&
     !gachaResult,
   );
   const invalidWheelSuccess = Boolean(
     active?.routeId === "wheel.spin" &&
     active.phase === "succeeded" &&
+    !validationPending &&
     !wheelResult,
   );
   const invalidAlbumClaimSuccess = Boolean(
     active?.routeId === "album.claim" &&
     active.phase === "succeeded" &&
+    !validationPending &&
     !albumClaimResult,
   );
   const invalidDedicatedSuccess =
@@ -282,6 +329,47 @@ export function OperationRegistryProvider({
     operationsRef.current = operations;
   }, [operations]);
 
+  const loadPresentation = useCallback(
+    (operationId: string, routeId: RecoverableRouteId) => {
+      return preloadOperationPresentation(routeId)
+        .then((loaded) => {
+          setPresentationState({ operationId, loaded, failed: false });
+          return loaded;
+        })
+        .catch(() => {
+          setPresentationState({ operationId, loaded: null, failed: true });
+          return null;
+        });
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (
+      activePresentationId &&
+      activePresentationRouteId &&
+      hasDedicatedPresentation(activePresentationRouteId)
+    )
+      void loadPresentation(activePresentationId, activePresentationRouteId);
+  }, [activePresentationId, activePresentationRouteId, loadPresentation]);
+
+  useEffect(() => {
+    if (!active || !requiresDedicatedValidation(active.routeId)) return;
+    const operation = active;
+    let cancelled = false;
+    void validateDedicatedOperation(operation)
+      .then((validated) => {
+        if (!cancelled) setValidationState({ source: operation, validated });
+      })
+      .catch(() => {
+        if (!cancelled)
+          setValidationState({ source: operation, validated: null });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [active]);
+
   useEffect(
     () =>
       registerSensitiveStateResetter(() => {
@@ -296,6 +384,9 @@ export function OperationRegistryProvider({
         setGachaActionId(null);
         setGachaActionError(null);
         setRevealedGachaAnimationId(null);
+        setMountedGachaAnimationId(null);
+        setPresentationState(null);
+        setValidationState(null);
         setWheelPresentationEpoch((current) => current + 1);
         needsAuthorityRefreshAfterLeave.current.clear();
         telegram()?.disableClosingConfirmation();
@@ -310,7 +401,11 @@ export function OperationRegistryProvider({
   }, [closingBlocked]);
 
   useEffect(() => {
-    if (!animatedGachaOperationId) return;
+    if (
+      !animatedGachaOperationId ||
+      mountedGachaAnimationId !== animatedGachaOperationId
+    )
+      return;
     const operationId = animatedGachaOperationId;
     let timer: number | undefined;
     const finishCycle = () => {
@@ -325,7 +420,7 @@ export function OperationRegistryProvider({
     return () => {
       if (timer !== undefined) window.clearTimeout(timer);
     };
-  }, [animatedGachaOperationId]);
+  }, [animatedGachaOperationId, mountedGachaAnimationId]);
 
   useLayoutEffect(() => {
     if (!activeId || !dialogRef.current) return;
@@ -376,16 +471,18 @@ export function OperationRegistryProvider({
     const routeIds = [...needsAuthorityRefreshAfterLeave.current];
     if (routeIds.length === 0) return;
     needsAuthorityRefreshAfterLeave.current.clear();
-    const scopes = [
-      ...new Set(
-        routeIds.flatMap((routeId) => routeById(routeId).refreshScopes),
-      ),
-    ];
-    void refreshScopes(scopes, { throwOnError: true }).catch(() => {
-      if (getSession()?.accountStatus !== "normal") return;
-      for (const routeId of routeIds)
-        needsAuthorityRefreshAfterLeave.current.add(routeId);
-    });
+    void Promise.all(routeIds.map((routeId) => loadClientRoute(routeId)))
+      .then((routes) =>
+        refreshScopes(
+          [...new Set(routes.flatMap((route) => route.refreshScopes ?? []))],
+          { throwOnError: true },
+        ),
+      )
+      .catch(() => {
+        if (getSession()?.accountStatus !== "normal") return;
+        for (const routeId of routeIds)
+          needsAuthorityRefreshAfterLeave.current.add(routeId);
+      });
   }, []);
 
   const discardTransientPresentations = useCallback(() => {
@@ -485,6 +582,8 @@ export function OperationRegistryProvider({
       const sessionGeneration = getSession()?.generation;
       if (!sessionGeneration || getSession()?.accountStatus !== "normal")
         return null;
+      if (!options?.background)
+        void preloadOperationPresentation(routeId).catch(() => undefined);
       if (options?.background) {
         try {
           const response = await apiRequest(routeId, input, {
@@ -544,7 +643,7 @@ export function OperationRegistryProvider({
       if (!isCurrentNormalSession(sessionGeneration)) return null;
       update(id, {
         phase: "submitting",
-        message: "已提交，正在等待服务器裁决",
+        message: "操作处理中，请勿重复操作",
       });
       try {
         const response = await apiRequest(routeId, input, {
@@ -577,7 +676,7 @@ export function OperationRegistryProvider({
           update(id, {
             phase: pending ? "pending" : "succeeded",
             message: pending
-              ? "服务器已接收，最终结果仍在确认"
+              ? "结果仍在确认，请勿重复操作"
               : confirmedMessage(routeId, response.data),
             result: response.data,
             persistent: true,
@@ -634,8 +733,8 @@ export function OperationRegistryProvider({
             phase: unknown ? "unknown" : "failed",
             message: unknown
               ? failure.code === "NETWORK_ERROR"
-                ? "网络中断，必须查询原操作，不能重复提交"
-                : "原操作结果详情暂时无法确认，必须查询原操作"
+                ? "网络中断，结果仍在确认，请勿重复操作"
+                : "结果详情暂时无法确认，请勿重复操作"
               : failure.message,
             errorCode: failure.code,
             persistent: Boolean(failure.operationId),
@@ -670,8 +769,13 @@ export function OperationRegistryProvider({
           candidate.terminalPresentationAllowed),
     );
     if (!operation) return false;
+    void preloadOperationPresentation(routeId).catch(() => undefined);
     setActiveId(operation.id);
     return true;
+  }, []);
+
+  const preload = useCallback((routeId: RecoverableRouteId): void => {
+    void preloadOperationPresentation(routeId).catch(() => undefined);
   }, []);
 
   const hydrate = useCallback(
@@ -683,6 +787,9 @@ export function OperationRegistryProvider({
       const completedOutsideRegistry = new Set<string>();
       let firstId: string | null = null;
       for (const operation of incoming) {
+        void preloadOperationPresentation(operation.use_case).catch(
+          () => undefined,
+        );
         if (operation.use_case === "gacha.open") {
           delete next[operation.operation_id];
           completedOutsideRegistry.add(operation.operation_id);
@@ -763,13 +870,13 @@ export function OperationRegistryProvider({
       )
         return;
       recoveringIds.current.add(operation.id);
-      update(operation.id, { phase: "pending", message: "正在查询原操作" });
+      update(operation.id, { phase: "pending", message: "正在确认最新结果" });
       try {
         const response = await apiRequest("operations.get", {
           operation_id: operation.id,
         });
         if (operation.sessionGeneration !== getSession()?.generation) return;
-        const recovered = parseRecoveredOperation(response.data);
+        const recovered = await parseRecoveredOperation(response.data);
         if (recovered.acknowledged_at !== null) {
           remove(operation.id);
           return;
@@ -857,7 +964,7 @@ export function OperationRegistryProvider({
               : null;
           update(operation.id, {
             phase: "failed",
-            message: definition?.message ?? "原操作已确认失败",
+            message: definition?.message ?? "操作未完成",
             result: recovered.result,
             errorCode: recovered.error_code,
             persistent: true,
@@ -870,15 +977,17 @@ export function OperationRegistryProvider({
             phase: recovered.status,
             message:
               recovered.status === "unknown"
-                ? "原操作结果仍未知，请稍后继续查询"
-                : "原操作仍在处理中",
+                ? "结果仍在确认，请稍后查看"
+                : "操作仍在处理中，请勿重复操作",
           });
         }
       } catch (cause) {
         update(operation.id, {
           phase: "unknown",
           message:
-            cause instanceof ApiFailure ? cause.message : "暂时无法查询原操作",
+            cause instanceof ApiFailure
+              ? cause.message
+              : "暂时无法确认最新结果",
         });
       } finally {
         recoveringIds.current.delete(operation.id);
@@ -946,6 +1055,7 @@ export function OperationRegistryProvider({
               navigationLockedThroughResultRouteIds.has(routeId)),
         ),
       present,
+      preload,
       navigationLocked,
       recoveryQueueActive,
       wheelPresentationEpoch,
@@ -955,6 +1065,7 @@ export function OperationRegistryProvider({
       hydrate,
       navigationLocked,
       operations,
+      preload,
       present,
       recoveryQueueActive,
       run,
@@ -978,9 +1089,8 @@ export function OperationRegistryProvider({
       )
         return;
       const generation = operation.sessionGeneration;
-      const parsedResult = routeById("gacha.open").output.safeParse(
-        operation.result,
-      );
+      const route = await loadClientRoute("gacha.open");
+      const parsedResult = route.output.safeParse(operation.result);
       if (!parsedResult.success) {
         setGachaActionError({
           operationId: operation.id,
@@ -1053,16 +1163,15 @@ export function OperationRegistryProvider({
       )
         return;
       const generation = operation.sessionGeneration;
-      const parsed = routeById("inventory.evolve").output.safeParse(
-        operation.result,
-      );
+      const route = await loadClientRoute("inventory.evolve");
+      const parsed = route.output.safeParse(operation.result);
       if (
         action !== "acknowledge" &&
         (!parsed.success || parsed.data.success_count < 1)
       ) {
         setAcknowledgementError({
           operationId: operation.id,
-          message: "进化结果详情暂时无法确认，请查询原操作",
+          message: "进化结果详情暂时无法确认，请查看最新结果",
         });
         return;
       }
@@ -1123,17 +1232,17 @@ export function OperationRegistryProvider({
     if (invalidGachaSuccess)
       update(active.id, {
         phase: "unknown",
-        message: "开盒结果详情暂时无法确认，请查询原操作",
+        message: "开盒结果详情暂时无法确认，请查看最新结果",
       });
     if (invalidWheelSuccess)
       update(active.id, {
         phase: "unknown",
-        message: "转盘结果详情暂时无法确认，请查询原操作",
+        message: "转盘结果详情暂时无法确认，请查看最新结果",
       });
     if (invalidAlbumClaimSuccess)
       update(active.id, {
         phase: "unknown",
-        message: "图鉴奖励详情暂时无法确认，请查询原操作",
+        message: "图鉴奖励详情暂时无法确认，请查看最新结果",
       });
     setActiveId(null);
   }, [
@@ -1171,6 +1280,42 @@ export function OperationRegistryProvider({
       first?.focus();
     }
   };
+
+  const handleGachaPresentationMounted = useCallback(() => {
+    if (active?.routeId === "gacha.open") setMountedGachaAnimationId(active.id);
+  }, [active]);
+
+  const GachaHatchAnimation =
+    loadedPresentation?.kind === "gacha"
+      ? loadedPresentation.module.GachaHatchAnimation
+      : null;
+  const GachaResultDialog =
+    loadedPresentation?.kind === "gacha"
+      ? loadedPresentation.module.GachaResultDialog
+      : null;
+  const EvolutionOperationDialog =
+    loadedPresentation?.kind === "evolution"
+      ? loadedPresentation.module.EvolutionOperationDialog
+      : null;
+  const DecompositionOperationDialog =
+    loadedPresentation?.kind === "decomposition"
+      ? loadedPresentation.module.DecompositionOperationDialog
+      : null;
+  const marketPresentation =
+    loadedPresentation?.kind === "market" ? loadedPresentation.module : null;
+  const WheelResultDialog =
+    loadedPresentation?.kind === "wheel"
+      ? loadedPresentation.module.WheelResultDialog
+      : null;
+  const AlbumClaimResultDialog =
+    loadedPresentation?.kind === "album"
+      ? loadedPresentation.module.AlbumClaimResultDialog
+      : null;
+  const dedicatedPresentationPending = Boolean(
+    active &&
+    hasDedicatedPresentation(active.routeId) &&
+    !presentationMatchesRoute(loadedPresentation, active.routeId),
+  );
 
   return (
     <OperationRegistryContext.Provider value={value}>
@@ -1240,53 +1385,79 @@ export function OperationRegistryProvider({
           tabIndex={-1}
           onKeyDown={trapDialogFocus}
         >
-          {active.routeId === "market.create_listing" &&
-          active.phase === "succeeded" ? (
-            <MarketListingSuccessDialog onConfirm={dismiss} />
+          {presentationLoadFailed &&
+          hasDedicatedPresentation(active.routeId) ? (
+            <PresentationLoadFailure
+              retry={() => void loadPresentation(active.id, active.routeId)}
+            />
+          ) : dedicatedPresentationPending ? (
+            <OperationProcessingLayer />
+          ) : active.routeId === "market.create_listing" &&
+            active.phase === "succeeded" ? (
+            marketPresentation ? (
+              <marketPresentation.MarketListingSuccessDialog
+                onConfirm={dismiss}
+              />
+            ) : (
+              <OperationProcessingLayer />
+            )
           ) : active.routeId === "market.create_listing" &&
             active.phase === "failed" ? (
-            <MarketListingFailureDialog
-              message={marketListingFailureMessage(active.errorCode)}
-              onConfirm={dismiss}
-            />
+            marketPresentation ? (
+              <marketPresentation.MarketListingFailureDialog
+                message={marketListingFailureMessage(active.errorCode)}
+                onConfirm={dismiss}
+              />
+            ) : (
+              <OperationProcessingLayer />
+            )
           ) : active.routeId === "market.purchase" &&
             active.phase === "succeeded" ? (
-            marketPurchaseResult ? (
-              <MarketPurchaseSuccessDialog
+            marketPurchaseResult && marketPresentation ? (
+              <marketPresentation.MarketPurchaseSuccessDialog
                 name={marketPurchaseResult.name}
                 quantity={marketPurchaseResult.result.quantity}
                 onConfirm={dismiss}
               />
-            ) : (
-              <MarketPurchaseFailureDialog
+            ) : marketPresentation ? (
+              <marketPresentation.MarketPurchaseFailureDialog
                 message="购买状态已更新，请查看最新藏品和余额。"
                 onConfirm={dismiss}
               />
+            ) : (
+              <OperationProcessingLayer />
             )
           ) : active.routeId === "market.purchase" &&
             active.phase === "failed" ? (
-            <MarketPurchaseFailureDialog
-              message={marketPurchaseFailureMessage(active.errorCode)}
-              onConfirm={dismiss}
-            />
-          ) : active.routeId === "inventory.decompose" ? (
+            marketPresentation ? (
+              <marketPresentation.MarketPurchaseFailureDialog
+                message={marketPurchaseFailureMessage(active.errorCode)}
+                onConfirm={dismiss}
+              />
+            ) : (
+              <OperationProcessingLayer />
+            )
+          ) : active.routeId === "inventory.decompose" &&
+            DecompositionOperationDialog ? (
             <DecompositionOperationDialog
               key={active.id}
               operationId={active.id}
               phase={active.phase}
-              result={active.result}
+              result={decompositionResult}
               errorCode={active.errorCode}
               presentation={active.presentation}
               onRecover={() => void recover(active)}
               onCollect={dismiss}
             />
-          ) : active.routeId === "inventory.evolve" ? (
+          ) : active.routeId === "inventory.evolve" &&
+            EvolutionOperationDialog ? (
             <EvolutionOperationDialog
               key={active.id}
               operationId={active.id}
               phase={active.phase}
-              input={active.input}
-              result={active.result}
+              input={evolutionInput}
+              result={evolutionResult}
+              rejectedResult={evolutionRejectedResult}
               errorCode={active.errorCode}
               busy={acknowledgingId === active.id}
               actionError={
@@ -1302,14 +1473,15 @@ export function OperationRegistryProvider({
                 void acknowledgeEvolutionResult(active, "acknowledge")
               }
             />
-          ) : showGachaAnimation ? (
+          ) : showGachaAnimation && GachaHatchAnimation ? (
             <GachaHatchAnimation
               tier={
                 active.animationTier ??
                 gachaAnimationTier(active.input, gachaResult)
               }
+              onMounted={handleGachaPresentationMounted}
             />
-          ) : gachaResult ? (
+          ) : gachaResult && GachaResultDialog ? (
             <GachaResultDialog
               result={gachaResult}
               busy={gachaActionId === active.id}
@@ -1325,14 +1497,13 @@ export function OperationRegistryProvider({
               }}
               onConfirm={() => remove(active.id)}
             />
-          ) : wheelResult ? (
+          ) : wheelResult && WheelResultDialog ? (
             <WheelResultDialog
               result={wheelResult}
               onConfirm={() => remove(active.id)}
             />
-          ) : albumClaimResult ? (
+          ) : albumClaimResult && AlbumClaimResultDialog ? (
             <AlbumClaimResultDialog
-              operationId={active.id}
               result={albumClaimResult}
               onConfirm={dismiss}
             />
@@ -1360,14 +1531,13 @@ export function OperationRegistryProvider({
               </h2>
               <p>
                 {invalidGachaSuccess
-                  ? "开盒结果详情暂时无法确认，请查询原操作"
+                  ? "开盒结果详情暂时无法确认，请查看最新结果"
                   : invalidWheelSuccess
-                    ? "转盘结果详情暂时无法确认，请查询原操作"
+                    ? "转盘结果详情暂时无法确认，请查看最新结果"
                     : invalidAlbumClaimSuccess
-                      ? "图鉴奖励详情暂时无法确认，请查询原操作"
+                      ? "图鉴奖励详情暂时无法确认，请查看最新结果"
                       : active.message}
               </p>
-              <code>操作号 {active.id}</code>
               {serverAcknowledgementRouteIds.has(active.routeId) &&
               acknowledgementError?.operationId === active.id ? (
                 <p className="operation-ack-error">
@@ -1377,7 +1547,9 @@ export function OperationRegistryProvider({
               {(active.phase === "pending" ||
                 active.phase === "unknown" ||
                 invalidDedicatedSuccess) && (
-                <Button onClick={() => void recover(active)}>查询原操作</Button>
+                <Button onClick={() => void recover(active)}>
+                  查看最新结果
+                </Button>
               )}
               {(active.phase === "pending" ||
                 active.phase === "unknown" ||
@@ -1413,6 +1585,153 @@ export function OperationRegistryProvider({
   );
 }
 
+function OperationProcessingLayer(): ReactNode {
+  return (
+    <div className="modal operation-presentation-loading" role="status">
+      <div className="operation-mark pending">…</div>
+      <h2>正在处理</h2>
+      <p>请稍候，结果准备好后会立即显示。</p>
+    </div>
+  );
+}
+
+function PresentationLoadFailure({ retry }: { retry(): void }): ReactNode {
+  return (
+    <div className="modal operation-presentation-loading" role="alert">
+      <div className="operation-mark failed">!</div>
+      <h2>画面暂时无法显示</h2>
+      <p>操作状态已保留，重新加载画面不会重复执行操作。</p>
+      <Button onClick={retry}>重新加载画面</Button>
+    </div>
+  );
+}
+
+function hasDedicatedPresentation(routeId: RecoverableRouteId): boolean {
+  return (
+    routeId === "gacha.open" ||
+    routeId === "inventory.evolve" ||
+    routeId === "inventory.decompose" ||
+    routeId === "market.create_listing" ||
+    routeId === "market.purchase" ||
+    routeId === "wheel.spin" ||
+    routeId === "album.claim"
+  );
+}
+
+function requiresDedicatedValidation(routeId: RecoverableRouteId): boolean {
+  return (
+    routeId === "gacha.open" ||
+    routeId === "inventory.evolve" ||
+    routeId === "inventory.decompose" ||
+    routeId === "market.purchase" ||
+    routeId === "wheel.spin" ||
+    routeId === "album.claim"
+  );
+}
+
+function presentationMatchesRoute(
+  presentation: LoadedOperationPresentation | null,
+  routeId: RecoverableRouteId,
+): boolean {
+  if (!presentation) return false;
+  if (routeId === "gacha.open") return presentation.kind === "gacha";
+  if (routeId === "inventory.evolve") return presentation.kind === "evolution";
+  if (routeId === "inventory.decompose")
+    return presentation.kind === "decomposition";
+  if (routeId === "market.create_listing" || routeId === "market.purchase")
+    return presentation.kind === "market";
+  if (routeId === "wheel.spin") return presentation.kind === "wheel";
+  if (routeId === "album.claim") return presentation.kind === "album";
+  return false;
+}
+
+async function validateDedicatedOperation(
+  operation: RegisteredOperation,
+): Promise<ValidatedDedicatedOperation | null> {
+  if (operation.routeId === "gacha.open") {
+    const route = await loadClientRoute(operation.routeId);
+    const parsed =
+      operation.phase === "succeeded"
+        ? route.output.safeParse(operation.result)
+        : null;
+    return {
+      id: operation.id,
+      routeId: operation.routeId,
+      result: parsed?.success ? parsed.data : null,
+    };
+  }
+  if (operation.routeId === "wheel.spin") {
+    const route = await loadClientRoute(operation.routeId);
+    const parsed =
+      operation.phase === "succeeded"
+        ? route.output.safeParse(operation.result)
+        : null;
+    return {
+      id: operation.id,
+      routeId: operation.routeId,
+      result: parsed?.success ? parsed.data : null,
+    };
+  }
+  if (operation.routeId === "album.claim") {
+    const route = await loadClientRoute(operation.routeId);
+    const parsed =
+      operation.phase === "succeeded"
+        ? route.output.safeParse(operation.result)
+        : null;
+    return {
+      id: operation.id,
+      routeId: operation.routeId,
+      result: parsed?.success ? parsed.data : null,
+    };
+  }
+  if (operation.routeId === "market.purchase") {
+    const route = await loadClientRoute(operation.routeId);
+    const input = route.input.safeParse(operation.input);
+    const result =
+      operation.phase === "succeeded"
+        ? route.output.safeParse(operation.result)
+        : null;
+    return {
+      id: operation.id,
+      routeId: operation.routeId,
+      input: input.success ? input.data : null,
+      result: result?.success ? result.data : null,
+    };
+  }
+  if (operation.routeId === "inventory.decompose") {
+    const route = await loadClientRoute(operation.routeId);
+    const result =
+      operation.phase === "succeeded"
+        ? route.output.safeParse(operation.result)
+        : null;
+    return {
+      id: operation.id,
+      routeId: operation.routeId,
+      result: result?.success ? result.data : null,
+    };
+  }
+  if (operation.routeId === "inventory.evolve") {
+    const route = await loadClientRoute(operation.routeId);
+    const input = route.input.safeParse(operation.input);
+    const result =
+      operation.phase === "succeeded"
+        ? route.output.safeParse(operation.result)
+        : null;
+    const rejectedResult =
+      operation.phase === "failed" && operation.result !== null
+        ? await parseEvolutionRejectedResult(operation.result).catch(() => null)
+        : null;
+    return {
+      id: operation.id,
+      routeId: operation.routeId,
+      input: input.success ? input.data : null,
+      result: result?.success ? result.data : null,
+      rejectedResult,
+    };
+  }
+  return null;
+}
+
 function isCurrentNormalSession(generation: string): boolean {
   const session = getSession();
   return (
@@ -1439,10 +1758,10 @@ function recoveredMessage(operation: RecoverableOperationSummary): string {
   if (operation.status === "failed")
     return operation.error_code && isErrorCode(operation.error_code)
       ? errorDefinition(operation.error_code).message
-      : "原操作已确认失败";
+      : "操作未完成";
   return operation.status === "unknown"
-    ? "原操作结果未知，需要继续查询"
-    : "原操作仍在处理中";
+    ? "结果仍在确认，请勿重复操作"
+    : "操作仍在处理中，请勿重复操作";
 }
 
 function operationDialogTitle(operation: RegisteredOperation): string {
@@ -1461,12 +1780,17 @@ function confirmedMessage(
 ): string {
   if (routeId === "market.create_listing") return "藏品已成功上架";
   if (routeId === "market.purchase") return "购买成功";
-  if (routeId !== "market.cancel_template_listings")
-    return "结果已由服务器确认";
-  const parsed = routeById(routeId).output.safeParse(result);
-  if (!parsed.success) return "已下架，真实状态已刷新";
-  return parsed.data.released_quantity > 0
-    ? `已下架，已释放 ${parsed.data.released_quantity} 个未成交藏品`
+  if (routeId !== "market.cancel_template_listings") return "操作已完成";
+  const releasedQuantity =
+    result &&
+    typeof result === "object" &&
+    "released_quantity" in result &&
+    typeof result.released_quantity === "number"
+      ? result.released_quantity
+      : null;
+  if (releasedQuantity === null) return "已下架，真实状态已刷新";
+  return releasedQuantity > 0
+    ? `已下架，已释放 ${releasedQuantity} 个未成交藏品`
     : "已下架，当前没有有效挂单";
 }
 

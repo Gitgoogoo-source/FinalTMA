@@ -10,12 +10,14 @@ export function AlbumChainCard({
   chain,
   claimBlocked,
   claiming,
+  onPrepareClaim,
   onClaim,
   onSelectNode,
 }: {
   chain: AlbumChain;
   claimBlocked: boolean;
   claiming: boolean;
+  onPrepareClaim(): void;
   onClaim(chainId: string): void;
   onSelectNode(
     chain: AlbumChain,
@@ -83,6 +85,8 @@ export function AlbumChainCard({
         className={`album-gift ${chain.claimable ? "claimable" : "secondary"}`}
         disabled={claimBlocked || !chain.claimable}
         aria-label={`${chain.theme}奖励，${claiming ? "领取中" : status}，${chain.reward_fgems} Fgems`}
+        onPointerDown={onPrepareClaim}
+        onFocus={onPrepareClaim}
         onClick={() => onClaim(chain.chain_id)}
       >
         {claiming ? (

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as Ably from "ably";
-import { battleRealtimeInvalidationSchema } from "@pokepets/api-contracts/app";
+import { parseBattleRealtimeInvalidation } from "@pokepets/api-contracts/app-client";
 
 import { apiRequest } from "../../platform/api/client.ts";
 
@@ -94,19 +94,21 @@ export function useBattleRealtime({
     };
     scheduleRef.current = scheduleRefetch;
     const onMessage = (message: Ably.InboundMessage) => {
-      const parsed = battleRealtimeInvalidationSchema.safeParse(message.data);
-      if (
-        !parsed.success ||
-        parsed.data.state_version < versionRef.current ||
-        seenEvents.current.has(parsed.data.event_id)
-      )
-        return;
-      seenEvents.current.add(parsed.data.event_id);
-      if (seenEvents.current.size > 128) {
-        const oldest = seenEvents.current.values().next().value;
-        if (oldest) seenEvents.current.delete(oldest);
-      }
-      scheduleRefetch();
+      void parseBattleRealtimeInvalidation(message.data)
+        .then((parsed) => {
+          if (
+            parsed.state_version < versionRef.current ||
+            seenEvents.current.has(parsed.event_id)
+          )
+            return;
+          seenEvents.current.add(parsed.event_id);
+          if (seenEvents.current.size > 128) {
+            const oldest = seenEvents.current.values().next().value;
+            if (oldest) seenEvents.current.delete(oldest);
+          }
+          scheduleRefetch();
+        })
+        .catch(() => undefined);
     };
     const onConnectionState = (change: Ably.ConnectionStateChange) => {
       if (disposed) return;

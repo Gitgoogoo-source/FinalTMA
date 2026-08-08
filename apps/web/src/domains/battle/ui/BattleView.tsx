@@ -8,9 +8,7 @@ import {
   type RefObject,
 } from "react";
 import {
-  battleTeamSelectionSchema,
-  errorDefinition,
-  isErrorCode,
+  parseBattleTeamSelection,
   type BattleActionEventDto,
   type BattleEntryTier,
   type BattlePageState,
@@ -18,7 +16,11 @@ import {
   type BattleTeamSelection,
   type RefreshScope,
   type RouteOutput,
-} from "@pokepets/api-contracts/app";
+} from "@pokepets/api-contracts/app-client";
+import {
+  errorDefinition,
+  isErrorCode,
+} from "@pokepets/api-contracts/app-client/errors";
 
 import {
   ApiFailure,
@@ -45,7 +47,7 @@ import {
   usePageSearchParams,
 } from "../../../shared/navigation/pageActivity.tsx";
 import { useBattleRealtime } from "../../../workflows/battle-realtime/index.ts";
-import { useNavigationIntent } from "../../../workflows/payment-recovery/index.ts";
+import { useNavigationIntent } from "../../../workflows/payment-recovery/context.ts";
 import { useBattleCommand } from "../useBattleCommand.ts";
 import {
   battlePresentationActionKey,
@@ -1053,7 +1055,10 @@ export function BattleView(): ReactNode {
 
   const create = async () => {
     if (!tier) return;
-    const selection = parseSelection(slots, teamOptions.data?.items ?? []);
+    const selection = await parseSelection(
+      slots,
+      teamOptions.data?.items ?? [],
+    );
     if (!selection) {
       return;
     }
@@ -1079,7 +1084,10 @@ export function BattleView(): ReactNode {
 
   const accept = async () => {
     if (!inviteRoom || inviteRoom.invite_status !== "available") return;
-    const selection = parseSelection(slots, teamOptions.data?.items ?? []);
+    const selection = await parseSelection(
+      slots,
+      teamOptions.data?.items ?? [],
+    );
     if (!selection) {
       return;
     }
@@ -1114,7 +1122,10 @@ export function BattleView(): ReactNode {
 
   const matchmake = async () => {
     if (!tier) return;
-    const selection = parseSelection(slots, teamOptions.data?.items ?? []);
+    const selection = await parseSelection(
+      slots,
+      teamOptions.data?.items ?? [],
+    );
     if (!selection || balance === null) return;
     if (balance < tier.entry_fee) {
       requestTopup(
@@ -1720,19 +1731,19 @@ function isInviteRoom(invite: Invite | undefined): invite is InviteRoom {
   return Boolean(invite && "room_id" in invite);
 }
 
-function parseSelection(
+async function parseSelection(
   slots: BattleTeamSlots,
   items: RouteOutput<"battle.team_options">["items"],
-): BattleTeamSelection | null {
-  const parsed = battleTeamSelectionSchema.safeParse(slots);
-  return parsed.success &&
-    parsed.data.every((templateId) =>
+): Promise<BattleTeamSelection | null> {
+  const parsed = await parseBattleTeamSelection(slots).catch(() => null);
+  return parsed &&
+    parsed.every((templateId) =>
       items.some(
         (item) =>
           item.template_id === templateId && item.available_quantity > 0,
       ),
     )
-    ? parsed.data
+    ? parsed
     : null;
 }
 

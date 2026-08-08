@@ -1,4 +1,4 @@
-import type { RecoverableRouteId } from "@pokepets/api-contracts/app";
+import type { RecoverableRouteId } from "@pokepets/api-contracts/app-client";
 
 const labels: Partial<Record<RecoverableRouteId, string>> = {
   "album.claim": "正在领取图鉴奖励",
@@ -10,9 +10,6 @@ const labels: Partial<Record<RecoverableRouteId, string>> = {
   "market.cancel_template_listings": "正在全部下架",
   "market.create_listing": "正在创建挂单",
   "market.purchase": "正在确认市场购买",
-  "mint.cancel": "正在取消 Mint",
-  "mint.reserve": "正在锁定藏品并签发 Mint 凭证",
-  "mint.submit": "正在等待链上确认",
   "referral.bind": "正在确认邀请关系",
   "tasks.check_in": "正在领取签到奖励",
   "tasks.claim": "正在领取任务奖励",
@@ -23,8 +20,6 @@ const labels: Partial<Record<RecoverableRouteId, string>> = {
   "vip.claim_free_box": "正在领取 VIP 盲盒",
   "vip.cancel_order": "正在取消未付款月卡订单",
   "vip.create_order": "正在创建 VIP Stars 订单",
-  "wallet.disconnect": "正在断开钱包",
-  "wallet.verify": "正在验证 TON 钱包",
   "wheel.spin": "正在转动幸运转盘",
 };
 

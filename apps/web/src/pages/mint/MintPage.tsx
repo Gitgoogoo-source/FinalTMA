@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import { MintView } from "../../domains/mint/index.ts";
+import "../../shared/styles/dormant-mint.css";
 import TonProvider from "../../platform/ton/TonProvider.tsx";
 
 export function MintPage(): ReactNode {

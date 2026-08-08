@@ -19,8 +19,9 @@ import {
 import { getSession } from "../../../platform/session/store.ts";
 import { telegram } from "../../../platform/telegram/index.ts";
 import { AppModal, Button } from "../../../shared/ui/index.tsx";
-import { useOperationRegistry } from "../../../workflows/operation-recovery/index.ts";
-import type { TopupRequest } from "../../../workflows/payment-recovery/index.ts";
+import { useOperationRegistry } from "../../../workflows/operation-recovery/context.ts";
+import type { TopupRequest } from "../../../workflows/payment-recovery/context.ts";
+import "../../../shared/styles/shell-dialogs.css";
 import type { PaymentOrder } from "../index.ts";
 
 const FINAL_STATUSES = new Set<PaymentOrder["status"]>([

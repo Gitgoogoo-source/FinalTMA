@@ -1,15 +1,13 @@
 import { CheckCircle2, Gift } from "lucide-react";
-import type { RouteOutput } from "@pokepets/api-contracts/app";
+import type { RouteOutput } from "@pokepets/api-contracts/app-client";
 import type { ReactNode } from "react";
 
 import { Button } from "../../shared/ui/index.tsx";
 
 export function AlbumClaimResultDialog({
-  operationId,
   result,
   onConfirm,
 }: {
-  operationId: string;
   result: RouteOutput<"album.claim">;
   onConfirm(): void;
 }): ReactNode {
@@ -24,7 +22,6 @@ export function AlbumClaimResultDialog({
         <Gift aria-hidden="true" />
         Fgems +{result.reward_fgems}
       </p>
-      <code>操作号 {operationId}</code>
       <Button onClick={onConfirm}>完成</Button>
     </div>
   );

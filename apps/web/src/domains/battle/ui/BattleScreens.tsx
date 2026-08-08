@@ -20,7 +20,7 @@ import type {
   BattleRoomSnapshotDto,
   BattleTerminalResultDto,
   RouteOutput,
-} from "@pokepets/api-contracts/app";
+} from "@pokepets/api-contracts/app-client";
 
 import { Button, CatalogImage } from "../../../shared/ui/index.tsx";
 import {

@@ -27,7 +27,7 @@
 ## 依赖方向
 
 ```text
-apps/web -> @pokepets/api-contracts/app
+apps/web -> @pokepets/api-contracts/app-client[/errors]
 api -> apps/api/entrypoints
 apps/api/entrypoints -> gateway-specific contracts + http
 apps/api/http -> injected route registry + handler map
@@ -39,7 +39,7 @@ contracts/ton -> TON blockchain
 
 禁止反向依赖、跨领域深层导入、浏览器访问 Supabase Data API、Node 层组合多次资产写入。浏览器对 `pet-runtime` 公开对象的图片 GET 是唯一 Supabase 直连例外。
 
-TMA 首次同步加载只覆盖应用壳、会话与账号门禁及默认开盒页；首屏完成后后台预加载其余普通主导航页面。`/game` 固定承载 React + TypeScript Battle，不引入 Phaser；Battle 只有在游戏页可见或当前 session 需要恢复 Battle participation/当场终局结果时读取专属状态，邀请 waiting 的创建者展示心跳和 lobby 的双方 presence 心跳只在页面可见时发送。隐藏、Telegram deactivated、`pagehide` 或离开 `/game` 立即结束当前 lease、中止在途 heartbeat 并尽力 offline；恢复先读取权威快照并取得新 lease，进入 `active_turn` 后停止 presence。
+TMA 首屏同步闭包固定为入口、默认开盒页、首屏契约及各自同步依赖；认证后 Provider 与首屏契约在 Telegram 初始化后并行预取，首屏完成后继续按既有策略后台预热其余普通主导航页面。操作结果、全局充值/VIP 弹窗和领域 CSS 只在对应意图后加载；生产构建按 [ADR-040](adr/ADR-040-first-screen-runtime-boundary.md) 对完整首屏闭包执行四项字节硬门禁和禁止模块检查。`/game` 固定承载 React + TypeScript Battle，不引入 Phaser；Battle 只有在游戏页可见或当前 session 需要恢复 Battle participation/当场终局结果时读取专属状态，邀请 waiting 的创建者展示心跳和 lobby 的双方 presence 心跳只在页面可见时发送。隐藏、Telegram deactivated、`pagehide` 或离开 `/game` 立即结束当前 lease、中止在途 heartbeat 并尽力 offline；恢复先读取权威快照并取得新 lease，进入 `active_turn` 后停止 presence。
 
 五个主导航页面在当前登录会话内首次访问后保持挂载。切换页面只恢复各自滚动、筛选和页内状态，同时按 [ADR-037](adr/ADR-037-persistent-page-query-activity.md) 暂停隐藏页面查询；切页前已开始的读取允许完成。返回页面时，新鲜且未失效的缓存不读取，超过 20 秒或被业务刷新范围标记失效的查询按键回正一次；已有缓存回正失败时保留内容并显示非阻塞重试。业务结果把契约范围全部标记失效，只立即刷新当前页面和全局活动查询；后台连续五分钟后回到前台只静默回正顶部摘要与当前页面。交易页按 [ADR-029](adr/ADR-029-market-sold-device-inbox.md) 在可见期间每 10 秒同步本人挂售与新成交事件，当前设备只持久保存按内部用户隔离的事件游标和未隐藏 SOLD 提醒，并由同一待展示集合驱动“管理”页签红点。
 
@@ -59,7 +59,7 @@ TMA 首次同步加载只覆盖应用壳、会话与账号门禁及默认开盒�
 
 ## 操作恢复
 
-前端内存操作阶段固定为 `confirming → submitting → pending/unknown → succeeded/failed`；数据库持久状态为 `pending`、`unknown`、`succeeded`、`failed`。随机结果和资产结果只生成一次，`unknown` 只查询原 `operation_id`。`identity.bootstrap` 同快照返回用户权威游标；`GET /api/operations/recoverable` 既发现转盘未决和进化规定状态，也只用不含结果内容的路由标记发现晚于首屏提交的任意 operation 终态。发现绑定可见、Telegram 激活和在线状态，恢复队列存在时暂停，清空后立即追赶；路由刷新范围全部标记失效且当前页面与全局活动查询成功后推进内存游标，隐藏页面不阻塞并在返回时回正。除进化专用回执外，开盒、转盘、分解和通用结果只在取得它们的当前前台运行期展示，“确定”“收下”或返回只处理 Web 内存展示，不发送结果 API、RPC、原操作查询或刷新；隐藏、刷新或重新进入后不恢复旧结果，只刷新权威页面状态。恢复注入的非进化 `pending`、`unknown` 只查询原操作，取得终态后静默回正并移除。进化在未决阶段锁定新提交和底部导航，终态由专用覆盖弹窗和服务端回执处理。Battle 创建、随机匹配、取消、接受和行动恢复原 operation 后必须读取 viewer-specific room snapshot；heartbeat/offline 只在当前 lease 内重试，生命周期结束后以权威快照申请下一版本 lease。普通 heartbeat/offline 结果只应用 room，确认退款终态才按路由契约刷新 Battle、顶部资产和 inventory。Battle 终局快照到达后立即执行三域回正，结果覆盖层等待动作表现队列清空，按钮只在内存返回首页；其他领域既有确认回执保持各自规则。
+前端内存操作阶段固定为 `confirming → submitting → pending/unknown → succeeded/failed`；数据库持久状态为 `pending`、`unknown`、`succeeded`、`failed`。随机结果和资产结果只生成一次，`unknown` 只查询原 `operation_id`。`identity.bootstrap` 同快照返回用户权威游标；`GET /api/operations/recoverable` 既发现转盘未决和进化规定状态，也只用不含结果内容的路由标记发现晚于首屏提交的任意 operation 终态。发现绑定可见、Telegram 激活和在线状态，恢复队列存在时暂停，清空后立即追赶；路由刷新范围全部标记失效且当前页面与全局活动查询成功后推进内存游标，隐藏页面不阻塞并在返回时回正。六类专用表现与业务请求并行加载，表现失败只重载 UI 而不重提 operation。除进化专用回执外，开盒、转盘、分解和通用结果只在取得它们的当前前台运行期展示，“确定”“收下”或返回只处理 Web 内存展示，不发送结果 API、RPC、原操作查询或刷新；隐藏、刷新或重新进入后不恢复旧结果，只刷新权威页面状态。恢复注入的非进化 `pending`、`unknown` 只查询原操作，取得终态后静默回正并移除。进化在未决阶段锁定新提交和底部导航，终态由专用覆盖弹窗和服务端回执处理。Battle 创建、随机匹配、取消、接受和行动恢复原 operation 后必须读取 viewer-specific room snapshot；heartbeat/offline 只在当前 lease 内重试，生命周期结束后以权威快照申请下一版本 lease。普通 heartbeat/offline 结果只应用 room，确认退款终态才按路由契约刷新 Battle、顶部资产和 inventory。Battle 终局快照到达后立即执行三域回正，结果覆盖层等待动作表现队列清空，按钮只在内存返回首页；其他领域既有确认回执保持各自规则。
 
 市场购买按 [ADR-030](adr/ADR-030-market-purchase-inline-progress.md) 在未决阶段只保留确认弹窗内的“购买中”按钮状态，不显示全局操作状态；当前前台运行期的权威刷新完成后才显示不含服务器、请求和 operation ID 的专用购买结果。离开前台后只恢复原 operation 与权威状态，不恢复旧购买结果弹窗。
 
@@ -117,3 +117,4 @@ TMA 首次同步加载只覆盖应用壳、会话与账号门禁及默认开盒�
 - [持久页面查询活动边界与缓存回正](adr/ADR-037-persistent-page-query-activity.md)
 - [本地会话凭证证明与登录 RPC 合并](adr/ADR-038-local-session-proof-and-login-rpc-consolidation.md)
 - [库存数量集合式读模型](adr/ADR-039-inventory-set-based-read-model.md)
+- [首屏运行时与样式边界](adr/ADR-040-first-screen-runtime-boundary.md)

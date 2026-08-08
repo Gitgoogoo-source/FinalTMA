@@ -38,8 +38,8 @@ import {
   usePageActive,
   usePageSearchParams,
 } from "../../../shared/navigation/pageActivity.tsx";
-import { useOperationRegistry } from "../../../workflows/operation-recovery/index.ts";
-import { useNavigationIntent } from "../../../workflows/payment-recovery/index.ts";
+import { useOperationRegistry } from "../../../workflows/operation-recovery/context.ts";
+import { useNavigationIntent } from "../../../workflows/payment-recovery/context.ts";
 type BoxTier = BoxArtTier;
 type Rarity = "common" | "rare" | "epic" | "legendary" | "mythic";
 type GachaViewState = { selectedTier: BoxTier; scrollY: number };
@@ -74,7 +74,7 @@ export function GachaView(): ReactNode {
   const catalog = useApiQuery("catalog.get");
   const identity = useApiQuery("identity.bootstrap");
   const session = useSession();
-  const { isBlocked, run } = useOperationRegistry();
+  const { isBlocked, preload, run } = useOperationRegistry();
   const { requestTopup } = useNavigationIntent();
   const blocked = isBlocked("gacha.open");
   const pageActive = usePageActive();
@@ -475,6 +475,8 @@ export function GachaView(): ReactNode {
                 aria-disabled={
                   blocked || !rulesComplete || ready[selectedBox.tier] !== true
                 }
+                onPointerDown={() => preload("gacha.open")}
+                onFocus={() => preload("gacha.open")}
                 onClick={() => open(selectedBox.tier, 1)}
               >
                 {blocked ? (
@@ -503,6 +505,8 @@ export function GachaView(): ReactNode {
                 aria-disabled={
                   blocked || !rulesComplete || ready[selectedBox.tier] !== true
                 }
+                onPointerDown={() => preload("gacha.open")}
+                onFocus={() => preload("gacha.open")}
                 onClick={() => open(selectedBox.tier, 10)}
               >
                 <b className="draw-discount">9折</b>

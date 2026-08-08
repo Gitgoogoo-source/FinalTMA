@@ -1,0 +1,191 @@
+.app-shell .wheel-result-modal {
+  gap: clamp(8px, 1.7dvh, 14px);
+  padding: clamp(70px, 10.5dvh, 94px) 16px calc(var(--safe-bottom) + 14px);
+  overflow: visible;
+  background:
+    radial-gradient(
+      circle at 50% 0%,
+      rgba(255, 205, 112, 0.2),
+      transparent 34%
+    ),
+    linear-gradient(180deg, #fff6e5 0%, #fffdf7 42%, #fffefa 100%);
+  animation: wheel-result-rise 0.34s cubic-bezier(0.22, 0.78, 0.24, 1);
+}
+.app-shell .wheel-result-gift {
+  position: absolute;
+  z-index: 0;
+  top: clamp(-174px, -20dvh, -132px);
+  left: 50%;
+  width: clamp(250px, 78vw, 322px);
+  max-width: 82%;
+  aspect-ratio: 1;
+  object-fit: contain;
+  transform: translateX(-50%);
+  filter: drop-shadow(0 16px 18px rgba(255, 145, 0, 0.14));
+  pointer-events: none;
+  user-select: none;
+}
+.app-shell .wheel-result-handle {
+  position: relative;
+  z-index: 1;
+  width: 48px;
+  height: 6px;
+  justify-self: center;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(90deg, #ffad45, #ff7421);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+}
+.app-shell .wheel-result-heading {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.app-shell .wheel-result-heading h2 {
+  color: #51361f;
+  font-size: clamp(24px, 7vw, 31px);
+  font-weight: 950;
+  letter-spacing: -0.04em;
+  text-align: center;
+}
+.app-shell .wheel-result-heading svg {
+  width: 18px;
+  height: 18px;
+  color: #ffad28;
+  fill: rgba(255, 190, 58, 0.2);
+}
+.app-shell .wheel-result-grid {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: clamp(5px, 1.7vw, 8px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.app-shell .wheel-reward-card {
+  min-width: 0;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 3px;
+  aspect-ratio: 0.76;
+  padding: 5px 3px 6px;
+  overflow: hidden;
+  border: 1px solid rgba(82, 61, 32, 0.08);
+  border-radius: clamp(11px, 3.2vw, 16px);
+  background: rgba(255, 255, 255, 0.7);
+  box-shadow:
+    0 7px 15px rgba(94, 74, 43, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+.app-shell .wheel-reward-card img {
+  width: min(100%, 58px);
+  aspect-ratio: 1;
+  border-radius: 10px;
+  object-fit: cover;
+}
+.app-shell .wheel-reward-card strong {
+  max-width: 100%;
+  overflow: hidden;
+  color: #3e342a;
+  font-size: clamp(8px, 2.45vw, 11px);
+  font-weight: 900;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-shell .wheel-reward-card.reward-fgems {
+  background: linear-gradient(180deg, #edf8ff, #e5f4ff);
+}
+.app-shell .wheel-reward-card.reward-kcoin {
+  background: linear-gradient(180deg, #fff9e5, #fff3c9);
+}
+.app-shell .wheel-reward-card.reward-free_normal_box {
+  background: linear-gradient(180deg, #f0fae8, #e4f5d6);
+}
+.app-shell .wheel-reward-card.reward-free_rare_box {
+  background: linear-gradient(180deg, #f5efff, #eaddff);
+  border-color: rgba(126, 72, 224, 0.2);
+  box-shadow:
+    0 8px 18px rgba(126, 72, 224, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+.app-shell .wheel-result-modal.is-single {
+  padding-top: clamp(76px, 12dvh, 104px);
+}
+.app-shell .wheel-result-modal.is-single .wheel-result-grid {
+  width: min(54vw, 196px);
+  justify-self: center;
+  grid-template-columns: minmax(0, 1fr);
+}
+.app-shell .wheel-result-modal.is-single .wheel-reward-card {
+  aspect-ratio: 1.05;
+  gap: 5px;
+  padding: 12px;
+  border-radius: 24px;
+}
+.app-shell .wheel-result-modal.is-single .wheel-reward-card img {
+  width: min(70%, 118px);
+  border-radius: 20px;
+}
+.app-shell .wheel-result-modal.is-single .wheel-reward-card strong {
+  font-size: 17px;
+}
+.app-shell .wheel-result-bonus {
+  position: relative;
+  z-index: 1;
+  min-height: 38px;
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+  gap: 7px;
+  align-items: center;
+  padding: 4px 10px 4px 5px;
+  border: 1px solid rgba(255, 164, 28, 0.2);
+  border-radius: 14px;
+  color: #9b5600;
+  background: rgba(255, 239, 195, 0.74);
+}
+.app-shell .wheel-result-bonus img {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+}
+.app-shell .wheel-result-bonus span {
+  font-size: 11px;
+  font-weight: 850;
+}
+.app-shell .wheel-result-bonus strong {
+  font-size: 12px;
+  font-weight: 950;
+}
+.app-shell .wheel-result-modal .operation-ack-error {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid rgba(190, 75, 49, 0.16);
+  border-radius: 12px;
+  color: #a34432;
+  background: rgba(255, 232, 224, 0.82);
+  font-size: 11px;
+  font-weight: 750;
+  text-align: center;
+}
+.app-shell .result-sheet-confirm.button {
+  position: relative;
+  z-index: 1;
+  min-height: 52px;
+  border-radius: 18px;
+  font-size: 15px;
+  font-weight: 950;
+  box-shadow:
+    0 13px 25px rgba(255, 112, 0, 0.23),
+    inset 0 1px 0 rgba(255, 255, 255, 0.52);
+}

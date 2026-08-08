@@ -1,4 +1,4 @@
-import type { RouteOutput } from "@pokepets/api-contracts/app";
+import type { RouteOutput } from "@pokepets/api-contracts/app-client";
 import { createContext, useContext } from "react";
 
 export type NavigationIntent = NonNullable<

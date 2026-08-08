@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  errorDefinition,
-  isErrorCode,
   parseRouteOutput,
   type BattleRoomSnapshotDto,
   type RefreshScope,
   type RouteInput,
   type RouteOutput,
-} from "@pokepets/api-contracts/app";
+} from "@pokepets/api-contracts/app-client";
+import {
+  errorDefinition,
+  isErrorCode,
+} from "@pokepets/api-contracts/app-client/errors";
 
 import {
   ApiFailure,
@@ -269,7 +271,7 @@ async function recoverSameOperation<Id extends BattleCommandRouteId>(
         try {
           return {
             kind: "succeeded",
-            data: parseRecoveredResult(routeId, response.data.result),
+            data: await parseRecoveredResult(routeId, response.data.result),
           };
         } catch {
           return {
@@ -326,10 +328,10 @@ async function recoverSameOperation<Id extends BattleCommandRouteId>(
   throw signal.reason;
 }
 
-function parseRecoveredResult<Id extends BattleCommandRouteId>(
+async function parseRecoveredResult<Id extends BattleCommandRouteId>(
   routeId: Id,
   result: unknown,
-): RouteOutput<Id> {
+): Promise<RouteOutput<Id>> {
   return parseRouteOutput(routeId, result);
 }
 

@@ -13,6 +13,8 @@ Vercel 将根目录三个 Function 入口编译为 JavaScript，但不会把 wor
 
 `@pokepets/api` 与 `@pokepets/api-contracts` 增加独立 TypeScript 构建配置。类型条件固定指向 `src/*.ts`，运行时条件固定指向 `dist/*.js`；构建阶段必须先生成两个 workspace 的 `dist`，再构建 Web 和打包 Vercel Functions。根目录三个 Function 入口仍只依赖 `@pokepets/api/entrypoints`，并以 Vercel 支持的 `export default { fetch }` Web Standard 签名返回 `Response`，不绕过模块边界。
 
+Contracts 构建固定同时产出活动服务端 `/app`、浏览器 `/app-client`、浏览器按需错误定义、休眠 `/dormant-app` 和 `/server`。Vercel App Function 只能跟随活动 `/app` registry 与 handler map，Wallet/Mint 休眠边界不得进入 Function 依赖图。Web 使用 Vite 默认 JS/CSS code splitting；生产构建必须遍历入口、默认开盒页和首屏契约的同步 chunk 图，四项首屏体积或结构门禁任一失败即终止整次构建，不允许通过人工 vendor chunk、提高大包阈值或关闭统计绕过。
+
 Vercel rewrite 使用 `__route` 传递原始 API 路径，并会把 source 的命名捕获 `path` 自动附加到查询字符串。两者都是部署基础设施字段，必须在严格业务输入校验前剥离；业务契约不得声明名为 `__route` 或 `path` 的输入字段。
 
 数据库适配器只解析 `SUPABASE_URL` 与 `SUPABASE_SERVICE_ROLE_KEY`。核心会话、Telegram、Cron 与支付支持配置由 `getEnv()` 校验；推荐链接与 Battle prepared-share deep link 共用的 Bot 用户名和 Mini App short name 由 `getReferralEnv()` 校验；Battle share、outbox、realtime 与 integration 所需的三个服务端变量只由 `getBattleEnv()` 校验；钱包链上公钥查询、Mint permit 与 Mint 对账只通过 `getTonEnv()` 校验 TON 配置。未启用的外部集成不得以占位值绕过校验，也不得阻塞不依赖该集成的 API。

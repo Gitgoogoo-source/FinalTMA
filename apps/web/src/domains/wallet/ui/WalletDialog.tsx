@@ -2,21 +2,23 @@ import { CheckCircle2, Link2Off, ShieldCheck, WalletCards } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTonConnectUI, useTonWallet } from "@tonconnect/ui-react";
 
-import { apiRequest } from "../../../platform/api/client.ts";
-import { useApiQuery } from "../../../platform/query/index.ts";
+import {
+  dormantApiRequest,
+  useDormantApiQuery,
+  useDormantOperationRegistry,
+} from "../../../dormant/api.ts";
 import { AppModal, Badge, Button } from "../../../shared/ui/index.tsx";
-import { useOperationRegistry } from "../../../workflows/operation-recovery/index.ts";
 
 type Challenge = { payload: string; expiresAt: string };
 
 export function WalletDialog({ close }: { close(): void }): ReactNode {
-  const status = useApiQuery("wallet.get");
+  const status = useDormantApiQuery("wallet.get");
   const [tonConnect] = useTonConnectUI();
   const wallet = useTonWallet();
   const pending = useRef<Challenge | null>(null);
   const [phase, setPhase] = useState<"idle" | "opening" | "verifying">("idle");
   const [error, setError] = useState("");
-  const { isBlocked, run } = useOperationRegistry();
+  const { isBlocked, run } = useDormantOperationRegistry();
   const blocked = isBlocked("wallet.verify") || isBlocked("wallet.disconnect");
 
   useEffect(() => {
@@ -81,7 +83,7 @@ export function WalletDialog({ close }: { close(): void }): ReactNode {
     setError("");
     setPhase("opening");
     try {
-      const response = await apiRequest("wallet.challenge", {});
+      const response = await dormantApiRequest("wallet.challenge", {});
       const payload = response.data.payload;
       pending.current = { payload, expiresAt: response.data.expires_at };
       tonConnect.setConnectRequestParameters({

@@ -2,7 +2,9 @@ import { useState, type ReactNode } from "react";
 
 import { MarketView } from "../../domains/market/index.ts";
 import { usePageSearchParams } from "../../shared/navigation/pageActivity.tsx";
-import { VipBanner, VipDialog } from "../../domains/vip/index.ts";
+import { VipBanner } from "../../domains/vip/ui/VipBanner.tsx";
+import { GlobalDialogs } from "../../app/shell/GlobalDialogs.tsx";
+import "../../shared/styles/market-page.css";
 
 export function MarketPage(): ReactNode {
   const [params, setParams] = usePageSearchParams();
@@ -21,7 +23,11 @@ export function MarketPage(): ReactNode {
       <MarketView
         vipBanner={<VipBanner open={() => setManuallyOpen(true)} />}
       />
-      {vipOpen && <VipDialog close={closeVip} />}
+      <GlobalDialogs
+        active={vipOpen ? "vip" : null}
+        topupRequest={null}
+        close={closeVip}
+      />
     </>
   );
 }

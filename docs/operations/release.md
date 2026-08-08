@@ -44,7 +44,7 @@ pnpm manifest:check
 
 `pnpm assets:check:catalog` 强制核对资源 manifest 的 210 个 `template_id`、210 个私有母版对象、420 个公开运行时对象、对象键、WebP 格式、尺寸、单文件体积、50 MiB 当前批次总上限、内容唯一性和 SHA-256，并确认 Git/Vercel 不含这些二进制。`APP_ENV=development pnpm build` 在生成 `apps/web/dist` 后继续确认只复制非宠物美术和统一宠物剪影；`APP_ENV=test` 与 `APP_ENV=production` 额外拒绝 Telegram 分享图的已知开发 checksum，休眠的 TON Connect 图标不属于当前 MVP 正式素材门禁。
 
-`pnpm architecture:check` 同时验证 `/game` 只承载 React + TypeScript Battle、没有 Phaser 或客户端战斗模拟器，任务页转盘位置、远征/钱包/Mint 任务与横幅隐藏、钱包/Mint/Mint 对账不进入当前运行时注册表，以及其余模块边界、网关隔离和文档归属。`pnpm contracts:check` 额外验证 OpenAPI 不发布这些休眠端点。
+`pnpm architecture:check` 同时验证 `/game` 只承载 React + TypeScript Battle、没有 Phaser 或客户端战斗模拟器，任务页转盘位置、远征/钱包/Mint 任务与横幅隐藏、钱包/Mint/Mint 对账不进入当前运行时注册表，活动 Web 只使用 `app-client`、`global.css` 不得恢复、操作表现保持动态边界，以及其余模块边界、网关隔离和文档归属。生产 build 还必须输出并通过 ADR-040 的四项首屏闭包硬门禁，禁止模块为零且没有 Vite 大 chunk 警告；`pnpm contracts:check` 额外验证 OpenAPI 不发布休眠端点。
 
 休眠实现的 TON Connect manifest 仅通过以下命令保持格式确定：
 

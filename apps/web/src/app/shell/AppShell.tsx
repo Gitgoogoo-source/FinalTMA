@@ -11,8 +11,8 @@ import { Outlet, useLocation } from "react-router-dom";
 import { refreshForegroundState } from "../../platform/query/index.ts";
 import { useSession } from "../../platform/session/store.ts";
 import { telegram } from "../../platform/telegram/index.ts";
-import { useNavigationIntent } from "../../workflows/payment-recovery/index.ts";
-import { AppRecoveryCoordinator } from "../recovery/AppRecoveryCoordinator.tsx";
+import { useNavigationIntent } from "../../workflows/payment-recovery/context.ts";
+import { RecoveryCoordinatorBoundary } from "../recovery/RecoveryCoordinatorBoundary.tsx";
 import { PersistentPages } from "../router/PersistentPages.tsx";
 import { getMainPagePath } from "../router/pageRoutes.ts";
 import { BottomNavigation } from "./BottomNavigation.tsx";
@@ -53,7 +53,7 @@ export function AppShell(): ReactNode {
         hidden={!activePath}
         inert={!activePath}
       >
-        <AppRecoveryCoordinator
+        <RecoveryCoordinatorBoundary
           openDialog={setDialog}
           closeDialogs={closeDialogs}
         />

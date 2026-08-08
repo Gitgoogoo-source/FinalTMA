@@ -1,3 +1,5 @@
+import type { ErrorCode } from "./error-codes.ts";
+
 export type RefreshScope =
   | "none"
   | "session"
@@ -487,13 +489,7 @@ export const errorRegistry = {
     "assets",
     "refresh",
   ),
-} as const satisfies Record<string, ErrorDefinition>;
-
-export type ErrorCode = keyof typeof errorRegistry;
-export const errorCodes = Object.keys(errorRegistry) as [
-  ErrorCode,
-  ...ErrorCode[],
-];
+} as const satisfies Record<ErrorCode, ErrorDefinition>;
 
 export function errorDefinition(code: ErrorCode): ErrorDefinition {
   return errorRegistry[code];

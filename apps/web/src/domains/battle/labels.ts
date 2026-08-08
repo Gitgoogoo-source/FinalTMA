@@ -2,7 +2,7 @@ import type {
   BattleEntryTier,
   BattleRoomStatus,
   BattleTerminalResultDto,
-} from "@pokepets/api-contracts/app";
+} from "@pokepets/api-contracts/app-client";
 
 export const battleRarityLabels = {
   common: "普通",

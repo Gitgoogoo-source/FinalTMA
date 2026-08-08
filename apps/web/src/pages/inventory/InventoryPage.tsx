@@ -11,7 +11,8 @@ import {
 import { Button } from "../../shared/ui/index.tsx";
 import { focusTaskTarget } from "../../shared/navigation/focusTaskTarget.ts";
 import { usePageSearchParams } from "../../shared/navigation/pageActivity.tsx";
-import { useOperationRegistry } from "../../workflows/operation-recovery/index.ts";
+import { useOperationRegistry } from "../../workflows/operation-recovery/context.ts";
+import "../../shared/styles/inventory-page.css";
 
 export function InventoryPage(): ReactNode {
   const navigate = useNavigate();

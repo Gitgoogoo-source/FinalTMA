@@ -10,12 +10,10 @@ import { gachaHandlers } from "../../domains/gacha/routes.ts";
 import { identityHandlers } from "../../domains/identity/routes.ts";
 import { inventoryHandlers } from "../../domains/inventory/routes.ts";
 import { marketHandlers } from "../../domains/market/routes.ts";
-import { mintHandlers } from "../../domains/mint/routes.ts";
 import { referralHandlers } from "../../domains/referral/routes.ts";
 import { taskHandlers } from "../../domains/tasks/routes.ts";
 import { topupHandlers } from "../../domains/topup/routes.ts";
 import { vipHandlers } from "../../domains/vip/routes.ts";
-import { walletHandlers } from "../../domains/wallet/routes.ts";
 import { wheelHandlers } from "../../domains/wheel/routes.ts";
 import type { RouteHandler } from "../../http/handlers.ts";
 import { operationRecoveryHandlers } from "../../workflows/operation-recovery/routes.ts";
@@ -39,8 +37,6 @@ export const appHandlers = {
   ...taskHandlers,
   ...referralHandlers,
   ...albumHandlers,
-  ...walletHandlers,
-  ...mintHandlers,
   ...operationRecoveryHandlers,
   ...paymentSupportHandlers,
 } satisfies Record<RouteId, RouteHandler>;

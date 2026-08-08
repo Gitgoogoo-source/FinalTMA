@@ -13,7 +13,7 @@ import {
   uuidSchema,
 } from "../../common/schemas.ts";
 import { mintSchema } from "../mint/models.ts";
-import { battleParticipationSchema } from "../battle/models.ts";
+import { battleParticipationSchema } from "../battle/bootstrap-models.ts";
 import { paymentSchema } from "../topup/models.ts";
 
 const healthOutput = z
@@ -77,53 +77,61 @@ const bootstrapOutput = z
   })
   .strict();
 
+const healthRoute = defineRoute({
+  id: "health.get",
+  method: "GET",
+  path: "/api/health",
+  gateway: "app",
+  auth: false,
+  idempotent: false,
+  input: emptyObjectSchema,
+  output: healthOutput,
+  errors: ["INTERNAL_ERROR"],
+});
+const authenticateRoute = defineRoute({
+  id: "identity.authenticate",
+  method: "POST",
+  path: "/api/auth/telegram",
+  gateway: "app",
+  auth: false,
+  idempotent: true,
+  refreshScopes: ["session"],
+  input: z.object({ init_data: z.string().min(1).max(16_384) }).strict(),
+  output: authOutput,
+  errors: [
+    "TELEGRAM_INIT_DATA_INVALID",
+    "TELEGRAM_INIT_DATA_EXPIRED",
+    "TELEGRAM_INIT_DATA_TIME_INVALID",
+    "TELEGRAM_START_PARAM_INVALID",
+    "RATE_LIMITED",
+    "IDEMPOTENCY_KEY_REUSED",
+    "INTERNAL_ERROR",
+  ],
+});
+const bootstrapRoute = defineRoute({
+  id: "identity.bootstrap",
+  method: "GET",
+  path: "/api/me/bootstrap",
+  gateway: "app",
+  auth: true,
+  idempotent: false,
+  input: emptyObjectSchema,
+  output: bootstrapOutput,
+  errors: [
+    "SESSION_REQUIRED",
+    "SESSION_EXPIRED",
+    "SESSION_REPLACED",
+    "ACCOUNT_RESTRICTED",
+    "INTERNAL_ERROR",
+  ],
+});
+
+export const identityFirstScreenRoutes = [
+  authenticateRoute,
+  bootstrapRoute,
+] as const;
+
 export const identityRoutes = [
-  defineRoute({
-    id: "health.get",
-    method: "GET",
-    path: "/api/health",
-    gateway: "app",
-    auth: false,
-    idempotent: false,
-    input: emptyObjectSchema,
-    output: healthOutput,
-    errors: ["INTERNAL_ERROR"],
-  }),
-  defineRoute({
-    id: "identity.authenticate",
-    method: "POST",
-    path: "/api/auth/telegram",
-    gateway: "app",
-    auth: false,
-    idempotent: true,
-    refreshScopes: ["session"],
-    input: z.object({ init_data: z.string().min(1).max(16_384) }).strict(),
-    output: authOutput,
-    errors: [
-      "TELEGRAM_INIT_DATA_INVALID",
-      "TELEGRAM_INIT_DATA_EXPIRED",
-      "TELEGRAM_INIT_DATA_TIME_INVALID",
-      "TELEGRAM_START_PARAM_INVALID",
-      "RATE_LIMITED",
-      "IDEMPOTENCY_KEY_REUSED",
-      "INTERNAL_ERROR",
-    ],
-  }),
-  defineRoute({
-    id: "identity.bootstrap",
-    method: "GET",
-    path: "/api/me/bootstrap",
-    gateway: "app",
-    auth: true,
-    idempotent: false,
-    input: emptyObjectSchema,
-    output: bootstrapOutput,
-    errors: [
-      "SESSION_REQUIRED",
-      "SESSION_EXPIRED",
-      "SESSION_REPLACED",
-      "ACCOUNT_RESTRICTED",
-      "INTERNAL_ERROR",
-    ],
-  }),
+  healthRoute,
+  ...identityFirstScreenRoutes,
 ] as const;

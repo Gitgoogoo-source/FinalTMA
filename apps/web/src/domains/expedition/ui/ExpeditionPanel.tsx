@@ -6,7 +6,7 @@ import { CatalogImage } from "../../../shared/ui/index.tsx";
 import { useApiQuery } from "../../../platform/query/index.ts";
 import { focusTaskTarget } from "../../../shared/navigation/focusTaskTarget.ts";
 import { AppModal, Badge, Button, Card } from "../../../shared/ui/index.tsx";
-import { useOperationRegistry } from "../../../workflows/operation-recovery/index.ts";
+import { useOperationRegistry } from "../../../workflows/operation-recovery/context.ts";
 
 const tierNames = {
   normal: "普通",

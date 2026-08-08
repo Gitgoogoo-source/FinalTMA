@@ -1,9 +1,9 @@
 import { useState, type ReactNode } from "react";
-import type { RouteOutput } from "@pokepets/api-contracts/app";
+import type { RouteOutput } from "@pokepets/api-contracts/app-client";
 
 import { useApiQuery } from "../../../platform/query/index.ts";
 import { Button } from "../../../shared/ui/index.tsx";
-import { useOperationRegistry } from "../../../workflows/operation-recovery/index.ts";
+import { useOperationRegistry } from "../../../workflows/operation-recovery/context.ts";
 import { DecompositionConfirmationDialog } from "./DecompositionConfirmationDialog.tsx";
 
 type InventoryItem = RouteOutput<"inventory.list">["items"][number];
@@ -17,7 +17,7 @@ export function DecompositionAction({
   imageReady: boolean;
   disabled: boolean;
 }): ReactNode {
-  const { run } = useOperationRegistry();
+  const { preload, run } = useOperationRegistry();
   const [confirming, setConfirming] = useState(false);
   const detail = useApiQuery(
     "inventory.detail",
@@ -48,6 +48,8 @@ export function DecompositionAction({
         className="inventory-action-button inventory-action-button--decompose"
         aria-busy={isPreparing}
         disabled={disabled || !imageReady || item.available < 1 || isPreparing}
+        onPointerDown={() => preload("inventory.decompose")}
+        onFocus={() => preload("inventory.decompose")}
         onClick={() => {
           setConfirming(true);
           void detail.refetch();

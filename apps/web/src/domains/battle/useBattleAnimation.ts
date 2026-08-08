@@ -12,7 +12,7 @@ import type {
   BattleOpponentTeamDto,
   BattleRoomSnapshotDto,
   BattleSelfTeamDto,
-} from "@pokepets/api-contracts/app";
+} from "@pokepets/api-contracts/app-client";
 import {
   clearBattleEffectLayer,
   parseBattleEffectKey,

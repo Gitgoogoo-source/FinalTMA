@@ -1,8 +1,9 @@
 import { Coins, Crown, Gem } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
-import { VipDailyBenefits } from "../../domains/vip/index.ts";
+import { VipDailyBenefits } from "../../domains/vip/ui/VipDailyBenefits.tsx";
 import { useApiQuery } from "../../platform/query/index.ts";
+import { preloadGlobalDialog } from "./global-dialog-loader.ts";
 
 export type GlobalDialog = "topup" | "vip";
 
@@ -36,6 +37,8 @@ export function TopAssetBar({
           className="asset-pill kcoin"
           data-kcoin-target
           aria-label={`K-coin：${kcoin?.available ?? "加载中"}，打开充值`}
+          onPointerDown={() => prepareGlobalDialog("topup")}
+          onFocus={() => prepareGlobalDialog("topup")}
           onClick={() => openDialog("topup")}
         >
           <Coins />
@@ -74,6 +77,8 @@ export function TopAssetBar({
             type="button"
             className="icon-action vip active"
             aria-label="查看有效 VIP 月卡"
+            onPointerDown={() => prepareGlobalDialog("vip")}
+            onFocus={() => prepareGlobalDialog("vip")}
             onClick={() => openDialog("vip")}
           >
             <Crown />
@@ -82,6 +87,10 @@ export function TopAssetBar({
       </div>
     </header>
   );
+}
+
+function prepareGlobalDialog(kind: GlobalDialog): void {
+  void preloadGlobalDialog(kind).catch(() => undefined);
 }
 
 function formatAsset(value: number | undefined, loading: boolean): string {

@@ -12,10 +12,8 @@ import { useNavigate } from "react-router-dom";
 import { useApiQuery } from "../../../platform/query/index.ts";
 import { useTelegramBackButton } from "../../../platform/telegram/index.ts";
 import { Badge, Button, PageState } from "../../../shared/ui/index.tsx";
-import {
-  useBlockingOperationRecovery,
-  useOperationRegistry,
-} from "../../../workflows/operation-recovery/index.ts";
+import { useOperationRegistry } from "../../../workflows/operation-recovery/context.ts";
+import { useBlockingOperationRecovery } from "../../../workflows/operation-recovery/useBlockingOperationRecovery.ts";
 import type { AlbumChain, AlbumFilter, AlbumNode } from "../types.ts";
 import { AlbumChainCard } from "./AlbumChainCard.tsx";
 import { AlbumNodeDialog } from "./AlbumNodeDialog.tsx";
@@ -36,7 +34,7 @@ export function AlbumView(): ReactNode {
   const navigate = useNavigate();
   const back = useCallback(() => navigate(-1), [navigate]);
   useTelegramBackButton(true, back);
-  const { isBlocked, run } = useOperationRegistry();
+  const { isBlocked, preload, run } = useOperationRegistry();
   const blocked = isBlocked("album.claim");
   const [filter, setFilter] = useState<AlbumFilter>("all");
   const [claimingChainId, setClaimingChainId] = useState<string | null>(null);
@@ -147,6 +145,7 @@ export function AlbumView(): ReactNode {
                     chain={chain}
                     claimBlocked={blocked}
                     claiming={claimingChainId === chain.chain_id}
+                    onPrepareClaim={() => preload("album.claim")}
                     onClaim={claim}
                     onSelectNode={(selectedChain, node, trigger) => {
                       dialogTrigger.current = trigger;

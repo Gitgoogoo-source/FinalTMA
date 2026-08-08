@@ -1,0 +1,20 @@
+.app-shell.operation-dialog-backdrop.result-sheet-backdrop {
+  place-items: end center;
+  padding: max(var(--safe-top), 10px) 0 0;
+  overflow: hidden;
+  background: rgba(29, 35, 39, 0.58);
+  backdrop-filter: blur(11px) saturate(90%);
+}
+.app-shell .result-sheet-modal {
+  position: relative;
+  width: min(100%, var(--app-width));
+  max-height: none;
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  border-bottom: 0;
+  border-radius: 34px 34px 0 0;
+  color: #43311f;
+  background: linear-gradient(180deg, #fff6e5 0%, #fffdf7 42%, #fffefa 100%);
+  box-shadow:
+    0 -24px 70px rgba(31, 29, 22, 0.24),
+    inset 0 1px 0 #fff;
+}

@@ -1,0 +1,1219 @@
+.box-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+.box-card {
+  min-height: 370px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.box-card .catalog-image,
+.box-card .image-missing {
+  height: 160px;
+}
+.box-card.rare {
+  background: linear-gradient(160deg, rgba(42, 130, 255, 0.15), var(--surface));
+}
+.box-card.legendary {
+  background: linear-gradient(160deg, rgba(255, 164, 54, 0.17), var(--surface));
+}
+.price-row,
+.pity,
+.button-row,
+.chain-head,
+.panel-title,
+.progress-line,
+.inline-form {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.price-row span,
+.pity {
+  color: var(--muted);
+  font-size: 12px;
+}
+.button-row .button {
+  flex: 1;
+}
+/* Gacha */
+.app-shell .gacha-page {
+  padding-top: 0;
+}
+.app-shell .gacha-heading {
+  width: 1px;
+  height: 1px;
+  min-height: 0;
+  position: absolute;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.app-shell .vip-daily-benefits {
+  width: 92px;
+  height: 52px;
+  min-width: 92px;
+  flex: 0 0 92px;
+  position: relative;
+  z-index: 3;
+  pointer-events: none;
+}
+.app-shell .vip-benefit-grid {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-columns: 44px 44px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0;
+}
+.app-shell .vip-benefit-grid article {
+  min-width: 0;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  pointer-events: none;
+}
+.app-shell .vip-benefit-grid .vip-benefit-tile {
+  --benefit-glow: rgba(75, 177, 237, 0.28);
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  position: relative;
+  display: block;
+  padding: 0;
+  border: 0;
+  border-radius: 15px;
+  color: #fff;
+  background: transparent;
+  box-shadow: none;
+  isolation: isolate;
+  pointer-events: auto;
+}
+.app-shell .vip-benefit-grid .vip-benefit-tile.free-box {
+  --benefit-glow: rgba(255, 147, 64, 0.3);
+}
+.app-shell .vip-benefit-grid .vip-benefit-tile:disabled {
+  opacity: 1;
+}
+.app-shell .vip-benefit-grid .vip-benefit-tile:not(:disabled):active {
+  transform: scale(0.93);
+}
+.app-shell .vip-benefit-tile > img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+  filter: drop-shadow(0 9px 11px var(--benefit-glow));
+  transition:
+    filter 180ms ease,
+    opacity 180ms ease,
+    transform 180ms ease;
+}
+.app-shell .vip-benefit-tile.claimable > img {
+  animation: vip-benefit-ready 2.8s ease-in-out infinite;
+}
+.app-shell .vip-benefit-tile.claimed > img,
+.app-shell .vip-benefit-tile.locked > img,
+.app-shell .vip-benefit-tile.loading > img {
+  opacity: 0.62;
+  filter: grayscale(0.28) saturate(0.7)
+    drop-shadow(0 5px 8px rgba(63, 67, 66, 0.12));
+}
+.app-shell .vip-benefit-tile.locked > img {
+  opacity: 0.48;
+  filter: grayscale(0.68) saturate(0.38)
+    drop-shadow(0 4px 7px rgba(63, 67, 66, 0.1));
+}
+.app-shell .vip-benefit-tile.retry > img {
+  opacity: 0.72;
+  filter: grayscale(0.18) saturate(0.64)
+    drop-shadow(0 5px 8px rgba(63, 67, 66, 0.12));
+}
+.app-shell .vip-benefit-tile .benefit-state {
+  width: 19px;
+  height: 19px;
+  position: absolute;
+  inset: -1px -1px auto auto;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  border-radius: 50%;
+  color: #fff;
+  background: rgba(53, 62, 62, 0.52);
+  box-shadow:
+    0 7px 16px rgba(48, 54, 53, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.68);
+  backdrop-filter: blur(9px) saturate(130%);
+  -webkit-backdrop-filter: blur(9px) saturate(130%);
+  transform: none;
+}
+.app-shell .vip-benefit-tile .benefit-state svg {
+  width: 11px;
+  height: 11px;
+  stroke-width: 2.7;
+}
+.app-shell .vip-benefit-tile.claimed .benefit-state {
+  background: rgba(73, 170, 107, 0.68);
+}
+.app-shell .vip-benefit-tile.loading .benefit-state {
+  color: var(--benefit-glow);
+  background: rgba(255, 255, 255, 0.8);
+}
+.app-shell .vip-benefit-tile.retry .benefit-state {
+  color: #d67728;
+  background: rgba(255, 248, 238, 0.84);
+}
+.app-shell .vip-benefit-status-text {
+  width: 1px;
+  height: 1px;
+  position: absolute;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+@keyframes vip-benefit-ready {
+  0%,
+  100% {
+    filter: drop-shadow(0 8px 10px var(--benefit-glow));
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    filter: drop-shadow(0 11px 16px var(--benefit-glow));
+    transform: translateY(-1px) scale(1.025);
+  }
+}
+.app-shell .gacha-showcase {
+  display: grid;
+  gap: 0;
+}
+.app-shell .gacha-hero {
+  min-height: 240px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  position: relative;
+  margin: 0 0 -6px;
+  isolation: isolate;
+}
+.app-shell .gacha-stage {
+  --gacha-glow: rgba(255, 177, 65, 0.25);
+  min-width: 0;
+  height: 240px;
+  display: grid;
+  place-items: center;
+  position: relative;
+  overflow: visible;
+}
+.app-shell .gacha-stage.rare {
+  --gacha-glow: rgba(85, 162, 89, 0.21);
+}
+.app-shell .gacha-stage.legendary {
+  --gacha-glow: rgba(255, 123, 45, 0.32);
+}
+.app-shell .gacha-stage .stage-glow {
+  width: min(64vw, 248px);
+  height: min(64vw, 248px);
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--gacha-glow), transparent 68%);
+  filter: blur(4px);
+}
+.app-shell .gacha-stage::after {
+  content: "";
+  position: absolute;
+  left: 17%;
+  right: 17%;
+  bottom: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(54, 49, 44, 0.15);
+  filter: blur(12px);
+}
+.app-shell .gacha-stage .catalog-image,
+.app-shell .gacha-stage .image-missing {
+  width: min(66vw, 258px);
+  max-width: 100%;
+  height: min(66vw, 258px);
+  z-index: 1;
+  filter: drop-shadow(0 23px 24px rgba(74, 55, 38, 0.19));
+  animation: egg-float 3.8s ease-in-out infinite;
+}
+.app-shell .gacha-stage.rare .catalog-image {
+  width: min(75vw, 292px);
+  height: min(64vw, 250px);
+  border-radius: 32px;
+}
+.app-shell .gacha-tier-selector {
+  width: min(100%, 326px);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 0 auto 10px;
+  z-index: 2;
+}
+.app-shell .gacha-tier-selector button {
+  min-width: 0;
+  height: 102px;
+  display: grid;
+  grid-template-rows: 50px auto auto 10px;
+  justify-items: center;
+  align-items: center;
+  gap: 0;
+  padding: 5px 5px 4px;
+  border: 1px solid rgba(228, 224, 216, 0.9);
+  border-radius: 18px;
+  color: var(--sprout-ink);
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow:
+    0 9px 22px rgba(54, 45, 38, 0.065),
+    inset 0 1px 0 #fff;
+  backdrop-filter: blur(18px) saturate(145%);
+}
+.app-shell .gacha-tier-selector button.active {
+  border-color: rgba(255, 122, 0, 0.72);
+  box-shadow:
+    0 12px 25px rgba(255, 122, 0, 0.13),
+    inset 0 1px 0 #fff;
+}
+.app-shell .gacha-tier-selector .tier-art {
+  width: 50px;
+  height: 50px;
+}
+.app-shell .gacha-tier-selector strong {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-shell .gacha-tier-selector small {
+  color: #84908b;
+  font-size: 8px;
+  font-weight: 700;
+}
+.app-shell .gacha-tier-selector i {
+  width: 13px;
+  height: 13px;
+  border: 1.5px solid rgba(54, 67, 75, 0.58);
+  border-radius: 50%;
+}
+.app-shell .gacha-tier-selector button.active i {
+  border: 3px solid #fff;
+  background: var(--sprout-orange);
+  box-shadow: 0 0 0 1.5px var(--sprout-orange);
+}
+.app-shell .gacha-details {
+  display: grid;
+  gap: 7px;
+  padding: 4px 2px 0;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+.app-shell .gacha-reward-preview {
+  display: grid;
+  position: relative;
+  padding: 0 54px;
+}
+.app-shell .gacha-pity-row {
+  position: relative;
+}
+.app-shell .gacha-rarity-previews {
+  display: grid;
+  gap: 7px;
+}
+.app-shell .gacha-rarity-previews article {
+  min-width: 0;
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  color: var(--sprout-ink);
+}
+.app-shell .gacha-rarity-previews .preview-art {
+  width: 46px;
+  height: 46px;
+  padding: 2px;
+  border: 1px solid rgba(223, 218, 207, 0.72);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow:
+    0 8px 16px rgba(54, 45, 38, 0.1),
+    inset 0 1px 0 #fff;
+  overflow: hidden;
+}
+.app-shell .gacha-rarity-previews .catalog-image,
+.app-shell .gacha-rarity-previews .image-missing {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: center top;
+}
+.app-shell .gacha-rarity-previews article > strong {
+  font-size: 7px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.app-shell .gacha-rarity-previews article > strong.rarity-common {
+  color: #769a68;
+}
+.app-shell .gacha-rarity-previews article > strong.rarity-rare {
+  color: #4d8df5;
+}
+.app-shell .gacha-rarity-previews article > strong.rarity-epic {
+  color: #8e63e6;
+}
+.app-shell .gacha-rarity-previews article > strong.rarity-legendary {
+  color: #ff7a00;
+}
+.app-shell .gacha-rarity-previews article > strong.rarity-mythic {
+  color: #ec577a;
+}
+.app-shell .pity-capsule {
+  min-height: 50px;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) 34px;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border: 1px solid rgba(232, 228, 219, 0.7);
+  border-radius: 26px;
+  color: #67736d;
+  background: rgba(255, 255, 255, 0.69);
+  font-size: 9px;
+  box-shadow:
+    0 9px 22px rgba(54, 45, 38, 0.05),
+    inset 0 1px 0 #fff;
+}
+.app-shell .pity-ring {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: conic-gradient(
+    var(--sprout-orange) var(--pity-progress),
+    rgba(225, 220, 211, 0.72) 0
+  );
+}
+.app-shell .pity-ring i {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #68736e;
+  background: rgba(255, 255, 255, 0.94);
+  font-size: 7px;
+  font-style: normal;
+  font-weight: 850;
+  font-variant-numeric: tabular-nums;
+}
+.app-shell .pity-copy {
+  display: grid;
+  gap: 2px;
+}
+.app-shell .pity-progress {
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+.app-shell .pity-capsule .pity-target {
+  margin: 0;
+  color: var(--sprout-green);
+  font-size: 9px;
+}
+.app-shell .pity-placeholder,
+.app-shell .pity-status {
+  color: #8a948f;
+  font-weight: 800;
+}
+.app-shell .pity-error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #b34a3c;
+  font-weight: 800;
+}
+.app-shell .pity-error button {
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: none;
+  font: inherit;
+  text-decoration: underline;
+}
+.app-shell .pity-capsule svg {
+  width: 17px;
+  color: var(--sprout-orange);
+}
+.app-shell .pity-gift {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(232, 228, 219, 0.72);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.76);
+}
+.app-shell .gacha-rule-failure {
+  min-height: 68px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid rgba(222, 76, 96, 0.16);
+  border-radius: 15px;
+  color: #ad3e51;
+  background: rgba(222, 76, 96, 0.06);
+  font-size: 10px;
+}
+.app-shell .gacha-rule-failure .button {
+  min-height: 36px;
+  flex: 0 0 auto;
+  padding: 0 12px;
+}
+.app-shell .gacha-actions {
+  display: grid;
+  grid-template-columns: 1fr 1.05fr;
+  gap: 12px;
+  margin-top: 8px;
+}
+.app-shell .gacha-actions .button {
+  min-height: 56px;
+  position: relative;
+  border-radius: 30px;
+}
+.app-shell .gacha-actions .single-draw {
+  border-color: rgba(54, 67, 75, 0.1);
+  color: var(--sprout-ink);
+  background: linear-gradient(180deg, #fff, #f6f5f1);
+  box-shadow: 0 10px 22px rgba(54, 45, 38, 0.08);
+}
+.app-shell .gacha-actions .button > span {
+  display: grid;
+  gap: 1px;
+  font-size: 13px;
+}
+.app-shell .gacha-actions .button small {
+  color: inherit;
+  font-size: 8px;
+  font-weight: 700;
+  opacity: 0.72;
+}
+.app-shell .gacha-actions .draw-discount {
+  position: absolute;
+  top: -9px;
+  right: 10px;
+  height: 21px;
+  padding: 0 8px;
+  border: 1px solid rgba(255, 255, 255, 0.84);
+  border-radius: 999px;
+  color: var(--sprout-orange);
+  background: rgba(255, 255, 255, 0.93);
+  box-shadow: 0 6px 12px rgba(255, 122, 0, 0.13);
+  font-size: 8px;
+  line-height: 20px;
+}
+
+.app-shell .gacha-page {
+  min-height: calc(
+    var(--tg-viewport-stable-height, 100dvh) - var(--shell-top-inset) -
+      var(--safe-bottom) - var(--size-topbar) - 82px
+  );
+  padding-inline: 14px;
+}
+.app-shell .gacha-hero {
+  min-height: clamp(200px, 55.81vw, 240px);
+  margin: 0;
+}
+.app-shell .gacha-stage {
+  height: clamp(200px, 55.81vw, 240px);
+}
+.app-shell .gacha-stage .stage-glow {
+  width: min(60vw, 238px);
+  height: min(60vw, 238px);
+  opacity: 0.6;
+}
+.app-shell .gacha-stage::after {
+  left: 23%;
+  right: 23%;
+  bottom: 13px;
+  height: 13px;
+  opacity: 0.75;
+}
+.app-shell .gacha-stage .catalog-image,
+.app-shell .gacha-stage.rare .catalog-image,
+.app-shell .gacha-stage .image-missing {
+  width: min(66vw, 252px);
+  height: clamp(184px, 50.7vw, 218px);
+  border-radius: 0;
+  filter: drop-shadow(0 18px 21px rgba(74, 55, 38, 0.16));
+  animation: none;
+}
+.app-shell .gacha-stage .catalog-image {
+  transform: translateY(clamp(-10px, -2.33vw, -7px));
+}
+.app-shell .gacha-tier-selector {
+  width: min(100%, 332px);
+  gap: 10px;
+  margin: 1px auto 13px;
+}
+.app-shell .gacha-tier-selector button {
+  height: clamp(106px, 28.84vw, 124px);
+  grid-template-rows: clamp(56px, 15.81vw, 68px) auto auto 10px;
+  padding: 5px 6px 4px;
+  border-color: rgba(225, 219, 210, 0.78);
+  border-radius: 19px;
+  background: rgba(255, 255, 255, 0.74);
+}
+.app-shell .gacha-tier-selector button.active {
+  border-color: #ff8a25;
+  box-shadow:
+    0 12px 25px rgba(255, 122, 0, 0.12),
+    inset 0 1px 0 #fff;
+}
+.app-shell .gacha-tier-selector .tier-art {
+  width: clamp(56px, 15.35vw, 66px);
+  height: clamp(56px, 15.35vw, 66px);
+}
+.app-shell .gacha-tier-selector strong {
+  font-size: 11px;
+}
+.app-shell .gacha-tier-selector small {
+  font-size: 8px;
+}
+.app-shell .gacha-tier-selector i {
+  width: 11px;
+  height: 11px;
+}
+.app-shell .gacha-details {
+  gap: clamp(14px, 3.95vw, 17px);
+}
+.app-shell .gacha-reward-preview {
+  padding-inline: 3px;
+}
+.app-shell .gacha-rarity-previews {
+  gap: 8px;
+}
+.app-shell .gacha-rarity-previews .preview-art {
+  width: clamp(46px, 11.63vw, 50px);
+  height: clamp(46px, 11.63vw, 50px);
+}
+.app-shell .gacha-rarity-previews article > strong {
+  font-size: 8px;
+}
+.app-shell .pity-capsule {
+  min-height: clamp(52px, 13.95vw, 60px);
+  grid-template-columns: 46px minmax(0, 1fr) 38px;
+  gap: 9px;
+  padding: 5px 7px;
+  border-radius: 29px;
+}
+.app-shell .pity-ring {
+  width: 46px;
+  height: 46px;
+}
+.app-shell .pity-ring i {
+  width: 35px;
+  height: 35px;
+  font-size: 8px;
+}
+.app-shell .pity-capsule .pity-target {
+  color: #36434b;
+  font-size: 11px;
+}
+.app-shell .pity-gift {
+  width: 38px;
+  height: 38px;
+}
+.app-shell .gacha-actions {
+  grid-template-columns: 1fr 1.08fr;
+  gap: 14px;
+  margin-top: clamp(16px, 5.12vw, 22px);
+}
+.app-shell .gacha-actions .button {
+  min-height: clamp(60px, 17.67vw, 76px);
+  border-radius: 38px;
+}
+.app-shell .gacha-actions .button > span {
+  font-size: clamp(17px, 4.42vw, 19px);
+  font-weight: 800;
+}
+.app-shell .gacha-actions .button small {
+  font-size: 10px;
+}
+.app-shell .gacha-actions .ten-draw {
+  background: #ff8121;
+  box-shadow:
+    0 13px 25px rgba(255, 122, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+.app-shell .gacha-actions .draw-discount {
+  top: -10px;
+  right: 12px;
+  height: 23px;
+  padding-inline: 9px;
+  font-size: 9px;
+  line-height: 22px;
+}
+@media (max-width: 720px) {
+  .app-shell .gacha-page {
+    padding-bottom: 4px;
+  }
+  .app-shell .gacha-showcase {
+    min-height: calc(
+      var(--tg-viewport-stable-height, 100dvh) - var(--shell-top-inset) -
+        var(--safe-bottom) - var(--size-topbar) - 106px
+    );
+    align-content: space-between;
+  }
+  .app-shell .gacha-hero,
+  .app-shell .gacha-stage {
+    min-height: clamp(150px, calc(35.43dvh - 79px), 240px);
+    height: clamp(150px, calc(35.43dvh - 79px), 240px);
+  }
+  .app-shell .gacha-stage .stage-glow {
+    width: clamp(156px, calc(32.28dvh - 53px), 238px);
+    height: clamp(156px, calc(32.28dvh - 53px), 238px);
+  }
+  .app-shell .gacha-stage::after {
+    bottom: clamp(5px, 1.4dvh, 13px);
+    height: clamp(10px, 1.7dvh, 13px);
+  }
+  .app-shell .gacha-stage .catalog-image,
+  .app-shell .gacha-stage.rare .catalog-image,
+  .app-shell .gacha-stage .image-missing {
+    width: min(66vw, clamp(192px, calc(23.62dvh + 39px), 252px));
+    height: clamp(144px, calc(29.13dvh - 44px), 218px);
+    transform: translateY(clamp(-7px, -0.5dvh, -2px));
+  }
+  .app-shell .gacha-tier-selector {
+    width: min(100%, 332px);
+    gap: clamp(7px, 1dvh, 10px);
+    margin: 0 auto clamp(6px, 1.2dvh, 11px);
+  }
+  .app-shell .gacha-tier-selector button {
+    height: clamp(76px, calc(17.32dvh - 36px), 120px);
+    grid-template-rows:
+      clamp(38px, calc(10.24dvh - 28px), 64px)
+      auto auto 9px;
+    padding: clamp(3px, 0.6dvh, 5px) 6px clamp(2px, 0.5dvh, 4px);
+    border-radius: clamp(15px, 2.1dvh, 19px);
+  }
+  .app-shell .gacha-tier-selector .tier-art {
+    width: clamp(38px, calc(10.24dvh - 28px), 64px);
+    height: clamp(38px, calc(10.24dvh - 28px), 64px);
+  }
+  .app-shell .gacha-tier-selector strong {
+    font-size: clamp(10px, 1.2dvh, 11px);
+  }
+  .app-shell .gacha-tier-selector small {
+    font-size: clamp(7px, 0.9dvh, 8px);
+  }
+  .app-shell .gacha-tier-selector i {
+    width: clamp(9px, 1.2dvh, 11px);
+    height: clamp(9px, 1.2dvh, 11px);
+  }
+  .app-shell .gacha-details {
+    gap: clamp(6px, 1.2dvh, 11px);
+  }
+  .app-shell .gacha-rarity-previews {
+    gap: clamp(6px, 0.9dvh, 8px);
+  }
+  .app-shell .gacha-rarity-previews article {
+    gap: clamp(1px, 0.4dvh, 3px);
+  }
+  .app-shell .gacha-rarity-previews .preview-art {
+    width: clamp(34px, calc(5.51dvh - 2px), 48px);
+    height: clamp(34px, calc(5.51dvh - 2px), 48px);
+  }
+  .app-shell .gacha-rarity-previews article > strong {
+    font-size: clamp(7px, 0.9dvh, 8px);
+  }
+  .app-shell .pity-capsule {
+    min-height: clamp(42px, calc(6.3dvh + 1px), 58px);
+    grid-template-columns:
+      clamp(34px, calc(4.72dvh + 4px), 46px)
+      minmax(0, 1fr)
+      clamp(30px, calc(4.72dvh), 38px);
+    gap: clamp(6px, 1dvh, 9px);
+    padding: clamp(3px, 0.6dvh, 5px) clamp(5px, 0.8dvh, 7px);
+    border-radius: clamp(22px, 3.2dvh, 29px);
+  }
+  .app-shell .pity-ring {
+    width: clamp(34px, calc(4.72dvh + 4px), 46px);
+    height: clamp(34px, calc(4.72dvh + 4px), 46px);
+  }
+  .app-shell .pity-ring i {
+    width: clamp(26px, calc(3.54dvh + 3px), 35px);
+    height: clamp(26px, calc(3.54dvh + 3px), 35px);
+    font-size: clamp(7px, 0.9dvh, 8px);
+  }
+  .app-shell .pity-capsule .pity-target {
+    font-size: clamp(9px, 1.25dvh, 11px);
+  }
+  .app-shell .pity-gift {
+    width: clamp(30px, calc(4.72dvh), 38px);
+    height: clamp(30px, calc(4.72dvh), 38px);
+  }
+  .app-shell .gacha-actions {
+    gap: clamp(10px, 1.6dvh, 14px);
+    margin-top: clamp(7px, 1.7dvh, 15px);
+  }
+  .app-shell .gacha-actions .button {
+    min-height: clamp(48px, calc(8.66dvh - 8px), 70px);
+    border-radius: clamp(26px, 4.2dvh, 35px);
+  }
+  .app-shell .gacha-actions .button > span {
+    font-size: clamp(14px, calc(1.57dvh + 4px), 18px);
+  }
+  .app-shell .gacha-actions .button small {
+    font-size: clamp(8px, 1.1dvh, 10px);
+  }
+  .app-shell .gacha-actions .draw-discount {
+    top: clamp(-10px, -1.1dvh, -7px);
+    height: clamp(19px, 2.7dvh, 23px);
+    padding-inline: clamp(7px, 1dvh, 9px);
+    font-size: clamp(8px, 1dvh, 9px);
+    line-height: clamp(18px, 2.6dvh, 22px);
+  }
+}
+
+@keyframes egg-float {
+  0%,
+  100% {
+    transform: translateY(-3px);
+  }
+  50% {
+    transform: translateY(4px);
+  }
+}
+
+.app-shell .gacha-page {
+  width: min(100%, 402px);
+  min-height: 0;
+  margin-inline: auto;
+  padding: 0 14px 24px;
+}
+
+.app-shell .gacha-showcase {
+  min-height: 0;
+  position: relative;
+  display: block;
+}
+
+.app-shell .gacha-hero,
+.app-shell .gacha-stage {
+  min-height: 336px;
+  height: 336px;
+}
+
+.app-shell .gacha-hero {
+  margin: 0;
+}
+
+.app-shell .gacha-stage {
+  align-items: end;
+  padding-top: 0;
+}
+
+.app-shell .gacha-stage .stage-glow {
+  display: none;
+}
+
+.app-shell .gacha-stage-art {
+  width: 100%;
+  height: 100%;
+  grid-area: 1 / 1;
+  display: grid;
+  place-items: end center;
+  z-index: 1;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.app-shell .gacha-stage-art.active {
+  opacity: 1;
+}
+
+.app-shell .gacha-stage-art:not(.active) .catalog-image {
+  animation: none !important;
+}
+
+.app-shell .gacha-stage::after {
+  left: 50%;
+  right: auto;
+  bottom: 34px;
+  width: min(222px, 64vw);
+  height: 29px;
+  opacity: 1;
+  filter: blur(7px);
+  transform: translateX(-50%);
+}
+
+.app-shell .gacha-stage .catalog-image,
+.app-shell .gacha-stage.rare .catalog-image,
+.app-shell .gacha-stage .image-missing {
+  width: min(74vw, 284px);
+  max-width: calc(100% - 20px);
+  height: 276px;
+  align-self: end;
+  margin-bottom: 18px;
+  border-radius: 0;
+  object-position: center bottom;
+  filter: drop-shadow(0 28px 28px rgba(54, 67, 75, 0.18));
+  transform-origin: center bottom;
+  animation: gacha-showcase-float 2.4s ease-in-out infinite !important;
+}
+
+.app-shell .gacha-tier-selector {
+  width: 232px;
+  max-width: 100%;
+  grid-template-columns: repeat(3, 70px);
+  justify-content: center;
+  gap: 11px;
+  margin: 0 auto;
+}
+
+.app-shell .gacha-tier-selector:has(button:only-child) button {
+  grid-column: 2;
+}
+
+.app-shell .gacha-tier-selector:has(button:nth-child(2):last-child) {
+  grid-template-columns: repeat(2, 70px);
+}
+
+.app-shell .gacha-tier-selector button {
+  width: 70px;
+  height: 91px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 3px;
+  padding: 7px 5px 19px;
+  border-radius: 14px;
+}
+
+.app-shell .gacha-tier-selector .tier-art {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+}
+
+.app-shell .gacha-tier-selector strong {
+  font-size: 12px;
+  line-height: 15px;
+}
+
+.app-shell .gacha-tier-selector i {
+  width: 12px;
+  height: 12px;
+  position: absolute;
+  bottom: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+@keyframes gacha-showcase-float {
+  0%,
+  100% {
+    transform: translateY(-5px) scale(1.2);
+  }
+  50% {
+    transform: translateY(5px) scale(1.2);
+  }
+}
+
+.app-shell .gacha-details {
+  height: 153px;
+  display: grid;
+  grid-template-rows: 72px 65px;
+  align-content: start;
+  gap: 0;
+  padding: 0;
+}
+
+.app-shell .gacha-reward-preview {
+  height: 72px;
+  display: grid;
+  margin-top: 0;
+  padding: 0 54px;
+}
+
+.app-shell .gacha-rarity-previews {
+  height: 54px;
+  align-self: end;
+  justify-content: stretch;
+  gap: 6px;
+}
+
+.app-shell .gacha-rarity-previews.normal-tier {
+  width: 84%;
+  justify-self: center;
+}
+
+.app-shell .gacha-rarity-previews article {
+  width: auto;
+  height: 54px;
+  gap: 3px;
+}
+
+.app-shell .gacha-rarity-previews .preview-art {
+  width: min(100%, 44px);
+  height: auto;
+  aspect-ratio: 1;
+  flex: 0 0 auto;
+}
+
+.app-shell .gacha-rarity-previews article > strong {
+  font-size: 8px;
+  line-height: 10px;
+}
+
+.app-shell .gacha-pity-row {
+  width: 100%;
+  height: 65px;
+  display: grid;
+  align-items: end;
+  justify-items: center;
+}
+
+.app-shell .pity-capsule {
+  width: clamp(218px, 64vw, 246px);
+  max-width: 100%;
+  min-height: 0;
+  height: 52px;
+  grid-template-columns: 44px minmax(0, 1fr) 38px;
+  gap: 5px;
+  justify-self: center;
+  margin: 0 auto;
+  padding: 3px 4px;
+  border-radius: 27px;
+}
+
+.app-shell .pity-ring {
+  width: 44px;
+  height: 44px;
+  box-shadow: 0 3px 9px rgba(255, 122, 0, 0.14);
+}
+
+.app-shell .pity-ring i {
+  width: 32px;
+  height: 32px;
+  font-size: 8px;
+}
+
+.app-shell .pity-copy {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.app-shell .pity-capsule .pity-target {
+  font-size: 10px;
+  line-height: 12px;
+  white-space: nowrap;
+}
+
+.app-shell .pity-gift {
+  width: 38px;
+  height: 38px;
+}
+
+.app-shell .pity-capsule:has(.pity-error) {
+  width: clamp(218px, 64vw, 246px);
+}
+
+.app-shell .gacha-details:has(.gacha-rule-failure) {
+  height: 153px;
+  grid-template-rows: 72px 65px;
+}
+
+.app-shell .gacha-pity-row .gacha-rule-failure {
+  width: clamp(218px, 64vw, 246px);
+  min-height: 52px;
+  height: 52px;
+  gap: 4px;
+  padding: 5px 6px;
+  font-size: 8px;
+}
+
+.app-shell .gacha-pity-row .gacha-rule-failure .button {
+  min-height: 32px;
+  padding-inline: 7px;
+}
+
+.app-shell .gacha-actions {
+  height: 54px;
+  grid-template-columns: 1fr 1.05fr;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.app-shell .gacha-actions .button {
+  min-height: 54px;
+  height: 54px;
+  padding: 5px 12px;
+  border-radius: 28px;
+  font-size: 18px;
+  line-height: 21px;
+}
+
+.app-shell .gacha-actions .button > span {
+  gap: 1px;
+  font-size: 18px;
+  line-height: 21px;
+}
+
+.app-shell .gacha-actions .button small {
+  font-size: 14px;
+  line-height: 16px;
+}
+
+.app-shell .gacha-actions .draw-discount {
+  top: -11px;
+  right: 14px;
+  height: 25px;
+  padding: 0 10px;
+  font-size: 13px;
+  line-height: 25px;
+}
+
+@media (max-width: 389px) {
+  .app-shell .topbar {
+    gap: 4px;
+    padding-inline: 8px;
+  }
+
+  .app-shell .vip-daily-benefits {
+    width: 80px;
+    min-width: 80px;
+    flex-basis: 80px;
+  }
+
+  .app-shell .vip-benefit-grid {
+    grid-template-columns: 38px 38px;
+  }
+
+  .app-shell .vip-benefit-grid .vip-benefit-tile {
+    width: 38px;
+    height: 38px;
+    min-height: 38px;
+    border-radius: 13px;
+  }
+
+  .app-shell .asset-actions {
+    gap: 4px;
+  }
+
+  .app-shell .asset-actions .asset-pill {
+    width: 76px;
+    flex-basis: 76px;
+  }
+
+  .app-shell .asset-actions .icon-action,
+  .app-shell .asset-actions .summary-retry {
+    width: 36px;
+    height: 36px;
+    flex-basis: 36px;
+  }
+}
+
+@media (max-width: 359px) {
+  .app-shell {
+    --size-avatar: 44px;
+  }
+
+  .app-shell .topbar {
+    padding-inline: 8px;
+  }
+
+  .app-shell .identity,
+  .app-shell .avatar {
+    width: 44px;
+    max-width: 44px;
+    height: 44px;
+    flex-basis: 44px;
+  }
+
+  .app-shell .asset-actions {
+    gap: 4px;
+  }
+
+  .app-shell .vip-daily-benefits {
+    width: 64px;
+    height: 44px;
+    min-width: 64px;
+    flex-basis: 64px;
+  }
+
+  .app-shell .vip-benefit-grid {
+    grid-template-columns: 32px 32px;
+  }
+
+  .app-shell .vip-benefit-grid article {
+    height: 44px;
+  }
+
+  .app-shell .vip-benefit-grid .vip-benefit-tile {
+    width: 32px;
+    height: 32px;
+    min-height: 32px;
+    border-radius: 11px;
+  }
+
+  .app-shell .vip-benefit-tile .benefit-state {
+    width: 15px;
+    height: 15px;
+  }
+
+  .app-shell .vip-benefit-tile .benefit-state svg {
+    width: 9px;
+    height: 9px;
+  }
+
+  .app-shell .asset-actions .wallet-action {
+    width: 42px;
+    flex-basis: 42px;
+    padding-inline: 3px;
+  }
+
+  .app-shell .asset-actions .asset-pill {
+    width: 72px;
+    flex-basis: 72px;
+    padding-inline: 6px;
+  }
+
+  .app-shell .asset-actions .icon-action,
+  .app-shell .asset-actions .summary-retry {
+    width: 34px;
+    height: 34px;
+    flex-basis: 34px;
+  }
+
+  .app-shell .gacha-reward-preview {
+    padding-inline: 46px;
+  }
+
+  .app-shell .gacha-actions {
+    gap: 10px;
+  }
+}

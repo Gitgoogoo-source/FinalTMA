@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { routeById, type RouteOutput } from "@pokepets/api-contracts/app";
+import type { RouteOutput } from "@pokepets/api-contracts/app-client";
 
 import { haptic, selectionHaptic } from "../../platform/telegram/index.ts";
 import { Button, CatalogImage } from "../../shared/ui/index.tsx";
@@ -27,14 +27,13 @@ export function DecompositionOperationDialog({
 }: {
   operationId: string;
   phase: OperationPhase;
-  result: unknown;
+  result: DecompositionResult | null;
   errorCode: string | null;
   presentation: OperationPresentation | null;
   onRecover(): void;
   onCollect(): void;
 }): ReactNode {
-  const parsed = routeById("inventory.decompose").output.safeParse(result);
-  const confirmedResult = parsed.success ? parsed.data : null;
+  const confirmedResult = result;
   const [ceremonyComplete, setCeremonyComplete] = useState(false);
   const announcedOutcome = useRef<string | null>(null);
 

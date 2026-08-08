@@ -1,4 +1,4 @@
-import type { ErrorCode } from "../common/errors.ts";
+import type { ErrorCode } from "../common/error-codes.ts";
 import {
   assertContractRegistry,
   findRouteByPathIn,
@@ -14,14 +14,12 @@ import { gachaRoutes } from "../domains/gacha/routes.ts";
 import { identityRoutes } from "../domains/identity/routes.ts";
 import { inventoryRoutes } from "../domains/inventory/routes.ts";
 import { marketRoutes } from "../domains/market/routes.ts";
-import { mintRoutes } from "../domains/mint/routes.ts";
 import { operationRoutes } from "../domains/operations/routes.ts";
 import { paymentSupportRoutes } from "../domains/payment-support/routes.ts";
 import { referralRoutes } from "../domains/referral/routes.ts";
 import { taskRoutes } from "../domains/tasks/routes.ts";
 import { topupRoutes } from "../domains/topup/routes.ts";
 import { vipRoutes } from "../domains/vip/routes.ts";
-import { walletRoutes } from "../domains/wallet/routes.ts";
 import { wheelRoutes } from "../domains/wheel/routes.ts";
 
 export const activeRoutes = [
@@ -42,13 +40,12 @@ export const activeRoutes = [
   ...paymentSupportRoutes,
 ] as const;
 
-export const dormantRoutes = [...walletRoutes, ...mintRoutes] as const;
-export const routes = [...activeRoutes, ...dormantRoutes] as const;
+export const routes = activeRoutes;
 
 assertContractRegistry(routes);
 assertContractRegistry(activeRoutes);
 
-export type AppRoute = (typeof routes)[number];
+export type AppRoute = (typeof activeRoutes)[number];
 export type RouteId = AppRoute["id"];
 export type RouteById<Id extends RouteId> = Extract<AppRoute, { id: Id }>;
 export type RecoverableRoute = Exclude<

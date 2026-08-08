@@ -18,7 +18,7 @@ import {
   CollectionDetailShowcase,
   PageState,
 } from "../../../shared/ui/index.tsx";
-import { useNewMarkers } from "../../../workflows/new-markers/index.ts";
+import { useNewMarkers } from "../../../workflows/new-markers/context.ts";
 import { getCollectionSkills } from "../collectionSkills.ts";
 import type { InventoryItem } from "../types.ts";
 

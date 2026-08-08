@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { errorCodes } from "./errors.ts";
+import { errorCodes } from "./error-codes.ts";
 import {
   accountStatusSchema,
   nonNegativeIntegerSchema,

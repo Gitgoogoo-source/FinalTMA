@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { errorCodes } from "./errors.ts";
+import { errorCodes } from "./error-codes.ts";
 
 export const uuidSchema = z.string().uuid();
 export const identifierSchema = z.string().trim().min(1).max(128);

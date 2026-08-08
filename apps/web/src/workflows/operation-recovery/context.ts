@@ -4,7 +4,7 @@ import type {
   RecoverableOperationSummary,
   RouteInput,
   RouteOutput,
-} from "@pokepets/api-contracts/app";
+} from "@pokepets/api-contracts/app-client";
 
 export type OperationPhase =
   | "confirming"
@@ -18,6 +18,8 @@ export type OperationPresentation = {
   name: string;
   imagePath: string;
 };
+
+export type GachaHatchTier = "normal" | "rare" | "legendary";
 
 export type OperationRegistryValue = {
   run<Id extends RecoverableRouteId>(
@@ -33,6 +35,7 @@ export type OperationRegistryValue = {
   ): Promise<RouteOutput<Id> | null>;
   isBlocked(routeId: RecoverableRouteId): boolean;
   present(routeId: RecoverableRouteId): boolean;
+  preload(routeId: RecoverableRouteId): void;
   navigationLocked: boolean;
   recoveryQueueActive: boolean;
   wheelPresentationEpoch: number;
