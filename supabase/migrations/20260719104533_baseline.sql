@@ -9057,6 +9057,276 @@ create table market.listings (
 create index listings_fifo_idx on market.listings (template_id, created_at, id) where status = 'active' and remaining > 0;
 create index listings_seller_active_idx on market.listings (seller_id, template_id, created_at) where status = 'active';
 
+create table market.seller_template_supply (
+  seller_id uuid not null references identity.users(id) on delete cascade,
+  template_id text not null references catalog.templates(id),
+  active_quantity bigint not null check (active_quantity > 0),
+  updated_at timestamptz not null default now(),
+  primary key (seller_id, template_id)
+);
+
+create index seller_template_supply_template_idx on market.seller_template_supply (template_id, seller_id);
+
+create table market.template_supply (
+  template_id text primary key references catalog.templates(id),
+  eligible_quantity bigint not null check (eligible_quantity > 0),
+  updated_at timestamptz not null default now()
+);
+
+create or replace function market.change_positive_supply(
+  p_scope text,
+  p_seller_id uuid,
+  p_template_id text,
+  p_delta bigint
+)
+returns void
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+declare
+  v_quantity bigint;
+begin
+  if p_delta = 0 then
+    return;
+  end if;
+
+  if p_scope = 'seller' then
+    if p_delta > 0 then
+      insert into market.seller_template_supply (seller_id, template_id, active_quantity)
+      values (p_seller_id, p_template_id, p_delta)
+      on conflict (seller_id, template_id) do update
+      set active_quantity = market.seller_template_supply.active_quantity + excluded.active_quantity,
+          updated_at = now();
+      return;
+    end if;
+
+    select active_quantity into v_quantity
+    from market.seller_template_supply
+    where seller_id = p_seller_id and template_id = p_template_id
+    for update;
+    if v_quantity is null or v_quantity < -p_delta then
+      raise exception using
+        errcode = '23514',
+        message = 'MARKET_SELLER_SUPPLY_UNDERFLOW',
+        detail = jsonb_build_object(
+          'seller_id', p_seller_id,
+          'template_id', p_template_id,
+          'current_quantity', v_quantity,
+          'delta', p_delta
+        )::text;
+    elsif v_quantity = -p_delta then
+      delete from market.seller_template_supply
+      where seller_id = p_seller_id and template_id = p_template_id;
+    else
+      update market.seller_template_supply
+      set active_quantity = active_quantity + p_delta, updated_at = now()
+      where seller_id = p_seller_id and template_id = p_template_id;
+    end if;
+    return;
+  end if;
+
+  if p_scope <> 'template' or p_seller_id is not null then
+    raise exception using errcode = '22023', message = 'MARKET_SUPPLY_SCOPE_INVALID';
+  end if;
+  if p_delta > 0 then
+    insert into market.template_supply (template_id, eligible_quantity)
+    values (p_template_id, p_delta)
+    on conflict (template_id) do update
+    set eligible_quantity = market.template_supply.eligible_quantity + excluded.eligible_quantity,
+        updated_at = now();
+    return;
+  end if;
+
+  select eligible_quantity into v_quantity
+  from market.template_supply
+  where template_id = p_template_id
+  for update;
+  if v_quantity is null or v_quantity < -p_delta then
+    raise exception using
+      errcode = '23514',
+      message = 'MARKET_TEMPLATE_SUPPLY_UNDERFLOW',
+      detail = jsonb_build_object(
+        'template_id', p_template_id,
+        'current_quantity', v_quantity,
+        'delta', p_delta
+      )::text;
+  elsif v_quantity = -p_delta then
+    delete from market.template_supply where template_id = p_template_id;
+  else
+    update market.template_supply
+    set eligible_quantity = eligible_quantity + p_delta, updated_at = now()
+    where template_id = p_template_id;
+  end if;
+end;
+$$;
+
+create or replace function market.change_listing_supply(
+  p_seller_id uuid,
+  p_template_id text,
+  p_delta bigint
+)
+returns void
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+declare
+  v_seller_is_eligible boolean;
+begin
+  if p_delta = 0 then
+    return;
+  end if;
+  perform pg_advisory_xact_lock(hashtextextended('market.template-supply:' || p_template_id, 0));
+  perform market.change_positive_supply('seller', p_seller_id, p_template_id, p_delta);
+  select status = 'normal' into v_seller_is_eligible
+  from identity.users
+  where id = p_seller_id;
+  if coalesce(v_seller_is_eligible, false) then
+    perform market.change_positive_supply('template', null, p_template_id, p_delta);
+  end if;
+end;
+$$;
+
+create or replace function market.sync_listing_supply()
+returns trigger
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+declare
+  v_old_quantity bigint := 0;
+  v_new_quantity bigint := 0;
+begin
+  if tg_op <> 'INSERT' and old.status = 'active' and old.remaining > 0 then
+    v_old_quantity := old.remaining;
+  end if;
+  if tg_op <> 'DELETE' and new.status = 'active' and new.remaining > 0 then
+    v_new_quantity := new.remaining;
+  end if;
+
+  if tg_op = 'UPDATE'
+    and (old.seller_id is distinct from new.seller_id or old.template_id is distinct from new.template_id)
+  then
+    raise exception using errcode = '23514', message = 'MARKET_LISTING_SUPPLY_KEY_IMMUTABLE';
+  end if;
+
+  perform market.change_listing_supply(
+    coalesce(new.seller_id, old.seller_id),
+    coalesce(new.template_id, old.template_id),
+    v_new_quantity - v_old_quantity
+  );
+  return coalesce(new, old);
+end;
+$$;
+
+create trigger listings_supply_sync
+after insert or delete or update of seller_id, template_id, remaining, status on market.listings
+for each row execute function market.sync_listing_supply();
+
+create or replace function market.recompute_template_supply(p_template_id text)
+returns void
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+declare
+  v_quantity bigint;
+begin
+  perform pg_advisory_xact_lock(hashtextextended('market.template-supply:' || p_template_id, 0));
+  select coalesce(sum(s.active_quantity), 0)::bigint into v_quantity
+  from market.seller_template_supply s
+  join identity.users u on u.id = s.seller_id and u.status = 'normal'
+  where s.template_id = p_template_id;
+  if v_quantity = 0 then
+    delete from market.template_supply where template_id = p_template_id;
+  else
+    insert into market.template_supply (template_id, eligible_quantity)
+    values (p_template_id, v_quantity)
+    on conflict (template_id) do update
+    set eligible_quantity = excluded.eligible_quantity, updated_at = now();
+  end if;
+end;
+$$;
+
+create or replace function market.sync_user_status_supply()
+returns trigger
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+declare
+  v_template_id text;
+begin
+  if old.status is not distinct from new.status then
+    return new;
+  end if;
+  for v_template_id in
+    select affected.template_id
+    from (
+      select supply.template_id
+      from market.seller_template_supply supply
+      where supply.seller_id = new.id
+      union
+      select listing.template_id
+      from market.listings listing
+      where listing.seller_id = new.id and listing.status = 'active' and listing.remaining > 0
+    ) affected
+    order by affected.template_id
+  loop
+    perform market.recompute_template_supply(v_template_id);
+  end loop;
+  return new;
+end;
+$$;
+
+create trigger users_market_supply_status_sync
+after update of status on identity.users
+for each row
+when (old.status is distinct from new.status)
+execute function market.sync_user_status_supply();
+
+create or replace function market.rebuild_supply()
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_seller_rows integer;
+  v_template_rows integer;
+begin
+  lock table identity.users in share mode;
+  lock table market.listings in share mode;
+  lock table market.seller_template_supply in access exclusive mode;
+  lock table market.template_supply in access exclusive mode;
+
+  delete from market.template_supply;
+  delete from market.seller_template_supply;
+
+  insert into market.seller_template_supply (seller_id, template_id, active_quantity)
+  select seller_id, template_id, sum(remaining)::bigint
+  from market.listings
+  where status = 'active' and remaining > 0
+  group by seller_id, template_id;
+  get diagnostics v_seller_rows = row_count;
+
+  insert into market.template_supply (template_id, eligible_quantity)
+  select supply.template_id, sum(supply.active_quantity)::bigint
+  from market.seller_template_supply supply
+  join identity.users users on users.id = supply.seller_id and users.status = 'normal'
+  group by supply.template_id;
+  get diagnostics v_template_rows = row_count;
+
+  return jsonb_build_object(
+    'seller_template_rows', v_seller_rows,
+    'template_rows', v_template_rows
+  );
+end;
+$$;
+
+revoke execute on function market.rebuild_supply() from public, anon, authenticated, service_role;
+
 create table market.trades (
   id uuid primary key default extensions.gen_random_uuid(),
   buyer_id uuid not null references identity.users(id) on delete cascade,
@@ -9124,20 +9394,13 @@ begin
         'stage', t.stage,
         'image_thumbnail_url', catalog.template_thumbnail_url(t.id),
         'unit_price', t.market_price,
-        'available_quantity', x.available_quantity,
-        'own_listed_quantity', x.own_listed_quantity
+        'available_quantity', greatest(supply.eligible_quantity - coalesce(own.active_quantity, 0), 0),
+        'own_listed_quantity', coalesce(own.active_quantity, 0)
       ) order by t.sort_order)
-      from catalog.templates t
-      join (
-        select
-          l.template_id,
-          coalesce(sum(l.remaining) filter (where l.seller_id <> v_user_id), 0) available_quantity,
-          coalesce(sum(l.remaining) filter (where l.seller_id = v_user_id), 0) own_listed_quantity
-        from market.listings l
-        join identity.users u on u.id = l.seller_id
-        where l.status = 'active' and l.remaining > 0 and u.status = 'normal'
-        group by l.template_id
-      ) x on x.template_id = t.id
+      from market.template_supply supply
+      join catalog.templates t on t.id = supply.template_id
+      left join market.seller_template_supply own
+        on own.seller_id = v_user_id and own.template_id = supply.template_id
     ), '[]'::jsonb),
     'sellable_items', coalesce((
       with user_items as materialized (
@@ -9177,20 +9440,13 @@ begin
     'stage', t.stage,
     'image_thumbnail_url', catalog.template_thumbnail_url(t.id),
     'unit_price', t.market_price,
-    'available_quantity', coalesce(x.available_quantity, 0),
-    'own_listed_quantity', coalesce(x.own_listed_quantity, 0)
+    'available_quantity', greatest(coalesce(supply.eligible_quantity, 0) - coalesce(own.active_quantity, 0), 0),
+    'own_listed_quantity', coalesce(own.active_quantity, 0)
   ) into v_result
   from catalog.templates t
-  left join (
-    select
-      l.template_id,
-      coalesce(sum(l.remaining) filter (where l.seller_id <> v_user_id), 0) available_quantity,
-      coalesce(sum(l.remaining) filter (where l.seller_id = v_user_id), 0) own_listed_quantity
-    from market.listings l
-    join identity.users u on u.id = l.seller_id
-    where l.template_id = p_template_id and l.status = 'active' and l.remaining > 0 and u.status = 'normal'
-    group by l.template_id
-  ) x on x.template_id = t.id
+  left join market.template_supply supply on supply.template_id = t.id
+  left join market.seller_template_supply own
+    on own.seller_id = v_user_id and own.template_id = t.id
   where t.id = p_template_id;
   if v_result is null then
     perform api.raise_business_error('TEMPLATE_NOT_FOUND', '藏品模板不存在');
@@ -9259,41 +9515,17 @@ begin
   return jsonb_build_object(
     'listings', coalesce((
       select jsonb_agg(jsonb_build_object(
-        'template_id', a.template_id,
+        'template_id', supply.template_id,
         'name', t.name,
         'rarity', t.rarity,
         'stage', t.stage,
         'image_thumbnail_url', catalog.template_thumbnail_url(t.id),
-        'listed_quantity', a.listed_quantity,
-        'sold_quantity', coalesce(s.sold_quantity, 0),
-        'unit_price', t.market_price,
-        'estimated_gross', a.listed_quantity * t.market_price,
-        'estimated_fee', floor(a.listed_quantity * t.market_price * 500.0 / 10000.0),
-        'estimated_net', a.listed_quantity * t.market_price - floor(a.listed_quantity * t.market_price * 500.0 / 10000.0),
-        'estimated_vip_rebate', case
-          when exists (
-            select 1 from vip.subscriptions v
-            where v.user_id = v_user_id and identity.utc_day() between v.starts_on and v.ends_on
-          )
-          then floor(floor(a.listed_quantity * t.market_price * 500.0 / 10000.0) * 2000.0 / 10000.0)
-          else 0
-        end,
-        'status', case when coalesce(s.sold_quantity, 0) > 0 then 'partially_sold' else 'active' end,
-        'first_listed_at', a.first_listed_at
+        'listed_quantity', supply.active_quantity,
+        'unit_price', t.market_price
       ) order by t.sort_order)
-      from (
-        select l.template_id, sum(l.remaining) listed_quantity, min(l.created_at) first_listed_at
-        from market.listings l
-        where l.seller_id = v_user_id and l.status = 'active' and l.remaining > 0
-        group by l.template_id
-      ) a
-      join catalog.templates t on t.id = a.template_id
-      left join (
-        select l.template_id, sum(l.quantity - l.remaining) sold_quantity
-        from market.listings l
-        where l.seller_id = v_user_id and l.quantity > l.remaining
-        group by l.template_id
-      ) s on s.template_id = a.template_id
+      from market.seller_template_supply supply
+      join catalog.templates t on t.id = supply.template_id
+      where supply.seller_id = v_user_id
     ), '[]'::jsonb),
     'sold_events', v_sold_events,
     'sale_cursor', v_sale_cursor::text,
@@ -9332,12 +9564,12 @@ begin
     if v_template.id is null then perform api.raise_business_error('TEMPLATE_NOT_FOUND', '藏品模板不存在'); end if;
     if p_quantity <= 0 then perform api.raise_business_error('INSUFFICIENT_INVENTORY', '可用藏品不足'); end if;
     perform pg_advisory_xact_lock(hashtextextended(v_user_id::text || ':market-listings', 0));
-    select count(distinct template_id) into v_active_count
-    from market.listings
-    where seller_id = v_user_id and status = 'active' and remaining > 0;
+    select count(*) into v_active_count
+    from market.seller_template_supply
+    where seller_id = v_user_id;
     if v_active_count >= 10 and not exists (
-      select 1 from market.listings
-      where seller_id = v_user_id and template_id = p_template_id and status = 'active' and remaining > 0
+      select 1 from market.seller_template_supply
+      where seller_id = v_user_id and template_id = p_template_id
     ) then
       perform api.raise_business_error('MARKET_ACTIVE_TEMPLATE_LIMIT', '最多同时出售 10 种藏品，请先售罄或下架一种藏品');
     end if;
@@ -11659,6 +11891,45 @@ begin
     from operations.operations o where o.status in ('pending', 'unknown') and o.created_at < now() - interval '1 day'
       and not exists (select 1 from payments.orders p where p.operation_id = o.id and p.status in ('pending', 'processing', 'paid', 'payment_identity_conflict'))
       and not exists (select 1 from onchain.mints m where m.operation_id = o.id and m.status in ('reserved', 'submitted', 'unknown'))
+    on conflict do nothing;
+    get diagnostics v_added = row_count; v_count := v_count + v_added;
+    insert into operations.invariant_violations (code, subject, details)
+    with authoritative as (
+      select seller_id, template_id, sum(remaining)::bigint quantity
+      from market.listings
+      where status = 'active' and remaining > 0
+      group by seller_id, template_id
+    )
+    select
+      'MARKET_SELLER_SUPPLY_MISMATCH',
+      coalesce(authoritative.seller_id, derived.seller_id)::text || ':' || coalesce(authoritative.template_id, derived.template_id),
+      jsonb_build_object(
+        'listing_quantity', coalesce(authoritative.quantity, 0),
+        'summary_quantity', coalesce(derived.active_quantity, 0)
+      )
+    from authoritative
+    full join market.seller_template_supply derived
+      on derived.seller_id = authoritative.seller_id and derived.template_id = authoritative.template_id
+    where coalesce(authoritative.quantity, 0) <> coalesce(derived.active_quantity, 0)
+    on conflict do nothing;
+    get diagnostics v_added = row_count; v_count := v_count + v_added;
+    insert into operations.invariant_violations (code, subject, details)
+    with eligible as (
+      select supply.template_id, sum(supply.active_quantity)::bigint quantity
+      from market.seller_template_supply supply
+      join identity.users users on users.id = supply.seller_id and users.status = 'normal'
+      group by supply.template_id
+    )
+    select
+      'MARKET_TEMPLATE_SUPPLY_MISMATCH',
+      coalesce(eligible.template_id, derived.template_id),
+      jsonb_build_object(
+        'eligible_seller_quantity', coalesce(eligible.quantity, 0),
+        'summary_quantity', coalesce(derived.eligible_quantity, 0)
+      )
+    from eligible
+    full join market.template_supply derived on derived.template_id = eligible.template_id
+    where coalesce(eligible.quantity, 0) <> coalesce(derived.eligible_quantity, 0)
     on conflict do nothing;
     get diagnostics v_added = row_count; v_count := v_count + v_added;
     v_added := battle.monitor_tick_health(v_scan_from, v_scan_to);

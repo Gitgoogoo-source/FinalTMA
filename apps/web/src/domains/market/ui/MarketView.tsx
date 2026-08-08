@@ -186,18 +186,6 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
       );
     return filtered;
   }, [buySort, priceFilter, rarityFilter, sorted, stageFilter, tab]);
-  const manageSummary = useMemo(
-    () =>
-      data.reduce(
-        (summary, item) => ({
-          listed: summary.listed + item.available,
-          gross: summary.gross + (item.estimated_gross ?? 0),
-          net: summary.net + (item.estimated_net ?? 0),
-        }),
-        { listed: 0, gross: 0, net: 0 },
-      ),
-    [data],
-  );
   const hasManageContent =
     tab === "manage" && (visible.length > 0 || soldEvents.length > 0);
   const selectedSellItem =
@@ -376,26 +364,6 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
         </Card>
       )}
       {tab === "buy" && vipBanner}
-      {tab === "manage" && sorted.length > 0 && (
-        <Card className="market-listing-summary" aria-label="出售汇总">
-          <MarketListingSummaryMetric
-            label="出售中"
-            value={formatKCoin(manageSummary.listed)}
-          />
-          <MarketListingSummaryMetric
-            label="总价值"
-            value={formatKCoin(manageSummary.gross)}
-            unit="K"
-            accent
-          />
-          <MarketListingSummaryMetric
-            label="预计到账"
-            value={formatKCoin(manageSummary.net)}
-            unit="K"
-            accent
-          />
-        </Card>
-      )}
       {tab === "buy" && (
         <div className="market-buy-controls">
           <div className="market-filter-strip">
@@ -642,7 +610,7 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
                 <MarketCard
                   key={item.template_id}
                   item={item}
-                  tab={tab}
+                  tab="buy"
                   blocked={blocked}
                   purchaseInProgress={purchaseInProgress}
                   balance={identity.data?.assets.kcoin.available}
@@ -805,35 +773,7 @@ type MarketViewItem = {
   own_listed_quantity?: number;
   total?: number;
   listed?: number;
-  sold_quantity?: number;
-  estimated_gross?: number;
-  estimated_fee?: number;
-  estimated_net?: number;
-  estimated_vip_rebate?: number;
-  status?: "active" | "partially_sold";
 };
-
-function MarketListingSummaryMetric({
-  label,
-  value,
-  unit,
-  accent = false,
-}: {
-  label: string;
-  value: string;
-  unit?: string;
-  accent?: boolean;
-}): ReactNode {
-  return (
-    <span className={accent ? "accent" : ""}>
-      <small>{label}</small>
-      <strong>
-        {value}
-        {unit && <i>{unit}</i>}
-      </strong>
-    </span>
-  );
-}
 
 function MarketListingCard({
   item,
@@ -1167,7 +1107,7 @@ function MarketCard({
   onSubmit,
 }: {
   item: MarketViewItem;
-  tab: MarketTab;
+  tab: Exclude<MarketTab, "manage">;
   blocked: boolean;
   purchaseInProgress: boolean;
   balance: number | undefined;
@@ -1194,11 +1134,7 @@ function MarketCard({
         />
         {tab !== "buy" && (
           <Badge>
-            {tab === "manage"
-              ? item.status === "partially_sold"
-                ? "部分成交"
-                : "出售中"
-              : rarityLabel(item.rarity)}
+            {rarityLabel(item.rarity)}
             {item.stage ? ` · 第 ${item.stage} 阶` : ""}
           </Badge>
         )}
@@ -1217,28 +1153,8 @@ function MarketCard({
               官方单价 <strong>{price} K</strong>
             </p>
             <p>
-              {tab === "sell" ? "可用" : "出售中"} <strong>{available}</strong>
+              可用 <strong>{available}</strong>
             </p>
-            {tab === "manage" && (
-              <>
-                <p>
-                  累计已售 <strong>{item.sold_quantity ?? 0}</strong>
-                </p>
-                <p>
-                  预计成交 <strong>{item.estimated_gross ?? 0} K</strong>
-                </p>
-                <p>
-                  预计手续费 <strong>{item.estimated_fee ?? 0} K</strong>
-                </p>
-                <p>
-                  预计到账 <strong>{item.estimated_net ?? 0} K</strong>
-                </p>
-                <p>
-                  月卡预计返还{" "}
-                  <strong>{item.estimated_vip_rebate ?? 0} K</strong>
-                </p>
-              </>
-            )}
           </div>
         )}
       </div>
@@ -1268,10 +1184,7 @@ function MarketCard({
       )}
       <Button
         disabled={
-          blocked ||
-          (tab !== "manage" && !imageReady) ||
-          available < 1 ||
-          quantity > available
+          blocked || !imageReady || available < 1 || quantity > available
         }
         onPointerDown={() =>
           onPrepare(tab === "buy" ? "market.purchase" : "market.create_listing")
@@ -1293,15 +1206,10 @@ function MarketCard({
             <ShoppingCart />
             {available < 1 ? "暂无在售" : "购买"}
           </>
-        ) : tab === "sell" ? (
+        ) : (
           <>
             <PackagePlus />
             确认出售
-          </>
-        ) : (
-          <>
-            <PackageMinus />
-            全部下架
           </>
         )}
       </Button>

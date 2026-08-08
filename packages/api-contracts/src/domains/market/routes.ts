@@ -45,14 +45,7 @@ const managedTemplateSchema = z
     stage: z.number().int().min(1).max(3),
     image_thumbnail_url: petThumbnailUrlSchema,
     listed_quantity: z.number().int().positive(),
-    sold_quantity: z.number().int().min(0),
     unit_price: z.number().int().positive(),
-    estimated_gross: z.number().int().positive(),
-    estimated_fee: z.number().int().min(0),
-    estimated_net: z.number().int().positive(),
-    estimated_vip_rebate: z.number().int().min(0),
-    status: z.enum(["active", "partially_sold"]),
-    first_listed_at: timestampSchema,
   })
   .strict();
 const saleSequenceSchema = z

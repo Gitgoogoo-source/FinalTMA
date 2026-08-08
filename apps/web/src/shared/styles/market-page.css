@@ -278,62 +278,6 @@
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.96);
   pointer-events: none;
 }
-.app-shell .market-listing-summary {
-  min-height: 88px;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  margin: 0 0 12px;
-  padding: 0;
-  overflow: hidden;
-  border-radius: 24px;
-}
-.app-shell .market-listing-summary > span {
-  min-width: 0;
-  position: relative;
-  display: grid;
-  place-items: center;
-  align-content: center;
-  gap: 8px;
-  padding: 12px 4px 10px;
-}
-.app-shell .market-listing-summary > span + span::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 20px;
-  bottom: 20px;
-  width: 1px;
-  background: rgba(54, 67, 75, 0.1);
-}
-.app-shell .market-listing-summary small {
-  color: #777f83;
-  font-size: 9px;
-  font-weight: 750;
-}
-.app-shell .market-listing-summary strong {
-  min-width: 0;
-  display: inline-flex;
-  align-items: baseline;
-  justify-content: center;
-  gap: 3px;
-  color: #101315;
-  font-size: clamp(20px, 6vw, 26px);
-  line-height: 1;
-  font-weight: 950;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.04em;
-  white-space: nowrap;
-}
-.app-shell .market-listing-summary .accent strong,
-.app-shell .market-listing-summary strong i {
-  color: #ff5a00;
-}
-.app-shell .market-listing-summary strong i {
-  font-size: 9px;
-  font-style: normal;
-  font-weight: 900;
-  letter-spacing: 0;
-}
 .app-shell .market-buy-controls {
   position: relative;
   z-index: 5;

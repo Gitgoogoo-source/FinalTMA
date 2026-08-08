@@ -168,6 +168,45 @@ begin
       and not exists (select 1 from onchain.mints m where m.operation_id = o.id and m.status in ('reserved', 'submitted', 'unknown'))
     on conflict do nothing;
     get diagnostics v_added = row_count; v_count := v_count + v_added;
+    insert into operations.invariant_violations (code, subject, details)
+    with authoritative as (
+      select seller_id, template_id, sum(remaining)::bigint quantity
+      from market.listings
+      where status = 'active' and remaining > 0
+      group by seller_id, template_id
+    )
+    select
+      'MARKET_SELLER_SUPPLY_MISMATCH',
+      coalesce(authoritative.seller_id, derived.seller_id)::text || ':' || coalesce(authoritative.template_id, derived.template_id),
+      jsonb_build_object(
+        'listing_quantity', coalesce(authoritative.quantity, 0),
+        'summary_quantity', coalesce(derived.active_quantity, 0)
+      )
+    from authoritative
+    full join market.seller_template_supply derived
+      on derived.seller_id = authoritative.seller_id and derived.template_id = authoritative.template_id
+    where coalesce(authoritative.quantity, 0) <> coalesce(derived.active_quantity, 0)
+    on conflict do nothing;
+    get diagnostics v_added = row_count; v_count := v_count + v_added;
+    insert into operations.invariant_violations (code, subject, details)
+    with eligible as (
+      select supply.template_id, sum(supply.active_quantity)::bigint quantity
+      from market.seller_template_supply supply
+      join identity.users users on users.id = supply.seller_id and users.status = 'normal'
+      group by supply.template_id
+    )
+    select
+      'MARKET_TEMPLATE_SUPPLY_MISMATCH',
+      coalesce(eligible.template_id, derived.template_id),
+      jsonb_build_object(
+        'eligible_seller_quantity', coalesce(eligible.quantity, 0),
+        'summary_quantity', coalesce(derived.eligible_quantity, 0)
+      )
+    from eligible
+    full join market.template_supply derived on derived.template_id = eligible.template_id
+    where coalesce(eligible.quantity, 0) <> coalesce(derived.eligible_quantity, 0)
+    on conflict do nothing;
+    get diagnostics v_added = row_count; v_count := v_count + v_added;
     v_added := battle.monitor_tick_health(v_scan_from, v_scan_to);
     v_count := v_count + v_added;
     v_added := battle.monitor_invariants();

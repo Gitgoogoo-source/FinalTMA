@@ -22,6 +22,9 @@ BATTLE_SCHEMA = ROOT / "supabase/schemas/44_battle.sql"
 BATTLE_BASELINE_MIGRATION = (
     ROOT / "supabase/migrations/20260719104533_baseline.sql"
 )
+MARKET_SCHEMA = ROOT / "supabase/schemas/50_market.sql"
+MARKET_CONTRACT = ROOT / "packages/api-contracts/src/domains/market/routes.ts"
+MARKET_VIEW = WEB_ROOT / "domains/market/ui/MarketView.tsx"
 IMPORT_PATTERN = re.compile(r"(?:from\s+|import\()\s*[\"']([^\"']+)[\"']")
 MODULE_IMPORT_PATTERN = re.compile(r"(?:from\s+|import\s*(?:\(\s*)?)[\"']([^\"']+)[\"']")
 BATTLE_ACCEPT_FUNCTION_PATTERN = re.compile(
@@ -55,6 +58,7 @@ REQUIRED_PATHS = (
     "docs/architecture/adr/ADR-037-persistent-page-query-activity.md",
     "docs/architecture/adr/ADR-038-local-session-proof-and-login-rpc-consolidation.md",
     "docs/architecture/adr/ADR-040-first-screen-runtime-boundary.md",
+    "docs/architecture/adr/ADR-041-market-transactional-supply-read-model.md",
     "docs/architecture/adr/ADR-016-controlled-battle-acceptance-fixture.md",
     "docs/architecture/adr/ADR-022-battle-stage-skill-progression.md",
     "docs/architecture/adr/ADR-025-battle-active-switch-atomicity.md",
@@ -171,6 +175,7 @@ def main() -> None:
     verify_battle_accept_operation_ordering()
     verify_battle_countdown_lock_semantics()
     verify_battle_switch_atomicity()
+    verify_market_transactional_supply_read_model()
     verify_api_boundaries()
     verify_session_credential_boundary()
     verify_contract_boundaries()
@@ -1281,6 +1286,124 @@ def verify_battle_switch_atomicity() -> None:
         raise SystemExit(
             "Battle switch functions differ between declarative schema and baseline migration"
         )
+
+
+def verify_market_transactional_supply_read_model() -> None:
+    sql = MARKET_SCHEMA.read_text(encoding="utf-8").lower()
+    required_sql = (
+        "create table market.seller_template_supply",
+        "primary key (seller_id, template_id)",
+        "create table market.template_supply",
+        "eligible_quantity bigint not null check (eligible_quantity > 0)",
+        "pg_advisory_xact_lock(hashtextextended('market.template-supply:' || p_template_id, 0))",
+        "create trigger listings_supply_sync",
+        "after insert or delete or update of seller_id, template_id, remaining, status on market.listings",
+        "create trigger users_market_supply_status_sync",
+        "order by affected.template_id",
+        "create or replace function market.rebuild_supply()",
+        "lock table identity.users in share mode",
+        "lock table market.listings in share mode",
+        "revoke execute on function market.rebuild_supply() from public, anon, authenticated, service_role",
+    )
+    missing = [fragment for fragment in required_sql if fragment not in sql]
+    if missing:
+        raise SystemExit(f"Market transactional supply model is incomplete: {missing}")
+
+    def function_block(name: str) -> str:
+        match = re.search(
+            rf"create\s+or\s+replace\s+function\s+api\.{re.escape(name)}\s*\(.*?\n\$\$;",
+            sql,
+            re.DOTALL,
+        )
+        if match is None:
+            raise SystemExit(f"Market read RPC is missing: api.{name}")
+        return match.group(0)
+
+    read_blocks = {
+        name: function_block(name)
+        for name in ("market_bootstrap", "market_template", "market_my_listings")
+    }
+    raw_history_references = {
+        name: [
+            relation
+            for relation in ("market.listings", "market.trade_details")
+            if relation in block
+        ]
+        for name, block in read_blocks.items()
+        if "market.listings" in block or "market.trade_details" in block
+    }
+    if raw_history_references:
+        raise SystemExit(
+            "Market read RPCs cannot scan authoritative listing or trade history: "
+            f"{raw_history_references}"
+        )
+    if not all(
+        fragment in read_blocks["market_bootstrap"]
+        for fragment in ("market.template_supply", "market.seller_template_supply")
+    ):
+        raise SystemExit("market_bootstrap must read both primary-key supply models")
+    if not all(
+        fragment in read_blocks["market_template"]
+        for fragment in ("market.template_supply", "market.seller_template_supply")
+    ):
+        raise SystemExit("market_template must read both primary-key supply models")
+    my_listings = read_blocks["market_my_listings"]
+    my_listings_required = (
+        "from market.seller_template_supply",
+        "where supply.seller_id = v_user_id",
+        "from market.seller_sale_events",
+        "sequence > v_after_sequence",
+        "limit 100",
+    )
+    missing = [fragment for fragment in my_listings_required if fragment not in my_listings]
+    if missing:
+        raise SystemExit(f"market_my_listings lost its bounded supply/event path: {missing}")
+
+    create_listing = function_block("market_create_listing")
+    create_limit_required = (
+        "select count(*) into v_active_count\n    from market.seller_template_supply",
+        "select 1 from market.seller_template_supply",
+    )
+    missing = [fragment for fragment in create_limit_required if fragment not in create_listing]
+    if missing:
+        raise SystemExit(f"Market template limit must use seller supply rows: {missing}")
+
+    contract = MARKET_CONTRACT.read_text(encoding="utf-8")
+    removed_contract_fields = (
+        "sold_quantity",
+        "estimated_gross",
+        "estimated_fee",
+        "estimated_net",
+        "estimated_vip_rebate",
+        "partially_sold",
+        "first_listed_at",
+    )
+    remaining = [field for field in removed_contract_fields if field in contract]
+    if remaining:
+        raise SystemExit(f"Market management contract restored removed fields: {remaining}")
+
+    view = MARKET_VIEW.read_text(encoding="utf-8")
+    forbidden_management_ui = (
+        "market-listing-summary",
+        "item.sold_quantity",
+        "item.estimated_gross",
+        "item.estimated_fee",
+        "item.estimated_net",
+        "item.estimated_vip_rebate",
+        'item.status === "partially_sold"',
+    )
+    remaining = [fragment for fragment in forbidden_management_ui if fragment in view]
+    if remaining:
+        raise SystemExit(f"Market management UI restored historical aggregates: {remaining}")
+
+    jobs = (ROOT / "supabase/schemas/95_jobs.sql").read_text(encoding="utf-8")
+    invariant_codes = (
+        "MARKET_SELLER_SUPPLY_MISMATCH",
+        "MARKET_TEMPLATE_SUPPLY_MISMATCH",
+    )
+    missing = [code for code in invariant_codes if code not in jobs]
+    if missing:
+        raise SystemExit(f"Market supply invariant monitoring is incomplete: {missing}")
 
 
 def verify_api_boundaries() -> None:

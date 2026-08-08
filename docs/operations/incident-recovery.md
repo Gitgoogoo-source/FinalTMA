@@ -33,6 +33,12 @@
 - 终局结果恢复：identity bootstrap 与 Battle bootstrap 只返回本人最新未确认结果；acknowledge 丢失时重试原 room，不创建 history/replay/audit 响应。
 - 验收夹具恢复：只允许 owner 查询 `admin.battle_fixture_status` 并以新 request UUID 调用 `admin.reconcile_battle_fixture`；不得裸 SQL 写余额、holding 或审计。project identity 不匹配、门禁关闭/过期、用户异常、任何活动业务状态或 product-data 漂移时保持拒绝。真实开发库重建后重新绑定当前 project ref 并按次写入最长 24 小时 enable；生产身份不得启用。
 
+## 市场供给汇总
+
+玩家请求中禁止自动修复市场汇总。先运行 `monitor-invariants`，分别核对 `MARKET_SELLER_SUPPLY_MISMATCH` 与 `MARKET_TEMPLATE_SUPPLY_MISMATCH` 的开放记录；前者比较原始有效挂单与卖家模板汇总，后者比较全部 `normal` 卖家汇总与全市场模板汇总。任一不一致都暂停市场新写入，保存原始挂单、两级汇总、用户状态、相关 operation 和事务错误证据，不得通过手工改一行汇总掩盖根因。
+
+只有数据库 owner 可在受控维护窗口执行 `market.rebuild_supply()`。执行前停止市场写流量并确认目标环境；函数在同一事务锁定 `identity.users`、`market.listings` 与两张汇总表，从有效原始挂单完整重建后返回卖家模板行数和市场模板行数。重建后再次运行两项不变量并用三个市场读取 RPC 对照原始有效挂单；`service_role`、`anon`、`authenticated` 和 Data API 均不得拥有该函数执行权。若根因来自声明式定义，正式上线前直接修正原始 Schema/baseline 并从空真实开发数据库重建三条迁移，不追加补丁 migration。
+
 ## 不变量
 
-运行 `monitor-invariants`，处理 `BALANCE_LEDGER_MISMATCH`、`DUPLICATE_PAYMENT_DELIVERY`、`RESERVATION_OVERFLOW`、`ILLEGAL_RESERVATION`、`OPEN_OPERATION_WITHOUT_SUBJECT` 及正式 Battle 契约声明的 room/stake/settlement/outbox 不变量。正式生产上线前的结构修复直接修改原始声明式 Schema，并从空真实开发数据库重建三条迁移；正式生产上线后的数据修复使用审计过的前向 SQL 或既有 RPC。任何阶段都保存变更前后证据且不直接改写账本历史或 Battle 私有审计。
+运行 `monitor-invariants`，处理 `BALANCE_LEDGER_MISMATCH`、`DUPLICATE_PAYMENT_DELIVERY`、`RESERVATION_OVERFLOW`、`ILLEGAL_RESERVATION`、`OPEN_OPERATION_WITHOUT_SUBJECT`、`MARKET_SELLER_SUPPLY_MISMATCH`、`MARKET_TEMPLATE_SUPPLY_MISMATCH` 及正式 Battle 契约声明的 room/stake/settlement/outbox 不变量。正式生产上线前的结构修复直接修改原始声明式 Schema，并从空真实开发数据库重建三条迁移；正式生产上线后的数据修复使用审计过的前向 SQL 或既有 RPC。任何阶段都保存变更前后证据且不直接改写账本历史或 Battle 私有审计。
