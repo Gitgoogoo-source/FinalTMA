@@ -612,8 +612,8 @@ final result: blocked
 ## ImageGen 素材证据
 
 - 使用用户指定的内置 `$imagegen` 路径分别生成两枚素材，均以纯色绿幕输出，再使用共享图像运行环境和 `remove_chroma_key.py` 移除背景；未使用 CLI 模型回退。
-- 礼盒生成源图：`/Users/mac/.codex/generated_images/019fbe1c-3287-7441-9b33-f2b560bac911/exec-acd535fb-c026-4d48-a513-d0d3abafa659.png`。最终成品：`apps/web/public/assets/vip/vip-daily-gift.png`，`384 × 384px` RGBA，Alpha 包围盒 `(67, 59)–(312, 322)`，四角 Alpha 均为 `0`，SHA-256 为 `03e263e3cab0dcbfd8f5e6677ecef39de4ad122a40d2af33863e21a894fd5512`。
-- 宝石生成源图：`/Users/mac/.codex/generated_images/019fbe1c-3287-7441-9b33-f2b560bac911/exec-ea6806c0-bae8-476b-840c-d925d76eb49d.png`。最终成品：`apps/web/public/assets/vip/vip-daily-fgems.png`，`384 × 384px` RGBA，Alpha 包围盒 `(45, 32)–(339, 342)`，四角 Alpha 均为 `0`，SHA-256 为 `22ea1d7f109ba4baf4e5b052b351855485060599732635936ff60bc984c7b940`。
+- 礼盒生成源图：`/Users/mac/.codex/generated_images/019fbe1c-3287-7441-9b33-f2b560bac911/exec-acd535fb-c026-4d48-a513-d0d3abafa659.png`。当前运行时成品：`apps/web/public/assets/vip/vip-daily-gift.png`，`112 × 112px` RGBA，Alpha 包围盒 `(17, 15)–(93, 95)`，四角 Alpha 均为 `0`，SHA-256 为 `7c2cbfa1a74c58ced16a76afb07bc84413bdfd88e546daab3718115d5ac38ffe`。
+- 宝石生成源图：`/Users/mac/.codex/generated_images/019fbe1c-3287-7441-9b33-f2b560bac911/exec-ea6806c0-bae8-476b-840c-d925d76eb49d.png`。当前运行时成品：`apps/web/public/assets/vip/vip-daily-fgems.png`，`112 × 112px` RGBA，Alpha 包围盒 `(11, 7)–(100, 101)`，四角 Alpha 均为 `0`，SHA-256 为 `5465bdb487b1fee226c82c6d820a2f92bd903ffd1ef661fc9bc720316290e1e5`。
 - 礼盒提示词固定为单个奶油白与香槟金礼盒、琥珀橙色缎带、紧凑 3D 日漫游戏图标、纯 `#00ff00` 背景，禁止文字、投影、地面和多余装饰。
 - 宝石提示词固定为单枚对称橙色切面宝石、香槟金外框、紧凑 3D 日漫游戏图标、纯 `#00ff00` 背景，禁止文字、底座、投影和多余光效。
 

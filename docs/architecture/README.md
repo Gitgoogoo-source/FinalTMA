@@ -111,4 +111,5 @@ TMA 首次同步加载只覆盖应用壳、会话与账号门禁及默认开盒�
 - [宠物美术发布一致性与不可变缓存](adr/ADR-031-art-release-consistency-and-cache-policy.md)
 - [Telegram Stars 付款人与订单账号绑定](adr/ADR-032-stars-payer-identity-binding.md)
 - [邀请分享只保留本地反馈](adr/ADR-033-referral-share-local-feedback.md)
+- [Vercel 静态美术运行时尺寸与 PNG 编码](adr/ADR-034-static-art-runtime-sizing.md)
 - [抽卡与邀请插画响应式 WebP](adr/ADR-035-responsive-gacha-and-referral-art.md)
