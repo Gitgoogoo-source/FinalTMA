@@ -333,6 +333,25 @@ p {
   text-align: center;
   color: var(--muted);
 }
+.stale-content-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 176, 57, 0.3);
+  border-radius: var(--radius-card, 14px);
+  color: var(--sprout-ink, #3d464b);
+  background: rgba(255, 176, 57, 0.1);
+  font-size: 12px;
+  font-weight: 800;
+}
+.stale-content-notice .button {
+  min-height: 34px;
+  padding: 7px 10px;
+  white-space: nowrap;
+}
 .spin {
   animation: spin 1s linear infinite;
 }

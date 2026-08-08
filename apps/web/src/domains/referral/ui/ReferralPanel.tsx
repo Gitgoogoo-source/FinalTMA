@@ -16,7 +16,12 @@ import {
   inviteGiftArtSrcSet,
   inviteGiftArtUrl,
 } from "../../../shared/assets/responsiveArt.ts";
-import { Badge, Button, Card } from "../../../shared/ui/index.tsx";
+import {
+  Badge,
+  Button,
+  Card,
+  StaleContentNotice,
+} from "../../../shared/ui/index.tsx";
 
 export function ReferralPanel(): ReactNode {
   const query = useApiQuery("referral.get");
@@ -53,13 +58,13 @@ export function ReferralPanel(): ReactNode {
       });
     }
   };
-  if (query.isLoading)
+  if (query.isLoading && query.data === undefined)
     return (
       <Card>
         <p>正在加载邀请数据</p>
       </Card>
     );
-  if (query.error)
+  if (query.error && query.data === undefined)
     return (
       <Card>
         <p>{(query.error as Error).message}</p>
@@ -68,6 +73,12 @@ export function ReferralPanel(): ReactNode {
     );
   return (
     <div className="referral-stack">
+      {query.error ? (
+        <StaleContentNotice
+          onRetry={() => void query.refetch()}
+          retrying={query.isFetching}
+        />
+      ) : null}
       <Card className="invite-card">
         <div className="invite-copy">
           <span>好友邀请奖励</span>

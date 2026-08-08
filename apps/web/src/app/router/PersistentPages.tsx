@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 
+import { PageQueryActivityProvider } from "../../platform/query/pageQueryActivity.tsx";
 import {
   PageActivityProvider,
   type MainPagePath,
@@ -96,17 +97,19 @@ export function PersistentPages({
             hidden={!active}
             inert={!active}
           >
-            <PageActivityProvider
-              active={active}
-              path={path}
-              search={active ? search : ""}
-            >
-              <Suspense
-                fallback={<main className="page-state">正在加载页面</main>}
+            <PageQueryActivityProvider active={active}>
+              <PageActivityProvider
+                active={active}
+                path={path}
+                search={active ? search : ""}
               >
-                <Page />
-              </Suspense>
-            </PageActivityProvider>
+                <Suspense
+                  fallback={<main className="page-state">正在加载页面</main>}
+                >
+                  <Page />
+                </Suspense>
+              </PageActivityProvider>
+            </PageQueryActivityProvider>
           </div>
         );
       })}

@@ -269,6 +269,7 @@ function checkQueryBoundary(source) {
   const observerQuery = calls(observer, "useQuery");
   const observerOptions = objectArgument(observerQuery[0], 0);
   const enabled = unwrap(objectPropertyExpression(observerOptions, "enabled"));
+  const pageEnabled = enabled ? unwrap(enabled.left) : undefined;
   const queryRefetch = variable(observer, "queryRefetch");
   const refetchDeclaration = variable(observer, "refetch");
   const refetchInitializer = unwrap(refetchDeclaration?.initializer);
@@ -278,10 +279,17 @@ function checkQueryBoundary(source) {
     calls(observer, "useSyncExternalStore").length === 1 &&
       enabled &&
       ts.isBinaryExpression(enabled) &&
-      expressionValue(enabled.left) === "enabled" &&
+      enabled.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken &&
+      pageEnabled &&
+      ts.isBinaryExpression(pageEnabled) &&
+      pageEnabled.operatorToken.kind ===
+        ts.SyntaxKind.AmpersandAmpersandToken &&
+      expressionValue(pageEnabled.left) === "requestedEnabled" &&
+      expressionValue(pageEnabled.right) === "pageQueryActive" &&
       isNegatedIdentifier(enabled.right, "suppressed") &&
+      calls(observer, "usePageQueryActive").length === 1 &&
       booleanProperty(observerOptions, "refetchOnReconnect") === false,
-    "ordinary observers must subscribe to route suppression and remain disabled behind it",
+    "ordinary observers must subscribe to page activity and route suppression",
   );
   must(
     expressionValue(queryRefetch?.initializer) === "query.refetch" &&

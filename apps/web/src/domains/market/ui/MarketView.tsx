@@ -560,7 +560,7 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
         </Card>
       )}
       {tab === "manage" && mine.error && hasManageContent && (
-        <Card className="resume-intent" role="alert">
+        <Card className="resume-intent" role="status" aria-live="polite">
           <strong>出售状态暂未更新</strong>
           <p>已保留当前设备上的成交提醒，可以稍后再试。</p>
           <Button onClick={() => void mine.refetch()}>重新加载</Button>
@@ -571,6 +571,8 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
           loading={state.isLoading}
           error={state.error as Error | null}
           onRetry={() => void state.refetch()}
+          hasContent={state.data !== undefined}
+          retrying={state.isFetching}
           empty={!selectedSellItem}
         >
           {selectedSellItem && (
@@ -602,6 +604,8 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
                 : (state.error as Error | null)
           }
           onRetry={() => void state.refetch()}
+          hasContent={state.data !== undefined}
+          retrying={state.isFetching}
           empty={
             tab === "manage" && sorted.length === 0 && soldEvents.length === 0
           }

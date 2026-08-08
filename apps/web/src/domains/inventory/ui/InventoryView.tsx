@@ -169,6 +169,8 @@ export function InventoryView({
         loading={query.isLoading}
         error={query.error as Error | null}
         onRetry={() => void query.refetch()}
+        hasContent={query.data !== undefined}
+        retrying={query.isFetching}
         empty={false}
       >
         {targetId && item?.template_id === targetId && (

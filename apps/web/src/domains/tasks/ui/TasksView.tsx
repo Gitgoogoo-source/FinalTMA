@@ -237,6 +237,8 @@ export function TasksView({
       loading={tasks.isLoading}
       error={tasks.error as Error | null}
       onRetry={() => void tasks.refetch()}
+      hasContent={tasks.data !== undefined}
+      retrying={tasks.isFetching}
       empty={false}
     >
       <div id="task-checkin" tabIndex={-1}>

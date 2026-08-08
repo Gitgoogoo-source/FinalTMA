@@ -41,12 +41,16 @@ export function PageState({
   loading,
   error,
   onRetry,
+  hasContent = false,
+  retrying = false,
   empty,
   children,
 }: {
   loading: boolean;
   error: Error | null;
   onRetry(): void;
+  hasContent?: boolean;
+  retrying?: boolean;
   empty?: boolean;
   children: ReactNode;
 }): ReactNode {
@@ -57,7 +61,7 @@ export function PageState({
         正在加载真实数据
       </div>
     );
-  if (error)
+  if (error && !hasContent)
     return (
       <div className="page-state">
         <AlertCircle />
@@ -68,8 +72,36 @@ export function PageState({
         </Button>
       </div>
     );
-  if (empty) return <div className="page-state">暂无可展示数据</div>;
-  return children;
+  const content = empty ? (
+    <div className="page-state">暂无可展示数据</div>
+  ) : (
+    children
+  );
+  if (!error) return content;
+  return (
+    <>
+      <StaleContentNotice onRetry={onRetry} retrying={retrying} />
+      {content}
+    </>
+  );
+}
+
+export function StaleContentNotice({
+  onRetry,
+  retrying = false,
+}: {
+  onRetry(): void;
+  retrying?: boolean;
+}): ReactNode {
+  return (
+    <div className="stale-content-notice" role="status" aria-live="polite">
+      <span>内容暂未更新</span>
+      <Button className="secondary" disabled={retrying} onClick={onRetry}>
+        <RefreshCw className={retrying ? "spin" : undefined} size={15} />
+        {retrying ? "正在更新" : "重新加载"}
+      </Button>
+    </div>
+  );
 }
 
 export function Badge({ children }: { children: ReactNode }): ReactNode {

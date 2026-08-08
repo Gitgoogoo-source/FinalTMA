@@ -22,6 +22,7 @@ import {
   registerBootstrapCacheSeeder,
   registerSessionCacheClearer,
 } from "../session/store.ts";
+import { usePageQueryActive } from "./pageQueryActivity.tsx";
 
 type ApiQuerySuppression = {
   generation: string;
@@ -252,6 +253,7 @@ export function invalidateApiQueries(
   const selected = new Set<RouteId>(routeIds);
   return queryClient.invalidateQueries(
     {
+      refetchType: "active",
       predicate: (query) =>
         query.queryKey[0] === generation &&
         selected.has(query.queryKey[2] as RouteId) &&
@@ -264,8 +266,9 @@ export function invalidateApiQueries(
 export function useApiQuery<Id extends RouteId>(
   routeId: Id,
   input: RouteInput<Id> = {} as RouteInput<Id>,
-  enabled = true,
+  requestedEnabled = true,
 ): UseQueryResult<RouteOutput<Id>> {
+  const pageQueryActive = usePageQueryActive();
   useSyncExternalStore(
     subscribeApiQuerySuppressions,
     getApiQuerySuppressionVersion,
@@ -278,7 +281,7 @@ export function useApiQuery<Id extends RouteId>(
     queryKey: [generation, "v1", routeId, input],
     queryFn: ({ signal }) =>
       executeApiQuery(generation, routeId, input, signal),
-    enabled: enabled && !suppressed,
+    enabled: requestedEnabled && pageQueryActive && !suppressed,
     refetchOnReconnect: false,
   });
   const queryRefetch = query.refetch;
@@ -294,6 +297,7 @@ export async function refreshUserState(): Promise<void> {
   if (!generation) return;
   await queryClient.invalidateQueries(
     {
+      refetchType: "active",
       predicate: (query) =>
         query.queryKey[0] === generation &&
         !isApiQuerySuppressed(generation, query.queryKey[2] as RouteId),
@@ -436,6 +440,7 @@ export async function refreshScopes(
   );
   await queryClient.invalidateQueries(
     {
+      refetchType: "active",
       predicate: (query) => {
         const generation = getSession()?.generation;
         if (!generation || query.queryKey[0] !== generation) return false;

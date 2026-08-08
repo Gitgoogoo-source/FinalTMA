@@ -44,6 +44,7 @@ REQUIRED_PATHS = (
     "apps/web/src/app/router",
     "apps/web/src/app/shell",
     "apps/web/src/app/router/PersistentPages.tsx",
+    "apps/web/src/platform/query/pageQueryActivity.tsx",
     "apps/web/src/shared/navigation/pageActivity.tsx",
     "apps/web/src/pages",
     "apps/web/src/domains",
@@ -51,6 +52,7 @@ REQUIRED_PATHS = (
     "apps/web/src/workflows/payment-recovery",
     "apps/web/src/workflows/battle-realtime",
     "docs/architecture/adr/ADR-013-session-page-lifecycle.md",
+    "docs/architecture/adr/ADR-037-persistent-page-query-activity.md",
     "docs/architecture/adr/ADR-016-controlled-battle-acceptance-fixture.md",
     "docs/architecture/adr/ADR-022-battle-stage-skill-progression.md",
     "docs/architecture/adr/ADR-025-battle-active-switch-atomicity.md",
@@ -220,6 +222,12 @@ def verify_web_boundaries() -> None:
     page_activity = (WEB_ROOT / "shared/navigation/pageActivity.tsx").read_text(
         encoding="utf-8"
     )
+    page_query_activity = (
+        WEB_ROOT / "platform/query/pageQueryActivity.tsx"
+    ).read_text(encoding="utf-8")
+    query_source = (WEB_ROOT / "platform/query/index.ts").read_text(
+        encoding="utf-8"
+    )
     lifecycle_terms = (
         "setVisitState({",
         "visitState.visited",
@@ -227,16 +235,87 @@ def verify_web_boundaries() -> None:
         "hidden={!active}",
         "inert={!active}",
         "PageActivityProvider",
+        "PageQueryActivityProvider",
+        "active={active}",
         "search: active ? search : snapshot.search",
         'history.scrollRestoration = "manual"',
     )
-    lifecycle_source = persistent_pages + page_activity
+    lifecycle_source = persistent_pages + page_activity + page_query_activity
     missing_lifecycle_terms = [
         value for value in lifecycle_terms if value not in lifecycle_source
     ]
     if missing_lifecycle_terms:
         raise SystemExit(
             f"Session page lifecycle is incomplete: {missing_lifecycle_terms}"
+        )
+    query_activity_terms = (
+        "const PageQueryActivityContext = createContext(true);",
+        "<PageQueryActivityContext.Provider value={active}>",
+        "export function usePageQueryActive(): boolean",
+        "const pageQueryActive = usePageQueryActive();",
+        "enabled: requestedEnabled && pageQueryActive && !suppressed",
+        "const queryRefetch = query.refetch;",
+        "cancelRefetch: false",
+    )
+    query_activity_source = page_query_activity + query_source
+    missing_query_activity_terms = [
+        value for value in query_activity_terms if value not in query_activity_source
+    ]
+    if missing_query_activity_terms:
+        raise SystemExit(
+            "Persistent-page query activity is incomplete: "
+            f"{missing_query_activity_terms}"
+        )
+    active_only_blocks = {
+        "invalidateApiQueries": query_source.partition(
+            "export function invalidateApiQueries"
+        )[2].partition("export function useApiQuery")[0],
+        "refreshUserState": query_source.partition(
+            "export async function refreshUserState"
+        )[2].partition("const topAssetRouteIds")[0],
+        "refreshScopes": query_source.partition(
+            "export async function refreshScopes"
+        )[2].partition("function foregroundPrefixes")[0],
+    }
+    missing_active_only = [
+        name
+        for name, source in active_only_blocks.items()
+        if 'refetchType: "active"' not in source
+    ]
+    if missing_active_only:
+        raise SystemExit(
+            "Query invalidation must refetch active observers only: "
+            f"{missing_active_only}"
+        )
+    market_view = (WEB_ROOT / "domains/market/ui/MarketView.tsx").read_text(
+        encoding="utf-8"
+    )
+    sold_inbox = (WEB_ROOT / "domains/market/soldInbox.ts").read_text(
+        encoding="utf-8"
+    )
+    battle_view = (WEB_ROOT / "domains/battle/ui/BattleView.tsx").read_text(
+        encoding="utf-8"
+    )
+    domain_lifecycle_terms = (
+        (market_view, "useMarketSoldInbox(pageActive, pageActive)"),
+        (
+            sold_inbox,
+            "const enabled = Boolean(userId) && queryEnabled && surfaceActive;",
+        ),
+        (
+            sold_inbox,
+            "const poll = Boolean(userId) && pollingEnabled && surfaceActive;",
+        ),
+        (battle_view, "pageActive && activeTerminal === null"),
+        (battle_view, "if (!pageActive || !sessionGeneration) return;"),
+    )
+    missing_domain_lifecycle = [
+        term for source, term in domain_lifecycle_terms if term not in source
+    ]
+    if missing_domain_lifecycle:
+        raise SystemExit(
+            "Battle or market page lifecycle gate is incomplete: "
+            f"{missing_domain_lifecycle}"
         )
     shell_source = (WEB_ROOT / "app/shell/AppShell.tsx").read_text(
         encoding="utf-8"
@@ -1246,6 +1325,7 @@ def verify_documentation() -> None:
         "refreshScopes",
         "Session generation",
         "不写入 `localStorage`",
+        "ADR-037",
     )
     missing_lifecycle_documentation = [
         value
@@ -1256,6 +1336,28 @@ def verify_documentation() -> None:
         raise SystemExit(
             "Session page lifecycle ADR is incomplete: "
             f"{missing_lifecycle_documentation}"
+        )
+    query_activity_adr = (
+        ROOT / "docs/architecture/adr/ADR-037-persistent-page-query-activity.md"
+    ).read_text(encoding="utf-8")
+    required_query_activity_terms = (
+        "页面查询活动状态",
+        "切换前已经发出的 GET",
+        "20 秒",
+        '`refetchType: "active"`',
+        "内容暂未更新",
+        "隐藏页面查询不读取、不参与等待",
+        "Telegram iOS 与 Android",
+    )
+    missing_query_activity_documentation = [
+        value
+        for value in required_query_activity_terms
+        if value not in query_activity_adr
+    ]
+    if missing_query_activity_documentation:
+        raise SystemExit(
+            "Persistent-page query activity ADR is incomplete: "
+            f"{missing_query_activity_documentation}"
         )
     fixture_adr = (
         ROOT / "docs/architecture/adr/ADR-016-controlled-battle-acceptance-fixture.md"

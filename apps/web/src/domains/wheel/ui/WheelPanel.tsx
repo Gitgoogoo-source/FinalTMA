@@ -22,7 +22,7 @@ import type { RouteOutput } from "@pokepets/api-contracts/app";
 import { useApiQuery } from "../../../platform/query/index.ts";
 import { focusTaskTarget } from "../../../shared/navigation/focusTaskTarget.ts";
 import { usePageSearchParams } from "../../../shared/navigation/pageActivity.tsx";
-import { Button, Card } from "../../../shared/ui/index.tsx";
+import { Button, Card, StaleContentNotice } from "../../../shared/ui/index.tsx";
 import { useOperationRegistry } from "../../../workflows/operation-recovery/index.ts";
 import { useNavigationIntent } from "../../../workflows/payment-recovery/index.ts";
 
@@ -288,15 +288,21 @@ function WheelPanelRuntime({
         </div>
       )}
 
-      {query.isLoading ? (
+      {query.isLoading && query.data === undefined ? (
         <p className="wheel-preparing">转盘准备中…</p>
-      ) : query.error ? (
+      ) : query.error && query.data === undefined ? (
         <div className="wheel-preparing">
           <p>转盘暂时没有准备好</p>
           <Button onClick={() => void query.refetch()}>再试一次</Button>
         </div>
       ) : (
         <>
+          {query.error ? (
+            <StaleContentNotice
+              onRetry={() => void query.refetch()}
+              retrying={query.isFetching}
+            />
+          ) : null}
           <MilestoneProgress
             spinCount={spinCount}
             dailyLimit={dailyLimit}
