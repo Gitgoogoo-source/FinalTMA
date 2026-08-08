@@ -1,5 +1,6 @@
 import { rpc } from "../../platform/db/index.ts";
 import { getEnv } from "../../platform/env/index.ts";
+import { errorDefinition } from "@pokepets/api-contracts/common";
 import {
   hashToken,
   identityFingerprint,
@@ -21,8 +22,7 @@ export const identityHandlers = {
   "identity.authenticate": async (context) => {
     const initData = String(context.input.init_data);
     const operationId = requireOperationId(context);
-    await rpc("identity_consume_login_rate_limit", {
-      p_scope: "source",
+    await rpc("identity_consume_login_source_rate_limit", {
       p_key_hash: identityFingerprint(
         "login-source",
         requestSource(context.request),
@@ -42,72 +42,60 @@ export const identityHandlers = {
         "TELEGRAM_INIT_DATA_INVALID",
         "Telegram 登录信息无效",
       );
-    await rpc("identity_consume_login_rate_limit", {
-      p_scope: "user",
-      p_key_hash: identityFingerprint("login-user", String(verified.user.id)),
-    });
-    await rpc("identity_consume_login_rate_limit", {
-      p_scope: "init_data",
-      p_key_hash: identityFingerprint("login-init-data", verified.initDataHash),
-    });
     const entry = classifyEntry(verified.startParam ?? null);
     const issued = issueToken(operationId);
-    const session = await rpc<{
-      account_status: "normal" | "banned";
-      user_id?: string;
-      expires_at?: string;
-      entry_kind?: "direct" | "referral" | "battle";
-      entry_handoff_state?: "pending" | "complete";
-      entry_handoff_code?: string | null;
-      entry_handoff_result?:
-        | "REFERRAL_BOUND"
-        | "REFERRAL_ALREADY_BOUND"
-        | "REFERRAL_ALREADY_RECHARGED"
-        | "REFERRAL_CANDIDATE_EXPIRED"
-        | "REFERRAL_CODE_INVALID"
-        | "REFERRAL_INELIGIBLE"
-        | "REFERRAL_INVITER_UNAVAILABLE"
-        | "REFERRAL_OLD_USER"
-        | "REFERRAL_SELF_BIND"
-        | null;
-    }>("identity_authenticate", {
-      p_operation_id: operationId,
-      p_request_hash: identityFingerprint(
-        "login-request",
-        verified.initDataHash,
-      ),
-      p_telegram_id: verified.user.id,
-      p_username: verified.user.username ?? null,
-      p_first_name: verified.user.first_name,
-      p_last_name: verified.user.last_name ?? null,
-      p_language_code: verified.user.language_code ?? null,
-      p_photo_url: verified.user.photo_url ?? null,
-      p_referral_code: referralCode(verified.user.id),
-      p_token_hash: issued.hash,
-      p_auth_date: verified.authDate.toISOString(),
-      p_entry_kind: entry.kind,
-      p_entry_referral_code: entry.referralCode,
-      p_battle_invite_token_hash: entry.battleInviteTokenHash,
-    });
-    if (session.account_status === "banned")
+    const result = await rpc<IdentityAuthenticationResult>(
+      "identity_authenticate",
+      {
+        p_operation_id: operationId,
+        p_request_hash: identityFingerprint(
+          "login-request",
+          verified.initDataHash,
+        ),
+        p_user_key_hash: identityFingerprint(
+          "login-user",
+          String(verified.user.id),
+        ),
+        p_init_data_key_hash: identityFingerprint(
+          "login-init-data",
+          verified.initDataHash,
+        ),
+        p_telegram_id: verified.user.id,
+        p_username: verified.user.username ?? null,
+        p_first_name: verified.user.first_name,
+        p_last_name: verified.user.last_name ?? null,
+        p_language_code: verified.user.language_code ?? null,
+        p_photo_url: verified.user.photo_url ?? null,
+        p_referral_code: referralCode(verified.user.id),
+        p_session_id: issued.sessionId,
+        p_token_hash: issued.hash,
+        p_auth_date: verified.authDate.toISOString(),
+        p_entry_kind: entry.kind,
+        p_entry_referral_code: entry.referralCode,
+        p_battle_invite_token_hash: entry.battleInviteTokenHash,
+      },
+    );
+    if ("error_code" in result) throw loginResultError(result.error_code);
+    if (result.account_status === "banned")
       return { data: { account_status: "banned" as const } };
     if (
-      !session.user_id ||
-      !session.expires_at ||
-      !session.entry_handoff_state ||
-      !session.entry_kind
+      result.session_id !== issued.sessionId ||
+      !result.user_id ||
+      !result.expires_at ||
+      !result.entry_handoff_state ||
+      !result.entry_kind
     )
       throw new ApiError(500, "INTERNAL_ERROR", "登录结果不完整", true);
     return {
       data: {
         account_status: "normal" as const,
         access_token: issued.token,
-        user_id: session.user_id,
-        expires_at: session.expires_at,
-        entry_kind: session.entry_kind,
-        entry_handoff_state: session.entry_handoff_state,
-        entry_handoff_code: session.entry_handoff_code ?? null,
-        entry_handoff_result: session.entry_handoff_result ?? null,
+        user_id: result.user_id,
+        expires_at: result.expires_at,
+        entry_kind: result.entry_kind,
+        entry_handoff_state: result.entry_handoff_state,
+        entry_handoff_code: result.entry_handoff_code ?? null,
+        entry_handoff_result: result.entry_handoff_result ?? null,
       },
     };
   },
@@ -119,7 +107,7 @@ export const identityHandlers = {
 } satisfies HandlerMap;
 
 function classifyEntry(startParam: string | null): {
-  kind: "direct" | "referral" | "battle";
+  kind: "direct" | "referral" | "battle" | "invalid";
   referralCode: string | null;
   battleInviteTokenHash: string | null;
 } {
@@ -141,10 +129,54 @@ function classifyEntry(startParam: string | null): {
       referralCode: null,
       battleInviteTokenHash: hashToken(startParam),
     };
-  throw new ApiError(
-    400,
-    "TELEGRAM_START_PARAM_INVALID",
-    "入口参数无效，请重新从 Telegram 进入应用",
+  return {
+    kind: "invalid",
+    referralCode: null,
+    battleInviteTokenHash: null,
+  };
+}
+
+type IdentityAuthenticationResult =
+  | {
+      error_code:
+        | "RATE_LIMITED"
+        | "IDEMPOTENCY_KEY_REUSED"
+        | "TELEGRAM_START_PARAM_INVALID";
+    }
+  | { account_status: "banned" }
+  | {
+      account_status: "normal";
+      session_id: string;
+      user_id: string;
+      expires_at: string;
+      entry_kind: "direct" | "referral" | "battle";
+      entry_handoff_state: "pending" | "complete";
+      entry_handoff_code: string | null;
+      entry_handoff_result:
+        | "REFERRAL_BOUND"
+        | "REFERRAL_ALREADY_BOUND"
+        | "REFERRAL_ALREADY_RECHARGED"
+        | "REFERRAL_CANDIDATE_EXPIRED"
+        | "REFERRAL_CODE_INVALID"
+        | "REFERRAL_INELIGIBLE"
+        | "REFERRAL_INVITER_UNAVAILABLE"
+        | "REFERRAL_OLD_USER"
+        | "REFERRAL_SELF_BIND"
+        | null;
+    };
+
+function loginResultError(
+  code:
+    | "RATE_LIMITED"
+    | "IDEMPOTENCY_KEY_REUSED"
+    | "TELEGRAM_START_PARAM_INVALID",
+): ApiError {
+  const definition = errorDefinition(code);
+  return new ApiError(
+    definition.status,
+    code,
+    definition.message,
+    definition.retryable,
   );
 }
 

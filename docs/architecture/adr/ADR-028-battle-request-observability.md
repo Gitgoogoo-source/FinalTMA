@@ -10,7 +10,7 @@ Vercel Runtime Logs 对全部玩家 `battle.*` 路由和 `battle.outbox_integrat
 
 阶段字段固定为：
 
-- `auth_ms`：网关鉴权与路由会话认证的合计墙钟时间。
+- `auth_ms`：网关鉴权与本地会话凭证完整性证明的合计墙钟时间，不包含数据库往返。
 - `input_parse_ms`：路径、查询与 body 解析校验时间。
 - `handler_ms`：Battle handler 的完整墙钟时间。
 - `response_ms`：成功响应契约校验与 JSON 生成时间。

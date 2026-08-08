@@ -49,7 +49,7 @@ export function createGateway<Route extends RouteDefinition>(
       telemetry = observesBattleRoute(matchedRoute.id)
         ? createBattleRequestTelemetry()
         : null;
-      const session = await observeRequestStage(telemetry, "auth", async () => {
+      const session = observeRequestStageSync(telemetry, "auth", () => {
         authenticateGateway(request, gateway, matchedRoute);
         return authenticateRoute(request, matchedRoute);
       });

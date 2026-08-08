@@ -1,10 +1,10 @@
-import type { Session } from "../platform/session.ts";
+import type { SessionCredential } from "../platform/session.ts";
 import type { RequestTelemetry } from "../platform/observability/index.ts";
 
 export type HandlerContext = {
   request: Request;
   input: Record<string, unknown>;
-  session: Session | null;
+  session: SessionCredential | null;
   operationId: string | null;
   telemetry: RequestTelemetry | null;
 };
@@ -18,7 +18,7 @@ export type HandlerResult = {
 export type RouteHandler = (context: HandlerContext) => Promise<HandlerResult>;
 export type HandlerMap = Record<string, RouteHandler>;
 
-export function requireSession(context: HandlerContext): Session {
+export function requireSession(context: HandlerContext): SessionCredential {
   if (!context.session)
     throw new Error("SESSION_REQUIRED:请从 Telegram 重新打开 Mini App");
   return context.session;

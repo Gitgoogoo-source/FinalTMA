@@ -1,39 +1,41 @@
-import { createHash, createHmac } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
-import { rpc } from "./db/index.ts";
 import { getEnv } from "./env/index.ts";
 import { ApiError } from "../http/errors.ts";
 
-export type Session = {
+export type SessionCredential = {
   session_id: string;
-  user_id: string;
-  account_status: "normal" | "banned";
-  entry_kind: "direct" | "referral" | "battle";
-  expires_at: string;
-  session_state: "active" | "expired" | "replaced";
-  entry_handoff_state: "pending" | "complete";
-  entry_handoff_code: string | null;
-  entry_handoff_result:
-    | "REFERRAL_BOUND"
-    | "REFERRAL_ALREADY_BOUND"
-    | "REFERRAL_ALREADY_RECHARGED"
-    | "REFERRAL_CANDIDATE_EXPIRED"
-    | "REFERRAL_CODE_INVALID"
-    | "REFERRAL_INELIGIBLE"
-    | "REFERRAL_INVITER_UNAVAILABLE"
-    | "REFERRAL_OLD_USER"
-    | "REFERRAL_SELF_BIND"
-    | null;
 };
+
+const SESSION_TOKEN_VERSION = 1;
+const SESSION_ID_BYTES = 16;
+const SESSION_MAC_BYTES = 32;
+const SESSION_PAYLOAD_BYTES = 1 + SESSION_ID_BYTES;
+const SESSION_TOKEN_BYTES = SESSION_PAYLOAD_BYTES + SESSION_MAC_BYTES;
+const SESSION_TOKEN_PATTERN = /^[A-Za-z0-9_-]{66}$/;
 
 export function issueToken(operationId: string): {
   token: string;
   hash: string;
+  sessionId: string;
 } {
-  const token = createHmac("sha256", getEnv().IDENTITY_SECURITY_SECRET)
-    .update(`pokepets-login-token-v1:${operationId}`)
-    .digest("base64url");
-  return { token, hash: hashToken(token) };
+  const sessionBytes = createHmac("sha256", getEnv().IDENTITY_SECURITY_SECRET)
+    .update(`pokepets-session-id-v1:${operationId}`)
+    .digest()
+    .subarray(0, SESSION_ID_BYTES);
+  sessionBytes[6] = (sessionBytes[6]! & 0x0f) | 0x80;
+  sessionBytes[8] = (sessionBytes[8]! & 0x3f) | 0x80;
+  const payload = Buffer.alloc(SESSION_PAYLOAD_BYTES);
+  payload[0] = SESSION_TOKEN_VERSION;
+  sessionBytes.copy(payload, 1);
+  const token = Buffer.concat([payload, signSessionPayload(payload)]).toString(
+    "base64url",
+  );
+  return {
+    token,
+    hash: hashToken(token),
+    sessionId: uuidFromBytes(sessionBytes),
+  };
 }
 
 export function identityFingerprint(domain: string, value: string): string {
@@ -54,29 +56,49 @@ export function referralCode(telegramId: number): string {
   return `TMA${signature.toUpperCase()}`;
 }
 
-export async function resolveSession(request: Request): Promise<Session> {
+export function authenticateSessionCredential(
+  request: Request,
+): SessionCredential {
   const authorization = request.headers.get("authorization");
-  if (!authorization?.startsWith("Bearer "))
-    throw new ApiError(
-      401,
-      "SESSION_REQUIRED",
-      "请从 Telegram 重新打开 Mini App",
-    );
-  const token = authorization.slice(7).trim();
-  const session = await rpc<Session | null>("identity_resolve_session", {
-    p_token_hash: hashToken(token),
-  });
-  if (!session)
-    throw new ApiError(
-      401,
-      "SESSION_REQUIRED",
-      "请从 Telegram 重新打开 Mini App",
-    );
-  if (session.account_status === "banned")
-    throw new ApiError(403, "ACCOUNT_RESTRICTED", "账号不可用");
-  if (session.session_state === "replaced")
-    throw new ApiError(401, "SESSION_REPLACED", "会话已被新登录替换");
-  if (session.session_state === "expired")
-    throw new ApiError(401, "SESSION_EXPIRED", "会话已过期");
-  return session;
+  const token = authorization?.startsWith("Bearer ")
+    ? authorization.slice(7)
+    : null;
+  if (!token || !SESSION_TOKEN_PATTERN.test(token)) throw sessionRequired();
+
+  const decoded = Buffer.from(token, "base64url");
+  if (
+    decoded.length !== SESSION_TOKEN_BYTES ||
+    decoded.toString("base64url") !== token ||
+    decoded[0] !== SESSION_TOKEN_VERSION
+  )
+    throw sessionRequired();
+
+  const payload = decoded.subarray(0, SESSION_PAYLOAD_BYTES);
+  const suppliedMac = decoded.subarray(SESSION_PAYLOAD_BYTES);
+  const expectedMac = signSessionPayload(payload);
+  if (!timingSafeEqual(suppliedMac, expectedMac)) throw sessionRequired();
+
+  return {
+    session_id: uuidFromBytes(payload.subarray(1)),
+  };
+}
+
+function signSessionPayload(payload: Uint8Array): Buffer {
+  return createHmac("sha256", getEnv().IDENTITY_SECURITY_SECRET)
+    .update("pokepets-session-proof-v1:")
+    .update(payload)
+    .digest();
+}
+
+function uuidFromBytes(value: Uint8Array): string {
+  const hex = Buffer.from(value).toString("hex");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
+function sessionRequired(): ApiError {
+  return new ApiError(
+    401,
+    "SESSION_REQUIRED",
+    "请从 Telegram 重新打开 Mini App",
+  );
 }

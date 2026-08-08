@@ -19,7 +19,7 @@
 | 13 图鉴            | album、inventory、market、gacha | album                                    | album、inventory、catalog、economy       | 70×3 显式节点、六筛选、永久点亮、整链奖励唯一领取                 |
 | 14 开盒            | gacha、operation-recovery       | gacha                                    | gacha、inventory、economy、operations    | 单抽/十连全成全败、结果只生成一次、展示按钮不写后端且不跨启动恢复 |
 | 15 VIP             | vip                             | vip、integrations                        | vip、payments、economy                   | 30 UTC 日、续费上限、每日手动领取                                 |
-| 16 登录            | session-bootstrap、platform     | identity                                 | identity、operations                     | initData、交接状态、限流、短会话、封禁迟到响应隔离                |
+| 16 登录            | session-bootstrap、platform     | identity                                 | identity、operations                     | 两次登录 RPC、本地凭证证明、数据库会话终裁决、限流与交接状态      |
 | 17 藏品            | inventory                       | inventory                                | inventory                                | 模板加数量、预留不可重复使用                                      |
 | 18 进化            | inventory、evolution            | evolution                                | 43_evolution、inventory、economy         | 只读预览、二次确认、原子结算、结果恢复与会话 NEW                  |
 | 19 顶部资产栏      | app/shell                       | identity                                 | economy、vip                             | 真实资产回正，不读取或展示钱包状态                                |

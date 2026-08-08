@@ -82,6 +82,14 @@ create table identity.auth_attempts (
 create index auth_attempts_scope_key_time_idx on identity.auth_attempts (scope, key_hash, attempted_at desc);
 create index auth_attempts_time_idx on identity.auth_attempts (attempted_at);
 
+create table identity.auth_maintenance (
+  task text primary key check (task = 'auth_attempts_cleanup'),
+  last_run_at timestamptz not null
+);
+
+insert into identity.auth_maintenance (task, last_run_at)
+values ('auth_attempts_cleanup', '-infinity'::timestamptz);
+
 create table identity.login_requests (
   operation_id uuid primary key,
   request_hash text not null check (request_hash ~ '^[0-9a-f]{64}$'),
@@ -222,7 +230,7 @@ begin
 end;
 $$;
 
-create or replace function api.identity_consume_login_rate_limit(p_scope text, p_key_hash text)
+create or replace function api.identity_consume_login_source_rate_limit(p_key_hash text)
 returns void
 language plpgsql
 security definer
@@ -230,57 +238,71 @@ set search_path = ''
 as $$
 declare
   v_count integer;
+  v_should_cleanup boolean;
+begin
+  if p_key_hash is null or p_key_hash !~ '^[0-9a-f]{64}$' then
+    perform api.raise_business_error('REQUEST_INVALID', '登录限流参数无效');
+  end if;
+  perform pg_advisory_xact_lock(hashtextextended('identity.rate.source:' || p_key_hash, 0));
+  select count(*) into v_count
+  from identity.auth_attempts
+  where scope = 'source' and key_hash = p_key_hash and attempted_at >= now() - interval '1 minute';
+  if v_count >= 30 then
+    perform api.raise_business_error('RATE_LIMITED', '操作过于频繁，请稍后重试');
+  end if;
+  insert into identity.auth_attempts (scope, key_hash) values ('source', p_key_hash);
+
+  if pg_try_advisory_xact_lock(hashtextextended('identity.maintenance:auth_attempts_cleanup', 0)) then
+    update identity.auth_maintenance
+    set last_run_at = now()
+    where task = 'auth_attempts_cleanup'
+      and last_run_at <= now() - interval '1 minute'
+    returning true into v_should_cleanup;
+    if coalesce(v_should_cleanup, false) then
+      delete from identity.auth_attempts
+      where attempted_at < now() - interval '5 minutes';
+    end if;
+  end if;
+end;
+$$;
+
+create or replace function identity.consume_login_rate_limit(p_scope text, p_key_hash text)
+returns boolean
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+declare
+  v_count integer;
   v_limit integer;
 begin
   v_limit := case p_scope
-    when 'source' then 30
     when 'user' then 10
     when 'init_data' then 3
     else null
   end;
-  if v_limit is null or p_key_hash !~ '^[0-9a-f]{64}$' then
+  if v_limit is null or p_key_hash is null or p_key_hash !~ '^[0-9a-f]{64}$' then
     perform api.raise_business_error('REQUEST_INVALID', '登录限流参数无效');
   end if;
-  perform pg_advisory_xact_lock(hashtextextended(p_scope || ':' || p_key_hash, 0));
-  delete from identity.auth_attempts where attempted_at < now() - interval '5 minutes';
-  delete from identity.auth_attempts
-  where scope = p_scope and key_hash = p_key_hash and attempted_at < now() - interval '1 minute';
+  perform pg_advisory_xact_lock(hashtextextended('identity.rate.' || p_scope || ':' || p_key_hash, 0));
   select count(*) into v_count
   from identity.auth_attempts
-  where scope = p_scope and key_hash = p_key_hash and attempted_at >= now() - interval '1 minute';
+  where scope = p_scope
+    and key_hash = p_key_hash
+    and attempted_at >= now() - interval '1 minute';
   if v_count >= v_limit then
-    perform api.raise_business_error('RATE_LIMITED', '操作过于频繁，请稍后重试');
+    return false;
   end if;
   insert into identity.auth_attempts (scope, key_hash) values (p_scope, p_key_hash);
+  return true;
 end;
-$$;
-
-create or replace function api.identity_resolve_session(p_token_hash text)
-returns jsonb
-language sql
-security definer
-set search_path = ''
-as $$
-  select jsonb_build_object(
-    'session_id', s.id,
-    'user_id', s.user_id,
-    'account_status', u.status,
-    'entry_kind', s.entry_kind,
-    'expires_at', s.expires_at,
-    'session_state', case
-      when s.revoked_at is not null then 'replaced'
-      when s.expires_at <= now() then 'expired'
-      else 'active'
-    end
-  ) || identity.session_entry_handoff(s.id)
-  from identity.sessions s
-  join identity.users u on u.id = s.user_id
-  where s.token_hash = p_token_hash
 $$;
 
 create or replace function api.identity_authenticate(
   p_operation_id uuid,
   p_request_hash text,
+  p_user_key_hash text,
+  p_init_data_key_hash text,
   p_telegram_id bigint,
   p_username text,
   p_first_name text,
@@ -288,6 +310,7 @@ create or replace function api.identity_authenticate(
   p_language_code text,
   p_photo_url text,
   p_referral_code text,
+  p_session_id uuid,
   p_token_hash text,
   p_auth_date timestamptz,
   p_entry_kind text,
@@ -307,22 +330,44 @@ declare
   v_expires_at timestamptz;
   v_candidate identity.entry_candidates%rowtype;
   v_referral_processed_at timestamptz;
+  v_rate_allowed boolean;
 begin
-  if p_request_hash !~ '^[0-9a-f]{64}$' or p_token_hash !~ '^[0-9a-f]{64}$' then
+  if p_request_hash is null or p_request_hash !~ '^[0-9a-f]{64}$'
+    or p_user_key_hash is null or p_user_key_hash !~ '^[0-9a-f]{64}$'
+    or p_init_data_key_hash is null or p_init_data_key_hash !~ '^[0-9a-f]{64}$'
+    or p_token_hash is null or p_token_hash !~ '^[0-9a-f]{64}$'
+    or p_session_id is null
+    or p_telegram_id is null
+  then
     perform api.raise_business_error('REQUEST_INVALID', '登录请求摘要无效');
   end if;
-  if p_entry_kind not in ('direct', 'referral', 'battle')
+  if p_entry_kind is null
+    or p_entry_kind not in ('direct', 'referral', 'battle', 'invalid')
     or (p_entry_kind = 'direct' and (p_entry_referral_code is not null or p_battle_invite_token_hash is not null))
     or (p_entry_kind = 'referral' and (p_entry_referral_code is null or p_entry_referral_code !~ '^TMA[A-F0-9]{20}$' or p_battle_invite_token_hash is not null))
     or (p_entry_kind = 'battle' and (p_entry_referral_code is not null or p_battle_invite_token_hash is null or p_battle_invite_token_hash !~ '^[0-9a-f]{64}$'))
+    or (p_entry_kind = 'invalid' and (p_entry_referral_code is not null or p_battle_invite_token_hash is not null))
   then
-    perform api.raise_business_error('TELEGRAM_START_PARAM_INVALID', '入口参数无效');
+    perform api.raise_business_error('REQUEST_INVALID', '登录入口参数无效');
   end if;
+
+  v_rate_allowed := identity.consume_login_rate_limit('user', p_user_key_hash);
+  if not v_rate_allowed then
+    return jsonb_build_object('error_code', 'RATE_LIMITED');
+  end if;
+  v_rate_allowed := identity.consume_login_rate_limit('init_data', p_init_data_key_hash);
+  if not v_rate_allowed then
+    return jsonb_build_object('error_code', 'RATE_LIMITED');
+  end if;
+  if p_entry_kind = 'invalid' then
+    return jsonb_build_object('error_code', 'TELEGRAM_START_PARAM_INVALID');
+  end if;
+
   perform pg_advisory_xact_lock(hashtextextended('identity.login:' || p_operation_id::text, 0));
   select * into v_login from identity.login_requests where operation_id = p_operation_id for update;
   if v_login.operation_id is not null then
     if v_login.request_hash <> p_request_hash then
-      perform api.raise_business_error('IDEMPOTENCY_KEY_REUSED', '幂等键已用于不同登录请求');
+      return jsonb_build_object('error_code', 'IDEMPOTENCY_KEY_REUSED');
     end if;
     select * into v_user from identity.users where id = v_login.user_id for update;
     if v_user.status = 'banned' then
@@ -394,10 +439,10 @@ begin
 
   v_expires_at := now() + interval '15 minutes';
   insert into identity.sessions (
-    user_id, token_hash, auth_date, expires_at, new_user, entry_kind,
+    id, user_id, token_hash, auth_date, expires_at, new_user, entry_kind,
     referral_code, battle_invite_token_hash, referral_processed_at
   ) values (
-    v_user.id, p_token_hash, p_auth_date, v_expires_at, v_new_user, p_entry_kind,
+    p_session_id, v_user.id, p_token_hash, p_auth_date, v_expires_at, v_new_user, p_entry_kind,
     p_entry_referral_code, p_battle_invite_token_hash, v_referral_processed_at
   )
   returning id into v_session_id;

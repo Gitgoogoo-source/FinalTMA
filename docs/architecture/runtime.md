@@ -26,9 +26,9 @@ Battle 页面状态按“当前会话未离开的 viewer-specific current-room�
 
 ## Functions
 
-根目录 `api/app.ts`、`api/integrations.ts`、`api/jobs.ts` 是三个薄适配器，只创建 `@pokepets/api/entrypoints` 网关。每个 entrypoint 显式注入本网关的 route registry 与完整 handler map；三个 registry 互不导入。当前 App 注册表只路由非钱包、非 Mint 端点，当前 Jobs 注册表只路由三项非 Mint job；钱包、Mint 与 `reconcile-mints` 的契约和 handler 源码保留在休眠集合，但路由匹配和服务端 OpenAPI 均不包含它们。请求按“网关认证、路由匹配、会话认证、入口交接门禁、契约输入解析、领域查询或工作流、契约输出解析、标准信封”执行。只有 `referral.bind` 和 `operations.get` 声明 `allowPendingEntryHandoff`。
+根目录 `api/app.ts`、`api/integrations.ts`、`api/jobs.ts` 是三个薄适配器，只创建 `@pokepets/api/entrypoints` 网关。每个 entrypoint 显式注入本网关的 route registry 与完整 handler map；三个 registry 互不导入。当前 App 注册表只路由非钱包、非 Mint 端点，当前 Jobs 注册表只路由三项非 Mint job；钱包、Mint 与 `reconcile-mints` 的契约和 handler 源码保留在休眠集合，但路由匹配和服务端 OpenAPI 均不包含它们。玩家请求按“路由匹配、网关认证、本地会话凭证证明、契约输入解析、领域查询或工作流、业务 RPC 数据库会话与入口交接裁决、契约输出解析、标准信封”执行；本地证明不读取数据库，只提取受 HMAC 保护的 `session_id`。只有 `referral.bind` 和 `operations.get` 声明 `allowPendingEntryHandoff`，对应例外只由数据库执行。
 
-`apps/api/domains` 不跨领域组合业务，每个 handler 只完成输入映射并调用一个 RPC；支付、退款、Mint 对账、定时任务和操作恢复进入 `apps/api/workflows`。Battle app handlers 只调用 viewer-specific 读取或单个 Battle RPC；`battle-share` 与 `battle-outbox` 分别属于 integrations workflow，并通过受保护 RPC 领取任务。Functions 不计算价格、奖励、库存、资产归属、Battle 命中/伤害/终局或最终交易结果。
+`apps/api/domains` 不跨领域组合业务，每个 handler 只完成输入映射并调用一个 RPC；`identity.authenticate` 是唯一例外，固定为验签前来源限流和验签后登录事务两个 RPC。支付、退款、Mint 对账、定时任务和操作恢复进入 `apps/api/workflows`。Battle app handlers 只调用 viewer-specific 读取或单个 Battle RPC；`battle-share` 与 `battle-outbox` 分别属于 integrations workflow，并通过受保护 RPC 领取任务。Functions 不计算价格、奖励、库存、资产归属、Battle 命中/伤害/终局或最终交易结果。
 
 玩家 `battle.*` 与 `battle.outbox_integration` 的请求终态日志按 [ADR-028](adr/ADR-028-battle-request-observability.md) 输出鉴权、输入解析、handler、响应、数据库 RPC 和 Ably 累计耗时；outbox 正常响应同时输出 processed/published/deferred。采集只贯穿既有调用，不改变玩家请求与 outbox integration 的异步解耦。
 

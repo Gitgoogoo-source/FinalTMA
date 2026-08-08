@@ -53,6 +53,7 @@ REQUIRED_PATHS = (
     "apps/web/src/workflows/battle-realtime",
     "docs/architecture/adr/ADR-013-session-page-lifecycle.md",
     "docs/architecture/adr/ADR-037-persistent-page-query-activity.md",
+    "docs/architecture/adr/ADR-038-local-session-proof-and-login-rpc-consolidation.md",
     "docs/architecture/adr/ADR-016-controlled-battle-acceptance-fixture.md",
     "docs/architecture/adr/ADR-022-battle-stage-skill-progression.md",
     "docs/architecture/adr/ADR-025-battle-active-switch-atomicity.md",
@@ -166,6 +167,7 @@ def main() -> None:
     verify_battle_countdown_lock_semantics()
     verify_battle_switch_atomicity()
     verify_api_boundaries()
+    verify_session_credential_boundary()
     verify_contract_boundaries()
     verify_documentation()
     verify_package_exports()
@@ -1229,6 +1231,58 @@ def verify_api_boundaries() -> None:
             raise SystemExit(f"{gateway} must own a complete typed handler map")
 
 
+def verify_session_credential_boundary() -> None:
+    session_source = (API_ROOT / "platform/session.ts").read_text(encoding="utf-8")
+    middleware_source = (API_ROOT / "http/middleware.ts").read_text(encoding="utf-8")
+    gateway_source = (API_ROOT / "http/gateway.ts").read_text(encoding="utf-8")
+    identity_routes = (API_ROOT / "domains/identity/routes.ts").read_text(
+        encoding="utf-8"
+    )
+    authenticate_block = identity_routes.partition(
+        '"identity.authenticate": async (context) => {'
+    )[2].partition('"identity.bootstrap": async (context) =>')[0]
+
+    required_session_terms = (
+        "export type SessionCredential",
+        "SESSION_TOKEN_VERSION = 1",
+        "SESSION_TOKEN_PATTERN",
+        "pokepets-session-id-v1:",
+        "pokepets-session-proof-v1:",
+        "timingSafeEqual(suppliedMac, expectedMac)",
+        "decoded.toString(\"base64url\") !== token",
+    )
+    missing = [term for term in required_session_terms if term not in session_source]
+    if missing:
+        raise SystemExit(f"Local session credential proof is incomplete: {missing}")
+    if (
+        'from "./db/index.ts"' in session_source
+        or "identity_resolve_session" in session_source
+        or "identity_resolve_session" in middleware_source
+    ):
+        raise SystemExit("Session credential authentication cannot call the database")
+    if "entry_handoff_state" in middleware_source:
+        raise SystemExit("Mutable entry handoff authority must remain in player RPCs")
+    if 'observeRequestStageSync(telemetry, "auth"' not in gateway_source:
+        raise SystemExit("Local route authentication must use the synchronous auth stage")
+
+    required_login_terms = (
+        '"identity_consume_login_source_rate_limit"',
+        '"identity_authenticate"',
+        "p_user_key_hash:",
+        "p_init_data_key_hash:",
+        "p_session_id: issued.sessionId",
+        "result.session_id !== issued.sessionId",
+    )
+    missing = [term for term in required_login_terms if term not in authenticate_block]
+    if missing or authenticate_block.count("await rpc") != 2:
+        raise SystemExit(
+            "Telegram authentication must make exactly two database RPC calls: "
+            f"missing={missing}, rpc_calls={authenticate_block.count('await rpc')}"
+        )
+    if "identity_consume_login_rate_limit" in identity_routes:
+        raise SystemExit("Legacy three-call login limiter must remain removed")
+
+
 def verify_contract_boundaries() -> None:
     derived = [
         relative(path)
@@ -1358,6 +1412,31 @@ def verify_documentation() -> None:
         raise SystemExit(
             "Persistent-page query activity ADR is incomplete: "
             f"{missing_query_activity_documentation}"
+        )
+    session_proof_adr = (
+        ROOT
+        / "docs/architecture/adr/ADR-038-local-session-proof-and-login-rpc-consolidation.md"
+    ).read_text(encoding="utf-8")
+    required_session_proof_terms = (
+        "49 字节",
+        "66 字符 Base64URL",
+        "恒定时间 HMAC",
+        "`api.identity_consume_login_source_rate_limit`",
+        "`api.identity_authenticate`",
+        "相同幂等请求的重放仍消耗用户与 `initData` 限流次数",
+        "`api.identity_resolve_session` 删除",
+        "每分钟至多执行一次",
+        "不配置双密钥兼容",
+    )
+    missing_session_proof_terms = [
+        value
+        for value in required_session_proof_terms
+        if value not in session_proof_adr
+    ]
+    if missing_session_proof_terms:
+        raise SystemExit(
+            "Local session proof ADR is incomplete: "
+            f"{missing_session_proof_terms}"
         )
     fixture_adr = (
         ROOT / "docs/architecture/adr/ADR-016-controlled-battle-acceptance-fixture.md"

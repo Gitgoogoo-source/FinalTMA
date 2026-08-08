@@ -2,11 +2,11 @@
 
 ## 决定
 
-Telegram 是唯一身份来源，不使用 Supabase Auth。只有认证交换端点接收 `initData`。服务端先按来源执行每分钟 30 次限流，验证签名、真实用户、24 小时时限和未来 5 分钟边界后，再按用户每分钟 10 次和同一 `initData` 每分钟 3 次限流。`start_param` 只允许空值、`^TMA[A-F0-9]{20}$` 推荐码或 `^BTL_[A-Za-z0-9_-]{32}$` Battle bearer token，并分别固化为 `direct`、`referral`、`battle`；其他值在创建账号前拒绝。Battle 原始 token 只在当前 Function 请求内存中存在，数据库和 session 只保存 SHA-256。
+Telegram 是唯一身份来源，不使用 Supabase Auth。只有认证交换端点接收 `initData`。服务端先通过来源专用 RPC 执行每分钟 30 次限流，验证签名、真实用户、24 小时时限和未来 5 分钟边界后，再由 `api.identity_authenticate` 同一事务按用户每分钟 10 次和同一 `initData` 每分钟 3 次限流并完成登录；成功路径固定为两次数据库往返。相同登录幂等请求的重放仍计入用户与 `initData` 限流。`start_param` 只允许空值、`^TMA[A-F0-9]{20}$` 推荐码或 `^BTL_[A-Za-z0-9_-]{32}$` Battle bearer token，并分别固化为 `direct`、`referral`、`battle`；其他值在限流记录提交后、创建账号前拒绝。Battle 原始 token 只在当前 Function 请求内存中存在，数据库和 session 只保存 SHA-256。
 
-认证交换必须携带 UUID `Idempotency-Key`。`identity.login_requests` 保存经域隔离 HMAC 生成的请求摘要及会话引用；同键同 `initData` 回放同一结果，同键不同请求返回 `IDEMPOTENCY_KEY_REUSED`。服务端使用 `IDENTITY_SECURITY_SECRET` 和操作 UUID 派生不可预测的 32 字节短期令牌，数据库只保存 SHA-256 哈希。`banned` 结果不签发令牌，只返回账号状态并撤销旧会话。
+认证交换必须携带 UUID `Idempotency-Key`。`identity.login_requests` 保存经域隔离 HMAC 生成的请求摘要及会话引用；同键同 `initData` 回放同一结果，同键不同请求返回 `IDEMPOTENCY_KEY_REUSED`。服务端按 [ADR-038](ADR-038-local-session-proof-and-login-rpc-consolidation.md) 使用 `IDENTITY_SECURITY_SECRET` 和操作 UUID 确定性派生 session UUID，并签发固定版本、包含该 UUID 与 HMAC 的短期 opaque bearer；数据库只保存完整令牌的 SHA-256。`banned` 结果不签发令牌，只返回账号状态并撤销旧会话。
 
-只有 `referral` 入口且首次创建账号时，合法邀请码才作为唯一 `identity.entry_candidates` 候选在同一事务固化，绑定边界为身份确认后 600 秒且恰好边界仍允许。`direct` 与 `battle` 不创建候选、不绑定推荐关系且交接状态直接完成。`identity.sessions.referral_processed_at` 是推荐入口交接门禁：空值表示 `pending`，非空表示 `complete`。认证交换和会话解析统一返回 `entry_kind`、`entry_handoff_state`、`entry_handoff_code`、`entry_handoff_result`，前端不得根据 Telegram `start_param` 或 `new_user` 推断资格。
+只有 `referral` 入口且首次创建账号时，合法邀请码才作为唯一 `identity.entry_candidates` 候选在同一事务固化，绑定边界为身份确认后 600 秒且恰好边界仍允许。`direct` 与 `battle` 不创建候选、不绑定推荐关系且交接状态直接完成。`identity.sessions.referral_processed_at` 是推荐入口交接门禁：空值表示 `pending`，非空表示 `complete`。认证交换返回 `entry_kind`、`entry_handoff_state`、`entry_handoff_code`、`entry_handoff_result`，前端不得根据 Telegram `start_param` 或 `new_user` 推断资格；后续请求只在 Function 本地证明凭证并提取 `session_id`，可变交接状态始终由业务 RPC 在数据库内裁决。
 
 `api.session_user` 默认拒绝 `pending` 会话并返回 `ENTRY_HANDOFF_PENDING`。仅 `referral.bind` 可创建邀请绑定操作；`operations.get` 仅可读取当前用户原 `referral.bind` 操作。绑定成功和全部确定拒绝在同一事务内固化候选、操作终态与当前会话完成时间；数据库异常、网络结果未知和未决操作保持 `pending`。已完成操作的幂等回放为当前会话补齐完成时间。
 

@@ -4,7 +4,10 @@ import { z } from "zod";
 
 import type { Gateway, RouteDefinition } from "@pokepets/api-contracts/common";
 
-import { resolveSession, type Session } from "../platform/session.ts";
+import {
+  authenticateSessionCredential,
+  type SessionCredential,
+} from "../platform/session.ts";
 import { getBattleEnv, getEnv } from "../platform/env/index.ts";
 import { ApiError } from "./errors.ts";
 
@@ -35,23 +38,12 @@ export function authenticateGateway(
     throw new ApiError(401, "WEBHOOK_UNAUTHORIZED", "Webhook 认证失败");
 }
 
-export async function authenticateRoute(
+export function authenticateRoute(
   request: Request,
   route: RouteDefinition,
-): Promise<Session | null> {
+): SessionCredential | null {
   if (!route.auth) return null;
-  const session = await resolveSession(request);
-  if (
-    session.entry_handoff_state === "pending" &&
-    !route.allowPendingEntryHandoff
-  )
-    throw new ApiError(
-      409,
-      "ENTRY_HANDOFF_PENDING",
-      "邀请绑定结果确认中，请稍后刷新",
-      true,
-    );
-  return session;
+  return authenticateSessionCredential(request);
 }
 
 export function idempotencyKey(

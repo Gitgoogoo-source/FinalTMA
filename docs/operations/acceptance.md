@@ -36,8 +36,9 @@ Battle stake / settlement / outbox event（脱敏）：
 
 执行 Telegram 登录场景前，先保存入口配置证据：Bot API `getMe.result.username` 必须等于当前环境 Bot，`getMe.result.has_main_web_app` 必须为 `true`，默认菜单按钮必须为 `web_app` 类型并指向当前环境 named Mini App 链接；随后只能从该 Bot 的 Main Mini App、菜单按钮或 named Mini App 链接启动，不得用浏览器直接访问部署 URL 代替 Telegram 真机验收。
 
-- Telegram 登录：首次、再次和并发首次登录；同键同 `initData` 回放；同键不同请求拒绝；资料与头像更新；无参数默认开盒页；严格大写 TMA 推荐入口；合法 `BTL_` Battle 入口进入游戏页且不创建推荐候选；格式合法但房间无效、取消、接受或过期时继续登录并展示真实不可用状态；其他非空参数在建号前拒绝。
+- Telegram 登录：首次、再次和并发首次登录；同键同 `initData` 回放且计入用户和 `initData` 限流；同键不同请求拒绝且限流记录提交；资料与头像更新；无参数默认开盒页；严格大写 TMA 推荐入口；合法 `BTL_` Battle 入口进入游戏页且不创建推荐候选；格式合法但房间无效、取消、接受或过期时继续登录并展示真实不可用状态；其他非空参数在用户和 `initData` 限流记录提交后、建号前拒绝。
 - Telegram 边界：签名伪造、机器人、恰好与超过 24 小时、恰好与超过未来 5 分钟；来源第 31 次、用户第 11 次和同 `initData` 第 4 次拒绝且页面不自动重试。
+- 身份数据库往返：在无其他请求的窄 UTC 窗口保存 Supabase Data API 日志，成功登录必须按顺序且只出现 `identity_consume_login_source_rate_limit` 与 `identity_authenticate` 两次 RPC，签名伪造只出现第一次，代码和运行日志均不得出现 `identity_resolve_session`；`identity.bootstrap` 等单 RPC 玩家读取只出现自身业务 RPC。篡改访问令牌任一字符必须返回 `SESSION_REQUIRED` 且没有业务 RPC；合法签名但已替换、过期、封禁或 `pending` 的凭证必须由首个业务 RPC 返回既有稳定错误。Battle 阶段日志的 `auth_ms` 不包含数据库往返，简单 Battle 请求的 `db_rpc_count` 只计算业务 RPC。
 - 会话与封禁：15 分钟绝对失效、多个并发请求只恢复一次、恢复后的第二次失效、会话替换不恢复，以及初始和使用中封禁时 DOM、弹窗、导航、查询及迟到结果全部清空。
 - 邀请前置交接：成功、老用户静默进入、已有关系、已有充值、自邀请、邀请码无效、邀请人不可用、候选超时、结果未知和 `OPERATION_NOT_FOUND` 原键单次重提；老用户场景必须确认后端仍返回 `REFERRAL_OLD_USER`、交接已完成、页面不存在邀请提示，且没有新增候选、邀请关系、绑定操作、奖励或资产变化；其他结果继续显示既定提示；保存候选与操作的数据库前后状态。
 - 首屏：`identity.bootstrap` 整体失败保留内存会话；VIP 和默认开盒摘要分别失败时只关闭自身入口并可局部重试；网络记录不得出现钱包摘要请求。

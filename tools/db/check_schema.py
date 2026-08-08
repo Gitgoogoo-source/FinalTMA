@@ -191,6 +191,8 @@ def verify_database_boundaries() -> None:
 def verify_identity_login_contract() -> None:
     sql = (SCHEMAS / "10_identity.sql").read_text(encoding="utf-8").lower()
     required = (
+        "create table identity.auth_maintenance",
+        "task text primary key check (task = 'auth_attempts_cleanup')",
         "create table identity.login_requests",
         "operation_id uuid primary key",
         "create table identity.entry_candidates",
@@ -198,13 +200,26 @@ def verify_identity_login_contract() -> None:
         "create unique index sessions_one_active_per_user_idx",
         "where revoked_at is null",
         "scope in ('source', 'user', 'init_data')",
-        "when 'source' then 30",
+        "if v_count >= 30 then",
         "when 'user' then 10",
         "when 'init_data' then 3",
-        "create or replace function api.identity_consume_login_rate_limit",
+        "create or replace function api.identity_consume_login_source_rate_limit",
+        "create or replace function identity.consume_login_rate_limit",
+        "pg_try_advisory_xact_lock",
+        "last_run_at <= now() - interval '1 minute'",
+        "attempted_at < now() - interval '5 minutes'",
         "create or replace function api.identity_authenticate",
         "p_operation_id uuid",
         "p_request_hash text",
+        "p_user_key_hash text",
+        "p_init_data_key_hash text",
+        "p_session_id uuid",
+        "identity.consume_login_rate_limit('user', p_user_key_hash)",
+        "identity.consume_login_rate_limit('init_data', p_init_data_key_hash)",
+        "jsonb_build_object('error_code', 'rate_limited')",
+        "jsonb_build_object('error_code', 'idempotency_key_reused')",
+        "jsonb_build_object('error_code', 'telegram_start_param_invalid')",
+        "p_session_id, v_user.id, p_token_hash",
         "if v_user.status = 'banned'",
         "now() + interval '15 minutes'",
         "now() + interval '10 minutes'",
@@ -212,6 +227,8 @@ def verify_identity_login_contract() -> None:
     missing = [fragment for fragment in required if fragment not in sql]
     if missing:
         raise SystemExit(f"Identity login contract is incomplete: {missing}")
+    if "identity_resolve_session" in sql or "identity_consume_login_rate_limit" in sql:
+        raise SystemExit("Legacy identity authentication RPCs must remain removed")
 
     referral_sql = (SCHEMAS / "63_referral.sql").read_text(encoding="utf-8").lower()
     if "identity.entry_candidates" not in referral_sql or "v_session.new_user" in referral_sql:
@@ -227,7 +244,7 @@ def verify_entry_handoff_contract() -> None:
         "'entry_handoff_result'",
         "p_allow_pending_entry_handoff boolean default false",
         "raise_business_error('entry_handoff_pending'",
-        "identity.session_entry_handoff(s.id)",
+        "identity.session_entry_handoff(v_login.session_id)",
         "referral_processed_at is null",
     )
     missing = [fragment for fragment in identity_required if fragment not in identity_sql]
@@ -257,6 +274,28 @@ def verify_entry_handoff_contract() -> None:
         raise SystemExit(
             f"Entry handoff settlement contract is incomplete: missing={missing}, "
             f"rejection_branches={referral_sql.count('return referral.reject_bind')}"
+        )
+
+
+def verify_player_rpc_session_authority() -> None:
+    pattern = re.compile(
+        r"create or replace function api\.([a-z0-9_]+)\((.*?)\n\$\$;",
+        re.DOTALL | re.IGNORECASE,
+    )
+    violations: list[str] = []
+    excluded = {"identity_authenticate", "session_user"}
+    for path in sorted(SCHEMAS.glob("*.sql")):
+        for match in pattern.finditer(path.read_text(encoding="utf-8")):
+            name = match.group(1).lower()
+            body = match.group(0).lower()
+            if "p_session_id uuid" not in body or name in excluded:
+                continue
+            if "api.session_user(" not in body and "operations.begin_command(" not in body:
+                violations.append(f"{path.name}:{name}")
+    if violations:
+        raise SystemExit(
+            "Player RPCs must validate mutable session authority before business work: "
+            f"{violations}"
         )
 
 
@@ -770,6 +809,7 @@ def main() -> None:
     verify_database_boundaries()
     verify_identity_login_contract()
     verify_entry_handoff_contract()
+    verify_player_rpc_session_authority()
     verify_stars_payment_contract()
     verify_battle_contract()
     verify_admin_fixture_contract()

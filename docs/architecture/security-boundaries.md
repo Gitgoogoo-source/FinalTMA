@@ -1,6 +1,6 @@
 # 安全边界
 
-浏览器不安装或调用 Supabase 客户端，不接收 `service_role`、`IDENTITY_SECURITY_SECRET`、Bot Token、Cron Secret、`ABLY_API_KEY`、`BATTLE_INVITE_SECRET`、`BATTLE_OUTBOX_SECRET`、TON 签名私钥或任何 `VITE_*` 机密。Telegram 是唯一登录身份；不使用 Supabase Auth、`auth.users`、Supabase Session、JWT 或 Refresh Token。登录来源、Telegram 用户、`initData` 和预认证请求只以 `IDENTITY_SECURITY_SECRET` 域隔离 HMAC 指纹进入限流与幂等表，日志不记录原 IP、原 `initData` 或 bearer token。
+浏览器不安装或调用 Supabase 客户端，不接收 `service_role`、`IDENTITY_SECURITY_SECRET`、Bot Token、Cron Secret、`ABLY_API_KEY`、`BATTLE_INVITE_SECRET`、`BATTLE_OUTBOX_SECRET`、TON 签名私钥或任何 `VITE_*` 机密。Telegram 是唯一登录身份；不使用 Supabase Auth、`auth.users`、Supabase Session、JWT 或 Refresh Token。登录来源、Telegram 用户、`initData` 和预认证请求只以 `IDENTITY_SECURITY_SECRET` 域隔离 HMAC 指纹进入限流与幂等表；访问令牌按 [ADR-038](adr/ADR-038-local-session-proof-and-login-rpc-consolidation.md) 包含版本、session UUID 和域隔离 HMAC，浏览器只把它视为 opaque bearer。日志不记录原 IP、原 `initData` 或 bearer token。
 
 Battle 阶段化结构日志只接受 [ADR-028](adr/ADR-028-battle-request-observability.md) 的固定耗时、调用次数和 outbox 聚合计数。日志不记录用户、session、operation、room、event、channel、token、capability、请求/响应内容、RPC 名称或原始外部错误；`request_id` 与 `route_id` 只用于同一请求的运行诊断。
 
@@ -10,7 +10,7 @@ Data API 只暴露 `api` schema。安全迁移撤销 `PUBLIC`、`anon`、`authen
 
 `admin` schema 不属于 Exposed schemas，也不存在对应应用路由。受控 Battle 验收函数使用 `SECURITY INVOKER`、空 `search_path`、owner membership 复核和显式全角色撤权；管理表启用 RLS且无应用策略。迁移不写 project ref、环境身份或 enable 记录。数据库 owner 必须先绑定不可改写的环境/project ref，再写入同值、明确启用、最长 24 小时的门禁；生产身份不能启用。审计只保存内部 UUID、有序 payload hash、不可逆 run key、前后聚合和结果，不保存 Telegram ID、用户名、`initData`、session、token 或其他凭据。
 
-会话认证按令牌、撤销/过期状态、账号状态、入口交接状态顺序裁决。除 `referral.bind` 与受限的 `operations.get` 外，Functions 中间件和数据库 `api.session_user` 都拒绝 `pending` 交接，固定返回 `ENTRY_HANDOFF_PENDING`。浏览器构造请求、修改入口参数或跳过启动工作流均不能访问业务 RPC。
+Functions 中间件严格证明令牌版本、规范 Base64URL 和 HMAC，只提取 `session_id`，不调用数据库也不裁决可变状态。每个玩家业务 RPC 在业务工作前通过 `api.session_user` 按会话存在、撤销/过期、账号状态、入口交接状态顺序最终裁决；除 `referral.bind` 与受限的 `operations.get` 外都拒绝 `pending` 交接并固定返回 `ENTRY_HANDOFF_PENDING`。篡改令牌不能进入业务 RPC；浏览器构造请求、修改入口参数或跳过启动工作流不能绕过数据库裁决。
 
 浏览器唯一允许的 Supabase 直连是匿名 GET `pet-runtime` 公开桶中的宠物 WebP 完整 URL；Web 构建不包含 Supabase SDK、anon key 或 service-role key。根路径与全部前端深链统一下发 CSP：`script-src` 只放行同源脚本和 Telegram 官方 Mini App SDK，`img-src` 只额外放行 `https://*.supabase.co` 图片，`connect-src` 只额外放行 Ably，不允许 Supabase Data API 连接。私有 `art-masters`、Storage 上传/覆盖/删除/列举以及全部 Postgres、RPC、Auth 和其他 Data API 只允许受控服务端或发布工具使用 service role。资源 RPC 不进入玩家路由，公开对象清理端点只接受 Vercel 注入的 `CRON_SECRET`。
 
