@@ -11,10 +11,16 @@ import { useState, type ReactNode } from "react";
 
 import { useApiQuery } from "../../../platform/query/index.ts";
 import { telegram } from "../../../platform/telegram/index.ts";
+import {
+  inviteGiftArtSizes,
+  inviteGiftArtSrcSet,
+  inviteGiftArtUrl,
+} from "../../../shared/assets/responsiveArt.ts";
 import { Badge, Button, Card } from "../../../shared/ui/index.tsx";
 
 export function ReferralPanel(): ReactNode {
   const query = useApiQuery("referral.get");
+  const [inviteArtFallback, setInviteArtFallback] = useState(false);
   const [feedback, setFeedback] = useState<{
     kind: "success" | "error";
     message: string;
@@ -87,8 +93,19 @@ export function ReferralPanel(): ReactNode {
         </div>
         <img
           className="invite-art"
-          src="/assets/tasks/invite-gifts.png"
+          src={
+            inviteArtFallback
+              ? "/assets/tasks/invite-gifts.png"
+              : inviteGiftArtUrl(512)
+          }
+          srcSet={inviteArtFallback ? undefined : inviteGiftArtSrcSet()}
+          sizes={inviteArtFallback ? undefined : inviteGiftArtSizes}
           alt="半透明橙色礼盒"
+          width={768}
+          height={576}
+          loading="lazy"
+          decoding="async"
+          onError={() => setInviteArtFallback(true)}
         />
         <div className="invite-actions">
           <Button

@@ -17,6 +17,16 @@ import {
   useSession,
 } from "../../../platform/session/store.ts";
 import { subscribeFreeRareClaimed } from "../../../shared/events/vipDailyBenefits.ts";
+import {
+  boxArtUrl,
+  boxHeroSizes,
+  boxHeroSrcSet,
+  boxThumbnailSizes,
+  boxThumbnailSrcSet,
+  fallbackToOriginalBoxArt,
+  preloadBoxHeroArt,
+  type BoxArtTier,
+} from "../../../shared/assets/responsiveArt.ts";
 import { Button, Card, PageState } from "../../../shared/ui/index.tsx";
 import {
   getAppMaxScrollTop,
@@ -30,7 +40,7 @@ import {
 } from "../../../shared/navigation/pageActivity.tsx";
 import { useOperationRegistry } from "../../../workflows/operation-recovery/index.ts";
 import { useNavigationIntent } from "../../../workflows/payment-recovery/index.ts";
-type BoxTier = "normal" | "rare" | "legendary";
+type BoxTier = BoxArtTier;
 type Rarity = "common" | "rare" | "epic" | "legendary" | "mythic";
 type GachaViewState = { selectedTier: BoxTier; scrollY: number };
 
@@ -48,11 +58,6 @@ const rarityLabels = {
   legendary: "传说",
   mythic: "神话",
 } as const;
-const boxArtPaths: Record<BoxTier, string> = {
-  normal: "/assets/boxes/normal.webp",
-  rare: "/assets/boxes/rare.webp",
-  legendary: "/assets/boxes/legendary.webp",
-};
 const representativeTemplateIds: Record<Rarity, string> = {
   common: "PET-N-001-1",
   rare: "PET-N-001-2",
@@ -146,6 +151,12 @@ export function GachaView(): ReactNode {
       setSelection({ tier, touched: true });
     },
     [setSelection],
+  );
+  const prepareTier = useCallback(
+    (tier: BoxTier) => {
+      if (tier !== selectedBox?.tier) preloadBoxHeroArt(tier);
+    },
+    [selectedBox?.tier],
   );
   const handleFreeRareClaimed = useCallback(() => {
     if (
@@ -270,38 +281,39 @@ export function GachaView(): ReactNode {
             <div className="gacha-hero">
               <div className={`gacha-stage ${selectedBox.tier}`}>
                 <span className="stage-glow" aria-hidden="true" />
-                {items.map((box) => {
-                  const active = box.tier === selectedBox.tier;
-                  return (
-                    <span
-                      key={box.tier}
-                      className={`gacha-stage-art${active ? " active" : ""}`}
-                      aria-hidden={!active}
-                    >
-                      <img
-                        className="catalog-image"
-                        src={boxArtPaths[box.tier]}
-                        alt={active ? box.display_name : ""}
-                        loading="eager"
-                        fetchPriority="high"
-                        onLoad={() =>
-                          setReady((state) =>
-                            state[box.tier] === true
-                              ? state
-                              : { ...state, [box.tier]: true },
-                          )
-                        }
-                        onError={() =>
-                          setReady((state) =>
-                            state[box.tier] === false
-                              ? state
-                              : { ...state, [box.tier]: false },
-                          )
-                        }
-                      />
-                    </span>
-                  );
-                })}
+                <span key={selectedBox.tier} className="gacha-stage-art active">
+                  <img
+                    className="catalog-image"
+                    src={boxArtUrl(selectedBox.tier, 768)}
+                    srcSet={boxHeroSrcSet(selectedBox.tier)}
+                    sizes={boxHeroSizes}
+                    alt={selectedBox.display_name}
+                    loading="eager"
+                    fetchPriority="high"
+                    decoding="async"
+                    onLoad={() =>
+                      setReady((state) =>
+                        state[selectedBox.tier] === true
+                          ? state
+                          : { ...state, [selectedBox.tier]: true },
+                      )
+                    }
+                    onError={(event) => {
+                      if (
+                        fallbackToOriginalBoxArt(
+                          event.currentTarget,
+                          selectedBox.tier,
+                        )
+                      )
+                        return;
+                      setReady((state) =>
+                        state[selectedBox.tier] === false
+                          ? state
+                          : { ...state, [selectedBox.tier]: false },
+                      );
+                    }}
+                  />
+                </span>
               </div>
             </div>
 
@@ -317,6 +329,9 @@ export function GachaView(): ReactNode {
                     key={box.tier}
                     className={active ? "active" : ""}
                     aria-pressed={active}
+                    onPointerEnter={() => prepareTier(box.tier)}
+                    onPointerDown={() => prepareTier(box.tier)}
+                    onFocus={() => prepareTier(box.tier)}
                     onClick={() => {
                       if (!active) selectTier(box.tier);
                       if (requestedTier)
@@ -329,9 +344,18 @@ export function GachaView(): ReactNode {
                     <span className="tier-art">
                       <img
                         className="catalog-image"
-                        src={boxArtPaths[box.tier]}
+                        src={boxArtUrl(box.tier, 128)}
+                        srcSet={boxThumbnailSrcSet(box.tier)}
+                        sizes={boxThumbnailSizes}
                         alt=""
                         loading="lazy"
+                        decoding="async"
+                        onError={(event) =>
+                          void fallbackToOriginalBoxArt(
+                            event.currentTarget,
+                            box.tier,
+                          )
+                        }
                       />
                     </span>
                     <strong>{box.display_name}</strong>

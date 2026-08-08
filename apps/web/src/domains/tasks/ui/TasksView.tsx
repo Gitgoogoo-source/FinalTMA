@@ -42,6 +42,12 @@ import {
   getAppScrollTop,
   scrollAppTo,
 } from "../../../shared/navigation/appScroll.ts";
+import {
+  boxArtUrl,
+  boxThumbnailSizes,
+  boxThumbnailSrcSet,
+  fallbackToOriginalBoxArt,
+} from "../../../shared/assets/responsiveArt.ts";
 import { Badge, Button, Card, PageState } from "../../../shared/ui/index.tsx";
 import { useOperationRegistry } from "../../../workflows/operation-recovery/index.ts";
 import {
@@ -277,8 +283,18 @@ export function TasksView({
                     {reward.kind === "box" ? (
                       <img
                         className="checkin-box-image"
-                        src="/assets/boxes/rare.webp"
+                        src={boxArtUrl("rare", 128)}
+                        srcSet={boxThumbnailSrcSet("rare")}
+                        sizes={boxThumbnailSizes}
                         alt=""
+                        loading="lazy"
+                        decoding="async"
+                        onError={(event) =>
+                          void fallbackToOriginalBoxArt(
+                            event.currentTarget,
+                            "rare",
+                          )
+                        }
                       />
                     ) : (
                       <img

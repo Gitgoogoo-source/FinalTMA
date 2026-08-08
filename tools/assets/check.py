@@ -48,6 +48,26 @@ BRAND_ASSETS = {
     "apps/web/public/assets/share/preview.webp": ("webp", 1200, 630),
     "apps/web/public/assets/ton/tonconnect-icon.png": ("png", 180, 180),
 }
+RESPONSIVE_STATIC_ASSETS = {
+    "apps/web/public/assets/boxes/responsive/normal-128.webp": ((128, 128), 10 * 1024, True),
+    "apps/web/public/assets/boxes/responsive/normal-192.webp": ((192, 192), 15 * 1024, True),
+    "apps/web/public/assets/boxes/responsive/normal-384.webp": ((384, 384), 30 * 1024, True),
+    "apps/web/public/assets/boxes/responsive/normal-768.webp": ((768, 768), 70 * 1024, True),
+    "apps/web/public/assets/boxes/responsive/normal-1024.webp": ((1024, 1024), 100 * 1024, True),
+    "apps/web/public/assets/boxes/responsive/rare-128.webp": ((128, 128), 10 * 1024, True),
+    "apps/web/public/assets/boxes/responsive/rare-192.webp": ((192, 192), 20 * 1024, True),
+    "apps/web/public/assets/boxes/responsive/rare-384.webp": ((384, 384), 40 * 1024, True),
+    "apps/web/public/assets/boxes/responsive/rare-768.webp": ((768, 768), 100 * 1024, True),
+    "apps/web/public/assets/boxes/responsive/rare-1024.webp": ((1024, 1024), 150 * 1024, True),
+    "apps/web/public/assets/boxes/responsive/legendary-128.webp": ((128, 160), 20 * 1024, True),
+    "apps/web/public/assets/boxes/responsive/legendary-192.webp": ((192, 240), 30 * 1024, True),
+    "apps/web/public/assets/boxes/responsive/legendary-384.webp": ((384, 480), 90 * 1024, True),
+    "apps/web/public/assets/boxes/responsive/legendary-768.webp": ((768, 960), 260 * 1024, True),
+    "apps/web/public/assets/boxes/responsive/legendary-1024.webp": ((1024, 1280), 380 * 1024, True),
+    "apps/web/public/assets/tasks/invite-gifts-256.webp": ((256, 192), 15 * 1024, False),
+    "apps/web/public/assets/tasks/invite-gifts-512.webp": ((512, 384), 35 * 1024, False),
+    "apps/web/public/assets/tasks/invite-gifts-768.webp": ((768, 576), 60 * 1024, False),
+}
 
 
 def digest_bytes(data: bytes) -> str:
@@ -257,7 +277,23 @@ def assert_repository_assets() -> dict[str, str]:
     return hashes
 
 
-def assert_build(source_hashes: dict[str, str]) -> None:
+def assert_responsive_static_assets() -> dict[str, str]:
+    hashes: dict[str, str] = {}
+    for name, (dimensions, maximum_bytes, alpha) in RESPONSIVE_STATIC_ASSETS.items():
+        path = ROOT / name
+        hashes[name] = digest(path)
+        if assert_format(path) != dimensions:
+            raise SystemExit(f"Responsive static asset dimensions mismatch: {name}")
+        if path.stat().st_size > maximum_bytes:
+            raise SystemExit(f"Responsive static asset exceeds its byte budget: {name}")
+        if has_alpha(path, path.read_bytes()) is not alpha:
+            raise SystemExit(f"Responsive static asset alpha channel mismatch: {name}")
+    return hashes
+
+
+def assert_build(
+    source_hashes: dict[str, str], responsive_hashes: dict[str, str]
+) -> None:
     for name in VERCEL_ASSETS:
         built = BUILD / Path(name).relative_to("apps/web/public")
         if digest(built) != source_hashes[name]:
@@ -265,6 +301,12 @@ def assert_build(source_hashes: dict[str, str]) -> None:
     built_silhouette = BUILD / Path(SILHOUETTE).relative_to("apps/web/public")
     if digest(built_silhouette) != digest(ROOT / SILHOUETTE):
         raise SystemExit("Built pet silhouette differs from its source")
+    for name, source_hash in responsive_hashes.items():
+        built = BUILD / Path(name).relative_to("apps/web/public")
+        if digest(built) != source_hash:
+            raise SystemExit(
+                f"Built responsive static asset differs from its source: {built.relative_to(ROOT)}"
+            )
     for relative in ("assets/catalog", "assets/gacha/representatives"):
         path = BUILD / relative
         if path.exists() and any(path.rglob("*")):
@@ -292,10 +334,11 @@ def main() -> None:
     assert_art_manifest(LEGACY_ART_MANIFEST, "v1")
     assert_removed_binaries(ROOT)
     source_hashes = assert_repository_assets()
+    responsive_hashes = assert_responsive_static_assets()
     if args.mode == "catalog":
         print("art manifest covers 210 masters and 420 immutable runtime objects; Git pet binaries are absent")
         return
-    assert_build(source_hashes)
+    assert_build(source_hashes, responsive_hashes)
     if args.mode == "development":
         print("Vercel build contains only Vercel-owned art plus the pet silhouette")
         return
