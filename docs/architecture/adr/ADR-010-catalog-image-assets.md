@@ -10,7 +10,7 @@
 
 母版对象键固定为 `catalog/<template-id>/<source-sha256>.webp`。当前运行时对象键固定为 `catalog/v2/thumb/<template-id>.<runtime-sha256>.webp` 与 `catalog/v2/detail/<template-id>.<runtime-sha256>.webp`；既有 v1 对象仅用于 90 天退役保留。Node.js 24 使用锁定的 `sharp` 版本，把每张 768×768 WebP 母版生成 256×256、quality 82 的缩略图和 768×768、quality 74 的详情图；两者均使用 WebP、effort 6、alphaQuality 100、Lanczos3 并移除元数据。上传固定 `upsert = false`，同键对象只能校验和复用，不能覆盖；公开对象响应固定为 `public, max-age=31536000, immutable`，内容哈希对象键与禁止覆盖共同保证地址不可变。
 
-数据库以资源发布批次为原子切换单位。一个批次必须恰好覆盖 210 个模板及其母版、缩略图和详情图对象；当前批次指针和资源 revision 在单个 PostgreSQL RPC 事务内切换。API 字段固定为 `image_thumbnail_url` 与 `image_detail_url`，所有读模型在读取时从当前批次解析完整公开 URL。Battle、operation 结果、进化静态清单和市场设备收件箱都不持久保存 URL；原命令响应、幂等回放和恢复查询通过统一展示入口按模板 ID 注入当前 URL。资源发布独立于前端代码和 Vercel 部署；已打开页面不主动刷新，之后的新开、刷新和正常 API 读取使用当前批次。
+数据库以资源发布批次为原子切换单位。一个批次必须恰好覆盖 210 个模板及其母版、缩略图和详情图对象；当前批次指针和资源 revision 在单个 PostgreSQL RPC 事务内切换。API 字段固定为 `image_thumbnail_url` 与 `image_detail_url`。`catalog.current` 只返回当前 checksum、release key 和 revision；`catalog.release` 按 checksum + release key 解析指定 active/retired 批次，并按 ADR-042 一年不可变缓存。Battle、operation 结果、进化静态清单和市场设备收件箱都不持久保存 URL；原命令响应、幂等回放和恢复查询通过统一展示入口按模板 ID 注入当前 URL。资源发布独立于前端代码和 Vercel 部署；已打开页面不主动刷新，之后的新开、刷新和正常 API 读取使用当前指针，发布与回滚不清除旧缓存。
 
 受控发布命令按“取得全局耐久资源变更租约 → 私有母版与公开 WebP 逐对象复核 SHA-256/尺寸/体积/MIME/缓存头 → 带 fence 的原子发布 RPC → 读取当前批次复核 → 结束租约”执行；需要上传时先完成本地校验、生成和无覆盖同步，再进入同一受控切换链路。发布、回滚和清理共用同一租约域，具体一致性与缓存规则以 [ADR-031](ADR-031-art-release-consistency-and-cache-policy.md) 为准。发布键和 manifest SHA-256 提供幂等性；同键不同载荷拒绝，任一上传或校验失败不切换当前批次。环境只通过服务端 `SUPABASE_URL` 和 `SUPABASE_SERVICE_ROLE_KEY` 派生公开基址；清单不保存环境域名或密钥。
 

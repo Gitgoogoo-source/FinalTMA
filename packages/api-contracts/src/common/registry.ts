@@ -25,6 +25,13 @@ export function assertContractRegistry(
         `Route ${route.id} cannot require and forbid Idempotency-Key`,
       );
     if (
+      route.cachePolicy === "public-immutable" &&
+      (route.method !== "GET" || route.auth || route.rawResponse !== true)
+    )
+      throw new Error(
+        `Public immutable route ${route.id} must be an unauthenticated raw GET`,
+      );
+    if (
       (route.gateway === "integrations") !==
       (route.integrationAuth !== undefined)
     )

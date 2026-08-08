@@ -121,6 +121,7 @@ export const mintRoutes = [
     auth: false,
     idempotent: false,
     rawResponse: true,
+    cachePolicy: "public-immutable",
     input: z.object({ nft_id: z.coerce.number().int().nonnegative() }).strict(),
     output: nftMetadataSchema,
     errors: ["NFT_METADATA_NOT_FOUND", "INTERNAL_ERROR"],

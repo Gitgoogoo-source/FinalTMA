@@ -14,7 +14,7 @@
 
 数据库 operation 结果只持久保存模板 ID 和业务结果，不保存宠物图片 URL。`operations.operation_json` 在返回成功结果时根据 use case 和模板 ID 注入当前批次的完整 URL，因此原命令响应、幂等回放和恢复查询使用同一展示入口。开盒结果注入缩略图与详情图，进化结果注入 source/target 两种 URL，市场上架结果注入缩略图。未知 use case 与失败结果原样返回。
 
-资源切换不向已打开页面推送 revision，也不新增 Ably 通知、轮询或聚焦刷新。已经渲染或保存在当前 WebView 内存中的旧 URL 可继续使用；新打开、刷新页面以及之后正常发生的 API 读取、幂等回放与 operation 恢复统一读取当前批次。宠物图片固定后不通过资源发布替换，因此不为长驻未刷新页面增加持续网络成本。
+资源切换不向已打开页面推送 revision，也不新增 Ably 通知、轮询或聚焦刷新。已经渲染或保存在当前 WebView 内存中的旧 URL 可继续使用；新打开或刷新页面通过 ADR-042 的 `catalog.current` 小指针选择 checksum + release key 不可变目录，切换期间保留上一份成功快照。幂等回放与 operation 恢复继续读取当前批次。发布与回滚不 purge 目录或图片缓存；回滚到旧 release key 直接复用旧缓存，因此不为长驻未刷新页面增加持续网络成本。
 
 ## 一致性与失败处理
 

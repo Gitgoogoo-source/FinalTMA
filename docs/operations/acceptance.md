@@ -60,6 +60,7 @@ Battle stake / settlement / outbox event（脱敏）：
 - Telegram 容器手势：在 Telegram iOS 与 Android 的“交易 / 游戏 / 开盒 / 藏品 / 任务”五个主导航页及可滚动弹窗中，从内容区域向下滑动不会最小化或关闭 Mini App，页面纵向滚动保持可用；从 Telegram 标题栏执行最小化或关闭仍然有效。
 - 全局顶部资产栏：五个主页只出现同一个资产栏；分别记录 Telegram iOS、Android、Desktop 与 Web 在原生全屏成功和不支持回退时的截图，确认设备安全区、内容安全区、视口与方向变化后，返回、关闭和更多控件始终位于资产栏上方且不重叠。
 - 藏品图片：私有桶永久保存 210 张当前母版和全部历史母版，公开桶当前批次恰好映射 420 个 v2 WebP；完整 URL、模板、对象键、SHA-256、尺寸和字节数与 Git 清单一致，响应缓存同时含 `public`、`max-age=31536000` 和 `immutable`，并由内容哈希键与禁止覆盖保证地址不可变；Vercel 构建不含宠物母版或运行时 WebP。受控命令必须在发布、回滚、清理共用的耐久租约内复核 630 个远端对象及缓存头后切换；并发清理只能跳过，旧 fence 不能提交。数据库 operation 结果不得出现图片 URL；新请求、幂等回放和恢复读取按模板 ID 注入当前 URL，已经打开且未刷新的页面允许保留内存旧 URL。v1 旧批次保持 90 天且受回滚锁保护。公开 URL 首次失败时固定布局显示 Vercel 统一宠物剪影，只在 1 秒和 3 秒后台重试，DOM 不出现服务器、Supabase、请求或资源故障文案。网络证据确认浏览器只对公开桶发图片 GET，不访问 Supabase Postgres、RPC、Auth 或其他 Data API。
+- 目录 pointer/release：`GET /api/catalog` 每次只返回标准信封中的 v1 checksum、正整数 revision 和当前 release key，固定 `Cache-Control: no-store` 且 request ID 独立。对应 release raw JSON 精确为 70 条链、210 个模板、3 个箱子、5 个充值档位且不含 revision；成功头固定为浏览器与 Vercel CDN 一年缓存，没有项目级 `x-request-id`、`Authorization`、`Set-Cookie` 或 `Vary: *`，响应小于 10 MB。无效 checksum、staging、缺失映射和不可用运行时对象统一为未缓存 `CATALOG_UNAVAILABLE`。A→B 后 pointer 指向 B 而 A 内容逐字节不变；B→A 后 revision 递增而 A 继续复用。首次无快照失败使用既有初始错误，已有快照时新 release 失败不清空页面，人工重试只执行一次 pointer→release；真实 Telegram 网络瀑布为一个动态小 pointer 和一个浏览器/CDN 可复用 release。
 
 ## Battle 受控验收夹具
 

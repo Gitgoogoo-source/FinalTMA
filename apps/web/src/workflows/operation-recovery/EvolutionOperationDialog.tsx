@@ -7,7 +7,7 @@ import type {
 import { X } from "lucide-react";
 
 import { evolutionRoute } from "../../domains/evolution/config.ts";
-import { useApiQuery } from "../../platform/query/index.ts";
+import { useCatalogQuery } from "../../platform/query/useCatalogQuery.ts";
 import { haptic, selectionHaptic } from "../../platform/telegram/index.ts";
 import { Badge, Button, CatalogImage } from "../../shared/ui/index.tsx";
 import type { OperationPhase } from "./context.ts";
@@ -67,7 +67,7 @@ export function EvolutionOperationDialog({
   onAcknowledge(): void;
 }): ReactNode {
   const confirmedResult = result;
-  const catalog = useApiQuery("catalog.get");
+  const catalog = useCatalogQuery();
   const presentation = useMemo(
     () =>
       evolutionPresentation(input, confirmedResult, catalog.data?.templates),

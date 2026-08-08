@@ -9,6 +9,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { useApiQuery } from "../../../platform/query/index.ts";
+import { useCatalogQuery } from "../../../platform/query/useCatalogQuery.ts";
 import { usePageSearchParams } from "../../../shared/navigation/pageActivity.tsx";
 import {
   Badge,
@@ -64,7 +65,7 @@ export function InventoryView({
   const targetId =
     searchParams.get("template") ?? searchParams.get("template_id") ?? "";
   const targetAction = searchParams.get("action");
-  const catalog = useApiQuery("catalog.get", {}, Boolean(targetId));
+  const catalog = useCatalogQuery(Boolean(targetId));
   const { templateIds: newTemplateIds, clearNew } = useNewMarkers();
   const navigate = useNavigate();
   const ownedItems = (query.data?.items ?? []).filter((item) => item.total > 0);

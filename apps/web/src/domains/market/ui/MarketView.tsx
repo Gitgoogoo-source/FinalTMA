@@ -25,6 +25,7 @@ import {
 } from "react";
 
 import { useApiQuery } from "../../../platform/query/index.ts";
+import { useCatalogQuery } from "../../../platform/query/useCatalogQuery.ts";
 import {
   usePageActive,
   usePageSearchParams,
@@ -76,7 +77,7 @@ export function MarketView({ vipBanner }: { vipBanner: ReactNode }): ReactNode {
     soldEvents,
     dismiss: dismissSoldEvent,
   } = useMarketSoldInbox(pageActive, pageActive);
-  const catalog = useApiQuery("catalog.get", {}, soldEvents.length > 0);
+  const catalog = useCatalogQuery(soldEvents.length > 0);
   const { isBlocked, preload, run } = useOperationRegistry();
   const { requestTopup } = useNavigationIntent();
   const [feedback, setFeedback] = useState<string | null>(null);

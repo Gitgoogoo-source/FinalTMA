@@ -126,7 +126,8 @@
             "recoveryAction": "none"
           }
         },
-        "x-refresh-scopes": []
+        "x-refresh-scopes": [],
+        "x-cache-policy": "no-store"
       }
     },
     "/api/auth/telegram": {
@@ -443,6 +444,7 @@
           }
         },
         "x-refresh-scopes": ["session"],
+        "x-cache-policy": "no-store",
         "requestBody": {
           "required": true,
           "content": {
@@ -1480,12 +1482,13 @@
             "recoveryAction": "refresh"
           }
         },
-        "x-refresh-scopes": []
+        "x-refresh-scopes": [],
+        "x-cache-policy": "no-store"
       }
     },
     "/api/catalog": {
       "get": {
-        "operationId": "catalog_get",
+        "operationId": "catalog_current",
         "tags": ["catalog"],
         "security": [],
         "parameters": [],
@@ -1504,250 +1507,23 @@
                         "version": { "type": "string", "const": "v1" },
                         "product_checksum": {
                           "type": "string",
-                          "minLength": 64,
-                          "maxLength": 64
+                          "pattern": "^[0-9a-f]{64}$"
                         },
                         "asset_revision": {
                           "type": "integer",
                           "exclusiveMinimum": 0,
                           "maximum": 9007199254740991
                         },
-                        "chains": {
-                          "minItems": 70,
-                          "maxItems": 70,
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "properties": {
-                              "id": { "type": "string" },
-                              "global_order": {
-                                "type": "integer",
-                                "exclusiveMinimum": 0,
-                                "maximum": 9007199254740991
-                              },
-                              "chain_type": {
-                                "type": "string",
-                                "enum": ["normal", "advanced", "top"]
-                              },
-                              "theme": { "type": "string" },
-                              "continuity": { "type": "string" },
-                              "catalog_version": {
-                                "type": "string",
-                                "const": "v1"
-                              }
-                            },
-                            "required": [
-                              "id",
-                              "global_order",
-                              "chain_type",
-                              "theme",
-                              "continuity",
-                              "catalog_version"
-                            ],
-                            "additionalProperties": false
-                          }
-                        },
-                        "templates": {
-                          "minItems": 210,
-                          "maxItems": 210,
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "properties": {
-                              "id": { "type": "string" },
-                              "chain_id": { "type": "string" },
-                              "stage": {
-                                "anyOf": [
-                                  { "type": "number", "const": 1 },
-                                  { "type": "number", "const": 2 },
-                                  { "type": "number", "const": 3 }
-                                ]
-                              },
-                              "rarity": {
-                                "type": "string",
-                                "enum": [
-                                  "common",
-                                  "rare",
-                                  "epic",
-                                  "legendary",
-                                  "mythic"
-                                ]
-                              },
-                              "name": { "type": "string" },
-                              "sort_order": {
-                                "type": "integer",
-                                "exclusiveMinimum": 0,
-                                "maximum": 9007199254740991
-                              },
-                              "combat_power": {
-                                "type": "integer",
-                                "exclusiveMinimum": 0,
-                                "maximum": 9007199254740991
-                              },
-                              "market_price": {
-                                "type": "integer",
-                                "exclusiveMinimum": 0,
-                                "maximum": 9007199254740991
-                              },
-                              "decompose_fgems": {
-                                "type": "integer",
-                                "exclusiveMinimum": 0,
-                                "maximum": 9007199254740991
-                              },
-                              "expedition_fgems": {
-                                "type": "integer",
-                                "exclusiveMinimum": 0,
-                                "maximum": 9007199254740991
-                              },
-                              "image_thumbnail_url": {
-                                "type": "string",
-                                "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v[12]\\/thumb\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
-                              },
-                              "image_detail_url": {
-                                "type": "string",
-                                "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v[12]\\/detail\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
-                              },
-                              "draw_weight": {
-                                "type": "integer",
-                                "exclusiveMinimum": 0,
-                                "maximum": 9007199254740991
-                              },
-                              "catalog_version": {
-                                "type": "string",
-                                "const": "v1"
-                              }
-                            },
-                            "required": [
-                              "id",
-                              "chain_id",
-                              "stage",
-                              "rarity",
-                              "name",
-                              "sort_order",
-                              "combat_power",
-                              "market_price",
-                              "decompose_fgems",
-                              "expedition_fgems",
-                              "image_thumbnail_url",
-                              "image_detail_url",
-                              "draw_weight",
-                              "catalog_version"
-                            ],
-                            "additionalProperties": false
-                          }
-                        },
-                        "boxes": {
-                          "minItems": 3,
-                          "maxItems": 3,
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "properties": {
-                              "tier": {
-                                "type": "string",
-                                "enum": ["normal", "rare", "legendary"]
-                              },
-                              "display_name": { "type": "string" },
-                              "image_path": {
-                                "type": "string",
-                                "pattern": "^\\/assets\\/.*"
-                              },
-                              "single_price": {
-                                "type": "integer",
-                                "exclusiveMinimum": 0,
-                                "maximum": 9007199254740991
-                              },
-                              "ten_price": {
-                                "type": "integer",
-                                "exclusiveMinimum": 0,
-                                "maximum": 9007199254740991
-                              },
-                              "pity_limit": {
-                                "type": "integer",
-                                "exclusiveMinimum": 0,
-                                "maximum": 9007199254740991
-                              },
-                              "pity_rarity": {
-                                "type": "string",
-                                "enum": [
-                                  "common",
-                                  "rare",
-                                  "epic",
-                                  "legendary",
-                                  "mythic"
-                                ]
-                              },
-                              "rarity_weights": {
-                                "type": "object",
-                                "properties": {
-                                  "common": {
-                                    "type": "integer",
-                                    "minimum": 0,
-                                    "maximum": 9007199254740991
-                                  },
-                                  "rare": {
-                                    "type": "integer",
-                                    "minimum": 0,
-                                    "maximum": 9007199254740991
-                                  },
-                                  "epic": {
-                                    "type": "integer",
-                                    "minimum": 0,
-                                    "maximum": 9007199254740991
-                                  },
-                                  "legendary": {
-                                    "type": "integer",
-                                    "minimum": 0,
-                                    "maximum": 9007199254740991
-                                  },
-                                  "mythic": {
-                                    "type": "integer",
-                                    "minimum": 0,
-                                    "maximum": 9007199254740991
-                                  }
-                                },
-                                "required": [
-                                  "common",
-                                  "rare",
-                                  "epic",
-                                  "legendary",
-                                  "mythic"
-                                ],
-                                "additionalProperties": false
-                              }
-                            },
-                            "required": [
-                              "tier",
-                              "display_name",
-                              "image_path",
-                              "single_price",
-                              "ten_price",
-                              "pity_limit",
-                              "pity_rarity",
-                              "rarity_weights"
-                            ],
-                            "additionalProperties": false
-                          }
-                        },
-                        "topup_products": {
-                          "minItems": 5,
-                          "maxItems": 5,
-                          "type": "array",
-                          "items": {
-                            "type": "integer",
-                            "exclusiveMinimum": 0,
-                            "maximum": 9007199254740991
-                          }
+                        "release_key": {
+                          "type": "string",
+                          "pattern": "^[a-z0-9][a-z0-9._-]{2,127}$"
                         }
                       },
                       "required": [
                         "version",
                         "product_checksum",
                         "asset_revision",
-                        "chains",
-                        "templates",
-                        "boxes",
-                        "topup_products"
+                        "release_key"
                       ],
                       "additionalProperties": false
                     },
@@ -1861,7 +1637,376 @@
             "recoveryAction": "refresh"
           }
         },
-        "x-refresh-scopes": []
+        "x-refresh-scopes": [],
+        "x-cache-policy": "no-store"
+      }
+    },
+    "/api/catalog/releases/v1/{product_checksum}/{release_key}": {
+      "get": {
+        "operationId": "catalog_release",
+        "tags": ["catalog"],
+        "security": [],
+        "parameters": [
+          {
+            "name": "product_checksum",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+          },
+          {
+            "name": "release_key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9._-]{2,127}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "version": { "type": "string", "const": "v1" },
+                    "product_checksum": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{64}$"
+                    },
+                    "release_key": {
+                      "type": "string",
+                      "pattern": "^[a-z0-9][a-z0-9._-]{2,127}$"
+                    },
+                    "chains": {
+                      "minItems": 70,
+                      "maxItems": 70,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": { "type": "string" },
+                          "global_order": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "chain_type": {
+                            "type": "string",
+                            "enum": ["normal", "advanced", "top"]
+                          },
+                          "theme": { "type": "string" },
+                          "continuity": { "type": "string" },
+                          "catalog_version": { "type": "string", "const": "v1" }
+                        },
+                        "required": [
+                          "id",
+                          "global_order",
+                          "chain_type",
+                          "theme",
+                          "continuity",
+                          "catalog_version"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "templates": {
+                      "minItems": 210,
+                      "maxItems": 210,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": { "type": "string" },
+                          "chain_id": { "type": "string" },
+                          "stage": {
+                            "anyOf": [
+                              { "type": "number", "const": 1 },
+                              { "type": "number", "const": 2 },
+                              { "type": "number", "const": 3 }
+                            ]
+                          },
+                          "rarity": {
+                            "type": "string",
+                            "enum": [
+                              "common",
+                              "rare",
+                              "epic",
+                              "legendary",
+                              "mythic"
+                            ]
+                          },
+                          "name": { "type": "string" },
+                          "sort_order": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "combat_power": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "market_price": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "decompose_fgems": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "expedition_fgems": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "image_thumbnail_url": {
+                            "type": "string",
+                            "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v[12]\\/thumb\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
+                          },
+                          "image_detail_url": {
+                            "type": "string",
+                            "pattern": "^https:\\/\\/[a-z0-9]+\\.supabase\\.co\\/storage\\/v1\\/object\\/public\\/pet-runtime\\/catalog\\/v[12]\\/detail\\/pet-[nat]-\\d{3}-[123]\\.[0-9a-f]{64}\\.webp$"
+                          },
+                          "draw_weight": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "catalog_version": { "type": "string", "const": "v1" }
+                        },
+                        "required": [
+                          "id",
+                          "chain_id",
+                          "stage",
+                          "rarity",
+                          "name",
+                          "sort_order",
+                          "combat_power",
+                          "market_price",
+                          "decompose_fgems",
+                          "expedition_fgems",
+                          "image_thumbnail_url",
+                          "image_detail_url",
+                          "draw_weight",
+                          "catalog_version"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "boxes": {
+                      "minItems": 3,
+                      "maxItems": 3,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "tier": {
+                            "type": "string",
+                            "enum": ["normal", "rare", "legendary"]
+                          },
+                          "display_name": { "type": "string" },
+                          "image_path": {
+                            "type": "string",
+                            "pattern": "^\\/assets\\/.*"
+                          },
+                          "single_price": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "ten_price": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "pity_limit": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "pity_rarity": {
+                            "type": "string",
+                            "enum": [
+                              "common",
+                              "rare",
+                              "epic",
+                              "legendary",
+                              "mythic"
+                            ]
+                          },
+                          "rarity_weights": {
+                            "type": "object",
+                            "properties": {
+                              "common": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "rare": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "epic": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "legendary": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "mythic": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": [
+                              "common",
+                              "rare",
+                              "epic",
+                              "legendary",
+                              "mythic"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "required": [
+                          "tier",
+                          "display_name",
+                          "image_path",
+                          "single_price",
+                          "ten_price",
+                          "pity_limit",
+                          "pity_rarity",
+                          "rarity_weights"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "topup_products": {
+                      "minItems": 5,
+                      "maxItems": 5,
+                      "type": "array",
+                      "items": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      }
+                    }
+                  },
+                  "required": [
+                    "version",
+                    "product_checksum",
+                    "release_key",
+                    "chains",
+                    "templates",
+                    "boxes",
+                    "topup_products"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Errors: REQUEST_INVALID, REQUEST_BODY_NOT_ALLOWED",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "500": {
+            "description": "Errors: DATABASE_RPC_FAILED, INTERNAL_ERROR",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "502": {
+            "description": "Errors: RESPONSE_INVALID",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          },
+          "503": {
+            "description": "Errors: CATALOG_UNAVAILABLE",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardError" }
+              }
+            }
+          }
+        },
+        "x-idempotency-required": false,
+        "x-idempotency-forbidden": false,
+        "x-allow-pending-entry-handoff": false,
+        "x-error-codes": [
+          "DATABASE_RPC_FAILED",
+          "INTERNAL_ERROR",
+          "REQUEST_INVALID",
+          "RESPONSE_INVALID",
+          "REQUEST_BODY_NOT_ALLOWED",
+          "CATALOG_UNAVAILABLE"
+        ],
+        "x-error-definitions": {
+          "DATABASE_RPC_FAILED": {
+            "status": 500,
+            "message": "数据库操作失败",
+            "retryable": true,
+            "refreshScope": "all",
+            "recoveryAction": "query_operation"
+          },
+          "INTERNAL_ERROR": {
+            "status": 500,
+            "message": "服务暂时不可用",
+            "retryable": true,
+            "refreshScope": "all",
+            "recoveryAction": "query_operation"
+          },
+          "REQUEST_INVALID": {
+            "status": 400,
+            "message": "请求参数无效",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "RESPONSE_INVALID": {
+            "status": 502,
+            "message": "服务响应格式无效",
+            "retryable": true,
+            "refreshScope": "all",
+            "recoveryAction": "refresh"
+          },
+          "REQUEST_BODY_NOT_ALLOWED": {
+            "status": 400,
+            "message": "GET 请求不能携带请求体",
+            "retryable": false,
+            "refreshScope": "none",
+            "recoveryAction": "none"
+          },
+          "CATALOG_UNAVAILABLE": {
+            "status": 503,
+            "message": "图鉴数据暂时不可用",
+            "retryable": true,
+            "refreshScope": "all",
+            "recoveryAction": "refresh"
+          }
+        },
+        "x-refresh-scopes": [],
+        "x-cache-policy": "public-immutable"
       }
     },
     "/api/gacha/bootstrap": {
@@ -2201,7 +2346,8 @@
             "recoveryAction": "refresh"
           }
         },
-        "x-refresh-scopes": []
+        "x-refresh-scopes": [],
+        "x-cache-policy": "no-store"
       }
     },
     "/api/gacha/open": {
@@ -2883,6 +3029,7 @@
           }
         },
         "x-refresh-scopes": ["assets", "inventory"],
+        "x-cache-policy": "no-store",
         "requestBody": {
           "required": true,
           "content": {
@@ -3211,7 +3358,8 @@
             "recoveryAction": "refresh"
           }
         },
-        "x-refresh-scopes": []
+        "x-refresh-scopes": [],
+        "x-cache-policy": "no-store"
       }
     },
     "/api/inventory/{template_id}": {
@@ -3518,7 +3666,8 @@
             "recoveryAction": "none"
           }
         },
-        "x-refresh-scopes": []
+        "x-refresh-scopes": [],
+        "x-cache-policy": "no-store"
       }
     },
     "/api/inventory/{template_id}/evolution-preview": {
@@ -3925,7 +4074,8 @@
             "recoveryAction": "none"
           }
         },
-        "x-refresh-scopes": []
+        "x-refresh-scopes": [],
+        "x-cache-policy": "no-store"
       }
     },
     "/api/inventory/evolution/results/{operation_id}/acknowledge": {
@@ -4178,6 +4328,7 @@
           }
         },
         "x-refresh-scopes": [],
+        "x-cache-policy": "no-store",
         "requestBody": {
           "required": true,
           "content": {
@@ -4991,6 +5142,7 @@
           }
         },
         "x-refresh-scopes": ["assets", "inventory"],
+        "x-cache-policy": "no-store",
         "requestBody": {
           "required": true,
           "content": {
@@ -5466,6 +5618,7 @@
           }
         },
         "x-refresh-scopes": ["assets", "inventory"],
+        "x-cache-policy": "no-store",
         "requestBody": {
           "required": true,
           "content": {
@@ -5805,7 +5958,8 @@
             "recoveryAction": "refresh"
           }
         },
-        "x-refresh-scopes": []
+        "x-refresh-scopes": [],
+        "x-cache-policy": "no-store"
       },
       "post": {
         "operationId": "expedition_create",
@@ -6273,6 +6427,7 @@
           }
         },
         "x-refresh-scopes": ["assets", "inventory"],
+        "x-cache-policy": "no-store",
         "requestBody": {
           "required": true,
           "content": {
@@ -6627,7 +6782,8 @@
             "recoveryAction": "none"
           }
         },
-        "x-refresh-scopes": []
+        "x-refresh-scopes": [],
+        "x-cache-policy": "no-store"
       }
     },
     "/api/expeditions/{expedition_id}/claim": {
@@ -6995,6 +7151,7 @@
           }
         },
         "x-refresh-scopes": ["assets", "inventory"],
+        "x-cache-policy": "no-store",
         "requestBody": {
           "required": true,
           "content": {
@@ -7214,7 +7371,8 @@
             "recoveryAction": "refresh"
           }
         },
-        "x-refresh-scopes": []
+        "x-refresh-scopes": [],
+        "x-cache-policy": "no-store"
       }
     },
     "/api/wheel/spins": {
@@ -7972,6 +8130,7 @@
           }
         },
         "x-refresh-scopes": ["assets"],
+        "x-cache-policy": "no-store",
         "requestBody": {
           "required": true,
           "content": {
@@ -8417,7 +8576,8 @@
             "recoveryAction": "refresh"
           }
         },
-        "x-refresh-scopes": []
+        "x-refresh-scopes": [],
+        "x-cache-policy": "no-store"
       }
     },
     "/api/market/templates/{template_id}": {
@@ -8667,7 +8827,8 @@
             "recoveryAction": "none"
           }
         },
-        "x-refresh-scopes": []
+        "x-refresh-scopes": [],
+        "x-cache-policy": "no-store"
       }
     },
     "/api/market/listings/mine": {
@@ -8978,7 +9139,8 @@
             "recoveryAction": "refresh"
           }
         },
-        "x-refresh-scopes": []
+        "x-refresh-scopes": [],
+        "x-cache-policy": "no-store"
       }
     },
     "/api/market/listings": {
@@ -9392,6 +9554,7 @@
           }
         },
         "x-refresh-scopes": ["assets", "inventory"],
+        "x-cache-policy": "no-store",
         "requestBody": {
           "required": true,
           "content": {
@@ -9760,6 +9923,7 @@
           }
         },
         "x-refresh-scopes": ["assets", "inventory"],
+        "x-cache-policy": "no-store",
         "requestBody": {
           "required": true,
           "content": {
@@ -10325,6 +10489,7 @@
           }
         },
         "x-refresh-scopes": ["assets", "inventory"],
+        "x-cache-policy": "no-store",
         "requestBody": {
           "required": true,
           "content": {
@@ -10879,7 +11044,8 @@
             "recoveryAction": "refresh"
           }
         },
-        "x-refresh-scopes": []
+        "x-refresh-scopes": [],
+        "x-cache-policy": "no-store"
       }
     },
     "/api/topups/orders": {
@@ -11961,6 +12127,7 @@
           }
         },
         "x-refresh-scopes": ["payments", "assets", "battle"],
+        "x-cache-policy": "no-store",
         "requestBody": {
           "required": true,
           "content": {
@@ -13273,6 +13440,7 @@
           }
         },
         "x-refresh-scopes": ["payments", "assets", "battle"],
+        "x-cache-policy": "no-store",
         "requestBody": {
           "required": true,
           "content": {
@@ -14218,6 +14386,7 @@
           }
         },
         "x-refresh-scopes": ["payments", "assets", "battle"],
+        "x-cache-policy": "no-store",
         "requestBody": {
           "required": true,
           "content": {
@@ -14748,7 +14917,8 @@
             "recoveryAction": "none"
           }
         },
-        "x-refresh-scopes": []
+        "x-refresh-scopes": [],
+        "x-cache-policy": "no-store"
       }
     },
     "/api/vip": {
@@ -15341,7 +15511,8 @@
             "recoveryAction": "refresh"
           }
         },
-        "x-refresh-scopes": []
+        "x-refresh-scopes": [],
+        "x-cache-policy": "no-store"
       }
     },
     "/api/vip/orders": {
@@ -16287,6 +16458,7 @@
           }
         },
         "x-refresh-scopes": ["payments", "assets"],
+        "x-cache-policy": "no-store",
         "requestBody": {
           "required": true,
           "content": {
@@ -17239,6 +17411,7 @@
           }
         },
         "x-refresh-scopes": ["payments", "assets"],
+        "x-cache-policy": "no-store",
         "requestBody": {
           "required": true,
           "content": {
@@ -17574,6 +17747,7 @@
           }
         },
         "x-refresh-scopes": ["payments", "assets"],
+        "x-cache-policy": "no-store",
         "requestBody": {
           "required": true,
           "content": {
@@ -17908,6 +18082,7 @@
           }
         },
         "x-refresh-scopes": ["payments", "assets"],
+        "x-cache-policy": "no-store",
         "requestBody": {
           "required": true,
           "content": {
@@ -18236,7 +18411,8 @@
             "recoveryAction": "refresh"
           }
         },
-        "x-refresh-scopes": []
+        "x-refresh-scopes": [],
+        "x-cache-policy": "no-store"
       }
     },
     "/api/tasks/check-in": {
@@ -18576,6 +18752,7 @@
           }
         },
         "x-refresh-scopes": ["assets"],
+        "x-cache-policy": "no-store",
         "requestBody": {
           "required": true,
           "content": {
@@ -18995,6 +19172,7 @@
           }
         },
         "x-refresh-scopes": ["assets"],
+        "x-cache-policy": "no-store",
         "requestBody": {
           "required": true,
           "content": {
@@ -19238,7 +19416,8 @@
             "recoveryAction": "refresh"
           }
         },
-        "x-refresh-scopes": []
+        "x-refresh-scopes": [],
+        "x-cache-policy": "no-store"
       }
     },
     "/api/referrals/bind": {
@@ -19590,6 +19769,7 @@
           }
         },
         "x-refresh-scopes": ["all"],
+        "x-cache-policy": "no-store",
         "requestBody": {
           "required": true,
           "content": {
@@ -19909,7 +20089,8 @@
             "recoveryAction": "refresh"
           }
         },
-        "x-refresh-scopes": []
+        "x-refresh-scopes": [],
+        "x-cache-policy": "no-store"
       }
     },
     "/api/album/{chain_id}/claim": {
@@ -20271,6 +20452,7 @@
           }
         },
         "x-refresh-scopes": ["assets"],
+        "x-cache-policy": "no-store",
         "requestBody": {
           "required": true,
           "content": {
@@ -21665,7 +21847,8 @@
             "recoveryAction": "refresh"
           }
         },
-        "x-refresh-scopes": ["battle"]
+        "x-refresh-scopes": ["battle"],
+        "x-cache-policy": "no-store"
       }
     },
     "/api/battle/team-options": {
@@ -22027,7 +22210,8 @@
             "recoveryAction": "none"
           }
         },
-        "x-refresh-scopes": ["battle", "inventory"]
+        "x-refresh-scopes": ["battle", "inventory"],
+        "x-cache-policy": "no-store"
       }
     },
     "/api/battle/invites/current": {
@@ -22334,7 +22518,8 @@
             "recoveryAction": "none"
           }
         },
-        "x-refresh-scopes": ["battle"]
+        "x-refresh-scopes": ["battle"],
+        "x-cache-policy": "no-store"
       }
     },
     "/api/battle/rooms/{room_id}": {
@@ -23421,7 +23606,8 @@
             "recoveryAction": "refresh"
           }
         },
-        "x-refresh-scopes": ["battle"]
+        "x-refresh-scopes": ["battle"],
+        "x-cache-policy": "no-store"
       }
     },
     "/api/battle/rooms": {
@@ -23929,6 +24115,7 @@
           }
         },
         "x-refresh-scopes": ["battle", "assets", "inventory"],
+        "x-cache-policy": "no-store",
         "requestBody": {
           "required": true,
           "content": {
@@ -24336,6 +24523,7 @@
           }
         },
         "x-refresh-scopes": ["battle", "assets", "inventory"],
+        "x-cache-policy": "no-store",
         "requestBody": {
           "required": true,
           "content": {
@@ -26455,6 +26643,7 @@
           }
         },
         "x-refresh-scopes": ["battle", "assets", "inventory"],
+        "x-cache-policy": "no-store",
         "requestBody": {
           "required": true,
           "content": {
@@ -28614,6 +28803,7 @@
           }
         },
         "x-refresh-scopes": ["battle", "assets", "inventory"],
+        "x-cache-policy": "no-store",
         "requestBody": {
           "required": true,
           "content": {
@@ -30747,6 +30937,7 @@
           }
         },
         "x-refresh-scopes": ["battle"],
+        "x-cache-policy": "no-store",
         "requestBody": {
           "required": true,
           "content": {
@@ -31979,6 +32170,7 @@
           }
         },
         "x-refresh-scopes": ["battle", "assets", "inventory"],
+        "x-cache-policy": "no-store",
         "requestBody": {
           "required": true,
           "content": {
@@ -33130,6 +33322,7 @@
           }
         },
         "x-refresh-scopes": ["battle", "assets", "inventory"],
+        "x-cache-policy": "no-store",
         "requestBody": {
           "required": true,
           "content": {
@@ -33408,6 +33601,7 @@
           }
         },
         "x-refresh-scopes": ["battle"],
+        "x-cache-policy": "no-store",
         "requestBody": {
           "required": true,
           "content": {
@@ -33833,7 +34027,8 @@
             "recoveryAction": "refresh"
           }
         },
-        "x-refresh-scopes": []
+        "x-refresh-scopes": [],
+        "x-cache-policy": "no-store"
       }
     },
     "/api/operations/{operation_id}": {
@@ -34251,7 +34446,8 @@
             "recoveryAction": "refresh"
           }
         },
-        "x-refresh-scopes": []
+        "x-refresh-scopes": [],
+        "x-cache-policy": "no-store"
       }
     },
     "/api/telegram/payment-support": {
@@ -34372,7 +34568,8 @@
             "recoveryAction": "none"
           }
         },
-        "x-refresh-scopes": []
+        "x-refresh-scopes": [],
+        "x-cache-policy": "no-store"
       }
     },
     "/api/telegram/webhook": {
@@ -34541,6 +34738,7 @@
           }
         },
         "x-refresh-scopes": [],
+        "x-cache-policy": "no-store",
         "requestBody": {
           "required": true,
           "content": {
@@ -34871,6 +35069,7 @@
           }
         },
         "x-refresh-scopes": [],
+        "x-cache-policy": "no-store",
         "requestBody": {
           "required": true,
           "content": {
@@ -35062,6 +35261,7 @@
           }
         },
         "x-refresh-scopes": [],
+        "x-cache-policy": "no-store",
         "requestBody": {
           "required": true,
           "content": {
@@ -35315,7 +35515,8 @@
             "recoveryAction": "refresh"
           }
         },
-        "x-refresh-scopes": []
+        "x-refresh-scopes": [],
+        "x-cache-policy": "no-store"
       }
     },
     "/api/jobs/cleanup-idempotency": {
@@ -35552,7 +35753,8 @@
             "recoveryAction": "refresh"
           }
         },
-        "x-refresh-scopes": []
+        "x-refresh-scopes": [],
+        "x-cache-policy": "no-store"
       }
     },
     "/api/jobs/monitor-invariants": {
@@ -35789,7 +35991,8 @@
             "recoveryAction": "refresh"
           }
         },
-        "x-refresh-scopes": []
+        "x-refresh-scopes": [],
+        "x-cache-policy": "no-store"
       }
     },
     "/api/jobs/cleanup-catalog-assets": {
@@ -36026,7 +36229,8 @@
             "recoveryAction": "refresh"
           }
         },
-        "x-refresh-scopes": []
+        "x-refresh-scopes": [],
+        "x-cache-policy": "no-store"
       }
     }
   },

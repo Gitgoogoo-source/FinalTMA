@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 
 import { useApiQuery } from "../../../platform/query/index.ts";
+import { useCatalogQuery } from "../../../platform/query/useCatalogQuery.ts";
 import { Button } from "../../../shared/ui/index.tsx";
 import { useOperationRegistry } from "../../../workflows/operation-recovery/context.ts";
 import { evolutionRoute, type EvolutionRarity } from "../config.ts";
@@ -25,7 +26,7 @@ export function EvolutionAction({
   const { isBlocked, preload, run } = useOperationRegistry();
   const [confirming, setConfirming] = useState(false);
   const bootstrap = useApiQuery("identity.bootstrap");
-  const catalog = useApiQuery("catalog.get", {}, confirming);
+  const catalog = useCatalogQuery(confirming);
   const route = evolutionRoute(item.template_id);
   const target = route
     ? catalog.data?.templates.find(

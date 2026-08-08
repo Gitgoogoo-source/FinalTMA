@@ -12,6 +12,7 @@ import {
 
 import { CatalogImage } from "../../../shared/ui/index.tsx";
 import { useApiQuery } from "../../../platform/query/index.ts";
+import { useCatalogQuery } from "../../../platform/query/useCatalogQuery.ts";
 import {
   registerSensitiveStateResetter,
   useSession,
@@ -71,7 +72,7 @@ const pityLoadError = new Error("保底进度加载失败，请重试");
 
 export function GachaView(): ReactNode {
   const boxes = useApiQuery("gacha.bootstrap");
-  const catalog = useApiQuery("catalog.get");
+  const catalog = useCatalogQuery();
   const identity = useApiQuery("identity.bootstrap");
   const session = useSession();
   const { isBlocked, preload, run } = useOperationRegistry();

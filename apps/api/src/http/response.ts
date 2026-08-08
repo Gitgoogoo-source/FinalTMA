@@ -19,10 +19,8 @@ export function successResponse(
       result.operationId ?? null,
     );
   const data = parsed.data;
-  const headers = responseHeaders(requestId);
+  const headers = responseHeaders(requestId, route.cachePolicy);
   if ("rawResponse" in route && route.rawResponse) {
-    if (route.id === "mint.metadata")
-      headers.set("cache-control", "public, max-age=31536000, immutable");
     return Response.json(data, { status: result.status ?? 200, headers });
   }
   return Response.json(
@@ -46,13 +44,22 @@ export function failureResponse(error: ApiError, requestId: string): Response {
   );
 }
 
-function responseHeaders(requestId: string): Headers {
-  return new Headers({
+function responseHeaders(
+  requestId: string,
+  cachePolicy?: RouteDefinition["cachePolicy"],
+): Headers {
+  const headers = new Headers({
     "content-type": "application/json; charset=utf-8",
-    "x-request-id": requestId,
     "x-content-type-options": "nosniff",
     "referrer-policy": "no-referrer",
-    "cache-control": "no-store",
     "content-security-policy": "default-src 'none'; frame-ancestors 'none'",
   });
+  if (cachePolicy === "public-immutable") {
+    headers.set("cache-control", "public, max-age=31536000, immutable");
+    headers.set("vercel-cdn-cache-control", "public, s-maxage=31536000");
+  } else {
+    headers.set("x-request-id", requestId);
+    headers.set("cache-control", "no-store");
+  }
+  return headers;
 }

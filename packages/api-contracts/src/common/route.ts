@@ -6,6 +6,7 @@ import type { RefreshScope } from "./errors.ts";
 export type HttpMethod = "GET" | "POST";
 export type Gateway = "app" | "integrations" | "jobs";
 export type IntegrationAuth = "telegram_webhook" | "battle_outbox";
+export type CachePolicy = "public-immutable";
 
 export type RouteDefinition<
   Id extends string = string,
@@ -23,6 +24,7 @@ export type RouteDefinition<
   allowPendingEntryHandoff?: true;
   refreshScopes?: readonly RefreshScope[];
   rawResponse?: boolean;
+  cachePolicy?: CachePolicy;
   input: Input;
   output: Output;
   errors: readonly ErrorCode[];

@@ -48,6 +48,7 @@ REQUIRED_PATHS = (
     "apps/web/src/app/shell",
     "apps/web/src/app/router/PersistentPages.tsx",
     "apps/web/src/platform/query/pageQueryActivity.tsx",
+    "apps/web/src/platform/query/useCatalogQuery.ts",
     "apps/web/src/shared/navigation/pageActivity.tsx",
     "apps/web/src/pages",
     "apps/web/src/domains",
@@ -59,6 +60,7 @@ REQUIRED_PATHS = (
     "docs/architecture/adr/ADR-038-local-session-proof-and-login-rpc-consolidation.md",
     "docs/architecture/adr/ADR-040-first-screen-runtime-boundary.md",
     "docs/architecture/adr/ADR-041-market-transactional-supply-read-model.md",
+    "docs/architecture/adr/ADR-042-catalog-pointer-immutable-release.md",
     "docs/architecture/adr/ADR-016-controlled-battle-acceptance-fixture.md",
     "docs/architecture/adr/ADR-022-battle-stage-skill-progression.md",
     "docs/architecture/adr/ADR-025-battle-active-switch-atomicity.md",
@@ -231,6 +233,32 @@ def verify_web_boundaries() -> None:
     web_source = "\n".join(path.read_text(encoding="utf-8") for path in typescript_files(WEB_ROOT))
     if "@supabase" in web_source or "SUPABASE_SERVICE_ROLE" in web_source:
         raise SystemExit("The Web application cannot import Supabase or reference service-role secrets")
+    catalog_query_path = WEB_ROOT / "platform/query/useCatalogQuery.ts"
+    catalog_query_source = catalog_query_path.read_text(encoding="utf-8")
+    catalog_query_terms = (
+        'useApiQuery("catalog.current"',
+        'useApiQuery(\n    "catalog.release"',
+        'fetchApiQuery("catalog.release"',
+        "lastSuccessfulCatalogSnapshot",
+    )
+    missing_catalog_query_terms = [
+        term for term in catalog_query_terms if term not in catalog_query_source
+    ]
+    if missing_catalog_query_terms:
+        raise SystemExit(
+            f"Catalog pointer/release query is incomplete: {missing_catalog_query_terms}"
+        )
+    catalog_bypasses = []
+    for root in (WEB_ROOT / "domains", WEB_ROOT / "workflows", WEB_ROOT / "pages"):
+        for source in typescript_files(root):
+            content = source.read_text(encoding="utf-8")
+            if re.search(r'["\']catalog\.(?:current|release)["\']', content):
+                catalog_bypasses.append(relative(source))
+    if catalog_bypasses:
+        raise SystemExit(
+            "Web domains must use useCatalogQuery instead of catalog routes directly: "
+            f"{sorted(catalog_bypasses)}"
+        )
     forbidden_files = list((WEB_ROOT / "domains").rglob("api.ts")) + list((WEB_ROOT / "domains").rglob("model.ts"))
     if forbidden_files:
         raise SystemExit(f"Unused Web domain scaffolding remains: {[relative(path) for path in forbidden_files]}")

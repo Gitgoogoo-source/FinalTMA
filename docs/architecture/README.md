@@ -18,6 +18,7 @@
 - API：同一 Vercel Project 内的 `app`、`integrations`、`jobs` 三个 Node.js 24 Function 网关。
 - Database：Supabase Postgres 17，仅暴露 `api` schema；浏览器不加载 Supabase SDK，也不直连 Postgres、RPC、Auth 或其他 Data API。
 - Art Storage：私有 `art-masters` 永久保存历史母版，公开 `pet-runtime` 只发布宠物运行时 WebP；浏览器只能直接 GET API 返回的公开桶宠物图片 URL。
+- Catalog Delivery：`catalog.current` 以 `no-store` 返回当前 checksum、release key 与 revision；`catalog.release` 按 checksum + release key 返回一年不可变缓存的完整目录，Web 只通过 `useCatalogQuery()` 合并为目录快照。
 - Realtime：Ably Standard 只发送 Battle 状态失效通知；REST 与数据库 `state_version` 回正权威状态。
 - Blockchain：TON Connect、钱包验证与 Tact NFT Mint 实现保留休眠；当前 App/Jobs 运行时注册表与 OpenAPI 均不发布相关端点，MVP 不提供入口、恢复或定时对账。
 - Deployment：Vercel Pro；真实开发环境与未来生产环境使用相同 Git commit 和 migration 序列。
@@ -42,6 +43,8 @@ contracts/ton -> TON blockchain
 TMA 首屏同步闭包固定为入口、默认开盒页、首屏契约及各自同步依赖；认证后 Provider 与首屏契约在 Telegram 初始化后并行预取，首屏完成后继续按既有策略后台预热其余普通主导航页面。操作结果、全局充值/VIP 弹窗和领域 CSS 只在对应意图后加载；生产构建按 [ADR-040](adr/ADR-040-first-screen-runtime-boundary.md) 对完整首屏闭包执行四项字节硬门禁和禁止模块检查。`/game` 固定承载 React + TypeScript Battle，不引入 Phaser；Battle 只有在游戏页可见或当前 session 需要恢复 Battle participation/当场终局结果时读取专属状态，邀请 waiting 的创建者展示心跳和 lobby 的双方 presence 心跳只在页面可见时发送。隐藏、Telegram deactivated、`pagehide` 或离开 `/game` 立即结束当前 lease、中止在途 heartbeat 并尽力 offline；恢复先读取权威快照并取得新 lease，进入 `active_turn` 后停止 presence。
 
 五个主导航页面在当前登录会话内首次访问后保持挂载。切换页面只恢复各自滚动、筛选和页内状态，同时按 [ADR-037](adr/ADR-037-persistent-page-query-activity.md) 暂停隐藏页面查询；切页前已开始的读取允许完成。返回页面时，新鲜且未失效的缓存不读取，超过 20 秒或被业务刷新范围标记失效的查询按键回正一次；已有缓存回正失败时保留内容并显示非阻塞重试。业务结果把契约范围全部标记失效，只立即刷新当前页面和全局活动查询；后台连续五分钟后回到前台只静默回正顶部摘要与当前页面。交易页按 [ADR-029](adr/ADR-029-market-sold-device-inbox.md) 在可见期间每 10 秒同步本人挂售与新成交事件，当前设备只持久保存按内部用户隔离的事件游标和未隐藏 SOLD 提醒，并由同一待展示集合驱动“管理”页签红点。市场首页、单模板和本人挂售读取按 [ADR-041](adr/ADR-041-market-transactional-supply-read-model.md) 只访问事务维护的两级供给汇总与有界成交游标，不随已售罄或已取消历史增长；原始 FIFO 挂单继续独占购买、下架、reservation 与结算裁决。
+
+目录交付按 [ADR-042](adr/ADR-042-catalog-pointer-immutable-release.md) 分成动态小指针与不可变完整内容。资源切换只改变 `catalog.current`；checksum + release key URL 永不原地改写或清除缓存。`useCatalogQuery()` 在新内容读取期间保留上一份成功快照，只有全新 WebView 没有快照时才进入原有初始错误状态。
 
 ## 可信边界
 

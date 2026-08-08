@@ -65,6 +65,7 @@ for (const route of routes) {
       route.errors.map((code) => [code, errorRegistry[code]]),
     ),
     "x-refresh-scopes": "refreshScopes" in route ? route.refreshScopes : [],
+    "x-cache-policy": "cachePolicy" in route ? route.cachePolicy : "no-store",
   };
 
   if (route.method === "POST") {
