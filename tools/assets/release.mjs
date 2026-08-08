@@ -386,8 +386,7 @@ async function request(path, init = {}, expected = [200]) {
         ...init,
         signal: init.signal ?? AbortSignal.timeout(20_000),
         headers: {
-          apikey: env.key,
-          authorization: `Bearer ${env.key}`,
+          ...supabaseServiceHeaders(env.key),
           ...(init.headers ?? {}),
         },
       });
@@ -419,6 +418,12 @@ async function request(path, init = {}, expected = [200]) {
     return response;
   }
   throw networkFailure;
+}
+
+function supabaseServiceHeaders(key) {
+  const headers = { apikey: key };
+  if (key.split(".").length === 3) headers.authorization = `Bearer ${key}`;
+  return headers;
 }
 
 async function ensureBuckets() {
