@@ -6,8 +6,8 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { Outlet, useLocation } from "react-router-dom";
 
+import { useAppLocation } from "../../platform/navigation/index.tsx";
 import { refreshForegroundState } from "../../platform/query/index.ts";
 import { useSession } from "../../platform/session/store.ts";
 import { telegram } from "../../platform/telegram/index.ts";
@@ -19,8 +19,12 @@ import { BottomNavigation } from "./BottomNavigation.tsx";
 import { GlobalDialogs } from "./GlobalDialogs.tsx";
 import { TopAssetBar, type GlobalDialog } from "./TopAssetBar.tsx";
 
-export function AppShell(): ReactNode {
-  const location = useLocation();
+export function AppShell({
+  standalonePage = null,
+}: {
+  standalonePage?: ReactNode;
+}): ReactNode {
+  const location = useAppLocation();
   const session = useSession();
   const activePath = getMainPagePath(location.pathname);
   const [dialog, setDialog] = useState<GlobalDialog | null>(null);
@@ -72,7 +76,7 @@ export function AppShell(): ReactNode {
           close={closeDialogs}
         />
       </div>
-      {!activePath ? <Outlet /> : null}
+      {!activePath ? standalonePage : null}
     </>
   );
 }

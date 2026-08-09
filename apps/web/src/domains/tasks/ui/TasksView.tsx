@@ -31,8 +31,8 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { useNavigate } from "react-router-dom";
 
+import { useAppNavigate } from "../../../platform/navigation/index.tsx";
 import { useApiQuery } from "../../../platform/query/index.ts";
 import {
   registerSensitiveStateResetter,
@@ -49,7 +49,10 @@ import {
   boxThumbnailSrcSet,
   fallbackToOriginalBoxArt,
 } from "../../../shared/assets/responsiveArt.ts";
-import { Badge, Button, Card, PageState } from "../../../shared/ui/index.tsx";
+import { Badge } from "../../../shared/ui/Badge.tsx";
+import { Button } from "../../../shared/ui/Button.tsx";
+import { Card } from "../../../shared/ui/Card.tsx";
+import { PageState } from "../../../shared/ui/PageState.tsx";
 import { useOperationRegistry } from "../../../workflows/operation-recovery/context.ts";
 import {
   isVisibleMvpTask,
@@ -168,7 +171,7 @@ export function TasksView({
 }): ReactNode {
   const tasks = useApiQuery("tasks.get");
   const { isBlocked, run } = useOperationRegistry();
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const preparePage = usePageModulePreparation();
   const session = useSession();
   const remembered = session ? viewStates.get(session.userId) : undefined;
@@ -410,7 +413,7 @@ export function TasksView({
 
 function goComplete(
   action: Task["completion_action"],
-  navigate: ReturnType<typeof useNavigate>,
+  navigate: ReturnType<typeof useAppNavigate>,
   preparePage: (target: string) => void,
 ): void {
   const route = getCompletionRoute(action);

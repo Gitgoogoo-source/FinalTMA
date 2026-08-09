@@ -1,16 +1,22 @@
 import { useTonConnectUI, useTonWallet } from "@tonconnect/ui-react";
 import { ChevronLeft, Link2, ShieldAlert } from "lucide-react";
 import { useCallback, useState, type ReactNode } from "react";
-import { useNavigate, useParams } from "react-router-dom";
 
-import { CatalogImage } from "../../../shared/ui/index.tsx";
+import {
+  useAppNavigate,
+  useAppParams,
+} from "../../../platform/navigation/index.tsx";
+import { CatalogImage } from "../../../shared/ui/CatalogImage.tsx";
 import {
   useDormantApiQuery,
   useDormantOperationRegistry,
 } from "../../../dormant/api.ts";
 import { useApiQuery } from "../../../platform/query/index.ts";
 import { useTelegramBackButton } from "../../../platform/telegram/index.ts";
-import { Badge, Button, Card, PageState } from "../../../shared/ui/index.tsx";
+import { Badge } from "../../../shared/ui/Badge.tsx";
+import { Button } from "../../../shared/ui/Button.tsx";
+import { Card } from "../../../shared/ui/Card.tsx";
+import { PageState } from "../../../shared/ui/PageState.tsx";
 
 type Transaction = {
   valid_until: number;
@@ -18,12 +24,12 @@ type Transaction = {
 };
 
 export function MintView(): ReactNode {
-  const { templateId = "" } = useParams();
+  const { templateId = "" } = useAppParams("/mint/:templateId");
   const inventory = useApiQuery("inventory.detail", {
     template_id: templateId,
   });
   const walletStatus = useDormantApiQuery("wallet.get");
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const back = useCallback(() => navigate(-1), [navigate]);
   useTelegramBackButton(true, back);
   const item = inventory.data;

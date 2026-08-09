@@ -16,12 +16,10 @@ import {
   inviteGiftArtSrcSet,
   inviteGiftArtUrl,
 } from "../../../shared/assets/responsiveArt.ts";
-import {
-  Badge,
-  Button,
-  Card,
-  StaleContentNotice,
-} from "../../../shared/ui/index.tsx";
+import { Badge } from "../../../shared/ui/Badge.tsx";
+import { Button } from "../../../shared/ui/Button.tsx";
+import { Card } from "../../../shared/ui/Card.tsx";
+import { StaleContentNotice } from "../../../shared/ui/PageState.tsx";
 
 export function ReferralPanel(): ReactNode {
   const query = useApiQuery("referral.get");

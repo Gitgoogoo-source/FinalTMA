@@ -22,13 +22,13 @@ import {
   errorDefinition,
   isErrorCode,
 } from "@pokepets/api-contracts/app-client/errors";
-import { useNavigate } from "react-router-dom";
 
 import {
   ApiFailure,
   apiRequest,
   newIdempotencyKey,
 } from "../../platform/api/client.ts";
+import { useAppNavigate } from "../../platform/navigation/index.tsx";
 import {
   fetchApiQuery,
   refreshRouteScopes,
@@ -45,7 +45,7 @@ import {
   telegram,
 } from "../../platform/telegram/index.ts";
 import { usePageModulePreparation } from "../../shared/navigation/pageModulePreparation.ts";
-import { Button } from "../../shared/ui/index.tsx";
+import { Button } from "../../shared/ui/Button.tsx";
 import { useNewMarkers } from "../new-markers/context.ts";
 import { useNavigationIntent } from "../payment-recovery/context.ts";
 import {
@@ -167,7 +167,7 @@ export function OperationRegistryRuntimeProvider({
 }: {
   children: ReactNode;
 }): ReactNode {
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const preparePage = usePageModulePreparation();
   const session = useSession();
   const { markNew } = useNewMarkers();

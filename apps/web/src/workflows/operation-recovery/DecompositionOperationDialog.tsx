@@ -2,7 +2,8 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { RouteOutput } from "@pokepets/api-contracts/app-client";
 
 import { haptic, selectionHaptic } from "../../platform/telegram/index.ts";
-import { Button, CatalogImage } from "../../shared/ui/index.tsx";
+import { Button } from "../../shared/ui/Button.tsx";
+import { CatalogImage } from "../../shared/ui/CatalogImage.tsx";
 import type { OperationPhase, OperationPresentation } from "./context.ts";
 
 type DecompositionResult = RouteOutput<"inventory.decompose">;

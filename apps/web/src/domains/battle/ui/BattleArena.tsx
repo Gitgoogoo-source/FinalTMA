@@ -6,7 +6,8 @@ import type {
   BattleSelfTeamDto,
 } from "@pokepets/api-contracts/app-client";
 
-import { Button, CatalogImage } from "../../../shared/ui/index.tsx";
+import { Button } from "../../../shared/ui/Button.tsx";
+import { CatalogImage } from "../../../shared/ui/CatalogImage.tsx";
 import { battleRarityLabels, formatBattleTime } from "../labels.ts";
 import {
   useBattleAnimation,

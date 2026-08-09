@@ -2,7 +2,7 @@ import { Sparkles } from "lucide-react";
 import type { ReactNode } from "react";
 import type { RouteOutput } from "@pokepets/api-contracts/app-client";
 
-import { Button } from "../../shared/ui/index.tsx";
+import { Button } from "../../shared/ui/Button.tsx";
 
 type WheelResult = RouteOutput<"wheel.spin">;
 type WheelReward = WheelResult["rewards"][number];

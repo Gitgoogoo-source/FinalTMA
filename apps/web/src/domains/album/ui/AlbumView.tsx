@@ -7,12 +7,14 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { useNavigate } from "react-router-dom";
 
+import { useAppNavigate } from "../../../platform/navigation/index.tsx";
 import { useApiQuery } from "../../../platform/query/index.ts";
 import { useTelegramBackButton } from "../../../platform/telegram/index.ts";
 import { usePageModulePreparation } from "../../../shared/navigation/pageModulePreparation.ts";
-import { Badge, Button, PageState } from "../../../shared/ui/index.tsx";
+import { Badge } from "../../../shared/ui/Badge.tsx";
+import { Button } from "../../../shared/ui/Button.tsx";
+import { PageState } from "../../../shared/ui/PageState.tsx";
 import { useOperationRegistry } from "../../../workflows/operation-recovery/context.ts";
 import { useBlockingOperationRecovery } from "../../../workflows/operation-recovery/useBlockingOperationRecovery.ts";
 import type { AlbumChain, AlbumFilter, AlbumNode } from "../types.ts";
@@ -32,7 +34,7 @@ export function AlbumView(): ReactNode {
   const query = useApiQuery("album.get");
   const bootstrap = useApiQuery("identity.bootstrap");
   useBlockingOperationRecovery(bootstrap.data?.blocking_operations);
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const preparePage = usePageModulePreparation();
   const back = useCallback(() => navigate(-1), [navigate]);
   useTelegramBackButton(true, back);

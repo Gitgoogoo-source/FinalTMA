@@ -18,7 +18,8 @@ import {
 } from "../../../platform/query/index.ts";
 import { getSession } from "../../../platform/session/store.ts";
 import { telegram } from "../../../platform/telegram/index.ts";
-import { AppModal, Button } from "../../../shared/ui/index.tsx";
+import { AppModal } from "../../../shared/ui/AppModal.tsx";
+import { Button } from "../../../shared/ui/Button.tsx";
 import { useOperationRegistry } from "../../../workflows/operation-recovery/context.ts";
 import type { TopupRequest } from "../../../workflows/payment-recovery/context.ts";
 import "../../../shared/styles/shell-dialogs.css";

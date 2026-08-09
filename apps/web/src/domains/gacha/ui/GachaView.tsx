@@ -10,7 +10,7 @@ import {
   type ReactNode,
 } from "react";
 
-import { CatalogImage } from "../../../shared/ui/index.tsx";
+import { CatalogImage } from "../../../shared/ui/CatalogImage.tsx";
 import { useApiQuery } from "../../../platform/query/index.ts";
 import { useCatalogQuery } from "../../../platform/query/useCatalogQuery.ts";
 import {
@@ -28,7 +28,9 @@ import {
   preloadBoxHeroArt,
   type BoxArtTier,
 } from "../../../shared/assets/responsiveArt.ts";
-import { Button, Card, PageState } from "../../../shared/ui/index.tsx";
+import { Button } from "../../../shared/ui/Button.tsx";
+import { Card } from "../../../shared/ui/Card.tsx";
+import { PageState } from "../../../shared/ui/PageState.tsx";
 import {
   getAppMaxScrollTop,
   getAppScrollTop,

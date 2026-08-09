@@ -1,6 +1,6 @@
 import { lazy, Suspense, type ReactNode } from "react";
 
-import { AppModal } from "../../../shared/ui/index.tsx";
+import { AppModal } from "../../../shared/ui/AppModal.tsx";
 
 const TonProvider = lazy(() => import("../../../platform/ton/TonProvider.tsx"));
 

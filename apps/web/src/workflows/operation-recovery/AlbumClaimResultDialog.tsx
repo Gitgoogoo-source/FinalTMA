@@ -2,7 +2,7 @@ import { CheckCircle2, Gift } from "lucide-react";
 import type { RouteOutput } from "@pokepets/api-contracts/app-client";
 import type { ReactNode } from "react";
 
-import { Button } from "../../shared/ui/index.tsx";
+import { Button } from "../../shared/ui/Button.tsx";
 
 export function AlbumClaimResultDialog({
   result,

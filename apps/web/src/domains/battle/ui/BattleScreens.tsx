@@ -23,7 +23,8 @@ import type {
 } from "@pokepets/api-contracts/app-client";
 
 import { getIdentityInitial } from "../../../shared/identityInitial.ts";
-import { Button, CatalogImage } from "../../../shared/ui/index.tsx";
+import { Button } from "../../../shared/ui/Button.tsx";
+import { CatalogImage } from "../../../shared/ui/CatalogImage.tsx";
 import {
   battleArenaTierLabels,
   battleRarityLabels,

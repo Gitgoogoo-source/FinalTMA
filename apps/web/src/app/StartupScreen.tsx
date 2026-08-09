@@ -1,7 +1,7 @@
 import { Gem, RotateCw } from "lucide-react";
 import type { ReactNode } from "react";
 
-import { Button } from "../shared/ui/index.tsx";
+import { Button } from "../shared/ui/Button.tsx";
 
 type StartupScreenProps = {
   title: string;

@@ -7,7 +7,9 @@ import {
   useDormantApiQuery,
   useDormantOperationRegistry,
 } from "../../../dormant/api.ts";
-import { AppModal, Badge, Button } from "../../../shared/ui/index.tsx";
+import { AppModal } from "../../../shared/ui/AppModal.tsx";
+import { Badge } from "../../../shared/ui/Badge.tsx";
+import { Button } from "../../../shared/ui/Button.tsx";
 
 type Challenge = { payload: string; expiresAt: string };
 

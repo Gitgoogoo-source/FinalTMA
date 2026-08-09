@@ -6,8 +6,11 @@ import {
   ShoppingBasket,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
 
+import {
+  useAppLocation,
+  useAppNavigate,
+} from "../../platform/navigation/index.tsx";
 import { usePageModulePreparation } from "../../shared/navigation/pageModulePreparation.ts";
 import { useOperationRegistry } from "../../workflows/operation-recovery/context.ts";
 
@@ -20,8 +23,8 @@ const navigation = [
 ] as const;
 
 export function BottomNavigation(): ReactNode {
-  const location = useLocation();
-  const navigate = useNavigate();
+  const location = useAppLocation();
+  const navigate = useAppNavigate();
   const preparePage = usePageModulePreparation();
   const { navigationLocked } = useOperationRegistry();
   return (

@@ -1,8 +1,10 @@
 import { CircleHelp, Gift, LoaderCircle } from "lucide-react";
 import type { MouseEvent, ReactNode } from "react";
 
-import { CatalogImage } from "../../../shared/ui/index.tsx";
-import { Badge, Button, Card } from "../../../shared/ui/index.tsx";
+import { CatalogImage } from "../../../shared/ui/CatalogImage.tsx";
+import { Badge } from "../../../shared/ui/Badge.tsx";
+import { Button } from "../../../shared/ui/Button.tsx";
+import { Card } from "../../../shared/ui/Card.tsx";
 import { chainTypeLabels, rarityLabels } from "../labels.ts";
 import type { AlbumChain, AlbumNode } from "../types.ts";
 

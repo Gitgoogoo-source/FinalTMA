@@ -9,7 +9,9 @@ import { X } from "lucide-react";
 import { evolutionRoute } from "../../domains/evolution/config.ts";
 import { useCatalogQuery } from "../../platform/query/useCatalogQuery.ts";
 import { haptic, selectionHaptic } from "../../platform/telegram/index.ts";
-import { Badge, Button, CatalogImage } from "../../shared/ui/index.tsx";
+import { Badge } from "../../shared/ui/Badge.tsx";
+import { Button } from "../../shared/ui/Button.tsx";
+import { CatalogImage } from "../../shared/ui/CatalogImage.tsx";
 import type { OperationPhase } from "./context.ts";
 
 type EvolutionResult = RouteOutput<"inventory.evolve">;

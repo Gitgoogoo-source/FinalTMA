@@ -22,7 +22,9 @@ import type { RouteOutput } from "@pokepets/api-contracts/app-client";
 import { useApiQuery } from "../../../platform/query/index.ts";
 import { focusTaskTarget } from "../../../shared/navigation/focusTaskTarget.ts";
 import { usePageSearchParams } from "../../../shared/navigation/pageActivity.tsx";
-import { Button, Card, StaleContentNotice } from "../../../shared/ui/index.tsx";
+import { Button } from "../../../shared/ui/Button.tsx";
+import { Card } from "../../../shared/ui/Card.tsx";
+import { StaleContentNotice } from "../../../shared/ui/PageState.tsx";
 import { useOperationRegistry } from "../../../workflows/operation-recovery/context.ts";
 import { useNavigationIntent } from "../../../workflows/payment-recovery/context.ts";
 

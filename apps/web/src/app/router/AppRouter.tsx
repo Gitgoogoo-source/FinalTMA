@@ -1,41 +1,37 @@
-import { lazy, Suspense, useEffect, type ReactNode } from "react";
-import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import {
+  lazy,
+  Suspense,
+  useEffect,
+  useLayoutEffect,
+  type ReactNode,
+} from "react";
+import {
+  replaceAppLocation,
+  useAppLocation,
+} from "../../platform/navigation/index.tsx";
 import { useSession } from "../../platform/session/store.ts";
 import {
   isFirstScreenReady,
   subscribeFirstScreenReady,
 } from "../../shared/navigation/firstScreenReadiness.ts";
 import { AppShell } from "../shell/AppShell.tsx";
-import { loadAlbumPage } from "./pageRoutes.ts";
+import { getMainPagePath, loadAlbumPage } from "./pageRoutes.ts";
 
 const AlbumPage = lazy(loadAlbumPage);
 
 export function AppRouter(): ReactNode {
-  useBackgroundPreload();
-  return (
-    <Routes>
-      <Route element={<AppShell />}>
-        <Route index element={<PersistentPageLeaf />} />
-        <Route path="market" element={<PersistentPageLeaf />} />
-        <Route path="game" element={<PersistentPageLeaf />} />
-        <Route path="inventory" element={<PersistentPageLeaf />} />
-        <Route path="tasks" element={<PersistentPageLeaf />} />
-        <Route path="album" element={withPageLoading(<AlbumPage />)} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Route>
-    </Routes>
-  );
+  const location = useAppLocation();
+  useBackgroundPreload(location.pathname);
+  if (getMainPagePath(location.pathname)) return <AppShell />;
+  if (location.pathname === "/album")
+    return <AppShell standalonePage={withPageLoading(<AlbumPage />)} />;
+  return <InvalidRouteRedirect />;
 }
 
-function PersistentPageLeaf(): null {
-  return null;
-}
-
-function useBackgroundPreload(): void {
-  const location = useLocation();
+function useBackgroundPreload(pathname: string): void {
   const generation = useSession()?.generation;
   useEffect(() => {
-    if (location.pathname !== "/" || !generation) return;
+    if (pathname !== "/" || !generation) return;
     let dispose: (() => void) | undefined;
     let cancelled = false;
     let loading = false;
@@ -57,7 +53,12 @@ function useBackgroundPreload(): void {
       unsubscribe();
       dispose?.();
     };
-  }, [generation, location.pathname]);
+  }, [generation, pathname]);
+}
+
+function InvalidRouteRedirect(): null {
+  useLayoutEffect(() => replaceAppLocation("/"), []);
+  return null;
 }
 
 function withPageLoading(page: ReactNode): ReactNode {

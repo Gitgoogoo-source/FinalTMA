@@ -8,13 +8,11 @@ import {
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
-import {
-  AppModal,
-  Button,
-  CatalogImage,
-  InventoryActionDialogHeader,
-  QuantityControl,
-} from "../../../shared/ui/index.tsx";
+import { AppModal } from "../../../shared/ui/AppModal.tsx";
+import { Button } from "../../../shared/ui/Button.tsx";
+import { CatalogImage } from "../../../shared/ui/CatalogImage.tsx";
+import { InventoryActionDialogHeader } from "../../../shared/ui/InventoryActionDialogHeader.tsx";
+import { QuantityControl } from "../../../shared/ui/QuantityControl.tsx";
 import type { EvolutionRarity, EvolutionRoute } from "../config.ts";
 
 type EvolutionSource = {

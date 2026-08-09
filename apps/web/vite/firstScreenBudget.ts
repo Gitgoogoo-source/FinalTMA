@@ -7,8 +7,8 @@ type OutputBundle = Rolldown.OutputBundle;
 type OutputChunk = Rolldown.OutputChunk;
 
 const limits = {
-  jsRaw: 470_000,
-  jsGzip: 135_000,
+  jsRaw: 400_000,
+  jsGzip: 125_000,
   cssRaw: 110_000,
   cssGzip: 23_000,
 } as const;
@@ -35,6 +35,14 @@ const forbiddenContractRouteDomains = [
 ] as const;
 
 const forbiddenModuleFragments = [
+  "/node_modules/react-router/",
+  "/node_modules/react-router-dom/",
+  "/apps/web/src/shared/ui/index.tsx",
+  "/apps/web/src/shared/ui/AppModal.tsx",
+  "/apps/web/src/shared/ui/Badge.tsx",
+  "/apps/web/src/shared/ui/CollectionDetailShowcase.tsx",
+  "/apps/web/src/shared/ui/InventoryActionDialogHeader.tsx",
+  "/apps/web/src/shared/ui/QuantityControl.tsx",
   "/apps/web/src/pages/album/",
   "/apps/web/src/pages/game/",
   "/apps/web/src/pages/inventory/",

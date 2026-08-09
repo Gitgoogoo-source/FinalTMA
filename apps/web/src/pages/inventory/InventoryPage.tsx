@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
 
 import { DecompositionAction } from "../../domains/decomposition/index.ts";
 import { EvolutionAction } from "../../domains/evolution/index.ts";
+import { useAppNavigate } from "../../platform/navigation/index.tsx";
 import {
   InventoryView,
   SellQuantityDialog,
   type InventoryItem,
 } from "../../domains/inventory/index.ts";
-import { Button } from "../../shared/ui/index.tsx";
+import { Button } from "../../shared/ui/Button.tsx";
 import { focusTaskTarget } from "../../shared/navigation/focusTaskTarget.ts";
 import { usePageSearchParams } from "../../shared/navigation/pageActivity.tsx";
 import { usePageModulePreparation } from "../../shared/navigation/pageModulePreparation.ts";
@@ -16,7 +16,7 @@ import { useOperationRegistry } from "../../workflows/operation-recovery/context
 import "../../shared/styles/inventory-page.css";
 
 export function InventoryPage(): ReactNode {
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const preparePage = usePageModulePreparation();
   const [params] = usePageSearchParams();
   const [sellItem, setSellItem] = useState<InventoryItem | null>(null);

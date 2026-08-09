@@ -2,7 +2,7 @@ import { useState, type ReactNode } from "react";
 
 import { useApiQuery } from "../../../platform/query/index.ts";
 import { useCatalogQuery } from "../../../platform/query/useCatalogQuery.ts";
-import { Button } from "../../../shared/ui/index.tsx";
+import { Button } from "../../../shared/ui/Button.tsx";
 import { useOperationRegistry } from "../../../workflows/operation-recovery/context.ts";
 import { evolutionRoute, type EvolutionRarity } from "../config.ts";
 import { EvolutionConfirmationDialog } from "./EvolutionConfirmationDialog.tsx";

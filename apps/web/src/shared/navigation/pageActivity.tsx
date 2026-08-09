@@ -6,24 +6,19 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { useNavigate } from "react-router-dom";
+
+import {
+  useAppNavigate,
+  type AppNavigationOptions,
+  type AppSearchParamsInit,
+} from "../../platform/navigation/index.tsx";
 
 export type MainPagePath = "/" | "/market" | "/game" | "/inventory" | "/tasks";
 
-type SearchParamsInit =
-  | string
-  | URLSearchParams
-  | Record<string, string>
-  | string[][];
-type SearchParamsOptions = {
-  replace?: boolean;
-  state?: unknown;
-  preventScrollReset?: boolean;
-};
 type PageActivityValue = {
   active: boolean;
   params: URLSearchParams;
-  setParams(next: SearchParamsInit, options?: SearchParamsOptions): void;
+  setParams(next: AppSearchParamsInit, options?: AppNavigationOptions): void;
 };
 
 const PageActivityContext = createContext<PageActivityValue | null>(null);
@@ -39,7 +34,7 @@ export function PageActivityProvider({
   search: string;
   children: ReactNode;
 }): ReactNode {
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const [snapshot, setSnapshot] = useState(() => ({
     active,
     search: active ? search : "",
@@ -54,7 +49,7 @@ export function PageActivityProvider({
     [active, search, snapshot.search],
   );
   const setParams = useCallback(
-    (next: SearchParamsInit, options?: SearchParamsOptions) => {
+    (next: AppSearchParamsInit, options?: AppNavigationOptions) => {
       const query = new URLSearchParams(next);
       navigate(
         { pathname: path, search: query.size > 0 ? `?${query}` : "" },

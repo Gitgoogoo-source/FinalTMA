@@ -6,20 +6,18 @@ import {
   Settings2,
 } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
 
+import { useAppNavigate } from "../../../platform/navigation/index.tsx";
 import { useApiQuery } from "../../../platform/query/index.ts";
 import { useCatalogQuery } from "../../../platform/query/useCatalogQuery.ts";
 import { usePageSearchParams } from "../../../shared/navigation/pageActivity.tsx";
 import { usePageModulePreparation } from "../../../shared/navigation/pageModulePreparation.ts";
-import {
-  Badge,
-  Button,
-  Card,
-  CatalogImage,
-  CollectionDetailShowcase,
-  PageState,
-} from "../../../shared/ui/index.tsx";
+import { Badge } from "../../../shared/ui/Badge.tsx";
+import { Button } from "../../../shared/ui/Button.tsx";
+import { Card } from "../../../shared/ui/Card.tsx";
+import { CatalogImage } from "../../../shared/ui/CatalogImage.tsx";
+import { CollectionDetailShowcase } from "../../../shared/ui/CollectionDetailShowcase.tsx";
+import { PageState } from "../../../shared/ui/PageState.tsx";
 import { useNewMarkers } from "../../../workflows/new-markers/context.ts";
 import { getCollectionSkills } from "../collectionSkills.ts";
 import type { InventoryItem } from "../types.ts";
@@ -68,7 +66,7 @@ export function InventoryView({
   const targetAction = searchParams.get("action");
   const catalog = useCatalogQuery(Boolean(targetId));
   const { templateIds: newTemplateIds, clearNew } = useNewMarkers();
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const preparePage = usePageModulePreparation();
   const ownedItems = (query.data?.items ?? []).filter((item) => item.total > 0);
   const selectableItems = ownedItems.filter((item) => item.available > 0);

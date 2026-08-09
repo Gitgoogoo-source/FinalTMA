@@ -4,7 +4,9 @@ import "../../../shared/styles/shell-dialogs.css";
 
 import { seedApiQuery, useApiQuery } from "../../../platform/query/index.ts";
 import { telegram } from "../../../platform/telegram/index.ts";
-import { AppModal, Badge, Button } from "../../../shared/ui/index.tsx";
+import { AppModal } from "../../../shared/ui/AppModal.tsx";
+import { Badge } from "../../../shared/ui/Badge.tsx";
+import { Button } from "../../../shared/ui/Button.tsx";
 import { useOperationRegistry } from "../../../workflows/operation-recovery/context.ts";
 
 export function VipDialog({ close }: { close(): void }): ReactNode {

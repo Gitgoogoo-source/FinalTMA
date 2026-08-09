@@ -67,6 +67,7 @@ REQUIRED_PATHS = (
     "docs/architecture/adr/ADR-042-catalog-pointer-immutable-release.md",
     "docs/architecture/adr/ADR-043-adaptive-page-module-warmup.md",
     "docs/architecture/adr/ADR-045-telegram-identity-initial-and-profile-photo-minimization.md",
+    "docs/architecture/adr/ADR-046-first-screen-direct-dependency-and-native-navigation.md",
     "docs/architecture/adr/ADR-016-controlled-battle-acceptance-fixture.md",
     "docs/architecture/adr/ADR-022-battle-stage-skill-progression.md",
     "docs/architecture/adr/ADR-025-battle-active-switch-atomicity.md",
@@ -323,20 +324,52 @@ def verify_identity_avatar_minimization() -> None:
 def verify_persistent_page_route_leaves() -> None:
     router = (WEB_ROOT / "app/router/AppRouter.tsx").read_text(encoding="utf-8")
     required_routes = (
-        '<Route index element={<PersistentPageLeaf />} />',
-        '<Route path="market" element={<PersistentPageLeaf />} />',
-        '<Route path="game" element={<PersistentPageLeaf />} />',
-        '<Route path="inventory" element={<PersistentPageLeaf />} />',
-        '<Route path="tasks" element={<PersistentPageLeaf />} />',
-        "function PersistentPageLeaf(): null",
-        "return null;",
+        "const location = useAppLocation();",
+        "if (getMainPagePath(location.pathname)) return <AppShell />;",
+        'if (location.pathname === "/album")',
+        "<AppShell standalonePage={withPageLoading(<AlbumPage />)} />",
+        "return <InvalidRouteRedirect />;",
+        'replaceAppLocation("/")',
     )
     missing = [term for term in required_routes if term not in router]
     app_shell = (WEB_ROOT / "app/shell/AppShell.tsx").read_text(encoding="utf-8")
-    if missing or "{!activePath ? <Outlet /> : null}" not in app_shell:
+    if missing or "{!activePath ? standalonePage : null}" not in app_shell:
         raise SystemExit(
-            "Persistent page route leaves must satisfy React Router without moving page rendering into Outlet: "
+            "Persistent page routes must remain owned by the native navigation shell: "
             f"{missing}"
+        )
+
+    navigation = (WEB_ROOT / "platform/navigation/index.tsx").read_text(
+        encoding="utf-8"
+    )
+    navigation_terms = (
+        "useSyncExternalStore",
+        'window.addEventListener("popstate", publishNavigation)',
+        'window.removeEventListener("popstate", publishNavigation)',
+        "window.history.pushState",
+        "window.history.replaceState",
+        "window.history.go(target)",
+        "APP_NAVIGATION_CROSS_ORIGIN_FORBIDDEN",
+        "export function replaceAppLocation",
+    )
+    missing_navigation = [
+        term for term in navigation_terms if term not in navigation
+    ]
+    if missing_navigation:
+        raise SystemExit(
+            "Native app navigation lifecycle is incomplete: "
+            f"{missing_navigation}"
+        )
+
+    forbidden_router_imports: list[str] = []
+    for source in typescript_files(WEB_ROOT):
+        for specifier in imports(source):
+            if specifier in ("react-router", "react-router-dom"):
+                forbidden_router_imports.append(relative(source))
+    if forbidden_router_imports:
+        raise SystemExit(
+            "Active Web source must not import the retired general router: "
+            f"{sorted(forbidden_router_imports)}"
         )
 
 
@@ -344,6 +377,20 @@ def verify_first_screen_runtime_boundaries() -> None:
     global_css = WEB_ROOT / "shared/styles/global.css"
     if global_css.exists():
         raise SystemExit("global.css must remain deleted")
+
+    ui_barrel = WEB_ROOT / "shared/ui/index.tsx"
+    if ui_barrel.exists():
+        raise SystemExit("Shared UI barrel must remain deleted")
+    ui_barrel_importers = [
+        relative(source)
+        for source in typescript_files(WEB_ROOT)
+        if any(specifier.endswith("shared/ui/index.tsx") for specifier in imports(source))
+    ]
+    if ui_barrel_importers:
+        raise SystemExit(
+            "Shared UI components must use direct leaf imports: "
+            f"{sorted(ui_barrel_importers)}"
+        )
 
     active_dormant_imports: list[str] = []
     for source in typescript_files(WEB_ROOT):
@@ -438,12 +485,15 @@ def verify_first_screen_runtime_boundaries() -> None:
         encoding="utf-8"
     )
     gate_terms = (
-        "jsRaw: 470_000",
-        "jsGzip: 135_000",
+        "jsRaw: 400_000",
+        "jsGzip: 125_000",
         "cssRaw: 110_000",
         "cssGzip: 23_000",
         "collectStaticClosure",
         "OperationRegistryRuntimeProvider.tsx",
+        "/node_modules/react-router/",
+        "/apps/web/src/shared/ui/AppModal.tsx",
+        "/apps/web/src/shared/ui/CollectionDetailShowcase.tsx",
         "Largest first-screen modules",
         "evolution-catalog-v1.json",
         "global.css must not exist",
@@ -677,7 +727,7 @@ def verify_adaptive_page_warmup() -> None:
     required_readiness_terms = (
         "subscribeFirstScreenReady",
         "isFirstScreenReady(generation)",
-        'location.pathname !== "/"',
+        'pathname !== "/"',
         "startAdaptivePageWarmup()",
         "markFirstScreenReady(session.generation)",
         "rulesComplete",

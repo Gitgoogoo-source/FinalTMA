@@ -1,11 +1,11 @@
 import { Check, LoaderCircle, LockKeyhole, RefreshCw } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
 
+import { useAppNavigate } from "../../../platform/navigation/index.tsx";
 import { useApiQuery } from "../../../platform/query/index.ts";
 import { notifyFreeRareClaimed } from "../../../shared/events/vipDailyBenefits.ts";
 import { usePageModulePreparation } from "../../../shared/navigation/pageModulePreparation.ts";
-import { Button } from "../../../shared/ui/index.tsx";
+import { Button } from "../../../shared/ui/Button.tsx";
 import { useOperationRegistry } from "../../../workflows/operation-recovery/context.ts";
 
 type Benefit = "fgems" | "freeBox";
@@ -16,7 +16,7 @@ type Feedback = {
 
 export function VipDailyBenefits(): ReactNode {
   const vip = useApiQuery("vip.get");
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const preparePage = usePageModulePreparation();
   const { isBlocked, run } = useOperationRegistry();
   const [pending, setPending] = useState<Partial<Record<Benefit, boolean>>>({});

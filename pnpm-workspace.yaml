@@ -10,7 +10,6 @@ allowBuilds:
 catalog:
   react: "19.2.6"
   react-dom: "19.2.6"
-  react-router-dom: "7.15.1"
   "@tma.js/sdk-react": "3.0.19"
   "@tonconnect/ui-react": "2.4.4"
   "@ton/core": "0.63.1"

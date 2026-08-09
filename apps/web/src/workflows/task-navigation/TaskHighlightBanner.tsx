@@ -8,13 +8,14 @@ import {
   Sparkles,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
 
 import { isVisibleMvpTask } from "../../domains/tasks/visibility.ts";
+import { useAppNavigate } from "../../platform/navigation/index.tsx";
 import { useApiQuery } from "../../platform/query/index.ts";
 import { focusTaskTarget } from "../../shared/navigation/focusTaskTarget.ts";
 import { usePageModulePreparation } from "../../shared/navigation/pageModulePreparation.ts";
-import { Button, Card } from "../../shared/ui/index.tsx";
+import { Button } from "../../shared/ui/Button.tsx";
+import { Card } from "../../shared/ui/Card.tsx";
 
 type Task = RouteOutput<"tasks.get">["tasks"][number];
 type Highlight = {
@@ -26,7 +27,7 @@ type Highlight = {
 };
 
 export function TaskHighlightBanner(): ReactNode {
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const preparePage = usePageModulePreparation();
   const tasks = useApiQuery("tasks.get");
   const referral = useApiQuery("referral.get");

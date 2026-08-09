@@ -2,7 +2,8 @@ import { ReceiptText } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { useApiQuery } from "../../../platform/query/index.ts";
-import { Button, Card } from "../../../shared/ui/index.tsx";
+import { Button } from "../../../shared/ui/Button.tsx";
+import { Card } from "../../../shared/ui/Card.tsx";
 
 export function VipBanner({ open }: { open(): void }): ReactNode {
   const vip = useApiQuery("vip.get");

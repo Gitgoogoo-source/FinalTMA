@@ -8,7 +8,8 @@ import {
 import { useMemo, useState, type ReactNode } from "react";
 import type { RouteOutput } from "@pokepets/api-contracts/app-client";
 
-import { Button, CatalogImage } from "../../../shared/ui/index.tsx";
+import { Button } from "../../../shared/ui/Button.tsx";
+import { CatalogImage } from "../../../shared/ui/CatalogImage.tsx";
 import { battleElementLabels, battleRarityLabels } from "../labels.ts";
 
 type TeamOption = RouteOutput<"battle.team_options">["items"][number];

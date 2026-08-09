@@ -2,7 +2,7 @@ import { useState, type ReactNode } from "react";
 import type { RouteOutput } from "@pokepets/api-contracts/app-client";
 
 import { useApiQuery } from "../../../platform/query/index.ts";
-import { Button } from "../../../shared/ui/index.tsx";
+import { Button } from "../../../shared/ui/Button.tsx";
 import { useOperationRegistry } from "../../../workflows/operation-recovery/context.ts";
 import { DecompositionConfirmationDialog } from "./DecompositionConfirmationDialog.tsx";
 

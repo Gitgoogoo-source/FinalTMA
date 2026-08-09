@@ -2,14 +2,12 @@ import { ShieldAlert } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import type { RouteOutput } from "@pokepets/api-contracts/app-client";
 
-import {
-  Badge,
-  AppModal,
-  Button,
-  CatalogImage,
-  InventoryActionDialogHeader,
-  QuantityControl,
-} from "../../../shared/ui/index.tsx";
+import { Badge } from "../../../shared/ui/Badge.tsx";
+import { AppModal } from "../../../shared/ui/AppModal.tsx";
+import { Button } from "../../../shared/ui/Button.tsx";
+import { CatalogImage } from "../../../shared/ui/CatalogImage.tsx";
+import { InventoryActionDialogHeader } from "../../../shared/ui/InventoryActionDialogHeader.tsx";
+import { QuantityControl } from "../../../shared/ui/QuantityControl.tsx";
 
 type InventoryItem = RouteOutput<"inventory.list">["items"][number];
 

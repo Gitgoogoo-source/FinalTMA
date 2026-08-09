@@ -1,11 +1,14 @@
 import { Compass, Timer } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { useSearchParams } from "react-router-dom";
 
-import { CatalogImage } from "../../../shared/ui/index.tsx";
+import { useAppSearchParams } from "../../../platform/navigation/index.tsx";
+import { CatalogImage } from "../../../shared/ui/CatalogImage.tsx";
 import { useApiQuery } from "../../../platform/query/index.ts";
 import { focusTaskTarget } from "../../../shared/navigation/focusTaskTarget.ts";
-import { AppModal, Badge, Button, Card } from "../../../shared/ui/index.tsx";
+import { AppModal } from "../../../shared/ui/AppModal.tsx";
+import { Badge } from "../../../shared/ui/Badge.tsx";
+import { Button } from "../../../shared/ui/Button.tsx";
+import { Card } from "../../../shared/ui/Card.tsx";
 import { useOperationRegistry } from "../../../workflows/operation-recovery/context.ts";
 
 const tierNames = {
@@ -23,7 +26,7 @@ const rarityNames: Record<string, string> = {
 type Tier = keyof typeof tierNames;
 
 export function ExpeditionPanel(): ReactNode {
-  const [params] = useSearchParams();
+  const [params] = useAppSearchParams();
   const query = useApiQuery("expedition.list");
   const refetchExpeditions = query.refetch;
   const { isBlocked, run } = useOperationRegistry();

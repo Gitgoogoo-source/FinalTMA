@@ -1,7 +1,7 @@
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 
 import type { PaymentOrder } from "../../domains/topup/index.ts";
+import { useAppNavigate } from "../../platform/navigation/index.tsx";
 import { usePageModulePreparation } from "../../shared/navigation/pageModulePreparation.ts";
 
 const resumedPayments = new Set<string>();
@@ -10,7 +10,7 @@ export function useNavigationIntentResume(
   orders: readonly PaymentOrder[] | undefined,
   onResume: () => void,
 ): void {
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
   const preparePage = usePageModulePreparation();
   useEffect(() => {
     const order = orders?.find(

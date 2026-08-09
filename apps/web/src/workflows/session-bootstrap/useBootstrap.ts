@@ -6,6 +6,7 @@ import {
   newIdempotencyKey,
   resetSessionRecovery,
 } from "../../platform/api/client.ts";
+import { replaceAppLocation } from "../../platform/navigation/index.tsx";
 import { fetchApiQuery, prefetchApiQuery } from "../../platform/query/index.ts";
 import {
   clearSensitiveState,
@@ -568,6 +569,5 @@ function nextFrame(): Promise<void> {
 }
 
 function replaceBrowserPath(path: "/" | "/game"): void {
-  window.history.replaceState({}, "", path);
-  window.dispatchEvent(new PopStateEvent("popstate"));
+  replaceAppLocation(path);
 }

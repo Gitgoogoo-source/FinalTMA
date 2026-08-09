@@ -1,16 +1,16 @@
 import { QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter } from "react-router-dom";
 import { useEffect, useRef, type ReactNode } from "react";
 
+import { AppNavigationProvider } from "../../platform/navigation/index.tsx";
 import { queryClient } from "../../platform/query/index.ts";
 import { useSession } from "../../platform/session/store.ts";
 
 export function AppProviders({ children }: { children: ReactNode }): ReactNode {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
+      <AppNavigationProvider>
         <CacheBoundary>{children}</CacheBoundary>
-      </BrowserRouter>
+      </AppNavigationProvider>
     </QueryClientProvider>
   );
 }

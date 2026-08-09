@@ -1,7 +1,7 @@
 import { AlertCircle } from "lucide-react";
 import type { ReactNode } from "react";
 
-import { Button } from "../../shared/ui/index.tsx";
+import { Button } from "../../shared/ui/Button.tsx";
 
 export function MarketPurchaseSuccessDialog({
   name,

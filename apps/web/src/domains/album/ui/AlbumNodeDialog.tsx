@@ -8,8 +8,9 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, type ReactNode } from "react";
 
-import { CatalogImage } from "../../../shared/ui/index.tsx";
-import { Badge, Button } from "../../../shared/ui/index.tsx";
+import { CatalogImage } from "../../../shared/ui/CatalogImage.tsx";
+import { Badge } from "../../../shared/ui/Badge.tsx";
+import { Button } from "../../../shared/ui/Button.tsx";
 import { chainTypeLabels, rarityLabels } from "../labels.ts";
 import type { AlbumChain, AlbumNode } from "../types.ts";
 

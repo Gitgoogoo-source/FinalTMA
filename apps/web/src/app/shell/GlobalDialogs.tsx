@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 
-import { Button } from "../../shared/ui/index.tsx";
+import { Button } from "../../shared/ui/Button.tsx";
 import type { TopupRequest } from "../../workflows/payment-recovery/context.ts";
 import type { GlobalDialog } from "./TopAssetBar.tsx";
 import {

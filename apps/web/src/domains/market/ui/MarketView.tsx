@@ -30,14 +30,12 @@ import {
   usePageActive,
   usePageSearchParams,
 } from "../../../shared/navigation/pageActivity.tsx";
-import {
-  AppModal,
-  Badge,
-  Button,
-  Card,
-  CatalogImage,
-  PageState,
-} from "../../../shared/ui/index.tsx";
+import { AppModal } from "../../../shared/ui/AppModal.tsx";
+import { Badge } from "../../../shared/ui/Badge.tsx";
+import { Button } from "../../../shared/ui/Button.tsx";
+import { Card } from "../../../shared/ui/Card.tsx";
+import { CatalogImage } from "../../../shared/ui/CatalogImage.tsx";
+import { PageState } from "../../../shared/ui/PageState.tsx";
 import { useOperationRegistry } from "../../../workflows/operation-recovery/context.ts";
 import { useNavigationIntent } from "../../../workflows/payment-recovery/context.ts";
 import { type MarketSoldEvent, useMarketSoldInbox } from "../soldInbox.ts";

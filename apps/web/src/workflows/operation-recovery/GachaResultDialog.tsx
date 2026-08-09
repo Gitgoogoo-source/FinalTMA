@@ -9,7 +9,8 @@ import {
 import type { RouteOutput } from "@pokepets/api-contracts/app-client";
 
 import { selectionHaptic } from "../../platform/telegram/index.ts";
-import { Button, CatalogImage } from "../../shared/ui/index.tsx";
+import { Button } from "../../shared/ui/Button.tsx";
+import { CatalogImage } from "../../shared/ui/CatalogImage.tsx";
 
 type GachaResult = RouteOutput<"gacha.open">;
 type ResultItem = GachaResult["results"][number];
