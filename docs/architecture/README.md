@@ -40,7 +40,7 @@ contracts/ton -> TON blockchain
 
 禁止反向依赖、跨领域深层导入、浏览器访问 Supabase Data API、Node 层组合多次资产写入。浏览器对 `pet-runtime` 公开对象的图片 GET 是唯一 Supabase 直连例外。
 
-TMA 首屏同步闭包固定为入口、默认开盒页、首屏契约及各自同步依赖；Telegram 初始化后只预取首屏契约，轻量操作 Facade 随入口加载，重型操作运行时只在玩家意图或真实 operation 恢复需要后加载。默认开盒页的数据、规则和主图全部就绪后，页面模块才按 [ADR-043](adr/ADR-043-adaptive-page-module-warmup.md) 在明确的前台 4G、非省流量条件下逐个后台准备藏品、任务、交易和图鉴；未知或受限网络不自动下载，Battle 永远只按玩家导航意图加载，模块准备不预取业务数据。操作运行时、操作结果、全局充值/VIP 弹窗和领域 CSS 只在对应意图或真实恢复需要后加载；生产构建按 [ADR-040](adr/ADR-040-first-screen-runtime-boundary.md) 对完整首屏闭包执行四项字节硬门禁和禁止模块检查。`/game` 固定承载 React + TypeScript Battle，不引入 Phaser；Battle 只有在游戏页可见或当前 session 需要恢复 Battle participation/当场终局结果时读取专属状态，邀请 waiting 的创建者展示心跳和 lobby 的双方 presence 心跳只在页面可见时发送。隐藏、Telegram deactivated、`pagehide` 或离开 `/game` 立即结束当前 lease、中止在途 heartbeat 并尽力 offline；恢复先读取权威快照并取得新 lease，进入 `active_turn` 后停止 presence。
+TMA 首屏同步闭包固定为入口、默认开盒页、首屏契约及各自同步依赖；Telegram 初始化后只预取首屏契约，轻量操作 Facade 随入口加载，重型操作运行时只在玩家意图或真实 operation 恢复需要后加载。恢复 effect 通过 `useEffectEvent` 调用最新 `hydrate`，未决 operation 重进不会因 Runtime 展示状态发布而重复水合。默认开盒页的数据、规则和主图全部就绪后，页面模块才按 [ADR-043](adr/ADR-043-adaptive-page-module-warmup.md) 在明确的前台 4G、非省流量条件下逐个后台准备藏品、任务、交易和图鉴；未知或受限网络不自动下载，Battle 永远只按玩家导航意图加载，模块准备不预取业务数据。操作运行时、操作结果、全局充值/VIP 弹窗和领域 CSS 只在对应意图或真实恢复需要后加载；生产构建按 [ADR-040](adr/ADR-040-first-screen-runtime-boundary.md) 对完整首屏闭包执行四项字节硬门禁和禁止模块检查。`/game` 固定承载 React + TypeScript Battle，不引入 Phaser；Battle 只有在游戏页可见或当前 session 需要恢复 Battle participation/当场终局结果时读取专属状态，邀请 waiting 的创建者展示心跳和 lobby 的双方 presence 心跳只在页面可见时发送。隐藏、Telegram deactivated、`pagehide` 或离开 `/game` 立即结束当前 lease、中止在途 heartbeat 并尽力 offline；恢复先读取权威快照并取得新 lease，进入 `active_turn` 后停止 presence。
 
 五个主导航页面在当前登录会话内首次访问后保持挂载。切换页面只恢复各自滚动、筛选和页内状态，同时按 [ADR-037](adr/ADR-037-persistent-page-query-activity.md) 暂停隐藏页面查询；切页前已开始的读取允许完成。返回页面时，新鲜且未失效的缓存不读取，超过 20 秒或被业务刷新范围标记失效的查询按键回正一次；已有缓存回正失败时保留内容并显示非阻塞重试。业务结果把契约范围全部标记失效，只立即刷新当前页面和全局活动查询；后台连续五分钟后回到前台只静默回正顶部摘要与当前页面。交易页按 [ADR-029](adr/ADR-029-market-sold-device-inbox.md) 在可见期间每 10 秒同步本人挂售与新成交事件，当前设备只持久保存按内部用户隔离的事件游标和未隐藏 SOLD 提醒，并由同一待展示集合驱动“管理”页签红点。市场首页、单模板和本人挂售读取按 [ADR-041](adr/ADR-041-market-transactional-supply-read-model.md) 只访问事务维护的两级供给汇总与有界成交游标，不随已售罄或已取消历史增长；原始 FIFO 挂单继续独占购买、下架、reservation 与结算裁决。
 
@@ -123,3 +123,4 @@ TMA 首屏同步闭包固定为入口、默认开盒页、首屏契约及各自�
 - [首屏运行时与样式边界](adr/ADR-040-first-screen-runtime-boundary.md)
 - [市场事务型供给读模型](adr/ADR-041-market-transactional-supply-read-model.md)
 - [自适应页面模块预热](adr/ADR-043-adaptive-page-module-warmup.md)
+- [操作 Runtime 稳定委托与恢复水合](adr/ADR-044-operation-runtime-stable-hydration.md)

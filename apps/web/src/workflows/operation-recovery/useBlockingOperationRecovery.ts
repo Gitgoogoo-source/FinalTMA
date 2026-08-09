@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useEffectEvent } from "react";
 import {
   parseRecoverableOperationSummary,
   type RecoverableOperationSummary,
@@ -14,6 +14,7 @@ export function useBlockingOperationRecovery(
   operations: readonly BlockingOperation[] | undefined,
 ): void {
   const { hydrate } = useOperationRegistry();
+  const hydrateRecovered = useEffectEvent(hydrate);
   useEffect(() => {
     if (!operations) return;
     const parsed: RecoverableOperationSummary[] = [];
@@ -24,6 +25,6 @@ export function useBlockingOperationRecovery(
         continue;
       }
     }
-    hydrate(parsed);
-  }, [hydrate, operations]);
+    hydrateRecovered(parsed);
+  }, [operations]);
 }

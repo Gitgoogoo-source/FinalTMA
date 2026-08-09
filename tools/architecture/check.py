@@ -330,6 +330,29 @@ def verify_first_screen_runtime_boundaries() -> None:
         raise SystemExit(
             "The operation registry must load its heavy runtime through the intent boundary"
         )
+    blocking_recovery_source = (
+        WEB_ROOT / "workflows/operation-recovery/useBlockingOperationRecovery.ts"
+    ).read_text(encoding="utf-8")
+    discovery_source = (
+        WEB_ROOT / "workflows/operation-recovery/useRecoverableOperationDiscovery.ts"
+    ).read_text(encoding="utf-8")
+    if any(
+        "const hydrateRecovered = useEffectEvent(hydrate);" not in source
+        or "hydrateRecovered(" not in source
+        for source in (blocking_recovery_source, discovery_source)
+    ) or any(
+        dependency in source
+        for source, dependency in (
+            (blocking_recovery_source, "[hydrate, operations]"),
+            (
+                discovery_source,
+                "[enabled, generation, hydrate, initialAuthorityCursor]",
+            ),
+        )
+    ):
+        raise SystemExit(
+            "Operation recovery effects must isolate hydrate with useEffectEvent"
+        )
     presentation_loader = (
         WEB_ROOT / "workflows/operation-recovery/presentation-loader.ts"
     ).read_text(encoding="utf-8")

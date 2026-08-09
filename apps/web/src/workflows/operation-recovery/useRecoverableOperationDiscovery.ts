@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import {
   isRecoverableRouteId,
   loadClientRoute,
@@ -24,6 +24,7 @@ export function useRecoverableOperationDiscovery(
   const session = useSession();
   const surfaceActive = useRecoverySurfaceActive();
   const { hydrate, recoveryQueueActive } = useOperationRegistry();
+  const hydrateRecovered = useEffectEvent(hydrate);
   const generation = session?.generation;
   const authorityCursor = useRef<{
     generation: string;
@@ -72,7 +73,7 @@ export function useRecoverableOperationDiscovery(
             continue;
           }
         }
-        hydrate(recovered);
+        hydrateRecovered(recovered);
         const authorityRoutes: RecoverableRouteId[] = [];
         for (const routeId of response.data.authority_refresh_routes) {
           if (!isRecoverableRouteId(routeId))
@@ -118,7 +119,7 @@ export function useRecoverableOperationDiscovery(
       if (timer !== undefined) window.clearTimeout(timer);
       inFlight?.abort();
     };
-  }, [enabled, generation, hydrate, initialAuthorityCursor]);
+  }, [enabled, generation, initialAuthorityCursor]);
 }
 
 function useRecoverySurfaceActive(): boolean {
