@@ -139,6 +139,9 @@ const WHEEL_SLOTS: readonly WheelSlot[] = [
 
 const SECTOR_ANGLE = 360 / WHEEL_SLOTS.length;
 const MINIMUM_SPIN_MS = 720;
+const WHEEL_SETTLE_MS = 2_200;
+const WHEEL_SETTLE_REDUCED_MS = 560;
+const WHEEL_SETTLE_GRACE_MS = 300;
 
 export function WheelPanel(): ReactNode {
   const wheelPresentationEpoch = useWheelPresentationEpoch();
@@ -582,24 +585,35 @@ async function settleOnSlot(
   const alignment = normalizeDegrees(targetModulo - currentModulo);
   const reducedMotion = prefersReducedMotion();
   const target = current + (reducedMotion ? 360 : 1_800) + alignment;
-  const animation = element.animate(
-    [
-      { transform: `rotate(${current}deg)` },
-      { transform: `rotate(${target}deg)` },
-    ],
-    {
-      duration: reducedMotion ? 560 : 2_200,
-      easing: "cubic-bezier(0.12, 0.72, 0.08, 1)",
-      fill: "forwards",
-    },
-  );
-  animationRef.current = animation;
-  await animation.finished.catch(() => undefined);
-  if (animationRef.current !== animation) return;
-  element.style.transform = `rotate(${target}deg)`;
-  rotationRef.current = target;
-  animation.cancel();
-  animationRef.current = null;
+  const duration = reducedMotion ? WHEEL_SETTLE_REDUCED_MS : WHEEL_SETTLE_MS;
+  let animation: Animation | null = null;
+  try {
+    animation = element.animate(
+      [
+        { transform: `rotate(${current}deg)` },
+        { transform: `rotate(${target}deg)` },
+      ],
+      {
+        duration,
+        easing: "cubic-bezier(0.12, 0.72, 0.08, 1)",
+        fill: "forwards",
+      },
+    );
+    animationRef.current = animation;
+    await waitForAnimationOrTimeout(
+      animation,
+      duration + WHEEL_SETTLE_GRACE_MS,
+    );
+  } catch {
+    // The confirmed result must still converge when Web Animations is unavailable.
+  } finally {
+    if (animationRef.current === animation) {
+      element.style.transform = `rotate(${target}deg)`;
+      rotationRef.current = target;
+      animation?.cancel();
+      animationRef.current = null;
+    }
+  }
 }
 
 function normalizeDegrees(value: number): number {
@@ -612,4 +626,21 @@ function prefersReducedMotion(): boolean {
 
 function waitFor(milliseconds: number): Promise<void> {
   return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+}
+
+async function waitForAnimationOrTimeout(
+  animation: Animation,
+  milliseconds: number,
+): Promise<void> {
+  let timeout: number | undefined;
+  try {
+    await Promise.race([
+      animation.finished.catch(() => undefined),
+      new Promise<void>((resolve) => {
+        timeout = window.setTimeout(resolve, milliseconds);
+      }),
+    ]);
+  } finally {
+    if (timeout !== undefined) window.clearTimeout(timeout);
+  }
 }
