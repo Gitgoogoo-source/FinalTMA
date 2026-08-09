@@ -1224,7 +1224,6 @@ set search_path = ''
 as $$
   select jsonb_build_object(
     'creator_display_name', btrim(concat_ws(' ', u.first_name, u.last_name)),
-    'creator_avatar_url', u.photo_url,
     'entry_fee', tier.entry_fee,
     'rarity_summary', battle.rarity_summary(r.id),
     'expires_at', r.expires_at,

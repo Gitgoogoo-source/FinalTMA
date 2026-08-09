@@ -124,3 +124,4 @@ TMA 首屏同步闭包固定为入口、默认开盒页、首屏契约及各自�
 - [市场事务型供给读模型](adr/ADR-041-market-transactional-supply-read-model.md)
 - [自适应页面模块预热](adr/ADR-043-adaptive-page-module-warmup.md)
 - [操作 Runtime 稳定委托与恢复水合](adr/ADR-044-operation-runtime-stable-hydration.md)
+- [Telegram 身份字首与头像数据最小化](adr/ADR-045-telegram-identity-initial-and-profile-photo-minimization.md)

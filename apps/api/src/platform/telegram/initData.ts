@@ -51,7 +51,6 @@ export interface TelegramWebAppUser {
   is_premium?: boolean | undefined;
   added_to_attachment_menu?: boolean | undefined;
   allows_write_to_pm?: boolean | undefined;
-  photo_url?: string | undefined;
 }
 
 export interface TelegramWebAppChat {
@@ -59,7 +58,6 @@ export interface TelegramWebAppChat {
   type: "group" | "supergroup" | "channel" | string;
   title: string;
   username?: string | undefined;
-  photo_url?: string | undefined;
 }
 
 export interface VerifiedTelegramInitData {
@@ -129,24 +127,30 @@ export function verifyTelegramInitData(
   const authDateUnix = parseAuthDate(paramsMap);
   validateAuthDate(authDateUnix);
 
-  const user = parseJsonField<TelegramWebAppUser>(paramsMap, "user");
+  const user = parseJsonField<unknown>(paramsMap, "user");
 
-  if (!user) {
+  if (user === undefined) {
     throw new TelegramInitDataValidationError(
       "USER_MISSING",
       "Telegram initData 缺少 user 字段。",
     );
   }
 
-  if (user && !isTelegramWebAppUser(user)) {
+  if (!isTelegramWebAppUser(user)) {
     throw new TelegramInitDataValidationError(
       "USER_INVALID",
       "Telegram initData user 字段格式无效。",
     );
   }
 
-  const receiver = parseJsonField<TelegramWebAppUser>(paramsMap, "receiver");
-  const chat = parseJsonField<TelegramWebAppChat>(paramsMap, "chat");
+  const receiverValue = parseJsonField<unknown>(paramsMap, "receiver");
+  const chatValue = parseJsonField<unknown>(paramsMap, "chat");
+  const receiver = isTelegramWebAppUser(receiverValue)
+    ? telegramWebAppUserWithoutPhoto(receiverValue)
+    : undefined;
+  const chat = isTelegramWebAppChat(chatValue)
+    ? telegramWebAppChatWithoutPhoto(chatValue)
+    : undefined;
 
   const canSendAfter = parseOptionalInteger(paramsMap.get("can_send_after"));
 
@@ -159,7 +163,7 @@ export function verifyTelegramInitData(
     authDate: new Date(authDateUnix * 1000),
 
     queryId: optionalString(paramsMap.get("query_id")),
-    user: user as TelegramWebAppUser,
+    user: telegramWebAppUserWithoutPhoto(user),
     receiver,
     chat,
 
@@ -363,9 +367,45 @@ function isTelegramWebAppUser(value: unknown): value is TelegramWebAppUser {
     optionalBoolean(value.allows_write_to_pm) &&
     optionalText(value.last_name) &&
     optionalText(value.username) &&
-    optionalText(value.language_code) &&
-    optionalHttpsUrl(value.photo_url)
+    optionalText(value.language_code)
   );
+}
+
+function isTelegramWebAppChat(value: unknown): value is TelegramWebAppChat {
+  if (!isRecord(value)) return false;
+  return (
+    Number.isSafeInteger(value.id) &&
+    typeof value.type === "string" &&
+    typeof value.title === "string" &&
+    optionalText(value.username)
+  );
+}
+
+function telegramWebAppUserWithoutPhoto(
+  value: TelegramWebAppUser,
+): TelegramWebAppUser {
+  return {
+    id: value.id,
+    is_bot: value.is_bot,
+    first_name: value.first_name,
+    last_name: value.last_name,
+    username: value.username,
+    language_code: value.language_code,
+    is_premium: value.is_premium,
+    added_to_attachment_menu: value.added_to_attachment_menu,
+    allows_write_to_pm: value.allows_write_to_pm,
+  };
+}
+
+function telegramWebAppChatWithoutPhoto(
+  value: TelegramWebAppChat,
+): TelegramWebAppChat {
+  return {
+    id: value.id,
+    type: value.type,
+    title: value.title,
+    username: value.username,
+  };
 }
 
 function optionalBoolean(value: unknown): boolean {
@@ -374,16 +414,6 @@ function optionalBoolean(value: unknown): boolean {
 
 function optionalText(value: unknown): boolean {
   return value === undefined || typeof value === "string";
-}
-
-function optionalHttpsUrl(value: unknown): boolean {
-  if (value === undefined) return true;
-  if (typeof value !== "string") return false;
-  try {
-    return new URL(value).protocol === "https:";
-  } catch {
-    return false;
-  }
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

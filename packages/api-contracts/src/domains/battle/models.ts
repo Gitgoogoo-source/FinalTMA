@@ -124,7 +124,6 @@ const rarityOrder: Readonly<Record<z.output<typeof raritySchema>, number>> = {
 export const battleChallengeCardSchema = z
   .object({
     creator_display_name: z.string().trim().min(1).max(128),
-    creator_avatar_url: z.string().url().nullable(),
     entry_fee: z.union([z.literal(20), z.literal(100), z.literal(500)]),
     rarity_summary: z
       .array(battleRaritySummaryItemSchema)

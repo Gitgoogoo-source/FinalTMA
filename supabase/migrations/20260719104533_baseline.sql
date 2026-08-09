@@ -36,7 +36,6 @@ create table identity.users (
   first_name text not null,
   last_name text,
   language_code text,
-  photo_url text,
   status text not null default 'normal' check (status in ('normal', 'banned')),
   referral_code text not null unique,
   invited_by uuid references identity.users(id),
@@ -308,7 +307,6 @@ create or replace function api.identity_authenticate(
   p_first_name text,
   p_last_name text,
   p_language_code text,
-  p_photo_url text,
   p_referral_code text,
   p_session_id uuid,
   p_token_hash text,
@@ -387,15 +385,15 @@ begin
   end if;
 
   perform pg_advisory_xact_lock(p_telegram_id);
-  insert into identity.users (telegram_id, username, first_name, last_name, language_code, photo_url, referral_code)
-  values (p_telegram_id, p_username, p_first_name, p_last_name, p_language_code, p_photo_url, p_referral_code)
+  insert into identity.users (telegram_id, username, first_name, last_name, language_code, referral_code)
+  values (p_telegram_id, p_username, p_first_name, p_last_name, p_language_code, p_referral_code)
   on conflict (telegram_id) do nothing
   returning * into v_user;
   v_new_user := v_user.id is not null;
   if not v_new_user then
     update identity.users
     set username = p_username, first_name = p_first_name, last_name = p_last_name,
-        language_code = p_language_code, photo_url = p_photo_url, updated_at = now()
+        language_code = p_language_code, updated_at = now()
     where telegram_id = p_telegram_id and status = 'normal'
     returning * into v_user;
     if v_user.id is null then
@@ -481,7 +479,6 @@ begin
       'username', u.username,
       'first_name', u.first_name,
       'last_name', u.last_name,
-      'photo_url', u.photo_url,
       'status', u.status,
       'referral_code', u.referral_code
     ),
@@ -4313,7 +4310,6 @@ set search_path = ''
 as $$
   select jsonb_build_object(
     'creator_display_name', btrim(concat_ws(' ', u.first_name, u.last_name)),
-    'creator_avatar_url', u.photo_url,
     'entry_fee', tier.entry_fee,
     'rarity_summary', battle.rarity_summary(r.id),
     'expires_at', r.expires_at,

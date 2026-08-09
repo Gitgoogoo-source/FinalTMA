@@ -66,6 +66,7 @@ REQUIRED_PATHS = (
     "docs/architecture/adr/ADR-041-market-transactional-supply-read-model.md",
     "docs/architecture/adr/ADR-042-catalog-pointer-immutable-release.md",
     "docs/architecture/adr/ADR-043-adaptive-page-module-warmup.md",
+    "docs/architecture/adr/ADR-045-telegram-identity-initial-and-profile-photo-minimization.md",
     "docs/architecture/adr/ADR-016-controlled-battle-acceptance-fixture.md",
     "docs/architecture/adr/ADR-022-battle-stage-skill-progression.md",
     "docs/architecture/adr/ADR-025-battle-active-switch-atomicity.md",
@@ -173,6 +174,8 @@ def main() -> None:
     assert_nonempty_domains(WEB_ROOT / "domains")
     assert_nonempty_domains(API_ROOT / "domains")
     verify_web_boundaries()
+    verify_identity_avatar_minimization()
+    verify_persistent_page_route_leaves()
     verify_first_screen_runtime_boundaries()
     verify_adaptive_page_warmup()
     verify_evolution_refresh_semantics()
@@ -271,6 +274,70 @@ def verify_web_boundaries() -> None:
     missing_boundaries = [path.parent.name for path in (WEB_ROOT / "domains").glob("*/ui") if not (path.parent / "index.ts").is_file()]
     if missing_boundaries:
         raise SystemExit(f"Web domains must expose one public index.ts: {missing_boundaries}")
+
+
+def verify_identity_avatar_minimization() -> None:
+    sources = {
+        "Telegram initData": API_ROOT / "platform/telegram/initData.ts",
+        "identity route": API_ROOT / "domains/identity/routes.ts",
+        "top asset bar": WEB_ROOT / "app/shell/TopAssetBar.tsx",
+        "Battle screens": WEB_ROOT / "domains/battle/ui/BattleScreens.tsx",
+        "user contract": CONTRACT_ROOT / "common/models.ts",
+        "Battle contract": CONTRACT_ROOT / "domains/battle/models.ts",
+        "identity schema": ROOT / "supabase/schemas/10_identity.sql",
+        "Battle schema": BATTLE_SCHEMA,
+        "baseline migration": BATTLE_BASELINE_MIGRATION,
+        "OpenAPI": ROOT / "packages/api-contracts/openapi/openapi.json",
+    }
+    forbidden = ("photo_url", "creator_avatar_url", "t.me/i/userpic")
+    violations = {
+        label: [term for term in forbidden if term in path.read_text(encoding="utf-8")]
+        for label, path in sources.items()
+        if any(term in path.read_text(encoding="utf-8") for term in forbidden)
+    }
+    if violations:
+        raise SystemExit(f"Real user avatar data remains in runtime sources: {violations}")
+
+    initial_helper = (WEB_ROOT / "shared/identityInitial.ts").read_text(
+        encoding="utf-8"
+    )
+    top_asset_bar = sources["top asset bar"].read_text(encoding="utf-8")
+    battle_screens = sources["Battle screens"].read_text(encoding="utf-8")
+    if (
+        "export function getIdentityInitial" not in initial_helper
+        or "Array.from(displayName.trim())[0]" not in initial_helper
+        or "getIdentityInitial(name)" not in top_asset_bar
+        or "getIdentityInitial(invite.creator_display_name)" not in battle_screens
+        or "<img" in top_asset_bar
+        or "creator_avatar" in battle_screens
+    ):
+        raise SystemExit(
+            "Top asset and Battle invite identity markers must use the shared initial helper"
+        )
+
+    vercel = (ROOT / "vercel.json").read_text(encoding="utf-8")
+    if "https://t.me" in vercel or "https://*.supabase.co" not in vercel:
+        raise SystemExit("CSP image sources must not expand for Telegram user avatars")
+
+
+def verify_persistent_page_route_leaves() -> None:
+    router = (WEB_ROOT / "app/router/AppRouter.tsx").read_text(encoding="utf-8")
+    required_routes = (
+        '<Route index element={<PersistentPageLeaf />} />',
+        '<Route path="market" element={<PersistentPageLeaf />} />',
+        '<Route path="game" element={<PersistentPageLeaf />} />',
+        '<Route path="inventory" element={<PersistentPageLeaf />} />',
+        '<Route path="tasks" element={<PersistentPageLeaf />} />',
+        "function PersistentPageLeaf(): null",
+        "return null;",
+    )
+    missing = [term for term in required_routes if term not in router]
+    app_shell = (WEB_ROOT / "app/shell/AppShell.tsx").read_text(encoding="utf-8")
+    if missing or "{!activePath ? <Outlet /> : null}" not in app_shell:
+        raise SystemExit(
+            "Persistent page route leaves must satisfy React Router without moving page rendering into Outlet: "
+            f"{missing}"
+        )
 
 
 def verify_first_screen_runtime_boundaries() -> None:

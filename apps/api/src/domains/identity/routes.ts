@@ -65,7 +65,6 @@ export const identityHandlers = {
         p_first_name: verified.user.first_name,
         p_last_name: verified.user.last_name ?? null,
         p_language_code: verified.user.language_code ?? null,
-        p_photo_url: verified.user.photo_url ?? null,
         p_referral_code: referralCode(verified.user.id),
         p_session_id: issued.sessionId,
         p_token_hash: issued.hash,

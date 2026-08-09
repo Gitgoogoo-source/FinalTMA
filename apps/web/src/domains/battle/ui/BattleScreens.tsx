@@ -22,6 +22,7 @@ import type {
   RouteOutput,
 } from "@pokepets/api-contracts/app-client";
 
+import { getIdentityInitial } from "../../../shared/identityInitial.ts";
 import { Button, CatalogImage } from "../../../shared/ui/index.tsx";
 import {
   battleArenaTierLabels,
@@ -706,18 +707,9 @@ export function BattleAccept({
         disabled={disabled}
       />
       <section className="battle-invite-summary">
-        {invite.creator_avatar_url ? (
-          <img
-            src={invite.creator_avatar_url}
-            alt={`${invite.creator_display_name}头像`}
-            width={64}
-            height={64}
-          />
-        ) : (
-          <span aria-hidden="true">
-            {invite.creator_display_name.slice(0, 1).toLocaleUpperCase("zh-CN")}
-          </span>
-        )}
+        <span aria-hidden="true">
+          {getIdentityInitial(invite.creator_display_name)}
+        </span>
         <div>
           <strong>{invite.creator_display_name}</strong>
           <p>

@@ -36,7 +36,7 @@ Battle stake / settlement / outbox event（脱敏）：
 
 执行 Telegram 登录场景前，先保存入口配置证据：Bot API `getMe.result.username` 必须等于当前环境 Bot，`getMe.result.has_main_web_app` 必须为 `true`，默认菜单按钮必须为 `web_app` 类型并指向当前环境 named Mini App 链接；随后只能从该 Bot 的 Main Mini App、菜单按钮或 named Mini App 链接启动，不得用浏览器直接访问部署 URL 代替 Telegram 真机验收。
 
-- Telegram 登录：首次、再次和并发首次登录；同键同 `initData` 回放且计入用户和 `initData` 限流；同键不同请求拒绝且限流记录提交；资料与头像更新；无参数默认开盒页；严格大写 TMA 推荐入口；合法 `BTL_` Battle 入口进入游戏页且不创建推荐候选；格式合法但房间无效、取消、接受或过期时继续登录并展示真实不可用状态；其他非空参数在用户和 `initData` 限流记录提交后、建号前拒绝。
+- Telegram 登录：首次、再次和并发首次登录；同键同 `initData` 回放且计入用户和 `initData` 限流；同键不同请求拒绝且限流记录提交；名字、姓氏和 username 更新；实际携带 `photo_url` 的签名 `initData` 仍可正常验证，但该字段不进入数据库、身份响应、Battle DTO 或 DOM；无参数默认开盒页；严格大写 TMA 推荐入口；合法 `BTL_` Battle 入口进入游戏页且不创建推荐候选；格式合法但房间无效、取消、接受或过期时继续登录并展示真实不可用状态；其他非空参数在用户和 `initData` 限流记录提交后、建号前拒绝。
 - Telegram 边界：签名伪造、机器人、恰好与超过 24 小时、恰好与超过未来 5 分钟；来源第 31 次、用户第 11 次和同 `initData` 第 4 次拒绝且页面不自动重试。
 - 身份数据库往返：在无其他请求的窄 UTC 窗口保存 Supabase Data API 日志，成功登录必须按顺序且只出现 `identity_consume_login_source_rate_limit` 与 `identity_authenticate` 两次 RPC，签名伪造只出现第一次，代码和运行日志均不得出现 `identity_resolve_session`；`identity.bootstrap` 等单 RPC 玩家读取只出现自身业务 RPC。篡改访问令牌任一字符必须返回 `SESSION_REQUIRED` 且没有业务 RPC；合法签名但已替换、过期、封禁或 `pending` 的凭证必须由首个业务 RPC 返回既有稳定错误。Battle 阶段日志的 `auth_ms` 不包含数据库往返，简单 Battle 请求的 `db_rpc_count` 只计算业务 RPC。
 - 会话与封禁：15 分钟绝对失效、多个并发请求只恢复一次、恢复后的第二次失效、会话替换不恢复，以及初始和使用中封禁时 DOM、弹窗、导航、查询及迟到结果全部清空。
@@ -77,7 +77,7 @@ Battle stake / settlement / outbox event（脱敏）：
 - Telegram prepared message 创建阶段继续验证同一 room 的 60 秒未知结果恢复、超时作废与退款；该服务端路径不得与已经进入 `waiting` 后的 `shareMessage` callback 混淆。`shareMessageSent`/成功 callback 使用已有真机发送证据；waiting 分享没有平台规定的 no-callback deadline。
 - 规则与页面：`battle-v1` checksum 与正式 JSON、数据库种子、API 摘要一致；Catalog v1 仍为 70 链/210 模板且 release checksum 不变；数据库中 1/2/3 阶各 70 个模板、有效技能分别为 140/210/280 且总数为 630；游戏页完整覆盖第 21 章八种页面状态，构建和运行资源不含 Phaser 或客户端战斗模拟器。
 - 服务器错误不可见：在八种 Battle 页面分别覆盖查询失败、命令拒绝、响应丢失、协调器抑制、deadline 回正、Ably 失效与前后台切换；网络证据可保存错误码，但 DOM 不得出现原始 `Error.message`、错误码、`battle-feedback`、通用错误浮层、Toast、Alert 或“重新读取”按钮。用户只看到游戏页面及其行内状态；终态三域回正失败时按 1 秒、2 秒、5 秒、此后每 5 秒静默恢复，离开 `/game` 停止，返回立即继续。
-- 隐私：按唯一清单分别保存七种严格 DTO：`BattleChallengeCardDto`、`BattleInvitePreviewDto`、`BattleLobbyDto`、`BattleSelfTeamDto`、`BattleOpponentTeamDto`、`BattleActionEventDto`、`BattleRoomSnapshotDto`；逐字段证明禁止信息不在 JSON、HTML、Ably、日志和分析事件中。挑战卡/接受预览允许创建者展示头像；lobby JSON 和 DOM 不返回或加载双方真实头像，只使用固定仓库 WebP/中性图标。动作事件不返回 seed、roll、公式中间值、operation ID 或对手精确生命；接受后对手生命百分比与已执行技能严格符合第 21.7 节。
+- 隐私：按唯一清单分别保存七种严格 DTO：`BattleChallengeCardDto`、`BattleInvitePreviewDto`、`BattleLobbyDto`、`BattleSelfTeamDto`、`BattleOpponentTeamDto`、`BattleActionEventDto`、`BattleRoomSnapshotDto`；逐字段证明禁止信息不在 JSON、HTML、Ably、日志和分析事件中。挑战卡/接受预览只返回创建者展示名称，Web 只计算名称字首；三者 JSON 和 DOM 均不返回或加载双方真实头像，lobby 只使用固定仓库 WebP/中性图标。动作事件不返回 seed、roll、公式中间值、operation ID 或对手精确生命；接受后对手生命百分比与已执行技能严格符合第 21.7 节。
 - 分享与接受：用户私聊、普通群、超级群、跨群转发、Bot 不在群、Bot 会话禁止、频道禁止、创建者本人严格 `self` 且服务端禁止；有效邀请直接显示队伍选择，没有前置状态页。创建者在线与离线均可接受，离线固定展示“离线 · 仍可接受”。两个普通接受者与一个竞争账号同时接受时只有首个事务成功，失败者余额和 inventory 完全不变。
 - 公开匹配：20/100/500 三档分别验证只选择同规则同档 `public_match/waiting` 候选，交叉档位并发永不互配；有多个合格候选时保存随机候选证据，无候选时只创建一个 120 秒房。点击匹配的同一事务完成 K-coin lock、三份 reservation 与加入或建房；匹配成功固定直接进入不可撤销的 3 秒 `lobby_countdown` 且没有接受确认，创建者在匹配前离线、匹配后离开或断网均不能阻止、取消或重置倒计时。主动取消、恰好 120 秒、超过 120 秒、取消/加入、超时/加入、同键回放与响应丢失逐项证明原额退款、释放、零 settlement、最多一个 opponent，好友房与公开房双向不可加入。
 - 分享反馈生命周期：同一 Telegram Mini App 会话中，房间 A 打开分享面板后，通过正常入口终结并创建房间 B；房间 B 未执行自己的分享动作前不得显示房间 A 的任何反馈。房间切换、终态退出和离开再进入 `/game` 的隔离使用 V09 真实证据；页面重载、重新认证及自然迟到 callback 只在真实发生时补充，不倒推为已验证。旧反馈不得覆盖新房间，本地即时反馈不得触发资产刷新或被记录为业务成功。

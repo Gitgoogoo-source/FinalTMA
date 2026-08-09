@@ -15,16 +15,20 @@ export function AppRouter(): ReactNode {
   return (
     <Routes>
       <Route element={<AppShell />}>
-        <Route index />
-        <Route path="market" />
-        <Route path="game" />
-        <Route path="inventory" />
-        <Route path="tasks" />
+        <Route index element={<PersistentPageLeaf />} />
+        <Route path="market" element={<PersistentPageLeaf />} />
+        <Route path="game" element={<PersistentPageLeaf />} />
+        <Route path="inventory" element={<PersistentPageLeaf />} />
+        <Route path="tasks" element={<PersistentPageLeaf />} />
         <Route path="album" element={withPageLoading(<AlbumPage />)} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
   );
+}
+
+function PersistentPageLeaf(): null {
+  return null;
 }
 
 function useBackgroundPreload(): void {

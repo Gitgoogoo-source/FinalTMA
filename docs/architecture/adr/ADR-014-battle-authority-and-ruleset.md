@@ -14,7 +14,7 @@ Supabase PostgreSQL 是 Battle 的唯一裁判。房间、参与资格、三宠 
 
 唯一初始规则版本固定为 `battle-v1`。`generated/battle/battle-v1.json` 及数据库种子共享同一 SHA-256 checksum，覆盖产品第 21 章声明的属性、稀有度、角色档案、技能、70 链映射、210 模板最终配置、时限和结算档位。房间创建时保存 `ruleset_id`、checksum 和三宠不可变配置快照；新规则发布不能改变既有等待房、活动战斗或永久审计。
 
-数据库读模型按当前 viewer 直接生成唯一七种独立 DTO：`BattleChallengeCardDto`、`BattleInvitePreviewDto`、`BattleLobbyDto`、`BattleSelfTeamDto`、`BattleOpponentTeamDto`、`BattleActionEventDto`、`BattleRoomSnapshotDto`。严格 lobby 只包含 phase、expires/start deadline 与固定两方 presence，不返回真实头像；挑战卡/接受预览仍可含创建者允许的展示头像。动作事件以单调 sequence 暴露当前会话需要补齐的权威表现事实，不返回 seed、roll、公式中间值或 operation ID。Web 在 `lobby_countdown` 只渲染覆盖所有产品内按钮的全屏锁定倒计时与确定文案，不把 DOM 遮罩当作业务安全边界。Functions 与 Web 不接收全量双边私有对象、room seed、roll 或内部审计后再过滤。
+数据库读模型按当前 viewer 直接生成唯一七种独立 DTO：`BattleChallengeCardDto`、`BattleInvitePreviewDto`、`BattleLobbyDto`、`BattleSelfTeamDto`、`BattleOpponentTeamDto`、`BattleActionEventDto`、`BattleRoomSnapshotDto`。严格 lobby 只包含 phase、expires/start deadline 与固定两方 presence；挑战卡和接受预览只返回创建者展示名称，三者均不返回真实头像 URL。Web 按 [ADR-045](ADR-045-telegram-identity-initial-and-profile-photo-minimization.md) 从展示名称计算身份字首。动作事件以单调 sequence 暴露当前会话需要补齐的权威表现事实，不返回 seed、roll、公式中间值或 operation ID。Web 在 `lobby_countdown` 只渲染覆盖所有产品内按钮的全屏锁定倒计时与确定文案，不把 DOM 遮罩当作业务安全边界。Functions 与 Web 不接收全量双边私有对象、room seed、roll 或内部审计后再过滤。
 
 规则、participant、stake/ledger、快照、reservation、生命、活动宠物或 settlement 出现永久不变量错误时，普通流程停止；advance 与 monitor 只在 room-first 锁内复用同一幂等安全事务，把 room/participants 写为 `voided`，退款已有原始 stake，释放 Battle reservation，并记录零手续费 settlement、invariant violation、outbox 与永久私有审计。prepared-share 明确失败的合法 `voided` 则固定为一份 stake refunded、reservation released、零 settlement；监控按明确终态来源区分。玩家端不建立 history、replay、audit、spectator、matchmaking 或公开 room 接口。
 

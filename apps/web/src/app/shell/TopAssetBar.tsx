@@ -1,8 +1,9 @@
 import { Coins, Crown, Gem } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 
 import { VipDailyBenefits } from "../../domains/vip/ui/VipDailyBenefits.tsx";
 import { useApiQuery } from "../../platform/query/index.ts";
+import { getIdentityInitial } from "../../shared/identityInitial.ts";
 import { preloadGlobalDialog } from "./global-dialog-loader.ts";
 
 export type GlobalDialog = "topup" | "vip";
@@ -24,7 +25,7 @@ export function TopAssetBar({
   return (
     <header className="topbar">
       <div className="identity">
-        <Avatar name={userLabel} photoUrl={user?.photo_url} />
+        <Avatar name={userLabel} />
         <div>
           <strong>{userLabel}</strong>
           <small>{user?.username ? `@${user.username}` : "PokePets"}</small>
@@ -98,25 +99,10 @@ function formatAsset(value: number | undefined, loading: boolean): string {
   return new Intl.NumberFormat("zh-CN").format(value);
 }
 
-function Avatar({
-  name,
-  photoUrl,
-}: {
-  name: string;
-  photoUrl: string | null | undefined;
-}): ReactNode {
-  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+function Avatar({ name }: { name: string }): ReactNode {
   return (
-    <span className="avatar">
-      {photoUrl && failedUrl !== photoUrl ? (
-        <img
-          src={photoUrl}
-          alt={`${name}头像`}
-          onError={() => setFailedUrl(photoUrl)}
-        />
-      ) : (
-        name.slice(0, 1).toUpperCase()
-      )}
+    <span className="avatar" aria-hidden="true">
+      {getIdentityInitial(name)}
     </span>
   );
 }

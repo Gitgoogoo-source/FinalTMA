@@ -510,12 +510,6 @@
                                 { "type": "null" }
                               ]
                             },
-                            "photo_url": {
-                              "anyOf": [
-                                { "type": "string", "format": "uri" },
-                                { "type": "null" }
-                              ]
-                            },
                             "status": {
                               "type": "string",
                               "enum": ["normal", "banned"]
@@ -528,7 +522,6 @@
                             "username",
                             "first_name",
                             "last_name",
-                            "photo_url",
                             "status",
                             "referral_code"
                           ],
@@ -22255,12 +22248,6 @@
                               "minLength": 1,
                               "maxLength": 128
                             },
-                            "creator_avatar_url": {
-                              "anyOf": [
-                                { "type": "string", "format": "uri" },
-                                { "type": "null" }
-                              ]
-                            },
                             "entry_fee": {
                               "anyOf": [
                                 { "type": "number", "const": 20 },
@@ -22330,7 +22317,6 @@
                           },
                           "required": [
                             "creator_display_name",
-                            "creator_avatar_url",
                             "entry_fee",
                             "rarity_summary",
                             "expires_at",

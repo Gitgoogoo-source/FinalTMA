@@ -28,7 +28,6 @@ export const userSchema = z
     username: z.string().nullable(),
     first_name: z.string(),
     last_name: z.string().nullable(),
-    photo_url: z.string().url().nullable(),
     status: accountStatusSchema,
     referral_code: z.string(),
   })
