@@ -276,7 +276,7 @@ function BenefitFeedback({
       {feedback === "success"
         ? success
         : claimed
-          ? "服务器确认今日已领取，未重复发放"
+          ? "今日权益已领取，未重复发放"
           : "领取未成功，已刷新真实状态"}
     </span>
   );
@@ -332,8 +332,8 @@ function vipStatusText(
   paymentPending: boolean,
   loading: boolean,
 ): string {
-  if (loading) return "正在读取真实月卡状态";
-  if (!data) return "无法读取真实月卡状态";
+  if (loading) return "正在确认月卡状态";
+  if (!data) return "月卡状态确认失败";
   if (paymentPending)
     return data.active ? "月卡有效，续费结果仍在确认" : "月卡付款结果仍在确认";
   if (data.active)

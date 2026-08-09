@@ -40,6 +40,7 @@ const forbiddenModuleFragments = [
   "/apps/web/src/pages/inventory/",
   "/apps/web/src/pages/market/",
   "/apps/web/src/pages/tasks/",
+  "/apps/web/src/workflows/operation-recovery/OperationRegistryRuntimeProvider.tsx",
   "/apps/web/src/workflows/operation-recovery/presentations/",
   "/packages/api-contracts/src/domains/battle/models.ts",
   "/packages/api-contracts/dist/domains/battle/models.js",
@@ -132,8 +133,7 @@ export function firstScreenBudgetPlugin(): Plugin {
           .sort()
           .join(", ")}`,
         `CSS assets: ${[...cssFiles].sort().join(", ") || "none"}`,
-        `Largest entry modules: ${[...closure]
-          .filter((chunk) => chunk.isEntry)
+        `Largest first-screen modules: ${[...closure]
           .flatMap((chunk) =>
             Object.entries(chunk.modules).map(([moduleId, detail]) => ({
               moduleId: normalizeModuleId(moduleId),

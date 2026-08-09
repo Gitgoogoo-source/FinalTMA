@@ -4,9 +4,9 @@ import { retryRecoveredBootstrap } from "../platform/api/client.ts";
 import { useSession } from "../platform/session/store.ts";
 import { useBootstrap } from "../workflows/session-bootstrap/index.ts";
 import { AccountGate } from "./guards/AccountGate.tsx";
+import { AuthenticatedRuntimeProviders } from "./providers/AuthenticatedRuntimeProviders.tsx";
 import { AppRouter } from "./router/AppRouter.tsx";
 import { StartupScreen } from "./StartupScreen.tsx";
-import { OperationRegistryBoundary } from "./providers/OperationRegistryBoundary.tsx";
 
 export function App(): ReactNode {
   const bootstrap = useBootstrap();
@@ -67,12 +67,12 @@ export function App(): ReactNode {
     );
   return (
     <AccountGate restricted={false}>
-      <OperationRegistryBoundary>
+      <AuthenticatedRuntimeProviders>
         <AppRouter />
         {bootstrap.notice ? (
           <EntryNotice key={bootstrap.notice} message={bootstrap.notice} />
         ) : null}
-      </OperationRegistryBoundary>
+      </AuthenticatedRuntimeProviders>
     </AccountGate>
   );
 }

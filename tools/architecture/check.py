@@ -18,6 +18,10 @@ GAME_PAGE = WEB_ROOT / "pages/game/GamePage.tsx"
 OPERATION_REGISTRY_PROVIDER = (
     WEB_ROOT / "workflows/operation-recovery/OperationRegistryProvider.tsx"
 )
+OPERATION_REGISTRY_RUNTIME_PROVIDER = (
+    WEB_ROOT
+    / "workflows/operation-recovery/OperationRegistryRuntimeProvider.tsx"
+)
 BATTLE_SCHEMA = ROOT / "supabase/schemas/44_battle.sql"
 BATTLE_BASELINE_MIGRATION = (
     ROOT / "supabase/migrations/20260719104533_baseline.sql"
@@ -300,6 +304,32 @@ def verify_first_screen_runtime_boundaries() -> None:
             "OperationRegistryProvider statically imports presentation code: "
             f"{forbidden_presenters}"
         )
+    main_source = (WEB_ROOT / "main.tsx").read_text(encoding="utf-8")
+    pre_render_source = main_source.split("createRoot(root).render", maxsplit=1)[0]
+    startup_preloads = re.findall(r"\b(preload[A-Za-z0-9_]+)\(", pre_render_source)
+    if startup_preloads != ["preloadFirstScreenContracts"]:
+        raise SystemExit(
+            "Web startup has unregistered pre-render preload calls: "
+            f"{startup_preloads}"
+        )
+    if (
+        "preloadOperationRegistryProvider" in main_source
+        or "provider-loader.ts" in main_source
+    ):
+        raise SystemExit(
+            "The heavy operation runtime cannot be preloaded during Web startup"
+        )
+    facade_source = OPERATION_REGISTRY_PROVIDER.read_text(encoding="utf-8")
+    if (
+        'loadOperationRegistryRuntime()' not in facade_source
+        or 'import("./OperationRegistryRuntimeProvider.tsx")'
+        not in (
+            WEB_ROOT / "workflows/operation-recovery/runtime-loader.ts"
+        ).read_text(encoding="utf-8")
+    ):
+        raise SystemExit(
+            "The operation registry must load its heavy runtime through the intent boundary"
+        )
     presentation_loader = (
         WEB_ROOT / "workflows/operation-recovery/presentation-loader.ts"
     ).read_text(encoding="utf-8")
@@ -323,6 +353,8 @@ def verify_first_screen_runtime_boundaries() -> None:
         "cssRaw: 110_000",
         "cssGzip: 23_000",
         "collectStaticClosure",
+        "OperationRegistryRuntimeProvider.tsx",
+        "Largest first-screen modules",
         "evolution-catalog-v1.json",
         "global.css must not exist",
     )
@@ -609,7 +641,7 @@ def verify_adaptive_page_warmup() -> None:
 
 
 def verify_evolution_refresh_semantics() -> None:
-    source = OPERATION_REGISTRY_PROVIDER.read_text(encoding="utf-8")
+    source = OPERATION_REGISTRY_RUNTIME_PROVIDER.read_text(encoding="utf-8")
     required_terms = (
         "const locallyRefreshedEvolutionIds = useRef(new Set<string>());",
         "locallyRefreshedEvolutionIds.current.clear();",
@@ -736,7 +768,7 @@ def verify_operation_recovery_discovery() -> None:
     context = (
         WEB_ROOT / "workflows/operation-recovery/context.ts"
     ).read_text(encoding="utf-8")
-    provider = OPERATION_REGISTRY_PROVIDER.read_text(encoding="utf-8")
+    provider = OPERATION_REGISTRY_RUNTIME_PROVIDER.read_text(encoding="utf-8")
     if (
         "useRecoverableOperationDiscovery(bootstrap.data?.authority_cursor);"
         not in coordinator

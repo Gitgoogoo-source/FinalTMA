@@ -2,7 +2,7 @@
 
 ## 决定
 
-开盒进行态由 `OperationRegistryProvider` 统一渲染 `GachaHatchAnimation`。弹层位于 `AppShell` 外层，使用独立的 `gacha-moon-*` 全局组件类与全屏月夜庭院背景，不依赖 `.app-shell` 后代选择器。场景以闭合和开启两张版本化 WebP 背景在同一个 3 秒 CSS 周期中交叉切换，不使用服务端返回数据生成动画帧，也不修改 `gacha.open` 请求、响应或当前运行期的原操作查询契约。
+开盒进行态由按意图加载的 `OperationRegistryRuntimeProvider` 统一渲染 `GachaHatchAnimation`；入口中的轻量 `OperationRegistryProvider` 只负责在重型运行时就绪前锁定并交接首次操作。弹层位于 `AppShell` 外层，使用独立的 `gacha-moon-*` 全局组件类与全屏月夜庭院背景，不依赖 `.app-shell` 后代选择器。场景以闭合和开启两张版本化 WebP 背景在同一个 3 秒 CSS 周期中交叉切换，不使用服务端返回数据生成动画帧，也不修改 `gacha.open` 请求、响应或当前运行期的原操作查询契约。
 
 仪式中只显示月夜庭院、蛋形灵契晶壳、灵光、固定标题与固定底部文案。三档盲盒共用同一视觉，不渲染盲盒蛋或当前档次盲盒主图，不以颜色、藏品或临时稀有度预告结果。场景不提供点击、蓄能、跳过或其他交互入口；每轮在固定时点调用三次中性 Telegram `selectionChanged()` 反馈，能力缺失或客户端抛错时静默降级。
 

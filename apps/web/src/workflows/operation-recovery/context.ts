@@ -21,17 +21,19 @@ export type OperationPresentation = {
 
 export type GachaHatchTier = "normal" | "rare" | "legendary";
 
+export type OperationRunOptions = {
+  background?: boolean;
+  dialog?: boolean;
+  presentation?: OperationPresentation;
+  retainOnFailure?: boolean;
+};
+
 export type OperationRegistryValue = {
   run<Id extends RecoverableRouteId>(
     label: string,
     routeId: Id,
     input: RouteInput<Id>,
-    options?: {
-      background?: boolean;
-      dialog?: boolean;
-      presentation?: OperationPresentation;
-      retainOnFailure?: boolean;
-    },
+    options?: OperationRunOptions,
   ): Promise<RouteOutput<Id> | null>;
   isBlocked(routeId: RecoverableRouteId): boolean;
   present(routeId: RecoverableRouteId): boolean;
