@@ -11,7 +11,7 @@
 
 Web 固定采用 `app → pages → domains/workflows → platform/shared` 的依赖方向。`app` 拥有启动、门禁、Provider、恢复协调、Router 和全局壳层；`pages` 是唯一跨领域 UI 组合层；`domains` 只公开本领域 UI 与实际被调用的类型；`workflows` 拥有跨请求恢复流程；`platform` 和 `shared` 不依赖业务领域。Web 领域之间禁止互相导入。
 
-API 固定采用 `entrypoints → http → domains/workflows → platform` 的依赖方向。`app`、`integrations`、`jobs` 各自拥有独立契约 registry 和完整 handler map，`createGateway` 必须显式接收当前 registry 与 handler map。任一网关不得导入另两个网关的 registry 或 handler。API 领域只映射输入并调用单个具名 RPC，不得导入其他 API 领域；唯一例外是 `identity.authenticate` 按 ADR-038 先调用来源限流 RPC、验签后调用登录事务 RPC。支付、退款、操作恢复、定时任务和 Mint 对账由 workflow 编排。
+API 固定采用 `entrypoints → http → domains/workflows → platform` 的依赖方向。`app`、`integrations`、`jobs` 各自拥有独立契约 registry 和完整 handler map，`createGateway` 必须显式接收当前 registry 与 handler map。任一网关不得导入另两个网关的 registry 或 handler。API 领域只映射输入并调用单个具名 RPC，不得导入其他 API 领域；唯一例外是 `identity.authenticate` 按 ADR-038 先调用来源限流 RPC、验签后调用登录事务 RPC，并在入口交接完成时于事务提交后调用一次只读 `identity_initial`。推荐入口仍为 `pending` 时不执行初始状态读取。支付、退款、操作恢复、定时任务和 Mint 对账由 workflow 编排。
 
 契约包固定导出服务端 `/app`、`/integrations`、`/jobs`、`/server`、无路由副作用的 `/common`、浏览器 `/app-client[/errors]` 和休眠 `/dormant-app`。活动 Web 只能导入 `/app-client` 边界，休眠 Wallet/Mint 适配器只能导入 `/dormant-app`；三个 API entrypoint 只能导入各自网关契约，活动 App entrypoint 不得导入 `/dormant-app`。`/server` 只供 OpenAPI 生成和服务端静态校验。路由 ID、HTTP 方法、URL、请求、响应、错误码和 refresh scope 保持不变。
 

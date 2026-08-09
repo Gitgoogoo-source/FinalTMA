@@ -2,7 +2,7 @@
 
 ## 决定
 
-Telegram 是唯一身份来源，不使用 Supabase Auth。只有认证交换端点接收 `initData`。服务端先通过来源专用 RPC 执行每分钟 30 次限流，验证签名、真实用户、24 小时时限和未来 5 分钟边界后，再由 `api.identity_authenticate` 同一事务按用户每分钟 10 次和同一 `initData` 每分钟 3 次限流并完成登录；成功路径固定为两次数据库往返。相同登录幂等请求的重放仍计入用户与 `initData` 限流。`start_param` 只允许空值、`^TMA[A-F0-9]{20}$` 推荐码或 `^BTL_[A-Za-z0-9_-]{32}$` Battle bearer token，并分别固化为 `direct`、`referral`、`battle`；其他值在限流记录提交后、创建账号前拒绝。Battle 原始 token 只在当前 Function 请求内存中存在，数据库和 session 只保存 SHA-256。
+Telegram 是唯一身份来源，不使用 Supabase Auth。只有认证交换端点接收 `initData`。服务端先通过来源专用 RPC 执行每分钟 30 次限流，验证签名、真实用户、24 小时时限和未来 5 分钟边界后，再由 `api.identity_authenticate` 同一事务按用户每分钟 10 次和同一 `initData` 每分钟 3 次限流并完成登录；身份认证裁决固定为两次数据库往返。入口交接完成的正常结果在认证事务提交后再读取一次 `api.identity_initial`，因此正常完整首屏固定为三次数据库往返且浏览器只有一个认证请求；推荐入口仍为 `pending` 时固定只有前两次认证 RPC。相同登录幂等请求的重放仍计入用户与 `initData` 限流。`start_param` 只允许空值、`^TMA[A-F0-9]{20}$` 推荐码或 `^BTL_[A-Za-z0-9_-]{32}$` Battle bearer token，并分别固化为 `direct`、`referral`、`battle`；其他值在限流记录提交后、创建账号前拒绝。Battle 原始 token 只在当前 Function 请求内存中存在，数据库和 session 只保存 SHA-256。
 
 认证交换必须携带 UUID `Idempotency-Key`。`identity.login_requests` 保存经域隔离 HMAC 生成的请求摘要及会话引用；同键同 `initData` 回放同一结果，同键不同请求返回 `IDEMPOTENCY_KEY_REUSED`。服务端按 [ADR-038](ADR-038-local-session-proof-and-login-rpc-consolidation.md) 使用 `IDENTITY_SECURITY_SECRET` 和操作 UUID 确定性派生 session UUID，并签发固定版本、包含该 UUID 与 HMAC 的短期 opaque bearer；数据库只保存完整令牌的 SHA-256。`banned` 结果不签发令牌，只返回账号状态并撤销旧会话。
 

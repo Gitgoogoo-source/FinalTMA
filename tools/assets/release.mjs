@@ -83,7 +83,11 @@ if (command === "prepare") {
   await migrateRuntimeV2(false);
 } else if (command === "status") {
   console.log(
-    JSON.stringify(await assertCatalogReleaseReady(await readManifest()), null, 2),
+    JSON.stringify(
+      await assertCatalogReleaseReady(await readManifest()),
+      null,
+      2,
+    ),
   );
 } else if (command === "lock") {
   const releaseKey = requiredOption("release-key");
@@ -743,7 +747,9 @@ async function assertCatalogReleaseReady(manifest) {
   for (const path of HISTORICAL_MANIFESTS) {
     const historicalManifest = await readManifestAt(path);
     if (historicalManifest.release.key === manifest.release.key)
-      throw new Error("Historical release must be distinct from the current release");
+      throw new Error(
+        "Historical release must be distinct from the current release",
+      );
     await assertRegisteredRelease(historicalManifest, "historical");
     const historicalRelease = await rpc("catalog_release", {
       p_product_checksum: pointer.product_checksum,
