@@ -70,6 +70,7 @@ REQUIRED_PATHS = (
     "docs/architecture/adr/ADR-046-first-screen-direct-dependency-and-native-navigation.md",
     "docs/architecture/adr/ADR-047-battle-staged-runtime-loading.md",
     "docs/architecture/adr/ADR-048-battle-dynamic-preload-entry-deduplication.md",
+    "docs/architecture/adr/ADR-050-catalog-post-rebuild-readiness-gate.md",
     "docs/architecture/adr/ADR-016-controlled-battle-acceptance-fixture.md",
     "docs/architecture/adr/ADR-022-battle-stage-skill-progression.md",
     "docs/architecture/adr/ADR-025-battle-active-switch-atomicity.md",
@@ -2332,6 +2333,50 @@ def verify_documentation() -> None:
         raise SystemExit(
             "Identity initial/summary ADR is incomplete: "
             f"{missing_identity_read_model_terms}"
+        )
+    catalog_status_adr = (
+        ROOT
+        / "docs/architecture/adr/ADR-050-catalog-post-rebuild-readiness-gate.md"
+    ).read_text(encoding="utf-8")
+    required_catalog_status_terms = (
+        "v1→v2",
+        "失效即失败",
+        "70/210/3/5",
+        "`catalog.asset_mutation_runs`",
+        "不使用 `bootstrap`",
+        "不修改数据库 schema",
+    )
+    missing_catalog_status_terms = [
+        value
+        for value in required_catalog_status_terms
+        if value not in catalog_status_adr
+    ]
+    if missing_catalog_status_terms:
+        raise SystemExit(
+            "Catalog post-rebuild readiness ADR is incomplete: "
+            f"{missing_catalog_status_terms}"
+        )
+    catalog_release_tool = (ROOT / "tools/assets/release.mjs").read_text(
+        encoding="utf-8"
+    )
+    required_catalog_status_gate = (
+        "HISTORICAL_MANIFESTS",
+        "assertCatalogReleaseReady(await readManifest())",
+        'rpc("catalog_asset_release_get", {',
+        'rpc("catalog_current", {})',
+        'rpc("catalog_release", {',
+        'status: "ready"',
+        "EXPECTED_CATALOG_COUNTS",
+    )
+    missing_catalog_status_gate = [
+        value
+        for value in required_catalog_status_gate
+        if value not in catalog_release_tool
+    ]
+    if missing_catalog_status_gate:
+        raise SystemExit(
+            "Catalog release status gate is incomplete: "
+            f"{missing_catalog_status_gate}"
         )
     fixture_adr = (
         ROOT / "docs/architecture/adr/ADR-016-controlled-battle-acceptance-fixture.md"

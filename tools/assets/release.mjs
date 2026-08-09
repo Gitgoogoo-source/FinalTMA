@@ -11,9 +11,18 @@ import sharp from "sharp";
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const CATALOG_PATH = resolve(ROOT, "generated/catalog/catalog-v1.json");
 const DEFAULT_MANIFEST = resolve(ROOT, "generated/assets/art-assets-v2.json");
+const HISTORICAL_MANIFESTS = [
+  resolve(ROOT, "generated/assets/releases/catalog-v1-initial.json"),
+];
 const PRIVATE_BUCKET = "art-masters";
 const PUBLIC_BUCKET = "pet-runtime";
 const PUBLIC_CACHE_CONTROL = "public, max-age=31536000, immutable";
+const EXPECTED_CATALOG_COUNTS = {
+  chains: 70,
+  templates: 210,
+  boxes: 3,
+  topup_products: 5,
+};
 const VARIANTS = {
   thumbnail: {
     directory: "thumb",
@@ -73,7 +82,9 @@ if (command === "prepare") {
 } else if (command === "manifest-runtime-v2") {
   await migrateRuntimeV2(false);
 } else if (command === "status") {
-  console.log(JSON.stringify(await rpc("catalog_asset_current", {}), null, 2));
+  console.log(
+    JSON.stringify(await assertCatalogReleaseReady(await readManifest()), null, 2),
+  );
 } else if (command === "lock") {
   const releaseKey = requiredOption("release-key");
   const lockDays = integerOption("lock-days", 90, 1, 3650);
@@ -699,6 +710,129 @@ async function assertCurrentRelease(manifest) {
       "Current asset release does not match the requested manifest",
     );
   return current;
+}
+
+async function assertCatalogReleaseReady(manifest) {
+  const current = await assertCurrentRelease(manifest);
+  const expectedOrigin = `${remoteEnv().url}/storage/v1/object/public`;
+  if (
+    current.public_origin !== expectedOrigin ||
+    current.public_bucket !== PUBLIC_BUCKET ||
+    !Number.isInteger(current.revision) ||
+    current.revision < 1
+  )
+    throw new Error("Current asset release delivery configuration is invalid");
+
+  await assertRegisteredRelease(manifest, "current");
+  const pointer = await rpc("catalog_current", {});
+  if (
+    pointer?.version !== catalog.version ||
+    pointer?.product_checksum !== catalog.product_checksum ||
+    pointer?.release_key !== manifest.release.key ||
+    pointer?.asset_revision !== current.revision
+  )
+    throw new Error("Catalog pointer does not match the current asset release");
+
+  const release = await rpc("catalog_release", {
+    p_product_checksum: pointer.product_checksum,
+    p_release_key: pointer.release_key,
+  });
+  assertCatalogPayload(release, manifest, current, "current");
+
+  const historicalReleases = [];
+  for (const path of HISTORICAL_MANIFESTS) {
+    const historicalManifest = await readManifestAt(path);
+    if (historicalManifest.release.key === manifest.release.key)
+      throw new Error("Historical release must be distinct from the current release");
+    await assertRegisteredRelease(historicalManifest, "historical");
+    const historicalRelease = await rpc("catalog_release", {
+      p_product_checksum: pointer.product_checksum,
+      p_release_key: historicalManifest.release.key,
+    });
+    assertCatalogPayload(
+      historicalRelease,
+      historicalManifest,
+      current,
+      "historical",
+    );
+    historicalReleases.push({
+      release_key: historicalManifest.release.key,
+      manifest_sha256: historicalManifest.manifest_sha256,
+      template_count: historicalManifest.templates.length,
+    });
+  }
+
+  return {
+    status: "ready",
+    version: pointer.version,
+    product_checksum: pointer.product_checksum,
+    release_key: pointer.release_key,
+    revision: pointer.asset_revision,
+    manifest_sha256: manifest.manifest_sha256,
+    catalog_counts: EXPECTED_CATALOG_COUNTS,
+    historical_releases: historicalReleases,
+  };
+}
+
+async function assertRegisteredRelease(manifest, label) {
+  const registered = await rpc("catalog_asset_release_get", {
+    p_release_key: manifest.release.key,
+  });
+  if (
+    registered?.schema_version !== manifest.schema_version ||
+    registered?.private_bucket !== manifest.private_bucket ||
+    registered?.public_bucket !== manifest.public_bucket ||
+    registered?.release?.key !== manifest.release.key ||
+    registered?.release?.git_commit !== manifest.release.git_commit ||
+    registered?.manifest_sha256 !== manifest.manifest_sha256 ||
+    !Array.isArray(registered?.templates) ||
+    registered.templates.length !== manifest.templates.length
+  )
+    throw new Error(`${label} asset release registration is incomplete`);
+
+  const expectedTemplates = new Map(
+    manifest.templates.map((item) => [item.template_id, canonical(item)]),
+  );
+  for (const item of registered.templates) {
+    if (expectedTemplates.get(item.template_id) !== canonical(item))
+      throw new Error(
+        `${label} asset release registration differs for ${item.template_id}`,
+      );
+    expectedTemplates.delete(item.template_id);
+  }
+  if (expectedTemplates.size !== 0)
+    throw new Error(`${label} asset release registration is missing templates`);
+}
+
+function assertCatalogPayload(payload, manifest, current, label) {
+  if (
+    payload?.version !== catalog.version ||
+    payload?.product_checksum !== catalog.product_checksum ||
+    payload?.release_key !== manifest.release.key
+  )
+    throw new Error(`${label} catalog release identity is invalid`);
+  for (const [field, count] of Object.entries(EXPECTED_CATALOG_COUNTS)) {
+    if (!Array.isArray(payload[field]) || payload[field].length !== count)
+      throw new Error(`${label} catalog release ${field} coverage is invalid`);
+  }
+
+  const manifestTemplates = new Map(
+    manifest.templates.map((item) => [item.template_id, item]),
+  );
+  for (const item of payload.templates) {
+    const expected = manifestTemplates.get(item.id);
+    if (
+      !expected ||
+      item.image_thumbnail_url !==
+        `${current.public_origin}/${current.public_bucket}/${expected.thumbnail.key}` ||
+      item.image_detail_url !==
+        `${current.public_origin}/${current.public_bucket}/${expected.detail.key}`
+    )
+      throw new Error(`${label} catalog image mapping differs for ${item.id}`);
+    manifestTemplates.delete(item.id);
+  }
+  if (manifestTemplates.size !== 0)
+    throw new Error(`${label} catalog release is missing template mappings`);
 }
 
 async function acquireMutationLease(kind, manifest) {
